@@ -769,6 +769,19 @@ def write_sat_diag_json(ctx: SatDiagContext, out_path: Path) -> None:
     out_path.write_text(json.dumps(payload, indent=2), encoding="ascii")
 
 
+def commit_sat_diag_provenance(
+    ctx: SatDiagContext,
+    archive: Path | str,
+    *,
+    placed_aperture_used: bool,
+) -> None:
+    """Persist ``sat_diag.json`` after per-frame catalog (same operation as placed aperture)."""
+    if placed_aperture_used:
+        ctx.raw_peaks_used = True
+        ctx.sat_peak_source = SAT_PEAK_SOURCE_PLACED
+    write_sat_diag_json(ctx, Path(archive) / "sat_diag.json")
+
+
 def load_sat_diag_json(path: Path) -> SatDiagContext | None:
     if not path.is_file():
         return None

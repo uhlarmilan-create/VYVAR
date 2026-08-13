@@ -10622,7 +10622,6 @@ def export_per_frame_catalogs(
         from sat_diag import (  # noqa: PLC0415
             draft_archive_from_platesolve,
             run_sat_diag,
-            write_sat_diag_json,
         )
 
         _arch = draft_archive_from_platesolve(ps)
@@ -10638,7 +10637,6 @@ def export_per_frame_catalogs(
             _sat_diag_ctx = run_sat_diag(_arch, equipment_adu=_eq_sat, hdr=_ref_hdr)
             if _sat_diag_ctx.sat_adu is not None:
                 equipment_saturate_adu = float(_sat_diag_ctx.sat_adu)
-            write_sat_diag_json(_sat_diag_ctx, _arch / "sat_diag.json")
             from sat_diag import resolve_drift_ref_sky_deg  # noqa: PLC0415
 
             _frame_hint = Path(files[0]).name if files else None
@@ -11073,6 +11071,7 @@ def export_per_frame_catalogs(
             "n_detected": meta.get("n_detected"),
             "n_matched": meta.get("n_matched"),
             "catalog_match_mode": ("master_reference_locked" if master_only_mode else meta.get("catalog_match_mode", "full_cone")),
+            "raw_peaks_used": bool(meta.get("raw_peaks_used")),
         }
 
     def _process_frame(fp: Path) -> dict[str, Any]:
@@ -11316,6 +11315,18 @@ def export_per_frame_catalogs(
             )
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[PHOT] hybrid bkg fallback finalize skipped: %s", exc)
+    if _sat_diag_ctx is not None and _sat_diag_archive:
+        try:
+            from sat_diag import commit_sat_diag_provenance  # noqa: PLC0415
+
+            _placed_raw = any(bool(r.get("raw_peaks_used")) for r in rows_out)
+            commit_sat_diag_provenance(
+                _sat_diag_ctx,
+                _sat_diag_archive,
+                placed_aperture_used=_placed_raw,
+            )
+        except Exception as _sd_write_exc:  # noqa: BLE001
+            LOGGER.warning("[SAT-DIAG] provenance commit skipped: %s", _sd_write_exc)
     return {
         "written": int(n_ok),
         "per_frame_dir": str(root),

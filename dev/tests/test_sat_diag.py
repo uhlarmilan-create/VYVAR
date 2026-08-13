@@ -20,6 +20,7 @@ from sat_diag import (  # noqa: E402
     PILEUP_RATIO,
     SAT_PEAK_SOURCE_PLACED,
     apply_raw_peaks_to_proc_df,
+    commit_sat_diag_provenance,
     derive_ceiling_from_paths,
     measure_raw_peaks_frame,
     resolve_sat_limit,
@@ -155,6 +156,18 @@ def test_apply_raw_peaks_uses_placed_source() -> None:
     assert str(df["sat_peak_source"].iloc[0]) == SAT_PEAK_SOURCE_PLACED
     assert "peak_loc_ok" not in df.columns
     assert math.isfinite(float(df["peak_max_adu"].iloc[0]))
+
+
+def test_commit_sat_diag_provenance_sets_raw_peaks_flag(tmp_path: Path) -> None:
+    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=55704.75, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
+    commit_sat_diag_provenance(ctx, tmp_path, placed_aperture_used=False)
+    raw = (tmp_path / "sat_diag.json").read_text(encoding="utf-8")
+    assert '"raw_peaks_used": false' in raw
+
+    commit_sat_diag_provenance(ctx, tmp_path, placed_aperture_used=True)
+    raw2 = (tmp_path / "sat_diag.json").read_text(encoding="utf-8")
+    assert '"raw_peaks_used": true' in raw2
+    assert SAT_PEAK_SOURCE_PLACED in raw2
 
 
 def test_refuse_float_input(tmp_path: Path) -> None:
