@@ -1,4 +1,4 @@
-# C-EXPORT-GAP — headless export wiring (report only)
+# C-EXPORT-GAP - headless export wiring (report only)
 
 **Date:** 2026-08-13  
 **Status:** Report for Milan decision; no implementation in this task.
@@ -14,7 +14,7 @@ AAVSO/VarAstro are **not** on the automated night path.
 
 ## What wiring would take
 
-1. After Step 14 photometry (or after trust/comp QA), call `export_all_method_lightcurve_reports(photometry_dir, cfg, ...)` per obs_group — same entry the UI uses.
+1. After Step 14 photometry (or after trust/comp QA), call `export_all_method_lightcurve_reports(photometry_dir, cfg, ...)` per obs_group - same entry the UI uses.
 2. Pass `observer_code`, filter map, BJD column selection, and method key (`aperture` default).
 3. Respect `INV-CFG-01` / trust: optionally skip export when trust is RED (policy choice).
 4. Stamp export provenance in `pipeline_meta.json` (new keys or extend INV-PROV-01).
@@ -23,8 +23,8 @@ AAVSO/VarAstro are **not** on the automated night path.
 
 | Gate | Effect |
 |------|--------|
-| **G-EXP-02 / T1** | Refuses AAVSO if `time_base != BJD_TDB` — headless must ensure Phase 2A wrote `bjd_tdb_mid` |
-| **OSC-03** | Blocks `oneRGGB` rows; R/G/B must use TR/TG/TB — mono rig unaffected |
+| **G-EXP-02 / T1** | Refuses AAVSO if `time_base != BJD_TDB` - headless must ensure Phase 2A wrote `bjd_tdb_mid` |
+| **OSC-03** | Blocks `oneRGGB` rows; R/G/B must use TR/TG/TB - mono rig unaffected |
 | **Trust GREEN** | Not enforced today on export; wiring could add optional hard gate |
 
 ## Risks of unattended export

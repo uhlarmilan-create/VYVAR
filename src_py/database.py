@@ -2002,20 +2002,6 @@ class VyvarDatabase:
             center["de_deg"] = float(center_de_deg)
         patch_draft_manifest(root, int(draft_id), center=center)
 
-    def set_obs_draft_masterstar_path(self, draft_id: int, masterstar_path: str | None) -> None:
-        """Persist absolute MASTERSTAR FITS path for a draft (manifest)."""
-        from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
-
-        _p = (str(masterstar_path).strip() if masterstar_path is not None else "") or None
-        root = resolve_draft_dir_for_id(self, int(draft_id))
-        if root is None:
-            raise ValueError(f"Draft '{draft_id}' not found for MASTERSTAR path update.")
-        manifest = load_or_init_manifest(root, int(draft_id))
-        paths = dict(manifest.get("paths") or {})
-        paths["masterstar"] = _p
-        paths["masterstar_fits"] = _p
-        patch_draft_manifest(root, int(draft_id), paths=paths)
-
     def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
         """Return persisted MASTERSTAR path for a draft (manifest-first)."""
         row = self.fetch_obs_draft_by_id(int(draft_id))
