@@ -93,7 +93,11 @@ No overwrite of `Archive/Drafts/draft_000509|510/calibrated/`.
 
 ## 4. Push
 
-Commit stack (one line each) — see git log after push.
+| Commit | Message |
+|--------|---------|
+| `f7eaadc` | feat(cal-diag): INV-CAL-01 v2 gate with stage-aware P2 validation |
+
+`origin/main` HEAD: **`f7eaadc`**
 
 `--fast` on final tree: **1313 passed**, 27 skipped, **OVERALL PASS**.
 
