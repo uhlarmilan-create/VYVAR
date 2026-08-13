@@ -13873,6 +13873,7 @@ def select_comparison_stars_per_target(
     use_pixel_dist: bool = False,
     gs11_comp_rejects_acc: list[int] | None = None,
     _selection_mode: str = "auto",
+    sat_may_exclude: bool = True,
 ) -> pd.DataFrame:
     """Faza 1: Pre jeden target vyber najstabilnejsie porovnavacie hviezdy.
 
@@ -14240,6 +14241,7 @@ def select_comparison_stars_per_target(
         dilution_map=_dilution_map,
         cfg=_cfg_p1,
         comp_quality_notes=_comp_gs11_notes,
+        sat_may_exclude=bool(sat_may_exclude),
     )
     if gs11_comp_rejects_acc is not None and _dilution_map:
         _max_d_gs11 = float(_cfg_p1.gs11_comp_max_dilution)
@@ -15066,6 +15068,26 @@ def run_phase0_and_phase1(
         (active.get("skip_reason", pd.Series(dtype=str)).astype(str) != "vsx_type_out_of_scope").sum()
     )
     _i_phase1 = 0
+    _sat_may_exclude = True
+    try:
+        _sd_path = Path(per_frame_csv_dir).resolve().parent.parent.parent / "sat_diag.json"
+        if not _sd_path.is_file():
+            _sd_path = Path(output_dir).resolve().parent.parent / "sat_diag.json"
+        if _sd_path.is_file():
+            from sat_diag import load_sat_diag_json  # noqa: PLC0415
+
+            _sd_ctx = load_sat_diag_json(_sd_path)
+            if _sd_ctx is not None:
+                _sat_may_exclude = bool(_sd_ctx.may_exclude_saturation())
+                logging.info(
+                    "[SAT-DIAG] phase1 sat_may_exclude=%s source=%s sat_adu=%s",
+                    _sat_may_exclude,
+                    _sd_ctx.sat_source,
+                    _sd_ctx.sat_adu,
+                )
+    except Exception as _sd_p1_exc:  # noqa: BLE001
+        logging.debug("[SAT-DIAG] phase1 context load skipped: %s", _sd_p1_exc)
+
     for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         try:
             _skip_reason = str(target_row.get("skip_reason") or "").strip()
@@ -15138,6 +15160,7 @@ def run_phase0_and_phase1(
                 ),
                 use_pixel_dist=not _wcs_scale_ok,
                 gs11_comp_rejects_acc=_gs11_comp_rejects_acc,
+                sat_may_exclude=_sat_may_exclude,
             )
             if comps is None or comps.empty:
                 targets_without_comps.append(str(tr_enriched.get("catalog_id", "")))

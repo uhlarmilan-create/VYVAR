@@ -40,8 +40,9 @@ DAO-CLOSE.
    on a draft that already has `postprocess` stamped (`photometry_core.py:10648`).
    Supported re-entry path blocked; workaround was trimming `pipeline_meta.json`
    stages. No fix yet.
-1. **SAT-DIAG (OPEN).** Architect recommendations recorded 2026-08-13; awaiting Milan
-   authorization. Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`.
+1. **SAT-DIAG (IMPLEMENTED 2026-08-13).** Wired gate: raw peaks, pile-up derivation,
+   INV-SAT-01. Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`. Does not close
+   too-high ceiling gap (exposure ramp only).
 2. **A-1 FWHM estimator disagreement (carry-forward).** Moment FWHM on single
    frames vs fitted Gaussian FWHM on MASTERSTAR stack differ by factor ~1.6-2.1;
    aperture follows the smaller value. Characterised in ZP-clip close-out;

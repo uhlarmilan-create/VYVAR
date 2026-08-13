@@ -1082,19 +1082,23 @@ def _apply_comp_metric_hard_filters(
     dilution_map: dict[str, dict[str, Any]] | None = None,
     cfg: Any | None = None,
     comp_quality_notes: dict[str, str] | None = None,
+    sat_may_exclude: bool = True,
 ) -> Any:
-    # Filter SAT: reject candidates above admission gate (70% full well vs 85pct limit column)
+    # Filter SAT: reject candidates above admission gate (Tier 1 only; INV-SAT-01)
     _sat_rejected: set[str] = set()
-    for cid in sorted(flux_map.keys()):
-        total = int(peak_total_map.get(cid, 0) or 0)
-        over = int(peak_over_map.get(cid, 0) or 0)
-        if total >= 10 and total > 0 and (float(over) / float(total)) > 0.10:
-            flux_map.pop(cid, None)
-            _sat_rejected.add(cid)
-            logging.info(
-                f"[FAZA 1] Saturacia filter: vyluceny {cid} "
-                f"({over}/{total} framov nad 85% limitom)"
-            )
+    if sat_may_exclude:
+        for cid in sorted(flux_map.keys()):
+            total = int(peak_total_map.get(cid, 0) or 0)
+            over = int(peak_over_map.get(cid, 0) or 0)
+            if total >= 10 and total > 0 and (float(over) / float(total)) > 0.10:
+                flux_map.pop(cid, None)
+                _sat_rejected.add(cid)
+                logging.info(
+                    f"[FAZA 1] Saturacia filter: vyluceny {cid} "
+                    f"({over}/{total} framov nad 85% limitom)"
+                )
+    else:
+        logging.info("[SAT-DIAG] saturation exclusion disabled (Tier 3 / unverified limit)")
     if _sat_rejected:
         logging.info(
             "[BATCH-E E.5] saturation gate excluded %d comps (admission_sat_peak_frac gate)",

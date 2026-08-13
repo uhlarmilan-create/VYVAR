@@ -1,7 +1,7 @@
 # VYVAR -- SAT-DIAG: Saturation and linearity limit gate (spec)
 
-Status: **DRAFT -- architect recommendations recorded 2026-08-13; awaiting Milan authorization.**
-Date: 2026-08-13 (decisions section added 2026-08-13).
+Status: **AUTHORIZED -- Milan 2026-08-13; implementation in progress.**
+Date: 2026-08-13 (decisions section added 2026-08-13; Part 0 limits 2026-08-13).
 Grounding: `dev/results/MEMO_saturation_limit_literature.md`,
 `dev/results/CURSOR_RESULT_saturation_peak_reconcile.md`,
 `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md` (structure model).
@@ -242,6 +242,12 @@ Default thresholds (implementation constants, not user config):
 
 Draft 510 reference: **13024** pixels at **65535**, **1** at 65532 -- `V_ceiling=65535`.
 
+**65535 versus 65532 (observed, unexplained):** under a clean two-bit left-shift,
+native maximum 16383 maps to **65532**, and pile-up would sit there. Measured
+pile-up sits at **65535** with a single pixel at 65532. Something beyond the
+shift maps the saturated value. This does not change behaviour (pixels clip at
+65535 either way) but must not be written up as understood.
+
 ### 5.3 Saturation level
 
 When pile-up detected:
@@ -291,10 +297,29 @@ Resolution order (section 3 Decision 1):
 3. Derived from Check A (pile-up level).
 4. Container ceiling from `BITPIX`/`BZERO` when no pile-up (section 5.4).
 
-### 6.1 Compatibility test
+### 6.1 Compatibility test (one-sided -- known limit)
 
 For stated ceiling `S`: **compatible** iff `S >= max_pixel_value` across sampled
 raw frames. Otherwise refuted -- do not use.
+
+**Known limit (cannot be closed in software):** this test refutes a stated
+ceiling that lies **below** the data (pixels exceed it). It **cannot** refute a
+ceiling that is **too high**, because the data never reach it. Where pile-up
+exists, Check A derivation covers the low-ceiling case. Where **no pile-up**
+exists, SAT-DIAG accepts the stated value **untested** for the too-high direction.
+TOI-1131 is exactly that state: 51 pixels at 65535, below the pile-up threshold,
+so `DATAMAX=65535` won unchallenged. It happens to be correct there, but nothing
+verified it.
+
+This matters because the linearity level is a fraction of the ceiling. A ceiling
+that is too high makes the linearity level too high, and non-linear stars pass.
+PSFEx documents "too high" as the common failure mode in practice; the test as
+built catches the rarer error (stated limit below data). **Only an exposure ramp
+can close the too-high gap.**
+
+Provenance must let a reader distinguish an **unverified accepted** stated value
+(`HEADER`, `EQUIPMENT`, `DERIVED_NO_PILEUP`) from a **measured** derived ceiling
+(`DERIVED`, `CONFLICT_DERIVED`). Do not record refuted values as plain `DERIVED`.
 
 ### 6.2 CONFLICT handling
 

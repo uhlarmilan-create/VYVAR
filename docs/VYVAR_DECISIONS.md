@@ -2515,10 +2515,12 @@ not become runtime gates.
 
 **Reference:** `docs/VYVAR_DAO_DETECTION.md`, `src_py/dao_reconcile.py`, `dev/results/CURSOR_RESULT_dao_close.md`.
 
-## SAT-DIAG - saturation and linearity limit gate (OPEN - architect recommendations 2026-08-13)
+## SAT-DIAG - saturation and linearity limit gate (IMPLEMENTED - Milan authorized 2026-08-13)
 
-**Status:** **OPEN -- architect recommendations recorded; awaiting Milan authorization.**
-Not implemented. Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md` section 3. Grounding:
+**Status:** **IMPLEMENTED** (2026-08-13). Milan authorized implementation same date.
+Module: `src_py/sat_diag.py`; invariant **INV-SAT-01** wired. Spec:
+`dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`. Report:
+`dev/results/CURSOR_RESULT_sat_diag_implement.md`.
 `dev/results/MEMO_saturation_limit_literature.md`,
 `dev/results/CURSOR_RESULT_saturation_peak_reconcile.md`.
 

@@ -45,6 +45,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-CFG-01R",
         "INV-PHASE0-ID",
         "INV-PREP-01",
+        "INV-SAT-01",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -745,6 +746,48 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                 pass
 
 
+def check_sat_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
+    """INV-SAT-01: SAT-DIAG limits and raw-peak provenance when gate ran."""
+    block = meta.get("sat_diag")
+    sd_path_ok = False
+    if photometry_dir is not None:
+        for candidate in (
+            Path(photometry_dir).resolve().parent.parent / "sat_diag.json",
+            Path(photometry_dir).resolve().parent / "sat_diag.json",
+        ):
+            if candidate.is_file():
+                sd_path_ok = True
+                break
+    if not isinstance(block, dict) and not sd_path_ok:
+        inv_check(
+            meta,
+            "INV-SAT-01",
+            True,
+            policy="WARN",
+            detail="sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+        )
+        return
+    src = str((block or {}).get("sat_source") or "")
+    sat_adu = (block or {}).get("sat_adu")
+    ok = bool(src) and sat_adu is not None
+    inv_check(
+        meta,
+        "INV-SAT-01",
+        ok,
+        policy="FAIL",
+        detail=f"sat_source={src!r} sat_adu={sat_adu}",
+    )
+    lin_src = str((block or {}).get("lin_source") or "")
+    if lin_src == "DEFAULT_FRAC" and bool((block or {}).get("tier3_exclusion_fired")):
+        inv_check(
+            meta,
+            "INV-SAT-01",
+            False,
+            policy="FAIL",
+            detail="Tier 3 DEFAULT_FRAC must not trigger exclusion",
+        )
+
+
 def validate_provenance_schema(
     meta: dict[str, Any],
     *,
@@ -804,6 +847,7 @@ def validate_provenance_schema(
         detail="; ".join(issues) if issues else f"prov_schema_version={PROV_SCHEMA_VERSION} ok",
     )
     validate_config_behavior(meta, photometry_dir)
+    check_sat_diag(meta, photometry_dir=photometry_dir)
 
 
 def run_end_of_run_invariants(

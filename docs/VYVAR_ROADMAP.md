@@ -281,29 +281,13 @@ licensing decision.
 
 ---
 
-## OPEN - SAT-DIAG (saturation and linearity limit gate)
+## DONE - SAT-DIAG (saturation and linearity limit gate)
 
-**Priority:** **HIGH** (blocks confident production runs on BO CVn-class fields).
-**Status:** Spec drafted 2026-08-13; **awaiting Milan decisions** before implementation.
+**Status:** **IMPLEMENTED** 2026-08-13 (Milan authorized). `src_py/sat_diag.py`,
+INV-SAT-01 wired. Report: `dev/results/CURSOR_RESULT_sat_diag_implement.md`.
 
-Grounding: `dev/results/MEMO_saturation_limit_literature.md`,
-`dev/results/CURSOR_RESULT_saturation_peak_reconcile.md`.
-Spec: `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md`. DECISIONS entry: **SAT-DIAG (OPEN)**.
-
-**Problem:** `EQUIPMENTS.SATURATE_ADU=16384` is in the wrong units for binned FITS
-data (ceiling **65535**); peaks are measured on aligned float frames (**~69000** max),
-not raw; limit crossings silently exclude comps from pool, PSF, and AC.
-
-**Measured consequence at active limit 16384:** **62 of 140** comparison stars fail
-static admission; **2 of 5** draft-509 BO CVn comps that produced the good light
-curve would be excluded. Authoritative BO CVn peaks (134 LC frames, WCS+drift):
-**94/134** frames >= 16384, **0/134** >= 65535.
-
-**Deliverables (after Milan settles DECISIONS):**
-
-1. Invariant-backed gate (`INV-SAT-01`) -- not config-parameter-only (see CAL-DIAG
-   removal `967f835`).
-2. Raw peak measurement + self-check; flags carried forward.
+Remaining (not blocking): exposure-ramp measured linearity; aggregate
+`peak_loc_fail_count` into `sat_diag.json` after catalog pass.
 3. Two levels keyed by `(equipment, readmode, binning)`.
 4. Provenance `VY_SATSRC` / `sat_diag.json`.
 

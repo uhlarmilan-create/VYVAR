@@ -1217,6 +1217,7 @@ class VyvarDatabase:
         self._ensure_active_columns()
         self._ensure_is_default_columns()
         self._ensure_equipments_saturate_adu_column()
+        self._migrate_qhy294mm_saturate_adu_null()
         self._ensure_equipments_cosmic_columns()
         self._ensure_equipments_bayermask_column()
         self._ensure_calibration_library_table()
@@ -2848,6 +2849,30 @@ class VyvarDatabase:
             return
         self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN SATURATE_ADU REAL;")
         self.conn.commit()
+
+    def _migrate_qhy294mm_saturate_adu_null(self) -> None:
+        """Idempotent: QHY294MM (id=1) wrong binned SATURATE_ADU=16384 -> NULL (SAT-DIAG derives)."""
+        try:
+            row = self.conn.execute(
+                "SELECT SATURATE_ADU FROM EQUIPMENTS WHERE ID = 1;"
+            ).fetchone()
+        except sqlite3.Error:
+            return
+        if row is None:
+            return
+        v = row["SATURATE_ADU"]
+        if v is None:
+            return
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            return
+        if abs(fv - 16384.0) < 0.5:
+            self.conn.execute(
+                "UPDATE EQUIPMENTS SET SATURATE_ADU = NULL WHERE ID = 1 AND SATURATE_ADU = ?;",
+                (fv,),
+            )
+            self.conn.commit()
 
     def _ensure_equipments_cosmic_columns(self) -> None:
         """Detector gain and read noise (e-/ADU, read noise e-) for photometric error / SNR."""

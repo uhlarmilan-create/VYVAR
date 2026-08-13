@@ -1087,7 +1087,63 @@ def _resolve_draft_light_raw_path(archive: Path, file_path: Path | str) -> Path 
         cand = sub / name
         if cand.is_file():
             return cand
+        # Setup subfolder (e.g. Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits)
+        try:
+            for hit in sub.rglob(name):
+                if hit.is_file():
+                    return hit
+        except OSError:
+            pass
     return None
+
+
+def _sat_ctx_from_worker(st: dict[str, Any]) -> Any | None:
+    raw = st.get("sat_diag_ctx_dict")
+    if not raw:
+        return None
+    try:
+        from sat_diag import PileupResult, SatDiagContext  # noqa: PLC0415
+
+        pileup_raw = raw.get("pileup")
+        pileup = PileupResult(**pileup_raw) if isinstance(pileup_raw, dict) else None
+        d = dict(raw)
+        d.pop("pileup", None)
+        d["pileup"] = pileup
+        return SatDiagContext(**{k: v for k, v in d.items() if k in SatDiagContext.__dataclass_fields__})
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _load_raw_for_frame(st: dict[str, Any], fname: str) -> Any | None:
+    arch = str(st.get("sat_diag_archive") or "").strip()
+    if not arch:
+        return None
+    raw_p = _resolve_draft_light_raw_path(Path(arch), fname)
+    if raw_p is None or not raw_p.is_file():
+        return None
+    try:
+        from sat_diag import image_adu_array  # noqa: PLC0415
+
+        with fits.open(raw_p, memmap=False) as hdul:
+            if int(hdul[0].header.get("BITPIX", 0)) < 0:
+                return None
+            return image_adu_array(hdul[0])
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _load_raw_hdr_for_frame(st: dict[str, Any], fname: str) -> fits.Header | None:
+    arch = str(st.get("sat_diag_archive") or "").strip()
+    if not arch:
+        return None
+    raw_p = _resolve_draft_light_raw_path(Path(arch), fname)
+    if raw_p is None or not raw_p.is_file():
+        return None
+    try:
+        with fits.open(raw_p, memmap=False) as hdul:
+            return hdul[0].header.copy()
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def find_qc_metrics_csv(
@@ -7630,6 +7686,11 @@ def detect_stars_match_master_reference(
     fallback_saturate_adu: float | None = None,
     equipment_saturate_adu: float | None = None,
     frame_name: str = "",
+    sat_diag_ctx: Any | None = None,
+    raw_data: "np.ndarray | None" = None,
+    raw_hdr: fits.Header | None = None,
+    ref_ra_deg: float | None = None,
+    ref_dec_deg: float | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """DAO on this frame + nearest-neighbor match to ``masterstars.csv`` (no Vizier / cone).
 
@@ -7774,9 +7835,13 @@ def detect_stars_match_master_reference(
 
     _fb_sat = fallback_saturate_adu
 
-    sat_limit, sat_limit_src = _effective_saturation_limit(
-        hdr, fallback_adu=_fb_sat, equipment_saturate_adu=equipment_saturate_adu
-    )
+    if sat_diag_ctx is not None and getattr(sat_diag_ctx, "sat_adu", None) is not None:
+        sat_limit = float(sat_diag_ctx.sat_adu)
+        sat_limit_src = str(getattr(sat_diag_ctx, "sat_source", "sat_diag"))
+    else:
+        sat_limit, sat_limit_src = _effective_saturation_limit(
+            hdr, fallback_adu=_fb_sat, equipment_saturate_adu=equipment_saturate_adu
+        )
     sat_frac = float(saturate_level_fraction)
     sat_frac = min(max(sat_frac, 0.5), 1.0)
 
@@ -8176,6 +8241,32 @@ def detect_stars_match_master_reference(
             "[BATCH-E E.2] centroid WCS fallback triggered on %d star-frames",
             int(_n_dao_wcs_fallback),
         )
+    if (
+        sat_diag_ctx is not None
+        and raw_data is not None
+        and raw_hdr is not None
+        and len(df_out) > 0
+    ):
+        try:
+            from sat_diag import apply_raw_peaks_to_proc_df  # noqa: PLC0415
+
+            apply_raw_peaks_to_proc_df(
+                df_out,
+                np.asarray(raw_data),
+                raw_hdr,
+                sat_diag_ctx,
+                ref_ra=ref_ra_deg,
+                ref_dec=ref_dec_deg,
+            )
+            n_sat = (
+                int(df_out["likely_saturated_raw"].sum())
+                if "likely_saturated_raw" in df_out.columns
+                else n_sat
+            )
+            meta["sat_limit_source"] = str(getattr(sat_diag_ctx, "sat_source", sat_limit_src))
+            meta["raw_peaks_used"] = True
+        except Exception as _sat_exc:  # noqa: BLE001
+            LOGGER.warning("[SAT-DIAG] raw peak merge failed for %s: %s", frame_name, _sat_exc)
     return df_out, meta
 
 
@@ -9814,6 +9905,11 @@ def _export_per_frame_run_catalog_core(
                 dao_fwhm_px=float(st.get("dao_fwhm_px", 2.5)),
                 equipment_saturate_adu=st.get("equipment_saturate_adu"),
                 frame_name=fname,
+                sat_diag_ctx=_sat_ctx_from_worker(st),
+                raw_data=_load_raw_for_frame(st, fname),
+                raw_hdr=_load_raw_hdr_for_frame(st, fname),
+                ref_ra_deg=st.get("sat_diag_ref_ra"),
+                ref_dec_deg=st.get("sat_diag_ref_dec"),
             )
         except Exception as exc:  # noqa: BLE001
             logging.error('[EXC-0373] detect_stars_and_match_catalog exception returns status error with empty csv for that f...: %s', exc)
@@ -10416,6 +10512,54 @@ def export_per_frame_catalogs(
             "Per-frame catalog lock requested, but masterstars_full_match.csv is missing or invalid."
         )
 
+    _sat_diag_ctx: Any | None = None
+    _sat_diag_archive: str = ""
+    _ref_ra_deg: float | None = None
+    _ref_dec_deg: float | None = None
+    try:
+        from sat_diag import (  # noqa: PLC0415
+            draft_archive_from_platesolve,
+            run_sat_diag,
+            write_sat_diag_json,
+        )
+
+        _arch = draft_archive_from_platesolve(ps)
+        if _arch is not None:
+            _sat_diag_archive = str(_arch)
+            _eq_sat = equipment_saturate_adu
+            if _eq_sat is None and equipment_id is not None:
+                _eq_sat = _equipment_saturate_adu_from_db(int(equipment_id))
+            _ref_hdr = fits.Header()
+            if files:
+                with fits.open(files[0], memmap=False) as _rh:
+                    _ref_hdr = _rh[0].header
+            _sat_diag_ctx = run_sat_diag(_arch, equipment_adu=_eq_sat, hdr=_ref_hdr)
+            if _sat_diag_ctx.sat_adu is not None:
+                equipment_saturate_adu = float(_sat_diag_ctx.sat_adu)
+            write_sat_diag_json(_sat_diag_ctx, _arch / "sat_diag.json")
+            if master_tab is not None and not getattr(master_tab, "empty", True):
+                if "ra_deg" in master_tab.columns and "dec_deg" in master_tab.columns:
+                    _mra = pd.to_numeric(master_tab["ra_deg"], errors="coerce")
+                    _mde = pd.to_numeric(master_tab["dec_deg"], errors="coerce")
+                    _flux_col = "flux" if "flux" in master_tab.columns else None
+                    if _flux_col:
+                        _ord = pd.to_numeric(master_tab[_flux_col], errors="coerce").fillna(0)
+                        _j = int(_ord.idxmax())
+                    else:
+                        _j = 0
+                    if math.isfinite(float(_mra.iloc[_j])) and math.isfinite(float(_mde.iloc[_j])):
+                        _ref_ra_deg = float(_mra.iloc[_j])
+                        _ref_dec_deg = float(_mde.iloc[_j])
+            LOGGER.info(
+                "[SAT-DIAG] sat_adu=%s source=%s lin_adu=%s (archive %s)",
+                _sat_diag_ctx.sat_adu,
+                _sat_diag_ctx.sat_source,
+                _sat_diag_ctx.lin_adu,
+                _sat_diag_archive,
+            )
+    except Exception as _sd_exc:  # noqa: BLE001
+        LOGGER.warning("[SAT-DIAG] init skipped: %s", _sd_exc)
+
     _gauss_override: float | None = None
     try:
         if masterstar_fits is not None:
@@ -10613,6 +10757,20 @@ def export_per_frame_catalogs(
         meta: dict[str, Any]
         if use_fast:
             try:
+                _raw_arr = None
+                _raw_hdr = None
+                if _sat_diag_ctx is not None and _sat_diag_archive:
+                    _raw_p = _resolve_draft_light_raw_path(Path(_sat_diag_archive), fname)
+                    if _raw_p is not None and _raw_p.is_file():
+                        try:
+                            from sat_diag import image_adu_array  # noqa: PLC0415
+
+                            with fits.open(_raw_p, memmap=False) as _rhd:
+                                if int(_rhd[0].header.get("BITPIX", 0)) >= 0:
+                                    _raw_arr = image_adu_array(_rhd[0])
+                                    _raw_hdr = _rhd[0].header.copy()
+                        except Exception:  # noqa: BLE001
+                            _raw_arr = None
                 df, meta = detect_stars_match_master_reference(
                     data,
                     hdr,
@@ -10624,6 +10782,12 @@ def export_per_frame_catalogs(
                     dao_threshold_sigma=float(dao_threshold_sigma),
                     dao_fwhm_px=float(_dao_fw_export),
                     equipment_saturate_adu=equipment_saturate_adu,
+                    frame_name=fname,
+                    sat_diag_ctx=_sat_diag_ctx,
+                    raw_data=_raw_arr,
+                    raw_hdr=_raw_hdr,
+                    ref_ra_deg=_ref_ra_deg,
+                    ref_dec_deg=_ref_dec_deg,
                 )
             except Exception as exc:  # noqa: BLE001
                 return {"file": fname, "status": f"error: {exc}", "csv": ""}
@@ -10836,6 +11000,12 @@ def export_per_frame_catalogs(
             "dao_threshold_sigma": float(dao_threshold_sigma),
             "dao_fwhm_px": float(_dao_fw_export),
             "equipment_saturate_adu": equipment_saturate_adu,
+            "sat_diag_ctx_dict": (
+                _sat_diag_ctx.to_json_dict() if _sat_diag_ctx is not None else None
+            ),
+            "sat_diag_archive": _sat_diag_archive,
+            "sat_diag_ref_ra": _ref_ra_deg,
+            "sat_diag_ref_dec": _ref_dec_deg,
             "export_cat_local": _export_cat_local,
             "master_only_mode": bool(master_only_mode),
             "plate_solve_fov_deg": _pfov_res,

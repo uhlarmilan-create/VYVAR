@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-13 -- SAT-DIAG implemented (Milan authorized)
+
+**Change.** `src_py/sat_diag.py` wired into per-frame catalog export and comp
+selection. INV-SAT-01 in runtime gate set. Idempotent migration
+`_migrate_qhy294mm_saturate_adu_null()`. Raw peaks + self-check replace aligned
+peaks for saturation decisions when raw FITS present.
+
+**Validated:** draft 510 catalog re-export + photometry; pool 709/735; BO CVn GREEN
+TRUST ac_scatter 0.0093; known comps pass. Report:
+`dev/results/CURSOR_RESULT_sat_diag_implement.md`.
+
+**Known limit:** compatibility test is one-sided (too-high ceiling needs ramp).
+
+---
+
 ## 2026-08-13 -- EQUIPMENTS.SATURATE_ADU cleared (QHY294MM, id=1)
 
 **Change.** `EQUIPMENTS.SATURATE_ADU` for equipment ID 1 (QHY294MM) set from
