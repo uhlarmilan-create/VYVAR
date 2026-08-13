@@ -47,6 +47,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-PREP-01",
         "INV-SAT-01",
         "INV-CAL-01",
+        "INV-CAL-02",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -850,6 +851,7 @@ def validate_provenance_schema(
     validate_config_behavior(meta, photometry_dir)
     check_sat_diag(meta, photometry_dir=photometry_dir)
     check_cal_diag(meta, photometry_dir=photometry_dir)
+    check_cal_stage(meta, photometry_dir=photometry_dir)
 
 
 def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
@@ -893,6 +895,35 @@ def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = 
         ok,
         policy="FAIL",
         detail=f"cal_diag keys={len(keys or {})} spec_version={spec_v!r}",
+    )
+
+
+def check_cal_stage(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
+    """INV-CAL-02: calibrated stage provenance when ``cal_stage.json`` is present."""
+    _ = photometry_dir
+    block = meta.get("cal_stage")
+    if not isinstance(block, dict):
+        inv_check(
+            meta,
+            "INV-CAL-02",
+            True,
+            policy="WARN",
+            detail="cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+        )
+        return
+    verify = block.get("verify_last") if isinstance(block.get("verify_last"), dict) else {}
+    fail_n = int(verify.get("fail_stamp") or 0) + int(verify.get("fail_corrupt") or 0)
+    ok = fail_n == 0
+    inv_check(
+        meta,
+        "INV-CAL-02",
+        ok,
+        policy="FAIL",
+        detail=(
+            f"cal_stage verify pass={verify.get('pass')} fail_stamp={verify.get('fail_stamp')} "
+            f"fail_corrupt={verify.get('fail_corrupt')} indet_legacy={verify.get('indeterminate_legacy')} "
+            f"indet_unknown={verify.get('indeterminate_unknown')}"
+        ),
     )
 
 

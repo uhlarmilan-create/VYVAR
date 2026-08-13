@@ -798,30 +798,23 @@ def gate_result_for_frame(
     return session.gate_results.get(gkey)
 
 
+class CalStageCompareRefusedError(RuntimeError):
+    """Raised when a pixel compare cannot proceed because stage is unknown."""
+
+
 def calibrated_stage_from_header(hdr: fits.Header) -> tuple[str, int | None]:
     """Return ``(stage, sky_order)`` for an archived ``calibrated/lights`` FITS.
 
-    ``stage`` is ``PURE`` when only ``(L-D)/F`` is on disk, or ``SKYSF_N`` when
-    preprocess applied an in-place order-N sky surface (``VY_SKYSF``).
+    Uses :func:`cal_stage.resolve_calibrated_stage`. Indeterminate resolutions return
+    the indeterminate token with ``sky_order=None``.
     """
-    v = hdr.get("VY_SKYSF")
-    if v is None:
-        return "PURE", None
-    if isinstance(v, bool):
-        skysf = v
-    elif isinstance(v, (int, float)):
-        skysf = bool(v)
-    else:
-        skysf = str(v).strip().lower() in ("true", "1", "t", "yes")
-    if not skysf:
-        return "PURE", None
-    order: int | None = None
-    if "VYSKYORD" in hdr:
-        try:
-            order = int(hdr["VYSKYORD"])
-        except (TypeError, ValueError):
-            order = None
-    return f"SKYSF_{order if order is not None else '?'}", order
+    from cal_stage import parse_cal_stage_token, resolve_calibrated_stage
+
+    res = resolve_calibrated_stage(hdr)
+    if res.is_indeterminate:
+        return res.stage, None
+    order, _pass_n = parse_cal_stage_token(res.stage)
+    return res.stage, order
 
 
 def apply_calibrated_stage_for_compare(
@@ -832,20 +825,47 @@ def apply_calibrated_stage_for_compare(
 ) -> np.ndarray:
     """Match archived ``calibrated/lights`` processing stage before pixel compare.
 
-    Recalibration produces pure ``(L-D)/F``. Archives may carry an in-place
-    sky-surface subtract (``VY_SKYSF``) from ``_qc_enrich_calibrated_in_place``.
+    Recalibration produces pure ``(L-D)/F``. Archives may carry in-place preprocess
+    sky-surface subtract(s). Refuses when stage is indeterminate (INV-CAL-02).
     """
-    stage, order = calibrated_stage_from_header(hdr)
-    if not stage.startswith("SKYSF"):
+    from cal_stage import resolve_calibrated_stage
+
+    archive_res = resolve_calibrated_stage(hdr)
+    if archive_res.is_indeterminate:
+        raise CalStageCompareRefusedError(
+            f"INV-CAL-02: refuse calibrated compare - archive {archive_res.confidence.value}: "
+            f"{archive_res.reason or archive_res.stage}"
+        )
+    if not archive_res.stage.startswith("SKYSF"):
         return np.asarray(data, dtype=np.float32)
-    sky_order = order if order is not None else int(default_sky_order)
+    sky_order = archive_res.sky_order if archive_res.sky_order is not None else int(default_sky_order)
+    pass_n = max(1, int(archive_res.sky_pass))
     from pipeline import _fit_subtract_preprocess_sky_surface  # noqa: PLC0415
 
-    out, _stats = _fit_subtract_preprocess_sky_surface(
-        np.asarray(data, dtype=np.float32),
-        order=int(sky_order),
-    )
+    out = np.asarray(data, dtype=np.float32)
+    for _ in range(pass_n):
+        out, _stats = _fit_subtract_preprocess_sky_surface(out, order=int(sky_order))
     return np.asarray(out, dtype=np.float32)
+
+
+def calibrated_compare_refused(
+    archive_hdr: fits.Header,
+    *,
+    fresh_hdr: fits.Header | None = None,
+) -> str | None:
+    """Return refusal reason when a calibrated pixel compare must not run."""
+    from cal_stage import CalStageConfidence, CalStageResolution, refuse_calibrated_compare, resolve_calibrated_stage
+
+    archive_res = resolve_calibrated_stage(archive_hdr)
+    if fresh_hdr is None:
+        fresh_res = CalStageResolution(
+            stage="PURE",
+            confidence=CalStageConfidence.LEGACY_INFERRED,
+            reason="synthetic fresh recalibration",
+        )
+    else:
+        fresh_res = resolve_calibrated_stage(fresh_hdr)
+    return refuse_calibrated_compare(archive_res, fresh_res)
 
 
 def is_obs_group_aborted(session: CalDiagSession, obs_group_key: str) -> bool:

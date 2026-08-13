@@ -16228,7 +16228,24 @@ def _calibrate_one_light_disk(
         except Exception as exc:  # noqa: BLE001
             logging.warning("[PERF-10] DAO QC in calibrate failed for %s: %s", src.name, exc)
 
+    from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
+
+    cal_stage_token = "PURE"
+    cal_datasum = stamp_cal_stage_headers(hdr, data, stage=cal_stage_token)
     fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
+    if qc_pack is not None and qc_pack.get("draft_id") is not None:
+        try:
+            db_cs = db if db is not None else _db_for_calibration_tasks(qc_pack)
+            if db_cs is not None:
+                db_cs.update_obs_file_cal_stage_by_raw_light_path(
+                    src,
+                    draft_id=int(qc_pack["draft_id"]),
+                    observation_id=qc_pack.get("observation_id"),
+                    cal_stage=cal_stage_token,
+                    cal_datasum=cal_datasum,
+                )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("manifest cal_stage sync failed after calibrate: %s", exc)
     return used_dark, used_flat, qc_summary, _hdr_vy_cflag_str(hdr), perf10_qc
 
 
@@ -16458,6 +16475,10 @@ def _passthrough_lights_to_calibrated(
             hdr["VY_CALST"] = (0, "VYVAR CALIB_STATUS: 2=full DF, 1=partial D, 0=raw (passthrough)")
             hdr.add_history("No calibration frames applied.")
             passthrough_cal_diag_headers(hdr)
+            from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
+
+            cal_stage_token = "PASSTHROUGH"
+            cal_datasum = stamp_cal_stage_headers(hdr, data, stage=cal_stage_token)
             fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
             stats["processed"] += 1
             stats["copied_only"] += 1
@@ -16470,6 +16491,13 @@ def _passthrough_lights_to_calibrated(
                         is_calibrated=0,
                         calib_type="PASSTHROUGH",
                         calib_flags="P",
+                    )
+                    db_pt.update_obs_file_cal_stage_by_raw_light_path(
+                        src,
+                        draft_id=draft_id,
+                        observation_id=observation_id,
+                        cal_stage=cal_stage_token,
+                        cal_datasum=cal_datasum,
                     )
                 except Exception:  # noqa: BLE001
                     pass
@@ -17625,6 +17653,12 @@ def _qc_enrich_one_frame(
     """Process one calibrated light frame in-place (picklable worker for parallel QC)."""
     import numpy as np
 
+    from cal_stage import (  # noqa: PLC0415
+        compute_skysf_apply_stage,
+        stamp_cal_stage_headers,
+        verify_fits_datasum,
+    )
+
     fp = Path(fp_str)
     try:
         with fits.open(fp, memmap=False) as hdul:
@@ -17632,6 +17666,10 @@ def _qc_enrich_one_frame(
             hdr = hdul[0].header.copy()
 
         sky_stats: dict[str, Any] = {}
+        cal_stage_token: str | None = None
+        cal_datasum: str | None = None
+        cal_pstbg: float | None = None
+        skypass: int | None = None
         is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
         if sky_order > 0 and not is_mosaic:
             action = _decide_preprocess_sky_action(
@@ -17647,6 +17685,12 @@ def _qc_enrich_one_frame(
                 data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
                 if _force_flag:
                     sky_stats["sky_surface_force_reapply"] = True
+                cal_stage_token, skypass = compute_skysf_apply_stage(
+                    hdr,
+                    sky_order=sky_order,
+                    force_reapply=_force_flag,
+                )
+                cal_pstbg = float(np.nanmedian(data)) if data.size else None
             else:
                 sky_stats = {
                     "sky_surface_applied": False,
@@ -17680,6 +17724,18 @@ def _qc_enrich_one_frame(
                         round(float(p2p), 4),
                         "Sky surface peak-to-peak ADU",
                     )
+                if cal_stage_token:
+                    cal_datasum = stamp_cal_stage_headers(
+                        hdr,
+                        data,
+                        stage=cal_stage_token,
+                        pstbg=cal_pstbg,
+                        skypass=skypass,
+                    )
+                    if not verify_fits_datasum(data, cal_datasum):
+                        raise RuntimeError(
+                            f"INV-CAL-02: VY_CALDATASUM self-check failed on {fp.name}"
+                        )
             if math.isfinite(fwhm):
                 hdr["VY_FWHM"] = (round(fwhm, 4), "Estimated FWHM [pix]")
             if math.isfinite(elong):
@@ -17706,7 +17762,7 @@ def _qc_enrich_one_frame(
                         hdr.add_history("VYVAR: VYTARGRA/VYTARGDE for plate solving (QC in-place)")
             hdul.flush()
 
-        return {
+        out_row: dict[str, Any] = {
             "src": str(fp),
             "dst": str(fp),
             "status": status,
@@ -17717,6 +17773,12 @@ def _qc_enrich_one_frame(
             "bg_median": float(np.nanmedian(data)) if data.size else None,
             **sky_stats,
         }
+        if cal_stage_token and cal_datasum:
+            out_row["cal_stage"] = cal_stage_token
+            out_row["cal_datasum"] = cal_datasum
+            if cal_pstbg is not None:
+                out_row["cal_pstbg"] = cal_pstbg
+        return out_row
     except SkySurfaceOrderConflictError:
         raise
     except Exception as exc:  # noqa: BLE001
@@ -17732,6 +17794,47 @@ def _qc_enrich_one_frame(
         }
 
 
+def _infer_raw_light_path_for_calibrated(cal_fp: Path) -> Path | None:
+    """Map ``calibrated/lights/...`` frame to matching ``Raw/lights/...`` if present."""
+    cal_fp = Path(cal_fp).resolve()
+    marker = f"{os.sep}calibrated{os.sep}lights{os.sep}"
+    s = str(cal_fp)
+    idx = s.find(marker)
+    if idx < 0:
+        return None
+    draft_root = Path(s[:idx])
+    rel = Path(s[idx + len(marker) :])
+    raw = draft_root / "Raw" / "lights" / rel
+    return raw if raw.is_file() else None
+
+
+def _sync_manifest_cal_stage_from_qc_row(
+    row: dict[str, Any],
+    *,
+    db: VyvarDatabase | None,
+    draft_id: int | None,
+) -> None:
+    if db is None or draft_id is None:
+        return
+    stage = row.get("cal_stage")
+    datasum = row.get("cal_datasum")
+    if not stage or not datasum:
+        return
+    raw = _infer_raw_light_path_for_calibrated(Path(str(row.get("src") or row.get("dst") or "")))
+    if raw is None:
+        return
+    try:
+        db.update_obs_file_cal_stage_by_raw_light_path(
+            raw,
+            draft_id=int(draft_id),
+            cal_stage=str(stage),
+            cal_datasum=str(datasum),
+            cal_pstbg=row.get("cal_pstbg"),
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("manifest cal_stage sync failed after preprocess: %s", exc)
+
+
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
@@ -17744,6 +17847,8 @@ def _qc_enrich_calibrated_in_place(
     only_paths: Sequence[Path | str] | None = None,
     prefilter_rejected: Mapping[Path | str, str] | None = None,
     progress_cb: Callable[..., None] | None = None,
+    draft_id: int | None = None,
+    db: VyvarDatabase | None = None,
 ) -> dict[str, Any]:
     """Lightweight QC pass that writes VY_* headers directly onto calibrated FITS files.
 
@@ -17810,6 +17915,7 @@ def _qc_enrich_calibrated_in_place(
                 except SkySurfaceOrderConflictError as exc:
                     raise RuntimeError(f"QC in-place failed for {fp.name}: {exc}") from exc
                 results.append(row)
+                _sync_manifest_cal_stage_from_qc_row(row, db=db, draft_id=draft_id)
                 if str(row.get("status", "")).startswith("error"):
                     log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
                 else:
@@ -17833,6 +17939,7 @@ def _qc_enrich_calibrated_in_place(
                 inject_pointing_only_if_missing=inject_pointing_only_if_missing,
             )
             results.append(row)
+            _sync_manifest_cal_stage_from_qc_row(row, db=db, draft_id=draft_id)
             if str(row.get("status", "")).startswith("error"):
                 log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
             else:
@@ -17917,13 +18024,11 @@ def _qc_enrich_calibrated_in_place(
     }
 
 
-def preprocess_calibrated_to_processed(
+def qc_enrich_calibrated_lights_in_place(
     *,
     calibrated_root: Path,
-    processed_root: Path,
     reject_fwhm_px: float | None = None,
     reject_elongation: float | None = None,
-    use_gpu_if_available: bool = False,
     progress_cb: Callable[..., None] | None = None,
     inject_pointing_ra_deg: float | None = None,
     inject_pointing_dec_deg: float | None = None,
@@ -17934,25 +18039,20 @@ def preprocess_calibrated_to_processed(
     draft_id: int | None = None,
     app_config: AppConfig | None = None,
 ) -> pd.DataFrame:
-    """Pre-process calibrated lights into /processed with proc_ prefix.
+    """In-place QC enrichment on ``calibrated/lights`` (no ``processed/`` copy tree).
 
-    Steps:
-    - Optional order-N polynomial sky-surface subtract (``preprocess_sky_surface_order``; default 2)
-    - QC metrics: FWHM + elongation (best-effort)
+    Mutates calibrated FITS in place:
+    - optional order-N polynomial sky-surface subtract (``preprocess_sky_surface_order``)
+    - FWHM / elongation QC headers (``VY_FWHM``, ``VY_ELONG``, ``VYVARPR``, ...)
+    - INV-CAL-02 stage stamp when pixels change (``VY_CALSTAGE``, ``VY_CALDATASUM``)
 
-    Optional ``inject_pointing_*``: write ``VYTARGRA`` / ``VYTARGDE`` (deg ICRS) into saved FITS headers
-    for plate-solve hints when the frame has no celestial WCS yet (see ``vyvar_platesolver.pointing_hint_from_header``).
+    Optional ``inject_pointing_*``: write ``VYTARGRA`` / ``VYTARGDE`` (deg ICRS) for plate-solve hints.
 
-    Parallelism: auto worker count from host CPU (capped) or non-empty env
-    ``VYVAR_PARALLEL_WORKERS`` / legacy env (pozri :func:`_vyvar_parallel_worker_count`). ``>1`` defaults to ``ProcessPoolExecutor`` (true CPU
-    parallelism); set env ``VYVAR_PARALLEL_BACKEND=thread`` to use threads. Peak RAM scales roughly with
-    the number of workers times per-frame working set.
+    Parallelism: auto worker count from host CPU (capped) or env
+    ``VYVAR_PARALLEL_WORKERS`` / legacy env (see :func:`_vyvar_parallel_worker_count`).
     """
-    import numpy as np
-
     cfg = app_config or AppConfig()
     calibrated_root = Path(calibrated_root)
-    processed_root = Path(processed_root)
 
     if db is not None and draft_id is not None:
         _ra_eff, _de_eff = resolve_preprocess_target_coordinates(
@@ -17980,6 +18080,8 @@ def preprocess_calibrated_to_processed(
         only_paths=only_paths,
         prefilter_rejected=prefilter_rejected,
         progress_cb=progress_cb,
+        draft_id=draft_id,
+        db=db,
     )
     _skip_n = int(_out.get("sky_surface_skip_count") or 0)
     if _skip_n:
@@ -17994,6 +18096,44 @@ def preprocess_calibrated_to_processed(
         "sky_surface_force_reapply": bool(_out.get("sky_surface_force_reapply")),
     }
     return df
+
+
+def preprocess_calibrated_to_processed(
+    *,
+    calibrated_root: Path,
+    processed_root: Path,
+    reject_fwhm_px: float | None = None,
+    reject_elongation: float | None = None,
+    use_gpu_if_available: bool = False,
+    progress_cb: Callable[..., None] | None = None,
+    inject_pointing_ra_deg: float | None = None,
+    inject_pointing_dec_deg: float | None = None,
+    inject_pointing_only_if_missing: bool = True,
+    only_paths: Sequence[Path | str] | None = None,
+    prefilter_rejected: Mapping[Path | str, str] | None = None,
+    db: VyvarDatabase | None = None,
+    draft_id: int | None = None,
+    app_config: AppConfig | None = None,
+) -> pd.DataFrame:
+    """Deprecated alias for :func:`qc_enrich_calibrated_lights_in_place`.
+
+    ``processed_root`` and ``use_gpu_if_available`` are ignored (legacy API).
+    """
+    _ = processed_root, use_gpu_if_available
+    return qc_enrich_calibrated_lights_in_place(
+        calibrated_root=calibrated_root,
+        reject_fwhm_px=reject_fwhm_px,
+        reject_elongation=reject_elongation,
+        progress_cb=progress_cb,
+        inject_pointing_ra_deg=inject_pointing_ra_deg,
+        inject_pointing_dec_deg=inject_pointing_dec_deg,
+        inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+        only_paths=only_paths,
+        prefilter_rejected=prefilter_rejected,
+        db=db,
+        draft_id=draft_id,
+        app_config=app_config,
+    )
 
 
 def preprocess_sky_summary_from_df(df: pd.DataFrame) -> dict[str, Any]:

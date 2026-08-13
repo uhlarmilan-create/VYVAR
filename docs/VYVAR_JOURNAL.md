@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-13 -- INV-CAL-02 implemented (Option A)
+
+**Authorization.** Milan authorized Option A with amendments 0.1-0.3.
+
+**Delivered.** `src_py/cal_stage.py` (resolver, DATASUM stamp, verify); write-path stamps in
+calibrate + in-place preprocess; `INV-CAL-02` wired in `invariants_runtime`; compare gates
+refuse indeterminate stage; force reapply -> `SKYSF_N_R{pass}`; rename
+`qc_enrich_calibrated_lights_in_place`. Anchors 435/509/510 pixels unchanged (sha256).
+Report: `dev/results/CURSOR_RESULT_inv_cal_02_impl.md`.
+
+---
+
 ## 2026-08-13 -- INV-CAL-01 P2 corrected and pushed
 
 **Finding.** Original P2 compared pure `(L-D)/F` recal to archives that had in-place

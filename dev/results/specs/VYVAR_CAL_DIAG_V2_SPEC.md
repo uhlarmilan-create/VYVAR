@@ -1,4 +1,4 @@
-# VYVAR ù CAL-DIAG v2 / INV-CAL-01: Derived calibration convention gate (spec)
+# VYVAR - CAL-DIAG v2 / INV-CAL-01: Derived calibration convention gate (spec)
 
 Status: **IMPLEMENTED (2026-08-13, Milan authorized; not pushed).** Decision 2 amendment: split `INDETERMINATE` into `INDETERMINATE_NEGLIGIBLE` and `INDETERMINATE_UNMEASURED`.
 Date: 2026-08-13.
@@ -15,8 +15,8 @@ any binning and calibrate lights at any (higher or equal) binning. VYVAR must
 
 - v1 **tested** SUM against a 2% median tolerance and optionally auto-corrected to MEAN.
 - v2 **derives** the per-read pedestal from master-dark structure, **predicts** the
-  convention-dependent sky separation `(bfù?1)ùP`, and **resolves** SUM vs MEAN from
-  lightùdark median scaling ù the same move SAT-DIAG made when it derived the ceiling
+  convention-dependent sky separation `(bf-?1)-P`, and **resolves** SUM vs MEAN from
+  light-dark median scaling - the same move SAT-DIAG made when it derived the ceiling
   instead of trusting `SATURATE_ADU`.
 - **No silent auto-correction.** Mismatch ? ABORT with full numeric report.
 - **Zero configuration keys.** Constants in this spec only.
@@ -26,9 +26,9 @@ any binning and calibrate lights at any (higher or equal) binning. VYVAR must
 
 | Quantity | Value |
 |----------|-------|
-| Pedestal P (bin1 pixel, intercept) | **24.548 ù 0.011 ADU** |
+| Pedestal P (bin1 pixel, intercept) | **24.548 - 0.011 ADU** |
 | Block factor bf (bin1 master ? bin2 light) | **2** |
-| Predicted convention separation `(bfù?1)ùP` | **73.6 ù 0.03 ADU** |
+| Predicted convention separation `(bf-?1)-P` | **73.6 - 0.03 ADU** |
 | Observed `M(D_SUM) ? M(D_MEAN)` | **73.65 ADU** |
 | Post-SUM-subtraction sky `M(L?D_SUM)` | **2399.53 ADU** |
 | Simulated sky if MEAN dark used | **2471.5 ADU** (+72 ADU) |
@@ -47,11 +47,11 @@ it does **not** verify that SUM was the right operator.
 
 For **CMOS software binning** (digitize each native pixel, then combine in software), block
 SUM of a bin1 master reproduces driver-side SUM binning. For **CCD on-chip binning** (one
-ADC conversion per superpixel), block SUM of a bin1 master carries `(bfù?1)` extra
-pedestals per superpixel ù a **~3% sky error** at Milan's pedestal, invisible to
+ADC conversion per superpixel), block SUM of a bin1 master carries `(bf-?1)` extra
+pedestals per superpixel - a **~3% sky error** at Milan's pedestal, invisible to
 `INV-FLUX-01`.
 
-CAL-DIAG v2 derives the pedestal **P** from master-dark data, predicts the SUMùMEAN
+CAL-DIAG v2 derives the pedestal **P** from master-dark data, predicts the SUM-MEAN
 separation, resolves which convention the light median supports, and runs an independent
 post-subtraction sky sanity check (Check B, retained from v1).
 
@@ -61,22 +61,22 @@ post-subtraction sky sanity check (Check B, retained from v1).
 
 ### In scope
 
-- Check **P** ù pedestal derivation from available master dark(s).
-- Check **C** ù convention resolution (SUM vs MEAN resample) from derived pedestal + light/dark medians.
-- Check **B** ù post-subtraction sky sanity (negative sky, sky vs saturation).
+- Check **P** - pedestal derivation from available master dark(s).
+- Check **C** - convention resolution (SUM vs MEAN resample) from derived pedestal + light/dark medians.
+- Check **B** - post-subtraction sky sanity (negative sky, sky vs saturation).
 - Provenance: `VY_DKRSMP`, `VY_DKRSMP_SRC`, `VY_CDSTAT`, `VY_CDSKY`, draft `cal_diag.json` block.
-- Fail-closed per `obs_group` on hard failure (same isolation as v1.1 ù5.6).
+- Fail-closed per `obs_group` on hard failure (same isolation as v1.1 -5.6).
 - Once per key `(obs_group_key, dark_path, light_binning)` on deterministic representative frame.
 
 ### Out of scope
 
-- Flat-norm sanity at calibrate (v1 ù2 deferred item).
+- Flat-norm sanity at calibrate (v1 -2 deferred item).
 - Master pairing correctness (exposure, temperature, gain match) beyond Check B symptoms.
 - RN exponent / `param_resolver` semantics (closed in DECISIONS 2026-07-07).
-- Upsampling master to finer binning (`bf < 1`) ù already `MasterResamplingError`.
-- CCD hardware-binning **correction** ù gate detects inconsistency and ABORTs; user must supply matched binning or a bin2 master (no linear fix exists).
+- Upsampling master to finer binning (`bf < 1`) - already `MasterResamplingError`.
+- CCD hardware-binning **correction** - gate detects inconsistency and ABORTs; user must supply matched binning or a bin2 master (no linear fix exists).
 - Implementation code, UI design, PARAMS registry entries (follow-on task).
-- Pedestal recording for noise model / SAT-DIAG (separate finding ù11 ù spec references only).
+- Pedestal recording for noise model / SAT-DIAG (separate finding -11 - spec references only).
 
 ---
 
@@ -85,7 +85,7 @@ post-subtraction sky sanity check (Check B, retained from v1).
 Per bin1 master pixel at exposure time t (seconds):
 
 ```
-v(t) = P + kùt + ?
+v(t) = P + k-t + ?
 ```
 
 | Symbol | Meaning |
@@ -94,17 +94,17 @@ v(t) = P + kùt + ?
 | **k** | Dark-current rate (ADU/s per bin1 pixel) |
 | **?** | Noise / structure (averaged down in master stack) |
 
-Resample to light binning with integer block factor **bf** (square binning: N = bfù pixels per superpixel):
+Resample to light binning with integer block factor **bf** (square binning: N = bf- pixels per superpixel):
 
 | Operator | Superpixel dark (pedestal-dominated) |
 |----------|--------------------------------------|
-| **SUM** | `D_SUM ? bfùù(P + kùt)` |
-| **MEAN** | `D_MEAN ? P + kùt` |
+| **SUM** | `D_SUM ? bf--(P + k-t)` |
+| **MEAN** | `D_MEAN ? P + k-t` |
 
 **Convention separation (master-only, exact under uniform P,k across block):**
 
 ```
-?_dark = M(D_SUM) ? M(D_MEAN) = (bfù ? 1)ù(P + kùt)
+?_dark = M(D_SUM) ? M(D_MEAN) = (bf- ? 1)-(P + k-t)
 ```
 
 For representative light L with the same crop geometry as calibration:
@@ -113,24 +113,24 @@ For representative light L with the same crop geometry as calibration:
 M(L ? D_SUM) ? M(L ? D_MEAN) = M(D_MEAN) ? M(D_SUM) = ??_dark
 ```
 
-The post-subtraction sky difference is **independent of L** ù convention discrimination
+The post-subtraction sky difference is **independent of L** - convention discrimination
 must use **light median scaling**, not post-sub sky alone.
 
 **Light median scaling (CMOS digital binning):**
 
 | Driver convention | Typical `M(L)` vs `M(D_MEAN)` |
 |-------------------|-------------------------------|
-| **SUM** (add 4 digitized pixels) | `M(L) / M(D_MEAN) ? bfù ù (P+kùt+s) / (P+kùt)` |
-| **MEAN** (average 4 pixels) | `M(L) / M(D_MEAN) ? (P+kùt+s) / (P+kùt)` |
+| **SUM** (add 4 digitized pixels) | `M(L) / M(D_MEAN) ? bf- - (P+k-t+s) / (P+k-t)` |
+| **MEAN** (average 4 pixels) | `M(L) / M(D_MEAN) ? (P+k-t+s) / (P+k-t)` |
 
-When sky+star contribution to the median satisfies `s* = M(L) ? bfùùM(D_MEAN)` (SUM case) or
+When sky+star contribution to the median satisfies `s* = M(L) ? bf--M(D_MEAN)` (SUM case) or
 `s* = M(L) ? M(D_MEAN)` (MEAN case), the discriminant reduces to comparing `M(L)/M(D_MEAN)`
-against **`bfù`** (SUM) vs **`? 1`** (MEAN), with ambiguity when `(bfù?1)ùP` is small.
+against **`bf-`** (SUM) vs **`? 1`** (MEAN), with ambiguity when `(bf-?1)-P` is small.
 
 **CCD on-chip binning:** true bin2 superpixel carries **one** pedestal; block SUM of bin1
-master carries **bfù** pedestals. Linear SUM resample cannot represent this; Check C fails
+master carries **bf-** pedestals. Linear SUM resample cannot represent this; Check C fails
 with `CCD_LINEAR_INCONSISTENT` when SUM-subtracted sky fails Check B but MEAN-subtracted
-sky passes (ù7.4).
+sky passes (-7.4).
 
 ---
 
@@ -138,15 +138,15 @@ sky passes (ù7.4).
 
 All medians use the same crop/match geometry as calibration (`_match_and_crop_pair`).
 
-Constants (implementation ù **not user config**):
+Constants (implementation - **not user config**):
 
 | Constant | Default | Role |
 |----------|---------|------|
 | `CAL_PED_INTERCEPT_MIN_EXPTIMES` | 2 | Minimum distinct master exptimes for intercept pedestal |
 | `CAL_PED_BOOTSTRAP_N` | 200 | Bootstrap draws for intercept ? |
 | `CAL_PED_SUBSAMPLE_N` | 100000 | Pixels for exposure fit |
-| `CAL_PED_CONSISTENCY_REL` | 0.05 | Relative tolerance: `?_dark` vs `(bfù?1)ùP` |
-| `CAL_CONV_SUM_SCALE` | 0.85 | SUM: require `M(L)/M(D_MEAN) ? bfùù(1??)` |
+| `CAL_PED_CONSISTENCY_REL` | 0.05 | Relative tolerance: `?_dark` vs `(bf-?1)-P` |
+| `CAL_CONV_SUM_SCALE` | 0.85 | SUM: require `M(L)/M(D_MEAN) ? bf--(1??)` |
 | `CAL_CONV_MEAN_SCALE` | 1.15 | MEAN: require `M(L)/M(D_MEAN) ? ?` |
 | `CAL_CONV_AMBIGUITY_BAND` | shared | Gray zone between scales ? INDETERMINATE |
 | `CAL_SKY_HARD_SIGMA` | 5.0 | Check B hard-fail floor (MAD-based) |
@@ -155,54 +155,54 @@ Constants (implementation ù **not user config**):
 
 Where `? = CAL_PED_CONSISTENCY_REL` (5% band on ratio tests unless noted).
 
-### 4.1 Check P ù pedestal derivation
+### 4.1 Check P - pedestal derivation
 
-**Inputs:** all scoped master darks for `(equipment, temperatureù?T, gain, filter)` usable
-for the obs_group ù at minimum the resolved `dark_path` master; prefer every library dark
+**Inputs:** all scoped master darks for `(equipment, temperature-?T, gain, filter)` usable
+for the obs_group - at minimum the resolved `dark_path` master; prefer every library dark
 at the same temperature and gain with distinct `EXPTIME`.
 
-**Method A ù intercept (preferred, ?2 exptimes):**
+**Method A - intercept (preferred, ?2 exptimes):**
 
 1. For each master dark at exposure `t_i`, sample `CAL_PED_SUBSAMPLE_N` pixels (deterministic seed from dark path).
-2. Per-pixel fit: `v = P + kùt` across available `t_i`.
+2. Per-pixel fit: `v = P + k-t` across available `t_i`.
 3. **P** = intercept; **?_P** = bootstrap standard deviation (`CAL_PED_BOOTSTRAP_N` draws).
 4. Record `k`, `?_k`.
 
-**Method B ù single-exposure fallback (exactly one master exptime):**
+**Method B - single-exposure fallback (exactly one master exptime):**
 
 1. If dark-current slope is negligible vs P: **`P := M(dark_bin1)`**, `?_P := ?_pixel / ?N_stack` (conservative; stack has NCOMBINE frames).
-2. **`k` unknown** ù set `k := 0`, `k_status := UNKNOWN`.
+2. **`k` unknown** - set `k := 0`, `k_status := UNKNOWN`.
 3. Pedestal provenance: `SINGLE_MASTER_MEDIAN`.
 
 **Negligible dark-current criterion (enables Method B validation):**
 
 ```
-|k| ù t_max < 0.05 ù P
+|k| - t_max < 0.05 - P
 ```
 
-If two exptimes exist but `|M(dark,t2) ? M(dark,t1)| / |t2?t1| ù t_max < 0.05ùP`, treat as
-pedestal-dominated (QHY294MM at ?10 ùC: measured **k = 0.00107 ADU/s**, **0.06 ADU over 60 s**
-vs **P ? 24.5 ADU** ù qualifies).
+If two exptimes exist but `|M(dark,t2) ? M(dark,t1)| / |t2?t1| - t_max < 0.05-P`, treat as
+pedestal-dominated (QHY294MM at ?10 -C: measured **k = 0.00107 ADU/s**, **0.06 ADU over 60 s**
+vs **P ? 24.5 ADU** - qualifies).
 
-**Method C ù cannot derive:**
+**Method C - cannot derive:**
 
 If no master dark, or master has non-finite median, Check P skipped (PASSTHROUGH path).
 
 **Pedestal consistency (one-sided, when bf > 1):**
 
 Measure `?_dark = M(D_SUM) ? M(D_MEAN)` from resampled masters at the light exposure time
-(use `t_light` for kùt correction when k known).
+(use `t_light` for k-t correction when k known).
 
-**Pass:** `|?_dark ? (bfù?1)ù(P + kùt_light)| ? CAL_PED_CONSISTENCY_REL ù max(?_dark, 1 ADU)`.
+**Pass:** `|?_dark ? (bf-?1)-(P + k-t_light)| ? CAL_PED_CONSISTENCY_REL - max(?_dark, 1 ADU)`.
 
-**Fail:** `PEDESTAL_INCONSISTENT` ù WARN, proceed with measured `?_dark` but do not trust
+**Fail:** `PEDESTAL_INCONSISTENT` - WARN, proceed with measured `?_dark` but do not trust
 derived P for prediction; convention check uses measured separation only.
 
 **What Check P falsifies:** internal inconsistency between intercept pedestal and observed
-SUMùMEAN dark separation. **Cannot falsify:** whether P equals physical readout offset
+SUM-MEAN dark separation. **Cannot falsify:** whether P equals physical readout offset
 (no bin2 reference dark required).
 
-### 4.2 Check C ù convention resolution
+### 4.2 Check C - convention resolution
 
 **Precondition:** `bf > 1` and dark applied. When `bf == 1`, skip Check C; convention `NONE`.
 
@@ -216,42 +216,42 @@ s_SUM = M(L ? D_SUM)
 s_MEAN = M(L ? D_MEAN)   (counterfactual; not applied unless MEAN wins)
 ```
 
-**Predictions (pedestal-dominated, kùt ? P):**
+**Predictions (pedestal-dominated, k-t ? P):**
 
 ```
-?_pred = (bfù ? 1) ù P
+?_pred = (bf- ? 1) - P
 s_SUM_expected = s_MEAN_expected ? ?_pred     (identities; s differs by ??_pred)
 ```
 
 Uncertainties (reporting, not gating unless noted):
 
 ```
-?_?_pred ? (bfù ? 1) ù ?_P
-?_s ? 1.4826 ù MAD(L ? D_applied) / ?N_eff     (N_eff ? n_pixels; typically ? 1 ADU)
+?_?_pred ? (bf- ? 1) - ?_P
+?_s ? 1.4826 - MAD(L ? D_applied) / ?N_eff     (N_eff ? n_pixels; typically ? 1 ADU)
 ```
 
 **Decision table:**
 
 | Condition | Resolved convention | `VY_DKRSMP_SRC` |
 |-----------|---------------------|-----------------|
-| `R ? bfù ù (1 ? ?)` AND `Q ? 1` | **SUM** | **DERIVED** |
-| `R ? CAL_CONV_MEAN_SCALE` AND `Q < bfùù(1??)` | **MEAN** | **DERIVED** |
-| `R` in gray band AND `?_dark < CAL_RESOLV_LIMIT` (ù4.2.1) | **INDETERMINATE** | **INDETERMINATE** |
-| Gray band but `?_dark ? CAL_RESOLV_LIMIT` | **CONFLICT** | ù (ABORT) |
-| SUM derived but `s_SUM` fails Check B; MEAN counterfactual passes | **CCD_LINEAR_INCONSISTENT** | ù (ABORT, ù7.4) |
+| `R ? bf- - (1 ? ?)` AND `Q ? 1` | **SUM** | **DERIVED** |
+| `R ? CAL_CONV_MEAN_SCALE` AND `Q < bf--(1??)` | **MEAN** | **DERIVED** |
+| `R` in gray band AND `?_dark < CAL_RESOLV_LIMIT` (-4.2.1) | **INDETERMINATE** | **INDETERMINATE** |
+| Gray band but `?_dark ? CAL_RESOLV_LIMIT` | **CONFLICT** | - (ABORT) |
+| SUM derived but `s_SUM` fails Check B; MEAN counterfactual passes | **CCD_LINEAR_INCONSISTENT** | - (ABORT, -7.4) |
 
 Apply dark using resolved convention. On **INDETERMINATE**, apply **SUM** (current pipeline
-default), emit **WARN**, `VY_DKRSMP_SRC=INDETERMINATE` ù do **not** auto-switch to MEAN.
+default), emit **WARN**, `VY_DKRSMP_SRC=INDETERMINATE` - do **not** auto-switch to MEAN.
 
 **Physical bound (retained from v1, one-sided):**
 
 Under matched convention, dark content ? light content:
 
 ```
-M(D_applied) ? M(L) ù (1 + ?)
+M(D_applied) ? M(L) - (1 + ?)
 ```
 
-Violation with `bf == 1` ? `WRONG_MASTER` (hot dark, pairing error) ù ABORT.
+Violation with `bf == 1` ? `WRONG_MASTER` (hot dark, pairing error) - ABORT.
 
 #### 4.2.1 Resolvability limit (numeric)
 
@@ -259,25 +259,25 @@ Conventions become **indistinguishable** when the predicted separation is smalle
 combined pedestal uncertainty:
 
 ```
-CAL_RESOLV_LIMIT = max( 3 ù ?_P ù (bfù ? 1),  1 ADU )
+CAL_RESOLV_LIMIT = max( 3 - ?_P - (bf- ? 1),  1 ADU )
 ```
 
 **QHY294MM reference (bf = 2, ?_P = 0.011 ADU):**
 
 ```
-CAL_RESOLV_LIMIT = max(3 ù 0.011 ù 3, 1) = max(0.10, 1) = 1 ADU
+CAL_RESOLV_LIMIT = max(3 - 0.011 - 3, 1) = max(0.10, 1) = 1 ADU
 ```
 
-Measured `?_dark = 73.65 ADU` ? **730ù above** resolvability floor.
+Measured `?_dark = 73.65 ADU` ? **730- above** resolvability floor.
 
 **Pedestal below which SUM and MEAN are indistinguishable (bf = 2):**
 
 ```
-P_indist = CAL_RESOLV_LIMIT / (bfù ? 1) = 1 / 3 ? 0.33 ADU
+P_indist = CAL_RESOLV_LIMIT / (bf- ? 1) = 1 / 3 ? 0.33 ADU
 ```
 
 Any camera with **P ? 1 ADU** and **bf = 2** is resolvable. At **bf = 2**, Milan's
-**P = 24.5 ADU** exceeds the threshold by **~74ù**.
+**P = 24.5 ADU** exceeds the threshold by **~74-**.
 
 **Frame-to-frame sky variation (~192 ADU std across 20 BO CVn frames) is not the test noise.**
 Check C uses **one frame median**; the discriminant `R` is stable to ?1 ADU on a single
@@ -287,10 +287,10 @@ frame. Temporal sky variation affects Check B repeatability, not Check C on a re
 
 | Claim | Falsified by |
 |-------|--------------|
-| "SUM resample matches this light" | `R < bfùù(1??)` or `M(D_SUM) > M(L)` |
+| "SUM resample matches this light" | `R < bf--(1??)` or `M(D_SUM) > M(L)` |
 | "MEAN resample matches this light" | `R > CAL_CONV_MEAN_SCALE` when MEAN selected |
 | "Pedestal model predicts observed ?_dark" | Check P consistency failure (WARN) |
-| "Linear SUM resample is valid for this sensor class" | CCD pattern (ù7.4) |
+| "Linear SUM resample is valid for this sensor class" | CCD pattern (-7.4) |
 
 **What Check C cannot falsify:**
 
@@ -298,25 +298,25 @@ frame. Temporal sky variation affects Check B repeatability, not Check C on a re
 - Correct master **temperature / gain / age** pairing (Check B may catch symptoms).
 - Non-linear spatial structure that scales neither as SUM nor MEAN.
 
-### 4.3 Check B ù post-subtraction sky sanity (unchanged merit)
+### 4.3 Check B - post-subtraction sky sanity (unchanged merit)
 
 After applying the **resolved** convention (not counterfactual):
 
 ```
 s = M(L ? D_applied)
-?_r = CAL_MAD_SIGMA ù MAD(L ? D_applied)
+?_r = CAL_MAD_SIGMA - MAD(L ? D_applied)
 ```
 
 | Condition | Status | Action |
 |-----------|--------|--------|
-| `s < ?CAL_SKY_HARD_SIGMA ù ?_r` | **ABORT** | Fail-closed obs_group |
-| `?CAL_SKY_HARD_SIGMAù?_r ? s < 0` | **WARN** | Continue |
-| `s > CAL_SKY_SAT_WARN_FRAC ù saturation_adu` | **WARN** | Continue (skip if saturation unresolvable) |
+| `s < ?CAL_SKY_HARD_SIGMA - ?_r` | **ABORT** | Fail-closed obs_group |
+| `?CAL_SKY_HARD_SIGMA-?_r ? s < 0` | **WARN** | Continue |
+| `s > CAL_SKY_SAT_WARN_FRAC - saturation_adu` | **WARN** | Continue (skip if saturation unresolvable) |
 | else | **PASS** | Continue |
 
 **One-sided:** detects implausibly **negative** sky beyond noise (hard fail) and
 implausibly **high** sky (warn). **Cannot detect** sky that is wrong but positive and
-within band (e.g. uniform +74 ADU offset would pass ù Check C must catch convention errors).
+within band (e.g. uniform +74 ADU offset would pass - Check C must catch convention errors).
 
 ---
 
@@ -328,9 +328,9 @@ On **ABORT**, emit one ERROR per key:
 
 ```
 INV-CAL-01 ABORT [obs_group]: convention=CONFLICT
-  P=24.548ù0.011 ADU  k=0.00107 ADU/s  bf=2
+  P=24.548-0.011 ADU  k=0.00107 ADU/s  bf=2
   ?_dark(meas)=73.65  ?_pred=73.64 ADU
-  R=M(L)/M(D_MEAN)=101.6  (SUM expects ?bfùù0.85=3.4)
+  R=M(L)/M(D_MEAN)=101.6  (SUM expects ?bf--0.85=3.4)
   s_SUM=2399.53  s_MEAN(counterfactual)=2471.5
   Check B: s=... ?_r=...
   Action: use matched binning, acquire bin2 master, or verify driver binning mode
@@ -351,7 +351,7 @@ User decides. **No MEAN auto-switch.**
 
 **DERIVED** = Check C resolved with confidence (SUM or MEAN).
 **INDETERMINATE** = gray band; SUM applied with WARN.
-**ASSUMED_SUM** = gate skipped (disabled bug path ù must not occur when INV-CAL-01 wired).
+**ASSUMED_SUM** = gate skipped (disabled bug path - must not occur when INV-CAL-01 wired).
 
 Draft `cal_diag.json` additive block (same keys as v1; extended fields above).
 
@@ -365,7 +365,7 @@ No `cal_diag_*` registry entries. Removal requires invariant deprecation per
 | Field | Value |
 |-------|-------|
 | **ID** | `INV-CAL-01` |
-| **Contract** | When master dark is resampled to light binning (`bf > 1`), calibration convention (block SUM vs MEAN) is **derived** from master-dark pedestal and lightùdark median scaling; post-subtraction sky passes Check B. Provenance `VY_DKRSMP` + `VY_DKRSMP_SRC` recorded. Fail-closed per obs_group on ABORT. |
+| **Contract** | When master dark is resampled to light binning (`bf > 1`), calibration convention (block SUM vs MEAN) is **derived** from master-dark pedestal and light-dark median scaling; post-subtraction sky passes Check B. Provenance `VY_DKRSMP` + `VY_DKRSMP_SRC` recorded. Fail-closed per obs_group on ABORT. |
 | **Enforced** | both (`cal_diag.py` + `invariants_runtime`) |
 | **Policy** | FAIL (ABORT path) |
 | **Evidence** | CAL-DIAG v2 spec 2026-08-13; supersedes v1 removed `967f835`; physics `CURSOR_RESULT_dark_binning_physics.md` |
@@ -374,7 +374,7 @@ No `cal_diag_*` registry entries. Removal requires invariant deprecation per
 
 ## 6. Coverage and cadence
 
-Same path coverage as v1.1 ù5.1:
+Same path coverage as v1.1 -5.1:
 
 - `calibrate_lights_to_calibrated` sequential loop
 - RAM QC calibration
@@ -383,7 +383,7 @@ Same path coverage as v1.1 ù5.1:
 Once per `(obs_group_key, dark_path, light_binning)`; representative frame = first light
 in sorted order within obs_group.
 
-Shared dark cache keyed by convention (SUM vs MEAN) ù no per-frame re-decision.
+Shared dark cache keyed by convention (SUM vs MEAN) - no per-frame re-decision.
 
 ---
 
@@ -391,17 +391,17 @@ Shared dark cache keyed by convention (SUM vs MEAN) ù no per-frame re-decision.
 
 | Case | bf | Check P | Check C outcome | Check B | Result |
 |------|-----|---------|-----------------|---------|--------|
-| **CMOS SUM** (QHY294MM, verified) | >1 | P?24.5 from intercept or single-master | `R?102 ? 4ù0.85` ? **SUM, DERIVED** | s?2399 PASS | **PASS** (Milan data) |
+| **CMOS SUM** (QHY294MM, verified) | >1 | P?24.5 from intercept or single-master | `R?102 ? 4-0.85` ? **SUM, DERIVED** | s?2399 PASS | **PASS** (Milan data) |
 | **CMOS MEAN** driver | >1 | P derived | `R?1`, MEAN branch ? **MEAN, DERIVED** | s_MEAN PASS | **PASS** with MEAN dark |
-| **CMOS MEAN light, SUM dark applied** (misconfig) | >1 | P derived | `R` high but production used SUM wronglyù if user forced SUM while MEAN lit: `s_SUM` low by ?_pred | **ABORT** Check B or CONFLICT on `R` | **ABORT** |
-| **CCD on-chip bin** (one ADC/superpixel) | >1 | P derived; `?_dark` matches | SUM applied: **s_SUM fails** B; s_MEAN counterfactual **PASS** | split | **ABORT** `CCD_LINEAR_INCONSISTENT` ù no linear fix |
+| **CMOS MEAN light, SUM dark applied** (misconfig) | >1 | P derived | `R` high but production used SUM wrongly- if user forced SUM while MEAN lit: `s_SUM` low by ?_pred | **ABORT** Check B or CONFLICT on `R` | **ABORT** |
+| **CCD on-chip bin** (one ADC/superpixel) | >1 | P derived; `?_dark` matches | SUM applied: **s_SUM fails** B; s_MEAN counterfactual **PASS** | split | **ABORT** `CCD_LINEAR_INCONSISTENT` - no linear fix |
 | **Matched binning** (bin2 master, bin2 light) | 1 | P optional | **Skipped** (`VY_DKRSMP=NONE`) | s sanity only | Check B only |
 | **Single master exptime** (common) | >1 | Method B: `P=M(dark_bin1)`; k=0 if pedestal-dominated | Uses measured `?_dark`; if `P>0.33 ADU` resolvable | B | **DERIVED** or **INDETERMINATE** if P tiny |
 | **Single master, warm sensor** (k confounded) | >1 | k unknown; Check P consistency weakened | Wider gray band; may ? **INDETERMINATE** | B | **WARN**, SUM default |
-| **No dark** | ù | Skip | **PASSTHROUGH** | Skip | No cal_diag dark checks |
+| **No dark** | - | Skip | **PASSTHROUGH** | Skip | No cal_diag dark checks |
 | **P below resolvability** (`P < 0.33 ADU` at bf=2) | >1 | P ? 0 | `?_dark < 1 ADU` ? **INDETERMINATE** | B | **WARN**, SUM default; honest "cannot distinguish" |
 | **Wrong camera/gain/readmode master** | >1 | P wrong | `R` or Check P inconsistent | likely **ABORT** B | **ABORT** (wrong master) |
-| **bf>1 but INDETERMINATE + wrong guess** | >1 | ù | SUM assumed | subtle bias | **Risk bounded**: only when `P < 0.33 ADU`; at Milan P=24.5 not exposed |
+| **bf>1 but INDETERMINATE + wrong guess** | >1 | - | SUM assumed | subtle bias | **Risk bounded**: only when `P < 0.33 ADU`; at Milan P=24.5 not exposed |
 
 **Defect criterion:** any case yielding **DERIVED** when truth is MEAN (or vice versa) without
 INDETERMINATE/WARN. Review MEAN-row and CCD-row in implementation tests.
@@ -423,11 +423,11 @@ On WARN (INDETERMINATE, slight negative sky, high sky, PEDESTAL_INCONSISTENT): c
 
 ## 9. What this gate does **not** cover (explicit)
 
-Mirror SAT-DIAG ù2 one-sided limits:
+Mirror SAT-DIAG -2 one-sided limits:
 
-- **Cannot refute** a convention choice when `(bfù?1)ùP` is below resolvability (reports INDETERMINATE).
+- **Cannot refute** a convention choice when `(bf-?1)-P` is below resolvability (reports INDETERMINATE).
 - **Cannot verify** absolute pedestal matches vendor OFFSET keyword (header is uninformative on QHY294MM).
-- **Cannot fix** CCD hardware binning ù only detects linear SUM/MEAN inconsistency.
+- **Cannot fix** CCD hardware binning - only detects linear SUM/MEAN inconsistency.
 - **Cannot verify** flat-field correctness (INV-FLUX-02 only).
 - **Cannot verify** master temporal validity or temperature match.
 - **Does not** require bin2 master dark on disk (derives from structure; direct bin2 comparison remains optional validation).
@@ -438,22 +438,22 @@ Mirror SAT-DIAG ù2 one-sided limits:
 
 **What this catches**
 
-- Calibrating 2ù2 lights with a 1ù1 master when the driver **averages** instead of **sums**
-  ù the failure mode CAL-DIAG v1 was built for, now with a **measured pedestal** instead of a 2% guess.
+- Calibrating 2-2 lights with a 1-1 master when the driver **averages** instead of **sums**
+  - the failure mode CAL-DIAG v1 was built for, now with a **measured pedestal** instead of a 2% guess.
 - **CCD-style** data where block SUM of a bin1 master is **linearly wrong** (~3% sky error at your pedestal).
 - Obvious broken calibration: **negative sky**, wrong master, gross pairing errors (Check B).
 
 **What it does not catch**
 
-- Subtle errors below **~1 ADU** convention separation (pedestal indistinguishable ù rare).
+- Subtle errors below **~1 ADU** convention separation (pedestal indistinguishable - rare).
 - Wrong master that still leaves a plausible positive sky.
 - Flat errors, gain drift, RN model issues.
 
 **What it would do on your data (435/509/510)**
 
-- Derive **P ? 24.5 ADU**, predict **? ? 73.6 ADU**, measure **?_dark = 73.65 ADU** ù consistent.
+- Derive **P ? 24.5 ADU**, predict **? ? 73.6 ADU**, measure **?_dark = 73.65 ADU** - consistent.
 - See **R ? 102 ? 4** ? convention **SUM, DERIVED**.
-- Check B: **s ? 2399 ADU** ù PASS.
+- Check B: **s ? 2399 ADU** - PASS.
 - **Silent pass.** No change to calibrated outputs. Stamps `VY_DKRSMP=SUM`, `VY_DKRSMP_SRC=DERIVED`.
 
 **What changed vs v1**
@@ -463,7 +463,7 @@ Mirror SAT-DIAG ù2 one-sided limits:
 
 ---
 
-## 11. Separate findings (not INV-CAL-01 ù record elsewhere)
+## 11. Separate findings (not INV-CAL-01 - record elsewhere)
 
 Implementers must copy these to consumer docs when those tasks run.
 
@@ -471,18 +471,18 @@ Implementers must copy these to consumer docs when those tasks run.
 
 QHY294MM: `OFFSET=0.0` in FITS while data carry **~24.5 ADU/bin1 pixel** pedestal.
 **SAT-DIAG**, noise model, and any RN/sky algebra must **measure P from dark/bias data**,
-not read `OFFSET`. Record in SAT-DIAG spec ù4 (pedestal note) and `VYVAR_DECISIONS.md`.
+not read `OFFSET`. Record in SAT-DIAG spec -4 (pedestal note) and `VYVAR_DECISIONS.md`.
 
-### 11.2 Pedestal-dominated dark at ?10 ùC (finding 4.2)
+### 11.2 Pedestal-dominated dark at ?10 -C (finding 4.2)
 
 60 s and 120 s masters: **identical median 24.4706 ADU**; **k = 0.00107 ADU/s**.
-Exposure-time matching of darks buys **?0.06 ADU over 60 s** ù negligible vs sky.
+Exposure-time matching of darks buys **?0.06 ADU over 60 s** - negligible vs sky.
 Record in DECISIONS / calibration-library matching guidance; do not require multi-exptime
 dark libraries at this temperature for QHY294MM.
 
 ---
 
-## 12. Validation (Definition of Done ù implementation task)
+## 12. Validation (Definition of Done - implementation task)
 
 1. Unit tests: QHY SUM pass (draft 435 numbers), MEAN driver synthetic, CCD inconsistent synthetic,
    bf=1 Check-B-only, single-master fallback, P-indistinguishable ? INDETERMINATE, no-dark PASSTHROUGH.
@@ -520,8 +520,8 @@ See roadmap **INV-CAL-02**.
 
 ## 13. Supersedes
 
-- `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md` v1.1 ù retained as history; do not implement v1 auto-MEAN.
-- CAL-DIAG removal `967f835` ù reinstatement requires Milan authorization + this spec.
+- `dev/results/specs/VYVAR_CAL_DIAG_SPEC.md` v1.1 - retained as history; do not implement v1 auto-MEAN.
+- CAL-DIAG removal `967f835` - reinstatement requires Milan authorization + this spec.
 
 ---
 

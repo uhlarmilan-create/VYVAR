@@ -22,9 +22,11 @@ from cal_diag import (  # noqa: E402
     CAL_PED_BOOTSTRAP_N,
     CAL_PED_SUBSAMPLE_N,
     apply_calibrated_stage_for_compare,
+    calibrated_compare_refused,
     calibrated_stage_from_header,
     cal_diag_gate_for_obs_group,
 )
+from cal_stage import resolve_calibrated_stage  # noqa: E402
 from config import AppConfig  # noqa: E402
 from pipeline import (  # noqa: E402
     _match_and_crop_pair,
@@ -107,7 +109,27 @@ def validate_p2(draft: str, fresh_root: Path | None = None) -> P2Result:
         ff = fresh_root / rel
         with fits.open(af) as ha, fits.open(ff) as hf:
             ah = ha[0].header
-            stage_label, _ = calibrated_stage_from_header(ah)
+            archive_res = resolve_calibrated_stage(ah)
+            stage_label = archive_res.stage
+            if archive_res.is_indeterminate:
+                return P2Result(
+                    draft=draft,
+                    n_frames=len(files),
+                    n_identical=0,
+                    max_abs_diff=float("nan"),
+                    stage=stage_label,
+                    passed=False,
+                )
+            refuse = calibrated_compare_refused(ah)
+            if refuse:
+                return P2Result(
+                    draft=draft,
+                    n_frames=len(files),
+                    n_identical=0,
+                    max_abs_diff=float("nan"),
+                    stage=stage_label,
+                    passed=False,
+                )
             fresh_staged = apply_calibrated_stage_for_compare(
                 np.asarray(hf[0].data, dtype=np.float32),
                 ah,

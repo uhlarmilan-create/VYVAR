@@ -10,17 +10,17 @@ the archived processing chain to fresh calibration.
 
 ## 1. Name the difference
 
-### 1.1 Draft 510 frame 001 — diff character
+### 1.1 Draft 510 frame 001 - diff character
 
 | Quantity | Archive `calibrated/` | Fresh recal (current code) |
 |----------|----------------------|----------------------------|
 | Pixel `nanmedian` | **2413.169** | **2414.373** |
 | `VY_QCBG` / manifest `qc.background` | **2414.373** | **2414.373** |
-| Median diff (fresh ? arch) | — | **+1.204 ADU** |
-| Max \|diff\| | — | **123.4 ADU** |
-| Ratio med (fresh/arch) | — | **0.999454** (~0.05% scale) |
-| `mad_diff` | — | **~25 ADU** |
-| corr(diff, arch level) | — | **0.057** (weak) |
+| Median diff (fresh ? arch) | - | **+1.204 ADU** |
+| Max \|diff\| | - | **123.4 ADU** |
+| Ratio med (fresh/arch) | - | **0.999454** (~0.05% scale) |
+| `mad_diff` | - | **~25 ADU** |
+| corr(diff, arch level) | - | **0.057** (weak) |
 
 **Form:** Mostly a **slight global shift (~1.2 ADU)** plus **structured residual**
 (max 123 ADU, ~5% of sky) consistent with a **low-order multiplicative/additive
@@ -62,8 +62,8 @@ code to **<0.001 ADU**; 509/510 archive differs only after the sky step.
 | Draft | Cal FITS mtime (UTC) | Manifest `updated_utc` | Masters (manifest) |
 |-------|----------------------|------------------------|---------------------|
 | 435 | 2026-07-16 09:15 | 2026-08-11 10:47 | Same Dark_60s Bin1 + Flat_0.15s NoFilter Bin1 |
-| 509 | 2026-08-12 10:18–10:19 | 2026-08-12 10:32 | Same |
-| 510 | 2026-08-12 13:11–13:11 | 2026-08-13 15:49 | Same |
+| 509 | 2026-08-12 10:18-10:19 | 2026-08-12 10:32 | Same |
+| 510 | 2026-08-12 13:11-13:11 | 2026-08-13 15:49 | Same |
 
 CalibrationLibrary masters rebuilt **2026-08-12 ~10:10 UTC** (before 509 cal).
 Headers: `VY_MDP`, `VY_MFP`, `VY_FLATM=32975`, `VY_CFLAG=DF`.
@@ -83,7 +83,7 @@ sky QC vs frame median gap, not a second processing stage.
 ### 2.2 Code path (not a cal-formula regression)
 
 Fresh `_calibrate_one_light_*` at HEAD, at `967f835`, and at `0ab686f` (Aug 12
-10:15, 3 min before 509 disk write) all produce **2414.373** — not 2413.169.
+10:15, 3 min before 509 disk write) all produce **2414.373** - not 2413.169.
 
 The archive was **not** produced by a different `(L?D)/F` implementation. It was
 produced by **`_qc_enrich_calibrated_in_place`** inside
@@ -96,8 +96,8 @@ produced by **`_qc_enrich_calibrated_in_place`** inside
 
 Relevant commits (already on tree before Aug 12 session):
 
-- `ff08002` — restore order-2 sky-surface on mono preprocess path
-- `84174ae` — `VY_SKYSF` guard headers for in-place sky subtract
+- `ff08002` - restore order-2 sky-surface on mono preprocess path
+- `84174ae` - `VY_SKYSF` guard headers for in-place sky subtract
 
 Placed-aperture work (2026-08-13) updated proc CSVs; **did not rewrite**
 calibrated FITS (confirmed: cal mtimes unchanged, `VY_SKYSF` present from Aug 12).
@@ -133,7 +133,7 @@ machines or library versions**; they guarantee **documented processing steps and
 versioned recipes**:
 
 - **DRAGONS** (Gemini): recipe/primitive sequences, AstroData tags, configurable
-  but automated steps — reproducibility via pinned version + recipe, not
+  but automated steps - reproducibility via pinned version + recipe, not
   cross-platform bitwise identity ([IOP 2024](https://iopscience.iop.org/article/10.3847/2515-5172/ad0044)).
 - **ccdproc / NumPy**: float promotion and platform FP semantics can change
   low bits; practitioners cast to `float32` before write when stable file size
@@ -146,7 +146,7 @@ versioned recipes**:
 
 **Tolerance:** For 16-bit ADU data, sub-ADU drift from FP is common; **~1 ADU
 systematic from mismatched processing stages** (as here) is a **provenance bug**,
-not acceptable “FP noise.” Structured 100+ ADU residuals are **decidedly not**
+not acceptable 'FP noise.' Structured 100+ ADU residuals are **decidedly not**
 rounding.
 
 ---
@@ -160,7 +160,7 @@ avoid overwriting archive; full re-platesolve/align would be a separate campaign
 
 **Proxy measurements:**
 
-- `detrended_aligned` frame 001 median **2413.169** — **identical** to
+- `detrended_aligned` frame 001 median **2413.169** - **identical** to
   sky-subtracted `calibrated/` (alignment did not remove sky signature).
 - Fresh pure cal + sky ? **pixel-identical** to archive on all 150 frames.
 
@@ -170,12 +170,12 @@ Sky-surface subtract removes a smooth bias (median **?1.20 ADU** on frame 001,
 p2p **177 ADU** across field). **Local-background aperture photometry** partially
 cancels uniform components; **low-order polynomial** components do **not** fully
 cancel for comps at different field positions. A full LC re-run on pure-cal inputs
-could shift check scatter at the **few×10?? mag** level or below — not assessed
+could shift check scatter at the **fewx10?? mag** level or below - not assessed
 numerically here.
 
 ### 4.3 Photometric inertness?
 
-**Not guaranteed inert** — sky surface is spatially structured. **Likely small**
+**Not guaranteed inert** - sky surface is spatially structured. **Likely small**
 for differential photometry with local sky annuli at BO CVn field scale, but
 this was not re-quantified end-to-end.
 
@@ -189,7 +189,7 @@ Evidence:
 - `pipeline_meta.json` stages start **2026-08-12T13:14** (after cal+preprocess)
 - Archive cal carries `VY_SKYSF=True` / `VYVARPR=True`
 - `dev/results/CURSOR_RESULT_placed_aperture.md`: check scatter **0.008629**,
-  5 comps, 134 pts — photometry on existing aligned products
+  5 comps, 134 pts - photometry on existing aligned products
 
 ---
 
@@ -197,14 +197,14 @@ Evidence:
 
 ### 5.1 Reproducibility guarantee
 
-**Yes:** a draft’s **stated product** should be reproducible from raw + recorded
+**Yes:** a draft's **stated product** should be reproducible from raw + recorded
 config + **explicit processing stage**.
 
 Today missing:
 
 - **Stage stamp on calibrated products** (`VY_SKYSF` exists but P2 ignores it)
 - **Content hash** of pixel data vs manifest QC fields
-- **Separation of “calibrated” vs “preprocessed-calibrated”** trees (in-place
+- **Separation of 'calibrated' vs 'preprocessed-calibrated'** trees (in-place
   mutation blurs the contract)
 
 Field practice: versioned recipes (DRAGONS), pinned dependencies, header
@@ -228,7 +228,7 @@ provenance (LSST/IVOA obs core), product-type keywords.
 | **509/510 `calibrated/` pixels** | **Correct preprocess-modified product** for the Aug 12 run, **mislabeled** as if QC header described current pixels |
 | **Manifest QC 2414.373** | **Correct for pure cal**; **stale relative to sky-subtracted pixels** on 509/510 |
 
-Not a “wrong physics” fork — an **apples-to-oranges P2 comparison**.
+Not a 'wrong physics' fork - an **apples-to-oranges P2 comparison**.
 
 ---
 
@@ -252,16 +252,16 @@ INV-CAL-01 P2 recalibrates pure (L?D)/F only
 
 | Question | Answer |
 |----------|--------|
-| **INV-CAL-01 affected?** | **P2 predicate is wrong for preprocess-modified cal products**, not the CAL-DIAG v2 gate itself. **Do not push** until P2 compares like-with-like (apply sky or exclude `VY_SKYSF` frames). P1/P3–P8 remain meaningful. |
-| **Draft 510 validated result stands?** | **Yes** — it used the actual archived preprocess chain. P2 does not invalidate 0.008629. |
-| **Archived 509/510 calibrated FITS** | **Keep for science reproducibility** of validated photometry. Optionally **add** pure-cal copies under a distinct stage path (`calibrated_pure/`) or restore pure cal from raw for future gates — **do not silently overwrite** existing files. |
+| **INV-CAL-01 affected?** | **P2 predicate is wrong for preprocess-modified cal products**, not the CAL-DIAG v2 gate itself. **Do not push** until P2 compares like-with-like (apply sky or exclude `VY_SKYSF` frames). P1/P3-P8 remain meaningful. |
+| **Draft 510 validated result stands?** | **Yes** - it used the actual archived preprocess chain. P2 does not invalidate 0.008629. |
+| **Archived 509/510 calibrated FITS** | **Keep for science reproducibility** of validated photometry. Optionally **add** pure-cal copies under a distinct stage path (`calibrated_pure/`) or restore pure cal from raw for future gates - **do not silently overwrite** existing files. |
 
 ---
 
 ## Files / artifacts
 
-- `tmp/_repro510_a`, `tmp/_repro510_b` — double-cal outputs (bit-identical)
-- `tmp/_cal_mismatch_investigate.py` — comparison harness (prior session)
+- `tmp/_repro510_a`, `tmp/_repro510_b` - double-cal outputs (bit-identical)
+- `tmp/_cal_mismatch_investigate.py` - comparison harness (prior session)
 - Measurements: this document
 
 ## Errors

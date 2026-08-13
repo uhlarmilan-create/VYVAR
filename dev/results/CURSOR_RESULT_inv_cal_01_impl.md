@@ -86,13 +86,13 @@ Headers on new cal: `VY_DKRSMP=SUM`, `VY_DKRSMP_SRC=DERIVED`, `VY_CDSKY=2399.529
 
 ## Case B recommendation (Decision 2 amendment)
 
-**Recommend: proceed with SUM + loud WARN** (`INDETERMINATE_UNMEASURED`, `ui_error`, `VY_DKRSMP_SRC=INDETERMINATE_UNMEASURED`, `VY_CDSTAT=WARN`) — **not fail-closed**.
+**Recommend: proceed with SUM + loud WARN** (`INDETERMINATE_UNMEASURED`, `ui_error`, `VY_DKRSMP_SRC=INDETERMINATE_UNMEASURED`, `VY_CDSTAT=WARN`) - **not fail-closed**.
 
 **Reasoning:**
 
 1. Fail-closed on first run with a single master dark blocks users who have done nothing wrong; QHY294MM at -10 C is pedestal-dominated and convention is still resolved via Check C (`Delta_meas`, `R`).
 2. Case B is the **residual risk when k/P are confounded**, not "single master" alone. Single-master median P is a valid measurement when dark current is negligible (Milan data).
-3. Fail-closed is appropriate for **ABORT** cases (Check B hard fail, CONFLICT, CCD_LINEAR_INCONSISTENT) where the numeric counterfactuals are shown — already implemented.
+3. Fail-closed is appropriate for **ABORT** cases (Check B hard fail, CONFLICT, CCD_LINEAR_INCONSISTENT) where the numeric counterfactuals are shown - already implemented.
 4. Downstream consumers can key on `VY_DKRSMP_SRC=INDETERMINATE_UNMEASURED` for stricter policy if Milan wants tier-2 exclusion later.
 
 **Implemented behaviour:** SUM + WARN + loud log (matches recommendation). Milan to confirm vs fail-closed.

@@ -1039,6 +1039,7 @@ def update_manifest_file_entry(
     is_calibrated: int | None = None,
     calib_type: str | None = None,
     calib_flags: str | None = None,
+    cal_stage: dict[str, Any] | None = None,
 ) -> bool:
     """Patch one ``files[]`` entry in the manifest."""
     root = resolve_draft_dir_for_id(db, int(draft_id))
@@ -1070,6 +1071,17 @@ def update_manifest_file_entry(
         cur_insp = entry.get("inspection") if isinstance(entry.get("inspection"), dict) else {}
         cur_insp.update(inspection)
         entry["inspection"] = cur_insp
+    if cal_stage:
+        entry["cal_stage"] = str(cal_stage.get("cal_stage") or "")
+        if cal_stage.get("cal_datasum") is not None:
+            entry["cal_datasum"] = str(cal_stage["cal_datasum"])
+        if cal_stage.get("cal_stage_ut") is not None:
+            entry["cal_stage_ut"] = str(cal_stage["cal_stage_ut"])
+        if cal_stage.get("cal_pstbg") is not None:
+            try:
+                entry["cal_pstbg"] = float(cal_stage["cal_pstbg"])
+            except (TypeError, ValueError):
+                pass
     files[idx] = entry
     patch_draft_manifest(root, int(draft_id), files=files)
     return True

@@ -304,7 +304,22 @@ Replaces v1 and restores verification removed in `967f835`. Zero config keys;
 `dev/results/CURSOR_RESULT_cal_mismatch_509_510.md`,
 `dev/results/CURSOR_RESULT_inv_cal_01_p2_push.md`.
 
-## OPEN - INV-CAL-02 / calibrated product stage integrity (2026-08-13)
+## DONE - INV-CAL-02 / calibrated product stage integrity (2026-08-13)
+
+**Status:** IMPLEMENTED (Option A; Milan authorized 2026-08-13). Spec:
+`dev/results/specs/VYVAR_CAL_STAGE_SPEC.md`. Report:
+`dev/results/CURSOR_RESULT_inv_cal_02_impl.md`.
+
+**Delivered:** `VY_CALSTAGE` + FITS `VY_CALDATASUM` stamped in same flush as pixel
+mutation; `resolve_calibrated_stage` with honest `INDETERMINATE_*`; compare gates refuse
+when stage unknown; force reapply stamps `SKYSF_N_R{pass}`; `qc_enrich_calibrated_lights_in_place`
+rename (replaces misnamed `preprocess_calibrated_to_processed`).
+
+**Deliberate departure:** field convention is immutable per-stage files; VYVAR keeps
+in-place mutation at ~0 extra storage vs ~1.75 GB/draft duplicate tree (Option B), because
+stamps close the reader-ambiguity gap (see DECISIONS INV-CAL-02-OPTION-A).
+
+## OPEN - INV-CAL-02 / calibrated product stage integrity (2026-08-13) [SUPERSEDED - see DONE above]
 
 **Priority:** HIGH (provenance; prevents repeat of P2/P-10 investigation cost).
 

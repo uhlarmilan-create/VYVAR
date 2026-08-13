@@ -2606,12 +2606,22 @@ read `OFFSET`. Recorded in `dev/results/specs/VYVAR_SAT_DIAG_SPEC.md` section 4 
 CalibrationLibrary dark matching need not require multi-exptime libraries at this temperature for
 QHY294MM wide rig.
 
-**11.3 Mutable `calibrated/` two-stage product (known hazard, 2026-08-13):** Not fixed by
-INV-CAL-01. `calibrated/lights/` may be pure `(L-D)/F` or carry in-place sky subtract
-(`VY_SKYSF`, `VYSKYORD`, `VYVARPR`). `VY_QCBG` / manifest QC can describe pre-sky state while
-pixels are sky-subtracted. Gates and investigations must check stage first. This cost time twice
-(P-10 sky-surface sign; INV-CAL-01 P2 predicate). Roadmap **INV-CAL-02** (stage stamp, pixel hash,
-QC alert; possibly separate directory for sky-subtracted product).
+**11.3 Mutable `calibrated/` two-stage product:** **FIXED by INV-CAL-02 (2026-08-13).**
+Option A: `VY_CALSTAGE` + FITS `VY_CALDATASUM` in same flush as pixel mutation;
+`resolve_calibrated_stage` returns `INDETERMINATE_*` when legacy headers ambiguous;
+compare gates refuse rather than assume `PURE`. Force reapply stamps `SKYSF_N_R{pass}`.
+Spec: `dev/results/specs/VYVAR_CAL_STAGE_SPEC.md`.
+
+**INV-CAL-02-OPTION-A (2026-08-13, Milan authorized):** Keep in-place mutation on
+`calibrated/lights/` rather than Option B separate tree (~1.75 GB/draft at 150 frames x
+11.6 MB). Field convention (DRAGONS/LSST/ccdproc) prefers immutable per-stage products;
+VYVAR departs deliberately because stamps + DATASUM close the reader-ambiguity gap at
+negligible storage cost. **Amendments:** (0.1) force reapply kept, stage token encodes pass
+count; (0.2) legacy `VYSKYP2P` without `VY_SKYSF` -> `INDETERMINATE_LEGACY`; (0.3)
+`preprocess_calibrated_to_processed` renamed to `qc_enrich_calibrated_lights_in_place`.
+
+**Previous hazard text (pre-INV-CAL-02):** Not fixed by INV-CAL-01. This cost time twice
+(P-10 sky-surface sign; INV-CAL-01 P2 predicate).
 
 **Previous text (historical):**
 (config reduction; P1 core SHA byte-identical). No dark-resample radiometry check

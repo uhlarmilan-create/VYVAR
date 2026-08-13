@@ -3596,6 +3596,40 @@ class VyvarDatabase:
         )
         return 1 if ok else 0
 
+    def update_obs_file_cal_stage_by_raw_light_path(
+        self,
+        raw_light_path: str | Path,
+        *,
+        draft_id: int | None = None,
+        observation_id: str | None = None,
+        cal_stage: str,
+        cal_datasum: str,
+        cal_pstbg: float | None = None,
+    ) -> int:
+        """Update INV-CAL-02 stage fields in manifest ``files[]``."""
+        from datetime import datetime, timezone
+
+        from draft_provenance import update_manifest_file_entry
+
+        if draft_id is None:
+            return 0
+        p = str(Path(raw_light_path).resolve())
+        _ = observation_id
+        payload: dict[str, Any] = {
+            "cal_stage": str(cal_stage),
+            "cal_datasum": str(cal_datasum),
+            "cal_stage_ut": datetime.now(timezone.utc).isoformat(),
+        }
+        if cal_pstbg is not None:
+            payload["cal_pstbg"] = float(cal_pstbg)
+        ok = update_manifest_file_entry(
+            self,
+            int(draft_id),
+            file_path=p,
+            cal_stage=payload,
+        )
+        return 1 if ok else 0
+
     def update_obs_file_quality_by_id(
         self,
         draft_id: int,
