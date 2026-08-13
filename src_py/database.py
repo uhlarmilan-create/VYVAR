@@ -2063,20 +2063,6 @@ class VyvarDatabase:
         paths["masterstar_fits"] = _p
         patch_draft_manifest(root, int(draft_id), paths=paths)
 
-    def qc_processing_run_exists(self, processing_hash: str) -> bool:
-        cur = self.conn.execute(
-            "SELECT 1 FROM OBS_QC_PROCESSING_RUN WHERE PROCESSING_HASH = ? LIMIT 1;",
-            (str(processing_hash),),
-        )
-        return cur.fetchone() is not None
-
-    def delete_qc_processing_run_by_hash(self, processing_hash: str) -> None:
-        self.conn.execute(
-            "DELETE FROM OBS_QC_PROCESSING_RUN WHERE PROCESSING_HASH = ?;",
-            (str(processing_hash),),
-        )
-        self.conn.commit()
-
     def record_qc_processing_apply(
         self,
         draft_id: int,
