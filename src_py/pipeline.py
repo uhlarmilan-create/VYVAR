@@ -8257,6 +8257,7 @@ def detect_stars_match_master_reference(
                 sat_diag_ctx,
                 ref_ra=ref_ra_deg,
                 ref_dec=ref_dec_deg,
+                aligned_hdr=hdr,
             )
             n_sat = (
                 int(df_out["likely_saturated_raw"].sum())
@@ -8264,6 +8265,9 @@ def detect_stars_match_master_reference(
                 else n_sat
             )
             meta["sat_limit_source"] = str(getattr(sat_diag_ctx, "sat_source", sat_limit_src))
+            meta["sat_peak_source"] = str(
+                getattr(sat_diag_ctx, "sat_peak_source", "ALIGNED_INTERIM")
+            )
             meta["raw_peaks_used"] = True
         except Exception as _sat_exc:  # noqa: BLE001
             LOGGER.warning("[SAT-DIAG] raw peak merge failed for %s: %s", frame_name, _sat_exc)

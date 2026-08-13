@@ -32,12 +32,18 @@ ADMISSION_SAT_FRAC = 0.70
 RESCALED_MAX_FRAC = 0.85
 DRAFT_SAT_EXCLUDE_FRAME_FRAC = 0.50
 
-PEAK_SEARCH_HALF = 22
+PEAK_SEARCH_HALF = 22  # reference-star drift only (mag-guided)
+PEAK_TARGET_SEARCH_HALF = 5  # anchored search at aligned/WCS position
 PEAK_BOX_HALF = 3
 PEAK_MIN_ADU = 4000.0
 PEAK_RING_CONTRAST_MIN = 1.8
 PEAK_RING_R_IN = 11
 PEAK_RING_R_OUT = 15
+PEAK_ALIGNED_MAX_DIST_PX = 12.0
+PEAK_RAW_ALIGNED_MAX_RATIO = 3.0
+
+SAT_PEAK_SOURCE_RAW_VERIFIED = "RAW_VERIFIED"
+SAT_PEAK_SOURCE_ALIGNED_INTERIM = "ALIGNED_INTERIM"
 
 # Tier-1 sat sources that may exclude (spec section 9.1).
 TIER1_SAT_SOURCES = frozenset(
@@ -80,11 +86,22 @@ class SatDiagContext:
     ybinning: int | None = None
     peak_loc_fail_count: dict[str, int] = field(default_factory=dict)
     raw_peaks_used: bool = False
+    sat_peak_source: str = SAT_PEAK_SOURCE_ALIGNED_INTERIM
+    lin_adu_native: float | None = None
+    sat_adu_native: float | None = None
+    sat_peak_verified_measurements: int = 0
+    sat_peak_interim_measurements: int = 0
 
     def to_json_dict(self) -> dict[str, Any]:
         d = asdict(self)
         if self.pileup is not None:
             d["pileup"] = asdict(self.pileup)
+        if self.lin_adu is not None and self.lin_adu_native is None:
+            bf = max(int(self.xbinning or 1), 1)
+            d["lin_adu_native"] = float(self.lin_adu) / float(bf)
+        if self.sat_adu is not None and self.sat_adu_native is None:
+            bf = max(int(self.xbinning or 1), 1)
+            d["sat_adu_native"] = float(self.sat_adu) / float(bf)
         return d
 
     def may_exclude_saturation(self) -> bool:
@@ -377,7 +394,7 @@ def peak_self_check(arr: np.ndarray, cx: int, cy: int, peak: float) -> bool:
 
 
 def mag_guided_centroid(arr: np.ndarray, x0: float, y0: float, half: int = PEAK_SEARCH_HALF) -> tuple[int, int]:
-    """Brightest pixel in search window."""
+    """Brightest pixel in search window (reference-star drift only)."""
     h, w = arr.shape
     xi = int(round(x0))
     yi = int(round(y0))
@@ -389,6 +406,102 @@ def mag_guided_centroid(arr: np.ndarray, x0: float, y0: float, half: int = PEAK_
     flat_idx = int(np.argmax(sub))
     sy, sx = np.unravel_index(flat_idx, sub.shape)
     return int(x0b + sx), int(y0b + sy)
+
+
+def expected_raw_from_aligned_centroid(
+    aligned_x: float,
+    aligned_y: float,
+    ra_deg: float,
+    dec_deg: float,
+    aligned_hdr: fits.Header,
+    raw_hdr: fits.Header,
+) -> tuple[float, float] | None:
+    """Apply aligned DAO residual (centroid minus aligned WCS) to raw WCS."""
+    try:
+        wcs_a = WCS(aligned_hdr)
+        wcs_r = WCS(raw_hdr)
+        if not (wcs_a.has_celestial and wcs_r.has_celestial):
+            return None
+        with np.errstate(all="ignore"):
+            axw, ayw = wcs_a.all_world2pix(float(ra_deg), float(dec_deg), 0)
+            rxw, ryw = wcs_r.all_world2pix(float(ra_deg), float(dec_deg), 0)
+        if not all(math.isfinite(v) for v in (axw, ayw, rxw, ryw)):
+            return None
+        return float(rxw + (float(aligned_x) - axw)), float(ryw + (float(aligned_y) - ayw))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def peak_verify_near_expected(
+    arr: np.ndarray,
+    expected_x: float,
+    expected_y: float,
+    aligned_peak: float | None,
+    *,
+    sat_adu: float | None,
+    max_dist_px: float = PEAK_ALIGNED_MAX_DIST_PX,
+) -> tuple[int, int, float] | None:
+    """Search within ``max_dist_px`` of expected for a verified peak (best ADU)."""
+    h, w = arr.shape
+    xi = int(round(expected_x))
+    yi = int(round(expected_y))
+    best: tuple[int, int, float] | None = None
+    r2_max = float(max_dist_px) ** 2
+    for dy in range(-int(math.ceil(max_dist_px)), int(math.ceil(max_dist_px)) + 1):
+        for dx in range(-int(math.ceil(max_dist_px)), int(math.ceil(max_dist_px)) + 1):
+            if float(dx * dx + dy * dy) > r2_max:
+                continue
+            gx, gy = xi + dx, yi + dy
+            if gx < 1 or gy < 1 or gx >= w - 1 or gy >= h - 1:
+                continue
+            pk = box_peak_max(arr, gx, gy)
+            if not peak_self_check(arr, gx, gy, pk):
+                continue
+            if not peak_raw_plausible(pk, aligned_peak, sat_adu=sat_adu):
+                continue
+            if best is None or pk > best[2]:
+                best = (gx, gy, pk)
+    return best
+
+
+def raw_ref_pixel_from_aligned_ref(
+    arr: np.ndarray,
+    raw_hdr: fits.Header,
+    ref_ra: float,
+    ref_dec: float,
+) -> tuple[float, float] | None:
+    """Raw pixel of reference star (mag-guided on WCS position)."""
+    try:
+        wcs = WCS(raw_hdr)
+        if not wcs.has_celestial:
+            return None
+        rx, ry = wcs.all_world2pix(float(ref_ra), float(ref_dec), 0)
+        if not (math.isfinite(rx) and math.isfinite(ry)):
+            return None
+        gx, gy = mag_guided_centroid(arr, float(rx), float(ry))
+        return float(gx), float(gy)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def peak_raw_plausible(
+    raw_peak: float,
+    aligned_peak: float | None,
+    *,
+    sat_adu: float | None,
+) -> bool:
+    """Brightness plausibility: raw must track aligned unless aligned is near ceiling."""
+    if aligned_peak is None or not math.isfinite(aligned_peak) or aligned_peak <= 0:
+        return True
+    if not math.isfinite(raw_peak) or raw_peak <= 0:
+        return False
+    if sat_adu is not None and math.isfinite(sat_adu) and float(aligned_peak) >= float(sat_adu) * 0.85:
+        # Aligned resampling can exceed raw container; ratio test not meaningful.
+        return True
+    ratio = float(raw_peak) / float(aligned_peak)
+    lo = 1.0 / PEAK_RAW_ALIGNED_MAX_RATIO
+    hi = PEAK_RAW_ALIGNED_MAX_RATIO
+    return lo <= ratio <= hi
 
 
 def box_peak_max(arr: np.ndarray, x: float, y: float, half: int = PEAK_BOX_HALF) -> float:
@@ -405,10 +518,21 @@ def measure_raw_peaks_frame(
     dec_deg: np.ndarray,
     ref_ra: float | None = None,
     ref_dec: float | None = None,
+    ref_aligned_x: float | None = None,
+    ref_aligned_y: float | None = None,
+    aligned_x: np.ndarray | None = None,
+    aligned_y: np.ndarray | None = None,
+    aligned_hdr: fits.Header | None = None,
+    aligned_peak: np.ndarray | None = None,
+    sat_adu: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Raw peaks with WCS + drift + self-check for matched stars.
+    """Raw peaks with plate-offset anchor + verification for matched stars.
+
+    Uses aligned-frame centroids transferred to raw via a per-frame reference
+    star (same plate scale). Falls back to WCS+drift when aligned coords absent.
 
     Returns ``(peak_max_adu_raw, peak_loc_ok, peak_loc_fail)`` arrays length N.
+    ``peak_loc_ok`` means RAW_VERIFIED (right star, plausible peak).
     """
     n = int(ra_deg.size)
     peaks = np.full(n, np.nan, dtype=np.float64)
@@ -418,37 +542,77 @@ def measure_raw_peaks_frame(
     if n == 0:
         return peaks, loc_ok, loc_fail
 
-    try:
-        with np.errstate(all="ignore"):
-            wcs = WCS(raw_hdr)
-        if not wcs.has_celestial:
-            return peaks, loc_ok, loc_fail
-    except Exception:  # noqa: BLE001
-        return peaks, loc_ok, loc_fail
-
     arr = np.asarray(raw_arr, dtype=np.float64)
-    xs, ys = wcs.all_world2pix(ra_deg, dec_deg, 0)
+
+    raw_ref: tuple[float, float] | None = None
+    if ref_ra is not None and ref_dec is not None and math.isfinite(ref_ra) and math.isfinite(ref_dec):
+        raw_ref = raw_ref_pixel_from_aligned_ref(arr, raw_hdr, float(ref_ra), float(ref_dec))
 
     drift_x, drift_y = 0.0, 0.0
-    if ref_ra is not None and ref_dec is not None and math.isfinite(ref_ra) and math.isfinite(ref_dec):
-        try:
+    try:
+        wcs = WCS(raw_hdr)
+        if wcs.has_celestial and raw_ref is not None and ref_ra is not None and ref_dec is not None:
             rx, ry = wcs.all_world2pix(float(ref_ra), float(ref_dec), 0)
-            gx, gy = mag_guided_centroid(arr, float(rx), float(ry))
-            drift_x = float(gx - rx)
-            drift_y = float(gy - ry)
-        except Exception:  # noqa: BLE001
-            drift_x, drift_y = 0.0, 0.0
+            drift_x = float(raw_ref[0] - rx)
+            drift_y = float(raw_ref[1] - ry)
+        xs, ys = wcs.all_world2pix(ra_deg, dec_deg, 0)
+    except Exception:  # noqa: BLE001
+        loc_fail[:] = True
+        return peaks, loc_ok, loc_fail
+
+    ax_arr = aligned_x if aligned_x is not None else np.full(n, np.nan)
+    ay_arr = aligned_y if aligned_y is not None else np.full(n, np.nan)
+    ap_arr = aligned_peak if aligned_peak is not None else np.full(n, np.nan)
+
+    plate_ok = (
+        raw_ref is not None
+        and ref_aligned_x is not None
+        and ref_aligned_y is not None
+        and aligned_x is not None
+        and aligned_y is not None
+    )
+    wcs_res_ok = aligned_hdr is not None and aligned_x is not None and aligned_y is not None
 
     for i in range(n):
         try:
-            wx = float(xs[i]) + drift_x
-            wy = float(ys[i]) + drift_y
-            if not (math.isfinite(wx) and math.isfinite(wy)):
+            expected_x = expected_y = float("nan")
+            if (
+                wcs_res_ok
+                and math.isfinite(float(ax_arr[i]))
+                and math.isfinite(float(ay_arr[i]))
+            ):
+                hit_xy = expected_raw_from_aligned_centroid(
+                    float(ax_arr[i]),
+                    float(ay_arr[i]),
+                    float(ra_deg[i]),
+                    float(dec_deg[i]),
+                    aligned_hdr,
+                    raw_hdr,
+                )
+                if hit_xy is not None:
+                    expected_x, expected_y = hit_xy
+            if not (math.isfinite(expected_x) and math.isfinite(expected_y)):
+                if (
+                    plate_ok
+                    and math.isfinite(float(ax_arr[i]))
+                    and math.isfinite(float(ay_arr[i]))
+                ):
+                    expected_x = float(raw_ref[0]) + (float(ax_arr[i]) - float(ref_aligned_x))
+                    expected_y = float(raw_ref[1]) + (float(ay_arr[i]) - float(ref_aligned_y))
+                else:
+                    expected_x = float(xs[i]) + drift_x
+                    expected_y = float(ys[i]) + drift_y
+
+            if not (math.isfinite(expected_x) and math.isfinite(expected_y)):
                 loc_fail[i] = True
                 continue
-            gx, gy = mag_guided_centroid(arr, wx, wy)
-            pk = box_peak_max(arr, gx, gy)
-            if peak_self_check(arr, gx, gy, pk):
+
+            ap_i = float(ap_arr[i]) if math.isfinite(float(ap_arr[i])) else None
+            hit = peak_verify_near_expected(
+                arr, expected_x, expected_y, ap_i, sat_adu=sat_adu
+            )
+            if hit is not None:
+                _, _, pk = hit
                 peaks[i] = pk
                 loc_ok[i] = True
             else:
@@ -514,6 +678,11 @@ def load_sat_diag_json(path: Path) -> SatDiagContext | None:
             ybinning=data.get("ybinning"),
             peak_loc_fail_count=dict(peak_fails or {}),
             raw_peaks_used=bool(data.get("raw_peaks_used")),
+            sat_peak_source=str(
+                data.get("sat_peak_source") or SAT_PEAK_SOURCE_ALIGNED_INTERIM
+            ),
+            lin_adu_native=data.get("lin_adu_native"),
+            sat_adu_native=data.get("sat_adu_native"),
         )
         return ctx
     except Exception as exc:  # noqa: BLE001
@@ -529,6 +698,7 @@ def apply_raw_peaks_to_proc_df(
     *,
     ref_ra: float | None = None,
     ref_dec: float | None = None,
+    aligned_hdr: fits.Header | None = None,
 ) -> SatDiagContext:
     """Merge raw peak columns into a per-frame proc catalog DataFrame."""
     import pandas as pd
@@ -541,9 +711,50 @@ def apply_raw_peaks_to_proc_df(
     ra = pd.to_numeric(df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
     de = pd.to_numeric(df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
     ok = np.isfinite(ra) & np.isfinite(de)
+
+    aligned_pk = np.full(len(df), np.nan, dtype=np.float64)
+    if "peak_max_adu_aligned" in df.columns:
+        aligned_pk = pd.to_numeric(df["peak_max_adu_aligned"], errors="coerce").to_numpy(
+            dtype=np.float64
+        )
+    elif "peak_max_adu" in df.columns:
+        aligned_pk = pd.to_numeric(df["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
+
+    ax = ay = None
+    if "x" in df.columns and "y" in df.columns:
+        ax = pd.to_numeric(df["x"], errors="coerce").to_numpy(dtype=np.float64)
+        ay = pd.to_numeric(df["y"], errors="coerce").to_numpy(dtype=np.float64)
+
+    ref_aligned_x = ref_aligned_y = None
+    if ax is not None and ay is not None and "flux" in df.columns:
+        flux_s = pd.to_numeric(df["flux"], errors="coerce").fillna(0)
+        if ref_ra is not None and ref_dec is not None and "ra_deg" in df.columns:
+            _ra = pd.to_numeric(df["ra_deg"], errors="coerce")
+            _de = pd.to_numeric(df["dec_deg"], errors="coerce")
+            _d2 = (_ra - float(ref_ra)) ** 2 + (_de - float(ref_dec)) ** 2
+            if _d2.notna().any() and float(_d2.min()) < 1e-10:
+                _j = int(_d2.idxmin())
+            else:
+                _j = int(flux_s.idxmax())
+        else:
+            _j = int(flux_s.idxmax())
+        ref_aligned_x = float(ax[_j])
+        ref_aligned_y = float(ay[_j])
+
     peaks, loc_ok, loc_fail = measure_raw_peaks_frame(
-        raw_arr, raw_hdr, ra_deg=ra[ok], dec_deg=de[ok],
-        ref_ra=ref_ra, ref_dec=ref_dec,
+        raw_arr,
+        raw_hdr,
+        ra_deg=ra[ok],
+        dec_deg=de[ok],
+        ref_ra=ref_ra,
+        ref_dec=ref_dec,
+        ref_aligned_x=ref_aligned_x,
+        ref_aligned_y=ref_aligned_y,
+        aligned_x=ax[ok] if ax is not None else None,
+        aligned_y=ay[ok] if ay is not None else None,
+        aligned_hdr=aligned_hdr,
+        aligned_peak=aligned_pk[ok] if aligned_pk is not None else None,
+        sat_adu=ctx.sat_adu,
     )
 
     pk_col = np.full(len(df), np.nan, dtype=np.float64)
@@ -557,30 +768,37 @@ def apply_raw_peaks_to_proc_df(
     df["peak_max_adu_raw"] = pk_col
     df["peak_loc_ok"] = ok_col
     df["peak_loc_fail"] = fail_col
+    df["peak_max_adu_aligned"] = aligned_pk
+
+    # Authoritative peak for saturation: RAW_VERIFIED when search passes, else aligned.
+    auth_pk = np.where(ok_col & np.isfinite(pk_col), pk_col, aligned_pk)
+    sat_src_col = np.where(
+        ok_col & np.isfinite(pk_col),
+        SAT_PEAK_SOURCE_RAW_VERIFIED,
+        SAT_PEAK_SOURCE_ALIGNED_INTERIM,
+    )
+    df["peak_max_adu"] = auth_pk
+    df["sat_peak_source"] = sat_src_col
 
     sat = ctx.sat_adu
     lin = ctx.lin_adu
-    use_pk = np.where(ok_col, pk_col, np.nan)
+    use_pk = pd.to_numeric(df["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
+    pk_finite = np.isfinite(use_pk)
     likely_sat = np.zeros(len(df), dtype=bool)
     likely_nl = np.zeros(len(df), dtype=bool)
     is_sat = np.zeros(len(df), dtype=bool)
     if sat is not None:
         thr85 = ctx.likely_saturated_threshold_adu()
         if thr85 is not None:
-            likely_sat = ok_col & np.isfinite(use_pk) & (use_pk >= thr85)
-        is_sat = ok_col & np.isfinite(use_pk) & (use_pk >= float(sat))
+            likely_sat = pk_finite & (use_pk >= thr85)
+        is_sat = pk_finite & (use_pk >= float(sat))
     if lin is not None:
-        likely_nl = ok_col & np.isfinite(use_pk) & (use_pk >= float(lin))
+        likely_nl = pk_finite & (use_pk >= float(lin))
 
     df["likely_saturated_raw"] = likely_sat
     df["likely_nonlinear_raw"] = likely_nl
     df["is_saturated_raw"] = is_sat
 
-    # Authoritative peak for saturation when self-check passed (INV-SAT-01).
-    if "peak_max_adu" in df.columns:
-        aligned_pk = pd.to_numeric(df["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
-        df["peak_max_adu_aligned"] = aligned_pk
-    df["peak_max_adu"] = np.where(ok_col, pk_col, np.nan)
     if ctx.saturate_limit_adu_85pct() is not None:
         df["saturate_limit_adu"] = float(ctx.sat_adu)
         df["saturate_limit_adu_85pct"] = float(ctx.saturate_limit_adu_85pct())
@@ -592,6 +810,23 @@ def apply_raw_peaks_to_proc_df(
         fail_mask = df["peak_loc_fail"].astype(bool)
         for cid, cnt in df.loc[fail_mask, id_col].astype(str).value_counts().items():
             ctx.peak_loc_fail_count[str(cid)] = int(ctx.peak_loc_fail_count.get(str(cid), 0)) + int(cnt)
+
+    n_verified = int((ok_col & np.isfinite(pk_col)).sum())
+    n_interim = int(len(df) - n_verified)
+    ctx.sat_peak_verified_measurements += n_verified
+    ctx.sat_peak_interim_measurements += n_interim
+    if ctx.sat_peak_verified_measurements > 0 and ctx.sat_peak_interim_measurements > 0:
+        ctx.sat_peak_source = "MIXED"
+    elif ctx.sat_peak_verified_measurements > 0:
+        ctx.sat_peak_source = SAT_PEAK_SOURCE_RAW_VERIFIED
+    else:
+        ctx.sat_peak_source = SAT_PEAK_SOURCE_ALIGNED_INTERIM
+
+    bf = max(int(ctx.xbinning or 1), 1)
+    if ctx.lin_adu is not None:
+        ctx.lin_adu_native = float(ctx.lin_adu) / float(bf)
+    if ctx.sat_adu is not None:
+        ctx.sat_adu_native = float(ctx.sat_adu) / float(bf)
 
     ctx.raw_peaks_used = True
     return ctx
@@ -617,6 +852,10 @@ def stamp_sat_fits_headers(hdr: fits.Header, ctx: SatDiagContext) -> None:
     hdr["VY_LINSRC"] = (str(ctx.lin_source), "Linearity provenance")
     bf = ctx.xbinning or 1
     hdr["VY_SATBF"] = (int(bf), "Binning key for SAT-DIAG")
+    hdr["VY_SATPS"] = (
+        str(ctx.sat_peak_source),
+        "Peak source for saturation (RAW_VERIFIED/ALIGNED_INTERIM/MIXED)",
+    )
 
 
 def draft_archive_from_platesolve(platesolve_dir: Path) -> Path | None:
