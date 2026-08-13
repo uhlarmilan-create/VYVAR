@@ -8,6 +8,30 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Wave 6 PROPOSE items - Milan authorized 2026-08-13 (implement later)
+
+| ID | Decision |
+|----|----------|
+| W6-PROP-03 | **Option A:** stamp `VY_QCBG_PRE` at cal QC; write `VY_QCBG` at preprocess in same FITS write (INV-CAL-02). |
+| W6-PROP-01 | **Option A:** `detect_outliers` clips constants only; variables stay mask-protected. |
+| W6-PROP-05 | Wire `count_final_data_for_*` into Calibration Library delete dialog before OK. |
+| W6-PROP-02 | Rename to `preprocess_calibrated_lights_in_place`; one-release deprecated shim. |
+| W6-PROP-04 | Reachability doc: `unwired_ui`=1 (`ui_finalization` only). |
+
+---
+
+## A-1 aperture EE - growth curves measured 2026-08-13 (decision pending)
+
+Growth curves on draft 510 (134 frames) and 435 (139 frames) measured enclosed flux vs radius
+using production annulus sky. **EE at production radius:** draft 510 comps median **81.5%**, BO CVn
+**85.8%**; draft 435 comps median **66.8%**, BO CVn **73.1%**. Below pre-registered 90% threshold;
+drafts differ systematically. VY_FWHM_GAUSS (SNR authority) tracks per-frame DAO FWHM on 510 but is
+**underestimated on 435** (2.40 vs 3.32 px proc estimate). QC moment FWHM measures wider wings, not
+core PSF. Report: `dev/results/CURSOR_RESULT_a1_growth_curves.md`. **Recommendation:** re-author SNR
+table FWHM to per-frame DAO/growth-curve r50; re-cut anchor after Milan approves.
+
+---
+
 ## ZP-CLIP-REMOVAL - no per-frame MAD rejection in ensemble_normalize (2026-08-12)
 
 **Problem.** Draft 509 (same raw as draft 435, HEAD `682f40c`) produced check-star

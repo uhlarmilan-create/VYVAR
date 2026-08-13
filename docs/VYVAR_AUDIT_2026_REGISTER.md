@@ -108,11 +108,15 @@ Milan approved KEEP/PROPOSE as written. **W6-DEL-04 excluded** (library delete g
 | W6-DEL-08 | DELETE ProcFrameStore.frame_columns | DONE | `ff6fba6` |
 | W6-DEL-09 | DELETE shadowed param resolvers | DONE | `c6dc90d` |
 | W6-KEEP-01 | KEEP ui_finalization | unchanged | - |
-| W6-PROP-01..04 | PROPOSE | reported, not implemented | - |
-| W6-PROP-05 | PROPOSE wire library delete guards (ex-DEL-04) | reported, not implemented | - |
+| W6-PROP-01..04 | PROPOSE | Milan authorized 2026-08-13; implement later | AUTHORIZED |
+| W6-PROP-05 | PROPOSE wire library delete guards (ex-DEL-04) | Milan authorized; implement later | AUTHORIZED |
+
+**Milan authorized (2026-08-13, not implemented):** W6-PROP-03 Option A (`VY_QCBG_PRE` + preprocess `VY_QCBG`); W6-PROP-01 Option A (clip constants only); W6-PROP-05 wire library delete guards; W6-PROP-02 rename shim; W6-PROP-04 reachability fix.
+
+| A-1 | 4 | aperture | U/P | HIGH | Growth curves draft 510/435: EE@production 81-86% (510) vs 67-73% (435); below 90% threshold | tmp/a1_growth_curve_results.json | MEASURED - decision pending | OPEN |
 
 All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 510 anchor unchanged on disk.
 
 ---
 
-*Append-only during audit run. Wave 6 deletions executed locally; not pushed pending Milan review.*
+*Append-only during audit run. Wave 6 pushed 2026-08-13 session.*

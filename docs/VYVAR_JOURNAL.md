@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-13 -- Wave 6 deletions + mixed-commit note
+
+**Wave 6.** Eight approved deletions executed (W6-DEL-01/02/03/05-09), one commit each,
+`--fast` green after every one. W6-DEL-04 (library delete guards) excluded per Milan -
+unwired safeguard, not dead. Register updated at `76b18b4`. Not pushed until this session.
+
+**Mixed commit note (`b82e976`).** W6-DEL-02 removed `set_obs_draft_masterstar_path` but the
+same commit also ASCII-cleaned `CITATIONS.bib` and `dev/results/CURSOR_RESULT_audit_part_abc.md`
+after `test_ascii_policy` failed mid-sequence. Unrelated changes bundled - harmless, but violates
+one-commit-one-thing. Root cause: non-ASCII bytes in tracked markdown/bib written without
+`ascii_migrate` before commit.
+
+**Milan PROPOSE decisions (authorized, not implemented this session):** W6-PROP-03 Option A
+(`VY_QCBG_PRE` + preprocess `VY_QCBG`); W6-PROP-01 Option A (clip constants only); W6-PROP-05
+wire library delete guards; W6-PROP-02 rename shim; W6-PROP-04 reachability count fix.
+
+---
+
 ## 2026-08-13 -- INV-CAL-02 implemented (Option A)
 
 **Authorization.** Milan authorized Option A with amendments 0.1-0.3.
