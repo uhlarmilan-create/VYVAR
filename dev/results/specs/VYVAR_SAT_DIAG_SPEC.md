@@ -393,51 +393,98 @@ policy (section 9): warn only, exclude nothing.**
 Once per raw light frame, **before calibration**, at the same cadence as DAO
 detection inputs (per obs_group, per frame).
 
-### 8.2 How (2026-08-13 anchored search)
+### 8.2 How (2026-08-13 placed aperture)
 
-For each star with known sky position and aligned-frame centroid `(x, y)`:
+Position is **determined**, not discovered (see
+`dev/results/MEMO_peak_location_literature.md`). For each catalog star on a raw
+frame:
 
-1. Map aligned pixel to raw pixel via shared sky position.
-2. Per-frame drift from bright reference only (`mag_guided`, `half=22` on ref).
-3. **WCS residual anchor:** expected raw = raw WCS(ra,dec) plus aligned DAO
-   offset (aligned xy minus aligned WCS xy). Search within 12 px disk for a
-   pixel passing self-check and brightness plausibility vs aligned peak.
-4. Report `peak_max_adu_raw` = max in 7x7 box at verified pixel (`half=3`).
+1. **Primary placement:** per-frame aligned DAO `(x, y)` on the raw pixel grid
+   (master-grid lock; same mechanism as AstroImageJ non-centroided apertures).
+2. **Refinement:** optional 11 px centre-of-mass centroid (`half=5`, photutils
+   default `box_size`); never brightest-pixel search on targets or comps.
+3. **Fallback** (no aligned coords): raw WCS plus frame drift from the variable
+   target (mag-guided on target only) or bright refs; then COM as above.
+4. **Peak:** maximum ADU in 7x7 footprint at refined position (`half=3`).
 
-### 8.3 Verification gate (pass = right star)
+Frame drift (diagnostic): variable target catalog match drives target-primary
+mag-guided offset; `residual_rms_px` reported per frame in `sat_diag.json`.
 
-All must pass for `peak_loc_ok=true` and `sat_peak_source=RAW_VERIFIED`:
+**Removed (2026-08-13) -- do not reintroduce without a DECISIONS entry:**
 
-| Test | Default threshold |
-|------|-------------------|
-| Self-check (8.3 legacy) | Local max, ring contrast >= 1.8, peak >= 4000 ADU |
-| Anchor distance | Found pixel within **12 px** of aligned-mapped raw position |
-| Brightness plausibility | `raw/aligned` in **[1/3, 3]** when aligned < 85% sat |
+| Removed | Why |
+|---------|-----|
+| `mag_guided_centroid` peak search on targets/comps | photutils 3.0 deprecates `xpeak`/`ypeak` with `search_boxsize` (brightest-pixel search); replacement is `centroid_sources` at a **given** position |
+| Anchor disk (`PEAK_ALIGNED_MAX_DIST_PX`) | Existed only to bound a search that should not happen |
+| `PEAK_RAW_ALIGNED_MAX_RATIO`, `PEAK_MIN_ADU` | Brightness plausibility for search results; no analogue in SExtractor/AIJ/DAOPHOT |
+| Ring-contrast self-check | Verified a search; replaced by determined placement |
+| `RAW_VERIFIED` / `ALIGNED_INTERIM` split | Per-frame membership flip-flop; violates `INV-COMP-MEMBERSHIP` |
+| `peak_loc_ok` / `peak_loc_fail` accounting | Search QA, not saturation science |
 
-When aligned peak >= 85% sat (resampling can exceed raw ceiling), plausibility
-ratio is skipped; anchor distance still required.
+**AstroImageJ rule cited:** when centroiding is disabled on an aperture, it
+**moves with the average motion of centroided apertures** (Collins et al. 2017,
+arXiv:1701.04817) -- faint stars near bright neighbours must not be searched
+independently. VYVAR applies this via aligned DAO grid lock (frame collective
+motion already in per-frame centroids), not via a 45x45 brightest-pixel hunt.
 
-When verification fails: `peak_max_adu_raw` may be NaN; saturation uses
-**aligned** peak (`sat_peak_source=ALIGNED_INTERIM`).
+### 8.6 Placement residual budget (2026-08-13)
 
-### 8.4 Peak source for saturation (provenance)
+Measured on draft 510 BO CVn (134 frames, all catalog stars): placement residual
+vs aligned DAO median **1.03 px**, p95 **3.99 px**. Photometric aperture radius
+on this draft: **~4.1 px** (FWHM ~2.7 px, factor ~1.5).
+
+**Usable limit (documentary, not yet gated):**
+
+```
+peak_box_half = 3          # 7x7 footprint for saturation peak (fixed)
+aperture_radius ~ k * FWHM # science aperture (rig-dependent)
+residual_p95  ~ 4 px       # draft 510 measured upper tail
+```
+
+Saturation peak uses a **7x7 box** (`half=3`), not the photometric aperture.
+The box half-width must exceed the p95 placement residual so the true peak
+pixel remains inside the footprint:
+
+```
+peak_box_half >= residual_p95 + margin   (margin ~ 0.5-1 px)
+```
+
+When **residual approaches or exceeds aperture radius**, flux and saturation
+measured at the placed centre **miss the stellar core** even if the 7x7 peak
+box still catches a local maximum. Risk rises with: smaller apertures, worse
+seeing (DAO centroid scatter), larger plate scale, or WCS-only fallback without
+aligned DAO seed.
+
+**Proposed flag (not implemented):** WARN when per-frame
+`placement_residual_px > 0.5 * aperture_radius_px` for any star entering comp
+admission or saturation tier-1 exclusion. Rationale: at 50% radius the aperture
+is already half-decentered; at 100% (p95 ~4 px vs R~4.1 px here) ~5% of
+star-frames sit near the edge of acceptability. Counter-argument: aligned DAO
++ 11 px COM already minimizes residual; flag would fire mostly on fallback
+WCS-only paths and should not block runs (WARN tier). Deferred pending multi-draft
+residual census.
+
+### 8.3 Frame drift diagnostic
+
+Drift references: stars with aligned peak >= 8000 ADU (>= 4000 fallback if
+< 2 refs). Per frame: median(placed - WCS) on refs; report `residual_rms_px`
+in `sat_diag.json` / frame meta. Faint comps are never drift references.
+
+### 8.4 Peak source and draft-level saturation
 
 | `sat_peak_source` | Meaning |
 |-------------------|---------|
-| `RAW_VERIFIED` | Anchored raw search passed all gates |
-| `ALIGNED_INTERIM` | Raw not verified; **aligned** peak drives saturation |
-| `MIXED` | Draft uses both (aggregate in `sat_diag.json`) |
+| `PLACED_APERTURE` | Raw peak at WCS-residual placed position |
 
-Draft `sat_diag.json` records `sat_peak_source`. Proc CSV column `sat_peak_source`
-is per star per frame. FITS header `VY_SATPS` mirrors draft-level source.
+**Once-per-draft rule (INV-COMP-MEMBERSHIP):** comp admission uses aggregate
+over frames: reject if >10% of frames exceed admission threshold
+(`sat_adu * admission_sat_peak_frac`). Draft `star_peak_draft` in
+`sat_diag.json` records per-star max peak, `n_over_admission`, `admission_reject`.
+A star saturating on a handful of frames (e.g. 5/134) is **not** rejected unless
+>10%; `n_saturated` counts frames at full scale.
 
-**ALIGNED_INTERIM caveat:** Aligned peaks pass through resampling and can exceed
-the raw container ceiling (draft 510 aligned ~69000 vs raw 65535). Interim mode
-is **conservative on admission** (may admit comps raw would reject) and **cannot**
-flag raw-only saturation. Document until raw search is fully trusted.
-
-Columns: `peak_max_adu` (authoritative for gates), `peak_max_adu_raw`,
-`peak_max_adu_aligned`, `likely_saturated_raw`, etc.
+Columns: `peak_max_adu` (= raw placed peak), `peak_max_adu_raw`,
+`peak_placed_x_raw`, `peak_placed_y_raw`, `peak_max_adu_aligned`, flags.
 
 ### 8.5 Existing drafts
 
@@ -508,7 +555,7 @@ Modelled on CAL-DIAG `VY_DKRSMP` / `VY_CDSKY` / `VY_CDSTAT`.
 ### 10.3 Proc CSV / pipeline_meta
 
 - Per-frame: `saturate_limit_adu`, `linearity_limit_adu`, `sat_limit_source`,
-  `peak_max_adu_raw`, `peak_loc_ok`, flags.
+  `peak_max_adu_raw`, `peak_placed_x_raw`, `peak_placed_y_raw`, flags.
 - Phase 2A merges additive `sat_diag` block into `pipeline_meta.json` (same
   pattern as CAL-DIAG `cal_diag` block).
 
@@ -520,17 +567,28 @@ Modelled on CAL-DIAG `VY_DKRSMP` / `VY_CDSKY` / `VY_CDSTAT`.
 |-------|----------------------|
 | **435** | Raw present; limits DERIVED ~65535; BO CVn not saturated; comp pool wider than at 16384 |
 | **509** | Same; photometry already run with wrong 16384 limit -- re-flag only on re-run |
-| **510** | No photometry yet; SAT-DIAG should run before production |
+| **510** | Placed-aperture raw peaks verified; BO CVn 5 comps, check scatter 0.008629 (=509) |
 
 Anchor `--full` does **not** cover raw peak measurement (INV-ANCHOR-00). A
 **SAT-DIAG unit test suite** + draft-510 raw histogram fixture is the regression
 gate for this class.
 
+**Checksum manifests (2026-08-13):** per-draft sha256 manifests in
+`dev/validation/` record verified-good archive trees. Draft **435** has
+pre/post-restore manifests (`anchor_435_checksums_*_20260813.json`, 2778 files).
+Draft **510** has `anchor_510_checksums_placed_aperture_20260813.json` (746 files,
+includes 134 reprocessed proc CSVs). Mechanism is **manual / script-generated**,
+not wired into `session_baseline_check.py --fast`. Extending to any draft:
+run the same sha256 walk over `Archive/Drafts/draft_XXXXXX/` after a verified
+good state; optional future `dev/tools/anchor_integrity_check.py --draft N
+--manifest path` (proposed in draft-435 restore plan, not yet implemented).
+
 ### 11.2 Invariants
 
-**INV-SAT-01** (planned):
+**INV-SAT-01** (wired):
 
-- Saturation limits in **image ADU** on **raw** peaks with self-check PASS.
+- Saturation limits in **image ADU** on **raw** placed-aperture peaks (aligned
+  DAO grid + optional 11 px COM; no brightest-pixel search on comps).
 - Aligned-frame peaks must not be sole saturation authority when raw exists.
 - `sat_limit_source` recorded when gate runs.
 - Tier 3 (`DEFAULT_FRAC`) must not trigger exclusion.
