@@ -20,15 +20,15 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## A-1 aperture EE - growth curves measured 2026-08-13 (decision pending)
+## A-1 aperture EE — decision (2) implemented on draft 510 (2026-08-14)
 
-Growth curves on draft 510 (134 frames) and 435 (139 frames) measured enclosed flux vs radius
-using production annulus sky. **EE at production radius:** draft 510 comps median **81.5%**, BO CVn
-**85.8%**; draft 435 comps median **66.8%**, BO CVn **73.1%**. Below pre-registered 90% threshold;
-drafts differ systematically. VY_FWHM_GAUSS (SNR authority) tracks per-frame DAO FWHM on 510 but is
-**underestimated on 435** (2.40 vs 3.32 px proc estimate). QC moment FWHM measures wider wings, not
-core PSF. Report: `dev/results/CURSOR_RESULT_a1_growth_curves.md`. **Recommendation:** re-author SNR
-table FWHM to per-frame DAO/growth-curve r50; re-cut anchor after Milan approves.
+Growth curves (2026-08-13) measured EE at production radius **81–86%** (510) vs **67–73%** (435), below a 90% target. **Decision (2):** SNR aperture table FWHM authority moved from stack `VY_FWHM_GAUSS` to **per-draft median of per-frame DAO moment FWHM** (`fwhm_px_scope`: `per_draft_median_frame_dao_moment`). `VY_FWHM_GAUSS` recorded for provenance only.
+
+**Wave 7 verification (draft 510):** re-export 135 proc sidecars + Phase 2A; `aperture_px` **4.141 → 4.261**; check_scatter **0.008629 → 0.008638**; EE **+0.8 pp**; xval target agreement still **≈3 mmag**. Draft **435 not re-cut** (no aligned science FITS). Closure: `docs/VYVAR_AUDIT_2026_CLOSURE.md`.
+
+**Deferred:** decision (3) COG correction; decision (4) fixed 90% enclosed fraction (~5.0–5.75 px on typical 510 comps).
+
+Report chain: `dev/results/CURSOR_RESULT_a1_growth_curves.md`, `dev/results/CURSOR_RESULT_a1_snr_dao_authority.md`.
 
 ---
 

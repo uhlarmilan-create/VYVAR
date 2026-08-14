@@ -37,7 +37,7 @@ def _sha256(path: Path) -> str:
 def validate_p1_checksums() -> dict[str, object]:
     manifests = {
         "435": ROOT / "dev/validation/anchor_435_checksums_post_restore_20260813.json",
-        "510": ROOT / "dev/validation/anchor_510_checksums_placed_aperture_20260813.json",
+        "510": ROOT / "dev/validation/anchor_510_checksums_a1_dao_fwhm_20260814.json",
     }
     out: dict[str, object] = {}
     for draft, man_path in manifests.items():

@@ -1,11 +1,22 @@
 # VYVAR -- Development State
 
-**Status:** Science audit **closed** (2026-08-04). DAO detection workstream **closed** (2026-08-07).
-ZP per-frame MAD clip **removed** (2026-08-12).
+**Status:** 2026 full-workflow audit **closed** (Wave 7, 2026-08-14). A-1 decision (2) implemented on draft 510.
 
-Last updated: **2026-08-13** (INV-CAL-02 implemented; INV-CAL-01 pushed; SAT-DIAG placed aperture).
+Last updated: **2026-08-14** (session close: push, checksum manifest, handoff).
 
-## 2026-08-13 -- INV-CAL-02 / calibrated stage integrity (implemented, not pushed)
+## 2026-08-14 -- Session close (audit Wave 7 + A-1 push)
+
+**A-1.** SNR sizing authority: per-draft median frame DAO moment FWHM (not `VY_FWHM_GAUSS`). Code + tests pushed. Draft 510 re-export + Phase 2A: `aperture_px` **4.261**, check_scatter **0.008638**, GREEN trust. New checksum manifest: `dev/validation/anchor_510_checksums_a1_dao_fwhm_20260814.json` (237 files changed vs placed-aperture manifest; diff JSON alongside).
+
+**Audit.** Seven waves closed; referee document `docs/VYVAR_AUDIT_2026_CLOSURE.md`. Register corrections: **U-P5-PRED** (P5 could not test aperture-dependent saturation), **U-XVAL-COMP-RMS** (2 mmag comp gap open).
+
+**Physics findings (independent of code):** QHY294MM 14-bit-in-16-bit container (65535 = clip); pedestal ~24.5 ADU/bin1 vs header `OFFSET=0`; dark at −10 °C pedestal-dominated (60 s = 120 s median); CMOS block-sum dark resample correct, CCD on-chip binning would not be (INV-CAL-01 derives convention).
+
+**Handoff:** `docs/VYVAR_HANDOFF_2026-08-14.md`.
+
+---
+
+## 2026-08-13 -- INV-CAL-02 / calibrated stage integrity (implemented, pushed)
 
 Option A: `VY_CALSTAGE` + FITS `VY_CALDATASUM` stamped in same flush as pixel change;
 legacy resolver honest (`INDETERMINATE_*`); compare gates refuse unknown stage; force
@@ -26,9 +37,9 @@ Peak search removed; raw saturation uses aligned DAO grid lock + 11 px COM
 refinement on raw frames (`PLACED_APERTURE`). Mag-guided retained on variable
 target for drift diagnostic only. Draft 510 BO CVn: **5 comps** (incl.
 `1497974027502858240`), check scatter **0.008629** (=509), GREEN trust, 134 pts.
-See `dev/results/CURSOR_RESULT_placed_aperture.md`.
+See `dev/results/CURSOR_RESULT_placed_aperture.md`. Post A-1 re-export (2026-08-14): check scatter **0.008638**, `aperture_px` **4.261**.
 
-**HEAD:** `d758c83` + docs commit pending; 3 code commits ahead of origin (ZP clip + encoding + FWHM fixture).
+---
 
 ## 2026-08-12 -- ZP-CLIP-REMOVAL (draft 509 BO CVn)
 

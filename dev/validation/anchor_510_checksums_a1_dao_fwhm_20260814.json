@@ -1,0 +1,3783 @@
+{
+  "version": 1,
+  "label": "a1_dao_fwhm_reexport_good",
+  "draft_id": 510,
+  "git_head": "d3b6ecd871cb43d909e9577accb2b6f083ea9e35",
+  "created_utc": "2026-08-14T05:12:05.792586+00:00",
+  "algorithm": "sha256",
+  "root": "Archive/Drafts/draft_000510",
+  "file_count": 754,
+  "files": {
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits": {
+      "sha256": "e1efa78d0960af9125a88f41053ba1b0d66f7f6e68c43de2fe366b4c73ccbb11",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:36:21.460000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_002.fits": {
+      "sha256": "84429b8552ebfe059f40140405d64d48cd8841e69ac47048fb03a9730ff5be6a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:38:22.280000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_003.fits": {
+      "sha256": "cf3e839865b4e1089f7e506bcd80612824db19030cf266c19b039f3b23212a35",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:40:23.280000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_004.fits": {
+      "sha256": "e179dace31bf04c4e1a169a0de6dabf1890db35e8e4a45a45675d9029d9e19b2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:42:24.340000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_005.fits": {
+      "sha256": "9c9845d4b2be233d239c3d8ec3bd6b7699078047ac0bae91732f8bd4388e3e40",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:44:25.300000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_006.fits": {
+      "sha256": "8c3c4b3396a0eef1288c1f165488530c46b932da26bb5c14abf758dc008617c0",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:46:26.290000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_007.fits": {
+      "sha256": "7702fc15d71f9f0f76246ab1b9298aa151abe68e47b27c117f465275bdf2cedb",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:48:27.290000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_008.fits": {
+      "sha256": "8443cd41a7a3a4081799134a7587a3b8516ca51d0302eea07c81f2e7c7db072d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:50:28.290000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_009.fits": {
+      "sha256": "dd35b18531a997a2dba76ca29148e24ae526b1324339c58d403d8da15c9e3aae",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:52:29.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_010.fits": {
+      "sha256": "f0ab350a083bb88587daa5d714f1b40a642557732cca0e29fc341e8fc432192d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:54:30.600000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_011.fits": {
+      "sha256": "fc673e854a84ac6d6e4e4dd64217b1844bf46b22d6707172999dcad42b4fc3c4",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:56:31.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_012.fits": {
+      "sha256": "2cfc1fbe2bb4e3a3625bbc9469d5e8b111ca76030b78971021d206f6d19a8dbb",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T19:58:32.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_013.fits": {
+      "sha256": "cc925061aca1914aa94696c7fda7d8c46357274822cb8ad9b48d5355c397d9a3",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:00:33.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_014.fits": {
+      "sha256": "990e47e1b10c4d4f18f38e628178a06b621eb3f72fa0a6d6f544c2169bc86363",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:02:34.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_015.fits": {
+      "sha256": "dbd8bce8ceebc1589e24704ac331d029dbd9d62975b2cd444975b3f39087a0a0",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:04:35.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_016.fits": {
+      "sha256": "8d39c007897ff6d2a90a9ef2f3eb6b68992ccaad8b61187d34f57004e4795356",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:06:36.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_017.fits": {
+      "sha256": "43ba7735846e7bbc2604b53e7997a0094127c843dd691f9f46fcb71946bd417c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:08:37.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_018.fits": {
+      "sha256": "570bd351cc602bb62a6b1f037a2e75c171f5b1237de3797cfaaade8d2983a72d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:10:38.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_019.fits": {
+      "sha256": "8bd8b1b6af9b0990ca47d80141a65543010b9076db92464cb9f8dd55b2f57928",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:12:39.610000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_020.fits": {
+      "sha256": "bf6011912f4030c537242d5f0d1d73743c4d0590d6f2cf22358ad1482a7d4cf1",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:14:40.470000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_021.fits": {
+      "sha256": "8bcf4757ae5019644cb950850ba4e35cb23934903789c9b4d371b1984e652305",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:16:41.440000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_022.fits": {
+      "sha256": "cdc1f0899f28bc8f91f925fda0d906028cdc92bc4428871a0d85c02df589dd45",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:18:42.450000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_023.fits": {
+      "sha256": "54cfaac9f1d54d2e86a69f31cbd3fff3b24c8efe4ec722fa38fd032a5c33fe83",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:20:43.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_024.fits": {
+      "sha256": "2b6255fb7d5fd2f39975bdd83a0d147d325610bb42dda85fe8f1ed175bad5b1a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:22:44.420000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_025.fits": {
+      "sha256": "d382be098da05075ccadab2ee87f9c8c46ad899a8251b772dfc6e163afd27e5b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:24:45.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_026.fits": {
+      "sha256": "45c8079b4669900c874c19651abd3dbc00b358a2af9e91899dbf248e4f864b87",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:26:46.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_027.fits": {
+      "sha256": "eed0427289c537f02a1568fc67fa1b2f1e701a6b80a6703958d2c80cc35f4551",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:28:47.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_028.fits": {
+      "sha256": "0ad6dc1ff7d2f3236c449108ce5869e95af0bd64264224cd24d7da93cafb5359",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:30:48.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_029.fits": {
+      "sha256": "af21e5842347c965c4d15ab98cdc3e13774b38c058b1e2d078c301592fb626f3",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:32:49.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_030.fits": {
+      "sha256": "22dc9284718194df267aa28fdc22ddd1e02b49774cb0ec315835dd838828a7ec",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:34:50.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_031.fits": {
+      "sha256": "d16eef9866a84907d5f501a7a0627ab06dcdb6fe701907c3b067318855475eb3",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:36:51.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_032.fits": {
+      "sha256": "7b1ecfb6a628172c19c8d307be27bf80a07e428e4a9296a7179c2a635e317d26",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:38:52.450000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_033.fits": {
+      "sha256": "7c8fd0bf4d7bfa7e9a7b4a4491b8f7dfc2880b7d40bd31786d7be896366c23f8",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:40:53.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_034.fits": {
+      "sha256": "ffef71c81431ee776b810e7dfab74fbc3085b7ab15e65764fb073cfd87ab07ce",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:42:54.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_035.fits": {
+      "sha256": "dc39ff277e483cdf58ca08fcd62eaa75d36b8ad517075689992033c0b69af1cf",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:44:55.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_036.fits": {
+      "sha256": "d2ffb2608277d2c81450bc848e166b781fe1034270fd37d2cf822a0913e76842",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:46:56.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_037.fits": {
+      "sha256": "3996e87ebeb2f08f744266d6e273808f594ed8bffc56c0c6d11042f00dd9bf2a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:48:57.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_038.fits": {
+      "sha256": "ea90f2fa99b60012645a8258fc6588c763ebefc3359902515071cb4ccb5dbc4d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:50:58.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_039.fits": {
+      "sha256": "02a5cc1c9ad48e859e5f0bbc97df39f93bda77fe579a8eeaa97207f11ae6c39b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:52:59.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_040.fits": {
+      "sha256": "bb9b2ede4a3d12d0e0939fe235e241dec86ef3b61257593f88e197fd2e33f314",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:55:00.500000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_041.fits": {
+      "sha256": "5c40447cf45462a7cffcd1d47571158a92766ad56a691e8d87e98885134748fe",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:57:01.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_042.fits": {
+      "sha256": "f1d8afe239c72b89a746f74ebd6c79b650b6ea39aecc87e525d2553b5ed2c2cb",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T20:59:02.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_043.fits": {
+      "sha256": "2837e0ee35a988dba0b6e0839de216db2162e32beb1cf9668fb4a803de7cc1bb",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:01:03.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_044.fits": {
+      "sha256": "ca6f3c4924e91d2179aa626c05f6403d753d84562860ad27f72842212fb21a00",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:03:04.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_045.fits": {
+      "sha256": "ced6db9ade34c09b35218bfc6d3dfbfaf9bed20a16b12fa9ee7ce2842057c779",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:05:05.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_046.fits": {
+      "sha256": "9cf2fe0eb72c3ff5ca96b79e12d1d03daa9d3a2ae4831920f43ffa414a1d59ae",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:07:06.470000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_047.fits": {
+      "sha256": "c264c62782b04cc3d0594aa8e82e00dfaa8d20e17a0307fdb0686817a9b947f8",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:09:07.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_048.fits": {
+      "sha256": "c7df8afcb597e7082db95d36d67ae36f0895381bf43b982e5c5f795723fa44de",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:11:08.600000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_049.fits": {
+      "sha256": "60134ff0d58eef62b3a99867e8720e14d44606124915387057bac5d944802be8",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:13:09.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_050.fits": {
+      "sha256": "1aa3cb9f6d828de4079ac88cd57116ed638eb1721ba118985f683692838f3ab5",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:15:10.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_051.fits": {
+      "sha256": "ed2ec2268bc474ec6ba51bdda755db589b45a4c745622aa377632d5bb2c34ae1",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:17:11.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_052.fits": {
+      "sha256": "8501dd339b4f2cb380685979f0d9ee61f4939c3efa5b6d49892c93f39b5eacd4",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:19:12.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_053.fits": {
+      "sha256": "74607780a1fb8a060e6184019efc96d6cce9be8bf838dc011df5b055c1755fd9",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:21:13.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_054.fits": {
+      "sha256": "02b23c861ac4bd7966c7b00c032f7dd4a5344d02e5bb6a6a21a1a5fdb28408f2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:23:14.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_055.fits": {
+      "sha256": "fc2a06934b16274838f7c20fe4b532da5c7faea1ba02b1b85b6acdc61b704c15",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:25:15.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_056.fits": {
+      "sha256": "032b34bca51827a2b4573b265d139dc86efe3336d3f72885672e7e5a2158ac59",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:27:16.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_057.fits": {
+      "sha256": "9f7ce5a3d31fa25e1d5065c8698ed5d6da20d6de38897ec19b9a83fb4648b55b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:29:17.460000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_058.fits": {
+      "sha256": "8dcd21e056a5bf725052bc922eef8de645c1a16d57a89a872677ae6551145b03",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:31:18.450000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_059.fits": {
+      "sha256": "54664bf5b9188cdce67b24f60411034f415e4e5e18894a7132cb26f7800e2f27",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:33:19.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_060.fits": {
+      "sha256": "97601459a18cd630c8a91ce607e5158b71cd880391445bfd6238d41c29fd83d4",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:35:20.430000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_061.fits": {
+      "sha256": "9f7937447dfd8095cc28dd32352676625408b30e848ff5c7b065f83de08d2b69",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:37:21.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_062.fits": {
+      "sha256": "28a6a39d6672154b8c055023e47799526a69a70dde9e4fef3e4d86092069228c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:39:22.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_063.fits": {
+      "sha256": "734b4dad9652c884536311eb322dd5e49e586a772c1bc3972fcd87f4acb8ed11",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:41:23.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_064.fits": {
+      "sha256": "5e14e2bc89e4ecc6e7c6ec27fab79bad9d7b9c6cac7f41b08eac1481196ddc8a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:43:24.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_065.fits": {
+      "sha256": "03f712a0367a014ad965a801ee3fabe53ceab101dc03b22212fe2394799ff9ec",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:45:25.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_066.fits": {
+      "sha256": "21901c5d087d10d6ed765b1e57b24ecbfbd32cb920d884fe533dbc38e4bff692",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:47:26.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_067.fits": {
+      "sha256": "5a22a76952ddd387a5c22a5c27edb5ca4858a766fd24f1215fdd74e7a601df17",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:49:27.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_068.fits": {
+      "sha256": "fb47725455ffe35318e4a5fa46435452f80bc2f591ebe6d26594d52c36dea59e",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:51:28.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_069.fits": {
+      "sha256": "1becfcdc0bfb215abd9098bd5e38b4736c4e3e64b0b470d490a241d9a8655d6a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:53:29.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_070.fits": {
+      "sha256": "33ba92b5ef210ae28017648e8bbed129a5f26eec22bb0f05f05a1a5d95affe43",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:55:30.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_071.fits": {
+      "sha256": "cb62eec169a7b9bb62aeb8f7a0d8922eddd4774fdfa92deb9ee35abd0f243e9d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:57:31.460000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_072.fits": {
+      "sha256": "39bb21de101a1c3a213b9b07db590991322b8bc2e3908394e2cf4f49bcf6765e",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T21:59:32.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_073.fits": {
+      "sha256": "53e6ca97f255aca227b8196c5b09ba9943ea7d54cc118958112864a3f38cb5de",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:01:33.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_074.fits": {
+      "sha256": "a0f3e2005054749219fce30e296af4adf8a5590da46b450b4541c93c8b3b710a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:03:34.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_075.fits": {
+      "sha256": "13ed5b5fc1762072326eaf4d0114c78d8f04722d539372ee6e5930d5437027bd",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:05:35.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_076.fits": {
+      "sha256": "90236a3324fb52763d5e6823c9334c7322b8b5112c3dece610470de69f5c7973",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:07:36.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_077.fits": {
+      "sha256": "972221bf5c6f1bfdd2592cfb43785fba1fbce5c5974a2f0c306a294755498bdf",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:09:37.610000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_078.fits": {
+      "sha256": "b0d9cb45486089fd720bb76a3f92ccb36096ca80101b1b489cd8440271f46880",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:11:38.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_079.fits": {
+      "sha256": "0ab3d9ac441e9610e297ed16efc4830a143141a1091b26ca63a1679733a69949",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:13:39.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_080.fits": {
+      "sha256": "8a02b0ca710d4880a8ae1b32ea6ca91ef28c224d788bbdf4371644f8fb40cbc0",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:15:40.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_081.fits": {
+      "sha256": "40aac95b5ea974e6035913742399dcfc8332019ae89f36fa37caa89c67202fc5",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:17:41.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_082.fits": {
+      "sha256": "a5d9cca49783015ddb8c788ff210a98c281ca222ffefff9944b9bfb77342611f",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:19:42.510000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_083.fits": {
+      "sha256": "4309c57c67b68783e9b247901aac1e6f8f46a0f13d311c67e0011224b51485d2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:21:43.450000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_084.fits": {
+      "sha256": "16a2c3be407139200ab3b848641bc280954f0b56f283a7f32353843fe05a1318",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:23:44.600000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_085.fits": {
+      "sha256": "bf3e452564af79846847de7bde690e7163349cdfe07b9a617204450416be2eae",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:25:45.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_086.fits": {
+      "sha256": "6bbb093aeb3d4ecaee96cefab3c99991b37176ad77fba0d91ea94d06e92df9a1",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:27:46.490000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_087.fits": {
+      "sha256": "f9a618d29ef8ca4c295e3ec5fa4b1e19e48588ecde9467a0fca61be569bfbbaa",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:29:47.600000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_088.fits": {
+      "sha256": "34c2dfce9c50f72aa2fa1f4a06938cba22c0e2412fab45037edd4fd5e8cdc0dd",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:31:48.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_089.fits": {
+      "sha256": "f8336fb1daedee4baf0bcefc8f56a93711dcaee3f806d81ce30305a0f64b1798",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:33:49.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_090.fits": {
+      "sha256": "63dda239d974898f3b4f8c302e9cdcd8d8c0c250cb2cc4619ffd0acf1146716e",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:35:50.610000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_091.fits": {
+      "sha256": "b76c38978b0153032ef1ce9cf66c99113af268d6414884f21a5bf89c531fed2e",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:37:51.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_092.fits": {
+      "sha256": "ec99c77b655b455782ddf499bb3e5d38bece87ac8a0728adebb5fc34070e7b82",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:39:52.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_093.fits": {
+      "sha256": "83cacf9c6ded1bfc7bd7a76c05e641f28fdc2234ecc517dd848f04e497914d47",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:41:53.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_094.fits": {
+      "sha256": "1dcb17ca3d6caafaec4159af3d7bd0ef6b8991547a0c8865fe5be77809c76ef3",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:43:54.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_095.fits": {
+      "sha256": "b3cda7297d5b2a2e8d0904a6bc4a4257fb1c0c4ee53d89638a730a4af72840c8",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:45:55.500000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_096.fits": {
+      "sha256": "02219a7d9d337cc8b2fd404e7e9c9809e40b66a406c4f8d39adebf2708268204",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:47:56.460000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_097.fits": {
+      "sha256": "916ca5406620cf7cf27403205803c0e56cfc1d15f7d3edc108bdf652e9ad112a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:49:57.470000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_098.fits": {
+      "sha256": "39b633f31734f29bff9b89e0a321672aaa3bfbbe49ad6b8fe8bc96a859698cbc",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:51:58.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_099.fits": {
+      "sha256": "4cb2d0c8c9cb46d46b6c4994a62095068f64bb28bd9e900f9dc5fec67acb8a0c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:53:59.410000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_100.fits": {
+      "sha256": "72df4a51dfdd43920f263ad6ec9b9b5afde82f19130184b2602564a56fc01fe6",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:56:00.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_101.fits": {
+      "sha256": "ce6491218b5622ea09ddfbd065f1e2acf95f009aac1e40d4f92d28567a583d74",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T22:58:01.530000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_102.fits": {
+      "sha256": "ad5e5926a47f8dc592d29dd2631e41f08e715acf6d740994d944a1c4b329a764",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:00:02.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_103.fits": {
+      "sha256": "7ad27fcc14a84e56595e87c71227aa8dd08c1efd35cb430927d1321abbb97027",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:02:03.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_104.fits": {
+      "sha256": "3fed8b860198b544c28c7744f241be1d4b65e81698d528970e186b2fb6a1ab72",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:04:04.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_105.fits": {
+      "sha256": "1fd37e7f8edf9495b71f1d477b83386e30030ef21d7bdbef363fc614f53ac411",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:06:05.640000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_106.fits": {
+      "sha256": "ad5a89f029dc691ac60e729e67f030242b4b10ab58c2ceff770d4b32857e8860",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:08:06.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_107.fits": {
+      "sha256": "1a7c01cdcdaa1fbd0206b419e61a13abfc41c098b7adfd13cfbe2acfcdab8a5c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:10:07.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_108.fits": {
+      "sha256": "ec67066ef2207fe1b66a64d3b466698da2e4a7b160096475c2ce70854fa1207b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:12:08.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_109.fits": {
+      "sha256": "70a43cb1af97e1bafb1dc5de6f67d52468b2409a3121301aa3268bfee12b628a",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:14:09.490000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_110.fits": {
+      "sha256": "59a0289f4f2595c1458f973c49f3de4ffc1958c3ea81507acf0e6310bcabe163",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:16:10.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_111.fits": {
+      "sha256": "e084754b3c3eb415d1a43a034a34b33c83769e934552f49dfd78b890087fb27f",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:18:11.500000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_112.fits": {
+      "sha256": "455795f99d58c60829b628bd331213b77241a3054638fa40879c4004d9094582",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:20:12.480000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_113.fits": {
+      "sha256": "b5b09b02910c5ccbef50b2fb1839435a937144d9ec13839a2fb2cb708c90e2cc",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:22:13.600000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_114.fits": {
+      "sha256": "dcc42f05115d2935d9051565b270b8e71298b6969a77af305ea584535a1bf068",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:24:14.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_115.fits": {
+      "sha256": "58fdbb8dedfca49ee4c32b4afdb42398b5b976ad50598244de4abcda31ce94b2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:26:15.580000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_116.fits": {
+      "sha256": "b52e0123eed12573b4aa317770381dacc22f251a99b7e6b6c0a7a3520afd5134",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:28:16.610000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_117.fits": {
+      "sha256": "c4d2ce26e57000bc5b084aa7d2bd720ff7cbe980578e34e75a3864f01991331d",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:30:17.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_118.fits": {
+      "sha256": "08bb3b1ca3baecf453607458a11e26da371df53838228fb9a8d66a3e85cd1ae3",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:32:18.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_119.fits": {
+      "sha256": "e6a62c794be899aad0f1660cc170631be8dd90b02317493d24d082dd3c67e1f6",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:34:19.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_120.fits": {
+      "sha256": "ad0ba94f2fc9379a69432780c3a48d3729e9ffd6e0a85340cb23dc520f912ab2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:36:20.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_121.fits": {
+      "sha256": "e0a3205b92df74d87e8050a731d73e94633ff39718753a1374278e4111108b0c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:38:21.480000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_122.fits": {
+      "sha256": "f8d63c627ca4a5519ab6ad14ff0add214f1b4ca21e08cd0a6718e26723200c59",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:40:22.500000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_123.fits": {
+      "sha256": "46c32678d6e380a1563dedb1019f3054b804c2f488c4ff4a8493a1ca3b78b2da",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:42:23.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_124.fits": {
+      "sha256": "39c3148b03f65cbc0ae42f6583c18893571d84011eb77840a03ddf0868f050f4",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:44:24.570000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_125.fits": {
+      "sha256": "1903d95138413ab79698f376e1dd16004b0a3197cce4f52b6a005695403cd0d0",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:46:25.490000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_126.fits": {
+      "sha256": "3dbf2b09099acccd290f365beb34e51b568b5590564b1203c6ef60865fa03e88",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:48:26.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_127.fits": {
+      "sha256": "00c108b444f1ba866d491c2004c54034f30f8ba6800d46bfbeb4e58983dcd6e5",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:50:27.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_128.fits": {
+      "sha256": "992eccfac8063c324f72452bf89d3596bde62170bc8ab44b1c28ff7d2d2a0580",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:52:28.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_129.fits": {
+      "sha256": "4ef12a5cea18931d9fe592e15a4b0b95b836be1e89605b35cedce2c6cb59f00c",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:54:29.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_130.fits": {
+      "sha256": "08f2b5d18bb7f3a84ed733b2e67234eb74f163ef340f5edd0bcc4f21295f6d7f",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:56:30.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_131.fits": {
+      "sha256": "76f43ab132940ec0325eaf88f277ab08ede529e525bbbd456152c8678d6fe171",
+      "size": 5823360,
+      "mtime_utc": "2026-04-23T23:58:31.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_132.fits": {
+      "sha256": "e656dfdb460d2958dd88b41a520101cab4782d02894c74ed3ee707a529a1339e",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:00:32.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_133.fits": {
+      "sha256": "3243254a262dde4bd57094dca476cbfc71941c8e404c058ab1c89991a922ddef",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:02:33.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_134.fits": {
+      "sha256": "3ece71a1cb080909a32738af4399a51791358b46010668e0ab441b672264c5f6",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:04:34.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_135.fits": {
+      "sha256": "a7906b179cd05f817d1fe535e5d72316f438a48cd9a3f10a1035390ac32eca44",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:06:35.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_136.fits": {
+      "sha256": "91e6806c9142c8c1b27286c808f136c56d6ad84e41321573085b738419d1da6f",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:08:36.450000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_137.fits": {
+      "sha256": "3ba7acd4d86acb492392388231997f5f7a62bc0d73031450b2a5554bd58aa1f2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:10:37.430000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_138.fits": {
+      "sha256": "7a95496eb0bf24b5e510fc894b2c5400cf015f5b860895d114c08f5ac333de17",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:12:38.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_139.fits": {
+      "sha256": "64774468cd0646f32a98ba92a857bc94aefaa6dffd26d659337a764fc2fcb621",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:14:39.590000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_140.fits": {
+      "sha256": "63dafd7b53b0f26271c57b2b26428edca0f5842dd5116976e44508e691ece638",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:16:40.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_141.fits": {
+      "sha256": "e6b2e865056f94bd5561551c46ff7270d8849b98944ea08591c202d65d3740db",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:18:41.520000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_142.fits": {
+      "sha256": "98345efd2db42063f91f3e04bebb7740c683294fc3e54d094393a7bebaf529e2",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:20:42.560000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_143.fits": {
+      "sha256": "26f036785d1e720209c52cfc6c7e6ff16aac77dee7051d67ed4d06694c0d553b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:22:43.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_144.fits": {
+      "sha256": "b44451ba7cea5247d332478de0e79d3db5a46396eade122d351d82fcdc836ba0",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:24:44.550000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_145.fits": {
+      "sha256": "705aa6815db047d8ff5f92adbd9d4a1d61219119a6397d76d3e18c8b892b2122",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:26:45.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_146.fits": {
+      "sha256": "bbb8e8581d1c27ff15f7d51ef6b9af8bd97b29b482b5515554e8401a436cc6c6",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:28:46.610000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_147.fits": {
+      "sha256": "4eeeb70de344c4ef95005186d4832e01daaa1e282d6e3af0b25f27085d4cc2e7",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:30:47.540000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_148.fits": {
+      "sha256": "242981895ab07474dbb5d999c8a60353e91a31f1ca9daf8877d078464c09c6f9",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:32:48.510000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_149.fits": {
+      "sha256": "b798ac88ad099ceb29ab28fbdd1e0f5d56fc85c6347ba61866456512dd1d5a3b",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:34:49.490000+00:00"
+    },
+    "Raw/lights/NoFilter_60_2/BO_CVn_Light_150.fits": {
+      "sha256": "9c0624c7261ba03ccbca94d956f4e88c8a95f3bd6571e8bbff224d7c7665d860",
+      "size": 5823360,
+      "mtime_utc": "2026-04-24T00:36:50.440000+00:00"
+    },
+    "aperture_snr_table.json": {
+      "sha256": "a0797c5d3f2fd16ca013ff027bc05ef32a50f26286a946ef89dc5bf2af212493",
+      "size": 1027,
+      "mtime_utc": "2026-08-14T04:54:18.730502+00:00"
+    },
+    "aperture_snr_table.json.bak_a1": {
+      "sha256": "8a464da04f8f375cd81f4d8236c7ca09f7d84f5a30b777c514caf149f29a7adc",
+      "size": 635,
+      "mtime_utc": "2026-08-13T15:20:56.129265+00:00"
+    },
+    "cal_diag.json": {
+      "sha256": "0f1ffd288ee515606e8f86ea4557aee3f11609b8ae631a3aa089fb6ae461865a",
+      "size": 1066,
+      "mtime_utc": "2026-08-13T18:11:45.312293+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_001.fits": {
+      "sha256": "1b96f02e4dd52402990943c3da764ba41a06b08205a11df4adaebe29ac3f2fa9",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.772898+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_002.fits": {
+      "sha256": "8c4d88afe53436493ced921f143a2df307bcaf9053ddadaf9c387cc1f14c347d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.782947+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_003.fits": {
+      "sha256": "2bf6881ddde7538652f2cbf0c99367d257cde43ecd7efd8a28667c87949451ba",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.782947+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_004.fits": {
+      "sha256": "86c2b73c3b50e900108cff82fc69cde033a948e8f6c7e40711f737b775a68ee7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.782947+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_005.fits": {
+      "sha256": "3994f24f91c431ba8bd3f3a5b18215ce621533afb19315b78f94ee9a511e981a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.774266+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_006.fits": {
+      "sha256": "96f7c71c9b427b598d66011155ebbbfd23ea9bb26b7292d51ae4e89c7375cd58",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.799071+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_007.fits": {
+      "sha256": "14682df169b82ef61f4672fdee7972819c44221e0d5079c0781a588215ac8789",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.782947+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_008.fits": {
+      "sha256": "ad02548b9bfc1a1501245c155d21016dab932184c4b24f0bf46d3e861adfd5ab",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:06.757634+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_009.fits": {
+      "sha256": "480f2471326c2cea4af90ff73b5cad38f63bbf1f4dee9498f616e7e3015ccc07",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.339545+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_010.fits": {
+      "sha256": "5ccba88fdd2a3e0d85aab3718d37602a50808740ac228da4d0e5ca5099901ba8",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.327395+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_011.fits": {
+      "sha256": "6b34d1071e4dc9aba0bdcb83902ae80231a9b0368823a44ab6fe4706a0a913da",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.384346+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_012.fits": {
+      "sha256": "d45d87cb301b066658905478d81bdfa1b97d54813c8fb3174fcaddbbdf8dc010",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.394966+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_013.fits": {
+      "sha256": "1b8713f12b344dfffd9b7e4a27336100a5b75afc4034ebedf59f237df623ac70",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.396967+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_014.fits": {
+      "sha256": "c1f1fd7fc248ed92ab44c337beb70b3ec12fe94459646f36eb194a4b2b1b3cf1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.376677+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_015.fits": {
+      "sha256": "8ed56909f8b5afdac83f0e1a32252f8b01350e5feebec8b5e43a73bea2ab0705",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.375991+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_016.fits": {
+      "sha256": "9e25057891c006efc1b1f628cf37e5f02f271b9f787fa5d30182569050d91c6e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:08.397965+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_017.fits": {
+      "sha256": "f3ea8934e920248a8990b053a855fa34a32c863d9e72c93a40ab8e12b083ec3a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:09.944280+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_018.fits": {
+      "sha256": "44bfc1aaa8a25efde6799d7ed90059cae48d89e4bf1f44ebe29e542c34e48b49",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:09.926936+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_019.fits": {
+      "sha256": "e212aaefe104c82150c180fe08280c711587d4778e2e7d4c6b452ebfcda91cd6",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:09.986319+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_020.fits": {
+      "sha256": "ce2334cf350bcc35285723007116556e3c1338d6565cacc738892ecfb4e2f53b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:10.028815+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_021.fits": {
+      "sha256": "41a59fd7a8f6030bb3c2c502e2ffa2e9cde8b3c3dd705c716d7031fd5b469010",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:10.001547+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_022.fits": {
+      "sha256": "2068f36578753ef0569482e565a711cb4128dd30ee06877dec590f49cd4284a0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:10.013345+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_023.fits": {
+      "sha256": "fb0c40a1622e17f1f4e3496d5b447cc923d1a82b9c69db6fda810881b358b86e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:10.051232+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_024.fits": {
+      "sha256": "e26a00a3ab9c7a97208b0aeb3aa4fe39f38240b0642a52d4879f0a61bd825897",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:10.052806+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_025.fits": {
+      "sha256": "72b2f273fc7479d7527e855e935d50fceb77f9d59790fa6e6a02be9ac661f033",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.517933+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_026.fits": {
+      "sha256": "aef2510e15e443606a095f6b985bf5ef46d7f3439b5e64d6f6f7fe9447cac00d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.542981+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_027.fits": {
+      "sha256": "e66225561378d9b47390403526a251f44d4e95a6ed882392bdb7a58c720ac6c4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.579146+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_028.fits": {
+      "sha256": "c049a081590490ae1550372098b70db712a85749e936a45c89889982496c213c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.564619+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_029.fits": {
+      "sha256": "f55f8fd3ffe83d94290ebbd9db11d3b9570a5f27c1290f863977e700e59be515",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.634539+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_030.fits": {
+      "sha256": "f73061500d49700223396b441595a3ce3575506570f195636bbfaf171f7e60c2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.590608+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_031.fits": {
+      "sha256": "10568eef0d1aa3b0967c2de56e4c569a51c3a90b04b31b2ab49edf4879d1fc26",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.639554+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_032.fits": {
+      "sha256": "a3f94fda951da71db8beb80578aef779d83b6a166d3c8e9d46888404618c6087",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:11.626173+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_033.fits": {
+      "sha256": "4b3adbc09340b2d602b6bed54447f23dd27300b599b1be9ea2107c8a0238c000",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.065557+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_034.fits": {
+      "sha256": "1a4b9a2c8c1445c6376f3a76340ecece7def94e2eccd63c2e93cc212bd9317fa",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.082802+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_035.fits": {
+      "sha256": "a20707c38625e04346fb9d64b0f42615c1c41198c3833806d951b5072f12063b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.125411+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_036.fits": {
+      "sha256": "aaf474d7b7a4c049615fb979c3c628e40f84b039a02b258de0f38d64d3179c87",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.129451+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_037.fits": {
+      "sha256": "8182f595a0b1e5e2f082f4edf3b4e42a9df693710cafe106d2e78fb4a72a26b9",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.134799+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_038.fits": {
+      "sha256": "87f718c20e51aa15dffb0b0edc98b7031f857a011c1e79416dfdfa78968c178f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.203305+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_039.fits": {
+      "sha256": "dc67618d2cff54e6136733fb395e391df83a632530a44140d67d3d89f94bd8fb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.186763+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_040.fits": {
+      "sha256": "1d12c8a4c3120d7b71f7e925149c279f5a2cd46e8914ba6c84bc6f9f48b16f29",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:13.199185+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_041.fits": {
+      "sha256": "d5da7fc426d15cff3081a0472b02a68f03ab570ffb8a961b5832023b1c6bee23",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.590972+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_042.fits": {
+      "sha256": "d2b5e70764f88148e6eb61b3b84ce5a28466659f668c55a5b7d6392e1d71ea1e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.637650+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_043.fits": {
+      "sha256": "6fa0e296322de9d029cfd22d8a8bb94bb2b2afa101795d455b6dffe251efad7f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.640931+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_044.fits": {
+      "sha256": "f7e5ac8372cd8ade8a4516b8658e141c2bedeb189fb1b61dc883085b077ba73a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.677909+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_045.fits": {
+      "sha256": "8401d7e4c6bbde589065a3e82e758b55b08903e5b503d607531a3e2d0e03306f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.699313+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_046.fits": {
+      "sha256": "2227ee6a077c9f6c009597dcf8f556093975a1cf567c0d4633dccad8373d17a1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.749859+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_047.fits": {
+      "sha256": "80988911e19d76df299b9cc557af0b0529a63e179496aee95d83b554c098b6bc",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.747718+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_048.fits": {
+      "sha256": "abc06b74eeb4d75cb225eca56aaac8554d69b004d6f5555f8d84a61c7ca04e98",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:14.747718+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_049.fits": {
+      "sha256": "b84dd0caedb0c107f069c58191225091f603c675dca8504855c3fa7b301de0d9",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.066821+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_050.fits": {
+      "sha256": "11d96d2632a95d76a783a399828f050857937e7673cc8d917a3ce02712a64e5e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.179103+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_051.fits": {
+      "sha256": "6e14d411133e409d80afff37b37f8139c371af3ed3c1a6d58cd7227942d460cb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.201600+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_052.fits": {
+      "sha256": "4a6430fc2581c1848c77fee0db26af7715d8aa2d5529ccf067a14258740759e0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.235515+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_053.fits": {
+      "sha256": "029a6ef16cab0e832eb829bcfe03d006227f9b322a0bd6d5e65b4ab73456eee3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.258900+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_054.fits": {
+      "sha256": "4b3ac562a187cc1dcb28543aafff2274a979f726faa37d3230055a94cf354e5f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.312480+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_055.fits": {
+      "sha256": "1547cad6184cc0d80762c715b271bc7a1bf134d261a5b925a4438e1a79f83fe4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.265570+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_056.fits": {
+      "sha256": "45491a7ded99a3f06a48936c25165822d141f60deed15c2da9ee26625e427589",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:16.309471+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_057.fits": {
+      "sha256": "c69026fb9b28738c3cbfd4fb8aec5ef969437bae1753e463d64fd3e22b8898de",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.492546+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_058.fits": {
+      "sha256": "dd71892a4a0528adb0f2b652a4f20cbff5de4c57e97de1b10a663babe10794ab",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.651948+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_059.fits": {
+      "sha256": "ba70266d8de9932b93c89cd78e11c8b503672ffc3cfbf76f0bc5be933229223f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.687919+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_060.fits": {
+      "sha256": "47ae20010045b6aa9849a567dfcfe37ddae49d05381a745752a8bdb296c38301",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.717763+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_061.fits": {
+      "sha256": "e3cd3179f41dde39e8f96c01480781709cb88af72eba6af473217f5fef419beb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.765425+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_062.fits": {
+      "sha256": "5e66c0c59a8ea1655855b61732fe5d96ee552ef95d4125f733b014bdedb9ecc3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.754889+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_063.fits": {
+      "sha256": "d9f31e839621219808200cd541a26e0b6434e1a8494f5ddbb923aa275bc01d66",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.801339+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_064.fits": {
+      "sha256": "8a2bc8f9a6bbf39d7591bc9d7ae5384e462561a5101b5cc36764fc3865d2f4d5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:17.808731+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_065.fits": {
+      "sha256": "2acf0b9a4853c8680c6ea826a130e7802a97cfdb6be0e17ef3549380de7e91a1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:18.791491+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_066.fits": {
+      "sha256": "179aa40352ffea2d230f48be6469e80e0adb0f91327b49c375f1b19fcc0ea57f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.075856+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_067.fits": {
+      "sha256": "ab4d0c02bea8986b276ec6733dee49bd5d2fe5ff10acb4af2b11332393c0a8f5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.144864+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_068.fits": {
+      "sha256": "0115b78a4344885bae7e64a6aa9ee52439d56c6b6c396b6347a423e7fac5e82d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.234228+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_069.fits": {
+      "sha256": "6e89f0055a7722b600b45df10487dfa1c493217bb4a00fcc4e8906bf98e12cad",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.217301+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_070.fits": {
+      "sha256": "f7ccdf95b816daf57dcaa2412ecf7b5536c4ea3bda3b4ee50cae6992813fc60a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.229240+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_071.fits": {
+      "sha256": "762ea24748f1d479903658764300bc4d850a3e05a512db182f06a70bbceaf2b2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.248551+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_072.fits": {
+      "sha256": "0bb5f935e1474b45c03e9e2d15cfbdcf8daeb7da156c86b232542e192121864e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:19.282472+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_073.fits": {
+      "sha256": "75d0b38f3bda04b95efe3f9fcf57c542d3e1a35d2f17a7f19ad59fdbc7e4f7e2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.120744+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_074.fits": {
+      "sha256": "db0bf38a0edf848706b6ae71c890333f388e13364cda7826d63977860bd12b89",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.480135+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_075.fits": {
+      "sha256": "27551381e1357d13b4863d08dee8fad01bd4cdd506c2d985fc533fdf33082dde",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.538233+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_076.fits": {
+      "sha256": "e157aab16600a145ca6f2ec06a9c05970e3f5af3a99ddf6d481cfe8045d8f74e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.658433+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_077.fits": {
+      "sha256": "939c54e173ee76ea9a02039cde7d1bdef3f89854da805ce681f644e7fc37e6e8",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.707604+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_078.fits": {
+      "sha256": "d425cdcb957bb68a5260bbc107218226914e92ba154ee149ce2107bab5af8cb3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.725436+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_079.fits": {
+      "sha256": "e7a67f5661a3db907f77acade7b654c18d1155f3376fddeb5bdd84c38dc8181e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.683071+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_080.fits": {
+      "sha256": "24793c6e7d2b65b3e12806992d6c7f248556b2413839a39f858591fff089e7d0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:20.734538+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_081.fits": {
+      "sha256": "cf7686105a2a0b54a08250118b0017eeebb600f419fd0cdbca6449ab3a68d83f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:21.487748+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_082.fits": {
+      "sha256": "710363c6f63327ff2e288a7782d874eced2a38a655c40c84aa59f00aedf919f2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:21.855663+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_083.fits": {
+      "sha256": "e9564a7d5748f7b2f59d5854604b1bd55608e224c0e41de5503b2b4d14d80496",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:21.937380+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_084.fits": {
+      "sha256": "270a802869402b960c4e7f0d2004d254f8a40ce01c5bc6efa46a9d3812b07ec2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.121260+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_085.fits": {
+      "sha256": "e9b2836524795257de8a3bf95dbe2de5e518940d8ea4b4d5059f2e334cb50f53",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.142385+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_086.fits": {
+      "sha256": "2e37f6b53899880d82f6488d0ffd696e30c3bcfbc083c4d15b996e42caf77614",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.098750+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_087.fits": {
+      "sha256": "1b7c8ebf9a7ab89dc0ccfe8400b6aa5e131a6e5aea3d7eb5b6cc44a08a169692",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.186484+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_088.fits": {
+      "sha256": "e28ad22dbf01e3c99c6620d6b73cfd1c273e1938f53df947f7afebead66dea69",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.192240+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_089.fits": {
+      "sha256": "062866a9836deb23f2392908101cacf9e1233357b3b7f99a491b251114c7e68a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:22.750013+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_090.fits": {
+      "sha256": "e0e4a9f7426847bbe39680fb5ceeec5e08144b1effcbcd8386f78315f9a82fc4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.241959+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_091.fits": {
+      "sha256": "1ef8c5688fb4aa1a656962ca322af1c7ca7cec1f1bcda4807a9568267fe1b26f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.330001+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_092.fits": {
+      "sha256": "66d43518be961cef1c0fdd38031c1e0827c8e8efe0134fef41b8900d0c911136",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.519781+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_093.fits": {
+      "sha256": "b8ac96f81e64a0618a65015596cbbe02df77c64ad4f63527763abf9735dcded7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.565299+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_094.fits": {
+      "sha256": "e547df796e7a010333f7e2e8580e980e4f952d7625a20fc65059fbea11da8be7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.583446+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_095.fits": {
+      "sha256": "b107fe57f583e46058cf6c8dc4a6593d154c327381902e31e8a753e43bd83ab0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.613729+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_096.fits": {
+      "sha256": "b7056417e707785c59ab5fd9a02696100b69409b7d671222e3a5a28a2ae38adb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:23.624271+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_097.fits": {
+      "sha256": "90c0e0fe4d3c5a9464c174513900c498da8de4524b77c174f3a7cc83761263a5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.107256+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_098.fits": {
+      "sha256": "41c968815dc8feb8d7d3daa75076b8516e4f80469e67528b953f2b59c8af4fb2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.700390+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_099.fits": {
+      "sha256": "aace32604fc7b0e414f1d9bdc2283e03df0711e6acb236479761d487ccd40749",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.733413+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_100.fits": {
+      "sha256": "d5c13a64343dea6bf1f6278b7b3758ce4ffa196cc0064b2b616cc095fb8855e3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.861124+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_101.fits": {
+      "sha256": "466956ee267212bef062d68b989a05e711622f311d3f0fd3b4f44f2037314487",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.976807+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_102.fits": {
+      "sha256": "5cbf2eaeaf043b1b1c20a87f763d15f1124418b63b8a84fe08088134e948e5ee",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:24.990353+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_103.fits": {
+      "sha256": "67174a7057c86bfc90a3e76269ee708e48e2761a9d4ad68a3837d67f60c7d0ec",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:25.048414+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_104.fits": {
+      "sha256": "d35a1d3c8962a747cef0c035c22e8e598037434b805e8109dbe3dfc9f88cf864",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:25.050449+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_105.fits": {
+      "sha256": "fe190adf82f6dc903514ea946f33bb26f366ebf0548847f2f08f8b1eaf6689b1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:25.482188+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_106.fits": {
+      "sha256": "97c22e6c84946e339aa75ef85499f33572326cba4dcc43fa359a36082c769c15",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.066499+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_107.fits": {
+      "sha256": "0570efebb372ebd9fb8caecd893d24c66b216963e6bb626021485781a1f4f25c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.157636+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_108.fits": {
+      "sha256": "b0a36a8a1b1a564c7a4bb584aeab50ab80d8c8927878a5c7440d96649cb1fc8e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.257868+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_109.fits": {
+      "sha256": "3582205adf7ae4ba418b5c6964f1e89a30321170b7804f3928ac4dd924edbdb5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.381949+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_110.fits": {
+      "sha256": "d9c243191a1ebf16b96150b13bab0317806022d4f68604252cb03e546274b360",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.442672+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_111.fits": {
+      "sha256": "f00e7639d54afe4ef558dbf9845ed7a44ffb3f2a3188a6fe4eb62fbe11c17d5d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.490298+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_112.fits": {
+      "sha256": "9dc500ee2cc94883ecf844bf5cdebd83d6904df5a8b4dfd5d337707241dd4d55",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.516948+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_113.fits": {
+      "sha256": "b87b611d9422d88d5cf10a6490c281912f7483f9682c3ff9dbb6106f86db0b02",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:26.872113+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_114.fits": {
+      "sha256": "208fd524fed270e97e77e078c8b77aa39f67e5a7fe05636bf3247f6fc3b3bf36",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.455767+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_115.fits": {
+      "sha256": "8ce617a73fd507e99765931875f80bb341a86a87f256fc716712cd044242c3e7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.515705+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_116.fits": {
+      "sha256": "3e2ba5bc2462de04effdae0a67718239c3ccf43010069a8a5b52fe3b69bd66ae",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.597404+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_117.fits": {
+      "sha256": "479a27f54620ddb61dd6c21b6d207eb0aed0903d6aef1a7c4df5089005a38222",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.815494+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_118.fits": {
+      "sha256": "4fe63821e7b3ea4016cf06883b04e0d25e933d6a61b63441749fcba6f51c84ca",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.905905+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_119.fits": {
+      "sha256": "182f5cef5c03795fc8cb75dee0cf063b0339ec3eaa1aba4eb68bc378425a7013",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.943977+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_120.fits": {
+      "sha256": "4a783c4700af38e60d25cfce0255a1de411e756bccab0258545fd15b8c4c9ee1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:27.993461+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_121.fits": {
+      "sha256": "cc205bf7410e8ed633f4999309c0b99d0dc417dcf7d9fa405b1e1f1c8f19000e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:28.281916+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_122.fits": {
+      "sha256": "99962123da96a9ea5f3715899a520c2a900479c1ddc80c5eff77e9aceb1c6d7c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:28.865782+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_123.fits": {
+      "sha256": "956709a598052d3334036205fe5a4ca74ed9abf5f15cbb8f484c283cc6efbdee",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:28.898880+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_124.fits": {
+      "sha256": "6a9c0b9ac65174330f9cf788dbc59c5254d729ddb9b2361a2d0274baff78a03b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:28.985190+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_125.fits": {
+      "sha256": "5ee52baa29fc0c71ad52f74f257713bc90bee0fd0207febb62ae975d76fc6e77",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:29.240336+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_126.fits": {
+      "sha256": "7d5fee964f107d67249080c31f1fcfb2b33710c0c1a25dc60d04c672560d97df",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:29.354449+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_127.fits": {
+      "sha256": "88edb63b8cfc2ad3c24fb97f2a71e8e2fb96216b1747b4487bc63edd7bf2cd2c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:29.384413+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_128.fits": {
+      "sha256": "1d5e1c63c2293643969de61e21bd5f908d103d246f9634331a9073407eba357e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:29.429487+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_129.fits": {
+      "sha256": "d49655668fef2be0cc5aba02901f95788d18136131ba59f51862f4a80d08cfaf",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:29.656458+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_130.fits": {
+      "sha256": "e65ee94e4c8da437f91d399ce5a4892658c09fda23b02c0af829063f8c820a3d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.199945+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_131.fits": {
+      "sha256": "e79613428e10bc6e26480edb91c0c5df6ec26ec6df0f89b3117e131c1c70d297",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.306184+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_132.fits": {
+      "sha256": "09ee89ebab0fe8c45f6a42ebf941f2faf849a503877fe68f36175c46f65e61a8",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.370700+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_133.fits": {
+      "sha256": "7de489b7b5df55f849a50a99ec1f0a125180e2c8f1445c56bfb82c02fed4cb8e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.609427+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_134.fits": {
+      "sha256": "2370b8b794646baafe62c933162a1a58ce086508113d41a810d669a0c164dca5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.763871+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_135.fits": {
+      "sha256": "d2c0b6a94a8d27c2b701602e8c20f9d6ede48ea594d04802297218465ec7fe3c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.799150+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_136.fits": {
+      "sha256": "4f389f3d2f631acddb655f04b82a75317846ed8f50ae7f2a185c62f7439f4889",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.826122+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_137.fits": {
+      "sha256": "63f281e3d58206f7655ea95923b6ad7d758d597f241ea42b3202b088c7e7335c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:30.987237+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_138.fits": {
+      "sha256": "c4493f962b266cd09ec0b990e172d26378a3090219da463f4bbc4d70aa9cbeb6",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:31.579095+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_139.fits": {
+      "sha256": "4422cc1ac37b8638059b656d9ae3ce94e076ad68147d802d54102a9ee7028082",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:31.594397+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_140.fits": {
+      "sha256": "9de4f5793416c53a992609666784c2d32d19e9acf72ea165aba0dd9812ad1542",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:31.717767+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_141.fits": {
+      "sha256": "23d42b8327ed57c7e6c687aadd501247b44d8659272613233977ea58c2bfd5c2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:31.925386+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_142.fits": {
+      "sha256": "8083ed6de4db938ac2e310f7389e8f87f49c88d73a40ebc0ba92c5cec1a9c59e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.124703+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_143.fits": {
+      "sha256": "af49732995d7187c368b0cacd307a4e3dede218f2ed702ba2919bfaaf3c415f3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.184132+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_144.fits": {
+      "sha256": "315a42230176f1675b25b722caff51084fa42abab98e11695965d339a52a6288",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.217185+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_145.fits": {
+      "sha256": "ffed3a142feeb101ce7ec72e6955a0d2c211b41c21dd6d8fb81d1582ab1652d5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.322482+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_146.fits": {
+      "sha256": "5b6c8e397c39919961f027fff5ecfe62e1c87ced63edbd73571144cdc3be24d5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.739794+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_147.fits": {
+      "sha256": "5b931acb53f68649783d51074f75ea6bd37b45280aa471739d9814da3eece7fc",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.769312+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_148.fits": {
+      "sha256": "82ff3a38e51d32adc4d9d1a264dab1a007a453567f732750cc460f3a0f21d290",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:32.846438+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_149.fits": {
+      "sha256": "8370343307187b68b3cc255ac2300538ee6c5c725a69e616e2fc46d3c782551e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:33.021431+00:00"
+    },
+    "calibrated/lights/NoFilter_60_2/BO_CVn_Light_150.fits": {
+      "sha256": "d5470678d42c41bd803a5293dfcfa2f5411b18340cfc50cd553ab955c4cb3b3b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:11:33.120790+00:00"
+    },
+    "calibrated/lights/qc_metrics.csv": {
+      "sha256": "0ffaf1995138f3cc4f4b110f0ca0b94913b0814645ec679e77a53e508fee3fb5",
+      "size": 56415,
+      "mtime_utc": "2026-08-12T13:11:34.440361+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_001.fits": {
+      "sha256": "d370db7ad3d22469c73728a0f474eca77aa7a3c362d3d15c6896a23e3704264c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.635293+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_003.fits": {
+      "sha256": "d0cf58da834d349fed95e7cd4f23be23dac8e40589d0388e5ff14c8f69719362",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.658204+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_004.fits": {
+      "sha256": "b1ad608f789f84e15ad3f90335358de9d3debfdaa9bfaa35e941606354dbeedd",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.678470+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_005.fits": {
+      "sha256": "ba8f4db0ff3adcfdc884e92658151b263b7195c1f8dfceaf22404f2f87c6e7f4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.700590+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_006.fits": {
+      "sha256": "15540bdc8715b5b509cf28a1decb595451bc4e61744764a7f16f6c9472e5be3e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.718860+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_008.fits": {
+      "sha256": "ae5ac86821877e15fe7642e370cd25e66e0e8e31ec40433b009a99c4e3ff861b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.745380+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_010.fits": {
+      "sha256": "7330dcc71982cf118ca831a4578205fb0105c382343547c4c62480b1f66e91d6",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.763405+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_011.fits": {
+      "sha256": "04521d0ea7bdf13bd0e8c4cdb5fa324fd49712087003752dff655cca9ba9d8c4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.781947+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_012.fits": {
+      "sha256": "644facb978a287d8f98528dc61dbb9eb178b024f07bfefc079232ac0e26b93a1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.797545+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_013.fits": {
+      "sha256": "6cdcfe099f080bc0ba89fb0b5d16d5d629792dbf520598a792542906aa3f2108",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.816756+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_014.fits": {
+      "sha256": "0d050469f5f1ad1213027a3a8076d2ee11d5620749ac5a81a992e09a44502fb6",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.833174+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_015.fits": {
+      "sha256": "29786479a482c6bb9e08fd8a99ed74dbed7122b2af83978481d870d8e1857007",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.860269+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_016.fits": {
+      "sha256": "e60f9dd35fa8802613318841c380cd6afc31fe6997d531fd49c9bcaf6eca0a6a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.881879+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_017.fits": {
+      "sha256": "d24e407f72efea56a61be25b4c0ecd547c289f2d2f008e5ea2a31f45cc162b45",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.898833+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_018.fits": {
+      "sha256": "996505b6b93ba3d925b9af7975b0ac45642e74c71bfa662d21c551479d328266",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.909116+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_019.fits": {
+      "sha256": "d3da29337e069bcea0f352add2f2d23c145c30ed295c91d6125c1101308f16d5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.936110+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_020.fits": {
+      "sha256": "e1097d78951962c4b461b938fa700c56fbe285a3fd708360e8aa7c5c7d68da54",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.955165+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_021.fits": {
+      "sha256": "6374a584f891aa548c8b279d1ed3761fbabd7fafbc37bb7fdabd832757038d8b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.975812+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_022.fits": {
+      "sha256": "4def5ea6ed91719bc3ad0526f574b6ca293f0677a77aeb5484737300410cbc5b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:14.994965+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_023.fits": {
+      "sha256": "bd62af82b3ad504227ba5699540fc31fd203584c82d5a4d6d3119bddfac6a930",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.011205+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_024.fits": {
+      "sha256": "202183643af5d85bf75fc2ab43ec7e3312b486cb52fe913eafd8bc40858b9d3d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.031556+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_025.fits": {
+      "sha256": "c177fdcd34dd6b87711f4e7f2eeb3ed763ebcaffc209898aa2557146cafc649e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.053694+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_026.fits": {
+      "sha256": "0b1d17037a9084aeb84ab303c6fab8d5497af2b30b2c639c3cdfe0df1ff68bc8",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.074063+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_027.fits": {
+      "sha256": "baa8ff83d6f200c16806589a121ef7fa235937dcd4cb4258917128fe14b536bd",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.093628+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_028.fits": {
+      "sha256": "890f2cfd479a3123ba90b5419067af0f26ef34b5424bf850fc67c8240fa26226",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.110182+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_029.fits": {
+      "sha256": "fa81cf31410709fa579b8bb1635886a110acafa719bd82d68cee64bfb2232502",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.133894+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_030.fits": {
+      "sha256": "160e6fd9fd94a764d5f8c2cac2a544f5908d7071b142b97c6486ac00691a9fe7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.154609+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_031.fits": {
+      "sha256": "a492b5db019a35962f36d1fa8745ff7cae9d4f5fd03109fe41ba7dc6b445f16e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.172684+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_032.fits": {
+      "sha256": "7ce4f53b4599bbfbd2595fa34e5455415fd3e1885e169441df6678e218325f2d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.187860+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_033.fits": {
+      "sha256": "188ce8c0c6cfaf58d32bff6c60d771cb347469c820a97b435343179f59fc853a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.204291+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_034.fits": {
+      "sha256": "4b2cab1725684988b280cd5af29057a0bb2e5e1640ef3fa2863c12ce761606ed",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.224878+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_035.fits": {
+      "sha256": "f7995d30cb44590784107c6bee6ec2579586e47677682f2b8153c005a4476efa",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.245225+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_036.fits": {
+      "sha256": "6f7548b44ae1ea05e22c7893ecf1fe6c2442a070f5b1569c6e67005c2b2cd010",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.261094+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_037.fits": {
+      "sha256": "89396eacce5ea5a2396314e120183407361ec0162ca88ca06cb12ffb65b821e8",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.281958+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_038.fits": {
+      "sha256": "b354ea3c99f56daf850783c85c364a78a9a3c84fe10797810f4ad9bb6cdce61b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.302488+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_039.fits": {
+      "sha256": "584a313c85cc168acbd09caac3d4bba126b7d1756a4fcbb6fcf91853c29040db",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.319786+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_040.fits": {
+      "sha256": "bf0415c29ba66581870f07778b60457dbbea72b239d1b021415f5f1cf251d85c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.342311+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_041.fits": {
+      "sha256": "38da371497a2eacd5a1c6436cdc3c3c52e30d839fb25508688eb7178bf2acd8f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.362395+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_042.fits": {
+      "sha256": "249a07474be1c18f9a2b271bdbedde865ce6db915416acb0e9a0f38699eedbd3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.386993+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_043.fits": {
+      "sha256": "950c99b4498b43e0685911c242adef9139339e53619cf69652347b5f89d7f251",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.409881+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_044.fits": {
+      "sha256": "7effcb221f1c0700948c38540e64400700fa612e23cfb26cfdb1f4d3285b0ee1",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.427878+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_045.fits": {
+      "sha256": "453c38dee3cda66bca312b86a1ed7c242bc30d7b6e3e0bdb7845055e993d2672",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.444345+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_046.fits": {
+      "sha256": "8a322a1f816ea6693cc0ec29019e3b3c1e4c40c9ddc81536bc751944c0fbc84c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.467449+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_047.fits": {
+      "sha256": "196dcf8c1f0b5283ca8cc888783beadc696a707c127d4b34df58c2b178b00894",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.484313+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_048.fits": {
+      "sha256": "a904eb4728be49aa115e2aa37f0e06a3aebd1d415fec71b822d761a3a7bf4a4e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.503004+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_050.fits": {
+      "sha256": "4657b72e8b206498a06df2a2af2d5a4d92459e1b10c3cd656f3f7aaaeae3d27f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.521487+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_051.fits": {
+      "sha256": "8107652d2dc31fe72c6dce1f3bcef9de5eedbe696d95170fe9777980e6432983",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.542296+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_052.fits": {
+      "sha256": "0f4d23cceae0b68aabbaaf4ec589569ed44c3e6f830d3cb069724ef55801aebe",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.560209+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_053.fits": {
+      "sha256": "314e88e9e69a46ee476f0fd52e479126c219b83a06ba8f2b5617ec6b19cb2199",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.577184+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_054.fits": {
+      "sha256": "1bc8b857aaebb3af40f1ca4bbf9475da21b9f26bcbd7388ea883ef6c4b81b5fc",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.596669+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_055.fits": {
+      "sha256": "045734d2970657fc2f5175b6e1a7959e2e224f23097a93075dfa046516db2f5f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.613867+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_057.fits": {
+      "sha256": "857574edd1d4fe99bc6b23c7bceec019b4b2be5e5c63a339b5a36474a293f6f5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.629686+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_059.fits": {
+      "sha256": "786a9f2d647eba79b59d82e5a8b0560ef1e951f93e2b412f4ee0eae31f546d3b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.650808+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_060.fits": {
+      "sha256": "9518b3c9a55cc948d1b307becd802c5555fcb59cd3ff725bc19f091dc2633094",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.670259+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_061.fits": {
+      "sha256": "ed78e28eddda0669c212e0700c0be88f0574cc7ec04606e8eb1bd479c9b4bdc5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.688065+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_062.fits": {
+      "sha256": "348d22c045f91c5571253339dc6b330daa7cfcce6920097d0420adb4927d480a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.702306+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_063.fits": {
+      "sha256": "596730ae30a1749ea6aa247ea8310149bc1f5fc00c2c4ecab63a8c302d0d0e93",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.726331+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_064.fits": {
+      "sha256": "9e00eb7c39e2d40696d35ba1950c8fd2572d7fc3afafba8037529b0a67607ee7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.746066+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_065.fits": {
+      "sha256": "7e458825f8d90120f88c0e98309da418acbebd3b25755c715dbebdc9934cd47e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.766461+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_067.fits": {
+      "sha256": "fe9b35e2bea489a5497921ab1ff7ce960fdc8642c1621f1a8847518572bcaee4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.784601+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_068.fits": {
+      "sha256": "6ffe685c6b17933ec1b22e3d2bccef836511739b24abe7f8a5f03dcb0e362acb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.804353+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_069.fits": {
+      "sha256": "e2f441988983da502cb923b155792f011a2ff8d79fd7c9eb4c5f9b248736591d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.824806+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_070.fits": {
+      "sha256": "542a42596597af7cb4b36f3754954f71b1db70ed6aa954221d49b92ba6e71866",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.843604+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_071.fits": {
+      "sha256": "c8802c68cbab7ae3d33ba52407b92cdbdedfc368b65c5f84d4b522a91e169445",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.857808+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_072.fits": {
+      "sha256": "d12dd743c5eeb0bd5affeb0034a39af37bf5a7bbae73b92fa0ffb32c48b9d8cb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.877311+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_073.fits": {
+      "sha256": "40062d8be42627d00b17295a4294a8645b6b01acc6fd90666fc4ebb17fde1681",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.893437+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_075.fits": {
+      "sha256": "9b9d1243532aed8d34cb830045b1846c9b5006aafc1bbec924e6dcb791461de0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.913749+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_076.fits": {
+      "sha256": "0e67c99a4abb9bcdb8517446148d76fc3fa40d6081de020cf6b2d63e05557579",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.931398+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_077.fits": {
+      "sha256": "801e784185e02b2d38d7781b1749a45a1de36586d04c6f746e2447eaef8c1a42",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.950011+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_078.fits": {
+      "sha256": "f06feb20b01187c387bcd73e1beda00fd388c9a5cb35df08917cf90f451b2d04",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.965479+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_079.fits": {
+      "sha256": "23c487dc39ad4cfc8704a6502c9a3469748ff1cd7a54dbf9620b0dc82d8048c4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.979869+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_080.fits": {
+      "sha256": "cc2a43b874ae7b9a04236a365cfba7755d7aeb460f1799cc56382de3b01f9924",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:15.994612+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_081.fits": {
+      "sha256": "66b6e1ba6dae0bb3db3416649503bbbb2016a6f73eb112b94197596d17f6d8de",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.008180+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_082.fits": {
+      "sha256": "c3e8f7fe8929214f11d79c2fab51e2e7f24fcab82f55e115deb18b6e866e5d14",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.024841+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_083.fits": {
+      "sha256": "49399faf4d3677fab0184362c55faf7a1ad531301387550f611f9d1982db8953",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.042884+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_084.fits": {
+      "sha256": "1957a2de8635c7b47454ceabea84cc2a7b23dae61e2264e67ad5070f9a85a18d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.059295+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_085.fits": {
+      "sha256": "26d890d868faf872c144b94ea0c9bccbf7e04367f38508922fd123f6a15b80b4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.074702+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_086.fits": {
+      "sha256": "c81b1072b9807667bc13aae3967311382368fa6ef60fd65cf5bffea5cb7ad7e3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.086900+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_087.fits": {
+      "sha256": "6f3ec359d16bb2ecb50f4be6e73fb5281ca7430ea9ebcd475932de699efa66ad",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.103323+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_088.fits": {
+      "sha256": "47dcfe174c54d23ffeafcddc2a05d1ea692a417657245bb2faf24d6f8495c96d",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.121325+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_089.fits": {
+      "sha256": "3088a98e87fa1d1e49e796e5af0143ca5be8e8ac1c05502b2eadbada96a6ce8f",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.136986+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_090.fits": {
+      "sha256": "19dc7d3ea4004ddefab3520c22e477c24b6f52152b58bd72ff6d656026721b77",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.150983+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_091.fits": {
+      "sha256": "42a7e24c5c02d50c85b726bc6ae797ebb4e40726e77b71ea4b4b4ef99ac65371",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.172748+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_092.fits": {
+      "sha256": "51079fa74da6de25616df47e0f88e74c2c43d3c5935386f8388b1304f8b0f780",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.190279+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_093.fits": {
+      "sha256": "1b5c6b06b01dd5e92e3908782f6fbe94ebffc8773d0b2be55026f5ea7ecac11e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.203598+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_094.fits": {
+      "sha256": "33144023914ad73e315575e89f12dee3c45a8271c75b62c78da7f44cd62bf9ce",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.218531+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_095.fits": {
+      "sha256": "35969db4a8fdc8eb1338868c11acd89a3b4694415a098ece7b57fa557ca1d4a0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.242477+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_096.fits": {
+      "sha256": "7dba507ed946fa7577bf7ec79f7c0574e82f7ba3102616f4e4b251d997a99d47",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.259849+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_097.fits": {
+      "sha256": "ece3387b16345b233bf150c0375c5b7fb922e92bfbaebe39aac12a8b87259b42",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.275881+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_098.fits": {
+      "sha256": "84ddf7372cc6bb72d649fef6290e5d2330c1316b1da65aeb522f4d6b4bdeaba6",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.291636+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_099.fits": {
+      "sha256": "2355d6847392c8484245f7a83afcf0a9e749e170c1de626e9e7325c9c47dfe92",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.307964+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_100.fits": {
+      "sha256": "e954a13411cc6f9a50ebe56dbf20d01cf572cd81d428eafdc2645956084b62a3",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.323415+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_101.fits": {
+      "sha256": "58c7da501ec0d94d6672bfdd2f3d68446a75dfb1f5a6917785852ef9131afc59",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.343536+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_102.fits": {
+      "sha256": "bbab5644077cfe03b3a894d9a6c63be57d2508eefd837b7f8ebe54c3d13642b0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.365614+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_103.fits": {
+      "sha256": "92e086e845c307904b22ffc7a75620aaf160d9240ed8c48150b84c4b824de147",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.392817+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_104.fits": {
+      "sha256": "ab2904bb6d318fb5ba84bc543816837a03729908e9209294b0a7758a2069da43",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.421122+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_105.fits": {
+      "sha256": "92b51836ceb45dd48e32466c73d84b692b5ef67bba2782d4b5f84fc09f00725a",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.437999+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_106.fits": {
+      "sha256": "10430e34822ba5bfa8b8b056f1c56e9322317c765e7d82a5198734b8d0701125",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.458101+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_107.fits": {
+      "sha256": "66907963d46443a5fd74660949b8cf7eb0089976a5b18754246e5513cef48c10",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.476384+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_108.fits": {
+      "sha256": "6c166928011c69ee6bffd2d12e18dab9d200ab56fb5d3c00d7957adbfd8eef1e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.494132+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_109.fits": {
+      "sha256": "05dcefd671a204480b3122891b9746b646d603534835bfdb5e9b8b6c5fa153bc",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.510200+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_110.fits": {
+      "sha256": "c378de931f445e4ba374654665f596f414fbe139a96dad982eb8621e8d7c3f00",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.524498+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_112.fits": {
+      "sha256": "22b5a34d21a51dfd4a5360054f117899948fefb4458fecb12008744b830be43e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.537323+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_113.fits": {
+      "sha256": "8d166369be712e4ca91ec364ade2be007677e6b231243930119eb367e2d3d781",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.556479+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_114.fits": {
+      "sha256": "1d183158a83dedd6469c7449ffd1c1523d2d901665d7519cf7b27abc1ad176ed",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.573487+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_115.fits": {
+      "sha256": "d01fe7f897171f6df73f0a0ce63698a3045ffca3afb5045cfe77aecc687eb31c",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.589147+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_116.fits": {
+      "sha256": "762e1a49eb927cdbd19d1663e0722a335880c0de25f8de2e88900c7aa15a5442",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.608184+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_117.fits": {
+      "sha256": "e2457366d2ef7dbc9b3ab536b1c91897b7c7ba2f42827a8617708b3276f25bbb",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.625956+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_118.fits": {
+      "sha256": "dab882fde1d2bececb0af8b3e243c30f5a93ab2c77365ef1cdebb605a73e4c08",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.639236+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_119.fits": {
+      "sha256": "60612444a1ccc475b2612eae265eefe9af9c9c5a50785c08206f95f4a339d044",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.653346+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_120.fits": {
+      "sha256": "82e256afc5de67fd4b2a001f632ddf977283ff2067d379a1db1cd6b1f458627e",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.670126+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_121.fits": {
+      "sha256": "967226c7321ad0ab668b7f0f94cd1f285d93e2bece869d9c887d6d80f4a99757",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.686636+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_123.fits": {
+      "sha256": "1c7356e95b728be83ec602d779c0eb798ad9af54a48d8e074fc98a01c79e6612",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.703698+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_124.fits": {
+      "sha256": "c6666cb76f614748da0ceb026201e1c38630b3ca91861db3504f1a6c4504c043",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.725375+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_125.fits": {
+      "sha256": "a73a45b850ea22db6217f304b2564b5708fb7242c5359be20d148d5dae0e7df0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.742630+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_126.fits": {
+      "sha256": "dde941b0ea2e59105b5cab42ba800e77573b0658e5a591d8fb353c7664b72bd2",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.761329+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_127.fits": {
+      "sha256": "ff8bcea7b4c781cfce79c0ea7b0cc732462e181b89afae835dd351c714322af0",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.780448+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_128.fits": {
+      "sha256": "97c2b099dcb38553e3ee3ba023ece04c082eb751ef2e7096269dd858333990d4",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.797679+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_129.fits": {
+      "sha256": "cfb2f1efd087b9ea3fdd5750b4277357f3ef9d1d255652e08663d002f6b959e7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.813168+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_130.fits": {
+      "sha256": "fd0c9ae943a80cc133f685e78e7e8eb85225246265d0dde159bf06640393aad9",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.840202+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_132.fits": {
+      "sha256": "bd2bf1664e670c25dbdc24efef364cb22cacaef17ce1e04757d9ad424b9c53aa",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.857007+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_133.fits": {
+      "sha256": "aca3d90f54a8b64b9e08de890cdf7f1cd7dfed1c909337d8e7743273fa0ee9d5",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.883211+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_134.fits": {
+      "sha256": "521d81259b71b27017b7474a8491e3fc02400edca8ec2f721969529be43db2ed",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.903933+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_135.fits": {
+      "sha256": "3fccbe53337b8de5d3b1ae0457333a3e541b3045b3231e2b46c0b597e67a6977",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.921341+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_136.fits": {
+      "sha256": "75e3e348fc1c0796ce9f1436bd61ef04c72b439ca189a942f7f865a23acc6dcf",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.939896+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_137.fits": {
+      "sha256": "9ad648005e38f4ef13af36db421cdaae40d9b630bc4de5cf904c5bf7f810cc60",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.955124+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_138.fits": {
+      "sha256": "c2798953738fb571af4fc4b029d683b87857578f2b145ca45da620440dc9f971",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.971066+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_139.fits": {
+      "sha256": "3765026fe71e3abae3f884e27705ff6c36a4599bc578ab5c76f8cee387152d86",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:16.993684+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_140.fits": {
+      "sha256": "a79a75f4b448439da460a317b9398d1ea9a43a344ed8df5c32bd4c7db6f4904b",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.014697+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_143.fits": {
+      "sha256": "aaa8c34cb071f9190c7afc928f0d83c2941f122b739ab0ae77a54cc698041450",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.037760+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_144.fits": {
+      "sha256": "2ad50d1e86a0823488decbea82ffb16bf6c9ea9b51bc6868f6f881316e13b9d7",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.067634+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_145.fits": {
+      "sha256": "5b99b062c5d35918671f0506fdd375b5ff78a809aed3961aea81ea4a0c77c540",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.083313+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_146.fits": {
+      "sha256": "fb1bd20fd0789a791d8592ec13d24667dbd1c650605b08164ef4803b5e89c939",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.109745+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_148.fits": {
+      "sha256": "376b8b97bb609a47a8c2c748b686ec5f0014b4e85f592cab62e7b62bebca8687",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:15:17.128501+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/MASTERSTAR.fits": {
+      "sha256": "303c33326909b71e3a3cf18de9e54248bfeb2875a0bebc71965649c95b383811",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:14:34.811188+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_001.csv": {
+      "sha256": "c1f877052e247dc54ed1b9c0cfe59d11a807d9206a46ffb5e02788ffbb0ec634",
+      "size": 492609,
+      "mtime_utc": "2026-08-14T04:47:15.078874+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_003.csv": {
+      "sha256": "68da946df476686f441ea287afe9d6454c3f12f8d2633da7ae2adf58dfd1a744",
+      "size": 484649,
+      "mtime_utc": "2026-08-14T04:47:17.773664+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_004.csv": {
+      "sha256": "ac8ef85d61113bba38d56d5e1687445837a7c2a13f8d3d512825621882134b52",
+      "size": 483875,
+      "mtime_utc": "2026-08-14T04:47:20.916784+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_005.csv": {
+      "sha256": "4e0958309cfdba6855cf0d2c6279770c3cf41a4bd0f4b503326146f4c1a86bf5",
+      "size": 485394,
+      "mtime_utc": "2026-08-14T04:47:24.440338+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_006.csv": {
+      "sha256": "eebf1a313684484724e37937e19c668da465c6ce2a570fa476e80bbe16f37e67",
+      "size": 485649,
+      "mtime_utc": "2026-08-14T04:47:27.650879+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_008.csv": {
+      "sha256": "5c22483b344c121e84d6fc892b2ebb23f8493665eddd28406300ef5def5fd408",
+      "size": 482002,
+      "mtime_utc": "2026-08-14T04:47:31.486339+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_010.csv": {
+      "sha256": "1d973ab14d97444fe15bffca1e62f535347d13c0ecce684725fd194d3861e402",
+      "size": 484011,
+      "mtime_utc": "2026-08-14T04:47:35.894466+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_011.csv": {
+      "sha256": "9455f327f14afa01dab41804059d9aac4041262f315e033a52c60853a1d8cacf",
+      "size": 483447,
+      "mtime_utc": "2026-08-14T04:47:39.683960+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_012.csv": {
+      "sha256": "f6bf364015c91f837680c2e1f668e4c661ec287b6d296d04a786a776321967fc",
+      "size": 482313,
+      "mtime_utc": "2026-08-14T04:47:39.401375+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_013.csv": {
+      "sha256": "c94e8be6df50b32a873bf205a0ccad8bdf3263dcb2eb18023f12a8cb5cdfcc50",
+      "size": 482446,
+      "mtime_utc": "2026-08-14T04:47:42.240287+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_014.csv": {
+      "sha256": "90347cea97362ac3898e8e7a0ed5b610fe7ec293ac6e9cfa036286f6988443b5",
+      "size": 486981,
+      "mtime_utc": "2026-08-14T04:47:45.801431+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_015.csv": {
+      "sha256": "6093ccd62ac99bf2bfb78b0c3f56ac9fe97c330f1657a58f3b48af459ac23236",
+      "size": 481721,
+      "mtime_utc": "2026-08-14T04:47:49.057593+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_016.csv": {
+      "sha256": "8d4adbed3f25ed01ea3385a05227848ff87bde8384023e654891d0220c25b2f5",
+      "size": 484016,
+      "mtime_utc": "2026-08-14T04:47:52.512508+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_017.csv": {
+      "sha256": "e29ea984ea3e5891a77bada430f1c2164f0efafcb738580e1b9c1ce524c3e79f",
+      "size": 484485,
+      "mtime_utc": "2026-08-14T04:47:56.235464+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_018.csv": {
+      "sha256": "2a7152458a55f6754001dc3edbb0f37e8c2259076be7ee63212afe7f0361c34c",
+      "size": 488079,
+      "mtime_utc": "2026-08-14T04:48:00.326843+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_019.csv": {
+      "sha256": "7a606be6f345ced2459cddd91e8ef832d6ba12980727eb54ef419427a5d07a72",
+      "size": 484101,
+      "mtime_utc": "2026-08-14T04:48:03.811121+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_020.csv": {
+      "sha256": "cb34151d12e5db69dfb5413144a1da5e4a9de9be3dd9240baa389a8be412ef45",
+      "size": 486623,
+      "mtime_utc": "2026-08-14T04:48:04.207777+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_021.csv": {
+      "sha256": "6673fc267bcb697ade6fd6565cdeeb7898f3100f85806bafa600be384b53a6b4",
+      "size": 483372,
+      "mtime_utc": "2026-08-14T04:48:06.574561+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_022.csv": {
+      "sha256": "8e6ccf388b16297ca67fe2d007a4357fea99c012584ed06f6a62f65fbaa7c6e9",
+      "size": 488572,
+      "mtime_utc": "2026-08-14T04:48:09.781009+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_023.csv": {
+      "sha256": "a543b45d18409c66030fb5f7bc550ba4590a789907a7ca8fe46b9924db626c2f",
+      "size": 486757,
+      "mtime_utc": "2026-08-14T04:48:13.423563+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_024.csv": {
+      "sha256": "5c28df9d1c857b637c031d1eb4edbee4d3098c888bee20f524fbb4ca08b4b7e9",
+      "size": 484456,
+      "mtime_utc": "2026-08-14T04:48:16.666327+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_025.csv": {
+      "sha256": "10df632c4883c42396e60a59cb675c0199bf0d6c2609072d9e0bb8e482cbfd02",
+      "size": 487132,
+      "mtime_utc": "2026-08-14T04:48:20.959289+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_026.csv": {
+      "sha256": "7836a637322e52b61da10a2cdd2c736e48ac773743df0ce8fddea73e629f050d",
+      "size": 485118,
+      "mtime_utc": "2026-08-14T04:48:24.899042+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_027.csv": {
+      "sha256": "424cd1697e27f98dc72e8097b252671a74d63fbe5714f4b19ae3b156dd689d43",
+      "size": 487194,
+      "mtime_utc": "2026-08-14T04:48:28.497342+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_028.csv": {
+      "sha256": "21f93f873d27a0fa3b2a95e53159a48f9681582133aa937a3c2137dc83c665bd",
+      "size": 487304,
+      "mtime_utc": "2026-08-14T04:48:28.682074+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_029.csv": {
+      "sha256": "9486e319657a73a7644c75566c3d43dfe8d45d364a1cbfdfe3c58d492c0f22a6",
+      "size": 483506,
+      "mtime_utc": "2026-08-14T04:48:31.188494+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_030.csv": {
+      "sha256": "1c9921dc9b6639f0bebb00b952d7a2132404b920fdd29a321d91128a208f7d3e",
+      "size": 487538,
+      "mtime_utc": "2026-08-14T04:48:34.350175+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_031.csv": {
+      "sha256": "adeacfc6db966bd0031aab352748652815b03bb63a341df9e08d70fda8778da5",
+      "size": 485210,
+      "mtime_utc": "2026-08-14T04:48:38.040521+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_032.csv": {
+      "sha256": "0ed0e552783e128bf8d8bfb6bfe1fbde4bdb0a9270c607366810f8fb31932eef",
+      "size": 485193,
+      "mtime_utc": "2026-08-14T04:48:40.968657+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_033.csv": {
+      "sha256": "587baeaf67185cc2c0095c4374dd4091af937af310901ff6201a33a4be5a0df4",
+      "size": 489843,
+      "mtime_utc": "2026-08-14T04:48:45.512672+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_034.csv": {
+      "sha256": "aff64fb0b5a44d51349644bbeb694f122a529975a97a3cea637b18457bfc4f50",
+      "size": 492849,
+      "mtime_utc": "2026-08-14T04:48:49.518428+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_035.csv": {
+      "sha256": "9ae64ef43feab46f7d89aee479f4cefa60ba02674d61d935a135c8d11e490987",
+      "size": 488521,
+      "mtime_utc": "2026-08-14T04:48:52.697426+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_036.csv": {
+      "sha256": "6daa922a5f4fcd4461f9d239b9a937d1f13c98489a4f1fce6e767f15dbacd4a9",
+      "size": 488594,
+      "mtime_utc": "2026-08-14T04:48:52.801722+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_037.csv": {
+      "sha256": "5abd1b0ba55cf658a287985acd0dfe49ade08c856794a2cefdb6f136b2ab5702",
+      "size": 486883,
+      "mtime_utc": "2026-08-14T04:48:55.273121+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_038.csv": {
+      "sha256": "2254091285850a01727b2661ce628857fc44924a9669278718dbc0a3d711972e",
+      "size": 487340,
+      "mtime_utc": "2026-08-14T04:48:58.403964+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_039.csv": {
+      "sha256": "386e828d3e7e71239464728da877a2e6c58b59c037c69ca972c00fc8d518c978",
+      "size": 484601,
+      "mtime_utc": "2026-08-14T04:49:01.959081+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_040.csv": {
+      "sha256": "f09a7db328cf67de5c0d522ab4e7e7140a0bf8d233ee51af19a7e09c018effc3",
+      "size": 489742,
+      "mtime_utc": "2026-08-14T04:49:04.978479+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_041.csv": {
+      "sha256": "22ed9e77dbc3aca5123a7bf109d4f9b3de080ea3bddf23b901cc43c844976dd4",
+      "size": 491084,
+      "mtime_utc": "2026-08-14T04:49:09.972519+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_042.csv": {
+      "sha256": "dbc24bd6e307a6bd44da86475e7e74e1cfed0a67f51f41db21f993694f4dbd3c",
+      "size": 488605,
+      "mtime_utc": "2026-08-14T04:49:13.836896+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_043.csv": {
+      "sha256": "d81a12287714d263cfdfebc870a4abd18b46f77ed6b2e4130cbd409dc07dc7aa",
+      "size": 490072,
+      "mtime_utc": "2026-08-14T04:49:16.940008+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_044.csv": {
+      "sha256": "04992a28f6ffade87d4f274040d6d83e65480ebcc5cd4b4270dea2c535180682",
+      "size": 489778,
+      "mtime_utc": "2026-08-14T04:49:17.172516+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_045.csv": {
+      "sha256": "20adbdc37dbcc566092c20efe70a7dfeeab7a7191ba16b93f5ee5c0a8c788bd4",
+      "size": 488292,
+      "mtime_utc": "2026-08-14T04:49:19.524266+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_046.csv": {
+      "sha256": "10ae96efa29da89a5d6e40d6e3ae99896d2509e970aeb2f6c0e3342c79510e8b",
+      "size": 489811,
+      "mtime_utc": "2026-08-14T04:49:22.569269+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_047.csv": {
+      "sha256": "966fabb5cbed3ce435ce9551a5298ec4f7caee26d66f69f84e04d10ccb284343",
+      "size": 488984,
+      "mtime_utc": "2026-08-14T04:49:26.340393+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_048.csv": {
+      "sha256": "28666540fb72e4f857d16c671c74d5d2d47c661faf30a7e0e20d571775639d0b",
+      "size": 488830,
+      "mtime_utc": "2026-08-14T04:49:29.612019+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_050.csv": {
+      "sha256": "d2c3767bf5af5693e029fb66138991273173aee5743a6832182e7dd127cdbd59",
+      "size": 491564,
+      "mtime_utc": "2026-08-14T04:49:34.054303+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_051.csv": {
+      "sha256": "fa5d51e5dc5fc1a69108b0d95a0b7acf7bfaa5acf613be4ae26914826fb2062c",
+      "size": 490735,
+      "mtime_utc": "2026-08-14T04:49:38.383979+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_052.csv": {
+      "sha256": "0e854017e27b9d43d1b38255b1a2e0b6dff304395705cc528518c84d0a544d62",
+      "size": 490698,
+      "mtime_utc": "2026-08-14T04:49:41.124977+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_053.csv": {
+      "sha256": "fb36f23755c8d15b562219a92a498aefb5bd32730d0cd1cbaef0fc3d7c3a575e",
+      "size": 489907,
+      "mtime_utc": "2026-08-14T04:49:41.605182+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_054.csv": {
+      "sha256": "d07070feede764ea22219604d0a8246abf24f8cab75858ee9264fcfa93d978f6",
+      "size": 492541,
+      "mtime_utc": "2026-08-14T04:49:43.836136+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_055.csv": {
+      "sha256": "65dfdc7a58014dcb641f456a41f43a9ec6064fb383b86d233e8d207e7031ae20",
+      "size": 493472,
+      "mtime_utc": "2026-08-14T04:49:46.586030+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_057.csv": {
+      "sha256": "6c4f7a7bd90821628ac25c49bec43816fdf4f18d7feb13e5f357b57e19f72591",
+      "size": 492494,
+      "mtime_utc": "2026-08-14T04:49:50.516088+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_059.csv": {
+      "sha256": "092b4a8fddf81f9bbfef269ae6c9c7e4f9eeec3c771ccfc43c75594627f6975d",
+      "size": 496411,
+      "mtime_utc": "2026-08-14T04:49:53.718170+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_060.csv": {
+      "sha256": "2775a77cefbc13a53306f43312e79ac6fd73e6141e69293eeac23931a56b49f5",
+      "size": 493568,
+      "mtime_utc": "2026-08-14T04:49:59.096380+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_061.csv": {
+      "sha256": "2ff157a634c9da6353b3b6348678fe58ea1a4b92a812d1375b1edeccd435f557",
+      "size": 495130,
+      "mtime_utc": "2026-08-14T04:50:03.603403+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_062.csv": {
+      "sha256": "4f1e697a1bbea124816163aed1107db1ff69cc72b4fbc2065745891df10561ff",
+      "size": 491425,
+      "mtime_utc": "2026-08-14T04:50:06.255038+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_063.csv": {
+      "sha256": "1daabe9510a9b8b669c5499e6da1023f685234c88be34482ba687e5c3ef6d184",
+      "size": 495992,
+      "mtime_utc": "2026-08-14T04:50:06.591599+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_064.csv": {
+      "sha256": "ae02ef8b6f1884572c069a925febb12f0a196e9d0c167aad0e13a5b29eefaef7",
+      "size": 492259,
+      "mtime_utc": "2026-08-14T04:50:08.824528+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_065.csv": {
+      "sha256": "6a071a0fd162e734f76be13c3db026eec16ac24c01cdebb2ea4ef278de5a4caf",
+      "size": 493044,
+      "mtime_utc": "2026-08-14T04:50:11.388745+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_067.csv": {
+      "sha256": "3d93bf505110f13960631f7d5f98deead9f24268558c1b983fa3f7110b91042f",
+      "size": 494126,
+      "mtime_utc": "2026-08-14T04:50:15.485737+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_068.csv": {
+      "sha256": "09c8dfda6076db69a6cf985a8dd035b03067a19526e54c8e5c18eb49c39fb4a8",
+      "size": 496278,
+      "mtime_utc": "2026-08-14T04:50:19.007132+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_069.csv": {
+      "sha256": "946c18b9671c96237a1c9974f28d3344fe6ab77c3a1f05c7d134cc49749e866f",
+      "size": 494760,
+      "mtime_utc": "2026-08-14T04:50:23.917350+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_070.csv": {
+      "sha256": "cf617c94284fdadc9f0473cacfeed4e21b6a6421736b6b8e91f609b0d410d1af",
+      "size": 495231,
+      "mtime_utc": "2026-08-14T04:50:27.884994+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_071.csv": {
+      "sha256": "57c0cbd5b6ad99ae79482a603af6df75008b21a929bbbf4e69bfbe34897e4caa",
+      "size": 497152,
+      "mtime_utc": "2026-08-14T04:50:30.844926+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_072.csv": {
+      "sha256": "3778423524c40fad791d8603008d6a3df0b778b4e3feaebd3072f3303be222c5",
+      "size": 499031,
+      "mtime_utc": "2026-08-14T04:50:31.155957+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_073.csv": {
+      "sha256": "24c1ee37b2fc9b5ae3ae3302d6681fb05c44e49dddc1800b76633091ac13be7a",
+      "size": 495833,
+      "mtime_utc": "2026-08-14T04:50:33.464953+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_075.csv": {
+      "sha256": "77bb71d46619614ad52c066fa5390ca8ea3fba017c12d00775e8fae743c5fed3",
+      "size": 498909,
+      "mtime_utc": "2026-08-14T04:50:36.191067+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_076.csv": {
+      "sha256": "1fc15c29afb07b619d0f29207b9b14d4bed5082803eab4c665c5d816ac63ac8b",
+      "size": 498452,
+      "mtime_utc": "2026-08-14T04:50:40.313478+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_077.csv": {
+      "sha256": "a98df2b8bb5832ec3a8e42fa8062579415d6a4afae41b2e791b9e39ee276c034",
+      "size": 496007,
+      "mtime_utc": "2026-08-14T04:50:43.690252+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_078.csv": {
+      "sha256": "1d2937053b90aa66e011ed2fc5ebb2f7a56c20e345e4ec3a7a474c81b41f87fc",
+      "size": 495059,
+      "mtime_utc": "2026-08-14T04:50:48.350264+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_079.csv": {
+      "sha256": "f71cdd808d562dacbb6d760db70b5074122a20bda7e93ea854fad17a392b86d2",
+      "size": 499236,
+      "mtime_utc": "2026-08-14T04:50:52.416710+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_080.csv": {
+      "sha256": "9822b1263e891205d644a7896f763f1952e3b72a9db41aae7d5c7ce0eff7109b",
+      "size": 499854,
+      "mtime_utc": "2026-08-14T04:50:55.132924+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_081.csv": {
+      "sha256": "ed2bd19c60aece5a1639226347b4314a3791ebdbf734c1f4e48e9dfd8d82364c",
+      "size": 498686,
+      "mtime_utc": "2026-08-14T04:50:55.522700+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_082.csv": {
+      "sha256": "b8a60928fa1e1eb7c5686bae1c7c105b4a0f77454f3b950e1b3f31e58a770d06",
+      "size": 495136,
+      "mtime_utc": "2026-08-14T04:50:57.571830+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_083.csv": {
+      "sha256": "fae0aeb011e83eabccbe402e703c36a786dfd733a20f257e735392dc2990208a",
+      "size": 498356,
+      "mtime_utc": "2026-08-14T04:51:00.120681+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_084.csv": {
+      "sha256": "aaef7cb8fdc11ee5f9910f33a6e3e99dcf4be690c6f8998451eb48eb20b8dc65",
+      "size": 495645,
+      "mtime_utc": "2026-08-14T04:51:04.618277+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_085.csv": {
+      "sha256": "45fb5c47b110775d7ec9ada522a903ab3944dcdb1e63cea79fb06b69da2017cf",
+      "size": 497343,
+      "mtime_utc": "2026-08-14T04:51:07.879632+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_086.csv": {
+      "sha256": "6928fd072a5344493308d704de1513d478db647b81b0985b03a86e48dc2ae6a8",
+      "size": 498315,
+      "mtime_utc": "2026-08-14T04:51:12.479462+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_087.csv": {
+      "sha256": "4759a09b3419d66d5d7e13d6b0d12a9a43c0deb1997a54c468056ea6f79fe83b",
+      "size": 496826,
+      "mtime_utc": "2026-08-14T04:51:16.245624+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_088.csv": {
+      "sha256": "ead6d28f53c19bb80dba9afc098b9eec1f915001b094dee857dade6eb35654ab",
+      "size": 499828,
+      "mtime_utc": "2026-08-14T04:51:19.296090+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_089.csv": {
+      "sha256": "45be35718f2716cfefed91fd95bf76d4d47717f154b83a73a8105402cae6fd42",
+      "size": 499499,
+      "mtime_utc": "2026-08-14T04:51:19.909665+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_090.csv": {
+      "sha256": "34765c5fd18555357590280afa5821f1a20049542ac1de62b8e515cf621f23e4",
+      "size": 495043,
+      "mtime_utc": "2026-08-14T04:51:21.667896+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_091.csv": {
+      "sha256": "43e74c446c24c535ffdb0f02167e6f944be1da40baae7a2fcde84e153ba738d4",
+      "size": 494604,
+      "mtime_utc": "2026-08-14T04:51:24.299724+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_092.csv": {
+      "sha256": "0802dc22c883b7f0c55a70bf3841e2cc5716837e0640b87ff7e2044f964e2606",
+      "size": 498196,
+      "mtime_utc": "2026-08-14T04:51:28.708240+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_093.csv": {
+      "sha256": "e46ad2067f837160107cbb00bab672bb475ee21217f1b7a0555b426b288fd0f1",
+      "size": 497276,
+      "mtime_utc": "2026-08-14T04:51:32.200678+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_094.csv": {
+      "sha256": "d8c7542a82ffaf68c15a48f404181f45d3fdea07051fff0fc11bb54800725d71",
+      "size": 498345,
+      "mtime_utc": "2026-08-14T04:51:36.810997+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_095.csv": {
+      "sha256": "eecd997dbdef7d708c83af674ecdea73c7f3817dbd30992735f026bc87c6aed3",
+      "size": 495837,
+      "mtime_utc": "2026-08-14T04:51:40.710691+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_096.csv": {
+      "sha256": "6d231e5a4bbfb459ee94be02dbe51da73e03464d40c902e3289629aedbfa9e86",
+      "size": 496071,
+      "mtime_utc": "2026-08-14T04:51:43.481341+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_097.csv": {
+      "sha256": "e2bfc0ce46dca81c748d6c114964ee4b16572aa1a1b4983a0356d27b3c9f8e47",
+      "size": 498721,
+      "mtime_utc": "2026-08-14T04:51:44.249695+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_098.csv": {
+      "sha256": "b2c119422881b824554a9d850a48fdfde4ef01432efd1b3286f56349deb054d5",
+      "size": 499085,
+      "mtime_utc": "2026-08-14T04:51:45.974326+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_099.csv": {
+      "sha256": "17df5ab61b9074a1ee33a69dc94473150bac475d5b4cfba7e67ff8cce99bd39d",
+      "size": 499135,
+      "mtime_utc": "2026-08-14T04:51:48.411350+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_100.csv": {
+      "sha256": "bd4fa0b6cf8802d22ee685029f85b1ab1abfdc2a7352ef8cd9549f330a3bfd19",
+      "size": 495086,
+      "mtime_utc": "2026-08-14T04:51:53.232222+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_101.csv": {
+      "sha256": "6ef59c931529e74788c2091f8d3df267cffce7251ea3d63a251c9c4c66d1aeca",
+      "size": 494645,
+      "mtime_utc": "2026-08-14T04:51:56.657996+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_102.csv": {
+      "sha256": "2e3d421240f1f04b9d990623f9546f06af21b6a425970722c117a93fee076aa3",
+      "size": 500734,
+      "mtime_utc": "2026-08-14T04:52:01.551392+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_103.csv": {
+      "sha256": "47d209bc7fd938817fa30d167aecaac4c0a91df936d28e977d69a34bc00144a6",
+      "size": 497565,
+      "mtime_utc": "2026-08-14T04:52:05.067206+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_104.csv": {
+      "sha256": "52b33043eb8f13aa8bf54df7061dd4147592d7e7500411ba7ffa07cbfb189a58",
+      "size": 501321,
+      "mtime_utc": "2026-08-14T04:52:07.805617+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_105.csv": {
+      "sha256": "1c9d675dc357ade4f25f1462d926ea5366a3bcf2820c24ea2b567bd0907d546c",
+      "size": 498446,
+      "mtime_utc": "2026-08-14T04:52:08.876150+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_106.csv": {
+      "sha256": "1148157062d7c82e45445d2ca15a81463229df92d46c98ef2418c2722d1f5264",
+      "size": 496780,
+      "mtime_utc": "2026-08-14T04:52:10.161326+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_107.csv": {
+      "sha256": "3adba07d66ee39ad1de2d43509920c477e752a8d058b739b6332d4e1648edc71",
+      "size": 495006,
+      "mtime_utc": "2026-08-14T04:52:12.430809+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_108.csv": {
+      "sha256": "68aa4c74c44d3e2465d58e3fc8d61be479c2f3ea0df381c4f35236f7f5392c7a",
+      "size": 492469,
+      "mtime_utc": "2026-08-14T04:52:17.448904+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_109.csv": {
+      "sha256": "806ca61b98fd5503653338afa9cb0b948f63abf68388ee21d9c05e89ac8c33ba",
+      "size": 496921,
+      "mtime_utc": "2026-08-14T04:52:20.896516+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_110.csv": {
+      "sha256": "112a79e26c8b57fc388b6d3cfb07aad22f331f0ae95a6f41d9745cd2f805f3f9",
+      "size": 499374,
+      "mtime_utc": "2026-08-14T04:52:25.780195+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_112.csv": {
+      "sha256": "0d063019847843f70dabaae4bf2c1a67391e1ceff8738c234b690870e7c9c91f",
+      "size": 495748,
+      "mtime_utc": "2026-08-14T04:52:29.170311+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_113.csv": {
+      "sha256": "1f81e192bf5eff86d3e1fc54c83b34555a02b7f4c2861cd64cbd87ed6a9f20d8",
+      "size": 496353,
+      "mtime_utc": "2026-08-14T04:52:32.203269+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_114.csv": {
+      "sha256": "5dfb42887e72850a0f842af90b2cac2c01a6b9aba26e56b34a461a3205c9a9c1",
+      "size": 497396,
+      "mtime_utc": "2026-08-14T04:52:33.399477+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_115.csv": {
+      "sha256": "6c7075523015bbd3003a594b2332bfec991bcac67ea428f028a01e15f5b87f2e",
+      "size": 497635,
+      "mtime_utc": "2026-08-14T04:52:34.584337+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_116.csv": {
+      "sha256": "bf92ebf7b0fabd28dd693176a288b072d6c7c3f41f8a049de6aa4ab92f7f49fc",
+      "size": 497858,
+      "mtime_utc": "2026-08-14T04:52:37.071291+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_117.csv": {
+      "sha256": "e4480c4ebf99c53801666696e89090d0aaef77c6a676e5b2c88404919b9f9a9d",
+      "size": 500422,
+      "mtime_utc": "2026-08-14T04:52:42.215630+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_118.csv": {
+      "sha256": "c0887a943f9b6ba21f7d4c669fa0b8a670d09dce5a0b77413fcce8b68704f106",
+      "size": 500676,
+      "mtime_utc": "2026-08-14T04:52:45.501311+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_119.csv": {
+      "sha256": "a0f4f7b08b7e9ef954bfabe1a94e1bbb34030a128791ff92a6d6483dafb8f7b5",
+      "size": 497004,
+      "mtime_utc": "2026-08-14T04:52:50.371899+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_120.csv": {
+      "sha256": "5ce7fe7338aef3e8f67f6e1016d0a5c344db454bc43db7e4c8598ff315dbaadb",
+      "size": 496922,
+      "mtime_utc": "2026-08-14T04:52:53.735192+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_121.csv": {
+      "sha256": "8bbc9bf5547c0ebf63163188477651ea0955dcbdadacc404a8fce09d64546e93",
+      "size": 499532,
+      "mtime_utc": "2026-08-14T04:52:56.932142+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_123.csv": {
+      "sha256": "e5c97ab57b22ebdff983b8dbd549393321b11c47d87671196ff8e06178981655",
+      "size": 501158,
+      "mtime_utc": "2026-08-14T04:52:58.246652+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_124.csv": {
+      "sha256": "733666ac495a72ae4555022f092af8251a6c3a0abe55c74c49b3edd131e9e048",
+      "size": 498805,
+      "mtime_utc": "2026-08-14T04:52:59.390218+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_125.csv": {
+      "sha256": "c5ff65a3994d3cb20bc9aead19165a1b879971523adfcb636457033a9c327406",
+      "size": 495603,
+      "mtime_utc": "2026-08-14T04:53:02.038395+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_126.csv": {
+      "sha256": "6408fa00aee1113f3aaf91222379abc241f4dc62150fe26880c3d5bb2907ab20",
+      "size": 497086,
+      "mtime_utc": "2026-08-14T04:53:07.606493+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_127.csv": {
+      "sha256": "2787ed1e70200d98ed142beb0bcbc520904ade0f7dbb132130e697524ac910da",
+      "size": 499640,
+      "mtime_utc": "2026-08-14T04:53:10.989475+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_128.csv": {
+      "sha256": "c0057f876dd279c06bf0e23fd3587d4e727d55e7a6d6ad781be0f6a8d431ae10",
+      "size": 495928,
+      "mtime_utc": "2026-08-14T04:53:15.409820+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_129.csv": {
+      "sha256": "f0ddad57650882063a295bd2ef202b39a7c098620c53f596623ae0720be56b5b",
+      "size": 497576,
+      "mtime_utc": "2026-08-14T04:53:18.648644+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_130.csv": {
+      "sha256": "8499839337cbee02db567707699fe25fb4ce1fea090af3068c4e132b102c43e0",
+      "size": 498958,
+      "mtime_utc": "2026-08-14T04:53:21.719314+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_132.csv": {
+      "sha256": "27c0a498603092fc3cd62314290c99ced0dbcf512e28993c925eb6061416741b",
+      "size": 499864,
+      "mtime_utc": "2026-08-14T04:53:23.145682+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_133.csv": {
+      "sha256": "697a0536b5d43c16d62fdfbd3a81058e6292a733a2bc2ebb390912be15bfef42",
+      "size": 497695,
+      "mtime_utc": "2026-08-14T04:53:24.056411+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_134.csv": {
+      "sha256": "a713ad77137ed66e533afc67b281faa35e805c8901c47e69d132238710e07f4c",
+      "size": 501559,
+      "mtime_utc": "2026-08-14T04:53:26.810834+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_135.csv": {
+      "sha256": "e0fb2e089e4bb229559f2e854e9741b03a29e60a1125424ab58e1ccec4f8b2a1",
+      "size": 496369,
+      "mtime_utc": "2026-08-14T04:53:32.361775+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_136.csv": {
+      "sha256": "115ba85d5f948012b89b859246901aa3ed1477ee8b0532e834a30d3f1fb558bc",
+      "size": 495363,
+      "mtime_utc": "2026-08-14T04:53:35.656725+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_137.csv": {
+      "sha256": "713313b1121c164aa02b7eac36c5dd2cdba1496a95b973bece43e2f62c968be0",
+      "size": 499393,
+      "mtime_utc": "2026-08-14T04:53:40.137402+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_138.csv": {
+      "sha256": "d3088cc985f9116593b66b30e7f205784225e6584a0c1770a00ff9ded5b94580",
+      "size": 496331,
+      "mtime_utc": "2026-08-14T04:53:42.938661+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_139.csv": {
+      "sha256": "b83f552e986f6e0b7a1a7fa2c4d022f081322a1ffaaefa9c0bdc8716e047d920",
+      "size": 495820,
+      "mtime_utc": "2026-08-14T04:53:45.911450+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_140.csv": {
+      "sha256": "36751de186f53c8fa420c66c302fbd601f1083c6252887588a5025ced9aa4194",
+      "size": 492740,
+      "mtime_utc": "2026-08-14T04:53:47.703041+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_143.csv": {
+      "sha256": "96fcec8d5ff17dce289c04e49be78bf8e49960df0a0d3281eeed02adc8c2e892",
+      "size": 497777,
+      "mtime_utc": "2026-08-14T04:53:48.466371+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_144.csv": {
+      "sha256": "e33790b396c85276b54029739a43e1b69afae21a76e6cd1c373073cc1f7f980a",
+      "size": 497253,
+      "mtime_utc": "2026-08-14T04:53:51.004799+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_145.csv": {
+      "sha256": "ee339c3a7561a52d20a160eb3522cd342958523a80f5c69c24a35ca19a7d9723",
+      "size": 498433,
+      "mtime_utc": "2026-08-14T04:53:55.454571+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_146.csv": {
+      "sha256": "e1a9bc942786e77b7c61ebd548ed4597e6c08c8e913547e0f262ba046288c8d0",
+      "size": 496416,
+      "mtime_utc": "2026-08-14T04:53:57.190882+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_BO_CVn_Light_148.csv": {
+      "sha256": "bc4f891ef846abf1e00313644cb54b6bb91f3decd35b210eaaeb10ab5d1db988",
+      "size": 493989,
+      "mtime_utc": "2026-08-14T04:53:59.656978+00:00"
+    },
+    "detrended_aligned/lights/NoFilter_60_2/proc_MASTERSTAR.csv": {
+      "sha256": "dd718f714b03695ec0fdbda2cfcba1aa88dcc045fd03cd3ea739c66c2e99f9d1",
+      "size": 421220,
+      "mtime_utc": "2026-08-14T04:54:00.667727+00:00"
+    },
+    "draft_manifest.json": {
+      "sha256": "226ca6624859b90e8f76e26d729320eabbf1008bf1f3acaa1904efa47c7fdf13",
+      "size": 160724,
+      "mtime_utc": "2026-08-13T15:49:19.827389+00:00"
+    },
+    "infolog_20260812_150826.txt": {
+      "sha256": "c9d18a4d519d1b68af4557ef192b54d4389f15ca4f6adaa8f45ab8edc7451ab0",
+      "size": 1997126,
+      "mtime_utc": "2026-08-12T13:15:25.299224+00:00"
+    },
+    "platesolve/NoFilter_60_2/MASTERSTAR.fits": {
+      "sha256": "303c33326909b71e3a3cf18de9e54248bfeb2875a0bebc71965649c95b383811",
+      "size": 11643840,
+      "mtime_utc": "2026-08-12T13:14:34.811188+00:00"
+    },
+    "platesolve/NoFilter_60_2/_hrd_cache/hrd_enrich.json": {
+      "sha256": "3ff9291aa1dfb91552c28cd650f0db693e52e23a4c5527e657bce911c48e039e",
+      "size": 3280,
+      "mtime_utc": "2026-08-13T18:45:07.874708+00:00"
+    },
+    "platesolve/NoFilter_60_2/_hrd_cache/summary.json": {
+      "sha256": "abceff7eefaa4de062911d634206ac504a9b94741f9bd438c34295574fb83e22",
+      "size": 106,
+      "mtime_utc": "2026-08-13T18:45:07.867238+00:00"
+    },
+    "platesolve/NoFilter_60_2/alignment_report.csv": {
+      "sha256": "27bb3bb40b16a3c9c6ab6263bb36a91fe08dd91ba8136965c2110ec34193d292",
+      "size": 7834,
+      "mtime_utc": "2026-08-14T04:54:07.759175+00:00"
+    },
+    "platesolve/NoFilter_60_2/comparison_stars.csv": {
+      "sha256": "a4e7c23cbd50b94b26f38a9742078e392e5af243dc2e19d5a220e643b8fb4f07",
+      "size": 53002,
+      "mtime_utc": "2026-08-12T13:15:21.244670+00:00"
+    },
+    "platesolve/NoFilter_60_2/field_catalog_cone.csv": {
+      "sha256": "2b8b62b26abc2a8d4c1e4e27e72db0baa0a8276ff028261bfccfca94df619a0b",
+      "size": 16451626,
+      "mtime_utc": "2026-08-12T13:13:39.280981+00:00"
+    },
+    "platesolve/NoFilter_60_2/field_catalog_cone_meta.json": {
+      "sha256": "5481a937e093fdab3d03000c6cbf7c85a5de6ef65bd8f843f83c57290d7b2ba9",
+      "size": 198,
+      "mtime_utc": "2026-08-12T13:13:39.285981+00:00"
+    },
+    "platesolve/NoFilter_60_2/masterstars_full_match.csv": {
+      "sha256": "31f9aca14a12e5a2aec611acdd0a31b43cb737391cf248def4e471b72faa2303",
+      "size": 260584,
+      "mtime_utc": "2026-08-12T13:14:33.961260+00:00"
+    },
+    "platesolve/NoFilter_60_2/per_frame_catalog_index.csv": {
+      "sha256": "6d2bcf3a2a9e8fe7866ef78cfb27f16addd7924431cc804a3a5c35d61caab225",
+      "size": 76605,
+      "mtime_utc": "2026-08-14T04:54:01.282716+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/_hrd_cache/hrd_field_annotated.png": {
+      "sha256": "5e5cc113c9789eefffac70c1fe5bdd3d420b7493d521edd2b7c6133be2c9f8c8",
+      "size": 3882702,
+      "mtime_utc": "2026-08-13T18:45:08.467357+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/_hrd_cache/hrd_field_color.png": {
+      "sha256": "3e5c93be3f6ed5841431b36b2a39ddf32a95b0afbf18c4f5429462aca257ab5f",
+      "size": 3686605,
+      "mtime_utc": "2026-08-13T18:45:10.352807+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/_hrd_cache/hrd_field_from_fits.png": {
+      "sha256": "cca8f7bad390aaeee81c8cae90154210ac370eae51d55763df1bb7db191b0479",
+      "size": 3888551,
+      "mtime_utc": "2026-08-13T18:45:08.243693+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/active_targets.csv": {
+      "sha256": "50d6de378dc649abeadbfaa4c85052e00ee93c77e6c61863d6b31618f4fdd2ae",
+      "size": 10657,
+      "mtime_utc": "2026-08-13T15:21:23.032640+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/comparison_stars_per_target.csv": {
+      "sha256": "582317621126ae6f92f7da9f5dc9609c270db1798841d7ce01ab84af3cb0ab3c",
+      "size": 60186,
+      "mtime_utc": "2026-08-13T15:20:47.892478+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/excluded_targets.csv": {
+      "sha256": "3683cd6e9038ed7bc8ef9d79529bb7e84d8a931d5fd30bbb7f610008c378079c",
+      "size": 107465,
+      "mtime_utc": "2026-08-13T15:19:41.493948+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/field_density.json": {
+      "sha256": "4d441b28b8aed079f4c9669528f37cf5ba6d70785fd5cc295e3743338a99fba0",
+      "size": 295,
+      "mtime_utc": "2026-08-13T15:19:41.310397+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/field_map.png": {
+      "sha256": "c4aabe6659f90163bb2c2ddbe2ab4a8245314118359a4428411b4170c96e7d66",
+      "size": 1363683,
+      "mtime_utc": "2026-08-14T04:54:19.851699+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1496795041799526400.csv": {
+      "sha256": "7b7db95488b2b02c762df1f42b5a24a50f4a807825547e5a3a2dc31acae73ca2",
+      "size": 16834,
+      "mtime_utc": "2026-08-14T04:54:27.398150+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1496998382733052928.csv": {
+      "sha256": "60e6617b633908f01ec0c87c8e1a393748ed0f5976ff41f9c4fd5ac7bbf9d7a1",
+      "size": 16823,
+      "mtime_utc": "2026-08-14T04:54:28.583239+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497169940906156032.csv": {
+      "sha256": "1dcdf8e28b3499f47cc5236f2ed985c70b0c765ce55974f8999ac9ae0115d43f",
+      "size": 15871,
+      "mtime_utc": "2026-08-14T04:54:26.210369+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497236186481686016.csv": {
+      "sha256": "4742e6c6bf7c84c8db404ba4d5b35f0642cced4cf623f6b87a6ade474364abe8",
+      "size": 20201,
+      "mtime_utc": "2026-08-14T04:54:31.074583+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497245497969274240.csv": {
+      "sha256": "9577d4d802900ec56da6af27e10479495dc3cf2802334f6330eb263be2b27aae",
+      "size": 16982,
+      "mtime_utc": "2026-08-14T04:54:29.682671+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497343732462852864.csv": {
+      "sha256": "a2ce5f0771421878d792696ddb87222a64a079f26c9ffca5c8fe0b6aa15d474e",
+      "size": 17081,
+      "mtime_utc": "2026-08-14T04:54:32.481267+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497418258735289472.csv": {
+      "sha256": "3e41026ff15669a77474a8102ed67bc71e93ddfd0c85a124909eb3daa2141e4b",
+      "size": 17516,
+      "mtime_utc": "2026-08-14T04:54:37.538810+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497425371201155072.csv": {
+      "sha256": "c78d00ef98afb8fd72cf0b4c410af2b79b67b7e52e223bbe6506e6280a570d7e",
+      "size": 16709,
+      "mtime_utc": "2026-08-14T04:54:38.890615+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1497683722074089728.csv": {
+      "sha256": "c7ec0a47f600b837507a7d64aa371fc8378361eef20daad0bec6a65bb65b2ba2",
+      "size": 15941,
+      "mtime_utc": "2026-08-14T04:54:33.818096+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498278351706325248.csv": {
+      "sha256": "af1406dc61106189aa85e1295b505e0a0c7fbd455f2448ab186f4a99e019929a",
+      "size": 17510,
+      "mtime_utc": "2026-08-14T04:54:45.397440+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498298211635183744.csv": {
+      "sha256": "d7128b69579ee272f3217102be5262b1c2d3650e7065eefb6533fe4ded73e632",
+      "size": 18850,
+      "mtime_utc": "2026-08-14T04:54:36.265686+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498486880958321024.csv": {
+      "sha256": "7e8bd790d8641e71107ddc003627e3f1f531428e8d9d10ef922aa39edfd1684d",
+      "size": 17370,
+      "mtime_utc": "2026-08-14T04:54:42.556357+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498613634033133184.csv": {
+      "sha256": "827bf685aa94004ba438cdf290b3fe907f8c508619c7cf6cdd970559b8cf8e7e",
+      "size": 16836,
+      "mtime_utc": "2026-08-14T04:54:41.434933+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498699086702005376.csv": {
+      "sha256": "0ec0163330a13899c6fb37628c8598a2c58559bcb3648370c7121751c0e6bdfb",
+      "size": 20728,
+      "mtime_utc": "2026-08-14T04:54:40.157779+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1498795809366255488.csv": {
+      "sha256": "39cd82728e225a4f61e88debb801f40117d9fd9ee669d6a600b00e3a8a39077b",
+      "size": 17497,
+      "mtime_utc": "2026-08-14T04:54:43.895772+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/check_kmag_1500549977088828160.csv": {
+      "sha256": "48b896a9defdfa35b833620516670e54b9cc51783613ee332887c76dbc7c3d0b",
+      "size": 16824,
+      "mtime_utc": "2026-08-14T04:54:34.900915+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496795041799526400.json": {
+      "sha256": "dbe859f0e67fdf6f73f61cc34a31f06c327329a655051a6f9a8d401aa7438b85",
+      "size": 1110,
+      "mtime_utc": "2026-08-14T04:54:59.018490+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496998382733052928.json": {
+      "sha256": "84ae170f9efa941b41c0315df5d4f344a478a32ca26321e9d61212b767c6ef48",
+      "size": 518,
+      "mtime_utc": "2026-08-14T04:54:59.018490+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497169940906156032.json": {
+      "sha256": "272ed51ad07bbf867cc0d197d96ec2eb45270da6d2d67ff844fbbdffa837ffa8",
+      "size": 518,
+      "mtime_utc": "2026-08-14T04:54:59.019709+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497236186481686016.json": {
+      "sha256": "5da3ddc24871a0605b317d8bdc718c216c17ea30dc6fc4c88c8043c29559b0a5",
+      "size": 1110,
+      "mtime_utc": "2026-08-14T04:54:59.019709+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497245497969274240.json": {
+      "sha256": "99e858502dbdd7f8e6152aea404ca643247da950641368eb5e3b9ecc8a5b29b3",
+      "size": 1703,
+      "mtime_utc": "2026-08-14T04:54:59.020717+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497343732462852864.json": {
+      "sha256": "11be3baca47f892677556c0fdfebc5ccc400127bbf43d6dbdbabf23c7f391f81",
+      "size": 1702,
+      "mtime_utc": "2026-08-14T04:54:59.020717+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497418258735289472.json": {
+      "sha256": "a3883906122424f0f964c42704feb077e98fabfb39fcd497074a1fcf121bd37c",
+      "size": 1702,
+      "mtime_utc": "2026-08-14T04:54:59.020717+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497425371201155072.json": {
+      "sha256": "c9ba8e73dd5e3f8815257d7d22a601b38464f5d0641973b6abf5cfcbb964e423",
+      "size": 1507,
+      "mtime_utc": "2026-08-14T04:54:59.021717+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497683722074089728.json": {
+      "sha256": "3cba1d5b55b9c600f89c8ef70ad25c5a0b08fdffe770775eb2fa521cd534bdb6",
+      "size": 1703,
+      "mtime_utc": "2026-08-14T04:54:59.021717+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498278351706325248.json": {
+      "sha256": "591acd049b53f26e0937a049a15a51a1735f58aa6f731b84cb420ed92338693a",
+      "size": 1701,
+      "mtime_utc": "2026-08-14T04:54:59.022715+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498298211635183744.json": {
+      "sha256": "1e943d33007b26a19555c92ab41f800d40778cda7034facea5a745178d30c67d",
+      "size": 1706,
+      "mtime_utc": "2026-08-14T04:54:59.022715+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498486880958321024.json": {
+      "sha256": "3e24df60cf01256b53849f6a143fdb16086b48cb784d97b5425ebe0f63a17249",
+      "size": 518,
+      "mtime_utc": "2026-08-14T04:54:59.022715+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498613634033133184.json": {
+      "sha256": "eeec312c3e529ef8c13c827701da628457ab2fc6e908eba7ac33e972a77c72f5",
+      "size": 1111,
+      "mtime_utc": "2026-08-14T04:54:59.023716+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498699086702005376.json": {
+      "sha256": "352ed4cbd09b3ae591f80baef4a61b668ccfa3080f6d6c52397de6ba2a26f96b",
+      "size": 1702,
+      "mtime_utc": "2026-08-14T04:54:59.023716+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1498795809366255488.json": {
+      "sha256": "7c85e335ebc956b2176e3ba9a66f71c62da3bac3c73d8d4dd4a945fa640ae854",
+      "size": 1503,
+      "mtime_utc": "2026-08-14T04:54:59.024719+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1500549977088828160.json": {
+      "sha256": "d897488f3dbda25104316117451fb105da38acef21b7eb2f6b909b8c3a21decf",
+      "size": 518,
+      "mtime_utc": "2026-08-14T04:54:59.024719+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1496795041799526400.json": {
+      "sha256": "8d3f0ebe102f099f0b87edaafa669bba181aa5e333a93ff545e9f5adf93c30e0",
+      "size": 478,
+      "mtime_utc": "2026-08-14T04:54:27.406338+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1496998382733052928.json": {
+      "sha256": "79979e52007577a5fa26b03a5c0ffbb97202e65e95156dcaf7f8253a11af7e96",
+      "size": 388,
+      "mtime_utc": "2026-08-14T04:54:28.589893+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497169940906156032.json": {
+      "sha256": "b88cc1b1aad72c48a615b5e4445367ec569bb19173d1522bfb1747a0b25cbbe7",
+      "size": 377,
+      "mtime_utc": "2026-08-14T04:54:26.218651+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497236186481686016.json": {
+      "sha256": "6f471f023c006d91c825034a4258ad3eff52a61c00d54fd8dd73b16777a0e3f3",
+      "size": 625,
+      "mtime_utc": "2026-08-14T04:54:31.080894+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497245497969274240.json": {
+      "sha256": "17ec5b696ddb5cdf6266bce4b5e6ec33862e3762a961c4c54b628c168eaf23a2",
+      "size": 580,
+      "mtime_utc": "2026-08-14T04:54:29.687752+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497343732462852864.json": {
+      "sha256": "6dc2095b15356c77f7a4641c62f25e9cd7377e2f375d34220a23d32da66c7d2c",
+      "size": 846,
+      "mtime_utc": "2026-08-14T04:54:32.487848+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497418258735289472.json": {
+      "sha256": "490cef15dfb20f8f3419a48010a3f0d89425d6d6130c252187addaf117a6054a",
+      "size": 787,
+      "mtime_utc": "2026-08-14T04:54:37.545155+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497425371201155072.json": {
+      "sha256": "1f6c8756a620803b46c6593c49bd49430b82fac958be1d0263bd922127d192bb",
+      "size": 842,
+      "mtime_utc": "2026-08-14T04:54:38.896205+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497683722074089728.json": {
+      "sha256": "46f5cc2678de2bdb7ffac2cc0acbf404a54fad0c7326d92074c0c611bb7d5f5c",
+      "size": 904,
+      "mtime_utc": "2026-08-14T04:54:33.825317+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498278351706325248.json": {
+      "sha256": "1a03e6aa5b88639efbba5151d74de2b1a37dc8db5f5d1412bbbb0a75411fdefb",
+      "size": 592,
+      "mtime_utc": "2026-08-14T04:54:45.403440+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498298211635183744.json": {
+      "sha256": "c8f149b7dcfcf7986fab3cff75f91381bb6c89572f83e7299272f0949730df9d",
+      "size": 788,
+      "mtime_utc": "2026-08-14T04:54:36.270694+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498486880958321024.json": {
+      "sha256": "a97c7bb6eca96cd162d4720269881fbd4fa1392e1cd95bb4b73c838953cdc910",
+      "size": 388,
+      "mtime_utc": "2026-08-14T04:54:42.562354+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498613634033133184.json": {
+      "sha256": "6b298fdd482841a63798ee2e0dd2fabe906b06833bd3505efb365cd97c0818ae",
+      "size": 626,
+      "mtime_utc": "2026-08-14T04:54:41.442942+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498699086702005376.json": {
+      "sha256": "51fbc642b54cffbc1ff7c9cae445e66822bb804de09f6364c97615281845c78b",
+      "size": 586,
+      "mtime_utc": "2026-08-14T04:54:40.162949+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498795809366255488.json": {
+      "sha256": "79bfc3ff069ad9fadbeac60c2a0f1b34798769210c6f659fa7dbc42d2d5ed291",
+      "size": 754,
+      "mtime_utc": "2026-08-14T04:54:43.901967+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1500549977088828160.json": {
+      "sha256": "79979e52007577a5fa26b03a5c0ffbb97202e65e95156dcaf7f8253a11af7e96",
+      "size": 388,
+      "mtime_utc": "2026-08-14T04:54:34.907007+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1496795041799526400.png": {
+      "sha256": "19805112e6b9d28a671aa0c93e634924e679dc1abc676aefbca3afa37fd13059",
+      "size": 1301328,
+      "mtime_utc": "2026-08-14T04:54:28.176377+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1496998382733052928.png": {
+      "sha256": "16e432757e74ae48ea95fc22f323d8f2d1fdb87151fc58a2e44f9c5fd49949e4",
+      "size": 1301598,
+      "mtime_utc": "2026-08-14T04:54:29.303124+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497169940906156032.png": {
+      "sha256": "28f7fdb16f4146d968b04ef9354872de82adc12c42ae4ce29a0522e2b89bfba0",
+      "size": 1301317,
+      "mtime_utc": "2026-08-14T04:54:26.972881+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497236186481686016.png": {
+      "sha256": "a5b2d1850ce3e42c918de095840e414c65b49c0c90f8161cb8a3e1574a0012f2",
+      "size": 1301820,
+      "mtime_utc": "2026-08-14T04:54:31.840226+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497245497969274240.png": {
+      "sha256": "c6fda662f13d2f79cdf8748efc0e949528ff7e18b3635ffdbea61fd0b3b16cd6",
+      "size": 1308373,
+      "mtime_utc": "2026-08-14T04:54:30.383600+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497343732462852864.png": {
+      "sha256": "dbf008e0594b7c095e225ff1245b80fb9939d2124eeffe4035cc048f0cd90215",
+      "size": 1305893,
+      "mtime_utc": "2026-08-14T04:54:33.212653+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497418258735289472.png": {
+      "sha256": "05fb7fc3b3eeaa31742bd3dcfcc729fe0c632a972e1849e919be2f09e82774ff",
+      "size": 1305929,
+      "mtime_utc": "2026-08-14T04:54:38.270658+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497425371201155072.png": {
+      "sha256": "0f0f6c6f4cd7dcd8d3abcdbc9f1a04a03afd94c74944e696b94cf9bba483519c",
+      "size": 1307311,
+      "mtime_utc": "2026-08-14T04:54:39.594793+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1497683722074089728.png": {
+      "sha256": "087fae7efd9dd1783665ae0abc930e73ea2ef65d8999a94cbb42e9f34fd5a533",
+      "size": 1308462,
+      "mtime_utc": "2026-08-14T04:54:34.538024+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498278351706325248.png": {
+      "sha256": "dc34c06704c0d9778e6d9a6a2b21b57a93f0e97ab30ecb2453c3cabf80143ed6",
+      "size": 1310514,
+      "mtime_utc": "2026-08-14T04:54:46.169124+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498298211635183744.png": {
+      "sha256": "8b4fa09b1b720ede364e23aa5e40eec09034f72f7c31acb28df8ed30784c5083",
+      "size": 1307948,
+      "mtime_utc": "2026-08-14T04:54:36.984767+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498486880958321024.png": {
+      "sha256": "6b479345ba0658ac1ae18ebace80f485d3ca90d0340b48571abf3af3e50d0312",
+      "size": 1300729,
+      "mtime_utc": "2026-08-14T04:54:43.301668+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498613634033133184.png": {
+      "sha256": "36ff93e869f56a3132f7dbcd11dad91b4147e3b1e93d33360aecc31997d2028c",
+      "size": 1301797,
+      "mtime_utc": "2026-08-14T04:54:42.144351+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498699086702005376.png": {
+      "sha256": "6a3320bd5505ef475b668a481eb77cff676dba46a5c2c4cb2d39b26d9ac9d07a",
+      "size": 1310101,
+      "mtime_utc": "2026-08-14T04:54:40.923625+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1498795809366255488.png": {
+      "sha256": "78a39ec7dbbb1c03967bc0c1c50b98626a36009856985463ae1bdc39c7779f56",
+      "size": 1309183,
+      "mtime_utc": "2026-08-14T04:54:44.605806+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/field_map_1500549977088828160.png": {
+      "sha256": "b07bacc52920dbc64b3561bc539527509cfaeacb651b07aadeab00a6b8acee82",
+      "size": 1301174,
+      "mtime_utc": "2026-08-14T04:54:35.600541+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496795041799526400.csv": {
+      "sha256": "e07ccaaf98ccec665eec9c969dca1e7295cae553652fc65a802f953fd9fa0fb2",
+      "size": 44051,
+      "mtime_utc": "2026-08-14T04:54:27.404323+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496998382733052928.csv": {
+      "sha256": "a13f32cd8beb607823694686c1d1a964e1bdf03378112789696b3f1b3e2e3aba",
+      "size": 44514,
+      "mtime_utc": "2026-08-14T04:54:28.588424+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497169940906156032.csv": {
+      "sha256": "d601ce61047cb94edb8cf50fed74a4fcb89725ad31017bd00cec19efefda7ee7",
+      "size": 33019,
+      "mtime_utc": "2026-08-14T04:54:26.215651+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497236186481686016.csv": {
+      "sha256": "ef346073c3bcd4715c84d4a2a6aae65a00411ca1cb5308ca7ada00726ef793c7",
+      "size": 47804,
+      "mtime_utc": "2026-08-14T04:54:31.079581+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497245497969274240.csv": {
+      "sha256": "8334529491dccc68e6bc1d8972fc34ac9ed108ab61de30609674a52740d908dd",
+      "size": 44578,
+      "mtime_utc": "2026-08-14T04:54:29.686753+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497343732462852864.csv": {
+      "sha256": "c2974d62eec3fb2b7d660c1210627b986181a1788766336a95a228ff5cbf4ae3",
+      "size": 47226,
+      "mtime_utc": "2026-08-14T04:54:32.486847+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497418258735289472.csv": {
+      "sha256": "8e3ce435e1998b2184a2c7c38c11f5ae1130c92e7438e47a3c7dad89de43bdfc",
+      "size": 47866,
+      "mtime_utc": "2026-08-14T04:54:37.544147+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497425371201155072.csv": {
+      "sha256": "a35a18a6e9821a6b2a72e0cb7072afa73670cf526f4b125bd5e6b62575df0680",
+      "size": 47901,
+      "mtime_utc": "2026-08-14T04:54:38.895205+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497683722074089728.csv": {
+      "sha256": "45bb70063c9bb8c8556e73dffc3d26af541bb4ea91233d84283c4e98d8b875a1",
+      "size": 42465,
+      "mtime_utc": "2026-08-14T04:54:33.824294+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498278351706325248.csv": {
+      "sha256": "f82c2aff0a71a6055e8b4701ec62b5624f43fc113d841ad599f80ef9acac6f9f",
+      "size": 44040,
+      "mtime_utc": "2026-08-14T04:54:45.402440+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498298211635183744.csv": {
+      "sha256": "6016efbac701c25e471e14ab81a0f2452deefdf719b947a6d53ebe9ae97ee444",
+      "size": 47754,
+      "mtime_utc": "2026-08-14T04:54:36.269683+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498486880958321024.csv": {
+      "sha256": "dc77fadc04470322c57b3c3f65fedb3ace5b6884b99a21345cf41acb64afeb73",
+      "size": 44423,
+      "mtime_utc": "2026-08-14T04:54:42.561351+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498613634033133184.csv": {
+      "sha256": "56f3682c053cdbc711722daec4f41d7c48316411d0675a20a6addb07fa551a28",
+      "size": 47276,
+      "mtime_utc": "2026-08-14T04:54:41.440943+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498699086702005376.csv": {
+      "sha256": "d40d054f2eab7446f076b1abe9e7e5b1643052a4f76ff830cf7f11bbb1c83edf",
+      "size": 44436,
+      "mtime_utc": "2026-08-14T04:54:40.162949+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498795809366255488.csv": {
+      "sha256": "0b6cd56d9b182449e7336d78829e895b469c63fd121e7d0d8fd77ca8eea7fa5e",
+      "size": 47736,
+      "mtime_utc": "2026-08-14T04:54:43.900932+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1500549977088828160.csv": {
+      "sha256": "ab90e3a0ae35f648dd712445c0bfc2990362d3b4e86a11ad192d03bde895e3bb",
+      "size": 44200,
+      "mtime_utc": "2026-08-14T04:54:34.906004+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1485574899299782528.json": {
+      "sha256": "4508dfefe6da62282f2aeadfd8a62f27f3c2d57f62dc755d1492ee25c41ac1e5",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.083180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1485984368598279808.json": {
+      "sha256": "71c48f15fb080f855b90071ac840c2b37448743d5db58bdc885140c1b093dd41",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.082178+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496282153986140032.json": {
+      "sha256": "8a31de9d716237c0251da66b504ba916dfa627b5a443d0795c8067c812f90be7",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.084180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496795041799526400.json": {
+      "sha256": "7b8ee82edf01bc2d6f432a2ba70c8b2dee88ab18de54c195d11d901e2073f71c",
+      "size": 651,
+      "mtime_utc": "2026-08-14T04:54:59.076072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496804834326599424.json": {
+      "sha256": "b46517366508c580b31d6d5d8da13eb0fe97d9d13d27d20137c35ceeed4a421a",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.083180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496880666268505216.json": {
+      "sha256": "75509d3eaccbe2513059818923ee645dc941a745e8b8131c0c77c09f4eb18dda",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.082178+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496965569182317952.json": {
+      "sha256": "553e43e4e302c9822d1c9a23f485eb27d3a7ed5d94d92680a6b1eebde1782c34",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.087727+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496976598656622848.json": {
+      "sha256": "49fc59bcc51f73521af7fedd880f738a4f757e5a29cd4a1e901befe987c92784",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.087727+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1496998382733052928.json": {
+      "sha256": "0df32ee92f9d68a86a0e59e1648bd54232c732e297812c3ff4f422bfaefddf36",
+      "size": 666,
+      "mtime_utc": "2026-08-14T04:54:59.076072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497007144465726080.json": {
+      "sha256": "c799c1f7a1ff22724807c17a7a732602fdd44fbba9a2bd40820e1e5a0f95afe9",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.077072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497061570291342464.json": {
+      "sha256": "8a3fb677664412dae1bb450837779be7cc2f1a87f5b90743f14295bf082e2525",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.082178+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497169940906156032.json": {
+      "sha256": "a372cb5aa3c7a859e8e260579002fe2293b721b7339d99c385d2fc744e1124c4",
+      "size": 795,
+      "mtime_utc": "2026-08-14T04:54:59.076072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497225981639401984.json": {
+      "sha256": "05f434b01f61155881a23ec256827b9e9422f5348d124c3da513c197322db79c",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.086365+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497236186481686016.json": {
+      "sha256": "64621672102ca255d854f62a252a0bbc4fe5f1702e6220c0fedb0ce3ecdc1118",
+      "size": 339,
+      "mtime_utc": "2026-08-14T04:54:59.077072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497245497969274240.json": {
+      "sha256": "c6226dce7632dd888e8067facbf035ac499967a8c393720a9ff5c06877ebb78d",
+      "size": 678,
+      "mtime_utc": "2026-08-14T04:54:59.077072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497303909525988352.json": {
+      "sha256": "41ef762860c03ae110b6243e3579e8d1d4a2da56e61856097e583552334e0743",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.084180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497343732462852864.json": {
+      "sha256": "834de313ac6089c8914ebf8e1e836a46feace1728dbd5d92b46b6ada6131c2e5",
+      "size": 312,
+      "mtime_utc": "2026-08-14T04:54:59.078070+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497418258735289472.json": {
+      "sha256": "8e064ac200ce0aaf7209eb0052ea5162a202d1dfcc051901364e8b9c6e05a21c",
+      "size": 312,
+      "mtime_utc": "2026-08-14T04:54:59.079073+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497425371201155072.json": {
+      "sha256": "1d32af23d2cd9871a21878045c79eea47ccb9f473a42e2f6d26b797a78a03bc8",
+      "size": 312,
+      "mtime_utc": "2026-08-14T04:54:59.080072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497498763602158720.json": {
+      "sha256": "4fd68b56951e2b8cb544a1ed816cadbcee571f60e6cf7ea49e9b841fd78e8bbd",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.084180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497600399708129792.json": {
+      "sha256": "8582ad0f91231faad5f98d6fbfb0d4684c079ee275eb7de079007e837b25e3f4",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.083180+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1497683722074089728.json": {
+      "sha256": "368b018862a345f58ce646e24cf37248ed15f1b607a6510b0a4c9e44981bd4d5",
+      "size": 312,
+      "mtime_utc": "2026-08-14T04:54:59.078070+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498011960654465536.json": {
+      "sha256": "73a747fc9719f52d69c5a4f9bf5f5d7887c448684a9733c5d5bd37b3d0935fdb",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.085182+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498105384781489920.json": {
+      "sha256": "555c9c5929b6899640882ba83d9e97129d1bde689c8f7cf82f21bddb28e21890",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.087727+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498183274013681536.json": {
+      "sha256": "c9ee4acd6016fa78c4720a80374d2aba862a45ae024b94cd63f5dde74b165168",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.088733+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498231038346636416.json": {
+      "sha256": "3b6ef26df7c84d8a11b9ac293db64f6d70346598ff2b2a9a1f3d662437b5432c",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.088733+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498278351706325248.json": {
+      "sha256": "eebd7dafd3d28d7f25a2d00b877fbb245fc145915e25937ffbbaa61c12dd9e99",
+      "size": 650,
+      "mtime_utc": "2026-08-14T04:54:59.090188+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498298211635183744.json": {
+      "sha256": "4183a7b9e279dcc49084eed74908af59552fc2f8f1f672cadbdac67e1b8e694f",
+      "size": 443,
+      "mtime_utc": "2026-08-14T04:54:59.079073+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498453002256280832.json": {
+      "sha256": "ce12817a9aab0f3bbf35da630663f4eff990138dc5ef310375d5d3bd51742fec",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.090188+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498486880958321024.json": {
+      "sha256": "d620e8cc872e1629817c7802b2121ed1dd5b27aee763afdf9374a0764cab457c",
+      "size": 587,
+      "mtime_utc": "2026-08-14T04:54:59.081124+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498529074716971776.json": {
+      "sha256": "371c7d83b888d5fd8b8d6ca22052250dea27517b1f33b1170a03d8ddedbd091e",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.091199+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498589513496406912.json": {
+      "sha256": "a3d5028f3f96a32582657b8b037fce56727890ec03db8449478720dfcd440fc1",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.085182+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498613634033133184.json": {
+      "sha256": "030077a54be1c5309138ce1aef9bb4d241ca9a355626357861368c026e667e97",
+      "size": 338,
+      "mtime_utc": "2026-08-14T04:54:59.080072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498699086702005376.json": {
+      "sha256": "f053b2878ff73ae2d24e6a59702fe581a26f28d5cc47ed720caddd6bc4020414",
+      "size": 339,
+      "mtime_utc": "2026-08-14T04:54:59.080072+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498795809366255488.json": {
+      "sha256": "93b767e657005e0496b502d0042e539210a151f65505364b5c00fa81bec67c88",
+      "size": 311,
+      "mtime_utc": "2026-08-14T04:54:59.088733+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498905004614111744.json": {
+      "sha256": "54d36a48a4b82eaed6b117291374174fa45cc2661e7e44fbbed08fd597dc3810",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.088733+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1498973724090771712.json": {
+      "sha256": "f69710825effa14483aa6e378de8e4d0c3577f302ce6bc645b118efb957d8e96",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.091199+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1499064433800590592.json": {
+      "sha256": "feb25433c538b00d907da563d4bf19e0913a5127b044b759f2ee2d6aba9a5817",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.092197+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1500271044731692416.json": {
+      "sha256": "253fd9f9eb57f14850fcedbb4ee39b25c17a7bc08f085f407a907c1010af6f10",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.086365+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1500549977088828160.json": {
+      "sha256": "85144a21ca8b0aabb1dbb181c3bf3241f2be78b2a092759fd3a9286853a13637",
+      "size": 666,
+      "mtime_utc": "2026-08-14T04:54:59.079073+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1500689752504456576.json": {
+      "sha256": "2126e5225e6e09d629a4091f6b242678ff3789302b1bf59e16f273925dc59ea4",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.081124+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1500702087650511232.json": {
+      "sha256": "12e6becd9d3f8d3de3b9cc72a047334a769dea590f551bca819cedd89b5c778e",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.090188+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1500746446072739200.json": {
+      "sha256": "860d9b3a5441cea46b7bfacf90510f3e1d7034a7f08e3a0117477df8d7facd82",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.092197+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1502044385189172224.json": {
+      "sha256": "daefe50ea6369211f9f0b795dea234008299bc2c9914393d66a65b2217b5618b",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.091199+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves/trust_1504485335363167488.json": {
+      "sha256": "335b09b26dbad98d0a326420043a01a7f83a25e17466fca3c53f974a4d45c9d6",
+      "size": 486,
+      "mtime_utc": "2026-08-14T04:54:59.091199+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/ASASSN-V_J13531356+3941074_20260423.txt": {
+      "sha256": "646b78842279e45bc9ce9b8b8684a56ddae98014305b1e682ff8022a7a8fb877",
+      "size": 14996,
+      "mtime_utc": "2026-08-14T04:54:59.181529+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/ASASSN-V_J13575722+4125184_20260423.txt": {
+      "sha256": "80c65bba4b1e94140064c7b54beecc4c1659a4f5d59d353d09c6c087d4b7694c",
+      "size": 14996,
+      "mtime_utc": "2026-08-14T04:54:59.395541+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/BO_CVn_20260423.txt": {
+      "sha256": "253b38b4f9ac8adc0af8df6051c69885360707fb0f0d92d178b6748c1bb5eca6",
+      "size": 11914,
+      "mtime_utc": "2026-08-14T04:54:59.428247+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/CSS_J1349253+393524_20260423.txt": {
+      "sha256": "8314153528b1e59633c403fbe55d088f8d4300e7030636f6146581864f6d63ff",
+      "size": 4531,
+      "mtime_utc": "2026-08-14T04:54:59.133985+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/CSS_J1409187+423422_20260423.txt": {
+      "sha256": "59cc82ffda17d8a2bd31cc846a1a683dbbc08dc8bb06d9ae866e1d14872e8b91",
+      "size": 13924,
+      "mtime_utc": "2026-08-14T04:54:59.458714+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/FU_CVn_20260423.txt": {
+      "sha256": "86bda5613081feabe593e301285a3980af22246534c3f693bff005c12e5b9bc6",
+      "size": 12048,
+      "mtime_utc": "2026-08-14T04:54:59.343961+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/FW_CVn_20260423.txt": {
+      "sha256": "f233ab93e32ce11aec5fd581815cef14603de1fca9c058065bdc0b308b996a68",
+      "size": 11914,
+      "mtime_utc": "2026-08-14T04:54:59.244989+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/Gaia_DR3_1498278351706325248_20260423.txt": {
+      "sha256": "c3ea33fd7499a75713fa30d72f34e1d6c85f9d2f5c00943592b14e0cfefe68d9",
+      "size": 14862,
+      "mtime_utc": "2026-08-14T04:54:59.514649+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/Gaia_DR3_1498795809366255488_20260423.txt": {
+      "sha256": "e2113e2ccadb08ba7414c3f0ea55997086f936287899d272084548ca6f17b6f7",
+      "size": 14996,
+      "mtime_utc": "2026-08-14T04:54:59.493344+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/HAT-188-0000203_20260423.txt": {
+      "sha256": "9a3e6c39ddda08fa9111163e9012ad080f3a038a9441607049810f52b9ecf65c",
+      "size": 9364,
+      "mtime_utc": "2026-08-14T04:54:59.276081+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/HAT-188-0000323_20260423.txt": {
+      "sha256": "606507632adc314a786df843654682073a3020e9c9ecb1d59df78dc49f581650",
+      "size": 13254,
+      "mtime_utc": "2026-08-14T04:54:59.203334+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/HIP_67011_20260423.txt": {
+      "sha256": "be28d441c720d4fb10ea4bcb1e6afd22abf74c2faca541f5c03a9f330741bc30",
+      "size": 12316,
+      "mtime_utc": "2026-08-14T04:54:59.295707+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/NSVS_5096293_20260423.txt": {
+      "sha256": "fa65d43ae1d869b1e8809ec01af3ac7af66522caf55200323342a20019a2e10d",
+      "size": 12852,
+      "mtime_utc": "2026-08-14T04:54:59.315584+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/NSV_19982_20260423.txt": {
+      "sha256": "d1c2a134d1fa9282b26923c1a6596114db46f56bdaac52eb3ef88c6cf68fa9b5",
+      "size": 12449,
+      "mtime_utc": "2026-08-14T04:54:59.375264+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/R_CVn_20260423.txt": {
+      "sha256": "cefc6cc466163a316ddf90ecbf2541be39b85cc1edc1f57d2e4a869c31ba7a21",
+      "size": 11780,
+      "mtime_utc": "2026-08-14T04:54:59.160252+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/aavso/SS_CVn_20260423.txt": {
+      "sha256": "8ca5442c328233a9ad58ca4430c4049905f8cab110ff2efb2a3b34fa9f9a2662",
+      "size": 12048,
+      "mtime_utc": "2026-08-14T04:54:59.222924+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/ASASSN-V_J13575722+4125184_20260423.txt": {
+      "sha256": "25660a028c0e7cd38800c1e7e4554faff8820d6825dbdbcf6ae39a6f8ea1f34c",
+      "size": 9577,
+      "mtime_utc": "2026-08-14T04:54:59.404642+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/ASASSN-V_J13575722+4125184_20260423_field.png": {
+      "sha256": "6a3320bd5505ef475b668a481eb77cff676dba46a5c2c4cb2d39b26d9ac9d07a",
+      "size": 1310101,
+      "mtime_utc": "2026-08-14T04:54:40.923625+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/BO_CVn_20260423.txt": {
+      "sha256": "99465e370983deb24bf4c37e0e6ef344fbeee84ca1c25618e0ec452bf8e6eaa8",
+      "size": 9259,
+      "mtime_utc": "2026-08-14T04:54:59.435335+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/BO_CVn_20260423_field.png": {
+      "sha256": "36ff93e869f56a3132f7dbcd11dad91b4147e3b1e93d33360aecc31997d2028c",
+      "size": 1301797,
+      "mtime_utc": "2026-08-14T04:54:42.144351+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/CSS_J1409187+423422_20260423.txt": {
+      "sha256": "29470dae8cc8692c08cd2afbbcbc706cc4dbf356855449a5ce1c411349b9b4cc",
+      "size": 9149,
+      "mtime_utc": "2026-08-14T04:54:59.468233+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/CSS_J1409187+423422_20260423_field.png": {
+      "sha256": "6b479345ba0658ac1ae18ebace80f485d3ca90d0340b48571abf3af3e50d0312",
+      "size": 1300729,
+      "mtime_utc": "2026-08-14T04:54:43.301668+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/FU_CVn_20260423.txt": {
+      "sha256": "9c06661ca019c92dd7d6fe2c4f4ee60fb71fa8160016a73801d0d17d49ab5deb",
+      "size": 9507,
+      "mtime_utc": "2026-08-14T04:54:59.353257+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/FU_CVn_20260423_field.png": {
+      "sha256": "05fb7fc3b3eeaa31742bd3dcfcc729fe0c632a972e1849e919be2f09e82774ff",
+      "size": 1305929,
+      "mtime_utc": "2026-08-14T04:54:38.270658+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/FW_CVn_20260423.txt": {
+      "sha256": "e98754fee954889bbbf59494907b1f95157ec24ac8ca5b2194eaec5b696e35cd",
+      "size": 9505,
+      "mtime_utc": "2026-08-14T04:54:59.254673+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/FW_CVn_20260423_field.png": {
+      "sha256": "dbf008e0594b7c095e225ff1245b80fb9939d2124eeffe4035cc048f0cd90215",
+      "size": 1305893,
+      "mtime_utc": "2026-08-14T04:54:33.212653+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/NSVS_5096293_20260423.txt": {
+      "sha256": "c0b2807e52d976b9ed9c3676787727fed8c9aa1071c0a44a34194f51fd10964b",
+      "size": 9612,
+      "mtime_utc": "2026-08-14T04:54:59.324115+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/lightcurves_reports/varastro/NSVS_5096293_20260423_field.png": {
+      "sha256": "8b4fa09b1b720ede364e23aa5e40eec09034f72f7c31acb28df8ed30784c5083",
+      "size": 1307948,
+      "mtime_utc": "2026-08-14T04:54:36.984767+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/photometry_summary.csv": {
+      "sha256": "1355f319bb29cd73ec67960fd22faefc24c11ff6c438559d7024663c8df1a425",
+      "size": 17338,
+      "mtime_utc": "2026-08-14T04:54:59.096200+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/pipeline_meta.json": {
+      "sha256": "02141dbda137d90452208712edf82dd9d4ba349a606f63c4d643b948091a8dcc",
+      "size": 33198,
+      "mtime_utc": "2026-08-14T04:55:00.507712+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/suspected_variables.csv": {
+      "sha256": "435c7eddc36df23d2ea16ff5cbc4ad15b4fb8a8c167a9e52f936b43bbda804cc",
+      "size": 2089,
+      "mtime_utc": "2026-08-13T15:20:50.187135+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry/variability_candidates.csv": {
+      "sha256": "d470c01e41c9e8dd14145163f52f376461ae82f9979aad7e31c9791aaa87bd25",
+      "size": 453,
+      "mtime_utc": "2026-08-14T04:55:00.504450+00:00"
+    },
+    "platesolve/NoFilter_60_2/photometry_plan.json": {
+      "sha256": "7de81ad91dc84b008a90bde33e777ed9c4eaa3d5a2299f28931ee989a453eab8",
+      "size": 3662,
+      "mtime_utc": "2026-08-12T13:15:21.260442+00:00"
+    },
+    "platesolve/NoFilter_60_2/variability_candidates.csv": {
+      "sha256": "f0286d41a28e9d114bc73bc153097992ac928ea8596e5fc0a61945c57092d036",
+      "size": 839,
+      "mtime_utc": "2026-08-13T17:07:03.149364+00:00"
+    },
+    "platesolve/NoFilter_60_2/variable_targets.csv": {
+      "sha256": "95963bda5e15d4760086960b2d049a4dee5671a05013542cd17771423dd46ecd",
+      "size": 202043,
+      "mtime_utc": "2026-08-13T15:19:41.338905+00:00"
+    },
+    "sat_diag.json": {
+      "sha256": "734741f05f247b137da51720c9e4835774162e0b4dbba3f25383c3744c3c3368",
+      "size": 962,
+      "mtime_utc": "2026-08-14T04:54:06.836713+00:00"
+    }
+  },
+  "notes": "Post A-1: 135 proc sidecars re-exported, Phase 2A re-run 2026-08-14. Supersedes placed_aperture_20260813 for photometry-path files."
+}

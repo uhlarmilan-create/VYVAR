@@ -12,7 +12,7 @@ Classes: **P** physics/method wrong - **I** implementation != method - **C** con
 
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
-| A-1 | 4 | aperture | U/P | HIGH | Moment FWHM ~5.1-5.3 px vs MASTERSTAR Gaussian 2.4-3.3 px (-1.6-2.1); SNR table follows smaller; EE~54% if moment correct | VYVAR_AUDIT_FINAL -5; STATE 2026-08-13 | DOCUMENTED mechanism; COG fix deferred | OPEN |
+| A-1 | 4 | aperture | U/P | HIGH | Decision (2) on 510: DAO median FWHM authority; re-export P1/P3 PASS; EE +0.8 pp; 435 not re-cut | `docs/VYVAR_AUDIT_2026_CLOSURE.md`; `anchor_510_checksums_a1_dao_fwhm_20260814.json` | **PARTIAL CLOSED** (510 only) | PARTIAL |
 | A-9 | 4 | PSF | U | MED | PSF scale estimators disagree 2.4-4.9 px; not blocking differential | closure register #31 | DOCUMENTED | OPEN |
 | T4-1 | 4 | detection | I?FIXED | - | N_equiv=3.78 wired E.4 | closure #10 | FIXED 2026-08-04 | CLOSED |
 | P-02 | 4 | errors | I?FIXED | - | Scintillation wired batch D | closure #25 | FIXED | CLOSED |
@@ -113,10 +113,21 @@ Milan approved KEEP/PROPOSE as written. **W6-DEL-04 excluded** (library delete g
 
 **Milan authorized (2026-08-13, not implemented):** W6-PROP-03 Option A (`VY_QCBG_PRE` + preprocess `VY_QCBG`); W6-PROP-01 Option A (clip constants only); W6-PROP-05 wire library delete guards; W6-PROP-02 rename shim; W6-PROP-04 reachability fix.
 
-| A-1 | 4 | aperture | U/P | HIGH | Growth curves draft 510/435: EE@production 81-86% (510) vs 67-73% (435); below 90% threshold | tmp/a1_growth_curve_results.json | MEASURED - decision pending | OPEN |
+| A-1 | 4 | aperture | U/P | HIGH | Decision (2) on 510; growth curves + Wave 7 closure | `VYVAR_AUDIT_2026_CLOSURE.md` | **PARTIAL CLOSED** (510) | PARTIAL |
 
-All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 510 anchor unchanged on disk.
+All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 510 photometry re-cut 2026-08-14 (see checksum diff).
 
 ---
 
-*Append-only during audit run. Wave 6 pushed 2026-08-13 session.*
+## Wave 7 closure (2026-08-14)
+
+| ID | wave | stage | class | severity | evidence | reference | disposition | status |
+|----|------|-------|-------|----------|----------|-----------|-------------|--------|
+| **U-P5-PRED** | 7 | saturation | U | MED | Pre-registered P5 tested `peak_max_adu`, a 7×7 box at placed centroid on **raw** pixels — **insensitive to photometry aperture radius by construction**. P5 could not catch an unintended saturation consequence of the radius change. Defect in prediction design, not implementation. A test that **would** measure admission against the photometry aperture: **peak ADU within a circular mask of radius `aperture_r_px` at the placed centroid on raw** (or max in that annulus), compared to `admission_threshold_adu()` — not implemented. | Wave 7 §2.1; `sat_diag.py` | Record explicitly; do not treat P5 PASS as radius-verified saturation | **DOCUMENTED** |
+| **U-XVAL-COMP-RMS** | 7 | aperture | U | MED | VYVAR comp median RMS **0.0101** vs photutils **0.0078** / sep **0.0076** — **unchanged** after A-1 re-export. Harness uses fixed **3 px** for photutils/sep while VYVAR uses SNR radii (~4.26 px); that explains why the comparison is not apples-to-apples, **not** the ~2 mmag gap itself. **Open and unexplained.** Would settle: run xval with photutils/sep at VYVAR per-star `aperture_r_px` from proc CSVs (and matched annulus sky). | `tmp/xval_out_wave7/xval_results.csv`; Wave 7 §2.2 | OPEN | **OPEN** |
+
+**Checksum manifests (draft 510):** `anchor_510_checksums_placed_aperture_20260813.json` (retained) → `anchor_510_checksums_a1_dao_fwhm_20260814.json` (current). Diff: **237** files changed (`dev/validation/anchor_510_checksum_diff_20260814.json`): 135 proc CSVs, ~100 photometry outputs, `aperture_snr_table.json`, `sat_diag.json`.
+
+---
+
+*Append-only during audit run. Wave 7 closed 2026-08-14.*
