@@ -77,10 +77,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
 | **A-1-435-RECUT** | HIGH | Draft 435: no aligned science FITS (150 in `calibrated/`, proc sidecars only). Re-cut needs align + DAO SNR table + export + Phase 2A. Milan decision. |
-| **A-1-DECISION-4** | MED | Fixed 90% enclosed-fraction sizing; decision (2) moved EE +0.8 pp only; ~5.0–5.75 px needed on 510 comps. |
+| **A-1-DECISION-4** | MED | Fixed 90% enclosed-fraction sizing; decision (2) moved EE +0.8 pp only; ~5.0-5.75 px needed on 510 comps. |
 | **U-XVAL-COMP-RMS** | MED | VYVAR vs photutils comp RMS gap ~2 mmag **open/unexplained**. Settle: xval at VYVAR per-star radii. Register Wave 7. |
 | **D1-2-LINEARITY-RAMP** | HIGH | Exposure ramp at telescope; nothing else substitutes. |
-| **WIDE-ERR** | MED | Wide-rig err ~2× underquote; route Honeycutt LOO + photon-term audit. |
+| **WIDE-ERR** | MED | Wide-rig err ~2x underquote; route Honeycutt LOO + photon-term audit. |
 | **W6-PROP-*** | MED | Authorized 2026-08-13, not implemented: `VY_QCBG_PRE`, detect_outliers Option A, library delete guards, preprocess rename. |
 | **C-EXPORT-GAP** | LOW | Headless `night_run` omits AAVSO/VarAstro export. |
 

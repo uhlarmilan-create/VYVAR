@@ -1,4 +1,4 @@
-# VYVAR audit 2026 ù Wave 7 closure
+# VYVAR audit 2026 - Wave 7 closure
 
 **Date:** 2026-08-14  
 **Audience:** JAAVSO referee / methods reviewer  
@@ -21,7 +21,7 @@ This document closes the August 2026 full-workflow audit. It states what was ver
 | **P3** | Check-star scatter ? baseline +10% (? **0.0095**) | **0.008629** | **0.008638** (+0.11%) | **PASS** |
 | **P5** | Saturation admission still passes at new radius | Max comp median peak **15?856 ADU** vs admission **45?874.5 ADU** | Unchanged (same peaks) | **PASS** |
 
-**P5 note (measurement, not assumption):** `peak_max_adu` is a 7ù7 pixel box maximum at the placed centroid on **raw** pixels (`sat_diag.apply_raw_peaks_to_proc_df`), not a peak within the photometry aperture radius. The radius change therefore does not move P5 peaks. P5 confirms no new saturation **rejections** in the comp gate; it does **not** test aperture-dependent peak growth.
+**P5 note (measurement, not assumption):** `peak_max_adu` is a 7x7 pixel box maximum at the placed centroid on **raw** pixels (`sat_diag.apply_raw_peaks_to_proc_df`), not a peak within the photometry aperture radius. The radius change therefore does not move P5 peaks. P5 confirms no new saturation **rejections** in the comp gate; it does **not** test aperture-dependent peak growth.
 
 **Trust:** GREEN, 5 clean comps, 134 frames (unchanged membership).
 
@@ -34,13 +34,13 @@ This document closes the August 2026 full-workflow audit. It states what was ver
 | BO CVn target RMS | 0.1454 | 0.1454 | 0.1456 | 0.1448 |
 | BO CVn comp RMS (dao) | 0.0105 | **0.0111** | 0.0105 | 0.0100 |
 | Median comp RMS (all targets) | dao **0.0102** | dao **0.0101** | **0.0078** | **0.0076** |
-| Median \|target phot ? VYVAR\| | 0.0030 mag | **0.0032 mag** | ù | ù |
+| Median \|target phot vs VYVAR\| | 0.0030 mag | **0.0032 mag** | - | - |
 
-**Interpretation:** The VYVARùphotutils **target** agreement remains **?3 mmag** ù the strongest independent validation in this audit. The comp-RMS gap (VYVAR dao ~10 mmag vs photutils/sep ~7.6ù7.8 mmag) is **unchanged** in median; photutils/sep use a fixed **3 px** aperture in the harness, not VYVAR SNR radii, so only `comp_rms_dao` reflects the radius change (+0.9 mmag on BO CVn comps).
+**Interpretation:** The VYVAR-photutils **target** agreement remains **~3 mmag** - the strongest independent validation in this audit. The comp-RMS gap (VYVAR dao ~10 mmag vs photutils/sep ~7.6-7.8 mmag) is **unchanged** in median; photutils/sep use a fixed **3 px** aperture in the harness, not VYVAR SNR radii, so only `comp_rms_dao` reflects the radius change (+0.9 mmag on BO CVn comps).
 
 ### 1.3 Enclosed-energy gradient at production radius
 
-**Method:** Median curve-of-growth over 134 frames per star; production annulus sky (r_in=10, r_out=15 px); radii 0.5ù15 px step 0.25 px (`tmp/wave7_ee_gradient.py`).
+**Method:** Median curve-of-growth over 134 frames per star; production annulus sky (r_in=10, r_out=15 px); radii 0.5-15 px step 0.25 px (`tmp/wave7_ee_gradient.py`).
 
 | Quantity | At r = 4.141 px (old) | At r = 4.261 px (new) |
 |----------|----------------------|----------------------|
@@ -49,11 +49,11 @@ This document closes the August 2026 full-workflow audit. It states what was ver
 | EE gradient (BO CVn) | **6.57 pp / px** | **6.36 pp / px** |
 | Comp median gradient | **6.76 pp / px** | **6.56 pp / px** |
 
-**Consequence class:** At ~6.5 pp per pixel, the +0.12 px radius step adds ~**0.8 pp** enclosed flux ù **marginal** for differential photometry (scatter moved 0.11%), not the step change required to reach a 90% EE target (~5.0ù5.75 px on typical comps per growth-curve closure).
+**Consequence class:** At ~6.5 pp per pixel, the +0.12 px radius step adds ~**0.8 pp** enclosed flux - **marginal** for differential photometry (scatter moved 0.11%), not the step change required to reach a 90% EE target (~5.0-5.75 px on typical comps per growth-curve closure).
 
 ---
 
-## 2. Draft 435 ù on-disk state and re-cut scope (report only; no re-cut)
+## 2. Draft 435 - on-disk state and re-cut scope (report only; no re-cut)
 
 Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
@@ -68,8 +68,8 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
 **What a re-cut would require:**
 
-1. Regenerate SNR table with DAO FWHM authority (expected FWHM ~3.3ù3.5 px from per-frame estimates vs current 2.395 px).
-2. **Regenerate aligned science FITS** ù the aligned tree has proc sidecars only; science pixels live in `calibrated/` (150 frames). Re-export catalogs as on 510 requires either a full align pass from calibrated lights or a verified proc-FITS-only export path (not exercised here).
+1. Regenerate SNR table with DAO FWHM authority (expected FWHM ~3.3-3.5 px from per-frame estimates vs current 2.395 px).
+2. **Regenerate aligned science FITS** - the aligned tree has proc sidecars only; science pixels live in `calibrated/` (150 frames). Re-export catalogs as on 510 requires either a full align pass from calibrated lights or a verified proc-FITS-only export path (not exercised here).
 3. Re-export proc CSVs, re-run Phase 2A, refresh trust/LCs.
 4. If Milan approves anchor update: `session_baseline_check.py --full` and new `VL-P1-GOLD` photometry SHA (INV-ANCHOR-00 scope: photometry-only gate).
 
@@ -86,20 +86,20 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 | Tool / pipeline | Aperture sizing | Varies with per-frame seeing? | Differential preservation |
 |-----------------|-----------------|------------------------------|---------------------------|
 | **DAOPHOT / IRAF PHOT** | Fixed radii in `PHOTPARS`; optional scale in FWHM units (Stetson 1987; IRAF `photpars`) | Not per star; manual re-run if seeing changes | Fixed r for all stars in a run ? standard differential practice |
-| **SExtractor** | `MAG_AUTO`: Kron ellipse ~2.5ù r_Kron (Bertin & Arnouts 1996); floor `PHOT_AUTOAPERS` | **Per object** adaptive ellipse | Differential use requires same algorithm on target and comps; crowding-sensitive |
-| **AstroImageJ** | Fixed radii default; optional **per-image** r = FWHM factor ù mean FWHM of apertures, or radial-profile cutoff (Collins et al. 2017, AJ 153, 77) | **Per frame** when enabled; warns against crowded fields | All apertures in an image scaled together ? preserves differential intent |
+| **SExtractor** | `MAG_AUTO`: Kron ellipse ~2.5x r_Kron (Bertin & Arnouts 1996); floor `PHOT_AUTOAPERS` | **Per object** adaptive ellipse | Differential use requires same algorithm on target and comps; crowding-sensitive |
+| **AstroImageJ** | Fixed radii default; optional **per-image** r = FWHM factor x mean FWHM of apertures, or radial-profile cutoff (Collins et al. 2017, AJ 153, 77) | **Per frame** when enabled; warns against crowded fields | All apertures in an image scaled together ? preserves differential intent |
 | **photutils** | User-supplied fixed `CircularAperture(r)` (docs v3.0) | Only if caller changes r each frame | Caller responsibility |
-| **VaST** | Default: diameter = **6 ù median(A_IMAGE)** from preliminary SExtractor pass (Sokolovsky et al. 2018, ASPC 11, 7) | **Per image** | Same diameter applied to all sources in that image |
+| **VaST** | Default: diameter = **6 x median(A_IMAGE)** from preliminary SExtractor pass (Sokolovsky et al. 2018, ASPC 11, 7) | **Per image** | Same diameter applied to all sources in that image |
 | **C-Munipack** | First aperture radius > FWHM from `munipack find -f` (tutorial) | Per frame via `-f` on each image | Growth-curve path available for normalization |
 | **Survey pipelines (ZTF etc.)** | PSF / aperture-model photometry on stacked/calibrated products; field PSF from bright stars | PSF model updated per CCD/night | Differential not primary product |
 
-**Conclusion:** Per-**frame** seeing adjustment is common (AIJ, VaST, SExtractor auto) but applied **uniformly to all stars in that frame**. VYVARùs per-**draft** median is more conservative (no frame-to-frame radius jitter); it matches the Honeycutt (1992) requirement that target and comp share the same aperture geometry within an epoch. No surveyed tool varies target and comp radii **independently** within a frame.
+**Conclusion:** Per-**frame** seeing adjustment is common (AIJ, VaST, SExtractor auto) but applied **uniformly to all stars in that frame**. VYVAR's per-**draft** median is more conservative (no frame-to-frame radius jitter); it matches the Honeycutt (1992) requirement that target and comp share the same aperture geometry within an epoch. No surveyed tool varies target and comp radii **independently** within a frame.
 
 ### 3.2 Is fixed enclosed-fraction (decision 4) the right end state?
 
-**Evidence for:** Growth curves measure production EE **81ù86%** (510) and **67ù73%** (435) vs a 90% literature target; decision (2) moved 510 by only **0.8 pp** EE ù the FWHM authority fix alone does not close the EE gap. Fixed r?? from measured curves would remove the FWHM-estimator debate and set an explicit flux scale (Stetson 1990 COG; SExtractor Kron ~90% intent).
+**Evidence for:** Growth curves measure production EE **81-86%** (510) and **67-73%** (435) vs a 90% literature target; decision (2) moved 510 by only **0.8 pp** EE - the FWHM authority fix alone does not close the EE gap. Fixed r90 from measured curves would remove the FWHM-estimator debate and set an explicit flux scale (Stetson 1990 COG; SExtractor Kron ~90% intent).
 
-**Evidence against / cost:** Requires per-star or per-field growth-curve measurement and storage; re-export of all proc catalogs; anchor re-cut on 435 and 510; saturation/comp selection re-validation; possible crowding interaction when r grows. Implementation cost: mediumùhigh (new sizing mode + provenance + tests), comparable to a second A-1 arc.
+**Evidence against / cost:** Requires per-star or per-field growth-curve measurement and storage; re-export of all proc catalogs; anchor re-cut on 435 and 510; saturation/comp selection re-validation; possible crowding interaction when r grows. Implementation cost: medium-high (new sizing mode + provenance + tests), comparable to a second A-1 arc.
 
 **What decision (2) does not settle:** (a) per-magnitude SNR radii still differ across comps; (b) draft-to-draft EE inconsistency (435 underradiused); (c) absolute-magnitude / publication claims without COG; (d) comp-RMS gap vs photutils (background/centroid, not FWHM alone).
 
@@ -122,7 +122,7 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 | **Aperture photometry** | Circular aperture + annulus sky (Howell 1989); SNR table | **xval:** target **3 mmag** vs photutils, 134 frames; growth curves; A-1 re-export P1/P3/P5 | **PASS** differential; EE **86%** not 90% |
 | **Ensemble / ZP** | Broeg et al. 2005 weighted median; ZP MAD clip removed | check_scatter **0.00864**; ZP-clip postmortem (509 vs 435) | **PASS** on anchor |
 | **Differential LC** | LOO comp median (Honeycutt 1992) | BO CVn lc_rms 0.145; xval target match | **PASS** |
-| **Error budget** | Howell 1989 + scintillation (batch D) | WIDE-ERR diag on wide rig | **PASS** anchor errs; **OPEN** wide rig ~2ù underquote |
+| **Error budget** | Howell 1989 + scintillation (batch D) | WIDE-ERR diag on wide rig | **PASS** anchor errs; **OPEN** wide rig ~2x underquote |
 | **Time** | astropy LTT ? HJD/BJD_TDB (Eastman et al. 2010) | BJD columns in proc CSV; export gate | **IMPLEMENTED**; spot xval not re-run |
 | **Trust / export** | Trust flags; AAVSO requires BJD_TDB | draft 510 GREEN; C-EXPORT-GAP: headless skips AAVSO | **PASS** trust; export path manual |
 
@@ -132,9 +132,9 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
 **Not checked (and why):**
 
-- End-to-end re-run from raw on anchor (`INV-ANCHOR-00` boundary ù by design of `--full`).
+- End-to-end re-run from raw on anchor (`INV-ANCHOR-00` boundary - by design of `--full`).
 - Draft 435 A-1 re-cut (no aligned science FITS; Milan report-only).
-- Dome-flat linearity curve (D1-2 ù requires observing program).
+- Dome-flat linearity curve (D1-2 - requires observing program).
 - Gaia transform coefficients hand-verification (OSC/mono not exercised).
 - AAVSO/VarAstro export on headless path (C-EXPORT-GAP).
 - Independent centroid/Background2D spot suite (partially embedded in xval only).
@@ -153,22 +153,22 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
 ### 4.3 Deliberate departures from field convention
 
-1. **No cosmic-ray rejection on science pixels** ù against van Dokkum (2001); justified because resampled wide-field cores were destroyed by L.A.Cosmic (2026-08-12 removal). Science pixels are not altered; outliers handled statistically.
+1. **No cosmic-ray rejection on science pixels** - against van Dokkum (2001); justified because resampled wide-field cores were destroyed by L.A.Cosmic (2026-08-12 removal). Science pixels are not altered; outliers handled statistically.
 
-2. **Cross-binning calibration with derived convention** ù CAL-DIAG SUM dark resample; no surveyed tool verifies the full VYVAR path; INV-CAL-01 gate + 150/150 byte identity on anchor.
+2. **Cross-binning calibration with derived convention** - CAL-DIAG SUM dark resample; no surveyed tool verifies the full VYVAR path; INV-CAL-01 gate + 150/150 byte identity on anchor.
 
-3. **Comparison-star membership decided once per draft** ù after ZP-clip postmortem (509 vs 435); Broeg ensemble kept; variables excluded by stability/RMS, not per-epoch LOO membership.
+3. **Comparison-star membership decided once per draft** - after ZP-clip postmortem (509 vs 435); Broeg ensemble kept; variables excluded by stability/RMS, not per-epoch LOO membership.
 
-4. **Saturation measured on raw pixels at placed aperture** ù not at photometry radius; admission 70% of full well; linearity tier uses DEFAULT_FRAC unless measured.
+4. **Saturation measured on raw pixels at placed aperture** - not at photometry radius; admission 70% of full well; linearity tier uses DEFAULT_FRAC unless measured.
 
-5. **In-place mutation of `calibrated/`** with stage stamping ù no separate immutable cal product; cost: naming (`calibrated/` holds skysf-enriched product), INV-ANCHOR-00 cannot see preprocess regressions via photometry-only gate.
+5. **In-place mutation of `calibrated/`** with stage stamping - no separate immutable cal product; cost: naming (`calibrated/` holds skysf-enriched product), INV-ANCHOR-00 cannot see preprocess regressions via photometry-only gate.
 
 ### 4.4 Open items after Wave 7
 
 | ID | Status after section 1 | Notes |
 |----|------------------------|-------|
 | **A-1** | **Partially closed** | Decision (2) implemented + verified on **510**; 435 not re-cut; EE still <90% |
-| **WIDE-ERR** | **OPEN** | Wide-rig err ~2ù underquote; fluxes OK |
+| **WIDE-ERR** | **OPEN** | Wide-rig err ~2x underquote; fluxes OK |
 | **D1-2 linearity** | **DEFERRED** | No dome-flat ramp |
 | **U-PED-01 pedestal** | **OPEN** | Header OFFSET=0 vs ~24.5 ADU/bin1 in CAL-DIAG |
 | **INV-CAL-01 ?_p=0** | **OPEN (edge)** | Gate PASS with zero intercept uncertainty |
@@ -180,15 +180,15 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
 ### 4.5 Limits of this audit (five statements)
 
-1. **Single-rig deep validation** ù Numerical closure is anchored on BO CVn / QHY294MM home rig (drafts 435/509/510). Other equipment IDs are not re-measured end-to-end in this audit.
+1. **Single-rig deep validation** - Numerical closure is anchored on BO CVn / QHY294MM home rig (drafts 435/509/510). Other equipment IDs are not re-measured end-to-end in this audit.
 
-2. **Photometry-only regression gate** ù `session_baseline_check --full` does not exercise cal, preprocess, align, or MASTERSTAR rebuild (INV-ANCHOR-00); preprocess or DAO regressions can slip until a full rebuild harness is run.
+2. **Photometry-only regression gate** - `session_baseline_check --full` does not exercise cal, preprocess, align, or MASTERSTAR rebuild (INV-ANCHOR-00); preprocess or DAO regressions can slip until a full rebuild harness is run.
 
-3. **Independent validation is differential-first** ù xval confirms target LCs to ~3 mmag; comp scatter offsets (~3 mmag vs photutils) and absolute EE fraction are not fully reconciled.
+3. **Independent validation is differential-first** - xval confirms target LCs to ~3 mmag; comp scatter offsets (~3 mmag vs photutils) and absolute EE fraction are not fully reconciled.
 
-4. **Literature matrix is not exhaustive** ù Tool survey (ù3.1) covers major packages cited in time-domain photometry papers, not every pipeline (e.g. MaxIm, MuniWin variants, proprietary survey codes).
+4. **Literature matrix is not exhaustive** - Tool survey (S3.1) covers major packages cited in time-domain photometry papers, not every pipeline (e.g. MaxIm, MuniWin variants, proprietary survey codes).
 
-5. **Re-cut authorization boundary** ù Measurements on draft 510 post-change do not automatically update P1 golden SHA, draft 435 products, or publication numbers until Milan authorizes anchor re-cut and ledger update.
+5. **Re-cut authorization boundary** - Measurements on draft 510 post-change do not automatically update P1 golden SHA, draft 435 products, or publication numbers until Milan authorizes anchor re-cut and ledger update.
 
 ---
 
@@ -198,7 +198,7 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 
 **Yes, with stated scope**, on the evidence gathered:
 
-- Independent photutils cross-validation on **134 frames** shows target differential RMS agreement at **?3 mmag** ù strong evidence the LOO ensemble path is implemented correctly.
+- Independent photutils cross-validation on **134 frames** shows target differential RMS agreement at **~3 mmag** - strong evidence the LOO ensemble path is implemented correctly.
 - Check-star scatter **0.0086 mag** (GREEN) survived a measured +2.9% aperture increase with no saturation admissions.
 - Remaining gaps are **declared**, not hidden: enclosed fraction ~**86%** not 90%; wide-rig error bars; 435 not updated; no CR cleaning; pedestal/header mismatch.
 
@@ -207,7 +207,7 @@ Measured inventory (`tmp/wave7_draft435_inventory.json`):
 - **Absolute** photometry or claims requiring known enclosed fraction ? need COG or fixed r?? (decision 4) plus 435 re-cut.
 - **Wide-field / wide-rig error bars** in publication ? WIDE-ERR fix and re-validation.
 - **Linearity near saturation** ? D1-2 measurement, not DEFAULT_FRAC.
-- **Cross-draft comparability** after A-1 ? draft 435 re-cut per ù2.
+- **Cross-draft comparability** after A-1 - draft 435 re-cut per S2.
 
 ---
 

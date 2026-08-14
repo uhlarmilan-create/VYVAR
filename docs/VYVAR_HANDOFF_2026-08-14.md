@@ -1,4 +1,4 @@
-# VYVAR handoff — 2026-08-14
+# VYVAR handoff - 2026-08-14
 
 Start here in a new session. Full audit closure: `docs/VYVAR_AUDIT_2026_CLOSURE.md`. Current snapshot: `docs/VYVAR_STATE.md`.
 
@@ -48,38 +48,38 @@ Session init: read `docs/VYVAR_STATE.md`, `VYVAR_ROADMAP.md`, latest `VYVAR_JOUR
 
 ---
 
-## Session arc (2026-08-13/14) — what happened
+## Session arc (2026-08-13/14) - what happened
 
-1. **ZP clip removal** — per-frame MAD on ensemble ZP at `len(z)>=4` caused 509 BO CVn failure; clip deleted, Broeg weights kept.
-2. **SAT-DIAG** — derive saturation from data; `SATURATE_ADU=16384` wrong units; placed-aperture raw peaks.
-3. **Placed aperture** — stop peak-search hijack on faint comps.
-4. **INV-CAL-01** — CAL-DIAG v2; dark SUM resample convention derived from measured pedestal.
-5. **INV-CAL-02** — `VY_CALSTAGE` + DATASUM on in-place `calibrated/`.
-6. **INV-GATE-REMOVAL** — policy documented.
-7. **Full audit** — seven waves; xval vs photutils/sep; eight deletions; four C-class fixes.
-8. **A-1 decision (2)** — SNR FWHM authority ? per-draft median frame DAO moment; draft 510 re-export verified.
+1. **ZP clip removal** - per-frame MAD on ensemble ZP at `len(z)>=4` caused 509 BO CVn failure; clip deleted, Broeg weights kept.
+2. **SAT-DIAG** - derive saturation from data; `SATURATE_ADU=16384` wrong units; placed-aperture raw peaks.
+3. **Placed aperture** - stop peak-search hijack on faint comps.
+4. **INV-CAL-01** - CAL-DIAG v2; dark SUM resample convention derived from measured pedestal.
+5. **INV-CAL-02** - `VY_CALSTAGE` + DATASUM on in-place `calibrated/`.
+6. **INV-GATE-REMOVAL** - policy documented.
+7. **Full audit** - seven waves; xval vs photutils/sep; eight deletions; four C-class fixes.
+8. **A-1 decision (2)** - SNR FWHM authority ? per-draft median frame DAO moment; draft 510 re-export verified.
 
-**Physics (measurement-backed):** QHY294MM 14-bit samples in 16-bit container (65535 = clip); pedestal ~24.5 ADU/bin1 vs header `OFFSET=0`; ?10 °C dark pedestal-dominated (60 s = 120 s); block-sum dark resample correct for CMOS software binning, not for CCD on-chip binning.
+**Physics (measurement-backed):** QHY294MM 14-bit samples in 16-bit container (65535 = clip); pedestal ~24.5 ADU/bin1 vs header `OFFSET=0`; ?10  degC dark pedestal-dominated (60 s = 120 s); block-sum dark resample correct for CMOS software binning, not for CCD on-chip binning.
 
 ---
 
-## Open items — act on these
+## Open items - act on these
 
 ### Exposure ramp (D1-2 linearity)
 
 - **Known:** SAT-DIAG uses DEFAULT_FRAC for linearity knee; one-sided test.
-- **Decided:** measured dome-flat / exposure ramp per sensor (Howell 2006 §4.4).
+- **Decided:** measured dome-flat / exposure ramp per sensor (Howell 2006 S4.4).
 - **Next:** Milan at telescope; no software substitute.
 
 ### WIDE-ERR
 
-- **Known:** wide-rig quoted errors ~2× underquoted vs check-star scatter (~20 mmag excess); fluxes OK.
+- **Known:** wide-rig quoted errors ~2x underquoted vs check-star scatter (~20 mmag excess); fluxes OK.
 - **Decided:** defer sigma fix; route Honeycutt LOO + photon-term audit (`docs/VYVAR_LIMITATIONS.md`).
 - **Next:** implement fix on wide rig; re-run check-star chi2 before publication claims on error bars.
 
-### Decision (4) — fixed enclosed fraction
+### Decision (4) - fixed enclosed fraction
 
-- **Known:** decision (2) moved EE +0.8 pp; 90% needs ~5.0–5.75 px on 510 comps; current ~86%.
+- **Known:** decision (2) moved EE +0.8 pp; 90% needs ~5.0-5.75 px on 510 comps; current ~86%.
 - **Decided:** deferred; likely next architectural step if publication needs stated EE.
 - **Next:** design per-star r90 from growth curves; estimate re-cut cost on 435+510.
 
@@ -111,12 +111,12 @@ Session init: read `docs/VYVAR_STATE.md`, `VYVAR_ROADMAP.md`, latest `VYVAR_JOUR
 
 ### U-XVAL-COMP-RMS
 
-- **Known:** VYVAR comp RMS 0.0101 vs photutils 0.0078 — gap **open, unexplained**; fixed 3 px harness vs ~4.26 px VYVAR radii explains non-comparability, not the 2 mmag.
+- **Known:** VYVAR comp RMS 0.0101 vs photutils 0.0078 - gap **open, unexplained**; fixed 3 px harness vs ~4.26 px VYVAR radii explains non-comparability, not the 2 mmag.
 - **Next:** extend `xval_run.py` to use per-star `aperture_r_px` from proc CSVs.
 
 ### U-P5-PRED
 
-- **Known:** P5 PASS did **not** verify saturation at photometry radius (`peak_max_adu` is 7×7 box at centroid on raw).
+- **Known:** P5 PASS did **not** verify saturation at photometry radius (`peak_max_adu` is 7x7 box at centroid on raw).
 - **Next:** if needed, measure peak within circular mask of `aperture_r_px` at placed centroid on raw.
 
 ### Register OPEN (see `docs/VYVAR_AUDIT_2026_REGISTER.md`)
@@ -140,9 +140,9 @@ U-PED-01, INV-CAL-01 ?_p=0 edge, F-B01/F-B02, P1-RECUT ledger stale, QHY294MM RN
 
 ## Honest session notes (for the next implementer)
 
-- **P5 was a bad prediction** — recorded in register; do not cite it as saturation-at-radius verification.
-- **xval comp gap remains open** — target agreement is strong; comp scatter mismatch is not closed.
-- **Draft 510 archive on disk diverged from prior manifest** — new manifest written; P1 golden ledger still stale for photometry SHA.
-- **`fwhm_px_scope` in proc CSVs may still read `per_draft_gaussian_override` for annulus FWHM** while SNR radii use DAO authority — cosmetic provenance gap, not re-measured this session.
+- **P5 was a bad prediction** - recorded in register; do not cite it as saturation-at-radius verification.
+- **xval comp gap remains open** - target agreement is strong; comp scatter mismatch is not closed.
+- **Draft 510 archive on disk diverged from prior manifest** - new manifest written; P1 golden ledger still stale for photometry SHA.
+- **`fwhm_px_scope` in proc CSVs may still read `per_draft_gaussian_override` for annulus FWHM** while SNR radii use DAO authority - cosmetic provenance gap, not re-measured this session.
 
 *Handoff written 2026-08-14. No further push without Milan.*

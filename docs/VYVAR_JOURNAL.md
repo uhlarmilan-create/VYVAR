@@ -4,7 +4,7 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ## 2026-08-14 -- Session close: Wave 7 audit + A-1 push
 
-**Arc (chronological).** ZP clip removal (509 BO CVn failure) → SAT-DIAG (16384 wrong units; derive ceiling) → placed aperture (peak hijack fix) → INV-CAL-01 (CAL-DIAG v2; pedestal-derived SUM) → INV-CAL-02 (stage stamp on `calibrated/`) → INV-GATE-REMOVAL policy → full 2026 audit (seven waves, xval, eight deletions) → A-1 decision (2) DAO FWHM authority on draft 510.
+**Arc (chronological).** ZP clip removal (509 BO CVn failure) -> SAT-DIAG (16384 wrong units; derive ceiling) -> placed aperture (peak hijack fix) -> INV-CAL-01 (CAL-DIAG v2; pedestal-derived SUM) -> INV-CAL-02 (stage stamp on `calibrated/`) -> INV-GATE-REMOVAL policy -> full 2026 audit (seven waves, xval, eight deletions) -> A-1 decision (2) DAO FWHM authority on draft 510.
 
 **Pushed:** A-1 code + tests; Wave 7 closure docs + register + checksum manifests.
 

@@ -179,8 +179,7 @@ CHAR_MAP: dict[str, str] = {
     "\u0171": "u",
     "\u0179": "Z",
     "\u017a": "z",
-    # replacement / BOM
-    "\ufffd": "-",
+    # BOM
     "\ufeff": "",
     # superscript minus (e.g. 10^-3 style leftovers)
     "\u207b": "-",

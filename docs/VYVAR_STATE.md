@@ -10,7 +10,7 @@ Last updated: **2026-08-14** (session close: push, checksum manifest, handoff).
 
 **Audit.** Seven waves closed; referee document `docs/VYVAR_AUDIT_2026_CLOSURE.md`. Register corrections: **U-P5-PRED** (P5 could not test aperture-dependent saturation), **U-XVAL-COMP-RMS** (2 mmag comp gap open).
 
-**Physics findings (independent of code):** QHY294MM 14-bit-in-16-bit container (65535 = clip); pedestal ~24.5 ADU/bin1 vs header `OFFSET=0`; dark at −10 °C pedestal-dominated (60 s = 120 s median); CMOS block-sum dark resample correct, CCD on-chip binning would not be (INV-CAL-01 derives convention).
+**Physics findings (independent of code):** QHY294MM 14-bit-in-16-bit container (65535 = clip); pedestal ~24.5 ADU/bin1 vs header `OFFSET=0`; dark at -10  degC pedestal-dominated (60 s = 120 s median); CMOS block-sum dark resample correct, CCD on-chip binning would not be (INV-CAL-01 derives convention).
 
 **Handoff:** `docs/VYVAR_HANDOFF_2026-08-14.md`.
 
