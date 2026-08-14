@@ -1,0 +1,197 @@
+{
+  "stage": 1,
+  "draft": 512,
+  "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise.",
+  "n_proc_files": 134,
+  "n_stars_summarized": 678,
+  "gain_e_per_adu": 3.17,
+  "gain_source": "db",
+  "read_noise_e": 7.6,
+  "read_noise_source": "db",
+  "fit": {
+    "n_stars": 629,
+    "gain_e_per_adu": 3.17,
+    "read_noise_e": 7.6,
+    "sky_adu_median": 1549.7497863769531,
+    "aperture_area_px_median": 36.55218233869761,
+    "zp_inst": 22.036623811051037,
+    "sigma_sys_mag": 0.00973727552090381,
+    "sigma_sys_mag_err": 0.00024305711590473546,
+    "chi2_red": 4.173245318139177,
+    "n_fit": 125,
+    "scint_mag_predicted": 0.001986423013116313,
+    "scint_rel_predicted": 0.0018295632073527753,
+    "scint_airmass_used": 1.0379755,
+    "scint_params": {
+      "draft_id": 512,
+      "setup": "NoFilter_60_2",
+      "telescope_diameter_m": 0.07,
+      "altitude_m": 275.0,
+      "exposure_s": 60.0,
+      "c_y": 1.5,
+      "source_notes": [
+        "D=0.070 m from TELESCOPE.DIAMETER (Carl-Zeiss 200mm)",
+        "altitude_m=275.0 from LOCATION (Jirny)",
+        "exposure_s=60.0 from setup name 'NoFilter_60_2'"
+      ]
+    },
+    "telescope_diameter_m_used": 0.2,
+    "telescope_diameter_m_db": 0.07,
+    "diameter_note": "override D=0.2 m (DB reported 0.07 m; name implies 200 mm wide-field)",
+    "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise."
+  },
+  "thresholds": {
+    "faint_limit_g": 10.75,
+    "faint_limit_snr_approx": 83.33195228625108,
+    "bright_limit_g": null,
+    "bright_upturn_visible": false,
+    "default_lin_frac": 0.85,
+    "detect_frac_min": 1.0,
+    "detect_frac_rule": "p16 of detect_frac among mag_g<=14 stars in this draft",
+    "dilution_threshold": null,
+    "dilution_rule": "Stage 1: not derived here (needs dilution.py batch). Stage 2 will use p16 of D among isolated-looking stars.",
+    "stability_excess_mad": 1.9220339056732911,
+    "stability_excess_iqr": 1.9220339056732911,
+    "stability_excess_inv_eta": null,
+    "stability_rule": "p84 of (scatter_mad / sigma_total_parametric) among non-catalogue-variable stars; CSI 2264 used ~3x median noise; Kjeldsen ~1.5 variability index",
+    "nonparametric_min_bin_n": 8,
+    "nonparametric_usable_above_g": 5.75
+  },
+  "scint_vs_sys": {
+    "sigma_sys_mag": 0.00973727552090381,
+    "scint_mag_predicted": 0.001986423013116313,
+    "ratio_sys_over_scint": 4.901914374032503,
+    "P_R2": "report both; do not adjust"
+  },
+  "curve_ratio_summary": {
+    "median_ratio_usable": 1.1244574783176162,
+    "max_abs_log_ratio_usable": 0.21422384586461937
+  },
+  "selection_unchanged": {
+    "plan_comparison_stars_n": 140,
+    "per_target_rows": 95,
+    "bo_cvn_before": {
+      "catalog_id": "1498613634033133184",
+      "trust": "GREEN",
+      "check_scatter": 0.009299945474024567,
+      "ac_scatter": 0.0132831661142742,
+      "lc_rms_ooe": 0.0466586683108079,
+      "n_good_comp": 5,
+      "comp_tiers": {
+        "selected_tier": "TIER1",
+        "n_tier1": 5,
+        "n_tier2": 0,
+        "n_tier3": 0,
+        "n_tier4": 0
+      },
+      "note": "Stage 1: selection unchanged; these are archived draft 512 values"
+    }
+  },
+  "np_bin_counts": [
+    {
+      "mag_center": 5.75,
+      "n": 2,
+      "usable": false
+    },
+    {
+      "mag_center": 6.25,
+      "n": 2,
+      "usable": false
+    },
+    {
+      "mag_center": 6.75,
+      "n": 5,
+      "usable": false
+    },
+    {
+      "mag_center": 7.25,
+      "n": 2,
+      "usable": false
+    },
+    {
+      "mag_center": 7.75,
+      "n": 7,
+      "usable": false
+    },
+    {
+      "mag_center": 8.25,
+      "n": 13,
+      "usable": true
+    },
+    {
+      "mag_center": 8.75,
+      "n": 13,
+      "usable": true
+    },
+    {
+      "mag_center": 9.25,
+      "n": 24,
+      "usable": true
+    },
+    {
+      "mag_center": 9.75,
+      "n": 36,
+      "usable": true
+    },
+    {
+      "mag_center": 10.25,
+      "n": 39,
+      "usable": true
+    },
+    {
+      "mag_center": 10.75,
+      "n": 58,
+      "usable": true
+    },
+    {
+      "mag_center": 11.25,
+      "n": 96,
+      "usable": true
+    },
+    {
+      "mag_center": 11.75,
+      "n": 133,
+      "usable": true
+    },
+    {
+      "mag_center": 12.25,
+      "n": 147,
+      "usable": true
+    },
+    {
+      "mag_center": 12.75,
+      "n": 39,
+      "usable": true
+    },
+    {
+      "mag_center": 13.25,
+      "n": 4,
+      "usable": false
+    },
+    {
+      "mag_center": 13.75,
+      "n": 2,
+      "usable": false
+    },
+    {
+      "mag_center": 14.25,
+      "n": 1,
+      "usable": false
+    },
+    {
+      "mag_center": 14.75,
+      "n": 3,
+      "usable": false
+    },
+    {
+      "mag_center": 15.25,
+      "n": 2,
+      "usable": false
+    },
+    {
+      "mag_center": 16.75,
+      "n": 1,
+      "usable": false
+    }
+  ]
+}
