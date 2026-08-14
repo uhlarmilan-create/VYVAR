@@ -409,7 +409,7 @@ def test_qc_file_fk_to_run_old_heals_on_open(tmp_path) -> None:
             """
         )
         db.conn.commit()
-    except Exception:
+    except Exception:  # noqa: BLE001
         failed = True
         db.conn.rollback()
     assert failed
