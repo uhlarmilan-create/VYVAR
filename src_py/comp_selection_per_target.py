@@ -40,6 +40,44 @@ LOGGER = logging.getLogger(__name__)
 _BO_CVN_CID = "1498613634033133184"
 BO_CVN_STEP_COUNTS: dict[str, int] = {}
 
+# COMP-POOL-01 Stage 3: pair-criterion relaxation order (assignment only).
+# Pool admission never relaxes these. Sparse fields widen in this stated order;
+# each firing is recorded in selection_note / provenance.
+COMP_ASSIGNMENT_RELAX_ORDER: tuple[str, ...] = (
+    "colour_tier_widen_T1_to_T4",
+    "adaptive_delta_mag",
+    "sparse_fallback_path",
+)
+
+
+def format_assignment_relax_provenance(
+    *,
+    used_mag_tol: float,
+    mag_tol_start: float | None,
+    best_tier: str,
+    comp_path: str,
+    n_t1: int = 0,
+    n_t2: int = 0,
+    n_t3: int = 0,
+    n_t4: int = 0,
+) -> str:
+    """ASCII provenance fragment: fixed order plus which steps actually fired."""
+    fired: list[str] = []
+    bt = str(best_tier or "").strip().upper()
+    if bt and bt not in ("TIER1", "1", ""):
+        fired.append(f"colour_tier->{bt}")
+    if mag_tol_start is not None and math.isfinite(float(mag_tol_start)):
+        if float(used_mag_tol) > float(mag_tol_start) + 1e-9:
+            fired.append(f"delta_mag->{float(used_mag_tol):.2f}")
+    if str(comp_path or "").strip().lower() == "sparse_fallback":
+        fired.append("sparse_fallback")
+    order = ">".join(COMP_ASSIGNMENT_RELAX_ORDER)
+    fired_s = ",".join(fired) if fired else "none"
+    return (
+        f"relax_order={order}; fired={fired_s}; "
+        f"n_tier1={int(n_t1)},n_tier2={int(n_t2)},n_tier3={int(n_t3)},n_tier4={int(n_t4)}"
+    )
+
 
 def bo_cvn_funnel_snapshot() -> dict[str, int]:
     return dict(BO_CVN_STEP_COUNTS)
@@ -2142,6 +2180,21 @@ def _assemble_comp_selection_result_rows(
         if comp_gs11_notes and cid in comp_gs11_notes:
             _gs11n = str(comp_gs11_notes[cid])
             _sel = f"{_sel}; {_gs11n}" if _sel else _gs11n
+        try:
+            _mag_start = float(getattr(_cfg_asm, "phase01_comparison_max_mag_diff", float("nan")))
+        except (TypeError, ValueError):
+            _mag_start = float("nan")
+        _relax = format_assignment_relax_provenance(
+            used_mag_tol=float(used_mag_tol) if math.isfinite(float(used_mag_tol)) else float("nan"),
+            mag_tol_start=_mag_start if math.isfinite(_mag_start) else None,
+            best_tier=str(best_tier),
+            comp_path=str(comp_path or "default"),
+            n_t1=int(n_t1),
+            n_t2=int(n_t2),
+            n_t3=int(n_t3),
+            n_t4=int(n_t4),
+        )
+        _sel = f"{_sel}; {_relax}" if _sel else _relax
         r["selection_note"] = _sel
         r["used_mag_tol"] = float(used_mag_tol) if math.isfinite(float(used_mag_tol)) else float("nan")
         r["comp_path"] = str(comp_path or "default").strip() or "default"

@@ -194,7 +194,7 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
-| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool (star-only, uncapped, draft-derived) vs assignment (pair properties). Stage 1 noise curve `ffb4402`. Stage 2 admission + cap removal: draft 512 pool 187 (was plan 140); BO CVn loses 1/5 comps (faint+dilution). sys/scint~4.9 (P-R2). | `CURSOR_RESULT_COMP_POOL_01_S1.md`, `CURSOR_RESULT_COMP_POOL_01_S2.md` | **IN PROGRESS** Stage 2; Stage 3 assignment pending | OPEN |
+| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool (star-only, uncapped, draft-derived) vs assignment (pair properties). Stage 1 `ffb4402`, Stage 2 `696c849`, Stage 3 relax provenance. Draft 512 pool 187; BO CVn loses 1/5 (faint+dilution). sys/scint~4.9 (P-R2). | `CURSOR_RESULT_COMP_POOL_01.md` (+ S1/S2/S3) | **STAGED** local; rebuild+push need Milan | OPEN |
 | **COMP-POOL-SCINT** | 10 | errors | U | MED | Fitted sigma_sys ~4.9x Osborn/Young scintillation on wide rig (P-02 / WIDE-ERR adjacent). | S1/S2 scint_vs_sys | **REPORT**; do not fudge | OPEN |
 
 ### Named non-derived (P-R0)

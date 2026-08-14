@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-12T08:27:47Z at git HEAD 0ab686f._
+_Generated 2026-08-14T14:06:12Z at git HEAD 696c849._
 
 ## Summary
 
-- Entries: 272
-- Tier: basic 13, advanced 68, expert 191
-- Kind: static 254, derived 0, resolved 18
-- Widget: auto 105, custom 142, hidden 25
-- Owner: db_static 9, config_runtime 244, fits_dynamic 6, internal 13
-- Scope: universal 223, rig 31, site 10, session 8
-- Scope key: none 223, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
+- Entries: 274
+- Tier: basic 13, advanced 68, expert 193
+- Kind: static 256, derived 0, resolved 18
+- Widget: auto 107, custom 142, hidden 25
+- Owner: db_static 9, config_runtime 246, fits_dynamic 6, internal 13
+- Scope: universal 225, rig 31, site 10, session 8
+- Scope key: none 225, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 18, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -262,10 +262,12 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_iterative_clip_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Iterative Clip Enabled |
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | auto | Comp Max Delta BPRP |
 | `comp_max_slope_mmag_hr` | 5.0 | 0 .. 500 | expert | static | config_runtime | universal | none | n/a | auto | Comp Max Slope Mmag Hr |
+| `comp_pool_derived_admission` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Pool Derived Admission |
 | `comp_select_rms_floor` | 1e-06 | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Select RMS Floor |
 | `comp_slope_significance_k` | 3.0 | 0 .. 10 | advanced | static | config_runtime | universal | none | n/a | auto | Comp Slope Significance K |
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Enabled |
 | `comp_sparse_fallback_min` | 0 | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Min |
+| `comparison_stars_pool_n` | 0 | 0 .. 50000 | expert | static | config_runtime | universal | none | n/a | auto | Comparison Stars Pool N |
 | `global_comp_pool_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Global Comp Pool Enabled |
 | `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Chip Interior Margin Arcsec |
 | `phase01_comparison_exclude_gaia_extobj` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia Extobj |

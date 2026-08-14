@@ -1525,6 +1525,39 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "comp_pool_derived_admission": {
+    "help": "COMP-POOL-01: admit the global comparison pool using draft-derived noise, stability, and dilution criteria instead of the legacy fixed RMS prefilter.",
+    "kind": "static",
+    "label": "Comp Pool Derived Admission",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comparison_stars_pool_n": {
+    "help": "Plan/spatial comparison pool size. 0 = uncapped (COMP-POOL-01); legacy default was 150.",
+    "kind": "static",
+    "label": "Comparison Stars Pool N",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0,
+      50000
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "gs11_comp_max_dilution": {
     "help": "Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model.",
     "kind": "static",
