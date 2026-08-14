@@ -12,7 +12,7 @@ Classes: **P** physics/method wrong - **I** implementation != method - **C** con
 
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
-| A-1 | 4 | aperture | U/P | HIGH | Decision (2) on 510: DAO median FWHM authority; re-export P1/P3 PASS; EE +0.8 pp; 435 not re-cut | `docs/VYVAR_AUDIT_2026_CLOSURE.md`; `anchor_510_checksums_a1_dao_fwhm_20260814.json` | **PARTIAL CLOSED** (510 only) | PARTIAL |
+| A-1 | 4 | aperture | U/P | HIGH | CLOSED as diagnosed, not fixed. Cause: `gaussian_fwhm_px_override` is set from MASTERSTAR `VY_FWHM_GAUSS` = 3.3014 px while the night's PSF measures ~5.19 px (`VY_FWHM`). Successor: remove that override (authorized in principle; moves numbers; own measured delta). | `dev/results/CURSOR_RESULT_COG_A1_01.md` | **DIAGNOSED** | CLOSED |
 | A-9 | 4 | PSF | U | MED | PSF scale estimators disagree 2.4-4.9 px; not blocking differential | closure register #31 | DOCUMENTED | OPEN |
 | T4-1 | 4 | detection | I?FIXED | - | N_equiv=3.78 wired E.4 | closure #10 | FIXED 2026-08-04 | CLOSED |
 | P-02 | 4 | errors | I?FIXED | - | Scintillation wired batch D | closure #25 | FIXED | CLOSED |
@@ -113,7 +113,7 @@ Milan approved KEEP/PROPOSE as written. **W6-DEL-04 excluded** (library delete g
 
 **Milan authorized (2026-08-13, not implemented):** W6-PROP-03 Option A (`VY_QCBG_PRE` + preprocess `VY_QCBG`); W6-PROP-01 Option A (clip constants only); W6-PROP-05 wire library delete guards; W6-PROP-02 rename shim; W6-PROP-04 reachability fix.
 
-| A-1 | 4 | aperture | U/P | HIGH | Decision (2) on 510; growth curves + Wave 7 closure | `VYVAR_AUDIT_2026_CLOSURE.md` | **PARTIAL CLOSED** (510) | PARTIAL |
+| A-1 | 4 | aperture | U/P | HIGH | See Wave 8: CLOSED as diagnosed, not fixed. | `CURSOR_RESULT_COG_A1_01.md` | **DIAGNOSED** | CLOSED |
 
 All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 510 photometry re-cut 2026-08-14 (see checksum diff).
 
@@ -124,10 +124,48 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
 | **U-P5-PRED** | 7 | saturation | U | MED | Pre-registered P5 tested `peak_max_adu`, a 7x7 box at placed centroid on **raw** pixels - **insensitive to photometry aperture radius by construction**. P5 could not catch an unintended saturation consequence of the radius change. Defect in prediction design, not implementation. A test that **would** measure admission against the photometry aperture: **peak ADU within a circular mask of radius `aperture_r_px` at the placed centroid on raw** (or max in that annulus), compared to `admission_threshold_adu()` - not implemented. | Wave 7 S2.1; `sat_diag.py` | Record explicitly; do not treat P5 PASS as radius-verified saturation | **DOCUMENTED** |
-| **U-XVAL-COMP-RMS** | 7 | aperture | U | MED | VYVAR comp median RMS **0.0101** vs photutils **0.0078** / sep **0.0076** - **unchanged** after A-1 re-export. Harness uses fixed **3 px** for photutils/sep while VYVAR uses SNR radii (~4.26 px); that explains why the comparison is not apples-to-apples, **not** the ~2 mmag gap itself. **Open and unexplained.** Would settle: run xval with photutils/sep at VYVAR per-star `aperture_r_px` from proc CSVs (and matched annulus sky). | `tmp/xval_out_wave7/xval_results.csv`; Wave 7 S2.2 | OPEN | **OPEN** |
+| **U-XVAL-COMP-RMS** | 7 | aperture | U | MED | RETRACTED as a photutils/sep vs VYVAR radius mismatch claim; pointer: `dev/results/CURSOR_RESULT_U_XVAL_COMP_RMS_localization.md`. Residual gap if any is not this item. | Wave 7 S2.2; Q1-XVAL-MATCHED | **RETRACTED** | RETRACTED |
 
 **Checksum manifests (draft 510):** `anchor_510_checksums_placed_aperture_20260813.json` (retained) -> `anchor_510_checksums_a1_dao_fwhm_20260814.json` (current). Diff: **237** files changed (`dev/validation/anchor_510_checksum_diff_20260814.json`): 135 proc CSVs, ~100 photometry outputs, `aperture_snr_table.json`, `sat_diag.json`.
 
 ---
 
 *Append-only during audit run. Wave 7 closed 2026-08-14.*
+
+---
+
+## Wave 8 - iron gates + sky clip (2026-08-14)
+
+| ID | wave | stage | class | severity | evidence | reference | disposition | status |
+|----|------|-------|-------|----------|----------|-----------|-------------|--------|
+| **ENC-STALE-01** | 8 | process | P | LOW | 7 non-ASCII docs broke `test_ascii_policy`; fixed with `ascii_migrate.py`. | `VYVAR_PROCESS.md` SHA-on-gate note | **FIXED** | CLOSED |
+| **IRON-GATES-01** | 8 | invariants | P | HIGH | Five iron rules wired. INV-PIXELS-01 nanmedian fill still awaiting Milan, so this item cannot be CLOSED. | `dev/results/CURSOR_RESULT_CLOSE_IRON_GATES.md` | **WIRED** | PARTIAL |
+| **SKY-CLIP-01** | 8 | photometry | P | HIGH | Unified plain annulus median; -0.058% flux median on 510 FITS recompute. `--full` anchor and P1 golden SHA invalidated by Commit B; re-cut is follow-up. | `VYVAR_DECISIONS.md` SKY-CLIP-01 | code **FIXED**; anchor **PENDING** | PARTIAL |
+| **PP-KWARG-01** | 8 | preprocess | P | HIGH | `_pp_kw` passed `use_gpu_if_available` to `qc_enrich_calibrated_lights_in_place`; draft 511 TypeError. Kwarg removed; `kwarg_compat_scan.py` gate. | `dev/results/CURSOR_RESULT_PP_KWARG_01.md` | **FIXED** | CLOSED |
+| **INV-CAL-02** | 8 | invariants | C | MED | Gate claimed absent stamp while `VY_CALSTAGE` present. Disk detection + fire proof. | `dev/tests/test_inv_cal_sat_gates.py` | **FIXED** | CLOSED |
+| **INV-SAT-01** | 8 | invariants | C | MED | Gate claimed absent `sat_diag.json` while file present. Draft-root load + fire proof. | `dev/tests/test_inv_cal_sat_gates.py` | **FIXED** | CLOSED |
+| **DRAFT-512-EXTRACT** | 8 | photometry | U | MED | Draft 512 extraction (dirty tree). Physics valid; not a reference until re-run on committed tree. | `CURSOR_RESULT_DRAFT_512_EXTRACT.md` | **DONE** | CLOSED |
+| **COG-A1-01** | 8 | aperture | U | HIGH | C-R2 fired: seeing-correlated EE systematic **not established**. EE-ratio is white noise (successive-difference 1.25-1.48 vs 1.414); floor 18.21 mmag ~ series scatter 19.18 mmag; FWHM span 3.20%. Test lacked power. | `CURSOR_RESULT_COG_A1_01.md` | **NOT ESTABLISHED** | CLOSED |
+| **D5-1** | 8 | aperture | U | MED | Q1: sizing FWHM and annulus geometry are per-draft frozen. Q2: per-star radius spread is `compute_snr_optimal_aperture_table`. | `CURSOR_RESULT_COG_A1_01.md` | **ANSWERED** | CLOSED |
+| **Q1-XVAL-MATCHED** | 8 | photometry | U | MED | Matched-geometry xval completed. | `CURSOR_RESULT_Q1_XVAL_MATCHED.md` | **DONE** | CLOSED |
+| **Decision (4)** | 8 | aperture | U | MED | Advanced: r90 measured 5.0-5.8 px, target 5.31 px, current radii enclose ~84.6%. | `CURSOR_RESULT_COG_A1_01.md` | **ADVANCED** | OPEN |
+| **A-1-OVERRIDE** | 8 | aperture | P | HIGH | Remove `VY_FWHM_GAUSS` as `gaussian_fwhm_px_override`. Authorized in principle; moves numbers; own delta. | successor of A-1 | **AUTHORIZED** | OPEN |
+
+*Wave 8 register diffs: `REGISTER_DIFF_CLOSE_IRON_GATES.md`, `REGISTER_DIFF_PP_KWARG_01.md`.*
+
+### Architect retractions (2026-08-14)
+
+- Auto-FWHM "arithmetic contradiction" was wrong. Limit is `median + k*MAD*1.4826` on manifest `inspection.fwhm`; prefilter runs on `VY_FWHM` -- two populations.
+- Predicted 11.5 mmag seeing systematic was a Gaussian-model estimate, superseded by measured 4.36 mmag below the 18.21 mmag floor.
+- `--fast` remaining green through SKY-CLIP-01 is expected: the byte-identity anchor runs only under `--full`.
+
+### Deferred (open, no action in CLOSE-AND-PUSH)
+
+- A-1-OVERRIDE: remove `VY_FWHM_GAUSS` override (authorized in principle; own measured delta)
+- U-SKY-FALLBACK-01: whole-frame median when annulus has fewer than 5 pixels; global path `except Exception`; no counter
+- INV-PIXELS-01 nanmedian fill: awaiting Milan
+- `--full` anchor and P1 golden ledger re-cut after SKY-CLIP-01 commit 1
+- Draft 512 re-run on a committed tree before it can be a reference
+- Seeing-dependence of EE ratio: needs a night with real seeing variation and a lower-noise estimator
+- U-SCATTER-DEF, WIDE-ERR, D1-2 exposure ramp, C-EXPORT-GAP, W6-PROP -- already open, unchanged
+

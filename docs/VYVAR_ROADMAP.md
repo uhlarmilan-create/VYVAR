@@ -76,9 +76,11 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **A-1-435-RECUT** | HIGH | Draft 435: no aligned science FITS (150 in `calibrated/`, proc sidecars only). Re-cut needs align + DAO SNR table + export + Phase 2A. Milan decision. |
-| **A-1-DECISION-4** | MED | Fixed 90% enclosed-fraction sizing; decision (2) moved EE +0.8 pp only; ~5.0-5.75 px needed on 510 comps. |
-| **U-XVAL-COMP-RMS** | MED | VYVAR vs photutils comp RMS gap ~2 mmag **open/unexplained**. Settle: xval at VYVAR per-star radii. Register Wave 7. |
+| **A-1-435-RECUT** | HIGH | Draft 435: no aligned science FITS. Re-cut needs align + DAO SNR table + export + Phase 2A. |
+| **A-1-OVERRIDE** | HIGH | Remove `VY_FWHM_GAUSS` as `gaussian_fwhm_px_override`. Authorized in principle; own measured delta. |
+| **A-1-DECISION-4** | MED | Advanced: r90 5.0-5.8 px, target 5.31 px, current EE ~84.6%. Not implemented. |
+| **FULL-ANCHOR-RECUT** | HIGH | `--full` anchor + P1 golden SHA stale after SKY-CLIP-01. Re-cut after this push. |
+| **U-XVAL-COMP-RMS** | MED | RETRACTED (see register). |
 | **D1-2-LINEARITY-RAMP** | HIGH | Exposure ramp at telescope; nothing else substitutes. |
 | **WIDE-ERR** | MED | Wide-rig err ~2x underquote; route Honeycutt LOO + photon-term audit. |
 | **W6-PROP-*** | MED | Authorized 2026-08-13, not implemented: `VY_QCBG_PRE`, detect_outliers Option A, library delete guards, preprocess rename. |

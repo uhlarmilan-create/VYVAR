@@ -1,0 +1,774 @@
+{
+  "register_id": "DRAFT-512-EXTRACT",
+  "draft_id": 512,
+  "extraction_utc": "2026-08-14T08:06:06.598567+00:00",
+  "E0": {
+    "git_at_extraction_time": {
+      "recoverable": false,
+      "current_head": "4a3e855f6cd48eb66d8df1254ab2356727c95a69",
+      "status_porcelain": " M dev/tests/test_skipproc_qc_allowlist.py\n M dev/tests/test_skysf_double_guard.py\n M docs/VYVAR_AUDIT_2026_CLOSURE.md\n M docs/VYVAR_AUDIT_2026_REGISTER.md\n M docs/VYVAR_DECISIONS.md\n M docs/VYVAR_HANDOFF_2026-08-14.md\n M docs/VYVAR_INVARIANTS.md\n M docs/VYVAR_JOURNAL.md\n M docs/VYVAR_PROCESS.md\n M docs/VYVAR_ROADMAP.md\n M docs/VYVAR_STATE.md\n M src_py/app.py\n M src_py/invariants_runtime.py\n M src_py/night_run.py\n M src_py/photometry_core.py\n?? dev/results/CURSOR_RESULT_CLOSE_IRON_GATES.md\n?? dev/results/CURSOR_RESULT_PP_KWARG_01.md\n?? dev/results/CURSOR_RESULT_Q1_XVAL_MATCHED.md\n?? dev/results/CURSOR_RESULT_U_SCATTER_DEF.md\n?? dev/results/CURSOR_RESULT_U_XVAL_COMP_RMS_localization.md\n?? dev/results/CURSOR_RESULT_a1_snr_dao_authority.md\n?? dev/results/REGISTER_DIFF_CLOSE_IRON_GATES.md\n?? dev/results/REGISTER_DIFF_PP_KWARG_01.md\n?? dev/results/REGISTER_DIFF_U_SCATTER_DEF_A.md\n?? dev/tests/_tmp_batch_e_lc/\n?? dev/tests/test_iron_gates.py\n?? dev/tests/test_kwarg_compat.py\n?? dev/tools/build_anchor_checksum_manifest.py\n?? dev/tools/iron_gates_scan.py\n?? dev/tools/kwarg_compat_scan.py\n?? dev/tools/q1_xval_matched_run.py\n?? dev/tools/sky_clip_510_impact.py\n?? dev/tools/wide_err_a2b.py\n?? dev/tools/wide_err_e1.py\n?? dev/tools/wide_err_e2.py\n?? dev/tools/wide_err_e3.py\n?? dev/tools/wide_err_e4.py\n?? src_py/tmp/\n?? vyvar.sqlite3-shm\n?? vyvar.sqlite3-wal\n",
+      "diff_stat": " dev/tests/test_skipproc_qc_allowlist.py |  5 ++-\n dev/tests/test_skysf_double_guard.py    |  5 ++-\n docs/VYVAR_AUDIT_2026_CLOSURE.md        | 62 ++++++++++++++++-----------------\n docs/VYVAR_AUDIT_2026_REGISTER.md       | 19 ++++++++--\n docs/VYVAR_DECISIONS.md                 | 36 ++++++++++++++++---\n docs/VYVAR_HANDOFF_2026-08-14.md        | 44 +++++++++++------------\n docs/VYVAR_INVARIANTS.md                |  6 +++-\n docs/VYVAR_JOURNAL.md                   |  2 +-\n docs/VYVAR_PROCESS.md                   |  3 ++\n docs/VYVAR_ROADMAP.md                   |  4 +--\n docs/VYVAR_STATE.md                     |  2 +-\n src_py/app.py                           |  2 --\n src_py/invariants_runtime.py            |  5 +++\n src_py/night_run.py                     |  2 --\n src_py/photometry_core.py               | 39 +++++++++++----------\n 15 files changed, 143 insertions(+), 93 deletions(-)\n"
+    },
+    "run_git_in_manifest": null,
+    "manifest_schema_version": 3,
+    "manifest_top_level_keys": [
+      "calibration_mode",
+      "center",
+      "draft_id",
+      "files",
+      "final_observation_id",
+      "is_calibrated",
+      "observation_start_jd",
+      "observer_location",
+      "paths",
+      "rig",
+      "schema_version",
+      "status",
+      "updated_utc"
+    ],
+    "manifest_status": "INGESTED",
+    "manifest_updated_utc": "2026-08-14T07:39:46+00:00",
+    "calibration_mode_512": "vyvar_calibrated",
+    "calibration_mode_510": "vyvar_calibrated",
+    "rig_512": {
+      "equipment_id": 1,
+      "telescope_id": 1,
+      "location_id": 2,
+      "scanning_id": 109043809
+    },
+    "rig_510": {
+      "equipment_id": 1,
+      "telescope_id": 1,
+      "location_id": 2,
+      "scanning_id": 109043809
+    },
+    "manifest_keys_only_512": [],
+    "manifest_keys_only_510": [],
+    "sky_clip01_evidence": {
+      "method": "proc_csv_sky_median_comparison_vs_510",
+      "sky_column": "sky_adu_per_px_annulus",
+      "target_median_sky_512": 1564.6828918457031,
+      "target_median_sky_510": 1562.8032836914062,
+      "note": "No git SHA in draft_manifest; SKY-CLIP-01 presence inferred from sky values and run date only"
+    },
+    "pp_kwarg01_evidence": {
+      "infolog_completed_photometry": "Phase 0+1 + Phase 2A start present",
+      "run_completed": true
+    },
+    "masterstar_frame_512": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_109.fits",
+    "masterstar_frame_510": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000510\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_109.fits"
+  },
+  "E1": {
+    "raw_frames": 150,
+    "calibrated_fits": 150,
+    "qc_rows": 150,
+    "qc_status_counts": {
+      "ok": 134,
+      "rejected_prefilter_fwhm": 16
+    },
+    "aligned_fits": 135,
+    "proc_csv_count": 134,
+    "proc_only_512": [],
+    "proc_only_510": [
+      "proc_MASTERSTAR.csv"
+    ],
+    "photometry_frames_bo_lc": 134,
+    "auto_fwhm_limit_px": 5.362,
+    "auto_fwhm_k": 1.5,
+    "auto_fwhm_median_vy_fwhm_log": 5.195,
+    "auto_fwhm_median_from_infolog_json": 5.3106824933043715,
+    "draft511_reference": {
+      "limit_px": 5.362,
+      "median": 5.311,
+      "k": 1.5,
+      "rejected": "16/150"
+    },
+    "fwhm_ok_min": 5.138327221563914,
+    "fwhm_ok_median": 5.1917332681208865,
+    "fwhm_ok_max": 5.304555720541574,
+    "rejected_frames": [
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_002.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_007.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_009.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_049.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_056.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_058.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_066.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_074.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_111.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_122.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_131.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_141.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_142.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_147.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_149.fits",
+        "status": "rejected_prefilter_fwhm"
+      },
+      {
+        "src": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_150.fits",
+        "status": "rejected_prefilter_fwhm"
+      }
+    ]
+  },
+  "E2": {
+    "same_raw_names": true,
+    "same_raw_sha256_all_common": true,
+    "n_common": 150,
+    "n_same_sha": 150,
+    "matched_pair_prerequisite": true
+  },
+  "E3": {
+    "calibration": {
+      "cal_diag": {
+        "keys": {
+          "NoFilter|60|2|C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits|b2": {
+            "obs_group_key": "NoFilter|60|2",
+            "dark_path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+            "light_binning": 2,
+            "status": "PASS",
+            "convention": "SUM",
+            "convention_src": "DERIVED",
+            "aborted": false,
+            "abort_reason": null,
+            "m_L": 2496.0,
+            "m_D_sum": 98.11764526367188,
+            "m_D_mean": 24.52941131591797,
+            "block_factor": 2,
+            "pedestal_p": 24.47058868408203,
+            "pedestal_sigma_p": 0.0,
+            "delta_dark": 73.5882339477539,
+            "delta_pred": 73.4117660522461,
+            "ratio_r": 101.75539754516085,
+            "s_sum": 2399.529296875,
+            "s_mean": 2472.823486328125,
+            "sky_median": 2399.529296875,
+            "sigma_r": 77.793064453125,
+            "saturation_adu": 65535.0,
+            "resolv_limit_adu": 1.0,
+            "messages": []
+          }
+        },
+        "aborted_groups": [],
+        "spec_version": "CAL-DIAG-v2"
+      },
+      "sample_header_calibrated_001": {
+        "VY_DKRSMP": "SUM",
+        "VY_DKRSMP_SRC": "DERIVED",
+        "VY_CALSTAGE": "SKYSF_2",
+        "VY_CALDATASUM": "641664276",
+        "VY_FWHM": 5.3046,
+        "VY_ELONG": 1.0642,
+        "VY_SKYSF": true,
+        "VYSKYORD": 2,
+        "VYSKYP2P": 177.2976,
+        "VY_QC": "ok",
+        "VYVARPR": true
+      },
+      "master_dark": "CalibrationLibrary/Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "master_flat": "CalibrationLibrary/Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits"
+    },
+    "preprocess": {
+      "sky_order_infolog": 2,
+      "sky_surface_skip_infolog": [],
+      "inv_flat01": {
+        "id": "INV-FLAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "max residual_flatness_p99=58.6 ADU (band=400; n=150)",
+        "ts": "2026-08-14T07:39:20.286558+00:00"
+      },
+      "inv_prep01": "not recorded in pipeline_meta invariants list"
+    },
+    "alignment": {
+      "alignment_report_rows": 135,
+      "alignment_report_columns": [
+        "file",
+        "frame_index",
+        "detected_stars",
+        "aligned",
+        "alignment_method",
+        "is_flipped",
+        "rotation_angle_deg",
+        "align_residual_px"
+      ],
+      "sample_alignment_stats": [
+        {
+          "file": "MASTERSTAR.fits",
+          "frame_index": "1",
+          "detected_stars": "300",
+          "aligned": "True",
+          "alignment_method": "reference",
+          "is_flipped": "False",
+          "rotation_angle_deg": "179.68322308348385",
+          "align_residual_px": NaN
+        },
+        {
+          "file": "BO_CVn_Light_001.fits",
+          "frame_index": "1",
+          "detected_stars": "200",
+          "aligned": "True",
+          "alignment_method": "astroalign",
+          "is_flipped": "False",
+          "rotation_angle_deg": NaN,
+          "align_residual_px": "0.0"
+        },
+        {
+          "file": "BO_CVn_Light_003.fits",
+          "frame_index": "2",
+          "detected_stars": "200",
+          "aligned": "True",
+          "alignment_method": "astroalign",
+          "is_flipped": "False",
+          "rotation_angle_deg": NaN,
+          "align_residual_px": "0.0"
+        }
+      ]
+    },
+    "masterstar": {
+      "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+      "reference_frame": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\calibrated\\lights\\NoFilter_60_2\\BO_CVn_Light_109.fits",
+      "inv_wcs01": {
+        "id": "INV-WCS-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "matched_world2pix_identity_p95_px=1.265 (warn<2)",
+        "ts": "2026-08-14T07:27:51.435060+00:00"
+      },
+      "wcs_roundtrip_p99_px": 1.0716455559168443e-11
+    },
+    "dao_detection": {
+      "aperture_snr_table_present": true,
+      "aperture_snr_table_keys": [
+        "table",
+        "fwhm_px",
+        "sky_adu_per_px",
+        "gain",
+        "read_noise",
+        "r_min_px",
+        "r_max_px",
+        "fwhm_px_scope",
+        "fwhm_estimator",
+        "vy_fwhm_gauss_px",
+        "vy_fwhm_dao_px",
+        "fwhm_n_frames",
+        "fwhm_per_frame_px"
+      ]
+    }
+  },
+  "E4": {
+    "headline_512": {
+      "aperture_px": 4.211,
+      "check_scatter": 0.009299945474024567,
+      "n_lc_points": 134,
+      "n_comps": 5,
+      "trust": "GREEN",
+      "lc_rms": 0.1453890409827528,
+      "lc_rms_ooe": 0.0466586683108079,
+      "ac_scatter": 0.0132831661142742
+    },
+    "headline_510": {
+      "aperture_px": 4.261,
+      "check_scatter": 0.00863848089884789,
+      "n_lc_points": 134,
+      "n_comps": 5,
+      "trust": "GREEN",
+      "lc_rms": 0.1453588445680608,
+      "lc_rms_ooe": 0.0466436019078776,
+      "ac_scatter": 0.0092831084413385
+    },
+    "comparison_star_ids_512": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "comparison_star_ids_510": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "same_comp_set": true,
+    "fwhm_px_scope_values": [
+      "per_draft_gaussian_override"
+    ],
+    "sky_column_used": "sky_adu_per_px_annulus",
+    "sat_diag": {
+      "schema_version": 2,
+      "updated_utc": "2026-08-14T07:37:00+00:00",
+      "sat_adu": 65535.0,
+      "lin_adu": 55704.75,
+      "sat_source": "DERIVED",
+      "lin_source": "DEFAULT_FRAC",
+      "bitpix_ceiling": 65535.0,
+      "derived_ceiling": 65535.0,
+      "header_value": null,
+      "equipment_value": null,
+      "refuted_source": null,
+      "refuted_value": null,
+      "warnings": [
+        "Linearity level is a default fraction, not a measured knee."
+      ],
+      "pileup": {
+        "pileup_detected": true,
+        "v_ceiling": 65535.0,
+        "n_at_ceiling": 2617,
+        "n_at_shoulder": 1,
+        "max_pixel": 65535.0,
+        "frames_sampled": 30,
+        "bitpix_ceiling": 65535.0,
+        "refused": false,
+        "refuse_reason": null
+      },
+      "xbinning": 2,
+      "ybinning": 2,
+      "raw_peaks_used": false,
+      "sat_peak_source": "PLACED_APERTURE",
+      "lin_adu_native": 27852.375,
+      "sat_adu_native": 32767.5,
+      "last_frame_drift": null,
+      "star_peak_draft": {},
+      "frame_drift_residuals_px": []
+    },
+    "inv_sat01": {
+      "id": "INV-SAT-01",
+      "ok": true,
+      "policy": "WARN",
+      "detail": "sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+      "ts": "2026-08-14T07:39:20.318528+00:00"
+    }
+  },
+  "E5": {
+    "invariants_512": [
+      {
+        "id": "INV-WCS-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "matched_world2pix_identity_p95_px=1.265 (warn<2)",
+        "ts": "2026-08-14T07:27:51.435060+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped masterstar seq=3 (cold_start)",
+        "ts": "2026-08-14T07:27:57.391035+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase01 seq=5 (gap)",
+        "ts": "2026-08-14T07:38:20.915454+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase2a seq=6",
+        "ts": "2026-08-14T07:39:20.281533+00:00"
+      },
+      {
+        "id": "INV-FLAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "max residual_flatness_p99=58.6 ADU (band=400; n=150)",
+        "ts": "2026-08-14T07:39:20.286558+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped postprocess seq=7",
+        "ts": "2026-08-14T07:39:20.288578+00:00"
+      },
+      {
+        "id": "INV-PROV-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "prov_schema_version=1 ok",
+        "ts": "2026-08-14T07:39:20.288578+00:00"
+      },
+      {
+        "id": "INV-CFG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "config<->behavior markers clean",
+        "ts": "2026-08-14T07:39:20.318528+00:00"
+      },
+      {
+        "id": "INV-SAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+        "ts": "2026-08-14T07:39:20.318528+00:00"
+      },
+      {
+        "id": "INV-CAL-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "cal_diag keys=1 spec_version='CAL-DIAG-v2'",
+        "ts": "2026-08-14T07:39:20.318528+00:00"
+      },
+      {
+        "id": "INV-CAL-02",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+        "ts": "2026-08-14T07:39:20.318528+00:00"
+      }
+    ],
+    "invariants_510": [
+      {
+        "id": "INV-WCS-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "matched_world2pix_identity_p95_px=1.265 (warn<2)",
+        "ts": "2026-08-12T13:14:20.460745+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped masterstar seq=3 (cold_start)",
+        "ts": "2026-08-12T13:14:28.601362+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase01 seq=5 (gap)",
+        "ts": "2026-08-13T12:50:22.804861+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase2a seq=6",
+        "ts": "2026-08-13T12:51:09.880837+00:00"
+      },
+      {
+        "id": "INV-FLAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "max residual_flatness_p99=58.6 ADU (band=400; n=150)",
+        "ts": "2026-08-13T12:51:09.884966+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped postprocess seq=7",
+        "ts": "2026-08-13T12:51:09.886965+00:00"
+      },
+      {
+        "id": "INV-PROV-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "prov_schema_version=1 ok",
+        "ts": "2026-08-13T12:51:09.886965+00:00"
+      },
+      {
+        "id": "INV-CFG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "config<->behavior markers clean",
+        "ts": "2026-08-13T12:51:09.912798+00:00"
+      },
+      {
+        "id": "INV-SAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+        "ts": "2026-08-13T12:51:09.913799+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase2a seq=6",
+        "ts": "2026-08-14T04:21:56.550679+00:00"
+      },
+      {
+        "id": "INV-FLAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "max residual_flatness_p99=58.6 ADU (band=400; n=150)",
+        "ts": "2026-08-14T04:21:56.555275+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped postprocess seq=7",
+        "ts": "2026-08-14T04:21:56.557419+00:00"
+      },
+      {
+        "id": "INV-PROV-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "prov_schema_version=1 ok",
+        "ts": "2026-08-14T04:21:56.557419+00:00"
+      },
+      {
+        "id": "INV-CFG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "config<->behavior markers clean",
+        "ts": "2026-08-14T04:21:56.613692+00:00"
+      },
+      {
+        "id": "INV-SAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+        "ts": "2026-08-14T04:21:56.613692+00:00"
+      },
+      {
+        "id": "INV-CAL-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "cal_diag keys=1 spec_version='CAL-DIAG-v2'",
+        "ts": "2026-08-14T04:21:56.613692+00:00"
+      },
+      {
+        "id": "INV-CAL-02",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+        "ts": "2026-08-14T04:21:56.613692+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase2a seq=6",
+        "ts": "2026-08-14T04:23:30.328362+00:00"
+      },
+      {
+        "id": "INV-FLAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "max residual_flatness_p99=58.6 ADU (band=400; n=150)",
+        "ts": "2026-08-14T04:23:30.332382+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped postprocess seq=7",
+        "ts": "2026-08-14T04:23:30.334957+00:00"
+      },
+      {
+        "id": "INV-PROV-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "prov_schema_version=1 ok",
+        "ts": "2026-08-14T04:23:30.334957+00:00"
+      },
+      {
+        "id": "INV-CFG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "config<->behavior markers clean",
+        "ts": "2026-08-14T04:23:30.363276+00:00"
+      },
+      {
+        "id": "INV-SAT-01",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
+        "ts": "2026-08-14T04:23:30.364370+00:00"
+      },
+      {
+        "id": "INV-CAL-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "cal_diag keys=1 spec_version='CAL-DIAG-v2'",
+        "ts": "2026-08-14T04:23:30.364370+00:00"
+      },
+      {
+        "id": "INV-CAL-02",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+        "ts": "2026-08-14T04:23:30.364370+00:00"
+      }
+    ]
+  },
+  "E6": {
+    "warnings": [
+      "07:37:14  [COMP] WARNING 1497169940906156032: color_rms_t3 - widened colour window / sparse pool",
+      "07:37:15  [COMP] WARNING 1496795041799526400: color_rms_wide - widened colour window / sparse pool",
+      "07:37:15  WARNING: [COMP] 1496795041799526400: SPARSE FIELD - all 5 comp stars TIER3/4 (color mismatch, penalty applied). LC quality may be reduced.",
+      "07:37:20  [COMP] WARNING 1496998382733052928: color_rms_t2 - widened colour window / sparse pool",
+      "07:37:23  [COMP] WARNING 1497007144465726080: color_rms_wide - widened colour window / sparse pool",
+      "07:37:23  WARNING: [COMP] 1497007144465726080: SPARSE FIELD - all 1 comp stars TIER3/4 (color mismatch, penalty applied). LC quality may be reduced.",
+      "07:37:27  [COMP] WARNING 1497245497969274240: color_rms_cap - widened colour window / sparse pool",
+      "07:37:27  WARNING: [COMP] 1497245497969274240: SPARSE FIELD - all 8 comp stars TIER3/4 (color mismatch, penalty applied). LC quality may be reduced.",
+      "07:37:41  [COMP] WARNING 1497683722074089728: color_rms_t2 - widened colour window / sparse pool",
+      "07:37:42  [COMP] WARNING 1500549977088828160: color_rms_t2 - widened colour window / sparse pool",
+      "07:38:17  [COMP] WARNING 1498278351706325248: color_rms_t3 - widened colour window / sparse pool"
+    ],
+    "errors": [
+      "07:25:47  ERROR  [pipeline]  [PLATE-SOLVE] _plate_solve_input_bundle failed: database is locked",
+      "07:26:25  WCS Refined: Mean residual error = 0.61 pixels",
+      "07:26:57  ERROR  [pipeline]  [PLATE-SOLVE] _plate_solve_input_bundle failed: database is locked"
+    ],
+    "skip_lines_sample": {
+      "07:39:03  [AC] run summary: applied=8 skipped=37 ({'no_comp_rms': 4, 'insufficie": 4
+    },
+    "phase_milestones": [
+      "07:21:53  [PHASE] run_vyvar start",
+      "07:21:53  [PHASE] Scan Source + Import + calibration start",
+      "07:21:55  [PHASE] Calibration start",
+      "07:23:28  [PHASE] Analyze QC (RAM -> manifest files[]) start",
+      "07:24:30  [PHASE] Auto FWHM limit start",
+      "07:24:30  [PHASE] Auto-select MASTERSTAR (TOP1) start",
+      "07:24:30  [PHASE] MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start",
+      "07:37:04  [PHASE] Phase 0+1 + Phase 2A (photometry) start",
+      "07:21:53  [PHASE] run_vyvar start",
+      "07:21:53  [PHASE] Scan Source + Import + calibration start",
+      "07:21:55  [PHASE] Calibration start",
+      "07:21:55  INFO  [pipeline]  [PHASE] Calibration start",
+      "07:23:28  [PHASE] Analyze QC (RAM -> manifest files[]) start",
+      "07:23:28  INFO  [pipeline]  [PHASE] Analyze QC (RAM -> manifest files[]) start",
+      "07:24:30  [PHASE] Auto FWHM limit start",
+      "07:24:30  INFO  [pipeline]  [PHASE] Auto FWHM limit start",
+      "07:24:30  [PHASE] Auto-select MASTERSTAR (TOP1) start",
+      "07:24:30  INFO  [pipeline]  [PHASE] Auto-select MASTERSTAR (TOP1) start",
+      "07:24:30  [PHASE] MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start",
+      "07:24:30  INFO  [pipeline]  [PHASE] MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start",
+      "07:37:04  [PHASE] Phase 0+1 + Phase 2A (photometry) start",
+      "07:37:04  INFO  [pipeline]  [PHASE] Phase 0+1 + Phase 2A (photometry) start"
+    ],
+    "phase_durations_hms": {
+      "calibration": {
+        "start": "07:21:55",
+        "end": "07:23:28"
+      },
+      "analyze_qc": {
+        "start": "07:23:28",
+        "end": "07:24:30"
+      },
+      "preprocess": {
+        "start": "07:24:30",
+        "end": "07:24:30"
+      },
+      "masterstar": {
+        "start": "07:24:30",
+        "end": "07:37:04"
+      },
+      "photometry": {
+        "start": "07:37:04",
+        "end": "07:24:30"
+      }
+    },
+    "first_ts": "07:21:53",
+    "last_ts": "07:39:45"
+  },
+  "E7": {
+    "bo_cvn_lc_points": 134,
+    "bo_cvn_time_span_bjd": [
+      2461154.3208268727,
+      2461154.526692516
+    ],
+    "bo_cvn_mag_calib_final_min": 9.401225,
+    "bo_cvn_mag_calib_final_max": 9.862619,
+    "bo_cvn_mag_calib_final_std": 0.14593461423444676,
+    "scatter_values": {
+      "S1_check_scatter_trust_json": 0.009299945474024567,
+      "S6_lc_rms_photometry_summary": 0.1453890409827528,
+      "S7_lc_rms_ooe_photometry_summary": 0.0466586683108079,
+      "S8_not_extracted_per_comp": null,
+      "ac_scatter_lightcurve_epoch": 0.013283
+    },
+    "aavso_export_files_count": 17,
+    "aavso_bo_cvn_export": [
+      "BO_CVn_20260423.txt"
+    ],
+    "exported_product_paths": {
+      "lightcurve_csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498613634033133184.csv",
+      "trust_json": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\trust_1498613634033133184.json",
+      "photometry_summary": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\photometry\\photometry_summary.csv"
+    }
+  },
+  "comparison_table_E4": {
+    "aperture_px": {
+      "512": 4.211,
+      "510": 4.261
+    },
+    "check_scatter_S1": {
+      "512": 0.009299945474024567,
+      "510": 0.00863848089884789
+    },
+    "n_lc_points": {
+      "512": 134,
+      "510": 134
+    },
+    "n_comps": {
+      "512": 5,
+      "510": 5
+    },
+    "trust": {
+      "512": "GREEN",
+      "510": "GREEN"
+    },
+    "lc_rms_S6": {
+      "512": 0.1453890409827528,
+      "510": 0.1453588445680608
+    },
+    "label": "Joint-effect comparison per X-R0; raw frames matched per E2"
+  },
+  "pre_registered_rules": [
+    "X-R0",
+    "X-R1",
+    "X-R2",
+    "X-R3"
+  ]
+}

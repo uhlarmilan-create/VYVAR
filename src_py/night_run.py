@@ -210,7 +210,6 @@ def _night_run_preprocess(
     from pipeline import (
         build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
-        preprocess_calibrated_to_processed,
         qc_enrich_calibrated_lights_in_place,
         _iter_light_fits,
     )
@@ -233,7 +232,6 @@ def _night_run_preprocess(
     _pp_kw = dict(
         reject_fwhm_px=(float(_fwhm_lim) if float(_fwhm_lim) > 0.0 else None),
         reject_elongation=None,
-        use_gpu_if_available=False,
         inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
         inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
         inject_pointing_only_if_missing=False,

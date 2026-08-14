@@ -18,6 +18,9 @@ Production code lives in `src_py/`; development material in `dev/`
 for the full map.
 
 - **Session baseline / anchor gate:** `python dev/scripts/session_baseline_check.py --fast`
+  (default tier: git state, config paths, full `dev/tests` pytest, anchor manifest-db parity hint,
+  deps outdated hint). Record the **git commit SHA** next to every reported PASS/FAIL; a result
+  from commit A is not evidence on commit B.
   (git/config/ledger + pytest) and `--full` (headless `run_full_photometry_pipeline`
   byte-identical anchor gate).
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates

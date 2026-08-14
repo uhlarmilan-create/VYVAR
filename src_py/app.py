@@ -766,7 +766,6 @@ def _vyvar_execute_preprocess_pending(
         build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
         estimate_archive_memory_profile,
-        preprocess_calibrated_to_processed,
         qc_enrich_calibrated_lights_in_place,
         preprocess_sky_summary_from_df,
         _iter_light_fits,
@@ -794,7 +793,6 @@ def _vyvar_execute_preprocess_pending(
     _pp_kw = dict(
         reject_fwhm_px=(float(_fwhm_lim) if float(_fwhm_lim) > 0.0 else None),
         reject_elongation=None,
-        use_gpu_if_available=False,
         inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
         inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
         inject_pointing_only_if_missing=False,

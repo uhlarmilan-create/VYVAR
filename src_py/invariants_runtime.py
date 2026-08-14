@@ -6,6 +6,7 @@ Records results under ``pipeline_meta["invariants"]``. FAIL policy raises
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import time
@@ -48,6 +49,11 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-SAT-01",
         "INV-CAL-01",
         "INV-CAL-02",
+        "INV-COMP-MEMBERSHIP",
+        "INV-MASTER-01",
+        "INV-NOCLIP-01",
+        "INV-NOCOSMIC-01",
+        "INV-PIXELS-01",
         "QC-01",
         "OSC-01",
         "OSC-02",
@@ -748,19 +754,87 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                 pass
 
 
+def _draft_root_from_photometry_dir(photometry_dir: Path | str | None) -> Path | None:
+    """Resolve draft archive root from a photometry or platesolve path."""
+    if photometry_dir is None:
+        return None
+    p = Path(photometry_dir).resolve()
+    for cand in (p, *p.parents):
+        if cand.name.startswith("draft_") and (cand / "calibrated").is_dir():
+            return cand
+        if (cand / "sat_diag.json").is_file():
+            return cand
+    return None
+
+
+def _load_sat_diag_block_from_disk(photometry_dir: Path | str | None) -> dict[str, Any] | None:
+    root = _draft_root_from_photometry_dir(photometry_dir)
+    if root is None:
+        return None
+    sd_path = root / "sat_diag.json"
+    if not sd_path.is_file():
+        return None
+    try:
+        loaded = json.loads(sd_path.read_text(encoding="ascii"))
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _sample_cal_stage_from_disk(photometry_dir: Path | str | None) -> dict[str, Any] | None:
+    """Return calibrated-stage evidence from ``cal_stage.json`` or FITS headers."""
+    root = _draft_root_from_photometry_dir(photometry_dir)
+    if root is None:
+        return None
+    cal_json = root / "cal_stage.json"
+    if cal_json.is_file():
+        try:
+            loaded = json.loads(cal_json.read_text(encoding="ascii"))
+            if isinstance(loaded, dict):
+                return loaded
+        except (OSError, json.JSONDecodeError, UnicodeError):
+            pass
+
+    cal_lights = root / "calibrated" / "lights"
+    if not cal_lights.is_dir():
+        return None
+    try:
+        from astropy.io import fits  # noqa: PLC0415
+
+        from cal_stage import verify_fits_datasum  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return None
+
+    for fp in sorted(cal_lights.rglob("*.fits"))[:5]:
+        try:
+            with fits.open(fp, memmap=True) as hdul:
+                hdr = hdul[0].header
+                data = hdul[0].data
+            stage = hdr.get("VY_CALSTAGE")
+            if stage is None:
+                continue
+            ds = hdr.get("VY_CALDATASUM")
+            ok_ds = verify_fits_datasum(np.asarray(data), str(ds) if ds is not None else None)
+            return {
+                "source": "calibrated_header",
+                "vy_calstage": str(stage),
+                "vy_caldatasum_ok": bool(ok_ds),
+                "sample": fp.name,
+            }
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
 def check_sat_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
     """INV-SAT-01: SAT-DIAG limits and raw-peak provenance when gate ran."""
     block = meta.get("sat_diag")
-    sd_path_ok = False
-    if photometry_dir is not None:
-        for candidate in (
-            Path(photometry_dir).resolve().parent.parent / "sat_diag.json",
-            Path(photometry_dir).resolve().parent / "sat_diag.json",
-        ):
-            if candidate.is_file():
-                sd_path_ok = True
-                break
-    if not isinstance(block, dict) and not sd_path_ok:
+    disk_block: dict[str, Any] | None = None
+    if not isinstance(block, dict):
+        disk_block = _load_sat_diag_block_from_disk(photometry_dir)
+        if disk_block is not None:
+            block = disk_block
+    if not isinstance(block, dict):
         inv_check(
             meta,
             "INV-SAT-01",
@@ -769,15 +843,18 @@ def check_sat_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = 
             detail="sat_diag not stamped (no raw lights or pre-SAT-DIAG draft)",
         )
         return
-    src = str((block or {}).get("sat_source") or "")
-    sat_adu = (block or {}).get("sat_adu")
+    src = str(block.get("sat_source") or "")
+    sat_adu = block.get("sat_adu")
     ok = bool(src) and sat_adu is not None
+    detail = f"sat_source={src!r} sat_adu={sat_adu}"
+    if disk_block is not None and not isinstance(meta.get("sat_diag"), dict):
+        detail = f"{detail} (loaded sat_diag.json from draft root; meta block missing)"
     inv_check(
         meta,
         "INV-SAT-01",
         ok,
         policy="FAIL",
-        detail=f"sat_source={src!r} sat_adu={sat_adu}",
+        detail=detail,
     )
     lin_src = str((block or {}).get("lin_source") or "")
     if lin_src == "DEFAULT_FRAC" and bool((block or {}).get("tier3_exclusion_fired")):
@@ -900,15 +977,42 @@ def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = 
 
 def check_cal_stage(meta: dict[str, Any], *, photometry_dir: Path | str | None = None) -> None:
     """INV-CAL-02: calibrated stage provenance when ``cal_stage.json`` is present."""
-    _ = photometry_dir
     block = meta.get("cal_stage")
     if not isinstance(block, dict):
+        disk = _sample_cal_stage_from_disk(photometry_dir)
+        if disk is None:
+            inv_check(
+                meta,
+                "INV-CAL-02",
+                True,
+                policy="WARN",
+                detail="cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+            )
+            return
+        if disk.get("source") == "calibrated_header":
+            ok = bool(disk.get("vy_calstage")) and bool(disk.get("vy_caldatasum_ok"))
+            inv_check(
+                meta,
+                "INV-CAL-02",
+                ok,
+                policy="FAIL",
+                detail=(
+                    f"cal_stage meta missing; disk VY_CALSTAGE={disk.get('vy_calstage')!r} "
+                    f"datasum_ok={disk.get('vy_caldatasum_ok')} sample={disk.get('sample')!r}"
+                ),
+            )
+            return
+        verify = disk.get("verify_last") if isinstance(disk.get("verify_last"), dict) else {}
+        fail_n = int(verify.get("fail_stamp") or 0) + int(verify.get("fail_corrupt") or 0)
         inv_check(
             meta,
             "INV-CAL-02",
-            True,
-            policy="WARN",
-            detail="cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+            fail_n == 0,
+            policy="FAIL",
+            detail=(
+                f"cal_stage meta missing; loaded cal_stage.json verify pass={verify.get('pass')} "
+                f"fail_stamp={verify.get('fail_stamp')} fail_corrupt={verify.get('fail_corrupt')}"
+            ),
         )
         return
     verify = block.get("verify_last") if isinstance(block.get("verify_last"), dict) else {}

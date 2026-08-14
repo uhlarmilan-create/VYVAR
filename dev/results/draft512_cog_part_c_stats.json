@@ -1,0 +1,28 @@
+{
+  "n_frames": 134,
+  "ee_target_median": 0.8458983455260953,
+  "ee_ensemble_median": 0.8153147972660906,
+  "delta_mmag_mean_offset": 39.081721578272585,
+  "delta_mmag_std_total": 19.180455437488522,
+  "delta_mmag_p2p_total": 138.95185238895027,
+  "fwhm_correlated_amplitude_mmag": 4.362053634063509,
+  "detection_floor": {
+    "method": "Block bootstrap (5000 resamples) 95th percentile of |slope(log10 ee_ratio vs fwhm)| x FWHM range x 2500",
+    "citation": "Efron and Tibshirani 1993; block resampling Kunsch 1989",
+    "floor_mmag_p95_bootstrap": 18.214494223796486,
+    "observed_fwhm_correlated_amplitude_mmag": 4.362053634063509,
+    "above_floor": false
+  },
+  "correlations": {
+    "pearson_r_fwhm_px": -0.039320991141620874,
+    "pearson_r_airmass": -0.09593680104559539,
+    "pearson_r_sky_adu_per_px": -0.1844564984209191,
+    "pearson_r_ee_target_vs_fwhm": -0.10082107602979354
+  },
+  "curve_flat_fraction": 0.8656716417910447,
+  "lc_scatter_comparison": {
+    "check_scatter_mmag": 9.3,
+    "ac_scatter_mmag": 13.283,
+    "lc_rms_ooe_mmag": 46.659
+  }
+}

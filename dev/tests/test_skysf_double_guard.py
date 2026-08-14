@@ -15,7 +15,7 @@ from pipeline import (
     _header_has_vy_skysf,
     _qc_enrich_calibrated_in_place,
     _qc_enrich_one_frame,
-    preprocess_calibrated_to_processed,
+    qc_enrich_calibrated_lights_in_place,
     preprocess_sky_summary_from_df,
 )
 
@@ -128,9 +128,8 @@ def test_t6_skip_counter_in_preprocess_summary_not_log_only(tmp_path: Path) -> N
     cfg = AppConfig()
     cfg.preprocess_sky_surface_order = 2
     _qc_enrich_calibrated_in_place(tmp_path, app_config=cfg)
-    df = preprocess_calibrated_to_processed(
+    df = qc_enrich_calibrated_lights_in_place(
         calibrated_root=tmp_path,
-        processed_root=tmp_path / "processed",
         app_config=cfg,
     )
     summary = preprocess_sky_summary_from_df(df)

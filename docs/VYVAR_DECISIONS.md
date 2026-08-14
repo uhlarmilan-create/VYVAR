@@ -32,6 +32,43 @@ Report chain: `dev/results/CURSOR_RESULT_a1_growth_curves.md`, `dev/results/CURS
 
 ---
 
+## SKY-CLIP-01 - plain annulus median sky, no one-sided clip (2026-08-14)
+
+**Problem.** Production batch aperture photometry used `_sky_pp_from_annulus_image` with a
+one-sided upper clip (`sky_pixels < median + 2*std` then re-median). The single-star path
+`_annulus_sky_subtracted_flux` used plain median. Q1-XVAL-MATCHED arm P1 measured
+`phot_plain - vyvar = -0.000585` (VYVAR flux higher => sky lower), consistent with downward
+bias from the clip.
+
+**Literature / tools.** IRAF `apphot` annulus sky modes are median/mode (no asymmetric clip).
+DAOPHOT uses sky-plane estimation without one-sided upper rejection on the annulus sample.
+SExtractor/photutils default to robust estimators (median) with optional symmetric sigma
+rejection in background meshes, not a one-sided annulus cut. AstroImageJ/C-Munipack: annulus
+median. The literature's standard answer to PSF-wing contamination in the annulus is the
+**mode** estimator (DAOPHOT; SExtractor `BACK_TYPE` / local background mode). Mode requires
+no rejection step. It was identified in the survey and **was never measured** on VYVAR
+data. Only median, mean, and the one-sided clip were measured. The estimator question is
+not closed.
+
+**Synthetic trade-off (CLOSE-IRON-GATES).** On clean sky the plain median is unbiased.
+Under PSF-wing contamination the plain median bias is **+0.276 ADU** against the clipped
+estimator's **+0.069 ADU** -- roughly four times the contamination bias. Moving to the
+median bought unbiasedness on clean sky and compliance with iron rule 1, and paid that
+contamination cost. BO CVn is not a crowded field; a crowded field is a different case.
+
+**Decision.** Replace clip with **plain median** of annulus pixels (`method="center"` mask).
+Unify all production call sites on `_sky_pp_from_annulus_image`. Register: SKY-CLIP-01,
+IRON-GATES-01 INV-NOCLIP-01.
+
+**Measurement (draft 510, FITS recomputation).** Median fractional flux change
+new-old = **-0.058%** (-0.027% target, -0.070% comps). Stored proc CSVs match old clip
+recompute exactly (max rel diff 0.0) until photometry re-export.
+
+**Retraction.** Q1-XVAL-MATCHED arm P1 (0.06% clip vs median offset) is superseded by this
+fix; replacement evidence: `dev/results/CURSOR_RESULT_CLOSE_IRON_GATES.md`.
+
+---
+
 ## ZP-CLIP-REMOVAL - no per-frame MAD rejection in ensemble_normalize (2026-08-12)
 
 **Problem.** Draft 509 (same raw as draft 435, HEAD `682f40c`) produced check-star

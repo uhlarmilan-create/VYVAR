@@ -1,8 +1,16 @@
 # VYVAR -- Development State
 
-**Status:** 2026 full-workflow audit **closed** (Wave 7, 2026-08-14). A-1 decision (2) implemented on draft 510.
+**Status:** 2026 full-workflow audit **closed** (Wave 7, 2026-08-14). Wave 8 iron gates + SKY-CLIP-01 pending push (CLOSE-AND-PUSH). A-1 **diagnosed, not fixed**.
 
-Last updated: **2026-08-14** (session close: push, checksum manifest, handoff).
+Last updated: **2026-08-14** (CLOSE-AND-PUSH, awaiting Milan push authorization).
+
+## 2026-08-14 -- CLOSE-AND-PUSH (unpushed until Milan)
+
+Iron gates wired (IRON-GATES-01 PARTIAL: INV-PIXELS-01 still open). SKY-CLIP-01 plain median. PP-KWARG-01. INV-CAL-02 / INV-SAT-01 disk gates. COG-A1-01: seeing systematic not established (C-R2). A-1 cause: `VY_FWHM_GAUSS` override 3.3014 px vs night FWHM ~5.19 px. Successor A-1-OVERRIDE authorized in principle.
+
+**Commit B invalidates `--full` anchor and P1 golden SHA.** Re-cut is follow-up.
+
+Reports: `dev/results/CURSOR_RESULT_CLOSE_AND_PUSH.md`.
 
 ## 2026-08-14 -- Session close (audit Wave 7 + A-1 push)
 

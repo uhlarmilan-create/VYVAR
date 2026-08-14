@@ -17,7 +17,7 @@ from pipeline import (
     filter_files_by_qc_metrics_allowlist,
     load_qc_metrics_status_by_path,
     norm_fits_path_key,
-    preprocess_calibrated_to_processed,
+    qc_enrich_calibrated_lights_in_place,
 )
 
 
@@ -151,9 +151,8 @@ def test_preprocess_creates_no_processed_directory(tmp_path: Path) -> None:
     lights = tmp_path / "calibrated" / "lights" / "NoFilter_60_2"
     fp = lights / "Light_001.fits"
     _write_light_fits(fp)
-    preprocess_calibrated_to_processed(
+    qc_enrich_calibrated_lights_in_place(
         calibrated_root=tmp_path / "calibrated" / "lights",
-        processed_root=tmp_path / "processed" / "lights",
         app_config=AppConfig(),
     )
     assert not (tmp_path / "processed").exists()
