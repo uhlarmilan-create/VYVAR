@@ -176,4 +176,7 @@ anyway. Stage 2 would consume photometry radii from products (archived path).
 
 ## Commit / --fast
 
-Recorded after commit below.
+- Tip: **fc6fcadf9037b0bf32a029bf6feecc5026a1c776**
+- `python dev/scripts/session_baseline_check.py --fast`: **OVERALL PASS**
+  (1356 passed, 27 skipped) on that tip.
+- **Awaiting Milan authorization to push.** Nothing pushed.
