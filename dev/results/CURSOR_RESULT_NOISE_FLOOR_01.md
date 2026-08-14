@@ -211,4 +211,7 @@ task. Closing the underquote is a separate authorized task.
 
 ## Commit / --fast
 
-Recorded after commit in the closing section of this file (SHA + OVERALL).
+- Tip: **86b0c77f4dc6c859e3dd2f0acadd150f7b299d54**
+- `python dev/scripts/session_baseline_check.py --fast`: **OVERALL PASS**
+  (1356 passed, 27 skipped) on that tip.
+- Not pushed (await Milan authorization). Stage 2 remains blocked under C2-R2.
