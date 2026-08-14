@@ -1,0 +1,85 @@
+{
+  "512": {
+    "aperture_r_median_stars": 3.411,
+    "aperture_area_fit": 36.55218233869761,
+    "sky": 1549.846435546875,
+    "zp": 22.036674841841315,
+    "sigma_sys": 0.00973727552090381,
+    "chi2_red": 4.16628841994753,
+    "np_param_median_usable": 1.1244616608884312,
+    "n_stars": 680,
+    "n_admit": 192,
+    "admit_frac": 0.2823529411764706,
+    "bo_comps_in_pool": 4,
+    "bo_comps_total": 5,
+    "bo_reject_reasons": [
+      "fainter_than_11.455"
+    ],
+    "fwhm_med_from_proc0": 3.7713262073800915,
+    "aperture_r_from_proc0": 3.411,
+    "at_G10": {
+      "mag_center": 9.75,
+      "n": 36,
+      "nonparametric": 0.010030175471364536,
+      "parametric": 0.010124128123328299,
+      "ratio_np_over_param": 0.9907199266130113,
+      "usable": true
+    }
+  },
+  "510": {
+    "aperture_r_median_stars": 3.461,
+    "aperture_area_fit": 37.63163357447106,
+    "sky": 1548.37255859375,
+    "zp": 22.0458133634235,
+    "sigma_sys": 0.009726220449140403,
+    "chi2_red": 3.980602776071255,
+    "np_param_median_usable": 1.128051545377668,
+    "n_stars": 644,
+    "n_admit": 181,
+    "admit_frac": 0.281055900621118,
+    "bo_comps_in_pool": 4,
+    "bo_comps_total": 5,
+    "bo_reject_reasons": [
+      "fainter_than_11.450"
+    ],
+    "fwhm_med_from_proc0": 3.780738928242015,
+    "aperture_r_from_proc0": 3.461,
+    "at_G10": {
+      "mag_center": 9.75,
+      "n": 34,
+      "nonparametric": 0.010053968970282684,
+      "parametric": 0.010113399082832045,
+      "ratio_np_over_param": 0.9941236262840407,
+      "usable": true
+    }
+  },
+  "435": {
+    "aperture_r_median_stars": 1.916,
+    "aperture_area_fit": 11.532962560516731,
+    "sky": 1564.2216186523438,
+    "zp": 21.68558924165267,
+    "sigma_sys": 0.011837591767887607,
+    "chi2_red": 6.404403314788558,
+    "np_param_median_usable": 1.5206570746524386,
+    "n_stars": 2770,
+    "n_admit": 117,
+    "admit_frac": 0.04223826714801444,
+    "bo_comps_in_pool": 0,
+    "bo_comps_total": 3,
+    "bo_reject_reasons": [
+      "inv_eta>0.657",
+      "inv_eta>0.657",
+      "inv_eta>0.657"
+    ],
+    "fwhm_med_from_proc0": 6.417855406148059,
+    "aperture_r_from_proc0": 1.916,
+    "at_G10": {
+      "mag_center": 9.75,
+      "n": 35,
+      "nonparametric": 0.012435782706135198,
+      "parametric": 0.012177931374866823,
+      "ratio_np_over_param": 1.0211736561268967,
+      "usable": true
+    }
+  }
+}

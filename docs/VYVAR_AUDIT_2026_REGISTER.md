@@ -194,8 +194,9 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
-| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool (star-only, uncapped, draft-derived) vs assignment (pair properties). Stage 1 `ffb4402`, Stage 2 `696c849`, Stage 3 relax provenance. Draft 512 pool 187; BO CVn loses 1/5 (faint+dilution). sys/scint~4.9 (P-R2). | `CURSOR_RESULT_COMP_POOL_01.md` (+ S1/S2/S3) | **STAGED** local; rebuild+push need Milan | OPEN |
-| **COMP-POOL-SCINT** | 10 | errors | U | MED | Fitted sigma_sys ~4.9x Osborn/Young scintillation on wide rig (P-02 / WIDE-ERR adjacent). | S1/S2 scint_vs_sys | **REPORT**; do not fudge | OPEN |
+| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool vs assignment. Stages 1-3 local. Draft 512 pool ~187; BO loses 1/5. **Push blocked** by COMP-POOL-02 (D override wrong; chi2_red~4; draft 435 empties ensemble). | `CURSOR_RESULT_COMP_POOL_01.md`; `CURSOR_RESULT_COMP_POOL_02.md` | **HOLD** pending C2-R2 guard | OPEN |
+| **COMP-POOL-02** | 10 | ensemble | P/U | HIGH | (1) D=0.2 override wrong: 200mm=focal, aperture=70mm; sys/scint~2.43 not 4.9. (2) chi2_red 4-6 = model rejected as description. (3) Draft 435 NP/param 1.52 / r=1.92 px empties BO pool. (4) Red stars 7-12% wider FWHM; ~30 mmag EE term; weak colour bias in admission. | `CURSOR_RESULT_COMP_POOL_02.md` | **REPORTED**; Item1 revert done; guard not implemented | OPEN |
+| **COMP-POOL-SCINT** | 10 | errors | U | MED | After D correction: sigma_sys / scint ~2.4 (512/510) to ~3.0 (435). Still above 1; P-02/WIDE-ERR adjacent. | COMP-POOL-02 item 1 | **UPDATED** ratio; still open | OPEN |
 
 ### Named non-derived (P-R0)
 

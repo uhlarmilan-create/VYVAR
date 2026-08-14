@@ -395,12 +395,10 @@ def fit_parametric_noise_curve(
     if telescope_diameter_m_override is not None:
         diam_note = (
             f"override D={telescope_diameter_m_override} m "
-            f"(DB reported {diam_db} m; name implies 200 mm wide-field)"
+            f"(DB reported {diam_db} m)"
         )
-    elif diam_db < 0.15 and draft_id in (510, 512, 435, 509):
-        # Known Jirny Carl-Zeiss 200 mm: DB DIAMETER sometimes wrong
-        diam_used = 0.2
-        diam_note = f"corrected D=0.2 m for 200 mm wide-field (DB had {diam_db} m)"
+    # COMP-POOL-02 item 1: do NOT reinterpret "200mm" as aperture.
+    # TELESCOPE.FOCAL=200 mm, DIAMETER=70 mm; plate scale recovers f=200 mm.
     am_med = float(np.nanmedian(pd.to_numeric(stars.get("airmass_median"), errors="coerce")))
     if not math.isfinite(am_med) or am_med < 1.0:
         am_med = 1.2

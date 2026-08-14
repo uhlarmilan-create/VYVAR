@@ -1,0 +1,54 @@
+{
+  "r_prod_px": 3.411,
+  "n_stars_with_curves": 6,
+  "stars": [
+    {
+      "catalog_id": "1497368849430107904",
+      "bp_rp": 0.5014162063598633,
+      "mag_g": 11.523398399353027,
+      "ee_at_r_prod": 0.7915345328813328,
+      "n_radii": 60
+    },
+    {
+      "catalog_id": "1497771992240531712",
+      "bp_rp": 0.3280553817749023,
+      "mag_g": 9.752412796020508,
+      "ee_at_r_prod": 0.7781503722835047,
+      "n_radii": 60
+    },
+    {
+      "catalog_id": "1497974027502858240",
+      "bp_rp": 0.4753026962280273,
+      "mag_g": 11.171563148498535,
+      "ee_at_r_prod": 0.7542869417737793,
+      "n_radii": 60
+    },
+    {
+      "catalog_id": "1498613634033133184",
+      "bp_rp": NaN,
+      "mag_g": NaN,
+      "ee_at_r_prod": 0.7836533714243588,
+      "n_radii": 60
+    },
+    {
+      "catalog_id": "1499053747922698240",
+      "bp_rp": 0.5212516784667969,
+      "mag_g": 10.787753105163574,
+      "ee_at_r_prod": 0.7919598226039609,
+      "n_radii": 60
+    },
+    {
+      "catalog_id": "1499200223486564608",
+      "bp_rp": 0.6063861846923828,
+      "mag_g": 9.678899765014648,
+      "ee_at_r_prod": 0.7629383200754251,
+      "n_radii": 60
+    }
+  ],
+  "blue_n": 5,
+  "red_n": 0,
+  "ee_blue_median": 0.7781503722835047,
+  "ee_red_median": NaN,
+  "mmag_red_minus_blue": NaN,
+  "note": "insufficient colour span in COG star set; report per-star EE and FWHM-based estimate"
+}

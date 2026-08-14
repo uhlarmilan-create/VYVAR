@@ -1,0 +1,64 @@
+{
+  "r_ap_px": 4.011,
+  "fwhm_blue": 3.1863386669416984,
+  "fwhm_red": 3.4491611084782203,
+  "fwhm_ratio_red_over_blue": 1.0824841515634567,
+  "mmag_gauss_crosscheck_only": 12.34749601431268,
+  "mmag_cog_fwhm_rescaled": 29.485010546318453,
+  "ee_cog": {
+    "ee_blue_at_r": 0.8257300718514741,
+    "ee_red_at_r_over_k": 0.8036077140718848,
+    "k": 1.0824841515634567
+  },
+  "architect_prior_mmag": 60,
+  "observed_inst_minus_G_mmag_red_minus_blue": 275.44889836140476,
+  "caveat_inst_minus_G": "includes astrophysical colour term + aperture loss",
+  "night_colour_term_mmag": {
+    "median": 277.594706434356,
+    "std": 6.633636429199141,
+    "n": 23
+  },
+  "focus_vs_colour_width_corr_512": -0.15626208685348633,
+  "pool_colour": {
+    "512": {
+      "admit_n": 86,
+      "admit_bprp_median": 0.9105563163757324,
+      "admit_bprp_mean": 0.9782084198885186,
+      "reject_n_in_mag": 110,
+      "reject_bprp_median": 0.933457851409912,
+      "reject_bprp_mean": 1.0157225652174515,
+      "admit_frac_red_gt_1.5": 0.03488372093023256,
+      "reject_frac_red_gt_1.5": 0.08181818181818182,
+      "admit_frac_blue_lt_0.8": 0.38372093023255816,
+      "reject_frac_blue_lt_0.8": 0.35454545454545455,
+      "faint_limit_g": 11.455328158279372
+    },
+    "510": {
+      "admit_n": 83,
+      "admit_bprp_median": 0.9167003631591796,
+      "admit_bprp_mean": 0.9859777703342667,
+      "reject_n_in_mag": 104,
+      "reject_bprp_median": 0.933457851409912,
+      "reject_bprp_mean": 1.0118677753668566,
+      "admit_frac_red_gt_1.5": 0.04819277108433735,
+      "reject_frac_red_gt_1.5": 0.07692307692307693,
+      "admit_frac_blue_lt_0.8": 0.37349397590361444,
+      "reject_frac_blue_lt_0.8": 0.3557692307692308,
+      "faint_limit_g": 11.44975544420413
+    },
+    "435": {
+      "admit_n": 50,
+      "admit_bprp_median": 1.0525426864624023,
+      "admit_bprp_mean": 0.9764991760253906,
+      "reject_n_in_mag": 252,
+      "reject_bprp_median": 0.8818697929382324,
+      "reject_bprp_mean": 0.9725294624056134,
+      "admit_frac_red_gt_1.5": 0.02,
+      "reject_frac_red_gt_1.5": 0.051587301587301584,
+      "admit_frac_blue_lt_0.8": 0.34,
+      "reject_frac_blue_lt_0.8": 0.36507936507936506,
+      "faint_limit_g": 11.873399082864125
+    }
+  },
+  "measured_note": "draft512_cog_curves.csv: COG stars are all BP-RP<0.7; EE colour effect estimated by FWHM-rescaled measured growth curve"
+}

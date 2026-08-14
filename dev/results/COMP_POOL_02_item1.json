@@ -1,0 +1,69 @@
+{
+  "pixel_verify": {
+    "EQUIPMENTS_PIXELSIZE_um": 4.63,
+    "header_PIXSIZE1_um": 4.63,
+    "header_XPIXSZ_um": 9.26,
+    "header_XBINNING": 2.0,
+    "native_pitch_from_XPIXSZ_um": 4.63,
+    "SCALE_arcsec_per_px": 9.55169,
+    "focal_length_from_scale_m": 0.19996606883179832,
+    "focal_length_DB_m": 0.2,
+    "diameter_DB_m": 0.07,
+    "f_ratio_DB": 2.857142857142857,
+    "f_ratio_from_scale": 0.35005938962014893,
+    "conclusion": "200 mm is FOCAL; DIAMETER=70 mm is aperture; override D=0.2 was wrong"
+  },
+  "scint_by_draft": [
+    {
+      "draft_id": 512,
+      "sigma_sys_mag": 0.00973727552090381,
+      "scint_mag_D007": 0.003999690394765461,
+      "scint_mag_D02_wrong": 0.001986423013116313,
+      "ratio_sys_over_scint_D007": 2.4345073142779583,
+      "ratio_sys_over_scint_D02_was": 4.901914374032503,
+      "chi2_red": 4.16628841994753,
+      "n_fit": 125,
+      "aperture_area_px": 36.55218233869761,
+      "sky_adu": 1549.846435546875,
+      "zp_inst": 22.036674841841315,
+      "diam_used": 0.07,
+      "diam_db": 0.07,
+      "diameter_note": "",
+      "airmass": 1.0379755
+    },
+    {
+      "draft_id": 510,
+      "sigma_sys_mag": 0.009726220449140403,
+      "scint_mag_D007": 0.003997994074173978,
+      "scint_mag_D02_wrong": 0.0019855805453430683,
+      "ratio_sys_over_scint_D007": 2.4327751038875483,
+      "ratio_sys_over_scint_D02_was": 4.8984265442930734,
+      "chi2_red": 3.980602776071255,
+      "n_fit": 118,
+      "aperture_area_px": 37.63163357447106,
+      "sky_adu": 1548.37255859375,
+      "zp_inst": 22.0458133634235,
+      "diam_used": 0.07,
+      "diam_db": 0.07,
+      "diameter_note": "",
+      "airmass": 1.037682
+    },
+    {
+      "draft_id": 435,
+      "sigma_sys_mag": 0.011837591767887607,
+      "scint_mag_D007": 0.004009847321673604,
+      "scint_mag_D02_wrong": 0.0019914673918960506,
+      "ratio_sys_over_scint_D007": 2.9521302978056805,
+      "ratio_sys_over_scint_D02_was": 5.944155458461807,
+      "chi2_red": 6.404403314788558,
+      "n_fit": 124,
+      "aperture_area_px": 11.532962560516731,
+      "sky_adu": 1564.2216186523438,
+      "zp_inst": 21.68558924165267,
+      "diam_used": 0.07,
+      "diam_db": 0.07,
+      "diameter_note": "",
+      "airmass": 1.039732
+    }
+  ]
+}
