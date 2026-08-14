@@ -1,0 +1,153 @@
+{
+  "draft": 512,
+  "k": 1.8,
+  "dao_threshold_sigma": 3.8,
+  "baseline_archived": {
+    "source": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\masterstars_full_match.csv",
+    "n_rows": 735,
+    "by_g": {
+      "10": 102,
+      "11": 245,
+      "12": 225,
+      "13": 11,
+      "14": 15,
+      "15": 7,
+      "16": 2,
+      "lt10": 113,
+      "ge17": 0,
+      "nan": 15
+    },
+    "noise_floor_log": 2427.0,
+    "estimator_then": "plain_mean_med_std_full_frame",
+    "plain_med": 1401.1177368164062,
+    "plain_std": 569.9332816157934,
+    "sky_mad_med": 1401.1177368164062,
+    "sky_mad_sig": 24.342366357421874,
+    "floor_plain_k": 2426.9976437248342,
+    "floor_sky_mad_k": 1444.9339962597655
+  },
+  "delta_A_sky_mad_pass2_gated": {
+    "n_rows": 3614,
+    "n_matched": 3451,
+    "n_dao_only": 163,
+    "by_g": {
+      "10": 103,
+      "11": 246,
+      "12": 503,
+      "13": 860,
+      "14": 1271,
+      "15": 355,
+      "16": 0,
+      "lt10": 113,
+      "ge17": 0,
+      "nan": 163
+    },
+    "noise_floor_adu": 1444.9339962597655,
+    "sky_median_adu": 1401.1177368164062,
+    "bg_sigma_adu": 24.342366357421874,
+    "bg_sigma_estimator": "sky_mad_le_median",
+    "prematch_pass2_exempt": false,
+    "n_detected_dao_raw": 307,
+    "n_dao_after_spatial_cap": 3614,
+    "n_detected_dao": 3614
+  },
+  "delta_AB_sky_mad_pass2_exempt": {
+    "n_rows": 3614,
+    "n_matched": 3451,
+    "n_dao_only": 163,
+    "by_g": {
+      "10": 103,
+      "11": 246,
+      "12": 503,
+      "13": 860,
+      "14": 1271,
+      "15": 355,
+      "16": 0,
+      "lt10": 113,
+      "ge17": 0,
+      "nan": 163
+    },
+    "noise_floor_adu": 1444.9339962597655,
+    "sky_median_adu": 1401.1177368164062,
+    "bg_sigma_adu": 24.342366357421874,
+    "bg_sigma_estimator": "sky_mad_le_median",
+    "prematch_pass2_exempt": true,
+    "n_detected_dao_raw": 307,
+    "n_dao_after_spatial_cap": 3614,
+    "n_detected_dao": 3614
+  },
+  "pool_proxy_n_nonvar_matched": {
+    "baseline": 666,
+    "delta_A": 3341,
+    "delta_AB": 3341
+  },
+  "bo_cvn_before": {
+    "target_catalog_id": "1498613634033133184",
+    "vsx_name": "BO CVn",
+    "trust": "GREEN",
+    "trust_reason": "5 clean comps, noisy LC (informational)",
+    "check_scatter": 0.009299945474024567,
+    "ac_scatter": 0.013283,
+    "lc_rms_ooe": 0.046659,
+    "comp_ids": [
+      "1499053747922698240",
+      "1497771992240531712",
+      "1497368849430107904",
+      "1499200223486564608",
+      "1497974027502858240"
+    ],
+    "comp_tiers": {
+      "selected_tier": "TIER1",
+      "n_tier1": 5,
+      "n_tier2": 0,
+      "n_tier3": 0,
+      "n_tier4": 0,
+      "tier4_warning": false
+    },
+    "sparse_field_warning": false,
+    "source": "photometry_summary.csv + trust/comp_quality JSON + infolog"
+  },
+  "deltas": {
+    "A_minus_baseline_n": 2879,
+    "AB_minus_A_n": 0,
+    "AB_minus_baseline_n": 2879
+  },
+  "second_target_r_cvn_before": {
+    "target_catalog_id": "1496795041799526400",
+    "vsx_name": "R CVn",
+    "label": "second target (NOT BO CVn); SPARSE FIELD example from draft 512 log",
+    "trust": "RED",
+    "trust_reason": "5 clean comps | soft: ensemble includes T3+ comps (colour mismatch); only 0 T1/T2 comps (GREEN requires >=3); T3+ comps with color term off (trust capped YELLOW) - inspect before submitting",
+    "check_scatter": 0.008297034389898233,
+    "ac_scatter": null,
+    "lc_rms_ooe": 0.0084440944862657,
+    "comp_ids": [
+      "1497442379271632384",
+      "1499906247391001088",
+      "1500296402219939584",
+      "1500576880763957248",
+      "1498735778606786816"
+    ],
+    "comp_tiers": {
+      "selected_tier": "TIER4",
+      "n_tier1": 0,
+      "n_tier2": 0,
+      "n_tier3": 0,
+      "n_tier4": 5,
+      "tier4_warning": true
+    },
+    "sparse_field_warning": true
+  },
+  "gate_inert_on_draft_512": true,
+  "n_in_spatial": 3614,
+  "n_out_after_gate": 3614,
+  "n_dao_only_baseline": 12,
+  "n_dao_only_after": 163,
+  "dao_only_frac_baseline": 0.0163265306122449,
+  "dao_only_frac_after": 0.045102379634753734,
+  "deferred_depth_limit": {
+    "id": "SNR-DEPTH-01",
+    "status": "DEFERRED",
+    "note": "F2 G15 frac_median=0.507; no depth cut implemented in SNR-GATE-01/02"
+  }
+}

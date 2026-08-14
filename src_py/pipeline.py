@@ -91,7 +91,7 @@ from proc_frame_store import proc_csv_path_for_aligned_fits
 
 from dao_reconcile import compute_gaia_dao_reconcile, reconcile_to_pipeline_meta, resolve_effective_match_depth
 from masterstar_context import header_core_fwhm_px
-from plain_stats import plain_mean_med_std
+from plain_stats import plain_mean_med_std, sky_mad_sigma_adu
 
 from utils import (
     ASTROMETRY_SOLVE_FIELD_CPULIMIT_SEC,
@@ -7487,9 +7487,17 @@ def _merge_dao_pass1_pass2_tables(
     bfac: int,
     dedup_px: float = 3.0,
 ) -> Any:
-    """Append pass-2 detections; drop pass-2 if within ``dedup_px`` of pass-1 (full image coords)."""
+    """Append pass-2 detections; drop pass-2 if within ``dedup_px`` of pass-1 (full image coords).
+
+    Adds integer column ``vy_dao_pass`` (1=pass1, 2=pass2) so the prematch peak gate can
+    exempt pass-2 recoveries (SNR-GATE-01).
+    """
     import numpy as np
     from astropy.table import Table, vstack
+
+    if tbl_pass1 is not None and len(tbl_pass1) > 0 and "vy_dao_pass" not in tbl_pass1.colnames:
+        tbl_pass1 = Table(tbl_pass1, copy=True)
+        tbl_pass1["vy_dao_pass"] = np.ones(len(tbl_pass1), dtype=np.int16)
 
     if not pass2_rows:
         return tbl_pass1
@@ -7514,6 +7522,7 @@ def _merge_dao_pass1_pass2_tables(
                 "y_centroid": yb,
                 "flux": float(row["flux"]),
                 "peak": float(row.get("peak", row["flux"])),
+                "vy_dao_pass": 2,
             }
         )
     if not kept:
@@ -7894,6 +7903,10 @@ def detect_stars_match_master_reference(
         tbl = finder(data_dao)
         if tbl is not None and len(tbl) > 0:
             tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+            from astropy.table import Table as _AstropyTable
+
+            tbl = _AstropyTable(tbl, copy=True)
+            tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
         n_pass1_dao_m = int(len(tbl)) if tbl is not None else 0
         _h_m, _wpx_m = int(data0.shape[0]), int(data0.shape[1])
         try:
@@ -8443,6 +8456,7 @@ def detect_stars_and_match_catalog(
     fov_equipment_id: int | None = None,
     fov_draft_id: int | None = None,
     prematch_peak_sigma_floor: float = 10.0,
+    prematch_exempt_pass2: bool = True,
     frame_name: str = "",
     dao_fwhm_bypass_header: bool = False,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -8476,9 +8490,10 @@ def detect_stars_and_match_catalog(
     ``dao_threshold_sigma``: DAOStarFinder threshold = sigma x std(background); lower values detect more faint
     sources (cf. SIPS ~2.5sigma).
 
-    ``prematch_peak_sigma_floor`` (default 10): before catalog matching, drop DAO rows whose local ``peak`` is
-    below ``median + k x sigma`` of the frame (sigma-clipped stats). Lower **k** keeps more faint detections
-    (MASTERSTAR / ``config.json`` / DAO-STARS typicky **2.0-3.5**); higher **k** cisti sum pred matchom.
+    ``prematch_peak_sigma_floor`` (default 10): before catalog matching, drop **pass-1** DAO rows whose local
+    ``peak`` is below ``sky_median + k x sky_mad_sigma`` (SNR-GATE-01). Pass-2 recoveries are exempt when
+    ``prematch_exempt_pass2`` is True (local annulus test already applied). Lower **k** keeps more faint pass-1
+    detections (MASTERSTAR / ``config.json`` / DAO-STARS typicky **1.8-3.5**).
 
     Saturation: (1) ``peak_max_adu`` vs resolved ceiling from FITS keywords / ``EQUIPMENTS.SATURATE_ADU`` (before BITPIX);
     (2) **plateau core** - many pixels in the central 3x3
@@ -8703,6 +8718,10 @@ def detect_stars_and_match_catalog(
         n_raw_dao = int(len(tbl)) if tbl is not None else 0
         if tbl is not None and len(tbl) > 0:
             tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+            from astropy.table import Table as _AstropyTable
+
+            tbl = _AstropyTable(tbl, copy=True)
+            tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
         n_pass1_dao = int(len(tbl)) if tbl is not None else 0
         try:
             _sigma_p2_cfg = float(_cfg_df.masterstar_dao_pass2_sigma)
@@ -8862,16 +8881,37 @@ def detect_stars_and_match_catalog(
         peak_max_adu=pmax_arr,
     )
     _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
-    # Pre-match SNR cleanup: drop weak DAO detections under (median + kxsigma) from image background.
+    # Prematch peak gate (SNR-GATE-01):
+    # - noise scale = sky MAD on pixels <= median (not full-frame sample std / scene variance)
+    # - pass-2 recoveries already passed a local annulus test; exempt them from this global cut
     _snr_k = float(prematch_peak_sigma_floor)
     if not math.isfinite(_snr_k):
         _snr_k = 10.0
     # Spodna hranica 0.5 = zhoda s AppConfig / DAO-STARS pre MASTERSTAR; horna 15 = per-frame default k=10 zostane platny.
     _snr_k = min(15.0, max(0.5, _snr_k))
-    _bg_sigma_adu = max(float(std) if np.isfinite(std) else 0.0, 1.0)
-    noise_floor = float(med + _snr_k * _bg_sigma_adu)
-    snr_keep = np.isfinite(pmax_arr) & (pmax_arr > noise_floor)
+    _sky_med_gate, _sky_sig_gate = sky_mad_sigma_adu(arr)
+    if not (math.isfinite(_sky_sig_gate) and float(_sky_sig_gate) > 0):
+        _sky_sig_gate = float(std) if np.isfinite(std) else 1.0
+    if not math.isfinite(_sky_med_gate):
+        _sky_med_gate = float(med)
+    _bg_sigma_adu = max(float(_sky_sig_gate), 1.0)
+    noise_floor = float(float(_sky_med_gate) + _snr_k * _bg_sigma_adu)
+    if "vy_dao_pass" in tbl.colnames:
+        _dao_pass = np.asarray(tbl["vy_dao_pass"], dtype=np.int16)
+        if int(_dao_pass.size) != int(n):
+            # Spatial / other pre-filters may have shortened peak arrays; fall back to pass-1.
+            _dao_pass = np.ones(n, dtype=np.int16)
+    else:
+        _dao_pass = np.ones(n, dtype=np.int16)
+    _is_pass2 = _dao_pass == 2
+    if bool(prematch_exempt_pass2):
+        snr_keep = _is_pass2 | (np.isfinite(pmax_arr) & (pmax_arr > noise_floor))
+    else:
+        snr_keep = np.isfinite(pmax_arr) & (pmax_arr > noise_floor)
     n_snr = int(np.count_nonzero(snr_keep))
+    n_gate_drop = int(np.count_nonzero(~snr_keep))
+    n_pass2_kept = int(np.count_nonzero(snr_keep & _is_pass2))
+    _exempt_tag = "pass2 exempt" if bool(prematch_exempt_pass2) else "pass2 gated"
     if 0 < n_snr < n:
         x = x[snr_keep]
         y = y[snr_keep]
@@ -8890,8 +8930,9 @@ def detect_stars_and_match_catalog(
         _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
         n = int(n_snr)
         log_event(
-            f"DAO po SNR filtri (sumova podlaha median+{_snr_k:.1f}xsigma): {n}/{n_spatial} bodov "
-            f"(noise_floor~{noise_floor:.1f} ADU; pred matchom s katalogom)."
+            f"DAO po SNR filtri (sky_mad median+{_snr_k:.1f}xsigma; {_exempt_tag}): {n}/{n_spatial} bodov "
+            f"(noise_floor~{noise_floor:.1f} ADU sky_sig~{_bg_sigma_adu:.1f}; "
+            f"pass2_kept={n_pass2_kept}; dropped={n_gate_drop}; pred matchom s katalogom)."
         )
     elif n_snr == 0:
         log_event(
@@ -9456,8 +9497,10 @@ def detect_stars_and_match_catalog(
     n_matched_final = int(cat_nonempty.sum()) if len(df_out) else 0
     meta = {
         "noise_floor_adu": float(noise_floor),
-        "sky_median_adu": float(med),
+        "sky_median_adu": float(_sky_med_gate),
         "bg_sigma_adu": float(_bg_sigma_adu),
+        "bg_sigma_estimator": "sky_mad_le_median",
+        "prematch_pass2_exempt": bool(prematch_exempt_pass2),
         "frame_max_adu": float(_frame_max_adu),
         "empirical_clip_adu": _empirical_clip_adu,
         "n_detected_dao_raw": int(n_raw_dao),

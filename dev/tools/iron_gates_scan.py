@@ -55,6 +55,10 @@ OUT_OF_SCOPE_MODULES: frozenset[str] = frozenset(
 MASTER_SCOPE: frozenset[str] = frozenset({"importer.py", "calibration.py", "pipeline.py"})
 
 NOCLIP_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    # NOTE (SNR-GATE-01 / F5): INV-NOCLIP-01 deliberately does NOT match detection floors of
+    # the form ``median + k * sigma`` (DAOStarFinder threshold, prematch peak gate). Those are
+    # significance cuts, not iterative kappa-sigma rejection of science samples. A broken
+    # *noise estimator* feeding such a gate is a separate defect (scene std vs sky MAD).
     (
         "one_sided_annulus_sky_clip",
         re.compile(r"sky_pixels\s*\[\s*sky_pixels\s*<\s*sky_med", re.MULTILINE),

@@ -1783,7 +1783,13 @@ def _noise_floor_adu_from_image_array(
     *,
     prematch_peak_sigma_floor: float = 10.0,
 ) -> float | None:
-    """DAO-style noise floor (median + kxsigma) for SNR table sky estimate."""
+    """Legacy DAO-style noise floor (median + k x full-frame sample std).
+
+    Used by the SNR aperture-table sky estimate path only. SNR-GATE-01 / SNR-GATE-02:
+    do **not** switch this helper to ``sky_mad_sigma_adu`` in the same commit as the
+    prematch peak gate -- that would move per-star aperture radii. Prematch uses
+    ``sky_mad_sigma_adu`` directly in ``pipeline.detect_stars_and_match_catalog``.
+    """
 
     arr = np.asarray(data, dtype=np.float64)
     finite = np.isfinite(arr)

@@ -1,0 +1,277 @@
+{
+  "n_proc_csvs": 134,
+  "phase2a_sky_from_proc": 1553.3518371582031,
+  "phase2a_bkg_var": 2114.3684943508415,
+  "resolved_fwhm": 3.389154740967996,
+  "fwhm_prov": {
+    "fwhm_px_scope": "per_draft_median_frame_dao_moment",
+    "fwhm_estimator": "dao_moment_median",
+    "vy_fwhm_gauss_px": 3.3014,
+    "vy_fwhm_dao_px": 5.19465,
+    "fwhm_n_frames": 12,
+    "fwhm_per_frame_px": [
+      3.3667,
+      3.4486,
+      3.4074,
+      3.4129,
+      3.4466,
+      3.4668,
+      3.4129,
+      3.3652,
+      3.3481,
+      3.3349,
+      3.3709,
+      3.3693
+    ]
+  },
+  "archived_sky": 1553.3518371582031,
+  "archived_fwhm": 3.389154740967996,
+  "per_mag_radii": [
+    {
+      "mag": 7.0,
+      "archived_r": 5.161,
+      "rebuilt_phase2a_r": 5.161,
+      "same_inputs_r": 5.261,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000053
+    },
+    {
+      "mag": 7.5,
+      "archived_r": 4.961,
+      "rebuilt_phase2a_r": 4.961,
+      "same_inputs_r": 5.061,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.09999999999999964
+    },
+    {
+      "mag": 8.0,
+      "archived_r": 4.761,
+      "rebuilt_phase2a_r": 4.761,
+      "same_inputs_r": 4.861,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.09999999999999964
+    },
+    {
+      "mag": 8.5,
+      "archived_r": 4.561,
+      "rebuilt_phase2a_r": 4.561,
+      "same_inputs_r": 4.661,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.09999999999999964
+    },
+    {
+      "mag": 9.0,
+      "archived_r": 4.361,
+      "rebuilt_phase2a_r": 4.361,
+      "same_inputs_r": 4.461,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000053
+    },
+    {
+      "mag": 9.5,
+      "archived_r": 4.161,
+      "rebuilt_phase2a_r": 4.161,
+      "same_inputs_r": 4.261,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000053
+    },
+    {
+      "mag": 10.0,
+      "archived_r": 3.961,
+      "rebuilt_phase2a_r": 3.961,
+      "same_inputs_r": 4.061,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 10.5,
+      "archived_r": 3.761,
+      "rebuilt_phase2a_r": 3.761,
+      "same_inputs_r": 3.861,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 11.0,
+      "archived_r": 3.561,
+      "rebuilt_phase2a_r": 3.561,
+      "same_inputs_r": 3.661,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 11.5,
+      "archived_r": 3.361,
+      "rebuilt_phase2a_r": 3.361,
+      "same_inputs_r": 3.461,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.09999999999999964
+    },
+    {
+      "mag": 12.0,
+      "archived_r": 3.161,
+      "rebuilt_phase2a_r": 3.161,
+      "same_inputs_r": 3.261,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 12.5,
+      "archived_r": 2.961,
+      "rebuilt_phase2a_r": 2.961,
+      "same_inputs_r": 3.061,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 13.0,
+      "archived_r": 2.811,
+      "rebuilt_phase2a_r": 2.811,
+      "same_inputs_r": 2.911,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.10000000000000009
+    },
+    {
+      "mag": 13.5,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.761,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.050000000000000266
+    },
+    {
+      "mag": 14.0,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 14.5,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 15.0,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 15.5,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 16.0,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 16.5,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 17.0,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 17.5,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    },
+    {
+      "mag": 18.0,
+      "archived_r": 2.711,
+      "rebuilt_phase2a_r": 2.711,
+      "same_inputs_r": 2.711,
+      "delta_phase2a": 0.0,
+      "delta_same_inputs": 0.0
+    }
+  ],
+  "max_abs_delta_same_inputs": 0.10000000000000053,
+  "max_abs_delta_phase2a_rebuild": 0.0,
+  "dao_flux_frame": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\detrended_aligned\\lights\\NoFilter_60_2\\BO_CVn_Light_004.fits",
+  "dao_flux_proc": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_004.csv",
+  "dao_flux_rows": [
+    {
+      "catalog_id": "1498613634033133184",
+      "aperture_r_px": 4.211,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 116790.66598763144,
+      "recomputed_dao_flux": 116790.66598763144,
+      "rel_diff": 0.0
+    },
+    {
+      "catalog_id": "1499053747922698240",
+      "aperture_r_px": 3.611,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 34895.66582608681,
+      "recomputed_dao_flux": 34895.66582608681,
+      "rel_diff": 0.0
+    },
+    {
+      "catalog_id": "1497771992240531712",
+      "aperture_r_px": 4.011,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 101936.99212905434,
+      "recomputed_dao_flux": 101936.99212905434,
+      "rel_diff": 0.0
+    },
+    {
+      "catalog_id": "1497368849430107904",
+      "aperture_r_px": 3.411,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 34067.60009336934,
+      "recomputed_dao_flux": 34067.60009336934,
+      "rel_diff": 0.0
+    },
+    {
+      "catalog_id": "1499200223486564608",
+      "aperture_r_px": 4.211,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 101231.7523793896,
+      "recomputed_dao_flux": 101231.7523793896,
+      "rel_diff": 0.0
+    },
+    {
+      "catalog_id": "1497974027502858240",
+      "aperture_r_px": 3.611,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "stored_dao_flux": 25208.270670771453,
+      "recomputed_dao_flux": 25208.270670771453,
+      "rel_diff": 0.0
+    }
+  ],
+  "dao_flux_max_abs_rel_diff": 0.0,
+  "note": "Final draft aperture_snr_table.json is overwritten in Phase 2A from proc CSV annulus sky (noise_floor_adu column), not from _noise_floor_adu_from_image_array. SNR-GATE-02 pinned that helper to plain_mean_med_std so the precompute path also does not adopt sky_mad."
+}

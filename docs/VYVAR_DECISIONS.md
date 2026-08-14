@@ -32,6 +32,27 @@ Report chain: `dev/results/CURSOR_RESULT_a1_growth_curves.md`, `dev/results/CURS
 
 ---
 
+## SNR-GATE-01 - prematch peak noise scale + pass-2 exempt (2026-08-14)
+
+**Problem.** After `c9e1f8f`, `plain_mean_med_std` returned unclipped full-frame sample std
+(~570 ADU on draft 512 MASTERSTAR) while call sites still looked like clipped background
+stats. Prematch `median + 1.8*std` therefore operated at ~12x real sky noise and discarded
+pass-2 Gaia recoveries that F2 showed are real stars through ~G15.
+
+**Decision.** (1) Prematch noise scale = `sky_mad_sigma_adu` (MAD on pixels <= median),
+validated by `sigma^2` vs sky linearity (implied g~2.94 vs QHY294MM 3.17). (2) Pass-2
+detections are exempt from the global peak gate; local annulus test + catalogue seed stand.
+Pass-1 keeps the sky-MAD peak floor. Do not retune `k` to hit a star count (G-R3).
+(3) SNR-GATE-02: `_noise_floor_adu_from_image_array` stays on legacy plain sample std so
+SNR aperture radii do not move in this commit.
+
+**Measurement (draft 512 MASTERSTAR):** 735 -> 3614 rows; Delta A carries the count; Delta B
+is zero numerically on this night but retained. Full LC reprocess not run in the task.
+
+Report: `dev/results/CURSOR_RESULT_SNR_GATE_01.md`. Commit/push await Milan.
+
+---
+
 ## SKY-CLIP-01 - plain annulus median sky, no one-sided clip (2026-08-14)
 
 **Problem.** Production batch aperture photometry used `_sky_pp_from_annulus_image` with a

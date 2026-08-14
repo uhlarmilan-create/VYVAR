@@ -169,3 +169,22 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 - Seeing-dependence of EE ratio: needs a night with real seeing variation and a lower-noise estimator
 - U-SCATTER-DEF, WIDE-ERR, D1-2 exposure ramp, C-EXPORT-GAP, W6-PROP -- already open, unchanged
 
+---
+
+## Wave 9 - DAO depth (2026-08-14)
+
+| ID | wave | stage | class | severity | evidence | reference | disposition | status |
+|----|------|-------|-------|----------|----------|-----------|-------------|--------|
+| **DAO-DEPTH-01** | 9 | detection | U | HIGH | Draft 512 ~704 proc rows vs ~1828 independent on same pixels. Localized to MASTERSTAR prematch SNR peak filter (3621->735); G12-G15 dropped. | `dev/results/CURSOR_RESULT_DAO_DEPTH_01.md` | **LOCALIZED**; successor **SNR-GATE-01** | SUPERSEDED-FIX |
+| **SNR-GATE-01** | 9 | detection | I/P | HIGH | Prematch used full-frame scene std (~570 ADU) as "1.8 sigma" noise after `c9e1f8f`; F1 disqualifies it; F2 shows discarded pass-2 stars real through ~G15. Fix: sky MAD estimator + pass-2 exempt from global peak gate. Draft 512 MASTERSTAR 735 -> 3614 (Delta A); AB-A=0 on this night. Gate inert after fix (3614 in = 3614 out). | `dev/results/CURSOR_RESULT_SNR_GATE_01.md` | **FIXED** (commit SNR-GATE-01; no push) | FIXED |
+| **SNR-GATE-02** | 9 | detection | C | HIGH | Surgical land: pin `_noise_floor_adu_from_image_array` so SNR aperture radii do not move; correct BO CVn baseline id; verify Part 5 zeros. | `dev/results/CURSOR_RESULT_SNR_GATE_01.md` secs 11-15 | **DONE** with SNR-GATE-01 commit | CLOSED |
+| **SNR-DEPTH-01** | 9 | detection | U | MED | F2: G15 repeatability degrades (frac_median 0.507); no depth limit implemented. | SNR-GATE-01 F2 | **DEFERRED** (after rebuild) | OPEN |
+
+### Deferred (adjacent)
+
+- DAO-CONE-CAP-01: field_catalog_cone 100k over ~13.6 deg truncates in-footprint G15+ vs local DR3 (~567 vs ~2592 at G15)
+- DAO-SNR-SIGMA-01: **CLOSED** by SNR-GATE-01 Delta A
+- DAO-PASS2-vs-PREMATCH-01: **CLOSED** by SNR-GATE-01 Delta B
+- FORCED_APERTURE-DEAD-01: label checked in UI/plot paths but never assigned in production writers
+- SNR-TABLE-SKY-01 (new finding): SNR-table precompute still uses misnamed `med+k*plain_std` as "sky"; Phase 2A overwrites from annulus. Own delta if fixed.
+

@@ -39,12 +39,17 @@ on calibrated frames). `dao_detection_n_equiv` is dimensionless and was measured
 
 ### 1.3 Pre-match peak sigma floor
 
-Before Gaia matching, weak DAO peaks can be dropped using a median + k*sigma floor on peak ADU.
+Before Gaia matching, weak **pass-1** DAO peaks can be dropped using
+`sky_median + k * sky_mad_sigma` on peak ADU (SNR-GATE-01). Pass-2 recoveries are exempt
+(local annulus test already applied).
 
-- Config default: `src_py/config.py:769` (`masterstar_prematch_peak_sigma_floor = 1.8`)
-- Wired into platesolve: `src_py/pipeline.py:12249-12251`
-- Pre-match SNR filter: `src_py/pipeline.py:8548-8574`
-- Noise-floor helper: `src_py/photometry_core.py:1786-1801`
+- Config default: `src_py/config.py` (`masterstar_prematch_peak_sigma_floor = 1.8`)
+- Noise helper: `src_py/plain_stats.py` (`sky_mad_sigma_adu`)
+- Pre-match SNR filter: `src_py/pipeline.py` (`detect_stars_and_match_catalog`)
+- Noise-floor helper for SNR table: `src_py/photometry_core.py` (`_noise_floor_adu_from_image_array`)
+
+Do **not** use full-frame `plain_mean_med_std` sample std as this noise scale (scene variance;
+fails `sigma^2` vs sky; see `dev/results/CURSOR_RESULT_SNR_GATE_01.md`).
 
 DAO-PHYS-2 showed no `k_floor` removes the draft_501 DAO_ONLY excess without unacceptable Gaia
 depth loss (k=5 removes 51% DAO / 4.1% Gaia on draft_501).

@@ -1,0 +1,144 @@
+{
+  "tolerance": {
+    "T_SLOPE_NSIG": 3.0,
+    "T_GAIN_LO": 0.05,
+    "T_GAIN_HI": 50.0,
+    "T_R2_MIN": 0.25,
+    "model": "sigma^2 = (1/g)*sky + RN_ADU^2",
+    "equipment_gain_e_per_adu": 3.17,
+    "equipment_rn_e": 7.6,
+    "note_binning": "frames are XBINNING=2; equipment row is camera native; interpret with care"
+  },
+  "sky_span": {
+    "min": 1329.7940673828125,
+    "max": 2413.1689453125,
+    "ratio": 1.8146937217594103
+  },
+  "estimators": {
+    "plain_full": {
+      "fit": {
+        "n": 134,
+        "slope_a": -4.926644984463361,
+        "intercept_b": 320840.2480775339,
+        "se_a": 1.7710586804790063,
+        "se_b": 2803.9614727827247,
+        "r2": 0.05537601162617756,
+        "rms_resid": 3835.2886958505187,
+        "nsig_a": -2.7817514116081603,
+        "g_implied": NaN,
+        "rn_adu_implied": 566.4276194515359
+      },
+      "qualify": false,
+      "reason": "slope_fail a=-4.927 nsig=-2.78",
+      "sig_median": 559.1750392385595,
+      "sky_response": {
+        "sky_p20": 1384.0442749023437,
+        "sky_p80": 1692.4015625,
+        "sig_at_p20": 558.3139274103379,
+        "sig_at_p80": 557.2256596136602,
+        "sig_ratio": 0.9980507958994943,
+        "expected_sqrt_sky_ratio": 1.1058003350822687
+      }
+    },
+    "mad_sky_le_median": {
+      "fit": {
+        "n": 134,
+        "slope_a": 0.34061105742012826,
+        "intercept_b": -77.57469199782037,
+        "se_a": 0.019409786516457216,
+        "se_b": 30.729808214126408,
+        "r2": 0.6999638545071023,
+        "rms_resid": 42.03256257737677,
+        "nsig_a": 17.548418532647442,
+        "g_implied": 2.9358999897837887,
+        "rn_adu_implied": NaN
+      },
+      "qualify": true,
+      "reason": "PASS",
+      "sig_median": 21.47964710083008,
+      "sky_response": {
+        "sky_p20": 1384.0442749023437,
+        "sky_p80": 1692.4015625,
+        "sig_at_p20": 19.433606616210938,
+        "sig_at_p80": 22.753801721191405,
+        "sig_ratio": 1.170848117415882,
+        "expected_sqrt_sky_ratio": 1.1058003350822687
+      }
+    },
+    "pct5_40_sky": {
+      "fit": {
+        "n": 134,
+        "slope_a": 0.13358029742291547,
+        "intercept_b": -27.298908220686542,
+        "se_a": 0.007649198445912922,
+        "se_b": 12.110303275896209,
+        "r2": 0.6979177443456123,
+        "rms_resid": 16.564603225903635,
+        "nsig_a": 17.463306563093465,
+        "g_implied": 7.486133953078411,
+        "rn_adu_implied": NaN
+      },
+      "qualify": true,
+      "reason": "PASS",
+      "sig_median": 13.597392340517462,
+      "sky_response": {
+        "sky_p20": 1384.0442749023437,
+        "sky_p80": 1692.4015625,
+        "sig_at_p20": 12.272358266206481,
+        "sig_at_p80": 14.379967290443181,
+        "sig_ratio": 1.1717362693069573,
+        "expected_sqrt_sky_ratio": 1.1058003350822687
+      }
+    },
+    "photutils_bkg2d_rms": {
+      "fit": {
+        "n": 134,
+        "slope_a": 0.650787761437573,
+        "intercept_b": 183.29087449711994,
+        "se_a": 0.054017559396962934,
+        "se_b": 85.4871186625936,
+        "r2": 0.5237189043959795,
+        "rms_resid": 117.1758762970951,
+        "nsig_a": 12.047707610317595,
+        "g_implied": 1.5365992713062495,
+        "rn_adu_implied": 13.538496020500945
+      },
+      "qualify": true,
+      "reason": "PASS",
+      "sig_median": 34.89793852833454,
+      "sky_response": {
+        "sky_p20": 1383.697747490855,
+        "sky_p80": 1691.7666563014072,
+        "sig_at_p20": 31.89703617226325,
+        "sig_at_p80": 36.43116465956241,
+        "sig_ratio": 1.1421488963053537,
+        "expected_sqrt_sky_ratio": 1.1057313258923893
+      }
+    },
+    "dao_convolved_rms": {
+      "fit": {
+        "n": 134,
+        "slope_a": 1.3444503607247535,
+        "intercept_b": 384165.5215301904,
+        "se_a": 3.3430024509989344,
+        "se_b": 5292.681817569141,
+        "r2": 0.0012237998842038467,
+        "rms_resid": 7239.387182275111,
+        "nsig_a": 0.4021685237840653,
+        "g_implied": 0.7437983797787294,
+        "rn_adu_implied": 619.810875614643
+      },
+      "qualify": false,
+      "reason": "slope_fail a=1.344 nsig=0.40",
+      "sig_median": 621.579975412179,
+      "sky_response": {
+        "sky_p20": 1384.0442749023437,
+        "sky_p80": 1692.4015625,
+        "sig_at_p20": 617.9245420095538,
+        "sig_at_p80": 620.2498597504792,
+        "sig_ratio": 1.0037631095430573,
+        "expected_sqrt_sky_ratio": 1.1058003350822687
+      }
+    }
+  }
+}
