@@ -357,7 +357,7 @@ def _night_run_platesolve(
         catalog_match_max_sep_arcsec=float(pending.get("catalog_match_max_sep_arcsec", 25.0)),
         saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
         max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
-        n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+        n_comparison_stars=int(pending.get("n_comparison_stars", 0)),
         faintest_mag_limit=(
             None if pending.get("faintest_mag_limit") is None else float(pending["faintest_mag_limit"])
         ),
@@ -940,7 +940,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             "catalog_match_max_sep_arcsec": float(params.catalog_match_max_sep_arcsec),
             "saturate_level_fraction": float(params.saturate_level_fraction),
             "max_catalog_rows": int(params.max_catalog_rows),
-            "n_comparison_stars": 150,
+            "n_comparison_stars": 0,
             "faintest_mag_limit": None,
             "dao_threshold_sigma": dao_sigma,
             "dao_fwhm_px": dao_fwhm,

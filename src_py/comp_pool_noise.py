@@ -1,4 +1,4 @@
-"""COMP-POOL-01 Stage 1: draft-level noise curve for comparison-star pool admission.
+"""COMP-POOL-01: draft-level noise curve and comparison-star pool admission.
 
 Parametric model (Howell 1989 + systematic floor)::
 
@@ -8,7 +8,8 @@ Parametric model (Howell 1989 + systematic floor)::
 Non-parametric: running median of robust scatter in magnitude bins (assumes the
 bulk of field stars are non-variable).
 
-Diagnostics only in Stage 1 -- selection code does not call these thresholds yet.
+Stage 1: fit + derived thresholds (diagnostics).
+Stage 2: ``admit_pool_stars`` applies those criteria; no pool-size cap.
 """
 
 from __future__ import annotations
@@ -459,23 +460,29 @@ def derive_pool_thresholds(
         detect_frac_min = float(np.nanmedian(df)) if df.notna().any() else float("nan")
         detect_rule = "median detect_frac (few mag_g<=14 stars)"
 
-    # Faint limit: where usable NP median exceeds 1.5 x bright asymptote (G8-10 usable bins)
-    bright_asym = float("nan")
-    if not np_curve.empty and (np_curve["usable"]).any():
-        uc = np_curve[np_curve["usable"]]
-        bright_bins = uc[(uc["mag_center"] >= 8.0) & (uc["mag_center"] <= 10.0)]
-        if not bright_bins.empty:
-            bright_asym = float(bright_bins["scatter_median"].median())
+    # Faint limit (operative): mag where sigma_phot(m) == sigma_sys (photon = floor).
+    # Fully determined by the fit; no free SNR constant. NP 1.5x asymptote kept as cross-check.
     faint_g = None
     faint_snr = None
-    if math.isfinite(bright_asym) and bright_asym > 0 and not np_curve.empty:
-        for _, row in np_curve.sort_values("mag_center").iterrows():
-            if not row["usable"]:
-                continue
-            if float(row["scatter_median"]) >= 1.5 * bright_asym and float(row["mag_center"]) > 10.0:
-                faint_g = float(row["mag_center"])
-                faint_snr = float(MAG_ERR_SCALE / float(row["scatter_median"]))
-                break
+    if (
+        math.isfinite(fit.sigma_sys_mag)
+        and fit.sigma_sys_mag > 0
+        and math.isfinite(fit.zp_inst)
+        and math.isfinite(fit.sky_adu_median)
+        and math.isfinite(fit.aperture_area_px_median)
+    ):
+        faint_g = _mag_where_phot_equals_sys(fit)
+        if faint_g is not None:
+            flux_f = 10.0 ** ((fit.zp_inst - float(faint_g)) / 2.5)
+            sp_f = predicted_sigma_mag_phot(
+                flux_f,
+                sky_adu=fit.sky_adu_median,
+                area_px=fit.aperture_area_px_median,
+                gain=fit.gain_e_per_adu,
+                read_noise_e=fit.read_noise_e,
+            )
+            stot_f = math.sqrt(sp_f * sp_f + fit.sigma_sys_mag * fit.sigma_sys_mag)
+            faint_snr = float(MAG_ERR_SCALE / stot_f) if stot_f > 0 else None
 
     # Bright limit / upturn: scatter rises again brighter than mag ~10
     bright_upturn = False
@@ -483,7 +490,6 @@ def derive_pool_thresholds(
     if not np_curve.empty and (np_curve["usable"]).any():
         uc = np_curve[np_curve["usable"]].sort_values("mag_center")
         if len(uc) >= 4:
-            # look for minimum then rise toward bright end
             mid = uc[(uc["mag_center"] >= 9.0) & (uc["mag_center"] <= 12.0)]
             bri = uc[uc["mag_center"] < 9.0]
             if not mid.empty and not bri.empty:
@@ -491,26 +497,56 @@ def derive_pool_thresholds(
                     bright_upturn = True
                     bright_g = float(bri["mag_center"].max())
 
-    # Dilution: not measured in Stage 1 without Gaia neighbour query; placeholder rule
+    # Dilution: derived when dilution_factor column present; else None (named gap).
     dilution_thr = None
     dilution_rule = (
-        "Stage 1: not derived here (needs dilution.py batch). "
-        "Stage 2 will use p16 of D among isolated-looking stars."
+        "not derived: attach dilution_factor via dilution.py then re-derive "
+        "(p16 of D over stars that pass detect+mag+catalogue filters)"
     )
+    if "dilution_factor" in stars.columns:
+        dser = pd.to_numeric(stars["dilution_factor"], errors="coerce")
+        ok_d = dser.notna() & (dser > 0) & (dser <= 1.0)
+        if "vsx_known_variable" in stars.columns:
+            ok_d &= ~stars["vsx_known_variable"].fillna(False).astype(bool)
+        if "gaia_variable_flag" in stars.columns:
+            ok_d &= ~stars["gaia_variable_flag"].fillna(False).astype(bool)
+        if ok_d.any():
+            # Prefer p16; if the distribution piles at D=1 (mostly isolated), step down
+            # to p10 then p05 so the gate still rejects the contaminated tail.
+            for pct, label in ((16, "p16"), (10, "p10"), (5, "p05")):
+                thr_try = float(np.percentile(dser[ok_d], pct))
+                if thr_try < 0.999:
+                    dilution_thr = thr_try
+                    dilution_rule = (
+                        f"{label} of dilution_factor D among non-catalogue-variable stars "
+                        f"with finite D (stepped from p16 when upper pile-up at 1.0); "
+                        f"admit if D >= threshold when D is measured; missing D does not reject"
+                    )
+                    break
+            else:
+                dilution_thr = None
+                dilution_rule = (
+                    "inert: D piles at 1.0 through p05; isolation gate not informative "
+                    "at this aperture/plate-scale (named; not a silent pass-as-derived)"
+                )
 
-    # Stability excess: compare scatter/model; threshold = p84 of (scatter/pred) among bulk
+    # Stability excess: p84 of (scatter/pred) among bulk; IQR and inv_eta analogous
     excess_mad = None
-    if fit.sigma_sys_mag == fit.sigma_sys_mag and stars is not None and not stars.empty:
-        # use nonparametric median as pred when available
-        ratios: list[float] = []
+    excess_iqr = None
+    excess_inv = None
+    ratios_mad: list[float] = []
+    ratios_iqr: list[float] = []
+    inv_vals: list[float] = []
+    if math.isfinite(fit.sigma_sys_mag) and stars is not None and not stars.empty:
         for _, st in stars.iterrows():
             if st.get("vsx_known_variable") or st.get("gaia_variable_flag"):
                 continue
             mg = float(st.get("mag_g", float("nan")))
             scv = float(st.get("scatter_mad", float("nan")))
+            sc_iqr = float(st.get("scatter_iqr", float("nan")))
+            inv = float(st.get("inv_eta", float("nan")))
             if not (math.isfinite(mg) and math.isfinite(scv) and scv > 0):
                 continue
-            # parametric prediction
             flux = float(st.get("flux_median", float("nan")))
             sky = float(st.get("sky_median", fit.sky_adu_median))
             rap = float(st.get("aperture_r_median", float("nan")))
@@ -526,13 +562,21 @@ def derive_pool_thresholds(
                 continue
             stot = math.sqrt(sp * sp + fit.sigma_sys_mag * fit.sigma_sys_mag)
             if stot > 0:
-                ratios.append(scv / stot)
-        if ratios:
-            excess_mad = float(np.percentile(ratios, 84))
+                ratios_mad.append(scv / stot)
+                if math.isfinite(sc_iqr) and sc_iqr > 0:
+                    ratios_iqr.append(sc_iqr / stot)
+            if math.isfinite(inv) and inv > 0:
+                inv_vals.append(inv)
+        if ratios_mad:
+            excess_mad = float(np.percentile(ratios_mad, 84))
+        if ratios_iqr:
+            excess_iqr = float(np.percentile(ratios_iqr, 84))
+        if inv_vals:
+            excess_inv = float(np.percentile(inv_vals, 84))
 
-    # Nonparametric usability: faintest mag where all brighter usable bins have n>=min
+    # Nonparametric usability: first bin (bright->faint) that fails min_n
     np_lim = None
-    min_bin_n = 8
+    min_bin_n = 8  # CHOSEN: NP validation usability only; not an admission threshold
     if not np_curve.empty:
         for _, row in np_curve.sort_values("mag_center").iterrows():
             if not bool(row["usable"]):
@@ -550,15 +594,281 @@ def derive_pool_thresholds(
         dilution_threshold=dilution_thr,
         dilution_rule=dilution_rule,
         stability_excess_mad=excess_mad,
-        stability_excess_iqr=excess_mad,  # same population rule until separate IQR fit
-        stability_excess_inv_eta=None,
+        stability_excess_iqr=excess_iqr if excess_iqr is not None else excess_mad,
+        stability_excess_inv_eta=excess_inv,
         stability_rule=(
-            "p84 of (scatter_mad / sigma_total_parametric) among non-catalogue-variable stars; "
-            "CSI 2264 used ~3x median noise; Kjeldsen ~1.5 variability index"
+            "p84 of (scatter/sigma_total_parametric) for MAD and IQR; "
+            "p84 of inv_eta (1/vonNeumann); reject above; "
+            "CSI 2264 ~3x median noise; Kjeldsen ~1.5 variability index"
         ),
         nonparametric_min_bin_n=min_bin_n,
         nonparametric_usable_above_g=np_lim,
     )
+
+
+def _mag_where_phot_equals_sys(fit: NoiseCurveFit) -> float | None:
+    """Binary-search G mag where sigma_phot == sigma_sys."""
+    sys = float(fit.sigma_sys_mag)
+    if not (math.isfinite(sys) and sys > 0):
+        return None
+
+    def _sp(mag: float) -> float:
+        flux = 10.0 ** ((fit.zp_inst - mag) / 2.5)
+        return predicted_sigma_mag_phot(
+            flux,
+            sky_adu=fit.sky_adu_median,
+            area_px=fit.aperture_area_px_median,
+            gain=fit.gain_e_per_adu,
+            read_noise_e=fit.read_noise_e,
+        )
+
+    lo, hi = 6.0, 18.0
+    spo, sph = _sp(lo), _sp(hi)
+    if not (math.isfinite(spo) and math.isfinite(sph)):
+        return None
+    if spo >= sys:
+        return float(lo)
+    if sph < sys:
+        return float(hi)
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        sm = _sp(mid)
+        if not math.isfinite(sm):
+            break
+        if sm < sys:
+            lo = mid
+        else:
+            hi = mid
+    return float(0.5 * (lo + hi))
+
+
+def attach_dilution_to_stars(
+    stars: pd.DataFrame,
+    positions: pd.DataFrame,
+    *,
+    gaia_db_path: str,
+    aperture_arcsec: float,
+    mag_limit_delta: float = 5.0,
+) -> pd.DataFrame:
+    """Attach dilution_factor D from Gaia neighbours (Seager/Howell definition)."""
+    from dilution import compute_dilution_factor  # noqa: PLC0415
+
+    out = stars.copy()
+    if out.empty or not gaia_db_path:
+        out["dilution_factor"] = float("nan")
+        return out
+    pos = positions.copy()
+    if "catalog_id" in pos.columns:
+        pos["catalog_id"] = pos["catalog_id"].map(
+            lambda v: str(int(v)) if pd.notna(v) and str(v).strip() != "" else ""
+        )
+    id_to_row: dict[str, dict[str, Any]] = {}
+    for _, r in pos.iterrows():
+        cid = str(r.get("catalog_id", "") or "").strip()
+        if not cid:
+            continue
+        id_to_row[cid] = {
+            "ra": float(pd.to_numeric(r.get("ra_deg"), errors="coerce")),
+            "dec": float(pd.to_numeric(r.get("dec_deg"), errors="coerce")),
+            "g": float(
+                pd.to_numeric(
+                    r.get("phot_g_mean_mag", r.get("catalog_mag", r.get("mag"))),
+                    errors="coerce",
+                )
+            ),
+        }
+    ds: list[float] = []
+    for cid in out["catalog_id"].astype(str):
+        meta = id_to_row.get(str(cid))
+        if meta is None or not all(math.isfinite(meta[k]) for k in ("ra", "dec", "g")):
+            ds.append(float("nan"))
+            continue
+        try:
+            res = compute_dilution_factor(
+                meta["ra"],
+                meta["dec"],
+                meta["g"],
+                float(aperture_arcsec),
+                str(gaia_db_path),
+                catalog_id=int(cid) if cid.isdigit() else None,
+                mag_limit_delta=float(mag_limit_delta),
+            )
+            ds.append(float(res.get("dilution_factor", float("nan"))))
+        except Exception:  # noqa: BLE001
+            ds.append(float("nan"))
+    out["dilution_factor"] = ds
+    return out
+
+
+def admit_pool_stars(
+    stars: pd.DataFrame,
+    fit: NoiseCurveFit,
+    thr: DerivedPoolThresholds,
+) -> pd.DataFrame:
+    """Apply Stage-1/2 derived criteria; return stars with admit flag and reject reasons.
+
+    No pool-size cap. Colour/spatial/magnitude proximity are Stage-3 assignment only.
+    """
+    if stars.empty:
+        return stars.copy()
+    rows: list[dict[str, Any]] = []
+    for _, st in stars.iterrows():
+        reasons: list[str] = []
+        cid = str(st.get("catalog_id", ""))
+        mg = float(st.get("mag_g", float("nan")))
+        dfrac = float(st.get("detect_frac", float("nan")))
+        sc_mad = float(st.get("scatter_mad", float("nan")))
+        sc_iqr = float(st.get("scatter_iqr", float("nan")))
+        inv = float(st.get("inv_eta", float("nan")))
+        dil = float(st.get("dilution_factor", float("nan"))) if "dilution_factor" in st.index else float("nan")
+
+        if bool(st.get("vsx_known_variable")):
+            reasons.append("vsx_known_variable")
+        if bool(st.get("gaia_variable_flag")):
+            reasons.append("gaia_variable_flag")
+        if math.isfinite(thr.detect_frac_min) and (
+            not math.isfinite(dfrac) or dfrac < float(thr.detect_frac_min)
+        ):
+            reasons.append(f"detect_frac<{thr.detect_frac_min:.4g}")
+        if thr.faint_limit_g is not None and math.isfinite(mg) and mg > float(thr.faint_limit_g):
+            reasons.append(f"fainter_than_{thr.faint_limit_g:.3f}")
+        if thr.bright_limit_g is not None and thr.bright_upturn_visible:
+            if math.isfinite(mg) and mg < float(thr.bright_limit_g):
+                reasons.append(f"brighter_than_upturn_{thr.bright_limit_g:.3f}")
+        if thr.dilution_threshold is not None and math.isfinite(dil):
+            if dil < float(thr.dilution_threshold):
+                reasons.append(f"dilution<{thr.dilution_threshold:.4g}")
+        # Missing dilution: do not reject (measurement gap, not a failed isolation test).
+
+        flux = float(st.get("flux_median", float("nan")))
+        sky = float(st.get("sky_median", fit.sky_adu_median))
+        rap = float(st.get("aperture_r_median", float("nan")))
+        area = math.pi * rap * rap if math.isfinite(rap) else fit.aperture_area_px_median
+        sp = predicted_sigma_mag_phot(
+            flux,
+            sky_adu=sky,
+            area_px=area,
+            gain=fit.gain_e_per_adu,
+            read_noise_e=fit.read_noise_e,
+        )
+        stot = (
+            math.sqrt(sp * sp + fit.sigma_sys_mag * fit.sigma_sys_mag)
+            if math.isfinite(sp) and math.isfinite(fit.sigma_sys_mag)
+            else float("nan")
+        )
+        ratio_mad = sc_mad / stot if math.isfinite(stot) and stot > 0 and math.isfinite(sc_mad) else float("nan")
+        ratio_iqr = sc_iqr / stot if math.isfinite(stot) and stot > 0 and math.isfinite(sc_iqr) else float("nan")
+        if thr.stability_excess_mad is not None and math.isfinite(ratio_mad):
+            if ratio_mad > float(thr.stability_excess_mad):
+                reasons.append(f"mad_excess>{thr.stability_excess_mad:.3g}")
+        if thr.stability_excess_iqr is not None and math.isfinite(ratio_iqr):
+            if ratio_iqr > float(thr.stability_excess_iqr):
+                reasons.append(f"iqr_excess>{thr.stability_excess_iqr:.3g}")
+        if thr.stability_excess_inv_eta is not None and math.isfinite(inv):
+            if inv > float(thr.stability_excess_inv_eta):
+                reasons.append(f"inv_eta>{thr.stability_excess_inv_eta:.3g}")
+
+        rows.append(
+            {
+                "catalog_id": cid,
+                "mag_g": mg,
+                "detect_frac": dfrac,
+                "scatter_mad": sc_mad,
+                "scatter_iqr": sc_iqr,
+                "inv_eta": inv,
+                "dilution_factor": dil,
+                "sigma_total_model": stot,
+                "ratio_mad": ratio_mad,
+                "ratio_iqr": ratio_iqr,
+                "admit": len(reasons) == 0,
+                "reject_reasons": ";".join(reasons),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def analyze_draft_comp_pool(
+    proc_dir: Path | str,
+    *,
+    draft_id: int,
+    setup: str,
+    gain: float,
+    read_noise_e: float,
+    positions: pd.DataFrame | None = None,
+    gaia_db_path: str | None = None,
+    aperture_arcsec: float | None = None,
+    telescope_diameter_m_override: float | None = None,
+    default_lin_frac: float = 0.85,
+) -> dict[str, Any]:
+    """Fit noise curve, derive thresholds, optionally dilution, admit pool (no cap)."""
+    epochs = load_star_timeseries_from_proc_dir(proc_dir)
+    # provisional ZP for instrumental mags in summarize; refined in fit
+    stars = summarize_stars(epochs, zp_inst=25.0)
+    if stars.empty:
+        return {"error": "no_stars", "n_proc": 0}
+    np_curve = nonparametric_noise_curve(stars)
+    fit, _obs, _pred = fit_parametric_noise_curve(
+        stars,
+        gain=float(gain),
+        read_noise_e=float(read_noise_e),
+        draft_id=int(draft_id),
+        setup=str(setup),
+        telescope_diameter_m_override=telescope_diameter_m_override,
+    )
+    # re-summarize with fitted ZP so instrumental mags match fit
+    stars = summarize_stars(epochs, zp_inst=float(fit.zp_inst))
+    np_curve = nonparametric_noise_curve(stars)
+    fit, _obs, _pred = fit_parametric_noise_curve(
+        stars,
+        gain=float(gain),
+        read_noise_e=float(read_noise_e),
+        draft_id=int(draft_id),
+        setup=str(setup),
+        telescope_diameter_m_override=telescope_diameter_m_override,
+    )
+    if (
+        positions is not None
+        and gaia_db_path
+        and aperture_arcsec is not None
+        and float(aperture_arcsec) > 0
+    ):
+        stars = attach_dilution_to_stars(
+            stars,
+            positions,
+            gaia_db_path=str(gaia_db_path),
+            aperture_arcsec=float(aperture_arcsec),
+        )
+    thr = derive_pool_thresholds(stars, np_curve, fit, default_lin_frac=float(default_lin_frac))
+    decisions = admit_pool_stars(stars, fit, thr)
+    ratio = curve_ratio_table(np_curve, fit)
+    usable = ratio[ratio["usable"]] if not ratio.empty and "usable" in ratio.columns else ratio
+    med_ratio = float(usable["ratio_np_over_param"].median()) if not usable.empty else float("nan")
+    n_admit = int(decisions["admit"].sum()) if not decisions.empty else 0
+    return {
+        "draft_id": int(draft_id),
+        "setup": str(setup),
+        "n_proc_files": int(len(list(Path(proc_dir).glob("proc_*.csv")))),
+        "n_stars": int(len(stars)),
+        "n_admitted": n_admit,
+        "fit": fit_to_jsonable(fit),
+        "thresholds": asdict(thr),
+        "scint_vs_sys": {
+            "sigma_sys_mag": fit.sigma_sys_mag,
+            "scint_mag_predicted": fit.scint_mag_predicted,
+            "ratio_sys_over_scint": (
+                float(fit.sigma_sys_mag / fit.scint_mag_predicted)
+                if math.isfinite(fit.scint_mag_predicted) and fit.scint_mag_predicted > 0
+                else float("nan")
+            ),
+            "P_R2": "report both; do not adjust",
+        },
+        "curve_ratio_median_usable": med_ratio,
+        "stars": stars,
+        "np_curve": np_curve,
+        "ratio": ratio,
+        "decisions": decisions,
+        "assumption": ASSUMPTION_BULK_NONVARIABLE,
+    }
 
 
 def curve_ratio_table(

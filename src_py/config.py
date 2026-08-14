@@ -1049,6 +1049,11 @@ class AppConfig:
     crowding_tighten_min_fwhm_px: float = 3.0
     #: ``True`` = jeden globalny comp pool (safe_bbox + RMS) pred per-target vyberom; ``False`` = legacy.
     global_comp_pool_enabled: bool = True
+    #: COMP-POOL-01 Stage 2: admit global pool via draft-derived noise/stability/dilution
+    #: criteria (no size cap). When False, legacy RMS prefilter only.
+    comp_pool_derived_admission: bool = True
+    #: Plan/spatial comparison pool size. ``0`` = uncapped (COMP-POOL-01); legacy default was 150.
+    comparison_stars_pool_n: int = 0
 
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
@@ -2396,6 +2401,16 @@ class AppConfig:
             self.crowding_tighten_min_fwhm_px = 3.0
         self.crowding_tighten_min_fwhm_px = max(0.0, min(30.0, float(self.crowding_tighten_min_fwhm_px)))
         self.global_comp_pool_enabled = bool(data.get("global_comp_pool_enabled", self.global_comp_pool_enabled))
+        self.comp_pool_derived_admission = bool(
+            data.get("comp_pool_derived_admission", self.comp_pool_derived_admission)
+        )
+        try:
+            self.comparison_stars_pool_n = int(
+                data.get("comparison_stars_pool_n", self.comparison_stars_pool_n)
+            )
+        except (TypeError, ValueError):
+            self.comparison_stars_pool_n = 0
+        self.comparison_stars_pool_n = max(0, min(50000, int(self.comparison_stars_pool_n)))
 
         self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
 
@@ -2714,6 +2729,8 @@ class AppConfig:
             "crowding_comp_availability_loosen_count": float(self.crowding_comp_availability_loosen_count),
             "crowding_tighten_min_fwhm_px": float(self.crowding_tighten_min_fwhm_px),
             "global_comp_pool_enabled": bool(self.global_comp_pool_enabled),
+            "comp_pool_derived_admission": bool(self.comp_pool_derived_admission),
+            "comparison_stars_pool_n": int(self.comparison_stars_pool_n),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

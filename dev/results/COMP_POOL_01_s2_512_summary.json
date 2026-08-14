@@ -1,0 +1,97 @@
+{
+  "draft_id": 512,
+  "setup": "NoFilter_60_2",
+  "plate_scale_arcsec_per_px": 9.55169,
+  "aperture_arcsec": 32.5712629,
+  "n_stars": 680,
+  "n_admitted": 187,
+  "plan_comparison_stars_n_before": 140,
+  "thresholds": {
+    "faint_limit_g": 11.455328158279372,
+    "faint_limit_snr_approx": 78.84458350958006,
+    "bright_limit_g": null,
+    "bright_upturn_visible": false,
+    "default_lin_frac": 0.85,
+    "detect_frac_min": 1.0,
+    "detect_frac_rule": "p16 of detect_frac among mag_g<=14 stars in this draft",
+    "dilution_threshold": 0.9875944458691114,
+    "dilution_rule": "p16 of dilution_factor D among non-catalogue-variable stars with finite D (stepped from p16 when upper pile-up at 1.0); admit if D >= threshold when D is measured; missing D does not reject",
+    "stability_excess_mad": 1.9202278772502224,
+    "stability_excess_iqr": 1.950981164421419,
+    "stability_excess_inv_eta": 0.8757970889604039,
+    "stability_rule": "p84 of (scatter/sigma_total_parametric) for MAD and IQR; p84 of inv_eta (1/vonNeumann); reject above; CSI 2264 ~3x median noise; Kjeldsen ~1.5 variability index",
+    "nonparametric_min_bin_n": 8,
+    "nonparametric_usable_above_g": 5.75
+  },
+  "fit": {
+    "n_stars": 631,
+    "gain_e_per_adu": 3.17,
+    "read_noise_e": 7.6,
+    "sky_adu_median": 1549.846435546875,
+    "aperture_area_px_median": 36.55218233869761,
+    "zp_inst": 22.036674841841315,
+    "sigma_sys_mag": 0.00973727552090381,
+    "sigma_sys_mag_err": 0.00024305711590473546,
+    "chi2_red": 4.16628841994753,
+    "n_fit": 125,
+    "scint_mag_predicted": 0.001986423013116313,
+    "scint_rel_predicted": 0.0018295632073527753,
+    "scint_airmass_used": 1.0379755,
+    "scint_params": {
+      "draft_id": 512,
+      "setup": "NoFilter_60_2",
+      "telescope_diameter_m": 0.07,
+      "altitude_m": 275.0,
+      "exposure_s": 60.0,
+      "c_y": 1.5,
+      "source_notes": [
+        "D=0.070 m from TELESCOPE.DIAMETER (Carl-Zeiss 200mm)",
+        "altitude_m=275.0 from LOCATION (Jirny)",
+        "exposure_s=60.0 from setup name 'NoFilter_60_2'"
+      ]
+    },
+    "telescope_diameter_m_used": 0.2,
+    "telescope_diameter_m_db": 0.07,
+    "diameter_note": "override D=0.2 m (DB reported 0.07 m; name implies 200 mm wide-field)",
+    "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise."
+  },
+  "scint_vs_sys": {
+    "sigma_sys_mag": 0.00973727552090381,
+    "scint_mag_predicted": 0.001986423013116313,
+    "ratio_sys_over_scint": 4.901914374032503,
+    "P_R2": "report both; do not adjust"
+  },
+  "curve_ratio_median_usable": 1.1244616608884312,
+  "reject_reason_counts": {
+    "fainter_than_11.455": 374,
+    "mad_excess>1.92": 115,
+    "iqr_excess>1.95": 115,
+    "inv_eta>0.876": 113,
+    "dilution<0.9876": 49,
+    "vsx_known_variable": 47,
+    "detect_frac<1": 1
+  },
+  "bo_cvn": {
+    "target": "1498613634033133184",
+    "ensemble_before": [
+      "1497771992240531712",
+      "1499200223486564608",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1497368849430107904"
+    ],
+    "n_before": 5,
+    "still_in_pool": [
+      "1497771992240531712",
+      "1499200223486564608",
+      "1497974027502858240",
+      "1499053747922698240"
+    ],
+    "dropped_from_pool": [
+      "1497368849430107904"
+    ],
+    "n_still_in_pool": 4,
+    "note": "Stage 2 changes pool admission only; per-target assignment unchanged until rebuild. Dropped means no longer eligible."
+  },
+  "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise."
+}

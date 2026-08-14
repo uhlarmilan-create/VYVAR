@@ -567,7 +567,7 @@ def _run_vyvar_full_pipeline(
             "catalog_match_max_sep_arcsec": float(cat_match_arc),
             "saturate_level_fraction": float(sat_level),
             "max_catalog_rows": int(max_cat_rows),
-            "n_comparison_stars": 150,
+            "n_comparison_stars": 0,
             "faintest_mag_limit": None,
             "dao_threshold_sigma": float(dao_sigma_default),
             "dao_fwhm_px": float(dao_fwhm_default),
@@ -1004,7 +1004,7 @@ def _vyvar_execute_platesolve_pending(
         ),
         saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
         max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
-        n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+        n_comparison_stars=int(pending.get("n_comparison_stars", 0)),
         faintest_mag_limit=(
             None
             if pending.get("faintest_mag_limit") is None
@@ -1716,7 +1716,7 @@ def _render_pending_job_dispatcher(
                         pending.get("catalog_match_max_sep_arcsec", 25.0)
                     ),
                     saturate_level_fraction=float(pending.get("saturate_level_fraction", 0.999)),
-                    n_comparison_stars=int(pending.get("n_comparison_stars", 150)),
+                    n_comparison_stars=int(pending.get("n_comparison_stars", 0)),
                     faintest_mag_limit=(
                         None
                         if pending.get("faintest_mag_limit") is None

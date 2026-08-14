@@ -6049,7 +6049,7 @@ def select_comparison_stars_spatial_grid(
     *,
     width_px: float,
     height_px: float,
-    n_comp: int = 150,
+    n_comp: int = 0,
     require_catalog_match: bool = True,
     require_photometry_ok: bool = True,
     require_non_variable: bool = True,
@@ -6158,6 +6158,30 @@ def select_comparison_stars_spatial_grid(
         w = float(work["x"].max()) + 1.0
         h = float(work["y"].max()) + 1.0
 
+    if "flux" not in work.columns:
+        work["flux"] = 0.0
+    work["_flux_key"] = pd.to_numeric(work["flux"], errors="coerce").fillna(0.0)
+
+    # COMP-POOL-01: n_comp <= 0 means uncapped pool (no grid truncate).
+    if int(n_comp) <= 0:
+        picked = work.sort_values("_flux_key", ascending=False).drop(
+            columns=["_flux_key"], errors="ignore"
+        )
+        picked.insert(0, "comp_id", [f"COMP_{i+1:04d}" for i in range(len(picked))])
+        picked.insert(1, "role", "comparison")
+        meta = {
+            "n_selected": int(len(picked)),
+            "grid_nx": 0,
+            "grid_ny": 0,
+            "n_comp_requested": 0,
+            "pool_uncapped": True,
+            "width_px": float(w),
+            "height_px": float(h),
+            "require_non_variable": bool(require_non_variable),
+            "exclude_nonlinear_badcolumn": bool(exclude_nonlinear_badcolumn),
+        }
+        return picked, meta
+
     ar = w / h
     nc = max(1, int(n_comp))
     ny = max(1, int(round(math.sqrt(nc / ar))))
@@ -6167,10 +6191,6 @@ def select_comparison_stars_spatial_grid(
 
     cw = w / float(nx)
     ch = h / float(ny)
-
-    if "flux" not in work.columns:
-        work["flux"] = 0.0
-    work["_flux_key"] = pd.to_numeric(work["flux"], errors="coerce").fillna(0.0)
 
     ix = np.floor(np.clip(work["x"].to_numpy(dtype=float), 0.0, w - 1e-6) / cw).astype(int)
     iy = np.floor(np.clip(work["y"].to_numpy(dtype=float), 0.0, h - 1e-6) / ch).astype(int)
@@ -6197,6 +6217,7 @@ def select_comparison_stars_spatial_grid(
         "grid_nx": int(nx),
         "grid_ny": int(ny),
         "n_comp_requested": int(nc),
+        "pool_uncapped": False,
         "width_px": float(w),
         "height_px": float(h),
         "require_non_variable": bool(require_non_variable),
@@ -6458,7 +6479,7 @@ def write_photometry_plan_files(
     platesolve_dir: Path,
     masterstar_fits: Path,
     masterstars_csv: Path,
-    n_comparison_stars: int = 150,
+    n_comparison_stars: int = 0,
     require_non_variable: bool = True,
     draft_id: int | None = None,
     database_path: Path | str | None = None,
@@ -11668,7 +11689,7 @@ def generate_masterstar_and_catalog(
     plate_solve_fov_deg: float = 1.0,
     catalog_match_max_sep_arcsec: float = 25.0,
     saturate_level_fraction: float = 0.999,
-    n_comparison_stars: int = 150,
+    n_comparison_stars: int = 0,
     require_non_variable_comparisons: bool = True,
     faintest_mag_limit: float | None = None,
     dao_threshold_sigma: float = 3.5,
@@ -14285,7 +14306,7 @@ def _astrometry_align_impl_body(
     catalog_match_max_sep_arcsec: float = 25.0,
     saturate_level_fraction: float = 0.999,
     max_catalog_rows: int = 12000,
-    n_comparison_stars: int = 150,
+    n_comparison_stars: int = 0,
     require_non_variable_comparisons: bool = True,
     faintest_mag_limit: float | None = None,
     dao_threshold_sigma: float = 3.5,
@@ -15368,7 +15389,7 @@ def astrometry_align_and_build_masterstar(
     catalog_match_max_sep_arcsec: float = 25.0,
     saturate_level_fraction: float = 0.999,
     max_catalog_rows: int = 12000,
-    n_comparison_stars: int = 150,
+    n_comparison_stars: int = 0,
     require_non_variable_comparisons: bool = True,
     faintest_mag_limit: float | None = None,
     dao_threshold_sigma: float = 3.5,

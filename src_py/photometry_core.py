@@ -4479,7 +4479,7 @@ def _ensure_group_comp_pool_csv(
             platesolve_dir=ps_dir,
             masterstar_fits=ms_fits,
             masterstars_csv=ms_path,
-            n_comparison_stars=int(getattr(cfg, "comparison_stars_pool_n", 150) or 150),
+            n_comparison_stars=int(getattr(cfg, "comparison_stars_pool_n", 0) or 0),
             require_non_variable=bool(getattr(cfg, "phase01_comparison_require_non_variable", True)),
             draft_id=int(draft_id) if draft_id is not None else None,
             database_path=getattr(cfg, "database_path", None),
@@ -4543,7 +4543,7 @@ def ensure_full_variable_targets_if_presel_stub(
             platesolve_dir=ps_dir,
             masterstar_fits=ms_fits,
             masterstars_csv=ms_path,
-            n_comparison_stars=int(getattr(_cfg, "comparison_stars_pool_n", 150) or 150),
+            n_comparison_stars=int(getattr(_cfg, "comparison_stars_pool_n", 0) or 0),
             require_non_variable=bool(getattr(_cfg, "phase01_comparison_require_non_variable", True)),
             draft_id=int(draft_id) if draft_id is not None else None,
             database_path=getattr(_cfg, "database_path", None),
@@ -13931,6 +13931,60 @@ def build_global_comp_pool(
     if not cand_ids:
         return pool.reset_index(drop=True)
 
+    use_derived = bool(getattr(cfg, "comp_pool_derived_admission", False))
+    admitted_ids: set[str] | None = None
+    derived_meta: dict[str, Any] = {}
+    if use_derived and per_frame_csv_paths:
+        try:
+            from comp_pool_noise import analyze_draft_comp_pool  # noqa: PLC0415
+
+            proc_dir = Path(per_frame_csv_paths[0]).parent
+            draft_id = int(getattr(cfg, "active_draft_id", 0) or 0)
+            setup = str(getattr(cfg, "active_setup_name", "") or "")
+            gain = float(getattr(cfg, "gain", 1.0) or 1.0)
+            rn = float(getattr(cfg, "read_noise", 0.0) or 0.0)
+            if not (math.isfinite(gain) and gain > 0):
+                gain = 1.0
+            if not (math.isfinite(rn) and rn >= 0):
+                rn = 0.0
+            plate = float(getattr(cfg, "plate_scale_arcsec_per_px", 0.0) or 0.0)
+            ap_r = float("nan")
+            if "aperture_r_px" in pool.columns:
+                ap_r = float(pd.to_numeric(pool["aperture_r_px"], errors="coerce").median())
+            ap_arcsec = float(ap_r * plate) if math.isfinite(ap_r) and plate > 0 else None
+            gaia_db = str(getattr(cfg, "gaia_db_path", "") or "")
+            analysis = analyze_draft_comp_pool(
+                proc_dir,
+                draft_id=int(draft_id) if draft_id and int(draft_id) > 0 else 0,
+                setup=setup or "unknown",
+                gain=gain,
+                read_noise_e=rn,
+                positions=pool if ap_arcsec else None,
+                gaia_db_path=gaia_db if ap_arcsec and gaia_db else None,
+                aperture_arcsec=ap_arcsec,
+            )
+            dec = analysis.get("decisions")
+            if isinstance(dec, pd.DataFrame) and not dec.empty and "admit" in dec.columns:
+                admitted_ids = {
+                    str(x).strip()
+                    for x, ok in zip(dec["catalog_id"], dec["admit"])
+                    if bool(ok) and str(x).strip()
+                }
+                derived_meta = {
+                    "n_admitted": int(analysis.get("n_admitted", 0) or 0),
+                    "thresholds": analysis.get("thresholds"),
+                    "scint_vs_sys": analysis.get("scint_vs_sys"),
+                    "fit_sigma_sys": (analysis.get("fit") or {}).get("sigma_sys_mag"),
+                }
+                logging.info(
+                    "[GLOBAL COMP POOL] derived admission: %d admitted of %d summarized",
+                    int(derived_meta.get("n_admitted", 0)),
+                    int(analysis.get("n_stars", 0) or 0),
+                )
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("[GLOBAL COMP POOL] derived admission failed: %s", exc)
+            admitted_ids = None
+
     rms_map = compute_global_pool_rms_map(
         cand_ids=cand_ids,
         _masterstars_df=masterstars_df,
@@ -13945,9 +13999,26 @@ def build_global_comp_pool(
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         max_comp_rms=max_comp_rms,
-        apply_rms_prefilter=True,
+        # Stage 2: stability is in derived admission; do not also hard-cut on legacy p2p.
+        apply_rms_prefilter=not bool(admitted_ids),
     )
     pool = attach_comp_rms_to_pool_rows(pool, rms_map, id_col=id_col)
+    if admitted_ids is not None:
+        before = int(len(pool))
+        nid = pool[id_col].map(lambda v: str(v).strip() if pd.notna(v) else "")
+        # also try catalog_id normalize
+        if "catalog_id" in pool.columns:
+            cid = pool["catalog_id"].map(lambda v: str(v).strip() if pd.notna(v) else "")
+            keep = nid.isin(admitted_ids) | cid.isin(admitted_ids)
+        else:
+            keep = nid.isin(admitted_ids)
+        pool = pool.loc[keep].copy()
+        logging.info(
+            "[GLOBAL COMP POOL] derived filter: %d -> %d (meta=%s)",
+            before,
+            int(len(pool)),
+            {k: derived_meta.get(k) for k in ("n_admitted", "fit_sigma_sys")},
+        )
     _before_dedupe = int(len(pool))
     pool = _dedupe_comp_pool_by_gaia_key(pool)
     if int(len(pool)) < _before_dedupe:
