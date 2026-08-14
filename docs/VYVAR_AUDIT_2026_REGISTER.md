@@ -20,7 +20,7 @@ Classes: **P** physics/method wrong - **I** implementation != method - **C** con
 | I-04 | 4 | ensemble | I?FIXED | - | err_scatter unmatched epochs | closure #22 | FIXED | CLOSED |
 | I-03 | 4 | errors | U | LOW | Legacy Howell terms unused on anchor | closure #23 | DOCUMENTED | OPEN |
 | D10-1 | 4 | transforms | C?FIXED | - | unfiltered?CR band | closure #18 | FIXED Milan decision | CLOSED |
-| WIDE-ERR | 4 | errors | I | MED | Wide-rig quoted err ~2x underquoted; localized by NOISE-FLOOR-01 to photon/sky variance (not ensemble SEM). Floor was UL ~6.8 mmag; completed Howell terms close ~4% of deficit; residual ~2.3x sigma at G10. Exported bars unchanged. | `CURSOR_RESULT_NOISE_FLOOR_01.md`; wide_error_diag.md | **DIAGNOSED**; fix = own task | OPEN |
+| WIDE-ERR | 4 | errors | I | MED | Diagnosed+localized (NOISE-FLOOR-01 + WIDE-ERR-LOC-01): photon/sky channel after completed Howell; full-range a,b split fails (r2~0.42, W-R1). Exported bars unchanged. | `CURSOR_RESULT_WIDE_ERR_LOC_01.md` | **DIAGNOSED+LOCALIZED**; fix = own task | OPEN |
 | D1-2 | 4 | calibration | U | MED | Linearity curve deferred | closure #24 | DEFERRED dome-flat ramp | DEFERRED |
 | D5-2 | 4 | saturation | C?FIXED | - | admission_sat_peak_frac=0.70 | batch E | FIXED | CLOSED |
 | ZP-CLIP | 3 | ensemble | C?FIXED | HIGH | `len(z)>=4` MAD clip rejected good comp | draft 509; DECISIONS ZP-CLIP-REMOVAL | REMOVED 2026-08-12 | FIXED |
@@ -198,6 +198,7 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 | **COMP-POOL-02** | 10 | ensemble | P/U | HIGH | (1) D=0.2 override wrong: 200mm=focal, aperture=70mm; sys/scint~2.43 not 4.9. (2) chi2_red 4-6 SUPERSEDED by NOISE-FLOOR-01. (3) Draft 435 NP/param 1.52 / r=1.92 px empties BO pool. (4) Red stars 7-12% wider FWHM; ~30 mmag EE term; weak colour bias in admission. | `CURSOR_RESULT_COMP_POOL_02.md` | **REPORTED**; Item1 revert done; Item2 superseded; guard not implemented | OPEN |
 | **COMP-POOL-SCINT** | 10 | errors | U | MED | NOISE-FLOOR-01: floor is UL ~6.8 mmag; sys/scint ~1.70+/-0.05 (UL) on 512/510 (was ~2.43 from inflated floor). Still above 1. | `CURSOR_RESULT_NOISE_FLOOR_01.md` | **UPDATED** UL ratio | OPEN |
 | **NOISE-FLOOR-01** | 10 | errors | P/U | HIGH | Flatness test: no flat bright range (N-R0 UL). Completed Howell terms close ~4% of G10 variance deficit; residual ~2.3x sigma localizes WIDE-ERR to photon/sky. Diagnostic-only; admission path pinned legacy. | `CURSOR_RESULT_NOISE_FLOOR_01.md`; `NOISE_FLOOR_01_*.json` | **REPORTED** | CLOSED |
+| **WIDE-ERR-LOC-01** | 10 | errors | U | HIGH | Item A: var_total expression closes (corr on extended only). Item B: a=7.45+/-0.22, b=2.20+/-0.07 but r2=0.42 (W-R1: not separable). Item C: 0.10 px SNR-radius drift = builder/product near-tie; not a Stage-2 block. | `CURSOR_RESULT_WIDE_ERR_LOC_01.md` | **REPORTED** | CLOSED |
 
 ### Named non-derived (P-R0)
 

@@ -64,9 +64,27 @@ def test_complete_model_sky_factor_increases_sigma():
     assert math.isclose(terms["sky_factor"], 1.0 + 36.55 / 2000.0, rel_tol=1e-6)
 
 
-def test_complete_model_corr_factor_inflates_extended_not_source_alone():
-    kwargs = dict(flux_adu=5.0e4, sky_adu=1500.0, area_px=36.55, gain=3.17, read_noise_e=7.6)
-    s1, t1 = predicted_sigma_mag_phot_complete(**kwargs, correlated_pixel_factor=1.0)
-    s2, t2 = predicted_sigma_mag_phot_complete(**kwargs, correlated_pixel_factor=1.5)
-    assert t2["var_source"] == t1["var_source"]
-    assert s2 > s1
+def test_complete_model_var_total_expression_closes():
+    """WIDE-ERR-LOC-01 Item A: corr multiplies extended terms only."""
+    s, terms = predicted_sigma_mag_phot_complete(
+        5.0e4,
+        sky_adu=1500.0,
+        area_px=36.55,
+        gain=3.17,
+        read_noise_e=7.6,
+        n_sky_px=2000.0,
+        dark_e_per_px=0.0,
+        digitization_adu=1.0,
+        correlated_pixel_factor=1.36436,
+    )
+    assert math.isfinite(s)
+    expected = terms["var_source"] + (
+        terms["var_sky"] + terms["var_dark"] + terms["var_rn"] + terms["var_dig"]
+    ) * terms["corr_factor"]
+    assert abs(terms["var_total"] - expected) < 1e-9
+    assert abs(terms["var_ext"] - (terms["var_total"] - terms["var_source"])) < 1e-9
+    # corr must not multiply source
+    wrong = (terms["var_source"] + terms["var_sky"] + terms["var_rn"] + terms["var_dig"]) * terms[
+        "corr_factor"
+    ]
+    assert abs(wrong - terms["var_total"]) > 1.0

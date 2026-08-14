@@ -213,6 +213,12 @@ def predicted_sigma_mag_phot_complete(
     corr = float(correlated_pixel_factor) if math.isfinite(correlated_pixel_factor) and correlated_pixel_factor > 0 else 1.0
     # Correlation multiplies the spatially extended (sky+RN+dark+dig) terms; source Poisson
     # is from photoelectrons and is not inflated the same way (Fruchter & Hook 2002 style).
+    #
+    # Exact accounting (WIDE-ERR-LOC-01 Item A):
+    #   var_sky already includes sky_factor = (1 + n_pix/n_B)
+    #   var_ext   = (var_sky + var_dark + var_rn + var_dig) * corr_factor
+    #   var_total = var_source + var_ext
+    # Do NOT multiply var_source by corr_factor (that over-counts ~14% at G10).
     var_ext = (var_sky + var_dark + var_rn + var_dig) * corr
     var_adu = var_source + var_ext
     terms = {
@@ -223,7 +229,9 @@ def predicted_sigma_mag_phot_complete(
         "var_dig": float(var_dig),
         "sky_factor": float(sky_factor),
         "corr_factor": float(corr),
+        "var_ext": float(var_ext),
         "var_total": float(var_adu),
+        "expression": "var_total = var_source + (var_sky + var_dark + var_rn + var_dig) * corr_factor; var_sky includes sky_factor",
     }
     if not math.isfinite(var_adu) or var_adu < 0:
         return float("nan"), terms
