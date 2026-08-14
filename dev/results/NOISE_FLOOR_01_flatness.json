@@ -1,0 +1,222 @@
+{
+  "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+  "drafts": {
+    "512": {
+      "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+      "max_ratio": 1.1,
+      "min_bins": 3,
+      "flat": false,
+      "mag_lo": 8.0,
+      "mag_hi": 9.5,
+      "n_bins": 2,
+      "bin_rows": [
+        {
+          "mag_center": 8.25,
+          "n": 13,
+          "scatter_median": 0.007396752674916477
+        },
+        {
+          "mag_center": 8.75,
+          "n": 13,
+          "scatter_median": 0.00700374165204271
+        },
+        {
+          "mag_center": 9.25,
+          "n": 24,
+          "scatter_median": 0.00932884904020501
+        },
+        {
+          "mag_center": 9.75,
+          "n": 36,
+          "scatter_median": 0.010030175471364536
+        },
+        {
+          "mag_center": 10.25,
+          "n": 39,
+          "scatter_median": 0.011414038094978872
+        },
+        {
+          "mag_center": 10.75,
+          "n": 58,
+          "scatter_median": 0.013029050381881725
+        },
+        {
+          "mag_center": 11.25,
+          "n": 96,
+          "scatter_median": 0.01737109512555267
+        },
+        {
+          "mag_center": 11.75,
+          "n": 133,
+          "scatter_median": 0.025845744228067926
+        },
+        {
+          "mag_center": 12.25,
+          "n": 147,
+          "scatter_median": 0.033863930916378814
+        },
+        {
+          "mag_center": 12.75,
+          "n": 40,
+          "scatter_median": 0.0440645861342511
+        }
+      ],
+      "result": "no_flat_range; upper_limit_scatter=0.00700 at G~8.75 (n_bins_kept=2)",
+      "upper_limit_scatter": 0.00700374165204271,
+      "upper_limit_at_mag": 8.75
+    },
+    "510": {
+      "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+      "max_ratio": 1.1,
+      "min_bins": 3,
+      "flat": false,
+      "mag_lo": 8.0,
+      "mag_hi": 9.5,
+      "n_bins": 2,
+      "bin_rows": [
+        {
+          "mag_center": 8.25,
+          "n": 12,
+          "scatter_median": 0.00741033730745432
+        },
+        {
+          "mag_center": 8.75,
+          "n": 13,
+          "scatter_median": 0.007009798536293091
+        },
+        {
+          "mag_center": 9.25,
+          "n": 22,
+          "scatter_median": 0.009431678450352678
+        },
+        {
+          "mag_center": 9.75,
+          "n": 34,
+          "scatter_median": 0.010053968970282684
+        },
+        {
+          "mag_center": 10.25,
+          "n": 37,
+          "scatter_median": 0.01144663837110764
+        },
+        {
+          "mag_center": 10.75,
+          "n": 57,
+          "scatter_median": 0.0130601080043159
+        },
+        {
+          "mag_center": 11.25,
+          "n": 92,
+          "scatter_median": 0.01724206471635313
+        },
+        {
+          "mag_center": 11.75,
+          "n": 126,
+          "scatter_median": 0.025405576922462817
+        },
+        {
+          "mag_center": 12.25,
+          "n": 141,
+          "scatter_median": 0.033793143822912444
+        },
+        {
+          "mag_center": 12.75,
+          "n": 36,
+          "scatter_median": 0.04257298087287865
+        }
+      ],
+      "result": "no_flat_range; upper_limit_scatter=0.00701 at G~8.75 (n_bins_kept=2)",
+      "upper_limit_scatter": 0.007009798536293091,
+      "upper_limit_at_mag": 8.75
+    },
+    "435": {
+      "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+      "max_ratio": 1.1,
+      "min_bins": 3,
+      "flat": false,
+      "mag_lo": 8.0,
+      "mag_hi": 9.5,
+      "n_bins": 2,
+      "bin_rows": [
+        {
+          "mag_center": 8.25,
+          "n": 13,
+          "scatter_median": 0.009527900020340003
+        },
+        {
+          "mag_center": 8.75,
+          "n": 12,
+          "scatter_median": 0.010088943719427045
+        },
+        {
+          "mag_center": 9.25,
+          "n": 25,
+          "scatter_median": 0.01102505713466356
+        },
+        {
+          "mag_center": 9.75,
+          "n": 35,
+          "scatter_median": 0.012435782706135198
+        },
+        {
+          "mag_center": 10.25,
+          "n": 39,
+          "scatter_median": 0.014559979099845934
+        },
+        {
+          "mag_center": 10.75,
+          "n": 61,
+          "scatter_median": 0.01660568612538892
+        },
+        {
+          "mag_center": 11.25,
+          "n": 98,
+          "scatter_median": 0.021259193396159684
+        },
+        {
+          "mag_center": 11.75,
+          "n": 146,
+          "scatter_median": 0.026987192414723582
+        },
+        {
+          "mag_center": 12.25,
+          "n": 204,
+          "scatter_median": 0.03504035394149434
+        },
+        {
+          "mag_center": 12.75,
+          "n": 261,
+          "scatter_median": 0.04852512371826259
+        },
+        {
+          "mag_center": 13.25,
+          "n": 365,
+          "scatter_median": 0.06855926190673736
+        },
+        {
+          "mag_center": 13.75,
+          "n": 435,
+          "scatter_median": 0.1025623556528972
+        },
+        {
+          "mag_center": 14.25,
+          "n": 390,
+          "scatter_median": 0.15721736812086634
+        },
+        {
+          "mag_center": 14.75,
+          "n": 319,
+          "scatter_median": 0.236744191669105
+        },
+        {
+          "mag_center": 15.25,
+          "n": 151,
+          "scatter_median": 0.3241252436412098
+        }
+      ],
+      "result": "no_flat_range; upper_limit_scatter=0.00953 at G~8.25 (n_bins_kept=2)",
+      "upper_limit_scatter": 0.009527900020340003,
+      "upper_limit_at_mag": 8.25
+    }
+  }
+}

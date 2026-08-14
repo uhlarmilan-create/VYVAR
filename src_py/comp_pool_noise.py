@@ -41,7 +41,7 @@ ASSUMPTION_BULK_NONVARIABLE = (
 
 @dataclass
 class NoiseCurveFit:
-    """Parametric noise-curve fit for one draft."""
+    """Parametric noise-curve fit for one draft (diagnostic path)."""
 
     n_stars: int
     gain_e_per_adu: float
@@ -61,6 +61,30 @@ class NoiseCurveFit:
     telescope_diameter_m_db: float = float("nan")
     diameter_note: str = ""
     assumption: str = ASSUMPTION_BULK_NONVARIABLE
+    # NOISE-FLOOR-01
+    floor_is_upper_limit: bool = False
+    flat_mag_lo: float | None = None
+    flat_mag_hi: float | None = None
+    flatness_criterion: str = ""
+    flatness_result: str = ""
+    model_completion: dict[str, Any] = field(default_factory=dict)
+
+
+# F1 criterion (stated before use; NOISE-FLOOR-01):
+# Grow a contiguous bright-end window of usable NP bins (n >= min_bin_n) from the
+# brightest usable bin fainterward while max(bin_median)/min(bin_median) <= 1.10
+# within the window. Require >= 3 contiguous bins for a *measured* floor. If fewer
+# than 3 bins qualify (typical when scatter is still settling at the bright end
+# where stars run out), the floor is an upper limit equal to the minimum
+# usable-bin median among the brightest bins examined (N-R0).
+FLATNESS_MAX_RATIO = 1.10
+FLATNESS_MIN_BINS = 3
+FLATNESS_CRITERION = (
+    f"Bright-end NP bins (n>={8}): grow fainter while "
+    f"max/min bin median scatter <= {FLATNESS_MAX_RATIO}; "
+    f"need >= {FLATNESS_MIN_BINS} contiguous bins for a measured floor; "
+    f"else upper limit at min bright-bin median (N-R0)."
+)
 
 
 @dataclass
@@ -137,7 +161,7 @@ def predicted_sigma_mag_phot(
     gain: float,
     read_noise_e: float,
 ) -> float:
-    """Howell photon+sky+RN magnitude sigma (no systematic floor)."""
+    """Howell photon+sky+RN magnitude sigma (reduced form; no systematic floor)."""
     f = float(flux_adu)
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     rn = float(read_noise_e) if math.isfinite(read_noise_e) and read_noise_e >= 0 else 0.0
@@ -145,11 +169,131 @@ def predicted_sigma_mag_phot(
     area = max(1e-6, float(area_px)) if math.isfinite(area_px) else 1.0
     if not math.isfinite(f) or f <= 0:
         return float("nan")
-    # Variance in ADU^2: F/g + n_pix*(sky/g + (RN/g)^2)
     var_adu = f / g + area * (sky / g + (rn / g) ** 2)
     if not math.isfinite(var_adu) or var_adu < 0:
         return float("nan")
     return float(MAG_ERR_SCALE * math.sqrt(var_adu) / f)
+
+
+def predicted_sigma_mag_phot_complete(
+    flux_adu: float,
+    *,
+    sky_adu: float,
+    area_px: float,
+    gain: float,
+    read_noise_e: float,
+    n_sky_px: float | None = None,
+    dark_e_per_px: float = 0.0,
+    digitization_adu: float = 1.0,
+    correlated_pixel_factor: float = 1.0,
+) -> tuple[float, dict[str, float]]:
+    """Howell-complete variance -> mag sigma (diagnostic only; N-R2: no free scale).
+
+    Terms (Howell 1989 eq. 2; Merline & Howell 1995):
+      source Poisson, sky Poisson with (1 + n_pix/n_B), dark shot, read noise,
+      digitisation q^2/12, and a measured correlated-pixel factor on the sum.
+    """
+    f = float(flux_adu)
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+    rn = float(read_noise_e) if math.isfinite(read_noise_e) and read_noise_e >= 0 else 0.0
+    sky = max(0.0, float(sky_adu)) if math.isfinite(sky_adu) else 0.0
+    area = max(1e-6, float(area_px)) if math.isfinite(area_px) else 1.0
+    if not math.isfinite(f) or f <= 0:
+        return float("nan"), {}
+    n_b = float(n_sky_px) if n_sky_px is not None and math.isfinite(float(n_sky_px)) and float(n_sky_px) > 0 else float("nan")
+    sky_factor = (1.0 + area / n_b) if math.isfinite(n_b) and n_b > 0 else 1.0
+    dark = max(0.0, float(dark_e_per_px)) if math.isfinite(dark_e_per_px) else 0.0
+    # dark in ADU^2: (dark_e / g) * area  (shot in electrons -> ADU via /g)
+    var_source = f / g
+    var_sky = area * (sky / g) * sky_factor
+    var_dark = area * (dark / g)
+    var_rn = area * (rn / g) ** 2
+    q = float(digitization_adu) if math.isfinite(digitization_adu) and digitization_adu > 0 else 1.0
+    var_dig = area * (q * q / 12.0)
+    corr = float(correlated_pixel_factor) if math.isfinite(correlated_pixel_factor) and correlated_pixel_factor > 0 else 1.0
+    # Correlation multiplies the spatially extended (sky+RN+dark+dig) terms; source Poisson
+    # is from photoelectrons and is not inflated the same way (Fruchter & Hook 2002 style).
+    var_ext = (var_sky + var_dark + var_rn + var_dig) * corr
+    var_adu = var_source + var_ext
+    terms = {
+        "var_source": float(var_source),
+        "var_sky": float(var_sky),
+        "var_dark": float(var_dark),
+        "var_rn": float(var_rn),
+        "var_dig": float(var_dig),
+        "sky_factor": float(sky_factor),
+        "corr_factor": float(corr),
+        "var_total": float(var_adu),
+    }
+    if not math.isfinite(var_adu) or var_adu < 0:
+        return float("nan"), terms
+    return float(MAG_ERR_SCALE * math.sqrt(var_adu) / f), terms
+
+
+def find_flat_scatter_range(
+    np_curve: pd.DataFrame,
+    *,
+    max_ratio: float = FLATNESS_MAX_RATIO,
+    min_bins: int = FLATNESS_MIN_BINS,
+) -> dict[str, Any]:
+    """F1: determine flat bright-end range from NP bin medians (criterion pre-stated)."""
+    out: dict[str, Any] = {
+        "criterion": FLATNESS_CRITERION,
+        "max_ratio": float(max_ratio),
+        "min_bins": int(min_bins),
+        "flat": False,
+        "mag_lo": None,
+        "mag_hi": None,
+        "n_bins": 0,
+        "bin_rows": [],
+        "result": "",
+    }
+    if np_curve is None or getattr(np_curve, "empty", True):
+        out["result"] = "no_np_curve"
+        return out
+    uc = np_curve[np_curve["usable"]].sort_values("mag_center")
+    if uc.empty:
+        out["result"] = "no_usable_bins"
+        return out
+    rows = uc.to_dict("records")
+    out["bin_rows"] = [
+        {"mag_center": float(r["mag_center"]), "n": int(r["n"]), "scatter_median": float(r["scatter_median"])}
+        for r in rows
+    ]
+    # Grow from brightest usable bin
+    included: list[dict[str, Any]] = []
+    for r in rows:
+        trial = included + [r]
+        sc = [float(x["scatter_median"]) for x in trial]
+        if max(sc) / min(sc) <= float(max_ratio) + 1e-12:
+            included = trial
+        else:
+            break
+    out["n_bins"] = int(len(included))
+    if len(included) >= int(min_bins):
+        out["flat"] = True
+        out["mag_lo"] = float(included[0]["mag_center"]) - 0.25
+        out["mag_hi"] = float(included[-1]["mag_center"]) + 0.25
+        out["result"] = (
+            f"flat_range G[{out['mag_lo']:.2f},{out['mag_hi']:.2f}] "
+            f"n_bins={len(included)} max/min="
+            f"{max(float(x['scatter_median']) for x in included)/min(float(x['scatter_median']) for x in included):.3f}"
+        )
+    else:
+        # upper limit: minimum scatter among the brightest usable bins examined
+        bright = rows[: max(1, min(3, len(rows)))]
+        out["flat"] = False
+        out["mag_lo"] = float(bright[0]["mag_center"]) - 0.25
+        out["mag_hi"] = float(bright[-1]["mag_center"]) + 0.25
+        out["upper_limit_scatter"] = float(min(float(x["scatter_median"]) for x in bright))
+        out["upper_limit_at_mag"] = float(
+            min(bright, key=lambda x: float(x["scatter_median"]))["mag_center"]
+        )
+        out["result"] = (
+            f"no_flat_range; upper_limit_scatter={out['upper_limit_scatter']:.5f} "
+            f"at G~{out['upper_limit_at_mag']:.2f} (n_bins_kept={len(included)})"
+        )
+    return out
 
 
 def load_star_timeseries_from_proc_dir(
@@ -320,8 +464,20 @@ def fit_parametric_noise_curve(
     draft_id: int | None,
     setup: str,
     telescope_diameter_m_override: float | None = None,
+    np_curve: pd.DataFrame | None = None,
+    n_sky_px: float | None = None,
+    dark_e_per_px: float = 0.0,
+    digitization_adu: float = 1.0,
+    correlated_pixel_factor: float = 1.0,
+    use_complete_model: bool = True,
+    floor_mode: str = "f1",
 ) -> tuple[NoiseCurveFit, np.ndarray, np.ndarray]:
-    """Fit sigma_sys so sigma_total matches observed MAD scatter (bright non-variables)."""
+    """Fit sigma_sys on the F1 flat range (or upper limit); diagnostic complete model optional.
+
+    floor_mode:
+      - \"f1\": NOISE-FLOOR-01 flatness / upper-limit path (diagnostics).
+      - \"legacy_g8_10p5\": pre-NOISE-FLOOR-01 window (pool-admission path; unchanged).
+    """
     m = pd.to_numeric(stars["mag_g"], errors="coerce")
     sc = pd.to_numeric(stars["scatter_mad"], errors="coerce")
     flux = pd.to_numeric(stars["flux_median"], errors="coerce")
@@ -336,38 +492,95 @@ def fit_parametric_noise_curve(
     sky_med = float(np.nanmedian(sky[ok])) if ok.any() else float("nan")
     area_med = float(np.nanmedian(math.pi * rap[ok] ** 2)) if ok.any() else float("nan")
 
-    # Photometric prediction at each star (full ok set)
-    sig_phot = np.array(
-        [
-            predicted_sigma_mag_phot(
+    def _sig_one(f: float, sk: float, r: float) -> float:
+        area = math.pi * float(r) ** 2 if math.isfinite(float(r)) else area_med
+        sky_u = float(sk) if math.isfinite(float(sk)) else sky_med
+        if use_complete_model:
+            s, _ = predicted_sigma_mag_phot_complete(
                 float(f),
-                sky_adu=float(sk) if math.isfinite(float(sk)) else sky_med,
-                area_px=math.pi * float(r) ** 2 if math.isfinite(float(r)) else area_med,
+                sky_adu=sky_u,
+                area_px=area,
                 gain=float(gain),
                 read_noise_e=float(read_noise_e),
+                n_sky_px=n_sky_px,
+                dark_e_per_px=dark_e_per_px,
+                digitization_adu=digitization_adu,
+                correlated_pixel_factor=correlated_pixel_factor,
             )
-            for f, sk, r in zip(flux[ok], sky[ok], rap[ok])
-        ],
+            return s
+        return predicted_sigma_mag_phot(
+            float(f),
+            sky_adu=sky_u,
+            area_px=area,
+            gain=float(gain),
+            read_noise_e=float(read_noise_e),
+        )
+
+    sig_phot = np.array(
+        [_sig_one(float(f), float(sk), float(r)) for f, sk, r in zip(flux[ok], sky[ok], rap[ok])],
         dtype=float,
     )
     obs = sc[ok].to_numpy(dtype=float)
     m_ok = m[ok].to_numpy(dtype=float)
 
-    # Systematic floor from the bright asymptote, where photon noise is negligible.
-    # Using G9-13.5 mixes in rising photon/variable excess and biases sigma_sys high (P-R1).
-    bright = (m_ok >= 8.0) & (m_ok <= 10.5) & np.isfinite(obs) & np.isfinite(sig_phot)
-    if int(np.count_nonzero(bright)) >= 8:
-        # At the bright end sigma_phot << sigma_obs; floor ~= median(obs)
-        # Correct for residual photon: sys^2 = median(max(0, obs^2 - phot^2))
+    if np_curve is None:
+        np_curve = nonparametric_noise_curve(stars)
+    flat = find_flat_scatter_range(np_curve)
+
+    floor_is_ul = False
+    mode = str(floor_mode or "f1").strip().lower()
+    if mode == "legacy_g8_10p5":
+        # COMP-POOL admission path: keep historical window (do not move thresholds).
+        m_lo, m_hi = 8.0, 10.5
+        bright = (m_ok >= m_lo) & (m_ok <= m_hi) & np.isfinite(obs) & np.isfinite(sig_phot)
+        floor_is_ul = False
+        flat = {
+            **flat,
+            "result": "legacy_g8_10p5_admission_window",
+            "mag_lo": m_lo,
+            "mag_hi": m_hi,
+            "flat": False,
+        }
+        resid_var = obs[bright] * obs[bright] - sig_phot[bright] * sig_phot[bright]
+        resid_var = resid_var[np.isfinite(resid_var)]
+        sys_var = float(np.median(np.maximum(resid_var, 0.0))) if resid_var.size else float("nan")
+        n_sys = int(resid_var.size)
+    elif flat.get("flat"):
+        m_lo = float(flat["mag_lo"])
+        m_hi = float(flat["mag_hi"])
+        bright = (m_ok >= m_lo) & (m_ok <= m_hi) & np.isfinite(obs) & np.isfinite(sig_phot)
+        floor_is_ul = False
         resid_var = obs[bright] * obs[bright] - sig_phot[bright] * sig_phot[bright]
         resid_var = resid_var[np.isfinite(resid_var)]
         sys_var = float(np.median(np.maximum(resid_var, 0.0))) if resid_var.size else float("nan")
         n_sys = int(resid_var.size)
     else:
-        resid_var = obs * obs - sig_phot * sig_phot
-        resid_var = resid_var[np.isfinite(resid_var)]
-        sys_var = float(np.median(np.maximum(resid_var, 0.0))) if resid_var.size else float("nan")
-        n_sys = int(resid_var.size)
+        # Upper limit: brightest usable stars; report min residual floor (N-R0)
+        floor_is_ul = True
+        m_lo = float(flat.get("mag_lo") or 8.0)
+        m_hi = float(flat.get("mag_hi") or 9.0)
+        bright = (m_ok >= m_lo) & (m_ok <= m_hi) & np.isfinite(obs) & np.isfinite(sig_phot)
+        if int(np.count_nonzero(bright)) < 5:
+            bright = (m_ok <= 9.0) & np.isfinite(obs) & np.isfinite(sig_phot)
+
+        if flat.get("upper_limit_scatter") is not None:
+            ul_sc = float(flat["upper_limit_scatter"])
+            ul_mag = float(flat.get("upper_limit_at_mag") or m_lo)
+            near = (np.abs(m_ok - ul_mag) <= 0.35) & np.isfinite(sig_phot)
+            phot_typ = float(np.median(sig_phot[near])) if int(np.count_nonzero(near)) >= 3 else 0.0
+            sys_var = max(0.0, ul_sc * ul_sc - phot_typ * phot_typ)
+            n_sys = int(np.count_nonzero(near)) if int(np.count_nonzero(near)) else 1
+            resid_var = np.asarray([sys_var], dtype=float)
+        elif int(np.count_nonzero(bright)) >= 3:
+            resid_var = obs[bright] * obs[bright] - sig_phot[bright] * sig_phot[bright]
+            resid_var = resid_var[np.isfinite(resid_var)]
+            sys_var = float(np.min(np.maximum(resid_var, 0.0))) if resid_var.size else float("nan")
+            n_sys = int(resid_var.size)
+        else:
+            resid_var = obs * obs - sig_phot * sig_phot
+            resid_var = resid_var[np.isfinite(resid_var)]
+            sys_var = float(np.median(np.maximum(resid_var, 0.0))) if resid_var.size else float("nan")
+            n_sys = int(resid_var.size)
 
     if resid_var.size and math.isfinite(sys_var) and sys_var > 0:
         mad_rv = float(np.median(np.abs(resid_var - np.median(resid_var))))
@@ -376,7 +589,6 @@ def fit_parametric_noise_curve(
         sys_err = float("nan")
     sigma_sys = math.sqrt(sys_var) if math.isfinite(sys_var) and sys_var >= 0 else float("nan")
 
-    # Validation chi2 on the wider G8-13 band (not the floor-fit band alone)
     val = (m_ok >= 8.0) & (m_ok <= 13.0) & np.isfinite(obs) & np.isfinite(sig_phot)
     pred = np.sqrt(
         np.maximum(sig_phot * sig_phot + (sigma_sys**2 if math.isfinite(sigma_sys) else 0.0), 0.0)
@@ -397,8 +609,6 @@ def fit_parametric_noise_curve(
             f"override D={telescope_diameter_m_override} m "
             f"(DB reported {diam_db} m)"
         )
-    # COMP-POOL-02 item 1: do NOT reinterpret "200mm" as aperture.
-    # TELESCOPE.FOCAL=200 mm, DIAMETER=70 mm; plate scale recovers f=200 mm.
     am_med = float(np.nanmedian(pd.to_numeric(stars.get("airmass_median"), errors="coerce")))
     if not math.isfinite(am_med) or am_med < 1.0:
         am_med = 1.2
@@ -411,9 +621,18 @@ def fit_parametric_noise_curve(
     )
     scint_mag = float(scint_rel * MAG_ERR_SCALE) if math.isfinite(scint_rel) else float("nan")
 
-    # ZP: mag_g ? zp - 2.5 log10(F)  => zp = median(mag_g + 2.5 log10 F)
     zp_vals = m[ok] + 2.5 * np.log10(flux[ok])
     zp_inst = float(np.nanmedian(zp_vals)) if ok.any() else 25.0
+
+    model_completion = {
+        "use_complete_model": bool(use_complete_model),
+        "floor_mode": mode,
+        "n_sky_px": n_sky_px,
+        "dark_e_per_px": float(dark_e_per_px),
+        "digitization_adu": float(digitization_adu),
+        "correlated_pixel_factor": float(correlated_pixel_factor),
+        "flatness": flat,
+    }
 
     fit = NoiseCurveFit(
         n_stars=int(ok.sum()),
@@ -433,6 +652,12 @@ def fit_parametric_noise_curve(
         telescope_diameter_m_used=diam_used,
         telescope_diameter_m_db=diam_db,
         diameter_note=diam_note,
+        floor_is_upper_limit=bool(floor_is_ul),
+        flat_mag_lo=float(flat["mag_lo"]) if flat.get("mag_lo") is not None else None,
+        flat_mag_hi=float(flat["mag_hi"]) if flat.get("mag_hi") is not None else None,
+        flatness_criterion=FLATNESS_CRITERION,
+        flatness_result=str(flat.get("result") or ""),
+        model_completion=model_completion,
     )
     return fit, obs, pred
 
@@ -812,6 +1037,9 @@ def analyze_draft_comp_pool(
         draft_id=int(draft_id),
         setup=str(setup),
         telescope_diameter_m_override=telescope_diameter_m_override,
+        np_curve=np_curve,
+        use_complete_model=False,
+        floor_mode="legacy_g8_10p5",
     )
     # re-summarize with fitted ZP so instrumental mags match fit
     stars = summarize_stars(epochs, zp_inst=float(fit.zp_inst))
@@ -823,6 +1051,9 @@ def analyze_draft_comp_pool(
         draft_id=int(draft_id),
         setup=str(setup),
         telescope_diameter_m_override=telescope_diameter_m_override,
+        np_curve=np_curve,
+        use_complete_model=False,
+        floor_mode="legacy_g8_10p5",
     )
     if (
         positions is not None

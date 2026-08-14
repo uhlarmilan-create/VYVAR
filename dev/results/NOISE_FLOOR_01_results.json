@@ -1,0 +1,1223 @@
+{
+  "flatness_criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+  "annulus_512": {
+    "r_ap": 3.411,
+    "r_in": 15.681650000000001,
+    "r_out": 29.7126,
+    "fwhm": 3.3014,
+    "annulus_inner_fwhm": 4.75,
+    "annulus_outer_fwhm": 9.0,
+    "n_pix": 36.55218233869761,
+    "n_sky_px": 2000.957179412714,
+    "sky_factor": 1.0182673486043443
+  },
+  "correlated_pixels": {
+    "method": "frame_difference_empty_aperture",
+    "files": [
+      "BO_CVn_Light_076.fits",
+      "BO_CVn_Light_077.fits"
+    ],
+    "sig_pix_adu_diff": 46.9300271118164,
+    "area_px": 36.55218233869761,
+    "r_ap_px": 3.411,
+    "n_trials": 500,
+    "var_sum_obs": 109836.09266307439,
+    "var_sum_indep": 80503.5295470046,
+    "corr_factor": 1.3643636904012144,
+    "rho_lag1_y": -0.010283580650434554,
+    "rho_lag1_x": -0.03931382341762129,
+    "rejected_single_frame_note": "Single-frame empty apertures mix large-scale structure into Var(sum); not used (was ~100x).",
+    "citation": "Casertano et al. 2000 PASP 112, 177; Fruchter & Hook 2002 PASP 114, 144"
+  },
+  "dark_e_per_px": 0.0,
+  "dark_note": "dark at -10C pedestal-dominated; shot term set to 0 (named)",
+  "digitization_adu": 1.0,
+  "digitization_note": "QHY294MM 14-bit in 16-bit container; q=1 ADU assumed after conversion",
+  "drafts": {
+    "512": {
+      "flatness": {
+        "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "max_ratio": 1.1,
+        "min_bins": 3,
+        "flat": false,
+        "mag_lo": 8.0,
+        "mag_hi": 9.5,
+        "n_bins": 2,
+        "bin_rows": [
+          {
+            "mag_center": 8.25,
+            "n": 13,
+            "scatter_median": 0.007396752674916477
+          },
+          {
+            "mag_center": 8.75,
+            "n": 13,
+            "scatter_median": 0.00700374165204271
+          },
+          {
+            "mag_center": 9.25,
+            "n": 24,
+            "scatter_median": 0.00932884904020501
+          },
+          {
+            "mag_center": 9.75,
+            "n": 36,
+            "scatter_median": 0.010030175471364536
+          },
+          {
+            "mag_center": 10.25,
+            "n": 39,
+            "scatter_median": 0.011414038094978872
+          },
+          {
+            "mag_center": 10.75,
+            "n": 58,
+            "scatter_median": 0.013029050381881725
+          },
+          {
+            "mag_center": 11.25,
+            "n": 96,
+            "scatter_median": 0.01737109512555267
+          },
+          {
+            "mag_center": 11.75,
+            "n": 133,
+            "scatter_median": 0.025845744228067926
+          },
+          {
+            "mag_center": 12.25,
+            "n": 147,
+            "scatter_median": 0.033863930916378814
+          },
+          {
+            "mag_center": 12.75,
+            "n": 40,
+            "scatter_median": 0.0440645861342511
+          }
+        ],
+        "result": "no_flat_range; upper_limit_scatter=0.00700 at G~8.75 (n_bins_kept=2)",
+        "upper_limit_scatter": 0.00700374165204271,
+        "upper_limit_at_mag": 8.75
+      },
+      "fit_reduced_f1": {
+        "note": "F1 flatness/UL path with reduced Howell (no sky_factor/corr)",
+        "sigma_sys": 0.006816528820529389,
+        "floor_is_upper_limit": true,
+        "chi2_red": 7.249480420055158
+      },
+      "fit_complete": {
+        "n_stars": 631,
+        "gain_e_per_adu": 3.17,
+        "read_noise_e": 7.6,
+        "sky_adu_median": 1549.846435546875,
+        "aperture_area_px_median": 36.55218233869761,
+        "zp_inst": 22.036674841841315,
+        "sigma_sys_mag": 0.00679175553714433,
+        "sigma_sys_mag_err": 0.0,
+        "chi2_red": 6.6588071980016785,
+        "n_fit": 18,
+        "scint_mag_predicted": 0.003999690394765461,
+        "scint_rel_predicted": 0.0036838509918313686,
+        "scint_airmass_used": 1.0379755,
+        "scint_params": {
+          "draft_id": 512,
+          "setup": "NoFilter_60_2",
+          "telescope_diameter_m": 0.07,
+          "altitude_m": 275.0,
+          "exposure_s": 60.0,
+          "c_y": 1.5,
+          "source_notes": [
+            "D=0.070 m from TELESCOPE.DIAMETER (Carl-Zeiss 200mm)",
+            "altitude_m=275.0 from LOCATION (Jirny)",
+            "exposure_s=60.0 from setup name 'NoFilter_60_2'"
+          ]
+        },
+        "telescope_diameter_m_used": 0.07,
+        "telescope_diameter_m_db": 0.07,
+        "diameter_note": "",
+        "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise.",
+        "floor_is_upper_limit": true,
+        "flat_mag_lo": 8.0,
+        "flat_mag_hi": 9.5,
+        "flatness_criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "flatness_result": "no_flat_range; upper_limit_scatter=0.00700 at G~8.75 (n_bins_kept=2)",
+        "model_completion": {
+          "use_complete_model": true,
+          "floor_mode": "f1",
+          "n_sky_px": 2000.957179412714,
+          "dark_e_per_px": 0.0,
+          "digitization_adu": 1.0,
+          "correlated_pixel_factor": 1.3643636904012144,
+          "flatness": {
+            "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+            "max_ratio": 1.1,
+            "min_bins": 3,
+            "flat": false,
+            "mag_lo": 8.0,
+            "mag_hi": 9.5,
+            "n_bins": 2,
+            "bin_rows": [
+              {
+                "mag_center": 8.25,
+                "n": 13,
+                "scatter_median": 0.007396752674916477
+              },
+              {
+                "mag_center": 8.75,
+                "n": 13,
+                "scatter_median": 0.00700374165204271
+              },
+              {
+                "mag_center": 9.25,
+                "n": 24,
+                "scatter_median": 0.00932884904020501
+              },
+              {
+                "mag_center": 9.75,
+                "n": 36,
+                "scatter_median": 0.010030175471364536
+              },
+              {
+                "mag_center": 10.25,
+                "n": 39,
+                "scatter_median": 0.011414038094978872
+              },
+              {
+                "mag_center": 10.75,
+                "n": 58,
+                "scatter_median": 0.013029050381881725
+              },
+              {
+                "mag_center": 11.25,
+                "n": 96,
+                "scatter_median": 0.01737109512555267
+              },
+              {
+                "mag_center": 11.75,
+                "n": 133,
+                "scatter_median": 0.025845744228067926
+              },
+              {
+                "mag_center": 12.25,
+                "n": 147,
+                "scatter_median": 0.033863930916378814
+              },
+              {
+                "mag_center": 12.75,
+                "n": 40,
+                "scatter_median": 0.0440645861342511
+              }
+            ],
+            "result": "no_flat_range; upper_limit_scatter=0.00700 at G~8.75 (n_bins_kept=2)",
+            "upper_limit_scatter": 0.00700374165204271,
+            "upper_limit_at_mag": 8.75
+          }
+        }
+      },
+      "scint_ratio": {
+        "sigma_sys_mag": 0.00679175553714433,
+        "sigma_sys_mag_err": 0.00019650551143688376,
+        "scint_mag": 0.003999690394765461,
+        "ratio": 1.6980703171507838,
+        "ratio_err": 0.049130180599492805,
+        "ratio_is_upper_limit": true,
+        "ratio_note": "upper_limit_ratio_N-R0",
+        "fraction_floor_variance_from_scint": 0.34680764234697187,
+        "assumptions": [
+          "D=0.07 m from TELESCOPE.DIAMETER",
+          "Osborn/Young C_Y=1.5",
+          "airmass=median of stars",
+          "floor is UPPER LIMIT if F1 finds no flat range (N-R0)",
+          "scintillation treated as exact given D,X,t,C_Y; uncertainty from floor only"
+        ]
+      },
+      "budgets_G10_G12p5": [
+        {
+          "mag": 10.0,
+          "n": 40,
+          "obs_mad_mmag": 11.017702758840823,
+          "floor_mmag": 6.79175553714433,
+          "phot_obs_after_floor_mmag": 8.675357675959994,
+          "phot_model_reduced_mmag": 3.4761103619821667,
+          "phot_model_complete_mmag": 3.832997219520332,
+          "ratio_phot_obs_over_reduced": 2.4957083557649433,
+          "ratio_phot_obs_over_complete": 2.2633352384862007,
+          "var_terms_adu2": {
+            "var_source": 21174.690532164965,
+            "var_sky": 25343.127497954345,
+            "var_dark": 0.0,
+            "var_rn": 290.5118532052278,
+            "var_dig": 4.21186022863864,
+            "sky_factor": 1.0252590726396744,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 56154.043824891836
+          },
+          "tot_reduced_mmag": 7.629632135628195,
+          "tot_complete_mmag": 7.7987057234634305
+        },
+        {
+          "mag": 12.5,
+          "n": 89,
+          "obs_mad_mmag": 37.73749724688365,
+          "floor_mmag": 6.79175553714433,
+          "phot_obs_after_floor_mmag": 37.12129786500224,
+          "phot_model_reduced_mmag": 20.01378666041778,
+          "phot_model_complete_mmag": 23.10099646854038,
+          "ratio_phot_obs_over_reduced": 1.8547863277876748,
+          "ratio_phot_obs_over_complete": 1.606913273873494,
+          "var_terms_adu2": {
+            "var_source": 2183.109831413133,
+            "var_sky": 14124.861235458047,
+            "var_dark": 0.0,
+            "var_rn": 163.71182272266807,
+            "var_dig": 2.3735049275130127,
+            "sky_factor": 1.0142342172152408,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 21681.158423582026
+          },
+          "tot_reduced_mmag": 21.134795948034306,
+          "tot_complete_mmag": 24.078703891942475
+        }
+      ],
+      "term_accounting_G10": {
+        "var_deficit_obs_minus_reduced": 6.31784875571582e-05,
+        "var_gained_by_complete_model": 2.6085244361708065e-06,
+        "fraction_of_deficit_closed_by_complete": 0.04128817477326992,
+        "remaining_var_deficit": 6.05699631209874e-05,
+        "remaining_sigma_factor_obs_over_complete": 2.2633352384862007,
+        "delta_var_sky_factor_only": 1.6862478005091776e-07,
+        "delta_var_digitization_only": 1.1298780053507518e-09,
+        "delta_var_corr_only": 2.446061881050753e-06,
+        "delta_var_dark": 0.0,
+        "frac_deficit_sky_factor": 0.0026690221081718877,
+        "frac_deficit_digitization": 1.7883903984382973e-05,
+        "frac_deficit_corr": 0.038716689424351546,
+        "frac_deficit_dark": 0.0,
+        "sky_factor_value": 1.0252590726396744
+      },
+      "residuals": {
+        "n": 631,
+        "ratio_median": 1.5352087630000315,
+        "corr_resid_mag": -0.00222065628392542,
+        "corr_resid_bprp": 0.09227137360218259,
+        "corr_resid_x": 0.0798486239438098,
+        "corr_resid_y": 0.023103875366640516,
+        "ratio_by_mag_bin": [
+          {
+            "mag_center": 8.25,
+            "n": 13,
+            "ratio_median": 1.068633438312769
+          },
+          {
+            "mag_center": 8.75,
+            "n": 13,
+            "ratio_median": 0.999740855578843
+          },
+          {
+            "mag_center": 9.25,
+            "n": 24,
+            "ratio_median": 1.2875907299488834
+          },
+          {
+            "mag_center": 9.75,
+            "n": 36,
+            "ratio_median": 1.3643122675147428
+          },
+          {
+            "mag_center": 10.25,
+            "n": 39,
+            "ratio_median": 1.3988985234069613
+          },
+          {
+            "mag_center": 10.75,
+            "n": 58,
+            "ratio_median": 1.3586423999291324
+          },
+          {
+            "mag_center": 11.25,
+            "n": 96,
+            "ratio_median": 1.4801298293249536
+          },
+          {
+            "mag_center": 11.75,
+            "n": 133,
+            "ratio_median": 1.6337624488694649
+          },
+          {
+            "mag_center": 12.25,
+            "n": 147,
+            "ratio_median": 1.5807845135689371
+          },
+          {
+            "mag_center": 12.75,
+            "n": 40,
+            "ratio_median": 1.55217463530583
+          }
+        ]
+      },
+      "ratio_median_G8_13": 1.5352087630000315,
+      "np_bin_bright": [
+        {
+          "mag_center": 8.25,
+          "n": 13,
+          "scatter_median": 0.007396752674916477
+        },
+        {
+          "mag_center": 8.75,
+          "n": 13,
+          "scatter_median": 0.00700374165204271
+        },
+        {
+          "mag_center": 9.25,
+          "n": 24,
+          "scatter_median": 0.00932884904020501
+        },
+        {
+          "mag_center": 9.75,
+          "n": 36,
+          "scatter_median": 0.010030175471364536
+        },
+        {
+          "mag_center": 10.25,
+          "n": 39,
+          "scatter_median": 0.011414038094978872
+        },
+        {
+          "mag_center": 10.75,
+          "n": 58,
+          "scatter_median": 0.013029050381881725
+        }
+      ]
+    },
+    "510": {
+      "flatness": {
+        "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "max_ratio": 1.1,
+        "min_bins": 3,
+        "flat": false,
+        "mag_lo": 8.0,
+        "mag_hi": 9.5,
+        "n_bins": 2,
+        "bin_rows": [
+          {
+            "mag_center": 8.25,
+            "n": 12,
+            "scatter_median": 0.00741033730745432
+          },
+          {
+            "mag_center": 8.75,
+            "n": 13,
+            "scatter_median": 0.007009798536293091
+          },
+          {
+            "mag_center": 9.25,
+            "n": 22,
+            "scatter_median": 0.009431678450352678
+          },
+          {
+            "mag_center": 9.75,
+            "n": 34,
+            "scatter_median": 0.010053968970282684
+          },
+          {
+            "mag_center": 10.25,
+            "n": 37,
+            "scatter_median": 0.01144663837110764
+          },
+          {
+            "mag_center": 10.75,
+            "n": 57,
+            "scatter_median": 0.0130601080043159
+          },
+          {
+            "mag_center": 11.25,
+            "n": 92,
+            "scatter_median": 0.01724206471635313
+          },
+          {
+            "mag_center": 11.75,
+            "n": 126,
+            "scatter_median": 0.025405576922462817
+          },
+          {
+            "mag_center": 12.25,
+            "n": 141,
+            "scatter_median": 0.033793143822912444
+          },
+          {
+            "mag_center": 12.75,
+            "n": 36,
+            "scatter_median": 0.04257298087287865
+          }
+        ],
+        "result": "no_flat_range; upper_limit_scatter=0.00701 at G~8.75 (n_bins_kept=2)",
+        "upper_limit_scatter": 0.007009798536293091,
+        "upper_limit_at_mag": 8.75
+      },
+      "fit_reduced_f1": {
+        "note": "F1 flatness/UL path with reduced Howell (no sky_factor/corr)",
+        "sigma_sys": 0.006822526700332065,
+        "floor_is_upper_limit": true,
+        "chi2_red": 7.008404227143832
+      },
+      "fit_complete": {
+        "n_stars": 600,
+        "gain_e_per_adu": 3.17,
+        "read_noise_e": 7.6,
+        "sky_adu_median": 1548.37255859375,
+        "aperture_area_px_median": 37.63163357447106,
+        "zp_inst": 22.0458133634235,
+        "sigma_sys_mag": 0.006797401308840611,
+        "sigma_sys_mag_err": 0.0,
+        "chi2_red": 6.468116775374511,
+        "n_fit": 16,
+        "scint_mag_predicted": 0.003997994074173978,
+        "scint_rel_predicted": 0.0036822886228286135,
+        "scint_airmass_used": 1.037682,
+        "scint_params": {
+          "draft_id": 510,
+          "setup": "NoFilter_60_2",
+          "telescope_diameter_m": 0.07,
+          "altitude_m": 275.0,
+          "exposure_s": 60.0,
+          "c_y": 1.5,
+          "source_notes": [
+            "D=0.070 m from TELESCOPE.DIAMETER (Carl-Zeiss 200mm)",
+            "altitude_m=275.0 from LOCATION (Jirny)",
+            "exposure_s=60.0 from setup name 'NoFilter_60_2'"
+          ]
+        },
+        "telescope_diameter_m_used": 0.07,
+        "telescope_diameter_m_db": 0.07,
+        "diameter_note": "",
+        "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise.",
+        "floor_is_upper_limit": true,
+        "flat_mag_lo": 8.0,
+        "flat_mag_hi": 9.5,
+        "flatness_criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "flatness_result": "no_flat_range; upper_limit_scatter=0.00701 at G~8.75 (n_bins_kept=2)",
+        "model_completion": {
+          "use_complete_model": true,
+          "floor_mode": "f1",
+          "n_sky_px": 2000.957179412714,
+          "dark_e_per_px": 0.0,
+          "digitization_adu": 1.0,
+          "correlated_pixel_factor": 1.3643636904012144,
+          "flatness": {
+            "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+            "max_ratio": 1.1,
+            "min_bins": 3,
+            "flat": false,
+            "mag_lo": 8.0,
+            "mag_hi": 9.5,
+            "n_bins": 2,
+            "bin_rows": [
+              {
+                "mag_center": 8.25,
+                "n": 12,
+                "scatter_median": 0.00741033730745432
+              },
+              {
+                "mag_center": 8.75,
+                "n": 13,
+                "scatter_median": 0.007009798536293091
+              },
+              {
+                "mag_center": 9.25,
+                "n": 22,
+                "scatter_median": 0.009431678450352678
+              },
+              {
+                "mag_center": 9.75,
+                "n": 34,
+                "scatter_median": 0.010053968970282684
+              },
+              {
+                "mag_center": 10.25,
+                "n": 37,
+                "scatter_median": 0.01144663837110764
+              },
+              {
+                "mag_center": 10.75,
+                "n": 57,
+                "scatter_median": 0.0130601080043159
+              },
+              {
+                "mag_center": 11.25,
+                "n": 92,
+                "scatter_median": 0.01724206471635313
+              },
+              {
+                "mag_center": 11.75,
+                "n": 126,
+                "scatter_median": 0.025405576922462817
+              },
+              {
+                "mag_center": 12.25,
+                "n": 141,
+                "scatter_median": 0.033793143822912444
+              },
+              {
+                "mag_center": 12.75,
+                "n": 36,
+                "scatter_median": 0.04257298087287865
+              }
+            ],
+            "result": "no_flat_range; upper_limit_scatter=0.00701 at G~8.75 (n_bins_kept=2)",
+            "upper_limit_scatter": 0.007009798536293091,
+            "upper_limit_at_mag": 8.75
+          }
+        }
+      },
+      "scint_ratio": {
+        "sigma_sys_mag": 0.006797401308840611,
+        "sigma_sys_mag_err": 0.00020026938558061463,
+        "scint_mag": 0.003997994074173978,
+        "ratio": 1.7002029474606002,
+        "ratio_err": 0.05009246683838372,
+        "ratio_is_upper_limit": true,
+        "ratio_note": "upper_limit_ratio_N-R0",
+        "fraction_floor_variance_from_scint": 0.3459381595260245,
+        "assumptions": [
+          "D=0.07 m from TELESCOPE.DIAMETER",
+          "Osborn/Young C_Y=1.5",
+          "airmass=median of stars",
+          "floor is UPPER LIMIT if F1 finds no flat range (N-R0)",
+          "scintillation treated as exact given D,X,t,C_Y; uncertainty from floor only"
+        ]
+      },
+      "budgets_G10_G12p5": [
+        {
+          "mag": 10.0,
+          "n": 37,
+          "obs_mad_mmag": 11.031023727170648,
+          "floor_mmag": 6.797401308840611,
+          "phot_obs_after_floor_mmag": 8.687854736122938,
+          "phot_model_reduced_mmag": 3.514294864968727,
+          "phot_model_complete_mmag": 3.8804898398902252,
+          "ratio_phot_obs_over_reduced": 2.4721473495936293,
+          "ratio_phot_obs_over_complete": 2.2388551689568934,
+          "var_terms_adu2": {
+            "var_source": 21052.740315957366,
+            "var_sky": 25966.86475247776,
+            "var_dark": 0.0,
+            "var_rn": 297.7998754642368,
+            "var_dig": 4.3175224615543755,
+            "sky_factor": 1.0258927427691675,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 56893.185745765586
+          },
+          "tot_reduced_mmag": 7.65211950712831,
+          "tot_complete_mmag": 7.827059853541386
+        },
+        {
+          "mag": 12.5,
+          "n": 85,
+          "obs_mad_mmag": 37.3850452561441,
+          "floor_mmag": 6.797401308840611,
+          "phot_obs_after_floor_mmag": 36.761895275550124,
+          "phot_model_reduced_mmag": 19.86775918434844,
+          "phot_model_complete_mmag": 22.94069291498249,
+          "ratio_phot_obs_over_reduced": 1.850329216014993,
+          "ratio_phot_obs_over_complete": 1.6024753660139472,
+          "var_terms_adu2": {
+            "var_source": 2232.7289868513744,
+            "var_sky": 14583.62207877095,
+            "var_dark": 0.0,
+            "var_rn": 169.19409120095133,
+            "var_dig": 2.452987221648834,
+            "sky_factor": 1.0147108828527882,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 22364.282467023186
+          },
+          "tot_reduced_mmag": 20.998393261406694,
+          "tot_complete_mmag": 23.926555455663813
+        }
+      ],
+      "term_accounting_G10": {
+        "var_deficit_obs_minus_reduced": 6.312855151802821e-05,
+        "var_gained_by_complete_model": 2.7079329995457043e-06,
+        "fraction_of_deficit_closed_by_complete": 0.04289553513313821,
+        "remaining_var_deficit": 6.042061851848251e-05,
+        "remaining_sigma_factor_obs_over_complete": 2.2388551689568934,
+        "delta_var_sky_factor_only": 1.7576400264646713e-07,
+        "delta_var_digitization_only": 1.1503162938059395e-09,
+        "delta_var_corr_only": 2.487649695766304e-06,
+        "delta_var_dark": 0.0,
+        "frac_deficit_sky_factor": 0.002784223594870105,
+        "frac_deficit_digitization": 1.8221807187789395e-05,
+        "frac_deficit_corr": 0.039406094959360545,
+        "frac_deficit_dark": 0.0,
+        "sky_factor_value": 1.0258927427691675
+      },
+      "residuals": {
+        "n": 600,
+        "ratio_median": 1.5234095816165971,
+        "corr_resid_mag": -0.02014068907855092,
+        "corr_resid_bprp": 0.07404455123189589,
+        "corr_resid_x": 0.10111884343426736,
+        "corr_resid_y": -0.0673286905098054,
+        "ratio_by_mag_bin": [
+          {
+            "mag_center": 8.25,
+            "n": 12,
+            "ratio_median": 1.071166767970563
+          },
+          {
+            "mag_center": 8.75,
+            "n": 13,
+            "ratio_median": 0.9911003255119883
+          },
+          {
+            "mag_center": 9.25,
+            "n": 22,
+            "ratio_median": 1.2926144252666782
+          },
+          {
+            "mag_center": 9.75,
+            "n": 34,
+            "ratio_median": 1.3528726598042937
+          },
+          {
+            "mag_center": 10.25,
+            "n": 37,
+            "ratio_median": 1.401413467728916
+          },
+          {
+            "mag_center": 10.75,
+            "n": 57,
+            "ratio_median": 1.3698992253417643
+          },
+          {
+            "mag_center": 11.25,
+            "n": 92,
+            "ratio_median": 1.4920031704184633
+          },
+          {
+            "mag_center": 11.75,
+            "n": 126,
+            "ratio_median": 1.604240162195142
+          },
+          {
+            "mag_center": 12.25,
+            "n": 141,
+            "ratio_median": 1.5555961411822092
+          },
+          {
+            "mag_center": 12.75,
+            "n": 36,
+            "ratio_median": 1.531258202084476
+          }
+        ]
+      },
+      "ratio_median_G8_13": 1.5234095816165971,
+      "np_bin_bright": [
+        {
+          "mag_center": 8.25,
+          "n": 12,
+          "scatter_median": 0.00741033730745432
+        },
+        {
+          "mag_center": 8.75,
+          "n": 13,
+          "scatter_median": 0.007009798536293091
+        },
+        {
+          "mag_center": 9.25,
+          "n": 22,
+          "scatter_median": 0.009431678450352678
+        },
+        {
+          "mag_center": 9.75,
+          "n": 34,
+          "scatter_median": 0.010053968970282684
+        },
+        {
+          "mag_center": 10.25,
+          "n": 37,
+          "scatter_median": 0.01144663837110764
+        },
+        {
+          "mag_center": 10.75,
+          "n": 57,
+          "scatter_median": 0.0130601080043159
+        }
+      ]
+    },
+    "435": {
+      "flatness": {
+        "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "max_ratio": 1.1,
+        "min_bins": 3,
+        "flat": false,
+        "mag_lo": 8.0,
+        "mag_hi": 9.5,
+        "n_bins": 2,
+        "bin_rows": [
+          {
+            "mag_center": 8.25,
+            "n": 13,
+            "scatter_median": 0.009527900020340003
+          },
+          {
+            "mag_center": 8.75,
+            "n": 12,
+            "scatter_median": 0.010088943719427045
+          },
+          {
+            "mag_center": 9.25,
+            "n": 25,
+            "scatter_median": 0.01102505713466356
+          },
+          {
+            "mag_center": 9.75,
+            "n": 35,
+            "scatter_median": 0.012435782706135198
+          },
+          {
+            "mag_center": 10.25,
+            "n": 39,
+            "scatter_median": 0.014559979099845934
+          },
+          {
+            "mag_center": 10.75,
+            "n": 61,
+            "scatter_median": 0.01660568612538892
+          },
+          {
+            "mag_center": 11.25,
+            "n": 98,
+            "scatter_median": 0.021259193396159684
+          },
+          {
+            "mag_center": 11.75,
+            "n": 146,
+            "scatter_median": 0.026987192414723582
+          },
+          {
+            "mag_center": 12.25,
+            "n": 204,
+            "scatter_median": 0.03504035394149434
+          },
+          {
+            "mag_center": 12.75,
+            "n": 261,
+            "scatter_median": 0.04852512371826259
+          },
+          {
+            "mag_center": 13.25,
+            "n": 365,
+            "scatter_median": 0.06855926190673736
+          },
+          {
+            "mag_center": 13.75,
+            "n": 435,
+            "scatter_median": 0.1025623556528972
+          },
+          {
+            "mag_center": 14.25,
+            "n": 390,
+            "scatter_median": 0.15721736812086634
+          },
+          {
+            "mag_center": 14.75,
+            "n": 319,
+            "scatter_median": 0.236744191669105
+          },
+          {
+            "mag_center": 15.25,
+            "n": 151,
+            "scatter_median": 0.3241252436412098
+          }
+        ],
+        "result": "no_flat_range; upper_limit_scatter=0.00953 at G~8.25 (n_bins_kept=2)",
+        "upper_limit_scatter": 0.009527900020340003,
+        "upper_limit_at_mag": 8.25
+      },
+      "fit_reduced_f1": {
+        "note": "F1 flatness/UL path with reduced Howell (no sky_factor/corr)",
+        "sigma_sys": 0.009438973657511346,
+        "floor_is_upper_limit": true,
+        "chi2_red": 7.635480790002882
+      },
+      "fit_complete": {
+        "n_stars": 2591,
+        "gain_e_per_adu": 3.17,
+        "read_noise_e": 7.6,
+        "sky_adu_median": 1564.2216186523438,
+        "aperture_area_px_median": 11.532962560516731,
+        "zp_inst": 21.68558924165267,
+        "sigma_sys_mag": 0.009433655188704785,
+        "sigma_sys_mag_err": 0.0,
+        "chi2_red": 6.202152106118262,
+        "n_fit": 18,
+        "scint_mag_predicted": 0.004009847321673604,
+        "scint_rel_predicted": 0.0036932058672270967,
+        "scint_airmass_used": 1.039732,
+        "scint_params": {
+          "draft_id": 435,
+          "setup": "NoFilter_60_2",
+          "telescope_diameter_m": 0.07,
+          "altitude_m": 275.0,
+          "exposure_s": 60.0,
+          "c_y": 1.5,
+          "source_notes": [
+            "D=0.070 m from TELESCOPE.DIAMETER (Carl-Zeiss 200mm)",
+            "altitude_m=275.0 from LOCATION (Jirny)",
+            "exposure_s=60.0 from setup name 'NoFilter_60_2'"
+          ]
+        },
+        "telescope_diameter_m_used": 0.07,
+        "telescope_diameter_m_db": 0.07,
+        "diameter_note": "",
+        "assumption": "Bulk of field stars are non-variable; median scatter at magnitude traces noise.",
+        "floor_is_upper_limit": true,
+        "flat_mag_lo": 8.0,
+        "flat_mag_hi": 9.5,
+        "flatness_criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+        "flatness_result": "no_flat_range; upper_limit_scatter=0.00953 at G~8.25 (n_bins_kept=2)",
+        "model_completion": {
+          "use_complete_model": true,
+          "floor_mode": "f1",
+          "n_sky_px": 2000.957179412714,
+          "dark_e_per_px": 0.0,
+          "digitization_adu": 1.0,
+          "correlated_pixel_factor": 1.3643636904012144,
+          "flatness": {
+            "criterion": "Bright-end NP bins (n>=8): grow fainter while max/min bin median scatter <= 1.1; need >= 3 contiguous bins for a measured floor; else upper limit at min bright-bin median (N-R0).",
+            "max_ratio": 1.1,
+            "min_bins": 3,
+            "flat": false,
+            "mag_lo": 8.0,
+            "mag_hi": 9.5,
+            "n_bins": 2,
+            "bin_rows": [
+              {
+                "mag_center": 8.25,
+                "n": 13,
+                "scatter_median": 0.009527900020340003
+              },
+              {
+                "mag_center": 8.75,
+                "n": 12,
+                "scatter_median": 0.010088943719427045
+              },
+              {
+                "mag_center": 9.25,
+                "n": 25,
+                "scatter_median": 0.01102505713466356
+              },
+              {
+                "mag_center": 9.75,
+                "n": 35,
+                "scatter_median": 0.012435782706135198
+              },
+              {
+                "mag_center": 10.25,
+                "n": 39,
+                "scatter_median": 0.014559979099845934
+              },
+              {
+                "mag_center": 10.75,
+                "n": 61,
+                "scatter_median": 0.01660568612538892
+              },
+              {
+                "mag_center": 11.25,
+                "n": 98,
+                "scatter_median": 0.021259193396159684
+              },
+              {
+                "mag_center": 11.75,
+                "n": 146,
+                "scatter_median": 0.026987192414723582
+              },
+              {
+                "mag_center": 12.25,
+                "n": 204,
+                "scatter_median": 0.03504035394149434
+              },
+              {
+                "mag_center": 12.75,
+                "n": 261,
+                "scatter_median": 0.04852512371826259
+              },
+              {
+                "mag_center": 13.25,
+                "n": 365,
+                "scatter_median": 0.06855926190673736
+              },
+              {
+                "mag_center": 13.75,
+                "n": 435,
+                "scatter_median": 0.1025623556528972
+              },
+              {
+                "mag_center": 14.25,
+                "n": 390,
+                "scatter_median": 0.15721736812086634
+              },
+              {
+                "mag_center": 14.75,
+                "n": 319,
+                "scatter_median": 0.236744191669105
+              },
+              {
+                "mag_center": 15.25,
+                "n": 151,
+                "scatter_median": 0.3241252436412098
+              }
+            ],
+            "result": "no_flat_range; upper_limit_scatter=0.00953 at G~8.25 (n_bins_kept=2)",
+            "upper_limit_scatter": 0.009527900020340003,
+            "upper_limit_at_mag": 8.25
+          }
+        }
+      },
+      "scint_ratio": {
+        "sigma_sys_mag": 0.009433655188704785,
+        "sigma_sys_mag_err": 0.0002805218495435212,
+        "scint_mag": 0.004009847321673604,
+        "ratio": 2.3526220406734657,
+        "ratio_err": 0.06995823706984405,
+        "ratio_is_upper_limit": true,
+        "ratio_note": "upper_limit_ratio_N-R0",
+        "fraction_floor_variance_from_scint": 0.18067400728811378,
+        "assumptions": [
+          "D=0.07 m from TELESCOPE.DIAMETER",
+          "Osborn/Young C_Y=1.5",
+          "airmass=median of stars",
+          "floor is UPPER LIMIT if F1 finds no flat range (N-R0)",
+          "scintillation treated as exact given D,X,t,C_Y; uncertainty from floor only"
+        ]
+      },
+      "budgets_G10_G12p5": [
+        {
+          "mag": 10.0,
+          "n": 40,
+          "obs_mad_mmag": 13.909327994411054,
+          "floor_mmag": 9.433655188704785,
+          "phot_obs_after_floor_mmag": 10.221328437963937,
+          "phot_model_reduced_mmag": 3.2894302728295433,
+          "phot_model_complete_mmag": 3.514055239127442,
+          "ratio_phot_obs_over_reduced": 3.1073248526929946,
+          "ratio_phot_obs_over_complete": 2.9086988514449037,
+          "var_terms_adu2": {
+            "var_source": 17294.23633947176,
+            "var_sky": 10279.654607895696,
+            "var_dark": 0.0,
+            "var_rn": 118.89725740644046,
+            "var_dig": 1.7237803698516558,
+            "sky_factor": 1.0103377346857023,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 31483.99480059067
+          },
+          "tot_reduced_mmag": 9.990705767821618,
+          "tot_complete_mmag": 10.066897955329425
+        },
+        {
+          "mag": 12.5,
+          "n": 223,
+          "obs_mad_mmag": 42.67908111291662,
+          "floor_mmag": 9.433655188704785,
+          "phot_obs_after_floor_mmag": 41.62343227586523,
+          "phot_model_reduced_mmag": 20.953461538815112,
+          "phot_model_complete_mmag": 23.891094719288724,
+          "ratio_phot_obs_over_reduced": 1.986470454953715,
+          "ratio_phot_obs_over_complete": 1.7422153637129116,
+          "var_terms_adu2": {
+            "var_source": 1375.8258815097686,
+            "var_sky": 5674.891705048368,
+            "var_dark": 0.0,
+            "var_rn": 66.29023251255822,
+            "var_dig": 0.9610802133763943,
+            "sky_factor": 1.0057637228218455,
+            "corr_factor": 1.3643636904012144,
+            "var_total": 9210.197320051882
+          },
+          "tot_reduced_mmag": 22.97915143511572,
+          "tot_complete_mmag": 25.686149129548443
+        }
+      ],
+      "term_accounting_G10": {
+        "var_deficit_obs_minus_reduced": 9.365520351692287e-05,
+        "var_gained_by_complete_model": 1.5282327038315811e-06,
+        "fraction_of_deficit_closed_by_complete": 0.01631764863503222,
+        "remaining_var_deficit": 9.212697081309129e-05,
+        "remaining_sigma_factor_obs_over_complete": 2.9086988514449037,
+        "delta_var_sky_factor_only": 4.297733350520443e-08,
+        "delta_var_digitization_only": 6.891944838449422e-10,
+        "delta_var_corr_only": 1.5087483788108176e-06,
+        "delta_var_dark": 0.0,
+        "frac_deficit_sky_factor": 0.00045888890196516105,
+        "frac_deficit_digitization": 7.358848819547002e-06,
+        "frac_deficit_corr": 0.016109605469366118,
+        "frac_deficit_dark": 0.0,
+        "sky_factor_value": 1.0103377346857023
+      },
+      "residuals": {
+        "n": 2591,
+        "ratio_median": 1.520719921498041,
+        "corr_resid_mag": -0.08270671363173238,
+        "corr_resid_bprp": 0.01791173882842825,
+        "corr_resid_x": -0.018185552578213044,
+        "corr_resid_y": -0.01929582111522602,
+        "ratio_by_mag_bin": [
+          {
+            "mag_center": 8.25,
+            "n": 13,
+            "ratio_median": 1.0022850614462175
+          },
+          {
+            "mag_center": 8.75,
+            "n": 12,
+            "ratio_median": 1.056335570858837
+          },
+          {
+            "mag_center": 9.25,
+            "n": 25,
+            "ratio_median": 1.1344854143783174
+          },
+          {
+            "mag_center": 9.75,
+            "n": 35,
+            "ratio_median": 1.2554696747847627
+          },
+          {
+            "mag_center": 10.25,
+            "n": 39,
+            "ratio_median": 1.412891388367686
+          },
+          {
+            "mag_center": 10.75,
+            "n": 61,
+            "ratio_median": 1.474033633489952
+          },
+          {
+            "mag_center": 11.25,
+            "n": 98,
+            "ratio_median": 1.66438240548641
+          },
+          {
+            "mag_center": 11.75,
+            "n": 146,
+            "ratio_median": 1.7177438213092153
+          },
+          {
+            "mag_center": 12.25,
+            "n": 204,
+            "ratio_median": 1.6990699270434724
+          },
+          {
+            "mag_center": 12.75,
+            "n": 261,
+            "ratio_median": 1.6156440189558001
+          }
+        ]
+      },
+      "ratio_median_G8_13": 1.520719921498041,
+      "np_bin_bright": [
+        {
+          "mag_center": 8.25,
+          "n": 13,
+          "scatter_median": 0.009527900020340003
+        },
+        {
+          "mag_center": 8.75,
+          "n": 12,
+          "scatter_median": 0.010088943719427045
+        },
+        {
+          "mag_center": 9.25,
+          "n": 25,
+          "scatter_median": 0.01102505713466356
+        },
+        {
+          "mag_center": 9.75,
+          "n": 35,
+          "scatter_median": 0.012435782706135198
+        },
+        {
+          "mag_center": 10.25,
+          "n": 39,
+          "scatter_median": 0.014559979099845934
+        },
+        {
+          "mag_center": 10.75,
+          "n": 61,
+          "scatter_median": 0.01660568612538892
+        }
+      ]
+    }
+  },
+  "section6": {
+    "impact_inventory": [
+      {
+        "quantity": "comp_pool_noise.fit_parametric_noise_curve F1/complete (floor_mode=f1)",
+        "feeds": "NOISE-FLOOR-01 diagnostics only",
+        "value_changes": true,
+        "intended_here": true
+      },
+      {
+        "quantity": "analyze_draft_comp_pool fit (floor_mode=legacy_g8_10p5, reduced Howell)",
+        "feeds": "COMP-POOL Stage-2 admission thresholds (blocked under C2-R2)",
+        "value_changes": false,
+        "intended_here": false,
+        "note": "explicitly pinned to legacy window so admission thresholds do not move"
+      },
+      {
+        "quantity": "_noise_floor_adu_from_image_array",
+        "feeds": "SNR aperture table sky estimate",
+        "value_changes": false,
+        "intended_here": false
+      },
+      {
+        "quantity": "sigma_bkg_ap / Howell production err / resolve_sigma_sys_mag",
+        "feeds": "exported LC uncertainties",
+        "value_changes": false,
+        "intended_here": false
+      },
+      {
+        "quantity": "dao_flux / aperture radii",
+        "feeds": "photometry products",
+        "value_changes": false,
+        "intended_here": false
+      }
+    ],
+    "aperture_snr": {
+      "archived_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000512\\aperture_snr_table.json",
+      "archived_sha256_16": "55cd7bf4b2f51d49",
+      "n_entries_compared": 23,
+      "noise_floor_helper_pinned_legacy_std": false,
+      "max_radius_delta_px_recompute_vs_archive": 0.10000000000000053,
+      "archive_file_written_by_this_task": false,
+      "photometry_core_modified_by_this_task": false,
+      "note": "Archive file not overwritten. Recompute with archived FWHM/sky/gain/RN shows a pre-existing +0.1 px bright-end offset vs the on-disk table (builder/product drift unrelated to NOISE-FLOOR-01; photometry_core untouched)."
+    },
+    "dao_flux": {
+      "frame": "proc_BO_CVn_Light_068.csv",
+      "max_rel_diff": 0.0,
+      "n_stars": 6,
+      "note": "Stored proc unchanged; no photometry recompute invoked by this task."
+    },
+    "error_bars": {
+      "lc_file": "lightcurve_1498613634033133184.csv",
+      "err_cols": [
+        "err",
+        "err_photon",
+        "err_sem_rel",
+        "err_scint_rel",
+        "err_sigma_sys_rel",
+        "sigma_sys_mag"
+      ],
+      "identical_to_archive": true,
+      "n_rows": 134,
+      "note": "No export rewrite; file untouched. Identity re-read confirms columns present."
+    },
+    "gates": {
+      "returncode": 0,
+      "stdout_tail": "...                                                                      [100%]\n3 passed in 6.29s\n",
+      "still_fire": true
+    }
+  }
+}

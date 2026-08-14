@@ -1,0 +1,287 @@
+{
+  "512": {
+    "term_accounting_G10": {
+      "var_deficit_obs_minus_reduced": 6.31784875571582e-05,
+      "var_gained_by_complete_model": 2.6085244361708065e-06,
+      "fraction_of_deficit_closed_by_complete": 0.04128817477326992,
+      "remaining_var_deficit": 6.05699631209874e-05,
+      "remaining_sigma_factor_obs_over_complete": 2.2633352384862007,
+      "delta_var_sky_factor_only": 1.6862478005091776e-07,
+      "delta_var_digitization_only": 1.1298780053507518e-09,
+      "delta_var_corr_only": 2.446061881050753e-06,
+      "delta_var_dark": 0.0,
+      "frac_deficit_sky_factor": 0.0026690221081718877,
+      "frac_deficit_digitization": 1.7883903984382973e-05,
+      "frac_deficit_corr": 0.038716689424351546,
+      "frac_deficit_dark": 0.0,
+      "sky_factor_value": 1.0252590726396744
+    },
+    "budgets": [
+      {
+        "mag": 10.0,
+        "n": 40,
+        "obs_mad_mmag": 11.017702758840823,
+        "floor_mmag": 6.79175553714433,
+        "phot_obs_after_floor_mmag": 8.675357675959994,
+        "phot_model_reduced_mmag": 3.4761103619821667,
+        "phot_model_complete_mmag": 3.832997219520332,
+        "ratio_phot_obs_over_reduced": 2.4957083557649433,
+        "ratio_phot_obs_over_complete": 2.2633352384862007,
+        "var_terms_adu2": {
+          "var_source": 21174.690532164965,
+          "var_sky": 25343.127497954345,
+          "var_dark": 0.0,
+          "var_rn": 290.5118532052278,
+          "var_dig": 4.21186022863864,
+          "sky_factor": 1.0252590726396744,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 56154.043824891836
+        },
+        "tot_reduced_mmag": 7.629632135628195,
+        "tot_complete_mmag": 7.7987057234634305
+      },
+      {
+        "mag": 12.5,
+        "n": 89,
+        "obs_mad_mmag": 37.73749724688365,
+        "floor_mmag": 6.79175553714433,
+        "phot_obs_after_floor_mmag": 37.12129786500224,
+        "phot_model_reduced_mmag": 20.01378666041778,
+        "phot_model_complete_mmag": 23.10099646854038,
+        "ratio_phot_obs_over_reduced": 1.8547863277876748,
+        "ratio_phot_obs_over_complete": 1.606913273873494,
+        "var_terms_adu2": {
+          "var_source": 2183.109831413133,
+          "var_sky": 14124.861235458047,
+          "var_dark": 0.0,
+          "var_rn": 163.71182272266807,
+          "var_dig": 2.3735049275130127,
+          "sky_factor": 1.0142342172152408,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 21681.158423582026
+        },
+        "tot_reduced_mmag": 21.134795948034306,
+        "tot_complete_mmag": 24.078703891942475
+      }
+    ],
+    "annulus": {
+      "r_ap": 3.411,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "fwhm": 3.3014,
+      "annulus_inner_fwhm": 4.75,
+      "annulus_outer_fwhm": 9.0,
+      "n_pix": 36.55218233869761,
+      "n_sky_px": 2000.957179412714,
+      "sky_factor": 1.0182673486043443
+    },
+    "corr": {
+      "method": "frame_difference_empty_aperture",
+      "files": [
+        "BO_CVn_Light_076.fits",
+        "BO_CVn_Light_077.fits"
+      ],
+      "sig_pix_adu_diff": 46.9300271118164,
+      "area_px": 36.55218233869761,
+      "r_ap_px": 3.411,
+      "n_trials": 500,
+      "var_sum_obs": 109836.09266307439,
+      "var_sum_indep": 80503.5295470046,
+      "corr_factor": 1.3643636904012144,
+      "rho_lag1_y": -0.010283580650434554,
+      "rho_lag1_x": -0.03931382341762129,
+      "rejected_single_frame_note": "Single-frame empty apertures mix large-scale structure into Var(sum); not used (was ~100x).",
+      "citation": "Casertano et al. 2000 PASP 112, 177; Fruchter & Hook 2002 PASP 114, 144"
+    }
+  },
+  "510": {
+    "term_accounting_G10": {
+      "var_deficit_obs_minus_reduced": 6.312855151802821e-05,
+      "var_gained_by_complete_model": 2.7079329995457043e-06,
+      "fraction_of_deficit_closed_by_complete": 0.04289553513313821,
+      "remaining_var_deficit": 6.042061851848251e-05,
+      "remaining_sigma_factor_obs_over_complete": 2.2388551689568934,
+      "delta_var_sky_factor_only": 1.7576400264646713e-07,
+      "delta_var_digitization_only": 1.1503162938059395e-09,
+      "delta_var_corr_only": 2.487649695766304e-06,
+      "delta_var_dark": 0.0,
+      "frac_deficit_sky_factor": 0.002784223594870105,
+      "frac_deficit_digitization": 1.8221807187789395e-05,
+      "frac_deficit_corr": 0.039406094959360545,
+      "frac_deficit_dark": 0.0,
+      "sky_factor_value": 1.0258927427691675
+    },
+    "budgets": [
+      {
+        "mag": 10.0,
+        "n": 37,
+        "obs_mad_mmag": 11.031023727170648,
+        "floor_mmag": 6.797401308840611,
+        "phot_obs_after_floor_mmag": 8.687854736122938,
+        "phot_model_reduced_mmag": 3.514294864968727,
+        "phot_model_complete_mmag": 3.8804898398902252,
+        "ratio_phot_obs_over_reduced": 2.4721473495936293,
+        "ratio_phot_obs_over_complete": 2.2388551689568934,
+        "var_terms_adu2": {
+          "var_source": 21052.740315957366,
+          "var_sky": 25966.86475247776,
+          "var_dark": 0.0,
+          "var_rn": 297.7998754642368,
+          "var_dig": 4.3175224615543755,
+          "sky_factor": 1.0258927427691675,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 56893.185745765586
+        },
+        "tot_reduced_mmag": 7.65211950712831,
+        "tot_complete_mmag": 7.827059853541386
+      },
+      {
+        "mag": 12.5,
+        "n": 85,
+        "obs_mad_mmag": 37.3850452561441,
+        "floor_mmag": 6.797401308840611,
+        "phot_obs_after_floor_mmag": 36.761895275550124,
+        "phot_model_reduced_mmag": 19.86775918434844,
+        "phot_model_complete_mmag": 22.94069291498249,
+        "ratio_phot_obs_over_reduced": 1.850329216014993,
+        "ratio_phot_obs_over_complete": 1.6024753660139472,
+        "var_terms_adu2": {
+          "var_source": 2232.7289868513744,
+          "var_sky": 14583.62207877095,
+          "var_dark": 0.0,
+          "var_rn": 169.19409120095133,
+          "var_dig": 2.452987221648834,
+          "sky_factor": 1.0147108828527882,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 22364.282467023186
+        },
+        "tot_reduced_mmag": 20.998393261406694,
+        "tot_complete_mmag": 23.926555455663813
+      }
+    ],
+    "annulus": {
+      "r_ap": 3.411,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "fwhm": 3.3014,
+      "annulus_inner_fwhm": 4.75,
+      "annulus_outer_fwhm": 9.0,
+      "n_pix": 36.55218233869761,
+      "n_sky_px": 2000.957179412714,
+      "sky_factor": 1.0182673486043443
+    },
+    "corr": {
+      "method": "frame_difference_empty_aperture",
+      "files": [
+        "BO_CVn_Light_076.fits",
+        "BO_CVn_Light_077.fits"
+      ],
+      "sig_pix_adu_diff": 46.9300271118164,
+      "area_px": 36.55218233869761,
+      "r_ap_px": 3.411,
+      "n_trials": 500,
+      "var_sum_obs": 109836.09266307439,
+      "var_sum_indep": 80503.5295470046,
+      "corr_factor": 1.3643636904012144,
+      "rho_lag1_y": -0.010283580650434554,
+      "rho_lag1_x": -0.03931382341762129,
+      "rejected_single_frame_note": "Single-frame empty apertures mix large-scale structure into Var(sum); not used (was ~100x).",
+      "citation": "Casertano et al. 2000 PASP 112, 177; Fruchter & Hook 2002 PASP 114, 144"
+    }
+  },
+  "435": {
+    "term_accounting_G10": {
+      "var_deficit_obs_minus_reduced": 9.365520351692287e-05,
+      "var_gained_by_complete_model": 1.5282327038315811e-06,
+      "fraction_of_deficit_closed_by_complete": 0.01631764863503222,
+      "remaining_var_deficit": 9.212697081309129e-05,
+      "remaining_sigma_factor_obs_over_complete": 2.9086988514449037,
+      "delta_var_sky_factor_only": 4.297733350520443e-08,
+      "delta_var_digitization_only": 6.891944838449422e-10,
+      "delta_var_corr_only": 1.5087483788108176e-06,
+      "delta_var_dark": 0.0,
+      "frac_deficit_sky_factor": 0.00045888890196516105,
+      "frac_deficit_digitization": 7.358848819547002e-06,
+      "frac_deficit_corr": 0.016109605469366118,
+      "frac_deficit_dark": 0.0,
+      "sky_factor_value": 1.0103377346857023
+    },
+    "budgets": [
+      {
+        "mag": 10.0,
+        "n": 40,
+        "obs_mad_mmag": 13.909327994411054,
+        "floor_mmag": 9.433655188704785,
+        "phot_obs_after_floor_mmag": 10.221328437963937,
+        "phot_model_reduced_mmag": 3.2894302728295433,
+        "phot_model_complete_mmag": 3.514055239127442,
+        "ratio_phot_obs_over_reduced": 3.1073248526929946,
+        "ratio_phot_obs_over_complete": 2.9086988514449037,
+        "var_terms_adu2": {
+          "var_source": 17294.23633947176,
+          "var_sky": 10279.654607895696,
+          "var_dark": 0.0,
+          "var_rn": 118.89725740644046,
+          "var_dig": 1.7237803698516558,
+          "sky_factor": 1.0103377346857023,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 31483.99480059067
+        },
+        "tot_reduced_mmag": 9.990705767821618,
+        "tot_complete_mmag": 10.066897955329425
+      },
+      {
+        "mag": 12.5,
+        "n": 223,
+        "obs_mad_mmag": 42.67908111291662,
+        "floor_mmag": 9.433655188704785,
+        "phot_obs_after_floor_mmag": 41.62343227586523,
+        "phot_model_reduced_mmag": 20.953461538815112,
+        "phot_model_complete_mmag": 23.891094719288724,
+        "ratio_phot_obs_over_reduced": 1.986470454953715,
+        "ratio_phot_obs_over_complete": 1.7422153637129116,
+        "var_terms_adu2": {
+          "var_source": 1375.8258815097686,
+          "var_sky": 5674.891705048368,
+          "var_dark": 0.0,
+          "var_rn": 66.29023251255822,
+          "var_dig": 0.9610802133763943,
+          "sky_factor": 1.0057637228218455,
+          "corr_factor": 1.3643636904012144,
+          "var_total": 9210.197320051882
+        },
+        "tot_reduced_mmag": 22.97915143511572,
+        "tot_complete_mmag": 25.686149129548443
+      }
+    ],
+    "annulus": {
+      "r_ap": 3.411,
+      "r_in": 15.681650000000001,
+      "r_out": 29.7126,
+      "fwhm": 3.3014,
+      "annulus_inner_fwhm": 4.75,
+      "annulus_outer_fwhm": 9.0,
+      "n_pix": 36.55218233869761,
+      "n_sky_px": 2000.957179412714,
+      "sky_factor": 1.0182673486043443
+    },
+    "corr": {
+      "method": "frame_difference_empty_aperture",
+      "files": [
+        "BO_CVn_Light_076.fits",
+        "BO_CVn_Light_077.fits"
+      ],
+      "sig_pix_adu_diff": 46.9300271118164,
+      "area_px": 36.55218233869761,
+      "r_ap_px": 3.411,
+      "n_trials": 500,
+      "var_sum_obs": 109836.09266307439,
+      "var_sum_indep": 80503.5295470046,
+      "corr_factor": 1.3643636904012144,
+      "rho_lag1_y": -0.010283580650434554,
+      "rho_lag1_x": -0.03931382341762129,
+      "rejected_single_frame_note": "Single-frame empty apertures mix large-scale structure into Var(sum); not used (was ~100x).",
+      "citation": "Casertano et al. 2000 PASP 112, 177; Fruchter & Hook 2002 PASP 114, 144"
+    }
+  }
+}
