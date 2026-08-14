@@ -77,8 +77,9 @@ def test_owner_groups_partition_every_key() -> None:
     # CAL-DIAG removal dropped 5 config_runtime keys (287 -> 282; config_runtime 259 -> 254).
     # L.A.Cosmic removal dropped 3 config_runtime keys (282 -> 279; config_runtime 254 -> 251).
     # Zero-clipping policy dropped 7 clip/CR gate keys (279 -> 272; config_runtime 251 -> 244).
+    # COMP-POOL-01 added comp_pool_derived_admission + comparison_stars_pool_n (244 -> 246).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 244, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 246, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:
