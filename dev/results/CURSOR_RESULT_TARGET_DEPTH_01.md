@@ -2,7 +2,7 @@ CURSOR RESULT - 2026-08-14 TARGET-DEPTH-01
 
 Register ID: TARGET-DEPTH-01
 Closes: SNR-DEPTH-01
-Status: implemented locally; commit below; push awaits Milan authorization.
+Status: COMMITTED tip **e54731e**; `--fast` OVERALL PASS on that tip; push awaits Milan authorization.
 
 ## Verdict
 
@@ -193,7 +193,7 @@ dao_flux, apertures, exported errs, COMP-POOL Stage 2, SNR-GATE detection depth.
 | BO CVn 512 | present; mag 9.72; zone linear; trust GREEN; check_scatter 0.009300; n_clean 5; would not mask |
 | BO CVn 513 | present; mag 9.72; zone linear; trust RED; check_scatter 0.011147; n_clean 4; would not mask |
 | Iron-gate + kwarg fixtures | returncode 0; still fire |
-| `--fast` | see commit footer |
+| `--fast` | OVERALL PASS on tip `e54731e` (1360 passed, 27 skipped) |
 
 Nothing moved that the inventory did not predict.
 
@@ -223,6 +223,8 @@ Nothing moved that the inventory did not predict.
 - **TARGET-DEPTH-01**: FIXED (Item A + Item B)
 
 Machine-readable: `dev/results/TARGET_DEPTH_01_results.json`
+
+Commits: science `3ae2625`; BLE001 test mark + tip `e54731e` (`--fast` PASS).
 
 ## Files changed
 
