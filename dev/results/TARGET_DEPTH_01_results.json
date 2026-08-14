@@ -1,0 +1,1152 @@
+{
+  "item_a": {
+    "cause": "OBS_QC_PROCESSING_FILE.RUN_ID foreign key still referenced OBS_QC_PROCESSING_RUN_OLD after a half-finished OBS_DRAFT FK strip migration. INSERT into FILE then raised: no such table: main.OBS_QC_PROCESSING_RUN_OLD.",
+    "created_by": "_rebuild_table_safely / _rebuild_qc_tables_without_obs_draft_fk left FILE pointing at RUN_OLD while RUN was already the live name (heal dropped RUN_OLD).",
+    "before_file_fk": [
+      [
+        0,
+        0,
+        "OBS_QC_PROCESSING_RUN",
+        "RUN_ID",
+        "ID",
+        "NO ACTION",
+        "CASCADE",
+        "NONE"
+      ]
+    ],
+    "after_file_fk_parent": "OBS_QC_PROCESSING_RUN",
+    "old_tables_before": [
+      "LOCATION_OLD"
+    ],
+    "old_tables_after_open": [
+      "LOCATION_OLD"
+    ],
+    "qc_write_demo": {
+      "run_id": 392,
+      "processing_hash": "target-depth-01-qc-demo",
+      "n_files_rows": 150,
+      "ok": true
+    },
+    "draft_statuses": [
+      {
+        "draft_id": 512,
+        "status": "INGESTED"
+      },
+      {
+        "draft_id": 513,
+        "status": "INGESTED"
+      },
+      {
+        "draft_id": 510,
+        "status": "INGESTED"
+      },
+      {
+        "draft_id": 435,
+        "status": "PROCESSED"
+      }
+    ],
+    "draft_513_status_before": "INGESTED",
+    "note_location_old": "LOCATION_OLD may remain from ACTIVE-column migration; not referenced by QC write. Deferred one-line: heal LOCATION_OLD orphans on open."
+  },
+  "item_b_depths": {
+    "512": {
+      "draft_id": 512,
+      "target_depth_g": 13.0,
+      "detect_frac_thr": 1.0,
+      "mode": "np_half_snr",
+      "n_bright": 617,
+      "rule": "bright detect_frac degenerate at ceiling (1.0000); forced-photometry detect_frac does not show the F2 DAO cliff; NP half-SNR (T-R0): last bin with detect_frac_median>=1 ends at G=13.0 (scatter_med=0.0441, snr_ref=24.640); snr_thr=0.5*snr_ref=12.320; last 0.5-mag bin with n>=8 and snr_median>=snr_thr.",
+      "bin_rows": [
+        {
+          "mag_lo": 5.5,
+          "mag_hi": 6.0,
+          "mag_center": 5.75,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.03169966822944593,
+          "snr_median": 34.25071192857423,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.0,
+          "mag_hi": 6.5,
+          "mag_center": 6.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.028187147937669202,
+          "snr_median": 38.51883869765892,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.5,
+          "mag_hi": 7.0,
+          "mag_center": 6.75,
+          "n": 5,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.02766082690204409,
+          "snr_median": 39.25176237872683,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.0,
+          "mag_hi": 7.5,
+          "mag_center": 7.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01654558868185621,
+          "snr_median": 65.62088697084202,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.5,
+          "mag_hi": 8.0,
+          "mag_center": 7.75,
+          "n": 7,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.016656234244317347,
+          "snr_median": 65.18497451658696,
+          "usable": false
+        },
+        {
+          "mag_lo": 8.0,
+          "mag_hi": 8.5,
+          "mag_center": 8.25,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.007396752674916477,
+          "snr_median": 146.78552230629901,
+          "usable": true
+        },
+        {
+          "mag_lo": 8.5,
+          "mag_hi": 9.0,
+          "mag_center": 8.75,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.00700374165204271,
+          "snr_median": 155.0223093168298,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.0,
+          "mag_hi": 9.5,
+          "mag_center": 9.25,
+          "n": 24,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.00932884904020501,
+          "snr_median": 116.3847973183913,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.5,
+          "mag_hi": 10.0,
+          "mag_center": 9.75,
+          "n": 36,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.010030175471364536,
+          "snr_median": 108.24698011094938,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.0,
+          "mag_hi": 10.5,
+          "mag_center": 10.25,
+          "n": 39,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.011414038094978872,
+          "snr_median": 95.12288251742856,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.5,
+          "mag_hi": 11.0,
+          "mag_center": 10.75,
+          "n": 58,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.013029050381881725,
+          "snr_median": 83.33195228625108,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.0,
+          "mag_hi": 11.5,
+          "mag_center": 11.25,
+          "n": 96,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01737109512555267,
+          "snr_median": 62.502461526505876,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.5,
+          "mag_hi": 12.0,
+          "mag_center": 11.75,
+          "n": 133,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.025845744228067926,
+          "snr_median": 42.00831654052519,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.0,
+          "mag_hi": 12.5,
+          "mag_center": 12.25,
+          "n": 147,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.033863930916378814,
+          "snr_median": 32.06172985171654,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.5,
+          "mag_hi": 13.0,
+          "mag_center": 12.75,
+          "n": 40,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.0440645861342511,
+          "snr_median": 24.639655106489112,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.0,
+          "mag_hi": 13.5,
+          "mag_center": 13.25,
+          "n": 4,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.03355141617803131,
+          "snr_median": 32.36036890356492,
+          "usable": false
+        }
+      ],
+      "n_active_targets": 45,
+      "n_lightcurves": 17,
+      "n_targets_fainter_than_limit": 2,
+      "n_existing_lc_fainter_than_limit": 1,
+      "existing_lc_fainter_than_limit": [
+        {
+          "catalog_id": "1497169940906156032",
+          "vsx_name": "CSS_J134925.3+393524",
+          "mag": 14.195008277893066,
+          "zone_flag": "noise"
+        }
+      ],
+      "targets_by_g_bin": {
+        "8": {
+          "n_targets": 1,
+          "n_linear": 1
+        },
+        "9": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "10": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "11": {
+          "n_targets": 10,
+          "n_linear": 5
+        },
+        "12": {
+          "n_targets": 19,
+          "n_linear": 0
+        },
+        "13": {
+          "n_targets": 1,
+          "n_linear": 0
+        },
+        "14": {
+          "n_targets": 1,
+          "n_linear": 0
+        },
+        "15": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "16": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "17": {
+          "n_targets": 0,
+          "n_linear": 0
+        }
+      }
+    },
+    "513": {
+      "draft_id": 513,
+      "target_depth_g": 15.0,
+      "detect_frac_thr": 1.0,
+      "mode": "np_half_snr",
+      "n_bright": 860,
+      "rule": "bright detect_frac degenerate at ceiling (1.0000); forced-photometry detect_frac does not show the F2 DAO cliff; NP half-SNR (T-R0): last bin with detect_frac_median>=1 ends at G=14.5 (scatter_med=0.1748, snr_ref=6.213); snr_thr=0.5*snr_ref=3.106; last 0.5-mag bin with n>=8 and snr_median>=snr_thr.",
+      "bin_rows": [
+        {
+          "mag_lo": 5.5,
+          "mag_hi": 6.0,
+          "mag_center": 5.75,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.03169966822944593,
+          "snr_median": 34.25071192857423,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.0,
+          "mag_hi": 6.5,
+          "mag_center": 6.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.028187147937669202,
+          "snr_median": 38.51883869765892,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.5,
+          "mag_hi": 7.0,
+          "mag_center": 6.75,
+          "n": 5,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.02766082690204409,
+          "snr_median": 39.25176237872683,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.0,
+          "mag_hi": 7.5,
+          "mag_center": 7.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01654558868185621,
+          "snr_median": 65.62088697084202,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.5,
+          "mag_hi": 8.0,
+          "mag_center": 7.75,
+          "n": 7,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.016656234244317347,
+          "snr_median": 65.18497451658696,
+          "usable": false
+        },
+        {
+          "mag_lo": 8.0,
+          "mag_hi": 8.5,
+          "mag_center": 8.25,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.007396752674916477,
+          "snr_median": 146.78552230629901,
+          "usable": true
+        },
+        {
+          "mag_lo": 8.5,
+          "mag_hi": 9.0,
+          "mag_center": 8.75,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.00700374165204271,
+          "snr_median": 155.0223093168298,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.0,
+          "mag_hi": 9.5,
+          "mag_center": 9.25,
+          "n": 24,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.00932884904020501,
+          "snr_median": 116.3847973183913,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.5,
+          "mag_hi": 10.0,
+          "mag_center": 9.75,
+          "n": 36,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.010030175471364536,
+          "snr_median": 108.24698011094938,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.0,
+          "mag_hi": 10.5,
+          "mag_center": 10.25,
+          "n": 39,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.011414038094978872,
+          "snr_median": 95.12288251742856,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.5,
+          "mag_hi": 11.0,
+          "mag_center": 10.75,
+          "n": 59,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.013046454757843684,
+          "snr_median": 83.22078487302244,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.0,
+          "mag_hi": 11.5,
+          "mag_center": 11.25,
+          "n": 96,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01737109512555267,
+          "snr_median": 62.502461526505876,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.5,
+          "mag_hi": 12.0,
+          "mag_center": 11.75,
+          "n": 134,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.02586600247804558,
+          "snr_median": 41.97541563214784,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.0,
+          "mag_hi": 12.5,
+          "mag_center": 12.25,
+          "n": 187,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.0358534224013153,
+          "snr_median": 30.282637808052,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.5,
+          "mag_hi": 13.0,
+          "mag_center": 12.75,
+          "n": 241,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.053375918401903984,
+          "snr_median": 20.341311911167036,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.0,
+          "mag_hi": 13.5,
+          "mag_center": 13.25,
+          "n": 344,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.08059005203980199,
+          "snr_median": 13.472335322750551,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.5,
+          "mag_hi": 14.0,
+          "mag_center": 13.75,
+          "n": 442,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.11794467700493536,
+          "snr_median": 9.205470160494798,
+          "usable": true
+        },
+        {
+          "mag_lo": 14.0,
+          "mag_hi": 14.5,
+          "mag_center": 14.25,
+          "n": 552,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.17475411772959798,
+          "snr_median": 6.2129363179763235,
+          "usable": true
+        },
+        {
+          "mag_lo": 14.5,
+          "mag_hi": 15.0,
+          "mag_center": 14.75,
+          "n": 638,
+          "detect_frac_median": 0.9923664122137404,
+          "scatter_mad_median": 0.2756494797334318,
+          "snr_median": 3.9388291456530085,
+          "usable": true
+        },
+        {
+          "mag_lo": 15.0,
+          "mag_hi": 15.5,
+          "mag_center": 15.25,
+          "n": 354,
+          "detect_frac_median": 0.9760952380952381,
+          "scatter_mad_median": 0.3961206014081049,
+          "snr_median": 2.7409233473306407,
+          "usable": false
+        }
+      ],
+      "n_active_targets": 218,
+      "n_lightcurves": 60,
+      "n_targets_fainter_than_limit": 15,
+      "n_existing_lc_fainter_than_limit": 4,
+      "existing_lc_fainter_than_limit": [
+        {
+          "catalog_id": "1496990342553687040",
+          "vsx_name": "TSVSC1 TN-N130302101-35-67-2",
+          "mag": 15.100932121276855,
+          "zone_flag": "noise"
+        },
+        {
+          "catalog_id": "1500295921183601152",
+          "vsx_name": "ZTF J134644.81+405436.2",
+          "mag": 15.09200668334961,
+          "zone_flag": "noise"
+        },
+        {
+          "catalog_id": "1486043226830097024",
+          "vsx_name": "ZTF J141147.12+404808.7",
+          "mag": 15.162455558776855,
+          "zone_flag": "noise"
+        },
+        {
+          "catalog_id": "1500576193569187840",
+          "vsx_name": "LINEAR 10032668",
+          "mag": 15.145925521850586,
+          "zone_flag": "noise"
+        }
+      ],
+      "targets_by_g_bin": {
+        "8": {
+          "n_targets": 1,
+          "n_linear": 1
+        },
+        "9": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "10": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "11": {
+          "n_targets": 10,
+          "n_linear": 10
+        },
+        "12": {
+          "n_targets": 52,
+          "n_linear": 52
+        },
+        "13": {
+          "n_targets": 59,
+          "n_linear": 54
+        },
+        "14": {
+          "n_targets": 68,
+          "n_linear": 40
+        },
+        "15": {
+          "n_targets": 15,
+          "n_linear": 3
+        },
+        "16": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "17": {
+          "n_targets": 0,
+          "n_linear": 0
+        }
+      }
+    },
+    "510": {
+      "draft_id": 510,
+      "target_depth_g": 13.0,
+      "detect_frac_thr": 1.0,
+      "mode": "np_half_snr",
+      "n_bright": 587,
+      "rule": "bright detect_frac degenerate at ceiling (1.0000); forced-photometry detect_frac does not show the F2 DAO cliff; NP half-SNR (T-R0): last bin with detect_frac_median>=1 ends at G=13.0 (scatter_med=0.0426, snr_ref=25.503); snr_thr=0.5*snr_ref=12.751; last 0.5-mag bin with n>=8 and snr_median>=snr_thr.",
+      "bin_rows": [
+        {
+          "mag_lo": 5.5,
+          "mag_hi": 6.0,
+          "mag_center": 5.75,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.031191394086672885,
+          "snr_median": 34.808838673293884,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.0,
+          "mag_hi": 6.5,
+          "mag_center": 6.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.028085627345458285,
+          "snr_median": 38.65807202393516,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.5,
+          "mag_hi": 7.0,
+          "mag_center": 6.75,
+          "n": 5,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.028748597740926973,
+          "snr_median": 37.76657959259201,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.0,
+          "mag_hi": 7.5,
+          "mag_center": 7.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.016339754314228825,
+          "snr_median": 66.44752325392427,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.5,
+          "mag_hi": 8.0,
+          "mag_center": 7.75,
+          "n": 6,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01837827753881624,
+          "snr_median": 59.07714705390517,
+          "usable": false
+        },
+        {
+          "mag_lo": 8.0,
+          "mag_hi": 8.5,
+          "mag_center": 8.25,
+          "n": 12,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.00741033730745432,
+          "snr_median": 146.51643504350994,
+          "usable": true
+        },
+        {
+          "mag_lo": 8.5,
+          "mag_hi": 9.0,
+          "mag_center": 8.75,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.007009798536293091,
+          "snr_median": 154.8883607905066,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.0,
+          "mag_hi": 9.5,
+          "mag_center": 9.25,
+          "n": 22,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.009431678450352678,
+          "snr_median": 115.1159054534488,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.5,
+          "mag_hi": 10.0,
+          "mag_center": 9.75,
+          "n": 34,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.010053968970282684,
+          "snr_median": 107.99080522004058,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.0,
+          "mag_hi": 10.5,
+          "mag_center": 10.25,
+          "n": 37,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01144663837110764,
+          "snr_median": 94.85197047009248,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.5,
+          "mag_hi": 11.0,
+          "mag_center": 10.75,
+          "n": 57,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.0130601080043159,
+          "snr_median": 83.13378452914266,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.0,
+          "mag_hi": 11.5,
+          "mag_center": 11.25,
+          "n": 92,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01724206471635313,
+          "snr_median": 62.97019658720858,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.5,
+          "mag_hi": 12.0,
+          "mag_center": 11.75,
+          "n": 126,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.025405576922462817,
+          "snr_median": 42.7361365605579,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.0,
+          "mag_hi": 12.5,
+          "mag_center": 12.25,
+          "n": 141,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.033793143822912444,
+          "snr_median": 32.128890121847085,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.5,
+          "mag_hi": 13.0,
+          "mag_center": 12.75,
+          "n": 36,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.04257298087287865,
+          "snr_median": 25.502940656189843,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.0,
+          "mag_hi": 13.5,
+          "mag_center": 13.25,
+          "n": 4,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.0326807704263807,
+          "snr_median": 33.222478864258875,
+          "usable": false
+        }
+      ],
+      "n_active_targets": 45,
+      "n_lightcurves": 16,
+      "n_targets_fainter_than_limit": 2,
+      "n_existing_lc_fainter_than_limit": 1,
+      "existing_lc_fainter_than_limit": [
+        {
+          "catalog_id": "1497169940906156032",
+          "vsx_name": "CSS_J134925.3+393524",
+          "mag": 14.195008277893066,
+          "zone_flag": "noise"
+        }
+      ],
+      "targets_by_g_bin": {
+        "8": {
+          "n_targets": 1,
+          "n_linear": 1
+        },
+        "9": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "10": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "11": {
+          "n_targets": 10,
+          "n_linear": 5
+        },
+        "12": {
+          "n_targets": 19,
+          "n_linear": 0
+        },
+        "13": {
+          "n_targets": 1,
+          "n_linear": 0
+        },
+        "14": {
+          "n_targets": 1,
+          "n_linear": 0
+        },
+        "15": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "16": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "17": {
+          "n_targets": 0,
+          "n_linear": 0
+        }
+      }
+    },
+    "435": {
+      "draft_id": 435,
+      "target_depth_g": 15.5,
+      "detect_frac_thr": 1.0,
+      "mode": "np_half_snr",
+      "n_bright": 912,
+      "rule": "bright detect_frac degenerate at ceiling (1.0000); forced-photometry detect_frac does not show the F2 DAO cliff; NP half-SNR (T-R0): last bin with detect_frac_median>=1 ends at G=15.5 (scatter_med=0.3241, snr_ref=3.350); snr_thr=0.5*snr_ref=1.675; last 0.5-mag bin with n>=8 and snr_median>=snr_thr.",
+      "bin_rows": [
+        {
+          "mag_lo": 5.5,
+          "mag_hi": 6.0,
+          "mag_center": 5.75,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.02263575666204946,
+          "snr_median": 47.9655361633414,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.0,
+          "mag_hi": 6.5,
+          "mag_center": 6.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01808966568331951,
+          "snr_median": 60.01969432521284,
+          "usable": false
+        },
+        {
+          "mag_lo": 6.5,
+          "mag_hi": 7.0,
+          "mag_center": 6.75,
+          "n": 5,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.02454231809318599,
+          "snr_median": 44.23935019649088,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.0,
+          "mag_hi": 7.5,
+          "mag_center": 7.25,
+          "n": 2,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.015714147433871336,
+          "snr_median": 69.09291193347596,
+          "usable": false
+        },
+        {
+          "mag_lo": 7.5,
+          "mag_hi": 8.0,
+          "mag_center": 7.75,
+          "n": 7,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01719466327356234,
+          "snr_median": 63.14378987738036,
+          "usable": false
+        },
+        {
+          "mag_lo": 8.0,
+          "mag_hi": 8.5,
+          "mag_center": 8.25,
+          "n": 13,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.009527900020340003,
+          "snr_median": 113.9533582888483,
+          "usable": true
+        },
+        {
+          "mag_lo": 8.5,
+          "mag_hi": 9.0,
+          "mag_center": 8.75,
+          "n": 12,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.010088943719427045,
+          "snr_median": 107.61643983279042,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.0,
+          "mag_hi": 9.5,
+          "mag_center": 9.25,
+          "n": 25,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01102505713466356,
+          "snr_median": 98.47896400867602,
+          "usable": true
+        },
+        {
+          "mag_lo": 9.5,
+          "mag_hi": 10.0,
+          "mag_center": 9.75,
+          "n": 35,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.012435782706135198,
+          "snr_median": 87.30742812211417,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.0,
+          "mag_hi": 10.5,
+          "mag_center": 10.25,
+          "n": 39,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.014559979099845934,
+          "snr_median": 74.56990132421399,
+          "usable": true
+        },
+        {
+          "mag_lo": 10.5,
+          "mag_hi": 11.0,
+          "mag_center": 10.75,
+          "n": 61,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.01660568612538892,
+          "snr_median": 65.38339918987843,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.0,
+          "mag_hi": 11.5,
+          "mag_center": 11.25,
+          "n": 98,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.021259193396159684,
+          "snr_median": 51.071373430106696,
+          "usable": true
+        },
+        {
+          "mag_lo": 11.5,
+          "mag_hi": 12.0,
+          "mag_center": 11.75,
+          "n": 146,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.026987192414723582,
+          "snr_median": 40.231536058777905,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.0,
+          "mag_hi": 12.5,
+          "mag_center": 12.25,
+          "n": 204,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.03504035394149434,
+          "snr_median": 30.985309297130545,
+          "usable": true
+        },
+        {
+          "mag_lo": 12.5,
+          "mag_hi": 13.0,
+          "mag_center": 12.75,
+          "n": 261,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.04852512371826259,
+          "snr_median": 22.374723062262053,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.0,
+          "mag_hi": 13.5,
+          "mag_center": 13.25,
+          "n": 365,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.06855926190673736,
+          "snr_median": 15.836462858002754,
+          "usable": true
+        },
+        {
+          "mag_lo": 13.5,
+          "mag_hi": 14.0,
+          "mag_center": 13.75,
+          "n": 435,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.10256235565289457,
+          "snr_median": 10.586108303056388,
+          "usable": true
+        },
+        {
+          "mag_lo": 14.0,
+          "mag_hi": 14.5,
+          "mag_center": 14.25,
+          "n": 390,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.15721736812086634,
+          "snr_median": 6.905955860572807,
+          "usable": true
+        },
+        {
+          "mag_lo": 14.5,
+          "mag_hi": 15.0,
+          "mag_center": 14.75,
+          "n": 319,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.236744191669105,
+          "snr_median": 4.5861154907472965,
+          "usable": true
+        },
+        {
+          "mag_lo": 15.0,
+          "mag_hi": 15.5,
+          "mag_center": 15.25,
+          "n": 151,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.3241252436412124,
+          "snr_median": 3.349742811022691,
+          "usable": true
+        },
+        {
+          "mag_lo": 15.5,
+          "mag_hi": 16.0,
+          "mag_center": 15.75,
+          "n": 6,
+          "detect_frac_median": 1.0,
+          "scatter_mad_median": 0.4836367165468163,
+          "snr_median": 2.24494164237638,
+          "usable": false
+        }
+      ],
+      "n_active_targets": 169,
+      "n_lightcurves": 167,
+      "n_targets_fainter_than_limit": 0,
+      "n_existing_lc_fainter_than_limit": 0,
+      "existing_lc_fainter_than_limit": [],
+      "targets_by_g_bin": {
+        "8": {
+          "n_targets": 1,
+          "n_linear": 0
+        },
+        "9": {
+          "n_targets": 6,
+          "n_linear": 6
+        },
+        "10": {
+          "n_targets": 5,
+          "n_linear": 5
+        },
+        "11": {
+          "n_targets": 13,
+          "n_linear": 13
+        },
+        "12": {
+          "n_targets": 54,
+          "n_linear": 50
+        },
+        "13": {
+          "n_targets": 62,
+          "n_linear": 31
+        },
+        "14": {
+          "n_targets": 25,
+          "n_linear": 6
+        },
+        "15": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "16": {
+          "n_targets": 0,
+          "n_linear": 0
+        },
+        "17": {
+          "n_targets": 0,
+          "n_linear": 0
+        }
+      }
+    }
+  },
+  "provenance_513": {
+    "draft_id": 513,
+    "manifest_status": "INGESTED",
+    "git_sha_in_manifest": null,
+    "git_sha_in_pipeline_meta": null,
+    "verdict": "Trial run under X-R3: no committed-tree SHA stamped in draft 513 products; manifest status remained INGESTED because QC snapshot write failed; nine local commits were pending push when it was run. Not a reference draft."
+  },
+  "section6": {
+    "impact_inventory": [
+      {
+        "quantity": "OBS_QC_PROCESSING_FILE FK rebuild",
+        "feeds": "QC snapshot write / draft status",
+        "value_changes": true,
+        "intended_here": true
+      },
+      {
+        "quantity": "select_active_targets skip_reason=below_target_depth",
+        "feeds": "active_targets.csv / which LCs are built",
+        "value_changes": true,
+        "intended_here": true
+      },
+      {
+        "quantity": "dao_flux / aperture radii / exported errs",
+        "feeds": "photometry products",
+        "value_changes": false,
+        "intended_here": false
+      },
+      {
+        "quantity": "COMP-POOL Stage 2 admission",
+        "feeds": "comparison pool",
+        "value_changes": false,
+        "intended_here": false
+      },
+      {
+        "quantity": "SNR-GATE-01 detection depth",
+        "feeds": "MASTERSTAR",
+        "value_changes": false,
+        "intended_here": false
+      }
+    ],
+    "aperture_snr": {
+      "n_compared": 23,
+      "max_radius_delta_px": 0.10000000000000053,
+      "archive_sha16": "55cd7bf4b2f51d49",
+      "noise_floor_helper_legacy": true
+    },
+    "dao_flux": {
+      "frame": "proc_BO_CVn_Light_068.csv",
+      "max_rel_diff": 0.0,
+      "n": 6
+    },
+    "error_bars": {
+      "identical_re_read": true,
+      "err_cols": [
+        "err",
+        "err_photon",
+        "err_sem_rel",
+        "err_scint_rel"
+      ],
+      "n_rows": 134
+    },
+    "bo_cvn": {
+      "512": {
+        "active": {
+          "catalog_id": 1498613634033133184,
+          "mag": 9.719649314880373,
+          "zone_flag": "linear",
+          "skip_photometry": false,
+          "skip_reason": NaN
+        },
+        "trust": "GREEN",
+        "check_scatter": 0.009299945474024567,
+        "n_clean": 5,
+        "comp_set_present": true,
+        "would_mask_below_depth": false
+      },
+      "513": {
+        "active": {
+          "catalog_id": 1498613634033133184,
+          "mag": 9.719649314880373,
+          "zone_flag": "linear",
+          "skip_photometry": false,
+          "skip_reason": NaN
+        },
+        "trust": "RED",
+        "check_scatter": 0.01114703258449497,
+        "n_clean": 4,
+        "comp_set_present": true,
+        "would_mask_below_depth": false
+      }
+    },
+    "gates": {
+      "returncode": 0,
+      "still_fire": true
+    }
+  },
+  "zone_flag_finding": {
+    "t_r1": true,
+    "measures": "peak_dao / bg_sigma versus dao_detection_n_equiv (DAO detection significance), plus saturation ceiling. 'linear' means above the DAO N-sigma detection cut, NOT photometric linearity (D1-2). 'noise' means detected but below that cut.",
+    "skip_on_noise": false,
+    "bound_by": "dao_detection_n_equiv on MASTERSTAR peak significance; saturated by sat limit"
+  }
+}

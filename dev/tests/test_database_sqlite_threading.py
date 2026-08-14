@@ -352,6 +352,70 @@ def test_qc_run_orphan_old_table_heals_on_open(tmp_path) -> None:
     db2.close()
 
 
+def test_qc_file_fk_to_run_old_heals_on_open(tmp_path) -> None:
+    """Half-finished QC migration: FILE FK to RUN_OLD must rebuild on open."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE OBS_QC_PROCESSING_RUN (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PROCESSING_HASH TEXT NOT NULL UNIQUE,
+            DRAFT_ID INTEGER NOT NULL,
+            CREATED_AT TEXT NOT NULL
+        );
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES ('fk-old-hash', 513, '2026-08-14T12:00:00+00:00');
+        CREATE TABLE OBS_QC_PROCESSING_FILE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            RUN_ID INTEGER NOT NULL,
+            SOURCE_OBS_FILE_ID INTEGER NOT NULL,
+            FILE_PATH TEXT,
+            FILTER TEXT,
+            EXPTIME REAL,
+            INSPECTION_JD REAL,
+            FWHM REAL,
+            DRIFT REAL,
+            FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN_OLD (ID) ON DELETE CASCADE
+        );
+        INSERT INTO OBS_QC_PROCESSING_FILE (
+            RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
+        ) VALUES (1, 42, 'lights/a.fits', 'Clear', 60.0, 2460000.5, 3.1, 0.0);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    parent = None
+    for row in db.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_FILE');"):
+        if str(row[3]).upper() == "RUN_ID":
+            parent = str(row[2])
+    assert parent == "OBS_QC_PROCESSING_RUN"
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "OBS_QC_PROCESSING_FILE_OLD" not in tables
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    n = db.conn.execute("SELECT COUNT(*) AS n FROM OBS_QC_PROCESSING_FILE;").fetchone()["n"]
+    assert int(n) == 1
+    # FK enforceable: insert with missing RUN_ID must fail under foreign_keys=ON
+    db.conn.execute("PRAGMA foreign_keys = ON;")
+    failed = False
+    try:
+        db.conn.execute(
+            """
+            INSERT INTO OBS_QC_PROCESSING_FILE (
+                RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH
+            ) VALUES (999999, 1, 'x');
+            """
+        )
+        db.conn.commit()
+    except Exception:
+        failed = True
+        db.conn.rollback()
+    assert failed
+    db.close()
+
+
 def test_qc_run_obs_draft_fk_migration_uses_safe_rebuild(tmp_path) -> None:
     """Legacy OBS_DRAFT FK on QC run table migrates without leaving *_OLD orphans."""
     db_path = tmp_path / "vyvar.sqlite3"

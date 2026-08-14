@@ -2922,6 +2922,27 @@ class VyvarDatabase:
             else:
                 self.conn.execute(f"ALTER TABLE {old} RENAME TO {base};")
 
+    def _qc_file_fk_parent(self) -> str | None:
+        """Return the parent table name referenced by OBS_QC_PROCESSING_FILE.RUN_ID, if any."""
+        if not self._table_exists("OBS_QC_PROCESSING_FILE"):
+            return None
+        try:
+            for row in self.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_FILE');"):
+                # row: id, seq, table, from, to, on_update, on_delete, match
+                if str(row[3]).upper() == "RUN_ID":
+                    return str(row[2])
+        except sqlite3.Error:
+            return None
+        return None
+
+    def _qc_file_needs_run_fk_rebuild(self) -> bool:
+        """True when FILE FK points at a missing/wrong parent (e.g. OBS_QC_PROCESSING_RUN_OLD)."""
+        parent = self._qc_file_fk_parent()
+        if parent is None:
+            # No FK recorded: still rebuild if orphan *_OLD naming is present historically
+            return False
+        return str(parent).upper() != "OBS_QC_PROCESSING_RUN"
+
     def _drop_vestigial_tables(self) -> None:
         # WAVE-B STEP 5: SETTINGS held only masterdark/masterflat validity days (config.json-authoritative).
         # PHOTOMETRY_LIGHT_CURVE was never read; light curves are file-based CSVs.
@@ -2952,10 +2973,14 @@ class VyvarDatabase:
         return self._table_has_fk_to("OBS_QC_PROCESSING_FILE", legacy_draft)
 
     def _rebuild_qc_tables_without_obs_draft_fk(self) -> None:
-        """Remove legacy draft-table FK from QC tables on older databases."""
+        """Remove legacy draft-table FK from QC tables on older databases.
+
+        Also rebuilds OBS_QC_PROCESSING_FILE when its RUN_ID FK still points at
+        OBS_QC_PROCESSING_RUN_OLD (half-finished migration; TARGET-DEPTH-01).
+        """
         self._heal_qc_orphan_old_tables()
         run_needs = self._qc_run_has_obs_draft_fk()
-        file_needs = self._qc_file_has_obs_draft_fk()
+        file_needs = self._qc_file_has_obs_draft_fk() or self._qc_file_needs_run_fk_rebuild()
         if not run_needs and not file_needs:
             return
         if run_needs:

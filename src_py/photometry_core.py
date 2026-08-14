@@ -13156,6 +13156,7 @@ def select_active_targets(
     masterstar_fits_path: Path | str | None = None,
     plate_scale_arcsec_px: float | None = None,
     cfg: Any | None = None,
+    target_depth_g: float | None = None,
 ) -> pd.DataFrame:
     """Faza 0: Filtruj VSX premenne -> active_targets.
 
@@ -13337,6 +13338,16 @@ def select_active_targets(
             continue
         skip_ph = zone_flag in ("saturated", "catalog_only", "neznama_zona")
         skip_reason = "zone_flag" if skip_ph else ""
+        # TARGET-DEPTH-01: draft-derived measurable depth (flag, do not omit the row).
+        if (
+            (not skip_ph)
+            and target_depth_g is not None
+            and math.isfinite(float(target_depth_g))
+            and math.isfinite(mag_for_skip)
+            and float(mag_for_skip) > float(target_depth_g)
+        ):
+            skip_ph = True
+            skip_reason = "below_target_depth"
         _voos = list(getattr(_cfg, "vsx_out_of_scope_types", []) or [])
         if (
             (not skip_ph)
@@ -13399,6 +13410,7 @@ def select_active_targets(
     ]
     n_masked_zone = int(sum(1 for r in matched_rows if r.get("skip_reason") == "zone_flag"))
     n_masked_vsx_type = int(sum(1 for r in matched_rows if r.get("skip_reason") == "vsx_type_out_of_scope"))
+    n_masked_depth = int(sum(1 for r in matched_rows if r.get("skip_reason") == "below_target_depth"))
     n_gaia_id_assigned = int(vt_in["catalog_id"].apply(lambda x: bool(_normalize_gaia_id(x))).sum()) if "catalog_id" in vt_in.columns else 0
     _contam_pct = float("nan")
     if not matched_rows:
@@ -13474,7 +13486,7 @@ def select_active_targets(
         f"dao_detected={len(matched_rows)} -> active={len(result)} | excluded: "
         f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} "
         f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame} | masked: "
-        f"zone_flag={n_masked_zone} vsx_type_out_of_scope={n_masked_vsx_type}"
+        f"zone_flag={n_masked_zone} vsx_type_out_of_scope={n_masked_vsx_type} below_target_depth={n_masked_depth}"
     )
     logging.info(_funnel_msg)
     log_event(_funnel_msg)
@@ -15175,6 +15187,42 @@ def run_phase0_and_phase1(
     else:
         _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(_cfg_p01)
 
+    # TARGET-DEPTH-01: derive measurable depth from this draft's per-frame detect_frac.
+    _target_depth_g: float | None = None
+    _depth_payload: dict[str, Any] = {}
+    try:
+        from comp_pool_noise import (  # noqa: PLC0415
+            derive_target_depth_limit,
+            load_star_timeseries_from_proc_dir,
+            summarize_stars,
+        )
+
+        _epochs_depth = load_star_timeseries_from_proc_dir(Path(per_frame_csv_dir))
+        _stars_depth = summarize_stars(_epochs_depth, zp_inst=25.0)
+        _depth = derive_target_depth_limit(_stars_depth)
+        _target_depth_g = _depth.target_depth_g
+        _depth_payload = {
+            "target_depth_g": _depth.target_depth_g,
+            "detect_frac_thr": _depth.detect_frac_thr,
+            "bright_mag_hi": _depth.bright_mag_hi,
+            "n_bright": _depth.n_bright,
+            "mode": getattr(_depth, "mode", "detect_frac"),
+            "rule": _depth.rule,
+            "bin_rows": _depth.bin_rows,
+        }
+        if _target_depth_g is not None:
+            logging.info(
+                "[TARGET-DEPTH-01] derived target_depth_g=%.3f (detect_frac_thr=%.4f, n_bright=%d)",
+                float(_target_depth_g),
+                float(_depth.detect_frac_thr or float("nan")),
+                int(_depth.n_bright),
+            )
+        else:
+            logging.info("[TARGET-DEPTH-01] depth not derived: %s", _depth.rule)
+    except Exception as exc:  # noqa: BLE001
+        logging.error("[TARGET-DEPTH-01] depth derivation failed - continuing without depth gate: %s", exc)
+        _target_depth_g = None
+
     active = select_active_targets(
         variable_targets_csv,
         masterstars_csv,
@@ -15187,6 +15235,7 @@ def run_phase0_and_phase1(
         masterstar_fits_path=_ms_for_catalog_only if _ms_for_catalog_only.is_file() else None,
         plate_scale_arcsec_px=_plate_scale_p01,  # TODO-23
         cfg=_cfg_p01,
+        target_depth_g=_target_depth_g,
     )
     active_csv = output_dir / "active_targets.csv"
     try:
@@ -15202,6 +15251,25 @@ def run_phase0_and_phase1(
     active = _attach_predicted_dilution_report(active, _cfg_p01)
     active.to_csv(active_csv, index=False)
     logging.info(f"[FAZA 0] Ulozene: {active_csv} ({len(active)} cielov)")
+    if _depth_payload:
+        try:
+            _n_depth = (
+                int((active["skip_reason"].astype(str) == "below_target_depth").sum())
+                if (not active.empty and "skip_reason" in active.columns)
+                else 0
+            )
+            _depth_payload = {
+                **_depth_payload,
+                "n_active_targets": int(len(active)),
+                "n_masked_below_target_depth": _n_depth,
+            }
+            (output_dir / "target_depth.json").write_text(
+                json.dumps(_depth_payload, indent=2, ensure_ascii=True),
+                encoding="ascii",
+                errors="replace",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logging.error("[TARGET-DEPTH-01] target_depth.json write failed: %s", exc)
     _excluded = LAST_EXCLUDED_TARGETS
     if _excluded is not None and not _excluded.empty:
         excluded_csv = output_dir / "excluded_targets.csv"

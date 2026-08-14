@@ -1146,3 +1146,234 @@ def curve_ratio_table(
 def fit_to_jsonable(fit: NoiseCurveFit) -> dict[str, Any]:
     d = asdict(fit)
     return d
+
+
+@dataclass
+class TargetDepthLimit:
+    """Per-draft target admission depth (TARGET-DEPTH-01)."""
+
+    target_depth_g: float | None
+    detect_frac_thr: float | None
+    bright_mag_hi: float
+    n_bright: int
+    rule: str
+    bin_rows: list[dict[str, Any]] = field(default_factory=list)
+    mode: str = "detect_frac"
+
+
+def derive_target_depth_limit(
+    stars: pd.DataFrame,
+    *,
+    bright_mag_hi: float = 13.0,
+    bin_width: float = 0.5,
+    min_bin_n: int = 8,
+    complete_detect_frac: float = 1.0,
+) -> TargetDepthLimit:
+    """Derive the faintest Gaia G at which targets remain measurable on this draft.
+
+    Primary rule (detect_frac informative -- p16 of bright sample below the median):
+      1. Bright reference: mag_g <= bright_mag_hi with finite detect_frac.
+      2. detect_frac_thr = p16(detect_frac) in that sample.
+      3. Walk 0.5-mag bins bright->faint; keep bins with n >= min_bin_n and
+         median(detect_frac) >= thr.
+      4. target_depth_g = upper edge of the last such bin.
+
+    Forced-photometry note: after SNR-GATE-01, MASTERSTAR stars are measured on
+    nearly every frame, so detect_frac stays near 1.0 through G15 and does not
+    reproduce the SNR-GATE F2 DAO-repeatability cliff (0.507 at G15). When the
+    bright detect_frac plateau is ceiling-degenerate, fall back to the NP scatter
+    curve already built by COMP-POOL-01 (T-R0):
+
+      A. Last bin with n >= min_bin_n and median(detect_frac) >= complete_detect_frac
+         is the forced-photometry completeness locus; snr_ref = 1.0857 / scatter_med.
+      B. snr_thr = 0.5 * snr_ref (half-SNR at that locus; named, same family as g_lim_50).
+      C. Walk bins by median scatter_mad; usable while 1.0857/scatter_med >= snr_thr.
+      D. If scatter_mad is absent, fall back to detect_frac half-completeness
+         (thr = 0.5 * bright_median).
+
+    Distinct from the comparison-pool faint limit (photon = floor): a programme
+    target may be fainter than usable comps, but must remain measurable.
+    """
+    mag_err_scale = float(MAG_ERR_SCALE)
+    rule = (
+        f"detect_frac_thr = p16 of detect_frac among mag_g<={bright_mag_hi:g}; "
+        f"last 0.5-mag bin with n>={min_bin_n} and median(detect_frac)>=thr; "
+        "target_depth_g = that bin's upper edge."
+    )
+    empty = TargetDepthLimit(
+        target_depth_g=None,
+        detect_frac_thr=None,
+        bright_mag_hi=float(bright_mag_hi),
+        n_bright=0,
+        rule=rule,
+        bin_rows=[],
+        mode="detect_frac",
+    )
+    if stars is None or getattr(stars, "empty", True):
+        return empty
+    if "mag_g" not in stars.columns or "detect_frac" not in stars.columns:
+        return empty
+    m = pd.to_numeric(stars["mag_g"], errors="coerce")
+    df = pd.to_numeric(stars["detect_frac"], errors="coerce")
+    sc = (
+        pd.to_numeric(stars["scatter_mad"], errors="coerce")
+        if "scatter_mad" in stars.columns
+        else pd.Series(np.nan, index=stars.index)
+    )
+    ok = m.notna() & df.notna() & (df >= 0) & (df <= 1.0)
+    if "vsx_known_variable" in stars.columns:
+        ok &= ~stars["vsx_known_variable"].fillna(False).astype(bool)
+    bright = ok & (m <= float(bright_mag_hi))
+    n_bright = int(bright.sum())
+    if n_bright < max(8, int(min_bin_n)):
+        return TargetDepthLimit(
+            target_depth_g=None,
+            detect_frac_thr=None,
+            bright_mag_hi=float(bright_mag_hi),
+            n_bright=n_bright,
+            rule=rule + " [insufficient bright sample; limit not derived]",
+            bin_rows=[],
+            mode="detect_frac",
+        )
+    thr_p16 = float(np.percentile(df[bright].to_numpy(dtype=float), 16))
+    bright_med = float(np.median(df[bright].to_numpy(dtype=float)))
+    if not math.isfinite(thr_p16) or not math.isfinite(bright_med):
+        return empty
+
+    m_ok = m[ok]
+    df_ok = df[ok]
+    sc_ok = sc[ok]
+    m_min = float(np.floor(float(m_ok.min()) / bin_width) * bin_width)
+    m_max = float(np.ceil(float(m_ok.max()) / bin_width) * bin_width)
+    degenerate = thr_p16 >= bright_med - 1e-9
+    use_np = bool(degenerate and sc_ok.notna().any() and (sc_ok > 0).any())
+
+    def _walk_bins(
+        *,
+        mode: str,
+        thr_detect: float | None,
+        snr_thr: float | None,
+        rule_text: str,
+    ) -> TargetDepthLimit:
+        bin_rows: list[dict[str, Any]] = []
+        last_ok_hi: float | None = None
+        lo = m_min
+        while lo < m_max - 1e-9:
+            hi = lo + float(bin_width)
+            band = (m_ok >= lo) & (m_ok < hi)
+            n = int(band.sum())
+            med_df = float(df_ok[band].median()) if n else float("nan")
+            med_sc = float(sc_ok[band].median()) if n and sc_ok[band].notna().any() else float("nan")
+            snr_med = (
+                float(mag_err_scale / med_sc)
+                if math.isfinite(med_sc) and med_sc > 0
+                else float("nan")
+            )
+            if mode == "detect_frac":
+                usable = bool(
+                    n >= int(min_bin_n)
+                    and math.isfinite(med_df)
+                    and thr_detect is not None
+                    and med_df + 1e-12 >= float(thr_detect)
+                )
+            else:
+                usable = bool(
+                    n >= int(min_bin_n)
+                    and math.isfinite(snr_med)
+                    and snr_thr is not None
+                    and snr_med + 1e-12 >= float(snr_thr)
+                )
+            bin_rows.append(
+                {
+                    "mag_lo": float(lo),
+                    "mag_hi": float(hi),
+                    "mag_center": float(lo + 0.5 * bin_width),
+                    "n": n,
+                    "detect_frac_median": med_df,
+                    "scatter_mad_median": med_sc,
+                    "snr_median": snr_med,
+                    "usable": usable,
+                }
+            )
+            if usable:
+                last_ok_hi = float(hi)
+            elif last_ok_hi is not None and lo >= float(bright_mag_hi):
+                break
+            lo = hi
+        return TargetDepthLimit(
+            target_depth_g=last_ok_hi,
+            detect_frac_thr=thr_detect,
+            bright_mag_hi=float(bright_mag_hi),
+            n_bright=n_bright,
+            rule=rule_text,
+            bin_rows=bin_rows,
+            mode=mode,
+        )
+
+    if use_np:
+        # Completeness locus under forced photometry, then half-SNR (T-R0).
+        last_complete_hi: float | None = None
+        last_complete_sc: float | None = None
+        lo = m_min
+        while lo < m_max - 1e-9:
+            hi = lo + float(bin_width)
+            band = (m_ok >= lo) & (m_ok < hi)
+            n = int(band.sum())
+            med_df = float(df_ok[band].median()) if n else float("nan")
+            med_sc = float(sc_ok[band].median()) if n and sc_ok[band].notna().any() else float("nan")
+            if (
+                n >= int(min_bin_n)
+                and math.isfinite(med_df)
+                and med_df + 1e-12 >= float(complete_detect_frac)
+                and math.isfinite(med_sc)
+                and med_sc > 0
+            ):
+                last_complete_hi = float(hi)
+                last_complete_sc = float(med_sc)
+            lo = hi
+        if last_complete_hi is None or last_complete_sc is None:
+            thr = 0.5 * bright_med
+            return _walk_bins(
+                mode="detect_frac",
+                thr_detect=thr,
+                snr_thr=None,
+                rule_text=(
+                    f"bright detect_frac degenerate at ceiling ({thr_p16:.4f}); "
+                    f"NP completeness locus unavailable; "
+                    f"thr=0.5*bright_median={thr:.4f} (half-completeness, T-R0)."
+                ),
+            )
+        snr_ref = float(mag_err_scale / last_complete_sc)
+        snr_thr = 0.5 * snr_ref
+        return _walk_bins(
+            mode="np_half_snr",
+            thr_detect=float(complete_detect_frac),
+            snr_thr=snr_thr,
+            rule_text=(
+                f"bright detect_frac degenerate at ceiling ({thr_p16:.4f}); "
+                f"forced-photometry detect_frac does not show the F2 DAO cliff; "
+                f"NP half-SNR (T-R0): last bin with detect_frac_median>="
+                f"{complete_detect_frac:g} ends at G={last_complete_hi:.1f} "
+                f"(scatter_med={last_complete_sc:.4f}, snr_ref={snr_ref:.3f}); "
+                f"snr_thr=0.5*snr_ref={snr_thr:.3f}; "
+                f"last 0.5-mag bin with n>={min_bin_n} and snr_median>=snr_thr."
+            ),
+        )
+
+    if degenerate:
+        thr = 0.5 * bright_med
+        rule_deg = (
+            f"bright mag_g<={bright_mag_hi:g}: p16 detect_frac degenerate at ceiling "
+            f"({thr_p16:.4f}); no scatter_mad for NP path; "
+            f"thr=0.5*bright_median={thr:.4f} (half-completeness, T-R0); "
+            f"last 0.5-mag bin with n>={min_bin_n} and median(detect_frac)>=thr."
+        )
+        return _walk_bins(mode="detect_frac", thr_detect=thr, snr_thr=None, rule_text=rule_deg)
+
+    thr = thr_p16
+    rule_ok = (
+        f"detect_frac_thr = p16 of detect_frac among mag_g<={bright_mag_hi:g} ({thr:.4f}); "
+        f"last 0.5-mag bin with n>={min_bin_n} and median(detect_frac)>=thr; "
+        "target_depth_g = that bin's upper edge."
+    )
+    return _walk_bins(mode="detect_frac", thr_detect=thr, snr_thr=None, rule_text=rule_ok)
