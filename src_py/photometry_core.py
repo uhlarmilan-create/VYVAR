@@ -2692,14 +2692,12 @@ def _annulus_sky_subtracted_flux(
         ann_masks = [ann_masks]
     for amask in ann_masks:
         try:
-            cut = amask.get_values(d)
-            cut = np.asarray(cut, dtype=np.float64).ravel()
-            cut = cut[np.isfinite(cut)]
-            if cut.size > 0:
-                sky_pp = float(np.median(cut))
-                sky_ok = True
+            ann_img = amask.to_image(d.shape)
+            sky_pp = _sky_pp_from_annulus_image(d, ann_img)
+            sky_ok = math.isfinite(sky_pp)
+            if sky_ok:
                 break
-        except (ValueError, TypeError, IndexError) as exc:
+        except (ValueError, TypeError, IndexError, AttributeError) as exc:
             from except_fix_counters import get_except_fix_counters
 
             get_except_fix_counters().sky_annulus_mask_fail += 1
@@ -12112,16 +12110,11 @@ def compute_fwhm_gaussian_for_aperture_catalog(
 
 
 def _sky_pp_from_annulus_image(d: np.ndarray, ann_img: np.ndarray) -> float:
-    """Local sky (ADU/px) from annulus mask image - matches batch annulus logic."""
+    """Local sky (ADU/px) from annulus mask image - plain median, no rejection (SKY-CLIP-01)."""
     sky_pixels = d[ann_img > 0]
-    if sky_pixels.size >= 5:
-        sky_med = float(np.median(sky_pixels))
-        sky_std = float(np.std(sky_pixels))
-        clipped = sky_pixels[sky_pixels < sky_med + 2.0 * sky_std]
-        if clipped.size >= 5:
-            return float(np.median(clipped))
-        return sky_med
-    return float(np.median(d))
+    if sky_pixels.size >= 1:
+        return float(np.median(sky_pixels))
+    return float(np.nanmedian(d))
 
 
 def _aperture_flux_sky_per_star(
