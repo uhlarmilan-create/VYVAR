@@ -2,7 +2,7 @@ CURSOR RESULT - SNR-GATE-01 - 2026-08-14
 
 Register ID: SNR-GATE-01
 Follows: DAO-DEPTH-01 (localization accepted)
-Status: COMMITTED at 956770c; `--fast` OVERALL PASS on content tip; push await Milan authorization.
+Status: COMMITTED tip **cb9e695**; `--fast` OVERALL PASS on that tip (SNR-GATE-03); push await Milan authorization.
 
 Artifacts:
 - `dev/results/SNR_GATE_01_f1_per_frame.csv`
@@ -375,13 +375,42 @@ Artifact: `dev/results/SNR_GATE_02_part5_verify.json`
 - `dev/tools/ascii_migrate.py --check`: migrated_or_would=0, stop=0
 
 ================================================================
-15. SNR-GATE-02 -- Part 6 commit
+15. SNR-GATE-02 / SNR-GATE-03 -- commit and tip verification
 ================================================================
 
-- Commit tip: **956770c** (authoritative: `git rev-parse HEAD`)
-- `--fast`: **OVERALL PASS** (1341 passed, 27 skipped; measured on `4af0aa7` before memo SHA self-edits; tree identical aside from this memo)
-- Message: SNR-GATE-01: sky-MAD prematch noise; pass-2 exempt from global peak gate.
-- Not pushed. Milan authorizes.
+Committed science tip (authoritative for SNR-GATE-01): **cb9e695**
+(`cb9e695e8b6f027125aa305a3a85695d724d18c6`).
+A commit cannot contain its own hash; earlier memo lines may still name
+pre-amend SHAs (4af0aa7 / 956770c). Documentation commits that record this
+verification may sit above cb9e695; they do not change the science tip.
+
+SNR-GATE-03 `--fast` on **cb9e695** (2026-08-14):
+
+```
+SESSION BASELINE CHECK (fast)
+------------------------------------------------------------------------
+Check                        Status Detail
+------------------------------------------------------------------------
+git-branch                   PASS   main
+git-head                     PASS   cb9e695
+git-staged                   PASS   none
+git-untracked-known          WARN   1 known untracked
+git-untracked                WARN   DAO_DEPTH_01_* and other known scratch
+git-origin-main              WARN   differs from origin/main (4a3e855)
+config-paths                 PASS   all present
+pytest                       PASS   1341 passed, 27 skipped
+manifest-db-parity           PASS   draft_id=435
+ledger                       PASS   v1 15 items
+ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430
+deps-outdated                WARN   numpy 2.4.4->2.5.2 (+96 other)
+------------------------------------------------------------------------
+OVERALL: PASS
+```
+
+Not pushed. Milan authorizes.
 
 This commit invalidates the `--full` anchor and the P1 golden ledger SHA again.
 Draft 512 rebuild produces the "after" light-curve numbers.
+
+Note: this memo section was updated on the working tree after SNR-GATE-03
+without amending cb9e695 (rule: do not amend to embed the verified tip SHA).
