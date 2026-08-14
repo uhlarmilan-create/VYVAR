@@ -1769,8 +1769,9 @@ def load_snr_aperture_table_from_draft_dir(
         logging.warning("[FAZA 2A] aperture_snr_table.json neplatny format - globalna apertura")
         return None
     logging.info(
-        "[FAZA 2A] Nacitana SNR aperture table: fwhm=%spx gain=%s sky=%s",
+        "[FAZA 2A] Nacitana SNR aperture table: fwhm=%spx scope=%s gain=%s sky=%s",
         table.get("fwhm_px"),
+        table.get("fwhm_px_scope"),
         table.get("gain"),
         table.get("sky_adu_per_px"),
     )
@@ -1798,45 +1799,227 @@ def _noise_floor_adu_from_image_array(
     return nf if math.isfinite(nf) and nf > 0 else None
 
 
+def _center_crop_with_offset(data: np.ndarray, *, max_side: int = 1000) -> tuple[np.ndarray, int, int]:
+    """Central crop for star metrics; returns ``(crop, x0, y0)`` full-frame offsets."""
+    arr = np.asarray(data, dtype=np.float32)
+    if arr.ndim != 2:
+        return arr, 0, 0
+    h, w = int(arr.shape[0]), int(arr.shape[1])
+    if h <= max_side and w <= max_side:
+        return arr, 0, 0
+    cy, cx = h // 2, w // 2
+    hs, ws = max_side // 2, max_side // 2
+    y0, y1 = max(0, cy - hs), min(h, cy + hs)
+    x0, x1 = max(0, cx - ws), min(w, cx + ws)
+    return np.asarray(arr[y0:y1, x0:x1], dtype=np.float32), int(x0), int(y0)
+
+
+def _frame_dao_moment_fwhm_median_px(data: np.ndarray) -> float | None:
+    """Per-frame median moment-FWHM at DAO-detected stars (proc ``fwhm_estimate_px`` family)."""
+    from photutils.detection import DAOStarFinder
+
+    from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER
+
+    arr = np.asarray(data, dtype=np.float32)
+    if arr.ndim != 2:
+        return None
+    crop, x0, y0 = _center_crop_with_offset(arr)
+    finite = np.isfinite(crop)
+    if not np.any(finite):
+        return None
+    _, med, std = plain_mean_med_std(crop[finite], sigma=3.0, maxiters=5)
+    std_f = float(std)
+    if not math.isfinite(std_f) or std_f <= 0:
+        return None
+    img2 = np.asarray(crop - float(med), dtype=np.float32)
+    img2 = np.nan_to_num(img2, nan=0.0, posinf=0.0, neginf=0.0)
+    fwhm_guess = float(max(3.0, min(12.0, 2.5 * std_f)))
+    tbl = None
+    for thr_k in (5.0, 3.5, 2.5):
+        finder = DAOStarFinder(
+            fwhm=fwhm_guess,
+            threshold=float(thr_k) * std_f,
+            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+        )
+        tbl = finder(img2)
+        if tbl is not None and len(tbl) >= 8:
+            break
+    if tbl is None or len(tbl) == 0:
+        return None
+    tbl.sort("flux")
+    tbl = tbl[::-1]
+    vals: list[float] = []
+    n_scan = int(min(len(tbl), 80))
+    for i in range(n_scan):
+        xc = float(tbl["x_centroid"][i]) + float(x0)
+        yc = float(tbl["y_centroid"][i]) + float(y0)
+        fw = _fwhm_moment_at(arr, xc, yc)
+        if math.isfinite(fw) and 1.5 < float(fw) < 12.0:
+            vals.append(float(fw))
+    if not vals:
+        return None
+    med_fw = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
+    return med_fw if math.isfinite(med_fw) and med_fw > 0 else None
+
+
+def estimate_median_dao_fwhm_px_for_snr_table(
+    *,
+    aligned_fits_paths: Sequence[Path | str] | None = None,
+    aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None = None,
+    max_frames: int = 12,
+) -> tuple[float | None, dict[str, Any]]:
+    """Median per-frame DAO moment FWHM across aligned science frames (A-1 sizing authority)."""
+    per_frame: list[float] = []
+    n_max = max(1, int(max_frames))
+
+    if aligned_ram_frames:
+        for _name, _hdr, arr in list(aligned_ram_frames)[:n_max]:
+            v = _frame_dao_moment_fwhm_median_px(arr)
+            if v is not None:
+                per_frame.append(float(v))
+
+    if aligned_fits_paths:
+        for raw in list(aligned_fits_paths)[:n_max]:
+            p = Path(raw)
+            if not p.is_file():
+                continue
+            try:
+                with astrofits.open(p, memmap=True) as hdul:
+                    d = hdul[0].data
+                if d is None:
+                    continue
+                v = _frame_dao_moment_fwhm_median_px(d)
+                if v is not None:
+                    per_frame.append(float(v))
+            except Exception as exc:  # noqa: BLE001
+                logging.error(
+                    "[EXC-0132] One aligned frame skipped for SNR DAO FWHM median: %s",
+                    exc,
+                )
+                continue
+
+    if not per_frame:
+        return None, {"fwhm_px_scope": "unknown", "fwhm_n_frames": 0}
+    med = float(np.nanmedian(np.asarray(per_frame, dtype=np.float64)))
+    if not math.isfinite(med) or med <= 0:
+        return None, {"fwhm_px_scope": "unknown", "fwhm_n_frames": 0}
+    return med, {
+        "fwhm_px_scope": "per_draft_median_frame_dao_moment",
+        "fwhm_estimator": "dao_moment_median",
+        "fwhm_n_frames": int(len(per_frame)),
+        "fwhm_per_frame_px": [round(float(x), 4) for x in per_frame[:24]],
+    }
+
+
+def _read_masterstar_fwhm_record_px(
+    masterstar_fits_path: Path | str | None,
+) -> tuple[float | None, float | None]:
+    """Return ``(vy_fwhm_gauss_px, vy_fwhm_dao_px)`` from MASTERSTAR header (record-only GAUSS)."""
+    if masterstar_fits_path is None or not str(masterstar_fits_path).strip():
+        return None, None
+    try:
+        with astrofits.open(Path(masterstar_fits_path), memmap=False) as hdul:
+            hdr = hdul[0].header
+    except Exception as exc:  # noqa: BLE001
+        logging.error(
+            "[EXC-0129] MASTERSTAR header FWHM key parse fails - SNR/aperture table uses later fallback FWHM so...: %s",
+            exc,
+        )
+        return None, None
+
+    gauss: float | None = None
+    dao: float | None = None
+    for key, slot in (("VY_FWHM_GAUSS", "gauss"), ("VY_FWHM_GAUSSIAN", "gauss"), ("VY_FWHM", "dao")):
+        v = hdr.get(key)
+        if v is None:
+            continue
+        try:
+            vf = float(v)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(vf) and 0.5 < vf < 30.0):
+            continue
+        if slot == "gauss" and gauss is None:
+            gauss = vf
+        elif slot == "dao" and dao is None:
+            dao = vf
+    return gauss, dao
+
+
 def resolve_fwhm_px_for_snr_aperture_table(
     *,
     masterstar_fits_path: Path | str | None,
     masterstar_selection: dict[str, Any] | None,
     fwhm_fallback_px: float | None = None,
-) -> float | None:
-    """FWHM for SNR table: VY_FWHM_GAUSS / VY_FWHM, then best_frame_fwhm_px, then fallback."""
-    if masterstar_fits_path is not None and str(masterstar_fits_path).strip():
-        try:
-            with astrofits.open(Path(masterstar_fits_path), memmap=False) as hdul:
-                hdr = hdul[0].header
-            for key in ("VY_FWHM_GAUSS", "VY_FWHM"):
-                v = hdr.get(key)
-                if v is None:
-                    continue
-                try:
-                    vf = float(v)
-                except (TypeError, ValueError):
-                    continue
-                if math.isfinite(vf) and 0.5 < vf < 30.0:
-                    return vf
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0129] MASTERSTAR header FWHM key parse fails - SNR/aperture table uses later fallback FWHM so...: %s', exc)
-            pass
+    aligned_fits_paths: Sequence[Path | str] | None = None,
+    aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None = None,
+) -> tuple[float | None, dict[str, Any]]:
+    """FWHM for SNR table: per-frame DAO moment median, then best_frame, then MASTERSTAR VY_FWHM, then fallback.
+
+    ``VY_FWHM_GAUSS`` (stacked 2D Gaussian fit) is recorded in provenance but is not a sizing authority.
+    """
+    prov: dict[str, Any] = {
+        "fwhm_px_scope": "unknown",
+        "fwhm_estimator": None,
+        "vy_fwhm_gauss_px": None,
+        "vy_fwhm_dao_px": None,
+    }
+    gauss_rec, dao_rec = _read_masterstar_fwhm_record_px(masterstar_fits_path)
+    prov["vy_fwhm_gauss_px"] = gauss_rec
+    prov["vy_fwhm_dao_px"] = dao_rec
+
+    dao_med, dao_prov = estimate_median_dao_fwhm_px_for_snr_table(
+        aligned_fits_paths=aligned_fits_paths,
+        aligned_ram_frames=aligned_ram_frames,
+    )
+    if dao_med is not None:
+        prov.update(dao_prov)
+        logging.info(
+            "[PIPELINE] SNR table FWHM=%.3f px from %s (%d frames); VY_FWHM_GAUSS=%s (record only)",
+            float(dao_med),
+            prov.get("fwhm_px_scope"),
+            int(prov.get("fwhm_n_frames") or 0),
+            f"{float(gauss_rec):.3f}" if gauss_rec is not None else "n/a",
+        )
+        return float(dao_med), prov
+
     sel = masterstar_selection if isinstance(masterstar_selection, dict) else {}
     try:
         bf = float(sel.get("best_frame_fwhm_px"))
         if math.isfinite(bf) and 0.5 < bf < 30.0:
-            return bf
+            prov.update(
+                {
+                    "fwhm_px_scope": "per_draft_best_frame_vy_fwhm_dao",
+                    "fwhm_estimator": "best_frame_fwhm_px",
+                }
+            )
+            return bf, prov
     except (TypeError, ValueError):
         pass
+
+    if dao_rec is not None:
+        prov.update(
+            {
+                "fwhm_px_scope": "masterstar_header_vy_fwhm_dao",
+                "fwhm_estimator": "vy_fwhm_header",
+            }
+        )
+        return float(dao_rec), prov
+
     if fwhm_fallback_px is not None:
         try:
             fb = float(fwhm_fallback_px)
             if math.isfinite(fb) and fb > 0:
-                return fb
+                prov.update(
+                    {
+                        "fwhm_px_scope": "config_fallback",
+                        "fwhm_estimator": "fwhm_fallback_px",
+                    }
+                )
+                return fb, prov
         except (TypeError, ValueError):
             pass
-    return None
+    return None, prov
 
 
 def estimate_median_sky_adu_per_px_for_snr_table(
@@ -1970,10 +2153,12 @@ def precompute_and_save_snr_aperture_table_for_draft(
         logging.warning("[PIPELINE] SNR table: draft_dir not found: %s", dd)
         return None
 
-    fwhm_px = resolve_fwhm_px_for_snr_aperture_table(
+    fwhm_px, fwhm_prov = resolve_fwhm_px_for_snr_aperture_table(
         masterstar_fits_path=masterstar_fits_path,
         masterstar_selection=masterstar_selection,
         fwhm_fallback_px=fwhm_fallback_px,
+        aligned_fits_paths=aligned_fits_paths,
+        aligned_ram_frames=aligned_ram_frames,
     )
     if fwhm_px is None or not math.isfinite(float(fwhm_px)) or float(fwhm_px) <= 0:
         logging.warning("[PIPELINE] SNR table: no valid FWHM - skip precompute")
@@ -2065,6 +2250,10 @@ def precompute_and_save_snr_aperture_table_for_draft(
         read_noise=float(rn_p),
         bkg_var_adu2_per_px=bkg_var_px,
     )
+    if isinstance(fwhm_prov, dict):
+        for k, v in fwhm_prov.items():
+            if v is not None:
+                snr_table[k] = v
     out_path = dd / "aperture_snr_table.json"
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(snr_table, f, indent=2)
@@ -8460,13 +8649,40 @@ def _phase2a_prepare_shared_state(
     _bkg_var_px = _median_bkg_var_adu2_per_px_from_proc_cache(_phase2a_csv_cache)
     _snr_ap_table: dict[str, Any] | None = None
     if force_aperture_px is None and bool(_cfg.aperture_photometry_enabled):
+        _aligned_fits_for_snr: list[Path] = []
+        try:
+            _aligned_fits_for_snr = sorted(
+                p
+                for p in _aligned_dir_2a.glob("*.fits")
+                if p.is_file()
+                and not p.name.startswith("proc_")
+                and p.name.upper() != "MASTERSTAR.FITS"
+            )
+        except Exception:  # noqa: BLE001
+            _aligned_fits_for_snr = []
+        _snr_fwhm_px, _snr_fwhm_prov = resolve_fwhm_px_for_snr_aperture_table(
+            masterstar_fits_path=masterstar_fits_path,
+            masterstar_selection={},
+            fwhm_fallback_px=float(fwhm_px) if math.isfinite(float(fwhm_px)) else None,
+            aligned_fits_paths=_aligned_fits_for_snr,
+        )
+        if _snr_fwhm_px is None or not math.isfinite(float(_snr_fwhm_px)) or float(_snr_fwhm_px) <= 0:
+            _snr_fwhm_px = float(fwhm_px)
+            _snr_fwhm_prov = {
+                "fwhm_px_scope": "phase2a_header_fallback",
+                "fwhm_estimator": "header_fwhm_px",
+            }
         _snr_ap_table = compute_snr_optimal_aperture_table(
-            fwhm_px=float(fwhm_px),
+            fwhm_px=float(_snr_fwhm_px),
             sky_adu_per_px=float(_median_sky),
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
             bkg_var_adu2_per_px=_bkg_var_px,
         )
+        if isinstance(_snr_fwhm_prov, dict):
+            for _pk, _pv in _snr_fwhm_prov.items():
+                if _pv is not None:
+                    _snr_ap_table[_pk] = _pv
         _tbl = _snr_ap_table.get("table") or {}
         logging.info(
             "[PHASE 2A] SNR-optimal aperture table built: "
@@ -8520,7 +8736,7 @@ def _phase2a_prepare_shared_state(
                 _star_mag,
                 _snr_ap_table,
                 aperture_fwhm_factor=_apt_fw,
-                fwhm_px=float(fwhm_px),
+                fwhm_px=float(_snr_fwhm_px),
             )
         if apertures_px:
             _rvals = list(apertures_px.values())
@@ -12182,6 +12398,8 @@ def enhance_catalog_dataframe_aperture_bpm(
         except (TypeError, ValueError):
             _ov_ok = False
         _fwhm_scope = "per_draft_gaussian_override" if _ov_ok else "per_frame_moment_median"
+    elif snr_aperture_table is not None and str(snr_aperture_table.get("fwhm_px_scope") or "").strip():
+        _fwhm_scope = str(snr_aperture_table.get("fwhm_px_scope")).strip()
     elif hdr is not None and hdr.get("VY_FWHM") is not None:
         _fwhm_scope = "per_frame_header_vy_fwhm_dao_scaled"
     elif math.isfinite(float(fwhm_moment_med)) and float(fwhm_moment_med) > 0:
