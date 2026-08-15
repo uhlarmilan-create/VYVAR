@@ -92,6 +92,50 @@ class InvariantViolation(RuntimeError):
         super().__init__(f"{self.inv_id}: {self.detail}")
 
 
+class PopulationEmptiedError(InvariantViolation):
+    """INV-NO-SILENT-EMPTY: a filter removed every row of a non-empty population."""
+
+    def __init__(
+        self,
+        *,
+        rule_id: str,
+        threshold: object,
+        unit: str,
+        population: str,
+        n_in: int,
+    ) -> None:
+        self.rule_id = str(rule_id)
+        self.threshold = threshold
+        self.unit = str(unit)
+        self.population = str(population)
+        self.n_in = int(n_in)
+        detail = (
+            f"rule_id={self.rule_id} emptied population={self.population!r} "
+            f"n_in={self.n_in} n_out=0 threshold={self.threshold!r} unit={self.unit}"
+        )
+        super().__init__("INV-NO-SILENT-EMPTY", detail)
+
+
+def assert_population_nonempty(
+    *,
+    n_in: int,
+    n_out: int,
+    rule_id: str,
+    threshold: object,
+    unit: str,
+    population: str,
+) -> None:
+    """Raise when a gate empties a previously non-empty population (INV-NO-SILENT-EMPTY)."""
+    if int(n_in) > 0 and int(n_out) == 0:
+        raise PopulationEmptiedError(
+            rule_id=str(rule_id),
+            threshold=threshold,
+            unit=str(unit),
+            population=str(population),
+            n_in=int(n_in),
+        )
+
+
 def inv_check(
     meta: dict[str, Any],
     inv_id: str,

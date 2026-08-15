@@ -13875,6 +13875,8 @@ def build_global_comp_pool(
     max_psf_chi2: float = 3.0,
     max_fwhm_factor: float = 1.5,
     edge_bad_frame_frac_max: float = 0.10,
+    admission_artifact_dir: Path | str | None = None,
+    photometry_dir_for_meta: Path | str | None = None,
 ) -> pd.DataFrame:
     """Zostav globalny comp pool - staticke filtre + RMS napriec framami (raz pre pole)."""
     pool = masterstars_df.copy()
@@ -13957,9 +13959,28 @@ def build_global_comp_pool(
         return pool.reset_index(drop=True)
 
     use_derived = bool(getattr(cfg, "comp_pool_derived_admission", False))
+    from comp_pool_noise import (  # noqa: PLC0415
+        CompPoolAdmissionError,
+        CompPoolRegime,
+        reject_reason_counts,
+        write_comp_pool_admission_artifact,
+    )
+    from invariants_runtime import (  # noqa: PLC0415
+        assert_population_nonempty,
+    )
+
+    regime = CompPoolRegime.LEGACY
+    fail_reason: str | None = None
     admitted_ids: set[str] | None = None
     derived_meta: dict[str, Any] = {}
-    if use_derived and per_frame_csv_paths:
+    decisions_df: pd.DataFrame | None = None
+    reason_counts: dict[str, int] = {}
+    admission_rules: list[dict[str, Any]] = []
+
+    if use_derived:
+        if not per_frame_csv_paths:
+            fail_reason = "no_per_frame_csv_paths"
+            raise CompPoolAdmissionError(fail_reason)
         try:
             from comp_pool_noise import analyze_draft_comp_pool  # noqa: PLC0415
 
@@ -13988,27 +14009,61 @@ def build_global_comp_pool(
                 gaia_db_path=gaia_db if ap_arcsec and gaia_db else None,
                 aperture_arcsec=ap_arcsec,
             )
+            if analysis.get("error"):
+                raise CompPoolAdmissionError(str(analysis.get("error")))
             dec = analysis.get("decisions")
-            if isinstance(dec, pd.DataFrame) and not dec.empty and "admit" in dec.columns:
-                admitted_ids = {
-                    str(x).strip()
-                    for x, ok in zip(dec["catalog_id"], dec["admit"])
-                    if bool(ok) and str(x).strip()
-                }
-                derived_meta = {
-                    "n_admitted": int(analysis.get("n_admitted", 0) or 0),
-                    "thresholds": analysis.get("thresholds"),
-                    "scint_vs_sys": analysis.get("scint_vs_sys"),
-                    "fit_sigma_sys": (analysis.get("fit") or {}).get("sigma_sys_mag"),
-                }
-                logging.info(
-                    "[GLOBAL COMP POOL] derived admission: %d admitted of %d summarized",
-                    int(derived_meta.get("n_admitted", 0)),
-                    int(analysis.get("n_stars", 0) or 0),
-                )
+            if not (isinstance(dec, pd.DataFrame) and not dec.empty and "admit" in dec.columns):
+                raise CompPoolAdmissionError("derived admission returned no decisions table")
+            decisions_df = dec
+            reason_counts = reject_reason_counts(dec)
+            admitted_ids = {
+                str(x).strip()
+                for x, ok in zip(dec["catalog_id"], dec["admit"])
+                if bool(ok) and str(x).strip()
+            }
+            regime = CompPoolRegime.DERIVED
+            derived_meta = {
+                "n_admitted": int(analysis.get("n_admitted", 0) or 0),
+                "thresholds": analysis.get("thresholds"),
+                "scint_vs_sys": analysis.get("scint_vs_sys"),
+                "fit_sigma_sys": (analysis.get("fit") or {}).get("sigma_sys_mag"),
+            }
+            logging.info(
+                "[GLOBAL COMP POOL] derived admission: %d admitted of %d summarized",
+                int(derived_meta.get("n_admitted", 0)),
+                int(analysis.get("n_stars", 0) or 0),
+            )
+        except CompPoolAdmissionError as _adm_exc:
+            if admission_artifact_dir is not None:
+                try:
+                    write_comp_pool_admission_artifact(
+                        Path(admission_artifact_dir) / "comp_pool_admission.json",
+                        regime=CompPoolRegime.FAILED,
+                        rules=[],
+                        reject_reason_counts_map={},
+                        fail_reason=str(_adm_exc.reason),
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+            raise
         except Exception as exc:  # noqa: BLE001
+            fail_reason = str(exc)
             logging.warning("[GLOBAL COMP POOL] derived admission failed: %s", exc)
-            admitted_ids = None
+            if admission_artifact_dir is not None:
+                try:
+                    write_comp_pool_admission_artifact(
+                        Path(admission_artifact_dir) / "comp_pool_admission.json",
+                        regime=CompPoolRegime.FAILED,
+                        rules=[],
+                        reject_reason_counts_map={},
+                        fail_reason=fail_reason,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+            raise CompPoolAdmissionError(fail_reason) from exc
+
+    # Mutually exclusive by regime, never by bool(admitted_ids).
+    apply_rms_prefilter = regime is CompPoolRegime.LEGACY
 
     rms_map = compute_global_pool_rms_map(
         cand_ids=cand_ids,
@@ -14024,26 +14079,105 @@ def build_global_comp_pool(
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         max_comp_rms=max_comp_rms,
-        # Stage 2: stability is in derived admission; do not also hard-cut on legacy p2p.
-        apply_rms_prefilter=not bool(admitted_ids),
+        apply_rms_prefilter=apply_rms_prefilter,
     )
     pool = attach_comp_rms_to_pool_rows(pool, rms_map, id_col=id_col)
-    if admitted_ids is not None:
+
+    if regime is CompPoolRegime.DERIVED:
+        assert admitted_ids is not None
         before = int(len(pool))
         nid = pool[id_col].map(lambda v: str(v).strip() if pd.notna(v) else "")
-        # also try catalog_id normalize
         if "catalog_id" in pool.columns:
             cid = pool["catalog_id"].map(lambda v: str(v).strip() if pd.notna(v) else "")
             keep = nid.isin(admitted_ids) | cid.isin(admitted_ids)
         else:
             keep = nid.isin(admitted_ids)
         pool = pool.loc[keep].copy()
+        thr_payload = derived_meta.get("thresholds")
+        admission_rules.append(
+            {
+                "rule_id": "COMP_POOL_DERIVED_ADMIT",
+                "n_in": before,
+                "n_out": int(len(pool)),
+                "threshold_value": thr_payload,
+                "unit": "mixed_derived",
+                "regime": regime.value,
+            }
+        )
         logging.info(
             "[GLOBAL COMP POOL] derived filter: %d -> %d (meta=%s)",
             before,
             int(len(pool)),
             {k: derived_meta.get(k) for k in ("n_admitted", "fit_sigma_sys")},
         )
+        # Persist before raise so a failed draft still carries attributable evidence.
+        if admission_artifact_dir is not None:
+            art = write_comp_pool_admission_artifact(
+                Path(admission_artifact_dir) / "comp_pool_admission.json",
+                regime=regime,
+                rules=admission_rules,
+                reject_reason_counts_map=reason_counts,
+                fail_reason=fail_reason,
+                extra={"derived_meta": {k: derived_meta.get(k) for k in ("n_admitted", "fit_sigma_sys")}},
+            )
+            if photometry_dir_for_meta is not None:
+                try:
+                    merge_photometry_pipeline_meta(
+                        photometry_dir_for_meta,
+                        {
+                            "comp_pool_admission": {
+                                "artifact": str(art.name),
+                                "regime": regime.value,
+                                "rules": admission_rules,
+                                "reject_reason_counts": reason_counts,
+                            }
+                        },
+                    )
+                except Exception as _meta_exc:  # noqa: BLE001
+                    logging.debug("[GLOBAL COMP POOL] pipeline_meta stamp failed: %s", _meta_exc)
+        assert_population_nonempty(
+            n_in=before,
+            n_out=int(len(pool)),
+            rule_id="COMP_POOL_DERIVED_ADMIT",
+            threshold=thr_payload,
+            unit="mixed_derived",
+            population="stars in global comp pool after static filters",
+        )
+    elif regime is CompPoolRegime.LEGACY:
+        admission_rules.append(
+            {
+                "rule_id": "COMP_POOL_LEGACY_RMS",
+                "n_in": int(len(pool)),
+                "n_out": int(len(pool)),
+                "threshold_value": float(max_comp_rms),
+                "unit": "mag",
+                "regime": regime.value,
+                "note": "legacy RMS prefilter currently a no-op inside compute_global_pool_rms_map",
+            }
+        )
+        if admission_artifact_dir is not None:
+            art = write_comp_pool_admission_artifact(
+                Path(admission_artifact_dir) / "comp_pool_admission.json",
+                regime=regime,
+                rules=admission_rules,
+                reject_reason_counts_map={},
+                fail_reason=None,
+            )
+            if photometry_dir_for_meta is not None:
+                try:
+                    merge_photometry_pipeline_meta(
+                        photometry_dir_for_meta,
+                        {
+                            "comp_pool_admission": {
+                                "artifact": str(art.name),
+                                "regime": regime.value,
+                                "rules": admission_rules,
+                            }
+                        },
+                    )
+                except Exception as _meta_exc:  # noqa: BLE001
+                    logging.debug("[GLOBAL COMP POOL] pipeline_meta stamp failed: %s", _meta_exc)
+
     _before_dedupe = int(len(pool))
     pool = _dedupe_comp_pool_by_gaia_key(pool)
     if int(len(pool)) < _before_dedupe:
@@ -15383,10 +15517,17 @@ def run_phase0_and_phase1(
                 fwhm_px=float(fwhm_px),
                 max_psf_chi2=float("inf"),  # global pool: skip PSF chi^2 (per-target filter unchanged)
                 max_fwhm_factor=float(max_fwhm_factor),
+                admission_artifact_dir=Path(output_dir),
+                photometry_dir_for_meta=Path(output_dir),
             )
             if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
                 _global_pool_df = None
         except Exception as _gcp_exc:  # noqa: BLE001
+            from comp_pool_noise import CompPoolAdmissionError  # noqa: PLC0415
+            from invariants_runtime import PopulationEmptiedError  # noqa: PLC0415
+
+            if isinstance(_gcp_exc, (CompPoolAdmissionError, PopulationEmptiedError)):
+                raise
             logging.warning(
                 "[GLOBAL COMP POOL] zostavenie zlyhalo: %s - fallback na per-target masterstars",
                 _gcp_exc,

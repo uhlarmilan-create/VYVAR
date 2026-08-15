@@ -18,6 +18,7 @@ import json
 import logging
 import math
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,72 @@ LOGGER = logging.getLogger(__name__)
 ASSUMPTION_BULK_NONVARIABLE = (
     "Bulk of field stars are non-variable; median scatter at magnitude traces noise."
 )
+
+
+class CompPoolRegime(str, Enum):
+    """Admission regime for ``build_global_comp_pool`` (mutually exclusive by construction)."""
+
+    DERIVED = "derived"  # derived admission ran and returned a decision
+    LEGACY = "legacy"  # derived admission disabled by config
+    FAILED = "failed"  # derived admission raised or could not run; see reason
+
+
+class CompPoolAdmissionError(RuntimeError):
+    """Configured derived admission failed or could not run; do not silently downgrade."""
+
+    def __init__(self, reason: str, *, regime: CompPoolRegime = CompPoolRegime.FAILED) -> None:
+        self.regime = CompPoolRegime(regime)
+        self.reason = str(reason)
+        super().__init__(f"comp_pool_admission regime={self.regime.value}: {self.reason}")
+
+
+def reject_reason_counts(decisions: pd.DataFrame) -> dict[str, int]:
+    """Count per-token reject reasons from ``admit_pool_stars`` decisions."""
+    counts: dict[str, int] = {}
+    if decisions is None or getattr(decisions, "empty", True) or "reject_reasons" not in decisions.columns:
+        return counts
+    for raw in decisions["reject_reasons"].astype(str).tolist():
+        for token in str(raw).split(";"):
+            t = token.strip()
+            if not t:
+                continue
+            counts[t] = int(counts.get(t, 0)) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+def write_comp_pool_admission_artifact(
+    path: Path | str,
+    *,
+    regime: CompPoolRegime,
+    rules: list[dict[str, Any]],
+    reject_reason_counts_map: dict[str, int] | None = None,
+    fail_reason: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Persist admission regime and per-rule (n_in, n_out) to a JSON sidecar."""
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {
+        "regime": str(CompPoolRegime(regime).value),
+        "fail_reason": None if fail_reason is None else str(fail_reason),
+        "rules": list(rules),
+        "reject_reason_counts": dict(reject_reason_counts_map or {}),
+    }
+    if extra:
+        payload.update(extra)
+
+    def _default(o: Any) -> Any:
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+            return None
+        if hasattr(o, "item"):
+            try:
+                return o.item()
+            except Exception:  # noqa: BLE001
+                pass
+        return str(o)
+
+    out.write_text(json.dumps(payload, indent=2, ensure_ascii=True, default=_default), encoding="utf-8")
+    return out
 
 
 @dataclass
