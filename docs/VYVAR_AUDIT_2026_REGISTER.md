@@ -180,7 +180,10 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 | **SNR-GATE-02** | 9 | detection | C | HIGH | Surgical land: pin `_noise_floor_adu_from_image_array` so SNR aperture radii do not move; correct BO CVn baseline id; verify Part 5 zeros. | `dev/results/CURSOR_RESULT_SNR_GATE_01.md` secs 11-15 | **DONE** with SNR-GATE-01 commit | CLOSED |
 | **SNR-DEPTH-01** | 9 | detection | U | MED | F2: G15 repeatability degrades (frac_median 0.507); no depth limit implemented. | SNR-GATE-01 F2 | **CLOSED** by TARGET-DEPTH-01 / 02 | CLOSED |
 | **TARGET-DEPTH-01** | 9 | photometry | I/P | HIGH | Item A QC FILE FK healed (accepted). Item B NP half-SNR proxy **superseded** by TARGET-DEPTH-02. | `CURSOR_RESULT_TARGET_DEPTH_01.md` | **Item A FIXED**; Item B SUPERSEDED | PARTIAL |
-| **TARGET-DEPTH-02** | 9 | photometry | I/P | HIGH | Item A: zone=noise -> skip_photometry. Item B: MASTERSTAR is single-frame (factor=1); depth = half-linear zone bin. Item C: BO 512/513 ensembles disjoint (trial). Item D: rename proposal + INGESTED repair path. | `CURSOR_RESULT_TARGET_DEPTH_02.md`; `TARGET_DEPTH_02_results.json` | **FIXED** (commit; no push) | FIXED |
+| **TARGET-DEPTH-02** | 9 | photometry | I/P | HIGH | Item A: zone=noise -> skip_photometry. Item B: MASTERSTAR single-frame (factor=1); half-linear depth. **Caveat (PUSH-02):** depth only meaningful on post-SNR-GATE MASTERSTAR; on 512/510 (depth 11.5) the cliff is where stars ran out under the broken gate, not measurability. | `CURSOR_RESULT_TARGET_DEPTH_02.md`; `CURSOR_RESULT_PUSH_02.md` | **FIXED**; depth caveat recorded | FIXED |
+| **BO-ENSEMBLE-01** | 9 | ensemble | U | HIGH | Draft 512 vs 513 BO CVn comps disjoint: 512 TIER1 x5 GREEN S1=0.0093; 513 0 T1 / T3+T4 RED S1=0.0111. Deeper MS did not retain 512 bright comps. | TARGET-DEPTH-02 Item C; `CURSOR_RESULT_PUSH_02.md` | **REPORTED**; T2-R4 uncontrolled (513 trial); rebuild on one tip settles | OPEN |
+| **DET-vs-MEAS-01** | 9 | photometry | U | MED | 3.78-sigma DAO cut is detection, not measurability; T2-R0 factor=1; best-frame FWHM advantage ~1% on 512; residual linear-vs-unusable-LC gap (~0.29 mag/pt at 3.78-sigma) not established. | PUSH-02 1.3 | **DEFERRED** | OPEN |
+| **PUSH-02** | 9 | process | C | HIGH | Record depth caveat + BO-ENSEMBLE-01; Milan-authorized push of TARGET-DEPTH stack. | `CURSOR_RESULT_PUSH_02.md` | **DONE** | CLOSED |
 
 ### Deferred (adjacent)
 
@@ -189,6 +192,16 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 - DAO-PASS2-vs-PREMATCH-01: **CLOSED** by SNR-GATE-01 Delta B
 - FORCED_APERTURE-DEAD-01: label checked in UI/plot paths but never assigned in production writers
 - SNR-TABLE-SKY-01 (new finding): SNR-table precompute still uses misnamed `med+k*plain_std` as "sky"; Phase 2A overwrites from annulus. Own delta if fixed.
+- DET-vs-MEAS-01: 3.78-sigma detection vs measurability gap (see Wave 9 row)
+- TARGET-DEPTH-02 mag-limit removal (proposed redundant with zone=noise gate; not applied)
+- zone rename to dao_detected / dao_subthreshold (proposed; not applied)
+- LOCATION_OLD orphan heal on DB open
+- drafts 512/513/510 status INGESTED repair (path in TARGET-DEPTH-02 Item D; not applied)
+- drafts 512 and 513 trial runs under X-R3; rebuild on committed tip
+- every draft since c9e1f8f with shallow MASTERSTAR depth
+- draft 510/512 checksum manifests
+- --full anchor and P1 golden ledger (stale since SKY-CLIP-01 / SNR-GATE-01)
+- BO-ENSEMBLE-01: controlled rebuild of 512+513 on one tip
 
 ---
 
