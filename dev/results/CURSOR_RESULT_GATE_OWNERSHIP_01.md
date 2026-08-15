@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Repo tip at issue: 691d3be
-Commit: (ownership commit SHA next)
+Commit: 5612f42 (local; not pushed)
 Type: INVESTIGATION + INSTRUMENTATION inventory. No science-path behaviour change from this task alone.
 Push: NO
 

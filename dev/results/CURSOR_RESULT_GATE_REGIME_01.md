@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Repo tip at issue: 691d3be
-Commit: (filled after local commit)
+Commit: 18c770e (local; not pushed)
 Type: BOUNDED FIX (failure path + provenance). Happy path science unchanged.
 Push: NO
 
@@ -10,6 +10,10 @@ Push: NO
 
 Compared: global comparison-pool admission control flow before vs after GATE-REGIME-01.
 Difference: explicit `CompPoolRegime` (DERIVED | LEGACY | FAILED), INV-NO-SILENT-EMPTY raise when derived admission empties a non-empty pool, and persisted `comp_pool_admission.json` / `pipeline_meta.comp_pool_admission`. Thresholds and `comp_pool_derived_admission` default are unchanged.
+
+## `--fast` (commit 18c770e working tree)
+
+OVERALL PASS. pytest: 1364 passed, 27 skipped (includes 4 new `test_gate_regime_01` tests).
 
 ## What I did
 
