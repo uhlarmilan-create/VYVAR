@@ -1,0 +1,15 @@
+{
+  "commit_sha": "a27f10f",
+  "k_config_mag_per_bprp": -0.373,
+  "n_stars": 1172,
+  "formula": "corr = k*(target_bp_rp - ens_bp_rp) = -k*delta_colour_Q3",
+  "post_correction_level_mmag_per_bprp": -237.98917742351617,
+  "post_correction_level_se_mmag": 152.6300775535734,
+  "post_correction_level_G_controlled_mmag_per_bprp": 1.6211670014340873,
+  "post_correction_level_G_controlled_se_mmag": 90.72716516376911,
+  "pre_impl_level_G_controlled_mmag_per_bprp": -373.09,
+  "sign_inverted_would_be_near_mmag_per_bprp": -746.0,
+  "consistent_with_zero_2se": true,
+  "q3_raw_level_mmag_per_bprp": -610.989177423516,
+  "q3_raw_level_G_controlled_mmag_per_bprp": null
+}

@@ -82,6 +82,7 @@ from cal_diag import (
 )
 from photometry_core import (
     _fwhm_moment_at,
+    discover_aligned_science_fits,
     load_snr_aperture_table_from_draft_dir,
     merge_photometry_pipeline_meta,
     precompute_and_save_snr_aperture_table_for_draft,
@@ -15232,9 +15233,14 @@ def _astrometry_align_impl_body(
                 )
                 _aligned_for_sky: list[Path] = []
                 try:
-                    _aligned_for_sky = sorted(aligned_root.glob("proc_*.fits"))
+                    _aligned_for_sky = discover_aligned_science_fits(aligned_root)
                 except Exception:  # noqa: BLE001
                     _aligned_for_sky = []
+                if not _aligned_for_sky:
+                    try:
+                        _aligned_for_sky = sorted(aligned_root.glob("proc_*.fits"))
+                    except Exception:  # noqa: BLE001
+                        _aligned_for_sky = []
                 if not _aligned_for_sky:
                     try:
                         _aligned_for_sky = sorted(_iter_fits_recursive(aligned_root))
@@ -15254,6 +15260,7 @@ def _astrometry_align_impl_body(
                     equipment_id=int(id_equipment) if id_equipment is not None else None,
                     sky_fallback=_sky_fb,
                     prematch_peak_sigma_floor=_prematch_k,
+                    cfg=_catalog_app_cfg,
                 )
         except Exception as _snr_pre_exc:  # noqa: BLE001
             LOGGER.warning("[PIPELINE] SNR aperture table precompute failed: %s", _snr_pre_exc)

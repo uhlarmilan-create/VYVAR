@@ -1,0 +1,16 @@
+{
+  "defect": "Phase 2A reads dao_flux and aperture_r_px from proc CSVs; it does not remeasure at SNR-table radii.",
+  "corrected_spec": "Re-run per-frame aperture photometry (proc CSV writer) with gated aperture_snr_table.json, then Phase 2A.",
+  "evidence": {
+    "BO_G": 9.72,
+    "snr_table_r_at_G9p7": 5.999,
+    "proc_csv_aperture_r_px_BO": 4.211,
+    "lc_aperture_r_px_BO": 4.211,
+    "proc_median_aperture_r_px": 2.711323792774397
+  },
+  "before_production_scatter_mmag": {
+    "BO_CVn_mag_calib_std": 146.45,
+    "FW_CVn_mag_calib_std": 14.83,
+    "note": "Variables/targets on OLD proc apertures; check_kmag sidecars were absent before re-export attempt."
+  }
+}

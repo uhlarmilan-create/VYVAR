@@ -1402,28 +1402,29 @@ def measure_growth_curve_ee(
         gain=float(gain),
         read_noise=float(read_noise),
         max_stars=int(max_stars),
+        ladder_outer_factor=1.3,
     )
     ee_radii = cog.get("ee_radii")
     ee_curve = cog.get("ee_curve")
     ref_r = float(cog.get("ref_r_px", float("nan")))
-    flat = float("nan")
-    if (
-        bool(cog.get("cog_ok"))
-        and ee_radii is not None
-        and ee_curve is not None
-        and np.asarray(ee_radii).size >= 5
-    ):
-        ee_a = np.asarray(ee_curve, dtype=np.float64)
-        # Flatness: median of last 5 ladder points over the normalisation point (=1).
-        flat = float(np.nanmedian(ee_a[-5:]))
+    flat = float(cog.get("flatness_outer_over_norm", float("nan")))
     ok = bool(cog.get("cog_ok")) and ee_radii is not None and ee_curve is not None
+    r90 = float("nan")
+    if ok:
+        rr = np.asarray(ee_radii, dtype=np.float64)
+        ee = np.asarray(ee_curve, dtype=np.float64)
+        if rr.size and ee.size == rr.size:
+            r90 = float(rr[int(np.argmin(np.abs(ee - 0.9)))])
     return {
         "ok": ok,
         "n_cog": int(cog.get("n_cog", 0) or 0),
         "ee_radii": np.asarray(ee_radii, dtype=np.float64) if ee_radii is not None else None,
         "ee_curve": np.asarray(ee_curve, dtype=np.float64) if ee_curve is not None else None,
         "ref_r_px": ref_r,
+        "ladder_outer_r_px": float(cog.get("ladder_outer_r_px", float("nan"))),
         "flatness_tail_over_norm": flat,
+        "flatness_outer_over_norm": flat,
+        "r90_px": r90,
         "min_stars_required": int(min_stars),
         "isolation_fwhm": float(isolation_fwhm),
         "reason": "" if ok else "too_few_isolated_cog_stars",
@@ -1437,7 +1438,7 @@ def compute_snr_optimal_aperture_table(
     read_noise: float = 10.0,
     mag_range: tuple[float, float] = (7.0, 18.0),
     mag_step: float = 0.5,
-    r_min_fwhm: float = 0.8,
+    r_min_fwhm: float = 0.25,
     r_max_fwhm: float = 2.5,
     r_step_px: float = 0.05,
     zero_point: float = 25.0,
@@ -1476,17 +1477,8 @@ def compute_snr_optimal_aperture_table(
 
     r_min_px = float(r_min_fwhm) * fw
     r_max_px = float(r_max_fwhm) * fw
-    # Measured CoG: allow the search to reach the normalisation radius of the curve
-    # (where EE~1). The legacy 2.5*FWHM cap was a Gaussian-search bound; keeping it
-    # when the measured optimum lies beyond it would report a bound hit that is not
-    # an optimum (IMPL-01).
-    if ee_radii is not None and ee_curve is not None:
-        try:
-            _ee_r_probe = np.asarray(ee_radii, dtype=np.float64)
-            if _ee_r_probe.size >= 2 and np.all(np.isfinite(_ee_r_probe)):
-                r_max_px = max(float(r_max_px), float(np.nanmax(_ee_r_probe)))
-        except (TypeError, ValueError):
-            pass
+    # Do not widen r_max to the EE ladder (IMPL-02): a bound that binds is not an
+    # optimum; widening only hides the failure mode that produced flat bright radii.
     r_values = np.arange(r_min_px, r_max_px + 0.5 * float(r_step_px), float(r_step_px))
     if r_values.size == 0:
         r_values = np.array([max(0.5, r_min_px)])
@@ -2223,6 +2215,30 @@ def resolve_fwhm_px_for_snr_aperture_table(
     return None, prov
 
 
+def estimate_star_free_median_sky_adu_per_px(
+    data: np.ndarray,
+    *,
+    exclusion_radius_px: float = 12.0,
+) -> float | None:
+    """Median ADU/px on star-free (edge) pixels - the pedestal, not the noise floor."""
+    d = np.asarray(data, dtype=np.float64)
+    if d.ndim != 2 or d.size == 0:
+        return None
+    blocked = _build_star_exclusion_mask(
+        d.shape,
+        np.asarray([], dtype=np.float64),
+        np.asarray([], dtype=np.float64),
+        float(exclusion_radius_px),
+        float(exclusion_radius_px),
+    )
+    vals = d[~blocked]
+    vals = vals[np.isfinite(vals)]
+    if vals.size < 64:
+        return None
+    med = float(np.median(vals))
+    return med if math.isfinite(med) else None
+
+
 def estimate_median_sky_adu_per_px_for_snr_table(
     *,
     aligned_fits_paths: Sequence[Path | str] | None = None,
@@ -2231,18 +2247,21 @@ def estimate_median_sky_adu_per_px_for_snr_table(
     prematch_peak_sigma_floor: float = 10.0,
     fallback: float = 1581.6,
 ) -> float:
-    """Median DAO noise-floor estimate across aligned frames (pre-per-frame CSV)."""
+    """Median star-free pedestal [ADU/px] across aligned frames (Howell sky term).
+
+    IMPL-02: previously this returned the DAO noise-floor helper, which is a scatter
+    scale and not a sky level. On pedestal frames that silently fed Howell with a
+    near-zero sky when ``bkg_var`` was also missing.
+    """
+    del prematch_peak_sigma_floor  # kept for call-site compatibility
     vals: list[float] = []
     n_max = max(1, int(max_frames))
 
     if aligned_ram_frames:
         for _name, _hdr, arr in list(aligned_ram_frames)[:n_max]:
-            nf = _noise_floor_adu_from_image_array(
-                arr,
-                prematch_peak_sigma_floor=prematch_peak_sigma_floor,
-            )
-            if nf is not None:
-                vals.append(float(nf))
+            sk = estimate_star_free_median_sky_adu_per_px(arr)
+            if sk is not None and sk >= 0:
+                vals.append(float(sk))
 
     if aligned_fits_paths:
         for raw in list(aligned_fits_paths)[:n_max]:
@@ -2254,20 +2273,49 @@ def estimate_median_sky_adu_per_px_for_snr_table(
                     d = hdul[0].data
                 if d is None:
                     continue
-                nf = _noise_floor_adu_from_image_array(
-                    d,
-                    prematch_peak_sigma_floor=prematch_peak_sigma_floor,
-                )
-                if nf is not None:
-                    vals.append(float(nf))
+                sk = estimate_star_free_median_sky_adu_per_px(d)
+                if sk is not None and sk >= 0:
+                    vals.append(float(sk))
             except Exception as exc:  # noqa: BLE001
-                logging.error('[EXC-0130] One frame skipped when estimating median sky for SNR table - sky_adu biased if few frames: %s', exc)
+                logging.error(
+                    "[EXC-0130] One frame skipped when estimating median sky for SNR table "
+                    "- sky_adu biased if few frames: %s",
+                    exc,
+                )
                 continue
 
     if not vals:
         return float(fallback)
     med = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
-    return med if math.isfinite(med) and med > 0 else float(fallback)
+    return med if math.isfinite(med) and med >= 0 else float(fallback)
+
+
+def discover_aligned_science_fits(aligned_root: Path | str, *, max_n: int = 200) -> list[Path]:
+    """Science FITS for SNR/CoG (prefer ``*_Light_*.fits``; never require ``proc_*.fits``)."""
+    root = Path(aligned_root)
+    if not root.is_dir():
+        return []
+    out: list[Path] = []
+    try:
+        cands = sorted(p for p in root.rglob("*.fits") if p.is_file())
+    except Exception:  # noqa: BLE001
+        return []
+    for p in cands:
+        name_u = p.name.upper()
+        if name_u == "MASTERSTAR.FITS" or name_u.startswith("PROC_"):
+            continue
+        out.append(p)
+        if len(out) >= int(max_n):
+            break
+    if out:
+        return out
+    # Last resort: calibrated proc frames if that is all that exists.
+    for p in cands:
+        if p.name.upper().startswith("PROC_"):
+            out.append(p)
+            if len(out) >= int(max_n):
+                break
+    return out
 
 
 def _median_bkg_var_adu2_per_px_from_proc_cache(
@@ -2510,11 +2558,14 @@ def _measure_ee_curve_for_snr_table(
             "isolation_fwhm": iso,
         }
     x, y, flux, sky = xy
-    # Always estimate local annulus sky on the frame used for COG. Catalog sky on
-    # sky-subtracted proc frames is near zero and would make EE track aperture area
-    # (sky growth), not the PSF (caught IMPL-01).
-    r_in = max(4.0, 3.0 * float(fwhm_px))
-    r_out = max(r_in + 2.0, 5.0 * float(fwhm_px))
+    # Sky annulus must sit strictly outside the EE ladder (incl. outer flatness
+    # radius). Overlap at 3-5xFWHM while the ladder reached 4.5xFWHM left starlight
+    # in the "sky" estimate and contaminated the growth curve (IMPL-02).
+    fw = float(fwhm_px)
+    ref_r = float(ref_fwhm) * fw
+    outer_r = 1.3 * ref_r
+    r_in = max(outer_r + max(1.0, 0.5 * fw), outer_r + 1.0)
+    r_out = max(r_in + max(2.0, 1.5 * fw), r_in + 2.0)
     sky_est = _estimate_annulus_sky_pp(data, x, y, r_in=r_in, r_out=r_out)
     med = float(np.nanmedian(sky_est)) if np.any(np.isfinite(sky_est)) else 0.0
     sky = np.where(np.isfinite(sky_est), sky_est, med)
@@ -2552,11 +2603,34 @@ def precompute_and_save_snr_aperture_table_for_draft(
     masterstars_csv: Path | str | None = None,
     cfg: Any | None = None,
 ) -> dict[str, Any] | None:
-    """Build and write ``aperture_snr_table.json`` before per-frame catalog export."""
+    """Build and write ``aperture_snr_table.json`` before per-frame catalog export.
+
+    IMPL-02: hard gates run before any write; a failed growth curve or aperture
+    table does not produce a file.
+    """
+    from snr_cog_gates import evaluate_snr_cog_gates
+
     dd = Path(draft_dir)
     if not dd.is_dir():
         logging.warning("[PIPELINE] SNR table: draft_dir not found: %s", dd)
         return None
+
+    fits_paths: list[Path] | None = None
+    if aligned_fits_paths:
+        fits_paths = [Path(p) for p in aligned_fits_paths]
+    if not fits_paths:
+        # Prefer science lights under detrended_aligned (draft 514 has no proc_*.fits).
+        for sub in (
+            dd / "detrended_aligned" / "lights",
+            dd / "calibrated" / "lights",
+            dd,
+        ):
+            if sub.is_dir():
+                found = discover_aligned_science_fits(sub)
+                if found:
+                    fits_paths = found
+                    break
+    aligned_fits_paths = fits_paths
 
     fwhm_px, fwhm_prov = resolve_fwhm_px_for_snr_aperture_table(
         masterstar_fits_path=masterstar_fits_path,
@@ -2568,6 +2642,21 @@ def precompute_and_save_snr_aperture_table_for_draft(
     if fwhm_px is None or not math.isfinite(float(fwhm_px)) or float(fwhm_px) <= 0:
         logging.warning("[PIPELINE] SNR table: no valid FWHM - skip precompute")
         return None
+
+    _hdr_dao = fwhm_prov.get("vy_fwhm_dao_px") if isinstance(fwhm_prov, dict) else None
+    try:
+        if _hdr_dao is not None and float(_hdr_dao) > float(fwhm_px) * 1.15:
+            logging.info(
+                "[PIPELINE] SNR FWHM raised to MASTERSTAR VY_FWHM=%.3f (was %.3f)",
+                float(_hdr_dao),
+                float(fwhm_px),
+            )
+            fwhm_px = float(_hdr_dao)
+            if isinstance(fwhm_prov, dict):
+                fwhm_prov = dict(fwhm_prov)
+                fwhm_prov["fwhm_px_scope"] = "masterstar_header_vy_fwhm_dao_preferred"
+    except (TypeError, ValueError):
+        pass
 
     gain_p = 1.0
     rn_p = 10.0
@@ -2633,7 +2722,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
     if aligned_fits_paths:
         n_sky = max(n_sky, min(len(list(aligned_fits_paths)), 12))
     logging.info(
-        "[PIPELINE] Sky for SNR table: %.1f ADU/px (median of up to %s frames)",
+        "[PIPELINE] Sky for SNR table: %.1f ADU/px (star-free pedestal; up to %s frames)",
         float(sky_adu),
         int(n_sky) if n_sky > 0 else 0,
     )
@@ -2642,10 +2731,23 @@ def precompute_and_save_snr_aperture_table_for_draft(
         aligned_fits_paths=aligned_fits_paths,
         aligned_ram_frames=aligned_ram_frames,
     )
+    if bkg_var_px is None and masterstar_fits_path is not None:
+        try:
+            with astrofits.open(Path(masterstar_fits_path), memmap=False) as hdul:
+                _ms_arr = hdul[0].data
+            if _ms_arr is not None:
+                bkg_var_px = estimate_star_free_per_pixel_variance_adu2(_ms_arr)
+        except Exception:  # noqa: BLE001
+            bkg_var_px = None
     if bkg_var_px is not None:
         logging.info(
-            "[PIPELINE] SNR table: measured star-free bkg var = %.4g ADU^2/px (per-pixel; ranking-only)",
+            "[PIPELINE] SNR table: measured star-free bkg var = %.4g ADU^2/px",
             float(bkg_var_px),
+        )
+    else:
+        logging.warning(
+            "[PIPELINE] SNR table: bkg_var unset - Howell sky/g+(RN/g)^2 will be used "
+            "(must not silently assume an already-subtracted frame)"
         )
 
     ee_meas = _measure_ee_curve_for_snr_table(
@@ -2662,10 +2764,11 @@ def precompute_and_save_snr_aperture_table_for_draft(
     if bool(ee_meas.get("ok")):
         logging.info(
             "[PIPELINE] SNR table EE path=measured_growth_curve n_cog=%s ref_r=%.2f "
-            "flatness=%.4f isolation_fwhm=%.1f",
+            "flatness_outer=%.4f r90=%.2f isolation_fwhm=%.1f",
             int(ee_meas.get("n_cog", 0) or 0),
             float(ee_meas.get("ref_r_px", float("nan"))),
-            float(ee_meas.get("flatness_tail_over_norm", float("nan"))),
+            float(ee_meas.get("flatness_outer_over_norm", float("nan"))),
+            float(ee_meas.get("r90_px", float("nan"))),
             float(ee_meas.get("isolation_fwhm", float("nan"))),
         )
         snr_table = compute_snr_optimal_aperture_table(
@@ -2680,9 +2783,14 @@ def precompute_and_save_snr_aperture_table_for_draft(
         )
         snr_table["ee_n_cog"] = int(ee_meas.get("n_cog", 0) or 0)
         snr_table["ee_ref_r_px"] = float(ee_meas.get("ref_r_px", float("nan")))
+        snr_table["ee_ladder_outer_r_px"] = float(ee_meas.get("ladder_outer_r_px", float("nan")))
         snr_table["ee_flatness_tail_over_norm"] = float(
             ee_meas.get("flatness_tail_over_norm", float("nan"))
         )
+        snr_table["ee_flatness_outer_over_norm"] = float(
+            ee_meas.get("flatness_outer_over_norm", float("nan"))
+        )
+        snr_table["ee_r90_px"] = float(ee_meas.get("r90_px", float("nan")))
         snr_table["ee_isolation_fwhm"] = float(ee_meas.get("isolation_fwhm", 3.0))
         snr_table["ee_min_stars_required"] = int(ee_meas.get("min_stars_required", 8))
     else:
@@ -2703,10 +2811,56 @@ def precompute_and_save_snr_aperture_table_for_draft(
         snr_table["ee_fallback_reason"] = str(ee_meas.get("reason") or "unknown")
         snr_table["ee_min_stars_required"] = int(ee_meas.get("min_stars_required", 8) or 8)
         snr_table["ee_isolation_fwhm"] = float(ee_meas.get("isolation_fwhm", 3.0) or 3.0)
+    if bkg_var_px is not None:
+        snr_table["bkg_var_adu2_per_px"] = float(bkg_var_px)
+    else:
+        snr_table["bkg_var_adu2_per_px"] = None
     if isinstance(fwhm_prov, dict):
         for k, v in fwhm_prov.items():
             if v is not None:
                 snr_table[k] = v
+
+    _ann_in = float(getattr(cfg, "annulus_inner_fwhm", 4.75) if cfg is not None else 4.75)
+    _ee_ok = bool(ee_meas.get("ok"))
+    gate_report = evaluate_snr_cog_gates(
+        snr_table=snr_table,
+        fwhm_px=float(fwhm_px),
+        annulus_inner_fwhm=_ann_in,
+        ee_radii=ee_meas.get("ee_radii") if _ee_ok else None,
+        ee_curve=ee_meas.get("ee_curve") if _ee_ok else None,
+        ref_r_px=ee_meas.get("ref_r_px") if _ee_ok else None,
+        r90_px=ee_meas.get("r90_px") if _ee_ok else None,
+        flatness_outer_over_norm=(
+            ee_meas.get("flatness_outer_over_norm") if _ee_ok else None
+        ),
+        ladder_outer_r_px=(ee_meas.get("ladder_outer_r_px") if _ee_ok else None),
+    )
+    # Measured CoG path: refuse to write on any gate failure.
+    # Gaussian fallback (no growth curve): only aperture gates are meaningful;
+    # CoG gates are expected to fail without a curve and must not block RN/gain
+    # unit tests or the intentional fallback artifact.
+    snr_table["impl02_gates"] = gate_report
+    if _ee_ok and not bool(gate_report.get("ok")):
+        logging.error(
+            "[PIPELINE] SNR aperture table REFUSED (IMPL-02 gates failed): %s",
+            gate_report.get("failures"),
+        )
+        diag_path = dd / "aperture_snr_table_REJECTED.json"
+        try:
+            with diag_path.open("w", encoding="utf-8") as f:
+                json.dump(snr_table, f, indent=2)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+    if (not _ee_ok) and gate_report.get("failures"):
+        # Record CoG gate skips; keep aperture-only status for the artifact.
+        snr_table["impl02_gates"] = {
+            **gate_report,
+            "ok": True,
+            "note": "gaussian_fallback: CoG gates not enforced",
+            "cog_gate_failures_informational": list(gate_report.get("failures") or []),
+        }
+
     out_path = dd / "aperture_snr_table.json"
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(snr_table, f, indent=2)
@@ -9186,99 +9340,193 @@ def _phase2a_prepare_shared_state(
     _bkg_var_px = _median_bkg_var_adu2_per_px_from_proc_cache(_phase2a_csv_cache)
     _snr_ap_table: dict[str, Any] | None = None
     if force_aperture_px is None and bool(_cfg.aperture_photometry_enabled):
-        _aligned_fits_for_snr: list[Path] = []
-        try:
-            _aligned_fits_for_snr = sorted(
-                p
-                for p in _aligned_dir_2a.glob("*.fits")
-                if p.is_file()
-                and not p.name.startswith("proc_")
-                and p.name.upper() != "MASTERSTAR.FITS"
-            )
-        except Exception:  # noqa: BLE001
-            _aligned_fits_for_snr = []
-        _snr_fwhm_px, _snr_fwhm_prov = resolve_fwhm_px_for_snr_aperture_table(
-            masterstar_fits_path=masterstar_fits_path,
-            masterstar_selection={},
-            fwhm_fallback_px=float(fwhm_px) if math.isfinite(float(fwhm_px)) else None,
-            aligned_fits_paths=_aligned_fits_for_snr,
-        )
-        if _snr_fwhm_px is None or not math.isfinite(float(_snr_fwhm_px)) or float(_snr_fwhm_px) <= 0:
-            _snr_fwhm_px = float(fwhm_px)
-            _snr_fwhm_prov = {
-                "fwhm_px_scope": "phase2a_header_fallback",
-                "fwhm_estimator": "header_fwhm_px",
-            }
+        from snr_cog_gates import evaluate_snr_cog_gates
+
+        # Prefer a precomputed gated table (pipeline precompute / IMPL-02 rebuild).
         _draft_dir_ee = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
-        _ee_meas = _measure_ee_curve_for_snr_table(
-            fwhm_px=float(_snr_fwhm_px),
-            gain=float(_gain_phot),
-            read_noise=float(_rn_phot),
-            draft_dir=Path(_draft_dir_ee),
-            masterstar_fits_path=masterstar_fits_path,
-            masterstars_csv=None,
-            aligned_fits_paths=_aligned_fits_for_snr,
-            aligned_ram_frames=None,
-            cfg=_cfg,
-        )
-        if bool(_ee_meas.get("ok")):
-            _snr_ap_table = compute_snr_optimal_aperture_table(
-                fwhm_px=float(_snr_fwhm_px),
-                sky_adu_per_px=float(_median_sky),
-                gain=float(_gain_phot),
-                read_noise=float(_rn_phot),
-                bkg_var_adu2_per_px=_bkg_var_px,
-                ee_radii=_ee_meas.get("ee_radii"),
-                ee_curve=_ee_meas.get("ee_curve"),
-                ee_source="measured_growth_curve",
+        _existing = load_snr_aperture_table_from_draft_dir(Path(_draft_dir_ee))
+        if isinstance(_existing, dict) and bool((_existing.get("impl02_gates") or {}).get("ok")):
+            _snr_ap_table = _existing
+            _snr_fwhm_px = float(_existing.get("fwhm_px") or fwhm_px)
+            logging.info(
+                "[PHASE 2A] Using precomputed gated aperture_snr_table.json "
+                "(fwhm=%.3f ee_path=%s)",
+                float(_snr_fwhm_px),
+                str(_existing.get("ee_path")),
             )
-            _snr_ap_table["ee_n_cog"] = int(_ee_meas.get("n_cog", 0) or 0)
-            _snr_ap_table["ee_ref_r_px"] = float(_ee_meas.get("ref_r_px", float("nan")))
-            _snr_ap_table["ee_flatness_tail_over_norm"] = float(
-                _ee_meas.get("flatness_tail_over_norm", float("nan"))
-            )
-            _snr_ap_table["ee_isolation_fwhm"] = float(_ee_meas.get("isolation_fwhm", 3.0))
-            _snr_ap_table["ee_min_stars_required"] = int(_ee_meas.get("min_stars_required", 8))
         else:
-            logging.warning(
-                "[PHASE 2A] SNR EE path=gaussian_fallback reason=%s",
-                str(_ee_meas.get("reason") or "unknown"),
+            _snr_ap_table = None
+            _snr_fwhm_px = float(fwhm_px)
+
+        if _snr_ap_table is None:
+            _aligned_fits_for_snr: list[Path] = []
+            try:
+                _aligned_fits_for_snr = discover_aligned_science_fits(_aligned_dir_2a)
+            except Exception:  # noqa: BLE001
+                _aligned_fits_for_snr = []
+            if _bkg_var_px is None:
+                _bkg_var_px = _median_bkg_var_from_aligned_frames(
+                    aligned_fits_paths=_aligned_fits_for_snr
+                )
+            _snr_fwhm_px, _snr_fwhm_prov = resolve_fwhm_px_for_snr_aperture_table(
+                masterstar_fits_path=masterstar_fits_path,
+                masterstar_selection={},
+                fwhm_fallback_px=float(fwhm_px) if math.isfinite(float(fwhm_px)) else None,
+                aligned_fits_paths=_aligned_fits_for_snr,
             )
-            _snr_ap_table = compute_snr_optimal_aperture_table(
+            if _snr_fwhm_px is None or not math.isfinite(float(_snr_fwhm_px)) or float(_snr_fwhm_px) <= 0:
+                _snr_fwhm_px = float(fwhm_px)
+                _snr_fwhm_prov = {
+                    "fwhm_px_scope": "phase2a_header_fallback",
+                    "fwhm_estimator": "header_fwhm_px",
+                }
+            _hdr_dao = _snr_fwhm_prov.get("vy_fwhm_dao_px") if isinstance(_snr_fwhm_prov, dict) else None
+            try:
+                if _hdr_dao is not None and float(_hdr_dao) > float(_snr_fwhm_px) * 1.15:
+                    logging.info(
+                        "[PHASE 2A] SNR FWHM raised to MASTERSTAR VY_FWHM=%.3f (was %.3f)",
+                        float(_hdr_dao),
+                        float(_snr_fwhm_px),
+                    )
+                    _snr_fwhm_px = float(_hdr_dao)
+                    _snr_fwhm_prov["fwhm_px_scope"] = "masterstar_header_vy_fwhm_dao_preferred"
+            except (TypeError, ValueError):
+                pass
+            _ee_meas = _measure_ee_curve_for_snr_table(
                 fwhm_px=float(_snr_fwhm_px),
-                sky_adu_per_px=float(_median_sky),
                 gain=float(_gain_phot),
                 read_noise=float(_rn_phot),
-                bkg_var_adu2_per_px=_bkg_var_px,
+                draft_dir=Path(_draft_dir_ee),
+                masterstar_fits_path=masterstar_fits_path,
+                masterstars_csv=None,
+                aligned_fits_paths=_aligned_fits_for_snr,
+                aligned_ram_frames=None,
+                cfg=_cfg,
             )
-            _snr_ap_table["ee_fallback_reason"] = str(_ee_meas.get("reason") or "unknown")
-            _snr_ap_table["ee_min_stars_required"] = int(_ee_meas.get("min_stars_required", 8) or 8)
-            _snr_ap_table["ee_isolation_fwhm"] = float(_ee_meas.get("isolation_fwhm", 3.0) or 3.0)
-        if isinstance(_snr_fwhm_prov, dict):
-            for _pk, _pv in _snr_fwhm_prov.items():
-                if _pv is not None:
-                    _snr_ap_table[_pk] = _pv
-        _tbl = _snr_ap_table.get("table") or {}
-        logging.info(
-            "[PHASE 2A] SNR-optimal aperture table built: "
-            "mag 7->%.2fpx mag 11->%.2fpx mag 14->%.2fpx mag 17->%.2fpx "
-            "ee_path=%s bound_hits=%s",
-            float(_tbl.get(7.0, float("nan"))),
-            float(_tbl.get(11.0, float("nan"))),
-            float(_tbl.get(14.0, float("nan"))),
-            float(_tbl.get(17.0, float("nan"))),
-            str(_snr_ap_table.get("ee_path")),
-            int(_snr_ap_table.get("n_bound_hits", 0) or 0),
-        )
-        try:
-            _draft_dir = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
-            _ap_table_path = Path(_draft_dir) / "aperture_snr_table.json"
-            with _ap_table_path.open("w", encoding="utf-8") as _f:
-                json.dump(_snr_ap_table, _f, indent=2)
-            logging.info("[PHASE 2A] Aperture SNR table saved: %s", _ap_table_path)
-        except Exception as _ap_exc:  # noqa: BLE001
-            logging.error('[EXC-0171] aperture_snr_table.json write to draft dir fails - table used in-memory but not persist...: %s', _ap_exc)
-            logging.warning("[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc)
+            if bool(_ee_meas.get("ok")):
+                _snr_ap_table = compute_snr_optimal_aperture_table(
+                    fwhm_px=float(_snr_fwhm_px),
+                    sky_adu_per_px=float(_median_sky),
+                    gain=float(_gain_phot),
+                    read_noise=float(_rn_phot),
+                    bkg_var_adu2_per_px=_bkg_var_px,
+                    ee_radii=_ee_meas.get("ee_radii"),
+                    ee_curve=_ee_meas.get("ee_curve"),
+                    ee_source="measured_growth_curve",
+                )
+                _snr_ap_table["ee_n_cog"] = int(_ee_meas.get("n_cog", 0) or 0)
+                _snr_ap_table["ee_ref_r_px"] = float(_ee_meas.get("ref_r_px", float("nan")))
+                _snr_ap_table["ee_ladder_outer_r_px"] = float(
+                    _ee_meas.get("ladder_outer_r_px", float("nan"))
+                )
+                _snr_ap_table["ee_flatness_tail_over_norm"] = float(
+                    _ee_meas.get("flatness_tail_over_norm", float("nan"))
+                )
+                _snr_ap_table["ee_flatness_outer_over_norm"] = float(
+                    _ee_meas.get("flatness_outer_over_norm", float("nan"))
+                )
+                _snr_ap_table["ee_r90_px"] = float(_ee_meas.get("r90_px", float("nan")))
+                _snr_ap_table["ee_isolation_fwhm"] = float(_ee_meas.get("isolation_fwhm", 3.0))
+                _snr_ap_table["ee_min_stars_required"] = int(_ee_meas.get("min_stars_required", 8))
+            else:
+                logging.warning(
+                    "[PHASE 2A] SNR EE path=gaussian_fallback reason=%s",
+                    str(_ee_meas.get("reason") or "unknown"),
+                )
+                _snr_ap_table = compute_snr_optimal_aperture_table(
+                    fwhm_px=float(_snr_fwhm_px),
+                    sky_adu_per_px=float(_median_sky),
+                    gain=float(_gain_phot),
+                    read_noise=float(_rn_phot),
+                    bkg_var_adu2_per_px=_bkg_var_px,
+                )
+                _snr_ap_table["ee_fallback_reason"] = str(_ee_meas.get("reason") or "unknown")
+                _snr_ap_table["ee_min_stars_required"] = int(
+                    _ee_meas.get("min_stars_required", 8) or 8
+                )
+                _snr_ap_table["ee_isolation_fwhm"] = float(
+                    _ee_meas.get("isolation_fwhm", 3.0) or 3.0
+                )
+            if _bkg_var_px is not None:
+                _snr_ap_table["bkg_var_adu2_per_px"] = float(_bkg_var_px)
+            else:
+                _snr_ap_table["bkg_var_adu2_per_px"] = None
+            if isinstance(_snr_fwhm_prov, dict):
+                for _pk, _pv in _snr_fwhm_prov.items():
+                    if _pv is not None:
+                        _snr_ap_table[_pk] = _pv
+            _gate = evaluate_snr_cog_gates(
+                snr_table=_snr_ap_table,
+                fwhm_px=float(_snr_fwhm_px),
+                annulus_inner_fwhm=float(getattr(_cfg, "annulus_inner_fwhm", 4.75)),
+                ee_radii=_ee_meas.get("ee_radii") if bool(_ee_meas.get("ok")) else None,
+                ee_curve=_ee_meas.get("ee_curve") if bool(_ee_meas.get("ok")) else None,
+                ref_r_px=_ee_meas.get("ref_r_px") if bool(_ee_meas.get("ok")) else None,
+                r90_px=_ee_meas.get("r90_px") if bool(_ee_meas.get("ok")) else None,
+                flatness_outer_over_norm=(
+                    _ee_meas.get("flatness_outer_over_norm") if bool(_ee_meas.get("ok")) else None
+                ),
+                ladder_outer_r_px=(
+                    _ee_meas.get("ladder_outer_r_px") if bool(_ee_meas.get("ok")) else None
+                ),
+            )
+            _snr_ap_table["impl02_gates"] = _gate
+            _ee_ok_p2a = bool(_ee_meas.get("ok"))
+            if _ee_ok_p2a and not bool(_gate.get("ok")):
+                logging.error(
+                    "[PHASE 2A] SNR aperture table REFUSED (IMPL-02 gates failed): %s",
+                    _gate.get("failures"),
+                )
+                try:
+                    with (Path(_draft_dir_ee) / "aperture_snr_table_REJECTED.json").open(
+                        "w", encoding="utf-8"
+                    ) as _f:
+                        json.dump(_snr_ap_table, _f, indent=2)
+                except Exception:  # noqa: BLE001
+                    pass
+                _snr_ap_table = None
+            elif not _ee_ok_p2a:
+                _snr_ap_table["impl02_gates"] = {
+                    **_gate,
+                    "ok": True,
+                    "note": "gaussian_fallback: CoG gates not enforced",
+                    "cog_gate_failures_informational": list(_gate.get("failures") or []),
+                }
+                try:
+                    _ap_table_path = Path(_draft_dir_ee) / "aperture_snr_table.json"
+                    with _ap_table_path.open("w", encoding="utf-8") as _f:
+                        json.dump(_snr_ap_table, _f, indent=2)
+                except Exception as _ap_exc:  # noqa: BLE001
+                    logging.warning(
+                        "[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc
+                    )
+            else:
+                _tbl = _snr_ap_table.get("table") or {}
+                logging.info(
+                    "[PHASE 2A] SNR-optimal aperture table built: "
+                    "mag 7->%.2fpx mag 11->%.2fpx mag 14->%.2fpx mag 17->%.2fpx "
+                    "ee_path=%s bound_hits=%s",
+                    float(_tbl.get(7.0, float("nan"))),
+                    float(_tbl.get(11.0, float("nan"))),
+                    float(_tbl.get(14.0, float("nan"))),
+                    float(_tbl.get(17.0, float("nan"))),
+                    str(_snr_ap_table.get("ee_path")),
+                    int(_snr_ap_table.get("n_bound_hits", 0) or 0),
+                )
+                try:
+                    _ap_table_path = Path(_draft_dir_ee) / "aperture_snr_table.json"
+                    with _ap_table_path.open("w", encoding="utf-8") as _f:
+                        json.dump(_snr_ap_table, _f, indent=2)
+                    logging.info("[PHASE 2A] Aperture SNR table saved: %s", _ap_table_path)
+                except Exception as _ap_exc:  # noqa: BLE001
+                    logging.error(
+                        "[EXC-0171] aperture_snr_table.json write to draft dir fails - "
+                        "table used in-memory but not persist...: %s",
+                        _ap_exc,
+                    )
+                    logging.warning(
+                        "[PHASE 2A] Could not save aperture_snr_table.json: %s", _ap_exc
+                    )
 
     _star_mag_by_cid = _phase2a_star_mag_lookup(at_df, comp_df, Path(masterstar_fits_path))
     _variable_target_cids = frozenset(
@@ -12922,6 +13170,7 @@ def compute_per_frame_cog_correction(
     ac_factor_max: float = 5.0,
     max_stars: int = 60,
     fallback_ee: tuple[np.ndarray, np.ndarray] | None = None,
+    ladder_outer_factor: float = 1.0,
 ) -> dict[str, Any]:
     """Per-frame curve-of-growth (encircled-energy) aperture correction.
 
@@ -12930,9 +13179,14 @@ def compute_per_frame_cog_correction(
     ``ac_factor = 1 / EE(r_star)`` that puts every star on the common ref-radius
     enclosed-flux scale (removing the per-star SNR-radius differential bias).
 
+    ``ladder_outer_factor`` > 1 extends the ladder past the normalisation radius so a
+    real flatness check can compare EE(outer) to EE(ref) (IMPL-02). Normalisation
+    remains at ``ref_r``, not at the last ladder point.
+
     Returns dict: ``ac_factor`` (len n, >=1.0), ``cog_ok``, ``n_cog``, ``ref_r_px``,
-    ``ee_radii``, ``ee_curve``. When fewer than ``min_stars`` COG stars are found and
-    no ``fallback_ee`` is given, ``cog_ok=False`` and every ``ac_factor=1.0``.
+    ``ee_radii``, ``ee_curve``, ``flatness_outer_over_norm``. When fewer than
+    ``min_stars`` COG stars are found and no ``fallback_ee`` is given, ``cog_ok=False``
+    and every ``ac_factor=1.0``.
     """
     from photutils.aperture import CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
@@ -12945,6 +13199,8 @@ def compute_per_frame_cog_correction(
         "ref_r_px": float(ref_fwhm) * float(fwhm_px) if math.isfinite(fwhm_px) else float("nan"),
         "ee_radii": None,
         "ee_curve": None,
+        "flatness_outer_over_norm": float("nan"),
+        "ladder_outer_r_px": float("nan"),
     }
     if n == 0 or not (math.isfinite(fwhm_px) and fwhm_px > 0):
         return out
@@ -12956,12 +13212,27 @@ def compute_per_frame_cog_correction(
     height, width = d.shape
 
     ref_r = float(ref_fwhm) * float(fwhm_px)
-    iso_r = max(ref_r, float(isolation_fwhm) * float(fwhm_px))
+    try:
+        outer_factor = float(ladder_outer_factor)
+    except (TypeError, ValueError):
+        outer_factor = 1.0
+    if not math.isfinite(outer_factor) or outer_factor < 1.0:
+        outer_factor = 1.0
+    outer_r = float(outer_factor) * ref_r
+    # Isolation uses the configured multiple of FWHM (do not force >= ref_r).
+    iso_r = float(isolation_fwhm) * float(fwhm_px)
     step = float(ladder_step_px) if math.isfinite(ladder_step_px) and ladder_step_px > 0 else 0.5
-    radii = np.arange(step, ref_r + 1e-6, step, dtype=np.float64)
-    if radii.size == 0 or radii[-1] < ref_r - 1e-6:
-        radii = np.append(radii, ref_r)
-    radii[-1] = ref_r  # ensure the reference radius is the final ladder point
+    radii = np.arange(step, outer_r + 1e-6, step, dtype=np.float64)
+    if radii.size == 0 or radii[-1] < outer_r - 1e-6:
+        radii = np.append(radii, outer_r)
+    # Ensure both normalisation and outer radii are exact ladder points.
+    if not np.any(np.isclose(radii, ref_r, rtol=0.0, atol=1e-6)):
+        radii = np.sort(np.append(radii, ref_r))
+    if not np.any(np.isclose(radii, outer_r, rtol=0.0, atol=1e-6)):
+        radii = np.sort(np.append(radii, outer_r))
+    i_norm = int(np.argmin(np.abs(radii - ref_r)))
+    radii[i_norm] = ref_r
+    out["ladder_outer_r_px"] = float(radii[-1])
 
     xx = np.asarray(x, dtype=np.float64)
     yy = np.asarray(y, dtype=np.float64)
@@ -12995,7 +13266,7 @@ def compute_per_frame_cog_correction(
     else:
         unsat = np.ones(n, dtype=bool)
 
-    margin = ref_r + 1.0
+    margin = float(radii[-1]) + 1.0
     in_bounds = (xx > margin) & (xx < (width - margin)) & (yy > margin) & (yy < (height - margin))
 
     sel = (
@@ -13025,7 +13296,7 @@ def compute_per_frame_cog_correction(
                 dtype=np.float64,
             )
             ee = sums - float(skp[i]) * math.pi * np.square(radii)
-            ref_val = float(ee[-1])
+            ref_val = float(ee[i_norm])
             if math.isfinite(ref_val) and ref_val > 0:
                 fr = ee / ref_val
                 if np.all(np.isfinite(fr)):
@@ -13040,9 +13311,14 @@ def compute_per_frame_cog_correction(
     ee_curve: np.ndarray | None = None
     if n_cog >= int(min_stars):
         ee_curve = np.median(np.vstack(fracs), axis=0)
-        ee_curve = np.clip(ee_curve, 1e-3, 1.0)
-        ee_curve[-1] = 1.0
+        ee_curve = np.clip(ee_curve, 1e-3, None)
+        # Renormalise so EE(ref)=1 exactly after the median (outer may exceed 1 slightly).
+        norm_v = float(ee_curve[i_norm])
+        if math.isfinite(norm_v) and norm_v > 0:
+            ee_curve = ee_curve / norm_v
+        ee_curve[i_norm] = 1.0
         out["cog_ok"] = True
+        out["flatness_outer_over_norm"] = float(ee_curve[-1])
     elif fallback_ee is not None:
         ee_radii, ee_curve = fallback_ee
         ee_radii = np.asarray(ee_radii, dtype=np.float64)
