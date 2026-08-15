@@ -4202,11 +4202,12 @@ def ensemble_normalize(
 
     ``delta_mag = mag_inst(target) - mag_ensemble`` (tvar voci suctu fluxov ako AIJ).
 
-    Zeropoint uses COMP-ADMIT-03 continuous weights ``w=1/sigma_eff^2`` when
+    Zeropoint uses continuous weights ``w=1/sigma_eff^2`` when
     ``comp_weight_map`` is supplied; otherwise ``1/rms^2``. No tier multiplier, no
-    per-frame rejection, no ``n_comp_max`` membership truncation
-    (INV-COMP-MEMBERSHIP / COMP-ADMIT-03). ``n_comp_min`` / ``n_comp_max`` /
-    ``comp_tier_map`` / ``tier_weights`` are call-site compatibility stubs.
+    per-frame rejection, no membership re-selection (COMP-ASSIGN-01 /
+    INV-COMP-MEMBERSHIP). ``n_comp_min`` / ``n_comp_max`` /
+    ``comp_tier_map`` / ``tier_weights`` are call-site compatibility stubs -
+    membership is decided in Phase 1 step 2 and consumed as given.
 
     FORCED-PHOT-01 / per-frame saturation: optional ``comp_likely_saturated`` maps
     catalog_id -> bool array (one per frame). Saturated epochs are **kept** in the
@@ -10615,20 +10616,9 @@ def _phase2a_process_one_target(
         enabled=bool(_cfg.temporal_binning_enabled),
     )
 
-    # Krok 3: Stability check
-    comp_bjd = {cid: _get_comp_bjd_series(cid, all_frames) for cid in comp_ids}
-    comp_quality = check_comparison_stability(
-        comp_lc,
-        comp_rms_map=comp_rms_map,
-        comp_bjd=comp_bjd,
-        n_comp_min=3,
-        outlier_sigma=stability_sigma,
-        max_comp_p2p=float(_cfg.phase01_comparison_max_comp_rms),
-        max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
-        comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
-        common_mode_detrend=True,
-        stability_run_flags=state.stability_run_flags,
-    )
+    # COMP-ASSIGN-01 D4/D5: membership is fixed from Phase 1 (3-8). Stability is a
+    # post-photometry verdict only - do not let it re-select before ensemble.
+    comp_quality = {cid: {"quality": "good"} for cid in comp_ids}
 
     # ALG-5: PyTICS iterative comp star intercalibration (RASTI 2026)
     comp_rms_map = pytics_iterative_weights(
@@ -10639,7 +10629,7 @@ def _phase2a_process_one_target(
         enabled=bool(_cfg.pytics_enabled),
     )
 
-    # Krok 4: Ensemble normalizacia
+    # Krok 4: Ensemble normalizacia (consumes the delivered set as given)
     mag_calib, delta_mag, ensemble_scatter = ensemble_normalize(
         target_lc,
         comp_lc,
@@ -11370,6 +11360,22 @@ def _phase2a_process_one_target(
         except Exception as _meth_exc:  # noqa: BLE001
             logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', _meth_exc)
             logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
+
+    # COMP-ASSIGN-01 D4: stability AFTER photometry - verdict only (membership unchanged).
+    comp_bjd = {cid: _get_comp_bjd_series(cid, all_frames) for cid in comp_ids}
+    comp_quality = check_comparison_stability(
+        comp_lc,
+        comp_rms_map=comp_rms_map,
+        comp_bjd=comp_bjd,
+        n_comp_min=3,
+        outlier_sigma=stability_sigma,
+        max_comp_p2p=float(_cfg.phase01_comparison_max_comp_rms),
+        max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
+        comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
+        common_mode_detrend=True,
+        stability_run_flags=state.stability_run_flags,
+    )
+
     # Kvalita comp pre UI (tabulka 'Porovnavacie hviezdy')
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
     try:
@@ -14898,10 +14904,13 @@ def _select_comps_by_color_then_rms(
     *,
     cfg: AppConfig | None = None,
 ) -> pd.DataFrame:
-    """
-    COMP-ADMIT-03: no colour hard cut, no n_comp_max truncation.
-    Rank by 1/comp_rms for display order only; all candidates are returned.
-    Drop near-zero RMS isolated_bin artefacts (measurement invalid, not a weight).
+    """COMP-ASSIGN-01: colour ladder -> RMS -> angular distance, clamp 3-8.
+
+    Step 2 of Milan's key (2026-08-15). ``comp_rms`` must already be present from
+    the global pool (step 1) - not re-derived here. Colour window widens until
+    ``n_comp_min``; final sort is ``|delta BP-RP|``, then ``comp_rms``, then
+    ``_dist_deg`` (haversine/pixel distance already on the frame), then
+    ``catalog_id``. Membership is ``head(n_comp_max)``.
     """
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
@@ -14909,8 +14918,8 @@ def _select_comps_by_color_then_rms(
     if "comp_rms" not in candidates.columns:
         raise ValueError("_select_comps_by_color_then_rms requires comp_rms column")
 
-    _ = (target_bprp, n_comp_min, n_comp_max, max_delta_bprp)
-
+    _n_min = max(1, int(n_comp_min))
+    _n_max = max(_n_min, int(n_comp_max))
     _floor = 1e-6
     if cfg is not None:
         try:
@@ -14924,18 +14933,69 @@ def _select_comps_by_color_then_rms(
     if out.empty:
         return out
 
-    if "bp_rp" in out.columns and np.isfinite(float(target_bprp)):
-        out["_delta_bprp_abs"] = (
-            pd.to_numeric(out.get("bp_rp"), errors="coerce") - float(target_bprp)
-        ).abs()
-
-    out["_broeg_score"] = pd.to_numeric(out["comp_rms"], errors="coerce").apply(
-        lambda r: 1.0 / r if np.isfinite(r) and r > 0 else 0.0
-    )
     id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
-    return out.sort_values(
-        ["_broeg_score", id_col], ascending=[False, True], kind="mergesort"
-    ).drop(columns=["_broeg_score"], errors="ignore")
+    tb = float(target_bprp)
+    if "bp_rp" in out.columns and math.isfinite(tb):
+        out["_delta_bprp_abs"] = (
+            pd.to_numeric(out.get("bp_rp"), errors="coerce") - tb
+        ).abs()
+    else:
+        out["_delta_bprp_abs"] = 0.0
+
+    if "_dist_deg" in out.columns:
+        out["_dist_sort"] = pd.to_numeric(out["_dist_deg"], errors="coerce")
+    elif "dist_deg" in out.columns:
+        out["_dist_sort"] = pd.to_numeric(out["dist_deg"], errors="coerce")
+    else:
+        out["_dist_sort"] = 0.0
+    out["_dist_sort"] = out["_dist_sort"].fillna(float("inf"))
+    out["_rms_sort"] = pd.to_numeric(out["comp_rms"], errors="coerce").fillna(float("inf"))
+    out["_delta_bprp_abs"] = pd.to_numeric(out["_delta_bprp_abs"], errors="coerce").fillna(
+        float("inf")
+    )
+
+    ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
+    selected = pd.DataFrame()
+    used_lim = float("nan")
+    for lim in ladder:
+        pool = out[out["_delta_bprp_abs"] <= float(lim)].copy()
+        if len(pool) >= _n_min:
+            selected = pool
+            used_lim = float(lim)
+            logging.info(
+                "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d)",
+                float(lim),
+                len(pool),
+                _n_min,
+            )
+            break
+        selected = pool
+        used_lim = float(lim)
+    if selected.empty:
+        selected = out
+        used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
+        logging.warning(
+            "[COMP] color filter relaxed to full candidate set "
+            "(no ladder step reached n_comp_min=%d; lim=%.3f)",
+            _n_min,
+            used_lim,
+        )
+    elif len(selected) < _n_min and len(out) >= _n_min:
+        selected = out
+        logging.info(
+            "[COMP] color filter relaxed to full set after ladder (n_ladder=%d < n_comp_min=%d)",
+            len(selected),
+            _n_min,
+        )
+
+    selected = selected.sort_values(
+        ["_delta_bprp_abs", "_rms_sort", "_dist_sort", id_col],
+        ascending=[True, True, True, True],
+        kind="mergesort",
+    )
+    selected = selected.head(_n_max).copy()
+    selected.attrs["color_ladder_lim"] = used_lim
+    return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
 
 def _select_comps_tiered(
@@ -15621,9 +15681,8 @@ def select_comparison_stars_per_target(
     if sparse_fallback:
         ms = masterstars_df.copy()
     elif global_comp_pool_df is not None and not getattr(global_comp_pool_df, "empty", True):
+        # COMP-ASSIGN-01 D2: keep step-1 pool ``comp_rms`` (do not drop / re-derive).
         ms = global_comp_pool_df.copy()
-        if "comp_rms" in ms.columns:
-            ms = ms.drop(columns=["comp_rms"])
     else:
         ms = masterstars_df.copy()
     for _id_col in ("catalog_id", "name"):
@@ -15885,21 +15944,46 @@ def select_comparison_stars_per_target(
 
     _use_iter_clip = bool(sparse_fallback)
 
-    rms_result = _detrend_and_compute_comp_rms_map(
-        flux_map,
-        min_frames=min_frames,
-        max_comp_rms=max_comp_rms,
-        n_comp_min=n_comp_min,
-        target_cid=target_cid,
-        target=target,
-        chip_fw=chip_fw,
-        chip_fh=chip_fh,
-        chip_interior_margin_px=int(chip_interior_margin_px),
-        skip_apriori_rms=_use_iter_clip,
+    # COMP-ASSIGN-01 D2: one RMS measurement - prefer pool step-1 ``comp_rms``.
+    _id_rms_col = (
+        "catalog_id"
+        if "catalog_id" in ms.columns
+        else ("name" if "name" in ms.columns else None)
     )
-    if rms_result[0] is None:
-        return _retry_sparse_fallback()
-    rms_map, sorted_rms_map = rms_result
+    _pool_rms_map: dict[str, float] = {}
+    if (not sparse_fallback) and _id_rms_col and "comp_rms" in ms.columns:
+        _ids = ms[_id_rms_col].map(lambda v: str(v).strip() if pd.notna(v) else "")
+        _vals = pd.to_numeric(ms["comp_rms"], errors="coerce")
+        for _cid_p, _rv_p in zip(_ids.tolist(), _vals.tolist(), strict=False):
+            if _cid_p and math.isfinite(float(_rv_p)):
+                _pool_rms_map[str(_cid_p)] = float(_rv_p)
+    if _pool_rms_map and not _use_iter_clip:
+        rms_map = dict(_pool_rms_map)
+        sorted_rms_map = dict(
+            sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
+        )
+        logging.info(
+            "[COMP-ASSIGN] Target %s: using pool step-1 comp_rms (n=%d); "
+            "skip per-target RMS re-derivation",
+            target_cid,
+            len(rms_map),
+        )
+    else:
+        rms_result = _detrend_and_compute_comp_rms_map(
+            flux_map,
+            min_frames=min_frames,
+            max_comp_rms=max_comp_rms,
+            n_comp_min=n_comp_min,
+            target_cid=target_cid,
+            target=target,
+            chip_fw=chip_fw,
+            chip_fh=chip_fh,
+            chip_interior_margin_px=int(chip_interior_margin_px),
+            skip_apriori_rms=_use_iter_clip,
+        )
+        if rms_result[0] is None:
+            return _retry_sparse_fallback()
+        rms_map, sorted_rms_map = rms_result
 
     def _apply_aperture_isolation_safe(cands: pd.DataFrame) -> pd.DataFrame:
         if cands.empty:

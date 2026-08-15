@@ -1,0 +1,164 @@
+{
+  "git_sha_working": "bb02bb8",
+  "aperture_r_px": 9.5,
+  "membership": {
+    "n_targets_with_comps": 97,
+    "n_pairs": 748,
+    "min": 3,
+    "max": 8,
+    "median": 8.0,
+    "outside_3_8": 0
+  },
+  "before_impl04_r9p5": {
+    "BO_CVn": {
+      "catalog_id": "1498613634033133184",
+      "lc_exists": true,
+      "check_kmag_sidecar": true,
+      "check_scatter_mmag": 9.059277234647098,
+      "check_catalog_id": "1499200223486564608",
+      "n_rows": 134,
+      "delta_mag_std_mmag": 157.02999711315437,
+      "mag_calib_std_mmag": 145.76935730017772,
+      "mag_calib_ac_std_mmag": 145.7693281250708,
+      "mag_calib_ct_std_mmag": 145.7693281492744,
+      "aperture_r_px_median": 9.5
+    },
+    "FW_CVn": {
+      "catalog_id": "1497343732462852864",
+      "lc_exists": true,
+      "check_kmag_sidecar": true,
+      "check_scatter_mmag": 8.584372253106931,
+      "check_catalog_id": "1500460813567859456",
+      "n_rows": 134,
+      "delta_mag_std_mmag": 49.91445748396251,
+      "mag_calib_std_mmag": 15.124465586754697,
+      "mag_calib_ac_std_mmag": null,
+      "mag_calib_ct_std_mmag": 15.124503244473873,
+      "aperture_r_px_median": 9.5
+    }
+  },
+  "after_comp_assign": {
+    "BO_CVn": {
+      "catalog_id": "1498613634033133184",
+      "check_kmag_sidecar": true,
+      "check_scatter_mmag": 17.521728940626527,
+      "check_catalog_id": "1497145751650265600",
+      "mag_calib_std_mmag": 145.64433112902066,
+      "aperture_r_px_median": 9.5,
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.0527358055114746,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.3910163887765711
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.0432796478271484,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.1395364529646639
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.063115119934082,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.2447884527623568
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.0171661376953124,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.1021141202877534
+        },
+        {
+          "catalog_id": "1498884113893156352",
+          "delta_bprp_abs": 0.106877326965332,
+          "comp_rms": 0.0523494436202601,
+          "dist_deg": 0.1372870122568293
+        },
+        {
+          "catalog_id": "1500571829882438656",
+          "delta_bprp_abs": 0.1094636917114257,
+          "comp_rms": 0.0572689991183304,
+          "dist_deg": 0.3793508087731145
+        },
+        {
+          "catalog_id": "1497730313879303168",
+          "delta_bprp_abs": 0.0966835021972656,
+          "comp_rms": 0.0722128270892069,
+          "dist_deg": 0.1685741993094574
+        },
+        {
+          "catalog_id": "1500470846611469056",
+          "delta_bprp_abs": 0.0638313293457031,
+          "comp_rms": 0.1503095221352342,
+          "dist_deg": 0.2671925187862088
+        }
+      ],
+      "comp_rms_fieldwide_all_nan": true,
+      "quality_member_n": 8
+    },
+    "FW_CVn": {
+      "catalog_id": "1497343732462852864",
+      "check_kmag_sidecar": true,
+      "check_scatter_mmag": 20.319913297650334,
+      "check_catalog_id": "1497145751650265600",
+      "mag_calib_std_mmag": 21.160743650624294,
+      "aperture_r_px_median": 9.5,
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497953377300128768",
+          "delta_bprp_abs": 0.0022859573364257,
+          "comp_rms": 0.0186652166960329,
+          "dist_deg": 0.2206908831341046
+        },
+        {
+          "catalog_id": "1497419770563778816",
+          "delta_bprp_abs": 0.000349998474121,
+          "comp_rms": 0.0252883147108373,
+          "dist_deg": 0.0913793690223329
+        },
+        {
+          "catalog_id": "1497885757335062016",
+          "delta_bprp_abs": 0.0022335052490234,
+          "comp_rms": 0.0255479410151442,
+          "dist_deg": 0.254485253672523
+        },
+        {
+          "catalog_id": "1498290240175790336",
+          "delta_bprp_abs": 0.0004501342773437,
+          "comp_rms": 0.0693534180339788,
+          "dist_deg": 0.4836395756382249
+        },
+        {
+          "catalog_id": "1497551196562800896",
+          "delta_bprp_abs": 0.0010414123535156,
+          "comp_rms": 0.0897837991268181,
+          "dist_deg": 0.2484341348903534
+        },
+        {
+          "catalog_id": "1497564459421863680",
+          "delta_bprp_abs": 0.0015077590942382,
+          "comp_rms": 0.1110905094511803,
+          "dist_deg": 0.294341054450704
+        },
+        {
+          "catalog_id": "1500438067421098240",
+          "delta_bprp_abs": 0.0024347305297851,
+          "comp_rms": 0.115893223596514,
+          "dist_deg": 0.1263119349388919
+        },
+        {
+          "catalog_id": "1498893631540706816",
+          "delta_bprp_abs": 0.0015506744384765,
+          "comp_rms": 0.460309250711418,
+          "dist_deg": 0.1353791891600508
+        }
+      ],
+      "comp_rms_fieldwide_all_nan": true,
+      "quality_member_n": 8
+    }
+  }
+}

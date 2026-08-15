@@ -168,7 +168,12 @@ def backfill_photometry(
                 k_colour_offset = ext.k_colour_offset
                 k_tier_excluded = ext.k_tier_excluded
         else:
-            chk = select_check_star(comp_df, ensemble_ids=ens_ids, cfg=cfg, n_comp_min=3)
+            chk = select_check_star(
+                field_check_star_candidate_pool(field_pool, target_comps=comp_df),
+                ensemble_ids=ens_ids,
+                cfg=cfg,
+                n_comp_min=3,
+            )
         sidecar_path = check_kmag_sidecar_path(lc_out, target_cid)
         existing_src_side = check_kmag_sidecar_path(lc_src, target_cid)
         check_cid = ""

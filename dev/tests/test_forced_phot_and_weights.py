@@ -202,3 +202,69 @@ def test_c_dist_positive_slope_recovered():
         residual_scatter_mag=sc.tolist(),
     )
     assert coeffs.c_dist_mag_per_deg == pytest.approx(0.005, rel=0.2)
+
+
+def test_ensemble_normalize_consumes_exact_step2_set():
+    """COMP-ASSIGN-01 D5: ensemble photometers exactly the delivered membership."""
+    from photometry_core import ensemble_normalize as _ens
+
+    n = 8
+    delivered = ["c1", "c2", "c3", "c4", "c5"]
+    target = np.linspace(12.0, 12.02, n)
+    comp_lc = {c: np.linspace(11.0, 11.01, n) + 0.01 * i for i, c in enumerate(delivered)}
+    # Extra star present in LC dict but NOT in quality/membership must be ignored
+    comp_lc["outsider"] = np.linspace(10.0, 10.01, n)
+    cat = {c: 11.0 for c in delivered}
+    cat["outsider"] = 10.0
+    quality = {c: {"quality": "good"} for c in delivered}
+    rms = {c: 0.01 for c in delivered}
+    rms["outsider"] = 0.001
+    mag, _, _ = _ens(
+        target,
+        comp_lc,
+        cat,
+        quality,
+        comp_rms_map=rms,
+        n_comp_min=3,
+        n_comp_max=8,
+    )
+    assert set(quality.keys()) == set(delivered)
+    assert np.isfinite(mag).all()
+    # Manual ZP with only delivered set
+    zp = np.zeros(n)
+    for i in range(n):
+        zs = np.array([cat[c] - comp_lc[c][i] for c in delivered])
+        w = np.array([1.0 / (rms[c] ** 2) for c in delivered])
+        zp[i] = float(np.sum(w * zs) / np.sum(w))
+    np.testing.assert_allclose(mag, target + zp, rtol=0, atol=1e-12)
+
+
+def test_select_comps_color_rms_distance_clamp():
+    """COMP-ASSIGN-01 D3: colour -> RMS -> distance; clamp to n_comp_max."""
+    from photometry_core import _select_comps_by_color_then_rms
+
+    rows = []
+    # Same colour, different RMS and distance - nearer quieter should win ties
+    for i, (rms, dist) in enumerate(
+        [(0.05, 0.5), (0.02, 0.8), (0.02, 0.1), (0.03, 0.2), (0.04, 0.15),
+         (0.06, 0.05), (0.07, 0.4), (0.08, 0.3), (0.09, 0.25), (0.10, 0.35)]
+    ):
+        rows.append(
+            {
+                "catalog_id": f"S{i:02d}",
+                "bp_rp": 1.0,
+                "comp_rms": rms,
+                "_dist_deg": dist,
+            }
+        )
+    df = pd.DataFrame(rows)
+    out = _select_comps_by_color_then_rms(
+        df, target_bprp=1.0, n_comp_min=3, n_comp_max=8, max_delta_bprp=0.5
+    )
+    assert 3 <= len(out) <= 8
+    assert len(out) == 8
+    # Best by |dbprp|=0, then rms, then distance: S02 (0.02, 0.1) before S01 (0.02, 0.8)
+    ids = out["catalog_id"].astype(str).tolist()
+    assert ids[0] == "S02"
+    assert "S01" in ids
+    assert ids.index("S02") < ids.index("S01")
