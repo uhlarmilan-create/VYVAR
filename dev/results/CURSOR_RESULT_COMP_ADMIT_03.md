@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Repo tip at issue: 691d3be (+ GATE-REGIME-01 18c770e, GATE-OWNERSHIP-01 5612f42)
-Commit: (filled after local commit)
+Commit: b6e0e29
 Type: SCIENCE CHANGE. Push: NO.
 
 ## Premise
@@ -95,8 +95,8 @@ admission reject wired in this change.
 
 ## `--fast`
 
-OVERALL PASS at pre-commit tip `e9fc9f1` (1369 passed, 27 skipped). Re-verify
-after this commit SHA.
+OVERALL PASS at tip `b6e0e29` (1369 passed, 27 skipped before commit; core
+admission/weight tests reconfirmed after commit).
 
 ## Files
 

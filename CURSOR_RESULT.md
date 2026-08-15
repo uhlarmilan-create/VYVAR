@@ -25,4 +25,4 @@ Universality tests pass (permutation/subset exact; fire proof on old rank rule).
 
 ## --fast
 
-OVERALL PASS (1369 passed, 27 skipped at tip before this commit).
+OVERALL PASS (1369 passed, 27 skipped). Commit `b6e0e29`.
