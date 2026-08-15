@@ -18,12 +18,16 @@ import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
-# Named gap: refractive colour-dependent PSF / enclosed-flux systematic (~30 mmag
-# over production radii on the wide lens) is registered but not yet reduced to a
-# portable c_col term independent of k''. Mirror rigs should be ~0.
-C_COL_PSF_TERM_GAP = (
-    "c_col_psf_term: named zero until a portable measurement of colour-dependent "
-    "enclosed-flux vs BP-RP is wired; k''*DeltaX is the only active colour term."
+# COMP-POOL-02 Item 4 (draft 512, Zeiss 200 mm refractive): FWHM-rescaled COG
+# enclosed-flux red-minus-blue = 29.485 mmag over BP-RP span 0.5 -> 1.5 (Delta=1.0).
+# c_col_psf = 0.029485 / 1.0 mag per BP-RP. Mirror/Newton: prediction ~0.
+C_COL_PSF_EE_MMAG = 29.485010546318453
+C_COL_PSF_BPRP_SPAN = 1.0  # BP-RP 0.5 to 1.5
+C_COL_PSF_REFRACTIVE_MAG_PER_BPRP = float(C_COL_PSF_EE_MMAG / 1000.0 / C_COL_PSF_BPRP_SPAN)
+C_COL_PSF_SOURCE = (
+    "MEASURED COMP-POOL-02 Item4: mmag_cog_fwhm_rescaled="
+    f"{C_COL_PSF_EE_MMAG:.3f} over Delta(BP-RP)={C_COL_PSF_BPRP_SPAN:.3f} "
+    f"(0.5->1.5); c_col_psf={C_COL_PSF_REFRACTIVE_MAG_PER_BPRP:.6g} mag/BP-RP"
 )
 
 
@@ -36,6 +40,11 @@ class CompWeightCoeffs:
     c_col_source: str
     c_dist_source: str
     notes: tuple[str, ...] = ()
+    c_col_k2_mag_per_bprp: float = 0.0
+    c_col_psf_mag_per_bprp: float = 0.0
+    c_dist_slope_unc_mag_per_deg: float = float("nan")
+    c_dist_n: int = 0
+    c_dist_r_value: float = float("nan")
 
 
 def sigma_eff_mag(
@@ -100,12 +109,41 @@ def c_col_from_k2_airmass(
 ) -> tuple[float, str]:
     """c_col ~= |k''| * Delta(X); second-order extinction colour systematic (mag per BP-RP)."""
     if k2_bprp is None or not math.isfinite(float(k2_bprp)):
-        return 0.0, "c_col=0 (no k2_bprp)"
+        return 0.0, "c_col_k2=0 (no k2_bprp; CLEAR/unfiltered -> literature NONE)"
     dx = float(airmass_span)
     if not math.isfinite(dx) or dx < 0:
         dx = 0.0
     val = abs(float(k2_bprp)) * dx
-    return float(val), f"c_col=|k2_bprp|*DeltaX (|{float(k2_bprp):.6g}|*{dx:.4g})"
+    return float(val), f"c_col_k2=|k2_bprp|*DeltaX (|{float(k2_bprp):.6g}|*{dx:.4g})"
+
+
+def c_col_psf_from_optics(optics_kind: str | None) -> tuple[float, str]:
+    """Colour-dependent PSF / enclosed-flux term from optics class.
+
+    refractive / telephoto / lens: MEASURED COMP-POOL-02 value.
+    mirror / newton / cassegrain: predicted 0 (no refractive chromatic width).
+    unknown: MEASURED refractive value with note (wide drafts in Archive are refractive).
+    """
+    kind = str(optics_kind or "unknown").strip().lower()
+    if kind in ("mirror", "newton", "cassegrain", "ritchey", "rc"):
+        return 0.0, "c_col_psf=0.0 predicted (mirror optics; no refractive chromatic width)"
+    if kind in ("refractive", "telephoto", "lens", "zeiss", "unknown", ""):
+        return (
+            float(C_COL_PSF_REFRACTIVE_MAG_PER_BPRP),
+            C_COL_PSF_SOURCE
+            + ("" if kind in ("refractive", "telephoto", "lens", "zeiss") else " [optics_kind=unknown->refractive]"),
+        )
+    return (
+        float(C_COL_PSF_REFRACTIVE_MAG_PER_BPRP),
+        C_COL_PSF_SOURCE + f" [optics_kind={kind!r}->refractive_default]",
+    )
+
+
+def combine_c_col_quadrature(c_k2: float, c_psf: float) -> float:
+    """Combine extinction and PSF colour terms in quadrature (independent systematics)."""
+    a = float(c_k2) if math.isfinite(float(c_k2)) else 0.0
+    b = float(c_psf) if math.isfinite(float(c_psf)) else 0.0
+    return float(math.hypot(a, b))
 
 
 def measure_c_dist_mag_per_deg(
@@ -113,51 +151,117 @@ def measure_c_dist_mag_per_deg(
     r_deg: Sequence[float],
     residual_scatter_mag: Sequence[float],
     min_points: int = 8,
-) -> tuple[float, str]:
-    """Regress residual scatter vs separation; return slope (mag/deg) or 0 with named gap."""
+) -> tuple[float, str, dict[str, float]]:
+    """Regress residual scatter vs separation; return slope (mag/deg), note, stats.
+
+    Estimator: ordinary least-squares ``np.polyfit`` degree 1 on (r, scatter).
+    Uncertainty: OLS slope standard error from residual variance.
+    Non-positive slope -> measured zero (universal answer on that rig).
+    """
+    stats: dict[str, float] = {
+        "slope": float("nan"),
+        "slope_unc": float("nan"),
+        "n": 0.0,
+        "r_value": float("nan"),
+        "chi2_red": float("nan"),
+    }
     x = np.asarray(list(r_deg), dtype=np.float64)
     y = np.asarray(list(residual_scatter_mag), dtype=np.float64)
     ok = np.isfinite(x) & np.isfinite(y) & (x >= 0) & (y >= 0)
-    if int(ok.sum()) < int(min_points):
+    n_ok = int(ok.sum())
+    stats["n"] = float(n_ok)
+    if n_ok < int(min_points):
         return 0.0, (
-            f"c_dist=0 named_gap:insufficient_points n={int(ok.sum())}<{int(min_points)}"
-        )
+            f"c_dist=0 named_gap:insufficient_points n={n_ok}<{int(min_points)}"
+        ), stats
     xx = x[ok]
     yy = y[ok]
-    # Slope of scatter vs r; clamp negative (unphysical for a systematic floor) to 0.
     try:
-        slope = float(np.polyfit(xx, yy, 1)[0])
+        coeffs = np.polyfit(xx, yy, 1)
+        slope = float(coeffs[0])
+        intercept = float(coeffs[1])
+        yhat = slope * xx + intercept
+        resid = yy - yhat
+        ss_res = float(np.sum(resid ** 2))
+        ss_tot = float(np.sum((yy - float(np.mean(yy))) ** 2))
+        r_val = float(math.sqrt(max(0.0, 1.0 - ss_res / ss_tot))) if ss_tot > 0 else 0.0
+        dof = max(1, n_ok - 2)
+        chi2_red = ss_res / float(dof)
+        # OLS slope SE: sigma^2 / Sxx
+        sxx = float(np.sum((xx - float(np.mean(xx))) ** 2))
+        sigma2 = ss_res / float(dof)
+        slope_unc = float(math.sqrt(sigma2 / sxx)) if sxx > 0 else float("nan")
     except Exception as exc:  # noqa: BLE001
-        return 0.0, f"c_dist=0 named_gap:polyfit_failed ({exc})"
-    if not math.isfinite(slope) or slope <= 0:
-        return 0.0, f"c_dist=0 (measured_slope={slope!r} consistent_with_zero_or_negative)"
-    return float(slope), f"c_dist=polyfit_scatter_vs_r slope={slope:.6g} mag/deg"
+        return 0.0, f"c_dist=0 named_gap:polyfit_failed ({exc})", stats
+    stats.update(
+        {
+            "slope": float(slope),
+            "slope_unc": float(slope_unc),
+            "r_value": float(r_val),
+            "chi2_red": float(chi2_red),
+        }
+    )
+    if not math.isfinite(slope):
+        return 0.0, f"c_dist=0 (nonfinite_slope)", stats
+    # Treat numerical dust and 1-sigma-consistent slopes as measured zero.
+    if abs(slope) < 1e-12:
+        return 0.0, (
+            f"c_dist=0 MEASURED (slope={slope:.6g} numerical_zero; n={n_ok})"
+        ), stats
+    if (not math.isfinite(slope_unc) and slope <= 0) or (
+        math.isfinite(slope_unc) and abs(slope) <= float(slope_unc)
+    ):
+        return 0.0, (
+            f"c_dist=0 MEASURED (slope={slope:.6g}+/-{slope_unc:.6g} mag/deg "
+            f"consistent_with_zero; n={n_ok}; r={r_val:.3f})"
+        ), stats
+    if slope <= 0:
+        return 0.0, (
+            f"c_dist=0 MEASURED (slope={slope:.6g} non_positive; n={n_ok})"
+        ), stats
+    return float(slope), (
+        f"c_dist=MEASURED polyfit_scatter_vs_r slope={slope:.6g}+/-{slope_unc:.6g} "
+        f"mag/deg n={n_ok} r={r_val:.3f}"
+    ), stats
 
 
 def resolve_comp_weight_coeffs(
     *,
     k2_bprp: float | None = None,
     airmass_span: float = 0.0,
+    optics_kind: str | None = None,
     r_deg: Sequence[float] | None = None,
     residual_scatter_mag: Sequence[float] | None = None,
     c_col_override: float | None = None,
     c_dist_override: float | None = None,
 ) -> CompWeightCoeffs:
-    """Derive c_col / c_dist; overrides when finite; else measure or named zero."""
-    notes: list[str] = [C_COL_PSF_TERM_GAP]
+    """Derive c_col / c_dist; overrides when finite; else measure or named/measured zero."""
+    notes: list[str] = []
+    c_k2, k2_src = c_col_from_k2_airmass(k2_bprp, airmass_span)
+    c_psf, psf_src = c_col_psf_from_optics(optics_kind)
+    notes.append(k2_src)
+    notes.append(psf_src)
+
     if c_col_override is not None and math.isfinite(float(c_col_override)):
         c_col = float(c_col_override)
         c_col_src = "config_override"
     else:
-        c_col, c_col_src = c_col_from_k2_airmass(k2_bprp, airmass_span)
+        c_col = combine_c_col_quadrature(c_k2, c_psf)
+        c_col_src = f"quadrature(k2,psf)={c_col:.6g}"
 
+    dist_unc = float("nan")
+    dist_n = 0
+    dist_r = float("nan")
     if c_dist_override is not None and math.isfinite(float(c_dist_override)):
         c_dist = float(c_dist_override)
         c_dist_src = "config_override"
     elif r_deg is not None and residual_scatter_mag is not None:
-        c_dist, c_dist_src = measure_c_dist_mag_per_deg(
+        c_dist, c_dist_src, st = measure_c_dist_mag_per_deg(
             r_deg=r_deg, residual_scatter_mag=residual_scatter_mag
         )
+        dist_unc = float(st.get("slope_unc", float("nan")))
+        dist_n = int(st.get("n", 0) or 0)
+        dist_r = float(st.get("r_value", float("nan")))
     else:
         c_dist, c_dist_src = 0.0, "c_dist=0 named_gap:no_regression_inputs"
 
@@ -167,6 +271,11 @@ def resolve_comp_weight_coeffs(
         c_col_source=str(c_col_src),
         c_dist_source=str(c_dist_src),
         notes=tuple(notes),
+        c_col_k2_mag_per_bprp=float(c_k2),
+        c_col_psf_mag_per_bprp=float(c_psf),
+        c_dist_slope_unc_mag_per_deg=float(dist_unc),
+        c_dist_n=int(dist_n),
+        c_dist_r_value=float(dist_r),
     )
 
 
@@ -199,7 +308,6 @@ def weights_table(
     def _sep(row_ra: float, row_dec: float) -> float:
         if not (math.isfinite(row_ra) and math.isfinite(row_dec) and math.isfinite(tra) and math.isfinite(tde)):
             return float("nan")
-        # Small-angle haversine in degrees (adequate for FOV << 90 deg).
         dra = math.radians(row_ra - tra) * math.cos(math.radians(0.5 * (row_dec + tde)))
         dde = math.radians(row_dec - tde)
         return float(math.degrees(math.hypot(dra, dde)))
@@ -228,3 +336,30 @@ def weights_table(
     out["comp_weight"] = ws
     out[id_col] = ids
     return out
+
+
+def infer_optics_kind_from_header_or_name(
+    *,
+    telescop: str | None = None,
+    telescope_name: str | None = None,
+    diameter_m: float | None = None,
+    focal_m: float | None = None,
+) -> str:
+    """Best-effort optics class for c_col_psf. Prefer explicit name tokens."""
+    blob = f"{telescop or ''} {telescope_name or ''}".lower()
+    if any(t in blob for t in ("newton", "cassegrain", "ritchey", " rc", "mirror")):
+        return "mirror"
+    if any(t in blob for t in ("zeiss", "sonnar", "telephoto", "refractor", "lens")):
+        return "refractive"
+    # Heuristic: very fast small aperture + short focal often refractive telephoto.
+    if (
+        diameter_m is not None
+        and focal_m is not None
+        and math.isfinite(float(diameter_m))
+        and math.isfinite(float(focal_m))
+        and float(diameter_m) > 0
+        and float(focal_m) / float(diameter_m) < 4.0
+        and float(focal_m) < 0.5
+    ):
+        return "refractive"
+    return "unknown"

@@ -1,0 +1,118 @@
+{
+  "512": {
+    "draft_id": 512,
+    "optics_kind": "refractive",
+    "phot_dir": "dev/results/COMP_POOL_02_residuals_512.csv",
+    "c_col": {
+      "value": 0.02948501054631845,
+      "unit": "mag_per_bprp",
+      "uncertainty": NaN,
+      "derivation": "quadrature(k2,psf)=0.029485",
+      "k2_term": 0.0,
+      "psf_term": 0.02948501054631845,
+      "psf_numerator_mmag": 29.485010546318453,
+      "psf_bprp_span": 1.0,
+      "notes": [
+        "c_col_k2=0 (no k2_bprp; CLEAR/unfiltered -> literature NONE)",
+        "MEASURED COMP-POOL-02 Item4: mmag_cog_fwhm_rescaled=29.485 over Delta(BP-RP)=1.000 (0.5->1.5); c_col_psf=0.029485 mag/BP-RP"
+      ]
+    },
+    "c_dist": {
+      "value": 0.0,
+      "unit": "mag_per_deg",
+      "uncertainty": 0.0012289812721226606,
+      "derivation": "c_dist=0 MEASURED (slope=-0.000108314+/-0.00122898 mag/deg consistent_with_zero; n=297; r=0.005)",
+      "n": 297,
+      "r_value": 0.005131250324338904,
+      "estimator": "OLS scatter_mad vs r_from_field_centre",
+      "ordering": "pre_forced COMP-POOL-02 residuals; re-verify after forced rebuild"
+    }
+  },
+  "513": {
+    "draft_id": 513,
+    "optics_kind": "refractive",
+    "phot_dir": null,
+    "error": "photometry_dir_not_found",
+    "c_col": {
+      "value": 0.02948501054631845,
+      "unit": "mag_per_bprp",
+      "uncertainty": NaN,
+      "derivation": "quadrature(k2,psf)=0.029485",
+      "k2_term": 0.0,
+      "psf_term": 0.02948501054631845,
+      "psf_numerator_mmag": 29.485010546318453,
+      "psf_bprp_span": 1.0,
+      "notes": [
+        "c_col_k2=0 (no k2_bprp; CLEAR/unfiltered -> literature NONE)",
+        "MEASURED COMP-POOL-02 Item4: mmag_cog_fwhm_rescaled=29.485 over Delta(BP-RP)=1.000 (0.5->1.5); c_col_psf=0.029485 mag/BP-RP"
+      ]
+    },
+    "c_dist": {
+      "value": 0.0,
+      "unit": "mag_per_deg",
+      "uncertainty": 0.00123,
+      "derivation": "MEASURED zero inherited from same refractive rig drafts 512/435 (no residual CSV for 513)",
+      "ordering": "pre_forced; re-verify after forced rebuild"
+    }
+  },
+  "435": {
+    "draft_id": 435,
+    "optics_kind": "refractive",
+    "phot_dir": "dev/results/COMP_POOL_02_residuals_435.csv",
+    "c_col": {
+      "value": 0.02948501054631845,
+      "unit": "mag_per_bprp",
+      "uncertainty": NaN,
+      "derivation": "quadrature(k2,psf)=0.029485",
+      "k2_term": 0.0,
+      "psf_term": 0.02948501054631845,
+      "psf_numerator_mmag": 29.485010546318453,
+      "psf_bprp_span": 1.0,
+      "notes": [
+        "c_col_k2=0 (no k2_bprp; CLEAR/unfiltered -> literature NONE)",
+        "MEASURED COMP-POOL-02 Item4: mmag_cog_fwhm_rescaled=29.485 over Delta(BP-RP)=1.000 (0.5->1.5); c_col_psf=0.029485 mag/BP-RP"
+      ]
+    },
+    "c_dist": {
+      "value": 0.0,
+      "unit": "mag_per_deg",
+      "uncertainty": 0.004477189111409076,
+      "derivation": "c_dist=0 MEASURED (slope=-0.0117081 non_positive; n=1277)",
+      "n": 1277,
+      "r_value": 0.07304060129388018,
+      "estimator": "OLS scatter_mad vs r_from_field_centre",
+      "ordering": "pre_forced COMP-POOL-02 residuals; re-verify after forced rebuild"
+    }
+  },
+  "fw_cvn_513": {
+    "draft_id": 513,
+    "comps": [],
+    "error": "no_phot"
+  },
+  "c_col_sensitivity": [
+    {
+      "c_col_factor": 0.5,
+      "c_col": 0.014742505273159226,
+      "weighted_colour_bias_mag": 0.0042747955457784
+    },
+    {
+      "c_col_factor": 1.0,
+      "c_col": 0.02948501054631845,
+      "weighted_colour_bias_mag": 0.007181770420166768
+    },
+    {
+      "c_col_factor": 1.5,
+      "c_col": 0.044227515819477675,
+      "weighted_colour_bias_mag": 0.008714138671950603
+    }
+  ],
+  "fw_cvn_513_synthetic": {
+    "note": "equal rms=0.01; C03 dBP-RP=0.044; three red at 0.4",
+    "c_col": 0.02948501054631845,
+    "weights": {
+      "C03": 9834.48,
+      "R_red": 4182.38,
+      "ratio_red_to_C03": 0.4253
+    }
+  }
+}

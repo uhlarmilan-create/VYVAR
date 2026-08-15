@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-15T08:15:25Z at git HEAD e9fc9f1._
+_Generated 2026-08-15T09:09:05Z at git HEAD e5e3be1._
 
 ## Summary
 
-- Entries: 277
-- Tier: basic 13, advanced 68, expert 196
-- Kind: static 259, derived 0, resolved 18
-- Widget: auto 110, custom 142, hidden 25
-- Owner: db_static 9, config_runtime 249, fits_dynamic 6, internal 13
-- Scope: universal 228, rig 31, site 10, session 8
-- Scope key: none 228, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
+- Entries: 281
+- Tier: basic 13, advanced 68, expert 200
+- Kind: static 263, derived 0, resolved 18
+- Widget: auto 114, custom 142, hidden 25
+- Owner: db_static 9, config_runtime 253, fits_dynamic 6, internal 13
+- Scope: universal 232, rig 31, site 10, session 8
+- Scope key: none 232, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 18, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -202,6 +202,9 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `err_background_mode` | empirical | - | expert | static | config_runtime | rig | rig | a | auto | Err Background Mode |
 | `err_empty_apertures_min` | 16 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures Min |
 | `err_empty_apertures_n` | 64 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures N |
+| `forced_photometry_centroid_bound_fwhm` | 2.5 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Centroid Bound Fwhm |
+| `forced_photometry_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Enabled |
+| `forced_photometry_margin_px` | 0.0 | 0 .. 200 | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Margin Px |
 | `gain` | 1.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Gain |
 | `gs11_comp_max_dilution` | 0.9 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Max Dilution |
 | `gs11_comp_suspect_dilution` | 0.98 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Suspect Dilution |
@@ -270,6 +273,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_weight_airmass_span` | 0.0 | 0 .. 3 | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight Airmass Span |
 | `comp_weight_c_col_mag_per_bprp` | None | 0 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight c_col |
 | `comp_weight_c_dist_mag_per_deg` | None | 0 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight c_dist |
+| `comp_weight_optics_kind` | unknown | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight Optics Kind |
 | `comparison_stars_pool_n` | 0 | 0 .. 50000 | expert | static | config_runtime | universal | none | n/a | auto | Comparison Stars Pool N |
 | `global_comp_pool_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Global Comp Pool Enabled |
 | `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Chip Interior Margin Arcsec |

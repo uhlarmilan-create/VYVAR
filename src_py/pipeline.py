@@ -10172,6 +10172,45 @@ def _export_per_frame_run_catalog_core(
     except Exception:  # noqa: BLE001
         pass
 
+    # FORCED-PHOT-01: inject force-eligible MASTERSTAR members missing from DAO match.
+    # DAO path above is unchanged (n_raw_dao / match counts preserved). Forced rows are
+    # measured at locked MASTERSTAR (x,y) with bounded peak refine.
+    try:
+        if master_tab is not None and bool(st.get("forced_photometry_enabled", True)):
+            from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
+
+            _force_ids = st.get("forced_photometry_catalog_ids")
+            _force_set = (
+                {str(x).strip() for x in _force_ids if str(x).strip()}
+                if _force_ids
+                else None
+            )
+            _fwhm_fp = float(st.get("dao_fwhm_px", 2.5) or 2.5)
+            _bound = float(st.get("forced_photometry_centroid_bound_fwhm", 2.5) or 2.5)
+            _margin = float(st.get("forced_photometry_margin_px", 0.0) or 0.0)
+            df, _fp_meta = inject_forced_masterstar_rows(
+                df,
+                master_tab,
+                image=np.asarray(data) if data is not None else None,
+                fwhm_px=_fwhm_fp,
+                centroid_bound_fwhm=_bound,
+                margin_px=_margin,
+                force_ids=_force_set,
+            )
+            try:
+                meta["forced_photometry"] = dict(_fp_meta)
+                debug_pixel_match["forced_photometry"] = dict(_fp_meta)
+            except Exception:  # noqa: BLE001
+                pass
+            LOGGER.debug(
+                "[FORCED-PHOT] %s injected=%s geometry_miss=%s",
+                fname,
+                _fp_meta.get("n_injected"),
+                _fp_meta.get("n_geometry_miss"),
+            )
+    except Exception as _fp_exc:  # noqa: BLE001
+        LOGGER.error("[FORCED-PHOT] inject failed (DAO path kept): %s", _fp_exc)
+
     try:
         debug_pixel_match["match_mode"] = meta.get("catalog_match_mode")
         debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px")
@@ -11178,6 +11217,15 @@ def export_per_frame_catalogs(
             "faintest_mag_limit": faintest_mag_limit,
             "dao_threshold_sigma": float(dao_threshold_sigma),
             "dao_fwhm_px": float(_dao_fw_export),
+            "forced_photometry_enabled": bool(
+                getattr(cfg_for_workers, "forced_photometry_enabled", True)
+            ),
+            "forced_photometry_centroid_bound_fwhm": float(
+                getattr(cfg_for_workers, "forced_photometry_centroid_bound_fwhm", 2.5) or 2.5
+            ),
+            "forced_photometry_margin_px": float(
+                getattr(cfg_for_workers, "forced_photometry_margin_px", 0.0) or 0.0
+            ),
             "equipment_saturate_adu": equipment_saturate_adu,
             "sat_diag_ctx_dict": (
                 _sat_diag_ctx.to_json_dict() if _sat_diag_ctx is not None else None

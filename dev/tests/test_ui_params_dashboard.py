@@ -79,8 +79,9 @@ def test_owner_groups_partition_every_key() -> None:
     # Zero-clipping policy dropped 7 clip/CR gate keys (279 -> 272; config_runtime 251 -> 244).
     # COMP-POOL-01 added comp_pool_derived_admission + comparison_stars_pool_n (244 -> 246).
     # COMP-ADMIT-03 added 3 weight coeff keys (246 -> 249).
+    # FORCED-PHOT-01 / COMP-WEIGHT-COEFF-01: +4 keys (249 -> 253).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 249, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 253, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

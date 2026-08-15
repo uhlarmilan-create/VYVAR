@@ -1060,6 +1060,14 @@ class AppConfig:
     comp_weight_c_dist_mag_per_deg: float | None = None
     #: Airmass span of the series for c_col = |k2|*DeltaX when not overridden.
     comp_weight_airmass_span: float = 0.0
+    #: Optics class for c_col_psf: refractive|mirror|unknown (COMP-WEIGHT-COEFF-01).
+    comp_weight_optics_kind: str = "unknown"
+    #: FORCED-PHOT-01: inject MASTERSTAR pool-eligible stars missing from DAO each frame.
+    forced_photometry_enabled: bool = True
+    #: Bounded peak refine search in units of FWHM (recorded; never unbounded).
+    forced_photometry_centroid_bound_fwhm: float = 2.5
+    #: Extra pixel margin for in-footprint geometry gate on forced rows.
+    forced_photometry_margin_px: float = 0.0
 
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
@@ -2438,6 +2446,34 @@ class AppConfig:
             self.comp_weight_airmass_span = 0.0
         if not math.isfinite(float(self.comp_weight_airmass_span)) or float(self.comp_weight_airmass_span) < 0:
             self.comp_weight_airmass_span = 0.0
+        self.comp_weight_optics_kind = str(
+            data.get("comp_weight_optics_kind", self.comp_weight_optics_kind) or "unknown"
+        ).strip().lower() or "unknown"
+        self.forced_photometry_enabled = bool(
+            data.get("forced_photometry_enabled", self.forced_photometry_enabled)
+        )
+        try:
+            self.forced_photometry_centroid_bound_fwhm = float(
+                data.get(
+                    "forced_photometry_centroid_bound_fwhm",
+                    self.forced_photometry_centroid_bound_fwhm,
+                )
+            )
+        except (TypeError, ValueError):
+            self.forced_photometry_centroid_bound_fwhm = 2.5
+        if (
+            not math.isfinite(float(self.forced_photometry_centroid_bound_fwhm))
+            or float(self.forced_photometry_centroid_bound_fwhm) < 0.5
+        ):
+            self.forced_photometry_centroid_bound_fwhm = 2.5
+        try:
+            self.forced_photometry_margin_px = float(
+                data.get("forced_photometry_margin_px", self.forced_photometry_margin_px)
+            )
+        except (TypeError, ValueError):
+            self.forced_photometry_margin_px = 0.0
+        if not math.isfinite(float(self.forced_photometry_margin_px)) or float(self.forced_photometry_margin_px) < 0:
+            self.forced_photometry_margin_px = 0.0
 
         self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
 
@@ -2761,6 +2797,10 @@ class AppConfig:
             "comp_weight_c_col_mag_per_bprp": self.comp_weight_c_col_mag_per_bprp,
             "comp_weight_c_dist_mag_per_deg": self.comp_weight_c_dist_mag_per_deg,
             "comp_weight_airmass_span": float(self.comp_weight_airmass_span),
+            "comp_weight_optics_kind": str(self.comp_weight_optics_kind),
+            "forced_photometry_enabled": bool(self.forced_photometry_enabled),
+            "forced_photometry_centroid_bound_fwhm": float(self.forced_photometry_centroid_bound_fwhm),
+            "forced_photometry_margin_px": float(self.forced_photometry_margin_px),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

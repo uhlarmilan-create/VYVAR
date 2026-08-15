@@ -3475,6 +3475,7 @@ def ensemble_normalize(
     comp_tier_map: dict[str, int] | None = None,
     tier_weights: dict[int, float] | None = None,
     comp_weight_map: dict[str, float] | None = None,
+    comp_likely_saturated: dict[str, np.ndarray] | None = None,
     n_comp_min: int = 3,
     n_comp_max: int = 10,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -3490,6 +3491,12 @@ def ensemble_normalize(
     (INV-COMP-MEMBERSHIP / COMP-ADMIT-03). ``n_comp_min`` / ``n_comp_max`` /
     ``comp_tier_map`` / ``tier_weights`` are call-site compatibility stubs.
 
+    FORCED-PHOT-01 / per-frame saturation: optional ``comp_likely_saturated`` maps
+    catalog_id -> bool array (one per frame). Saturated epochs are **kept** in the
+    series but excluded from that frame's zeropoint flux sum (measurability: the
+    measurement is invalid that frame, not imprecise). This is explicit, not silent.
+    Membership ``good_ids`` does not change.
+
     Returns:
         (mag_calib, delta_mag, ensemble_scatter) - arrays dlzky n_frames
     """
@@ -3501,6 +3508,7 @@ def ensemble_normalize(
 
     comp_rms_map = comp_rms_map or {}
     comp_weight_map = comp_weight_map or {}
+    comp_likely_saturated = comp_likely_saturated or {}
 
     # Full admitted membership (COMP-ADMIT-03). Quality annotations must not eject members.
     # Keep ``good_ids = selected`` token for INV-COMP-MEMBERSHIP static scan.
@@ -3532,6 +3540,7 @@ def ensemble_normalize(
         if _fin.size:
             comp_ref_map[cid] = float(np.median(_fin))
 
+    n_sat_excluded = 0
     for i in range(n_frames):
         comp_pairs: list[tuple[str, float]] = []
         for cid in good_ids:
@@ -3542,6 +3551,15 @@ def ensemble_normalize(
             except Exception as exc:  # noqa: BLE001
                 logging.error("[EXC-0135] One comp's inst mag on one frame skipped - ensemble normalization ignores that comp for...: %s", exc)
                 continue
+            # FORCED-PHOT-01: per-frame sat -> keep row elsewhere; exclude from ZP this frame.
+            sat_arr = comp_likely_saturated.get(cid)
+            if sat_arr is not None:
+                try:
+                    if bool(sat_arr[i]):
+                        n_sat_excluded += 1
+                        continue
+                except Exception:  # noqa: BLE001
+                    pass
             if math.isfinite(mv):
                 comp_pairs.append((cid, mv))
 
@@ -3623,6 +3641,13 @@ def ensemble_normalize(
             mag_calib[i] = target_mag_inst[i] + float(np.nanmedian(np.asarray(zp_offs, dtype=np.float64)))
         else:
             mag_calib[i] = delta_mag[i] + cat_offset
+
+    if n_sat_excluded > 0:
+        logging.info(
+            "[FORCED-PHOT] ensemble_normalize: excluded %d per-frame saturated "
+            "comp epochs from ZP (rows kept; membership unchanged)",
+            int(n_sat_excluded),
+        )
 
     return mag_calib, delta_mag, ensemble_scatter
 
@@ -9335,9 +9360,24 @@ def _phase2a_process_one_target(
                 _r_list.append(float(math.hypot(_cx - _tx, _cy - _ty) * _plate / 3600.0))
                 if math.isfinite(_rms):
                     _sc_list.append(_rms)
+    _optics = str(getattr(_cfg, "comp_weight_optics_kind", "") or "").strip()
+    if not _optics:
+        try:
+            from comp_weights import infer_optics_kind_from_header_or_name  # noqa: PLC0415
+
+            _optics = infer_optics_kind_from_header_or_name(
+                telescop=str(getattr(_cfg, "telescope_name", "") or ""),
+                telescope_name=str(getattr(_cfg, "telescope_name", "") or ""),
+            )
+        except Exception:  # noqa: BLE001
+            _optics = "unknown"
+    if not math.isfinite(_am_span) or _am_span <= 0:
+        # Best-effort airmass span from frame table if present on comps flux cache later; keep 0.
+        _am_span = 0.0
     _coeffs = resolve_comp_weight_coeffs(
         k2_bprp=_k2,
         airmass_span=_am_span,
+        optics_kind=_optics,
         r_deg=_r_list,
         residual_scatter_mag=_sc_list,
         c_col_override=_c_col_ov_f,
@@ -13950,15 +13990,16 @@ def build_global_comp_pool(
         z = pool["zone"].astype(str).str.strip().str.lower()
         pool = pool.loc[~z.isin(["saturated", "nonlinear"])].copy()
 
+    # FORCED-PHOT / COMP-ADMIT-03 review: is_noisy is not a gate; is_usable may
+    # still encode zone=linear for diagnostics but noisy stars enter via scatter.
     cand_mask = (
-        _bool_col(pool.get("is_usable", pd.Series(True, index=pool.index)))
-        & ~_bool_col(pool.get("is_saturated", pd.Series(False, index=pool.index)))
-        & ~_bool_col(pool.get("is_noisy", pd.Series(False, index=pool.index)))
+        ~_bool_col(pool.get("is_saturated", pd.Series(False, index=pool.index)))
         & ~_bool_col(pool.get("vsx_known_variable", pd.Series(False, index=pool.index)))
         & ~_bool_col(pool.get("likely_saturated", pd.Series(False, index=pool.index)))
     )
     pool = pool.loc[cand_mask].copy()
 
+    # Gaia NSS = known variable; QSO/GAL = measurability (extended).
     if bool(cfg.phase01_comparison_exclude_gaia_nss) and "gaia_nss" in pool.columns:
         pool = pool.loc[~_bool_col(pool["gaia_nss"])].copy()
     if bool(cfg.phase01_comparison_exclude_gaia_extobj):

@@ -389,16 +389,18 @@ def _filter_comp_candidates_spatial_static(
             log_label="variable_target_catalog_ids (comp spatial filter)",
         ) or None
 
-    # COMP-ADMIT-03: distance is a weight term, not a hard cut. Keep measurability
-    # (sat/usable) and known-variable; chip margin is geometry.
+    # COMP-ADMIT-03 / FORCED-PHOT-01: distance is a weight term, not a hard cut.
+    # Gates: measurability (sat/nonlinear; Gaia QSO/GAL), known variable (VSX + Gaia
+    # NSS), geometry (chip margin). is_noisy is NOT a gate (DAO significance -> weight).
     _ = (max_dist_deg, min_dist_arcsec, max_delta_bprp_cfg, target_bprp_eff, mag_t)
     cand_mask = (
-        _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
-        & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
+        ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
     )
+    if "zone" in ms.columns:
+        _z = ms["zone"].astype(str).str.strip().str.lower()
+        cand_mask &= ~_z.isin(["saturated", "nonlinear"])
     if _debug_bo:
         try:
             _n_a = int(cand_mask.sum())
@@ -458,7 +460,9 @@ def _filter_comp_candidates_spatial_static(
     # Filter A: Gaia objektove flagy
     _n_before_a = int(cand_mask.sum())
 
-    # gaia_nss=True -> non-single star (binarka/dvojhviezda) -> variabilny flux
+    # Gaia NSS -> known variable (non-single / binary flux). QSO/GAL -> measurability
+    # (extended source; aperture photometry invalid). Both remain among the three
+    # permitted gate classes (COMP-ADMIT-03 review).
     if exclude_gaia_nss and "gaia_nss" in ms.columns:
         _nss_rej = cand_mask & _bool_col(ms["gaia_nss"])
         cand_mask &= ~_bool_col(ms["gaia_nss"])
@@ -468,7 +472,7 @@ def _filter_comp_candidates_spatial_static(
                 f"[FAZA 1] Target {target_cid}: Filter A (gaia_nss) vylucil {_n_rej} kandidatov"
             )
 
-    # gaia_qso, gaia_gal -> nie bodovy zdroj -> systematicke chyby
+    # gaia_qso / gaia_gal -> extended; measurability gate (aperture invalid)
     if exclude_gaia_extobj:
         _rej_ext_total = 0
         for _ext_col in ("gaia_qso", "gaia_gal"):
@@ -520,15 +524,16 @@ def _filter_comp_candidates_spatial_static(
 
     cand_mask = cand_mask | det_mask
 
-    # Base mask: measurability + known variable only (COMP-ADMIT-03).
-    # NOTE: cand_mask already includes many filters + DET; we rebuild explicitly for clarity.
+    # Base mask: measurability + known variable only (COMP-ADMIT-03 review).
+    # is_noisy omitted (weight via scatter). Gaia NSS/QSO/GAL handled below.
     _base_mask = (
-        _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
-        & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
+        ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
     )
+    if "zone" in ms.columns:
+        _z2 = ms["zone"].astype(str).str.strip().str.lower()
+        _base_mask &= ~_z2.isin(["saturated", "nonlinear"])
     if target_cid:
         _base_mask &= (
             ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid

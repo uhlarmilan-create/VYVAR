@@ -119,11 +119,9 @@ sigma_eff^2 = sigma_rms^2 + (c_col * |dBP-RP|)^2 + (c_dist * r_deg)^2
 w = 1 / sigma_eff^2
 ```
 
-**Forced photometry.** Per-frame comparison photometry still depends on DAO
-detection (+ targeted pass-2), not forced aperture at catalogue XY every frame
-(`pipeline.py` detect/match path). `detect_frac` as an admission criterion is
-therefore a symptom; it is deleted as a cut. A follow-up task is needed if fixed
-membership across every frame is required without Honeycutt global LS.
+**Forced photometry.** Superseded by FORCED-PHOT-01 (2026-08-15): pool-eligible
+MASTERSTAR members are injected and aperture-measured every frame at locked
+MASTERSTAR XY after DAO match. Detection no longer gates presence.
 
 **Broeg iteration.** VYVAR's `ensemble_normalize` uses one-shot `1/sigma^2` for the
 catalog zeropoint (AIJ/Honeycutt unweighted flux sum for `delta_mag`). It does not
@@ -133,6 +131,46 @@ not the same as discarding members (iron rule 1).
 
 **Rule.** Comparison admission: three gates only. Continuous qualities are weights.
 See INV-COMP-MEMBERSHIP. Extends ZP-CLIP-REMOVAL from the zeropoint to admission.
+
+**COMP-ADMIT-03 review corrections (same date, FORCED-PHOT / COMP-WEIGHT tasks):**
+- ``is_noisy`` is not a measurability gate (DAO peak significance); it belongs in
+  weight via scatter.
+- Gaia NSS -> known-variable gate; Gaia QSO/GAL -> measurability (extended source).
+
+---
+
+## FORCED-PHOT-01 - fixed membership by forced aperture (2026-08-15)
+
+**Problem.** After COMP-ADMIT-03 removed `detect_frac`, pool membership grew while
+per-frame presence remained DAO-conditional. ZP-CLIP-REMOVAL proved that varying
+membership with a fixed-membership weighted mean is the defect; Honeycutt global
+LS is parked. INV-COMP-MEMBERSHIP was unenforceable in practice.
+
+**Decision.** Once a star is force-eligible for the draft (three gates), it is
+measured in every frame at MASTERSTAR ``(x,y)`` on the aligned grid (bounded peak
+refine, bound recorded in FWHM units). DAO discovery is unchanged. Geometry
+out-of-footprint yields no measurement (recorded). Low SNR is kept. Per-frame
+saturation keeps the row and excludes that epoch from the zeropoint explicitly.
+
+**Answer.** After this change, a force-eligible pool member's per-frame presence
+is **not** conditional on anything other than geometry (code:
+`forced_photometry.inject_forced_masterstar_rows` after DAO in
+`_export_per_frame_run_catalog_core`).
+
+---
+
+## COMP-WEIGHT-COEFF-01 - measure c_col and c_dist (2026-08-15)
+
+**c_col.** CLEAR/unfiltered: literature k'' is NONE (no CHOSEN CMOS default).
+PSF/EE term MEASURED on refractive Zeiss 200 mm: 29.485 mmag enclosed-flux
+difference over BP-RP span 1.0 (0.5->1.5) from COMP-POOL-02 Item 4 =>
+`c_col_psf = 0.029485 mag/BP-RP`. Combined in quadrature with `|k2|*DeltaX`.
+Mirror optics: `c_col_psf = 0` predicted. Rig via `comp_weight_optics_kind`.
+
+**c_dist.** OLS of `scatter_mad` vs field-centre separation on COMP-POOL-02
+residuals: **measured zero** on drafts 512 and 435 (and 510 scatter path),
+consistent with zero within uncertainty. Named measured zero, not a gap.
+Ordering: measured on pre-forced products; re-verify after forced rebuild.
 
 ---
 

@@ -1,0 +1,56 @@
+{
+  "512": {
+    "scatter_mad_vs_r": {
+      "c_dist": 0.0,
+      "unc": 0.0012289812721226606,
+      "src": "c_dist=0 MEASURED (slope=-0.000108314+/-0.00122898 mag/deg consistent_with_zero; n=297; r=0.005)",
+      "n": 297,
+      "r": 0.005131250324338904
+    },
+    "abs_resid_vs_r": {
+      "c_dist": 0.0,
+      "unc": 0.0009486636081503998,
+      "src": "c_dist=0 MEASURED (slope=0.00014541+/-0.000948664 mag/deg consistent_with_zero; n=297; r=0.009)",
+      "n": 297,
+      "r": 0.008923892995677508
+    },
+    "c_col": 0.02948501054631845
+  },
+  "510": {
+    "scatter_mad_vs_r": {
+      "c_dist": 0.0,
+      "unc": 0.0012647715255195485,
+      "src": "c_dist=0 MEASURED (slope=0.000739093+/-0.00126477 mag/deg consistent_with_zero; n=281; r=0.035)",
+      "n": 281,
+      "r": 0.034963857172504144
+    },
+    "abs_resid_vs_r": {
+      "c_dist": 0.0010393972977325507,
+      "unc": 0.000963388578128731,
+      "src": "c_dist=MEASURED polyfit_scatter_vs_r slope=0.0010394+/-0.000963389 mag/deg n=281 r=0.064",
+      "n": 281,
+      "r": 0.06445756729726168
+    },
+    "c_col": 0.02948501054631845
+  },
+  "435": {
+    "scatter_mad_vs_r": {
+      "c_dist": 0.0,
+      "unc": 0.004477189111409076,
+      "src": "c_dist=0 MEASURED (slope=-0.0117081 non_positive; n=1277)",
+      "n": 1277,
+      "r": 0.07304060129388018
+    },
+    "abs_resid_vs_r": {
+      "c_dist": 0.0,
+      "unc": 0.002506888598602653,
+      "src": "c_dist=0 MEASURED (slope=0.000992098+/-0.00250689 mag/deg consistent_with_zero; n=1277; r=0.011)",
+      "n": 1277,
+      "r": 0.011082505568039091
+    },
+    "c_col": 0.02948501054631845
+  },
+  "513": {
+    "error": "missing"
+  }
+}

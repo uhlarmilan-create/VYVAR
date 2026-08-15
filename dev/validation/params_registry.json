@@ -4431,5 +4431,71 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "comp_weight_optics_kind": {
+    "help": "Optics class for c_col_psf (refractive|mirror|unknown).",
+    "kind": "static",
+    "label": "Comp Weight Optics Kind",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "forced_photometry_enabled": {
+    "help": "Inject force-eligible MASTERSTAR members missing from DAO each frame.",
+    "kind": "static",
+    "label": "Forced Photometry Enabled",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "forced_photometry_centroid_bound_fwhm": {
+    "help": "Bounded peak refine search radius in FWHM units for forced photometry.",
+    "kind": "static",
+    "label": "Forced Photometry Centroid Bound Fwhm",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": "FWHM",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "forced_photometry_margin_px": {
+    "help": "Extra pixel margin for forced-photometry footprint geometry gate.",
+    "kind": "static",
+    "label": "Forced Photometry Margin Px",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      200.0
+    ],
+    "tier": "expert",
+    "unit": "px",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }
