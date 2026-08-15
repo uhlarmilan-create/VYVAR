@@ -1,9 +1,9 @@
 # CURSOR RESULT - PRE-IMPL-01
 
 Date: 2026-08-15
-Baseline: 011fff7; result commit: **1dd83e5** (A1/A2 + weight persistence + this report)
+Baseline: 011fff7; result commits: **1dd83e5** / tip **bc75467**
 Type: INVESTIGATION. Push: NO.
-`--fast` OVERALL: see end of file.
+`--fast` OVERALL: **PASS** (1383 passed, 27 skipped).
 
 JSON: `dev/results/PRE_IMPL_01_Q{1..5}.json`
 
