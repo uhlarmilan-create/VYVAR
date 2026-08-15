@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Baseline: 2fd9071 (PRE-IMPL-01)
-Tip: see git log after commit
+Tip: **f9464e5** (IMPL-01)
 
 ## What I did
 
