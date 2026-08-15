@@ -272,6 +272,35 @@ def select_check_star(
     df = _drop_rms_artefacts(df, cfg=cfg, floor_override=check_select_rms_floor)
     df = _apply_crowding_exclusion(df, cfg)
 
+    # IMPL-04: do not promote a tier-1 star whose RMS exceeds the existing
+    # phase01_comparison_max_comp_rms ceiling (draft 514: lone T1 at 0.125 mag
+    # beat quieter T2/T3 and produced 222 mmag check LCs).
+    _cfg = cfg or AppConfig()
+    try:
+        _rms_ceil = float(getattr(_cfg, "phase01_comparison_max_comp_rms", 0.1) or 0.1)
+    except (TypeError, ValueError):
+        _rms_ceil = 0.1
+    if math.isfinite(_rms_ceil) and _rms_ceil > 0:
+        work = df.copy()
+        for _col in ("p2p_rms", "comp_rms"):
+            if _col in work.columns:
+                work[_col] = pd.to_numeric(work[_col], errors="coerce")
+        if "p2p_rms" in work.columns or "comp_rms" in work.columns:
+            def _under_ceil(row: pd.Series) -> bool:
+                vals = []
+                for _col in ("p2p_rms", "comp_rms"):
+                    if _col in row.index:
+                        v = float(pd.to_numeric(row.get(_col), errors="coerce"))
+                        if math.isfinite(v):
+                            vals.append(v)
+                if not vals:
+                    return True
+                return min(vals) <= _rms_ceil
+
+            work = work.loc[work.apply(_under_ceil, axis=1)].copy()
+            if not work.empty:
+                df = work
+
     if len(df) < int(n_comp_min):
         return None
 

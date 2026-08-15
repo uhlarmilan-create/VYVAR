@@ -289,16 +289,16 @@ def measure_flux_ladder_frame(
     *,
     annulus_inner_px: float,
     annulus_outer_px: float,
-    method: str = "center",
+    method: str = "exact",
 ) -> tuple[dict[float, np.ndarray], np.ndarray]:
-    """One-pass multi-radius sky-subtracted fluxes for all positions in a frame.
+    """One-pass multi-radius sky-subtracted fluxes via production aperture sum.
 
-    Sky is measured once per star from a fixed annulus outside the largest radius
-    (P2: ensemble must be rebuilt per radius from these fluxes, not rescaled).
+    IMPL-04: uses ``photometry_core._aperture_flux_sky_batch`` (photutils
+    ``method='exact'``) - the same path as production ``enhance_catalog``. The old
+    harness default ``method='center'`` produced integer/half-integer parity sawtooth
+    and must not be used for radius selection. ``method`` is accepted only for the
+    fire-proof test; production/scan callers leave the default.
     """
-    from photutils.aperture import CircularAnnulus, CircularAperture
-    from photutils.aperture import aperture_photometry as _aphot
-
     pos = np.column_stack(
         [np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)]
     )
@@ -308,41 +308,57 @@ def measure_flux_ladder_frame(
     r_in = float(annulus_inner_px)
     r_out = float(annulus_outer_px)
     sky_pp = np.full(n, np.nan, dtype=np.float64)
-    if (
-        math.isfinite(r_in)
-        and math.isfinite(r_out)
-        and r_out > r_in > 0
-        and n > 0
-    ):
-        try:
-            ann = CircularAnnulus(pos, r_in=r_in, r_out=r_out)
-            masks = ann.to_mask(method="center")
-            if not isinstance(masks, (list, tuple)):
-                masks = [masks]
-            for i, m in enumerate(masks):
-                try:
-                    img = m.get_values(d)
-                    img = np.asarray(img, dtype=np.float64)
-                    img = img[np.isfinite(img)]
-                    if img.size >= 8:
-                        sky_pp[i] = float(np.median(img))
-                except Exception:  # noqa: BLE001
-                    continue
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[SCATTER-AP] annulus sky failed: %s", exc)
-
     out: dict[float, np.ndarray] = {}
+
+    if str(method).strip().lower() != "exact":
+        # Fire-proof path only: intentional broken masking (parity sawtooth).
+        from photutils.aperture import CircularAnnulus, CircularAperture
+        from photutils.aperture import aperture_photometry as _aphot
+
+        if (
+            math.isfinite(r_in)
+            and math.isfinite(r_out)
+            and r_out > r_in > 0
+            and n > 0
+        ):
+            try:
+                ann = CircularAnnulus(pos, r_in=r_in, r_out=r_out)
+                masks = ann.to_mask(method="center")
+                if not isinstance(masks, (list, tuple)):
+                    masks = [masks]
+                for i, m in enumerate(masks):
+                    try:
+                        img = m.get_values(d)
+                        img = np.asarray(img, dtype=np.float64)
+                        img = img[np.isfinite(img)]
+                        if img.size >= 8:
+                            sky_pp[i] = float(np.median(img))
+                    except Exception:  # noqa: BLE001
+                        continue
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("[SCATTER-AP] annulus sky failed: %s", exc)
+        for r in r_list:
+            flux = np.full(n, np.nan, dtype=np.float64)
+            try:
+                ap = CircularAperture(pos, r=float(r))
+                phot = _aphot(d, ap, method=method)
+                area = float(math.pi * float(r) ** 2)
+                sums = np.asarray(phot["aperture_sum"], dtype=np.float64)
+                flux = sums - sky_pp * area
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("[SCATTER-AP] r=%.2f photometry failed: %s", r, exc)
+            out[float(r)] = flux
+        return out, sky_pp
+
+    # Production path: shared batch/per-star exact aperture sum.
+    from photometry_core import _aperture_flux_sky_batch
+
     for r in r_list:
-        flux = np.full(n, np.nan, dtype=np.float64)
-        try:
-            ap = CircularAperture(pos, r=float(r))
-            phot = _aphot(d, ap, method=method)
-            area = float(math.pi * float(r) ** 2)
-            sums = np.asarray(phot["aperture_sum"], dtype=np.float64)
-            flux = sums - sky_pp * area
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[SCATTER-AP] r=%.2f photometry failed: %s", r, exc)
+        flux, sky = _aperture_flux_sky_batch(
+            d, pos, float(r), float(annulus_inner_px), float(annulus_outer_px)
+        )
         out[float(r)] = flux
+        sky_pp = sky
     return out, sky_pp
 
 

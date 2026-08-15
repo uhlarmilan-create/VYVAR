@@ -210,3 +210,61 @@ def test_impl01_flat_table_fails_gates():
     assert rep["ok"] is False
     assert "INV-COG-FLATNESS-REAL" in rep["failures"]
     assert "INV-APERTURE-MAG-MONOTONE" in rep["failures"]
+
+
+def test_fire_aperture_mask_exact_smooth_vs_center_sawtooth():
+    """IMPL-04: center masking sawtooths LC scatter; production exact is smooth.
+
+    Synthetic Moffat star with small centroid jitter across frames. Scatter vs r
+    under ``method='center'`` must show integer/half-integer mean split
+    (parity signature from IMPL-03). ``method='exact'`` (production
+    ``_aperture_flux_sky_per_star``) must keep that split within noise.
+    """
+    from aperture_scatter_select import measure_flux_ladder_frame
+
+    rng = np.random.default_rng(404)
+    yy, xx = np.mgrid[0:64, 0:64]
+    x0, y0 = 31.37, 32.61
+    r2 = (xx - x0) ** 2 + (yy - y0) ** 2
+    star = (1.0 + r2 / (2.8**2)) ** (-2.5)
+    base = 1200.0 + 8.0e4 * star / star.max()
+    radii = np.arange(1.5, 8.01, 0.5)
+
+    def scatter_curve(method: str) -> np.ndarray:
+        series = {float(r): [] for r in radii}
+        for _ in range(24):
+            dx, dy = 0.05 * rng.normal(), 0.05 * rng.normal()
+            data = base + 0.5 * rng.normal(size=base.shape)
+            flux, _ = measure_flux_ladder_frame(
+                data,
+                np.array([x0 + dx]),
+                np.array([y0 + dy]),
+                radii,
+                annulus_inner_px=14.0,
+                annulus_outer_px=20.0,
+                method=method,
+            )
+            for r in radii:
+                series[float(r)].append(float(flux[float(r)][0]))
+        out = []
+        for r in radii:
+            f = np.asarray(series[float(r)], dtype=float)
+            m = -2.5 * np.log10(np.clip(f, 1e-6, None))
+            med = float(np.median(m))
+            out.append(float(np.median(np.abs(m - med)) * 1.4826 * 1000.0))
+        return np.asarray(out, dtype=float)
+
+    def parity_split(sc: np.ndarray) -> float:
+        r = np.asarray(radii, dtype=float)
+        is_int = np.isclose(r % 1.0, 0.0, atol=1e-6)
+        is_half = np.isclose(r % 1.0, 0.5, atol=1e-6)
+        return abs(float(np.mean(sc[is_int])) - float(np.mean(sc[is_half])))
+
+    sc_c = scatter_curve("center")
+    sc_e = scatter_curve("exact")
+    split_c = parity_split(sc_c)
+    split_e = parity_split(sc_e)
+    # Fire: center parity split is large (mmag); exact is small.
+    assert split_c > 5.0, f"center parity split too weak: {split_c} mmag; sc={sc_c}"
+    assert split_e < 1.0, f"exact parity split too large: {split_e} mmag; sc={sc_e}"
+    assert split_c > 5.0 * split_e

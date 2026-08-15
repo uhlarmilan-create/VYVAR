@@ -3398,7 +3398,7 @@ def _annulus_sky_subtracted_flux(
     ap = CircularAperture(pos, r=float(r_ap))
     an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))
 
-    phot_ap = _aphot(d, ap)
+    phot_ap = _aphot(d, ap, method="exact")
     sum_ap = float(np.asarray(phot_ap["aperture_sum"], dtype=np.float64).ravel()[0])
     area_ap = float(ap.area)
 
@@ -13217,6 +13217,70 @@ def _sky_pp_from_annulus_image(d: np.ndarray, ann_img: np.ndarray) -> float:
     return float(np.nanmedian(d))
 
 
+def _aperture_flux_sky_batch(
+    d: np.ndarray,
+    pos: np.ndarray,
+    r_ap: float | np.ndarray,
+    r_in: float | np.ndarray,
+    r_out: float | np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Sky-subtracted circular aperture sums (photutils ``method='exact'``).
+
+    Shared by production per-star photometry and the scatter/CoG radius ladder
+    (IMPL-04). When all stars share one radius, uses one batch aperture call.
+    """
+    from photutils.aperture import CircularAnnulus, CircularAperture
+    from photutils.aperture import aperture_photometry as _aphot
+
+    pos = np.asarray(pos, dtype=np.float64)
+    n = int(pos.shape[0])
+    flux_arr = np.full(n, np.nan, dtype=np.float64)
+    sky_pp_arr = np.full(n, np.nan, dtype=np.float64)
+    if n == 0:
+        return flux_arr, sky_pp_arr
+
+    r_ap_arr = np.full(n, float(r_ap), dtype=np.float64) if np.isscalar(r_ap) else np.asarray(r_ap, dtype=np.float64)
+    r_in_arr = np.full(n, float(r_in), dtype=np.float64) if np.isscalar(r_in) else np.asarray(r_in, dtype=np.float64)
+    r_out_arr = np.full(n, float(r_out), dtype=np.float64) if np.isscalar(r_out) else np.asarray(r_out, dtype=np.float64)
+
+    # Uniform radius: one batch exact sum.
+    if (
+        np.all(np.isfinite(r_ap_arr))
+        and np.all(r_ap_arr > 0)
+        and float(np.nanmax(r_ap_arr) - np.nanmin(r_ap_arr)) < 1e-9
+        and np.all(np.isfinite(r_in_arr))
+        and np.all(np.isfinite(r_out_arr))
+        and float(np.nanmax(r_in_arr) - np.nanmin(r_in_arr)) < 1e-9
+        and float(np.nanmax(r_out_arr) - np.nanmin(r_out_arr)) < 1e-9
+        and float(r_out_arr[0]) > float(r_in_arr[0]) > 0
+    ):
+        r0 = float(r_ap_arr[0])
+        rin = float(r_in_arr[0])
+        rout = float(r_out_arr[0])
+        try:
+            ap = CircularAperture(pos, r=r0)
+            phot = _aphot(d, ap, method="exact")
+            sums = np.asarray(phot["aperture_sum"], dtype=np.float64)
+            area = float(ap.area)
+            an = CircularAnnulus(pos, r_in=rin, r_out=rout)
+            masks = an.to_mask(method="center")
+            if not isinstance(masks, (list, tuple)):
+                masks = [masks]
+            for i, m in enumerate(masks):
+                try:
+                    ann_img = m.to_image(d.shape)
+                    sky_pp_arr[i] = _sky_pp_from_annulus_image(d, ann_img)
+                except Exception:  # noqa: BLE001
+                    sky_pp_arr[i] = float("nan")
+            flux_arr = sums - sky_pp_arr * area
+            return flux_arr, sky_pp_arr
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("[PHOT] batch exact aperture failed, falling back per-star: %s", exc)
+
+    # Heterogeneous radii: per-star exact (photutils 2.3 scalar-r constraint).
+    return _aperture_flux_sky_per_star(d, pos, r_ap_arr, r_in_arr, r_out_arr)
+
+
 def _aperture_flux_sky_per_star(
     d: np.ndarray,
     pos: np.ndarray,
@@ -13224,7 +13288,12 @@ def _aperture_flux_sky_per_star(
     r_in_arr: np.ndarray,
     r_out_arr: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Per-star circular aperture + annulus sky (photutils 2.3 requires scalar ``r`` per aperture)."""
+    """Per-star circular aperture + annulus sky (photutils 2.3 requires scalar ``r`` per aperture).
+
+    Aperture sum uses photutils ``method='exact'`` (fractional pixel overlap). Binary
+    ``center`` masking produces radius-parity sawtooth in growth/scatter ladders
+    (IMPL-04). Annulus sky still uses ``center`` masks for median sampling only.
+    """
     from photutils.aperture import CircularAnnulus, CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
 
@@ -13250,7 +13319,7 @@ def _aperture_flux_sky_per_star(
             xy = (float(pos[idx, 0]), float(pos[idx, 1]))
             ap_i = CircularAperture([xy], r=r_ap)
             an_i = CircularAnnulus([xy], r_in=r_in, r_out=r_out)
-            phot_i = _aphot(d, ap_i)
+            phot_i = _aphot(d, ap_i, method="exact")
             ann_masks = an_i.to_mask(method="center")
             if not isinstance(ann_masks, (list, tuple)):
                 ann_masks = [ann_masks]
@@ -13589,7 +13658,7 @@ def enhance_catalog_dataframe_aperture_bpm(
 
             if r_ap_arr is not None:
                 # photutils 2.3: CircularAperture.r must be scalar - one aperture per star.
-                flux_arr, sky_pp_arr = _aperture_flux_sky_per_star(d, pos, r_ap_arr, r_in_arr, r_out_arr)
+                flux_arr, sky_pp_arr = _aperture_flux_sky_batch(d, pos, r_ap_arr, r_in_arr, r_out_arr)
                 out["flux"] = flux_arr.astype(np.float64)
                 out["dao_flux"] = out["flux"]
                 out["aperture_r_px"] = r_ap_arr.astype(np.float64)
@@ -13617,7 +13686,7 @@ def enhance_catalog_dataframe_aperture_bpm(
             else:
                 ap = CircularAperture(pos, r=r_ap)
                 an = CircularAnnulus(pos, r_in=r_in, r_out=r_out)
-                phot_ap = _aphot(d, ap)
+                phot_ap = _aphot(d, ap, method="exact")
                 sum_ap = np.asarray(phot_ap["aperture_sum"], dtype=np.float64)
                 area_ap_per = float(ap.area)
                 sky_pp_arr = np.zeros(n, dtype=np.float64)
@@ -13659,8 +13728,8 @@ def enhance_catalog_dataframe_aperture_bpm(
                     try:
                         ap_sm = CircularAperture(pos, r=_rs)
                         ap_lg = CircularAperture(pos, r=_rl)
-                        phot_sm = _aphot(d, ap_sm)
-                        phot_lg = _aphot(d, ap_lg)
+                        phot_sm = _aphot(d, ap_sm, method="exact")
+                        phot_lg = _aphot(d, ap_lg, method="exact")
                         sum_sm = np.asarray(phot_sm["aperture_sum"], dtype=np.float64).ravel()
                         sum_lg = np.asarray(phot_lg["aperture_sum"], dtype=np.float64).ravel()
                         if sum_sm.size != n or sum_lg.size != n:
