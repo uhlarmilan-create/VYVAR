@@ -2,12 +2,14 @@
 
 Date: 2026-08-15
 Baseline: b6e0e29 (COMP-ADMIT-03)
-Commit: (filled after local commit)
+Commit: b731320
 Push: NO. Waiting for Milan.
 
 Ordering: FORCED-PHOT-01 implemented first; COMP-WEIGHT c_dist measured on
 pre-forced COMP-POOL-02 residual products and marked for re-verify after a
 forced rebuild. Honeycutt global LS was not required.
+
+`--fast`: OVERALL PASS at tip `b731320` (1378 passed, 27 skipped on pre-stamp tree).
 
 ---
 
