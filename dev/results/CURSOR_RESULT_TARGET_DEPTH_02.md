@@ -2,7 +2,7 @@ CURSOR RESULT - 2026-08-15 TARGET-DEPTH-02
 
 Register ID: TARGET-DEPTH-02
 Follows: TARGET-DEPTH-01 (Item A accepted; Item B superseded here)
-Status: COMMITTED tip below; `--fast` recorded beside SHA; push awaits Milan.
+Status: COMMITTED tip **974e17a**; `--fast` OVERALL PASS on that tip (1360 passed, 27 skipped); push awaits Milan.
 
 ## Verdict
 
@@ -173,7 +173,7 @@ same path `night_run`/`app` use after DQF).
 | Exported errs | identical re-read |
 | BO CVn masked? | No on 512/513/510/435 (linear, G~9.72) |
 | Iron-gate + kwarg | fire (returncode 0) |
-| `--fast` | see tip footer |
+| `--fast` | OVERALL PASS on tip `974e17a` (1360 passed, 27 skipped) |
 
 Impact inventory: zone_noise skip and MASTERSTAR depth gate intended; photometry
 numbers / COMP-POOL Stage 2 / SNR-GATE untouched.
