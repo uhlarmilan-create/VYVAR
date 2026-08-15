@@ -83,11 +83,34 @@ committed tip would settle it.
 
 ## 3. Push
 
-- Command: `git push origin main`
-- Pre-push verified tip: `21f6060` (`--fast` OVERALL PASS)
-- Pushed tip SHA: (filled after push)
-- Post-push `--fast`: `git-origin-main` must not report a difference
-- `git log --oneline -15` and working tree: see footer after push
+- Command: `git push origin main` (`8fe1759..5872634`)
+- Pushed tip SHA: **5872634**
+- Pre-push `--fast` on findings tip `21f6060`: OVERALL PASS
+- Docs tip recording that result: `5872634`
+- Post-push `--fast` on `5872634`: **OVERALL PASS**; `git-origin-main` no longer
+  reports a difference (`HEAD` == `origin/main` == `5872634`)
+- Working tree: clean of tracked changes; untracked local scratch only
+  (DAO_DEPTH ledgers, wide_err tools, sqlite wal/shm, tmp)
+
+### git log --oneline -15 (at push)
+
+```
+5872634 PUSH-02: record --fast PASS on tip 21f6060.
+21f6060 PUSH-02: record depth caveat and BO-ENSEMBLE-01; authorize push.
+7d52bd4 TARGET-DEPTH-02: record --fast PASS on tip 974e17a.
+974e17a TARGET-DEPTH-02: gate noise zone; MASTERSTAR half-linear depth.
+4acfb4b TARGET-DEPTH-01: record --fast PASS on tip e54731e.
+e54731e TARGET-DEPTH-01: mark broad-except in QC FK heal test (BLE001).
+3ae2625 TARGET-DEPTH-01: heal QC FILE FK; derive per-draft target depth.
+df94593 WIDE-ERR-LOC-01: record --fast PASS on tip fc6fcad.
+fc6fcad WIDE-ERR-LOC-01: close variance accounting; localize deficit; report radius drift.
+d238e41 NOISE-FLOOR-01: record --fast PASS on tip 86b0c77.
+86b0c77 NOISE-FLOOR-01: fit floor only where flat; localize WIDE-ERR to photon/sky.
+72271c9 COMP-POOL-02: revert wrong D=0.2 aperture override; report four blockers.
+8f3cdb6 COMP-POOL-01: update params dashboard owner-count lock for two new knobs.
+7522247 COMP-POOL-01 Stage 3: record assignment relax order; register new pool knobs.
+696c849 COMP-POOL-01 Stage 2: derived pool admission and remove size cap.
+```
 
 ---
 
