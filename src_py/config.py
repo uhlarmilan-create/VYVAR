@@ -877,6 +877,14 @@ class AppConfig:
     phase01_ct_min_comp: int = 7
     #: Faza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
     apply_color_term: str = "off"
+    #: Per-rig Clear/unfiltered level colour coefficient (mag per BP-RP). None = disabled.
+    #: PRE-IMPL-01 G-controlled measurement on this telephoto rig: -0.373 +/- 0.090.
+    #: Not universal - remasure per equipment. Applied as export-only constant (no shape term).
+    color_level_k_mag_per_bprp: float | None = None
+    #: Uncertainty on ``color_level_k_mag_per_bprp`` (mag per BP-RP); propagates into exported err.
+    color_level_k_stderr_mag_per_bprp: float | None = None
+    #: Isolation radius (FWHM units) for SNR-table growth-curve stars (IMPL-01: 3 FWHM).
+    snr_cog_isolation_fwhm: float = 3.0
     #: Second-order extinction: ``off`` | ``literature`` | ``fit_else_literature`` (fit path v2).
     k2_mode: str = "literature"
     #: Optional per-band k'' overrides (mag/airmass/BP-RP); empty dict uses ``k2_extinction`` converter.
@@ -1844,6 +1852,21 @@ class AppConfig:
             self.apply_color_term = "off"
         else:
             self.apply_color_term = "auto"
+        for _clk in ("color_level_k_mag_per_bprp", "color_level_k_stderr_mag_per_bprp"):
+            _raw = data.get(_clk, getattr(self, _clk))
+            if _raw is None or _raw == "":
+                setattr(self, _clk, None)
+            else:
+                try:
+                    _fv = float(_raw)
+                    setattr(self, _clk, _fv if math.isfinite(_fv) else None)
+                except (TypeError, ValueError):
+                    setattr(self, _clk, None)
+        try:
+            _iso = float(data.get("snr_cog_isolation_fwhm", self.snr_cog_isolation_fwhm))
+            self.snr_cog_isolation_fwhm = _iso if math.isfinite(_iso) and _iso > 0 else 3.0
+        except (TypeError, ValueError):
+            self.snr_cog_isolation_fwhm = 3.0
         _k2m = str(data.get("k2_mode", self.k2_mode) or "literature").strip().lower()
         if _k2m in ("0", "false", "no", "off", "none"):
             self.k2_mode = "off"
@@ -2738,6 +2761,9 @@ class AppConfig:
             "phase01_use_bprp_primary": bool(self.phase01_use_bprp_primary),
             "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
             "apply_color_term": str(self.apply_color_term),
+            "color_level_k_mag_per_bprp": self.color_level_k_mag_per_bprp,
+            "color_level_k_stderr_mag_per_bprp": self.color_level_k_stderr_mag_per_bprp,
+            "snr_cog_isolation_fwhm": float(self.snr_cog_isolation_fwhm),
             "k2_mode": str(self.k2_mode),
             "k2_defaults_bprp": dict(self.k2_defaults_bprp),
             "sigma_sys_mag": dict(self.sigma_sys_mag),

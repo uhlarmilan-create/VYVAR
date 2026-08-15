@@ -574,6 +574,21 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "blind_verify_match_tol_arcsec": {
+    "help": "Blind verify match tolerance in arcsec. None uses legacy blind_verify_match_tol_px.",
+    "kind": "static",
+    "label": "Blind Verify Match Tol Arcsec",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
+  },
   "blind_verify_match_tol_px": {
     "help": "Pixel tolerance when matching image stars to catalog positions during verification.",
     "kind": "static",
@@ -802,6 +817,21 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "cog_ladder_step_fwhm": {
+    "help": "COG ladder step as multiple of measured FWHM. None uses legacy cog_ladder_step_px.",
+    "kind": "static",
+    "label": "COG Ladder Step FWHM",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
+  },
   "cog_ladder_step_px": {
     "help": "Radius step (px) of the curve-of-growth aperture ladder.",
     "kind": "static",
@@ -883,6 +913,42 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "color_level_k_mag_per_bprp": {
+    "help": "Per-rig Clear/unfiltered level colour coefficient (mag per BP-RP). Measured; not universal. Export-only constant correction.",
+    "kind": "static",
+    "label": "Color Level K",
+    "owner": "config_runtime",
+    "phase": "extinction",
+    "range": [
+      -2.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": "mag_per_bprp",
+    "widget": "custom",
+    "scope": "rig",
+    "scope_confidence": "high",
+    "scope_key": "rig_band",
+    "scope_group": "a"
+  },
+  "color_level_k_stderr_mag_per_bprp": {
+    "help": "Uncertainty on color_level_k_mag_per_bprp; propagates into exported magnitude errors.",
+    "kind": "static",
+    "label": "Color Level K Stderr",
+    "owner": "config_runtime",
+    "phase": "extinction",
+    "range": [
+      0.0,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": "mag_per_bprp",
+    "widget": "custom",
+    "scope": "rig",
+    "scope_confidence": "high",
+    "scope_key": "rig_band",
+    "scope_group": "a"
+  },
   "comp_color_tiers": {
     "help": "Ordered color-match tiers for comparison weighting. Each entry is a BP-RP color-match limit ('bprp', tighter = better color match) and the ensemble weight ('w') for stars in that tier. WAVE-B merged the eight comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.",
     "kind": "static",
@@ -959,6 +1025,21 @@
       0.0,
       500.0
     ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_pool_derived_admission": {
+    "help": "COMP-ADMIT-03: when True, run draft noise-curve diagnostics and drop only known variables (VSX/Gaia). Scatter/colour/distance enter continuous weights, not cuts.",
+    "kind": "static",
+    "label": "Comp Pool Derived Admission",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -1053,6 +1134,93 @@
     "phase": "trust",
     "range": null,
     "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_airmass_span": {
+    "help": "Airmass span of the series used when deriving c_col = |k2_bprp| * DeltaX.",
+    "kind": "static",
+    "label": "Comp Weight Airmass Span",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      3.0
+    ],
+    "tier": "expert",
+    "unit": "airmass",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_c_col_mag_per_bprp": {
+    "help": "COMP-ADMIT-03 colour systematic coefficient in the weight sigma_eff (mag per BP-RP). None = derive from |k2|*airmass_span.",
+    "kind": "static",
+    "label": "Comp Weight c_col",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": "mag / (BP-RP)",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_c_dist_mag_per_deg": {
+    "help": "COMP-ADMIT-03 distance systematic coefficient in sigma_eff (mag per degree). None = measure from draft or named zero.",
+    "kind": "static",
+    "label": "Comp Weight c_dist",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": "mag / deg",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_optics_kind": {
+    "help": "Optics class for c_col_psf (refractive|mirror|unknown).",
+    "kind": "static",
+    "label": "Comp Weight Optics Kind",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comparison_stars_pool_n": {
+    "help": "Plan/spatial comparison pool size. 0 = uncapped (COMP-POOL-01); legacy default was 150.",
+    "kind": "static",
+    "label": "Comparison Stars Pool N",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0,
+      50000
+    ],
+    "tier": "expert",
     "unit": null,
     "widget": "auto",
     "scope": "universal",
@@ -1399,6 +1567,57 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "forced_photometry_centroid_bound_fwhm": {
+    "help": "Bounded peak refine search radius in FWHM units for forced photometry.",
+    "kind": "static",
+    "label": "Forced Photometry Centroid Bound Fwhm",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": "FWHM",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "forced_photometry_enabled": {
+    "help": "Inject force-eligible MASTERSTAR members missing from DAO each frame.",
+    "kind": "static",
+    "label": "Forced Photometry Enabled",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "forced_photometry_margin_px": {
+    "help": "Extra pixel margin for forced-photometry footprint geometry gate.",
+    "kind": "static",
+    "label": "Forced Photometry Margin Px",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.0,
+      200.0
+    ],
+    "tier": "expert",
+    "unit": "px",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "frame_align_residual_gate_enabled": {
     "help": "Optional gate dropping frames whose alignment residuals are unusually large (poorly registered frames).",
     "kind": "static",
@@ -1525,39 +1744,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "comp_pool_derived_admission": {
-    "help": "COMP-ADMIT-03: when True, run draft noise-curve diagnostics and drop only known variables (VSX/Gaia). Scatter/colour/distance enter continuous weights, not cuts.",
-    "kind": "static",
-    "label": "Comp Pool Derived Admission",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comparison_stars_pool_n": {
-    "help": "Plan/spatial comparison pool size. 0 = uncapped (COMP-POOL-01); legacy default was 150.",
-    "kind": "static",
-    "label": "Comparison Stars Pool N",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0,
-      50000
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "gs11_comp_max_dilution": {
     "help": "Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model.",
     "kind": "static",
@@ -1662,6 +1848,21 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "hrd_color_bg_box_arcsec": {
+    "help": "HR diagram local background box in arcsec. None uses legacy hrd_color_bg_box_px.",
+    "kind": "static",
+    "label": "HRD Color BG Box Arcsec",
+    "owner": "config_runtime",
+    "phase": "reports",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "hrd_color_bg_box_px": {
     "help": "Background sampling box (px) for star colors in the color HR diagram.",
@@ -2185,6 +2386,21 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "masterstar_centre_rms_max_arcsec": {
+    "help": "MASTERSTAR centre RMS gate in arcsec. None uses legacy masterstar_centre_rms_max_px.",
+    "kind": "static",
+    "label": "Masterstar Centre RMS Max Arcsec",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
+  },
   "masterstar_centre_rms_max_px": {
     "help": "Maximum RMS (px) of star positions near the frame centre for an acceptable astrometric solution.",
     "kind": "static",
@@ -2439,6 +2655,21 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "masterstar_sibling_rms_max_arcsec": {
+    "help": "Sibling recovery RMS gate in arcsec. None uses legacy masterstar_sibling_rms_max_px.",
+    "kind": "static",
+    "label": "Masterstar Sibling RMS Max Arcsec",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "masterstar_sibling_rms_max_px": {
     "help": "RMS limit for accepting a sibling recovery solution.",
@@ -2779,6 +3010,24 @@
     "scope_key": "site",
     "scope_group": "n/a"
   },
+  "osc_channel_binning": {
+    "help": "OSC only: NxN average binning applied to each extracted channel (R/G/B/oneRGGB) after Bayer plane split. Allowed 1-4 (default 2). Total linear scale vs raw mosaic = 2 (superpixel) x N.",
+    "kind": "static",
+    "label": "OSC Channel Binning",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": [
+      1.0,
+      4.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "rig",
+    "scope_confidence": "high",
+    "scope_key": "rig",
+    "scope_group": "a"
+  },
   "per_frame_mp_reserve_ram_gb": {
     "help": "RAM (GB) kept free per worker when sizing per-frame parallelism.",
     "kind": "static",
@@ -2826,6 +3075,21 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "phase01_chip_interior_margin_arcsec": {
+    "help": "Chip interior margin in arcsec. None uses legacy phase01_chip_interior_margin_px.",
+    "kind": "static",
+    "label": "Phase01 Chip Interior Margin Arcsec",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "phase01_chip_interior_margin_px": {
     "help": "Margin (px) from the chip edge inside which stars are excluded from comparison selection (edge effects).",
@@ -2886,6 +3150,21 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "phase01_comparison_isolation_radius_arcsec": {
+    "help": "Comp isolation radius in arcsec. None uses legacy phase01_comparison_isolation_radius_px.",
+    "kind": "static",
+    "label": "Phase01 Comparison Isolation Radius Arcsec",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": "arcsec",
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "phase01_comparison_isolation_radius_px": {
     "help": "Isolation radius (px): a comparison must have no bright neighbour inside it.",
@@ -2958,6 +3237,21 @@
     "scope_confidence": "low",
     "scope_key": "rig",
     "scope_group": "b"
+  },
+  "phase01_comparison_max_dist_fov_frac": {
+    "help": "Max comp distance as fraction of half-diagonal FOV. None uses legacy max_dist_deg fallback.",
+    "kind": "static",
+    "label": "Phase01 Comparison Max Dist FOV Frac",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
   },
   "phase01_comparison_max_fwhm_factor": {
     "help": "Maximum FWHM ratio vs the field median a comparison may have (rejects defocused/blended shapes).",
@@ -3274,6 +3568,21 @@
     "scope_key": "rig",
     "scope_group": "a"
   },
+  "preprocess_sky_surface_force_reapply": {
+    "help": "When true, bypass the sky-surface idempotency guard and re-subtract the model in-place (diagnostic / recovery only; default false preserves anchor byte-identity).",
+    "kind": "static",
+    "label": "Preprocess Sky Surface Force Reapply",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "preprocess_sky_surface_order": {
     "help": "Polynomial order of the flux-conserving sky-surface background model subtracted before photometry (2 = gentle 2D gradient removal; part of the draft_435 anchor).",
     "kind": "static",
@@ -3291,39 +3600,6 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
-  },
-  "preprocess_sky_surface_force_reapply": {
-    "help": "When true, bypass the sky-surface idempotency guard and re-subtract the model in-place (diagnostic / recovery only; default false preserves anchor byte-identity).",
-    "kind": "static",
-    "label": "Preprocess Sky Surface Force Reapply",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "osc_channel_binning": {
-    "help": "OSC only: NxN average binning applied to each extracted channel (R/G/B/oneRGGB) after Bayer plane split. Allowed 1-4 (default 2). Total linear scale vs raw mosaic = 2 (superpixel) x N.",
-    "kind": "static",
-    "label": "OSC Channel Binning",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": [
-      1.0,
-      4.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
   },
   "project_root": {
     "help": "VYVAR installation root; derived from the code location, never edit.",
@@ -3676,6 +3952,21 @@
     "scope_key": "rig_sampling",
     "scope_group": "b"
   },
+  "qc_max_hfr_fwhm_ratio": {
+    "help": "QC HFR limit as multiple of measured FWHM. None uses legacy qc_max_hfr px cap.",
+    "kind": "static",
+    "label": "QC Max HFR FWHM Ratio",
+    "owner": "config_runtime",
+    "phase": "qc",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
+  },
   "qc_min_stars": {
     "help": "Minimum number of detected stars a frame needs to be considered usable.",
     "kind": "static",
@@ -3811,6 +4102,21 @@
     "scope_key": "rig",
     "scope_group": "a"
   },
+  "sips_dao_fwhm_fwhm_factor": {
+    "help": "Initial DAO FWHM as multiple of measured FWHM. None uses legacy sips_dao_fwhm_px.",
+    "kind": "static",
+    "label": "SIPS DAO FWHM Factor",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "hidden",
+    "scope": "universal",
+    "scope_key": "none",
+    "scope_group": "n/a",
+    "scope_confidence": "high"
+  },
   "sips_dao_fwhm_px": {
     "help": "Assumed star FWHM (px) for the SIPS-style DAO detection preset.",
     "kind": "static",
@@ -3843,6 +4149,24 @@
     "scope_confidence": "low",
     "scope_key": "rig_sampling",
     "scope_group": "a"
+  },
+  "snr_cog_isolation_fwhm": {
+    "help": "Minimum neighbour separation in FWHM units for stars used to build the SNR-table measured growth curve.",
+    "kind": "static",
+    "label": "SNR COG Isolation FWHM",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      12.0
+    ],
+    "tier": "expert",
+    "unit": "fwhm",
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   },
   "sparse_trust_T_green": {
     "help": "Check-star T-statistic bound for GREEN trust on sparse fields.",
@@ -4222,276 +4546,6 @@
     "range": null,
     "tier": "basic",
     "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "blind_verify_match_tol_arcsec": {
-    "help": "Blind verify match tolerance in arcsec. None uses legacy blind_verify_match_tol_px.",
-    "kind": "static",
-    "label": "Blind Verify Match Tol Arcsec",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "cog_ladder_step_fwhm": {
-    "help": "COG ladder step as multiple of measured FWHM. None uses legacy cog_ladder_step_px.",
-    "kind": "static",
-    "label": "COG Ladder Step FWHM",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "hrd_color_bg_box_arcsec": {
-    "help": "HR diagram local background box in arcsec. None uses legacy hrd_color_bg_box_px.",
-    "kind": "static",
-    "label": "HRD Color BG Box Arcsec",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "masterstar_centre_rms_max_arcsec": {
-    "help": "MASTERSTAR centre RMS gate in arcsec. None uses legacy masterstar_centre_rms_max_px.",
-    "kind": "static",
-    "label": "Masterstar Centre RMS Max Arcsec",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "masterstar_sibling_rms_max_arcsec": {
-    "help": "Sibling recovery RMS gate in arcsec. None uses legacy masterstar_sibling_rms_max_px.",
-    "kind": "static",
-    "label": "Masterstar Sibling RMS Max Arcsec",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "phase01_chip_interior_margin_arcsec": {
-    "help": "Chip interior margin in arcsec. None uses legacy phase01_chip_interior_margin_px.",
-    "kind": "static",
-    "label": "Phase01 Chip Interior Margin Arcsec",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "phase01_comparison_isolation_radius_arcsec": {
-    "help": "Comp isolation radius in arcsec. None uses legacy phase01_comparison_isolation_radius_px.",
-    "kind": "static",
-    "label": "Phase01 Comparison Isolation Radius Arcsec",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "phase01_comparison_max_dist_fov_frac": {
-    "help": "Max comp distance as fraction of half-diagonal FOV. None uses legacy max_dist_deg fallback.",
-    "kind": "static",
-    "label": "Phase01 Comparison Max Dist FOV Frac",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "qc_max_hfr_fwhm_ratio": {
-    "help": "QC HFR limit as multiple of measured FWHM. None uses legacy qc_max_hfr px cap.",
-    "kind": "static",
-    "label": "QC Max HFR FWHM Ratio",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "sips_dao_fwhm_fwhm_factor": {
-    "help": "Initial DAO FWHM as multiple of measured FWHM. None uses legacy sips_dao_fwhm_px.",
-    "kind": "static",
-    "label": "SIPS DAO FWHM Factor",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_key": "none",
-    "scope_group": "n/a",
-    "scope_confidence": "high"
-  },
-  "comp_weight_c_col_mag_per_bprp": {
-    "help": "COMP-ADMIT-03 colour systematic coefficient in the weight sigma_eff (mag per BP-RP). None = derive from |k2|*airmass_span.",
-    "kind": "static",
-    "label": "Comp Weight c_col",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": "mag / (BP-RP)",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_weight_c_dist_mag_per_deg": {
-    "help": "COMP-ADMIT-03 distance systematic coefficient in sigma_eff (mag per degree). None = measure from draft or named zero.",
-    "kind": "static",
-    "label": "Comp Weight c_dist",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": "mag / deg",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_weight_airmass_span": {
-    "help": "Airmass span of the series used when deriving c_col = |k2_bprp| * DeltaX.",
-    "kind": "static",
-    "label": "Comp Weight Airmass Span",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      3.0
-    ],
-    "tier": "expert",
-    "unit": "airmass",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_weight_optics_kind": {
-    "help": "Optics class for c_col_psf (refractive|mirror|unknown).",
-    "kind": "static",
-    "label": "Comp Weight Optics Kind",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "forced_photometry_enabled": {
-    "help": "Inject force-eligible MASTERSTAR members missing from DAO each frame.",
-    "kind": "static",
-    "label": "Forced Photometry Enabled",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "forced_photometry_centroid_bound_fwhm": {
-    "help": "Bounded peak refine search radius in FWHM units for forced photometry.",
-    "kind": "static",
-    "label": "Forced Photometry Centroid Bound Fwhm",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.5,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": "FWHM",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "forced_photometry_margin_px": {
-    "help": "Extra pixel margin for forced-photometry footprint geometry gate.",
-    "kind": "static",
-    "label": "Forced Photometry Margin Px",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.0,
-      200.0
-    ],
-    "tier": "expert",
-    "unit": "px",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",

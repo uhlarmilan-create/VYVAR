@@ -340,12 +340,18 @@ def color_term_auto_from_band(band: PhotometricBand) -> bool:
 
 
 def compare_legacy_color_term_auto(obs_group: str) -> bool:
-    """Legacy ``resolve_apply_color_term(cfg, obs_group)`` with ``apply_color_term='auto'``."""
+    """Legacy ``resolve_apply_color_term(cfg, obs_group)`` with ``apply_color_term='auto'``.
+
+    Clears ``color_level_k_mag_per_bprp`` so this compares band-auto policy only
+    (Clear level export path is a separate IMPL-01 gate).
+    """
     from config import AppConfig  # noqa: PLC0415
     from photometry_core import resolve_apply_color_term  # noqa: PLC0415
 
     cfg = AppConfig()
     cfg.apply_color_term = "auto"
+    cfg.color_level_k_mag_per_bprp = None
+    cfg.color_level_k_stderr_mag_per_bprp = None
     return bool(resolve_apply_color_term(cfg, obs_group))
 
 

@@ -668,8 +668,14 @@
   // program is enabled.
   "k2_mode": "literature",
   // Whether a color-term transformation is applied to magnitudes ('off' keeps
-  // instrumental system).
-  "apply_color_term": "off",
+  // instrumental system). 'auto' enables Clear level k when set below.
+  "apply_color_term": "auto",
+  // Per-rig Clear/unfiltered level colour coefficient (mag per BP-RP). PRE-IMPL-01
+  // G-controlled: -0.373 +/- 0.090 on this telephoto CMOS. Remeasure per equipment.
+  "color_level_k_mag_per_bprp": -0.373,
+  "color_level_k_stderr_mag_per_bprp": 0.090,
+  // Isolation (FWHM units) for SNR-table measured growth-curve stars.
+  "snr_cog_isolation_fwhm": 3.0,
   // Upper cap of the fitted second-order extinction coefficient k2 (mag per
   // airmass per color unit).
   "k2_ceiling": 0.1,

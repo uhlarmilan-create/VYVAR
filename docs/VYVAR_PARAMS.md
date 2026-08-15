@@ -6,18 +6,18 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-15T09:09:05Z at git HEAD e5e3be1._
+_Generated 2026-08-15T13:22:31Z at git HEAD 2fd9071._
 
 ## Summary
 
-- Entries: 281
-- Tier: basic 13, advanced 68, expert 200
-- Kind: static 263, derived 0, resolved 18
-- Widget: auto 114, custom 142, hidden 25
-- Owner: db_static 9, config_runtime 253, fits_dynamic 6, internal 13
-- Scope: universal 232, rig 31, site 10, session 8
-- Scope key: none 232, rig 15, rig_band 2, rig_sampling 14, site 10, frame 8
-- Rig triage group: a 18, b 10, c 3
+- Entries: 284
+- Tier: basic 13, advanced 68, expert 203
+- Kind: static 266, derived 0, resolved 18
+- Widget: auto 114, custom 145, hidden 25
+- Owner: db_static 9, config_runtime 256, fits_dynamic 6, internal 13
+- Scope: universal 233, rig 33, site 10, session 8
+- Scope key: none 233, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -250,6 +250,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `savgol_polyorder` | 2 | - | expert | static | config_runtime | universal | none | n/a | custom | Savgol Polyorder |
 | `savgol_window_frac` | 0.5 | - | expert | static | config_runtime | universal | none | n/a | custom | Savgol Window Frac |
 | `sigma_sys_mag` | {} | - | expert | static | config_runtime | rig | rig | a | auto | Sigma Sys Mag |
+| `snr_cog_isolation_fwhm` | 3.0 | 1 .. 12 | expert | static | config_runtime | universal | none | n/a | custom | SNR COG Isolation FWHM |
 | `sysrem_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | SYSREM Enabled |
 | `sysrem_n_iter` | 3 | - | expert | static | config_runtime | universal | none | n/a | custom | SYSREM N Iter |
 | `temporal_bin_window` | 0 | 0 .. 51 | expert | static | config_runtime | universal | none | n/a | custom | Temporal Bin Window |
@@ -322,6 +323,8 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `apply_color_term` | off | - | expert | static | config_runtime | rig | rig_band | a | auto | Apply Color Term |
+| `color_level_k_mag_per_bprp` | None | -2 .. 2 | expert | static | config_runtime | rig | rig_band | a | custom | Color Level K |
+| `color_level_k_stderr_mag_per_bprp` | None | 0 .. 2 | expert | static | config_runtime | rig | rig_band | a | custom | Color Level K Stderr |
 | `k2_ceiling` | 0.1 | - | expert | static | config_runtime | universal | none | n/a | custom | K2 Ceiling |
 | `k2_defaults_bprp` | {} | - | expert | static | config_runtime | rig | rig_band | a | custom | K2 Defaults BPRP |
 | `k2_fit_consistency_sigma` | 2.0 | - | expert | static | config_runtime | universal | none | n/a | custom | K2 Fit Consistency Sigma |

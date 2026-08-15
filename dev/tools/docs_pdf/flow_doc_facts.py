@@ -35,7 +35,7 @@ DOC_CONFIG_FACTS: dict[str, object] = {
     "field_density_sparse_threshold": 300.0,
     "field_density_dense_threshold": 1000.0,
     "verify_mag_limit": 14.0,
-    "apply_color_term": "off",
+    "apply_color_term": "auto",
     "phase01_comparison_max_comp_rms": 0.1,
     "comp_max_slope_mmag_hr": 5.0,
     "sparse_trust_T_green": 1.5,

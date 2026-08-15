@@ -1107,6 +1107,59 @@ def export_lightcurve_reports(
     a_lines.append("#DATE=BJD\n")
     a_lines.append("#OBSTYPE=CCD\n")
     a_lines.append("#\n")
+    _ct_ok_export = False
+    _ct_c1_e = float("nan")
+    _ct_c1_se_e = float("nan")
+    _ct_corr_e = float("nan")
+    _ct_mode_e = ""
+    if "ct_ok" in lc_normal.columns:
+        try:
+            _ct_ok_export = False
+            _ct_series = lc_normal["ct_ok"]
+            for _v in _ct_series.tolist():
+                if isinstance(_v, bool) and _v:
+                    _ct_ok_export = True
+                    break
+                if str(_v).strip().lower() in ("true", "1", "yes"):
+                    _ct_ok_export = True
+                    break
+        except Exception:  # noqa: BLE001
+            _ct_ok_export = False
+    if _ct_ok_export:
+        try:
+            _ct_c1_e = float(pd.to_numeric(lc_normal["ct_c1"], errors="coerce").dropna().iloc[0])
+        except Exception:  # noqa: BLE001
+            _ct_c1_e = float("nan")
+        try:
+            if "ct_c1_stderr" in lc_normal.columns:
+                _ct_c1_se_e = float(
+                    pd.to_numeric(lc_normal["ct_c1_stderr"], errors="coerce").dropna().iloc[0]
+                )
+        except Exception:  # noqa: BLE001
+            _ct_c1_se_e = float("nan")
+        try:
+            _ct_corr_e = float(
+                pd.to_numeric(lc_normal["ct_correction"], errors="coerce").dropna().iloc[0]
+            )
+        except Exception:  # noqa: BLE001
+            _ct_corr_e = float("nan")
+        try:
+            if "ct_mode" in lc_normal.columns:
+                _ct_mode_e = str(lc_normal["ct_mode"].iloc[0] or "").strip()
+        except Exception:  # noqa: BLE001
+            _ct_mode_e = ""
+        a_lines.append(
+            f"#COLOR_LEVEL: applied mode={_ct_mode_e or 'ct'} "
+            f"k={_ct_c1_e:+.4f}"
+            + (f"+/-{_ct_c1_se_e:.4f}" if math.isfinite(_ct_c1_se_e) else "")
+            + " mag/BP-RP "
+            f"correction={_ct_corr_e:+.4f} mag (constant; export-only)\n"
+        )
+        a_lines.append(
+            "#COLOR_LEVEL: magnitudes are colour-level corrected toward ensemble "
+            "weighted BP-RP; not a filter transformation to Johnson/Cousins\n"
+        )
+    _trans_flag = "YES" if _ct_ok_export else "NO"
 
     starid = vsx_name[:30]
     for row_pos, (_, row) in enumerate(lc_normal.iterrows()):
@@ -1133,7 +1186,7 @@ def export_lightcurve_reports(
                     mag_s,
                     err_s,
                     aavso_filter,
-                    "NO",
+                    _trans_flag,
                     "STD",
                     "ENSEMBLE",
                     "na",

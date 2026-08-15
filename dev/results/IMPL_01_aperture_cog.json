@@ -1,0 +1,73 @@
+{
+  "commit_sha": "2fd9071",
+  "ee_path": "measured_growth_curve",
+  "ee_n_cog": 41,
+  "ee_ref_r_px": 15.642528782000895,
+  "ee_flatness_tail_over_norm": 1.0,
+  "ee_isolation_fwhm": 3.0,
+  "ee_min_stars_required": 8,
+  "ee_fallback_reason": null,
+  "n_bound_hits": 0,
+  "fwhm_px": 3.4761175071113097,
+  "per_mag_bin": [
+    {
+      "mag": 8.0,
+      "r_old_px": 4.561,
+      "r_new_px": 11.031,
+      "ee_at_new": 0.99221,
+      "ee_old_at_2p711": 0.663,
+      "bound_hit": "none"
+    },
+    {
+      "mag": 10.0,
+      "r_old_px": 4.061,
+      "r_new_px": 10.981,
+      "ee_at_new": 0.99041,
+      "ee_old_at_2p711": 0.663,
+      "bound_hit": "none"
+    },
+    {
+      "mag": 12.0,
+      "r_old_px": 3.261,
+      "r_new_px": 10.481,
+      "ee_at_new": 0.95624,
+      "ee_old_at_2p711": 0.663,
+      "bound_hit": "none"
+    },
+    {
+      "mag": 14.0,
+      "r_old_px": 2.711,
+      "r_new_px": 10.481,
+      "ee_at_new": 0.95624,
+      "ee_old_at_2p711": 0.663,
+      "bound_hit": "none"
+    },
+    {
+      "mag": 16.0,
+      "r_old_px": 2.711,
+      "r_new_px": 10.481,
+      "ee_at_new": 0.95624,
+      "ee_old_at_2p711": 0.663,
+      "bound_hit": "none"
+    }
+  ],
+  "check_star_scatter": {
+    "before_mmag": null,
+    "after_mmag": null,
+    "method": "LOO median-ensemble MAD of instrumental mags at fixed r (old=2.711px vs new_med=10.481px) on same frames; not full Phase-2A re-export",
+    "n_frames": 40,
+    "after_direct_mmag": 13.044475239068316,
+    "before_direct_mmag": 29.09160459302306,
+    "n_stars": 8,
+    "r_new_median_px": 10.481
+  },
+  "q4_night_ee_quantity": "common_mode_absolute_EE_single_star_frame_to_frame_demeaned_MAD; NOT residual after ensemble common-mode cancellation",
+  "q4_night_ee_mad_mmag": 0.008,
+  "q4_wide_err_note": "Named as common-mode absolute EE variation. Tiny 0.008 mmag on draft 514 does not establish differential residual; aperture-loss-vs-seeing as WIDE-ERR driver is not supported by this quantity as measured.",
+  "color_level_literature": {
+    "k_level_mag_per_bprp": -0.373,
+    "k_level_stderr": 0.09,
+    "plausible": true,
+    "cite": "AAVSO CCD Photometry Guide: untransformed Clear/standard residuals 'as high as several tenths of a magnitude'; |k|=0.373 mag/BP-RP sits in that range for Delta(BP-RP)~1. Gaia G-V linear terms are smaller (~0.01-0.05); Clear red CMOS to Gaia G is expected larger. Per-rig only."
+  }
+}

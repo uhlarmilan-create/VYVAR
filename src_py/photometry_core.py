@@ -1297,6 +1297,139 @@ def _sky_pp_for_photometric_error(row: Any) -> float:
     return 0.0
 
 
+def _gaussian_ee_fraction(r_px: float, fwhm_px: float) -> float:
+    """Analytic Gaussian enclosed-energy fraction at radius ``r_px`` (sigma = FWHM/2.355)."""
+    fw = float(fwhm_px)
+    if not (math.isfinite(fw) and fw > 0 and math.isfinite(float(r_px)) and float(r_px) >= 0):
+        return float("nan")
+    sigma = fw / 2.355
+    return float(1.0 - math.exp(-(float(r_px) ** 2) / (2.0 * sigma**2)))
+
+
+def _interp_ee_fraction(
+    r_px: float,
+    ee_radii: np.ndarray,
+    ee_curve: np.ndarray,
+) -> float:
+    """Linear interpolation of a measured EE curve; clamp outside the ladder."""
+    rr = np.asarray(ee_radii, dtype=np.float64)
+    ee = np.asarray(ee_curve, dtype=np.float64)
+    if rr.size < 2 or ee.size != rr.size:
+        return float("nan")
+    r = float(r_px)
+    if not math.isfinite(r):
+        return float("nan")
+    return float(np.interp(r, rr, ee, left=float(ee[0]), right=float(ee[-1])))
+
+
+def measure_growth_curve_ee(
+    data: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    fwhm_px: float,
+    sky_pp: np.ndarray | None = None,
+    dao_flux: np.ndarray | None = None,
+    peak_max_adu: np.ndarray | None = None,
+    sat_limit_adu: np.ndarray | None = None,
+    isolation_fwhm: float = 3.0,
+    ref_fwhm: float = 4.5,
+    ladder_step_px: float = 0.5,
+    min_stars: int = 8,
+    snr_min: float = 50.0,
+    sat_frac: float = 0.85,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+    max_stars: int = 60,
+    aperture_r_px: np.ndarray | None = None,
+) -> dict[str, Any]:
+    """Measured draft growth curve (encircled energy), reusing COG-A1 selection rules.
+
+    Isolation default is **3 FWHM** (catalogue neighbour exclusion for SNR sizing).
+    Normalisation radius is ``ref_fwhm * fwhm_px``; callers should verify flatness there.
+
+    Minimum ``min_stars`` default **8** matches ``cog_min_stars``: a robust median EE
+    curve needs a small ensemble; Q4 used 12 when available, but 8 is the production
+    COG gate. Below ``min_stars``, ``ok=False`` and the SNR table must fall back to
+    the Gaussian model explicitly.
+    """
+    # Delegate star selection + ladder photometry to the existing COG builder so
+    # SNR sizing and aperture-correction share one growth-curve implementation.
+    n = int(len(x))
+    if n == 0:
+        return {
+            "ok": False,
+            "n_cog": 0,
+            "ee_radii": None,
+            "ee_curve": None,
+            "ref_r_px": float("nan"),
+            "flatness_tail_over_norm": float("nan"),
+            "min_stars_required": int(min_stars),
+            "isolation_fwhm": float(isolation_fwhm),
+            "reason": "no_stars",
+        }
+    xx = np.asarray(x, dtype=np.float64)
+    yy = np.asarray(y, dtype=np.float64)
+    if dao_flux is None:
+        flux = np.ones(n, dtype=np.float64)
+    else:
+        flux = np.asarray(dao_flux, dtype=np.float64)
+    if sky_pp is None:
+        skp = np.zeros(n, dtype=np.float64)
+    else:
+        skp = np.asarray(sky_pp, dtype=np.float64)
+    if aperture_r_px is None:
+        rap = np.full(n, max(1.0, 0.8 * float(fwhm_px)), dtype=np.float64)
+    else:
+        rap = np.asarray(aperture_r_px, dtype=np.float64)
+
+    cog = compute_per_frame_cog_correction(
+        np.asarray(data, dtype=np.float64),
+        xx,
+        yy,
+        flux,
+        rap,
+        skp,
+        fwhm_px=float(fwhm_px),
+        peak_max_adu=peak_max_adu,
+        sat_limit_adu=sat_limit_adu,
+        ref_fwhm=float(ref_fwhm),
+        ladder_step_px=float(ladder_step_px),
+        min_stars=int(min_stars),
+        isolation_fwhm=float(isolation_fwhm),
+        snr_min=float(snr_min),
+        sat_frac=float(sat_frac),
+        gain=float(gain),
+        read_noise=float(read_noise),
+        max_stars=int(max_stars),
+    )
+    ee_radii = cog.get("ee_radii")
+    ee_curve = cog.get("ee_curve")
+    ref_r = float(cog.get("ref_r_px", float("nan")))
+    flat = float("nan")
+    if (
+        bool(cog.get("cog_ok"))
+        and ee_radii is not None
+        and ee_curve is not None
+        and np.asarray(ee_radii).size >= 5
+    ):
+        ee_a = np.asarray(ee_curve, dtype=np.float64)
+        # Flatness: median of last 5 ladder points over the normalisation point (=1).
+        flat = float(np.nanmedian(ee_a[-5:]))
+    ok = bool(cog.get("cog_ok")) and ee_radii is not None and ee_curve is not None
+    return {
+        "ok": ok,
+        "n_cog": int(cog.get("n_cog", 0) or 0),
+        "ee_radii": np.asarray(ee_radii, dtype=np.float64) if ee_radii is not None else None,
+        "ee_curve": np.asarray(ee_curve, dtype=np.float64) if ee_curve is not None else None,
+        "ref_r_px": ref_r,
+        "flatness_tail_over_norm": flat,
+        "min_stars_required": int(min_stars),
+        "isolation_fwhm": float(isolation_fwhm),
+        "reason": "" if ok else "too_few_isolated_cog_stars",
+    }
+
+
 def compute_snr_optimal_aperture_table(
     fwhm_px: float,
     sky_adu_per_px: float,
@@ -1309,19 +1442,23 @@ def compute_snr_optimal_aperture_table(
     r_step_px: float = 0.05,
     zero_point: float = 25.0,
     bkg_var_adu2_per_px: float | None = None,
+    ee_radii: np.ndarray | Sequence[float] | None = None,
+    ee_curve: np.ndarray | Sequence[float] | None = None,
+    ee_source: str | None = None,
 ) -> dict[str, Any]:
-    """SNR-optimal circular aperture radius per magnitude bin (Gaussian PSF enclosed flux).
+    """SNR-optimal circular aperture radius per magnitude bin.
+
+    Prefer a **measured** draft growth curve (``ee_radii`` / ``ee_curve``). When that
+    curve is missing or invalid, fall back to the analytic Gaussian enclosed-flux
+    model and record ``ee_path='gaussian_fallback'`` in the artifact.
 
     SNR = F(r)/g / sqrt(F(r)/g + N_pix.bkg_var/g)  (dimensionless; flux and noise in e-).
 
-    When ``bkg_var_adu2_per_px`` is supplied, per-pixel background variance is taken from
-    measured star-free pixels (same frame) instead of reconstructing ``sky/g + (RN/g)^2``.
-    Residual limitation: a per-pixel metric ignores aperture-scale covariance on resampled
-    frames (Fruchter & Hook 2002); acceptable here because ranking, not absolute SNR,
-    drives the optimal-radius choice.
+    Bounds ``r_min_fwhm``..``r_max_fwhm`` remain search limits. A bin whose optimum
+    lands on a bound is **not** an unconstrained optimum; the artifact flags it via
+    ``bound_hit_by_mag``.
     """
-    # SNR-optimal aperture selection
-    # Howell (1989) PASP 101:616, S3 - SNR(r) = F(r) / sqrt(F(r)/g + pi*r^2*sky/g + pi*r^2*(RN/g)^2)
+    # Howell (1989) PASP 101:616, S3
     fw = float(fwhm_px)
     if not math.isfinite(fw) or fw <= 0:
         fw = 3.5
@@ -1337,21 +1474,60 @@ def compute_snr_optimal_aperture_table(
     )
     bkg_var_px = float(bkg_var_adu2_per_px) if use_meas_bkg else float("nan")
 
-    sigma = fw / 2.355
     r_min_px = float(r_min_fwhm) * fw
     r_max_px = float(r_max_fwhm) * fw
-    r_values = np.arange(r_min_px, r_max_px, float(r_step_px))
+    # Measured CoG: allow the search to reach the normalisation radius of the curve
+    # (where EE~1). The legacy 2.5*FWHM cap was a Gaussian-search bound; keeping it
+    # when the measured optimum lies beyond it would report a bound hit that is not
+    # an optimum (IMPL-01).
+    if ee_radii is not None and ee_curve is not None:
+        try:
+            _ee_r_probe = np.asarray(ee_radii, dtype=np.float64)
+            if _ee_r_probe.size >= 2 and np.all(np.isfinite(_ee_r_probe)):
+                r_max_px = max(float(r_max_px), float(np.nanmax(_ee_r_probe)))
+        except (TypeError, ValueError):
+            pass
+    r_values = np.arange(r_min_px, r_max_px + 0.5 * float(r_step_px), float(r_step_px))
     if r_values.size == 0:
         r_values = np.array([max(0.5, r_min_px)])
 
+    use_measured = False
+    ee_r_arr: np.ndarray | None = None
+    ee_c_arr: np.ndarray | None = None
+    if ee_radii is not None and ee_curve is not None:
+        ee_r_arr = np.asarray(ee_radii, dtype=np.float64)
+        ee_c_arr = np.asarray(ee_curve, dtype=np.float64)
+        if (
+            ee_r_arr.size >= 2
+            and ee_c_arr.size == ee_r_arr.size
+            and np.all(np.isfinite(ee_r_arr))
+            and np.all(np.isfinite(ee_c_arr))
+            and float(np.nanmax(ee_c_arr)) > 0
+        ):
+            use_measured = True
+
+    ee_path = "measured_growth_curve" if use_measured else "gaussian_fallback"
+    if ee_source and use_measured:
+        ee_path = str(ee_source)
+
     table: dict[float, float] = {}
+    ee_at_opt: dict[float, float] = {}
+    bound_hit_by_mag: dict[float, str] = {}
     mags = np.arange(float(mag_range[0]), float(mag_range[1]) + float(mag_step), float(mag_step))
+    tol = max(float(r_step_px) * 0.51, 1e-6)
     for mag in mags:
         flux_total = 10.0 ** ((float(zero_point) - float(mag)) / 2.5)
         best_snr = -1.0
         best_r = float(r_values[0])
+        best_ee = float("nan")
         for r in r_values:
-            enclosed = flux_total * (1.0 - np.exp(-(float(r) ** 2) / (2.0 * sigma**2)))
+            if use_measured and ee_r_arr is not None and ee_c_arr is not None:
+                ee_frac = _interp_ee_fraction(float(r), ee_r_arr, ee_c_arr)
+            else:
+                ee_frac = _gaussian_ee_fraction(float(r), fw)
+            if not (math.isfinite(ee_frac) and ee_frac > 0):
+                continue
+            enclosed = flux_total * float(ee_frac)
             area = math.pi * float(r) ** 2
             n_photon = enclosed / g
             if use_meas_bkg:
@@ -1365,9 +1541,18 @@ def compute_snr_optimal_aperture_table(
             if snr > best_snr:
                 best_snr = snr
                 best_r = float(r)
-        table[round(float(mag), 1)] = round(best_r, 3)
+                best_ee = float(ee_frac)
+        mag_key = round(float(mag), 1)
+        table[mag_key] = round(best_r, 3)
+        ee_at_opt[mag_key] = round(best_ee, 6) if math.isfinite(best_ee) else float("nan")
+        if abs(best_r - r_min_px) <= tol:
+            bound_hit_by_mag[mag_key] = "r_min"
+        elif abs(best_r - float(r_values[-1])) <= tol or abs(best_r - r_max_px) <= tol:
+            bound_hit_by_mag[mag_key] = "r_max"
+        else:
+            bound_hit_by_mag[mag_key] = "none"
 
-    return {
+    out: dict[str, Any] = {
         "table": table,
         "fwhm_px": fw,
         "sky_adu_per_px": sky,
@@ -1375,7 +1560,17 @@ def compute_snr_optimal_aperture_table(
         "read_noise": rn,
         "r_min_px": r_min_px,
         "r_max_px": r_max_px,
+        "r_min_fwhm": float(r_min_fwhm),
+        "r_max_fwhm": float(r_max_fwhm),
+        "ee_path": ee_path,
+        "ee_at_opt_by_mag": ee_at_opt,
+        "bound_hit_by_mag": bound_hit_by_mag,
+        "n_bound_hits": int(sum(1 for v in bound_hit_by_mag.values() if v != "none")),
     }
+    if use_measured and ee_r_arr is not None and ee_c_arr is not None:
+        out["ee_radii"] = [round(float(v), 4) for v in ee_r_arr.tolist()]
+        out["ee_curve"] = [round(float(v), 6) for v in ee_c_arr.tolist()]
+    return out
 
 
 def _resolve_phase2a_equipment_id(
@@ -2139,6 +2334,208 @@ def _median_bkg_var_from_aligned_frames(
     return med if math.isfinite(med) and med >= 0 else None
 
 
+def _load_star_xy_for_snr_ee(
+    *,
+    masterstars_csv: Path | str | None,
+    draft_dir: Path,
+    masterstar_fits_path: Path | str | None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
+    """Return (x, y, flux_proxy, sky_proxy) for growth-curve measurement, or None."""
+    candidates: list[Path] = []
+    if masterstars_csv is not None and str(masterstars_csv).strip():
+        candidates.append(Path(masterstars_csv))
+    ms_path = Path(masterstar_fits_path) if masterstar_fits_path else None
+    if ms_path is not None:
+        candidates.append(ms_path.parent / "masterstars_full_match.csv")
+        candidates.append(ms_path.parent / "masterstars.csv")
+    candidates.append(Path(draft_dir) / "masterstars_full_match.csv")
+    # Existing proc catalog (re-runs / triage): first frame positions.
+    for proc_root in (
+        Path(draft_dir) / "detrended_aligned" / "lights",
+        Path(draft_dir) / "calibrated" / "lights",
+    ):
+        if proc_root.is_dir():
+            for p in sorted(proc_root.rglob("proc_*.csv"))[:1]:
+                candidates.append(p)
+            break
+
+    df = None
+    for p in candidates:
+        try:
+            if p.is_file():
+                df = pd.read_csv(p, nrows=50000)
+                if "x" in df.columns and "y" in df.columns:
+                    break
+                df = None
+        except Exception:  # noqa: BLE001
+            df = None
+    if df is None or df.empty:
+        return None
+    x = pd.to_numeric(df.get("x"), errors="coerce").to_numpy(dtype=np.float64)
+    y = pd.to_numeric(df.get("y"), errors="coerce").to_numpy(dtype=np.float64)
+    flux = pd.to_numeric(df.get("dao_flux", df.get("flux")), errors="coerce").to_numpy(
+        dtype=np.float64
+    )
+    if not np.any(np.isfinite(flux) & (flux > 0)):
+        # Brightness proxy from catalog mag when flux missing.
+        mag = pd.to_numeric(df.get("mag", df.get("phot_g_mean_mag")), errors="coerce").to_numpy(
+            dtype=np.float64
+        )
+        flux = np.where(np.isfinite(mag), 10.0 ** ((25.0 - mag) / 2.5), np.nan)
+    sky = pd.to_numeric(
+        df.get("sky_adu_per_px_annulus", df.get("noise_floor_adu")), errors="coerce"
+    ).to_numpy(dtype=np.float64)
+    if not np.any(np.isfinite(sky)):
+        sky = np.zeros(len(x), dtype=np.float64)
+    else:
+        sky = np.where(np.isfinite(sky), sky, float(np.nanmedian(sky[np.isfinite(sky)])))
+    ok = np.isfinite(x) & np.isfinite(y) & np.isfinite(flux) & (flux > 0)
+    if int(ok.sum()) < 8:
+        return None
+    return x[ok], y[ok], flux[ok], sky[ok]
+
+
+def _frame_data_for_snr_ee(
+    *,
+    masterstar_fits_path: Path | str | None,
+    aligned_fits_paths: Sequence[Path | str] | None,
+    aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None,
+) -> np.ndarray | None:
+    """Prefer a median of up to 5 aligned frames; else MASTERSTAR pixels."""
+    arrays: list[np.ndarray] = []
+    if aligned_ram_frames:
+        for _name, data, _hdr in list(aligned_ram_frames)[:5]:
+            try:
+                a = np.asarray(data, dtype=np.float64)
+                if a.ndim == 2 and a.size > 0:
+                    arrays.append(a)
+            except Exception:  # noqa: BLE001
+                continue
+    if not arrays and aligned_fits_paths:
+        for fp in list(aligned_fits_paths)[:5]:
+            try:
+                with astrofits.open(Path(fp), memmap=False) as hdul:
+                    a = np.asarray(hdul[0].data, dtype=np.float64)
+                if a.ndim == 2 and a.size > 0:
+                    arrays.append(a)
+            except Exception:  # noqa: BLE001
+                continue
+    if not arrays and masterstar_fits_path is not None:
+        try:
+            with astrofits.open(Path(masterstar_fits_path), memmap=False) as hdul:
+                a = np.asarray(hdul[0].data, dtype=np.float64)
+            if a.ndim == 2 and a.size > 0:
+                arrays.append(a)
+        except Exception:  # noqa: BLE001
+            pass
+    if not arrays:
+        return None
+    if len(arrays) == 1:
+        return arrays[0]
+    # Align shapes by crop to common min extent.
+    h = min(a.shape[0] for a in arrays)
+    w = min(a.shape[1] for a in arrays)
+    stack = np.stack([a[:h, :w] for a in arrays], axis=0)
+    return np.nanmedian(stack, axis=0)
+
+
+def _estimate_annulus_sky_pp(
+    data: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    r_in: float,
+    r_out: float,
+) -> np.ndarray:
+    """Per-star median annulus sky (ADU/px) for COG when catalog sky is missing."""
+    from photutils.aperture import CircularAnnulus, aperture_photometry as _aphot
+
+    n = int(len(x))
+    out = np.full(n, float("nan"), dtype=np.float64)
+    d = np.asarray(data, dtype=np.float64)
+    for i in range(n):
+        try:
+            xi, yi = float(x[i]), float(y[i])
+            if not (math.isfinite(xi) and math.isfinite(yi)):
+                continue
+            ann = CircularAnnulus([(xi, yi)], r_in=float(r_in), r_out=float(r_out))
+            tab = _aphot(d, ann, method="exact")
+            area = float(ann.area)
+            if area > 0 and math.isfinite(float(tab["aperture_sum"][0])):
+                out[i] = float(tab["aperture_sum"][0]) / area
+        except Exception:  # noqa: BLE001
+            continue
+    return out
+
+
+def _measure_ee_curve_for_snr_table(
+    *,
+    fwhm_px: float,
+    gain: float,
+    read_noise: float,
+    draft_dir: Path,
+    masterstar_fits_path: Path | str | None,
+    masterstars_csv: Path | str | None,
+    aligned_fits_paths: Sequence[Path | str] | None,
+    aligned_ram_frames: Sequence[tuple[str, Any, Any]] | None,
+    cfg: Any | None,
+) -> dict[str, Any]:
+    """Attempt measured growth curve for SNR sizing; never silent on failure."""
+    _cfg = cfg
+    iso = float(getattr(_cfg, "snr_cog_isolation_fwhm", 3.0) if _cfg is not None else 3.0)
+    ref_fwhm = float(getattr(_cfg, "cog_ref_fwhm", 4.5) if _cfg is not None else 4.5)
+    min_stars = int(getattr(_cfg, "cog_min_stars", 8) if _cfg is not None else 8)
+    snr_min = float(getattr(_cfg, "cog_snr_min", 50.0) if _cfg is not None else 50.0)
+    sat_frac = float(getattr(_cfg, "cog_sat_frac", 0.85) if _cfg is not None else 0.85)
+    step = float(getattr(_cfg, "cog_ladder_step_px", 0.5) if _cfg is not None else 0.5)
+    step_f = getattr(_cfg, "cog_ladder_step_fwhm", None) if _cfg is not None else None
+    if step_f is not None and math.isfinite(float(step_f)) and float(step_f) > 0:
+        step = float(step_f) * float(fwhm_px)
+
+    xy = _load_star_xy_for_snr_ee(
+        masterstars_csv=masterstars_csv,
+        draft_dir=draft_dir,
+        masterstar_fits_path=masterstar_fits_path,
+    )
+    data = _frame_data_for_snr_ee(
+        masterstar_fits_path=masterstar_fits_path,
+        aligned_fits_paths=aligned_fits_paths,
+        aligned_ram_frames=aligned_ram_frames,
+    )
+    if xy is None or data is None:
+        return {
+            "ok": False,
+            "reason": "no_star_catalog_or_frame",
+            "min_stars_required": min_stars,
+            "isolation_fwhm": iso,
+        }
+    x, y, flux, sky = xy
+    # Always estimate local annulus sky on the frame used for COG. Catalog sky on
+    # sky-subtracted proc frames is near zero and would make EE track aperture area
+    # (sky growth), not the PSF (caught IMPL-01).
+    r_in = max(4.0, 3.0 * float(fwhm_px))
+    r_out = max(r_in + 2.0, 5.0 * float(fwhm_px))
+    sky_est = _estimate_annulus_sky_pp(data, x, y, r_in=r_in, r_out=r_out)
+    med = float(np.nanmedian(sky_est)) if np.any(np.isfinite(sky_est)) else 0.0
+    sky = np.where(np.isfinite(sky_est), sky_est, med)
+    return measure_growth_curve_ee(
+        data,
+        x,
+        y,
+        fwhm_px=float(fwhm_px),
+        sky_pp=sky,
+        dao_flux=flux,
+        isolation_fwhm=float(iso),
+        ref_fwhm=float(ref_fwhm),
+        ladder_step_px=float(step),
+        min_stars=int(min_stars),
+        snr_min=float(snr_min),
+        sat_frac=float(sat_frac),
+        gain=float(gain),
+        read_noise=float(read_noise),
+    )
+
+
 def precompute_and_save_snr_aperture_table_for_draft(
     draft_dir: Path | str,
     *,
@@ -2152,6 +2549,8 @@ def precompute_and_save_snr_aperture_table_for_draft(
     equipment_id: int | None = None,
     sky_fallback: float = 1581.6,
     prematch_peak_sigma_floor: float = 10.0,
+    masterstars_csv: Path | str | None = None,
+    cfg: Any | None = None,
 ) -> dict[str, Any] | None:
     """Build and write ``aperture_snr_table.json`` before per-frame catalog export."""
     dd = Path(draft_dir)
@@ -2249,13 +2648,61 @@ def precompute_and_save_snr_aperture_table_for_draft(
             float(bkg_var_px),
         )
 
-    snr_table = compute_snr_optimal_aperture_table(
+    ee_meas = _measure_ee_curve_for_snr_table(
         fwhm_px=float(fwhm_px),
-        sky_adu_per_px=float(sky_adu),
         gain=float(gain_p),
         read_noise=float(rn_p),
-        bkg_var_adu2_per_px=bkg_var_px,
+        draft_dir=dd,
+        masterstar_fits_path=masterstar_fits_path,
+        masterstars_csv=masterstars_csv,
+        aligned_fits_paths=aligned_fits_paths,
+        aligned_ram_frames=aligned_ram_frames,
+        cfg=cfg,
     )
+    if bool(ee_meas.get("ok")):
+        logging.info(
+            "[PIPELINE] SNR table EE path=measured_growth_curve n_cog=%s ref_r=%.2f "
+            "flatness=%.4f isolation_fwhm=%.1f",
+            int(ee_meas.get("n_cog", 0) or 0),
+            float(ee_meas.get("ref_r_px", float("nan"))),
+            float(ee_meas.get("flatness_tail_over_norm", float("nan"))),
+            float(ee_meas.get("isolation_fwhm", float("nan"))),
+        )
+        snr_table = compute_snr_optimal_aperture_table(
+            fwhm_px=float(fwhm_px),
+            sky_adu_per_px=float(sky_adu),
+            gain=float(gain_p),
+            read_noise=float(rn_p),
+            bkg_var_adu2_per_px=bkg_var_px,
+            ee_radii=ee_meas.get("ee_radii"),
+            ee_curve=ee_meas.get("ee_curve"),
+            ee_source="measured_growth_curve",
+        )
+        snr_table["ee_n_cog"] = int(ee_meas.get("n_cog", 0) or 0)
+        snr_table["ee_ref_r_px"] = float(ee_meas.get("ref_r_px", float("nan")))
+        snr_table["ee_flatness_tail_over_norm"] = float(
+            ee_meas.get("flatness_tail_over_norm", float("nan"))
+        )
+        snr_table["ee_isolation_fwhm"] = float(ee_meas.get("isolation_fwhm", 3.0))
+        snr_table["ee_min_stars_required"] = int(ee_meas.get("min_stars_required", 8))
+    else:
+        logging.warning(
+            "[PIPELINE] SNR table EE path=gaussian_fallback reason=%s "
+            "(min_stars=%s isolation_fwhm=%s)",
+            str(ee_meas.get("reason") or "unknown"),
+            ee_meas.get("min_stars_required"),
+            ee_meas.get("isolation_fwhm"),
+        )
+        snr_table = compute_snr_optimal_aperture_table(
+            fwhm_px=float(fwhm_px),
+            sky_adu_per_px=float(sky_adu),
+            gain=float(gain_p),
+            read_noise=float(rn_p),
+            bkg_var_adu2_per_px=bkg_var_px,
+        )
+        snr_table["ee_fallback_reason"] = str(ee_meas.get("reason") or "unknown")
+        snr_table["ee_min_stars_required"] = int(ee_meas.get("min_stars_required", 8) or 8)
+        snr_table["ee_isolation_fwhm"] = float(ee_meas.get("isolation_fwhm", 3.0) or 3.0)
     if isinstance(fwhm_prov, dict):
         for k, v in fwhm_prov.items():
             if v is not None:
@@ -2272,10 +2719,12 @@ def precompute_and_save_snr_aperture_table_for_draft(
 
     logging.info(
         "[PIPELINE] aperture_snr_table.json ulozena pred exportom CSV: "
-        "mag7->%.2fpx mag11->%.2fpx mag14->%.2fpx (%s)",
+        "mag7->%.2fpx mag11->%.2fpx mag14->%.2fpx ee_path=%s bound_hits=%s (%s)",
         _r_at(7.0),
         _r_at(11.0),
         _r_at(14.0),
+        str(snr_table.get("ee_path")),
+        int(snr_table.get("n_bound_hits", 0) or 0),
         out_path,
     )
     return snr_table
@@ -3913,16 +4362,21 @@ def apply_color_term(
     comp_bp_rp: dict[str, float],
     comp_quality: dict[str, dict],
     c1: float,
+    *,
+    comp_weights: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, float, float]:
-    """
-    Aplikuje color term korekciu na kalibrovanu krivku.
+    """Apply a constant colour correction to the calibrated light curve.
 
-    Vzorec:
-      bp_rp_comp_med = median(bp_rp pouzitych COMP)
-      ct_correction  = c1 * (target_bp_rp - bp_rp_comp_med)
+    Formula (existing path, removes PRE-IMPL-01 level bias):
+      bp_rp_comp_ref = weighted_mean(bp_rp) when weights given, else median
+      ct_correction  = c1 * (target_bp_rp - bp_rp_comp_ref)
       mag_calib_ct   = mag_calib + ct_correction
 
-    Returns: (mag_calib_ct, ct_correction, bp_rp_comp_med)
+    The correction is a **per-target / per-draft constant** (no airmass / epoch
+    dependence). PRE-IMPL-01 measured level ~ k * (ens - target); adding
+    ``c1 * (target - ens)`` with ``c1 = k_level`` removes that bias.
+
+    Returns: (mag_calib_ct, ct_correction, bp_rp_comp_ref)
     """
     if mag_calib is None:
         return np.asarray([], dtype=np.float64), 0.0, float("nan")
@@ -3931,23 +4385,41 @@ def apply_color_term(
         return base.copy(), 0.0, float("nan")
 
     usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
-    bps = [
-        float(comp_bp_rp.get(cid, float("nan")))
-        for cid in usable
-        if math.isfinite(float(comp_bp_rp.get(cid, float("nan"))))
-    ]
+    bps: list[float] = []
+    wts: list[float] = []
+    for cid in usable:
+        bp = float(comp_bp_rp.get(cid, float("nan")))
+        if not math.isfinite(bp):
+            continue
+        if comp_weights is not None:
+            w = float(comp_weights.get(cid, float("nan")))
+            if not (math.isfinite(w) and w > 0):
+                continue
+            bps.append(bp)
+            wts.append(w)
+        else:
+            bps.append(bp)
+            wts.append(1.0)
     if not bps:
         return base.copy(), 0.0, float("nan")
-    bp_med = float(np.median(np.asarray(bps, dtype=np.float64)))
-    corr = float(c1) * (float(target_bp_rp) - float(bp_med))
+    bp_arr = np.asarray(bps, dtype=np.float64)
+    wt_arr = np.asarray(wts, dtype=np.float64)
+    if comp_weights is not None and float(np.sum(wt_arr)) > 0:
+        bp_ref = float(np.sum(wt_arr * bp_arr) / np.sum(wt_arr))
+        ref_label = "comp_wmean"
+    else:
+        bp_ref = float(np.median(bp_arr))
+        ref_label = "comp_med"
+    corr = float(c1) * (float(target_bp_rp) - float(bp_ref))
     out = base + float(corr)
     logging.info(
-        "[COLOR TERM] target bp_rp=%.3f, comp_med bp_rp=%.3f, correction=%+.4f mag",
+        "[COLOR TERM] target bp_rp=%.3f, %s bp_rp=%.3f, correction=%+.4f mag (constant)",
         float(target_bp_rp),
-        float(bp_med),
+        ref_label,
+        float(bp_ref),
         float(corr),
     )
-    return out, float(corr), float(bp_med)
+    return out, float(corr), float(bp_ref)
 
 
 def _check_color_term_extrapolation(
@@ -4001,6 +4473,7 @@ def should_apply_color_term(
     *,
     min_comp_for_ct: int = 7,
     max_stderr_ratio: float = 0.5,
+    cfg: Any | None = None,
 ) -> tuple[bool, str]:
     """
     Auto-rozhodnutie ci aplikovat color term korekciu.
@@ -4008,10 +4481,30 @@ def should_apply_color_term(
     Returns: (apply: bool, reason: str)
     reason = kratky popis preco sa CT aplikuje alebo nie
     """
-    from band_classify import classify_photometric_band, color_term_auto_from_band
+    from band_classify import (
+        band_failsafe_clear,
+        classify_photometric_band,
+        color_term_auto_from_band,
+    )
 
     filter_raw = str(obs_group or "").split("|")[0].strip()
     band = classify_photometric_band(obs_group)
+
+    # Clear / unfiltered: fixed per-rig level coefficient (export-only), not a night fit.
+    if band_failsafe_clear(band):
+        k = getattr(cfg, "color_level_k_mag_per_bprp", None) if cfg is not None else None
+        k_se = (
+            getattr(cfg, "color_level_k_stderr_mag_per_bprp", None) if cfg is not None else None
+        )
+        if k is not None and math.isfinite(float(k)) and abs(float(k)) > 1e-6:
+            se = float(k_se) if k_se is not None and math.isfinite(float(k_se)) else float("nan")
+            return True, (
+                f"{band.value} ({filter_raw}) - clear level k={float(k):+.4f}"
+                + (f" +- {se:.4f}" if math.isfinite(se) else "")
+                + " mag/BP-RP (export-only)"
+            )
+        return False, f"{band.value} ({filter_raw}) - CT nie je potrebny (no color_level_k)"
+
     if not color_term_auto_from_band(band):
         return False, f"{band.value} ({filter_raw}) - CT nie je potrebny"
 
@@ -4090,7 +4583,11 @@ def resolve_apply_color_term(
     aavso_code: str | None = None,
 ) -> bool:
     """User/config toggle: CT applies correction only - never limits the target set."""
-    from band_classify import classify_photometric_band, color_term_auto_from_band
+    from band_classify import (
+        band_failsafe_clear,
+        classify_photometric_band,
+        color_term_auto_from_band,
+    )
 
     mode = str(getattr(cfg, "apply_color_term", "auto") or "auto").strip().lower()
     if mode in ("0", "false", "no", "off"):
@@ -4102,7 +4599,16 @@ def resolve_apply_color_term(
         fits_filter=fits_filter,
         aavso_code=aavso_code,
     )
-    return bool(color_term_auto_from_band(band))
+    if color_term_auto_from_band(band):
+        return True
+    # Clear/unfiltered auto: enable only when a measured per-rig level k is set.
+    if band_failsafe_clear(band):
+        k = getattr(cfg, "color_level_k_mag_per_bprp", None)
+        try:
+            return k is not None and math.isfinite(float(k)) and abs(float(k)) > 1e-6
+        except (TypeError, ValueError):
+            return False
+    return False
 
 
 def _target_display_name(row: Any, *, fallback_cid: str = "") -> str:
@@ -4154,6 +4660,7 @@ class _ColorTermGroupFit:
     comp_catalog_mag: dict[str, float]
     apply_gate: bool
     gate_reason: str
+    mode: str = "fit"  # "fit" | "clear_level"
 
 
 def _group_comp_mag_inst_from_flux_matrix(
@@ -4361,6 +4868,8 @@ def _compute_group_color_term_fit(
     k2_value: float | None = None,
     k2_source: Any | None = None,
 ) -> _ColorTermGroupFit | None:
+    from band_classify import band_failsafe_clear, classify_photometric_band  # noqa: PLC0415
+
     comp_csv = Path(comparison_stars_csv)
     if not comp_csv.is_file():
         return None
@@ -4368,6 +4877,40 @@ def _compute_group_color_term_fit(
     comp_ids = sorted(comp_bp_rp.keys())
     if not comp_ids:
         return None
+
+    band = classify_photometric_band(obs_group)
+    k_level = getattr(cfg, "color_level_k_mag_per_bprp", None)
+    k_se = getattr(cfg, "color_level_k_stderr_mag_per_bprp", None)
+    if band_failsafe_clear(band) and k_level is not None:
+        try:
+            k_ok = math.isfinite(float(k_level)) and abs(float(k_level)) > 1e-6
+        except (TypeError, ValueError):
+            k_ok = False
+        if k_ok:
+            se = float("nan")
+            try:
+                if k_se is not None and math.isfinite(float(k_se)):
+                    se = float(k_se)
+            except (TypeError, ValueError):
+                se = float("nan")
+            reason = (
+                f"{band.value} clear_level k={float(k_level):+.4f}"
+                + (f" +- {se:.4f}" if math.isfinite(se) else "")
+                + " mag/BP-RP (export-only; shape term null)"
+            )
+            logging.info("[COLOR TERM] %s", reason)
+            return _ColorTermGroupFit(
+                c1=float(k_level),
+                c1_stderr=float(se),
+                n_comp=int(len(comp_ids)),
+                comp_bp_rp=comp_bp_rp,
+                comp_quality=comp_quality,
+                comp_catalog_mag=comp_catalog_mag,
+                apply_gate=True,
+                gate_reason=reason,
+                mode="clear_level",
+            )
+
     comp_mag_inst = _group_comp_mag_inst_from_proc_csvs(comp_ids, csv_files)
     n_from_matrix = sum(
         1
@@ -4416,6 +4959,7 @@ def _compute_group_color_term_fit(
         c1_stderr=float(c1_stderr),
         n_comp=int(n_comp),
         min_comp_for_ct=int(getattr(cfg, "phase01_ct_min_comp", 7)),
+        cfg=cfg,
     )
     return _ColorTermGroupFit(
         c1=float(c1),
@@ -4426,6 +4970,7 @@ def _compute_group_color_term_fit(
         comp_catalog_mag=comp_catalog_mag,
         apply_gate=bool(apply_gate),
         gate_reason=str(gate_reason),
+        mode="fit",
     )
 
 
@@ -5114,6 +5659,8 @@ def save_lightcurve_csv(
     method: str = "aperture",
     ct_correction: float | None = None,
     ct_c1: float | None = None,
+    ct_c1_stderr: float | None = None,
+    ct_mode: str | None = None,
     ct_bp_rp_target: float | None = None,
     ct_bp_rp_comp_med: float | None = None,
     ct_n_comp: int | None = None,
@@ -5230,6 +5777,8 @@ def save_lightcurve_csv(
             "mag_calib_ct": np.round(mag_calib_ct_arr, 6),
             "ct_correction": np.round(_fill_scalar(ct_correction, float("nan")), 6),
             "ct_c1": np.round(_fill_scalar(ct_c1, float("nan")), 6),
+            "ct_c1_stderr": np.round(_fill_scalar(ct_c1_stderr, float("nan")), 6),
+            "ct_mode": str(ct_mode or ""),
             "ct_bp_rp_target": np.round(_fill_scalar(ct_bp_rp_target, float("nan")), 6),
             "ct_bp_rp_comp_med": np.round(_fill_scalar(ct_bp_rp_comp_med, float("nan")), 6),
             "ct_n_comp": np.full(n, int(ct_n_comp) if ct_n_comp is not None else -1, dtype=int),
@@ -8660,13 +9209,51 @@ def _phase2a_prepare_shared_state(
                 "fwhm_px_scope": "phase2a_header_fallback",
                 "fwhm_estimator": "header_fwhm_px",
             }
-        _snr_ap_table = compute_snr_optimal_aperture_table(
+        _draft_dir_ee = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+        _ee_meas = _measure_ee_curve_for_snr_table(
             fwhm_px=float(_snr_fwhm_px),
-            sky_adu_per_px=float(_median_sky),
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
-            bkg_var_adu2_per_px=_bkg_var_px,
+            draft_dir=Path(_draft_dir_ee),
+            masterstar_fits_path=masterstar_fits_path,
+            masterstars_csv=None,
+            aligned_fits_paths=_aligned_fits_for_snr,
+            aligned_ram_frames=None,
+            cfg=_cfg,
         )
+        if bool(_ee_meas.get("ok")):
+            _snr_ap_table = compute_snr_optimal_aperture_table(
+                fwhm_px=float(_snr_fwhm_px),
+                sky_adu_per_px=float(_median_sky),
+                gain=float(_gain_phot),
+                read_noise=float(_rn_phot),
+                bkg_var_adu2_per_px=_bkg_var_px,
+                ee_radii=_ee_meas.get("ee_radii"),
+                ee_curve=_ee_meas.get("ee_curve"),
+                ee_source="measured_growth_curve",
+            )
+            _snr_ap_table["ee_n_cog"] = int(_ee_meas.get("n_cog", 0) or 0)
+            _snr_ap_table["ee_ref_r_px"] = float(_ee_meas.get("ref_r_px", float("nan")))
+            _snr_ap_table["ee_flatness_tail_over_norm"] = float(
+                _ee_meas.get("flatness_tail_over_norm", float("nan"))
+            )
+            _snr_ap_table["ee_isolation_fwhm"] = float(_ee_meas.get("isolation_fwhm", 3.0))
+            _snr_ap_table["ee_min_stars_required"] = int(_ee_meas.get("min_stars_required", 8))
+        else:
+            logging.warning(
+                "[PHASE 2A] SNR EE path=gaussian_fallback reason=%s",
+                str(_ee_meas.get("reason") or "unknown"),
+            )
+            _snr_ap_table = compute_snr_optimal_aperture_table(
+                fwhm_px=float(_snr_fwhm_px),
+                sky_adu_per_px=float(_median_sky),
+                gain=float(_gain_phot),
+                read_noise=float(_rn_phot),
+                bkg_var_adu2_per_px=_bkg_var_px,
+            )
+            _snr_ap_table["ee_fallback_reason"] = str(_ee_meas.get("reason") or "unknown")
+            _snr_ap_table["ee_min_stars_required"] = int(_ee_meas.get("min_stars_required", 8) or 8)
+            _snr_ap_table["ee_isolation_fwhm"] = float(_ee_meas.get("isolation_fwhm", 3.0) or 3.0)
         if isinstance(_snr_fwhm_prov, dict):
             for _pk, _pv in _snr_fwhm_prov.items():
                 if _pv is not None:
@@ -8674,11 +9261,14 @@ def _phase2a_prepare_shared_state(
         _tbl = _snr_ap_table.get("table") or {}
         logging.info(
             "[PHASE 2A] SNR-optimal aperture table built: "
-            "mag 7->%.2fpx mag 11->%.2fpx mag 14->%.2fpx mag 17->%.2fpx",
+            "mag 7->%.2fpx mag 11->%.2fpx mag 14->%.2fpx mag 17->%.2fpx "
+            "ee_path=%s bound_hits=%s",
             float(_tbl.get(7.0, float("nan"))),
             float(_tbl.get(11.0, float("nan"))),
             float(_tbl.get(14.0, float("nan"))),
             float(_tbl.get(17.0, float("nan"))),
+            str(_snr_ap_table.get("ee_path")),
+            int(_snr_ap_table.get("n_bound_hits", 0) or 0),
         )
         try:
             _draft_dir = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
@@ -9884,6 +10474,8 @@ def _phase2a_process_one_target(
         k2_colour_ref = _bp_med_k2
 
     c1 = 0.0
+    c1_stderr = float("nan")
+    ct_mode = ""
     ct_n_comp = 0
     mag_calib_ct = mag_calib.copy()
     ct_corr = 0.0
@@ -9892,6 +10484,8 @@ def _phase2a_process_one_target(
     _group_ct = state.group_color_term
     if state.apply_color_term and _group_ct is not None and _group_ct.apply_gate:
         c1 = float(_group_ct.c1)
+        c1_stderr = float(_group_ct.c1_stderr)
+        ct_mode = str(getattr(_group_ct, "mode", "fit") or "fit")
         ct_n_comp = int(_group_ct.n_comp)
         _ct_in_range = _check_color_term_extrapolation(
             target_bp_rp=float(target_bp_rp),
@@ -9906,6 +10500,7 @@ def _phase2a_process_one_target(
                 _group_ct.comp_bp_rp,
                 _group_ct.comp_quality,
                 c1,
+                comp_weights=comp_weight_map if ct_mode == "clear_level" else None,
             )
             ct_ok = (
                 bool(math.isfinite(float(target_bp_rp)))
@@ -10069,6 +10664,19 @@ def _phase2a_process_one_target(
         sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
+    # Propagate colour-level coefficient uncertainty into exported err (constant per LC).
+    if bool(ct_ok) and math.isfinite(float(c1_stderr)) and math.isfinite(float(ct_corr)):
+        # corr = c1 * (target - ref) => sigma_corr = |target-ref| * sigma_c1
+        _dcol = float(target_bp_rp) - float(bp_rp_comp_med) if math.isfinite(float(bp_rp_comp_med)) else float("nan")
+        if math.isfinite(_dcol):
+            _err_ct = abs(_dcol) * float(c1_stderr)
+            if math.isfinite(_err_ct) and _err_ct > 0:
+                err = np.sqrt(np.square(np.asarray(err, dtype=np.float64)) + _err_ct**2)
+                logging.info(
+                    "[COLOR TERM] err += %.4f mag from k uncertainty (delta_colour=%+.3f)",
+                    float(_err_ct),
+                    float(_dcol),
+                )
     err_photon_export, err_sem_rel_export, err_scint_rel_export, err_sigma_sys_rel_export = (
         _err_budget_components_keyed(
             err_photon_arr,
@@ -10304,6 +10912,8 @@ def _phase2a_process_one_target(
         src_files,
         ct_correction=(float(ct_corr) if bool(ct_ok) else float("nan")),
         ct_c1=(float(c1) if bool(ct_ok) else float("nan")),
+        ct_c1_stderr=(float(c1_stderr) if bool(ct_ok) else float("nan")),
+        ct_mode=(str(ct_mode) if bool(ct_ok) else ""),
         ct_bp_rp_target=(float(target_bp_rp) if bool(ct_ok) else float("nan")),
         ct_bp_rp_comp_med=(float(bp_rp_comp_med) if bool(ct_ok) else float("nan")),
         ct_n_comp=(int(ct_n_comp) if bool(ct_ok) else None),
@@ -10553,6 +11163,8 @@ def _phase2a_process_one_target(
         "ct_ok": bool(ct_ok),
         "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
         "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
+        "ct_c1_stderr": float(c1_stderr) if bool(ct_ok) and math.isfinite(float(c1_stderr)) else float("nan"),
+        "ct_mode": str(ct_mode) if bool(ct_ok) else "",
         "ct_n_comp": int(ct_n_comp) if bool(ct_ok) else 0,
         **_ac_summary_fields(ac_result if bool(_cfg.aperture_correction_enabled) else {"ok": False, "reason": "disabled"}),
     }

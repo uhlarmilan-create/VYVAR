@@ -325,7 +325,23 @@ def test_resolve_apply_color_term_toggle(mode, obs_group, expected):
 
     cfg = AppConfig()
     cfg.apply_color_term = mode
+    # Isolate band-auto toggle from Clear level-k path (IMPL-01).
+    cfg.color_level_k_mag_per_bprp = None
+    cfg.color_level_k_stderr_mag_per_bprp = None
     assert resolve_apply_color_term(cfg, obs_group) is expected
+
+
+def test_resolve_apply_color_term_clear_level_k():
+    from config import AppConfig
+    from photometry_core import resolve_apply_color_term
+
+    cfg = AppConfig()
+    cfg.apply_color_term = "auto"
+    cfg.color_level_k_mag_per_bprp = -0.373
+    cfg.color_level_k_stderr_mag_per_bprp = 0.090
+    assert resolve_apply_color_term(cfg, "NoFilter|60|2") is True
+    cfg.color_level_k_mag_per_bprp = None
+    assert resolve_apply_color_term(cfg, "NoFilter|60|2") is False
 
 
 def test_target_display_name_prefers_vsx_over_nan():

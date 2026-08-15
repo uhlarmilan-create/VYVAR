@@ -8,6 +8,64 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## IMPL-01 - no ensemble size cut in v1.0 (2026-08-15)
+
+**Decision.** Do **not** cut the comparison ensemble by cumulative weight, N_eff, or
+rank in v1.0. Keep the full admitted pool with existing `1/sigma_eff^2` weights.
+
+**Evidence (PRE-IMPL-01 / DRAFT-514-TRIAGE):**
+
+- **Science.** Check-star scatter is flat from the full ensemble through 90 percent of
+  cumulative weight (16.49 to 16.92 mmag). The far tail does not improve scatter.
+- **Cost.** `ensemble_normalize` is about 2 s of roughly 58 s per-target wall time at
+  n=1292 (~3.5 percent). A cut does not buy meaningful runtime.
+- **Constructibility.** An absolute, field-independent inclusion ceiling from `sigma_eff`
+  was not established. Q1's `sigma_obs/sigma_eff` trend is **contaminated** (see OPEN
+  PRE-IMPL-01-Q1 below): absence of evidence for a scale, not evidence against one.
+
+**Future cuts.** Any later ensemble cut must be **field-independent**: a star's
+inclusion may depend only on that star and the target, never on the rest of the pool.
+Candidates with an absolute scale: `comp_rms` (mag) or median SNR. Cumulative-weight
+or N_eff truncations remain performance experiments, not v1.0 policy.
+
+Report: `dev/results/CURSOR_RESULT_IMPL_01.md`.
+
+---
+
+## OPEN - PRE-IMPL-01 measurement corrections (register only; 2026-08-15)
+
+Architect review: four conclusions do not follow from their measurements. Recorded
+OPEN so they are not later cited as settled. **Do not act** in IMPL-01.
+
+1. **PRE-IMPL-01-Q1 contaminated.** Q2 replaced flux-sum `loo_diff_series` with
+   weighted-mean peers; Q1 kept the flux-sum estimator. In the Q1 sample `sigma_obs`
+   is ~60 mmag flat while `comp_rms` is 6-9 mmag (reference floor). A constant
+   `sigma_obs` divided by magnitude-dependent `sigma_eff` produces the reported
+   2.85 to 1.08 trend automatically and makes `excess2` constant. Conclusion that
+   `sigma_eff` has no absolute scale is **unsupported** (and so is its opposite).
+   Re-run with weighted-mean peers when convenient.
+
+2. **PRE-IMPL-01-Q2 read one column.** Scatter improves at 50 percent truncation
+   (16.49 to 12.79 mmag) but airmass slope worsens (101 to 255 mmag per airmass).
+   A 255 mmag/airmass drift contaminates light-curve shape worse than 3.7 mmag of
+   scatter. The claim "far tail carries a missing `sigma_eff` term" used the scatter
+   column only.
+
+3. **PRE-IMPL-01-Q5 matched on the wrong quantity.** Blends looked 16 mmag quieter
+   than isolated stars at matched catalogue G. A blend carries more flux than its
+   catalogue G implies, so matching on catalogue magnitude does not match signal.
+   Match on **measured flux**. Deferring blend merging is probably still right; that
+   decision does not follow from this measurement.
+
+4. **PRE-IMPL-01-Q4 night EE quantity.** Q4 reported night EE variation MAD
+   0.008 mmag. The measured quantity is **frame-to-frame absolute EE of one isolated
+   star at fixed production radius** (common-mode aperture-loss amplitude), demeaned
+   MAD - **not** the residual after ensemble common-mode removal. Whether 0.008 mmag
+   is physical (stable seeing that night) or method-limited remains open; it must not
+   be cited as a differential residual. See IMPL-01 Item 1 artifact.
+
+---
+
 ## Wave 6 PROPOSE items - Milan authorized 2026-08-13 (implement later)
 
 | ID | Decision |
