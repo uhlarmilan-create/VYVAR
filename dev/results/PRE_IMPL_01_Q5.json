@@ -1,0 +1,13 @@
+{
+  "commit_sha": "011fff7",
+  "n_pool": 1292,
+  "n_blended": 633,
+  "n_isolated": 659,
+  "n_matched_pairs": 631,
+  "median_scatter_excess_blend_minus_iso_mmag": -16.187957371448,
+  "median_abs_slope_excess_mmag_per_airmass": -33.01893386228433,
+  "corr_scatter_excess_vs_blend_delta_bprp": 0.04637139524996839,
+  "decision": "same_or_better_defer_merging",
+  "falsification": "matched-mag scatter excess |median| > 1 mmag, or tracks blend colour difference",
+  "decision_note": "blend minus iso median excess = -16.188 mmag (negative => blends quieter); not worse at matched mag"
+}

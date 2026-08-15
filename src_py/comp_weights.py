@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -363,3 +364,70 @@ def infer_optics_kind_from_header_or_name(
     ):
         return "refractive"
     return "unknown"
+
+
+def rewrite_comparison_stars_weights_csv(
+    csv_path: Path | str,
+    *,
+    c_col_mag_per_bprp: float | None = None,
+    c_dist_mag_per_deg: float = 0.0,
+) -> dict[str, int | float]:
+    """Rewrite ``comp_weight`` / ``sigma_eff_mag`` to match Phase-2A sigma_eff formula.
+
+    PRE-IMPL-01: the Phase-1 CSV previously stored ``1/rms^2`` only, identical
+    across targets. After COMP-ADMIT-03 the weights are the selection mechanism;
+    the persisted artifact must describe what Phase 2A uses.
+    """
+    path = Path(csv_path)
+    if not path.is_file():
+        return {"ok": 0, "n_rows": 0}
+    df = pd.read_csv(path)
+    if df.empty or "catalog_id" not in df.columns:
+        return {"ok": 0, "n_rows": 0}
+    c_col = float(
+        C_COL_PSF_REFRACTIVE_MAG_PER_BPRP if c_col_mag_per_bprp is None else c_col_mag_per_bprp
+    )
+    c_dist = float(c_dist_mag_per_deg) if math.isfinite(float(c_dist_mag_per_deg)) else 0.0
+    weights: list[float] = []
+    sigmas: list[float] = []
+    for i in range(len(df)):
+        rms = float(pd.to_numeric(df.iloc[i].get("comp_rms"), errors="coerce"))
+        bpr = float(pd.to_numeric(df.iloc[i].get("bp_rp"), errors="coerce"))
+        tb = float(pd.to_numeric(df.iloc[i].get("target_bp_rp"), errors="coerce"))
+        db = abs(bpr - tb) if math.isfinite(bpr) and math.isfinite(tb) else 0.0
+        ra = float(pd.to_numeric(df.iloc[i].get("ra_deg", df.iloc[i].get("ra")), errors="coerce"))
+        dec = float(pd.to_numeric(df.iloc[i].get("dec_deg", df.iloc[i].get("dec")), errors="coerce"))
+        # Target RA/Dec not always on row; use group median of comps for this target if needed.
+        rdeg = 0.0
+        if "r_deg" in df.columns:
+            rdeg = float(pd.to_numeric(df.iloc[i].get("r_deg"), errors="coerce"))
+            if not math.isfinite(rdeg):
+                rdeg = 0.0
+        se = sigma_eff_mag(
+            sigma_rms_mag=rms if math.isfinite(rms) else float("nan"),
+            delta_bprp=db,
+            r_deg=rdeg,
+            c_col_mag_per_bprp=c_col,
+            c_dist_mag_per_deg=c_dist,
+        )
+        sigmas.append(se)
+        weights.append(weight_from_sigma_eff(se))
+    df["sigma_eff_mag"] = sigmas
+    df["comp_weight"] = weights
+    df.to_csv(path, index=False)
+    # N_eff diversity check: unique N_eff across targets
+    neffs = []
+    if "target_catalog_id" in df.columns:
+        for tid, sub in df.groupby(df["target_catalog_id"].astype(str)):
+            w = pd.to_numeric(sub["comp_weight"], errors="coerce").to_numpy(dtype=float)
+            w = w[np.isfinite(w) & (w > 0)]
+            if w.size:
+                neffs.append(float((np.sum(w) ** 2) / np.sum(w * w)))
+    return {
+        "ok": 1,
+        "n_rows": int(len(df)),
+        "n_targets": int(len(neffs)),
+        "N_eff_min": float(min(neffs)) if neffs else float("nan"),
+        "N_eff_max": float(max(neffs)) if neffs else float("nan"),
+        "N_eff_unique_rounded": int(len({round(x, 3) for x in neffs})) if neffs else 0,
+    }

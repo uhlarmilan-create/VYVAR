@@ -619,6 +619,7 @@ def _run_vyvar_full_pipeline(
             run_groups = list(sorted(all_setups.keys()))
 
         errors: list[str] = []
+        error_exc: BaseException | None = None
         completed: list[str] = []
         zero_target_setups: list[str] = []
         for nm in run_groups:
@@ -687,6 +688,8 @@ def _run_vyvar_full_pipeline(
                     log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT zlyhal: {_pdf_err}")
             except Exception as exc_nm:  # noqa: BLE001
                 errors.append(f"{nm}: {exc_nm}")
+                if error_exc is None:
+                    error_exc = exc_nm
         _astro_skips = (
             [str(s.get("setup") or "?") for s in (_ps_out.get("skipped_subgroups") or [])]
             if isinstance(_ps_out, dict)
@@ -694,9 +697,20 @@ def _run_vyvar_full_pipeline(
         )
         _all_problems = list(errors) + [f"{nm}: plate-solve skipped" for nm in _astro_skips]
         if _all_problems and not completed:
+            # Prefer the original exception (keeps traceback) over a rebuilt RuntimeError.
+            _fail_exc: BaseException
+            if error_exc is not None and len(errors) == 1 and not _astro_skips:
+                _fail_exc = error_exc
+            else:
+                _fail_exc = RuntimeError(" ; ".join(_all_problems))
+                if error_exc is not None:
+                    try:
+                        _fail_exc.__cause__ = error_exc
+                    except Exception:  # noqa: BLE001
+                        pass
             return _fail(
                 "Phase 0+1 + Phase 2A (photometry)",
-                RuntimeError(" ; ".join(_all_problems)),
+                _fail_exc,
             )
         if _all_problems:
             log_event(

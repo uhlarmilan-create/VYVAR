@@ -1,0 +1,119 @@
+{
+  "commit_sha": "011fff7",
+  "production_r_px": 2.711323792774397,
+  "norm_radius_px": 12.0,
+  "isolation_min_sep_px": 15.583950000000002,
+  "isolation_fwhm_px_used": 5.19465,
+  "n_isolated_bright": 12,
+  "n_frames_cog": 40,
+  "ee_at_prod_median": 0.6625395627338092,
+  "ee_at_prod_p16": 0.6437434012354142,
+  "ee_at_prod_p84": 0.7227511006334736,
+  "per_star": [
+    {
+      "catalog_id": "1497853802778923392",
+      "g_mag": 8.37234115600586,
+      "ee_at_prod_r": 0.7238097635068598,
+      "flatness_tail_over_norm": 0.9970954986272823,
+      "r50": 1.75,
+      "r90": 5.0
+    },
+    {
+      "catalog_id": "1498602913793336448",
+      "g_mag": 8.181798934936523,
+      "ee_at_prod_r": 0.6465966669777528,
+      "flatness_tail_over_norm": 0.9951640596002732,
+      "r50": 2.0,
+      "r90": 5.75
+    },
+    {
+      "catalog_id": "1497001784346570880",
+      "g_mag": 8.379693984985352,
+      "ee_at_prod_r": 0.6660206265569109,
+      "flatness_tail_over_norm": 0.9964912217698607,
+      "r50": 1.75,
+      "r90": 5.75
+    },
+    {
+      "catalog_id": "1498428263244809344",
+      "g_mag": 8.528379440307617,
+      "ee_at_prod_r": 0.730910670987564,
+      "flatness_tail_over_norm": 0.997052464916856,
+      "r50": 1.5,
+      "r90": 5.0
+    },
+    {
+      "catalog_id": "1497613731286514432",
+      "g_mag": 8.45042610168457,
+      "ee_at_prod_r": 0.6590584989107076,
+      "flatness_tail_over_norm": 0.9959095429898324,
+      "r50": 2.0,
+      "r90": 5.75
+    },
+    {
+      "catalog_id": "1499087008148643456",
+      "g_mag": 8.451699256896973,
+      "ee_at_prod_r": 0.6347080597180086,
+      "flatness_tail_over_norm": 0.9950245031053665,
+      "r50": 2.0,
+      "r90": 5.75
+    },
+    {
+      "catalog_id": "1485539753584115072",
+      "g_mag": 8.496113777160645,
+      "ee_at_prod_r": 0.6496402227932303,
+      "flatness_tail_over_norm": 0.9972893980676764,
+      "r50": 2.0,
+      "r90": 6.0
+    },
+    {
+      "catalog_id": "1499906247391001088",
+      "g_mag": 8.742789268493652,
+      "ee_at_prod_r": 0.6969789903392802,
+      "flatness_tail_over_norm": 0.9978343075399336,
+      "r50": 1.75,
+      "r90": 5.25
+    },
+    {
+      "catalog_id": "1497721930102624384",
+      "g_mag": 8.933232307434082,
+      "ee_at_prod_r": 0.722416786041878,
+      "flatness_tail_over_norm": 0.9968252350511535,
+      "r50": 1.5,
+      "r90": 5.0
+    },
+    {
+      "catalog_id": "1499122982794703744",
+      "g_mag": 8.685306549072266,
+      "ee_at_prod_r": 0.6319270541558111,
+      "flatness_tail_over_norm": 0.9954638097041275,
+      "r50": 2.0,
+      "r90": 6.0
+    },
+    {
+      "catalog_id": "1500689752504456576",
+      "g_mag": 9.006264686584473,
+      "ee_at_prod_r": 0.6526042001295058,
+      "flatness_tail_over_norm": 0.9948360644708276,
+      "r50": 2.0,
+      "r90": 5.75
+    },
+    {
+      "catalog_id": "1497343732462852864",
+      "g_mag": 9.184231758117676,
+      "ee_at_prod_r": 0.7023253559622238,
+      "flatness_tail_over_norm": 0.9964604386606514,
+      "r50": 1.75,
+      "r90": 5.0
+    }
+  ],
+  "ee_night_variation_mad_mmag": 0.008008883728943365,
+  "ee_night_variation_p16_p84_mmag": 0.018058531079229438,
+  "register_84p6_resolution": "84.6% EE was measured on draft 510 at production radii ~4.1 px (CURSOR_RESULT_a1_growth_curves). Draft 514 median aperture equals SNR r_min=2.711 px (faint-star clamp), a different radius. r90~5.0-5.8 px and EE~84.6% at r~4.1 are consistent with each other; they are inconsistent only if conflated with r=2.711.",
+  "r_min_clamp": {
+    "snr_r_min_px": 2.711323792774397,
+    "median_aperture_equals_r_min": true,
+    "intended": "Yes as a numerical floor in the SNR table for faint mag bins; not an optimized radius for the median star. Most catalogue stars are faint so the median sits on the clamp boundary."
+  },
+  "falsification": "EE at 2.711 px near 0.85, or night EE variation << 1 mmag MAD"
+}

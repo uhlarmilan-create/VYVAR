@@ -81,7 +81,17 @@ def write_run_preflight_error_log(
             summarize_db_fk_state(db, cfg),
             "",
             "traceback:",
-            traceback.format_exc(),
+            "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            if getattr(exc, "__traceback__", None) is not None
+            else (
+                traceback.format_exc()
+                if traceback.format_exc().strip() not in ("", "NoneType: None")
+                else (
+                    "(no traceback on exception object; "
+                    "caller likely rebuilt RuntimeError from a string - "
+                    "see chained errors / sys.exception context)"
+                )
+            ),
             "",
         ]
     )

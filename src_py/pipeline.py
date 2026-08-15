@@ -10305,6 +10305,19 @@ def _export_per_frame_run_catalog_core(
     df2 = _proc_catalog_keep_matched_rows_only(df2)
     LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
 
+    # FORCED-PHOT / DRAFT-514-TRIAGE A2: multiple DAO detections can match the same
+    # Gaia id; dedupe before write. Alternate export path already called this;
+    # production ``_export_per_frame_run_catalog_core`` did not (root cause of
+    # 127 duplicate rows in proc_BO_CVn_Light_001 on draft 514).
+    _before_dedupe = len(df2)
+    df2 = _proc_deduplicate_matched_catalog_rows(df2)
+    if len(df2) != _before_dedupe:
+        LOGGER.debug(
+            "[PROC] dedupe catalog_id: %d -> %d rows",
+            _before_dedupe,
+            len(df2),
+        )
+
     csv_paths: list[str] = []
     write_sidecar = bool(st.get("write_sidecar_csv_next_to_fits"))
     mirror_flat = bool(st.get("mirror_flat_platesolve_folder"))

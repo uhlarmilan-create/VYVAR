@@ -3327,26 +3327,32 @@ def compute_aperture_correction(
     ref_t1 = df[df["comp_tier"] == 1].copy()
     ref_t2 = df[df["comp_tier"] == 2].copy()
 
+    # Prefer T1, then T1+T2. If still empty (all TIER3/4 under COMP-ADMIT-03),
+    # use the full candidate set for AC refs - colour tiers are display-only now.
     ref_stars = ref_t1
     if int(len(ref_stars)) < int(min_ref_stars):
         ref_stars = pd.concat([ref_t1, ref_t2], ignore_index=True)
+    if int(len(ref_stars)) < int(min_ref_stars):
+        ref_stars = df.copy()
 
-    # Aplikuj contamination filter
-    if "contamination_idx" in ref_stars.columns:
-        ref_stars = ref_stars[
-            ref_stars["contamination_idx"].apply(
-                lambda x: float(x) <= float(max_contamination) if pd.notna(x) else False
-            )
-        ]
-    else:
+    # Column presence must be checked on a non-empty schema source: filtering an
+    # empty frame can drop columns (pandas), which falsely reported no_comp_rms
+    # on draft 514 when all comps were TIER4.
+    if "contamination_idx" not in df.columns:
         return _fail("no_contamination_idx")
-
-    # Aplikuj comp_rms filter
-    if "comp_rms" in ref_stars.columns:
-        cr = pd.to_numeric(ref_stars["comp_rms"], errors="coerce")
-        ref_stars = ref_stars[np.isfinite(cr.to_numpy(dtype=float)) & (cr.to_numpy(dtype=float) > 0)].copy()
-    else:
+    if "comp_rms" not in df.columns:
         return _fail("no_comp_rms")
+
+    # Apply contamination filter
+    ref_stars = ref_stars[
+        ref_stars["contamination_idx"].apply(
+            lambda x: float(x) <= float(max_contamination) if pd.notna(x) else False
+        )
+    ]
+
+    # Apply comp_rms filter
+    cr = pd.to_numeric(ref_stars["comp_rms"], errors="coerce")
+    ref_stars = ref_stars[np.isfinite(cr.to_numpy(dtype=float)) & (cr.to_numpy(dtype=float) > 0)].copy()
 
     if int(len(ref_stars)) < int(min_ref_stars):
         return _fail("insufficient_ref_stars")
@@ -10998,6 +11004,21 @@ def _phase2a_finalize_exports(
         if isinstance(_inv_end_exc, InvariantViolation):
             raise
         logging.warning("[INV] end-of-run validation skipped: %s", _inv_end_exc)
+
+    # PRE-IMPL-01: persist Phase-2A sigma_eff weights into comparison_stars_per_target.csv
+    try:
+        from comp_weights import rewrite_comparison_stars_weights_csv  # noqa: PLC0415
+
+        _cw = Path(comparison_stars_csv)
+        if _cw.is_file():
+            _stats = rewrite_comparison_stars_weights_csv(_cw)
+            logging.info(
+                "[PRE-IMPL-01] Rewrote comp_weight/sigma_eff_mag on %s: %s",
+                _cw.name,
+                _stats,
+            )
+    except Exception as _w_exc:  # noqa: BLE001
+        logging.error("[PRE-IMPL-01] comp_weight rewrite failed: %s", _w_exc)
 
     return {
         "n_targets": len(at_df),

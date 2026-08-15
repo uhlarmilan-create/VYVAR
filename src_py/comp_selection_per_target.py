@@ -2060,13 +2060,34 @@ def _assemble_comp_selection_result_rows(
             rms_f = float(pd.to_numeric(rms_val, errors="coerce"))
         except Exception:  # noqa: BLE001
             rms_f = float("nan")
-        if math.isfinite(rms_f) and rms_f > 1e-6:
-            # COMP-ADMIT-03: Phase-1 CSV weight is 1/rms^2 only (display/provenance).
-            # Colour/distance enter sigma_eff in Phase-2A ensemble_normalize; no tier
-            # multiplier (tiers are not admission or weight authority).
-            r["comp_weight"] = 1.0 / (rms_f**2)
-        else:
-            r["comp_weight"] = float("nan")
+        # COMP-ADMIT-03 / PRE-IMPL-01: persist the same sigma_eff weight Phase 2A uses.
+        # Previous 1/rms^2-only column was identical across targets (no colour term) and
+        # did not describe the run. Weights are the selection mechanism after gate removal.
+        try:
+            from comp_weights import (  # noqa: PLC0415
+                C_COL_PSF_REFRACTIVE_MAG_PER_BPRP,
+                sigma_eff_mag,
+                weight_from_sigma_eff,
+            )
+
+            bpr = float(pd.to_numeric(r.get("bp_rp"), errors="coerce"))
+            tb = float(pd.to_numeric(r.get("target_bp_rp"), errors="coerce"))
+            db = abs(bpr - tb) if math.isfinite(bpr) and math.isfinite(tb) else 0.0
+            # Separation optional at Phase-1 write; c_dist=0 on wide refractive.
+            se = sigma_eff_mag(
+                sigma_rms_mag=rms_f if math.isfinite(rms_f) else float("nan"),
+                delta_bprp=db,
+                r_deg=0.0,
+                c_col_mag_per_bprp=float(C_COL_PSF_REFRACTIVE_MAG_PER_BPRP),
+                c_dist_mag_per_deg=0.0,
+            )
+            r["comp_weight"] = weight_from_sigma_eff(se)
+            r["sigma_eff_mag"] = se
+        except Exception:  # noqa: BLE001
+            if math.isfinite(rms_f) and rms_f > 1e-6:
+                r["comp_weight"] = 1.0 / (rms_f**2)
+            else:
+                r["comp_weight"] = float("nan")
         result_rows.append(r)
 
     if not result_rows:

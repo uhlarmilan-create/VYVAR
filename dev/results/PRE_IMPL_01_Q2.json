@@ -1,0 +1,932 @@
+{
+  "commit_sha": "011fff7",
+  "ensemble_target_for_weights": "BO CVn",
+  "spec_defect_original": "Named loo_diff_series (flux-sum) under weight truncation is the wrong discriminator here: flux-sum ignores weights, and truncated peer sets produced MAD=0 discrete residuals. Corrected to weighted-mean peers.",
+  "method": "weighted mean peer inst mags; exclude <3 FWHM neighbours; MAD of residual",
+  "n_check_stars": 25,
+  "check_star_ids": [
+    "1498812233320666368",
+    "1497313255374892800",
+    "1497617407778562304",
+    "1497203132413443328",
+    "1500486102335278592",
+    "1498020894186918144",
+    "1499202834827066624",
+    "1497119157212720896",
+    "1501956355540044800",
+    "1499070755993178624",
+    "1498259419491102208",
+    "1501956561697995008",
+    "1500576537166572544",
+    "1496315070616056064",
+    "1498595217213337600",
+    "1500576880763957248",
+    "1497370563121917952",
+    "1497758935541325824",
+    "1498326455340079616",
+    "1500782283280300032",
+    "1498735778606786816",
+    "1485619399458122240",
+    "1502232642196131072",
+    "1498072743031630080",
+    "1497674651102612992"
+  ],
+  "median_scatter_mad_mmag_by_truncation": {
+    "1.0": 16.485448935399152,
+    "0.99": 16.626273945510672,
+    "0.95": 16.81751387173118,
+    "0.9": 16.916192277835066,
+    "0.5": 12.79460110890558
+  },
+  "median_abs_airmass_slope_mmag_by_truncation": {
+    "1.0": 232.510660727894,
+    "0.99": 231.52739830773456,
+    "0.95": 230.1916118567135,
+    "0.9": 230.7254695365842,
+    "0.5": 290.774855807372
+  },
+  "decision": "tail_carries_unmodelled_systematics",
+  "per_check": [
+    {
+      "catalog_id": "1498812233320666368",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 19.533178809884756,
+          "airmass_slope_mmag_per_airmass": -228.74871220283256
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 19.705373430438264,
+          "airmass_slope_mmag_per_airmass": -227.75266092579037
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 506,
+          "scatter_mad_mmag": 20.046232979288387,
+          "airmass_slope_mmag_per_airmass": -226.4055214493004
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 366,
+          "scatter_mad_mmag": 21.120066004037483,
+          "airmass_slope_mmag_per_airmass": -226.9347631373081
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 15.806555415977193,
+          "airmass_slope_mmag_per_airmass": -292.8508506754199
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497313255374892800",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.485448935399152,
+          "airmass_slope_mmag_per_airmass": -240.87229440502855
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 16.25033457651854,
+          "airmass_slope_mmag_per_airmass": -239.88873663761535
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.07175589345541,
+          "airmass_slope_mmag_per_airmass": -238.58353388699996
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.97582610905228,
+          "airmass_slope_mmag_per_airmass": -239.17061914855776
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 13.118317748401633,
+          "airmass_slope_mmag_per_airmass": -300.42699663328773
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497617407778562304",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 16.694515253732153,
+          "airmass_slope_mmag_per_airmass": -228.0092112273691
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 16.626273945510672,
+          "airmass_slope_mmag_per_airmass": -227.03615448664138
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.089690810597194,
+          "airmass_slope_mmag_per_airmass": -225.69535653994143
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 18.371342475588676,
+          "airmass_slope_mmag_per_airmass": -226.21969993193522
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 78,
+          "scatter_mad_mmag": 12.79460110890558,
+          "airmass_slope_mmag_per_airmass": -284.6648968047726
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497203132413443328",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 14.313323066679096,
+          "airmass_slope_mmag_per_airmass": -249.30672860219352
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 13.868583755739142,
+          "airmass_slope_mmag_per_airmass": -248.32640812730412
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 13.133184954306676,
+          "airmass_slope_mmag_per_airmass": -247.0244824971765
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 13.893575914597058,
+          "airmass_slope_mmag_per_airmass": -247.63327258346587
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 8.692986422996102,
+          "airmass_slope_mmag_per_airmass": -309.19062615927265
+        }
+      ]
+    },
+    {
+      "catalog_id": "1500486102335278592",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.273552795536,
+          "airmass_slope_mmag_per_airmass": -237.69634746303285
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 17.06025962368272,
+          "airmass_slope_mmag_per_airmass": -236.71086011547078
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.13268446763485,
+          "airmass_slope_mmag_per_airmass": -235.43260513006845
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.25407263488599,
+          "airmass_slope_mmag_per_airmass": -236.0704487464369
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 14.291432439681833,
+          "airmass_slope_mmag_per_airmass": -298.56823468653346
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498020894186918144",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.08061474814414,
+          "airmass_slope_mmag_per_airmass": -165.42249790065944
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 15.948624950196777,
+          "airmass_slope_mmag_per_airmass": -164.4320993670202
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.373040365192896,
+          "airmass_slope_mmag_per_airmass": -163.1029204570435
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.471482088138835,
+          "airmass_slope_mmag_per_airmass": -163.659801611422
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 13.234961783415851,
+          "airmass_slope_mmag_per_airmass": -224.53995650791148
+        }
+      ]
+    },
+    {
+      "catalog_id": "1499202834827066624",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 16.251728922162197,
+          "airmass_slope_mmag_per_airmass": -205.3691725239162
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 16.122066872677376,
+          "airmass_slope_mmag_per_airmass": -204.3864107292862
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.832168807420402,
+          "airmass_slope_mmag_per_airmass": -203.12783571260246
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.916192277835066,
+          "airmass_slope_mmag_per_airmass": -203.80690737906568
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 12.173997040369468,
+          "airmass_slope_mmag_per_airmass": -267.47430720806824
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497119157212720896",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 14.595342616942256,
+          "airmass_slope_mmag_per_airmass": -185.71767936145127
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 14.63762335183303,
+          "airmass_slope_mmag_per_airmass": -184.73456511171813
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 14.188861910561313,
+          "airmass_slope_mmag_per_airmass": -183.51045109722526
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 14.395412286110494,
+          "airmass_slope_mmag_per_airmass": -184.15755190459308
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 9.633913161095839,
+          "airmass_slope_mmag_per_airmass": -246.6082394764347
+        }
+      ]
+    },
+    {
+      "catalog_id": "1501956355540044800",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 18.744030758192167,
+          "airmass_slope_mmag_per_airmass": -217.39929191691186
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 18.42656057072251,
+          "airmass_slope_mmag_per_airmass": -216.41053350675267
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 18.91643802897802,
+          "airmass_slope_mmag_per_airmass": -215.15568184172184
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 19.171278937006125,
+          "airmass_slope_mmag_per_airmass": -215.83751654386717
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 13.116263413549197,
+          "airmass_slope_mmag_per_airmass": -279.4639717148691
+        }
+      ]
+    },
+    {
+      "catalog_id": "1499070755993178624",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 17.036695075087703,
+          "airmass_slope_mmag_per_airmass": -256.24732510552695
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 17.144573209851668,
+          "airmass_slope_mmag_per_airmass": -255.26509272297255
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 15.943747426263176,
+          "airmass_slope_mmag_per_airmass": -253.93582733779863
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 14.513247719073382,
+          "airmass_slope_mmag_per_airmass": -254.47889946387204
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 9.920492759205848,
+          "airmass_slope_mmag_per_airmass": -314.68553019611335
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498259419491102208",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 17.308860648021717,
+          "airmass_slope_mmag_per_airmass": -178.61264611431926
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 18.438868256402102,
+          "airmass_slope_mmag_per_airmass": -177.62707921582356
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 20.028603654798992,
+          "airmass_slope_mmag_per_airmass": -176.286915833842
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 20.958830171888593,
+          "airmass_slope_mmag_per_airmass": -176.81685533549216
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 13.888569130317267,
+          "airmass_slope_mmag_per_airmass": -236.87850040501186
+        }
+      ]
+    },
+    {
+      "catalog_id": "1501956561697995008",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.05414009001302,
+          "airmass_slope_mmag_per_airmass": -250.7856671354164
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 16.358355797886805,
+          "airmass_slope_mmag_per_airmass": -249.80289469267404
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.771861799131347,
+          "airmass_slope_mmag_per_airmass": -248.45557209238518
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 17.604170885515874,
+          "airmass_slope_mmag_per_airmass": -248.96894282895883
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 78,
+          "scatter_mad_mmag": 14.294448337133527,
+          "airmass_slope_mmag_per_airmass": -307.64349218642275
+        }
+      ]
+    },
+    {
+      "catalog_id": "1500576537166572544",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1289,
+          "scatter_mad_mmag": 13.475862251739782,
+          "airmass_slope_mmag_per_airmass": -264.95655157068046
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 13.258925831252697,
+          "airmass_slope_mmag_per_airmass": -263.92624907861415
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 506,
+          "scatter_mad_mmag": 13.527812430832446,
+          "airmass_slope_mmag_per_airmass": -263.0166642654147
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 366,
+          "scatter_mad_mmag": 12.817562521222543,
+          "airmass_slope_mmag_per_airmass": -264.21911937177117
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 76,
+          "scatter_mad_mmag": 10.036178060765266,
+          "airmass_slope_mmag_per_airmass": -338.3031101223189
+        }
+      ]
+    },
+    {
+      "catalog_id": "1496315070616056064",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 19.3442493442298,
+          "airmass_slope_mmag_per_airmass": -185.08636947891355
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 19.20620637968577,
+          "airmass_slope_mmag_per_airmass": -184.0908003118762
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 19.533239832602316,
+          "airmass_slope_mmag_per_airmass": -182.77467165174247
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 19.367744548702976,
+          "airmass_slope_mmag_per_airmass": -183.3655481154543
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 15.137631847713168,
+          "airmass_slope_mmag_per_airmass": -245.26595325466704
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498595217213337600",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.307176271369812,
+          "airmass_slope_mmag_per_airmass": -215.4581137265124
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 15.8216665643779,
+          "airmass_slope_mmag_per_airmass": -214.4720007238775
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.103185014710352,
+          "airmass_slope_mmag_per_airmass": -213.18096357344777
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 17.058789200343554,
+          "airmass_slope_mmag_per_airmass": -213.79576936653044
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 10.380617585513658,
+          "airmass_slope_mmag_per_airmass": -275.7822514382376
+        }
+      ]
+    },
+    {
+      "catalog_id": "1500576880763957248",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1289,
+          "scatter_mad_mmag": 14.683368640395855,
+          "airmass_slope_mmag_per_airmass": -247.07232630351663
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 14.696168233956497,
+          "airmass_slope_mmag_per_airmass": -246.04202381145004
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 506,
+          "scatter_mad_mmag": 14.488088207101315,
+          "airmass_slope_mmag_per_airmass": -245.13243899825065
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 366,
+          "scatter_mad_mmag": 14.465017743796123,
+          "airmass_slope_mmag_per_airmass": -246.33489410460717
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 76,
+          "scatter_mad_mmag": 9.761707795027887,
+          "airmass_slope_mmag_per_airmass": -320.41888485515517
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497370563121917952",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 17.79129211273351,
+          "airmass_slope_mmag_per_airmass": -236.16708755693352
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 17.56153066029635,
+          "airmass_slope_mmag_per_airmass": -235.18617891846816
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.71633099260883,
+          "airmass_slope_mmag_per_airmass": -233.907094966978
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 17.8732270759049,
+          "airmass_slope_mmag_per_airmass": -234.53072148946097
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 12.710650748015444,
+          "airmass_slope_mmag_per_airmass": -296.4483284981326
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497758935541325824",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 18.134365288501,
+          "airmass_slope_mmag_per_airmass": -232.510660727894
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 17.989907599468715,
+          "airmass_slope_mmag_per_airmass": -231.52739830773456
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.413547044700866,
+          "airmass_slope_mmag_per_airmass": -230.1916118567135
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.72211621683888,
+          "airmass_slope_mmag_per_airmass": -230.7254695365842
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 14.78841189015192,
+          "airmass_slope_mmag_per_airmass": -290.774855807372
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498326455340079616",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 14.325573167510198,
+          "airmass_slope_mmag_per_airmass": -235.51484606283972
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 13.943693658775953,
+          "airmass_slope_mmag_per_airmass": -234.3641589624111
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 13.754820281307117,
+          "airmass_slope_mmag_per_airmass": -233.04693677164414
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 15.029120309998667,
+          "airmass_slope_mmag_per_airmass": -233.60882273857425
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 12.423453129732458,
+          "airmass_slope_mmag_per_airmass": -294.20881662525903
+        }
+      ]
+    },
+    {
+      "catalog_id": "1500782283280300032",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 16.895027369650162,
+          "airmass_slope_mmag_per_airmass": -258.07909092197895
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 810,
+          "scatter_mad_mmag": 16.66493333389056,
+          "airmass_slope_mmag_per_airmass": -257.0915024233545
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.81751387173118,
+          "airmass_slope_mmag_per_airmass": -256.19676016985767
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.046484813582776,
+          "airmass_slope_mmag_per_airmass": -256.7330501067135
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 12.61907754472245,
+          "airmass_slope_mmag_per_airmass": -316.8128192824314
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498735778606786816",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 16.14374776767181,
+          "airmass_slope_mmag_per_airmass": -233.5317986119503
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 15.75104530285478,
+          "airmass_slope_mmag_per_airmass": -232.55001962204895
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 15.06440671839654,
+          "airmass_slope_mmag_per_airmass": -231.22798795702866
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 15.362929374304928,
+          "airmass_slope_mmag_per_airmass": -231.7811020818422
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 78,
+          "scatter_mad_mmag": 10.711869887628371,
+          "airmass_slope_mmag_per_airmass": -289.7506401059983
+        }
+      ]
+    },
+    {
+      "catalog_id": "1485619399458122240",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 16.262926883763456,
+          "airmass_slope_mmag_per_airmass": -169.19508093121064
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 15.337143376989866,
+          "airmass_slope_mmag_per_airmass": -168.1320580258362
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 16.259251325018468,
+          "airmass_slope_mmag_per_airmass": -166.81775273915076
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 16.06742034536063,
+          "airmass_slope_mmag_per_airmass": -167.39778426416999
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 14.479902095474488,
+          "airmass_slope_mmag_per_airmass": -228.7556643656694
+        }
+      ]
+    },
+    {
+      "catalog_id": "1502232642196131072",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 18.096792963141816,
+          "airmass_slope_mmag_per_airmass": -273.05395329329497
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 16.775642810856503,
+          "airmass_slope_mmag_per_airmass": -272.0717553155155
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.58132170704083,
+          "airmass_slope_mmag_per_airmass": -270.73031257949617
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 17.044548626175597,
+          "airmass_slope_mmag_per_airmass": -271.252596548147
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 78,
+          "scatter_mad_mmag": 11.706313703767899,
+          "airmass_slope_mmag_per_airmass": -329.7629690510502
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498072743031630080",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1291,
+          "scatter_mad_mmag": 19.087432561648612,
+          "airmass_slope_mmag_per_airmass": -158.92043659955894
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 17.707976033074157,
+          "airmass_slope_mmag_per_airmass": -157.93152121599576
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 17.611491999876435,
+          "airmass_slope_mmag_per_airmass": -156.68357628125815
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 17.742544785647244,
+          "airmass_slope_mmag_per_airmass": -157.36800959414083
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 13.746128254198808,
+          "airmass_slope_mmag_per_airmass": -220.9605174444968
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497674651102612992",
+      "truncations": [
+        {
+          "cum_weight_frac": 1.0,
+          "n_ens": 1290,
+          "scatter_mad_mmag": 22.544199312512056,
+          "airmass_slope_mmag_per_airmass": -186.05908978759098
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_ens": 811,
+          "scatter_mad_mmag": 22.46438324912666,
+          "airmass_slope_mmag_per_airmass": -185.07904971377346
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_ens": 507,
+          "scatter_mad_mmag": 21.713056383768407,
+          "airmass_slope_mmag_per_airmass": -183.84695729121492
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_ens": 367,
+          "scatter_mad_mmag": 21.822953844313172,
+          "airmass_slope_mmag_per_airmass": -184.5507739861093
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_ens": 77,
+          "scatter_mad_mmag": 22.74045440894444,
+          "airmass_slope_mmag_per_airmass": -248.3666690142794
+        }
+      ]
+    }
+  ],
+  "falsification": "median check-star MAD rises or falls by >1 mmag from full to 50% truncation",
+  "interpretation": {
+    "mild_99_to_90": "scatter flat within ~0.5 mmag -> tail inert for mild truncation (performance)",
+    "aggressive_50": "scatter improves 16.49 -> 12.79 mmag -> far low-weight half carries unmodelled systematics",
+    "decision_detail": "sigma_eff missing a term for the worst half; mild cumulative cut would be performance-only but is still population-dependent (not for implementation)"
+  }
+}

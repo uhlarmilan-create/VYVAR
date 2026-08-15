@@ -1,0 +1,375 @@
+{
+  "commit_sha": "011fff7",
+  "sigma_obs_estimator": "1.4826*MAD of loo_diff_series (focus - ensemble flux-sum, median-subtracted)",
+  "n_rows": 10336,
+  "n_finite_ratio": 10336,
+  "ratio_median": 1.166275608187445,
+  "ratio_p16": 0.8570737377521181,
+  "ratio_p84": 1.892271957805127,
+  "ratio_vs_G": [
+    {
+      "lo": 8,
+      "hi": 10,
+      "n": 288,
+      "ratio_median": 2.8497172972549176
+    },
+    {
+      "lo": 10,
+      "hi": 11,
+      "n": 288,
+      "ratio_median": 2.700896356671882
+    },
+    {
+      "lo": 11,
+      "hi": 12,
+      "n": 704,
+      "ratio_median": 2.094733291124191
+    },
+    {
+      "lo": 12,
+      "hi": 13,
+      "n": 1584,
+      "ratio_median": 1.674264908715075
+    },
+    {
+      "lo": 13,
+      "hi": 14,
+      "n": 2568,
+      "ratio_median": 1.2329657206545672
+    },
+    {
+      "lo": 14,
+      "hi": 15,
+      "n": 3760,
+      "ratio_median": 1.0756510781371795
+    }
+  ],
+  "ratio_vs_abs_delta_bprp": [
+    {
+      "lo": 0,
+      "hi": 0.2,
+      "n": 3116,
+      "ratio_median": 1.2427374321102405
+    },
+    {
+      "lo": 0.2,
+      "hi": 0.5,
+      "n": 3892,
+      "ratio_median": 1.2041206246339216
+    },
+    {
+      "lo": 0.5,
+      "hi": 1.0,
+      "n": 1691,
+      "ratio_median": 1.2282695234571366
+    },
+    {
+      "lo": 1.0,
+      "hi": 2.0,
+      "n": 330,
+      "ratio_median": 1.084285537812013
+    },
+    {
+      "lo": 2.0,
+      "hi": 5.0,
+      "n": 1241,
+      "ratio_median": 0.7067548602446074
+    }
+  ],
+  "ratio_vs_r_deg": [
+    {
+      "lo": 0,
+      "hi": 0.5,
+      "n": 408,
+      "ratio_median": 1.154858301268642
+    },
+    {
+      "lo": 0.5,
+      "hi": 1.0,
+      "n": 1336,
+      "ratio_median": 1.2075574714931194
+    },
+    {
+      "lo": 1.0,
+      "hi": 2.0,
+      "n": 4648,
+      "ratio_median": 1.163333291982107
+    },
+    {
+      "lo": 2.0,
+      "hi": 5.0,
+      "n": 3944,
+      "ratio_median": 1.166649861279581
+    }
+  ],
+  "tautological_part": "sigma_eff includes comp_rms; sigma_obs and rms both measure night scatter of the same star (related domains)",
+  "non_tautological": {
+    "test": "excess2 = max(0, sigma_obs^2 - rms^2) vs colour_term^2 = (c_col*|dBP-RP|)^2",
+    "corr_excess2_vs_colour2": 0.001932902782501181,
+    "scale_factor_excess2_over_colour2": 1.6891276607795962,
+    "note": "a~1 means colour term predicts excess scatter; a~0 means colour term does not"
+  },
+  "rows_sample": [
+    {
+      "target": "BO CVn",
+      "catalog_id": "1500296402219939584",
+      "g_mag": 8.2427396774292,
+      "delta_bprp": 1.0748324394226076,
+      "r_deg": 2.02394765185964,
+      "sigma_obs_mad_loo_mag": 0.06516969747408936,
+      "sigma_eff_mag": 0.03236751329610665,
+      "comp_rms_mag": 0.0065808950246146,
+      "ratio_obs_over_eff": 2.0134292331295143,
+      "excess2_obs_minus_rms": 0.004203781289539332,
+      "colour_term2": 0.0010043477376486432
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1498812233320666368",
+      "g_mag": 10.253812789916992,
+      "delta_bprp": 0.3117456436157227,
+      "r_deg": 0.8417346252710894,
+      "sigma_obs_mad_loo_mag": 0.06173458582574114,
+      "sigma_eff_mag": 0.011729923299901865,
+      "comp_rms_mag": 0.0072870762117583,
+      "ratio_obs_over_eff": 5.262999957233959,
+      "excess2_obs_minus_rms": 0.0037580576073598247,
+      "colour_term2": 8.448962090560698e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497313255374892800",
+      "g_mag": 10.002345085144045,
+      "delta_bprp": 0.4585638046264648,
+      "r_deg": 1.179432366210868,
+      "sigma_obs_mad_loo_mag": 0.06187606037042747,
+      "sigma_eff_mag": 0.015434782908759591,
+      "comp_rms_mag": 0.0074445691547593,
+      "ratio_obs_over_eff": 4.008871439021756,
+      "excess2_obs_minus_rms": 0.0037732252370647913,
+      "colour_term2": 0.0001828109135405436
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497617407778562304",
+      "g_mag": 9.570152282714844,
+      "delta_bprp": 0.9436101913452148,
+      "r_deg": 2.0772516316230183,
+      "sigma_obs_mad_loo_mag": 0.061915013876882745,
+      "sigma_eff_mag": 0.028801464874194323,
+      "comp_rms_mag": 0.0074458619940429,
+      "ratio_obs_over_eff": 2.149717528164953,
+      "excess2_obs_minus_rms": 0.0037780280825402504,
+      "colour_term2": 0.0007740835180651168
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497203132413443328",
+      "g_mag": 9.307086944580078,
+      "delta_bprp": 0.5153331756591797,
+      "r_deg": 1.70261030600815,
+      "sigma_obs_mad_loo_mag": 0.06493375969900689,
+      "sigma_eff_mag": 0.0171441627519833,
+      "comp_rms_mag": 0.007940171416785,
+      "ratio_obs_over_eff": 3.787514190011706,
+      "excess2_obs_minus_rms": 0.004153346826520442,
+      "colour_term2": 0.00023087599433856208
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1500486102335278592",
+      "g_mag": 10.16754913330078,
+      "delta_bprp": 0.28806781768798834,
+      "r_deg": 1.7619852606518718,
+      "sigma_obs_mad_loo_mag": 0.06212610207395784,
+      "sigma_eff_mag": 0.011809227812260436,
+      "comp_rms_mag": 0.0082045851015704,
+      "ratio_obs_over_eff": 5.260809856632457,
+      "excess2_obs_minus_rms": 0.003792337342214918,
+      "colour_term2": 7.214264483295442e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497442379271632384",
+      "g_mag": 8.8513822555542,
+      "delta_bprp": 0.22230911254882818,
+      "r_deg": 1.0217243915361098,
+      "sigma_obs_mad_loo_mag": 0.0614776912087288,
+      "sigma_eff_mag": 0.01065071092304745,
+      "comp_rms_mag": 0.0083947850918343,
+      "ratio_obs_over_eff": 5.772167853668345,
+      "excess2_obs_minus_rms": 0.0037090340996177268,
+      "colour_term2": 4.2965226428238836e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1498020894186918144",
+      "g_mag": 10.285472869873049,
+      "delta_bprp": 0.3958492279052735,
+      "r_deg": 2.493149843827534,
+      "sigma_obs_mad_loo_mag": 0.054942431301773106,
+      "sigma_eff_mag": 0.014382772093307721,
+      "comp_rms_mag": 0.0084046089114445,
+      "ratio_obs_over_eff": 3.8200168191038584,
+      "excess2_obs_minus_rms": 0.0029480333063957253,
+      "colour_term2": 0.0001362266821336991
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1499202834827066624",
+      "g_mag": 10.110356330871582,
+      "delta_bprp": 0.1779699325561524,
+      "r_deg": 1.9437160492083512,
+      "sigma_obs_mad_loo_mag": 0.05888697488233604,
+      "sigma_eff_mag": 0.009950829249607237,
+      "comp_rms_mag": 0.0084547809064406,
+      "ratio_obs_over_eff": 5.917795733924419,
+      "excess2_obs_minus_rms": 0.003396192490616963,
+      "colour_term2": 2.7535682578926405e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497119157212720896",
+      "g_mag": 9.131044387817385,
+      "delta_bprp": 0.4120635986328125,
+      "r_deg": 1.2759849264520167,
+      "sigma_obs_mad_loo_mag": 0.059954760586631343,
+      "sigma_eff_mag": 0.014845381291460989,
+      "comp_rms_mag": 0.0085305419815238,
+      "ratio_obs_over_eff": 4.0386137216372555,
+      "excess2_obs_minus_rms": 0.003521803170501743,
+      "colour_term2": 0.00014761519919031992
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1501956355540044800",
+      "g_mag": 10.216922760009766,
+      "delta_bprp": 0.1875228881835938,
+      "r_deg": 1.407889998032566,
+      "sigma_obs_mad_loo_mag": 0.05690643453132175,
+      "sigma_eff_mag": 0.010205792514500142,
+      "comp_rms_mag": 0.0085782921092148,
+      "ratio_obs_over_eff": 5.5758956935946395,
+      "excess2_obs_minus_rms": 0.0031647551955565913,
+      "colour_term2": 3.057110533801024e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1499070755993178624",
+      "g_mag": 9.691335678100586,
+      "delta_bprp": 0.7373113632202148,
+      "r_deg": 1.2890207207633262,
+      "sigma_obs_mad_loo_mag": 0.06215310866896845,
+      "sigma_eff_mag": 0.02343156704438958,
+      "comp_rms_mag": 0.0087422352546303,
+      "ratio_obs_over_eff": 2.6525374317143804,
+      "excess2_obs_minus_rms": 0.0037865822399693,
+      "colour_term2": 0.0004726116569084229
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1498259419491102208",
+      "g_mag": 9.94560432434082,
+      "delta_bprp": 0.6491546630859375,
+      "r_deg": 2.833328098158437,
+      "sigma_obs_mad_loo_mag": 0.058069402389174685,
+      "sigma_eff_mag": 0.021064305130811516,
+      "comp_rms_mag": 0.0087950348624975,
+      "ratio_obs_over_eff": 2.7567680029584496,
+      "excess2_obs_minus_rms": 0.0032947028556033404,
+      "colour_term2": 0.00036635231241138595
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1501956561697995008",
+      "g_mag": 9.621334075927734,
+      "delta_bprp": 1.1657495498657227,
+      "r_deg": 1.3784816337210262,
+      "sigma_obs_mad_loo_mag": 0.05857785714701084,
+      "sigma_eff_mag": 0.03553402031071539,
+      "comp_rms_mag": 0.0090123661939695,
+      "ratio_obs_over_eff": 1.6485006941178144,
+      "excess2_obs_minus_rms": 0.0033501426035214043,
+      "colour_term2": 0.0011814438550281298
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1500576537166572544",
+      "g_mag": 11.355791091918944,
+      "delta_bprp": 0.25451469421386724,
+      "r_deg": 2.5837430677043844,
+      "sigma_obs_mad_loo_mag": 0.06528382916299652,
+      "sigma_eff_mag": 0.011747079791256594,
+      "comp_rms_mag": 0.0090376068675574,
+      "ratio_obs_over_eff": 5.557451751675985,
+      "excess2_obs_minus_rms": 0.004180300012290795,
+      "colour_term2": 5.631554572962839e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1496315070616056064",
+      "g_mag": 10.428983688354492,
+      "delta_bprp": 0.20222091674804693,
+      "r_deg": 1.1796064781871225,
+      "sigma_obs_mad_loo_mag": 0.05333680733605597,
+      "sigma_eff_mag": 0.010899782932016516,
+      "comp_rms_mag": 0.0091243646517758,
+      "ratio_obs_over_eff": 4.893382525938834,
+      "excess2_obs_minus_rms": 0.002761560986504978,
+      "colour_term2": 3.555123766650287e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1498595217213337600",
+      "g_mag": 10.009214401245115,
+      "delta_bprp": 0.306570053100586,
+      "r_deg": 0.5939963813798725,
+      "sigma_obs_mad_loo_mag": 0.06058247105709489,
+      "sigma_eff_mag": 0.012986700481675025,
+      "comp_rms_mag": 0.0093245304769176,
+      "ratio_obs_over_eff": 4.664962523974447,
+      "excess2_obs_minus_rms": 0.003583288930768775,
+      "colour_term2": 8.170752078577318e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1500576880763957248",
+      "g_mag": 9.00732421875,
+      "delta_bprp": 0.12327194213867193,
+      "r_deg": 2.554577761708465,
+      "sigma_obs_mad_loo_mag": 0.0640157097389757,
+      "sigma_eff_mag": 0.010014105924303792,
+      "comp_rms_mag": 0.0093312088520342,
+      "ratio_obs_over_eff": 6.392553686057226,
+      "excess2_obs_minus_rms": 0.004010939634744508,
+      "colour_term2": 1.3210858822894872e-05
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497370563121917952",
+      "g_mag": 9.34685230255127,
+      "delta_bprp": 0.4220380783081055,
+      "r_deg": 0.6090056304606489,
+      "sigma_obs_mad_loo_mag": 0.06172584249665889,
+      "sigma_eff_mag": 0.015560848703179015,
+      "comp_rms_mag": 0.0093430147094393,
+      "ratio_obs_over_eff": 3.9667400971547626,
+      "excess2_obs_minus_rms": 0.0037227877080615412,
+      "colour_term2": 0.00015484808850242896
+    },
+    {
+      "target": "BO CVn",
+      "catalog_id": "1497758935541325824",
+      "g_mag": 9.861004829406738,
+      "delta_bprp": 0.7349710464477539,
+      "r_deg": 1.2875053466424213,
+      "sigma_obs_mad_loo_mag": 0.05568424786713601,
+      "sigma_eff_mag": 0.023630467976622414,
+      "comp_rms_mag": 0.0094224653420551,
+      "ratio_obs_over_eff": 2.3564598010595623,
+      "excess2_obs_minus_rms": 0.0030119526074064117,
+      "colour_term2": 0.0004696161636719478
+    }
+  ],
+  "falsification": "ratio flat near 1 with colour excess scaling a~1, OR ratio strongly mag-dependent"
+}

@@ -24,6 +24,10 @@ def c4_small_sample(n: int) -> float:
     c4(n) = sqrt(2/(n-1)) * Gamma(n/2) / Gamma((n-1)/2).
 
     Requires n >= 2. Unit-tested against literature constants to 1e-4.
+
+    For large n, ``math.gamma`` overflows (OverflowError: math range error on
+    Windows when Gamma(x) exceeds ~1e308, x>~171). Use ``math.lgamma`` ratio so
+    COMP-ADMIT-03 full membership (n_comps >> 200) does not crash Phase 2A.
     """
     if n < 2:
         return float("nan")
@@ -31,7 +35,13 @@ def c4_small_sample(n: int) -> float:
         return math.sqrt(2.0) * math.gamma(1.0) / math.gamma(0.5)
     half = 0.5 * float(n)
     half_m1 = 0.5 * float(n - 1)
-    return math.sqrt(2.0 / float(n - 1)) * math.gamma(half) / math.gamma(half_m1)
+    # Prefer lgamma for all n>=3: numerically stable and overflow-safe.
+    try:
+        log_ratio = math.lgamma(half) - math.lgamma(half_m1)
+        return math.sqrt(2.0 / float(n - 1)) * math.exp(log_ratio)
+    except (OverflowError, ValueError):
+        # Asymptotic: c4 -> 1 as n -> inf (correction ~ 1/(4n)).
+        return float(1.0 - 1.0 / (4.0 * float(n)))
 
 
 def ensemble_sem_mag_from_residuals(residuals: list[float] | Any) -> float:

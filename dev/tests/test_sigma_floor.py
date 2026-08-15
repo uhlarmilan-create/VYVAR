@@ -39,6 +39,23 @@ def test_c4_small_sample_n_lt_2_is_nan() -> None:
     assert math.isnan(c4_small_sample(1))
 
 
+def test_c4_large_n_no_overflow() -> None:
+    """DRAFT-514-TRIAGE A1: math.gamma overflowed for n>~342 (COMP-ADMIT full pool)."""
+    for n in (200, 342, 500, 1000, 5000):
+        v = c4_small_sample(n)
+        assert math.isfinite(v), f"c4({n}) not finite: {v}"
+        assert 0.9 < v <= 1.0, f"c4({n})={v} out of expected band"
+    # Must approach 1
+    assert abs(c4_small_sample(5000) - 1.0) < 1e-3
+
+
+def test_ensemble_sem_large_n_no_overflow() -> None:
+    rng = np.random.default_rng(0)
+    resid = rng.normal(0.0, 0.01, size=600).tolist()
+    sem = ensemble_sem_mag_from_residuals(resid)
+    assert math.isfinite(sem) and sem > 0
+
+
 def test_ensemble_sem_c4_increases_vs_uncorrected() -> None:
     resid = [0.01, -0.02, 0.015, -0.005]
     n = len(resid)

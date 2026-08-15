@@ -1,0 +1,21 @@
+{
+  "commit_sha": "011fff7",
+  "n_stars": 1172,
+  "method": "weighted-mean peer ensemble (not flux-sum); level=median(m-wm); shape=airmass slope of median-subtracted residual",
+  "shape_term_kpp_mmag_per_bprp_per_airmass": -83.30608184404586,
+  "shape_term_se_mmag": 98.53652945420876,
+  "shape_term_corr": -0.024708927790005997,
+  "shape_significant_2se": false,
+  "level_term_mmag_per_bprp": -611.3625318288526,
+  "level_term_se_mmag": 152.07570943540279,
+  "level_term_corr": -0.11672585971412067,
+  "level_significant_2se": true,
+  "level_vs_G_corr": 0.8045575929941962,
+  "level_term_mmag_per_bprp_G_controlled": -373.08967251706923,
+  "level_term_se_mmag_G_controlled": 90.27900625709667,
+  "level_G_controlled_significant_2se": true,
+  "compare_c_col_mmag_per_bprp": 29.485010546318453,
+  "compare_k2_clear": "NONE",
+  "design_choice": "c_level_term_exports_only",
+  "falsification": "shape and/or G-controlled level |coef|>2*se"
+}
