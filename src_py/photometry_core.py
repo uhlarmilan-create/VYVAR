@@ -9216,7 +9216,8 @@ def _phase2a_process_one_target(
     # When per-frame sat is ON, skip_photometry already encodes the decision;
     # do not re-force whole-star skip from master zone_flag.
     _pfs_on = bool(getattr(_cfg, "per_frame_saturation_enabled", False))
-    if (not _pfs_on) and _zf_low == "saturated":
+    # TARGET-DEPTH-02: noise (below DAO N-sigma on MASTERSTAR) does not enter photometry.
+    if (not _pfs_on) and _zf_low in ("saturated", "noise"):
         skip_photo = True
     if progress_cb is not None and (
         ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
@@ -9224,7 +9225,12 @@ def _phase2a_process_one_target(
         _p2(f"Faza 2A: ciel {ti}/{_nt}: {target_name[:50]}")
     if skip_photo:
         _sr_col = str(target_row.get("skip_reason", "") or "").strip()
-        _skip_reason = _sr_col if _sr_col else "saturovany ciel"
+        if _sr_col:
+            _skip_reason = _sr_col
+        elif _zf_low == "noise":
+            _skip_reason = "zone_noise"
+        else:
+            _skip_reason = "saturovany ciel"
         logging.info(f"[FAZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
         _skip_sum: dict[str, Any] = {
             "catalog_id": target_cid,
@@ -13169,12 +13175,14 @@ def select_active_targets(
       in variable_targets for comp veto but are excluded here.
     - Manual / exoplanet targets: identity join on ``catalog_id`` when present (not subject to VSX gate).
     - ``catalog_id`` z masterstars musi byt neprazdny (inak sa ciel vynecha).
-    - ``catalog_only`` / ``neznama_zona`` / ``saturated`` zone flags mask photometry.
+    - ``catalog_only`` / ``neznama_zona`` / ``saturated`` / ``noise`` zone flags mask photometry
+      (TARGET-DEPTH-02: ``noise`` = below DAO N-sigma on MASTERSTAR; flag, do not omit).
     - ``vsx_out_of_scope_types`` (config): VSX auto-selected targets whose type tokens match
       are kept in active_targets with ``skip_photometry=True`` and
       ``skip_reason='vsx_type_out_of_scope'`` (mask-first). Manual targets are never filtered.
       Empty list = inactive (byte-identical to prior behaviour).
-
+    - ``target_depth_g`` (optional): MASTERSTAR-derived population depth; fainter targets get
+      ``skip_reason='below_target_depth'``.
     Returns:
         DataFrame s active targets - stlpce z variable_targets + pridane zo masterstars:
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
@@ -13336,9 +13344,12 @@ def select_active_targets(
             )
             excluded_rows.append(_excluded_target_row(vrow, "saturated", mag=mag_for_skip))
             continue
-        skip_ph = zone_flag in ("saturated", "catalog_only", "neznama_zona")
-        skip_reason = "zone_flag" if skip_ph else ""
-        # TARGET-DEPTH-01: draft-derived measurable depth (flag, do not omit the row).
+        skip_ph = zone_flag in ("saturated", "catalog_only", "neznama_zona", "noise")
+        if zone_flag == "noise":
+            skip_reason = "zone_noise"
+        else:
+            skip_reason = "zone_flag" if skip_ph else ""
+        # TARGET-DEPTH-02: draft-derived MASTERSTAR population depth (flag, do not omit).
         if (
             (not skip_ph)
             and target_depth_g is not None
@@ -13409,6 +13420,7 @@ def select_active_targets(
         "skip_reason",
     ]
     n_masked_zone = int(sum(1 for r in matched_rows if r.get("skip_reason") == "zone_flag"))
+    n_masked_noise = int(sum(1 for r in matched_rows if r.get("skip_reason") == "zone_noise"))
     n_masked_vsx_type = int(sum(1 for r in matched_rows if r.get("skip_reason") == "vsx_type_out_of_scope"))
     n_masked_depth = int(sum(1 for r in matched_rows if r.get("skip_reason") == "below_target_depth"))
     n_gaia_id_assigned = int(vt_in["catalog_id"].apply(lambda x: bool(_normalize_gaia_id(x))).sum()) if "catalog_id" in vt_in.columns else 0
@@ -13486,7 +13498,8 @@ def select_active_targets(
         f"dao_detected={len(matched_rows)} -> active={len(result)} | excluded: "
         f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} "
         f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame} | masked: "
-        f"zone_flag={n_masked_zone} vsx_type_out_of_scope={n_masked_vsx_type} below_target_depth={n_masked_depth}"
+        f"zone_flag={n_masked_zone} zone_noise={n_masked_noise} "
+        f"vsx_type_out_of_scope={n_masked_vsx_type} below_target_depth={n_masked_depth}"
     )
     logging.info(_funnel_msg)
     log_event(_funnel_msg)
@@ -15187,40 +15200,38 @@ def run_phase0_and_phase1(
     else:
         _plate_scale_p01 = _resolve_plate_scale_arcsec_per_px(_cfg_p01)
 
-    # TARGET-DEPTH-01: derive measurable depth from this draft's per-frame detect_frac.
+    # TARGET-DEPTH-02: derive population depth from MASTERSTAR zone (single-frame copy; factor=1).
     _target_depth_g: float | None = None
     _depth_payload: dict[str, Any] = {}
     try:
-        from comp_pool_noise import (  # noqa: PLC0415
-            derive_target_depth_limit,
-            load_star_timeseries_from_proc_dir,
-            summarize_stars,
-        )
+        from comp_pool_noise import derive_target_depth_from_masterstar  # noqa: PLC0415
 
-        _epochs_depth = load_star_timeseries_from_proc_dir(Path(per_frame_csv_dir))
-        _stars_depth = summarize_stars(_epochs_depth, zp_inst=25.0)
-        _depth = derive_target_depth_limit(_stars_depth)
+        _ms_depth = pd.read_csv(masterstars_csv, low_memory=False)
+        _depth = derive_target_depth_from_masterstar(_ms_depth, masterstar_n_combine=1)
         _target_depth_g = _depth.target_depth_g
         _depth_payload = {
             "target_depth_g": _depth.target_depth_g,
-            "detect_frac_thr": _depth.detect_frac_thr,
-            "bright_mag_hi": _depth.bright_mag_hi,
-            "n_bright": _depth.n_bright,
-            "mode": getattr(_depth, "mode", "detect_frac"),
+            "linear_frac_thr": _depth.linear_frac_thr,
+            "n_stars": _depth.n_stars,
+            "mode": _depth.mode,
+            "masterstar_n_combine": _depth.masterstar_n_combine,
+            "snr_scale_factor": _depth.snr_scale_factor,
+            "mag_offset": _depth.mag_offset,
             "rule": _depth.rule,
             "bin_rows": _depth.bin_rows,
         }
         if _target_depth_g is not None:
             logging.info(
-                "[TARGET-DEPTH-01] derived target_depth_g=%.3f (detect_frac_thr=%.4f, n_bright=%d)",
+                "[TARGET-DEPTH-02] derived target_depth_g=%.3f (linear_frac_thr=%.3f, n_stars=%d, n_combine=%d)",
                 float(_target_depth_g),
-                float(_depth.detect_frac_thr or float("nan")),
-                int(_depth.n_bright),
+                float(_depth.linear_frac_thr),
+                int(_depth.n_stars),
+                int(_depth.masterstar_n_combine),
             )
         else:
-            logging.info("[TARGET-DEPTH-01] depth not derived: %s", _depth.rule)
+            logging.info("[TARGET-DEPTH-02] depth not derived: %s", _depth.rule)
     except Exception as exc:  # noqa: BLE001
-        logging.error("[TARGET-DEPTH-01] depth derivation failed - continuing without depth gate: %s", exc)
+        logging.error("[TARGET-DEPTH-02] depth derivation failed - continuing without depth gate: %s", exc)
         _target_depth_g = None
 
     active = select_active_targets(

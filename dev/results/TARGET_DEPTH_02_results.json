@@ -1,0 +1,581 @@
+{
+  "item_a": {
+    "consumer_check": {
+      "variability_detector": "zone_filter default ['linear'] only -- does not consume noise LCs",
+      "lc_quality": "labels zone=noise as lc_quality_flag=noisy after LC exists; diagnostic only",
+      "ui_aperture": "badge/display only",
+      "phase2a": "builds LC unless skip_photometry; Item A sets skip -- intended change",
+      "verdict": "No downstream path requires noise photometry; safe to gate"
+    },
+    "counts": {
+      "513": {
+        "n_active": 218,
+        "n_noise": 45,
+        "n_noise_with_existing_lc": 12,
+        "n_linear": 173
+      },
+      "512": {
+        "n_active": 45,
+        "n_noise": 26,
+        "n_noise_with_existing_lc": 6,
+        "n_linear": 19
+      },
+      "510": {
+        "n_active": 45,
+        "n_noise": 26,
+        "n_noise_with_existing_lc": 6,
+        "n_linear": 19
+      },
+      "435": {
+        "n_active": 169,
+        "n_noise": 0,
+        "n_noise_with_existing_lc": 0,
+        "n_linear": 113
+      }
+    }
+  },
+  "item_b": {
+    "masterstar_is": "Single best processed light frame (lowest VY_FWHM), copied to MASTERSTAR.fits by build_masterstar_from_detrended; not an N-frame stack. No NCOMBINE in headers. EXPTIME=60 s matches a single light.",
+    "snr_scale_factor": 1.0,
+    "mag_offset": 0.0,
+    "t2_r0": "factor=1; depth gap is not a stack-vs-frame sqrt(N) effect",
+    "previous_g145": {
+      "param": "vsx_variable_targets_mag_limit=14.5",
+      "removed_by": "a0e3431 (2026-07-22) feat(vsx)!: scope by DAO+Gaia detection",
+      "decision": "VSX-AUTO-MAGLIM in VYVAR_DECISIONS.md"
+    },
+    "f2_crosscheck": {
+      "f2_g14_frac_median": 0.955,
+      "f2_g15_frac_median": 0.507,
+      "draft_513_depth_g": 15.0,
+      "draft_513_bin_14_5_15_0_linear_frac": 0.5483870967741935,
+      "agreement": "513 depth G=15.0 sits at the F2 cliff (G14 still mostly linear, G15 half); T2-R2: agrees within 0.5-mag binning"
+    },
+    "chosen_constants": [
+      {
+        "name": "bin_width",
+        "value": 0.5,
+        "why": "COMP-POOL NP binning convention"
+      },
+      {
+        "name": "min_bin_n",
+        "value": 8,
+        "why": "COMP-POOL NP usability convention"
+      },
+      {
+        "name": "linear_frac_thr",
+        "value": 0.5,
+        "why": "half the bin still above DAO cut (g_lim_50 family); not tuned to 14.5"
+      }
+    ],
+    "td01_chosen_count": 6,
+    "td02_chosen_count": 3,
+    "depths": {
+      "513": {
+        "target_depth_g": 15.0,
+        "linear_frac_thr": 0.5,
+        "n_stars": 3280,
+        "mode": "masterstar_zone",
+        "masterstar_n_combine": 1,
+        "snr_scale_factor": 1.0,
+        "mag_offset": 0.0,
+        "rule": "MASTERSTAR zone linear_frac: last 0.5-mag bin with n>=8 and frac(zone==linear)>=0.5; n_combine=1 => snr_scale=1, mag_offset=0.",
+        "bin_rows": [
+          {
+            "mag_lo": 11.5,
+            "mag_hi": 12.0,
+            "mag_center": 11.75,
+            "n": 138,
+            "n_linear": 138,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 12.0,
+            "mag_hi": 12.5,
+            "mag_center": 12.25,
+            "n": 195,
+            "n_linear": 195,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 12.5,
+            "mag_hi": 13.0,
+            "mag_center": 12.75,
+            "n": 252,
+            "n_linear": 252,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 13.0,
+            "mag_hi": 13.5,
+            "mag_center": 13.25,
+            "n": 351,
+            "n_linear": 351,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 13.5,
+            "mag_hi": 14.0,
+            "mag_center": 13.75,
+            "n": 445,
+            "n_linear": 441,
+            "linear_frac": 0.9910112359550561,
+            "usable": true
+          },
+          {
+            "mag_lo": 14.0,
+            "mag_hi": 14.5,
+            "mag_center": 14.25,
+            "n": 569,
+            "n_linear": 498,
+            "linear_frac": 0.875219683655536,
+            "usable": true
+          },
+          {
+            "mag_lo": 14.5,
+            "mag_hi": 15.0,
+            "mag_center": 14.75,
+            "n": 651,
+            "n_linear": 357,
+            "linear_frac": 0.5483870967741935,
+            "usable": true
+          },
+          {
+            "mag_lo": 15.0,
+            "mag_hi": 15.5,
+            "mag_center": 15.25,
+            "n": 365,
+            "n_linear": 131,
+            "linear_frac": 0.3589041095890411,
+            "usable": false
+          }
+        ],
+        "n_targets_fainter": 15,
+        "n_fainter_that_are_noise": 12,
+        "n_existing_lc_fainter": 4
+      },
+      "512": {
+        "target_depth_g": 11.5,
+        "linear_frac_thr": 0.5,
+        "n_stars": 666,
+        "mode": "masterstar_zone",
+        "masterstar_n_combine": 1,
+        "snr_scale_factor": 1.0,
+        "mag_offset": 0.0,
+        "rule": "MASTERSTAR zone linear_frac: last 0.5-mag bin with n>=8 and frac(zone==linear)>=0.5; n_combine=1 => snr_scale=1, mag_offset=0.",
+        "bin_rows": [
+          {
+            "mag_lo": 9.5,
+            "mag_hi": 10.0,
+            "mag_center": 9.75,
+            "n": 36,
+            "n_linear": 36,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 10.0,
+            "mag_hi": 10.5,
+            "mag_center": 10.25,
+            "n": 39,
+            "n_linear": 39,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 10.5,
+            "mag_hi": 11.0,
+            "mag_center": 10.75,
+            "n": 58,
+            "n_linear": 58,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 11.0,
+            "mag_hi": 11.5,
+            "mag_center": 11.25,
+            "n": 96,
+            "n_linear": 90,
+            "linear_frac": 0.9375,
+            "usable": true
+          },
+          {
+            "mag_lo": 11.5,
+            "mag_hi": 12.0,
+            "mag_center": 11.75,
+            "n": 137,
+            "n_linear": 46,
+            "linear_frac": 0.3357664233576642,
+            "usable": false
+          },
+          {
+            "mag_lo": 12.0,
+            "mag_hi": 12.5,
+            "mag_center": 12.25,
+            "n": 156,
+            "n_linear": 3,
+            "linear_frac": 0.019230769230769232,
+            "usable": false
+          },
+          {
+            "mag_lo": 12.5,
+            "mag_hi": 13.0,
+            "mag_center": 12.75,
+            "n": 46,
+            "n_linear": 2,
+            "linear_frac": 0.043478260869565216,
+            "usable": false
+          },
+          {
+            "mag_lo": 13.0,
+            "mag_hi": 13.5,
+            "mag_center": 13.25,
+            "n": 6,
+            "n_linear": 0,
+            "linear_frac": 0.0,
+            "usable": false
+          }
+        ],
+        "n_targets_fainter": 27,
+        "n_fainter_that_are_noise": 25,
+        "n_existing_lc_fainter": 5
+      },
+      "510": {
+        "target_depth_g": 11.5,
+        "linear_frac_thr": 0.5,
+        "n_stars": 666,
+        "mode": "masterstar_zone",
+        "masterstar_n_combine": 1,
+        "snr_scale_factor": 1.0,
+        "mag_offset": 0.0,
+        "rule": "MASTERSTAR zone linear_frac: last 0.5-mag bin with n>=8 and frac(zone==linear)>=0.5; n_combine=1 => snr_scale=1, mag_offset=0.",
+        "bin_rows": [
+          {
+            "mag_lo": 9.5,
+            "mag_hi": 10.0,
+            "mag_center": 9.75,
+            "n": 36,
+            "n_linear": 36,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 10.0,
+            "mag_hi": 10.5,
+            "mag_center": 10.25,
+            "n": 39,
+            "n_linear": 39,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 10.5,
+            "mag_hi": 11.0,
+            "mag_center": 10.75,
+            "n": 58,
+            "n_linear": 58,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 11.0,
+            "mag_hi": 11.5,
+            "mag_center": 11.25,
+            "n": 96,
+            "n_linear": 90,
+            "linear_frac": 0.9375,
+            "usable": true
+          },
+          {
+            "mag_lo": 11.5,
+            "mag_hi": 12.0,
+            "mag_center": 11.75,
+            "n": 137,
+            "n_linear": 46,
+            "linear_frac": 0.3357664233576642,
+            "usable": false
+          },
+          {
+            "mag_lo": 12.0,
+            "mag_hi": 12.5,
+            "mag_center": 12.25,
+            "n": 156,
+            "n_linear": 3,
+            "linear_frac": 0.019230769230769232,
+            "usable": false
+          },
+          {
+            "mag_lo": 12.5,
+            "mag_hi": 13.0,
+            "mag_center": 12.75,
+            "n": 46,
+            "n_linear": 2,
+            "linear_frac": 0.043478260869565216,
+            "usable": false
+          },
+          {
+            "mag_lo": 13.0,
+            "mag_hi": 13.5,
+            "mag_center": 13.25,
+            "n": 6,
+            "n_linear": 0,
+            "linear_frac": 0.0,
+            "usable": false
+          }
+        ],
+        "n_targets_fainter": 27,
+        "n_fainter_that_are_noise": 25,
+        "n_existing_lc_fainter": 5
+      },
+      "435": {
+        "target_depth_g": 15.5,
+        "linear_frac_thr": 0.5,
+        "n_stars": 1652,
+        "mode": "masterstar_zone",
+        "masterstar_n_combine": 1,
+        "snr_scale_factor": 1.0,
+        "mag_offset": 0.0,
+        "rule": "MASTERSTAR zone linear_frac: last 0.5-mag bin with n>=8 and frac(zone==linear)>=0.5; n_combine=1 => snr_scale=1, mag_offset=0.",
+        "bin_rows": [
+          {
+            "mag_lo": 12.0,
+            "mag_hi": 12.5,
+            "mag_center": 12.25,
+            "n": 202,
+            "n_linear": 202,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 12.5,
+            "mag_hi": 13.0,
+            "mag_center": 12.75,
+            "n": 227,
+            "n_linear": 227,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 13.0,
+            "mag_hi": 13.5,
+            "mag_center": 13.25,
+            "n": 242,
+            "n_linear": 242,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 13.5,
+            "mag_hi": 14.0,
+            "mag_center": 13.75,
+            "n": 223,
+            "n_linear": 223,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 14.0,
+            "mag_hi": 14.5,
+            "mag_center": 14.25,
+            "n": 181,
+            "n_linear": 181,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 14.5,
+            "mag_hi": 15.0,
+            "mag_center": 14.75,
+            "n": 95,
+            "n_linear": 95,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 15.0,
+            "mag_hi": 15.5,
+            "mag_center": 15.25,
+            "n": 47,
+            "n_linear": 47,
+            "linear_frac": 1.0,
+            "usable": true
+          },
+          {
+            "mag_lo": 15.5,
+            "mag_hi": 16.0,
+            "mag_center": 15.75,
+            "n": 4,
+            "n_linear": 4,
+            "linear_frac": 1.0,
+            "usable": false
+          }
+        ],
+        "n_targets_fainter": 0,
+        "n_fainter_that_are_noise": 0,
+        "n_existing_lc_fainter": 0
+      }
+    },
+    "redundancy_verdict": "MASTERSTAR is already single-frame, so zone=noise is per-star significance at the right depth. Item A alone is the primary gate Milan asked for. The mag limit summarises the population linear/noise cliff and also masks rare linear outliers fainter than the half-linear bin. Propose dropping the magnitude limit in a follow-up once Item A is accepted; not removed in this task.",
+    "aavso_snr_note": "AAVSO CCD Photometry Guide: SNR>~100 excellent for comps; SNR<10-20 poor (star lost in background). Target case differs: detection threshold here is dao_detection_n_equiv=3.78 (peak significance), already the MASTERSTAR zone cut."
+  },
+  "item_c": {
+    "drafts": {
+      "512": {
+        "trust": "GREEN",
+        "trust_reason": "5 clean comps, noisy LC (informational)",
+        "check_scatter": 0.009299945474024567,
+        "n_clean": 5,
+        "soft_warnings": [],
+        "comp_ids": [
+          "1497368849430107904",
+          "1497771992240531712",
+          "1497974027502858240",
+          "1499053747922698240",
+          "1499200223486564608"
+        ],
+        "selected_tier": "TIER1",
+        "n_tier1": 5,
+        "n_tier2": 0,
+        "n_tier3": 0,
+        "n_tier4": 0
+      },
+      "513": {
+        "trust": "RED",
+        "trust_reason": "4 clean comps, noisy LC (informational) | soft: ensemble includes T3+ comps (colour mismatch); only 0 T1/T2 comps (GREEN requires >=3); T3+ comps with color term off (trust capped YELLOW) - inspect before submitting",
+        "check_scatter": 0.01114703258449497,
+        "n_clean": 4,
+        "soft_warnings": [
+          "ensemble includes T3+ comps (colour mismatch)",
+          "only 0 T1/T2 comps (GREEN requires >=3)",
+          "T3+ comps with color term off (trust capped YELLOW)"
+        ],
+        "comp_ids": [
+          "1496798993170465536",
+          "1496994156484645632",
+          "1497894828305963776",
+          "1498626793812916480"
+        ],
+        "selected_tier": "TIER3",
+        "n_tier1": 0,
+        "n_tier2": 0,
+        "n_tier3": 1,
+        "n_tier4": 3
+      }
+    },
+    "intersection": [],
+    "only_512": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "only_513": [
+      "1496798993170465536",
+      "1496994156484645632",
+      "1497894828305963776",
+      "1498626793812916480"
+    ],
+    "finding": "Not a one-star loss from the same set: ensembles are disjoint. 512: TIER1, 5 T1 comps, GREEN. 513: TIER3, 0 T1/T2, 4 comps, RED with colour-mismatch soft warnings. check_scatter rose 1.85 mmag.",
+    "comparability": "Draft 513 is a trial under X-R3 (uncommitted tree, no SHA); differs from 512 in detection depth (SNR-GATE), MASTERSTAR content, and possibly assignment code. Uncontrolled multi-cause comparison; a committed-tree rebuild of both drafts on the same tip would settle attribution (T2-R4)."
+  },
+  "item_d": {
+    "zone_rename_proposal": {
+      "quantity": "peak_dao / bg_sigma vs dao_detection_n_equiv (DAO peak significance)",
+      "current": {
+        "linear": "above cut",
+        "noise": "below cut",
+        "saturated": "peak sat"
+      },
+      "proposed": {
+        "linear": "dao_detected",
+        "noise": "dao_subthreshold",
+        "saturated": "peak_saturated"
+      },
+      "note": "Rename deferred; touches products/provenance."
+    },
+    "ingested_repair": "Heal-on-open fixed future QC writes. To repair 512/513/510: call VyvarDatabase.record_qc_processing_apply(draft_id, hash) then update_obs_draft_status(draft_id, 'PROCESSED') which patches draft_manifest.json status (night_run/app already do this after DQF). Re-running the QC snapshot path alone is enough if status is set."
+  },
+  "section7": {
+    "impact_inventory": [
+      {
+        "quantity": "zone_noise -> skip_photometry",
+        "feeds": "active_targets / Phase 2A LC production",
+        "value_changes": true,
+        "intended_here": true
+      },
+      {
+        "quantity": "target_depth_g from MASTERSTAR zone linear_frac",
+        "feeds": "active_targets skip below_target_depth",
+        "value_changes": true,
+        "intended_here": true
+      },
+      {
+        "quantity": "dao_flux / apertures / exported errs / COMP-POOL Stage 2 / SNR-GATE",
+        "feeds": "photometry products",
+        "value_changes": false,
+        "intended_here": false
+      }
+    ],
+    "aperture_snr": {
+      "n_compared": 23,
+      "max_radius_delta_px": 0.10000000000000053,
+      "archive_sha16": "55cd7bf4b2f51d49",
+      "noise_floor_helper_legacy": true
+    },
+    "dao_flux": {
+      "frame": "proc_BO_CVn_Light_068.csv",
+      "max_rel_diff": 0.0,
+      "n": 6
+    },
+    "error_bars": {
+      "identical_re_read": true,
+      "err_cols": [
+        "err",
+        "err_photon",
+        "err_sem_rel",
+        "err_scint_rel"
+      ],
+      "n_rows": 134
+    },
+    "bo_cvn_not_masked": {
+      "512": {
+        "present": true,
+        "mag": 9.719649314880373,
+        "zone_flag": "linear",
+        "would_mask": false,
+        "target_depth_g": 11.5
+      },
+      "513": {
+        "present": true,
+        "mag": 9.719649314880373,
+        "zone_flag": "linear",
+        "would_mask": false,
+        "target_depth_g": 15.0
+      },
+      "510": {
+        "present": true,
+        "mag": 9.719649314880373,
+        "zone_flag": "linear",
+        "would_mask": false,
+        "target_depth_g": 11.5
+      },
+      "435": {
+        "present": true,
+        "mag": 9.719649314880373,
+        "zone_flag": "linear",
+        "would_mask": false,
+        "target_depth_g": 15.5
+      }
+    },
+    "gates": {
+      "returncode": 0,
+      "still_fire": true
+    }
+  }
+}
