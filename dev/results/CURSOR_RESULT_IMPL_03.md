@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Baseline: 9762240 (IMPL-02)
-Tip: (see commit after --fast)
+Tip: **c2bab5c** (stamp docs: see git log)
 Push: NO
 
 ## What I did
@@ -121,8 +121,8 @@ draft `aperture_snr_table_zp_corrected.json`.
 
 ## --fast
 
-(see stamp after suite)
+OVERALL PASS on impl **c2bab5c** (1401 passed, 27 skipped).
 
 ## Files changed
 
-(list + SHA after commit)
+Impl **c2bab5c**. Push: NO.
