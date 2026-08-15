@@ -1,7 +1,7 @@
 # CURSOR RESULT - PRE-IMPL-01
 
 Date: 2026-08-15
-Baseline: 011fff7 (+ A1/A2 committed this task; weight persistence committed this task)
+Baseline: 011fff7; result commit: **1dd83e5** (A1/A2 + weight persistence + this report)
 Type: INVESTIGATION. Push: NO.
 `--fast` OVERALL: see end of file.
 
@@ -51,7 +51,7 @@ Ratio vs G (decisive):
 Colour isolation (non-tautological):
 
 - Tautological: `sigma_eff` contains `comp_rms`; both track night scatter of the same star.
-- Non-tautological: `corr(excess2, colour_term^2) ~ 0.002` — **colour term does not predict extra scatter**.
+- Non-tautological: `corr(excess2, colour_term^2) ~ 0.002` - **colour term does not predict extra scatter**.
 
 **Answer:** ratio is systematically mag-dependent (bright under-predicted by ~3x, faint ~ok). Colour term is ordering, not absolute. An absolute ceiling on `sigma_eff` is **NOT constructible**. Prefer a cut on `comp_rms` (mag) or median SNR.
 
@@ -75,7 +75,7 @@ Median check-star MAD scatter (mmag) vs cumulative-weight truncation:
 | 90% | 16.92 | 178 |
 | 50% | **12.79** | 255 |
 
-**Answer:** Through 90%, scatter is flat (~0.4 mmag) — mild tail is inert (performance). At 50%, scatter **improves** by ~3.7 mmag — the far low-weight half carries systematics `sigma_eff` does not model.
+**Answer:** Through 90%, scatter is flat (~0.4 mmag) - mild tail is inert (performance). At 50%, scatter **improves** by ~3.7 mmag - the far low-weight half carries systematics `sigma_eff` does not model.
 
 **Falsification:** scatter rises or falls by >1 mmag from full to 50%. **Happened (fell).**
 
@@ -92,10 +92,10 @@ Median check-star MAD scatter (mmag) vs cumulative-weight truncation:
 | Shape k'' | -83.3 | 98.5 | mmag / BP-RP / airmass | **no** |
 | Level (raw) | -611 | 152 | mmag / BP-RP | yes (confounded: corr with G = 0.80) |
 | Level (G-controlled) | -373 | 90 | mmag / BP-RP | **yes** |
-| `c_col` reference | 29.5 | — | mmag / BP-RP | — |
-| CLEAR k'' | NONE | — | — | — |
+| `c_col` reference | 29.5 | - | mmag / BP-RP | - |
+| CLEAR k'' | NONE | - | - | - |
 
-**Answer:** Shape term consistent with zero — no airmass-coupled colour contamination of LC shape at this precision. G-controlled level term is significant but ~13x `c_col` and not the PSF EE coefficient; it is a zero-point / export-level effect, not a transit-shape effect.
+**Answer:** Shape term consistent with zero - no airmass-coupled colour contamination of LC shape at this precision. G-controlled level term is significant but ~13x `c_col` and not the PSF EE coefficient; it is a zero-point / export-level effect, not a transit-shape effect.
 
 **Design:** **(c) for exports/absolute level only**; **(a) weighting alone for LC shape**. Not (b) from this sample.
 
@@ -114,11 +114,11 @@ Median check-star MAD scatter (mmag) vs cumulative-weight truncation:
 | Night EE variation MAD | **0.008 mmag** |
 | Night EE p16-p84 | 0.018 mmag |
 
-**Register 84.6% vs r90 5.0-5.8:** both refer to draft **510** production radii ~**4.1 px** (`CURSOR_RESULT_a1_growth_curves`). Draft **514** median aperture is the faint-star **r_min clamp** 2.711 px — a different radius. No contradiction once drafts are not conflated. `VY_FWHM_GAUSS` and DAO moment remain one PSF in two conventions; not needed to settle EE.
+**Register 84.6% vs r90 5.0-5.8:** both refer to draft **510** production radii ~**4.1 px** (`CURSOR_RESULT_a1_growth_curves`). Draft **514** median aperture is the faint-star **r_min clamp** 2.711 px - a different radius. No contradiction once drafts are not conflated. `VY_FWHM_GAUSS` and DAO moment remain one PSF in two conventions; not needed to settle EE.
 
-**r_min clamp:** intended as a numerical floor for faint SNR bins. Most catalogue stars are faint, so the median sits on the clamp — boundary condition, not an optimized radius for the median star.
+**r_min clamp:** intended as a numerical floor for faint SNR bins. Most catalogue stars are faint, so the median sits on the clamp - boundary condition, not an optimized radius for the median star.
 
-**WIDE-ERR:** EE~66% confirms undersizing vs 90% target. Night EE variation on this sample is **negligible** (0.008 mmag) — not supporting aperture-loss-vs-seeing as the WIDE-ERR driver on draft 514's night.
+**WIDE-ERR:** EE~66% confirms undersizing vs 90% target. Night EE variation on this sample is **negligible** (0.008 mmag) - not supporting aperture-loss-vs-seeing as the WIDE-ERR driver on draft 514's night.
 
 **Falsification:** EE at 2.711 near 0.85, or night EE variation >> 1 mmag. EE falsified 0.85; night variation did not show large scatter.
 
@@ -146,7 +146,7 @@ Median check-star MAD scatter (mmag) vs cumulative-weight truncation:
 
 ### `comp_weight` persistence (PRE-IMPL-01)
 
-- Cause: Phase 1 wrote `1/rms^2` only — identical across targets.
+- Cause: Phase 1 wrote `1/rms^2` only - identical across targets.
 - Fix: Phase 1 writes `sigma_eff` weights; `rewrite_comparison_stars_weights_csv` at Phase 2A end; draft 514 CSV rewritten (97 distinct N_eff, range 150-590).
 - Test: `dev/tests/test_comp_weight_rewrite.py`
 
