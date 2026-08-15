@@ -83,12 +83,12 @@ committed tip would settle it.
 
 ## 3. Push
 
-- Command: `git push origin main` (`8fe1759..5872634`)
-- Pushed tip SHA: **5872634**
-- Pre-push `--fast` on findings tip `21f6060`: OVERALL PASS
-- Docs tip recording that result: `5872634`
+- Command: `git push origin main` (first `8fe1759..5872634`; finalize `5872634..738a24e`)
+- Verified findings tip (`--fast` OVERALL PASS): **21f6060**
+- Tip that recorded that PASS and first push: **5872634**
+- Current `origin/main` tip (finalize memo): **738a24e**
 - Post-push `--fast` on `5872634`: **OVERALL PASS**; `git-origin-main` no longer
-  reports a difference (`HEAD` == `origin/main` == `5872634`)
+  reported a difference (`HEAD` == `origin/main`)
 - Working tree: clean of tracked changes; untracked local scratch only
   (DAO_DEPTH ledgers, wide_err tools, sqlite wal/shm, tmp)
 
