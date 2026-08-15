@@ -75,8 +75,8 @@ committed tip would settle it.
 
 ## 2. Verify
 
-- Docs/register commit: see below
-- `--fast` before push: OVERALL PASS on tip recorded below
+- Docs/register commit: `21f6060` (findings); follow-up tip records `--fast`
+- `--fast` on `21f6060`: **OVERALL PASS** (1360 passed, 27 skipped)
 - No adjustments to make checks pass
 
 ---
@@ -84,6 +84,7 @@ committed tip would settle it.
 ## 3. Push
 
 - Command: `git push origin main`
+- Pre-push verified tip: `21f6060` (`--fast` OVERALL PASS)
 - Pushed tip SHA: (filled after push)
 - Post-push `--fast`: `git-origin-main` must not report a difference
 - `git log --oneline -15` and working tree: see footer after push
