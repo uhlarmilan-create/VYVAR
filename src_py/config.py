@@ -719,6 +719,12 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.9
+    #: IMPL-03: aperture radius authority - ``scatter`` (LC scatter min) or ``snr`` (Howell).
+    aperture_selection_criterion: str = "scatter"
+    #: Scatter-selection fixed-pixel ladder bounds [px].
+    aperture_scatter_r_min_px: float = 1.5
+    aperture_scatter_r_max_px: float = 12.0
+    aperture_scatter_r_step_px: float = 0.5
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.
     aperture_snr_sizing: dict[str, float] = field(
@@ -1683,6 +1689,26 @@ class AppConfig:
         except (TypeError, ValueError):
             self.aperture_fwhm_factor = 2.75
         self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
+        _crit = str(data.get("aperture_selection_criterion", self.aperture_selection_criterion) or "scatter").strip().lower()
+        self.aperture_selection_criterion = _crit if _crit in ("scatter", "snr") else "scatter"
+        try:
+            self.aperture_scatter_r_min_px = float(
+                data.get("aperture_scatter_r_min_px", self.aperture_scatter_r_min_px)
+            )
+        except (TypeError, ValueError):
+            self.aperture_scatter_r_min_px = 1.5
+        try:
+            self.aperture_scatter_r_max_px = float(
+                data.get("aperture_scatter_r_max_px", self.aperture_scatter_r_max_px)
+            )
+        except (TypeError, ValueError):
+            self.aperture_scatter_r_max_px = 12.0
+        try:
+            self.aperture_scatter_r_step_px = float(
+                data.get("aperture_scatter_r_step_px", self.aperture_scatter_r_step_px)
+            )
+        except (TypeError, ValueError):
+            self.aperture_scatter_r_step_px = 0.5
         # aperture_snr_sizing (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large).
         # New structured form wins; legacy scalar keys are accepted for one transition release.
         _asz = data.get("aperture_snr_sizing")
@@ -2674,6 +2700,10 @@ class AppConfig:
             "epsf_min_stars": int(self.epsf_min_stars),
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
+            "aperture_selection_criterion": str(self.aperture_selection_criterion),
+            "aperture_scatter_r_min_px": float(self.aperture_scatter_r_min_px),
+            "aperture_scatter_r_max_px": float(self.aperture_scatter_r_max_px),
+            "aperture_scatter_r_step_px": float(self.aperture_scatter_r_step_px),
             "aperture_snr_sizing": {
                 "small": float(self.aperture_snr_sizing.get("small", 1.5)),
                 "large": float(self.aperture_snr_sizing.get("large", 4.0)),

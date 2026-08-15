@@ -4551,5 +4551,74 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "aperture_selection_criterion": {
+    "help": "Aperture radius authority for draft photometry: scatter (minimise non-variable LC scatter; IMPL-03) or snr (Howell single-measurement SNR).",
+    "kind": "static",
+    "label": "Aperture Selection Criterion",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": "enum",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "aperture_scatter_r_min_px": {
+    "help": "Minimum radius of the scatter-selection photometry ladder.",
+    "kind": "static",
+    "label": "Aperture Scatter R Min",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.5,
+      20.0
+    ],
+    "tier": "expert",
+    "unit": "px",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "aperture_scatter_r_max_px": {
+    "help": "Maximum radius of the scatter-selection photometry ladder.",
+    "kind": "static",
+    "label": "Aperture Scatter R Max",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      1.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": "px",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "aperture_scatter_r_step_px": {
+    "help": "Step size of the scatter-selection photometry ladder.",
+    "kind": "static",
+    "label": "Aperture Scatter R Step",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      0.1,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": "px",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }

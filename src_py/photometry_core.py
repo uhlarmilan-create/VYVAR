@@ -1453,6 +1453,11 @@ def compute_snr_optimal_aperture_table(
     curve is missing or invalid, fall back to the analytic Gaussian enclosed-flux
     model and record ``ee_path='gaussian_fallback'`` in the artifact.
 
+    ``zero_point`` converts catalogue magnitude to total ADU via
+    ``Ftot = 10**((ZP - G)/2.5)``. A hardcoded ZP=25 overstates flux by ~15x on
+    draft 514 (IMPL-03); prefer a draft-calibrated ZP from
+    ``calibrate_snr_zero_point_from_fluxes``.
+
     SNR = F(r)/g / sqrt(F(r)/g + N_pix.bkg_var/g)  (dimensionless; flux and noise in e-).
 
     Bounds ``r_min_fwhm``..``r_max_fwhm`` remain search limits. A bin whose optimum
@@ -1554,6 +1559,7 @@ def compute_snr_optimal_aperture_table(
         "r_max_px": r_max_px,
         "r_min_fwhm": float(r_min_fwhm),
         "r_max_fwhm": float(r_max_fwhm),
+        "zero_point": float(zero_point),
         "ee_path": ee_path,
         "ee_at_opt_by_mag": ee_at_opt,
         "bound_hit_by_mag": bound_hit_by_mag,
@@ -1563,6 +1569,74 @@ def compute_snr_optimal_aperture_table(
         out["ee_radii"] = [round(float(v), 4) for v in ee_r_arr.tolist()]
         out["ee_curve"] = [round(float(v), 6) for v in ee_c_arr.tolist()]
     return out
+
+
+def _calibrate_snr_zero_point_for_draft(
+    *,
+    draft_dir: Path,
+    aligned_fits_paths: Sequence[Path | str] | None,
+    ee_radii: Sequence[float] | None,
+    ee_curve: Sequence[float] | None,
+) -> dict[str, Any]:
+    """Estimate ZP from proc CSV dao_flux + G, correcting to Ftot via EE(r)."""
+    from aperture_scatter_select import calibrate_snr_zero_point_from_fluxes
+
+    dd = Path(draft_dir)
+    csv_paths: list[Path] = []
+    if aligned_fits_paths:
+        for p in aligned_fits_paths:
+            parent = Path(p).resolve().parent
+            found = sorted(parent.glob("proc_*.csv"))
+            csv_paths.extend(found[:2])
+            if len(csv_paths) >= 6:
+                break
+    if len(csv_paths) < 3:
+        for sub in (
+            dd / "detrended_aligned" / "lights",
+            dd / "calibrated" / "lights",
+        ):
+            if not sub.is_dir():
+                continue
+            found = sorted(sub.rglob("proc_*.csv"))
+            csv_paths.extend(found[:6])
+            if len(csv_paths) >= 6:
+                break
+    csv_paths = list(dict.fromkeys(csv_paths))[:8]
+    if not csv_paths:
+        return {"ok": False, "zero_point": 25.0, "reason": "no_proc_csv"}
+
+    mags: list[float] = []
+    fluxes: list[float] = []
+    raps: list[float] = []
+    for csv_path in csv_paths:
+        try:
+            df = pd.read_csv(csv_path, low_memory=False)
+        except Exception:  # noqa: BLE001
+            continue
+        gcol = None
+        for c in ("phot_g_mean_mag", "catalog_mag", "mag"):
+            if c in df.columns:
+                gcol = c
+                break
+        if gcol is None or "dao_flux" not in df.columns:
+            continue
+        g = pd.to_numeric(df[gcol], errors="coerce").to_numpy(dtype=float)
+        f = pd.to_numeric(df["dao_flux"], errors="coerce").to_numpy(dtype=float)
+        if "aperture_r_px" in df.columns:
+            r = pd.to_numeric(df["aperture_r_px"], errors="coerce").to_numpy(dtype=float)
+        else:
+            r = np.full(len(df), np.nan, dtype=float)
+        ok = np.isfinite(g) & np.isfinite(f) & (f > 0) & (g > 5) & (g < 18)
+        mags.extend(g[ok].tolist())
+        fluxes.extend(f[ok].tolist())
+        raps.extend(r[ok].tolist())
+    return calibrate_snr_zero_point_from_fluxes(
+        mags,
+        fluxes,
+        raps if any(math.isfinite(x) for x in raps) else None,
+        ee_radii=ee_radii,
+        ee_curve=ee_curve,
+    )
 
 
 def _resolve_phase2a_equipment_id(
@@ -1935,32 +2009,44 @@ def resolve_draft_dir_for_snr_aperture_table(
 def load_snr_aperture_table_from_draft_dir(
     draft_dir: Path | str | None,
 ) -> dict[str, Any] | None:
-    """Nacita ``aperture_snr_table.json`` z draft priecinka (ak existuje)."""
+    """Load draft aperture table (scatter-optimal or SNR).
+
+    Prefer ``aperture_scatter_table.json`` when present (IMPL-03), else
+    ``aperture_snr_table.json``.
+    """
     if draft_dir is None or not str(draft_dir).strip():
         return None
     dd = Path(draft_dir)
     if not dd.is_dir():
         return None
-    path = dd / "aperture_snr_table.json"
-    if not path.is_file():
-        logging.warning("[FAZA 2A] aperture_snr_table.json nenajdena - pouzivam globalnu aperturu")
+    path = None
+    for name in ("aperture_scatter_table.json", "aperture_snr_table.json"):
+        cand = dd / name
+        if cand.is_file():
+            path = cand
+            break
+    if path is None:
+        logging.warning("[FAZA 2A] aperture table not found - using global aperture")
         return None
     try:
         with path.open(encoding="utf-8") as f:
             table = json.load(f)
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0128] aperture_snr_table.json unreadable - Phase 2A uses global default aperture instead of p...: %s', exc)
-        logging.warning("[FAZA 2A] aperture_snr_table.json necitatelna (%s) - globalna apertura", exc)
+        logging.error(
+            "[EXC-0128] aperture table unreadable - Phase 2A uses global default: %s",
+            exc,
+        )
+        logging.warning("[FAZA 2A] aperture table unreadable (%s) - global aperture", exc)
         return None
     if not isinstance(table, dict):
-        logging.warning("[FAZA 2A] aperture_snr_table.json neplatny format - globalna apertura")
+        logging.warning("[FAZA 2A] aperture table invalid format - global aperture")
         return None
     logging.info(
-        "[FAZA 2A] Nacitana SNR aperture table: fwhm=%spx scope=%s gain=%s sky=%s",
+        "[FAZA 2A] Loaded aperture table %s: criterion=%s fwhm=%spx fixed_r=%s",
+        path.name,
+        table.get("selection_criterion") or table.get("ee_path"),
         table.get("fwhm_px"),
-        table.get("fwhm_px_scope"),
-        table.get("gain"),
-        table.get("sky_adu_per_px"),
+        table.get("fixed_radius_px"),
     )
     return table
 
@@ -2771,6 +2857,26 @@ def precompute_and_save_snr_aperture_table_for_draft(
             float(ee_meas.get("r90_px", float("nan"))),
             float(ee_meas.get("isolation_fwhm", float("nan"))),
         )
+        zp_cal = _calibrate_snr_zero_point_for_draft(
+            draft_dir=dd,
+            aligned_fits_paths=aligned_fits_paths,
+            ee_radii=ee_meas.get("ee_radii"),
+            ee_curve=ee_meas.get("ee_curve"),
+        )
+        zp_use = float(zp_cal.get("zero_point", 25.0)) if zp_cal.get("ok") else 25.0
+        if not zp_cal.get("ok"):
+            logging.warning(
+                "[PIPELINE] SNR ZP calibration failed (%s) - using default 25.0 "
+                "(IMPL-03: default overstates flux on typical drafts)",
+                zp_cal.get("reason"),
+            )
+        else:
+            logging.info(
+                "[PIPELINE] SNR ZP calibrated=%.3f (n=%s mad=%.3f) from proc fluxes+EE",
+                zp_use,
+                zp_cal.get("n"),
+                zp_cal.get("zero_point_mad"),
+            )
         snr_table = compute_snr_optimal_aperture_table(
             fwhm_px=float(fwhm_px),
             sky_adu_per_px=float(sky_adu),
@@ -2780,7 +2886,9 @@ def precompute_and_save_snr_aperture_table_for_draft(
             ee_radii=ee_meas.get("ee_radii"),
             ee_curve=ee_meas.get("ee_curve"),
             ee_source="measured_growth_curve",
+            zero_point=float(zp_use),
         )
+        snr_table["zero_point_calibration"] = zp_cal
         snr_table["ee_n_cog"] = int(ee_meas.get("n_cog", 0) or 0)
         snr_table["ee_ref_r_px"] = float(ee_meas.get("ref_r_px", float("nan")))
         snr_table["ee_ladder_outer_r_px"] = float(ee_meas.get("ladder_outer_r_px", float("nan")))
@@ -11069,8 +11177,22 @@ def _phase2a_process_one_target(
                         kmag=_chk_result.kmag,
                         ensemble=_chk_result,
                     )
+                else:
+                    logging.warning(
+                        "[CHECK-KMAG] ensemble returned empty for target=%s check=%s",
+                        target_cid,
+                        _chk_cid,
+                    )
+            else:
+                logging.warning(
+                    "[CHECK-KMAG] check star %s has no LC series for target %s",
+                    _chk_cid,
+                    target_cid,
+                )
+        else:
+            logging.warning("[CHECK-KMAG] no check star selected for target %s", target_cid)
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
-        logging.debug("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
+        logging.warning("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
     # Krok 6: Ulozenie vystupov
     lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"

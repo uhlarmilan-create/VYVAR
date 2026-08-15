@@ -146,6 +146,11 @@ def remeasure_proc_csvs(
     for i, csv_path in enumerate(csv_files, 1):
         fits_path = aligned_dir / f"{csv_path.stem}.fits"
         if not fits_path.is_file():
+            # draft 514 style: proc_BO_CVn_Light_001.csv -> BO_CVn_Light_001.fits
+            stem = csv_path.stem
+            if stem.lower().startswith("proc_"):
+                fits_path = aligned_dir / f"{stem[5:]}.fits"
+        if not fits_path.is_file():
             LOGGER.warning("Skip %s - missing %s", csv_path.name, fits_path.name)
             continue
         df = pd.read_csv(csv_path, low_memory=False, dtype=GAIA_PROC_CSV_READ_DTYPE)

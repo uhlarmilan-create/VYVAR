@@ -528,11 +528,23 @@ def compute_check_ensemble_mag_calib(
     if not cid or cid not in comp_lc:
         return None
     other_ids = [c for c in comp_ids if c != cid and c in comp_lc]
-    other_quality = {
-        c: comp_quality[c]
-        for c in other_ids
-        if c in comp_quality and str(comp_quality[c].get("quality", "")).strip().lower() != "excluded"
-    }
+    other_quality: dict[str, dict] = {}
+    for c in other_ids:
+        if c not in comp_quality:
+            continue
+        info = comp_quality[c]
+        if isinstance(info, str):
+            q = str(info).strip().lower()
+            if q == "excluded":
+                continue
+            other_quality[c] = {"quality": q or "good"}
+        elif isinstance(info, dict):
+            q = str(info.get("quality", "") or "").strip().lower()
+            if q == "excluded":
+                continue
+            other_quality[c] = info
+        else:
+            continue
     n_ensemble = len(other_quality)
     _min_other = max(2, int(n_comp_min if n_comp_min is not None else 2))
     _max_other = int(n_comp_max if n_comp_max is not None else cfg.phase01_comparison_n_comp_max)
