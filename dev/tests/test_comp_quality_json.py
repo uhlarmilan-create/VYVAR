@@ -29,7 +29,7 @@ def test_parse_comp_quality_flat_and_structured():
 
 
 def test_stability_outlier_note_on_exclude():
-    """One noisy comp above hard p2p ceiling -> excluded (no MAD sigma-clip)."""
+    """COMP-ADMIT-03: noisy p2p marks suspect, does not eject membership."""
     rng = np.random.default_rng(1)
     n = 40
     bjd = np.linspace(2459000.0, 2459000.4, n)
@@ -48,9 +48,10 @@ def test_stability_outlier_note_on_exclude():
         outlier_sigma=3.0,
         max_comp_slope_mmag_hr=99.0,
     )
-    assert q["c4"]["quality"] == "excluded"
-    assert "p2p_hard_ceiling" in q["c4"].get("note", "")
+    assert q["c4"]["quality"] == "suspect"
+    assert "p2p_high" in q["c4"].get("note", "")
     assert "p2p=" in q["c4"]["note"]
+    assert "COMP-ADMIT-03" in q["c4"]["note"]
 
 
 def test_stability_few_frames_note():

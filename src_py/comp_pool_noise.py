@@ -9,7 +9,8 @@ Non-parametric: running median of robust scatter in magnitude bins (assumes the
 bulk of field stars are non-variable).
 
 Stage 1: fit + derived thresholds (diagnostics).
-Stage 2: ``admit_pool_stars`` applies those criteria; no pool-size cap.
+Stage 2: ``admit_pool_stars`` rejects only known variables (VSX / Gaia);
+scatter/colour/distance enter continuous weights (COMP-ADMIT-03). No pool-size cap.
 """
 
 from __future__ import annotations
@@ -1003,10 +1004,14 @@ def admit_pool_stars(
     fit: NoiseCurveFit,
     thr: DerivedPoolThresholds,
 ) -> pd.DataFrame:
-    """Apply Stage-1/2 derived criteria; return stars with admit flag and reject reasons.
+    """COMP-ADMIT-03: admit unless known variable (VSX / Gaia).
 
-    No pool-size cap. Colour/spatial/magnitude proximity are Stage-3 assignment only.
+    Measurability and geometry are enforced upstream in ``build_global_comp_pool``.
+    Scatter, colour, distance, dilution, detect_frac, and faint/bright limits are
+    **not** admission cuts; they enter continuous weights (``comp_weights``).
+    ``fit`` / ``thr`` remain for provenance / diagnostics only.
     """
+    _ = (fit, thr)
     if stars.empty:
         return stars.copy()
     rows: list[dict[str, Any]] = []
@@ -1024,47 +1029,6 @@ def admit_pool_stars(
             reasons.append("vsx_known_variable")
         if bool(st.get("gaia_variable_flag")):
             reasons.append("gaia_variable_flag")
-        if math.isfinite(thr.detect_frac_min) and (
-            not math.isfinite(dfrac) or dfrac < float(thr.detect_frac_min)
-        ):
-            reasons.append(f"detect_frac<{thr.detect_frac_min:.4g}")
-        if thr.faint_limit_g is not None and math.isfinite(mg) and mg > float(thr.faint_limit_g):
-            reasons.append(f"fainter_than_{thr.faint_limit_g:.3f}")
-        if thr.bright_limit_g is not None and thr.bright_upturn_visible:
-            if math.isfinite(mg) and mg < float(thr.bright_limit_g):
-                reasons.append(f"brighter_than_upturn_{thr.bright_limit_g:.3f}")
-        if thr.dilution_threshold is not None and math.isfinite(dil):
-            if dil < float(thr.dilution_threshold):
-                reasons.append(f"dilution<{thr.dilution_threshold:.4g}")
-        # Missing dilution: do not reject (measurement gap, not a failed isolation test).
-
-        flux = float(st.get("flux_median", float("nan")))
-        sky = float(st.get("sky_median", fit.sky_adu_median))
-        rap = float(st.get("aperture_r_median", float("nan")))
-        area = math.pi * rap * rap if math.isfinite(rap) else fit.aperture_area_px_median
-        sp = predicted_sigma_mag_phot(
-            flux,
-            sky_adu=sky,
-            area_px=area,
-            gain=fit.gain_e_per_adu,
-            read_noise_e=fit.read_noise_e,
-        )
-        stot = (
-            math.sqrt(sp * sp + fit.sigma_sys_mag * fit.sigma_sys_mag)
-            if math.isfinite(sp) and math.isfinite(fit.sigma_sys_mag)
-            else float("nan")
-        )
-        ratio_mad = sc_mad / stot if math.isfinite(stot) and stot > 0 and math.isfinite(sc_mad) else float("nan")
-        ratio_iqr = sc_iqr / stot if math.isfinite(stot) and stot > 0 and math.isfinite(sc_iqr) else float("nan")
-        if thr.stability_excess_mad is not None and math.isfinite(ratio_mad):
-            if ratio_mad > float(thr.stability_excess_mad):
-                reasons.append(f"mad_excess>{thr.stability_excess_mad:.3g}")
-        if thr.stability_excess_iqr is not None and math.isfinite(ratio_iqr):
-            if ratio_iqr > float(thr.stability_excess_iqr):
-                reasons.append(f"iqr_excess>{thr.stability_excess_iqr:.3g}")
-        if thr.stability_excess_inv_eta is not None and math.isfinite(inv):
-            if inv > float(thr.stability_excess_inv_eta):
-                reasons.append(f"inv_eta>{thr.stability_excess_inv_eta:.3g}")
 
         rows.append(
             {
@@ -1075,9 +1039,9 @@ def admit_pool_stars(
                 "scatter_iqr": sc_iqr,
                 "inv_eta": inv,
                 "dilution_factor": dil,
-                "sigma_total_model": stot,
-                "ratio_mad": ratio_mad,
-                "ratio_iqr": ratio_iqr,
+                "sigma_total_model": float("nan"),
+                "ratio_mad": float("nan"),
+                "ratio_iqr": float("nan"),
                 "admit": len(reasons) == 0,
                 "reject_reasons": ";".join(reasons),
             }

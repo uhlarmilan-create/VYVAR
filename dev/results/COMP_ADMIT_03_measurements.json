@@ -1,0 +1,107 @@
+{
+  "512": {
+    "draft_id": 512,
+    "n_masterstars": 735,
+    "n_proc": 134,
+    "n_summarized": 680,
+    "n_admitted_decisions": 633,
+    "n_global_pool": 141,
+    "pool_empty": false,
+    "coeffs": {
+      "c_col": 0.0,
+      "c_dist": 0.0,
+      "c_col_source": "c_col=0 (no k2_bprp)",
+      "c_dist_source": "c_dist=0 named_gap:no_regression_inputs",
+      "notes": [
+        "c_col_psf_term: named zero until a portable measurement of colour-dependent enclosed-flux vs BP-RP is wired; k''*DeltaX is the only active colour term."
+      ]
+    },
+    "bo_cvn_archived_comps": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "bo_cvn_in_new_pool": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "fw_cvn_archived_n_comps": 0
+  },
+  "513": {
+    "draft_id": 513,
+    "n_masterstars": 3621,
+    "n_proc": 134,
+    "n_summarized": 3448,
+    "n_admitted_decisions": 3201,
+    "n_global_pool": 1238,
+    "pool_empty": false,
+    "coeffs": {
+      "c_col": 0.0,
+      "c_dist": 0.0,
+      "c_col_source": "c_col=0 (no k2_bprp)",
+      "c_dist_source": "c_dist=0 named_gap:no_regression_inputs",
+      "notes": [
+        "c_col_psf_term: named zero until a portable measurement of colour-dependent enclosed-flux vs BP-RP is wired; k''*DeltaX is the only active colour term."
+      ]
+    },
+    "bo_cvn_archived_comps": [
+      "1496798993170465536",
+      "1496994156484645632",
+      "1497894828305963776",
+      "1498626793812916480"
+    ],
+    "bo_cvn_in_new_pool": [
+      "1496798993170465536",
+      "1496994156484645632",
+      "1497894828305963776",
+      "1498626793812916480"
+    ],
+    "fw_cvn_archived_n_comps": 0
+  },
+  "435": {
+    "draft_id": 435,
+    "n_masterstars": 2951,
+    "n_proc": 139,
+    "n_summarized": 2770,
+    "n_admitted_decisions": 2592,
+    "n_global_pool": 783,
+    "pool_empty": false,
+    "coeffs": {
+      "c_col": 0.0,
+      "c_dist": 0.0,
+      "c_col_source": "c_col=0 (no k2_bprp)",
+      "c_dist_source": "c_dist=0 named_gap:no_regression_inputs",
+      "notes": [
+        "c_col_psf_term: named zero until a portable measurement of colour-dependent enclosed-flux vs BP-RP is wired; k''*DeltaX is the only active colour term."
+      ]
+    },
+    "bo_cvn_archived_comps": [
+      "1497771992240531712",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "bo_cvn_in_new_pool": [
+      "1497771992240531712",
+      "1499053747922698240",
+      "1499200223486564608"
+    ],
+    "fw_cvn_archived_n_comps": 0
+  },
+  "bo_cvn_pool_intersection_512_513": [],
+  "bo_cvn_pool_union_512_513": [
+    "1496798993170465536",
+    "1496994156484645632",
+    "1497368849430107904",
+    "1497771992240531712",
+    "1497894828305963776",
+    "1497974027502858240",
+    "1498626793812916480",
+    "1499053747922698240",
+    "1499200223486564608"
+  ]
+}

@@ -90,6 +90,52 @@ fix; replacement evidence: `dev/results/CURSOR_RESULT_CLOSE_IRON_GATES.md`.
 
 ---
 
+## COMP-ADMIT-03 - admission is weights, not rank cuts (2026-08-15)
+
+**Problem.** COMP-POOL-01 Stage 2 (`696c849`) added five rank-based comparison
+admission cuts (p84 MAD/IQR/inv_eta, p16 detect_frac, dilution ladder, faint/bright).
+They sat upstream of the word "admitted" in ZP-CLIP-REMOVAL and therefore did not
+violate its letter, but they violated its decision: Broeg-family pipelines favour
+using as many comps as possible with weights, not a tiny hand-picked set.
+Rank cuts also make a star's fate depend on the composition of the field
+(universality failure; GATE-OWNERSHIP-01 R2).
+
+**Physical argument (INV-GATE-REMOVAL).** Each deleted gate discretised a continuous
+quality already expressed by a weight:
+
+- scatter -> `sigma_rms` in `sigma_eff`
+- colour difference -> `c_col * |delta(BP-RP)|`
+- angular distance -> `c_dist * r`
+
+Rank-based cuts additionally reject a fixed fraction of a uniformly good population.
+Byte-identity is not evidence for removal; the physics is.
+
+**Gates that remain (exactly three):** saturation/non-linearity (measurement
+invalid), known variable (VSX/Gaia flag), geometry (aligned footprint). Everything
+else is weight:
+
+```
+sigma_eff^2 = sigma_rms^2 + (c_col * |dBP-RP|)^2 + (c_dist * r_deg)^2
+w = 1 / sigma_eff^2
+```
+
+**Forced photometry.** Per-frame comparison photometry still depends on DAO
+detection (+ targeted pass-2), not forced aperture at catalogue XY every frame
+(`pipeline.py` detect/match path). `detect_frac` as an admission criterion is
+therefore a symptom; it is deleted as a cut. A follow-up task is needed if fixed
+membership across every frame is required without Honeycutt global LS.
+
+**Broeg iteration.** VYVAR's `ensemble_normalize` uses one-shot `1/sigma^2` for the
+catalog zeropoint (AIJ/Honeycutt unweighted flux sum for `delta_mag`). It does not
+iterate residuals into weights. Adding colour/distance systematic terms to
+`sigma_eff` does not introduce iteration; an iterative fit that down-weights is
+not the same as discarding members (iron rule 1).
+
+**Rule.** Comparison admission: three gates only. Continuous qualities are weights.
+See INV-COMP-MEMBERSHIP. Extends ZP-CLIP-REMOVAL from the zeropoint to admission.
+
+---
+
 ## ZP-CLIP-REMOVAL - no per-frame MAD rejection in ensemble_normalize (2026-08-12)
 
 **Problem.** Draft 509 (same raw as draft 435, HEAD `682f40c`) produced check-star

@@ -833,6 +833,40 @@ def render_settings_dashboard(
             compute="Dynamic threshold: `max(|Deltamag|, floor for bright)` per `config.py` logic.",
         )
         st.subheader("Color filter - Gaia BP-RP")
+        st.caption(
+            "COMP-ADMIT-03: colour and distance are continuous weights "
+            "(sigma_eff), not hard admission cuts. Tier sliders below are "
+            "legacy UI retained for display; they no longer reject comps."
+        )
+        _c_col = st.number_input(
+            "comp_weight_c_col_mag_per_bprp (blank=derive from k2*DeltaX)",
+            value=float(cfg.comp_weight_c_col_mag_per_bprp)
+            if cfg.comp_weight_c_col_mag_per_bprp is not None
+            else 0.0,
+            min_value=0.0,
+            max_value=1.0,
+            step=0.001,
+            format="%.4f",
+            help="mag per BP-RP. Set 0 and leave airmass_span=0 for named zero.",
+        )
+        _c_dist = st.number_input(
+            "comp_weight_c_dist_mag_per_deg (0=named zero / measure)",
+            value=float(cfg.comp_weight_c_dist_mag_per_deg)
+            if cfg.comp_weight_c_dist_mag_per_deg is not None
+            else 0.0,
+            min_value=0.0,
+            max_value=1.0,
+            step=0.001,
+            format="%.4f",
+        )
+        _am_span = st.number_input(
+            "comp_weight_airmass_span",
+            value=float(cfg.comp_weight_airmass_span or 0.0),
+            min_value=0.0,
+            max_value=3.0,
+            step=0.05,
+            format="%.2f",
+        )
         # comp_color_tiers (WAVE-B STEP 4): unpack the structured key into per-tier slider values.
         _ui_tier_lims = cfg.comp_tier_bprp_limits()
         _ui_tier_w = cfg.comp_tier_weights()
@@ -1069,6 +1103,9 @@ def render_settings_dashboard(
             {"bprp": float(max(0.50, min(2.00, tier4_bprp))), "w": float(max(0.05, min(0.50, tier4_w)))},
         ]
         cfg.comp_max_delta_bprp = float(max(0.20, min(2.0, comp_dbprp)))
+        cfg.comp_weight_c_col_mag_per_bprp = float(_c_col) if float(_c_col) > 0 else None
+        cfg.comp_weight_c_dist_mag_per_deg = float(_c_dist) if float(_c_dist) > 0 else None
+        cfg.comp_weight_airmass_span = float(max(0.0, min(3.0, _am_span)))
         cfg.phase01_comparison_n_comp_min = int(max(2, min(12, p01_ncmin)))
         cfg.phase01_comparison_n_comp_max = int(max(3, min(20, p01_ncmax)))
         if cfg.phase01_comparison_n_comp_max < cfg.phase01_comparison_n_comp_min:

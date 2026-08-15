@@ -333,37 +333,11 @@ def _adaptive_mag_filter(
     max_mag_diff: float,
     mag_diff_step: float = 0.25,
 ) -> tuple[pd.DataFrame, float]:
-    """Postupne uvolnuje Deltamag limit kym nie je dostatok kandidatov."""
+    """COMP-ADMIT-03: |dmag| is not an admission cut (faint -> large sigma_rms weight)."""
+    _ = (target_mag, mag_diff_absolute, n_comp_min, max_mag_diff, mag_diff_step)
     if all_candidates is None or getattr(all_candidates, "empty", True):
         return pd.DataFrame(), float(mag_diff_start)
-    target = float(target_mag)
-    if not math.isfinite(target):
-        return all_candidates, float(mag_diff_start)
-    try:
-        mag_abs = float(mag_diff_absolute)
-    except Exception:  # noqa: BLE001
-        mag_abs = 3.0
-    if not math.isfinite(mag_abs) or mag_abs <= 0:
-        mag_abs = 3.0
-    mag_tol = float(mag_diff_start)
-    if not math.isfinite(mag_tol) or mag_tol <= 0:
-        mag_tol = float(max_mag_diff)
-    if "mag" not in all_candidates.columns:
-        all_candidates = all_candidates.copy()
-        all_candidates["mag"] = pd.to_numeric(
-            all_candidates.get("phot_g_mean_mag", pd.Series(index=all_candidates.index, dtype=float)),
-            errors="coerce",
-        )
-    mags = pd.to_numeric(all_candidates["mag"], errors="coerce")
-    while mag_tol <= mag_abs + 1e-9:
-        pool = all_candidates[(mags - target).abs() <= mag_tol]
-        if int(len(pool)) >= int(n_comp_min) * 2:
-            return pool, float(mag_tol)
-        if mag_tol >= mag_abs - 1e-9:
-            return pool, float(mag_tol)
-        mag_tol = min(float(mag_tol) + float(mag_diff_step), float(mag_abs))
-    pool = all_candidates[(mags - target).abs() <= float(mag_abs)]
-    return pool, float(mag_abs)
+    return all_candidates.copy(), float(mag_diff_start)
 
 
 def _filter_comp_candidates_spatial_static(
@@ -415,9 +389,11 @@ def _filter_comp_candidates_spatial_static(
             log_label="variable_target_catalog_ids (comp spatial filter)",
         ) or None
 
+    # COMP-ADMIT-03: distance is a weight term, not a hard cut. Keep measurability
+    # (sat/usable) and known-variable; chip margin is geometry.
+    _ = (max_dist_deg, min_dist_arcsec, max_delta_bprp_cfg, target_bprp_eff, mag_t)
     cand_mask = (
-        ms["_dist_deg"].le(max_dist_deg)
-        & _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
+        _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
         & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
@@ -457,58 +433,27 @@ def _filter_comp_candidates_spatial_static(
         if _debug_bo:
                         print(f"[DEBUG BO CVn] (chip margin {int(_cm)} px) -> {int(cand_mask.sum())}")
 
-    # Hard filter: minimalna vzdialenost od targetu
-    if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
-        min_dist_deg = float(min_dist_arcsec) / 3600.0
-        cand_mask &= ms["_dist_deg"].ge(min_dist_deg)
-        if _debug_bo:
-            try:
-                _n_d = int(cand_mask.sum())
-                BO_CVN_STEP_COUNTS["D_min_dist_arcsec"] = _n_d
-                print(
-                    f"[DEBUG BO CVn] Step E: after min_dist_arcsec={float(min_dist_arcsec):.1f} "
-                    f"-> {_n_d}"
-                )
-            except Exception:  # noqa: BLE001
-                # EXC-0037: T3 -- BO CVn debug print after min_dist filter suppressed (EXCEPT-BULK-2 2026-07-08)
-                pass
+    # COMP-ADMIT-03: min_dist / colour are weight terms, not admission cuts.
+    if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0 and _debug_bo:
+        print(
+            f"[DEBUG BO CVn] min_dist_arcsec={float(min_dist_arcsec):.1f} "
+            f"skipped as hard cut (COMP-ADMIT-03)"
+        )
 
-    # Ziadna hviezda zo zoznamu VSX cielov (variable_targets) ako comp - vratane catalog_only Gaia ID.
+    # Ziadna hviezda zo zoznamu VSX cielov (variable_targets) ako comp.
     if _vt_gaia_ids:
         cand_mask &= ~ms["_norm_cid_vt"].isin(_vt_gaia_ids)
         if _debug_bo:
-                        print(f"[DEBUG BO CVn] (exclude variable_targets IDs) -> {int(cand_mask.sum())}")
+            print(f"[DEBUG BO CVn] (exclude variable_targets IDs) -> {int(cand_mask.sum())}")
 
-    # Hard filter: |DeltaMag| sa aplikuje adaptivne neskor (na candidates_pre),
-    # aby bol robustny pre cele rozpatie magnitud a riedke polia.
     if "_mag" not in ms.columns:
         ms["_mag"] = pd.to_numeric(ms.get("mag", ms.get("phot_g_mean_mag")), errors="coerce")
 
-    # Hard farebny filter: |DeltaBP-RP|
-    if math.isfinite(max_delta_bprp_cfg) and max_delta_bprp_cfg > 0:
-        _bpr_raw = pd.to_numeric(ms.get("bp_rp"), errors="coerce")
-        _tcol = float(target_bprp_eff) if math.isfinite(float(target_bprp_eff)) else float("nan")
-        _known_color = np.isfinite(_tcol) & _bpr_raw.notna()
-        _delta_c = (_bpr_raw - float(_tcol)).abs()
-        _color_ok = ~_known_color | _delta_c.le(float(max_delta_bprp_cfg))
-        cand_mask &= _color_ok
-        if _debug_bo:
-            try:
-                _n_b = int(cand_mask.sum())
-                BO_CVN_STEP_COUNTS["B_bp_rp"] = _n_b
-                print(
-                    f"[DEBUG BO CVn] Step D: after |delta BP-RP|<={float(max_delta_bprp_cfg):.2f} "
-                    f"-> {_n_b}"
-                )
-            except Exception:  # noqa: BLE001
-                # EXC-0039: T3 -- BO CVn debug print after BP-RP color filter suppressed (EXCEPT-BULK-2 2026-07-08)
-                pass
-        n_cf = int((_known_color & ~_color_ok).sum())
-        if n_cf > 0:
-            logging.debug(
-                f"[FAZA 1] Target {target_cid}: |DeltaBP-RP| filter odstranil "
-                f"{n_cf} kandidatov (threshold={float(max_delta_bprp_cfg):.2f})"
-            )
+    if math.isfinite(max_delta_bprp_cfg) and max_delta_bprp_cfg > 0 and _debug_bo:
+        print(
+            f"[DEBUG BO CVn] max_delta_bprp={float(max_delta_bprp_cfg):.2f} "
+            f"skipped as hard cut (COMP-ADMIT-03)"
+        )
 
     # Filter A: Gaia objektove flagy
     _n_before_a = int(cand_mask.sum())
@@ -555,13 +500,12 @@ def _filter_comp_candidates_spatial_static(
             # EXC-0040: T3 -- BO CVn debug print after Filter A (nss/extobj) suppressed (EXCEPT-BULK-2 2026-07-08)
             pass
 
-    # Zahrn DET hviezdy (bez Gaia ID) ak maju snr50_ok a nie su saturovane.
-    # Tieto mozu byt stabilne comp hviezdy aj bez katalogoveho zaznamu.
+    # Include DET stars (no Gaia ID) if snr50_ok and not saturated.
+    # COMP-ADMIT-03: distance is not a hard cut (weight term in Phase-2A).
     det_mask = (
         ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index)))
         .astype(str)
         .str.startswith("DET")
-        & ms["_dist_deg"].le(max_dist_deg)
         & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("likely_saturated", pd.Series(False, index=ms.index)))
         & _bool_col(ms.get("snr50_ok", pd.Series(False, index=ms.index)))
@@ -572,16 +516,14 @@ def _filter_comp_candidates_spatial_static(
             ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str)
             != target_cid
         )
-    if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
-        det_mask &= ms["_dist_deg"].ge(float(min_dist_arcsec) / 3600.0)
+    _ = min_dist_arcsec  # retained config; not an admission cut
 
     cand_mask = cand_mask | det_mask
 
-    # Base mask for tiered Deltamag/DeltaB-V selection (keeps all non-photometric filters).
+    # Base mask: measurability + known variable only (COMP-ADMIT-03).
     # NOTE: cand_mask already includes many filters + DET; we rebuild explicitly for clarity.
     _base_mask = (
-        ms["_dist_deg"].le(max_dist_deg)
-        & _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
+        _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
         & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
         & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
@@ -1168,95 +1110,12 @@ def _apply_comp_metric_hard_filters(
     if _edge_rejected:
         logging.info(f"[FAZA 1] Celkom vylucenych kvoli edge/annulus: {len(_edge_rejected)}")
 
-    # Filter SNR: vyluc kandidatov s median SNR < 5sigma
+    # COMP-ADMIT-03: SNR / PSF / FWHM / GS11 dilution are not admission cuts.
+    # Low SNR and blends raise sigma_rms (weight); dilution is not a gate.
+    _ = (snr_map, max_psf_chi2, max_fwhm_factor, frame_fwhm_medians, dilution_map, cfg, comp_quality_notes)
     _snr_rejected: set[str] = set()
-    for cid in sorted(flux_map.keys()):
-        snrs = snr_map.get(cid, [])
-        if len(snrs) >= 5:
-            snr_median = float(np.median(np.asarray(snrs, dtype=np.float64)))
-            if math.isfinite(snr_median) and snr_median < 5.0:
-                flux_map.pop(cid, None)
-                _snr_rejected.add(cid)
-                logging.info(
-                    f"[FAZA 1] SNR filter: vyluceny {cid} "
-                    f"(median SNR={snr_median:.1f} < 5)"
-                )
-
-    # Filter B: PSF chi^2 a FWHM blend detekcia
-    _global_fwhm_med = float(np.median(frame_fwhm_medians)) if frame_fwhm_medians else float("nan")
     _b_rejected: set[str] = set()
-
-    if math.isfinite(max_psf_chi2):
-        for _cid, _chi2_vals in sorted(psf_chi2_map.items(), key=lambda kv: str(kv[0])):
-            valid = [v for v in _chi2_vals if math.isfinite(v) and v > 0]
-            if len(valid) < 3:
-                continue  # not enough valid PSF data - skip filter
-            _med_chi2 = float(np.median(valid))
-            if _med_chi2 > max_psf_chi2:
-                _b_rejected.add(_cid)
-                logging.debug(
-                    f"[FAZA 1] Blend filter (PSF chi^2): vyluceny {_cid} "
-                    f"(median chi^2={_med_chi2:.2f} > {max_psf_chi2:.2f})"
-                )
-
-    if math.isfinite(max_fwhm_factor) and math.isfinite(_global_fwhm_med) and _global_fwhm_med > 0:
-        for _cid, _fwhm_vals in sorted(fwhm_map.items(), key=lambda kv: str(kv[0])):
-            if len(_fwhm_vals) < 3:
-                continue
-            _med_fwhm = float(np.median(_fwhm_vals))
-            _fwhm_ratio = _med_fwhm / _global_fwhm_med
-            if _fwhm_ratio > max_fwhm_factor:
-                _b_rejected.add(_cid)
-                logging.debug(
-                    f"[FAZA 1] Blend filter (FWHM): vyluceny {_cid} "
-                    f"(median FWHM={_med_fwhm:.2f}px, ratio={_fwhm_ratio:.2f} > {max_fwhm_factor:.2f})"
-                )
-
-    if _b_rejected:
-        logging.info(
-            f"[FAZA 1] Target {target_cid}: Filter B (PSF/FWHM) vylucil "
-            f"{len(_b_rejected)} kandidatov: {sorted(_b_rejected)}"
-        )
-        for _cid in _b_rejected:
-            flux_map.pop(_cid, None)
-
     _gs11_rejected: set[str] = set()
-    if dilution_map is not None:
-        try:
-            _cfg_gs11 = cfg if cfg is not None else AppConfig()
-            _max_d = float(_cfg_gs11.gs11_comp_max_dilution or 0.90)
-            _sus_d = float(_cfg_gs11.gs11_comp_suspect_dilution or 0.98)
-        except Exception:  # noqa: BLE001
-            _max_d = 0.90
-            _sus_d = 0.98
-        _notes = comp_quality_notes if comp_quality_notes is not None else {}
-        for cid in sorted(flux_map.keys()):
-            d_entry = dilution_map.get(cid, {}) if dilution_map else {}
-            try:
-                df = float(d_entry.get("dilution_factor", 1.0))
-            except (TypeError, ValueError):
-                df = 1.0
-            if not math.isfinite(df):
-                df = 1.0
-            if df < _max_d:
-                flux_map.pop(cid, None)
-                _gs11_rejected.add(cid)
-                logging.debug(
-                    "[FAZA 1] Comp %s GS11-rejected: D=%.4f < %.4f",
-                    cid,
-                    df,
-                    _max_d,
-                )
-            elif df < _sus_d:
-                _notes[cid] = f"dilution_suspect (D={df:.3f})"
-        if _gs11_rejected:
-            logging.info(
-                "[FAZA 1] Target %s: GS11 dilution filter vylucil %d kandidatov: %s",
-                target_cid,
-                len(_gs11_rejected),
-                sorted(_gs11_rejected),
-            )
-            _b_rejected = set(_b_rejected) | _gs11_rejected
     return flux_map, _b_rejected
 
 
@@ -1561,34 +1420,18 @@ def _detrend_and_compute_comp_rms_map(
             return None, None
         return rms_map, sorted_rms_map
 
-    # Tvrdy RMS limit - odmietni nestabilne hviezdy bez ohladu na ranking
+    # COMP-ADMIT-03: max_comp_rms is no longer an admission hard cut. Scatter
+    # enters continuous weights (sigma_rms). Keep all stars with a finite RMS.
     if math.isfinite(max_comp_rms) and max_comp_rms > 0:
-        n_before = len(rms_map)
-        rms_map = {cid: rms for cid, rms in sorted_rms_map.items() if rms <= max_comp_rms}
-        n_rejected = n_before - len(rms_map)
-        if n_rejected > 0:
-            logging.info(
-                f"[FAZA 1] Target {target_cid}: tvrdy RMS filter (>{max_comp_rms:.3f}) "
-                f"odmietol {n_rejected} kandidatov, zostava {len(rms_map)}"
-            )
-
-    # Fallback ak stale < n_comp_min: PER-TARGET GATE JE AUTORITATIVNY.
-    # max_comp_rms je tvrda kvalitativna latka - ziadna selekcna cesta nesmie
-    # pustit comp s comp_rms > max_comp_rms ako "dobry". Predtym sa gate uvolnoval
-    # krokmi [max, 0.08, 0.15], co prijimalo nad-gate comp (known-issue (b)).
-    # Teraz vyberame len spomedzi gate-passerov; nikdy nerelaxujeme nad gate.
-    if len(rms_map) < n_comp_min and math.isfinite(max_comp_rms) and max_comp_rms > 0:
-        rms_map = {
-            cid: rms
-            for cid, rms in sorted_rms_map.items()
-            if rms <= float(max_comp_rms)
-        }
         logging.info(
-            f"[FAZA 1] Target {target_cid}: {len(rms_map)} comp pod gate "
-            f"(max_comp_rms={float(max_comp_rms):.3f}); gate autoritativny, "
-            f"bez relaxacie nad gate."
+            "[FAZA 1] Target %s: COMP-ADMIT-03 skips hard RMS cut "
+            "(max_comp_rms=%.3f retained as diagnostic only); n=%d",
+            target_cid,
+            float(max_comp_rms),
+            len(rms_map),
         )
 
+    # Previously: relax-above-gate was forbidden; now there is no RMS gate.
     if len(rms_map) < n_comp_min:
         logging.warning(
             f"[FAZA 1] Target {target_cid}: len {len(rms_map)} kandidatov "
@@ -2213,24 +2056,10 @@ def _assemble_comp_selection_result_rows(
         except Exception:  # noqa: BLE001
             rms_f = float("nan")
         if math.isfinite(rms_f) and rms_f > 1e-6:
-            _asm_w = _cfg_asm.comp_tier_weights()
-            _tw_map = {
-                1: float(_asm_w[0] or 1.00),
-                2: float(_asm_w[1] or 0.85),
-                3: float(_asm_w[2] or 0.50),
-                4: float(_asm_w[3] or 0.25),
-            }
-            try:
-                _tier_i = int(pd.to_numeric(r.get("comp_tier", 4), errors="coerce") or 4)
-            except Exception:  # noqa: BLE001
-                _tier_i = 4
-            tw = float(_tw_map.get(int(_tier_i), 0.25))
-            if not (math.isfinite(tw) and tw > 0):
-                tw = 0.25
-            # Broeg, Fernandez & Neuhauser (2005) AN 326:134
-            # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
-            # Safe: rms_f > 1e-6 guard prevents division by zero in weight computation.
-            r["comp_weight"] = (1.0 / (rms_f**2)) * tw
+            # COMP-ADMIT-03: Phase-1 CSV weight is 1/rms^2 only (display/provenance).
+            # Colour/distance enter sigma_eff in Phase-2A ensemble_normalize; no tier
+            # multiplier (tiers are not admission or weight authority).
+            r["comp_weight"] = 1.0 / (rms_f**2)
         else:
             r["comp_weight"] = float("nan")
         result_rows.append(r)

@@ -1049,11 +1049,17 @@ class AppConfig:
     crowding_tighten_min_fwhm_px: float = 3.0
     #: ``True`` = jeden globalny comp pool (safe_bbox + RMS) pred per-target vyberom; ``False`` = legacy.
     global_comp_pool_enabled: bool = True
-    #: COMP-POOL-01 Stage 2: admit global pool via draft-derived noise/stability/dilution
-    #: criteria (no size cap). When False, legacy RMS prefilter only.
+    #: COMP-POOL-01 Stage 2 / COMP-ADMIT-03: derived path now only drops known variables;
+    #: scatter/colour/distance enter continuous weights (``comp_weights``).
     comp_pool_derived_admission: bool = True
     #: Plan/spatial comparison pool size. ``0`` = uncapped (COMP-POOL-01); legacy default was 150.
     comparison_stars_pool_n: int = 0
+    #: COMP-ADMIT-03 weight colour coefficient [mag per BP-RP]. None = derive from |k''|*DeltaX.
+    comp_weight_c_col_mag_per_bprp: float | None = None
+    #: COMP-ADMIT-03 weight distance coefficient [mag per degree]. None = measure or named zero.
+    comp_weight_c_dist_mag_per_deg: float | None = None
+    #: Airmass span of the series for c_col = |k2|*DeltaX when not overridden.
+    comp_weight_airmass_span: float = 0.0
 
     #: Post-calibration QC on each calibrated light (metrics + pass/fail vs limits).
     qc_after_calibrate_enabled: bool = True
@@ -2411,6 +2417,27 @@ class AppConfig:
         except (TypeError, ValueError):
             self.comparison_stars_pool_n = 0
         self.comparison_stars_pool_n = max(0, min(50000, int(self.comparison_stars_pool_n)))
+        for _ck, _default in (
+            ("comp_weight_c_col_mag_per_bprp", None),
+            ("comp_weight_c_dist_mag_per_deg", None),
+        ):
+            raw = data.get(_ck, _default)
+            if raw is None or raw == "":
+                setattr(self, _ck, None)
+            else:
+                try:
+                    fv = float(raw)
+                    setattr(self, _ck, fv if math.isfinite(fv) else None)
+                except (TypeError, ValueError):
+                    setattr(self, _ck, None)
+        try:
+            self.comp_weight_airmass_span = float(
+                data.get("comp_weight_airmass_span", self.comp_weight_airmass_span)
+            )
+        except (TypeError, ValueError):
+            self.comp_weight_airmass_span = 0.0
+        if not math.isfinite(float(self.comp_weight_airmass_span)) or float(self.comp_weight_airmass_span) < 0:
+            self.comp_weight_airmass_span = 0.0
 
         self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
 
@@ -2731,6 +2758,9 @@ class AppConfig:
             "global_comp_pool_enabled": bool(self.global_comp_pool_enabled),
             "comp_pool_derived_admission": bool(self.comp_pool_derived_admission),
             "comparison_stars_pool_n": int(self.comparison_stars_pool_n),
+            "comp_weight_c_col_mag_per_bprp": self.comp_weight_c_col_mag_per_bprp,
+            "comp_weight_c_dist_mag_per_deg": self.comp_weight_c_dist_mag_per_deg,
+            "comp_weight_airmass_span": float(self.comp_weight_airmass_span),
         }
 
     # Backward-compatible alias (some callers expect to_dict()).

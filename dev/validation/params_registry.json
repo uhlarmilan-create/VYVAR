@@ -1526,7 +1526,7 @@
     "scope_group": "n/a"
   },
   "comp_pool_derived_admission": {
-    "help": "COMP-POOL-01: admit the global comparison pool using draft-derived noise, stability, and dilution criteria instead of the legacy fixed RMS prefilter.",
+    "help": "COMP-ADMIT-03: when True, run draft noise-curve diagnostics and drop only known variables (VSX/Gaia). Scatter/colour/distance enter continuous weights, not cuts.",
     "kind": "static",
     "label": "Comp Pool Derived Admission",
     "owner": "config_runtime",
@@ -4377,5 +4377,59 @@
     "scope_key": "none",
     "scope_group": "n/a",
     "scope_confidence": "high"
+  },
+  "comp_weight_c_col_mag_per_bprp": {
+    "help": "COMP-ADMIT-03 colour systematic coefficient in the weight sigma_eff (mag per BP-RP). None = derive from |k2|*airmass_span.",
+    "kind": "static",
+    "label": "Comp Weight c_col",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": "mag / (BP-RP)",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_c_dist_mag_per_deg": {
+    "help": "COMP-ADMIT-03 distance systematic coefficient in sigma_eff (mag per degree). None = measure from draft or named zero.",
+    "kind": "static",
+    "label": "Comp Weight c_dist",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "tier": "expert",
+    "unit": "mag / deg",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_weight_airmass_span": {
+    "help": "Airmass span of the series used when deriving c_col = |k2_bprp| * DeltaX.",
+    "kind": "static",
+    "label": "Comp Weight Airmass Span",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      0.0,
+      3.0
+    ],
+    "tier": "expert",
+    "unit": "airmass",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }

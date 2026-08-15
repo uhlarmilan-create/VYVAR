@@ -25,6 +25,7 @@ def _cfg_gs11_on(**overrides: object) -> AppConfig:
 
 
 def test_comp_hard_reject_low_dilution() -> None:
+    """COMP-ADMIT-03: dilution is not an admission cut."""
     flux = {"c1": [1.0, 1.0, 1.0, 1.0, 1.0]}
     dil = {"c1": {"dilution_factor": 0.85, "dilution_delta_mag": 0.1}}
     notes: dict[str, str] = {}
@@ -46,11 +47,12 @@ def test_comp_hard_reject_low_dilution() -> None:
         cfg=_cfg_gs11_on(),
         comp_quality_notes=notes,
     )
-    assert "c1" not in out
-    assert "c1" in rej
+    assert "c1" in out
+    assert "c1" not in rej
 
 
 def test_comp_suspect_medium_dilution() -> None:
+    """COMP-ADMIT-03: medium dilution no longer writes suspect notes via hard filter."""
     flux = {"c2": [1.0, 1.0, 1.0, 1.0, 1.0]}
     dil = {"c2": {"dilution_factor": 0.95, "dilution_delta_mag": 0.02}}
     notes: dict[str, str] = {}
@@ -74,7 +76,7 @@ def test_comp_suspect_medium_dilution() -> None:
     )
     assert "c2" in out
     assert "c2" not in rej
-    assert "dilution_suspect" in notes.get("c2", "")
+    assert "c2" not in notes
 
 
 def test_comp_passes_high_dilution() -> None:

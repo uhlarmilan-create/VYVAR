@@ -3207,27 +3207,17 @@ def check_comparison_stability(
                 result[cid]["quality"] = "suspect"
                 result[cid]["note"] = "isolated_bin"
 
-    # Hard p2p ceiling only (no MAD/sigma outlier rejection; zero-clipping 2026-08-12).
-    # ``outlier_sigma`` kept for call-site compatibility and ignored.
+    # COMP-ADMIT-03: p2p is diagnostic only - never eject members (weight via sigma_rms).
     _ = outlier_sigma
     threshold = float(max_comp_p2p) if math.isfinite(float(max_comp_p2p)) and float(max_comp_p2p) > 0 else 0.1
-    n_good = sum(
-        1
-        for v in result.values()
-        if v["quality"] == "good" and math.isfinite(v["rms_p2p"]) and v["rms_p2p"] <= threshold
-    )
     for cid, info in result.items():
         if not math.isfinite(info["rms_p2p"]):
             continue
         if info["rms_p2p"] > threshold:
-            if n_good < n_comp_min:
-                result[cid]["quality"] = "suspect"
-                result[cid]["note"] = "p2p_hard_ceiling (kept: n_good<min)"
-            else:
-                result[cid]["quality"] = "excluded"
-                result[cid]["note"] = (
-                    f"p2p_hard_ceiling (p2p={info['rms_p2p']:.4f} > thr={threshold:.4f})"
-                )
+            result[cid]["quality"] = "suspect"
+            result[cid]["note"] = (
+                f"p2p_high (p2p={info['rms_p2p']:.4f} > thr={threshold:.4f}; kept COMP-ADMIT-03)"
+            )
 
     # Slope filter: exclude comps with a night-long linear trend (slow drifts pass p2p RMS).
     if comp_bjd is not None and max_comp_slope_mmag_hr > 0:
@@ -3256,7 +3246,7 @@ def check_comparison_stability(
                 comp_slope_significance_k
             ):
                 logging.info(
-                    "Comp %s slope-excluded: %.1f mmag/hr (%.1fsigma) > %s mmag/hr @ %ssigma",
+                    "Comp %s slope-high (kept COMP-ADMIT-03): %.1f mmag/hr (%.1fsigma) > %s mmag/hr @ %ssigma",
                     cid,
                     slope_mmag_hr,
                     slope_sig,
@@ -3265,12 +3255,8 @@ def check_comparison_stability(
                 )
                 info["slope_mmag_hr"] = slope_mmag_hr
                 info["slope_sigma"] = slope_sig
-                if n_good_slope < n_comp_min:
-                    info["quality"] = "suspect"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}sigma, kept: n_good<min)"
-                else:
-                    info["quality"] = "excluded"
-                    note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}sigma)"
+                info["quality"] = "suspect"
+                note = f"slope={slope_mmag_hr:.1f} mmag/hr ({slope_sig:.1f}sigma; kept COMP-ADMIT-03)"
                 if info.get("note"):
                     info["note"] = f"{info['note']}; {note}"
                 else:
@@ -3488,6 +3474,7 @@ def ensemble_normalize(
     comp_rms_map: dict[str, float] | None = None,
     comp_tier_map: dict[str, int] | None = None,
     tier_weights: dict[int, float] | None = None,
+    comp_weight_map: dict[str, float] | None = None,
     n_comp_min: int = 3,
     n_comp_max: int = 10,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -3497,62 +3484,28 @@ def ensemble_normalize(
 
     ``delta_mag = mag_inst(target) - mag_ensemble`` (tvar voci suctu fluxov ako AIJ).
 
-    ``mag_calib`` musi mat iny zeropoint ako samotny ``median(katalog)``: sucet fluxov dava
-    ``m_ensemble = -2.5 log10(Sigma F_i)``, co pri n comps zhruba zodpoveda ``m_i - 2.5 log10(n)``
-    pri podobnych ``m_i`` - pripocitanie len ``median(cat)`` by posunulo krivku o ~``2.5 log10(n)``
-    mag. Preto ``mag_calib = mag_inst(target) + median_j(cat_mag_j - mag_inst_j)`` (klasicky
-    diferencialny posun); ``delta_mag`` ostava oproti ``mag_ensemble`` z AIJ suctu.
-
-    Vyber comps: zoradenie podla ``comp_rms`` (Faza 1), prvych ``n_comp_min`` vzdy;
-    dalsie len ak ``rms_p2p`` < ``p2p_threshold`` z stability; max ``n_comp_max``.
+    Zeropoint uses COMP-ADMIT-03 continuous weights ``w=1/sigma_eff^2`` when
+    ``comp_weight_map`` is supplied; otherwise ``1/rms^2``. No tier multiplier, no
+    per-frame rejection, no ``n_comp_max`` membership truncation
+    (INV-COMP-MEMBERSHIP / COMP-ADMIT-03). ``n_comp_min`` / ``n_comp_max`` /
+    ``comp_tier_map`` / ``tier_weights`` are call-site compatibility stubs.
 
     Returns:
         (mag_calib, delta_mag, ensemble_scatter) - arrays dlzky n_frames
     """
+    _ = (comp_tier_map, tier_weights, n_comp_min, n_comp_max)
     n_frames = len(target_mag_inst)
     mag_calib = np.full(n_frames, float("nan"))
     delta_mag = np.full(n_frames, float("nan"))
     ensemble_scatter = np.full(n_frames, float("nan"))
 
     comp_rms_map = comp_rms_map or {}
-    comp_tier_map = comp_tier_map or {}
-    tier_weights = tier_weights or {1: 1.0, 2: 0.85, 3: 0.50, 4: 0.25}
+    comp_weight_map = comp_weight_map or {}
 
-    p2p_thr = float("nan")
-    # Canonical: prefer a shared threshold; take first finite from sorted cids (not dict.values order).
-    for _cid in sorted(comp_quality.keys(), key=str):
-        q = comp_quality[_cid]
-        t = q.get("p2p_threshold")
-        if t is not None and math.isfinite(float(t)):
-            p2p_thr = float(t)
-            break
-
-    # Ensemble: good aj suspect; excluded nie. (RMS sa pouziva na vyber poradia, nie na vahu fluxu.)
-    usable_all = [
-        cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")
-    ]
-    usable_sorted = sorted(
-        usable_all,
-        key=lambda c: (
-            0 if comp_quality[c].get("quality") == "good" else 1,
-            float(comp_rms_map.get(c, float("inf"))),
-            str(c),
-        ),
-    )
-
-    selected: list[str] = []
-    for cid in usable_sorted:
-        if len(selected) >= n_comp_max:
-            break
-        p2p = float(comp_quality[cid].get("rms_p2p", float("nan")))
-        if (
-            len(selected) < n_comp_min
-            or (math.isfinite(p2p_thr) and math.isfinite(p2p) and p2p < p2p_thr)
-            or not math.isfinite(p2p_thr)
-        ):
-            selected.append(cid)
-
-    good_ids = selected[:n_comp_max]
+    # Full admitted membership (COMP-ADMIT-03). Quality annotations must not eject members.
+    # Keep ``good_ids = selected`` token for INV-COMP-MEMBERSHIP static scan.
+    selected = sorted(comp_quality.keys(), key=str) if comp_quality else sorted(comp_mag_inst.keys(), key=str)
+    good_ids = selected
     if not good_ids:
         log_event("ensemble_normalize: no valid comp stars - returning all-NaN LC")
         return mag_calib, delta_mag, ensemble_scatter
@@ -3560,8 +3513,8 @@ def ensemble_normalize(
     cat_mags = np.asarray([comp_catalog_mag.get(cid, float("nan")) for cid in good_ids])
     cat_offset = float(np.nanmedian(cat_mags))
     logging.debug(
-        f"[FAZA 2A] Ensemble: {len(good_ids)} comps (good+suspect), "
-        f"catalog_mag median={cat_offset:.3f} (mag_calib zeropoint = median(cat-inst) per frame)"
+        f"[FAZA 2A] Ensemble: {len(good_ids)} comps (COMP-ADMIT-03 full membership), "
+        f"catalog_mag median={cat_offset:.3f}"
     )
 
     # Per-comp across-night reference = median of its own instrumental magnitudes. Referencing each
@@ -3642,19 +3595,20 @@ def ensemble_normalize(
             if math.isfinite(cm_j) and math.isfinite(m_j):
                 d = float(cm_j - m_j)
                 zp_offs.append(d)
-                rms_j = float(comp_rms_map.get(cid_j, float("nan")))
-                if math.isfinite(rms_j) and rms_j > 1e-6:
+                w_j = float(comp_weight_map.get(cid_j, float("nan")))
+                if not (math.isfinite(w_j) and w_j > 0):
+                    rms_j = float(comp_rms_map.get(cid_j, float("nan")))
+                    if math.isfinite(rms_j) and rms_j > 1e-6:
+                        # Broeg 2005 1/sigma^2; COMP-ADMIT-03 drops the tier multiplier.
+                        w_j = 1.0 / (rms_j**2)
+                    else:
+                        w_j = float("nan")
+                if math.isfinite(w_j) and w_j > 0:
                     zp_vals.append(d)
-                    tier_j = int(comp_tier_map.get(cid_j, 4))
-                    tw = float(tier_weights.get(tier_j, 0.25))
-                    if not (math.isfinite(tw) and tw > 0):
-                        tw = 0.25
-                    # Broeg, Fernandez & Neuhauser (2005) AN 326:134
-                    # Optimal weights: w_i = 1 / sigma_i^2 (inverse variance weighting)
-                    weights.append((1.0 / (rms_j**2)) * tw)
+                    weights.append(float(w_j))
         if weights:
-            # Broeg 1/sigma^2 (+ tier) weights over ALL admitted comps - no per-frame
-            # rejection (INV-COMP-MEMBERSHIP; ZP MAD clip removed 2026-08-12).
+            # Continuous weights over ALL admitted comps - no per-frame rejection
+            # (INV-COMP-MEMBERSHIP; COMP-ADMIT-03; ZP MAD clip removed 2026-08-12).
             w = np.asarray(weights, dtype=np.float64)
             z = np.asarray(zp_vals, dtype=np.float64)
             if len(z) >= 2 and float(np.sum(w)) > 0:
@@ -3666,7 +3620,6 @@ def ensemble_normalize(
             else:
                 mag_calib[i] = delta_mag[i] + cat_offset
         elif zp_offs:
-            # fallback to median if we don't have usable RMS weights
             mag_calib[i] = target_mag_inst[i] + float(np.nanmedian(np.asarray(zp_offs, dtype=np.float64)))
         else:
             mag_calib[i] = delta_mag[i] + cat_offset
@@ -9325,12 +9278,103 @@ def _phase2a_process_one_target(
             rms_raw = float(r.get("comp_rms", float("nan")))
         except Exception:  # noqa: BLE001
             rms_raw = float("nan")
-        tier = int(comp_tier_map.get(cid0, 4))
-        tw = float(tier_weights.get(int(tier), 0.25))
-        if math.isfinite(rms_raw) and rms_raw > 1e-6 and math.isfinite(tw) and tw > 0:
-            comp_rms_map[cid0] = float(rms_raw) / math.sqrt(float(tw))
-        else:
-            comp_rms_map[cid0] = float(rms_raw)
+        # COMP-ADMIT-03: do not bake tier into rms; colour/distance enter sigma_eff.
+        comp_rms_map[cid0] = float(rms_raw)
+
+    # Continuous weights: sigma_eff^2 = rms^2 + (c_col*|dBP-RP|)^2 + (c_dist*r)^2
+    from comp_weights import resolve_comp_weight_coeffs, sigma_eff_mag, weight_from_sigma_eff  # noqa: PLC0415
+
+    _tx = float(pd.to_numeric(target_row.get("x"), errors="coerce"))
+    _ty = float(pd.to_numeric(target_row.get("y"), errors="coerce"))
+    _tra = float(pd.to_numeric(target_row.get("ra_deg", target_row.get("ra")), errors="coerce"))
+    _tde = float(pd.to_numeric(target_row.get("dec_deg", target_row.get("dec")), errors="coerce"))
+    _tbpr = float(pd.to_numeric(target_row.get("bp_rp"), errors="coerce"))
+    _plate = float(getattr(_cfg, "plate_scale_arcsec_per_px", 0.0) or 0.0)
+    _c_col_ov = getattr(_cfg, "comp_weight_c_col_mag_per_bprp", None)
+    _c_dist_ov = getattr(_cfg, "comp_weight_c_dist_mag_per_deg", None)
+    try:
+        _c_col_ov_f = float(_c_col_ov) if _c_col_ov is not None else None
+    except (TypeError, ValueError):
+        _c_col_ov_f = None
+    try:
+        _c_dist_ov_f = float(_c_dist_ov) if _c_dist_ov is not None else None
+    except (TypeError, ValueError):
+        _c_dist_ov_f = None
+    _k2 = None
+    try:
+        from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
+
+        _k2, _ = resolve_k2_bprp_value(_cfg, str(getattr(_cfg, "active_obs_group", "") or ""))
+    except Exception:  # noqa: BLE001
+        _k2 = None
+    _am_span = float(getattr(_cfg, "comp_weight_airmass_span", float("nan")) or float("nan"))
+    if not math.isfinite(_am_span):
+        _am_span = 0.0
+    _r_list: list[float] = []
+    _sc_list: list[float] = []
+    for _, r in target_comps.iterrows():
+        try:
+            _rr = float(pd.to_numeric(r.get("ra_deg", r.get("ra")), errors="coerce"))
+            _dd = float(pd.to_numeric(r.get("dec_deg", r.get("dec")), errors="coerce"))
+            _rms = float(pd.to_numeric(r.get("comp_rms"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            continue
+        if math.isfinite(_rr) and math.isfinite(_dd) and math.isfinite(_tra) and math.isfinite(_tde):
+            dra = math.radians(_rr - _tra) * math.cos(math.radians(0.5 * (_dd + _tde)))
+            dde = math.radians(_dd - _tde)
+            _r_list.append(float(math.degrees(math.hypot(dra, dde))))
+            if math.isfinite(_rms):
+                _sc_list.append(_rms)
+        elif math.isfinite(_tx) and math.isfinite(_ty) and _plate > 0:
+            try:
+                _cx = float(pd.to_numeric(r.get("x"), errors="coerce"))
+                _cy = float(pd.to_numeric(r.get("y"), errors="coerce"))
+            except Exception:  # noqa: BLE001
+                continue
+            if math.isfinite(_cx) and math.isfinite(_cy):
+                _r_list.append(float(math.hypot(_cx - _tx, _cy - _ty) * _plate / 3600.0))
+                if math.isfinite(_rms):
+                    _sc_list.append(_rms)
+    _coeffs = resolve_comp_weight_coeffs(
+        k2_bprp=_k2,
+        airmass_span=_am_span,
+        r_deg=_r_list,
+        residual_scatter_mag=_sc_list,
+        c_col_override=_c_col_ov_f,
+        c_dist_override=_c_dist_ov_f,
+    )
+    comp_weight_map: dict[str, float] = {}
+    for _, r in target_comps.iterrows():
+        cid0 = _normalize_gaia_id(r["catalog_id"])
+        rms0 = float(comp_rms_map.get(cid0, float("nan")))
+        try:
+            bpr0 = float(pd.to_numeric(r.get("bp_rp"), errors="coerce"))
+        except Exception:  # noqa: BLE001
+            bpr0 = float("nan")
+        db = abs(bpr0 - _tbpr) if math.isfinite(bpr0) and math.isfinite(_tbpr) else 0.0
+        rdeg = 0.0
+        try:
+            _rr = float(pd.to_numeric(r.get("ra_deg", r.get("ra")), errors="coerce"))
+            _dd = float(pd.to_numeric(r.get("dec_deg", r.get("dec")), errors="coerce"))
+            if math.isfinite(_rr) and math.isfinite(_dd) and math.isfinite(_tra) and math.isfinite(_tde):
+                dra = math.radians(_rr - _tra) * math.cos(math.radians(0.5 * (_dd + _tde)))
+                dde = math.radians(_dd - _tde)
+                rdeg = float(math.degrees(math.hypot(dra, dde)))
+            elif math.isfinite(_tx) and math.isfinite(_ty) and _plate > 0:
+                _cx = float(pd.to_numeric(r.get("x"), errors="coerce"))
+                _cy = float(pd.to_numeric(r.get("y"), errors="coerce"))
+                if math.isfinite(_cx) and math.isfinite(_cy):
+                    rdeg = float(math.hypot(_cx - _tx, _cy - _ty) * _plate / 3600.0)
+        except Exception:  # noqa: BLE001
+            rdeg = 0.0
+        se = sigma_eff_mag(
+            sigma_rms_mag=rms0,
+            delta_bprp=db,
+            r_deg=rdeg,
+            c_col_mag_per_bprp=_coeffs.c_col_mag_per_bprp,
+            c_dist_mag_per_deg=_coeffs.c_dist_mag_per_deg,
+        )
+        comp_weight_map[cid0] = weight_from_sigma_eff(se)
 
     _chk_cid_pref: str | None = None
     try:
@@ -9612,6 +9656,7 @@ def _phase2a_process_one_target(
         comp_rms_map=comp_rms_map,
         comp_tier_map=comp_tier_map,
         tier_weights=tier_weights,
+        comp_weight_map=comp_weight_map,
         n_comp_min=max(1, int(getattr(_cfg, "phase01_comparison_n_comp_min", 3))),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
     )
@@ -13714,15 +13759,17 @@ def _select_comps_by_color_then_rms(
     cfg: AppConfig | None = None,
 ) -> pd.DataFrame:
     """
-    Stupen 1: farebny filter (|DeltaBP-RP|) - tier ladder widen ak < n_comp_min
-    Stupen 2: rank by comp_rms ASC (Broeg 1/rms equivalent)
-    Drop comp_rms < comp_select_rms_floor (isolated_bin artefact).
+    COMP-ADMIT-03: no colour hard cut, no n_comp_max truncation.
+    Rank by 1/comp_rms for display order only; all candidates are returned.
+    Drop near-zero RMS isolated_bin artefacts (measurement invalid, not a weight).
     """
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
 
     if "comp_rms" not in candidates.columns:
         raise ValueError("_select_comps_by_color_then_rms requires comp_rms column")
+
+    _ = (target_bprp, n_comp_min, n_comp_max, max_delta_bprp)
 
     _floor = 1e-6
     if cfg is not None:
@@ -13731,54 +13778,24 @@ def _select_comps_by_color_then_rms(
         except (TypeError, ValueError):
             _floor = 1e-6
 
-    def _apply_rms_floor(df: pd.DataFrame) -> pd.DataFrame:
-        rms = pd.to_numeric(df["comp_rms"], errors="coerce")
-        return df[rms >= _floor].copy()
-
-    def _rank_by_rms(df: pd.DataFrame) -> pd.DataFrame:
-        ranked = df.copy()
-        ranked["_broeg_score"] = ranked["comp_rms"].apply(
-            lambda r: 1.0 / r if np.isfinite(r) and r > 0 else 0.0
-        )
-        id_col = "catalog_id" if "catalog_id" in ranked.columns else ranked.columns[0]
-        return ranked.sort_values(
-            ["_broeg_score", id_col], ascending=[False, True], kind="mergesort"
-        )
-
-    if not np.isfinite(float(target_bprp)):
-        ranked = _rank_by_rms(_apply_rms_floor(candidates.copy()))
-        return ranked.head(int(n_comp_max))
-
     out = candidates.copy()
-    out["_delta_bprp_abs"] = (pd.to_numeric(out.get("bp_rp"), errors="coerce") - float(target_bprp)).abs()
-    out = _apply_rms_floor(out)
+    rms = pd.to_numeric(out["comp_rms"], errors="coerce")
+    out = out[rms >= _floor].copy()
+    if out.empty:
+        return out
 
-    thresholds = _bprp_tier_ladder_for_selection(cfg, max_delta_bprp)
-    first_thr = float(thresholds[0]) if thresholds else float(max_delta_bprp)
+    if "bp_rp" in out.columns and np.isfinite(float(target_bprp)):
+        out["_delta_bprp_abs"] = (
+            pd.to_numeric(out.get("bp_rp"), errors="coerce") - float(target_bprp)
+        ).abs()
 
-    selected = pd.DataFrame()
-    used_threshold: float | None = None
-
-    for thr in thresholds:
-        pool = out[out["_delta_bprp_abs"] <= float(thr)]
-        if int(len(pool)) >= int(n_comp_min):
-            selected = pool
-            used_threshold = float(thr)
-            break
-
-    if selected.empty:
-        selected = out
-        used_threshold = float(thresholds[-1]) if thresholds else float(max_delta_bprp)
-
-    result = _rank_by_rms(selected).head(int(n_comp_max))
-
-    if used_threshold is not None and used_threshold > first_thr:
-        log_event(
-            f"[COMP] color filter relaxed to delta_bprp<={float(used_threshold):.2f} "
-            f"(target_bprp={float(target_bprp):.3f}, n={int(len(result))})"
-        )
-
-    return result
+    out["_broeg_score"] = pd.to_numeric(out["comp_rms"], errors="coerce").apply(
+        lambda r: 1.0 / r if np.isfinite(r) and r > 0 else 0.0
+    )
+    id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
+    return out.sort_values(
+        ["_broeg_score", id_col], ascending=[False, True], kind="mergesort"
+    ).drop(columns=["_broeg_score"], errors="ignore")
 
 
 def _select_comps_tiered(

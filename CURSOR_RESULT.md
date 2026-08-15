@@ -1,25 +1,28 @@
-TASK_ID: GATE-OWNERSHIP-01 + GATE-REGIME-01
+TASK_ID: COMP-ADMIT-03
 
 CURSOR RESULT - 2026-08-15
 
-Both tasks completed locally. Push: NO. Waiting for Milan.
+SCIENCE CHANGE. Removes comparison-star admission rejection layer.
+Push: NO. Waiting for Milan.
 
-## GATE-REGIME-01 -- commit 18c770e
+Detail: `dev/results/CURSOR_RESULT_COMP_ADMIT_03.md`
 
-- Explicit CompPoolRegime (DERIVED|LEGACY|FAILED); mutually exclusive by construction
-- INV-NO-SILENT-EMPTY wired at derived admission; FAILED no silent legacy downgrade
-- Persists photometry/comp_pool_admission.json (+ pipeline_meta) with reject_reason_counts
-- Happy path draft 512 pool ID SHA-256 identical: cccdda39bd74cfbd58f141bbe602e2eb58e45eea7780f51d54055d5b6598d77b
-- Tests: 4/4 pass in test_gate_regime_01.py
-- Detail: dev/results/CURSOR_RESULT_GATE_REGIME_01.md
+## Forced photometry
 
-## GATE-OWNERSHIP-01 -- commit 5612f42
+Comps are DAO-detected (+ pass-2), then aperture at locked MASTERSTAR XY.
+Not forced every catalogue star every frame. `detect_frac` deleted as a cut;
+follow-up needed for true fixed membership.
 
-- 59 gates in dev/validation/gates_inventory.json; validator OK
-- R1-R5 in dev/results/CURSOR_RESULT_GATE_OWNERSHIP_01.md
-- Fourth conflict class: multi-floor detection significance
-- Rank cuts: literature does not defend p84 as comparison-admission owner (Broeg absolute; Sokolovsky 2017 for variable search)
+## Design
+
+Three gates only: saturation/non-linearity, known variable, geometry.
+Weight: sigma_eff^2 = rms^2 + (c_col*|dBP-RP|)^2 + (c_dist*r)^2; w=1/sigma_eff^2.
+Universality tests pass (permutation/subset exact; fire proof on old rank rule).
+
+## Draft pools after
+
+512: 141; 513: 1238; 435: 783 (not emptied). c_col/c_dist named zeros in harness.
 
 ## --fast
 
-OVERALL PASS. 1364 passed, 27 skipped (on working tree including new tests).
+OVERALL PASS (1369 passed, 27 skipped at tip before this commit).
