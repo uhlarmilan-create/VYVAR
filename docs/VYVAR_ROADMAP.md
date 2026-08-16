@@ -13,7 +13,7 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 ## NEXT SESSION - entry point (2026-08-16 SESSION-CLOSE)
 
 Local tip at close science stamp: **`4fe84b4`** (IMPL-05 C). origin/main after
-SESSION-CLOSE: **`1521d3c`**. Acceptance so far is a **10-target**
+SESSION-CLOSE stamp: **`1b8fcab`**. Acceptance so far is a **10-target**
 Phase 2A subset on draft 514, not the full 97-target field.
 
 | Pri | Next item |

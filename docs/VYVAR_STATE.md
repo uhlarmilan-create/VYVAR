@@ -1,11 +1,12 @@
 # VYVAR -- Development State
 
-**Status:** SESSION-CLOSE 2026-08-16 **pushed**. origin/main tip **`1521d3c`**.
-Science tip for aperture/selection policy remains IMPL-05 C stamp **`4fe84b4`**.
-Photometry outputs changed by design this session (aperture + selection); P1
-golden ledger stale **by intent**.
+**Status:** SESSION-CLOSE 2026-08-16 **pushed**. origin/main tip **`1b8fcab`**
+(stamp after content commits through `1521d3c`). Science tip for aperture /
+selection policy remains IMPL-05 C stamp **`4fe84b4`**. Photometry outputs
+changed by design this session (aperture + selection); P1 golden ledger stale
+**by intent**.
 
-Last updated: **2026-08-16** (SESSION-CLOSE; Milan-authorized push `1521d3c`).
+Last updated: **2026-08-16** (SESSION-CLOSE; Milan-authorized push).
 
 ## 2026-08-16 -- Policy snapshot (post IMPL-05 C)
 

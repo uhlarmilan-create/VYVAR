@@ -51,8 +51,9 @@ new tip (standing decision).
 
 | | |
 |--|--|
-| origin/main | **1521d3c** |
-| range | `691d3be..1521d3c` (from PUSH-02 note tip through SESSION-CLOSE) |
+| origin/main | **1b8fcab** |
+| content tip | `1521d3c` (tools/results/docs packs) |
+| range | `691d3be..1b8fcab` |
 | `--fast` PASS SHA | **4fe84b4** (1418 passed, 27 skipped) |
 | pull --rebase | clean (already up to date) |
 
