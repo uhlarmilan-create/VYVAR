@@ -1,0 +1,769 @@
+{
+  "aperture_r_px": 9.5,
+  "membership": {
+    "n_targets": 97,
+    "n_pairs": 734,
+    "min": 3,
+    "max": 8,
+    "median": 8.0,
+    "ceiling": 0.08,
+    "n_above_ceiling": 0,
+    "comp_rms_max": 0.0795514099397166
+  },
+  "check_star_1497145751650265600": {
+    "catalog_id": "1497145751650265600",
+    "n_sidecars": 45,
+    "comp_rms": 0.0107433952554153,
+    "bp_rp": 1.095876693725586,
+    "mag": 9.86292552947998,
+    "contamination_idx": 0.0941705244308257,
+    "vsx_known_variable": "False",
+    "gaia_dr3_variable_catalog": "False",
+    "peak_dao": 8570.369140625,
+    "peak_max_adu": 10619.2509765625,
+    "likely_saturated": "False",
+    "comp_tier": "1",
+    "_dist_deg": 0.1224993069907214
+  },
+  "before_comp_assign_01_same_meter_265600": {
+    "BO_CVn": {
+      "catalog_id": "1498613634033133184",
+      "name": "BO_CVn",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.0527358055114746,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.3910163887765711
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.0432796478271484,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.1395364529646639
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.063115119934082,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.2447884527623568
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.0171661376953124,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.1021141202877534
+        },
+        {
+          "catalog_id": "1498884113893156352",
+          "delta_bprp_abs": 0.106877326965332,
+          "comp_rms": 0.0523494436202601,
+          "dist_deg": 0.1372870122568293
+        },
+        {
+          "catalog_id": "1500571829882438656",
+          "delta_bprp_abs": 0.1094636917114257,
+          "comp_rms": 0.0572689991183304,
+          "dist_deg": 0.3793508087731145
+        },
+        {
+          "catalog_id": "1497730313879303168",
+          "delta_bprp_abs": 0.0966835021972656,
+          "comp_rms": 0.0722128270892069,
+          "dist_deg": 0.1685741993094574
+        },
+        {
+          "catalog_id": "1500470846611469056",
+          "delta_bprp_abs": 0.0638313293457031,
+          "comp_rms": 0.1503095221352342,
+          "dist_deg": 0.2671925187862088
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 23.616316567665145,
+      "mag_calib_std_mmag": 145.64433112902066,
+      "delta_mag_std_mmag": 146.57264311969217,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 17.521728940626527,
+      "fixed_meter_check_catalog_id": "1497145751650265600",
+      "same_meter_as_after": true
+    },
+    "FW_CVn": {
+      "catalog_id": "1497343732462852864",
+      "name": "FW_CVn",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497953377300128768",
+          "delta_bprp_abs": 0.0022859573364257,
+          "comp_rms": 0.0186652166960329,
+          "dist_deg": 0.2206908831341046
+        },
+        {
+          "catalog_id": "1497419770563778816",
+          "delta_bprp_abs": 0.000349998474121,
+          "comp_rms": 0.0252883147108373,
+          "dist_deg": 0.0913793690223329
+        },
+        {
+          "catalog_id": "1497885757335062016",
+          "delta_bprp_abs": 0.0022335052490234,
+          "comp_rms": 0.0255479410151442,
+          "dist_deg": 0.254485253672523
+        },
+        {
+          "catalog_id": "1498290240175790336",
+          "delta_bprp_abs": 0.0004501342773437,
+          "comp_rms": 0.0693534180339788,
+          "dist_deg": 0.4836395756382249
+        },
+        {
+          "catalog_id": "1497551196562800896",
+          "delta_bprp_abs": 0.0010414123535156,
+          "comp_rms": 0.0897837991268181,
+          "dist_deg": 0.2484341348903534
+        },
+        {
+          "catalog_id": "1497564459421863680",
+          "delta_bprp_abs": 0.0015077590942382,
+          "comp_rms": 0.1110905094511803,
+          "dist_deg": 0.294341054450704
+        },
+        {
+          "catalog_id": "1500438067421098240",
+          "delta_bprp_abs": 0.0024347305297851,
+          "comp_rms": 0.115893223596514,
+          "dist_deg": 0.1263119349388919
+        },
+        {
+          "catalog_id": "1498893631540706816",
+          "delta_bprp_abs": 0.0015506744384765,
+          "comp_rms": 0.460309250711418,
+          "dist_deg": 0.1353791891600508
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 62.770484766453876,
+      "mag_calib_std_mmag": 21.160743650624294,
+      "delta_mag_std_mmag": 80.02171870980305,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 20.319913297650334,
+      "fixed_meter_check_catalog_id": "1497145751650265600",
+      "same_meter_as_after": true
+    }
+  },
+  "after_comp_assign_02": {
+    "BO_CVn": {
+      "catalog_id": "1498613634033133184",
+      "name": "BO_CVn",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.0527358055114746,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.3910163887765711
+        },
+        {
+          "catalog_id": "1500576880763957248",
+          "delta_bprp_abs": 0.1232719421386718,
+          "comp_rms": 0.0174373282251998,
+          "dist_deg": 0.3894296425150959
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.0432796478271484,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.1395364529646639
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.063115119934082,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.2447884527623568
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.0171661376953124,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.1021141202877534
+        },
+        {
+          "catalog_id": "1498884113893156352",
+          "delta_bprp_abs": 0.106877326965332,
+          "comp_rms": 0.0523494436202601,
+          "dist_deg": 0.1372870122568293
+        },
+        {
+          "catalog_id": "1500571829882438656",
+          "delta_bprp_abs": 0.1094636917114257,
+          "comp_rms": 0.0572689991183304,
+          "dist_deg": 0.3793508087731145
+        },
+        {
+          "catalog_id": "1497730313879303168",
+          "delta_bprp_abs": 0.0966835021972656,
+          "comp_rms": 0.0722128270892069,
+          "dist_deg": 0.1685741993094574
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 14.472956514575134,
+      "mag_calib_std_mmag": 145.50073517998956,
+      "delta_mag_std_mmag": 146.18687898111088,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 16.392669136965285
+    },
+    "FW_CVn": {
+      "catalog_id": "1497343732462852864",
+      "name": "FW_CVn",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497953377300128768",
+          "delta_bprp_abs": 0.0022859573364257,
+          "comp_rms": 0.0186652166960329,
+          "dist_deg": 0.2206908831341046
+        },
+        {
+          "catalog_id": "1500402402012681728",
+          "delta_bprp_abs": 0.0027980804443359,
+          "comp_rms": 0.0244145359699762,
+          "dist_deg": 0.1208895393114695
+        },
+        {
+          "catalog_id": "1497419770563778816",
+          "delta_bprp_abs": 0.000349998474121,
+          "comp_rms": 0.0252883147108373,
+          "dist_deg": 0.0913793690223329
+        },
+        {
+          "catalog_id": "1497885757335062016",
+          "delta_bprp_abs": 0.0022335052490234,
+          "comp_rms": 0.0255479410151442,
+          "dist_deg": 0.254485253672523
+        },
+        {
+          "catalog_id": "1485599127211995392",
+          "delta_bprp_abs": 0.0031862258911132,
+          "comp_rms": 0.0486510235725118,
+          "dist_deg": 0.4295932217069427
+        },
+        {
+          "catalog_id": "1502100460283030528",
+          "delta_bprp_abs": 0.0027227401733398,
+          "comp_rms": 0.0624479158015568,
+          "dist_deg": 0.2816277730691277
+        },
+        {
+          "catalog_id": "1498290240175790336",
+          "delta_bprp_abs": 0.0004501342773437,
+          "comp_rms": 0.0693534180339788,
+          "dist_deg": 0.4836395756382249
+        },
+        {
+          "catalog_id": "1498761926367251712",
+          "delta_bprp_abs": 0.0032339096069335,
+          "comp_rms": 0.0781769502348427,
+          "dist_deg": 0.2462621120103331
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 17.421633666756772,
+      "mag_calib_std_mmag": 20.27241026705373,
+      "delta_mag_std_mmag": 23.633779909282712,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 18.695533239846593
+    }
+  },
+  "quiet_acceptance": {
+    "1497132660589966976": {
+      "catalog_id": "1497132660589966976",
+      "name": "1497132660589966976",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1500576537166572544",
+          "delta_bprp_abs": 0.0014142990112304,
+          "comp_rms": 0.0104351212488799,
+          "dist_deg": 0.3398054704406284
+        },
+        {
+          "catalog_id": "1485927228353411840",
+          "delta_bprp_abs": 0.004155158996582,
+          "comp_rms": 0.0253453911556233,
+          "dist_deg": 0.417768816948642
+        },
+        {
+          "catalog_id": "1499066907701715456",
+          "delta_bprp_abs": 0.0040187835693359,
+          "comp_rms": 0.026163877738761,
+          "dist_deg": 0.2590061855689981
+        },
+        {
+          "catalog_id": "1500771666120657152",
+          "delta_bprp_abs": 0.0003309249877929,
+          "comp_rms": 0.0263253636504701,
+          "dist_deg": 0.4184108957056191
+        },
+        {
+          "catalog_id": "1497615243113940224",
+          "delta_bprp_abs": 0.0046396255493164,
+          "comp_rms": 0.0391250492719073,
+          "dist_deg": 0.2789802608886172
+        },
+        {
+          "catalog_id": "1498921153691101440",
+          "delta_bprp_abs": 0.0048894882202148,
+          "comp_rms": 0.0576270974041504,
+          "dist_deg": 0.2170528700245771
+        },
+        {
+          "catalog_id": "1502005146368037632",
+          "delta_bprp_abs": 0.005131721496582,
+          "comp_rms": 0.0611186779851206,
+          "dist_deg": 0.302929156517099
+        },
+        {
+          "catalog_id": "1497076787358749952",
+          "delta_bprp_abs": 6.67572021484375e-05,
+          "comp_rms": 0.0734489401288775,
+          "dist_deg": 0.0385993525530452
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 15.866013853531788,
+      "mag_calib_std_mmag": 40.39142728481338,
+      "delta_mag_std_mmag": 40.27608162732058,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 16.96167211785472
+    },
+    "1498278351706325248": {
+      "catalog_id": "1498278351706325248",
+      "name": "1498278351706325248",
+      "n_comps": 7,
+      "comps": [
+        {
+          "catalog_id": "1497771992240531712",
+          "delta_bprp_abs": 0.0914697647094726,
+          "comp_rms": 0.0110531698512615,
+          "dist_deg": 0.3398214360414559
+        },
+        {
+          "catalog_id": "1497119157212720896",
+          "delta_bprp_abs": 0.1905126571655274,
+          "comp_rms": 0.0149048537140478,
+          "dist_deg": 0.5157698544096132
+        },
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.1688151359558105,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.5806381230395058
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.2648305892944336,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.4486033606211418
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.2846660614013672,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.3398558013344036
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.2387170791625976,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.2437937795864031
+        },
+        {
+          "catalog_id": "1500403089207449856",
+          "delta_bprp_abs": 0.2754802703857422,
+          "comp_rms": 0.0569866534481831,
+          "dist_deg": 0.5368138672206147
+        }
+      ],
+      "ladder_step": 2,
+      "selection_note": "color_rms_t2; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=1,n_tier2=6,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 10.55472104201626,
+      "mag_calib_std_mmag": 8.78378571140682,
+      "delta_mag_std_mmag": 10.291445073726646,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 14.891675095972621
+    },
+    "1498425548825498112": {
+      "catalog_id": "1498425548825498112",
+      "name": "1498425548825498112",
+      "n_comps": 4,
+      "comps": [
+        {
+          "catalog_id": "1498407166365489920",
+          "delta_bprp_abs": 0.1360406875610351,
+          "comp_rms": 0.005829892149861,
+          "dist_deg": 0.0328643420226716
+        },
+        {
+          "catalog_id": "1501956561697995008",
+          "delta_bprp_abs": 0.1032142639160156,
+          "comp_rms": 0.0068377147648555,
+          "dist_deg": 0.3580824882479955
+        },
+        {
+          "catalog_id": "1496798993170465536",
+          "delta_bprp_abs": 0.0953006744384765,
+          "comp_rms": 0.0110884926051165,
+          "dist_deg": 0.600837393817732
+        },
+        {
+          "catalog_id": "1498513269237363456",
+          "delta_bprp_abs": 0.031905174255371,
+          "comp_rms": 0.0462561257845487,
+          "dist_deg": 0.0484254784600233
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=4,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 12.101977696161503,
+      "mag_calib_std_mmag": 133.51762014694546,
+      "delta_mag_std_mmag": 133.31975933537427,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 15.186967127891458
+    },
+    "1498783199341798016": {
+      "catalog_id": "1498783199341798016",
+      "name": "1498783199341798016",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497014390074509312",
+          "delta_bprp_abs": 0.005157470703125,
+          "comp_rms": 0.020076802423087,
+          "dist_deg": 0.3778247566325027
+        },
+        {
+          "catalog_id": "1498250451598794496",
+          "delta_bprp_abs": 0.0063676834106445,
+          "comp_rms": 0.026707939758265,
+          "dist_deg": 0.2288134371209041
+        },
+        {
+          "catalog_id": "1496941448646024704",
+          "delta_bprp_abs": 0.0012807846069335,
+          "comp_rms": 0.0396200680015767,
+          "dist_deg": 0.4281642735493977
+        },
+        {
+          "catalog_id": "1500626255707967744",
+          "delta_bprp_abs": 0.0091800689697265,
+          "comp_rms": 0.0438830149187275,
+          "dist_deg": 0.4476132443671236
+        },
+        {
+          "catalog_id": "1498534602338213632",
+          "delta_bprp_abs": 0.0007562637329101,
+          "comp_rms": 0.0512110463498585,
+          "dist_deg": 0.1450349582010075
+        },
+        {
+          "catalog_id": "1499002925572553216",
+          "delta_bprp_abs": 0.0072174072265625,
+          "comp_rms": 0.0595209806310581,
+          "dist_deg": 0.1018695979812062
+        },
+        {
+          "catalog_id": "1499204518453840896",
+          "delta_bprp_abs": 0.0026063919067382,
+          "comp_rms": 0.0685001824720521,
+          "dist_deg": 0.117502817217862
+        },
+        {
+          "catalog_id": "1499037633204699648",
+          "delta_bprp_abs": 0.0034542083740234,
+          "comp_rms": 0.0754141669644422,
+          "dist_deg": 0.0901662771967453
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 18.181700454048983,
+      "mag_calib_std_mmag": 92.37434837087622,
+      "delta_mag_std_mmag": 100.11805063135091,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 29.054397443468865
+    },
+    "1498795809366255488": {
+      "catalog_id": "1498795809366255488",
+      "name": "1498795809366255488",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.0760960578918457,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.3502113457755823
+        },
+        {
+          "catalog_id": "1500576880763957248",
+          "delta_bprp_abs": 0.0999116897583007,
+          "comp_rms": 0.0174373282251998,
+          "dist_deg": 0.4063504980355149
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.0199193954467773,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.1969536654302585
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.0397548675537109,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.1364616379937012
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.0061941146850586,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.072290873138513
+        },
+        {
+          "catalog_id": "1498884113893156352",
+          "delta_bprp_abs": 0.0835170745849609,
+          "comp_rms": 0.0523494436202601,
+          "dist_deg": 0.1285810750635355
+        },
+        {
+          "catalog_id": "1500571829882438656",
+          "delta_bprp_abs": 0.0861034393310546,
+          "comp_rms": 0.0572689991183304,
+          "dist_deg": 0.4038837151201949
+        },
+        {
+          "catalog_id": "1497730313879303168",
+          "delta_bprp_abs": 0.0733232498168945,
+          "comp_rms": 0.0722128270892069,
+          "dist_deg": 0.2953324659226223
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 14.472956514575134,
+      "mag_calib_std_mmag": 50.601354821520054,
+      "delta_mag_std_mmag": 50.660386100126956,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 16.392669136965285
+    },
+    "1498842882207281152": {
+      "catalog_id": "1498842882207281152",
+      "name": "1498842882207281152",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497203132413443328",
+          "delta_bprp_abs": 0.0024223327636717,
+          "comp_rms": 0.016717530582169,
+          "dist_deg": 0.3651751151828826
+        },
+        {
+          "catalog_id": "1500771150725075712",
+          "delta_bprp_abs": 0.010110855102539,
+          "comp_rms": 0.0203627912554347,
+          "dist_deg": 0.3689566212292947
+        },
+        {
+          "catalog_id": "1496850154820849920",
+          "delta_bprp_abs": 0.0101919174194334,
+          "comp_rms": 0.0372399880666913,
+          "dist_deg": 0.4828200794689418
+        },
+        {
+          "catalog_id": "1485613352143613696",
+          "delta_bprp_abs": 0.0232925415039061,
+          "comp_rms": 0.0439649781791943,
+          "dist_deg": 0.3831115643309593
+        },
+        {
+          "catalog_id": "1498582297951365376",
+          "delta_bprp_abs": 0.016200065612793,
+          "comp_rms": 0.0507959720195949,
+          "dist_deg": 0.230195962465827
+        },
+        {
+          "catalog_id": "1497024599212804096",
+          "delta_bprp_abs": 0.0076589584350585,
+          "comp_rms": 0.0536800049911314,
+          "dist_deg": 0.3243043446240461
+        },
+        {
+          "catalog_id": "1497908636624908800",
+          "delta_bprp_abs": 0.0061569213867187,
+          "comp_rms": 0.0600381191688752,
+          "dist_deg": 0.2329223771487835
+        },
+        {
+          "catalog_id": "1502100288484337664",
+          "delta_bprp_abs": 0.0040454864501953,
+          "comp_rms": 0.0705285114001499,
+          "dist_deg": 0.1432082575976702
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 16.79586793348618,
+      "mag_calib_std_mmag": 99.66924912273377,
+      "delta_mag_std_mmag": 92.44468085887365,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 57.48708017235074
+    },
+    "1499084499887740160": {
+      "catalog_id": "1499084499887740160",
+      "name": "1499084499887740160",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1497771992240531712",
+          "delta_bprp_abs": 0.0032682418823241,
+          "comp_rms": 0.0110531698512615,
+          "dist_deg": 0.3631718666505227
+        },
+        {
+          "catalog_id": "1500748301498613248",
+          "delta_bprp_abs": 0.080613613128662,
+          "comp_rms": 0.015896480503069,
+          "dist_deg": 0.1873800577095761
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "delta_bprp_abs": 0.1766290664672851,
+          "comp_rms": 0.0182739180560074,
+          "dist_deg": 0.1936812851645295
+        },
+        {
+          "catalog_id": "1499053747922698240",
+          "delta_bprp_abs": 0.1964645385742187,
+          "comp_rms": 0.0236454738619609,
+          "dist_deg": 0.057423600472383
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "delta_bprp_abs": 0.1505155563354491,
+          "comp_rms": 0.0268543510549806,
+          "dist_deg": 0.2368533878147004
+        },
+        {
+          "catalog_id": "1498884113893156352",
+          "delta_bprp_abs": 0.2402267456054687,
+          "comp_rms": 0.0523494436202601,
+          "dist_deg": 0.1236983689974121
+        },
+        {
+          "catalog_id": "1500571829882438656",
+          "delta_bprp_abs": 0.2428131103515625,
+          "comp_rms": 0.0572689991183304,
+          "dist_deg": 0.2908733551480241
+        },
+        {
+          "catalog_id": "1497730313879303168",
+          "delta_bprp_abs": 0.2300329208374023,
+          "comp_rms": 0.0722128270892069,
+          "dist_deg": 0.4176927723577612
+        }
+      ],
+      "ladder_step": 2,
+      "selection_note": "color_rms_t2; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=2,n_tier2=6,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 14.374438165969298,
+      "mag_calib_std_mmag": 68.30562851918923,
+      "delta_mag_std_mmag": 70.12063944741574,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 15.267150362023607
+    },
+    "1500461157165243648": {
+      "catalog_id": "1500461157165243648",
+      "name": "1500461157165243648",
+      "n_comps": 8,
+      "comps": [
+        {
+          "catalog_id": "1499070755993178624",
+          "delta_bprp_abs": 0.0124940872192382,
+          "comp_rms": 0.0092339698685829,
+          "dist_deg": 0.166980377779498
+        },
+        {
+          "catalog_id": "1496948904709272576",
+          "delta_bprp_abs": 0.0017251968383789,
+          "comp_rms": 0.0093328609644543,
+          "dist_deg": 0.313241843326336
+        },
+        {
+          "catalog_id": "1496994156484645632",
+          "delta_bprp_abs": 0.0135269165039064,
+          "comp_rms": 0.011513253713109,
+          "dist_deg": 0.3053715206949184
+        },
+        {
+          "catalog_id": "1498735778606786816",
+          "delta_bprp_abs": 0.0127410888671875,
+          "comp_rms": 0.0155915694198096,
+          "dist_deg": 0.2564918252615966
+        },
+        {
+          "catalog_id": "1497429631809166080",
+          "delta_bprp_abs": 0.0037708282470705,
+          "comp_rms": 0.0190295307404603,
+          "dist_deg": 0.0906695544217048
+        },
+        {
+          "catalog_id": "1497726946623168000",
+          "delta_bprp_abs": 0.014449119567871,
+          "comp_rms": 0.0320198504951991,
+          "dist_deg": 0.4403657194299458
+        },
+        {
+          "catalog_id": "1500776235965837312",
+          "delta_bprp_abs": 0.0060625076293945,
+          "comp_rms": 0.0771641091629674,
+          "dist_deg": 0.1835583525769283
+        },
+        {
+          "catalog_id": "1500781596085042688",
+          "delta_bprp_abs": 0.0022773742675781,
+          "comp_rms": 0.0795514099397166,
+          "dist_deg": 0.1807848298889155
+        }
+      ],
+      "ladder_step": 1,
+      "selection_note": "color_rms_t1; relax_order=colour_tier_widen_T1_to_T4>adaptive_delta_mag>sparse_fallback_path; fired=none; n_tier1=8,n_tier2=0,n_tier3=0,n_tier4=0",
+      "pred_sigma_ens_mmag": 14.904980802150872,
+      "mag_calib_std_mmag": 11.979139890867327,
+      "delta_mag_std_mmag": 73.33269581415468,
+      "aperture_r_px_median": 9.5,
+      "check_catalog_id": "1497145751650265600",
+      "check_scatter_mmag": 18.268515678621654
+    }
+  },
+  "impl04_reference_check_mmag": {
+    "BO_CVn": 9.059,
+    "FW_CVn": 8.584
+  },
+  "verdict": "check scatter with meter 265600 remains ~16-19 mmag (not IMPL-04 ~9); FW delta_mag_std 80->23.6 proves ensemble repair; predicted sigma_ens now matches check order"
+}

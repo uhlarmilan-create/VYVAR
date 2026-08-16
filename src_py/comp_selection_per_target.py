@@ -1591,6 +1591,7 @@ def _assign_comp_tiers_to_pool(
     chip_fh: int | None,
     chip_interior_margin_px: int,
     cfg: AppConfig | None = None,
+    max_comp_rms: float | None = None,
 ) -> dict[str, Any]:
     # Build candidate pool DF with comp_rms, then select by tier + RMS.
     _active_keys = sorted(active.keys(), key=str)
@@ -1728,6 +1729,7 @@ def _assign_comp_tiers_to_pool(
         n_comp_max=int(n_comp_max),
         max_delta_bprp=_max_d,
         cfg=_cfg_w,
+        max_comp_rms=max_comp_rms,
     )
 
     def _color_rms_sel_note(fc: pd.DataFrame) -> str:

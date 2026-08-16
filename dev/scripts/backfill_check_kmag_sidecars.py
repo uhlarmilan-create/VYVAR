@@ -197,13 +197,9 @@ def backfill_photometry(
                 k_source = ext.k_source
                 k_colour_offset = ext.k_colour_offset
                 k_tier_excluded = ext.k_tier_excluded
-        if chk is None and not check_cid and len(comp_df) >= 2 and not sparse_branch:
-            df_pick = comp_df.copy()
-            if "comp_rms" in df_pick.columns:
-                df_pick["comp_rms"] = pd.to_numeric(df_pick["comp_rms"], errors="coerce")
-                df_pick = df_pick.sort_values("comp_rms", ascending=True, kind="mergesort")
-            check_cid = _norm_id(df_pick.iloc[0].get("catalog_id", ""))
-            ens_ids = set()
+        # COMP-ASSIGN-02: no parallel lowest-RMS pick. Non-sparse path already
+        # called select_check_star on the field pool; if that returned None,
+        # leave the target without a sidecar rather than inventing a second path.
         if chk is None and not check_cid:
             if sidecar_path.is_file():
                 sidecar_path.unlink()

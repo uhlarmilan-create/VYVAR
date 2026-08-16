@@ -2859,3 +2859,41 @@ unverified condition with risk stated. See `docs/VYVAR_INVARIANTS.md`.
 
 **Decision for Milan:** whether to reinstate the CAL-DIAG dark-resample convention
 check. Not bundled with SAT-DIAG authorization.
+
+---
+
+## COMP-ASSIGN-02 - n_comp_max is a ceiling, not a target (2026-08-15)
+
+**Context:** COMP-ASSIGN-01 restored colour-then-RMS ordering but applied only
+`comp_select_rms_floor` before `head(n_comp_max)`. When a colour bin held exactly
+eight candidates, noisy comps (FW CVn up to `comp_rms=0.46`) entered the set;
+check scatter rose BO 9.1->17.5 mmag, FW 8.6->20.3 mmag.
+
+**Arithmetic (unweighted flux-sum ensemble, AIJ / `ensemble_normalize`):** for
+roughly equal-brightness comps, `sigma_ens ~ sqrt(sum sigma_i^2)/N`. Predicted
+from the COMP-ASSIGN-01 selected eights: BO 23.6 mmag (best-3: 11.3), FW 62.8
+(best-3: 13.5) vs measured check after 17.5 / 20.3. The RMS composition predicts
+the damage; therefore **membership must never pad to eight with above-ceiling
+comps**.
+
+**Decision (restores documented known-issue (b) gate):**
+`phase01_comparison_max_comp_rms` is a hard ceiling inside
+`_select_comps_by_color_then_rms`, applied **before** the colour ladder and
+**before** `head(n_comp_max)`. The set is filled only with under-ceiling comps;
+it is **not** padded to `n_comp_max`. `n_comp_max=8` is a ceiling, not a target
+- three clean comps beat eight where five are noisy.
+
+**Colour vs RMS trade:** measured colour LEVEL term (~-0.373 mag/BP-RP) prices
+delta(BP-RP)=0.05 at ~19 mmag of level (corrected at export). An admitted
+comp at rms 0.46 costs ~57 mmag of scatter per star in an 8-star unweighted sum.
+Ladder widen after the ceiling (slightly worse colour, clean RMS) is the intended
+outcome.
+
+**Relax path (existing, not redesigned):**
+`COMP_ASSIGNMENT_RELAX_ORDER` =
+`colour_tier_widen_T1_to_T4` > `adaptive_delta_mag` > `sparse_fallback_path`.
+Inside step-2 selection, if no ladder step reaches `n_comp_min` under the
+ceiling, the code relaxes to the full **under-ceiling** candidate set (log +
+provenance) and keeps a thin set if still `< n_comp_min` (graceful degradation
+warning). Above-ceiling comps are never re-admitted. Empty / zero gate-passers
+still route to the existing sparse_fallback recursion.

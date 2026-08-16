@@ -268,3 +268,106 @@ def test_select_comps_color_rms_distance_clamp():
     assert ids[0] == "S02"
     assert "S01" in ids
     assert ids.index("S02") < ids.index("S01")
+
+
+def test_select_comps_max_comp_rms_ceiling_before_head():
+    """COMP-ASSIGN-02: phase01_comparison_max_comp_rms before head(n_comp_max).
+
+    Perfect-colour noisy eights must not fill the set; ladder widens to clean
+    comps. n_comp_max is a ceiling, not a pad target.
+    """
+    from config import AppConfig
+    from photometry_core import _select_comps_by_color_then_rms
+
+    cfg = AppConfig()
+    cfg.phase01_comparison_max_comp_rms = 0.1
+    rows = []
+    # Eight perfect-colour comps above the ceiling (FW CVn pattern).
+    for i in range(8):
+        rows.append(
+            {
+                "catalog_id": f"NOISY{i:02d}",
+                "bp_rp": 1.000,
+                "comp_rms": 0.15 + 0.04 * i,
+                "_dist_deg": 0.05 + 0.01 * i,
+            }
+        )
+    # Three slightly worse colour, under ceiling.
+    for i, (db, rms) in enumerate([(0.04, 0.02), (0.05, 0.025), (0.06, 0.03)]):
+        rows.append(
+            {
+                "catalog_id": f"CLEAN{i:02d}",
+                "bp_rp": 1.0 + db,
+                "comp_rms": rms,
+                "_dist_deg": 0.10 + 0.01 * i,
+            }
+        )
+    df = pd.DataFrame(rows)
+    out = _select_comps_by_color_then_rms(
+        df,
+        target_bprp=1.0,
+        n_comp_min=3,
+        n_comp_max=8,
+        max_delta_bprp=0.79,
+        cfg=cfg,
+    )
+    assert len(out) == 3
+    assert set(out["catalog_id"].astype(str)) == {"CLEAN00", "CLEAN01", "CLEAN02"}
+    assert float(pd.to_numeric(out["comp_rms"], errors="coerce").max()) <= 0.1
+    assert int(out.attrs.get("color_ladder_step", 0)) >= 1
+
+
+def test_fire_comp_assign_01_snapshot_breached_ceiling():
+    """Fire proof (fail side): COMP-ASSIGN-01 CSV admitted above-ceiling comps."""
+    from pathlib import Path
+
+    from config import AppConfig
+
+    snap = (
+        Path(__file__).resolve().parents[1]
+        / "results"
+        / "COMP_ASSIGN_01_comparison_stars_per_target.csv"
+    )
+    assert snap.is_file(), f"missing COMP-ASSIGN-01 snapshot: {snap}"
+    df = pd.read_csv(snap, low_memory=False)
+    ceil = float(AppConfig().phase01_comparison_max_comp_rms)
+    rms = pd.to_numeric(df["comp_rms"], errors="coerce")
+    n_breach = int((rms.notna() & (rms > ceil)).sum())
+    assert n_breach > 0, "COMP-ASSIGN-01 snapshot should still show the defect"
+
+
+def test_fire_rebuilt_comparison_csv_under_ceiling():
+    """Fire proof (pass side): rebuilt membership stays under the RMS ceiling."""
+    from pathlib import Path
+
+    from config import AppConfig, apply_density_overrides
+
+    root = Path(__file__).resolve().parents[2]
+    phot = (
+        root
+        / "Archive"
+        / "Drafts"
+        / "draft_000514"
+        / "platesolve"
+        / "NoFilter_60_2"
+        / "photometry"
+    )
+    live = phot / "comparison_stars_per_target.csv"
+    if not live.is_file():
+        import pytest
+
+        pytest.skip(f"rebuilt CSV not present yet: {live}")
+    cfg = AppConfig()
+    ceil = float(cfg.phase01_comparison_max_comp_rms)
+    fd = phot / "field_density.json"
+    if fd.is_file():
+        import json
+
+        meta = json.loads(fd.read_text(encoding="utf-8"))
+        dclass = str(meta.get("density_class") or "")
+        if meta.get("field_density_adaptive_applied") and dclass:
+            ceil = float(apply_density_overrides(cfg, dclass).phase01_comparison_max_comp_rms)
+    df = pd.read_csv(live, low_memory=False)
+    rms = pd.to_numeric(df["comp_rms"], errors="coerce")
+    n_breach = int((rms.notna() & (rms > ceil)).sum())
+    assert n_breach == 0, f"{n_breach} comps above max_comp_rms={ceil}"

@@ -14903,14 +14903,16 @@ def _select_comps_by_color_then_rms(
     max_delta_bprp: float = 0.5,
     *,
     cfg: AppConfig | None = None,
+    max_comp_rms: float | None = None,
 ) -> pd.DataFrame:
-    """COMP-ASSIGN-01: colour ladder -> RMS -> angular distance, clamp 3-8.
+    """COMP-ASSIGN: colour ladder -> RMS -> distance; clamp under RMS ceiling.
 
-    Step 2 of Milan's key (2026-08-15). ``comp_rms`` must already be present from
-    the global pool (step 1) - not re-derived here. Colour window widens until
-    ``n_comp_min``; final sort is ``|delta BP-RP|``, then ``comp_rms``, then
-    ``_dist_deg`` (haversine/pixel distance already on the frame), then
-    ``catalog_id``. Membership is ``head(n_comp_max)``.
+    Step 2 of Milan's key. ``comp_rms`` comes from the global pool (step 1).
+    ``phase01_comparison_max_comp_rms`` is a hard ceiling applied before the colour
+    ladder and before ``head(n_comp_max)`` - n_comp_max is a ceiling, not a target
+    (COMP-ASSIGN-02). Colour window widens until ``n_comp_min`` under-ceiling comps
+    exist. Sort: ``|delta BP-RP|``, then ``comp_rms``, then ``_dist_deg``, then
+    ``catalog_id``. Membership is ``head(n_comp_max)`` of the under-ceiling set.
     """
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
@@ -14921,17 +14923,51 @@ def _select_comps_by_color_then_rms(
     _n_min = max(1, int(n_comp_min))
     _n_max = max(_n_min, int(n_comp_max))
     _floor = 1e-6
+    _ceil = float("nan")
     if cfg is not None:
         try:
             _floor = float(getattr(cfg, "comp_select_rms_floor", 1e-6) or 1e-6)
         except (TypeError, ValueError):
             _floor = 1e-6
+        try:
+            _ceil = float(
+                getattr(cfg, "phase01_comparison_max_comp_rms", float("nan")) or float("nan")
+            )
+        except (TypeError, ValueError):
+            _ceil = float("nan")
+    if max_comp_rms is not None:
+        try:
+            _mc = float(max_comp_rms)
+        except (TypeError, ValueError):
+            _mc = float("nan")
+        if math.isfinite(_mc) and _mc > 0:
+            _ceil = _mc
 
     out = candidates.copy()
     rms = pd.to_numeric(out["comp_rms"], errors="coerce")
     out = out[rms >= _floor].copy()
     if out.empty:
         return out
+
+    # Authoritative per-target RMS gate (known-issue (b) / COMP-ASSIGN-02): never
+    # admit comps above the ceiling into membership. Applied before colour widen
+    # so a full colour bin of noisy comps forces the ladder to open.
+    if math.isfinite(_ceil) and _ceil > 0:
+        _n0 = int(len(out))
+        _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
+        out = out[_rms_c.notna() & (_rms_c <= float(_ceil))].copy()
+        logging.info(
+            "[COMP] max_comp_rms ceiling=%.4f: %d -> %d under-ceiling candidates",
+            float(_ceil),
+            _n0,
+            int(len(out)),
+        )
+        if out.empty:
+            logging.warning(
+                "[COMP] no candidates under max_comp_rms=%.4f after floor filter",
+                float(_ceil),
+            )
+            return out
 
     id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
     tb = float(target_bprp)
@@ -14957,35 +14993,48 @@ def _select_comps_by_color_then_rms(
     ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
     selected = pd.DataFrame()
     used_lim = float("nan")
-    for lim in ladder:
+    ladder_step = 0
+    for step_i, lim in enumerate(ladder, start=1):
         pool = out[out["_delta_bprp_abs"] <= float(lim)].copy()
         if len(pool) >= _n_min:
             selected = pool
             used_lim = float(lim)
+            ladder_step = int(step_i)
             logging.info(
-                "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d)",
+                "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d) "
+                "ladder_step=%d",
                 float(lim),
                 len(pool),
                 _n_min,
+                ladder_step,
             )
             break
         selected = pool
         used_lim = float(lim)
+        ladder_step = int(step_i)
     if selected.empty:
+        # Widest under-ceiling set: relax to full under-ceiling candidates
+        # (never re-admit above-ceiling comps).
         selected = out
         used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
+        ladder_step = int(len(ladder)) if ladder else 0
         logging.warning(
-            "[COMP] color filter relaxed to full candidate set "
-            "(no ladder step reached n_comp_min=%d; lim=%.3f)",
+            "[COMP] color filter relaxed to full under-ceiling set "
+            "(no ladder step reached n_comp_min=%d; lim=%.3f; n=%d)",
             _n_min,
             used_lim,
+            int(len(selected)),
         )
     elif len(selected) < _n_min and len(out) >= _n_min:
+        n_ladder = int(len(selected))
         selected = out
+        ladder_step = int(len(ladder)) if ladder else ladder_step
         logging.info(
-            "[COMP] color filter relaxed to full set after ladder (n_ladder=%d < n_comp_min=%d)",
-            len(selected),
+            "[COMP] color filter relaxed to full under-ceiling set after ladder "
+            "(n_ladder=%d < n_comp_min=%d; n_full=%d)",
+            n_ladder,
             _n_min,
+            int(len(out)),
         )
 
     selected = selected.sort_values(
@@ -14993,8 +15042,13 @@ def _select_comps_by_color_then_rms(
         ascending=[True, True, True, True],
         kind="mergesort",
     )
+    # Ceiling, not target: at most n_comp_max under-ceiling comps; do not pad.
     selected = selected.head(_n_max).copy()
     selected.attrs["color_ladder_lim"] = used_lim
+    selected.attrs["color_ladder_step"] = int(ladder_step)
+    selected.attrs["max_comp_rms_ceiling"] = (
+        float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
+    )
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
 
@@ -16114,6 +16168,7 @@ def select_comparison_stars_per_target(
         chip_fh=chip_fh,
         chip_interior_margin_px=int(chip_interior_margin_px),
         cfg=_cfg_p1,
+        max_comp_rms=float(max_comp_rms),
     )
     final_comps = tier_out["final_comps"]
     if final_comps is None or getattr(final_comps, "empty", True):
