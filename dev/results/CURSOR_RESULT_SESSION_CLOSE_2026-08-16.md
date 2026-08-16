@@ -49,5 +49,12 @@ new tip (standing decision).
 
 ## Push
 
-Final origin/main SHA and pushed range recorded after push in the session
-report / STATE tip line.
+| | |
+|--|--|
+| origin/main | **1521d3c** |
+| range | `691d3be..1521d3c` (from PUSH-02 note tip through SESSION-CLOSE) |
+| `--fast` PASS SHA | **4fe84b4** (1418 passed, 27 skipped) |
+| pull --rebase | clean (already up to date) |
+
+Scratch left behind: `vyvar.sqlite3-shm`, `vyvar.sqlite3-wal`, `src_py/tmp/`,
+`dev/tests/_tmp_batch_e_lc/`.
