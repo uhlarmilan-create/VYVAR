@@ -8,6 +8,23 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## PUSH-STAMP-01 - content tip vs origin SHA (2026-08-16)
+
+**Rule.** A close result records the **CONTENT tip** (last substantive commit of
+the close) and the pushed range up to it. The final `origin/main` SHA is
+**never** written into a committed file, because committing that string changes
+HEAD and forces another stamp.
+
+**Precedent this ends.** Stamp-on-stamp chains: PUSH-02 (`5872634` -> `738a24e`
+-> `691d3be`); SESSION-CLOSE (`1521d3c` -> `1b8fcab` -> `9f139ef`). One docs
+commit per close is enough; do not chase self-referential tip SHAs.
+
+**Practice.** STATE/ROADMAP/RESULT may name the science tip and the content
+pack tip. After `git push`, the report text (uncommitted or chat) may mention
+the received remote SHA; that SHA is not a reason for a further docs commit.
+
+---
+
 ## RUN-WORKER-01 - subprocess job worker (open; 2026-08-16)
 
 **Incident (HANG-P1-T16-01).** Draft 515 RUN VYVAR executed Phase 0+1 on the
