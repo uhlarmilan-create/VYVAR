@@ -1,0 +1,58 @@
+{
+  "noise_counts": {
+    "513": {
+      "n_active": 218,
+      "n_noise": 45,
+      "n_noise_with_lc": 12,
+      "n_linear": 173,
+      "n_skip_true": 157
+    },
+    "512": {
+      "n_active": 45,
+      "n_noise": 26,
+      "n_noise_with_lc": 6,
+      "n_linear": 19,
+      "n_skip_true": 28
+    },
+    "510": {
+      "n_active": 45,
+      "n_noise": 26,
+      "n_noise_with_lc": 6,
+      "n_linear": 19,
+      "n_skip_true": 28
+    },
+    "435": {
+      "n_active": 169,
+      "n_noise": 0,
+      "n_noise_with_lc": 0,
+      "n_linear": 113,
+      "n_skip_true": 2
+    }
+  },
+  "ms_meta": {
+    "513": {
+      "path": "Archive\\Drafts\\draft_000513\\platesolve\\NoFilter_60_2\\photometry\\pipeline_meta.json",
+      "subset": {
+        "match_depth_source": "max(faintest_mag_limit=18.0, 18.0) MASTERSTAR floor"
+      }
+    },
+    "512": {
+      "path": "Archive\\Drafts\\draft_000512\\platesolve\\NoFilter_60_2\\photometry\\pipeline_meta.json",
+      "subset": {
+        "match_depth_source": "max(faintest_mag_limit=18.0, 18.0) MASTERSTAR floor"
+      }
+    },
+    "510": {
+      "path": "Archive\\Drafts\\draft_000510\\platesolve\\NoFilter_60_2\\photometry\\pipeline_meta.json",
+      "subset": {
+        "match_depth_source": "max(faintest_mag_limit=18.0, 18.0) MASTERSTAR floor"
+      }
+    },
+    "435": {
+      "path": "Archive\\Drafts\\draft_000435\\platesolve\\NoFilter_60_2\\photometry\\pipeline_meta.json",
+      "subset": {
+        "identity_qa_source": "pass1_UI_MASTERSTAR_stamp_preserved"
+      }
+    }
+  }
+}

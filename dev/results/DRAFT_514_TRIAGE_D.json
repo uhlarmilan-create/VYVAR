@@ -1,0 +1,43 @@
+{
+  "commit_sha": "011fff7",
+  "proc_file": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000514\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_001.csv",
+  "A2_duplicates": {
+    "rows": 3627,
+    "unique_catalog_id": 3500,
+    "extra_duplicate_rows": 127,
+    "cause": "_export_per_frame_run_catalog_core did not call _proc_deduplicate_matched_catalog_rows before write; alternate export path did. Multiple DAO detections match same Gaia id.",
+    "forced_photometry_role": "not the cause (duplicate rows have forced_photometry=False)"
+  },
+  "D1_blends": {
+    "plate_scale_arcsec_per_px": 9.55169,
+    "median_fwhm_estimate_px": 6.134574686601291,
+    "median_fwhm_arcsec": 58.59555568826269,
+    "median_aperture_r_px": 2.711323792774397,
+    "n_stars_unique": 3500,
+    "n_with_neighbour_inside_aperture": 1780,
+    "frac_with_neighbour_inside_aperture": 0.5085714285714286,
+    "neighbour_sep_fwhm_p16": 0.0,
+    "neighbour_sep_fwhm_p50": 0.0,
+    "neighbour_sep_fwhm_p84": 0.028668542522062097,
+    "n_pool_members_with_neighbour": 629,
+    "n_pool_ids_in_csv": 1292,
+    "unit_sep": "FWHM"
+  },
+  "D2_aperture_vs_psf": {
+    "median_aperture_r_px": 2.711323792774397,
+    "r_min_px_from_snr_table": 2.711323792774397,
+    "r_max_px_from_snr_table": 8.47288685241999,
+    "snr_table_fwhm_px": 3.389154740967996,
+    "snr_table_fwhm_estimator": "dao_moment_median",
+    "snr_table_fwhm_scope": "per_draft_median_frame_dao_moment",
+    "phase2a_infolog_fwhm_px": 3.301,
+    "auto_fwhm_median_px": 5.311,
+    "median_fwhm_estimate_px_proc": 6.134574686601291,
+    "aperture_fwhm_factor_config": 1.9,
+    "naive_1p9_times_phase2a_fwhm_px": 6.2719,
+    "r_over_snr_fwhm": 0.8,
+    "r_over_proc_fwhm_estimate": 0.44197420869229626,
+    "gaussian_ee_at_r_over_proc_fwhm": 0.4181838713261299,
+    "finding": "Median aperture equals snr_table r_min_px (clamp). Production radius is SNR-table sized, not aperture_fwhm_factor*FWHM. Phase2A FWHM~3.3 px feeds the SNR table; AUTO FWHM~5.3 and proc fwhm_estimate~6.1 are different estimators. If moment FWHM is closer to true seeing, EE at r_min is ~42 percent and aperture losses vary with seeing."
+  }
+}

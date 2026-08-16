@@ -1,0 +1,193 @@
+{
+  "commit_sha": "011fff7",
+  "n_frames": 134,
+  "method": "synthetic_inst_mags_real_weights",
+  "targets": {
+    "BO CVn": {
+      "n_comps_full": 1292,
+      "N_eff": 203.33140206807747,
+      "truncation": [
+        {
+          "cum_weight_frac": 0.999,
+          "n_comps_kept": 1094,
+          "zp_diff_rms_mmag": 0.038057711138197454,
+          "zp_diff_mean_mmag": -0.0020980194950624095,
+          "lc_scatter_full_mmag": 4.736783797666504,
+          "lc_scatter_trunc_mmag": 4.74593646531455,
+          "lc_scatter_change_mmag": 0.009152667648045565,
+          "wall_clock_s": 1.6537236000003759,
+          "wall_clock_full_s": 1.6842583999969065
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_comps_kept": 812,
+          "zp_diff_rms_mmag": 0.1243856626743778,
+          "zp_diff_mean_mmag": 0.005190081950812496,
+          "lc_scatter_full_mmag": 4.736783797666504,
+          "lc_scatter_trunc_mmag": 4.766382933264064,
+          "lc_scatter_change_mmag": 0.02959913559756,
+          "wall_clock_s": 0.9468301000015344,
+          "wall_clock_full_s": 1.6842583999969065
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_comps_kept": 508,
+          "zp_diff_rms_mmag": 0.28921411136582076,
+          "zp_diff_mean_mmag": 0.05314964588502814,
+          "lc_scatter_full_mmag": 4.736783797666504,
+          "lc_scatter_trunc_mmag": 4.766100091958909,
+          "lc_scatter_change_mmag": 0.029316294292404343,
+          "wall_clock_s": 0.410405799979344,
+          "wall_clock_full_s": 1.6842583999969065
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_comps_kept": 368,
+          "zp_diff_rms_mmag": 0.41080480125493113,
+          "zp_diff_mean_mmag": 0.05169961231731583,
+          "lc_scatter_full_mmag": 4.736783797666504,
+          "lc_scatter_trunc_mmag": 4.774368578535122,
+          "lc_scatter_change_mmag": 0.03758478086861761,
+          "wall_clock_s": 0.2249809000059031,
+          "wall_clock_full_s": 1.6842583999969065
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_comps_kept": 78,
+          "zp_diff_rms_mmag": 0.9822218510415611,
+          "zp_diff_mean_mmag": -0.10617888948533685,
+          "lc_scatter_full_mmag": 4.736783797666504,
+          "lc_scatter_trunc_mmag": 4.866966574274528,
+          "lc_scatter_change_mmag": 0.1301827766080237,
+          "wall_clock_s": 0.034717900009127334,
+          "wall_clock_full_s": 1.6842583999969065
+        }
+      ],
+      "note": "Measuring instrument only; not a candidate cut. Synthetic common-mode+noise; weights from production sigma_eff."
+    },
+    "FW CVn": {
+      "n_comps_full": 1292,
+      "N_eff": 173.63887493924776,
+      "truncation": [
+        {
+          "cum_weight_frac": 0.999,
+          "n_comps_kept": 1068,
+          "zp_diff_rms_mmag": 0.03821351416777933,
+          "zp_diff_mean_mmag": 0.0023069927140635348,
+          "lc_scatter_full_mmag": 5.1033142470571775,
+          "lc_scatter_trunc_mmag": 5.106542511535251,
+          "lc_scatter_change_mmag": 0.0032282644780732284,
+          "wall_clock_s": 1.6102807999996003,
+          "wall_clock_full_s": 2.0411639000230934
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_comps_kept": 766,
+          "zp_diff_rms_mmag": 0.1127319272821644,
+          "zp_diff_mean_mmag": -0.010727669675353905,
+          "lc_scatter_full_mmag": 5.1033142470571775,
+          "lc_scatter_trunc_mmag": 5.101215291404803,
+          "lc_scatter_change_mmag": -0.002098955652374279,
+          "wall_clock_s": 0.8550552999950014,
+          "wall_clock_full_s": 2.0411639000230934
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_comps_kept": 453,
+          "zp_diff_rms_mmag": 0.25181533886058655,
+          "zp_diff_mean_mmag": 0.012552201050530953,
+          "lc_scatter_full_mmag": 5.1033142470571775,
+          "lc_scatter_trunc_mmag": 5.092504406844709,
+          "lc_scatter_change_mmag": -0.010809840212468558,
+          "wall_clock_s": 0.2861857000098098,
+          "wall_clock_full_s": 2.0411639000230934
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_comps_kept": 322,
+          "zp_diff_rms_mmag": 0.3517474786580405,
+          "zp_diff_mean_mmag": 0.022511852626538542,
+          "lc_scatter_full_mmag": 5.1033142470571775,
+          "lc_scatter_trunc_mmag": 5.105388107067218,
+          "lc_scatter_change_mmag": 0.002073860010040285,
+          "wall_clock_s": 0.16077760001644492,
+          "wall_clock_full_s": 2.0411639000230934
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_comps_kept": 67,
+          "zp_diff_rms_mmag": 0.9897286479008235,
+          "zp_diff_mean_mmag": 0.09424702240872583,
+          "lc_scatter_full_mmag": 5.1033142470571775,
+          "lc_scatter_trunc_mmag": 5.146385131256091,
+          "lc_scatter_change_mmag": 0.04307088419891336,
+          "wall_clock_s": 0.019109299988485873,
+          "wall_clock_full_s": 2.0411639000230934
+        }
+      ],
+      "note": "Measuring instrument only; not a candidate cut. Synthetic common-mode+noise; weights from production sigma_eff."
+    },
+    "R CVn": {
+      "n_comps_full": 1292,
+      "N_eff": 346.6550998469041,
+      "truncation": [
+        {
+          "cum_weight_frac": 0.999,
+          "n_comps_kept": 1256,
+          "zp_diff_rms_mmag": 0.17152192186567752,
+          "zp_diff_mean_mmag": -0.019684979504445126,
+          "lc_scatter_full_mmag": 5.356767601922739,
+          "lc_scatter_trunc_mmag": 5.3394817651917545,
+          "lc_scatter_change_mmag": -0.017285836730984272,
+          "wall_clock_s": 1.8730689999938477,
+          "wall_clock_full_s": 2.1332592999970075
+        },
+        {
+          "cum_weight_frac": 0.99,
+          "n_comps_kept": 1124,
+          "zp_diff_rms_mmag": 0.48284709891602384,
+          "zp_diff_mean_mmag": -0.007326440548991023,
+          "lc_scatter_full_mmag": 5.356767601922739,
+          "lc_scatter_trunc_mmag": 5.3007028821094355,
+          "lc_scatter_change_mmag": -0.0560647198133033,
+          "wall_clock_s": 1.5080214999907184,
+          "wall_clock_full_s": 2.1332592999970075
+        },
+        {
+          "cum_weight_frac": 0.95,
+          "n_comps_kept": 951,
+          "zp_diff_rms_mmag": 0.9638223039235003,
+          "zp_diff_mean_mmag": 0.05313449345817262,
+          "lc_scatter_full_mmag": 5.356767601922739,
+          "lc_scatter_trunc_mmag": 5.2976623264086085,
+          "lc_scatter_change_mmag": -0.05910527551413036,
+          "wall_clock_s": 1.1940961999935098,
+          "wall_clock_full_s": 2.1332592999970075
+        },
+        {
+          "cum_weight_frac": 0.9,
+          "n_comps_kept": 835,
+          "zp_diff_rms_mmag": 1.3577302898266113,
+          "zp_diff_mean_mmag": 0.1255754095365229,
+          "lc_scatter_full_mmag": 5.356767601922739,
+          "lc_scatter_trunc_mmag": 5.075256636165885,
+          "lc_scatter_change_mmag": -0.28151096575685397,
+          "wall_clock_s": 0.9826389999943785,
+          "wall_clock_full_s": 2.1332592999970075
+        },
+        {
+          "cum_weight_frac": 0.5,
+          "n_comps_kept": 362,
+          "zp_diff_rms_mmag": 2.5807006635198144,
+          "zp_diff_mean_mmag": 0.07276642317139119,
+          "lc_scatter_full_mmag": 5.356767601922739,
+          "lc_scatter_trunc_mmag": 4.972502476742142,
+          "lc_scatter_change_mmag": -0.38426512518059663,
+          "wall_clock_s": 0.2567336000211071,
+          "wall_clock_full_s": 2.1332592999970075
+        }
+      ],
+      "note": "Measuring instrument only; not a candidate cut. Synthetic common-mode+noise; weights from production sigma_eff."
+    }
+  }
+}

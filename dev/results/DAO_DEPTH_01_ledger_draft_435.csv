@@ -1,0 +1,51 @@
+draft,stage,magnitude_bin,count_in,count_out,loss_reason,count_lost,note
+435,catalog_cone_query,ALL,,100000,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,ALL,100000,4130,outside_or_cap,95870,DESCRIPTIVE; same order as 512 cone footprint
+435,dao_pass1_detections,ALL,,2552,,0,DESCRIPTIVE log; masterstar_dao_threshold_sigma=2.1 in pipeline_meta snapshot
+435,dao_pass2_input_unmatched_gaia,ALL,,1332,,0,DESCRIPTIVE
+435,dao_pass2_completions,ALL,1332,1225,pass2_miss,107,DESCRIPTIVE
+435,dao_merged_after_spatial_cap,ALL,,3777,,0,DESCRIPTIVE
+435,prematch_snr_peak_filter,ALL,3777,2951,peak_below_median_plus_k_sigma,826,DESCRIPTIVE; k=1.8; logged noise_floor~2105.9 (MAD-like; not current full-frame std replay)
+435,masterstars_full_match,ALL,2951,2951,,0,GAIA_MATCHED=2842 DAO_ONLY=109 DESCRIPTIVE
+435,drop_DAO_ONLY_TODO13,ALL,2951,2842,DAO_ONLY,109,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,ALL,2842,2590,per_frame_drop,252,DESCRIPTIVE
+435,vsx_out_of_scope_ROT_variable_targets,ALL,,186,policy,0,DESCRIPTIVE; not detection loss
+435,gaia_cone_in_footprint_Gle17p5,5,,3,,0,DESCRIPTIVE
+435,masterstars_full_match,5,,3,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,5,,3,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,6,,8,,0,DESCRIPTIVE
+435,masterstars_full_match,6,,7,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,6,,7,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,7,,12,,0,DESCRIPTIVE
+435,masterstars_full_match,7,,12,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,7,,11,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,8,,26,,0,DESCRIPTIVE
+435,masterstars_full_match,8,,26,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,8,,26,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,9,,67,,0,DESCRIPTIVE
+435,masterstars_full_match,9,,65,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,9,,64,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,10,,107,,0,DESCRIPTIVE
+435,masterstars_full_match,10,,106,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,10,,105,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,11,,260,,0,DESCRIPTIVE
+435,masterstars_full_match,11,,255,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,11,,256,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,12,,545,,0,DESCRIPTIVE
+435,masterstars_full_match,12,,526,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,12,,524,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,13,,946,,0,DESCRIPTIVE
+435,masterstars_full_match,13,,877,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,13,,795,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,14,,1590,,0,DESCRIPTIVE
+435,masterstars_full_match,14,,780,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,14,,673,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,15,,566,,0,DESCRIPTIVE
+435,masterstars_full_match,15,,167,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,15,,117,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,16,,0,,0,DESCRIPTIVE
+435,masterstars_full_match,16,,9,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,16,,5,,0,DESCRIPTIVE
+435,gaia_cone_in_footprint_Gle17p5,17,,0,,0,DESCRIPTIVE
+435,masterstars_full_match,17,,8,,0,DESCRIPTIVE
+435,proc_BO_CVn_Light_001,17,,3,,0,DESCRIPTIVE

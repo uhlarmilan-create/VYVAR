@@ -1,0 +1,221 @@
+{
+  "commit_sha": "011fff7",
+  "n_targets_with_lc": 21,
+  "corr_slope_vs_delta_colour": -0.024838960399155157,
+  "coeff_mmag_per_bprp_per_airmass": -29.280181319803496,
+  "compare_k2_literature_clear": "NONE (CLEAR)",
+  "compare_c_col_psf_mag_per_bprp": 0.029485,
+  "targets": [
+    {
+      "name": "R CVn",
+      "target_catalog_id": "1496795041799526400",
+      "delta_colour_ensemble": -4.714046034686869,
+      "airmass_slope_mag_per_airmass": -0.2787775523619788,
+      "airmass_slope_mmag_per_airmass": -278.7775523619788,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1496795041799526400.csv"
+    },
+    {
+      "name": "HAT-188-0001788",
+      "target_catalog_id": "1497561779362267392",
+      "delta_colour_ensemble": -0.6237921894602629,
+      "airmass_slope_mag_per_airmass": -0.1672858738251642,
+      "airmass_slope_mmag_per_airmass": -167.2858738251642,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497561779362267392.csv"
+    },
+    {
+      "name": "ASASSN-V J135313.56+394107.4",
+      "target_catalog_id": "1496998382733052928",
+      "delta_colour_ensemble": -0.7146580526675417,
+      "airmass_slope_mag_per_airmass": -0.10917126107169366,
+      "airmass_slope_mmag_per_airmass": -109.17126107169365,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1496998382733052928.csv"
+    },
+    {
+      "name": "CV CVn",
+      "target_catalog_id": "1497007144465726080",
+      "delta_colour_ensemble": -2.0561866547246304,
+      "airmass_slope_mag_per_airmass": -0.11999049270767596,
+      "airmass_slope_mmag_per_airmass": -119.99049270767597,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497007144465726080.csv"
+    },
+    {
+      "name": "CSS_J134925.3+393524",
+      "target_catalog_id": "1497169940906156032",
+      "delta_colour_ensemble": 0.2651349673802593,
+      "airmass_slope_mag_per_airmass": 0.019398653117818916,
+      "airmass_slope_mmag_per_airmass": 19.398653117818917,
+      "n_epochs": 95,
+      "lc_file": "lightcurve_1497169940906156032.csv"
+    },
+    {
+      "name": "FY CVn",
+      "target_catalog_id": "1496278752372040832",
+      "delta_colour_ensemble": 0.2691756345271443,
+      "airmass_slope_mag_per_airmass": -1.3693277815534648,
+      "airmass_slope_mmag_per_airmass": -1369.3277815534648,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1496278752372040832.csv"
+    },
+    {
+      "name": "HAT-188-0000323",
+      "target_catalog_id": "1497245497969274240",
+      "delta_colour_ensemble": -1.2342267946158794,
+      "airmass_slope_mag_per_airmass": -0.12662968174026956,
+      "airmass_slope_mmag_per_airmass": -126.62968174026956,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497245497969274240.csv"
+    },
+    {
+      "name": "SS CVn",
+      "target_catalog_id": "1497236186481686016",
+      "delta_colour_ensemble": 0.3341319394564388,
+      "airmass_slope_mag_per_airmass": -3.948694829939494,
+      "airmass_slope_mmag_per_airmass": -3948.694829939494,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497236186481686016.csv"
+    },
+    {
+      "name": "HAT-188-0000203",
+      "target_catalog_id": "1497683722074089728",
+      "delta_colour_ensemble": -0.5512927653176285,
+      "airmass_slope_mag_per_airmass": -0.07078922409947938,
+      "airmass_slope_mmag_per_airmass": -70.78922409947938,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497683722074089728.csv"
+    },
+    {
+      "name": "FZ CVn",
+      "target_catalog_id": "1496293286541396480",
+      "delta_colour_ensemble": 0.08548868617068417,
+      "airmass_slope_mag_per_airmass": 2.656548625240933,
+      "airmass_slope_mmag_per_airmass": 2656.5486252409332,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1496293286541396480.csv"
+    },
+    {
+      "name": "ZTF J140033.29+405446.7",
+      "target_catalog_id": "1498617482323461376",
+      "delta_colour_ensemble": -0.38929855317447326,
+      "airmass_slope_mag_per_airmass": -0.20503627608712982,
+      "airmass_slope_mmag_per_airmass": -205.0362760871298,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1498617482323461376.csv"
+    },
+    {
+      "name": "BO CVn",
+      "target_catalog_id": "1498613634033133184",
+      "delta_colour_ensemble": 0.3774358272426885,
+      "airmass_slope_mag_per_airmass": -0.4038815673080645,
+      "airmass_slope_mmag_per_airmass": -403.8815673080645,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1498613634033133184.csv"
+    },
+    {
+      "name": "ASASSN-V J140843.29+402701.8",
+      "target_catalog_id": "1498027456896444928",
+      "delta_colour_ensemble": -0.9260976669250036,
+      "airmass_slope_mag_per_airmass": -0.18342202745630462,
+      "airmass_slope_mmag_per_airmass": -183.42202745630462,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1498027456896444928.csv"
+    },
+    {
+      "name": "ZTF J141004.59+410003.7",
+      "target_catalog_id": "1498064771572297856",
+      "delta_colour_ensemble": -0.1956427902568636,
+      "airmass_slope_mag_per_airmass": 2.308040910383352,
+      "airmass_slope_mmag_per_airmass": 2308.0409103833517,
+      "n_epochs": 124,
+      "lc_file": "lightcurve_1498064771572297856.csv"
+    },
+    {
+      "name": "FW CVn",
+      "target_catalog_id": "1497343732462852864",
+      "delta_colour_ensemble": 0.07212041751056952,
+      "airmass_slope_mag_per_airmass": 0.08993337832126656,
+      "airmass_slope_mmag_per_airmass": 89.93337832126656,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497343732462852864.csv"
+    },
+    {
+      "name": "ASASSN-V J135757.22+412518.4",
+      "target_catalog_id": "1498699086702005376",
+      "delta_colour_ensemble": 0.06237881584756255,
+      "airmass_slope_mag_per_airmass": -0.2688633666709609,
+      "airmass_slope_mmag_per_airmass": -268.8633666709609,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1498699086702005376.csv"
+    },
+    {
+      "name": "FU CVn",
+      "target_catalog_id": "1497418258735289472",
+      "delta_colour_ensemble": 0.23147972269459705,
+      "airmass_slope_mag_per_airmass": -0.2669793957892276,
+      "airmass_slope_mmag_per_airmass": -266.97939578922757,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497418258735289472.csv"
+    },
+    {
+      "name": "NSV 19982",
+      "target_catalog_id": "1497425371201155072",
+      "delta_colour_ensemble": -0.19735434693281562,
+      "airmass_slope_mag_per_airmass": -0.006277165125166839,
+      "airmass_slope_mmag_per_airmass": -6.277165125166839,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1497425371201155072.csv"
+    },
+    {
+      "name": "HIP 67011",
+      "target_catalog_id": "1500549977088828160",
+      "delta_colour_ensemble": -0.8109752915076447,
+      "airmass_slope_mag_per_airmass": -0.13735906309736712,
+      "airmass_slope_mmag_per_airmass": -137.3590630973671,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1500549977088828160.csv"
+    },
+    {
+      "name": "NSVS 5096293",
+      "target_catalog_id": "1498298211635183744",
+      "delta_colour_ensemble": -0.14396468532020334,
+      "airmass_slope_mag_per_airmass": 2.351195639989852,
+      "airmass_slope_mmag_per_airmass": 2351.1956399898518,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1498298211635183744.csv"
+    },
+    {
+      "name": "RX CVn",
+      "target_catalog_id": "1500424804562041984",
+      "delta_colour_ensemble": 0.2568056136093242,
+      "airmass_slope_mag_per_airmass": -0.6243459078395079,
+      "airmass_slope_mmag_per_airmass": -624.345907839508,
+      "n_epochs": 134,
+      "lc_file": "lightcurve_1500424804562041984.csv"
+    }
+  ],
+  "subsets": {
+    "all": {
+      "corr": -0.024838960399155157,
+      "coeff_mmag_per_bprp_per_airmass": -29.280181319803496,
+      "n": 21
+    },
+    "abs_delta_colour_lt_2": {
+      "corr": -0.15986440921398862,
+      "coeff_mmag_per_bprp_per_airmass": -466.67356037387833,
+      "n": 19
+    },
+    "abs_slope_lt_150_mmag_per_airmass": {
+      "corr": 0.7893967401315192,
+      "coeff_mmag_per_bprp_per_airmass": 87.49212160767729,
+      "n": 8
+    },
+    "nonvariable_like": {
+      "corr": null,
+      "coeff_mmag_per_bprp_per_airmass": null,
+      "n": 3
+    }
+  }
+}

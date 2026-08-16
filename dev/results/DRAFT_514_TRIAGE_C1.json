@@ -1,0 +1,685 @@
+{
+  "commit_sha": "011fff7",
+  "delta_colour_ensemble_unit": "BP-RP",
+  "targets": [
+    {
+      "name": "R CVn",
+      "delta_colour_ensemble": -4.714046034686869,
+      "n_blue": 1289,
+      "n_red": 0,
+      "target_bp_rp": 5.675171375274658
+    },
+    {
+      "name": "TSVSC1 TN-N130302101-35-67-2",
+      "delta_colour_ensemble": -0.10986270092411687,
+      "n_blue": 958,
+      "n_red": 331,
+      "target_bp_rp": 1.0806798934936523
+    },
+    {
+      "name": "HAT-188-0001788",
+      "delta_colour_ensemble": -0.6237921894602629,
+      "n_blue": 1252,
+      "n_red": 37,
+      "target_bp_rp": 1.7044658660888672
+    },
+    {
+      "name": "ASASSN-V J135313.56+394107.4",
+      "delta_colour_ensemble": -0.7146580526675417,
+      "n_blue": 1259,
+      "n_red": 30,
+      "target_bp_rp": 1.784404754638672
+    },
+    {
+      "name": "CV CVn",
+      "delta_colour_ensemble": -2.0561866547246304,
+      "n_blue": 1289,
+      "n_red": 0,
+      "target_bp_rp": 3.037997245788574
+    },
+    {
+      "name": "HAT-188-0003359",
+      "delta_colour_ensemble": -0.8073214530423283,
+      "n_blue": 1266,
+      "n_red": 23,
+      "target_bp_rp": 1.8649349212646484
+    },
+    {
+      "name": "CSS_J134925.3+393524",
+      "delta_colour_ensemble": 0.2651349673802593,
+      "n_blue": 21,
+      "n_red": 1267,
+      "target_bp_rp": 0.5780401229858398
+    },
+    {
+      "name": "FY CVn",
+      "delta_colour_ensemble": 0.2691756345271443,
+      "n_blue": 21,
+      "n_red": 1268,
+      "target_bp_rp": 0.5740785598754883
+    },
+    {
+      "name": "HAT-188-0002048",
+      "delta_colour_ensemble": -1.49597520608792,
+      "n_blue": 1285,
+      "n_red": 4,
+      "target_bp_rp": 2.4957704544067383
+    },
+    {
+      "name": "HAT-188-0000323",
+      "delta_colour_ensemble": -1.2342267946158794,
+      "n_blue": 1280,
+      "n_red": 9,
+      "target_bp_rp": 2.248966217041016
+    },
+    {
+      "name": "SS CVn",
+      "delta_colour_ensemble": 0.3341319394564388,
+      "n_blue": 12,
+      "n_red": 1277,
+      "target_bp_rp": 0.5038461685180664
+    },
+    {
+      "name": "HAT-188-0000203",
+      "delta_colour_ensemble": -0.5512927653176285,
+      "n_blue": 1247,
+      "n_red": 42,
+      "target_bp_rp": 1.638092041015625
+    },
+    {
+      "name": "FZ CVn",
+      "delta_colour_ensemble": 0.08548868617068417,
+      "n_blue": 333,
+      "n_red": 956,
+      "target_bp_rp": 0.7966785430908203
+    },
+    {
+      "name": "ZTF J140033.29+405446.7",
+      "delta_colour_ensemble": -0.38929855317447326,
+      "n_blue": 1209,
+      "n_red": 80,
+      "target_bp_rp": 1.465740203857422
+    },
+    {
+      "name": "BO CVn",
+      "delta_colour_ensemble": 0.3774358272426885,
+      "n_blue": 8,
+      "n_red": 1281,
+      "target_bp_rp": 0.4581365585327148
+    },
+    {
+      "name": "ASASSN-V J140843.29+402701.8",
+      "delta_colour_ensemble": -0.9260976669250036,
+      "n_blue": 1271,
+      "n_red": 18,
+      "target_bp_rp": 1.9690628051757808
+    },
+    {
+      "name": "ZTF J141004.59+410003.7",
+      "delta_colour_ensemble": -0.1956427902568636,
+      "n_blue": 1102,
+      "n_red": 187,
+      "target_bp_rp": 1.2052106857299805
+    },
+    {
+      "name": "FW CVn",
+      "delta_colour_ensemble": 0.07212041751056952,
+      "n_blue": 407,
+      "n_red": 882,
+      "target_bp_rp": 0.8148937225341797
+    },
+    {
+      "name": "ASASSN-V J135757.22+412518.4",
+      "delta_colour_ensemble": 0.06237881584756255,
+      "n_blue": 455,
+      "n_red": 834,
+      "target_bp_rp": 0.8283462524414062
+    },
+    {
+      "name": "FU CVn",
+      "delta_colour_ensemble": 0.23147972269459705,
+      "n_blue": 27,
+      "n_red": 1262,
+      "target_bp_rp": 0.616246223449707
+    },
+    {
+      "name": "NSV 19982",
+      "delta_colour_ensemble": -0.19735434693281562,
+      "n_blue": 1102,
+      "n_red": 187,
+      "target_bp_rp": 1.2076435089111328
+    },
+    {
+      "name": "HIP 67011",
+      "delta_colour_ensemble": -0.8109752915076447,
+      "n_blue": 1266,
+      "n_red": 23,
+      "target_bp_rp": 1.868114948272705
+    },
+    {
+      "name": "NSVS 5096293",
+      "delta_colour_ensemble": -0.14396468532020334,
+      "n_blue": 1034,
+      "n_red": 255,
+      "target_bp_rp": 1.1308002471923828
+    },
+    {
+      "name": "RX CVn",
+      "delta_colour_ensemble": 0.2568056136093242,
+      "n_blue": 23,
+      "n_red": 1266,
+      "target_bp_rp": 0.5877761840820312
+    },
+    {
+      "name": "ZTF J134644.81+405436.2",
+      "delta_colour_ensemble": -0.414336224561658,
+      "n_blue": 1216,
+      "n_red": 73,
+      "target_bp_rp": 1.495624542236328
+    },
+    {
+      "name": "HAT-188-0001516",
+      "delta_colour_ensemble": -1.2933931936971337,
+      "n_blue": 1281,
+      "n_red": 8,
+      "target_bp_rp": 2.304180145263672
+    },
+    {
+      "name": "ZTF J141147.12+404808.7",
+      "delta_colour_ensemble": -0.0053999623063358815,
+      "n_blue": 723,
+      "n_red": 566,
+      "target_bp_rp": 0.9254522323608398
+    },
+    {
+      "name": "CSS_J134948.9+415037",
+      "delta_colour_ensemble": -0.19756444155877273,
+      "n_blue": 1102,
+      "n_red": 187,
+      "target_bp_rp": 1.207942008972168
+    },
+    {
+      "name": "GH CVn",
+      "delta_colour_ensemble": 0.15716281744406213,
+      "n_blue": 95,
+      "n_red": 1194,
+      "target_bp_rp": 0.7040824890136719
+    },
+    {
+      "name": "ZTF J140640.73+413639.0",
+      "delta_colour_ensemble": -0.0329529167971927,
+      "n_blue": 791,
+      "n_red": 497,
+      "target_bp_rp": 0.9661579132080078
+    },
+    {
+      "name": "LINEAR 10032668",
+      "delta_colour_ensemble": 0.3642016000134412,
+      "n_blue": 9,
+      "n_red": 1280,
+      "target_bp_rp": 0.4720363616943359
+    },
+    {
+      "name": "ZTF J140300.57+413339.3",
+      "delta_colour_ensemble": -0.17136467997348204,
+      "n_blue": 1072,
+      "n_red": 217,
+      "target_bp_rp": 1.1704893112182615
+    },
+    {
+      "name": "ASASSN-V J140619.34+422109.5",
+      "delta_colour_ensemble": -0.6492568023803293,
+      "n_blue": 1252,
+      "n_red": 37,
+      "target_bp_rp": 1.7271003723144531
+    },
+    {
+      "name": "ZTF J135636.59+422135.5",
+      "delta_colour_ensemble": 0.5165760900803963,
+      "n_blue": 5,
+      "n_red": 1283,
+      "target_bp_rp": 0.3142557144165039
+    },
+    {
+      "name": "CSS_J135929.8+421520",
+      "delta_colour_ensemble": -0.03623535603427919,
+      "n_blue": 798,
+      "n_red": 491,
+      "target_bp_rp": 0.9710474014282228
+    },
+    {
+      "name": "CSS_J140918.7+423422",
+      "delta_colour_ensemble": 0.3776128986866928,
+      "n_blue": 8,
+      "n_red": 1280,
+      "target_bp_rp": 0.4579505920410156
+    },
+    {
+      "name": "TOI-3919",
+      "delta_colour_ensemble": 0.1513837948845671,
+      "n_blue": 110,
+      "n_red": 1179,
+      "target_bp_rp": 0.7112369537353516
+    },
+    {
+      "name": "Gaia DR3 1496248206564680064",
+      "delta_colour_ensemble": 0.005630899986922122,
+      "n_blue": 689,
+      "n_red": 600,
+      "target_bp_rp": 0.9093036651611328
+    },
+    {
+      "name": "Gaia DR3 1497603835681942400",
+      "delta_colour_ensemble": 0.3691940177565381,
+      "n_blue": 9,
+      "n_red": 1280,
+      "target_bp_rp": 0.4667863845825195
+    },
+    {
+      "name": "Gaia DR3 1497096960821764224",
+      "delta_colour_ensemble": -0.08860584701696217,
+      "n_blue": 914,
+      "n_red": 375,
+      "target_bp_rp": 1.049118995666504
+    },
+    {
+      "name": "Gaia DR3 1485534187306501376",
+      "delta_colour_ensemble": 0.10210269729024413,
+      "n_blue": 245,
+      "n_red": 1043,
+      "target_bp_rp": 0.7744550704956055
+    },
+    {
+      "name": "Gaia DR3 1497037209236836736",
+      "delta_colour_ensemble": -0.30928859486882865,
+      "n_blue": 1178,
+      "n_red": 110,
+      "target_bp_rp": 1.3627614974975586
+    },
+    {
+      "name": "Gaia DR3 1497622939696499840",
+      "delta_colour_ensemble": -0.23059215278015777,
+      "n_blue": 1136,
+      "n_red": 153,
+      "target_bp_rp": 1.254530906677246
+    },
+    {
+      "name": "Gaia DR3 1497181966814590848",
+      "delta_colour_ensemble": 0.6788595266822703,
+      "n_blue": 3,
+      "n_red": 1286,
+      "target_bp_rp": 0.1475439071655273
+    },
+    {
+      "name": "Gaia DR3 1496930968925861248",
+      "delta_colour_ensemble": -1.2881070546480402,
+      "n_blue": 1281,
+      "n_red": 8,
+      "target_bp_rp": 2.29923152923584
+    },
+    {
+      "name": "Gaia DR3 1497639123133258752",
+      "delta_colour_ensemble": 0.5968688992427233,
+      "n_blue": 4,
+      "n_red": 1285,
+      "target_bp_rp": 0.2318305969238281
+    },
+    {
+      "name": "Gaia DR3 1497227287309482624",
+      "delta_colour_ensemble": -0.6457278853026818,
+      "n_blue": 1252,
+      "n_red": 37,
+      "target_bp_rp": 1.723978042602539
+    },
+    {
+      "name": "Gaia DR3 1497822982093584000",
+      "delta_colour_ensemble": -0.542803474438674,
+      "n_blue": 1244,
+      "n_red": 45,
+      "target_bp_rp": 1.630051612854004
+    },
+    {
+      "name": "Gaia DR3 1485987254816323328",
+      "delta_colour_ensemble": -0.09136694108332799,
+      "n_blue": 919,
+      "n_red": 370,
+      "target_bp_rp": 1.0532283782958984
+    },
+    {
+      "name": "Gaia DR3 1497774637941811584",
+      "delta_colour_ensemble": -0.39922541814082857,
+      "n_blue": 1212,
+      "n_red": 77,
+      "target_bp_rp": 1.477743148803711
+    },
+    {
+      "name": "Gaia DR3 1485987151737107200",
+      "delta_colour_ensemble": 0.10660640862979409,
+      "n_blue": 221,
+      "n_red": 1068,
+      "target_bp_rp": 0.7685060501098633
+    },
+    {
+      "name": "Gaia DR3 1497871669842349184",
+      "delta_colour_ensemble": 0.3746275733678622,
+      "n_blue": 8,
+      "n_red": 1281,
+      "target_bp_rp": 0.4610815048217773
+    },
+    {
+      "name": "Gaia DR3 1497284015237511808",
+      "delta_colour_ensemble": -0.5280455562978361,
+      "n_blue": 1243,
+      "n_red": 46,
+      "target_bp_rp": 1.6158943176269531
+    },
+    {
+      "name": "Gaia DR3 1497154753901690624",
+      "delta_colour_ensemble": -0.4073649443098313,
+      "n_blue": 1213,
+      "n_red": 76,
+      "target_bp_rp": 1.4874343872070312
+    },
+    {
+      "name": "Gaia DR3 1497289959472202624",
+      "delta_colour_ensemble": -1.3629609333238637,
+      "n_blue": 1282,
+      "n_red": 7,
+      "target_bp_rp": 2.36956787109375
+    },
+    {
+      "name": "Gaia DR3 1497395615667678848",
+      "delta_colour_ensemble": -0.4217078093149622,
+      "n_blue": 1219,
+      "n_red": 70,
+      "target_bp_rp": 1.5041732788085938
+    },
+    {
+      "name": "Gaia DR3 1498089270065726464",
+      "delta_colour_ensemble": -0.34390854850604646,
+      "n_blue": 1196,
+      "n_red": 93,
+      "target_bp_rp": 1.4085168838500977
+    },
+    {
+      "name": "Gaia DR3 1500327978819506944",
+      "delta_colour_ensemble": -0.06601869043439046,
+      "n_blue": 864,
+      "n_red": 425,
+      "target_bp_rp": 1.0154399871826172
+    },
+    {
+      "name": "Gaia DR3 1497923827925178368",
+      "delta_colour_ensemble": -1.2861105597340492,
+      "n_blue": 1281,
+      "n_red": 8,
+      "target_bp_rp": 2.29736328125
+    },
+    {
+      "name": "Gaia DR3 1498058827337611392",
+      "delta_colour_ensemble": 0.3462709422913143,
+      "n_blue": 11,
+      "n_red": 1278,
+      "target_bp_rp": 0.4909629821777344
+    },
+    {
+      "name": "Gaia DR3 1498118922519946624",
+      "delta_colour_ensemble": -0.02842848445701185,
+      "n_blue": 778,
+      "n_red": 511,
+      "target_bp_rp": 0.959453582763672
+    },
+    {
+      "name": "Gaia DR3 1497971759760138880",
+      "delta_colour_ensemble": -1.005956708686154,
+      "n_blue": 1274,
+      "n_red": 15,
+      "target_bp_rp": 2.040219306945801
+    },
+    {
+      "name": "Gaia DR3 1498878753773944576",
+      "delta_colour_ensemble": -0.176092826457241,
+      "n_blue": 1077,
+      "n_red": 212,
+      "target_bp_rp": 1.1772832870483398
+    },
+    {
+      "name": "Gaia DR3 1498690531127172224",
+      "delta_colour_ensemble": -0.12347807550953627,
+      "n_blue": 993,
+      "n_red": 296,
+      "target_bp_rp": 1.100778579711914
+    },
+    {
+      "name": "Gaia DR3 1498135552633294976",
+      "delta_colour_ensemble": -0.5736271833415767,
+      "n_blue": 1250,
+      "n_red": 39,
+      "target_bp_rp": 1.6589326858520508
+    },
+    {
+      "name": "Gaia DR3 1500373574192295808",
+      "delta_colour_ensemble": -0.2852916860449415,
+      "n_blue": 1166,
+      "n_red": 123,
+      "target_bp_rp": 1.3302488327026367
+    },
+    {
+      "name": "Gaia DR3 1498322916287022976",
+      "delta_colour_ensemble": -1.0708084244569933,
+      "n_blue": 1274,
+      "n_red": 15,
+      "target_bp_rp": 2.0987510681152344
+    },
+    {
+      "name": "Gaia DR3 1498141668666708480",
+      "delta_colour_ensemble": -0.32249750507388564,
+      "n_blue": 1184,
+      "n_red": 105,
+      "target_bp_rp": 1.3803930282592771
+    },
+    {
+      "name": "Gaia DR3 1498364251052277248",
+      "delta_colour_ensemble": -1.268365533005348,
+      "n_blue": 1280,
+      "n_red": 9,
+      "target_bp_rp": 2.2807769775390625
+    },
+    {
+      "name": "Gaia DR3 1498752275577303808",
+      "delta_colour_ensemble": -0.1890373446303355,
+      "n_blue": 1098,
+      "n_red": 191,
+      "target_bp_rp": 1.1958036422729492
+    },
+    {
+      "name": "Gaia DR3 1498928884632208512",
+      "delta_colour_ensemble": -0.5301959965915111,
+      "n_blue": 1243,
+      "n_red": 46,
+      "target_bp_rp": 1.6179723739624023
+    },
+    {
+      "name": "Gaia DR3 1498767462581637248",
+      "delta_colour_ensemble": -1.233833967362784,
+      "n_blue": 1280,
+      "n_red": 9,
+      "target_bp_rp": 2.248600959777832
+    },
+    {
+      "name": "Gaia DR3 1498795809366255488",
+      "delta_colour_ensemble": 0.3552252988197932,
+      "n_blue": 11,
+      "n_red": 1278,
+      "target_bp_rp": 0.4814968109130859
+    },
+    {
+      "name": "Gaia DR3 1501952404169670400",
+      "delta_colour_ensemble": -0.38239886709480553,
+      "n_blue": 1207,
+      "n_red": 82,
+      "target_bp_rp": 1.4572820663452148
+    },
+    {
+      "name": "Gaia DR3 1498957609373454592",
+      "delta_colour_ensemble": -1.4127088054298023,
+      "n_blue": 1284,
+      "n_red": 5,
+      "target_bp_rp": 2.416601181030273
+    },
+    {
+      "name": "Gaia DR3 1500693841313325696",
+      "delta_colour_ensemble": -0.05784398811321556,
+      "n_blue": 852,
+      "n_red": 437,
+      "target_bp_rp": 1.0032415390014648
+    },
+    {
+      "name": "Gaia DR3 1498278351706325248",
+      "delta_colour_ensemble": 0.5922421002831497,
+      "n_blue": 4,
+      "n_red": 1285,
+      "target_bp_rp": 0.2365856170654297
+    },
+    {
+      "name": "Gaia DR3 1498783199341798016",
+      "delta_colour_ensemble": 0.05533779667394412,
+      "n_blue": 488,
+      "n_red": 801,
+      "target_bp_rp": 0.8381595611572266
+    },
+    {
+      "name": "Gaia DR3 1498968054733938560",
+      "delta_colour_ensemble": -0.12719229559451828,
+      "n_blue": 1000,
+      "n_red": 289,
+      "target_bp_rp": 1.1062421798706057
+    },
+    {
+      "name": "Gaia DR3 1500693635154913792",
+      "delta_colour_ensemble": -0.6027300999244882,
+      "n_blue": 1250,
+      "n_red": 39,
+      "target_bp_rp": 1.685527801513672
+    },
+    {
+      "name": "Gaia DR3 1498835391784358272",
+      "delta_colour_ensemble": -1.1717711800769168,
+      "n_blue": 1278,
+      "n_red": 11,
+      "target_bp_rp": 2.191131591796875
+    },
+    {
+      "name": "Gaia DR3 1499006984318088320",
+      "delta_colour_ensemble": 0.28006858552404257,
+      "n_blue": 18,
+      "n_red": 1271,
+      "target_bp_rp": 0.5621156692504883
+    },
+    {
+      "name": "Gaia DR3 1498506947045497344",
+      "delta_colour_ensemble": -1.4212032306917837,
+      "n_blue": 1285,
+      "n_red": 4,
+      "target_bp_rp": 2.4246530532836914
+    },
+    {
+      "name": "Gaia DR3 1499210016011946496",
+      "delta_colour_ensemble": -0.15820344800378638,
+      "n_blue": 1056,
+      "n_red": 233,
+      "target_bp_rp": 1.1514930725097656
+    },
+    {
+      "name": "Gaia DR3 1499036430613832320",
+      "delta_colour_ensemble": -1.0673745954451368,
+      "n_blue": 1274,
+      "n_red": 15,
+      "target_bp_rp": 2.095635414123535
+    },
+    {
+      "name": "Gaia DR3 1500418894687086208",
+      "delta_colour_ensemble": -0.005984332365900347,
+      "n_blue": 724,
+      "n_red": 565,
+      "target_bp_rp": 0.9263105392456056
+    },
+    {
+      "name": "Gaia DR3 1499084499887740160",
+      "delta_colour_ensemble": 0.5062981977374744,
+      "n_blue": 5,
+      "n_red": 1284,
+      "target_bp_rp": 0.3247871398925781
+    },
+    {
+      "name": "Gaia DR3 1499052957647968640",
+      "delta_colour_ensemble": -1.003492837735523,
+      "n_blue": 1274,
+      "n_red": 15,
+      "target_bp_rp": 2.038008689880371
+    },
+    {
+      "name": "Gaia DR3 1502034042907960704",
+      "delta_colour_ensemble": -0.22544827510813836,
+      "n_blue": 1133,
+      "n_red": 156,
+      "target_bp_rp": 1.2473173141479492
+    },
+    {
+      "name": "Gaia DR3 1499037598844960384",
+      "delta_colour_ensemble": -1.2322777778807477,
+      "n_blue": 1279,
+      "n_red": 9,
+      "target_bp_rp": 2.247220039367676
+    },
+    {
+      "name": "Gaia DR3 1498480077730173056",
+      "delta_colour_ensemble": 0.08984009925029979,
+      "n_blue": 314,
+      "n_red": 975,
+      "target_bp_rp": 0.7908124923706055
+    },
+    {
+      "name": "Gaia DR3 1502012464992313088",
+      "delta_colour_ensemble": 0.3696986721481677,
+      "n_blue": 9,
+      "n_red": 1280,
+      "target_bp_rp": 0.4662561416625976
+    },
+    {
+      "name": "Gaia DR3 1500768195787098240",
+      "delta_colour_ensemble": -0.7523049992674866,
+      "n_blue": 1263,
+      "n_red": 26,
+      "target_bp_rp": 1.8171300888061523
+    },
+    {
+      "name": "Gaia DR3 1499231731366546688",
+      "delta_colour_ensemble": -0.8853957526468403,
+      "n_blue": 1269,
+      "n_red": 20,
+      "target_bp_rp": 1.933176040649414
+    },
+    {
+      "name": "Gaia DR3 1499081819828174080",
+      "delta_colour_ensemble": -0.18226039665134364,
+      "n_blue": 1085,
+      "n_red": 204,
+      "target_bp_rp": 1.186121940612793
+    },
+    {
+      "name": "Gaia DR3 1498531067581799936",
+      "delta_colour_ensemble": -0.16606871598396278,
+      "n_blue": 1065,
+      "n_red": 223,
+      "target_bp_rp": 1.1629743576049805
+    },
+    {
+      "name": "Gaia DR3 1502098570497419520",
+      "delta_colour_ensemble": 0.04755325131886812,
+      "n_blue": 526,
+      "n_red": 763,
+      "target_bp_rp": 0.8490934371948242
+    }
+  ]
+}

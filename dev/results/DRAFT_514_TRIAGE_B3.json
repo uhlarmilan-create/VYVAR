@@ -1,0 +1,36 @@
+{
+  "commit_sha": "011fff7",
+  "observed_phase2a_s_per_target_from_quality_files": 57.9648011525472,
+  "n_quality_files_observed": 13,
+  "ensemble_normalize_scaling": [
+    {
+      "n_comps": 50,
+      "ensemble_normalize_wall_s": 0.01186759999836795
+    },
+    {
+      "n_comps": 100,
+      "ensemble_normalize_wall_s": 0.023617800005013123
+    },
+    {
+      "n_comps": 250,
+      "ensemble_normalize_wall_s": 0.08333249998395331
+    },
+    {
+      "n_comps": 500,
+      "ensemble_normalize_wall_s": 0.27542439999524504
+    },
+    {
+      "n_comps": 812,
+      "ensemble_normalize_wall_s": 0.6212259999883827
+    },
+    {
+      "n_comps": 1094,
+      "ensemble_normalize_wall_s": 1.4964095999894198
+    },
+    {
+      "n_comps": 1292,
+      "ensemble_normalize_wall_s": 2.1656278000155
+    }
+  ],
+  "note": "Phase2A wall dominated by per-target LC build over all frames with full admitted membership; ensemble_normalize alone is sub-second even at n=1292"
+}

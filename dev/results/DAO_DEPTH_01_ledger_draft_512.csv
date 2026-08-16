@@ -1,0 +1,91 @@
+draft,stage,magnitude_bin,count_in,count_out,loss_reason,count_lost,note
+512,catalog_cone_query,ALL,,100000,,0,field_catalog_cone.csv; radius~13.64 deg; brightest cap
+512,gaia_local_db_in_footprint_Gle17p5,ALL,,12579,,0,query_local_gaia bbox clipped to MASTERSTAR WCS footprint
+512,gaia_cone_in_footprint_Gle17p5,ALL,100000,4130,outside_footprint_or_missing_from_brightest_cap,95870,cone incomplete for G15+ vs local DB
+512,dao_pass1_detections,ALL,,307,,0,DAOStarFinder on MASTERSTAR; VY_NDAO=307; thr~2402 ADU; FWHM=5.19465; masterstar_dao_threshold_sigma=3.8
+512,dao_pass2_input_unmatched_gaia,ALL,,3681,,0,Gaia in cone footprint with no pass1 neighbor within match radius
+512,dao_pass2_completions,ALL,3681,3314,pass2_cutout_no_detection_or_center_tol_gt_5px,367,local DAO thr=pass2_sigma*annulus_std; pass2_sigma=1.9; 25 empty cutouts logged
+512,dao_merged_after_spatial_cap,ALL,,3621,,0,merge pass1+pass2; spatial cap max_n=100000 not binding
+512,prematch_snr_peak_filter,ALL,3621,735,peak_below_median_plus_k_sigma,2886,k=masterstar_prematch_peak_sigma_floor=1.8; noise_floor~2427 ADU; std=plain_mean_med_std(full frame)~570
+512,masterstars_full_match,ALL,735,735,,0,GAIA_MATCHED=723 DAO_ONLY=12
+512,drop_DAO_ONLY_TODO13,ALL,735,723,DAO_ONLY_no_catalog_id,12,policy keep catalog-matched only
+512,proc_BO_CVn_Light_001,ALL,723,704,per_frame_master_lock_nonmatch_or_filter,19,MASTERSTAR lock; all rows source_type=GAIA_MATCHED
+512,vsx_out_of_scope_ROT_variable_targets,ALL,,633,policy_vsx_out_of_scope_types,0,NOT a detection loss; VT census only; excluded no_dao_detection=2
+512,gaia_local_db_in_footprint_Gle17p5,5,,3,,0,
+512,gaia_cone_in_footprint_Gle17p5,5,,3,,0,
+512,prematch_snr_peak_filter,5,3,3,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,5,,3,,0,
+512,proc_BO_CVn_Light_001,5,,3,,0,
+512,net_localDB_to_proc,5,3,3,joint_chain_see_snr_for_G12_G15,0,
+512,gaia_local_db_in_footprint_Gle17p5,6,,8,,0,
+512,gaia_cone_in_footprint_Gle17p5,6,,8,,0,
+512,prematch_snr_peak_filter,6,7,7,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,6,,7,,0,
+512,proc_BO_CVn_Light_001,6,,7,,0,
+512,net_localDB_to_proc,6,8,7,joint_chain_see_snr_for_G12_G15,1,
+512,gaia_local_db_in_footprint_Gle17p5,7,,12,,0,
+512,gaia_cone_in_footprint_Gle17p5,7,,12,,0,
+512,prematch_snr_peak_filter,7,9,9,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,7,,11,,0,
+512,proc_BO_CVn_Light_001,7,,11,,0,
+512,net_localDB_to_proc,7,12,11,joint_chain_see_snr_for_G12_G15,1,
+512,gaia_local_db_in_footprint_Gle17p5,8,,27,,0,
+512,gaia_cone_in_footprint_Gle17p5,8,,27,,0,
+512,prematch_snr_peak_filter,8,25,25,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,8,,27,,0,
+512,proc_BO_CVn_Light_001,8,,26,,0,
+512,net_localDB_to_proc,8,27,26,joint_chain_see_snr_for_G12_G15,1,
+512,gaia_local_db_in_footprint_Gle17p5,9,,66,,0,
+512,gaia_cone_in_footprint_Gle17p5,9,,66,,0,
+512,prematch_snr_peak_filter,9,61,61,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,9,,65,,0,
+512,proc_BO_CVn_Light_001,9,,65,,0,
+512,net_localDB_to_proc,9,66,65,joint_chain_see_snr_for_G12_G15,1,
+512,gaia_local_db_in_footprint_Gle17p5,10,,107,,0,
+512,gaia_cone_in_footprint_Gle17p5,10,,107,,0,
+512,prematch_snr_peak_filter,10,91,91,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,10,,102,,0,
+512,proc_BO_CVn_Light_001,10,,102,,0,
+512,net_localDB_to_proc,10,107,102,joint_chain_see_snr_for_G12_G15,5,
+512,gaia_local_db_in_footprint_Gle17p5,11,,260,,0,
+512,gaia_cone_in_footprint_Gle17p5,11,,261,,0,
+512,prematch_snr_peak_filter,11,235,235,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,11,,245,,0,
+512,proc_BO_CVn_Light_001,11,,246,,0,
+512,net_localDB_to_proc,11,260,246,joint_chain_see_snr_for_G12_G15,14,
+512,gaia_local_db_in_footprint_Gle17p5,12,,542,,0,
+512,gaia_cone_in_footprint_Gle17p5,12,,542,,0,
+512,prematch_snr_peak_filter,12,490,220,peak_below_median_plus_k_sigma,270,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,12,,225,,0,
+512,proc_BO_CVn_Light_001,12,,224,,0,
+512,net_localDB_to_proc,12,542,224,joint_chain_see_snr_for_G12_G15,318,
+512,gaia_local_db_in_footprint_Gle17p5,13,,943,,0,
+512,gaia_cone_in_footprint_Gle17p5,13,,946,,0,
+512,prematch_snr_peak_filter,13,774,6,peak_below_median_plus_k_sigma,768,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,13,,11,,0,
+512,proc_BO_CVn_Light_001,13,,10,,0,
+512,net_localDB_to_proc,13,943,10,joint_chain_see_snr_for_G12_G15,933,
+512,gaia_local_db_in_footprint_Gle17p5,14,,1589,,0,
+512,gaia_cone_in_footprint_Gle17p5,14,,1591,,0,
+512,prematch_snr_peak_filter,14,891,3,peak_below_median_plus_k_sigma,888,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,14,,15,,0,
+512,proc_BO_CVn_Light_001,14,,4,,0,
+512,net_localDB_to_proc,14,1589,4,joint_chain_see_snr_for_G12_G15,1585,
+512,gaia_local_db_in_footprint_Gle17p5,15,,2592,,0,
+512,gaia_cone_in_footprint_Gle17p5,15,,567,,0,
+512,prematch_snr_peak_filter,15,181,4,peak_below_median_plus_k_sigma,177,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,15,,7,,0,
+512,proc_BO_CVn_Light_001,15,,4,,0,
+512,net_localDB_to_proc,15,2592,4,joint_chain_see_snr_for_G12_G15,2588,
+512,gaia_local_db_in_footprint_Gle17p5,16,,3887,,0,
+512,gaia_cone_in_footprint_Gle17p5,16,,0,,0,
+512,prematch_snr_peak_filter,16,0,0,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,16,,2,,0,
+512,proc_BO_CVn_Light_001,16,,0,,0,
+512,net_localDB_to_proc,16,3887,0,joint_chain_see_snr_for_G12_G15,3887,
+512,gaia_local_db_in_footprint_Gle17p5,17,,2543,,0,
+512,gaia_cone_in_footprint_Gle17p5,17,,0,,0,
+512,prematch_snr_peak_filter,17,0,0,peak_below_median_plus_k_sigma,0,replay on MASTERSTAR; Gaia NN mag within 8 arcsec
+512,masterstars_full_match,17,,0,,0,
+512,proc_BO_CVn_Light_001,17,,0,,0,
+512,net_localDB_to_proc,17,2543,0,joint_chain_see_snr_for_G12_G15,2543,
