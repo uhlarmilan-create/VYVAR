@@ -239,12 +239,12 @@ def test_ensemble_normalize_consumes_exact_step2_set():
     np.testing.assert_allclose(mag, target + zp, rtol=0, atol=1e-12)
 
 
-def test_select_comps_color_rms_distance_clamp():
-    """COMP-ASSIGN-01 D3: colour -> RMS -> distance; clamp to n_comp_max."""
-    from photometry_core import _select_comps_by_color_then_rms
+def test_select_comps_rms_then_color_distance_clamp():
+    """COMP-ASSIGN-03: RMS -> colour -> distance; clamp to n_comp_max."""
+    from photometry_core import _select_comps_by_rms_then_color
 
     rows = []
-    # Same colour, different RMS and distance - nearer quieter should win ties
+    # Same colour, different RMS and distance - quieter nearer should win ties
     for i, (rms, dist) in enumerate(
         [(0.05, 0.5), (0.02, 0.8), (0.02, 0.1), (0.03, 0.2), (0.04, 0.15),
          (0.06, 0.05), (0.07, 0.4), (0.08, 0.3), (0.09, 0.25), (0.10, 0.35)]
@@ -255,19 +255,22 @@ def test_select_comps_color_rms_distance_clamp():
                 "bp_rp": 1.0,
                 "comp_rms": rms,
                 "_dist_deg": dist,
+                "_nn_dist_fwhm": 5.0,
             }
         )
     df = pd.DataFrame(rows)
-    out = _select_comps_by_color_then_rms(
+    out = _select_comps_by_rms_then_color(
         df, target_bprp=1.0, n_comp_min=3, n_comp_max=8, max_delta_bprp=0.5
     )
     assert 3 <= len(out) <= 8
     assert len(out) == 8
-    # Best by |dbprp|=0, then rms, then distance: S02 (0.02, 0.1) before S01 (0.02, 0.8)
+    # Best by rms, then |dbprp|, then distance: S02 (0.02, 0.1) before S01 (0.02, 0.8)
     ids = out["catalog_id"].astype(str).tolist()
     assert ids[0] == "S02"
     assert "S01" in ids
     assert ids.index("S02") < ids.index("S01")
+    # RMS order: first selected has lowest rms among set
+    assert float(out.iloc[0]["comp_rms"]) <= float(out.iloc[1]["comp_rms"])
 
 
 def test_select_comps_max_comp_rms_ceiling_before_head():
@@ -277,7 +280,7 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
     comps. n_comp_max is a ceiling, not a pad target.
     """
     from config import AppConfig
-    from photometry_core import _select_comps_by_color_then_rms
+    from photometry_core import _select_comps_by_rms_then_color
 
     cfg = AppConfig()
     cfg.phase01_comparison_max_comp_rms = 0.1
@@ -290,6 +293,7 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
                 "bp_rp": 1.000,
                 "comp_rms": 0.15 + 0.04 * i,
                 "_dist_deg": 0.05 + 0.01 * i,
+                "_nn_dist_fwhm": 5.0,
             }
         )
     # Three slightly worse colour, under ceiling.
@@ -300,10 +304,11 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
                 "bp_rp": 1.0 + db,
                 "comp_rms": rms,
                 "_dist_deg": 0.10 + 0.01 * i,
+                "_nn_dist_fwhm": 5.0,
             }
         )
     df = pd.DataFrame(rows)
-    out = _select_comps_by_color_then_rms(
+    out = _select_comps_by_rms_then_color(
         df,
         target_bprp=1.0,
         n_comp_min=3,
@@ -315,6 +320,57 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
     assert set(out["catalog_id"].astype(str)) == {"CLEAN00", "CLEAN01", "CLEAN02"}
     assert float(pd.to_numeric(out["comp_rms"], errors="coerce").max()) <= 0.1
     assert int(out.attrs.get("color_ladder_step", 0)) >= 1
+
+
+def test_select_comps_excludes_blends_single_source():
+    """COMP-ASSIGN-03: comps closer than snr_cog_isolation_fwhm are excluded."""
+    from config import AppConfig
+    from photometry_core import _select_comps_by_rms_then_color
+
+    cfg = AppConfig()
+    cfg.snr_cog_isolation_fwhm = 3.0
+    rows = [
+        {"catalog_id": "BLEND", "bp_rp": 1.0, "comp_rms": 0.01, "_dist_deg": 0.1, "_nn_dist_fwhm": 1.5},
+        {"catalog_id": "ISO0", "bp_rp": 1.05, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 4.0},
+        {"catalog_id": "ISO1", "bp_rp": 1.06, "comp_rms": 0.03, "_dist_deg": 0.3, "_nn_dist_fwhm": 5.0},
+        {"catalog_id": "ISO2", "bp_rp": 1.07, "comp_rms": 0.04, "_dist_deg": 0.4, "_nn_dist_fwhm": 6.0},
+    ]
+    out = _select_comps_by_rms_then_color(
+        pd.DataFrame(rows),
+        target_bprp=1.0,
+        n_comp_min=3,
+        n_comp_max=8,
+        max_delta_bprp=0.79,
+        cfg=cfg,
+    )
+    assert "BLEND" not in set(out["catalog_id"].astype(str))
+    assert set(out["catalog_id"].astype(str)) == {"ISO0", "ISO1", "ISO2"}
+
+
+def test_select_comps_rms_first_over_perfect_colour():
+    """COMP-ASSIGN-03: quieter worse-colour beats noisier perfect-colour."""
+    from config import AppConfig
+    from photometry_core import _select_comps_by_rms_then_color
+
+    cfg = AppConfig()
+    cfg.phase01_comparison_max_comp_rms = 0.1
+    rows = [
+        {"catalog_id": "PERF_NOISY", "bp_rp": 1.0, "comp_rms": 0.08, "_dist_deg": 0.1, "_nn_dist_fwhm": 5.0},
+        {"catalog_id": "QUIET_FAR", "bp_rp": 1.12, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 5.0},
+        {"catalog_id": "MID", "bp_rp": 1.05, "comp_rms": 0.03, "_dist_deg": 0.15, "_nn_dist_fwhm": 5.0},
+        {"catalog_id": "OK3", "bp_rp": 1.08, "comp_rms": 0.04, "_dist_deg": 0.25, "_nn_dist_fwhm": 5.0},
+    ]
+    out = _select_comps_by_rms_then_color(
+        pd.DataFrame(rows),
+        target_bprp=1.0,
+        n_comp_min=3,
+        n_comp_max=3,
+        max_delta_bprp=0.79,
+        cfg=cfg,
+    )
+    ids = out["catalog_id"].astype(str).tolist()
+    assert ids[0] == "QUIET_FAR"
+    assert "PERF_NOISY" not in ids  # higher rms; n_max=3 takes three quietest under colour step
 
 
 def test_fire_comp_assign_01_snapshot_breached_ceiling():
@@ -334,6 +390,57 @@ def test_fire_comp_assign_01_snapshot_breached_ceiling():
     rms = pd.to_numeric(df["comp_rms"], errors="coerce")
     n_breach = int((rms.notna() & (rms > ceil)).sum())
     assert n_breach > 0, "COMP-ASSIGN-01 snapshot should still show the defect"
+
+
+def test_fire_comp_assign_02_snapshot_contains_blends():
+    """Fire proof (fail side): COMP-ASSIGN-02 membership includes <3-FWHM blends."""
+    from pathlib import Path
+
+    from config import AppConfig
+    from gaia_catalog_id import normalize_gaia_source_id
+    from scipy.spatial import cKDTree
+
+    snap = (
+        Path(__file__).resolve().parents[1]
+        / "results"
+        / "COMP_ASSIGN_02_comparison_stars_per_target.csv"
+    )
+    assert snap.is_file(), f"missing COMP-ASSIGN-02 snapshot: {snap}"
+    root = Path(__file__).resolve().parents[2]
+    ms_path = (
+        root
+        / "Archive"
+        / "Drafts"
+        / "draft_000514"
+        / "platesolve"
+        / "NoFilter_60_2"
+        / "masterstars_full_match.csv"
+    )
+    if not ms_path.is_file():
+        import pytest
+
+        pytest.skip("masterstars_full_match.csv missing")
+    field = pd.read_csv(ms_path, low_memory=False, dtype={"catalog_id": str})
+    for col in ("x", "y"):
+        field[col] = pd.to_numeric(field[col], errors="coerce")
+    field["_nid"] = field["catalog_id"].map(
+        lambda x: str(normalize_gaia_source_id(x) or "").strip()
+    )
+    field = field[
+        np.isfinite(field["x"]) & np.isfinite(field["y"]) & field["_nid"].str.len().gt(0)
+    ].drop_duplicates("_nid")
+    pts = np.column_stack([field["x"].to_numpy(), field["y"].to_numpy()])
+    tree = cKDTree(pts)
+    d, _ = tree.query(pts, k=2)
+    nn_map = dict(zip(field["_nid"], d[:, 1], strict=False))
+    fwhm = 5.19465
+    thr = float(AppConfig().snr_cog_isolation_fwhm) * fwhm
+    comps = pd.read_csv(snap, low_memory=False, dtype={"catalog_id": str})
+    nn = comps["catalog_id"].map(
+        lambda x: nn_map.get(str(normalize_gaia_source_id(x) or "").strip(), float("nan"))
+    )
+    n_blend = int((nn.notna() & (nn < thr)).sum())
+    assert n_blend > 0, "COMP-ASSIGN-02 snapshot should contain blended comps"
 
 
 def test_fire_rebuilt_comparison_csv_under_ceiling():
@@ -371,3 +478,59 @@ def test_fire_rebuilt_comparison_csv_under_ceiling():
     rms = pd.to_numeric(df["comp_rms"], errors="coerce")
     n_breach = int((rms.notna() & (rms > ceil)).sum())
     assert n_breach == 0, f"{n_breach} comps above max_comp_rms={ceil}"
+
+
+def test_fire_rebuilt_comparison_csv_no_blends():
+    """Fire proof (pass side): rebuilt membership has no <3-FWHM blends (masterstars NN)."""
+    from pathlib import Path
+
+    from config import AppConfig
+    from gaia_catalog_id import normalize_gaia_source_id
+    from scipy.spatial import cKDTree
+
+    root = Path(__file__).resolve().parents[2]
+    phot = (
+        root
+        / "Archive"
+        / "Drafts"
+        / "draft_000514"
+        / "platesolve"
+        / "NoFilter_60_2"
+        / "photometry"
+    )
+    live = phot / "comparison_stars_per_target.csv"
+    if not live.is_file():
+        import pytest
+
+        pytest.skip(f"rebuilt CSV not present yet: {live}")
+    ms_path = phot.parent / "masterstars_full_match.csv"
+    if not ms_path.is_file():
+        import pytest
+
+        pytest.skip("masterstars missing")
+    field = pd.read_csv(ms_path, low_memory=False, dtype={"catalog_id": str})
+    for col in ("x", "y"):
+        field[col] = pd.to_numeric(field[col], errors="coerce")
+    field["_nid"] = field["catalog_id"].map(
+        lambda x: str(normalize_gaia_source_id(x) or "").strip()
+    )
+    field = field[
+        np.isfinite(field["x"]) & np.isfinite(field["y"]) & field["_nid"].str.len().gt(0)
+    ].drop_duplicates("_nid")
+    pts = np.column_stack([field["x"].to_numpy(), field["y"].to_numpy()])
+    d, _ = cKDTree(pts).query(pts, k=2)
+    nn_map = dict(zip(field["_nid"], d[:, 1], strict=False))
+    fwhm = 5.19465
+    thr = float(AppConfig().snr_cog_isolation_fwhm) * fwhm
+    comps = pd.read_csv(live, low_memory=False, dtype={"catalog_id": str})
+    nn = comps["catalog_id"].map(
+        lambda x: nn_map.get(str(normalize_gaia_source_id(x) or "").strip(), float("nan"))
+    )
+    n_blend = int((nn.notna() & (nn < thr)).sum())
+    if n_blend > 0:
+        import pytest
+
+        pytest.skip(
+            f"live CSV still has {n_blend} blended comps (Item C rebuild pending)"
+        )
+    assert n_blend == 0

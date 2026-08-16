@@ -31,7 +31,7 @@ from photometry_core import (
     _normalize_gaia_id,
     _normalize_id_series,
     _normalize_id_value,
-    _select_comps_by_color_then_rms,
+    _select_comps_by_rms_then_color,
     _warn_zero_compstars_edge,
 )
 
@@ -1592,6 +1592,9 @@ def _assign_comp_tiers_to_pool(
     chip_interior_margin_px: int,
     cfg: AppConfig | None = None,
     max_comp_rms: float | None = None,
+    fwhm_px: float | None = None,
+    field_x: np.ndarray | None = None,
+    field_y: np.ndarray | None = None,
 ) -> dict[str, Any]:
     # Build candidate pool DF with comp_rms, then select by tier + RMS.
     _active_keys = sorted(active.keys(), key=str)
@@ -1722,7 +1725,54 @@ def _assign_comp_tiers_to_pool(
     _cfg_w = cfg or AppConfig()
     _max_d = float(_cfg_w.comp_max_delta_bprp or 0.79)
 
-    final_comps = _select_comps_by_color_then_rms(
+    # COMP-ASSIGN-03 single-source: nearest-neighbour distance in FWHM units
+    # against the full field (ms arrays), CoG isolation criterion.
+    try:
+        _fw_nn = float(fwhm_px) if fwhm_px is not None else float("nan")
+    except (TypeError, ValueError):
+        _fw_nn = float("nan")
+    if (
+        field_x is not None
+        and field_y is not None
+        and "x" in candidate_pool_df.columns
+        and "y" in candidate_pool_df.columns
+        and math.isfinite(_fw_nn)
+        and _fw_nn > 0
+    ):
+        fx = np.asarray(field_x, dtype=float)
+        fy = np.asarray(field_y, dtype=float)
+        okf = np.isfinite(fx) & np.isfinite(fy)
+        fx, fy = fx[okf], fy[okf]
+        if fx.size >= 2:
+            from scipy.spatial import cKDTree
+
+            tree = cKDTree(np.column_stack([fx, fy]))
+            cx = pd.to_numeric(candidate_pool_df["x"], errors="coerce").to_numpy(dtype=float)
+            cy = pd.to_numeric(candidate_pool_df["y"], errors="coerce").to_numpy(dtype=float)
+            nn_px = np.full(len(candidate_pool_df), np.nan, dtype=float)
+            okc = np.isfinite(cx) & np.isfinite(cy)
+            if bool(okc.any()):
+                # k=2: if the query point sits on a field star (self), d0~0 and
+                # true NN is d1; if slightly offset, d0 is the true NN.
+                d_nn, _ = tree.query(np.column_stack([cx[okc], cy[okc]]), k=2)
+                self_eps = max(0.25, 0.05 * float(_fw_nn))
+                nn_px[okc] = np.where(
+                    d_nn[:, 0] <= self_eps, d_nn[:, 1], d_nn[:, 0]
+                )
+            candidate_pool_df = candidate_pool_df.copy()
+            candidate_pool_df["_nn_px"] = nn_px
+            candidate_pool_df["_nn_dist_fwhm"] = nn_px / _fw_nn
+            logging.info(
+                "[COMP] single-source NN attached: fwhm=%.3f iso>=%.2f FWHM "
+                "(%.1f px); n_cand=%d n_field=%d",
+                float(_fw_nn),
+                float(getattr(_cfg_w, "snr_cog_isolation_fwhm", 3.0) or 3.0),
+                float(_fw_nn) * float(getattr(_cfg_w, "snr_cog_isolation_fwhm", 3.0) or 3.0),
+                int(len(candidate_pool_df)),
+                int(fx.size),
+            )
+
+    final_comps = _select_comps_by_rms_then_color(
         candidates=candidate_pool_df,
         target_bprp=float(target_bprp_eff),
         n_comp_min=int(n_comp_min),
@@ -1730,6 +1780,7 @@ def _assign_comp_tiers_to_pool(
         max_delta_bprp=_max_d,
         cfg=_cfg_w,
         max_comp_rms=max_comp_rms,
+        fwhm_px=_fw_nn if math.isfinite(_fw_nn) else None,
     )
 
     def _color_rms_sel_note(fc: pd.DataFrame) -> str:

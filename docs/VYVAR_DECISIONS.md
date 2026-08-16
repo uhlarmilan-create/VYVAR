@@ -2909,3 +2909,27 @@ ceiling, the code relaxes to the full **under-ceiling** candidate set (log +
 provenance) and keeps a thin set if still `< n_comp_min` (graceful degradation
 warning). Above-ceiling comps are never re-admitted. Empty / zero gate-passers
 still route to the existing sparse_fallback recursion.
+
+## COMP-ASSIGN-03 - RMS first, single-source comps (2026-08-16)
+
+**Context:** COMP-ASSIGN-01/02 ranked colour before RMS. On this rig the colour
+LEVEL term is corrected at export (IMPL-01, verified) and the shape term is
+null (-83 +/- 99 mmag/BP-RP/airmass). High `comp_rms` is always expensive in the
+unweighted flux sum: `sigma_ens = sqrt(sum sigma_i^2)/N`. Milan (2026-08-16):
+reorder to **RMS -> |delta(BP-RP)| -> distance**, keep the COMP-ASSIGN-02 RMS
+ceiling, and admit only **single-source** comps.
+
+**Single-source:** a comparison star must have no other catalogue entry within
+`snr_cog_isolation_fwhm` (default 3.0) x FWHM - the same isolation criterion as
+the CoG / SNR eval path. A blend's Gaia BP-RP is not the colour of the optical
+blob, either component can vary independently, and its EE differs from a point
+source. With an uncapped pool and only 3-8 comps needed, the constraint costs
+nothing. This supersedes the PRE-IMPL Q5 "defer merging" conclusion **for comps
+only** (Q5 concerned the pool at large and matched on the wrong quantity);
+merging for targets remains deferred.
+
+**Implementation:** `_select_comps_by_rms_then_color` (honest rename of
+`_select_comps_by_color_then_rms`; thin alias retained). Colour ladder widens on
+colour while RMS orders within a step. Blends filtered before the ladder.
+
+**Status:** IMPL-05 Item C (local). Push: NO.

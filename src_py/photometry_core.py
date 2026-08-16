@@ -14897,7 +14897,7 @@ def _bprp_tier_ladder_for_selection(
     return out or [float(max_delta_bprp)]
 
 
-def _select_comps_by_color_then_rms(
+def _select_comps_by_rms_then_color(
     candidates: pd.DataFrame,
     target_bprp: float,
     n_comp_min: int,
@@ -14906,26 +14906,29 @@ def _select_comps_by_color_then_rms(
     *,
     cfg: AppConfig | None = None,
     max_comp_rms: float | None = None,
+    fwhm_px: float | None = None,
 ) -> pd.DataFrame:
-    """COMP-ASSIGN: colour ladder -> RMS -> distance; clamp under RMS ceiling.
+    """COMP-ASSIGN-03: RMS -> colour ladder -> distance; single-source only.
 
-    Step 2 of Milan's key. ``comp_rms`` comes from the global pool (step 1).
-    ``phase01_comparison_max_comp_rms`` is a hard ceiling applied before the colour
-    ladder and before ``head(n_comp_max)`` - n_comp_max is a ceiling, not a target
-    (COMP-ASSIGN-02). Colour window widens until ``n_comp_min`` under-ceiling comps
-    exist. Sort: ``|delta BP-RP|``, then ``comp_rms``, then ``_dist_deg``, then
-    ``catalog_id``. Membership is ``head(n_comp_max)`` of the under-ceiling set.
+    ``comp_rms`` from the global pool (step 1). ``phase01_comparison_max_comp_rms``
+    is a hard ceiling before the colour ladder and ``head(n_comp_max)``
+    (COMP-ASSIGN-02). Colour window widens until ``n_comp_min`` under-ceiling
+    single-source comps exist; within a colour step, order is ``comp_rms``, then
+    ``|delta BP-RP|``, then ``_dist_deg``, then ``catalog_id``. Blends (nearest
+    catalogue neighbour closer than ``snr_cog_isolation_fwhm`` x FWHM) are
+    excluded from candidacy. ``n_comp_max`` remains a ceiling, not a pad target.
     """
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
 
     if "comp_rms" not in candidates.columns:
-        raise ValueError("_select_comps_by_color_then_rms requires comp_rms column")
+        raise ValueError("_select_comps_by_rms_then_color requires comp_rms column")
 
     _n_min = max(1, int(n_comp_min))
     _n_max = max(_n_min, int(n_comp_max))
     _floor = 1e-6
     _ceil = float("nan")
+    _iso_fwhm = 3.0
     if cfg is not None:
         try:
             _floor = float(getattr(cfg, "comp_select_rms_floor", 1e-6) or 1e-6)
@@ -14937,6 +14940,10 @@ def _select_comps_by_color_then_rms(
             )
         except (TypeError, ValueError):
             _ceil = float("nan")
+        try:
+            _iso_fwhm = float(getattr(cfg, "snr_cog_isolation_fwhm", 3.0) or 3.0)
+        except (TypeError, ValueError):
+            _iso_fwhm = 3.0
     if max_comp_rms is not None:
         try:
             _mc = float(max_comp_rms)
@@ -14944,6 +14951,8 @@ def _select_comps_by_color_then_rms(
             _mc = float("nan")
         if math.isfinite(_mc) and _mc > 0:
             _ceil = _mc
+    if not (math.isfinite(_iso_fwhm) and _iso_fwhm > 0):
+        _iso_fwhm = 3.0
 
     out = candidates.copy()
     rms = pd.to_numeric(out["comp_rms"], errors="coerce")
@@ -14951,9 +14960,9 @@ def _select_comps_by_color_then_rms(
     if out.empty:
         return out
 
-    # Authoritative per-target RMS gate (known-issue (b) / COMP-ASSIGN-02): never
-    # admit comps above the ceiling into membership. Applied before colour widen
-    # so a full colour bin of noisy comps forces the ladder to open.
+    # Authoritative per-target RMS gate (COMP-ASSIGN-02): never admit above-ceiling
+    # comps. Applied before colour widen so a full colour bin of noisy comps
+    # forces the ladder to open.
     if math.isfinite(_ceil) and _ceil > 0:
         _n0 = int(len(out))
         _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
@@ -14968,6 +14977,36 @@ def _select_comps_by_color_then_rms(
             logging.warning(
                 "[COMP] no candidates under max_comp_rms=%.4f after floor filter",
                 float(_ceil),
+            )
+            return out
+
+    # Single-source (COMP-ASSIGN-03): exclude blends inside CoG isolation radius.
+    _nn_fwhm = None
+    if "_nn_dist_fwhm" in out.columns:
+        _nn_fwhm = pd.to_numeric(out["_nn_dist_fwhm"], errors="coerce")
+    elif "_nn_px" in out.columns and fwhm_px is not None:
+        try:
+            _fw = float(fwhm_px)
+        except (TypeError, ValueError):
+            _fw = float("nan")
+        if math.isfinite(_fw) and _fw > 0:
+            _nn_fwhm = pd.to_numeric(out["_nn_px"], errors="coerce") / _fw
+    if _nn_fwhm is not None:
+        _n_pre = int(len(out))
+        _ok = _nn_fwhm.notna() & (_nn_fwhm >= float(_iso_fwhm))
+        # Missing NN: keep (unknown), only drop measured blends.
+        _keep = _nn_fwhm.isna() | _ok
+        out = out[_keep].copy()
+        logging.info(
+            "[COMP] single-source isolation >=%.2f FWHM: %d -> %d candidates",
+            float(_iso_fwhm),
+            _n_pre,
+            int(len(out)),
+        )
+        if out.empty:
+            logging.warning(
+                "[COMP] no candidates after single-source isolation (%.2f FWHM)",
+                float(_iso_fwhm),
             )
             return out
 
@@ -15004,7 +15043,7 @@ def _select_comps_by_color_then_rms(
             ladder_step = int(step_i)
             logging.info(
                 "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d) "
-                "ladder_step=%d",
+                "ladder_step=%d (RMS-ordered within)",
                 float(lim),
                 len(pool),
                 _n_min,
@@ -15015,13 +15054,11 @@ def _select_comps_by_color_then_rms(
         used_lim = float(lim)
         ladder_step = int(step_i)
     if selected.empty:
-        # Widest under-ceiling set: relax to full under-ceiling candidates
-        # (never re-admit above-ceiling comps).
         selected = out
         used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
         ladder_step = int(len(ladder)) if ladder else 0
         logging.warning(
-            "[COMP] color filter relaxed to full under-ceiling set "
+            "[COMP] color filter relaxed to full under-ceiling single-source set "
             "(no ladder step reached n_comp_min=%d; lim=%.3f; n=%d)",
             _n_min,
             used_lim,
@@ -15032,26 +15069,51 @@ def _select_comps_by_color_then_rms(
         selected = out
         ladder_step = int(len(ladder)) if ladder else ladder_step
         logging.info(
-            "[COMP] color filter relaxed to full under-ceiling set after ladder "
-            "(n_ladder=%d < n_comp_min=%d; n_full=%d)",
+            "[COMP] color filter relaxed to full under-ceiling single-source set "
+            "after ladder (n_ladder=%d < n_comp_min=%d; n_full=%d)",
             n_ladder,
             _n_min,
             int(len(out)),
         )
 
+    # COMP-ASSIGN-03: RMS first, then colour, then distance.
     selected = selected.sort_values(
-        ["_delta_bprp_abs", "_rms_sort", "_dist_sort", id_col],
+        ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col],
         ascending=[True, True, True, True],
         kind="mergesort",
     )
-    # Ceiling, not target: at most n_comp_max under-ceiling comps; do not pad.
     selected = selected.head(_n_max).copy()
     selected.attrs["color_ladder_lim"] = used_lim
     selected.attrs["color_ladder_step"] = int(ladder_step)
     selected.attrs["max_comp_rms_ceiling"] = (
         float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
     )
+    selected.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
+
+
+def _select_comps_by_color_then_rms(
+    candidates: pd.DataFrame,
+    target_bprp: float,
+    n_comp_min: int,
+    n_comp_max: int,
+    max_delta_bprp: float = 0.5,
+    *,
+    cfg: AppConfig | None = None,
+    max_comp_rms: float | None = None,
+    fwhm_px: float | None = None,
+) -> pd.DataFrame:
+    """Deprecated alias - COMP-ASSIGN-03 renamed to ``_select_comps_by_rms_then_color``."""
+    return _select_comps_by_rms_then_color(
+        candidates,
+        target_bprp,
+        n_comp_min,
+        n_comp_max,
+        max_delta_bprp,
+        cfg=cfg,
+        max_comp_rms=max_comp_rms,
+        fwhm_px=fwhm_px,
+    )
 
 
 def _select_comps_tiered(
@@ -15872,12 +15934,14 @@ def select_comparison_stars_per_target(
     if not (math.isfinite(_r_ap_iso) and _r_ap_iso > 0):
         _r_ap_iso = 7.0
     try:
-        ms_arr_x = pd.to_numeric(ms.get("x", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
-        ms_arr_y = pd.to_numeric(ms.get("y", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
-        if "_mag" in ms.columns:
-            ms_arr_mag = pd.to_numeric(ms["_mag"], errors="coerce").to_numpy(dtype=float)
+        # Full catalogue for single-source NN (global pool may omit the neighbour).
+        _field_src = masterstars_df if masterstars_df is not None else ms
+        ms_arr_x = pd.to_numeric(_field_src.get("x", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+        ms_arr_y = pd.to_numeric(_field_src.get("y", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+        if "_mag" in _field_src.columns:
+            ms_arr_mag = pd.to_numeric(_field_src["_mag"], errors="coerce").to_numpy(dtype=float)
         else:
-            ms_arr_mag = pd.to_numeric(ms.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
+            ms_arr_mag = pd.to_numeric(_field_src.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
     except Exception as _iso_exc:  # noqa: BLE001
         logging.warning(f"[FAZA 1] Aperture izolacia preskocena (chyba): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
@@ -16171,6 +16235,9 @@ def select_comparison_stars_per_target(
         chip_interior_margin_px=int(chip_interior_margin_px),
         cfg=_cfg_p1,
         max_comp_rms=float(max_comp_rms),
+        fwhm_px=float(fwhm_px) if fwhm_px is not None else None,
+        field_x=ms_arr_x,
+        field_y=ms_arr_y,
     )
     final_comps = tier_out["final_comps"]
     if final_comps is None or getattr(final_comps, "empty", True):
@@ -16349,6 +16416,36 @@ def run_phase0_and_phase1(
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Prefer night seeing (VY_FWHM) over the 3.7 default / Gaussian core for
+    # Phase-1 blend isolation (COMP-ASSIGN-03 uses snr_cog_isolation_fwhm x FWHM).
+    _ms_fits_fwhm = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
+    try:
+        if _ms_fits_fwhm.is_file():
+            from astropy.io import fits as _astrofits_fwhm  # noqa: PLC0415
+
+            with _astrofits_fwhm.open(_ms_fits_fwhm, memmap=False) as _hdul_fw:
+                _hdr_fw = _hdul_fw[0].header
+            for _k_fw in ("VY_FWHM", "VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+                _v_fw = _hdr_fw.get(_k_fw)
+                if _v_fw is None:
+                    continue
+                _fv_fw = float(_v_fw)
+                if 0.5 < _fv_fw < 30.0:
+                    fwhm_px = _fv_fw
+                    break
+    except Exception as exc:  # noqa: BLE001
+        logging.error(
+            "[EXC-FWHM-P01] MASTERSTAR FWHM resolve failed - keeping fwhm_px=%.3f: %s",
+            float(fwhm_px),
+            exc,
+        )
+    logging.info(
+        "[PHASE 0+1] fwhm_px=%.3f (single-source iso=%.1f px at %.2f FWHM)",
+        float(fwhm_px),
+        float(fwhm_px) * float(getattr(cfg or AppConfig(), "snr_cog_isolation_fwhm", 3.0) or 3.0),
+        float(getattr(cfg or AppConfig(), "snr_cog_isolation_fwhm", 3.0) or 3.0),
+    )
 
     def _p(msg: str) -> None:
         if progress_cb is None:
@@ -17571,7 +17668,10 @@ def run_full_photometry_pipeline(
             logging.warning("[PERF-2] Cannot open MASTERSTAR.fits for header: %s", exc)
     if _ms_header_shared is not None:
         try:
-            for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+            # Prefer night seeing (VY_FWHM) over Gaussian-core (VY_FWHM_GAUSS) for
+            # Phase-1 isolation / blend geometry. Core FWHM under-states the CoG
+            # 3-FWHM single-source radius (COMP-ASSIGN-03 / A-1).
+            for key in ("VY_FWHM", "VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
                 v = _ms_header_shared.get(key)
                 if v is None:
                     continue
