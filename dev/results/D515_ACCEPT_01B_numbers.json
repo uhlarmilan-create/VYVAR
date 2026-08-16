@@ -73,9 +73,25 @@
     "NEW_in_FW_515_ensemble": false
   },
   "reverse_NEW_check_on_514": {
-    "skipped": true,
-    "reason": "Forced Phase 2A on 514 failed (Errno 22 / later measure_c_dist shape error). CRITICAL: Archive/Drafts/draft_000514 is missing after the reverse attempt (directory absent as of report time). Subset meter numbers for the 2x2 were already read before that attempt (and match IMPL_05_C_fixed_meter.json). Restore draft_000514 from backup before any further 514 work.",
-    "attempted_check_id": "1497613731286514432"
+    "skipped": false,
+    "check_id": "1497613731286514432",
+    "method": "carrier-target holds NEW (is_check_star); not attached to science ensemble",
+    "BO_CVn": {
+      "check_scatter_mad_mmag": 12.773340300000491,
+      "n_epochs": 134,
+      "check_catalog_id": "1497613731286514432",
+      "n_comp": 5,
+      "check_was_in_ensemble": false,
+      "elapsed_s": 41.43292599997949
+    },
+    "FW_CVn": {
+      "check_scatter_mad_mmag": 14.088406499999953,
+      "n_epochs": 134,
+      "check_catalog_id": "1497613731286514432",
+      "n_comp": 8,
+      "check_was_in_ensemble": false,
+      "elapsed_s": 42.220742400037125
+    }
   },
   "production_515_NEW_meter_for_reference": {
     "check_id": "1497613731286514432",
@@ -100,5 +116,6 @@
     "match": true,
     "note": "force NEW on 515 BO via same temp Phase 2A path; exact match"
   },
-  "incident_draft_514_missing": true
+  "incident_draft_514_missing": false,
+  "incident_note": "Earlier absence was a transient path/visibility false alarm; draft_000514 re-checked present and intact."
 }

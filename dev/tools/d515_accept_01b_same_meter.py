@@ -114,35 +114,55 @@ def run_forced_check(
         return hit.iloc[:1].copy()
 
     sub_at = _at_row(target_id)
-    # PERF-8 flux matrix is targets+comps only. A forced check that is not this
-    # target's ensemble member is absent unless it is also an active target.
-    # Include the check as a second active target so it enters the matrix; we
-    # still read check_kmag for the science target only.
-    chk_at = _at_row(check_id)
-    sub_at = pd.concat([sub_at, chk_at], ignore_index=True)
+    # PERF-8 flux matrix = active targets + their comps only. A forced check that
+    # is not this target's ensemble member is absent unless injected. Prefer a
+    # carrier active target (not the check itself): add check as a fake comp of
+    # the carrier so it enters the matrix without becoming an active target
+    # (activating the check as a target broke resolve_comp_weight_coeffs on 514).
+    carrier_id = None
+    for cid in at["catalog_id"].astype(str).str.strip().tolist():
+        if cid and cid not in (target_id, check_id):
+            carrier_id = cid
+            break
+    if carrier_id is None:
+        # fallback: last resort co-target (worked on 515 self-check)
+        chk_at = _at_row(check_id)
+        sub_at = pd.concat([sub_at, chk_at], ignore_index=True)
+    else:
+        sub_at = pd.concat([sub_at, _at_row(carrier_id)], ignore_index=True)
 
     # Force check via is_check_star on the field pool (one row).
+    # Do NOT attach the check row to the science target's ensemble (that would
+    # put it in target_comps and break weight regression when comp_rms is missing).
     comp2 = comp.copy()
     comp2["is_check_star"] = False
     mask = comp2["catalog_id"].astype(str).str.strip() == check_id
+    attach_tid = carrier_id or target_id
     if not bool(mask.any()):
         add = ms[ms["catalog_id"] == check_id].iloc[:1].copy()
-        add["target_catalog_id"] = target_id
+        add["target_catalog_id"] = attach_tid
         add["is_check_star"] = True
+        if "comp_rms" in add.columns:
+            add["comp_rms"] = 0.01
+        else:
+            add["comp_rms"] = 0.01
         comp2 = pd.concat([comp2, add], ignore_index=True)
     else:
         idx = comp2.index[mask][0]
         comp2.loc[:, "is_check_star"] = False
         comp2.loc[idx, "is_check_star"] = True
-
-    # Give the check-as-target a tiny ensemble so Phase 2A does not abort it
-    # (membership unused for our meter; science target keeps its real ensemble).
-    if not bool((comp2["target_catalog_id"].astype(str).str.strip() == check_id).any()):
-        donors = comp2[comp2["target_catalog_id"].astype(str).str.strip() == target_id].head(3)
-        if not donors.empty:
-            d2 = donors.copy()
-            d2["target_catalog_id"] = check_id
-            comp2 = pd.concat([comp2, d2], ignore_index=True)
+        # Keep that row's original target_catalog_id (must not be science target
+        # if it would enter the science ensemble; exclude if it is).
+        if str(comp2.loc[idx, "target_catalog_id"]).strip() == str(target_id):
+            # Move the flag row off the science ensemble onto the carrier.
+            if carrier_id is not None:
+                moved = comp2.loc[[idx]].copy()
+                moved["target_catalog_id"] = carrier_id
+                moved["is_check_star"] = True
+                comp2 = comp2.drop(index=idx)
+                comp2 = pd.concat([comp2, moved], ignore_index=True)
+            else:
+                comp2 = comp2.drop(index=idx)
 
     cfg = AppConfig()
     # Measurement only: skip Comp QA / trust (minutes on full pool; not needed for check MAD).
