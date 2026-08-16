@@ -31,7 +31,7 @@ def _git_sha() -> str:
             )
             .strip()
         )
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return "unknown"
 
 

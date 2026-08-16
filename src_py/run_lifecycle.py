@@ -24,7 +24,7 @@ def _streamlit_control_flow_exceptions() -> tuple[type[BaseException], ...]:
         )
 
         return (RerunException, StopException)
-    except Exception:
+    except ImportError:
         try:
             from streamlit.runtime.scriptrunner.script_runner import (  # noqa: PLC0415
                 RerunException,
@@ -32,7 +32,7 @@ def _streamlit_control_flow_exceptions() -> tuple[type[BaseException], ...]:
             )
 
             return (RerunException, StopException)
-        except Exception:
+        except ImportError:
             return ()
 
 
@@ -70,5 +70,6 @@ def run_callable_with_exit_log(
     finally:
         try:
             log_fn(exit_line)
-        except Exception:
-            pass
+        except Exception as _log_exc:  # noqa: BLE001
+            # Exit log must not mask the original RUN outcome.
+            _ = _log_exc
