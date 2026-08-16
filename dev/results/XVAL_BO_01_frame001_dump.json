@@ -1,0 +1,261 @@
+{
+  "task": "XVAL-BO-01",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "frame": "proc_BO_CVn_Light_001.csv",
+  "target_catalog_id": "1498613634033133184",
+  "check_catalog_id": "1497613731286514432",
+  "quantity_notes": {
+    "flux": "proc CSV column 'flux'",
+    "dao_flux": "proc CSV column 'dao_flux' (Phase 2A read_flux_from_csv uses this)",
+    "kmag_fluxsum": "-2.5*log10(F_check / sum F_comp) from dao_flux [mag]",
+    "kmag_magcalib_phase1": "m_check + sum(w*(G_cat - m_comp))/sum(w), w=1/comp_rms^2 [mag]",
+    "production_sidecar_kmag": "check_kmag CSV kmag column for this source_file [mag]"
+  },
+  "stars": [
+    {
+      "catalog_id": "1497368849430107904",
+      "role": "comp",
+      "present": true,
+      "aperture_r_px": 3.499,
+      "flux": 35137.15447590219,
+      "dao_flux": 35137.15447590219,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -11.36441646991499,
+      "catalog_G_mag": 11.523398399353027,
+      "comp_rms_mag": 0.0229886981734615,
+      "zp_weight_1_over_rms2": 1892.218322068013
+    },
+    {
+      "catalog_id": "1497613731286514432",
+      "role": "check",
+      "present": true,
+      "aperture_r_px": 7.999,
+      "flux": 323624.5024013748,
+      "dao_flux": 323624.5024013748,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -13.77510348920212,
+      "catalog_G_mag": null,
+      "comp_rms_mag": null,
+      "zp_weight_1_over_rms2": null
+    },
+    {
+      "catalog_id": "1497771992240531712",
+      "role": "comp",
+      "present": true,
+      "aperture_r_px": 5.499,
+      "flux": 109742.60900025156,
+      "dao_flux": 109742.60900025156,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -12.600938202046352,
+      "catalog_G_mag": 9.752412796020508,
+      "comp_rms_mag": 0.0096695682746887,
+      "zp_weight_1_over_rms2": 10695.124182490359
+    },
+    {
+      "catalog_id": "1497974027502858240",
+      "role": "comp",
+      "present": true,
+      "aperture_r_px": 3.999,
+      "flux": 25243.423275006706,
+      "dao_flux": 25243.423275006706,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -11.005370623719678,
+      "catalog_G_mag": 11.171563148498535,
+      "comp_rms_mag": 0.0145752089044984,
+      "zp_weight_1_over_rms2": 4707.2842462138715
+    },
+    {
+      "catalog_id": "1498613634033133184",
+      "role": "target",
+      "present": true,
+      "aperture_r_px": 5.999,
+      "flux": 129197.04123304768,
+      "dao_flux": 129197.04123304768,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -12.778131419773162,
+      "catalog_G_mag": null,
+      "comp_rms_mag": null,
+      "zp_weight_1_over_rms2": null
+    },
+    {
+      "catalog_id": "1499200223486564608",
+      "role": "comp",
+      "present": true,
+      "aperture_r_px": 5.999,
+      "flux": 109429.05122508992,
+      "dao_flux": 109429.05122508992,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -12.597831584514749,
+      "catalog_G_mag": 9.678899765014648,
+      "comp_rms_mag": 0.0116211138443162,
+      "zp_weight_1_over_rms2": 7404.64920396026
+    },
+    {
+      "catalog_id": "1500748301498613248",
+      "role": "comp",
+      "present": true,
+      "aperture_r_px": 8.499,
+      "flux": 561397.4257738899,
+      "dao_flux": 561397.4257738899,
+      "flux_equals_dao": true,
+      "mag_inst_from_dao": -14.373176042233592,
+      "catalog_G_mag": 7.991215229034424,
+      "comp_rms_mag": 0.0080641637457094,
+      "zp_weight_1_over_rms2": 15377.343813078423
+    }
+  ],
+  "epoch_formulas": {
+    "kmag_fluxsum_mag": 1.0368215139377428,
+    "kmag_magcalib_phase1_rms_mag": 8.572840484958295,
+    "production_sidecar_kmag_mag": 8.606761,
+    "zp_detail": [
+      {
+        "catalog_id": "1500748301498613248",
+        "m_inst": -14.373176042233592,
+        "cat_G": 7.991215229034424,
+        "zp_off": 22.364391271268016,
+        "w": 15377.343813078423
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "m_inst": -12.600938202046352,
+        "cat_G": 9.752412796020508,
+        "zp_off": 22.35335099806686,
+        "w": 10695.124182490359
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "m_inst": -12.597831584514749,
+        "cat_G": 9.678899765014648,
+        "zp_off": 22.2767313495294,
+        "w": 7404.64920396026
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "m_inst": -11.005370623719678,
+        "cat_G": 11.171563148498535,
+        "zp_off": 22.176933772218213,
+        "w": 4707.2842462138715
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "m_inst": -11.36441646991499,
+        "cat_G": 11.523398399353027,
+        "zp_off": 22.88781486926802,
+        "w": 1892.218322068013
+      }
+    ],
+    "delta_fluxsum_minus_prod_mmag": -7569.939486062258,
+    "magcalib_minus_prod_mmag": -33.92051504170546
+  },
+  "full_series": {
+    "BO_CVn": {
+      "n_comp": 5,
+      "comp_ids": [
+        "1500748301498613248",
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "production_check_mad_mmag": 6.713212799999471,
+      "delta_mag_fluxsum_mad_mmag": 10.329445417799871,
+      "ensemble_normalize_delta_mag_mad_mmag": 10.329445417799871,
+      "mag_calib_phase1_rms_mad_mmag": 8.682539702207704,
+      "mag_calib_pytics_rms_mad_mmag": 6.713325949592877,
+      "corr_prod_vs_delta_mag": 0.6433575639347476,
+      "corr_prod_vs_mag_calib_phase1": 0.8433211218314367,
+      "corr_prod_vs_mag_calib_pytics": 0.9999999993404596,
+      "medabs_prod_vs_delta_mmag": 7563.802538153331,
+      "medabs_prod_vs_mag_calib_phase1_mmag": 30.972120116644852,
+      "medabs_prod_vs_mag_calib_pytics_mmag": 0.00023119819747563497,
+      "pytics_rms_before_after": {
+        "1500748301498613248": {
+          "before": 0.0080641637457094,
+          "after": 0.01234325238376995
+        },
+        "1497771992240531712": {
+          "before": 0.0096695682746887,
+          "after": 0.0042623490133264835
+        },
+        "1499200223486564608": {
+          "before": 0.0116211138443162,
+          "after": 0.00803044072105875
+        },
+        "1497974027502858240": {
+          "before": 0.0145752089044984,
+          "after": 0.013387512967354999
+        },
+        "1497368849430107904": {
+          "before": 0.0229886981734615,
+          "after": 0.010653453669442703
+        }
+      }
+    },
+    "FW_CVn": {
+      "n_comp": 8,
+      "comp_ids": [
+        "1497442379271632384",
+        "1499906247391001088",
+        "1497674651102612992",
+        "1498020894186918144",
+        "1498812233320666368",
+        "1497370563121917952",
+        "1497313255374892800",
+        "1500486102335278592"
+      ],
+      "production_check_mad_mmag": 8.201001900000032,
+      "delta_mag_fluxsum_mad_mmag": 8.196638534173841,
+      "ensemble_normalize_delta_mag_mad_mmag": 8.196638534173841,
+      "mag_calib_phase1_rms_mad_mmag": 7.961459795768313,
+      "mag_calib_pytics_rms_mad_mmag": 8.201045167156991,
+      "corr_prod_vs_delta_mag": 0.997160114609423,
+      "corr_prod_vs_mag_calib_phase1": 0.9932480234415316,
+      "corr_prod_vs_mag_calib_pytics": 0.9999999990884328,
+      "medabs_prod_vs_delta_mmag": 7192.1419386090265,
+      "medabs_prod_vs_mag_calib_phase1_mmag": 8.156350504830101,
+      "medabs_prod_vs_mag_calib_pytics_mmag": 0.0002813439374804716,
+      "pytics_rms_before_after": {
+        "1497442379271632384": {
+          "before": 0.0036449686303589,
+          "after": 0.004118695579026849
+        },
+        "1499906247391001088": {
+          "before": 0.0050290119982957,
+          "after": 0.004248926075194617
+        },
+        "1497674651102612992": {
+          "before": 0.0073565865985558,
+          "after": 0.006413342651828572
+        },
+        "1498020894186918144": {
+          "before": 0.007775557888416,
+          "after": 0.006630434415103875
+        },
+        "1498812233320666368": {
+          "before": 0.0079742890597828,
+          "after": 0.007836362637137745
+        },
+        "1497370563121917952": {
+          "before": 0.0082281758674866,
+          "after": 0.004891625306258672
+        },
+        "1497313255374892800": {
+          "before": 0.0087225730618011,
+          "after": 0.006982043249227096
+        },
+        "1500486102335278592": {
+          "before": 0.0092161570384159,
+          "after": 0.009111816368737266
+        }
+      }
+    }
+  },
+  "code_path": {
+    "writer": "photometry_core._phase2a_process_one_target -> compute_check_ensemble_mag_calib -> ensemble_normalize -> save_check_kmag_sidecar",
+    "flux_authority": "read_flux_from_csv: dao_flux (not 'flux' by name; on this night they match for dumped stars)",
+    "aperture": "aperture_r_px from proc CSV row (DAO aperture used when dao_flux was measured)",
+    "combination": "ens_med = -2.5 log10(sum 10^(-0.4 m_i)) unweighted flux sum; delta_mag = m_check - ens_med; sidecar stores mag_calib = m_check + weighted_mean(G_cat - m_comp) with w=1/rms^2 (pytics-updated rms), NOT delta_mag",
+    "per_target_branch": "No BO/FW special case. Same function. Differences arise from ensemble membership, n_comp, per-comp rms (incl. pytics), and catalog G values."
+  }
+}
