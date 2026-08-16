@@ -1,0 +1,63 @@
+{
+  "before_r95_loo_mmag": {
+    "8-9": {
+      "n": 4,
+      "median_scatter_mmag": 7.786723789851446
+    },
+    "9-10": {
+      "n": 8,
+      "median_scatter_mmag": 10.160049296998135
+    },
+    "10-11": {
+      "n": 8,
+      "median_scatter_mmag": 17.834140811314086
+    },
+    "11-12": {
+      "n": 8,
+      "median_scatter_mmag": 34.35957113695896
+    },
+    "12-13": {
+      "n": 8,
+      "median_scatter_mmag": 70.48404113726352
+    },
+    "13-14": {
+      "n": 8,
+      "median_scatter_mmag": 83.76466930049548
+    },
+    "14-15": {
+      "n": 8,
+      "median_scatter_mmag": 45.74373863085469
+    }
+  },
+  "after_permag_loo_mmag": {
+    "8-9": {
+      "n": 4,
+      "median_scatter_mmag": 12.348001171995847
+    },
+    "9-10": {
+      "n": 8,
+      "median_scatter_mmag": 8.348480615786634
+    },
+    "10-11": {
+      "n": 8,
+      "median_scatter_mmag": 11.917217123494279
+    },
+    "11-12": {
+      "n": 8,
+      "median_scatter_mmag": 22.2757615541623
+    },
+    "12-13": {
+      "n": 8,
+      "median_scatter_mmag": 40.34220721249109
+    },
+    "13-14": {
+      "n": 8,
+      "median_scatter_mmag": 36.23617086368211
+    },
+    "14-15": {
+      "n": 8,
+      "median_scatter_mmag": 172.7804604591969
+    }
+  },
+  "n_stars": 52
+}

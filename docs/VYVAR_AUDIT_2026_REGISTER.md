@@ -29,6 +29,7 @@ Classes: **P** physics/method wrong - **I** implementation != method - **C** con
 | INV-CAL-01 | 3 | calibration | C | MED | sigma_p=0 degenerate on some bins | cal_diag.py; inv_cal01_validate | Wired FAIL gate | OPEN (edge) |
 | INV-DAG-01 | 3 | pipeline | C | MED | Re-stamp friction blocks photometry re-run | invariants_runtime.py:494; STATE | No fix | OPEN |
 | F-B01/F-B02 | 3 | import | C | LOW | PASSTHROUGH records wrong CALIBRATION_MODE | calpath_audit.md | UNVERIFIED fix order | OPEN |
+| EMPTY-DAO-01 | 2 | detection/export | I/U | MED | Frames with empty DAO table reach dedupe with forced-only rows (no peak/flux cols). IMPL-05 A fixed the dtype crash symptom only. Count/why on draft 515 (clouds/guiding/gate) is field/QC - register only. | `CURSOR_RESULT_IMPL_05_A.md`; DECISIONS EMPTY-DAO-01 | **OPEN** (no investigation in IMPL-05) | OPEN |
 
 ---
 

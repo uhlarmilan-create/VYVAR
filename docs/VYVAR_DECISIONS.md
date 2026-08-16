@@ -66,6 +66,18 @@ OPEN so they are not later cited as settled. **Do not act** in IMPL-01.
 
 ---
 
+## OPEN - EMPTY-DAO-01 (register only; 2026-08-16)
+
+IMPL-05 Item A fixed the dtype crash in `_proc_deduplicate_matched_catalog_rows`
+when `peak_max_adu` / `dao_flux` / `flux` are absent. The crash exposed a deeper
+path: frames with an **empty DAO table** still reach per-frame export; forced-phot
+injection then supplies catalog rows without saturation/flux columns. How many
+such frames draft 515 has, and why (clouds / guiding / a gate), is a field/QC
+question. **Do not investigate in IMPL-05.** Register only so the finding does
+not vanish because the crash is fixed.
+
+---
+
 ## Wave 6 PROPOSE items - Milan authorized 2026-08-13 (implement later)
 
 | ID | Decision |
