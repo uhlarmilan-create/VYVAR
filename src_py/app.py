@@ -2257,6 +2257,8 @@ def render_live_view(
                     ),
                 )
             if run_vyvar_clicked or run_vyvar_nc_clicked:
+                from run_lifecycle import run_callable_with_exit_log  # noqa: PLC0415
+
                 _pre_cal = bool(run_vyvar_nc_clicked)
                 _dao_fwhm_default = float(
                     max(1.0, min(8.0, float(getattr(cfg, "sips_dao_fwhm_px", 2.5))))
@@ -2269,54 +2271,63 @@ def render_live_view(
                 _status_label = (
                     "[folder] RUN VYVAR (non-cal) running..." if _pre_cal else "! RUN VYVAR running..."
                 )
-                with st.status(_status_label, expanded=True) as _rv_status:
-                    ok = _run_vyvar_full_pipeline(
-                        pipeline=pipeline,
-                        cfg=cfg,
-                        source_root=_sr_rv,
-                        import_equipment_id=int(import_equipment_id),
-                        import_telescope_id=int(import_telescope_id),
-                        dark_validity_days=int(dark_validity_days),
-                        flat_validity_days=int(flat_validity_days),
-                        plate_fov_ui=float(cfg.plate_solve_fov_deg),
-                        dao_fwhm_default=_dao_fwhm_default,
-                        dao_sigma_default=_dao_sigma_default,
-                        cat_match_arc=2.0,
-                        max_cat_rows=12000,
-                        max_extra_ps=0,
-                        min_stars=100,
-                        max_stars=500,
-                        max_ctrl=int(cfg.alignment_max_control_points),
-                        sat_level=0.95,
-                        footer_placeholder=footer_placeholder,
-                        pre_calibrated_mode=_pre_cal,
-                    )
-                    if ok:
-                        _done_label = (
-                            "[OK] RUN VYVAR (non-cal) complete"
-                            if _pre_cal
-                            else "[OK] RUN VYVAR complete"
+
+                def _run_vyvar_body() -> bool:
+                    with st.status(_status_label, expanded=True) as _rv_status:
+                        _ok = _run_vyvar_full_pipeline(
+                            pipeline=pipeline,
+                            cfg=cfg,
+                            source_root=_sr_rv,
+                            import_equipment_id=int(import_equipment_id),
+                            import_telescope_id=int(import_telescope_id),
+                            dark_validity_days=int(dark_validity_days),
+                            flat_validity_days=int(flat_validity_days),
+                            plate_fov_ui=float(cfg.plate_solve_fov_deg),
+                            dao_fwhm_default=_dao_fwhm_default,
+                            dao_sigma_default=_dao_sigma_default,
+                            cat_match_arc=2.0,
+                            max_cat_rows=12000,
+                            max_extra_ps=0,
+                            min_stars=100,
+                            max_stars=500,
+                            max_ctrl=int(cfg.alignment_max_control_points),
+                            sat_level=0.95,
+                            footer_placeholder=footer_placeholder,
+                            pre_calibrated_mode=_pre_cal,
                         )
-                        _rv_status.update(
-                            label=_done_label,
-                            state="complete",
-                            expanded=False,
-                        )
-                        st.success("Pipeline finished successfully. Review the results.")
-                    else:
-                        _err_label = (
-                            "[X] RUN VYVAR (non-cal) - chyba" if _pre_cal else "[X] RUN VYVAR - chyba"
-                        )
-                        _rv_status.update(
-                            label=_err_label,
-                            state="error",
-                            expanded=True,
-                        )
-                        st.error(
-                            _vyvar_format_run_failure_message(
-                                default="Pipeline stopped. See Infolog for error details."
+                        if _ok:
+                            _done_label = (
+                                "[OK] RUN VYVAR (non-cal) complete"
+                                if _pre_cal
+                                else "[OK] RUN VYVAR complete"
                             )
+                            _rv_status.update(
+                                label=_done_label,
+                                state="complete",
+                                expanded=False,
+                            )
+                        else:
+                            _err_label = (
+                                "[X] RUN VYVAR (non-cal) - chyba"
+                                if _pre_cal
+                                else "[X] RUN VYVAR - chyba"
+                            )
+                            _rv_status.update(
+                                label=_err_label,
+                                state="error",
+                                expanded=True,
+                            )
+                        return bool(_ok)
+
+                ok = run_callable_with_exit_log(_run_vyvar_body, log_event)
+                if ok:
+                    st.success("Pipeline finished successfully. Review the results.")
+                else:
+                    st.error(
+                        _vyvar_format_run_failure_message(
+                            default="Pipeline stopped. See Infolog for error details."
                         )
+                    )
 
     plan = st.session_state.get("vyvar_smart_plan")
     if plan:
