@@ -264,8 +264,9 @@ A resumed run would **not** hang again on that missing-index/box branch for the 
 
 | | |
 |--|--|
-| Local commit | **`1adf2b4`** `HANG-P1-T16-01: document idle Streamlit abort; Gaia box hypothesis dead.` |
-| Follow-up | ASCII re-encode of `dev/results/IMPL_02_phase2a_log.txt` (UTF-16 BOM `0xff` broke `test_ascii_policy`; left from SESSION-CLOSE). |
-| `--fast` | recorded after follow-up commit |
+| Result commit | **`1adf2b4`** `HANG-P1-T16-01: document idle Streamlit abort; Gaia box hypothesis dead.` |
+| ASCII fix | **`ee7c56c`** re-encode `IMPL_02_phase2a_log.txt` (UTF-16 BOM broke ascii policy) |
+| `--fast` | **OVERALL PASS** @ `ee7c56c` |
+| pytest | 1418 passed, 27 skipped |
 
 No science/code change. Push: NO.
