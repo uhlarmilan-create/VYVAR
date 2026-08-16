@@ -1,0 +1,458 @@
+{
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "part_a": {
+    "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+    "exit_status": 0,
+    "ended_in_phase": "Phase 2A complete (post Comp QA + trust)",
+    "frames_aligned_fits": 135,
+    "frames_photometered_proc_csv": 134,
+    "phase1_targets_total": 97,
+    "lc_files_written": 49,
+    "photometry_targets_completed": 49,
+    "skip_reason_histogram_phase1": {
+      "(empty)": 49,
+      "zone_noise": 45,
+      "below_target_depth": 3
+    },
+    "zone_flag_histogram_phase1": {
+      "linear": 52,
+      "noise": 45
+    },
+    "gap_97_to_49": {
+      "phase1_n": 97,
+      "lc_n": 49,
+      "missing_lc_n": 48,
+      "missing_reason_histogram": {
+        "zone_noise": 45,
+        "below_target_depth": 3
+      },
+      "silent_missing_n": 0,
+      "silent_missing": []
+    },
+    "qa_degraded": []
+  },
+  "part_b": {
+    "elapsed_s": 4244.0,
+    "phase0_wall_s": 0.30000000000000004,
+    "phase1_wall_s": 3905.9,
+    "phase2a_wall_s": 331.9000000000001,
+    "t0_s": 0.1,
+    "t0_done_s": 0.4,
+    "t1_start_s": 6.2,
+    "t2_start_s": 3912.1,
+    "phase1_per_target": {
+      "n_intervals": 14,
+      "min_s": 33.90000000000009,
+      "median_s": 273.35000000000014,
+      "p90_s": 428.36999999999995,
+      "max_s": 462.70000000000005,
+      "five_slowest": [
+        {
+          "name": "ASASSN-V J140843.29+402701.8",
+          "index": 16,
+          "dt_s": 462.70000000000005
+        },
+        {
+          "name": "RX CVn",
+          "index": 24,
+          "dt_s": 449.6999999999998
+        },
+        {
+          "name": "FY CVn",
+          "index": 8,
+          "dt_s": 378.6
+        },
+        {
+          "name": "R CVn",
+          "index": 1,
+          "dt_s": 297.70000000000005
+        },
+        {
+          "name": "ZTF J140300.57+413339.3",
+          "index": 32,
+          "dt_s": 279.8000000000002
+        }
+      ]
+    },
+    "phase2a_per_target": {
+      "n_intervals": 13,
+      "min_s": 0.0,
+      "median_s": 4.599999999999909,
+      "p90_s": 20.4000000000001,
+      "max_s": 25.199999999999818,
+      "five_slowest": [
+        {
+          "name": "R CVn",
+          "index": 1,
+          "dt_s": 25.199999999999818
+        },
+        {
+          "name": "FW CVn",
+          "index": 18,
+          "dt_s": 23.40000000000009
+        },
+        {
+          "name": "CSS_J135929.8+421520",
+          "index": 36,
+          "dt_s": 8.400000000000091
+        },
+        {
+          "name": "Gaia DR3 1497070744341492864",
+          "index": 72,
+          "dt_s": 5.099999999999909
+        },
+        {
+          "name": "Gaia DR3 1500705484968035968",
+          "index": 180,
+          "dt_s": 5.099999999999909
+        }
+      ]
+    },
+    "n_phase1_status_lines": 14,
+    "n_phase2a_status_lines": 14,
+    "events_sample": [
+      [
+        0.0,
+        "Faza 0+1: select targets + comparison stars..."
+      ],
+      [
+        0.1,
+        "Faza 0: vyber aktivnych cielov z VSX..."
+      ],
+      [
+        0.4,
+        "Faza 0 hotova: 218 aktivnych cielov"
+      ],
+      [
+        6.2,
+        "Faza 1: ProcFrameStore 134 per-frame CSV - vyber porovnavaciek (218 cielov)..."
+      ],
+      [
+        53.9,
+        "Phase 1: target 1/97: R CVn"
+      ],
+      [
+        351.6,
+        "Phase 1: target 8/97: FY CVn"
+      ],
+      [
+        730.2,
+        "Phase 1: target 16/97: ASASSN-V J140843.29+402701.8"
+      ],
+      [
+        1192.9,
+        "Phase 1: target 24/97: RX CVn"
+      ],
+      [
+        4017.1,
+        "Faza 2A: ciel 162/218: Gaia DR3 1501955221668216320"
+      ],
+      [
+        4022.1,
+        "Faza 2A: ciel 180/218: Gaia DR3 1500705484968035968"
+      ],
+      [
+        4027.2,
+        "Faza 2A: ciel 198/218: Gaia DR3 1499052957647968640"
+      ],
+      [
+        4028.8,
+        "Faza 2A: ciel 216/218: Gaia DR3 1500746446072739200"
+      ],
+      [
+        4028.8,
+        "Faza 2A: ciel 218/218: Gaia DR3 1502098570497419520"
+      ],
+      [
+        4028.8,
+        "Comp QA (Sokolovsky locus)..."
+      ],
+      [
+        4239.9,
+        "Trust flag (GREEN/YELLOW/RED)..."
+      ],
+      [
+        4240.1,
+        "Faza 2A hotovo: 49 kriviek z 134 snimok -> photometry"
+      ]
+    ],
+    "log_caveat_phase1": "Phase 1 status was logged sparsely (every ~8 targets after RUN-HARDEN-01); B2 Phase 1 stats are inter-checkpoint deltas, not true per-target walls.",
+    "log_caveat_phase2a": "Phase 2A ciel status is also sparse (~every 18 of 218); photometry of the 49 LC targets is short; Comp QA is timed separately.",
+    "comp_qa_wall_s": 211.09999999999945,
+    "dominance": {
+      "phase0": "Log shows brief VSX/active-target selection (~seconds); not resolvable further.",
+      "phase1": "Dominated by per-target select_comparison_stars_per_target / _accumulate_per_frame_comp_metrics (long gaps between Phase 1 status lines).",
+      "phase2a": "Aperture photometry over targets is short in the log; Comp QA dominates late Phase 2A wall (211.1 s Comp QA -> Trust)."
+    }
+  },
+  "part_c": {
+    "n_proc_csv": 134,
+    "n_empty_dao_forced_only": 0,
+    "rate": 0.0,
+    "frames": [],
+    "setup": "NoFilter_60_2",
+    "definition": "proc CSV lacks peak_max_adu and dao_flux columns (EMPTY-DAO-01 forced-only signature)"
+  },
+  "part_d": {
+    "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+    "science_identity_4fe84b4_to_da9cce4_src_py": "empty",
+    "BO_CVn": {
+      "target_catalog_id": "1498613634033133184",
+      "check_kmag_path": "check_kmag_1498613634033133184.csv",
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 6.713212799999471,
+      "check_scatter_std_mmag": 7.695814530528619,
+      "n_epochs": 134,
+      "n_comp": 5,
+      "comp_ids": [
+        "1500748301498613248",
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "set_equal_impl05c": true,
+      "impl05c_subset_check_mad_mmag": 8.594632200000406,
+      "impl05c_check_id": "1498020894186918144",
+      "named_meter_check_id_149714_is_selected": false
+    },
+    "FW_CVn": {
+      "target_catalog_id": "1497343732462852864",
+      "check_kmag_path": "check_kmag_1497343732462852864.csv",
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 8.201001900000032,
+      "check_scatter_std_mmag": 7.005806671416987,
+      "n_epochs": 134,
+      "n_comp": 8,
+      "comp_ids": [
+        "1497442379271632384",
+        "1499906247391001088",
+        "1497674651102612992",
+        "1498020894186918144",
+        "1498812233320666368",
+        "1497370563121917952",
+        "1497313255374892800",
+        "1500486102335278592"
+      ],
+      "set_equal_impl05c": false,
+      "impl05c_subset_check_mad_mmag": 9.819259800000395,
+      "impl05c_check_id": "1497368849430107904"
+    },
+    "distribution_all_lc_targets": {
+      "n": 49,
+      "min_mmag": 6.249159000000447,
+      "median_mmag": 8.201001900000032,
+      "p90_mmag": 10.729576199999906,
+      "max_mmag": 11.832630600001341,
+      "gt_3x_median": [],
+      "metric_note": "Prefer check_kmag MAD (1.4826*MAD*1000); else summary lc_rms*1000"
+    },
+    "spec_note_check_star": "Task names check 1497145751650265600; IMPL-05 C fixed meter used BO check 1498020894186918144 / FW check 1497368849430107904. D1 reports production check_kmag MAD for BO/FW on 515.",
+    "science_identity_diff_stat": "(empty)"
+  },
+  "part_e": {
+    "estimator": "1.4826*MAD of focus - equal-weight mean peer inst mags (PRE-IMPL Q2-style; not flux-sum loo_diff_series)",
+    "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+    "bins": {
+      "8-9": {
+        "n": 15,
+        "n_candidates_in_bin": 27,
+        "n_with_proc": 15,
+        "median_loo_scatter_mmag": 11.988543441702657,
+        "values_mmag": [
+          12.822417974778835,
+          10.815463440563228,
+          13.206916389167278,
+          11.988543441702657,
+          11.468710377352318,
+          9.883796447650898,
+          11.909091196033017,
+          11.519705613728355,
+          12.746681682176131,
+          11.651068025678498,
+          11.858381589356151,
+          12.777717682780436,
+          13.647846787234371,
+          12.412415097362599,
+          13.645455465336822
+        ]
+      },
+      "9-10": {
+        "n": 15,
+        "n_candidates_in_bin": 65,
+        "n_with_proc": 15,
+        "median_loo_scatter_mmag": 13.687339415472659,
+        "values_mmag": [
+          21.565313882025837,
+          12.050373903061343,
+          13.538276681083282,
+          11.719700632150882,
+          14.009066633838122,
+          16.87443144317686,
+          12.649380788384196,
+          15.237411774568434,
+          13.6192585699434,
+          13.009461236520016,
+          13.687339415472659,
+          15.50146102440353,
+          16.79911340342891,
+          10.909734246891473,
+          15.72660708079756
+        ]
+      },
+      "10-11": {
+        "n": 15,
+        "n_candidates_in_bin": 103,
+        "n_with_proc": 15,
+        "median_loo_scatter_mmag": 16.450777056798568,
+        "values_mmag": [
+          12.042017241125265,
+          17.4165474249231,
+          15.158174055758682,
+          18.952172944056297,
+          14.011500368449333,
+          16.504716279580983,
+          14.373993175409112,
+          16.576012281508575,
+          14.10022020234794,
+          14.61625180052855,
+          16.450777056798568,
+          17.15258707407735,
+          14.347246828217974,
+          17.88734286604658,
+          17.7305839127683
+        ]
+      },
+      "11-12": {
+        "n": 15,
+        "n_candidates_in_bin": 246,
+        "n_with_proc": 15,
+        "median_loo_scatter_mmag": 20.70470833426409,
+        "values_mmag": [
+          34.04183683949322,
+          12.882938752545474,
+          17.96361754248089,
+          51.197889065902835,
+          19.296854227154764,
+          22.135248409272332,
+          19.46155875947865,
+          27.780049177069074,
+          19.21236689080438,
+          12.326530661627462,
+          31.593038107704704,
+          21.210257051984783,
+          23.33461511628481,
+          20.70470833426409,
+          17.031557961840058
+        ]
+      },
+      "12-13": {
+        "n": 13,
+        "n_candidates_in_bin": 506,
+        "n_with_proc": 13,
+        "median_loo_scatter_mmag": 33.009557272337105,
+        "values_mmag": [
+          23.97790583725207,
+          28.268493159007274,
+          47.74820381972051,
+          23.365408095878344,
+          125.22940760633946,
+          25.955943956693304,
+          25.955943956693304,
+          37.153417780854134,
+          36.341604137155336,
+          29.529143886625825,
+          33.009557272337105,
+          33.652878033267676,
+          33.652878033267676
+        ]
+      },
+      "13-14": {
+        "n": 12,
+        "n_candidates_in_bin": 865,
+        "n_with_proc": 12,
+        "median_loo_scatter_mmag": 38.89157651455142,
+        "values_mmag": [
+          29.2324311409533,
+          140.39005036516787,
+          152.94397423961613,
+          33.652878033267676,
+          35.381707045403594,
+          38.78739831562168,
+          30.62790512027612,
+          172.39047342169692,
+          44.82787685184165,
+          38.99575471348115,
+          90.00675670536246,
+          27.19677827897814
+        ]
+      },
+      "14-15": {
+        "n": 11,
+        "n_candidates_in_bin": 1306,
+        "n_with_proc": 11,
+        "median_loo_scatter_mmag": 40.98479043713609,
+        "values_mmag": [
+          31.679177556722234,
+          36.88018326909532,
+          37.017365944919604,
+          48.41134000807972,
+          36.627743597008674,
+          34.39868006058609,
+          45.619990239981526,
+          45.54889640944797,
+          45.60207753823903,
+          40.98479043713609,
+          51.93266140431229
+        ]
+      }
+    },
+    "BIN_8_9": {
+      "subset_before_r95_mmag": 7.786723789851446,
+      "subset_after_permag_mmag": 12.348001171995847,
+      "full_515_median_loo_mmag": 11.988543441702657,
+      "n": 15
+    },
+    "FAINT_14_15": {
+      "subset_after_permag_mmag": 172.7804604591969,
+      "full_515_median_loo_mmag": 40.98479043713609,
+      "n": 11
+    }
+  },
+  "part_f_summary": {
+    "n_rows": 698,
+    "correlation_comp_rms_mmag_vs_loo_mmag": 0.919244576145711,
+    "median_ratio_comp_rms_mmag_over_loo_mmag": 1.0015054266994983,
+    "ratio_by_G_bin": {
+      "8-9": {
+        "n": 88,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 0.7883061990561819
+      },
+      "9-10": {
+        "n": 354,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 1.0363167014837413
+      },
+      "10-11": {
+        "n": 125,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 1.0209471786521753
+      },
+      "11-12": {
+        "n": 46,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 1.16192147020731
+      },
+      "12-13": {
+        "n": 57,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 0.8876006458559953
+      },
+      "13-14": {
+        "n": 7,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": 0.8473547568510442
+      },
+      "14-15": {
+        "n": 0,
+        "median_ratio_comp_rms_mmag_over_loo_mmag": null
+      }
+    },
+    "ordering_note": "If median ratio is roughly constant across G bins, RMS-first ordering is likely preserved under a monotone remapping; absolute thresholds still need a unified definition."
+  }
+}
