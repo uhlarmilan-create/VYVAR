@@ -2,8 +2,8 @@
 
 Date: 2026-08-16
 Draft 515 photometry SHA: da9cce4
-Content tip: a09d2d0
-Pushed range: 9f139ef..a09d2d0
+Content tip: feab854 (WIDE-ERR-04 science)
+Pushed range: 9f139ef..feab854 (science) through docs stamp on push tip
 Push: authorized (step 4)
 
 ## Verdict
@@ -77,10 +77,10 @@ session_baseline_check.py --fast: see below (filled at tip).
 
 ## 4 - Push
 
-Pushed range 9f139ef..a09d2d0 (content tip a09d2d0). Scratch left behind:
-`tmp/wide_err_04_lc_before`, `tmp/wide_err_03b_lc_backup`, Archive draft 515
-photometry outputs (gitignored data), `.pytest_cache` / `.ruff_cache`,
-`dev/tests/_tmp_batch_e_lc/`, `src_py/tmp/`, sqlite shm/wal.
+Content tip (science): **feab854**. Pushed range: **9f139ef..745cbf9**.
+Scratch left behind: `tmp/wide_err_04_lc_before`, `tmp/wide_err_03b_lc_backup`,
+Archive draft 515 photometry (gitignored), caches, `dev/tests/_tmp_batch_e_lc/`,
+`src_py/tmp/`, sqlite shm/wal.
 
 ## Spec defects
 1. Expected BO after-band ~7.6-8 mmag ignored CT uncertainty added at export.
@@ -95,4 +95,5 @@ photometry outputs (gitignored data), `.pytest_cache` / `.ruff_cache`,
 - `dev/results/CURSOR_RESULT_WIDE_ERR_04.md` + JSON
 
 ## session_baseline_check.py --fast
-**OVERALL PASS** (1429 passed, 28 skipped) prior to content tip a09d2d0.
+**OVERALL PASS** (1429 passed, 28 skipped) at tip 2396949 before WIDE-ERR-04
+commit; content tip feab854.
