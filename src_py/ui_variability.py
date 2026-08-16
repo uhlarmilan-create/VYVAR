@@ -1563,7 +1563,15 @@ def render_variability_dashboard(
             c for c in candidates if str(c) not in {str(k) for k in bullets_map}
         ]
 
-        if missing and "crossmatch_auto_done" not in st.session_state:
+        from run_lifecycle import is_vyvar_run_active  # noqa: PLC0415
+
+        _run_active = is_vyvar_run_active(st.session_state.get("vyvar_footer_state"))
+
+        if (
+            (not _run_active)
+            and missing
+            and "crossmatch_auto_done" not in st.session_state
+        ):
             pb = st.progress(0, text="Running catalog crossmatch...")
             status = st.empty()
 
@@ -1609,7 +1617,8 @@ def render_variability_dashboard(
 
         # -- Auto TESS trigger ------------------------
         # crossmatch_auto_done is set True, then st.rerun(), so this block runs on the next cycle.
-        if st.session_state.get("crossmatch_auto_done"):
+        # RUN-HARDEN-01: never auto-rerun while a RUN/job owns the footer (HANG-P1-T16-01).
+        if (not _run_active) and st.session_state.get("crossmatch_auto_done"):
             tess_results = st.session_state.get("tess_results", {})
             photometry_dir = st.session_state.get("var_photometry_dir")
             if not photometry_dir:

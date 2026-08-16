@@ -17018,11 +17018,7 @@ def run_phase0_and_phase1(
                 _n_oos_skipped += 1
                 continue
             _i_phase1 += 1
-            if progress_cb is not None and (
-                _i_phase1 == 1
-                or _i_phase1 == _n_phase1
-                or (_n_phase1 > 1 and _i_phase1 % max(1, _n_phase1 // 12) == 0)
-            ):
+            if progress_cb is not None:
                 _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
                 _p(f"Phase 1: target {_i_phase1}/{_n_phase1}: {_tid}")
             tr_enriched = _enrich_target_bp_rp_from_gaia_db(

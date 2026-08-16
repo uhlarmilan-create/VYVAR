@@ -1453,7 +1453,12 @@ def render_aperture_photometry(
     # ------------------------------------------------------------------
     # Block B: Auto pipeline (crossmatch + TESS), separate from Phase 2A
     # ------------------------------------------------------------------
-    if (
+    from run_lifecycle import is_vyvar_run_active  # noqa: PLC0415
+
+    if is_vyvar_run_active(st.session_state.get("vyvar_footer_state")):
+        # RUN-HARDEN-01: do not auto-crossmatch / auto-TESS / st.rerun while RUN active.
+        pass
+    elif (
         st.session_state.get("var_analysis_done")
         and st.session_state.get("_ap_session_id") == st.session_state.get("_current_session_id")
         and not st.session_state.get("tess_auto_done")
