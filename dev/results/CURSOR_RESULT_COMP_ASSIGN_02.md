@@ -2,7 +2,7 @@
 
 Date: 2026-08-16
 Baseline: 0f5f7b0 (COMP-ASSIGN-01, stamp 635404f), on IMPL-04 5cfb285
-Tip: (pending commit)
+Tip: **20ced6a**
 Push: NO
 
 ## What I did
@@ -94,7 +94,7 @@ fail side), `docs/VYVAR_DECISIONS.md` entry.
 ## Tests
 
 - Fire proofs above
-- `--fast` (running / see tip SHA)
+- `--fast` OVERALL PASS (1407 passed, 27 skipped) via `session_baseline_check.py --fast`
 
 ## Files changed
 
