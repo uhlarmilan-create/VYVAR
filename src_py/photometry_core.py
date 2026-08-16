@@ -178,6 +178,8 @@ _COMP_QUALITY_JSON_META_KEYS = frozenset(
         "n_tier3",
         "n_tier4",
         "aperture_correction",
+        "qa_degraded",
+        "qa_degraded_reason",
     }
 )
 

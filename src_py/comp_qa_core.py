@@ -23,6 +23,12 @@ _INVNV_FLOOR = 1.0
 _SPIKE_HARD = 3.0
 _CAL_MAG_COLS = ("mag_calib", "comp_mag_calib", "lc_median_mag", "vyvar_calibrated_mag")
 
+# QA is a post-LC verdict over the step-2 selected set (clamp 3-8). A pool much
+# larger than n_comp_max means the caller fed the uncapped admission pool (COMP-
+# ADMIT-03-era ~1292/target) - O(N^3 F) drop-worst loop. 4x leaves room for
+# thin/sparse sets without admitting pool-scale input.
+_QA_POOL_MAX_MULT = 4
+
 
 def mad_sigma(x: np.ndarray) -> float:
     x = np.asarray(x, dtype=float)
@@ -254,6 +260,29 @@ def load_proc_pivot(proc_dir: Path, ids: set[str]) -> tuple[pd.DataFrame, pd.Dat
     return flux_w, time_df
 
 
+def assert_comp_qa_pool_size(n_pool: int, *, max_comps: int, target_id: str = "") -> None:
+    """Fail loudly when QA is handed more than a sane multiple of n_comp_max.
+
+    INV-NO-SILENT-EMPTY style: oversized pool is a caller bug (step-2 CSV must
+    carry the selected 3-8, not the uncapped admission pool).
+    """
+    from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+    n = int(n_pool)
+    mx = max(1, int(max_comps))
+    limit = int(_QA_POOL_MAX_MULT) * mx
+    if n > limit:
+        tid = str(target_id or "").strip() or "?"
+        raise InvariantViolation(
+            "INV-COMP-QA-POOL-SIZE",
+            (
+                f"comp QA pool too large for target={tid}: n_pool={n} "
+                f"> {limit} (= {_QA_POOL_MAX_MULT} * n_comp_max={mx}); "
+                "QA reads step-2 comparison_stars_per_target members only"
+            ),
+        )
+
+
 def compute_comp_qa(
     *,
     photometry_dir: Path,
@@ -264,6 +293,9 @@ def compute_comp_qa(
     _target_processing_order: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run draft-wide comp QA; read-only w.r.t. photometry products.
+
+    Pool source is ``comparison_stars_per_target.csv`` - the step-2 selected
+    set (typically 3-8), not the uncapped admission pool.
 
     Returns dict with keys: per_target, per_comp_rows, stats, comp_csv_path.
     """
@@ -279,6 +311,7 @@ def compute_comp_qa(
     comps["_catalog_id_n"] = comps["catalog_id"].map(_normalize_id)
     comps["_target_n"] = comps["target_catalog_id"].map(_normalize_id)
 
+    _mx = max(1, int(max_comps))
     target_data: dict[str, dict] = {}
     for tid, grp in comps.groupby("_target_n"):
         if not tid:
@@ -287,6 +320,7 @@ def compute_comp_qa(
         comp_ids = [c for c in comp_ids if c]
         if len(comp_ids) < 1:
             continue
+        assert_comp_qa_pool_size(len(comp_ids), max_comps=_mx, target_id=str(tid))
         _qa_min = max(1, min(int(min_comps), len(comp_ids)))
         all_ids = set(comp_ids) | {tid}
         flux_w, _time_df = load_proc_pivot(proc_dir, all_ids)
@@ -298,6 +332,7 @@ def compute_comp_qa(
         pool = [c for c in comp_ids if c in mag]
         if len(pool) < 1:
             continue
+        assert_comp_qa_pool_size(len(pool), max_comps=_mx, target_id=str(tid))
         target_data[tid] = {
             "qa_min_comps": _qa_min,
             "grp": grp,
@@ -353,6 +388,8 @@ def compute_comp_qa(
     for tid, td in _target_items:
         grp = td["grp"]
         surviving = list(td["pool"])
+        qa_degraded = False
+        qa_degraded_reason = ""
 
         _qa_min = int(td.get("qa_min_comps", min_comps))
         while len(surviving) >= _qa_min:
@@ -397,9 +434,18 @@ def compute_comp_qa(
             dropped_global.add((tid, worst_id))
             surviving = [c for c in surviving if c != worst_id]
 
+        # Membership is never changed post COMP-ASSIGN-01; survivors are a LOO
+        # peer set for metrics only. If flagging would leave fewer than qa_min
+        # peers, keep the original step-2 membership and mark degraded.
         surv_final = [c for c in td["pool"] if (tid, c) not in dropped_global]
         if len(surv_final) < _qa_min:
+            qa_degraded = True
+            qa_degraded_reason = (
+                f"flagging left {len(surv_final)} survivors < qa_min={_qa_min}; "
+                "kept step-2 membership unchanged"
+            )
             surv_final = list(td["pool"])
+            LOGGER.warning("[COMP_QA] %s: qa_degraded - %s", tid, qa_degraded_reason)
 
         thr_inv_f = robust_thr(
             [
@@ -479,6 +525,9 @@ def compute_comp_qa(
             "n_flagged": n_flag_t,
             "n_clean": n_clean,
             "comps": comp_payload,
+            "qa_degraded": bool(qa_degraded),
+            "qa_degraded_reason": str(qa_degraded_reason),
+            "membership_ids": list(td["pool"]),
         }
 
     tgt_df = pd.DataFrame(
@@ -517,6 +566,9 @@ def compute_comp_qa(
             "n_clean_lt_min": n_lt_min,
             "min_comps": mn,
             "strong_comps": strong,
+            "n_qa_degraded": int(
+                sum(1 for v in per_target.values() if v.get("qa_degraded"))
+            ),
         },
         "comp_csv_path": comp_path,
     }
@@ -537,11 +589,16 @@ def write_comp_qa_artifacts(
 
     for tid, tinfo in result.get("per_target", {}).items():
         out_path = lc / f"comp_qa_{tid}.json"
+        _deg = bool(tinfo.get("qa_degraded"))
+        _deg_reason = str(tinfo.get("qa_degraded_reason") or "")
         payload = {
             "target_catalog_id": tid,
             "n_clean": int(tinfo["n_clean"]),
             "n_comps": int(tinfo["n_comps"]),
             "n_flagged": int(tinfo["n_flagged"]),
+            "qa_degraded": _deg,
+            "qa_degraded_reason": _deg_reason,
+            "membership_ids": list(tinfo.get("membership_ids") or []),
             "comps": {
                 cid: {
                     "sigma_iqr": c["sigma_iqr"],
@@ -555,6 +612,26 @@ def write_comp_qa_artifacts(
         }
         out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         written.append(out_path)
+
+        # Merge qa_degraded into existing Phase-2A comp_quality sidecar (metadata only).
+        cq_path = lc / f"comp_quality_{tid}.json"
+        if cq_path.is_file():
+            try:
+                raw = json.loads(cq_path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    raw["qa_degraded"] = _deg
+                    raw["qa_degraded_reason"] = _deg_reason
+                    cq_path.write_text(
+                        json.dumps(raw, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    written.append(cq_path)
+            except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+                LOGGER.warning(
+                    "[COMP_QA] could not merge qa_degraded into %s: %s",
+                    cq_path.name,
+                    exc,
+                )
 
     if update_summary:
         summ_path = phot / "photometry_summary.csv"
