@@ -1,0 +1,58 @@
+{
+  "task": "WIDE-ERR-03 Stage S2",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "draft_id": 515,
+  "setup": "NoFilter_60_2",
+  "domain": "e-/ADU_container",
+  "aperture_r_px": 3.999,
+  "photon_transfer": {
+    "g_pt": 0.6370667331227862,
+    "g_pt_ci_lo": 0.44338128076377437,
+    "g_pt_ci_hi": 1.0941919812123437,
+    "n_frames": 134,
+    "aperture_r_px": 3.999,
+    "slope": 1.5696942690731635,
+    "intercept": -32078.9888269964,
+    "method": "theil_sen_empty_ap_var_vs_npix_sky",
+    "domain": "e-/ADU_container",
+    "ok": true,
+    "notes": [
+      "bootstrap_p16=0.524075 bootstrap_p84=0.828362"
+    ],
+    "ci_width_factor": 2.4678353116926237
+  },
+  "authority": {
+    "value_e_per_adu_container": 0.6370667331227862,
+    "source": "g_pt",
+    "g_pt": 0.6370667331227862,
+    "g_db_native": 3.17,
+    "container_scale": 4.0,
+    "g_db_div_scale": 0.7925,
+    "warn": null,
+    "ok": true
+  },
+  "s2c_fire_proof": {
+    "g_pt": 0.635,
+    "g_db_bare_native_misapplied": 3.17,
+    "g_db_div_scale": 0.7925,
+    "ratio_bare_vs_gpt": 4.9921259842519685,
+    "ratio_scaled_vs_gpt": 1.2480314960629921,
+    "guard_fires_on_bare_db": true,
+    "threshold": 2.0
+  },
+  "s2d": {
+    "architect_g_pt": 0.635,
+    "architect_ci": [
+      0.44,
+      1.09
+    ],
+    "estimated_g_pt": 0.6370667331227862,
+    "estimated_ci": [
+      0.44338128076377437,
+      1.0941919812123437
+    ],
+    "in_architect_ci": true,
+    "pass": true
+  },
+  "s2d_stop": false
+}

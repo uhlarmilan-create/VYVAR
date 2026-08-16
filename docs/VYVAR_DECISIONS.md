@@ -8,6 +8,148 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## WIDE-ERR-04 - close at physical model (2026-08-16)
+
+**Closure.** Wide-rig exported errors closed at the **physical model**:
+container-domain `g_pt` authority (GAIN-DOMAIN-01) + weighted ensemble SEM,
+with identity calibration `s=1`, `sigma_r=0` (no empirical floor). The 03B
+~6.9 mmag constant floor over-inflated the product frame; C2 held-out chose
+identity. Machinery `(s, sigma_r)` and `export_err_mode=calibrated|model`
+remain as the documented per-rig hook.
+
+**Accuracy (product-frame even-half, draft 515, SHA da9cce4 photometry).**
+Across G 8-13 gated bins, median(scatter/err) is typically within ~+/-15% of
+1; (11.0, 11.5] n=5 remains ~25% conservative (ratio 0.746) - see CORR-ERR-01.
+Under-quoting (the scientifically harmful direction) is eliminated.
+
+**Literature context.** AAVSO amateur practice often quotes SNR-based errors
+that the AAVSO forum itself acknowledges under-estimate. Professional
+transit/variable work rescales to chi2~1 and/or adds a red-noise floor
+(Pont, Zucker & Queloz 2006; Gillon 2009). VYVAR now sits at or above both
+bars: physical budget without under-quote; residual conservatism documented
+rather than silently absorbed by s<1.
+
+**Decision rule.** Conservative errors are acceptable; under-quoted errors
+are not. CORR-ERR-01 stays OPEN as a LOW research note (covariance-aware
+budget out of v1.0).
+
+**Artifacts.** `dev/results/CURSOR_RESULT_WIDE_ERR_04.md`, accuracy + reexport JSON.
+
+---
+
+## WIDE-ERR-03C - product-frame meter + CORR-ERR-01 (2026-08-16)
+
+**Product-frame meter rule (XVAL lesson generalized).** Calibration and
+acceptance gates must measure the product that ships: pytics-weighted
+`mag_calib` (dao_flux -> m_inst; zp = sum w_j (G_j - m_j) / sum w_j), not the
+LOO flux-sum / delta_mag diagnostic frame. INV-CALIB-HOLDOUT still applies
+(odd/even frames; fire proof required).
+
+**Escalation outcome.** C1d: existing 03B constant floor on the product meter
+FAILED harder (ratios ~0.70-0.78) - not a meter artifact that would rescue
+03B. C2: held-out chose constant with s clamped to 1.0 and sigma_r=0 (physical
+model alone); still FAIL at (11.0,11.5] ratio 0.746. C3: per-LC floor FAIL.
+STOP: open **CORR-ERR-01** - observed product-frame scatter lies below the
+diagonal physical err_model (s=1, sigma_r=0) in gated bins; common-mode
+cancelled by the catalog ZP is not a diagonal (s, sigma_r) residual.
+WIDE-ERR + SEM stay OPEN. WIDE-ERR-CROSSRIG stays OPEN. No forced pass.
+
+**Artifacts.** `dev/results/CURSOR_RESULT_WIDE_ERR_03C.md`, `WIDE_ERR_03C_C*.json`.
+
+---
+
+## WIDE-ERR-03B - smooth clamped calib + INV-CALIB-HOLDOUT (2026-08-16)
+
+**s >= 1 clamp.** Per-draft err calibration may only inflate errors beyond the
+physical model (`s >= 1` always). Never deflate via s < 1. A genuine model
+overprediction (e.g. faint-end ratio 0.75-0.85) is a MODEL question (g_pt
+center vs CI; register GAIN-PT-CI-01), not something a few comps may absorb.
+
+**Smooth form, few parameters.** Replace per-bin (s, sigma_r) tables with a
+smooth form on all calibration stars at once: one constant s and sigma_r(G)
+either constant or a monotone non-increasing-in-flux smooth function (e.g.
+linear in G, non-negative). Rationale: ~50 clean comps cannot support ~20 free
+parameters; they can support 2-3. Form choice is by held-out performance, not
+in-sample fit alone.
+
+**INV-CALIB-HOLDOUT (standing rule).** Any future per-draft err calibration
+must be validated non-circularly: fit coefficients on a held-out split
+(prefer odd/even frames when star count is scarce; also report star-split),
+and accept only on the evaluation half. A gate that fits and accepts on the
+same stars is not a verification (WIDE-ERR-03 S5e defect). Deliberately wrong
+calibration must fail the same gate (fire proof).
+
+**Artifacts.** `dev/results/CURSOR_RESULT_WIDE_ERR_03B.md`, `WIDE_ERR_03B_B2.json`,
+`WIDE_ERR_03B_B3.json`.
+
+---
+
+## WIDE-ERR-03 - container-domain gain + photon-transfer authority + calibrated err (2026-08-16)
+
+**Unit chain (S1c, verbatim).** QHY294MM digitizes a 14-bit native sample and
+stores it in a 16-bit FITS container by a left shift of two bits, so container
+ADU = 4 * native ADU (raw lights sit on a residue class mod 4; S1a). The
+equipment DB gain 3.17 e-/ADU is the native-domain conversion; the matching
+container-domain gain is therefore 3.17/4 = 0.7925 e-/ADU_container
+(photon-transfer on draft 515 gives g_pt ~ 0.635 e-/ADU_container inside CI
+[0.44, 1.09], which excludes bare 3.17). Hardware/software 2x2 binning on this
+CMOS path sums container-domain electrons and ADU together, leaving
+e-/ADU_container unchanged to first order; bias/dark/flat calibration and later
+resampling mix the integer grid into floats but do not change the ADU scale away
+from the container domain. Production photon and SNR terms that consume flux and
+sky in container ADU must therefore use g_container (g_pt when available, else
+DB/4), never bare DB gain; read noise remains in electrons and enters only as
+(RN/g)^2*npix in ADU^2.
+
+**Gain authority.** Data-derived `g_pt` (Theil-Sen empty-aperture var vs
+npix*sky) when CI finite and width factor <=~3; else DB_native/container_scale.
+Never bare DB on container ADU. Log authority (INV-NO-SILENT). WARN if g_pt and
+DB/scale disagree >2x.
+
+**Retraction.** Architect fitted effective gain 0.24-0.32 (WIDE-ERR-02 W1c STOP)
+is superseded: g-k_sky degeneracy; sky dominates photon above G~11. Standing
+number is the photon-transfer CI.
+
+**Err export.** `err_exported^2 = (s * err_model)^2 + sigma_r^2` per draft x rig
+x G bin on clean comps in the mag_calib-like frame (Pont+2006 / Gillon 2009),
+plus weighted ensemble SEM matching ZP weights (SEM-WEIGHT-01). Config
+`export_err_mode=calibrated|model`. SysRem stays out of v1 (modifies LCs).
+
+**Citations.** Tamuz+2005; Pont+2006; Kovacs+2005; Gillon 2009; Winn 2008.
+
+**Artifacts.** `dev/results/CURSOR_RESULT_WIDE_ERR_03.md`, S1/S2/S4/S5 JSON,
+`gain_photon_transfer.json`, `err_calibration.json`.
+
+---
+
+## WIDE-ERR-02 - STOP at W1c (gain); calibrated err + SEM not shipped (2026-08-16)
+
+**Task intent.** One wave: Pont/Gillon-style
+`err_exported^2 = (s * err_model)^2 + sigma_r^2` calibrated in the
+**mag_calib / comps-only** frame (XVAL-BO-01 lesson), plus the weighted SEM
+fix (measured ratio 0.677). SysRem remains out of v1 scope (modifies LCs).
+
+**Gate fired.** Part W1c: production gain on draft 515 NoFilter_60_2 is
+**3.17 e-/ADU** (`draft_manifest.rig.equipment_id=1` -> EQUIPMENTS QHY294MM /
+`header_index_mapped` GAIN setting 0; stamped in `pipeline_meta.dynamic_params`).
+Architect fitted effective gain from the empirical photon term is **0.24-0.32**.
+Disagreement >2x (ratio to mid ~11). Task rule: STOP and report before
+implementing calibration - a white scale + red floor would mask a wrong photon
+term.
+
+**W1b did not stop.** Production sys+scint hypot at G8-9 is ~4.0 mmag (sys=0
+for equipment 1; scint alone), reproducing the ~2x gap vs LC-frame ~6-8 mmag.
+
+**Disposition.** W3 (calibrated export + weighted SEM) **not implemented**.
+WIDE-ERR and SEM stay OPEN. WIDE-ERR-CROSSRIG stays OPEN. Next prerequisite:
+resolve why production e-/ADU and the fitted effective differ by an order of
+magnitude (units, flux domain, or DB gain) before any err-bar calibration wave.
+
+**Artifacts.** `dev/results/CURSOR_RESULT_WIDE_ERR_02.md`,
+`WIDE_ERR_02_prod_components.json`, `WIDE_ERR_02_summary.json`.
+
+---
+
 ## PUSH-STAMP-01 - content tip vs origin SHA (2026-08-16)
 
 **Rule.** A close result records the **CONTENT tip** (last substantive commit of

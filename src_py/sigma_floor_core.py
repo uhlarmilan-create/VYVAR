@@ -59,6 +59,54 @@ def ensemble_sem_mag_from_residuals(residuals: list[float] | Any) -> float:
     return std_ddof1 / c4 / math.sqrt(n)
 
 
+def ensemble_sem_mag_from_residuals_weighted(
+    residuals: list[float] | Any,
+    weights: list[float] | Any,
+) -> float:
+    """Reliability-weighted ensemble SEM (mag); reduces to unweighted when w equal.
+
+    WIDE-ERR-03 / SEM-WEIGHT-01: same residuals as production
+    ``(m_inst - median_night)``, weights ``w=1/sigma_eff^2`` matching mag_calib ZP.
+
+        mu = sum(w x)/sum(w)
+        V1 = sum(w), V2 = sum(w^2), N_eff = V1^2/V2
+        s_w^2 = sum(w (x-mu)^2)/(V1 - V2/V1)
+        SEM = s_w / c4(round(N_eff)) / sqrt(N_eff)
+    """
+    xs: list[float] = []
+    ws: list[float] = []
+    for x, w in zip(residuals, weights, strict=False):
+        xf = float(x)
+        wf = float(w)
+        if math.isfinite(xf) and math.isfinite(wf) and wf > 0:
+            xs.append(xf)
+            ws.append(wf)
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    # Equal weights -> exact unweighted path
+    if max(ws) - min(ws) <= 1e-15 * max(ws):
+        return ensemble_sem_mag_from_residuals(xs)
+    v1 = sum(ws)
+    v2 = sum(w * w for w in ws)
+    if v1 <= 0 or v2 <= 0:
+        return float("nan")
+    n_eff = (v1 * v1) / v2
+    mu = sum(w * x for w, x in zip(ws, xs, strict=True)) / v1
+    denom = v1 - (v2 / v1)
+    if denom <= 0:
+        return float("nan")
+    s2 = sum(w * (x - mu) ** 2 for w, x in zip(ws, xs, strict=True)) / denom
+    if s2 < 0:
+        return float("nan")
+    s = math.sqrt(s2)
+    n_eff_r = max(2, int(round(n_eff)))
+    c4 = c4_small_sample(n_eff_r)
+    if not math.isfinite(c4) or c4 <= 0:
+        return float("nan")
+    return s / c4 / math.sqrt(n_eff)
+
+
 def mag_sigma_to_rel(sigma_mag: float) -> float:
     if not math.isfinite(sigma_mag) or sigma_mag <= 0:
         return 0.0
@@ -142,28 +190,46 @@ def resolve_sigma_sys_mag(
     *,
     rig_label: str = "",
 ) -> float:
-    """Per-rig white floor in mag; 0.0 fail-safe when unknown (one-time INFO log)."""
+    """Per-rig white floor in mag; explicit 0.0 with a log line when unset.
+
+    WIDE-ERR-03 S3: missing map keys (e.g. equipment 1 while only ``\"4\"`` is set)
+    must not be silent. Interim for wide-rig equipment 1 is sys=0 WITH this log;
+    Stage 5 calibration owns any residual floor (do not invent a constant).
+    """
     if equipment_id is None:
         key = "unknown"
         val = 0.0
+        present = False
     else:
         key = str(int(equipment_id))
         raw_map = getattr(cfg, "sigma_sys_mag", None) if cfg is not None else None
         val = 0.0
-        if isinstance(raw_map, dict):
+        present = False
+        if isinstance(raw_map, dict) and key in raw_map:
+            present = True
             try:
-                v = float(raw_map.get(key, 0.0))
-                if math.isfinite(v) and v > 0:
+                v = float(raw_map.get(key))
+                if math.isfinite(v) and v >= 0:
                     val = v
             except (TypeError, ValueError):
                 val = 0.0
-    if val <= 0 and key not in _LOGGED_UNFLOORED:
-        _LOGGED_UNFLOORED.add(key)
-        logging.info(
-            "[SIGMA-FLOOR] equipment_id=%s (%s): no sigma_sys_mag configured - floor=0",
-            key,
-            rig_label or "rig",
-        )
+    log_key = f"{key}:{'set' if present else 'default0'}"
+    if log_key not in _LOGGED_UNFLOORED:
+        _LOGGED_UNFLOORED.add(log_key)
+        if present:
+            logging.info(
+                "[SIGMA-FLOOR] equipment_id=%s (%s): sigma_sys_mag=%.6g mag (config map)",
+                key,
+                rig_label or "rig",
+                val,
+            )
+        else:
+            logging.info(
+                "[SIGMA-FLOOR] equipment_id=%s (%s): sigma_sys_mag unset in config map - "
+                "explicit default 0.0 mag (WIDE-ERR-03; residual floor owned by err calibration)",
+                key,
+                rig_label or "rig",
+            )
     return float(val)
 
 

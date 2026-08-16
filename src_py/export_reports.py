@@ -1103,6 +1103,43 @@ def export_lightcurve_reports(
     a_lines.append(f"#OBSCODE={_obc}\n")
     _append_aavso_observer_location_lines(a_lines, fresh_cfg, _resolved_site)
     a_lines.append(_aavso_software_header_line(_sw_ver, _export_method))
+    # WIDE-ERR-03: one comment line naming err mode, gain authority, calibration ranges.
+    try:
+        from err_calibration import ERR_CALIB_SIDECAR, load_sidecar  # noqa: PLC0415
+
+        _eem = str(getattr(fresh_cfg, "export_err_mode", "calibrated") or "calibrated")
+        _g_note = "g_pt/container"
+        _cal_note = "none"
+        if _phot_dir is not None:
+            _cal = load_sidecar(Path(_phot_dir) / ERR_CALIB_SIDECAR)
+            _gpt = None
+            try:
+                import json as _json  # noqa: PLC0415
+
+                _gp = Path(_phot_dir) / "gain_photon_transfer.json"
+                if _gp.is_file():
+                    _gpt = _json.loads(_gp.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                _gpt = None
+            if isinstance(_gpt, dict):
+                _auth = (_gpt.get("authority") or {})
+                if _auth.get("value_e_per_adu_container") is not None:
+                    _g_note = (
+                        f"{_auth.get('source')}={float(_auth['value_e_per_adu_container']):.4g} "
+                        "e-/ADU_container"
+                    )
+            if _cal and (_cal.get("bins") or []):
+                _ss = [float(b.get("s", 1)) for b in _cal["bins"]]
+                _rr = [float(b.get("sigma_r_rel", 0)) for b in _cal["bins"]]
+                _cal_note = (
+                    f"s=[{min(_ss):.3g},{max(_ss):.3g}] "
+                    f"sigma_r_rel=[{min(_rr):.3g},{max(_rr):.3g}]"
+                )
+        a_lines.append(
+            f"#ERR_MODEL=mode={_eem}; gain={_g_note}; calib={_cal_note}\n"
+        )
+    except Exception as _eem_exc:  # noqa: BLE001
+        logging.debug("[EXPORT] ERR_MODEL comment skipped: %s", _eem_exc)
     a_lines.append("#DELIM=,\n")
     a_lines.append("#DATE=BJD\n")
     a_lines.append("#OBSTYPE=CCD\n")
@@ -1340,6 +1377,11 @@ def export_lightcurve_reports(
         v_lines.append(f"# FIELD IMAGE: {field_img}\n")
     else:
         v_lines.append("# FIELD IMAGE: not available\n")
+    try:
+        _eem_v = str(getattr(fresh_cfg, "export_err_mode", "calibrated") or "calibrated")
+        v_lines.append(f"# ERR_MODEL: mode={_eem_v} (see AAVSO #ERR_MODEL line)\n")
+    except Exception:  # noqa: BLE001
+        pass
     v_lines.append("#\n")
 
     v_lines.append("# BJD(TDB)       delta_mag  err    mag_calib\n")

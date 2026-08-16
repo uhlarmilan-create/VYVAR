@@ -1,0 +1,48 @@
+{
+  "task": "WIDE-ERR-04",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "identity_sidecar": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\err_calibration.json",
+  "reexport": {
+    "task": "WIDE-ERR-04 1b re-export",
+    "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+    "elapsed_s": 510.68773126602173,
+    "mag_byte_identity": {
+      "n_common": 49,
+      "n_mag_byte_identical": 49,
+      "n_mag_mismatch": 0,
+      "pass": true,
+      "fail_examples": []
+    },
+    "err_before_after": {
+      "BO": {
+        "catalog_id": "1498613634033133184",
+        "median_err_before_mmag": 11.1375,
+        "median_err_after_mmag": 9.1415,
+        "frame": "exported LC err [mmag]"
+      },
+      "FW": {
+        "catalog_id": "1497343732462852864",
+        "median_err_before_mmag": 9.770000000000001,
+        "median_err_after_mmag": 7.42,
+        "frame": "exported LC err [mmag]"
+      }
+    },
+    "backup_dir": "C:\\ASTRO\\python\\VYVAR\\tmp\\wide_err_04_lc_before"
+  },
+  "accuracy_G8_9": {
+    "n": 4,
+    "median_ratio": 1.037432255563739,
+    "median_err_mmag": 6.73457903741253,
+    "in_window": true
+  },
+  "accuracy_bins_outside": [
+    {
+      "bin": "(11.0, 11.5]",
+      "n": 5,
+      "n_ratio": 5,
+      "median_ratio": 0.7464221489280479,
+      "median_err_mmag": 18.56456378332291,
+      "gated": true
+    }
+  ]
+}

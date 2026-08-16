@@ -1,0 +1,38 @@
+{
+  "task": "WIDE-ERR-02",
+  "outcome": "STOPPED_W1C",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "draft_id": 515,
+  "setup": "NoFilter_60_2",
+  "push": "NOT_AUTHORIZED",
+  "w1b": {
+    "stop": false,
+    "median_sys_plus_scint_hypot_mmag_G8_9": 3.9993093102265695,
+    "frame": "production LC err_* rel-flux -> mmag",
+    "note": "sys+scint ~4.0 mmag in 3-4 band; bright deficit vs LC-frame 6-8 reproduced"
+  },
+  "w1c": {
+    "stop": true,
+    "production_gain_e_per_adu": 3.17,
+    "gain_source": "pipeline_meta.dynamic_params.gain (= header_index_mapped EQUIPMENTS ID=1)",
+    "equipment_id": 1,
+    "equipment_row": "EQUIPMENTS ID=1 QHY294MM GAIN_ADU=3.17 READNOISE_E=7.6",
+    "architect_fitted_effective_e_per_adu": [0.24, 0.32],
+    "ratio_to_fitted_mid": 11.32,
+    "note": "STOP >2x; do not implement W3"
+  },
+  "w2b_table": null,
+  "w3e_table": null,
+  "implement_w3": false,
+  "register": {
+    "WIDE-ERR": "OPEN",
+    "SEM": "OPEN",
+    "WIDE-ERR-CROSSRIG": "OPEN"
+  },
+  "baseline_fast": "OVERALL PASS",
+  "artifacts": {
+    "prod_components": "dev/results/WIDE_ERR_02_prod_components.json",
+    "result_md": "dev/results/CURSOR_RESULT_WIDE_ERR_02.md",
+    "harness": "dev/tools/wide_err_02_w1_dump.py"
+  }
+}

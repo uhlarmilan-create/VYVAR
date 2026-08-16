@@ -1,0 +1,31 @@
+{
+  "task": "WIDE-ERR-03B B3",
+  "draft_id": 515,
+  "setup": "NoFilter_60_2",
+  "elapsed_s": 405.88809871673584,
+  "n_lc_snapshot": 49,
+  "mag_byte_identity": {
+    "n_common": 49,
+    "n_mag_byte_identical": 49,
+    "n_mag_mismatch": 0,
+    "pass": true,
+    "fail_examples": []
+  },
+  "err_before_after": {
+    "BO": {
+      "catalog_id": "1498613634033133184",
+      "median_err_before_mag": 0.0075725,
+      "median_err_after_mag": 0.0111375,
+      "median_err_before_mmag": 7.572500000000001,
+      "median_err_after_mmag": 11.1375
+    },
+    "FW": {
+      "catalog_id": "1497343732462852864",
+      "median_err_before_mag": 0.006581999999999999,
+      "median_err_after_mag": 0.009770000000000001,
+      "median_err_before_mmag": 6.581999999999999,
+      "median_err_after_mmag": 9.770000000000001
+    }
+  },
+  "backup_dir": "C:\\ASTRO\\python\\VYVAR\\tmp\\wide_err_03b_lc_backup"
+}

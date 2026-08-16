@@ -1,0 +1,119 @@
+{
+  "task": "WIDE-ERR-03 Stage S1a",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "draft_id": 515,
+  "setup": "NoFilter_60_2",
+  "domain": "pixel ADU values; residue = rint(ADU) mod 4",
+  "frames": {
+    "raw": {
+      "meta": {
+        "path": "Archive/Drafts/draft_000515/Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits",
+        "BITPIX": 16,
+        "XBINNING": 2,
+        "YBINNING": 2,
+        "GAIN": 0.0,
+        "BZERO": 32768,
+        "BSCALE": 1,
+        "VY_CALSTAGE": null
+      },
+      "mod4": {
+        "n_pixels": 2908554,
+        "counts_mod4": {
+          "0": 2908460,
+          "1": 0,
+          "2": 0,
+          "3": 94
+        },
+        "frac_mod4": {
+          "0": 0.9999676815352233,
+          "1": 0.0,
+          "2": 0.0,
+          "3": 3.231846477665534e-05
+        },
+        "dominant_residue": 0,
+        "dominant_frac": 0.9999676815352233,
+        "min": 2156.0,
+        "max": 65535.0,
+        "median": 2496.0,
+        "frac_exact_int": 1.0
+      }
+    },
+    "calibrated": {
+      "meta": {
+        "path": "Archive/Drafts/draft_000515/calibrated/lights/NoFilter_60_2/BO_CVn_Light_001.fits",
+        "BITPIX": -32,
+        "XBINNING": 2,
+        "YBINNING": 2,
+        "GAIN": 0.0,
+        "BZERO": null,
+        "BSCALE": null,
+        "VY_CALSTAGE": "SKYSF_2"
+      },
+      "mod4": {
+        "n_pixels": 2908554,
+        "counts_mod4": {
+          "0": 727231,
+          "1": 726826,
+          "2": 727328,
+          "3": 727169
+        },
+        "frac_mod4": {
+          "0": 0.250031802744594,
+          "1": 0.24989255829529036,
+          "2": 0.25006515264973594,
+          "3": 0.25001048631037964
+        },
+        "dominant_residue": 2,
+        "dominant_frac": 0.25006515264973594,
+        "min": -299.87701416015625,
+        "max": 68566.8125,
+        "median": 2413.1689453125,
+        "frac_exact_int": 0.0002533905163871807
+      }
+    },
+    "detrended_aligned": {
+      "meta": {
+        "path": "Archive/Drafts/draft_000515/detrended_aligned/lights/NoFilter_60_2/BO_CVn_Light_001.fits",
+        "BITPIX": -32,
+        "XBINNING": 2,
+        "YBINNING": 2,
+        "GAIN": 0.0,
+        "BZERO": null,
+        "BSCALE": null,
+        "VY_CALSTAGE": "SKYSF_2"
+      },
+      "mod4": {
+        "n_pixels": 2908554,
+        "counts_mod4": {
+          "0": 722632,
+          "1": 741354,
+          "2": 723104,
+          "3": 721464
+        },
+        "frac_mod4": {
+          "0": 0.24845060466472343,
+          "1": 0.25488748017055896,
+          "2": 0.24861288461551684,
+          "3": 0.24804903054920074
+        },
+        "dominant_residue": 1,
+        "dominant_frac": 0.25488748017055896,
+        "min": 478.83447265625,
+        "max": 68566.8125,
+        "median": 2413.1689453125,
+        "frac_exact_int": 0.0002482333145611187
+      }
+    }
+  },
+  "s1a_stop": false,
+  "s1a_note": "Raw dominant residue 0 holds 1.0000 of pixels. PASS: raw on grid of 4 (14-bit samples in 16-bit container, stride 4).",
+  "calibration_effect_note": "Calibrated (bias/dark/flat): residues redistribute (fracs {'0': 0.250031802744594, '1': 0.24989255829529036, '2': 0.25006515264973594, '3': 0.25001048631037964}); float/division breaks exact integer grid. Detrended+aligned/resampled further mixes residues (fracs {'0': 0.24845060466472343, '1': 0.25488748017055896, '2': 0.24861288461551684, '3': 0.24804903054920074}).",
+  "container_scale_hypothesis": {
+    "native_bit_depth": 14,
+    "container_bit_depth": 16,
+    "expected_adu_stride": 4,
+    "g_native_over_g_container": 4.0,
+    "db_gain_native_e_per_adu": 3.17,
+    "implied_g_container_e_per_adu": 0.7925
+  }
+}

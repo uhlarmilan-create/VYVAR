@@ -1,12 +1,16 @@
 # VYVAR -- Development State
 
-**Status:** SESSION-CLOSE 2026-08-16 **pushed**. origin/main tip **`1b8fcab`**
-(stamp after content commits through `1521d3c`). Science tip for aperture /
-selection policy remains IMPL-05 C stamp **`4fe84b4`**. Photometry outputs
-changed by design this session (aperture + selection); P1 golden ledger stale
-**by intent**.
+**Status:** WIDE-ERR-04 close pending Milan-authorized push of day's chain.
+Local tip before push: see `CURSOR_RESULT_WIDE_ERR_04.md` (PUSH-STAMP-01).
 
-Last updated: **2026-08-16** (SESSION-CLOSE; Milan-authorized push).
+Last updated: **2026-08-16** (WIDE-ERR-04 physical-model closure).
+
+## 2026-08-16 -- WIDE-ERR-04 (physical model)
+
+WIDE-ERR + SEM **CLOSED** at identity calibration (s=1, sigma_r=0) with
+container-domain g_pt and weighted SEM. Draft 515 LC err re-exported; mag
+byte-identity 49/49. CORR-ERR-01 remains OPEN as LOW research note.
+WIDE-ERR-CROSSRIG stays OPEN. Report: `dev/results/CURSOR_RESULT_WIDE_ERR_04.md`.
 
 ## 2026-08-16 -- Policy snapshot (post IMPL-05 C)
 
@@ -24,8 +28,8 @@ export; shape null on this rig.
 (COMP-ASSIGN-01; IMPL-05 D pool guard). Fixed-meter acceptance (10-target
 subset): BO 8.6 mmag, FW 9.8 mmag.
 
-**Next:** full 97-target Phase 2A on draft 514 or fresh 515; COMP-RMS-DEF-01;
-WIDE-ERR + SEM together; P1 A/B on new tip. See ROADMAP.
+**Next:** P1 A/B on new tip; COMP-RMS-DEF-01; WIDE-ERR-CROSSRIG when other
+rigs exist. See ROADMAP.
 
 ## 2026-08-14 -- CLOSE-AND-PUSH (unpushed until Milan)
 

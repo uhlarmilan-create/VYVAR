@@ -2780,8 +2780,36 @@ def precompute_and_save_snr_aperture_table_for_draft(
         _g_res = resolve_gain(_snr_header, db=db, equipment_id=int(eq_id))
         _rn_res = resolve_read_noise(_snr_header, db=db, equipment_id=int(eq_id))
         if _g_res.ok:
-            gain_p = float(_g_res.value)
-            gain_src = _g_res.source
+            from gain_photon_transfer import (  # noqa: PLC0415
+                DEFAULT_CONTAINER_SCALE,
+                apply_photometric_gain_authority,
+            )
+
+            _native = float(_g_res.value)
+            _proc = None
+            try:
+                # aligned FITS live next to proc_*.csv under the same lights dir
+                if aligned_fits_paths:
+                    _proc = Path(aligned_fits_paths[0]).parent
+            except Exception:  # noqa: BLE001
+                _proc = None
+            _g_c, _auth, _ = apply_photometric_gain_authority(
+                g_db_native=_native,
+                native_source=_g_res.source,
+                proc_dir=_proc,
+                aperture_r_px=4.0,
+                container_scale=DEFAULT_CONTAINER_SCALE,
+            )
+            if _auth.ok and math.isfinite(_g_c) and _g_c > 0:
+                gain_p = float(_g_c)
+                gain_src = f"{_auth.source}(native={_g_res.source})"
+            else:
+                if _g_res.source == "header":
+                    gain_p = _native
+                    gain_src = f"header({_g_res.source})"
+                else:
+                    gain_p = _native / DEFAULT_CONTAINER_SCALE
+                    gain_src = f"db_div_container_scale({_g_res.source})"
         if _rn_res.ok:
             rn_p = float(_rn_res.value)
     if db is not None:
@@ -2792,7 +2820,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
             pass
 
     logging.info(
-        "[PIPELINE] SNR table gain=%.3f e-/ADU RN=%.1f e- (source: %s)",
+        "[PIPELINE] SNR table gain=%.3f e-/ADU_container RN=%.1f e- (source: %s)",
         float(gain_p),
         float(rn_p),
         gain_src,
@@ -4314,9 +4342,29 @@ def ensemble_normalize(
             if cid_j in comp_ref_map and math.isfinite(comp_ref_map[cid_j])
         ]
         if len(comp_resid) >= 2:
-            from sigma_floor_core import ensemble_sem_mag_from_residuals  # noqa: PLC0415
+            from sigma_floor_core import (  # noqa: PLC0415
+                ensemble_sem_mag_from_residuals,
+                ensemble_sem_mag_from_residuals_weighted,
+            )
 
-            ensemble_scatter[i] = float(ensemble_sem_mag_from_residuals(comp_resid))
+            if comp_weight_map:
+                w_resid = []
+                x_resid = []
+                for cid_j, m in comp_pairs:
+                    if cid_j not in comp_ref_map or not math.isfinite(comp_ref_map[cid_j]):
+                        continue
+                    wj = float(comp_weight_map.get(cid_j, float("nan")))
+                    if not math.isfinite(wj) or wj <= 0:
+                        # fall back to 1/rms^2 if weight missing
+                        rms = float(comp_rms_map.get(cid_j, float("nan")))
+                        wj = (1.0 / (rms * rms)) if math.isfinite(rms) and rms > 0 else 1.0
+                    x_resid.append(m - comp_ref_map[cid_j])
+                    w_resid.append(wj)
+                ensemble_scatter[i] = float(
+                    ensemble_sem_mag_from_residuals_weighted(x_resid, w_resid)
+                )
+            else:
+                ensemble_scatter[i] = float(ensemble_sem_mag_from_residuals(comp_resid))
         else:
             ensemble_scatter[i] = 0.0
         delta_mag[i] = target_mag_inst[i] - ens_med
@@ -9437,11 +9485,58 @@ def _phase2a_prepare_shared_state(
     )
     _gain_res = resolve_gain(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)
     _rn_res = resolve_read_noise(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)
-    _gain_phot = float(_gain_res.value) if _gain_res.ok else 1.0
+    _gain_native = float(_gain_res.value) if _gain_res.ok else 1.0
     _rn_phot = float(_rn_res.value) if _rn_res.ok else 10.0
+    # WIDE-ERR-03: science gain is container-domain (g_pt or DB/scale), never bare native.
+    from gain_photon_transfer import (  # noqa: PLC0415
+        DEFAULT_CONTAINER_SCALE,
+        apply_photometric_gain_authority,
+    )
+
+    _proc_dir_gain = Path(_aligned_dir_2a) if _aligned_dir_2a is not None else None
+    # Photon-transfer empty-aperture must use a sky-dominated radius near the
+    # production photometry aperture (~4 px on wide). Do NOT use
+    # aperture_scatter_r_min_px (often 1.5) - that biases the PT slope and can
+    # push CI width over the authority gate (WIDE-ERR-03B B3 defect).
+    _ap_r_gain = 4.0
+    try:
+        from invariants_runtime import load_pipeline_meta  # noqa: PLC0415
+
+        _meta_gain = load_pipeline_meta(output_dir) if output_dir is not None else {}
+        _dyn_gain = _meta_gain.get("dynamic_params") if isinstance(_meta_gain, dict) else None
+        if isinstance(_dyn_gain, dict) and _dyn_gain.get("aperture_r_px") is not None:
+            _ap_r_dyn = float(_dyn_gain["aperture_r_px"])
+            if math.isfinite(_ap_r_dyn) and _ap_r_dyn > 0:
+                _ap_r_gain = _ap_r_dyn
+    except (TypeError, ValueError, OSError):
+        pass
+    try:
+        _ap_r_meta = float(force_aperture_px) if force_aperture_px is not None else float("nan")
+        if math.isfinite(_ap_r_meta) and _ap_r_meta > 0:
+            _ap_r_gain = _ap_r_meta
+    except (TypeError, ValueError):
+        pass
+    _scale = float(getattr(_cfg, "gain_container_scale", DEFAULT_CONTAINER_SCALE) or DEFAULT_CONTAINER_SCALE)
+    _ci_w = float(getattr(_cfg, "photon_transfer_ci_max_width_factor", 3.0) or 3.0)
+    _sidecar = Path(output_dir) / "gain_photon_transfer.json" if output_dir is not None else None
+    _gain_phot, _gain_auth, _ = apply_photometric_gain_authority(
+        g_db_native=_gain_native,
+        native_source=_gain_res.source if _gain_res.ok else "default",
+        proc_dir=_proc_dir_gain,
+        aperture_r_px=_ap_r_gain,
+        container_scale=_scale,
+        ci_max_width_factor=_ci_w,
+        persist_sidecar=_sidecar,
+        draft_meta={"draft_id": draft_id, "stage": "phase2a"},
+    )
+    if not math.isfinite(_gain_phot) or _gain_phot <= 0:
+        _gain_phot = _gain_native / _scale if _scale > 0 else 1.0
     logging.info(
-        "[PHASE 2A] Photometric errors: gain=%.3f e-/ADU (source: %s), RN=%.1f e- (source: %s)",
+        "[PHASE 2A] Photometric errors: gain=%.3f e-/ADU_container (authority=%s; native=%.3f src=%s), "
+        "RN=%.1f e- (source: %s)",
         float(_gain_phot),
+        _gain_auth.source,
+        float(_gain_native),
         _gain_res.source if _gain_res.ok else "default",
         float(_rn_phot),
         _rn_res.source if _rn_res.ok else "default",
@@ -11012,6 +11107,49 @@ def _phase2a_process_one_target(
         sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
+    # WIDE-ERR-03: optional Pont/Gillon calibration layer on combined model err.
+    _export_mode = str(getattr(_cfg, "export_err_mode", "calibrated") or "calibrated").strip().lower()
+    if _export_mode != "model":
+        try:
+            from err_calibration import (  # noqa: PLC0415
+                ERR_CALIB_SIDECAR,
+                apply_calibration_rel,
+                bins_from_sidecar,
+                load_sidecar,
+                smooth_from_sidecar,
+            )
+
+            _cal_path = Path(output_dir) / ERR_CALIB_SIDECAR if output_dir is not None else None
+            _cal = load_sidecar(_cal_path) if _cal_path is not None else None
+            if _cal:
+                _smooth = smooth_from_sidecar(_cal)
+                _bins = bins_from_sidecar(_cal) if not _smooth else []
+                _calib_obj = _smooth if _smooth is not None else _bins
+                _g_tgt = float("nan")
+                try:
+                    _g_tgt = float(
+                        pd.to_numeric(
+                            target_row.get("phot_g_mean_mag", target_row.get("mag", float("nan"))),
+                            errors="coerce",
+                        )
+                    )
+                except Exception:  # noqa: BLE001
+                    _g_tgt = float("nan")
+                if math.isfinite(_g_tgt) and _calib_obj:
+                    err = np.asarray(
+                        [
+                            apply_calibration_rel(float(e), _g_tgt, _calib_obj)
+                            for e in np.asarray(err, dtype=np.float64)
+                        ],
+                        dtype=np.float64,
+                    )
+                    logging.info(
+                        "[ERR-CALIB] applied export_err_mode=calibrated for G=%.3f (%s)",
+                        _g_tgt,
+                        "smooth" if _smooth is not None else f"{len(_bins)} bins",
+                    )
+        except Exception as _cal_exc:  # noqa: BLE001
+            logging.warning("[ERR-CALIB] skip apply: %s", _cal_exc)
     # Propagate colour-level coefficient uncertainty into exported err (constant per LC).
     if bool(ct_ok) and math.isfinite(float(c1_stderr)) and math.isfinite(float(ct_corr)):
         # corr = c1 * (target - ref) => sigma_corr = |target-ref| * sigma_c1

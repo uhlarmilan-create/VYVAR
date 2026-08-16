@@ -6,18 +6,18 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-15T18:37:00Z at git HEAD 9762240._
+_Generated 2026-08-16T19:33:50Z at git HEAD 2396949._
 
 ## Summary
 
-- Entries: 288
-- Tier: basic 13, advanced 69, expert 206
-- Kind: static 270, derived 0, resolved 18
-- Widget: auto 118, custom 145, hidden 25
-- Owner: db_static 9, config_runtime 260, fits_dynamic 6, internal 13
-- Scope: universal 237, rig 33, site 10, session 8
-- Scope key: none 237, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
-- Rig triage group: a 20, b 10, c 3
+- Entries: 291
+- Tier: basic 13, advanced 70, expert 208
+- Kind: static 273, derived 0, resolved 18
+- Widget: auto 121, custom 145, hidden 25
+- Owner: db_static 9, config_runtime 263, fits_dynamic 6, internal 13
+- Scope: universal 239, rig 34, site 10, session 8
+- Scope key: none 239, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -210,6 +210,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `forced_photometry_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Enabled |
 | `forced_photometry_margin_px` | 0.0 | 0 .. 200 | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Margin Px |
 | `gain` | 1.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Gain |
+| `gain_container_scale` | 4.0 | 1 .. 16 | expert | static | config_runtime | rig | rig | a | auto | Gain Container Scale |
 | `gs11_comp_max_dilution` | 0.9 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Max Dilution |
 | `gs11_comp_suspect_dilution` | 0.98 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Suspect Dilution |
 | `gs11_dilution_aperture_arcsec` | 0.0 | 0 .. 120 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Aperture Arcsec |
@@ -232,6 +233,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `per_frame_saturation_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | custom | Per Frame Saturation Enabled |
 | `phase2a_airmass_before_outlier` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Phase2a Airmass Before Outlier |
 | `photometry_mode` | both | - | basic | static | config_runtime | universal | none | n/a | auto | Photometry Mode |
+| `photon_transfer_ci_max_width_factor` | 3.0 | 1 .. 10 | expert | static | config_runtime | universal | none | n/a | auto | Photon Transfer CI Max Width Factor |
 | `psf_adaptive_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive Enabled |
 | `psf_adaptive_resolve_fwhm` | 2.0 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive Resolve FWHM |
 | `psf_adaptive_snr_lo` | 15.0 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive SNR Lo |
@@ -365,6 +367,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `export_arcsec_per_px` | 1.3 | - | expert | static | fits_dynamic | session | frame | n/a | auto | Export Arcsec Per PX |
+| `export_err_mode` | calibrated | - | advanced | static | config_runtime | universal | none | n/a | auto | Export Err Mode |
 | `tess_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | TESS Enabled |
 
 ## system

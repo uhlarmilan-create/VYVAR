@@ -83,7 +83,7 @@ def test_owner_groups_partition_every_key() -> None:
     # IMPL-01: +3 keys (color_level_k, stderr, snr_cog_isolation) (253 -> 256).
     # IMPL-03: +4 aperture scatter selection keys (256 -> 260).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 260, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 263, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

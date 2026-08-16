@@ -18,11 +18,14 @@ Phase 2A subset on draft 514, not the full 97-target field.
 
 | Pri | Next item |
 |-----|-----------|
-| **HIGH** | (1) Full 97-target Phase 2A rebuild of draft 514, or a fresh 515, on the pushed tip. **In flight:** draft 515 headless Phase 0+1+2A (RUN-HARDEN-01 Part A). Then **D515-ACCEPT-01**. |
+| **HIGH** | (1) Full 97-target Phase 2A rebuild of draft 514, or a fresh 515, on the pushed tip. **Done for 515 accept path;** P1 A/B still needed. |
 | **HIGH** | (2) **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise (BO pred 14.9 vs measured 8.6 mmag); same class as U-SCATTER-DEF. |
-| **HIGH** | (3) **WIDE-ERR + SEM** shipped together (ratio 0.677 measured; SEM fix ready but blocked with WIDE-ERR). |
-| **HIGH** | (4) **P1 A/B** byte-identity pair on the new tip (golden ledger stale by intent after aperture/selection changes). |
+| **HIGH** | (3) **P1 A/B** byte-identity pair on the new tip (golden ledger stale by intent after aperture/selection changes). |
 | **MED** | **RUN-WORKER-01** (open decision) -- subprocess/job worker so UI reruns cannot kill photometry; B+C mitigations already in RUN-HARDEN-01. |
+| **MED** | **WIDE-ERR-CROSSRIG** -- per-rig physical-model / calib when Newton/Boyden drafts exist. |
+| **LOW** | **CORR-ERR-01** research note -- covariance-aware err budget (out of v1.0). |
+
+**CLOSED this arc:** WIDE-ERR + SEM (WIDE-ERR-04 physical model). EXPORT-READY interim MAGERR item **OBSOLETE** (real fix shipped). U-09 remains the only ToM-related export prerequisite.
 
 Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
 D1b; D2; WIDE-ERR-CROSSRIG; D1-2; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
@@ -103,7 +106,9 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **FULL-ANCHOR-RECUT** | HIGH | `--full` anchor + P1 golden SHA stale after SKY-CLIP-01. Re-cut after this push. |
 | **U-XVAL-COMP-RMS** | MED | RETRACTED (see register). |
 | **D1-2-LINEARITY-RAMP** | HIGH | Exposure ramp at telescope; nothing else substitutes. |
-| **WIDE-ERR** | MED | Wide-rig err ~2x underquote; route Honeycutt LOO + photon-term audit. |
+| **WIDE-ERR** | -- | **CLOSED** (WIDE-ERR-04): physical model g_pt + weighted SEM; identity s=1,sr=0. |
+| **CORR-ERR-01** | LOW | Research note: ZP common-mode vs diagonal budget; out of v1.0. |
+| **WIDE-ERR-CROSSRIG** | MED | Per-rig when Newton/Boyden drafts exist. |
 | **W6-PROP-*** | MED | Authorized 2026-08-13, not implemented: `VY_QCBG_PRE`, detect_outliers Option A, library delete guards, preprocess rename. |
 | **C-EXPORT-GAP** | LOW | Headless `night_run` omits AAVSO/VarAstro export. |
 

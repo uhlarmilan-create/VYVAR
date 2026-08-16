@@ -1,0 +1,42 @@
+{
+  "task": "WIDE-ERR-03B",
+  "outcome": "B2c_FAIL",
+  "run_sha_baseline": "23969496e723fde14f87da83c12584c6a7a38ce9",
+  "draft_515_photometry_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "push": "NOT_AUTHORIZED",
+  "b1": {
+    "form": "constant_sigma_r",
+    "s": 1.001118295861578,
+    "sigma_r0_mmag": 6.892615508521114,
+    "sigma_r_slope_mmag_per_G": 0.0,
+    "n_stars": 54,
+    "s_clamp": "s >= 1.0",
+    "s_clamped": false
+  },
+  "b2c_pass": false,
+  "b2_frame_eval_outside": [
+    {"bin": "(10.0, 10.5]", "n": 8, "median_ratio": 0.8395950704187847},
+    {"bin": "(11.0, 11.5]", "n": 5, "median_ratio": 0.8389203583968591}
+  ],
+  "b2_star_split_eval_pass": true,
+  "b2d_fire_proof_failed_as_required": true,
+  "b3_mag_byte_identity": true,
+  "b3_err_mmag": {
+    "BO": {"before": 7.5725, "after": 11.1375},
+    "FW": {"before": 6.582, "after": 9.77}
+  },
+  "register": {
+    "GAIN-DOMAIN-01": "CLOSED",
+    "WIDE-ERR": "OPEN",
+    "SEM": "OPEN",
+    "WIDE-ERR-CROSSRIG": "OPEN",
+    "GAIN-PT-CI-01": "not_opened"
+  },
+  "artifacts": [
+    "dev/results/CURSOR_RESULT_WIDE_ERR_03B.md",
+    "dev/results/WIDE_ERR_03B_B2.json",
+    "dev/results/WIDE_ERR_03B_B3.json"
+  ],
+  "next_step": "Re-measure B2c in mag_calib/comps-only frame; do not widen [0.85,1.15]; do not s<1.",
+  "baseline_fast": "OVERALL PASS (1429 passed, 28 skipped)"
+}

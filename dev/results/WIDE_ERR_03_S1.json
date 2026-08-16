@@ -1,0 +1,70 @@
+{
+  "task": "WIDE-ERR-03 Stage S1",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "draft_id": 515,
+  "setup": "NoFilter_60_2",
+  "s1a": {
+    "artifact": "dev/results/WIDE_ERR_03_S1a_grid.json",
+    "stop": false,
+    "raw_dominant_residue": 0,
+    "raw_dominant_frac": 1.0,
+    "note": "Raw bin2 light: all pixels on residue 0 (rint(ADU) mod 4) - grid of 4 PASS. Calibrated and detrended/aligned frames redistribute residues ~uniformly (float dark/flat and resampling destroy the integer lattice)."
+  },
+  "s1b_gain_call_sites": [
+    {
+      "site": "photometry_core._howell_variance_adu2 / _photometric_error",
+      "assumes_domain": "e-/ADU matching flux ADU domain",
+      "receives_today": "native DB/header gain 3.17 on container ADU (BUG pre WIDE-ERR-03)",
+      "rn_path": "RN in e-; term (RN/g)^2*area in ADU^2 - wrong g mis-scales RN in ADU"
+    },
+    {
+      "site": "photometry_core._photometric_error_with_bkg_mode (empirical)",
+      "assumes_domain": "F/g uses same ADU domain as flux; sigma_bkg_ap already in container ADU",
+      "receives_today": "native 3.17 for F/g only",
+      "rn_path": "RN not added separately in empirical mode"
+    },
+    {
+      "site": "photometry_core Phase 2A _gain_phot (resolve_gain)",
+      "assumes_domain": "e-/ADU for photon/SNR",
+      "receives_today": "header_index_mapped / EQUIPMENTS.GAIN_ADU native",
+      "rn_path": "resolve_read_noise: DB e- scaled by binning; domain-free electrons"
+    },
+    {
+      "site": "photometry_core SNR aperture table precompute",
+      "assumes_domain": "same as Phase 2A",
+      "receives_today": "resolve_gain native",
+      "rn_path": "resolve_read_noise e-"
+    },
+    {
+      "site": "sigma_budget.howell_sigma / total_sigma",
+      "assumes_domain": "delegates to _photometric_error",
+      "receives_today": "caller-supplied gain",
+      "rn_path": "e- via same Howell form"
+    },
+    {
+      "site": "comp_pool_noise (diagnostic fits)",
+      "assumes_domain": "fit.gain_e_per_adu",
+      "receives_today": "diagnostic; not LC export",
+      "rn_path": "e-"
+    },
+    {
+      "site": "psf_photometry / psf_neighbor_sub sky sigma",
+      "assumes_domain": "e-/ADU with sky ADU",
+      "receives_today": "resolve_gain",
+      "rn_path": "read_noise_e explicit"
+    },
+    {
+      "site": "check_star_kmag err path",
+      "assumes_domain": "same as production err",
+      "receives_today": "passes Phase 2A gain",
+      "rn_path": "e-"
+    },
+    {
+      "site": "param_resolver.resolve_gain / EQUIPMENTS.GAIN_ADU",
+      "assumes_domain": "native camera e-/ADU (index map 3.17 for QHY294 setting 0)",
+      "receives_today": "authoritative native; must divide by container scale or replace with g_pt before science",
+      "rn_path": "READNOISE_E is e- at bin1; scaled *bin for software sum"
+    }
+  ],
+  "s1c_unit_chain_paragraph": "QHY294MM digitizes a 14-bit native sample and stores it in a 16-bit FITS container by a left shift of two bits, so container ADU = 4 * native ADU (raw lights sit on a residue class mod 4; S1a). The equipment DB gain 3.17 e-/ADU is the native-domain conversion; the matching container-domain gain is therefore 3.17/4 = 0.7925 e-/ADU_container (photon-transfer on draft 515 gives g_pt ~ 0.635 e-/ADU_container inside CI [0.44, 1.09], which excludes bare 3.17). Hardware/software 2x2 binning on this CMOS path sums container-domain electrons and ADU together, leaving e-/ADU_container unchanged to first order; bias/dark/flat calibration and later resampling mix the integer grid into floats but do not change the ADU scale away from the container domain. Production photon and SNR terms that consume flux and sky in container ADU must therefore use g_container (g_pt when available, else DB/4), never bare DB gain; read noise remains in electrons and enters only as (RN/g)^2*npix in ADU^2."
+}

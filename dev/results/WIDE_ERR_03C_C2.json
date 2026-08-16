@@ -1,0 +1,166 @@
+{
+  "task": "WIDE-ERR-03C C2",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "candidates": [
+    {
+      "name": "constant",
+      "score": 0.04350419892192314,
+      "meta": {
+        "form": "constant_sigma_r",
+        "s": 1.0,
+        "sigma_r0_mmag": 0.0,
+        "sigma_r_slope_mmag_per_G": 0.0,
+        "n_stars": 54,
+        "s_clamped": true,
+        "median_ratio_pre": 0.952565929686682,
+        "median_ratio_post": 0.952565929686682
+      }
+    },
+    {
+      "name": "step_r5",
+      "score": 0.04350419892192314,
+      "meta": {
+        "form": "two_level_r_ap",
+        "r_cut_px": 5.0,
+        "sigma_r_bright_mmag": 0.0,
+        "sigma_r_rest_mmag": 0.0,
+        "s": 1.0,
+        "s_clamped": true,
+        "n_bright_odd": 29,
+        "n_rest_odd": 25
+      }
+    },
+    {
+      "name": "linear_r_ap",
+      "score": 0.12290419905793293,
+      "meta": {
+        "form": "sigma_r = a * r_ap_px",
+        "a_mmag_per_px": 0.715370359643781,
+        "s": 1.0,
+        "s_clamped": true
+      }
+    }
+  ],
+  "winner": "constant",
+  "winner_meta": {
+    "form": "constant_sigma_r",
+    "s": 1.0,
+    "sigma_r0_mmag": 0.0,
+    "sigma_r_slope_mmag_per_G": 0.0,
+    "n_stars": 54,
+    "s_clamped": true,
+    "median_ratio_pre": 0.952565929686682,
+    "median_ratio_post": 0.952565929686682
+  },
+  "even_gate": {
+    "by_G_bin": {
+      "(8.0, 8.5]": {
+        "n": 2,
+        "n_ratio": 2,
+        "median_ratio": 1.2868128110330421,
+        "median_err_mmag": 6.645359847658563,
+        "gated": false
+      },
+      "(8.5, 9.0]": {
+        "n": 2,
+        "n_ratio": 2,
+        "median_ratio": 0.8159847103448636,
+        "median_err_mmag": 6.73457903741253,
+        "gated": false
+      },
+      "(9.0, 9.5]": {
+        "n": 10,
+        "n_ratio": 10,
+        "median_ratio": 0.9944776536710458,
+        "median_err_mmag": 7.7732950003257955,
+        "gated": true
+      },
+      "(9.5, 10.0]": {
+        "n": 11,
+        "n_ratio": 11,
+        "median_ratio": 0.9677167289246337,
+        "median_err_mmag": 9.348427368389125,
+        "gated": true
+      },
+      "(10.0, 10.5]": {
+        "n": 8,
+        "n_ratio": 8,
+        "median_ratio": 0.8569931769060538,
+        "median_err_mmag": 10.045082165274,
+        "gated": true
+      },
+      "(10.5, 11.0]": {
+        "n": 4,
+        "n_ratio": 4,
+        "median_ratio": 1.1488010939739786,
+        "median_err_mmag": 14.102605431564108,
+        "gated": true
+      },
+      "(11.0, 11.5]": {
+        "n": 5,
+        "n_ratio": 5,
+        "median_ratio": 0.7464221489280479,
+        "median_err_mmag": 18.56456378332291,
+        "gated": true
+      },
+      "(11.5, 12.0]": {
+        "n": 3,
+        "n_ratio": 3,
+        "median_ratio": 0.9091714598977313,
+        "median_err_mmag": 21.726808511754175,
+        "gated": false
+      },
+      "(12.0, 12.5]": {
+        "n": 5,
+        "n_ratio": 5,
+        "median_ratio": 1.1125191902958576,
+        "median_err_mmag": 15.345234643195882,
+        "gated": true
+      },
+      "(12.5, 13.0]": {
+        "n": 3,
+        "n_ratio": 3,
+        "median_ratio": 0.9119557269138272,
+        "median_err_mmag": 62.5572474726183,
+        "gated": false
+      },
+      "(13.0, 13.5]": {
+        "n": 1,
+        "n_ratio": 1,
+        "median_ratio": 0.7268171367170575,
+        "median_err_mmag": 73.74564321599622,
+        "gated": false
+      },
+      "(13.5, 14.0]": {
+        "n": 0
+      },
+      "(14.0, 14.5]": {
+        "n": 0
+      },
+      "(14.5, 15.0]": {
+        "n": 0
+      },
+      "(15.0, 15.5]": {
+        "n": 0
+      }
+    },
+    "bins_outside": [
+      {
+        "bin": "(11.0, 11.5]",
+        "n": 5,
+        "n_ratio": 5,
+        "median_ratio": 0.7464221489280479,
+        "median_err_mmag": 18.56456378332291,
+        "gated": true
+      }
+    ],
+    "G8_9": {
+      "n": 4,
+      "median_ratio": 1.037432255563739,
+      "median_err_mmag": 6.73457903741253,
+      "in_window": true
+    },
+    "pass": false
+  },
+  "bin_8_9_physics": "Constant/null floor; no strong BIN-8-9 aperture-floor link claimed."
+}

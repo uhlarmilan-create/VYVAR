@@ -46,14 +46,19 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 | 28 | DAO centroid stability | 5, 7 | **FIXED** | E.2 WCS guard |
 | 29 | Anchor re-cut (VL-ANCHOR-WCSINV) | all | **FIXED** | physical re-cut GATE 2; SHA 5bccd85a |
 | 30 | TODO-B coaddition (Zackay & Ofek) | 7 | **QUEUED** | MASTERSTAR enhancement |
-| 32 | **WIDE-ERR** wide-rig err underquote ~2x | 9 | **OPEN** | future thread; err bars only |
+| 32 | **WIDE-ERR** wide-rig err underquote ~2x | 9 | **CLOSED** | WIDE-ERR-04: physical model (g_pt + weighted SEM, s=1, sr=0); under-quote eliminated; see RESULT_04 |
+| 32b | **GAIN-DOMAIN-01** 14-bit-in-16-bit vs native DB gain | 9 | **CLOSED** | Physics proven in WIDE-ERR-03; stays CLOSED |
+| 32c | **SEM** weighted ensemble SEM (ratio ~0.677) | 9 | **CLOSED** | Shipped with WIDE-ERR-03/04; identity fire proofs; never alone |
+| 32d | **WIDE-ERR-CROSSRIG** per-rig calib on Newton/Boyden | 9 | **OPEN** | Mechanism is per-rig; calibrate when those drafts exist |
+| 32e | **CORR-ERR-01** ZP common-mode vs diagonal budget | 9 | **OPEN** | Research note (LOW): product-frame scatter below model in (11.0,11.5]; covariance-aware budget out of v1.0 |
 
 ---
 
 ## Future threads (not audit-open)
 
-1. **WIDE-ERR** -- Honeycutt LOO ensemble SEM + photon-term audit before wide-rig submission.
+1. **WIDE-ERR-CROSSRIG** -- apply the same per-rig gain/err calibration when Newton/Boyden drafts exist.
 2. **MASTERSTAR stacking** -- Steps 1-6 + TODO-B coaddition (enhancement).
+3. Draft 515 LC err = physical model (WIDE-ERR-04 identity sidecar). CORR-ERR-01 research note remains OPEN (LOW).
 
 ---
 

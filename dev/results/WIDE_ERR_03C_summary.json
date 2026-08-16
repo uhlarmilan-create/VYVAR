@@ -1,0 +1,57 @@
+{
+  "task": "WIDE-ERR-03C",
+  "outcome": "STOP_CORR_ERR_01",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "baseline_tip": "23969496e723fde14f87da83c12584c6a7a38ce9",
+  "part0_push": "SKIPPED_blank_authorization",
+  "c1d_pass": false,
+  "c1d_note": "Not a meter artifact rescue of 03B; product-frame ratios with existing floor are LOWER (0.70-0.78)",
+  "c2_pass": false,
+  "c2_winner": "constant with s=1.0 clamped, sigma_r=0 (physical model alone)",
+  "c3_pass": false,
+  "register": {
+    "GAIN-DOMAIN-01": "CLOSED",
+    "WIDE-ERR": "OPEN",
+    "SEM": "OPEN",
+    "CORR-ERR-01": "OPEN",
+    "WIDE-ERR-CROSSRIG": "OPEN"
+  },
+  "corr_err_01": {
+    "id": "CORR-ERR-01",
+    "status": "OPEN",
+    "note": "Product-frame mag_calib scatter lies below diagonal err_model (s=1, sigma_r=0) in gated bins; ZP cancels common-mode that the photon+SEM+scint budget still quotes. Beyond diagonal (s, sigma_r).",
+    "c2_even_outside": [
+      {"bin": "(11.0, 11.5]", "n": 5, "median_ratio": 0.7464221489280479, "median_err_mmag": 18.56456378332291}
+    ],
+    "c3_even_outside": [
+      {"bin": "(9.5, 10.0]", "n": 11, "median_ratio": 0.7874876385138534},
+      {"bin": "(10.0, 10.5]", "n": 8, "median_ratio": 0.8147262296525182},
+      {"bin": "(11.0, 11.5]", "n": 5, "median_ratio": 0.7464221489280479}
+    ],
+    "pont_check_kmag_vs_target_err": {
+      "citation": "Pont, Zucker & Queloz 2006 sigma_r binned-residual spirit",
+      "frame": "check_kmag sidecar MAD (product mag_calib) vs target LC median err",
+      "BO": {
+        "catalog_id": "1498613634033133184",
+        "check_kmag_mad_mmag": 6.713212799999471,
+        "target_median_err_mmag": 11.1375,
+        "ratio": 0.602936
+      },
+      "FW": {
+        "catalog_id": "1497343732462852864",
+        "check_kmag_mad_mmag": 8.201001900000032,
+        "target_median_err_mmag": 9.77,
+        "ratio": 0.839407
+      },
+      "note": "Target mag_calib_final MAD is dominated by astrophysical variability (BO); use check_kmag for constant-star residual evidence."
+    }
+  },
+  "artifacts": [
+    "dev/results/WIDE_ERR_03C_C1.json",
+    "dev/results/WIDE_ERR_03C_C2.json",
+    "dev/results/WIDE_ERR_03C_C3.json",
+    "dev/results/CURSOR_RESULT_WIDE_ERR_03C.md"
+  ],
+  "reexport": "NOT_DONE_gate_failed",
+  "baseline_fast": "OVERALL PASS (1429 passed, 28 skipped)"
+}

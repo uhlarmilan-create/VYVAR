@@ -1,0 +1,28 @@
+{
+  "task": "WIDE-ERR-03",
+  "outcome": "S5e_PASS",
+  "run_sha": "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9",
+  "draft_id": 515,
+  "push": "NOT_AUTHORIZED",
+  "s1a_stop": false,
+  "g_pt_e_per_adu_container": 0.6370667331227862,
+  "g_pt_ci": [0.44338128076377437, 1.0941919812123437],
+  "s4b_scope": "full_s_sigma_r_calibration",
+  "s5e_pass": true,
+  "register": {
+    "GAIN-DOMAIN-01": "CLOSED",
+    "WIDE-ERR": "CLOSED",
+    "SEM": "CLOSED",
+    "WIDE-ERR-CROSSRIG": "OPEN"
+  },
+  "baseline_fast": "OVERALL PASS",
+  "pytest": "1429 passed, 28 skipped",
+  "artifacts": {
+    "result_md": "dev/results/CURSOR_RESULT_WIDE_ERR_03.md",
+    "s1": "dev/results/WIDE_ERR_03_S1.json",
+    "s1a": "dev/results/WIDE_ERR_03_S1a_grid.json",
+    "s2": "dev/results/WIDE_ERR_03_S2.json",
+    "s4": "dev/results/WIDE_ERR_03_S4.json",
+    "s5": "dev/results/WIDE_ERR_03_S5.json"
+  }
+}
