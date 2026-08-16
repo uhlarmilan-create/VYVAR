@@ -7405,12 +7405,18 @@ def _proc_deduplicate_matched_catalog_rows(df: pd.DataFrame) -> pd.DataFrame:
     matched = cid.ne("") & ~cid.str.lower().isin({"nan", "none"})
     if not bool(matched.any()):
         return out
+    # Always a Series: out.get("flux") is None when the column is absent (empty-DAO
+    # frames after forced-phot inject - draft 515 crash), and pd.to_numeric(None)
+    # collapses to numpy.float64 without .fillna.
     if "peak_max_adu" in out.columns:
         score = pd.to_numeric(out["peak_max_adu"], errors="coerce")
     elif "dao_flux" in out.columns:
         score = pd.to_numeric(out["dao_flux"], errors="coerce")
+    elif "flux" in out.columns:
+        score = pd.to_numeric(out["flux"], errors="coerce")
     else:
-        score = pd.to_numeric(out.get("flux"), errors="coerce")
+        score = pd.Series(float("nan"), index=out.index, dtype="float64")
+    score = pd.Series(pd.to_numeric(score, errors="coerce"), index=out.index, dtype="float64")
     out["_dedupe_score"] = score.fillna(-1.0)
     keep_idx = (
         out.loc[matched]
