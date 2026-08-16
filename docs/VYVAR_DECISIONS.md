@@ -8,6 +8,30 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## RUN-WORKER-01 - subprocess job worker (open; 2026-08-16)
+
+**Incident (HANG-P1-T16-01).** Draft 515 RUN VYVAR executed Phase 0+1 on the
+Streamlit script thread. At Phase 1 target 16/97 the Variability auto-TESS
+branch issued `st.rerun()`, silently aborting the RUN. py-spy later showed an
+idle Streamlit process; the Gaia box-scan hypothesis was dead (indexes present,
+0.4 ms query). The UI footer stayed stale ("8/97") with no `[RUN]` exit line.
+
+**Mitigations shipped in RUN-HARDEN-01 (B+C):** (1) `run_callable_with_exit_log`
+around the UI RUN entry emits `[RUN] finished OK` / `aborted: ...` /
+`interrupted by script rerun`. (2) Variability and Aperture auto-crossmatch /
+auto-TESS branches no-op while `vyvar_footer_state.running` is true.
+(3) Phase 1 progress logs every target.
+
+**Open architecture (do not implement until Milan decides):** RUN-WORKER-01 -
+move Phase 0+1+2A (and optionally the full RUN VYVAR chain) into a **subprocess
+or dedicated job worker** that writes a status file (PID, step, pct, last
+heartbeat, exit code) under the draft or `tmp/`; the Streamlit UI only queues
+the job and polls the status file. Browser refresh, session timeout, and tab
+auto-`st.rerun()` then cannot kill photometry. B+C remain as in-process
+guards for any residual UI-thread work.
+
+---
+
 ## GATE-OWNERSHIP v1 scope - D3 unit + D4 universality (2026-08-15)
 
 Recorded from GATE-OWNERSHIP-01 (`5612f42`); not a retune. v1.0 scope for how
