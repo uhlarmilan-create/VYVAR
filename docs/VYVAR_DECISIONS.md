@@ -8,6 +8,45 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## GATE-OWNERSHIP v1 scope - D3 unit + D4 universality (2026-08-15)
+
+Recorded from GATE-OWNERSHIP-01 (`5612f42`); not a retune. v1.0 scope for how
+gates are judged when ownership work continues.
+
+**D3 - threshold-must-carry-unit.** Every science-path gate threshold must
+declare a physical unit (mag, ADU, dimensionless excess, fraction, mmag/hr,
+...). A bare number in a registry or inventory row is incomplete. At inventory
+time only 6 of 274 params had non-null `unit`; ownership work may not close a
+conflict without naming the unit of decision.
+
+**D4 - universality-as-test.** A star's admit/reject fate may depend only on
+that star and the target (and fixed physical constants), never on the
+composition of the peer pool for that draft. Rank-statistic cuts fail this
+test by construction (GATE-OWNERSHIP R2; COMP-ADMIT-03 removal). Field-
+relative percentiles remain diagnostics / variable-search tools, not admission
+owners.
+
+Report: `dev/results/CURSOR_RESULT_GATE_OWNERSHIP_01.md`.
+
+---
+
+## COMP-ASSIGN-01 - stability is a post-LC verdict, never a selector (2026-08-15)
+
+**Decision.** `check_comparison_stability` runs **after** light-curve write.
+It may write sidecars and trust flags; it must **not** drop or reshuffle the
+comparison set used by `ensemble_normalize`. Membership is decided in step 2
+(RMS/colour/distance + ceiling + 3-8 clamp); stability is a verdict on that
+fixed set.
+
+**Lineage.** Extends ZP-CLIP-REMOVAL: varying membership mid-ensemble (or
+post-selecting by residual scatter) reintroduces the two-state ZP failure mode
+that ZP-CLIP-REMOVAL removed. Comp QA (IMPL-05 D) remains a guarded post-LC
+consumer of the step-2 pool only.
+
+Report: `dev/results/CURSOR_RESULT_COMP_ASSIGN_01.md`. Tip stamp `635404f`.
+
+---
+
 ## IMPL-01 - no ensemble size cut in v1.0 (2026-08-15)
 
 **Decision.** Do **not** cut the comparison ensemble by cumulative weight, N_eff, or
@@ -2932,4 +2971,4 @@ merging for targets remains deferred.
 `_select_comps_by_color_then_rms`; thin alias retained). Colour ladder widens on
 colour while RMS orders within a step. Blends filtered before the ladder.
 
-**Status:** IMPL-05 Item C (local). Push: NO.
+**Status:** IMPL-05 Item C. Tip stamp `4fe84b4`. SESSION-CLOSE 2026-08-16 push.

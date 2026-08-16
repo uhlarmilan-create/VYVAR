@@ -182,7 +182,7 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 | **SNR-DEPTH-01** | 9 | detection | U | MED | F2: G15 repeatability degrades (frac_median 0.507); no depth limit implemented. | SNR-GATE-01 F2 | **CLOSED** by TARGET-DEPTH-01 / 02 | CLOSED |
 | **TARGET-DEPTH-01** | 9 | photometry | I/P | HIGH | Item A QC FILE FK healed (accepted). Item B NP half-SNR proxy **superseded** by TARGET-DEPTH-02. | `CURSOR_RESULT_TARGET_DEPTH_01.md` | **Item A FIXED**; Item B SUPERSEDED | PARTIAL |
 | **TARGET-DEPTH-02** | 9 | photometry | I/P | HIGH | Item A: zone=noise -> skip_photometry. Item B: MASTERSTAR single-frame (factor=1); half-linear depth. **Caveat (PUSH-02):** depth only meaningful on post-SNR-GATE MASTERSTAR; on 512/510 (depth 11.5) the cliff is where stars ran out under the broken gate, not measurability. | `CURSOR_RESULT_TARGET_DEPTH_02.md`; `CURSOR_RESULT_PUSH_02.md` | **FIXED**; depth caveat recorded | FIXED |
-| **BO-ENSEMBLE-01** | 9 | ensemble | U | HIGH | Draft 512 vs 513 BO CVn comps disjoint: 512 TIER1 x5 GREEN S1=0.0093; 513 0 T1 / T3+T4 RED S1=0.0111. Deeper MS did not retain 512 bright comps. | TARGET-DEPTH-02 Item C; `CURSOR_RESULT_PUSH_02.md` | **REPORTED**; T2-R4 uncontrolled (513 trial); rebuild on one tip settles | OPEN |
+| **BO-ENSEMBLE-01** | 9 | ensemble | U | HIGH | Draft 512 vs 513 BO CVn comps disjoint under rank cuts. Cause: rank cuts emptied/reshuffled pools; sets stable under RMS-first (COMP-ASSIGN-03 / IMPL-05 C). | TARGET-DEPTH-02 Item C; `CURSOR_RESULT_IMPL_05_C.md` | **CLOSED** at `4fe84b4` | CLOSED |
 | **DET-vs-MEAS-01** | 9 | photometry | U | MED | 3.78-sigma DAO cut is detection, not measurability; T2-R0 factor=1; best-frame FWHM advantage ~1% on 512; residual linear-vs-unusable-LC gap (~0.29 mag/pt at 3.78-sigma) not established. | PUSH-02 1.3 | **DEFERRED** | OPEN |
 | **PUSH-02** | 9 | process | C | HIGH | Record depth caveat + BO-ENSEMBLE-01; Milan-authorized push of TARGET-DEPTH stack. | `CURSOR_RESULT_PUSH_02.md` | **DONE** | CLOSED |
 
@@ -210,7 +210,7 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 
 | ID | wave | stage | class | severity | evidence | reference | disposition | status |
 |----|------|-------|-------|----------|----------|-----------|-------------|--------|
-| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool vs assignment. Stages 1-3 local. Draft 512 pool ~187; BO loses 1/5. **Push blocked** by COMP-POOL-02 (D override wrong; chi2_red~4; draft 435 empties ensemble). | `CURSOR_RESULT_COMP_POOL_01.md`; `CURSOR_RESULT_COMP_POOL_02.md` | **HOLD** pending C2-R2 guard | OPEN |
+| **COMP-POOL-01** | 10 | ensemble | P/I | HIGH | Split pool vs assignment. Stages 1-3 local. Draft 512 pool ~187; BO loses 1/5. Stage 2 rank cuts **CLOSED** by COMP-ADMIT-03 (`b6e0e29`). Residual COMP-POOL-02 items stay open separately. | `CURSOR_RESULT_COMP_POOL_01.md`; COMP-ADMIT-03 | **Stage 2 CLOSED** (superseded) | CLOSED |
 | **COMP-POOL-02** | 10 | ensemble | P/U | HIGH | (1) D=0.2 override wrong: 200mm=focal, aperture=70mm; sys/scint~2.43 not 4.9. (2) chi2_red 4-6 SUPERSEDED by NOISE-FLOOR-01. (3) Draft 435 NP/param 1.52 / r=1.92 px empties BO pool. (4) Red stars 7-12% wider FWHM; ~30 mmag EE term; weak colour bias in admission. | `CURSOR_RESULT_COMP_POOL_02.md` | **REPORTED**; Item1 revert done; Item2 superseded; guard not implemented | OPEN |
 | **COMP-POOL-SCINT** | 10 | errors | U | MED | NOISE-FLOOR-01: floor is UL ~6.8 mmag; sys/scint ~1.70+/-0.05 (UL) on 512/510 (was ~2.43 from inflated floor). Still above 1. | `CURSOR_RESULT_NOISE_FLOOR_01.md` | **UPDATED** UL ratio | OPEN |
 | **NOISE-FLOOR-01** | 10 | errors | P/U | HIGH | Flatness test: no flat bright range (N-R0 UL). Completed Howell terms close ~4% of G10 variance deficit; residual ~2.3x sigma localizes WIDE-ERR to photon/sky. Diagnostic-only; admission path pinned legacy. | `CURSOR_RESULT_NOISE_FLOOR_01.md`; `NOISE_FLOOR_01_*.json` | **REPORTED** | CLOSED |
@@ -221,4 +221,41 @@ All eight deletions: `--fast` PASS after each (1323 passed, 27 skipped). Draft 5
 - `default_lin_frac=0.85` (D1-2 linearity knee unmeasured)
 - `nonparametric_min_bin_n=8` (NP curve usability only)
 - Dilution percentile step p16->p10->p05 when D piles at 1.0
+
+---
+
+## SESSION-CLOSE 2026-08-16 status sweep (tip `4fe84b4`)
+
+### CLOSE (closing SHA)
+
+| ID | closing note | SHA |
+|----|--------------|-----|
+| **C2-R2 / COMP-POOL-01 Stage 2** | Rank-cut admission superseded by COMP-ADMIT-03 (weights, not rank cuts). | `b6e0e29` |
+| **BO-ENSEMBLE-01** | Cause: rank cuts emptied/reshuffled pools; sets now stable under RMS-first (COMP-ASSIGN-03). | `9dfeaa3` / `4fe84b4` |
+| **DAO-DEPTH follow-ons** | Covered by IMPL aperture/selection fixes this session (SNR-GATE lineage already FIXED). | `f200adb`..`4fe84b4` |
+| **A2 duplicates** | Covered in IMPL/forced-phot path this arc. | session chain |
+| **check_kmag silent-skip** | Closed in session arc. | session chain |
+| **twin-222 checks** | Closed in session arc. | session chain |
+| **sawtooth** | Exact aperture overlap masking (IMPL-04). | `5cfb285` |
+| **ZP=25 hardcode** | Closed in session arc. | session chain |
+| **c4 overflow** | Closed in session arc. | session chain |
+| **preflight traceback** | Closed in session arc. | session chain |
+
+Row updates: COMP-POOL-01 Stage 2 / C2-R2 -> **CLOSED** (superseded); BO-ENSEMBLE-01 -> **CLOSED**.
+
+### OPEN (new, from this session)
+
+| ID | stage | evidence | status |
+|----|-------|----------|--------|
+| **COMP-RMS-DEF-01** | ensemble | CSV `comp_rms` overstates per-star noise vs LOO (BO pred 14.9 vs measured 8.6 mmag). RMS-first sorts on a column whose definition must be unified; same class as U-SCATTER-DEF. | OPEN |
+| **EMPTY-DAO-01** | detection/export | Already registered (carry row above); IMPL-05 A fixed crash only. | OPEN |
+| **BIN-8-9-REGRESSION-01** | aperture | LOO 7.8 -> 12.3 mmag at r 9.5 -> 5.0, n=4; verify on next draft. | OPEN |
+| **FAINT-14-15-CONTAM** | comps | 172 mmag LOO; single-source addresses candidacy; watch. | OPEN |
+| **Q1-RERUN** | weights | `sigma_eff` scale question still open; Q1 contaminated by flux-sum LOO (PRE-IMPL-01). | OPEN |
+| **QA-DEGRADED** | Comp QA | Two targets flagged `qa_degraded` under IMPL-05 D guard. | OPEN |
+| **quiet outliers** | LC | Quiet outliers at 29 / 57 mmag (session note). | OPEN |
+
+### CARRY (unchanged)
+
+WIDE-ERR (exported error bars still blocked; SEM fix ready but must ship together with WIDE-ERR; ratio 0.677 measured); P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan; D1b; D2; WIDE-ERR-CROSSRIG; D1-2; C-EXPORT-GAP; W6-PROP; D10-1; D11-1; U-SKY-FALLBACK-01; LOCATION_OLD; zone rename; DET-vs-MEAS-01; A-1-OVERRIDE; blended-target merging (deferred past v1.0); drafts 512/513/510 INGESTED repair.
 

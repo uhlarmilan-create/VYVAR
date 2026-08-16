@@ -1,8 +1,30 @@
 # VYVAR -- Development State
 
-**Status:** 2026 full-workflow audit **closed** (Wave 7, 2026-08-14). Wave 8 iron gates + SKY-CLIP-01 pending push (CLOSE-AND-PUSH). A-1 **diagnosed, not fixed**.
+**Status:** SESSION-CLOSE 2026-08-16. Tip after push recorded here once origin/main
+advances; local tip at close start **`4fe84b4`** (IMPL-05 C stamp). Photometry
+outputs changed by design this session (aperture + selection); P1 golden ledger
+stale **by intent**.
 
-Last updated: **2026-08-14** (CLOSE-AND-PUSH, awaiting Milan push authorization).
+Last updated: **2026-08-16** (SESSION-CLOSE; Milan-authorized push).
+
+## 2026-08-16 -- Policy snapshot (post IMPL-05 C)
+
+**Aperture.** Per-magnitude scatter table (IMPL-05 B): bright ~6.5 px -> faint
+~2.0 px; ladder persisted as `aperture_flux_ladder.parquet`. Exact overlap
+masking (IMPL-04); no sawtooth.
+
+**Selection.** RMS -> |delta(BP-RP)| -> distance (COMP-ASSIGN-03); single-source
+isolation at `snr_cog_isolation_fwhm` x FWHM; `phase01_comparison_max_comp_rms`
+ceiling authoritative; `n_comp_max` is a ceiling not a target; 3-8 honoured
+end-to-end. No ensemble size cut in v1.0 (IMPL-01). Colour LEVEL corrected at
+export; shape null on this rig.
+
+**QA.** Stability / Comp QA are **post-LC verdicts**, never selectors
+(COMP-ASSIGN-01; IMPL-05 D pool guard). Fixed-meter acceptance (10-target
+subset): BO 8.6 mmag, FW 9.8 mmag.
+
+**Next:** full 97-target Phase 2A on draft 514 or fresh 515; COMP-RMS-DEF-01;
+WIDE-ERR + SEM together; P1 A/B on new tip. See ROADMAP.
 
 ## 2026-08-14 -- CLOSE-AND-PUSH (unpushed until Milan)
 

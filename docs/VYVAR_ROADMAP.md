@@ -10,6 +10,25 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## NEXT SESSION - entry point (2026-08-16 SESSION-CLOSE)
+
+Local tip at close: **`4fe84b4`** (IMPL-05 C). Acceptance so far is a **10-target**
+Phase 2A subset on draft 514, not the full 97-target field.
+
+| Pri | Next item |
+|-----|-----------|
+| **HIGH** | (1) Full 97-target Phase 2A rebuild of draft 514, or a fresh 515, on the pushed tip. |
+| **HIGH** | (2) **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise (BO pred 14.9 vs measured 8.6 mmag); same class as U-SCATTER-DEF. |
+| **HIGH** | (3) **WIDE-ERR + SEM** shipped together (ratio 0.677 measured; SEM fix ready but blocked with WIDE-ERR). |
+| **HIGH** | (4) **P1 A/B** byte-identity pair on the new tip (golden ledger stale by intent after aperture/selection changes). |
+
+Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
+D1b; D2; WIDE-ERR-CROSSRIG; D1-2; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
+U-SKY-FALLBACK-01; LOCATION_OLD; zone rename; DET-vs-MEAS-01; A-1-OVERRIDE;
+blended-target merging (deferred past v1.0); drafts 512/513/510 INGESTED repair.
+
+---
+
 ## DONE - CYTHON-RELEASE (closed-source bundle; preview 2026-07-23)
 
 **Status:** **DONE (2026-07-23).** RELEASE-1: 85-module MODULE_LIST compile (84 @ `b4c372a`

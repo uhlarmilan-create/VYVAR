@@ -2,6 +2,39 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-15/16 -- GATE inventory through IMPL-05 C (local chain; SESSION-CLOSE push)
+
+**Arc.** Gate inventory (59 sites; 5 instrumented) and INV-NO-SILENT-EMPTY
+(`18c770e`, `5612f42`) -> COMP-ADMIT-03 removed rank-cut admission (`b6e0e29`)
+-> forced photometry + weight coefficients (`b731320`) -> colour LEVEL
+correction at export (k=-0.373+/-0.090; post-correction +1.6+/-91 mmag;
+`f9464e5`/`a27f10f`) -> growth-curve gates (7 fire proofs; IMPL-02/03) ->
+scatter-criterion aperture (`c2bab5c`) -> sawtooth fixed by exact masking
+(`5cfb285`) -> per-magnitude radii (bright ~6.5 px -> faint ~2.0 px; `f200adb`)
+-> selection RMS -> colour -> distance, single-source, ceiling authoritative,
+3-8 honoured end-to-end (`0f5f7b0`, `20ced6a`, `9dfeaa3`) -> Comp QA guard
+(275 s for 49 targets; `3927afd`) -> fixed-meter acceptance BO 8.6 / FW 9.8
+mmag (was ~16-19; tip stamp `4fe84b4`).
+
+| Stage | Tip / stamp |
+|-------|-------------|
+| GATE-REGIME / OWNERSHIP | `18c770e` / `5612f42` |
+| COMP-ADMIT-03 | `b6e0e29` |
+| FORCED-PHOT + weights | `b731320` (`011fff7`) |
+| PRE-IMPL-01 | `1dd83e5` / `bc75467` (`2fd9071`) |
+| IMPL-01 colour LEVEL | `f9464e5` / `a27f10f` |
+| IMPL-02 CoG | `ba3a33b` / `9762240` |
+| IMPL-03 scatter aperture | `c2bab5c` / `1630beb` |
+| IMPL-04 exact mask + 9.5 | `5cfb285` / `bb02bb8` |
+| COMP-ASSIGN-01/02 | `0f5f7b0`/`635404f`, `20ced6a`/`977d9f5` |
+| IMPL-05 A/D/B/C | `b2ae3b7`/`ac51e84`, `3927afd`/`0000dd8`, `f200adb`, `9dfeaa3`/`4fe84b4` |
+
+Acceptance so far is a 10-target Phase 2A subset on draft 514, not the full
+97-target rebuild. Photometry outputs changed by design (aperture + selection);
+P1 golden ledger is stale by intent. Next gate: local A/B on the pushed tip.
+
+---
+
 ## 2026-08-14 -- CLOSE-AND-PUSH (awaiting Milan)
 
 Wave 8: iron gates, SKY-CLIP-01, PP-KWARG-01, INV-CAL-02/SAT-01 disk gates, draft 512 extract, COG-A1-01. A-1 closed as diagnosed. Two commits (A hygiene, B sky estimator). `--full` anchor stale after B. Not pushed without Milan.
