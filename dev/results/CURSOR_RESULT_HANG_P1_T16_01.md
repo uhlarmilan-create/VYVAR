@@ -262,4 +262,10 @@ A resumed run would **not** hang again on that missing-index/box branch for the 
 
 ## Commits / --fast
 
-Local result commit only (no science/code change). `--fast` recorded below after commit.
+| | |
+|--|--|
+| Local commit | **`1adf2b4`** `HANG-P1-T16-01: document idle Streamlit abort; Gaia box hypothesis dead.` |
+| Follow-up | ASCII re-encode of `dev/results/IMPL_02_phase2a_log.txt` (UTF-16 BOM `0xff` broke `test_ascii_policy`; left from SESSION-CLOSE). |
+| `--fast` | recorded after follow-up commit |
+
+No science/code change. Push: NO.
