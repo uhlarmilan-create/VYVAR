@@ -50,10 +50,10 @@ persisted comps for targets 1-15. Does not re-calibrate or re-platesolve.
 | | |
 |--|--|
 | State | **RUNNING** (not complete) |
-| Last Phase 1 status | **16/97** ASASSN-V J140843.29+402701.8 at **730.2 s** |
-| Stack sample | active in `_accumulate_per_frame_comp_metrics` (not idle) |
-| Note | Same target index as the UI abort; headless continues past it |
-| Expected remaining | ~81 targets x ~44 s plus Phase 2A (order-of-magnitude) |
+| Last Phase 1 status | **24/97** RX CVn at **1192.9 s** (~19.9 min) |
+| Prior milestones | 1/97 @ 53.9 s; 8/97 @ 351.6 s; 16/97 @ 730.2 s (past UI abort target) |
+| Stack sample (earlier) | active in `_accumulate_per_frame_comp_metrics` (not idle) |
+| Expected remaining | ~73 targets x ~45 s plus Phase 2A (order-of-magnitude) |
 | D515-ACCEPT-01 | deferred to next task |
 
 Log path remains `tmp/draft_515_headless_phase012a.log` (gitignored tmp).
@@ -121,6 +121,9 @@ subprocess/status-file sketch, awaiting Milan). ROADMAP lists it MED.
 | acd22c4 | docs: RUN-WORKER-01 open architecture decision. |
 | 849adcb | tools: headless Phase 0+1+2A harness for draft 515. |
 | 9ff7de7 | fix BLE001 blind except in run_lifecycle + harness |
-| (result tip) | this report + --fast stamp |
+| dfed148 | results: RUN-HARDEN-01 report |
 
-`--fast`: see stamp commit after PASS.
+| | |
+|--|--|
+| `--fast` | **OVERALL PASS** @ **dfed148** |
+| pytest | **1423 passed**, 27 skipped |
