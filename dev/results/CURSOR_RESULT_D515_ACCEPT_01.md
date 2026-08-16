@@ -173,4 +173,6 @@ origin/main differs (local ahead; push not authorized).
 - dev/results/COMP_RMS_DEF_01_dataset.json
 - dev/results/CURSOR_RESULT_D515_ACCEPT_01.md
 
-Commit hashes: filled after local commits below.
+Commit hashes:
+a4b6640 D515-ACCEPT-01: full-field acceptance of IMPL-05 on draft 515.
+a445b59 docs: PUSH-STAMP-01 - record content tip, not origin SHA.
