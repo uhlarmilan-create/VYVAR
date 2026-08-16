@@ -49,12 +49,13 @@ persisted comps for targets 1-15. Does not re-calibrate or re-platesolve.
 
 | | |
 |--|--|
-| State | **RUNNING** (not complete) |
-| Last Phase 1 status | **24/97** RX CVn at **1192.9 s** (~19.9 min) |
-| Prior milestones | 1/97 @ 53.9 s; 8/97 @ 351.6 s; 16/97 @ 730.2 s (past UI abort target) |
-| Stack sample (earlier) | active in `_accumulate_per_frame_comp_metrics` (not idle) |
-| Expected remaining | ~73 targets x ~45 s plus Phase 2A (order-of-magnitude) |
-| D515-ACCEPT-01 | deferred to next task |
+| State | **COMPLETE** (exit 0) |
+| ELAPSED_S | **4244.0** (~70.7 min) |
+| ERROR | None |
+| Phase 2A | **49** light curves from **134** frames |
+| Artifacts | `comparison_stars_per_target.csv`, `photometry_summary.csv`, `lightcurves/`, `pipeline_meta.json` written |
+| Prior milestones | 1/97 @ 53.9 s; 8/97 @ 351.6 s; 16/97 @ 730.2 s; 24/97 @ 1192.9 s |
+| D515-ACCEPT-01 | next task (not folded in) |
 
 Log path remains `tmp/draft_515_headless_phase012a.log` (gitignored tmp).
 
