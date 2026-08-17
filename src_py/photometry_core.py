@@ -2783,6 +2783,7 @@ def precompute_and_save_snr_aperture_table_for_draft(
             from gain_photon_transfer import (  # noqa: PLC0415
                 DEFAULT_CONTAINER_SCALE,
                 apply_photometric_gain_authority,
+                resolve_photon_transfer_aperture_r_px,
             )
 
             _native = float(_g_res.value)
@@ -2793,12 +2794,14 @@ def precompute_and_save_snr_aperture_table_for_draft(
                     _proc = Path(aligned_fits_paths[0]).parent
             except Exception:  # noqa: BLE001
                 _proc = None
+            _ap_r_snr, _ap_r_snr_src = resolve_photon_transfer_aperture_r_px()
             _g_c, _auth, _ = apply_photometric_gain_authority(
                 g_db_native=_native,
                 native_source=_g_res.source,
                 proc_dir=_proc,
-                aperture_r_px=4.0,
+                aperture_r_px=_ap_r_snr,
                 container_scale=DEFAULT_CONTAINER_SCALE,
+                aperture_r_px_source=_ap_r_snr_src,
             )
             if _auth.ok and math.isfinite(_g_c) and _g_c > 0:
                 gain_p = float(_g_c)
@@ -9656,31 +9659,14 @@ def _phase2a_prepare_shared_state(
     from gain_photon_transfer import (  # noqa: PLC0415
         DEFAULT_CONTAINER_SCALE,
         apply_photometric_gain_authority,
+        resolve_photon_transfer_aperture_r_px,
     )
 
     _proc_dir_gain = Path(_aligned_dir_2a) if _aligned_dir_2a is not None else None
-    # Photon-transfer empty-aperture must use a sky-dominated radius near the
-    # production photometry aperture (~4 px on wide). Do NOT use
-    # aperture_scatter_r_min_px (often 1.5) - that biases the PT slope and can
-    # push CI width over the authority gate (WIDE-ERR-03B B3 defect).
-    _ap_r_gain = 4.0
-    try:
-        from invariants_runtime import load_pipeline_meta  # noqa: PLC0415
-
-        _meta_gain = load_pipeline_meta(output_dir) if output_dir is not None else {}
-        _dyn_gain = _meta_gain.get("dynamic_params") if isinstance(_meta_gain, dict) else None
-        if isinstance(_dyn_gain, dict) and _dyn_gain.get("aperture_r_px") is not None:
-            _ap_r_dyn = float(_dyn_gain["aperture_r_px"])
-            if math.isfinite(_ap_r_dyn) and _ap_r_dyn > 0:
-                _ap_r_gain = _ap_r_dyn
-    except (TypeError, ValueError, OSError):
-        pass
-    try:
-        _ap_r_meta = float(force_aperture_px) if force_aperture_px is not None else float("nan")
-        if math.isfinite(_ap_r_meta) and _ap_r_meta > 0:
-            _ap_r_gain = _ap_r_meta
-    except (TypeError, ValueError):
-        pass
+    # GAIN-PT-RADIUS-01: pin sky-dominated r=4.0. Do not read leftover
+    # dynamic_params.aperture_r_px and do not let force_aperture_px override PT
+    # (that flag sizes star photometry, not empty-aperture PT).
+    _ap_r_gain, _ap_r_src = resolve_photon_transfer_aperture_r_px()
     _scale = float(getattr(_cfg, "gain_container_scale", DEFAULT_CONTAINER_SCALE) or DEFAULT_CONTAINER_SCALE)
     _ci_w = float(getattr(_cfg, "photon_transfer_ci_max_width_factor", 3.0) or 3.0)
     _sidecar = Path(output_dir) / "gain_photon_transfer.json" if output_dir is not None else None
@@ -9693,6 +9679,7 @@ def _phase2a_prepare_shared_state(
         ci_max_width_factor=_ci_w,
         persist_sidecar=_sidecar,
         draft_meta={"draft_id": draft_id, "stage": "phase2a"},
+        aperture_r_px_source=_ap_r_src,
     )
     if not math.isfinite(_gain_phot) or _gain_phot <= 0:
         _gain_phot = _gain_native / _scale if _scale > 0 else 1.0

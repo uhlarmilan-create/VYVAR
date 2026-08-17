@@ -22,6 +22,45 @@ logger = logging.getLogger(__name__)
 # 14-bit samples in a 16-bit FITS container -> ADU stride 4 (S1a proof).
 DEFAULT_CONTAINER_SCALE = 4.0
 GAIN_PT_SIDECAR_NAME = "gain_photon_transfer.json"
+# GAIN-PT-RADIUS-01: empty-aperture PT must be sky-dominated (~4 px on wide).
+# Never read leftover pipeline_meta dynamic_params.aperture_r_px (WIDE-ERR-03B B3).
+PHOTON_TRANSFER_APERTURE_R_PX = 4.0
+PHOTON_TRANSFER_APERTURE_SOURCE = "pinned_sky_dominated_4px"
+
+
+def resolve_photon_transfer_aperture_r_px(
+    leftover_dynamic_params: dict[str, Any] | None = None,
+) -> tuple[float, str]:
+    """Pinned sky-dominated PT radius. Leftover meta is ignored (GAIN-PT-RADIUS-01).
+
+    ``leftover_dynamic_params`` is accepted so callers/tests can pass previous-run
+    ``dynamic_params`` without changing the result.
+    """
+    _ = leftover_dynamic_params
+    return float(PHOTON_TRANSFER_APERTURE_R_PX), str(PHOTON_TRANSFER_APERTURE_SOURCE)
+
+
+def legacy_pt_aperture_from_leftover_dynamic_params(
+    leftover_dynamic_params: dict[str, Any] | None,
+    default_r_px: float = PHOTON_TRANSFER_APERTURE_R_PX,
+) -> float:
+    """Pre-GAIN-PT-RADIUS-01 hole replica: leftover ``aperture_r_px`` overrode the pin.
+
+    Production Phase 2A must not call this. Kept for fire-proof (a).
+    """
+    r = float(default_r_px)
+    if not isinstance(leftover_dynamic_params, dict):
+        return r
+    raw = leftover_dynamic_params.get("aperture_r_px")
+    if raw is None:
+        return r
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return r
+    if math.isfinite(v) and v > 0:
+        return v
+    return r
 
 
 @dataclass
@@ -333,6 +372,7 @@ def apply_photometric_gain_authority(
     ci_max_width_factor: float = 3.0,
     persist_sidecar: Path | None = None,
     draft_meta: dict[str, Any] | None = None,
+    aperture_r_px_source: str | None = None,
 ) -> tuple[float, PhotometricGainAuthority, PhotonTransferGain | None]:
     """Estimate g_pt if possible and return (gain_container, authority, pt).
 
@@ -376,11 +416,13 @@ def apply_photometric_gain_authority(
             ok=math.isfinite(fallback) and fallback > 0,
         )
     if persist_sidecar is not None:
+        _r_src = str(aperture_r_px_source or "").strip() or PHOTON_TRANSFER_APERTURE_SOURCE
         payload = {
             "photon_transfer": pt.to_dict() if pt is not None else None,
             "authority": auth.to_dict(),
             "native_gain": {"value": float(g_db_native), "source": native_source},
             "aperture_r_px": float(aperture_r_px),
+            "aperture_r_px_source": _r_src,
         }
         if draft_meta:
             payload.update(draft_meta)
