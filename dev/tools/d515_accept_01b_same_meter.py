@@ -120,10 +120,21 @@ def run_forced_check(
     # the carrier so it enters the matrix without becoming an active target
     # (activating the check as a target broke resolve_comp_weight_coeffs on 514).
     carrier_id = None
+    # Prefer a co-target whose ensemble already contains the check (flux matrix).
     for cid in at["catalog_id"].astype(str).str.strip().tolist():
-        if cid and cid not in (target_id, check_id):
+        if cid and cid not in (target_id, check_id) and check_id in set(comps_of(comp, cid)):
+            skip_row = at[at["catalog_id"] == cid]
+            if not skip_row.empty:
+                sp = skip_row.iloc[0].get("skip_photometry", False)
+                if str(sp).strip().lower() in ("1", "true", "yes"):
+                    continue
             carrier_id = cid
             break
+    if carrier_id is None:
+        for cid in at["catalog_id"].astype(str).str.strip().tolist():
+            if cid and cid not in (target_id, check_id):
+                carrier_id = cid
+                break
     if carrier_id is None:
         # fallback: last resort co-target (worked on 515 self-check)
         chk_at = _at_row(check_id)
