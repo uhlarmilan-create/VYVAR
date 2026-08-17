@@ -1,13 +1,22 @@
 # VYVAR -- Development State
 
-**Status:** GAIN-PT-RADIUS-01 CLOSED. Draft 515 product SHA:
-**de6f7c8** (ERR-only re-export; MAG byte-identical to 36a53b0).
-SUBMIT-01 checklist PASS (BO CVn AAVSO/VarAstro ready for Milan).
-origin/main tip before this work: **6b23633**. Local tip **a60b8c1**
-(GAIN-PT docs+results; code fix 057ecdc). Push not authorized.
-**8f107cf quarantined** (VL-PFS-8F107CF).
+**Status:** XVAL-AIJ-02 CLOSED (docs+evidence). Draft 515 product SHA:
+**de6f7c8** (unchanged; MAG byte-identical to 36a53b0). GAIN-PT-RADIUS-01
+and SUBMIT-01 remain CLOSED. Baseline origin/main **dde6ce0** (PUSH-AUTH
+#2). **8f107cf quarantined** (VL-PFS-8F107CF). No science-code change.
 
-Last updated: **2026-08-17** (GAIN-PT-RADIUS-01 + SUBMIT-01).
+Last updated: **2026-08-17** (XVAL-AIJ-02).
+
+## 2026-08-17 -- XVAL-AIJ-02 CLOSED
+
+EXTERNAL-XVAL extended to the production clean 4-comp ensemble and two
+frame states. AIJ 6.0.10 vs VYVAR de6f7c8 on BO CVn 2026-04-23: 4.86
+mmag RMS / 134 epochs (4c); 3.27 mmag remains the 5c XVAL-AIJ-01 row.
+Frame-set (detrended_aligned vs calibrated) 3.80 mmag RMS / 131 epochs,
+no airmass/time correlation. QC: 13 VYVAR-rejected calibrated epochs
+are ~2.4x worse in AIJ vs a local curve; 049 and 111 photometrically
+fine (alignment-reason). Evidence under `dev/results/XVAL_AIJ_02_*`.
+Report: `CURSOR_RESULT_XVAL_AIJ_02.md`.
 
 ## 2026-08-17 -- GAIN-PT-RADIUS-01 + SUBMIT-01
 

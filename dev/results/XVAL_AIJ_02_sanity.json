@@ -1,0 +1,141 @@
+{
+  "run2": {
+    "n": 145,
+    "source_radius": 6.0,
+    "sky_min": 12.0,
+    "sky_max": 23.0
+  },
+  "run3": {
+    "n": 134,
+    "source_radius": 7.0,
+    "sky_min": 14.0,
+    "sky_max": 27.0
+  },
+  "run1": {
+    "n": 134,
+    "source_radius": 7.0,
+    "sky_min": 14.0,
+    "sky_max": 27.0
+  },
+  "cell1_run3_vs_run1_4c_rebuild": {
+    "n": 134,
+    "rms_mmag": 1.750168839931514e-13,
+    "max_abs_mmag": 6.661338147750939e-13,
+    "median_abs_mmag": 0.0
+  },
+  "cell2_run3_vs_run2": {
+    "n_inner": 132,
+    "n_common_ok": 131,
+    "broken_stems": [
+      "BO_CVn_Light_145"
+    ],
+    "rms_mmag": 4.93210294987804,
+    "r_airmass": -0.024649981802758646,
+    "r_jd": 0.03639756605757474,
+    "rms_mmag_independent_mz": 4.93210294987804,
+    "rms_mmag_raw_no_mz": 3.803238567578864,
+    "rms_mmag_claimed_match": "raw_no_mz_3.80",
+    "r_airmass_run3_minus_run2": -0.024649981802758646,
+    "r_jd_run3_minus_run2": 0.03639756605757474
+  },
+  "cell3_weights_vs_fluxsum": {
+    "n": 134,
+    "rms_mmag": 2.5154044640835815,
+    "weights_raw": [
+      9241.188631814864,
+      6486.886182273987,
+      4701.614479402266,
+      1886.4056430480184
+    ],
+    "weights_norm": [
+      0.4141041995964919,
+      0.29068195850218936,
+      0.2106826706362547,
+      0.08453117126506406
+    ],
+    "wcol": "comp_weight",
+    "n_comp_rows": 4,
+    "comp_ids": [
+      "1497771992240531712",
+      "1499200223486564608",
+      "1497974027502858240",
+      "1497368849430107904"
+    ],
+    "rms_mmag_flux_weight": 2.5154044640835815,
+    "rms_mmag_catalog_g_zp": 2.847818946827235
+  },
+  "cell_old_5c": {
+    "n": 134,
+    "rms_mmag": 3.2683533954737327
+  },
+  "cell_prod_4c": {
+    "n": 134,
+    "rms_vs_mag_calib_final_mmag": 4.860578857334185,
+    "rms_vs_delta_mag_mmag": 4.741101641344045,
+    "rms_vs_mag_calib_mmag": 4.860582787245944,
+    "aij_depth_mmag": 462.7077624339391,
+    "vy_mag_calib_final_depth_mmag": 469.6040000000004,
+    "r_airmass": -0.02261864350249163,
+    "r_fwhm": 0.05661604653421825,
+    "r_jd": 0.12043997698612234,
+    "vy_err_median_mmag": 8.945000000000002,
+    "aij_err_median_mmag": 7.31950919857614
+  },
+  "part_c": {
+    "n_run2": 145,
+    "n_run3": 134,
+    "n_extra": 13,
+    "extra_stems": [
+      "BO_CVn_Light_002",
+      "BO_CVn_Light_007",
+      "BO_CVn_Light_009",
+      "BO_CVn_Light_049",
+      "BO_CVn_Light_056",
+      "BO_CVn_Light_058",
+      "BO_CVn_Light_066",
+      "BO_CVn_Light_074",
+      "BO_CVn_Light_111",
+      "BO_CVn_Light_122",
+      "BO_CVn_Light_131",
+      "BO_CVn_Light_141",
+      "BO_CVn_Light_142"
+    ],
+    "extra_median_abs_resid_mmag": 8.561887559127012,
+    "accepted_mad_abs_resid_mmag": 7.838711339482107,
+    "ratio": 2.355029425293885,
+    "n_accepted_for_mad": 130,
+    "broken_in_extra": [],
+    "extra_fwhm": {
+      "BO_CVn_Light_002": 2.4702844551348506,
+      "BO_CVn_Light_007": 2.442705727161621,
+      "BO_CVn_Light_009": 3.133367885274493,
+      "BO_CVn_Light_049": 2.660056797684168,
+      "BO_CVn_Light_056": 2.910847443928899,
+      "BO_CVn_Light_058": 3.010277737899395,
+      "BO_CVn_Light_066": 2.606093379604355,
+      "BO_CVn_Light_074": 2.6827365241480337,
+      "BO_CVn_Light_111": 2.6403813639137206,
+      "BO_CVn_Light_122": 2.879373862151352,
+      "BO_CVn_Light_131": 2.745029697957796,
+      "BO_CVn_Light_141": 2.7713728101878914,
+      "BO_CVn_Light_142": 2.7677257920413743
+    },
+    "method": "run2 mag minus 7-point running median vs JD; extra=13 stems in run2 not in run3",
+    "accepted_mad_unscaled_mmag": 2.452162159964577,
+    "accepted_mad_scaled_14826_mmag": 3.635575618363482,
+    "n_accepted_stems": 132,
+    "n_accepted_finite": 131,
+    "fine_in_aij": [
+      "BO_CVn_Light_049",
+      "BO_CVn_Light_111"
+    ]
+  },
+  "compare_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\XVAL_AIJ_02_bo_compare.csv",
+  "n_compare": 134,
+  "spec_defects": [
+    "architect XVAL_AIJ_02_bo_compare.csv was not supplied; reconstructed from run3 tbl + de6f7c8 LC",
+    "ROADMAP had no XVAL-AIJ-02 row",
+    "claimed 3.80 is raw mag RMS not independent median-zero (mz RMS 4.93); aperture also r=6 vs r=7",
+    "claimed weighting 2.70 not reproduced: flux-weight 2.52, Gaia-G ZP 2.85"
+  ]
+}

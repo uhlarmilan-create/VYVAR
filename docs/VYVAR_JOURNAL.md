@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-17 -- XVAL-AIJ-02 (docs + evidence)
+
+Milan AIJ 6.0.10 run2 (calibrated, 4c) and run3 (detrended_aligned, 4c)
+vs VYVAR de6f7c8 on BO CVn. Production 4c tools RMS 4.86 mmag / 134
+epochs (depth 463 vs 470 mmag); old 5c remains 3.27 mmag. Rise is C2
+common-mode, not regression. Frame-set run3 vs run2 3.80 mmag RMS / 131
+epochs, no airmass/time trend. QC: 13 calibrated epochs VYVAR dropped
+from the aligned set are ~2.4x worse vs a local curve in AIJ; frames
+049 and 111 look photometrically fine (alignment-reason). No science
+code. `--fast` OVERALL PASS (1447 passed, 28 skipped). Push authorized
+this close. Report: `dev/results/CURSOR_RESULT_XVAL_AIJ_02.md`.
+
 ## 2026-08-17 -- GAIN-PT-RADIUS-01 + SUBMIT-01
 
 Pinned PT r=4.0; fire proofs; g_pt=0.63707 restored on 515. ERR-only

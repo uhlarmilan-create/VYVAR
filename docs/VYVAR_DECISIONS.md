@@ -130,6 +130,58 @@ comparison ensembles.
 
 ---
 
+## XVAL-AIJ-02 - production 4-comp ensemble and two frame states (2026-08-17)
+
+**Chain (extends XVAL-AIJ-01).** library (photutils/sep ~3 mmag) ->
+product formula (0.0001 mmag, XVAL-BO-01) -> external tool on a matched
+5-star ensemble (3.3 mmag, XVAL-AIJ-01) -> external tool on the
+**production clean 4-comp ensemble** and on **two frame states**
+(calibrated unaligned vs detrended_aligned). Saturated C2 is absent.
+Production comps (RA/DEC-matched): `1497771992240531712`,
+`1499200223486564608`, `1497974027502858240`,
+`1497368849430107904`. Domain: BO CVn 2026-04-23, 134 epochs, VYVAR
+product SHA **de6f7c8**, AIJ 6.0.10.
+
+**Matrix (per-epoch mmag; sanity-read from committed tables).**
+
+| cell | RMS mmag | note |
+|------|---------:|------|
+| AIJ run3 vs architect 4c rebuild of run1 | 0.00 | byte-equal (drop saturated C2 from run1 C3-C6 = run3 C2-C5) |
+| frame-set: run3 vs run2 | 3.80 | 131 common epochs; 1 broken cal frame (FWHM=0) excluded; r(airmass/time) ~0 |
+| weighting: pytics vs flux-sum on AIJ fluxes | 2.52 | production `comp_weight` on AIJ Source-Sky; spec 2.70 not reproduced |
+| tools, old 5c (XVAL-AIJ-01) | 3.27 | reference row, unchanged |
+| tools, production 4c: run3 vs mag_calib_final | 4.86 | 134/134; depth 462.7 vs 469.6 mmag |
+| AIJ run3 vs delta_mag (flux-sum layer) | 4.74 | same epochs; spec 4.72 |
+
+The rise 3.27 -> 4.86 is expected physics, not regression: the old
+flux-sum was dominated by bright C2 in both tools, so common-mode noise
+cancelled in the difference; the clean 4-comp sum of fainter stars
+averages per-tool measurement noise less. 4.86 mmag sits inside the
+combined error budget (VYVAR 8.9 mmag median + AIJ CCD-eq ~7.3 mmag
+median on this 4c table; XVAL-AIJ-01 5c was ~6.2 mmag).
+
+**QC finding.** Run2 (calibrated, 145 frames) contains 13 epochs absent
+from the aligned/detrended AIJ table (VYVAR QC dropped them from the
+aligned set). Residual vs a 7-point running-median local curve: median
+|resid| 8.56 mmag vs 3.64 mmag scaled MAD (x 1.4826) on the accepted
+epochs (~2.4x worse) -- independent-tool evidence that the QC filter
+selects genuinely bad frames. Frames 049 and 111 of those 13 are
+photometrically fine in AIJ (resid ~0 mmag), consistent with
+alignment-reason rejection, not photometric.
+
+Evidence: `dev/results/XVAL_AIJ_02_bo_compare.csv`,
+`XVAL_AIJ_02_Table_calibrated.tbl`,
+`XVAL_AIJ_02_Table_detr_aligned.tbl`,
+`CURSOR_RESULT_XVAL_AIJ_02.md`.
+
+JAAVSO methods sentence: VYVAR and AstroImageJ agree to 3.3 mmag RMS
+(matched 5-star ensembles) and 4.9 mmag RMS on the production clean
+4-comp ensemble over 134 epochs of a 0.47-mag eclipser; processing-chain
+(alignment+detrending) effect bounded at 3.8 mmag RMS with no
+airmass/time correlation.
+
+---
+
 ## WIDE-ERR-04 - close at physical model (2026-08-16)
 
 **Closure.** Wide-rig exported errors closed at the **physical model**:

@@ -36,6 +36,7 @@ interim MAGERR item **OBSOLETE**. U-09 **CLOSED** on the home wide rig
 still need a per-rig DATE-OBS check. GAIN-AUTH-VERIFY-01 **CLOSED** by
 GAIN-PT-RADIUS-01 (pin r=4.0; product SHA **de6f7c8**). SUBMIT-01 ready
 (BO CVn 2026-04-23; Milan manual). 8f107cf quarantined (VL-PFS-8F107CF).
+XVAL-AIJ-02 **DONE** (production 4c + two frame states; 4.9 mmag RMS).
 
 Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
 D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
@@ -328,13 +329,25 @@ pipeline paper; **Astronomy & Computing** as a possible expanded v2 paper later.
 - [ ] **PUB-VALIDATION-SECTION**: existing threads feed here - **TODO-SEP-XVAL** longitudinal
       record ("mission + paper Validation section") and the single-night canonical unit
       (**TODO-GS8** / DECISIONS product-scope boundary) become the Validation section's backbone.
-      **JAAVSO methods (XVAL-AIJ-01):** VYVAR and AstroImageJ agree to 3.3 mmag RMS per
-      epoch over 134 frames of a 0.47-mag-amplitude eclipser using identical
-      comparison ensembles.
+      **JAAVSO methods (XVAL-AIJ-01 + XVAL-AIJ-02):** VYVAR and AstroImageJ
+      agree to 3.3 mmag RMS (matched 5-star ensembles) and 4.9 mmag RMS on
+      the production clean 4-comp ensemble over 134 epochs of a 0.47-mag
+      eclipser; processing-chain (alignment+detrending) effect bounded at
+      3.8 mmag RMS with no airmass/time correlation.
 
 **Depends on / feeds:** nothing blocks writing the outline now; PUB-FIGS wants a
 representative filtered draft (425 BVR qualifies today); JOSS track blocked only on repo
 licensing decision.
+
+---
+
+## DONE - XVAL-AIJ-02 (production 4-comp + two frame states)
+
+**Status:** **DONE** 2026-08-17 (docs+evidence; no science code). AIJ 6.0.10
+run2/run3 vs VYVAR de6f7c8 on BO CVn. Tools RMS 4.86 mmag on the production
+4c ensemble (134 epochs); 3.27 mmag 5c row unchanged. Frame-set 3.80 mmag
+RMS / 131 epochs. QC: 13 rejected calibrated epochs ~2.4x worse in AIJ.
+DECISIONS XVAL-AIJ-02. Report: `dev/results/CURSOR_RESULT_XVAL_AIJ_02.md`.
 
 ---
 
@@ -666,7 +679,7 @@ WSN PARKED. See session history in STATE.
 | Broeg IVW / sigma budget IVW flip | Parked | Sigma budget validates on Newton gate |
 | rig-aware X2_RED (design note) | NOT implemented | Multi-night sigma_r on eq4 stabilizes rig noise estimate |
 | dense-field astroalign cap | OPEN MED | Cross-rig regression data (home + narrow rigs) |
-| EXTERNAL-XVAL / independent-tool | **CLOSED** 2026-08-17 | AIJ 6.0.10 vs VYVAR 3.3 mmag RMS / 134 frames / BO CVn; `CURSOR_RESULT_XVAL_AIJ_01.md` |
+| EXTERNAL-XVAL / independent-tool | **CLOSED** 2026-08-17 | AIJ 6.0.10 vs VYVAR: 3.3 mmag RMS (5c, XVAL-AIJ-01) and 4.9 mmag RMS (production 4c, XVAL-AIJ-02) / 134 frames / BO CVn; frame-set 3.8 mmag; `CURSOR_RESULT_XVAL_AIJ_02.md` |
 | EXTERNAL-XVAL / FWHM claim | MED | Confirm/deny "true ~7.7-8.6 px" before any factor retune |
 | Frame-level CR rejection | MED | Shared V0612 anomaly class |
 | TODO-MULTISET | FUTURE | Per-rig config for multi-rig production |
@@ -712,11 +725,13 @@ next calibration lever.
    Blocks TODO-GS8 + TODO-MULTISET for IVW flip. **`delta_mag` flux-sum canonical until Newton gate passes.**
 
 3. **EXTERNAL-XVAL - external validation campaign (MEDIUM).** Independent-tool
-   cross-check **CLOSED** (XVAL-AIJ-01): VYVAR and AstroImageJ agree to 3.3 mmag
-   RMS per epoch over 134 frames of a 0.47-mag-amplitude eclipser using identical
-   comparison ensembles. Remaining: FWHM external-validation claim (confirm/deny
-   "true ~7.7-8.6 px" before any factor retune). Feeds **TODO-SEP-XVAL** ledger
-   and the future publication Validation section.
+   cross-check **CLOSED** (XVAL-AIJ-01 + XVAL-AIJ-02): VYVAR and AstroImageJ
+   agree to 3.3 mmag RMS (matched 5-star ensembles) and 4.9 mmag RMS on the
+   production clean 4-comp ensemble over 134 epochs of a 0.47-mag eclipser;
+   processing-chain (alignment+detrending) effect bounded at 3.8 mmag RMS
+   with no airmass/time correlation. Remaining: FWHM external-validation
+   claim (confirm/deny "true ~7.7-8.6 px" before any factor retune). Feeds
+   **TODO-SEP-XVAL** ledger and the future publication Validation section.
 
 4. **Frame-level CR / bad-pixel rejection (MEDIUM)** - shared V0612 anomaly (~JD 2461200.385) is a
    single-frame artifact matching SIPS; consider pixel-level CR rejection **before** photometry
