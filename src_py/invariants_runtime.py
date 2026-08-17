@@ -687,10 +687,14 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                     break
 
     # Empty vsx_out_of_scope_types => no out-of-scope skip markers.
-    _cfg_snap = meta.get("config") if isinstance(meta.get("config"), dict) else {}
+    # Authority is provenance.config_snapshot (same as _cfg_flag), not a
+    # non-existent top-level meta["config"] key.
+    prov = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
+    snap = prov.get("config_snapshot") if isinstance(prov.get("config_snapshot"), dict) else {}
+    _cfg_legacy = meta.get("config") if isinstance(meta.get("config"), dict) else {}
     _voos = meta.get("vsx_out_of_scope_types")
     if _voos is None:
-        _voos = _cfg_snap.get("vsx_out_of_scope_types", [])
+        _voos = snap.get("vsx_out_of_scope_types", _cfg_legacy.get("vsx_out_of_scope_types", []))
     if isinstance(_voos, str):
         _voos_list = [p.strip() for p in _voos.split(",") if p.strip()]
     elif isinstance(_voos, (list, tuple)):
@@ -702,6 +706,7 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
 
         for rel in (
             Path(photometry_dir) / "photometry_summary.csv",
+            Path(photometry_dir) / "active_targets.csv",
             Path(photometry_dir).parent / "active_targets.csv",
         ):
             if not rel.is_file():
