@@ -7167,6 +7167,58 @@ def _phase2a_coerce_skip_photometry(df: pd.DataFrame) -> pd.Series:
     return pd.Series(False, index=df.index, dtype=bool)
 
 
+# PFS-SEMANTICS-01: never rescue these skip_reason values (TARGET-DEPTH-02 outranks PFS).
+PFS_NEVER_RESCUE_REASONS = frozenset({"zone_noise", "below_target_depth"})
+PFS_SATURATION_SKIP_REASONS = frozenset(
+    {
+        "zone_flag",
+        "saturovany ciel",
+        "per_frame_saturation",
+        "likely_saturated",
+        "saturated",
+    }
+)
+
+
+def pfs_rescue_eligible(
+    *,
+    zone_flag: str,
+    skip_reason: str = "",
+    likely_saturated: bool = False,
+) -> bool:
+    """True only for saturation-caused skips. Keyed on recorded skip_reason.
+
+    Rescue-eligible: zone_flag==saturated, likely_saturated, or an explicit
+    saturation skip_reason. NEVER rescue zone_noise or below_target_depth.
+    Bare skip_photometry without a saturation reason is not eligible.
+    """
+    zf = str(zone_flag or "").strip().lower()
+    sr = str(skip_reason or "").strip().lower()
+    if sr in PFS_NEVER_RESCUE_REASONS:
+        return False
+    if zf == "noise":
+        return False
+    if zf in ("saturated", "likely_saturated") or bool(likely_saturated):
+        return True
+    if sr in PFS_SATURATION_SKIP_REASONS and zf != "linear":
+        return True
+    if sr in {"saturovany ciel", "per_frame_saturation", "likely_saturated", "saturated"}:
+        return True
+    return False
+
+
+def _keep_recorded_skip_reason(*, skip_reason: str, zone_flag: str, legacy_skip: bool) -> str:
+    recorded = str(skip_reason or "").strip()
+    if recorded:
+        return recorded
+    zf = str(zone_flag or "").strip().lower()
+    if zf == "noise":
+        return "zone_noise"
+    if legacy_skip or zf == "saturated":
+        return "zone_flag"
+    return ""
+
+
 def decide_target_saturation_policy(
     *,
     zone_flag: str,
@@ -7175,21 +7227,32 @@ def decide_target_saturation_policy(
     enabled: bool,
     min_clean_frac: float = 0.5,
     likely_saturated: bool = False,
+    skip_reason: str = "",
 ) -> dict[str, Any]:
-    """Per-target saturation gate (PER-FRAME-SAT-GATED).
+    """Per-target saturation gate (PER-FRAME-SAT-GATED / PFS-SEMANTICS-01).
 
     When ``enabled`` is False: legacy whole-star skip (zone / skip_photometry).
-    When True: master zone saturation is advisory; skip only if clean_frac
-    (fraction of frames without saturation) is below ``min_clean_frac``.
-    Missing per-frame peak/sat data falls back to legacy zone behavior.
+    When True: rescue only saturation-caused skips (recorded skip_reason /
+    zone_flag==saturated). TARGET-DEPTH-02 (zone_noise, below_target_depth)
+    outranks PFS: those skips are never cleared. Missing per-frame peak/sat
+    data on a rescue-eligible target falls back to legacy zone behavior.
     """
     zf = str(zone_flag or "").strip().lower()
+    recorded = str(skip_reason or "").strip()
     legacy = bool(legacy_skip) or zf == "saturated"
+    eligible = pfs_rescue_eligible(
+        zone_flag=zf,
+        skip_reason=recorded,
+        likely_saturated=bool(likely_saturated),
+    )
     advisory = bool(legacy) or zf in ("saturated", "likely_saturated") or bool(likely_saturated)
     thr = float(min_clean_frac)
     if not math.isfinite(thr):
         thr = 0.5
     thr = max(0.1, min(1.0, thr))
+    kept_reason = _keep_recorded_skip_reason(
+        skip_reason=recorded, zone_flag=zf, legacy_skip=bool(legacy_skip)
+    )
 
     if not enabled:
         return {
@@ -7201,10 +7264,29 @@ def decide_target_saturation_policy(
             "n_clean": 0,
         }
 
+    if not eligible:
+        n = 0
+        n_clean = 0
+        clean_frac = float("nan")
+        if frame_saturated is not None:
+            flags = [bool(x) for x in list(frame_saturated)]
+            n = len(flags)
+            if n > 0:
+                n_clean = int(sum(1 for s in flags if not s))
+                clean_frac = float(n_clean) / float(n)
+        return {
+            "skip_photometry": bool(legacy_skip),
+            "skip_reason": kept_reason,
+            "sat_clean_frac": clean_frac,
+            "per_frame_sat_fallback": False,
+            "n_frames": n,
+            "n_clean": n_clean,
+        }
+
     if frame_saturated is None:
         return {
             "skip_photometry": bool(legacy),
-            "skip_reason": "zone_flag" if legacy else "",
+            "skip_reason": "zone_flag" if legacy else kept_reason,
             "sat_clean_frac": float("nan"),
             "per_frame_sat_fallback": True,
             "n_frames": 0,
@@ -7216,7 +7298,7 @@ def decide_target_saturation_policy(
     if n == 0:
         return {
             "skip_photometry": bool(legacy),
-            "skip_reason": "zone_flag" if legacy else "",
+            "skip_reason": "zone_flag" if legacy else kept_reason,
             "sat_clean_frac": float("nan"),
             "per_frame_sat_fallback": True,
             "n_frames": 0,
@@ -7258,12 +7340,25 @@ def _per_frame_sat_flags_for_catalog_id(
     csv_files: list[Path],
     csv_cache: dict[str, Any],
     *,
-    sat_limit_adu: float | None,
+    sat_limit_adu: float | None = None,
+    peak_test_adu: float | None = None,
 ) -> list[bool] | None:
-    """Return per-frame saturation bools for a target, or None if data unavailable."""
+    """Return per-frame saturation bools for a target, or None if data unavailable.
+
+    Clean test uses ``peak_test_adu`` (INV-SAT-LIMIT catalog peak-test), not the
+    raw container clip and not a stale ``is_saturated`` column. ``sat_limit_adu``
+    is accepted as an explicit caller override when ``peak_test_adu`` is omitted
+    (unit tests). Container clip is a different physical question (hard clip) and
+    is not used here.
+    """
     cid = _normalize_gaia_id(catalog_id)
     if not cid:
         return None
+    lim_raw = peak_test_adu if peak_test_adu is not None else sat_limit_adu
+    try:
+        lim = float(lim_raw) if lim_raw is not None else float("nan")
+    except (TypeError, ValueError):
+        lim = float("nan")
     flags: list[bool] = []
     n_matched = 0
     for path in csv_files:
@@ -7278,22 +7373,54 @@ def _per_frame_sat_flags_for_catalog_id(
             continue
         row = df.loc[m].iloc[0]
         n_matched += 1
+        peak = float(pd.to_numeric(row.get("peak_max_adu"), errors="coerce"))
+        if math.isfinite(peak) and math.isfinite(lim) and lim > 0:
+            flags.append(bool(peak > lim))
+            continue
         if "is_saturated" in df.columns:
             flags.append(_coerce_bool_cell(row.get("is_saturated")))
             continue
         if "likely_saturated" in df.columns and _coerce_bool_cell(row.get("likely_saturated")):
             flags.append(True)
             continue
-        peak = float(pd.to_numeric(row.get("peak_max_adu"), errors="coerce"))
-        lim = float(sat_limit_adu) if sat_limit_adu is not None else float("nan")
-        if math.isfinite(peak) and math.isfinite(lim) and lim > 0:
-            flags.append(bool(peak > lim))
-            continue
         # Matched row but no usable sat diagnostic -> cannot evaluate.
         return None
     if n_matched == 0 or len(flags) == 0:
         return None
     return flags
+
+
+def _resolve_pfs_peak_test(
+    *,
+    peak_test_adu: float | None,
+    peak_test_source: str,
+    sat_limit_adu: float | None,
+) -> tuple[float | None, str, float, str]:
+    """Return (peak_test, peak_test_source, container_clip, container_source)."""
+    from pipeline import (  # noqa: PLC0415
+        SAT_LIMIT_CONTAINER_CLIP_ADU,
+        inv_sat_limit_peak_test_adu,
+    )
+
+    container = float(SAT_LIMIT_CONTAINER_CLIP_ADU)
+    container_src = "SAT_LIMIT_CONTAINER_CLIP_ADU"
+    if peak_test_adu is not None:
+        try:
+            pt = float(peak_test_adu)
+        except (TypeError, ValueError):
+            pt = float("nan")
+        if math.isfinite(pt) and pt > 0:
+            src = str(peak_test_source or "").strip() or "caller_peak_test_adu"
+            return pt, src, container, container_src
+    if sat_limit_adu is not None:
+        try:
+            sl = float(sat_limit_adu)
+        except (TypeError, ValueError):
+            sl = float("nan")
+        if math.isfinite(sl) and sl > 0:
+            return sl, "caller_sat_limit_adu", container, container_src
+    pt, src = inv_sat_limit_peak_test_adu()
+    return float(pt), str(src), container, container_src
 
 
 def apply_per_frame_saturation_to_active_targets(
@@ -7304,14 +7431,23 @@ def apply_per_frame_saturation_to_active_targets(
     sat_limit_adu: float | None,
     enabled: bool,
     min_clean_frac: float,
+    peak_test_adu: float | None = None,
+    peak_test_source: str = "",
 ) -> dict[str, Any]:
     """Mutate ``at_df`` skip columns per PER-FRAME-SAT-GATED; return night meta.
 
     When ``enabled`` is False: no-op (INV-CFG-01 - no new markers).
+    Rescue is keyed on recorded skip_reason (PFS-SEMANTICS-01), not bare
+    skip_photometry. Peak-test and container clip are named separately.
     """
     if not enabled:
         return {}
 
+    pt, pt_src, container, container_src = _resolve_pfs_peak_test(
+        peak_test_adu=peak_test_adu,
+        peak_test_source=peak_test_source,
+        sat_limit_adu=sat_limit_adu,
+    )
     meta: dict[str, Any] = {
         "per_frame_sat_enabled": True,
         "per_frame_sat_min_clean_frac": float(min_clean_frac),
@@ -7319,22 +7455,34 @@ def apply_per_frame_saturation_to_active_targets(
         "per_frame_sat_n_fallback": 0,
         "per_frame_sat_n_rescued": 0,
         "per_frame_sat_n_skipped": 0,
+        "per_frame_sat_peak_test_adu": float(pt) if pt is not None else float("nan"),
+        "per_frame_sat_peak_test_source": str(pt_src),
+        "per_frame_sat_container_clip_adu": float(container),
+        "per_frame_sat_container_clip_source": str(container_src),
     }
     at_df["sat_clean_frac"] = float("nan")
-    at_df["skip_reason"] = ""
+    if "skip_reason" not in at_df.columns:
+        at_df["skip_reason"] = ""
+    else:
+        at_df["skip_reason"] = at_df["skip_reason"].astype(object)
     at_df["per_frame_sat_fallback"] = False
 
     for idx, row in at_df.iterrows():
         cid = _normalize_gaia_id(row.get("catalog_id", ""))
         zf = str(row.get("zone_flag", "") or "").strip()
         legacy = bool(row.get("skip_photometry", False))
+        recorded = str(row.get("skip_reason", "") or "").strip()
         likely = (
             _coerce_bool_cell(row.get("likely_saturated"))
             if "likely_saturated" in at_df.columns
             else False
         )
         flags = _per_frame_sat_flags_for_catalog_id(
-            cid, csv_files, csv_cache, sat_limit_adu=sat_limit_adu
+            cid,
+            csv_files,
+            csv_cache,
+            sat_limit_adu=sat_limit_adu,
+            peak_test_adu=pt,
         )
         dec = decide_target_saturation_policy(
             zone_flag=zf,
@@ -7343,6 +7491,7 @@ def apply_per_frame_saturation_to_active_targets(
             enabled=True,
             min_clean_frac=float(min_clean_frac),
             likely_saturated=likely,
+            skip_reason=recorded,
         )
         at_df.at[idx, "skip_photometry"] = bool(dec["skip_photometry"])
         at_df.at[idx, "skip_reason"] = str(dec["skip_reason"] or "")
@@ -9376,16 +9525,28 @@ def _phase2a_prepare_shared_state(
 
     # PER-FRAME-SAT-GATED: when ON, revise target skip_photometry from per-frame
     # clean fraction before aperture/FWHM star-set selection. OFF = no-op.
+    # Peak-test uses INV-SAT-LIMIT catalog authority (not raw container clip).
     _pfs_enabled = bool(getattr(_cfg, "per_frame_saturation_enabled", False))
     _pfs_min = float(getattr(_cfg, "per_frame_sat_min_clean_frac", 0.5))
-    _sat_limit_early = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
+    _peak_test_adu: float | None = None
+    _peak_test_src = ""
+    try:
+        from pipeline import inv_sat_limit_peak_test_adu  # noqa: PLC0415
+
+        _peak_test_adu, _peak_test_src = inv_sat_limit_peak_test_adu()
+    except Exception as exc:  # noqa: BLE001
+        logging.error("[EXC-PFS] INV-SAT-LIMIT peak-test resolve failed: %s", exc)
+        _peak_test_adu = None
+        _peak_test_src = ""
     _per_frame_sat_meta = apply_per_frame_saturation_to_active_targets(
         at_df,
         csv_files=csv_files,
         csv_cache=_phase2a_csv_cache,
-        sat_limit_adu=_sat_limit_early,
+        sat_limit_adu=None,
         enabled=_pfs_enabled,
         min_clean_frac=_pfs_min,
+        peak_test_adu=_peak_test_adu,
+        peak_test_source=_peak_test_src,
     )
     if _pfs_enabled:
         try:
@@ -9396,11 +9557,15 @@ def _phase2a_prepare_shared_state(
                 exc,
             )
         logging.info(
-            "[PER-FRAME-SAT] enabled: rescued=%s skipped=%s fallback=%s (min_clean_frac=%.3f)",
+            "[PER-FRAME-SAT] enabled: rescued=%s skipped=%s fallback=%s "
+            "(min_clean_frac=%.3f peak_test=%.1f ADU src=%s container_clip=%.0f ADU)",
             _per_frame_sat_meta.get("per_frame_sat_n_rescued"),
             _per_frame_sat_meta.get("per_frame_sat_n_skipped"),
             _per_frame_sat_meta.get("per_frame_sat_n_fallback"),
             _pfs_min,
+            float(_per_frame_sat_meta.get("per_frame_sat_peak_test_adu") or float("nan")),
+            str(_per_frame_sat_meta.get("per_frame_sat_peak_test_source") or ""),
+            float(_per_frame_sat_meta.get("per_frame_sat_container_clip_adu") or float("nan")),
         )
 
     # Krok 1: Globalna fixna apertura - vsetky hviezdy (target + comp), faktor x FWHM
@@ -10244,8 +10409,12 @@ def _phase2a_process_one_target(
     # When per-frame sat is ON, skip_photometry already encodes the decision;
     # do not re-force whole-star skip from master zone_flag.
     _pfs_on = bool(getattr(_cfg, "per_frame_saturation_enabled", False))
-    # TARGET-DEPTH-02: noise (below DAO N-sigma on MASTERSTAR) does not enter photometry.
-    if (not _pfs_on) and _zf_low in ("saturated", "noise"):
+    # TARGET-DEPTH-02 outranks PFS: noise never enters photometry.
+    # Saturation-zone skip is re-forced only when PFS is OFF (PFS already
+    # encoded the saturation decision). Do not exempt the whole {saturated, noise} set.
+    if _zf_low == "noise":
+        skip_photo = True
+    elif (not _pfs_on) and _zf_low == "saturated":
         skip_photo = True
     if progress_cb is not None and (
         ti == 1 or ti == _nt or (_nt > 1 and ti % max(1, _nt // 12) == 0)
@@ -10276,9 +10445,7 @@ def _phase2a_process_one_target(
             "lc_png": "",
         }
         if _pfs_on:
-            _skip_sum["skip_reason"] = _sr_col or (
-                "zone_flag" if _zf_low == "saturated" else ""
-            )
+            _skip_sum["skip_reason"] = _skip_reason
             _scf = float(pd.to_numeric(target_row.get("sat_clean_frac"), errors="coerce"))
             _skip_sum["sat_clean_frac"] = _scf
             _skip_sum["per_frame_sat_fallback"] = bool(
@@ -15103,6 +15270,7 @@ def _select_comps_by_rms_then_color(
     # forces the ladder to open.
     if math.isfinite(_ceil) and _ceil > 0:
         _n0 = int(len(out))
+        _pre_ceil = out.copy()
         _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
         out = out[_rms_c.notna() & (_rms_c <= float(_ceil))].copy()
         logging.info(
@@ -15111,6 +15279,17 @@ def _select_comps_by_rms_then_color(
             _n0,
             int(len(out)),
         )
+        if _n0 > int(len(out)):
+            _ceil_dropped = _pre_ceil.loc[~_pre_ceil.index.isin(out.index)]
+            if not _ceil_dropped.empty:
+                _bc = _ceil_dropped.sort_values("comp_rms", kind="mergesort").iloc[0]
+                _cidc = "catalog_id" if "catalog_id" in _ceil_dropped.columns else _ceil_dropped.columns[0]
+                logging.info(
+                    "[COMP] best ceiling-rejected cid=%s rms=%s threshold=%.4f",
+                    str(_bc.get(_cidc, "")),
+                    str(_bc.get("comp_rms", "")),
+                    float(_ceil),
+                )
         if out.empty:
             logging.warning(
                 "[COMP] no candidates under max_comp_rms=%.4f after floor filter",
@@ -15130,7 +15309,11 @@ def _select_comps_by_rms_then_color(
         if math.isfinite(_fw) and _fw > 0:
             _nn_fwhm = pd.to_numeric(out["_nn_px"], errors="coerce") / _fw
     if _nn_fwhm is not None:
+        out = out.copy()
+        if "_nn_dist_fwhm" not in out.columns:
+            out["_nn_dist_fwhm"] = _nn_fwhm
         _n_pre = int(len(out))
+        _pre_iso = out.copy()
         _ok = _nn_fwhm.notna() & (_nn_fwhm >= float(_iso_fwhm))
         # Missing NN: keep (unknown), only drop measured blends.
         _keep = _nn_fwhm.isna() | _ok
@@ -15141,6 +15324,31 @@ def _select_comps_by_rms_then_color(
             _n_pre,
             int(len(out)),
         )
+        if _n_pre > int(len(out)):
+            _iso_dropped = _pre_iso.loc[~_pre_iso.index.isin(out.index)]
+            if not _iso_dropped.empty:
+                _nn_d = pd.to_numeric(_iso_dropped.get("_nn_dist_fwhm"), errors="coerce")
+                if _nn_d is not None and _nn_d.notna().any():
+                    _iso_dropped = _iso_dropped.assign(_nn_sort=_nn_d)
+                    _bi = _iso_dropped.sort_values(
+                        ["comp_rms", "_nn_sort"],
+                        ascending=[True, True],
+                        kind="mergesort",
+                    ).iloc[0]
+                    _nnv = float(pd.to_numeric(_bi.get("_nn_dist_fwhm"), errors="coerce"))
+                else:
+                    _bi = _iso_dropped.sort_values("comp_rms", kind="mergesort").iloc[0]
+                    _nnv = float("nan")
+                _cid_iso = (
+                    "catalog_id" if "catalog_id" in _iso_dropped.columns else _iso_dropped.columns[0]
+                )
+                logging.info(
+                    "[COMP] best isolation-rejected cid=%s rms=%s nn_fwhm=%s threshold=%.2f FWHM",
+                    str(_bi.get(_cid_iso, "")),
+                    str(_bi.get("comp_rms", "")),
+                    f"{_nnv:.3f}" if math.isfinite(_nnv) else "nan",
+                    float(_iso_fwhm),
+                )
         if out.empty:
             logging.warning(
                 "[COMP] no candidates after single-source isolation (%.2f FWHM)",
@@ -15215,11 +15423,60 @@ def _select_comps_by_rms_then_color(
         )
 
     # COMP-ASSIGN-03: RMS first, then colour, then distance.
+    n_pre_colour = int(len(out))
+    n_colour_pool = int(len(selected))
+    if n_pre_colour > n_colour_pool and math.isfinite(float(used_lim)):
+        _col_dropped = out.loc[~out.index.isin(selected.index)]
+        if not _col_dropped.empty:
+            _bcol = _col_dropped.sort_values("_rms_sort", kind="mergesort").iloc[0]
+            _db = float(pd.to_numeric(_bcol.get("_delta_bprp_abs"), errors="coerce"))
+            logging.info(
+                "[COMP] best colour-rejected cid=%s rms=%s d_bprp=%s colour_lim=%.3f",
+                str(_bcol.get(id_col, "")),
+                str(_bcol.get("comp_rms", "")),
+                f"{_db:.3f}" if math.isfinite(_db) else "nan",
+                float(used_lim),
+            )
     selected = selected.sort_values(
         ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col],
         ascending=[True, True, True, True],
         kind="mergesort",
     )
+    n_clean_pool = int(len(selected))
+    _ceil_s = f"{float(_ceil):.4f}" if math.isfinite(_ceil) and _ceil > 0 else "nan"
+    if n_clean_pool > _n_max:
+        _nxt = selected.iloc[_n_max]
+        _nr = float(pd.to_numeric(_nxt.get("comp_rms"), errors="coerce"))
+        _nd = float(pd.to_numeric(_nxt.get("_delta_bprp_abs"), errors="coerce"))
+        _nds = float(pd.to_numeric(_nxt.get("_dist_sort"), errors="coerce"))
+        logging.info(
+            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
+            "n_comp_max=%d admitted=%d; best not-admitted (n_comp_max/distance sort) "
+            "cid=%s rms=%s d_bprp=%s dist_deg=%s "
+            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
+            n_clean_pool,
+            _n_max,
+            _n_max,
+            str(_nxt.get(id_col, "")),
+            f"{_nr:.4f}" if math.isfinite(_nr) else "nan",
+            f"{_nd:.3f}" if math.isfinite(_nd) else "nan",
+            f"{_nds:.5f}" if math.isfinite(_nds) else "nan",
+            _ceil_s,
+            float(_iso_fwhm),
+            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
+        )
+    else:
+        logging.info(
+            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
+            "n_comp_max=%d admitted=%d; nothing better in the pool "
+            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
+            n_clean_pool,
+            _n_max,
+            n_clean_pool,
+            _ceil_s,
+            float(_iso_fwhm),
+            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
+        )
     selected = selected.head(_n_max).copy()
     selected.attrs["color_ladder_lim"] = used_lim
     selected.attrs["color_ladder_step"] = int(ladder_step)

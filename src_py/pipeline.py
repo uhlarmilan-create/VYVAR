@@ -5397,6 +5397,23 @@ def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
 SAT_LIMIT_CONTAINER_CLIP_ADU = 65535.0
 # Peak-test fraction when the linearity knee is unmeasured (D1-2 / SAT-LIMIT-01 B3).
 SAT_LIMIT_NO_KNEE_FRAC = 0.80
+# Provenance string for the INV-SAT-LIMIT peak-test (catalog zone + per-frame clean).
+SAT_LIMIT_PEAK_TEST_SOURCE = (
+    f"INV-SAT-LIMIT peak-test {SAT_LIMIT_NO_KNEE_FRAC:.2f}x "
+    f"container_clip_{SAT_LIMIT_CONTAINER_CLIP_ADU:.0f}"
+)
+
+
+def inv_sat_limit_peak_test_adu() -> tuple[float, str]:
+    """Catalog-zone peak-test (INV-SAT-LIMIT). One authority for zone and per-frame.
+
+    Hard container clip is ``SAT_LIMIT_CONTAINER_CLIP_ADU`` (named separately;
+    not used as the clean-frame test). This returns the peak-test used for
+    ``zone==saturated``: currently 0.80 x 65535 = 52428 ADU when the D1-2 knee
+    is unmeasured. n_stack is not applied here: per-frame CSVs are one exposure.
+    """
+    peak = float(SAT_LIMIT_CONTAINER_CLIP_ADU) * float(SAT_LIMIT_NO_KNEE_FRAC)
+    return peak, SAT_LIMIT_PEAK_TEST_SOURCE
 
 
 def _finite_positive_adu(value: Any) -> float | None:
