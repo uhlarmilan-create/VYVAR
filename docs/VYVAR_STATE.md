@@ -3,7 +3,8 @@
 **Status:** XVAL-AIJ-02 CLOSED (docs+evidence). Draft 515 product SHA:
 **de6f7c8** (unchanged; MAG byte-identical to 36a53b0). GAIN-PT-RADIUS-01
 and SUBMIT-01 remain CLOSED. Baseline origin/main **dde6ce0** (PUSH-AUTH
-#2). **8f107cf quarantined** (VL-PFS-8F107CF). No science-code change.
+#2). Content tip **a0d326c**. **8f107cf quarantined** (VL-PFS-8F107CF).
+No science-code change.
 
 Last updated: **2026-08-17** (XVAL-AIJ-02).
 

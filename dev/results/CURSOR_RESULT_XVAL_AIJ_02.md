@@ -97,8 +97,9 @@ added (none existed). STATE/JOURNAL close notes.
 `session_baseline_check.py --fast` on dde6ce0 + this working tree:
 **OVERALL PASS**. pytest 1447 passed, 28 skipped (P1 env unset).
 
-PUSH-STAMP-01: content tip recorded after commit (this file updated in
-the stamp commit).
+PUSH-STAMP-01: content tip **a0d326c**
+(`docs+results: XVAL-AIJ-02 production 4c AIJ matrix and QC finding.`).
+`--fast` OVERALL PASS (1447 passed, 28 skipped) recorded on that tree.
 
 ## Spec defects
 
