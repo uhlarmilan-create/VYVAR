@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-03",
+  "updated": "2026-08-17",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -253,6 +253,17 @@
         "run1": 443.2,
         "run2": 449.1
       }
+    },
+    {
+      "id": "VL-PFS-8F107CF",
+      "area": "photometry",
+      "description": "Draft 515 photometry SHA 8f107cf quarantined DEFECT: PFS rescued non-saturation skips",
+      "verification": "dev/results/CURSOR_RESULT_SAT_RERANK_01.md (96 LCs; 45 zone_noise + 2 below_target_depth rescued). No export and no acceptance number may cite 8f107cf. On-disk state overwritten by PFS-SEMANTICS-01 third rebuild.",
+      "passes": false,
+      "last_verified": "2026-08-17",
+      "commit": null,
+      "status": "quarantined_defect",
+      "notes": "Reason: apply_per_frame_saturation_to_active_targets / decide_target_saturation_policy keyed on bare skip_photometry and blanked skip_reason; Phase 2A re-force bypassed the whole {saturated, noise} set when PFS was ON. Pointer: CURSOR_RESULT_SAT_RERANK_01.md. SHA 8f107cfa2f4af63335e51608f6df7658d03ba14fbcd82c12fc07c4dab06933b8 (core n=193)."
     }
   ]
 }
