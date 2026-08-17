@@ -39,7 +39,7 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 | 21 | I-11 Howell sky term | 2 | **FIXED** | batch D |
 | 22 | I-04 ensemble scatter unmatched | 8 | **FIXED** | batch D |
 | 23 | I-03 omitted Howell terms | 2 | **DOCUMENTED** | legacy unused on anchor |
-| 24 | D1-2 linearity correction | 1 | **DEFERRED** | dome-flat ramp per sensor |
+| 24 | D1-2 linearity correction | 1 | **DEFERRED** | dome-flat ramp per sensor; SAT-LIMIT-01 cheap residual-vs-peak did not resolve a knee |
 | 25 | P-02 scintillation in production err | 9 | **FIXED** | batch D; floor not applied |
 | 26 | U-09 DATE-OBS convention per rig | 4 | **DOCUMENTED** | home rig verified |
 | 27 | Part 0c delta pairing fix | 7 | **FIXED** | E.1 source_file merge |
@@ -51,6 +51,7 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 | 32c | **SEM** weighted ensemble SEM (ratio ~0.677) | 9 | **CLOSED** | Shipped with WIDE-ERR-03/04; identity fire proofs; never alone |
 | 32d | **WIDE-ERR-CROSSRIG** per-rig calib on Newton/Boyden | 9 | **OPEN** | Mechanism is per-rig; calibrate when those drafts exist |
 | 32e | **CORR-ERR-01** ZP common-mode vs diagonal budget | 9 | **OPEN** | Research note (LOW): product-frame scatter below model in (11.0,11.5]; covariance-aware budget out of v1.0 |
+| 32f | **SAT-LIMIT-01** catalog sat clip NaN silent-pass | 7, 8 | **CLOSED** | INV-SAT-LIMIT; 515 reclassified 24 saturated; see RESULT_SAT_LIMIT_01 |
 
 ---
 
@@ -59,6 +60,7 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 1. **WIDE-ERR-CROSSRIG** -- apply the same per-rig gain/err calibration when Newton/Boyden drafts exist.
 2. **MASTERSTAR stacking** -- Steps 1-6 + TODO-B coaddition (enhancement).
 3. Draft 515 LC err = physical model (WIDE-ERR-04 identity sidecar). CORR-ERR-01 research note remains OPEN (LOW).
+4. SAT-LIMIT-01 <-> BIN-8-9 (bright-end LOO excess partly saturation/nonlinearity, not closed) <-> D1-2 (knee still unmeasured; dome-flat ramp).
 
 ---
 

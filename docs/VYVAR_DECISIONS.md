@@ -8,6 +8,54 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## SAT-LIMIT-01 - never silently admit a missing saturation clip (2026-08-17)
+
+**Hole.** Draft 515 MASTERSTAR catalog had `saturate_limit_adu` NaN on
+3621/3621 rows. EQUIPMENTS id=1 SATURATE_ADU is NULL (wrong-16384 wipe);
+MASTERSTAR FITS is BITPIX -32 so BITPIX inference is None; SAT-DIAG 65535
+DERIVED was not wired into MASTERSTAR annotate. `peak > NaN` is False, so
+`is_saturated` never fired. C2 (G=7.99, peak 64350 ADU = 98.2% of 65535)
+sat in the BO ensemble as zone=linear.
+
+**INV-SAT-LIMIT.** Unresolved clip -> WARN-named conservative default
+(GAIN-DOMAIN-01 container 65535, peak-test 0.80 x clip = 52428 ADU when the
+D1-2 knee is unmeasured). Never silent admit. Float-stack overshoot of a few
+percent does not veto the camera clip; a true unit change (frame_max > 1.20 x
+raw clip) still skips.
+
+**Knee.** Cheap residual-vs-peak on 515 did not resolve a linearity knee.
+D1-2 stays OPEN (dome-flat ramp).
+
+**515 impact.** 24 stars reclassified saturated, including C2. Product-frame
+check MAD without C2 and without a replacement rose 7.05 -> 8.58 mmag
+(meter match to D515-ACCEPT-01B). SAT gate still excludes C2; a quieter
+ensemble needs Phase 1 re-rank. Production comparison CSV not rewritten.
+
+**Artifacts.** `dev/results/CURSOR_RESULT_SAT_LIMIT_01.md`,
+`SAT_LIMIT_01_summary.json`.
+
+---
+
+## XVAL-AIJ-01 - three-link photometry cross-check (2026-08-17)
+
+**Chain.** VYVAR differential photometry is now closed against three independent
+reductions on the same data:
+
+1. **Library:** photutils/sep vs VYVAR dao_flux, ~3 mmag RMS (audit Wave 7 /
+   TODO-SEP-XVAL harness).
+2. **Product formula:** architect independent reconstruction of mag_calib,
+   0.0001 mmag (XVAL-BO-01; formula identity, not a second photometry engine).
+3. **External tool:** AstroImageJ 6.0.10 vs VYVAR, 3.3 mmag RMS per epoch
+   over 134 frames of BO CVn (0.47 mag ptp eclipser), identical five-star
+   ensembles. Evidence: `dev/results/XVAL_AIJ_01_bo_compare.csv`,
+   `CURSOR_RESULT_XVAL_AIJ_01.md`.
+
+JAAVSO methods sentence: VYVAR and AstroImageJ agree to 3.3 mmag RMS per
+epoch over 134 frames of a 0.47-mag-amplitude eclipser using identical
+comparison ensembles.
+
+---
+
 ## WIDE-ERR-04 - close at physical model (2026-08-16)
 
 **Closure.** Wide-rig exported errors closed at the **physical model**:

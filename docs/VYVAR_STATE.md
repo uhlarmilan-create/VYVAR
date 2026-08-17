@@ -1,9 +1,18 @@
 # VYVAR -- Development State
 
-**Status:** WIDE-ERR-04 close pending Milan-authorized push of day's chain.
-Local tip before push: see `CURSOR_RESULT_WIDE_ERR_04.md` (PUSH-STAMP-01).
+**Status:** XVAL-AIJ-01 + SAT-LIMIT-01 landed locally; push NOT authorized.
+Baseline origin/main: a217e1d. Draft 515 photometry SHA: da9cce4.
 
-Last updated: **2026-08-16** (WIDE-ERR-04 physical-model closure).
+Last updated: **2026-08-17** (XVAL-AIJ-01 + SAT-LIMIT-01).
+
+## 2026-08-17 -- XVAL-AIJ-01 + SAT-LIMIT-01
+
+EXTERNAL-XVAL independent-tool **CLOSED**: AIJ vs VYVAR 3.3 mmag RMS / 134
+epochs / BO CVn. SAT-LIMIT-01 **CLOSED** in code (INV-SAT-LIMIT); 515 catalog
+reclassified (24 saturated including C2). D1-2 remains OPEN. Production BO
+ensemble CSV not rewritten; check MAD without C2 rose 7.05 -> 8.58 mmag on
+the product meter. Reports: `CURSOR_RESULT_XVAL_AIJ_01.md`,
+`CURSOR_RESULT_SAT_LIMIT_01.md`.
 
 ## 2026-08-16 -- WIDE-ERR-04 (physical model)
 

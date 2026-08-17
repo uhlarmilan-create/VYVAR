@@ -21,7 +21,7 @@ Classes: **P** physics/method wrong - **I** implementation != method - **C** con
 | I-03 | 4 | errors | U | LOW | Legacy Howell terms unused on anchor | closure #23 | DOCUMENTED | OPEN |
 | D10-1 | 4 | transforms | C?FIXED | - | unfiltered?CR band | closure #18 | FIXED Milan decision | CLOSED |
 | WIDE-ERR | 4 | errors | I | MED | Diagnosed+localized (NOISE-FLOOR-01 + WIDE-ERR-LOC-01): photon/sky channel after completed Howell; full-range a,b split fails (r2~0.42, W-R1). Exported bars unchanged. | `CURSOR_RESULT_WIDE_ERR_LOC_01.md` | **DIAGNOSED+LOCALIZED**; fix = own task | OPEN |
-| D1-2 | 4 | calibration | U | MED | Linearity curve deferred | closure #24 | DEFERRED dome-flat ramp | DEFERRED |
+| D1-2 | 4 | calibration | U | MED | Linearity curve deferred. SAT-LIMIT-01 cheap residual-vs-peak did not resolve a knee (auto-flag at 25000 ADU rejected). Dome-flat ramp still required. | closure #24 | DEFERRED dome-flat ramp | DEFERRED |
 | D5-2 | 4 | saturation | C?FIXED | - | admission_sat_peak_frac=0.70 | batch E | FIXED | CLOSED |
 | ZP-CLIP | 3 | ensemble | C?FIXED | HIGH | `len(z)>=4` MAD clip rejected good comp | draft 509; DECISIONS ZP-CLIP-REMOVAL | REMOVED 2026-08-12 | FIXED |
 | SATURATE_ADU | 3 | calibration | C | HIGH | DB value 16384 wrong units (binned?bin1) | database.py:2854; SAT-DIAG | NULLed QHY294MM; SAT-DIAG derives | FIXED |
@@ -249,7 +249,8 @@ Row updates: COMP-POOL-01 Stage 2 / C2-R2 -> **CLOSED** (superseded); BO-ENSEMBL
 |----|-------|----------|--------|
 | **COMP-RMS-DEF-01** | ensemble | CSV `comp_rms` overstates per-star noise vs LOO (BO pred 14.9 vs measured 8.6 mmag). RMS-first sorts on a column whose definition must be unified; same class as U-SCATTER-DEF. | OPEN |
 | **EMPTY-DAO-01** | detection/export | Already registered (carry row above); IMPL-05 A fixed crash only. | OPEN |
-| **BIN-8-9-REGRESSION-01** | aperture | LOO 7.8 -> 12.3 mmag at r 9.5 -> 5.0, n=4; verify on next draft. | OPEN |
+| **BIN-8-9-REGRESSION-01** | aperture | LOO 7.8 -> 12.3 mmag at r 9.5 -> 5.0, n=4; SAT-LIMIT-01: 24 stars above 0.80 clip including C2 - bright-end excess plausibly partly saturation; not closed. | OPEN |
+| **SAT-LIMIT-01** | saturation | Catalog clip NaN 3621/3621; INV-SAT-LIMIT conservative 0.80 x 65535; 515 reclassified. | CLOSED |
 | **FAINT-14-15-CONTAM** | comps | 172 mmag LOO; single-source addresses candidacy; watch. | OPEN |
 | **Q1-RERUN** | weights | `sigma_eff` scale question still open; Q1 contaminated by flux-sum LOO (PRE-IMPL-01). | OPEN |
 | **QA-DEGRADED** | Comp QA | Two targets flagged `qa_degraded` under IMPL-05 D guard. | OPEN |

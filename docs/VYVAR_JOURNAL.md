@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-17 -- XVAL-AIJ-01 + SAT-LIMIT-01
+
+**XVAL-AIJ-01.** Milan AIJ 6.0.10 vs VYVAR on BO CVn, same 5 comps, 134/134
+epochs: median +0.15 mmag, RMS 3.27 mmag, MAD 3.24 mmag (x 1.4826), max |diff|
+10.0 mmag, amplitude 474 vs 475 mmag ptp. Independent-tool cross-check CLOSED.
+Three-link chain in DECISIONS: photutils/sep ~3 mmag -> formula 0.0001 mmag ->
+AIJ 3.3 mmag.
+
+**SAT-LIMIT-01.** Catalog limits NaN 3621/3621 (EQUIPMENTS id=1 NULL + float
+MASTERSTAR BITPIX + SAT-DIAG not wired + frame_max 1.02 veto). INV-SAT-LIMIT
+conservative default 0.80 x 65535. 515 reclassified: 24 saturated including
+C2. Product check MAD without C2 7.05 -> 8.58 mmag. D1-2 still OPEN. Push not
+authorized.
+
+---
+
 ## 2026-08-15/16 -- GATE inventory through IMPL-05 C (local chain; SESSION-CLOSE push)
 
 **Arc.** Gate inventory (59 sites; 5 instrumented) and INV-NO-SILENT-EMPTY
