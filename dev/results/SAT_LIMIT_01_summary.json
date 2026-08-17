@@ -1,0 +1,477 @@
+{
+  "catalog": {
+    "n_rows": 3621,
+    "saturate_limit_adu": {
+      "n_nan": 3621,
+      "n_finite": 0
+    },
+    "saturate_limit_adu_85pct": {
+      "n_nan": 3621,
+      "n_finite": 0
+    },
+    "is_saturated_true": 0,
+    "likely_saturated_true": 5,
+    "zone_counts": {
+      "linear": 2908,
+      "noise": 713
+    },
+    "peak_max_adu": {
+      "min": 1460.343017578125,
+      "median": 1688.17236328125,
+      "max": 68429.1171875,
+      "n_ge_0.80clip": 24,
+      "n_ge_0.85clip": 23,
+      "n_ge_65000": 15
+    },
+    "C2": {
+      "catalog_id": "1500748301498613248",
+      "phot_g_mean_mag": 7.991215229034424,
+      "peak_max_adu": 64350.48046875,
+      "zone": "linear",
+      "is_saturated": false,
+      "likely_saturated": false,
+      "pct_of_clip": 98.19253905355917
+    },
+    "likely_saturated_ids": [
+      "1500347838748255360",
+      "1497120565961994752",
+      "1497795528662695424",
+      "1498284433380024576",
+      "1498027250738022144"
+    ],
+    "likely_saturated_peaks": [
+      66216.1484375,
+      65477.2890625,
+      65345.625,
+      66126.3828125,
+      67462.03125
+    ]
+  },
+  "equipment": {
+    "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+    "equipment_id_1": {
+      "ID": 1,
+      "CAMERANAME": "QHY294MM",
+      "ALIAS": "Camera1",
+      "SATURATE_ADU": null,
+      "GAIN_ADU": 3.17,
+      "READNOISE_E": 7.6
+    },
+    "draft_515": {
+      "draft_table_not_found": true,
+      "id_equipment_tables": []
+    }
+  },
+  "sat_diag": {
+    "sat_adu": 65535.0,
+    "sat_source": "DERIVED",
+    "lin_adu": 55704.75,
+    "lin_source": "DEFAULT_FRAC",
+    "header_value": null,
+    "equipment_value": null,
+    "bitpix_ceiling": 65535.0,
+    "derived_ceiling": 65535.0
+  },
+  "masterstar_fits": {
+    "BITPIX": -32,
+    "SATURATE": null,
+    "MAXLIN": null,
+    "LINLIMIT": null,
+    "MAXADU": null,
+    "DATAMAX": null,
+    "MAXPIX": null,
+    "data_min": -5951.00244140625,
+    "data_median": 1401.1177368164062,
+    "data_max": 68429.1171875
+  },
+  "knee": {
+    "n_used": 2644,
+    "n_linear_mask": 2644,
+    "zp_mag": -22.098363173887485,
+    "n_zp_cohort": 746,
+    "ref_bin_std_mag": 0.006018563110830206,
+    "knee_adu": null,
+    "knee_resolved": false,
+    "bins": [
+      {
+        "lo": 0.0,
+        "hi": 5000.0,
+        "n": 2403,
+        "median_resid_mag": 0.033754153813085,
+        "median_peak_adu": 1747.567138671875,
+        "median_G": 13.750283241271973
+      },
+      {
+        "lo": 5000.0,
+        "hi": 10000.0,
+        "n": 122,
+        "median_resid_mag": -0.021092201769544516,
+        "median_peak_adu": 6472.105224609375,
+        "median_G": 10.802305221557617
+      },
+      {
+        "lo": 10000.0,
+        "hi": 15000.0,
+        "n": 37,
+        "median_resid_mag": -0.00698001564830264,
+        "median_peak_adu": 11756.3046875,
+        "median_G": 9.902342796325684
+      },
+      {
+        "lo": 15000.0,
+        "hi": 20000.0,
+        "n": 18,
+        "median_resid_mag": -0.010343059725322234,
+        "median_peak_adu": 16339.85400390625,
+        "median_G": 9.567518711090088
+      },
+      {
+        "lo": 20000.0,
+        "hi": 25000.0,
+        "n": 13,
+        "median_resid_mag": -0.019502106115361073,
+        "median_peak_adu": 21929.244140625,
+        "median_G": 9.307086944580078
+      },
+      {
+        "lo": 25000.0,
+        "hi": 30000.0,
+        "n": 8,
+        "median_resid_mag": -0.076242939213504,
+        "median_peak_adu": 26812.1806640625,
+        "median_G": 9.272656917572021
+      },
+      {
+        "lo": 30000.0,
+        "hi": 35000.0,
+        "n": 10,
+        "median_resid_mag": -0.03990787094662274,
+        "median_peak_adu": 32627.8486328125,
+        "median_G": 8.7943754196167
+      },
+      {
+        "lo": 35000.0,
+        "hi": 40000.0,
+        "n": 5,
+        "median_resid_mag": 0.09362386191274297,
+        "median_peak_adu": 37874.5859375,
+        "median_G": 8.496113777160645
+      },
+      {
+        "lo": 40000.0,
+        "hi": 45000.0,
+        "n": 2,
+        "median_resid_mag": null
+      },
+      {
+        "lo": 45000.0,
+        "hi": 50000.0,
+        "n": 3,
+        "median_resid_mag": null
+      },
+      {
+        "lo": 50000.0,
+        "hi": 55000.0,
+        "n": 1,
+        "median_resid_mag": null
+      },
+      {
+        "lo": 55000.0,
+        "hi": 60000.0,
+        "n": 2,
+        "median_resid_mag": null
+      },
+      {
+        "lo": 60000.0,
+        "hi": 65536.0,
+        "n": 9,
+        "median_resid_mag": 0.21313386306134063,
+        "median_peak_adu": 64641.23046875,
+        "median_G": 6.900562763214111
+      }
+    ],
+    "auto_detector_knee_adu": 25000.0,
+    "auto_detector_resolved": true,
+    "physics_review": "NOT a resolved linearity knee (n=8 dip reverses next bin; 60k+ +213 mmag is clip saturation)",
+    "chosen_limit_adu": 52428.0,
+    "chosen_source": "conservative_default_0.80x_container_clip_65535"
+  },
+  "b4": {
+    "draft": 515,
+    "photometry_sha": "da9cce4",
+    "chosen_limit": {
+      "peak_test_adu": 52428.0,
+      "clip_adu": 65535.0,
+      "frac": 0.8,
+      "source": "conservative_default_0.80x_container_clip_65535",
+      "knee_note": "Cheap residual-vs-peak auto-detector fired at 25000 ADU on n=8 (-76 mmag) then reversed; that is not a resolved linearity knee. Bright-end +213 mmag at peak>60k is saturation, not a sub-clip knee. D1-2 remains OPEN (dome-flat ramp)."
+    },
+    "fire_proof_c2_unresolved": {
+      "is_saturated": true,
+      "zone": "saturated",
+      "saturate_limit_adu": 65535.0,
+      "saturate_limit_adu_85pct": 52428.0
+    },
+    "reclassify": {
+      "n_rows": 3621,
+      "peak_test_adu": 52428.0,
+      "clip_adu": 65535.0,
+      "frac": 0.8,
+      "n_is_saturated_before": 0,
+      "n_is_saturated_after": 24,
+      "n_zone_changed_to_saturated": 24,
+      "saturated_catalog_ids": [
+        "1500347838748255360",
+        "1497120565961994752",
+        "1500502938607034496",
+        "1497795528662695424",
+        "1498959739676066048",
+        "1498284433380024576",
+        "1500535889596118656",
+        "1502029301264570240",
+        "1498027250738022144",
+        "1497007144465726080",
+        "1498359440688922240",
+        "1496273392252850304",
+        "1500346189480812416",
+        "1497250308334141056",
+        "1501972809558725248",
+        "1498814260545232384",
+        "1485541334132081536",
+        "1485619777414711680",
+        "1500748301498613248",
+        "1498285464172200192",
+        "1497772782515937920",
+        "1498927097925811072",
+        "1497853802778923392",
+        "1497974302380766080"
+      ]
+    },
+    "c2_after": {
+      "is_saturated": true,
+      "zone": "saturated",
+      "peak_max_adu": 64350.48046875
+    },
+    "affected_ensembles": [
+      {
+        "target_catalog_id": "1486043226830097024",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1497181966814590848",
+        "n_comp": 4,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1497236186481686016",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1497603835681942400",
+        "n_comp": 7,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1497639123133258752",
+        "n_comp": 6,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1497871669842349184",
+        "n_comp": 7,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498058827337611392",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498118922519946624",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1498278351706325248",
+        "n_comp": 6,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498321301379345408",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1498486880958321024",
+        "n_comp": 5,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498613634033133184",
+        "n_comp": 5,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498795809366255488",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1498842882207281152",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1499021174889970816",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1499084499887740160",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1500327978819506944",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1500418894687086208",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1500576193569187840",
+        "n_comp": 8,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      },
+      {
+        "target_catalog_id": "1500693841313325696",
+        "n_comp": 8,
+        "saturated_members": [
+          "1498814260545232384"
+        ]
+      },
+      {
+        "target_catalog_id": "1502012464992313088",
+        "n_comp": 7,
+        "saturated_members": [
+          "1500748301498613248"
+        ]
+      }
+    ],
+    "bo_reselect": {
+      "old_ensemble": [
+        "1500748301498613248",
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "new_ensemble": [
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "dropped": [
+        "1500748301498613248"
+      ],
+      "n_old": 5,
+      "n_new": 4,
+      "c2_was_member": true,
+      "c2_in_new": false,
+      "note": "drop_saturated_keep_rank",
+      "method": "layer2_membership_gate_on_fixed_pool (no RMS re-rank, no G-fill)"
+    },
+    "check_mad_old": {
+      "meter": "mag_calib_pytics_zp (XVAL-BO-01 / WIDE-ERR-03C product frame)",
+      "case": "full_ensemble",
+      "n_epochs": 134,
+      "n_frames_csv": 134,
+      "check_scatter_mad_mmag": 7.049776749415898,
+      "ensemble": [
+        "1500748301498613248",
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "n_comp": 5,
+      "weights": {
+        "1500748301498613248": 6563.579980478409,
+        "1497771992240531712": 55042.98575767813,
+        "1499200223486564608": 15506.766195941536,
+        "1497974027502858240": 5579.563068561,
+        "1497368849430107904": 8810.877373810388
+      }
+    },
+    "check_mad_new": {
+      "meter": "mag_calib_pytics_zp (XVAL-BO-01 / WIDE-ERR-03C product frame)",
+      "case": "full_ensemble",
+      "n_epochs": 134,
+      "n_frames_csv": 134,
+      "check_scatter_mad_mmag": 8.579582528945744,
+      "ensemble": [
+        "1497771992240531712",
+        "1499200223486564608",
+        "1497974027502858240",
+        "1497368849430107904"
+      ],
+      "n_comp": 4,
+      "weights": {
+        "1497771992240531712": 238384.76648085105,
+        "1499200223486564608": 10690.285973762466,
+        "1497974027502858240": 4984.888638481617,
+        "1497368849430107904": 7663.820130695736
+      }
+    },
+    "accept_01b_note": "D515-ACCEPT-01B 515 BO cell (7.0498 mmag, check 1498020894186918144, ensemble including C2) is superseded for ensemble-membership questions; pointer: CURSOR_RESULT_SAT_LIMIT_01.md. 01B 2x2 vs 514 same-meter table is not silently overwritten.",
+    "files": {
+      "masterstars_backup": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\masterstars_full_match_before_sat_limit_01.csv",
+      "bo_ensemble_sidecar": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\comparison_stars_bo_sat_limit_01.csv",
+      "production_comp_csv_unchanged": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\comparison_stars_per_target.csv"
+    }
+  }
+}

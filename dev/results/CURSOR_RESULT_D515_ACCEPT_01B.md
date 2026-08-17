@@ -1,5 +1,12 @@
 CURSOR RESULT - 2026-08-16 D515-ACCEPT-01B
 
+SUPERSEDED-WITH-POINTER (ensemble membership only, 2026-08-17): the 515 BO
+cell below (7.0498 mmag) was measured with C2 `1500748301498613248` in the
+ensemble. SAT-LIMIT-01 reclassified C2 as saturated. Product-frame check MAD
+without C2 (no replacement) is 8.580 mmag. See
+`dev/results/CURSOR_RESULT_SAT_LIMIT_01.md`. This 2x2 vs 514 same-meter table
+is not overwritten; it remains the 514-vs-515 identical-ensemble comparison.
+
 What I did
 Same-meter re-read of check MAD on draft 515 (run SHA da9cce4) using the
 IMPL-05 C check IDs. Measurement via temp Phase 2A with is_check_star forced
