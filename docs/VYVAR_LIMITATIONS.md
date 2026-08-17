@@ -147,10 +147,17 @@ for crowded fields. Status: **DOCUMENTED**. Literature: Honeycutt (1992).
 
 ## U-09 -- DATE-OBS convention per rig
 
-BO CVn wide rig: DATE-OBS = shutter-open, **verified**. Other rigs: convention not verified per
-rig; a +EXPTIME/2 error is invisible in light-curve shape but fatal for times of minimum. QHY294
-has no DATE-END/EXPMID header; driver convention **UNVERIFIED** before timing-critical submission.
-Status: **MEASURED** (home rig), **DOCUMENTED** (others). Evidence: `CURSOR_RESULT_audit_stage2.md`.
+BO CVn wide rig (draft 515, NoFilter_60_2, QHY294PROM, 60 s): DATE-OBS =
+shutter-open, **CLOSED** for this rig. On-frame comment "UTC start date of
+observation"; 149 consecutive gaps median 121.000 s (EXPTIME + 61 s dead
+time), 0 gaps < EXPTIME; no DATE-END/EXPMID. VYVAR adds EXPTIME/2 in
+`mid_exposure_jd`; measured jd_mid - jd(DATE-OBS) = 30.000 s; export BJD
+is that mid. Ekos/INDI logs were not on the Windows PC. Other rigs:
+convention not verified per rig; a missing +EXPTIME/2 is invisible in
+light-curve shape but fatal for times of minimum (30 s on 60 s frames).
+Status: **CLOSED** (home rig 515), **DOCUMENTED** (others). Evidence:
+`dev/results/CURSOR_RESULT_U09_GAIN_AUTH.md` (supersedes audit_stage2
+UNVERIFIED on this rig).
 
 ## aperture_snr_sizing -- partially wired (closure Step 1, 2026-07-31)
 

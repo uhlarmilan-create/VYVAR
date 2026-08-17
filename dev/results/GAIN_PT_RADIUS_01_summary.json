@@ -1,0 +1,131 @@
+{
+  "task": "GAIN-PT-RADIUS-01 + SUBMIT-01",
+  "status": "OK",
+  "measured_utc": "2026-08-17T15:11:40Z",
+  "code_sha": "6b23633fe26c11ee12cda5caf217f397c5d8ab06",
+  "a3": {
+    "r_pt_px": 4.0,
+    "r_pt_source": "pinned_sky_dominated_4px",
+    "g_pt": 0.6370667331227862,
+    "g_pt_ci_lo": 0.44338128076377437,
+    "g_pt_ci_hi": 1.0941919812123437,
+    "ci_width_factor": 2.4678353116926237,
+    "n_frames": 134,
+    "pt_ok": true,
+    "authority_source": "g_pt",
+    "authority_value": 0.6370667331227862,
+    "wide_err_04_g_pt": 0.6370667331227862,
+    "abs_delta_vs_wide_err_04": 0.0,
+    "ci_gate_pass": true,
+    "sidecar_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\gain_photon_transfer.json"
+  },
+  "b": {
+    "elapsed_s": 789.8475143909454,
+    "mag_byte_identity": {
+      "n_common": 48,
+      "n_mag_byte_identical": 48,
+      "n_mag_mismatch": 0,
+      "pass": true,
+      "fail_examples": []
+    },
+    "bo_mag_calib_byte_identical_vs_backup": true,
+    "err_before_after": {
+      "BO_median_err_before_mmag": 8.364999999999998,
+      "BO_median_err_after_mmag": 8.945000000000002,
+      "BO_delta_mmag": 0.5800000000000024,
+      "FW_median_err_before_mmag": 7.01,
+      "FW_median_err_after_mmag": 7.42,
+      "FW_delta_mmag": 0.40999999999999975
+    },
+    "check_mad_mmag": {
+      "method": "MAD(mag_calib - kmag) * 1.4826 * 1000",
+      "BO_before_mmag": 194.28435180000002,
+      "BO_after_mmag": 194.28435180000002,
+      "BO_delta_mmag": 0.0,
+      "FW_before_mmag": 14.014276500000127,
+      "FW_after_mmag": 14.014276500000127,
+      "FW_delta_mmag": 0.0,
+      "pass_byte_unaffected": true,
+      "note": "mag-domain; also mag_calib/delta_mag/bjd byte-identical BO+FW vs backup"
+    },
+    "aavso_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt",
+    "varastro_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423.txt",
+    "aavso_n_rows": 134,
+    "aavso_magerr_median_mag": 0.009,
+    "err_model_line": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+    "photometry_sha_core": "de6f7c8155d141376cf6df895144873f470555c5bb2de426ddad5b46cd981301",
+    "photometry_sha_core_n": 97,
+    "photometry_sha_core_prefix": "de6f7c8",
+    "prev_sha_prefix": "36a53b0",
+    "sidecar_after_phase2a": {
+      "authority_source": "g_pt",
+      "authority_value": 0.6370667331227862,
+      "aperture_r_px": 4.0,
+      "aperture_r_px_source": "pinned_sky_dominated_4px",
+      "g_pt": 0.6370667331227862,
+      "ci_width_factor": 2.4678353116926237
+    },
+    "a3_carried": {
+      "r_pt_px": 4.0,
+      "r_pt_source": "pinned_sky_dominated_4px",
+      "g_pt": 0.6370667331227862,
+      "g_pt_ci_lo": 0.44338128076377437,
+      "g_pt_ci_hi": 1.0941919812123437,
+      "ci_width_factor": 2.4678353116926237,
+      "n_frames": 134,
+      "pt_ok": true,
+      "authority_source": "g_pt",
+      "authority_value": 0.6370667331227862,
+      "wide_err_04_g_pt": 0.6370667331227862,
+      "abs_delta_vs_wide_err_04": 0.0,
+      "ci_gate_pass": true,
+      "sidecar_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\gain_photon_transfer.json"
+    },
+    "varastro_bytes": 9065,
+    "aavso_magerr_before_mag": 0.008,
+    "aavso_magerr_after_mag": 0.009,
+    "spec_expected_recombined_delta_mmag": 0.18,
+    "measured_lc_median_err_delta_mmag": 0.5800000000000024
+  },
+  "c": {
+    "checks": {
+      "C1_OBSCODE_UMIA": "PASS",
+      "C1_TYPE_present": "PASS",
+      "C1_SOFTWARE_VYVAR": "PASS",
+      "C1_band_CV": "PASS",
+      "C1_KNAME_KMAG_0_na": "PASS",
+      "C1_KNAME_is_check": "PASS",
+      "C1_NOTES_n_comp4": "PASS",
+      "C1_NOTES_no_truncated_ids": "PASS",
+      "C1_DATE_BJD": "PASS",
+      "C1_n_rows_134": "PASS",
+      "C1_ERR_MODEL_g_pt": "PASS",
+      "C1_MAGERR_3decimal": "PASS",
+      "C2_varastro_exists": "PASS",
+      "C2_w_pre_w_post": "PASS",
+      "C2_n_epochs_134": "PASS",
+      "C3_mag_depth": "PASS",
+      "C3_quiet_median_9p4_9p5": "PASS",
+      "C3_mandatory_na": "PASS"
+    },
+    "n_aavso_rows": 134,
+    "n_varastro_data_rows": 134,
+    "notes_first": "meth=aperture|n_comp=4 GaiaDR3 ensemble|trust=GREEN|4 clean comps",
+    "err_model": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+    "kname_na_n": 0,
+    "kmag_na_n": 0,
+    "mag_depth": 0.47000000000000064,
+    "quiet_median_mag": 9.462499999999999,
+    "magerr_median_mag": 0.009,
+    "truncated_ids": [],
+    "obscode_line": "#OBSCODE=UMIA",
+    "software_lines": [
+      "# Pipeline: VYVAR - Automated Differential Photometry Pipeline",
+      "#SOFTWARE=VYVAR/1.0 (aperture photometry; Broeg 2005 ensemble)"
+    ]
+  },
+  "named_defects": [
+    "Spec B1 expected ~+0.18 mmag on recombined median from GAIN-AUTH B2; measured LC median err +0.580 mmag (AAVSO MAGERR 0.008->0.009). Physics/measurement outranks the estimate.",
+    "GAIN-AUTH-VERIFY estimated under-quote vs g_pt; this fix restores g_pt authority (conservative direction)."
+  ]
+}

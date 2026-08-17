@@ -31,8 +31,11 @@ authority). SAT-RERANK-01 DONE on SHA 36a53b0 (48 LCs; pointer
 `CURSOR_RESULT_SAT_RERANK_01B.md`). SAT-LIMIT-01 CLOSED. EXPORT-HDR-01
 closed on the same product. NET-TEST-01 DONE (vendored icon list).
 WIDE-ERR + SEM (WIDE-ERR-04). EXPORT-READY
-interim MAGERR item **OBSOLETE**. U-09 remains the only ToM-related export
-prerequisite. 8f107cf quarantined (VL-PFS-8F107CF).
+interim MAGERR item **OBSOLETE**. U-09 **CLOSED** on the home wide rig
+(verdict a, draft 515; `CURSOR_RESULT_U09_GAIN_AUTH.md`). Other rigs
+still need a per-rig DATE-OBS check. GAIN-AUTH-VERIFY-01 **CLOSED** by
+GAIN-PT-RADIUS-01 (pin r=4.0; product SHA **de6f7c8**). SUBMIT-01 ready
+(BO CVn 2026-04-23; Milan manual). 8f107cf quarantined (VL-PFS-8F107CF).
 
 Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
 D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;

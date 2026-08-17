@@ -39,7 +39,7 @@ architecture** (enhancement, not a correctness blocker).
 | **I-03** | Omitted Howell terms | **DOCUMENTED** | legacy path unused on anchor | batch D |
 | **P-02** | Scintillation | **FIXED** | batch D wired | batch D |
 | **A-6** | sigma_sys floor | **DOCUMENTED** | fit anomaly; not applied | batch D |
-| **U-09** | DATE-OBS per rig | **DOCUMENTED** | home rig verified | batch A |
+| **U-09** | DATE-OBS per rig | **CLOSED** | home rig 515 measured (verdict a); other rigs unverified | batch A + U-09 2026-08-17 |
 | **Part 0c** | Delta pairing | **FIXED** | E.1 source_file merge | batch E |
 | **DAO centroid** | Aperture placement | **FIXED** | E.2 WCS guard | batch E |
 | **T4-1** | Detection on resampled | **FIXED** | E.4 N_equiv=3.78 | batch E |
@@ -85,8 +85,9 @@ One sentence each; full detail in `docs/VYVAR_LIMITATIONS.md`.
   fix routed (Honeycutt 1992 LOO + photon-term audit) before wide-rig submission claims err bars
   (**OPEN**).
 - **D1-1 / CR-1:** cosmic-ray rejection added in batch E (**FIXED**).
-- **U-09 timing convention:** home rig (BO CVn) verified; other rigs need per-rig confirmation
-  (**DOCUMENTED**).
+- **U-09 timing convention:** home rig (draft 515 BO CVn) **CLOSED** (DATE-OBS
+  start + EXPTIME/2 in `mid_exposure_jd`); other rigs still need per-rig
+  confirmation (`CURSOR_RESULT_U09_GAIN_AUTH.md`).
 - **Gaia proper-motion:** no-op on local DR3 build; awaits DR4 (**DEFERRED**).
 
 ---

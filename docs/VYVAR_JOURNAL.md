@@ -2,6 +2,28 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-17 -- GAIN-PT-RADIUS-01 + SUBMIT-01
+
+Pinned PT r=4.0; fire proofs; g_pt=0.63707 restored on 515. ERR-only
+rebuild: MAG 48/48 identical, product SHA **de6f7c8**, ERR_MODEL
+g_pt=0.6371, BO median err +0.580 mmag. SUBMIT-01 checklist all PASS
+(UMIA / CV / 134 / BJD). Push not authorized. Report:
+`dev/results/CURSOR_RESULT_GAIN_PT_RADIUS_01.md`.
+
+## 2026-08-17 -- U-09 CLOSED + GAIN-AUTH-VERIFY-01
+
+Home-rig DATE-OBS is shutter-open (on-frame comment; 121 s cadence =
+60 s + 61 s dead; 0 overlaps). `mid_exposure_jd` adds EXPTIME/2
+(30.000 s measured). Export BJD = that mid + TDB/LTT (jd_export -
+jd(DATE-OBS) = 398.847 s median). No JD code change.
+
+36a53b0 fallback: sidecar present; PT g_pt=1.403 at r=2.499 px, CI
+factor 6.22 > 3, authority db/scale 0.7925. Not a harness skip.
+Photon term 1/sqrt(g): export under-quotes vs WIDE-ERR-04 g_pt=0.637
+by 0.42 mmag photon-only / 0.28 mmag empirical on BO CVn. MAG/times
+submit-worthy. Report: `dev/results/CURSOR_RESULT_U09_GAIN_AUTH.md`.
+Push not authorized. `--fast` OVERALL PASS (1443 passed, 28 skipped, SHA 6b23633).
+
 ## 2026-08-17 -- NET-TEST-01 (harness; pulled forward)
 
 Vendored Streamlit material icon names from locally installed streamlit

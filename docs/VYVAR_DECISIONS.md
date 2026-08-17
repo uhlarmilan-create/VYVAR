@@ -8,6 +8,54 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## GAIN-PT-RADIUS-01 - pin photon-transfer aperture at 4.0 px (2026-08-17)
+
+**Mechanism.** PT empty-aperture radius is always
+`PHOTON_TRANSFER_APERTURE_R_PX = 4.0` with source string
+`pinned_sky_dominated_4px` (`resolve_photon_transfer_aperture_r_px`).
+Leftover `pipeline_meta.dynamic_params.aperture_r_px` is never read for
+PT. `force_aperture_px` sizes star photometry only and does not override
+PT. Sidecar records `aperture_r_px` and `aperture_r_px_source`. No new
+config key (291).
+
+**Why.** Reading leftover meta before this-run apertures exist selected
+r=2.499 on 36a53b0, widened CI to 6.22, and fell back to DB/scale
+(GAIN-AUTH-VERIFY-01). WIDE-ERR-03B B3: PT needs sky-dominated ~4 px.
+
+**Proof.** On draft 515, pinned PT gives g_pt=0.63707, CI factor 2.468,
+authority=g_pt (byte-identical to WIDE-ERR-04). ERR-only Phase 2A:
+MAG 48/48 byte-identical; product SHA **de6f7c8** (err columns).
+SUBMIT-01 checklist all PASS. Evidence:
+`dev/results/CURSOR_RESULT_GAIN_PT_RADIUS_01.md`.
+
+---
+
+## U-09 - DATE-OBS is shutter-open; export is mid-exposure BJD (2026-08-17)
+
+**Closed (verdict a)** on the home wide rig (draft 515, NoFilter_60_2,
+QHY294PROM, 60 s). Real-frame DATE-OBS comment is "UTC start date of
+observation". Consecutive BO CVn DATE-OBS gaps are 121.000 s median
+(EXPTIME 60 s + 61 s dead time; 149/149 gaps >= EXPTIME; 0 overlaps).
+VYVAR adds EXPTIME/2 in `time_utils.mid_exposure_jd` (not at export).
+Measured jd_mid - jd(DATE-OBS) = 30.000 s; AAVSO DATE is BJD_TDB of that
+mid (jd_export - jd(DATE-OBS) = 398.847 s median = 30 s + TDB/LTT).
+Ekos/INDI logs were not on this PC; start vs end would still want a log
+excerpt, but mid-exposure DATE-OBS is incompatible with the on-frame
+comment. Other rigs stay unverified. Evidence:
+`dev/results/CURSOR_RESULT_U09_GAIN_AUTH.md`.
+
+---
+
+## GAIN-AUTH-VERIFY-01 - 36a53b0 used DB/scale because PT CI was wide (2026-08-17)
+
+**CLOSED** by GAIN-PT-RADIUS-01. Root cause was leftover
+`dynamic_params.aperture_r_px=2.499` overriding the intended ~4 px PT
+radius (CI factor 6.22 > 3). Pin at 4.0 restores g_pt=0.637 authority.
+Pointer: `CURSOR_RESULT_U09_GAIN_AUTH.md` (diagnosis);
+`CURSOR_RESULT_GAIN_PT_RADIUS_01.md` (fix).
+
+---
+
 ## PFS-SEMANTICS-01 - rescue keyed on skip_reason; one limit authority (2026-08-17)
 
 **Teach, do not disable.** `per_frame_saturation_enabled` remains a valid

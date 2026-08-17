@@ -41,7 +41,7 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 | 23 | I-03 omitted Howell terms | 2 | **DOCUMENTED** | legacy unused on anchor |
 | 24 | D1-2 linearity correction | 1 | **DEFERRED** | dome-flat ramp per sensor; SAT-LIMIT-01 cheap residual-vs-peak did not resolve a knee |
 | 25 | P-02 scintillation in production err | 9 | **FIXED** | batch D; floor not applied |
-| 26 | U-09 DATE-OBS convention per rig | 4 | **DOCUMENTED** | home rig verified |
+| 26 | U-09 DATE-OBS convention per rig | 4 | **CLOSED** | home rig 515 measured (verdict a); other rigs unverified; RESULT_U09_GAIN_AUTH |
 | 27 | Part 0c delta pairing fix | 7 | **FIXED** | E.1 source_file merge |
 | 28 | DAO centroid stability | 5, 7 | **FIXED** | E.2 WCS guard |
 | 29 | Anchor re-cut (VL-ANCHOR-WCSINV) | all | **FIXED** | physical re-cut GATE 2; SHA 5bccd85a |

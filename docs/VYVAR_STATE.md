@@ -1,12 +1,31 @@
 # VYVAR -- Development State
 
-**Status:** PFS-SEMANTICS-01 + SAT-RERANK-01 + EXPORT-HDR-01 closed locally.
-NET-TEST-01 implemented (vendored icon list; no network in `--fast` icon
-tests). Push AUTHORIZED pending `--fast` on the new content tip.
-Baseline origin/main: a217e1d. Draft 515 photometry SHA: **36a53b0**
-(48 LCs). **8f107cf quarantined** (VL-PFS-8F107CF).
+**Status:** GAIN-PT-RADIUS-01 CLOSED. Draft 515 product SHA:
+**de6f7c8** (ERR-only re-export; MAG byte-identical to 36a53b0).
+SUBMIT-01 checklist PASS (BO CVn AAVSO/VarAstro ready for Milan).
+origin/main tip before this work: **6b23633**. Push not authorized.
+**8f107cf quarantined** (VL-PFS-8F107CF).
 
-Last updated: **2026-08-17** (NET-TEST-01 harness).
+Last updated: **2026-08-17** (GAIN-PT-RADIUS-01 + SUBMIT-01).
+
+## 2026-08-17 -- GAIN-PT-RADIUS-01 + SUBMIT-01
+
+PT radius pinned at 4.0 px (`pinned_sky_dominated_4px`); leftover
+dynamic_params ignored. A3: g_pt=0.63707, CI factor 2.468, authority
+g_pt. ERR-only Phase 2A: MAG 48/48 identical; BO median err
+8.365 -> 8.945 mmag; AAVSO MAGERR 0.008 -> 0.009; ERR_MODEL
+`gain=g_pt=0.6371`. Product SHA **de6f7c8** (supersedes 36a53b0 for
+err-sensitive meters). SUBMIT-01 all PASS; Milan submits manually.
+Report: `dev/results/CURSOR_RESULT_GAIN_PT_RADIUS_01.md`.
+
+## 2026-08-17 -- U-09 CLOSED + GAIN-AUTH-VERIFY-01
+
+DATE-OBS on draft 515 60 s frames is start-of-exposure; VYVAR adds
+EXPTIME/2; export is mid-exposure BJD. jd_mid - DATE-OBS = 30.000 s.
+36a53b0 ERR_MODEL gain=0.7925 because PT at r=2.499 px had CI width
+6.22 > 3; not a skipped sidecar. Photon term under-quotes vs g_pt=0.637
+by 0.42 mmag median (BO CVn). MAG/times submit-worthy; g_pt re-export
+optional. Report: `dev/results/CURSOR_RESULT_U09_GAIN_AUTH.md`.
 
 ## 2026-08-17 -- PFS-SEMANTICS-01 + SAT-RERANK-01B + EXPORT-HDR-01
 
