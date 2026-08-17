@@ -5393,6 +5393,40 @@ def _saturate_limit_adu_from_header(hdr: fits.Header) -> float | None:
     return None
 
 
+# SAT-LIMIT-01 / GAIN-DOMAIN-01: 16-bit FITS container clip (pile-up at 65535, not 65532).
+SAT_LIMIT_CONTAINER_CLIP_ADU = 65535.0
+# Peak-test fraction when the linearity knee is unmeasured (D1-2 / SAT-LIMIT-01 B3).
+SAT_LIMIT_NO_KNEE_FRAC = 0.80
+
+
+def _finite_positive_adu(value: Any) -> float | None:
+    """Return a finite positive ADU, else None (NaN/inf/<=0/unparsable)."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isfinite(v) and v > 0:
+        return v
+    return None
+
+
+def _sat_adu_from_draft_sat_diag(archive_path: Path | None) -> float | None:
+    """Read ``sat_diag.json`` ``sat_adu`` from a draft archive root when present."""
+    if archive_path is None:
+        return None
+    try:
+        from sat_diag import load_sat_diag_json  # noqa: PLC0415
+
+        ctx = load_sat_diag_json(Path(archive_path) / "sat_diag.json")
+    except Exception:  # noqa: BLE001
+        return None
+    if ctx is None:
+        return None
+    return _finite_positive_adu(getattr(ctx, "sat_adu", None))
+
+
 def _infer_sat_limit_from_bitpix(hdr: fits.Header) -> float | None:
     """Infer linearity ceiling from FITS integer layout (e.g. unsigned 16-bit -> 65535)."""
     import math
@@ -5438,9 +5472,10 @@ def _effective_saturation_limit(
     *,
     fallback_adu: float | None,
     equipment_saturate_adu: float | None = None,
-) -> tuple[float | None, str]:
+) -> tuple[float, str]:
     """Resolve saturation ceiling: header keywords -> ``EQUIPMENTS`` / caller ``equipment_saturate_adu`` ->
-    ``DATAMAX`` / ``MAXPIX`` -> BITPIX guess -> optional ``fallback_adu`` (call sites typically pass ``None``).
+    ``DATAMAX`` / ``MAXPIX`` -> BITPIX guess -> optional ``fallback_adu`` -> GAIN-DOMAIN-01
+    container clip (INV-SAT-LIMIT; never None).
     """
     import math
 
@@ -5472,7 +5507,15 @@ def _effective_saturation_limit(
         if math.isfinite(fa) and fa > 0:
             return fa, "config_fallback"
 
-    return None, "none"
+    # INV-SAT-LIMIT: never return None. MASTERSTAR stacks are float (BITPIX -32),
+    # EQUIPMENTS.SATURATE_ADU may be NULL (QHY294MM migration), headers often omit
+    # SATURATE/MAXLIN. Silent None made peak>limit comparisons False for the whole catalog.
+    logging.warning(
+        "[INV-SAT-LIMIT] saturation clip unresolved (header/equipment/BITPIX none); "
+        "using GAIN-DOMAIN-01 container clip %.0f ADU",
+        SAT_LIMIT_CONTAINER_CLIP_ADU,
+    )
+    return float(SAT_LIMIT_CONTAINER_CLIP_ADU), "conservative_default_container_clip_65535"
 
 
 def _box_peak_max_adu(data: "np.ndarray", x: float, y: float, half: int = 3) -> float:
@@ -6285,7 +6328,8 @@ def _resolve_peak_saturation_limit_adu(
     if camera_sat_limit_adu is None:
         return None
     try:
-        cam_lim = float(camera_sat_limit_adu) * frac / float(ns)
+        raw_cam = float(camera_sat_limit_adu)
+        cam_lim = raw_cam * frac / float(ns)
     except (TypeError, ValueError):
         return None
     if not math.isfinite(cam_lim) or cam_lim <= 0:
@@ -6299,7 +6343,10 @@ def _resolve_peak_saturation_limit_adu(
             fmax = float(frame_max_adu)
     except (TypeError, ValueError):
         pass
-    if math.isfinite(fmax) and fmax > cam_lim * 1.02:
+    # Float MASTERSTAR stacks can overshoot the 16-bit clip by a few percent
+    # (interpolation). Veto only when the image is clearly a different unit scale
+    # (SAT-LIMIT-01: 515 stack max 68429 vs clip 65535 is not a unit change).
+    if math.isfinite(fmax) and math.isfinite(raw_cam) and fmax > raw_cam * 1.20:
         return None
     if math.isfinite(sky) and sky > 0.20 * cam_lim:
         return None
@@ -6389,23 +6436,27 @@ def _annotate_masterstars_flux_zones(
     ns = int(n_stack) if n_stack is not None else 1
     ns = max(1, ns)
 
-    sat_lim: float | None = None
-    if equipment_saturate_adu is not None:
-        try:
-            fe = float(equipment_saturate_adu)
-            if math.isfinite(fe) and fe > 0:
-                sat_lim = fe * float(saturate_limit_fraction) / float(ns)
-        except (TypeError, ValueError):
-            pass
-    if sat_lim is None and saturate_limit_adu_fallback is not None:
-        try:
-            fe = float(saturate_limit_adu_fallback)
-            if math.isfinite(fe) and fe > 0:
-                sat_lim = fe * float(saturate_limit_fraction) / float(ns)
-        except (TypeError, ValueError):
-            pass
+    # RAW camera/container clip (do not pre-scale; _resolve_peak_saturation_limit_adu applies frac).
+    sat_lim_raw = _finite_positive_adu(equipment_saturate_adu)
+    peak_frac = float(saturate_limit_fraction)
+    unresolved_clip = sat_lim_raw is None
+    if unresolved_clip:
+        sat_lim_raw = _finite_positive_adu(saturate_limit_adu_fallback)
+        unresolved_clip = sat_lim_raw is None
+    if unresolved_clip:
+        sat_lim_raw = float(SAT_LIMIT_CONTAINER_CLIP_ADU)
+        peak_frac = float(SAT_LIMIT_NO_KNEE_FRAC)
+        _masterstar_zone_log_once(
+            "sat_limit_unresolved",
+            "[INV-SAT-LIMIT] header/equipment/sat_diag clip unresolved; "
+            f"using clip={SAT_LIMIT_CONTAINER_CLIP_ADU:.0f} ADU (GAIN-DOMAIN-01 container), "
+            f"peak-test frac={SAT_LIMIT_NO_KNEE_FRAC:.2f} "
+            f"(peak-test={SAT_LIMIT_CONTAINER_CLIP_ADU * SAT_LIMIT_NO_KNEE_FRAC:.1f} ADU). "
+            "Never silently admit.",
+        )
 
     out["noise_floor_adu"] = nf if nf is not None else np.nan
+    out["saturate_limit_adu"] = float(sat_lim_raw) if sat_lim_raw is not None else np.nan
 
     if "peak_max_adu" in out.columns:
         peak_s = pd.to_numeric(out["peak_max_adu"], errors="coerce")
@@ -6413,13 +6464,21 @@ def _annotate_masterstars_flux_zones(
         peak_s = flux_s
 
     peak_sat_lim = _resolve_peak_saturation_limit_adu(
-        camera_sat_limit_adu=sat_lim,
-        saturate_fraction=float(saturate_limit_fraction),
+        camera_sat_limit_adu=sat_lim_raw,
+        saturate_fraction=peak_frac,
         n_stack=ns,
         sky_median_adu=sky_median_adu,
         frame_max_adu=frame_max_adu,
         empirical_clip_adu=empirical_clip_adu,
     )
+    if peak_sat_lim is None and unresolved_clip:
+        # Scale veto rejected even the conservative default. INV-SAT-LIMIT: still apply peak test.
+        peak_sat_lim = float(sat_lim_raw) * float(peak_frac) / float(ns)
+        _masterstar_zone_log_once(
+            "sat_limit_unresolved_scale_veto",
+            "[INV-SAT-LIMIT] peak-test scale veto ignored for unresolved clip; "
+            f"applying peak-test={float(peak_sat_lim):.1f} ADU.",
+        )
     out["saturate_limit_adu_85pct"] = peak_sat_lim if peak_sat_lim is not None else np.nan
 
     out["zone"] = ""
@@ -6468,6 +6527,7 @@ def _annotate_masterstars_flux_zones(
     if peak_sat_lim is not None:
         out["is_saturated"] = (peak_s > float(peak_sat_lim)).fillna(False)
     else:
+        # Camera clip was supplied but rejected as wrong-scale (precalibrated stack).
         out["is_saturated"] = False
 
     out["is_noisy"] = out["zone"].eq("noise")
@@ -11792,6 +11852,14 @@ def generate_masterstar_and_catalog(
     # Draft UI moze poslat .../draft_x/non_calibrated - MASTERSTAR a platesolve patria pod koren draftu.
     if ap.name.casefold() == "non_calibrated":
         ap = ap.parent
+    if equipment_saturate_adu is None:
+        _sd_clip = _sat_adu_from_draft_sat_diag(ap)
+        if _sd_clip is not None:
+            equipment_saturate_adu = _sd_clip
+            logging.info(
+                "[INV-SAT-LIMIT] EQUIPMENTS.SATURATE_ADU missing; using sat_diag.json sat_adu=%.0f",
+                _sd_clip,
+            )
     detrended_root: Path | None = None
     if masterstar_skip_build:
         ps = Path(platesolve_dir) if platesolve_dir is not None else (ap / "platesolve")
@@ -13535,7 +13603,13 @@ def generate_masterstar_and_catalog(
                         ):
                             sat_thr = float(sat_limit) * float(saturate_level_fraction)
                         else:
-                            sat_thr = float("inf")
+                            # INV-SAT-LIMIT: never admit against +inf.
+                            sat_thr = float(SAT_LIMIT_CONTAINER_CLIP_ADU) * float(SAT_LIMIT_NO_KNEE_FRAC)
+                            logging.warning(
+                                "[INV-SAT-LIMIT] MASTERSTAR sat_thr unresolved; "
+                                "using peak-test %.1f ADU (0.80 x container clip)",
+                                sat_thr,
+                            )
 
                         rows_ms: list[dict[str, Any]] = []
                         det_ok = det.iloc[np.where(ok)[0]].reset_index(drop=True)
