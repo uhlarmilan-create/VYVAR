@@ -23,12 +23,14 @@ Phase 2A subset on draft 514, not the full 97-target field.
 | **MED** | **BIN-8-9-REGRESSION-01** OPEN: full-field LOO 11.9885 mmag n=15, byte-identical to D515-ACCEPT-01 gate. SAT-LIMIT/PFS/re-rank did not change proc-CSV LOO. |
 | **MED** | **RUN-WORKER-01** (open decision) -- subprocess/job worker so UI reruns cannot kill photometry; B+C mitigations already in RUN-HARDEN-01. |
 | **MED** | **WIDE-ERR-CROSSRIG** -- per-rig physical-model / calib when Newton/Boyden drafts exist. |
+| **HIGH** | (3) **NET-TEST-01** **DONE** (2026-08-17): `--fast` icon list vendored from local streamlit 1.55.0 (`dev/tests/data/streamlit_material_icon_names.txt`); no network in that test. `check_pytest` prints FAILED/ERROR node ids. |
 | **LOW** | **CORR-ERR-01** research note -- covariance-aware err budget (out of v1.0). |
 
 **CLOSED this arc:** PFS-SEMANTICS-01 (rescue on skip_reason; one peak-test
 authority). SAT-RERANK-01 DONE on SHA 36a53b0 (48 LCs; pointer
 `CURSOR_RESULT_SAT_RERANK_01B.md`). SAT-LIMIT-01 CLOSED. EXPORT-HDR-01
-closed on the same product. WIDE-ERR + SEM (WIDE-ERR-04). EXPORT-READY
+closed on the same product. NET-TEST-01 DONE (vendored icon list).
+WIDE-ERR + SEM (WIDE-ERR-04). EXPORT-READY
 interim MAGERR item **OBSOLETE**. U-09 remains the only ToM-related export
 prerequisite. 8f107cf quarantined (VL-PFS-8F107CF).
 

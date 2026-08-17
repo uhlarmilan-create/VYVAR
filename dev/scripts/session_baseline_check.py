@@ -193,6 +193,16 @@ def check_config_paths(report: SessionReport) -> None:
         report.add("config-paths", "PASS", "all present")
 
 
+def _pytest_fail_nodes(out: str) -> list[str]:
+    """Node ids from pytest -q FAILED/ERROR summary lines (NET-TEST-01)."""
+    nodes: list[str] = []
+    for m in re.finditer(r"^(?:FAILED|ERROR)\s+(\S+)", out, flags=re.M):
+        node = m.group(1)
+        if node not in nodes:
+            nodes.append(node)
+    return nodes
+
+
 def check_pytest(report: SessionReport) -> None:
     try:
         proc = subprocess.run(
@@ -213,6 +223,15 @@ def check_pytest(report: SessionReport) -> None:
         counts.append(f"{m_pass.group(1)} passed")
     if m_skip:
         counts.append(f"{m_skip.group(1)} skipped")
+    if proc.returncode != 0:
+        nodes = _pytest_fail_nodes(out)
+        if nodes:
+            shown = nodes[:8]
+            counts.append("fail=" + ",".join(shown))
+            if len(nodes) > 8:
+                counts.append(f"+{len(nodes) - 8} more")
+        else:
+            counts.append(f"exit {proc.returncode} (no FAILED/ERROR node parsed)")
     detail = ", ".join(counts) if counts else out.strip()[-200:]
     if proc.returncode == 0:
         report.add("pytest", "PASS", detail)

@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-17 -- NET-TEST-01 (harness; pulled forward)
+
+Vendored Streamlit material icon names from locally installed streamlit
+**1.55.0** (not GitHub 1.60.0 tag; that was the 429 source). Tests read
+`dev/tests/data/streamlit_material_icon_names.txt`. `check_pytest` prints
+FAILED/ERROR node ids. No science change.
+
+## 2026-08-17 -- PUSH-AUTH held (NET-TEST-01 queued)
+
+Milan authorized push of f4f16d5. `--fast` after >= 30 min cooldown still
+FAIL: `test_telescope_icon_is_not_used` GitHub HTTP 429. Solo rerun: 1
+failed, 1 passed (literals test green). No exemption push. NET-TEST-01
+queued: vendor pinned Streamlit icon list; `check_pytest` must print the
+failing node id. Report: `dev/results/CURSOR_RESULT_PUSH_AUTH_20260817.md`.
+
 ## 2026-08-17 -- PFS-SEMANTICS-01 + SAT-RERANK-01B + EXPORT-HDR-01
 
 Taught PFS: rescue on skip_reason; never zone_noise / below_target_depth;

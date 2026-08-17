@@ -1,11 +1,12 @@
 # VYVAR -- Development State
 
 **Status:** PFS-SEMANTICS-01 + SAT-RERANK-01 + EXPORT-HDR-01 closed locally.
-Push NOT authorized (Milan go). Baseline origin/main: a217e1d. Draft 515
-photometry SHA: **36a53b0** (48 LCs). **8f107cf quarantined**
-(VL-PFS-8F107CF); do not cite for export or acceptance.
+NET-TEST-01 implemented (vendored icon list; no network in `--fast` icon
+tests). Push AUTHORIZED pending `--fast` on the new content tip.
+Baseline origin/main: a217e1d. Draft 515 photometry SHA: **36a53b0**
+(48 LCs). **8f107cf quarantined** (VL-PFS-8F107CF).
 
-Last updated: **2026-08-17** (PFS-SEMANTICS-01 close).
+Last updated: **2026-08-17** (NET-TEST-01 harness).
 
 ## 2026-08-17 -- PFS-SEMANTICS-01 + SAT-RERANK-01B + EXPORT-HDR-01
 
