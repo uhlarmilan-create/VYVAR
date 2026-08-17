@@ -8,7 +8,9 @@ Pinned PT r=4.0; fire proofs; g_pt=0.63707 restored on 515. ERR-only
 rebuild: MAG 48/48 identical, product SHA **de6f7c8**, ERR_MODEL
 g_pt=0.6371, BO median err +0.580 mmag. SUBMIT-01 checklist all PASS
 (UMIA / CV / 134 / BJD). Push not authorized. Report:
-`dev/results/CURSOR_RESULT_GAIN_PT_RADIUS_01.md`.
+`dev/results/CURSOR_RESULT_GAIN_PT_RADIUS_01.md`. Local tip **a60b8c1**
+(code 057ecdc). `--fast` OVERALL PASS (1447 passed, 28 skipped).
+Push not authorized.
 
 ## 2026-08-17 -- U-09 CLOSED + GAIN-AUTH-VERIFY-01
 
