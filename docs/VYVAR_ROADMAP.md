@@ -18,17 +18,22 @@ Phase 2A subset on draft 514, not the full 97-target field.
 
 | Pri | Next item |
 |-----|-----------|
-| **HIGH** | (1) Full 97-target Phase 2A rebuild of draft 514, or a fresh 515, on the pushed tip. **Done for 515 accept path;** P1 A/B still needed. |
-| **HIGH** | (2) **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise (BO pred 14.9 vs measured 8.6 mmag); same class as U-SCATTER-DEF. |
-| **HIGH** | (3) **P1 A/B** byte-identity pair on the new tip (golden ledger stale by intent after aperture/selection changes). |
+| **HIGH** | (1) **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise (BO pred 14.9 vs measured 8.6 mmag); same class as U-SCATTER-DEF. Untouched this arc. |
+| **HIGH** | (2) **P1 A/B** still OPEN. 2026-08-17 attempt on this tip: `test_invariants_p1_golden` 1 passed / 4 ERROR (INV-CAL-01 cal_diag missing after dark calibration on `draft_000435_p1mini`). Headless vs UI pair not obtained. P1-RECUT remains. Not a PFS-SEMANTICS defect (P1 uses AppConfig default PFS=false). |
+| **MED** | **BIN-8-9-REGRESSION-01** OPEN: full-field LOO 11.9885 mmag n=15, byte-identical to D515-ACCEPT-01 gate. SAT-LIMIT/PFS/re-rank did not change proc-CSV LOO. |
 | **MED** | **RUN-WORKER-01** (open decision) -- subprocess/job worker so UI reruns cannot kill photometry; B+C mitigations already in RUN-HARDEN-01. |
 | **MED** | **WIDE-ERR-CROSSRIG** -- per-rig physical-model / calib when Newton/Boyden drafts exist. |
 | **LOW** | **CORR-ERR-01** research note -- covariance-aware err budget (out of v1.0). |
 
-**CLOSED this arc:** WIDE-ERR + SEM (WIDE-ERR-04 physical model). EXPORT-READY interim MAGERR item **OBSOLETE** (real fix shipped). U-09 remains the only ToM-related export prerequisite.
+**CLOSED this arc:** PFS-SEMANTICS-01 (rescue on skip_reason; one peak-test
+authority). SAT-RERANK-01 DONE on SHA 36a53b0 (48 LCs; pointer
+`CURSOR_RESULT_SAT_RERANK_01B.md`). SAT-LIMIT-01 CLOSED. EXPORT-HDR-01
+closed on the same product. WIDE-ERR + SEM (WIDE-ERR-04). EXPORT-READY
+interim MAGERR item **OBSOLETE**. U-09 remains the only ToM-related export
+prerequisite. 8f107cf quarantined (VL-PFS-8F107CF).
 
 Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
-D1b; D2; WIDE-ERR-CROSSRIG; D1-2; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
+D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
 U-SKY-FALLBACK-01; LOCATION_OLD; zone rename; DET-vs-MEAS-01; A-1-OVERRIDE;
 blended-target merging (deferred past v1.0); drafts 512/513/510 INGESTED repair.
 

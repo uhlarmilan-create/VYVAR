@@ -1,9 +1,47 @@
 # VYVAR -- Development State
 
-**Status:** XVAL-AIJ-01 + SAT-LIMIT-01 landed locally; push NOT authorized.
-Baseline origin/main: a217e1d. Draft 515 photometry SHA: da9cce4.
+**Status:** PFS-SEMANTICS-01 + SAT-RERANK-01 + EXPORT-HDR-01 closed locally.
+Push NOT authorized (Milan go). Baseline origin/main: a217e1d. Draft 515
+photometry SHA: **36a53b0** (48 LCs). **8f107cf quarantined**
+(VL-PFS-8F107CF); do not cite for export or acceptance.
 
-Last updated: **2026-08-17** (XVAL-AIJ-01 + SAT-LIMIT-01).
+Last updated: **2026-08-17** (PFS-SEMANTICS-01 close).
+
+## 2026-08-17 -- PFS-SEMANTICS-01 + SAT-RERANK-01B + EXPORT-HDR-01
+
+PFS rescue keyed on recorded skip_reason. TARGET-DEPTH-02 outranks PFS.
+One peak-test authority: 52428 ADU (INV-SAT-LIMIT). Third 515 rebuild:
+97 -> 48 LCs (da9cce4 49 minus CV CVn `1497007144465726080`,
+sat_clean_frac=0.448 < 0.5). B2: 0/24 saturated IDs in ensembles.
+01B meters: BO check 8.5798 mmag (membership changed; supersede da9cce4
+7.0498), FW check 10.6836 mmag (unchanged). BIN-8-9 OPEN at 11.9885 mmag
+n=15 (byte-identical to D515-ACCEPT-01; proc-CSV LOO). EXPORT-HDR-01
+re-export of BO CVn AAVSO+VarAstro from 36a53b0 with PFS ON via per-run
+override. SAT-LIMIT-01 CLOSED. D1-2 OPEN.
+
+Reports: `CURSOR_RESULT_PFS_SEMANTICS_01.md`,
+`CURSOR_RESULT_SAT_RERANK_01B.md`, `CURSOR_RESULT_EXPORT_HDR_01.md`.
+
+XVAL-AIJ-01 remains CLOSED (AIJ Table.tbl at
+`dev/results/XVAL_AIJ_01_Table.tbl`).
+
+P1 A/B on this tip: ERROR. `test_invariants_p1_golden` 1 passed, 4 ERROR
+in 443.4 s. Cause: INV-CAL-01 `cal_diag block missing after dark
+calibration` on `draft_000435_p1mini` (photometry-ready mini has no
+cal_diag.json; pipeline stamps a dark-applied calibration_mode). Headless
+vs UI byte-identity pair was not obtained. P1-RECUT remains OPEN. Not a
+PFS-SEMANTICS defect.
+
+`session_baseline_check.py --fast` OVERALL PASS: pytest 1442 passed, 28
+skipped (P1 env unset; flow_doc green via restored config.json default
+false, not edited facts).
+
+## 2026-08-17 -- SAT-RERANK-01 blocked then superseded (8f107cf)
+
+Defective 96-LC product SHA **8f107cf** quarantined: PFS rescued 45
+zone_noise + 2 below_target_depth. Ledger VL-PFS-8F107CF. Report:
+`dev/results/CURSOR_RESULT_SAT_RERANK_01.md`. On-disk state overwritten
+by the 36a53b0 rebuild.
 
 ## 2026-08-17 -- XVAL-AIJ-01 + SAT-LIMIT-01
 

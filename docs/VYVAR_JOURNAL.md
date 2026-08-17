@@ -2,6 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-17 -- PFS-SEMANTICS-01 + SAT-RERANK-01B + EXPORT-HDR-01
+
+Taught PFS: rescue on skip_reason; never zone_noise / below_target_depth;
+peak-test 52428 ADU (same as catalog). config.json PFS stays false; harness
+per-run override. Third 515 rebuild SHA **36a53b0**, 48 LCs (49 minus CV
+CVn clean_frac=0.448). 8f107cf quarantined VL-PFS-8F107CF. BO 01B MAD
+8.5798 mmag n=134; FW 10.6836 mmag n=134. BIN-8-9 OPEN 11.9885 mmag n=15.
+EXPORT-HDR-01 BO CVn re-export PFS ON. Push not authorized.
+Reports: `CURSOR_RESULT_PFS_SEMANTICS_01.md`,
+`CURSOR_RESULT_SAT_RERANK_01B.md`, `CURSOR_RESULT_EXPORT_HDR_01.md`.
+P1 A/B: ERROR INV-CAL-01 on p1mini (443 s); pair not obtained; P1-RECUT OPEN.
+`--fast` OVERALL PASS (1442 passed, 28 skipped).
+
+## 2026-08-17 -- SAT-RERANK-01 follow-up (verdict b; superseded)
+
+515 rebuild SHA **8f107cf** (96/97 LCs). `per_frame_saturation_enabled=true`
+rescued 45 zone_noise + 2 below_target_depth (TARGET-DEPTH-02). Catalog
+noise 713 unchanged. One linear G=15.13 kept gated (PFS fallback).
+B4/B5 not run on that product. Quarantined; overwritten by 36a53b0.
+Report: `dev/results/CURSOR_RESULT_SAT_RERANK_01.md`.
+
 ## 2026-08-17 -- XVAL-AIJ-01 + SAT-LIMIT-01
 
 **XVAL-AIJ-01.** Milan AIJ 6.0.10 vs VYVAR on BO CVn, same 5 comps, 134/134

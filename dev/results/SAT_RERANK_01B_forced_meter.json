@@ -1,0 +1,81 @@
+{
+  "archive_git_or_meta": "part3",
+  "photometry_sha_core": "36a53b0cacd58e9fdb922726023e806dd6fbf5a42fb2caeb70f37187a822799d",
+  "photometry_sha_core_prefix": "36a53b0",
+  "carrier_rule": "prefer a co-target whose ensemble already contains the forced check (flux matrix). First FW pass with R CVn carrier had no CHK_FW series; second pass used BO CVn as carrier.",
+  "BO": {
+    "check_catalog_id": "1498020894186918144",
+    "check_scatter_mad_mmag": 8.579806199998334,
+    "n_epochs": 134,
+    "path": "C:\\Users\\uhlar\\AppData\\Local\\Temp\\d515_01b_01B_BO_3_lqsywy\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv",
+    "audit_copy": "C:\\ASTRO\\python\\VYVAR\\tmp\\d515_01b_check_kmag_01B_BO.csv",
+    "label": "01B_BO",
+    "draft_id": 515,
+    "target_catalog_id": "1498613634033133184",
+    "forced_check_id": "1498020894186918144",
+    "check_was_in_ensemble": false,
+    "ensemble_ids_used": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1499200223486564608"
+    ],
+    "n_comp": 4,
+    "phase2a_result_keys": [
+      "n_targets",
+      "n_frames",
+      "n_lightcurves",
+      "summary_csv",
+      "summary_report_pdf",
+      "field_map_png",
+      "output_dir",
+      "lunar_context"
+    ],
+    "elapsed_s": 43.84676109999418,
+    "quantity": "check_scatter_mad_mmag = 1.4826 * MAD(kmag) * 1000",
+    "run_sha_of_archive_photometry": "36a53b0cacd58e9fdb922726023e806dd6fbf5a42fb2caeb70f37187a822799d"
+  },
+  "FW": {
+    "check_catalog_id": "1497368849430107904",
+    "check_scatter_mad_mmag": 10.68361559999875,
+    "n_epochs": 134,
+    "path": "C:\\Users\\uhlar\\AppData\\Local\\Temp\\d515_01b_01B_FW_8vuudguv\\photometry\\lightcurves\\check_kmag_1497343732462852864.csv",
+    "audit_copy": "C:\\ASTRO\\python\\VYVAR\\tmp\\d515_01b_check_kmag_01B_FW.csv",
+    "label": "01B_FW",
+    "draft_id": 515,
+    "target_catalog_id": "1497343732462852864",
+    "forced_check_id": "1497368849430107904",
+    "check_was_in_ensemble": false,
+    "ensemble_ids_used": [
+      "1497313255374892800",
+      "1497370563121917952",
+      "1497442379271632384",
+      "1497674651102612992",
+      "1498020894186918144",
+      "1498812233320666368",
+      "1499906247391001088",
+      "1500486102335278592"
+    ],
+    "n_comp": 8,
+    "phase2a_result_keys": [
+      "n_targets",
+      "n_frames",
+      "n_lightcurves",
+      "summary_csv",
+      "summary_report_pdf",
+      "field_map_png",
+      "output_dir",
+      "lunar_context"
+    ],
+    "elapsed_s": 44.21392360003665,
+    "quantity": "check_scatter_mad_mmag = 1.4826 * MAD(kmag) * 1000",
+    "run_sha_of_archive_photometry": "36a53b0cacd58e9fdb922726023e806dd6fbf5a42fb2caeb70f37187a822799d"
+  },
+  "da9cce4_pointer": {
+    "BO_mmag": 7.0498,
+    "FW_mmag": 10.6836,
+    "n_epochs": 134
+  },
+  "delta_vs_da9_BO_mmag": 1.5300061999983336,
+  "delta_vs_da9_FW_mmag": 1.5599998750559507e-05
+}

@@ -52,12 +52,13 @@ AIJ C2..C6 = VYVAR comps `1500748301498613248`, `1497771992240531712`,
 AIJ used a fixed 7 px aperture; VYVAR used per-magnitude 3.5-8.5 px. No
 FWHM or airmass correlation of the difference.
 
-## Spec defect
+## Spec defect (CLOSED 2026-08-17)
 
-Milan's AIJ `Table.tbl` was not in the supplied folder (CSV + task only).
-The epoch table is committed; the raw AIJ table is not. If it arrives, place
-it next to the CSV. Not blocking: the compare CSV is the architect's
-epoch-matched product.
+Raw AIJ table is now at `dev/results/XVAL_AIJ_01_Table.tbl` (copy of
+`Archive/Drafts/draft_000515/detrended_aligned/Table.tbl`; Archive is
+gitignored). Tab-separated, Source_Radius=7, sky 14/27, T1 + C2..C6.
+134 data rows; Labels and `rel_flux_T1` match the compare CSV to
+machine precision. Compare CSV remains the epoch-matched product.
 
 ## Cross-validation chain (see DECISIONS)
 
@@ -67,6 +68,7 @@ photutils/sep ~3 mmag RMS (library) -> architect independent reconstruction
 ## Files
 
 - `dev/results/XVAL_AIJ_01_bo_compare.csv`
+- `dev/results/XVAL_AIJ_01_Table.tbl` (raw AIJ 6.0.10 table)
 - `dev/results/CURSOR_TASK_XVAL_AIJ_SAT_LIMIT.md` (task copy)
 - this file
 

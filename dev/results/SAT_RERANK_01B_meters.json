@@ -1,0 +1,149 @@
+{
+  "photometry_sha_core": "36a53b0cacd58e9fdb922726023e806dd6fbf5a42fb2caeb70f37187a822799d",
+  "photometry_sha_core_prefix": "36a53b0",
+  "bo": {
+    "ids": [
+      "1497771992240531712",
+      "1499200223486564608",
+      "1497974027502858240",
+      "1497368849430107904"
+    ],
+    "comp_weight": [
+      9241.188631814846,
+      6486.886182273926,
+      4701.614479402263,
+      1886.405643048008
+    ],
+    "n_eff": 3.2519162366230616,
+    "n_comp": 4
+  },
+  "fw": {
+    "ids": [
+      "1497442379271632384",
+      "1499906247391001088",
+      "1497674651102612992",
+      "1498020894186918144",
+      "1498812233320666368",
+      "1497370563121917952",
+      "1497313255374892800",
+      "1500486102335278592"
+    ],
+    "comp_weight": [
+      34481.93162766442,
+      38837.063930251534,
+      14252.842591417151,
+      16184.410036098354,
+      15302.06583547958,
+      14004.079118185222,
+      11751.723244076724,
+      11230.981200702425
+    ],
+    "n_eff": 6.313370780096699,
+    "n_comp": 8
+  },
+  "chk_fw_in_fw_ensemble": false,
+  "chk_fw_in_bo_ensemble": true,
+  "chk_bo_in_bo_ensemble": false,
+  "chk_bo_in_fw_ensemble": true,
+  "stop_fw_meter_consumed": false,
+  "b2_sat_in_ensemble": [],
+  "comp_log_bo": {
+    "begin_line": 475,
+    "end_line": 483,
+    "n_block_lines": 9,
+    "lines": [
+      "2026-08-17 13:25:47,437 INFO [COMP] target=1498613634033133184 rms-then-color begin n_cand=623",
+      "2026-08-17 13:25:47,438 INFO [COMP] max_comp_rms ceiling=0.0800: 623 -> 331 under-ceiling candidates",
+      "2026-08-17 13:25:47,438 INFO [COMP] best ceiling-rejected cid=1498780652424659456 rms=0.08045378268403114 threshold=0.0800",
+      "2026-08-17 13:25:47,439 INFO [COMP] single-source isolation >=3.00 FWHM: 331 -> 258 candidates",
+      "2026-08-17 13:25:47,440 INFO [COMP] best isolation-rejected cid=1499202834827066624 rms=0.0065753740019465065 nn_fwhm=2.977 threshold=3.00 FWHM",
+      "2026-08-17 13:25:47,441 INFO [COMP] color filter at delta_bprp<=0.150 (n=4 >= n_comp_min=3) ladder_step=1 (RMS-ordered within)",
+      "2026-08-17 13:25:47,441 INFO [COMP] best colour-rejected cid=1500727513856914944 rms=0.0003827924640198515 d_bprp=0.782 colour_lim=0.150",
+      "2026-08-17 13:25:47,442 INFO [COMP] clean pool n=4 after ceiling/isolation/colour; n_comp_max=8 admitted=4; nothing better in the pool (thresholds: ceiling=0.0800 isolation=3.00 FWHM colour_lim=0.150)",
+      "2026-08-17 13:25:47,442 INFO [COMP] target=1498613634033133184 rms-then-color end n_admitted=4"
+    ],
+    "ceiling_line": "2026-08-17 13:25:47,438 INFO [COMP] max_comp_rms ceiling=0.0800: 623 -> 331 under-ceiling candidates",
+    "best_ceiling_line": "2026-08-17 13:25:47,438 INFO [COMP] best ceiling-rejected cid=1498780652424659456 rms=0.08045378268403114 threshold=0.0800",
+    "isolation_line": "2026-08-17 13:25:47,439 INFO [COMP] single-source isolation >=3.00 FWHM: 331 -> 258 candidates",
+    "best_isolation_line": "2026-08-17 13:25:47,440 INFO [COMP] best isolation-rejected cid=1499202834827066624 rms=0.0065753740019465065 nn_fwhm=2.977 threshold=3.00 FWHM",
+    "colour_line": "2026-08-17 13:25:47,441 INFO [COMP] color filter at delta_bprp<=0.150 (n=4 >= n_comp_min=3) ladder_step=1 (RMS-ordered within)",
+    "best_colour_line": "2026-08-17 13:25:47,441 INFO [COMP] best colour-rejected cid=1500727513856914944 rms=0.0003827924640198515 d_bprp=0.782 colour_lim=0.150",
+    "clean_pool_line": "2026-08-17 13:25:47,442 INFO [COMP] clean pool n=4 after ceiling/isolation/colour; n_comp_max=8 admitted=4; nothing better in the pool (thresholds: ceiling=0.0800 isolation=3.00 FWHM colour_lim=0.150)",
+    "nothing_better_line": "2026-08-17 13:25:47,442 INFO [COMP] clean pool n=4 after ceiling/isolation/colour; n_comp_max=8 admitted=4; nothing better in the pool (thresholds: ceiling=0.0800 isolation=3.00 FWHM colour_lim=0.150)"
+  },
+  "production_check_sidecar": {
+    "BO": {
+      "mad_mmag": 7.150579800000032,
+      "n_epochs": 134,
+      "check_id": "1497613731286514432"
+    },
+    "FW": {
+      "mad_mmag": 8.201001900000032,
+      "n_epochs": 134,
+      "check_id": "1497613731286514432"
+    }
+  },
+  "da9cce4_fixed_meter": {
+    "BO": 7.0498,
+    "FW": 10.6836,
+    "n_epochs": 134
+  },
+  "bin_loo": {
+    "8-9": {
+      "n": 15,
+      "n_candidates_in_bin": 27,
+      "median_loo_scatter_mmag": 11.988543441702657,
+      "min_mmag": 9.883796447650898,
+      "max_mmag": 13.647846787234371
+    },
+    "9-10": {
+      "n": 15,
+      "n_candidates_in_bin": 65,
+      "median_loo_scatter_mmag": 13.687339415472659,
+      "min_mmag": 10.909734246891473,
+      "max_mmag": 21.565313882025837
+    },
+    "10-11": {
+      "n": 15,
+      "n_candidates_in_bin": 103,
+      "median_loo_scatter_mmag": 16.450777056798568,
+      "min_mmag": 12.042017241125265,
+      "max_mmag": 18.952172944056297
+    },
+    "11-12": {
+      "n": 15,
+      "n_candidates_in_bin": 246,
+      "median_loo_scatter_mmag": 20.70470833426409,
+      "min_mmag": 12.326530661627462,
+      "max_mmag": 51.197889065902835
+    },
+    "12-13": {
+      "n": 13,
+      "n_candidates_in_bin": 506,
+      "median_loo_scatter_mmag": 33.009557272337105,
+      "min_mmag": 23.365408095878344,
+      "max_mmag": 125.22940760633946
+    },
+    "13-14": {
+      "n": 12,
+      "n_candidates_in_bin": 865,
+      "median_loo_scatter_mmag": 38.89157651455142,
+      "min_mmag": 27.19677827897814,
+      "max_mmag": 172.39047342169692
+    },
+    "14-15": {
+      "n": 11,
+      "n_candidates_in_bin": 1306,
+      "median_loo_scatter_mmag": 40.98479043713609,
+      "min_mmag": 31.679177556722234,
+      "max_mmag": 51.93266140431229
+    }
+  },
+  "bin_8_9": {
+    "median_loo_mmag": 11.988543441702657,
+    "n": 15,
+    "gate_mmag": 11.988543441702657,
+    "gate_n": 15,
+    "verdict": "OPEN"
+  }
+}

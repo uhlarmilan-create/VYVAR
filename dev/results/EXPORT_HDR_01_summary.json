@@ -1,0 +1,17 @@
+{
+  "aavso": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt",
+  "varastro": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423.txt",
+  "n_comp_notes": "meth=aperture|n_comp=4 GaiaDR3 ensemble|trust=GREEN|4 clean comps",
+  "truncated_gaia": [],
+  "pfs_matrix_line": "#   per-frame saturation: ON",
+  "pfs_on": true,
+  "err_model": "#ERR_MODEL=mode=calibrated; gain=db_div_container_scale=0.7925 e-/ADU_container; calib=none",
+  "w_pre_w_post": true,
+  "kname_na_n": 0,
+  "kmag_na_n": 0,
+  "n_aavso_rows": 134,
+  "c5_max_abs_delta_export_vs_lc_mmag": 0.49799999999855515,
+  "c5_n_matched": 134,
+  "c5_chain_ac_vs_raw_plus_corr_mmag": 0.0010000000010279564,
+  "pfs_from_snapshot": true
+}

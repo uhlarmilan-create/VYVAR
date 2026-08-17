@@ -8,6 +8,32 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## PFS-SEMANTICS-01 - rescue keyed on skip_reason; one limit authority (2026-08-17)
+
+**Teach, do not disable.** `per_frame_saturation_enabled` remains a valid
+per-run override (AppConfig default false; 291 keys). Rescue is keyed on
+the recorded `skip_reason` / saturation zone, never on bare
+`skip_photometry`.
+
+**Never rescue** `zone_noise` or `below_target_depth`. TARGET-DEPTH-02
+outranks PFS. Phase 2A re-force always keeps noise out; saturation-zone
+skip is re-forced only when PFS is OFF.
+
+**One limit authority.** Per-frame clean test uses
+`inv_sat_limit_peak_test_adu()` (INV-SAT-LIMIT effective peak-test,
+currently 0.80 x 65535 = 52428 ADU on this rig). Container clip 65535 ADU
+is a separate named field (hard clip vs nonlinearity). Provenance cites
+the source string.
+
+**8f107cf** is quarantined (VL-PFS-8F107CF): PFS rescued non-saturation
+skips (96 LCs). Do not cite for export or acceptance.
+
+**SAT-RERANK-01** DONE on SHA 36a53b0 (48 LCs; CV CVn gated by
+clean_frac=0.448 < 0.5). Pointers: `CURSOR_RESULT_PFS_SEMANTICS_01.md`,
+`CURSOR_RESULT_SAT_RERANK_01B.md`. SAT-LIMIT-01 stays CLOSED. D1-2 OPEN.
+
+---
+
 ## SAT-LIMIT-01 - never silently admit a missing saturation clip (2026-08-17)
 
 **Hole.** Draft 515 MASTERSTAR catalog had `saturate_limit_adu` NaN on
