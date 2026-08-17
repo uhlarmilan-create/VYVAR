@@ -28,14 +28,56 @@ from report_methods import (
     varastro_export_path,
 )
 from check_star_kmag import (
+    build_aligned_comp_inst,
+    check_catalog_id_from_sidecar,
+    check_kmag_sidecar_path,
+    comp_ensemble_maps,
+    kmag_from_sidecar,
     kmag_values_for_export,
     resolve_proc_csv_dir,
     select_check_star,
 )
-from photometry_core import parse_comp_quality_json_map, _resolve_plate_scale_arcsec_per_px
+from photometry_core import (
+    _resolve_plate_scale_arcsec_per_px,
+    check_comparison_stability,
+    parse_comp_quality_json_map,
+    pytics_iterative_weights,
+)
 
 # Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
+
+# Gaia DR3 source_id is 19 decimal digits. A shorter numeric prefix in an export
+# is a different star (EXPORT-HDR-01).
+_GAIA_ID_FULL_DIGITS = 19
+
+
+def find_truncated_gaia_ids(text: str, full_ids: list[str] | tuple[str, ...]) -> list[str]:
+    """Return catalog IDs that appear in ``text`` only as a proper prefix.
+
+    Truncated Gaia IDs are a worse defect than omitting them: the stub names a
+    different star. Full IDs present in the text are allowed.
+    """
+    blob = str(text or "")
+    out: list[str] = []
+    for raw in full_ids:
+        fid = str(raw or "").strip()
+        if len(fid) < 10:
+            continue
+        if fid in blob:
+            continue
+        for n in range(len(fid) - 1, 9, -1):
+            if fid[:n] in blob:
+                out.append(fid)
+                break
+    return out
+
+
+def format_aavso_notes_ensemble(*, n_comp: int, lc_method: str) -> str:
+    """AAVSO NOTES: ensemble size, not a truncated Gaia list (EXPORT-HDR-01)."""
+    meth = str(lc_method or "aperture").strip() or "aperture"
+    n = max(0, int(n_comp))
+    return f"meth={meth}|n_comp={n} GaiaDR3 ensemble"
 
 # Single source for export headers (AAVSO #SOFTWARE + VarAstro Software line).
 VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"
@@ -717,10 +759,11 @@ def _format_varastro_comp_table(
     *,
     comp_quality_map: dict[str, str] | None = None,
     use_johnson_mag: bool = False,
+    post_weight_rel_map: dict[str, float] | None = None,
 ) -> str:
     header = (
         "# Nr  CatalogId             Mag    BP-RP  dBPRP  tier_color  "
-        "p2p_RMS  w_rel  tier status\n"
+        "p2p_RMS  w_pre  w_post tier status\n"
     )
     if comp_df is None or comp_df.empty:
         return header
@@ -753,6 +796,13 @@ def _format_varastro_comp_table(
         dbprp_s = f"{float(dbprp):.3f}" if math.isfinite(float(dbprp)) else "  -  "
         p2p_s = f"{float(p2p):.4f}" if math.isfinite(float(p2p)) else "  -  "
         wrel_s = f"{float(w_rel):.3f}" if math.isfinite(float(w_rel)) else "  -  "
+        w_post = float("nan")
+        if post_weight_rel_map:
+            try:
+                w_post = float(post_weight_rel_map.get(cid_key, float("nan")))
+            except Exception:  # noqa: BLE001
+                w_post = float("nan")
+        wpost_s = f"{float(w_post):.3f}" if math.isfinite(float(w_post)) else "  -  "
         try:
             tier_i = int(tier) if math.isfinite(float(tier)) else 4
         except Exception:  # noqa: BLE001
@@ -762,9 +812,78 @@ def _format_varastro_comp_table(
         tier_cs = str(row.get("color_tier_src", "") or "")[:12].ljust(12)
         lines.append(
             f"# C{export_row_n:02d} {cid} {mag_s}  {bprp_s}  {dbprp_s}  {tier_cs} {p2p_s}  "
-            f"{wrel_s}  {tier_i}  {st_s}\n"
+            f"{wrel_s}  {wpost_s}  {tier_i}  {st_s}\n"
         )
     return "".join(lines)
+
+
+def _export_post_weight_rel_map(
+    *,
+    comp_df: pd.DataFrame,
+    lc_normal: pd.DataFrame,
+    proc_dir: Path | None,
+    comp_quality_map: dict[str, str] | None,
+    cfg: AppConfig,
+    export_method: str,
+    proc_csv_cache: dict[str, pd.DataFrame] | None = None,
+) -> dict[str, float]:
+    """Recompute export-time post-PyTICS relative weights for the real ensemble."""
+    if proc_dir is None or not proc_dir.is_dir() or comp_df is None or comp_df.empty or "catalog_id" not in comp_df.columns:
+        return {}
+    source_files = lc_normal.get("source_file", pd.Series([""] * len(lc_normal))).astype(str).tolist()
+    if not source_files:
+        return {}
+    comp_ids: list[str] = []
+    for _, crow in comp_df.iterrows():
+        cid = str(normalize_gaia_source_id(crow.get("catalog_id", "")) or "").strip()
+        if not cid:
+            continue
+        if comp_quality_map and str(comp_quality_map.get(cid, "") or "").strip().lower() == "excluded":
+            continue
+        if cid not in comp_ids:
+            comp_ids.append(cid)
+    if len(comp_ids) < 2:
+        return {}
+    comp_lc = build_aligned_comp_inst(
+        proc_dir,
+        comp_ids,
+        source_files,
+        cfg,
+        export_method,
+        csv_cache=proc_csv_cache,
+    )
+    _comp_catalog_mag, _comp_tier_map, comp_rms_map, _tier_weights = comp_ensemble_maps(comp_df, cfg)
+    comp_quality = check_comparison_stability(
+        {c: comp_lc[c] for c in comp_ids if c in comp_lc},
+        comp_rms_map=comp_rms_map,
+        n_comp_min=2,
+        outlier_sigma=3.0,
+        common_mode_detrend=True,
+    )
+    if comp_quality_map:
+        for cid, q in comp_quality_map.items():
+            q2 = str(q or "").strip().lower()
+            if cid in comp_quality:
+                if q2 == "excluded":
+                    comp_quality[cid]["quality"] = "excluded"
+                elif q2 in ("good", "suspect"):
+                    comp_quality[cid]["quality"] = q2
+    post_rms = pytics_iterative_weights(
+        comp_lc={c: comp_lc[c] for c in comp_ids if c in comp_lc},
+        comp_quality=comp_quality,
+        comp_rms_map=comp_rms_map,
+        n_iter=int(cfg.pytics_n_iter),
+        enabled=bool(cfg.pytics_enabled),
+    )
+    weights: dict[str, float] = {}
+    for cid in comp_ids:
+        r = float(post_rms.get(cid, float("nan")))
+        if math.isfinite(r) and r > 1e-9:
+            weights[cid] = 1.0 / (r * r)
+    if not weights:
+        return {}
+    w_max = max(weights.values())
+    return {cid: (w / w_max) for cid, w in weights.items() if math.isfinite(w) and w > 0}
 
 
 def _select_export_lc_rows(lc_df: pd.DataFrame) -> pd.DataFrame:
@@ -989,8 +1108,20 @@ def export_lightcurve_reports(
         n_comp_min=3,
         cfg=fresh_cfg,
     )
-    check_cid = str(check_row.get("catalog_id")) if check_row is not None else "na"
     _lc_dir = Path(lc_dir) if lc_dir is not None else (out_base.parent / "lightcurves")
+    _side_cid = check_catalog_id_from_sidecar(_lc_dir, target_cid)
+    if _side_cid:
+        check_cid = _side_cid
+        if check_row is None or str(normalize_gaia_source_id(check_row.get("catalog_id")) or "").strip() != _side_cid:
+            if comp_df is not None and not comp_df.empty and "catalog_id" in comp_df.columns:
+                _hit = comp_df[
+                    comp_df["catalog_id"].astype(str).map(lambda x: str(normalize_gaia_source_id(x) or "").strip())
+                    == _side_cid
+                ]
+                if not _hit.empty:
+                    check_row = _hit.iloc[0]
+    else:
+        check_cid = str(check_row.get("catalog_id")) if check_row is not None else "na"
     _phot_dir = out_base.parent
     _proc_dir = resolve_proc_csv_dir(_phot_dir, obs_group_resolved)
     kmag_values, _kmag_mode = kmag_values_for_export(
@@ -1006,6 +1137,15 @@ def export_lightcurve_reports(
         proc_csv_cache=proc_csv_cache,
     )
     logging.debug("[EXPORT] KMAG mode=%s for %s", _kmag_mode, str(vsx_name))
+    _post_weight_rel = _export_post_weight_rel_map(
+        comp_df=comp_df,
+        lc_normal=lc_normal,
+        proc_dir=_proc_dir,
+        comp_quality_map=comp_quality_map,
+        cfg=fresh_cfg,
+        export_method=_export_method,
+        proc_csv_cache=proc_csv_cache,
+    )
 
     _lc_method = _export_method
     if "method" in lc_normal.columns and _export_method == "aperture":
@@ -1017,8 +1157,9 @@ def export_lightcurve_reports(
             except Exception:  # noqa: BLE001
                 _lc_method = str(_mvals.iloc[0])
 
-    # Notes: comp Gaia IDs (first line only).
-    comp_ids = []
+    # NOTES: ensemble size, never a truncated Gaia list (EXPORT-HDR-01).
+    _n_notes_comp = 0
+    _full_note_ids: list[str] = []
     if comp_df is not None and (not comp_df.empty) and "catalog_id" in comp_df.columns:
         for _, crow in comp_df.iterrows():
             v2 = str(crow.get("catalog_id", "") or "").strip()
@@ -1028,17 +1169,15 @@ def export_lightcurve_reports(
             if comp_quality_map and ck:
                 if str(comp_quality_map.get(ck, "") or "").strip().lower() == "excluded":
                     continue
-            # Safe: Gaia ID truncated to 18 chars intentionally for AAVSO notes field length limit.
-            comp_ids.append(v2[:18])
-    notes_first = (f"GaiaDR3:{'|'.join(comp_ids)}")[:100] if comp_ids else "na"
+            _n_notes_comp += 1
+            _full_note_ids.append(v2)
+    notes_first = format_aavso_notes_ensemble(n_comp=_n_notes_comp, lc_method=_lc_method)
     _gs11_note = _aavso_gs11_notes_suffix(summary_row, fresh_cfg)
     if _gs11_note:
-        notes_first = (notes_first + _gs11_note)[:100] if notes_first != "na" else _gs11_note.strip("|")[:100]
-    _meth_note = f"meth={_lc_method}|"
-    if notes_first != "na":
-        notes_first = (_meth_note + notes_first)[:100]
-    else:
-        notes_first = _meth_note.strip("|")[:100]
+        notes_first = (notes_first + _gs11_note)[:100]
+    _trunc = find_truncated_gaia_ids(notes_first, _full_note_ids)
+    if _trunc:
+        raise ValueError(f"AAVSO NOTES would emit truncated Gaia IDs: {_trunc}")
 
     _trust = str(summary_row.get("trust", "") or "").strip().upper()
     _trust_reason = str(summary_row.get("trust_reason", "") or "").strip()
@@ -1345,6 +1484,7 @@ def export_lightcurve_reports(
             comp_export_df if _osc_export else comp_df,
             comp_quality_map=comp_quality_map,
             use_johnson_mag=_osc_export,
+            post_weight_rel_map=_post_weight_rel,
         )
     )
     v_lines.append("#\n")

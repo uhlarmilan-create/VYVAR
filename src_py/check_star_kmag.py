@@ -838,6 +838,22 @@ def check_kmag_sidecar_path(lc_dir: Path | str, target_cid: str) -> Path:
     return Path(lc_dir) / f"check_kmag_{str(target_cid).strip()}.csv"
 
 
+def check_catalog_id_from_sidecar(lc_dir: Path | str | None, target_cid: str) -> str:
+    """Return ``check_catalog_id`` from the per-target kmag sidecar, or empty."""
+    if lc_dir is None:
+        return ""
+    path = check_kmag_sidecar_path(lc_dir, target_cid)
+    if not path.is_file():
+        return ""
+    try:
+        df = pd.read_csv(path, dtype={"check_catalog_id": str}, nrows=1)
+    except Exception:  # noqa: BLE001
+        return ""
+    if df.empty or "check_catalog_id" not in df.columns:
+        return ""
+    return str(normalize_gaia_source_id(df["check_catalog_id"].iloc[0]) or "").strip()
+
+
 def save_check_kmag_sidecar(
     path: Path,
     *,
@@ -1030,19 +1046,19 @@ def kmag_values_for_export(
     n_rows = len(lc_normal)
     if n_rows == 0:
         return ([], "na")
+
+    source_files = lc_normal.get("source_file", pd.Series([""] * n_rows)).astype(str).tolist()
+    if lc_dir is not None:
+        side = kmag_from_sidecar(check_kmag_sidecar_path(lc_dir, target_cid), source_files)
+        if side is not None:
+            return side
+
     if check_row is None:
         return (["na"] * n_rows, "na")
 
     check_cid = str(normalize_gaia_source_id(check_row.get("catalog_id", "")) or "").strip()
     if not check_cid:
         return (["na"] * n_rows, "na")
-
-    source_files = lc_normal.get("source_file", pd.Series([""] * n_rows)).astype(str).tolist()
-
-    if lc_dir is not None:
-        side = kmag_from_sidecar(check_kmag_sidecar_path(lc_dir, target_cid), source_files)
-        if side is not None:
-            return side
 
     comp_ids: list[str] = []
     if comp_df is not None and not comp_df.empty and "catalog_id" in comp_df.columns:
