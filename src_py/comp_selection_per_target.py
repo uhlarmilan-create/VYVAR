@@ -1772,6 +1772,11 @@ def _assign_comp_tiers_to_pool(
                 int(fx.size),
             )
 
+    logging.info(
+        "[COMP] target=%s rms-then-color begin n_cand=%d",
+        str(target_cid),
+        int(len(candidate_pool_df)),
+    )
     final_comps = _select_comps_by_rms_then_color(
         candidates=candidate_pool_df,
         target_bprp=float(target_bprp_eff),
@@ -1781,6 +1786,11 @@ def _assign_comp_tiers_to_pool(
         cfg=_cfg_w,
         max_comp_rms=max_comp_rms,
         fwhm_px=_fw_nn if math.isfinite(_fw_nn) else None,
+    )
+    logging.info(
+        "[COMP] target=%s rms-then-color end n_admitted=%d",
+        str(target_cid),
+        int(0 if final_comps is None else len(final_comps)),
     )
 
     def _color_rms_sel_note(fc: pd.DataFrame) -> str:
