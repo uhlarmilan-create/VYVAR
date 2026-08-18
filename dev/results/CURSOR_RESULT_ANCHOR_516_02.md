@@ -73,9 +73,9 @@ Runtime: wall **840.0 s**, Phase 2A **583.3 s**, 48 LCs.
 
 | SHA (core, n=97) | value |
 |------------------|-------|
-| 515 | `de6f7c8…` |
-| 516 before (PFS OFF UI) | `6dc6ef2e…` |
-| 516 after (PFS ON harness) | `d5f71ab1…` **? de6f7c8** |
+| 515 | `de6f7c8...` |
+| 516 before (PFS OFF UI) | `6dc6ef2e...` |
+| 516 after (PFS ON harness) | `d5f71ab1...` **? de6f7c8** |
 
 LC science vs 515 after PFS ON: **MAG and ERR and err_photon max |delta|
 = 0.0** on all 48 LCs (BO median err 8.945 mmag both). vs PFS-OFF
