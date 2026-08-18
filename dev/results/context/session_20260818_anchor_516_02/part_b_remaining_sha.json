@@ -1,0 +1,56 @@
+{
+  "sha515_core": "de6f7c8155d141376cf6df895144873f470555c5bb2de426ddad5b46cd981301",
+  "sha516_pfs_on_core": "d5f71ab102dc953e95491d1fb2406a5cabf25f0ff850bb2895e311f1d1cbf07f",
+  "n515": 97,
+  "n516": 97,
+  "core_byte_diff_files": [
+    "platesolve/NoFilter_60_2/photometry/comparison_stars_per_target.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485534187306501376.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485987254816323328.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496278752372040832.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496293286541396480.csv"
+  ],
+  "n_core_byte_diff": 48,
+  "n_lc_byte_diff": 47,
+  "lc_numeric_col_diffs": {
+    "ct_n_comp": {
+      "n_lcs": 47,
+      "max_abs": 17.0
+    }
+  },
+  "only_515_extended_n": 48,
+  "only_516_extended_n": 0,
+  "skip_515": {
+    "n": 218,
+    "skip_reason": {
+      "vsx_type_out_of_scope": 121,
+      "": 48,
+      "zone_noise": 45,
+      "below_target_depth": 3,
+      "per_frame_saturation": 1
+    },
+    "cv": "per_frame_saturation"
+  },
+  "skip_516_pfs_on": {
+    "n": 218,
+    "skip_reason": {
+      "vsx_type_out_of_scope": 121,
+      "": 48,
+      "zone_noise": 45,
+      "below_target_depth": 3,
+      "per_frame_saturation": 1
+    },
+    "cv": "per_frame_saturation"
+  },
+  "skip_516_pfs_off": {
+    "n": 218,
+    "skip_reason": {
+      "vsx_type_out_of_scope": 121,
+      "": 48,
+      "zone_noise": 45,
+      "below_target_depth": 3,
+      "zone_flag": 1
+    },
+    "cv": "zone_flag"
+  }
+}

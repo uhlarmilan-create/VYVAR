@@ -1,0 +1,22 @@
+{
+  "elapsed_s": 840.0038997000083,
+  "phase2a_s": 583.2884553000331,
+  "sha515_core": "de6f7c8155d141376cf6df895144873f470555c5bb2de426ddad5b46cd981301",
+  "sha516_before_core": "6dc6ef2e2a018c533b2c0cc2f01bd8cb7a96c38901235432867e04ad5d46b8d8",
+  "sha516_after_core": "d5f71ab102dc953e95491d1fb2406a5cabf25f0ff850bb2895e311f1d1cbf07f",
+  "sha516_after_extended": "82a89d3e8c144588e8af5289ef70cdde9eed37623eb8efaa539d218563cfebc4",
+  "n_after": 97,
+  "match_de6f7c8": false,
+  "pfs_override": true,
+  "result_keys": [
+    "field_map_png",
+    "lunar_context",
+    "n_frames",
+    "n_lightcurves",
+    "n_targets",
+    "output_dir",
+    "summary_csv",
+    "summary_report_pdf"
+  ],
+  "n_lc": 48
+}

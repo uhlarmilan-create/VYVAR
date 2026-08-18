@@ -1,0 +1,18 @@
+{
+  "515": {
+    "": 48,
+    "zone_noise": 45,
+    "per_frame_saturation": 1,
+    "vsx_type_out_of_scope": 121,
+    "below_target_depth": 3
+  },
+  "516": {
+    "": 48,
+    "zone_noise": 45,
+    "zone_flag": 1,
+    "vsx_type_out_of_scope": 121,
+    "below_target_depth": 3
+  },
+  "cv_515": "per_frame_saturation",
+  "cv_516": "zone_flag"
+}

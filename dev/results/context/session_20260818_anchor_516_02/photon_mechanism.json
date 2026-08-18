@@ -1,0 +1,19 @@
+{
+  "bo_frame": "proc_BO_CVn_Light_014.csv",
+  "dao_flux": 121563.34005235216,
+  "sigma_bkg_ap_on_disk": 1664.462819724145,
+  "g_pt": 0.6370667331227862,
+  "empirical_rel_full_csv": 0.014155825100401071,
+  "howell_rel_annulus": 0.006039546761373669,
+  "lc_photon_515_and_516_pfs_on": 0.006241,
+  "lc_photon_516_pfs_off_ui": 0.014156,
+  "needed_cols_2a_omits": [
+    "sigma_bkg_ap",
+    "sky_surface_bg_median_adu",
+    "err_bkg_source"
+  ],
+  "ui_path": "run_full_photometry_pipeline passes proc_frame_store (full columns) -> empirical",
+  "headless_path": "run_phase2a usecols cache without sigma_bkg_ap -> Howell fallback",
+  "pfs_in_photon_formula": false,
+  "057ecdc_in_err_formula": false
+}

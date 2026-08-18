@@ -64,6 +64,9 @@ hard_copy_*.bundle
 /tmp/
 .worktrees/
 
+# Draft-data copies under session context (not Rule 0.2 evidence)
+**/516_pfs_off_snapshot/
+
 # Verify logs and temp extracts
 *.log
 *_verify_console.txt
