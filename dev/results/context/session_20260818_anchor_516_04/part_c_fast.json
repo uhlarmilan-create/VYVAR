@@ -1,0 +1,10 @@
+{
+  "tier": "fast",
+  "overall": "PASS",
+  "git_head": "4a65675",
+  "pytest_passed": 1460,
+  "pytest_skipped": 21,
+  "elapsed_s": 1663.642,
+  "utc_end": "2026-08-18T15:06:40Z",
+  "notes": "Second --fast after test_sigma_sys once-log hygiene + draft 516 PT fire-proof. First --fast FAIL was order-dependent caplog on test_sigma_sys_explicit_zero_for_equipment_1."
+}

@@ -1,0 +1,97 @@
+{
+  "sha_core": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "sha_ext": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+  "n_core": 97,
+  "n_ext": 145,
+  "gating": {
+    "n_active": 218,
+    "n_lc": 48,
+    "n_comp_qa": 48,
+    "skip_reason_histogram": {
+      "": 48,
+      "zone_noise": 45,
+      "per_frame_saturation": 1,
+      "vsx_type_out_of_scope": 121,
+      "below_target_depth": 3
+    },
+    "cv_cvn": {
+      "skip_reason": "per_frame_saturation",
+      "skip_photometry": "True",
+      "zone_flag": "saturated"
+    }
+  },
+  "bo_median_err_mmag": 8.531500000000001,
+  "bo_per_term": {
+    "err": {
+      "median": 0.008531500000000001,
+      "median_mmag": 8.531500000000001
+    },
+    "err_photon": {
+      "median": 0.005511,
+      "median_mmag": 5.511
+    },
+    "err_sem_rel": {
+      "median": 0.004914,
+      "median_mmag": 4.914
+    },
+    "err_scint_rel": {
+      "median": 0.0036835,
+      "median_mmag": 3.6835
+    },
+    "err_sigma_sys_rel": {
+      "median": 0.0,
+      "median_mmag": 0.0
+    }
+  },
+  "meters_01b": {
+    "BO": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 7.150579800000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv"
+    },
+    "FW": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 8.201001900000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1497343732462852864.csv"
+    },
+    "BO_515": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 7.150579800000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv"
+    },
+    "FW_515": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 8.201001900000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1497343732462852864.csv"
+    }
+  },
+  "aavso_516": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt",
+  "varastro_516": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423.txt",
+  "n_rows_515": 134,
+  "n_rows_516": 134,
+  "mag_ident_134": 134,
+  "mag_max_abs": 0.0,
+  "magerr_3dec_n_changed": 82,
+  "magerr_3dec_n": 134,
+  "err_model_516": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+  "bo_median_magerr_3dec_516": 0.009,
+  "submit01": {
+    "C1_OBSCODE_UMIA": "PASS",
+    "C1_SOFTWARE_VYVAR": "PASS",
+    "C1_band_CV": "PASS",
+    "C1_KNAME_check": "FAIL",
+    "C1_NOTES_n_comp": "FAIL",
+    "C1_DATE_BJD": "PASS",
+    "C1_n_rows_134": "PASS",
+    "C1_ERR_MODEL_gpt": "PASS",
+    "C2_varastro_exists": "PASS",
+    "C2_w_pre_post": "PASS",
+    "C2_varastro_epochs": "PASS",
+    "C3_mag_depth": "depth=0.470 quiet_median=9.575",
+    "C5_do_not_submit": "noted"
+  }
+}

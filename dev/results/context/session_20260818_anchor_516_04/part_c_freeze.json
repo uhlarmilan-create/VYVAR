@@ -1,0 +1,21 @@
+{
+  "utc": "2026-08-18T12:54:39Z",
+  "src": "draft_000516",
+  "snapshot": "draft_000516_snapshot_cleanrebuild_20260818",
+  "copied": {
+    "draft_manifest.json": 185391,
+    "cal_diag.json": 1066,
+    "sat_diag.json": 962,
+    "aperture_snr_table.json": 16581,
+    "platesolve/NoFilter_60_2": 801,
+    "detrended_aligned/lights/NoFilter_60_2": 269,
+    "calibrated/lights/NoFilter_60_2": 150
+  },
+  "snap_core": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "snap_core_n": 97,
+  "snap_ext": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+  "snap_ext_n": 145,
+  "src_core": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "src_core_n": 97,
+  "sha_match_src": true
+}

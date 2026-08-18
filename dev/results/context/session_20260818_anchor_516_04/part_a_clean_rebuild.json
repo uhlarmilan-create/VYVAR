@@ -1,0 +1,241 @@
+{
+  "git_sha": "4a65675eba04",
+  "annot": {
+    "old_zone_counts": {
+      "linear": 2884,
+      "noise": 713,
+      "saturated": 24
+    },
+    "new_zone_counts": {
+      "linear": 2884,
+      "noise": 713,
+      "saturated": 24
+    },
+    "old_n_saturated": 24,
+    "new_n_saturated": 24,
+    "added_saturated": [],
+    "removed_saturated": [],
+    "n_zone_flip": 0,
+    "saturate_limit_unique": [
+      52428.0
+    ],
+    "bg_sigma": 24.360535636780753,
+    "noise_floor_adu": 1444.9339962597655,
+    "band_star_old_zone": "saturated",
+    "band_star_new_zone": "saturated",
+    "resume_already_annotated": true
+  },
+  "pool": {
+    "n_old": 2356,
+    "n_new": 2356,
+    "cmeta": {
+      "n_selected": 2356,
+      "grid_nx": 0,
+      "grid_ny": 0
+    },
+    "band_star_was_in_pool": false,
+    "band_star_in_pool": false,
+    "safe_bbox": [
+      46.751850000000005,
+      46.751850000000005,
+      2034.24815,
+      1349.24815
+    ]
+  },
+  "proc_rewrite": {
+    "n_files": 134,
+    "n_is_saturated_flips": 0,
+    "n_55704_left": 0
+  },
+  "wiped": [
+    "lightcurves/",
+    "lightcurves_reports/",
+    "active_targets.csv",
+    "comparison_stars_per_target.csv",
+    "comp_pool_admission.json",
+    "excluded_targets.csv",
+    "photometry_summary.csv",
+    "suspected_variables.csv",
+    "variability_candidates.csv",
+    "target_depth.json"
+  ],
+  "elapsed_s": 5046.544480800047,
+  "phase0_s": 0.3670043000020087,
+  "phase1_s": 4297.703909199976,
+  "phase2a_s": 516.6431013999972,
+  "sha_before_core": "be6191e0efcb8016637445c8d5d5b186db693f9a2dacea4646a74c061f502f41",
+  "sha_before_ext": "0c76a3a676ee439debe91a9afdba4b4974df1683e070ed6c02f327e2c2685e4c",
+  "sha_after_core": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "sha_after_ext": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+  "n_before_core": 97,
+  "n_before_ext": 145,
+  "n_after_core": 97,
+  "n_after_ext": 145,
+  "n_lightcurves": null,
+  "error": null,
+  "e1_e5": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS",
+    "E5": "PASS",
+    "mag_ident_lcs": 48,
+    "mag_mismatch": [],
+    "n_lc_515": 48,
+    "n_lc_516": 48,
+    "ct_n_comp_old": 2346,
+    "ct_n_comp_new": 2345,
+    "ct_c1_old": -0.373,
+    "ct_c1_new": -0.373,
+    "err_term_max_abs_vs_515": {
+      "err_sem_rel": 0.0,
+      "err_scint_rel": 0.0,
+      "err_sigma_sys_rel": 0.0
+    },
+    "err_photon_max_abs_vs_515": 6.589155999999999,
+    "err_max_abs_vs_515": 6.589154999999998,
+    "n_proc_empirical": 134,
+    "n_proc": 134,
+    "leftover_55704": []
+  },
+  "provenance": {
+    "n": 22,
+    "n_stale": 0,
+    "stale": [],
+    "sample": [
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/masterstars_full_match.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T11:28:35Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/comparison_stars.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T11:28:35Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/active_targets.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:43:24Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/comparison_stars_per_target.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:52:41Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/pipeline_meta.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:52:40Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/photometry_summary.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:05Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485534187306501376.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:44:38Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485987254816323328.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:44:45Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496278752372040832.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:43:47Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496293286541396480.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:43:55Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496795041799526400.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:43:40Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496998382733052928.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:43:43Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497132660589966976.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:44:34Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497154753901690624.csv",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:44:48Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1485534187306501376.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1485987254816323328.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496278752372040832.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496293286541396480.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496795041799526400.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1496998382733052928.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497132660589966976.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/comp_qa_1497154753901690624.json",
+        "exists": true,
+        "mtime_utc": "2026-08-18T12:49:04Z",
+        "post_run_start": true
+      }
+    ]
+  },
+  "STOP_MAG": false
+}

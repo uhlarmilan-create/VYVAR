@@ -1,0 +1,18 @@
+{
+  "tier": "full",
+  "overall": "PASS",
+  "git_head": "4a65675",
+  "pytest_passed": 1461,
+  "pytest_skipped": 21,
+  "pipeline_s": 6135,
+  "elapsed_s": 8333.949,
+  "work_root": "tmp/session_baseline/20260818T161323Z",
+  "sha_core": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "sha_ext": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+  "core_n": 97,
+  "ext_n": 145,
+  "n_lc_compared": 48,
+  "plan_regen_vt_rows": 873,
+  "utc_end": "2026-08-18T17:55:57Z",
+  "prior_crash": "first --full 20260818T15:35:17Z mkdir WinError 123 (colon in timestamp); fixed _full_work_stamp %Y%m%dT%H%M%SZ"
+}
