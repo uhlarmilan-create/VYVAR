@@ -36,6 +36,7 @@ def _base_row(
         "aperture_r_px": 3.0,
         "noise_floor_adu": 1.0,
         "peak_max_adu": 1000.0,
+        "sigma_bkg_ap": 10.0,
     }
 
 

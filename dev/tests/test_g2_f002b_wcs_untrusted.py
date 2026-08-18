@@ -36,6 +36,7 @@ def test_read_flux_propagates_catalog_match_mode_without_changing_mag(tmp_path: 
         "y": [10.0],
         "dao_flux": [1000.0],
         "aperture_r_px": [3.0],
+        "sigma_bkg_ap": [10.0],
         "flag": ["normal"],
     }
     pd.DataFrame({**row, "catalog_match_mode": ["master_reference_sky"]}).to_csv(csv_sky, index=False)

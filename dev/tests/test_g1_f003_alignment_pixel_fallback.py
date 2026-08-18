@@ -127,6 +127,7 @@ def test_read_flux_propagates_alignment_failed(tmp_path: Path) -> None:
             "y": [10.0],
             "dao_flux": [1000.0],
             "aperture_r_px": [3.0],
+            "sigma_bkg_ap": [10.0],
             "flag": ["normal"],
         }
     ).to_csv(csv_path, index=False)
