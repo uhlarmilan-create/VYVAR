@@ -235,3 +235,35 @@ def test_fire_qa_degraded_keeps_membership(tmp_path: Path, monkeypatch: pytest.M
     assert payload["qa_degraded"] is True
     assert set(payload["membership_ids"]) == set(tinfo["membership_ids"])
     assert any(Path(p) == qa_path for p in paths)
+
+
+def test_write_comp_qa_artifacts_removes_stale_sidecars(tmp_path: Path) -> None:
+    phot, _proc = _write_synthetic_qa_tree(tmp_path, n_comps=3)
+    lc = phot / "lightcurves"
+    tid_live = "1000000000000000001"
+    stale = lc / "comp_qa_9999999999999999999.json"
+    stale.write_text('{"stale": true}', encoding="utf-8")
+
+    result = {
+        "per_target": {
+            tid_live: {
+                "n_clean": 3,
+                "n_comps": 3,
+                "n_flagged": 0,
+                "qa_degraded": False,
+                "qa_degraded_reason": "",
+                "membership_ids": [
+                    "2000000000000000000",
+                    "2000000000000000001",
+                    "2000000000000000002",
+                ],
+                "comps": {},
+            }
+        }
+    }
+    paths = write_comp_qa_artifacts(result, photometry_dir=phot, update_summary=False)
+    live = lc / f"comp_qa_{tid_live}.json"
+    assert live.is_file()
+    assert not stale.exists()
+    assert any(Path(p) == live for p in paths)
+    assert any(Path(p) == stale for p in paths)

@@ -586,9 +586,11 @@ def write_comp_qa_artifacts(
     lc = Path(lc_dir) if lc_dir is not None else phot / "lightcurves"
     lc.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
+    expected_paths: set[Path] = set()
 
     for tid, tinfo in result.get("per_target", {}).items():
         out_path = lc / f"comp_qa_{tid}.json"
+        expected_paths.add(out_path.resolve())
         _deg = bool(tinfo.get("qa_degraded"))
         _deg_reason = str(tinfo.get("qa_degraded_reason") or "")
         payload = {
@@ -632,6 +634,21 @@ def write_comp_qa_artifacts(
                     cq_path.name,
                     exc,
                 )
+
+    # History-independence: remove stale comp_qa sidecars for targets no longer
+    # present in the current lightcurve/QA target set.
+    for stale_path in sorted(lc.glob("comp_qa_*.json")):
+        try:
+            if stale_path.resolve() in expected_paths:
+                continue
+            stale_path.unlink()
+            written.append(stale_path)
+        except OSError as exc:
+            LOGGER.warning(
+                "[COMP_QA] could not remove stale %s: %s",
+                stale_path.name,
+                exc,
+            )
 
     if update_summary:
         summ_path = phot / "photometry_summary.csv"
