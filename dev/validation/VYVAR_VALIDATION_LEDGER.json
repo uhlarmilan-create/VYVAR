@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-17",
+  "updated": "2026-08-18",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,9 +44,9 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-07-29",
-      "commit": "226d269",
-      "notes": "Re-verify on next --full against draft_435 sky-surface anchor."
+      "last_verified": "2026-08-18",
+      "commit": "4a65675",
+      "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
       "id": "VL-K2-MATRIX",
@@ -142,71 +142,58 @@
     {
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
-      "description": "In-Archive BO CVn Anchor #3 sky-surface snapshot draft_000435_snapshot_skysurface_20260716",
-      "verification": "scripts/session_baseline_check.py --full (core 5bccd85a\u2026 n=497; extended 7fdcdca4\u2026 n=744). Physical re-cut from calibrated lights (batch E GATE 2). Matched-star differential delta -23 mmag (V-clean).",
+      "description": "Frozen 516 clean-rebuild snapshot draft_000516_snapshot_cleanrebuild_20260818 (canonical --full; PFS ON, ROT out-of-scope, sat 0.80)",
+      "verification": "scripts/session_baseline_check.py --full (core 477dc8cf n=97; extended f71e0722 n=145). Photometers frozen snapshot inputs copied to tmp, never live 516.",
       "passes": true,
-      "last_verified": "2026-08-04",
-      "commit": "20dde2b",
-      "notes": "Batch E physical re-cut (2026-08-04, GATE 2 authorized): full production path from calibrated lights on scratch draft_000500; snapshot refreshed. E.3 CR 365810 px; E.4 N_equiv=3.78; differential LC stable (-23 mmag matched-star). Supersedes batch D core b9c9489a / extended 65bc826c. Prior batch D: err-only delta (scintillation). sigma_sys floor eq 1 NOT applied.",
-      "identity_gate_dropped_targets": [
-        {
-          "vsx_gaia_target_id": "1499883638682689920",
-          "stale_lc_gaia_id": "1499883638682689408"
-        },
-        {
-          "vsx_gaia_target_id": "1500410236033012352",
-          "stale_lc_gaia_id": "1500410613990135296"
-        },
-        {
-          "vsx_gaia_target_id": "1498513166158147968",
-          "stale_lc_gaia_id": "1498513269237363456"
-        },
-        {
-          "vsx_gaia_target_id": "1499064433800590592",
-          "stale_lc_gaia_id": "1499064399440851968"
-        }
-      ],
+      "last_verified": "2026-08-18",
+      "commit": "4a65675",
+      "notes": "ANCHOR-516-04: recut from clean 516 rebuild on 4a65675. Product SHA 477dc8cf supersedes be6191e0 (0.85-annotated catalog) and de6f7c8 (Howell-by-omission ERR). MAG byte-identical to de6f7c8. 435 sky-surface golden retired by design (ROT out-of-scope policy predates it). Snapshot inputs frozen so the gate cannot photometer a live drifting draft.",
       "census_fingerprint": {
-        "n_raw_dao": 2552,
-        "matched": 2842,
-        "targets": 165
+        "n_raw_dao": 307,
+        "matched": 3546,
+        "targets": 218
       },
       "plan_regen_fingerprint": {
-        "variable_targets_rows": 875,
+        "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-          "gaia_dr3_direct": 512,
-          "masterstars": 205,
+          "gaia_dr3_direct": 460,
+          "masterstars": 255,
           "masterstars_exo": 2,
           "no_match": 156
         }
       },
       "phase0_funnel_fingerprint": {
-        "variable_targets_rows": 245,
+        "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-          "gaia_dr3_direct": 64,
-          "masterstars": 178,
+          "gaia_dr3_direct": 460,
+          "masterstars": 255,
           "masterstars_exo": 2,
-          "no_match": 1
+          "no_match": 156
         },
-        "active_targets_rows": 165,
-        "skip_photometry_true": 2,
+        "active_targets_rows": 218,
+        "skip_photometry_true": 170,
         "skip_reason_histogram": {
-          "": 163,
-          "zone_flag": 2
+          "": 48,
+          "below_target_depth": 3,
+          "per_frame_saturation": 1,
+          "vsx_type_out_of_scope": 121,
+          "zone_noise": 45
         },
         "zone_flag_histogram": {
-          "linear": 110,
-          "noisy1": 10,
-          "noisy2": 5,
-          "noisy3": 38,
-          "saturated": 2
+          "linear": 172,
+          "noise": 45,
+          "saturated": 1
         }
       },
-      "identity_p95_baseline_px": 1.536099044764055,
-      "core_sha": "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e",
-      "extended_sha": "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2",
-      "superseded_core_sha": "b9c9489aa88b1df815bf6157911b35af5bb1c42a3b0eaf58995042fcdd007a39",
-      "superseded_extended_sha": "65bc826cac433453f689dbc5ab2883e783b7a7c7563092c02cfa443058f48cc2"
+      "identity_p95_baseline_px": 1.7846151827213692,
+      "core_sha": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+      "extended_sha": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+      "core_n": 97,
+      "extended_n": 145,
+      "superseded_core_sha": "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e",
+      "superseded_extended_sha": "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2",
+      "superseded_snapshot": "draft_000435_snapshot_skysurface_20260716",
+      "product_sha_lineage": "de6f7c8 -> be6191e0 -> 477dc8cf"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
@@ -221,37 +208,37 @@
     {
       "id": "VL-P1-GOLD",
       "area": "invariants",
-      "description": "INVARIANTS P1 golden mini draft_000435_p1mini (16-frame DATE-OBS stride from draft_000435)",
+      "description": "INVARIANTS P1 golden mini draft_000516_p1mini (16-frame DATE-OBS stride from frozen 516 snapshot; cal_diag.json included)",
       "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
       "passes": true,
-      "last_verified": "2026-07-28",
-      "commit": "a9d7eb0",
-      "notes": "Re-cut 2026-07-28 (GOLDEN-ASSET-RECUT Part 2): identity gate (4 mis-associated gaia_dr3_direct targets removed) plus delta_mag_sysrem schema column. Two independent wipe+rebuild+headless runs byte-identical. Supersedes core 074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec n=333 / extended 66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba n=497 (2026-07-19 lock). Scope unchanged: photometry-ready mini.",
-      "mini_name": "draft_000435_p1mini",
-      "source_draft": "draft_000435",
+      "last_verified": "2026-08-18",
+      "commit": "4a65675",
+      "notes": "ANCHOR-516-04 recut from draft_000516_snapshot_cleanrebuild_20260818. MUST include cal_diag.json on draft root and platesolve/SETUP (INV-CAL-01). Canonical PFS ON. 435 p1mini retired (superseded-with-pointer). Headless lock 651.6 s.",
+      "mini_name": "draft_000516_p1mini",
+      "source_draft": "draft_000516_snapshot_cleanrebuild_20260818",
       "setup": "NoFilter_60_2",
       "n_frames": 16,
       "selection": "even_stride_date_obs_first_included_aligned_only",
-      "inputs_manifest_sha256": "86ab0d9ea6e41264323badb291dfba77756192370cd3486db0f5eb049088bb91",
-      "core_sha": "e7976de18e4197e85e0120dcadf6bdae5ac0be73238be92f83c7cd87fa0fedee",
-      "core_n": 325,
-      "extended_sha": "d0e8f64b55806400aa7e305d97c79c7d4d03cb99b96e48ac44c81d7e087b3deb",
-      "extended_n": 485,
-      "superseded_core_sha": "074ae881e0f589b41a998db3bd64e87cb8179e3dae2e8bce87dc234fb0adfeec",
-      "superseded_extended_sha": "66285d3f601e70a472aed90834d6f3298eb0f53a7330bc0a12602c634fdd03ba",
-      "superseded_core_n": 333,
-      "superseded_extended_n": 497,
+      "inputs_manifest_sha256": "f788270d3ca05141b2c10c012f0b15da0078679439570fda178b39cf8da08664",
+      "core_sha": "416043193b633d7e3a98cff2ae6fc635a243722a2d4bcb10410115c70adbc231",
+      "core_n": 97,
+      "extended_sha": "65e64210fb1c8c5e1cff3137adb430049276fffcfb92737b823a0ce59d54b5aa",
+      "extended_n": 145,
+      "superseded_core_sha": "e7976de18e4197e85e0120dcadf6bdae5ac0be73238be92f83c7cd87fa0fedee",
+      "superseded_extended_sha": "d0e8f64b55806400aa7e305d97c79c7d4d03cb99b96e48ac44c81d7e087b3deb",
+      "superseded_mini_name": "draft_000435_p1mini",
+      "superseded_core_n": 325,
+      "superseded_extended_n": 485,
       "census": {
-        "dao_pass1_vy_ndao": 2552,
-        "n_detected_mean": 2777.5625,
-        "n_matched_mean": 2638.5625,
-        "identity_n_parent": 2842,
-        "identity_p95_parent": 1.536099044764055,
-        "n_summary_targets": 165
+        "dao_pass1_vy_ndao": 307,
+        "n_detected_mean": 3513.625,
+        "n_matched_mean": 3349.625,
+        "identity_n_parent": 3546,
+        "identity_p95_parent": 1.7846151827213692,
+        "n_summary_targets": 48
       },
       "lock_timings_s": {
-        "run1": 443.2,
-        "run2": 449.1
+        "run1": 651.6
       }
     },
     {

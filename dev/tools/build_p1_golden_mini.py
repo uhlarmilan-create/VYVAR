@@ -1,18 +1,17 @@
 # -*- coding: ascii -*-
-"""Build the INVARIANTS P1 golden mini-dataset from draft_000435.
+"""Build the INVARIANTS P1 golden mini-dataset from frozen 516 snapshot.
 
 Runbook (local):
   python dev/tools/build_p1_golden_mini.py
   set VYVAR_INVARIANTS_P1=1
   pytest dev/tests/test_invariants_p1_seed.py dev/tests/test_invariants_p1_golden.py -q
 
-Design (see DECISIONS INVARIANTS-P1-GOLDEN-MINI):
-  - Source: Archive/Drafts/draft_000435
+Design (see DECISIONS INVARIANTS-P1-GOLDEN-MINI / ANCHOR-516-04):
+  - Source: Archive/Drafts/draft_000516_snapshot_cleanrebuild_20260818
   - 16 lights by even DATE-OBS stride (first included)
   - Photometry-ready layout: calibrated subset + detrended_aligned proc
     CSV/FITS for those frames + platesolve catalogs/MASTERSTAR from parent
-  - Scope: in-draft Raw/darks/flats have no local masters (CalibrationLibrary);
-    mini starts at photometry-ready stage matching session_baseline --full
+  - MUST include cal_diag.json (INV-CAL-01)
   - Idempotent: wipe + rebuild; prints frame list + SHA256 per copied input
   - Writes p1_manifest.json next to the mini root
 """
@@ -30,8 +29,8 @@ sys.path.insert(0, str(REPO_ROOT / "src_py"))
 
 from config import AppConfig  # noqa: E402
 
-SOURCE_DRAFT = "draft_000435"
-MINI_NAME = "draft_000435_p1mini"
+SOURCE_DRAFT = "draft_000516_snapshot_cleanrebuild_20260818"
+MINI_NAME = "draft_000516_p1mini"
 SETUP = "NoFilter_60_2"
 N_FRAMES = 16
 
@@ -68,8 +67,13 @@ def select_stride_frames(
 
     rows: list[tuple[str, str]] = []
     for f in sorted(cal_dir.glob("*.fits")):
-        proc = da_dir / f"proc_{f.stem}.fits"
-        if not proc.is_file():
+        stem = f.stem
+        proc_fits = da_dir / f"proc_{stem}.fits"
+        plain_fits = da_dir / f"{stem}.fits"
+        proc_csv = da_dir / f"proc_{stem}.csv"
+        if not proc_csv.is_file():
+            continue
+        if not (proc_fits.is_file() or plain_fits.is_file()):
             continue
         with fits.open(f, memmap=True) as hdul:
             dobs = str(hdul[0].header.get("DATE-OBS") or hdul[0].header.get("DATE") or "")
@@ -143,11 +147,17 @@ def build_mini(*, archive_root: Path | None = None) -> Path:
     for dobs, name in selected:
         print(f"  {dobs}  {name}")
 
-    # draft metadata
+    # draft metadata -- cal_diag.json is required (INV-CAL-01)
+    cal_diag_src = src_root / "cal_diag.json"
+    if not cal_diag_src.is_file():
+        raise FileNotFoundError(f"P1 mini requires cal_diag.json on source: {cal_diag_src}")
     for meta_name in ("draft_manifest.json", "cal_diag.json"):
         meta_src = src_root / meta_name
         if meta_src.is_file():
             _copy_into(mini_root, meta_src, meta_name, inputs)
+    # INV-CAL-01 looks at platesolve/ and setup-dir, not only draft root.
+    _copy_into(mini_root, cal_diag_src, f"platesolve/{SETUP}/cal_diag.json", inputs)
+    _copy_into(mini_root, cal_diag_src, "platesolve/cal_diag.json", inputs)
 
     # calibrated + optional raw lights for the selected set
     for name in basenames:
@@ -156,18 +166,28 @@ def build_mini(*, archive_root: Path | None = None) -> Path:
         if raw_src.is_file():
             _copy_into(mini_root, raw_src, f"Raw/lights/{SETUP}/{name}", inputs)
 
-    # detrended_aligned proc products
+    # detrended_aligned proc products (516 FITS are stem.fits; CSV is proc_stem.csv)
     for stem in stems:
-        for ext in (".fits", ".csv"):
-            src = da_src / f"proc_{stem}{ext}"
-            if not src.is_file():
-                raise FileNotFoundError(f"missing aligned product: {src}")
-            _copy_into(
-                mini_root,
-                src,
-                f"detrended_aligned/lights/{SETUP}/proc_{stem}{ext}",
-                inputs,
-            )
+        csv_src = da_src / f"proc_{stem}.csv"
+        if not csv_src.is_file():
+            raise FileNotFoundError(f"missing aligned CSV: {csv_src}")
+        _copy_into(
+            mini_root,
+            csv_src,
+            f"detrended_aligned/lights/{SETUP}/proc_{stem}.csv",
+            inputs,
+        )
+        fits_src = da_src / f"proc_{stem}.fits"
+        if not fits_src.is_file():
+            fits_src = da_src / f"{stem}.fits"
+        if not fits_src.is_file():
+            raise FileNotFoundError(f"missing aligned FITS for {stem}")
+        _copy_into(
+            mini_root,
+            fits_src,
+            f"detrended_aligned/lights/{SETUP}/proc_{stem}.fits",
+            inputs,
+        )
 
     # platesolve shared products (full catalogs; MASTERSTAR from parent night)
     for name in (

@@ -38,9 +38,9 @@ from ui_aperture_photometry import _find_phase2a_paths
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
-MINI_NAME = "draft_000435_p1mini"
+MINI_NAME = "draft_000516_p1mini"
 SETUP = "NoFilter_60_2"
-DRAFT_ID = 435
+DRAFT_ID = 516
 
 
 def _enabled() -> bool:
@@ -100,6 +100,8 @@ def _cfg_for_p1() -> AppConfig:
     cfg = AppConfig()
     cfg.k2_mode = "literature"
     cfg.save_lightcurve_png = False
+    cfg.per_frame_saturation_enabled = True
+    cfg.export_err_mode = "calibrated"
     return cfg
 
 
@@ -280,8 +282,12 @@ def test_mini_present_or_buildable(mini_and_gold: tuple[Path, dict]) -> None:
     man = json.loads(man_path.read_text(encoding="utf-8"))
     assert man["n_frames"] == 16
     assert man["inputs_manifest_sha256"] == gold["inputs_manifest_sha256"]
-    # Verify each input file SHA matches the build manifest
+    # Verify each input file SHA matches the build manifest.
+    # Skip files the photometry pipeline is allowed to rewrite in-place.
+    _rewriteable = {"platesolve/NoFilter_60_2/alignment_report.csv"}
     for item in man["inputs"]:
+        if item["rel"].replace("\\", "/") in _rewriteable:
+            continue
         path = mini / item["rel"]
         assert path.is_file(), f"missing input {item['rel']}"
         h = hashlib.sha256(path.read_bytes()).hexdigest()

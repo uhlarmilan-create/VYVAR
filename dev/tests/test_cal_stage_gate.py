@@ -130,16 +130,16 @@ def test_calibrate_stamps_pure(tmp_path: Path) -> None:
     lib = Path(__file__).resolve().parents[2] / "CalibrationLibrary"
     md = sorted(lib.glob("Dark_60s*Bin1*.fits"))[0]
     mf = sorted(lib.glob("Flat*.fits"))[0]
-    raw = Path(__file__).resolve().parents[2] / "Archive/Drafts/draft_000435/Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits"
+    raw = Path(__file__).resolve().parents[2] / "Archive/Drafts/draft_000516/Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits"
     if not raw.is_file():
-        pytest.skip("anchor raw frame missing")
+        pytest.skip("516 raw frame missing")
     dst = tmp_path / "cal.fits"
     _calibrate_one_light_disk(
         src=raw,
         dst=dst,
         master_dark_path=md,
         masterflat_by_filter={"NoFilter": mf},
-        qc_pack={"enabled": False, "draft_id": 435},
+        qc_pack={"enabled": False, "draft_id": 516},
     )
     with fits.open(dst) as hdul:
         hdr = hdul[0].header

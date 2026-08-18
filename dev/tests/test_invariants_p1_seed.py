@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""INVARIANTS P1 seed: draft_435 double-photometry SHA + census-band smoke (slow).
+"""INVARIANTS P1 seed: frozen 516 snapshot SHA + census-band smoke (slow).
 
 Marked slow; skipped unless VYVAR_INVARIANTS_P1=1 or --run-invariants-p1.
 Uses in-Archive snapshot as golden; does not require UI path in this seed.
@@ -17,9 +17,9 @@ from tests.photometry_sha import compute_photometry_sha
 
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
-SNAPSHOT = "draft_000435_snapshot_skysurface_20260716"
-EXPECTED_CORE = "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e"
-EXPECTED_EXT = "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2"
+SNAPSHOT = "draft_000516_snapshot_cleanrebuild_20260818"
+EXPECTED_CORE = "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956"
+EXPECTED_EXT = "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d"
 
 
 def _enabled() -> bool:
@@ -42,8 +42,8 @@ def test_p1_snapshot_sha_matches_registered() -> None:
     ext, ne = compute_photometry_sha(snap, include_comp_qa=True)
     assert core == EXPECTED_CORE
     assert ext == EXPECTED_EXT
-    assert nc == 325
-    assert ne == 487
+    assert nc == 97
+    assert ne == 145
 
 
 def test_p1_census_fingerprint_in_meta() -> None:
