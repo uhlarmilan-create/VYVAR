@@ -22,6 +22,7 @@ def _frame(cog_ok: bool | None, *, flux: float = 100.0, apcorr: float = 110.0) -
                 "aperture_r_px": [3.0, 3.0],
                 "x": [10.0, 20.0],
                 "y": [10.0, 20.0],
+                "sigma_bkg_ap": [10.0, 10.0],
             }
         )
     return pd.DataFrame(
@@ -34,6 +35,7 @@ def _frame(cog_ok: bool | None, *, flux: float = 100.0, apcorr: float = 110.0) -
             "aperture_r_px": [3.0, 3.0],
             "x": [10.0, 20.0],
             "y": [10.0, 20.0],
+            "sigma_bkg_ap": [10.0, 10.0],
         }
     )
 
