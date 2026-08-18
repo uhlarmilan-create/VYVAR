@@ -22,7 +22,10 @@ from photometry_core import (
     _clamp_err_empty_apertures_n,
     _howell_bkg_variance_adu2,
     _normalize_err_background_mode,
+    _phase2a_cache_columns,
+    _phase2a_proc_column_requirements,
     _photometric_error,
+    _phase2a_empirical_sigma_bkg_ap,
     _photometric_error_with_bkg_mode,
     bkg_scale_ratio_empirical_over_howell,
     compute_setup_bkg_scale_r,
@@ -30,6 +33,7 @@ from photometry_core import (
     enhance_catalog_dataframe_aperture_bpm,
     finalize_hybrid_bkg_fallback_proc_dir,
     measure_empty_aperture_sigma_bkg,
+    read_flux_from_csv,
     scaled_sigma_bkg_ap_from_howell,
 )
 
@@ -304,3 +308,117 @@ def test_snr_table_uses_measured_bkg_var() -> None:
         bkg_var_adu2_per_px=25.0,
     )
     assert legacy["table"] != measured["table"]
+
+
+def test_phase2a_cache_columns_cover_named_requirements() -> None:
+    req = _phase2a_proc_column_requirements()
+    cols = set(_phase2a_cache_columns())
+    for group_cols in req.values():
+        for col in group_cols:
+            assert col in cols
+    assert SIGMA_BKG_AP_COL in cols
+    assert ERR_BKG_SOURCE_COL in cols
+    assert "sky_annulus_r_out_px" in cols
+
+
+def test_phase2a_empirical_requires_sigma_bkg_ap_input() -> None:
+    row = pd.Series(
+        {
+            "catalog_id": "1498613634033133184",
+            "dao_flux": 121563.0,
+            "aperture_r_px": 5.0,
+            "sky_adu_per_px_annulus": 1000.0,
+        }
+    )
+    with pytest.raises(ValueError, match="INV-ERR-MODE-01"):
+        _phase2a_empirical_sigma_bkg_ap(
+            row,
+            err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+            source_file="proc_test.csv",
+            catalog_id="1498613634033133184",
+        )
+
+
+def test_phase2a_empirical_accepts_projected_sigma_bkg_ap() -> None:
+    row = pd.Series(
+        {
+            "catalog_id": "1498613634033133184",
+            SIGMA_BKG_AP_COL: 1664.0,
+            ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
+        }
+    )
+    sig = _phase2a_empirical_sigma_bkg_ap(
+        row,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        source_file="proc_test.csv",
+        catalog_id="1498613634033133184",
+    )
+    assert sig == pytest.approx(1664.0)
+
+
+def test_phase2a_projected_cache_matches_full_row_empirical() -> None:
+    row = {
+        "catalog_id": "1498613634033133184",
+        "name": "1498613634033133184",
+        "bjd_tdb_mid": 2450000.123,
+        "hjd_mid": 2450000.122,
+        "jd_mid": 2450000.121,
+        "dao_flux": 121563.0,
+        "noise_floor_adu": 1000.0,
+        "sky_adu_per_px_annulus": 1000.0,
+        "aperture_r_px": 5.0,
+        "peak_max_adu": 12000.0,
+        "airmass": 1.2,
+        "x": 100.0,
+        "y": 120.0,
+        "flux_small": 110000.0,
+        "flux_large": 130000.0,
+        "mag": 12.3,
+        "bp_rp": 0.8,
+        "b_v": 0.7,
+        "zone": "linear",
+        "source_type": "GAIA_MATCHED",
+        "vsx_known_variable": False,
+        "gaia_dr3_variable_catalog": False,
+        "ra_deg": 120.0,
+        "dec_deg": 30.0,
+        "photometry_ok": True,
+        "edge_safe_10px": True,
+        "edge_fail": False,
+        "snr50_ok": True,
+        "is_saturated": False,
+        "likely_saturated": False,
+        "is_usable": True,
+        "catalog_match_mode": "direct",
+        "sky_annulus_r_out_px": 18.0,
+        SIGMA_BKG_AP_COL: 1664.0,
+        ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
+    }
+    full_df = pd.DataFrame([row])
+    projected_df = full_df[[c for c in _phase2a_cache_columns() if c in full_df.columns]].copy()
+    star_ids = ["1498613634033133184"]
+    aps = {"1498613634033133184": 5.0}
+    frame = Path("proc_test.csv")
+
+    full = read_flux_from_csv(
+        frame,
+        star_ids,
+        aps,
+        csv_df=full_df,
+        gain=0.63707,
+        read_noise=14.08,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+    )
+    projected = read_flux_from_csv(
+        frame,
+        star_ids,
+        aps,
+        csv_df=projected_df,
+        gain=0.63707,
+        read_noise=14.08,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+    )
+    assert len(full) == 1
+    assert len(projected) == 1
+    assert projected.loc[0, "err"] == pytest.approx(full.loc[0, "err"], rel=0, abs=1e-15)
+    assert projected.loc[0, ERR_BKG_SOURCE_COL] == full.loc[0, ERR_BKG_SOURCE_COL]

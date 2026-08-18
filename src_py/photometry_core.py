@@ -1278,6 +1278,120 @@ def _photometric_error_with_bkg_mode(
     return err, src
 
 
+def _phase2a_proc_column_requirements() -> dict[str, list[str]]:
+    """Named proc-CSV column requirements for headless Phase 2A.
+
+    This is the contract that the reduced Phase-2A CSV cache must satisfy. The
+    UI/full-pipeline path reads from ``ProcFrameStore``; the headless path must
+    project every column that any selectable Phase-2A branch can consume.
+    """
+    return {
+        "lookup_identity": [
+            "catalog_id",
+            "name",
+            "x",
+            "y",
+        ],
+        "frame_times_and_trust": [
+            "bjd_tdb_mid",
+            "hjd_mid",
+            "jd_mid",
+            "airmass",
+            "catalog_match_mode",
+        ],
+        "photometry_core": [
+            "dao_flux",
+            "aperture_r_px",
+            "noise_floor_adu",
+            "sky_adu_per_px_annulus",
+            SKY_SURFACE_BG_MEDIAN_ADU_COL,
+            "flux_small",
+            "flux_large",
+        ],
+        "err_empirical": [
+            SIGMA_BKG_AP_COL,
+            ERR_BKG_SOURCE_COL,
+        ],
+        "pfs_and_sat": [
+            "peak_max_adu",
+            "is_saturated",
+            "likely_saturated",
+        ],
+        "edge_gating": [
+            "sky_annulus_r_out_px",
+            "edge_fail",
+            "edge_safe_10px",
+        ],
+        "variability_and_export": [
+            "mag",
+            "bp_rp",
+            "b_v",
+            "zone",
+            "source_type",
+            "vsx_known_variable",
+            "gaia_dr3_variable_catalog",
+            "ra_deg",
+            "dec_deg",
+            "photometry_ok",
+            "snr50_ok",
+            "is_usable",
+        ],
+        "psf_branch": [
+            "psf_flux",
+            "psf_flux_err",
+            "psf_fit_ok",
+            "psf_chi2",
+            "psf_quality",
+            "psf_quality_fallback",
+            "psf_snr",
+            "psf_ac_factor",
+            "psf_ac_n_used",
+            "psf_ac_applied",
+        ],
+        "cog_branch": [
+            "ac_factor",
+            "dao_flux_apcorr",
+            "cog_ok",
+        ],
+    }
+
+
+def _phase2a_cache_columns() -> list[str]:
+    """Union of all required proc-CSV columns for headless Phase 2A."""
+    cols: list[str] = []
+    for required in _phase2a_proc_column_requirements().values():
+        cols.extend(required)
+    return list(dict.fromkeys(cols))
+
+
+def _phase2a_empirical_sigma_bkg_ap(
+    row_csv: pd.Series,
+    *,
+    err_background_mode: str,
+    source_file: str,
+    catalog_id: str,
+) -> float | None:
+    """Return per-row empirical ``sigma_bkg_ap`` or raise on missing input.
+
+    INV-ERR-MODE-01: if Phase 2A is configured for empirical background errors,
+    missing required proc-CSV inputs are a hard failure, not a silent Howell
+    fallback caused by a starved cache projection.
+    """
+    mode = _normalize_err_background_mode(err_background_mode)
+    sig = float(pd.to_numeric(row_csv.get(SIGMA_BKG_AP_COL), errors="coerce"))
+    if math.isfinite(sig):
+        return sig
+    if mode != ERR_BKG_MODE_EMPIRICAL:
+        return None
+    src_raw = row_csv.get(ERR_BKG_SOURCE_COL, "")
+    src = str(src_raw).strip().lower() if src_raw is not None else ""
+    raise ValueError(
+        "[INV-ERR-MODE-01] err_background_mode=empirical requires "
+        f"'{SIGMA_BKG_AP_COL}' in Phase 2A input; missing/NaN for catalog_id={catalog_id} "
+        f"in {source_file} (err_bkg_source={src or 'missing'})."
+    )
+
+
 def _sky_pp_for_photometric_error(row: Any) -> float:
     """Sky level (ADU/px) for Howell ``_photometric_error`` from a proc-CSV row.
 
@@ -3380,9 +3494,12 @@ def read_flux_from_csv(
         # Chyba - fotonovy sum + background (empirical empty-aperture or Howell legacy)
         r_ap = base["aperture_r_px"]
         area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
-        _sig_bkg = float(pd.to_numeric(row_csv.get(SIGMA_BKG_AP_COL), errors="coerce"))
-        if not math.isfinite(_sig_bkg):
-            _sig_bkg = None
+        _sig_bkg = _phase2a_empirical_sigma_bkg_ap(
+            row_csv,
+            err_background_mode=err_background_mode,
+            source_file=source_file,
+            catalog_id=str(cid),
+        )
         _err, _err_src = _photometric_error_with_bkg_mode(
             flux,
             err_background_mode=err_background_mode,
@@ -9349,59 +9466,7 @@ def _phase2a_prepare_shared_state(
         logging.info("[FAZA 2A] Nacitavam CSV cache...")
         _t_cache = time.time()
         _phase2a_csv_cache: dict[str, pd.DataFrame] = {}
-        _needed_cols_2a = list(
-            dict.fromkeys(
-                [
-                    "catalog_id",
-                    "name",
-                    "bjd_tdb_mid",
-                    "hjd_mid",
-                    "jd_mid",
-                    "dao_flux",
-                    "noise_floor_adu",
-                    "sky_adu_per_px_annulus",
-                    "aperture_r_px",
-                    "peak_max_adu",
-                    "airmass",
-                    "x",
-                    "y",
-                    "flux_small",
-                    "flux_large",
-                    # Variability / auto-export (TODO-PERF-6) - same cache, no second disk read
-                    "mag",
-                    "bp_rp",
-                    "b_v",
-                    "zone",
-                    "source_type",
-                    "vsx_known_variable",
-                    "gaia_dr3_variable_catalog",
-                    "ra_deg",
-                    "dec_deg",
-                    "photometry_ok",
-                    "edge_safe_10px",
-                    "edge_fail",
-                    "snr50_ok",
-                    "is_saturated",
-                    "likely_saturated",
-                    "is_usable",
-                    "psf_flux",
-                    "psf_flux_err",
-                    "psf_fit_ok",
-                    "psf_chi2",
-                    "psf_quality",
-                    "psf_quality_fallback",
-                    "psf_snr",
-                    "psf_ac_factor",
-                    "psf_ac_n_used",
-                    "psf_ac_applied",
-                    "catalog_match_mode",
-                    # COG aperture correction (latent; present only when COG was run)
-                    "ac_factor",
-                    "dao_flux_apcorr",
-                    "cog_ok",
-                ]
-            )
-        )
+        _needed_cols_2a = _phase2a_cache_columns()
         for _csv_path in csv_files:
             try:
                 _hdr = pd.read_csv(_csv_path, nrows=0)
