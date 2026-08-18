@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-16T19:33:50Z at git HEAD 2396949._
+_Generated 2026-08-18T10:17:38Z at git HEAD 08cf443._
 
 ## Summary
 
@@ -153,7 +153,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `phase01_plate_scale_arcsec_per_px` | 1.3 | 0 .. 30 | expert | resolved | fits_dynamic | session | frame | n/a | auto | Phase01 Plate Scale Arcsec Per PX |
 | `plate_scale_arcsec_per_px` | 1.3 | 0.1 .. 30 | expert | resolved | fits_dynamic | session | frame | n/a | auto | Plate Scale Arcsec Per PX |
 | `plate_solve_fov_deg` | 1.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Plate Solve FOV Deg |
-| `saturate_limit_fraction` | 0.85 | - | expert | static | config_runtime | rig | rig | a | auto | Saturate Limit Fraction |
+| `saturate_limit_fraction` | 0.8 | - | expert | static | config_runtime | rig | rig | a | auto | Saturate Limit Fraction |
 | `sips_dao_fwhm_fwhm_factor` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | SIPS DAO FWHM Factor |
 | `sips_dao_fwhm_px` | 2.5 | 1 .. 8 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Sips DAO FWHM PX |
 | `sips_dao_threshold_sigma` | 3.5 | - | advanced | static | config_runtime | rig | rig_sampling | a | custom | Sips DAO Threshold Sigma |
