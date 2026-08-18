@@ -744,7 +744,7 @@ class AppConfig:
     # WAVE-B STEP 6: masterstar_solver_use_draft_median_if_hint_sep_deg hardcoded
     # (module constant in pipeline.py).
     #: Saturation safety fraction applied to equipment_saturate_adu before classifying MASTERSTAR zones.
-    saturate_limit_fraction: float = 0.85
+    saturate_limit_fraction: float = 0.80
     # WAVE-B STEP 6: masterstar_optimizer_mirror_extra_log hardcoded (module constant in pipeline.py).
     #: Enable verbose debug logs for plate solving / blind solver / hint plumbing.
     debug_platesolver: bool = False

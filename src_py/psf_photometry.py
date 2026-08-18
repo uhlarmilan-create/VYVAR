@@ -1729,7 +1729,7 @@ def fit_moffat_psf_stars(
         # Skip saturated stars - Moffat profile invalid for saturated cores
         if saturate_limit_adu is not None:
             _peak = float(srow.get(peak_col, float("nan")))
-            if math.isfinite(_peak) and _peak >= float(saturate_limit_adu) * 0.85:
+            if math.isfinite(_peak) and _peak >= float(saturate_limit_adu) * 0.80:
                 base["moffat_saturated"] = True
                 base["moffat_fit_ok"] = False
                 base["moffat_chi2"] = float("nan")

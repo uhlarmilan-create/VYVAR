@@ -221,3 +221,26 @@ def test_masterstar_stack_few_percent_overshoot_still_flags_peak() -> None:
     )
     assert bool(out.loc[0, "is_saturated"])
     assert str(out.loc[0, "zone"]) == "saturated"
+
+
+def test_resolved_equipment_limit_uses_inv_sat_limit_authority() -> None:
+    """Resolved 16-bit clip must still use the 0.80 INV-SAT-LIMIT peak test."""
+    df = pd.DataFrame(
+        {
+            "flux": [8000.0],
+            "peak_dao": [45.0],
+            "peak_max_adu": [54581.773438],
+        }
+    )
+    out = _annotate_masterstars_flux_zones(
+        df,
+        noise_floor_adu=2105.9,
+        equipment_saturate_adu=65535.0,
+        sigma_px=10.0,
+        sky_median_adu=1955.0,
+        prematch_peak_sigma_floor=1.8,
+        dao_detection_n_equiv=3.78,
+    )
+    assert float(out.loc[0, "saturate_limit_adu_85pct"]) == pytest.approx(52428.0)
+    assert bool(out.loc[0, "is_saturated"])
+    assert str(out.loc[0, "zone"]) == "saturated"

@@ -6418,7 +6418,7 @@ def _annotate_masterstars_flux_zones(
     equipment_saturate_adu: float | None,
     saturate_limit_adu_fallback: Any = None,
     n_stack: int | None = None,
-    saturate_limit_fraction: float = 0.85,
+    saturate_limit_fraction: float = SAT_LIMIT_NO_KNEE_FRAC,
     sigma_px: Any = None,
     sky_median_adu: Any = None,
     prematch_peak_sigma_floor: Any = None,

@@ -788,16 +788,16 @@ def _accumulate_per_frame_comp_metrics(
                     sp = sp[sp["_limit"].gt(0) & sp["_peak"].notna() & sp["_limit"].notna()]
                     if not sp.empty:
                         _adm_frac = 0.70
-                        _sat_frac_col = 0.85
+                        _sat_frac_col = 0.80
                         try:
                             _adm_frac = float(getattr(_cfg_sat, "admission_sat_peak_frac", 0.70))
                         except (TypeError, ValueError):
                             _adm_frac = 0.70
                         try:
-                            _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.85))
+                            _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.80))
                         except (TypeError, ValueError):
-                            _sat_frac_col = 0.85
-                        _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.85)
+                            _sat_frac_col = 0.80
+                        _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.80)
                         sp["_over"] = sp["_peak"] > sp["_limit"] * _adm_mult
                         for cid, n_tot in sp.groupby(name_col, sort=True).size().items():
                             cid_s = str(cid)
@@ -813,16 +813,16 @@ def _accumulate_per_frame_comp_metrics(
                         if math.isfinite(peak) and math.isfinite(limit) and limit > 0:
                             peak_total_map[_cid] = int(peak_total_map.get(_cid, 0)) + 1
                             _adm_frac = 0.70
-                            _sat_frac_col = 0.85
+                            _sat_frac_col = 0.80
                             try:
                                 _adm_frac = float(getattr(_cfg_sat, "admission_sat_peak_frac", 0.70))
                             except (TypeError, ValueError):
                                 _adm_frac = 0.70
                             try:
-                                _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.85))
+                                _sat_frac_col = float(getattr(_cfg_sat, "saturate_limit_fraction", 0.80))
                             except (TypeError, ValueError):
-                                _sat_frac_col = 0.85
-                            _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.85)
+                                _sat_frac_col = 0.80
+                            _adm_mult = _adm_frac / _sat_frac_col if _sat_frac_col > 0 else (0.70 / 0.80)
                             if peak > limit * _adm_mult:
                                 peak_over_map[_cid] = int(peak_over_map.get(_cid, 0)) + 1
 

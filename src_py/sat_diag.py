@@ -26,10 +26,10 @@ LOGGER = logging.getLogger(__name__)
 N_PILEUP_MIN = 100
 PILEUP_RATIO = 10.0
 SAT_DIAG_MAX_FRAMES = 30
-LINEARITY_DEFAULT_FRAC = 0.85
-SATURATE_LIMIT_FRACTION = 0.85
+LINEARITY_DEFAULT_FRAC = 0.80
+SATURATE_LIMIT_FRACTION = 0.80
 ADMISSION_SAT_FRAC = 0.70
-RESCALED_MAX_FRAC = 0.85
+RESCALED_MAX_FRAC = 0.80
 DRAFT_SAT_EXCLUDE_FRAME_FRAC = 0.50
 
 # Placed-aperture peak (7x7 footprint, half=3 -- matches pipeline / DAOPHOT).
@@ -154,7 +154,7 @@ class SatDiagContext:
     def likely_saturated_threshold_adu(self) -> float | None:
         if self.sat_adu is None:
             return None
-        return float(self.sat_adu) * 0.85
+        return float(self.sat_adu) * SATURATE_LIMIT_FRACTION
 
     def saturate_limit_adu_85pct(self) -> float | None:
         if self.sat_adu is None:

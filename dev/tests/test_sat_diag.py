@@ -151,7 +151,7 @@ def test_apply_raw_peaks_uses_placed_source() -> None:
             "peak_max_adu_aligned": [11000.0],
         }
     )
-    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=55704.75, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
+    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=52428.0, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
     apply_raw_peaks_to_proc_df(df, arr, hdr, ctx, aligned_hdr=hdr)
     assert str(df["sat_peak_source"].iloc[0]) == SAT_PEAK_SOURCE_PLACED
     assert "peak_loc_ok" not in df.columns
@@ -159,7 +159,7 @@ def test_apply_raw_peaks_uses_placed_source() -> None:
 
 
 def test_commit_sat_diag_provenance_sets_raw_peaks_flag(tmp_path: Path) -> None:
-    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=55704.75, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
+    ctx = SatDiagContext(sat_adu=65535.0, lin_adu=52428.0, sat_source="DERIVED", lin_source="DEFAULT_FRAC")
     commit_sat_diag_provenance(ctx, tmp_path, placed_aperture_used=False)
     raw = (tmp_path / "sat_diag.json").read_text(encoding="utf-8")
     assert '"raw_peaks_used": false' in raw

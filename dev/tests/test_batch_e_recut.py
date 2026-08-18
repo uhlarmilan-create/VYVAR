@@ -80,11 +80,12 @@ def test_dao_centroid_wcs_guard_replaces_large_shift() -> None:
 def test_admission_sat_peak_frac_default_70pct() -> None:
     cfg = AppConfig()
     assert abs(float(cfg.admission_sat_peak_frac) - 0.70) < 1e-9
+    assert abs(float(cfg.saturate_limit_fraction) - 0.80) < 1e-9
     limit = 100.0
     mult = cfg.admission_sat_peak_frac / cfg.saturate_limit_fraction
     threshold = limit * mult
-    assert 85.0 > threshold
-    assert not (65.0 > threshold)
+    assert 90.0 > threshold
+    assert not (80.0 > threshold)
 
 
 def test_lacosmic_config_removed() -> None:
