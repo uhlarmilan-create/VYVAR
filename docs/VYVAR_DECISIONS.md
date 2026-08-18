@@ -6,6 +6,40 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## Canonical --full / P1 mode and clean-rebuild freeze (ANCHOR-516-04, 2026-08-18)
+
+**Canonical headless mode.** `--full`, P1 golden, and product rebuilds run with
+PFS ON, `export_err_mode=calibrated`, empirical background ERR
+(INV-ERR-MODE-01 fail-loud if `sigma_bkg_ap` missing), and
+`saturate_limit_fraction=0.80` (peak-test 52428 ADU). ROT in
+`vsx_out_of_scope_types` is deliberate policy, not a defect.
+
+**One-authority sat-limit includes the MASTERSTAR writer.** Live
+`saturate_limit_fraction` is not enough: `_annotate_masterstars_flux_zones`
+and per-frame `saturate_limit_adu_85pct` / leftover `linearity_limit_adu`
+copies must carry 52428. A product that consumes a 0.85-annotated
+`masterstars_full_match.csv` is not a clean rebuild (be6191e0 lesson).
+
+**Anchor-from-clean-rebuild.** The `--full` gate photometers *frozen
+snapshot inputs* copied into `tmp/session_baseline/<ts>/`, never a live
+draft. A golden that photometers a live draft under evolving config is
+not a reproducibility gate (435 lesson). Reference product SHA
+**477dc8cf** (MAG = de6f7c8; ERR empirical). P1 mini is
+`draft_000516_p1mini` and must include `cal_diag.json` where INV-CAL-01
+looks (draft root and `platesolve/<setup>/`).
+
+**435 retired by design.** Not repaired. DELETE-OK list is for Milan.
+
+---
+
+## INV-ERR-MODE-01 - empirical ERR fail-loud (2026-08-18)
+
+Headless Phase 2A with `err_background_mode=empirical` raises if
+`sigma_bkg_ap` is missing/NaN instead of silently falling through to
+Howell. Cache columns are derived from the named requirements map.
+Landed in `96aa0d6`. Proof: 516 rebuild `err_bkg_source=empirical` on
+all 134 proc CSVs; sem/scint/sys deltas vs de6f7c8 = 0.
+
 ---
 
 ## GAIN-PT-RADIUS-01 - pin photon-transfer aperture at 4.0 px (2026-08-17)

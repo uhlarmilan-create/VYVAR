@@ -2,6 +2,21 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-18 -- ANCHOR-516-04 clean 516 freeze + recut
+
+Clean rebuild of draft 516 on tip `4a65675`: MASTERSTAR zones re-annotated
+at 0.80 (23->24 saturated; star 1497853802778923392 left the pool),
+Phase 0+1+2A PFS ON. Product SHA **477dc8cf** (core n=97) / **f71e0722**
+(extended n=145). MAG 48/48 vs de6f7c8; ct_n_comp 2346->2345; ct_c1
+-0.373 unchanged. E1-E5 PASS. Runtime: Phase 0 0.4 s, Phase 1 4298 s,
+Phase 2A 517 s, total 5047 s. Frozen snapshot
+`draft_000516_snapshot_cleanrebuild_20260818`. P1 mini
+`draft_000516_p1mini` core **41604319** (651 s lock). `--fast` OVERALL
+PASS (1460 passed, 21 skipped, 1664 s). `--full` OVERALL PASS (1461
+passed, 21 skipped; pipeline 6135 s; core SHA 477dc8cf n=97). 435
+golden retired by design. Push not authorized.
+Report: `dev/results/CURSOR_RESULT_ANCHOR_516_04.md`.
+
 ## 2026-08-17 -- XVAL-AIJ-02 (docs + evidence)
 
 Milan AIJ 6.0.10 run2 (calibrated, 4c) and run3 (detrended_aligned, 4c)

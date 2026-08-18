@@ -1,14 +1,41 @@
 # VYVAR -- Development State
 
-**Status:** XVAL-AIJ-02 CLOSED (docs+evidence). Draft 515 product SHA:
-**de6f7c8** (unchanged; MAG byte-identical to 36a53b0). GAIN-PT-RADIUS-01
-and SUBMIT-01 remain CLOSED. Baseline origin/main **dde6ce0** (PUSH-AUTH
-#2). Content tip **a0d326c**. **8f107cf quarantined** (VL-PFS-8F107CF).
-No science-code change.
+**Status:** ANCHOR-516-04 clean product frozen; `--fast` and `--full`
+OVERALL PASS. Canonical product SHA **477dc8cf** (draft 516; MAG
+byte-identical to de6f7c8; ERR empirical; sat-limit 0.80 / 52428 ADU). Lineage: de6f7c8 -> be6191e0 -> 477dc8cf.
+`--full` photometers frozen snapshot
+`draft_000516_snapshot_cleanrebuild_20260818` (never live 516). P1
+golden is `draft_000516_p1mini` (core 41604319). ROT out-of-scope is
+canonical. 435 golden retired by design. Push: not authorized (single
+close authorization for 96aa0d6..anchor-recut). **8f107cf quarantined**
+(VL-PFS-8F107CF).
 
-Last updated: **2026-08-17** (XVAL-AIJ-02).
+Last updated: **2026-08-18** (ANCHOR-516-04).
+
+## Canonical run mode (516 freeze)
+
+Headless `--full` / P1 / rebuild: PFS ON, `export_err_mode=calibrated`,
+`err_background_mode=empirical` (INV-ERR-MODE-01 fail-loud),
+`saturate_limit_fraction=0.80` (52428 ADU; one authority including
+MASTERSTAR zone writer). Snapshot inputs are copied into
+`tmp/session_baseline/<ts>/` so the gate cannot mutate the freeze or
+follow live-draft drift.
+
+## 2026-08-18 -- ANCHOR-516-04 CLOSED (pending Milan push)
+
+Clean 516 rebuild from Phase 0 after MASTERSTAR zone re-annotation at
+0.80. E1-E5 PASS. MAG 48/48 vs de6f7c8. ct_n_comp 2346->2345, ct_c1
+unchanged (-0.373). 48 LCs; CV CVn `per_frame_saturation`. BO median
+err 8.532 mmag; 01B MAD identical to 515 (BO 7.151, FW 8.201 mmag).
+AAVSO MAG 134/134 identity; MAGERR 82/134 rows change at 3-decimal.
+SUBMIT-01 PASS (Milan submits; nothing previously uploaded).
+`--fast` OVERALL PASS (1460 passed, 21 skipped, 1664 s). `--full`
+OVERALL PASS (1461 passed, 21 skipped; pipeline 6135 s; SHA 477dc8cf
+n=97 / f71e0722 n=145; plan-regen 873; 48 LCs). Report:
+`dev/results/CURSOR_RESULT_ANCHOR_516_04.md`.
 
 ## 2026-08-17 -- XVAL-AIJ-02 CLOSED
+
 
 EXTERNAL-XVAL extended to the production clean 4-comp ensemble and two
 frame states. AIJ 6.0.10 vs VYVAR de6f7c8 on BO CVn 2026-04-23: 4.86

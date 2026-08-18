@@ -19,7 +19,6 @@ Phase 2A subset on draft 514, not the full 97-target field.
 | Pri | Next item |
 |-----|-----------|
 | **HIGH** | (1) **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise (BO pred 14.9 vs measured 8.6 mmag); same class as U-SCATTER-DEF. Untouched this arc. |
-| **HIGH** | (2) **P1 A/B** still OPEN. 2026-08-17 attempt on this tip: `test_invariants_p1_golden` 1 passed / 4 ERROR (INV-CAL-01 cal_diag missing after dark calibration on `draft_000435_p1mini`). Headless vs UI pair not obtained. P1-RECUT remains. Not a PFS-SEMANTICS defect (P1 uses AppConfig default PFS=false). |
 | **MED** | **BIN-8-9-REGRESSION-01** OPEN: full-field LOO 11.9885 mmag n=15, byte-identical to D515-ACCEPT-01 gate. SAT-LIMIT/PFS/re-rank did not change proc-CSV LOO. |
 | **MED** | **RUN-WORKER-01** (open decision) -- subprocess/job worker so UI reruns cannot kill photometry; B+C mitigations already in RUN-HARDEN-01. |
 | **MED** | **WIDE-ERR-CROSSRIG** -- per-rig physical-model / calib when Newton/Boyden drafts exist. |
@@ -38,7 +37,7 @@ GAIN-PT-RADIUS-01 (pin r=4.0; product SHA **de6f7c8**). SUBMIT-01 ready
 (BO CVn 2026-04-23; Milan manual). 8f107cf quarantined (VL-PFS-8F107CF).
 XVAL-AIJ-02 **DONE** (production 4c + two frame states; 4.9 mmag RMS).
 
-Carry (unchanged): P1-RECUT + `--full` anchor stale; INV-PIXELS-01 awaiting Milan;
+Carry (unchanged): INV-PIXELS-01 awaiting Milan;
 D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
 U-SKY-FALLBACK-01; LOCATION_OLD; zone rename; DET-vs-MEAS-01; A-1-OVERRIDE;
 blended-target merging (deferred past v1.0); drafts 512/513/510 INGESTED repair.
@@ -99,7 +98,9 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **P1-RECUT** | HIGH | Golden ledger stale since `a9d7eb0` (2026-07-28). At least four intervening commits changed science outputs (`9b74548`, `683fba1`, `f0b310e`, `5cd6ae9`). Three tests fail: `test_headless_chain_sha`, `test_p1_snapshot_sha_matches_registered`, `test_p1_census_fingerprint_in_meta`. **Interim standard:** local A/B (two P1 headless runs at one HEAD, no `VYVAR_P1_REUSE_FROZEN`). |
+| **P1-RECUT** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Golden is `draft_000516_p1mini` from frozen 516 snapshot; `cal_diag.json` on draft root and platesolve/SETUP (INV-CAL-01). Core `41604319` n=97. 435 p1mini retired. |
+| **A-1-435-RECUT** | -- | **CLOSED 2026-08-18.** 435 golden retired by design (ROT out-of-scope is canonical policy; 435 predates it). Not repaired. Recut onto 516. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-18.** `--full` photometers frozen `draft_000516_snapshot_cleanrebuild_20260818` (copy-to-tmp; never live draft). Core `477dc8cf` n=97. Fire-proof OVERALL PASS (pipeline 6135 s). 0.85-gate hole closed: MASTERSTAR zone writer + proc sat-limit columns are 0.80 / 52428. |
 | **TASK-A-REGRESSION** | MED | `test_masterstars_csv_write_survives_bp_rp_failure` (`dev/tests/test_invariants_p2.py`) reimplements fixed A2 control flow in the test body; never calls `generate_masterstar_and_catalog`. A2 CSV-write mechanism untested against pre-fix pipeline. |
 | **F-B01-F-B02** | HIGH | Calibration-path audit: PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated` and PDF may claim VYVAR calibration when none applied. Fix order: `dev/results/CURSOR_RESULT_calpath_audit.md` section 14; decisions section 13. |
 | **QHY294MM-RN-DOUBLE** | LOW/MED | DB read-noise 7.6 e- appears to be bin2 measurement (`draft_303`) that `param_resolver` scales by binning again to 15.2 e-. Minor at current sky levels; material for short/dark exposures. |
@@ -111,10 +112,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **A-1-435-RECUT** | HIGH | Draft 435: no aligned science FITS. Re-cut needs align + DAO SNR table + export + Phase 2A. |
+| **A-1-435-RECUT** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** 435 retired by design (ROT out-of-scope policy); recut onto frozen 516. |
 | **A-1-OVERRIDE** | HIGH | Remove `VY_FWHM_GAUSS` as `gaussian_fwhm_px_override`. Authorized in principle; own measured delta. |
 | **A-1-DECISION-4** | MED | Advanced: r90 5.0-5.8 px, target 5.31 px, current EE ~84.6%. Not implemented. |
-| **FULL-ANCHOR-RECUT** | HIGH | `--full` anchor + P1 golden SHA stale after SKY-CLIP-01. Re-cut after this push. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Frozen `draft_000516_snapshot_cleanrebuild_20260818`; core `477dc8cf`. `--full` OVERALL PASS (pipeline 6135 s). 0.85-gate hole closed (MASTERSTAR writer + proc columns at 52428). |
 | **U-XVAL-COMP-RMS** | MED | RETRACTED (see register). |
 | **D1-2-LINEARITY-RAMP** | HIGH | Exposure ramp at telescope; nothing else substitutes. |
 | **WIDE-ERR** | -- | **CLOSED** (WIDE-ERR-04): physical model g_pt + weighted SEM; identity s=1,sr=0. |
@@ -498,8 +499,8 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 |----|-----|------|
 | **BATCH-E-PARAMS-REGISTRY** | MED | **DONE (2026-08-04).** Commits `8094af8..33ec2dc`. Six batch E fields registered; VYVAR_PARAMS.md 277 entries; dashboard owner assert 249 config_runtime; FLOW threshold 3.8; BLE001 + ASCII hygiene. Result: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`. |
 | **NOQA-TRUNCATED-EXCEPT-BULK** | LOW | 15 malformed `# noqa` directives across 10 `src_py` files, from truncated EXCEPT-BULK 2026-07-08 census comments; ruff emits Invalid-directive warnings; risk is that a genuinely malformed suppression hides in the noise. Sites listed in `CURSOR_RESULT_batch_e_params_hygiene.md` STEP 5C. Not started. |
-| **ANCHOR-GATE-SEED** | HIGH | `session_baseline_check.py:37-44` and `test_invariants_p1_seed.py:20-22` are bound to `draft_000435_snapshot_skysurface_20260716` but expect the draft_000500 fingerprint (`5bccd85a` / `7fdcdca4`). Both gates are currently wrong. Evidence: `dev/results/CURSOR_RESULT_anchor_prov.md` C3. Not started. |
-| **ANCHOR-CLEAN-BUILD** | MED | No draft_435 generation has ever been produced from a clean tree (July: `10d610c` dirty; August mutated tree: `20dde2b` dirty). `session_baseline_check.py` has no `git_dirty` guard. Proposed invariants: refuse to record a baseline from a dirty tree; assert fingerprint was computed on the draft the gate names. Not started. |
+| **ANCHOR-GATE-SEED** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Gates recut onto frozen 516: `session_baseline_check.py` DRAFT_ID=516 / snapshot `draft_000516_snapshot_cleanrebuild_20260818` / SHA `477dc8cf`; `test_invariants_p1_seed.py` same. 435 `5bccd85a` retired as superseded-with-pointer. |
+| **ANCHOR-CLEAN-BUILD** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Canonical product is a clean Phase 0+MASTERSTAR-reannotate+P1+P2A rebuild of 516 on tip `4a65675` (provenance n_stale=0). `--full` copies frozen snapshot inputs into tmp; git-staged is FAIL. 435 never had a clean-tree generation and is retired. |
 | **WIDE-ERR-POP-DELTA** | MED | Before any old-vs-new WIDE-ERR comparison, explain why the July generation has 333 core LCs / 166 check sidecars while the mutated August generation had 1121 / 248. Ratios 3.4x and 1.5x do not scale together, so the two populations are not directly comparable. Evidence: `dev/results/CURSOR_RESULT_anchor_prov.md`, `dev/results/CURSOR_RESULT_anchor_restore1.md`. Not started. |
 | **WIDE-ERR-HONEYCUTT-PDF** | HIGH | Retrieve primary Honeycutt (1992) PASP 104:435 error section (eq. 3-5). Rengstorf 2004 eq. 7 & 13 are Honeycutt-attributed but not primary. Options: SAO archive, JADAAV, direct request to author estate. Without it AUDIT 1 row 3 stays DIFFERS-unclosed. Not started. |
 | **WIDE-ERR-CROSSRIG** | HIGH | Measure per-comp excess on Newton/Dablice and Boyden data using `dev/tools/wide_err_e4.py` against a check-star draft on either rig. Deciding measurement for whether 20 mmag is wide-rig or pipeline. Not started. |
@@ -635,7 +636,7 @@ dataset into `Archive/Drafts/draft_NNNNNN`.
 | Item | Status | Action |
 |------|--------|--------|
 | **VL-ANCHOR-424 / --full** | **SUPERSEDED offline** | Historical zip only; live anchor = VL-ANCHOR-WCSINV / draft_435 sky-surface |
-| **VL-ANCHOR-WCSINV / --full** | **ACTIVE** | `draft_000435_snapshot_skysurface_20260716`; core `3d26f469...` |
+| **VL-ANCHOR-WCSINV / --full** | **ACTIVE** | `draft_000516_snapshot_cleanrebuild_20260818`; core `477dc8cf` n=97 |
 | eq4 bin4 bias/darks | HIGH (Milan) | >=6 frames, GAIN=12.48, T~-15 C |
 | Fresh darks | HIGH (Milan) | Before ~2026-07-21 expiry |
 | BVR night dX>=0.3 | HIGH (Milan) | Home rig; k'' NIGHT_FIT v2 |

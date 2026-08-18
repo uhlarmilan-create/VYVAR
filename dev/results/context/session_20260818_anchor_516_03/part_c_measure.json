@@ -1,0 +1,133 @@
+{
+  "sha515_core": "de6f7c8155d141376cf6df895144873f470555c5bb2de426ddad5b46cd981301",
+  "sha516_core": "be6191e0efcb8016637445c8d5d5b186db693f9a2dacea4646a74c061f502f41",
+  "sha515_ext": "b166fd5ebc1826dde9f1faa58b9ccf1fba487de75218094e36e85be6629c6204",
+  "sha516_ext": "0c76a3a676ee439debe91a9afdba4b4974df1683e070ed6c02f327e2c2685e4c",
+  "n515_core": 97,
+  "n516_core": 97,
+  "n515_ext": 193,
+  "n516_ext": 145,
+  "match_de6f7c8": false,
+  "n_lc_515": 48,
+  "n_lc_516": 48,
+  "lc_names_identical": true,
+  "mag_ident": 48,
+  "mag_mismatch": 0,
+  "mag_max_abs": 0.0,
+  "mag_max_file": null,
+  "err_ident": 0,
+  "err_mismatch": 48,
+  "err_max_abs": 6.589155999999999,
+  "err_max_file": "lightcurve_1498321301379345408.csv",
+  "term_max": {
+    "err": 6.589154999999998,
+    "err_photon": 6.589155999999999,
+    "err_sem_rel": 0.0,
+    "err_scint_rel": 0.0,
+    "err_sigma_sys_rel": 0.0
+  },
+  "err_bkg_source_515": {},
+  "err_bkg_source_516": {},
+  "n_rows_515": 6432,
+  "n_rows_516": 6432,
+  "bo_median_err_mmag_515": 8.945000000000002,
+  "bo_median_err_mmag_516": 8.531500000000001,
+  "pool_n_515": 2374,
+  "pool_n_516": 2357,
+  "pool_only_515": [
+    "1485541334132081536",
+    "1485619777414711680",
+    "1496273392252850304",
+    "1497250308334141056",
+    "1497772782515937920",
+    "1497974302380766080",
+    "1498285464172200192",
+    "1498359440688922240",
+    "1498814260545232384",
+    "1498927097925811072",
+    "1498959739676066048",
+    "1500346189480812416",
+    "1500502938607034496",
+    "1500535889596118656",
+    "1500748301498613248",
+    "1501972809558725248",
+    "1502029301264570240"
+  ],
+  "pool_only_516": [],
+  "n_only_515": 17,
+  "n_only_516": 0,
+  "sat_limit_pool_515": null,
+  "sat_limit_pool_516": 55704.75,
+  "sat_limit_ms_516": 55704.75,
+  "band_star_in_516_pool": true,
+  "band_star_masterstar": {
+    "peak_max_adu": 54581.7734375,
+    "zone": "linear",
+    "is_saturated": "False",
+    "likely_saturated": "False",
+    "photometry_ok": "True",
+    "is_usable": "True"
+  },
+  "ct_515": {
+    "saturate_limit_adu_85pct": {
+      "nunique": 1,
+      "median": 52428.0,
+      "min": 52428.0,
+      "max": 52428.0
+    },
+    "saturate_limit_adu": {
+      "nunique": 1,
+      "median": 65535.0,
+      "min": 65535.0,
+      "max": 65535.0
+    }
+  },
+  "ct_516": {
+    "saturate_limit_adu_85pct": {
+      "nunique": 1,
+      "median": 55704.75,
+      "min": 55704.75,
+      "max": 55704.75
+    },
+    "saturate_limit_adu": {
+      "nunique": 1,
+      "median": 65535.0,
+      "min": 65535.0,
+      "max": 65535.0
+    }
+  },
+  "comp_qa_515": 96,
+  "comp_qa_516": 48,
+  "examples": [
+    {
+      "file": "lightcurve_1485534187306501376.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.300539
+    },
+    {
+      "file": "lightcurve_1485987254816323328.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.289108
+    },
+    {
+      "file": "lightcurve_1496278752372040832.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.058925000000000005
+    },
+    {
+      "file": "lightcurve_1496293286541396480.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.22925899999999996
+    },
+    {
+      "file": "lightcurve_1496795041799526400.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.892744
+    },
+    {
+      "file": "lightcurve_1496998382733052928.csv",
+      "mag_max_abs": 0.0,
+      "err_max_abs": 0.020552
+    }
+  ]
+}

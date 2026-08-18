@@ -1,0 +1,48 @@
+{
+  "meters_01b": {
+    "BO": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 7.150579800000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv"
+    },
+    "FW": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 8.201001900000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1497343732462852864.csv"
+    },
+    "BO_515": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 7.150579800000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv"
+    },
+    "FW_515": {
+      "check_catalog_id": "1497613731286514432",
+      "check_scatter_mad_mmag": 8.201001900000032,
+      "n_epochs": 134,
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1497343732462852864.csv"
+    }
+  },
+  "aavso_515": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt",
+  "aavso_516": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt",
+  "varastro_515": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423.txt",
+  "varastro_516": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423.txt",
+  "n_rows_515": 134,
+  "n_rows_516": 134,
+  "n_compared": 134,
+  "mag_max_abs": 0.0,
+  "magerr_delta_max": 0.006,
+  "magerr_delta_median": -0.0009999999999999992,
+  "magerr_3dec_delta_max": 0.006,
+  "magerr_3dec_delta_median": -0.0009999999999999992,
+  "magerr_3dec_n_changed": 82,
+  "magerr_3dec_n": 134,
+  "err_model_515": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+  "err_model_516": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+  "bo_median_magerr_515": 0.009,
+  "bo_median_magerr_516": 0.009,
+  "bo_median_magerr_3dec_515": 0.009,
+  "bo_median_magerr_3dec_516": 0.009
+}

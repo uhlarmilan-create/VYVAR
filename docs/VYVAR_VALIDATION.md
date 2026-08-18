@@ -195,10 +195,12 @@ Deterministic regeneration: `python -m tests.validation.recover --all`.
 
 **Status (2026-08-04):** Batch E **GATE 2 authorized**; anchor fingerprints **pushed** (physical re-cut).
 
-| tier | SHA (draft_435 snapshot, active anchor) | n |
-|------|----------------------------------------|---|
-| core | `5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e` | 497 |
-| extended | `7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2` | 744 |
+| tier | SHA (draft_516 frozen snapshot, active anchor) | n |
+|------|-----------------------------------------------|---|
+| core | `477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956` | 97 |
+| extended | `f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d` | 145 |
+
+Superseded 435 sky-surface (retired by design): core `5bccd85a...` n=497 / extended `7fdcdca4...` n=744.
 
 Superseded batch D (GATE 1): core `b9c9489a...` / extended `65bc826c...` (n=325/487).
 Superseded pre-batch-D: `b7f980c0...` / `2c43bbbf...`.

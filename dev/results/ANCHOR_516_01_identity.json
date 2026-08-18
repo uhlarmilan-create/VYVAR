@@ -1,0 +1,58 @@
+{
+  "task": "ANCHOR-516-01",
+  "verdict": "STOP_PART_B",
+  "premise": "516 claimed identical to 515 product de6f7c8",
+  "part_a": {
+    "draft_516_created": "2026-08-17T22:04:59+00:00 (draft_manifest updated_utc)",
+    "run_window_utc": "2026-08-17T20:21:19 to 2026-08-17T22:04:58 (infolog)",
+    "git_hash_516": "d5ef039380ea8810ecc0bd1c1207e0698b296fbe",
+    "git_hash_515": "6b23633fe26c11ee12cda5caf217f397c5d8ab06",
+    "git_tip_ok": true,
+    "entry_point": "run_phase2a",
+    "calibration_mode": "vyvar_calibrated",
+    "cal_diag_present_516": true,
+    "pfs_515": true,
+    "pfs_516": false,
+    "per_frame_saturation_enabled_515": true,
+    "per_frame_saturation_enabled_516": false
+  },
+  "part_b": {
+    "sha_515_core": "de6f7c8155d141376cf6df895144873f470555c5bb2de426ddad5b46cd981301",
+    "sha_516_core": "6dc6ef2e2a018c533b2c0cc2f01bd8cb7a96c38901235432867e04ad5d46b8d8",
+    "sha_match_expected_de6f7c8": false,
+    "n_lc_515": 48,
+    "n_lc_516": 48,
+    "lc_names_identical": true,
+    "mag_science_identical": true,
+    "mag_max_delta_any_col": 0.0,
+    "err_diff_n_lcs": 46,
+    "err_max_delta_mag": 0.006589,
+    "err_max_delta_mmag": 6.589,
+    "err_max_target": "1498321301379345408",
+    "bo_err_median_mmag_515": 8.945,
+    "bo_err_mmedian_mmag_516": 8.532,
+    "byte_diff_lc_files": 48,
+    "byte_diff_comp_csv": 1,
+    "comp_qa_515": 96,
+    "comp_qa_516": 48,
+    "extended_n_515": 193,
+    "extended_n_516": 145,
+    "gating_515": {
+      "zone_noise": 45,
+      "below_target_depth": 3,
+      "per_frame_saturation": 1,
+      "accepted_lcs": 48
+    },
+    "gating_516": {
+      "zone_noise": 45,
+      "below_target_depth": 3,
+      "zone_flag": 1,
+      "accepted_lcs": 48
+    },
+    "gating_diff_target": "1497007144465726080",
+    "gating_diff": "515 per_frame_saturation vs 516 zone_flag",
+    "err_model_line": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none"
+  },
+  "part_c": "NOT_RUN_SHA_MISMATCH",
+  "spec_defect": "Premise 516 identical to 515 is false: different git tip, PFS setting, product SHA, err column, comp sidecars, one skip_reason."
+}

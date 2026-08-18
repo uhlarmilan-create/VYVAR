@@ -9,14 +9,14 @@ Run at session start **before any new work** (see `docs/VYVAR_CLAUDE_OPERATING_P
 ```text
 git pull
 # read docs/VYVAR_STATE.md + latest JOURNAL
-python dev/scripts/session_baseline_check.py          # --fast (default, ~3 min)
-python dev/scripts/session_baseline_check.py --full   # after science-touching changes (~25 min)
+python dev/scripts/session_baseline_check.py          # --fast (default, ~28 min)
+python dev/scripts/session_baseline_check.py --full   # after science-touching changes (~28 min pytest + ~102 min photometry on 516)
 ```
 
 | Tier | What it checks |
 |------|----------------|
 | **--fast** | Git tree (FAIL on staged changes); config paths; full `pytest -q`; validation ledger + TODO hint for `passes=false` items |
-| **--full** | Everything in --fast, plus headless **draft_435** via `run_full_photometry_pipeline` into `tmp/session_baseline/<timestamp>/` (archive inputs read-only); **content anchor gate**: science-meaningful compare vs `draft_000435_snapshot_skysurface_20260716` + photometry SHA (core `3d26f469...` / extended `6420f1da...`); `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-WCSINV` + `VL-COUNTERS-ZERO` on PASS. **Provenance block hash** printed informational only (git-bound; not a cross-commit gate). |
+| **--full** | Everything in --fast, plus headless photometry of *frozen* `draft_000516_snapshot_cleanrebuild_20260818` inputs copied into `tmp/session_baseline/<timestamp>/` (never live 516; never mutates the snapshot). Canonical mode: PFS ON, `export_err_mode=calibrated`, empirical ERR. Content gate: science-meaningful compare vs the snapshot + photometry SHA (core `477dc8cf` n=97 / extended `f71e0722` n=145); `except_fix_counters` all-zero; updates ledger `VL-ANCHOR-WCSINV` + `VL-COUNTERS-ZERO` on PASS. **Provenance block hash** printed informational only (git-bound; not a cross-commit gate). |
 
 Exit **0** = PASS, **1** = FAIL. Concise summary table printed at end.
 

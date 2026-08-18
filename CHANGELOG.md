@@ -8,6 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Changed
+- **ANCHOR-516-04 (2026-08-18):** Canonical product SHA **477dc8cf** on draft 516
+  (MAG = de6f7c8, ERR empirical, sat-limit 0.80 / 52428). `--full` and P1 recut
+  from frozen 516 snapshot; 435 golden retired by design. MASTERSTAR zone writer
+  is part of the one-authority sat-limit. `saturate_limit_fraction` default 0.80
+  (already in PARAMS at `4a65675`).
 - **INV-MS-01 removed (2026-08-05):** masterstar DAO_ONLY fraction is informational only;
   CSV write no longer skipped when annotate/bp_rp steps fail. See `docs/VYVAR_LIMITATIONS.md`.
 

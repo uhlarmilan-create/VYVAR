@@ -1,0 +1,24 @@
+{
+  "git_sha": "615dddabe75b1a421262da1d361c0768ee2b88b0",
+  "elapsed_s": 4841.063756200019,
+  "phase0_s": 0.42286410002270713,
+  "phase1_s": 4007.377335899975,
+  "phase2a_s": 570.5420955999871,
+  "sha_before_core": "d5f71ab102dc953e95491d1fb2406a5cabf25f0ff850bb2895e311f1d1cbf07f",
+  "sha_before_ext": "82a89d3e8c144588e8af5289ef70cdde9eed37623eb8efaa539d218563cfebc4",
+  "sha_after_core": "be6191e0efcb8016637445c8d5d5b186db693f9a2dacea4646a74c061f502f41",
+  "sha_after_ext": "0c76a3a676ee439debe91a9afdba4b4974df1683e070ed6c02f327e2c2685e4c",
+  "n_before_core": 97,
+  "n_before_ext": 145,
+  "n_after_core": 97,
+  "n_after_ext": 145,
+  "result_keys": [
+    "output_dir",
+    "phase01",
+    "phase2a",
+    "proc_frame_store",
+    "sysrem"
+  ],
+  "n_lightcurves": null,
+  "error": null
+}
