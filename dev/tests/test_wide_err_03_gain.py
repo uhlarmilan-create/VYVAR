@@ -61,8 +61,12 @@ def test_sigma_sys_explicit_zero_for_equipment_1(caplog):
 
     import logging
 
+    import sigma_floor_core as sfc
+
+    # Once-per-process log; earlier suite tests may have already consumed the key.
+    sfc._LOGGED_UNFLOORED.discard("1:default0")
     with caplog.at_level(logging.INFO):
-        v = resolve_sigma_sys_mag(1, Cfg(), rig_label="test")
+        v = sfc.resolve_sigma_sys_mag(1, Cfg(), rig_label="test")
     assert v == 0.0
     assert any("explicit default 0.0" in r.message for r in caplog.records)
 
@@ -92,13 +96,13 @@ def test_weighted_sem_unequal_differs():
 
 
 @pytest.mark.skipif(
-    not Path("Archive/Drafts/draft_000515/detrended_aligned/lights/NoFilter_60_2").is_dir(),
-    reason="draft 515 proc CSVs not present",
+    not Path("Archive/Drafts/draft_000516/detrended_aligned/lights/NoFilter_60_2").is_dir(),
+    reason="draft 516 proc CSVs not present",
 )
-def test_s2d_photon_transfer_on_draft_515():
+def test_s2d_photon_transfer_on_draft_516():
     from gain_photon_transfer import estimate_photon_transfer_gain_from_proc_dir
 
-    proc = Path("Archive/Drafts/draft_000515/detrended_aligned/lights/NoFilter_60_2")
+    proc = Path("Archive/Drafts/draft_000516/detrended_aligned/lights/NoFilter_60_2")
     pt = estimate_photon_transfer_gain_from_proc_dir(proc, aperture_r_px=3.999)
     assert pt.ok
     assert 0.44 <= pt.g_pt <= 1.09

@@ -92,13 +92,24 @@ def test_run_full_baseline_suspended_short_circuit(ledger_path: Path) -> None:
     assert report.results[0].status == "SUSPENDED"
 
 
+def test_full_work_stamp_is_windows_path_safe() -> None:
+    import scripts.session_baseline_check as sbc
+
+    ts = sbc._full_work_stamp()
+    assert ":" not in ts
+    assert "T" in ts and ts.endswith("Z")
+    probe = REPO_ROOT / "tmp" / f"_stamp_probe_{ts}"
+    probe.mkdir(parents=True, exist_ok=True)
+    probe.rmdir()
+
+
 def test_except_fix_allowlist_is_draft_scoped() -> None:
     """B3: empty_comp_drop allowlist must be draft-keyed, not a global exemption."""
     import scripts.session_baseline_check as sbc
 
     by_draft = sbc.EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT
-    assert 435 in by_draft
-    assert by_draft[435] == {"phase2a_empty_comp_drop": 1}
+    assert 516 in by_draft
+    assert by_draft[516] == {}
     # Other drafts have no allowlist - a nonzero counter would fail the gate.
     assert by_draft.get(999, {}) == {}
     assert by_draft.get(424, {}) == {}

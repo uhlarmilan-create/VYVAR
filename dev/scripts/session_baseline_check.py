@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Session-start baseline check (--fast default; --full for draft_424 anchor re-verify).
+"""Session-start baseline check (--fast default; --full for frozen 516 anchor).
 
 Exit 0 = PASS or SUSPENDED, 1 = FAIL. ASCII output; concise summary table at end.
 """
@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -32,32 +33,38 @@ def _ensure_import_paths() -> None:
     for _p in (REPO_ROOT / "src_py", REPO_ROOT / "dev", REPO_ROOT):
         if _p.is_dir() and str(_p) not in sys.path:
             sys.path.insert(0, str(_p))
+
+
+def _full_work_stamp() -> str:
+    """UTC stamp safe as a single path component on Windows (no colons)."""
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
 ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
-DRAFT_ID = 435
+DRAFT_ID = 516
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000435_snapshot_skysurface_20260716"
-# Content anchors (Anchor #3 / sky-surface; LABBE-DET err-stable dual pass on 10d610c).
-EXPECTED_PHOTOMETRY_SHA_CORE = "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "5bccd85a"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "7fdcdca4"
-# Structural empty-comp drops keyed by draft_id only (Anchor #3 / R CVn on 435).
-# A future draft with phase2a_empty_comp_drop>0 must FAIL until explicitly listed.
-# Value must match exactly - empty_comp_drop=2 on 435 still trips the gate.
+SNAPSHOT_NAME = "draft_000516_snapshot_cleanrebuild_20260818"
+# Canonical product SHA 477dc8cf (clean 516 rebuild on 4a65675; MAG=de6f7c8, ERR empirical, sat 0.80).
+EXPECTED_PHOTOMETRY_SHA_CORE = "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "477dc8cf"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "f71e0722"
+# Structural empty-comp drops keyed by draft_id only.
+# 516: all-zero except_fix (no empty-comp drop). 435 retired.
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
-    435: {"phase2a_empty_comp_drop": 1},  # R CVn 1496795041799526400 (+ siblings w/ 0 comps)
+    516: {},
 }
 
 # Phase 0 funnel fingerprints: frozen input VT + post-pipeline active_targets.
 # Plan-regen (write_photometry_plan_files) is checked separately via EXPECTED_PLAN_REGEN_BY_DRAFT
 # and covers the VSX->Gaia matcher; photometry SHA covers the identity join at pipeline time.
 EXPECTED_PLAN_REGEN_BY_DRAFT: dict[int, dict[str, Any]] = {
-    435: {
-        "variable_targets_rows": 875,
+    516: {
+        "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-            "gaia_dr3_direct": 512,
-            "masterstars": 205,
+            "gaia_dr3_direct": 460,
+            "masterstars": 255,
             "masterstars_exo": 2,
             "no_match": 156,
         },
@@ -65,23 +72,27 @@ EXPECTED_PLAN_REGEN_BY_DRAFT: dict[int, dict[str, Any]] = {
 }
 
 EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
-    435: {
-        "variable_targets_rows": 245,
+    516: {
+        "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-            "gaia_dr3_direct": 64,
-            "masterstars": 178,
+            "gaia_dr3_direct": 460,
+            "masterstars": 255,
             "masterstars_exo": 2,
-            "no_match": 1,
+            "no_match": 156,
         },
-        "active_targets_rows": 165,
-        "skip_photometry_true": 2,
-        "skip_reason_histogram": {"": 162, "no_comps": 1, "zone_flag": 2},
+        "active_targets_rows": 218,
+        "skip_photometry_true": 170,
+        "skip_reason_histogram": {
+            "": 48,
+            "below_target_depth": 3,
+            "per_frame_saturation": 1,
+            "vsx_type_out_of_scope": 121,
+            "zone_noise": 45,
+        },
         "zone_flag_histogram": {
-            "linear": 110,
-            "noisy1": 10,
-            "noisy2": 5,
-            "noisy3": 38,
-            "saturated": 2,
+            "linear": 172,
+            "noise": 45,
+            "saturated": 1,
         },
     },
 }
@@ -510,8 +521,41 @@ def _check_plan_regen_fingerprint(
         )
 
 
+def _copy_frozen_anchor_inputs(snapshot: Path, work_root: Path) -> tuple[Path, Path]:
+    """Copy snapshot catalogs + aligned lights into tmp so --full cannot mutate the freeze.
+
+    The 435 lesson: photometering a live draft under evolving config is not a
+    reproducibility gate. Inputs are snapshotted; the pipeline writes only under
+    work_root.
+    """
+    ps_src = snapshot / "platesolve" / SETUP
+    lights_src = snapshot / "detrended_aligned" / "lights" / SETUP
+    ps_dst = work_root / "platesolve" / SETUP
+    lights_dst = work_root / "detrended_aligned" / "lights" / SETUP
+    if ps_dst.exists():
+        shutil.rmtree(ps_dst)
+    shutil.copytree(
+        ps_src,
+        ps_dst,
+        ignore=shutil.ignore_patterns("photometry", "_hrd_cache", "*.pdf"),
+    )
+    if lights_dst.exists():
+        shutil.rmtree(lights_dst)
+    shutil.copytree(lights_src, lights_dst)
+    for name in ("cal_diag.json", "draft_manifest.json", "sat_diag.json"):
+        src = snapshot / name
+        if src.is_file():
+            shutil.copy2(src, work_root / name)
+            shutil.copy2(src, ps_dst / name)
+    out_phot = ps_dst / "photometry"
+    if out_phot.exists():
+        shutil.rmtree(out_phot)
+    out_phot.mkdir(parents=True, exist_ok=True)
+    return ps_dst, lights_dst
+
+
 def run_full_baseline(report: SessionReport) -> None:
-    """Deliberate full tier: force P1 golden execution when env flag is set."""
+    """Deliberate full tier: photometer frozen 516 snapshot inputs into tmp."""
     os.environ["VYVAR_P1_FORCE"] = "1"
     suspend_msg = _full_baseline_suspend_message()
     if suspend_msg:
@@ -532,11 +576,10 @@ def run_full_baseline(report: SessionReport) -> None:
     cfg = AppConfig()
     cfg.k2_mode = "literature"
     cfg.save_lightcurve_png = False
+    cfg.per_frame_saturation_enabled = True
+    cfg.export_err_mode = "calibrated"
 
-    draft = Path(cfg.archive_root) / "Drafts" / f"draft_{DRAFT_ID:06d}"
     snapshot = Path(cfg.archive_root) / "Drafts" / SNAPSHOT_NAME
-    ps = draft / "platesolve" / SETUP
-    lights = draft / "detrended_aligned" / "lights" / SETUP
 
     if not snapshot.is_dir():
         report.add("full-snapshot", "FAIL", f"missing {snapshot}")
@@ -554,19 +597,23 @@ def run_full_baseline(report: SessionReport) -> None:
             report.add("full-provenance", "FAIL", "anchor snapshot missing provenance git_hash")
     else:
         report.add("full-provenance", "FAIL", f"missing {snap_meta_path.name}")
+    snap_ps = snapshot / "platesolve" / SETUP
+    snap_lights = snapshot / "detrended_aligned" / "lights" / SETUP
     for req, label in [
-        (ps / "MASTERSTAR.fits", "MASTERSTAR.fits"),
-        (ps / "variable_targets.csv", "variable_targets.csv"),
-        (ps / "masterstars_full_match.csv", "masterstars_full_match.csv"),
-        (lights, "detrended_aligned/lights"),
+        (snap_ps / "MASTERSTAR.fits", "MASTERSTAR.fits"),
+        (snap_ps / "variable_targets.csv", "variable_targets.csv"),
+        (snap_ps / "masterstars_full_match.csv", "masterstars_full_match.csv"),
+        (snap_lights, "detrended_aligned/lights"),
     ]:
         if not req.exists():
             report.add("full-inputs", "FAIL", f"missing {label}")
             return
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = _full_work_stamp()
     work_root = REPO_ROOT / "tmp" / "session_baseline" / ts
-    out_phot = work_root / "platesolve" / SETUP / "photometry"
+    work_root.mkdir(parents=True, exist_ok=True)
+    ps, lights = _copy_frozen_anchor_inputs(snapshot, work_root)
+    out_phot = ps / "photometry"
     out_phot.mkdir(parents=True, exist_ok=True)
 
     _check_plan_regen_fingerprint(report, cfg=cfg, ps=ps, work_root=work_root, draft_id=DRAFT_ID)
@@ -793,7 +840,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Deliberate full tier: draft_435 headless run + anchor + counters (~25 min)",
+        help="Deliberate full tier: frozen 516 snapshot headless run + anchor + counters",
     )
     args = parser.parse_args(argv)
 
