@@ -6,7 +6,7 @@ to `draft_000516_era_candidate`; pinned-comp Phase-2A; T-panel (T0-T3 + T1-abs).
 Live `draft_000516` restored and SHA-verified 477dc8cf n=97. NO anchor recut,
 NO exports, NO push.
 
-## P0 — L4 era-native offset
+## P0 - L4 era-native offset
 
 - Fixed `_eval_l4()` in `tmp/dao_gaia_era_01_part_c_rebuild.py`: offset from
   **candidate LC** vs AIJ, not baseline `mag_calib_final`.
@@ -35,7 +35,7 @@ Pinned Phase-2A runtime: **719 s**.
 
 ## T-panel (`dev/results/context/session_20260819_era02/era02_tpanel.json`)
 
-### T0 Infrastructure — **PASS**
+### T0 Infrastructure - **PASS**
 
 | Check | Result |
 |-------|--------|
@@ -51,7 +51,7 @@ Pinned Phase-2A runtime: **719 s**.
 | Check MAD (mmag) | **5.15** (anchor band 6.08-8.22) | **8.75** (PASS) | **8.65** |
 
 BO XVAL **6.24 mmag** with fixed offset (was false 228 mmag pre-P0). Slightly above
-±1 mmag matrix band. BO MAD below 0.85 anchor band (tighter scatter, not looser).
++-1 mmag matrix band. BO MAD below 0.85 anchor band (tighter scatter, not looser).
 
 ### T1-abs Absolute ZP vs Gaia?Johnson V transform
 
@@ -69,7 +69,7 @@ vs catalog transform (architect review item).
 | Mode | Pass | Notes |
 |------|------|-------|
 | **Unpinned** | **18 / 48** | Large median offsets remain; epoch shape mostly ?10 mmag after offset |
-| **Pinned** | **48 / 48** | Perfect shape match — confirms selection-only |
+| **Pinned** | **48 / 48** | Perfect shape match - confirms selection-only |
 
 The 24/46 unpinned population from ERA-02-OPEN investigation: with shape gate
 (not byte continuity), **18/48 pass unpinned**; **48/48 pass pinned**.
@@ -102,9 +102,9 @@ The 24/46 unpinned population from ERA-02-OPEN investigation: with shape gate
 
 ## Files changed
 
-- `tmp/dao_gaia_era_01_part_c_rebuild.py` — L4 era-native offset (P0)
-- `tmp/dao_gaia_era_02_execute.py` — ERA-02 orchestrator
-- `tmp/dao_gaia_era_02_resume.py` — resume pinned + T-panel
-- `docs/VYVAR_DECISIONS.md` — ERA-ACCEPT + L2 rescope + T1-abs
+- `tmp/dao_gaia_era_01_part_c_rebuild.py` - L4 era-native offset (P0)
+- `tmp/dao_gaia_era_02_execute.py` - ERA-02 orchestrator
+- `tmp/dao_gaia_era_02_resume.py` - resume pinned + T-panel
+- `docs/VYVAR_DECISIONS.md` - ERA-ACCEPT + L2 rescope + T1-abs
 
 No `src_py` production edits. Live draft 477dc8cf verified.

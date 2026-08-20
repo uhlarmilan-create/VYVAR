@@ -27,8 +27,8 @@ Raw: `dev/results/context/session_20260819_era01_part_c/part_c_rebuild_l1_l6.jso
 |--------|--------|---------------|
 | masterstars rows | 2612 | **2644** |
 | comparison_stars | 2241 | 2241 |
-| census rows | — | **4131** |
-| Certificate | — | **PASS** match/centroid **2.5/2.5 px**, sigma **4.5/4.0** |
+| census rows | - | **4131** |
+| Certificate | - | **PASS** match/centroid **2.5/2.5 px**, sigma **4.5/4.0** |
 
 Census states: DETECTED_P1 2157, DETECTED_P2 367, FORCED_SEED 123,
 SEED_REJECTED 672, BLENDED 221, TOO_FAINT 511, EDGE 80.
@@ -47,12 +47,12 @@ SEED_REJECTED 672, BLENDED 221, TOO_FAINT 511, EDGE 80.
 | **L1** | **PASS** | 48/48 LCs; CV CVn `per_frame_saturation` |
 | **L2** | **DEVIATE** | 2/48 targets pass; median \|delta\| <= 2 mmag AND max epoch <= 10 mmag vs 477dc8cf |
 | **L3** | **DEVIATE** | BO check MAD **8.74 mmag** (anchor 7.15, band 6.08-8.22); FW **7.58** (PASS) |
-| **L4** | **DEVIATE** | BO XVAL RMS mis-merge (8484 mmag — eval bug); FW tbl path missing in running harness |
+| **L4** | **DEVIATE** | BO XVAL RMS mis-merge (8484 mmag - eval bug); FW tbl path missing in running harness |
 | **L5** | **DEVIATE** | Census completeness above depth **75.7%** (gate >= 99%); empty-sky audits PASS |
 | **L6** | **DEVIATE** | `err_sem_rel` max abs vs baseline **0.052 mag** (sem/scint/sys must be 0) |
 
 Provenance: 2 stale mtimes (`dao_gaia_calibration.json`, `gaia_source_state_census.csv`
-not rewritten on this run — pre-run A-fix 4 artifacts).
+not rewritten on this run - pre-run A-fix 4 artifacts).
 
 ### L2 binding failures (sample)
 
@@ -71,7 +71,7 @@ L2 pass count: **2/48** (NSV 19982, ZTF J140300.57+413339.3 only).
 ## Recovery
 
 Live `draft_000516` **restored** from snapshot (477dc8cf n=97 verified).
-Rebuild product SHA `541b3f57` exists only in context JSON / log — not live.
+Rebuild product SHA `541b3f57` exists only in context JSON / log - not live.
 
 ## Not executed (per STOP spec)
 
@@ -92,10 +92,10 @@ L6 sem term also moved.
 Possible paths (Milan decision):
 
 1. **Overlay-only MS path** (keep detection table; apply Gaia census /
-   accounting without row loss) then photometry-only rebuild — retest L2.
+   accounting without row loss) then photometry-only rebuild - retest L2.
 2. **Revise pre-registered L2/L5 gates** if membership change is accepted
    as new-era physics (explicit authorization; new anchor SHAs).
-3. **Investigate L5** — census completeness drop driven by G 14-15 bins
+3. **Investigate L5** - census completeness drop driven by G 14-15 bins
    (34% at G 14.5-15.0); may couple to seed/pass2 policy vs depth gate.
 
 Push: **not authorized** (STOP; awaiting Milan review).

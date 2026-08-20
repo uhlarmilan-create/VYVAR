@@ -12,18 +12,18 @@ pre-registered STOP rule.
 
 ## Output / findings
 
-### Part A — Pin mechanism (production)
-- `src_py/pinned_ensembles.py` — load/validate/select, INV-PIN-01/02/03 helpers
-- `dev/validation/pinned_ensembles.csv` — 477dc8cf ensembles for 48 LC targets
-- `src_py/photometry_core.py` — Phase-1 pin dispatch, meta provenance, comp_provenance sidecar, pinned `ct_n_comp` overlay
-- `dev/tests/test_pinned_ensembles.py` — 7 tests PASS
+### Part A - Pin mechanism (production)
+- `src_py/pinned_ensembles.py` - load/validate/select, INV-PIN-01/02/03 helpers
+- `dev/validation/pinned_ensembles.csv` - 477dc8cf ensembles for 48 LC targets
+- `src_py/photometry_core.py` - Phase-1 pin dispatch, meta provenance, comp_provenance sidecar, pinned `ct_n_comp` overlay
+- `dev/tests/test_pinned_ensembles.py` - 7 tests PASS
 
-### Part B — Rebuild + acceptance panel (STOP)
+### Part B - Rebuild + acceptance panel (STOP)
 
 | Tier | Result | Notes |
 |------|--------|-------|
 | A-T0 | PASS | Cert 2.5/2.5, sigma 4.5/4.0; census 4990 @ 100%; INV-MS-EXPAND-01 PASS |
-| A-T1 | DEVIATE | BO XVAL 4.858 mmag (matrix 4.86) PASS; FW 1.524 (1.52) PASS; FW check MAD 6.22 mmag below band 6.97–9.43; GH XVAL harness has no AIJ reference |
+| A-T1 | DEVIATE | BO XVAL 4.858 mmag (matrix 4.86) PASS; FW 1.524 (1.52) PASS; FW check MAD 6.22 mmag below band 6.97-9.43; GH XVAL harness has no AIJ reference |
 | A-T2 | DEVIATE | 44/48 shape pass (?10 mmag residual); 4 missing LC |
 | A-MAG | DEVIATE | 0/48 full-file byte identity (after fixes: BO/FW mag_calib_final median ?=0.0 mmag; residual diff is metadata e.g. ct_n_comp before last fix) |
 | A-L1 | DEVIATE | 4 baseline targets missing LC (see below) |
@@ -31,7 +31,7 @@ pre-registered STOP rule.
 | INV-PIN-03 | PASS | Pin SHA in pipeline_meta |
 
 **Product SHA (live draft_000516, final retry):** `0c4dadbf16f2bee4` (n=29 core photometry hash scope)
-**Supersede intent:** 477dc8cf ? 0c4dadbf (not ratified — STOP)
+**Supersede intent:** 477dc8cf ? 0c4dadbf (not ratified - STOP)
 
 **MS rebuild (new era):** 2643 detection + 967 catalog ? 3610 MS rows; census 4990; cert PASS
 
@@ -39,20 +39,20 @@ pre-registered STOP rule.
 
 ### STOP mechanisms (named)
 
-1. **Four pinned targets — full ensemble color re-validation fail**
+1. **Four pinned targets - full ensemble color re-validation fail**
    - `1496795041799526400`: all 8 pinned comps dropped `color_ceiling_violation` ? no Phase-1 comps ? no LC
    - `1497181966814590848`: got 3 comps but Phase-2A skip `zone_noise`
    - `1497350638770267520`, `1498064771572297856`: missing LC (see panel JSON)
    - Rule behavior is correct (fail-loud); MS-POOL-POLICY-01 refill deferred per task
 
-2. **A-T1 FW check MAD** below anchor band (6.22 vs 6.97–9.43 mmag) despite XVAL matrix PASS
+2. **A-T1 FW check MAD** below anchor band (6.22 vs 6.97-9.43 mmag) despite XVAL matrix PASS
 
 3. **A-MAG** full-file byte identity blocked primarily by field-wide `ct_n_comp` metadata (2345 vs 2229) on otherwise identical BO mag columns; overlay fix added for next run
 
 4. **Initial pin bugs (fixed):** wrong `_detrend_and_compute_comp_rms_map` kwargs; `_dist_deg` computed after `set_index`; missing anchor `contamination_idx` broke AC (`insufficient_ref_stars`)
 
 ### ERA-02 alignment
-Pinned Phase-1 + anchor comp_pt overlay reproduces BO AC (`delta_m_corr=-0.129885`) and BO/FW XVAL at matrix after fixes — confirms selection-only + metadata path diagnosis from ERA-02.
+Pinned Phase-1 + anchor comp_pt overlay reproduces BO AC (`delta_m_corr=-0.129885`) and BO/FW XVAL at matrix after fixes - confirms selection-only + metadata path diagnosis from ERA-02.
 
 ### Artifacts
 - Panel JSON: `dev/results/context/session_20260819_era03/era03_acceptance_panel.json`
@@ -63,7 +63,7 @@ Pinned Phase-1 + anchor comp_pt overlay reproduces BO AC (`delta_m_corr=-0.12988
 - `Archive/Drafts/draft_000516_era_candidate`
 
 ## Errors (if any)
-Pre-registered STOP — no silent failure. Live draft_000516 remains on new-era MS + partial pinned product (not restored to 477dc8cf per era-cut instruction).
+Pre-registered STOP - no silent failure. Live draft_000516 remains on new-era MS + partial pinned product (not restored to 477dc8cf per era-cut instruction).
 
 ## Files changed
 - `src_py/pinned_ensembles.py` (new)
