@@ -17,9 +17,9 @@ from tests.photometry_sha import compute_photometry_sha
 
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
-SNAPSHOT = "draft_000516_snapshot_cleanrebuild_20260818"
-EXPECTED_CORE = "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956"
-EXPECTED_EXT = "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d"
+SNAPSHOT = "draft_000516_snapshot_era03_20260820"
+EXPECTED_CORE = "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d"
+EXPECTED_EXT = "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73"
 
 
 def _enabled() -> bool:
@@ -42,8 +42,8 @@ def test_p1_snapshot_sha_matches_registered() -> None:
     ext, ne = compute_photometry_sha(snap, include_comp_qa=True)
     assert core == EXPECTED_CORE
     assert ext == EXPECTED_EXT
-    assert nc == 97
-    assert ne == 145
+    assert nc == 121
+    assert ne == 179
 
 
 def test_p1_census_fingerprint_in_meta() -> None:

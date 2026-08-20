@@ -44,12 +44,14 @@ ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
 DRAFT_ID = 516
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000516_snapshot_cleanrebuild_20260818"
-# Canonical product SHA 477dc8cf (clean 516 rebuild on 4a65675; MAG=de6f7c8, ERR empirical, sat 0.80).
-EXPECTED_PHOTOMETRY_SHA_CORE = "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "477dc8cf"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "f71e0722"
+SNAPSHOT_NAME = "draft_000516_snapshot_era03_20260820"
+# Canonical product SHA 9902d918 (DAO-Gaia ERA-03 close + pinned check stars; supersede 477dc8cf).
+EXPECTED_PHOTOMETRY_SHA_CORE = "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "9902d918"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "472bc9e4"
+EXPECTED_PHOTOMETRY_SHA_CORE_N = 121
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 179
 # Structural empty-comp drops keyed by draft_id only.
 # 516: all-zero except_fix (no empty-comp drop). 435 retired.
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
@@ -63,8 +65,8 @@ EXPECTED_PLAN_REGEN_BY_DRAFT: dict[int, dict[str, Any]] = {
     516: {
         "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-            "gaia_dr3_direct": 460,
-            "masterstars": 255,
+            "gaia_dr3_direct": 433,
+            "masterstars": 282,
             "masterstars_exo": 2,
             "no_match": 156,
         },
@@ -75,24 +77,25 @@ EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
     516: {
         "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-            "gaia_dr3_direct": 460,
-            "masterstars": 255,
+            "gaia_dr3_direct": 433,
+            "masterstars": 282,
             "masterstars_exo": 2,
             "no_match": 156,
         },
-        "active_targets_rows": 218,
-        "skip_photometry_true": 170,
+        "active_targets_rows": 265,
+        "skip_photometry_true": 205,
         "skip_reason_histogram": {
-            "": 48,
-            "below_target_depth": 3,
+            "": 60,
+            "below_target_depth": 1,
             "per_frame_saturation": 1,
-            "vsx_type_out_of_scope": 121,
-            "zone_noise": 45,
+            "vsx_type_out_of_scope": 190,
+            "zone_noise": 13,
         },
         "zone_flag_histogram": {
-            "linear": 172,
-            "noise": 45,
+            "linear": 163,
+            "noise": 13,
             "saturated": 1,
+            "unknown": 88,
         },
     },
 }
@@ -695,6 +698,12 @@ def run_full_baseline(report: SessionReport) -> None:
             "full-snapshot-sha-core",
             "FAIL",
             f"snapshot {snap_core_sha[:16]}... != expected {EXPECTED_PHOTOMETRY_SHA_CORE[:16]}...",
+        )
+    elif snap_core_n != EXPECTED_PHOTOMETRY_SHA_CORE_N:
+        report.add(
+            "full-snapshot-sha-core",
+            "FAIL",
+            f"snapshot n={snap_core_n} != expected {EXPECTED_PHOTOMETRY_SHA_CORE_N}",
         )
     else:
         report.add("full-snapshot-sha-core", "PASS", f"{snap_core_sha[:16]}... n={snap_core_n}")

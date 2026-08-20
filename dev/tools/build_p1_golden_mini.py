@@ -7,7 +7,7 @@ Runbook (local):
   pytest dev/tests/test_invariants_p1_seed.py dev/tests/test_invariants_p1_golden.py -q
 
 Design (see DECISIONS INVARIANTS-P1-GOLDEN-MINI / ANCHOR-516-04):
-  - Source: Archive/Drafts/draft_000516_snapshot_cleanrebuild_20260818
+  - Source: Archive/Drafts/draft_000516_snapshot_era03_20260820
   - 16 lights by even DATE-OBS stride (first included)
   - Photometry-ready layout: calibrated subset + detrended_aligned proc
     CSV/FITS for those frames + platesolve catalogs/MASTERSTAR from parent
@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO_ROOT / "src_py"))
 
 from config import AppConfig  # noqa: E402
 
-SOURCE_DRAFT = "draft_000516_snapshot_cleanrebuild_20260818"
+SOURCE_DRAFT = "draft_000516_snapshot_era03_20260820"
 MINI_NAME = "draft_000516_p1mini"
 SETUP = "NoFilter_60_2"
 N_FRAMES = 16

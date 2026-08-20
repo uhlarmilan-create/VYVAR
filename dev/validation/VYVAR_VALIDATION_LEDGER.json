@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-18",
+  "updated": "2026-08-20",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-08-18",
-      "commit": "4a65675",
+      "last_verified": "2026-08-20",
+      "commit": "b8d5c74",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -142,22 +142,22 @@
     {
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
-      "description": "Frozen 516 clean-rebuild snapshot draft_000516_snapshot_cleanrebuild_20260818 (canonical --full; PFS ON, ROT out-of-scope, sat 0.80)",
-      "verification": "scripts/session_baseline_check.py --full (core 477dc8cf n=97; extended f71e0722 n=145). Photometers frozen snapshot inputs copied to tmp, never live 516.",
+      "description": "Frozen 516 ERA-03 snapshot draft_000516_snapshot_era03_20260820 (canonical --full; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
+      "verification": "scripts/session_baseline_check.py --full (core 9902d918 n=121; extended 472bc9e4 n=179). Photometers frozen snapshot inputs copied to tmp, never live 516.",
       "passes": true,
-      "last_verified": "2026-08-18",
-      "commit": "4a65675",
-      "notes": "ANCHOR-516-04: recut from clean 516 rebuild on 4a65675. Product SHA 477dc8cf supersedes be6191e0 (0.85-annotated catalog) and de6f7c8 (Howell-by-omission ERR). MAG byte-identical to de6f7c8. 435 sky-surface golden retired by design (ROT out-of-scope policy predates it). Snapshot inputs frozen so the gate cannot photometer a live drifting draft.",
+      "last_verified": "2026-08-20",
+      "commit": "b8d5c74",
+      "notes": "DAO-GAIA ERA-03 close: supersedes ANCHOR-516-04 clean-rebuild core 477dc8cf (n=97). Pinned 48-target comp ensembles + check_catalog_id per target (INV-PIN-01..04). +14 additive LCs/comp_quality sidecars; -2 honest zone_noise missing. CV CVn 1497007144465726080 skip_reason=per_frame_saturation. Snapshot inputs frozen so the gate cannot photometer a live drifting draft.",
       "census_fingerprint": {
-        "n_raw_dao": 307,
+        "n_raw_dao": 2246,
         "matched": 3546,
-        "targets": 218
+        "targets": 265
       },
       "plan_regen_fingerprint": {
         "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-          "gaia_dr3_direct": 460,
-          "masterstars": 255,
+          "gaia_dr3_direct": 433,
+          "masterstars": 282,
           "masterstars_exo": 2,
           "no_match": 156
         }
@@ -165,35 +165,36 @@
       "phase0_funnel_fingerprint": {
         "variable_targets_rows": 873,
         "gaia_match_source_histogram": {
-          "gaia_dr3_direct": 460,
-          "masterstars": 255,
+          "gaia_dr3_direct": 433,
+          "masterstars": 282,
           "masterstars_exo": 2,
           "no_match": 156
         },
-        "active_targets_rows": 218,
-        "skip_photometry_true": 170,
+        "active_targets_rows": 265,
+        "skip_photometry_true": 205,
         "skip_reason_histogram": {
-          "": 48,
-          "below_target_depth": 3,
+          "": 60,
+          "below_target_depth": 1,
           "per_frame_saturation": 1,
-          "vsx_type_out_of_scope": 121,
-          "zone_noise": 45
+          "vsx_type_out_of_scope": 190,
+          "zone_noise": 13
         },
         "zone_flag_histogram": {
-          "linear": 172,
-          "noise": 45,
-          "saturated": 1
+          "linear": 163,
+          "noise": 13,
+          "saturated": 1,
+          "unknown": 88
         }
       },
       "identity_p95_baseline_px": 1.7846151827213692,
-      "core_sha": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
-      "extended_sha": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
-      "core_n": 97,
-      "extended_n": 145,
-      "superseded_core_sha": "5bccd85a94d95031f80d372141ae0c61b0d8b0b2026c6bb15076d4e6a5e9b77e",
-      "superseded_extended_sha": "7fdcdca402ad47d044ca7b34d1f1c0d09185d02016f94a1a3747cb0528862ea2",
-      "superseded_snapshot": "draft_000435_snapshot_skysurface_20260716",
-      "product_sha_lineage": "de6f7c8 -> be6191e0 -> 477dc8cf"
+      "core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+      "extended_sha": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
+      "core_n": 121,
+      "extended_n": 179,
+      "superseded_core_sha": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+      "superseded_extended_sha": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
+      "superseded_snapshot": "draft_000516_snapshot_cleanrebuild_20260818",
+      "product_sha_lineage": "477dc8cf -> 9902d918"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
@@ -211,34 +212,34 @@
       "description": "INVARIANTS P1 golden mini draft_000516_p1mini (16-frame DATE-OBS stride from frozen 516 snapshot; cal_diag.json included)",
       "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
       "passes": true,
-      "last_verified": "2026-08-18",
-      "commit": "4a65675",
-      "notes": "ANCHOR-516-04 recut from draft_000516_snapshot_cleanrebuild_20260818. MUST include cal_diag.json on draft root and platesolve/SETUP (INV-CAL-01). Canonical PFS ON. 435 p1mini retired (superseded-with-pointer). Headless lock 651.6 s.",
+      "last_verified": "2026-08-20",
+      "commit": null,
+      "notes": "ERA-03 recut from draft_000516_snapshot_era03_20260820. MUST include cal_diag.json on draft root and platesolve/SETUP (INV-CAL-01). Canonical PFS ON + pinned ensembles. 516-04 p1mini superseded-with-pointer. Headless lock ~455 s (2026-08-20).",
       "mini_name": "draft_000516_p1mini",
-      "source_draft": "draft_000516_snapshot_cleanrebuild_20260818",
+      "source_draft": "draft_000516_snapshot_era03_20260820",
       "setup": "NoFilter_60_2",
       "n_frames": 16,
       "selection": "even_stride_date_obs_first_included_aligned_only",
-      "inputs_manifest_sha256": "f788270d3ca05141b2c10c012f0b15da0078679439570fda178b39cf8da08664",
-      "core_sha": "416043193b633d7e3a98cff2ae6fc635a243722a2d4bcb10410115c70adbc231",
-      "core_n": 97,
-      "extended_sha": "65e64210fb1c8c5e1cff3137adb430049276fffcfb92737b823a0ce59d54b5aa",
-      "extended_n": 145,
-      "superseded_core_sha": "e7976de18e4197e85e0120dcadf6bdae5ac0be73238be92f83c7cd87fa0fedee",
-      "superseded_extended_sha": "d0e8f64b55806400aa7e305d97c79c7d4d03cb99b96e48ac44c81d7e087b3deb",
-      "superseded_mini_name": "draft_000435_p1mini",
-      "superseded_core_n": 325,
-      "superseded_extended_n": 485,
+      "inputs_manifest_sha256": "7c3796db8fe84a7481582ea17d41ff15765804658685cbb3212606102746c4b8",
+      "core_sha": "6af4539c6d187ca946cdf5ebeee8b45e2a622558321a82021c0701acea067abb",
+      "core_n": 115,
+      "extended_sha": "e237ea955af423b8223e1ea70803d1f8d468d346214fcee898154aeb304fee0f",
+      "extended_n": 170,
+      "superseded_core_sha": "416043193b633d7e3a98cff2ae6fc635a243722a2d4bcb10410115c70adbc231",
+      "superseded_extended_sha": "65e64210fb1c8c5e1cff3137adb430049276fffcfb92737b823a0ce59d54b5aa",
+      "superseded_mini_name": "draft_000516_p1mini",
+      "superseded_core_n": 97,
+      "superseded_extended_n": 145,
       "census": {
-        "dao_pass1_vy_ndao": 307,
+        "dao_pass1_vy_ndao": 2246,
         "n_detected_mean": 3513.625,
         "n_matched_mean": 3349.625,
         "identity_n_parent": 3546,
         "identity_p95_parent": 1.7846151827213692,
-        "n_summary_targets": 48
+        "n_summary_targets": 60
       },
       "lock_timings_s": {
-        "run1": 651.6
+        "run1": 454.6
       }
     },
     {

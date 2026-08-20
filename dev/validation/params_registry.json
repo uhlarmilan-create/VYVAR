@@ -2434,6 +2434,126 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "masterstar_dao_centroid_qa_cap_px": {
+    "help": "Upper cap [px] when deriving pass2/seed centroid tolerances from astrometric residual p95.",
+    "kind": "static",
+    "label": "Masterstar DAO Centroid QA Cap PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_centroid_qa_floor_px": {
+    "help": "Lower floor [px] when deriving pass2/seed centroid tolerances from astrometric residual p95.",
+    "kind": "static",
+    "label": "Masterstar DAO Centroid QA Floor PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_empty_sky_false_accept_max": {
+    "help": "Empty-sky audit (INV-DET-FALSEFILL-01): maximum false-accept rate at MASTERSTAR build.",
+    "kind": "static",
+    "label": "Masterstar DAO Empty Sky False Accept Max",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.0,
+      0.05
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_empty_sky_target_n": {
+    "help": "Empty-sky audit sample size (main-field positions) for false-fill rate measurement.",
+    "kind": "static",
+    "label": "Masterstar DAO Empty Sky Target N",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      500,
+      5000
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_match_radius_k": {
+    "help": "Gaia match radius multiplier k times astrometric residual p95 [px] (DAO-GAIA-ERA-01).",
+    "kind": "static",
+    "label": "Masterstar DAO Match Radius K",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      3.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_pass1_dedup_px": {
+    "help": "Pass1 spatial deduplication radius [px] before pass2 targeted cutouts.",
+    "kind": "static",
+    "label": "Masterstar DAO Pass1 Dedup PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.1,
+      2.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_dao_pass2_center_tol_px": {
+    "help": "Maximum centroid offset [px] for pass2 cutout acceptance at Gaia seed positions.",
+    "kind": "static",
+    "label": "Masterstar DAO Pass2 Center Tol PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "masterstar_dao_threshold_sigma": {
     "help": "Primary DAO detection threshold (sigma) on the masterstar, multiplied by gradient-immune pixel noise sigma_pp (adjacent-difference MAD). Recalibrated 2026-07-30 (P-10 bundle): 3.8 reproduces ~175 ADU threshold and ~3.7% DAO_ONLY on anchor-class data where 2.1 against sigma_clipped_stats was an effective 3.8 sigma.",
     "kind": "static",
@@ -2526,6 +2646,129 @@
       5.0
     ],
     "tier": "advanced",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_forced_seed_centroid_max_px": {
+    "help": "FORCED_SEED admission: max COM centroid offset from propagated Gaia [px].",
+    "kind": "static",
+    "label": "Masterstar Forced Seed Centroid Max PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      5.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_forced_seed_comp_pool_enabled": {
+    "help": "Admit FORCED_SEED stars into the comp/CT pool (default off).",
+    "kind": "static",
+    "label": "Masterstar Forced Seed Comp Pool Enabled",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": null,
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_forced_seed_snr_min": {
+    "help": "FORCED_SEED admission: minimum aperture SNR on local annulus background.",
+    "kind": "static",
+    "label": "Masterstar Forced Seed SNR Min",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      1.0,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_gaia_census_edge_margin_px": {
+    "help": "Gaia-complete census: edge margin [px] for EDGE source_state classification.",
+    "kind": "static",
+    "label": "Masterstar Gaia Census Edge Margin PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      1.0,
+      30.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_gaia_census_target_depth_g": {
+    "help": "Gaia-complete census + pass2 seed window: maximum G magnitude.",
+    "kind": "static",
+    "label": "Masterstar Gaia Census Target Depth G",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      10.0,
+      18.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_lock_leftover_radius_px": {
+    "help": "FORCED_SEED / leftover promotion: greedy match radius for leftover detections to Gaia [px].",
+    "kind": "static",
+    "label": "Masterstar Lock Leftover Radius PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      10.0
+    ],
+    "tier": "expert",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "masterstar_lock_pair_tol_px": {
+    "help": "Lock-existing assignment: max shift from locked catalog_id xy to detection [px].",
+    "kind": "static",
+    "label": "Masterstar Lock Pair Tol PX",
+    "owner": "config_runtime",
+    "phase": "detection",
+    "range": [
+      0.5,
+      10.0
+    ],
+    "tier": "expert",
     "unit": null,
     "widget": "custom",
     "scope": "universal",

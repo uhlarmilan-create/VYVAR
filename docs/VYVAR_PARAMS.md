@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-18T10:17:38Z at git HEAD 08cf443._
+_Generated 2026-08-20T12:16:01Z at git HEAD b8d5c74._
 
 ## Summary
 
-- Entries: 291
-- Tier: basic 13, advanced 70, expert 208
-- Kind: static 273, derived 0, resolved 18
-- Widget: auto 121, custom 145, hidden 25
-- Owner: db_static 9, config_runtime 263, fits_dynamic 6, internal 13
-- Scope: universal 239, rig 34, site 10, session 8
-- Scope key: none 239, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 305
+- Tier: basic 13, advanced 70, expert 222
+- Kind: static 287, derived 0, resolved 18
+- Widget: auto 121, custom 159, hidden 25
+- Owner: db_static 9, config_runtime 277, fits_dynamic 6, internal 13
+- Scope: universal 253, rig 34, site 10, session 8
+- Scope key: none 253, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -116,7 +116,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `crowding_comp_availability_loosen_count` | 500.0 | 0 .. 1000000 | expert | static | config_runtime | universal | none | n/a | custom | Crowding Comp Availability Loosen Count |
 | `crowding_tighten_min_fwhm_px` | 3.0 | 0 .. 30 | expert | static | config_runtime | rig | rig_sampling | a | custom | Crowding Tighten Min FWHM PX |
 | `dao_centroid_max_shift_fwhm` | 1.0 | 0.1 .. 5 | expert | static | config_runtime | universal | none | n/a | auto | Dao Centroid Max Shift Fwhm |
-| `dao_detection_n_equiv` | 3.78 | 0.5 .. 12 | expert | static | config_runtime | universal | none | n/a | auto | Dao Detection N Equiv |
+| `dao_detection_n_equiv` | 4.5 | 0.5 .. 12 | expert | static | config_runtime | universal | none | n/a | auto | Dao Detection N Equiv |
 | `debug_platesolver` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Debug Platesolver |
 | `epsf_min_stars` | 30 | - | expert | static | config_runtime | universal | none | n/a | custom | EPSF Min Stars |
 | `exoplanet_match_max_sep_arcsec` | 3.0 | 0.5 .. 30 | expert | static | config_runtime | universal | none | n/a | auto | Exoplanet Match Max Sep Arcsec |
@@ -130,13 +130,27 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Catalog Recovery Min |
 | `masterstar_centre_rms_max_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Masterstar Centre RMS Max Arcsec |
 | `masterstar_centre_rms_max_px` | 1.2 | 0.5 .. 5 | advanced | static | config_runtime | rig | rig_sampling | b | custom | Masterstar Centre RMS Max PX |
-| `masterstar_dao_pass2_sigma` | 1.9 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Pass2 Sigma |
-| `masterstar_dao_threshold_sigma` | 3.8 | 0.1 .. 6 | advanced | static | config_runtime | rig | rig_sampling | a | custom | Masterstar DAO Threshold Sigma |
+| `masterstar_dao_centroid_qa_cap_px` | 3.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Centroid QA Cap PX |
+| `masterstar_dao_centroid_qa_floor_px` | 1.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Centroid QA Floor PX |
+| `masterstar_dao_empty_sky_false_accept_max` | 0.01 | 0 .. 0.05 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Empty Sky False Accept Max |
+| `masterstar_dao_empty_sky_target_n` | 2200 | 500 .. 5000 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Empty Sky Target N |
+| `masterstar_dao_match_radius_k` | 1.7 | 0.5 .. 3 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Match Radius K |
+| `masterstar_dao_pass1_dedup_px` | 0.75 | 0.1 .. 2 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Pass1 Dedup PX |
+| `masterstar_dao_pass2_center_tol_px` | 2.0 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Pass2 Center Tol PX |
+| `masterstar_dao_pass2_sigma` | 4.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar DAO Pass2 Sigma |
+| `masterstar_dao_threshold_sigma` | 4.5 | 0.1 .. 6 | advanced | static | config_runtime | rig | rig_sampling | a | custom | Masterstar DAO Threshold Sigma |
 | `masterstar_detection_cap_adaptive` | True | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Detection Cap Adaptive |
 | `masterstar_detection_cap_k` | 0.08 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Detection Cap K |
 | `masterstar_detection_cap_max` | 800 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Detection Cap Max |
 | `masterstar_detection_cap_min` | 250 | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Detection Cap Min |
 | `masterstar_distortion_benign_ratio_max` | 3.2 | 2 .. 5 | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Distortion Benign Ratio Max |
+| `masterstar_forced_seed_centroid_max_px` | 2.0 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Forced Seed Centroid Max PX |
+| `masterstar_forced_seed_comp_pool_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Forced Seed Comp Pool Enabled |
+| `masterstar_forced_seed_snr_min` | 4.0 | 1 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Forced Seed SNR Min |
+| `masterstar_gaia_census_edge_margin_px` | 10.0 | 1 .. 30 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Gaia Census Edge Margin PX |
+| `masterstar_gaia_census_target_depth_g` | 15.0 | 10 .. 18 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Gaia Census Target Depth G |
+| `masterstar_lock_leftover_radius_px` | 3.0 | 0.5 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Lock Leftover Radius PX |
+| `masterstar_lock_pair_tol_px` | 3.0 | 0.5 .. 10 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Lock Pair Tol PX |
 | `masterstar_min_matched_floor` | 40 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Min Matched Floor |
 | `masterstar_platesolve_sip_max_order` | 4 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Platesolve SIP Max Order |
 | `masterstar_platesolve_sip_min_order` | 3 | - | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Platesolve SIP Min Order |
