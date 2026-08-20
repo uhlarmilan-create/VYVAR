@@ -1,0 +1,726 @@
+{
+  "git_sha": "b8d5c74c3a2d",
+  "elapsed_s": 6341.932764399913,
+  "phase0_s": 0.6300836000591516,
+  "phase1_s": 5305.105099399923,
+  "phase2a_s": 596.858596200007,
+  "ms_rebuild": {
+    "elapsed_s": 163.5910137000028,
+    "n_ms_before": 3621,
+    "n_ms_after": 3610,
+    "n_detected": 3610,
+    "n_matched": 3584,
+    "census_exists": true,
+    "certificate_status": "PASS",
+    "certificate_match_px": 2.5,
+    "certificate_centroid_px": 2.5,
+    "certificate_pass1_sigma": 4.5,
+    "certificate_pass2_sigma": 4.0,
+    "census_by_state": {
+      "DETECTED_P1": 3103,
+      "SEED_REJECTED": 1150,
+      "DETECTED_P2": 397,
+      "BLENDED": 146,
+      "EDGE": 101,
+      "FORCED_SEED": 93
+    },
+    "n_census": 4990,
+    "catalog_derived_membership": {
+      "membership_depth_g": 15.0,
+      "n_detection_rows_in": 2643,
+      "n_catalog_rows_added": 967,
+      "n_dao_only_preserved": 26,
+      "n_rows_out": 3610
+    },
+    "inv_ms_expand_01": {
+      "ok": true,
+      "detail": "ok n_in=2643 n_out=3610 added=967"
+    }
+  },
+  "annot": {
+    "zone_counts": {
+      "linear": 2437,
+      "unknown": 967,
+      "noise": 182,
+      "saturated": 24
+    },
+    "bg_sigma": 24.338907877604164
+  },
+  "pool": {
+    "n_old": 2240,
+    "n_new": 2240,
+    "cmeta": {
+      "n_selected": 2240
+    }
+  },
+  "wiped": [
+    "lightcurves/",
+    "lightcurves_reports/",
+    "active_targets.csv",
+    "comparison_stars_per_target.csv",
+    "comp_pool_admission.json",
+    "excluded_targets.csv",
+    "photometry_summary.csv",
+    "suspected_variables.csv",
+    "variability_candidates.csv",
+    "target_depth.json"
+  ],
+  "sha_before": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "sha_after_core": "75f9220ea0c7ec7387a210330cae90f3653a31864b98e953df715f3685f5e56d",
+  "sha_after_ext": "456b9bc1da6c8a50363b78cf30d18990625045e8f5d4fc463c2c6acab5fcc0b1",
+  "sha_after_n_core": 121,
+  "sha_after_n_ext": 179,
+  "provenance": {
+    "n_stale": 0,
+    "stale": [],
+    "sample": [
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/masterstars_full_match.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/comparison_stars.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/dao_gaia_calibration.json",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/gaia_source_state_census.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/active_targets.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/pipeline_meta.json",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485534187306501376.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485560025830226432.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485987151737107200.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485987254816323328.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496037650087948160.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496278752372040832.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496293286541396480.csv",
+        "exists": true,
+        "post_run_start": true
+      },
+      {
+        "rel": "Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496733984545821696.csv",
+        "exists": true,
+        "post_run_start": true
+      }
+    ]
+  },
+  "L1": {
+    "L1": "DEVIATE",
+    "n_lc": 60,
+    "n_baseline": 48,
+    "baseline_subset_ok": false,
+    "targets_additive": [
+      "1485560025830226432",
+      "1485987151737107200",
+      "1496037650087948160",
+      "1496733984545821696",
+      "1497096960821764224",
+      "1497284015237511808",
+      "1497491273179203456",
+      "1497683996951418880",
+      "1498752516095473664",
+      "1499081819828174080",
+      "1499209638054824320",
+      "1499842372636900992",
+      "1500410236033012352",
+      "1500418894687086208"
+    ],
+    "targets_missing_from_baseline": [
+      "1497181966814590848",
+      "1498064771572297856"
+    ],
+    "missing_lc_files": [
+      "1497181966814590848",
+      "1498064771572297856"
+    ],
+    "deviate_reason": "baseline_missing_from_lc n=2 ids=['1497181966814590848', '1498064771572297856']",
+    "skip_reason_histogram": {
+      "vsx_type_out_of_scope": 190,
+      "zone_noise": 13,
+      "per_frame_saturation": 1,
+      "below_target_depth": 1
+    },
+    "cv_cvn_skip_reason": "per_frame_saturation"
+  },
+  "L2": {
+    "L2": "DEVIATE",
+    "n_targets": 48,
+    "n_pass": 2,
+    "per_target": [
+      {
+        "target": "1485534187306501376",
+        "name": "Gaia DR3 1485534187306501376",
+        "median_delta_mmag": 193.17299999999983,
+        "max_abs_epoch_mmag": 199.5660000000008,
+        "pass": false
+      },
+      {
+        "target": "1485987254816323328",
+        "name": "Gaia DR3 1485987254816323328",
+        "median_delta_mmag": -54.821999999999704,
+        "max_abs_epoch_mmag": 65.37400000000027,
+        "pass": false
+      },
+      {
+        "target": "1496278752372040832",
+        "name": "FY CVn",
+        "median_delta_mmag": 105.52450000000047,
+        "max_abs_epoch_mmag": 117.5259999999998,
+        "pass": false
+      },
+      {
+        "target": "1496293286541396480",
+        "name": "FZ CVn",
+        "median_delta_mmag": 191.90100000000055,
+        "max_abs_epoch_mmag": 198.01100000000105,
+        "pass": false
+      },
+      {
+        "target": "1496795041799526400",
+        "name": "R CVn",
+        "median_delta_mmag": -39.26150000000028,
+        "max_abs_epoch_mmag": 44.90700000000025,
+        "pass": false
+      },
+      {
+        "target": "1496998382733052928",
+        "name": "ASASSN-V J135313.56+394107.4",
+        "median_delta_mmag": 282.6285000000004,
+        "max_abs_epoch_mmag": 292.4590000000009,
+        "pass": false
+      },
+      {
+        "target": "1497132660589966976",
+        "name": "TOI-3919",
+        "median_delta_mmag": 189.00399999999973,
+        "max_abs_epoch_mmag": 195.85700000000017,
+        "pass": false
+      },
+      {
+        "target": "1497154753901690624",
+        "name": "Gaia DR3 1497154753901690624",
+        "median_delta_mmag": -19.709000000000643,
+        "max_abs_epoch_mmag": 24.988999999999706,
+        "pass": false
+      },
+      {
+        "target": "1497169940906156032",
+        "name": "CSS_J134925.3+393524",
+        "median_delta_mmag": 109.6199999999996,
+        "max_abs_epoch_mmag": 120.62799999999996,
+        "pass": false
+      },
+      {
+        "target": "1497181966814590848",
+        "reason": "missing_lc",
+        "pass": false
+      },
+      {
+        "target": "1497227287309482624",
+        "name": "Gaia DR3 1497227287309482624",
+        "median_delta_mmag": 0.0,
+        "max_abs_epoch_mmag": 0.0,
+        "pass": true
+      },
+      {
+        "target": "1497236186481686016",
+        "name": "SS CVn",
+        "median_delta_mmag": -77.29749999999936,
+        "max_abs_epoch_mmag": 95.39400000000064,
+        "pass": false
+      },
+      {
+        "target": "1497245497969274240",
+        "name": "HAT-188-0000323",
+        "median_delta_mmag": 227.53200000000007,
+        "max_abs_epoch_mmag": 227.53200000000007,
+        "pass": false
+      },
+      {
+        "target": "1497343732462852864",
+        "name": "FW CVn",
+        "median_delta_mmag": 199.8660000000001,
+        "max_abs_epoch_mmag": 205.23500000000007,
+        "pass": false
+      },
+      {
+        "target": "1497350638770267520",
+        "name": "HAT-188-0001516",
+        "median_delta_mmag": 412.56700000000103,
+        "max_abs_epoch_mmag": 429.5869999999997,
+        "pass": false
+      },
+      {
+        "target": "1497418258735289472",
+        "name": "FU CVn",
+        "median_delta_mmag": 37.24650000000018,
+        "max_abs_epoch_mmag": 47.48599999999925,
+        "pass": false
+      },
+      {
+        "target": "1497425371201155072",
+        "name": "NSV 19982",
+        "median_delta_mmag": -49.39249999999973,
+        "max_abs_epoch_mmag": 63.4219999999992,
+        "pass": false
+      },
+      {
+        "target": "1497561779362267392",
+        "name": "HAT-188-0001788",
+        "median_delta_mmag": 36.6780000000011,
+        "max_abs_epoch_mmag": 54.07499999999921,
+        "pass": false
+      },
+      {
+        "target": "1497603835681942400",
+        "name": "Gaia DR3 1497603835681942400",
+        "median_delta_mmag": -136.5524999999996,
+        "max_abs_epoch_mmag": 172.53900000000044,
+        "pass": false
+      },
+      {
+        "target": "1497639123133258752",
+        "name": "Gaia DR3 1497639123133258752",
+        "median_delta_mmag": 175.90649999999997,
+        "max_abs_epoch_mmag": 185.54199999999986,
+        "pass": false
+      },
+      {
+        "target": "1497683722074089728",
+        "name": "HAT-188-0000203",
+        "median_delta_mmag": 277.8749999999999,
+        "max_abs_epoch_mmag": 285.84500000000014,
+        "pass": false
+      },
+      {
+        "target": "1497871669842349184",
+        "name": "Gaia DR3 1497871669842349184",
+        "median_delta_mmag": -136.51399999999913,
+        "max_abs_epoch_mmag": 172.62500000000003,
+        "pass": false
+      },
+      {
+        "target": "1498000793739050368",
+        "name": "ZTF J140300.57+413339.3",
+        "median_delta_mmag": 6.069499999999728,
+        "max_abs_epoch_mmag": 14.151000000000025,
+        "pass": false
+      },
+      {
+        "target": "1498027456896444928",
+        "name": "ASASSN-V J140843.29+402701.8",
+        "median_delta_mmag": 6.028500000000214,
+        "max_abs_epoch_mmag": 16.406999999999172,
+        "pass": false
+      },
+      {
+        "target": "1498058827337611392",
+        "name": "Gaia DR3 1498058827337611392",
+        "median_delta_mmag": -81.36799999999944,
+        "max_abs_epoch_mmag": 99.2449999999998,
+        "pass": false
+      },
+      {
+        "target": "1498064771572297856",
+        "reason": "missing_lc",
+        "pass": false
+      },
+      {
+        "target": "1498278351706325248",
+        "name": "Gaia DR3 1498278351706325248",
+        "median_delta_mmag": 177.72200000000015,
+        "max_abs_epoch_mmag": 187.4690000000001,
+        "pass": false
+      },
+      {
+        "target": "1498298211635183744",
+        "name": "NSVS 5096293",
+        "median_delta_mmag": -4.895499999999942,
+        "max_abs_epoch_mmag": 9.73899999999972,
+        "pass": false
+      },
+      {
+        "target": "1498321301379345408",
+        "name": "ZTF J140640.73+413639.0",
+        "median_delta_mmag": -9.791999999999135,
+        "max_abs_epoch_mmag": 19.530999999998855,
+        "pass": false
+      },
+      {
+        "target": "1498425548825498112",
+        "name": "ASASSN-V J140619.34+422109.5",
+        "median_delta_mmag": 0.0,
+        "max_abs_epoch_mmag": 0.0,
+        "pass": true
+      },
+      {
+        "target": "1498486880958321024",
+        "name": "CSS_J140918.7+423422",
+        "median_delta_mmag": 227.60599999999977,
+        "max_abs_epoch_mmag": 240.70000000000036,
+        "pass": false
+      },
+      {
+        "target": "1498613634033133184",
+        "name": "BO CVn",
+        "median_delta_mmag": 227.6100000000012,
+        "max_abs_epoch_mmag": 240.70399999999916,
+        "pass": false
+      },
+      {
+        "target": "1498617482323461376",
+        "name": "ZTF J140033.29+405446.7",
+        "median_delta_mmag": -22.758500000000126,
+        "max_abs_epoch_mmag": 28.717000000000326,
+        "pass": false
+      },
+      {
+        "target": "1498699086702005376",
+        "name": "ASASSN-V J135757.22+412518.4",
+        "median_delta_mmag": 203.14050000000083,
+        "max_abs_epoch_mmag": 209.35799999999995,
+        "pass": false
+      },
+      {
+        "target": "1498783199341798016",
+        "name": "Gaia DR3 1498783199341798016",
+        "median_delta_mmag": 230.09000000000057,
+        "max_abs_epoch_mmag": 235.08899999999855,
+        "pass": false
+      },
+      {
+        "target": "1498795809366255488",
+        "name": "Gaia DR3 1498795809366255488",
+        "median_delta_mmag": -110.20450000000004,
+        "max_abs_epoch_mmag": 126.13900000000022,
+        "pass": false
+      },
+      {
+        "target": "1498804639818507904",
+        "name": "GH CVn",
+        "median_delta_mmag": 190.48849999999985,
+        "max_abs_epoch_mmag": 197.49100000000118,
+        "pass": false
+      },
+      {
+        "target": "1498842882207281152",
+        "name": "CSS_J135929.8+421520",
+        "median_delta_mmag": -8.982500000001004,
+        "max_abs_epoch_mmag": 18.670999999999438,
+        "pass": false
+      },
+      {
+        "target": "1499006984318088320",
+        "name": "Gaia DR3 1499006984318088320",
+        "median_delta_mmag": -151.90199999999976,
+        "max_abs_epoch_mmag": 164.11700000000096,
+        "pass": false
+      },
+      {
+        "target": "1499021174889970816",
+        "name": "ZTF J135636.59+422135.5",
+        "median_delta_mmag": -63.44699999999914,
+        "max_abs_epoch_mmag": 82.10599999999957,
+        "pass": false
+      },
+      {
+        "target": "1499084499887740160",
+        "name": "Gaia DR3 1499084499887740160",
+        "median_delta_mmag": -49.65799999999998,
+        "max_abs_epoch_mmag": 69.73799999999919,
+        "pass": false
+      },
+      {
+        "target": "1499210016011946496",
+        "name": "Gaia DR3 1499210016011946496",
+        "median_delta_mmag": 1.30349999999968,
+        "max_abs_epoch_mmag": 12.811000000001016,
+        "pass": false
+      },
+      {
+        "target": "1500327978819506944",
+        "name": "Gaia DR3 1500327978819506944",
+        "median_delta_mmag": -121.43049999999889,
+        "max_abs_epoch_mmag": 134.188,
+        "pass": false
+      },
+      {
+        "target": "1500424804562041984",
+        "name": "RX CVn",
+        "median_delta_mmag": 116.56899999999925,
+        "max_abs_epoch_mmag": 128.21099999999853,
+        "pass": false
+      },
+      {
+        "target": "1500461157165243648",
+        "name": "CSS_J134948.9+415037",
+        "median_delta_mmag": -12.593500000000368,
+        "max_abs_epoch_mmag": 15.078000000000813,
+        "pass": false
+      },
+      {
+        "target": "1500549977088828160",
+        "name": "HIP 67011",
+        "median_delta_mmag": 41.26999999999992,
+        "max_abs_epoch_mmag": 58.27399999999994,
+        "pass": false
+      },
+      {
+        "target": "1500693841313325696",
+        "name": "Gaia DR3 1500693841313325696",
+        "median_delta_mmag": -50.46899999999965,
+        "max_abs_epoch_mmag": 61.028999999999556,
+        "pass": false
+      },
+      {
+        "target": "1502012464992313088",
+        "name": "Gaia DR3 1502012464992313088",
+        "median_delta_mmag": -136.54899999999958,
+        "max_abs_epoch_mmag": 172.5469999999998,
+        "pass": false
+      }
+    ],
+    "baseline_sha": "477dc8cf"
+  },
+  "L3": {
+    "L3": "DEVIATE",
+    "meters": {
+      "BO": {
+        "mad_mmag": 5.146104600000331,
+        "anchor_mmag": 7.150579800000032,
+        "band_lo": 6.077992830000027,
+        "band_hi": 8.223166770000036,
+        "pass": false
+      },
+      "FW": {
+        "mad_mmag": 8.754011700000955,
+        "anchor_mmag": 8.201001900000032,
+        "band_lo": 6.970851615000027,
+        "band_hi": 9.431152185000036,
+        "pass": true
+      }
+    }
+  },
+  "L4": {
+    "L4": "DEVIATE",
+    "xval": {
+      "BO": {
+        "rms_mmag": 228.48872319893016,
+        "matrix_mmag": 4.86,
+        "delta_from_matrix_mmag": 223.62872319893015,
+        "n_epochs": 134,
+        "pass": false,
+        "tbl": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\XVAL_AIJ_02_bo_compare.csv"
+      },
+      "FW": {
+        "rms_mmag": 2.643801899675674,
+        "matrix_mmag": 1.52,
+        "delta_from_matrix_mmag": 1.1238018996756738,
+        "n_epochs": 134,
+        "pass": false,
+        "tbl": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000515\\detrended_aligned\\FW_CVn_AIJ.tbl"
+      }
+    }
+  },
+  "L5": {
+    "L5": "PASS",
+    "census_accounting": {
+      "ok": true,
+      "detail": "ok n=4990",
+      "n_census": 4990,
+      "n_on_chip": 4990,
+      "accounting_pct": 100.0,
+      "state_counts": {
+        "DETECTED_P1": 3103,
+        "SEED_REJECTED": 1150,
+        "DETECTED_P2": 397,
+        "BLENDED": 146,
+        "EDGE": 101,
+        "FORCED_SEED": 93
+      }
+    },
+    "detection_completeness_diagnostic": {
+      "ok": true,
+      "numerator": 2606,
+      "denominator": 2606,
+      "completeness_pct": 100.0,
+      "depth_g": 14.5,
+      "denominator_label": "on-chip Gaia G<=14.5 excluding EDGE",
+      "numerator_label": "DETECTED_P1 + DETECTED_P2 + FORCED_SEED",
+      "bins": [
+        {
+          "g_lo": 8.0,
+          "g_hi": 8.5,
+          "n_eligible": 13,
+          "n_detected_seed": 13,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 8.5,
+          "g_hi": 9.0,
+          "n_eligible": 13,
+          "n_detected_seed": 13,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 9.0,
+          "g_hi": 9.5,
+          "n_eligible": 26,
+          "n_detected_seed": 26,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 9.5,
+          "g_hi": 10.0,
+          "n_eligible": 38,
+          "n_detected_seed": 38,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 10.0,
+          "g_hi": 10.5,
+          "n_eligible": 43,
+          "n_detected_seed": 43,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 10.5,
+          "g_hi": 11.0,
+          "n_eligible": 64,
+          "n_detected_seed": 64,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 11.0,
+          "g_hi": 11.5,
+          "n_eligible": 101,
+          "n_detected_seed": 101,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 11.5,
+          "g_hi": 12.0,
+          "n_eligible": 151,
+          "n_detected_seed": 151,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 12.0,
+          "g_hi": 12.5,
+          "n_eligible": 234,
+          "n_detected_seed": 234,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 12.5,
+          "g_hi": 13.0,
+          "n_eligible": 298,
+          "n_detected_seed": 298,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 13.0,
+          "g_hi": 13.5,
+          "n_eligible": 404,
+          "n_detected_seed": 404,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 13.5,
+          "g_hi": 14.0,
+          "n_eligible": 521,
+          "n_detected_seed": 521,
+          "completeness_pct": 100.0
+        },
+        {
+          "g_lo": 14.0,
+          "g_hi": 14.5,
+          "n_eligible": 677,
+          "n_detected_seed": 677,
+          "completeness_pct": 100.0
+        }
+      ],
+      "state_counts": {
+        "DETECTED_P1": 3103,
+        "SEED_REJECTED": 1150,
+        "DETECTED_P2": 397,
+        "BLENDED": 146,
+        "EDGE": 101,
+        "FORCED_SEED": 93
+      },
+      "reference": {
+        "iter_id": "win_p1_4.5_p2_4.0_i6_i7",
+        "depth_g": 14.5,
+        "completeness_pct": 95.77897160399078,
+        "label": "g1_eye_seed_le145"
+      },
+      "delta_vs_ref_pp": 4.221028396009217,
+      "diagnostic_only": true
+    },
+    "empty_sky_inv_det": "PASS",
+    "empty_sky_inv_seed": "PASS",
+    "note": "L5-new: census accounting 100% required; detection completeness diagnostic only"
+  },
+  "L6": {
+    "L6": "DEVIATE",
+    "err_term_max_abs_vs_baseline": {
+      "err_sem_rel": 0.069179,
+      "err_scint_rel": 0.0,
+      "err_sigma_sys_rel": 0.0
+    },
+    "err_photon_max_abs_vs_baseline": 0.0,
+    "n_lc_compared": 46,
+    "note": "sem/scint/sys must be 0; photon may shift via membership"
+  },
+  "limits": {
+    "L1": "DEVIATE",
+    "L2": "DEVIATE",
+    "L3": "DEVIATE",
+    "L4": "DEVIATE",
+    "L5": "PASS",
+    "L6": "DEVIATE"
+  },
+  "overall": "STOP"
+}

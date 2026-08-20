@@ -1,0 +1,60 @@
+{
+  "baseline_core_n": 97,
+  "era_core_n": 121,
+  "delta_n": 24,
+  "added_by_kind": {
+    "comp_quality_json": 14,
+    "lightcurve_csv": 14
+  },
+  "removed_by_kind": {
+    "comp_quality_json": 2,
+    "lightcurve_csv": 2
+  },
+  "added_files": [
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1485560025830226432.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1485987151737107200.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1496037650087948160.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1496733984545821696.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497096960821764224.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497284015237511808.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497491273179203456.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497683996951418880.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498752516095473664.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1499081819828174080.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1499209638054824320.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1499842372636900992.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1500410236033012352.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1500418894687086208.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485560025830226432.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1485987151737107200.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496037650087948160.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496733984545821696.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497096960821764224.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497284015237511808.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497491273179203456.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497683996951418880.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498752516095473664.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1499081819828174080.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1499209638054824320.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1499842372636900992.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1500410236033012352.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1500418894687086208.csv"
+  ],
+  "removed_files": [
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1497181966814590848.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/comp_quality_1498064771572297856.json",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497181966814590848.csv",
+    "platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498064771572297856.csv"
+  ],
+  "era_core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+  "era_extended_sha": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
+  "era_extended_n": 179,
+  "cv_cvn_gating": {
+    "skip_reason": "per_frame_saturation",
+    "n_epochs": "",
+    "trust_flag": "",
+    "n_comp": ""
+  },
+  "lineage": "477dc8cf (n=97) -> 9902d918 (n=121)",
+  "check_pin_note": "FW check_catalog_id restored to anchor 1497613731286514432; FW MAD 8.201 mmag"
+}

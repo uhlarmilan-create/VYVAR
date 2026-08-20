@@ -1,0 +1,36 @@
+{
+  "hand_validated": {
+    "match_radius_px": 3.0,
+    "pass2_center_tol_px": 2.0,
+    "pass1_sigma": 4.5,
+    "pass2_sigma": 4.0
+  },
+  "derived": {
+    "residual_p95_px": 1.202465015639798,
+    "match_radius_px": 2.0,
+    "pass2_center_tol_px": 1.0,
+    "lock_pair_tol_px": 2.0,
+    "lock_leftover_radius_px": 2.0,
+    "forced_seed_centroid_max_px": 1.0,
+    "plate_scale_arcsec_per_px": 9.77392166587295,
+    "fwhm_px": 5.19465,
+    "pass1_sigma": 4.5,
+    "pass2_sigma": 4.0
+  },
+  "delta": {
+    "match_radius_px": -1.0,
+    "pass2_center_tol_px": -1.0,
+    "pass1_sigma": 0.0,
+    "pass2_sigma": 0.0
+  },
+  "empty_sky": {
+    "n_positions": 2200,
+    "pass2_accept": 1,
+    "pass2_rate": 0.00045454545454545455,
+    "seed_accept": 3,
+    "seed_rate": 0.0013636363636363637,
+    "inv_det": "PASS",
+    "inv_seed": "PASS"
+  },
+  "status": "PASS"
+}

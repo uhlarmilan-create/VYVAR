@@ -1,0 +1,43 @@
+{
+  "afix": "A-fix 3",
+  "populations": {
+    "detection_identity": {
+      "name": "detection_identity",
+      "n": 2576,
+      "p50_px": 0.4938824666274315,
+      "p95_px": 1.1684049239469931,
+      "g_band": null,
+      "states": "pass1+pass2|all_G|matched"
+    },
+    "seed_centroid": {
+      "name": "seed_centroid",
+      "n": 490,
+      "p50_px": 0.5556330462777819,
+      "p95_px": 1.370615135751455,
+      "g_band": null,
+      "states": "DETECTED_P2|FORCED_SEED|Gaia_seed_position"
+    }
+  },
+  "derived_vs_hand": {
+    "match_radius_px": {
+      "hand": 3.0,
+      "derived": 2.0
+    },
+    "pass2_center_tol_px": {
+      "hand": 2.0,
+      "derived": 1.5
+    },
+    "pass1_sigma": {
+      "hand": 4.5,
+      "derived": 4.5
+    },
+    "pass2_sigma": {
+      "hand": 4.0,
+      "derived": 4.0
+    }
+  },
+  "validation_status": "FAIL",
+  "max_regression_pp": 0.011511895625479718,
+  "g2_pass": true,
+  "fail_reason": "MASTERSTAR/g1_strict_le145: derived 0.9179 vs hand 0.9248 (regression 0.69 pp > 0.5 pp); Light_001/g1_strict_le145: derived 0.8906 vs hand 0.9021 (regression 1.15 pp > 0.5 pp); Light_001/g1_eye_seed_le145: derived 0.9371 vs hand 0.9440 (regression 0.69 pp > 0.5 pp); Light_001/g3_g18: derived 0.0432 vs hand 0.0381 (regression 0.51 pp > 0.5 pp); Light_076/g1_strict_le145: derived 0.9332 vs hand 0.9401 (regression 0.69 pp > 0.5 pp); Light_148/g1_strict_le145: derived 0.9355 vs hand 0.9436 (regression 0.81 pp > 0.5 pp)"
+}

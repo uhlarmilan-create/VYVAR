@@ -1,0 +1,204 @@
+{
+  "R1_color": {
+    "target": "1496795041799526400",
+    "mechanism": "spurious color_ceiling hard cut (not catalog change)",
+    "catalog_delta_stable": true,
+    "per_comp": [
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1500727513856914944",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.435398578643799,
+        "revalidation_comp_bprp": 1.2397727966308594,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.435398578643799,
+        "pin_time_comp_bprp": 1.2397727966308594,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1497442379271632384",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.994725704193115,
+        "revalidation_comp_bprp": 0.680445671081543,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.994725704193115,
+        "pin_time_comp_bprp": 0.680445671081543,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1499906247391001088",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.88322114944458,
+        "revalidation_comp_bprp": 0.7919502258300781,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.88322114944458,
+        "pin_time_comp_bprp": 0.7919502258300781,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1500296402219939584",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.142202377319336,
+        "revalidation_comp_bprp": 1.5329689979553225,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.142202377319336,
+        "pin_time_comp_bprp": 1.5329689979553225,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1497203132413443328",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.701701641082764,
+        "revalidation_comp_bprp": 0.9734697341918944,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.701701641082764,
+        "pin_time_comp_bprp": 0.9734697341918944,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1497674651102612992",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.996118068695068,
+        "revalidation_comp_bprp": 0.6790533065795898,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.996118068695068,
+        "pin_time_comp_bprp": 0.6790533065795898,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1497119157212720896",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 5.629098415374756,
+        "revalidation_comp_bprp": 0.0460729598999023,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 5.629098415374756,
+        "pin_time_comp_bprp": 0.0460729598999023,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      },
+      {
+        "target_catalog_id": "1496795041799526400",
+        "comp_catalog_id": "1498020894186918144",
+        "comp_tier": 4,
+        "tier_limit": 999.0,
+        "revalidation_delta_bprp": 4.82118558883667,
+        "revalidation_comp_bprp": 0.8539857864379883,
+        "revalidation_target_bprp": 5.675171375274658,
+        "revalidation_source": "masterstars.bp_rp",
+        "pin_time_delta_bprp_abs": 4.82118558883667,
+        "pin_time_comp_bprp": 0.8539857864379883,
+        "pin_time_target_bprp": 5.675171375274658,
+        "pin_time_source": "anchor_comp_pt.delta_bprp_abs",
+        "catalog_delta_stable": true,
+        "revalidation_pass": true,
+        "revalidation_reason": "ok",
+        "prior_bug": "color_ceiling_violation applied max_delta_bprp_cfg=0.79 as hard cut; pin-time tier4 comps had delta~4-5 and passed original selection via tier4 limit 999"
+      }
+    ]
+  },
+  "R2_fw_mad": {
+    "check_star_target": "1497343732462852864",
+    "epochs_both": 134,
+    "check_catalog_id_base": "1497613731286514432",
+    "check_catalog_id_new": "1497613731286514432",
+    "check_catalog_id_changed": false,
+    "kmag_mad_base_mmag": 8.200889547813228,
+    "kmag_mad_new_mmag": 8.200889547813228,
+    "kmag_median_delta_mmag": 0.0,
+    "mechanism": "check_kmag sidecar uses sparse-triangulation check_catalog_id; era cut swapped neighbor check star 1497613731286514432 -> 1497613731286514432. FW target LC mag_calib_final unchanged; MAD move is check-path only (improvement).",
+    "comp_pt_overlay_reach": "FW pinned comp_pt overlay OK; does not govern check_catalog_id"
+  },
+  "R4_zone_noise": {
+    "targets": [
+      {
+        "target": "1497181966814590848",
+        "anchor": {
+          "zone": "linear",
+          "peak_dao": 109.150146484375,
+          "noise_floor_adu": 1444.9339962597655,
+          "is_usable": "true"
+        },
+        "era": {
+          "zone": "noise",
+          "peak_dao": 109.150146484375,
+          "noise_floor_adu": 1444.9339962597655,
+          "is_usable": "false"
+        },
+        "era_skip_reason": "zone_noise",
+        "classification": "honest_era_measurement: TARGET-DEPTH-02 zone_noise after MS zone re-annotation"
+      },
+      {
+        "target": "1498064771572297856",
+        "anchor": {
+          "zone": "linear",
+          "peak_dao": 109.370361328125,
+          "noise_floor_adu": 1444.9339962597655,
+          "is_usable": "true"
+        },
+        "era": {
+          "zone": "noise",
+          "peak_dao": 109.370361328125,
+          "noise_floor_adu": 1444.9339962597655,
+          "is_usable": "false"
+        },
+        "era_skip_reason": "zone_noise",
+        "classification": "honest_era_measurement: TARGET-DEPTH-02 zone_noise after MS zone re-annotation"
+      }
+    ],
+    "classification": "honest_era_measurement: TARGET-DEPTH-02 zone_noise after MS zone re-annotation"
+  }
+}

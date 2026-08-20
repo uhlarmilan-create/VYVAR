@@ -1,0 +1,46 @@
+{
+  "afix": "A-fix 4",
+  "status": "PASS",
+  "derived": {
+    "match_radius_px": 2.5,
+    "pass2_center_tol_px": 2.5
+  },
+  "hand": {
+    "match_radius_px": 3.0,
+    "pass2_center_tol_px": 2.0
+  },
+  "diagnostic": {
+    "detection_identity": {
+      "name": "detection_identity",
+      "n": 2824,
+      "p50_px": 0.5049350775918031,
+      "p95_px": 1.3639146319163722,
+      "n_raw": 2831,
+      "p50_raw_px": 0.5059925059981573,
+      "p95_raw_px": 1.3867076676261436,
+      "tail_estimate_px": 14.970490562382556,
+      "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=14.970 px",
+      "measurement_mode": "diagnostic|greedy_assign+pass2_accepted|tail_core",
+      "diagnostic_radius_px": 10.3893,
+      "g_band": null,
+      "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+    },
+    "seed_centroid": {
+      "name": "seed_centroid",
+      "n": 374,
+      "p50_px": 0.7950626085608922,
+      "p95_px": 2.454146757571882,
+      "n_raw": 374,
+      "p50_raw_px": 0.7950626085608922,
+      "p95_raw_px": 2.454146757571882,
+      "tail_estimate_px": 14.970490562382556,
+      "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=14.970 px",
+      "measurement_mode": "diagnostic|snr_only_before_centroid_gate",
+      "diagnostic_radius_px": null,
+      "g_band": null,
+      "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+    }
+  },
+  "validation_status": "PASS",
+  "max_regression_pp": 0.0006283864833833766
+}

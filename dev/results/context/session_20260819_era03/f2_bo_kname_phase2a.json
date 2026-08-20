@@ -1,0 +1,28 @@
+{
+  "utc": "2026-08-20T15:10:00Z",
+  "mode": "surgical_check_kmag_patch",
+  "phase2a_only_attempt": {
+    "status": "STOP",
+    "reason": "full phase2a re-run moved core SHA 9902d918 -> a751183c (n=121 unchanged) before INV-DAG-01 crash",
+    "lesson": "phase2a-only on live draft rewrites all LCs; not SHA-safe"
+  },
+  "surgical_fix": {
+    "method": "restore snapshot era03 photometry + replace check_kmag_1498613634033133184.csv only",
+    "check_kmag_outside_core_sha": true,
+    "core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+    "core_n": 121
+  },
+  "BO": {
+    "check_catalog_id": "1497613731286514432",
+    "check_scatter_mad_mmag": 7.150579800000032,
+    "n_epochs": 134,
+    "mad_band": [6.08, 8.22],
+    "mad_band_ok": true
+  },
+  "FW": {
+    "check_catalog_id": "1497613731286514432",
+    "check_scatter_mad_mmag": 8.201001900000032,
+    "n_epochs": 134
+  },
+  "status": "PASS"
+}

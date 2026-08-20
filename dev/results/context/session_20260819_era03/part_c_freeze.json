@@ -1,0 +1,12 @@
+{
+  "utc": "2026-08-20T11:29:41Z",
+  "src": "draft_000516",
+  "snapshot": "draft_000516_snapshot_era03_20260820",
+  "snap_core": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+  "snap_core_n": 121,
+  "snap_ext": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
+  "snap_ext_n": 179,
+  "src_core": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+  "src_core_n": 121,
+  "sha_match_src": true
+}

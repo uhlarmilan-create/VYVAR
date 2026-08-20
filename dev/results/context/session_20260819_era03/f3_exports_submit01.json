@@ -1,0 +1,75 @@
+{
+  "utc": "2026-08-20T15:07:57Z",
+  "targets": {
+    "BO_CVn": {
+      "kname_aavso": {
+        "kname_unique": [
+          "1497613731286514432"
+        ],
+        "kname_anchor_ok": true
+      },
+      "mag_diff_vs_477dc8cf": {
+        "n_rows_compared": 134,
+        "mag_max_abs_mmag": 0.0,
+        "mag_identical": true,
+        "magerr_n_changed_3dec": 0
+      },
+      "aavso_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\BO_CVn_20260423.txt"
+    },
+    "FW_CVn": {
+      "kname_aavso": {
+        "kname_unique": [
+          "1497613731286514432"
+        ],
+        "kname_anchor_ok": true
+      },
+      "mag_diff_vs_477dc8cf": {
+        "n_rows_compared": 134,
+        "mag_max_abs_mmag": 0.0,
+        "mag_identical": true,
+        "magerr_n_changed_3dec": 0
+      },
+      "aavso_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves_reports\\aavso\\FW_CVn_20260423.txt"
+    }
+  },
+  "baseline_477dc8cf": "draft_000516_snapshot_cleanrebuild_20260818",
+  "science_note": "46 baseline pinned targets: mag_calib_final expected byte-identical vs 477dc8cf era; additive 14 LCs are new products",
+  "SUBMIT-01_BO": {
+    "checks": {
+      "C1_OBSCODE_UMIA": "PASS",
+      "C1_TYPE_present": "PASS",
+      "C1_SOFTWARE_VYVAR": "PASS",
+      "C1_band_CV": "PASS",
+      "C1_KNAME_KMAG_0_na": "PASS",
+      "C1_KNAME_is_check": "PASS",
+      "C1_NOTES_n_comp4": "PASS",
+      "C1_NOTES_no_truncated_ids": "PASS",
+      "C1_DATE_BJD": "PASS",
+      "C1_n_rows_134": "PASS",
+      "C1_ERR_MODEL_g_pt": "PASS",
+      "C1_MAGERR_3decimal": "PASS",
+      "C2_varastro_exists": "PASS",
+      "C2_w_pre_w_post": "PASS",
+      "C2_n_epochs_134": "PASS",
+      "C3_mag_depth": "PASS",
+      "C3_quiet_median_9p4_9p5": "PASS",
+      "C3_mandatory_na": "PASS"
+    },
+    "n_aavso_rows": 134,
+    "n_varastro_data_rows": 134,
+    "notes_first": "meth=aperture|n_comp=4 GaiaDR3 ensemble|trust=GREEN|4 clean comps",
+    "err_model": "#ERR_MODEL=mode=calibrated; gain=g_pt=0.6371 e-/ADU_container; calib=none",
+    "kname_na_n": 0,
+    "kmag_na_n": 0,
+    "mag_depth": 0.47000000000000064,
+    "quiet_median_mag": 9.462499999999999,
+    "magerr_median_mag": 0.009,
+    "truncated_ids": [],
+    "obscode_line": "#OBSCODE=UMIA",
+    "software_lines": [
+      "# Pipeline: VYVAR - Automated Differential Photometry Pipeline",
+      "#SOFTWARE=VYVAR/1.0 (aperture photometry; Broeg 2005 ensemble)"
+    ]
+  },
+  "SUBMIT-01_pass": true
+}

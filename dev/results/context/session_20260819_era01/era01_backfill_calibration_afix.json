@@ -1,0 +1,34 @@
+{
+  "status": "FAIL",
+  "fail_reason": "MASTERSTAR/g1_strict_le145: derived 0.9106 vs hand 0.9248 (regression 1.42 pp > 0.5 pp); MASTERSTAR/g1_eye_seed_le145: derived 0.9490 vs hand 0.9578 (regression 0.88 pp > 0.5 pp); Light_001/g1_strict_le145: derived 0.8780 vs hand 0.9021 (regression 2.42 pp > 0.5 pp); Light_001/g1_eye_le145: derived 0.9029 vs hand 0.9102 (regression 0.73 pp > 0.5 pp); Light_001/g1_eye_seed_le145: derived 0.9267 vs hand 0.9440 (regression 1.73 pp > 0.5 pp); Light_001/g3_g18: derived 0.0445 vs hand 0.0381 (regression 0.65 pp > 0.5 pp); Light_076/g1_strict_le145: derived 0.9256 vs hand 0.9401 (regression 1.46 pp > 0.5 pp); Light_076/g1_eye_seed_le145: derived 0.9635 vs hand 0.9724 (regression 0.88 pp > 0.5 pp); Light_148/g1_strict_le13: derived 0.9801 vs hand 0.9871 (regression 0.70 pp > 0.5 pp); Light_148/g1_strict_le145: derived 0.9290 vs hand 0.9436 (regression 1.46 pp > 0.5 pp); Light_148/g1_eye_seed_le145: derived 0.9655 vs hand 0.9735 (regression 0.81 pp > 0.5 pp)",
+  "derived": {
+    "residual_p95_px": 1.202465015639798,
+    "match_radius_px": 2.0,
+    "pass2_center_tol_px": 1.0,
+    "lock_pair_tol_px": 2.0,
+    "lock_leftover_radius_px": 2.0,
+    "forced_seed_centroid_max_px": 1.0,
+    "plate_scale_arcsec_per_px": 9.77392166587295,
+    "fwhm_px": 5.19465,
+    "pass1_sigma": 4.5,
+    "pass2_sigma": 4.0,
+    "detection_identity": {
+      "name": "detection_identity",
+      "n": 2589,
+      "p50_px": 0.4960988898505616,
+      "p95_px": 1.202465015639798,
+      "g_band": null,
+      "states": "pass1_gaia_locked_proxy"
+    },
+    "faint_star_centroid": {
+      "name": "faint_star_centroid",
+      "n": 1555,
+      "p50_px": 0.5116163973271558,
+      "p95_px": 1.1613339932803193,
+      "g_band": "13.0-15.0",
+      "states": "DETECTED_P1|DETECTED_P2"
+    }
+  },
+  "validation_status": "FAIL",
+  "validation_fail": "MASTERSTAR/g1_strict_le145: derived 0.9106 vs hand 0.9248 (regression 1.42 pp > 0.5 pp); MASTERSTAR/g1_eye_seed_le145: derived 0.9490 vs hand 0.9578 (regression 0.88 pp > 0.5 pp); Light_001/g1_strict_le145: derived 0.8780 vs hand 0.9021 (regression 2.42 pp > 0.5 pp); Light_001/g1_eye_le145: derived 0.9029 vs hand 0.9102 (regression 0.73 pp > 0.5 pp); Light_001/g1_eye_seed_le145: derived 0.9267 vs hand 0.9440 (regression 1.73 pp > 0.5 pp); Light_001/g3_g18: derived 0.0445 vs hand 0.0381 (regression 0.65 pp > 0.5 pp); Light_076/g1_strict_le145: derived 0.9256 vs hand 0.9401 (regression 1.46 pp > 0.5 pp); Light_076/g1_eye_seed_le145: derived 0.9635 vs hand 0.9724 (regression 0.88 pp > 0.5 pp); Light_148/g1_strict_le13: derived 0.9801 vs hand 0.9871 (regression 0.70 pp > 0.5 pp); Light_148/g1_strict_le145: derived 0.9290 vs hand 0.9436 (regression 1.46 pp > 0.5 pp); Light_148/g1_eye_seed_le145: derived 0.9655 vs hand 0.9735 (regression 0.81 pp > 0.5 pp)"
+}
