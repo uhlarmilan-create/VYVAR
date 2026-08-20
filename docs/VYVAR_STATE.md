@@ -1,16 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** ANCHOR-516-04 clean product frozen; `--fast` and `--full`
-OVERALL PASS. Canonical product SHA **477dc8cf** (draft 516; MAG
-byte-identical to de6f7c8; ERR empirical; sat-limit 0.80 / 52428 ADU). Lineage: de6f7c8 -> be6191e0 -> 477dc8cf.
-`--full` photometers frozen snapshot
-`draft_000516_snapshot_cleanrebuild_20260818` (never live 516). P1
-golden is `draft_000516_p1mini` (core 41604319). ROT out-of-scope is
-canonical. 435 golden retired by design. Push: not authorized (single
-close authorization for 96aa0d6..anchor-recut). **8f107cf quarantined**
-(VL-PFS-8F107CF).
+**Status:** DAO-GAIA ERA-03 CLOSED (2026-08-20). `--fast` and `--full` OVERALL
+PASS. Canonical product SHA **9902d918** (core n=121; extended **472bc9e4**
+n=179). P1 golden **6af4539c** n=115. Frozen snapshot
+`draft_000516_snapshot_era03_20260820`. 60 LCs on live draft (48 baseline
+science-pass + 12 additive + 2 honest zone_noise missing in core scope). BO/FW
+check MAD 7.151 / 8.201 mmag. SUBMIT-01 PASS. Push: **PUSH-STAMP-01 pending**
+(Milan authorization).
 
-Last updated: **2026-08-18** (ANCHOR-516-04).
+Last updated: **2026-08-20** (ERA-03 CLOSE).
 
 ## Canonical run mode (516 freeze)
 

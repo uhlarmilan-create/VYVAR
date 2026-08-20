@@ -3363,3 +3363,118 @@ merging for targets remains deferred.
 colour while RMS orders within a step. Blends filtered before the ladder.
 
 **Status:** IMPL-05 Item C. Tip stamp `4fe84b4`. SESSION-CLOSE 2026-08-16 push.
+
+## DAO-GAIA-ERA-01 M1-M4 - catalog-derived MASTERSTAR membership (2026-08-19)
+
+**Problem (Part C retry).** MS rebuild built membership FROM detection (~3621 -> 2644
+rows). That violated Part-F catalog-derived additive membership: pool shrank, ensembles
+swapped, ZP moved 50-250 mmag. Detection/certificate work is not implicated; the
+membership model was.
+
+**M1 - Membership rows (M1-amend).** Membership envelope = every on-chip Gaia star with
+G <= `target_depth_g` (15.0) + DAO_ONLY reals + bright/sat handling as today. Row existence
+NEVER depends on detection outcome. Census accounting stays deeper (17.5); G in 15.0-17.5 is
+census-only, not membership. `source_state` carries provenance
+(`DETECTED_P1` / `DETECTED_P2` / `FORCED_SEED` / `SEED_REJECTED` / `TOO_FAINT` /
+`BLENDED` / `SAT` / `EDGE`). Production: `expand_detection_to_catalog_membership()` at
+G<=15.0 in `masterstar_gaia_accounting.py`, wired in `generate_masterstar_and_catalog()`
+before zone annotation; enrich/certificate at G<=17.5.
+
+**M2 - Per-frame measurement (M2-amend).** `source_state` is PROVENANCE only, never
+measurement permission. Per-frame forced injection measures ALL MS members under existing
+`force_eligible_masterstar_mask()` rules (sat/variable/extended exclusions unchanged).
+`SEED_REJECTED` and `TOO_FAINT` members are measured exactly as the baseline era measured
+them (aperture at Gaia position). Per-frame QA gates (zone etc.) remain the quality authority.
+
+**M3 - Pool candidacy (this task).** State-agnostic; same zone/sat/variable/mag gates
+as the `477dc8cf` era. Detection state is NOT a pool criterion yet.
+State-based pool policy is **MS-POOL-POLICY-01** (separate task, before first new-field
+draft).
+
+**M4 - Detection completeness.** Diagnostic only (census + per-bin curve in
+certificate/UI). Not a membership gate. Certificate reports `census_accounting` (100%
+on-chip named) separately from `detection_completeness` vs iter4 sandbox reference
+(~96% at G<=14.5).
+
+**M-guard - INV-MS-EXPAND-01.** Catalog expand path is fail-loud: expand must report
+`n_catalog_rows_added`, write census + certificate with fresh mtimes, or raise. A swallowed
+exception on this path is the WCS-bug class and must be impossible. Enforced by
+`verify_ms_expand_guard()` after certificate write.
+
+**Part C L-table recalibration.** L5-new: census accounting = 100%. L1-final: baseline
+48-target set must be a SUBSET of the new LC set (each of the 48 with an LC); additional
+targets reported as additive, not failures; any of the 48 missing = DEVIATE with named
+reason. L2/L3/L6 unchanged. L4: eval harness label merge fix (offset-corrected XVAL).
+
+**Status:** Panel GREEN 2026-08-20; anchor recut authorized and executed
+(VL-ANCHOR-WCSINV -> 9902d918). PUSH-STAMP-01 pending Milan.
+
+## DAO-GAIA-ERA-03 CLOSE - pinned ensembles + check-star pinning (2026-08-20)
+
+**Context.** Production close of DAO-Gaia era on live draft 516 after panel-red
+fixes (INV-PIN-04 color authority, check-pin distance fallback).
+
+**Decisions (binding).**
+
+1. **Pinned-output principle.** For the 48 baseline LC targets,
+   `pinned_ensembles.csv` is the membership authority; re-validation uses
+   data-derived rules only (zone/sat/distance/RMS; color tier limits via
+   INV-PIN-04, not global BP-RP ceiling).
+2. **Check-star pinning = KNAME continuity.** Each pinned target carries
+   `check_catalog_id` in the pin file; export KNAME must match anchor check
+   (`1497613731286514432` for BO/FW on NoFilter_60_2). Sidecar
+   `check_kmag_*.csv` is outside core photometry SHA scope.
+3. **SHA scope 121.** Core hash includes: all `lightcurve_*.csv`,
+   `comp_quality_*.json`, and `comparison_stars_per_target.csv`. +14 additive
+   LCs/comp_quality vs 477dc8cf era; -2 honest zone_noise missing. Extended
+   n=179 adds comp_qa sidecars.
+4. **L2 rescoped (unchanged from ERA-02).** Same-branch regression only; era
+   migration uses T0-T3 + pinned-comp + check-meter bands, not byte-identical
+   `mag_calib_final` vs 477dc8cf for all metadata columns.
+5. **INV-PIN-01..04** wired in `invariants_runtime` + `VYVAR_INVARIANTS.md`.
+
+**Acceptance (2026-08-20).** Panel OVERALL PASS. Product SHA **9902d918**
+n=121. BO/FW check MAD 7.151 / 8.201 mmag (band 6.08-8.22). CV CVn
+`per_frame_saturation`. SUBMIT-01 PASS on BO export post KNAME fix.
+
+**F2 note.** Full Phase-2A re-run on live draft moved core SHA (9902d918 ->
+a751183c) before INV-DAG-01 stop; surgical restore + check_kmag patch only
+preserved SHA. Phase-2A-only is not SHA-safe on live draft.
+
+## DAO-GAIA-ERA-02 ERA-ACCEPT - tiered acceptance for pipeline-era changes (2026-08-19)
+
+**Context.** ERA-02-OPEN investigation + execute run on preserved
+`draft_000516_era_candidate`. Pinned-comp experiment confirmed selection-only
+mechanism (BO +227.6 mmag unpinned -> 0.0 mmag pinned; FW +199.9 -> 0.0).
+L4 228 mmag was harness offset bug (fixed P0).
+
+**Tier model (binding for era migration; T4 for same-branch only).**
+
+| Tier | Gate | Era candidate (2026-08-19) |
+|------|------|----------------------------|
+| **T0** | Certificate PASS, census 100%, empty-sky inv | **PASS** |
+| **T1** | Era-native XVAL RMS (BO/FW) + check MAD bands | **Mixed** (BO XVAL 6.24 vs 4.86; FW 2.64 vs 1.52; BO/FW MAD OK) |
+| **T1-abs** | \|median_calib - Gaia->Johnson V\| for BO/FW/GH; era closer to catalog wins; >50 mmag regression flags | **Mixed** (BO/FW candidate wins; GH baseline wins +192 mmag candidate regression) |
+| **T2** | Post-offset shape: max epoch residual <= 10 mmag vs baseline | Unpinned 18/48; **Pinned 48/48** |
+| **T3** | Pool/per-target comp Jaccard (diagnostic) | Pool 0.704; per-target median 0.333 unpinned |
+| **T4** | L2 byte-continuity (\|median Delta\|<=2, max<=10 mmag) | **Same-branch regression ONLY** - not era migration |
+
+**T1-abs rationale.** VYVAR exports calibrated magnitudes; differential ensemble
+offset is not arbitrary for product consumers who anchor to catalog transforms.
+Gaia DR3 G + BP-RP -> Johnson V via `gaia_johnson.transform_gaia_to_johnson`
+(Table 5.9). Compare median `mag_calib_final` per check star vs transformed
+catalog V; report both eras side-by-side. Regression threshold: candidate
+\|Delta\| worse than baseline by **> 50 mmag** on any of BO/FW/GH.
+
+**L2 rescope.** `L2` continuity gate retained for **same-branch hotfix
+regression** only. Era migration must use T0-T3 + T1-abs + pinned-comp
+sensitivity experiment. Byte-identical `mag_calib_final` vs prior anchor is
+**not** a valid era acceptance criterion (Honeycutt 1992 ensemble rebase).
+
+**Pinned-comp protocol.** Before era sign-off: freeze baseline
+`comparison_stars_per_target.csv`, re-run Phase-2A on candidate MS/flux.
+Collapse to mmag -> selection-only; persist -> flux-path investigation.
+
+**Status:** Panel delivered; architect/Milan decide era acceptance. No anchor
+recut authorized from this task.
+

@@ -10,6 +10,29 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## NEXT SESSION - entry point (2026-08-20 ERA-03 CLOSE)
+
+Local tip: **pending ERA-03 commit series** (origin **`b8d5c74`**). Canonical
+product SHA **9902d918** n=121 / extended **472bc9e4** n=179 on draft 516.
+P1 golden **6af4539c** n=115. `--fast` and `--full` OVERALL PASS on
+`draft_000516_snapshot_era03_20260820`.
+
+| Pri | Next item |
+|-----|-----------|
+| **HIGH** | **MS-POOL-POLICY-01** -- new-field comp pool refill policy (48 pinned targets with color re-validation drops; deferred at ERA-03 close). |
+| **MED** | **ePSF-VALID** -- next-session candidate: internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
+| **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
+| **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
+
+**CLOSED this arc (DAO-GAIA ERA-03):** pinned ensembles (48 targets) +
+check-star pinning (KNAME continuity); INV-PIN-01..04; core scope 97->121
+(+14 additive LCs/comp_quality; -2 honest zone_noise); anchor freeze
+`draft_000516_snapshot_era03_20260820`; panel GREEN; BO/FW MAD 7.151/8.201 mmag;
+SUBMIT-01 PASS on BO export; GH color question merged into **D10-1** (not a
+blocker for era close).
+
+---
+
 ## NEXT SESSION - entry point (2026-08-16 SESSION-CLOSE)
 
 Local tip at close science stamp: **`4fe84b4`** (IMPL-05 C). origin/main after
@@ -98,9 +121,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **P1-RECUT** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Golden is `draft_000516_p1mini` from frozen 516 snapshot; `cal_diag.json` on draft root and platesolve/SETUP (INV-CAL-01). Core `41604319` n=97. 435 p1mini retired. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Frozen `draft_000516_snapshot_era03_20260820`; core `9902d918` n=121. Supersedes ANCHOR-516-04 / `477dc8cf`. `--fast` + `--full` OVERALL PASS. |
+| **P1-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Golden `draft_000516_p1mini` from era03 snapshot; core `6af4539c` n=115. |
 | **A-1-435-RECUT** | -- | **CLOSED 2026-08-18.** 435 golden retired by design (ROT out-of-scope is canonical policy; 435 predates it). Not repaired. Recut onto 516. |
-| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-18.** `--full` photometers frozen `draft_000516_snapshot_cleanrebuild_20260818` (copy-to-tmp; never live draft). Core `477dc8cf` n=97. Fire-proof OVERALL PASS (pipeline 6135 s). 0.85-gate hole closed: MASTERSTAR zone writer + proc sat-limit columns are 0.80 / 52428. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Frozen `draft_000516_snapshot_era03_20260820`; core `9902d918` n=121. `--full` OVERALL PASS. |
 | **TASK-A-REGRESSION** | MED | `test_masterstars_csv_write_survives_bp_rp_failure` (`dev/tests/test_invariants_p2.py`) reimplements fixed A2 control flow in the test body; never calls `generate_masterstar_and_catalog`. A2 CSV-write mechanism untested against pre-fix pipeline. |
 | **F-B01-F-B02** | HIGH | Calibration-path audit: PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated` and PDF may claim VYVAR calibration when none applied. Fix order: `dev/results/CURSOR_RESULT_calpath_audit.md` section 14; decisions section 13. |
 | **QHY294MM-RN-DOUBLE** | LOW/MED | DB read-noise 7.6 e- appears to be bin2 measurement (`draft_303`) that `param_resolver` scales by binning again to 15.2 e-. Minor at current sky levels; material for short/dark exposures. |

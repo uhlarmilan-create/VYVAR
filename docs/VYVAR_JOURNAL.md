@@ -2,6 +2,56 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-20 -- DAO-GAIA ERA-03 CLOSE
+
+Panel GREEN; product SHA **9902d918** n=121. Pinned 48-target comp ensembles +
+check-star pinning (KNAME continuity). `--fast` OVERALL PASS (1479 passed).
+`--full` OVERALL PASS (SHA match; science 60/0; funnel 265 active). F2: surgical
+check_kmag patch (phase2a-only moved SHA -- documented STOP). F3: BO/FW exports
+regenerated; SUBMIT-01 PASS; MAG 134/134 identical vs 477dc8cf era for BO/FW.
+MS-POOL-POLICY-01 deferred HIGH. Report:
+`dev/results/CURSOR_RESULT_ERA03_PRE_CD_20260820.md`.
+
+## 2026-08-20 -- DAO-GAIA ERA-03 pre-C/D (P1-P3 + Part C freeze)
+
+Panel GREEN after check-star pin retry (SHA **9902d918** n=121). Scope table
+97->121: +14 additive LCs/comp_quality, -2 honest zone_noise missing; extended
+472bc9e4 n=179. INV-PIN-01..04 wired. Frozen snapshot
+`draft_000516_snapshot_era03_20260820` (SHA match live 516). P1 mini recut
+(core 6af4539c n=115; manifest 7c3796db). Ledger VL-ANCHOR-WCSINV + VL-P1-GOLD
+updated. CV CVn gating: skip_reason=per_frame_saturation. FW check MAD 8.201 mmag
+(anchor match); BO export KNAME needs photometry re-run after check-pin distance
+fallback fix. `--full` gate in progress. Part D exports/docs commits separable;
+PUSH-STAMP-01 not yet requested.
+
+## 2026-08-19 -- MASTERSTAR-GAIA-01 Part F E3b PAUSE
+
+Part F amendment 1: E3b pass-2 survival before Phase 1. Pass-2 survive new
+params 1796/3315 (54.2%). Comp pool DETECTED survival 1833/2356 (77.8%) < 90%
+gate -> PAUSE. 523 comp members SEED_REJECTED; 116 FORCED_SEED. Full rebuild
+not started. Report: `dev/results/CURSOR_RESULT_MASTERSTAR_GAIA_01_PART_F_PAUSE.md`.
+Parts A-E: see `dev/results/CURSOR_RESULT_MASTERSTAR_GAIA_01.md`.
+
+Architect decision required before Phase 1 (options: proceed anyway, intermediate params,
+FORCED_SEED comp-pool gate, hybrid comp carve-out).
+
+## 2026-08-19 -- MASTERSTAR-GAIA-01 (Parts A-E; F pending)
+
+## 2026-08-18 -- DAO-COMPLETENESS-01 (category-c confirmed)
+
+Measurement only on draft 516 / NoFilter_60_2 (five frames 001,037,076,109,148).
+FOV Gaia G<=17.5 on chip = 11953. DAO 50% match edge = 15.0 (= target_depth_g).
+Bright-end completeness 91% not 100%. Pass 2 is the main catalog fill
+(infolog: pass1 307, pass2 +3314 / 3681 unmatched, total 3621), not ~0.
+Category-c (forced aperture SNR, Gaia nn>=2 px, not DAO-matched): 63-67 per
+frame, 69 unique, 62 persist all 5 frames. Spatial: uniform, not edge/vignette.
+Governing cause: 10 px match floor + 1-1 assignment so Pass 2 never searches
+a Gaia that already has any DAO neighbour; 26 unique FWHM-isolated stars
+G=11.4-13.5 are not in MASTERSTAR (25/26 on all 5 frames). Overlay
+FORCED_APERTURE=0 is a source_type label mismatch (forced_photometry=True
+on 360 Light_001 rows). No code/config change. Push not authorized.
+Report: `dev/results/CURSOR_RESULT_DAO_COMPLETENESS_01.md`.
+
 ## 2026-08-18 -- ANCHOR-516-04 clean 516 freeze + recut
 
 Clean rebuild of draft 516 on tip `4a65675`: MASTERSTAR zones re-annotated
