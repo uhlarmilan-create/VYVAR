@@ -164,7 +164,7 @@
   // Recalibrated 2026-07-30 (P-10 bundle): 3.8 reproduces ~175 ADU threshold
   // and ~3.7% DAO_ONLY on anchor-class data where 2.1 against
   // sigma_clipped_stats was an effective 3.8 sigma.
-  "masterstar_dao_threshold_sigma": 3.8,
+  "masterstar_dao_threshold_sigma": 4.5,
   // Limit on the edge-to-centre distortion ratio still considered benign for
   // the optics.
   "masterstar_distortion_benign_ratio_max": 3.2,
@@ -251,7 +251,7 @@
   // element on the resampled detection image; DAO threshold is N_equiv *
   // rms_conv. Measured from audit Part 2b (rel_err=1.09 -> 3.78; legacy 1.36
   // -> 4.71).
-  "dao_detection_n_equiv": 3.78,
+  "dao_detection_n_equiv": 4.5,
   // Verbose diagnostic logging of the plate solver; for troubleshooting only.
   "debug_platesolver": false,
   // Minimum suitable stars required to build an empirical PSF model (ePSF)

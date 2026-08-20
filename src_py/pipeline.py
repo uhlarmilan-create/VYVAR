@@ -6138,6 +6138,20 @@ def select_comparison_stars_spatial_grid(
         work = work[work["is_usable"].fillna(False).astype(bool)]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_usable_filter"}
+    try:
+        from config import AppConfig  # noqa: PLC0415
+
+        _seed_pool = bool(getattr(AppConfig(), "masterstar_forced_seed_comp_pool_enabled", False))
+    except Exception:  # noqa: BLE001
+        _seed_pool = False
+    if not _seed_pool:
+        if "source_state" in work.columns:
+            work = work[work["source_state"].astype(str).str.strip() != "FORCED_SEED"]
+        if "forced_photometry" in work.columns:
+            _fp = work["forced_photometry"].astype(str).str.strip().str.lower()
+            work = work[~_fp.isin(["true", "1", "yes"])]
+        if work.empty:
+            return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_seed_pool_filter"}
     if require_catalog_match and "catalog" in work.columns:
         work = work[work["catalog"].fillna("").astype(str).str.strip() != ""]
     if require_photometry_ok and "photometry_ok" in work.columns:
@@ -7585,6 +7599,37 @@ def _dao_pass2_annulus_stats(data0: "np.ndarray", cx: float, cy: float) -> tuple
     return float(md), float(sd)
 
 
+def _gaia_chip_xy_from_catalog(
+    cat_df: pd.DataFrame | None,
+    wcs_obj: Any,
+    *,
+    wpx: int,
+    h: int,
+) -> pd.DataFrame:
+    """On-chip Gaia rows with x_gaia/y_gaia for star-mask and born-owned pass2."""
+    import numpy as np
+
+    if cat_df is None or cat_df.empty or "ra_deg" not in cat_df.columns or "dec_deg" not in cat_df.columns:
+        return pd.DataFrame()
+    ra = pd.to_numeric(cat_df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de = pd.to_numeric(cat_df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    ok = np.isfinite(ra) & np.isfinite(de)
+    if not bool(ok.any()):
+        return pd.DataFrame()
+    gx, gy = wcs_obj.world_to_pixel_values(ra[ok], de[ok])
+    sub = cat_df.loc[ok].copy().reset_index(drop=True)
+    sub["x_gaia"] = gx
+    sub["y_gaia"] = gy
+    sub["g_mag"] = pd.to_numeric(sub.get("mag"), errors="coerce")
+    inb = (
+        (sub["x_gaia"] >= 0)
+        & (sub["x_gaia"] < float(wpx))
+        & (sub["y_gaia"] >= 0)
+        & (sub["y_gaia"] < float(h))
+    )
+    return sub.loc[inb].reset_index(drop=True)
+
+
 def _merge_dao_pass1_pass2_tables(
     tbl_pass1: Any,
     pass2_rows: list[dict[str, float]],
@@ -7647,6 +7692,7 @@ def _dao_targeted_pass2_unmatched_gaia(
     bfac: int,
     fwhm_px: float,
     pass2_sigma: float,
+    pass2_center_tol_px: float = 5.0,
     match_sep_arcsec: float,
     wpx: int,
     h: int,
@@ -7654,6 +7700,8 @@ def _dao_targeted_pass2_unmatched_gaia(
     """Run local DAO on Gaia positions with no pass-1 DAO neighbor. Returns (merged_tbl, n_unmatched, n_pass2)."""
     import numpy as np
     from photutils.detection import DAOStarFinder  # type: ignore
+
+    from masterstar_gaia_accounting import Pass2AcceptParams, dao_pass2_try_at_position
 
     if cat_df is None or cat_df.empty or "ra_deg" not in cat_df.columns or "dec_deg" not in cat_df.columns:
         return tbl_pass1, 0, 0
@@ -7696,66 +7744,33 @@ def _dao_targeted_pass2_unmatched_gaia(
 
     sigma_p2 = max(1.5, min(20.0, float(pass2_sigma)))
     fwhm_cut = max(1.2, min(20.0, float(fwhm_px)))
-    hw = 10
+    center_tol = max(0.5, min(10.0, float(pass2_center_tol_px)))
+    p2_params = Pass2AcceptParams(
+        sigma=sigma_p2,
+        center_tol_px=center_tol,
+        fwhm_px=float(fwhm_cut),
+    )
     pass2_rows: list[dict[str, float]] = []
-    center_tol = 5.0
-
-    # Hygiene: targeted-cutout DAO on empty patches floods the log with one
-    # photutils NoDetectionsWarning per miss (thousands per frame). Suppress the
-    # per-occurrence warning, count the misses, and emit a single summary line.
-    from photutils.utils.exceptions import NoDetectionsWarning  # noqa: PLC0415
-
     n_empty_cutouts = 0
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", NoDetectionsWarning)
-        for i in unmatched_idx:
-            x0 = float(gx[i])
-            y0 = float(gy[i])
-            ix, iy = int(round(x0)), int(round(y0))
-            xlo, xhi = max(0, ix - hw), min(int(wpx), ix + hw + 1)
-            ylo, yhi = max(0, iy - hw), min(int(h), iy + hw + 1)
-            if xhi - xlo < 7 or yhi - ylo < 7:
-                continue
-            cutout = data0[ylo:yhi, xlo:xhi]
-            _, local_std = _dao_pass2_annulus_stats(data0, x0, y0)
-            if not (math.isfinite(local_std) and local_std > 0):
-                continue
-            thr2 = max(sigma_p2 * float(local_std), 1e-6)
-            try:
-                finder2 = DAOStarFinder(
-                    fwhm=float(fwhm_cut),
-                    threshold=float(thr2),
-                    n_brightest=None,
-                    **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-                )
-                tloc = finder2(cutout)
-            except Exception:  # noqa: BLE001
-                continue
-            if tloc is None or len(tloc) == 0:
+
+    for i in unmatched_idx:
+        x0 = float(gx[i])
+        y0 = float(gy[i])
+        hit = dao_pass2_try_at_position(
+            data0, x0, y0, wpx=int(wpx), h=int(h), params=p2_params
+        )
+        if not hit.get("accepted"):
+            if str(hit.get("reason", "")) == "no_detection":
                 n_empty_cutouts += 1
-                continue
-            xc = np.asarray(tloc["x_centroid"], dtype=np.float64)
-            yc = np.asarray(tloc["y_centroid"], dtype=np.float64)
-            x_full = xlo + xc
-            y_full = ylo + yc
-            dctr = np.hypot(x_full - x0, y_full - y0)
-            j = int(np.argmin(dctr))
-            if float(dctr[j]) > center_tol:
-                continue
-            flux_np = np.asarray(tloc["flux"], dtype=np.float64)
-            peak_np = (
-                np.asarray(tloc["peak"], dtype=np.float64)
-                if "peak" in tloc.colnames
-                else flux_np
-            )
-            pass2_rows.append(
-                {
-                    "x_full": float(x_full[j]),
-                    "y_full": float(y_full[j]),
-                    "flux": float(flux_np[j]),
-                    "peak": float(peak_np[j]),
-                }
-            )
+            continue
+        pass2_rows.append(
+            {
+                "x_full": float(hit["x_det"]),
+                "y_full": float(hit["y_det"]),
+                "flux": float(hit["flux"]),
+                "peak": float(hit.get("peak", hit["flux"])),
+            }
+        )
 
     if n_empty_cutouts > 0:
         LOGGER.info(
@@ -8018,6 +8033,10 @@ def detect_stars_match_master_reference(
             _sigma_p2_m = float(_cfg_dao.masterstar_dao_pass2_sigma)
         except (TypeError, ValueError):
             _sigma_p2_m = 1.9
+        try:
+            _ctol_p2_m = float(_cfg_dao.masterstar_dao_pass2_center_tol_px)
+        except (TypeError, ValueError):
+            _ctol_p2_m = 5.0
         tbl, _n_unmatched_master, _n_pass2_raw_m = _dao_targeted_pass2_unmatched_gaia(
             data0,
             tbl,
@@ -8026,6 +8045,7 @@ def detect_stars_match_master_reference(
             bfac=int(bfac),
             fwhm_px=float(max(1.2, _base_fw_m)),
             pass2_sigma=float(_sigma_p2_m),
+            pass2_center_tol_px=float(_ctol_p2_m),
             match_sep_arcsec=float(match_sep_arcsec),
             wpx=int(_wpx_m),
             h=int(_h_m),
@@ -8745,6 +8765,7 @@ def detect_stars_and_match_catalog(
     else:
         _base_fw = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_c)
     _dao_n_equiv_used: float | None = None
+    _derived_tol: Any = None
     try:
         from photutils.detection import DAOStarFinder  # type: ignore
 
@@ -8753,9 +8774,33 @@ def detect_stars_and_match_catalog(
         dao_scale = _dao_auto_binning_factor(*data0.shape)
         data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
         fwhm_eff = max(1.2, _base_fw / float(bfac))
+        from masterstar_gaia_accounting import (  # noqa: PLC0415
+            Pass2AcceptParams,
+            dao_pass2_born_owned_rows,
+            dedup_pass1_spatial,
+            estimate_star_masked_sky_sigma,
+            merge_dao_pass1_pass2_born_owned,
+            star_mask_from_gaia_xy,
+        )
+
+        _gaia_chip_det = _gaia_chip_xy_from_catalog(cat_df, wcs_obj, wpx=int(wpx), h=int(h))
+        _gx_sm = (
+            pd.to_numeric(_gaia_chip_det["x_gaia"], errors="coerce").to_numpy(dtype=np.float64)
+            if len(_gaia_chip_det)
+            else np.asarray([], dtype=np.float64)
+        )
+        _gy_sm = (
+            pd.to_numeric(_gaia_chip_det["y_gaia"], errors="coerce").to_numpy(dtype=np.float64)
+            if len(_gaia_chip_det)
+            else np.asarray([], dtype=np.float64)
+        )
+        _smask = star_mask_from_gaia_xy(_gx_sm, _gy_sm, wpx=int(wpx), h=int(h), fwhm_px=float(_base_fw))
+        sky_sig, _sky_med_det = estimate_star_masked_sky_sigma(data0, star_mask=_smask)
         rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
         sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
-        std_dao = rms_conv
+        std_dao = sky_sig
+        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+            std_dao = rms_conv
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             try:
                 std_dao = float(np.nanstd(arr))
@@ -8797,17 +8842,18 @@ def detect_stars_and_match_catalog(
                 "catalog_match_mode": "full_cone",
                 "reason": "std_dao_zero",
             }
-        _thr, _n_equiv_used = _dao_detection_threshold_adu(
-            float(std_dao), cfg=AppConfig(), dao_threshold_sigma=float(_ds),
-        )
-        _dao_n_equiv_used = float(_n_equiv_used)
+        _thr_sigma = float(getattr(_cfg_df, "masterstar_dao_threshold_sigma", _ds))
+        if not math.isfinite(_thr_sigma) or _thr_sigma <= 0:
+            _thr_sigma = float(_ds)
+        _thr = max(_thr_sigma * float(std_dao), 1e-6)
+        _dao_n_equiv_used = float(_thr_sigma)
         # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
         try:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
             print(
                 f"DEBUG DAO INPUT: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} n_equiv={float(_n_equiv_used):.2f} "
-                f"sigma_pp_diag={float(sigma_pp_diag):.2f} "
+                f"threshold={float(_thr):.1f} sky_sigma={float(std_dao):.2f} n_sigma={float(_thr_sigma):.2f} "
+                f"rms_conv_diag={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
                 f"fwhm={float(fwhm_eff):.2f}"
             )
         except Exception:  # noqa: BLE001
@@ -8829,20 +8875,86 @@ def detect_stars_and_match_catalog(
             tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
         n_pass1_dao = int(len(tbl)) if tbl is not None else 0
         try:
+            _dedup_px = float(_cfg_df.masterstar_dao_pass1_dedup_px)
+        except (TypeError, ValueError):
+            _dedup_px = 0.75
+        if tbl is not None and len(tbl) > 0:
+            tbl = dedup_pass1_spatial(tbl, sep_px=max(0.25, min(2.0, _dedup_px)))
+        try:
             _sigma_p2_cfg = float(_cfg_df.masterstar_dao_pass2_sigma)
         except (TypeError, ValueError):
-            _sigma_p2_cfg = 1.9
-        tbl, _n_unmatched_gaia, _n_pass2_raw = _dao_targeted_pass2_unmatched_gaia(
+            _sigma_p2_cfg = 4.0
+        try:
+            _depth_p2 = float(_cfg_df.masterstar_gaia_census_target_depth_g)
+        except (TypeError, ValueError):
+            _depth_p2 = 15.0
+        try:
+            _edge_p2 = float(_cfg_df.masterstar_gaia_census_edge_margin_px)
+        except (TypeError, ValueError):
+            _edge_p2 = 10.0
+        _match_r_coarse_px = _catalog_match_radius_px(
+            wcs_obj, match_sep_arcsec=float(match_sep_arcsec), wpx=int(wpx), h=int(h)
+        )
+        _dao_x_p1 = np.asarray([], dtype=np.float64)
+        _dao_y_p1 = np.asarray([], dtype=np.float64)
+        if tbl is not None and len(tbl) > 0:
+            xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
+            yb = np.asarray(tbl["y_centroid"], dtype=np.float64)
+            _dao_x_p1, _dao_y_p1 = _dao_xy_binned_to_full(xb, yb, int(bfac))
+        from dao_gaia_calibration import (  # noqa: PLC0415
+            compute_pass1_astrometric_residuals_px,
+            derive_tolerances_from_residuals,
+            plate_scale_arcsec_per_px_from_wcs,
+        )
+
+        _gg_sm = (
+            pd.to_numeric(_gaia_chip_det.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)
+            if len(_gaia_chip_det) and "g_mag" in _gaia_chip_det.columns
+            else (
+                pd.to_numeric(_gaia_chip_det.get("mag"), errors="coerce").to_numpy(dtype=np.float64)
+                if len(_gaia_chip_det) and "mag" in _gaia_chip_det.columns
+                else np.asarray([], dtype=np.float64)
+            )
+        )
+        _res_dr = compute_pass1_astrometric_residuals_px(
+            _dao_x_p1,
+            _dao_y_p1,
+            _gx_sm,
+            _gy_sm,
+            coarse_match_px=float(_match_r_coarse_px),
+        )
+        _derived_tol = derive_tolerances_from_residuals(
+            _res_dr,
+            np.asarray([], dtype=np.float64),
+            fwhm_px=float(max(1.2, _base_fw)),
+            plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs(wcs_obj),
+            pass1_sigma=float(_thr_sigma),
+            pass2_sigma=float(_sigma_p2_cfg),
+            match_k=float(getattr(_cfg_df, "masterstar_dao_match_radius_k", 1.7)),
+            centroid_floor_px=float(getattr(_cfg_df, "masterstar_dao_centroid_qa_floor_px", 1.0)),
+            centroid_cap_px=float(getattr(_cfg_df, "masterstar_dao_centroid_qa_cap_px", 3.0)),
+        )
+        _match_r_px_p2 = float(_derived_tol.match_radius_px)
+        p2_params = Pass2AcceptParams(
+            sigma=max(1.5, min(20.0, float(_sigma_p2_cfg))),
+            center_tol_px=max(0.5, min(10.0, float(_derived_tol.pass2_center_tol_px))),
+            fwhm_px=float(max(1.2, _base_fw)),
+        )
+        _pass2_rows, _n_unmatched_gaia, _n_pass2_raw, _amb_p2 = dao_pass2_born_owned_rows(
             data0,
             tbl,
-            cat_df=cat_df,
-            wcs_obj=wcs_obj,
+            gaia_chip=_gaia_chip_det,
             bfac=int(bfac),
             fwhm_px=float(max(1.2, _base_fw)),
-            pass2_sigma=float(_sigma_p2_cfg),
-            match_sep_arcsec=float(match_sep_arcsec),
+            pass2_params=p2_params,
+            target_depth_g=float(_depth_p2),
+            edge_margin_px=float(_edge_p2),
+            match_r_px=float(_match_r_px_p2),
             wpx=int(wpx),
             h=int(h),
+        )
+        tbl = merge_dao_pass1_pass2_born_owned(
+            tbl, _pass2_rows, bfac=int(bfac), gaia_chip=_gaia_chip_det
         )
         n_merged_dao = int(len(tbl)) if tbl is not None else 0
         LOGGER.info(
@@ -8931,6 +9043,14 @@ def detect_stars_and_match_catalog(
     x, y = _dao_xy_binned_to_full(xb, yb, bfac)
     flux = np.asarray(tbl["flux"], dtype=np.float64)
     peak_dao = np.asarray(tbl["peak"], dtype=np.float64) if "peak" in tbl.colnames else np.full(n, np.nan)
+    if "vy_seed_catalog_id" in tbl.colnames:
+        vy_seed_cid = np.asarray(tbl["vy_seed_catalog_id"], dtype=object)
+    else:
+        vy_seed_cid = np.array([""] * n, dtype=object)
+    if "vy_ambiguous_owner" in tbl.colnames:
+        vy_amb_owner = np.asarray(tbl["vy_ambiguous_owner"], dtype=bool)
+    else:
+        vy_amb_owner = np.zeros(n, dtype=bool)
     ra_deg, dec_deg = _all_pix2world_icrs_deg(wcs_obj, x, y)
     det_coords = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
 
@@ -9033,6 +9153,9 @@ def detect_stars_and_match_catalog(
         pmax_arr = pmax_arr[snr_keep]
         _sat_block = {k: np.asarray(v)[snr_keep] for k, v in _sat_block.items()}
         _sat_csv, n_sat_pk, n_sat_pl = _proc_sat_block_for_csv(_sat_block)
+        vy_seed_cid = vy_seed_cid[snr_keep]
+        vy_amb_owner = vy_amb_owner[snr_keep]
+        _dao_pass = _dao_pass[snr_keep]
         n = int(n_snr)
         log_event(
             f"DAO po SNR filtri (sky_mad median+{_snr_k:.1f}xsigma; {_exempt_tag}): {n}/{n_spatial} bodov "
@@ -9171,6 +9294,23 @@ def detect_stars_and_match_catalog(
                 used_cat: set[int] = set()
                 cat_row = np.full(n, -1, dtype=np.int64)
                 sepa_out = np.full(n, np.nan, dtype=np.float64)
+                # Born-owned pass2: pre-lock seed catalog_id (no greedy reassignment).
+                _cid_to_cr = {
+                    str(cid_c[_k]).strip(): _k for _k in range(nc) if str(cid_c[_k]).strip()
+                }
+                for i in range(n):
+                    if int(_dao_pass[i]) != 2:
+                        continue
+                    sc = str(vy_seed_cid[i] if i < len(vy_seed_cid) else "").strip()
+                    if not sc:
+                        continue
+                    cr_b = _cid_to_cr.get(sc)
+                    if cr_b is None or cr_b in used_cat or i in used_det:
+                        continue
+                    used_det.add(i)
+                    used_cat.add(cr_b)
+                    cat_row[i] = int(cr_b)
+                    sepa_out[i] = 0.0
                 for s, i, cr in pairs:
                     if i in used_det or cr in used_cat:
                         continue
@@ -9321,6 +9461,9 @@ def detect_stars_and_match_catalog(
                 log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
 
         _apply_post_match_identity_gate()
+        if len(df_out) == int(n):
+            df_out["vy_dao_pass"] = np.asarray(_dao_pass, dtype=np.int16)
+            df_out["ambiguous_owner"] = np.asarray(vy_amb_owner, dtype=bool)
         if n >= 8:
             _dao_match_rate = float(n_matched) / float(max(1, n))
             if _dao_match_rate < 0.88:
@@ -9639,6 +9782,9 @@ def detect_stars_and_match_catalog(
         "catalog_match_fraction_target": 0.95,
         "catalog_match_fraction_met": (
             bool((float(n_matched_final) / float(max(1, len(df_out)))) >= 0.95) if len(df_out) else True
+        ),
+        "dao_gaia_derived_tol": (
+            _derived_tol.to_dict() if _derived_tol is not None else None
         ),
         **meta_mag,
     }
@@ -13041,6 +13187,24 @@ def generate_masterstar_and_catalog(
     try:
         # Critical: keep Gaia IDs as strings (avoid float/scientific precision loss).
         df_final = pd.read_csv(csv_path, low_memory=False, dtype={"catalog_id": str, "name": str})
+        # Preserve DAO pass provenance through astrometry_optimizer CSV round-trip.
+        for _prov_col in ("vy_dao_pass", "ambiguous_owner"):
+            if _prov_col not in df_out.columns:
+                continue
+            _cid_out = df_out.get("catalog_id", pd.Series([""] * len(df_out))).map(
+                lambda c: str(c).strip()
+            )
+            _map = df_out.assign(_cid=_cid_out).drop_duplicates("_cid", keep="last").set_index("_cid")[
+                _prov_col
+            ]
+            _cid_fin = df_final.get("catalog_id", pd.Series([""] * len(df_final))).map(
+                lambda c: str(c).strip()
+            )
+            df_final[_prov_col] = _cid_fin.map(_map)
+            if _prov_col == "vy_dao_pass":
+                df_final[_prov_col] = pd.to_numeric(df_final[_prov_col], errors="coerce").fillna(1)
+            elif _prov_col == "ambiguous_owner":
+                df_final[_prov_col] = df_final[_prov_col].fillna(False).astype(bool)
     except Exception as _df_final_exc:  # noqa: BLE001
         log_event(
             f"MASTERSTAR: re-read of {Path(csv_path).name} failed ({_df_final_exc!s}); "
@@ -13116,6 +13280,66 @@ def generate_masterstar_and_catalog(
         _wcs_rt_p99 = None
         _wcs_rt_pass = None
         _identity_qa = {}
+    # DAO-GAIA-ERA-01 M1: expand detection table to catalog-derived membership before zones/enrich.
+    # INV-MS-EXPAND-01: when cone+WCS exist, expand must succeed or raise (no silent skip).
+    _chip_ms: pd.DataFrame | None = None
+    _membership_expand_meta: dict[str, Any] = {}
+    _cone_gaia_pre = Path(platesolve_dir) / "field_catalog_cone.csv"
+    _wcs_ok_pre = bool(_has_valid_wcs(hdr))
+    if _cone_gaia_pre.is_file() and _wcs_ok_pre:
+        from masterstar_gaia_accounting import (  # noqa: PLC0415
+            expand_detection_to_catalog_membership,
+            gaia_on_chip_from_cone,
+        )
+        from astropy.wcs import WCS as _WCS_expand  # noqa: PLC0415
+
+        LOGGER.info(
+            "[M1] catalog membership expand: cone=%s wcs_ok=%s n_ms_in=%d",
+            True,
+            True,
+            int(len(df_final)),
+        )
+        _cone_df_pre = read_vyvar_csv(_cone_gaia_pre, low_memory=False, dtype={"catalog_id": str})
+        _nax1_pre = int(hdr.get("NAXIS1") or 0)
+        _nax2_pre = int(hdr.get("NAXIS2") or 0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FITSFixedWarning)
+            _wcs_pre = _WCS_expand(hdr)
+        _ra_pre = pd.to_numeric(_cone_df_pre["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+        _de_pre = pd.to_numeric(_cone_df_pre["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+        _ok_pre = np.isfinite(_ra_pre) & np.isfinite(_de_pre)
+        _gx_pre, _gy_pre = _wcs_pre.world_to_pixel_values(_ra_pre[_ok_pre], _de_pre[_ok_pre])
+        _chip_ms = gaia_on_chip_from_cone(
+            _cone_df_pre, gx=_gx_pre, gy=_gy_pre, ok_mask=_ok_pre, wpx=_nax1_pre, h=_nax2_pre
+        )
+        _membership_depth_g = float(
+            getattr(_cfg_ms, "masterstar_gaia_census_target_depth_g", None) or 15.0
+        )
+        df_final, _membership_expand_meta = expand_detection_to_catalog_membership(
+            df_final,
+            _chip_ms,
+            membership_depth_g=_membership_depth_g,
+            wpx=_nax1_pre,
+            h=_nax2_pre,
+        )
+        det_meta["catalog_derived_membership"] = dict(_membership_expand_meta)
+        LOGGER.info(
+            "[M1] catalog-derived membership: +%d Gaia rows (depth G<=%.1f), n_out=%d",
+            int(_membership_expand_meta.get("n_catalog_rows_added", 0)),
+            _membership_depth_g,
+            int(_membership_expand_meta.get("n_rows_out", len(df_final))),
+        )
+        log_event(
+            "MASTERSTAR catalog-derived membership: "
+            f"+{int(_membership_expand_meta.get('n_catalog_rows_added', 0))} Gaia rows "
+            f"(depth G<={_membership_depth_g:.1f}), "
+            f"n_out={int(_membership_expand_meta.get('n_rows_out', len(df_final)))}"
+        )
+    elif _cone_gaia_pre.is_file() or _wcs_ok_pre:
+        raise RuntimeError(
+            "INV-MS-EXPAND-01: catalog membership expand blocked "
+            f"(cone={_cone_gaia_pre.is_file()} wcs_ok={_wcs_ok_pre})"
+        )
     # VSX stamp deferred until after write_photometry_plan_files (VT CSV created there).
     df_final = _annotate_masterstars_flux_zones(
         df_final,
@@ -13139,6 +13363,137 @@ def generate_masterstar_and_catalog(
     try:
         cid = df_final.get("catalog_id", pd.Series([""] * len(df_final))).fillna("").astype(str).str.strip()
         df_final["source_type"] = np.where(cid.ne(""), "GAIA_MATCHED", "DAO_ONLY")
+        from masterstar_gaia_accounting import (  # noqa: PLC0415
+            enrich_masterstar_gaia_complete,
+            gaia_on_chip_from_cone,
+            write_gaia_census_and_verify,
+        )
+        from astropy.wcs import WCS as _WCS_enrich  # noqa: PLC0415
+
+        _cone_gaia = Path(platesolve_dir) / "field_catalog_cone.csv"
+        if not _cone_gaia.is_file():
+            raise RuntimeError("MASTERSTAR Gaia-complete enrich: missing field_catalog_cone.csv")
+        if not _has_valid_wcs(hdr):
+            raise RuntimeError("MASTERSTAR Gaia-complete enrich: MASTERSTAR WCS missing/invalid")
+        _cone_df = read_vyvar_csv(_cone_gaia, low_memory=False, dtype={"catalog_id": str})
+        _nax1_g = int(hdr.get("NAXIS1") or 0)
+        _nax2_g = int(hdr.get("NAXIS2") or 0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FITSFixedWarning)
+            _wcs_g = _WCS_enrich(hdr)
+        _ra_g = pd.to_numeric(_cone_df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+        _de_g = pd.to_numeric(_cone_df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+        _ok_g = np.isfinite(_ra_g) & np.isfinite(_de_g)
+        _gx, _gy = _wcs_g.world_to_pixel_values(_ra_g[_ok_g], _de_g[_ok_g])
+        _chip = (
+            _chip_ms
+            if _chip_ms is not None and len(_chip_ms)
+            else gaia_on_chip_from_cone(
+                _cone_df, gx=_gx, gy=_gy, ok_mask=_ok_g, wpx=_nax1_g, h=_nax2_g
+            )
+        )
+        with fits.open(masterstar_fits, memmap=False) as _hg:
+            _raw_g = np.asarray(_hg[0].data, dtype=np.float32)
+        _, _med_g, _ = plain_mean_med_std(_raw_g, sigma=3.0, maxiters=3)
+        _data0_g = np.nan_to_num(
+            (_raw_g - _med_g).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0
+        )
+        _fwhm_g = float(det_meta.get("dao_fwhm_px") or header_core_fwhm_px(hdr) or 3.5)
+        _membership_depth_g = float(
+            getattr(_cfg_ms, "masterstar_gaia_census_target_depth_g", None) or 15.0
+        )
+        _census_depth_g = 17.5  # M1-amend: census accounting depth; G 15-17.5 census-only
+        df_final, _gaia_census, _gaia_meta = enrich_masterstar_gaia_complete(
+            df_final,
+            data0=_data0_g,
+            gaia_on_chip=_chip,
+            cfg=_cfg_ms,
+            wpx=_nax1_g,
+            h=_nax2_g,
+            fwhm_px=_fwhm_g,
+            target_depth_g=_census_depth_g,
+            sat_limit_adu=det_meta.get("saturate_limit_adu"),
+            identity_lock_only=False,
+            catalog_derived_membership=bool(_membership_expand_meta),
+            tolerance_overrides=det_meta.get("dao_gaia_derived_tol"),
+        )
+        _census_inv = write_gaia_census_and_verify(
+            _gaia_census,
+            n_on_chip=len(_chip),
+            census_path=Path(platesolve_dir) / "gaia_source_state_census.csv",
+        )
+        try:
+            from dao_gaia_calibration import (  # noqa: PLC0415
+                build_calibration_certificate,
+                write_calibration_certificate,
+            )
+
+            _setup_nm = str(setup_name or platesolve_dir.name or "MASTERSTAR")
+            _tol_d = det_meta.get("dao_gaia_derived_tol") or {}
+            _dao_x_f = pd.to_numeric(df_final.get("x"), errors="coerce").to_numpy(dtype=np.float64)
+            _dao_y_f = pd.to_numeric(df_final.get("y"), errors="coerce").to_numpy(dtype=np.float64)
+            _cert = build_calibration_certificate(
+                setup=_setup_nm,
+                wcs_obj=_wcs_g,
+                data0=_data0_g,
+                dao_x=_dao_x_f,
+                dao_y=_dao_y_f,
+                gaia_x=pd.to_numeric(_chip.get("x_gaia"), errors="coerce").to_numpy(dtype=np.float64),
+                gaia_y=pd.to_numeric(_chip.get("y_gaia"), errors="coerce").to_numpy(dtype=np.float64),
+                gaia_g=pd.to_numeric(_chip.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64),
+                fwhm_px=float(_fwhm_g),
+                pass1_sigma=float(_tol_d.get("pass1_sigma") or _cfg_ms.masterstar_dao_threshold_sigma),
+                pass2_sigma=float(_tol_d.get("pass2_sigma") or _cfg_ms.masterstar_dao_pass2_sigma),
+                seed_snr_min=float(_cfg_ms.masterstar_forced_seed_snr_min),
+                target_depth_g=float(_census_depth_g),
+                edge_margin_px=float(_cfg_ms.masterstar_gaia_census_edge_margin_px),
+                cfg=_cfg_ms,
+                ms_df=df_final,
+                census_df=_gaia_census,
+                repo_root=Path(__file__).resolve().parent.parent,
+            )
+            _cert_path = write_calibration_certificate(
+                _cert, Path(platesolve_dir), fail_closed=True
+            )
+            if _membership_expand_meta:
+                from masterstar_gaia_accounting import verify_ms_expand_guard  # noqa: PLC0415
+
+                _ok_exp, _det_exp = verify_ms_expand_guard(
+                    _membership_expand_meta,
+                    census_path=Path(platesolve_dir) / "gaia_source_state_census.csv",
+                    cert_path=_cert_path,
+                )
+                if not _ok_exp:
+                    from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+                    raise InvariantViolation("INV-MS-EXPAND-01", _det_exp)
+                log_event(f"INV-MS-EXPAND-01 PASS: {_det_exp}")
+            det_meta["dao_gaia_calibration"] = _cert.to_dict()
+            det_meta["dao_gaia_calibration_path"] = str(_cert_path)
+            log_event(
+                f"DAO-Gaia calibration certificate {_cert.status}: "
+                f"match_r={_cert.derived.match_radius_px:.1f}px "
+                f"centroid={_cert.derived.pass2_center_tol_px:.1f}px "
+                f"empty-sky det={_cert.empty_sky.inv_det} seed={_cert.empty_sky.inv_seed}"
+            )
+        except Exception as _cal_exc:  # noqa: BLE001
+            from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+            if isinstance(_cal_exc, InvariantViolation):
+                raise
+            if _membership_expand_meta:
+                raise RuntimeError(
+                    f"INV-MS-EXPAND-01: certificate write failed: {_cal_exc!s}"
+                ) from _cal_exc
+            log_event(f"DAO-Gaia calibration certificate skipped: {_cal_exc!s}")
+        det_meta["gaia_census_meta"] = _gaia_meta
+        det_meta["gaia_census_invariants"] = _census_inv.get("invariants") or []
+        log_event(
+            f"MASTERSTAR Gaia census: {len(_chip)} on-chip, "
+            f"forced_seed={_gaia_meta.get('n_forced_seed', 0)}, "
+            f"leftover_promotions={_gaia_meta.get('n_leftover_promotions', 0)}, "
+            f"INV-MS-CENSUS-01 {_census_inv.get('detail')}"
+        )
         _gdb_fill = str(_cfg_ms.gaia_db_path or "").strip()
         df_final, _n_bp_fill, _n_bp_miss = _fill_masterstars_gaia_matched_bp_rp_from_local_db(
             df_final,
@@ -13250,6 +13605,16 @@ def generate_masterstar_and_catalog(
             except Exception as _ms_census_exc:  # noqa: BLE001
                 LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
     except Exception as exc:  # noqa: BLE001
+        from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+        if isinstance(exc, InvariantViolation):
+            raise
+        _cone_gaia_fail = Path(platesolve_dir) / "field_catalog_cone.csv"
+        if _cone_gaia_fail.is_file() and _has_valid_wcs(hdr):
+            raise RuntimeError(
+                f"MASTERSTAR Gaia-complete enrich failed on production path: {exc!s}"
+            ) from exc
+        LOGGER.exception("[M1] MASTERSTAR source_type annotate failed: %s", exc)
         log_event(f"MASTERSTAR source_type annotate failed: {exc!s}")
     _vyvar_df_to_csv(df_final, csv_path)
     _n_det = int(len(df_final))
@@ -13523,6 +13888,7 @@ def generate_masterstar_and_catalog(
         "faintest_mag_limit": det_meta.get("faintest_mag_limit"),
         "n_dropped_fainter_than_limit": det_meta.get("n_dropped_fainter_than_limit"),
         "field_catalog_cone_csv": det_meta.get("field_catalog_cone_csv"),
+        "catalog_derived_membership": det_meta.get("catalog_derived_membership"),
         "dao_threshold_sigma": det_meta.get("dao_threshold_sigma"),
         "masterstar_match_png": "",
     }

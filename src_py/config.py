@@ -752,10 +752,10 @@ class AppConfig:
     masterstar_platesolve_sip_max_order: int = 4
     #: Najnizsi SIP stupen pri pade vyssich (typicky 3; nie menej ako 2).
     masterstar_platesolve_sip_min_order: int = 3
-    #: DAOStarFinder threshold = sigmaxRMS len pre MASTERSTAR katalog (hlbsia detekcia; ciel viac tisic hviezd).
-    masterstar_dao_threshold_sigma: float = 3.8
-    #: T4-1 Option B: measured N_equiv on resampled detection image (Part 2b rel_err=1.09 -> 3.78).
-    dao_detection_n_equiv: float = 3.78
+    #: DAOStarFinder pass1 threshold = this x star-masked sky sigma (NOT rms_conv; DAO-GAIA iter4).
+    masterstar_dao_threshold_sigma: float = 4.5
+    #: Deprecated alias kept for zone-classifier T1 only; detection uses masterstar_dao_threshold_sigma.
+    dao_detection_n_equiv: float = 4.5
     #: E.2: max DAO-vs-WCS centroid shift (x FWHM) before WCS pixel fallback on matched stars.
     dao_centroid_max_shift_fwhm: float = 1.0
     #: D5-2 / C-1 admission gate: reject comps with peak above this fraction of full well (limit col is 85pct).
@@ -764,8 +764,34 @@ class AppConfig:
     masterstar_prematch_peak_sigma_floor: float = 1.8
     #: MASTERSTAR katalog: DAO FWHM z najlepsieho zdrojoveho snimku (``best_frame_fwhm_px``), nie median ``VY_FWHM`` v hlavicke.
     masterstar_use_best_frame_fwhm: bool = True
-    #: MASTERSTAR DAO pass 2: lokalny prah v sigma pri cielenych Gaia poziciach bez DAO zhody (min. 1.5 v kode).
-    masterstar_dao_pass2_sigma: float = 1.9
+    #: MASTERSTAR DAO pass 2: local annulus sigma at Gaia seed positions (born-owned; INV-DET-FALSEFILL-01).
+    masterstar_dao_pass2_sigma: float = 4.0
+    #: MASTERSTAR DAO pass 2: max centroid offset [px] for targeted cutout acceptance (INV-DET-FALSEFILL-01 audit).
+    masterstar_dao_pass2_center_tol_px: float = 2.0
+    #: Pass1 spatial dedup radius [px] before pass2 (iter4 I6).
+    masterstar_dao_pass1_dedup_px: float = 0.75
+    #: Gaia-complete census + pass2 seed window: maximum G magnitude (default 15.0).
+    masterstar_gaia_census_target_depth_g: float = 15.0
+    #: FORCED_SEED admission (MASTERSTAR-GAIA-01): max COM centroid offset from propagated Gaia [px].
+    masterstar_forced_seed_centroid_max_px: float = 2.0
+    #: FORCED_SEED admission: minimum aperture SNR on local annulus background.
+    masterstar_forced_seed_snr_min: float = 4.0
+    #: FORCED_SEED / leftover promotion: greedy match radius for leftover detections to Gaia [px].
+    masterstar_lock_leftover_radius_px: float = 3.0
+    #: Lock-existing assignment: max shift from locked catalog_id xy to detection [px].
+    masterstar_lock_pair_tol_px: float = 3.0
+    #: Gaia-complete census: edge margin [px] for EDGE state (matches target_depth edge band).
+    masterstar_gaia_census_edge_margin_px: float = 10.0
+    #: Comp/CT pool: admit FORCED_SEED stars (default off; separate future decision).
+    masterstar_forced_seed_comp_pool_enabled: bool = False
+    #: DAO-GAIA-ERA-01 (D-A): match radius = k x astrometric residual p95 [px] (validated ~1.7 -> 3 px @ p95~1.78).
+    masterstar_dao_match_radius_k: float = 1.7
+    #: DAO-GAIA-ERA-01: centroid QA floor/cap when deriving pass2/seed tolerances from residual p95 [px].
+    masterstar_dao_centroid_qa_floor_px: float = 1.0
+    masterstar_dao_centroid_qa_cap_px: float = 3.0
+    #: Empty-sky audit (INV-DET/SEED-FALSEFILL-01): max false-accept rate at MS build.
+    masterstar_dao_empty_sky_false_accept_max: float = 0.01
+    masterstar_dao_empty_sky_target_n: int = 2200
     # WAVE-B STEP 6: masterstar_platesolve_prewrite_rms_max_px / _prewrite_relaxed_rms_max_px /
     # _nn_refine_max_rms_px and masterstar_sip_force_rms_guard_ratio hardcoded as solver internals
     # (module constants in pipeline.py / vyvar_platesolver.py).
@@ -2086,7 +2112,7 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.masterstar_dao_threshold_sigma = 1.8
-        self.masterstar_dao_threshold_sigma = max(0.1, min(6.0, float(self.masterstar_dao_threshold_sigma)))
+        self.masterstar_dao_threshold_sigma = max(0.1, min(12.0, float(self.masterstar_dao_threshold_sigma)))
         try:
             self.dao_detection_n_equiv = float(data.get("dao_detection_n_equiv", self.dao_detection_n_equiv))
         except (TypeError, ValueError):

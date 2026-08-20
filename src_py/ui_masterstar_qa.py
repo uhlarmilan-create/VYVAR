@@ -551,67 +551,38 @@ def render_masterstar_qa(
             _gaia_dao_raw_pct = 100.0 * float(_n_dao_detected_fb) / float(_cone_rows)
             _gaia_dao_is_raw_only = True
             _n_gaia_undetected = int(_cone_rows) - int(_n_dao_detected_fb)
+        _census_comp: dict | None = None
+        _census_path = setup_dir / "gaia_source_state_census.csv"
+        if _census_path.is_file():
+            try:
+                from config import AppConfig
+                from dao_gaia_calibration import census_completeness_above_depth
+
+                _census_df = read_vyvar_csv(_census_path, low_memory=False, dtype={"catalog_id": str})
+                _depth_ui = float(AppConfig().masterstar_gaia_census_target_depth_g)
+                _census_comp = census_completeness_above_depth(_census_df, depth_g=_depth_ui)
+            except Exception:  # noqa: BLE001
+                _census_comp = None
         m1, m2, m3, m4 = st.columns(4)
         with m1:
             st.metric("Stars mapped in frame", n_all)
         with m2:
             st.metric("DAO->Gaia Match (%)", f"{match_rate:.2f}")
         with m3:
-            if _gaia_dao_pct is not None:
-                _g50_txt = _g_lim_50_display or (
-                    f">= {_g_lim_50:.1f} (frame deeper than reference)"
-                    if _g_lim_50_censored and _g_lim_50 is not None
-                    else (f"{_g_lim_50:.2f}" if _g_lim_50 is not None else "?")
-                )
-                _g90_txt = _g_lim_90_display or (
-                    f">= {_g_lim_90:.1f} (frame deeper than reference)"
-                    if _g_lim_90_censored and _g_lim_90 is not None
-                    else (f"{_g_lim_90:.2f}" if _g_lim_90 is not None else "?")
-                )
-                _help_lines = [
-                    _completeness_50_label or "completeness_50: matched / (matched + genuinely-missed) in-frame",
-                    f"G_lim_50: {_g50_txt}"
-                    + (" [right-censored: fit exceeded reference depth]" if _g_lim_50_censored else ""),
-                    f"G_lim_90: {_g90_txt}"
-                    + (" [right-censored]" if _g_lim_90_censored else ""),
-                    f"Fit: {_fit_method if _fit_method is not None else '?'}",
-                    f"Match depth: {_match_depth if _match_depth is not None else '?'}",
-                    f"Matched: {_n_gaia_matched if _n_gaia_matched is not None else '?'}",
-                    f"Off-frame: {_n_gaia_off_frame if _n_gaia_off_frame is not None else '?'}",
-                    f"Below limit: {_n_gaia_below_limit if _n_gaia_below_limit is not None else '?'}",
-                    f"Blended: {_n_gaia_blended if _n_gaia_blended is not None else '?'}",
-                    f"Genuinely missed: {_n_gaia_missed if _n_gaia_missed is not None else '?'}",
-                    f"  missed below G90 (2-pass metric): {_n_missed_below_g90 if _n_missed_below_g90 is not None else '?'}",
-                    f"  missed fade-zone (G90..G50): {_n_missed_fadezone if _n_missed_fadezone is not None else '?'}",
-                ]
-                if _gaia_dao_raw_pct is not None:
-                    _help_lines.append(f"Raw (cone legacy): {_gaia_dao_raw_pct:.1f}%")
+            if _census_comp and _census_comp.get("ok"):
+                _c_pct = float(_census_comp["completeness_pct"])
+                _c_num = int(_census_comp["numerator"])
+                _c_den = int(_census_comp["denominator"])
                 st.metric(
-                    "Gaia->DAO Completeness (%)",
-                    f"{_gaia_dao_pct:.1f}",
-                    help="\n".join(_help_lines),
-                )
-            elif _gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only:
-                _denom = _meta_catalog_rows if _meta_catalog_rows else _cone_rows
-                _undetected = (
-                    int(_n_gaia_undetected)
-                    if _n_gaia_undetected is not None and _denom
-                    else (int(_denom) - int(n_ok) if _denom else 0)
-                )
-                _help_detected = (
-                    int(_denom) - _undetected if _denom and _n_gaia_undetected is not None else int(n_ok)
-                )
-                st.metric(
-                    "Gaia->DAO Completeness (%) raw",
-                    f"{_gaia_dao_raw_pct:.1f}",
+                    "Completeness above depth (%)",
+                    f"{_c_pct:.2f}",
                     help=(
-                        f"raw (unlimited denominator)\n"
-                        f"{_help_detected} of {_denom or '?'} Gaia catalog stars detected by DAO\n"
-                        f"Undetected (no DAO match): {_undetected}"
+                        f"{_census_comp['numerator_label']} / {_census_comp['denominator_label']}\n"
+                        f"{_c_num} / {_c_den}"
                     ),
                 )
             else:
-                st.metric("Gaia->DAO Completeness (%)", "-")
+                st.metric("Completeness above depth (%)", "-")
         with m4:
             st.metric("Reference Star Density (stars/MPix)", f"{ref_density:.1f}")
             if ref_density > 1500.0:
@@ -623,6 +594,31 @@ def render_masterstar_qa(
             f"With **catalog_id**: **{n_ok}** . without **catalog_id**: **{max(0, n_all - n_ok)}** "
             f"(all rows with finite WCS projection)."
         )
+        if _census_comp and _census_comp.get("ok"):
+            _c_num = int(_census_comp["numerator"])
+            _c_den = int(_census_comp["denominator"])
+            st.caption(
+                f"Completeness above depth: **{_c_num}** / **{_c_den}** "
+                f"({_census_comp['numerator_label']} / {_census_comp['denominator_label']})"
+            )
+            _bins = _census_comp.get("bins") or []
+            if _bins:
+                with st.expander("Completeness by G bin (0.5 mag steps)", expanded=False):
+                    st.dataframe(
+                        pd.DataFrame(_bins)[
+                            ["g_lo", "g_hi", "n_eligible", "n_detected_seed", "completeness_pct"]
+                        ],
+                        width="stretch",
+                        hide_index=True,
+                    )
+            with st.expander("Gaia source_state census (verbatim)", expanded=False):
+                st.dataframe(
+                    pd.Series(_census_comp.get("state_counts") or {}).rename("count").reset_index().rename(
+                        columns={"index": "source_state"}
+                    ),
+                    width="stretch",
+                    hide_index=True,
+                )
         _n_unmatched_rows = max(0, n_all - n_ok)
         if _n_dao_unmatched is not None:
             _depth_s = (
@@ -649,24 +645,12 @@ def render_masterstar_qa(
                 )
         elif _n_unmatched_rows > 0:
             st.caption(f"Unmatched detections: **{_n_unmatched_rows}** (re-run MASTERSTAR for R-2 breakdown)")
-        _thresh_pct = _gaia_dao_pct if _gaia_dao_pct is not None else None
-        if _thresh_pct is not None:
-            if _thresh_pct >= 90.0:
-                st.caption("[OK] Completeness: EXCELLENT (>=90% in-frame Gaia stars detected)")
-            elif _thresh_pct >= 80.0:
-                st.caption("! Completeness: GOOD (80-90%)")
-            else:
-                _miss_n = int(_n_gaia_missed) if _n_gaia_missed is not None else "?"
-                st.caption(
-                    f"[X] Completeness: LOW (<80%) - {_miss_n} genuinely-missed stars above the frame "
-                    "limit; check DAO threshold/FWHM; 2-pass recovery candidate"
-                )
-        elif _gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only:
-            st.caption("Gaia->DAO: legacy/raw metric (unlimited cone denominator) - re-run MASTERSTAR for corrected buckets")
-        elif _cone_rows and _cone_rows > 0:
-            st.caption("Gaia->DAO: pipeline_meta.json missing - raw ratio from MASTERSTAR rows")
-        else:
-            st.caption("Gaia->DAO: field_catalog_cone.csv unavailable")
+        if _gaia_dao_pct is not None or (_gaia_dao_raw_pct is not None and _gaia_dao_is_raw_only):
+            with st.expander("Legacy Gaia->DAO reconcile metrics (informational)", expanded=False):
+                if _gaia_dao_pct is not None:
+                    st.caption(f"Legacy corrected completeness: **{_gaia_dao_pct:.1f}%**")
+                if _gaia_dao_raw_pct is not None:
+                    st.caption(f"Legacy raw cone ratio: **{_gaia_dao_raw_pct:.1f}%**")
         if match_rate >= 90.0:
             st.markdown(
                 "<div style='color:#39FF14;font-weight:900;font-size:1.2rem;'>Astrometry quality: EXCELLENT (Lock OK)</div>",
@@ -733,8 +717,9 @@ def render_masterstar_qa(
         st.markdown("### Layer display")
         st.caption(
             "Diagnostic map: **MASTERSTAR.fits** + per-frame **proc CSV** overlay (not masterstars reprojection). "
-            "**Green** = `GAIA_MATCHED`, **cyan** = `FORCED_APERTURE`, **red** = `DAO_ONLY` / unmatched (expect 0 after TODO-13). "
-            "Summary metrics above still use **masterstars_full_match.csv**. "
+            "**Green hollow** = DAO pass1/pass2 detection, **cyan filled** = `FORCED_SEED`, "
+            "**gold slash** = `ambiguous_owner` flag, **red** = unmatched DAO. "
+            "Summary metrics above use **masterstars_full_match.csv** + **gaia_source_state_census.csv**. "
             "**VSX** (below) = yellow squares from local SQLite."
         )
         if proc_csv is not None and proc_csv.is_file():
@@ -825,7 +810,26 @@ def render_masterstar_qa(
                     f"VSX in field (before mag filter): **{len(vsx_chip_all)}** . after slider: **{len(vsx_filt) if vsx_filt is not None else 0}**"
                 )
 
-        if "source_type" in ms_plot.columns:
+        _proc_has_state = (
+            proc_csv is not None
+            and proc_csv.is_file()
+            and "source_state" in read_vyvar_csv(proc_csv, nrows=1).columns
+        )
+        if _proc_has_state and "source_state" in ms_plot.columns:
+            st_ss = ms_plot["source_state"].fillna("").astype(str).str.strip().str.upper()
+            n_gaia_m = int(st_ss.isin({"DETECTED_P1", "DETECTED_P2", "GAIA_MATCHED"}).sum())
+            n_forced = int(st_ss.eq("FORCED_SEED").sum())
+            if n_forced == 0 and "forced_photometry" in ms_plot.columns:
+                n_forced = int(ms_plot["forced_photometry"].fillna(False).astype(bool).sum())
+            n_dao_only = int(st_ss.eq("DAO_ONLY").sum())
+            if n_dao_only == 0 and "source_type" in ms_plot.columns:
+                st_up = ms_plot["source_type"].fillna("").astype(str).str.strip().str.upper()
+                n_dao_only = int(st_up.eq("DAO_ONLY").sum())
+            st.caption(
+                f"Layer in frame (**{len(ms_plot)}** rows): "
+                f"DETECTED **{n_gaia_m}** . FORCED_SEED **{n_forced}** . DAO_ONLY **{n_dao_only}**"
+            )
+        elif "source_type" in ms_plot.columns:
             st_up = ms_plot["source_type"].fillna("").astype(str).str.strip().str.upper()
             n_gaia_m = int(st_up.eq("GAIA_MATCHED").sum())
             n_forced = int(st_up.eq("FORCED_APERTURE").sum())

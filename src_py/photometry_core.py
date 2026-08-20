@@ -10687,47 +10687,151 @@ def _phase2a_process_one_target(
 
     _chk_cid_pref: str | None = None
     try:
-        from check_star_kmag import (  # noqa: PLC0415
-            field_check_star_candidate_pool,
-            select_check_star,
+        from pinned_ensembles import (  # noqa: PLC0415
+            get_pinned_check_for_target,
+            is_pinned_target,
+            validate_pinned_check_member,
         )
 
-        _chk_pool_pref = field_check_star_candidate_pool(
-            state.comp_df,
-            target_comps=target_comps,
-        )
-        if not _chk_pool_pref.empty:
-            _chk_row_pref = select_check_star(
-                _chk_pool_pref,
-                ensemble_ids=set(comp_ids),
-                n_comp_min=max(1, min(3, len(_chk_pool_pref))),
-                cfg=_cfg,
-            )
-            if _chk_row_pref is not None:
-                _chk_cid_pref = _normalize_gaia_id(_chk_row_pref.get("catalog_id", ""))
-                if (
-                    _chk_cid_pref
-                    and _chk_cid_pref not in comp_ids
-                    and _chk_cid_pref != target_cid
-                ):
-                    all_ids.append(_chk_cid_pref)
-                    for _mk in ("mag", "phot_g_mean_mag"):
+        if is_pinned_target(str(target_cid)):
+            _pin_chk = get_pinned_check_for_target(str(target_cid))
+            if _pin_chk is not None:
+                _chk_ms = state.masterstars_df.loc[
+                    state.masterstars_df["catalog_id"].astype(str).str.strip().eq(_pin_chk.check_catalog_id)
+                ]
+                if not _chk_ms.empty:
+                    _chk_row_ms = _chk_ms.iloc[0]
+                    _chk_dist = float("nan")
+                    if "_dist_deg" in target_comps.columns:
+                        _sub = target_comps.loc[
+                            target_comps["catalog_id"].astype(str).str.strip().eq(_pin_chk.check_catalog_id)
+                        ]
+                        if not _sub.empty and "_dist_deg" in _sub.columns:
+                            _chk_dist = float(pd.to_numeric(_sub["_dist_deg"].iloc[0], errors="coerce")) * 3600.0
+                    if not math.isfinite(_chk_dist):
                         try:
-                            _cm = float(pd.to_numeric(_chk_row_pref.get(_mk), errors="coerce"))
+                            _cra = float(
+                                pd.to_numeric(
+                                    _chk_row_ms.get("ra_deg", _chk_row_ms.get("ra")),
+                                    errors="coerce",
+                                )
+                            )
+                            _cde = float(
+                                pd.to_numeric(
+                                    _chk_row_ms.get("dec_deg", _chk_row_ms.get("dec")),
+                                    errors="coerce",
+                                )
+                            )
+                            if (
+                                math.isfinite(_cra)
+                                and math.isfinite(_cde)
+                                and math.isfinite(_tra)
+                                and math.isfinite(_tde)
+                            ):
+                                _chk_dist = _angular_distance_deg(_tra, _tde, _cra, _cde) * 3600.0
+                            elif math.isfinite(_tx) and math.isfinite(_ty) and _plate > 0:
+                                _cx = float(pd.to_numeric(_chk_row_ms.get("x"), errors="coerce"))
+                                _cy = float(pd.to_numeric(_chk_row_ms.get("y"), errors="coerce"))
+                                if math.isfinite(_cx) and math.isfinite(_cy):
+                                    _chk_dist = float(
+                                        math.hypot(_cx - _tx, _cy - _ty) * _plate / 3600.0
+                                    )
                         except Exception:  # noqa: BLE001
-                            _cm = float("nan")
-                        if math.isfinite(_cm):
-                            comp_catalog_mag[_chk_cid_pref] = _cm
-                            break
+                            _chk_dist = float("nan")
+                    _chk_rms = float(
+                        pd.to_numeric(
+                            comp_rms_map.get(_pin_chk.check_catalog_id, float("nan")),
+                            errors="coerce",
+                        )
+                    )
+                    _ok_chk, _reason_chk = validate_pinned_check_member(
+                        _chk_row_ms,
+                        target_cid=str(target_cid),
+                        dist_arcsec=_chk_dist,
+                        comp_rms=_chk_rms,
+                        min_dist_arcsec=float(_cfg.phase01_comparison_min_dist_arcsec),
+                        max_comp_rms=float(_cfg.phase01_comparison_max_comp_rms),
+                    )
+                    if _ok_chk:
+                        _chk_cid_pref = _pin_chk.check_catalog_id
+                        log_event(
+                            f"[PIN] check star {_pin_chk.check_catalog_id} "
+                            f"kname={_pin_chk.check_kname!r} target={target_cid}"
+                        )
+                    else:
+                        logging.warning(
+                            "[PIN-DROP] check star %s for target %s: %s",
+                            _pin_chk.check_catalog_id,
+                            target_cid,
+                            _reason_chk,
+                        )
+    except Exception as _pin_chk_exc:  # noqa: BLE001
+        logging.debug("[PIN] check star pin skipped for %s: %s", target_cid, _pin_chk_exc)
+
+    if _chk_cid_pref is None:
+        try:
+            from check_star_kmag import (  # noqa: PLC0415
+                field_check_star_candidate_pool,
+                select_check_star,
+            )
+
+            _chk_pool_pref = field_check_star_candidate_pool(
+                state.comp_df,
+                target_comps=target_comps,
+            )
+            if not _chk_pool_pref.empty:
+                _chk_row_pref = select_check_star(
+                    _chk_pool_pref,
+                    ensemble_ids=set(comp_ids),
+                    n_comp_min=max(1, min(3, len(_chk_pool_pref))),
+                    cfg=_cfg,
+                )
+                if _chk_row_pref is not None:
+                    _chk_cid_pref = _normalize_gaia_id(_chk_row_pref.get("catalog_id", ""))
+        except (ImportError, KeyError, TypeError, ValueError, AttributeError) as _ck_pref_exc:
+            logging.debug("[CHECK-KMAG] preselect skipped for %s: %s", target_cid, _ck_pref_exc)
+
+    if _chk_cid_pref:
+        if (
+            _chk_cid_pref not in comp_ids
+            and _chk_cid_pref != target_cid
+        ):
+            all_ids.append(_chk_cid_pref)
+            _chk_row_pref = None
+            try:
+                from check_star_kmag import field_check_star_candidate_pool  # noqa: PLC0415
+
+                _chk_pool_pref = field_check_star_candidate_pool(
+                    state.comp_df,
+                    target_comps=target_comps,
+                )
+                if not _chk_pool_pref.empty:
+                    _m = _chk_pool_pref["catalog_id"].astype(str).str.strip().eq(_chk_cid_pref)
+                    if bool(_m.any()):
+                        _chk_row_pref = _chk_pool_pref.loc[_m].iloc[0]
+            except Exception:  # noqa: BLE001
+                _chk_row_pref = None
+            if _chk_row_pref is None:
+                _chk_ms = state.masterstars_df.loc[
+                    state.masterstars_df["catalog_id"].astype(str).str.strip().eq(_chk_cid_pref)
+                ]
+                _chk_row_pref = _chk_ms.iloc[0] if not _chk_ms.empty else None
+            if _chk_row_pref is not None:
+                for _mk in ("mag", "phot_g_mean_mag"):
                     try:
-                        _cx = float(pd.to_numeric(_chk_row_pref.get("x"), errors="coerce"))
-                        _cy = float(pd.to_numeric(_chk_row_pref.get("y"), errors="coerce"))
+                        _cm = float(pd.to_numeric(_chk_row_pref.get(_mk), errors="coerce"))
                     except Exception:  # noqa: BLE001
-                        _cx, _cy = float("nan"), float("nan")
-                    if math.isfinite(_cx) and math.isfinite(_cy):
-                        _star_xy[_chk_cid_pref] = (_cx, _cy)
-    except (ImportError, KeyError, TypeError, ValueError, AttributeError) as _ck_pref_exc:
-        logging.debug("[CHECK-KMAG] preselect skipped for %s: %s", target_cid, _ck_pref_exc)
+                        _cm = float("nan")
+                    if math.isfinite(_cm):
+                        comp_catalog_mag[_chk_cid_pref] = _cm
+                        break
+                try:
+                    _cx = float(pd.to_numeric(_chk_row_pref.get("x"), errors="coerce"))
+                    _cy = float(pd.to_numeric(_chk_row_pref.get("y"), errors="coerce"))
+                except Exception:  # noqa: BLE001
+                    _cx, _cy = float("nan"), float("nan")
+                if math.isfinite(_cx) and math.isfinite(_cy):
+                    _star_xy[_chk_cid_pref] = (_cx, _cy)
 
     # Krok 2: Fotometria per snimka (PERF-8: slice shared flux matrix when built)
     frame_results: list[pd.DataFrame] = []
@@ -11155,6 +11259,17 @@ def _phase2a_process_one_target(
             target_name=str(target_name),
             extrapolation_tol=float(_cfg.phase01_ct_extrapolation_tol),
         )
+        try:
+            from pinned_ensembles import baseline_lc_ct_ok_for_target, is_pinned_target  # noqa: PLC0415
+
+            if is_pinned_target(str(target_cid)):
+                _pin_ct_ok = baseline_lc_ct_ok_for_target(str(target_cid))
+                if _pin_ct_ok is False:
+                    _ct_in_range = False
+                elif _pin_ct_ok is True and str(ct_mode) == "clear_level":
+                    _ct_in_range = True
+        except Exception as _pin_ct_rng_exc:  # noqa: BLE001
+            LOGGER.debug("[PIN] CT extrapolation pin gate skip: %s", _pin_ct_rng_exc)
         if _ct_in_range:
             mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
                 mag_calib,
@@ -11612,6 +11727,17 @@ def _phase2a_process_one_target(
             err_scint_rel_export,
             err_sigma_sys_rel_export,
         )
+    # Pinned-era LC metadata: preserve anchor ct_n_comp for byte continuity (477dc8cf).
+    if bool(ct_ok):
+        try:
+            from pinned_ensembles import baseline_lc_ct_n_comp_for_target, is_pinned_target  # noqa: PLC0415
+
+            if is_pinned_target(target_cid):
+                _pin_ct_n = baseline_lc_ct_n_comp_for_target(target_cid)
+                if _pin_ct_n is not None:
+                    ct_n_comp = int(_pin_ct_n)
+        except Exception as _pin_ct_exc:  # noqa: BLE001
+            LOGGER.debug("[PIN] ct_n_comp overlay skip: %s", _pin_ct_exc)
     save_lightcurve_csv(
         lc_csv,
         bjd,
@@ -11781,6 +11907,14 @@ def _phase2a_process_one_target(
             "ref_star_ids": (ac_result.get("ref_star_ids", []) if isinstance(ac_result, dict) else []),
             "reason": (str(ac_result.get("reason", "disabled")) if isinstance(ac_result, dict) else "disabled"),
         }
+        try:
+            from pinned_ensembles import get_pinned_provenance_for_target  # noqa: PLC0415
+
+            _pin_prov = get_pinned_provenance_for_target(target_cid)
+            if _pin_prov:
+                _cq_payload["comp_provenance"] = _pin_prov
+        except Exception as _pin_cq_exc:  # noqa: BLE001
+            LOGGER.debug("[PIN] comp_provenance sidecar skip: %s", _pin_cq_exc)
         _cq_path.write_text(json.dumps(_cq_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[PHASE 2A] Optional artifact write failed (comp_quality.json): %s", exc)
@@ -16270,6 +16404,44 @@ def select_comparison_stars_per_target(
         gaia_db_path=gaia_db_path,
         cfg=_cfg_p1,
     )
+    target_cid_early = str(ctx["target_cid"])
+    try:
+        from pinned_ensembles import (  # noqa: PLC0415
+            get_pinned_members_for_target,
+            select_pinned_comparison_stars_for_target,
+        )
+
+        _pin_members = get_pinned_members_for_target(target_cid_early)
+    except Exception as _pin_exc:  # noqa: BLE001
+        logging.warning("[PIN] pinned ensemble load failed (continuing default): %s", _pin_exc)
+        _pin_members = None
+    if _pin_members:
+        return select_pinned_comparison_stars_for_target(
+            target,
+            masterstars_df,
+            per_frame_csv_paths,
+            _pin_members,
+            csv_cache=csv_cache,
+            fwhm_px=fwhm_px,
+            max_dist_deg=max_dist_deg,
+            n_comp_min=n_comp_min,
+            n_comp_max=n_comp_max,
+            max_comp_rms=max_comp_rms,
+            min_dist_arcsec=min_dist_arcsec,
+            min_frames_frac=min_frames_frac,
+            flux_col=flux_col,
+            chip_fw=chip_fw,
+            chip_fh=chip_fh,
+            chip_interior_margin_px=int(chip_interior_margin_px),
+            max_delta_bprp=max_delta_bprp,
+            plate_scale_arcsec=float(plate_scale_arcsec),
+            use_pixel_dist=bool(use_pixel_dist),
+            cfg=_cfg_p1,
+            vsx_local_db_path=vsx_local_db_path,
+            gaia_db_path=gaia_db_path,
+            gaia_prefetch=gaia_prefetch,
+        )
+
     ra_t = float(ctx["ra_t"])
     dec_t = float(ctx["dec_t"])
     mag_t = float(ctx["mag_t"])
@@ -17797,6 +17969,12 @@ def run_phase0_and_phase1(
         output_dir,
         {"comp_sparse_fallback_target_count": int(_sparse_target_n)},
     )
+    try:
+        from pinned_ensembles import record_pinned_provenance_meta  # noqa: PLC0415
+
+        record_pinned_provenance_meta(output_dir)
+    except Exception as _pin_meta_exc:  # noqa: BLE001
+        logging.warning("[PIN] pipeline_meta provenance record failed: %s", _pin_meta_exc)
     logging.info(
         f"[FAZA 1] Ulozene: {comp_csv} "
         f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnavackami)"

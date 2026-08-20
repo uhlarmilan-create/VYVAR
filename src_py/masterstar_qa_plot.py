@@ -172,16 +172,26 @@ def build_starfield_qa_png_mapping(
                 continue
             if use_source_type and st_col is not None:
                 stv = str(st_col[i])
-                if stv == "FORCED_APERTURE":
+                ss = str(dfx.get("source_state", pd.Series([""] * len(dfx))).iloc[i]).strip().upper()
+                if ss == "FORCED_SEED" or stv == "FORCED_APERTURE":
                     if not show_match:
                         continue
                     cyan = (0, 200, 220) if not invert else (80, 240, 255)
-                    draw.ellipse((x - r, y - r, x + r, y + r), outline=cyan, width=2)
-                elif stv == "GAIA_MATCHED" or (stv and stv not in ("FORCED_APERTURE", "DAO_ONLY")):
+                    draw.ellipse((x - r, y - r, x + r, y + r), fill=cyan, outline=(255, 255, 255), width=1)
+                elif stv == "GAIA_MATCHED" or ss in ("DETECTED_P1", "DETECTED_P2") or (
+                    stv and stv not in ("FORCED_APERTURE", "DAO_ONLY")
+                ):
                     if not show_match:
                         continue
                     green = (20, 160, 40) if not invert else (0, 200, 80)
                     draw.ellipse((x - r, y - r, x + r, y + r), outline=green, width=2)
+                    amb = bool(dfx.get("ambiguous_owner", pd.Series([False] * len(dfx))).iloc[i])
+                    if amb or ss == "AMBIGUOUS_OWNER":
+                        draw.line(
+                            [(x - r - 2, y - r - 2), (x + r + 2, y + r + 2)],
+                            fill=(255, 200, 0),
+                            width=2,
+                        )
                 else:
                     if not show_dao:
                         continue
