@@ -1,0 +1,63 @@
+{
+  "snapshot": "draft_000516_snapshot_era03_20260820",
+  "n_frames": 134,
+  "airmass_min": 1.012587,
+  "airmass_max": 1.218604,
+  "n_stars": 2076,
+  "bprp_span": 2.336918830871582,
+  "widen_note": "",
+  "mag_column": "median(mag_inst + per_frame_zp) where zp_f = median(G_comp - mag_inst_comp); pre-CT ensemble path (photometry_core.py:4546-4579)",
+  "zp_method": "unweighted median of (Gaia G catalog - comp mag_inst) per frame; production uses 1/rms^2 weights when comp_weight_map set",
+  "coeff_set": "GDR3_TABLE59_COEFFS",
+  "bprp_validity": {
+    "min": -0.5,
+    "max": 5.1,
+    "enforced_at": "gaia_johnson.transform_gaia_to_johnson:148-155"
+  },
+  "g_validity": {
+    "min": 8.0,
+    "max": 16.0
+  },
+  "a_V": -0.37117383465333614,
+  "b_V": 0.0016430491584887475,
+  "b_V_stderr": 0.06729455251511492,
+  "b_V_mmag_per_mag": 1.6430491584887474,
+  "a_R": -0.41036233861765176,
+  "b_R": 0.49547101432786617,
+  "b_R_stderr": 0.06730042738454113,
+  "b_R_mmag_per_mag": 495.47101432786616,
+  "abs_b_ratio": 301.5558066342903,
+  "abs_b_diff": 0.49382796516937744,
+  "combined_b_stderr": 0.09517302309137528,
+  "sign_b_V_minus_b_R": -0.49382796516937744,
+  "expected_sign_b_V_minus_b_R": "negative (red-leaning sensor + V catalog: b_V more negative than b_R)",
+  "verdict": "CV",
+  "submission_systematics": {
+    "BO CVn": {
+      "target_catalog_id": "1498613634033133184",
+      "target_bp_rp": 0.4581365585327148,
+      "comp_ensemble_median_bp_rp": 0.4883594512939453,
+      "delta_bp_rp_target_minus_comp": -0.030222892761230524,
+      "systematic_V_mmag_if_bV": -0.04965769851843547,
+      "systematic_R_mmag_if_bR": -14.974567332329212
+    },
+    "FW CVn": {
+      "target_catalog_id": "1497343732462852864",
+      "target_bp_rp": 0.8148937225341797,
+      "comp_ensemble_median_bp_rp": 0.7809162139892578,
+      "delta_bp_rp_target_minus_comp": 0.033977508544921875,
+      "systematic_V_mmag_if_bV": 0.05582671682227811,
+      "systematic_R_mmag_if_bR": 16.834870623086182
+    },
+    "GH CVn": {
+      "target_catalog_id": "1498804639818507904",
+      "target_bp_rp": 0.7040824890136719,
+      "comp_ensemble_median_bp_rp": 0.7580432891845703,
+      "delta_bp_rp_target_minus_comp": -0.05396080017089844,
+      "systematic_V_mmag_if_bV": -0.08866024731217413,
+      "systematic_R_mmag_if_bR": -26.736012394618342
+    }
+  },
+  "t1_abs_gh_baseline_mmag": 141.0,
+  "t1_abs_gh_candidate_mmag": 332.0
+}
