@@ -7,7 +7,7 @@ dependency check, and release migration note. Measured `csv_only` ePSF prepare o
 DB (draft 517). No code or DB writes.
 
 Baseline: local tip `6fec103` (EPSF-DB-01 Gaia amendment); task cites `f54d481` / pushed
-`69f4f5e` — same EPSF-DB diagnosis series.
+`69f4f5e` - same EPSF-DB diagnosis series.
 
 ## Output / findings
 
