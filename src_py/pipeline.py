@@ -6599,35 +6599,31 @@ def write_photometry_plan_files(
             df = df.copy()
             df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
     except Exception:  # noqa: BLE001
-        # EXC-0347: T1 -- MASTER_SOURCES likely_nonlinear/on_bad_column DB merge failure omits nonlinear/bad-colu... (EXCEPT-BULK 2026-07-08)
         pass
-    if draft_id is not None and database_path:
-        dbp = Path(str(database_path))
-        if dbp.is_file():
-            try:
-                _db_m = VyvarDatabase(dbp)
-                try:
-                    _msr = _db_m.fetch_master_sources_for_draft(int(draft_id))
-                finally:
-                    _db_m.conn.close()
-                if _msr:
-                    sid_nl = {
-                        str(r.get("SOURCE_ID_GAIA") or "").strip(): int(r.get("LIKELY_NONLINEAR") or 0)
-                        for r in _msr
-                    }
-                    sid_bc = {
-                        str(r.get("SOURCE_ID_GAIA") or "").strip(): int(r.get("ON_BAD_COLUMN") or 0)
-                        for r in _msr
-                    }
 
-                    def _cid(v: Any) -> str:
-                        return str(v or "").strip()
+    _enrichment_provenance: dict[str, Any] = {"source": "masterstars_full_match.csv"}
+    try:
+        from masterstars_enrichment import missing_comp_selection_enrichment_columns  # noqa: PLC0415
 
-                    if "catalog_id" in df.columns:
-                        df["likely_nonlinear"] = df["catalog_id"].map(lambda c: sid_nl.get(_cid(c), 0))
-                        df["on_bad_column"] = df["catalog_id"].map(lambda c: sid_bc.get(_cid(c), 0))
-            except Exception:  # noqa: BLE001
-                pass
+        _missing_enrich = missing_comp_selection_enrichment_columns(df)
+        if _missing_enrich:
+            _msg = (
+                "comp-selection enrichment unavailable for this draft: columns "
+                f"{_missing_enrich} absent from masterstars_full_match.csv - "
+                "selection proceeds without nonlinearity/bad-column exclusion"
+            )
+            logging.error("[COMP-SELECTION] %s", _msg)
+            log_event(f"ERROR: {_msg}")
+            _enrichment_provenance = {
+                "source": "masterstars_full_match.csv",
+                "enrichment_missing_columns": list(_missing_enrich),
+                "nonlinearity_badcolumn_exclusion": False,
+                "message": _msg,
+            }
+        else:
+            _enrichment_provenance["nonlinearity_badcolumn_exclusion"] = True
+    except Exception as _enrich_exc:  # noqa: BLE001
+        logging.error("[COMP-SELECTION] enrichment column check failed: %s", _enrich_exc)
     try:
         with fits.open(masterstar_fits, memmap=False) as hdul:
             hdr = hdul[0].header
@@ -7194,6 +7190,7 @@ def write_photometry_plan_files(
         "masterstars": str(masterstars_csv),
         "masterstar_fits": str(masterstar_fits),
         "comparison_selection": cmeta,
+        "comp_selection_enrichment": _enrichment_provenance,
         "variable_targets_diagnostics": _vsx_diag,
         "safe_bbox_px": list(_safe_bbox) if _safe_bbox is not None else None,
         "safe_bbox_r_out_px": float(_r_out) if _r_out is not None else None,
@@ -7211,6 +7208,7 @@ def write_photometry_plan_files(
         "variable_targets_csv": str(var_path),
         "photometry_plan_json": str(plan_path),
         "comparison_selection": cmeta,
+        "comp_selection_enrichment": _enrichment_provenance,
     }
 
 
@@ -13915,7 +13913,7 @@ def generate_masterstar_and_catalog(
         "masterstar_match_png": "",
     }
     out.update(photo_plan)
-    # MASTER_SOURCES: rich Gaia cross-match for MASTERSTAR detections (stored in project DB).
+    # Enrichment columns for masterstars_full_match.csv (formerly MASTER_SOURCES DB).
     try:
         gaia_db = str(_cfg_ms.gaia_db_path or "").strip()
         if gaia_db and draft_id is not None and "ra_deg" in df_final.columns and "dec_deg" in df_final.columns:
@@ -14283,12 +14281,16 @@ def generate_masterstar_and_catalog(
                                 }
                             )
                         try:
-                            pipeline_db = VyvarDatabase(Path(_cfg_ms.database_path))
-                            try:
-                                n_ins = pipeline_db.replace_master_sources_for_draft(int(draft_id), rows_ms)
-                            finally:
-                                pipeline_db.conn.close()
-                            out["master_sources_written"] = int(n_ins)
+                            from masterstars_enrichment import (  # noqa: PLC0415
+                                apply_common_field_bbox_exclusion,
+                                apply_stress_rms_to_rows_ms,
+                                apply_vsx_variable_flags,
+                                merge_enrichment_into_masterstars_df,
+                            )
+
+                            df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
+                            _vyvar_df_to_csv(df_final, csv_path)
+                            out["masterstars_enrichment_written"] = int(len(rows_ms))
                             try:
                                 _wp2 = write_photometry_plan_files(
                                     platesolve_dir=platesolve_dir,
@@ -14297,20 +14299,20 @@ def generate_masterstar_and_catalog(
                                     n_comparison_stars=int(n_comparison_stars),
                                     require_non_variable=bool(require_non_variable_comparisons),
                                     draft_id=int(draft_id),
-                                    database_path=Path(_cfg_ms.database_path),
                                 )
                                 out.update(_wp2)
                             except Exception as _wp2_exc:  # noqa: BLE001
                                 log_event(
-                                    f"MASTERSTAR: DB-aware photometry-plan rewrite failed ({_wp2_exc!s}); "
-                                    "keeping the non-DB photometry plan."
+                                    f"MASTERSTAR: enriched photometry-plan rewrite failed ({_wp2_exc!s}); "
+                                    "keeping the prior photometry plan."
                                 )
                         except Exception as exc:  # noqa: BLE001
-                            out["master_sources_written"] = 0
-                            out["master_sources_error"] = str(exc)
+                            out["masterstars_enrichment_error"] = str(exc)
 
                         # Stress-test: 10% random sample, exclude Border/Blended by default (soft-crop).
                         try:
+                            from masterstars_enrichment import merge_enrichment_into_masterstars_df  # noqa: PLC0415
+
                             root_frames = (
                                 Path(source_root)
                                 if source_root is not None
@@ -14329,27 +14331,16 @@ def generate_masterstar_and_catalog(
                                 bbox = common_field_intersection_bbox_px(frame_paths=_ms_inputs, finite_stride=16)
                                 if bbox is not None:
                                     x0b, y0b, x1b, y1b = bbox
-                                    pipeline_db_b = VyvarDatabase(Path(_cfg_ms.database_path))
-                                    try:
-                                        pipeline_db_b.conn.execute(
-                                            """
-                                            UPDATE MASTER_SOURCES
-                                            SET IS_SAFE_COMP = 0, EXCLUSION_REASON = 'Out of common field'
-                                            WHERE DRAFT_ID = ?
-                                              AND COALESCE(SAFE_OVERRIDE, 0) = 0
-                                              AND COALESCE(IS_SAFE_COMP, 0) = 1
-                                              AND (
-                                                X_MASTER IS NULL OR Y_MASTER IS NULL
-                                                OR X_MASTER < ? OR X_MASTER > ?
-                                                OR Y_MASTER < ? OR Y_MASTER > ?
-                                              );
-                                            """,
-                                            (int(draft_id), float(x0b), float(x1b), float(y0b), float(y1b)),
-                                        )
-                                        pipeline_db_b.conn.commit()
-                                        out["common_field_bbox_px"] = [float(x0b), float(y0b), float(x1b), float(y1b)]
-                                    finally:
-                                        pipeline_db_b.conn.close()
+                                    apply_common_field_bbox_exclusion(
+                                        rows_ms,
+                                        x0=float(x0b),
+                                        x1=float(x1b),
+                                        y0=float(y0b),
+                                        y1=float(y1b),
+                                    )
+                                    df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
+                                    _vyvar_df_to_csv(df_final, csv_path)
+                                    out["common_field_bbox_px"] = [float(x0b), float(y0b), float(x1b), float(y1b)]
                             except Exception as exc:  # noqa: BLE001
                                 out["common_field_error"] = str(exc)
 
@@ -14367,84 +14358,41 @@ def generate_masterstar_and_catalog(
                             out["stress_frames_sampled"] = int(st_res.frames_sampled)
                             out["stress_frames_used"] = int(st_res.frames_used)
 
-                            pipeline_db2 = VyvarDatabase(Path(_cfg_ms.database_path))
-                            try:
-                                ms_rows = pipeline_db2.fetch_master_sources_for_draft(int(draft_id))
-                                # Per-bin median RMS on safe comps.
-                                by_bin: dict[str, list[float]] = {}
-                                for rr in ms_rows:
-                                    if int(rr.get("IS_SAFE_COMP") or 0) != 1:
-                                        continue
-                                    sid = str(rr.get("SOURCE_ID_GAIA") or "").strip()
-                                    if not sid or sid not in st_res.per_source_rms:
-                                        continue
-                                    b = str(rr.get("PHOT_CATEGORY") or "").strip()
-                                    if b:
-                                        by_bin.setdefault(b, []).append(float(st_res.per_source_rms[sid]))
-                                med_by_bin = {b: float(pd.Series(v).median()) for b, v in by_bin.items() if v}
+                            by_bin: dict[str, list[float]] = {}
+                            for rr in rows_ms:
+                                if int(rr.get("is_safe_comp") or 0) != 1:
+                                    continue
+                                sid = str(rr.get("source_id_gaia") or "").strip()
+                                if not sid or sid not in st_res.per_source_rms:
+                                    continue
+                                b = str(rr.get("phot_category") or "").strip()
+                                if b:
+                                    by_bin.setdefault(b, []).append(float(st_res.per_source_rms[sid]))
+                            med_by_bin = {b: float(pd.Series(v).median()) for b, v in by_bin.items() if v}
+                            apply_stress_rms_to_rows_ms(rows_ms, st_res.per_source_rms, med_by_bin)
 
-                                # Update STRESS_RMS in DB.
-                                for rr in ms_rows:
-                                    sid = str(rr.get("SOURCE_ID_GAIA") or "").strip()
-                                    if not sid or sid not in st_res.per_source_rms:
-                                        continue
-                                    pipeline_db2.conn.execute(
-                                        "UPDATE MASTER_SOURCES SET STRESS_RMS = ? WHERE ID = ?;",
-                                        (float(st_res.per_source_rms[sid]), int(rr["ID"])),
-                                    )
-                                pipeline_db2.conn.commit()
+                            packed = [
+                                {
+                                    "source_id_gaia": rr.get("source_id_gaia"),
+                                    "phot_category": rr.get("phot_category"),
+                                    "stress_rms": rr.get("stress_rms"),
+                                    "ra": rr.get("ra"),
+                                    "dec": rr.get("dec"),
+                                }
+                                for rr in rows_ms
+                                if rr.get("stress_rms") is not None
+                            ]
+                            var_ids = vsx_is_known_variable_top3_per_bin(rows=packed)
+                            if var_ids:
+                                apply_vsx_variable_flags(rows_ms, set(var_ids))
+                                out["vsx_flagged_variables"] = int(len(var_ids))
 
-                                # Unstable: RMS > 1.5x bin median
-                                for rr in ms_rows:
-                                    if int(rr.get("SAFE_OVERRIDE") or 0) == 1:
-                                        continue
-                                    if int(rr.get("IS_SAFE_COMP") or 0) != 1:
-                                        continue
-                                    b = str(rr.get("PHOT_CATEGORY") or "").strip()
-                                    sid = str(rr.get("SOURCE_ID_GAIA") or "").strip()
-                                    if not b or b not in med_by_bin or sid not in st_res.per_source_rms:
-                                        continue
-                                    if float(st_res.per_source_rms[sid]) > 1.5 * float(med_by_bin[b]):
-                                        pipeline_db2.conn.execute(
-                                            "UPDATE MASTER_SOURCES SET IS_SAFE_COMP = 0, EXCLUSION_REASON = 'Unstable' WHERE ID = ?;",
-                                            (int(rr["ID"]),),
-                                        )
-                                pipeline_db2.conn.commit()
-
-                                # VSX check for TOP3 stable per occupied bin.
-                                ms_rows2 = pipeline_db2.fetch_master_sources_for_draft(int(draft_id))
-                                packed = [
-                                    {
-                                        "source_id_gaia": rr.get("SOURCE_ID_GAIA"),
-                                        "phot_category": rr.get("PHOT_CATEGORY"),
-                                        "stress_rms": rr.get("STRESS_RMS"),
-                                        "ra": rr.get("RA"),
-                                        "dec": rr.get("DE"),
-                                    }
-                                    for rr in ms_rows2
-                                    if rr.get("STRESS_RMS") is not None
-                                ]
-                                var_ids = vsx_is_known_variable_top3_per_bin(rows=packed)
-                                if var_ids:
-                                    qmarks = ",".join(["?"] * len(var_ids))
-                                    pipeline_db2.conn.execute(
-                                        f"""
-                                        UPDATE MASTER_SOURCES
-                                        SET IS_VAR = 1, IS_SAFE_COMP = 0, EXCLUSION_REASON = 'Variable'
-                                        WHERE DRAFT_ID = ?
-                                          AND SOURCE_ID_GAIA IN ({qmarks})
-                                          AND COALESCE(SAFE_OVERRIDE, 0) = 0;
-                                        """,
-                                        (int(draft_id), *list(var_ids)),
-                                    )
-                                    pipeline_db2.conn.commit()
-                                    out["vsx_flagged_variables"] = int(len(var_ids))
-                            finally:
-                                pipeline_db2.conn.close()
+                            df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
+                            _vyvar_df_to_csv(df_final, csv_path)
                         except Exception as exc:  # noqa: BLE001
                             out["stress_test_error"] = str(exc)
     except Exception as exc:  # noqa: BLE001
-        out["master_sources_error"] = str(exc)
+        out["masterstars_enrichment_error"] = str(exc)
     # Persist MASTERSTAR path on draft for later UI reloads / Step 3 continuity.
     try:
         if draft_id is not None:

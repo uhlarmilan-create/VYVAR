@@ -168,15 +168,41 @@ def render_photometric_grid_qa(*, pipeline: AstroPipeline, draft_id: int | None)
     if did is None:
         st.info("Draft ID is not set.")
         return
+    from masterstars_enrichment import ENRICHMENT_COLUMNS, grid_qa_dataframe_from_masterstars_csv
+    from utils import resolve_draft_dir
+
+    draft_dir = resolve_draft_dir(pipeline.db, did)
+    if draft_dir is None:
+        st.info("Draft directory not found.")
+        return
+    csv_path: Path | None = None
+    ps_root = Path(draft_dir) / "platesolve"
+    if ps_root.is_dir():
+        for setup in sorted(ps_root.iterdir()):
+            cand = setup / "masterstars_full_match.csv"
+            if cand.is_file():
+                csv_path = cand
+                break
+    if csv_path is None:
+        st.info("masterstars_full_match.csv not found. Run **MAKE MASTERSTAR** in VAR-STREM first.")
+        return
     try:
-        rows = pipeline.db.fetch_master_sources_for_draft(int(did))
+        raw = pd.read_csv(csv_path, low_memory=False, dtype={"catalog_id": str})
     except Exception as exc:  # noqa: BLE001
         st.error(str(exc))
         return
-    if not rows:
-        st.info("MASTER_SOURCES is empty. Run **MAKE MASTERSTAR** in VAR-STREM first.")
+    missing = [c for c in ENRICHMENT_COLUMNS if c not in raw.columns]
+    if missing:
+        st.info(
+            "Photometric grid enrichment not available for this draft (pre-retirement). "
+            f"Missing columns: {', '.join(missing)}. Re-run MAKE MASTERSTAR to populate."
+        )
         return
-    df = pd.DataFrame(rows)
+    df_norm = grid_qa_dataframe_from_masterstars_csv(raw)
+    if df_norm is None:
+        st.info("Photometric grid enrichment not available for this draft (pre-retirement).")
+        return
+    df = df_norm
     # Normalize cols
     for c in ("G_MAG", "BP_RP", "STRESS_RMS"):
         if c in df.columns:
