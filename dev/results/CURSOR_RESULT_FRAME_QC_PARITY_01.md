@@ -12,7 +12,7 @@ VYVAR exposes **two independent frame-QC layers** on the full UI / `night_run`
 pipeline path, and **neither layer runs** on the headless `--full` anchor
 photometry path (`session_baseline_check.py` copies frozen aligned inputs and
 calls `run_full_photometry_pipeline` only). **Layer A (calibration HFR):**
-during `calibrate_lights`, `_post_calibration_qc_eval` (`pipeline.py:16328-16404`)
+during `calibrate_lights`, `_post_calibration_qc_eval` (`pipeline.py:16361-16404`)
 measures median half-flux radius on a central 1000 px DAO crop, compares to
 `cfg.qc_max_hfr` (5.0 px; `qc_max_hfr_fwhm_ratio=None` -> legacy px via
 `unit_resolver.resolve_hfr_limit_px`), stamps `VYQCPASS` / `VY_QCHFR`, logs
@@ -25,7 +25,7 @@ frames via DB `calibrated_paths_for_draft_apply_filters`
 `qc_metrics.csv` through `build_prefilter_rejected_map` + in-place QC
 (`app.py:817-853`, `night_run.py:241-277`). Alignment and photometry consume
 only `status == ok` rows (`filter_files_by_qc_metrics_allowlist`,
-`pipeline.py:1248-1264`, gate at `15983`). **Measured on disk: draft 516 and
+`pipeline.py:1248-1264`, gate at `16016`). **Measured on disk: draft 516 and
 517 have byte-identical QC artifacts** (0 status/header diffs across 150
 frames; both 134 proc CSVs). The DRAFT-517-REVIEW claim that "517 UI rejected
 16/150 frames the headless anchor accepted" is **rejected for live 516 vs 517
@@ -38,7 +38,7 @@ Anchor SHA divergence vs 517 is not explained by a 516-vs-517 QC path split.
 
 | Gate | Decision function | Authority value (517) | Ratio mode |
 |------|-------------------|----------------------|------------|
-| Calibration HFR | `_post_calibration_qc_eval` `pipeline.py:16376-16381` | `config.json` `qc_max_hfr=5.0` (`config.py:1122`, load `1508-1510`); packed in `_qc_pack_from_config` `16213-16214` | `qc_max_hfr_fwhm_ratio=null` in `config.json`; resolver uses legacy px `unit_resolver.py:145-147`. **Note:** `_calibrate_one_light_apply_masters_in_ram` builds `limits` without passing ratio key (`16788-16792`) -- ratio inactive even if set. |
+| Calibration HFR | `_post_calibration_qc_eval` `pipeline.py:16376-16404` | `config.json` `qc_max_hfr=5.0` (`config.py:1122`, load `1508-1510`); packed in `_qc_pack_from_config` `16246-16247` | `qc_max_hfr_fwhm_ratio=null` in `config.json`; resolver uses legacy px `unit_resolver.py:142-147`. **Note:** `_calibrate_one_light_apply_masters_in_ram` builds `limits` without passing ratio key (`16827` path) -- ratio inactive even if set. |
 | Preprocess FWHM drop | `calibrated_paths_for_draft_apply_filters` + `qc_metrics.csv` status | Auto FWHM **5.362 px** from infolog line 2371 (`auto_fwhm_enabled`, k=1.5); DB manifest `FWHM` column from Analyze QC | N/A (segmentation FWHM diagnostic in `_qc_enrich_calibrated_in_place`, `18471-18474`: prefilter drives status, not header FWHM reject params) |
 
 No `ui_settings` runtime override observed for `qc_max_hfr` on draft 517.
@@ -49,7 +49,7 @@ only; not the gate authority.
 
 | Path | Layer A (cal HFR) | Layer B (FWHM prefilter -> qc_metrics) | Rejection removes from photometry? |
 |------|-------------------|----------------------------------------|-------------------------------------|
-| **(a) UI RUN VYVAR** | Yes -- all 150 calibrations (`infolog` 21 HFR REJECTED logs) | Yes -- preprocess after Auto FWHM (`infolog` 2371, 2381: 134/150 selected) | **Layer B only** -- alignment allowlist 134/150 (`pipeline.py:15983`) |
+| **(a) UI RUN VYVAR** | Yes -- all 150 calibrations (`infolog` 21 HFR REJECTED logs) | Yes -- preprocess after Auto FWHM (`infolog` 2371, 2381: 134/150 selected) | **Layer B only** -- alignment allowlist 134/150 (`pipeline.py:16016`) |
 | **(b) Headless `--full` anchor** | **No** -- photometry-only on frozen snapshot (`session_baseline_check.py:560-639`) | **No** -- snapshot already contains 134 aligned frames + proc sidecars | N/A (inputs pre-filtered at snapshot time) |
 | **(c) `night_run` / orchestrator batch** | Yes (shared calibrate path) | Yes -- `_night_run_preprocess_pending` mirrors `app._vyvar_execute_preprocess_pending` (`night_run.py:241-277`) | Layer B via same qc_metrics allowlist |
 

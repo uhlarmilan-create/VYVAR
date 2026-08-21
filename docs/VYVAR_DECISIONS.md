@@ -3556,6 +3556,10 @@ existing gates; split-half self-test certificate instead of star-count constants
 time-mode (fixed / FWHM-scaled / per-frame) chosen by measurement per setup;
 mono cameras only for now (OSC deferred).
 
+**2026-08-21 addendum (draft 518 XVAL).** Draft 518 cross-validation vs AstroImageJ was a
+**TEST only** (no ledger entry). Formal Newton-rig XVAL waits for VYVAR-native calibration
+data, not pre-calibrated external input.
+
 ---
 
 ## CLOSED - EMPTY-DAO-01 (2026-08-21)

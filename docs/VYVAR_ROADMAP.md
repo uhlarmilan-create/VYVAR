@@ -12,7 +12,7 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01)
 
-Local tip: **`e0db635`** (D10-1b); origin/main still **`8dea595`** (ERR-518 + D10 series
+Local tip: **`66a0813`** (D10-1-CLOSE); origin/main still **`8dea595`** (full local series
 await Milan push). Draft **517** first post-era UI field run reviewed
 (`CURSOR_RESULT_DRAFT_517_REVIEW.md`). FRAME-QC-PARITY-01 phase 1 names dual QC layers
 (calibration HFR vs preprocess FWHM prefilter) and UI/full-pipeline vs headless `--full`
@@ -29,7 +29,7 @@ photometry-only split (`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
 | **MED** | **ePSF-VALID** -- internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
 | **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
 | **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
-| **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. |
+| **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. 2026-08-21 XVAL note: AIJ on pre-calibrated pedestal data (draft 518, ~33.5k ADU) suffered sky-annulus failures leaking the pedestal into flux (11/71 frames) and ~14x overquoted errors; VYVAR empirical path immune. Contract (pedestal/pre-sub sky stamp) also fixes the Howell fallback branch. |
 
 **CLOSED (2026-08-21):** **D10-1 / D10-1b** -- CV/CR band-letter measurement complete; Milan
 affirmed **CV** for unfiltered exports (zero code change). GH colour question merged into
