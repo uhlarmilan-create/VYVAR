@@ -1,14 +1,22 @@
 # VYVAR -- Development State
 
-**Status:** DAO-GAIA ERA-03 CLOSED (2026-08-20). `--fast` and `--full` OVERALL
-PASS. Canonical product SHA **9902d918** (core n=121; extended **472bc9e4**
-n=179). P1 golden **6af4539c** n=115. Frozen snapshot
-`draft_000516_snapshot_era03_20260820`. 60 LCs on live draft (48 baseline
-science-pass + 12 additive + 2 honest zone_noise missing in core scope). BO/FW
-check MAD 7.151 / 8.201 mmag. SUBMIT-01 PASS. Push: **PUSH-STAMP-01 pending**
-(Milan authorization).
+**Status:** SESSION-CLOSE 2026-08-21. Local tip **`1881d4a`** (MS-SOURCES-RETIRE-02 +
+EPSF-VALID-01 prerequisite STOP); **push pending Milan** (origin at SESSION-CLOSE commit
+after push). Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179;
+P1 golden **6af4539c** n=115. Frozen snapshot `draft_000516_snapshot_era03_20260820`.
 
-Last updated: **2026-08-20** (ERA-03 CLOSE).
+**vyvar.sqlite3:** MASTER_SOURCES btree corruption found (EPSF-DB-01); table **retired
+from code** (MS-SOURCES-RETIRE C1-C3). Production file swap **PENDING Milan**
+(`dev/tools/db_hygiene_swap.py`). `--fast` **db-quick-check FAILS by design** until swap;
+pytest green at tip.
+
+**Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW)
+unblocked, pending Milan.
+
+**ePSF arc OPEN:** EPSF-VALID-01 issued; Cursor STOPPED at prerequisite gate (push/swap/
+gates). Re-issue after Milan checklist.
+
+Last updated: **2026-08-21** (SESSION-CLOSE).
 
 ## Canonical run mode (516 freeze)
 

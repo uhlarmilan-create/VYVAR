@@ -10,47 +10,36 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01)
+## NEXT SESSION - entry point (2026-08-21 SESSION-CLOSE)
 
-Local tip: **`66a0813`** (D10-1-CLOSE); origin/main still **`8dea595`** (full local series
-await Milan push). Draft **517** first post-era UI field run reviewed
-(`CURSOR_RESULT_DRAFT_517_REVIEW.md`). FRAME-QC-PARITY-01 phase 1 names dual QC layers
-(calibration HFR vs preprocess FWHM prefilter) and UI/full-pipeline vs headless `--full`
-photometry-only split (`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
+Local tip **`1881d4a`** (+ SESSION-CLOSE commit); push pending Milan. After push + DB swap
++ gates, session opens here:
 
-| Pri | Next item |
-|-----|-----------|
-| **HIGH** | **FRAME-QC-PARITY-01** -- UI/full-pipeline vs headless `--full`: two QC stacks, one product name. Phase 1 = mechanism named (2026-08-21). Phase 2 = Milan picks authority + code (after decision). Blocks anchor-comparability of UI runs; does **not** block new fields. |
-| **HIGH** | **MS-POOL-POLICY-01** (RESCOPED 2026-08-20) -- generator determinism. Selection rules (RMS, color tiers, distance) stay immutable; stabilize **inputs only** (catalog-derived mags/colors as ranking inputs, qualification thresholds vs knife-edge ranking, hysteresis for existing ensembles; pin refill fills to pin-time `n_min` only). Fire proof: same draft twice -> identical ensembles + MAG. No new-field draft trusted for SUBMIT before this lands. |
-| **MED** | **MS-QA-DISPLAY-01** -- UI cue for EDGE/BLENDED "Gaia-only by state" (517 sighting: 22 bright Gaia without DAO markers, all correctly EDGE). |
-| **LOW** | **CV-CVN-SKIP-CONSISTENCY** -- document `zone_flag` vs `per_frame_saturation` skip_reason taxonomy (PFS on/off). |
-| **LOW** | **SIGMA-BKG-VAR-01** (measurement-only) -- quantify empty-aperture `sigma_bkg_ap` estimator variance on the production mask (multi-seed on one frame; 518 same-frame spread 51.2 vs 71.8 ADU); decide whether `n_valid` needs raising. Error-budget umbrella with P-02. |
-| **FUTURE** | **COMP-HISTORY-DB** (release 2.0) -- per-star comp-history / per-field auto-pin database. Pin infrastructure (INV-PIN-01..04, re-validation, refill-to-min) is the ready substrate; re-validation path measured at minutes vs ~40-90 min full selection (Phase 1 wall share ~92%). |
-| **MED** | **ePSF-VALID** -- internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
-| **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
-| **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
-| **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. 2026-08-21 XVAL note: AIJ on pre-calibrated pedestal data (draft 518, ~33.5k ADU) suffered sky-annulus failures leaking the pedestal into flux (11/71 frames) and ~14x overquoted errors; VYVAR empirical path immune. Contract (pedestal/pre-sub sky stamp) also fixes the Howell fallback branch. |
+| Step | Action |
+|------|--------|
+| **1** | **Milan checklist:** push -> `db_hygiene_swap.py` (app closed) -> `--fast` OVERALL PASS -> `--full` recut **9902d918** / **472bc9e4** -> first AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **2** | **EPSF-VALID-01 re-issue** (Parts A-D) - session entry point for ePSF arc |
+| **3** | **FRAME-QC-PARITY phase 2** (decided: Layer A log honesty + QC provenance stamp) - short; can interleave |
 
-**CLOSED (2026-08-21):** **EPSF-DB-01 / MS-SOURCES-RETIRE** -- `MASTER_SOURCES` retired;
-ePSF + enrichment read draft CSV; Phase 3 `dev/tools/db_hygiene_swap.py` for corrupt DB file
-swap; release migration ships with next build. **NEXT:** **ePSF-VALID-01** (opening input:
-conscious CSV-pool widening from MS-SOURCES-RETIRE C1). Evidence:
-`dev/results/CURSOR_RESULT_EPSF_DB_01.md`, `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
+| Pri | Carry list (unchanged) |
+|-----|------------------------|
+| **HIGH** | **MS-POOL-POLICY-01** - generator determinism (inputs-only stabilization; fire proof) |
+| **MED** | **PRECAL-INPUT-CONTRACT-01** - externally pre-calibrated lights contract (Newton) |
+| **LOW** | **SIGMA-BKG-VAR-01** - empty-aperture `sigma_bkg_ap` variance |
+| **MED** | **COMP-RMS-DEF-01** - unify CSV `comp_rms` vs LOO per-star noise |
+| **MED** | **WIDE-ERR / CORR-ERR-01** - exported error bars (open) |
+| **MED** | **D5-1 / COG arc** - Newton note: SNR table rejected on INV-COG-MONOTONE / R90 / APERTURE-BOUND |
+| **LOW** | **gaussian_fwhm_px_override=2.2919** - provenance question |
+| **LOW** | Exposure ramp; ERA membership leftovers |
+| **MED** | **MS-QA-DISPLAY-01**, **RUN-WORKER-01**, **CV-CVN-SKIP-CONSISTENCY** |
+| **FUTURE** | **COMP-HISTORY-DB** (release 2.0) |
 
-**CLOSED (2026-08-21):** **D10-1 / D10-1b** -- CV/CR band-letter measurement complete; Milan
-affirmed **CV** for unfiltered exports (zero code change). GH colour question merged into
-D10-1 and resolved with it. First AAVSO + VarAstro upload (BO first, FW second) **unblocked**
-from the band-letter side; remaining order: push ERR-518 series -> DOCS-SYNC-517 -> uploads at
-Milan's convenience. Evidence: `CURSOR_RESULT_D10_1_CV_CR.md`, `CURSOR_RESULT_D10_1B_CV_CR.md`;
-DECISIONS D10-1-CLOSE.
-
-**CLOSED (2026-08-21):** **EMPTY-DAO-01** -- superseded for empty-sky false-fill by
-era DAO-Gaia audits (draft 517 certificate empty_sky pass2 **0.14%** 3/2200 vs
-pre-era ~55% class); forced-only proc-CSV path remains covered by era census
-accounting. Pointer: `CURSOR_RESULT_DRAFT_517_REVIEW.md` Part A; DECISIONS
-2026-08-20 product model.
+**CLOSED (2026-08-21):** EPSF-DB-01 / MS-SOURCES-RETIRE; D10-1/D10-1b (CV); EMPTY-DAO-01;
+FRAME-QC-PARITY-01 phase 1. Evidence: `dev/results/CURSOR_RESULT_*` series.
 
 ---
+
+## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01) [superseded]
 
 ## NEXT SESSION - entry point (2026-08-20 ERA-03 CLOSE)
 

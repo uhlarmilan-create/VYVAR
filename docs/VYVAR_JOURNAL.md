@@ -2,42 +2,38 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
-## 2026-08-21 -- MS-SOURCES-RETIRE (MASTER_SOURCES retirement)
+## 2026-08-21 -- SESSION-CLOSE (compact day record)
 
-Two file-corruption incidents in one day: `config.json` truncation (morning) and
-`vyvar.sqlite3` btree damage isolated to `MASTER_SOURCES` (+ indexes) during heavy
-concurrent access. Structural fix: per-draft science data lives in draft files
-(`masterstars_full_match.csv` enrichment columns), shared DB reduced to
-equipment/location/cache/QC. ePSF reads CSV only (conscious widening vs DB safe-comp;
-refinement deferred to ePSF-VALID-01). Phase 3 DB hygiene swap script:
-`dev/tools/db_hygiene_swap.py`. Reports: `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_01_AUDIT.md`,
-`dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
+Arcs in order:
 
-## 2026-08-21 -- D10-1 / D10-1b band letter CV affirmed
-
-D10-1 measured CV vs CR on frozen era-516 NoFilter snapshot (ensemble fit: b_V ~ flat,
-b_R ~ +495 mmag/mag). Review challenged flat b_V as possible V-transform artifact; D10-1b
-provenance audit (Gaia G only on LHS ZP), b_G cross-check, and raw mag_inst probe (no ZP)
-confirmed V-like effective band - real physics, not sandbox bug. Raw slopes b_V=-29,
-b_G=+358, b_R=+466 mmag/mag (n=1567); identity gates passed; mechanical rule -> CV on
-both fits. Milan affirmed **CV** for unfiltered exports; zero code change (existing
-NOFILTER/CLEAR/L -> CV mapping). First AAVSO + VarAstro upload unblocked from band-letter
-side (BO first, FW second). Lesson: a verdict that survives an adversarial re-measurement
-is the one you publish; the review retraction is part of the record. Reports:
-`dev/results/CURSOR_RESULT_D10_1_CV_CR.md`, `dev/results/CURSOR_RESULT_D10_1B_CV_CR.md`.
-
-## 2026-08-21 -- ERR-518-02 (sigma_bkg_ap key transport + RAM finalize)
-
-Draft 518 (Newton, pre-calibrated) hit INV-ERR-MODE-01 because `global_fixed`
-aperture mode stored Labbe results under unrounded `_sigma_by_r` keys while row
-assignment looked up `round(r, 4)` (ERR-518-01). Fix: `_sigma_bkg_r_key()` for
-all store/lookup; INV-ERR-SIGMA-ACCT-01 fail-loud if measured empirical radii
-project to zero rows. RAM handoff path now calls
-`_finalize_hybrid_bkg_fallback_sidecar` after deferred CSV flush (commit 2).
-Re-export on draft 518 proc dir: **62352 empirical** (was 62352 howell_fallback);
-first-frame `sigma_bkg_ap` ~51 ADU (order of sandbox 71.8); INV-ERR-MODE-01 sample
-pass. Anchor 516 snapshot `--full`: core SHA **9902d918** byte-identical,
-science compare 60/0. Report: `dev/results/CURSOR_RESULT_ERR_518_02.md`.
+- **ERR-518:** INV-ERR-MODE-01 on first Newton draft (pre-calibrated input); root cause
+  key-projection mismatch in `_sigma_by_r` (global_fixed path); fixed via shared
+  `_sigma_bkg_r_key` + new INV-ERR-SIGMA-ACCT-01; RAM-path finalize gap fixed; `--full`
+  incident (concurrent git ops) -> PROCESS rule "no git ops during `--full`".
+- **XVAL test** (no ledger): ZTF J163831.02+614701.9, Newton vs AIJ, core 60/71 frames
+  RMS 6.5 mmag r=0.981; 11 AIJ outliers = AIJ sky-annulus failures leaking the ~33.5k ADU
+  external-calibration pedestal (quantitatively closed); AIJ errors ~14x overquoted on
+  pedestal data; VYVAR empirical path immune. Formal Newton XVAL waits for VYVAR-native
+  calibration.
+- **D10-1/D10-1b:** CV vs CR decided by pre-registered dual measurement; architect artifact
+  hypothesis tested and disproven by raw-counts probe; physical finding: wide rig effective
+  band is V-like (b_V -29 +/- 65, b_G +358, b_R +466 mmag/mag). CV affirmed by Milan;
+  D10-1 + D10-2 CLOSED in audit register.
+- **DOCS-SYNC-517 + FRAME-QC-PARITY-01 phase 1:** premise (516-vs-517 frame split)
+  REJECTED by measurement - artifacts byte-identical; real split is full-pipeline vs
+  photometry-only replay (design, INV-ANCHOR-00); pre-step named the true prefilter authority
+  (manifest `inspection.fwhm`, limit median+1.5*sigma_MAD = 5.362 px, replay closed 134/16).
+  Architect retractions (517-review frame claim, FW 3.1 mmag attribution) on record; FW delta
+  re-attributed to selection/census -> strengthens MS-POOL-POLICY-01. FRAME-QC phase 2
+  (option 2 + provenance stamp) DECIDED, not yet implemented - carry-over.
+- **EPSF-DB-01 + MS-SOURCES-RETIRE:** "database disk image is malformed" on RUN ePSF;
+  corruption isolated to MASTER_SOURCES btrees 11-14; Milan decision: no DB repair, files
+  over DB - table retired (C1-C3), enrichment persisted to masterstars CSV (EXC-0347 silent
+  pass -> loud), hygiene swap scripted, quick_check wired into `--fast`. Second
+  file-corruption incident of the day; common denominator concurrent access during heavy
+  runs.
+- **EPSF-VALID-01:** issued; Cursor correctly STOPPED at prerequisite gate (push/swap/gates
+  pending Milan).
 
 ## 2026-08-20 -- DAO-GAIA ERA-03 CLOSE
 
