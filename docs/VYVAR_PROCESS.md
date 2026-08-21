@@ -18,6 +18,7 @@ Production code lives in `src_py/`; development material in `dev/`
 for the full map.
 
 - **Session baseline / anchor gate:** `python dev/scripts/session_baseline_check.py --fast`
+  (includes `PRAGMA quick_check` on `vyvar.sqlite3` since MS-SOURCES-RETIRE-01 Phase 4).
   (default tier: git state, config paths, full `dev/tests` pytest, anchor manifest-db parity hint,
   deps outdated hint). Record the **git commit SHA** next to every reported PASS/FAIL; a result
   from commit A is not evidence on commit B.

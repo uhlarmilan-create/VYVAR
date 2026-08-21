@@ -6,6 +6,30 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## MS-SOURCES-RETIRE - files over DB for per-draft science (2026-08-21)
+
+**Decision (Milan, binding).** No database repair and no re-population of corrupt
+`MASTER_SOURCES`. Draft directory files (`masterstars_full_match.csv` + enrichment columns
+written at MAKE MASTERSTAR) are the source of truth for ePSF input, comp-selection enrichment,
+and Photometric Grid QA. Shared SQLite holds equipment/location/calibration/cache only.
+
+**Architect review decisions (2026-08-21, binding for MS-SOURCES-RETIRE-02):**
+
+1. ePSF uses existing CSV-quality selection path as-is (conscious widening vs DB safe-comp +
+   targeting + augment); PSF-star refinement belongs to **ePSF-VALID-01**.
+2. MAKE MASTERSTAR persists enrichment fields to CSV; EXC-0347 silent pass replaced with
+   fail-loud log + plan provenance when columns absent on old drafts.
+3. SHA gates unchanged for frozen anchor snapshot (9902d918); new columns affect newly built
+   masterstars only.
+4. `LOCATION_OLD` excluded from hygiene swap copy list (legacy mirror; no active path).
+   `update_master_source_safety` deleted (unwired).
+5. `PRAGMA quick_check` on `vyvar.sqlite3` is part of `--fast` gate after Phase 4.
+
+**Reports:** `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_01_AUDIT.md`,
+`dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
+
+---
+
 ## D10-1-CLOSE - unfiltered band letter CV affirmed (2026-08-21)
 
 **Decision (Milan, binding).** Unfiltered wide-rig exports use AAVSO/VarAstro band code

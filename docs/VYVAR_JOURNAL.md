@@ -2,6 +2,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-21 -- MS-SOURCES-RETIRE (MASTER_SOURCES retirement)
+
+Two file-corruption incidents in one day: `config.json` truncation (morning) and
+`vyvar.sqlite3` btree damage isolated to `MASTER_SOURCES` (+ indexes) during heavy
+concurrent access. Structural fix: per-draft science data lives in draft files
+(`masterstars_full_match.csv` enrichment columns), shared DB reduced to
+equipment/location/cache/QC. ePSF reads CSV only (conscious widening vs DB safe-comp;
+refinement deferred to ePSF-VALID-01). Phase 3 DB hygiene swap script:
+`dev/tools/db_hygiene_swap.py`. Reports: `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_01_AUDIT.md`,
+`dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
+
 ## 2026-08-21 -- D10-1 / D10-1b band letter CV affirmed
 
 D10-1 measured CV vs CR on frozen era-516 NoFilter snapshot (ensemble fit: b_V ~ flat,

@@ -31,6 +31,12 @@ photometry-only split (`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
 | **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
 | **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. 2026-08-21 XVAL note: AIJ on pre-calibrated pedestal data (draft 518, ~33.5k ADU) suffered sky-annulus failures leaking the pedestal into flux (11/71 frames) and ~14x overquoted errors; VYVAR empirical path immune. Contract (pedestal/pre-sub sky stamp) also fixes the Howell fallback branch. |
 
+**CLOSED (2026-08-21):** **EPSF-DB-01 / MS-SOURCES-RETIRE** -- `MASTER_SOURCES` retired;
+ePSF + enrichment read draft CSV; Phase 3 `dev/tools/db_hygiene_swap.py` for corrupt DB file
+swap; release migration ships with next build. **NEXT:** **ePSF-VALID-01** (opening input:
+conscious CSV-pool widening from MS-SOURCES-RETIRE C1). Evidence:
+`dev/results/CURSOR_RESULT_EPSF_DB_01.md`, `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
+
 **CLOSED (2026-08-21):** **D10-1 / D10-1b** -- CV/CR band-letter measurement complete; Milan
 affirmed **CV** for unfiltered exports (zero code change). GH colour question merged into
 D10-1 and resolved with it. First AAVSO + VarAstro upload (BO first, FW second) **unblocked**

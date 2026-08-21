@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -305,6 +306,31 @@ def check_anchor_manifest_db_parity(report: SessionReport) -> None:
         report.add("manifest-db-parity", "FAIL", str(exc)[:80])
     finally:
         db.close()
+
+
+def check_db_quick_check(report: SessionReport) -> None:
+    """Fail fast if vyvar.sqlite3 PRAGMA quick_check is not ok (~1.2 s on production DB)."""
+    _ensure_import_paths()
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=REPO_ROOT)
+    db_path = Path(cfg.database_path).expanduser()
+    if not db_path.is_file():
+        report.add("db-quick-check", "WARN", "vyvar.sqlite3 missing")
+        return
+    try:
+        conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
+        try:
+            row = conn.execute("PRAGMA quick_check;").fetchone()
+        finally:
+            conn.close()
+        msg = str(row[0]) if row else ""
+        if msg.lower() == "ok":
+            report.add("db-quick-check", "PASS", "ok")
+        else:
+            report.add("db-quick-check", "FAIL", msg[:80])
+    except Exception as exc:  # noqa: BLE001
+        report.add("db-quick-check", "FAIL", str(exc)[:80])
 
 
 def check_deps_outdated(report: SessionReport) -> None:
@@ -858,6 +884,7 @@ def main(argv: list[str] | None = None) -> int:
     check_config_paths(report)
     check_pytest(report)
     check_anchor_manifest_db_parity(report)
+    check_db_quick_check(report)
     check_ledger_hint(report)
     check_deps_outdated(report)
     if args.full:
