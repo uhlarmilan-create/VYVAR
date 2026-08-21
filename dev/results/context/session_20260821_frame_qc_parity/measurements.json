@@ -1,0 +1,145 @@
+{
+  "qc_metrics_rows_516": 150,
+  "qc_metrics_rows_517": 150,
+  "status_ok_516": 134,
+  "status_ok_517": 134,
+  "prefilter_rejected_516": 16,
+  "prefilter_rejected_517": 16,
+  "status_diff_count": 0,
+  "header_diff_count": 0,
+  "vyqcpass_false_516": 21,
+  "vyqcpass_false_517": 21,
+  "infolog_hfr_rejections_517": 21,
+  "proc_csv_516": 134,
+  "proc_csv_517": 134,
+  "prefilter_rejected_frames": [
+    {
+      "frame": "BO_CVn_Light_002.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.254759439365003,
+      "VY_QCHFR": 1.9148431490695357,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_007.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.236027233492498,
+      "VY_QCHFR": 9.465383095533035,
+      "VYQCPASS": false,
+      "infolog_hfr_px": 9.47
+    },
+    {
+      "frame": "BO_CVn_Light_009.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 6.076516327391553,
+      "VY_QCHFR": 3.4712746527096536,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_049.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.209224809665415,
+      "VY_QCHFR": 1.925074184431005,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_056.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.29196847889393,
+      "VY_QCHFR": 2.106622404716466,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_058.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.4095361914745705,
+      "VY_QCHFR": 9.905026919051016,
+      "VYQCPASS": false,
+      "infolog_hfr_px": 9.91
+    },
+    {
+      "frame": "BO_CVn_Light_066.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.278707685371715,
+      "VY_QCHFR": 2.054847709539086,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_074.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.256443269411122,
+      "VY_QCHFR": 2.0519093184847703,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_111.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.254399996626966,
+      "VY_QCHFR": 2.0401841706793293,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_122.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.287680254654251,
+      "VY_QCHFR": 9.964850360514674,
+      "VYQCPASS": false,
+      "infolog_hfr_px": 9.96
+    },
+    {
+      "frame": "BO_CVn_Light_131.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.24570390810859,
+      "VY_QCHFR": 2.1004209978540156,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_141.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.255002583153807,
+      "VY_QCHFR": 2.0553931787253696,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_142.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.24219098007014,
+      "VY_QCHFR": 2.118303690409698,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_147.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.238623468745072,
+      "VY_QCHFR": 2.018736768796922,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_149.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.250481575751802,
+      "VY_QCHFR": 2.0942106447199733,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    },
+    {
+      "frame": "BO_CVn_Light_150.fits",
+      "status": "rejected_prefilter_fwhm",
+      "fwhm_px": 5.2326818430904005,
+      "VY_QCHFR": 1.959545063377711,
+      "VYQCPASS": true,
+      "infolog_hfr_px": NaN
+    }
+  ]
+}
