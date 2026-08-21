@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-21 -- D10-1 / D10-1b band letter CV affirmed
+
+D10-1 measured CV vs CR on frozen era-516 NoFilter snapshot (ensemble fit: b_V ~ flat,
+b_R ~ +495 mmag/mag). Review challenged flat b_V as possible V-transform artifact; D10-1b
+provenance audit (Gaia G only on LHS ZP), b_G cross-check, and raw mag_inst probe (no ZP)
+confirmed V-like effective band - real physics, not sandbox bug. Raw slopes b_V=-29,
+b_G=+358, b_R=+466 mmag/mag (n=1567); identity gates passed; mechanical rule -> CV on
+both fits. Milan affirmed **CV** for unfiltered exports; zero code change (existing
+NOFILTER/CLEAR/L -> CV mapping). First AAVSO + VarAstro upload unblocked from band-letter
+side (BO first, FW second). Lesson: a verdict that survives an adversarial re-measurement
+is the one you publish; the review retraction is part of the record. Reports:
+`dev/results/CURSOR_RESULT_D10_1_CV_CR.md`, `dev/results/CURSOR_RESULT_D10_1B_CV_CR.md`.
+
 ## 2026-08-21 -- ERR-518-02 (sigma_bkg_ap key transport + RAM finalize)
 
 Draft 518 (Newton, pre-calibrated) hit INV-ERR-MODE-01 because `global_fixed`

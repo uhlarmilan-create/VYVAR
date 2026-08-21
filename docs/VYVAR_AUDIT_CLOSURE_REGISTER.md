@@ -28,12 +28,12 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 | 12 | SKYSF-DOUBLE in-place guard | 3 | **FIXED** | Read `VY_SKYSF` before re-subtract |
 | 13 | I-12 PM unavailable logging | 4 | **FIXED** | WARNING when pmra/pmdec absent |
 | 14 | T1 export time_base truth | 12 | **FIXED** | Refuse non-BJD_TDB AAVSO export |
-| 15 | D10-2 Gaia->Johnson range guard | 10 | **FIXED** | Stage 1 |
+| 15 | D10-2 Gaia->Johnson range guard | 10 | **CLOSED** | 2026-08-21: guard verified `gaia_johnson.py:38-42`, `140-155`; exercised in D10-1 (11+3 excluded) |
 | 16 | D5-1 aperture provenance columns | 5 | **DOCUMENTED** | A-1b; COG deferred |
 | 16b | **D5-2** production flux vs G scaling | 5 | **FIXED** | slope -0.318 -> -0.491; gate E.5 |
 | 31 | **A-9** absolute PSF scale | 5, 7 | **DOCUMENTED** | Not blocking differential |
 | 17 | D1-3 master flat documentation | 1 | **CLOSED** | DECISIONS entry |
-| 18 | D10-1 unfiltered CV->CR band | 10 | **FIXED** | Milan decision |
+| 18 | D10-1 unfiltered CV->CR band | 10 | **CLOSED** | 2026-08-21: empirical D10-1 + D10-1b; Milan affirmed **CV**; zero code change; `CURSOR_RESULT_D10_1_CV_CR.md`, `CURSOR_RESULT_D10_1B_CV_CR.md` |
 | 19 | sigma_pp drop | 2 | **FIXED** | Milan decision |
 | 20 | masterstar_dao_threshold 2.1->3.8 | 7 | **FIXED** | P-10 bundle |
 | 21 | I-11 Howell sky term | 2 | **FIXED** | batch D |
@@ -64,4 +64,13 @@ A-1 aperture finding: **A-1b CONFIRMED, DOCUMENTED** (~144 mmag fixture; COG fix
 
 ---
 
-*Register closed 2026-08-04. See `docs/VYVAR_AUDIT_CLOSURE.md` for referee deliverable.*
+## Post-audit empirical closures (2026-08-21)
+
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| **D10-1** | Unfiltered CV vs CR band letter | **CLOSED** | Ensemble + raw-counts probe on era-516 NoFilter; CV affirmed; no export code change |
+| **D10-2** | Gaia->Johnson validity guard | **CLOSED** | Present, enforced, exercised in D10-1 star selection |
+
+---
+
+*Register closed 2026-08-04. Post-audit updates above. See `docs/VYVAR_AUDIT_CLOSURE.md` for referee deliverable.*

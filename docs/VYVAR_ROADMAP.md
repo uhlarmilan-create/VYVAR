@@ -12,11 +12,11 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01)
 
-Local tip: **`8dea595`** (ERA-03 close pushed). Draft **517** first post-era UI
-field run reviewed (`CURSOR_RESULT_DRAFT_517_REVIEW.md`). FRAME-QC-PARITY-01
-phase 1 names dual QC layers (calibration HFR vs preprocess FWHM prefilter) and
-UI/full-pipeline vs headless `--full` photometry-only split
-(`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
+Local tip: **`e0db635`** (D10-1b); origin/main still **`8dea595`** (ERR-518 + D10 series
+await Milan push). Draft **517** first post-era UI field run reviewed
+(`CURSOR_RESULT_DRAFT_517_REVIEW.md`). FRAME-QC-PARITY-01 phase 1 names dual QC layers
+(calibration HFR vs preprocess FWHM prefilter) and UI/full-pipeline vs headless `--full`
+photometry-only split (`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
 
 | Pri | Next item |
 |-----|-----------|
@@ -30,6 +30,13 @@ UI/full-pipeline vs headless `--full` photometry-only split
 | **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
 | **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
 | **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. |
+
+**CLOSED (2026-08-21):** **D10-1 / D10-1b** -- CV/CR band-letter measurement complete; Milan
+affirmed **CV** for unfiltered exports (zero code change). GH colour question merged into
+D10-1 and resolved with it. First AAVSO + VarAstro upload (BO first, FW second) **unblocked**
+from the band-letter side; remaining order: push ERR-518 series -> DOCS-SYNC-517 -> uploads at
+Milan's convenience. Evidence: `CURSOR_RESULT_D10_1_CV_CR.md`, `CURSOR_RESULT_D10_1B_CV_CR.md`;
+DECISIONS D10-1-CLOSE.
 
 **CLOSED (2026-08-21):** **EMPTY-DAO-01** -- superseded for empty-sky false-fill by
 era DAO-Gaia audits (draft 517 certificate empty_sky pass2 **0.14%** 3/2200 vs
@@ -57,8 +64,8 @@ Local tip: **`8dea595`** (ERA-03 close pushed). Canonical product SHA
 check-star pinning (KNAME continuity); INV-PIN-01..04; core scope 97->121
 (+14 additive LCs/comp_quality; -2 honest zone_noise); anchor freeze
 `draft_000516_snapshot_era03_20260820`; panel GREEN; BO/FW MAD 7.151/8.201 mmag;
-SUBMIT-01 PASS on BO export; GH color question merged into **D10-1** (not a
-blocker for era close).
+SUBMIT-01 PASS on BO export; GH color question merged into **D10-1** and **resolved**
+with CV affirmed (2026-08-21; see DECISIONS D10-1-CLOSE).
 
 ---
 
@@ -90,7 +97,7 @@ GAIN-PT-RADIUS-01 (pin r=4.0; product SHA **de6f7c8**). SUBMIT-01 ready
 XVAL-AIJ-02 **DONE** (production 4c + two frame states; 4.9 mmag RMS).
 
 Carry (unchanged): INV-PIXELS-01 awaiting Milan;
-D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D10-1; D11-1;
+D1b; D2; WIDE-ERR-CROSSRIG; D1-2 OPEN; C-EXPORT-GAP; W6-PROP; D11-1;
 U-SKY-FALLBACK-01; LOCATION_OLD; zone rename; DET-vs-MEAS-01; A-1-OVERRIDE;
 blended-target merging (deferred past v1.0); drafts 512/513/510 INGESTED repair.
 

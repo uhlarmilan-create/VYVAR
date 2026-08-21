@@ -6,6 +6,39 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D10-1-CLOSE - unfiltered band letter CV affirmed (2026-08-21)
+
+**Decision (Milan, binding).** Unfiltered wide-rig exports use AAVSO/VarAstro band code
+**CV** (Johnson V comparison magnitudes). Zero code change: existing
+NOFILTER/CLEAR/L/LUM/LUMINANCE -> CV mapping in `export_reports.py` stays as-is.
+
+**Evidence (pre-registered dual measurement on frozen era-516 NoFilter snapshot).**
+
+- **D10-1** ensemble fit (n=2076, BP-RP span 2.34): b_V = +1.6 +/- 67, b_R = +495 +/- 67
+  mmag/mag; mechanical rule -> CV.
+- **D10-1b** raw-counts probe (n=1567, G<=14, BP-RP span 0.46-2.80): b_V = -29 +/- 65,
+  b_G = +358 +/- 65, b_R = +466 +/- 65 mmag/mag; identity gates b_R-b_V and b_G-b_V
+  passed; same rule -> CV.
+- **Physical finding:** Zeiss 200 mm + QHY294MM NoFilter effective band is V-like (I-V flat,
+  I-G sloped) - real bandpass physics, **not** a construction artifact (D10-1b provenance
+  audit: Gaia G only on LHS ZP; b_G discriminator; raw mag_inst confirms pattern without ZP).
+- **Architect retraction on record:** artifact hypothesis raised in D10-1 review was tested
+  and disproven by the raw-counts probe.
+- **Colour systematics at pinned submission targets under CV:** sub-mmag (BO +0.9, FW -1.0,
+  GH +1.5 mmag); CR would inject ~15-25 mmag.
+
+**Reports:** `dev/results/CURSOR_RESULT_D10_1_CV_CR.md`,
+`dev/results/CURSOR_RESULT_D10_1B_CV_CR.md`.
+
+**Methods-paper caveat.** Slopes are 5-sigma robust but averaged over large per-star residual
+scatter (transform sigma, faint end); state explicitly when publishing.
+
+**D10-2 closure (same date).** Gaia->Johnson validity guard verified present and enforced
+(`gaia_johnson.py:38-42`, `140-155`; BP-RP [-0.5, 5.1], G [8, 16]); exercised in D10-1
+selection (11+3 stars excluded).
+
+---
+
 ## Canonical --full / P1 mode and clean-rebuild freeze (ANCHOR-516-04, 2026-08-18)
 
 **Canonical headless mode.** `--full`, P1 golden, and product rebuilds run with
