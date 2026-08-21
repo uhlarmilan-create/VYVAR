@@ -1,0 +1,72 @@
+{
+  "config": {
+    "annulus_inner_fwhm": 4.75,
+    "annulus_outer_fwhm": 9.0,
+    "err_background_mode": "empirical",
+    "err_empty_apertures_n": 64,
+    "err_empty_apertures_min": 16
+  },
+  "aperture_geometry": {
+    "r_ap_px": 4.35461,
+    "fwhm_px_for_aperture": 2.2919,
+    "r_in_px": 10.886525,
+    "r_out_px": 20.6271,
+    "n_stars_in_proc": 878
+  },
+  "fits": {
+    "aligned": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000518\\detrended_aligned\\lights\\V_60_2\\TOI-1131.01.b_2025-04-22_23-05-09_V.fits",
+      "shape": [
+        2088,
+        3126
+      ],
+      "dtype": ">f4",
+      "bitpix": -32,
+      "bzero": null,
+      "bscale": null,
+      "min": 33415.9921875,
+      "max": 92818.203125,
+      "median": 33487.3671875,
+      "nan_frac": 0.0,
+      "inf_frac": 0.0,
+      "edge20_nan_frac": 0.0,
+      "fwhm_dao_median_px": NaN,
+      "vyvarpr": true,
+      "cal_stage": null,
+      "sky_surface_applied": true
+    },
+    "non_calibrated": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000518\\non_calibrated\\lights\\V_60_2\\TOI-1131.01.b_2025-04-22_23-05-09_V.fits",
+      "shape": [
+        2088,
+        3126
+      ],
+      "dtype": ">f4",
+      "bitpix": -32,
+      "bzero": null,
+      "bscale": null,
+      "min": 33415.9921875,
+      "max": 98232.296875,
+      "median": 33487.33203125,
+      "nan_frac": 0.0,
+      "inf_frac": 0.0,
+      "edge20_nan_frac": 0.0,
+      "fwhm_dao_median_px": NaN,
+      "vyvarpr": true,
+      "cal_stage": null,
+      "sky_surface_applied": true
+    }
+  },
+  "labbe": {
+    "aligned": {
+      "sigma_bkg_ap": 71.80124960975753,
+      "n_valid": 64,
+      "reason": ""
+    },
+    "non_calibrated": {
+      "sigma_bkg_ap": 99.93261532851801,
+      "n_valid": 64,
+      "reason": ""
+    }
+  }
+}

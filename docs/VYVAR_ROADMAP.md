@@ -28,6 +28,7 @@ UI/full-pipeline vs headless `--full` photometry-only split
 | **MED** | **ePSF-VALID** -- internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
 | **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
 | **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
+| **MED** | **PRECAL-INPUT-CONTRACT-01** (new, ERR-518-01) -- input contract for externally pre-calibrated lights: pedestal/sky stamp, SNR-table vs global_fixed empirical err path; blocks Newton-class drafts until defined. |
 
 **CLOSED (2026-08-21):** **EMPTY-DAO-01** -- superseded for empty-sky false-fill by
 era DAO-Gaia audits (draft 517 certificate empty_sky pass2 **0.14%** 3/2200 vs
