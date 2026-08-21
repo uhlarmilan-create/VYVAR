@@ -1223,7 +1223,7 @@ class VyvarDatabase:
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
-        self._ensure_master_sources_table()
+        self._drop_master_sources_table()
         self._normalize_active_columns_to_text()
 
     def _column_sql_type(self, table: str, column: str) -> str | None:
@@ -1345,181 +1345,34 @@ class VyvarDatabase:
         self.conn.execute("DROP VIEW IF EXISTS FINAL_DATA;")
         self.conn.commit()
 
-    def _ensure_master_sources_table(self) -> None:
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS MASTER_SOURCES (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                DRAFT_ID INTEGER,
-                SOURCE_ID_GAIA TEXT,
-                X_MASTER REAL,
-                Y_MASTER REAL,
-                RA REAL,
-                DE REAL,
-                G_MAG REAL,
-                BP_RP REAL,
-                G_FLUX_ERROR_REL REAL,
-                NON_SINGLE_STAR INTEGER DEFAULT 0,
-                PHOT_VARIABLE_FLAG TEXT,
-                FILTER_NAME TEXT,
-                PHOT_CATEGORY TEXT,
-                RECOMMENDED_APERTURE REAL,
-                IS_VAR INTEGER DEFAULT 0,
-                IS_SATURATED INTEGER DEFAULT 0,
-                IS_SAFE_COMP INTEGER DEFAULT 1,
-                EXCLUSION_REASON TEXT,
-                STRESS_RMS REAL,
-                SAFE_OVERRIDE INTEGER DEFAULT 0,
-                CREATED_AT TEXT NOT NULL
-            );
-            """
+    def _drop_master_sources_table(self) -> None:
+        """Retire MASTER_SOURCES; tolerate corrupt btree until Phase 3 DB hygiene swap."""
+        stmts = (
+            "DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;",
+            "DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;",
+            "DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;",
+            "DROP TABLE IF EXISTS MASTER_SOURCES;",
         )
-        # Migrations for older DBs: add missing columns.
-        cur = self.conn.execute("PRAGMA table_info('MASTER_SOURCES');")
-        cols = {str(r[1]).upper() for r in cur.fetchall()}
-        add_cols: list[tuple[str, str]] = []
-        if "FILTER_NAME" not in cols:
-            add_cols.append(("FILTER_NAME", "TEXT"))
-        if "PHOT_CATEGORY" not in cols:
-            add_cols.append(("PHOT_CATEGORY", "TEXT"))
-        if "G_FLUX_ERROR_REL" not in cols:
-            add_cols.append(("G_FLUX_ERROR_REL", "REAL"))
-        if "NON_SINGLE_STAR" not in cols:
-            add_cols.append(("NON_SINGLE_STAR", "INTEGER DEFAULT 0"))
-        if "PHOT_VARIABLE_FLAG" not in cols:
-            add_cols.append(("PHOT_VARIABLE_FLAG", "TEXT"))
-        if "RECOMMENDED_APERTURE" not in cols:
-            add_cols.append(("RECOMMENDED_APERTURE", "REAL"))
-        if "IS_SAFE_COMP" not in cols:
-            add_cols.append(("IS_SAFE_COMP", "INTEGER DEFAULT 1"))
-        if "EXCLUSION_REASON" not in cols:
-            add_cols.append(("EXCLUSION_REASON", "TEXT"))
-        if "STRESS_RMS" not in cols:
-            add_cols.append(("STRESS_RMS", "REAL"))
-        if "SAFE_OVERRIDE" not in cols:
-            add_cols.append(("SAFE_OVERRIDE", "INTEGER DEFAULT 0"))
-        if "LIKELY_NONLINEAR" not in cols:
-            add_cols.append(("LIKELY_NONLINEAR", "INTEGER DEFAULT 0"))
-        if "ON_BAD_COLUMN" not in cols:
-            add_cols.append(("ON_BAD_COLUMN", "INTEGER DEFAULT 0"))
-        for name, sql_type in add_cols:
-            self.conn.execute(f"ALTER TABLE MASTER_SOURCES ADD COLUMN {name} {sql_type};")
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_MASTER_SOURCES_DRAFT ON MASTER_SOURCES (DRAFT_ID);"
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_MASTER_SOURCES_GAIA ON MASTER_SOURCES (SOURCE_ID_GAIA);"
-        )
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS IDX_MASTER_SOURCES_PHOTCAT ON MASTER_SOURCES (DRAFT_ID, PHOT_CATEGORY);"
-        )
-        self.conn.commit()
-
-    def replace_master_sources_for_draft(self, draft_id: int, rows: list[dict[str, Any]]) -> int:
-        """Replace MASTER_SOURCES rows for a draft (delete+insert)."""
-        did = int(draft_id)
-        self.conn.execute("DELETE FROM MASTER_SOURCES WHERE DRAFT_ID = ?;", (did,))
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        n = 0
-        for r in rows:
-            self.conn.execute(
-                """
-                INSERT INTO MASTER_SOURCES (
-                    DRAFT_ID,
-                    SOURCE_ID_GAIA,
-                    X_MASTER,
-                    Y_MASTER,
-                    RA,
-                    DE,
-                    G_MAG,
-                    BP_RP,
-                    G_FLUX_ERROR_REL,
-                    NON_SINGLE_STAR,
-                    PHOT_VARIABLE_FLAG,
-                    FILTER_NAME,
-                    PHOT_CATEGORY,
-                    RECOMMENDED_APERTURE,
-                    IS_VAR,
-                    IS_SATURATED,
-                    IS_SAFE_COMP,
-                    EXCLUSION_REASON,
-                    STRESS_RMS,
-                    SAFE_OVERRIDE,
-                    LIKELY_NONLINEAR,
-                    ON_BAD_COLUMN,
-                    CREATED_AT
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """,
-                (
-                    did,
-                    str(r.get("source_id_gaia") or ""),
-                    float(r.get("x_master")) if r.get("x_master") is not None else None,
-                    float(r.get("y_master")) if r.get("y_master") is not None else None,
-                    float(r.get("ra")) if r.get("ra") is not None else None,
-                    float(r.get("dec")) if r.get("dec") is not None else None,
-                    float(r.get("g_mag")) if r.get("g_mag") is not None else None,
-                    float(r.get("bp_rp")) if r.get("bp_rp") is not None else None,
-                    float(r.get("g_flux_error_rel")) if r.get("g_flux_error_rel") is not None else None,
-                    1 if int(r.get("non_single_star") or 0) else 0,
-                    str(r.get("phot_variable_flag") or "") or None,
-                    str(r.get("filter_name") or ""),
-                    str(r.get("phot_category") or ""),
-                    float(r.get("recommended_aperture")) if r.get("recommended_aperture") is not None else None,
-                    1 if int(r.get("is_var") or 0) else 0,
-                    1 if int(r.get("is_saturated") or 0) else 0,
-                    1 if int(r.get("is_safe_comp") if r.get("is_safe_comp") is not None else 1) else 0,
-                    str(r.get("exclusion_reason") or "") or None,
-                    float(r.get("stress_rms")) if r.get("stress_rms") is not None else None,
-                    1 if int(r.get("safe_override") or 0) else 0,
-                    1 if int(r.get("likely_nonlinear") or 0) else 0,
-                    1 if int(r.get("on_bad_column") or 0) else 0,
-                    now,
-                ),
+        deferred = False
+        for sql in stmts:
+            try:
+                self.conn.execute(sql)
+            except Exception as exc:  # noqa: BLE001
+                deferred = True
+                logging.warning(
+                    "[DB] MASTER_SOURCES retirement deferred (%s): %s",
+                    sql.strip(),
+                    exc,
+                )
+        try:
+            self.conn.commit()
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("[DB] MASTER_SOURCES retirement commit failed: %s", exc)
+        if deferred:
+            logging.warning(
+                "[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py "
+                "with the app closed (Phase 3)."
             )
-            n += 1
-        self.conn.commit()
-        return n
-
-    def fetch_master_sources_for_draft(self, draft_id: int) -> list[dict[str, Any]]:
-        cur = self.conn.execute(
-            """
-            SELECT *
-            FROM MASTER_SOURCES
-            WHERE DRAFT_ID = ?
-            ORDER BY
-              COALESCE(IS_SAFE_COMP, 0) DESC,
-              COALESCE(STRESS_RMS, 1e9) ASC,
-              COALESCE(G_MAG, 99) ASC,
-              ID ASC;
-            """,
-            (int(draft_id),),
-        )
-        return [dict(r) for r in cur.fetchall()]
-
-    def update_master_source_safety(
-        self,
-        source_row_id: int,
-        *,
-        is_safe_comp: bool,
-        exclusion_reason: str | None = None,
-        safe_override: bool = True,
-    ) -> None:
-        self.conn.execute(
-            """
-            UPDATE MASTER_SOURCES
-            SET IS_SAFE_COMP = ?,
-                EXCLUSION_REASON = ?,
-                SAFE_OVERRIDE = ?
-            WHERE ID = ?;
-            """,
-            (
-                1 if bool(is_safe_comp) else 0,
-                (str(exclusion_reason).strip() if exclusion_reason is not None else None),
-                1 if bool(safe_override) else 0,
-                int(source_row_id),
-            ),
-        )
-        self.conn.commit()
 
     @staticmethod
     def sql_expr_active_is_true(column_ref: str) -> str:
