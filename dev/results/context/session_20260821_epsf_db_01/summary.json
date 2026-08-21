@@ -1,0 +1,45 @@
+{
+  "vyvar_app": {
+    "path": "vyvar.sqlite3",
+    "size_bytes": 52752384,
+    "mtime": "2026-08-21T09:19:33",
+    "wal_size": 0,
+    "shm_size": 32768,
+    "connection_mode": "file:...?mode=ro",
+    "journal_mode": "wal",
+    "page_count": 12877,
+    "freelist_count": 431,
+    "verdict": "malformed",
+    "corrupt_rootpages": [11, 12, 13, 14],
+    "corrupt_objects": [
+      "MASTER_SOURCES",
+      "IDX_MASTER_SOURCES_DRAFT",
+      "IDX_MASTER_SOURCES_GAIA",
+      "IDX_MASTER_SOURCES_PHOTCAT"
+    ],
+    "readable_tables": {
+      "EQUIPMENTS": 5,
+      "TELESCOPE": 8,
+      "LOCATION": 6,
+      "LOCATION_OLD": 6,
+      "CALIBRATION_LIBRARY": 3,
+      "FITS_HEADER_CACHE": 16102,
+      "OBS_QC_PROCESSING_RUN": 15,
+      "OBS_QC_PROCESSING_FILE": 1414,
+      "FIELD_REGISTRY": 0,
+      "COMP_STAR_LIBRARY": 0
+    },
+    "master_sources_count_draft_517": "ERROR malformed"
+  },
+  "gaia_dr3": {
+    "path": "GAIA_DR3/vyvar_gaia_dr3.db",
+    "size_bytes": 53137264640,
+    "verdict": "not_fully_checked",
+    "note": "Full PRAGMA quick_check started but did not complete within session (>12 min on 53 GB). ePSF build_epsf_model failure occurs before Gaia catalog open; Gaia unlikely cause of reported UI error."
+  },
+  "reproduction": {
+    "get_epsf_fwhm_from_context": "OK 3.3014",
+    "_epsf_prepare_stars": "DatabaseError database disk image is malformed",
+    "master_sources_query": "DatabaseError database disk image is malformed"
+  }
+}
