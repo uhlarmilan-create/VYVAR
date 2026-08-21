@@ -44,7 +44,7 @@ Connection mode: **`file:<abs-path>?mode=ro`** (SQLite URI read-only) unless not
 | DB | Size | mtime | -wal/-shm | quick_check | Verdict |
 |----|------|-------|-----------|-------------|---------|
 | **vyvar.sqlite3** (app) | 50.3 MB | 2026-08-21 09:19 | wal 0 B, shm 32 KB | **FAIL** (~1.2 s) | **MALFORMED** |
-| **GAIA_DR3/vyvar_gaia_dr3.db** | 49.5 GB | 2026-06-15 | none | not completed (>12 min run) | **Inconclusive** (not on failure path) |
+| **GAIA_DR3/vyvar_gaia_dr3.db** | 49.5 GB | 2026-06-15 | wal 0 B, shm 32 KB | **OK** (970 s, read-only) | **OK** |
 | **GAIA_DR3/gaia_dr3_local.sqlite3** | 0 B | 2026-07-21 | n/a | skipped | **Empty stub** |
 
 **vyvar.sqlite3 integrity detail:** `PRAGMA quick_check` and `integrity_check` report

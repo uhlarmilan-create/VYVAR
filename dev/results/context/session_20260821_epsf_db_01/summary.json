@@ -34,8 +34,11 @@
   "gaia_dr3": {
     "path": "GAIA_DR3/vyvar_gaia_dr3.db",
     "size_bytes": 53137264640,
-    "verdict": "not_fully_checked",
-    "note": "Full PRAGMA quick_check started but did not complete within session (>12 min on 53 GB). ePSF build_epsf_model failure occurs before Gaia catalog open; Gaia unlikely cause of reported UI error."
+    "quick_check_elapsed_s": 970.5,
+    "quick_check_ok": true,
+    "row_counts": {"gaia_dr3": 211712600, "strip_progress": 713},
+    "verdict": "OK",
+    "note": "Full PRAGMA quick_check completed read-only; ePSF failure path does not reach Gaia before MASTER_SOURCES query fails."
   },
   "reproduction": {
     "get_epsf_fwhm_from_context": "OK 3.3014",
