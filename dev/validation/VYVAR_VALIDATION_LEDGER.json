@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-20",
+  "updated": "2026-08-21",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-08-20",
-      "commit": "b8d5c74",
+      "last_verified": "2026-08-21",
+      "commit": "5f46469",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -145,8 +145,8 @@
       "description": "Frozen 516 ERA-03 snapshot draft_000516_snapshot_era03_20260820 (canonical --full; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
       "verification": "scripts/session_baseline_check.py --full (core 9902d918 n=121; extended 472bc9e4 n=179). Photometers frozen snapshot inputs copied to tmp, never live 516.",
       "passes": true,
-      "last_verified": "2026-08-20",
-      "commit": "b8d5c74",
+      "last_verified": "2026-08-21",
+      "commit": "5f46469",
       "notes": "DAO-GAIA ERA-03 close: supersedes ANCHOR-516-04 clean-rebuild core 477dc8cf (n=97). Pinned 48-target comp ensembles + check_catalog_id per target (INV-PIN-01..04). +14 additive LCs/comp_quality sidecars; -2 honest zone_noise missing. CV CVn 1497007144465726080 skip_reason=per_frame_saturation. Snapshot inputs frozen so the gate cannot photometer a live drifting draft.",
       "census_fingerprint": {
         "n_raw_dao": 2246,

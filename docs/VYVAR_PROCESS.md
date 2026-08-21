@@ -26,6 +26,9 @@ for the full map.
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates
   `docs/VYVAR_PARAMS.md` from `dev/validation/params_registry.json`.
 - **Ledger:** `dev/validation/VYVAR_VALIDATION_LEDGER.json`.
+- **No git during `--full`:** do not run git operations (`add`, `commit`, `checkout`)
+  while `session_baseline_check.py --full` is running; the 2026-08-21
+  `index.lock` / `config.json` incident is the reason.
 
 ### Full-suite pytest comparability
 
