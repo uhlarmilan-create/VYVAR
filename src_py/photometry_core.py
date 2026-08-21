@@ -78,6 +78,56 @@ ERR_BKG_SOURCE_HOWELL_SCALED = "howell_scaled"
 BKG_SCALE_R_CLAMP_LO = 0.05
 BKG_SCALE_R_CLAMP_HI = 2.0
 
+
+def _sigma_bkg_r_key(r: float) -> float:
+    """Canonical dict key for per-radius ``sigma_bkg_ap`` transport.
+
+    Every ``_sigma_by_r`` store AND lookup must go through this function
+    (ERR-518-01: unrounded store key vs rounded lookup key lost 100%
+    of empirical measurements in global_fixed mode).
+    """
+    return round(float(r), 4)
+
+
+def _assert_inv_err_sigma_acct_01(
+    sigma_by_r: dict[float, tuple[float, str]],
+    src_col: np.ndarray,
+    *,
+    n: int,
+    r_ap_arr: np.ndarray | None,
+    r_ap: float,
+) -> None:
+    """INV-ERR-SIGMA-ACCT-01: measured empirical radii must project to rows."""
+    from invariants_runtime import InvariantViolation  # noqa: PLC0415
+
+    n_empirical_measured = sum(
+        1 for _sig, _src in sigma_by_r.values() if _src == ERR_BKG_SOURCE_EMPIRICAL
+    )
+    n_empirical_assigned = int(np.sum(src_col == ERR_BKG_SOURCE_EMPIRICAL))
+    if n_empirical_measured <= 0 or n_empirical_assigned > 0:
+        return
+    if r_ap_arr is not None:
+        radii_requested = sorted(
+            {
+                _sigma_bkg_r_key(float(v))
+                for v in r_ap_arr[np.isfinite(r_ap_arr) & (r_ap_arr > 0)]
+            }
+        )
+    else:
+        radii_requested = [_sigma_bkg_r_key(float(r_ap))]
+    radii_measured = sorted(
+        _sigma_bkg_r_key(r)
+        for r, (_sig, src) in sigma_by_r.items()
+        if src == ERR_BKG_SOURCE_EMPIRICAL
+    )
+    raise InvariantViolation(
+        "INV-ERR-SIGMA-ACCT-01",
+        "Labbe measurement succeeded for "
+        f"{n_empirical_measured} radius value(s) but 0 of {n} rows received "
+        "empirical sigma_bkg_ap; key projection is broken. "
+        f"radii_measured={radii_measured} radii_requested={radii_requested}",
+    )
+
 # Per-target LC time provenance (F-BJD-1): labels BJD recompute path, does not alter time values.
 TIME_BASE_COL = "time_base"
 TIME_BASE_BJD_TDB = "BJD_TDB"
@@ -14287,9 +14337,9 @@ def enhance_catalog_dataframe_aperture_bpm(
                         {"r_ap": float(_r_u), "seed": int(_seed), "n_valid": int(_nv)}
                     )
                     if math.isfinite(_sig) and _sig >= 0:
-                        _sigma_by_r[float(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)
+                        _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)
                     else:
-                        _sigma_by_r[float(_r_u)] = (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK)
+                        _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK)
                         if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_err_bkg_logged"):
                             enhance_catalog_dataframe_aperture_bpm._err_bkg_logged = set()
                         _log_id = str(hdr.get("FRAME") or hdr.get("VY_FRAME") or id(hdr))
@@ -14304,7 +14354,7 @@ def enhance_catalog_dataframe_aperture_bpm(
                 _src_col = np.full(n, ERR_BKG_SOURCE_HOWELL_FALLBACK, dtype=object)
                 if r_ap_arr is not None:
                     for _i in range(n):
-                        _r_key = round(float(r_ap_arr[_i]), 4)
+                        _r_key = _sigma_bkg_r_key(float(r_ap_arr[_i]))
                         _sig_v, _src_v = _sigma_by_r.get(
                             _r_key,
                             (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
@@ -14313,11 +14363,18 @@ def enhance_catalog_dataframe_aperture_bpm(
                         _src_col[_i] = _src_v
                 else:
                     _sig_v, _src_v = _sigma_by_r.get(
-                        round(float(r_ap), 4),
+                        _sigma_bkg_r_key(float(r_ap)),
                         (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
                     )
                     _sigma_col[:] = _sig_v
                     _src_col[:] = _src_v
+                _assert_inv_err_sigma_acct_01(
+                    _sigma_by_r,
+                    _src_col,
+                    n=n,
+                    r_ap_arr=r_ap_arr,
+                    r_ap=float(r_ap),
+                )
                 out[SIGMA_BKG_AP_COL] = _sigma_col
                 out[ERR_BKG_SOURCE_COL] = _src_col
             elif _bkg_mode == ERR_BKG_MODE_HOWELL:

@@ -18,6 +18,7 @@ from photometry_core import (
     ERR_BKG_SOURCE_HOWELL_FALLBACK,
     ERR_BKG_SOURCE_HOWELL_SCALED,
     SIGMA_BKG_AP_COL,
+    _assert_inv_err_sigma_acct_01,
     _clamp_bkg_scale_r,
     _clamp_err_empty_apertures_n,
     _howell_bkg_variance_adu2,
@@ -27,6 +28,7 @@ from photometry_core import (
     _photometric_error,
     _phase2a_empirical_sigma_bkg_ap,
     _photometric_error_with_bkg_mode,
+    _sigma_bkg_r_key,
     bkg_scale_ratio_empirical_over_howell,
     compute_setup_bkg_scale_r,
     compute_snr_optimal_aperture_table,
@@ -36,6 +38,7 @@ from photometry_core import (
     read_flux_from_csv,
     scaled_sigma_bkg_ap_from_howell,
 )
+from invariants_runtime import InvariantViolation
 
 
 def test_clamp_err_empty_apertures_n() -> None:
@@ -422,3 +425,119 @@ def test_phase2a_projected_cache_matches_full_row_empirical() -> None:
     assert len(projected) == 1
     assert projected.loc[0, "err"] == pytest.approx(full.loc[0, "err"], rel=0, abs=1e-15)
     assert projected.loc[0, ERR_BKG_SOURCE_COL] == full.loc[0, ERR_BKG_SOURCE_COL]
+
+
+def test_sigma_bkg_r_key_canonicalizes_518_global_aperture() -> None:
+    """ERR-518-01: 4.35461 must round-trip as 4.3546 (pre-fix store/lookup miss)."""
+    r_ap = max(0.5, 1.9 * 2.2919)
+    assert r_ap == pytest.approx(4.35461)
+    assert _sigma_bkg_r_key(r_ap) == 4.3546
+    broken_store = {float(r_ap): ("stored", ERR_BKG_SOURCE_EMPIRICAL)}
+    assert broken_store.get(_sigma_bkg_r_key(r_ap)) is None
+
+
+def test_global_fixed_518_r_ap_emits_empirical_sigma(monkeypatch: pytest.MonkeyPatch) -> None:
+    """global_fixed + gaussian override 2.2919: rows must be EMPIRICAL with finite sigma."""
+    rng = np.random.default_rng(518)
+    ny, nx = 512, 512
+    data = rng.normal(800.0, 2.5, size=(ny, nx)).astype(np.float32)
+    n_stars = 24
+    xs = rng.uniform(60, nx - 60, size=n_stars)
+    ys = rng.uniform(60, ny - 60, size=n_stars)
+    df = pd.DataFrame(
+        {
+            "x": xs,
+            "y": ys,
+            "flux": rng.uniform(5000, 15000, size=n_stars),
+            "catalog_id": [f"G{i:012d}" for i in range(n_stars)],
+            "peak_max_adu": np.full(n_stars, 100.0),
+        }
+    )
+    out = enhance_catalog_dataframe_aperture_bpm(
+        df,
+        data,
+        {"FWHM": 4.2},
+        aperture_enabled=True,
+        aperture_fwhm_factor=1.9,
+        annulus_inner_fwhm=4.75,
+        annulus_outer_fwhm=9.0,
+        nonlinearity_peak_percentile=20.0,
+        nonlinearity_fwhm_ratio=1.25,
+        master_dark_path=None,
+        snr_aperture_table=None,
+        gaussian_fwhm_px_override=2.2919,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        err_empty_apertures_n=32,
+        err_empty_apertures_min=8,
+    )
+    assert float(out["aperture_r_px"].iloc[0]) == pytest.approx(4.35461, rel=1e-4)
+    src = out[ERR_BKG_SOURCE_COL].astype(str)
+    assert (src == ERR_BKG_SOURCE_EMPIRICAL).all()
+    sig = pd.to_numeric(out[SIGMA_BKG_AP_COL], errors="coerce")
+    assert sig.notna().all()
+    assert (sig > 0).all()
+
+
+def test_inv_err_sigma_acct_01_fires_on_desynced_keys() -> None:
+    sigma_by_r = {4.35461: (71.8, ERR_BKG_SOURCE_EMPIRICAL)}
+    src_col = np.full(8, ERR_BKG_SOURCE_HOWELL_FALLBACK, dtype=object)
+    with pytest.raises(InvariantViolation, match="INV-ERR-SIGMA-ACCT-01"):
+        _assert_inv_err_sigma_acct_01(
+            sigma_by_r,
+            src_col,
+            n=8,
+            r_ap_arr=None,
+            r_ap=4.35461,
+        )
+
+
+def test_snr_table_path_sigma_projection_unchanged() -> None:
+    """snr_table radii already rounded; projection must stay stable."""
+    rng = np.random.default_rng(516)
+    ny, nx = 400, 400
+    data = rng.normal(900.0, 2.0, size=(ny, nx)).astype(np.float32)
+    n_stars = 16
+    mags = np.linspace(10.0, 14.0, n_stars)
+    xs = rng.uniform(50, nx - 50, size=n_stars)
+    ys = rng.uniform(50, ny - 50, size=n_stars)
+    df = pd.DataFrame(
+        {
+            "x": xs,
+            "y": ys,
+            "flux": rng.uniform(4000, 12000, size=n_stars),
+            "mag": mags,
+            "phot_g_mean_mag": mags,
+            "catalog_id": [f"G{i:012d}" for i in range(n_stars)],
+            "peak_max_adu": np.full(n_stars, 120.0),
+        }
+    )
+    snr_table = {
+        "table": {f"{m:.1f}": 3.0 + 0.1 * i for i, m in enumerate(mags)},
+        "fwhm_px": 4.0,
+        "fwhm_px_scope": "test",
+    }
+    kw = dict(
+        aperture_enabled=True,
+        aperture_fwhm_factor=1.7,
+        annulus_inner_fwhm=4.0,
+        annulus_outer_fwhm=6.0,
+        nonlinearity_peak_percentile=20.0,
+        nonlinearity_fwhm_ratio=1.25,
+        master_dark_path=None,
+        snr_aperture_table=snr_table,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        err_empty_apertures_n=32,
+        err_empty_apertures_min=8,
+    )
+    out_a = enhance_catalog_dataframe_aperture_bpm(df, data, {"FWHM": 4.0}, **kw)
+    out_b = enhance_catalog_dataframe_aperture_bpm(df, data, {"FWHM": 4.0}, **kw)
+    pd.testing.assert_series_equal(
+        out_a[SIGMA_BKG_AP_COL],
+        out_b[SIGMA_BKG_AP_COL],
+        check_names=True,
+    )
+    pd.testing.assert_series_equal(
+        out_a[ERR_BKG_SOURCE_COL].astype(str),
+        out_b[ERR_BKG_SOURCE_COL].astype(str),
+        check_names=True,
+    )
