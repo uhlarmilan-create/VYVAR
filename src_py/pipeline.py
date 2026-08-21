@@ -10642,6 +10642,35 @@ def _export_per_frame_ram_worker_task(
     return _export_per_frame_run_catalog_core(Path(base_str), hdr, data, st)
 
 
+def _finalize_hybrid_bkg_fallback_sidecar(
+    proc_dir: Path,
+    *,
+    err_background_mode: str,
+    write_sidecar: bool,
+    gain: float,
+    read_noise: float,
+    setup_label: str,
+) -> dict[str, Any]:
+    """Post-export hybrid Howell fallback scaling when sidecar proc CSVs exist."""
+    if (
+        str(err_background_mode).strip().lower() != "empirical"
+        or not write_sidecar
+    ):
+        return {}
+    try:
+        from photometry_core import finalize_hybrid_bkg_fallback_proc_dir
+
+        return finalize_hybrid_bkg_fallback_proc_dir(
+            proc_dir,
+            gain=float(gain),
+            read_noise=float(read_noise),
+            setup_label=str(setup_label),
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[PHOT] hybrid bkg fallback finalize skipped: %s", exc)
+        return {}
+
+
 def export_per_frame_catalogs(
     *,
     frames_root: Path,
@@ -11654,22 +11683,15 @@ def export_per_frame_catalogs(
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
     n_master_ref = sum(1 for r in rows_out if r.get("catalog_match_mode") == "master_reference")
     _hybrid_stats: dict[str, Any] = {}
-    if (
-        str(_ap_st.get("err_background_mode", "empirical")).strip().lower() == "empirical"
-        and write_sidecar_csv_next_to_fits
-        and not defer_disk_writes
-    ):
-        try:
-            from photometry_core import finalize_hybrid_bkg_fallback_proc_dir
-
-            _hybrid_stats = finalize_hybrid_bkg_fallback_proc_dir(
-                root,
-                gain=float(_ap_st.get("gain", _cfg_ap.gain)),
-                read_noise=float(_ap_st.get("read_noise", _cfg_ap.read_noise)),
-                setup_label=str(root.name),
-            )
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[PHOT] hybrid bkg fallback finalize skipped: %s", exc)
+    if not defer_disk_writes:
+        _hybrid_stats = _finalize_hybrid_bkg_fallback_sidecar(
+            root,
+            err_background_mode=str(_ap_st.get("err_background_mode", "empirical")),
+            write_sidecar=bool(write_sidecar_csv_next_to_fits),
+            gain=float(_ap_st.get("gain", _cfg_ap.gain)),
+            read_noise=float(_ap_st.get("read_noise", _cfg_ap.read_noise)),
+            setup_label=str(root.name),
+        )
     if _sat_diag_ctx is not None and _sat_diag_archive:
         try:
             from sat_diag import commit_sat_diag_provenance  # noqa: PLC0415
@@ -15823,6 +15845,17 @@ def _astrometry_align_impl_body(
                 pass
             df.to_csv(pcsv, index=False)
         pd.DataFrame(per_cat.get("frames", [])).to_csv(Path(per_cat["index_csv"]), index=False)
+        if per_cat.get("deferred_csv_writes"):
+            _hybrid_ram = _finalize_hybrid_bkg_fallback_sidecar(
+                aligned_root,
+                err_background_mode=str(_catalog_app_cfg.err_background_mode),
+                write_sidecar=True,
+                gain=float(_catalog_app_cfg.gain),
+                read_noise=float(_catalog_app_cfg.read_noise),
+                setup_label=str(aligned_root.name),
+            )
+            if _hybrid_ram:
+                per_cat["hybrid_bkg_fallback"] = _hybrid_ram
     else:
         per_cat = export_per_frame_catalogs(
             frames_root=aligned_root,

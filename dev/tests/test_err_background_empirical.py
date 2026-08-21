@@ -541,3 +541,78 @@ def test_snr_table_path_sigma_projection_unchanged() -> None:
         out_b[ERR_BKG_SOURCE_COL].astype(str),
         check_names=True,
     )
+
+
+def test_ram_flush_finalize_scales_fallback_rows(tmp_path: Path) -> None:
+    """Deferred flush + finalize: fallback rows become howell_scaled."""
+    from pipeline import _finalize_hybrid_bkg_fallback_sidecar
+
+    area = math.pi * 4.3546**2
+    g, rn, sky = 3.12, 2.6, 33488.0
+    hb = _howell_bkg_variance_adu2(sky, area, gain=g, read_noise=rn)
+    sig_emp = math.sqrt(0.55 * hb)
+    df = pd.DataFrame(
+        [
+            {
+                "catalog_id": "1",
+                SIGMA_BKG_AP_COL: sig_emp,
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
+                "sky_adu_per_px_annulus": sky,
+                "aperture_r_px": 4.3546,
+                "aperture_area_px": area,
+            },
+            {
+                "catalog_id": "2",
+                SIGMA_BKG_AP_COL: float("nan"),
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
+                "sky_adu_per_px_annulus": sky,
+                "aperture_r_px": 4.3546,
+                "aperture_area_px": area,
+            },
+        ]
+    )
+    sidecar = tmp_path / "proc_frame.csv"
+    df.to_csv(sidecar, index=False)
+    stats = _finalize_hybrid_bkg_fallback_sidecar(
+        tmp_path,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        write_sidecar=True,
+        gain=g,
+        read_noise=rn,
+        setup_label="ram_flush_test",
+    )
+    assert stats.get("n_scaled_rows") == 1
+    out = pd.read_csv(sidecar)
+    assert out.loc[1, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_SCALED
+    assert math.isfinite(float(out.loc[1, SIGMA_BKG_AP_COL]))
+
+
+def test_ram_flush_finalize_noop_on_all_fallback(tmp_path: Path) -> None:
+    from pipeline import _finalize_hybrid_bkg_fallback_sidecar
+
+    area = math.pi * 4.0**2
+    df = pd.DataFrame(
+        [
+            {
+                "catalog_id": "2",
+                SIGMA_BKG_AP_COL: float("nan"),
+                ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_HOWELL_FALLBACK,
+                "sky_adu_per_px_annulus": 800.0,
+                "aperture_r_px": 4.0,
+                "aperture_area_px": area,
+            },
+        ]
+    )
+    df.to_csv(tmp_path / "proc_only_fallback.csv", index=False)
+    stats = _finalize_hybrid_bkg_fallback_sidecar(
+        tmp_path,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        write_sidecar=True,
+        gain=3.12,
+        read_noise=2.6,
+        setup_label="all_fallback",
+    )
+    assert stats.get("r_setup") is None
+    assert stats.get("n_ratio_samples") == 0
+    out = pd.read_csv(tmp_path / "proc_only_fallback.csv")
+    assert out.loc[0, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_FALLBACK
