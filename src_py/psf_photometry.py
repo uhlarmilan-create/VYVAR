@@ -113,7 +113,7 @@ def _epsf_positions_from_csvs(
     allowed_ids: set[str],
     existing: set[str],
 ) -> list[dict[str, Any]]:
-    """Add x/y positions for allowed IDs missing from MASTER_SOURCES join."""
+    """Add x/y positions for allowed IDs missing from the primary CSV candidate set."""
     root = Path(platesolve_dir)
     phot = root / "photometry"
     extra: list[dict[str, Any]] = []
@@ -806,25 +806,23 @@ def _epsf_prepare_stars(
     *,
     min_stars: int | None = None,
     moffat_centroids: pd.DataFrame | None = None,
-    use_targeting: bool = True,
-    csv_only: bool = False,
 ) -> dict[str, Any]:
     """Select clean, isolated ePSF candidate stars and return sky-subtracted EPSFStars + meta.
 
-    Shared by the single global ePSF build and the spatially-varying grid build so both use
-    the *identical* candidate selection (DB safe-comps intersect CSV quality intersect isolation) and the
-    same per-cutout sky subtraction.
+    Candidate positions come only from ``masterstars_full_match.csv`` (quality-filtered
+    rows with finite ``x``/``y``). The ``db`` parameter is used for FWHM manifest fallback and
+    gain/read-noise resolution elsewhere in the ePSF pipeline - not for star selection.
 
-    ``use_targeting`` (default True, the production global-ePSF behaviour) narrows candidates to
-    the masterstar/comp worklist. The grid build passes ``use_targeting=False`` so candidates
-    span the *full* frame - essential for a spatially-varying model to populate edge/corner cells.
+    Conscious widening (MS-SOURCES-RETIRE, 2026-08-21): production ePSF uses the full
+    CSV-quality pool instead of the retired MASTER_SOURCES safe-comp subset, targeting, and
+    broad-pool augment. PSF-star selection refinement belongs to ePSF-VALID-01.
     """
     mpath = Path(masterstar_fits_path)
     csvpath = Path(masterstars_csv_path)
     if not mpath.is_file():
         raise FileNotFoundError(f"MASTERSTAR FITS not found: {mpath}")
     if not csvpath.is_file():
-        raise FileNotFoundError(f"masterstars CSV not found: {csvpath}")
+        raise FileNotFoundError(f"masterstars_full_match.csv not found: {csvpath}")
 
     try:
         from config import AppConfig
@@ -865,10 +863,12 @@ def _epsf_prepare_stars(
         df = df.copy()
         df["catalog_known_variable"] = _vsx | _gvar
 
-    req = ("catalog_id", "catalog_known_variable", "likely_saturated", "photometry_ok")
+    req = ("catalog_id", "catalog_known_variable", "likely_saturated", "photometry_ok", "x", "y")
     missing = [c for c in req if c not in df.columns]
     if missing:
-        raise ValueError(f"masterstars CSV missing required columns: {missing}")
+        raise ValueError(
+            f"masterstars_full_match.csv missing required columns {missing} in {csvpath}"
+        )
 
     _funnel_mask = pd.Series(True, index=df.index)
     _funnel_mask &= df["catalog_known_variable"].map(_scalar_is_explicit_false)
@@ -909,7 +909,6 @@ def _epsf_prepare_stars(
     csv_ok = df.loc[csv_mask].copy()
     csv_ok["_cid"] = csv_ok["catalog_id"].map(_norm_catalog_id)
     csv_ok = csv_ok[csv_ok["_cid"] != ""]
-    allowed = set(csv_ok["_cid"].unique())
     funnel["n_csv_with_catalog_id"] = int(len(csv_ok))
     log_event(f"PSF ePSF: CSV filter -> {len(csv_ok)} rows with non-empty catalog_id")
     LOGGER.info(
@@ -943,167 +942,60 @@ def _epsf_prepare_stars(
                     _mag_by_cid[cid] = mg
 
     star_rows: list[dict[str, Any]] = []
-    if csv_only:
-        # Full-frame candidate set straight from the clean CSV (x,y are master-frame px).
-        # Avoids the MASTER_SOURCES safe-comp intersect CSV id-join, which can under-cover the frame
-        # (some edge stars use non-Gaia catalog ids) - fatal for a spatially-varying ePSF.
-        _have_xy = ("x" in csv_ok.columns) and ("y" in csv_ok.columns)
-        if not _have_xy:
-            raise ValueError("csv_only ePSF candidate selection needs x,y columns in masterstars CSV")
-        for _, r in csv_ok.iterrows():
-            cid = str(r.get("_cid", "") or "").strip()
-            if not cid:
-                continue
-            try:
-                x_f = float(pd.to_numeric(r.get("x"), errors="coerce"))
-                y_f = float(pd.to_numeric(r.get("y"), errors="coerce"))
-            except (TypeError, ValueError):
-                continue
-            if not (math.isfinite(x_f) and math.isfinite(y_f)):
-                continue
-            star_rows.append(
-                {
-                    "catalog_id": cid,
-                    "x": x_f,
-                    "y": y_f,
-                    "ra_deg": _ra_by_cid.get(cid, float("nan")),
-                    "dec_deg": _dec_by_cid.get(cid, float("nan")),
-                    "mag": _mag_by_cid.get(cid, float("nan")),
-                }
-            )
-        psf_stars_df = pd.DataFrame(star_rows)
-        n_join = int(len(psf_stars_df))
-        funnel["n_after_db_join"] = n_join
-        log_event(f"PSF ePSF: CSV-only full-frame candidates -> {n_join} star positions")
-        LOGGER.info("[ePSF funnel] csv_only path: n_after_db_join=%s", n_join)
-    else:
-        _sc_row = db.conn.execute(
-            """
-            SELECT COUNT(*) AS n FROM MASTER_SOURCES
-            WHERE DRAFT_ID = ?
-              AND COALESCE(IS_SAFE_COMP, 0) = 1
-              AND (EXCLUSION_REASON IS NULL OR TRIM(EXCLUSION_REASON) = '');
-            """,
-            (int(draft_id),),
-        ).fetchone()
-        funnel["n_master_sources_safe_comp"] = int(_sc_row["n"] if _sc_row else 0)
-        cur = db.conn.execute(
-            """
-            SELECT SOURCE_ID_GAIA, X_MASTER, Y_MASTER
-            FROM MASTER_SOURCES
-            WHERE DRAFT_ID = ?
-              AND COALESCE(IS_SAFE_COMP, 0) = 1
-              AND (EXCLUSION_REASON IS NULL OR TRIM(EXCLUSION_REASON) = '');
-            """,
-            (int(draft_id),),
+    for _, r in csv_ok.iterrows():
+        cid = str(r.get("_cid", "") or "").strip()
+        if not cid:
+            continue
+        try:
+            x_f = float(pd.to_numeric(r.get("x"), errors="coerce"))
+            y_f = float(pd.to_numeric(r.get("y"), errors="coerce"))
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(x_f) and math.isfinite(y_f)):
+            continue
+        star_rows.append(
+            {
+                "catalog_id": cid,
+                "x": x_f,
+                "y": y_f,
+                "ra_deg": _ra_by_cid.get(cid, float("nan")),
+                "dec_deg": _dec_by_cid.get(cid, float("nan")),
+                "mag": _mag_by_cid.get(cid, float("nan")),
+            }
         )
-        for row in cur.fetchall():
-            gid = _norm_catalog_id(row["SOURCE_ID_GAIA"])
-            if not gid or gid not in allowed:
-                continue
-            xm, ym = row["X_MASTER"], row["Y_MASTER"]
-            if xm is None or ym is None:
-                continue
-            try:
-                x_f = float(xm)
-                y_f = float(ym)
-            except (TypeError, ValueError):
-                continue
-            funnel["n_db_join_loop_ok"] = int(funnel.get("n_db_join_loop_ok", 0)) + 1
-            star_rows.append(
-                {
-                    "catalog_id": gid,
-                    "x": x_f,
-                    "y": y_f,
-                    "ra_deg": _ra_by_cid.get(gid, float("nan")),
-                    "dec_deg": _dec_by_cid.get(gid, float("nan")),
-                    "mag": _mag_by_cid.get(gid, float("nan")),
-                }
-            )
 
-    used_broad_pool = False
-    n_safe_comp_join = int(funnel.get("n_db_join_loop_ok", 0)) if not csv_only else int(len(star_rows))
-    funnel["n_safe_comp_csv_join"] = n_safe_comp_join
-
-    if not csv_only and n_safe_comp_join < min_stars:
-        star_rows, used_broad_pool = _epsf_augment_candidates_from_detected_pool(
-            mpath=mpath,
-            csv_ok=csv_ok,
-            star_rows=star_rows,
-            fwhm_px=float(fwhm_px),
-            db=db,
-            cfg=cfg,
-            funnel=funnel,
-        )
-    funnel["used_broad_pool"] = bool(used_broad_pool)
+    funnel["used_broad_pool"] = False
+    funnel["n_safe_comp_csv_join"] = int(len(star_rows))
 
     if len(star_rows) == 0:
-        funnel["n_after_db_join"] = 0
+        funnel["n_after_csv_select"] = 0
         funnel["n_final"] = 0
         _fmsg = (
             "ePSF candidate funnel: "
             + ", ".join(f"{k}={v}" for k, v in funnel.items())
-            + " - no ePSF candidates after DB join / broad-pool augment"
+            + f" - no ePSF candidates after CSV quality filter ({csvpath.name})"
         )
         LOGGER.info("[ePSF funnel] %s", _fmsg)
         raise ValueError(_fmsg)
 
     psf_stars_df = pd.DataFrame(star_rows)
     n_join = int(len(psf_stars_df))
+    funnel["n_after_csv_select"] = n_join
     funnel["n_after_db_join"] = n_join
-    if csv_only:
-        log_event(f"PSF ePSF: CSV-only full-frame candidates -> {n_join} star positions")
-        LOGGER.info("[ePSF funnel] csv_only path: n_after_db_join=%s", n_join)
-    else:
-        log_event(f"PSF ePSF: joined MASTER_SOURCES intersect CSV -> {n_safe_comp_join} safe-comp; total candidates {n_join}")
-        LOGGER.info(
-            "[ePSF funnel] after DB join: n_safe_comp=%s n_after_db_join=%s broad_pool=%s",
-            n_safe_comp_join,
-            n_join,
-            used_broad_pool,
-        )
-
-    allowed_ids, n_ms_targets, n_comp_targets = (
-        _epsf_allowed_catalog_ids(mpath.parent) if (use_targeting and not csv_only) else (set(), 0, 0)
+    funnel["n_after_targeting"] = n_join
+    log_event(
+        f"PSF ePSF: masterstars_full_match.csv candidates -> {n_join} star positions "
+        f"(file: {csvpath.name})"
     )
-    k_total = n_join
-    if allowed_ids and not used_broad_pool:
-        targeted_rows = [r for r in star_rows if str(r.get("catalog_id", "")) in allowed_ids]
-        have = {str(r.get("catalog_id", "")) for r in targeted_rows}
-        targeted_rows.extend(_epsf_positions_from_csvs(mpath.parent, allowed_ids, have))
-        if len(targeted_rows) >= int(min_stars):
-            psf_stars_df = pd.DataFrame(targeted_rows)
-            n_join = int(len(psf_stars_df))
-            funnel["n_after_targeting"] = n_join
-            log_event(
-                f"[ePSF] Building from {n_ms_targets} masterstars + {n_comp_targets} comp stars "
-                f"(was: {k_total} total)"
-            )
-        else:
-            funnel["n_after_targeting"] = int(len(targeted_rows))
-            LOGGER.warning(
-                "[ePSF] Only %d targeted stars (< min_stars=%d) - using all %d stars",
-                len(targeted_rows),
-                int(min_stars),
-                k_total,
-            )
-    elif used_broad_pool:
-        funnel["n_after_targeting"] = n_join
-        log_event(
-            f"[ePSF] Skipped targeting - using broad detected-star pool ({n_join} candidates, "
-            f"safe-comp join was {n_safe_comp_join})"
-        )
-        LOGGER.info("[ePSF funnel] targeting skipped (broad pool): n_after_targeting=%s", n_join)
-    else:
-        funnel["n_after_targeting"] = n_join
+    LOGGER.info("[ePSF funnel] csv path: n_after_csv_select=%s", n_join)
 
     if n_join < min_stars:
         funnel["n_final"] = n_join
         _fmsg = (
-            f"EPSF build needs at least {min_stars} clean stars after DB+CSV join; found {n_join}. "
+            f"EPSF build needs at least {min_stars} clean stars from {csvpath.name}; found {n_join}. "
             f"Funnel: {funnel}"
         )
-        LOGGER.info("[ePSF funnel] insufficient after join: %s", _fmsg)
+        LOGGER.info("[ePSF funnel] insufficient after CSV select: %s", _fmsg)
         raise ValueError(_fmsg)
 
     # Phase 2: override centroid positions with Moffat-fitted values
@@ -1486,7 +1378,6 @@ def build_epsf_grid_model(
         draft_id,
         min_stars=min_stars,
         moffat_centroids=moffat_centroids,
-        csv_only=True,
     )
     stars = prep["stars"]
     data = prep["data"]
