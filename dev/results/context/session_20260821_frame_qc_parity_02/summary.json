@@ -1,0 +1,42 @@
+{
+  "authority_column": "draft_manifest.json files[].inspection.fwhm (Analyze-time DAO moment median)",
+  "filter_function": "calibrated_paths_for_draft_apply_filters pipeline.py:2368-2428",
+  "limit_formula": "median(manifest_fwhm) + k*MAD*1.4826 via compute_auto_fwhm_limit photometry_core.py:13640",
+  "qc_metrics_column": "qc_metrics.csv fwhm_px (preprocess in-place segmentation; NOT filter authority)",
+  "drafts": {
+    "draft_000516": {
+      "auto": {
+        "median_fwhm": 5.311,
+        "mad": 0.0231,
+        "sigma_mad": 0.0342,
+        "auto_limit": 5.362,
+        "k": 1.5,
+        "n_total": 150,
+        "n_kept": 134,
+        "n_cut": 16
+      },
+      "limit_px": 5.362,
+      "n_ok_replay": 134,
+      "n_ok_actual": 134,
+      "mismatch_count": 0,
+      "csv": "dev\\results\\context\\session_20260821_frame_qc_parity_02\\draft_000516_fwhm_dump.csv"
+    },
+    "draft_000517": {
+      "auto": {
+        "median_fwhm": 5.311,
+        "mad": 0.0231,
+        "sigma_mad": 0.0342,
+        "auto_limit": 5.362,
+        "k": 1.5,
+        "n_total": 150,
+        "n_kept": 134,
+        "n_cut": 16
+      },
+      "limit_px": 5.362,
+      "n_ok_replay": 134,
+      "n_ok_actual": 134,
+      "mismatch_count": 0,
+      "csv": "dev\\results\\context\\session_20260821_frame_qc_parity_02\\draft_000517_fwhm_dump.csv"
+    }
+  }
+}
