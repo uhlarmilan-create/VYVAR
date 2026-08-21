@@ -1,0 +1,38 @@
+{
+  "d517_core_sha": "342344d204025cf915a0d1842e0406c89e570cf63cbacc992c4b9bcbab481ecd",
+  "d517_core_n": 111,
+  "anchor_516_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+  "anchor_516_n": 121,
+  "identical": false,
+  "input_deltas_first": [
+    "Fresh draft 517 UI run on era tip 8dea595; live 516 product stamped b8d5c74 (pre-era code path on prior run).",
+    "Phase 2A used 134 frames (infolog); 16 lights rejected at QC (HFR>5) from 150 imported.",
+    "MASTERSTAR census footprint smaller (4131 vs 4990 rows); certificate seed population n=462 vs 589.",
+    "55 LCs written vs 60 on anchor 516; 5 LC files only on 516."
+  ],
+  "lc_only_516": [
+    "1485560025830226432",
+    "1496037650087948160",
+    "1496733984545821696",
+    "1497169940906156032",
+    "1497491273179203456"
+  ],
+  "pinned_48_lc_missing_517": [
+    "1497169940906156032",
+    "1497181966814590848",
+    "1498064771572297856"
+  ],
+  "pinned_48_lc_missing_516": [
+    "1497181966814590848",
+    "1498064771572297856"
+  ],
+  "shared_lc_count": 55,
+  "shared_mag_calib_final_deltas": {
+    "n_with_any_delta": 34,
+    "n_pinned_shared": 45,
+    "n_pinned_le_2mmag": 19,
+    "BO_CVn_mmag": 0.0,
+    "FW_CVn_mmag": 3.058,
+    "note": "Large deltas on some Gaia additive targets (e.g. 1485534187306501376 ~3729 mmag) are not pinned-science regressions; interpret under MS-POOL-POLICY-01 / frame-subset scope."
+  }
+}

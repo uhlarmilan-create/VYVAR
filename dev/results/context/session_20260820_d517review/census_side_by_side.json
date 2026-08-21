@@ -1,0 +1,15 @@
+{
+  "517_n_total": 4131,
+  "516_n_total": 4990,
+  "accounting_517_pct": 100.0,
+  "accounting_516_pct": 100.0,
+  "states": {
+    "DETECTED_P1": {"517": 3082, "516": 3103, "delta": -21},
+    "DETECTED_P2": {"517": 414, "516": 397, "delta": 17},
+    "FORCED_SEED": {"517": 39, "516": 93, "delta": -54},
+    "SEED_REJECTED": {"517": 450, "516": 1150, "delta": -700},
+    "BLENDED": {"517": 61, "516": 146, "delta": -85},
+    "EDGE": {"517": 85, "516": 101, "delta": -16}
+  },
+  "note": "517 census row count lower than 516 (4131 vs 4990) - smaller on-chip Gaia cone/census footprint on fresh MASTERSTAR build, not an accounting failure."
+}

@@ -10,16 +10,43 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
+## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01)
+
+Local tip: **`8dea595`** (ERA-03 close pushed). Draft **517** first post-era UI
+field run reviewed (`CURSOR_RESULT_DRAFT_517_REVIEW.md`). FRAME-QC-PARITY-01
+phase 1 names dual QC layers (calibration HFR vs preprocess FWHM prefilter) and
+UI/full-pipeline vs headless `--full` photometry-only split
+(`CURSOR_RESULT_FRAME_QC_PARITY_01.md`).
+
+| Pri | Next item |
+|-----|-----------|
+| **HIGH** | **FRAME-QC-PARITY-01** -- UI/full-pipeline vs headless `--full`: two QC stacks, one product name. Phase 1 = mechanism named (2026-08-21). Phase 2 = Milan picks authority + code (after decision). Blocks anchor-comparability of UI runs; does **not** block new fields. |
+| **HIGH** | **MS-POOL-POLICY-01** (RESCOPED 2026-08-20) -- generator determinism. Selection rules (RMS, color tiers, distance) stay immutable; stabilize **inputs only** (catalog-derived mags/colors as ranking inputs, qualification thresholds vs knife-edge ranking, hysteresis for existing ensembles; pin refill fills to pin-time `n_min` only). Fire proof: same draft twice -> identical ensembles + MAG. No new-field draft trusted for SUBMIT before this lands. |
+| **MED** | **MS-QA-DISPLAY-01** -- UI cue for EDGE/BLENDED "Gaia-only by state" (517 sighting: 22 bright Gaia without DAO markers, all correctly EDGE). |
+| **LOW** | **CV-CVN-SKIP-CONSISTENCY** -- document `zone_flag` vs `per_frame_saturation` skip_reason taxonomy (PFS on/off). |
+| **FUTURE** | **COMP-HISTORY-DB** (release 2.0) -- per-star comp-history / per-field auto-pin database. Pin infrastructure (INV-PIN-01..04, re-validation, refill-to-min) is the ready substrate; re-validation path measured at minutes vs ~40-90 min full selection (Phase 1 wall share ~92%). |
+| **MED** | **ePSF-VALID** -- internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
+| **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
+| **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |
+
+**CLOSED (2026-08-21):** **EMPTY-DAO-01** -- superseded for empty-sky false-fill by
+era DAO-Gaia audits (draft 517 certificate empty_sky pass2 **0.14%** 3/2200 vs
+pre-era ~55% class); forced-only proc-CSV path remains covered by era census
+accounting. Pointer: `CURSOR_RESULT_DRAFT_517_REVIEW.md` Part A; DECISIONS
+2026-08-20 product model.
+
+---
+
 ## NEXT SESSION - entry point (2026-08-20 ERA-03 CLOSE)
 
-Local tip: **pending ERA-03 commit series** (origin **`b8d5c74`**). Canonical
-product SHA **9902d918** n=121 / extended **472bc9e4** n=179 on draft 516.
-P1 golden **6af4539c** n=115. `--fast` and `--full` OVERALL PASS on
+Local tip: **`8dea595`** (ERA-03 close pushed). Canonical product SHA
+**9902d918** n=121 / extended **472bc9e4** n=179 on draft 516. P1 golden
+**6af4539c** n=115. `--fast` and `--full` OVERALL PASS on
 `draft_000516_snapshot_era03_20260820`.
 
 | Pri | Next item |
 |-----|-----------|
-| **HIGH** | **MS-POOL-POLICY-01** -- new-field comp pool refill policy (48 pinned targets with color re-validation drops; deferred at ERA-03 close). |
+| **HIGH** | **MS-POOL-POLICY-01** -- new-field comp pool refill policy (48 pinned targets with color re-validation drops; deferred at ERA-03 close). **Superseded by rescope above (2026-08-21).** |
 | **MED** | **ePSF-VALID** -- next-session candidate: internal ePSF-vs-aperture identity + independent reference (see V1-VALIDATION-PROTOCOL). |
 | **MED** | **COMP-RMS-DEF-01** -- unify CSV `comp_rms` vs LOO per-star noise. |
 | **MED** | **RUN-WORKER-01** -- subprocess worker so UI reruns cannot kill photometry. |

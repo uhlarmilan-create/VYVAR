@@ -496,15 +496,12 @@ OPEN so they are not later cited as settled. **Do not act** in IMPL-01.
 
 ---
 
-## OPEN - EMPTY-DAO-01 (register only; 2026-08-16)
+## CLOSED - EMPTY-DAO-01 (was register-only; 2026-08-16; closed 2026-08-21)
 
 IMPL-05 Item A fixed the dtype crash in `_proc_deduplicate_matched_catalog_rows`
-when `peak_max_adu` / `dao_flux` / `flux` are absent. The crash exposed a deeper
-path: frames with an **empty DAO table** still reach per-frame export; forced-phot
-injection then supplies catalog rows without saturation/flux columns. How many
-such frames draft 515 has, and why (clouds / guiding / a gate), is a field/QC
-question. **Do not investigate in IMPL-05.** Register only so the finding does
-not vanish because the crash is fixed.
+when `peak_max_adu` / `dao_flux` / `flux` are absent. **Closed 2026-08-21:**
+empty-sky false-fill addressed by era DAO-Gaia audits (517 certificate
+empty_sky pass2 0.14%, 3/2200). See CLOSED section at file end and ROADMAP.
 
 ---
 
@@ -3477,4 +3474,41 @@ Collapse to mmag -> selection-only; persist -> flux-path investigation.
 
 **Status:** Panel delivered; architect/Milan decide era acceptance. No anchor
 recut authorized from this task.
+
+---
+
+## Product model and pool policy (2026-08-20, Milan, binding)
+
+**VYVAR 1.x is a deterministic draft generator.** User flow: run -> draft ->
+submit -> delete draft. No cross-draft memory, no persistent state layer in 1.x.
+
+**Pins are internal-only** (anchor-continuity tool for the 48 legacy targets).
+Users never see or manage them. Per-field auto-pin / comp-history DB deferred to
+release 2.0 (**COMP-HISTORY-DB** on ROADMAP).
+
+**Selection rules stay immutable; MS-POOL-POLICY-01 stabilizes inputs only**
+(catalog-derived mags/colors, qualification thresholds, hysteresis, pin-time
+`n_min` refill cap).
+
+**`n_comp_min` / `n_comp_max` are USER settings (expectations), not physics.**
+The pool has no min/max; per-target selection has none; min/max gate the final
+expectation only. At n=1, `err_sem_rel` is undefined -> the error model must
+handle this loudly (no silent zero; I-04 class); NOTES must state single-comp.
+A pin carries its pin-time `n_min`; a config change never silently refills a pin.
+
+**ePSF validation constraints:** measure ONLY the science set (targets + comps +
+checks + BLENDED sample), never all stars; PSF-star selection = composition of
+existing gates; split-half self-test certificate instead of star-count constants;
+time-mode (fixed / FWHM-scaled / per-frame) chosen by measurement per setup;
+mono cameras only for now (OSC deferred).
+
+---
+
+## CLOSED - EMPTY-DAO-01 (2026-08-21)
+
+Register-only item from 2026-08-16 (empty DAO table / forced-only proc rows).
+**Closed:** empty-sky false-fill rate addressed by era DAO-Gaia audits (draft 517
+certificate empty_sky pass2 **0.14%**, 3/2200; pre-era class ~55%). Remaining
+forced-only export path is governed by era census accounting (100% on 517). See
+ROADMAP EMPTY-DAO-01 closure pointer and `CURSOR_RESULT_DRAFT_517_REVIEW.md`.
 

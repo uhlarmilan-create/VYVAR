@@ -1,0 +1,951 @@
+{
+  "utc": "2026-08-20T17:47:40.810682+00:00",
+  "part_a": {
+    "git_tip": "8dea595b0edfc4c30ed9f3011b4a2d661f60cdc5",
+    "git_dirty": true,
+    "run_mode": "UI (infolog: run_vyvar, ui_selection site)",
+    "entry_point_stamped": "run_phase2a",
+    "config_keys": {
+      "psf_photometry_enabled": false,
+      "err_background_mode": "empirical",
+      "masterstar_dao_threshold_sigma": 4.5,
+      "dao_detection_n_equiv": 4.5,
+      "forced_photometry_enabled": true
+    },
+    "pfs": false,
+    "err_background_mode": "empirical",
+    "runtime": {
+      "run_start_utc": "16:25:20",
+      "last_timestamp_utc": "17:37:43",
+      "milestone_run_vyvar_to_photo_start": "16:25:20 -> 16:56:09 (~31 min pre-photometry)",
+      "calibration_window": "16:25:29 -> 16:27:58",
+      "masterstar_window": "16:27:58 -> 16:56:09 (~28 min)",
+      "photometry_start": "16:56:09"
+    },
+    "infolog_scan": {
+      "phase_markers": [
+        {
+          "t": "16:25:20",
+          "label": "run_vyvar start"
+        },
+        {
+          "t": "16:25:20",
+          "label": "Scan Source + Import + calibration start"
+        },
+        {
+          "t": "16:25:29",
+          "label": "Calibration start"
+        },
+        {
+          "t": "16:26:57",
+          "label": "Analyze QC (RAM -> manifest files[]) start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "Auto FWHM limit start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "Auto-select MASTERSTAR (TOP1) start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start"
+        },
+        {
+          "t": "16:56:09",
+          "label": "Phase 0+1 + Phase 2A (photometry) start"
+        },
+        {
+          "t": "16:25:20",
+          "label": "run_vyvar start"
+        },
+        {
+          "t": "16:25:20",
+          "label": "Scan Source + Import + calibration start"
+        },
+        {
+          "t": "16:25:29",
+          "label": "Calibration start"
+        },
+        {
+          "t": "16:26:57",
+          "label": "Analyze QC (RAM -> manifest files[]) start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "Auto FWHM limit start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "Auto-select MASTERSTAR (TOP1) start"
+        },
+        {
+          "t": "16:27:58",
+          "label": "MAKE MASTERSTAR (detrend + plate-solve + zarovnanie) start"
+        },
+        {
+          "t": "16:56:09",
+          "label": "Phase 0+1 + Phase 2A (photometry) start"
+        }
+      ],
+      "invariant_violation_hits": 0,
+      "expand_guard_hits": [
+        "INV-MS-EXPAND"
+      ],
+      "census_guard_hits": [],
+      "pinned_hits": 47,
+      "sample_inv_lines": []
+    },
+    "certificate_517": {
+      "status": "PASS",
+      "derived": {
+        "residual_p95_px": 1.4197994937799843,
+        "match_radius_px": 2.5,
+        "pass2_center_tol_px": 2.5,
+        "lock_pair_tol_px": 2.5,
+        "lock_leftover_radius_px": 2.5,
+        "forced_seed_centroid_max_px": 2.5,
+        "plate_scale_arcsec_per_px": 9.774693440778176,
+        "fwhm_px": 5.1569,
+        "pass1_sigma": 4.5,
+        "pass2_sigma": 4.0,
+        "detection_identity": {
+          "name": "detection_identity",
+          "n": 2829,
+          "p50_px": 0.4873241026753101,
+          "p95_px": 1.4197994937799843,
+          "g_band": null,
+          "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+        },
+        "seed_centroid": {
+          "name": "seed_centroid",
+          "n": 462,
+          "p50_px": 0.7865782334171397,
+          "p95_px": 2.420257943754173,
+          "g_band": null,
+          "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+        },
+        "faint_star_centroid": {
+          "name": "seed_centroid",
+          "n": 462,
+          "p50_px": 0.7865782334171397,
+          "p95_px": 2.420257943754173,
+          "g_band": null,
+          "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+        },
+        "diagnostic": {
+          "detection_identity": {
+            "name": "detection_identity",
+            "n": 2829,
+            "p50_px": 0.4873241026753101,
+            "p95_px": 1.4197994937799843,
+            "n_raw": 2836,
+            "p50_raw_px": 0.4879791807572939,
+            "p95_raw_px": 1.4471073461455939,
+            "tail_estimate_px": 14.970490562382556,
+            "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=14.970 px",
+            "measurement_mode": "diagnostic|greedy_assign+pass2_accepted|tail_core",
+            "diagnostic_radius_px": 10.3138,
+            "g_band": null,
+            "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+          },
+          "seed_centroid": {
+            "name": "seed_centroid",
+            "n": 462,
+            "p50_px": 0.7865782334171397,
+            "p95_px": 2.420257943754173,
+            "n_raw": 462,
+            "p50_raw_px": 0.7865782334171397,
+            "p95_raw_px": 2.420257943754173,
+            "tail_estimate_px": 14.970490562382556,
+            "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=14.970 px",
+            "measurement_mode": "diagnostic|snr_only_before_centroid_gate",
+            "diagnostic_radius_px": null,
+            "g_band": null,
+            "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+          }
+        }
+      },
+      "empty_sky": null
+    },
+    "certificate_516": {
+      "status": "PASS",
+      "derived": {
+        "residual_p95_px": 1.411022048213138,
+        "match_radius_px": 2.5,
+        "pass2_center_tol_px": 2.5,
+        "lock_pair_tol_px": 2.5,
+        "lock_leftover_radius_px": 2.5,
+        "forced_seed_centroid_max_px": 2.5,
+        "plate_scale_arcsec_per_px": 9.773978049430486,
+        "fwhm_px": 5.19465,
+        "pass1_sigma": 4.5,
+        "pass2_sigma": 4.0,
+        "detection_identity": {
+          "name": "detection_identity",
+          "n": 2870,
+          "p50_px": 0.506371806399577,
+          "p95_px": 1.411022048213138,
+          "g_band": null,
+          "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+        },
+        "seed_centroid": {
+          "name": "seed_centroid",
+          "n": 589,
+          "p50_px": 0.8377984984506122,
+          "p95_px": 2.461498007264167,
+          "g_band": null,
+          "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+        },
+        "faint_star_centroid": {
+          "name": "seed_centroid",
+          "n": 589,
+          "p50_px": 0.8377984984506122,
+          "p95_px": 2.461498007264167,
+          "g_band": null,
+          "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+        },
+        "diagnostic": {
+          "detection_identity": {
+            "name": "detection_identity",
+            "n": 2870,
+            "p50_px": 0.506371806399577,
+            "p95_px": 1.411022048213138,
+            "n_raw": 2879,
+            "p50_raw_px": 0.5076634608072987,
+            "p95_raw_px": 1.450777119740444,
+            "tail_estimate_px": 13.621136857048265,
+            "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=13.621 px",
+            "measurement_mode": "diagnostic|greedy_assign+pass2_accepted|tail_core",
+            "diagnostic_radius_px": 10.3893,
+            "g_band": null,
+            "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+          },
+          "seed_centroid": {
+            "name": "seed_centroid",
+            "n": 589,
+            "p50_px": 0.8377984984506122,
+            "p95_px": 2.461498007264167,
+            "n_raw": 589,
+            "p50_raw_px": 0.8377984984506122,
+            "p95_raw_px": 2.461498007264167,
+            "tail_estimate_px": 13.621136857048265,
+            "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=13.621 px",
+            "measurement_mode": "diagnostic|snr_only_before_centroid_gate",
+            "diagnostic_radius_px": null,
+            "g_band": null,
+            "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+          }
+        }
+      }
+    },
+    "certificate_drift": {},
+    "census_517": {
+      "DETECTED_P1": 3082,
+      "EDGE": 85,
+      "DETECTED_P2": 414,
+      "FORCED_SEED": 39,
+      "SEED_REJECTED": 450,
+      "BLENDED": 61
+    },
+    "census_516": {
+      "DETECTED_P1": 3103,
+      "EDGE": 101,
+      "DETECTED_P2": 397,
+      "FORCED_SEED": 93,
+      "SEED_REJECTED": 1150,
+      "BLENDED": 146
+    },
+    "census_accounting_517": {
+      "n_total": 4131,
+      "on_chip": 4131,
+      "pct": 100.0
+    },
+    "census_accounting_516": {
+      "n_total": 4990,
+      "on_chip": 4990,
+      "pct": 100.0
+    }
+  },
+  "part_b": {
+    "input_deltas": {
+      "git_hash_517": "8dea595b0edfc4c30ed9f3011b4a2d661f60cdc5",
+      "git_hash_516": "b8d5c74c3a2d8124c1b4c804a060dd515c9fef14",
+      "entry_517": "run_phase2a",
+      "entry_516": "run_phase2a",
+      "draft_id_517": 517,
+      "draft_id_516": 516,
+      "note": "Same field BO CVn; fresh draft dir; compare frame manifests if SHA differs"
+    },
+    "product_sha": {
+      "d517_core_sha": "342344d204025cf915a0d1842e0406c89e570cf63cbacc992c4b9bcbab481ecd",
+      "d517_core_n": 111,
+      "d516_core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+      "d516_anchor_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+      "identical_to_anchor": false,
+      "identical_to_live_516": false,
+      "diff": {
+        "n_shared_lcs": 55,
+        "only_517": [],
+        "only_516": [
+          "1485560025830226432",
+          "1496037650087948160",
+          "1496733984545821696",
+          "1497169940906156032",
+          "1497491273179203456"
+        ],
+        "n_mag_deltas": 34,
+        "mag_sample": [
+          {
+            "tid": "1485534187306501376",
+            "max_mag_calib_final_mmag": 3728.848000000001
+          },
+          {
+            "tid": "1485987151737107200",
+            "max_mag_calib_final_mmag": 2770.6479999999997
+          },
+          {
+            "tid": "1496278752372040832",
+            "max_mag_calib_final_mmag": 3.844999999998322
+          },
+          {
+            "tid": "1496293286541396480",
+            "max_mag_calib_final_mmag": 2.990999999999744
+          },
+          {
+            "tid": "1496795041799526400",
+            "max_mag_calib_final_mmag": 3.9160000000002526
+          },
+          {
+            "tid": "1496998382733052928",
+            "max_mag_calib_final_mmag": 6.500000000000838
+          },
+          {
+            "tid": "1497096960821764224",
+            "max_mag_calib_final_mmag": 10.131999999998698
+          },
+          {
+            "tid": "1497132660589966976",
+            "max_mag_calib_final_mmag": 69.19500000000056
+          },
+          {
+            "tid": "1497154753901690624",
+            "max_mag_calib_final_mmag": 6.64599999999993
+          },
+          {
+            "tid": "1497227287309482624",
+            "max_mag_calib_final_mmag": 2.704999999998847
+          },
+          {
+            "tid": "1497236186481686016",
+            "max_mag_calib_final_mmag": 4.260999999999626
+          },
+          {
+            "tid": "1497245497969274240",
+            "max_mag_calib_final_mmag": 8.309000000000566
+          },
+          {
+            "tid": "1497343732462852864",
+            "max_mag_calib_final_mmag": 3.0580000000011154
+          },
+          {
+            "tid": "1497350638770267520",
+            "max_mag_calib_final_mmag": 5.9180000000012
+          },
+          {
+            "tid": "1497425371201155072",
+            "max_mag_calib_final_mmag": 0.1860000000011297
+          }
+        ]
+      }
+    },
+    "pin_path": {
+      "pinned_ensembles_sha256": "bb5154143b0cf68ee89ea43f857e8c0a385e492bdd8273d907387dcfa2548344",
+      "pin_file_sha256": "bb5154143b0cf68ee89ea43f857e8c0a385e492bdd8273d907387dcfa2548344",
+      "pinned_target_count": 48,
+      "pinned_provenance_sha": "477dc8cf",
+      "member_drops": [],
+      "n_drops": 0
+    },
+    "lc_census": {
+      "n_lc_files": 55,
+      "lc_catalog_ids": [
+        "1485534187306501376",
+        "1485987151737107200",
+        "1485987254816323328",
+        "1496278752372040832",
+        "1496293286541396480",
+        "1496795041799526400",
+        "1496998382733052928",
+        "1497096960821764224",
+        "1497132660589966976",
+        "1497154753901690624",
+        "1497227287309482624",
+        "1497236186481686016",
+        "1497245497969274240",
+        "1497284015237511808",
+        "1497343732462852864",
+        "1497350638770267520",
+        "1497418258735289472",
+        "1497425371201155072",
+        "1497561779362267392",
+        "1497603835681942400",
+        "1497639123133258752",
+        "1497683722074089728",
+        "1497683996951418880",
+        "1497871669842349184",
+        "1498000793739050368",
+        "1498027456896444928",
+        "1498058827337611392",
+        "1498278351706325248",
+        "1498298211635183744",
+        "1498321301379345408",
+        "1498425548825498112",
+        "1498486880958321024",
+        "1498613634033133184",
+        "1498617482323461376",
+        "1498699086702005376",
+        "1498752516095473664",
+        "1498783199341798016",
+        "1498795809366255488",
+        "1498804639818507904",
+        "1498842882207281152",
+        "1499006984318088320",
+        "1499021174889970816",
+        "1499081819828174080",
+        "1499084499887740160",
+        "1499209638054824320",
+        "1499210016011946496",
+        "1499842372636900992",
+        "1500327978819506944",
+        "1500410236033012352",
+        "1500418894687086208",
+        "1500424804562041984",
+        "1500461157165243648",
+        "1500549977088828160",
+        "1500693841313325696",
+        "1502012464992313088"
+      ],
+      "skip_reasons": {
+        "1496795041799526400": "nan",
+        "1496998382733052928": "nan",
+        "1499842372636900992": "nan",
+        "1497561779362267392": "nan",
+        "1497007144465726080": "zone_flag",
+        "1496278752372040832": "nan",
+        "1497236186481686016": "nan",
+        "1496293286541396480": "nan",
+        "1497245497969274240": "nan",
+        "1498613634033133184": "nan",
+        "1498617482323461376": "nan",
+        "1497350638770267520": "nan",
+        "1498064771572297856": "zone_noise",
+        "1498027456896444928": "nan",
+        "1497683996951418880": "nan",
+        "1497683722074089728": "nan",
+        "1497343732462852864": "nan",
+        "1499209638054824320": "nan",
+        "1499021174889970816": "nan",
+        "1498425548825498112": "nan",
+        "1500689752504456576": "vsx_type_out_of_scope",
+        "1498752516095473664": "nan",
+        "1498804639818507904": "nan",
+        "1500461157165243648": "nan",
+        "1498321301379345408": "nan",
+        "1500424804562041984": "nan",
+        "1498000793739050368": "nan",
+        "1498699086702005376": "nan",
+        "1497425371201155072": "nan",
+        "1497418258735289472": "nan",
+        "1498298211635183744": "nan",
+        "1500549977088828160": "nan",
+        "1498842882207281152": "nan",
+        "1497132660589966976": "nan",
+        "1498486880958321024": "nan",
+        "1498486056324598528": "vsx_type_out_of_scope",
+        "1499244513189283712": "vsx_type_out_of_scope",
+        "1496248206564680064": "zone_noise",
+        "1497570128778641152": "vsx_type_out_of_scope",
+        "1485609538212672000": "vsx_type_out_of_scope",
+        "1497622939696499840": "zone_noise",
+        "1497181966814590848": "zone_noise",
+        "1497623248934145536": "vsx_type_out_of_scope",
+        "1497603835681942400": "nan",
+        "1485929083779282048": "vsx_type_out_of_scope",
+        "1497010168122706688": "vsx_type_out_of_scope",
+        "1497600399708129792": "vsx_type_out_of_scope",
+        "1485552329248338816": "vsx_type_out_of_scope",
+        "1496846925005421056": "vsx_type_out_of_scope",
+        "1497498763602158720": "vsx_type_out_of_scope",
+        "1496286139715833088": "vsx_type_out_of_scope",
+        "1485534187306501376": "nan",
+        "1496968421040578944": "vsx_type_out_of_scope",
+        "1496807273867416320": "vsx_type_out_of_scope",
+        "1496241609494910976": "vsx_type_out_of_scope",
+        "1496944987699077376": "vsx_type_out_of_scope",
+        "1497729317446890240": "vsx_type_out_of_scope",
+        "1485540612577549568": "vsx_type_out_of_scope",
+        "1496804834326599424": "vsx_type_out_of_scope",
+        "1496965569182317952": "vsx_type_out_of_scope",
+        "1485574899299782528": "vsx_type_out_of_scope",
+        "1485569165520082048": "vsx_type_out_of_scope",
+        "1496976598656622848": "vsx_type_out_of_scope",
+        "1496777965010561408": "vsx_type_out_of_scope",
+        "1497121459315202560": "vsx_type_out_of_scope",
+        "1497644277093974400": "vsx_type_out_of_scope",
+        "1497114793525954432": "vsx_type_out_of_scope",
+        "1497070744341492864": "vsx_type_out_of_scope",
+        "1485988010730568192": "vsx_type_out_of_scope",
+        "1497763299228100096": "vsx_type_out_of_scope",
+        "1497763093069670144": "vsx_type_out_of_scope",
+        "1485984368598279808": "vsx_type_out_of_scope",
+        "1498011960654465536": "vsx_type_out_of_scope",
+        "1499892159897789824": "vsx_type_out_of_scope",
+        "1499953766908656256": "vsx_type_out_of_scope",
+        "1497225981639401984": "vsx_type_out_of_scope",
+        "1497639123133258752": "nan",
+        "1497871669842349184": "nan",
+        "1497133553943163904": "vsx_type_out_of_scope",
+        "1497227287309482624": "nan",
+        "1497094418201167744": "vsx_type_out_of_scope",
+        "1499958439833051520": "vsx_type_out_of_scope",
+        "1497888471754387072": "vsx_type_out_of_scope",
+        "1497704372276351360": "vsx_type_out_of_scope",
+        "1497704131758182400": "vsx_type_out_of_scope",
+        "1498032473418221952": "vsx_type_out_of_scope",
+        "1500282142928547968": "vsx_type_out_of_scope",
+        "1498021787539643648": "vsx_type_out_of_scope",
+        "1497892801081417216": "vsx_type_out_of_scope",
+        "1498608067755142912": "vsx_type_out_of_scope",
+        "1497154753901690624": "nan",
+        "1497265873295605120": "vsx_type_out_of_scope",
+        "1497699183955811968": "vsx_type_out_of_scope",
+        "1500271044731692416": "vsx_type_out_of_scope",
+        "1500271079092820096": "vsx_type_out_of_scope",
+        "1497289959472202624": "vsx_type_out_of_scope",
+        "1497158396033960064": "vsx_type_out_of_scope",
+        "1497940389319020928": "vsx_type_out_of_scope",
+        "1498589513496406912": "vsx_type_out_of_scope",
+        "1497284015237511808": "nan",
+        "1497297690413358720": "vsx_type_out_of_scope",
+        "1499974932507448448": "vsx_type_out_of_scope",
+        "1497379535310161792": "vsx_type_out_of_scope",
+        "1500291007741051520": "vsx_type_out_of_scope",
+        "1497347718192483840": "vsx_type_out_of_scope",
+        "1497345278651080576": "zone_noise",
+        "1498650364592989440": "vsx_type_out_of_scope",
+        "1497912008175205760": "vsx_type_out_of_scope",
+        "1497181623217208064": "vsx_type_out_of_scope",
+        "1496876646179115648": "vsx_type_out_of_scope",
+        "1497061570291342464": "vsx_type_out_of_scope",
+        "1497002849498457728": "vsx_type_out_of_scope",
+        "1497096960821764224": "nan",
+        "1496877883129723648": "vsx_type_out_of_scope",
+        "1499869001434118656": "vsx_type_out_of_scope",
+        "1496880666268505216": "vsx_type_out_of_scope",
+        "1499883638682689920": "vsx_type_out_of_scope",
+        "1485987151737107200": "nan",
+        "1497114175050663040": "vsx_type_out_of_scope",
+        "1485987254816323328": "nan",
+        "1496282153986140032": "vsx_type_out_of_scope",
+        "1496831119525794304": "vsx_type_out_of_scope",
+        "1497513469570146432": "vsx_type_out_of_scope",
+        "1496280126761597440": "vsx_type_out_of_scope",
+        "1496993675448311808": "vsx_type_out_of_scope",
+        "1497525907795379456": "vsx_type_out_of_scope",
+        "1496930968925861248": "vsx_type_out_of_scope",
+        "1496226044533492864": "vsx_type_out_of_scope",
+        "1500361926240967936": "vsx_type_out_of_scope",
+        "1497971759760138880": "vsx_type_out_of_scope",
+        "1497971450522478080": "zone_noise",
+        "1498857072779075200": "vsx_type_out_of_scope",
+        "1500323099736658048": "vsx_type_out_of_scope",
+        "1498120159470525696": "vsx_type_out_of_scope",
+        "1500327978819506944": "nan",
+        "1498105384781489920": "vsx_type_out_of_scope",
+        "1500357081517854592": "vsx_type_out_of_scope",
+        "1497391698657524480": "vsx_type_out_of_scope",
+        "1500311761023032320": "vsx_type_out_of_scope",
+        "1500311657943843072": "vsx_type_out_of_scope",
+        "1497960008729614976": "vsx_type_out_of_scope",
+        "1498058827337611392": "nan",
+        "1497923827925178368": "vsx_type_out_of_scope",
+        "1498055357004035712": "vsx_type_out_of_scope",
+        "1500302312095001600": "vsx_type_out_of_scope",
+        "1497395615667678848": "zone_noise",
+        "1497164580786846976": "vsx_type_out_of_scope",
+        "1497303909525988352": "vsx_type_out_of_scope",
+        "1498139469643451136": "vsx_type_out_of_scope",
+        "1500418894687086208": "nan",
+        "1497424851508532992": "vsx_type_out_of_scope",
+        "1497436125799224960": "vsx_type_out_of_scope",
+        "1500380858456833536": "vsx_type_out_of_scope",
+        "1498135552633294976": "vsx_type_out_of_scope",
+        "1498874424446929280": "vsx_type_out_of_scope",
+        "1498878753773944576": "vsx_type_out_of_scope",
+        "1500410236033012352": "nan",
+        "1498698193348806144": "vsx_type_out_of_scope",
+        "1497420045441686528": "vsx_type_out_of_scope",
+        "1500550526844642688": "vsx_type_out_of_scope",
+        "1498364251052277248": "vsx_type_out_of_scope",
+        "1498751485303339776": "vsx_type_out_of_scope",
+        "1498141668666708480": "vsx_type_out_of_scope",
+        "1498744544636143104": "vsx_type_out_of_scope",
+        "1498882533345167488": "vsx_type_out_of_scope",
+        "1497440970522358528": "vsx_type_out_of_scope",
+        "1498322916287022976": "zone_noise",
+        "1500397694728616960": "vsx_type_out_of_scope",
+        "1498371844554437376": "vsx_type_out_of_scope",
+        "1498183274013681536": "vsx_type_out_of_scope",
+        "1498755986429049856": "vsx_type_out_of_scope",
+        "1498231038346636416": "vsx_type_out_of_scope",
+        "1498341092588681856": "vsx_type_out_of_scope",
+        "1498229629597339776": "zone_noise",
+        "1498795809366255488": "nan",
+        "1498752275577303808": "vsx_type_out_of_scope",
+        "1498807457317021568": "vsx_type_out_of_scope",
+        "1498905004614111744": "vsx_type_out_of_scope",
+        "1501955152948739200": "vsx_type_out_of_scope",
+        "1500499640072148992": "vsx_type_out_of_scope",
+        "1501955221668216320": "vsx_type_out_of_scope",
+        "1498824568466764288": "vsx_type_out_of_scope",
+        "1499140884218407040": "vsx_type_out_of_scope",
+        "1498996607677094784": "vsx_type_out_of_scope",
+        "1498143180495215488": "vsx_type_out_of_scope",
+        "1500430989314972032": "vsx_type_out_of_scope",
+        "1498751450943601280": "vsx_type_out_of_scope",
+        "1498732106410850944": "vsx_type_out_of_scope",
+        "1498311298398914816": "vsx_type_out_of_scope",
+        "1497419495685871488": "vsx_type_out_of_scope",
+        "1498723688274975104": "vsx_type_out_of_scope",
+        "1500373574192295808": "zone_noise",
+        "1498783199341798016": "nan",
+        "1498360952517410688": "vsx_type_out_of_scope",
+        "1500702087650511232": "vsx_type_out_of_scope",
+        "1500693841313325696": "nan",
+        "1501957455051193472": "vsx_type_out_of_scope",
+        "1500690886375824512": "vsx_type_out_of_scope",
+        "1498957609373454592": "vsx_type_out_of_scope",
+        "1498399779021762176": "vsx_type_out_of_scope",
+        "1498453002256280832": "vsx_type_out_of_scope",
+        "1498453242774449536": "vsx_type_out_of_scope",
+        "1498783852176829184": "vsx_type_out_of_scope",
+        "1498973724090771712": "vsx_type_out_of_scope",
+        "1500657282551698560": "vsx_type_out_of_scope",
+        "1498968054733938560": "vsx_type_out_of_scope",
+        "1500516094090243712": "vsx_type_out_of_scope",
+        "1500693635154913792": "vsx_type_out_of_scope",
+        "1500700335303879680": "vsx_type_out_of_scope",
+        "1500705484968035968": "vsx_type_out_of_scope",
+        "1499006984318088320": "nan",
+        "1499020831292586624": "zone_noise",
+        "1498506947045497344": "vsx_type_out_of_scope",
+        "1498835391784358272": "vsx_type_out_of_scope",
+        "1498472209350080000": "vsx_type_out_of_scope",
+        "1499210016011946496": "nan",
+        "1499215032533749888": "vsx_type_out_of_scope",
+        "1499036430613832320": "vsx_type_out_of_scope",
+        "1500540768678968832": "vsx_type_out_of_scope",
+        "1499074466844182016": "vsx_type_out_of_scope",
+        "1498453414573142016": "vsx_type_out_of_scope",
+        "1498278351706325248": "nan",
+        "1498408094078428288": "vsx_type_out_of_scope",
+        "1498829481909356160": "vsx_type_out_of_scope",
+        "1499037598844960384": "vsx_type_out_of_scope",
+        "1498474992488864640": "vsx_type_out_of_scope",
+        "1499213280187092352": "vsx_type_out_of_scope",
+        "1501989718845529216": "vsx_type_out_of_scope",
+        "1499052957647968640": "vsx_type_out_of_scope",
+        "1500768195787098240": "vsx_type_out_of_scope",
+        "1499084499887740160": "nan",
+        "1498513166158147968": "vsx_type_out_of_scope",
+        "1499081063913928576": "vsx_type_out_of_scope",
+        "1498529074716971776": "vsx_type_out_of_scope",
+        "1502012464992313088": "nan",
+        "1500734798121451776": "vsx_type_out_of_scope",
+        "1499092952383382400": "vsx_type_out_of_scope",
+        "1499231731366546688": "vsx_type_out_of_scope",
+        "1502044385189172224": "vsx_type_out_of_scope",
+        "1498480077730173056": "zone_noise",
+        "1498531067581799936": "vsx_type_out_of_scope",
+        "1504485335363167488": "vsx_type_out_of_scope",
+        "1499278078357014656": "vsx_type_out_of_scope",
+        "1500746446072739200": "vsx_type_out_of_scope",
+        "1498531686057111040": "vsx_type_out_of_scope",
+        "1500783481574137088": "vsx_type_out_of_scope",
+        "1499064433800590592": "vsx_type_out_of_scope",
+        "1499081819828174080": "nan",
+        "1499119546820866176": "zone_noise",
+        "1502098570497419520": "zone_noise"
+      },
+      "n_skipped_active": 250
+    },
+    "check_meters": {
+      "BO_CVn": {
+        "target_catalog_id": "1498613634033133184",
+        "check_kmag_path": "check_kmag_1498613634033133184.csv",
+        "exists": true,
+        "check_catalog_id": "1497613731286514432",
+        "check_scatter_mad_mmag": 4.822500000000396,
+        "n_epochs": 134
+      },
+      "FW_CVn": {
+        "target_catalog_id": "1497343732462852864",
+        "check_kmag_path": "check_kmag_1497343732462852864.csv",
+        "exists": true,
+        "check_catalog_id": "1497613731286514432",
+        "check_scatter_mad_mmag": 5.584500000000325,
+        "n_epochs": 134
+      }
+    },
+    "cv_cvn_skip": "zone_flag"
+  },
+  "part_c": {
+    "bright_no_dao_g_le_13": [
+      {
+        "catalog_id": "1500803208360486144",
+        "G": 8.716609954833984,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1485558239123302272",
+        "G": 9.187561988830566,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1504280070285995008",
+        "G": 9.329008102416992,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1485478936845668096",
+        "G": 11.11017894744873,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1496733984545821696",
+        "G": 11.141863822937012,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1498210525582858112",
+        "G": 11.34274959564209,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1498217049636492672",
+        "G": 11.370611190795898,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1496596579951815936",
+        "G": 11.446002960205078,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1504507256876205056",
+        "G": 11.45705223083496,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1498210697381550848",
+        "G": 11.519775390625,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1499121363590317184",
+        "G": 11.852954864501951,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1496212674298610304",
+        "G": 11.947455406188965,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1501535895421132672",
+        "G": 12.203811645507812,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1499864087991504384",
+        "G": 12.20659065246582,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1504280001566518912",
+        "G": 12.377982139587402,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1496212747314674560",
+        "G": 12.393675804138184,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1502243843470826240",
+        "G": 12.571730613708496,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1499857834519139968",
+        "G": 12.64687442779541,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1496819059257617920",
+        "G": 12.739359855651855,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1486136822757775616",
+        "G": 12.806660652160645,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1499262414612928128",
+        "G": 12.81285572052002,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      },
+      {
+        "catalog_id": "1486014845686239616",
+        "G": 12.848642349243164,
+        "source_state": "EDGE",
+        "seed_reject_reason": "nan",
+        "ambiguous_owner": false,
+        "vy_dao_pass": null,
+        "seed_centroid_px": NaN,
+        "overlay_expected": "Gaia marker only (edge)",
+        "verdict": "expected_named_category"
+      }
+    ]
+  },
+  "runtime_s": 1.04
+}
