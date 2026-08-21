@@ -1,0 +1,8 @@
+{
+  "n_files": 71,
+  "err_bkg_source": {
+    "empirical": 62352
+  },
+  "first_sigma_bkg_ap": 51.18428130311031,
+  "inv_err_mode_01_preflight_sample": true
+}

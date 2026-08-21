@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-21 -- ERR-518-02 (sigma_bkg_ap key transport + RAM finalize)
+
+Draft 518 (Newton, pre-calibrated) hit INV-ERR-MODE-01 because `global_fixed`
+aperture mode stored Labbe results under unrounded `_sigma_by_r` keys while row
+assignment looked up `round(r, 4)` (ERR-518-01). Fix: `_sigma_bkg_r_key()` for
+all store/lookup; INV-ERR-SIGMA-ACCT-01 fail-loud if measured empirical radii
+project to zero rows. RAM handoff path now calls
+`_finalize_hybrid_bkg_fallback_sidecar` after deferred CSV flush (commit 2).
+Re-export on draft 518 proc dir: **62352 empirical** (was 62352 howell_fallback);
+first-frame `sigma_bkg_ap` ~51 ADU (order of sandbox 71.8); INV-ERR-MODE-01 sample
+pass. Anchor 516 snapshot `--full`: core SHA **9902d918** byte-identical,
+science compare 60/0. Report: `dev/results/CURSOR_RESULT_ERR_518_02.md`.
+
 ## 2026-08-20 -- DAO-GAIA ERA-03 CLOSE
 
 Panel GREEN; product SHA **9902d918** n=121. Pinned 48-target comp ensembles +

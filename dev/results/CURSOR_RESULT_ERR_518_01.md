@@ -16,7 +16,7 @@ empty-aperture measurement **succeeds** on draft 518 frames (sandbox:
 `aperture_snr_table_REJECTED.json`, no `aperture_snr_table.json`) stores
 Labbe results in `_sigma_by_r` under the **unrounded** key `float(r_ap)`
 (e.g. `4.35461`) while row assignment looks up `round(float(r_ap), 4)`
-(e.g. `4.3546`) — keys do not match (`dict.get` returns miss). Every row
+(e.g. `4.3546`) - keys do not match (`dict.get` returns miss). Every row
 is written `err_bkg_source=howell_fallback`, `sigma_bkg_ap=NaN` despite
 successful Labbe. **Secondary Branch B:** RAM handoff calls
 `export_per_frame_catalogs(..., defer_disk_writes=True)` (`pipeline.py:15797`);
@@ -37,7 +37,7 @@ would not be howell_scaled on this path. With 100% raw fallback,
   returns finite `33488.88` ADU/px from `noise_floor_adu` /
   `sky_adu_per_px_annulus` (no `sky_surface_bg_median_adu` column in proc
   CSV). Simulated `scaled_sigma_bkg_ap_from_howell` with `r_setup=1.0`
-  yields finite sigma — finalize would work if empirical ratios existed.
+  yields finite sigma - finalize would work if empirical ratios existed.
 
 ## 4.1 Logs
 
@@ -88,7 +88,7 @@ Columns **absent** from proc CSV: `aperture_area_px`, `sky_surface_bg_median_adu
 ### 4.2.7 Unique `aperture_r_px`
 Single value **4.35461** px (global_fixed, `aperture_factor_applied=global_1.900x`,
 `fwhm_px_for_aperture=2.2919`, `snr_aperture_mode=global_fixed`). All rows
-fallback — not radius-selective.
+fallback - not radius-selective.
 
 ## 4.3 Execution-path facts (Branch B discriminators)
 
@@ -149,7 +149,7 @@ r_ap = max(0.5, 1.9 * 2.2919)  # 4.35461
 Storage: `_sigma_by_r[float(_r_u)]` with `_r_u` from unrounded `r_ap`
 (`photometry_core.py:14258-14290`). Lookup (global mode): `round(float(r_ap), 4)`
 (`photometry_core.py:14315-14317`). SNR-table path uses rounded keys throughout
-— explains draft 516 (`snr_aperture_mode=snr_table`, 100% empirical on frame 001).
+- explains draft 516 (`snr_aperture_mode=snr_table`, 100% empirical on frame 001).
 
 ## Fix options (no recommendation)
 
@@ -178,7 +178,7 @@ Storage: `_sigma_by_r[float(_r_u)]` with `_r_u` from unrounded `r_ap`
 | Item | Action |
 |------|--------|
 | `dev/results/CURSOR_RESULT_ERR_518_01.md` | This report |
-| ROADMAP | Suggest **PRECAL-INPUT-CONTRACT-01** (externally pre-calibrated frame contract: pedestal, sky stamp, SNR-table requirement for empirical err mode) — not written here |
+| ROADMAP | Suggest **PRECAL-INPUT-CONTRACT-01** (externally pre-calibrated frame contract: pedestal, sky stamp, SNR-table requirement for empirical err mode) - not written here |
 | `docs/VYVAR_ROADMAP.md` | Not edited in this task (investigation STOP) |
 
 ## Errors (if any)
@@ -189,4 +189,4 @@ None (investigation only).
 - `dev/sandbox/err_518_01_labbe_measure.py`
 - `dev/results/context/session_20260821_err518/labbe_measurements.json`
 
-STOP — Milan reviews; code fix is a separate task after decision.
+STOP - Milan reviews; code fix is a separate task after decision.

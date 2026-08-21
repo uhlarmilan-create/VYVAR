@@ -32,12 +32,33 @@ looks (draft root and `platesolve/<setup>/`).
 
 ---
 
+## ERR-518-02 - sigma_bkg_ap key transport + RAM finalize (2026-08-21)
+
+**Implemented (Milan decision):** options 1+2 from ERR-518-01. `_sigma_bkg_r_key()`
+canonicalizes every `_sigma_by_r` store and lookup; INV-ERR-SIGMA-ACCT-01 raises
+`InvariantViolation` when Labbe succeeds but zero rows receive empirical source.
+RAM handoff invokes `_finalize_hybrid_bkg_fallback_sidecar` once after deferred
+CSV flush (direct-write path unchanged; no double finalize because defer path
+skips the in-export call).
+
+**Rejected (Milan 2026-08-21):** option 3 (block empirical without accepted SNR
+table) - would hard-block Newton drafts that legitimately run `global_fixed` until
+SNR gate passes; option 5 (ops workaround regen SNR table only) - treats symptom,
+not transport bug.
+
+**Deferred:** PRECAL-INPUT-CONTRACT-01 (option 4) stays ROADMAP; Howell sky_pp on
+externally pre-calibrated pedestals is not fully resolved here.
+
+Proof: draft 518 re-export 62352/62352 empirical; anchor 516 core SHA unchanged
+9902d918.
+
+---
+
 ## INV-ERR-MODE-01 - empirical ERR fail-loud (2026-08-18)
 
 Headless Phase 2A with `err_background_mode=empirical` raises if
 `sigma_bkg_ap` is missing/NaN instead of silently falling through to
 Howell. Cache columns are derived from the named requirements map.
-Landed in `96aa0d6`. Proof: 516 rebuild `err_bkg_source=empirical` on
 all 134 proc CSVs; sem/scint/sys deltas vs de6f7c8 = 0.
 
 ---
