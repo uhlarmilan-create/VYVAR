@@ -1,0 +1,128 @@
+{
+  "baseline_local": "489d9d3",
+  "baseline_origin_main": "8dea595",
+  "provenance": {
+    "proc_flux_column": "flux from proc_*.csv (_load_proc_series:130-144)",
+    "mag_inst": "-2.5*log10(flux) via photometry_core._flux_to_mag",
+    "ensemble_zp_catalog": "phot_g_mean_mag (Gaia G) from comparison_stars.csv (_frame_zp_median:176-185)",
+    "transform_on_lhs": "NONE - transform_gaia_to_johnson used only for RHS catalog V/Rc (lines 247-248 ensemble build)",
+    "v_transform_in_zp": false,
+    "lhs_scale": "mag_inst + median(G_comp - inst_comp) per frame (G-anchored ZP by construction)"
+  },
+  "expected_from_table59_mean_over_span": {
+    "d_G_minus_V_mmag_per_mag_mean": -365.24573982528074,
+    "d_G_minus_Rc_mmag_per_mag_mean": 114.03235182707672,
+    "d_V_minus_Rc_mmag_per_mag_mean": 479.27809165235755,
+    "bprp_grid_min": -0.1359205245971679,
+    "bprp_grid_max": 2.197953224182129
+  },
+  "ensemble_replay": {
+    "slopes": {
+      "G": {
+        "a": -0.5296198899645428,
+        "b_mag_per_mag": 0.3846814536827526,
+        "b_mmag_per_mag": 384.6814536827526,
+        "b_stderr_mag_per_mag": 0.06734421177454394,
+        "b_stderr_mmag_per_mag": 67.34421177454395,
+        "n": 2076,
+        "bprp_span": 2.333873748779297
+      },
+      "V": {
+        "a": -0.37117383465333614,
+        "b_mag_per_mag": 0.0016430491584887475,
+        "b_mmag_per_mag": 1.6430491584887474,
+        "b_stderr_mag_per_mag": 0.06729455251511492,
+        "b_stderr_mmag_per_mag": 67.29455251511492,
+        "n": 2076,
+        "bprp_span": 2.333873748779297
+      },
+      "Rc": {
+        "a": -0.41036233861765176,
+        "b_mag_per_mag": 0.49547101432786617,
+        "b_mmag_per_mag": 495.47101432786616,
+        "b_stderr_mag_per_mag": 0.06730042738454113,
+        "b_stderr_mmag_per_mag": 67.30042738454114,
+        "n": 2076,
+        "bprp_span": 2.333873748779297
+      }
+    },
+    "identity_bR_minus_bV_mmag_per_mag": 493.8279651693774,
+    "identity_bG_minus_bV_mmag_per_mag": 383.03840452426385,
+    "expected_bR_minus_bV_mmag_per_mag": 479.27809165235755,
+    "expected_minus_dGV_mmag_per_mag": 365.24573982528074,
+    "verdict": "CV"
+  },
+  "raw_counts_probe": {
+    "g_cut": 14.0,
+    "g_cut_note": "",
+    "slopes": {
+      "G": {
+        "a": -22.386031308266382,
+        "b_mag_per_mag": 0.3581072737341483,
+        "b_mmag_per_mag": 358.1072737341483,
+        "b_stderr_mag_per_mag": 0.06535201469082533,
+        "b_stderr_mmag_per_mag": 65.35201469082533,
+        "n": 1567,
+        "bprp_span": 2.333873748779297
+      },
+      "V": {
+        "a": -22.224745617890488,
+        "b_mag_per_mag": -0.028704026175384107,
+        "b_mmag_per_mag": -28.704026175384108,
+        "b_stderr_mag_per_mag": 0.06532134054796017,
+        "b_stderr_mmag_per_mag": 65.32134054796016,
+        "n": 1567,
+        "bprp_span": 2.333873748779297
+      },
+      "Rc": {
+        "a": -22.264369669042118,
+        "b_mag_per_mag": 0.46572332180886394,
+        "b_mmag_per_mag": 465.72332180886394,
+        "b_stderr_mag_per_mag": 0.06532178172408011,
+        "b_stderr_mmag_per_mag": 65.32178172408011,
+        "n": 1567,
+        "bprp_span": 2.333873748779297
+      }
+    },
+    "identity_bR_minus_bV_mmag_per_mag": 494.42734798424806,
+    "identity_bG_minus_bV_mmag_per_mag": 386.8112999095324,
+    "identity_sanity_pass": true,
+    "verdict": "CV"
+  },
+  "final_verdict_raw_rule": "CV",
+  "submission_raw_slopes": {
+    "BO CVn": {
+      "delta_bp_rp": -0.030222892761230524,
+      "CV_systematic_mmag": 0.8675187049141878,
+      "CR_systematic_mmag": -14.075506011433347
+    },
+    "FW CVn": {
+      "delta_bp_rp": 0.033977508544921875,
+      "CV_systematic_mmag": -0.9752912946477746,
+      "CR_systematic_mmag": 15.824118146330076
+    },
+    "GH CVn": {
+      "delta_bp_rp": -0.05396080017089844,
+      "CV_systematic_mmag": 1.54889222055014,
+      "CR_systematic_mmag": -25.130803103055133
+    }
+  },
+  "submission_ensemble_slopes": {
+    "BO CVn": {
+      "delta_bp_rp": -0.030222892761230524,
+      "CV_systematic_mmag": -0.04965769851843547,
+      "CR_systematic_mmag": -14.974567332329212
+    },
+    "FW CVn": {
+      "delta_bp_rp": 0.033977508544921875,
+      "CV_systematic_mmag": 0.05582671682227811,
+      "CR_systematic_mmag": 16.834870623086182
+    },
+    "GH CVn": {
+      "delta_bp_rp": -0.05396080017089844,
+      "CV_systematic_mmag": -0.08866024731217413,
+      "CR_systematic_mmag": -26.736012394618342
+    }
+  },
+  "d101_verdict_was": "CV"
+}

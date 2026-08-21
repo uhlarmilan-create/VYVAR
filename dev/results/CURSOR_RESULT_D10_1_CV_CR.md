@@ -77,17 +77,18 @@ Sandbox: `dev/sandbox/d10_1_cv_cr_measure.py`
 
 Plot: `dev/results/context/session_20260821_d10_1/residual_vs_bprp.png`
 
-## Interpretation (measurement facts, not a mapping change)
+## Interpretation (SUPERSEDED by D10-1b - 2026-08-21)
 
-1. **G-anchored ensemble:** production ZP uses Gaia **G** catalog mags for comps
-   (`ensemble_normalize`, `comp_catalog_mag = phot_g_mean_mag`). Nightly
-   `mag_ensemble` is therefore close to Gaia G. Residuals are approximately
-   `G - X(G, BP-RP)` for X in {V, Rc}, so **b_R tracks the Table 5.9 G-R
-   polynomial slope** (~0.5 mag/mag in this BP-RP range) while **b_V is near
-   flat** (~0.002 mag/mag). The decision rule selects **CV** on this basis.
+**The paragraph below is retracted.** D10-1b provenance audit and raw mag_inst
+probe show: (1) no V-transform on the LHS - ZP uses Gaia G only; (2) flat b_V
+is **not** explained by G-scale residuals being flat; (3) b_R ~ +495 tracks
+**d(V-Rc)/dc**, not d(G-Rc)/dc alone. Raw counts (no ZP) confirm **V-like**
+effective band (b_V ~ flat, b_R ~ +466). **Mechanical CV verdict stands** on
+both fits. See `dev/results/CURSOR_RESULT_D10_1B_CV_CR.md`.
 
-2. **Sign sanity:** `b_V - b_R` negative as pre-registered for a red-leaning
-   sensor narrative; **no sign contradiction flagged.**
+~~1. **G-anchored ensemble:** production ZP uses Gaia **G** catalog mags...~~
+
+~~2. **Sign sanity:** `b_V - b_R` negative as pre-registered...~~
 
 3. **GH CVn T1-abs (era arc):** baseline |calib - Gaia->Johnson V| **141 mmag**
    beats candidate **332 mmag** on GH check star (`CURSOR_RESULT_DAO_GAIA_ERA_02_EXECUTE.md`).
