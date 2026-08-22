@@ -444,9 +444,26 @@ def _epsf_fit_catalog_ids(
     *,
     psf_photometry_enabled: bool = False,
 ) -> set[str] | None:
-    """Target-only subset (default) vs full LC star set when PSF photometry is enabled."""
+    """Target-only subset (default) vs science set when PSF photometry is enabled."""
     if psf_photometry_enabled:
-        return _epsf_lc_catalog_ids(platesolve_dir)
+        from epsf_science_set import build_epsf_science_set
+
+        result = build_epsf_science_set(platesolve_dir)
+        if not result.catalog_ids:
+            raise ValueError(
+                "ePSF science set is empty"
+                + (f": {result.empty_reason}" if result.empty_reason else "")
+                + "; refusing silent fallback to full LC pool."
+            )
+        LOGGER.debug(
+            "[ePSF] science-set catalog_ids loaded: %d (targets=%d comps=%d checks=%d blended=%d)",
+            result.n_total,
+            result.n_targets,
+            result.n_per_target_comps,
+            result.n_check_stars,
+            result.n_blended,
+        )
+        return set(result.catalog_ids)
     return _epsf_target_catalog_ids(platesolve_dir)
 
 
@@ -463,7 +480,20 @@ def _fill_psf_catalog_columns(
     _run_aperture = bool(st.get("_run_aperture", False))
     _epsf_raw = str(st.get("epsf_model_path", "") or "").strip()
     _epsf_path = Path(_epsf_raw) if _epsf_raw else None
+    _frame_name = str(st.get("epsf_frame_name") or st.get("current_frame_name") or "")
+    _frame_index = st.get("epsf_frame_index")
+    _psf_record: dict[str, Any] = {
+        "frame_name": _frame_name,
+        "frame_index": _frame_index,
+        "n_fit": 0,
+        "n_ok": 0,
+        "exception_class": None,
+        "exception_message": None,
+        "traceback_tail": None,
+    }
     if _run_epsf and _epsf_path is not None and _epsf_path.is_file():
+        _n_fit = 0
+        _n_ok = 0
         try:
             from psf_photometry import psf_photometry_stars as _psf_phot
 
@@ -553,6 +583,7 @@ def _fill_psf_catalog_columns(
             else:
                 _n_ok = 0
 
+            _psf_record.update({"n_fit": _n_fit, "n_ok": _n_ok})
             if _tid is not None:
                 LOGGER.info(
                     "[ePSF] fitting %d/%d stars (targeted: variables+comps only), %d psf_fit_ok",
@@ -567,7 +598,26 @@ def _fill_psf_catalog_columns(
                     _n_all,
                 )
         except Exception as _psf_e:  # noqa: BLE001
-            LOGGER.warning("[ePSF] per-frame PSF failed (non-fatal): %s", _psf_e)
+            import traceback
+
+            _exc_cls = type(_psf_e).__name__
+            _exc_msg = str(_psf_e)
+            _tb_tail = "\n".join(traceback.format_exc().splitlines()[-8:])
+            _psf_record.update(
+                {
+                    "n_fit": _n_fit,
+                    "n_ok": 0,
+                    "exception_class": _exc_cls,
+                    "exception_message": _exc_msg,
+                    "traceback_tail": _tb_tail,
+                }
+            )
+            LOGGER.warning(
+                "[ePSF] per-frame PSF failed on frame %s: %s: %s",
+                _frame_name or "?",
+                _exc_cls,
+                _exc_msg,
+            )
             for _c in ("psf_flux", "psf_flux_err", "psf_chi2"):
                 if _c not in df.columns:
                     df[_c] = float("nan")
@@ -583,6 +633,9 @@ def _fill_psf_catalog_columns(
                 df[_c] = float("nan")
         if "psf_fit_ok" not in df.columns:
             df["psf_fit_ok"] = False
+
+    if _run_epsf:
+        st["_psf_frame_record"] = _psf_record
 
     # -- Moffat PSF fit (Step 1 of two-step ePSF pipeline only) -----------------
     if _run_epsf:
@@ -10199,6 +10252,10 @@ def _export_per_frame_run_catalog_core(
 ) -> dict[str, Any]:
     log_event("DEBUG: per-frame worker entry point called")
     fname = base_path.name
+    st["epsf_frame_name"] = fname
+    _idx_map = st.get("epsf_frame_index_by_name")
+    if isinstance(_idx_map, dict):
+        st["epsf_frame_index"] = _idx_map.get(fname)
     debug_pixel_match: dict[str, Any] = {
         "file": fname,
         "use_fast": bool(st.get("use_master_fast_path")),
@@ -10571,6 +10628,7 @@ def _export_per_frame_run_catalog_core(
         csv_paths.append(str(flat_path))
 
     primary_csv = csv_paths[0] if csv_paths else ""
+    _psf_rec = st.get("_psf_frame_record")
     return {
         "file": fname,
         "status": "ok",
@@ -10582,6 +10640,7 @@ def _export_per_frame_run_catalog_core(
         "deferred_writes": deferred_writes,
         "infolog_messages": [],
         "debug_pixel_match": debug_pixel_match,
+        "psf_frame_record": dict(_psf_rec) if isinstance(_psf_rec, dict) else None,
     }
 
 
@@ -10789,6 +10848,19 @@ def export_per_frame_catalogs(
     if ps is None:
         ps = Path(platesolve_dir)
     _ap_st.update(_export_catalog_psf_st_fields(_cfg_ap, ps))
+    _epsf_science_meta: dict[str, Any] | None = None
+    if bool(_cfg_ap.psf_photometry_enabled) and bool(_ap_st.get("_run_epsf")):
+        from epsf_science_set import build_epsf_science_set
+
+        _sci = build_epsf_science_set(ps)
+        if not _sci.catalog_ids:
+            raise ValueError(
+                "ePSF science set is empty"
+                + (f": {_sci.empty_reason}" if _sci.empty_reason else "")
+                + "; refusing silent fallback to full LC pool."
+            )
+        _epsf_science_meta = _sci.to_meta_dict()
+        _ap_st["epsf_science_set_meta"] = _epsf_science_meta
     out_flat = ps / "per_frame_catalogs"
     if mirror_flat_platesolve_folder:
         out_flat.mkdir(parents=True, exist_ok=True)
@@ -10800,6 +10872,9 @@ def export_per_frame_catalogs(
         files = [root / name for name, _, _ in work_ram]
     else:
         files = sorted(_iter_fits_recursive(root))
+
+    _frame_index_by_name = {Path(f).name: i for i, f in enumerate(files)}
+    _ap_st["epsf_frame_index_by_name"] = _frame_index_by_name
 
     if not files:
         return {
@@ -11534,6 +11609,8 @@ def export_per_frame_catalogs(
             "exoplanet_local_db_path": str(_cfg_ap.exoplanet_local_db_path or ""),
             "exoplanet_match_max_sep_arcsec": float(_cfg_ap.exoplanet_match_max_sep_arcsec),
             **_export_catalog_psf_st_fields(_cfg_ap, ps),
+            "epsf_frame_index_by_name": dict(_frame_index_by_name),
+            "epsf_science_set_meta": _epsf_science_meta,
         }
 
     if use_parallel_mp and use_ram_inputs and work_ram is not None:
@@ -11702,6 +11779,21 @@ def export_per_frame_catalogs(
             )
         except Exception as _sd_write_exc:  # noqa: BLE001
             LOGGER.warning("[SAT-DIAG] provenance commit skipped: %s", _sd_write_exc)
+    _epsf_job_summary: dict[str, Any] | None = None
+    if bool(_cfg_ap.psf_photometry_enabled) and bool(_ap_st.get("_run_epsf")):
+        from epsf_frame_accounting import finalize_epsf_frame_job
+
+        _psf_recs = [
+            r["psf_frame_record"]
+            for r in rows_out
+            if isinstance(r.get("psf_frame_record"), dict)
+        ]
+        if _psf_recs:
+            _epsf_job_summary = finalize_epsf_frame_job(
+                _psf_recs,
+                platesolve_dir=ps,
+                science_set_meta=_epsf_science_meta,
+            )
     return {
         "written": int(n_ok),
         "per_frame_dir": str(root),
@@ -11712,6 +11804,7 @@ def export_per_frame_catalogs(
         "frames_master_reference_match": int(n_master_ref),
         "deferred_csv_writes": list(deferred_csv_writes) if defer_disk_writes else [],
         "hybrid_bkg_fallback": _hybrid_stats,
+        "epsf_job_summary": _epsf_job_summary,
     }
 
 

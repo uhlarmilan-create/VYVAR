@@ -1859,6 +1859,13 @@ def _render_pending_job_dispatcher(
                     draft_id=_draft_epsf,
                     equipment_id=int(_peq) if _peq is not None else None,
                 )
+                if isinstance(per_cat.get("epsf_job_summary"), dict):
+                    _ejs = per_cat["epsf_job_summary"]
+                    log_event(
+                        f"[ePSF job] frame accounting: "
+                        f"{_ejs.get('frames_with_zero_ok', '?')}/{_ejs.get('frames_total', '?')} "
+                        f"zero-ok frames; policy={_ejs.get('inv_psf_frame_01_policy', '?')}"
+                    )
                 _n_proc = len(list(_frames_root.glob("proc_*.csv")))
                 _written = int(per_cat.get("written", 0) or 0)
                 _out_epsf = {
