@@ -35,6 +35,8 @@ def _write_min_csv(path: Path, *, with_xy: bool = True, drop_col: str | None = N
             "ra_deg": 180.0 + i * 0.001,
             "dec_deg": 45.0,
             "mag": 12.0,
+            "zone": "linear",
+            "source_state": "DETECTED_P1",
         }
         if with_xy:
             row["x"] = 50.0 + i * 10.0
@@ -51,6 +53,15 @@ def test_epsf_prepare_stars_csv_path(tmp_path: Path) -> None:
     csv = tmp_path / "masterstars_full_match.csv"
     _write_min_masterstar(ms)
     _write_min_csv(csv)
+    phot = tmp_path / "photometry"
+    phot.mkdir()
+    ids = [f"GaiaDR3_{1000000000000000000 + i}" for i in range(40)]
+    pd.DataFrame({"catalog_id": ids[:10], "zone_flag": "linear"}).to_csv(
+        phot / "active_targets.csv", index=False
+    )
+    pd.DataFrame({"catalog_id": ids[10:]}).to_csv(
+        phot / "comparison_stars_per_target.csv", index=False
+    )
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
     try:
         prep = _epsf_prepare_stars(ms, csv, db, draft_id=1, min_stars=10)

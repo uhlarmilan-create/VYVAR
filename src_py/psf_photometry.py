@@ -40,6 +40,105 @@ LOGGER = logging.getLogger(__name__)
 _MASTERSTAR_EPSF_NAME = "masterstar_epsf.fits"
 _MASTERSTAR_EPSF_META_NAME = "masterstar_epsf_meta.json"
 
+# INTERIM cap: DAOPHOT/allstar practice uses tens to low hundreds of PSF stars
+# (Stetson 1987; Harris et al. DAOPHOT manual). Part D will tune empirically.
+_EPSF_BUILD_INTERIM_TOP_N = 200
+_EPSF_BUILD_CLEAN_SOURCE_STATES = frozenset({"DETECTED_P1", "DETECTED_P2", "FORCED_SEED"})
+
+
+class InstrumentedEPSFBuilder(EPSFBuilder):
+    """EPSFBuilder subclass recording per-iteration photutils _fit_error_status counts."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.iteration_failure_curve: list[dict[str, int]] = []
+
+    def _process_iteration(self, stars: Any, epsf: Any, iter_num: int) -> Any:
+        result = super()._process_iteration(stars, epsf, iter_num)
+        hist = {0: 0, 1: 0, 2: 0, 3: 0}
+        for star in stars:
+            st = int(getattr(star, "_fit_error_status", 0) or 0)
+            hist[st] = hist.get(st, 0) + 1
+        n_fail = hist[1] + hist[2] + hist[3]
+        self.iteration_failure_curve.append(
+            {
+                "iteration": len(self.iteration_failure_curve) + 1,
+                "n_stars": len(stars),
+                "n_fail": n_fail,
+                "n_status_0": hist[0],
+                "n_status_1": hist[1],
+                "n_status_2": hist[2],
+                "n_status_3": hist[3],
+            }
+        )
+        return result
+
+
+def _epsf_apply_build_selection_gates(
+    df: pd.DataFrame,
+    *,
+    platesolve_dir: Path,
+    cutout_size: int,
+    image_shape: tuple[int, int],
+    funnel: dict[str, Any],
+) -> pd.DataFrame:
+    """Part C build-star gates: zone linear, clean source_state, science scope, edge-safe, interim top-N."""
+    from epsf_science_set import build_epsf_science_set
+
+    work = df.copy()
+    funnel["n_build_input"] = int(len(work))
+
+    if "zone" in work.columns:
+        work = work[work["zone"].astype(str).str.strip().str.lower() == "linear"]
+    funnel["n_after_zone_linear"] = int(len(work))
+
+    if "source_state" in work.columns:
+        ss = work["source_state"].astype(str).str.strip().str.upper()
+        work = work[ss.isin(_EPSF_BUILD_CLEAN_SOURCE_STATES)]
+    funnel["n_after_clean_source_state"] = int(len(work))
+
+    sci = build_epsf_science_set(platesolve_dir)
+    if sci.catalog_ids:
+        cids = {_norm_catalog_id(x) for x in sci.catalog_ids}
+        if "_cid" not in work.columns:
+            work["_cid"] = work["catalog_id"].map(_norm_catalog_id)
+        work = work[work["_cid"].isin(cids)]
+    else:
+        work = work.iloc[0:0]
+    funnel["n_after_science_scope"] = int(len(work))
+
+    h, w = image_shape
+    half = int(cutout_size) // 2
+    margin = half + 1
+    xs = pd.to_numeric(work["x"], errors="coerce")
+    ys = pd.to_numeric(work["y"], errors="coerce")
+    edge_ok = (
+        xs.notna()
+        & ys.notna()
+        & (xs >= margin)
+        & (xs < w - margin)
+        & (ys >= margin)
+        & (ys < h - margin)
+    )
+    work = work.loc[edge_ok]
+    funnel["n_after_edge_safe_cutout"] = int(len(work))
+
+    if len(work) > _EPSF_BUILD_INTERIM_TOP_N:
+        mag_col = next(
+            (c for c in ("mag", "catalog_mag", "phot_g_mean_mag") if c in work.columns),
+            None,
+        )
+        if mag_col is not None:
+            work = work.copy()
+            work["_sort_mag"] = pd.to_numeric(work[mag_col], errors="coerce")
+            work = work.sort_values("_sort_mag", ascending=True, na_position="last")
+        work = work.head(_EPSF_BUILD_INTERIM_TOP_N)
+    funnel["n_after_interim_top_n"] = int(len(work))
+    funnel["build_interim_top_n"] = int(_EPSF_BUILD_INTERIM_TOP_N)
+    funnel["build_interim_top_n_mark"] = "INTERIM"
+
+    return work
+
 
 def _epsf_noop_finder(_data: np.ndarray, mask: np.ndarray | None = None) -> None:
     """Finder for IterativePSFPhotometry: no residual sources (catalog positions only)."""
@@ -539,13 +638,14 @@ def _epsf_build_imagepsf_from_stars(
     else:
         _smoothing = "quartic"
 
-    builder = EPSFBuilder(
+    builder = InstrumentedEPSFBuilder(
         oversampling=osamp,
         maxiters=15,
         progress_bar=False,
         smoothing_kernel=_smoothing,
     )
     epsf_model, _fitted = builder(stars)
+    iteration_failure_curve = list(builder.iteration_failure_curve)
     epsf_data = epsf_model.data
 
     nan_frac = float(np.sum(~np.isfinite(epsf_data)) / epsf_data.size)
@@ -602,6 +702,7 @@ def _epsf_build_imagepsf_from_stars(
         "smoothing": _smoothing,
         "fit_shape": fit_shape,
         "epsf_sum_native": float(_epsf_normalized.sum() / osamp**2),
+        "iteration_failure_curve": iteration_failure_curve,
     }
 
 
@@ -907,6 +1008,15 @@ def _epsf_prepare_stars(
     if "is_usable" in df.columns:
         csv_mask &= df["is_usable"].fillna(False).astype(bool)
     csv_ok = df.loc[csv_mask].copy()
+    with fits.open(mpath, memmap=True) as _hd_gate:
+        _gate_shape = np.asarray(_hd_gate[0].data).shape
+    csv_ok = _epsf_apply_build_selection_gates(
+        csv_ok,
+        platesolve_dir=mpath.parent,
+        cutout_size=cutout_size,
+        image_shape=(int(_gate_shape[0]), int(_gate_shape[1])),
+        funnel=funnel,
+    )
     csv_ok["_cid"] = csv_ok["catalog_id"].map(_norm_catalog_id)
     csv_ok = csv_ok[csv_ok["_cid"] != ""]
     funnel["n_csv_with_catalog_id"] = int(len(csv_ok))
@@ -1229,6 +1339,7 @@ def _epsf_prepare_stars(
         "n_overridden": int(_n_overridden),
         "isolation_radius_px": float(_isolation_radius_px),
         "plate_scale_arcsec_px": plate_scale_arcsec_px,
+        "funnel": funnel,
     }
 
 
@@ -1242,6 +1353,7 @@ def build_epsf_model(
     min_stars: int | None = None,
     spatial_order: int | None = None,
     moffat_centroids: pd.DataFrame | None = None,
+    sandbox_output_dir: Path | str | None = None,
 ) -> Path:
     """Build ePSF from clean comparison stars and write ``masterstar_epsf.fits`` + meta JSON."""
     prep = _epsf_prepare_stars(
@@ -1262,6 +1374,7 @@ def build_epsf_model(
     _n_overridden = prep["n_overridden"]
     _isolation_radius_px = prep["isolation_radius_px"]
     plate_scale_arcsec_px = prep["plate_scale_arcsec_px"]
+    _build_funnel = dict(prep.get("funnel") or {})
 
     osamp = max(1, int(oversampling))
     if spatial_order is None:
@@ -1278,6 +1391,7 @@ def build_epsf_model(
     _norm_factor = _built["norm_factor"]
     _epsf_sum_native = _built["epsf_sum_native"]
     arr = _built["arr"]
+    _iteration_curve = list(_built.get("iteration_failure_curve") or [])
     if _qc.get("epsf_nan_fraction") and _qc["epsf_nan_fraction"] > 0.05:
         log_event(f"ePSF QC WARNING: {_qc['epsf_nan_fraction']:.1%} non-finite pixels in ePSF model")
     _ratio = _qc.get("epsf_vs_input_fwhm_ratio")
@@ -1291,7 +1405,8 @@ def build_epsf_model(
     if _qc.get("epsf_asymmetry") and _qc["epsf_asymmetry"] > 0.1:
         log_event(f"ePSF QC WARNING: ePSF asymmetry={_qc['epsf_asymmetry']:.3f} (>0.1) - coma/tracking")
 
-    out_dir = mpath.parent
+    out_dir = Path(sandbox_output_dir) if sandbox_output_dir else mpath.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
     epsf_path = out_dir / _MASTERSTAR_EPSF_NAME
     meta_path = out_dir / _MASTERSTAR_EPSF_META_NAME
 
@@ -1319,6 +1434,25 @@ def build_epsf_model(
         "n_stars_after_join": int(n_join),
         "draft_id": int(draft_id),
         "created_utc": created,
+        "build_funnel": _build_funnel,
+        "build_selection": {
+            "gates": [
+                "zone_linear",
+                "non_variable",
+                "non_saturated",
+                "photometry_ok",
+                "clean_source_state",
+                "science_scope",
+                "edge_safe_cutout",
+                "isolated",
+                "interim_top_n",
+            ],
+            "interim_top_n": _EPSF_BUILD_INTERIM_TOP_N,
+            "interim_top_n_mark": "INTERIM",
+            "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration",
+        },
+        "iteration_failure_curve": _iteration_curve,
+        "sandbox_output": bool(sandbox_output_dir),
     }
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
