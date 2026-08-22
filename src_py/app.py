@@ -1788,7 +1788,7 @@ def _render_pending_job_dispatcher(
             elif pending.get("kind") == "run_epsf":
                 from psf_photometry import build_epsf_model
 
-                from pipeline import export_per_frame_catalogs
+                from epsf_psf_merge import run_epsf_psf_merge_job
 
                 _ms_fits = Path(str(pending.get("masterstar_fits_path", "")).strip())
                 _ms_csv = Path(str(pending.get("masterstars_csv_path", "")).strip())
@@ -1838,26 +1838,13 @@ def _render_pending_job_dispatcher(
                     )
                 )
                 _peq = pending.get("equipment_id")
-                per_cat = export_per_frame_catalogs(
+                per_cat = run_epsf_psf_merge_job(
                     frames_root=_frames_root,
                     platesolve_dir=_ps_dir,
-                    max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
-                    catalog_match_max_sep_arcsec=float(
-                        pending.get("catalog_match_max_sep_arcsec", 25.0)
-                    ),
-                    saturate_level_fraction=float(
-                        pending.get("saturate_level_fraction", 0.999)
-                    ),
-                    dao_threshold_sigma=_dao_sigma,
-                    dao_fwhm_px=_dao_fwhm,
-                    masterstars_csv=_ms_csv,
-                    masterstar_fits=_ms_fits,
-                    use_master_fast_path=True,
-                    catalog_local_gaia_only=True,
-                    progress_cb=_cb,
                     app_config=_cfg_epsf,
                     draft_id=_draft_epsf,
                     equipment_id=int(_peq) if _peq is not None else None,
+                    progress_cb=_cb,
                 )
                 if isinstance(per_cat.get("epsf_job_summary"), dict):
                     _ejs = per_cat["epsf_job_summary"]

@@ -638,7 +638,7 @@ def _fill_psf_catalog_columns(
         st["_psf_frame_record"] = _psf_record
 
     # -- Moffat PSF fit (Step 1 of two-step ePSF pipeline only) -----------------
-    if _run_epsf:
+    if _run_epsf and not bool(st.get("_psf_merge_only", False)):
         try:
             from config import AppConfig
             from psf_photometry import fit_moffat_psf_stars
@@ -10754,6 +10754,7 @@ def export_per_frame_catalogs(
     master_dark_path: Path | str | None = None,
     draft_id: int | None = None,
     equipment_id: int | None = None,
+    full_catalog_export: bool = False,
 ) -> dict[str, Any]:
     """For each FITS under ``frames_root`` with WCS: DAO + catalog table, write one CSV per frame.
 
@@ -10871,7 +10872,12 @@ def export_per_frame_catalogs(
         work_ram = sorted(list(aligned_ram), key=lambda t: t[0])
         files = [root / name for name, _, _ in work_ram]
     else:
-        files = sorted(_iter_fits_recursive(root))
+        if full_catalog_export:
+            files = sorted(_iter_fits_recursive(root))
+        else:
+            from epsf_frame_accounting import list_epsf_science_light_fits
+
+            files = list_epsf_science_light_fits(root)
 
     _frame_index_by_name = {Path(f).name: i for i, f in enumerate(files)}
     _ap_st["epsf_frame_index_by_name"] = _frame_index_by_name
@@ -15863,6 +15869,7 @@ def _astrometry_align_impl_body(
             master_dark_path=_master_dark_bpm_path,
             draft_id=draft_id,
             equipment_id=id_equipment,
+            full_catalog_export=True,
         )
         _prog("detrended_aligned/lights: zapisujem FITS + CSV na disk (davka po praci v RAM)...")
         if not _ram_flushed_before_masterstar:
@@ -15917,6 +15924,7 @@ def _astrometry_align_impl_body(
             master_dark_path=_master_dark_bpm_path,
             draft_id=draft_id,
             equipment_id=id_equipment,
+            full_catalog_export=True,
         )
 
     _assert_alignment_produced_fits(aligned_root)

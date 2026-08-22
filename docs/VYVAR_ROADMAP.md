@@ -311,6 +311,7 @@ CV/CR->clear behavioral flip + band-aware k'' correction path.
 | **SIGMA-PROV-FORENSIC** | HIGH | **DONE (2026-07-13).** draft_426 archive LC **stale pre-Fix-A err** (semantic 7.46x i); fresh i_70_4 rerun: V0611 chi2=**2.13**, err=**0.0175 mag**. P2/P3 quantitative predictions FAIL. Part C unit fix landed. Result: ``CURSOR_RESULT_sigma_prov_forensic.md``. |
 | **426-REGEN** | - | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
+| **EXPORT-PARITY-01** | HIGH | **OPEN (2026-08-22).** ``export_per_frame_catalogs`` full recompute diverges from full-pipeline photometry on live draft 516: 99/134 frames row shrink, 51k flux numeric diffs, 41k mag losses (R5 audit). PSF RUN job fixed via INV-PSF-ADDITIVE-01 / F6 merge path; standing two-path defect for full export vs pipeline photometry remains. Evidence: ``CURSOR_RESULT_EPSF_VALID_02_R5F5.md``. |
 | **COMP-POOL-R** | MED | **RESOLVED (2026-07-14):** r baseline filled; sparse trust validated. SS Cam
    **RESOLVED: YELLOW** (Milan confirmed 2026-07-14, evidence-based): R=2.008 [1.224, 3.886],
    p_stab=0.0, x2_pair=2.96e-4 mag^2 (=17.2 mmag pair excess, 26% below X2_RED cap of 20 mmag),
