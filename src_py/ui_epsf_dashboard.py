@@ -112,7 +112,18 @@ def _render_epsf_dashboard_body(
         st.info("No per-frame proc_*.csv found for this setup.")
         return
 
+    platesolve_dir = epsf_fits.parent
+    from epsf_science_set import build_epsf_science_set
     from photometry_core import load_epsf_metrics_for_draft
+
+    _sci = build_epsf_science_set(platesolve_dir)
+    if not _sci.catalog_ids:
+        st.error(
+            f"ePSF science set is empty"
+            + (f": {_sci.empty_reason}" if _sci.empty_reason else "")
+            + "."
+        )
+        return
 
     with st.spinner("Loading ePSF metrics..."):
         epsf_df = load_epsf_metrics_for_draft(proc_dir, active_targets_df)
@@ -121,8 +132,36 @@ def _render_epsf_dashboard_body(
         st.info("No PSF columns in per-frame catalogs (run pipeline with PSF enabled).")
         return
 
+    _sci_ids = {str(x) for x in _sci.catalog_ids}
+    epsf_df = epsf_df[epsf_df["catalog_id"].astype(str).isin(_sci_ids)].copy()
+    if epsf_df.empty:
+        st.info("No PSF stats for science-set stars in per-frame catalogs.")
+        return
+
+    meta_json = epsf_fits.parent / "masterstar_epsf_meta.json"
+    with st.expander("ePSF model build meta", expanded=False):
+        if meta_json.is_file():
+            try:
+                meta = json.loads(meta_json.read_text(encoding="utf-8"))
+                st.json(
+                    {
+                        "n_stars_used": meta.get("n_stars_used"),
+                        "fwhm_px": meta.get("fwhm_px"),
+                        "cutout_size": meta.get("cutout_size"),
+                        "oversampling": meta.get("oversampling"),
+                        "build_funnel": meta.get("build_funnel"),
+                        "build_selection": meta.get("build_selection"),
+                        "iteration_failure_curve": meta.get("iteration_failure_curve"),
+                        "epsf_qc": meta.get("epsf_qc"),
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.caption(f"Could not read meta JSON: {exc}")
+        else:
+            st.caption("No masterstar_epsf_meta.json beside model FITS.")
+
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Stars with PSF stats", f"{len(epsf_df)}")
+    c1.metric("Science-set stars with PSF stats", f"{len(epsf_df)}")
     c2.metric("Stars > 50% PSF frames", f"{int((epsf_df['pct_psf_ok'] > 50).sum())}")
     med_chi2 = pd.to_numeric(epsf_df["median_chi2"], errors="coerce").median()
     c3.metric("Median chi^2 (per star)", f"{med_chi2:.1f}" if pd.notna(med_chi2) else "-")
@@ -145,7 +184,10 @@ def _render_epsf_dashboard_body(
         width="stretch",
         column_config={
             "pct_psf_ok": st.column_config.ProgressColumn(
-                "PSF %", min_value=0, max_value=100
+                "PSF %",
+                min_value=0,
+                max_value=100,
+                format="%.1f%%",
             ),
             "mean_chi2": st.column_config.NumberColumn("mean chi^2", format="%.1f"),
             "min_chi2": st.column_config.NumberColumn("min chi^2", format="%.1f"),
