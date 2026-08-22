@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from invariants_runtime import InvariantViolation, inv_check
+from utils import iter_fits_paths_recursive
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,6 +18,26 @@ INV_PSF_FRAME_01 = "INV-PSF-FRAME-01"
 DEFAULT_ZERO_OK_FRAME_FRACTION_FAIL = 0.20
 _TRACEBACK_TAIL_LINES = 8
 _JOB_SUMMARY_NAME = "epsf_photometry_job_summary.json"
+
+
+def is_non_science_aligned_fits(name: str | Path) -> bool:
+    """True for stacked reference / proc-cal frames co-located under aligned lights."""
+    stem = Path(name).name.upper()
+    if stem == "MASTERSTAR.FITS":
+        return True
+    if stem.startswith("PROC_"):
+        return True
+    return False
+
+
+def list_epsf_science_light_fits(root: Path | str) -> list[Path]:
+    """Science epoch FITS for ePSF export / INV-PSF-FRAME-01 (excludes MASTERSTAR)."""
+    root = Path(root)
+    return [
+        p
+        for p in iter_fits_paths_recursive(root)
+        if not is_non_science_aligned_fits(p.name)
+    ]
 
 
 def make_empty_frame_record(
