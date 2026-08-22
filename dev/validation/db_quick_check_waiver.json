@@ -1,0 +1,6 @@
+{
+  "db_quick_check_waiver": "Milan 2026-08-22 files-only direction; MASTER_SOURCES retired",
+  "decision_date": "2026-08-22",
+  "authorizer": "Milan",
+  "scope": "Corrupt MASTER_SOURCES btrees in vyvar.sqlite3; code no longer reads that store. Gate stays; verdict downgraded to WARN while waiver active (INV-GATE-REMOVAL)."
+}

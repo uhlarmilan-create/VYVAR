@@ -10,34 +10,29 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-21 SESSION-CLOSE)
+## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02)
 
-Local tip **`1881d4a`** (+ SESSION-CLOSE commit); push pending Milan. After push + DB swap
-+ gates, session opens here:
+G0: db-quick-check waiver committed (Milan 2026-08-22 files-only). Phase 1 measurement
+in progress; Phase 2 fixes (F1-F4) await architect review of P1 report.
 
 | Step | Action |
 |------|--------|
-| **1** | **Milan checklist:** push -> `db_hygiene_swap.py` (app closed) -> `--fast` OVERALL PASS -> `--full` recut **9902d918** / **472bc9e4** -> first AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
-| **2** | **EPSF-VALID-01 re-issue** (Parts A-D) - session entry point for ePSF arc |
-| **3** | **FRAME-QC-PARITY phase 2** (decided: Layer A log honesty + QC provenance stamp) - short; can interleave |
+| **1** | **EPSF-VALID-02 P1** complete -> architect review -> authorize Phase 2 |
+| **2** | **`--full` recut** **9902d918** / **472bc9e4** (post-retire baseline for F2-F4 anchor guard) |
+| **3** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) at Milan's convenience |
+| **4** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) - interleave OK |
 
-| Pri | Carry list (unchanged) |
-|-----|------------------------|
-| **HIGH** | **MS-POOL-POLICY-01** - generator determinism (inputs-only stabilization; fire proof) |
-| **MED** | **PRECAL-INPUT-CONTRACT-01** - externally pre-calibrated lights contract (Newton) |
-| **LOW** | **SIGMA-BKG-VAR-01** - empty-aperture `sigma_bkg_ap` variance |
-| **MED** | **COMP-RMS-DEF-01** - unify CSV `comp_rms` vs LOO per-star noise |
-| **MED** | **WIDE-ERR / CORR-ERR-01** - exported error bars (open) |
-| **MED** | **D5-1 / COG arc** - Newton note: SNR table rejected on INV-COG-MONOTONE / R90 / APERTURE-BOUND |
-| **LOW** | **gaussian_fwhm_px_override=2.2919** - provenance question |
-| **LOW** | Exposure ramp; ERA membership leftovers |
-| **MED** | **MS-QA-DISPLAY-01**, **RUN-WORKER-01**, **CV-CVN-SKIP-CONSISTENCY** |
-| **FUTURE** | **COMP-HISTORY-DB** (release 2.0) |
-
-**CLOSED (2026-08-21):** EPSF-DB-01 / MS-SOURCES-RETIRE; D10-1/D10-1b (CV); EMPTY-DAO-01;
-FRAME-QC-PARITY-01 phase 1. Evidence: `dev/results/CURSOR_RESULT_*` series.
+| Pri | Carry list |
+|-----|------------|
+| **FUTURE** | **DB-RETIRE-01** - migrate EQUIPMENTS/TELESCOPE/LOCATION/CALIBRATION_LIBRARY/FITS_HEADER_CACHE to files; retire vyvar.sqlite3 entirely |
+| **HIGH** | **MS-POOL-POLICY-01** - generator determinism |
+| **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **EPSF-VALID-02** Phase 2: F1 UI, F2 fail-loud accounting, F3 science-set scoping, F4 build fix |
+| **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp, ERA leftovers |
 
 ---
+
+## NEXT SESSION - entry point (2026-08-21 SESSION-CLOSE) [superseded]
 
 ## NEXT SESSION - entry point (2026-08-21 DOCS-SYNC-517 + FRAME-QC-PARITY-01) [superseded]
 

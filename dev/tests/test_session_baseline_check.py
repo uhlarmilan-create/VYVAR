@@ -153,3 +153,75 @@ def test_main_full_exit_zero_when_suspended(monkeypatch: pytest.MonkeyPatch) -> 
 
     code = sbc.main(["--full"])
     assert code == 0
+
+
+def test_db_quick_check_waiver_downgrades_fail_to_warn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import scripts.session_baseline_check as sbc
+
+    sbc._ensure_import_paths()
+    import config as config_mod
+
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.execute("CREATE TABLE t(x)")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(sbc, "_load_db_quick_check_waiver", lambda: "test waiver Milan 2026-08-22")
+
+    class _Cfg:
+        database_path = str(db_path)
+
+    monkeypatch.setattr(config_mod, "AppConfig", lambda **_: _Cfg())
+
+    class _Conn:
+        def execute(self, _sql: str):
+            return ("Tree 11 invalid",)
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(sbc.sqlite3, "connect", lambda *_a, **_k: _Conn())
+
+    report = sbc.SessionReport(tier="fast")
+    sbc.check_db_quick_check(report)
+    assert len(report.results) == 1
+    assert report.results[0].status == "WARN"
+    assert "WAIVED" in report.results[0].detail
+    assert report.ok
+
+
+def test_db_quick_check_no_waiver_stays_fail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import scripts.session_baseline_check as sbc
+
+    sbc._ensure_import_paths()
+    import config as config_mod
+
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.execute("CREATE TABLE t(x)")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(sbc, "_load_db_quick_check_waiver", lambda: None)
+
+    class _Cfg:
+        database_path = str(db_path)
+
+    monkeypatch.setattr(config_mod, "AppConfig", lambda **_: _Cfg())
+
+    class _Conn:
+        def execute(self, _sql: str):
+            return ("Tree 11 invalid",)
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(sbc.sqlite3, "connect", lambda *_a, **_k: _Conn())
+
+    report = sbc.SessionReport(tier="fast")
+    sbc.check_db_quick_check(report)
+    assert report.results[0].status == "FAIL"
+    assert not report.ok

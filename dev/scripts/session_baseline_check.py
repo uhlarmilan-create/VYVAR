@@ -22,6 +22,19 @@ from typing import Any
 # dev/scripts/session_baseline_check.py -> repo root is parents[2].
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LEDGER_PATH = REPO_ROOT / "dev" / "validation" / "VYVAR_VALIDATION_LEDGER.json"
+DB_QUICK_CHECK_WAIVER_PATH = REPO_ROOT / "dev" / "validation" / "db_quick_check_waiver.json"
+
+
+def _load_db_quick_check_waiver() -> str | None:
+    """Return waiver text if a committed waiver marker is present, else None."""
+    if not DB_QUICK_CHECK_WAIVER_PATH.is_file():
+        return None
+    try:
+        payload = json.loads(DB_QUICK_CHECK_WAIVER_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    text = str(payload.get("db_quick_check_waiver", "") or "").strip()
+    return text or None
 
 
 def _ensure_import_paths() -> None:
@@ -309,7 +322,12 @@ def check_anchor_manifest_db_parity(report: SessionReport) -> None:
 
 
 def check_db_quick_check(report: SessionReport) -> None:
-    """Fail fast if vyvar.sqlite3 PRAGMA quick_check is not ok (~1.2 s on production DB)."""
+    """Fail fast if vyvar.sqlite3 PRAGMA quick_check is not ok (~1.2 s on production DB).
+
+    When ``dev/validation/db_quick_check_waiver.json`` is present with
+    ``db_quick_check_waiver`` text, a failing check reports WARN (not FAIL) so
+    ``--fast`` can pass while corruption status remains visible on every run.
+    """
     _ensure_import_paths()
     from config import AppConfig
 
@@ -318,6 +336,7 @@ def check_db_quick_check(report: SessionReport) -> None:
     if not db_path.is_file():
         report.add("db-quick-check", "WARN", "vyvar.sqlite3 missing")
         return
+    waiver = _load_db_quick_check_waiver()
     try:
         conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
         try:
@@ -327,10 +346,16 @@ def check_db_quick_check(report: SessionReport) -> None:
         msg = str(row[0]) if row else ""
         if msg.lower() == "ok":
             report.add("db-quick-check", "PASS", "ok")
+        elif waiver:
+            detail = f"WAIVED ({waiver[:48]}...): {msg[:40]}"
+            report.add("db-quick-check", "WARN", detail)
         else:
             report.add("db-quick-check", "FAIL", msg[:80])
     except Exception as exc:  # noqa: BLE001
-        report.add("db-quick-check", "FAIL", str(exc)[:80])
+        if waiver:
+            report.add("db-quick-check", "WARN", f"WAIVED ({waiver[:48]}...): {exc}"[:80])
+        else:
+            report.add("db-quick-check", "FAIL", str(exc)[:80])
 
 
 def check_deps_outdated(report: SessionReport) -> None:

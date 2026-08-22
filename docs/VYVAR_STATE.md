@@ -1,22 +1,19 @@
 # VYVAR -- Development State
 
-**Status:** SESSION-CLOSE 2026-08-21. Local tip **`1881d4a`** (MS-SOURCES-RETIRE-02 +
-EPSF-VALID-01 prerequisite STOP); **push pending Milan** (origin at SESSION-CLOSE commit
-after push). Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179;
-P1 golden **6af4539c** n=115. Frozen snapshot `draft_000516_snapshot_era03_20260820`.
+**Status:** EPSF-VALID-02 rev2 in progress (2026-08-22). Local tip at **`ea4e593`** +
+G0 waiver commit; origin synced. Anchor era unchanged: core **9902d918** n=121; extended
+**472bc9e4** n=179; P1 golden **6af4539c** n=115.
 
-**vyvar.sqlite3:** MASTER_SOURCES btree corruption found (EPSF-DB-01); table **retired
-from code** (MS-SOURCES-RETIRE C1-C3). Production file swap **PENDING Milan**
-(`dev/tools/db_hygiene_swap.py`). `--fast` **db-quick-check FAILS by design** until swap;
-pytest green at tip.
+**vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
+(MS-SOURCES-RETIRE). **DB swap dropped** (Milan 2026-08-22 files-only direction);
+`db-quick-check` **WARN/waived** via committed marker (`dev/validation/db_quick_check_waiver.json`).
+**DB-RETIRE-01** (FUTURE): migrate remaining DB stores to files; retire vyvar.sqlite3 entirely.
 
-**Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW)
-unblocked, pending Milan.
+**Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW) pending.
 
-**ePSF arc OPEN:** EPSF-VALID-01 issued; Cursor STOPPED at prerequisite gate (push/swap/
-gates). Re-issue after Milan checklist.
+**ePSF arc:** EPSF-VALID-02 Phase 1 measurement (516 coverage collapse, 517 build, science-set census).
 
-Last updated: **2026-08-21** (SESSION-CLOSE).
+Last updated: **2026-08-22** (EPSF-VALID-02 G0).
 
 ## Canonical run mode (516 freeze)
 

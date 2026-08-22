@@ -25,6 +25,18 @@ and Photometric Grid QA. Shared SQLite holds equipment/location/calibration/cach
    `update_master_source_safety` deleted (unwired).
 5. `PRAGMA quick_check` on `vyvar.sqlite3` is part of `--fast` gate after Phase 4.
 
+**2026-08-22 addendum (Milan, binding).** DB hygiene swap is **dropped** as a prerequisite
+for file-based work. Direction extends files-over-DB: corrupt `MASTER_SOURCES` btrees sit in
+a store code no longer reads; blocking file jobs on a retired store is process debt. Consequences:
+
+- `db-quick-check` is **waived** (explicit committed marker in
+  `dev/validation/db_quick_check_waiver.json`); gate stays, verdict downgrades to WARN with
+  waiver text on every run (INV-GATE-REMOVAL).
+- **DB-RETIRE-01** (FUTURE): migrate remaining DB stores (EQUIPMENTS, TELESCOPE, LOCATION,
+  CALIBRATION_LIBRARY, FITS_HEADER_CACHE) to file-based storage; retire `vyvar.sqlite3` entirely.
+- DB-writing jobs remain discouraged until DB-RETIRE-01; file-based jobs (RUN ePSF, uploads,
+  exports) are **unblocked**.
+
 **Reports:** `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_01_AUDIT.md`,
 `dev/results/CURSOR_RESULT_MS_SOURCES_RETIRE_02.md`.
 
