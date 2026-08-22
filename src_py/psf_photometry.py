@@ -44,6 +44,8 @@ _MASTERSTAR_EPSF_META_NAME = "masterstar_epsf_meta.json"
 # (Stetson 1987; Harris et al. DAOPHOT manual). Part D will tune empirically.
 _EPSF_BUILD_INTERIM_TOP_N = 200
 _EPSF_BUILD_CLEAN_SOURCE_STATES = frozenset({"DETECTED_P1", "DETECTED_P2", "FORCED_SEED"})
+_EPSF_BUILD_GUARD_MAX_DROP_FRAC = 0.10
+_EPSF_BUILD_GUARD_REASON = "epsf_build_non_finite_guard"
 
 
 class InstrumentedEPSFBuilder(EPSFBuilder):
@@ -706,6 +708,40 @@ def _epsf_build_imagepsf_from_stars(
     }
 
 
+def _epsf_is_non_finite_build_error(exc: BaseException) -> bool:
+    if not isinstance(exc, ValueError):
+        return False
+    msg = str(exc).lower()
+    return "finite" in msg or "non-finite" in msg
+
+
+def _epsf_dist_edge_px(x: float, y: float, *, height: int, width: int) -> float:
+    return min(float(x), float(y), width - 1 - float(x), height - 1 - float(y))
+
+
+def _epsf_guard_pick_drop(psf_stars_df: pd.DataFrame, *, image_shape: tuple[int, int]) -> dict[str, Any]:
+    """Deterministic edge-nearest star drop for non-finite ePSF build recovery."""
+    h, w = int(image_shape[0]), int(image_shape[1])
+    work = psf_stars_df.copy()
+    xs = pd.to_numeric(work["x"], errors="coerce")
+    ys = pd.to_numeric(work["y"], errors="coerce")
+    dists = [
+        _epsf_dist_edge_px(x, y, height=h, width=w) if math.isfinite(x) and math.isfinite(y) else float("inf")
+        for x, y in zip(xs, ys, strict=True)
+    ]
+    work["_dist_edge"] = dists
+    work["_cid"] = work["catalog_id"].map(_norm_catalog_id)
+    work = work.sort_values(["_dist_edge", "_cid"], ascending=[True, True], kind="mergesort")
+    row = work.iloc[0]
+    return {
+        "catalog_id": str(row["_cid"]),
+        "x": float(row["x"]),
+        "y": float(row["y"]),
+        "dist_edge_px": float(row["_dist_edge"]),
+        "reason": _EPSF_BUILD_GUARD_REASON,
+    }
+
+
 _CONE_CATALOG_NAME = "field_catalog_cone.csv"
 
 
@@ -907,6 +943,7 @@ def _epsf_prepare_stars(
     *,
     min_stars: int | None = None,
     moffat_centroids: pd.DataFrame | None = None,
+    exclude_catalog_ids: frozenset[str] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Select clean, isolated ePSF candidate stars and return sky-subtracted EPSFStars + meta.
 
@@ -1259,6 +1296,24 @@ def _epsf_prepare_stars(
             LOGGER.info("[ePSF funnel] insufficient after isolation: %s", _fmsg)
             raise ValueError(_fmsg)
 
+    if exclude_catalog_ids:
+        _excl = {_norm_catalog_id(x) for x in exclude_catalog_ids if str(x).strip()}
+        if _excl:
+            _n_before_guard = int(len(psf_stars_df))
+            psf_stars_df = psf_stars_df[
+                ~psf_stars_df["catalog_id"].map(_norm_catalog_id).isin(_excl)
+            ].reset_index(drop=True)
+            funnel["n_after_guard_exclude"] = int(len(psf_stars_df))
+            funnel["n_guard_excluded_this_pass"] = _n_before_guard - int(len(psf_stars_df))
+            if len(psf_stars_df) < min_stars:
+                funnel["n_final"] = int(len(psf_stars_df))
+                _fmsg = (
+                    f"EPSF build needs at least {min_stars} stars after guard exclusions; "
+                    f"found {len(psf_stars_df)}. Funnel: {funnel}"
+                )
+                LOGGER.info("[ePSF funnel] insufficient after guard exclude: %s", _fmsg)
+                raise ValueError(_fmsg)
+
     xs = psf_stars_df["x"].to_numpy(dtype=float).tolist()
     ys = psf_stars_df["y"].to_numpy(dtype=float).tolist()
     cat = Table([xs, ys], names=("x", "y"))
@@ -1340,6 +1395,7 @@ def _epsf_prepare_stars(
         "isolation_radius_px": float(_isolation_radius_px),
         "plate_scale_arcsec_px": plate_scale_arcsec_px,
         "funnel": funnel,
+        "psf_stars_df": psf_stars_df,
     }
 
 
@@ -1354,16 +1410,76 @@ def build_epsf_model(
     spatial_order: int | None = None,
     moffat_centroids: pd.DataFrame | None = None,
     sandbox_output_dir: Path | str | None = None,
+    meta_extra: dict[str, Any] | None = None,
 ) -> Path:
     """Build ePSF from clean comparison stars and write ``masterstar_epsf.fits`` + meta JSON."""
-    prep = _epsf_prepare_stars(
-        masterstar_fits_path,
-        masterstars_csv_path,
-        db,
-        draft_id,
-        min_stars=min_stars,
-        moffat_centroids=moffat_centroids,
-    )
+    osamp = max(1, int(oversampling))
+    try:
+        from config import AppConfig
+
+        cfg = AppConfig()
+    except Exception:  # noqa: BLE001
+        cfg = None
+    if spatial_order is None:
+        spatial_order = int(getattr(cfg, "psf_spatial_order", 0) or 0) if cfg is not None else 0
+    spatial_order = max(0, min(2, int(spatial_order)))
+    _spatial_enabled = bool(getattr(cfg, "psf_spatial_enabled", False)) if cfg is not None else False
+    if not _spatial_enabled:
+        spatial_order = 0
+
+    guard_dropped: list[dict[str, Any]] = []
+    exclude: set[str] = set()
+    n_pool_baseline: int | None = None
+    prep: dict[str, Any] | None = None
+    _built: dict[str, Any] | None = None
+
+    while True:
+        prep = _epsf_prepare_stars(
+            masterstar_fits_path,
+            masterstars_csv_path,
+            db,
+            draft_id,
+            min_stars=min_stars,
+            moffat_centroids=moffat_centroids,
+            exclude_catalog_ids=frozenset(exclude) if exclude else None,
+        )
+        if n_pool_baseline is None:
+            n_pool_baseline = int(prep.get("n_after_isolation") or prep.get("n_ext") or 0)
+        try:
+            _built = _epsf_build_imagepsf_from_stars(
+                prep["stars"],
+                osamp=osamp,
+                fwhm_px=float(prep["fwhm_px"]),
+                cutout_size=int(prep["cutout_size"]),
+            )
+            break
+        except ValueError as exc:
+            if not _epsf_is_non_finite_build_error(exc):
+                raise
+            if n_pool_baseline <= 0:
+                raise
+            next_drop_n = len(guard_dropped) + 1
+            if next_drop_n / float(n_pool_baseline) > _EPSF_BUILD_GUARD_MAX_DROP_FRAC:
+                raise RuntimeError(
+                    f"ePSF build guard: non-finite build would require dropping "
+                    f"{next_drop_n}/{n_pool_baseline} stars "
+                    f"(>{_EPSF_BUILD_GUARD_MAX_DROP_FRAC:.0%} of gated pool). "
+                    f"Already dropped: {guard_dropped}"
+                ) from exc
+            drop = _epsf_guard_pick_drop(
+                prep["psf_stars_df"],
+                image_shape=tuple(np.asarray(prep["data"]).shape),
+            )
+            guard_dropped.append(drop)
+            exclude.add(str(drop["catalog_id"]))
+            log_event(
+                "ePSF guard: dropping "
+                f"{drop['catalog_id']} at ({drop['x']:.1f},{drop['y']:.1f}) "
+                f"dist_edge={drop['dist_edge_px']:.1f}px ({drop['reason']})"
+            )
+
+    assert prep is not None and _built is not None
+
     cfg = prep["cfg"]
     mpath = prep["mpath"]
     fwhm_px = prep["fwhm_px"]
@@ -1375,16 +1491,6 @@ def build_epsf_model(
     _isolation_radius_px = prep["isolation_radius_px"]
     plate_scale_arcsec_px = prep["plate_scale_arcsec_px"]
     _build_funnel = dict(prep.get("funnel") or {})
-
-    osamp = max(1, int(oversampling))
-    if spatial_order is None:
-        spatial_order = int(getattr(cfg, "psf_spatial_order", 0) or 0) if cfg is not None else 0
-    spatial_order = max(0, min(2, int(spatial_order)))
-    _spatial_enabled = bool(getattr(cfg, "psf_spatial_enabled", False)) if cfg is not None else False
-    if not _spatial_enabled:
-        spatial_order = 0
-
-    _built = _epsf_build_imagepsf_from_stars(stars, osamp=osamp, fwhm_px=fwhm_px, cutout_size=cutout_size)
     _qc = _built["qc"]
     _smoothing = _built["smoothing"]
     fit_shape = _built["fit_shape"]
@@ -1453,7 +1559,29 @@ def build_epsf_model(
         },
         "iteration_failure_curve": _iteration_curve,
         "sandbox_output": bool(sandbox_output_dir),
+        "build_guard": {
+            "enabled": True,
+            "max_drop_frac": _EPSF_BUILD_GUARD_MAX_DROP_FRAC,
+            "n_pool_baseline": int(n_pool_baseline or 0),
+            "requested_n": int(n_pool_baseline or 0),
+            "n_dropped": int(len(guard_dropped)),
+            "n_stars_used_after_guard": int(n_ext),
+            "dropped": guard_dropped,
+        },
+        "n_policy": {
+            "production_pool": "full Part C gated science-comp pool",
+            "certificate_metric": (
+                "scale-aligned per-star RMS delta < 3x median ERR budget of compared stars; "
+                "raw inter-model offsets are bookkeeping"
+            ),
+            "interim_top_n": "disabled",
+            "split_half_note": (
+                "S5b D1b PASS: odd/even gated split-half aligned RMS 30.3 mmag vs 15.3 mmag ERR budget"
+            ),
+        },
     }
+    if meta_extra:
+        meta.update(meta_extra)
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     log_event(
