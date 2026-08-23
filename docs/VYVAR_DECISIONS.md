@@ -3622,6 +3622,32 @@ Evidence: `dev/results/CURSOR_RESULT_EPSF_VALID_02_S6.md`, `CURSOR_RESULT_EPSF_V
 
 ---
 
+## EPSF-BRIGHT-01 FD-A - full CCD PSF fit variance (2026-08-23)
+
+**Decision (Milan GO):** Replace sky-only photutils fit error maps with the full per-pixel
+CCD variance model for PSF-branch chi2 gating and sandwich flux errors:
+
+`sigma^2 = F_model/g + sky/g + (RN/g)^2` (ADU^2 domain)
+
+**Implementation:** One-pass **(i)** - static error map built from DAO aperture flux
+(`ref_fluxes`) distributed by the ePSF profile at the catalog position before fit
+(DAOPHOT / Anderson & King practice; photutils `PSFPhotometry` requires a fixed
+per-fit error array). Gain and read noise resolved via production
+`_psf_resolve_gain_read_noise` / `param_resolver.resolve_gain` (never hardcoded).
+
+**Provenance strings:** `psf_weight_mode=full_ccd`, `psf_err_mode=sandwich_full_ccd`.
+
+**Supersedes for chi2 gating only:** the 2026-06-09 sky-only **fit-weight** decision
+remains documented for V3d flux-bias context; FD-A restores source Poisson in weights
+because sky-only reduced chi2 acted as a brightness cut on the PSF branch (M1/M2
+confirmed). Threshold **50** unchanged - genuine outlier gate under recalibrated statistic.
+
+**Scope:** PSF columns only; aperture path untouched; INV-PSF-ADDITIVE-01 guards merge.
+
+Evidence: `dev/results/CURSOR_RESULT_EPSF_BRIGHT_01.md`, `CURSOR_RESULT_EPSF_BRIGHT_01_P3.md`.
+
+---
+
 ## CLOSED - EMPTY-DAO-01 (2026-08-21)
 
 Register-only item from 2026-08-16 (empty DAO table / forced-only proc rows).
