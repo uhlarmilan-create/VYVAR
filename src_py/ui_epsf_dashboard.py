@@ -179,9 +179,14 @@ def _render_epsf_dashboard_body(
     ]
     if "vsx_name" in epsf_df.columns:
         display_cols = ["vsx_name"] + display_cols
+    _n_sci_total = len(_sci_ids)
+    _n_table = len(epsf_df)
+    st.caption(f"Showing {_n_table} / {_n_sci_total} science-set stars with PSF stats.")
+
     st.dataframe(
-        epsf_df[display_cols].head(50),
+        epsf_df[display_cols],
         width="stretch",
+        hide_index=True,
         column_config={
             "pct_psf_ok": st.column_config.ProgressColumn(
                 "PSF %",
@@ -218,6 +223,12 @@ def _render_epsf_dashboard_body(
     if not lc_csv.is_file() or proc_data is None or proc_data.empty:
         st.caption("LC CSV or per-frame PSF series not available for overlay.")
         return
+
+    _n_proc = len(proc_data)
+    _n_ok = int(proc_data["psf_fit_ok"].fillna(False).astype(bool).sum()) if "psf_fit_ok" in proc_data.columns else _n_proc
+    _n_dropped = _n_proc - _n_ok
+    if _n_dropped > 0:
+        st.caption(f"Epochs dropped by quality gate: {_n_dropped} / {_n_proc}")
 
     try:
         import plotly.graph_objects as go
