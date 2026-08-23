@@ -104,8 +104,8 @@ def test_psf_sky_method_residual_annulus_on_v3d_frame(fast_cfg, tmp_path):
         quality_fallback_enabled=False,
     )
     assert df.iloc[0].get("psf_sky_method") == "residual_annulus"
-    assert df.iloc[0].get("psf_weight_mode") == "sky_only"
-    assert df.iloc[0].get("psf_err_mode") == "sandwich_skyonly"
+    assert df.iloc[0].get("psf_weight_mode") == "full_ccd"
+    assert df.iloc[0].get("psf_err_mode") == "sandwich_full_ccd"
 
 
 def test_bias_decomposition_v2_structure(fast_cfg, tmp_path):

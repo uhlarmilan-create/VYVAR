@@ -2324,6 +2324,63 @@ def _psf_sky_only_sigma_per_px(sky_per_px_adu: float, gain: float, read_noise_e:
     return float(math.sqrt(max(var, 1e-12)))
 
 
+def _psf_variance_per_px_adu2(
+    f_model_per_px: np.ndarray,
+    *,
+    sky_per_px: float,
+    gain: float,
+    read_noise_e: float,
+) -> np.ndarray:
+    """Full CCD variance per pixel (ADU^2): F_model/g + sky/g + (RN/g)^2."""
+    g = max(1e-6, float(gain))
+    rn = max(0.0, float(read_noise_e))
+    sky = max(0.0, float(sky_per_px)) if math.isfinite(sky_per_px) else 0.0
+    f = np.maximum(np.asarray(f_model_per_px, dtype=np.float64), 0.0)
+    return np.maximum(f / g + sky / g + (rn / g) ** 2, 1e-12)
+
+
+def _psf_model_prediction_cutout(
+    psf_model: Any,
+    cut_shape: tuple[int, ...],
+    flux: float,
+    x_0: float,
+    y_0: float,
+) -> np.ndarray:
+    """Per-pixel model prediction (ADU) for one-pass error-map construction."""
+    if not (math.isfinite(flux) and flux > 0 and math.isfinite(x_0) and math.isfinite(y_0)):
+        return np.zeros(cut_shape, dtype=np.float64)
+    h, w = int(cut_shape[0]), int(cut_shape[1])
+    yy, xx = np.mgrid[0:h, 0:w]
+    xg = xx.astype(np.float64).ravel()
+    yg = yy.astype(np.float64).ravel()
+    npx = xg.size
+    try:
+        model = psf_model.evaluate(
+            xg,
+            yg,
+            np.full(npx, float(flux), dtype=np.float64),
+            np.full(npx, float(x_0), dtype=np.float64),
+            np.full(npx, float(y_0), dtype=np.float64),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logging.error("[PSF] model evaluate for error map failed: %s", exc)
+        return np.zeros(cut_shape, dtype=np.float64)
+    return np.maximum(np.asarray(model, dtype=np.float64).reshape(cut_shape), 0.0)
+
+
+def _psf_flux_init_for_error_map(dao_flux: float, flux_guess: float) -> float:
+    """Prefer DAO aperture flux for one-pass F_model; fall back to cutout guess."""
+    if math.isfinite(dao_flux) and dao_flux > 0:
+        return float(dao_flux)
+    if math.isfinite(flux_guess) and flux_guess > 0:
+        return float(flux_guess)
+    return 1.0
+
+
+_PSF_WEIGHT_MODE_FULL = "full_ccd"
+_PSF_ERR_MODE_FULL = "sandwich_full_ccd"
+
+
 def _psf_fit_error_cutout(
     cut_shape: tuple[int, ...],
     *,
@@ -2340,6 +2397,31 @@ def _psf_fit_error_cutout(
         if np.any(pos):
             err_fit = np.where(pos, err_fit, sigma).astype(np.float64, copy=False)
     return err_fit
+
+
+def _psf_fit_error_cutout_full_ccd(
+    cut_shape: tuple[int, ...],
+    *,
+    psf_model: Any,
+    flux_init: float,
+    x_0: float,
+    y_0: float,
+    sky_per_px: float,
+    gain: float,
+    read_noise_e: float,
+    err_full_cut: np.ndarray | None = None,
+) -> np.ndarray:
+    """Per-pixel sigma for photutils PSF fit (full CCD variance, one-pass F_model from DAO flux)."""
+    f_map = _psf_model_prediction_cutout(psf_model, cut_shape, flux_init, x_0, y_0)
+    var = _psf_variance_per_px_adu2(
+        f_map, sky_per_px=sky_per_px, gain=gain, read_noise_e=read_noise_e
+    )
+    err_fit = np.sqrt(var)
+    if err_full_cut is not None and err_full_cut.shape == cut_shape:
+        pos = np.isfinite(err_full_cut) & (err_full_cut > 0)
+        if np.any(pos):
+            err_fit = np.where(pos, err_fit, np.sqrt(var)).astype(np.float64, copy=False)
+    return err_fit.astype(np.float64, copy=False)
 
 
 def _psf_fit_region_mask(
@@ -2373,11 +2455,8 @@ def _psf_sandwich_flux_err(
     read_noise_e: float,
     fit_shape: tuple[int, int],
 ) -> float:
-    """Sandwich SE for sky-only weighted PSF flux (true variance, sky-only weights)."""
+    """Sandwich SE for full-CCD-weighted PSF flux (weights match per-pixel variance)."""
     if not (math.isfinite(flux_fit) and flux_fit > 0 and math.isfinite(x_fit) and math.isfinite(y_fit)):
-        return float("nan")
-    sigma_sky = _psf_sky_only_sigma_per_px(sky_per_px, gain, read_noise_e)
-    if not math.isfinite(sigma_sky) or sigma_sky <= 0:
         return float("nan")
     fh_y = int(fit_shape[0]) // 2
     fh_x = int(fit_shape[1]) // 2
@@ -2389,33 +2468,21 @@ def _psf_sandwich_flux_err(
     x1 = min(int(cut_shape[1]), ix + fh_x + 1)
     if y1 <= y0 or x1 <= x0:
         return float("nan")
-    yy, xx = np.mgrid[y0:y1, x0:x1]
-    xg = xx.astype(np.float64).ravel()
-    yg = yy.astype(np.float64).ravel()
-    npx = xg.size
-    try:
-        model = psf_model.evaluate(
-            xg,
-            yg,
-            np.ones(npx, dtype=np.float64),
-            np.full(npx, float(x_fit), dtype=np.float64),
-            np.full(npx, float(y_fit), dtype=np.float64),
-        )
-        p = np.maximum(np.asarray(model, dtype=np.float64).ravel(), 0.0)
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0453] PSF model evaluate for sandwich flux_err fails - flux uncertainty becomes NaN for that ...: %s', exc)
+    f_map = _psf_model_prediction_cutout(psf_model, cut_shape, flux_fit, x_fit, y_fit)
+    p_map = _psf_model_prediction_cutout(psf_model, cut_shape, 1.0, x_fit, y_fit)
+    var = _psf_variance_per_px_adu2(
+        f_map, sky_per_px=sky_per_px, gain=gain, read_noise_e=read_noise_e
+    )
+    p = p_map[y0:y1, x0:x1].ravel()
+    v = var[y0:y1, x0:x1].ravel()
+    pos = (p > 0) & (v > 0) & np.isfinite(p) & np.isfinite(v)
+    if not np.any(pos):
         return float("nan")
-    w = 1.0 / (sigma_sky * sigma_sky)
-    g = max(1e-6, float(gain))
-    sigma_true_sq = sigma_sky * sigma_sky + float(flux_fit) * p / g
-    wp2 = w * p * p
+    wp2 = (p[pos] * p[pos]) / v[pos]
     denom = float(np.sum(wp2))
     if denom <= 0 or not math.isfinite(denom):
         return float("nan")
-    numer = float(np.sum(w * w * sigma_true_sq * p * p))
-    if not math.isfinite(numer) or numer <= 0:
-        return float("nan")
-    return float(math.sqrt(numer / (denom * denom)))
+    return float(1.0 / math.sqrt(denom))
 
 
 def _apply_psf_fixed_position(phot: Any, *, fix: bool) -> None:
@@ -2536,11 +2603,20 @@ def _grouped_psf_fit(
         if ec.shape == cut.shape and np.any(np.isfinite(ec)) and float(np.nanmax(ec)) > 0:
             err_full_cut = ec
     _grp_gain, _grp_rn = _psf_resolve_gain_read_noise(frame_hdr)
-    err_cut = _psf_fit_error_cutout(
-        cut.shape, sky_per_px=sky, gain=_grp_gain, read_noise_e=_grp_rn, err_full_cut=err_full_cut
+    _flux_init = _psf_flux_init_for_error_map(float("nan"), tflux)
+    err_cut = _psf_fit_error_cutout_full_ccd(
+        cut.shape,
+        psf_model=psf_model,
+        flux_init=_flux_init,
+        x_0=tx_l,
+        y_0=ty_l,
+        sky_per_px=sky,
+        gain=_grp_gain,
+        read_noise_e=_grp_rn,
+        err_full_cut=err_full_cut,
     )
-    _weight_mode = "sky_only"
-    _err_mode = "sandwich_skyonly"
+    _weight_mode = _PSF_WEIGHT_MODE_FULL
+    _err_mode = _PSF_ERR_MODE_FULL
 
     try:
         grouper = SourceGrouper(min_separation=float(sep))
@@ -2574,6 +2650,18 @@ def _grouped_psf_fit(
                 cut_sub = cut - sky
                 init_f2 = [float(f) for f in _flux_arr]
                 init = Table([init_x, init_y, init_f2], names=("x_0", "y_0", "flux_0"))
+                _flux_init2 = _psf_flux_init_for_error_map(float("nan"), float(_flux_arr[0]))
+                err_cut = _psf_fit_error_cutout_full_ccd(
+                    cut.shape,
+                    psf_model=psf_model,
+                    flux_init=_flux_init2,
+                    x_0=tx_l,
+                    y_0=ty_l,
+                    sky_per_px=sky,
+                    gain=_grp_gain,
+                    read_noise_e=_grp_rn,
+                    err_full_cut=err_full_cut,
+                )
                 res = phot(data=cut_sub, init_params=init, error=err_cut)
         # Identify the target row: nearest fit position to the target init xy.
         xf = np.asarray(res["x_fit"], dtype=float)
@@ -2760,8 +2848,17 @@ def psf_photometry_stars(
 
     fwhm_px_meta = float(meta.get("fwhm_px", 0.0))
     _psf_gain, _psf_rn = _psf_resolve_gain_read_noise(frame_hdr)
-    _weight_mode = "sky_only"
-    _err_mode = "sandwich_skyonly"
+    _weight_mode = _PSF_WEIGHT_MODE_FULL
+    _err_mode = _PSF_ERR_MODE_FULL
+
+    _ref_flux_by_cid: dict[str, float] = {}
+    if ref_fluxes is not None:
+        _ref_arr = np.asarray(ref_fluxes, dtype=float)
+        if len(_ref_arr) == len(star_positions):
+            for _j, (_, _row) in enumerate(star_positions.iterrows()):
+                _v = float(_ref_arr[_j])
+                if math.isfinite(_v) and _v > 0:
+                    _ref_flux_by_cid[str(_row["catalog_id"])] = _v
 
     err_full: np.ndarray | None = None
     if error is not None:
@@ -3054,13 +3151,8 @@ def psf_photometry_stars(
                 err_full_cut = np.asarray(err_full[y1:y2, x1:x2], dtype=np.float64)
                 if err_full_cut.shape != cut.shape:
                     raise ValueError("error cutout shape mismatch")
-            err_cut = _psf_fit_error_cutout(
-                cut.shape,
-                sky_per_px=_sky_per_px,
-                gain=_psf_gain,
-                read_noise_e=_psf_rn,
-                err_full_cut=err_full_cut,
-            )
+            _dao_flux = _ref_flux_by_cid.get(str(cid), float("nan"))
+            _flux_init = _psf_flux_init_for_error_map(_dao_flux, flux_guess)
             _star_iterative = _used_iterative
             _psf_model_use = psf_model
             _phot_use = phot
@@ -3068,6 +3160,17 @@ def psf_photometry_stars(
                 _local_arr = interp_gridded_epsf_array(gridded_model, x, y)
                 _psf_model_use = ImagePSF(np.asarray(_local_arr, dtype=np.float64), oversampling=osamp)
                 _phot_use, _star_iterative = _make_phot(_psf_model_use)
+            err_cut = _psf_fit_error_cutout_full_ccd(
+                cut.shape,
+                psf_model=_psf_model_use,
+                flux_init=_flux_init,
+                x_0=xc,
+                y_0=yc,
+                sky_per_px=_sky_per_px,
+                gain=_psf_gain,
+                read_noise_e=_psf_rn,
+                err_full_cut=err_full_cut,
+            )
             try:
                 res = _phot_use(data=cut_sky_sub, init_params=init, error=err_cut)
             except Exception as exc_call:  # noqa: BLE001
@@ -3103,6 +3206,18 @@ def psf_photometry_stars(
                         _fg2 = float(np.nansum(cut_sky_sub.clip(min=0)))
                         if math.isfinite(_fg2) and _fg2 > 0:
                             init = Table([[xc], [yc], [_fg2]], names=("x_0", "y_0", "flux_0"))
+                            _flux_init = _psf_flux_init_for_error_map(_dao_flux, _fg2)
+                            err_cut = _psf_fit_error_cutout_full_ccd(
+                                cut.shape,
+                                psf_model=_psf_model_use,
+                                flux_init=_flux_init,
+                                x_0=xc,
+                                y_0=yc,
+                                sky_per_px=_sky_per_px,
+                                gain=_psf_gain,
+                                read_noise_e=_psf_rn,
+                                err_full_cut=err_full_cut,
+                            )
                             try:
                                 res = _phot_use(data=cut_sky_sub, init_params=init, error=err_cut)
                             except Exception as exc_refine:  # noqa: BLE001
