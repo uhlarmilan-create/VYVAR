@@ -14,10 +14,11 @@ STOP-B signed; Milan authorized swap.
 
 | Commit | Description |
 |--------|-------------|
-| `f97615a` | Addendum 1: production ePSF edge-star build guard + `dev/tests/test_epsf_build_guard.py` |
-| *(pending)* | S6 close: docs, sandbox harness, S5 retraction, execution artifacts |
+| `f97615a` | Addendum 1: production ePSF edge-star build guard + tests |
+| `8b98156` | S6 close: docs, INV-EPSF-BUILD-GUARD-01 wired, execution JSON |
+| `777f10e` | ASCII fix in S5/S6 result docs |
 
-HEAD after guard commit: **`f97615a`**.
+HEAD: **`777f10e`**.
 
 ---
 
@@ -123,8 +124,8 @@ Policy summary:
 
 | Gate | Status | Detail |
 |------|--------|--------|
-| `--fast` | *re-run after ASCII fix* | First run FAIL: non-ASCII em-dash in docs (fixed) |
-| `--full` | *pending* | Confirm 9902d918 / 472bc9e4 on frozen snapshot |
+| `--fast` | **OVERALL PASS** | HEAD `777f10e`; 1507 passed, 32 skipped (~581 s) |
+| `--full` | **OVERALL PASS** | HEAD `777f10e`; core **9902d918** n=121, extended **472bc9e4** n=179 (~2541 s pipeline) |
 
 ---
 
