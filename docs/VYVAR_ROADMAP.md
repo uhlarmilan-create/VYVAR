@@ -10,27 +10,30 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02)
+## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02 S6 close)
 
-G0: db-quick-check waiver committed (Milan 2026-08-22 files-only). Phase 1 measurement
-in progress; Phase 2 fixes (F1-F4) await architect review of P1 report.
+**EPSF-VALID-02 CLOSED** (2026-08-22): gated 67-star production ePSF on draft 516; 517 first
+gated build; edge-star guard in production path; S5b aligned certificates; STOP-B signed.
 
 | Step | Action |
 |------|--------|
-| **1** | **EPSF-VALID-02 P1** complete -> architect review -> authorize Phase 2 |
-| **2** | **`--full` recut** **9902d918** / **472bc9e4** (post-retire baseline for F2-F4 anchor guard) |
-| **3** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) at Milan's convenience |
-| **4** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) - interleave OK |
+| **1** | Milan: dashboard curve review + push today's commit series |
+| **2** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
+| **3** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **4** | **EXPORT-PARITY-01** (HIGH): full export vs pipeline photometry divergence |
 
 | Pri | Carry list |
 |-----|------------|
-| **FUTURE** | **DB-RETIRE-01** - migrate EQUIPMENTS/TELESCOPE/LOCATION/CALIBRATION_LIBRARY/FITS_HEADER_CACHE to files; retire vyvar.sqlite3 entirely |
-| **HIGH** | **MS-POOL-POLICY-01** - generator determinism |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
 | **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
-| **MED** | **EPSF-VALID-02** Phase 2: F1 UI, F2 fail-loud accounting, F3 science-set scoping, F4 build fix |
-| **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp, ERA leftovers |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
+| **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
+| **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |
 
 ---
+
+## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02) [superseded]
 
 ## NEXT SESSION - entry point (2026-08-21 SESSION-CLOSE) [superseded]
 

@@ -1,7 +1,8 @@
 # VYVAR -- Development State
 
-**Status:** EPSF-VALID-02 rev2 in progress (2026-08-22). Local tip at **`ea4e593`** +
-G0 waiver commit; origin synced. Anchor era unchanged: core **9902d918** n=121; extended
+**Status:** EPSF-VALID-02 **CLOSED** (2026-08-22 S6). Draft 516 production ePSF is **gated
+67-star** model with edge-star build guard; pre-gated 1475-star model archived. Draft 517 has
+first gated production ePSF (66 stars). Anchor era unchanged: core **9902d918** n=121; extended
 **472bc9e4** n=179; P1 golden **6af4539c** n=115.
 
 **vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
@@ -11,9 +12,9 @@ G0 waiver commit; origin synced. Anchor era unchanged: core **9902d918** n=121; 
 
 **Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW) pending.
 
-**ePSF arc:** EPSF-VALID-02 Phase 1 measurement (516 coverage collapse, 517 build, science-set census).
+**ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path).
 
-Last updated: **2026-08-22** (EPSF-VALID-02 G0).
+Last updated: **2026-08-22** (EPSF-VALID-02 S6).
 
 ## Canonical run mode (516 freeze)
 

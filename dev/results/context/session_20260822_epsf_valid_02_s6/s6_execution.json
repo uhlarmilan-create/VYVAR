@@ -1,0 +1,247 @@
+{
+  "created_utc": "2026-08-22T19:11:54Z",
+  "sections": {
+    "517_build": {
+      "status": "ok",
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000517\\platesolve\\NoFilter_60_2\\masterstar_epsf.fits",
+      "meta": {
+        "fwhm_px": 3.3014,
+        "cutout_size": 17,
+        "oversampling": 2,
+        "spatial_order": 0,
+        "smoothing_kernel": "quadratic",
+        "fit_shape": [
+          9,
+          9
+        ],
+        "epsf_qc": {
+          "epsf_fwhm_native_px": 2.438,
+          "epsf_vs_input_fwhm_ratio": 0.739,
+          "epsf_nan_fraction": 0.0,
+          "epsf_asymmetry": 0.0136
+        },
+        "epsf_norm_factor": 1.0,
+        "epsf_sum_native": 1.0,
+        "phase2_moffat_centroids_used": 0,
+        "isolation_radius_px": 9.9042,
+        "plate_scale_arcsec_px": 9.773925823247218,
+        "n_stars_used": 66,
+        "n_stars_after_join": 67,
+        "draft_id": 517,
+        "created_utc": "2026-08-22T19:11:58Z",
+        "build_funnel": {
+          "n_csv_input": 3606,
+          "n_after_variable_excluded": 3321,
+          "n_after_peak_sat_likely": 2437,
+          "n_after_peak_sat_is_saturated": 2434,
+          "n_after_photometry_ok": 2434,
+          "n_after_not_noisy": 2268,
+          "n_after_usable": 2268,
+          "n_after_snr_cut": null,
+          "n_after_snr_cut_reason": "not applied in this function",
+          "n_build_input": 2268,
+          "n_after_zone_linear": 2268,
+          "n_after_clean_source_state": 2207,
+          "n_after_science_scope": 67,
+          "n_after_edge_safe_cutout": 67,
+          "n_after_interim_top_n": 67,
+          "build_interim_top_n": 200,
+          "build_interim_top_n_mark": "INTERIM",
+          "n_csv_with_catalog_id": 67,
+          "used_broad_pool": false,
+          "n_safe_comp_csv_join": 67,
+          "n_after_csv_select": 67,
+          "n_after_db_join": 67,
+          "n_after_targeting": 67,
+          "n_before_isolation": 67,
+          "n_after_isolation": 66,
+          "n_after_extract_stars": 66,
+          "n_final": 66
+        },
+        "build_selection": {
+          "gates": [
+            "zone_linear",
+            "non_variable",
+            "non_saturated",
+            "photometry_ok",
+            "clean_source_state",
+            "science_scope",
+            "edge_safe_cutout",
+            "isolated",
+            "interim_top_n"
+          ],
+          "interim_top_n": 200,
+          "interim_top_n_mark": "INTERIM",
+          "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+        },
+        "iteration_failure_curve": [
+          {
+            "iteration": 1,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 2,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 3,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 4,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 5,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 6,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 7,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 8,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 9,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 10,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 11,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 12,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 13,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 14,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          },
+          {
+            "iteration": 15,
+            "n_stars": 66,
+            "n_fail": 0,
+            "n_status_0": 66,
+            "n_status_1": 0,
+            "n_status_2": 0,
+            "n_status_3": 0
+          }
+        ],
+        "sandbox_output": false,
+        "build_guard": {
+          "enabled": true,
+          "max_drop_frac": 0.1,
+          "n_pool_baseline": 66,
+          "requested_n": 66,
+          "n_dropped": 0,
+          "n_stars_used_after_guard": 66,
+          "dropped": []
+        },
+        "n_policy": {
+          "production_pool": "full Part C gated science-comp pool",
+          "certificate_metric": "scale-aligned per-star RMS delta < 3x median ERR budget of compared stars; raw inter-model offsets are bookkeeping",
+          "interim_top_n": "disabled",
+          "split_half_note": "S5b D1b PASS: odd/even gated split-half aligned RMS 30.3 mmag vs 15.3 mmag ERR budget"
+        },
+        "swap_meta": {
+          "swap_date": "2026-08-22",
+          "first_production_gated_build": true,
+          "epsf_valid_arc": "EPSF-VALID-02 S6"
+        }
+      }
+    },
+    "516_psf_merge": {
+      "written": 134,
+      "frames_total": 134,
+      "inv_psf_additive_01_failures": [],
+      "note": "Merge completed; harness post-process fix after AttributeError on invariants list",
+      "dao_flux_unchanged_sample_20_20": true,
+      "frames_with_psf_flux": 134
+    }
+  },
+  "merge_verified_utc": "2026-08-22T23:47:36Z"
+}

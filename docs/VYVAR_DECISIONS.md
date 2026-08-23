@@ -3598,6 +3598,30 @@ data, not pre-calibrated external input.
 
 ---
 
+## EPSF-VALID-02 S6 - gated production ePSF swap (2026-08-22)
+
+**Decision:** Draft 516 production `masterstar_epsf.fits` replaced with Part C gated
+science-comp build (67 stars, edge-star guard). Pre-gated 1475-star model archived as
+`masterstar_epsf_pre_gated_20260822.fits`. Draft 517 receives first gated production build
+(66 stars). Milan authorized swap after STOP-B (S5b aligned certificates PASS).
+
+**INV-PSF-ADDITIVE-01:** RUN ePSF uses F6 merge path only; PSF columns additive to existing
+proc sidecars; aperture and all non-`psf_*` columns untouched.
+
+**N policy (production + certificate):**
+- Production builds use the **full Part C gated science-comp pool** (not INTERIM top-N=200).
+- Certificate metric: **scale-aligned** per-star RMS delta < 3x median ERR budget of compared
+  stars; raw inter-model flux offsets are bookkeeping (differential photometry cancels them).
+- INTERIM top-N=200 remains **disabled**.
+
+**Edge-star build guard:** On non-finite EPSFBuilder result, drop edge-nearest isolated star
+(logged in `masterstar_epsf_meta.json` -> `build_guard`). Build **FAILS LOUDLY** if guard would
+drop >10% of the gated pool (no silent erosion).
+
+Evidence: `dev/results/CURSOR_RESULT_EPSF_VALID_02_S6.md`, `CURSOR_RESULT_EPSF_VALID_02_S5B.md`.
+
+---
+
 ## CLOSED - EMPTY-DAO-01 (2026-08-21)
 
 Register-only item from 2026-08-16 (empty DAO table / forced-only proc rows).
