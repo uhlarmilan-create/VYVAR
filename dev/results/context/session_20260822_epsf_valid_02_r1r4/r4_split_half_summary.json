@@ -1,0 +1,18 @@
+{
+  "n_frames": 10,
+  "n_matched_star_frames": 300,
+  "per_star_delta_median_mmag": -314.8438654663066,
+  "per_star_delta_rms_mmag": 86.74321337370627,
+  "prod": {
+    "model": "production_1475",
+    "n_rows_ok": 300,
+    "psf_dao_ratio_median": 1.3268237820397812,
+    "chi2_median": 21.712700031668103
+  },
+  "gated": {
+    "model": "sandbox_67",
+    "n_rows_ok": 300,
+    "psf_dao_ratio_median": 0.9973502588819907,
+    "chi2_median": 1.477363168032189
+  }
+}

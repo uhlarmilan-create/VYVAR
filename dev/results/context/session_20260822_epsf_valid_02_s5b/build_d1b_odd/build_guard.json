@@ -1,0 +1,12 @@
+{
+  "requested_n": 34,
+  "dropped": [
+    {
+      "catalog_id": "1497528072458898432",
+      "dist_edge_px": 55.877667440488494,
+      "reason": "epsf_build_non_finite_guard"
+    }
+  ],
+  "n_stars_used": 33,
+  "build_ok": true
+}

@@ -1,0 +1,27 @@
+{
+  "platesolve_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000517\\platesolve\\NoFilter_60_2",
+  "cutout_size": 17,
+  "fit_boxsize_default": 5,
+  "with_injection": {
+    "label": "with_sky_injection",
+    "histogram": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "0": 200
+    },
+    "n_stars": 200,
+    "builder_error": ""
+  },
+  "without_injection": {
+    "label": "sky_sub_before_extract",
+    "histogram": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "0": 200
+    },
+    "n_stars": 200,
+    "builder_error": ""
+  }
+}

@@ -1,0 +1,6 @@
+column,n_rows_compared,n_numeric_diff,n_files_with_numeric_diff,max_abs_delta_overall,median_abs_delta_overall,n_repr_diff_rows,n_mag_lost_finite_to_nan,n_mag_gained_nan_to_finite,mag_relevant_diff_rows
+dao_flux,426486,51348,99,812800.7111168882,1244.7857425250604,0,,,
+flux,426486,51348,99,812800.7111168882,1244.7857425250604,0,,,
+mag,333072,0,0,0.0,0.0,0,41381.0,2513.0,43894.0
+mag_inst,0,0,0,0.0,0.0,0,,,
+mag_err,0,0,0,0.0,0.0,0,,,

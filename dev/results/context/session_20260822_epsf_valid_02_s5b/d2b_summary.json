@@ -1,0 +1,49 @@
+{
+  "curve": [
+    {
+      "n_build": 15,
+      "n_guard_dropped": 0,
+      "n_pairs": 460,
+      "offset_removed_n_mmag": 69.91157064311868,
+      "offset_removed_ref_mmag": 379.83402531412787,
+      "raw_median_delta_mmag": -318.0680673463221,
+      "raw_rms_delta_mmag": 317.2504234559051,
+      "aligned_median_delta_mmag": -8.573654317222976,
+      "aligned_rms_delta_mmag": 25.42211349529278
+    },
+    {
+      "n_build": 30,
+      "n_guard_dropped": 0,
+      "n_pairs": 457,
+      "offset_removed_n_mmag": -31.664338652683885,
+      "offset_removed_ref_mmag": 379.83402531412787,
+      "raw_median_delta_mmag": -419.5476645812833,
+      "raw_rms_delta_mmag": 415.0563670588672,
+      "aligned_median_delta_mmag": -9.758358171029583,
+      "aligned_rms_delta_mmag": 36.89150342864693
+    },
+    {
+      "n_build": 50,
+      "n_guard_dropped": 0,
+      "n_pairs": 462,
+      "offset_removed_n_mmag": 88.88624973937729,
+      "offset_removed_ref_mmag": 379.83402531412787,
+      "raw_median_delta_mmag": -294.1362305374339,
+      "raw_rms_delta_mmag": 290.99057827930415,
+      "aligned_median_delta_mmag": -2.7225554860983476,
+      "aligned_rms_delta_mmag": 12.9294336137579
+    },
+    {
+      "n_build": 67,
+      "n_guard_dropped": 0,
+      "n_pairs": 478,
+      "offset_removed_n_mmag": 379.83402531412787,
+      "offset_removed_ref_mmag": 379.83402531412787,
+      "raw_median_delta_mmag": 0.0,
+      "raw_rms_delta_mmag": 0.0,
+      "aligned_median_delta_mmag": 0.0,
+      "aligned_rms_delta_mmag": 0.0
+    }
+  ],
+  "n_frames": 12
+}

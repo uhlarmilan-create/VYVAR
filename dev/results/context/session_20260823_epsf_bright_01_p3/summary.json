@@ -1,0 +1,36 @@
+{
+  "m1_bo_cvn": {
+    "n_frames": 134,
+    "n_psf_fit_ok": 133,
+    "frac_psf_fit_ok": 0.9925373134328358,
+    "n_chi2_ge_50": 1,
+    "frac_chi2_ge_50": 0.007462686567164179,
+    "n_psf_quality_bad": 1,
+    "chi2_median": 22.640128818207458,
+    "chi2_p95": 36.363689904414606,
+    "chi2_min": 7.429904800696069,
+    "chi2_max": 55.75071203067768
+  },
+  "m2_chi2_brightness": {
+    "n_stars_full_coverage": 192,
+    "n_frames_expected": 134,
+    "median_obs_chi2": 2.120705920534517,
+    "median_pred_inflation": 1.000332304024639,
+    "median_obs_over_pred": 2.119844499217307,
+    "n_stars_chi2_ge_50": 30
+  },
+  "m3_ratio_nonlinear": {
+    "n_stars": 298,
+    "bo_cvn_median_ratio": 0.6709999981466086,
+    "bright10_ratio_range": [
+      0.17229412308942174,
+      0.6500962952661515
+    ],
+    "ratio_peak_corr": 0.21967385962319486,
+    "n_residual_samples": 30
+  },
+  "chi2_threshold": 50.0,
+  "gain": 1.0,
+  "n_science_set": 333,
+  "n_star_frame_rows": 34951
+}

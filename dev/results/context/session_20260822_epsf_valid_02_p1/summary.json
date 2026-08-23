@@ -1,0 +1,58 @@
+{
+  "p1c": {
+    "science_set": 333,
+    "epsf_lc_catalog_ids": 2505,
+    "epsf_target_catalog_ids": 2505,
+    "science_subset_of_lc": true,
+    "science_vs_lc_overlap": 333,
+    "science_only_not_in_lc": 0,
+    "lc_only_not_in_science": 2172
+  },
+  "p1a_infolog": {
+    "per_frame_fail_lines": 0,
+    "fitting_info_lines": 0
+  },
+  "p1a": {
+    "n_frames": 134,
+    "first_frame_zero_ok": 35,
+    "last_frame_with_any_ok": 34,
+    "frames_with_zero_ok": 99,
+    "frames_with_partial_ok": 35,
+    "target_n_psf_ok": 35,
+    "target_n_frames": 134
+  },
+  "p1d": {
+    "n_epsf_df_rows": 3944,
+    "n_full_coverage_ge50pct": 33,
+    "psf_dao_ratio_min": 0.2574,
+    "psf_dao_ratio_max": 1.1572,
+    "mean_chi2_median": 13.89
+  },
+  "p1b": {
+    "platesolve_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000517\\platesolve\\NoFilter_60_2",
+    "cutout_size": 17,
+    "fit_boxsize_default": 5,
+    "with_injection": {
+      "label": "with_sky_injection",
+      "histogram": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "0": 200
+      },
+      "n_stars": 200,
+      "builder_error": ""
+    },
+    "without_injection": {
+      "label": "sky_sub_before_extract",
+      "histogram": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "0": 200
+      },
+      "n_stars": 200,
+      "builder_error": ""
+    }
+  }
+}

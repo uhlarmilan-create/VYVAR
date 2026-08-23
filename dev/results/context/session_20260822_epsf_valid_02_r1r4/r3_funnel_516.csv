@@ -1,0 +1,15 @@
+gate,n
+n_csv_input,3610
+n_after_non_variable (VSX/Gaia-var excluded),3325
+n_after_non_saturated (likely_sat + is_saturated),2432
+n_after_photometry_ok,2432
+n_after_not_noisy,2264
+n_after_usable,2264
+n_after_zone_linear,2264
+n_after_clean_source_state,2200
+n_after_science_scope,68
+n_after_edge_safe_cutout,68
+n_after_interim_top_n,68
+n_before_isolation,68
+n_after_isolation,67
+n_stars_used (extract_stars),67

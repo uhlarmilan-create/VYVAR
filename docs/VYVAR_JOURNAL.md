@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-23 -- SESSION-CLOSE (ePSF arc: VALID-02 + BRIGHT-01)
+
+- **EPSF-VALID-02 CLOSED:** production wiring F1-F6; gated 67-star ePSF on draft 516 (S6 swap);
+  INV-PSF-ADDITIVE-01 F6 merge path; first gated build draft 517; `--full` anchor SHA unchanged.
+- **EPSF-BRIGHT-01 CLOSED:** chi2 brightness-gate mechanism confirmed; Phase 1 UI fix; **FD-A**
+  full-CCD variance model + F6 re-merge (BO CVn 133/134 `psf_fit_ok`). Ratio droop persists ->
+  **EPSF-SHAPE-01** opened HIGH. Push: Milan-authorized SESSION-CLOSE.
+
 ## 2026-08-21 -- SESSION-CLOSE (compact day record)
 
 Arcs in order:

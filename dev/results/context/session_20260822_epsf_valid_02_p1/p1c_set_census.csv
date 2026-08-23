@@ -1,0 +1,2 @@
+science_set,epsf_lc_catalog_ids,epsf_target_catalog_ids,science_subset_of_lc,science_vs_lc_overlap,science_only_not_in_lc,lc_only_not_in_science
+333,2505,2505,True,333,0,2172

@@ -1,0 +1,1235 @@
+{
+  "created_utc": "2026-08-22T16:07:46Z",
+  "frames_total": 134,
+  "frames_with_zero_ok": 0,
+  "frames_with_zero_ok_fraction": 0.0,
+  "inv_psf_frame_01_threshold": 0.2,
+  "n_fit_total": 34951,
+  "n_ok_total": 10379,
+  "first_failing_frame": null,
+  "exception_histogram_by_class": {},
+  "per_frame_records": [
+    {
+      "frame_name": "BO_CVn_Light_001.fits",
+      "frame_index": 0,
+      "n_fit": 225,
+      "n_ok": 68,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_003.fits",
+      "frame_index": 1,
+      "n_fit": 235,
+      "n_ok": 72,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_004.fits",
+      "frame_index": 2,
+      "n_fit": 231,
+      "n_ok": 71,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_005.fits",
+      "frame_index": 3,
+      "n_fit": 226,
+      "n_ok": 62,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_006.fits",
+      "frame_index": 4,
+      "n_fit": 234,
+      "n_ok": 66,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_008.fits",
+      "frame_index": 5,
+      "n_fit": 233,
+      "n_ok": 68,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_010.fits",
+      "frame_index": 6,
+      "n_fit": 222,
+      "n_ok": 60,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_011.fits",
+      "frame_index": 7,
+      "n_fit": 233,
+      "n_ok": 70,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_012.fits",
+      "frame_index": 8,
+      "n_fit": 241,
+      "n_ok": 70,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_013.fits",
+      "frame_index": 9,
+      "n_fit": 237,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_014.fits",
+      "frame_index": 10,
+      "n_fit": 229,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_015.fits",
+      "frame_index": 11,
+      "n_fit": 229,
+      "n_ok": 67,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_016.fits",
+      "frame_index": 12,
+      "n_fit": 239,
+      "n_ok": 70,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_017.fits",
+      "frame_index": 13,
+      "n_fit": 234,
+      "n_ok": 68,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_018.fits",
+      "frame_index": 14,
+      "n_fit": 230,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_019.fits",
+      "frame_index": 15,
+      "n_fit": 238,
+      "n_ok": 70,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_020.fits",
+      "frame_index": 16,
+      "n_fit": 233,
+      "n_ok": 63,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_021.fits",
+      "frame_index": 17,
+      "n_fit": 231,
+      "n_ok": 72,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_022.fits",
+      "frame_index": 18,
+      "n_fit": 230,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_023.fits",
+      "frame_index": 19,
+      "n_fit": 231,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_024.fits",
+      "frame_index": 20,
+      "n_fit": 243,
+      "n_ok": 72,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_025.fits",
+      "frame_index": 21,
+      "n_fit": 230,
+      "n_ok": 71,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_026.fits",
+      "frame_index": 22,
+      "n_fit": 233,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_027.fits",
+      "frame_index": 23,
+      "n_fit": 236,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_028.fits",
+      "frame_index": 24,
+      "n_fit": 235,
+      "n_ok": 72,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_029.fits",
+      "frame_index": 25,
+      "n_fit": 231,
+      "n_ok": 71,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_030.fits",
+      "frame_index": 26,
+      "n_fit": 234,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_031.fits",
+      "frame_index": 27,
+      "n_fit": 234,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_032.fits",
+      "frame_index": 28,
+      "n_fit": 237,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_033.fits",
+      "frame_index": 29,
+      "n_fit": 239,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_034.fits",
+      "frame_index": 30,
+      "n_fit": 231,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_035.fits",
+      "frame_index": 31,
+      "n_fit": 233,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_036.fits",
+      "frame_index": 32,
+      "n_fit": 237,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_037.fits",
+      "frame_index": 33,
+      "n_fit": 240,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_038.fits",
+      "frame_index": 34,
+      "n_fit": 238,
+      "n_ok": 74,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_039.fits",
+      "frame_index": 35,
+      "n_fit": 270,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_040.fits",
+      "frame_index": 36,
+      "n_fit": 271,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_041.fits",
+      "frame_index": 37,
+      "n_fit": 269,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_042.fits",
+      "frame_index": 38,
+      "n_fit": 266,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_043.fits",
+      "frame_index": 39,
+      "n_fit": 267,
+      "n_ok": 72,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_044.fits",
+      "frame_index": 40,
+      "n_fit": 269,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_045.fits",
+      "frame_index": 41,
+      "n_fit": 272,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_046.fits",
+      "frame_index": 42,
+      "n_fit": 272,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_047.fits",
+      "frame_index": 43,
+      "n_fit": 270,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_048.fits",
+      "frame_index": 44,
+      "n_fit": 270,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_050.fits",
+      "frame_index": 45,
+      "n_fit": 264,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_051.fits",
+      "frame_index": 46,
+      "n_fit": 270,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_052.fits",
+      "frame_index": 47,
+      "n_fit": 272,
+      "n_ok": 82,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_053.fits",
+      "frame_index": 48,
+      "n_fit": 272,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_054.fits",
+      "frame_index": 49,
+      "n_fit": 271,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_055.fits",
+      "frame_index": 50,
+      "n_fit": 271,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_057.fits",
+      "frame_index": 51,
+      "n_fit": 273,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_059.fits",
+      "frame_index": 52,
+      "n_fit": 270,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_060.fits",
+      "frame_index": 53,
+      "n_fit": 273,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_061.fits",
+      "frame_index": 54,
+      "n_fit": 269,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_062.fits",
+      "frame_index": 55,
+      "n_fit": 271,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_063.fits",
+      "frame_index": 56,
+      "n_fit": 264,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_064.fits",
+      "frame_index": 57,
+      "n_fit": 269,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_065.fits",
+      "frame_index": 58,
+      "n_fit": 269,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_067.fits",
+      "frame_index": 59,
+      "n_fit": 268,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_068.fits",
+      "frame_index": 60,
+      "n_fit": 274,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_069.fits",
+      "frame_index": 61,
+      "n_fit": 270,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_070.fits",
+      "frame_index": 62,
+      "n_fit": 272,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_071.fits",
+      "frame_index": 63,
+      "n_fit": 270,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_072.fits",
+      "frame_index": 64,
+      "n_fit": 267,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_073.fits",
+      "frame_index": 65,
+      "n_fit": 268,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_075.fits",
+      "frame_index": 66,
+      "n_fit": 266,
+      "n_ok": 73,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_076.fits",
+      "frame_index": 67,
+      "n_fit": 271,
+      "n_ok": 82,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_077.fits",
+      "frame_index": 68,
+      "n_fit": 271,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_078.fits",
+      "frame_index": 69,
+      "n_fit": 270,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_079.fits",
+      "frame_index": 70,
+      "n_fit": 269,
+      "n_ok": 74,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_080.fits",
+      "frame_index": 71,
+      "n_fit": 266,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_081.fits",
+      "frame_index": 72,
+      "n_fit": 271,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_082.fits",
+      "frame_index": 73,
+      "n_fit": 274,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_083.fits",
+      "frame_index": 74,
+      "n_fit": 270,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_084.fits",
+      "frame_index": 75,
+      "n_fit": 269,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_085.fits",
+      "frame_index": 76,
+      "n_fit": 270,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_086.fits",
+      "frame_index": 77,
+      "n_fit": 269,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_087.fits",
+      "frame_index": 78,
+      "n_fit": 272,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_088.fits",
+      "frame_index": 79,
+      "n_fit": 273,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_089.fits",
+      "frame_index": 80,
+      "n_fit": 268,
+      "n_ok": 84,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_090.fits",
+      "frame_index": 81,
+      "n_fit": 269,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_091.fits",
+      "frame_index": 82,
+      "n_fit": 270,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_092.fits",
+      "frame_index": 83,
+      "n_fit": 272,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_093.fits",
+      "frame_index": 84,
+      "n_fit": 272,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_094.fits",
+      "frame_index": 85,
+      "n_fit": 266,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_095.fits",
+      "frame_index": 86,
+      "n_fit": 271,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_096.fits",
+      "frame_index": 87,
+      "n_fit": 276,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_097.fits",
+      "frame_index": 88,
+      "n_fit": 273,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_098.fits",
+      "frame_index": 89,
+      "n_fit": 275,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_099.fits",
+      "frame_index": 90,
+      "n_fit": 270,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_100.fits",
+      "frame_index": 91,
+      "n_fit": 268,
+      "n_ok": 70,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_101.fits",
+      "frame_index": 92,
+      "n_fit": 270,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_102.fits",
+      "frame_index": 93,
+      "n_fit": 272,
+      "n_ok": 84,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_103.fits",
+      "frame_index": 94,
+      "n_fit": 272,
+      "n_ok": 84,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_104.fits",
+      "frame_index": 95,
+      "n_fit": 271,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_105.fits",
+      "frame_index": 96,
+      "n_fit": 264,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_106.fits",
+      "frame_index": 97,
+      "n_fit": 272,
+      "n_ok": 87,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_107.fits",
+      "frame_index": 98,
+      "n_fit": 264,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_108.fits",
+      "frame_index": 99,
+      "n_fit": 269,
+      "n_ok": 84,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_109.fits",
+      "frame_index": 100,
+      "n_fit": 276,
+      "n_ok": 86,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_110.fits",
+      "frame_index": 101,
+      "n_fit": 271,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_112.fits",
+      "frame_index": 102,
+      "n_fit": 267,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_113.fits",
+      "frame_index": 103,
+      "n_fit": 274,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_114.fits",
+      "frame_index": 104,
+      "n_fit": 272,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_115.fits",
+      "frame_index": 105,
+      "n_fit": 269,
+      "n_ok": 87,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_116.fits",
+      "frame_index": 106,
+      "n_fit": 273,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_117.fits",
+      "frame_index": 107,
+      "n_fit": 270,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_118.fits",
+      "frame_index": 108,
+      "n_fit": 277,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_119.fits",
+      "frame_index": 109,
+      "n_fit": 272,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_120.fits",
+      "frame_index": 110,
+      "n_fit": 275,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_121.fits",
+      "frame_index": 111,
+      "n_fit": 273,
+      "n_ok": 77,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_123.fits",
+      "frame_index": 112,
+      "n_fit": 273,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_124.fits",
+      "frame_index": 113,
+      "n_fit": 268,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_125.fits",
+      "frame_index": 114,
+      "n_fit": 270,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_126.fits",
+      "frame_index": 115,
+      "n_fit": 272,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_127.fits",
+      "frame_index": 116,
+      "n_fit": 273,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_128.fits",
+      "frame_index": 117,
+      "n_fit": 270,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_129.fits",
+      "frame_index": 118,
+      "n_fit": 270,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_130.fits",
+      "frame_index": 119,
+      "n_fit": 271,
+      "n_ok": 84,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_132.fits",
+      "frame_index": 120,
+      "n_fit": 275,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_133.fits",
+      "frame_index": 121,
+      "n_fit": 273,
+      "n_ok": 82,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_134.fits",
+      "frame_index": 122,
+      "n_fit": 274,
+      "n_ok": 83,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_135.fits",
+      "frame_index": 123,
+      "n_fit": 267,
+      "n_ok": 79,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_136.fits",
+      "frame_index": 124,
+      "n_fit": 269,
+      "n_ok": 75,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_137.fits",
+      "frame_index": 125,
+      "n_fit": 270,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_138.fits",
+      "frame_index": 126,
+      "n_fit": 274,
+      "n_ok": 81,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_139.fits",
+      "frame_index": 127,
+      "n_fit": 267,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_140.fits",
+      "frame_index": 128,
+      "n_fit": 272,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_143.fits",
+      "frame_index": 129,
+      "n_fit": 268,
+      "n_ok": 78,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_144.fits",
+      "frame_index": 130,
+      "n_fit": 269,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_145.fits",
+      "frame_index": 131,
+      "n_fit": 272,
+      "n_ok": 76,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_146.fits",
+      "frame_index": 132,
+      "n_fit": 274,
+      "n_ok": 85,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    },
+    {
+      "frame_name": "BO_CVn_Light_148.fits",
+      "frame_index": 133,
+      "n_fit": 271,
+      "n_ok": 80,
+      "exception_class": null,
+      "exception_message": null,
+      "traceback_tail": null
+    }
+  ],
+  "science_set": {
+    "n_total": 333,
+    "n_targets": 265,
+    "n_per_target_comps": 68,
+    "n_check_stars": 0,
+    "n_blended": 0,
+    "composition": {
+      "targets": 265,
+      "per_target_comps_only": 68,
+      "check_stars_only": 0,
+      "blended_only": 0
+    },
+    "empty_reason": null
+  },
+  "inv_psf_frame_01_policy": "ok",
+  "summary_json": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\epsf_photometry_job_summary.json"
+}

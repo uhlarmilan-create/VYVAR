@@ -1,0 +1,108 @@
+{
+  "n_files": 134,
+  "summary": [
+    {
+      "column": "dao_flux",
+      "n_rows_compared": 426486,
+      "n_numeric_diff": 51348,
+      "n_files_with_numeric_diff": 99,
+      "max_abs_delta_overall": 812800.7111168882,
+      "median_abs_delta_overall": 1244.7857425250604,
+      "n_repr_diff_rows": 0
+    },
+    {
+      "column": "flux",
+      "n_rows_compared": 426486,
+      "n_numeric_diff": 51348,
+      "n_files_with_numeric_diff": 99,
+      "max_abs_delta_overall": 812800.7111168882,
+      "median_abs_delta_overall": 1244.7857425250604,
+      "n_repr_diff_rows": 0
+    },
+    {
+      "column": "mag",
+      "n_rows_compared": 333072,
+      "n_numeric_diff": 0,
+      "n_files_with_numeric_diff": 0,
+      "max_abs_delta_overall": 0.0,
+      "median_abs_delta_overall": 0.0,
+      "n_repr_diff_rows": 0
+    },
+    {
+      "column": "mag_inst",
+      "n_rows_compared": 0,
+      "n_numeric_diff": 0,
+      "n_files_with_numeric_diff": 0,
+      "max_abs_delta_overall": 0.0,
+      "median_abs_delta_overall": 0.0,
+      "n_repr_diff_rows": 0
+    },
+    {
+      "column": "mag_err",
+      "n_rows_compared": 0,
+      "n_numeric_diff": 0,
+      "n_files_with_numeric_diff": 0,
+      "max_abs_delta_overall": 0.0,
+      "median_abs_delta_overall": 0.0,
+      "n_repr_diff_rows": 0
+    }
+  ],
+  "n_files_any_numeric_diff": 99,
+  "n_files_row_set_diff": 99,
+  "n_files_row_order_diff": 99,
+  "sample_mtimes": [
+    {
+      "file": "proc_BO_CVn_Light_001.csv",
+      "backup_mtime_utc": "2026-08-21T17:03:09.913231+00:00",
+      "live_mtime_utc": "2026-08-22T08:21:21.510066+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_003.csv",
+      "backup_mtime_utc": "2026-08-21T17:03:32.746633+00:00",
+      "live_mtime_utc": "2026-08-22T08:21:32.454317+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_004.csv",
+      "backup_mtime_utc": "2026-08-21T17:03:37.984967+00:00",
+      "live_mtime_utc": "2026-08-22T08:21:30.799518+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_005.csv",
+      "backup_mtime_utc": "2026-08-21T17:03:52.939409+00:00",
+      "live_mtime_utc": "2026-08-22T08:21:30.722618+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_006.csv",
+      "backup_mtime_utc": "2026-08-21T17:03:47.517904+00:00",
+      "live_mtime_utc": "2026-08-22T08:21:41.171473+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_143.csv",
+      "backup_mtime_utc": "2026-08-18T11:28:44.243553+00:00",
+      "live_mtime_utc": "2026-08-22T09:38:29.158001+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_144.csv",
+      "backup_mtime_utc": "2026-08-18T11:28:44.306248+00:00",
+      "live_mtime_utc": "2026-08-22T09:39:16.968055+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_145.csv",
+      "backup_mtime_utc": "2026-08-18T11:28:44.368205+00:00",
+      "live_mtime_utc": "2026-08-22T09:39:45.253470+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_146.csv",
+      "backup_mtime_utc": "2026-08-18T11:28:44.432470+00:00",
+      "live_mtime_utc": "2026-08-22T09:39:49.915787+00:00"
+    },
+    {
+      "file": "proc_BO_CVn_Light_148.csv",
+      "backup_mtime_utc": "2026-08-18T11:28:44.496987+00:00",
+      "live_mtime_utc": "2026-08-22T09:39:55.123279+00:00"
+    }
+  ],
+  "mag_lost_total": 41381,
+  "mag_gained_total": 2513,
+  "restore_recommended": true
+}

@@ -1,9 +1,11 @@
 # VYVAR -- Development State
 
-**Status:** EPSF-VALID-02 **CLOSED** (2026-08-22 S6). Draft 516 production ePSF is **gated
-67-star** model with edge-star build guard; pre-gated 1475-star model archived. Draft 517 has
-first gated production ePSF (66 stars). Anchor era unchanged: core **9902d918** n=121; extended
-**472bc9e4** n=179; P1 golden **6af4539c** n=115.
+**Status:** EPSF-VALID-02 **CLOSED** (2026-08-22 S6). **EPSF-BRIGHT-01 CLOSED** (2026-08-23 FD-A).
+Draft 516 production ePSF is **gated 67-star** model with edge-star build guard; pre-gated 1475-star
+model archived. Draft 517 has first gated production ePSF (66 stars). FD-A full-CCD variance model
+live (`psf_weight_mode=full_ccd`); BO CVn PSF overlay **133/134** fit_ok post F6 re-merge.
+**EPSF-SHAPE-01** + **EXPORT-PARITY-01** remain **OPEN HIGH**. Anchor era unchanged: core
+**9902d918** n=121; extended **472bc9e4** n=179; P1 golden **6af4539c** n=115.
 
 **vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
 (MS-SOURCES-RETIRE). **DB swap dropped** (Milan 2026-08-22 files-only direction);
@@ -12,9 +14,23 @@ first gated production ePSF (66 stars). Anchor era unchanged: core **9902d918** 
 
 **Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW) pending.
 
-**ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path).
+**ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path, FD-A).
 
-Last updated: **2026-08-22** (EPSF-VALID-02 S6).
+Last updated: **2026-08-23** (SESSION-CLOSE ePSF arc).
+
+## 2026-08-22/23 -- SESSION-CLOSE ePSF arc
+
+**EPSF-VALID-02 CLOSED:** F1-F6 wired invariants (INV-PSF-FRAME-01, INV-PSF-ADDITIVE-01),
+science-set dashboard scope, gated 67-star build + S6 swap on draft 516, first gated build on 517,
+F6 PSF-only merge 134/134. Evidence: `CURSOR_RESULT_EPSF_VALID_02_*` (F1-S6, R1R4, S1S4, S5B,
+ACCEPT).
+
+**EPSF-BRIGHT-01 CLOSED:** UI table cap removed + gated-epoch caption; M1-M3 confirmed sky-only
+chi2 brightness gate; **FD-A GO** - full CCD variance model; F6 re-merge (BO CVn 133/134 fit_ok).
+**EPSF-SHAPE-01 OPEN HIGH:** PSF/DAO ratio droop on bright stars persists post-FD-A. Reports:
+`CURSOR_RESULT_EPSF_BRIGHT_01.md`, `CURSOR_RESULT_EPSF_BRIGHT_01_P3.md`.
+
+**Open HIGH:** EXPORT-PARITY-01; EPSF-SHAPE-01.
 
 ## Canonical run mode (516 freeze)
 
