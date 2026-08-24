@@ -6,7 +6,36 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## EPSF-AC-01 - chi2<5 AC gate is a brightness cut (2026-08-24)
+
+**Finding (measurement, binding until a new AC decision).** The F6 ePSF aperture
+correction (`_compute_aperture_correction`, chi2<5) is a brightness cut in
+disguise: on draft 516, 20-frame subset, 0/30 brightest science-set stars are
+ever admitted; night-median admitted mag 13.35 vs science-set 12.90.
+Night-median AC from that ensemble is 0.500 vs 0.567 from all fit_ok vs
+0.78/0.64/0.59/0.47/0.46 per M1 mag bin. Uncorrected PSF/DAO is mag-sloped
+(bins 1.27 -> 2.21; corr=0.69; RMS~=|median| in every bin = offset, not
+scatter). A scalar AC cannot be honest on this model.
+
+**Policy (recommendation; not wired -- STOP for Milan).**
+(a) Production F6 merge: keep current chi2<5 behavior as an explicit named
+fallback until GO. Do not treat it as a quality gate. Preferred GO options:
+P4/AC-off (stamp uncorrected; absolute scale stays untrusted) or P2 mag-binned
+if a nearer-to-1 PSF/DAO per bin is wanted. P3 (all fit_ok) is the least-wrong
+scalar but still cannot flatten A1.
+(b) Internal PSF LC: P4 (no AC). Per-frame scalar cancels in the ensemble ZP;
+P0 vs P4 `psf_delta_mag` identical to 1e-12. Mag-slope residual for BO CVn vs
+pinned-comp mean mag is ~76 mmag (A1 slope term), separate from the existing
+~614 mmag RMS vs aperture driven by ensemble fit_ok drops.
+
+**Evidence:** `dev/results/CURSOR_RESULT_EPSF_AC_01.md`.
+H5 fitter-scale in `CURSOR_RESULT_EPSF_SHAPE_01_M.md` is superseded
+(SHAPE-01-F F2). F2b pedestal mechanism retracted (outer-annulus median 0).
+
+---
+
 ## EPSF-LC-LOG-01 - internal PSF LC authority (2026-08-24)
+
 
 **Decision (Milan, binding).** Phase 2A no longer writes submission-shaped
 ``lightcurve_*_psf.csv`` files. Those globs in ``photometry_core``,

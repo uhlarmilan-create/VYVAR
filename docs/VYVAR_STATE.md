@@ -4,8 +4,10 @@
 Draft 516 production ePSF is **gated 67-star** model with edge-star build guard; pre-gated 1475-star
 model archived. Draft 517 has first gated production ePSF (66 stars). FD-A full-CCD variance model
 live (`psf_weight_mode=full_ccd`); BO CVn PSF overlay **133/134** fit_ok post F6 re-merge.
-**EPSF-SHAPE-01** + **EXPORT-PARITY-01** remain **OPEN HIGH**. Anchor era unchanged: core
-**9902d918** n=121; extended **472bc9e4** n=179; P1 golden **6af4539c** n=115.
+**EPSF-SHAPE-01** remains **OPEN HIGH** for the **narrow ePSF core** (FWHM 2.36 vs 3.30 px;
+bright chi2 ~68). The flux-scale **policy** layered on that model is **EPSF-AC-01** (measured
+2026-08-24; STOP for Milan, no production AC wiring). **EXPORT-PARITY-01** remains **OPEN HIGH**.
+Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179; P1 golden **6af4539c** n=115.
 
 **vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
 (MS-SOURCES-RETIRE). **DB swap dropped** (Milan 2026-08-22 files-only direction);
@@ -14,9 +16,19 @@ live (`psf_weight_mode=full_ccd`); BO CVn PSF overlay **133/134** fit_ok post F6
 
 **Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW) pending.
 
-**ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path, FD-A).
+**ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path, FD-A)
+for relative photometry. Absolute PSF flux scale on bright stars is untrusted until EPSF-SHAPE-01
+(core) and EPSF-AC-01 (policy GO).
 
-Last updated: **2026-08-23** (SESSION-CLOSE ePSF arc).
+Last updated: **2026-08-24** (EPSF-AC-01 measure; SHAPE-01-F accepted).
+
+## 2026-08-24 -- EPSF-AC-01 (STOP for Milan)
+
+SHAPE-01-F: the 0.671 bright-star droop is F6 `psf_ac_factor` trained on chi2<5, not a
+fitter-class split. EPSF-AC-01 measured the full-range uncorrected PSF/DAO (not flat in mag)
+and the AC ensemble census (0/30 brightest ever admitted). No production AC change in this
+task. Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. Root narrow-core remains EPSF-SHAPE-01 /
+**EPSF-CORE-01** (FUTURE).
 
 ## 2026-08-22/23 -- SESSION-CLOSE ePSF arc
 

@@ -10,7 +10,35 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02 S6 close)
+## NEXT SESSION - entry point (2026-08-24 EPSF-AC-01 STOP)
+
+Local tip after SHAPE-01-F G0: **`cf95c53`** (not pushed). Production ePSF SHA
+`172f95403beae36d...` unchanged. EPSF-AC-01 measured; **no AC wiring** until Milan GO.
+
+| Step | Action |
+|------|--------|
+| **1** | Milan: AC policy GO or keep P0 named fallback (see A4 in `CURSOR_RESULT_EPSF_AC_01.md`) |
+| **2** | Milan: dashboard curve review + push the local commit series (LC-LOG through SHAPE-01-F) |
+| **3** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
+| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **5** | **EXPORT-PARITY-01** (HIGH): full export vs pipeline photometry divergence |
+
+| Pri | Carry list |
+|-----|------------|
+| **HIGH** | **EPSF-AC-01** - AC policy STOP; chi2<5 gate is a brightness cut; no wiring this task |
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); policy is AC-01 |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **FUTURE** | **EPSF-CORE-01** - custom core-sampled ePSF build; gated on Newton/well-sampled data |
+| **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
+| **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
+| **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
+| **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |
+
+---
+
+## NEXT SESSION - entry point (2026-08-22 EPSF-VALID-02 S6 close) [superseded]
+
 
 **EPSF-VALID-02 CLOSED** (2026-08-22): gated 67-star production ePSF on draft 516; 517 first
 gated build; edge-star guard in production path; S5b aligned certificates; STOP-B signed.
@@ -315,7 +343,9 @@ CV/CR->clear behavioral flip + band-aware k'' correction path.
 | **426-REGEN** | - | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
 | **EXPORT-PARITY-01** | HIGH | **OPEN (2026-08-22).** ``export_per_frame_catalogs`` full recompute diverges from full-pipeline photometry on live draft 516: 99/134 frames row shrink, 51k flux numeric diffs, 41k mag losses (R5 audit). PSF RUN job fixed via INV-PSF-ADDITIVE-01 / F6 merge path; standing two-path defect for full export vs pipeline photometry remains. Evidence: ``CURSOR_RESULT_EPSF_VALID_02_R5F5.md``. |
-| **EPSF-SHAPE-01** | HIGH | **OPEN (2026-08-23).** Post-FD-A F6 merge on draft 516: PSF/DAO ratio droop on bright science-set stars **persists** (BO CVn median ratio **0.67**; brightest-10 median ratio **0.09-0.65**; target branch trust ~0.9). Chi2 gating fixed (BO CVn **133/134** ``psf_fit_ok``) but flux-ratio shape deficit remains - PSF-branch trust on bright stars, not aperture. Separate from EPSF-BRIGHT-01 (variance model). Evidence: ``CURSOR_RESULT_EPSF_BRIGHT_01_P3.md``. |
+| **EPSF-SHAPE-01** | HIGH | **OPEN (core).** Narrow production ePSF (FWHM 2.36 vs input 3.30 px; bright chi2 ~68). SHAPE-01-M/F: H5 fitter-scale superseded (iter==single with AC off); osamp=4 builder closed; F2b pedestal retracted. Flux-scale **policy** is **EPSF-AC-01**. Evidence: `CURSOR_RESULT_EPSF_SHAPE_01_M.md`, `CURSOR_RESULT_EPSF_SHAPE_01_F.md`. |
+| **EPSF-AC-01** | HIGH | **OPEN / STOP for Milan (2026-08-24).** chi2<5 AC gate admits 0/30 brightest; uncorrected PSF/DAO is mag-sloped (bins 1.27 -> 2.21). Recommend: F6 keep P0 as named fallback until GO; internal PSF LC = P4 (no AC; delta_mag invariant). No wiring this task. Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. |
+| **EPSF-CORE-01** | FUTURE | Custom core-sampled ePSF (Anderson-King constrained core or non-stock builder) to move `epsf_fwhm_native_px` toward ~3.3. Generality claim gated on Newton / well-sampled (0.65 arcsec/px) data; this wide-rig campaign is not the osamp=4 template. |
 | **COMP-POOL-R** | MED | **RESOLVED (2026-07-14):** r baseline filled; sparse trust validated. SS Cam
    **RESOLVED: YELLOW** (Milan confirmed 2026-07-14, evidence-based): R=2.008 [1.224, 3.886],
    p_stab=0.0, x2_pair=2.96e-4 mag^2 (=17.2 mmag pair excess, 26% below X2_RED cap of 20 mmag),
