@@ -40,7 +40,12 @@ CATALOG-PROVENANCE (catalog identity) and the census pattern note
 (denominator identity) -- this is the parameter-space instance.
 
 **Evidence:** `dev/results/CURSOR_RESULT_DAO_GAIA_REGRESS_01.md`,
-`dev/results/CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
+`dev/results/CURSOR_RESULT_DAO_GAIA_XFER_01.md`. 520 z follow-up
+(read-only, not a gate change): projecting the g_60_4 VERIFIED WCS onto
+z_90_4 MASTERSTAR yields catalog_recovery_gate 2.7% (n_tight=3); z
+p99-median contrast 9.06 ADU vs g 40.0 ADU. Sibling seed would not
+rescue this set. Carry MULTIFILTER-WCS-01 for the general seed-not-trust
+design; do not lower `masterstar_catalog_recovery_min`.
 
 ---
 

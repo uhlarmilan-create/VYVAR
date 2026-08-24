@@ -1,0 +1,83 @@
+{
+  "utc": "2026-08-24T18:35:21.298240+00:00",
+  "note": "read-only; no FITS write; recovery_min not changed",
+  "paths": {
+    "g": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\MASTERSTAR.fits",
+    "z": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\z_90_4\\MASTERSTAR.fits",
+    "i": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\i_70_4\\MASTERSTAR.fits"
+  },
+  "g_header": {
+    "date_obs": "2026-06-08T20:02:41.348",
+    "filter": "g",
+    "naxis1": 3552,
+    "naxis2": 2664,
+    "vy_fwhm": 2.5
+  },
+  "g_contrast": {
+    "median_adu": 35746.5703125,
+    "p99_adu": 35786.5625,
+    "p99_minus_median_adu": 39.9921875,
+    "n_pix": 9462528
+  },
+  "z_header": {
+    "date_obs": "2026-06-08T20:06:25.281",
+    "filter": "z",
+    "naxis1": 3552,
+    "naxis2": 2664,
+    "vy_fwhm": 2.5
+  },
+  "z_contrast": {
+    "median_adu": 33348.765625,
+    "p99_adu": 33357.82421875,
+    "p99_minus_median_adu": 9.05859375,
+    "n_pix": 9462528
+  },
+  "i_header": {
+    "date_obs": "2026-06-08T20:05:04.249",
+    "filter": "i",
+    "naxis1": 3552,
+    "naxis2": 2664,
+    "vy_fwhm": 2.5
+  },
+  "g_on_z": {
+    "donor": "g_60_4",
+    "n_det": 113,
+    "raw_g_wcs_on_z": {
+      "n_cat_in_frame": 169,
+      "n_matched_tight": 3,
+      "n_detections_used": 113,
+      "catalog_recovery_tight": 0.01775147928994083,
+      "catalog_recovery_tight_gate": 0.02654867256637168,
+      "would_pass_recovery_min": false,
+      "recovery_min": 0.65
+    },
+    "in_memory_bulk_shift_no_write": {
+      "confirmed": false,
+      "n_matched_tight": 3,
+      "catalog_recovery_tight_gate": 0.02654867256637168,
+      "rms_px": 2.32113193889714,
+      "median_dpx": 2.3471525376403752
+    }
+  },
+  "i_on_z": {
+    "donor": "i_70_4",
+    "n_det": 113,
+    "raw_g_wcs_on_z": {
+      "n_cat_in_frame": 173,
+      "n_matched_tight": 0,
+      "n_detections_used": 113,
+      "catalog_recovery_tight": 0.0,
+      "catalog_recovery_tight_gate": 0.0,
+      "would_pass_recovery_min": false,
+      "recovery_min": 0.65
+    },
+    "in_memory_bulk_shift_no_write": {
+      "confirmed": false,
+      "n_matched_tight": 0,
+      "catalog_recovery_tight_gate": 0.0,
+      "rms_px": Infinity,
+      "median_dpx": NaN
+    }
+  },
+  "reading": "low recovery (~shallow): z is physically shallow; reject stands with a measured reason"
+}

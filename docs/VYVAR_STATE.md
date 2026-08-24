@@ -27,14 +27,15 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-24** (DAO-GAIA-XFER-01 GO wire; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
+Last updated: **2026-08-24** (DAO-GAIA-XFER-01 CLOSED `e5a6149`; MULTIFILTER-WCS-01 carry; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
 
 ## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO wired)
 
 STAGE-01 iter4 sandbox gate pinned to `hand_validated()` params. Draft-derived
 centroid tols stay production-scope on the certificate with identity stamps
 (catalog fp, sandbox SHAs, hand CSV, 516 plate scale/FWHM). Cause was H-GATE-XFER
-(REGRESS-01). z_90_4 solve reject untouched. Evidence:
+(REGRESS-01). z_90_4 solve reject stands (g-WCS-on-z gate 2.7%, contrast
+9.06 ADU); carry MULTIFILTER-WCS-01. Evidence:
 `CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
 
 ## 2026-08-24 -- EPSF-NEWTON-518-01 (STOP N2)

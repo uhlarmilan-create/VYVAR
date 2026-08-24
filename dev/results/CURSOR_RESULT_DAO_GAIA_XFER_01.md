@@ -30,7 +30,7 @@ fields.
 |------|--------|----------|
 | G-GO | PASS | Milan CURSOR TASK is the GO (Option 1 + identity stamps). |
 | G0 | PASS | REGRESS-01 committed `d66613ce45c483d40f7b7a9cfcb44a7c787b0d62`. Declared dirt (AC-02 wiring) left unstaged. |
-| G1 | PASS | `d66613c` is a descendant of `2926a95` (`git merge-base --is-ancestor` exit 0). XFER commit SHA below. |
+| G1 | PASS | Tip `e5a61496bddd2adae07a24fc62d451d165f41a22` is a descendant of `2926a95` (`git merge-base --is-ancestor` exit 0). Parent G0 `d66613c`. |
 | G2 | PASS | Production ePSF SHA `172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20` unchanged. 128 guarded 516 files (ePSF FITS+meta, aperture LCs, AAVSO, VarAstro) hash-identical before vs after. Extra 60 `lightcurve_*_psf.csv` on 516 are pre-existing AC-02 dirt, not this sandbox rescore. |
 | G3 | PASS | `--fast` OVERALL PASS: pytest 1530 passed, 32 skipped (~11 min). |
 
@@ -130,9 +130,30 @@ and `dev/results/context/session_20260824_dao_gaia_xfer_01/`.
 - `docs/VYVAR_DECISIONS.md` -- H-GATE-XFER + gate-design principle
   (pin AND stamp params, rig scale/FWHM, catalog identity, input SHAs;
   same lesson class as CATALOG-PROVENANCE and the census pattern note).
-- `docs/VYVAR_ROADMAP.md` -- Z-SOLVE-520-01 LOW; hand-CSV re-lock
-  deferred to the next natural STAGE-01 iteration.
+- `docs/VYVAR_ROADMAP.md` -- **MULTIFILTER-WCS-01** MED (seed, never
+  trust, a sibling VERIFIED WCS; gate unrelaxed;
+  `wcs_source=sibling_seed:<set>`). Hand-CSV re-lock deferred to the
+  next natural STAGE-01 iteration.
 - `docs/VYVAR_JOURNAL.md` / `docs/VYVAR_STATE.md` -- one-liners.
+
+### W6 cheap measurement (read-only, no wiring)
+
+Project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR. Same DAO n_det=113
+as the blind solve. `masterstar_catalog_recovery_min` unchanged (0.65).
+
+| donor | DATE-OBS | n_tight | recovery gate | bulk-shift confirmed |
+|-------|----------|--------:|--------------:|----------------------|
+| g_60_4 (VERIFIED, 97.0%) | 20:02:41 | 3 | **2.7%** | no (rms 2.32 px) |
+| i_70_4 (closest DATE-OBS, 80.4%) | 20:05:04 | 0 | **0.0%** | no |
+| z blind solve (reject) | 20:06:25 | 16 | 14.2% | -- |
+
+z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Reading: z is
+physically shallow; sibling seed would not rescue 520 z. JSON:
+`dev/results/session_20260824_dao_gaia_xfer_01/w6_g_wcs_on_z.json`.
+
+Existing `_pass2_sibling_wcs_recovery` is enabled and would also not
+confirm (in-memory reproduce). MULTIFILTER-WCS-01 remains the general
+seed-not-trust design for other drafts.
 
 ## `--fast`
 
@@ -167,4 +188,6 @@ ledger-todo, deps-outdated. Wall ~11 min.
 ## Errors (if any)
 
 None that block the wire. Photometry of 520 g/i/r not run (W5 stop).
-z_90_4 diagnosis deferred to Z-SOLVE-520-01.
+z_90_4 reject stands with measured reason (g-WCS-on-z gate 2.7%,
+contrast 9.06 ADU). Sibling-seed wiring is MULTIFILTER-WCS-01, not this
+commit.

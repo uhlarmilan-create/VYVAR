@@ -12,9 +12,10 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ## NEXT SESSION - entry point (2026-08-24 DAO-GAIA-XFER-01)
 
-Local tip after XFER-01 wire (parent `d66613c`, not pushed). Production
-516 ePSF SHA `172f95403beae36d...` unchanged. Draft 520 g/i/r calibration
-certificate unblocked; z_90_4 remains solve-rejected. AC-02 wiring still
+Local tip **`e5a6149`** (XFER-01 wire; W6 MULTIFILTER-WCS-01 carry;
+not pushed). Production 516 ePSF SHA `172f95403beae36d...` unchanged.
+Draft 520 g/i/r calibration certificate unblocked; z_90_4 remains
+solve-rejected (g-WCS-on-z recovery 2.7%, shallow). AC-02 wiring still
 dirty. `--fast` 1530 passed / 32 skipped.
 
 | Step | Action |
@@ -32,7 +33,7 @@ dirty. `--fast` 1530 passed / 32 skipped.
 |-----|------------|
 | **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
 | **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
-| **LOW** | **Z-SOLVE-520-01** - diagnose z_90_4 n_tight=16 / rms 6.72 px vs g rms 1.44 on the same catalog (shallow ADU contrast measured; historical z never VERIFIED); do not lower `masterstar_catalog_recovery_min`. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
+| **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
 | **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |

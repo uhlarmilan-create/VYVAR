@@ -6,7 +6,9 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 Pinned STAGE-01 sandbox gate to hand_validated params (H-GATE-XFER from
 REGRESS-01). Certificate identity stamps + informational 2x tol-drift WARN.
-z_90_4 solve reject untouched. Evidence:
+z_90_4 solve reject stands: g VERIFIED WCS projected on z MASTERSTAR
+gives catalog_recovery_gate 2.7% (shallow; p99-median 9.06 ADU). Carry
+**MULTIFILTER-WCS-01** (MED). Evidence:
 `CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
 
 ## 2026-08-24 -- EPSF-NEWTON-518-01 (STOP N2)
