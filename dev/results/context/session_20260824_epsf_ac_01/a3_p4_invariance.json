@@ -1,0 +1,9 @@
+{
+  "n": 133,
+  "max_abs": 5.329070518200751e-15,
+  "rms": 1.885518441511829e-15,
+  "identical_to_1e12": true,
+  "identical_to_1e6": true,
+  "p4_residual_bias_mag": 0.07585092839814293,
+  "p4_residual_bias_mmag": 75.85092839814293
+}

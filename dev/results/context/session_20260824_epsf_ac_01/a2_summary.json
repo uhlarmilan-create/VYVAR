@@ -1,0 +1,19 @@
+{
+  "chi2_gate": 5.0,
+  "night_median_n_chi2_lt5": 167.0,
+  "night_median_frac_chi2_lt5": 0.7738613360323887,
+  "night_median_admit_mag": 13.352066278457642,
+  "night_median_science_mag": 12.903046131134033,
+  "night_median_frac_bright30": 0.0,
+  "n_bright30_ever_admitted": 0,
+  "n_bright30": 30,
+  "night_median_ac_chi2_lt5": 0.5000877451870585,
+  "night_median_ac_all_fit_ok": 0.5670516760771898,
+  "night_median_ac_bins": {
+    "bin0": 0.7820025387400221,
+    "bin1": 0.6377661499946997,
+    "bin2": 0.5941790984473059,
+    "bin3": 0.46932785897278073,
+    "bin4": 0.4570744445437752
+  }
+}

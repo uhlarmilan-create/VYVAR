@@ -1,0 +1,28 @@
+{
+  "copied_text": [
+    "a1_ratio_vs_mag_bins.csv",
+    "a1_star_frame.csv",
+    "a1_star_night_median.csv",
+    "a1_summary.json",
+    "a2_ac_bias.csv",
+    "a2_ensemble_census.csv",
+    "a2_summary.json",
+    "a3_P0_bo_delta.csv",
+    "a3_P0_star_median.csv",
+    "a3_P1_bo_delta.csv",
+    "a3_P1_star_median.csv",
+    "a3_P2_bo_delta.csv",
+    "a3_P2_star_median.csv",
+    "a3_P3_bo_delta.csv",
+    "a3_P3_star_median.csv",
+    "a3_P4_bo_delta.csv",
+    "a3_p4_invariance.json",
+    "a3_P4_star_median.csv",
+    "a3_policy_table.csv",
+    "hashes_after.json",
+    "hashes_before.json",
+    "positive_control.txt",
+    "summary.json"
+  ],
+  "blobs_not_copied": []
+}
