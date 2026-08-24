@@ -1,0 +1,22 @@
+{
+  "bo_comp": {
+    "catalog_id": "1499200223486564608",
+    "phot_g_mean_mag": 9.678899765014648,
+    "cause_counts": {
+      "fit_ok": 27,
+      "chi2_ge_50": 107
+    },
+    "n_chi2_ge_50": 107,
+    "median_chi2_when_ge50": 62.02301911491309
+  },
+  "fw_comp": {
+    "catalog_id": "1497442379271632384",
+    "phot_g_mean_mag": 8.8513822555542,
+    "cause_counts": {
+      "chi2_ge_50": 130,
+      "fit_ok": 4
+    },
+    "n_chi2_ge_50": 130,
+    "median_chi2_when_ge50": 97.29635604082225
+  }
+}

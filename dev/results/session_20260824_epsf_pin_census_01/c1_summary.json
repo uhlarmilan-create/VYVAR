@@ -1,0 +1,32 @@
+{
+  "n_targets": 60,
+  "n_unique_comps": 67,
+  "n_star_epochs": 56548,
+  "star_epoch_cause_counts": {
+    "chi2_ge_50": 22220,
+    "fit_ok": 34328
+  },
+  "star_epoch_fail_n": 22220,
+  "frac_star_epoch_fail_chi2_ge_50": 1.0,
+  "frac_star_epoch_fail_inferred": 0.0,
+  "frac_star_epoch_fail_nonfinite_or_missing": 0.0,
+  "n_target_epoch_pin_drops": 7453,
+  "pin_drop_first_comp_cause_counts": {
+    "chi2_ge_50": 7453
+  },
+  "frac_pin_drops_chi2_ge_50": 1.0,
+  "frac_pin_drops_inferred": 0.0,
+  "frac_pin_drops_nonfinite_or_missing": 0.0,
+  "chi2_histogram": {
+    "n_chi2_ge_50_star_epochs": 22220,
+    "bin_50_100": 13963,
+    "bin_100_200": 4330,
+    "bin_ge_200": 3927,
+    "median_chi2": 78.22975919337438,
+    "p16_chi2": 56.42412780586683,
+    "p84_chi2": 212.50011717549663
+  },
+  "note_finite_chi2": "A row with finite stored psf_chi2 implies the PSF fit completed.",
+  "inferred_class_name": "inferred_non_converged_or_quality_fallback",
+  "inferred_class_definition": "fit_ok false AND finite psf_flux>0 AND finite chi2 < 50. Convergence flags are not persisted; this class is inferred."
+}
