@@ -1,0 +1,70 @@
+{
+  "utc": "2026-08-24T16:57:54.840001+00:00",
+  "gaia_live": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
+    "size_bytes": 53137264640,
+    "mtime_utc": "2026-06-14T23:05:57.812991+00:00",
+    "fingerprint_sha256": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+    "fingerprint_method": "sha256(size + first_1MiB + last_1MiB)",
+    "row_count_recorded_20260821_epsf_db_01": 211712600,
+    "max_g_mag_recorded_20260729": 17.5
+  },
+  "gaia_zaloha": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\zaloha\\vyvar_gaia_dr3.db",
+    "size_bytes": 10066063360,
+    "mtime_utc": "2026-04-28T10:59:35.105623+00:00",
+    "fingerprint_sha256": "9dd58788ceec35c54609177e19c2c5c1ebebdad95f0830cc9dc4e701c1e14601"
+  },
+  "vsx_live": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db",
+    "size_bytes": 908324864,
+    "mtime_utc": "2026-06-03T07:02:13.728443+00:00",
+    "fingerprint_sha256": "13b4753f97c16a23f079026d9beab3eab0a1ebf3ea917f302e19e2f41b5086c5",
+    "row_count": 7827904
+  },
+  "july29_session_close": {
+    "gaia_fp": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+    "vsx_fp": "13b4753f97c16a23f079026d9beab3eab0a1ebf3ea917f302e19e2f41b5086c5",
+    "gaia_size": 53137264640,
+    "gaia_rows": 211712600,
+    "max_g_mag": 17.5,
+    "source": "dev/results/CURSOR_RESULT_session_close.md Part 1.3"
+  },
+  "hand_lock_csv": {
+    "path": "dev/results/context/session_20260819_daostage01_iter4/final_scores.csv",
+    "date": "2026-08-19",
+    "catalog_fingerprint_recorded": false,
+    "git_sha_recorded_in_csv": false
+  },
+  "cones_radius_deg": 0.4,
+  "cones": {
+    "sscam_520_ra_109.113_dec_73.334": {
+      "live_n": 365,
+      "live_g_le_13": 23,
+      "live_g_le_14.5": 66,
+      "live_g_le_16": 175,
+      "live_g_le_17.5": 365,
+      "zaloha_n": 175,
+      "zaloha_g_le_13": 23,
+      "zaloha_g_le_14.5": 66,
+      "zaloha_g_le_16": 175
+    },
+    "cvn_516_ra_209.504_dec_41.191": {
+      "live_n": 235,
+      "live_g_le_13": 19,
+      "live_g_le_14.5": 39,
+      "live_g_le_16": 116,
+      "live_g_le_17.5": 235,
+      "zaloha_n": 116,
+      "zaloha_g_le_13": 19,
+      "zaloha_g_le_14.5": 39,
+      "zaloha_g_le_16": 116
+    }
+  },
+  "verdict_vs_hand_lock_era": "identical",
+  "verdict_vs_july29_stamp": "identical",
+  "verdict_vs_zaloha": "changed (10GB G<=16 vs 53GB G<=17.5); G<=14.5 row counts identical in both footprints",
+  "gate_checks_catalog_identity": false,
+  "gaia_live_matches_july29": true,
+  "vsx_live_matches_july29": true
+}

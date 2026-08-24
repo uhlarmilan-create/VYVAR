@@ -1,0 +1,295 @@
+{
+  "utc": "2026-08-24T16:57:31.274358+00:00",
+  "masterstar_stats": {
+    "g_60_4": {
+      "path": "Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\MASTERSTAR.fits",
+      "size_bytes": 37860480,
+      "sha256": "3ab82d72f61403906d95697826a99286bde1b6b46c7127e578e16419582f0c3f",
+      "naxis": [
+        3552,
+        2664
+      ],
+      "filter": "g",
+      "exptime": 60.0,
+      "date_obs": "2026-06-08T20:02:41.348",
+      "instrume": "C5A-150M",
+      "telescop": "AZ800",
+      "has_wcs": true,
+      "crval1": 109.16903292269,
+      "crval2": 73.344264865091,
+      "median": 35746.5703125,
+      "std": 86.40259137798861,
+      "p10": 35726.3203125,
+      "p90": 35767.2578125,
+      "p99": 35786.5625,
+      "max": 88781.5,
+      "n_gt_med_plus_5std": 1558,
+      "n_gt_med_plus_10std": 796
+    },
+    "i_70_4": {
+      "path": "Archive\\Drafts\\draft_000520\\platesolve\\i_70_4\\MASTERSTAR.fits",
+      "size_bytes": 37860480,
+      "sha256": "9b05a45d13d35a5edadcbc617ed49cb92fc821692463cf4231ef20b65d16aee5",
+      "naxis": [
+        3552,
+        2664
+      ],
+      "filter": "i",
+      "exptime": 70.0,
+      "date_obs": "2026-06-08T20:05:04.249",
+      "instrume": "C5A-150M",
+      "telescop": "AZ800",
+      "has_wcs": true,
+      "crval1": 109.15857456158,
+      "crval2": 73.341999180606,
+      "median": 33634.08984375,
+      "std": 27.510145115272685,
+      "p10": 33626.27734375,
+      "p90": 33642.34375,
+      "p99": 33649.99609375,
+      "max": 48938.828125,
+      "n_gt_med_plus_5std": 2426,
+      "n_gt_med_plus_10std": 1317
+    },
+    "r_60_4": {
+      "path": "Archive\\Drafts\\draft_000520\\platesolve\\r_60_4\\MASTERSTAR.fits",
+      "size_bytes": 37860480,
+      "sha256": "55e41a2d76c497a9020682bfd792512bca7b295945b7903e01f87dec02f56b5a",
+      "naxis": [
+        3552,
+        2664
+      ],
+      "filter": "r",
+      "exptime": 60.0,
+      "date_obs": "2026-06-08T20:03:52.771",
+      "instrume": "C5A-150M",
+      "telescop": "AZ800",
+      "has_wcs": true,
+      "crval1": 109.12272660081,
+      "crval2": 73.337413950424,
+      "median": 33759.453125,
+      "std": 63.24454015953804,
+      "p10": 33750.80859375,
+      "p90": 33768.26171875,
+      "p99": 33776.16796875,
+      "max": 71745.625,
+      "n_gt_med_plus_5std": 1920,
+      "n_gt_med_plus_10std": 979
+    },
+    "z_90_4": {
+      "path": "Archive\\Drafts\\draft_000520\\platesolve\\z_90_4\\MASTERSTAR.fits",
+      "size_bytes": 37857600,
+      "sha256": "da5c86a93e2cb764d5ec0bd1c5e53ffacdd635a3e23130d0231596661d4b1d92",
+      "naxis": [
+        3552,
+        2664
+      ],
+      "filter": "z",
+      "exptime": 90.0,
+      "date_obs": "2026-06-08T20:06:25.281",
+      "instrume": "C5A-150M",
+      "telescop": "AZ800",
+      "has_wcs": false,
+      "crval1": null,
+      "crval2": null,
+      "median": 33348.765625,
+      "std": 9.271009367568764,
+      "p10": 33344.6640625,
+      "p90": 33353.49609375,
+      "p99": 33357.82421875,
+      "max": 37430.6875,
+      "n_gt_med_plus_5std": 3681,
+      "n_gt_med_plus_10std": 2026
+    }
+  },
+  "input_lights": {
+    "g_60_4": {
+      "n_fits": 25,
+      "files": [
+        {
+          "name": "SSCam_2026-06-08_20-03-48_g_0000.fits",
+          "sha256": "b93ea21f8011b3dc89519d842ceb02e2c7f47e3f62a4aecb9d59576d700d4252",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T20:02:41.348",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "g",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_21-09-19_g_0048.fits",
+          "sha256": "023052579fa438feb060333ef5586acb7d52bba98f95fdfbb380bcb52f0508d3",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T21:08:13.020",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "g",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_22-14-45_g_0096.fits",
+          "sha256": "41e1155dacb6cc3131f554c14f6a98d5702a5eda433d8c690f3ea15af9f7dc52",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T22:13:38.489",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "g",
+          "instrume": "C5A-150M"
+        }
+      ]
+    },
+    "i_70_4": {
+      "n_fits": 25,
+      "files": [
+        {
+          "name": "SSCam_2026-06-08_20-06-21_i_0002.fits",
+          "sha256": "f41b5e20f6b6ad423a0970b780b03de69a23a6860fdd0d193104728cbb5eec9c",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T20:05:04.249",
+          "exptime": 70.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "i",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_21-11-51_i_0050.fits",
+          "sha256": "d6339a341358078af15d8cce4e165e8ee432de7360c8b102552b6feda65d589e",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T21:10:34.419",
+          "exptime": 70.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "i",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_22-17-17_i_0098.fits",
+          "sha256": "0c5ed3616908b00c1ac8b13aef3dc298c6b2497d52cb71ed059b8e824be27573",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T22:16:00.367",
+          "exptime": 70.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "i",
+          "instrume": "C5A-150M"
+        }
+      ]
+    },
+    "r_60_4": {
+      "n_fits": 25,
+      "files": [
+        {
+          "name": "SSCam_2026-06-08_20-04-59_r_0001.fits",
+          "sha256": "a50eb9dede9488532162b5b12c12917772cb7c8f91b496a3d6609f80ea83f285",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T20:03:52.771",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "r",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_21-10-30_r_0049.fits",
+          "sha256": "1a6c8c2269030402a01d6d9a21f2bb0096025abcc28bfdd01c0779c8f62f98f6",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T21:09:23.791",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "r",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_22-15-56_r_0097.fits",
+          "sha256": "04de275cb3f27fff7d317ae193789e1b1a347693a06dda092998bdf2cafcfa37",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T22:14:49.344",
+          "exptime": 60.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "r",
+          "instrume": "C5A-150M"
+        }
+      ]
+    },
+    "z_90_4": {
+      "n_fits": 25,
+      "files": [
+        {
+          "name": "SSCam_2026-06-08_20-08-02_z_0003.fits",
+          "sha256": "07f70ace77c6ff81cdff4015a81528792561b9885c60bd6e942a466c5a32e929",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T20:06:25.281",
+          "exptime": 90.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "z",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_21-13-32_z_0051.fits",
+          "sha256": "3d7b4a3620e92db131c3609fdec7ce4f94995b90a1e4535c39bca06c8aae8c8c",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T21:11:55.731",
+          "exptime": 90.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "z",
+          "instrume": "C5A-150M"
+        },
+        {
+          "name": "SSCam_2026-06-08_22-18-58_z_0099.fits",
+          "sha256": "10458c46894862af732676ae42e5e88e7bee4965bb5aa51da6a03e91d9a74a24",
+          "size_bytes": 37857600,
+          "date_obs": "2026-06-08T22:17:21.323",
+          "exptime": 90.0,
+          "naxis": [
+            3552,
+            2664
+          ],
+          "filter": "z",
+          "instrume": "C5A-150M"
+        }
+      ]
+    }
+  },
+  "sandbox_516_sha256": {
+    "live_masterstar": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "live_light001": "2e085929a8a99b49254852377726db0fd48011f399dd84abb05af30ebedd0c18",
+    "live_light076": "be4c7efcfcdd4a51ebbb3006bc795176b1e964763cddcb1c7390da4854f1f714",
+    "live_light148": "d762f151c861fc524763e342bec1bae191c5f3f53eee2dc4bafbcc1d1e97698f",
+    "era03_masterstar_identical": true,
+    "cleanrebuild_masterstar": "104700ddf86b8e0ac63663545a7389663a1bc4df540d30947da685cfad19f8cc",
+    "lights_identical_across_live_era03_cleanrebuild": true,
+    "masterstar_rewritten_utc": "2026-08-20T07:10:49"
+  },
+  "historical_brno_masterstar_hashes": null,
+  "provenance_gap": "drafts 399/400/402/407/426 not on disk; no historical SHA256 for this SS Cam night"
+}

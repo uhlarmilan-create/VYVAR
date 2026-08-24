@@ -1,0 +1,62 @@
+{
+  "premise": {
+    "compared": "iter4 scores on draft 516 WIDE sandbox (MASTERSTAR + BO_CVn Light_001/076/148) using 520-derived centroid tols vs 2026-08-19 hand CSV locked at seed/pass2=2.0 px on those same 516 frames",
+    "not_compared": "520 SS Cam photometry completeness vs a 520 hand reference"
+  },
+  "hand_lock": {
+    "date": "2026-08-19",
+    "csv": "dev/results/context/session_20260819_daostage01_iter4/final_scores.csv",
+    "sandbox": "Archive/Drafts/draft_000516 platesolve/NoFilter_60_2 + lights NoFilter_60_2",
+    "hand_params": {
+      "match_radius_px": 3.0,
+      "pass2_center_tol_px": 2.0,
+      "forced_seed_centroid_max_px": 2.0,
+      "pass1_sigma": 4.5,
+      "pass2_sigma": 4.0
+    },
+    "catalog_fingerprint_in_csv": false,
+    "production_wire_commit": "3aae487dda6b840b8489cc8d3212efb6f1017f3f",
+    "production_wire_date": "2026-08-20"
+  },
+  "hand_recomputed_20260824_in_g_cert": {
+    "note": "run_validation_gate also scores hand_validated params against current Gaia + current 516 FITS; stored as validation.hand_scores.recomputed",
+    "MASTERSTAR_g1_strict_le145": 0.9251726784343822,
+    "hand_csv_MASTERSTAR_g1_strict_le145": 0.9247889485801996,
+    "delta_pp": 0.038,
+    "Light_001_g1_strict_le145": 0.9021488871834229,
+    "Light_076_g1_strict_le145": 0.9401381427475057,
+    "Light_148_g1_strict_le145": 0.9435917114351496,
+    "lights_match_csv_exactly": true,
+    "MASTERSTAR_n_pass1": 2636,
+    "MASTERSTAR_n_pass2": 217,
+    "MASTERSTAR_n_forced_seed": 162,
+    "hand_csv_n_forced_seed": 163
+  },
+  "derived_tols": {
+    "g_60_4": {"match_radius_px": 3.5, "pass2_center_tol_px": 1.0, "forced_seed_centroid_max_px": 1.0, "fwhm_px": 1.25, "plate_scale": 0.56078, "seed_p95": 1.1119},
+    "i_70_4": {"match_radius_px": 4.0, "pass2_center_tol_px": 1.0, "forced_seed_centroid_max_px": 1.0, "fwhm_px": 1.25, "plate_scale": 0.56087, "seed_p95": 1.1225},
+    "r_60_4": {"match_radius_px": 5.0, "pass2_center_tol_px": 1.5, "forced_seed_centroid_max_px": 1.5, "fwhm_px": 1.25, "plate_scale": 0.56057, "seed_p95": 1.3440},
+    "wide_516_era03_PASS": {"match_radius_px": 2.5, "pass2_center_tol_px": 2.5, "forced_seed_centroid_max_px": 2.5, "fwhm_px": 5.19465, "plate_scale": 9.774}
+  },
+  "centroid_derivation": {
+    "floor_px": 1.0,
+    "cap_px": 3.0,
+    "round_step_px": 0.5,
+    "g_path": "seed_p95 1.11 -> clamp[1.0,3.0] -> round 1.0"
+  },
+  "derived_vs_hand_g_60_4_MASTERSTAR": {
+    "g1_strict_le145_derived": 0.9128933231005372,
+    "g1_strict_le145_hand": 0.9247889485801996,
+    "n_pass2_derived": 168,
+    "n_pass2_hand": 217,
+    "n_forced_seed_derived": 109,
+    "n_forced_seed_hand": 163
+  },
+  "solve_qa_infolog_20260824": {
+    "g_60_4": {"match_rate": 1.0, "rms_px": 1.44, "catalog_recovery_tight": 0.190, "catalog_recovery_gate": 0.970, "n_cat_in_frame": 168, "n_det": 33, "verified": true},
+    "i_70_4": {"match_rate": 0.863, "rms_px": 2.98, "catalog_recovery_tight": 0.244, "catalog_recovery_gate": 0.804, "n_cat_in_frame": 168, "n_det": 51, "verified": true},
+    "r_60_4": {"match_rate": 0.949, "rms_px": 1.49, "catalog_recovery_tight": 0.202, "catalog_recovery_gate": 0.872, "n_cat_in_frame": 168, "n_det": 39, "verified": true},
+    "z_90_4": {"match_rate": 0.195, "rms_px": 6.72, "catalog_recovery_tight": 0.095, "catalog_recovery_gate": 0.142, "n_cat_in_frame": 168, "n_det": 113, "n_matched_tight": 16, "verified": false},
+    "historical_20260614": {"r_60_4_recovery_approx": 0.84, "z_90_4_recovery_approx": 0.34, "source": "docs/VYVAR_STATE.md Brno AZ800 2026-06-14"}
+  }
+}
