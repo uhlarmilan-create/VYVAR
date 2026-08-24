@@ -232,6 +232,17 @@ def run_epsf_psf_merge_job(
         )
 
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
+    psf_lc: dict[str, Any] | None = None
+    try:
+        from psf_internal_lc import write_internal_psf_lightcurves_after_epsf_job  # noqa: PLC0415
+
+        psf_lc = write_internal_psf_lightcurves_after_epsf_job(
+            platesolve_dir=ps,
+            frames_root=root,
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[ePSF] internal PSF LC write skipped: %s", exc)
+        psf_lc = {"error": str(exc)}
     return {
         "written": int(n_ok),
         "frames_total": len(files),
@@ -239,4 +250,5 @@ def run_epsf_psf_merge_job(
         "frames": rows_out,
         "epsf_job_summary": _epsf_job_summary,
         "science_set": _epsf_science_meta,
+        "internal_psf_lc": psf_lc,
     }

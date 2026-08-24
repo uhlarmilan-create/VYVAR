@@ -366,6 +366,37 @@ def render_epsf_dashboard(
     with _col_info:
         st.caption(_epsf_meta_caption(epsf_fits))
 
+    _col_lc, _col_lc_info = st.columns([1, 3])
+    with _col_lc:
+        _write_psf_lc = st.button(
+            "Write internal PSF light curves",
+            key=f"epsf_psf_lc_btn_{selected_setup}",
+            help="Diagnostic only: lightcurve_*_psf.csv. Never submitted to AAVSO/VarAstro.",
+        )
+    with _col_lc_info:
+        st.caption("INTERNAL DIAGNOSTIC - not for AAVSO/VarAstro submission.")
+
+    if _write_psf_lc:
+        if pf_dir is None or not Path(pf_dir).is_dir():
+            st.error("Aligned frames / proc_*.csv directory not found.")
+        elif ps_dir is None or not ps_dir.is_dir():
+            st.error("Platesolve setup directory not found.")
+        else:
+            try:
+                from psf_internal_lc import write_internal_psf_lightcurves
+
+                with st.spinner("Writing internal PSF light curves..."):
+                    _lc_out = write_internal_psf_lightcurves(
+                        platesolve_dir=ps_dir,
+                        frames_root=Path(pf_dir),
+                    )
+                st.success(
+                    f"Wrote {_lc_out.get('n_written', 0)} internal PSF LC file(s) "
+                    f"(skipped {_lc_out.get('n_skipped', 0)})."
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Internal PSF LC write failed: {exc}")
+
     if _run_epsf:
         if ms_fits is None or not Path(ms_fits).is_file():
             st.error("MASTERSTAR.fits not found. Run MAKE MASTERSTAR first.")

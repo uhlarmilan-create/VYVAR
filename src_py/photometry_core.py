@@ -11836,65 +11836,8 @@ def _phase2a_process_one_target(
         err_scint_rel=err_scint_rel_export,
         err_sigma_sys_rel=err_sigma_sys_rel_export,
     )
-    if _have_psf_cols:
-        try:
-            from method_lc_output import MethodLcWriteContext, save_method_variant_lightcurve  # noqa: PLC0415
-
-            _alt_methods: list[str] = []
-            if bool(_cfg.psf_photometry_enabled):
-                _alt_methods.append("psf")
-            if bool(getattr(_cfg, "psf_adaptive_enabled", False)):
-                _alt_methods.append("adaptive")
-            if _alt_methods:
-                _mctx_base = MethodLcWriteContext(
-                    method="psf",
-                    target_cid=target_cid,
-                    comp_ids=list(comp_ids),
-                    all_frames=all_frames,
-                    lc_dir=lc_dir,
-                    cfg=_cfg,
-                    stability_sigma=stability_sigma,
-                    outlier_sigma=outlier_sigma,
-                    comp_catalog_mag=comp_catalog_mag,
-                    comp_rms_map=comp_rms_map,
-                    comp_tier_map=comp_tier_map,
-                    tier_weights=tier_weights,
-                    target_row=target_row,
-                    state=state,
-                    apertures_px=apertures_px,
-                    ac_result=(ac_result if isinstance(ac_result, dict) else None),
-                    comp_bp_rp=comp_bp_rp,
-                    target_bp_rp=float(target_bp_rp),
-                    bjd=bjd,
-                    hjd=hjd,
-                    jd=jd,
-                    airmass_arr=airmass_arr,
-                    flip_arr=flip_arr,
-                    err=err,
-                    ap_arr=ap_arr,
-                    src_files=src_files,
-                    sat_flags=sat_flags,
-                    target_frames=target_frames,
-                    lunar_phase_pct=_lc_lunar_phase,
-                    lunar_separation_deg=_lc_lunar_sep,
-                    lunar_risk=_lc_lunar_risk,
-                    time_base=time_base,
-                )
-                for _alt_m in _alt_methods:
-                    try:
-                        _mctx = MethodLcWriteContext(**{**_mctx_base.__dict__, "method": _alt_m})
-                        save_method_variant_lightcurve(_mctx)
-                    except Exception as _alt_exc:  # noqa: BLE001
-                        logging.error('[EXC-0172] Alternate method-variant LC file (e.g. detrended) not written for one target/method: %s', _alt_exc)
-                        logging.warning(
-                            "[METHOD-LC] %s %s failed: %s",
-                            target_cid,
-                            _alt_m,
-                            _alt_exc,
-                        )
-        except Exception as _meth_exc:  # noqa: BLE001
-            logging.error('[EXC-0173] All method-variant LC exports for target skipped when init block fails: %s', _meth_exc)
-            logging.warning("[METHOD-LC] init failed for %s: %s", target_cid, _meth_exc)
+    # EPSF-LC-LOG-01 / INV-PSF-SUBMIT-01: PSF LC files are an internal diagnostic
+    # product written by psf_internal_lc (RUN ePSF path), not Phase 2A.
 
     # COMP-ASSIGN-01 D4: stability AFTER photometry - verdict only (membership unchanged).
     comp_bjd = {cid: _get_comp_bjd_series(cid, all_frames) for cid in comp_ids}

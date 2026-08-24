@@ -6,6 +6,42 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## EPSF-LC-LOG-01 - internal PSF LC authority (2026-08-24)
+
+**Decision (Milan, binding).** Phase 2A no longer writes submission-shaped
+``lightcurve_*_psf.csv`` files. Those globs in ``photometry_core``,
+``photometry_report``, and ``export_reports`` now mean the internal diagnostic
+product written by ``psf_internal_lc.py`` (RUN ePSF job path and/or the ePSF
+dashboard button / headless flag).
+
+**Rationale.** A Phase 2A method-variant LC would collide with the diagnostic
+schema (provenance header, ``psf_delta_mag``, NaN coverage rows) and with the
+trust boundary: PSF relative photometry is production-usable; PSF absolute
+scale on bright stars is untrusted pending EPSF-SHAPE-01. Science exports
+remain aperture-only. One writer owns the filename.
+
+**Evidence:** ``dev/results/CURSOR_RESULT_EPSF_LC_LOG_01.md``.
+
+---
+
+## INV-PSF-SUBMIT-01 - unconditional AAVSO/VarAstro guard (2026-08-24)
+
+**Decision (Milan, binding).** AAVSO and VarAstro submission writers hard-fail
+when the effective ``lc_method`` is ``psf`` or ``adaptive``. No config escape
+hatch. Internal PSF light curves must not route through those writers.
+
+**Rationale.** Review found ``export_reports.py`` could feed ``_export_method in
+("psf", "adaptive")`` into the AAVSO citation context, i.e. the submission
+path could in principle run with a PSF method. SESSION-CLOSE 2026-08-23 trust
+boundary: science exports stay aperture-only. An escape hatch would re-open
+the same risk site. The guard is ``InvariantViolation("INV-PSF-SUBMIT-01")``
+before any export bytes are written; the batch exporter iterates aperture only.
+
+**Evidence:** ``docs/VYVAR_INVARIANTS.md`` (INV-PSF-SUBMIT-01);
+``dev/tests/test_psf_internal_lc.py`` T3.
+
+---
+
 ## MS-SOURCES-RETIRE - files over DB for per-draft science (2026-08-21)
 
 **Decision (Milan, binding).** No database repair and no re-population of corrupt

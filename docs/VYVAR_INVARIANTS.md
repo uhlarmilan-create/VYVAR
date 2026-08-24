@@ -49,7 +49,24 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | INV-ERR-SIGMA-ACCT-01 **[wired]** | Empirical Labbe transport accounting: if at least one radius in ``_sigma_by_r`` carries source ``empirical`` after the per-radius loop, row assignment must emit at least one ``err_bkg_source=empirical`` row. Zero measured + zero assigned is legal (crowded field). Raises ``InvariantViolation`` (ERR-518-02; catches global_fixed key mismatch class). | runtime in ``enhance_catalog_dataframe_aperture_bpm`` + unit test | FAIL | ERR-518-01/02; would have caught draft 518 before INV-ERR-MODE-01. |
 | INV-PSF-FRAME-01 **[wired]** | RUN ePSF per-frame accounting: if more than 20% of frames in a PSF photometry export job have zero ``psf_fit_ok``, the job FAILS LOUDLY (``InvariantViolation``). Below threshold with any zero-ok frames: WARN with persisted per-frame table. Exception class and full message captured on every swallowed frame failure. | runtime in ``epsf_frame_accounting.finalize_epsf_frame_job`` + unit test | FAIL (>20%); WARN (<=20% with any zero-ok) | EPSF-VALID-02 F2; draft 516 incident was 74% zero-ok frames. |
 | INV-PSF-ADDITIVE-01 **[wired]** | RUN ePSF PSF-only merge: existing proc sidecar non-``psf_*`` columns (row set, order, values) must be byte-identical in memory before write. Missing sidecar = FAIL LOUDLY (no catalog fabrication). UI RUN ePSF uses ``run_epsf_psf_merge_job`` only; full ``export_per_frame_catalogs`` requires explicit ``full_catalog_export=True``. | runtime in ``epsf_psf_merge.assert_inv_psf_additive_01`` + unit tests | FAIL | EPSF-VALID-02 F6/S6; R5 accept rerun rewrote aperture columns on draft 516. |
+| INV-PSF-SUBMIT-01 **[wired]** | AAVSO and VarAstro submission writers must hard-fail when the effective ``lc_method`` is ``psf`` or ``adaptive``. No config escape hatch. Internal diagnostic PSF light curves (``lightcurve_*_psf.csv``) must not route through those writers. Science exports remain aperture-only; PSF relative photometry is an internal product pending EPSF-SHAPE-01. | runtime in ``export_reports.export_lightcurve_reports`` (raise ``InvariantViolation``) + ``dev/tests/test_psf_internal_lc.py`` | FAIL | EPSF-LC-LOG-01; SESSION-CLOSE 2026-08-23 trust boundary. |
 | INV-EPSF-BUILD-GUARD-01 **[wired]** | Production ``build_epsf_model``: on non-finite EPSFBuilder result, drop edge-nearest gated star (logged in ``masterstar_epsf_meta.json`` -> ``build_guard``); FAIL LOUDLY if >10% of gated pool would be dropped. | ``psf_photometry.build_epsf_model`` + ``dev/tests/test_epsf_build_guard.py`` | FAIL | EPSF-VALID-02 S6 Addendum 1; D1b-a odd-half build failure. |
+
+### INV-PSF-SUBMIT-01 (EPSF-LC-LOG-01)
+
+- **Definition:** AAVSO and VarAstro submission writers must hard-fail when the
+  effective ``lc_method`` is ``psf`` or ``adaptive``. Internal diagnostic PSF
+  light curves (``lightcurve_*_psf.csv``) must not enter those writers.
+- **Rationale:** SESSION-CLOSE 2026-08-23 trust boundary: PSF is production-usable
+  for relative photometry only; absolute PSF flux on bright stars is untrusted
+  pending EPSF-SHAPE-01. Science exports stay aperture-only. No config escape
+  hatch -- the guard is unconditional.
+- **Trigger:** ``export_reports.export_lightcurve_reports`` raises
+  ``InvariantViolation("INV-PSF-SUBMIT-01", ...)`` before any AAVSO/VarAstro
+  bytes are written. ``export_all_method_lightcurve_reports`` iterates aperture
+  only.
+- **Test:** ``dev/tests/test_psf_internal_lc.py`` (T3: psf and adaptive raise
+  with the invariant name in the message; aperture still writes).
 
 ### Anchor `--full` stage coverage (INV-ANCHOR-00 detail)
 

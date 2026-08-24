@@ -20,6 +20,7 @@ from citations import (
     load_pipeline_meta,
 )
 from gaia_catalog_id import normalize_gaia_source_id
+from invariants_runtime import InvariantViolation
 from report_methods import (
     aavso_export_path,
     active_report_methods,
@@ -50,6 +51,8 @@ _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 # Gaia DR3 source_id is 19 decimal digits. A shorter numeric prefix in an export
 # is a different star (EXPORT-HDR-01).
 _GAIA_ID_FULL_DIGITS = 19
+
+INV_PSF_SUBMIT_01 = "INV-PSF-SUBMIT-01"
 
 
 def find_truncated_gaia_ids(text: str, full_ids: list[str] | tuple[str, ...]) -> list[str]:
@@ -978,6 +981,12 @@ def export_lightcurve_reports(
     vsx_name = str(target_row.get("vsx_name", "") or "").strip() or "unknown"
     safe = _safe_filename(vsx_name)
     _export_method = str(export_method or "aperture").strip().lower()
+    if _export_method in ("psf", "adaptive"):
+        raise InvariantViolation(
+            INV_PSF_SUBMIT_01,
+            "AAVSO/VarAstro submission writers refuse lc_method="
+            f"{_export_method}; science exports are aperture-only",
+        )
     _target_id = str(target_row.get("catalog_id", "") or vsx_name).strip()
 
     # Use exportable LC points (normal frames; canonical mag_calib_final when present).
@@ -1563,19 +1572,24 @@ def export_all_method_lightcurve_reports(
     export_stats: dict[str, int] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Path]]:
-    """Export AAVSO + VarAstro for each active photometry method."""
+    """Export AAVSO + VarAstro for the aperture submission product only.
+
+    Internal PSF/adaptive LC files (``lightcurve_*_psf.csv``) are never routed
+    through these writers (INV-PSF-SUBMIT-01). The glob remains as a presence
+    signal for reports; submission methods stay aperture-only.
+    """
     fresh_cfg = cfg or AppConfig()
     _lc_dir = Path(lc_dir)
     _tid = str(target_cid or target_row.get("catalog_id", "") or "").strip()
     _have_psf_files = any(_lc_dir.glob("lightcurve_*_psf.csv")) or any(
         _lc_dir.glob("lightcurve_*_adaptive.csv")
     )
-    _methods = active_report_methods(
-        fresh_cfg,
-        have_psf_cols=_have_psf_files
-        or bool(getattr(fresh_cfg, "psf_photometry_enabled", False))
-        or bool(getattr(fresh_cfg, "psf_adaptive_enabled", False)),
-    )
+    if _have_psf_files:
+        logging.info(
+            "[EXPORT] internal PSF/adaptive LC files present; "
+            "INV-PSF-SUBMIT-01 keeps AAVSO/VarAstro aperture-only"
+        )
+    _methods = ["aperture"]
     out: dict[str, dict[str, Path]] = {}
     _proc_cache = proc_csv_cache if proc_csv_cache is not None else {}
     for method in _methods:
