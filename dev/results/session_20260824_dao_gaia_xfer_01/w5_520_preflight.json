@@ -1,0 +1,108 @@
+{
+  "utc": "2026-08-24T17:51:15.704323+00:00",
+  "draft": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520",
+  "success": true,
+  "error": null,
+  "output": {
+    "aligned_frames": 78,
+    "input_frames": 75,
+    "skipped_subgroups": [
+      {
+        "gkey": "z_90_4",
+        "setup": "z_90_4",
+        "solved": false,
+        "skipped_reason": "MASTERSTAR plate-solve zlyhal. Back-end returned: {'solved': False, 'match_rate': 0.19469026548672566, 'rms_px': 6.724698425106982, 'reason': 'VYVAR solver: invalid solution (match_rate=19.5%, rms=6.72px, hint_sep=0.228deg, verified=False, catalog_recovery_tight=9.5%, catalog_recovery_gate=14.2%, n_matched_tight=16).'}. Cannot safely continue with photometry / source extraction."
+      }
+    ],
+    "keys": [
+      "aligned_frames",
+      "aligned_root",
+      "alignment_detection_sigma",
+      "alignment_max_control_points_used",
+      "alignment_max_stars_cap",
+      "alignment_report_csv",
+      "build_masterstar_and_catalogs",
+      "catalog_local_gaia_only",
+      "catalog_match_max_sep_arcsec",
+      "comparison_selection",
+      "comparison_stars_csv",
+      "detrended_files_used",
+      "detrended_input_root",
+      "equipment_saturate_adu_resolved",
+      "extra_platesolve",
+      "faintest_mag_limit",
+      "id_equipment",
+      "input_frames",
+      "masterstar_built",
+      "masterstar_fits",
+      "masterstars_csv",
+      "max_catalog_rows",
+      "n_comparison_stars_requested",
+      "observation_group_key",
+      "observation_subgroup_reports",
+      "per_frame_catalog_dir",
+      "per_frame_catalog_index_csv",
+      "per_frame_catalogs_written",
+      "photometry_plan_json",
+      "ram_align_handoff_used",
+      "reference_frame",
+      "reference_hint_ra_dec_deg",
+      "reference_star_counts",
+      "rotation_flip_first_index_1based",
+      "rotation_flip_frame_indices_1based",
+      "rotation_ref_angle_deg",
+      "saturate_level_fraction",
+      "saturate_limit_adu",
+      "saturate_limit_source",
+      "scanning_id",
+      "skipped_subgroups",
+      "variable_targets_csv"
+    ]
+  },
+  "certs": {
+    "g_60_4": {
+      "cert_exists": true,
+      "masterstar_exists": true,
+      "status": "PASS",
+      "fail_reason": null,
+      "derived_pass2_center_tol_px": 1.0,
+      "derived_forced_seed_centroid_max_px": 1.0,
+      "sandbox_params": "hand_validated",
+      "gaia_fingerprint": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+      "tol_drift_warn_status": "WARN",
+      "validation_status": "PASS",
+      "max_regression_pp": 6.403252852449359e-06,
+      "copied_to": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260824_dao_gaia_xfer_01\\g_60_4_dao_gaia_calibration.json"
+    },
+    "i_70_4": {
+      "cert_exists": true,
+      "masterstar_exists": true,
+      "status": "PASS",
+      "fail_reason": null,
+      "derived_pass2_center_tol_px": 1.0,
+      "derived_forced_seed_centroid_max_px": 1.0,
+      "sandbox_params": "hand_validated",
+      "gaia_fingerprint": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+      "tol_drift_warn_status": "WARN",
+      "validation_status": "PASS",
+      "max_regression_pp": 6.403252852449359e-06
+    },
+    "r_60_4": {
+      "cert_exists": true,
+      "masterstar_exists": true,
+      "status": "PASS",
+      "fail_reason": null,
+      "derived_pass2_center_tol_px": 1.5,
+      "derived_forced_seed_centroid_max_px": 1.5,
+      "sandbox_params": "hand_validated",
+      "gaia_fingerprint": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+      "tol_drift_warn_status": "OK",
+      "validation_status": "PASS",
+      "max_regression_pp": 6.403252852449359e-06
+    },
+    "z_90_4": {
+      "cert_exists": false,
+      "masterstar_exists": true
+    }
+  }
+}

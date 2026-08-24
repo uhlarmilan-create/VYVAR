@@ -157,9 +157,10 @@ class DaoGaiaCalibrationCertificate:
     empty_sky: EmptySkyAudit
     validation: ValidationGateResult | None = None
     inputs: dict[str, Any] = field(default_factory=dict)
+    identity: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "setup": self.setup,
             "built_utc": self.built_utc,
             "status": self.status,
@@ -169,6 +170,9 @@ class DaoGaiaCalibrationCertificate:
             "validation": self.validation.to_dict() if self.validation is not None else None,
             "inputs": self.inputs,
         }
+        if self.identity:
+            payload.update(self.identity)
+        return payload
 
 
 def _round_px(value: float, *, step: float = PX_ROUND_STEP) -> float:
@@ -1178,14 +1182,44 @@ def write_calibration_certificate(
     platesolve_dir: Path | str,
     *,
     fail_closed: bool = True,
+    repo_root: Path | str | None = None,
 ) -> Path:
-    """Write ``dao_gaia_calibration.json``; optionally block catalog acceptance on FAIL."""
+    """Write ``dao_gaia_calibration.json``; optionally block catalog acceptance on FAIL.
+
+    XFER-01: identity stamps are mandatory (catalog fp, sandbox SHAs, hand CSV,
+    lock-rig plate scale/FWHM, production-scope derived tols). Missing stamp
+    source fails loud (DAO-GAIA-IDENTITY). Drift WARN is informational.
+    """
     from invariants_runtime import InvariantViolation
+    from dao_gaia_stage_validation import (  # noqa: PLC0415
+        IDENTITY_STAMP_KEYS,
+        build_certificate_identity_stamps,
+    )
+
+    stamps = build_certificate_identity_stamps(cert.derived, repo_root=repo_root)
+    for key in IDENTITY_STAMP_KEYS:
+        if stamps.get(key) in (None, "", {}):
+            raise InvariantViolation("DAO-GAIA-IDENTITY", f"identity stamp {key} empty")
+    prod = stamps["production_tolerances"]
+    stamps["derived_pass2_center_tol_px"] = prod["derived_pass2_center_tol_px"]
+    stamps["derived_forced_seed_centroid_max_px"] = prod["derived_forced_seed_centroid_max_px"]
+    cert.identity = stamps
 
     out_dir = Path(platesolve_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / CERT_FILENAME
     path.write_text(json.dumps(cert.to_dict(), indent=2), encoding="utf-8")
+    warn = stamps.get("tol_drift_warn") or {}
+    if warn.get("status") == "WARN":
+        msg = f"DAO-GAIA-XFER-01 {warn.get('message')}"
+        try:
+            from pipeline import log_event  # noqa: PLC0415
+
+            log_event(msg)
+        except Exception:  # noqa: BLE001
+            import logging
+
+            logging.getLogger("vyvar").warning(msg)
     if fail_closed and cert.status != "PASS":
         raise InvariantViolation(
             "DAO-GAIA-CALIBRATION",

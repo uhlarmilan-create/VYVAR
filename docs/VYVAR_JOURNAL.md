@@ -2,6 +2,27 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO)
+
+Pinned STAGE-01 sandbox gate to hand_validated params (H-GATE-XFER from
+REGRESS-01). Certificate identity stamps + informational 2x tol-drift WARN.
+z_90_4 solve reject untouched. Evidence:
+`CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
+
+## 2026-08-24 -- EPSF-NEWTON-518-01 (STOP N2)
+
+Newton draft 518 (TOI-1131, V 60 s, bin2 1.30 arcsec/px) aperture branch
+present; Part C gated ePSF pool 26 < 30. P-A..P-E unmeasured. ZP-OK parked.
+Census G0 commit `2926a95` (WIDE-rig tag). Evidence:
+`CURSOR_RESULT_EPSF_NEWTON_518_01.md`.
+
+## 2026-08-24 -- EPSF-PIN-CENSUS-01 (measure; STOP)
+
+Draft 516 pin drops are 100% stored `psf_chi2 >= 50` (7453/7453; inferred class empty).
+Admitting chi2>=50 holds PSF-vs-aperture quality (BO 23/134 -> 134/134, RMS 38.8 -> 37.3 mmag;
+FW 0/134 -> 134/134, RMS 48.5 mmag, offset not scatter). Interim `psf_fit_ok_for_zp` not wired.
+Evidence: `CURSOR_RESULT_EPSF_PIN_CENSUS_01.md`.
+
 ## 2026-08-23 -- SESSION-CLOSE (ePSF arc: VALID-02 + BRIGHT-01)
 
 - **EPSF-VALID-02 CLOSED:** production wiring F1-F6; gated 67-star ePSF on draft 516 (S6 swap);

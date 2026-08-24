@@ -1,12 +1,18 @@
 # VYVAR -- Development State
 
-**Status:** EPSF-VALID-02 **CLOSED** (2026-08-22 S6). **EPSF-BRIGHT-01 CLOSED** (2026-08-23 FD-A).
+**Status:** **DAO-GAIA-XFER-01 CLOSED** (2026-08-24, Milan GO): STAGE-01 sandbox
+gate pinned to hand_validated params; 520 g/i/r calibration certificate unblocked
+(z_90_4 remains solve-rejected). EPSF-VALID-02 **CLOSED** (2026-08-22 S6). **EPSF-BRIGHT-01 CLOSED** (2026-08-23 FD-A).
+**EPSF-AC-01 CLOSED** (measure) and **EPSF-AC-02 CLOSED** (Milan GO wire, 2026-08-24): production
+F6 AC = P4 (`p4_none`, uncorrected stamp); internal PSF LC = P4 + INV-PSF-LC-PIN-01.
+**EPSF-PIN-CENSUS-01 CLOSED** (measure, 2026-08-24): 100% of pin drops are stored chi2>=50;
+STOP for Milan on interim `psf_fit_ok_for_zp`. **EPSF-NEWTON-518-01 CLOSED** (STOP N2):
+gated pool 26<30; ZP-OK remains parked.
 Draft 516 production ePSF is **gated 67-star** model with edge-star build guard; pre-gated 1475-star
 model archived. Draft 517 has first gated production ePSF (66 stars). FD-A full-CCD variance model
 live (`psf_weight_mode=full_ccd`); BO CVn PSF overlay **133/134** fit_ok post F6 re-merge.
 **EPSF-SHAPE-01** remains **OPEN HIGH** for the **narrow ePSF core** (FWHM 2.36 vs 3.30 px;
-bright chi2 ~68). The flux-scale **policy** layered on that model is **EPSF-AC-01** (measured
-2026-08-24; STOP for Milan, no production AC wiring). **EXPORT-PARITY-01** remains **OPEN HIGH**.
+bright chi2 ~68), now routed to **EPSF-CORE-01**. **EXPORT-PARITY-01** remains **OPEN HIGH**.
 Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179; P1 golden **6af4539c** n=115.
 
 **vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
@@ -17,18 +23,51 @@ Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179; P1 g
 **Band letter:** CV affirmed (D10-1/D10-1b); first AAVSO/VarAstro uploads (BO -> FW) pending.
 
 **ePSF:** production-ready on 516/517 (Part C gated pool, INV-PSF-ADDITIVE-01 merge path, FD-A)
-for relative photometry. Absolute PSF flux scale on bright stars is untrusted until EPSF-SHAPE-01
-(core) and EPSF-AC-01 (policy GO).
+for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale on bright
+stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
+DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-24** (EPSF-AC-01 measure; SHAPE-01-F accepted).
+Last updated: **2026-08-24** (DAO-GAIA-XFER-01 GO wire; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
 
-## 2026-08-24 -- EPSF-AC-01 (STOP for Milan)
+## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO wired)
+
+STAGE-01 iter4 sandbox gate pinned to `hand_validated()` params. Draft-derived
+centroid tols stay production-scope on the certificate with identity stamps
+(catalog fp, sandbox SHAs, hand CSV, 516 plate scale/FWHM). Cause was H-GATE-XFER
+(REGRESS-01). z_90_4 solve reject untouched. Evidence:
+`CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
+
+## 2026-08-24 -- EPSF-NEWTON-518-01 (STOP N2)
+
+Newton draft 518 is photometry-ready (bin2 1.30 arcsec/px, V 60 s, 71
+science lights, 10 aperture LCs) but the Part C gated ePSF pool is 26
+stars (science_scope choke) vs `epsf_min_stars=30`. No ePSF, no P-A..P-E.
+EPSF-ZP-OK-01-WIRE stays parked. 516 hash-identical. Evidence:
+`CURSOR_RESULT_EPSF_NEWTON_518_01.md`.
+
+## 2026-08-24 -- EPSF-PIN-CENSUS-01 (measure; STOP for Milan)
+
+100% of 7453 pin drops on draft 516 are stored `psf_chi2 >= 50`. Inferred
+non-converged / quality-fallback class is empty. Admitting chi2>=50 holds
+PSF-vs-aperture quality (BO 38.8 -> 37.3 mmag on 134/134; FW 0 -> 134 at
+48.5 mmag RMS, offset not scatter). Interim proposal `psf_fit_ok_for_zp`
+(convergence + finite only) is not wired. Evidence:
+`CURSOR_RESULT_EPSF_PIN_CENSUS_01.md`.
+
+## 2026-08-24 -- EPSF-AC-02 (Milan GO wired)
+
+Production F6 merge and internal PSF LC use `psf_ac_policy=p4_none`. INV-PSF-LC-PIN-01
+drops any epoch that cannot use the full pinned ensemble (BO CVn 23/134 survive;
+PSF-vs-aperture RMS 614 -> 39 mmag on those epochs, RMS~=|median| = +40 mmag level
+offset). SHAPE-01 narrow-core root remains OPEN, routed to EPSF-CORE-01. Evidence:
+`CURSOR_RESULT_EPSF_AC_02_WIRE.md`.
+
+## 2026-08-24 -- EPSF-AC-01 (measure; closed by AC-02 GO)
 
 SHAPE-01-F: the 0.671 bright-star droop is F6 `psf_ac_factor` trained on chi2<5, not a
 fitter-class split. EPSF-AC-01 measured the full-range uncorrected PSF/DAO (not flat in mag)
-and the AC ensemble census (0/30 brightest ever admitted). No production AC change in this
-task. Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. Root narrow-core remains EPSF-SHAPE-01 /
-**EPSF-CORE-01** (FUTURE).
+and the AC ensemble census (0/30 brightest ever admitted). Evidence: `CURSOR_RESULT_EPSF_AC_01.md`.
+Root narrow-core remains EPSF-SHAPE-01 / **EPSF-CORE-01** (FUTURE).
 
 ## 2026-08-22/23 -- SESSION-CLOSE ePSF arc
 
@@ -42,7 +81,7 @@ chi2 brightness gate; **FD-A GO** - full CCD variance model; F6 re-merge (BO CVn
 **EPSF-SHAPE-01 OPEN HIGH:** PSF/DAO ratio droop on bright stars persists post-FD-A. Reports:
 `CURSOR_RESULT_EPSF_BRIGHT_01.md`, `CURSOR_RESULT_EPSF_BRIGHT_01_P3.md`.
 
-**Open HIGH:** EXPORT-PARITY-01; EPSF-SHAPE-01.
+**Open HIGH:** EXPORT-PARITY-01; EPSF-SHAPE-01 (routed to EPSF-CORE-01).
 
 ## Canonical run mode (516 freeze)
 

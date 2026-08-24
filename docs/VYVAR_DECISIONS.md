@@ -6,7 +6,110 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## DAO-GAIA-XFER-01 - pin STAGE-01 sandbox gate to hand params (2026-08-24)
+
+**Cause (REGRESS-01, accepted).** Draft 520 Brno AZ800/C5A-150M failed
+DAO-GAIA-CALIBRATION by ~0.6-2.0 pp because the STAGE-01 iter4 sandbox
+(draft 516 WIDE CVn, FWHM 5.2 px, 9.77 arcsec/px) was re-scored with
+**Brno-derived** centroid tols (1.0 px from FWHM 1.25 px). Hand CSV was
+locked 2026-08-19 at seed/pass2 = 2.0 px on those 516 frames. Catalog
+fingerprint and scoring code were unchanged (H-GATE-XFER, not H-KAT /
+H-CODE / H-DATA).
+
+**Decision (Milan GO, 2026-08-24, binding).** Option 1 + identity stamps.
+
+1. The STAGE-01 validation gate **always** re-scores the 516 sandbox with
+   `ValidationParams.hand_validated()` (match 3.0 / pass2 2.0 / seed 2.0 /
+   p1=4.5 / p2=4.0). Draft-derived centroid tols are **never** substituted
+   into that compare. `MAX_REGRESSION_PP=0.005` and fail-closed raise
+   unchanged.
+2. Derived tols remain in force for **production photometry of the current
+   set** and are recorded on the certificate as separate fields
+   (`derived_pass2_center_tol_px`, `derived_forced_seed_centroid_max_px`,
+   `production_tolerances.scope=production_photometry_current_set`).
+3. Certificate write is fail-loud without identity stamps: Gaia/VSX cheap
+   fingerprints, sandbox draft id + SHA256 of MASTERSTAR and Light_001/076/148
+   actually scored, hand CSV path+SHA256, lock-rig plate scale and FWHM
+   (516). Missing stamp source raises `DAO-GAIA-IDENTITY`.
+4. Informational WARN when |derived/hand| ratio >= 2x (does not block).
+
+**Gate-design principle (general).** A reference-bearing gate must pin
+**and stamp** the full context the reference stands on: params, rig
+scale/FWHM, catalog identity, and input SHAs. Same lesson class as
+CATALOG-PROVENANCE (catalog identity) and the census pattern note
+(denominator identity) -- this is the parameter-space instance.
+
+**Evidence:** `dev/results/CURSOR_RESULT_DAO_GAIA_REGRESS_01.md`,
+`dev/results/CURSOR_RESULT_DAO_GAIA_XFER_01.md`.
+
+---
+
 ## EPSF-AC-01 - chi2<5 AC gate is a brightness cut (2026-08-24)
+
+**Finding (measurement, binding until a new AC decision).** The F6 ePSF aperture
+correction (`_compute_aperture_correction`, chi2<5) is a brightness cut in
+disguise: on draft 516, 20-frame subset, 0/30 brightest science-set stars are
+ever admitted; night-median admitted mag 13.35 vs science-set 12.90.
+Night-median AC from that ensemble is 0.500 vs 0.567 from all fit_ok vs
+0.78/0.64/0.59/0.47/0.46 per M1 mag bin. Uncorrected PSF/DAO is mag-sloped
+(bins 1.27 -> 2.21; corr=0.69; RMS~=|median| in every bin = offset, not
+scatter). A scalar AC cannot be honest on this model.
+
+**Policy (recommendation; not wired -- STOP for Milan).**
+(a) Production F6 merge: keep current chi2<5 behavior as an explicit named
+fallback until GO. Do not treat it as a quality gate. Preferred GO options:
+P4/AC-off (stamp uncorrected; absolute scale stays untrusted) or P2 mag-binned
+if a nearer-to-1 PSF/DAO per bin is wanted. P3 (all fit_ok) is the least-wrong
+scalar but still cannot flatten A1.
+(b) Internal PSF LC: P4 (no AC). Per-frame scalar cancels in the ensemble ZP;
+P0 vs P4 `psf_delta_mag` identical to 1e-12. Mag-slope residual for BO CVn vs
+pinned-comp mean mag is ~76 mmag (A1 slope term), separate from the existing
+~614 mmag RMS vs aperture driven by ensemble fit_ok drops.
+
+**Evidence:** `dev/results/CURSOR_RESULT_EPSF_AC_01.md`.
+H5 fitter-scale in `CURSOR_RESULT_EPSF_SHAPE_01_M.md` is superseded
+(SHAPE-01-F F2). F2b pedestal mechanism retracted (outer-annulus median 0).
+
+---
+
+## EPSF-AC-02 - Milan GO: P4 production AC + LC-PIN-01 (2026-08-24)
+
+**Decision (Milan GO, 2026-08-24, binding).** Four items, each with its own
+rationale.
+
+**(a) Production F6 merge AC policy = P4 (`psf_ac_policy=p4_none`).**
+Stamp uncorrected fit flux (`psf_ac_factor=1`, `psf_ac_applied=false`). The
+chi2<5 DAO/PSF median remains available as the named fallback
+`chi2_lt5_legacy`. A scalar trained on a brightness-cut ensemble cannot be an
+honest absolute scale on this ePSF (EPSF-AC-01 A1/A2). Relative photometry
+does not need that scale: a per-frame scalar cancels in the ensemble ZP.
+
+**(b) Internal PSF LC policy = P4.** Same reason as (a), plus the measured
+P0/P4 `psf_delta_mag` invariance (AC-01 A3, 5e-15). Wiring a scalar AC into
+the diagnostic LC would change provenance without changing differential mags.
+
+**(c) LC-PIN-01: same-membership-or-NaN ensemble ZP (INV-PSF-LC-PIN-01).**
+If any pinned comparison star lacks `psf_fit_ok` or finite `psf_flux` on an
+epoch, that epoch is NaN `psf_delta_mag` with
+`psf_epoch_drop_reason=comp_psf_fail:<gaia_id>`. Aperture columns stay filled.
+No partial-ensemble fallback. AC-01 A3 614 mmag RMS was membership drift
+(frame 004: 0.385 vs 0.866), the PSF-branch analogue of ERA-03 INV-PIN.
+
+**(d) EPSF-CORE-01 ROADMAP row gets the literature parameters.** The remaining
+open defect is the narrow ePSF core (FWHM 2.36 vs 3.30 px), not the AC scalar.
+Build recipe: multi-frame samples, oversampling vs >=4 gridpoints/FWHM,
+minimal smoothing at low osamp, 2D polynomial gridpoint estimation, watch
+photutils for Godden & Blundell 2025 fixes. Newton remains desired but is no
+longer the sole unlock.
+
+**Canonical AC (literature).** Absolute PSF scale, when wanted, is to be
+derived DAOGROW/DOLPHOT-style from bright isolated stars versus growth-curve
+total magnitudes (Stetson 1990), never from a chi2-gated per-star DAO ratio
+(defect A2 on record).
+
+**Evidence:** `dev/results/CURSOR_RESULT_EPSF_AC_02_WIRE.md`.
+
+---
 
 **Finding (measurement, binding until a new AC decision).** The F6 ePSF aperture
 correction (`_compute_aperture_correction`, chi2<5) is a brightness cut in

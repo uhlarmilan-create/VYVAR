@@ -10,25 +10,60 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-24 EPSF-AC-01 STOP)
+## NEXT SESSION - entry point (2026-08-24 DAO-GAIA-XFER-01)
 
-Local tip after SHAPE-01-F G0: **`cf95c53`** (not pushed). Production ePSF SHA
-`172f95403beae36d...` unchanged. EPSF-AC-01 measured; **no AC wiring** until Milan GO.
+Local tip after XFER-01 wire (parent `d66613c`, not pushed). Production
+516 ePSF SHA `172f95403beae36d...` unchanged. Draft 520 g/i/r calibration
+certificate unblocked; z_90_4 remains solve-rejected. AC-02 wiring still
+dirty. `--fast` 1530 passed / 32 skipped.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: AC policy GO or keep P0 named fallback (see A4 in `CURSOR_RESULT_EPSF_AC_01.md`) |
-| **2** | Milan: dashboard curve review + push the local commit series (LC-LOG through SHAPE-01-F) |
-| **3** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
-| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
-| **5** | **EXPORT-PARITY-01** (HIGH): full export vs pipeline photometry divergence |
+| **1** | Milan: watch 520 photometry (preflight only in XFER-01) or GO a full RUN |
+| **2** | Milan: Newton 518 ePSF - hold for a night with gated pool >=30, or GO a wide-only ZP-OK without claiming Newton |
+| **3** | Milan: GO or hold interim `psf_fit_ok_for_zp` (wide-rig CENSUS-01 still stands; no Newton P-D) |
+| **4** | Milan: authorize commit/push of AC-02 wiring + remaining docs |
+| **5** | Milan: dashboard curve review + push the local commit series (LC-LOG through XFER) |
+| **6** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
+| **7** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **8** | **EXPORT-PARITY-01** (HIGH): full export vs pipeline photometry divergence |
 
 | Pri | Carry list |
 |-----|------------|
-| **HIGH** | **EPSF-AC-01** - AC policy STOP; chi2<5 gate is a brightness cut; no wiring this task |
-| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); policy is AC-01 |
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
 | **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
-| **FUTURE** | **EPSF-CORE-01** - custom core-sampled ePSF build; gated on Newton/well-sampled data |
+| **LOW** | **Z-SOLVE-520-01** - diagnose z_90_4 n_tight=16 / rms 6.72 px vs g rms 1.44 on the same catalog (shallow ADU contrast measured; historical z never VERIFIED); do not lower `masterstar_catalog_recovery_min`. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
+| **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
+| **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
+| **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
+| **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
+| **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |
+
+---
+
+## NEXT SESSION - entry point (2026-08-24 EPSF-NEWTON-518-01 STOP)
+
+Local tip **`2926a95`** (census committed; AC-02 wiring still dirty; not
+pushed). Production 516 ePSF SHA `172f95403beae36d...` unchanged. Newton
+518 ePSF STOP: gated pool 26 < 30. EPSF-ZP-OK-01-WIRE stays parked.
+SHAPE-01 root remains OPEN, routed to **EPSF-CORE-01**.
+
+| Step | Action |
+|------|--------|
+| **1** | Milan: Newton 518 ePSF - hold for a night with gated pool >=30, or GO a wide-only ZP-OK without claiming Newton |
+| **2** | Milan: GO or hold interim `psf_fit_ok_for_zp` (wide-rig CENSUS-01 still stands; no Newton P-D) |
+| **3** | Milan: authorize commit/push of AC-02 wiring + remaining docs |
+| **4** | Milan: dashboard curve review + push the local commit series (LC-LOG through census) |
+| **5** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
+| **6** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **7** | **EXPORT-PARITY-01** (HIGH): full export vs pipeline photometry divergence |
+
+| Pri | Carry list |
+|-----|------------|
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
 | **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
@@ -343,9 +378,12 @@ CV/CR->clear behavioral flip + band-aware k'' correction path.
 | **426-REGEN** | - | **DONE (2026-07-13); baseline SUPERSEDED by MASTERSTAR-EPOCH-FIX.** Stale at ``Archive/evidence/draft_000426_stale_20260626``. |
 | **MASTERSTAR-EPOCH** | HIGH | **CLOSED (2026-07-13).** ``proc_MASTERSTAR.csv`` excluded from epoch collection; draft_426 regen 25 epochs. Result: ``CURSOR_RESULT_masterstar_epoch.md``. |
 | **EXPORT-PARITY-01** | HIGH | **OPEN (2026-08-22).** ``export_per_frame_catalogs`` full recompute diverges from full-pipeline photometry on live draft 516: 99/134 frames row shrink, 51k flux numeric diffs, 41k mag losses (R5 audit). PSF RUN job fixed via INV-PSF-ADDITIVE-01 / F6 merge path; standing two-path defect for full export vs pipeline photometry remains. Evidence: ``CURSOR_RESULT_EPSF_VALID_02_R5F5.md``. |
-| **EPSF-SHAPE-01** | HIGH | **OPEN (core).** Narrow production ePSF (FWHM 2.36 vs input 3.30 px; bright chi2 ~68). SHAPE-01-M/F: H5 fitter-scale superseded (iter==single with AC off); osamp=4 builder closed; F2b pedestal retracted. Flux-scale **policy** is **EPSF-AC-01**. Evidence: `CURSOR_RESULT_EPSF_SHAPE_01_M.md`, `CURSOR_RESULT_EPSF_SHAPE_01_F.md`. |
-| **EPSF-AC-01** | HIGH | **OPEN / STOP for Milan (2026-08-24).** chi2<5 AC gate admits 0/30 brightest; uncorrected PSF/DAO is mag-sloped (bins 1.27 -> 2.21). Recommend: F6 keep P0 as named fallback until GO; internal PSF LC = P4 (no AC; delta_mag invariant). No wiring this task. Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. |
-| **EPSF-CORE-01** | FUTURE | Custom core-sampled ePSF (Anderson-King constrained core or non-stock builder) to move `epsf_fwhm_native_px` toward ~3.3. Generality claim gated on Newton / well-sampled (0.65 arcsec/px) data; this wide-rig campaign is not the osamp=4 template. |
+| **EPSF-SHAPE-01** | HIGH | **OPEN (core), routed to EPSF-CORE-01.** Narrow production ePSF (FWHM 2.36 vs input 3.30 px; bright chi2 ~68). SHAPE-01-M/F: H5 fitter-scale superseded (iter==single with AC off); osamp=4 builder closed; F2b pedestal retracted. Flux-scale **policy** closed by **EPSF-AC-02** (P4). Evidence: `CURSOR_RESULT_EPSF_SHAPE_01_M.md`, `CURSOR_RESULT_EPSF_SHAPE_01_F.md`. |
+| **EPSF-AC-01** | HIGH | **CLOSED (measure, 2026-08-24).** chi2<5 AC gate admits 0/30 brightest; uncorrected PSF/DAO mag-sloped (bins 1.27 -> 2.21). Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. |
+| **EPSF-AC-02** | HIGH | **CLOSED (wire, 2026-08-24, Milan GO).** Production F6 AC = P4 (`p4_none`); internal PSF LC = P4; INV-PSF-LC-PIN-01 same-membership-or-NaN. BO CVn PSF-vs-aperture RMS 614 -> 39 mmag on 23/134 full-membership epochs. Evidence: `CURSOR_RESULT_EPSF_AC_02_WIRE.md`. |
+| **EPSF-PIN-CENSUS-01** | HIGH | **CLOSED (measure, 2026-08-24).** 100% of pin drops are stored chi2>=50; inferred/nonfinite/missing = 0. Admitting chi2>=50 holds PSF-vs-aperture quality (BO 38.8->37.3 mmag on 134/134; FW 0->134 at 48.5 mmag RMS). STOP for Milan on `psf_fit_ok_for_zp`. Evidence: `CURSOR_RESULT_EPSF_PIN_CENSUS_01.md`. |
+| **EPSF-NEWTON-518-01** | HIGH | **CLOSED (STOP N2, 2026-08-24).** Newton draft 518 (bin2 1.30 arcsec/px) Part C gated pool 26 < 30 (science_scope). ePSF not built; P-A..P-E unmeasured. ZP-OK stays parked. Evidence: `CURSOR_RESULT_EPSF_NEWTON_518_01.md`. |
+| **EPSF-CORE-01** | FUTURE | Custom / literature-parameter ePSF to move `epsf_fwhm_native_px` toward ~3.3. **Acceptance coverage (PIN-CENSUS-01):** pinned-comp `psf_fit_ok` fraction on BO CVn / FW CVn (current 23/134 and 0/134 full-membership epochs under chi2<50). **Newton 518 (EPSF-NEWTON-518-01):** not yet a cross-rig ePSF baseline - Part C gated pool 26 < 30 (science_scope choke); night is bin2 1.30 arcsec/px, not unbinned 0.65. **Samples:** multi-frame ePSF samples (production 67 stars x 134 lights ~ 9000 samples; star x frame, not unique stars). Godden & Blundell 2025 GJW precedent 99 x 31. **Oversampling:** >=4 gridpoints per FWHM (osamp=2 at FWHM 3.3 px already gives 6.6; raising osamp needs the sample table: ~240 stars-samples per the paper's Table 2 for osamp=4 M=6 at 95 percent). **Smoothing:** minimal-or-no smoothing at low oversampling (5x5 quadratic at osamp=2 spans 2.5 native px = documented over-smoothing/ringing regime, matches F2b). **Gridpoints:** 2D polynomial surface over sigma-clipped median (photutils default underestimates the peak gridpoint). **Upstream:** watch photutils for the Godden & Blundell 2025 fixes (initial-ePSF centre indexing, flux+position degeneracy constraint, normalization). Cross-rig validation on Newton remains desired but is no longer the sole unlock. |
 | **COMP-POOL-R** | MED | **RESOLVED (2026-07-14):** r baseline filled; sparse trust validated. SS Cam
    **RESOLVED: YELLOW** (Milan confirmed 2026-07-14, evidence-based): R=2.008 [1.224, 3.886],
    p_stab=0.0, x2_pair=2.96e-4 mag^2 (=17.2 mmag pair excess, 26% below X2_RED cap of 20 mmag),
