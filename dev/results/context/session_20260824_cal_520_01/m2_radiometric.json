@@ -1,0 +1,323 @@
+{
+  "g_n_lights": 25,
+  "g_first": "SSCam_2026-06-08_20-03-48_g_0000.fits",
+  "g_last": "SSCam_2026-06-08_22-14-45_g_0096.fits",
+  "g_first_header": {
+    "DATE-OBS": "2026-06-08T20:02:41.348",
+    "FILTER": "g",
+    "XBINNING": 4,
+    "YBINNING": 4,
+    "EXPTIME": 60.0,
+    "CCD-TEMP": -15.02,
+    "GAIN": 12.48,
+    "INSTRUME": "C5A-150M",
+    "TELESCOP": "AZ800",
+    "IMAGETYP": "OBJECT",
+    "NAXIS1": 3552,
+    "NAXIS2": 2664
+  },
+  "g_last_header": {
+    "DATE-OBS": "2026-06-08T22:13:38.489",
+    "FILTER": "g",
+    "XBINNING": 4,
+    "YBINNING": 4,
+    "EXPTIME": 60.0,
+    "CCD-TEMP": -14.95,
+    "GAIN": 12.48,
+    "INSTRUME": "C5A-150M",
+    "TELESCOP": "AZ800",
+    "IMAGETYP": "OBJECT",
+    "NAXIS1": 3552,
+    "NAXIS2": 2664
+  },
+  "ref516": "BO_CVn_Light_001.fits",
+  "ref516_header": {
+    "DATE-OBS": "2026-04-23T19:35:20.355",
+    "FILTER": "",
+    "XBINNING": 2,
+    "YBINNING": 2,
+    "EXPTIME": 60.0,
+    "CCD-TEMP": -10.0,
+    "GAIN": 0.0,
+    "INSTRUME": "QHY CCD QHY294PROM",
+    "TELESCOP": "Sample Primary 200@F\\2.9",
+    "IMAGETYP": "Light Frame",
+    "NAXIS1": 2082,
+    "NAXIS2": 1397
+  },
+  "large_scale": {
+    "g_0000": {
+      "n_sky": 9212278,
+      "n_star_mask": 250250,
+      "sky_median_adu": 35746.515625,
+      "shape": [
+        2664,
+        3552
+      ],
+      "sigma_50": {
+        "rms_adu": 5.800998292143644,
+        "p99_p1_adu": 29.77941256119084,
+        "rel_rms_to_sky": 0.0001622815032659185,
+        "rel_p99_p1_to_sky": 0.0008330717565200689,
+        "blur_median_adu": 35745.717877066665
+      },
+      "sigma_80": {
+        "rms_adu": 5.484665729227675,
+        "p99_p1_adu": 28.13669328357355,
+        "rel_rms_to_sky": 0.00015343217746772138,
+        "rel_p99_p1_to_sky": 0.0007871170879629908,
+        "blur_median_adu": 35745.67592510718
+      },
+      "sigma_150": {
+        "rms_adu": 4.84223391416555,
+        "p99_p1_adu": 25.656318364621256,
+        "rel_rms_to_sky": 0.00013546030513751785,
+        "rel_p99_p1_to_sky": 0.0007177292084568384,
+        "blur_median_adu": 35745.71191004239
+      },
+      "inv_prep01_large_small_ratio": 0.016644094946807835
+    },
+    "g_mid": {
+      "n_sky": 8247248,
+      "n_star_mask": 1215280,
+      "sky_median_adu": 33316.97265625,
+      "shape": [
+        2664,
+        3552
+      ],
+      "sigma_50": {
+        "rms_adu": 0.21380611316785703,
+        "p99_p1_adu": 1.0174042678627302,
+        "rel_rms_to_sky": 6.417333152499037e-06,
+        "rel_p99_p1_to_sky": 3.0537116272833784e-05,
+        "blur_median_adu": 33316.92065732439
+      },
+      "sigma_80": {
+        "rms_adu": 0.19674173319719915,
+        "p99_p1_adu": 1.034057634351484,
+        "rel_rms_to_sky": 5.905150363662827e-06,
+        "rel_p99_p1_to_sky": 3.1036962602227995e-05,
+        "blur_median_adu": 33316.9212137632
+      },
+      "sigma_150": {
+        "rms_adu": 0.16426427345346023,
+        "p99_p1_adu": 0.9060632844339125,
+        "rel_rms_to_sky": 4.930348118608116e-06,
+        "rel_p99_p1_to_sky": 2.719524651240911e-05,
+        "blur_median_adu": 33316.923423033324
+      },
+      "inv_prep01_large_small_ratio": 0.014209650760486926
+    },
+    "g_last": {
+      "n_sky": 8092716,
+      "n_star_mask": 1369812,
+      "sky_median_adu": 33305.484375,
+      "shape": [
+        2664,
+        3552
+      ],
+      "sigma_50": {
+        "rms_adu": 0.1581950010954038,
+        "p99_p1_adu": 0.736547500717279,
+        "rel_rms_to_sky": 4.749818357668122e-06,
+        "rel_p99_p1_to_sky": 2.211490133048933e-05,
+        "blur_median_adu": 33305.47313471476
+      },
+      "sigma_80": {
+        "rms_adu": 0.1439139898659086,
+        "p99_p1_adu": 0.7336395211896161,
+        "rel_rms_to_sky": 4.321029781327376e-06,
+        "rel_p99_p1_to_sky": 2.20275889979341e-05,
+        "blur_median_adu": 33305.47351514276
+      },
+      "sigma_150": {
+        "rms_adu": 0.1195779744875607,
+        "p99_p1_adu": 0.6405547656322597,
+        "rel_rms_to_sky": 3.5903388505383566e-06,
+        "rel_p99_p1_to_sky": 1.923271129823524e-05,
+        "blur_median_adu": 33305.47657552836
+      },
+      "inv_prep01_large_small_ratio": 0.01333061969755365
+    },
+    "ref516_BO_CVn_Light_001": {
+      "n_sky": 2462989,
+      "n_star_mask": 445565,
+      "sky_median_adu": 2409.767333984375,
+      "shape": [
+        1397,
+        2082
+      ],
+      "sigma_50": {
+        "rms_adu": 17.340489936608616,
+        "p99_p1_adu": 63.590177208080604,
+        "rel_rms_to_sky": 0.007195918747864084,
+        "rel_p99_p1_to_sky": 0.026388513244114266,
+        "blur_median_adu": 2413.7205875223217
+      },
+      "sigma_80": {
+        "rms_adu": 16.949071082151868,
+        "p99_p1_adu": 61.44589066272647,
+        "rel_rms_to_sky": 0.007033488604116735,
+        "rel_p99_p1_to_sky": 0.025498681883586727,
+        "blur_median_adu": 2413.6035729317837
+      },
+      "sigma_150": {
+        "rms_adu": 15.840510582619407,
+        "p99_p1_adu": 56.69677558863941,
+        "rel_rms_to_sky": 0.006573460582365964,
+        "rel_p99_p1_to_sky": 0.0235279044532882,
+        "blur_median_adu": 2413.02774997778
+      },
+      "inv_prep01_large_small_ratio": 0.006082711984718241
+    }
+  },
+  "inv_prep01_warn_threshold": 10.0,
+  "inv_prep01_this_measure_all_g": [
+    {
+      "file": "SSCam_2026-06-08_20-03-48_g_0000.fits",
+      "large_small_ratio": 0.016644094946807835
+    },
+    {
+      "file": "SSCam_2026-06-08_20-09-16_g_0004.fits",
+      "large_small_ratio": 0.025553632081026664
+    },
+    {
+      "file": "SSCam_2026-06-08_20-14-43_g_0008.fits",
+      "large_small_ratio": 0.019900971802175718
+    },
+    {
+      "file": "SSCam_2026-06-08_20-20-12_g_0012.fits",
+      "large_small_ratio": 0.01863668372430414
+    },
+    {
+      "file": "SSCam_2026-06-08_20-25-40_g_0016.fits",
+      "large_small_ratio": 0.011373115363687243
+    },
+    {
+      "file": "SSCam_2026-06-08_20-31-07_g_0020.fits",
+      "large_small_ratio": 0.021654922922364084
+    },
+    {
+      "file": "SSCam_2026-06-08_20-36-36_g_0024.fits",
+      "large_small_ratio": 0.020637666626321712
+    },
+    {
+      "file": "SSCam_2026-06-08_20-42-02_g_0028.fits",
+      "large_small_ratio": 0.015710016245824684
+    },
+    {
+      "file": "SSCam_2026-06-08_20-47-30_g_0032.fits",
+      "large_small_ratio": 0.019605071525653175
+    },
+    {
+      "file": "SSCam_2026-06-08_20-52-58_g_0036.fits",
+      "large_small_ratio": 0.02048526137223492
+    },
+    {
+      "file": "SSCam_2026-06-08_20-58-25_g_0040.fits",
+      "large_small_ratio": 0.020898938140043857
+    },
+    {
+      "file": "SSCam_2026-06-08_21-03-52_g_0044.fits",
+      "large_small_ratio": 0.027749151192468784
+    },
+    {
+      "file": "SSCam_2026-06-08_21-09-19_g_0048.fits",
+      "large_small_ratio": 0.014209650760486926
+    },
+    {
+      "file": "SSCam_2026-06-08_21-14-46_g_0052.fits",
+      "large_small_ratio": 0.02038291083611537
+    },
+    {
+      "file": "SSCam_2026-06-08_21-20-13_g_0056.fits",
+      "large_small_ratio": 0.01460112147074633
+    },
+    {
+      "file": "SSCam_2026-06-08_21-25-40_g_0060.fits",
+      "large_small_ratio": 0.013577248781875563
+    },
+    {
+      "file": "SSCam_2026-06-08_21-31-07_g_0064.fits",
+      "large_small_ratio": 0.01726807634063065
+    },
+    {
+      "file": "SSCam_2026-06-08_21-36-34_g_0068.fits",
+      "large_small_ratio": 0.01648446399009566
+    },
+    {
+      "file": "SSCam_2026-06-08_21-42-02_g_0072.fits",
+      "large_small_ratio": 0.013483519903136813
+    },
+    {
+      "file": "SSCam_2026-06-08_21-47-29_g_0076.fits",
+      "large_small_ratio": 0.014345633512774581
+    },
+    {
+      "file": "SSCam_2026-06-08_21-52-56_g_0080.fits",
+      "large_small_ratio": 0.015138987020938598
+    },
+    {
+      "file": "SSCam_2026-06-08_21-58-24_g_0084.fits",
+      "large_small_ratio": 0.01398869742398513
+    },
+    {
+      "file": "SSCam_2026-06-08_22-03-51_g_0088.fits",
+      "large_small_ratio": 0.011575493434419914
+    },
+    {
+      "file": "SSCam_2026-06-08_22-09-17_g_0092.fits",
+      "large_small_ratio": 0.015363483147160267
+    },
+    {
+      "file": "SSCam_2026-06-08_22-14-45_g_0096.fits",
+      "large_small_ratio": 0.01333061969755365
+    }
+  ],
+  "inv_prep01_g_median": 0.01648446399009566,
+  "inv_prep01_recorded_in_run": {
+    "g_60_4": 0.02,
+    "i_70_4": 0.02,
+    "r_60_4": 0.01,
+    "z_90_4": 0.06,
+    "warn": 10.0,
+    "source": "infolog_20260824_204055.txt 18:43:19-18:43:25"
+  },
+  "two_light": {
+    "pair_first_last_pixel": {
+      "median_a": 35746.5703125,
+      "median_b": 33305.5,
+      "scale_b_to_a": 1.0732933092882557,
+      "n_sky": 8089818,
+      "ratio_median": 1.000002622099522,
+      "ratio_lp80_rms": 0.0001339125902599819,
+      "ratio_lp80_p99_p1": 0.000674054067698604,
+      "ratio_minus_1_lp80_rms": 0.0001339125902599819
+    },
+    "pair_first_second_pixel": {
+      "median_a": 35746.5703125,
+      "median_b": 34638.90625,
+      "scale_b_to_a": 1.0319774549030398,
+      "n_sky": 9149034,
+      "ratio_median": 0.9999990143095525,
+      "ratio_lp80_rms": 7.412588715712894e-05,
+      "ratio_lp80_p99_p1": 0.00036664205475944733,
+      "ratio_minus_1_lp80_rms": 7.412588715712894e-05
+    },
+    "star_xcorr_shift_last_minus_first_px": {
+      "dy": -2,
+      "dx": 1
+    },
+    "pair_first_last_star_aligned": {
+      "median_a": 35746.5703125,
+      "median_b": 33305.5,
+      "scale_b_to_a": 1.0732933092882557,
+      "n_sky": 8055384,
+      "ratio_median": 1.0000024925556592,
+      "ratio_lp80_rms": 0.00013323735021759638,
+      "ratio_lp80_p99_p1": 0.0006723680477958016,
+      "ratio_minus_1_lp80_rms": 0.00013323735021759638
+    },
+    "plot": "two_light_ratio_g0000_g0096.png"
+  }
+}

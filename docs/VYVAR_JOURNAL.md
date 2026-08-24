@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-24 -- CAL-520-01 (measure, STOP)
+
+Draft 520 is `pre_calibrated` because `[folder] RUN VYVAR (non-cal)` was
+clicked (`app.py:2244-2290`); calibration skipped; lights stay
+`RAW_NON_CALIBRATED` under `non_calibrated/lights`. INV-PREP-01 ran and
+stayed informational (g 0.02x, warn>10). CalibrationLibrary has no
+eq=4/tel=6 (C5A-150M / AZ 800) masters; only WIDE QHY eq=1/tel=1.
+June-band G 11.6-13.9 comps today median `comp_rms` 0.236 vs selected
+faint 0.026. UI `time (unknown)` is `_LC_OVERVIEW_COLS` dropping
+`time_base` (on-disk LC is `BJD_TDB`). STOP menu: (b) Milan supplies
+AZ800 cal frames, then raw rerun; (c) PRECAL-INPUT-CONTRACT-01 stays
+MED. Evidence: `CURSOR_RESULT_CAL_520_01.md`. Not pushed.
+
 ## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO)
 
 Pinned STAGE-01 sandbox gate to hand_validated params (H-GATE-XFER from

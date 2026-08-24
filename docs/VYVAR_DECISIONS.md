@@ -290,6 +290,11 @@ not transport bug.
 
 **Deferred:** PRECAL-INPUT-CONTRACT-01 (option 4) stays ROADMAP; Howell sky_pp on
 externally pre-calibrated pedestals is not fully resolved here.
+CAL-520-01 (2026-08-24, measure): third evidence instance -- draft 520
+clicked `[folder] RUN VYVAR (non-cal)` on `RAW_NON_CALIBRATED` Brno
+lights; INV-PREP-01 logged 0.02x and stayed informational; no eq=4/tel=6
+masters in CalibrationLibrary. Gate, when wired, must be star-masked and
+bias-aware (M2.1), not INV-PREP-01's unmasked variance ratio.
 
 Proof: draft 518 re-export 62352/62352 empirical; anchor 516 core SHA unchanged
 9902d918.

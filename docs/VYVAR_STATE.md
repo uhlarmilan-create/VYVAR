@@ -1,6 +1,8 @@
 # VYVAR -- Development State
 
-**Status:** **DAO-GAIA-XFER-01 CLOSED** (2026-08-24, Milan GO): STAGE-01 sandbox
+**Status:** **CAL-520-01 STOP** (2026-08-24, measure): draft 520 photometry
+wreck is H-CAL-MISCLASS (non-cal button; no AZ800 masters in library).
+**DAO-GAIA-XFER-01 CLOSED** (2026-08-24, Milan GO): STAGE-01 sandbox
 gate pinned to hand_validated params; 520 g/i/r calibration certificate unblocked
 (z_90_4 remains solve-rejected). EPSF-VALID-02 **CLOSED** (2026-08-22 S6). **EPSF-BRIGHT-01 CLOSED** (2026-08-23 FD-A).
 **EPSF-AC-01 CLOSED** (measure) and **EPSF-AC-02 CLOSED** (Milan GO wire, 2026-08-24): production
@@ -27,7 +29,16 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-24** (DAO-GAIA-XFER-01 CLOSED `e5a6149`; MULTIFILTER-WCS-01 carry; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
+Last updated: **2026-08-24** (CAL-520-01 STOP `505fa13`; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
+
+## 2026-08-24 -- CAL-520-01 (measure, STOP)
+
+Draft 520 V0612 `lc_rms` 0.3949 vs June 0.0622 is H-CAL-MISCLASS: UI
+non-cal button skipped VYVAR calibration on raw Brno lights. Library
+has no C5A-150M/AZ800 masters. INV-PREP-01 0.02x did not fire. Bright
+June-band comps rms 0.236 vs selected faint 0.026. Time-axis UI is a
+separate `_LC_OVERVIEW_COLS` omit of `time_base`. STOP: Milan supplies
+cal frames, then raw rerun. Evidence: `CURSOR_RESULT_CAL_520_01.md`.
 
 ## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO wired)
 

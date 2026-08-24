@@ -1,0 +1,34 @@
+{
+  "target": "V0612 Cam",
+  "target_catalog_id": "1111749368289526912",
+  "june_band_n_in_field": 48,
+  "selected_n": 8,
+  "june_band_comp_rms_today_median": 0.23553672357312844,
+  "june_band_comp_rms_today_min": 0.1563644528468084,
+  "june_band_comp_rms_today_max": 0.2985579938638489,
+  "selected_comp_rms_today_median": null,
+  "selected_comp_rms_today_min": null,
+  "selected_comp_rms_today_max": null,
+  "selected_phot_g_min": 14.482001304626465,
+  "selected_phot_g_max": 16.85844612121582,
+  "june_gaia_ids_from_june_table": "not_recovered",
+  "lc_on_disk_time_base_unique": [
+    "BJD_TDB"
+  ],
+  "june_band_n_in_field_excluding_target": 47,
+  "june_band_n_with_fieldwide_rms": 8,
+  "target_excluded_from_june_band": "1111749368289526912",
+  "selected_comp_rms_from_photometry_csv_median": 0.02630029098185075,
+  "selected_comp_rms_from_photometry_csv_min": 0.0165026014447689,
+  "selected_comp_rms_from_photometry_csv_max": 0.0339199883820436,
+  "selected_phot_g_list": [
+    14.482001304626465,
+    15.233558654785156,
+    15.31721019744873,
+    15.559930801391602,
+    16.1873779296875,
+    16.402931213378906,
+    16.496030807495117,
+    16.85844612121582
+  ]
+}

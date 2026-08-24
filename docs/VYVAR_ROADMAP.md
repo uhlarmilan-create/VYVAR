@@ -10,17 +10,19 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-24 DAO-GAIA-XFER-01)
+## NEXT SESSION - entry point (2026-08-24 CAL-520-01 STOP)
 
-Local tip **`e5a6149`** (XFER-01 wire; W6 MULTIFILTER-WCS-01 carry;
-not pushed). Production 516 ePSF SHA `172f95403beae36d...` unchanged.
-Draft 520 g/i/r calibration certificate unblocked; z_90_4 remains
-solve-rejected (g-WCS-on-z recovery 2.7%, shallow). AC-02 wiring still
-dirty. `--fast` 1530 passed / 32 skipped.
+Local tip **`505fa13`** (XFER-01 W6; CAL-520-01 measure; not pushed).
+Production 516 ePSF SHA `172f95403beae36d...` unchanged. Draft 520 was
+run as `pre_calibrated` (non-cal button) on `RAW_NON_CALIBRATED`
+lights; VYVAR has no AZ800/C5A-150M masters in CalibrationLibrary.
+z_90_4 remains solve-rejected. AC-02 wiring still dirty.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: watch 520 photometry (preflight only in XFER-01) or GO a full RUN |
+| **1** | Milan: supply AZ800 / C5A-150M darks+flats, then GO a raw (`! RUN VYVAR`) 520 rerun -- CAL-520-01 (b) then (a) |
+| **1b** | Milan: GO PRECAL-INPUT-CONTRACT-01 wiring (star-masked bias-aware flatness; INV-PREP-01 0.02x did not fire) |
+| **1c** | Optional one-line UI: add `time_base` to `_LC_OVERVIEW_COLS` (520 "time (unknown)") |
 | **2** | Milan: Newton 518 ePSF - hold for a night with gated pool >=30, or GO a wide-only ZP-OK without claiming Newton |
 | **3** | Milan: GO or hold interim `psf_fit_ok_for_zp` (wide-rig CENSUS-01 still stands; no Newton P-D) |
 | **4** | Milan: authorize commit/push of AC-02 wiring + remaining docs |
@@ -36,7 +38,7 @@ dirty. `--fast` 1530 passed / 32 skipped.
 | **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
-| **MED** | **PRECAL-INPUT-CONTRACT-01**, **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **PRECAL-INPUT-CONTRACT-01** (520 third evidence instance: non-cal button, donuts, INV-PREP-01 0.02x silent), **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
 | **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
 | **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |

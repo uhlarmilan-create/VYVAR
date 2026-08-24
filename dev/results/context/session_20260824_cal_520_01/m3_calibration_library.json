@@ -1,0 +1,203 @@
+{
+  "light_match_keys": {
+    "xbinning": 4,
+    "exptime": 60.0,
+    "ccd_temp": -15.02,
+    "gain": 12,
+    "filter": "g",
+    "id_equipments": 4,
+    "id_telescope": 6,
+    "light_date": "2026-06-08T20:02:41.348"
+  },
+  "validity_windows_days": {
+    "dark": 90,
+    "flat": 200
+  },
+  "library_fits_on_disk": [
+    {
+      "name": "Dark_120s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "sha256": "fc165ce74dfdbc7795aeaf766c720ca86f2e072a4efbbf778887d56a5244c558",
+      "size_bytes": 46560960,
+      "header": {
+        "DATE-OBS": "2026-04-22T18:37:10",
+        "FILTER": "",
+        "XBINNING": 1,
+        "YBINNING": 1,
+        "EXPTIME": 120.0,
+        "CCD-TEMP": -10.0,
+        "GAIN": 0.0,
+        "INSTRUME": "QHY CCD QHY294PROM",
+        "TELESCOP": "Carl Zeiss Objektiv 200@F\\2.8",
+        "IMAGETYP": "Dark Frame",
+        "NAXIS1": 4164,
+        "NAXIS2": 2795
+      }
+    },
+    {
+      "name": "Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "sha256": "525daf5c56b78ece9326d1770a52122673a1ce05da197628f6c048594b015de7",
+      "size_bytes": 46560960,
+      "header": {
+        "DATE-OBS": "2026-04-22T18:19:42",
+        "FILTER": "",
+        "XBINNING": 1,
+        "YBINNING": 1,
+        "EXPTIME": 60.0,
+        "CCD-TEMP": -10.0,
+        "GAIN": 0.0,
+        "INSTRUME": "QHY CCD QHY294PROM",
+        "TELESCOP": "Carl Zeiss Objektiv 200@F\\2.8",
+        "IMAGETYP": "Dark Frame",
+        "NAXIS1": 4164,
+        "NAXIS2": 2795
+      }
+    },
+    {
+      "name": "Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+      "sha256": "0667ed7662e62fd9cd9e6026f9c5f0d75d709cc689288c820557e3ecdd1cf92f",
+      "size_bytes": 46560960,
+      "header": {
+        "DATE-OBS": "2026-04-22T18:14:30",
+        "FILTER": "",
+        "XBINNING": 1,
+        "YBINNING": 1,
+        "EXPTIME": 0.15,
+        "CCD-TEMP": -10.5,
+        "GAIN": 0.0,
+        "INSTRUME": "QHY CCD QHY294PROM",
+        "TELESCOP": "Carl Zeiss Objektiv 200@F\\2.8",
+        "IMAGETYP": "Flat Frame",
+        "NAXIS1": 4164,
+        "NAXIS2": 2795
+      }
+    }
+  ],
+  "calibration_library_db_n": 3,
+  "calibration_library_db_rows": [
+    {
+      "ID": 86,
+      "KIND": "dark",
+      "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "XBINNING": 1,
+      "EXPTIME": 60.0,
+      "CCD_TEMP": -10.0,
+      "FILTER_NAME": "",
+      "GAIN": 0,
+      "NCOMBINE": 17,
+      "REGISTERED_AT": "2026-08-12T10:10:40+00:00",
+      "ID_EQUIPMENTS": 1,
+      "ID_TELESCOPE": 1
+    },
+    {
+      "ID": 87,
+      "KIND": "dark",
+      "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_120s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "XBINNING": 1,
+      "EXPTIME": 120.0,
+      "CCD_TEMP": -10.0,
+      "FILTER_NAME": "",
+      "GAIN": 0,
+      "NCOMBINE": 17,
+      "REGISTERED_AT": "2026-08-12T10:10:57+00:00",
+      "ID_EQUIPMENTS": 1,
+      "ID_TELESCOPE": 1
+    },
+    {
+      "ID": 88,
+      "KIND": "flat",
+      "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+      "XBINNING": 1,
+      "EXPTIME": 0.15,
+      "CCD_TEMP": null,
+      "FILTER_NAME": "NoFilter",
+      "GAIN": 0,
+      "NCOMBINE": 27,
+      "REGISTERED_AT": "2026-08-12T10:12:13+00:00",
+      "ID_EQUIPMENTS": 1,
+      "ID_TELESCOPE": 1
+    }
+  ],
+  "equipment_tables": [
+    {
+      "table": "EQUIPMENTS",
+      "rows": [
+        {
+          "ID": 1,
+          "CAMERANAME": "QHY294MM",
+          "PIXELSIZE": 4.63
+        },
+        {
+          "ID": 2,
+          "CAMERANAME": "C3-26000",
+          "PIXELSIZE": 3.76
+        },
+        {
+          "ID": 3,
+          "CAMERANAME": "QHY 600M",
+          "PIXELSIZE": 3.76
+        },
+        {
+          "ID": 4,
+          "CAMERANAME": "C5A-150M",
+          "PIXELSIZE": 3.76
+        },
+        {
+          "ID": 5,
+          "CAMERANAME": "ASI533MC Pro",
+          "PIXELSIZE": 3.76
+        }
+      ]
+    },
+    {
+      "table": "TELESCOPE",
+      "rows": [
+        {
+          "ID": 1,
+          "TELESCOPENAME": "Carl-Zeiss 200mm",
+          "FOCAL": 200.0
+        },
+        {
+          "ID": 2,
+          "TELESCOPENAME": "DDT 300/1200",
+          "FOCAL": 1200.0
+        },
+        {
+          "ID": 3,
+          "TELESCOPENAME": "Test",
+          "FOCAL": 0.0
+        },
+        {
+          "ID": 4,
+          "TELESCOPENAME": "Planewave CDK24",
+          "FOCAL": 3962.0
+        },
+        {
+          "ID": 5,
+          "TELESCOPENAME": "Takahashi FSQ-106ED",
+          "FOCAL": 382.0
+        },
+        {
+          "ID": 6,
+          "TELESCOPENAME": "AZ 800",
+          "FOCAL": 5480.0
+        },
+        {
+          "ID": 7,
+          "TELESCOPENAME": "Celestron 14\"",
+          "FOCAL": 2357.0
+        },
+        {
+          "ID": 8,
+          "TELESCOPENAME": "M71 RC 1480mm",
+          "FOCAL": 1480.0
+        }
+      ]
+    }
+  ],
+  "find_best_eq4_tel6": {
+    "dark_bin4_g_60s": null,
+    "flat_bin4_g": null,
+    "dark_prefer_unbinned": null,
+    "flat_nofilter_unbinned": null
+  }
+}
