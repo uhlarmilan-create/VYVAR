@@ -1,0 +1,235 @@
+{
+  "fwhm_px": 3.3014,
+  "cutout_size": 17,
+  "oversampling": 4,
+  "spatial_order": 0,
+  "smoothing_kernel": "quadratic",
+  "fit_shape": [
+    9,
+    9
+  ],
+  "epsf_qc": {
+    "epsf_fwhm_native_px": null,
+    "epsf_vs_input_fwhm_ratio": null,
+    "epsf_nan_fraction": 0.0,
+    "epsf_asymmetry": 0.0984
+  },
+  "epsf_norm_factor": 1.0,
+  "epsf_sum_native": 1.0,
+  "phase2_moffat_centroids_used": 0,
+  "isolation_radius_px": 9.9042,
+  "plate_scale_arcsec_px": 9.773890066483727,
+  "n_stars_used": 66,
+  "n_stars_after_join": 68,
+  "draft_id": 516,
+  "created_utc": "2026-08-24T13:12:00Z",
+  "build_funnel": {
+    "n_csv_input": 3610,
+    "n_after_variable_excluded": 3325,
+    "n_after_peak_sat_likely": 2442,
+    "n_after_peak_sat_is_saturated": 2432,
+    "n_after_photometry_ok": 2432,
+    "n_after_not_noisy": 2264,
+    "n_after_usable": 2264,
+    "n_after_snr_cut": null,
+    "n_after_snr_cut_reason": "not applied in this function",
+    "n_build_input": 2264,
+    "n_after_zone_linear": 2264,
+    "n_after_clean_source_state": 2200,
+    "n_after_science_scope": 68,
+    "n_after_edge_safe_cutout": 68,
+    "n_after_interim_top_n": 68,
+    "build_interim_top_n": 200,
+    "build_interim_top_n_mark": "INTERIM",
+    "n_csv_with_catalog_id": 68,
+    "used_broad_pool": false,
+    "n_safe_comp_csv_join": 68,
+    "n_after_csv_select": 68,
+    "n_after_db_join": 68,
+    "n_after_targeting": 68,
+    "n_before_isolation": 68,
+    "n_after_isolation": 67,
+    "n_after_guard_exclude": 66,
+    "n_guard_excluded_this_pass": 1,
+    "n_after_extract_stars": 66,
+    "n_final": 66
+  },
+  "build_selection": {
+    "gates": [
+      "zone_linear",
+      "non_variable",
+      "non_saturated",
+      "photometry_ok",
+      "clean_source_state",
+      "science_scope",
+      "edge_safe_cutout",
+      "isolated",
+      "interim_top_n"
+    ],
+    "interim_top_n": 200,
+    "interim_top_n_mark": "INTERIM",
+    "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+  },
+  "iteration_failure_curve": [
+    {
+      "iteration": 1,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 2,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 3,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 4,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 5,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 6,
+      "n_stars": 66,
+      "n_fail": 0,
+      "n_status_0": 66,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 7,
+      "n_stars": 66,
+      "n_fail": 1,
+      "n_status_0": 65,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 1
+    },
+    {
+      "iteration": 8,
+      "n_stars": 66,
+      "n_fail": 3,
+      "n_status_0": 63,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 3
+    },
+    {
+      "iteration": 9,
+      "n_stars": 66,
+      "n_fail": 15,
+      "n_status_0": 51,
+      "n_status_1": 1,
+      "n_status_2": 0,
+      "n_status_3": 14
+    },
+    {
+      "iteration": 10,
+      "n_stars": 66,
+      "n_fail": 42,
+      "n_status_0": 24,
+      "n_status_1": 1,
+      "n_status_2": 0,
+      "n_status_3": 41
+    },
+    {
+      "iteration": 11,
+      "n_stars": 66,
+      "n_fail": 55,
+      "n_status_0": 11,
+      "n_status_1": 3,
+      "n_status_2": 0,
+      "n_status_3": 52
+    },
+    {
+      "iteration": 12,
+      "n_stars": 66,
+      "n_fail": 62,
+      "n_status_0": 4,
+      "n_status_1": 5,
+      "n_status_2": 0,
+      "n_status_3": 57
+    },
+    {
+      "iteration": 13,
+      "n_stars": 66,
+      "n_fail": 64,
+      "n_status_0": 2,
+      "n_status_1": 6,
+      "n_status_2": 0,
+      "n_status_3": 58
+    },
+    {
+      "iteration": 14,
+      "n_stars": 66,
+      "n_fail": 65,
+      "n_status_0": 1,
+      "n_status_1": 6,
+      "n_status_2": 0,
+      "n_status_3": 59
+    },
+    {
+      "iteration": 15,
+      "n_stars": 66,
+      "n_fail": 65,
+      "n_status_0": 1,
+      "n_status_1": 6,
+      "n_status_2": 0,
+      "n_status_3": 59
+    }
+  ],
+  "sandbox_output": true,
+  "build_guard": {
+    "enabled": true,
+    "max_drop_frac": 0.1,
+    "n_pool_baseline": 67,
+    "requested_n": 67,
+    "n_dropped": 1,
+    "n_stars_used_after_guard": 66,
+    "dropped": [
+      {
+        "catalog_id": "1485483541052276480",
+        "x": 437.3027644019147,
+        "y": 1350.5686406726818,
+        "dist_edge_px": 45.431359327318205,
+        "reason": "epsf_build_non_finite_guard"
+      }
+    ]
+  },
+  "n_policy": {
+    "production_pool": "full Part C gated science-comp pool",
+    "certificate_metric": "scale-aligned per-star RMS delta < 3x median ERR budget of compared stars; raw inter-model offsets are bookkeeping",
+    "interim_top_n": "disabled",
+    "split_half_note": "S5b D1b PASS: odd/even gated split-half aligned RMS 30.3 mmag vs 15.3 mmag ERR budget"
+  },
+  "shape01f_tag": "os4_quad_maxiters15"
+}

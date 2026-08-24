@@ -1,0 +1,92 @@
+{
+  "attempts": [
+    {
+      "tag": "os4_quad_maxiters15",
+      "oversampling": 4,
+      "smoothing_kernel": "quadratic",
+      "builder_kwargs": {
+        "maxiters": "15"
+      },
+      "build_ok": true,
+      "build_error": "",
+      "n_stars_used": 66,
+      "epsf_fwhm_native_px": null,
+      "n_fail_last_iter": 65,
+      "n_status_3_last": 59,
+      "n_iters": 15,
+      "model_sha256": "85d311f2eb229d8ebb16e03697a7f8c79f70826f4fc1b18e2d59ca74e6ec64dd",
+      "n_star_iter_rows": 990,
+      "n_recenter_rows": 15,
+      "first_exception": null,
+      "converged": false
+    },
+    {
+      "tag": "os4_quad_maxiters6",
+      "oversampling": 4,
+      "smoothing_kernel": "quadratic",
+      "builder_kwargs": {
+        "maxiters": "6"
+      },
+      "build_ok": true,
+      "build_error": "",
+      "n_stars_used": 66,
+      "epsf_fwhm_native_px": 1.401,
+      "n_fail_last_iter": 0,
+      "n_status_3_last": 0,
+      "n_iters": 6,
+      "model_sha256": "b6faefb0189fbfee49895ecee335b49e0f050b05ab6ee7f69606cc75d22ff265",
+      "n_star_iter_rows": 396,
+      "n_recenter_rows": 6,
+      "first_exception": null,
+      "converged": false
+    },
+    {
+      "tag": "os4_quad_recenter1",
+      "oversampling": 4,
+      "smoothing_kernel": "quadratic",
+      "builder_kwargs": {
+        "maxiters": "15",
+        "recentering_maxiters": "1"
+      },
+      "build_ok": false,
+      "build_error": "ValueError: The ePSF fitting failed for all stars.",
+      "n_stars_used": null,
+      "epsf_fwhm_native_px": null,
+      "n_fail_last_iter": null,
+      "n_status_3_last": null,
+      "n_iters": null,
+      "model_sha256": "",
+      "n_star_iter_rows": 804,
+      "n_recenter_rows": 13,
+      "first_exception": {
+        "where": "_process_iteration",
+        "exception_class": "ValueError",
+        "exception_message": "The ePSF fitting failed for all stars.",
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\scripts\\epsf_shape_01_f.py\", line 162, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\ASTRO\\python\\VYVAR\\src_py\\psf_photometry.py\", line 59, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\uhlar\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\photutils\\psf\\epsf_builder.py\", line 1883, in _process_iteration\n    raise ValueError(msg)\nValueError: The ePSF fitting failed for all stars.\n"
+      },
+      "converged": false
+    },
+    {
+      "tag": "os4_quad_box3",
+      "oversampling": 4,
+      "smoothing_kernel": "quadratic",
+      "builder_kwargs": {
+        "maxiters": "15",
+        "recentering_boxsize": "(3, 3)"
+      },
+      "build_ok": true,
+      "build_error": "",
+      "n_stars_used": 66,
+      "epsf_fwhm_native_px": 0.82,
+      "n_fail_last_iter": 9,
+      "n_status_3_last": 7,
+      "n_iters": 15,
+      "model_sha256": "48b9a216ab416daf86d70953996e1f9f958d48d0d69e71011feccf8855bb6c83",
+      "n_star_iter_rows": 990,
+      "n_recenter_rows": 15,
+      "first_exception": null,
+      "converged": false
+    }
+  ],
+  "prod_epsf_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+}

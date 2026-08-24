@@ -1,0 +1,10 @@
+{
+  "single_dao_median": 1.2176375156541255,
+  "iter_dao_median": 1.2176375156541255,
+  "chi2_single": 68.44382748334277,
+  "chi2_iter": 68.44382748334277,
+  "baseline_iter_dao": 1.2176375156541255,
+  "baseline_single_dao": 1.2176375156541255,
+  "baseline_chi2_iter": 68.44382748334277,
+  "baseline_chi2_single": 68.44382748334277
+}

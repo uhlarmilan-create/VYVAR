@@ -1,0 +1,71 @@
+{
+  "copied_text": [
+    "f1_attempts.csv",
+    "f1_summary.json",
+    "f2_bright_ids.txt",
+    "f2_summary.json",
+    "f2_three_way.csv",
+    "f2b_norm_audit.json",
+    "f2b_radial_norm.csv",
+    "f2b_refit_summary.json",
+    "f3_remerge.json",
+    "fits_f1_os4_quad_maxiters6.csv",
+    "fits_f2_iter.csv",
+    "fits_f2_single.csv",
+    "fits_f2b_ped_iter.csv",
+    "fits_f2b_ped_single.csv",
+    "frame_subset.txt",
+    "hashes_after.json",
+    "hashes_before.json",
+    "models\\os4_quad_box3\\first_exceptions.json",
+    "models\\os4_quad_box3\\masterstar_epsf_meta.json",
+    "models\\os4_quad_box3\\recenter_deltas.csv",
+    "models\\os4_quad_box3\\star_iter_status.csv",
+    "models\\os4_quad_maxiters15\\first_exceptions.json",
+    "models\\os4_quad_maxiters15\\masterstar_epsf_meta.json",
+    "models\\os4_quad_maxiters15\\recenter_deltas.csv",
+    "models\\os4_quad_maxiters15\\star_iter_status.csv",
+    "models\\os4_quad_maxiters6\\first_exceptions.json",
+    "models\\os4_quad_maxiters6\\masterstar_epsf_meta.json",
+    "models\\os4_quad_maxiters6\\recenter_deltas.csv",
+    "models\\os4_quad_maxiters6\\star_iter_status.csv",
+    "models\\os4_quad_recenter1\\first_exceptions.json",
+    "models\\os4_quad_recenter1\\recenter_deltas.csv",
+    "models\\os4_quad_recenter1\\star_iter_status.csv",
+    "models\\prod_pedestal_sub\\masterstar_epsf_meta.json",
+    "positive_control.txt",
+    "summary.json"
+  ],
+  "blobs_not_copied": [
+    {
+      "path": "f3_remerge\\BO_CVn_Light_001.fits",
+      "sha256": "2e085929a8a99b49254852377726db0fd48011f399dd84abb05af30ebedd0c18",
+      "bytes": 11643840
+    },
+    {
+      "path": "f3_remerge\\proc_BO_CVn_Light_001.csv",
+      "sha256": "86add74f8ea6eee9674639fde3ab1b135c306324b4e9f87aa6285b3e62165841",
+      "bytes": 2721693
+    },
+    {
+      "path": "models\\os4_quad_box3\\masterstar_epsf.fits",
+      "sha256": "48b9a216ab416daf86d70953996e1f9f958d48d0d69e71011feccf8855bb6c83",
+      "bytes": 23040
+    },
+    {
+      "path": "models\\os4_quad_maxiters15\\masterstar_epsf.fits",
+      "sha256": "85d311f2eb229d8ebb16e03697a7f8c79f70826f4fc1b18e2d59ca74e6ec64dd",
+      "bytes": 23040
+    },
+    {
+      "path": "models\\os4_quad_maxiters6\\masterstar_epsf.fits",
+      "sha256": "b6faefb0189fbfee49895ecee335b49e0f050b05ab6ee7f69606cc75d22ff265",
+      "bytes": 23040
+    },
+    {
+      "path": "models\\prod_pedestal_sub\\masterstar_epsf.fits",
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "bytes": 8640
+    }
+  ]
+}

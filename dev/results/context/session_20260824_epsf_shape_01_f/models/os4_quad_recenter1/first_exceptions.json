@@ -1,0 +1,8 @@
+[
+  {
+    "where": "_process_iteration",
+    "exception_class": "ValueError",
+    "exception_message": "The ePSF fitting failed for all stars.",
+    "traceback": "Traceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\scripts\\epsf_shape_01_f.py\", line 162, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\ASTRO\\python\\VYVAR\\src_py\\psf_photometry.py\", line 59, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\uhlar\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\photutils\\psf\\epsf_builder.py\", line 1883, in _process_iteration\n    raise ValueError(msg)\nValueError: The ePSF fitting failed for all stars.\n"
+  }
+]

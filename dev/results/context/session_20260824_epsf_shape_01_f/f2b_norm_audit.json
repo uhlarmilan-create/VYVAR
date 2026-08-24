@@ -1,0 +1,17 @@
+{
+  "shape": [
+    35,
+    35
+  ],
+  "sum": 3.9999999930339527,
+  "peak": 0.09536316245794296,
+  "min": -0.054658226668834686,
+  "ee_circular_8p5": 0.6980314712135447,
+  "frac_norm_r_gt_8p5": 0.3019685287864553,
+  "frac_norm_negative": -0.3023648303350542,
+  "frac_abs_in_negative": 0.18842103922276332,
+  "outer_annulus_median": 0.0,
+  "geom_frac_pixels_r_gt_8p5": 0.26448979591836735,
+  "ee_is_geometry_not_pedestal": false,
+  "peak_over_abs_min": 1.7447174610280145
+}

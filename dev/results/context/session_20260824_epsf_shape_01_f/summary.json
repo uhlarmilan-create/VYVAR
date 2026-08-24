@@ -1,0 +1,175 @@
+{
+  "elapsed_s": 1.05254,
+  "prod_epsf_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+  "positive_control_changed": true,
+  "production_hashes_identical": true,
+  "f1": {
+    "attempts": [
+      {
+        "tag": "os4_quad_maxiters15",
+        "oversampling": 4,
+        "smoothing_kernel": "quadratic",
+        "builder_kwargs": {
+          "maxiters": "15"
+        },
+        "build_ok": true,
+        "build_error": "",
+        "n_stars_used": 66,
+        "epsf_fwhm_native_px": null,
+        "n_fail_last_iter": 65,
+        "n_status_3_last": 59,
+        "n_iters": 15,
+        "model_sha256": "85d311f2eb229d8ebb16e03697a7f8c79f70826f4fc1b18e2d59ca74e6ec64dd",
+        "n_star_iter_rows": 990,
+        "n_recenter_rows": 15,
+        "first_exception": null,
+        "converged": false
+      },
+      {
+        "tag": "os4_quad_maxiters6",
+        "oversampling": 4,
+        "smoothing_kernel": "quadratic",
+        "builder_kwargs": {
+          "maxiters": "6"
+        },
+        "build_ok": true,
+        "build_error": "",
+        "n_stars_used": 66,
+        "epsf_fwhm_native_px": 1.401,
+        "n_fail_last_iter": 0,
+        "n_status_3_last": 0,
+        "n_iters": 6,
+        "model_sha256": "b6faefb0189fbfee49895ecee335b49e0f050b05ab6ee7f69606cc75d22ff265",
+        "n_star_iter_rows": 396,
+        "n_recenter_rows": 6,
+        "first_exception": null,
+        "converged": false
+      },
+      {
+        "tag": "os4_quad_recenter1",
+        "oversampling": 4,
+        "smoothing_kernel": "quadratic",
+        "builder_kwargs": {
+          "maxiters": "15",
+          "recentering_maxiters": "1"
+        },
+        "build_ok": false,
+        "build_error": "ValueError: The ePSF fitting failed for all stars.",
+        "n_stars_used": null,
+        "epsf_fwhm_native_px": null,
+        "n_fail_last_iter": null,
+        "n_status_3_last": null,
+        "n_iters": null,
+        "model_sha256": "",
+        "n_star_iter_rows": 804,
+        "n_recenter_rows": 13,
+        "first_exception": {
+          "where": "_process_iteration",
+          "exception_class": "ValueError",
+          "exception_message": "The ePSF fitting failed for all stars.",
+          "traceback": "Traceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\scripts\\epsf_shape_01_f.py\", line 162, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\ASTRO\\python\\VYVAR\\src_py\\psf_photometry.py\", line 59, in _process_iteration\n    result = super()._process_iteration(stars, epsf, iter_num)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\uhlar\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\photutils\\psf\\epsf_builder.py\", line 1883, in _process_iteration\n    raise ValueError(msg)\nValueError: The ePSF fitting failed for all stars.\n"
+        },
+        "converged": false
+      },
+      {
+        "tag": "os4_quad_box3",
+        "oversampling": 4,
+        "smoothing_kernel": "quadratic",
+        "builder_kwargs": {
+          "maxiters": "15",
+          "recentering_boxsize": "(3, 3)"
+        },
+        "build_ok": true,
+        "build_error": "",
+        "n_stars_used": 66,
+        "epsf_fwhm_native_px": 0.82,
+        "n_fail_last_iter": 9,
+        "n_status_3_last": 7,
+        "n_iters": 15,
+        "model_sha256": "48b9a216ab416daf86d70953996e1f9f958d48d0d69e71011feccf8855bb6c83",
+        "n_star_iter_rows": 990,
+        "n_recenter_rows": 15,
+        "first_exception": null,
+        "converged": false
+      }
+    ],
+    "prod_epsf_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "f1_photometry": null,
+  "f2": {
+    "n_stars": 30,
+    "n_rows": 600,
+    "checks": {
+      "iter_dao": {
+        "n": 600,
+        "median": 1.2176375156541255,
+        "rms": 1.1898146846303392,
+        "rms_vs_abs_median": true
+      },
+      "single_dao": {
+        "n": 600,
+        "median": 1.2176375156541255,
+        "rms": 1.1898146846303392,
+        "rms_vs_abs_median": true
+      },
+      "iter_single": {
+        "n": 600,
+        "median": 1.0,
+        "rms": 1.0,
+        "rms_vs_abs_median": true
+      },
+      "dchi2": {
+        "n": 600,
+        "median": 0.0,
+        "rms": 0.0,
+        "rms_vs_abs_median": true
+      }
+    },
+    "iter_dao_median": 1.2176375156541255,
+    "single_dao_median": 1.2176375156541255,
+    "iter_single_median": 1.0,
+    "dchi2_median": 0.0,
+    "corr_iter_single_vs_mag": NaN,
+    "corr_iter_single_vs_group_n": NaN,
+    "iter_single_frame_median_std": 0.0,
+    "chi2_median_iter": 68.44382748334277,
+    "chi2_median_single": 68.44382748334277
+  },
+  "f2b": {
+    "shape": [
+      35,
+      35
+    ],
+    "sum": 3.9999999930339527,
+    "peak": 0.09536316245794296,
+    "min": -0.054658226668834686,
+    "ee_circular_8p5": 0.6980314712135447,
+    "frac_norm_r_gt_8p5": 0.3019685287864553,
+    "frac_norm_negative": -0.3023648303350542,
+    "frac_abs_in_negative": 0.18842103922276332,
+    "outer_annulus_median": 0.0,
+    "geom_frac_pixels_r_gt_8p5": 0.26448979591836735,
+    "ee_is_geometry_not_pedestal": false,
+    "peak_over_abs_min": 1.7447174610280145,
+    "pedestal_sandbox": "dev/results/session_20260824_epsf_shape_01_f/models/prod_pedestal_sub/masterstar_epsf.fits"
+  },
+  "f2b_refit": {
+    "single_dao_median": 1.2176375156541255,
+    "iter_dao_median": 1.2176375156541255,
+    "chi2_single": 68.44382748334277,
+    "chi2_iter": 68.44382748334277,
+    "baseline_iter_dao": 1.2176375156541255,
+    "baseline_single_dao": 1.2176375156541255,
+    "baseline_chi2_iter": 68.44382748334277,
+    "baseline_chi2_single": 68.44382748334277
+  },
+  "f3": {
+    "has_x_fit": true,
+    "has_y_fit": true,
+    "has_psf_group_n": true,
+    "bo_x_fit": 957.5969896346058,
+    "additive_ok": true,
+    "sidecar": "dev/results/session_20260824_epsf_shape_01_f/f3_remerge/proc_BO_CVn_Light_001.csv"
+  },
+  "f4_unlocked": false
+}

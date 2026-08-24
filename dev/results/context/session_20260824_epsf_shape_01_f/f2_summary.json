@@ -1,0 +1,39 @@
+{
+  "n_stars": 30,
+  "n_rows": 600,
+  "checks": {
+    "iter_dao": {
+      "n": 600,
+      "median": 1.2176375156541255,
+      "rms": 1.1898146846303392,
+      "rms_vs_abs_median": true
+    },
+    "single_dao": {
+      "n": 600,
+      "median": 1.2176375156541255,
+      "rms": 1.1898146846303392,
+      "rms_vs_abs_median": true
+    },
+    "iter_single": {
+      "n": 600,
+      "median": 1.0,
+      "rms": 1.0,
+      "rms_vs_abs_median": true
+    },
+    "dchi2": {
+      "n": 600,
+      "median": 0.0,
+      "rms": 0.0,
+      "rms_vs_abs_median": true
+    }
+  },
+  "iter_dao_median": 1.2176375156541255,
+  "single_dao_median": 1.2176375156541255,
+  "iter_single_median": 1.0,
+  "dchi2_median": 0.0,
+  "corr_iter_single_vs_mag": NaN,
+  "corr_iter_single_vs_group_n": NaN,
+  "iter_single_frame_median_std": 0.0,
+  "chi2_median_iter": 68.44382748334277,
+  "chi2_median_single": 68.44382748334277
+}

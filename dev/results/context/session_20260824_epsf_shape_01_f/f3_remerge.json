@@ -1,0 +1,8 @@
+{
+  "has_x_fit": true,
+  "has_y_fit": true,
+  "has_psf_group_n": true,
+  "bo_x_fit": 957.5969896346058,
+  "additive_ok": true,
+  "sidecar": "dev/results/session_20260824_epsf_shape_01_f/f3_remerge/proc_BO_CVn_Light_001.csv"
+}

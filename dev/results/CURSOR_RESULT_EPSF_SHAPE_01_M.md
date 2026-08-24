@@ -1,5 +1,11 @@
 CURSOR RESULT - 2026-08-24T12:40:00Z (EPSF-SHAPE-01-M)
 
+**H5 SUPERSEDED by `CURSOR_RESULT_EPSF_SHAPE_01_F.md` (F2: IterativePSFPhotometry ==
+PSFPhotometry with AC off, iter/single = 1.000; the M3 0.667 vs 1.357 split was
+production F6 global `psf_ac_factor` ~0.528, not a fitter-class scale). F2b
+pedestal mechanism retracted (outer-annulus median 0; ringing, not a DC
+pedestal).**
+
 What I did
 Measurement-only diagnosis of the bright-star PSF shape mismatch that survives
 FD-A. Sandbox artifacts under `dev/results/session_20260824_epsf_shape_01_m/`.
@@ -147,10 +153,12 @@ Literature (report only; not wired into CITATIONS.bib): Anderson & King 2000
 | H4 | one-pass F_model init (FD-A) | 0.22 percent flux shift | chi2 68.4 -> 62.3, still >> faint | generic FD-A | 3 (not droop) | 2 (minor) |
 | H5 (new) | IterativePSFPhotometry flux scale vs single-pass on the SAME ePSF | BO CVn 0.667 iterative vs 1.357 single-pass | chi2 stays ~22 | generic photutils, measured on this rig | 2 (fitter scale) | 2 |
 
+**H5 row SUPERSEDED (SHAPE-01-F F2):** iterative == single-pass; production
+droop is the chi2<5 AC gate. Keep this table as the M3-era ranking; do not
+re-derive H5 from M3 numbers.
+
 M1 core-shaped residual + production ePSF too narrow (FWHM 0.72x) is the
-shape story. H5 is the fitter-scale story. They can both be true: a too-narrow
-model plus an iterative fitter that locks onto the core would under-estimate
-total flux relative to DAO (direction of the 0.671 droop).
+shape story. The M3-era H5 fitter-scale story is superseded (see banner).
 
 ## SHAPE-01-F recommendation
 
