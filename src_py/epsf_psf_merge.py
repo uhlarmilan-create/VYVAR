@@ -30,11 +30,19 @@ PSF_MERGE_COLUMNS: tuple[str, ...] = (
     "psf_ac_n_used",
     "psf_ac_applied",
     "psf_quality_fallback",
+    "psf_group_n",
+    "x_fit",
+    "y_fit",
 )
+
+# Fit coordinates are PSF-only (EPSF-SHAPE-01-F F3); treated as PSF columns
+# so INV-PSF-ADDITIVE-01 non-PSF byte-identity still holds.
+_PSF_FIT_COORD_COLS = frozenset({"x_fit", "y_fit"})
 
 
 def is_psf_column(name: str) -> bool:
-    return str(name).startswith("psf_")
+    n = str(name)
+    return n.startswith("psf_") or n in _PSF_FIT_COORD_COLS
 
 
 def non_psf_columns(columns) -> list[str]:

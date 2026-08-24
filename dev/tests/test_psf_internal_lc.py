@@ -187,6 +187,7 @@ def _synthetic_draft(tmp_path: Path) -> tuple[Path, Path, str]:
                     "psf_flux_err": 10.0 if psf_ok else np.nan,
                     "psf_chi2": 1.5 if psf_ok else np.nan,
                     "psf_fit_ok": psf_ok,
+                    "psf_group_n": 2 if psf_ok else 0,
                     "flux": flux * 1.1,
                     "dao_flux": flux * 1.1,
                 }
@@ -231,6 +232,8 @@ def test_writer_header_and_nan_epochs_synthetic(tmp_path: Path) -> None:
     assert pd.isna(df.loc[1, "psf_delta_mag"])
     assert bool(df.loc[0, "psf_fit_ok"]) is True
     assert np.isfinite(float(df.loc[0, "psf_delta_mag"]))
+    assert float(df.loc[0, "n_group"]) == pytest.approx(2.0)
+    assert pd.isna(df.loc[1, "n_group"]) or float(df.loc[1, "n_group"]) == 0.0
 
 
 @pytest.mark.skipif(

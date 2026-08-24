@@ -101,6 +101,64 @@ def test_merge_psf_preserves_aperture_columns(tmp_path: Path, monkeypatch: pytes
     assert float(out.loc[0, "psf_flux"]) == pytest.approx(999.0)
 
 
+def test_x_fit_y_fit_are_psf_columns() -> None:
+    from epsf_psf_merge import is_psf_column
+
+    assert is_psf_column("x_fit")
+    assert is_psf_column("y_fit")
+    assert is_psf_column("psf_group_n")
+    assert not is_psf_column("dao_flux")
+    assert not is_psf_column("x")
+
+
+def test_merge_psf_x_fit_does_not_break_additivity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fits_p = tmp_path / "BO_CVn_Light_001.fits"
+    _write_fits(fits_p)
+    sidecar = tmp_path / "proc_BO_CVn_Light_001.csv"
+    pd.DataFrame(
+        {
+            "catalog_id": ["1498486880958321024"],
+            "x": [16.0],
+            "y": [16.0],
+            "dao_flux": [12345.6],
+            "mag": [11.0],
+        }
+    ).to_csv(sidecar, index=False)
+
+    def _fake_fill(df, data, hdr, st, *, target_ids=None):
+        out = df.copy()
+        out["psf_flux"] = 999.0
+        out["psf_fit_ok"] = True
+        out["x_fit"] = 16.2
+        out["y_fit"] = 15.9
+        out["psf_group_n"] = 1
+        st["_psf_frame_record"] = {
+            "frame_name": fits_p.name,
+            "frame_index": 0,
+            "n_fit": 1,
+            "n_ok": 1,
+            "exception_class": None,
+            "exception_message": None,
+            "traceback_tail": None,
+        }
+        return out
+
+    import pipeline
+
+    monkeypatch.setattr(pipeline, "_fill_psf_catalog_columns", _fake_fill)
+    before = pd.read_csv(sidecar)
+    merge_psf_into_sidecar(
+        fits_path=fits_p,
+        sidecar_path=sidecar,
+        st={"_run_epsf": True, "epsf_model_path": str(tmp_path / "model.fits")},
+        target_ids={"1498486880958321024"},
+    )
+    after = pd.read_csv(sidecar, dtype={"catalog_id": str})
+    assert_inv_psf_additive_01(before, after, frame_name=fits_p.name)
+    assert float(after.loc[0, "x_fit"]) == pytest.approx(16.2)
+    assert int(after.loc[0, "psf_group_n"]) == 1
+
+
 def test_fill_psf_skips_moffat_when_psf_merge_only(monkeypatch: pytest.MonkeyPatch) -> None:
     import pipeline
 

@@ -629,6 +629,7 @@ def _epsf_build_imagepsf_from_stars(
     fwhm_px: float,
     cutout_size: int,
     smoothing_kernel: str | None = None,
+    builder_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run EPSFBuilder on a (sky-subtracted) EPSFStars set; return normalized array + QC.
 
@@ -644,11 +645,14 @@ def _epsf_build_imagepsf_from_stars(
     else:
         _smoothing = str(smoothing_kernel).strip().lower() or ("quadratic" if osamp <= 2 else "quartic")
 
+    _bkw = dict(builder_kwargs or {})
+    _maxiters = int(_bkw.pop("maxiters", 15))
     builder = InstrumentedEPSFBuilder(
         oversampling=osamp,
-        maxiters=15,
+        maxiters=_maxiters,
         progress_bar=False,
         smoothing_kernel=_smoothing,
+        **_bkw,
     )
     epsf_model, _fitted = builder(stars)
     iteration_failure_curve = list(builder.iteration_failure_curve)
@@ -1416,6 +1420,7 @@ def build_epsf_model(
     sandbox_output_dir: Path | str | None = None,
     meta_extra: dict[str, Any] | None = None,
     smoothing_kernel: str | None = None,
+    builder_kwargs: dict[str, Any] | None = None,
 ) -> Path:
     """Build ePSF from clean comparison stars and write ``masterstar_epsf.fits`` + meta JSON."""
     osamp = max(1, int(oversampling))
@@ -1457,6 +1462,7 @@ def build_epsf_model(
                 fwhm_px=float(prep["fwhm_px"]),
                 cutout_size=int(prep["cutout_size"]),
                 smoothing_kernel=smoothing_kernel,
+                builder_kwargs=builder_kwargs,
             )
             break
         except ValueError as exc:
@@ -2712,6 +2718,8 @@ def _grouped_psf_fit(
         "psf_chi2": chi2,
         "psf_fit_ok": bool(converged and chi2_ok),
         "n_group": int(len(init_f)),
+        "x_fit": float(x_lo) + float(xf[k]),
+        "y_fit": float(y_lo) + float(yf[k]),
         "psf_sky_method": _sky_method,
         "psf_weight_mode": _weight_mode,
         "psf_err_mode": _err_mode,
@@ -3019,6 +3027,8 @@ def psf_photometry_stars(
         "psf_nn_dist_fwhm",
         "psf_quality",
         "psf_quality_fallback",
+        "x_fit",
+        "y_fit",
     ]
     _quality_fallback_on = (
         bool(getattr(_cfg_grp, "psf_quality_fallback_enabled", True))
@@ -3054,6 +3064,8 @@ def psf_photometry_stars(
                     "psf_group_used": False,
                     "psf_group_n": 0,
                     "psf_group_fallback": False,
+                    "x_fit": float("nan"),
+                    "y_fit": float("nan"),
                 }
             )
             continue
@@ -3074,6 +3086,8 @@ def psf_photometry_stars(
             "psf_group_used": False,
             "psf_group_n": 0,
             "psf_group_fallback": False,
+            "x_fit": float("nan"),
+            "y_fit": float("nan"),
         }
 
         # -- Gated joint/deblended fit: target + close neighbours via SourceGrouper --
@@ -3294,6 +3308,8 @@ def psf_photometry_stars(
                     "psf_sky_method": _sky_method,
                     "psf_weight_mode": _weight_mode,
                     "psf_err_mode": _err_mode,
+                    "x_fit": float(res["x_fit"][0]) + float(x1),
+                    "y_fit": float(res["y_fit"][0]) + float(y1),
                 }
             )
         except Exception:  # noqa: BLE001

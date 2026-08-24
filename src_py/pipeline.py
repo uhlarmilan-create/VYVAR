@@ -576,6 +576,9 @@ def _fill_psf_catalog_columns(
                     "psf_snr",
                     "psf_quality",
                     "psf_quality_fallback",
+                    "psf_group_n",
+                    "x_fit",
+                    "y_fit",
                 ):
                     if _col in _psf_idx.columns:
                         df[_col] = df["catalog_id"].map(_psf_idx[_col])
