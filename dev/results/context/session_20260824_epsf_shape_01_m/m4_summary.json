@@ -1,0 +1,9 @@
+{
+  "n_stars": 30,
+  "n_rows": 600,
+  "chi2_median_one": 68.44382748334277,
+  "chi2_median_two": 62.33944488037281,
+  "d_chi2_median": -5.32561182578938,
+  "d_flux_frac_median": 0.0021995383240046296,
+  "d_flux_frac_p95_abs": 0.015618554857895574
+}

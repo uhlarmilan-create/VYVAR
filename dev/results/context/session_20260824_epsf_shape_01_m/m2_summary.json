@@ -1,0 +1,9 @@
+{
+  "model_ee_at_edge": 0.6980314712135447,
+  "gaussian_ee_at_8p5px": 0.9999999895766483,
+  "gaussian_truncation_deficit": 1.042335173728759e-08,
+  "empirical_ee_at_8p5_median": 0.9494021798981536,
+  "observed_bo_cvn_psf_dao": 0.671,
+  "trunc_explains_half_of_droop": false,
+  "note": "Production ePSF is flux-normalized inside the 17 px cutout, so model EE at the edge is ~1 by construction and cannot by itself explain a 0.671 PSF/DAO ratio. Analytic Gaussian truncation at FWHM=3.3 px / r=8.5 px is tiny."
+}

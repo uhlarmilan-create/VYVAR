@@ -1,0 +1,137 @@
+[
+  {
+    "iteration": 1,
+    "n_stars": 67,
+    "n_fail": 0,
+    "n_status_0": 67,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 2,
+    "n_stars": 67,
+    "n_fail": 0,
+    "n_status_0": 67,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 3,
+    "n_stars": 67,
+    "n_fail": 0,
+    "n_status_0": 67,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 4,
+    "n_stars": 67,
+    "n_fail": 31,
+    "n_status_0": 36,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 31
+  },
+  {
+    "iteration": 5,
+    "n_stars": 67,
+    "n_fail": 2,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 2
+  },
+  {
+    "iteration": 6,
+    "n_stars": 67,
+    "n_fail": 10,
+    "n_status_0": 57,
+    "n_status_1": 2,
+    "n_status_2": 0,
+    "n_status_3": 8
+  },
+  {
+    "iteration": 7,
+    "n_stars": 67,
+    "n_fail": 19,
+    "n_status_0": 48,
+    "n_status_1": 6,
+    "n_status_2": 0,
+    "n_status_3": 13
+  },
+  {
+    "iteration": 8,
+    "n_stars": 67,
+    "n_fail": 23,
+    "n_status_0": 44,
+    "n_status_1": 7,
+    "n_status_2": 0,
+    "n_status_3": 16
+  },
+  {
+    "iteration": 9,
+    "n_stars": 67,
+    "n_fail": 24,
+    "n_status_0": 43,
+    "n_status_1": 7,
+    "n_status_2": 0,
+    "n_status_3": 17
+  },
+  {
+    "iteration": 10,
+    "n_stars": 67,
+    "n_fail": 29,
+    "n_status_0": 38,
+    "n_status_1": 8,
+    "n_status_2": 0,
+    "n_status_3": 21
+  },
+  {
+    "iteration": 11,
+    "n_stars": 67,
+    "n_fail": 33,
+    "n_status_0": 34,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 24
+  },
+  {
+    "iteration": 12,
+    "n_stars": 67,
+    "n_fail": 37,
+    "n_status_0": 30,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 28
+  },
+  {
+    "iteration": 13,
+    "n_stars": 67,
+    "n_fail": 38,
+    "n_status_0": 29,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 29
+  },
+  {
+    "iteration": 14,
+    "n_stars": 67,
+    "n_fail": 39,
+    "n_status_0": 28,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 30
+  },
+  {
+    "iteration": 15,
+    "n_stars": 67,
+    "n_fail": 39,
+    "n_status_0": 28,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 30
+  }
+]

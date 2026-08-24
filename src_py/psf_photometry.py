@@ -628,6 +628,7 @@ def _epsf_build_imagepsf_from_stars(
     osamp: int,
     fwhm_px: float,
     cutout_size: int,
+    smoothing_kernel: str | None = None,
 ) -> dict[str, Any]:
     """Run EPSFBuilder on a (sky-subtracted) EPSFStars set; return normalized array + QC.
 
@@ -635,10 +636,13 @@ def _epsf_build_imagepsf_from_stars(
     construction, QC, and ImagePSF flux normalization are identical in both paths.
     """
     osamp = max(1, int(osamp))
-    if osamp <= 2:
-        _smoothing = "quadratic"
+    if smoothing_kernel is None:
+        if osamp <= 2:
+            _smoothing = "quadratic"
+        else:
+            _smoothing = "quartic"
     else:
-        _smoothing = "quartic"
+        _smoothing = str(smoothing_kernel).strip().lower() or ("quadratic" if osamp <= 2 else "quartic")
 
     builder = InstrumentedEPSFBuilder(
         oversampling=osamp,
@@ -1411,6 +1415,7 @@ def build_epsf_model(
     moffat_centroids: pd.DataFrame | None = None,
     sandbox_output_dir: Path | str | None = None,
     meta_extra: dict[str, Any] | None = None,
+    smoothing_kernel: str | None = None,
 ) -> Path:
     """Build ePSF from clean comparison stars and write ``masterstar_epsf.fits`` + meta JSON."""
     osamp = max(1, int(oversampling))
@@ -1451,6 +1456,7 @@ def build_epsf_model(
                 osamp=osamp,
                 fwhm_px=float(prep["fwhm_px"]),
                 cutout_size=int(prep["cutout_size"]),
+                smoothing_kernel=smoothing_kernel,
             )
             break
         except ValueError as exc:

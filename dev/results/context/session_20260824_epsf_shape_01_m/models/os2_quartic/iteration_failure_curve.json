@@ -1,0 +1,137 @@
+[
+  {
+    "iteration": 1,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 2,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 3,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 4,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 5,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 6,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 7,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 8,
+    "n_stars": 65,
+    "n_fail": 0,
+    "n_status_0": 65,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 0
+  },
+  {
+    "iteration": 9,
+    "n_stars": 65,
+    "n_fail": 16,
+    "n_status_0": 49,
+    "n_status_1": 0,
+    "n_status_2": 0,
+    "n_status_3": 16
+  },
+  {
+    "iteration": 10,
+    "n_stars": 65,
+    "n_fail": 20,
+    "n_status_0": 45,
+    "n_status_1": 2,
+    "n_status_2": 0,
+    "n_status_3": 18
+  },
+  {
+    "iteration": 11,
+    "n_stars": 65,
+    "n_fail": 41,
+    "n_status_0": 24,
+    "n_status_1": 3,
+    "n_status_2": 0,
+    "n_status_3": 38
+  },
+  {
+    "iteration": 12,
+    "n_stars": 65,
+    "n_fail": 47,
+    "n_status_0": 18,
+    "n_status_1": 8,
+    "n_status_2": 0,
+    "n_status_3": 39
+  },
+  {
+    "iteration": 13,
+    "n_stars": 65,
+    "n_fail": 52,
+    "n_status_0": 13,
+    "n_status_1": 9,
+    "n_status_2": 0,
+    "n_status_3": 43
+  },
+  {
+    "iteration": 14,
+    "n_stars": 65,
+    "n_fail": 55,
+    "n_status_0": 10,
+    "n_status_1": 11,
+    "n_status_2": 0,
+    "n_status_3": 44
+  },
+  {
+    "iteration": 15,
+    "n_stars": 65,
+    "n_fail": 57,
+    "n_status_0": 8,
+    "n_status_1": 11,
+    "n_status_2": 0,
+    "n_status_3": 46
+  }
+]

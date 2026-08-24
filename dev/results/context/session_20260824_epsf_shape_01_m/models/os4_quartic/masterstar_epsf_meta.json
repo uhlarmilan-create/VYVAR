@@ -1,0 +1,225 @@
+{
+  "fwhm_px": 3.3014,
+  "cutout_size": 17,
+  "oversampling": 4,
+  "spatial_order": 0,
+  "smoothing_kernel": "quartic",
+  "fit_shape": [
+    9,
+    9
+  ],
+  "epsf_qc": {
+    "epsf_fwhm_native_px": null,
+    "epsf_vs_input_fwhm_ratio": null,
+    "epsf_nan_fraction": 0.0,
+    "epsf_asymmetry": 0.0303
+  },
+  "epsf_norm_factor": 1.0,
+  "epsf_sum_native": 1.0,
+  "phase2_moffat_centroids_used": 0,
+  "isolation_radius_px": 9.9042,
+  "plate_scale_arcsec_px": 9.773890066483727,
+  "n_stars_used": 67,
+  "n_stars_after_join": 68,
+  "draft_id": 516,
+  "created_utc": "2026-08-24T10:49:43Z",
+  "build_funnel": {
+    "n_csv_input": 3610,
+    "n_after_variable_excluded": 3325,
+    "n_after_peak_sat_likely": 2442,
+    "n_after_peak_sat_is_saturated": 2432,
+    "n_after_photometry_ok": 2432,
+    "n_after_not_noisy": 2264,
+    "n_after_usable": 2264,
+    "n_after_snr_cut": null,
+    "n_after_snr_cut_reason": "not applied in this function",
+    "n_build_input": 2264,
+    "n_after_zone_linear": 2264,
+    "n_after_clean_source_state": 2200,
+    "n_after_science_scope": 68,
+    "n_after_edge_safe_cutout": 68,
+    "n_after_interim_top_n": 68,
+    "build_interim_top_n": 200,
+    "build_interim_top_n_mark": "INTERIM",
+    "n_csv_with_catalog_id": 68,
+    "used_broad_pool": false,
+    "n_safe_comp_csv_join": 68,
+    "n_after_csv_select": 68,
+    "n_after_db_join": 68,
+    "n_after_targeting": 68,
+    "n_before_isolation": 68,
+    "n_after_isolation": 67,
+    "n_after_extract_stars": 67,
+    "n_final": 67
+  },
+  "build_selection": {
+    "gates": [
+      "zone_linear",
+      "non_variable",
+      "non_saturated",
+      "photometry_ok",
+      "clean_source_state",
+      "science_scope",
+      "edge_safe_cutout",
+      "isolated",
+      "interim_top_n"
+    ],
+    "interim_top_n": 200,
+    "interim_top_n_mark": "INTERIM",
+    "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+  },
+  "iteration_failure_curve": [
+    {
+      "iteration": 1,
+      "n_stars": 67,
+      "n_fail": 0,
+      "n_status_0": 67,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 2,
+      "n_stars": 67,
+      "n_fail": 0,
+      "n_status_0": 67,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 3,
+      "n_stars": 67,
+      "n_fail": 0,
+      "n_status_0": 67,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 4,
+      "n_stars": 67,
+      "n_fail": 31,
+      "n_status_0": 36,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 31
+    },
+    {
+      "iteration": 5,
+      "n_stars": 67,
+      "n_fail": 2,
+      "n_status_0": 65,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 2
+    },
+    {
+      "iteration": 6,
+      "n_stars": 67,
+      "n_fail": 10,
+      "n_status_0": 57,
+      "n_status_1": 2,
+      "n_status_2": 0,
+      "n_status_3": 8
+    },
+    {
+      "iteration": 7,
+      "n_stars": 67,
+      "n_fail": 19,
+      "n_status_0": 48,
+      "n_status_1": 6,
+      "n_status_2": 0,
+      "n_status_3": 13
+    },
+    {
+      "iteration": 8,
+      "n_stars": 67,
+      "n_fail": 23,
+      "n_status_0": 44,
+      "n_status_1": 7,
+      "n_status_2": 0,
+      "n_status_3": 16
+    },
+    {
+      "iteration": 9,
+      "n_stars": 67,
+      "n_fail": 24,
+      "n_status_0": 43,
+      "n_status_1": 7,
+      "n_status_2": 0,
+      "n_status_3": 17
+    },
+    {
+      "iteration": 10,
+      "n_stars": 67,
+      "n_fail": 29,
+      "n_status_0": 38,
+      "n_status_1": 8,
+      "n_status_2": 0,
+      "n_status_3": 21
+    },
+    {
+      "iteration": 11,
+      "n_stars": 67,
+      "n_fail": 33,
+      "n_status_0": 34,
+      "n_status_1": 9,
+      "n_status_2": 0,
+      "n_status_3": 24
+    },
+    {
+      "iteration": 12,
+      "n_stars": 67,
+      "n_fail": 37,
+      "n_status_0": 30,
+      "n_status_1": 9,
+      "n_status_2": 0,
+      "n_status_3": 28
+    },
+    {
+      "iteration": 13,
+      "n_stars": 67,
+      "n_fail": 38,
+      "n_status_0": 29,
+      "n_status_1": 9,
+      "n_status_2": 0,
+      "n_status_3": 29
+    },
+    {
+      "iteration": 14,
+      "n_stars": 67,
+      "n_fail": 39,
+      "n_status_0": 28,
+      "n_status_1": 9,
+      "n_status_2": 0,
+      "n_status_3": 30
+    },
+    {
+      "iteration": 15,
+      "n_stars": 67,
+      "n_fail": 39,
+      "n_status_0": 28,
+      "n_status_1": 9,
+      "n_status_2": 0,
+      "n_status_3": 30
+    }
+  ],
+  "sandbox_output": true,
+  "build_guard": {
+    "enabled": true,
+    "max_drop_frac": 0.1,
+    "n_pool_baseline": 67,
+    "requested_n": 67,
+    "n_dropped": 0,
+    "n_stars_used_after_guard": 67,
+    "dropped": []
+  },
+  "n_policy": {
+    "production_pool": "full Part C gated science-comp pool",
+    "certificate_metric": "scale-aligned per-star RMS delta < 3x median ERR budget of compared stars; raw inter-model offsets are bookkeeping",
+    "interim_top_n": "disabled",
+    "split_half_note": "S5b D1b PASS: odd/even gated split-half aligned RMS 30.3 mmag vs 15.3 mmag ERR budget"
+  },
+  "shape01m_tag": "os4_quartic"
+}

@@ -1,0 +1,132 @@
+{
+  "copied_text": [
+    "fits_m4_onepass.csv",
+    "fits_m4_twopass.csv",
+    "fits_os2_quadratic.csv",
+    "fits_os2_quartic.csv",
+    "fits_os4_quadratic.csv",
+    "fits_os4_quartic.csv",
+    "frame_subset.txt",
+    "hashes_after.json",
+    "hashes_before.json",
+    "m1_depart_vs_faint.csv",
+    "m1_radial_frac_resid.csv",
+    "m1_star_frame_rows.csv",
+    "m1_summary.json",
+    "m2_empirical_growth.csv",
+    "m2_model_growth.csv",
+    "m2_summary.json",
+    "m3_sensitivity.csv",
+    "m3_summary.json",
+    "m4_summary.json",
+    "m4_two_pass_compare.csv",
+    "m5_synthesis.json",
+    "models\\os2_quadratic\\iteration_failure_curve.json",
+    "models\\os2_quadratic\\masterstar_epsf_meta.json",
+    "models\\os2_quartic\\iteration_failure_curve.json",
+    "models\\os2_quartic\\masterstar_epsf_meta.json",
+    "models\\os4_quadratic\\iteration_failure_curve.json",
+    "models\\os4_quadratic\\masterstar_epsf_meta.json",
+    "models\\os4_quartic\\iteration_failure_curve.json",
+    "models\\os4_quartic\\masterstar_epsf_meta.json",
+    "positive_control.txt",
+    "summary.json"
+  ],
+  "blobs_not_copied": [
+    {
+      "path": "m1_resid_bin0.fits",
+      "sha256": "61ea1b4ca2c8b5542fd8f79e398b58f5b93dbc8eb59bcc33efc55ea935d1e650",
+      "bytes": 5760
+    },
+    {
+      "path": "m1_resid_bin0.png",
+      "sha256": "7cbb96d25517fe2e254fa83c4c7b4e93375ba7bd5136302cbb544ed5e1f2a6c3",
+      "bytes": 21367
+    },
+    {
+      "path": "m1_resid_bin1.fits",
+      "sha256": "ef27a6febf6adc442ad810fca58aa49bb53670e7351ef772e7d43c8239d491af",
+      "bytes": 5760
+    },
+    {
+      "path": "m1_resid_bin1.png",
+      "sha256": "5f049f26f786b5c9984b329e9d9f4fc2670bdb2ce1292d9d5f7fc8fde8339ec3",
+      "bytes": 21751
+    },
+    {
+      "path": "m1_resid_bin2.fits",
+      "sha256": "c9bba64668fe752e326829f2a5d450d71a844feb8387e4b28e85ec2f7468ec8d",
+      "bytes": 5760
+    },
+    {
+      "path": "m1_resid_bin2.png",
+      "sha256": "e4f003576598f03508a3b705b2388c97318657769621cf77d8588ad0bdf8bf49",
+      "bytes": 21726
+    },
+    {
+      "path": "m1_resid_bin3.fits",
+      "sha256": "b9fc1612fa3f2cc86e0baa976a486b6767892b71cecc461d2ece5a0f872f63e7",
+      "bytes": 5760
+    },
+    {
+      "path": "m1_resid_bin3.png",
+      "sha256": "74ce7e72dff6e5f5daf09da08018760ca58cb238fb35d9f7bbceb13302b966d6",
+      "bytes": 22079
+    },
+    {
+      "path": "m1_resid_bin4.fits",
+      "sha256": "e6ab33ddf89ebf53459038b3276dbdbdc3c99676932423371064a34bc6c4e41f",
+      "bytes": 5760
+    },
+    {
+      "path": "m1_resid_bin4.png",
+      "sha256": "aea3045041076fefff03cdf8396520476384a5b259bdac14e16603205e2f43a0",
+      "bytes": 21955
+    },
+    {
+      "path": "m1_stack_bin0.npy",
+      "sha256": "1426a0789c32e54453ab985032f93c9cb702d8a85bbf3a1bd72d9dc0e02f3d93",
+      "bytes": 2440
+    },
+    {
+      "path": "m1_stack_bin1.npy",
+      "sha256": "bfc53b81f22171efcb0966281a04a83db551d667fd6e7f0ef219ab98b329669a",
+      "bytes": 2440
+    },
+    {
+      "path": "m1_stack_bin2.npy",
+      "sha256": "28c7924d0a9f6f6a2aea8bcd422430a52fe401ead2388294f5c2cd640bde2170",
+      "bytes": 2440
+    },
+    {
+      "path": "m1_stack_bin3.npy",
+      "sha256": "bb2cfb721e40b84ea8b6370fe5809df194489c7b6f4139d56d84f484037a8156",
+      "bytes": 2440
+    },
+    {
+      "path": "m1_stack_bin4.npy",
+      "sha256": "c9e639d5494580abedf7384e2ec003db2c4325a999e81ceecdcceabf9f31d722",
+      "bytes": 2440
+    },
+    {
+      "path": "models\\os2_quadratic\\masterstar_epsf.fits",
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "bytes": 8640
+    },
+    {
+      "path": "models\\os2_quartic\\masterstar_epsf.fits",
+      "sha256": "cfc55d4c7f2165cdb2456fcb642469a8cc94cae9205e5d0bbf5f166752d2d72a",
+      "bytes": 8640
+    },
+    {
+      "path": "models\\os4_quadratic\\masterstar_epsf.fits",
+      "sha256": "85d311f2eb229d8ebb16e03697a7f8c79f70826f4fc1b18e2d59ca74e6ec64dd",
+      "bytes": 23040
+    },
+    {
+      "path": "models\\os4_quartic\\masterstar_epsf.fits",
+      "sha256": "6626eac6971530d214caac5ebe8860c137d86ee930047c12213a494220a8a635",
+      "bytes": 23040
+    }
+  ]
+}

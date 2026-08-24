@@ -1,0 +1,42 @@
+{
+  "elapsed_s": 7009.250791,
+  "prod_epsf_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+  "n_stars_used": 67,
+  "positive_control_changed": true,
+  "production_hashes_identical": true,
+  "m1": {
+    "n_cutouts": 5179,
+    "n_frames": 20,
+    "mag_edges": [
+      5.94305944442749,
+      10.551580429077148,
+      12.388586044311523,
+      13.252224922180176,
+      14.055132865905762,
+      15.559402465820312
+    ],
+    "n_depart_ge_0p05": 6,
+    "core_mean_abs_bright": 0.5189713798930325,
+    "wing_mean_abs_bright": 0.010686004389679876,
+    "core_mean_abs_faint": 0.6616624321636558,
+    "wing_mean_abs_faint": 0.0047776652175430135
+  },
+  "m2": {
+    "model_ee_at_edge": 0.6980314712135447,
+    "gaussian_ee_at_8p5px": 0.9999999895766483,
+    "gaussian_truncation_deficit": 1.042335173728759e-08,
+    "empirical_ee_at_8p5_median": 0.9494021798981536,
+    "observed_bo_cvn_psf_dao": 0.671,
+    "trunc_explains_half_of_droop": false,
+    "note": "Production ePSF is flux-normalized inside the 17 px cutout, so model EE at the edge is ~1 by construction and cannot by itself explain a 0.671 PSF/DAO ratio. Analytic Gaussian truncation at FWHM=3.3 px / r=8.5 px is tiny."
+  },
+  "m4": {
+    "n_stars": 30,
+    "n_rows": 600,
+    "chi2_median_one": 68.44382748334277,
+    "chi2_median_two": 62.33944488037281,
+    "d_chi2_median": -5.32561182578938,
+    "d_flux_frac_median": 0.0021995383240046296,
+    "d_flux_frac_p95_abs": 0.015618554857895574
+  }
+}

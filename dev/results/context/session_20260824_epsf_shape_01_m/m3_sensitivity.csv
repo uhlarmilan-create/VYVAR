@@ -1,0 +1,7 @@
+tag,oversampling,smoothing_kernel,n_stars_used,model_sha256,sandbox,build_ok,build_error,ratio_median,ratio_corr_mag,chi2_median_bright,chi2_median_faint,n_fail_last_iter,determinism_note
+os1_quadratic,1,quadratic,,,True,False,ValueError: The ePSF fitting failed for all stars.,,,,,,EPSFBuilder maxiters=15; sandbox_output_dir isolates writes
+os1_quartic,1,quartic,,,True,False,ValueError: The ePSF fitting failed for all stars.,,,,,,EPSFBuilder maxiters=15; sandbox_output_dir isolates writes
+os2_quadratic,2,quadratic,67.0,172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20,True,True,,1.7464736972074855,0.3352244863528754,41.84458536057663,0.7775038635852248,0.0,"EPSFBuilder maxiters=15, no global RNG; sandbox_output_dir isolates writes"
+os2_quartic,2,quartic,65.0,cfc55d4c7f2165cdb2456fcb642469a8cc94cae9205e5d0bbf5f166752d2d72a,True,True,,-0.008689213565446198,0.14539363796362664,3430.2978715664844,1.46692286769324,57.0,"EPSFBuilder maxiters=15, no global RNG; sandbox_output_dir isolates writes"
+os4_quadratic,4,quadratic,66.0,85d311f2eb229d8ebb16e03697a7f8c79f70826f4fc1b18e2d59ca74e6ec64dd,True,True,,-0.0005681845380408955,0.12130353526584244,2144.7734545606027,1.4143743111432805,65.0,"EPSFBuilder maxiters=15, no global RNG; sandbox_output_dir isolates writes"
+os4_quartic,4,quartic,67.0,6626eac6971530d214caac5ebe8860c137d86ee930047c12213a494220a8a635,True,True,,0.04067347672009014,0.14053018912038387,2190.601405547891,1.399186637313634,39.0,"EPSFBuilder maxiters=15, no global RNG; sandbox_output_dir isolates writes"
