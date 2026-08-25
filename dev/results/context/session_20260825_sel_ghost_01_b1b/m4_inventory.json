@@ -1,0 +1,574 @@
+{
+  "paths": [
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\MASTERSTAR.fits",
+      "exists": true,
+      "sha256": "2862552040ec30f98481521a512497f7e86d2a0a0203185884a2d3f1ef07c997",
+      "bytes": 37860480
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\masterstars_full_match.csv",
+      "exists": true,
+      "sha256": "5ce9b07fe0490103b2e16f6fbe3b18ffc7cd987fbee8a334722cc2fd46c6a683",
+      "bytes": 266514
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\dao_gaia_calibration.json",
+      "exists": true,
+      "sha256": "1ce66e277a0ef288adbbf22f9b6a8f47f14bec0bf95aa539532e197d10f5ba91",
+      "bytes": 14914
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\MASTERSTAR.fits.bak",
+      "exists": false,
+      "sha256": null,
+      "bytes": null
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\MASTERSTAR.wcs",
+      "exists": false,
+      "sha256": null,
+      "bytes": null
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\g_60_4\\g_60_4.wcs",
+      "exists": false,
+      "sha256": null,
+      "bytes": null
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\i_70_4\\MASTERSTAR.fits",
+      "exists": true,
+      "sha256": "9e25117badf78bc1ae6a970ee63fc3295fcd56f810d8892f9e704724967f4850",
+      "bytes": 37860480
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\i_70_4\\dao_gaia_calibration.json",
+      "exists": true,
+      "sha256": "9d048b4cb444f6b1d3be45e9fe7648625ebaaf56a6cde46954f5ee1689bcd62f",
+      "bytes": 14929
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\r_60_4\\MASTERSTAR.fits",
+      "exists": true,
+      "sha256": "01178cac2a0ea0648d881e070f0f755968c9522c380d0a32e363aaacac62cce6",
+      "bytes": 37860480
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\r_60_4\\dao_gaia_calibration.json",
+      "exists": true,
+      "sha256": "0d35cb765bc630eec957e3bdd086167e421ab2e3c5a947da46bbcad2df4aca4a",
+      "bytes": 14143
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\z_90_4\\MASTERSTAR.fits",
+      "exists": true,
+      "sha256": "da5c86a93e2cb764d5ec0bd1c5e53ffacdd635a3e23130d0231596661d4b1d92",
+      "bytes": 37857600
+    },
+    {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000520\\platesolve\\z_90_4\\dao_gaia_calibration.json",
+      "exists": false,
+      "sha256": null,
+      "bytes": null
+    }
+  ],
+  "g_header": {
+    "n_history": 9,
+    "history_wcs_related": [
+      "VYVAR: SIP rejected by RMS guard (lin=1.442 sip=2.144 ratio=1.486; SIP m",
+      "ust not exceed linear RMS)",
+      "VYVAR: Grip1 SIP3 rms_px lin=80.997 -> sip=84.665",
+      "VYVAR: Grip2 SIP3 rms_px lin=80.997 -> sip=84.665",
+      "VYVAR: post-pass3 SIP3 rms_px lin=80.997 -> sip=84.665",
+      "VYVAR: Grip1 SIP3 rms_px lin=81.267 -> sip=85.123",
+      "VYVAR: Grip2 SIP3 rms_px lin=81.267 -> sip=85.123",
+      "VYVAR: post-pass3 SIP3 rms_px lin=81.267 -> sip=85.123"
+    ],
+    "wcs_cards": {
+      "CRVAL1": 109.16903292269,
+      "CRVAL2": 73.344264865091,
+      "CRPIX1": 1877.1413294006,
+      "CRPIX2": 1269.864385435,
+      "PC1_1": 0.00015560716419324,
+      "PC1_2": -7.3021016244617e-06,
+      "PC2_1": -6.7237356287265e-06,
+      "PC2_2": -0.00015620175976589,
+      "CTYPE1": "RA---TAN",
+      "CTYPE2": "DEC--TAN"
+    },
+    "backupish_cards": [
+      "WCSAXES=2",
+      "VY_WCSRT=True"
+    ]
+  },
+  "certificate": {
+    "setup": "g_60_4",
+    "built_utc": "2026-08-24T18:45:27.061385+00:00",
+    "status": "PASS",
+    "fail_reason": null,
+    "derived": {
+      "residual_p95_px": 2.0954309837750396,
+      "match_radius_px": 3.5,
+      "pass2_center_tol_px": 1.0,
+      "lock_pair_tol_px": 3.5,
+      "lock_leftover_radius_px": 3.5,
+      "forced_seed_centroid_max_px": 1.0,
+      "plate_scale_arcsec_per_px": 0.560781258995021,
+      "fwhm_px": 1.25,
+      "pass1_sigma": 4.5,
+      "pass2_sigma": 4.0,
+      "detection_identity": {
+        "name": "detection_identity",
+        "n": 44,
+        "p50_px": 0.961323013657883,
+        "p95_px": 2.0954309837750396,
+        "g_band": null,
+        "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+      },
+      "seed_centroid": {
+        "name": "seed_centroid",
+        "n": 166,
+        "p50_px": 0.5613436622160226,
+        "p95_px": 1.111897723392239,
+        "g_band": null,
+        "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+      },
+      "faint_star_centroid": {
+        "name": "seed_centroid",
+        "n": 166,
+        "p50_px": 0.5613436622160226,
+        "p95_px": 1.111897723392239,
+        "g_band": null,
+        "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+      },
+      "diagnostic": {
+        "detection_identity": {
+          "name": "detection_identity",
+          "n": 44,
+          "p50_px": 0.961323013657883,
+          "p95_px": 2.0954309837750396,
+          "n_raw": 56,
+          "p50_raw_px": 1.2224096324348404,
+          "p95_raw_px": 8.50179067166398,
+          "tail_estimate_px": 86.77580611395858,
+          "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=86.776 px",
+          "measurement_mode": "diagnostic|greedy_assign+pass2_accepted|tail_core",
+          "diagnostic_radius_px": 10.0,
+          "g_band": null,
+          "states": "pass1+pass2|all_G|DAO_gaia_crossmatch"
+        },
+        "seed_centroid": {
+          "name": "seed_centroid",
+          "n": 166,
+          "p50_px": 0.5613436622160226,
+          "p95_px": 1.111897723392239,
+          "n_raw": 166,
+          "p50_raw_px": 0.5613436622160226,
+          "p95_raw_px": 1.111897723392239,
+          "tail_estimate_px": 86.77580611395858,
+          "tail_method": "core=sep<= 4.0 px astrometric envelope; random_match_scale=86.776 px",
+          "measurement_mode": "diagnostic|snr_only_before_centroid_gate",
+          "diagnostic_radius_px": null,
+          "g_band": null,
+          "states": "pass2+forced_seed|unowned_Gaia_seed_position"
+        }
+      }
+    },
+    "empty_sky": {
+      "n_positions": 2200,
+      "pass2_accept": 0,
+      "pass2_rate": 0.0,
+      "seed_accept": 2,
+      "seed_rate": 0.0009090909090909091,
+      "inv_det": "PASS",
+      "inv_seed": "PASS"
+    },
+    "validation": {
+      "status": "PASS",
+      "fail_reason": null,
+      "max_regression_pp": 6.403252852449359e-06,
+      "hand_scores": {
+        "baseline_csv": {
+          "MASTERSTAR": {
+            "frame": "MASTERSTAR",
+            "g1_strict_le13": 0.9880478087649402,
+            "g1_strict_le145": 0.9247889485801996,
+            "g1_eye_le13": 0.9880478087649402,
+            "g1_eye_le145": 0.930928626247122,
+            "g1_eye_seed_le13": 1.0,
+            "g1_eye_seed_le145": 0.9577897160399079,
+            "g2": 0.0009090909090909091,
+            "g3_g18": 0.014311270125223614,
+            "g4_ok": true
+          },
+          "Light_001": {
+            "frame": "Light_001",
+            "g1_strict_le13": 0.9870517928286853,
+            "g1_strict_le145": 0.9021488871834229,
+            "g1_eye_le13": 0.9870517928286853,
+            "g1_eye_le145": 0.9102072141212586,
+            "g1_eye_seed_le13": 0.999003984063745,
+            "g1_eye_seed_le145": 0.9439754412893323,
+            "g2": NaN,
+            "g3_g18": 0.038069942452412575,
+            "g4_ok": true
+          },
+          "Light_076": {
+            "frame": "Light_076",
+            "g1_strict_le13": 0.9870517928286853,
+            "g1_strict_le145": 0.9401381427475057,
+            "g1_eye_le13": 0.9870517928286853,
+            "g1_eye_le145": 0.9458940905602455,
+            "g1_eye_seed_le13": 1.0,
+            "g1_eye_seed_le145": 0.9723714504988488,
+            "g2": NaN,
+            "g3_g18": 0.034967845659163985,
+            "g4_ok": true
+          },
+          "Light_148": {
+            "frame": "Light_148",
+            "g1_strict_le13": 0.9870517928286853,
+            "g1_strict_le145": 0.9435917114351496,
+            "g1_eye_le13": 0.9870517928286853,
+            "g1_eye_le145": 0.9481964696853415,
+            "g1_eye_seed_le13": 1.0,
+            "g1_eye_seed_le145": 0.9735226400613968,
+            "g2": NaN,
+            "g3_g18": 0.038338658146964855,
+            "g4_ok": true
+          }
+        },
+        "csv_path": "C:/ASTRO/python/VYVAR/dev/results/context/session_20260819_daostage01_iter4/final_scores.csv"
+      },
+      "derived_scores": {
+        "MASTERSTAR": {
+          "frame": "MASTERSTAR",
+          "g1_strict_le13": 0.9880478087649402,
+          "g1_strict_le145": 0.9251726784343822,
+          "g1_eye_le13": 0.9880478087649402,
+          "g1_eye_le145": 0.9313123561013047,
+          "g1_eye_seed_le13": 1.0,
+          "g1_eye_seed_le145": 0.9581734458940906,
+          "g2": 0.0009090909090909091,
+          "g3_g18": 0.014317673378076063,
+          "g4_ok": true,
+          "n_pass1": 2636,
+          "n_pass2": 217,
+          "n_forced_seed": 162,
+          "n_ambiguous_owner": 8,
+          "state_counts": {
+            "TOO_FAINT": 3136,
+            "DETECTED": 2689,
+            "FORCED_SEED": 162,
+            "EDGE": 146,
+            "BLENDED": 35
+          }
+        },
+        "Light_001": {
+          "frame": "Light_001",
+          "g1_strict_le13": 0.9870517928286853,
+          "g1_strict_le145": 0.9021488871834229,
+          "g1_eye_le13": 0.9870517928286853,
+          "g1_eye_le145": 0.9102072141212586,
+          "g1_eye_seed_le13": 0.999003984063745,
+          "g1_eye_seed_le145": 0.9439754412893323,
+          "g2": NaN,
+          "g3_g18": 0.038069942452412575,
+          "g4_ok": true,
+          "n_pass1": 2478,
+          "n_pass2": 354,
+          "n_forced_seed": 191,
+          "n_ambiguous_owner": 9,
+          "state_counts": {
+            "TOO_FAINT": 3178,
+            "DETECTED": 2612,
+            "FORCED_SEED": 191,
+            "EDGE": 146,
+            "BLENDED": 41
+          }
+        },
+        "Light_076": {
+          "frame": "Light_076",
+          "g1_strict_le13": 0.9870517928286853,
+          "g1_strict_le145": 0.9401381427475057,
+          "g1_eye_le13": 0.9870517928286853,
+          "g1_eye_le145": 0.9458940905602455,
+          "g1_eye_seed_le13": 1.0,
+          "g1_eye_seed_le145": 0.9723714504988488,
+          "g2": NaN,
+          "g3_g18": 0.034967845659163985,
+          "g4_ok": true,
+          "n_pass1": 2946,
+          "n_pass2": 245,
+          "n_forced_seed": 180,
+          "n_ambiguous_owner": 8,
+          "state_counts": {
+            "TOO_FAINT": 2950,
+            "DETECTED": 2855,
+            "FORCED_SEED": 180,
+            "EDGE": 146,
+            "BLENDED": 37
+          }
+        },
+        "Light_148": {
+          "frame": "Light_148",
+          "g1_strict_le13": 0.9870517928286853,
+          "g1_strict_le145": 0.9435917114351496,
+          "g1_eye_le13": 0.9870517928286853,
+          "g1_eye_le145": 0.9481964696853415,
+          "g1_eye_seed_le13": 1.0,
+          "g1_eye_seed_le145": 0.9735226400613968,
+          "g2": NaN,
+          "g3_g18": 0.038338658146964855,
+          "g4_ok": true,
+          "n_pass1": 3016,
+          "n_pass2": 230,
+          "n_forced_seed": 159,
+          "n_ambiguous_owner": 8,
+          "state_counts": {
+            "TOO_FAINT": 2928,
+            "DETECTED": 2903,
+            "FORCED_SEED": 159,
+            "EDGE": 146,
+            "BLENDED": 32
+          }
+        }
+      },
+      "regressions": {
+        "MASTERSTAR/g1_strict_le13": 0.0,
+        "MASTERSTAR/g1_strict_le145": -0.00038372985418266836,
+        "MASTERSTAR/g1_eye_le13": 0.0,
+        "MASTERSTAR/g1_eye_le145": -0.00038372985418266836,
+        "MASTERSTAR/g1_eye_seed_le13": 0.0,
+        "MASTERSTAR/g1_eye_seed_le145": -0.00038372985418266836,
+        "MASTERSTAR/g2": 0.0,
+        "MASTERSTAR/g3_g18": 6.403252852449359e-06,
+        "Light_001/g1_strict_le13": 0.0,
+        "Light_001/g1_strict_le145": 0.0,
+        "Light_001/g1_eye_le13": 0.0,
+        "Light_001/g1_eye_le145": 0.0,
+        "Light_001/g1_eye_seed_le13": 0.0,
+        "Light_001/g1_eye_seed_le145": 0.0,
+        "Light_001/g3_g18": 0.0,
+        "Light_076/g1_strict_le13": 0.0,
+        "Light_076/g1_strict_le145": 0.0,
+        "Light_076/g1_eye_le13": 0.0,
+        "Light_076/g1_eye_le145": 0.0,
+        "Light_076/g1_eye_seed_le13": 0.0,
+        "Light_076/g1_eye_seed_le145": 0.0,
+        "Light_076/g3_g18": 0.0,
+        "Light_148/g1_strict_le13": 0.0,
+        "Light_148/g1_strict_le145": 0.0,
+        "Light_148/g1_eye_le13": 0.0,
+        "Light_148/g1_eye_le145": 0.0,
+        "Light_148/g1_eye_seed_le13": 0.0,
+        "Light_148/g1_eye_seed_le145": 0.0,
+        "Light_148/g3_g18": 0.0
+      },
+      "g2_pass": true
+    },
+    "inputs": {
+      "measurement_mode": "diagnostic",
+      "diagnostic_radius_px": 10.0,
+      "n_identity_core": 44,
+      "n_identity_raw": 56,
+      "n_seed_core": 166,
+      "n_seed_raw": 166,
+      "seed_population": "pass2+forced_seed|unowned_Gaia_seed_position",
+      "coarse_match_px": 10.0,
+      "match_k": 1.7,
+      "centroid_floor_px": 1.0,
+      "centroid_cap_px": 3.0,
+      "target_depth_g": 17.5,
+      "edge_margin_px": 10.0,
+      "empty_sky_target_n": 2200,
+      "false_accept_max": 0.01,
+      "seed_snr_min": 4.0,
+      "census_accounting": {
+        "ok": true,
+        "detail": "ok n=400",
+        "n_census": 400,
+        "n_on_chip": 400,
+        "accounting_pct": 100.0,
+        "state_counts": {
+          "DETECTED_P1": 314,
+          "SEED_REJECTED": 50,
+          "FORCED_SEED": 28,
+          "DETECTED_P2": 6,
+          "EDGE": 2
+        }
+      },
+      "detection_completeness": {
+        "ok": true,
+        "numerator": 82,
+        "denominator": 82,
+        "completeness_pct": 100.0,
+        "depth_g": 14.5,
+        "denominator_label": "on-chip Gaia G<=14.5 excluding EDGE",
+        "numerator_label": "DETECTED_P1 + DETECTED_P2 + FORCED_SEED",
+        "bins": [
+          {
+            "g_lo": 9.0,
+            "g_hi": 9.5,
+            "n_eligible": 1,
+            "n_detected_seed": 1,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 9.5,
+            "g_hi": 10.0,
+            "n_eligible": 1,
+            "n_detected_seed": 1,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 10.0,
+            "g_hi": 10.5,
+            "n_eligible": 1,
+            "n_detected_seed": 1,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 10.5,
+            "g_hi": 11.0,
+            "n_eligible": 1,
+            "n_detected_seed": 1,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 11.0,
+            "g_hi": 11.5,
+            "n_eligible": 4,
+            "n_detected_seed": 4,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 11.5,
+            "g_hi": 12.0,
+            "n_eligible": 2,
+            "n_detected_seed": 2,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 12.0,
+            "g_hi": 12.5,
+            "n_eligible": 9,
+            "n_detected_seed": 9,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 12.5,
+            "g_hi": 13.0,
+            "n_eligible": 5,
+            "n_detected_seed": 5,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 13.0,
+            "g_hi": 13.5,
+            "n_eligible": 15,
+            "n_detected_seed": 15,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 13.5,
+            "g_hi": 14.0,
+            "n_eligible": 17,
+            "n_detected_seed": 17,
+            "completeness_pct": 100.0
+          },
+          {
+            "g_lo": 14.0,
+            "g_hi": 14.5,
+            "n_eligible": 25,
+            "n_detected_seed": 25,
+            "completeness_pct": 100.0
+          }
+        ],
+        "state_counts": {
+          "DETECTED_P1": 314,
+          "SEED_REJECTED": 50,
+          "FORCED_SEED": 28,
+          "DETECTED_P2": 6,
+          "EDGE": 2
+        },
+        "reference": {
+          "iter_id": "win_p1_4.5_p2_4.0_i6_i7",
+          "depth_g": 14.5,
+          "completeness_pct": 95.77897160399078,
+          "label": "g1_eye_seed_le145"
+        },
+        "delta_vs_ref_pp": 4.221028396009217,
+        "diagnostic_only": true
+      }
+    },
+    "gaia_fingerprint": "921ecb430eabd2f5d1c4815ea99bb08d2ee04734b8a45f66f60f0fe51126552d",
+    "vsx_fingerprint": "13b4753f97c16a23f079026d9beab3eab0a1ebf3ea917f302e19e2f41b5086c5",
+    "sandbox": {
+      "draft_id": 516,
+      "masterstar_sha256": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+      "light_001_sha256": "2e085929a8a99b49254852377726db0fd48011f399dd84abb05af30ebedd0c18",
+      "light_076_sha256": "be4c7efcfcdd4a51ebbb3006bc795176b1e964763cddcb1c7390da4854f1f714",
+      "light_148_sha256": "d762f151c861fc524763e342bec1bae191c5f3f53eee2dc4bafbcc1d1e97698f"
+    },
+    "hand_csv": {
+      "path": "C:/ASTRO/python/VYVAR/dev/results/context/session_20260819_daostage01_iter4/final_scores.csv",
+      "sha256": "450f620901aa4e5e7b17a79e3e7034aebd4ec29ca89683b4f9322e0aa2aa88b2"
+    },
+    "lock_rig": {
+      "draft_id": 516,
+      "plate_scale_arcsec_per_px": 9.773890066483727,
+      "fwhm_px": 5.19465,
+      "note": "STAGE-01 iter4 sandbox (draft 516 WIDE)"
+    },
+    "production_tolerances": {
+      "scope": "production_photometry_current_set",
+      "derived_pass2_center_tol_px": 1.0,
+      "derived_forced_seed_centroid_max_px": 1.0,
+      "derived_match_radius_px": 3.5,
+      "derived_plate_scale_arcsec_per_px": 0.560781258995021,
+      "derived_fwhm_px": 1.25
+    },
+    "tol_drift_warn": {
+      "status": "WARN",
+      "blocks": false,
+      "message": "cross-rig / scale drift vs STAGE-01 hand tols (informational, not a gate): pass2_center_tol_px derived 1.00 px vs hand 2.00 px (ratio 2.00x >= 2x); forced_seed_centroid_max_px derived 1.00 px vs hand 2.00 px (ratio 2.00x >= 2x)",
+      "checks": [
+        {
+          "name": "pass2_center_tol_px",
+          "derived_px": 1.0,
+          "hand_px": 2.0,
+          "ratio": 2.0
+        },
+        {
+          "name": "forced_seed_centroid_max_px",
+          "derived_px": 1.0,
+          "hand_px": 2.0,
+          "ratio": 2.0
+        }
+      ],
+      "current_set_plate_scale_arcsec_per_px": 0.560781258995021,
+      "current_set_fwhm_px": 1.25,
+      "lock_hand_pass2_center_tol_px": 2.0,
+      "lock_hand_forced_seed_centroid_max_px": 2.0,
+      "lock_hand_match_radius_px": 3.0
+    },
+    "sandbox_params": "hand_validated",
+    "sandbox_params_detail": {
+      "match_radius_px": 3.0,
+      "pass2_center_tol_px": 2.0,
+      "forced_seed_centroid_max_px": 2.0,
+      "pass1_sigma": 4.5,
+      "pass2_sigma": 4.0
+    },
+    "derived_pass2_center_tol_px": 1.0,
+    "derived_forced_seed_centroid_max_px": 1.0
+  },
+  "bstop1_infologs": [
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\infolog_20260825_143627.txt",
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\infolog_20260825_144309.txt",
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\infolog_20260825_144555.txt",
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\infolog_20260825_145143.txt"
+  ]
+}

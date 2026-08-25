@@ -1,0 +1,414 @@
+{
+  "m3_516": {
+    "n": 3606,
+    "n_cid": 3571,
+    "source_state": {
+      "DETECTED_P1": 2210,
+      "DAO_ONLY": 35,
+      "DETECTED_P2": 398,
+      "catalog_membership": 963
+    },
+    "vy_match_mode": {
+      "locked": 2597,
+      "": 46,
+      "catalog_membership": 963
+    },
+    "ghosts": [
+      {
+        "catalog_id": "1112112413285008896",
+        "present": false
+      },
+      {
+        "catalog_id": "1112115024625070720",
+        "present": false
+      },
+      {
+        "catalog_id": "1111930718988511616",
+        "present": false
+      },
+      {
+        "catalog_id": "1112119250872867200",
+        "present": false
+      },
+      {
+        "catalog_id": "1112110042463052928",
+        "present": false
+      },
+      {
+        "catalog_id": "1111931371821079552",
+        "present": false
+      },
+      {
+        "catalog_id": "1111737823417422464",
+        "present": false
+      },
+      {
+        "catalog_id": "1111922300852743808",
+        "present": false
+      }
+    ],
+    "g12": [
+      {
+        "catalog_id": "1112113680298377344",
+        "present": false
+      },
+      {
+        "catalog_id": "1111931371823539456",
+        "present": false
+      },
+      {
+        "catalog_id": "1112113066119992064",
+        "present": false
+      },
+      {
+        "catalog_id": "1111920204908702336",
+        "present": false
+      },
+      {
+        "catalog_id": "1112110695298081664",
+        "present": false
+      },
+      {
+        "catalog_id": "1112130898824233216",
+        "present": false
+      },
+      {
+        "catalog_id": "1112121862213003648",
+        "present": false
+      },
+      {
+        "catalog_id": "1111749157833870208",
+        "present": false
+      },
+      {
+        "catalog_id": "1111754659689117952",
+        "present": false
+      },
+      {
+        "catalog_id": "1112121067641532160",
+        "present": false
+      },
+      {
+        "catalog_id": "1111955148762490496",
+        "present": false
+      }
+    ]
+  },
+  "m3_520": {
+    "n": 791,
+    "n_cid": 113,
+    "source_state": {
+      "DAO_ONLY": 678,
+      "DETECTED_P1": 7,
+      "catalog_membership": 106
+    },
+    "vy_match_mode": {
+      "": 678,
+      "locked": 7,
+      "catalog_membership": 106
+    },
+    "ghosts": [
+      {
+        "catalog_id": "1112112413285008896",
+        "present": false
+      },
+      {
+        "catalog_id": "1112115024625070720",
+        "present": false
+      },
+      {
+        "catalog_id": "1111930718988511616",
+        "present": false
+      },
+      {
+        "catalog_id": "1112119250872867200",
+        "present": false
+      },
+      {
+        "catalog_id": "1112110042463052928",
+        "present": false
+      },
+      {
+        "catalog_id": "1111931371821079552",
+        "present": false
+      },
+      {
+        "catalog_id": "1111737823417422464",
+        "present": false
+      },
+      {
+        "catalog_id": "1111922300852743808",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      }
+    ],
+    "g12": [
+      {
+        "catalog_id": "1112113680298377344",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111931371823539456",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112113066119992064",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111920204908702336",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112110695298081664",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112130898824233216",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112121862213003648",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111749157833870208",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "1.0",
+        "peak_dao": "1869.3779296875",
+        "forced_photometry": "nan"
+      },
+      {
+        "catalog_id": "1111754659689117952",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112121067641532160",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111955148762490496",
+        "present": true,
+        "source_state": "catalog_membership",
+        "vy_match_mode": "catalog_membership",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      }
+    ]
+  },
+  "b1_516": {
+    "n_cid": 3571
+  },
+  "b1_520": {
+    "n": 791,
+    "n_cid": 113,
+    "source_state": {
+      "DAO_ONLY": 678,
+      "DETECTED_P1": 112,
+      "EDGE": 1
+    },
+    "vy_match_mode": {
+      "": 678,
+      "locked": 113
+    },
+    "ghosts": [
+      {
+        "catalog_id": "1112112413285008896",
+        "present": false
+      },
+      {
+        "catalog_id": "1112115024625070720",
+        "present": false
+      },
+      {
+        "catalog_id": "1111930718988511616",
+        "present": false
+      },
+      {
+        "catalog_id": "1112119250872867200",
+        "present": false
+      },
+      {
+        "catalog_id": "1112110042463052928",
+        "present": false
+      },
+      {
+        "catalog_id": "1111931371821079552",
+        "present": false
+      },
+      {
+        "catalog_id": "1111737823417422464",
+        "present": false
+      },
+      {
+        "catalog_id": "1111922300852743808",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      }
+    ],
+    "g12": [
+      {
+        "catalog_id": "1112113680298377344",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111931371823539456",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112113066119992064",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111920204908702336",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112110695298081664",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112130898824233216",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112121862213003648",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111749157833870208",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "1.0",
+        "peak_dao": "1869.3779296875",
+        "forced_photometry": "nan"
+      },
+      {
+        "catalog_id": "1111754659689117952",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1112121067641532160",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      },
+      {
+        "catalog_id": "1111955148762490496",
+        "present": true,
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "vy_dao_pass": "nan",
+        "peak_dao": "nan",
+        "forced_photometry": "False"
+      }
+    ]
+  },
+  "cid_516_m3_vs_b1": {
+    "only_m3": [],
+    "only_b1": [],
+    "n_m3": 3571,
+    "n_b1": 3571,
+    "n_live": 3584
+  }
+}

@@ -1,8 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **SEL-GHOST-01 A measured** (2026-08-25): H-MATCH-WIDEN
-stopped (P-A5 false on final WCS; IDs restored from `name` after a
-working gate; refine rematch did not run). **REG-520-01 STOP**
+**Status:** **SEL-GHOST-01 B-STOP-1b** (2026-08-25): clean-tree `--fast`
+holes closed (`0684ba9`/`b39982c`/`6dad937`); B1 changes 516 by 10 catalog_ids,
+0 in LC ensembles, `--full` byte-identical YES; H-LABEL TRUE and
+INV-SOURCE-STATE-01 wired (`58a2187`); 520 has no pre-optimizer WCS
+on disk. B3-B5 still wait D1-D3. **SEL-GHOST-01 B-STOP-1** (2026-08-25):
+B1+B2 on `main` (`d8c18a7`/`e2a0a84`/`01f6f77`); 520 optimizer entry
+7==gate-out (not 347); 1/8 ghost IDs still injected post-gate at Gaia
+xy; 516 fail=0 and widen not fired; catalog_id set not byte-identical;
+B1e lock rejects=10 not 0. STOP for Milan D1-D3 before B3-B5. **REG-520-01 STOP**
 (2026-08-24, measure): June 0.06 vs today
 0.39 on the same non-cal button is S2 selection (rms ceiling 0.1 +
 59-px false locks), not S1 pairing starvation and not H-CAL-MISCLASS.
@@ -34,7 +40,26 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-25** (SEL-GHOST-01 A measured; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-25** (SEL-GHOST-01 B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-1b (measure + label honesty)
+
+Clean-tree `--fast` at `01f6f77` FAIL (STAGE-01 not in tree); `0684ba9`
+4-tuple callers; still FAIL on untracked empty-sky CSV; `b39982c`
+tracks it. 516 B1 effect is 10 pass1 edge IDs vs `c592ecf` control
+(harness is 4+1 vs live); K=0 in 60 aperture LC ensembles; `--full`
+YES. H-LABEL TRUE; leftover ghost and G<12 injects now
+`catalog_membership`. No pre-optimizer 520 WCS; M4b not run.
+Evidence: `CURSOR_RESULT_SEL_GHOST_01_B1b.md`. Not pushed.
+
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-1 (B1+B2 wired; STOP for D1-D3)
+
+Sandbox 520 skip-solve: optimizer 7/685 == gate-out 7 (not 347). P-B2
+MISS 1/8 (`1111922300852743808` locked at Gaia xy, gate empty). P-B3
+optimizer skipped. P-B4 11/11 vs final WCS is mostly membership at
+d_px=0. 516: fail=0, match_sep_effective=12", cid set 3571 vs 3584,
+`n_lock_geometry_reject=10`. Live SHAs unchanged. Evidence:
+`CURSOR_RESULT_SEL_GHOST_01_B.md`. Not pushed.
 
 ## 2026-08-25 -- SEL-GHOST-01 A measured: H-MATCH-WIDEN stopped (P-A5 false; name-export restore; no refine rematch)
 

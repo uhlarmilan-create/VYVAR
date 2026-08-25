@@ -2,6 +2,24 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-1b (measure + INV-SOURCE-STATE-01)
+
+Clean-tree `--fast` was red at `01f6f77`/`58a2187` (STAGE-01 +
+empty-sky CSV). B1 516 delta vs pre-B1 skip-solve: 10 catalog_ids, 0
+in LC ensembles; governing lock_tol is derived 2.5 px not config 3.0.
+H-LABEL TRUE; injects no longer DETECTED_P1. 520 has no stored
+pre-optimizer WCS. Evidence:
+`CURSOR_RESULT_SEL_GHOST_01_B1b.md`. Not pushed. B3-B5 still wait
+D1-D3.
+
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-1 (B1+B2 wired; STOP for D1-D3)
+
+B1 identity gate+export+optimizer; B2 provenance stamps; skip-solve
+WCS hotfix. 520: 7==7 not 347; 1/8 ghost ID re-injected at Gaia xy;
+516 fail=0, widen not fired, cid set not identical, lock rejects=10.
+Live 520/516 SHA unchanged. B3-B5 wait D1-D3. Evidence:
+`CURSOR_RESULT_SEL_GHOST_01_B.md`. Not pushed.
+
 ## 2026-08-25 -- SEL-GHOST-01 A measured: H-MATCH-WIDEN stopped (P-A5 false; name-export restore; no refine rematch)
 
 g_60_4 log: widen 12->18", gate ok=52 warn=9 fail=286, refine rejected
