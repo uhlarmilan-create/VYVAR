@@ -401,6 +401,8 @@ def g2_empty_false_accept(
     match_radius_px: float | None = None,
 ) -> float:
     match_r = float(MATCH_RADIUS_PX if match_radius_px is None else match_radius_px)
+    if empty_df is None or empty_df.empty or "frame" not in empty_df.columns:
+        return float("nan")
     sub = empty_df[empty_df["frame"].astype(str).str.contains(frame_label.split("_")[-1] if "Light" in frame_label else "MASTERSTAR")]
     if sub.empty and frame_label == "MASTERSTAR":
         sub = empty_df[empty_df["frame"].astype(str) == "MASTERSTAR"]
