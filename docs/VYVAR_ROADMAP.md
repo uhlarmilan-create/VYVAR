@@ -10,7 +10,26 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-25 SEL-GHOST-01 B-STOP-3)
+## NEXT SESSION - entry point (2026-08-25 CLOSE-OUT C1/C2 STOP)
+
+Local `main` `78b3495` tracks `origin/sel-ghost-01` (same SHA).
+`origin/main` stays `b1f5b8c` until C6. C0 hygiene pushed. C1: R1-vs-R0
+is freeze lag; census 4+1 IDs unexplained; no fix commit. C2: comp_rms
+is mag-bin relative flux; C3 waits Milan GO. C4 ZP-OK v2 locate-fail
+(re-issue v2). C6 re-cut waits Milan GO in chat after C1 STOP (full
+chain, not photometry-only). Live 516/520 SHA unchanged.
+
+| Step | Action |
+|------|--------|
+| **1** | Milan: GO C3 (COMP-RMS-DEF-01-B + ZONE-SAT-01 wiring) or hold |
+| **2** | Milan: C6 full-chain re-cut GO (or wait on census 4+1 unexplained) |
+| **3** | Architect re-issues EPSF-ZP-OK-01-WIRE v2 (locate failed) |
+| **4** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 (15.511 UI overwrite of DB scale fixed at `1ec035f`; not a new DAO-SCALE-AUTH-01) |
+| **5** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **6** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **7** | **EXPORT-PARITY-01** (HIGH) |
+
+## NEXT SESSION - prior (2026-08-25 SEL-GHOST-01 B-STOP-3)
 
 Local `main` ahead of `origin/main` `b1f5b8c`. Push: NO until Milan
 reviews B-STOP-3. Production-path 516 three-way measured. Re-cut of
@@ -56,12 +75,12 @@ solve-rejected. AC-02 wiring is in the close stack.
 |-----|------------|
 | **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
 | **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
-| **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. **SEL-GHOST-01 S6 (2026-08-25):** g_60_4 re-solves when Equipment+Telescope DB scale (0.566 "/px at bin4) is not overwritten by the FITS/config/UI 15.511 "/px Zeiss-wide default; first attempt with the wrong triangle-filter scale failed (`n_cat_tri=113`, cap 33 detections). z_90_4 still needs sibling-seed. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
+| **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. **SEL-GHOST-01 S6 (2026-08-25):** g_60_4 re-solves when Equipment+Telescope DB scale (0.566 "/px at bin4) is not overwritten by the FITS/config/UI 15.511 "/px Zeiss-wide default; first attempt with the wrong triangle-filter scale failed (`n_cat_tri=113`, cap 33 detections). **`1ec035f` keeps DB plate scale over FITS/UI** (governing-value defect closed; do not open DAO-SCALE-AUTH-01). z_90_4 still needs sibling-seed. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
-| **MED** | **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **COMP-RMS-DEF-01-B** (C3, waits Milan GO on C2f), **WIDE-ERR/CORR-ERR-01** |
 | **MED** | **PRECAL-INPUT-CONTRACT-01** (informational stamp, not a blocking gate; REG-520-01 menu d), **DAO-TOL-FLOOR-01** (pass2/seed floor = f(rms, FWHM); cite M2 curve) |
-| **MED** | **ZONE-SAT-01** (G=7.63 peak 88781 zone=linear; separate task) |
+| **MED** | **ZONE-SAT-01** (measure STOP C2e; wiring folded into C3 GO; G=7.63 peak_max 88781 zone=linear because 85pct NaN) |
 | **OPEN** | **INPUT-PATH-ARCH-01** (discussion pending - Milan 2026-08-25: non-cal route stays; externally-calibrated vs raw-without-masters split still to be discussed) |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
 | **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |

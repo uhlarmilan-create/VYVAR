@@ -1,6 +1,12 @@
 # VYVAR -- Development State
 
-**Status:** **SEL-GHOST-01 B-STOP-3** (2026-08-25): T1/T2 on `main`
+**Status:** **CLOSE-OUT 2026-08-25 C1/C2 STOP.** C0 pushed to
+`origin/sel-ghost-01` at `78b349598b6fc2fc56ee9c8380fbd0728e614831`
+(`--fast --clean` OVERALL PASS). origin/main stays `b1f5b8c`. C1
+ANCHOR-DRIFT-01: R1-vs-R0 is freeze lag; census 4+1 unexplained; no
+fix commit; C6 waits Milan GO. C2 COMP-RMS-DEF-01-A measured; C3
+waits GO. C4 ZP-OK v2 locate-fail. Live 516/520 SHA unchanged.
+**SEL-GHOST-01 B-STOP-3** (2026-08-25): T1/T2 on `main`
 (`e410130`/`6e0fd5c`); INV-CAL-01 honors `pre_calibrated` (`6950495`).
 Production-path 516 three-way (R0 frozen / R1 `c592ecf` / R2 HEAD)
 measured; no re-cut, no push. Live 516/520 SHA unchanged. **SEL-GHOST-01 B-STOP-2** (2026-08-25): D1-D4 wired;
@@ -48,7 +54,32 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-25** (SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-25** (CLOSE-OUT C0-C2 STOP, C4 locate-fail; C3/C6 wait GO; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-25 -- CLOSE-OUT C0 (hygiene; branch `sel-ghost-01`)
+
+C0a: one haversine for `_dist_deg`, persist 9 decimal degrees
+(`c929c0b`). C0b: D3 gates on `snr_ap_pixscaled` (`78b3495`).
+`--fast --clean` OVERALL PASS. Pushed `main:sel-ghost-01` remote SHA
+`78b349598b6fc2fc56ee9c8380fbd0728e614831`. origin/main stays
+`b1f5b8c`.
+
+## 2026-08-25 -- CLOSE-OUT C1 ANCHOR-DRIFT-01 STOP
+
+R1 vs R0 is freeze lag: C1c no MS-moving commit in `ad19e14..c592ecf`
+on the pre-expand table. Census 4+1 IDs unexplained. No fix commit.
+C6 waits Milan GO. Evidence: `CURSOR_RESULT_ANCHOR_DRIFT_01.md`.
+
+## 2026-08-25 -- CLOSE-OUT C2 COMP-RMS-DEF-01-A STOP
+
+Selector `comp_rms` is mag-bin relative flux, not LOO differential mag.
+ZONE-SAT-01: 85pct NaN skips the peak test (G=7.63 linear). C3 waits
+GO. Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_A.md`.
+
+## 2026-08-25 -- CLOSE-OUT C4 EPSF-ZP-OK-01-WIRE v2 locate-fail
+
+v2 task file not found. No wiring. Evidence:
+`CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
 
 ## 2026-08-25 -- SEL-GHOST-01 B-STOP-3 (production-path evidence; no re-cut)
 

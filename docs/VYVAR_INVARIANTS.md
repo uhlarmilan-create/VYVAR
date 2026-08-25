@@ -134,6 +134,19 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
   `snr_peak` remains diagnostic and is not gated. Threshold is unchanged (D5).
 - **Test:** `dev/tests/test_s5_d3_candidacy.py`, `dev/tests/test_t2_aperture_snr.py`.
 
+### INV-CAL-01 pre_calibrated (SEL-GHOST-01 B-STOP-3)
+
+- **Definition:** When the draft is `pre_calibrated` (dark calibration
+  skipped), INV-CAL-01 does not require a `cal_diag.json` block after
+  dark calibration. Missing cal_diag in that mode is WARN / skip, not
+  FAIL. `invariants_runtime` treats `pre_calibrated` like PASSTHROUGH
+  for the dark-applied predicate (`6950495`).
+- **Rationale:** 520 V0612 / B-STOP-3 T4 harness: production-path
+  photometry aborted on `cal_diag block missing` even though dark was
+  never run.
+- **Test:** harness coverage via `session_baseline_check --full` on
+  pre_calibrated drafts; unit path in `invariants_runtime.py`.
+
 ### Anchor `--full` stage coverage (INV-ANCHOR-00 detail)
 
 | Pipeline stage | Covered by `--full`? | Notes |

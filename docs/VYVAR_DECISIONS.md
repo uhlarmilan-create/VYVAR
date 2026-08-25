@@ -60,6 +60,11 @@ D4  One geometry question, one threshold. Lock PREFERENCE keeps the
     identity-gate fail threshold 3 x FWHM_dao_px. Basis: B1b M2c (ten
     516 edge stars at 2.05-2.65 px rejected at 2.5 px while the
     identity gate passes them at 3 x FWHM).
+D5  D3 aperture SNR threshold stays 10. Two live 516 comps
+    (1500579870061241088 snr_ap 8.29; 1498964240802993408 snr_ap 7.57;
+    photon ~0.13 mag) leave the ensembles. The gated column is
+    `snr_ap_pixscaled` (pixel-scaled err_ap), not empty-aperture
+    empirical error. Basis: B3 T2-P1 table; CLOSE-OUT C0b.
 
 Architect retraction (verbatim): "H-MATCH-WIDEN
 (2026-08-25) named WCS-refine rematch (H2) as the path that returned
@@ -80,8 +85,46 @@ retained = 742): honest = 1.0 (61/61 DETECTED-with-cid), reported =
 numerator is retired.
 
 Pointers: INV-MATCH-IDENTITY-01, INV-SOURCE-STATE-01, INV-WCS-01 write
-guard (S4b). Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`,
-`CURSOR_RESULT_SEL_GHOST_01_B3.md`.
+guard (S4b), D3 SNR note. Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`,
+`CURSOR_RESULT_SEL_GHOST_01_B3.md`, CLOSE-OUT C0/C1/C2.
+
+## ANCHOR-DRIFT-01 - R1 vs R0 is freeze lag, not a hidden MS commit (2026-08-25)
+
+**Cause (measured, STOP C1).** Fresh full chain at `c592ecf` (R1) vs
+frozen live 516 (R0, freeze git `ad19e14`): 0/60 LC SHA equal because
+`--full` never rebuilds MASTERSTAR. C1c: no commit in
+`ad19e14..c592ecf` moves the pre-expand detection CSV (SHA
+`2eae423d...`, n=2643 at four bisect points). Frozen 3610 vs R1 3606
+is census membership. Name DET_ vs cid, greedy ID swaps, and two
+headline LC deltas (bogus frozen epoch; ZP on identical mag_inst) are
+authorized-unrecut. Census 4+1 catalog_id membership remains
+unexplained at ID grain. No defect-fixed-here. Re-cut is C6, Milan GO
+in chat, full-chain (not photometry-only).
+
+Evidence: `CURSOR_RESULT_ANCHOR_DRIFT_01.md`.
+
+## COMP-RMS-DEF-01-A - selector comp_rms is not differential mag (2026-08-25)
+
+**Cause (measured, STOP C2; wiring is C3).** Selector `comp_rms`
+(`comp_pool_rms.compute_global_pool_rms_map` 74-387) is 1.4826*MAD of
+mag-bin relative flux (fractional), gated as if mag (ceiling 0.1).
+Leave-one-out MAD of differential mag (iv) puts the bright 520 pool
+near a few times photon; selector 4.33 can sit in a 5% ensemble.
+`suspected_variables` uses the same relative-flux series with RMS not
+MAD (5/7 flagged). ZONE-SAT-01: peak test reads `peak_max_adu` but
+skips when `saturate_limit_adu_85pct` is NaN, so G=7.63 peak 88781
+stays `zone=linear`. Fix direction (GO): LOO differential scatter,
+ceiling k*photon, zone reads pixel peak vs saturate limit. k not
+computed on frozen 516 (no SNR column).
+
+Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_A.md`.
+
+## EPSF-ZP-OK-01-WIRE v2 - locate fail (2026-08-25)
+
+Parked v2 task file was not on disk, in `dev/tasks/`, or in chat
+transcripts. Cursor STOP at locate; did not reconstruct W1-W4 from v1.
+Architect re-issues v2 to run. Evidence:
+`CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
 
 ## REG-520-01 - non-cal is first-class; 0.39 vs 0.06 is selection (2026-08-24)
 

@@ -27,6 +27,11 @@ for the full map.
   reports. Dirty-tree `--fast` alone is not the push gate (SEL-GHOST-01 S7).
   (git/config/ledger + pytest) and `--full` (headless `run_full_photometry_pipeline`
   byte-identical anchor gate).
+  **Anchor re-cut (ANCHOR-DRIFT-01, 2026-08-25):** `--full` copies the frozen
+  MASTERSTAR and reruns photometry only (INV-ANCHOR-00). A fresh **full-chain**
+  run (not photometry-only) is required before any era snapshot re-cut.
+  Two consecutive `--full` OVERALL PASS byte-identical runs against that new
+  freeze then confirm determinism.
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates
   `docs/VYVAR_PARAMS.md` from `dev/validation/params_registry.json`.
 - **Ledger:** `dev/validation/VYVAR_VALIDATION_LEDGER.json`.

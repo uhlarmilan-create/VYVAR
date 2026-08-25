@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- CLOSE-OUT C0-C2 STOP (C3/C6 wait GO; C4 locate-fail)
+
+C0 hygiene on `sel-ghost-01` `78b3495`. C1: R1-vs-R0 freeze lag; census
+4+1 unexplained; no defect-fixed-here. C2: comp_rms is relative-flux
+MAD gated as mag; zone skips peak test when 85pct is NaN. C3/C6 not
+run. ZP-OK v2 not located. Live 516/520 SHA unchanged.
+Evidence: `CURSOR_RESULT_ANCHOR_DRIFT_01.md`,
+`CURSOR_RESULT_COMP_RMS_DEF_01_A.md`,
+`CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
+
 ## 2026-08-25 -- SEL-GHOST-01 B-STOP-3 (production-path 516 three-way; no re-cut)
 
 T1/T2 committed. T2-P1 FALSE (65/67). T3 R1 vs R0: 0/60 LC SHA.
