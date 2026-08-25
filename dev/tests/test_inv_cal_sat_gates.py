@@ -17,10 +17,23 @@ sys.path.insert(0, str(SRC))
 
 from cal_stage import stamp_cal_stage_headers  # noqa: E402
 from invariants_runtime import (  # noqa: E402
+    check_cal_diag,
     check_cal_stage,
     check_sat_diag,
     inv_check,
 )
+
+
+def test_check_cal_diag_pre_calibrated_skips_without_file(tmp_path: Path) -> None:
+    """INV-CAL-01: pre_calibrated drafts never ran dark calibration (520)."""
+    photo = tmp_path / "platesolve" / "g_60_4" / "photometry"
+    photo.mkdir(parents=True)
+    meta: dict = {"calibration_mode": "pre_calibrated"}
+    check_cal_diag(meta, photometry_dir=photo)
+    rec = [x for x in meta["invariants"] if x["id"] == "INV-CAL-01"][-1]
+    assert rec["ok"] is True
+    assert rec["policy"] == "WARN"
+    assert "no dark calibration" in rec["detail"]
 
 
 def test_sat_diag_loads_draft_root_json(tmp_path: Path) -> None:

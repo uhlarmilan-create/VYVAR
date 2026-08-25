@@ -1021,7 +1021,9 @@ def check_cal_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = 
                 cd_path_ok = True
                 break
     cal_mode = str(meta.get("calibration_mode") or "")
-    dark_applied = cal_mode not in ("", "PASSTHROUGH", "RAW")
+    # pre_calibrated: dark calibration was skipped (CALIBRATION_MODE_PRE).
+    # PASSTHROUGH/RAW: no VYVAR dark step. None of these require cal_diag.json.
+    dark_applied = cal_mode not in ("", "PASSTHROUGH", "RAW", "pre_calibrated")
     if not dark_applied and not isinstance(block, dict) and not cd_path_ok:
         inv_check(
             meta,
