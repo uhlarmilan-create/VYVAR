@@ -1,11 +1,11 @@
-CURSOR RESULT - 2026-08-22T18:30:00Z (EPSF-VALID-02 S5b — D1/D2 re-measurement)
+CURSOR RESULT - 2026-08-22T18:30:00Z (EPSF-VALID-02 S5b - D1/D2 re-measurement)
 
 What I did
 Re-ran Part D certificates with **scale-aligned** metrics (sandbox only; no production
 writes, no model swap). Harness: `dev/sandbox/epsf_valid_02_s5b_measure.py`. Artifacts
 under `dev/results/context/session_20260822_epsf_valid_02_s5b/`.
 
-Parent: S5 STOP-B partial (B1–B4 signed; D1/D2 rejected for raw-flux metric defect).
+Parent: S5 STOP-B partial (B1-B4 signed; D1/D2 rejected for raw-flux metric defect).
 HEAD: `2ba3d58`. No commits.
 
 ---
@@ -14,7 +14,7 @@ HEAD: `2ba3d58`. No commits.
 
 S5 D2 raw deltas showed RMS ? |median| at every N (~300 mmag), dominated by **global
 flux-scale offset** between builds. S5b removes per-model median scale (equivalent to
-each model’s own AC bookkeeping) before comparing per-star deltas.
+each model's own AC bookkeeping) before comparing per-star deltas.
 
 | N (S5 raw) | raw median ? | raw RMS ? |
 |-----------:|-------------:|----------:|
@@ -22,12 +22,12 @@ each model’s own AC bookkeeping) before comparing per-star deltas.
 | 30 | ?427.3 | 430.5 |
 | 50 | ?300.4 | 299.3 |
 
-After alignment (S5b), the same builds differ by **tens of mmag**, not hundreds — premise
+After alignment (S5b), the same builds differ by **tens of mmag**, not hundreds - premise
 **confirmed**; S5 D1/D2 rejection stands; S5b certificates supersede S5 Part D numbers.
 
 ---
 
-## D1b-a — Odd-half build diagnosis + sandbox fix
+## D1b-a - Odd-half build diagnosis + sandbox fix
 
 **Failure:** `ValueError: All elements of input data must be finite` during `EPSFBuilder`
 normalization when too many odd-half stars receive photutils `_fit_error_status=3`
@@ -43,20 +43,20 @@ normalization when too many odd-half stars receive photutils `_fit_error_status=
 
 **Candidate S6 production hardening (not committed):** extend build-input guard to drop
 stars that destabilize EPSFBuilder iterations (edge proximity / status-3 cluster), with
-logged `catalog_id` + reason — same pattern as sandbox `sandbox_build_guarded()`.
+logged `catalog_id` + reason - same pattern as sandbox `sandbox_build_guarded()`.
 
 ---
 
-## D1b — True split-half (aligned)
+## D1b - True split-half (aligned)
 
 | Item | Value |
 |------|------:|
 | Build A (odd) | 34 requested ? **33 built** (1 guard drop) |
 | Build B (even) | 33 built, 0 drops |
 | Frames | 12 (same as S5 D1) |
-| Matched star–frame pairs | **368** (34 stars; target ?50 **met**) |
-| Removed offset — odd (mmag) | +1490.4 |
-| Removed offset — even (mmag) | +374.5 |
+| Matched star-frame pairs | **368** (34 stars; target ?50 **met**) |
+| Removed offset - odd (mmag) | +1490.4 |
+| Removed offset - even (mmag) | +374.5 |
 | **Raw** median ? / RMS (mmag) | ?1121.3 / 1124.7 |
 | **Aligned** per-star median ? (mmag) | **?7.8** |
 | **Aligned** per-star RMS ? (mmag) | **30.3** |
@@ -71,10 +71,10 @@ per-star ? mmag (equivalent to per-model AC scale removal).
 |------|------:|
 | Median ERR-path err | **15.3 mmag** |
 | n pairs | 368 / 368 |
-| Source | proc CSV photon term: `sqrt(dao_flux/gain + sigma_bkg_ap²)/dao_flux × 1000` |
+| Source | proc CSV photon term: `sqrt(dao_flux/gain + sigma_bkg_ap^2)/dao_flux x 1000` |
 | Note | `err_term_epochs_picks.csv` has **0 overlap** with comp build pool (target LCs only); not used |
 
-Criteria: |aligned median| < 2× budget and aligned RMS < 3× budget.
+Criteria: |aligned median| < 2x budget and aligned RMS < 3x budget.
 
 | Check | Threshold | Actual | |
 |-------|----------:|-------:|---|
@@ -88,7 +88,7 @@ Artifacts: `d1b_summary.json`, `d1b_matched_pairs.csv`, `d1b_per_star_aligned_mm
 
 ---
 
-## D2b — Convergence with aligned scale (vs N=67 reference)
+## D2b - Convergence with aligned scale (vs N=67 reference)
 
 Same 12 frames as D1b; science-set comp stars (67 gated pool); scale aligned per D1b (c).
 
@@ -99,13 +99,13 @@ Same 12 frames as D1b; science-set comp stars (67 gated pool); scale aligned per
 | 50 | 462 | +88.9 | ?294.1 | 291.0 | ?2.7 | **12.9** |
 | 67 | 478 | +379.8 | 0.0 | 0.0 | 0.0 | 0.0 |
 
-(ref removed offset ? +379.8 mmag at all N — reference self-comparison at N=67.)
+(ref removed offset ? +379.8 mmag at all N - reference self-comparison at N=67.)
 
 **Curve artifacts:** `d2b_convergence_curve.csv`, `d2b_convergence_curve.png`
 (offset + aligned RMS series), `d2b_summary.json`, sandbox builds `build_d2b_n15/30/50/`.
 
-**D2b verdict: PASS (aligned convergence)** — N=50 aligned RMS 12.9 mmag < 15.3 mmag
-budget; N=15 within ~1.7× budget. N=30 is a local outlier (36.9 mmag) but still ? raw
+**D2b verdict: PASS (aligned convergence)** - N=50 aligned RMS 12.9 mmag < 15.3 mmag
+budget; N=15 within ~1.7x budget. N=30 is a local outlier (36.9 mmag) but still ? raw
 300 mmag artifact. Non-monotonic aligned RMS at N=30 likely subset composition / edge-star
 sensitivity, not scale defect.
 
@@ -117,8 +117,8 @@ sensitivity, not scale defect.
 >
 > **Certificate / validation threshold (revised):** partial-N sandbox builds are **not**
 > disqualified by hundreds-of-mmag raw offsets. For split-half / convergence checks, require
-> **scale-aligned** RMS ? < 3× comp-star ERR budget (~46 mmag here). N?50 meets this;
-> N=15 meets it; N=30 marginal (2.4× budget).
+> **scale-aligned** RMS ? < 3x comp-star ERR budget (~46 mmag here). N?50 meets this;
+> N=15 meets it; N=30 marginal (2.4x budget).
 >
 > **INTERIM top-N=200:** remain **disabled** for production builds until field-specific
 > evidence shows gated-pool convergence; S5b does not change that policy, only corrects the
@@ -178,7 +178,7 @@ No commits (measurement-only task).
 
 ## STOP-B resume
 
-S5b completes **aligned** D1/D2 certificates. B1–B4 verdicts from S5 stand unchanged.
+S5b completes **aligned** D1/D2 certificates. B1-B4 verdicts from S5 stand unchanged.
 
 **Architect review + Milan swap decision required before S6.**
 

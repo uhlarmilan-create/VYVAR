@@ -1,18 +1,18 @@
 CURSOR RESULT - EPSF-VALID-02 Phase 2 review fixups (R1-R4)
 
 Date: 2026-08-22. HEAD: `93b3194`. Parent: CURSOR_TASK_EPSF_VALID_02_P2.md.
-Scope: review findings only. No production model swap. No Part B/D. **STOP** — architect sign-off decides model-swap.
+Scope: review findings only. No production model swap. No Part B/D. **STOP** - architect sign-off decides model-swap.
 
 ---
 
-## R1 — 134 vs 135 frames (BLOCKING: explain, do not fix)
+## R1 - 134 vs 135 frames (BLOCKING: explain, do not fix)
 
 ### Summary
 
 | Path | Count | Enumerator |
 |------|------:|------------|
 | P1 / anchor / accept backup / aperture guard | **134** | `proc_BO_CVn_Light_*.csv` only (science lights after QC) |
-| ACCEPT rerun / `export_per_frame_catalogs` / CSS denominator | **135** | `_iter_fits_recursive(detrended_aligned/lights/NoFilter_60_2)` — **all** `*.fits` |
+| ACCEPT rerun / `export_per_frame_catalogs` / CSS denominator | **135** | `_iter_fits_recursive(detrended_aligned/lights/NoFilter_60_2)` - **all** `*.fits` |
 
 **Extra frame:** `MASTERSTAR.fits` (stacked reference; `frame_index=134` in `epsf_photometry_job_summary.json`).
 
@@ -35,7 +35,7 @@ This is a **two-path defect**: anchor accounting and ACCEPT/export frame account
 ### CSS and aperture guard
 
 - CSS target coverage **135/135** counts all proc sidecars with a CSS row, including `proc_MASTERSTAR` (`accept_summary.json`: `n_frames_psf_ok=135`, `total_frames=135`). Science-light-only CSS on Light_* remains **134/134** for full-night stars.
-- Aperture guard scoped to **134** Light backup files. `pre_aperture_column_hashes.json` was **`{}`** ? reported `aperture_hash_mismatches=0` was **vacuous** (empty pre-hash). Independent post-hoc column compare (dao_flux/mag/mag_inst/flux) shows widespread diffs vs backup — guard did not substantively run; follow-up belongs outside R1 report scope.
+- Aperture guard scoped to **134** Light backup files. `pre_aperture_column_hashes.json` was **`{}`** ? reported `aperture_hash_mismatches=0` was **vacuous** (empty pre-hash). Independent post-hoc column compare (dao_flux/mag/mag_inst/flux) shows widespread diffs vs backup - guard did not substantively run; follow-up belongs outside R1 report scope.
 
 ### On-disk verification (2026-08-22)
 
@@ -48,7 +48,7 @@ Evidence: `dev/results/context/session_20260822_epsf_valid_02_accept/export_resu
 
 ---
 
-## R2 — `--fast` gate (BLOCKING)
+## R2 - `--fast` gate (BLOCKING)
 
 Full `--fast` re-run at HEAD **`93b3194`**:
 
@@ -63,7 +63,7 @@ Prior intermittent failure `test_v3d_fine_scale.py::test_v3d_run_structure` **di
 
 ---
 
-## R3 — Funnel vs pre-registered Part C composition
+## R3 - Funnel vs pre-registered Part C composition
 
 ### a) Funnel tables (516 and 517) with non-var and non-sat rows
 
@@ -95,7 +95,7 @@ Explicit rows added for pre-registered gates:
 | n_csv_input | 3606 |
 | n_after_non_variable (VSX/Gaia-var excluded) | 3321 |
 | n_after_non_saturated (likely_sat + is_saturated) | 2434 |
-| … (downstream gates unchanged from F4) … |
+| ... (downstream gates unchanged from F4) ... |
 | n_after_isolation | **66** |
 | n_stars_used (extract_stars) | **66** |
 
@@ -106,8 +106,8 @@ Sandbox: `dev/sandbox/epsf_valid_02_r3_build_census.py`.
 
 Full lists with role, variability, and saturation flags:
 
-- **516:** `dev/results/context/session_20260822_epsf_valid_02_r1r4/r3_build_stars_516.csv` — **67** stars
-- **517:** `dev/results/context/session_20260822_epsf_valid_02_r1r4/r3_build_stars_517.csv` — **66** stars
+- **516:** `dev/results/context/session_20260822_epsf_valid_02_r1r4/r3_build_stars_516.csv` - **67** stars
+- **517:** `dev/results/context/session_20260822_epsf_valid_02_r1r4/r3_build_stars_517.csv` - **66** stars
 
 Columns: `catalog_id`, `role`, `catalog_known_variable`, `vsx_known_variable`, `gaia_dr3_variable_catalog`, `likely_saturated`, `is_saturated`, `zone`, `source_state`, `mag`.
 
@@ -124,11 +124,11 @@ Columns: `catalog_id`, `role`, `catalog_known_variable`, `vsx_known_variable`, `
 | Non-saturated gate skipped? | **No.** Applied (`2432/3325` for 516; `2434/3321` for 517). |
 | Science-scope gate | Applied (`68` ? isolation ? `67` for 516). Targets in the 333-ID science set are **not** in the build pool because they fail earlier gates (variable / photometry / isolation), not because gates were bypassed. |
 
-**No silent deviation from pre-registered Part C gates.** Named expectation: ePSF build uses stable comps, not active variable targets — consistent with funnel and census.
+**No silent deviation from pre-registered Part C gates.** Named expectation: ePSF build uses stable comps, not active variable targets - consistent with funnel and census.
 
 ---
 
-## R4 — Split-half quick delta (informal preview)
+## R4 - Split-half quick delta (informal preview)
 
 Sandbox: `dev/sandbox/epsf_valid_02_r4_split_half.py`  
 Models:
@@ -166,8 +166,8 @@ Artifacts:
 |------|------|--------|----------|
 | `--fast` | `93b3194` | **OVERALL PASS** | `dev/results/context/session_20260822_epsf_valid_02_r1r4/fast_baseline_stdout.txt` |
 | `--full` recut | `93b3194` | **OVERALL PASS** (from ACCEPT session) | `dev/results/context/session_20260822_epsf_valid_02_accept/full_baseline_stdout.txt` |
-| core photometry SHA | — | `9902d918e9f48e0f…` n=121 | full baseline |
-| extended photometry SHA | — | `472bc9e4446f13a8…` n=179 | full baseline |
+| core photometry SHA | - | `9902d918e9f48e0f...` n=121 | full baseline |
+| extended photometry SHA | - | `472bc9e4446f13a8...` n=179 | full baseline |
 
 ---
 
@@ -180,4 +180,4 @@ Artifacts:
 | `dev/sandbox/epsf_valid_02_r4_split_half.py` | sandbox (R4; untracked) |
 | `dev/results/context/session_20260822_epsf_valid_02_r1r4/*` | R1R4 artifacts |
 
-No production code changes. No commits. **STOP** — awaiting architect sign-off on model-swap question.
+No production code changes. No commits. **STOP** - awaiting architect sign-off on model-swap question.

@@ -1,11 +1,11 @@
 CURSOR RESULT - EPSF-VALID-02 S1-S4 (STOP-A)
 
 Date: 2026-08-22. HEAD: `2ba3d58`. Parent: EPSF-VALID-02 FINAL task.
-**STOP-A COMPLETE** ù S1ùS4 all pass; architect review before S5/S6.
+**STOP-A COMPLETE** ? S1?S4 all pass; architect review before S5/S6.
 
 ---
 
-## S1 ù Restore draft 516 aperture columns (EXECUTED)
+## S1 ? Restore draft 516 aperture columns (EXECUTED)
 
 **Action:** Restored all 134 `proc_BO_CVn_Light_*.csv` from `proc_backup_pre_accept/`; re-merged `psf_*` columns from accept-rerun live files by `catalog_id` (map, preserving backup row order). Deleted `proc_MASTERSTAR.csv`.
 
@@ -24,22 +24,22 @@ Artifacts:
 
 ---
 
-## S2 ù F5 enumerator fix
+## S2 ? F5 enumerator fix
 
-**Commit:** `57046dd` ù `EPSF-VALID-02 F5: science-light frame enumerator for ePSF accounting.`
+**Commit:** `57046dd` ? `EPSF-VALID-02 F5: science-light frame enumerator for ePSF accounting.`
 
 - `list_epsf_science_light_fits()` / `is_non_science_aligned_fits()` in `src_py/epsf_frame_accounting.py`
 - Excludes `MASTERSTAR.fits` and `proc_*` cal frames
-- Test: `dev/tests/test_epsf_science_light_fits.py` ù draft 516 asserts **134** science lights
+- Test: `dev/tests/test_epsf_science_light_fits.py` ? draft 516 asserts **134** science lights
 
 ---
 
-## S3 ù F6 PSF-only merge
+## S3 ? F6 PSF-only merge
 
 **Commits:** `c218921` (merge path), `2ba3d58` (registry wire)
 
-- `src_py/epsf_psf_merge.py` ù `run_epsf_psf_merge_job`, `merge_psf_into_sidecar`, **INV-PSF-ADDITIVE-01**
-- UI RUN ePSF (`app.py`) calls merge job only ù not full `export_per_frame_catalogs`
+- `src_py/epsf_psf_merge.py` ? `run_epsf_psf_merge_job`, `merge_psf_into_sidecar`, **INV-PSF-ADDITIVE-01**
+- UI RUN ePSF (`app.py`) calls merge job only ? not full `export_per_frame_catalogs`
 - Full export gated behind `full_catalog_export=True` (pipeline internal only)
 - Moffat pass skipped when `_psf_merge_only=True`
 - **INV-PSF-ADDITIVE-01** documented in `docs/VYVAR_INVARIANTS.md`; wired in `WIRED_INV_IDS`
@@ -48,7 +48,7 @@ Artifacts:
 
 ---
 
-## S4 ù Acceptance re-run v2 (COMPLETE)
+## S4 ? Acceptance re-run v2 (COMPLETE)
 
 **Script:** `dev/sandbox/epsf_valid_02_s4_accept_v2.py`  
 **Model:** frozen production `masterstar_epsf.fits` on draft 516  
@@ -72,12 +72,12 @@ Artifacts: `dev/results/context/session_20260822_epsf_valid_02_s1s4/s4_accept_su
 
 | Gate | HEAD | Result |
 |------|------|--------|
-| `--fast` | `2ba3d58` | **OVERALL PASS** ù 1504 passed, 32 skipped |
-| `--full` recut | ù | **Not run** ù S1 restore touches Archive draft 516 only (outside snapshot); F6 code change does not require recut for STOP-A |
+| `--fast` | `2ba3d58` | **OVERALL PASS** ? 1504 passed, 32 skipped |
+| `--full` recut | ? | **Not run** ? S1 restore touches Archive draft 516 only (outside snapshot); F6 code change does not require recut for STOP-A |
 
 Evidence: `dev/results/context/session_20260822_epsf_valid_02_s1s4/fast_baseline_stdout_v2.txt`
 
-Prior `--full` SHAs (unchanged by this work): core `9902d918ù` n=121, extended `472bc9e4ù` n=179.
+Prior `--full` SHAs (unchanged by this work): core `9902d918?` n=121, extended `472bc9e4?` n=179.
 
 ---
 
@@ -107,4 +107,4 @@ Prior `--full` SHAs (unchanged by this work): core `9902d918ù` n=121, extended `
 
 Live draft 516: 134 proc CSVs restored; `proc_MASTERSTAR.csv` removed.
 
-**STOP-A COMPLETE** ó ready for architect review before S5/S6.
+**STOP-A COMPLETE** ? ready for architect review before S5/S6.
