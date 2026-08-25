@@ -124,6 +124,16 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
   `_has_det = peak_dao > 0 or "vy_dao_pass" in out.columns`.
 - **Test:** `dev/tests/test_inv_source_state_01.py`.
 
+### D3 comparison candidacy SNR (SEL-GHOST-01)
+
+- **Definition:** Before the RMS ceiling, a comparison candidate must have
+  MASTERSTAR `snr_ap_pixscaled` >= 10. That column is `flux_ap / err_ap` with
+  `err_ap = sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2)` (pixel-scaled background
+  term). It is adequate as a floor of 10. It is not the production
+  empty-aperture empirical error and must not be quoted as such.
+  `snr_peak` remains diagnostic and is not gated. Threshold is unchanged (D5).
+- **Test:** `dev/tests/test_s5_d3_candidacy.py`, `dev/tests/test_t2_aperture_snr.py`.
+
 ### Anchor `--full` stage coverage (INV-ANCHOR-00 detail)
 
 | Pipeline stage | Covered by `--full`? | Notes |

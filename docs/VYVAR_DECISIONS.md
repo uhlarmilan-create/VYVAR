@@ -51,7 +51,9 @@ D2  Astrometry optimizer refit acceptance: reject when rms_sip >
 D3  Comparison candidacy before the rms ceiling: source_state in
     {DETECTED_P1, DETECTED_P2}; vy_identity_gate != fail;
     gaia_dao_resid_px <= max(3 x FWHM_dao_px, 2 x solve_rms_px);
-    MASTERSTAR SNR >= 10. phase01_comparison_max_comp_rms unchanged
+    MASTERSTAR snr_ap_pixscaled >= 10 (pixel-scaled estimate
+    sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2), not empty-aperture
+    empirical error; D5: threshold stays 10). phase01_comparison_max_comp_rms unchanged
     (COMP-RMS-DEF-01). Basis: REG-520-01, Part A, B-STOP-1.
 D4  One geometry question, one threshold. Lock PREFERENCE keeps the
     derived lock tolerance (certificate); lock REJECTION (B1e) uses the

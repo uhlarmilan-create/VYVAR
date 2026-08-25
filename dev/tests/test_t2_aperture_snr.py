@@ -9,7 +9,7 @@ import pandas as pd
 from photometry_core import stamp_masterstar_snr_columns
 
 
-def test_snr_uses_flux_over_empirical_err_not_peak() -> None:
+def test_snr_uses_flux_over_pixscaled_err_not_peak() -> None:
     df = pd.DataFrame(
         {
             "flux": [2781.54],
@@ -33,8 +33,8 @@ def test_snr_uses_flux_over_empirical_err_not_peak() -> None:
     sigma_bkg_ap = 24.35 * np.sqrt(area)
     err = np.sqrt(2781.54 / 1.0 + sigma_bkg_ap**2)
     expected = 2781.54 / err
-    assert abs(float(out.loc[0, "snr"]) - expected) < 1e-6
-    assert float(out.loc[0, "snr"]) != float(out.loc[0, "snr_peak"])
+    assert abs(float(out.loc[0, "snr_ap_pixscaled"]) - expected) < 1e-6
+    assert float(out.loc[0, "snr_ap_pixscaled"]) != float(out.loc[0, "snr_peak"])
 
 
 def test_snr_peak_not_gated_column() -> None:
@@ -44,4 +44,4 @@ def test_snr_peak_not_gated_column() -> None:
     )
     assert "snr_peak" in out.columns
     assert float(out.loc[0, "snr_peak"]) == 5.0
-    assert float(out.loc[0, "snr"]) > 10.0
+    assert float(out.loc[0, "snr_ap_pixscaled"]) > 10.0

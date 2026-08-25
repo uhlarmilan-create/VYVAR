@@ -14,7 +14,7 @@ def _row(*, state: str, gate: str, resid: float, snr: float, rms: float, cid: st
         "source_state": state,
         "vy_identity_gate": gate,
         "gaia_dao_resid_px": resid,
-        "snr": snr,
+        "snr_ap_pixscaled": snr,
         "comp_rms": rms,
         "catalog_id": cid,
         "name": cid,
@@ -48,7 +48,7 @@ def test_d3_only_honest_star_is_candidate() -> None:
 
 def test_d3_missing_column_raises_name() -> None:
     df = pd.DataFrame(
-        [{"source_state": "DETECTED_P1", "vy_identity_gate": "ok", "snr": 20.0}]
+        [{"source_state": "DETECTED_P1", "vy_identity_gate": "ok", "snr_ap_pixscaled": 20.0}]
     )
     with pytest.raises(D3CandidacyError, match="gaia_dao_resid_px"):
         apply_d3_comparison_candidacy(df, fwhm_dao_px=2.5, solve_rms_px=1.3)

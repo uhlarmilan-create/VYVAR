@@ -211,7 +211,7 @@ def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path]
                 "source_state": "DETECTED_P1",
                 "vy_identity_gate": "ok",
                 "gaia_dao_resid_px": 0.2,
-                "snr": 80.0,
+                "snr_ap_pixscaled": 80.0,
             }
         )
     masterstars = pd.DataFrame(rows)

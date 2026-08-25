@@ -1,5 +1,10 @@
 # -*- coding: ascii -*-
-"""D3: comparison candidacy predicates (before RMS ceiling)."""
+"""D3: comparison candidacy predicates (before RMS ceiling).
+
+SNR gate uses MASTERSTAR ``snr_ap_pixscaled`` (pixel-scaled
+``sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2)``), not empty-aperture empirical
+error. Threshold ``D3_SNR_MIN`` stays 10 (SEL-GHOST-01 D5).
+"""
 
 from __future__ import annotations
 
@@ -17,7 +22,7 @@ D3_REQUIRED_COLUMNS = (
     "source_state",
     "vy_identity_gate",
     "gaia_dao_resid_px",
-    "snr",
+    "snr_ap_pixscaled",
 )
 D3_DETECTED_STATES = frozenset({SOURCE_DETECTED_P1, SOURCE_DETECTED_P2})
 D3_SNR_MIN = 10.0
@@ -56,7 +61,7 @@ def apply_d3_comparison_candidacy(
     st = df["source_state"].astype(str).str.strip()
     gate = df["vy_identity_gate"].astype(str).str.strip().str.lower()
     resid = pd.to_numeric(df["gaia_dao_resid_px"], errors="coerce")
-    snr = pd.to_numeric(df["snr"], errors="coerce")
+    snr = pd.to_numeric(df["snr_ap_pixscaled"], errors="coerce")
     m_state = st.isin(D3_DETECTED_STATES)
     m_gate = gate.ne("fail")
     m_resid = resid.le(ceil)
@@ -66,18 +71,18 @@ def apply_d3_comparison_candidacy(
         "source_state": int((~m_state).sum()),
         "vy_identity_gate": int((m_state & ~m_gate).sum()),
         "gaia_dao_resid_px": int((m_state & m_gate & ~m_resid).sum()),
-        "snr": int((m_state & m_gate & m_resid & ~m_snr).sum()),
+        "snr_ap_pixscaled": int((m_state & m_gate & m_resid & ~m_snr).sum()),
     }
     n_out = int(mask.sum())
     LOGGER.info(
-        "[D3] %s: n_in=%d n_out=%d drops state=%d gate=%d resid=%d snr=%d (ceil=%.3f px)",
+        "[D3] %s: n_in=%d n_out=%d drops state=%d gate=%d resid=%d snr_ap_pixscaled=%d (ceil=%.3f px)",
         str(log_label),
         n_in,
         n_out,
         drops["source_state"],
         drops["vy_identity_gate"],
         drops["gaia_dao_resid_px"],
-        drops["snr"],
+        drops["snr_ap_pixscaled"],
         float(ceil),
     )
     return mask, {"n_in": n_in, "n_out": n_out, "drops": drops, "resid_ceiling_px": float(ceil)}

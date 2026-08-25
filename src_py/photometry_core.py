@@ -1340,16 +1340,17 @@ def stamp_masterstar_snr_columns(
     annulus_inner_fwhm: float = 4.75,
     annulus_outer_fwhm: float = 9.0,
 ) -> pd.DataFrame:
-    """Stamp MASTERSTAR ``snr`` = flux_ap/err_ap and ``snr_peak`` = peak/sigma.
+    """Stamp MASTERSTAR ``snr_ap_pixscaled`` = flux_ap/err_ap_pixscaled and ``snr_peak``.
 
     Columns used:
     - ``flux_ap``: CircularAperture+annulus on ``image`` when provided and (x,y)
       are finite; otherwise the existing ``flux`` column (DAO/aperture flux
-      already in the table). ``err_ap`` is not in the MS CSV.
-    - ``err_ap``: production empirical path ``sqrt(F/g + sigma_bkg_ap^2)``
-      (``_photometric_error_with_bkg_mode``). ``sigma_bkg_ap`` is
-      ``bg_sigma_adu * sqrt(pi r^2)`` because MASTERSTAR has no empty-aperture
-      ``sigma_bkg_ap`` column.
+      already in the table).
+    - ``err_ap``: pixel-scaled estimate ``sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2)``
+      (``_photometric_error_with_bkg_mode``). This is **not** the production
+      empty-aperture ``sigma_bkg_ap`` measurement. D3 gates on this estimate
+      (floor 10); do not quote it as the empirical error.
+    - ``snr_ap_pixscaled``: ``flux_ap / err_ap`` (gated by D3).
     - ``snr_peak``: ``peak_dao / bg_sigma_adu`` (diagnostic; not gated).
     """
     out = df.copy()
@@ -1397,7 +1398,7 @@ def stamp_masterstar_snr_columns(
     snr = np.full(n, np.nan, dtype=np.float64)
     ok_err = good & np.isfinite(err_ap) & (err_ap > 0)
     snr[ok_err] = f[ok_err] / err_ap[ok_err]
-    out["snr"] = snr
+    out["snr_ap_pixscaled"] = snr
     out["flux_ap"] = flux_ap
     out["err_ap"] = err_ap
     return out
