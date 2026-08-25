@@ -54,6 +54,241 @@ _POST_FLIP_JUMP_MAX_ABS_PX: float = 25.0
 _POST_FLIP_JUMP_MAX_HYPOT_PX: float = 35.0
 _POST_FLIP_MATCHED_MIN: int = 20
 _FITS_KEY_OPT_PARITY_FLIP: str = "VY_OPTPF"
+# S4a / D2: entry-WCS backup. FITS keywords are 8 chars; the 6-char prefix VY_W0_
+# plus the original card name is stored as HIERARCH VY_W0_<CARD> (astropy).
+# Sentinel VY_W0BK marks that a backup exists (first entry wins).
+_FITS_KEY_WCS_BACKUP: str = "VY_W0BK"
+_WCS_BACKUP_PREFIX: str = "VY_W0_"
+# Truncation map: original FITS card -> backup keyword when we need an 8-char
+# native key. All other cards use HIERARCH VY_W0_<CARD> (full name, no truncation).
+_WCS_BACKUP_TRUNC8: dict[str, str] = {
+    # Sentinel only; science cards stay HIERARCH so CRVAL1 is not collapsed.
+}
+
+
+def entry_wcs_sidecar_path(fits_path: Path) -> Path:
+    """``<MASTERSTAR>.entry.wcs`` next to the FITS (stem, not ``.fits.entry.wcs``)."""
+    p = Path(fits_path)
+    return p.with_name(p.stem + ".entry.wcs")
+
+
+def _header_has_wcs_backup(hdr: Any) -> bool:
+    if hdr is None:
+        return False
+    try:
+        if hdr.get(_FITS_KEY_WCS_BACKUP):
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        for k in hdr.keys():
+            ks = str(k).replace("HIERARCH ", "").strip()
+            if ks.startswith(_WCS_BACKUP_PREFIX):
+                return True
+    except Exception:  # noqa: BLE001
+        return False
+    return False
+
+
+def _iter_celestial_wcs_cards(hdr: Any) -> list[tuple[str, Any]]:
+    from utils import header_key_is_celestial_wcs
+
+    out: list[tuple[str, Any]] = []
+    try:
+        keys = list(hdr.keys())
+    except Exception:  # noqa: BLE001
+        return out
+    extra = {"WCSAXES", "WCSNAME", "LATPOLE", "LONPOLE", "RADESYS", "EQUINOX"}
+    for k in keys:
+        ks = str(k)
+        if ks in ("COMMENT", "HISTORY", "CONTINUE"):
+            continue
+        if header_key_is_celestial_wcs(ks) or ks.upper() in extra:
+            try:
+                out.append((ks, hdr[k]))
+            except Exception:  # noqa: BLE001
+                continue
+    return out
+
+
+def backup_entry_wcs(fits_path: Path) -> dict[str, Any]:
+    """Copy entry WCS cards to ``VY_W0_*`` and write ``<stem>.entry.wcs``.
+
+    Idempotent: if ``VY_W0_*`` / ``VY_W0BK`` already exists, do not overwrite
+    (first optimizer entry wins). Returns a small stamp dict.
+    """
+    path = Path(fits_path).resolve()
+    sidecar = entry_wcs_sidecar_path(path)
+    with fits.open(path, memmap=False) as hdul:
+        hdr = hdul[0].header
+        already = _header_has_wcs_backup(hdr)
+        cards = _iter_celestial_wcs_cards(hdr)
+        hdr_text = hdr.tostring(sep="\n", endcard=True, padding=False)
+    if already:
+        return {
+            "backup_written": False,
+            "already_present": True,
+            "n_cards": 0,
+            "sidecar": str(sidecar),
+        }
+    with fits.open(path, mode="update", memmap=False) as hdul:
+        hh = hdul[0].header
+        if _header_has_wcs_backup(hh):
+            return {
+                "backup_written": False,
+                "already_present": True,
+                "n_cards": 0,
+                "sidecar": str(sidecar),
+            }
+        n_ok = 0
+        for orig, val in cards:
+            bkey = _WCS_BACKUP_TRUNC8.get(str(orig).upper(), _WCS_BACKUP_PREFIX + str(orig))
+            try:
+                hh[bkey] = val
+                n_ok += 1
+            except Exception:  # noqa: BLE001
+                LOGGER.debug("[ASTROMETRY] VY_W0 backup skip %s: cannot write", orig)
+        hh[_FITS_KEY_WCS_BACKUP] = (True, "VYVAR entry WCS backup present (first entry)")
+        hh.add_history(
+            "VYVAR: entry WCS backed up to VY_W0_<card> (HIERARCH; see astrometry_optimizer "
+            "_WCS_BACKUP_TRUNC8) and " + sidecar.name
+        )
+        hdul.flush()
+    if not sidecar.is_file():
+        sidecar.write_text(hdr_text if isinstance(hdr_text, str) else str(hdr_text), encoding="ascii", errors="replace")
+    return {
+        "backup_written": True,
+        "already_present": False,
+        "n_cards": int(n_ok),
+        "sidecar": str(sidecar),
+    }
+
+
+def pair_residuals_px(
+    wcs_obj: WCS,
+    x: np.ndarray,
+    y: np.ndarray,
+    ra_deg: np.ndarray,
+    dec_deg: np.ndarray,
+) -> np.ndarray:
+    """Pixel separation of (x,y) vs world2pix(ra,dec)."""
+    xa = np.asarray(x, dtype=np.float64).ravel()
+    ya = np.asarray(y, dtype=np.float64).ravel()
+    ra = np.asarray(ra_deg, dtype=np.float64).ravel()
+    de = np.asarray(dec_deg, dtype=np.float64).ravel()
+    n = int(min(xa.size, ya.size, ra.size, de.size))
+    if n <= 0:
+        return np.asarray([], dtype=np.float64)
+    xa, ya, ra, de = xa[:n], ya[:n], ra[:n], de[:n]
+    ok = np.isfinite(xa) & np.isfinite(ya) & np.isfinite(ra) & np.isfinite(de)
+    if not bool(ok.any()):
+        return np.asarray([], dtype=np.float64)
+    try:
+        gx, gy = wcs_obj.world_to_pixel_values(ra[ok], de[ok])
+    except Exception:  # noqa: BLE001
+        return np.asarray([], dtype=np.float64)
+    return np.hypot(np.asarray(gx, dtype=np.float64) - xa[ok], np.asarray(gy, dtype=np.float64) - ya[ok])
+
+
+def rms_sip_honest_px(resid: np.ndarray) -> float:
+    arr = np.asarray(resid, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return float("nan")
+    return float(np.sqrt(np.mean(arr * arr)))
+
+
+def identity_p95_px(resid: np.ndarray) -> float:
+    arr = np.asarray(resid, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return float("nan")
+    return float(np.percentile(arr, 95))
+
+
+def d2_refit_should_accept(
+    *,
+    rms_sip: float,
+    n_honest: int,
+    p95_entry: float,
+    p95_candidate: float,
+    fwhm_dao_px: float,
+) -> tuple[bool, str]:
+    """D2: reject when rms_sip too large, too few honest pairs, or p95 worsens vs entry."""
+    fw = max(0.5, float(fwhm_dao_px))
+    ceil = max(3.0 * fw, 3.0)
+    n = int(n_honest)
+    if n < 10:
+        return False, f"n_honest={n}<10"
+    try:
+        rms = float(rms_sip)
+    except (TypeError, ValueError):
+        rms = float("nan")
+    if (not math.isfinite(rms)) or rms > ceil:
+        return False, f"rms_sip={rms:.3f}>{ceil:.3f}"
+    try:
+        pe = float(p95_entry)
+        pc = float(p95_candidate)
+    except (TypeError, ValueError):
+        pe, pc = float("nan"), float("nan")
+    if math.isfinite(pe) and math.isfinite(pc) and pc > pe:
+        return False, f"p95_candidate={pc:.4f}>p95_entry={pe:.4f}"
+    return True, "ok"
+
+
+def honest_pair_arrays(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
+    """x,y,ra,dec for rows with vy_identity_gate in {ok, warn}."""
+    if df is None or getattr(df, "empty", True):
+        z = np.asarray([], dtype=np.float64)
+        return z, z, z, z, 0
+    if "vy_identity_gate" not in df.columns:
+        z = np.asarray([], dtype=np.float64)
+        return z, z, z, z, 0
+    gate = df["vy_identity_gate"].astype(str).str.strip().str.lower()
+    hon = gate.isin(["ok", "warn"])
+    sub = df.loc[hon]
+    ra_col = _first_existing_col(sub, ["ra_deg", "RA_DEG", "ra", "RA"])
+    de_col = _first_existing_col(sub, ["dec_deg", "DEC_DEG", "dec", "DEC"])
+    if ra_col is None or de_col is None or "x" not in sub.columns or "y" not in sub.columns:
+        z = np.asarray([], dtype=np.float64)
+        return z, z, z, z, 0
+    x = pd.to_numeric(sub["x"], errors="coerce").to_numpy(dtype=np.float64)
+    y = pd.to_numeric(sub["y"], errors="coerce").to_numpy(dtype=np.float64)
+    ra = pd.to_numeric(sub[ra_col], errors="coerce").to_numpy(dtype=np.float64)
+    de = pd.to_numeric(sub[de_col], errors="coerce").to_numpy(dtype=np.float64)
+    ok = np.isfinite(x) & np.isfinite(y) & np.isfinite(ra) & np.isfinite(de)
+    n = int(np.count_nonzero(ok))
+    return x[ok], y[ok], ra[ok], de[ok], n
+
+
+def evaluate_d2_refit(
+    *,
+    w_entry: WCS,
+    w_candidate: WCS,
+    df: pd.DataFrame,
+    fwhm_dao_px: float,
+) -> dict[str, Any]:
+    x, y, ra, de, n = honest_pair_arrays(df)
+    resid_c = pair_residuals_px(w_candidate, x, y, ra, de)
+    resid_e = pair_residuals_px(w_entry, x, y, ra, de)
+    rms = rms_sip_honest_px(resid_c)
+    p95_e = identity_p95_px(resid_e)
+    p95_c = identity_p95_px(resid_c)
+    ok, reason = d2_refit_should_accept(
+        rms_sip=rms,
+        n_honest=n,
+        p95_entry=p95_e,
+        p95_candidate=p95_c,
+        fwhm_dao_px=fwhm_dao_px,
+    )
+    return {
+        "rejected": (not ok),
+        "reason": str(reason),
+        "rms_sip": (float(rms) if math.isfinite(rms) else None),
+        "n": int(n),
+        "p95_entry": (float(p95_e) if math.isfinite(p95_e) else None),
+        "p95_candidate": (float(p95_c) if math.isfinite(p95_c) else None),
+    }
 
 
 def _optimizer_parity_flip_already_in_fits(fits_path: Path) -> bool:
@@ -303,6 +538,15 @@ def optimize_masterstar_matches(
     w = WCS(hdr)
     if not getattr(w, "has_celestial", False):
         raise ValueError(f"MASTERSTAR FITS has no usable WCS: {fits_path}")
+    w_entry = w
+    _bak = backup_entry_wcs(fits_path)
+    log_event(
+        f"Astrometry optimizer: entry WCS backup "
+        f"written={_bak.get('backup_written')} already={_bak.get('already_present')} "
+        f"n_cards={_bak.get('n_cards')} sidecar={_bak.get('sidecar')}"
+    )
+    if stats_out is not None:
+        stats_out["wcs_entry_backup"] = dict(_bak)
 
     from gaia_catalog_id import normalize_gaia_source_id_series as _norm_cid_series
     from invariants_runtime import assert_inv_match_identity_01
@@ -699,6 +943,33 @@ def optimize_masterstar_matches(
                 sip_force_rms_guard_ratio=sip_force_rms_guard_ratio,
             )
             w_out = w_sip if w_sip is not None else w_lin
+            _d2 = evaluate_d2_refit(
+                w_entry=w_entry,
+                w_candidate=w_out,
+                df=df,
+                fwhm_dao_px=float(_fwhm_dao),
+            )
+            if stats_out is not None:
+                stats_out["optimizer_refit"] = dict(_d2)
+            if _d2.get("rejected"):
+                log_event(
+                    f"Astrometry optimizer {tag}: D2 refit rejected ({_d2.get('reason')}) "
+                    f"rms_sip={_d2.get('rms_sip')} n={_d2.get('n')} "
+                    f"p95_entry={_d2.get('p95_entry')} p95_candidate={_d2.get('p95_candidate')}"
+                )
+                LOGGER.info(
+                    "Astrometry optimizer %s: D2 refit rejected reason=%s rms_sip=%s n=%s "
+                    "p95_entry=%s p95_candidate=%s (header unchanged)",
+                    tag,
+                    _d2.get("reason"),
+                    _d2.get("rms_sip"),
+                    _d2.get("n"),
+                    _d2.get("p95_entry"),
+                    _d2.get("p95_candidate"),
+                )
+                meta = dict(meta)
+                meta["optimizer_refit"] = dict(_d2)
+                return meta
             from wcs_invertibility import apply_wcs_refit_with_invertibility_gate
 
             nax1 = int(hdr.get("NAXIS1") or data.shape[1] if data.ndim >= 2 else 0)
