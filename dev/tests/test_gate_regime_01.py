@@ -67,6 +67,10 @@ def _static_pool_df(n: int = 5) -> pd.DataFrame:
                 "vsx_known_variable": False,
                 "likely_saturated": False,
                 "zone": "linear",
+                "source_state": "DETECTED_P1",
+                "vy_identity_gate": "ok",
+                "gaia_dao_resid_px": 0.2,
+                "snr": 80.0,
             }
         )
     return pd.DataFrame(rows)
