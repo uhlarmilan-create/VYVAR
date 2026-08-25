@@ -569,11 +569,23 @@ def _build_candidates_pre_adaptive_mag(
     target: pd.Series,
     cfg: AppConfig | None = None,
     sparse_fallback_mode: bool = False,
+    fwhm_dao_px: float = 3.5,
+    solve_rms_px: float | None = None,
 ) -> tuple[pd.DataFrame, float] | None:
     """Returns (candidates_pre, used_mag_tol) or None if too few candidates."""
     # Start with a broad candidate set (emergency tier) for one-pass per-frame metrics.
     # Apply adaptive Deltamag filter here (changes only the INPUT to later filters).
     candidates_pre = ms[_base_mask | det_mask].copy()
+    from d3_comparison_candidacy import apply_d3_comparison_candidacy  # noqa: PLC0415
+
+    _d3_mask, _d3_meta = apply_d3_comparison_candidacy(
+        candidates_pre,
+        fwhm_dao_px=float(fwhm_dao_px),
+        solve_rms_px=solve_rms_px,
+        log_label=str(target_cid or "comp"),
+    )
+    candidates_pre = candidates_pre.loc[_d3_mask].copy()
+    _ = _d3_meta
     _debug_bo = str(target_cid).strip() == "1498613634033133184"
     if _debug_bo:
         print(f"[DEBUG BO CVn] Step G0: candidates before adaptive delta mag = {int(len(candidates_pre))}")

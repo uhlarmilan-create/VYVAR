@@ -15859,6 +15859,29 @@ def build_global_comp_pool(
     )
     pool = pool.loc[cand_mask].copy()
 
+    from d3_comparison_candidacy import apply_d3_comparison_candidacy  # noqa: PLC0415
+
+    _solve_rms_d3: float | None = None
+    if photometry_dir_for_meta is not None:
+        try:
+            _pm = Path(photometry_dir_for_meta)
+            _meta_p = _pm if _pm.name == "pipeline_meta.json" else _pm / "pipeline_meta.json"
+            if _meta_p.is_file():
+                _pj = json.loads(_meta_p.read_text(encoding="utf-8"))
+                _inp = _pj.get("match_sep_formula_inputs") or {}
+                if isinstance(_inp, dict) and _inp.get("solve_rms_px") is not None:
+                    _solve_rms_d3 = float(_inp["solve_rms_px"])
+        except Exception:  # noqa: BLE001
+            _solve_rms_d3 = None
+    _d3_mask, _d3_meta = apply_d3_comparison_candidacy(
+        pool,
+        fwhm_dao_px=float(fwhm_px),
+        solve_rms_px=_solve_rms_d3,
+        log_label="global_comp_pool",
+    )
+    pool = pool.loc[_d3_mask].copy()
+    _ = _d3_meta
+
     # Gaia NSS = known variable; QSO/GAL = measurability (extended).
     if bool(cfg.phase01_comparison_exclude_gaia_nss) and "gaia_nss" in pool.columns:
         pool = pool.loc[~_bool_col(pool["gaia_nss"])].copy()
@@ -16302,7 +16325,6 @@ def select_comparison_stars_per_target(
         DataFrame s porovnavacimi hviezdami pre tento target, zoradeny podla RMS ASC.
         Prazdny DataFrame ak sa nenajde dostatok stabilnych hviezd.
     """
-    _ = fwhm_px
     from comp_selection_per_target import (  # noqa: PLC0415
         _accumulate_per_frame_comp_metrics,
         _apply_comp_metric_hard_filters,
@@ -16511,6 +16533,8 @@ def select_comparison_stars_per_target(
         target=target,
         cfg=_cfg_p1,
         sparse_fallback_mode=sparse_fallback,
+        fwhm_dao_px=float(fwhm_px),
+        solve_rms_px=None,
     )
     if built is None:
         return _retry_sparse_fallback()
