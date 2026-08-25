@@ -13277,13 +13277,10 @@ _PHASE_USECOLS_PERFRAME: list[str] = [
 
 
 def _angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
-    """Uhlova vzdialenost v stupnoch (haversine)."""
-    r1, d1, r2, d2 = map(math.radians, [ra1, dec1, ra2, dec2])
-    a = (
-        math.sin((d2 - d1) / 2) ** 2
-        + math.cos(d1) * math.cos(d2) * math.sin((r2 - r1) / 2) ** 2
-    )
-    return math.degrees(2 * math.asin(min(1.0, math.sqrt(a))))
+    """Uhlova vzdialenost v stupnoch (haversine). Same formula as Phase-1 ``_dist_deg``."""
+    from sky_separation import angular_distance_deg  # noqa: PLC0415
+
+    return angular_distance_deg(ra1, dec1, ra2, dec2)
 
 
 def _normalize_id_value(x: Any) -> str:
@@ -18051,6 +18048,9 @@ def run_phase0_and_phase1(
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0218] comparison_stars_per_target.csv catalog_id normalization fails - corrupted IDs in comp ...: %s', exc)
         pass
+    from sky_separation import persist_dist_deg_column  # noqa: PLC0415
+
+    persist_dist_deg_column(comp_df)
     comp_df.to_csv(comp_csv, index=False)
     _sparse_target_n = 0
     if "comp_path" in comp_df.columns and "target_catalog_id" in comp_df.columns:

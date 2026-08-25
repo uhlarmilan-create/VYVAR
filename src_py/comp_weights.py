@@ -414,6 +414,9 @@ def rewrite_comparison_stars_weights_csv(
         weights.append(weight_from_sigma_eff(se))
     df["sigma_eff_mag"] = sigmas
     df["comp_weight"] = weights
+    from sky_separation import persist_dist_deg_column  # noqa: PLC0415
+
+    persist_dist_deg_column(df)
     df.to_csv(path, index=False)
     # N_eff diversity check: unique N_eff across targets
     neffs = []

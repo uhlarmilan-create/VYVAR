@@ -34,6 +34,11 @@ from photometry_core import (
     _select_comps_by_rms_then_color,
     _warn_zero_compstars_edge,
 )
+from sky_separation import (
+    angular_distance_deg_vectorized as _angular_distance_deg_vectorized,
+    pixel_distance_deg_vectorized as _pixel_distance_deg_vectorized,
+    quantize_dist_deg,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -123,48 +128,7 @@ def _log_bo_cvn_comp_funnel(
             print(f"  catalog_id={cid} comp_rms={float(rv):.6f}")
 
 
-def _pixel_distance_deg_vectorized(
-    x_t: float,
-    y_t: float,
-    x_arr: np.ndarray,
-    y_arr: np.ndarray,
-    *,
-    plate_scale_arcsec: float,
-) -> np.ndarray:
-    """Euclidean pixel distance converted to degrees via plate scale; invalid -> 999.0."""
-    x2 = np.asarray(x_arr, dtype=np.float64)
-    y2 = np.asarray(y_arr, dtype=np.float64)
-    scale = float(plate_scale_arcsec)
-    if not math.isfinite(scale) or scale <= 0:
-        return np.full(x2.shape, 999.0, dtype=np.float64)
-    _bad_xt = not math.isfinite(float(x_t))
-    _bad_yt = not math.isfinite(float(y_t))
-    bad = ~np.isfinite(x2) | ~np.isfinite(y2) | _bad_xt | _bad_yt
-    dist_px = np.hypot(x2 - float(x_t), y2 - float(y_t))
-    dist_deg = dist_px * scale / 3600.0
-    return np.where(bad, 999.0, dist_deg)
-
-
-def _angular_distance_deg_vectorized(
-    ra_t: float, dec_t: float, ra_arr: np.ndarray, dec_arr: np.ndarray
-) -> np.ndarray:
-    """Haversine distance (deg); invalid coords -> 999.0 (PERF-9)."""
-    ra2 = np.asarray(ra_arr, dtype=np.float64)
-    de2 = np.asarray(dec_arr, dtype=np.float64)
-    ra1 = float(ra_t)
-    de1 = float(dec_t)
-    bad = ~np.isfinite(ra2) | ~np.isfinite(de2)
-    r1, d1 = math.radians(ra1), math.radians(de1)
-    r2 = np.radians(ra2)
-    d2 = np.radians(de2)
-    a = (
-        np.sin((d2 - d1) / 2.0) ** 2
-        + math.cos(d1) * np.cos(d2) * np.sin((r2 - r1) / 2.0) ** 2
-    )
-    dist = np.degrees(2.0 * np.arcsin(np.minimum(1.0, np.sqrt(np.clip(a, 0.0, 1.0)))))
-    dist = np.where(bad, 999.0, dist)
-    logging.debug("[PERF-9] vectorized haversine on %d candidates", int(len(dist)))
-    return dist
+# Distance helpers live in sky_separation (one formula for greedy + pin paths).
 
 
 def _resolve_target_color_for_comp_selection(
@@ -370,17 +334,21 @@ def _filter_comp_candidates_spatial_static(
     if use_pixel_dist and x_t is not None and y_t is not None and "x" in ms.columns and "y" in ms.columns:
         x_arr = pd.to_numeric(ms["x"], errors="coerce").to_numpy(dtype=np.float64)
         y_arr = pd.to_numeric(ms["y"], errors="coerce").to_numpy(dtype=np.float64)
-        ms["_dist_deg"] = _pixel_distance_deg_vectorized(
-            float(x_t),
-            float(y_t),
-            x_arr,
-            y_arr,
-            plate_scale_arcsec=float(plate_scale_arcsec),
+        ms["_dist_deg"] = quantize_dist_deg(
+            _pixel_distance_deg_vectorized(
+                float(x_t),
+                float(y_t),
+                x_arr,
+                y_arr,
+                plate_scale_arcsec=float(plate_scale_arcsec),
+            )
         )
     else:
         ra_arr = pd.to_numeric(ms["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
         dec_arr = pd.to_numeric(ms["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-        ms["_dist_deg"] = _angular_distance_deg_vectorized(ra_t, dec_t, ra_arr, dec_arr)
+        ms["_dist_deg"] = quantize_dist_deg(
+            _angular_distance_deg_vectorized(ra_t, dec_t, ra_arr, dec_arr)
+        )
     ms["_norm_cid_vt"] = ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).map(_normalize_gaia_id)
     _vt_gaia_ids: frozenset[str] | None = None
     if variable_target_catalog_ids:

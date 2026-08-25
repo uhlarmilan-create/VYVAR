@@ -557,19 +557,23 @@ def select_pinned_comparison_stars_for_target(
     _x_t = float(pd.to_numeric(target.get("x"), errors="coerce"))
     _y_t = float(pd.to_numeric(target.get("y"), errors="coerce"))
     if use_pixel_dist and math.isfinite(_x_t) and math.isfinite(_y_t):
-        from comp_selection_per_target import _pixel_distance_deg_vectorized  # noqa: PLC0415
+        from sky_separation import pixel_distance_deg_vectorized, quantize_dist_deg  # noqa: PLC0415
 
         x_arr = pd.to_numeric(ms.get("x", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
         y_arr = pd.to_numeric(ms.get("y", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
-        ms["_dist_deg"] = _pixel_distance_deg_vectorized(
-            _x_t, _y_t, x_arr, y_arr, plate_scale_arcsec=float(plate_scale_arcsec)
+        ms["_dist_deg"] = quantize_dist_deg(
+            pixel_distance_deg_vectorized(
+                _x_t, _y_t, x_arr, y_arr, plate_scale_arcsec=float(plate_scale_arcsec)
+            )
         )
     else:
-        from comp_selection_per_target import _angular_distance_deg_vectorized  # noqa: PLC0415
+        from sky_separation import angular_distance_deg_vectorized, quantize_dist_deg  # noqa: PLC0415
 
         ra_arr = pd.to_numeric(ms.get("ra_deg"), errors="coerce").to_numpy(dtype=float)
         dec_arr = pd.to_numeric(ms.get("dec_deg"), errors="coerce").to_numpy(dtype=float)
-        ms["_dist_deg"] = _angular_distance_deg_vectorized(ra_t, dec_t, ra_arr, dec_arr)
+        ms["_dist_deg"] = quantize_dist_deg(
+            angular_distance_deg_vectorized(ra_t, dec_t, ra_arr, dec_arr)
+        )
 
     ms_indexed = ms.set_index(ms[id_col].astype(str).str.strip(), drop=False)
 

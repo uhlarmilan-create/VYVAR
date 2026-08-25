@@ -1262,7 +1262,7 @@ def _epsf_prepare_stars(
         funnel["n_after_isolation"] = n_before_iso
         funnel["n_after_isolation_reason"] = "skipped (no plate scale)"
     elif n_join > 0 and "ra_deg" in psf_stars_df.columns and "dec_deg" in psf_stars_df.columns:
-        from comp_selection_per_target import _angular_distance_deg_vectorized
+        from sky_separation import angular_distance_deg_vectorized as _angular_distance_deg_vectorized
 
         radius_deg = _isolation_radius_px * float(plate_scale_arcsec_px) / 3600.0
         self_deg = 0.5 * float(plate_scale_arcsec_px) / 3600.0  # <0.5px counts as the star itself
