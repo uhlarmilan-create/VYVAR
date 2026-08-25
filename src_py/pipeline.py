@@ -87,6 +87,7 @@ from photometry_core import (
     merge_photometry_pipeline_meta,
     precompute_and_save_snr_aperture_table_for_draft,
     resolve_draft_dir_for_snr_aperture_table,
+    stamp_masterstar_snr_columns,
 )
 from proc_frame_store import proc_csv_path_for_aligned_fits
 
@@ -8659,10 +8660,11 @@ def detect_stars_and_match_catalog(
     ``mag`` fainter than the limit are dropped. **Unmatched** detections (no ``mag``) are kept for QA.
 
     ``match_sep_arcsec`` requested value is recorded; D1 sets the one-pass
-    effective radius to max(12 arcsec, 3 x max(solve_rms_px, FWHM_dao_px) x
-    plate_scale). There is no match-rate widening. A final tightening to
-    ~4.5 arcsec is applied only when most loose matches survive it. Low match
-    rate remains a WARN.
+    effective radius to max(12 arcsec, 3 x FWHM_dao_px x plate_scale).
+    ``solve_rms_px`` is stamped as a diagnostic and does not enter the radius.
+    There is no match-rate widening. A final tightening to ~4.5 arcsec is
+    applied only when most loose matches survive it. Low match rate remains a
+    WARN.
 
     ``max_catalog_rows`` caps DAO detections written per frame. Rows are chosen with **spatial
     stratification** (brightest per coarse grid cell, then global flux top-up) so vignetting does not
@@ -9494,13 +9496,13 @@ def detect_stars_and_match_catalog(
                 floor_arcsec=12.0,
             )
             LOGGER.info(
-                "Catalog match: radius = f(solve_rms=%.3f px, FWHM_dao=%.3f px, scale=%.4f arcsec/px) "
-                "-> %.2f arcsec (formula=%.2f floor=12)",
-                float(_d1_inputs["solve_rms_px"] or float("nan")),
+                "Catalog match: radius = max(12, 3 x FWHM_dao=%.3f px x scale=%.4f arcsec/px) "
+                "-> %.2f arcsec (formula=%.2f; solve_rms=%.3f px diagnostic only)",
                 float(_d1_inputs["fwhm_dao_px"]),
                 float(_d1_inputs["plate_scale_arcsec_per_px"] or float("nan")),
                 float(match_sep_used),
                 float(_d1_inputs["formula_arcsec"] or float("nan")),
+                float(_d1_inputs["solve_rms_px"] or float("nan")),
             )
             df_out, n_matched = _assign_catalog_at_threshold(match_sep_used)
             # After a successful loose initial match, tighten for cleaner final IDs (only if most matches survive).
@@ -9950,11 +9952,39 @@ def detect_stars_and_match_catalog(
     else:
         LOGGER.debug("[DAO] catalog_rows not available - Gaia->DAO skip")
     df_out = _proc_rename_det_names_to_catalog_id(df_out)
-    if "snr" not in df_out.columns and "peak_dao" in df_out.columns:
-        _sig = float(_bg_sigma_adu) if math.isfinite(float(_bg_sigma_adu)) else 1.0
-        _sig = max(_sig, 1.0)
-        df_out = df_out.copy()
-        df_out["snr"] = pd.to_numeric(df_out["peak_dao"], errors="coerce") / _sig
+    try:
+        _gain_ms = float(getattr(_cfg_df, "gain", 1.0) or 1.0)
+    except (TypeError, ValueError):
+        _gain_ms = 1.0
+    if not math.isfinite(_gain_ms) or _gain_ms <= 0:
+        _gain_ms = 1.0
+    try:
+        _rn_ms = float(getattr(_cfg_df, "read_noise", 10.0) or 10.0)
+    except (TypeError, ValueError):
+        _rn_ms = 10.0
+    try:
+        _ap_fac = float(getattr(_cfg_df, "aperture_fwhm_factor", 1.9) or 1.9)
+    except (TypeError, ValueError):
+        _ap_fac = 1.9
+    try:
+        _ann_in = float(getattr(_cfg_df, "annulus_inner_fwhm", 4.75) or 4.75)
+    except (TypeError, ValueError):
+        _ann_in = 4.75
+    try:
+        _ann_out = float(getattr(_cfg_df, "annulus_outer_fwhm", 9.0) or 9.0)
+    except (TypeError, ValueError):
+        _ann_out = 9.0
+    df_out = stamp_masterstar_snr_columns(
+        df_out,
+        image=arr,
+        fwhm_dao_px=float(_fwhm_used),
+        bg_sigma_adu=float(_bg_sigma_adu),
+        gain=_gain_ms,
+        read_noise=_rn_ms,
+        aperture_fwhm_factor=_ap_fac,
+        annulus_inner_fwhm=_ann_in,
+        annulus_outer_fwhm=_ann_out,
+    )
     return df_out, meta
 
 

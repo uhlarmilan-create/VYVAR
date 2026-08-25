@@ -1328,6 +1328,81 @@ def _photometric_error_with_bkg_mode(
     return err, src
 
 
+def stamp_masterstar_snr_columns(
+    df: pd.DataFrame,
+    *,
+    image: np.ndarray | None,
+    fwhm_dao_px: float,
+    bg_sigma_adu: float,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+    aperture_fwhm_factor: float = 1.9,
+    annulus_inner_fwhm: float = 4.75,
+    annulus_outer_fwhm: float = 9.0,
+) -> pd.DataFrame:
+    """Stamp MASTERSTAR ``snr`` = flux_ap/err_ap and ``snr_peak`` = peak/sigma.
+
+    Columns used:
+    - ``flux_ap``: CircularAperture+annulus on ``image`` when provided and (x,y)
+      are finite; otherwise the existing ``flux`` column (DAO/aperture flux
+      already in the table). ``err_ap`` is not in the MS CSV.
+    - ``err_ap``: production empirical path ``sqrt(F/g + sigma_bkg_ap^2)``
+      (``_photometric_error_with_bkg_mode``). ``sigma_bkg_ap`` is
+      ``bg_sigma_adu * sqrt(pi r^2)`` because MASTERSTAR has no empty-aperture
+      ``sigma_bkg_ap`` column.
+    - ``snr_peak``: ``peak_dao / bg_sigma_adu`` (diagnostic; not gated).
+    """
+    out = df.copy()
+    n = int(len(out))
+    sig = float(bg_sigma_adu) if math.isfinite(float(bg_sigma_adu)) else 1.0
+    sig = max(sig, 1e-6)
+    if "peak_dao" in out.columns:
+        peak = pd.to_numeric(out["peak_dao"], errors="coerce")
+    else:
+        peak = pd.Series(np.full(n, np.nan, dtype=np.float64), index=out.index)
+    out["snr_peak"] = peak / sig
+
+    fw = max(0.5, float(fwhm_dao_px)) if math.isfinite(float(fwhm_dao_px)) else 2.5
+    fac = float(aperture_fwhm_factor) if math.isfinite(float(aperture_fwhm_factor)) and aperture_fwhm_factor > 0 else 1.9
+    r_ap = max(0.5, fac * fw)
+    area = math.pi * r_ap * r_ap
+    sigma_bkg_ap = sig * math.sqrt(area)
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+
+    flux_ap = np.full(n, np.nan, dtype=np.float64)
+    if "flux" in out.columns:
+        flux_ap = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
+
+    if image is not None and n > 0 and "x" in out.columns and "y" in out.columns:
+        try:
+            xx = pd.to_numeric(out["x"], errors="coerce").to_numpy(dtype=np.float64)
+            yy = pd.to_numeric(out["y"], errors="coerce").to_numpy(dtype=np.float64)
+            ok = np.isfinite(xx) & np.isfinite(yy)
+            if int(np.count_nonzero(ok)) > 0:
+                r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
+                r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
+                d = np.asarray(image, dtype=np.float64)
+                pos = np.column_stack([xx[ok], yy[ok]])
+                flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out)
+                flux_ap[ok] = flux_m
+        except Exception:  # noqa: BLE001
+            if "flux" in out.columns:
+                flux_ap = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
+
+    f = np.asarray(flux_ap, dtype=np.float64)
+    var = np.full(n, np.nan, dtype=np.float64)
+    good = np.isfinite(f) & (f > 0)
+    var[good] = f[good] / g + sigma_bkg_ap * sigma_bkg_ap
+    err_ap = np.sqrt(var)
+    snr = np.full(n, np.nan, dtype=np.float64)
+    ok_err = good & np.isfinite(err_ap) & (err_ap > 0)
+    snr[ok_err] = f[ok_err] / err_ap[ok_err]
+    out["snr"] = snr
+    out["flux_ap"] = flux_ap
+    out["err_ap"] = err_ap
+    return out
+
+
 def _phase2a_proc_column_requirements() -> dict[str, list[str]]:
     """Named proc-CSV column requirements for headless Phase 2A.
 
