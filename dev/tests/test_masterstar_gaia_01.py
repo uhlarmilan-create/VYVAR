@@ -98,7 +98,7 @@ def test_inv_ms_identity_01_anchor_baseline() -> None:
     gaia["x_gaia"] = gaia["x"]
     gaia["y_gaia"] = gaia["y"]
     gaia["g_mag"] = pd.to_numeric(gaia["mag"], errors="coerce")
-    _, _, _ = lock_existing_and_leftover_assign(
+    _, _, _modes, _rej = lock_existing_and_leftover_assign(
         det_x, det_y, gaia, locked_pairs=locked, leftover_radius_px=3.0
     )
     result = {

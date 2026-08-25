@@ -195,14 +195,11 @@ def _catalog_id_empty_to_blank(s: pd.Series) -> pd.Series:
 
 
 def catalog_id_series_for_masterstars_export(df: pd.DataFrame) -> pd.Series:
-    """Stlpec ``catalog_id`` do CSV ako desiatkovy retazec; pri platnom ciselnom ``name`` berie ID odtial."""
+    """Normalise an existing nonempty ``catalog_id`` for CSV; never copy ``name`` onto an empty ID.
+
+    INV-MATCH-IDENTITY-01: identity lives in ``catalog_id``. DET_->catalog_id renaming
+    is ``_proc_rename_det_names_to_catalog_id`` (catalog_id onto name), never the reverse.
+    """
     if "catalog_id" not in df.columns:
         return pd.Series([""] * len(df), index=df.index, dtype=object)
-    cid = _catalog_id_empty_to_blank(df["catalog_id"])
-    if "name" not in df.columns:
-        return cid
-    nk = df["name"].map(normalize_gaia_source_id)
-    mask = nk.map(lambda x: bool(x and re.fullmatch(r"\d{12,22}", x)))
-    out = cid.copy()
-    out.loc[mask] = nk.loc[mask].map(normalize_gaia_source_id).astype(object)
-    return _catalog_id_empty_to_blank(out)
+    return _catalog_id_empty_to_blank(df["catalog_id"])

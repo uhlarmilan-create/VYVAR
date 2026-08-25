@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from typing import Any
 
 import numpy as np
@@ -237,6 +238,120 @@ def post_match_pixel_sep(
     return "ok", dpx
 
 
+# Gaia-derived columns written by pipeline._assign_catalog_at_threshold (name, mag,
+# b_v, catalog, catalog_id, gaia_nss/qso/gal) plus later copies (bp_rp, phot_g_mean_mag,
+# catalog_mag, match_sep_arcsec). Fail must clear all of these, not only catalog_id.
+GAIA_MATCH_IDENTITY_NAN_COLS = (
+    "match_sep_arcsec",
+    "mag",
+    "b_v",
+    "bp_rp",
+    "catalog_mag",
+    "phot_g_mean_mag",
+    "gaia_nss",
+    "gaia_qso",
+    "gaia_gal",
+)
+GAIA_MATCH_IDENTITY_EMPTY_COLS = ("catalog_id", "catalog")
+_DET_NAME_RE = re.compile(r"^DET_\d{4,}$")
+
+
+def det_fallback_name(ordinal_1based: int) -> str:
+    """DET_%04d name from the detect_stars idx_det convention (1-based)."""
+    return f"DET_{int(ordinal_1based):04d}"
+
+
+def empty_identity_gate_acc() -> dict[str, int]:
+    return {"passes": 0, "ok": 0, "warn": 0, "fail": 0, "n_matched_out": 0}
+
+
+def accumulate_identity_gate(acc: dict[str, int], counts: dict[str, int], n_matched_out: int) -> dict[str, int]:
+    out = dict(acc or empty_identity_gate_acc())
+    out["passes"] = int(out.get("passes", 0)) + 1
+    for k in ("ok", "warn", "fail"):
+        out[k] = int(out.get(k, 0)) + int(counts.get(k, 0))
+    out["n_matched_out"] = int(n_matched_out)
+    return out
+
+
+def gaia_radec_map_from_table(
+    df: Any,
+    *,
+    id_col: str = "catalog_id",
+    ra_col: str = "ra_deg",
+    dec_col: str = "dec_deg",
+) -> dict[str, tuple[float, float]]:
+    """Build catalog_id -> (ra, dec) for the identity gate."""
+    import pandas as pd
+
+    from gaia_catalog_id import normalize_gaia_source_id
+
+    out: dict[str, tuple[float, float]] = {}
+    if df is None or getattr(df, "empty", True):
+        return out
+    cid = df[id_col] if id_col in df.columns else df.get("source_id")
+    if cid is None:
+        return out
+    ra = pd.to_numeric(df[ra_col] if ra_col in df.columns else df.get("ra"), errors="coerce")
+    de = pd.to_numeric(df[dec_col] if dec_col in df.columns else df.get("dec"), errors="coerce")
+    for i in range(len(df)):
+        k = normalize_gaia_source_id(str(cid.iloc[i] if hasattr(cid, "iloc") else ""))
+        if not k:
+            continue
+        try:
+            rv = float(ra.iloc[i])
+            dv = float(de.iloc[i])
+        except Exception:  # noqa: BLE001
+            continue
+        if math.isfinite(rv) and math.isfinite(dv):
+            out[k] = (rv, dv)
+    return out
+
+
+def resolve_det_fallback_name(
+    out: Any,
+    idx: Any,
+    *,
+    ordinal_1based: int,
+    det_fallback_names: Any = None,
+) -> str:
+    """Prefer an existing DET_* name, then an explicit fallback series, then ordinal."""
+    import pandas as pd
+
+    if det_fallback_names is not None:
+        try:
+            raw = det_fallback_names.loc[idx] if hasattr(det_fallback_names, "loc") else None
+            s = str(raw or "").strip()
+            if _DET_NAME_RE.match(s):
+                return s
+        except Exception:  # noqa: BLE001
+            pass
+    if "name" in getattr(out, "columns", ()):
+        existing = str(out.at[idx, "name"] or "").strip()
+        if _DET_NAME_RE.match(existing):
+            return existing
+    return det_fallback_name(ordinal_1based)
+
+
+def clear_row_match_identity(
+    out: Any,
+    idx: Any,
+    *,
+    det_name: str,
+) -> None:
+    """B1a: strip every Gaia identity column the match wrote; restore DET_* name."""
+    import pandas as pd
+
+    for col in GAIA_MATCH_IDENTITY_EMPTY_COLS:
+        if col in out.columns:
+            out.at[idx, col] = ""
+    for col in GAIA_MATCH_IDENTITY_NAN_COLS:
+        if col in out.columns:
+            out.at[idx, col] = float("nan")
+    if "name" in out.columns:
+        out.at[idx, "name"] = str(det_name)
+
+
 def finalize_masterstar_sky_coords(
     df: Any,
     wcs_obj: WCS,
@@ -314,16 +429,26 @@ def apply_post_match_identity_gate_df(
     gaia_ra_dec_by_cid: dict[str, tuple[float, float]],
     fwhm_px: float = 3.5,
     log_fn: Any | None = None,
+    det_fallback_names: Any = None,
 ) -> tuple[Any, dict[str, int]]:
-    """Drop catalog assignments where sep(world2pix(Gaia), x/y) exceeds fail threshold."""
+    """Drop catalog assignments where sep(world2pix(Gaia), x/y) exceeds fail threshold.
+
+    INV-MATCH-IDENTITY-01: fail clears catalog_id, name, and every Gaia-derived
+    match column; stamps ``vy_identity_gate`` and ``gaia_dao_resid_px``.
+    """
     import pandas as pd
 
     from gaia_catalog_id import normalize_gaia_source_id
 
     out = df.copy()
+    n = len(out)
+    if "vy_identity_gate" not in out.columns:
+        out["vy_identity_gate"] = np.array([""] * n, dtype=object)
+    if "gaia_dao_resid_px" not in out.columns:
+        out["gaia_dao_resid_px"] = np.full(n, np.nan, dtype=np.float64)
     counts: dict[str, int] = {"warn": 0, "fail": 0, "ok": 0}
-    cid = out.get("catalog_id", pd.Series([""] * len(out), index=out.index)).map(normalize_gaia_source_id)
-    for idx in out.index:
+    cid = out.get("catalog_id", pd.Series([""] * n, index=out.index)).map(normalize_gaia_source_id)
+    for ordinal, idx in enumerate(out.index, start=1):
         key = str(cid.loc[idx] or "").strip()
         if not key or key == "nan":
             continue
@@ -332,16 +457,15 @@ def apply_post_match_identity_gate_df(
             continue
         xv = float(pd.to_numeric(out.at[idx, "x"], errors="coerce"))
         yv = float(pd.to_numeric(out.at[idx, "y"], errors="coerce"))
-        verdict, _dpx = post_match_pixel_sep(xv, yv, g[0], g[1], wcs_obj, fwhm_px=fwhm_px)
+        verdict, dpx = post_match_pixel_sep(xv, yv, g[0], g[1], wcs_obj, fwhm_px=fwhm_px)
         counts[verdict] = counts.get(verdict, 0) + 1
+        out.at[idx, "vy_identity_gate"] = str(verdict)
+        out.at[idx, "gaia_dao_resid_px"] = dpx
         if verdict == "fail":
-            for col, val in (
-                ("catalog_id", ""),
-                ("catalog", ""),
-                ("match_sep_arcsec", float("nan")),
-            ):
-                if col in out.columns:
-                    out.at[idx, col] = val
+            det_name = resolve_det_fallback_name(
+                out, idx, ordinal_1based=ordinal, det_fallback_names=det_fallback_names
+            )
+            clear_row_match_identity(out, idx, det_name=det_name)
     if log_fn and (counts.get("warn") or counts.get("fail")):
         log_fn(
             f"post_match_identity_gate: ok={counts.get('ok', 0)} warn={counts.get('warn', 0)} "

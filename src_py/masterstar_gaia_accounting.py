@@ -537,12 +537,14 @@ def lock_existing_and_leftover_assign(
     leftover_radius_px: float = 3.0,
     lock_tol_px: float = 3.0,
     det_catalog_ids: np.ndarray | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return (det_to_gaia_row, gaia_owner_det, vy_match_mode per det).
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[int]]:
+    """Return (det_to_gaia_row, gaia_owner_det, vy_match_mode per det, geometry_reject_det_indices).
 
     det_to_gaia_row[i] = row index in gaia_df or -1
     gaia_owner_det[j] = det index or -1
     vy_match_mode[i] = 'locked' | 'leftover_promotion' | ''
+    geometry_reject_det_indices: detections that carried a locked cid but sat
+    farther than lock_tol_px from the Gaia pixel position (INV-MATCH-IDENTITY-01).
     """
     n_d = int(len(det_x))
     n_g = int(len(gaia_df))
@@ -561,6 +563,7 @@ def lock_existing_and_leftover_assign(
 
     used_det: set[int] = set()
     used_g: set[int] = set()
+    geometry_reject_dets: list[int] = []
 
     if locked_pairs:
         det_cids = (
@@ -568,27 +571,33 @@ def lock_existing_and_leftover_assign(
             if det_catalog_ids is not None
             else np.array([""] * n_d, dtype=object)
         )
-        for cid, (lx, ly) in locked_pairs.items():
+        for cid, (_lx, _ly) in locked_pairs.items():
             gr = cid_to_row.get(_norm_cid(cid))
             if gr is None or gr in used_g:
                 continue
             nc = _norm_cid(cid)
+            gx_g = float(gx[gr]) if gr < len(gx) else float("nan")
+            gy_g = float(gy[gr]) if gr < len(gy) else float("nan")
             best_i = -1
             best_d = float("inf")
-            # Prefer detections already carrying this catalog_id (born-owned pass2).
+            # Prefer detections already carrying this catalog_id (born-owned pass2),
+            # but only if they sit within lock_tol of the Gaia pixel position.
             for i in range(n_d):
                 if i in used_det:
                     continue
                 dc = _norm_cid(det_cids[i]) if i < len(det_cids) else ""
                 if dc and dc == nc:
-                    best_i = i
-                    best_d = float(math.hypot(det_x[i] - lx, det_y[i] - ly))
-                    break
+                    d_gaia = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
+                    if math.isfinite(d_gaia) and d_gaia <= float(lock_tol_px):
+                        best_i = i
+                        best_d = d_gaia
+                        break
+                    geometry_reject_dets.append(i)
             if best_i < 0:
                 for i in range(n_d):
                     if i in used_det:
                         continue
-                    d = float(math.hypot(det_x[i] - lx, det_y[i] - ly))
+                    d = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
                     if d <= float(lock_tol_px) and d < best_d:
                         best_d = d
                         best_i = i
@@ -632,7 +641,7 @@ def lock_existing_and_leftover_assign(
         if not match_mode[i]:
             match_mode[i] = "leftover_promotion"
 
-    return det_to_g, gaia_owner, match_mode
+    return det_to_g, gaia_owner, match_mode, geometry_reject_dets
 
 
 def annotate_blended_groups(
@@ -990,7 +999,12 @@ def enrich_masterstar_gaia_complete(
     from config import AppConfig
 
     _cfg = cfg if isinstance(cfg, AppConfig) else AppConfig()
-    meta: dict[str, Any] = {"n_forced_seed": 0, "n_leftover_promotions": 0, "n_seed_rejected": 0}
+    meta: dict[str, Any] = {
+        "n_forced_seed": 0,
+        "n_leftover_promotions": 0,
+        "n_seed_rejected": 0,
+        "n_lock_geometry_reject": 0,
+    }
     out = df_ms.copy() if df_ms is not None else pd.DataFrame()
 
     if gaia_on_chip is None or gaia_on_chip.empty:
@@ -1044,7 +1058,7 @@ def enrich_masterstar_gaia_complete(
             getattr(_cfg, "masterstar_lock_pair_tol_px", 3.0),
         )
     )
-    det_to_g, gaia_owner, vy_modes = lock_existing_and_leftover_assign(
+    det_to_g, gaia_owner, vy_modes, _geom_rej = lock_existing_and_leftover_assign(
         det_x,
         det_y,
         gdf,
@@ -1057,6 +1071,15 @@ def enrich_masterstar_gaia_complete(
             else None
         ),
     )
+    meta["n_lock_geometry_reject"] = int(len({int(i) for i in _geom_rej}))
+    if _geom_rej:
+        from wcs_invertibility import clear_row_match_identity, det_fallback_name
+
+        for i in _geom_rej:
+            if int(det_to_g[i]) >= 0:
+                continue
+            idx = out.index[i]
+            clear_row_match_identity(out, idx, det_name=det_fallback_name(i + 1))
 
     if "vy_match_mode" not in out.columns:
         out["vy_match_mode"] = ""

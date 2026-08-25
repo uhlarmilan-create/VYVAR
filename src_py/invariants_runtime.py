@@ -39,6 +39,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-FLUX-02",
         "INV-FLAT-01",
         "INV-WCS-01",
+        "INV-MATCH-IDENTITY-01",
         "INV-DAG-01",
         "INV-ERR-SIGMA-ACCT-01",
         "INV-PSF-FRAME-01",
@@ -144,6 +145,21 @@ def assert_population_nonempty(
             unit=str(unit),
             population=str(population),
             n_in=int(n_in),
+        )
+
+
+def assert_inv_match_identity_01(*, n_in: int, n_out_of_gate: int | None) -> None:
+    """FAIL-CLOSED if catalog IDs were re-created between the identity gate and optimizer entry."""
+    if n_out_of_gate is None:
+        return
+    n_in_i = int(n_in)
+    n_out_i = int(n_out_of_gate)
+    limit = 1.10 * float(max(1, n_out_i))
+    if n_in_i > limit:
+        raise InvariantViolation(
+            "INV-MATCH-IDENTITY-01",
+            f"n_in={n_in_i} > 1.10 x n_out_of_gate={n_out_i} (limit {limit:.1f}); "
+            "identity was re-created between gate and optimizer",
         )
 
 

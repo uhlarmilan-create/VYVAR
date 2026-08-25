@@ -321,7 +321,7 @@ def _diagnostic_identity_separations_px(
     gaia_df = pd.DataFrame({"x_gaia": gx, "y_gaia": gy, "catalog_id": [""] * len(gx)})
 
     seps: list[float] = []
-    det_to_g, gaia_owner, _ = lock_existing_and_leftover_assign(
+    det_to_g, gaia_owner, _, _ = lock_existing_and_leftover_assign(
         dx, dy, gaia_df, leftover_radius_px=r_diag
     )
     for i in range(len(dx)):

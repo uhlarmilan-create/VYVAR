@@ -275,6 +275,8 @@ def optimize_masterstar_matches(
     gaia_max_catalog_rows: int | None = None,
     mirror_orientation_extra_log: bool = True,
     sip_force_rms_guard_ratio: float | None = 1.15,
+    fwhm_dao_px: float | None = None,
+    identity_gate_n_out: int | None = None,
 ) -> Path:
     """Optimize MASTERSTAR matches and write ``masterstars_full_match.csv``.
 
@@ -300,6 +302,32 @@ def optimize_masterstar_matches(
     w = WCS(hdr)
     if not getattr(w, "has_celestial", False):
         raise ValueError(f"MASTERSTAR FITS has no usable WCS: {fits_path}")
+
+    from gaia_catalog_id import normalize_gaia_source_id_series as _norm_cid_series
+    from invariants_runtime import assert_inv_match_identity_01
+
+    _n_in = int(
+        _norm_cid_series(df.get("catalog_id", pd.Series([""] * len(df), index=df.index)))
+        .astype(str)
+        .str.strip()
+        .ne("")
+        .sum()
+    )
+    assert_inv_match_identity_01(n_in=_n_in, n_out_of_gate=identity_gate_n_out)
+
+    _fwhm_dao = None
+    if fwhm_dao_px is not None:
+        try:
+            _fwhm_dao = float(fwhm_dao_px)
+        except (TypeError, ValueError):
+            _fwhm_dao = None
+    if _fwhm_dao is None or (not math.isfinite(_fwhm_dao)) or _fwhm_dao <= 0:
+        try:
+            _fwhm_dao = float(hdr.get("VY_FWHM_DAO") or 0.0)
+        except (TypeError, ValueError):
+            _fwhm_dao = 0.0
+    if not math.isfinite(_fwhm_dao) or _fwhm_dao <= 0:
+        _fwhm_dao = 1.25
 
     gdf = _gaia_for_field(
         df,
@@ -330,6 +358,23 @@ def optimize_masterstar_matches(
         dec=pd.to_numeric(gdf["dec"], errors="coerce").to_numpy(dtype=np.float64) * u.deg,
         frame="icrs",
     )
+
+    from wcs_invertibility import apply_post_match_identity_gate_df, gaia_radec_map_from_table
+
+    _gmap_entry = gaia_radec_map_from_table(gdf, id_col="source_id", ra_col="ra", dec_col="dec")
+    df, _idc_entry = apply_post_match_identity_gate_df(
+        df,
+        w,
+        gaia_ra_dec_by_cid=_gmap_entry,
+        fwhm_px=float(_fwhm_dao),
+        log_fn=log_event,
+    )
+    if _idc_entry.get("fail") or _idc_entry.get("warn"):
+        log_event(
+            f"Astrometry optimizer entry identity gate: ok={_idc_entry.get('ok', 0)} "
+            f"warn={_idc_entry.get('warn', 0)} fail={_idc_entry.get('fail', 0)} "
+            f"(DAO FWHM={float(_fwhm_dao):.2f}px)"
+        )
 
     x = pd.to_numeric(df.get("x"), errors="coerce").to_numpy(dtype=np.float64)
     y = pd.to_numeric(df.get("y"), errors="coerce").to_numpy(dtype=np.float64)
@@ -463,9 +508,7 @@ def optimize_masterstar_matches(
         log_event(f"Astrometry optimizer initial jump skipped: {exc!s}")
     log_event("Astrometry optimizer: adaptive rematch radius enabled (center=5.0\", edge>800px => 10-15\").")
     cid_series = df.get("catalog_id", pd.Series([""] * len(df), index=df.index)).copy()
-    _fwhm_hdr = float(hdr.get("VY_FWHM") or hdr.get("DAO_FWHM") or 3.5)
-    if not math.isfinite(_fwhm_hdr) or _fwhm_hdr <= 0:
-        _fwhm_hdr = 3.5
+    _fwhm_hdr = float(_fwhm_dao)
     _identity_warn = 0
     _identity_fail = 0
 

@@ -9230,6 +9230,9 @@ def detect_stars_and_match_catalog(
     n_matched = 0
     match_sep_used = max(12.0, float(match_sep_arcsec))
     _wcs_refine_iters = 0
+    from wcs_invertibility import empty_identity_gate_acc
+
+    _identity_gate_acc = empty_identity_gate_acc()
     if cat_df.empty:
         df_out = pd.DataFrame(
             {
@@ -9240,6 +9243,7 @@ def detect_stars_and_match_catalog(
                 "b_v": np.full(n, np.nan, dtype=np.float64),
                 "catalog": np.array([""] * n, dtype=object),
                 "catalog_id": np.array([""] * n, dtype=object),
+                "match_sep_arcsec": np.full(n, np.nan, dtype=np.float64),
                 "x": x,
                 "y": y,
                 "flux": flux,
@@ -9421,6 +9425,7 @@ def detect_stars_and_match_catalog(
                     "b_v": bv_out,
                     "catalog": cat_out,
                     "catalog_id": cid_out,
+                    "match_sep_arcsec": np.where(matched_l, sepa_eff, np.nan),
                     "x": x,
                     "y": y,
                     "flux": flux,
@@ -9431,6 +9436,44 @@ def detect_stars_and_match_catalog(
                 }
             )
             return df_l, n_ma
+
+        def _apply_post_match_identity_gate() -> None:
+            nonlocal df_out, n_matched, _identity_gate_acc
+            try:
+                from wcs_invertibility import (
+                    accumulate_identity_gate,
+                    apply_post_match_identity_gate_df,
+                    gaia_radec_map_from_table,
+                )
+
+                _fwhm_gate = float(_fwhm_used)
+                if not math.isfinite(_fwhm_gate) or _fwhm_gate <= 0:
+                    _fwhm_gate = 3.5
+                _gmap = gaia_radec_map_from_table(cat_df)
+                _det_fb = None
+                if len(df_out) == int(len(det_str)):
+                    import pandas as _pd
+
+                    _det_fb = _pd.Series(det_str, index=df_out.index)
+                df_out, _idc = apply_post_match_identity_gate_df(
+                    df_out,
+                    wcs_obj,
+                    gaia_ra_dec_by_cid=_gmap,
+                    fwhm_px=_fwhm_gate,
+                    log_fn=log_event,
+                    det_fallback_names=_det_fb,
+                )
+                n_matched = int(
+                    df_out.get("catalog_id", pd.Series([""] * len(df_out)))
+                    .fillna("")
+                    .astype(str)
+                    .str.strip()
+                    .ne("")
+                    .sum()
+                )
+                _identity_gate_acc = accumulate_identity_gate(_identity_gate_acc, _idc, n_matched)
+            except Exception as _idg_exc:  # noqa: BLE001
+                log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
 
         def _run_full_match_pass() -> None:
             nonlocal df_out, n_matched, match_sep_used
@@ -9480,45 +9523,9 @@ def detect_stars_and_match_catalog(
                         int(n_tight),
                     )
                     df_out, n_matched, match_sep_used = df_tight, n_tight, _tight_sec
+            _apply_post_match_identity_gate()
 
         _run_full_match_pass()
-
-        def _apply_post_match_identity_gate() -> None:
-            nonlocal df_out, n_matched
-            try:
-                from gaia_catalog_id import normalize_gaia_source_id
-                from wcs_invertibility import apply_post_match_identity_gate_df
-
-                _fwhm_gate = float(_fwhm_used)
-                if not math.isfinite(_fwhm_gate) or _fwhm_gate <= 0:
-                    _fwhm_gate = 3.5
-                _cid_col = cat_df.get("catalog_id", cat_df.get("source_id", pd.Series(dtype=object)))
-                _ra_c = pd.to_numeric(cat_df["ra_deg"], errors="coerce")
-                _de_c = pd.to_numeric(cat_df["dec_deg"], errors="coerce")
-                _gmap: dict[str, tuple[float, float]] = {}
-                for _i in range(len(cat_df)):
-                    _k = normalize_gaia_source_id(str(_cid_col.iloc[_i] if hasattr(_cid_col, "iloc") else ""))
-                    if _k and math.isfinite(float(_ra_c.iloc[_i])) and math.isfinite(float(_de_c.iloc[_i])):
-                        _gmap[_k] = (float(_ra_c.iloc[_i]), float(_de_c.iloc[_i]))
-                df_out, _idc = apply_post_match_identity_gate_df(
-                    df_out,
-                    wcs_obj,
-                    gaia_ra_dec_by_cid=_gmap,
-                    fwhm_px=_fwhm_gate,
-                    log_fn=log_event,
-                )
-                n_matched = int(
-                    df_out.get("catalog_id", pd.Series([""] * len(df_out)))
-                    .fillna("")
-                    .astype(str)
-                    .str.strip()
-                    .ne("")
-                    .sum()
-                )
-            except Exception as _idg_exc:  # noqa: BLE001
-                log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
-
-        _apply_post_match_identity_gate()
         if len(df_out) == int(n):
             df_out["vy_dao_pass"] = np.asarray(_dao_pass, dtype=np.int16)
             df_out["ambiguous_owner"] = np.asarray(vy_amb_owner, dtype=bool)
@@ -9844,6 +9851,10 @@ def detect_stars_and_match_catalog(
         "dao_gaia_derived_tol": (
             _derived_tol.to_dict() if _derived_tol is not None else None
         ),
+        "identity_gate": {
+            **dict(_identity_gate_acc),
+            "fwhm_px": float(_fwhm_used),
+        },
         **meta_mag,
     }
     _catalog_rows = int(meta.get("catalog_rows", 0))
@@ -10440,6 +10451,8 @@ def _export_per_frame_run_catalog_core(
                 "bp_rp",
                 "phot_g_mean_mag",
                 "catalog_mag",
+                "vy_identity_gate",
+                "gaia_dao_resid_px",
                 "edge_safe_10px",
                 "snr50_ok",
                 "noise_floor_adu",
@@ -13215,6 +13228,56 @@ def generate_masterstar_and_catalog(
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR: zlucenie VYVAR parov preskocene - {exc!s}")
 
+    _fwhm_dao = float(det_meta.get("dao_fwhm_px") or 0.0)
+    if not math.isfinite(_fwhm_dao) or _fwhm_dao <= 0:
+        _fwhm_dao = float((det_meta.get("identity_gate") or {}).get("fwhm_px") or 1.25)
+
+    try:
+        from wcs_invertibility import (
+            accumulate_identity_gate,
+            apply_post_match_identity_gate_df,
+            gaia_radec_map_from_table,
+        )
+
+        _gmap_ms: dict[str, tuple[float, float]] = {}
+        _cone_p = Path(platesolve_dir) / "field_catalog_cone.csv"
+        if _cone_p.is_file():
+            _cone_df = pd.read_csv(_cone_p, low_memory=False, dtype={"catalog_id": str, "source_id": str})
+            _gmap_ms.update(gaia_radec_map_from_table(_cone_df))
+        if isinstance(solve_meta, dict):
+            _pids = solve_meta.get("pairs_catalog_id") or []
+            _pra = solve_meta.get("pairs_ra") or []
+            _pde = solve_meta.get("pairs_de") or []
+            from gaia_catalog_id import normalize_gaia_source_id as _norm_gid
+
+            for _i, _pid in enumerate(_pids):
+                _k = _norm_gid(str(_pid))
+                if _k and _i < len(_pra) and _i < len(_pde):
+                    _gmap_ms[_k] = (float(_pra[_i]), float(_pde[_i]))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FITSFixedWarning)
+            _w_gate = WCS(hdr)
+        df_out, _idc_merge = apply_post_match_identity_gate_df(
+            df_out,
+            _w_gate,
+            gaia_ra_dec_by_cid=_gmap_ms,
+            fwhm_px=_fwhm_dao,
+            log_fn=log_event,
+        )
+        _acc = dict(det_meta.get("identity_gate") or {})
+        _n_out = int(
+            df_out.get("catalog_id", pd.Series([""] * len(df_out)))
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .ne("")
+            .sum()
+        )
+        det_meta["identity_gate"] = accumulate_identity_gate(_acc, _idc_merge, _n_out)
+        det_meta["identity_gate"]["fwhm_px"] = float(_fwhm_dao)
+    except Exception as _mg_exc:  # noqa: BLE001
+        log_event(f"post_match_identity_gate (post-merge) skipped: {_mg_exc!s}")
+
     if "b_v" in df_out.columns and "bp_rp" not in df_out.columns:
         df_out = df_out.copy()
         df_out["bp_rp"] = pd.to_numeric(df_out["b_v"], errors="coerce")
@@ -13264,6 +13327,16 @@ def generate_masterstar_and_catalog(
         _gdb_opt = str(_cfg_ms.gaia_db_path or "").strip()
         if _gdb_opt:
             _mir_extra = bool(_MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG)
+            _idg_n_out = int((det_meta.get("identity_gate") or {}).get("n_matched_out") or 0)
+            try:
+                with fits.open(masterstar_fits, mode="update", memmap=False) as _hf_dao:
+                    _hf_dao[0].header["VY_FWHM_DAO"] = (
+                        float(_fwhm_dao),
+                        "DAO-domain FWHM [pix] for identity gate",
+                    )
+                    _hf_dao.flush()
+            except Exception as _dao_hdr_exc:  # noqa: BLE001
+                log_event(f"MASTERSTAR VY_FWHM_DAO stamp skipped: {_dao_hdr_exc!s}")
             csv_path = optimize_masterstar_matches(
                 masterstars_csv=temp_csv,
                 masterstar_fits=masterstar_fits,
@@ -13273,8 +13346,11 @@ def generate_masterstar_and_catalog(
                 gaia_max_catalog_rows=int(_ms_max_catalog_rows_eff),
                 mirror_orientation_extra_log=_mir_extra,
                 sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
+                fwhm_dao_px=float(_fwhm_dao),
+                identity_gate_n_out=_idg_n_out,
             )
             # Force one more pass after WCS displacement update for final edge recovery.
+            # Identity-count contract is first-entry only; rematch may add honest pairs.
             csv_path = optimize_masterstar_matches(
                 masterstars_csv=csv_path,
                 masterstar_fits=masterstar_fits,
@@ -13284,6 +13360,8 @@ def generate_masterstar_and_catalog(
                 gaia_max_catalog_rows=int(_ms_max_catalog_rows_eff),
                 mirror_orientation_extra_log=_mir_extra,
                 sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
+                fwhm_dao_px=float(_fwhm_dao),
+                identity_gate_n_out=None,
             )
             log_event("MASTERSTAR optimizer: forced final re-match pass completed.")
             # Final safety: repair any residual precision-loss IDs in masterstars_full_match.csv via Gaia RA/DEC lookup.
@@ -13308,6 +13386,10 @@ def generate_masterstar_and_catalog(
         else:
             _vyvar_df_to_csv(df_out, csv_path)
     except Exception as exc:  # noqa: BLE001
+        from invariants_runtime import InvariantViolation as _InvMatchId  # noqa: PLC0415
+
+        if isinstance(exc, _InvMatchId):
+            raise
         log_event(f"MASTERSTAR optimizer skipped/fallback: {exc!s}")
         _vyvar_df_to_csv(df_out, csv_path)
     try:
@@ -13331,6 +13413,10 @@ def generate_masterstar_and_catalog(
                 df_final[_prov_col] = pd.to_numeric(df_final[_prov_col], errors="coerce").fillna(1)
             elif _prov_col == "ambiguous_owner":
                 df_final[_prov_col] = df_final[_prov_col].fillna(False).astype(bool)
+        if len(df_final) == len(df_out):
+            for _idcol in ("vy_identity_gate", "gaia_dao_resid_px"):
+                if _idcol in df_out.columns and _idcol not in df_final.columns:
+                    df_final[_idcol] = df_out[_idcol].to_numpy()
     except Exception as _df_final_exc:  # noqa: BLE001
         log_event(
             f"MASTERSTAR: re-read of {Path(csv_path).name} failed ({_df_final_exc!s}); "
@@ -13787,6 +13873,12 @@ def generate_masterstar_and_catalog(
             "n_gaia_detected": int(_n_gaia_det_opt),
             "n_gaia_undetected": int(_cat_rows_opt - _n_gaia_det_opt),
         }
+        _idg_stamp = dict(det_meta.get("identity_gate") or {})
+        _gmeta = det_meta.get("gaia_census_meta") or {}
+        if isinstance(_gmeta, dict) and "n_lock_geometry_reject" in _gmeta:
+            _idg_stamp["n_lock_geometry_reject"] = int(_gmeta.get("n_lock_geometry_reject") or 0)
+        if _idg_stamp:
+            _meta_patch["identity_gate"] = _idg_stamp
         if _wcs_rt_p99 is not None:
             _meta_patch["wcs_roundtrip_p99_px"] = float(_wcs_rt_p99)
             _meta_patch["wcs_roundtrip_pass"] = bool(_wcs_rt_pass)
