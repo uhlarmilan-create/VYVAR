@@ -1,6 +1,11 @@
 # VYVAR -- Development State
 
-**Status:** **SEL-GHOST-01 B-STOP-1b** (2026-08-25): clean-tree `--fast`
+**Status:** **SEL-GHOST-01 B-STOP-2** (2026-08-25): D1-D4 wired;
+`--fast --clean` PASS at `936512f`; 520 `g_60_4` re-solves at 0.566 "/px
+(gate-out 61, D2 refit rejected). 516 catalog_id 3583 vs c592ecf 3581;
+sandbox LCs not byte-identical to live; `--full` FAIL (D3 raises on
+frozen MS missing `vy_identity_gate`; 14 empty-comp). No re-cut. No
+push. **SEL-GHOST-01 B-STOP-1b** (2026-08-25): clean-tree `--fast`
 holes closed (`0684ba9`/`b39982c`/`6dad937`); B1 changes 516 by 10 catalog_ids,
 0 in LC ensembles, `--full` byte-identical YES; H-LABEL TRUE and
 INV-SOURCE-STATE-01 wired (`58a2187`); 520 has no pre-optimizer WCS
@@ -40,7 +45,14 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-25** (SEL-GHOST-01 B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-25** (SEL-GHOST-01 B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-2 (D1-D4 wired; 516/520 sandbox)
+
+D1 one-pass radius, D2 refit guard+backup, D3 candidacy, D4 lock
+reject=3xFWHM. 520 g_60_4 solves when DB 0.566 "/px is not overwritten
+by 15.511 UI scale. `--full` FAIL on frozen CSV missing D3 columns.
+Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`. Not pushed.
 
 ## 2026-08-25 -- SEL-GHOST-01 B-STOP-1b (measure + label honesty)
 

@@ -6,6 +6,65 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## SEL-GHOST-01 - one identity, one geometry, no match-rate widening (2026-08-25)
+
+Part A (draft 520 `g_60_4`) binding facts:
+
+F1  Sky-domain match widens (12" -> 18" logged; silent 0.95 loop to
+    96" unlogged). 347/692 pairs at gate time; greedy closest-first.
+F2  Identity gate ran once, correctly: ok=52 warn=9 fail=286 at
+    FWHM 1.25 px. It clears catalog_id / catalog / match_sep_arcsec
+    and leaves `name` (wcs_invertibility.py:337-344).
+F3  _vyvar_df_to_csv (pipeline.py:5938-5940) calls
+    catalog_id_series_for_masterstars_export (gaia_catalog_id.py:
+    197-208) which copies a Gaia-looking `name` back onto catalog_id.
+    The 286 stripped IDs are restored on export. Optimizer input sees
+    347 nonempty IDs; Grip1 SIP fit on those pairs: rms_lin 81.0 px,
+    rms_sip 84.7 px; INV-WCS-01 WARN p95 146.8 px. Final header WCS is
+    unusable (10/11 G<12 stars fail the gate against it).
+F4  All 8 ghost comps: vy_match_mode=locked (born-owned lock skips
+    lock_tol_px). Optimizer identity (astrometry_optimizer.py:475-480)
+    gates only NEW writes, with header VY_FWHM=2.5 (full-res) rather
+    than the DAO-domain _fwhm_used=1.25.
+F5  Honest match rate (d_px <= 3 FWHM) 0.088 at gate time vs 0.522
+    reported on the final table. No literature precedent for
+    match-rate-driven radius widening (Marrese et al. 2019, A&A 621
+    A144; Bertin SCAMP/SExtractor).
+
+Milan GO (chat, 2026-08-25) on D1-D4:
+
+D1  Catalog-match radius must not chase a match rate. The 0.70 -> x1.5
+    loop and the 0.95 widening loop are REMOVED. Radius =
+    max(12", 3 x max(solve_rms_px, FWHM_dao_px) x plate_scale), one
+    pass; the tighten-to-4.5" step stays. Low match rate remains a
+    WARN. Basis: Part A F1/F5, Marrese et al. 2019 A&A 621 A144, no
+    precedent for match-rate-driven widening.
+D2  Astrometry optimizer refit acceptance: reject when rms_sip >
+    max(3 x FWHM_dao_px, 3 px) or n_honest_pairs < 10. A refit that
+    worsens round-trip p95 versus the entry WCS is never written.
+    Before the first optimizer write, the entry WCS is backed up.
+    Basis: Part A F3, B1b M4 (no backup existed; 84.7 px SIP written).
+D3  Comparison candidacy before the rms ceiling: source_state in
+    {DETECTED_P1, DETECTED_P2}; vy_identity_gate != fail;
+    gaia_dao_resid_px <= max(3 x FWHM_dao_px, 2 x solve_rms_px);
+    MASTERSTAR SNR >= 10. phase01_comparison_max_comp_rms unchanged
+    (COMP-RMS-DEF-01). Basis: REG-520-01, Part A, B-STOP-1.
+D4  One geometry question, one threshold. Lock PREFERENCE keeps the
+    derived lock tolerance (certificate); lock REJECTION (B1e) uses the
+    identity-gate fail threshold 3 x FWHM_dao_px. Basis: B1b M2c (ten
+    516 edge stars at 2.05-2.65 px rejected at 2.5 px while the
+    identity gate passes them at 3 x FWHM).
+
+Architect retraction (verbatim): "H-MATCH-WIDEN
+(2026-08-25) named WCS-refine rematch (H2) as the path that returned
+stripped IDs to the table. Measured: refine was rejected 3x and never
+rematched on 520 g_60_4. The return path is name-based rehydration on
+CSV export (F3). H2 is retracted as cause; the code path remains real
+and is closed by B1 as defence, not as the fix."
+
+Pointers: INV-MATCH-IDENTITY-01, INV-SOURCE-STATE-01, INV-WCS-01 write
+guard (S4b). Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`.
+
 ## REG-520-01 - non-cal is first-class; 0.39 vs 0.06 is selection (2026-08-24)
 
 **Cause (measured, STOP).** Same SS Cam night, same `RUN VYVAR (non-cal)`

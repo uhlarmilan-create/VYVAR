@@ -10,13 +10,32 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-24 REG-520-01 STOP)
+## NEXT SESSION - entry point (2026-08-25 SEL-GHOST-01 B-STOP-2)
+
+Local `main` ahead of `origin/main` `b1f5b8c`. `--fast --clean` PASS.
+520 `g_60_4` now solves at DB 0.566 "/px. `--full` is red until Milan
+authorises a frozen-MS recut that stamps D3 columns (no recut in this
+task). V0612 sandbox lc_rms 0.123 with 1 D3-honest comp.
+
+| Step | Action |
+|------|--------|
+| **1** | Milan: review B-STOP-2; GO push / SESSION-CLOSE inventory |
+| **2** | `--full` recut of 9902d918 / 472bc9e4 only after D3 columns exist on the frozen MASTERSTAR (or D3 policy for pre-D3 CSVs) |
+| **3** | 520 photometry with a larger honest DETECTED pool (D3 left 7; V0612 got 1) |
+| **4** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **5** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **6** | ZONE-SAT-01 (G=7.63 peak 88781 zone=linear) |
+| **7** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **8** | **EXPORT-PARITY-01** (HIGH) |
+
+## NEXT SESSION - prior (2026-08-24 REG-520-01 STOP)
 
 Local tip **`92361a3`** plus SESSION-CLOSE-20260824 stack (AC-02 +
 REG-520-01; not pushed until this close). Production 516 ePSF SHA
 `172f95403beae36d...` unchanged. Non-cal is first-class (Milan).
 0.39 vs 0.06 is S2 selection, not the button. z_90_4 remains
 solve-rejected. AC-02 wiring is in the close stack.
+
 
 | Step | Action |
 |------|--------|
@@ -37,11 +56,13 @@ solve-rejected. AC-02 wiring is in the close stack.
 |-----|------------|
 | **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
 | **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
-| **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
+| **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. **SEL-GHOST-01 S6 (2026-08-25):** g_60_4 re-solves when Equipment+Telescope DB scale (0.566 "/px at bin4) is not overwritten by the FITS/config/UI 15.511 "/px Zeiss-wide default; first attempt with the wrong triangle-filter scale failed (`n_cat_tri=113`, cap 33 detections). z_90_4 still needs sibling-seed. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
-| **MED** | **REG-520-S2** (comp selection: rms ceiling + no Gaia-DAO residual gate), **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
 | **MED** | **PRECAL-INPUT-CONTRACT-01** (informational stamp, not a blocking gate; REG-520-01 menu d), **DAO-TOL-FLOOR-01** (pass2/seed floor = f(rms, FWHM); cite M2 curve) |
+| **MED** | **ZONE-SAT-01** (G=7.63 peak 88781 zone=linear; separate task) |
+| **OPEN** | **INPUT-PATH-ARCH-01** (discussion pending - Milan 2026-08-25: non-cal route stays; externally-calibrated vs raw-without-masters split still to be discussed) |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
 | **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
 | **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |

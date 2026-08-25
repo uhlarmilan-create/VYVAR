@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-2 (D1-D4; 520 re-solve; --full STOP)
+
+D1-D4 on `main`. 520 g_60_4 accepted at 1.44 px / 61 gate-out after DB
+scale won over 15.511 UI. 516 S3 cid 3583 vs 3581; `--full` FAIL (D3
+raise on frozen MS). No re-cut, no push.
+Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`.
+
 ## 2026-08-25 -- SEL-GHOST-01 B-STOP-1b (measure + INV-SOURCE-STATE-01)
 
 Clean-tree `--fast` was red at `01f6f77`/`58a2187` (STAGE-01 +

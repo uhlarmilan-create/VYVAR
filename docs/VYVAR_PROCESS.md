@@ -22,6 +22,9 @@ for the full map.
   (default tier: git state, config paths, full `dev/tests` pytest, anchor manifest-db parity hint,
   deps outdated hint). Record the **git commit SHA** next to every reported PASS/FAIL; a result
   from commit A is not evidence on commit B.
+  **Gate before any push is `--fast --clean`:** `--clean` adds a temporary git worktree
+  from HEAD (tracked files only), runs the pytest/ruff/pyflakes subset there, and
+  reports. Dirty-tree `--fast` alone is not the push gate (SEL-GHOST-01 S7).
   (git/config/ledger + pytest) and `--full` (headless `run_full_photometry_pipeline`
   byte-identical anchor gate).
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates

@@ -1,0 +1,132 @@
+[
+  {
+    "target": "1496037650087948160",
+    "kind": "dropped_from_live",
+    "catalog_id": "1498974102047892224",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.5189459391477602,
+    "snr": 49.99658366734472,
+    "phot_g_mean_mag": 12.130355834960938
+  },
+  {
+    "target": "1496037650087948160",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1497125479404597248",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.4767785743603827,
+    "snr": 54.5722910281829,
+    "phot_g_mean_mag": 12.12802505493164
+  },
+  {
+    "target": "1496733984545821696",
+    "kind": "dropped_from_live",
+    "catalog_id": "1497631048594737408",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.415303215323066,
+    "snr": 154.0325032474417,
+    "phot_g_mean_mag": 11.279866218566896
+  },
+  {
+    "target": "1496733984545821696",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1500492871204256512",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.3439032514359022,
+    "snr": 65.3039564309479,
+    "phot_g_mean_mag": 12.036867141723633
+  },
+  {
+    "target": "1497284015237511808",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1500418379291011840",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.7185713991461717,
+    "snr": 22.00267468267106,
+    "phot_g_mean_mag": 12.57274055480957
+  },
+  {
+    "target": "1499081819828174080",
+    "kind": "dropped_from_live",
+    "catalog_id": "1496874408500111104",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.1876741962627915,
+    "snr": 133.91133393266537,
+    "phot_g_mean_mag": 11.22511386871338
+  },
+  {
+    "target": "1499081819828174080",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1504489595970703872",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 1.084269831525119,
+    "snr": 267.8584730133781,
+    "phot_g_mean_mag": 10.509350776672363
+  },
+  {
+    "target": "1499209638054824320",
+    "kind": "dropped_from_live",
+    "catalog_id": "1498964240802993408",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.4241405904745221,
+    "snr": 17.899259289374367,
+    "phot_g_mean_mag": 13.002341270446776
+  },
+  {
+    "target": "1499209638054824320",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1500418379291011840",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.7185713991461717,
+    "snr": 22.00267468267106,
+    "phot_g_mean_mag": 12.57274055480957
+  },
+  {
+    "target": "1500410236033012352",
+    "kind": "dropped_from_live",
+    "catalog_id": "1496874408500111104",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.1876741962627915,
+    "snr": 133.91133393266537,
+    "phot_g_mean_mag": 11.22511386871338
+  },
+  {
+    "target": "1500410236033012352",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1497145751650265600",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.3276835583863624,
+    "snr": 352.0762531787274,
+    "phot_g_mean_mag": 9.86292552947998
+  },
+  {
+    "target": "1500418894687086208",
+    "kind": "dropped_from_live",
+    "catalog_id": "1500688820495583488",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.093184043036403,
+    "snr": 170.2142437440328,
+    "phot_g_mean_mag": 10.812159538269045
+  },
+  {
+    "target": "1500418894687086208",
+    "kind": "added_in_sandbox",
+    "catalog_id": "1498383080188862976",
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.6371993906800072,
+    "snr": 155.64676380444868,
+    "phot_g_mean_mag": 10.934696197509766
+  }
+]

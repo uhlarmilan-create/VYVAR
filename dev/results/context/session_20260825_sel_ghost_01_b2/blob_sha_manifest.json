@@ -1,0 +1,436 @@
+{
+  "utc": "2026-08-25T16:05:54.150357+00:00",
+  "n": 86,
+  "files": [
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\MASTERSTAR.fits",
+      "sha256": "23f89e8e314c027fd0f590b0d373ca5b235db26763d736e31be32a9d8671d64c",
+      "bytes": 11646720
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\field_map.png",
+      "sha256": "e271e14e4e47adbb7f40aaa8fbef30bf78843355d534f9d306e65fe5abe206e3",
+      "bytes": 1593575
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1485534187306501376.png",
+      "sha256": "f9fc513e48168b370c908acac132b1150a28b3cdfaa580fd5feefadf081d58bc",
+      "bytes": 1309951
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1485560025830226432.png",
+      "sha256": "907ef1e12cc9c89c429387912b2de36b12eb995aa75fdd4b24f48debf4782c53",
+      "bytes": 1310104
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1485987151737107200.png",
+      "sha256": "33775918f70e697a966795a529713d189e9daa202d48214c3ebec70ebe5159d2",
+      "bytes": 1309796
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1485987254816323328.png",
+      "sha256": "7b2d40b90dd5554faceca00c317c82cc0c4caa7fa968744298083c248ee1d400",
+      "bytes": 1310800
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496037650087948160.png",
+      "sha256": "d72e059ddb5e0b3e363e530afef44df3e3dc1f7bda3678b0827b90a67812513e",
+      "bytes": 1307468
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496278752372040832.png",
+      "sha256": "19795f5308fdbe16d9fe521653e53eec95c5c6dbeaaae4cb8d056de7523b9d60",
+      "bytes": 1305416
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496293286541396480.png",
+      "sha256": "efd00092ce42c25f9dbcf1da8488ebd02005156827fb9c12d77fd32b2e21d254",
+      "bytes": 1305569
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496733984545821696.png",
+      "sha256": "598aa4a4876ac13697614ceabe0e19163e110f26c626d06cc7742ac6aaa0543a",
+      "bytes": 1311170
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496795041799526400.png",
+      "sha256": "d0d76bdcedea89c058eeb06abd4f6eecb8a4c7a6875a0c6c88a1f6a808880e86",
+      "bytes": 1305578
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1496998382733052928.png",
+      "sha256": "f248b6f59489fe12353589633ab2548392729df84ccbb6ba6c55d068e57c1d07",
+      "bytes": 1308516
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497096960821764224.png",
+      "sha256": "f5697001d94e69f25e6b9a34f9096606c1bd835b2198ffee0fe95a18f740215f",
+      "bytes": 1310532
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497132660589966976.png",
+      "sha256": "1dee6627e95cb5c43dbdd6d89688def759e14e51f6f0f9145b249b8d62676733",
+      "bytes": 1306239
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497154753901690624.png",
+      "sha256": "e6ccc7557b0f3ee0b8f1a46d795bde945ce0b114f9cbca052bffe1fe76554f82",
+      "bytes": 1310073
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497169940906156032.png",
+      "sha256": "b9b7adb21787f8fc6a5f6e1988edd1ce11316f361b025a5638ad135494567a04",
+      "bytes": 1309398
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497227287309482624.png",
+      "sha256": "21b60072e6be349a293ac9d82972083ec326dd8041b7a93c5ad116b5513ee4fa",
+      "bytes": 1303198
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497236186481686016.png",
+      "sha256": "e9585b334cda9faba18a3f30377c17c11ef29fa4ad91696a3dcfbc2b5f3dc5b7",
+      "bytes": 1306031
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497245497969274240.png",
+      "sha256": "6dd982d32a30dbb076f0529754ce515ab7cb52faa30e4d8c2b16808e82955d2f",
+      "bytes": 1301252
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497284015237511808.png",
+      "sha256": "b80b6d74bc950965649f24682d63929846c3585d8ab66961bb2bf3650b41c8a3",
+      "bytes": 1306912
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497343732462852864.png",
+      "sha256": "29920daed89679fdbeb0a4f090ad7891609435aed126b9d36e627d1ca1b174fa",
+      "bytes": 1305726
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497350638770267520.png",
+      "sha256": "c6532a793cefc51f9b7c2ac3e6f6e585e394c49a2ed1c308a008b34dfd766515",
+      "bytes": 1308063
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497418258735289472.png",
+      "sha256": "cbf694fa237c0f8dcb128ff97fe95e093febab65d7e4e20beef5d1163da3c9be",
+      "bytes": 1305290
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497425371201155072.png",
+      "sha256": "995e95949f07db60c3cc8dce9d7c35095dfec569ce9661c0e03d5f2f3419f47c",
+      "bytes": 1307262
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497491273179203456.png",
+      "sha256": "bcd32f3593e67af627501bec4c07cd6d03bd47c8f94da42b953be964ce17ac2b",
+      "bytes": 1309869
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497561779362267392.png",
+      "sha256": "dd42e2a6af6b9676438e61d4d24ac90865d541e88804b0ce8e99c1c5dd2fd416",
+      "bytes": 1303799
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497603835681942400.png",
+      "sha256": "42a51016ba7fa4da380a0b08e5b0af4f8f741e3ba48a927fc6c9173427286f13",
+      "bytes": 1307651
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497639123133258752.png",
+      "sha256": "a9404d7ce2bbebc49ed75e4e124c18a524a9c3875c983388e533c0ef8d016deb",
+      "bytes": 1306006
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497683722074089728.png",
+      "sha256": "6d78737fb1c7385c507f28d5032268ed98f4ff8b3795366691c090aa100ddb6d",
+      "bytes": 1305585
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497683996951418880.png",
+      "sha256": "1547481ac880952f3520ad897cfedd460d93c24f355df06b91ffe94169c39e54",
+      "bytes": 1307997
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1497871669842349184.png",
+      "sha256": "02ba1175d053e3f36fc75fea69eff27d927266a0735263cde81a44fcbe9b411a",
+      "bytes": 1307707
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498000793739050368.png",
+      "sha256": "63d571c749a861a7fe7875dbb7817d6c1531d18c9c49668233d38784115a3df2",
+      "bytes": 1309317
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498027456896444928.png",
+      "sha256": "9e103a7f8a9fcd0a9239a74c86fdbc54afd3311cd83902e2f2a73c915fa2e613",
+      "bytes": 1309896
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498058827337611392.png",
+      "sha256": "0baaf15ca068bd9c9ac1a77e632b67eb897971901d063a842ec4a9b1159730ab",
+      "bytes": 1310256
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498278351706325248.png",
+      "sha256": "bec071e00ed08fce14f102273fd555782a60b26ba679fa1c37b544d21121cb1a",
+      "bytes": 1306092
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498298211635183744.png",
+      "sha256": "6111f73933a35fbbd827b25c3761ff8aea4aca1252403622245f3b2791addbe1",
+      "bytes": 1308260
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498321301379345408.png",
+      "sha256": "8edd230735799101aef1a8c142484284acb6b72358c8afd625446941163fadef",
+      "bytes": 1308789
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498425548825498112.png",
+      "sha256": "8f2905f0c2c143eff48dd3e62f58439e8a52bd3c034a9082c7deaba7a5f0b9e1",
+      "bytes": 1302915
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498486880958321024.png",
+      "sha256": "1af966ab51e61233d34000c907c02b53507839c85a7acea9467248e3a8db9900",
+      "bytes": 1303655
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498613634033133184.png",
+      "sha256": "58a5eddfba46c7a1aaf2cb9d8db1e746663a644092313284654ae915d19342a1",
+      "bytes": 1300312
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498617482323461376.png",
+      "sha256": "ca1187359df2f0fa5ab7d2da8f099cc5f6a2237aeb4e1c1aa4b190d24cccd1c8",
+      "bytes": 1309036
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498699086702005376.png",
+      "sha256": "081291b191ae55046858f4fe2ab6d116e383d6599ec38c868633142aece61c62",
+      "bytes": 1309836
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498752516095473664.png",
+      "sha256": "48c5b82c04de6b14bbfc288584fc3f3c2a1a9e9020cdb23166a688d696d16870",
+      "bytes": 1300838
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498783199341798016.png",
+      "sha256": "463cbe721dab4f267a1b011cafbd971e892af185ee82a763ff81f2dd8b66f4b6",
+      "bytes": 1310169
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498795809366255488.png",
+      "sha256": "8c339a869b42f3cccfe3b0a65b930363e7ac97a2b525915aa84df62a832132d7",
+      "bytes": 1309282
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498804639818507904.png",
+      "sha256": "fd15cc32fa260c9252d717a337462210a1f3cc78f2ef495a1533e16428f1c920",
+      "bytes": 1305864
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1498842882207281152.png",
+      "sha256": "47f1b8d84f6ad249dbf4de4a0b524bafac3123fa9b31f191a4cfe364fe8b5cae",
+      "bytes": 1309602
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499006984318088320.png",
+      "sha256": "ea01441e015615c14c1efcd57f5788db3917bbc73bfdecc335ef9168cb03623d",
+      "bytes": 1310463
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499021174889970816.png",
+      "sha256": "21126583377b0c99c05a1262dcee96fd9cd57ffe8e9e0a987066999d460f4ae4",
+      "bytes": 1308234
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499081819828174080.png",
+      "sha256": "44f98667e7efcf994481f3b5e9f6fb07c79db62f18ca1f33d059d089a68bffb5",
+      "bytes": 1310124
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499084499887740160.png",
+      "sha256": "dee79461f304e71a1941c676c99fde75c04a5334bcb96388cdce9f7d7508090b",
+      "bytes": 1310551
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499209638054824320.png",
+      "sha256": "095c90c714baa2af99597921a608b4a66fcb4fc9ce8e5906b12d6a3dcdd12731",
+      "bytes": 1310217
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499210016011946496.png",
+      "sha256": "b66621113c661dbd49226e51beafa6c412a8260eb89a84d8a2f7149cab941c33",
+      "bytes": 1310393
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1499842372636900992.png",
+      "sha256": "5f888a0b2b101248e14e58140236a28db5872106496bbffbf7a96d7d9ca2f6a8",
+      "bytes": 1307222
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500327978819506944.png",
+      "sha256": "255d1b81202849e08a209193e4839fa6e282dc6df2c2b106a3cbaa54c92c9e4a",
+      "bytes": 1310262
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500410236033012352.png",
+      "sha256": "cf7aedf09835fcbbe3198330b22b97011daecb7065146f82672fb292d7165da4",
+      "bytes": 1310628
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500418894687086208.png",
+      "sha256": "f85cf1ba848fdddc739a05825e870170d0c5def65a47515d9c0fcc85b08a2e60",
+      "bytes": 1310470
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500424804562041984.png",
+      "sha256": "201d51094f932c7b4f6856a42dcef9fdd979690b0c0cd2fce6acd7de0dc52170",
+      "bytes": 1305569
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500461157165243648.png",
+      "sha256": "8dd588841adf993505b14d671afd0dd43fc68000d3d0b472bb7424a41ad049a0",
+      "bytes": 1309489
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500549977088828160.png",
+      "sha256": "c3794939d0f799df48f70b4b7637248d6a9762147c8f58975bb3366559334e56",
+      "bytes": 1305353
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1500693841313325696.png",
+      "sha256": "8b0a773aaea3d809fdcd03e05cad4ade724f992805c942ff195dfa8a1bf9393f",
+      "bytes": 1310514
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves\\field_map_1502012464992313088.png",
+      "sha256": "894b7dbe61514e94c23ec710904089f6e0571818938e417cfb7ea55c67579a3e",
+      "bytes": 1307701
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\ASASSN-V_J13575722+4125184_20260423_field.png",
+      "sha256": "081291b191ae55046858f4fe2ab6d116e383d6599ec38c868633142aece61c62",
+      "bytes": 1309836
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\BO_CVn_20260423_field.png",
+      "sha256": "58a5eddfba46c7a1aaf2cb9d8db1e746663a644092313284654ae915d19342a1",
+      "bytes": 1300312
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\CSS_J1349489+415037_20260423_field.png",
+      "sha256": "8dd588841adf993505b14d671afd0dd43fc68000d3d0b472bb7424a41ad049a0",
+      "bytes": 1309489
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\CSS_J1359298+421520_20260423_field.png",
+      "sha256": "47f1b8d84f6ad249dbf4de4a0b524bafac3123fa9b31f191a4cfe364fe8b5cae",
+      "bytes": 1309602
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\CSS_J1409187+423422_20260423_field.png",
+      "sha256": "1af966ab51e61233d34000c907c02b53507839c85a7acea9467248e3a8db9900",
+      "bytes": 1303655
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\FU_CVn_20260423_field.png",
+      "sha256": "cbf694fa237c0f8dcb128ff97fe95e093febab65d7e4e20beef5d1163da3c9be",
+      "bytes": 1305290
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\FW_CVn_20260423_field.png",
+      "sha256": "29920daed89679fdbeb0a4f090ad7891609435aed126b9d36e627d1ca1b174fa",
+      "bytes": 1305726
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\FY_CVn_20260423_field.png",
+      "sha256": "19795f5308fdbe16d9fe521653e53eec95c5c6dbeaaae4cb8d056de7523b9d60",
+      "bytes": 1305416
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\FZ_CVn_20260423_field.png",
+      "sha256": "efd00092ce42c25f9dbcf1da8488ebd02005156827fb9c12d77fd32b2e21d254",
+      "bytes": 1305569
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\GH_CVn_20260423_field.png",
+      "sha256": "fd15cc32fa260c9252d717a337462210a1f3cc78f2ef495a1533e16428f1c920",
+      "bytes": 1305864
+    },
+    {
+      "rel": "sandbox_516_phot\\NoFilter_60_2\\photometry\\lightcurves_reports\\varastro\\NSVS_5096293_20260423_field.png",
+      "sha256": "6111f73933a35fbbd827b25c3761ff8aea4aca1252403622245f3b2791addbe1",
+      "bytes": 1308260
+    },
+    {
+      "rel": "sandbox_516_s1\\NoFilter_60_2\\MASTERSTAR.fits",
+      "sha256": "6b8afaecf646774eca4a8868586c43a4b68c2f932017e80ea43467c8a180904c",
+      "bytes": 11646720
+    },
+    {
+      "rel": "sandbox_516_s3\\NoFilter_60_2\\MASTERSTAR.entry.wcs",
+      "sha256": "3b9c1dba781e9ba59453e66fff1d7c53a605229eae884773d5cddaa65230a333",
+      "bytes": 9838
+    },
+    {
+      "rel": "sandbox_516_s3\\NoFilter_60_2\\MASTERSTAR.fits",
+      "sha256": "23f89e8e314c027fd0f590b0d373ca5b235db26763d736e31be32a9d8671d64c",
+      "bytes": 11646720
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\MASTERSTAR.fits",
+      "sha256": "118c0ffa8f0fb9b4c5e7dea5125ea045f3a7cda5cd36d7a242b72edd70320efe",
+      "bytes": 37860480
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\field_map.png",
+      "sha256": "14400de8e6889544a2b01b9113889aa5c32c2a0fd2540be7c746a0a10a95696b",
+      "bytes": 1298192
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves\\field_map_1111749368289526912.png",
+      "sha256": "80f94dff23f7a85c05645ae60cf2183ec081e9743ad6062b87d160731f672661",
+      "bytes": 1294100
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves\\field_map_1112113066119992064.png",
+      "sha256": "b280362b233690c0959d6bbeca44bf32495beb3e69c837f859e067f89cb248c4",
+      "bytes": 1293457
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves\\field_map_1112127291051695744.png",
+      "sha256": "ccdcec92e71d1a5ed644519da8da92c95619eedd862bba8207cd64d8b97cd8b2",
+      "bytes": 1293870
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves\\field_map_1112130898824233216.png",
+      "sha256": "5c0e40dd1a1ccbf8991d8aa71ccbc566c0a345dc1e30b830178cdeca2fd80c10",
+      "bytes": 1293694
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves_reports\\varastro\\SS_Cam_20260608_field.png",
+      "sha256": "b280362b233690c0959d6bbeca44bf32495beb3e69c837f859e067f89cb248c4",
+      "bytes": 1293457
+    },
+    {
+      "rel": "sandbox_520_phot\\g_60_4\\photometry\\lightcurves_reports\\varastro\\V0612_Cam_20260608_field.png",
+      "sha256": "80f94dff23f7a85c05645ae60cf2183ec081e9743ad6062b87d160731f672661",
+      "bytes": 1294100
+    },
+    {
+      "rel": "sandbox_520_s6\\g_60_4\\MASTERSTAR.entry.wcs",
+      "sha256": "4e5251743205d1d5bdbed557d9b2aaaa96a2876b4de86bfa5aa50a399dd35157",
+      "bytes": 6558
+    },
+    {
+      "rel": "sandbox_520_s6\\g_60_4\\MASTERSTAR.fits",
+      "sha256": "118c0ffa8f0fb9b4c5e7dea5125ea045f3a7cda5cd36d7a242b72edd70320efe",
+      "bytes": 37860480
+    }
+  ]
+}

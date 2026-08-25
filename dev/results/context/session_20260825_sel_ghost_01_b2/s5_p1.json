@@ -1,0 +1,42 @@
+{
+  "n_targets": 60,
+  "n_lc60_from_active_targets": 60,
+  "n_ensemble_rows": 422,
+  "missing_ms_cols": [],
+  "fwhm_dao_px": 5.19465,
+  "solve_rms_px": 0.595,
+  "snr_column_on_ms": true,
+  "targets_with_drop": [
+    {
+      "target": "1496998382733052928",
+      "n_fail": 1,
+      "n": 7,
+      "drops": {
+        "source_state": 0,
+        "vy_identity_gate": 0,
+        "gaia_dao_resid_px": 0,
+        "snr": 1
+      },
+      "ids": [
+        "1500579870061241088"
+      ]
+    },
+    {
+      "target": "1497683722074089728",
+      "n_fail": 1,
+      "n": 6,
+      "drops": {
+        "source_state": 0,
+        "vy_identity_gate": 0,
+        "gaia_dao_resid_px": 0,
+        "snr": 1
+      },
+      "ids": [
+        "1500579870061241088"
+      ]
+    }
+  ],
+  "n_comp_fail_d3": 2,
+  "s5_p1": false,
+  "err": null
+}
