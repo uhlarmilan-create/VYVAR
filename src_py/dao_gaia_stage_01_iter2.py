@@ -459,7 +459,7 @@ def save_detections(path: Path, det_x: np.ndarray, det_y: np.ndarray, meta: dict
 
 
 def load_detections(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    z = np.load(path, allow_pickle=False)
+    z = np.load(path)
     meta = json.loads(str(z["meta"]))
     return np.asarray(z["det_x"], dtype=np.float64), np.asarray(z["det_y"], dtype=np.float64), meta
 
