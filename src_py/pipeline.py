@@ -9510,6 +9510,12 @@ def detect_stars_and_match_catalog(
                         break
                     df_out, n_matched, match_sep_used = df_try, n_try, nxt
                     cur_thr = nxt
+                    LOGGER.info(
+                        "Catalog match: 0.95 widen iter threshold=%.2f arcsec n_matched=%d rate=%.3f",
+                        float(nxt),
+                        int(n_matched),
+                        float(n_matched) / float(max(1, n)),
+                    )
             # After a successful loose initial match, tighten for cleaner final IDs (only if most matches survive).
             _tight_sec = 4.5
             if n_matched >= max(10, int(0.20 * max(1, n))) and float(match_sep_used) > _tight_sec + 1e-9:
@@ -9808,6 +9814,15 @@ def detect_stars_and_match_catalog(
         else pd.Series([], dtype=bool)
     )
     n_matched_final = int(cat_nonempty.sum()) if len(df_out) else 0
+    _ps_idg: float | None = None
+    try:
+        from dao_gaia_calibration import plate_scale_arcsec_per_px_from_wcs as _ps_idg_fn
+
+        _ps_try = float(_ps_idg_fn(wcs_obj))
+        if math.isfinite(_ps_try) and _ps_try > 0:
+            _ps_idg = _ps_try
+    except Exception:  # noqa: BLE001
+        _ps_idg = None
     meta = {
         "noise_floor_adu": float(noise_floor),
         "sky_median_adu": float(_sky_med_gate),
@@ -9854,6 +9869,15 @@ def detect_stars_and_match_catalog(
         "identity_gate": {
             **dict(_identity_gate_acc),
             "fwhm_px": float(_fwhm_used),
+            "plate_scale_arcsec_per_px": (
+                float(_ps_idg) if _ps_idg is not None and math.isfinite(float(_ps_idg)) else None
+            ),
+            "fail_threshold_px": float(3.0 * float(_fwhm_used)),
+            "fail_threshold_arcsec": (
+                float(3.0 * float(_fwhm_used) * float(_ps_idg))
+                if _ps_idg is not None and math.isfinite(float(_ps_idg))
+                else None
+            ),
         },
         **meta_mag,
     }
@@ -13321,6 +13345,7 @@ def generate_masterstar_and_catalog(
     _msc_name = str(masterstars_csv_basename or "masterstars_full_match.csv").strip() or "masterstars_full_match.csv"
     csv_path = platesolve_dir / _msc_name
     _vyvar_df_to_csv(df_out, temp_csv)
+    _opt_stats_last: dict[str, Any] = {}
     try:
         from astrometry_optimizer import optimize_masterstar_matches
 
@@ -13348,6 +13373,7 @@ def generate_masterstar_and_catalog(
                 sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
                 fwhm_dao_px=float(_fwhm_dao),
                 identity_gate_n_out=_idg_n_out,
+                stats_out=_opt_stats_last,
             )
             # Force one more pass after WCS displacement update for final edge recovery.
             # Identity-count contract is first-entry only; rematch may add honest pairs.
@@ -13362,6 +13388,7 @@ def generate_masterstar_and_catalog(
                 sip_force_rms_guard_ratio=_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
                 fwhm_dao_px=float(_fwhm_dao),
                 identity_gate_n_out=None,
+                stats_out=_opt_stats_last,
             )
             log_event("MASTERSTAR optimizer: forced final re-match pass completed.")
             # Final safety: repair any residual precision-loss IDs in masterstars_full_match.csv via Gaia RA/DEC lookup.
@@ -13879,6 +13906,15 @@ def generate_masterstar_and_catalog(
             _idg_stamp["n_lock_geometry_reject"] = int(_gmeta.get("n_lock_geometry_reject") or 0)
         if _idg_stamp:
             _meta_patch["identity_gate"] = _idg_stamp
+        for _mk in (
+            "match_sep_arcsec_requested",
+            "match_sep_arcsec_effective",
+            "wcs_gaia_pixel_refine_iters",
+        ):
+            if det_meta.get(_mk) is not None:
+                _meta_patch[_mk] = det_meta.get(_mk)
+        if _opt_stats_last:
+            _meta_patch["optimizer_refit"] = dict(_opt_stats_last)
         if _wcs_rt_p99 is not None:
             _meta_patch["wcs_roundtrip_p99_px"] = float(_wcs_rt_p99)
             _meta_patch["wcs_roundtrip_pass"] = bool(_wcs_rt_pass)

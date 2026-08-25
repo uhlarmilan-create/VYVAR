@@ -277,6 +277,7 @@ def optimize_masterstar_matches(
     sip_force_rms_guard_ratio: float | None = 1.15,
     fwhm_dao_px: float | None = None,
     identity_gate_n_out: int | None = None,
+    stats_out: dict[str, Any] | None = None,
 ) -> Path:
     """Optimize MASTERSTAR matches and write ``masterstars_full_match.csv``.
 
@@ -729,6 +730,10 @@ def optimize_masterstar_matches(
                 f"Astrometry optimizer {tag}: SIP{int(sip_order)} n_pairs={n_pairs} "
                 f"(rms_lin={meta.get('rms_linear_px')}, rms_sip={meta.get('rms_sip_px')})"
             )
+            if stats_out is not None:
+                stats_out["rms_lin"] = meta.get("rms_linear_px")
+                stats_out["rms_sip"] = meta.get("rms_sip_px")
+                stats_out["n_pairs"] = int(n_pairs)
             with fits.open(fits_path, memmap=False) as _h:
                 w_new = _WCS(_h[0].header)
             if not getattr(w_new, "has_celestial", False):
