@@ -13902,6 +13902,19 @@ def generate_masterstar_and_catalog(
             _idg_stamp["n_lock_geometry_reject"] = int(_gmeta.get("n_lock_geometry_reject") or 0)
         if _idg_stamp:
             _meta_patch["identity_gate"] = _idg_stamp
+        try:
+            from dao_gaia_calibration import effective_tol_stamps  # noqa: PLC0415
+
+            _meta_patch["dao_gaia_tol"] = effective_tol_stamps(
+                det_meta.get("dao_gaia_derived_tol")
+                if isinstance(det_meta.get("dao_gaia_derived_tol"), dict)
+                else None,
+                _cfg_ms,
+                fwhm_px=float(det_meta.get("dao_fwhm_px") or _idg_stamp.get("fwhm_px") or 3.5),
+                census_meta=_gmeta if isinstance(_gmeta, dict) else None,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         for _mk in (
             "match_sep_arcsec_requested",
             "match_sep_arcsec_effective",

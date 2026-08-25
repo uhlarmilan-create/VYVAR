@@ -114,6 +114,54 @@ class DerivedTolerances:
         return d
 
 
+def effective_tol_stamps(
+    derived: dict[str, Any] | None,
+    cfg: Any,
+    *,
+    fwhm_px: float,
+    census_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """S2: effective DAO-Gaia tols vs config defaults for pipeline_meta."""
+    import math
+
+    d = derived if isinstance(derived, dict) else {}
+    cm = census_meta if isinstance(census_meta, dict) else {}
+    fw = float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 3.5
+    lock_def = float(getattr(cfg, "masterstar_lock_pair_tol_px", 3.0))
+    p2_def = float(getattr(cfg, "masterstar_dao_pass2_center_tol_px", 2.0))
+    leftover_def = float(getattr(cfg, "masterstar_lock_leftover_radius_px", 3.0))
+
+    def _eff(key: str, default: float) -> float:
+        raw = d.get(key)
+        if raw is None:
+            raw = cm.get(f"{key}_effective", cm.get(key))
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            return float(default)
+        return val if math.isfinite(val) else float(default)
+
+    ident = cm.get("identity_fail_px")
+    try:
+        ident_f = float(ident) if ident is not None else 3.0 * fw
+    except (TypeError, ValueError):
+        ident_f = 3.0 * fw
+    if not math.isfinite(ident_f) or ident_f <= 0:
+        ident_f = 3.0 * fw
+    return {
+        "lock_pair_tol_px": _eff("lock_pair_tol_px", lock_def),
+        "lock_pair_tol_px_config_default": lock_def,
+        "pass2_center_tol_px": _eff("pass2_center_tol_px", p2_def),
+        "pass2_center_tol_px_config_default": p2_def,
+        "identity_fail_px": float(ident_f),
+        "identity_fail_px_formula": "3 * FWHM_dao_px",
+        "match_radius_px": _eff("match_radius_px", leftover_def),
+        "match_radius_px_config_default": leftover_def,
+        "lock_leftover_radius_px": _eff("lock_leftover_radius_px", leftover_def),
+        "lock_leftover_radius_px_config_default": leftover_def,
+    }
+
+
 @dataclass(frozen=True)
 class DiagnosticTolerances:
     """Diagnostic distributions recorded in certificate (A-fix 4)."""
