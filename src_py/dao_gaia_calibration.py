@@ -290,14 +290,17 @@ def catalog_match_radius_d1_arcsec(
 ) -> tuple[float, dict[str, Any]]:
     """D1: one-pass catalog match radius. No match-rate widening.
 
-    radius = max(floor, 3 x max(solve_rms_px, FWHM_dao_px) x plate_scale)
+    radius = max(floor, 3 x FWHM_dao_px x plate_scale).
+
+    ``solve_rms_px`` is stamped as a diagnostic only. It belongs to the
+    identity-gate WCS, not to a radius the 3xFWHM gate strips anyway.
     """
     fw = max(0.5, float(fwhm_dao_px))
     try:
         rms = float(solve_rms_px) if solve_rms_px is not None else float("nan")
     except (TypeError, ValueError):
         rms = float("nan")
-    inner_px = max(rms, fw) if math.isfinite(rms) else fw
+    inner_px = fw
     try:
         scale = float(plate_scale_arcsec_per_px)
     except (TypeError, ValueError):

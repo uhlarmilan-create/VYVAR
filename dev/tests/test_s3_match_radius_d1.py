@@ -29,9 +29,25 @@ def test_d1_516_like_radius_reported() -> None:
         fwhm_dao_px=2.5,
         plate_scale_arcsec_per_px=9.774,
     )
-    expected = max(12.0, 3.0 * max(1.36, 2.5) * 9.774)
+    expected = max(12.0, 3.0 * 2.5 * 9.774)
     assert used == expected
     assert abs(float(inp["formula_arcsec"]) - expected) < 1e-9
+    assert float(inp["solve_rms_px"]) == 1.36
+    assert float(inp["inner_px"]) == 2.5
+
+
+def test_d1_solve_rms_does_not_enter_radius() -> None:
+    used_hi, _ = catalog_match_radius_d1_arcsec(
+        solve_rms_px=50.0,
+        fwhm_dao_px=2.5,
+        plate_scale_arcsec_per_px=9.774,
+    )
+    used_lo, _ = catalog_match_radius_d1_arcsec(
+        solve_rms_px=0.1,
+        fwhm_dao_px=2.5,
+        plate_scale_arcsec_per_px=9.774,
+    )
+    assert used_hi == used_lo
 
 
 def test_d1_widening_loops_removed_from_pipeline_source() -> None:
