@@ -575,6 +575,7 @@ def lock_existing_and_leftover_assign(
     locked_pairs: dict[str, tuple[float, float]] | None = None,
     leftover_radius_px: float = 3.0,
     lock_tol_px: float = 3.0,
+    identity_fail_px: float | None = None,
     det_catalog_ids: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[int]]:
     """Return (det_to_gaia_row, gaia_owner_det, vy_match_mode per det, geometry_reject_det_indices).
@@ -582,8 +583,10 @@ def lock_existing_and_leftover_assign(
     det_to_gaia_row[i] = row index in gaia_df or -1
     gaia_owner_det[j] = det index or -1
     vy_match_mode[i] = 'locked' | 'leftover_promotion' | ''
-    geometry_reject_det_indices: detections that carried a locked cid but sat
-    farther than lock_tol_px from the Gaia pixel position (INV-MATCH-IDENTITY-01).
+    geometry_reject_det_indices: born-owned detections farther than
+    identity_fail_px from Gaia xy (D4: reject threshold is the identity-gate
+    fail radius 3 x FWHM_dao, not the derived lock preference). When
+    identity_fail_px is omitted, reject uses lock_tol_px (STAGE-01 callers).
     """
     n_d = int(len(det_x))
     n_g = int(len(gaia_df))
@@ -603,6 +606,9 @@ def lock_existing_and_leftover_assign(
     used_det: set[int] = set()
     used_g: set[int] = set()
     geometry_reject_dets: list[int] = []
+    fail_px = float(identity_fail_px) if identity_fail_px is not None else float(lock_tol_px)
+    if not math.isfinite(fail_px) or fail_px <= 0:
+        fail_px = float(lock_tol_px)
 
     if locked_pairs:
         det_cids = (
@@ -619,19 +625,25 @@ def lock_existing_and_leftover_assign(
             gy_g = float(gy[gr]) if gr < len(gy) else float("nan")
             best_i = -1
             best_d = float("inf")
-            # Prefer detections already carrying this catalog_id (born-owned pass2),
-            # but only if they sit within lock_tol of the Gaia pixel position.
+            # Preference: born-owned within lock_tol_px. Keep (still lock) when
+            # lock_tol < d <= identity_fail. Reject only past identity_fail_px (D4).
             for i in range(n_d):
                 if i in used_det:
                     continue
                 dc = _norm_cid(det_cids[i]) if i < len(det_cids) else ""
                 if dc and dc == nc:
                     d_gaia = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
-                    if math.isfinite(d_gaia) and d_gaia <= float(lock_tol_px):
+                    if not math.isfinite(d_gaia):
+                        continue
+                    if d_gaia <= float(lock_tol_px):
                         best_i = i
                         best_d = d_gaia
                         break
-                    geometry_reject_dets.append(i)
+                    if d_gaia > float(fail_px):
+                        geometry_reject_dets.append(i)
+                    elif d_gaia < best_d:
+                        best_i = i
+                        best_d = d_gaia
             if best_i < 0:
                 for i in range(n_d):
                     if i in used_det:
@@ -1097,6 +1109,11 @@ def enrich_masterstar_gaia_complete(
             getattr(_cfg, "masterstar_lock_pair_tol_px", 3.0),
         )
     )
+    # D4: reject radius is the identity-gate fail threshold (3 x FWHM_dao), not lock_tol.
+    _fwhm_lock = float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 3.5
+    identity_fail_px = float(
+        (tolerance_overrides or {}).get("identity_fail_px", 3.0 * _fwhm_lock)
+    )
     det_to_g, gaia_owner, vy_modes, _geom_rej = lock_existing_and_leftover_assign(
         det_x,
         det_y,
@@ -1104,6 +1121,7 @@ def enrich_masterstar_gaia_complete(
         locked_pairs=locked_pairs,
         leftover_radius_px=leftover_r,
         lock_tol_px=lock_tol,
+        identity_fail_px=identity_fail_px,
         det_catalog_ids=(
             out["catalog_id"].map(_norm_cid).to_numpy(dtype=object)
             if "catalog_id" in out.columns
@@ -1111,6 +1129,8 @@ def enrich_masterstar_gaia_complete(
         ),
     )
     meta["n_lock_geometry_reject"] = int(len({int(i) for i in _geom_rej}))
+    meta["identity_fail_px"] = float(identity_fail_px)
+    meta["lock_pair_tol_px_effective"] = float(lock_tol)
     if _geom_rej:
         from wcs_invertibility import clear_row_match_identity, det_fallback_name
 

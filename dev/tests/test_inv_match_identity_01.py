@@ -130,6 +130,43 @@ def test_assert_inv_match_identity_01_limit() -> None:
         assert_inv_match_identity_01(n_in=10, n_out_of_gate=2)
 
 
+def test_d4_lock_reject_uses_identity_fail_not_lock_tol() -> None:
+    """D4: 2.6 px at FWHM 3.3 stays locked; 12 px is rejected."""
+    cid_keep = "1112112413285008896"
+    cid_rej = "1112115024625070720"
+    fwhm = 3.3
+    identity_fail = 3.0 * fwhm
+    lock_tol = 2.5
+    gaia = pd.DataFrame(
+        {
+            "catalog_id": [cid_keep, cid_rej],
+            "x_gaia": [100.0, 200.0],
+            "y_gaia": [100.0, 200.0],
+        }
+    )
+    det_x = np.array([102.6, 212.0], dtype=np.float64)
+    det_y = np.array([100.0, 200.0], dtype=np.float64)
+    locked = {cid_keep: (102.6, 100.0), cid_rej: (212.0, 200.0)}
+    det_cids = np.array([cid_keep, cid_rej], dtype=object)
+    dtg, _own, modes, rej = lock_existing_and_leftover_assign(
+        det_x,
+        det_y,
+        gaia,
+        locked_pairs=locked,
+        leftover_radius_px=0.0,
+        lock_tol_px=lock_tol,
+        identity_fail_px=identity_fail,
+        det_catalog_ids=det_cids,
+    )
+    assert float(identity_fail) == pytest.approx(9.9)
+    assert str(modes[0]) == "locked"
+    assert int(dtg[0]) == 0
+    assert 0 not in {int(i) for i in rej}
+    assert 1 in {int(i) for i in rej}
+    assert str(modes[1]) == ""
+    assert int(dtg[1]) < 0
+
+
 def test_born_owned_lock_geometry_reject() -> None:
     det_x = np.array([100.0], dtype=np.float64)
     det_y = np.array([100.0], dtype=np.float64)
