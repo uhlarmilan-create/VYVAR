@@ -12882,8 +12882,6 @@ def generate_masterstar_and_catalog(
 
         # Post-solve anisotropy validation: reject strongly anisotropic pixel scale and retry solver once.
         try:
-            from astropy.wcs import WCS
-
             wcs0 = WCS(hdr)
             scale_x = abs(float(wcs0.pixel_scale_matrix[0, 0])) * 3600.0  # arcsec/px
             scale_y = abs(float(wcs0.pixel_scale_matrix[1, 1])) * 3600.0  # arcsec/px
@@ -12920,8 +12918,6 @@ def generate_masterstar_and_catalog(
             if not _has_valid_wcs(hdr):
                 raise RuntimeError("MASTERSTAR: po retry plate-solve chyba platny WCS.")
             try:
-                from astropy.wcs import WCS
-
                 wcs1 = WCS(hdr)
                 sx = abs(float(wcs1.pixel_scale_matrix[0, 0])) * 3600.0
                 sy = abs(float(wcs1.pixel_scale_matrix[1, 1])) * 3600.0
