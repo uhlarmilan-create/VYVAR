@@ -387,19 +387,7 @@ def compute_global_pool_rms_map(
     return rms_map
 
 
-def attach_comp_rms_to_pool_rows(
-    pool: pd.DataFrame,
-    rms_map: dict[str, float],
-    *,
-    id_col: str,
-) -> pd.DataFrame:
-    """Prida stlpec ``comp_rms`` podla ID zhody s ``rms_map``."""
-    if pool.empty or not rms_map:
-        return pool
-    out = pool.copy()
-    keys = out[id_col].astype(str).str.strip()
-
-    # Build canonical normalized-id -> rms map (min catalog_id wins on collision)
+def _lookup_rms_map(rms_map: dict[str, float], keys: pd.Series) -> pd.Series:
     _norm_rms: dict[str, float] = {}
     _norm_key: dict[str, str] = {}
     for rk, rv in sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0]))):
@@ -414,7 +402,28 @@ def attach_comp_rms_to_pool_rows(
         nk = _norm_id_val(k)
         return _norm_rms.get(nk, float("nan"))
 
-    out["comp_rms"] = keys.map(_lookup)
-    # Keep all spatial/static pool rows; per-target Phase-1 recomputes RMS on the
-    # target-specific candidate subset. Dropping rows here starved sparse fields.
+    return keys.map(_lookup)
+
+
+def attach_comp_rms_to_pool_rows(
+    pool: pd.DataFrame,
+    rms_map: dict[str, float],
+    *,
+    id_col: str,
+    relflux_map: dict[str, float] | None = None,
+    frames_basis: str = "all_loadable",
+) -> pd.DataFrame:
+    """Attach gated ``comp_rms`` (= LOO mag MAD) plus diagnostic ``comp_relflux_mad``."""
+    if pool.empty:
+        return pool
+    out = pool.copy()
+    keys = out[id_col].astype(str).str.strip()
+    loo = _lookup_rms_map(rms_map, keys) if rms_map else pd.Series(np.nan, index=out.index)
+    out["comp_rms_loo_mag"] = loo
+    out["comp_rms"] = loo
+    rel = relflux_map if relflux_map is not None else rms_map
+    out["comp_relflux_mad"] = (
+        _lookup_rms_map(rel, keys) if rel else pd.Series(np.nan, index=out.index)
+    )
+    out["comp_rms_frames_basis"] = str(frames_basis)
     return out.reset_index(drop=True)

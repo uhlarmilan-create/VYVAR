@@ -20,6 +20,12 @@ import pandas as pd
 from astropy.io import fits as astrofits
 
 from comp_pool_rms import attach_comp_rms_to_pool_rows, compute_global_pool_rms_map
+from comp_rms_loo import (
+    COMP_RMS_FRAMES_BASIS,
+    COMP_RMS_LOO_PHOTON_K_DEFAULT,
+    LN10_OVER_2P5,
+    compute_loo_mag_rms_map,
+)
 from proc_frame_store import (
     PROC_CSV_GLOB,
     PROC_STORE_COLS,
@@ -15525,37 +15531,51 @@ def _select_comps_by_rms_then_color(
     if out.empty:
         return out
 
-    # Authoritative per-target RMS gate (COMP-ASSIGN-02): never admit above-ceiling
-    # comps. Applied before colour widen so a full colour bin of noisy comps
-    # forces the ladder to open.
-    if math.isfinite(_ceil) and _ceil > 0:
-        _n0 = int(len(out))
-        _pre_ceil = out.copy()
-        _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
-        out = out[_rms_c.notna() & (_rms_c <= float(_ceil))].copy()
-        logging.info(
-            "[COMP] max_comp_rms ceiling=%.4f: %d -> %d under-ceiling candidates",
-            float(_ceil),
-            _n0,
-            int(len(out)),
+    # Authoritative per-target RMS gate (INV-COMP-RMS-01): LOO mag MAD vs
+    # k * photon (snr_ap_pixscaled) and an absolute 0.1 mag cap.
+    _k_loo = COMP_RMS_LOO_PHOTON_K_DEFAULT
+    if cfg is not None:
+        try:
+            _k_loo = float(getattr(cfg, "comp_rms_loo_photon_k", _k_loo) or _k_loo)
+        except (TypeError, ValueError):
+            _k_loo = COMP_RMS_LOO_PHOTON_K_DEFAULT
+    _abs_ceil = _ceil if math.isfinite(_ceil) and _ceil > 0 else 0.1
+    if "snr_ap_pixscaled" not in out.columns:
+        raise ValueError(
+            "INV-COMP-RMS-01: snr_ap_pixscaled missing on comparison candidates"
         )
-        if _n0 > int(len(out)):
-            _ceil_dropped = _pre_ceil.loc[~_pre_ceil.index.isin(out.index)]
-            if not _ceil_dropped.empty:
-                _bc = _ceil_dropped.sort_values("comp_rms", kind="mergesort").iloc[0]
-                _cidc = "catalog_id" if "catalog_id" in _ceil_dropped.columns else _ceil_dropped.columns[0]
-                logging.info(
-                    "[COMP] best ceiling-rejected cid=%s rms=%s threshold=%.4f",
-                    str(_bc.get(_cidc, "")),
-                    str(_bc.get("comp_rms", "")),
-                    float(_ceil),
-                )
-        if out.empty:
-            logging.warning(
-                "[COMP] no candidates under max_comp_rms=%.4f after floor filter",
-                float(_ceil),
+    _snr = pd.to_numeric(out["snr_ap_pixscaled"], errors="coerce")
+    _rms_c = pd.to_numeric(out["comp_rms"], errors="coerce")
+    _ph = LN10_OVER_2P5 / _snr
+    _star_ceil = np.minimum(float(_abs_ceil), float(_k_loo) * _ph)
+    _n0 = int(len(out))
+    _pre_ceil = out.copy()
+    out = out[_rms_c.notna() & _snr.gt(0) & _rms_c.le(_star_ceil)].copy()
+    logging.info(
+        "[COMP] loo ceiling k=%.3f abs=%.4f: %d -> %d under-ceiling candidates",
+        float(_k_loo),
+        float(_abs_ceil),
+        _n0,
+        int(len(out)),
+    )
+    if _n0 > int(len(out)):
+        _ceil_dropped = _pre_ceil.loc[~_pre_ceil.index.isin(out.index)]
+        if not _ceil_dropped.empty:
+            _bc = _ceil_dropped.sort_values("comp_rms", kind="mergesort").iloc[0]
+            _cidc = "catalog_id" if "catalog_id" in _ceil_dropped.columns else _ceil_dropped.columns[0]
+            logging.info(
+                "[COMP] best ceiling-rejected cid=%s rms=%s threshold=%.4f",
+                str(_bc.get(_cidc, "")),
+                str(_bc.get("comp_rms", "")),
+                float(_abs_ceil),
             )
-            return out
+    if out.empty:
+        logging.warning(
+            "[COMP] no candidates under loo ceiling k=%.3f abs=%.4f after floor filter",
+            float(_k_loo),
+            float(_abs_ceil),
+        )
+        return out
 
     # Single-source (COMP-ASSIGN-03): exclude blends inside CoG isolation radius.
     _nn_fwhm = None
@@ -16079,7 +16099,7 @@ def build_global_comp_pool(
     # Mutually exclusive by regime, never by bool(admitted_ids).
     apply_rms_prefilter = regime is CompPoolRegime.LEGACY
 
-    rms_map = compute_global_pool_rms_map(
+    relflux_map = compute_global_pool_rms_map(
         cand_ids=cand_ids,
         _masterstars_df=masterstars_df,
         per_frame_csv_paths=per_frame_csv_paths,
@@ -16095,7 +16115,20 @@ def build_global_comp_pool(
         max_comp_rms=max_comp_rms,
         apply_rms_prefilter=apply_rms_prefilter,
     )
-    pool = attach_comp_rms_to_pool_rows(pool, rms_map, id_col=id_col)
+    loo_map, _basis = compute_loo_mag_rms_map(
+        cand_ids=cand_ids,
+        per_frame_csv_paths=per_frame_csv_paths,
+        csv_cache=csv_cache,
+        flux_col=flux_col,
+        min_frames_frac=min_frames_frac,
+    )
+    pool = attach_comp_rms_to_pool_rows(
+        pool,
+        loo_map,
+        id_col=id_col,
+        relflux_map=relflux_map,
+        frames_basis=COMP_RMS_FRAMES_BASIS,
+    )
 
     if regime is CompPoolRegime.DERIVED:
         assert admitted_ids is not None
@@ -18778,22 +18811,30 @@ def _write_suspected_variables(
             rms_map[cid] = rms
             nframes_map[cid] = len(vals)
 
-    if not rms_map:
+    # COMP-RMS-DEF-01-B: flag on LOO mag MAD; keep mag-bin relflux RMS as diagnostic.
+    _csv_cache = csv_cache or {}
+    loo_map, _basis = compute_loo_mag_rms_map(
+        set(pool_ids),
+        csv_paths,
+        _csv_cache,
+        flux_col=flux_col,
+        min_frames_frac=min_frames_frac,
+    )
+    if not loo_map:
         pd.DataFrame().to_csv(output_path, index=False)
         return
 
     _MAD_CONSISTENCY = 0.6745
-    rms_arr = np.asarray(list(rms_map.values()), dtype=np.float64)
-    med = float(np.median(rms_arr))
-    mad_raw = float(np.median(np.abs(rms_arr - med)))
+    loo_arr = np.asarray(list(loo_map.values()), dtype=np.float64)
+    med = float(np.median(loo_arr))
+    mad_raw = float(np.median(np.abs(loo_arr - med)))
     if not math.isfinite(mad_raw) or mad_raw <= 0:
-        # Fallback: ak MAD=0, pouzi normalizovanu std ako estimator
-        mad_sigma = float(np.std(rms_arr)) / _MAD_CONSISTENCY or 1e-9
+        mad_sigma = float(np.std(loo_arr)) / _MAD_CONSISTENCY or 1e-9
     else:
         mad_sigma = mad_raw / _MAD_CONSISTENCY
     threshold = med + outlier_sigma * mad_sigma
 
-    suspected = {cid: rms for cid, rms in rms_map.items() if rms > threshold}
+    suspected = {cid: rms for cid, rms in loo_map.items() if rms > threshold}
 
     if not suspected:
         pd.DataFrame().to_csv(output_path, index=False)
@@ -18813,6 +18854,8 @@ def _write_suspected_variables(
                 "ra_deg": r.get("ra_deg", float("nan")),
                 "dec_deg": r.get("dec_deg", float("nan")),
                 "mag": r.get("mag", float("nan")),
+                "comp_rms_loo_mag": rms,
+                "comp_relflux_mad": float(rms_map.get(cid, float("nan"))),
                 "comp_rms": rms,
                 "n_frames": nframes_map.get(cid, 0),
                 "zone": r.get("zone", ""),

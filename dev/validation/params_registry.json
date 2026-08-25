@@ -3446,7 +3446,7 @@
     "scope_group": "n/a"
   },
   "phase01_comparison_max_comp_rms": {
-    "help": "Maximum night RMS of a comparison-star series; density adaptation may tighten it.",
+    "help": "Absolute upper bound on comparison-star LOO mag MAD (INV-COMP-RMS-01). The gate is min(this, k x photon).",
     "kind": "resolved",
     "label": "Phase01 Comparison Max Comp RMS",
     "owner": "config_runtime",
@@ -3454,6 +3454,24 @@
     "range": [
       0.01,
       0.5
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "comp_rms_loo_photon_k": {
+    "help": "LOO mag MAD ceiling = k x photon_sigma(snr_ap_pixscaled). C3-0: k=5 from 516 p90(r)=3.67.",
+    "kind": "static",
+    "label": "Comp RMS LOO Photon K",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "range": [
+      1.0,
+      50.0
     ],
     "tier": "advanced",
     "unit": null,

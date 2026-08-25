@@ -6552,8 +6552,13 @@ def _annotate_masterstars_flux_zones(
     out["saturate_limit_adu"] = float(sat_lim_raw) if sat_lim_raw is not None else np.nan
 
     if "peak_max_adu" in out.columns:
+        peak_col_used = "peak_max_adu"
         peak_s = pd.to_numeric(out["peak_max_adu"], errors="coerce")
+    elif "peak_dao" in out.columns:
+        peak_col_used = "peak_dao"
+        peak_s = pd.to_numeric(out["peak_dao"], errors="coerce")
     else:
+        peak_col_used = "flux"
         peak_s = flux_s
 
     peak_sat_lim = _resolve_peak_saturation_limit_adu(
@@ -6572,7 +6577,16 @@ def _annotate_masterstars_flux_zones(
             "[INV-SAT-LIMIT] peak-test scale veto ignored for unresolved clip; "
             f"applying peak-test={float(peak_sat_lim):.1f} ADU.",
         )
+    if peak_sat_lim is None:
+        peak_sat_lim = float(sat_lim_raw) if sat_lim_raw is not None else None
+        _masterstar_zone_log_once(
+            "sat_limit_85pct_nan",
+            "[ZONE-SAT-01] saturate_limit_adu_85pct unresolved; peak test uses saturate_limit_adu "
+            f"({peak_sat_lim}).",
+        )
     out["saturate_limit_adu_85pct"] = peak_sat_lim if peak_sat_lim is not None else np.nan
+    out["zone_peak_column"] = peak_col_used
+    out["zone_sat_limit_used"] = float(peak_sat_lim) if peak_sat_lim is not None else np.nan
 
     out["zone"] = ""
     if peak_sat_lim is not None:

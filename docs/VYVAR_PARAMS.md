@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-25T14:38:10Z at git HEAD 1cd404a._
+_Generated 2026-08-25T21:11:13Z at git HEAD e73fd29._
 
 ## Summary
 
-- Entries: 306
-- Tier: basic 13, advanced 71, expert 222
-- Kind: static 288, derived 0, resolved 18
-- Widget: auto 122, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 278, fits_dynamic 6, internal 13
-- Scope: universal 254, rig 34, site 10, session 8
-- Scope key: none 254, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 307
+- Tier: basic 13, advanced 72, expert 222
+- Kind: static 289, derived 0, resolved 18
+- Widget: auto 122, custom 160, hidden 25
+- Owner: db_static 9, config_runtime 279, fits_dynamic 6, internal 13
+- Scope: universal 255, rig 34, site 10, session 8
+- Scope key: none 255, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -288,6 +288,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | auto | Comp Max Delta BPRP |
 | `comp_max_slope_mmag_hr` | 5.0 | 0 .. 500 | expert | static | config_runtime | universal | none | n/a | auto | Comp Max Slope Mmag Hr |
 | `comp_pool_derived_admission` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Pool Derived Admission |
+| `comp_rms_loo_photon_k` | 5.0 | 1 .. 50 | advanced | static | config_runtime | universal | none | n/a | custom | Comp RMS LOO Photon K |
 | `comp_select_rms_floor` | 1e-06 | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Select RMS Floor |
 | `comp_slope_significance_k` | 3.0 | 0 .. 10 | advanced | static | config_runtime | universal | none | n/a | auto | Comp Slope Significance K |
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Enabled |

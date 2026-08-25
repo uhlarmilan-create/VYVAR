@@ -881,6 +881,9 @@ class AppConfig:
     phase01_comparison_n_comp_min: int = 3
     phase01_comparison_n_comp_max: int = 8
     phase01_comparison_max_comp_rms: float = 0.1
+    #: COMP-RMS-DEF-01-B: LOO mag MAD ceiling is k x photon_sigma(snr_ap_pixscaled).
+    #: C3-0 (516 R2, 70 comps): p90(r)=3.67 -> k=5 (rule: 3<=p90<=5 => 5).
+    comp_rms_loo_photon_k: float = 5.0
     phase01_comparison_min_dist_arcsec: float = 60.0
     phase01_comparison_min_frames_frac: float = 0.2
     phase01_comparison_exclude_gaia_nss: bool = True
@@ -2390,6 +2393,7 @@ class AppConfig:
         _f01("check_select_rms_floor", 1e-4, 0.0, 0.01)
         _f01("comp_select_rms_floor", 1e-6, 0.0, 0.01)
         _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
+        _f01("comp_rms_loo_photon_k", 5.0, 1.0, 50.0)
         _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
         _f01("phase01_comparison_min_frames_frac", 0.3, 0.05, 0.95)
         self.phase01_comparison_exclude_gaia_nss = bool(
@@ -2843,6 +2847,7 @@ class AppConfig:
             "phase01_comparison_n_comp_min": int(self.phase01_comparison_n_comp_min),
             "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),
             "phase01_comparison_max_comp_rms": float(self.phase01_comparison_max_comp_rms),
+            "comp_rms_loo_photon_k": float(self.comp_rms_loo_photon_k),
             "phase01_comparison_min_dist_arcsec": float(self.phase01_comparison_min_dist_arcsec),
             "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),

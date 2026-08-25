@@ -256,6 +256,7 @@ def test_select_comps_rms_then_color_distance_clamp():
                 "comp_rms": rms,
                 "_dist_deg": dist,
                 "_nn_dist_fwhm": 5.0,
+                "snr_ap_pixscaled": 40.0,
             }
         )
     df = pd.DataFrame(rows)
@@ -294,6 +295,7 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
                 "comp_rms": 0.15 + 0.04 * i,
                 "_dist_deg": 0.05 + 0.01 * i,
                 "_nn_dist_fwhm": 5.0,
+                "snr_ap_pixscaled": 40.0,
             }
         )
     # Three slightly worse colour, under ceiling.
@@ -305,6 +307,7 @@ def test_select_comps_max_comp_rms_ceiling_before_head():
                 "comp_rms": rms,
                 "_dist_deg": 0.10 + 0.01 * i,
                 "_nn_dist_fwhm": 5.0,
+                "snr_ap_pixscaled": 40.0,
             }
         )
     df = pd.DataFrame(rows)
@@ -330,10 +333,10 @@ def test_select_comps_excludes_blends_single_source():
     cfg = AppConfig()
     cfg.snr_cog_isolation_fwhm = 3.0
     rows = [
-        {"catalog_id": "BLEND", "bp_rp": 1.0, "comp_rms": 0.01, "_dist_deg": 0.1, "_nn_dist_fwhm": 1.5},
-        {"catalog_id": "ISO0", "bp_rp": 1.05, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 4.0},
-        {"catalog_id": "ISO1", "bp_rp": 1.06, "comp_rms": 0.03, "_dist_deg": 0.3, "_nn_dist_fwhm": 5.0},
-        {"catalog_id": "ISO2", "bp_rp": 1.07, "comp_rms": 0.04, "_dist_deg": 0.4, "_nn_dist_fwhm": 6.0},
+        {"catalog_id": "BLEND", "bp_rp": 1.0, "comp_rms": 0.01, "_dist_deg": 0.1, "_nn_dist_fwhm": 1.5, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "ISO0", "bp_rp": 1.05, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 4.0, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "ISO1", "bp_rp": 1.06, "comp_rms": 0.03, "_dist_deg": 0.3, "_nn_dist_fwhm": 5.0, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "ISO2", "bp_rp": 1.07, "comp_rms": 0.04, "_dist_deg": 0.4, "_nn_dist_fwhm": 6.0, "snr_ap_pixscaled": 40.0},
     ]
     out = _select_comps_by_rms_then_color(
         pd.DataFrame(rows),
@@ -355,10 +358,10 @@ def test_select_comps_rms_first_over_perfect_colour():
     cfg = AppConfig()
     cfg.phase01_comparison_max_comp_rms = 0.1
     rows = [
-        {"catalog_id": "PERF_NOISY", "bp_rp": 1.0, "comp_rms": 0.08, "_dist_deg": 0.1, "_nn_dist_fwhm": 5.0},
-        {"catalog_id": "QUIET_FAR", "bp_rp": 1.12, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 5.0},
-        {"catalog_id": "MID", "bp_rp": 1.05, "comp_rms": 0.03, "_dist_deg": 0.15, "_nn_dist_fwhm": 5.0},
-        {"catalog_id": "OK3", "bp_rp": 1.08, "comp_rms": 0.04, "_dist_deg": 0.25, "_nn_dist_fwhm": 5.0},
+        {"catalog_id": "PERF_NOISY", "bp_rp": 1.0, "comp_rms": 0.08, "_dist_deg": 0.1, "_nn_dist_fwhm": 5.0, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "QUIET_FAR", "bp_rp": 1.12, "comp_rms": 0.02, "_dist_deg": 0.2, "_nn_dist_fwhm": 5.0, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "MID", "bp_rp": 1.05, "comp_rms": 0.03, "_dist_deg": 0.15, "_nn_dist_fwhm": 5.0, "snr_ap_pixscaled": 40.0},
+        {"catalog_id": "OK3", "bp_rp": 1.08, "comp_rms": 0.04, "_dist_deg": 0.25, "_nn_dist_fwhm": 5.0, "snr_ap_pixscaled": 40.0},
     ]
     out = _select_comps_by_rms_then_color(
         pd.DataFrame(rows),
