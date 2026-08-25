@@ -246,6 +246,78 @@ def plate_scale_arcsec_per_px_from_wcs(wcs_obj: Any) -> float:
     return float("nan")
 
 
+def solve_rms_px_from_fits_header(hdr: Any) -> float | None:
+    """Best-effort solve RMS [px] from FITS HISTORY (SIP lin= or NN refine line)."""
+    import re
+
+    first_lin: float | None = None
+    nn_rms: float | None = None
+    try:
+        cards = list(hdr.cards)
+    except Exception:  # noqa: BLE001
+        return None
+    for c in cards:
+        if str(getattr(c, "keyword", "")) != "HISTORY":
+            continue
+        s = str(getattr(c, "value", "") or "")
+        if first_lin is None:
+            m = re.search(r"lin=([0-9]+(?:\.[0-9]+)?)", s)
+            if m:
+                try:
+                    first_lin = float(m.group(1))
+                except ValueError:
+                    first_lin = None
+        if nn_rms is None:
+            m = re.search(r"Mean residual error\s*=\s*([0-9]+(?:\.[0-9]+)?)", s, re.I)
+            if m:
+                try:
+                    nn_rms = float(m.group(1))
+                except ValueError:
+                    nn_rms = None
+    if nn_rms is not None and math.isfinite(nn_rms):
+        return float(nn_rms)
+    if first_lin is not None and math.isfinite(first_lin):
+        return float(first_lin)
+    return None
+
+
+def catalog_match_radius_d1_arcsec(
+    *,
+    solve_rms_px: float | None,
+    fwhm_dao_px: float,
+    plate_scale_arcsec_per_px: float,
+    floor_arcsec: float = 12.0,
+) -> tuple[float, dict[str, Any]]:
+    """D1: one-pass catalog match radius. No match-rate widening.
+
+    radius = max(floor, 3 x max(solve_rms_px, FWHM_dao_px) x plate_scale)
+    """
+    fw = max(0.5, float(fwhm_dao_px))
+    try:
+        rms = float(solve_rms_px) if solve_rms_px is not None else float("nan")
+    except (TypeError, ValueError):
+        rms = float("nan")
+    inner_px = max(rms, fw) if math.isfinite(rms) else fw
+    try:
+        scale = float(plate_scale_arcsec_per_px)
+    except (TypeError, ValueError):
+        scale = float("nan")
+    formula = 3.0 * inner_px * scale if math.isfinite(scale) and scale > 0 else float("nan")
+    used = float(floor_arcsec)
+    if math.isfinite(formula):
+        used = max(float(floor_arcsec), float(formula))
+    inputs = {
+        "solve_rms_px": (float(rms) if math.isfinite(rms) else None),
+        "fwhm_dao_px": float(fw),
+        "plate_scale_arcsec_per_px": (float(scale) if math.isfinite(scale) else None),
+        "inner_px": float(inner_px),
+        "formula_arcsec": (float(formula) if math.isfinite(formula) else None),
+        "floor_arcsec": float(floor_arcsec),
+        "used_arcsec": float(used),
+    }
+    return float(used), inputs
+
+
 def compute_pass1_astrometric_residuals_px(
     dao_x: np.ndarray,
     dao_y: np.ndarray,

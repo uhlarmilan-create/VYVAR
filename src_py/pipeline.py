@@ -8657,11 +8657,11 @@ def detect_stars_and_match_catalog(
     **Faintest magnitude:** if ``faintest_mag_limit`` is set (e.g. ``14``), **matched** stars with catalog
     ``mag`` fainter than the limit are dropped. **Unmatched** detections (no ``mag``) are kept for QA.
 
-    ``match_sep_arcsec`` default 8 arcsec is a robust initial tolerance for slight WCS-scale/offset mismatch; the
-    effective floor is ~12 arcsec, then the matcher widens toward a high match fraction (target ~95% on typical
-    good frames). When the fraction stays low, a **Gaia/pixel** TAN refit (brightest-first greedy pairs, optional
-    Gaia cone re-query) is applied iteratively. A final tightening to ~4.5 arcsec is applied only when most loose
-    matches survive it.
+    ``match_sep_arcsec`` requested value is recorded; D1 sets the one-pass
+    effective radius to max(12 arcsec, 3 x max(solve_rms_px, FWHM_dao_px) x
+    plate_scale). There is no match-rate widening. A final tightening to
+    ~4.5 arcsec is applied only when most loose matches survive it. Low match
+    rate remains a WARN.
 
     ``max_catalog_rows`` caps DAO detections written per frame. Rows are chosen with **spatial
     stratification** (brightest per coarse grid cell, then global flux top-up) so vignetting does not
@@ -9229,6 +9229,7 @@ def detect_stars_and_match_catalog(
     det_str = np.array([f"DET_{i:04d}" for i in idx_det], dtype=object)
     n_matched = 0
     match_sep_used = max(12.0, float(match_sep_arcsec))
+    _match_sep_formula_inputs: dict[str, Any] = {}
     _wcs_refine_iters = 0
     from wcs_invertibility import empty_identity_gate_acc
 
@@ -9476,46 +9477,31 @@ def detect_stars_and_match_catalog(
                 log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
 
         def _run_full_match_pass() -> None:
-            nonlocal df_out, n_matched, match_sep_used
-            match_sep_used = max(12.0, float(match_sep_arcsec))
+            nonlocal df_out, n_matched, match_sep_used, _match_sep_formula_inputs
+            from dao_gaia_calibration import (
+                catalog_match_radius_d1_arcsec,
+                plate_scale_arcsec_per_px_from_wcs,
+                solve_rms_px_from_fits_header,
+            )
+
+            _ps_match = float(plate_scale_arcsec_per_px_from_wcs(wcs_obj))
+            _rms_match = solve_rms_px_from_fits_header(hdr)
+            match_sep_used, _d1_inputs = catalog_match_radius_d1_arcsec(
+                solve_rms_px=_rms_match,
+                fwhm_dao_px=float(_fwhm_used),
+                plate_scale_arcsec_per_px=_ps_match,
+                floor_arcsec=12.0,
+            )
+            LOGGER.info(
+                "Catalog match: radius = f(solve_rms=%.3f px, FWHM_dao=%.3f px, scale=%.4f arcsec/px) "
+                "-> %.2f arcsec (formula=%.2f floor=12)",
+                float(_d1_inputs["solve_rms_px"] or float("nan")),
+                float(_d1_inputs["fwhm_dao_px"]),
+                float(_d1_inputs["plate_scale_arcsec_per_px"] or float("nan")),
+                float(match_sep_used),
+                float(_d1_inputs["formula_arcsec"] or float("nan")),
+            )
             df_out, n_matched = _assign_catalog_at_threshold(match_sep_used)
-            if n >= 20:
-                r_match = float(n_matched) / float(max(1, n))
-                if r_match < 0.70:
-                    _req_before = float(match_sep_used)
-                    thr_wider = min(float(match_sep_used) * 1.5, 90.0)
-                    if thr_wider > float(match_sep_used) + 1e-9:
-                        df_try, n_try = _assign_catalog_at_threshold(thr_wider)
-                        if n_try > n_matched:
-                            df_out, n_matched, match_sep_used = df_try, n_try, thr_wider
-                            LOGGER.info(
-                                "Catalog match: zhoda %.0f%% < 70 %%, opakovanie s max separaciou %.2f arcsec (pozadovane %.2f arcsec)",
-                                100.0 * r_match,
-                                thr_wider,
-                                _req_before,
-                            )
-            # Extra widen toward ~95% match rate on retained DAO rows (residual WCS / crowding).
-            if n >= 8:
-                cur_thr = float(match_sep_used)
-                _widen_cap_arcsec = 96.0
-                for _ in range(16):
-                    r2 = float(n_matched) / float(max(1, n))
-                    if r2 >= 0.95 or cur_thr >= _widen_cap_arcsec:
-                        break
-                    nxt = min(max(cur_thr * 1.12, cur_thr + 0.45), _widen_cap_arcsec)
-                    if nxt <= cur_thr + 1e-6:
-                        break
-                    df_try, n_try = _assign_catalog_at_threshold(nxt)
-                    if n_try <= n_matched:
-                        break
-                    df_out, n_matched, match_sep_used = df_try, n_try, nxt
-                    cur_thr = nxt
-                    LOGGER.info(
-                        "Catalog match: 0.95 widen iter threshold=%.2f arcsec n_matched=%d rate=%.3f",
-                        float(nxt),
-                        int(n_matched),
-                        float(n_matched) / float(max(1, n)),
-                    )
             # After a successful loose initial match, tighten for cleaner final IDs (only if most matches survive).
             _tight_sec = 4.5
             if n_matched >= max(10, int(0.20 * max(1, n))) and float(match_sep_used) > _tight_sec + 1e-9:
@@ -9530,6 +9516,7 @@ def detect_stars_and_match_catalog(
                     )
                     df_out, n_matched, match_sep_used = df_tight, n_tight, _tight_sec
             _apply_post_match_identity_gate()
+            _match_sep_formula_inputs = dict(_d1_inputs)
 
         _run_full_match_pass()
         if len(df_out) == int(n):
@@ -9858,6 +9845,7 @@ def detect_stars_and_match_catalog(
         "prematch_peak_sigma_floor": float(_snr_k),
         "match_sep_arcsec_requested": float(match_sep_arcsec),
         "match_sep_arcsec_effective": float(match_sep_used),
+        "match_sep_formula_inputs": dict(_match_sep_formula_inputs),
         "wcs_gaia_pixel_refine_iters": int(_wcs_refine_iters),
         "catalog_match_fraction_target": 0.95,
         "catalog_match_fraction_met": (
@@ -13918,6 +13906,7 @@ def generate_masterstar_and_catalog(
         for _mk in (
             "match_sep_arcsec_requested",
             "match_sep_arcsec_effective",
+            "match_sep_formula_inputs",
             "wcs_gaia_pixel_refine_iters",
         ):
             if det_meta.get(_mk) is not None:
