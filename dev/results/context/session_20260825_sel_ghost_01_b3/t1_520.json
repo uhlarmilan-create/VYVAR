@@ -1,0 +1,91 @@
+{
+  "utc": "2026-08-25T16:32:08.558639+00:00",
+  "err": null,
+  "out": {
+    "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\MASTERSTAR.fits",
+    "masterstars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\masterstars_full_match.csv",
+    "frames_used": 1,
+    "masterstar_selection": {
+      "source": "platesolve_existing",
+      "file": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\MASTERSTAR.fits"
+    },
+    "n_raw_dao": 715,
+    "detected_stars": 742,
+    "catalog_matched": 111,
+    "catalog_rows": 24571,
+    "catalog_match_max_sep_arcsec": 10.0,
+    "max_catalog_rows": 100000,
+    "n_likely_saturated": 235,
+    "saturate_limit_adu": 65535.0,
+    "saturate_limit_source": "header_datamax",
+    "solve": {
+      "solved": true,
+      "method": "sibling_recovered",
+      "match_rate": 1.0,
+      "sip_meta": {
+        "masterstar_verified": true,
+        "route": "sibling_recovered",
+        "n_matched_tight": 0
+      },
+      "wcs_plate_scale_adjustment": {
+        "rescaled": false
+      },
+      "wcs_roundtrip_p99_px": 2.3865032051703165e-10,
+      "wcs_roundtrip_pass": true
+    },
+    "n_comparison_stars_requested": 0,
+    "faintest_mag_limit": 18.0,
+    "n_dropped_fainter_than_limit": 0,
+    "field_catalog_cone_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\field_catalog_cone.csv",
+    "catalog_derived_membership": {
+      "membership_depth_g": 15.0,
+      "n_detection_rows_in": 692,
+      "n_catalog_rows_added": 50,
+      "n_dao_only_preserved": 631,
+      "n_rows_out": 742
+    },
+    "dao_threshold_sigma": 4.5,
+    "masterstar_match_png": "",
+    "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\comparison_stars.csv",
+    "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\variable_targets.csv",
+    "photometry_plan_json": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\sandbox_520_t1\\g_60_4\\photometry_plan.json",
+    "comparison_selection": {
+      "n_selected": 7,
+      "grid_nx": 0,
+      "grid_ny": 0,
+      "n_comp_requested": 0,
+      "pool_uncapped": true,
+      "width_px": 3552.0,
+      "height_px": 2664.0,
+      "require_non_variable": true,
+      "exclude_nonlinear_badcolumn": true
+    },
+    "comp_selection_enrichment": {
+      "source": "masterstars_full_match.csv",
+      "enrichment_missing_columns": [
+        "likely_nonlinear",
+        "on_bad_column"
+      ],
+      "nonlinearity_badcolumn_exclusion": false,
+      "message": "comp-selection enrichment unavailable for this draft: columns ['likely_nonlinear', 'on_bad_column'] absent from masterstars_full_match.csv - selection proceeds without nonlinearity/bad-column exclusion"
+    }
+  },
+  "elapsed_s": 72.2,
+  "live_csv_unchanged": true,
+  "live_csv_sha_guard": true,
+  "n_t1": 111,
+  "n_s6": 111,
+  "only_t1": [],
+  "only_s6": [],
+  "t1_cid_eq_s6": true,
+  "match_sep_arcsec_effective": 12.0,
+  "match_sep_formula_inputs": {
+    "solve_rms_px": 1.442,
+    "fwhm_dao_px": 1.25,
+    "plate_scale_arcsec_per_px": 0.560781258995021,
+    "inner_px": 1.25,
+    "formula_arcsec": 2.1029297212313285,
+    "floor_arcsec": 12.0,
+    "used_arcsec": 12.0
+  }
+}

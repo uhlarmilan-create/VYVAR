@@ -1,0 +1,38 @@
+{
+  "utc": "2026-08-25T17:53:30.656743+00:00",
+  "copy_snap_s": 1.9,
+  "ms_columns": {
+    "vy_identity_gate": true,
+    "gaia_dao_resid_px": true,
+    "snr": true,
+    "snr_peak": true,
+    "flux_ap": true,
+    "err_ap": true
+  },
+  "effective_tol_stamps": {
+    "solve_rms_px": 0.595,
+    "fwhm_dao_px": 5.19465,
+    "plate_scale_arcsec_per_px": 9.773890066483727,
+    "inner_px": 5.19465,
+    "formula_arcsec": 152.3158141015791,
+    "floor_arcsec": 12.0,
+    "used_arcsec": 152.3158141015791
+  },
+  "has_formula_inputs": true,
+  "has_dao_gaia_tol": false,
+  "copy_work_s": 1.7,
+  "phot_s": 1483.6,
+  "err": null,
+  "sha_snap": "360ef397dadae4175eb4f938507990dbc56da54af2973c24bf6627f3d06d0151",
+  "n_snap": 121,
+  "sha_run": "4f372c6c6b88a7e92ce0cb06a1c13be1de8a3916a3dfc6287bf7eb2e6cca0ace",
+  "n_run": 121,
+  "sha_snap_ext": "c6299a894d308ef4de965c198149d261c595574777febbb14df7e4df167206be",
+  "n_snap_ext": 180,
+  "sha_run_ext": "cd0fb28582a5d0cfce1ac319a4b71434efecac960039b3820c7d174973745ffb",
+  "n_run_ext": 180,
+  "sha_equal": false,
+  "sha_equal_ext": false,
+  "t3_p5": false,
+  "inv_cal_parent": true
+}

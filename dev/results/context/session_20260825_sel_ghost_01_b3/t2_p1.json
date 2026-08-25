@@ -1,0 +1,688 @@
+{
+  "n_comp_ids": 67,
+  "n_d3_pass": 65,
+  "t2_p1": false,
+  "star_1500579870061241088": {
+    "catalog_id": "1500579870061241088",
+    "in_ms": true,
+    "snr_ap": 8.289699850481181,
+    "snr_peak": 6.478304668885194,
+    "d3_pass": false,
+    "source_state": "DETECTED_P1",
+    "vy_identity_gate": "ok",
+    "gaia_dao_resid_px": 0.3049328623314231
+  },
+  "d3_snr_min": 10.0,
+  "rows": [
+    {
+      "catalog_id": "1485483541052276480",
+      "in_ms": true,
+      "snr_ap": 69.10673649358975,
+      "snr_peak": 224.8270236749236,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.30516816410456
+    },
+    {
+      "catalog_id": "1485609641291887872",
+      "in_ms": true,
+      "snr_ap": 66.38916323781983,
+      "snr_peak": 228.7324927644566,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4753984933999151
+    },
+    {
+      "catalog_id": "1496315070616056064",
+      "in_ms": true,
+      "snr_ap": 124.30629792335294,
+      "snr_peak": 270.5073719660611,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5409779809792498
+    },
+    {
+      "catalog_id": "1496786967262035712",
+      "in_ms": true,
+      "snr_ap": 22.96649705137391,
+      "snr_peak": 39.57034520393141,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.203783137590219
+    },
+    {
+      "catalog_id": "1496798993170465536",
+      "in_ms": true,
+      "snr_ap": 207.1679632143289,
+      "snr_peak": 302.1562744751882,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1310632369368306
+    },
+    {
+      "catalog_id": "1496874408500111104",
+      "in_ms": true,
+      "snr_ap": 58.31112301563849,
+      "snr_peak": 133.91133393266537,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1876741962627915
+    },
+    {
+      "catalog_id": "1496948904709272576",
+      "in_ms": true,
+      "snr_ap": 224.7666258766899,
+      "snr_peak": 523.3996942737818,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5372189776316921
+    },
+    {
+      "catalog_id": "1496984467038399744",
+      "in_ms": true,
+      "snr_ap": 191.9259254080362,
+      "snr_peak": 491.8898802221114,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3050445835147624
+    },
+    {
+      "catalog_id": "1496994156484645632",
+      "in_ms": true,
+      "snr_ap": 173.02247688959588,
+      "snr_peak": 317.5977009107243,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4109543455225461
+    },
+    {
+      "catalog_id": "1497014390074509312",
+      "in_ms": true,
+      "snr_ap": 94.37223845730088,
+      "snr_peak": 244.28931808890945,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5782222532427794
+    },
+    {
+      "catalog_id": "1497119157212720896",
+      "in_ms": true,
+      "snr_ap": 348.35981825928013,
+      "snr_peak": 1397.6548566785818,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5557990171390891
+    },
+    {
+      "catalog_id": "1497145751650265600",
+      "in_ms": true,
+      "snr_ap": 170.3595386597953,
+      "snr_peak": 352.0762531787274,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3276835583863624
+    },
+    {
+      "catalog_id": "1497196054307837696",
+      "in_ms": true,
+      "snr_ap": 157.46836528775336,
+      "snr_peak": 349.29143507580983,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5068674743301594
+    },
+    {
+      "catalog_id": "1497203132413443328",
+      "in_ms": true,
+      "snr_ap": 277.95020911593133,
+      "snr_peak": 779.6619329272171,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5934285802744641
+    },
+    {
+      "catalog_id": "1497313255374892800",
+      "in_ms": true,
+      "snr_ap": 163.13709708545915,
+      "snr_peak": 440.4245834230995,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5371126865165555
+    },
+    {
+      "catalog_id": "1497326621313118976",
+      "in_ms": true,
+      "snr_ap": 74.96585960796158,
+      "snr_peak": 179.88422131574822,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5983211756434236
+    },
+    {
+      "catalog_id": "1497368849430107904",
+      "in_ms": true,
+      "snr_ap": 90.20803134765808,
+      "snr_peak": 198.6153084122161,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4720196678194716
+    },
+    {
+      "catalog_id": "1497370563121917952",
+      "in_ms": true,
+      "snr_ap": 264.74004169962814,
+      "snr_peak": 574.1586768582039,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3771971903932161
+    },
+    {
+      "catalog_id": "1497429837967596800",
+      "in_ms": true,
+      "snr_ap": 20.90421184972304,
+      "snr_peak": 51.973920460895584,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6131223006736964
+    },
+    {
+      "catalog_id": "1497442379271632384",
+      "in_ms": true,
+      "snr_ap": 394.8490711211732,
+      "snr_peak": 1343.604929663214,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5316538780581775
+    },
+    {
+      "catalog_id": "1497528072458898432",
+      "in_ms": true,
+      "snr_ap": 292.83670431168895,
+      "snr_peak": 813.9935537053341,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4342086209269754
+    },
+    {
+      "catalog_id": "1497613731286514432",
+      "in_ms": true,
+      "snr_ap": 466.5740150018225,
+      "snr_peak": 1413.8781792882833,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5372410460582094
+    },
+    {
+      "catalog_id": "1497617407778562304",
+      "in_ms": true,
+      "snr_ap": 209.8066243947568,
+      "snr_peak": 565.729041768005,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4435811066528263
+    },
+    {
+      "catalog_id": "1497631048594737408",
+      "in_ms": true,
+      "snr_ap": 60.68613294795336,
+      "snr_peak": 154.0325032474417,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.415303215323066
+    },
+    {
+      "catalog_id": "1497674651102612992",
+      "in_ms": true,
+      "snr_ap": 286.0948023568255,
+      "snr_peak": 939.7052078515624,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5740519633728539
+    },
+    {
+      "catalog_id": "1497676850124557312",
+      "in_ms": true,
+      "snr_ap": 53.01165438473743,
+      "snr_peak": 107.15446773939412,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5711411078949624
+    },
+    {
+      "catalog_id": "1497719902878053888",
+      "in_ms": true,
+      "snr_ap": 245.42740195621013,
+      "snr_peak": 660.4701455040781,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6037031198207636
+    },
+    {
+      "catalog_id": "1497726465588057344",
+      "in_ms": true,
+      "snr_ap": 165.63308151845902,
+      "snr_peak": 412.0765344447139,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6958466831812066
+    },
+    {
+      "catalog_id": "1497758935541325824",
+      "in_ms": true,
+      "snr_ap": 174.6897333689239,
+      "snr_peak": 405.23941605690953,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6300885269349485
+    },
+    {
+      "catalog_id": "1497771992240531712",
+      "in_ms": true,
+      "snr_ap": 218.12094808437925,
+      "snr_peak": 646.9806913748627,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5933474144051347
+    },
+    {
+      "catalog_id": "1497837207025312768",
+      "in_ms": true,
+      "snr_ap": 226.91876296257408,
+      "snr_peak": 477.3681145303704,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5734371256146344
+    },
+    {
+      "catalog_id": "1497894828305963776",
+      "in_ms": true,
+      "snr_ap": 101.33805806079808,
+      "snr_peak": 204.80322029214824,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6086009493378484
+    },
+    {
+      "catalog_id": "1497953377300128768",
+      "in_ms": true,
+      "snr_ap": 89.4629055096647,
+      "snr_peak": 203.8224801781547,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5720720173175957
+    },
+    {
+      "catalog_id": "1497974027502858240",
+      "in_ms": true,
+      "snr_ap": 68.44501864966753,
+      "snr_peak": 181.4273931082288,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5754708313349725
+    },
+    {
+      "catalog_id": "1497976089087192832",
+      "in_ms": true,
+      "snr_ap": 128.2725643650126,
+      "snr_peak": 247.51946397434745,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.659330029606382
+    },
+    {
+      "catalog_id": "1497977291678057472",
+      "in_ms": true,
+      "snr_ap": 24.7573544912338,
+      "snr_peak": 59.53141435672463,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6590585230324333
+    },
+    {
+      "catalog_id": "1498020894186918144",
+      "in_ms": true,
+      "snr_ap": 151.65749161212784,
+      "snr_peak": 557.1762449920859,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1309409286932998
+    },
+    {
+      "catalog_id": "1498062332030906880",
+      "in_ms": true,
+      "snr_ap": 229.5202626655054,
+      "snr_peak": 457.08671467071895,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.225647145425191
+    },
+    {
+      "catalog_id": "1498222615914114816",
+      "in_ms": true,
+      "snr_ap": 25.546628272605407,
+      "snr_peak": 85.15571457293777,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1261240327457469
+    },
+    {
+      "catalog_id": "1498244610443240192",
+      "in_ms": true,
+      "snr_ap": 27.45140928456085,
+      "snr_peak": 53.63673360101102,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.0374250445688833
+    },
+    {
+      "catalog_id": "1498326455340079616",
+      "in_ms": true,
+      "snr_ap": 253.2632577486262,
+      "snr_peak": 633.6389510328855,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5795741656861315
+    },
+    {
+      "catalog_id": "1498626793812916480",
+      "in_ms": true,
+      "snr_ap": 100.46513242962644,
+      "snr_peak": 212.89010884750965,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.2167138828543602
+    },
+    {
+      "catalog_id": "1498645691668588288",
+      "in_ms": true,
+      "snr_ap": 13.213958606754296,
+      "snr_peak": 26.60726686882474,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.2088006288423836
+    },
+    {
+      "catalog_id": "1498677611865494016",
+      "in_ms": true,
+      "snr_ap": 57.62375376044367,
+      "snr_peak": 115.46779126043194,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1563390165205101
+    },
+    {
+      "catalog_id": "1498735778606786816",
+      "in_ms": true,
+      "snr_ap": 296.3788039848829,
+      "snr_peak": 740.3816996875482,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.283747952516868
+    },
+    {
+      "catalog_id": "1498812233320666368",
+      "in_ms": true,
+      "snr_ap": 140.64157286178707,
+      "snr_peak": 323.68549878846915,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4344813994094404
+    },
+    {
+      "catalog_id": "1498964240802993408",
+      "in_ms": true,
+      "snr_ap": 7.572155482805203,
+      "snr_peak": 17.899259289374367,
+      "d3_pass": false,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4241405904745221
+    },
+    {
+      "catalog_id": "1498974102047892224",
+      "in_ms": true,
+      "snr_ap": 24.10687647873176,
+      "snr_peak": 49.99658366734472,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5189459391477602
+    },
+    {
+      "catalog_id": "1498994786610872576",
+      "in_ms": true,
+      "snr_ap": 101.8261201045528,
+      "snr_peak": 171.1627893131434,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3990410240212474
+    },
+    {
+      "catalog_id": "1499200223486564608",
+      "in_ms": true,
+      "snr_ap": 217.59327745227023,
+      "snr_peak": 625.9624877627883,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.216637962579761
+    },
+    {
+      "catalog_id": "1499867867561302272",
+      "in_ms": true,
+      "snr_ap": 30.10562035590644,
+      "snr_peak": 75.99669752570962,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.8301088156013875
+    },
+    {
+      "catalog_id": "1499906247391001088",
+      "in_ms": true,
+      "snr_ap": 413.35842276254033,
+      "snr_peak": 1331.5315540950908,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1451838459789895
+    },
+    {
+      "catalog_id": "1500296402219939584",
+      "in_ms": true,
+      "snr_ap": 504.0268125710934,
+      "snr_peak": 1211.3666690013229,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5204149016099303
+    },
+    {
+      "catalog_id": "1500355466608253184",
+      "in_ms": true,
+      "snr_ap": 99.31034816893693,
+      "snr_peak": 137.15538064028644,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.2327265275326094
+    },
+    {
+      "catalog_id": "1500403089207449856",
+      "in_ms": true,
+      "snr_ap": 44.10839205735741,
+      "snr_peak": 93.7893888597403,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5878032901726008
+    },
+    {
+      "catalog_id": "1500460813567859456",
+      "in_ms": true,
+      "snr_ap": 245.2608116565312,
+      "snr_peak": 540.8235825534716,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5793706576132588
+    },
+    {
+      "catalog_id": "1500467303261764096",
+      "in_ms": true,
+      "snr_ap": 15.210430586182182,
+      "snr_peak": 18.33725554158032,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.7980077008210728
+    },
+    {
+      "catalog_id": "1500486102335278592",
+      "in_ms": true,
+      "snr_ap": 142.85437669377336,
+      "snr_peak": 343.35159169218105,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5269065787739547
+    },
+    {
+      "catalog_id": "1500576537166572544",
+      "in_ms": true,
+      "snr_ap": 57.11905295399734,
+      "snr_peak": 116.5245145121304,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.4175269108389645
+    },
+    {
+      "catalog_id": "1500579870061241088",
+      "in_ms": true,
+      "snr_ap": 8.289699850481181,
+      "snr_peak": 6.478304668885194,
+      "d3_pass": false,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3049328623314231
+    },
+    {
+      "catalog_id": "1500602959805382656",
+      "in_ms": true,
+      "snr_ap": 10.546866979147138,
+      "snr_peak": 12.785476777229292,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5035408471682901
+    },
+    {
+      "catalog_id": "1500664876053883904",
+      "in_ms": true,
+      "snr_ap": 163.23927210367555,
+      "snr_peak": 221.01460785250063,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.6778137482079952
+    },
+    {
+      "catalog_id": "1500688820495583488",
+      "in_ms": true,
+      "snr_ap": 81.49079853101108,
+      "snr_peak": 170.2142437440328,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.093184043036403
+    },
+    {
+      "catalog_id": "1500727513856914944",
+      "in_ms": true,
+      "snr_ap": 270.6035854518791,
+      "snr_peak": 477.69074198201935,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.1621925133722011
+    },
+    {
+      "catalog_id": "1501956561697995008",
+      "in_ms": true,
+      "snr_ap": 187.9441072738649,
+      "snr_peak": 341.42385054487505,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.5751488448487236
+    },
+    {
+      "catalog_id": "1502007585909464064",
+      "in_ms": true,
+      "snr_ap": 83.89764624772779,
+      "snr_peak": 112.6446606461584,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 0.3600642713568145
+    },
+    {
+      "catalog_id": "1504489595970703872",
+      "in_ms": true,
+      "snr_ap": 103.54920129864767,
+      "snr_peak": 267.8584730133781,
+      "d3_pass": true,
+      "source_state": "DETECTED_P1",
+      "vy_identity_gate": "ok",
+      "gaia_dao_resid_px": 1.084269831525119
+    }
+  ]
+}

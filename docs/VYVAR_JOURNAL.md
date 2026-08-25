@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- SEL-GHOST-01 B-STOP-3 (production-path 516 three-way; no re-cut)
+
+T1/T2 committed. T2-P1 FALSE (65/67). T3 R1 vs R0: 0/60 LC SHA.
+T3 R2 vs R1: same-ensemble aperture mag identical; SHA can move on
+AC overlay. 520 forced-7 lc_rms 0.053 vs one-comp 0.123. No re-cut,
+no push. Evidence: `CURSOR_RESULT_SEL_GHOST_01_B3.md`.
+
 ## 2026-08-25 -- SEL-GHOST-01 B-STOP-2 (D1-D4; 520 re-solve; --full STOP)
 
 D1-D4 on `main`. 520 g_60_4 accepted at 1.44 px / 61 gate-out after DB

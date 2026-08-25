@@ -10,18 +10,18 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-25 SEL-GHOST-01 B-STOP-2)
+## NEXT SESSION - entry point (2026-08-25 SEL-GHOST-01 B-STOP-3)
 
-Local `main` ahead of `origin/main` `b1f5b8c`. `--fast --clean` PASS.
-520 `g_60_4` now solves at DB 0.566 "/px. `--full` is red until Milan
-authorises a frozen-MS recut that stamps D3 columns (no recut in this
-task). V0612 sandbox lc_rms 0.123 with 1 D3-honest comp.
+Local `main` ahead of `origin/main` `b1f5b8c`. Push: NO until Milan
+reviews B-STOP-3. Production-path 516 three-way measured. Re-cut of
+the era03 frozen snapshot is a Milan GO, not done in this task.
+V0612 still one-comp at ceiling 0.1 (forced-7 script lc_rms 0.053).
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: review B-STOP-2; GO push / SESSION-CLOSE inventory |
-| **2** | `--full` recut of 9902d918 / 472bc9e4 only after D3 columns exist on the frozen MASTERSTAR (or D3 policy for pre-D3 CSVs) |
-| **3** | 520 photometry with a larger honest DETECTED pool (D3 left 7; V0612 got 1) |
+| **1** | Milan: review B-STOP-3 re-cut proposal (R2 candidate SHA vs anchor) |
+| **2** | `--full` recut of 9902d918 / 472bc9e4 only after Milan GO |
+| **3** | COMP-RMS-DEF-01: 0.1 mag vs photon (T4 table; no wiring yet) |
 | **4** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **5** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
 | **6** | ZONE-SAT-01 (G=7.63 peak 88781 zone=linear) |

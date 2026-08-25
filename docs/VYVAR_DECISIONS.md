@@ -35,10 +35,14 @@ Milan GO (chat, 2026-08-25) on D1-D4:
 
 D1  Catalog-match radius must not chase a match rate. The 0.70 -> x1.5
     loop and the 0.95 widening loop are REMOVED. Radius =
-    max(12", 3 x max(solve_rms_px, FWHM_dao_px) x plate_scale), one
-    pass; the tighten-to-4.5" step stays. Low match rate remains a
-    WARN. Basis: Part A F1/F5, Marrese et al. 2019 A&A 621 A144, no
-    precedent for match-rate-driven widening.
+    max(12", 3 x FWHM_dao_px x plate_scale), one pass; the
+    tighten-to-4.5" step stays. Low match rate remains a WARN.
+    `solve_rms_px` is stamped as a diagnostic only (it belongs to the
+    identity-gate WCS, not to a radius the 3xFWHM gate strips anyway).
+    T1 (B-STOP-3, 2026-08-25): 516/520 post-gate catalog_id sets
+    identical to S3/S6; 516 used radius stayed 152.32" because
+    solve_rms was already below FWHM. Basis: Part A F1/F5, Marrese
+    et al. 2019 A&A 621 A144, B-STOP-2 D1 architect error.
 D2  Astrometry optimizer refit acceptance: reject when rms_sip >
     max(3 x FWHM_dao_px, 3 px) or n_honest_pairs < 10. A refit that
     worsens round-trip p95 versus the entry WCS is never written.
@@ -62,8 +66,20 @@ rematched on 520 g_60_4. The return path is name-based rehydration on
 CSV export (F3). H2 is retracted as cause; the code path remains real
 and is closed by B1 as defence, not as the fix."
 
+Part A 2.5 honest match rate (B-STOP-3 T5, 2026-08-25). Defined on
+DETECTED rows only (catalog_membership rows are catalog, not matches):
+
+  honest   = n(DETECTED with d <= 3 FWHM) / n(DETECTED with cid)
+  reported = n(DETECTED with cid) / n(DAO retained)
+
+B-STOP-2 P-520-4 restated under this definition on 520 g_60_4 (n_DAO
+retained = 742): honest = 1.0 (61/61 DETECTED-with-cid), reported =
+0.082 (61/742). The old Part A mix of membership rows into the
+numerator is retired.
+
 Pointers: INV-MATCH-IDENTITY-01, INV-SOURCE-STATE-01, INV-WCS-01 write
-guard (S4b). Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`.
+guard (S4b). Evidence: `CURSOR_RESULT_SEL_GHOST_01_B2.md`,
+`CURSOR_RESULT_SEL_GHOST_01_B3.md`.
 
 ## REG-520-01 - non-cal is first-class; 0.39 vs 0.06 is selection (2026-08-24)
 
