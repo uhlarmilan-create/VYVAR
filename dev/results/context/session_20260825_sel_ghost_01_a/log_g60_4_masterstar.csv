@@ -1,0 +1,109 @@
+line,text
+1339,18:44:27  INFO  [pipeline]  [DAO total] 719 detections after merge
+1340,18:44:27  DAO na snimku: raw=715 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 719 bodov (binning DAO=2x).
+1341,18:44:28  DAO po SNR filtri (sky_mad median+1.8xsigma; pass2 exempt): 692/719 bodov (noise_floor~35763.4 ADU sky_sig~9.3; pass2_kept=6; dropped=27; pred matchom s katalogom).
+1342,"18:44:28  INFO  [pipeline]  Catalog match: zhoda 13% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+1343,18:44:29  post_match_identity_gate: ok=52 warn=9 fail=286 (FWHM=1.25px)
+1344,"18:44:30  WARNING  [pipeline]  [DAO] Match rate 8.8% below 88% threshold, consider lowering masterstar_dao_threshold_sigma in config.json"
+1345,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1346,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1347,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1348,18:44:30  INFO  [pipeline]  [DAO] Gaia->DAO completeness (raw): 61/24571 Gaia stars detected (0.2%) | catalog_only (undetected): 24510
+1349,18:44:30  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1350,18:44:30  GAIA SQL: Found 440 stars (Mag <= 17.5)
+1351,18:44:32  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=89.8% (matched=61 missed=6 off_frame=40 below_limit=333 blended=0) G_lim_50=14.05 fit=fleming1995_erf
+1352,"18:44:32  MASTERSTAR: VYVAR pary (33) zlucene do katalogu (mirror=mirror_x, pre astrometry optimizer)."
+1353,18:44:32  [chart] MATCH STATS (raw): Found 692 stars on image | 61 matched with Gaia | Match Rate: 8.82% | Gaia->DAO: 0.25% (62/24571)
+1354,18:44:32  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 62/24571 (0.3%) | catalog_only: 24509
+1355,"18:44:32  MASTERSTAR manifest update: DRAFT_ID=520, WCS=1, Stars=692, rows=1"
+1356,18:44:32  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1357,18:44:32  GAIA SQL: Found 517 stars (Mag <= 17.5)
+1358,"18:44:32  Astrometry optimizer BBOX: DAO RA[108.143410,110.117650] Dec[73.113444,73.551497] | Gaia RA[108.115849,110.145775] Dec[73.085322,73.579908]"
+1359,"18:44:32  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=347/692"
+1360,18:44:32  Astrometry optimizer: model built from 96 central matched stars (no resid clip).
+1361,"18:44:32  Astrometry optimizer initial jump: median dx=36.68px dy=11.08px from 692 candidates (NN sky <=180"")."
+1362,"18:44:32  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+1363,18:44:33  WCS invertibility gate PASS (astrometry Grip1 SIP refit): p99=0.0000px (threshold 0.2px).
+1364,"18:44:33  Astrometry optimizer Grip1: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1365,"18:44:33  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1366,18:44:34  WCS invertibility gate PASS (astrometry Grip2 SIP refit): p99=0.0000px (threshold 0.2px).
+1367,"18:44:34  Astrometry optimizer Grip2: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1368,"18:44:34  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1369,18:44:34  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+1370,"18:44:34  Astrometry optimizer orientation test: corner unmatched=10 base@25""=30.0% mirror@25""=30.0%."
+1371,18:44:34  Astrometry optimizer pass3 debug: rematching edge detections with 517 available catalog stars.
+1372,18:44:34  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+1373,18:44:34  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+1374,18:44:34  DEBUG: pass3 actually SAVED [0] new matches to dataframe.
+1375,"18:44:34  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+1376,18:44:34  Astrometry optimizer edge diagnostics: 296 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+1377,18:44:34  Astrometry optimizer diagnostics: 345 DAO-only stars below 50sigma (kept in CSV by design).
+1378,18:44:34  WCS invertibility gate PASS (astrometry post-pass3 SIP refit): p99=0.0000px (threshold 0.2px).
+1379,"18:44:34  Astrometry optimizer post-pass3: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1380,"18:44:34  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+1381,18:44:34  GAIA SQL by source_id: fetched 2 / 2 unique ids (batched).
+1382,18:44:35  finalize_masterstar_sky_coords: gaia_catalog=347 final_wcs=345 (matched rows with DB hit=347/347)
+1383,18:44:35  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\g_60_4\masterstars_full_match.csv (347/692 catalog-matched).
+1384,18:44:35  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1385,18:44:35  GAIA SQL: Found 566 stars (Mag <= 17.5)
+1386,"18:44:35  Astrometry optimizer BBOX: DAO RA[108.115849,110.193735] Dec[73.106713,73.576643] | Gaia RA[108.090983,110.223287] Dec[73.079662,73.602679]"
+1387,"18:44:35  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=347/692"
+1388,18:44:35  Astrometry optimizer: model built from 96 central matched stars (no resid clip).
+1389,"18:44:35  Astrometry optimizer initial jump: median dx=37.85px dy=20.90px from 692 candidates (NN sky <=180"")."
+1390,"18:44:35  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+1391,18:44:35  WCS invertibility gate PASS (astrometry Grip1 SIP refit): p99=0.0000px (threshold 0.2px).
+1392,"18:44:35  Astrometry optimizer Grip1: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1393,"18:44:35  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1394,18:44:36  WCS invertibility gate PASS (astrometry Grip2 SIP refit): p99=0.0000px (threshold 0.2px).
+1395,"18:44:36  Astrometry optimizer Grip2: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1396,"18:44:36  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1397,18:44:36  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+1398,"18:44:36  Astrometry optimizer orientation test: corner unmatched=10 base@25""=20.0% mirror@25""=20.0%."
+1399,18:44:36  Astrometry optimizer pass3 debug: rematching edge detections with 566 available catalog stars.
+1400,18:44:36  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+1401,18:44:36  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+1402,18:44:36  DEBUG: pass3 actually SAVED [0] new matches to dataframe.
+1403,"18:44:36  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+1404,18:44:36  Astrometry optimizer edge diagnostics: 296 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+1405,18:44:36  Astrometry optimizer diagnostics: 345 DAO-only stars below 50sigma (kept in CSV by design).
+1406,18:44:37  WCS invertibility gate PASS (astrometry post-pass3 SIP refit): p99=0.0000px (threshold 0.2px).
+1407,"18:44:37  Astrometry optimizer post-pass3: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1408,"18:44:37  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+1409,18:44:37  GAIA SQL by source_id: fetched 1 / 1 unique ids (batched).
+1410,18:44:37  finalize_masterstar_sky_coords: gaia_catalog=347 final_wcs=345 (matched rows with DB hit=347/347)
+1411,18:44:37  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\g_60_4\masterstars_full_match.csv (347/692 catalog-matched).
+1412,18:44:37  MASTERSTAR optimizer: forced final re-match pass completed.
+1413,18:44:37  REPAIR summary: checked=0 repaired=0 kept_placeholder=345 no_gaia_in_box=0 over_max_sep=0
+1414,18:44:37  finalize_masterstar_sky_coords: gaia_catalog=347 final_wcs=345 (matched rows with DB hit=347/347)
+1415,18:44:37  matched_world2pix_identity_px: n=347 p95=146.799 p99=166.588
+1416,18:44:37  IDENTITY-QA WARN: p95=146.799 px > 2.0 px threshold
+1417,18:44:37  INFO  [pipeline]  [M1] catalog membership expand: cone=True wcs_ok=True n_ms_in=692
+1418,"18:44:37  INFO  [pipeline]  [M1] catalog-derived membership: +14 Gaia rows (depth G<=15.0), n_out=706"
+1419,"18:44:37  MASTERSTAR catalog-derived membership: +14 Gaia rows (depth G<=15.0), n_out=706"
+1420,"18:44:44  CATALOG SEARCH (GAIA local): Ra=209.4811736478657, Dec=41.155000443662466, Radius=4.82 deg (pre ?mm)"
+1421,18:44:44  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1422,18:44:47  GAIA SQL: Found 41354 stars (Mag <= 17.5)
+1423,"18:44:56  CATALOG SEARCH (GAIA local): Ra=209.48120390824172, Dec=41.154964479311104, Radius=4.82 deg (pre ?mm)"
+1424,18:44:56  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1425,18:44:57  GAIA SQL: Found 41354 stars (Mag <= 17.5)
+1426,"18:45:07  CATALOG SEARCH (GAIA local): Ra=209.48120390824172, Dec=41.154964479311104, Radius=4.82 deg (pre ?mm)"
+1427,18:45:07  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1428,18:45:08  GAIA SQL: Found 41354 stars (Mag <= 17.5)
+1429,"18:45:17  CATALOG SEARCH (GAIA local): Ra=209.48120390824172, Dec=41.154964479311104, Radius=4.82 deg (pre ?mm)"
+1430,18:45:17  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1431,18:45:18  GAIA SQL: Found 41354 stars (Mag <= 17.5)
+1432,"18:45:31  DAO-GAIA-XFER-01 cross-rig / scale drift vs STAGE-01 hand tols (informational, not a gate): pass2_center_tol_px derived 1.00 px vs hand 2.00 px (ratio 2.00x >= 2x); forced_seed_centroid_max_px derived 1.00 px vs hand 2.00 px (ratio 2.00x >= 2x)"
+1433,18:45:31  INV-MS-EXPAND-01 PASS: ok n_in=692 n_out=706 added=14
+1434,18:45:31  DAO-Gaia calibration certificate PASS: match_r=3.5px centroid=1.0px empty-sky det=PASS seed=PASS
+1435,"18:45:31  MASTERSTAR Gaia census: 400 on-chip, forced_seed=28, leftover_promotions=0, INV-MS-CENSUS-01 ok n=400"
+1436,18:45:31  GAIA SQL by source_id: fetched 1 / 1 unique ids (batched).
+1437,18:45:31  masterstars bp_rp fallback: 0/1 doplnenych z Gaia DB
+1438,18:45:31  GAIA SQL: mag_limit 18.00 > MAX(g_mag) v DB (17.500) - orezavam.
+1439,18:45:31  GAIA SQL: Found 440 stars (Mag <= 17.5)
+1440,18:45:31  GAIA SQL by source_id: fetched 15 / 15 unique ids (batched).
+1441,"18:45:35  INFO  [pipeline]  MASTERSTAR DAO_ONLY census: 345/706 (fraction=0.489) [artifact_negative=267, unmatched_in_range=0, ambiguous_depth=78, beyond_catalogue=0, indeterminate=0] | confirmable_depth G=17.50 (from gaia_db_max_g_mag) | informational, not a gate | flux-to-G RMS=1.251 mag; unmeasurable(sigma_g>1.0)=1.000"
+1442,"18:45:35  MASTERSTAR DAO_ONLY census: 345/706 (fraction=0.489) [artifact_negative=267, unmatched_in_range=0, ambiguous_depth=78, beyond_catalogue=0, indeterminate=0] | confirmable_depth G=17.50 (from gaia_db_max_g_mag) | informational, not a gate | flux-to-G RMS=1.251 mag; unmeasurable(sigma_g>1.0)=1.000"
+1443,18:45:35  [chart] MATCH STATS (optimized): Found 706 stars on image | 361 matched with Gaia | Match Rate: 51.13% | Gaia->DAO: 1.47% (361/24571)
+1444,18:45:35  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 361/24571 (1.5%) | catalog_only: 24210
+1445,"18:45:35  MASTERSTAR JSON consistency: n_raw_dao=715, detected_stars=706, catalog_matched=361, gaia_dao_completeness_pct=1.47, n_gaia_undetected=24210"
+1446,18:45:38  MASTERSTAR katalog: masterstars_full_match.csv - 706 riadkov (DAO + katalog na celom poli; ziadne orezanie podla vzdialenosti od stredu snimku).

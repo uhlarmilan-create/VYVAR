@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- SEL-GHOST-01 A measured: H-MATCH-WIDEN stopped (P-A5 false; name-export restore; no refine rematch)
+
+g_60_4 log: widen 12->18", gate ok=52 warn=9 fail=286, refine rejected
+(rms=269 px, no rematch). 347 IDs reappear at optimizer via `name` copy
+in CSV export. 8/8 ghosts `vy_match_mode=locked`. P-A1..P-A4 TRUE,
+P-A5 FALSE. Evidence: `CURSOR_RESULT_SEL_GHOST_01_A.md`. Not pushed.
+
 ## 2026-08-24 -- REG-520-01 (measure, STOP)
 
 Same non-cal button, same night: June V0612 `lc_rms` 0.0622 vs today

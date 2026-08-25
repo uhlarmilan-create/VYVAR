@@ -1,0 +1,249 @@
+{
+  "masterstars_full_match_sha256": "5ce9b07fe0490103b2e16f6fbe3b18ffc7cd987fbee8a334722cc2fd46c6a683",
+  "epsf_516_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+  "epsf_516_expected": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+  "epsf_516_unchanged": true,
+  "dao_binning_log_lines": [
+    {
+      "line": 1340,
+      "text": "18:44:27  DAO na snimku: raw=715 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 719 bodov (binning DAO=2x)."
+    },
+    {
+      "line": 2919,
+      "text": "18:52:05  DAO na snimku: raw=988 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 991 bodov (binning DAO=2x)."
+    },
+    {
+      "line": 4499,
+      "text": "18:59:36  DAO na snimku: raw=879 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 879 bodov (binning DAO=2x)."
+    }
+  ],
+  "n_post_match_identity_gate_lines": 3,
+  "gate_lines": [
+    {
+      "line": 1343,
+      "text": "18:44:29  post_match_identity_gate: ok=52 warn=9 fail=286 (FWHM=1.25px)"
+    },
+    {
+      "line": 2921,
+      "text": "18:52:08  post_match_identity_gate: ok=45 warn=16 fail=387 (FWHM=1.25px)"
+    },
+    {
+      "line": 4501,
+      "text": "18:59:38  post_match_identity_gate: ok=71 warn=34 fail=326 (FWHM=1.25px)"
+    }
+  ],
+  "catalog_wcs_refine_lines": [
+    {
+      "line": 1345,
+      "text": "18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 1346,
+      "text": "18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 1347,
+      "text": "18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 2014,
+      "text": "18:52:01  VYVAR: NN WCS refine zamietnuty (rms=11.12px > 7.5px) - ponechavam WCS pred NN (inak casto kolaps zhody s Gaia v MASTERSTAR kroku)."
+    },
+    {
+      "line": 2923,
+      "text": "18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 2924,
+      "text": "18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 2925,
+      "text": "18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 4503,
+      "text": "18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 4504,
+      "text": "18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching."
+    },
+    {
+      "line": 4505,
+      "text": "18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching."
+    }
+  ],
+  "widen_tighten_lines": [
+    {
+      "line": 1342,
+      "text": "18:44:28  INFO  [pipeline]  Catalog match: zhoda 13% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+    },
+    {
+      "line": 2920,
+      "text": "18:52:06  INFO  [pipeline]  Catalog match: zhoda 11% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+    },
+    {
+      "line": 4500,
+      "text": "18:59:37  INFO  [pipeline]  Catalog match: zhoda 16% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+    }
+  ],
+  "gate_skipped_lines": [],
+  "n_ms_rows": 706,
+  "n_matched_catalog_id": 361,
+  "nunique_catalog_id": 361,
+  "columns": [
+    "name",
+    "ra_deg",
+    "dec_deg",
+    "mag",
+    "b_v",
+    "catalog",
+    "catalog_id",
+    "x",
+    "y",
+    "flux",
+    "vsx_known_variable",
+    "gaia_dr3_variable_catalog",
+    "exo_host_obj_id",
+    "exo_host_name",
+    "exo_cat_source",
+    "exo_disposition",
+    "exo_match_sep_arcsec",
+    "peak_dao",
+    "peak_max_adu",
+    "saturate_limit_adu",
+    "likely_saturated",
+    "photometry_ok",
+    "vy_dao_pass",
+    "ambiguous_owner",
+    "bp_rp",
+    "phot_g_mean_mag",
+    "edge_safe_10px",
+    "snr50_ok",
+    "coord_source",
+    "source_type",
+    "forced_photometry",
+    "is_usable",
+    "vy_match_mode",
+    "noise_floor_adu",
+    "saturate_limit_adu_85pct",
+    "zone",
+    "is_saturated",
+    "is_noisy",
+    "source_state",
+    "implied_g_mag",
+    "implied_g_minus_depth",
+    "sigma_g_row",
+    "dao_only_class",
+    "is_safe_comp",
+    "exclusion_reason",
+    "stress_rms",
+    "phot_category",
+    "likely_nonlinear",
+    "on_bad_column",
+    "recommended_aperture",
+    "non_single_star",
+    "phot_variable_flag",
+    "g_flux_error_rel",
+    "_cid"
+  ],
+  "match_sep_arcsec_column_present": false,
+  "vy_match_mode_counts": {
+    "locked": 322,
+    "": 39
+  },
+  "header_VY_FWHM": 2.5,
+  "header_XBINNING": 4,
+  "masterstar_shape": [
+    2664,
+    3552
+  ],
+  "plate_scale_arcsec_px_wcs": 0.5618244729533156,
+  "dao_gaia_calibration_keys": [
+    "built_utc",
+    "derived",
+    "derived_forced_seed_centroid_max_px",
+    "derived_pass2_center_tol_px",
+    "empty_sky",
+    "fail_reason",
+    "gaia_fingerprint",
+    "hand_csv",
+    "inputs",
+    "lock_rig",
+    "production_tolerances",
+    "sandbox",
+    "sandbox_params",
+    "sandbox_params_detail",
+    "setup",
+    "status",
+    "tol_drift_warn",
+    "validation",
+    "vsx_fingerprint"
+  ],
+  "_base_fw": 2.5,
+  "bfac": 2.0,
+  "_fwhm_used": 1.25,
+  "fail_threshold_px": 3.75,
+  "warn_threshold_px": 1.875,
+  "fail_threshold_arcsec": 2.1068417735749336,
+  "cone_n": 24571,
+  "g12_ids": [
+    "1112113680298377344",
+    "1111931371823539456",
+    "1112113066119992064",
+    "1111920204908702336",
+    "1112110695298081664",
+    "1112130898824233216",
+    "1112121862213003648",
+    "1111749157833870208",
+    "1111754659689117952",
+    "1112121067641532160",
+    "1111955148762490496"
+  ],
+  "n_g12": 11,
+  "gate_replay_ok": 0,
+  "gate_replay_warn": 8,
+  "gate_replay_fail": 353,
+  "gate_replay_no_gaia_coords": 0,
+  "n_would_lose_catalog_id": 353,
+  "dpx_p50": 60.454494799496565,
+  "dpx_p95": 144.40016350746046,
+  "n_retained_dao_log": 692,
+  "pipeline_match_rate_final_table": 0.5216763005780347,
+  "pipeline_match_rate_final_over_nrows": 0.5113314447592068,
+  "honest_match_rate_dpx_le_3fwhm": 0.011560693641618497,
+  "honest_n_pairs": 8,
+  "ghost_n_present": 8,
+  "ghost_n_fail": 8,
+  "ghost_n_lose_id": 8,
+  "g12_n_present": 11,
+  "g12_n_fail": 10,
+  "g12_n_lose_id": 10,
+  "ghost_vy_match_modes": [
+    "locked",
+    "locked",
+    "locked",
+    "locked",
+    "locked",
+    "locked",
+    "locked",
+    "locked"
+  ],
+  "p_a3_all_locked": true,
+  "ghost_sky_sep_arcsec": [
+    21.606263804766876,
+    31.1272062391595,
+    70.70273272951674,
+    79.29586699776252,
+    29.865199672612494,
+    15.026826479623036,
+    57.366920845870254,
+    21.64001766978529
+  ],
+  "p_a4_all_gt_3fwhm_scale_le_96": true,
+  "p_a4_n_gt_18": 7,
+  "last_logged_match_sep_arcsec": 18.0,
+  "n_name_looks_like_gaia_id": 361,
+  "n_name_gaia_and_catalog_id_set": 361
+}

@@ -1,0 +1,167 @@
+line,text
+432,18:44:20  WCS Refined: Mean residual error = 1.44 pixels
+1340,18:44:27  DAO na snimku: raw=715 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 719 bodov (binning DAO=2x).
+1342,"18:44:28  INFO  [pipeline]  Catalog match: zhoda 13% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+1343,18:44:29  post_match_identity_gate: ok=52 warn=9 fail=286 (FWHM=1.25px)
+1344,"18:44:30  WARNING  [pipeline]  [DAO] Match rate 8.8% below 88% threshold, consider lowering masterstar_dao_threshold_sigma in config.json"
+1345,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1346,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1347,18:44:30  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=269.38px > 10) - sirsi pixelovy matching.
+1348,18:44:30  INFO  [pipeline]  [DAO] Gaia->DAO completeness (raw): 61/24571 Gaia stars detected (0.2%) | catalog_only (undetected): 24510
+1351,18:44:32  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=89.8% (matched=61 missed=6 off_frame=40 below_limit=333 blended=0) G_lim_50=14.05 fit=fleming1995_erf
+1352,"18:44:32  MASTERSTAR: VYVAR pary (33) zlucene do katalogu (mirror=mirror_x, pre astrometry optimizer)."
+1353,18:44:32  [chart] MATCH STATS (raw): Found 692 stars on image | 61 matched with Gaia | Match Rate: 8.82% | Gaia->DAO: 0.25% (62/24571)
+1354,18:44:32  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 62/24571 (0.3%) | catalog_only: 24509
+1358,"18:44:32  Astrometry optimizer BBOX: DAO RA[108.143410,110.117650] Dec[73.113444,73.551497] | Gaia RA[108.115849,110.145775] Dec[73.085322,73.579908]"
+1359,"18:44:32  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=347/692"
+1360,18:44:32  Astrometry optimizer: model built from 96 central matched stars (no resid clip).
+1361,"18:44:32  Astrometry optimizer initial jump: median dx=36.68px dy=11.08px from 692 candidates (NN sky <=180"")."
+1362,"18:44:32  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+1364,"18:44:33  Astrometry optimizer Grip1: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1365,"18:44:33  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1367,"18:44:34  Astrometry optimizer Grip2: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1368,"18:44:34  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1369,18:44:34  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+1370,"18:44:34  Astrometry optimizer orientation test: corner unmatched=10 base@25""=30.0% mirror@25""=30.0%."
+1371,18:44:34  Astrometry optimizer pass3 debug: rematching edge detections with 517 available catalog stars.
+1372,18:44:34  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+1373,18:44:34  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+1375,"18:44:34  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+1376,18:44:34  Astrometry optimizer edge diagnostics: 296 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+1377,18:44:34  Astrometry optimizer diagnostics: 345 DAO-only stars below 50sigma (kept in CSV by design).
+1379,"18:44:34  Astrometry optimizer post-pass3: SIP3 n_pairs=347 (rms_lin=80.9965509733939, rms_sip=84.66452197305969)"
+1380,"18:44:34  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+1383,18:44:35  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\g_60_4\masterstars_full_match.csv (347/692 catalog-matched).
+1386,"18:44:35  Astrometry optimizer BBOX: DAO RA[108.115849,110.193735] Dec[73.106713,73.576643] | Gaia RA[108.090983,110.223287] Dec[73.079662,73.602679]"
+1387,"18:44:35  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=347/692"
+1388,18:44:35  Astrometry optimizer: model built from 96 central matched stars (no resid clip).
+1389,"18:44:35  Astrometry optimizer initial jump: median dx=37.85px dy=20.90px from 692 candidates (NN sky <=180"")."
+1390,"18:44:35  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+1392,"18:44:35  Astrometry optimizer Grip1: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1393,"18:44:35  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1395,"18:44:36  Astrometry optimizer Grip2: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1396,"18:44:36  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+1397,18:44:36  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+1398,"18:44:36  Astrometry optimizer orientation test: corner unmatched=10 base@25""=20.0% mirror@25""=20.0%."
+1399,18:44:36  Astrometry optimizer pass3 debug: rematching edge detections with 566 available catalog stars.
+1400,18:44:36  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+1401,18:44:36  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+1403,"18:44:36  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+1404,18:44:36  Astrometry optimizer edge diagnostics: 296 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+1405,18:44:36  Astrometry optimizer diagnostics: 345 DAO-only stars below 50sigma (kept in CSV by design).
+1407,"18:44:37  Astrometry optimizer post-pass3: SIP3 n_pairs=347 (rms_lin=81.26662454856069, rms_sip=85.12345645106583)"
+1408,"18:44:37  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+1411,18:44:37  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\g_60_4\masterstars_full_match.csv (347/692 catalog-matched).
+1443,18:45:35  [chart] MATCH STATS (optimized): Found 706 stars on image | 361 matched with Gaia | Match Rate: 51.13% | Gaia->DAO: 1.47% (361/24571)
+1444,18:45:35  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 361/24571 (1.5%) | catalog_only: 24210
+2013,18:52:01  WCS Refined: Mean residual error = 11.12 pixels
+2014,18:52:01  VYVAR: NN WCS refine zamietnuty (rms=11.12px > 7.5px) - ponechavam WCS pred NN (inak casto kolaps zhody s Gaia v MASTERSTAR kroku).
+2919,18:52:05  DAO na snimku: raw=988 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 991 bodov (binning DAO=2x).
+2920,"18:52:06  INFO  [pipeline]  Catalog match: zhoda 11% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+2921,18:52:08  post_match_identity_gate: ok=45 warn=16 fail=387 (FWHM=1.25px)
+2922,"18:52:08  WARNING  [pipeline]  [DAO] Match rate 6.2% below 88% threshold, consider lowering masterstar_dao_threshold_sigma in config.json"
+2923,18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching.
+2924,18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching.
+2925,18:52:08  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=287.03px > 10) - sirsi pixelovy matching.
+2926,18:52:08  INFO  [pipeline]  [DAO] Gaia->DAO completeness (raw): 61/24571 Gaia stars detected (0.2%) | catalog_only (undetected): 24510
+2929,18:52:10  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=91.4% (matched=61 missed=5 off_frame=39 below_limit=334 blended=0) G_lim_50=14.03 fit=fleming1995_erf
+2930,"18:52:10  MASTERSTAR: VYVAR pary (44) zlucene do katalogu (mirror=mirror_x, pre astrometry optimizer)."
+2931,18:52:10  [chart] MATCH STATS (raw): Found 991 stars on image | 61 matched with Gaia | Match Rate: 6.16% | Gaia->DAO: 0.25% (62/24571)
+2932,18:52:10  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 62/24571 (0.3%) | catalog_only: 24509
+2936,"18:52:11  Astrometry optimizer BBOX: DAO RA[108.143559,110.116965] Dec[73.113571,73.546231] | Gaia RA[108.115849,110.145775] Dec[73.085322,73.575316]"
+2937,"18:52:11  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=449/991"
+2938,18:52:11  Astrometry optimizer: model built from 149 central matched stars (no resid clip).
+2939,"18:52:11  Astrometry optimizer initial jump: median dx=75.78px dy=-88.88px from 991 candidates (NN sky <=180"")."
+2940,"18:52:11  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+2942,"18:52:12  Astrometry optimizer Grip1: SIP3 n_pairs=449 (rms_lin=65.3810518039035, rms_sip=70.60826083314848)"
+2943,"18:52:12  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+2945,"18:52:13  Astrometry optimizer Grip2: SIP3 n_pairs=449 (rms_lin=65.3810518039035, rms_sip=70.60826083314848)"
+2946,"18:52:13  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+2947,18:52:13  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+2948,"18:52:13  Astrometry optimizer orientation test: corner unmatched=10 base@25""=30.0% mirror@25""=20.0%."
+2949,18:52:13  Astrometry optimizer pass3 debug: rematching edge detections with 508 available catalog stars.
+2950,18:52:13  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+2951,18:52:13  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+2953,"18:52:13  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+2954,18:52:13  Astrometry optimizer edge diagnostics: 14 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+2955,18:52:13  Astrometry optimizer diagnostics: 542 DAO-only stars below 50sigma (kept in CSV by design).
+2957,"18:52:14  Astrometry optimizer post-pass3: SIP3 n_pairs=449 (rms_lin=65.3810518039035, rms_sip=70.60826083314848)"
+2958,"18:52:14  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+2961,18:52:14  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\i_70_4\masterstars_full_match.csv (449/991 catalog-matched).
+2964,"18:52:14  Astrometry optimizer BBOX: DAO RA[108.094934,110.193735] Dec[73.106713,73.572007] | Gaia RA[108.070697,110.223287] Dec[73.079662,73.599914]"
+2965,"18:52:14  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=449/991"
+2966,18:52:14  Astrometry optimizer: model built from 150 central matched stars (no resid clip).
+2967,"18:52:14  Astrometry optimizer initial jump: median dx=36.10px dy=-98.44px from 991 candidates (NN sky <=180"")."
+2968,"18:52:14  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+2970,"18:52:15  Astrometry optimizer Grip1: SIP3 n_pairs=449 (rms_lin=66.94435001687268, rms_sip=73.32165405494558)"
+2971,"18:52:15  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+2973,"18:52:16  Astrometry optimizer Grip2: SIP3 n_pairs=449 (rms_lin=66.94435001687268, rms_sip=73.32165405494558)"
+2974,"18:52:16  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+2975,18:52:16  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+2976,"18:52:16  Astrometry optimizer orientation test: corner unmatched=10 base@25""=30.0% mirror@25""=30.0%."
+2977,18:52:16  Astrometry optimizer pass3 debug: rematching edge detections with 568 available catalog stars.
+2978,18:52:17  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+2979,18:52:17  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+2981,"18:52:17  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+2982,18:52:17  Astrometry optimizer edge diagnostics: 14 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+2983,18:52:17  Astrometry optimizer diagnostics: 542 DAO-only stars below 50sigma (kept in CSV by design).
+2985,"18:52:17  Astrometry optimizer post-pass3: SIP3 n_pairs=449 (rms_lin=66.94435001687268, rms_sip=73.32165405494558)"
+2986,"18:52:18  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+2989,18:52:18  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\i_70_4\masterstars_full_match.csv (449/991 catalog-matched).
+3021,18:53:16  [chart] MATCH STATS (optimized): Found 991 stars on image | 449 matched with Gaia | Match Rate: 45.31% | Gaia->DAO: 1.82% (448/24571)
+3022,18:53:16  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 448/24571 (1.8%) | catalog_only: 24123
+3591,18:59:32  WCS Refined: Mean residual error = 4.48 pixels
+4499,18:59:36  DAO na snimku: raw=879 (po brightest-prefilter max 1200000) -> po priestorovom strope max_n=100000: 879 bodov (binning DAO=2x).
+4500,"18:59:37  INFO  [pipeline]  Catalog match: zhoda 16% < 70 %, opakovanie s max separaciou 18.00 arcsec (pozadovane 12.00 arcsec)"
+4501,18:59:38  post_match_identity_gate: ok=71 warn=34 fail=326 (FWHM=1.25px)
+4502,"18:59:38  WARNING  [pipeline]  [DAO] Match rate 11.9% below 88% threshold, consider lowering masterstar_dao_threshold_sigma in config.json"
+4503,18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching.
+4504,18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching.
+4505,18:59:38  INFO  [pipeline]  Catalog match: WCS refine zamietnuty (rms=277.17px > 10) - sirsi pixelovy matching.
+4506,18:59:38  INFO  [pipeline]  [DAO] Gaia->DAO completeness (raw): 105/24572 Gaia stars detected (0.4%) | catalog_only (undetected): 24467
+4509,18:59:41  INFO  [pipeline]  [DAO] Gaia->DAO reconcile: completeness_50=94.4% (matched=105 missed=6 off_frame=38 below_limit=289 blended=0) G_lim_50=14.90 fit=fleming1995_erf
+4510,"18:59:41  MASTERSTAR: VYVAR pary (37) zlucene do katalogu (mirror=mirror_x, pre astrometry optimizer)."
+4511,18:59:41  [chart] MATCH STATS (raw): Found 879 stars on image | 105 matched with Gaia | Match Rate: 11.95% | Gaia->DAO: 0.44% (107/24572)
+4512,18:59:41  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 107/24572 (0.4%) | catalog_only: 24465
+4516,"18:59:41  Astrometry optimizer BBOX: DAO RA[108.143821,110.093112] Dec[73.113625,73.545869] | Gaia RA[108.115849,110.123002] Dec[73.085322,73.575316]"
+4517,"18:59:41  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=431/879"
+4518,18:59:41  Astrometry optimizer: model built from 146 central matched stars (no resid clip).
+4519,"18:59:41  Astrometry optimizer initial jump: median dx=16.74px dy=-47.93px from 879 candidates (NN sky <=180"")."
+4520,"18:59:41  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+4522,"18:59:42  Astrometry optimizer Grip1: SIP3 n_pairs=431 (rms_lin=64.4221436785597, rms_sip=68.48650783379017)"
+4523,"18:59:42  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+4525,"18:59:43  Astrometry optimizer Grip2: SIP3 n_pairs=431 (rms_lin=64.4221436785597, rms_sip=68.48650783379017)"
+4526,"18:59:43  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+4527,18:59:43  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+4528,"18:59:43  Astrometry optimizer orientation test: corner unmatched=10 base@25""=40.0% mirror@25""=40.0%."
+4529,18:59:43  Astrometry optimizer pass3 debug: rematching edge detections with 504 available catalog stars.
+4530,18:59:43  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+4531,18:59:43  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+4533,"18:59:43  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+4534,18:59:43  Astrometry optimizer edge diagnostics: 9 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+4535,18:59:43  Astrometry optimizer diagnostics: 448 DAO-only stars below 50sigma (kept in CSV by design).
+4537,"18:59:43  Astrometry optimizer post-pass3: SIP3 n_pairs=431 (rms_lin=64.4221436785597, rms_sip=68.48650783379017)"
+4538,"18:59:43  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+4541,18:59:44  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\r_60_4\masterstars_full_match.csv (431/879 catalog-matched).
+4544,"18:59:44  Astrometry optimizer BBOX: DAO RA[108.096047,110.122437] Dec[73.106713,73.563193] | Gaia RA[108.070697,110.150147] Dec[73.079662,73.590622]"
+4545,"18:59:44  Astrometry optimizer input columns: id_col=catalog_id, sep_col=NONE, matched_nonempty=431/879"
+4546,18:59:44  Astrometry optimizer: model built from 146 central matched stars (no resid clip).
+4547,"18:59:44  Astrometry optimizer initial jump: median dx=16.53px dy=-53.64px from 879 candidates (NN sky <=180"")."
+4548,"18:59:44  Astrometry optimizer: adaptive rematch radius enabled (center=5.0"", edge>800px => 10-15"")."
+4550,"18:59:45  Astrometry optimizer Grip1: SIP3 n_pairs=431 (rms_lin=64.82687690958483, rms_sip=69.3032000127125)"
+4551,"18:59:45  Astrometry optimizer Grip 1/5: center_r=5.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+4553,"18:59:45  Astrometry optimizer Grip2: SIP3 n_pairs=431 (rms_lin=64.82687690958483, rms_sip=69.3032000127125)"
+4554,"18:59:45  Astrometry optimizer Grip 2/5: center_r=4.00"" passA=+0 passB=+0 bright_anchors=+0 (displacement+SIP)."
+4555,18:59:45  Astrometry optimizer: predcasny koniec Grip (2x po sebe 0 novych zhod) - setrim cas.
+4556,"18:59:45  Astrometry optimizer orientation test: corner unmatched=10 base@25""=30.0% mirror@25""=10.0%."
+4557,18:59:45  Astrometry optimizer pass3 debug: rematching edge detections with 546 available catalog stars.
+4558,18:59:46  Astrometry optimizer pass3 iteration 1/2: +0 matches.
+4559,18:59:46  Astrometry optimizer pass3 iteration 2/2: +0 matches.
+4561,"18:59:46  Astrometry optimizer re-match: Grip(passA+passB+bright) totals +0/+0/+0, pass3(edge@25/60"") +0."
+4562,18:59:46  Astrometry optimizer edge diagnostics: 9 stars outside 10px safe area (kept for DAO-only/discovery analysis).
+4563,18:59:46  Astrometry optimizer diagnostics: 448 DAO-only stars below 50sigma (kept in CSV by design).
+4565,"18:59:46  Astrometry optimizer post-pass3: SIP3 n_pairs=431 (rms_lin=64.82687690958483, rms_sip=69.3032000127125)"
+4566,"18:59:46  Astrometry optimizer pass4 full-field@30"": +0 matches after SIP refit."
+4569,18:59:46  Astrometry optimizer: wrote C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000520\platesolve\r_60_4\masterstars_full_match.csv (431/879 catalog-matched).
+4600,19:00:41  [chart] MATCH STATS (optimized): Found 879 stars on image | 431 matched with Gaia | Match Rate: 49.03% | Gaia->DAO: 1.75% (431/24572)
+4601,19:00:41  INFO  [pipeline]  [MASTERSTAR] Gaia->DAO completeness: 431/24572 (1.8%) | catalog_only: 24141

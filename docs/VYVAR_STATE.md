@@ -1,6 +1,9 @@
 # VYVAR -- Development State
 
-**Status:** **REG-520-01 STOP** (2026-08-24, measure): June 0.06 vs today
+**Status:** **SEL-GHOST-01 A measured** (2026-08-25): H-MATCH-WIDEN
+stopped (P-A5 false on final WCS; IDs restored from `name` after a
+working gate; refine rematch did not run). **REG-520-01 STOP**
+(2026-08-24, measure): June 0.06 vs today
 0.39 on the same non-cal button is S2 selection (rms ceiling 0.1 +
 59-px false locks), not S1 pairing starvation and not H-CAL-MISCLASS.
 CAL-520-01 library facts remain; causal story superseded.
@@ -31,7 +34,11 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-24** (REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-25** (SEL-GHOST-01 A measured; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-25 -- SEL-GHOST-01 A measured: H-MATCH-WIDEN stopped (P-A5 false; name-export restore; no refine rematch)
+
+Evidence: `CURSOR_RESULT_SEL_GHOST_01_A.md`. Architect writes Part B.
 
 ## 2026-08-24 -- REG-520-01 (measure, STOP)
 
