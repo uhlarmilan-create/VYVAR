@@ -29,6 +29,8 @@ SOURCE_TOO_FAINT = "TOO_FAINT"
 SOURCE_SATURATED = "SATURATED"
 SOURCE_EDGE = "EDGE"
 SOURCE_SEED_REJECTED = "SEED_REJECTED"
+SOURCE_CATALOG_ONLY = "CATALOG_ONLY"
+SOURCE_CATALOG_MEMBERSHIP = "catalog_membership"
 
 ALL_SOURCE_STATES = frozenset(
     {
@@ -40,6 +42,22 @@ ALL_SOURCE_STATES = frozenset(
         SOURCE_SATURATED,
         SOURCE_EDGE,
         SOURCE_SEED_REJECTED,
+        SOURCE_CATALOG_ONLY,
+        SOURCE_CATALOG_MEMBERSHIP,
+    }
+)
+
+# Census states that may label a non-detection row (INV-SOURCE-STATE-01).
+_NONDET_CENSUS_STATES = frozenset(
+    {
+        SOURCE_FORCED_SEED,
+        SOURCE_SEED_REJECTED,
+        SOURCE_CATALOG_MEMBERSHIP,
+        SOURCE_CATALOG_ONLY,
+        SOURCE_TOO_FAINT,
+        SOURCE_SATURATED,
+        SOURCE_EDGE,
+        SOURCE_BLENDED,
     }
 )
 
@@ -517,6 +535,27 @@ def forced_seed_accept(
     if not math.isfinite(snr) or snr < float(p.snr_min):
         return False, "snr_low"
     return True, "ok"
+
+
+def _row_is_dao_detected(peak_dao: object, vy_dao_pass: object) -> tuple[bool, int]:
+    """INV-SOURCE-STATE-01: DETECTED_Pn requires this row's own pass and peak.
+
+    Column presence is not a detection. ``vy_dao_pass`` fillna(1) is forbidden here.
+    Returns (is_detected, pass_number) with pass_number in {1, 2} when detected.
+    """
+    try:
+        peak = float(peak_dao)
+    except (TypeError, ValueError):
+        peak = float("nan")
+    if not math.isfinite(peak) or peak <= 0.0:
+        return False, 0
+    try:
+        vp = int(float(vy_dao_pass))
+    except (TypeError, ValueError):
+        return False, 0
+    if vp not in (1, 2):
+        return False, 0
+    return True, vp
 
 
 def _norm_cid(v: object) -> str:
@@ -1085,7 +1124,11 @@ def enrich_masterstar_gaia_complete(
         out["vy_match_mode"] = ""
     for i in range(n_d):
         if vy_modes[i]:
-            out.loc[out.index[i], "vy_match_mode"] = str(vy_modes[i])
+            idx = out.index[i]
+            cur = str(out.loc[idx, "vy_match_mode"] or "").strip()
+            # Expand rows stay catalog_membership; lock must not relabel them (INV-SOURCE-STATE-01).
+            if cur != "catalog_membership":
+                out.loc[idx, "vy_match_mode"] = str(vy_modes[i])
         gr = int(det_to_g[i])
         if (not identity_lock_only) and gr >= 0 and gr < n_g:
             cid = _norm_cid(gdf.iloc[gr].get("catalog_id"))
@@ -1231,24 +1274,33 @@ def enrich_masterstar_gaia_complete(
             _fp_ok = str(_fp_raw).strip().lower() in {"true", "1", "yes"}
         if _fp_ok:
             out.loc[out.index[i], "source_state"] = SOURCE_FORCED_SEED
-        elif cid:
-            st = out.loc[out.index[i], "source_state"] if "source_state" in out.columns else ""
-            if str(st).strip():
-                continue
-            if catalog_derived_membership and cid in census_st:
-                out.loc[out.index[i], "source_state"] = census_st[cid]
-                continue
-            _pd = float(peak_dao.iloc[i]) if i < len(peak_dao) and math.isfinite(float(peak_dao.iloc[i])) else 0.0
-            _has_det = _pd > 0.0 or "vy_dao_pass" in out.columns
-            if _has_det:
-                vp = int(det_pass[i]) if i < len(det_pass) else 1
-                out.loc[out.index[i], "source_state"] = (
-                    SOURCE_DETECTED_P2 if vp == 2 else SOURCE_DETECTED_P1
-                )
-            elif cid in census_st:
-                out.loc[out.index[i], "source_state"] = census_st[cid]
-        else:
+            continue
+        if not cid:
             out.loc[out.index[i], "source_state"] = "DAO_ONLY"
+            continue
+        st = out.loc[out.index[i], "source_state"] if "source_state" in out.columns else ""
+        if str(st).strip() in (SOURCE_DETECTED_P1, SOURCE_DETECTED_P2):
+            # Pre-set DETECTED_* is only kept when this row itself is a DAO detection.
+            pass
+        elif str(st).strip():
+            continue
+        peak_v = peak_dao.iloc[i] if i < len(peak_dao) else float("nan")
+        vp_raw = out.loc[out.index[i], "vy_dao_pass"] if "vy_dao_pass" in out.columns else float("nan")
+        is_det, vp = _row_is_dao_detected(peak_v, vp_raw)
+        if is_det:
+            out.loc[out.index[i], "source_state"] = (
+                SOURCE_DETECTED_P2 if vp == 2 else SOURCE_DETECTED_P1
+            )
+            continue
+        mode = str(out.loc[out.index[i], "vy_match_mode"] or "").strip() if "vy_match_mode" in out.columns else ""
+        if mode == "catalog_membership":
+            out.loc[out.index[i], "source_state"] = SOURCE_CATALOG_MEMBERSHIP
+            continue
+        cst = str(census_st.get(cid, "") or "").strip()
+        if cst in _NONDET_CENSUS_STATES:
+            out.loc[out.index[i], "source_state"] = cst
+        else:
+            out.loc[out.index[i], "source_state"] = SOURCE_CATALOG_ONLY
 
     meta["n_on_chip_gaia"] = n_g
     meta["census_by_state"] = (

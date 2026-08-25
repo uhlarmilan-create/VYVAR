@@ -16,6 +16,7 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | INV-WCS-00 | WCS invertibility / round-trip gate (F-428). | already enforced (F-428) | FAIL | Reference only; not re-wired in P2. |
 | INV-WCS-01 **[wired]** | MASTERSTAR matched world?pix identity p95 ? 2.0 px (band around 1.54 px draft_435 baseline). | both | WARN | `evaluate_matched_world2pix_identity_px`; meta key `matched_world2pix_identity_p95_px`. |
 | INV-MATCH-IDENTITY-01 **[wired]** | One identity, one gate: post-match fail clears `catalog_id`, `name` (`DET_%04d` fallback), and every Gaia-derived match column; export must not copy `name` onto empty `catalog_id`; optimizer entry nonempty `catalog_id` must be <= 1.10 x gate-out count (else FAIL). `vy_identity_gate` and `gaia_dao_resid_px` persist on `masterstars_full_match.csv`. Born-owned lock honours `lock_tol_px` vs Gaia xy. | both | FAIL | SEL-GHOST-01 F2-F4; `assert_inv_match_identity_01`; `apply_post_match_identity_gate_df`; `catalog_id_series_for_masterstars_export`. |
+| INV-SOURCE-STATE-01 **[wired]** | `source_state=DETECTED_Pn` only when that row's own `vy_dao_pass` is 1 or 2 AND `peak_dao` > 0. Column presence is not a detection. Catalog-membership expand rows keep `vy_match_mode=catalog_membership` (lock must not relabel them `locked`). | `dev/tests/test_inv_source_state_01.py` | FAIL | SEL-GHOST-01 B-STOP-1b H-LABEL; `enrich_masterstar_gaia_complete`. |
 | INV-DAG-01 **[wired]** | Stage ordering: each stage stamps `pipeline_meta.stages` with `(name, seq, head_inputs_present)`; a stage refuses to run if its declared upstream stamp is missing (cold-start mid-pipeline entry allowed when `stages` empty). DAG: calibrate ? preprocess ? align ? masterstar ? perframe ? phase01 ? phase2a ? postprocess. | both | FAIL | `stamp_pipeline_stage` / `stamp_stage_on_disk`. |
 | INV-RNG-01 **[wired]** | Determinism: science path has no naked global-RNG calls (`np.random.<fn>(` without a `Generator` seeded via `SeedSequence`). Seeds/policy recorded in provenance (`labbe_rng_seed_policy`). | test (AST/grep over `src_py`) + schema | FAIL (test/schema) | LABBE-DET pattern; allowlist empty on 2026-07-19 tree. |
 | INV-PROV-01 **[wired]** | Provenance schema: `pipeline_meta.json` validates a minimal schema (`prov_schema_version`, provenance keys incl. `labbe_rng_seed_policy`, sky_surface stats when applied, `cog_night_fallback` iff COG enabled, `invariants` block, census keys when masterstar stamped). | runtime (end-of-run) | FAIL | `validate_provenance_schema`. |
@@ -105,6 +106,21 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 - **Trigger:** `assert_inv_match_identity_01` at optimizer entry; identity gate
   inside every `_run_full_match_pass` and after platesolve-pair merge.
 - **Test:** `dev/tests/test_inv_match_identity_01.py`.
+
+### INV-SOURCE-STATE-01 (SEL-GHOST-01 B-STOP-1b)
+
+- **Definition:** A MASTERSTAR row is `DETECTED_P1` / `DETECTED_P2` only when
+  that row's own `vy_dao_pass` is 1 or 2 and `peak_dao` > 0. The presence of
+  the `vy_dao_pass` column (after any pass2 ran) is not a detection.
+  Rows born from `expand_detection_to_catalog_membership` keep
+  `vy_match_mode=catalog_membership`; the lock pass must not overwrite that
+  to `locked`. Non-detections take the census state when it is
+  FORCED_SEED / SEED_REJECTED / catalog_membership / CATALOG_ONLY (etc.),
+  otherwise `CATALOG_ONLY`.
+- **Rationale:** B-STOP-1 P-B2/P-B4: catalog injects at Gaia xy (`d_px=0`,
+  empty identity gate) were labelled `DETECTED_P1` / `locked` because
+  `_has_det = peak_dao > 0 or "vy_dao_pass" in out.columns`.
+- **Test:** `dev/tests/test_inv_source_state_01.py`.
 
 ### Anchor `--full` stage coverage (INV-ANCHOR-00 detail)
 
