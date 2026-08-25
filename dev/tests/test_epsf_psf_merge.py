@@ -187,3 +187,45 @@ def test_fill_psf_skips_moffat_when_psf_merge_only(monkeypatch: pytest.MonkeyPat
     }
     pipeline._fill_psf_catalog_columns(df, data, hdr, st)
     assert called["moffat"] is False
+
+
+def test_stamp_p4_none_inverts_ac_and_keeps_aperture(tmp_path: Path) -> None:
+    from epsf_psf_merge import stamp_p4_none_on_dataframe, stamp_p4_none_sidecar
+
+    sidecar = tmp_path / "proc_Light_001.csv"
+    pd.DataFrame(
+        {
+            "catalog_id": ["1"],
+            "dao_flux": [12345.6],
+            "psf_flux": [50.0],
+            "psf_flux_err": [1.0],
+            "psf_ac_factor": [0.5],
+            "psf_ac_applied": [True],
+            "psf_ac_n_used": [12],
+        }
+    ).to_csv(sidecar, index=False)
+    rec = stamp_p4_none_sidecar(sidecar)
+    assert rec["status"] == "ok"
+    out = pd.read_csv(sidecar, dtype={"catalog_id": str})
+    assert float(out.loc[0, "dao_flux"]) == pytest.approx(12345.6)
+    assert float(out.loc[0, "psf_flux"]) == pytest.approx(100.0)
+    assert float(out.loc[0, "psf_flux_err"]) == pytest.approx(2.0)
+    assert float(out.loc[0, "psf_ac_factor"]) == pytest.approx(1.0)
+    assert str(out.loc[0, "psf_ac_policy"]) == "p4_none"
+    before = pd.DataFrame({"catalog_id": ["1"], "dao_flux": [10.0], "psf_flux": [1.0]})
+    after = stamp_p4_none_on_dataframe(before)
+    assert_inv_psf_additive_01(before, after, frame_name="t.csv")
+
+
+def test_resolve_psf_ac_policy_and_legacy_ac_formula() -> None:
+    from psf_photometry import _compute_aperture_correction, resolve_psf_ac_policy
+
+    assert resolve_psf_ac_policy(None) == "p4_none"
+    assert resolve_psf_ac_policy("p4_none", apply_aperture_correction=True) == "p4_none"
+    assert resolve_psf_ac_policy(None, apply_aperture_correction=True) == "chi2_lt5_legacy"
+    psf = np.array([10.0, 20.0, 30.0, 40.0, 50.0, 60.0])
+    ref = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 120.0])
+    chi2 = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    fac, n_used = _compute_aperture_correction(psf, ref, chi2, chi2_limit=5.0, min_ref_stars=5)
+    assert n_used == 6
+    assert fac == pytest.approx(2.0)

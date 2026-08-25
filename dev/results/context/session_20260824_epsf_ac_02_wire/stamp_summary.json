@@ -1,0 +1,544 @@
+{
+  "written": 134,
+  "frames_total": 134,
+  "policy": "p4_none",
+  "merge_meta": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\epsf_ac_merge_meta.json",
+  "frames": [
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_001.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_003.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_004.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_005.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_006.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_008.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_010.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_011.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_012.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_013.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_014.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_015.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_016.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_017.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_018.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_019.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_020.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_021.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_022.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_023.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_024.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_025.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_026.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_027.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_028.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_029.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_030.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_031.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_032.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_033.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_034.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_035.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_036.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_037.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_038.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_039.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_040.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_041.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_042.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_043.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_044.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_045.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_046.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_047.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_048.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_050.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_051.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_052.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_053.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_054.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_055.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_057.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_059.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_060.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_061.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_062.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_063.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_064.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_065.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_067.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_068.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_069.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_070.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_071.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_072.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_073.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_075.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_076.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_077.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_078.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_079.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_080.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_081.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_082.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_083.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_084.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_085.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_086.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_087.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_088.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_089.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_090.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_091.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_092.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_093.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_094.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_095.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_096.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_097.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_098.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_099.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_100.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_101.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_102.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_103.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_104.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_105.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_106.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_107.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_108.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_109.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_110.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_112.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_113.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_114.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_115.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_116.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_117.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_118.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_119.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_120.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_121.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_123.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_124.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_125.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_126.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_127.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_128.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_129.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_130.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_132.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_133.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_134.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_135.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_136.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_137.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_138.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_139.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_140.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_143.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_144.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_145.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_146.csv",
+      "status": "ok"
+    },
+    {
+      "csv": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\detrended_aligned\\lights\\NoFilter_60_2\\proc_BO_CVn_Light_148.csv",
+      "status": "ok"
+    }
+  ]
+}

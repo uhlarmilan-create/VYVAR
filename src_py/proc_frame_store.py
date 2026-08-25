@@ -90,6 +90,7 @@ PROC_STORE_COLS = [
     "psf_ac_factor",
     "psf_ac_n_used",
     "psf_ac_applied",
+    "psf_ac_policy",
     # G2-F002b trust (per-frame proc CSV; Phase 2A frame_time_lookup)
     "catalog_match_mode",
     # wcs_untrusted is NOT stored here - derived in Phase 2A LC export from

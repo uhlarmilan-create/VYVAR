@@ -28,6 +28,7 @@ INTERNAL_BANNER = "# INTERNAL DIAGNOSTIC PRODUCT - NOT FOR AAVSO/VARASTRO SUBMIS
 TRUST_NOTE_LINE1 = "# PSF absolute scale untrusted pending EPSF-SHAPE-01;"
 TRUST_NOTE_LINE2 = "# relative photometry only"
 PRODUCT_NAME = "internal_psf_diagnostic"
+INV_PSF_LC_PIN_01 = "INV-PSF-LC-PIN-01"
 
 # Substrings that T1 / header audits must find (every provenance line).
 REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
@@ -41,6 +42,7 @@ REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
     "epsf_cutout_size=",
     "psf_weight_mode=",
     "psf_err_mode=",
+    "psf_ac_policy=",
     "gain_authority=",
     "ensemble_n_comp=",
     "ensemble_pinned_ids=",
@@ -48,6 +50,9 @@ REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
     "git_dirty=",
     TRUST_NOTE_LINE1,
     TRUST_NOTE_LINE2,
+    "psf_lc_n_epochs_full=",
+    "psf_lc_n_epochs_dropped_pin=",
+    "psf_ap_level_offset_mag=",
 )
 
 _PROC_USECOLS = (
@@ -64,6 +69,7 @@ _PROC_USECOLS = (
     "n_group",
     "psf_weight_mode",
     "psf_err_mode",
+    "psf_ac_policy",
     "flux",
     "dao_flux",
 )
@@ -219,6 +225,7 @@ def build_provenance_header(
     epsf_meta: dict[str, Any],
     psf_weight_mode: str,
     psf_err_mode: str,
+    psf_ac_policy: str,
     gain_value: float,
     gain_source: str,
     n_comp: int,
@@ -226,6 +233,9 @@ def build_provenance_header(
     ensemble_source: str,
     git_hash: str,
     git_dirty: str,
+    n_epochs_full: int = 0,
+    n_epochs_dropped_pin: int = 0,
+    psf_ap_level_offset_mag: float = float("nan"),
 ) -> list[str]:
     gtxt = f"{gain_value:.6g}" if math.isfinite(float(gain_value)) else "nan"
     ids = ",".join(str(c) for c in pinned_ids)
@@ -240,6 +250,7 @@ def build_provenance_header(
         f"# epsf_cutout_size={epsf_meta.get('cutout_size')}",
         f"# psf_weight_mode={psf_weight_mode}",
         f"# psf_err_mode={psf_err_mode}",
+        f"# psf_ac_policy={psf_ac_policy}",
         f"# gain_authority=g_pt={gtxt} source={gain_source}",
         f"# ensemble_n_comp={int(n_comp)}",
         f"# ensemble_pinned_ids={ids}",
@@ -249,6 +260,11 @@ def build_provenance_header(
         TRUST_NOTE_LINE1,
         TRUST_NOTE_LINE2,
         f"# product={PRODUCT_NAME}",
+        f"# psf_lc_n_epochs_full={int(n_epochs_full)}",
+        f"# psf_lc_n_epochs_dropped_pin={int(n_epochs_dropped_pin)}",
+        f"# psf_ap_level_offset_mag={psf_ap_level_offset_mag:.6g}"
+        if math.isfinite(float(psf_ap_level_offset_mag))
+        else "# psf_ap_level_offset_mag=nan",
     ]
     return lines
 
@@ -302,6 +318,7 @@ def _star_frame_table(stack: pd.DataFrame, cid: str, epoch_keys: Sequence[str]) 
                     "aperture_flux": np.nan,
                     "psf_weight_mode": "",
                     "psf_err_mode": "",
+                    "psf_ac_policy": "",
                 }
             )
             continue
@@ -320,6 +337,7 @@ def _star_frame_table(stack: pd.DataFrame, cid: str, epoch_keys: Sequence[str]) 
                 "aperture_flux": flux,
                 "psf_weight_mode": str(rec.get("psf_weight_mode") or ""),
                 "psf_err_mode": str(rec.get("psf_err_mode") or ""),
+                "psf_ac_policy": str(rec.get("psf_ac_policy") or ""),
             }
         )
     return pd.DataFrame(rows)
@@ -391,6 +409,34 @@ def write_one_internal_psf_lc(
     )
     _ = _mag_calib
 
+    # INV-PSF-LC-PIN-01: full pinned ensemble membership or NaN. No partial ZP.
+    drop_reason = [""] * n
+    psf_delta = np.asarray(psf_delta, dtype=np.float64)
+    for i in range(n):
+        missing: list[str] = []
+        for cid in comp_ids:
+            mag_i = float(comp_mag[cid][i]) if i < len(comp_mag[cid]) else float("nan")
+            if not math.isfinite(mag_i):
+                missing.append(cid)
+        if missing:
+            psf_delta[i] = float("nan")
+            drop_reason[i] = f"comp_psf_fail:{missing[0]}"
+
+    n_dropped_pin = int(sum(1 for r in drop_reason if r))
+    n_full = int(n - n_dropped_pin)
+    ap_delta = pd.to_numeric(ap.get("delta_mag"), errors="coerce").to_numpy(dtype=np.float64)
+    if len(ap_delta) != n:
+        ap_delta = np.full(n, np.nan)
+    level_vals = []
+    for i in range(n):
+        if drop_reason[i]:
+            continue
+        pdlt = float(psf_delta[i])
+        adlt = float(ap_delta[i])
+        if math.isfinite(pdlt) and math.isfinite(adlt):
+            level_vals.append(pdlt - adlt)
+    level_off = float(np.median(level_vals)) if level_vals else float("nan")
+
     pfe = tgt["psf_flux_err"].to_numpy(dtype=np.float64)
     err_rel = np.full(n, np.nan, dtype=np.float64)
     good_err = usable & np.isfinite(pfe) & (pfe > 0)
@@ -399,6 +445,8 @@ def write_one_internal_psf_lc(
     sc = np.asarray(ensemble_scatter, dtype=np.float64)
     for i in range(n):
         if not usable[i] or not math.isfinite(float(err_rel[i])):
+            continue
+        if drop_reason[i]:
             continue
         sem = float(sc[i]) if i < len(sc) and math.isfinite(float(sc[i])) else 0.0
         psf_delta_err[i] = combine_production_err_mag(float(err_rel[i]), sem)
@@ -417,17 +465,32 @@ def write_one_internal_psf_lc(
 
     weight_mode = ""
     err_mode = ""
-    for col, default in (("psf_weight_mode", "full_ccd"), ("psf_err_mode", "sandwich_full_ccd")):
-        vals = [str(v).strip() for v in tgt[col].tolist() if str(v).strip()]
+    ac_policy = ""
+    for col, default in (
+        ("psf_weight_mode", "full_ccd"),
+        ("psf_err_mode", "sandwich_full_ccd"),
+        ("psf_ac_policy", "p4_none"),
+    ):
+        vals = [str(v).strip() for v in tgt[col].tolist() if str(v).strip()] if col in tgt.columns else []
         if col == "psf_weight_mode":
             weight_mode = vals[0] if vals else default
-        else:
+        elif col == "psf_err_mode":
             err_mode = vals[0] if vals else default
+        else:
+            ac_policy = vals[0] if vals else default
+    if not ac_policy:
+        try:
+            from config import AppConfig as _AppConfig
+
+            ac_policy = str(getattr(_AppConfig(), "psf_ac_policy", "p4_none") or "p4_none")
+        except Exception:  # noqa: BLE001
+            ac_policy = "p4_none"
 
     header = build_provenance_header(
         epsf_meta=epsf_meta,
         psf_weight_mode=weight_mode,
         psf_err_mode=err_mode,
+        psf_ac_policy=ac_policy,
         gain_value=gain_value,
         gain_source=gain_source,
         n_comp=len(comp_ids),
@@ -435,6 +498,9 @@ def write_one_internal_psf_lc(
         ensemble_source=ens_source,
         git_hash=git_hash,
         git_dirty=git_dirty,
+        n_epochs_full=n_full,
+        n_epochs_dropped_pin=n_dropped_pin,
+        psf_ap_level_offset_mag=level_off,
     )
 
     def _num(arr: np.ndarray, nd: int) -> list[Any]:
@@ -466,6 +532,7 @@ def write_one_internal_psf_lc(
             "delta_mag": _num(ap_delta, 6),
             "err": _num(ap_err, 6),
             "psf_ap_ratio": _num(ratio, 6),
+            "psf_epoch_drop_reason": drop_reason,
             "product": [PRODUCT_NAME] * n,
         }
     )

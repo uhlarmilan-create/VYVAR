@@ -648,6 +648,10 @@ class AppConfig:
     psf_spatial_order: int = 0
     #: Reduced chi^2 cutoff for PSF fit acceptance (``psf_fit_ok``).
     psf_chi2_threshold: float = 50.0
+    #: F6 ePSF aperture-correction policy (EPSF-AC-02). ``p4_none`` stamps
+    #: uncorrected fit flux (``psf_ac_factor=1``). ``chi2_lt5_legacy`` is the
+    #: named fallback: median DAO/PSF among chi2<5 stars (EPSF-AC-01 A2 defect).
+    psf_ac_policy: str = "p4_none"
     #: PSF crowded-field joint-fit (SourceGrouper). Default OFF -> production unchanged.
     #: When enabled, each PSF target is fit jointly with its close neighbours so a
     #: bright neighbour does not corrupt a faint blended target.
@@ -1637,6 +1641,8 @@ class AppConfig:
             self.psf_chi2_threshold = _pct if math.isfinite(_pct) and _pct > 0 else 50.0
         except (TypeError, ValueError):
             self.psf_chi2_threshold = 50.0
+        _acp = str(data.get("psf_ac_policy", self.psf_ac_policy) or "p4_none").strip().lower()
+        self.psf_ac_policy = _acp if _acp in ("p4_none", "chi2_lt5_legacy") else "p4_none"
         self.psf_grouper_enabled = bool(data.get("psf_grouper_enabled", self.psf_grouper_enabled))
         try:
             _gsf = float(data.get("psf_group_sep_fwhm", self.psf_group_sep_fwhm))
@@ -2723,6 +2729,7 @@ class AppConfig:
             "psf_photometry_enabled": bool(self.psf_photometry_enabled),
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
+            "psf_ac_policy": str(self.psf_ac_policy),
             "psf_grouper_enabled": bool(self.psf_grouper_enabled),
             "psf_group_sep_fwhm": float(self.psf_group_sep_fwhm),
             "psf_neighbor_include_fwhm": float(self.psf_neighbor_include_fwhm),

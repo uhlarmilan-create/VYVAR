@@ -44,6 +44,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-PSF-FRAME-01",
         "INV-PSF-ADDITIVE-01",
         "INV-PSF-SUBMIT-01",
+        "INV-PSF-LC-PIN-01",
         "INV-EPSF-BUILD-GUARD-01",
         "INV-RNG-01",
         "INV-PROV-01",

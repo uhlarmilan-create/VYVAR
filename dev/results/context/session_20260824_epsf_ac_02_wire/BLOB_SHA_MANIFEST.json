@@ -1,0 +1,20 @@
+{
+  "copied_text": [
+    "bo_cvn_residuals.csv",
+    "bo_meters.json",
+    "expected_changed_diff_keys.json",
+    "fw_cvn_residuals.csv",
+    "fw_meters.json",
+    "g4_epsf_sha.txt",
+    "hashes_expected_changed_after.json",
+    "hashes_expected_changed_before.json",
+    "hashes_must_not_change_after.json",
+    "hashes_must_not_change_before.json",
+    "lc_regen.json",
+    "per_target_pin_counts.csv",
+    "pin_diagnostics.json",
+    "stamp_summary.json",
+    "summary.json"
+  ],
+  "blobs_not_copied": {}
+}

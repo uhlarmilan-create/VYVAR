@@ -3919,6 +3919,21 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "psf_ac_policy": {
+    "help": "F6 ePSF aperture-correction policy. p4_none stamps uncorrected fit flux (psf_ac_factor=1). chi2_lt5_legacy is the named fallback: median DAO/PSF among chi2<5 stars (EPSF-AC-01 A2 brightness-cut defect). Absolute PSF scale, when wanted, belongs to a DAOGROW/DOLPHOT-style growth-curve path, not this gate.",
+    "kind": "static",
+    "label": "PSF AC Policy",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "psf_group_sep_fwhm": {
     "help": "Separation (FWHM) within which stars are fitted together as a PSF group.",
     "kind": "static",

@@ -1,0 +1,37 @@
+{
+  "bo_cvn": {
+    "catalog_id": "1498613634033133184",
+    "n_epochs": 134,
+    "n_full": 23,
+    "n_dropped_pin": 111,
+    "coverage": 0.17164179104477612,
+    "level_offset_mmag": 40.464,
+    "level_offset_sign": "positive (psf_delta_mag - aperture delta_mag)",
+    "rms_mmag": 38.770,
+    "demeaned_rms_mmag": 9.912,
+    "rms_vs_abs_median": true,
+    "a3_baseline_rms_mmag": 614.270,
+    "drop_reasons": {
+      "comp_psf_fail:1499200223486564608": 95,
+      "comp_psf_fail:1497771992240531712": 16
+    },
+    "frame_004": {
+      "psf_delta_mag": null,
+      "aperture_delta_mag": 0.8655,
+      "reason": "comp_psf_fail:1499200223486564608"
+    }
+  },
+  "fw_cvn": {
+    "catalog_id": "1497343732462852864",
+    "n_epochs": 134,
+    "n_full": 0,
+    "n_dropped_pin": 134,
+    "coverage": 0.0,
+    "level_offset_mmag": null,
+    "rms_mmag": null,
+    "drop_reasons": {
+      "comp_psf_fail:1497442379271632384": 130,
+      "comp_psf_fail:1499906247391001088": 4
+    }
+  }
+}

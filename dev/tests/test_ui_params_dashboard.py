@@ -83,8 +83,9 @@ def test_owner_groups_partition_every_key() -> None:
     # IMPL-01: +3 keys (color_level_k, stderr, snr_cog_isolation) (253 -> 256).
     # IMPL-03: +4 aperture scatter selection keys (256 -> 260).
     # ERA-03: +14 MASTERSTAR DAO/pin registry keys (263 -> 277).
+    # EPSF-AC-02: +1 config_runtime key psf_ac_policy (277 -> 278).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 277, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 278, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

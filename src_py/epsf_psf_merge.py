@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -29,6 +31,7 @@ PSF_MERGE_COLUMNS: tuple[str, ...] = (
     "psf_ac_factor",
     "psf_ac_n_used",
     "psf_ac_applied",
+    "psf_ac_policy",
     "psf_quality_fallback",
     "psf_group_n",
     "x_fit",
@@ -97,6 +100,163 @@ def assert_inv_psf_additive_01(
                 raise InvariantViolation(f"{INV_PSF_ADDITIVE_01}: {detail}")
 
     inv_check(meta, INV_PSF_ADDITIVE_01, True, policy="FAIL", detail=f"frame={frame_name} ok")
+
+
+def stamp_p4_none_on_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Invert stored AC and stamp ``p4_none`` on PSF columns. Non-PSF columns untouched."""
+    from psf_photometry import invert_applied_ac
+
+    out = df.copy()
+    n = len(out)
+    flux = pd.to_numeric(out["psf_flux"], errors="coerce") if "psf_flux" in out.columns else pd.Series([np.nan] * n)
+    err = (
+        pd.to_numeric(out["psf_flux_err"], errors="coerce")
+        if "psf_flux_err" in out.columns
+        else pd.Series([np.nan] * n)
+    )
+    fac = (
+        pd.to_numeric(out["psf_ac_factor"], errors="coerce")
+        if "psf_ac_factor" in out.columns
+        else pd.Series([np.nan] * n)
+    )
+    if "psf_ac_applied" in out.columns:
+        applied = out["psf_ac_applied"].astype(str).str.lower().str.strip().isin(
+            ("1", "true", "t", "yes", "y")
+        )
+    else:
+        applied = pd.Series([False] * n)
+    new_flux = []
+    new_err = []
+    new_fac = []
+    new_applied = []
+    new_n = []
+    new_pol = []
+    for i in range(n):
+        fl = float(flux.iloc[i]) if i < len(flux) else float("nan")
+        er = float(err.iloc[i]) if i < len(err) else float("nan")
+        fa = float(fac.iloc[i]) if i < len(fac) else float("nan")
+        ap = bool(applied.iloc[i]) if i < len(applied) else False
+        if math.isfinite(fl) or math.isfinite(fa):
+            nfl, ner = invert_applied_ac(fl, er, fa, ap)
+            new_flux.append(nfl)
+            new_err.append(ner)
+            new_fac.append(1.0)
+            new_applied.append(False)
+            new_n.append(0)
+            new_pol.append("p4_none")
+        else:
+            new_flux.append(fl)
+            new_err.append(er)
+            new_fac.append(fa)
+            new_applied.append(ap)
+            new_n.append(out["psf_ac_n_used"].iloc[i] if "psf_ac_n_used" in out.columns else float("nan"))
+            new_pol.append("")
+    out["psf_flux"] = new_flux
+    out["psf_flux_err"] = new_err
+    out["psf_ac_factor"] = new_fac
+    out["psf_ac_applied"] = new_applied
+    out["psf_ac_n_used"] = new_n
+    out["psf_ac_policy"] = new_pol
+    return out
+
+
+def stamp_p4_none_sidecar(
+    sidecar_path: Path,
+    *,
+    pipeline_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Rewrite one proc sidecar PSF columns to P4 (uncorrected). ADDITIVE-01 asserted."""
+    from pipeline import _vyvar_df_to_csv
+
+    before = read_vyvar_csv(sidecar_path, low_memory=False)
+    after = stamp_p4_none_on_dataframe(before)
+    assert_inv_psf_additive_01(
+        before,
+        after,
+        frame_name=sidecar_path.name,
+        pipeline_meta=pipeline_meta,
+    )
+    _vyvar_df_to_csv(after, sidecar_path)
+    return {"csv": str(sidecar_path), "status": "ok"}
+
+
+def psf_ac_policy_params(policy: str) -> dict[str, Any]:
+    """Named parameters stamped with the F6 AC policy."""
+    p = str(policy or "").strip().lower()
+    if p == "chi2_lt5_legacy":
+        return {"chi2_limit": 5.0, "min_ref_stars": 5}
+    return {"psf_ac_factor": 1.0, "psf_ac_applied": False}
+
+
+def write_epsf_ac_merge_meta(
+    platesolve_dir: Path,
+    *,
+    policy: str,
+    n_sidecars: int,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Stamp policy name + parameters into F6 merge meta (platesolve sidecar)."""
+    meta: dict[str, Any] = {
+        "psf_ac_policy": str(policy),
+        "psf_ac_params": psf_ac_policy_params(policy),
+        "n_sidecars": int(n_sidecars),
+        "stamped_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "task": "EPSF-AC-02-WIRE",
+    }
+    if extra:
+        meta.update(extra)
+    out = Path(platesolve_dir) / "epsf_ac_merge_meta.json"
+    out.write_text(json.dumps(meta, indent=2) + "\n", encoding="ascii")
+    return out
+
+
+def stamp_p4_none_science_sidecars(
+    frames_root: Path,
+    *,
+    platesolve_dir: Path | None = None,
+    pipeline_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Invert stored AC on every ``proc_*.csv`` under frames_root. ADDITIVE-01 per file."""
+    root = Path(frames_root)
+    files = sorted(root.glob("proc_*.csv"))
+    if not files:
+        raise FileNotFoundError(f"No proc_*.csv under {root}")
+    rows: list[dict[str, Any]] = []
+    n_ok = 0
+    for p in files:
+        rec = stamp_p4_none_sidecar(p, pipeline_meta=pipeline_meta)
+        rec["status"] = "ok"
+        rows.append(rec)
+        n_ok += 1
+    meta_path = None
+    if platesolve_dir is not None:
+        meta_path = write_epsf_ac_merge_meta(
+            Path(platesolve_dir),
+            policy="p4_none",
+            n_sidecars=n_ok,
+            extra={"frames_root": str(root)},
+        )
+        phot = Path(platesolve_dir) / "photometry"
+        if phot.is_dir():
+            try:
+                from photometry_core import merge_photometry_pipeline_meta
+
+                merge_photometry_pipeline_meta(
+                    phot,
+                    {
+                        "psf_ac_policy": "p4_none",
+                        "psf_ac_params": psf_ac_policy_params("p4_none"),
+                    },
+                )
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.warning("[ePSF] pipeline_meta AC stamp skipped: %s", exc)
+    return {
+        "written": n_ok,
+        "frames_total": len(files),
+        "policy": "p4_none",
+        "merge_meta": str(meta_path) if meta_path is not None else None,
+        "frames": rows,
+    }
 
 
 def merge_psf_into_sidecar(
@@ -240,6 +400,24 @@ def run_epsf_psf_merge_job(
         )
 
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
+    _policy = str(getattr(_cfg, "psf_ac_policy", "p4_none") or "p4_none")
+    _ac_params = psf_ac_policy_params(_policy)
+    if _epsf_job_summary is not None:
+        _epsf_job_summary["psf_ac_policy"] = _policy
+        _epsf_job_summary["psf_ac_params"] = _ac_params
+        from epsf_frame_accounting import persist_epsf_job_summary
+
+        persist_epsf_job_summary(_epsf_job_summary, ps)
+    write_epsf_ac_merge_meta(ps, policy=_policy, n_sidecars=int(n_ok))
+    try:
+        from photometry_core import merge_photometry_pipeline_meta
+
+        merge_photometry_pipeline_meta(
+            ps / "photometry",
+            {"psf_ac_policy": _policy, "psf_ac_params": _ac_params},
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("[ePSF] pipeline_meta AC stamp skipped: %s", exc)
     psf_lc: dict[str, Any] | None = None
     try:
         from psf_internal_lc import write_internal_psf_lightcurves_after_epsf_job  # noqa: PLC0415

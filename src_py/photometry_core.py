@@ -1397,6 +1397,7 @@ def _phase2a_proc_column_requirements() -> dict[str, list[str]]:
             "psf_ac_factor",
             "psf_ac_n_used",
             "psf_ac_applied",
+            "psf_ac_policy",
         ],
         "cog_branch": [
             "ac_factor",

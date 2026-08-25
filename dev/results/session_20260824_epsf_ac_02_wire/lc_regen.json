@@ -1,0 +1,426 @@
+{
+  "n_written": 60,
+  "n_skipped": 0,
+  "per_target": [
+    {
+      "catalog_id": "1485534187306501376",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1485560025830226432",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1485987151737107200",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1485987254816323328",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496037650087948160",
+      "n_epochs_full": "134",
+      "n_epochs_dropped_pin": "0",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496278752372040832",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496293286541396480",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496733984545821696",
+      "n_epochs_full": "110",
+      "n_epochs_dropped_pin": "24",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496795041799526400",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1496998382733052928",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497096960821764224",
+      "n_epochs_full": "49",
+      "n_epochs_dropped_pin": "85",
+      "level_offset_mag": "-0.589199",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497132660589966976",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497154753901690624",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497169940906156032",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497227287309482624",
+      "n_epochs_full": "10",
+      "n_epochs_dropped_pin": "124",
+      "level_offset_mag": "-0.662259",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497236186481686016",
+      "n_epochs_full": "27",
+      "n_epochs_dropped_pin": "107",
+      "level_offset_mag": "-0.180603",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497245497969274240",
+      "n_epochs_full": "10",
+      "n_epochs_dropped_pin": "124",
+      "level_offset_mag": "-0.139133",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497284015237511808",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497343732462852864",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497350638770267520",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497418258735289472",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497425371201155072",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497491273179203456",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497561779362267392",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497603835681942400",
+      "n_epochs_full": "23",
+      "n_epochs_dropped_pin": "111",
+      "level_offset_mag": "-0.273055",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497639123133258752",
+      "n_epochs_full": "24",
+      "n_epochs_dropped_pin": "110",
+      "level_offset_mag": "-0.419828",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497683722074089728",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497683996951418880",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1497871669842349184",
+      "n_epochs_full": "23",
+      "n_epochs_dropped_pin": "111",
+      "level_offset_mag": "-0.492893",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498000793739050368",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498027456896444928",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498058827337611392",
+      "n_epochs_full": "27",
+      "n_epochs_dropped_pin": "107",
+      "level_offset_mag": "-0.375485",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498278351706325248",
+      "n_epochs_full": "24",
+      "n_epochs_dropped_pin": "110",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498298211635183744",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498321301379345408",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498425548825498112",
+      "n_epochs_full": "10",
+      "n_epochs_dropped_pin": "124",
+      "level_offset_mag": "-0.404348",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498486880958321024",
+      "n_epochs_full": "23",
+      "n_epochs_dropped_pin": "111",
+      "level_offset_mag": "-0.248679",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498613634033133184",
+      "n_epochs_full": "23",
+      "n_epochs_dropped_pin": "111",
+      "level_offset_mag": "0.0404642",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498617482323461376",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498699086702005376",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498752516095473664",
+      "n_epochs_full": "10",
+      "n_epochs_dropped_pin": "124",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498783199341798016",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498795809366255488",
+      "n_epochs_full": "27",
+      "n_epochs_dropped_pin": "107",
+      "level_offset_mag": "-0.0899321",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498804639818507904",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1498842882207281152",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499006984318088320",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499021174889970816",
+      "n_epochs_full": "5",
+      "n_epochs_dropped_pin": "129",
+      "level_offset_mag": "-0.460863",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499081819828174080",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499084499887740160",
+      "n_epochs_full": "5",
+      "n_epochs_dropped_pin": "129",
+      "level_offset_mag": "-0.269024",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499209638054824320",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499210016011946496",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1499842372636900992",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500327978819506944",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500410236033012352",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500418894687086208",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500424804562041984",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500461157165243648",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500549977088828160",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1500693841313325696",
+      "n_epochs_full": "0",
+      "n_epochs_dropped_pin": "134",
+      "level_offset_mag": "nan",
+      "policy": "p4_none"
+    },
+    {
+      "catalog_id": "1502012464992313088",
+      "n_epochs_full": "23",
+      "n_epochs_dropped_pin": "111",
+      "level_offset_mag": "-0.397077",
+      "policy": "p4_none"
+    }
+  ]
+}

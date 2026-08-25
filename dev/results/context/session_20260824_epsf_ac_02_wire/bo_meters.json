@@ -1,0 +1,18 @@
+{
+  "catalog_id": "1498613634033133184",
+  "n_epochs": 134,
+  "n_full_membership": 23,
+  "n_dropped_pin": 111,
+  "coverage_pin_survive": 0.17164179104477612,
+  "n_finite_pairs": 23,
+  "level_offset_mag": 0.040464000000000055,
+  "level_offset_mmag": 40.464000000000055,
+  "rms_mag": 0.03876979400310864,
+  "rms_mmag": 38.76979400310864,
+  "rms_vs_abs_median": true,
+  "header_n_full": "23",
+  "header_n_dropped_pin": "111",
+  "header_level_offset": "0.0404642",
+  "header_policy": "p4_none",
+  "psf_lc_sha256": "b6380bf5aea3df91c0a7ca9d3d92bf6962ab19a9f84b739ba606eb2539045b72"
+}

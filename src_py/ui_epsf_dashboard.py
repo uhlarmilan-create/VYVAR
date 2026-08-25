@@ -166,6 +166,10 @@ def _render_epsf_dashboard_body(
     med_chi2 = pd.to_numeric(epsf_df["median_chi2"], errors="coerce").median()
     c3.metric("Median chi^2 (per star)", f"{med_chi2:.1f}" if pd.notna(med_chi2) else "-")
     c4.metric("chi^2 threshold", f"{float(getattr(cfg, 'psf_chi2_threshold', 50.0)):.0f}")
+    st.caption(
+        f"PSF AC policy: `{getattr(cfg, 'psf_ac_policy', 'p4_none')}` "
+        "(read-only; default p4_none stamps uncorrected fit flux)."
+    )
 
     st.markdown("**Per-star ePSF metrics**")
     display_cols = [

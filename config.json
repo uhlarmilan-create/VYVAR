@@ -38,7 +38,7 @@
   // Database ID of the currently selected observing site (LOCATION table
   // row). This id stays in config.json and drives the hydration of the
   // coordinates.
-  "observer_location_id": 2,
+  "observer_location_id": 5,
   // Full observer name printed in reports.
   "observer_name": "Milan Uhlar",
   // Optional mapping of your local filter names to official AAVSO filter
@@ -352,6 +352,9 @@
   // Master switch of aperture photometry - the production measurement method
   // of VYVAR.
   "aperture_photometry_enabled": true,
+  // Aperture radius authority for draft photometry: scatter (minimise non-
+  // variable LC scatter; IMPL-03) or snr (Howell single-measurement SNR).
+  "aperture_selection_criterion": "scatter",
   // Aperture size multiplier applied to the variable (target) star.
   "aperture_variable_factor": 1.0,
   // Optional 'democratic' detrend of the light curve (median trend of the
@@ -369,6 +372,12 @@
   // When true, target saturation uses per-frame clean fraction instead of
   // whole-star master zone skip (default false keeps legacy zone skip).
   "per_frame_saturation_enabled": false,
+  // F6 ePSF aperture-correction policy. p4_none stamps uncorrected fit flux
+  // (psf_ac_factor=1). chi2_lt5_legacy is the named fallback: median DAO/PSF
+  // among chi2<5 stars (EPSF-AC-01 A2 brightness-cut defect). Absolute PSF
+  // scale, when wanted, belongs to a DAOGROW/DOLPHOT-style growth-curve path,
+  // not this gate.
+  "psf_ac_policy": "p4_none",
   // Chi-square limit of an acceptable PSF fit.
   "psf_chi2_threshold": 50.0,
   // Master switch of PSF photometry (currently OFF; enablement gated on the
@@ -395,6 +404,12 @@
   "aperture_correction_max_scatter_mag": 0.03,
   // Minimum reference stars required to compute an aperture correction.
   "aperture_correction_min_ref_stars": 3,
+  // Maximum radius of the scatter-selection photometry ladder.
+  "aperture_scatter_r_max_px": 12.0,
+  // Minimum radius of the scatter-selection photometry ladder.
+  "aperture_scatter_r_min_px": 1.5,
+  // Step size of the scatter-selection photometry ladder.
+  "aperture_scatter_r_step_px": 0.5,
   // SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is
   // the minimum radius (best for faint stars), 'large' the maximum. WAVE-B
   // merged the former aperture_fwhm_factor_small/_large scalars into this
@@ -432,6 +447,15 @@
   // How many empty apertures are placed per frame for the empirical
   // background noise measurement.
   "err_empty_apertures_n": 64,
+  // Bounded peak refine search radius in FWHM units for forced photometry.
+  "forced_photometry_centroid_bound_fwhm": 2.5,
+  // Inject force-eligible MASTERSTAR members missing from DAO each frame.
+  "forced_photometry_enabled": true,
+  // Extra pixel margin for forced-photometry footprint geometry gate.
+  "forced_photometry_margin_px": 0.0,
+  // Native-to-container ADU scale (14-bit samples in 16-bit FITS = 4).
+  // Divides DB gain when g_pt unavailable.
+  "gain_container_scale": 4.0,
   // Maximum dilution (flux contamination) a comparison star may have under
   // the GS11 dilution model.
   "gs11_comp_max_dilution": 0.9,
@@ -476,6 +500,9 @@
   // Order switch: apply the airmass detrend before (True) or after (False)
   // outlier rejection in Phase 2A.
   "phase2a_airmass_before_outlier": false,
+  // Accept photon-transfer g_pt as gain authority only when CI hi/lo is at
+  // most this factor (~3).
+  "photon_transfer_ci_max_width_factor": 3.0,
   // Adaptive per-star routing between PSF and aperture measurement (PSF
   // program is OFF pending the Newton dense-field gate).
   "psf_adaptive_enabled": false,
@@ -510,11 +537,14 @@
   "savgol_polyorder": 2,
   // Window width (fraction of the series) of the Savitzky-Golay filter.
   "savgol_window_frac": 0.5,
-  // Per-equipment systematic error floor (mag) added in quadrature to
-  // statistical errors; dict keys are equipment_id strings (e.g. {'3':
-  // 0.018}), not filter band numbers. Lookup: resolve_sigma_sys_mag in
-  // sigma_floor_core.py.
+  // Per-equipment systematic error floor (mag) added in quadrature; dict keys
+  // are equipment_id strings. Missing key -> explicit 0.0 with INFO log
+  // (WIDE-ERR-03); wide-rig equipment 1 interim is 0 (Stage-5 calibration
+  // owns residual floor).
   "sigma_sys_mag": {"4": 0.018},
+  // Minimum neighbour separation in FWHM units for stars used to build the
+  // SNR-table measured growth curve.
+  "snr_cog_isolation_fwhm": 3.0,
   // Optional SysRem systematics removal (Tamuz+ 2005); OFF by default -
   // validated as risky for preserving real variability.
   "sysrem_enabled": false,
@@ -590,9 +620,26 @@
   // Maximum linear trend (mmag/hour) a comparison star may show before being
   // rejected as drifting.
   "comp_max_slope_mmag_hr": 5.0,
+  // COMP-ADMIT-03: when True, run draft noise-curve diagnostics and drop only
+  // known variables (VSX/Gaia). Scatter/colour/distance enter continuous
+  // weights, not cuts.
+  "comp_pool_derived_admission": true,
   // Numerical floor of comparison RMS in weighting (prevents division blow-
   // ups).
   "comp_select_rms_floor": 1e-06,
+  // Airmass span of the series used when deriving c_col = |k2_bprp| * DeltaX.
+  "comp_weight_airmass_span": 0.0,
+  // COMP-ADMIT-03 colour systematic coefficient in the weight sigma_eff (mag
+  // per BP-RP). None = derive from |k2|*airmass_span.
+  "comp_weight_c_col_mag_per_bprp": null,
+  // COMP-ADMIT-03 distance systematic coefficient in sigma_eff (mag per
+  // degree). None = measure from draft or named zero.
+  "comp_weight_c_dist_mag_per_deg": null,
+  // Optics class for c_col_psf (refractive|mirror|unknown).
+  "comp_weight_optics_kind": "unknown",
+  // Plan/spatial comparison pool size. 0 = uncapped (COMP-POOL-01); legacy
+  // default was 150.
+  "comparison_stars_pool_n": 0,
   // Builds one field-wide comparison pool reused across targets instead of
   // fully per-target pools.
   "global_comp_pool_enabled": true,
@@ -668,14 +715,14 @@
   // program is enabled.
   "k2_mode": "literature",
   // Whether a color-term transformation is applied to magnitudes ('off' keeps
-  // instrumental system). 'auto' enables Clear level k when set below.
+  // instrumental system).
   "apply_color_term": "auto",
-  // Per-rig Clear/unfiltered level colour coefficient (mag per BP-RP). PRE-IMPL-01
-  // G-controlled: -0.373 +/- 0.090 on this telephoto CMOS. Remeasure per equipment.
+  // Per-rig Clear/unfiltered level colour coefficient (mag per BP-RP).
+  // Measured; not universal. Export-only constant correction.
   "color_level_k_mag_per_bprp": -0.373,
-  "color_level_k_stderr_mag_per_bprp": 0.090,
-  // Isolation (FWHM units) for SNR-table measured growth-curve stars.
-  "snr_cog_isolation_fwhm": 3.0,
+  // Uncertainty on color_level_k_mag_per_bprp; propagates into exported
+  // magnitude errors.
+  "color_level_k_stderr_mag_per_bprp": 0.09,
   // Upper cap of the fitted second-order extinction coefficient k2 (mag per
   // airmass per color unit).
   "k2_ceiling": 0.1,
@@ -742,6 +789,10 @@
   // === Export ===
   // Output for the outside world: AAVSO/VarAstro submission and TESS cross-
   // analysis.
+  // Exported per-epoch err: calibrated applies optional (s, sigma_r) sidecar
+  // (WIDE-ERR-04 default identity s=1, sigma_r=0 = pure physical model with
+  // g_pt + weighted SEM); model skips sidecar.
+  "export_err_mode": "calibrated",
   // Enables the TESS cross-analysis block (comparing your light curve against
   // TESS data).
   "tess_enabled": false,

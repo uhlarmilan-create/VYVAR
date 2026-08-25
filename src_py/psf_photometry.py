@@ -468,6 +468,11 @@ def _compute_aperture_correction(
     """Compute aperture correction factor from clean reference stars.
 
     Returns ``(correction_factor, n_used)``. ``correction_factor`` is 1.0 if not enough clean stars.
+
+    This chi2<5 per-star DAO/PSF median is the ``chi2_lt5_legacy`` fallback only
+    (EPSF-AC-01 A2: the gate is a brightness cut). Absolute PSF scale, when
+    wanted, is a DAOGROW/DOLPHOT-style growth-curve total (Stetson 1990), not
+    this ensemble.
     """
     mask = (
         np.isfinite(psf_fluxes)
@@ -489,6 +494,50 @@ def _compute_aperture_correction(
     if len(ratios) < min_ref_stars:
         return 1.0, len(ratios)
     return float(np.median(ratios)), len(ratios)
+
+
+PSF_AC_POLICY_P4_NONE = "p4_none"
+PSF_AC_POLICY_CHI2_LT5_LEGACY = "chi2_lt5_legacy"
+PSF_AC_POLICIES = frozenset({PSF_AC_POLICY_P4_NONE, PSF_AC_POLICY_CHI2_LT5_LEGACY})
+
+
+def resolve_psf_ac_policy(
+    raw: Any = None,
+    *,
+    apply_aperture_correction: bool | None = None,
+) -> str:
+    """Return ``p4_none`` or ``chi2_lt5_legacy``. Explicit policy wins over the bool."""
+    s = str(raw or "").strip().lower()
+    if s in PSF_AC_POLICIES:
+        return s
+    if apply_aperture_correction is False:
+        return PSF_AC_POLICY_P4_NONE
+    if apply_aperture_correction is True:
+        return PSF_AC_POLICY_CHI2_LT5_LEGACY
+    return PSF_AC_POLICY_P4_NONE
+
+
+def invert_applied_ac(
+    psf_flux: float,
+    psf_flux_err: float,
+    ac_factor: float,
+    ac_applied: bool,
+) -> tuple[float, float]:
+    """Recover uncorrected fit flux from a stored AC multiply."""
+    flux = float(psf_flux) if psf_flux is not None else float("nan")
+    err = float(psf_flux_err) if psf_flux_err is not None else float("nan")
+    fac = float(ac_factor) if ac_factor is not None else float("nan")
+    if (
+        bool(ac_applied)
+        and math.isfinite(flux)
+        and flux > 0
+        and math.isfinite(fac)
+        and fac > 0
+    ):
+        flux = flux / fac
+        if math.isfinite(err):
+            err = err / fac
+    return flux, err
 
 
 def _compute_moffat_aperture_correction(
@@ -2801,6 +2850,7 @@ def psf_photometry_stars(
     max_fit_iters: int = 3,
     ref_fluxes: np.ndarray | None = None,
     apply_aperture_correction: bool = True,
+    psf_ac_policy: str | None = None,
     grouper_enabled: bool | None = None,
     neighbor_catalog: pd.DataFrame | None = None,
     group_sep_fwhm: float | None = None,
@@ -3016,6 +3066,7 @@ def psf_photometry_stars(
         "psf_ac_factor",
         "psf_ac_n_used",
         "psf_ac_applied",
+        "psf_ac_policy",
         "psf_group_used",
         "psf_group_n",
         "psf_group_fallback",
@@ -3037,6 +3088,10 @@ def psf_photometry_stars(
     )
     _nn_map = nn_dist_fwhm_map or {}
     _nn_dmag_map = nn_delta_mag_map or {}
+    _ac_policy = resolve_psf_ac_policy(
+        psf_ac_policy, apply_aperture_correction=apply_aperture_correction
+    )
+    _do_ac = _ac_policy == PSF_AC_POLICY_CHI2_LT5_LEGACY
     if star_positions.empty:
         return pd.DataFrame(columns=_cols)
 
@@ -3318,7 +3373,7 @@ def psf_photometry_stars(
     # --- Aperture correction ---
     _ac_factor = 1.0
     _ac_n_used = 0
-    if apply_aperture_correction and ref_fluxes is not None:
+    if _do_ac and ref_fluxes is not None:
         _psf_flux_arr = np.array([r.get("psf_flux", np.nan) for r in out_rows], dtype=float)
         _ref_flux_arr = np.asarray(ref_fluxes, dtype=float)
         _chi2_arr = np.array([r.get("psf_chi2", np.nan) for r in out_rows], dtype=float)
@@ -3350,7 +3405,8 @@ def psf_photometry_stars(
     for r in out_rows:
         r["psf_ac_factor"] = _ac_factor
         r["psf_ac_n_used"] = _ac_n_used
-        if apply_aperture_correction:
+        r["psf_ac_policy"] = _ac_policy
+        if _do_ac:
             r["psf_ac_applied"] = bool(_ac_n_used >= 5)
         else:
             r["psf_ac_applied"] = False

@@ -16,6 +16,7 @@ from export_reports import export_all_method_lightcurve_reports, export_lightcur
 from invariants_runtime import InvariantViolation
 from photometry_core import TIME_BASE_BJD_TDB
 from psf_internal_lc import (
+    INV_PSF_LC_PIN_01,
     REQUIRED_HEADER_MARKERS,
     write_internal_psf_lightcurves,
 )
@@ -174,7 +175,9 @@ def _synthetic_draft(tmp_path: Path) -> tuple[Path, Path, str]:
     for proc_name, fits_name, bjd in epochs:
         rows = []
         for cid in ids:
-            psf_ok = not (proc_name.endswith("002.csv") and cid == target)
+            target_fail = proc_name.endswith("002.csv") and cid == target
+            comp_fail = proc_name.endswith("003.csv") and cid == comps[0]
+            psf_ok = not (target_fail or comp_fail)
             flux = 1000.0 if cid == target else 800.0
             rows.append(
                 {
@@ -188,6 +191,7 @@ def _synthetic_draft(tmp_path: Path) -> tuple[Path, Path, str]:
                     "psf_chi2": 1.5 if psf_ok else np.nan,
                     "psf_fit_ok": psf_ok,
                     "psf_group_n": 2 if psf_ok else 0,
+                    "psf_ac_policy": "p4_none",
                     "flux": flux * 1.1,
                     "dao_flux": flux * 1.1,
                 }
@@ -234,6 +238,56 @@ def test_writer_header_and_nan_epochs_synthetic(tmp_path: Path) -> None:
     assert np.isfinite(float(df.loc[0, "psf_delta_mag"]))
     assert float(df.loc[0, "n_group"]) == pytest.approx(2.0)
     assert pd.isna(df.loc[1, "n_group"]) or float(df.loc[1, "n_group"]) == 0.0
+    assert "# psf_ac_policy=p4_none" in text
+    assert "psf_epoch_drop_reason" in df.columns
+    assert pd.isna(df.loc[2, "psf_delta_mag"])
+    assert str(df.loc[2, "psf_epoch_drop_reason"]) == f"comp_psf_fail:{2001}"
+    assert np.isfinite(float(df.loc[2, "delta_mag"]))
+    assert INV_PSF_LC_PIN_01 == "INV-PSF-LC-PIN-01"
+
+
+def test_inv_psf_lc_pin_01_failed_comp_not_renormalized(tmp_path: Path) -> None:
+    """Partial ensemble must not leak a ZP; pin-drop is NaN + named reason."""
+    ps, frames, target = _synthetic_draft(tmp_path)
+    out = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+    )
+    df = pd.read_csv(Path(out["written"][0]), comment="#")
+    assert pd.isna(df.loc[2, "psf_delta_mag"])
+    reason = str(df.loc[2, "psf_epoch_drop_reason"])
+    assert reason.startswith("comp_psf_fail:")
+    assert "2001" in reason
+    assert np.isfinite(float(df.loc[0, "psf_delta_mag"]))
+    assert str(df.loc[0, "psf_epoch_drop_reason"]) in ("", "nan")
+
+
+def test_p4_invariance_scalar_ac_cancels_in_writer(tmp_path: Path) -> None:
+    """Scalar AC on/off must not change psf_delta_mag (ZP cancel)."""
+    ps, frames, target = _synthetic_draft(tmp_path)
+    out1 = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+    )
+    d1 = pd.read_csv(Path(out1["written"][0]), comment="#")
+    for p in frames.glob("proc_*.csv"):
+        df = pd.read_csv(p)
+        flux = pd.to_numeric(df["psf_flux"], errors="coerce")
+        df["psf_flux"] = flux * 0.528
+        df.to_csv(p, index=False)
+    out2 = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+    )
+    d2 = pd.read_csv(Path(out2["written"][0]), comment="#")
+    a = pd.to_numeric(d1["psf_delta_mag"], errors="coerce").to_numpy()
+    b = pd.to_numeric(d2["psf_delta_mag"], errors="coerce").to_numpy()
+    both = np.isfinite(a) & np.isfinite(b)
+    assert int(both.sum()) >= 1
+    assert float(np.nanmax(np.abs(a[both] - b[both]))) < 1e-12
 
 
 @pytest.mark.skipif(

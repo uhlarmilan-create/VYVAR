@@ -12,3 +12,4 @@ def test_progress_column_pct_format_is_explicit_percent() -> None:
     src = inspect.getsource(mod._render_epsf_dashboard_body)
     assert 'format="%.1f%%"' in src
     assert "ProgressColumn" in src
+    assert "psf_ac_policy" in src
