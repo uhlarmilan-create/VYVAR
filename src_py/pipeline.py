@@ -3811,12 +3811,13 @@ def _plate_solve_input_bundle(
     app_config: AppConfig | None,
     equipment_id: int | None,
     draft_id: int | None = None,
+    telescope_id: int | None = None,
 ) -> dict[str, Any]:
     """Open DB once: metadata, effective pixel, focal length, expected plate scale [arcsec/pixel]."""
     cfg_u = app_config or AppConfig()
     db_u = _vyvar_open_database(cfg_u)
     _eq_use, _tel_use = resolve_optics_ids_for_platesolve(
-        db_u, draft_id, equipment_id=equipment_id
+        db_u, draft_id, equipment_id=equipment_id, telescope_id=telescope_id
     )
     out: dict[str, Any] = {
         "meta": {},
@@ -12140,6 +12141,7 @@ def generate_masterstar_and_catalog(
     app_config: AppConfig | None = None,
     equipment_id: int | None = None,
     draft_id: int | None = None,
+    telescope_id: int | None = None,
     master_dark_path: Path | str | None = None,
     masterstar_candidate_paths: "Sequence[str] | None" = None,
     masterstar_selection_pct: float | None = None,
@@ -12653,7 +12655,7 @@ def generate_masterstar_and_catalog(
     if _db_scale is not None:
         try:
             _eq_ms, _tel_ms = resolve_optics_ids_for_platesolve(
-                _db_scale, draft_id, equipment_id=equipment_id
+                _db_scale, draft_id, equipment_id=equipment_id, telescope_id=telescope_id
             )
             _auto_scale_ms = compute_plate_scale_from_db(
                 _eq_ms, _tel_ms, _db_scale.conn, binning=_bin_ms
@@ -12684,6 +12686,7 @@ def generate_masterstar_and_catalog(
         app_config=_cfg_ms,
         equipment_id=_eq_ms,
         draft_id=int(draft_id) if draft_id is not None else None,
+        telescope_id=_tel_ms if _tel_ms is not None else telescope_id,
     )
     _eff_um = _bundle.get("eff_um")
     _foc_mm = _bundle.get("focal_mm")
