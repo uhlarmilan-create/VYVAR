@@ -1,0 +1,112 @@
+{
+  "utc": "2026-08-25T19:25:42.606795+00:00",
+  "era03_freeze_sha": "ad19e14ddb45fdf99a242f6eac97ea39859584e5",
+  "r1_sha": "c592ecf",
+  "points": [
+    {
+      "sha": "ad19e14",
+      "label": "ERA-03 freeze ledger commit (docs close; product SHA 9902d918)",
+      "worktree": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_ad19e14",
+      "elapsed_s": 81.3,
+      "returncode": 1,
+      "stderr_tail": "  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_ad19e14\\src_py\\pipeline.py\", line 13604, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\ms_ad19e14\\_run.py\", line 11, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_ad19e14\\src_py\\pipeline.py\", line 13733, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "stdout_tail": "DEBUG DAO INPUT: frame mean=1420.9 std=569.9 threshold=179.3 sky_sigma=39.85 n_sigma=4.50 rms_conv_diag=635.35 sigma_pp_diag=40.44 fwhm=5.19\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "n_xy_gt_0.05": 9,
+        "n_name_diff": 91,
+        "n_state_diff": 2617,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "frozen_sha": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "sha_equal": false
+      },
+      "live_sha": {
+        "csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345"
+      }
+    },
+    {
+      "sha": "6fd1452",
+      "label": "feat(psf): persist x_fit y_fit through F6 merge",
+      "worktree": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_6fd1452",
+      "elapsed_s": 60.1,
+      "returncode": 1,
+      "stderr_tail": "  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_6fd1452\\src_py\\pipeline.py\", line 13607, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\ms_6fd1452\\_run.py\", line 11, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_6fd1452\\src_py\\pipeline.py\", line 13736, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "stdout_tail": "DEBUG DAO INPUT: frame mean=1420.9 std=569.9 threshold=179.3 sky_sigma=39.85 n_sigma=4.50 rms_conv_diag=635.35 sigma_pp_diag=40.44 fwhm=5.19\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "n_xy_gt_0.05": 9,
+        "n_name_diff": 91,
+        "n_state_diff": 2617,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "frozen_sha": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "sha_equal": false
+      },
+      "live_sha": {
+        "csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345"
+      }
+    },
+    {
+      "sha": "e5a6149",
+      "label": "fix(dao): pin STAGE-01 sandbox gate to hand params (XFER-01)",
+      "worktree": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_e5a6149",
+      "elapsed_s": 60.6,
+      "returncode": 1,
+      "stderr_tail": "  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_e5a6149\\src_py\\pipeline.py\", line 13607, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\ms_e5a6149\\_run.py\", line 11, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_e5a6149\\src_py\\pipeline.py\", line 13736, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "stdout_tail": "DEBUG DAO INPUT: frame mean=1420.9 std=569.9 threshold=179.3 sky_sigma=39.85 n_sigma=4.50 rms_conv_diag=635.35 sigma_pp_diag=40.44 fwhm=5.19\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "n_xy_gt_0.05": 9,
+        "n_name_diff": 91,
+        "n_state_diff": 2617,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "frozen_sha": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "sha_equal": false
+      },
+      "live_sha": {
+        "csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345"
+      }
+    },
+    {
+      "sha": "c592ecf",
+      "label": "R1 tree (SEL-GHOST-01 A docs; last commit before B1)",
+      "worktree": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_c592ecf",
+      "elapsed_s": 60.9,
+      "returncode": 1,
+      "stderr_tail": "  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_c592ecf\\src_py\\pipeline.py\", line 13611, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\ms_c592ecf\\_run.py\", line 11, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_c592ecf\\src_py\\pipeline.py\", line 13740, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "stdout_tail": "DEBUG DAO INPUT: frame mean=1420.9 std=569.9 threshold=179.3 sky_sigma=39.85 n_sigma=4.50 rms_conv_diag=635.35 sigma_pp_diag=40.44 fwhm=5.19\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "n_xy_gt_0.05": 9,
+        "n_name_diff": 91,
+        "n_state_diff": 2617,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "frozen_sha": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "sha_equal": false
+      },
+      "live_sha": {
+        "csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+        "fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345"
+      }
+    }
+  ],
+  "live_unchanged": true
+}

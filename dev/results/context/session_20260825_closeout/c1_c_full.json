@@ -1,0 +1,38 @@
+{
+  "utc": "2026-08-25T19:31:41.381555+00:00",
+  "points": [
+    {
+      "sha": "ad19e14",
+      "label": "ERA-03 ledger",
+      "elapsed_s": 54.2,
+      "returncode": 1,
+      "stderr_tail": "xception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\msfull_ad19e14\\_run.py\", line 10, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_ad19e14\\src_py\\pipeline.py\", line 13733, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "sha_equal": false
+      }
+    },
+    {
+      "sha": "c592ecf",
+      "label": "R1",
+      "elapsed_s": 52.4,
+      "returncode": 1,
+      "stderr_tail": "xception:\n\nTraceback (most recent call last):\n  File \"C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_closeout\\msfull_c592ecf\\_run.py\", line 10, in <module>\n    generate_masterstar_and_catalog(\n  File \"C:\\ASTRO\\python\\VYVAR\\.worktrees\\c1_c592ecf\\src_py\\pipeline.py\", line 13740, in generate_masterstar_and_catalog\n    raise RuntimeError(\nRuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: No module named 'dao_gaia_stage_01_iter4'\n",
+      "csv_exists": true,
+      "vs_frozen": {
+        "n_new": 2643,
+        "n_frozen": 3610,
+        "n_only_frozen": 967,
+        "n_only_new": 1,
+        "csv_sha": "2eae423d8a6345b175706161cf25298b31871c0db0e8aa7f4b974750cd7d1216",
+        "sha_equal": false
+      }
+    }
+  ],
+  "live_unchanged": true
+}
