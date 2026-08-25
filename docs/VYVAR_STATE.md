@@ -1,6 +1,11 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-25 C1/C2 STOP.** C0 pushed to
+**Status:** **CLOSE-OUT 2026-08-25 C3/C7 STOP.** C3 COMP-RMS-DEF-01-B
+wired (k=5, LOO mag, ZONE-SAT-01). C7: R1 harness was contaminated;
+lost VSX `1500387696044768384` is depth+DAO, freeze LC already
+no_data; C6 not asked. C4 ZP-OK v2 task is on disk (run next, Push:
+NO). origin/main stays `b1f5b8c`. Live 516/520 SHA unchanged.
+**CLOSE-OUT 2026-08-25 C1/C2 STOP.** C0 pushed to
 `origin/sel-ghost-01` at `78b349598b6fc2fc56ee9c8380fbd0728e614831`
 (`--fast --clean` OVERALL PASS). origin/main stays `b1f5b8c`. C1
 ANCHOR-DRIFT-01: R1-vs-R0 is freeze lag; census 4+1 unexplained; no
@@ -54,7 +59,21 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-25** (CLOSE-OUT C0-C2 STOP, C4 locate-fail; C3/C6 wait GO; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-25** (CLOSE-OUT C3/C7 STOP; C4 ZP-OK next; C6 not asked; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-25 -- CLOSE-OUT C3 COMP-RMS-DEF-01-B STOP
+
+k=5 from C3-0 p90=3.672. Selector `comp_rms` is LOO mag MAD; ceiling
+min(0.1, 5 x photon). 520 G=7.63 zone=saturated. P-C3-1 HIT.
+P-C3-2 one miss r=5.10 (`1496315070616056064`). Evidence:
+`CURSOR_RESULT_COMP_RMS_DEF_01_B.md`.
+
+## 2026-08-25 -- CLOSE-OUT C7 pre-C6 verification STOP
+
+R1 T3 expand used HEAD STAGE-01 (harness-fixed). `--full` copy list
+in PROCESS. Headline no_data from snapshot vs live proc_029.
+Lost VSX G=15.56 is depth 15.0 + DAO miss; freeze LC already
+no_data. C6 not asked. Evidence: `CURSOR_RESULT_CLOSEOUT_C7.md`.
 
 ## 2026-08-25 -- CLOSE-OUT C0 (hygiene; branch `sel-ghost-01`)
 

@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-25 -- CLOSE-OUT C3/C7 STOP (C4 ZP-OK next; C6 not asked)
+
+C3: k=5; LOO mag RMS; ZONE-SAT-01 peak test never skipped.
+P-C3-1 HIT (520 V0612 5/7, lc_rms 0.055). C7: R1 contaminated;
+lost VSX already no_data on freeze. C6 not asked. ZP-OK v2 task
+on disk. Live 516/520 SHA unchanged.
+Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_B.md`,
+`CURSOR_RESULT_CLOSEOUT_C7.md`.
+
 ## 2026-08-25 -- CLOSE-OUT C0-C2 STOP (C3/C6 wait GO; C4 locate-fail)
 
 C0 hygiene on `sel-ghost-01` `78b3495`. C1: R1-vs-R0 freeze lag; census

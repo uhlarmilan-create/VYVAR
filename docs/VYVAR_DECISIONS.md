@@ -119,6 +119,22 @@ computed on frozen 516 (no SNR column).
 
 Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_A.md`.
 
+## COMP-RMS-DEF-01-B - LOO mag RMS, k=5, zone peak test (2026-08-25)
+
+Milan GO (chat, 2026-08-25): wire C2f. C3-0 k is p90 of
+(iv/photon) rounded up; 3<=p90<=5 => k=5. Measured p90=3.672 so
+**k=5**. Gated statistic is `comp_rms_loo_mag` (MAD*1.4826 of
+leave-one-out differential mag vs the candidate pool, all loadable
+proc frames, no clipping). `comp_relflux_mad` is diagnostic.
+Ceiling is `min(0.1 mag, k x photon)` with photon from
+`snr_ap_pixscaled` (raise if missing). `phase01_comparison_max_comp_rms`
+is an absolute cap only. ZONE-SAT-01: peak test uses `peak_max_adu`
+(fallback peak_dao, fallback flux) and still runs against
+`saturate_limit_adu` when 85pct is NaN. Wide-rig 516 24 saturated
+rows stay; 520 G=7.63 becomes saturated.
+
+Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_B.md`.
+
 ## EPSF-ZP-OK-01-WIRE v2 - locate fail (2026-08-25)
 
 Parked v2 task file was not on disk, in `dev/tasks/`, or in chat
