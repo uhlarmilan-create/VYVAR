@@ -1,0 +1,1336 @@
+{
+  "k": 5.0,
+  "abs_max": 0.1,
+  "p_c3_1": {
+    "proc_dir": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\t4_520\\detrended_aligned\\lights\\g_60_4",
+    "n_proc": 25,
+    "frames_basis": "all_loadable",
+    "n_pass": 5,
+    "pass_ids": [
+      "1111920204908702336",
+      "1112110695298081664",
+      "1111749157833870208",
+      "1112121862213003648",
+      "1112121067641532160"
+    ],
+    "g13_selected": false,
+    "g763_selected": false,
+    "lc_rms": 0.054644703634696715,
+    "rows": [
+      {
+        "catalog_id": "1112113680298377344",
+        "G": NaN,
+        "loo": 0.03767094778339292,
+        "snr": 854.9103974473459,
+        "photon": 0.00127,
+        "ceil": 0.006350000000000001,
+        "r": 29.662163608970804,
+        "passes": false,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1111920204908702336",
+        "G": NaN,
+        "loo": 0.01610938302150241,
+        "snr": 212.4728385045263,
+        "photon": 0.00511,
+        "ceil": 0.02555,
+        "r": 3.152521139237262,
+        "passes": true,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1112110695298081664",
+        "G": NaN,
+        "loo": 0.014350398655231581,
+        "snr": 171.79370328451415,
+        "photon": 0.00632,
+        "ceil": 0.031599999999999996,
+        "r": 2.2706326986125918,
+        "passes": true,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1111749157833870208",
+        "G": NaN,
+        "loo": 0.017013918255076903,
+        "snr": 158.9657693642942,
+        "photon": 0.00683,
+        "ceil": 0.03415,
+        "r": 2.4910568455456668,
+        "passes": true,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1112121862213003648",
+        "G": NaN,
+        "loo": 0.01291503813222148,
+        "snr": 155.7727696927015,
+        "photon": 0.00697,
+        "ceil": 0.03485,
+        "r": 1.852946647377544,
+        "passes": true,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1112121067641532160",
+        "G": NaN,
+        "loo": 0.01644770464723641,
+        "snr": 131.76410251919046,
+        "photon": 0.00824,
+        "ceil": 0.0412,
+        "r": 1.9960806610723798,
+        "passes": true,
+        "peak": NaN,
+        "zone_on_disk": ""
+      },
+      {
+        "catalog_id": "1111737033143440768",
+        "G": NaN,
+        "loo": 0.18801412940386622,
+        "snr": 43.0847700300845,
+        "photon": 0.0252,
+        "ceil": 0.1,
+        "r": 7.460878150947072,
+        "passes": false,
+        "peak": NaN,
+        "zone_on_disk": ""
+      }
+    ],
+    "hit_ensemble_ge5": true,
+    "hit_lc_rms_le_0p06": true,
+    "hit_g13_not_selected": true
+  },
+  "zone_520_g763": null,
+  "p_c3_2": {
+    "n_live_ids_parsed": 144,
+    "n_d5": 0,
+    "n_proc": 134,
+    "frames_basis": "all_loadable",
+    "n_fail": 144,
+    "fails": [
+      {
+        "catalog_id": "1485483541052276480",
+        "loo": 0.03421623972450652,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1485534187306501376",
+        "loo": 1.081500538672728,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1485560025830226432",
+        "loo": 0.11887262799966014,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1485609641291887872",
+        "loo": 0.03535395004816242,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1485987151737107200",
+        "loo": 0.47436666421882046,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1485987254816323328",
+        "loo": 0.2106156836851679,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496037650087948160",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496248206564680064",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496278752372040832",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496293286541396480",
+        "loo": 0.22015873676287798,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496315070616056064",
+        "loo": 0.03163408696223136,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496733984545821696",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496786967262035712",
+        "loo": 0.09275119413953778,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496795041799526400",
+        "loo": 0.02869325285004744,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496798993170465536",
+        "loo": 0.032190303542776105,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496874408500111104",
+        "loo": 0.05032165005422593,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496948904709272576",
+        "loo": 0.028763121957203975,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496984467038399744",
+        "loo": 0.03518111410591585,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496994156484645632",
+        "loo": 0.03971011103149824,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1496998382733052928",
+        "loo": 0.03645736880938509,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497007144465726080",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497014390074509312",
+        "loo": 0.03174239497290569,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497096960821764224",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497119157212720896",
+        "loo": 0.027373896349731832,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497125479404597248",
+        "loo": 0.06196073865614387,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497132660589966976",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497145751650265600",
+        "loo": 0.03123621814973891,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497154753901690624",
+        "loo": 0.9032347756097338,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497169940906156032",
+        "loo": 0.029905342133764574,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497181966814590848",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497196054307837696",
+        "loo": 0.037953219689224674,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "loo": 0.0298208257333149,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497227287309482624",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497236186481686016",
+        "loo": 0.22396109846745996,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497245497969274240",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497284015237511808",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "loo": 0.035869956827864535,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497326621313118976",
+        "loo": 0.03475532730658821,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497343732462852864",
+        "loo": 0.04059619996223047,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497345278651080576",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497350638770267520",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "loo": 0.03283429517090096,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "loo": 0.027905115879588837,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497395615667678848",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497418258735289472",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497425371201155072",
+        "loo": 0.03668587263794857,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "loo": 0.0688869263412244,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "loo": 0.02658375103662811,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497491273179203456",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "loo": 0.03145000766869469,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497561779362267392",
+        "loo": 0.12455789729508633,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497603835681942400",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "loo": 0.026165445581983107,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497617407778562304",
+        "loo": 0.02873044582577894,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497622939696499840",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497631048594737408",
+        "loo": 0.04596657294127979,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497639123133258752",
+        "loo": 0.09563204826066021,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "loo": 0.028562140225517785,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497676850124557312",
+        "loo": 0.05108287798178601,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497683722074089728",
+        "loo": 0.03629523816869364,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497683996951418880",
+        "loo": 0.6357834445306032,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497719902878053888",
+        "loo": 0.03111354991453162,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "loo": 0.03051626843996811,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "loo": 0.028894681060672948,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "loo": 0.029663014116167275,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "loo": 0.030609588247235482,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497871669842349184",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497894828305963776",
+        "loo": 0.03159478447432348,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497953377300128768",
+        "loo": 0.03698834076536901,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497971450522478080",
+        "loo": 0.26518900292715847,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "loo": 0.03603095931345107,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497976089087192832",
+        "loo": 0.03522226749799908,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1497977291678057472",
+        "loo": 0.06695798979656402,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498000793739050368",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "loo": 0.031673743708010176,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498027456896444928",
+        "loo": 0.12933624134873692,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498058827337611392",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498062332030906880",
+        "loo": 0.02951810382361262,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498064771572297856",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "loo": 0.05683732388696175,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498229629597339776",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498244610443240192",
+        "loo": 0.03310230402580305,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498278351706325248",
+        "loo": 0.030302772344953276,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498298211635183744",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498321301379345408",
+        "loo": 0.20250523628089198,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498322916287022976",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "loo": 0.029072255973110056,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498383080188862976",
+        "loo": 0.03370229245793701,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498425548825498112",
+        "loo": 0.09592679367554761,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498480077730173056",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498486880958321024",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498613634033133184",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498617482323461376",
+        "loo": 0.2308917444789006,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498626793812916480",
+        "loo": 0.036238348519002476,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498645691668588288",
+        "loo": 0.08661183191686314,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498677611865494016",
+        "loo": 0.04226327129942443,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498699086702005376",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "loo": 0.03258326794562151,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498752516095473664",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498783199341798016",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498795809366255488",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498804639818507904",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "loo": 0.029801673099703323,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498842882207281152",
+        "loo": 0.03875842966094279,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1498994786610872576",
+        "loo": 0.03306918341807869,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499006984318088320",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499020831292586624",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499021174889970816",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499024297329815040",
+        "loo": 0.038541467682491726,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499081819828174080",
+        "loo": 0.669708163852811,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499084499887740160",
+        "loo": 0.07162358398473323,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499119546820866176",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "loo": 0.030621285834777964,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499209638054824320",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499210016011946496",
+        "loo": 0.20915947480033084,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499842372636900992",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "loo": 0.04506911279833356,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "loo": 0.026780514815650046,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "loo": 0.02960885077843713,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500327978819506944",
+        "loo": 0.14814621631546943,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500355466608253184",
+        "loo": 0.029098629092358247,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500373574192295808",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500403089207449856",
+        "loo": 0.038248776531786016,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500410236033012352",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500418379291011840",
+        "loo": 0.08051261329396756,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500418894687086208",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500424804562041984",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "loo": 0.036465747544920726,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500461157165243648",
+        "loo": 0.06867276369323283,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "loo": 0.10291322134653082,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "loo": 0.027998836885651055,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500492871204256512",
+        "loo": 0.04546314101026527,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500549977088828160",
+        "loo": 0.03469823159671888,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "loo": 0.03216700717531493,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500579870061241088",
+        "loo": 0.10103651472816877,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "loo": 0.1707367657384435,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "loo": 0.035305456026050036,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500688820495583488",
+        "loo": 0.0354587310785266,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500693841313325696",
+        "loo": NaN,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "loo": 0.029151463114251576,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "loo": 0.02841505547263944,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1502007585909464064",
+        "loo": 0.04185939459911424,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1502012464992313088",
+        "loo": 0.17001873540695395,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      },
+      {
+        "catalog_id": "1504489595970703872",
+        "loo": 0.03615041327000565,
+        "snr": NaN,
+        "photon": NaN,
+        "ceil": NaN,
+        "r": NaN
+      }
+    ],
+    "all_d5_pass": false,
+    "n_sat_on_disk": 24,
+    "n_sat_rezone": 12,
+    "snr_col": null,
+    "comp_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\t3_r2\\platesolve\\NoFilter_60_2\\photometry\\comparison_stars_per_target.csv",
+    "comp_cols": [
+      "name",
+      "ra_deg",
+      "dec_deg",
+      "mag",
+      "b_v",
+      "catalog",
+      "catalog_id",
+      "match_sep_arcsec",
+      "x",
+      "y",
+      "flux",
+      "vsx_known_variable",
+      "gaia_dr3_variable_catalog",
+      "exo_host_obj_id",
+      "exo_host_name",
+      "exo_cat_source",
+      "exo_disposition",
+      "exo_match_sep_arcsec",
+      "peak_dao",
+      "peak_max_adu"
+    ]
+  },
+  "p_c3_3": {
+    "n_old_relflux_flags_recomputed": 55,
+    "n_new_loo_flags": 41,
+    "n_live_comp_newly_flagged": 17,
+    "live_comp_newly_flagged": [
+      "1485534187306501376",
+      "1485987151737107200",
+      "1485987254816323328",
+      "1496293286541396480",
+      "1497154753901690624",
+      "1497236186481686016",
+      "1497561779362267392",
+      "1497683996951418880",
+      "1497971450522478080",
+      "1498027456896444928",
+      "1498321301379345408",
+      "1498617482323461376",
+      "1499081819828174080",
+      "1499210016011946496",
+      "1500327978819506944",
+      "1500602959805382656",
+      "1502012464992313088"
+    ],
+    "n_old_file": 298,
+    "n_old_file_overlap_new": 0,
+    "sv_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b3\\t3_r2\\platesolve\\NoFilter_60_2\\photometry\\suspected_variables.csv"
+  },
+  "p_c3_3_520": {
+    "n_old_recomputed": 0,
+    "n_new": 2,
+    "overlap": [],
+    "n_old_file": 5,
+    "new_ids": [
+      "1111737033143440768",
+      "1112113680298377344"
+    ],
+    "old_ids": []
+  }
+}

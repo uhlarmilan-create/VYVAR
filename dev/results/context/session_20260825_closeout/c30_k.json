@@ -1,0 +1,773 @@
+{
+  "premise": "iv LOO MAD mag vs own ensembles on T3 R2 516; photon=1.0857/snr_ap_pixscaled",
+  "n_live_comps": 70,
+  "n_proc_frames": 134,
+  "n_ratio_finite": 70,
+  "p50": 2.51410060998778,
+  "p90": 3.6719982170134715,
+  "max": 5.914921155818797,
+  "k_rule": "p90 rounded UP to 1 sig fig; if 3<=p90<=5 then k=5",
+  "k": 5.0,
+  "histogram": [
+    {
+      "lo": 0.0,
+      "hi": 1.0,
+      "n": 5
+    },
+    {
+      "lo": 1.0,
+      "hi": 2.0,
+      "n": 15
+    },
+    {
+      "lo": 2.0,
+      "hi": 3.0,
+      "n": 31
+    },
+    {
+      "lo": 3.0,
+      "hi": 4.0,
+      "n": 14
+    },
+    {
+      "lo": 4.0,
+      "hi": 5.0,
+      "n": 3
+    },
+    {
+      "lo": 5.0,
+      "hi": 8.0,
+      "n": 2
+    },
+    {
+      "lo": 8.0,
+      "hi": 10.0,
+      "n": 0
+    },
+    {
+      "lo": 10.0,
+      "hi": 20.0,
+      "n": 0
+    },
+    {
+      "lo": 20.0,
+      "hi": 50.0,
+      "n": 0
+    },
+    {
+      "lo": 50.0,
+      "hi": 100.0,
+      "n": 0
+    },
+    {
+      "lo": 100.0,
+      "hi": 1000000000.0,
+      "n": 0
+    }
+  ],
+  "rows": [
+    {
+      "catalog_id": "1485483541052276480",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.044428484466356055,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.015711003873824094,
+      "r": 2.827857775554228
+    },
+    {
+      "catalog_id": "1485609641291887872",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.0566449336075268,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01635411792838533,
+      "r": 3.4636495747172016
+    },
+    {
+      "catalog_id": "1496315070616056064",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04455737341929129,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.008734361998517504,
+      "r": 5.101388450221559
+    },
+    {
+      "catalog_id": "1496786967262035712",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04566248738894164,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.04727478475839998,
+      "r": 0.965895193860785
+    },
+    {
+      "catalog_id": "1496798993170465536",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012582546169606582,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.005240849926370439,
+      "r": 2.4008598502878042
+    },
+    {
+      "catalog_id": "1496874408500111104",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03850764546405221,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01861971007601663,
+      "r": 2.0681119795550686
+    },
+    {
+      "catalog_id": "1496948904709272576",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012707475376707474,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004830504531192186,
+      "r": 2.6306724886916157
+    },
+    {
+      "catalog_id": "1496984467038399744",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.015538602832491845,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.00565705858887925,
+      "r": 2.7467636384459437
+    },
+    {
+      "catalog_id": "1496994156484645632",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01457563310033004,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0062751165298074426,
+      "r": 2.3227669209160178
+    },
+    {
+      "catalog_id": "1497014390074509312",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.037413358325354015,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.011504826233928692,
+      "r": 3.251970743810011
+    },
+    {
+      "catalog_id": "1497119157212720896",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011617851089531669,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0031167090687538156,
+      "r": 3.7276020421684555
+    },
+    {
+      "catalog_id": "1497125479404597248",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.06952071040315355,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.05501867799543642,
+      "r": 1.2635838034661613
+    },
+    {
+      "catalog_id": "1497145751650265600",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011907701151773253,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006373204654693997,
+      "r": 1.8684008747472098
+    },
+    {
+      "catalog_id": "1497196054307837696",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.015656861532352753,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006894948091790277,
+      "r": 2.2707729375069796
+    },
+    {
+      "catalog_id": "1497203132413443328",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.009592161313218474,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.003906225536622192,
+      "r": 2.4556086747395156
+    },
+    {
+      "catalog_id": "1497313255374892800",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011685517927784833,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006655360578038041,
+      "r": 1.7558053828587077
+    },
+    {
+      "catalog_id": "1497326621313118976",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.040650443529425,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.014483075501782431,
+      "r": 2.8067549274615153
+    },
+    {
+      "catalog_id": "1497368849430107904",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03612527022668964,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.012035915079154608,
+      "r": 3.0014560578992593
+    },
+    {
+      "catalog_id": "1497370563121917952",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.010310680761187114,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004101140869313591,
+      "r": 2.51410060998778
+    },
+    {
+      "catalog_id": "1497429837967596800",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.08014919133463581,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.05193863382955116,
+      "r": 1.5431517047149186
+    },
+    {
+      "catalog_id": "1497442379271632384",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.00926524348304985,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0027497499276753607,
+      "r": 3.369485853894608
+    },
+    {
+      "catalog_id": "1497528072458898432",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011839382788606962,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0037076506762024463,
+      "r": 3.1932303829478954
+    },
+    {
+      "catalog_id": "1497613731286514432",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.009823989232714814,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0023270395903935807,
+      "r": 4.221668283285738
+    },
+    {
+      "catalog_id": "1497617407778562304",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01103046208227674,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.005174937673632685,
+      "r": 2.131515928873712
+    },
+    {
+      "catalog_id": "1497631048594737408",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04766943978568479,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.017891009890007265,
+      "r": 2.664435382840506
+    },
+    {
+      "catalog_id": "1497674651102612992",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.010974529740159354,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.003795022474417304,
+      "r": 2.891822068021984
+    },
+    {
+      "catalog_id": "1497676850124557312",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.05114693210211221,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.020481085100236437,
+      "r": 2.497276479824878
+    },
+    {
+      "catalog_id": "1497719902878053888",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01266788785312281,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0044238589338604075,
+      "r": 2.863537929783938
+    },
+    {
+      "catalog_id": "1497726465588057344",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.013456232664531014,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006555068557588414,
+      "r": 2.052798158602557
+    },
+    {
+      "catalog_id": "1497758935541325824",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012580211340417568,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006215226183127682,
+      "r": 2.024095498659204
+    },
+    {
+      "catalog_id": "1497771992240531712",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011417719972705425,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004977679651099428,
+      "r": 2.2937836046125577
+    },
+    {
+      "catalog_id": "1497837207025312768",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012425378267580063,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004784691184559299,
+      "r": 2.596902869651873
+    },
+    {
+      "catalog_id": "1497894828305963776",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.0326330785189512,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.010714002473845893,
+      "r": 3.045834514096135
+    },
+    {
+      "catalog_id": "1497953377300128768",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04456396073105548,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01213616077605301,
+      "r": 3.6719982170134715
+    },
+    {
+      "catalog_id": "1497974027502858240",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04450943397539542,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01586289588604566,
+      "r": 2.805883257076009
+    },
+    {
+      "catalog_id": "1497976089087192832",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.036534915906633554,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.008464290163160353,
+      "r": 4.316359104233773
+    },
+    {
+      "catalog_id": "1497977291678057472",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.07065292999618888,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.04385509789192427,
+      "r": 1.6110539798658006
+    },
+    {
+      "catalog_id": "1498020894186918144",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01326629004596947,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0071591333419581925,
+      "r": 1.8530581024687025
+    },
+    {
+      "catalog_id": "1498062332030906880",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.013234771327151647,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004730459054678071,
+      "r": 2.797777377242795
+    },
+    {
+      "catalog_id": "1498222615914114816",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.07456804973212246,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.042500176272670956,
+      "r": 1.754535069542105
+    },
+    {
+      "catalog_id": "1498244610443240192",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04767262179052285,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.03955120094212308,
+      "r": 1.2053394247189657
+    },
+    {
+      "catalog_id": "1498326455340079616",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01147597581221821,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004286986649424551,
+      "r": 2.6769329486385613
+    },
+    {
+      "catalog_id": "1498383080188862976",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.052905435836665494,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.014573735016032922,
+      "r": 3.6301905982552127
+    },
+    {
+      "catalog_id": "1498626793812916480",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03162553073407815,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.010807094745220817,
+      "r": 2.926367490954384
+    },
+    {
+      "catalog_id": "1498645691668588288",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.07874284374659798,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.08216585484104338,
+      "r": 0.9583402241592022
+    },
+    {
+      "catalog_id": "1498677611865494016",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.046634127151403484,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.018841816679833215,
+      "r": 2.4750334823773628
+    },
+    {
+      "catalog_id": "1498735778606786816",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01108323428008996,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.003663339584883096,
+      "r": 3.0254455049227023
+    },
+    {
+      "catalog_id": "1498812233320666368",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04566248738894164,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.007719880990133101,
+      "r": 5.914921155818797
+    },
+    {
+      "catalog_id": "1498994786610872576",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.030467375358000266,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01066264926566307,
+      "r": 2.857392623436875
+    },
+    {
+      "catalog_id": "1499024297329815040",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03851017356215812,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01656875265896337,
+      "r": 2.32426510038611
+    },
+    {
+      "catalog_id": "1499200223486564608",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.01189957140066929,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004989750682882604,
+      "r": 2.3848028001661294
+    },
+    {
+      "catalog_id": "1499867867561302272",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.06551812598687434,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.03606423624302159,
+      "r": 1.8167063221684632
+    },
+    {
+      "catalog_id": "1499906247391001088",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.009036825588450604,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0026266217039971774,
+      "r": 3.440474726413178
+    },
+    {
+      "catalog_id": "1500296402219939584",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.009953977465387934,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.00215412390309094,
+      "r": 4.6208936501308155
+    },
+    {
+      "catalog_id": "1500355466608253184",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03412575382207705,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.010932760027295268,
+      "r": 3.121421648044685
+    },
+    {
+      "catalog_id": "1500403089207449856",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.047560512249530236,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.024615184415388937,
+      "r": 1.9321615246480268
+    },
+    {
+      "catalog_id": "1500418379291011840",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.08764668249858709,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.07601409118082332,
+      "r": 1.1530320383636767
+    },
+    {
+      "catalog_id": "1500460813567859456",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012543252240309785,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0044268637840056526,
+      "r": 2.8334398464278046
+    },
+    {
+      "catalog_id": "1500467303261764096",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.09536748660958766,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.07138103018230525,
+      "r": 1.3360340466650822
+    },
+    {
+      "catalog_id": "1500486102335278592",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011977684828604968,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.007600300599018704,
+      "r": 1.5759488289386132
+    },
+    {
+      "catalog_id": "1500492871204256512",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.05265404179437379,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.031588475617461496,
+      "r": 1.6668750474704026
+    },
+    {
+      "catalog_id": "1500576537166572544",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.00953498705110857,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.019008301934427412,
+      "r": 0.5016222429547489
+    },
+    {
+      "catalog_id": "1500579870061241088",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.09548767681399246,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.13097412745228731,
+      "r": 0.729057552597766
+    },
+    {
+      "catalog_id": "1500602959805382656",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03222654687718924,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.1029439554803152,
+      "r": 0.31304943283776926
+    },
+    {
+      "catalog_id": "1500664876053883904",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011150755997533499,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.006651194842798387,
+      "r": 1.676504186252645
+    },
+    {
+      "catalog_id": "1500688820495583488",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03404906908638105,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.013323420856465847,
+      "r": 2.5555800911187956
+    },
+    {
+      "catalog_id": "1500727513856914944",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.012022935574294553,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.004012275753645562,
+      "r": 2.99653770391292
+    },
+    {
+      "catalog_id": "1501956561697995008",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.011945829191079378,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.0057769100638842405,
+      "r": 2.0678579134824404
+    },
+    {
+      "catalog_id": "1502007585909464064",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.04641736979530607,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.01294119982284407,
+      "r": 3.58679028457386
+    },
+    {
+      "catalog_id": "1504489595970703872",
+      "n_ensemble_mates": 69,
+      "n_loo": 134,
+      "iv_mad_loo": 0.03943826310370216,
+      "snr_ap_pixscaled": NaN,
+      "photon": 0.010485220466614152,
+      "r": 3.7613193951693242
+    }
+  ],
+  "seven_520": [
+    {
+      "catalog_id": "1112113680298377344",
+      "iv_mad_loo": 0.037408272344282505,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1111920204908702336",
+      "iv_mad_loo": 0.015687190160514668,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1112110695298081664",
+      "iv_mad_loo": 0.014311508349625567,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1111749157833870208",
+      "iv_mad_loo": 0.0183044519003155,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1112121862213003648",
+      "iv_mad_loo": 0.012437059270052286,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1112121067641532160",
+      "iv_mad_loo": 0.01607220332583066,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    },
+    {
+      "catalog_id": "1111737033143440768",
+      "iv_mad_loo": 0.1867603631238323,
+      "photon": NaN,
+      "r": NaN,
+      "n_loo": 25
+    }
+  ],
+  "ms_snr_col": [
+    "name",
+    "ra_deg",
+    "dec_deg",
+    "mag",
+    "b_v",
+    "catalog",
+    "catalog_id",
+    "match_sep_arcsec",
+    "x",
+    "y",
+    "flux",
+    "vsx_known_variable",
+    "gaia_dr3_variable_catalog",
+    "exo_host_obj_id",
+    "exo_host_name",
+    "exo_cat_source",
+    "exo_disposition",
+    "exo_match_sep_arcsec",
+    "peak_dao",
+    "peak_max_adu"
+  ]
+}
