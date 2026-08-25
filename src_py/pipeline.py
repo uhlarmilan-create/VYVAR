@@ -9950,6 +9950,11 @@ def detect_stars_and_match_catalog(
     else:
         LOGGER.debug("[DAO] catalog_rows not available - Gaia->DAO skip")
     df_out = _proc_rename_det_names_to_catalog_id(df_out)
+    if "snr" not in df_out.columns and "peak_dao" in df_out.columns:
+        _sig = float(_bg_sigma_adu) if math.isfinite(float(_bg_sigma_adu)) else 1.0
+        _sig = max(_sig, 1.0)
+        df_out = df_out.copy()
+        df_out["snr"] = pd.to_numeric(df_out["peak_dao"], errors="coerce") / _sig
     return df_out, meta
 
 
