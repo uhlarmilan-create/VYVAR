@@ -162,7 +162,23 @@ def default_repr(value: Any) -> str:
     from pathlib import Path as _P
 
     if isinstance(value, _P):
-        return value.name or str(value)
+        # Name-independent: checkout folder basename must not appear in docs
+        # (SEL-GHOST-01 S7; worktree --clean). Git toplevel -> stable token.
+        try:
+            import subprocess
+
+            cwd = value if value.is_dir() else value.parent
+            top = subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=str(cwd),
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+            if top and _P(top).resolve() == value.resolve():
+                return "(git toplevel)"
+        except Exception:  # noqa: BLE001
+            pass
+        return "(path)"
     if isinstance(value, bool):
         return "True" if value else "False"
     if isinstance(value, dict):

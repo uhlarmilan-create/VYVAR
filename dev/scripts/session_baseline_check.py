@@ -870,6 +870,103 @@ def run_full_baseline(report: SessionReport) -> None:
         _update_ledger_on_full_pass(_git_short_head())
 
 
+def check_clean_tree(report: SessionReport) -> None:
+    """S7: tracked-only git worktree; pytest/ruff/pyflakes subset. Folder name must not matter."""
+    import tempfile
+    import uuid
+
+    try:
+        top = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(REPO_ROOT),
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception as exc:  # noqa: BLE001
+        report.add("clean-tree", "FAIL", f"git toplevel: {exc}")
+        return
+    wt_name = "b1b_clean_" + uuid.uuid4().hex[:8]
+    parent = Path(tempfile.mkdtemp(prefix="vyvar_clean_"))
+    wt = parent / wt_name
+    add = subprocess.run(
+        ["git", "worktree", "add", "--detach", str(wt), "HEAD"],
+        cwd=top,
+        capture_output=True,
+        text=True,
+    )
+    if add.returncode != 0:
+        shutil.rmtree(parent, ignore_errors=True)
+        report.add("clean-tree", "FAIL", "worktree add: " + (add.stderr or add.stdout or "")[:180])
+        return
+    details: list[str] = [f"worktree={wt_name}"]
+    ok = True
+    try:
+        pytest_cmd = [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "dev/tests/test_params_registry.py",
+            "dev/tests/test_s3_match_radius_d1.py",
+            "dev/tests/test_s4_optimizer_d2.py",
+            "dev/tests/test_s5_d3_candidacy.py",
+            "dev/tests/test_s7_clean_tree_name.py",
+        ]
+        pt = subprocess.run(pytest_cmd, cwd=str(wt), capture_output=True, text=True, timeout=600)
+        out = (pt.stdout or "") + (pt.stderr or "")
+        m_pass = re.search(r"(\d+) passed", out)
+        details.append("pytest " + (m_pass.group(0) if m_pass else f"exit {pt.returncode}"))
+        if pt.returncode != 0:
+            ok = False
+            nodes = _pytest_fail_nodes(out)
+            if nodes:
+                details.append("fail=" + ",".join(nodes[:6]))
+        ruff = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", "src_py", "dev/tests/test_params_registry.py"],
+            cwd=str(wt),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if ruff.returncode != 0:
+            ok = False
+            details.append("ruff FAIL")
+        else:
+            details.append("ruff PASS")
+        flake = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pyflakes",
+                "src_py/params_registry.py",
+                "src_py/d3_comparison_candidacy.py",
+            ],
+            cwd=str(wt),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if flake.returncode == 2 and "No module named" in (flake.stderr or ""):
+            details.append("pyflakes SKIP (not installed)")
+        elif flake.returncode != 0:
+            ok = False
+            details.append("pyflakes FAIL")
+        else:
+            details.append("pyflakes PASS")
+    except subprocess.TimeoutExpired:
+        ok = False
+        details.append("timeout")
+    finally:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(wt)],
+            cwd=top,
+            capture_output=True,
+            text=True,
+        )
+        shutil.rmtree(parent, ignore_errors=True)
+    report.add("clean-tree", "PASS" if ok else "FAIL", "; ".join(details)[:220])
+
+
 def print_summary(report: SessionReport) -> None:
     print()
     print(f"SESSION BASELINE CHECK ({report.tier})")
@@ -902,6 +999,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Deliberate full tier: frozen 516 snapshot headless run + anchor + counters",
     )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Also run the tracked-only worktree gate (pytest/ruff/pyflakes subset)",
+    )
     args = parser.parse_args(argv)
 
     report = SessionReport(tier="full" if args.full else "fast")
@@ -912,6 +1014,8 @@ def main(argv: list[str] | None = None) -> int:
     check_db_quick_check(report)
     check_ledger_hint(report)
     check_deps_outdated(report)
+    if args.clean:
+        check_clean_tree(report)
     if args.full:
         run_full_baseline(report)
 

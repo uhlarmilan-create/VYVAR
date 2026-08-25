@@ -253,6 +253,16 @@ def test_strings_are_ascii_only() -> None:
     assert not bad, "Registry entries with non-ASCII strings:\n" + "\n".join(bad)
 
 
+def test_project_root_default_repr_is_name_independent() -> None:
+    """S7: rendered default must not be the checkout folder basename."""
+    from pathlib import Path as _P
+
+    defaults = pr.appconfig_defaults()
+    rendered = pr.default_repr(defaults["project_root"])
+    assert rendered == "(git toplevel)"
+    assert rendered != _P(defaults["project_root"]).name
+
+
 def test_generated_params_md_is_fresh(tmp_path) -> None:
     # Regenerating in a temp dir must reproduce the committed VYVAR_PARAMS.md exactly,
     # excluding only the volatile timestamp/HEAD header line. Doc freshness is a tested

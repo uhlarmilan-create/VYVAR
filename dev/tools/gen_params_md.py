@@ -19,8 +19,24 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-# dev/tools/gen_params_md.py -> repo root is parents[2].
-ROOT = Path(__file__).resolve().parents[2]
+def _git_toplevel(start: Path) -> Path:
+    """Repo root from git; basename of the checkout folder must not matter."""
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(start),
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if out:
+            return Path(out)
+    except Exception:  # noqa: BLE001
+        pass
+    return Path(__file__).resolve().parents[2]
+
+
+# Name-independent of the clone folder (S7 --clean worktree).
+ROOT = _git_toplevel(Path(__file__).resolve().parent)
 # Phase A: VYVAR modules still live at repo root; Phase B: under src_py. Cover both so
 # `import params_registry` resolves regardless of layout.
 for _p in (ROOT, ROOT / "src_py"):

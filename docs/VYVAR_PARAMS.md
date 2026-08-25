@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-24T14:16:04Z at git HEAD 876053a._
+_Generated 2026-08-25T14:38:10Z at git HEAD 1cd404a._
 
 ## Summary
 
@@ -48,7 +48,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `database_path` | (resolved at runtime) | - | expert | static | internal | universal | none | n/a | hidden | Database Path |
 | `exoplanet_local_db_path` | exoplanets/vyvar_exoplanet_local.db | - | expert | static | internal | universal | none | n/a | hidden | Exoplanet Local Db Path |
 | `gaia_db_path` |  | - | expert | static | internal | universal | none | n/a | hidden | Gaia Db Path |
-| `project_root` | VYVAR | - | expert | static | internal | universal | none | n/a | hidden | Project Root |
+| `project_root` | (git toplevel) | - | expert | static | internal | universal | none | n/a | hidden | Project Root |
 | `vsx_local_db_path` |  | - | expert | static | internal | universal | none | n/a | hidden | VSX Local Db Path |
 
 ## calibration
