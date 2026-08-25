@@ -3,6 +3,7 @@ target-version = "py312"
 line-length = 120
 exclude = [
     "dev/sandbox",
+    "dev/results",
     "tmp",
     "Archive",
     "dev/scripts/archive",

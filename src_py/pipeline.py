@@ -12696,11 +12696,33 @@ def generate_masterstar_and_catalog(
     _eff_um = _bundle.get("eff_um")
     _foc_mm = _bundle.get("focal_mm")
     _expected_bundle = _bundle.get("expected_arcsec_per_px")
+    # D1/S6: a FITS/config/UI scale must not overwrite Equipment+Telescope DB
+    # scale. On 520 g_60_4 the bundle used 200 mm / 15.511 "/px (Zeiss-wide
+    # default) while the AZ800 row is 0.566 "/px; the triangle filter then
+    # rejected every match. First auto-scale from DB wins.
     try:
-        if _expected_bundle is not None and math.isfinite(float(_expected_bundle)) and float(_expected_bundle) > 0:
-            _plate_scale_ms = float(_expected_bundle)
+        _bundle_scale = (
+            float(_expected_bundle)
+            if _expected_bundle is not None
+            and math.isfinite(float(_expected_bundle))
+            and float(_expected_bundle) > 0
+            else None
+        )
     except (TypeError, ValueError):
-        pass
+        _bundle_scale = None
+    if _auto_scale_ms is not None:
+        _plate_scale_ms = float(_auto_scale_ms)
+        if (
+            _bundle_scale is not None
+            and abs(float(_bundle_scale) - float(_auto_scale_ms)) / float(_auto_scale_ms) > 0.05
+        ):
+            log_event(
+                f"WARNING: MASTERSTAR plate-scale from FITS/config/UI "
+                f"({_bundle_scale:.4f} arcsec/px) disagrees with DB Equipment+Telescope "
+                f"({_auto_scale_ms:.4f} arcsec/px) - keeping DB scale for the triangle filter."
+            )
+    elif _bundle_scale is not None:
+        _plate_scale_ms = float(_bundle_scale)
 
     _skip_independent_solve = bool(masterstar_platesolve_skip_solve) or (
         str(hdr.get("VY_CRT", "")).strip().lower() == "sibling_recovered"

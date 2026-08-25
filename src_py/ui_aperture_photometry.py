@@ -36,8 +36,9 @@ def _lc_time_axis_title(lc_df: pd.DataFrame, offset: int | None) -> str:
         return jd_axis_title("time (unknown)", offset)
     return jd_axis_title(lc_time_axis_short_label(tb), offset)
 
+
 # Columns loaded from lightcurve_*.csv for charts / preload (see _render_target_detail, multi-filter overlay).
-    _LC_OVERVIEW_COLS = [
+_LC_OVERVIEW_COLS = [
     "time_base",
     "bjd",
     "bjd_tdb_mid",
