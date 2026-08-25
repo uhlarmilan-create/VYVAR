@@ -1,0 +1,288 @@
+{
+  "c7_1": {
+    "harness": "dev/results/session_20260825_sel_ghost_01_b3/run_t3.py",
+    "r1_sys_path": "sys.path.insert(0, WT_R1/src_py) but does NOT clear ROOT/src_py",
+    "worktree": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\b1b_c592ecf",
+    "worktree_exists": true,
+    "iter4_in_worktree": false,
+    "iter4_in_head": true,
+    "run_t3_insert_snippet": "sys.path.insert(0, str(src_py))",
+    "isolated_probe_rc": 0,
+    "isolated_probe": "{\"path0\": \"C:\\\\ASTRO\\\\python\\\\VYVAR\\\\.worktrees\\\\b1b_c592ecf\\\\src_py\", \"head_on_path\": false, \"iter4_ok\": false, \"iter4_err\": \"ModuleNotFoundError: No module named 'dao_gaia_stage_01_iter4'\", \"pipeline_err\": \"ModuleNotFoundError: No module named '__future__'\"}",
+    "contaminated_probe": "{\"head_on_path\": true, \"iter4_file\": \"C:\\\\ASTRO\\\\python\\\\VYVAR\\\\src_py\\\\dao_gaia_stage_01_iter4.py\", \"iter4_ok\": true}",
+    "r1_n_ms": null,
+    "r1_git": "c592ecf13bfb118d93f32bea285b9454dc02422f"
+  },
+  "c7_2": {
+    "fn": "session_baseline_check._copy_frozen_anchor_inputs",
+    "file": "dev/scripts/session_baseline_check.py",
+    "lines": "578-608",
+    "copies": [
+      "platesolve/NoFilter_60_2/ entire tree EXCEPT photometry/, _hrd_cache/, *.pdf (includes MASTERSTAR.fits, masterstars_full_match.csv, WCS in FITS headers, field_catalog, ePSF products)",
+      "detrended_aligned/lights/NoFilter_60_2/ (aligned lights FITS; these are preprocessed, not raw)",
+      "cal_diag.json, draft_manifest.json, sat_diag.json from snapshot root -> work_root and platesolve setup"
+    ],
+    "then_deletes": "destination photometry/ is rmtree'd and recreated empty",
+    "not_copied_as_inputs": "live photometry/ (proc CSVs, LCs) - rebuilt; raw lights; calibration masters from CalibrationLibrary are NOT in this copy (pre_calibrated/aligned path)",
+    "blind_zone": "MASTERSTAR stack+CSV+ePSF, per-frame aligned FITS (WCS in headers), cal_diag, sat_diag, draft_manifest, field catalogs under platesolve"
+  },
+  "c7_3": {
+    "1498000793739050368": {
+      "r0": {
+        "present": true,
+        "x": "690.1645560092186",
+        "y": "549.1157137588717",
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "name": "1498000793739050368",
+        "vy_dao_pass": "1",
+        "peak_dao": "672.327880859375",
+        "phot_g_mean_mag": "12.998473167419434",
+        "mag": "12.998473167419434"
+      },
+      "r1": {
+        "present": true,
+        "x": "690.1645560092186",
+        "y": "549.1157137588717",
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "name": "1498000793739050368",
+        "vy_dao_pass": "1",
+        "peak_dao": "672.327880859375",
+        "phot_g_mean_mag": "12.998473167419434",
+        "mag": "12.998473167419434"
+      },
+      "ms_identical_xy_state_mode_name": true,
+      "row25_r0": {
+        "flag": "normal",
+        "mag": 10.734337,
+        "bjd": 2461154.359982057,
+        "mag_inst": -11.431815,
+        "source_file": "proc_BO_CVn_Light_029.csv"
+      },
+      "row25_r1": {
+        "flag": "no_data",
+        "mag": "nan",
+        "bjd": "nan",
+        "mag_inst": "nan",
+        "source_file": "proc_BO_CVn_Light_029.csv"
+      }
+    },
+    "1485987151737107200": {
+      "r0": {
+        "present": true,
+        "x": "106.71722237443193",
+        "y": "1056.463233940129",
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "name": "1485987151737107200",
+        "vy_dao_pass": NaN,
+        "peak_dao": NaN,
+        "phot_g_mean_mag": NaN,
+        "mag": "14.966069221496582"
+      },
+      "r1": {
+        "present": true,
+        "x": "106.68851514750168",
+        "y": "1056.4697035556935",
+        "source_state": "DETECTED_P1",
+        "vy_match_mode": "locked",
+        "name": "1485987151737107200",
+        "vy_dao_pass": NaN,
+        "peak_dao": NaN,
+        "phot_g_mean_mag": NaN,
+        "mag": "14.966069221496582"
+      },
+      "ms_identical_xy_state_mode_name": false,
+      "nfin_r0": 122,
+      "nfin_r1": 105,
+      "n_r0_only_finite_vs_r1_nan": 17
+    }
+  },
+  "c7_4": {
+    "id": "1500387696044768384",
+    "r0": {
+      "present": true,
+      "x": "1806.9603755234195",
+      "y": "587.029814845187",
+      "source_state": "DETECTED_P1",
+      "vy_match_mode": "locked",
+      "name": "1500387696044768384",
+      "vy_dao_pass": "1",
+      "peak_dao": "529.9163818359375",
+      "phot_g_mean_mag": "15.559402465820312",
+      "mag": "15.559402465820312"
+    },
+    "r1": {
+      "present": false
+    },
+    "r2": {
+      "present": false
+    },
+    "variable_targets": [
+      {
+        "name": "Gaia DR3 1500387696044768384",
+        "catalog_id": "1500387696044768384",
+        "catalog": "VSX",
+        "ra_deg": "206.7068328857422",
+        "dec_deg": "41.40956115722656",
+        "priority": "1",
+        "notes": "VAR P=0.224918",
+        "vsx_name": "Gaia DR3 1500387696044768384",
+        "vsx_type": "VAR",
+        "vsx_period": "0.224918",
+        "x": "1806.9461846411514",
+        "y": "587.0481610259958",
+        "mag": "15.559402465820312",
+        "zone": "linear",
+        "gaia_match_arcsec": "0.525415310975705",
+        "gaia_match_quality": "poor",
+        "gaia_match_source": "masterstars",
+        "vsx_mag_max": "15.5",
+        "exo_host_obj_id": NaN,
+        "exo_host_name": NaN,
+        "exo_cat_source": NaN,
+        "exo_disposition": NaN,
+        "exo_match_sep_arcsec": NaN,
+        "target_origin": NaN
+      }
+    ],
+    "vt_name_cols": [
+      "name",
+      "vsx_name",
+      "vsx_type",
+      "vsx_period",
+      "vsx_mag_max"
+    ],
+    "census_r1": [],
+    "census_r1_n": 4131,
+    "census_r2": [],
+    "census_r2_n": 4131
+  },
+  "c7_5": {
+    "only_r0": {
+      "1496997386298488832": {
+        "r0": {
+          "present": true,
+          "x": "1438.816984450254",
+          "y": "1214.4144084513912",
+          "source_state": "DETECTED_P1",
+          "vy_match_mode": "locked",
+          "name": "1496997386298488832",
+          "vy_dao_pass": "1",
+          "peak_dao": "156.2291259765625",
+          "phot_g_mean_mag": "15.280324935913086",
+          "mag": "15.280324935913086"
+        },
+        "r1": {
+          "present": false
+        },
+        "r2": {
+          "present": false
+        }
+      },
+      "1497063283984301696": {
+        "r0": {
+          "present": true,
+          "x": "1110.5363677342318",
+          "y": "1114.5412666258344",
+          "source_state": "DETECTED_P1",
+          "vy_match_mode": "locked",
+          "name": "1497063283984301696",
+          "vy_dao_pass": "1",
+          "peak_dao": "180.8544921875",
+          "phot_g_mean_mag": "15.367382049560549",
+          "mag": "15.367382049560549"
+        },
+        "r1": {
+          "present": false
+        },
+        "r2": {
+          "present": false
+        }
+      },
+      "1498903316693061248": {
+        "r0": {
+          "present": true,
+          "x": "1082.2728721214914",
+          "y": "460.848327271497",
+          "source_state": "DETECTED_P1",
+          "vy_match_mode": "locked",
+          "name": "1498903316693061248",
+          "vy_dao_pass": "1",
+          "peak_dao": "5336.6982421875",
+          "phot_g_mean_mag": "15.33494472503662",
+          "mag": "15.33494472503662"
+        },
+        "r1": {
+          "present": false
+        },
+        "r2": {
+          "present": false
+        }
+      },
+      "1500387696044768384": {
+        "r0": {
+          "present": true,
+          "x": "1806.9603755234195",
+          "y": "587.029814845187",
+          "source_state": "DETECTED_P1",
+          "vy_match_mode": "locked",
+          "name": "1500387696044768384",
+          "vy_dao_pass": "1",
+          "peak_dao": "529.9163818359375",
+          "phot_g_mean_mag": "15.559402465820312",
+          "mag": "15.559402465820312"
+        },
+        "r1": {
+          "present": false
+        },
+        "r2": {
+          "present": false
+        }
+      }
+    },
+    "only_r1": {
+      "1504304603139151872": {
+        "r0": {
+          "present": false
+        },
+        "r1": {
+          "present": true,
+          "x": "78.06338879886407",
+          "y": "83.10067038338931",
+          "source_state": "DETECTED_P1",
+          "vy_match_mode": NaN,
+          "name": "DET_0482",
+          "vy_dao_pass": "1",
+          "peak_dao": "2139.383056640625",
+          "phot_g_mean_mag": "17.454769134521484",
+          "mag": "17.454769134521484"
+        },
+        "r2": {
+          "present": false
+        }
+      }
+    },
+    "r2_vs_r1_set": {
+      "n_r0": 3585,
+      "n_r1": 3582,
+      "n_r2": 3584,
+      "r2_minus_r1": [
+        "1485911972629595392",
+        "1497137402233837952",
+        "1497195367112531712",
+        "1502034042907960704"
+      ],
+      "r1_minus_r2": [
+        "1485912110068525824",
+        "1504304603139151872"
+      ],
+      "n_r2_minus_r1": 4,
+      "n_r1_minus_r2": 2,
+      "lost_in_r2": false,
+      "lost_in_r1": false,
+      "lost_in_r0": true
+    }
+  }
+}
