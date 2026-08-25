@@ -1,7 +1,9 @@
 # VYVAR -- Development State
 
-**Status:** **CAL-520-01 STOP** (2026-08-24, measure): draft 520 photometry
-wreck is H-CAL-MISCLASS (non-cal button; no AZ800 masters in library).
+**Status:** **REG-520-01 STOP** (2026-08-24, measure): June 0.06 vs today
+0.39 on the same non-cal button is S2 selection (rms ceiling 0.1 +
+59-px false locks), not S1 pairing starvation and not H-CAL-MISCLASS.
+CAL-520-01 library facts remain; causal story superseded.
 **DAO-GAIA-XFER-01 CLOSED** (2026-08-24, Milan GO): STAGE-01 sandbox
 gate pinned to hand_validated params; 520 g/i/r calibration certificate unblocked
 (z_90_4 remains solve-rejected). EPSF-VALID-02 **CLOSED** (2026-08-22 S6). **EPSF-BRIGHT-01 CLOSED** (2026-08-23 FD-A).
@@ -29,16 +31,27 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-24** (CAL-520-01 STOP `505fa13`; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry; EPSF-NEWTON-518-01 STOP N2; PIN-CENSUS committed).
+Last updated: **2026-08-24** (REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
 
-## 2026-08-24 -- CAL-520-01 (measure, STOP)
+## 2026-08-24 -- REG-520-01 (measure, STOP)
 
-Draft 520 V0612 `lc_rms` 0.3949 vs June 0.0622 is H-CAL-MISCLASS: UI
-non-cal button skipped VYVAR calibration on raw Brno lights. Library
-has no C5A-150M/AZ800 masters. INV-PREP-01 0.02x did not fire. Bright
-June-band comps rms 0.236 vs selected faint 0.026. Time-axis UI is a
-separate `_LC_OVERVIEW_COLS` omit of `time_base`. STOP: Milan supplies
-cal frames, then raw rerun. Evidence: `CURSOR_RESULT_CAL_520_01.md`.
+Same SS Cam 2026-06-08, same `RUN VYVAR (non-cal)` button: June
+`lc_rms` 0.0622 vs today 0.3949. S1 matching A/B/C does not change
+G<12 / G<14 DETECTED counts (already 11/11 and 57/57). Selected 8
+comps are DETECTED_P1 but 59 px median from Gaia (aperture != star).
+June-band stars fail `max_comp_rms=0.1` (fieldwide 0.16-0.30). G<14
+complete ensemble from today's `dao_flux` recovers lc_rms 0.068.
+S3 `"time (unknown)"` is `_LC_OVERVIEW_COLS` omitting `time_base`.
+STOP menu: S2 selection-input first; (a) rms-derived floor hygiene;
+(b) `non_cal_declared` banner; (c) time_base; (d) PRECAL informative.
+Evidence: `CURSOR_RESULT_REG_520_01.md`.
+
+## 2026-08-24 -- CAL-520-01 (measure, STOP; cause superseded by REG-520-01)
+
+Library facts stand: no eq=4/tel=6 masters; INV-PREP-01 0.02x
+informational; donuts real. H-CAL-MISCLASS is **not** the cause of
+0.39 vs 0.06 (Milan: same non-cal button in June). Evidence:
+`CURSOR_RESULT_CAL_520_01.md`.
 
 ## 2026-08-24 -- DAO-GAIA-XFER-01 (Milan GO wired)
 

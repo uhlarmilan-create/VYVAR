@@ -1,0 +1,15 @@
+{
+  "n_selected": 8,
+  "n_selected_detected_p1p2": 8,
+  "frac_selected_detected": 1.0,
+  "mean_frac_forced_photometry_selected": 1.0,
+  "per_frame_source_state_column_present": false,
+  "comp_pool_gates_on_source_state": false,
+  "comp_pool_gate_file_line": "photometry_core.py:15777-15860 cand_mask has no source_state; admit_pool_stars :1002-1046 VSX/Gaia-variable only; _select_comps_by_rms_then_color :15392 uses phase01_comparison_max_comp_rms=0.1 ceiling",
+  "max_comp_rms_config": 0.1,
+  "june_band_n": 47,
+  "june_band_detected_n": 43,
+  "june_band_peak_max_median": 33644.603515625,
+  "june_band_sat80_any": 0.0,
+  "selected_peak_max_median": NaN
+}

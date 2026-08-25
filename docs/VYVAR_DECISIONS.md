@@ -6,6 +6,23 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## REG-520-01 - non-cal is first-class; 0.39 vs 0.06 is selection (2026-08-24)
+
+**Cause (measured, STOP).** Same SS Cam night, same `RUN VYVAR (non-cal)`
+button: June lc_rms 0.0622 vs today 0.3949. S1 matching A/B/C does not
+change bright DETECTED counts. Selected comps are DETECTED_P1 at 59 px
+from Gaia; June-band stars fail `max_comp_rms=0.1`. CAL-520-01
+H-CAL-MISCLASS is superseded as the causal story. Library "no AZ800
+masters" remains a fact, not the regression.
+
+**Decision (Milan testimony, binding until a later GO).** Non-cal is a
+first-class route. PRECAL radiometric metric informs, does not block.
+A declared-mode stamp/banner is the product direction (not executed in
+REG-520-01). Selection-input (rms ceiling + residual/visibility gate)
+is the evidence-ranked fix for this draft's lc_rms.
+
+Evidence: `CURSOR_RESULT_REG_520_01.md`.
+
 ## DAO-GAIA-XFER-01 - pin STAGE-01 sandbox gate to hand params (2026-08-24)
 
 **Cause (REGRESS-01, accepted).** Draft 520 Brno AZ800/C5A-150M failed

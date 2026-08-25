@@ -2,6 +2,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-24 -- REG-520-01 (measure, STOP)
+
+Same non-cal button, same night: June V0612 `lc_rms` 0.0622 vs today
+0.3949. S1 pass2/seed 1.0 px does not starve bright pairing (G<12
+11/11 DETECTED_P1; A/B/C unchanged). S2: rms ceiling 0.1 drops
+June-band (0.16-0.30); selected 8 are DETECTED_P1 at 59 px from Gaia.
+G<14 complete 8 from today's `dao_flux` -> lc_rms 0.068. S3 UI
+`_LC_OVERVIEW_COLS` omits `time_base` (on-disk `BJD_TDB`). CAL-520-01
+H-CAL-MISCLASS superseded as cause. Evidence:
+`CURSOR_RESULT_REG_520_01.md`. Not pushed.
+
 ## 2026-08-24 -- CAL-520-01 (measure, STOP)
 
 Draft 520 is `pre_calibrated` because `[folder] RUN VYVAR (non-cal)` was

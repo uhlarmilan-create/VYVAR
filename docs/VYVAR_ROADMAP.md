@@ -10,22 +10,24 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-24 CAL-520-01 STOP)
+## NEXT SESSION - entry point (2026-08-24 REG-520-01 STOP)
 
-Local tip **`505fa13`** (XFER-01 W6; CAL-520-01 measure; not pushed).
-Production 516 ePSF SHA `172f95403beae36d...` unchanged. Draft 520 was
-run as `pre_calibrated` (non-cal button) on `RAW_NON_CALIBRATED`
-lights; VYVAR has no AZ800/C5A-150M masters in CalibrationLibrary.
-z_90_4 remains solve-rejected. AC-02 wiring still dirty.
+Local tip **`92361a3`** plus SESSION-CLOSE-20260824 stack (AC-02 +
+REG-520-01; not pushed until this close). Production 516 ePSF SHA
+`172f95403beae36d...` unchanged. Non-cal is first-class (Milan).
+0.39 vs 0.06 is S2 selection, not the button. z_90_4 remains
+solve-rejected. AC-02 wiring is in the close stack.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: supply AZ800 / C5A-150M darks+flats, then GO a raw (`! RUN VYVAR`) 520 rerun -- CAL-520-01 (b) then (a) |
-| **1b** | Milan: GO PRECAL-INPUT-CONTRACT-01 wiring (star-masked bias-aware flatness; INV-PREP-01 0.02x did not fire) |
-| **1c** | Optional one-line UI: add `time_base` to `_LC_OVERVIEW_COLS` (520 "time (unknown)") |
+| **1** | Milan: GO S2 selection-input fix (rms ceiling 0.1 + no Gaia-DAO residual / visibility gate; comps must sit on the Gaia star) -- REG-520-01 menu 1 |
+| **1a** | Optional later: production pass2/seed floor = f(solve rms, FWHM); cite M2 curve; i_70_4 is the worst live gap -- menu (a) |
+| **1b** | Milan: GO `calibration_mode=non_cal_declared` banner + cautious LC class + submit lock -- menu (b) |
+| **1c** | One-line UI: add `time_base` to `_LC_OVERVIEW_COLS` -- menu (c) |
+| **1d** | PRECAL metric stays informative, does not block -- menu (d); PRECAL-INPUT-CONTRACT-01 as a blocking gate is the wrong direction |
 | **2** | Milan: Newton 518 ePSF - hold for a night with gated pool >=30, or GO a wide-only ZP-OK without claiming Newton |
 | **3** | Milan: GO or hold interim `psf_fit_ok_for_zp` (wide-rig CENSUS-01 still stands; no Newton P-D) |
-| **4** | Milan: authorize commit/push of AC-02 wiring + remaining docs |
+| **4** | SESSION-CLOSE-20260824: AC-02 wiring + REG-520-01 results (this close) |
 | **5** | Milan: dashboard curve review + push the local commit series (LC-LOG through XFER) |
 | **6** | **`--full` recut** **9902d918** / **472bc9e4** (post-swap anchor guard on frozen snapshot) |
 | **7** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
@@ -38,7 +40,8 @@ z_90_4 remains solve-rejected. AC-02 wiring still dirty.
 | **MED** | **MULTIFILTER-WCS-01** - one field shot through multiple filters in one observation group shares pointing; the solver should SEED, never trust, a sibling set's VERIFIED WCS. Design: within a draft/observation group, when a set's blind solve fails, retry with the WCS of a VERIFIED sibling (closest DATE-OBS) as the initial hypothesis; the catalog-recovery verification gate runs unchanged and unrelaxed; provenance stamps `wcs_source=sibling_seed:<set>`; guard on pointing drift between the sets. Decisive first measurement (520, 2026-08-24, read-only): project g_60_4 VERIFIED WCS onto z_90_4 MASTERSTAR -> catalog_recovery_gate **2.7%** (n_tight=3 / n_det=113 / n_cat=169); in-memory bulk-shift not confirmed. i_70_4 (closest DATE-OBS) -> **0%**. z p99-median contrast **9.06 ADU** vs g **40.0 ADU**. Blind-solve reject stands (z is physically shallow); do not lower `masterstar_catalog_recovery_min`. Wiring of sibling-seed is still the general design for other drafts. Hand-CSV re-lock with full stamps at the next natural STAGE-01 iteration (not now). |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild (multi-frame samples, osamp vs FWHM, smoothing) |
 | **FUTURE** | **DB-RETIRE-01**, **MS-POOL-POLICY-01** |
-| **MED** | **PRECAL-INPUT-CONTRACT-01** (520 third evidence instance: non-cal button, donuts, INV-PREP-01 0.02x silent), **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **REG-520-S2** (comp selection: rms ceiling + no Gaia-DAO residual gate), **COMP-RMS-DEF-01**, **WIDE-ERR/CORR-ERR-01** |
+| **MED** | **PRECAL-INPUT-CONTRACT-01** (informational stamp, not a blocking gate; REG-520-01 menu d), **DAO-TOL-FLOOR-01** (pass2/seed floor = f(rms, FWHM); cite M2 curve) |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp) |
 | **FUTURE** | ePSF spatial / OSC validation (Part B/D full scope deferred) |
 | **LOW** | **SIGMA-BKG-VAR-01**, gaussian_fwhm_px_override provenance, exposure ramp |

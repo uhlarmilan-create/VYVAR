@@ -182,6 +182,12 @@ If seeing ~3 arcsec, Newton FWHM ~4.6 px (critically to well sampled).
 - F4: a higher-osamp rebuild is more likely to be legal on Newton; this
   wide-rig campaign must not be the template for swapping osamp=4 in.
 
+**2026-08-24 measurement (EPSF-NEWTON-518-01):** the on-disk Newton draft
+is 518 (TOI-1131, V 60 s, **bin2 1.30 arcsec/px**, not unbinned 0.65).
+Part C gated pool 26 < `epsf_min_stars=30` (science_scope choke). ePSF
+not built. P-A..P-E from this paragraph remain unmeasured. Evidence:
+`CURSOR_RESULT_EPSF_NEWTON_518_01.md`.
+
 ## Files touched
 
 Production code (no model/catalog/export byte change):

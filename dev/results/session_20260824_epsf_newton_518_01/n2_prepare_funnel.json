@@ -1,0 +1,45 @@
+{
+  "stop": true,
+  "stop_reason": "gated_pool_below_epsf_min_stars",
+  "epsf_min_stars": 30,
+  "godden_o2_m6_95pct_stars": 48,
+  "fwhm_px_context": 2.2919,
+  "cutout_size": 15,
+  "cutout_vs_wide_17": {
+    "newton_cutout": 15,
+    "wide_production": 17
+  },
+  "gridpoints_per_fwhm_osamp2": 4.5838,
+  "n_after_isolation": 26,
+  "n_ext": 0,
+  "funnel": {
+    "n_csv_input": 1215,
+    "n_after_variable_excluded": 1194,
+    "n_after_peak_sat_likely": 790,
+    "n_after_peak_sat_is_saturated": 790,
+    "n_after_photometry_ok": 790,
+    "n_after_not_noisy": 790,
+    "n_after_usable": 790,
+    "n_after_snr_cut": null,
+    "n_after_snr_cut_reason": "not applied in this function",
+    "n_build_input": 790,
+    "n_after_zone_linear": 790,
+    "n_after_clean_source_state": 492,
+    "n_after_science_scope": 26,
+    "n_after_edge_safe_cutout": 26,
+    "n_after_interim_top_n": 26,
+    "build_interim_top_n": 200,
+    "build_interim_top_n_mark": "INTERIM",
+    "n_csv_with_catalog_id": 26,
+    "used_broad_pool": false,
+    "n_safe_comp_csv_join": 26,
+    "n_after_csv_select": 26,
+    "n_after_db_join": 26,
+    "n_after_targeting": 26,
+    "n_final": 26
+  },
+  "error": "EPSF build needs at least 30 clean stars from masterstars_full_match.csv; found 26. Funnel: {'n_csv_input': 1215, 'n_after_variable_excluded': 1194, 'n_after_peak_sat_likely': 790, 'n_after_peak_sat_is_saturated': 790, 'n_after_photometry_ok': 790, 'n_after_not_noisy': 790, 'n_after_usable': 790, 'n_after_snr_cut': None, 'n_after_snr_cut_reason': 'not applied in this function', 'n_build_input': 790, 'n_after_zone_linear': 790, 'n_after_clean_source_state': 492, 'n_after_science_scope': 26, 'n_after_edge_safe_cutout': 26, 'n_after_interim_top_n': 26, 'build_interim_top_n': 200, 'build_interim_top_n_mark': 'INTERIM', 'n_csv_with_catalog_id': 26, 'used_broad_pool': False, 'n_safe_comp_csv_join': 26, 'n_after_csv_select': 26, 'n_after_db_join': 26, 'n_after_targeting': 26, 'n_final': 26}",
+  "equipment_query": {
+    "error": "no such table: TELESCOPES"
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "file": "lightcurve_1625358840491946496.csv",
+    "sha256": "b41bbdd5223ce4d665e519929d5343485e3d8a4d75f1b6deeadbd3d1feb410a8"
+  },
+  {
+    "file": "lightcurve_1625361348752915968.csv",
+    "sha256": "a9cb84c5ed6c6839c3169a9986db32a90151cf722682d781ec2a2aaafa6715db"
+  },
+  {
+    "file": "lightcurve_1625373404725030528.csv",
+    "sha256": "35021e994f4addc96f92682123b2350013451da7dbea9cbd90ff33ecff676388"
+  },
+  {
+    "file": "lightcurve_1625382892308863488.csv",
+    "sha256": "93b5f39a8e021818a60e8c7c4e08280276fa67255f5300e34561f8c030391e65"
+  },
+  {
+    "file": "lightcurve_1625385430634374272.csv",
+    "sha256": "3b31f67caa0e2932e8d8b963975a31f0bae6954c7f83c15b315a5022017364da"
+  },
+  {
+    "file": "lightcurve_1625400858159986432.csv",
+    "sha256": "ba49d02eeab38ac3791988ad8183fc8d0f8775da46d28c1af9264176b4fc94d9"
+  },
+  {
+    "file": "lightcurve_1625409074429526912.csv",
+    "sha256": "8c6ce9396073387e346a81d42a83b71d6d3764a9b4dd67f58fee56a4359ebc91"
+  },
+  {
+    "file": "lightcurve_1625465733638160000.csv",
+    "sha256": "98e9e49d862b1dbbcc5ec320c4aa5733281248329a83e08cd68bedefae9b8dd2"
+  },
+  {
+    "file": "lightcurve_1625559295205753344.csv",
+    "sha256": "f6299a8c16d10429b0c67ddf20984251c952a345c4640d22f4554a614533f56b"
+  },
+  {
+    "file": "lightcurve_1625573829375431296.csv",
+    "sha256": "9ea1f41ef8eb0ec58d79bf47d4eab2e1d9503d5d4ed138d6fa2aa99b56e5f0d4"
+  }
+]

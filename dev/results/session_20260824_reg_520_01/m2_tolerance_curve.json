@@ -1,0 +1,271 @@
+{
+  "principle": "derived matching/centroid tolerance must be a function of measured astrometric rms and FWHM; never a fixed 1.0 px floor",
+  "g_match_curve_all_gaia": [
+    {
+      "radius_px": 0.5,
+      "n_gaia": 400,
+      "n_matched": 19,
+      "frac": 0.0475
+    },
+    {
+      "radius_px": 1.0,
+      "n_gaia": 400,
+      "n_matched": 35,
+      "frac": 0.0875
+    },
+    {
+      "radius_px": 1.44,
+      "n_gaia": 400,
+      "n_matched": 52,
+      "frac": 0.13
+    },
+    {
+      "radius_px": 1.5,
+      "n_gaia": 400,
+      "n_matched": 56,
+      "frac": 0.14
+    },
+    {
+      "radius_px": 2.0,
+      "n_gaia": 400,
+      "n_matched": 68,
+      "frac": 0.17
+    },
+    {
+      "radius_px": 2.5,
+      "n_gaia": 400,
+      "n_matched": 72,
+      "frac": 0.18
+    },
+    {
+      "radius_px": 3.0,
+      "n_gaia": 400,
+      "n_matched": 75,
+      "frac": 0.1875
+    },
+    {
+      "radius_px": 3.5,
+      "n_gaia": 400,
+      "n_matched": 76,
+      "frac": 0.19
+    },
+    {
+      "radius_px": 5.0,
+      "n_gaia": 400,
+      "n_matched": 76,
+      "frac": 0.19
+    }
+  ],
+  "g_match_curve_by_band": [
+    {
+      "band": "Glt12",
+      "points": [
+        {
+          "radius_px": 0.5,
+          "n_gaia": 11,
+          "n_matched": 1,
+          "frac": 0.09090909090909091
+        },
+        {
+          "radius_px": 1.0,
+          "n_gaia": 11,
+          "n_matched": 3,
+          "frac": 0.2727272727272727
+        },
+        {
+          "radius_px": 1.44,
+          "n_gaia": 11,
+          "n_matched": 4,
+          "frac": 0.36363636363636365
+        },
+        {
+          "radius_px": 1.5,
+          "n_gaia": 11,
+          "n_matched": 5,
+          "frac": 0.45454545454545453
+        },
+        {
+          "radius_px": 2.0,
+          "n_gaia": 11,
+          "n_matched": 7,
+          "frac": 0.6363636363636364
+        },
+        {
+          "radius_px": 2.5,
+          "n_gaia": 11,
+          "n_matched": 10,
+          "frac": 0.9090909090909091
+        },
+        {
+          "radius_px": 3.0,
+          "n_gaia": 11,
+          "n_matched": 10,
+          "frac": 0.9090909090909091
+        },
+        {
+          "radius_px": 3.5,
+          "n_gaia": 11,
+          "n_matched": 10,
+          "frac": 0.9090909090909091
+        },
+        {
+          "radius_px": 5.0,
+          "n_gaia": 11,
+          "n_matched": 10,
+          "frac": 0.9090909090909091
+        }
+      ]
+    },
+    {
+      "band": "Glt14",
+      "points": [
+        {
+          "radius_px": 0.5,
+          "n_gaia": 57,
+          "n_matched": 5,
+          "frac": 0.08771929824561403
+        },
+        {
+          "radius_px": 1.0,
+          "n_gaia": 57,
+          "n_matched": 20,
+          "frac": 0.3508771929824561
+        },
+        {
+          "radius_px": 1.44,
+          "n_gaia": 57,
+          "n_matched": 36,
+          "frac": 0.631578947368421
+        },
+        {
+          "radius_px": 1.5,
+          "n_gaia": 57,
+          "n_matched": 38,
+          "frac": 0.6666666666666666
+        },
+        {
+          "radius_px": 2.0,
+          "n_gaia": 57,
+          "n_matched": 46,
+          "frac": 0.8070175438596491
+        },
+        {
+          "radius_px": 2.5,
+          "n_gaia": 57,
+          "n_matched": 50,
+          "frac": 0.8771929824561403
+        },
+        {
+          "radius_px": 3.0,
+          "n_gaia": 57,
+          "n_matched": 52,
+          "frac": 0.9122807017543859
+        },
+        {
+          "radius_px": 3.5,
+          "n_gaia": 57,
+          "n_matched": 53,
+          "frac": 0.9298245614035088
+        },
+        {
+          "radius_px": 5.0,
+          "n_gaia": 57,
+          "n_matched": 53,
+          "frac": 0.9298245614035088
+        }
+      ]
+    },
+    {
+      "band": "G_11.6_13.9",
+      "points": [
+        {
+          "radius_px": 0.5,
+          "n_gaia": 45,
+          "n_matched": 4,
+          "frac": 0.08888888888888889
+        },
+        {
+          "radius_px": 1.0,
+          "n_gaia": 45,
+          "n_matched": 16,
+          "frac": 0.35555555555555557
+        },
+        {
+          "radius_px": 1.44,
+          "n_gaia": 45,
+          "n_matched": 31,
+          "frac": 0.6888888888888889
+        },
+        {
+          "radius_px": 1.5,
+          "n_gaia": 45,
+          "n_matched": 33,
+          "frac": 0.7333333333333333
+        },
+        {
+          "radius_px": 2.0,
+          "n_gaia": 45,
+          "n_matched": 38,
+          "frac": 0.8444444444444444
+        },
+        {
+          "radius_px": 2.5,
+          "n_gaia": 45,
+          "n_matched": 39,
+          "frac": 0.8666666666666667
+        },
+        {
+          "radius_px": 3.0,
+          "n_gaia": 45,
+          "n_matched": 41,
+          "frac": 0.9111111111111111
+        },
+        {
+          "radius_px": 3.5,
+          "n_gaia": 45,
+          "n_matched": 42,
+          "frac": 0.9333333333333333
+        },
+        {
+          "radius_px": 5.0,
+          "n_gaia": 45,
+          "n_matched": 42,
+          "frac": 0.9333333333333333
+        }
+      ]
+    }
+  ],
+  "per_set_derived_vs_solve_rms": {
+    "g_60_4": {
+      "solve_rms_px": 1.44,
+      "fwhm_px": 1.25,
+      "residual_p95_px": 2.0954309837750396,
+      "match_radius_px": 3.5,
+      "pass2_center_tol_px": 1.0,
+      "forced_seed_centroid_max_px": 1.0,
+      "centroid_floor_px": 1.0,
+      "tol_minus_rms": -0.43999999999999995
+    },
+    "i_70_4": {
+      "solve_rms_px": 2.98,
+      "fwhm_px": 1.25,
+      "residual_p95_px": 2.463231541301138,
+      "match_radius_px": 4.0,
+      "pass2_center_tol_px": 1.0,
+      "forced_seed_centroid_max_px": 1.0,
+      "centroid_floor_px": 1.0,
+      "tol_minus_rms": -1.98
+    },
+    "r_60_4": {
+      "solve_rms_px": 1.49,
+      "fwhm_px": 1.25,
+      "residual_p95_px": 2.892412402132568,
+      "match_radius_px": 5.0,
+      "pass2_center_tol_px": 1.5,
+      "forced_seed_centroid_max_px": 1.5,
+      "centroid_floor_px": 1.0,
+      "tol_minus_rms": 0.010000000000000009
+    }
+  },
+  "floor_code": "dao_gaia_calibration.py:36 DEFAULT_CENTROID_FLOOR_PX=1.0; :728-763 derive_tolerances_from_diagnostic"
+}

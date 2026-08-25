@@ -1,0 +1,4 @@
+variant,tol_px,n_unmatched_tried,n_pass2_accept,n_forced_seed_accept,n_centroid_tol_reject,n_detected_Glt12,n_detected_Glt14,n_gaia_Glt12,n_gaia_Glt14
+A_1.0,1.0,78,0,25,10,11,57,11,57
+B_2.0,2.0,78,0,28,3,11,57,11,57
+C_2.5,2.5,78,0,28,3,11,57,11,57
