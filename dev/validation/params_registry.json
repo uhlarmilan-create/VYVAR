@@ -3475,7 +3475,7 @@
     ],
     "tier": "advanced",
     "unit": null,
-    "widget": "custom",
+    "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
     "scope_key": "none",

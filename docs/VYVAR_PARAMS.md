@@ -6,14 +6,14 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-25T21:11:13Z at git HEAD e73fd29._
+_Generated 2026-08-25T21:36:27Z at git HEAD ba9fef3._
 
 ## Summary
 
 - Entries: 307
 - Tier: basic 13, advanced 72, expert 222
 - Kind: static 289, derived 0, resolved 18
-- Widget: auto 122, custom 160, hidden 25
+- Widget: auto 123, custom 159, hidden 25
 - Owner: db_static 9, config_runtime 279, fits_dynamic 6, internal 13
 - Scope: universal 255, rig 34, site 10, session 8
 - Scope key: none 255, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
@@ -288,7 +288,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | auto | Comp Max Delta BPRP |
 | `comp_max_slope_mmag_hr` | 5.0 | 0 .. 500 | expert | static | config_runtime | universal | none | n/a | auto | Comp Max Slope Mmag Hr |
 | `comp_pool_derived_admission` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Pool Derived Admission |
-| `comp_rms_loo_photon_k` | 5.0 | 1 .. 50 | advanced | static | config_runtime | universal | none | n/a | custom | Comp RMS LOO Photon K |
+| `comp_rms_loo_photon_k` | 5.0 | 1 .. 50 | advanced | static | config_runtime | universal | none | n/a | auto | Comp RMS LOO Photon K |
 | `comp_select_rms_floor` | 1e-06 | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Select RMS Floor |
 | `comp_slope_significance_k` | 3.0 | 0 .. 10 | advanced | static | config_runtime | universal | none | n/a | auto | Comp Slope Significance K |
 | `comp_sparse_fallback_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Sparse Fallback Enabled |
