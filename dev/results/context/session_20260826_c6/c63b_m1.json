@@ -1,0 +1,184 @@
+{
+  "elapsed_s": 7.594,
+  "compared": "era04 aligned FITS vs live 516 aligned FITS; masters from CalibrationLibrary vs cal_diag/manifest",
+  "bo_xy": {
+    "x": 957.659037924808,
+    "y": 822.4406097055581,
+    "aperture_r_px": 5.499
+  },
+  "frames": [
+    {
+      "frame": "010",
+      "name": "BO_CVn_Light_010.fits",
+      "era04_exists": true,
+      "live_exists": true,
+      "sha_era04": "a81192a5e0b83a2512bdb85c30fd166d3f2c77e1c4b5357df602854f309538c6",
+      "sha_live": "c8b7ed8fa43ca16868afa1a35b061c885b53098633a513f7fcfc2fedbe641574",
+      "sha_equal": false,
+      "naxis": [
+        2082,
+        1397
+      ],
+      "max_abs_dpix": 0.0,
+      "median_dpix": 0.0,
+      "mean_dpix": 0.0,
+      "frac_nonzero": 0.0,
+      "aperture": {
+        "n_pix": 92,
+        "max_abs": 0.0,
+        "median": 0.0
+      }
+    },
+    {
+      "frame": "050",
+      "name": "BO_CVn_Light_050.fits",
+      "era04_exists": true,
+      "live_exists": true,
+      "sha_era04": "fbfed0b6b0587914f74a4b246170186ea1e6c7da5372904c210f3577387a69dd",
+      "sha_live": "a27fb9bc2b9cde106ae7d5741a8de6780761dedae14707a290dcbbe33ca897af",
+      "sha_equal": false,
+      "naxis": [
+        2082,
+        1397
+      ],
+      "max_abs_dpix": 0.0,
+      "median_dpix": 0.0,
+      "mean_dpix": 0.0,
+      "frac_nonzero": 0.0,
+      "aperture": {
+        "n_pix": 92,
+        "max_abs": 0.0,
+        "median": 0.0
+      }
+    },
+    {
+      "frame": "109",
+      "name": "BO_CVn_Light_109.fits",
+      "era04_exists": true,
+      "live_exists": true,
+      "sha_era04": "0563e0b5da41a3495c0efdc9de011cc8d5a05228bd6afc54f74ed49ed6c41f58",
+      "sha_live": "df0d2f1c4a9f6701a500c1ddf49f8a1177a48c9528e67e9ea901041668ebd921",
+      "sha_equal": false,
+      "naxis": [
+        2082,
+        1397
+      ],
+      "max_abs_dpix": 0.0,
+      "median_dpix": 0.0,
+      "mean_dpix": 0.0,
+      "frac_nonzero": 0.0,
+      "aperture": {
+        "n_pix": 92,
+        "max_abs": 0.0,
+        "median": 0.0
+      }
+    }
+  ],
+  "sha_all_probe_equal": false,
+  "pixels_differ": true,
+  "masters": {
+    "dark_file": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "exists": true,
+      "sha256": "525daf5c56b78ece9326d1770a52122673a1ce05da197628f6c048594b015de7",
+      "size": 46560960,
+      "mtime_utc": "2026-08-12T10:10:40.496536+00:00"
+    },
+    "flat_file": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+      "exists": true,
+      "sha256": "0667ed7662e62fd9cd9e6026f9c5f0d75d709cc689288c820557e3ecdd1cf92f",
+      "size": 46560960,
+      "mtime_utc": "2026-08-12T10:12:13.346447+00:00"
+    },
+    "cal_diag_era04": {
+      "cal_diag_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\cal_diag.json",
+      "n_keys": 1,
+      "key_names": [
+        "NoFilter|60|2|C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits|b2"
+      ],
+      "dark_path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "status": "PASS",
+      "spec_version": "CAL-DIAG-v2"
+    },
+    "cal_diag_live": {
+      "cal_diag_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\cal_diag.json",
+      "n_keys": 1,
+      "key_names": [
+        "NoFilter|60|2|C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits|b2"
+      ],
+      "dark_path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+      "status": "PASS",
+      "spec_version": "CAL-DIAG-v2"
+    },
+    "manifest_era04": {},
+    "manifest_live": {},
+    "manifest_era03": {},
+    "dark_path_equal_era04_vs_live": true,
+    "flat_path_equal_era04_vs_live": true,
+    "masters_equal": true,
+    "library_records": [
+      {
+        "ID": 86,
+        "KIND": "dark",
+        "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+        "XBINNING": 1,
+        "EXPTIME": 60.0,
+        "CCD_TEMP": -10.0,
+        "FILTER_NAME": "",
+        "GAIN": 0,
+        "NCOMBINE": 17,
+        "REGISTERED_AT": "2026-08-12T10:10:40+00:00",
+        "ID_EQUIPMENTS": 1,
+        "ID_TELESCOPE": 1,
+        "_queried_file": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits"
+      },
+      {
+        "ID": 88,
+        "KIND": "flat",
+        "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+        "XBINNING": 1,
+        "EXPTIME": 0.15,
+        "CCD_TEMP": null,
+        "FILTER_NAME": "NoFilter",
+        "GAIN": 0,
+        "NCOMBINE": 27,
+        "REGISTERED_AT": "2026-08-12T10:12:13+00:00",
+        "ID_EQUIPMENTS": 1,
+        "ID_TELESCOPE": 1,
+        "_queried_file": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits"
+      }
+    ]
+  },
+  "alignment": {
+    "HEAD": "65eed01",
+    "live_Light_109_mtime_utc": "2026-08-17T20:26:40.536093+00:00",
+    "era04_Light_109_mtime_utc": "2026-08-26T09:13:06.779411+00:00",
+    "git_log_since_20260820": [
+      "2ac6580 2026-08-25 C3: wire LOO mag RMS and ZONE-SAT-01 peak test.",
+      "6e0fd5c 2026-08-25 T2: MASTERSTAR snr is aperture SNR; keep peak/sigma as snr_peak.",
+      "1ec035f 2026-08-25 S6: keep DB plate scale over FITS/UI; restore LC overview cols",
+      "24855e0 2026-08-25 S5 follow-up: stamp MASTERSTAR snr from peak over sky sigma",
+      "e0f918a 2026-08-25 S6: pass telescope_id into MASTERSTAR plate-scale resolve",
+      "b13d393 2026-08-25 D1: one-pass catalog match radius, no widen loops",
+      "4fc6b8f 2026-08-25 B2 addendum: stamp effective vs config DAO-Gaia tols",
+      "01f6f77 2026-08-25 fix(wcs): skip-solve path must not shadow module WCS",
+      "e2a0a84 2026-08-25 fix(provenance): log widen loop and stamp match/optimizer meta",
+      "d8c18a7 2026-08-25 fix(identity): INV-MATCH-IDENTITY-01 one gate, no name rehydration",
+      "6fbfbea 2026-08-25 feat(psf): wire P4 AC policy and INV-PSF-LC-PIN-01 (EPSF-AC-02).",
+      "6fd1452 2026-08-24 feat(psf): persist x_fit y_fit and psf_group_n through F6 merge",
+      "c218921 2026-08-22 EPSF-VALID-02 F6: PSF-only sidecar merge and INV-PSF-ADDITIVE-01.",
+      "8202c7c 2026-08-22 EPSF-VALID-02 F3: PSF measurement set uses science set (333 on 516).",
+      "b9f7a64 2026-08-21 MS-SOURCES-RETIRE C2: persist enrichment to masterstars CSV.",
+      "30d631d 2026-08-21 ERR-518-02 commit 2: finalize hybrid bkg fallback after RAM CSV flush."
+    ]
+  },
+  "bo_dmag_vs_dpix": {
+    "n_epochs": 134,
+    "corr": NaN,
+    "note": "insufficient dpix variance or n",
+    "dmag_calib_median_mmag": 2.787000000000539,
+    "dmag_final_median_mmag": 59.389499999999984
+  },
+  "preproc_named_input": "alignment_or_resample_code"
+}

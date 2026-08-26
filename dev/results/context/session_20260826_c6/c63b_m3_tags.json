@@ -1,0 +1,46 @@
+{
+  "stop": true,
+  "era04_locked": false,
+  "no_config_change": true,
+  "no_c3_floor_fix": true,
+  "no_era04_rerun": true,
+  "tags_per_class": {
+    "PREPROC-REBUILD": {
+      "BO": "REFUSED",
+      "FW": "REFUSED",
+      "GH": "REFUSED",
+      "unnamed_55": "REFUSED",
+      "reason": "Science pixels max|dpix|=0 vs live and vs era03 on frames 010/050/109. SHA unequal is WCS CRPIX/PC header only. Masters path+SHA+library record identical (registered 2026-08-12, no library change since 2026-08-20). Cannot name a master identity or alignment/resample commit. (a) stays UNNAMED; recut waits."
+    },
+    "C3-FLOOR": {
+      "BO": "REFUSED",
+      "FW": "REFUSED",
+      "GH": "REFUSED",
+      "unnamed_55": "REFUSED",
+      "reason": "Of the D3 1860 (C6-1 log: state=766, snr_ap_pixscaled=1094, gate=0, resid=0) none are k*photon. k*photon is after D3. Among D3 survivors, 90 fail k*photon but G p50=13.29 (faint). Bright-decile median r=4.75 < 5. BO ensemble members all r<3 and do not fail k*photon. No fix, no [C3-FLOOR] re-run."
+    },
+    "POOL-SNR": {
+      "BO": "ASSIGNED",
+      "FW": "REFUSED",
+      "GH": "REFUSED",
+      "unnamed_55": "PARTIAL",
+      "reason_BO": "mag_calib_final +59.389 mmag collapses to +2.787 mmag when era03 ct_bp_rp_comp_med is applied to era04 mag_calib+ac. Cause = CT pool membership. comparison_stars.csv n 2240->150, G p50 13.33->10.35 (faint-biased to bright). Global BP-RP p50 0.864->0.854 (no pool colour bias). BO CT ref 0.455->0.606 because only 1 of 4 ensemble IDs sits in the 150-star file (the reddest, bp_rp=0.606386). 59 mmag is CT colour-ref of the new sparse pool, not ensemble ZP. Ledger: measured CT-ref offset of the old 2240 pool vs n=150 spatial/derived pool.",
+      "reason_FW_GH": "Same 8/8 ensembles. CT bp_rp_comp_med almost unchanged (FW +0.0006, GH -0.0038). Replay with era03 CT med leaves mag_calib motion (FW -10.836, GH -6.814 mmag). Not pool-gate. Stays UNNAMED.",
+      "reason_unnamed_55": "Field median dmag_calib is -10.3 mmag with pixels identical. Only 12/56 LCs are CT-dominated |dct|>20 mmag (includes BO). Those 12 take [POOL-SNR] for the mag_calib_final CT piece. The mag_calib-dominated majority stay UNNAMED."
+    }
+  },
+  "plus59_collapses": true,
+  "plus59_residual_mmag": 2.787,
+  "G_median_r_crosses_5": 9.516,
+  "bright_decile_median_r": 4.749,
+  "bright_end_r_exceeds_5_in_G85_95_bins": true,
+  "d3_1860_c61_log": {
+    "n_in": 2927,
+    "n_out": 1067,
+    "source_state": 766,
+    "snr_ap_pixscaled": 1094,
+    "gate": 0,
+    "resid": 0,
+    "k_photon": 0
+  }
+}

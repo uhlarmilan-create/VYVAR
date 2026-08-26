@@ -1,0 +1,754 @@
+{
+  "utc": "2026-08-26T16:01:02.906267+00:00",
+  "HEAD": "65eed01dd6b607d903537cf937173a74d246d1e7",
+  "m1": {
+    "elapsed_s": 7.594,
+    "compared": "era04 aligned FITS vs live 516 aligned FITS; masters from CalibrationLibrary vs cal_diag/manifest",
+    "bo_xy": {
+      "x": 957.659037924808,
+      "y": 822.4406097055581,
+      "aperture_r_px": 5.499
+    },
+    "frames": [
+      {
+        "frame": "010",
+        "name": "BO_CVn_Light_010.fits",
+        "era04_exists": true,
+        "live_exists": true,
+        "sha_era04": "a81192a5e0b83a2512bdb85c30fd166d3f2c77e1c4b5357df602854f309538c6",
+        "sha_live": "c8b7ed8fa43ca16868afa1a35b061c885b53098633a513f7fcfc2fedbe641574",
+        "sha_equal": false,
+        "naxis": [
+          2082,
+          1397
+        ],
+        "max_abs_dpix": 0.0,
+        "median_dpix": 0.0,
+        "mean_dpix": 0.0,
+        "frac_nonzero": 0.0,
+        "aperture": {
+          "n_pix": 92,
+          "max_abs": 0.0,
+          "median": 0.0
+        }
+      },
+      {
+        "frame": "050",
+        "name": "BO_CVn_Light_050.fits",
+        "era04_exists": true,
+        "live_exists": true,
+        "sha_era04": "fbfed0b6b0587914f74a4b246170186ea1e6c7da5372904c210f3577387a69dd",
+        "sha_live": "a27fb9bc2b9cde106ae7d5741a8de6780761dedae14707a290dcbbe33ca897af",
+        "sha_equal": false,
+        "naxis": [
+          2082,
+          1397
+        ],
+        "max_abs_dpix": 0.0,
+        "median_dpix": 0.0,
+        "mean_dpix": 0.0,
+        "frac_nonzero": 0.0,
+        "aperture": {
+          "n_pix": 92,
+          "max_abs": 0.0,
+          "median": 0.0
+        }
+      },
+      {
+        "frame": "109",
+        "name": "BO_CVn_Light_109.fits",
+        "era04_exists": true,
+        "live_exists": true,
+        "sha_era04": "0563e0b5da41a3495c0efdc9de011cc8d5a05228bd6afc54f74ed49ed6c41f58",
+        "sha_live": "df0d2f1c4a9f6701a500c1ddf49f8a1177a48c9528e67e9ea901041668ebd921",
+        "sha_equal": false,
+        "naxis": [
+          2082,
+          1397
+        ],
+        "max_abs_dpix": 0.0,
+        "median_dpix": 0.0,
+        "mean_dpix": 0.0,
+        "frac_nonzero": 0.0,
+        "aperture": {
+          "n_pix": 92,
+          "max_abs": 0.0,
+          "median": 0.0
+        }
+      }
+    ],
+    "sha_all_probe_equal": false,
+    "pixels_differ": true,
+    "masters": {
+      "dark_file": {
+        "path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+        "exists": true,
+        "sha256": "525daf5c56b78ece9326d1770a52122673a1ce05da197628f6c048594b015de7",
+        "size": 46560960,
+        "mtime_utc": "2026-08-12T10:10:40.496536+00:00"
+      },
+      "flat_file": {
+        "path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+        "exists": true,
+        "sha256": "0667ed7662e62fd9cd9e6026f9c5f0d75d709cc689288c820557e3ecdd1cf92f",
+        "size": 46560960,
+        "mtime_utc": "2026-08-12T10:12:13.346447+00:00"
+      },
+      "cal_diag_era04": {
+        "cal_diag_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\cal_diag.json",
+        "n_keys": 1,
+        "key_names": [
+          "NoFilter|60|2|C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits|b2"
+        ],
+        "dark_path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+        "status": "PASS",
+        "spec_version": "CAL-DIAG-v2"
+      },
+      "cal_diag_live": {
+        "cal_diag_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\cal_diag.json",
+        "n_keys": 1,
+        "key_names": [
+          "NoFilter|60|2|C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits|b2"
+        ],
+        "dark_path": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+        "status": "PASS",
+        "spec_version": "CAL-DIAG-v2"
+      },
+      "manifest_era04": {},
+      "manifest_live": {},
+      "manifest_era03": {},
+      "dark_path_equal_era04_vs_live": true,
+      "flat_path_equal_era04_vs_live": true,
+      "masters_equal": true,
+      "library_records": [
+        {
+          "ID": 86,
+          "KIND": "dark",
+          "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits",
+          "XBINNING": 1,
+          "EXPTIME": 60.0,
+          "CCD_TEMP": -10.0,
+          "FILTER_NAME": "",
+          "GAIN": 0,
+          "NCOMBINE": 17,
+          "REGISTERED_AT": "2026-08-12T10:10:40+00:00",
+          "ID_EQUIPMENTS": 1,
+          "ID_TELESCOPE": 1,
+          "_queried_file": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits"
+        },
+        {
+          "ID": 88,
+          "KIND": "flat",
+          "FILE_PATH": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits",
+          "XBINNING": 1,
+          "EXPTIME": 0.15,
+          "CCD_TEMP": null,
+          "FILTER_NAME": "NoFilter",
+          "GAIN": 0,
+          "NCOMBINE": 27,
+          "REGISTERED_AT": "2026-08-12T10:12:13+00:00",
+          "ID_EQUIPMENTS": 1,
+          "ID_TELESCOPE": 1,
+          "_queried_file": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary\\Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits"
+        }
+      ]
+    },
+    "alignment": {
+      "HEAD": "65eed01",
+      "live_Light_109_mtime_utc": "2026-08-17T20:26:40.536093+00:00",
+      "era04_Light_109_mtime_utc": "2026-08-26T09:13:06.779411+00:00",
+      "git_log_since_20260820": [
+        "2ac6580 2026-08-25 C3: wire LOO mag RMS and ZONE-SAT-01 peak test.",
+        "6e0fd5c 2026-08-25 T2: MASTERSTAR snr is aperture SNR; keep peak/sigma as snr_peak.",
+        "1ec035f 2026-08-25 S6: keep DB plate scale over FITS/UI; restore LC overview cols",
+        "24855e0 2026-08-25 S5 follow-up: stamp MASTERSTAR snr from peak over sky sigma",
+        "e0f918a 2026-08-25 S6: pass telescope_id into MASTERSTAR plate-scale resolve",
+        "b13d393 2026-08-25 D1: one-pass catalog match radius, no widen loops",
+        "4fc6b8f 2026-08-25 B2 addendum: stamp effective vs config DAO-Gaia tols",
+        "01f6f77 2026-08-25 fix(wcs): skip-solve path must not shadow module WCS",
+        "e2a0a84 2026-08-25 fix(provenance): log widen loop and stamp match/optimizer meta",
+        "d8c18a7 2026-08-25 fix(identity): INV-MATCH-IDENTITY-01 one gate, no name rehydration",
+        "6fbfbea 2026-08-25 feat(psf): wire P4 AC policy and INV-PSF-LC-PIN-01 (EPSF-AC-02).",
+        "6fd1452 2026-08-24 feat(psf): persist x_fit y_fit and psf_group_n through F6 merge",
+        "c218921 2026-08-22 EPSF-VALID-02 F6: PSF-only sidecar merge and INV-PSF-ADDITIVE-01.",
+        "8202c7c 2026-08-22 EPSF-VALID-02 F3: PSF measurement set uses science set (333 on 516).",
+        "b9f7a64 2026-08-21 MS-SOURCES-RETIRE C2: persist enrichment to masterstars CSV.",
+        "30d631d 2026-08-21 ERR-518-02 commit 2: finalize hybrid bkg fallback after RAM CSV flush."
+      ]
+    },
+    "bo_dmag_vs_dpix": {
+      "n_epochs": 134,
+      "corr": NaN,
+      "note": "insufficient dpix variance or n",
+      "dmag_calib_median_mmag": 2.787000000000539,
+      "dmag_final_median_mmag": 59.389499999999984
+    },
+    "preproc_named_input": "alignment_or_resample_code"
+  },
+  "m2": {
+    "elapsed_s": 22.672,
+    "compared": "era03 vs era04 comparison_stars.csv (AC/ZP export) and D3 global_comp_pool on era04 masterstars; mag_calib_final replay uses era03 ct_bp_rp_comp_med on era04 mag_calib+ac",
+    "pools": {
+      "era03_comparison_stars": {
+        "label": "era03_comparison_stars",
+        "n": 2240,
+        "n_unique_id": 2240,
+        "G": {
+          "n": 2240,
+          "p10": 11.187812519073487,
+          "p50": 13.330130100250244,
+          "p90": 14.398142528533937
+        },
+        "bp_rp_p50": 0.8644638061523438
+      },
+      "era04_comparison_stars": {
+        "label": "era04_comparison_stars",
+        "n": 150,
+        "n_unique_id": 150,
+        "G": {
+          "n": 150,
+          "p10": 8.839250755310058,
+          "p50": 10.348536491394043,
+          "p90": 11.93575916290283
+        },
+        "bp_rp_p50": 0.8539857864379883
+      },
+      "era03_masterstars": {
+        "label": "era03_masterstars",
+        "n": 3610,
+        "n_unique_id": 3610,
+        "G": {
+          "n": 2617,
+          "p10": 11.16952075958252,
+          "p50": 13.406869888305664,
+          "p90": 14.49589309692383
+        },
+        "bp_rp_p50": 0.9006133079528809
+      },
+      "era04_masterstars": {
+        "label": "era04_masterstars",
+        "n": 3600,
+        "n_unique_id": 3600,
+        "G": {
+          "n": 2630,
+          "p10": 11.184501266479494,
+          "p50": 13.412616729736328,
+          "p90": 14.501361274719239
+        },
+        "bp_rp_p50": 0.9004735946655273
+      },
+      "era03_cs_ids_not_in_era04_cs": {
+        "n": 2091,
+        "G_from_era03_ms": {
+          "n": 2091,
+          "p10": 11.732372283935549,
+          "p50": 13.429070472717283,
+          "p90": 14.427989959716797
+        },
+        "bp_rp_p50_era03": 0.8645076751708984,
+        "G_from_era04_ms": {
+          "n": 2071,
+          "p10": 11.73922348022461,
+          "p50": 13.41979694366455,
+          "p90": 14.410761833190918
+        }
+      },
+      "era04_cs_ids_not_in_era03_cs": {
+        "n": 1
+      }
+    },
+    "drop_split": {
+      "n_pre_d3": 3291,
+      "n_d3_out": 1177,
+      "n_removed_1860_expected": 2114,
+      "d3_meta": {
+        "n_in": 3291,
+        "n_out": 1177,
+        "drops": {
+          "source_state": 875,
+          "vy_identity_gate": 0,
+          "gaia_dao_resid_px": 3,
+          "snr_ap_pixscaled": 1236
+        },
+        "resid_ceiling_px": 11.100000000000001
+      },
+      "source_state": {
+        "n": 875,
+        "G": {
+          "n": 0,
+          "p10": NaN,
+          "p50": NaN,
+          "p90": NaN
+        },
+        "bp_rp_p50": 0.9743742942810059
+      },
+      "snr_ap_pixscaled_lt_10": {
+        "n": 1236,
+        "G": {
+          "n": 1236,
+          "p10": 13.271909713745115,
+          "p50": 14.035343170166016,
+          "p90": 14.655421257019043
+        },
+        "bp_rp_p50": 0.874605655670166
+      },
+      "vy_identity_gate": {
+        "n": 0,
+        "G": {
+          "n": 0,
+          "p10": NaN,
+          "p50": NaN,
+          "p90": NaN
+        },
+        "bp_rp_p50": NaN
+      },
+      "gaia_dao_resid": {
+        "n": 3,
+        "G": {
+          "n": 3,
+          "p10": 14.995084953308105,
+          "p50": 15.168768882751465,
+          "p90": 15.214369010925292
+        },
+        "bp_rp_p50": 0.8405065536499023
+      },
+      "k_photon_of_1860": {
+        "n": 0,
+        "note": "k*photon is after D3; none of the 1860 D3 drops are k*photon"
+      },
+      "k_photon_among_d3_survivors": {
+        "n": 90,
+        "G": {
+          "n": 90,
+          "p10": 9.20894775390625,
+          "p50": 13.28645133972168,
+          "p90": 14.13084373474121
+        },
+        "bp_rp_p50": 0.8641366958618164
+      },
+      "d3_survivors": {
+        "n": 1177,
+        "G": {
+          "n": 1177,
+          "p10": 10.422117233276367,
+          "p50": 12.424742698669434,
+          "p90": 13.729656982421876
+        },
+        "bp_rp_p50": 0.8580217361450195
+      }
+    },
+    "loo": {
+      "k": 5.0,
+      "n_d3_survivors_with_loo": 578,
+      "median_r": 1.1938048967642703,
+      "bright_decile_median_r": 4.749285523632767,
+      "G_where_median_r_crosses_5": 9.515732288360596,
+      "n_fail_k_photon": 90,
+      "fail_k_G": {
+        "n": 90,
+        "p10": 9.20894775390625,
+        "p50": 13.28645133972168,
+        "p90": 14.13084373474121
+      },
+      "bright_end_r_exceeds_5": false
+    },
+    "replay": [
+      {
+        "target": "BO",
+        "catalog_id": "1498613634033133184",
+        "n_ens_e3": 4,
+        "n_ens_e4": 4,
+        "ids_swapped": [],
+        "ct_c1": -0.373,
+        "ct_bp_rp_target": 0.458137,
+        "ct_bp_rp_comp_med_e3": 0.454638,
+        "ct_bp_rp_comp_med_e4": 0.606386,
+        "d_bp_rp_comp_med": 0.151748,
+        "ac_e3": -0.129885,
+        "ac_e4": -0.129885,
+        "dmag_calib_median_mmag": 2.787000000000539,
+        "dmag_final_obs_median_mmag": 59.389499999999984,
+        "dmag_final_replay_era03_ctmed_median_mmag": 2.786873000000689,
+        "ct_replay": -0.0013051270000000112,
+        "wmean_bp_rp_era03_ids_on_era04_ms": 0.45463797568508735,
+        "ens3_bp_rp_p50": 0.4883594512939453,
+        "ens4_bp_rp_p50": 0.4883594512939453,
+        "ens3_G": {
+          "n": 4,
+          "p10": 9.700953674316406,
+          "p50": 10.461987972259521,
+          "p90": 11.417847824096679
+        },
+        "ens4_G": {
+          "n": 4,
+          "p10": 9.700953674316406,
+          "p50": 10.461987972259521,
+          "p90": 11.417847824096679
+        },
+        "e3_members": [
+          {
+            "catalog_id": "1497771992240531712",
+            "bp_rp": 0.3280553817749023,
+            "G": 9.752412796020508,
+            "comp_weight": 9241.188631814864,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499200223486564608",
+            "bp_rp": 0.6063861846923828,
+            "G": 9.678899765014648,
+            "comp_weight": 6486.886182273987,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497974027502858240",
+            "bp_rp": 0.4753026962280273,
+            "G": 11.171563148498535,
+            "comp_weight": 4701.614479402266,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497368849430107904",
+            "bp_rp": 0.5014162063598633,
+            "G": 11.523398399353027,
+            "comp_weight": 1886.4056430480184,
+            "comp_tier": 1
+          }
+        ],
+        "e4_members": [
+          {
+            "catalog_id": "1497771992240531712",
+            "bp_rp": 0.3280553817749023,
+            "G": 9.752412796020508,
+            "comp_weight": 9241.188631814864,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499200223486564608",
+            "bp_rp": 0.6063861846923828,
+            "G": 9.678899765014648,
+            "comp_weight": 6486.886182273987,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497974027502858240",
+            "bp_rp": 0.4753026962280273,
+            "G": 11.171563148498535,
+            "comp_weight": 4701.614479402266,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497368849430107904",
+            "bp_rp": 0.5014162063598633,
+            "G": 11.523398399353027,
+            "comp_weight": 1886.4056430480184,
+            "comp_tier": 1
+          }
+        ]
+      },
+      {
+        "target": "FW",
+        "catalog_id": "1497343732462852864",
+        "n_ens_e3": 8,
+        "n_ens_e4": 8,
+        "ids_swapped": [],
+        "ct_c1": -0.373,
+        "ct_bp_rp_target": 0.814894,
+        "ct_bp_rp_comp_med_e3": 0.775289,
+        "ct_bp_rp_comp_med_e4": 0.775877,
+        "d_bp_rp_comp_med": 0.0005880000000000329,
+        "ac_e3": -0.166556,
+        "ac_e4": -0.166556,
+        "dmag_calib_median_mmag": -10.83600000000029,
+        "dmag_final_obs_median_mmag": -10.616999999999877,
+        "dmag_final_replay_era03_ctmed_median_mmag": -10.835665000000994,
+        "ct_replay": -0.014772665,
+        "wmean_bp_rp_era03_ids_on_era04_ms": 0.7752889404041986,
+        "ens3_bp_rp_p50": 0.7809162139892578,
+        "ens4_bp_rp_p50": 0.7809162139892578,
+        "ens3_G": {
+          "n": 8,
+          "p10": 8.818804359436035,
+          "p50": 9.674598693847656,
+          "p90": 10.263310813903809
+        },
+        "ens4_G": {
+          "n": 8,
+          "p10": 8.818804359436035,
+          "p50": 9.674598693847656,
+          "p90": 10.263310813903809
+        },
+        "e3_members": [
+          {
+            "catalog_id": "1497442379271632384",
+            "bp_rp": 0.680445671081543,
+            "G": 8.8513822555542,
+            "comp_weight": 34481.93162766339,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499906247391001088",
+            "bp_rp": 0.7919502258300781,
+            "G": 8.742789268493652,
+            "comp_weight": 38837.06393024443,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497674651102612992",
+            "bp_rp": 0.6790533065795898,
+            "G": 9.287351608276367,
+            "comp_weight": 14252.8425914174,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498020894186918144",
+            "bp_rp": 0.8539857864379883,
+            "G": 10.285472869873049,
+            "comp_weight": 16184.41003609868,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498812233320666368",
+            "bp_rp": 0.7698822021484375,
+            "G": 10.253812789916992,
+            "comp_weight": 15302.065835479752,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497370563121917952",
+            "bp_rp": 0.8801746368408203,
+            "G": 9.34685230255127,
+            "comp_weight": 14004.079118185333,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497313255374892800",
+            "bp_rp": 0.9167003631591796,
+            "G": 10.002345085144045,
+            "comp_weight": 11751.72324407696,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1500486102335278592",
+            "bp_rp": 0.7462043762207031,
+            "G": 10.16754913330078,
+            "comp_weight": 11230.98120070263,
+            "comp_tier": 1
+          }
+        ],
+        "e4_members": [
+          {
+            "catalog_id": "1497442379271632384",
+            "bp_rp": 0.680445671081543,
+            "G": 8.8513822555542,
+            "comp_weight": 34481.93162766339,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499906247391001088",
+            "bp_rp": 0.7919502258300781,
+            "G": 8.742789268493652,
+            "comp_weight": 38837.06393024443,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497674651102612992",
+            "bp_rp": 0.6790533065795898,
+            "G": 9.287351608276367,
+            "comp_weight": 14252.8425914174,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498020894186918144",
+            "bp_rp": 0.8539857864379883,
+            "G": 10.285472869873049,
+            "comp_weight": 16184.41003609868,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498812233320666368",
+            "bp_rp": 0.7698822021484375,
+            "G": 10.253812789916992,
+            "comp_weight": 15302.065835479752,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497370563121917952",
+            "bp_rp": 0.8801746368408203,
+            "G": 9.34685230255127,
+            "comp_weight": 14004.079118185333,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497313255374892800",
+            "bp_rp": 0.9167003631591796,
+            "G": 10.002345085144045,
+            "comp_weight": 11751.72324407696,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1500486102335278592",
+            "bp_rp": 0.7462043762207031,
+            "G": 10.16754913330078,
+            "comp_weight": 11230.98120070263,
+            "comp_tier": 1
+          }
+        ]
+      },
+      {
+        "target": "GH",
+        "catalog_id": "1498804639818507904",
+        "n_ens_e3": 8,
+        "n_ens_e4": 8,
+        "ids_swapped": [],
+        "ct_c1": -0.373,
+        "ct_bp_rp_target": 0.704082,
+        "ct_bp_rp_comp_med_e3": 0.727702,
+        "ct_bp_rp_comp_med_e4": 0.723884,
+        "d_bp_rp_comp_med": -0.003817999999999988,
+        "ac_e3": -0.149559,
+        "ac_e4": -0.149559,
+        "dmag_calib_median_mmag": -6.814499999999946,
+        "dmag_final_obs_median_mmag": -8.23849999999915,
+        "dmag_final_replay_era03_ctmed_median_mmag": -6.81323999999961,
+        "ct_replay": 0.00881025999999999,
+        "wmean_bp_rp_era03_ids_on_era04_ms": 0.7277017995976688,
+        "ens3_bp_rp_p50": 0.7580432891845703,
+        "ens4_bp_rp_p50": 0.7580432891845703,
+        "ens3_G": {
+          "n": 8,
+          "p10": 8.818804359436035,
+          "p50": 10.131371021270752,
+          "p90": 10.328526115417482
+        },
+        "ens4_G": {
+          "n": 8,
+          "p10": 8.818804359436035,
+          "p50": 10.131371021270752,
+          "p90": 10.328526115417482
+        },
+        "e3_members": [
+          {
+            "catalog_id": "1497442379271632384",
+            "bp_rp": 0.680445671081543,
+            "G": 8.8513822555542,
+            "comp_weight": 72613.67701892335,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499906247391001088",
+            "bp_rp": 0.7919502258300781,
+            "G": 8.742789268493652,
+            "comp_weight": 31246.96452420644,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497674651102612992",
+            "bp_rp": 0.6790533065795898,
+            "G": 9.287351608276367,
+            "comp_weight": 18293.57888140939,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498020894186918144",
+            "bp_rp": 0.8539857864379883,
+            "G": 10.285472869873049,
+            "comp_weight": 12500.80955453239,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498812233320666368",
+            "bp_rp": 0.7698822021484375,
+            "G": 10.253812789916992,
+            "comp_weight": 14847.08372290426,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1500486102335278592",
+            "bp_rp": 0.7462043762207031,
+            "G": 10.16754913330078,
+            "comp_weight": 11563.363796006448,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1496315070616056064",
+            "bp_rp": 0.6603574752807617,
+            "G": 10.428983688354492,
+            "comp_weight": 10285.04352695688,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497196054307837696",
+            "bp_rp": 0.8055410385131836,
+            "G": 10.095192909240724,
+            "comp_weight": 7548.985004369229,
+            "comp_tier": 1
+          }
+        ],
+        "e4_members": [
+          {
+            "catalog_id": "1497442379271632384",
+            "bp_rp": 0.680445671081543,
+            "G": 8.8513822555542,
+            "comp_weight": 72613.67701892335,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1499906247391001088",
+            "bp_rp": 0.7919502258300781,
+            "G": 8.742789268493652,
+            "comp_weight": 31246.96452420644,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497674651102612992",
+            "bp_rp": 0.6790533065795898,
+            "G": 9.287351608276367,
+            "comp_weight": 18293.57888140939,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498020894186918144",
+            "bp_rp": 0.8539857864379883,
+            "G": 10.285472869873049,
+            "comp_weight": 12500.80955453239,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1498812233320666368",
+            "bp_rp": 0.7698822021484375,
+            "G": 10.253812789916992,
+            "comp_weight": 14847.08372290426,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1500486102335278592",
+            "bp_rp": 0.7462043762207031,
+            "G": 10.16754913330078,
+            "comp_weight": 11563.363796006448,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1496315070616056064",
+            "bp_rp": 0.6603574752807617,
+            "G": 10.428983688354492,
+            "comp_weight": 10285.04352695688,
+            "comp_tier": 1
+          },
+          {
+            "catalog_id": "1497196054307837696",
+            "bp_rp": 0.8055410385131836,
+            "G": 10.095192909240724,
+            "comp_weight": 7548.985004369229,
+            "comp_tier": 1
+          }
+        ]
+      }
+    ],
+    "plus59_collapses_to_mmag": true,
+    "plus59_cause": "pool_gate_ct_bprp_med",
+    "fwhm_px": 3.7,
+    "solve_rms_px": null
+  },
+  "elapsed_s_total": 30.412
+}

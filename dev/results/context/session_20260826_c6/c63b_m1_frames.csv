@@ -1,0 +1,4 @@
+frame,name,era04_exists,live_exists,sha_era04,sha_live,sha_equal,naxis,max_abs_dpix,median_dpix,mean_dpix,frac_nonzero,aperture
+010,BO_CVn_Light_010.fits,True,True,a81192a5e0b83a2512bdb85c30fd166d3f2c77e1c4b5357df602854f309538c6,c8b7ed8fa43ca16868afa1a35b061c885b53098633a513f7fcfc2fedbe641574,False,"[2082, 1397]",0.0,0.0,0.0,0.0,"{'n_pix': 92, 'max_abs': 0.0, 'median': 0.0}"
+050,BO_CVn_Light_050.fits,True,True,fbfed0b6b0587914f74a4b246170186ea1e6c7da5372904c210f3577387a69dd,a27fb9bc2b9cde106ae7d5741a8de6780761dedae14707a290dcbbe33ca897af,False,"[2082, 1397]",0.0,0.0,0.0,0.0,"{'n_pix': 92, 'max_abs': 0.0, 'median': 0.0}"
+109,BO_CVn_Light_109.fits,True,True,0563e0b5da41a3495c0efdc9de011cc8d5a05228bd6afc54f74ed49ed6c41f58,df0d2f1c4a9f6701a500c1ddf49f8a1177a48c9528e67e9ea901041668ebd921,False,"[2082, 1397]",0.0,0.0,0.0,0.0,"{'n_pix': 92, 'max_abs': 0.0, 'median': 0.0}"

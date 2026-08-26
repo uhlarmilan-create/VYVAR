@@ -1,11 +1,12 @@
 CURSOR RESULT - 2026-08-26T13:50:00Z
 
 What I did
-C6 ANCHOR RE-CUT era04 (Milan GO 2026-08-26), C6-0 final through C6-3.
+C6 ANCHOR RE-CUT era04 (Milan GO 2026-08-26), C6-0 final through C6-3b.
 R1'' informational (declared shim); C6-1 full-chain products written
 into a new era04 snapshot; C6-3 STOP (unnamed mag_calib motion vs
-era03). era04 is NOT locked. era03 untouched. origin/main stays
-7c086e8. No PUSH_AUTH SHA.
+era03); C6-3b named the 55 (measure only). era04 is NOT locked.
+era03 untouched. origin/main stays 7c086e8. No PUSH_AUTH SHA.
+No config change. No C3-FLOOR fix. No era04 re-run.
 
 ## Premise (Rule 0.1)
 Compared: (C6-0) isolated c592ecf + A files + one declared 3-tuple
@@ -131,15 +132,133 @@ C6-2 PASS. C6-3 STOP. Both gates required. era04 not locked.
 
 Summaries: c62_full_run1b_summary.txt, c62_full_run2_summary.txt
 
+## C6-3b Name the 55  STOP (measure only; no lock)
+
+Premise (Rule 0.1): compared era04 tree
+draft_000516_snapshot_era04_20260826 (HEAD 65eed01; core 961d590f)
+versus live draft_000516 aligned FITS (M1 pixels/masters) and versus
+era03 freeze draft_000516_snapshot_era03_20260820 (M2 pool / LC).
+Differ: era04 photometry is HEAD; live aligned FITS mtime 2026-08-17;
+era03 photometry is the 2026-08-20 freeze. M1 probe frames 010, 050,
+109 (TOP1). No era04 lock. No config change.
+
+### M1 PREPROC  elapsed_s 7.6
+
+Frames 010 / 050 / 109 (era04 aligned FITS vs live aligned FITS):
+
+  SHA equal: N / N / N
+  max|dpix|: 0.0 / 0.0 / 0.0
+  median dpix: 0.0 / 0.0 / 0.0
+  aperture stamp around BO (x=957.66 y=822.44 r=5.499 px): max|dpix|=0
+
+SHA differs on six WCS cards only (CRPIX1/2, PC1_1, PC1_2, PC2_1,
+PC2_2); same six cards on all three frames. era04 vs era03 aligned
+pixels also max|dpix|=0 (SHA unequal, same header-only class).
+
+Masters era04 vs live cal_diag / draft_manifest / library:
+  dark  CalibrationLibrary/Dark_60s_Dark_0G_-10deg_Bin1_20260422.fits
+        SHA 525daf5c... library ID=86 REGISTERED_AT 2026-08-12T10:10:40Z
+  flat  CalibrationLibrary/Flat_0.15s_NoFilter_0G_-10.5deg_Bin1_20260422.fits
+        SHA 0667ed76... library ID=88 REGISTERED_AT 2026-08-12T10:12:13Z
+  cal_diag dark_path identical. Library did not change since 2026-08-20.
+
+Masters equal AND science pixels equal: no alignment/resample commit
+to name. (a) is not pixels. BO per-epoch dmag vs max|dpix| correlation
+undefined (dpix=0 every epoch). mag_calib +2.787 mmag vs era03 is not
+an aligned-FITS pixel difference.
+
+[PREPROC-REBUILD] REFUSED (BO, FW, GH, unnamed 55). Stays UNNAMED;
+recut waits.
+
+JSON: c63b_m1.json, c63b_m1_headers.json
+CSV: c63b_m1_frames.csv, c63b_m1_bo_dmag_dpix.csv
+
+### M2 POOL  elapsed_s 22.7
+
+AC/ZP export comparison_stars.csv:
+  era03 n=2240  G p10/p50/p90 = 11.19 / 13.33 / 14.40  BP-RP p50=0.864
+  era04 n=150   G p10/p50/p90 =  8.84 / 10.35 / 11.94  BP-RP p50=0.854
+  removed from era03 file: 2091 (G p50=13.43, faint). added: 1.
+  Global BP-RP p50 shift -0.010: new pool did not introduce a colour
+  bias at the field-pool level.
+
+D3 1860 (governing C6-1 log, not the bbox-free reconstruction):
+  n_in=2927 n_out=1067 removed=1860
+  source_state=766
+  snr_ap_pixscaled<10=1094  (reconstruction G p50=14.04, faint)
+  vy_identity_gate=0
+  gaia_dao_resid=0 (reconstruction found 3; log says 0)
+  k*photon of the 1860: 0 (k*photon is after D3)
+
+Reconstruction without variable-target/bbox cut: n_in=3291 n_out=1177
+drops state=875 snr=1236 resid=3. Same shape (faint SNR + unmatched
+state). source_state rows have no phot_g (n_G=0).
+
+Then derived admission 1067 -> 534 (era04 comp_pool_admission.json;
+faint_limit_g=10.66). era03 derived was 3114 -> 1352, same G~10.65
+ceiling, no D3 in front.
+
+k*photon among D3 survivors: 90 fail (G p10/p50/p90 = 9.21 / 13.29 /
+14.13). Bright-decile median r = 4.749 (does not exceed 5).
+G at which median r crosses 5: 9.516 (bright end, G 8.5-9.5 bins
+have r_p50 9.0 and 6.6; then r falls below 5). BO four ensemble
+members all r<3, none fail k*photon.
+
+Recompute era04 mag_calib_final with era03 pool membership (script:
+era04 mag_calib + era03 ct_bp_rp_comp_med * c1 + era04 ac):
+  BO  obs +59.389 mmag -> replay +2.787 mmag  COLLAPSES
+  FW  obs -10.617 mmag -> replay -10.836 mmag  does not collapse
+  GH  obs  -8.238 mmag -> replay  -6.814 mmag  does not collapse
+
+BO mechanism: ct_c1=-0.373 unchanged. ac_correction unchanged
+(-0.129885). ct_bp_rp_comp_med 0.454638 -> 0.606386.
+era03 comparison_stars.csv contains all 4 BO ensemble IDs; era04
+file contains only 1499200223486564608 (bp_rp=0.606386), the reddest.
+Weighted CT ref collapsed to that one star. Same 4-star ensemble
+still used for mag_calib (ids_swapped empty).
+
++59 mmag cause = pool gate (CT membership), residual = mag_calib
++2.787 mmag (UNNAMED; not pixels).
+
+JSON: c63b_m2.json  CSV: c63b_m2_drop_split.csv, c63b_m2_r_vs_g.csv,
+c63b_m2_replay.csv, c63b_lc_census.csv
+
+### M3 tags  (assigned or refused per target class)
+
+[C3-FLOOR]     BO REFUSED  FW REFUSED  GH REFUSED  unnamed55 REFUSED
+               Bright stars were not the 1860. No fix, no re-run.
+
+[POOL-SNR]     BO ASSIGNED
+               FW REFUSED   GH REFUSED
+               unnamed55 PARTIAL: 12/56 aperture LCs are CT-dominated
+               (|dct|>20 mmag) and take [POOL-SNR] for mag_calib_final.
+               Field median dmag_calib=-10.3 mmag (FW-like) stays
+               UNNAMED. 59 mmag goes to the ledger and methods paper
+               as measured CT-ref offset of the old n=2240 pool vs
+               the n=150 pool, not as a mag_calib ZP of the 4-star
+               ensemble. Global BP-RP p50 did not shift; BO's
+               effective CT ref did (1-star overlap).
+
+[PREPROC-REBUILD]  all classes REFUSED
+               Pixels equal; masters equal; no named input.
+
+era04 still not locked. 55 unnamed not fully named: mag_calib
+motion with identical pixels remains UNNAMED and the recut waits.
+
+JSON: c63b_m3_tags.json  harness: c63b_measure.py
+elapsed_s total 30.3 (M1 7.6 + M2 22.7).
+
 ## C6-4 / C6-5
-Lock skipped (C6-3 STOP). SNAPSHOT_NAME remains era03
-(9902d918 / 472bc9e4). INV-ANCHOR-00 pointer unchanged. No
+Lock skipped (C6-3 STOP; C6-3b did not lock). SNAPSHOT_NAME remains
+era03 (9902d918 / 472bc9e4). INV-ANCHOR-00 pointer unchanged. No
 PUSH_AUTH SHA. `--fast --clean` OVERALL PASS (1575 passed, 32
 skipped; clean-tree pytest/ruff/pyflakes PASS). Push sel-ghost-01
 by name.
 
 ## Errors
 C6-0 R1'' skipped (KeyError frame). C6-3 STOP unnamed + sanity.
+C6-3b: D3 reconstruction n_in=3291 != log 2927 (bbox/variable-target
+static filters omitted); governing 1860 split is the C6-1 log.
 C6-1 first photometry INV-CAL-01 (fixed by copying cal_diag).
 
 ## Files changed
@@ -157,3 +276,7 @@ C6-1 first photometry INV-CAL-01 (fixed by copying cal_diag).
 - docs STATE / ROADMAP / JOURNAL / DECISIONS
 - `dev/results/CURSOR_RESULT_SESSION_CLOSE_20260826.md`
 - Archive era04 snapshot (not git-tracked)
+- C6-3b: c63b_measure.py, c63b_m1.json, c63b_m1_headers.json,
+  c63b_m1_frames.csv, c63b_m1_bo_dmag_dpix.csv, c63b_m2.json,
+  c63b_m2_drop_split.csv, c63b_m2_r_vs_g.csv, c63b_m2_replay.csv,
+  c63b_lc_census.csv, c63b_m3_tags.json, c63b_summary.json

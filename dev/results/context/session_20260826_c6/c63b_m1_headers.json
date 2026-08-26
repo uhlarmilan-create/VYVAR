@@ -1,0 +1,25 @@
+{
+  "note": "era04 vs live aligned FITS: science pixels identical (max_abs_dpix=0). SHA differs on WCS cards only. Same 6 cards on frames 010, 050, 109. era04 vs era03 pixels also max_abs_dpix=0.",
+  "header_diffs_all_three_frames": [
+    {"key": "CRPIX1", "era04": "1014.6354430429", "live": "1014.6518178545"},
+    {"key": "CRPIX2", "era04": "688.62618915132", "live": "688.61905567948"},
+    {"key": "PC1_1", "era04": "-0.0027147069278126", "live": "-0.0027147189985817"},
+    {"key": "PC1_2", "era04": "1.6209251420693e-05", "live": "1.6292246000389e-05"},
+    {"key": "PC2_1", "era04": "-1.6090454252168e-05", "live": "-1.6142568491119e-05"},
+    {"key": "PC2_2", "era04": "-0.002715181754243", "live": "-0.0027151719327589"}
+  ],
+  "era04_vs_era03_pixels": {
+    "frames": ["010", "050", "109"],
+    "max_abs_dpix": 0.0,
+    "median_dpix": 0.0,
+    "frac_nonzero": 0.0,
+    "sha_equal": false
+  },
+  "masters_library": {
+    "changed_since_2026-08-20": false,
+    "dark_registered_at": "2026-08-12T10:10:40+00:00",
+    "flat_registered_at": "2026-08-12T10:12:13+00:00",
+    "dark_sha256": "525daf5c56b78ece9326d1770a52122673a1ce05da197628f6c048594b015de7",
+    "flat_sha256": "0667ed7662e62fd9cd9e6026f9c5f0d75d709cc689288c820557e3ecdd1cf92f"
+  }
+}
