@@ -10,7 +10,34 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C8 STOP; C4 next; C6 waits)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C8+C4 STOP; C6 waits GO)
+
+Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
+force-push `origin/main` (now `7c086e8` lineage). Pushes name the
+ref. C8 STOP. C4 ZP-OK v2 wired wide-rig only (`1:1`). C6 full-chain
+era04 waits Milan GO in chat (named-cause ledger; never overwrite
+era03).
+
+| Step | Action |
+|------|--------|
+| **1** | Milan: C6 full-chain era04 GO (after C8 + C4 STOPs; named-cause ledger) |
+| **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **5** | **EXPORT-PARITY-01** (HIGH) |
+
+| Pri | Carry list |
+|-----|------------|
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **MED** | **EPSF-ZP-OK-XRIG-01** - extend `fit_ok_for_zp` past wide `1:1`. Requires (1) master dark+flat in CalibrationLibrary for that rig and (2) CENSUS-01 replay of pin-drop vs quality. Newton 518 gated pool 26 does not qualify. |
+| **MED** | **MULTIFILTER-WCS-01** - sibling-seed for z_90_4 (see prior entry) |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp). C8-2: draft 516 frame 29 admitted (`status=ok`) with `n_stars_detected=263` vs ~100 on 028/030; FWHM/elongation normal. Do not wire in C8. |
+| **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
+| **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
+| **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C8 STOP; C4 next; C6 waits)
 
 Local `main` tracks `origin/sel-ghost-01`. 2026-08-25 push incident:
 `origin/main` is at `7c086e8` (same tip); do not force-push back to
@@ -472,6 +499,8 @@ CV/CR->clear behavioral flip + band-aware k'' correction path.
 | **EPSF-AC-01** | HIGH | **CLOSED (measure, 2026-08-24).** chi2<5 AC gate admits 0/30 brightest; uncorrected PSF/DAO mag-sloped (bins 1.27 -> 2.21). Evidence: `CURSOR_RESULT_EPSF_AC_01.md`. |
 | **EPSF-AC-02** | HIGH | **CLOSED (wire, 2026-08-24, Milan GO).** Production F6 AC = P4 (`p4_none`); internal PSF LC = P4; INV-PSF-LC-PIN-01 same-membership-or-NaN. BO CVn PSF-vs-aperture RMS 614 -> 39 mmag on 23/134 full-membership epochs. Evidence: `CURSOR_RESULT_EPSF_AC_02_WIRE.md`. |
 | **EPSF-PIN-CENSUS-01** | HIGH | **CLOSED (measure, 2026-08-24).** 100% of pin drops are stored chi2>=50; inferred/nonfinite/missing = 0. Admitting chi2>=50 holds PSF-vs-aperture quality (BO 38.8->37.3 mmag on 134/134; FW 0->134 at 48.5 mmag RMS). STOP for Milan on `psf_fit_ok_for_zp`. Evidence: `CURSOR_RESULT_EPSF_PIN_CENSUS_01.md`. |
+| **EPSF-ZP-OK-01-WIRE v2** | HIGH | **CLOSED (wire, 2026-08-26, Milan GO wide-only).** `fit_ok_for_zp` on rig `1:1` only. W2 HIT: BO 134/134 demeaned 8.495 mmag; FW 134/134 demeaned 5.218 mmag. T1 no longer rewrites live 516. Evidence: `CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`. |
+| **EPSF-ZP-OK-XRIG-01** | MED | Extend `fit_ok_for_zp` past wide `1:1`. Two conditions: master dark+flat in CalibrationLibrary for that rig; CENSUS-01 replay of pin-drop vs quality. Newton 518 pool 26 does not qualify. |
 | **EPSF-NEWTON-518-01** | HIGH | **CLOSED (STOP N2, 2026-08-24).** Newton draft 518 (bin2 1.30 arcsec/px) Part C gated pool 26 < 30 (science_scope). ePSF not built; P-A..P-E unmeasured. ZP-OK stays parked. Evidence: `CURSOR_RESULT_EPSF_NEWTON_518_01.md`. |
 | **EPSF-CORE-01** | FUTURE | Custom / literature-parameter ePSF to move `epsf_fwhm_native_px` toward ~3.3. **Acceptance coverage (PIN-CENSUS-01):** pinned-comp `psf_fit_ok` fraction on BO CVn / FW CVn (current 23/134 and 0/134 full-membership epochs under chi2<50). **Newton 518 (EPSF-NEWTON-518-01):** not yet a cross-rig ePSF baseline - Part C gated pool 26 < 30 (science_scope choke); night is bin2 1.30 arcsec/px, not unbinned 0.65. **Samples:** multi-frame ePSF samples (production 67 stars x 134 lights ~ 9000 samples; star x frame, not unique stars). Godden & Blundell 2025 GJW precedent 99 x 31. **Oversampling:** >=4 gridpoints per FWHM (osamp=2 at FWHM 3.3 px already gives 6.6; raising osamp needs the sample table: ~240 stars-samples per the paper's Table 2 for osamp=4 M=6 at 95 percent). **Smoothing:** minimal-or-no smoothing at low oversampling (5x5 quadratic at osamp=2 spans 2.5 native px = documented over-smoothing/ringing regime, matches F2b). **Gridpoints:** 2D polynomial surface over sigma-clipped median (photutils default underestimates the peak gridpoint). **Upstream:** watch photutils for the Godden & Blundell 2025 fixes (initial-ePSF centre indexing, flux+position degeneracy constraint, normalization). Cross-rig validation on Newton remains desired but is no longer the sole unlock. |
 | **COMP-POOL-R** | MED | **RESOLVED (2026-07-14):** r baseline filled; sparse trust validated. SS Cam

@@ -1,0 +1,39 @@
+{
+  "n_watch": 127,
+  "epsf_sha": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+  "epsf_unchanged": true,
+  "guard_changed": [],
+  "guard_ok": true,
+  "positive_control_ok": true,
+  "n_written": 60,
+  "elapsed_s": 17.8,
+  "membership": "fit_ok_for_zp",
+  "rig": "1:1",
+  "validated": true,
+  "bo": {
+    "n_finite": 134,
+    "n_rows": 134,
+    "demeaned_rms_mmag": 8.49522075627004,
+    "raw_rms_mmag": 37.29537998437748,
+    "level_offset_mmag": 36.864499999999964
+  },
+  "fw": {
+    "n_finite": 134,
+    "n_rows": 134,
+    "demeaned_rms_mmag": 5.217899304246274,
+    "raw_rms_mmag": 48.48238818990886,
+    "level_offset_mmag": 48.571000000000026
+  },
+  "bo_pred": {
+    "n": 134,
+    "demeaned_rms_mmag": 8.5
+  },
+  "fw_pred": {
+    "n": 134,
+    "demeaned_rms_mmag": 5.2
+  },
+  "bo_n_ok": true,
+  "fw_n_ok": true,
+  "bo_rms_ok": true,
+  "fw_rms_ok": true
+}

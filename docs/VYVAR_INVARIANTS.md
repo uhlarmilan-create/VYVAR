@@ -53,7 +53,7 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 | INV-PSF-FRAME-01 **[wired]** | RUN ePSF per-frame accounting: if more than 20% of frames in a PSF photometry export job have zero ``psf_fit_ok``, the job FAILS LOUDLY (``InvariantViolation``). Below threshold with any zero-ok frames: WARN with persisted per-frame table. Exception class and full message captured on every swallowed frame failure. | runtime in ``epsf_frame_accounting.finalize_epsf_frame_job`` + unit test | FAIL (>20%); WARN (<=20% with any zero-ok) | EPSF-VALID-02 F2; draft 516 incident was 74% zero-ok frames. |
 | INV-PSF-ADDITIVE-01 **[wired]** | RUN ePSF PSF-only merge: existing proc sidecar non-``psf_*`` columns (row set, order, values) must be byte-identical in memory before write. Missing sidecar = FAIL LOUDLY (no catalog fabrication). UI RUN ePSF uses ``run_epsf_psf_merge_job`` only; full ``export_per_frame_catalogs`` requires explicit ``full_catalog_export=True``. | runtime in ``epsf_psf_merge.assert_inv_psf_additive_01`` + unit tests | FAIL | EPSF-VALID-02 F6/S6; R5 accept rerun rewrote aperture columns on draft 516. |
 | INV-PSF-SUBMIT-01 **[wired]** | AAVSO and VarAstro submission writers must hard-fail when the effective ``lc_method`` is ``psf`` or ``adaptive``. No config escape hatch. Internal diagnostic PSF light curves (``lightcurve_*_psf.csv``) must not route through those writers. Science exports remain aperture-only; PSF relative photometry is an internal product pending EPSF-SHAPE-01. | runtime in ``export_reports.export_lightcurve_reports`` (raise ``InvariantViolation``) + ``dev/tests/test_psf_internal_lc.py`` | FAIL | EPSF-LC-LOG-01; SESSION-CLOSE 2026-08-23 trust boundary. |
-| INV-PSF-LC-PIN-01 **[wired]** | Internal PSF LC ensemble ZP uses the full pinned (or resolved) comparison set or the epoch is NaN. If any pinned comp lacks ``psf_fit_ok`` or finite ``psf_flux``, that epoch gets NaN ``psf_delta_mag`` and ``psf_epoch_drop_reason=comp_psf_fail:<gaia_id>``. Aperture columns stay filled. No partial-ensemble fallback and no substitution. | writer in ``psf_internal_lc.write_one_internal_psf_lc`` + ``dev/tests/test_psf_internal_lc.py`` | FAIL | EPSF-AC-02; analogue of INV-PIN / ERA-03 same-membership discipline on the PSF branch. |
+| INV-PSF-LC-PIN-01 **[wired]** | Internal PSF LC ensemble ZP uses the full pinned (or resolved) comparison set or the epoch is NaN. Membership predicate is config-selected (`psf_zp_membership`) and rig-scoped (`psf_zp_for_zp_validated_rigs`; draft 516 pair `1:1`). `fit_ok_strict` requires stored `psf_fit_ok`; `fit_ok_for_zp` also admits finite `psf_flux>0` and finite `psf_chi2`. Unvalidated rigs stay strict. If any pinned member fails the effective predicate, that epoch gets NaN `psf_delta_mag` and `psf_epoch_drop_reason=comp_psf_fail:<gaia_id>`. Aperture columns stay filled. No partial-ensemble fallback. | writer in ``psf_internal_lc.write_one_internal_psf_lc`` + ``dev/tests/test_psf_internal_lc.py`` | FAIL | EPSF-ZP-OK-01-WIRE v2; EPSF-AC-02 analogue of INV-PIN / ERA-03. |
 | INV-EPSF-BUILD-GUARD-01 **[wired]** | Production ``build_epsf_model``: on non-finite EPSFBuilder result, drop edge-nearest gated star (logged in ``masterstar_epsf_meta.json`` -> ``build_guard``); FAIL LOUDLY if >10% of gated pool would be dropped. | ``psf_photometry.build_epsf_model`` + ``dev/tests/test_epsf_build_guard.py`` | FAIL | EPSF-VALID-02 S6 Addendum 1; D1b-a odd-half build failure. |
 
 ### INV-PSF-SUBMIT-01 (EPSF-LC-LOG-01)
@@ -75,9 +75,16 @@ record, run continues. Wired gates are check-only (never mutate science arrays).
 ### INV-PSF-LC-PIN-01 (EPSF-AC-02)
 
 - **Definition:** The internal PSF light-curve ensemble zero-point for a target
-  uses the full pinned (or resolved) comparison set or the epoch is NaN. If any
-  pinned comparison star lacks ``psf_fit_ok`` or a finite ``psf_flux`` on that
-  epoch, ``psf_delta_mag`` is NaN and ``psf_epoch_drop_reason`` is
+  uses the full pinned (or resolved) comparison set or the epoch is NaN.
+  The per-star membership predicate is config-selected
+  (``psf_zp_membership``: ``fit_ok_strict`` or ``fit_ok_for_zp``) and
+  rig-scoped (``psf_zp_for_zp_validated_rigs``, identity
+  ``equipment_id:telescope_id``; draft 516 is ``1:1``). Unvalidated rigs
+  stay ``fit_ok_strict`` and stamp the EPSF-ZP-OK-XRIG-01 INFO line.
+  ``fit_ok_for_zp`` admits stored ``psf_fit_ok`` OR (finite ``psf_flux>0``
+  AND finite ``psf_chi2``); ``psf_fit_ok`` remains the strict recorded
+  column. If any pinned comparison star fails the effective predicate,
+  ``psf_delta_mag`` is NaN and ``psf_epoch_drop_reason`` is
   ``comp_psf_fail:<gaia_id>`` for the first missing member. Aperture
   ``delta_mag`` / ``err`` stay filled. There is no partial-ensemble fallback
   and no substitution of a spare comparison star.

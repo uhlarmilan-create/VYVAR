@@ -2,6 +2,12 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C4 EPSF-ZP-OK-01-WIRE v2 (wide 1:1)
+
+W1-W4 wired. BO 134/134 demeaned 8.495 mmag; FW 134/134 5.218 mmag.
+T1 writes tmp. ePSF SHA unchanged. XRIG-01 recorded. C6 waits GO.
+Evidence: `CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C8 STOP (push incident + R1' + frame 29)
 
 Push incident recorded; no force-push of main. P0 pre-push guard.

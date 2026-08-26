@@ -1,26 +1,116 @@
-CURSOR RESULT - 2026-08-25 (EPSF-ZP-OK-01-WIRE v2)
+CURSOR RESULT - 2026-08-26 (EPSF-ZP-OK-01-WIRE v2)
 
 What I did
-STOP at locate. Did not wire W1-W3. Did not reconstruct the parked
-v2 task from v1 or from memory. Push: NO. Live 516 untouched.
+Wired W1-W4 for the wide rig only (draft 516/517 pair equipment_id=1,
+telescope_id=1 -> identity `1:1`). Production default
+`psf_zp_membership=fit_ok_for_zp` on that allow-list. T1 writes
+`output_directory` (tmp); live BO PSF LC is not rewritten by `--fast`.
+W2 regenerated 60 internal PSF LCs on live 516. Hash guards held.
+Pushed to `sel-ghost-01` by name. C6 not run.
 
-HEAD `b1f5b8cd3ab58e27b86000720b85dd09aaa7ea25` == `origin/main`.
+HEAD after W4 is recorded in Files changed. Live ePSF SHA
+`172f95403beae36d...` unchanged.
 
 ## Premise (Rule 0.1)
 
-**What is compared:** the parked EPSF-ZP-OK-01-WIRE **v2** task file
-(written 2026-08-24, "wide-validated-only scope after Newton 518 could
-not build") versus what is on disk / in Cursor context at HEAD
-`b1f5b8c` after SEL-GHOST-01 A.
+**What is compared:** PIN-CENSUS-01 chi2<50 pin (BO 23/134, FW 0/134)
+versus `fit_ok_for_zp` membership on stored columns (no refit),
+wide-rig only.
 
-**How they differ:** this amendment names W1-W3 as already specified
-in v2 and forbids changing them. v2 is not in the repo. The only
-full ZP-OK task on record is **v1** (2026-08-24 18:03, GO-gated,
-REJECTED for missing GO). v1 W3 is docs. This amendment's W3 is the
-T1 `--fast` live-516 PSF LC rewrite. Those are not the same work
-item. Using v1 as v2 would violate the locate rule.
+**How they differ:** `psf_fit_ok` stays the strict recorded column.
+ZP membership may also admit finite `psf_flux>0` and finite `psf_chi2`.
+Unvalidated rigs stay strict and stamp EPSF-ZP-OK-XRIG-01.
 
-## Locate search (negative)
+## W1 membership
+
+`src_py/psf_internal_lc.py`: `psf_fit_ok_for_zp = psf_fit_ok OR
+(finite psf_flux AND psf_flux>0 AND finite psf_chi2)`. Config
+`psf_zp_membership` in {fit_ok_strict, fit_ok_for_zp}, default
+fit_ok_for_zp. Config `psf_zp_for_zp_validated_rigs` default `["1:1"]`.
+No-manifest or unlisted rig -> fit_ok_strict + header line
+`# psf_zp_membership: fit_ok_strict (psf_fit_ok_for_zp not validated
+for this rig; see EPSF-ZP-OK-XRIG-01)`. Stamps
+`psf_zp_membership_effective` and `psf_zp_membership_rig_validated`.
+Scope: INV-PSF-LC-PIN-01 only.
+
+Tests: chi2=80 finite flux -> strict drops, for_zp keeps; unvalidated
+rig -> strict + INFO; validated -> for_zp + header. INV-PSF-SUBMIT-01
+unchanged.
+
+Dashboard `config_runtime` 279 -> 281.
+
+## W2 live 516 regenerate
+
+n_written=60. elapsed_s=17.8. Rig `1:1` validated. Effective
+fit_ok_for_zp. Hash guard: 127 must-not-change files identical
+(aperture LCs, AAVSO, VarAstro, ePSF). Positive control: one-byte
+scratch mutation changed SHA. ePSF SHA
+`172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20`.
+
+| target | n_finite | demeaned RMS mmag | pred n / mmag | hit |
+|--------|----------|-------------------|---------------|-----|
+| BO CVn `1498613634033133184` | 134/134 | 8.495 | 134 / 8.5 | YES |
+| FW CVn `1497343732462852864` | 134/134 | 5.218 | 134 / 5.2 | YES |
+
+STOP gates (miss >1 epoch or 1 mmag): **PASS**. All-60 meters:
+`dev/results/context/session_20260826_closeout/c4_w2_all60_meters.csv`.
+Live BO PSF LC SHA after W2:
+`77adbc039dd6f247832a77f9f170a1206ce4203ee1827466b5f2a94b25a19ed0`.
+
+## W3 output_directory
+
+`write_internal_psf_lightcurves` / CLI `--output-directory`. Default
+remains the draft lightcurves dir. T1
+`test_epsf_lc_log_01_draft516_bo_cvn` writes tmp_path and asserts live
+BO PSF LC SHA unchanged. W3b: `--fast` twice after this STOP; live
+BO PSF SHA must equal W2a product on both runs.
+
+## W4 docs
+
+DECISIONS: ZP-OK v2 wide-rig only. ROADMAP EPSF-ZP-OK-XRIG-01 (MED):
+extension requires (1) master dark+flat in CalibrationLibrary for
+that rig and (2) CENSUS-01 replay of pin-drop vs quality on that
+night. Newton 518 gated pool 26 does not qualify. Closed: "ZP-OK v2
+undecided" and "T1 rewrites live 516". INV-PSF-LC-PIN-01 membership
+is config-selected and rig-scoped.
+
+## Gates
+
+| Gate | Status |
+|------|--------|
+| `--fast --clean` | recorded after this STOP |
+| 516 aperture/AAVSO/VarAstro byte-identical | PASS (W2) |
+| ePSF SHA unchanged | PASS |
+| INV-PSF-SUBMIT-01 | PASS (unit tests) |
+| W2 BO/FW meters | PASS |
+
+## C6
+
+Not run. Waits Milan GO in chat after this STOP plus C8.
+
+## Errors
+
+None on W1-W4 science path. C8-1 R1' table remains blocked (separate
+STOP).
+
+## Files changed
+
+- `src_py/psf_internal_lc.py`, `src_py/config.py`
+- `dev/validation/params_registry.json`, `docs/VYVAR_PARAMS.md`
+- `dev/tests/test_psf_internal_lc.py`, `dev/tests/test_ui_params_dashboard.py`
+- `docs/VYVAR_INVARIANTS.md`, `docs/VYVAR_DECISIONS.md`
+- `docs/VYVAR_ROADMAP.md`, `docs/VYVAR_STATE.md`, `docs/VYVAR_JOURNAL.md`
+- `docs/VYVAR_CONFIG_GUIDE_EN.md`, `docs/VYVAR_CONFIG_GUIDE_CZ.md`
+- this STOP (locate table kept as appendix)
+- `dev/results/context/session_20260826_closeout/c4_w2.json`
+
+## Appendix - locate STOP (2026-08-25, not wiring)
+
+STOP at locate. Did not wire W1-W3. Did not reconstruct the parked
+v2 task from v1 or from memory. Push: NO. Live 516 untouched.
+HEAD then `b1f5b8c`.
+
+### Locate search (negative)
 
 | Place | Result |
 |-------|--------|
@@ -34,42 +124,12 @@ item. Using v1 as v2 would violate the locate rule.
 | agent transcripts | **v2 task body never pasted as a user_query** |
 | git `b1f5b8c` | confirmed absent (task said so) |
 
-Pointers that *name* v2 but do not contain it:
+Pointers that named v2 but did not contain it:
 
-- `docs/VYVAR_HANDOFF_2026-08-24.md` line 79: T1 rewrite "parked in
-  EPSF-ZP-OK-01-WIRE v2 W3, which has not run"
-- `dev/results/CURSOR_RESULT_SESSION_CLOSE_20260824.md` same sentence
-- ROADMAP: "EPSF-ZP-OK-01-WIRE stays parked" (no v2 file)
+- `docs/VYVAR_HANDOFF_2026-08-24.md` line 79
+- `dev/results/CURSOR_RESULT_SESSION_CLOSE_20260824.md`
+- ROADMAP: "EPSF-ZP-OK-01-WIRE stays parked" (no v2 file then)
 
-## What is on record (not v2)
-
-v1 exists in [EPSF light-curve product](19f2248a-a4bc-4efd-b2d4-a239c12683cc)
-transcript line 413 (2026-08-24 18:03). Cursor REJECTED it for missing
-Milan GO. v1 headings only (not executed):
-
-- W1 membership predicate (`psf_zp_membership` fit_ok_strict /
-  fit_ok_for_zp in INV-PSF-LC-PIN-01 only)
-- W2 regenerate 60 internal PSF LCs + all-60 meters
-- W3 **docs** (DECISIONS / ROADMAP / STATE)
-
-This amendment's W3 is T1 test rewriting live 516 BO CVn PSF LC on
-`--fast`. That item is **not** in v1. Scope A/B (rig allow-list,
-EPSF-ZP-OK-XRIG-01) are also not in v1.
-
-## Gates
-
-Not run for wiring (wiring not started). Locate-fail `--fast` after
-docs one-liners: **OVERALL PASS** (1530 passed, 32 skipped) at HEAD
-`b1f5b8c`.
-
-## Errors
-
-Parked v2 task file not found. Architect re-issues v2 (or pastes it
-into chat). Cursor will then apply amendment A-C on top of W1-W3
-without reconstructing them.
-
-## Files changed
-
-- `dev/results/CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md` (this STOP)
-- `docs/VYVAR_STATE.md` / `docs/VYVAR_JOURNAL.md` (one-liners)
-- no commit, no push, no science-path edit
+v1 existed in chat 2026-08-24 18:03 (REJECTED for missing GO). v1 W3
+was docs. The locate amendment's W3 was T1 `--fast` live-516 PSF LC
+rewrite. Architect re-issued v2 2026-08-25; this STOP is that wire.

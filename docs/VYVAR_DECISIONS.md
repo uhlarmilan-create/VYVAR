@@ -119,6 +119,20 @@ computed on frozen 516 (no SNR column).
 
 Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_A.md`.
 
+## EPSF-ZP-OK-01-WIRE v2 - wide rig only (2026-08-26)
+
+Wired for Carl-Zeiss 200 mm + QHY294MM (drafts 516/517). Rig identity
+is `equipment_id:telescope_id` = `1:1`, not `scanning_id`. Production
+`psf_zp_membership=fit_ok_for_zp` on that allow-list. Other rigs stay
+`fit_ok_strict` until EPSF-ZP-OK-XRIG-01. T1 no longer rewrites live
+516 PSF LCs (`output_directory`). Closed: locate-fail / "ZP-OK v2
+undecided" / "T1 rewrites live 516".
+
+W2 meters HIT: BO 134/134 demeaned 8.495 mmag; FW 134/134 demeaned
+5.218 mmag. ePSF SHA unchanged.
+
+Evidence: `CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
+
 ## 2026-08-25 push incident - do not rewrite origin/main (2026-08-26)
 
 `git push origin HEAD` advanced `origin/main` from `b1f5b8c` to `7c086e8`
@@ -149,10 +163,9 @@ Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_B.md`.
 
 ## EPSF-ZP-OK-01-WIRE v2 - locate fail (2026-08-25)
 
-Parked v2 task file was not on disk, in `dev/tasks/`, or in chat
-transcripts. Cursor STOP at locate; did not reconstruct W1-W4 from v1.
-Architect re-issues v2 to run. Evidence:
-`CURSOR_RESULT_EPSF_ZP_OK_01_WIRE_v2.md`.
+**SUPERSEDED 2026-08-26** by the wide-rig wire (same filename STOP,
+locate table kept as appendix). Parked v2 was re-issued in chat
+2026-08-25 and executed in CLOSE-OUT C4.
 
 ## REG-520-01 - non-cal is first-class; 0.39 vs 0.06 is selection (2026-08-24)
 
