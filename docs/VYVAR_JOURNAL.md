@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C6-0 resume STOP (A-only; 4-tuple vs 3-tuple)
+
+Six A files from c592ecf..0684ba9 copied. Import OK. Chain FAIL:
+iter4 unpacks 4 from `lock_existing`; c592ecf returns 3. M not copied.
+C6-1 not started. era03 untouched. No PUSH_AUTH SHA.
+Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C6-0 STOP (era04 not locked)
 
 Milan GO on C6. Isolated c592ecf + three iter files from 0684ba9:

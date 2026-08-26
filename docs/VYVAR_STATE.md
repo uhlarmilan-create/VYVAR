@@ -1,9 +1,9 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 C6-0 STOP.** Milan GO on C6 executed.
-R1' three-file isolated import missing `dao_gaia_stage_01`. Did not
-copy a fourth file. C6-1..C6-4 not started. era04 not locked. era03
-untouched. Live 516/520 SHA unchanged. origin/main stays `7c086e8`.
+**Status:** **CLOSE-OUT 2026-08-26 C6-0 resume STOP.** A-only copy from
+`c592ecf..0684ba9` (6 files) imports. Chain FAIL: iter4 unpacks
+4-tuple `lock_existing`; c592ecf accounting returns 3. M file not
+copied. era04 not locked. era03 untouched. origin/main stays `7c086e8`.
 **CLOSE-OUT 2026-08-26 C8+C4 STOP.** Push incident recorded;
 P0 guard in. C8-1 R1' blocked (one-file iter4). C4 ZP-OK v2 wired
 wide-rig `1:1` (BO 134/134 8.495 mmag; FW 134/134 5.218 mmag). C6
@@ -67,14 +67,13 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT C6-0 STOP, no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
 
 ## 2026-08-26 -- CLOSE-OUT C6-0 STOP (era04 not locked)
 
-Isolated c592ecf + iter2/3/4 from 0684ba9:
-`ModuleNotFoundError: dao_gaia_stage_01`. Fourth file not copied.
-C6-1 not started. era03 freeze still core **9902d918** n=121,
-ext **472bc9e4** n=179. Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+Resume A-only: six files, import OK, chain FAIL 4-tuple vs 3-tuple
+`lock_existing`. M not copied. era03 freeze still core **9902d918**
+n=121, ext **472bc9e4** n=179. Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
 
 ## 2026-08-25 -- CLOSE-OUT C3 COMP-RMS-DEF-01-B STOP
 

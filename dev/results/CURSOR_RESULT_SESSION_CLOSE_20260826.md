@@ -1,12 +1,15 @@
 CURSOR RESULT - SESSION CLOSE 2026-08-26
 
-Architect handoff file. C6-0 STOP blocked era04 lock.
+Architect handoff file. C6-0 resume STOP blocked era04 lock.
 No SHA for main fast-forward in this file.
 
-Date: 2026-08-26. Branch: sel-ghost-01. Tip at this write: aa90d7f
-plus the C6-0 STOP commit that follows. origin/main stays 7c086e8.
+Date: 2026-08-26. Branch: sel-ghost-01. origin/main stays 7c086e8.
 era03 freeze: ad19e14; core 9902d918 n=121; ext 472bc9e4 n=179.
 era04: NOT LOCKED. era03 not overwritten.
+
+C6-0 resume: A-only 6 files from c592ecf..0684ba9. Import OK. Chain
+FAIL ValueError unpack 4 vs 3 on lock_existing_and_leftover_assign
+(c592ecf accounting is 3-tuple; 0684ba9 M not copied).
 
 ## Commits b1f5b8c..tip grouped by task
 
@@ -105,7 +108,7 @@ PUSH_AUTH after era04 is locked (not this STOP).
 - sqlite threading flake on malformed-DB WARN (C4 --fast: 13/13 in isolation)
 - 520 selection wiring lives on the branch; 520 has no era snapshot
 - Newton 518 unchanged (gated pool 26; ZP-OK does not apply)
-- C6-0 R1' blocked: three-file copy still missing dao_gaia_stage_01
+- C6-0 R1' blocked: A-only imports; chain FAIL 4-tuple vs 3-tuple lock_existing
 - T3 R1 remains contaminated; C6-0-P1 untested
 - `--full` on frozen era03 MS still raises until a full-chain recut
   (D3/C3 columns absent on freeze)

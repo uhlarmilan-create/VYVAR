@@ -10,16 +10,16 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-0 STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-0 resume STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. C6 GO ran; R1' three-file import missing `dao_gaia_stage_01`.
-C6-1 not started. era03 untouched. era04 not locked.
+ref. C6-0 A-only (6 files) imports. Chain FAIL: iter4 4-tuple vs
+c592ecf `lock_existing` 3-tuple. M not copied. era04 not locked.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: C6-0 resume GO (copy `dao_gaia_stage_01.py` from 0684ba9, or skip R1' table, or worktree at 0684ba9) then C6-1 full-chain era04 |
+| **1** | Milan: C6-0 resume GO (copy M `masterstar_gaia_accounting.py`, or skip R1' table) then C6-1 full-chain era04 |
 | **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
 | **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |

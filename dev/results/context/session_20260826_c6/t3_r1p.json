@@ -1,0 +1,15 @@
+{
+  "utc": "2026-08-26T08:17:53.822267+00:00",
+  "run": "r1p",
+  "label": "c592ecf+A(0684ba9)",
+  "pipeline_file": "C:\\ASTRO\\python\\VYVAR\\.worktrees\\c6_r1p_c592ecf\\src_py\\pipeline.py",
+  "err": "MS RuntimeError: MASTERSTAR Gaia-complete enrich failed on production path: INV-MS-EXPAND-01: certificate write failed: not enough values to unpack (expected 4, got 3)",
+  "live_before": {
+    "516_csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "516_fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "516_epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "copy_s": 1.9,
+  "n_lights": 135,
+  "cal_copied": true
+}

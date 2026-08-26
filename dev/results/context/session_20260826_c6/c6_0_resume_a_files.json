@@ -1,0 +1,36 @@
+{
+  "task": "C6-0 resume A-only copy",
+  "utc": "2026-08-26T08:15:00Z",
+  "diff": "git diff --name-status c592ecf 0684ba9",
+  "A_copied_from_0684ba9": [
+    {"path": "dev/results/context/session_20260819_daostage01_iter4/final_scores.csv", "bytes": 1188},
+    {"path": "dev/tests/test_inv_match_identity_01.py", "bytes": 5150},
+    {"path": "src_py/dao_gaia_stage_01.py", "bytes": 28353},
+    {"path": "src_py/dao_gaia_stage_01_iter2.py", "bytes": 29378},
+    {"path": "src_py/dao_gaia_stage_01_iter3.py", "bytes": 26543},
+    {"path": "src_py/dao_gaia_stage_01_iter4.py", "bytes": 24571}
+  ],
+  "M_not_copied": [
+    "dev/tests/test_masterstar_gaia_01.py",
+    "docs/VYVAR_INVARIANTS.md",
+    "src_py/astrometry_optimizer.py",
+    "src_py/dao_gaia_calibration.py",
+    "src_py/gaia_catalog_id.py",
+    "src_py/invariants_runtime.py",
+    "src_py/masterstar_gaia_accounting.py",
+    "src_py/pipeline.py",
+    "src_py/ui_aperture_photometry.py",
+    "src_py/wcs_invertibility.py"
+  ],
+  "worktree": ".worktrees/c6_r1p_c592ecf",
+  "worktree_sha": "c592ecf",
+  "archive_junction": ".worktrees/c6_r1p_c592ecf/Archive -> repo Archive (data path only; STAGE-01 FRAMES are REPO-relative)",
+  "import_ok": true,
+  "import_loaded_from": {
+    "dao_gaia_stage_01": ".worktrees/c6_r1p_c592ecf/src_py/dao_gaia_stage_01.py",
+    "iter2": ".worktrees/c6_r1p_c592ecf/src_py/dao_gaia_stage_01_iter2.py",
+    "iter3": ".worktrees/c6_r1p_c592ecf/src_py/dao_gaia_stage_01_iter3.py",
+    "iter4": ".worktrees/c6_r1p_c592ecf/src_py/dao_gaia_stage_01_iter4.py",
+    "pipeline": ".worktrees/c6_r1p_c592ecf/src_py/pipeline.py"
+  }
+}
