@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-26T06:25:23Z at git HEAD 7c086e8._
+_Generated 2026-08-26T17:35:10Z at git HEAD d0a6ddf._
 
 ## Summary
 
-- Entries: 309
-- Tier: basic 13, advanced 74, expert 222
-- Kind: static 291, derived 0, resolved 18
-- Widget: auto 125, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 281, fits_dynamic 6, internal 13
-- Scope: universal 257, rig 34, site 10, session 8
-- Scope key: none 257, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 310
+- Tier: basic 13, advanced 75, expert 222
+- Kind: static 292, derived 0, resolved 18
+- Widget: auto 126, custom 159, hidden 25
+- Owner: db_static 9, config_runtime 282, fits_dynamic 6, internal 13
+- Scope: universal 258, rig 34, site 10, session 8
+- Scope key: none 258, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -198,8 +198,9 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `aperture_correction_max_contamination` | 0.15 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Contamination |
 | `aperture_correction_max_scatter_mag` | 0.03 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Scatter Mag |
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Min Ref Stars |
-| `aperture_fwhm_factor` | 1.9 | 0.5 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
+| `aperture_fwhm_factor` | 1.9 | 0.25 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Photometry Enabled |
+| `aperture_policy_mode` | f_fixed_night | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Policy Mode |
 | `aperture_scatter_r_max_px` | 12.0 | 1 .. 30 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Scatter R Max |
 | `aperture_scatter_r_min_px` | 1.5 | 0.5 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Scatter R Min |
 | `aperture_scatter_r_step_px` | 0.5 | 0.1 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Scatter R Step |

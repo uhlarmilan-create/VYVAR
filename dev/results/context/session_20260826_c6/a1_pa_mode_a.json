@@ -1,0 +1,96 @@
+{
+  "mode": "f_fixed_night",
+  "P-A1": {
+    "pass": false,
+    "stars": {
+      "BO": 65.558,
+      "FW": 23.9655,
+      "GH": -387.9375
+    }
+  },
+  "P-A2": {
+    "pass": false,
+    "within_5pct": {
+      "BO": true,
+      "FW": true,
+      "GH": false
+    },
+    "rms_e3": {
+      "BO": 145.7484,
+      "FW": 13.7764,
+      "GH": 107.9663
+    },
+    "rms_e4": {
+      "BO": 147.6456,
+      "FW": 14.1978,
+      "GH": 101.8799
+    },
+    "ratio": {
+      "BO": 1.013,
+      "FW": 1.0306,
+      "GH": 0.9436
+    }
+  },
+  "P-A3": {
+    "BO": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\XVAL_AIJ_01_bo_compare.csv",
+      "present": true,
+      "sha256": "4ffa9e8e43b0736809eff132db959e399fed53a8ccc6b6006c9eb6c2660c7fc1",
+      "rms_diff_mmag": 18.1778,
+      "n": 134,
+      "median_diff_mmag": 6.0,
+      "known_gate_mmag": 3.3,
+      "pass": false
+    },
+    "FW": {
+      "present": false,
+      "note": "FW CVn AIJ table is not on disk; gate NOT MEASURED"
+    }
+  },
+  "P-A4": {
+    "mode_a_rho": {
+      "BO": 0.0888,
+      "FW": -0.2529,
+      "GH": 0.0794
+    },
+    "note": "mode b rho filled by a1_mode_b_harness.py"
+  },
+  "stars": {
+    "BO": {
+      "cid": "1498613634033133184",
+      "n_join": 134,
+      "dmag_calib_mmag": 65.558,
+      "rms_e3_mmag": 145.7484,
+      "rms_e4_mmag": 147.6456,
+      "rms_ratio_e4_over_e3": 1.013,
+      "spearman_dmag_vs_fwhm": 0.0888,
+      "aperture_policy": "f_fixed_night",
+      "aperture_f": 0.385228,
+      "median_r_ap_px": 2.0
+    },
+    "FW": {
+      "cid": "1497343732462852864",
+      "n_join": 134,
+      "dmag_calib_mmag": 23.9655,
+      "rms_e3_mmag": 13.7764,
+      "rms_e4_mmag": 14.1978,
+      "rms_ratio_e4_over_e3": 1.0306,
+      "spearman_dmag_vs_fwhm": -0.2529,
+      "aperture_policy": "f_fixed_night",
+      "aperture_f": 0.385228,
+      "median_r_ap_px": 2.0
+    },
+    "GH": {
+      "cid": "1498804639818507904",
+      "n_join": 134,
+      "dmag_calib_mmag": -387.9375,
+      "rms_e3_mmag": 107.9663,
+      "rms_e4_mmag": 101.8799,
+      "rms_ratio_e4_over_e3": 0.9436,
+      "spearman_dmag_vs_fwhm": 0.0794,
+      "aperture_policy": "f_fixed_night",
+      "aperture_f": 0.385228,
+      "median_r_ap_px": 2.0
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "mode": "f_fixed_night",
+  "f": 0.385228,
+  "n_frames": 134,
+  "r_ap": 2.0,
+  "night_fwhm_px": 5.191733,
+  "stars": {
+    "BO": {
+      "rms_mmag": 145.6416,
+      "spearman_dmag_vs_fwhm": 0.0868
+    },
+    "FW": {
+      "rms_mmag": 14.377,
+      "spearman_dmag_vs_fwhm": -0.2311
+    },
+    "GH": {
+      "rms_mmag": 100.5943,
+      "spearman_dmag_vs_fwhm": 0.0948
+    }
+  },
+  "elapsed_s": 14.16
+}

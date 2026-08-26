@@ -1,6 +1,15 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 C6-3d STOP.** era04 not locked.
+**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01 STOP.** era04 not locked.
+Option (i) wired: one r/frame = f x QC fwhm_px (FWHM-AUTH-01).
+f=0.385228 from the 516 scatter ladder (no retune). Mode (a)
+f_fixed_night is the recorded default. P-A1 FAIL (BO +65.6 /
+FW +24.0 / GH -387.9 mmag vs era03). P-A2 GH 5.64% outside 5%.
+P-A3 BO AIJ RMS 18.18 mmag (gate 3.3); FW AIJ NOT MEASURED.
+P-A4 harness PASS. C6-2/C6-4 skipped. era03 freeze remains the
+gate: core **9902d918** n=121, ext **472bc9e4** n=179.
+origin/main stays `7c086e8`.
+**CLOSE-OUT 2026-08-26 C6-3d STOP.** era04 not locked.
 [APERTURE-RADIUS] named: SNR-table mag 9.5 5.999->5.499 from the
 measured growth curve (ee_r90 6.0->5.5), not FWHM-AUTH, not ZP.
 P3 collapses BO/FW/GH mag_calib to 0.0 mmag. P1/P2 FAIL as written.
@@ -76,7 +85,17 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT C6-3d STOP, era04 not locked; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01 STOP, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-26 -- CLOSE-OUT APERTURE-01 STOP (era04 not locked)
+
+Option (i) wired. One r/frame = f x qc_metrics.fwhm_px
+(FWHM-AUTH-01). f=0.385228 from 516 ladder (r=2.0 px). Mode (a)
+f_fixed_night default. P-A1 FAIL vs era03 mixed r (BO +65.6,
+FW +24.0, GH -387.9 mmag). P-A2 GH 5.64% outside 5%. P-A3 BO
+AIJ 18.18 mmag (product SHA 4ffa9e8e); FW AIJ not on disk.
+P-A4 harness PASS. C6-2/C6-4 skipped. [EDGE-ANNULUS-01] recorded
+not wired. Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
 
 ## 2026-08-26 -- CLOSE-OUT C6-3d STOP (era04 not locked)
 

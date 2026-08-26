@@ -64,6 +64,9 @@ PHOTOMETRY_QC_COLS_LC = frozenset(
         "err_sem_rel",
         "err_sigma_sys_rel",
         "sigma_sys_mag",
+        "aperture_policy",
+        "aperture_f",
+        "fwhm_night_median_px",
     }
 )
 PHOTOMETRY_TIME_COLS = frozenset({"bjd", "hjd", "jd", "mjd", "time", "bjd_tdb", "bjd_bary"})

@@ -1064,7 +1064,7 @@ def render_settings_dashboard(
         cfg.alignment_max_control_points = int(max(12, min(500, aln_mcp)))
         det_sig = float(aln_sig)
         cfg.alignment_detection_sigma = det_sig if det_sig > 0 else 5.0
-        cfg.aperture_fwhm_factor = float(max(0.5, min(6.0, ap_fwhm)))
+        cfg.aperture_fwhm_factor = float(max(0.25, min(6.0, ap_fwhm)))
         cfg.annulus_inner_fwhm = float(max(1.0, min(10.0, ann_in)))
         cfg.annulus_outer_fwhm = float(max(1.5, min(12.0, ann_out)))
         if cfg.annulus_outer_fwhm <= cfg.annulus_inner_fwhm:

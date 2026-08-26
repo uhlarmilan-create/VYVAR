@@ -1,0 +1,23 @@
+{
+  "mode": "f_per_frame",
+  "f": 0.385228,
+  "n_frames": 134,
+  "r_ap_min": 1.9794,
+  "r_ap_max": 2.0435,
+  "r_ap_median": 2.0,
+  "stars": {
+    "BO": {
+      "rms_mmag": 145.6542,
+      "spearman_dmag_vs_fwhm": 0.0885
+    },
+    "FW": {
+      "rms_mmag": 14.2358,
+      "spearman_dmag_vs_fwhm": -0.1855
+    },
+    "GH": {
+      "rms_mmag": 100.6468,
+      "spearman_dmag_vs_fwhm": 0.089
+    }
+  },
+  "elapsed_s": 24.46
+}

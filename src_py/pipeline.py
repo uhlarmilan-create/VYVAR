@@ -232,6 +232,10 @@ def _apply_aperture_catalog_enhancements_from_st(
             aperture_variable_factor=float(st.get("aperture_variable_factor", 1.0)),
             aperture_comp_factor=float(st.get("aperture_comp_factor", 1.0)),
             variable_target_catalog_ids=frozenset(st.get("variable_target_catalog_ids") or []),
+            aperture_policy_mode=st.get("aperture_policy_mode"),
+            fwhm_night_median_px=st.get("fwhm_night_median_px"),
+            qc_fwhm_by_name=st.get("qc_fwhm_by_name"),
+            frame_name=st.get("current_frame_name"),
         )
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
@@ -10588,6 +10592,7 @@ def _export_per_frame_run_catalog_core(
     _run_aperture = bool(st.get("_run_aperture", True))
     _run_epsf = bool(st.get("_run_epsf", False))
     if _run_aperture:
+        st["current_frame_name"] = fname
         df = _apply_aperture_catalog_enhancements_from_st(df, data, hdr, st)
     _ps_dir = str(st.get("platesolve_dir") or "").strip()
     _psf_on = bool(st.get("psf_photometry_enabled", False))
@@ -10882,6 +10887,25 @@ def export_per_frame_catalogs(
     _snr_ap_table_for_bpm = load_snr_aperture_table_from_draft_dir(_draft_dir_snr)
 
     ps = Path(platesolve_dir) if platesolve_dir is not None else None
+    _qc_fwhm_by_name: dict[str, float] = {}
+    _fwhm_night_median_px: float | None = None
+    try:
+        from aperture_policy import load_qc_fwhm_map, normalize_aperture_policy_mode  # noqa: PLC0415
+
+        _qc_root = None
+        if ps is not None:
+            try:
+                _qc_root = Path(ps).resolve().parents[1]
+            except IndexError:
+                _qc_root = None
+        _qc_csv = find_qc_metrics_csv(_qc_root) if _qc_root is not None else None
+        _qc_fwhm_by_name, _fwhm_night_median_px = load_qc_fwhm_map(_qc_csv)
+        _ap_policy_mode = normalize_aperture_policy_mode(
+            getattr(_cfg_ap, "aperture_policy_mode", "f_fixed_night")
+        )
+    except Exception as _qc_exc:  # noqa: BLE001
+        LOGGER.warning("[APERTURE-01] QC FWHM map not loaded: %s", _qc_exc)
+        _ap_policy_mode = "f_fixed_night"
 
     _ap_st: dict[str, Any] = {
         "aperture_photometry_enabled": bool(_cfg_ap.aperture_photometry_enabled),
@@ -10899,6 +10923,9 @@ def export_per_frame_catalogs(
         "aperture_fwhm_factor_small": float(_cfg_ap.aperture_snr_sizing.get("small", 1.5)),
         "aperture_fwhm_factor_large": float(_cfg_ap.aperture_snr_sizing.get("large", 4.0)),
         "snr_aperture_table": _snr_ap_table_for_bpm,
+        "aperture_policy_mode": str(_ap_policy_mode),
+        "fwhm_night_median_px": _fwhm_night_median_px,
+        "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
         "platesolve_dir": str(ps.resolve()) if ps is not None else "",
         "cog_aperture_correction_enabled": bool(_cfg_ap.cog_aperture_correction_enabled),
         "cog_ref_fwhm": float(_cfg_ap.cog_ref_fwhm),
@@ -11491,6 +11518,7 @@ def export_per_frame_catalogs(
         _run_aperture = bool(_ap_st.get("_run_aperture", True))
         _run_epsf = bool(_ap_st.get("_run_epsf", False))
         if _run_aperture:
+            _ap_st["current_frame_name"] = fname
             df = _apply_aperture_catalog_enhancements_from_st(df, data, hdr, _ap_st)
         _psf_on = bool(_ap_st.get("psf_photometry_enabled", False))
         _epsf_ids = (
@@ -11690,6 +11718,9 @@ def export_per_frame_catalogs(
             "aperture_fwhm_factor_small": float(_cfg_ap.aperture_snr_sizing.get("small", 1.5)),
             "aperture_fwhm_factor_large": float(_cfg_ap.aperture_snr_sizing.get("large", 4.0)),
             "snr_aperture_table": _snr_ap_table_for_bpm,
+            "aperture_policy_mode": str(_ap_policy_mode),
+            "fwhm_night_median_px": _fwhm_night_median_px,
+            "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
             "platesolve_dir": str(ps.resolve()),
             "observer_lat": float(_cfg_ap.observer_lat),
             "observer_lon": float(_cfg_ap.observer_lon),

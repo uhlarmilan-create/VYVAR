@@ -706,6 +706,23 @@ def run_full_baseline(report: SessionReport) -> None:
     elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
     report.add("full-pipeline", "PASS", f"{elapsed:.0f}s -> {work_root.relative_to(REPO_ROOT)}")
 
+    t_psf = datetime.now(timezone.utc)
+    try:
+        from psf_internal_lc import write_internal_psf_lightcurves  # noqa: PLC0415
+
+        psf_out = write_internal_psf_lightcurves(
+            platesolve_dir=ps,
+            frames_root=lights,
+            photometry_dir=out_phot,
+            cfg=cfg,
+        )
+        n_psf = int(psf_out.get("n_written") or 0)
+        psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
+        report.add("full-psf-lc", "PASS", f"wrote {n_psf} in {psf_s:.0f}s")
+    except Exception as exc:  # noqa: BLE001
+        report.add("full-psf-lc", "FAIL", str(exc)[:200])
+        return
+
     run_meta_path = out_phot / "pipeline_meta.json"
     run_meta: dict[str, Any] = {}
     if run_meta_path.is_file():

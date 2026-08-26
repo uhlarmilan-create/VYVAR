@@ -502,27 +502,123 @@ Milan has not chosen (i) vs (ii); recut waits that change.
 CSV: c63d_era03_era04_ledger_v3.csv
 elapsed_s total 33.6 (X6a 0.18, P3 33.4).
 
+## APERTURE-01 (D5-1 fix)  STOP (wired; P-A1/P-A3 FAIL; not locked)
+
+CURSOR RESULT - 2026-08-26T19:05:00Z
+
+Milan GO option (i). One r per frame = f x QC FWHM, both modes
+wired, config-selected. f from the 516 scatter ladder (no retune).
+era04 old candidate renamed (not deleted) to
+draft_000516_snapshot_era04_candidate1_20260826. Recut into
+draft_000516_snapshot_era04_20260826. era03 untouched. Live 516
+SHA unchanged (csv bfa24039 / fits 13e77cf8 / epsf 172f9540).
+origin/main stays 7c086e8. SNAPSHOT_NAME remains era03. No lock.
+
+### Premise (Rule 0.1)
+Compared: era04 APERTURE-01 (one r/frame = f x QC fwhm_px) vs
+era03 mixed SNR-table radii. Differ: production radii no longer
+mag-bin; f=0.385228 from 516 ladder; FWHM authority QC moment,
+not Gaussian conversion.
+
+### A1 Wire
+Module src_py/aperture_policy.py. Modes (a) f_fixed_night
+(default) and (b) f_per_frame. FWHM-AUTH-01: qc_metrics.fwhm_px
+/ header VY_FWHM. Do not use VY_FWHM_GAUSS, DAO_TO_GAUSSIAN
+0.667, or the SNR-table draft-constant FWHM. SNR table remains
+a diagnostic artifact (compute_snr_optimal_aperture_table).
+ee_r90_continuous interpolates; it does not set radii.
+config: aperture_policy_mode, aperture_fwhm_factor range
+0.25..6.0 (measured f is 0.385).
+
+### Ladder (pre-registered, no tuning)
+Script a1_f_ladder.py. Night QC FWHM = 5.19173 px. Grid r=
+1.5..12 step 0.5. Annulus 4.75/9 x night FWHM. 134 frames.
+
+Best: r=2.0 px, f=0.385228, joint mean RMS 86.871 mmag
+(BO 145.64 / FW 14.38 / GH 100.59). GH RMS grows with r
+(crowding). Joint min at small r is GH-driven. Do not retune.
+
+### A2 Stamps
+proc CSV: r_ap unique 2.000, r_in 24.661, r_out 46.726,
+fwhm_px_for_aperture = QC frame FWHM, f=0.385228,
+mode=f_fixed_night, snr_aperture_mode=aperture_01,
+fwhm_px_scope=qc_metrics.fwhm_px. LC columns: aperture_policy,
+aperture_f, fwhm_night_median_px, aperture_r_px=2.0.
+photometry/aperture_policy.json written.
+
+### Recut notes
+Old era04 -> era04_candidate1 (kept). Catalog export required
+(run_full_photometry_pipeline does not rewrite proc dao_flux).
+Empty-aperture Labbe failed when excl_r = r_out (~47 px) around
+every catalog star filled the chip; fallback isolation 4 x r_ap
+when crowding. Filled sigma_bkg_ap empirical 134/134. Phase 2A
+then PSF LC. sha_core 74002bc2 n=169; sha_ext 0537fdbc n=222.
+
+### P-A predictions (mode a production; mode b harness)
+P-A1 FAIL. mag_calib vs era03: BO +65.558 mmag, FW +23.966,
+GH -387.938 (gate +-3 mmag). Cause: ladder f gives r=2.0 vs
+era03 mixed r (BO 5.999, FW 6.999, GH 2.499) with COG off, so
+EE fraction is not the era03 mixed-radius scale. The 2.8/10.8/6.8
+mmag mixed-radius offset is not the dominant leftover; the
+absolute-aperture EE jump is. No retune of f.
+
+P-A2 FAIL on GH. Demeaned RMS vs era03: BO 147.65/145.75
+(+1.3%), FW 14.20/13.78 (+3.1%), GH 101.88/107.97 (-5.64%).
+BO/FW within 5%; GH 0.64 pt outside. Mode (a) vs harness (b)
+joint RMS is a tie (BO 145.64 vs 145.65; FW 14.38 vs 14.24;
+GH 100.59 vs 100.65). Default (a) if they tie.
+
+P-A3 FAIL (BO); FW NOT MEASURED. AIJ product on disk:
+dev/results/XVAL_AIJ_01_bo_compare.csv SHA
+4ffa9e8e43b0736809eff132db959e399fed53a8ccc6b6006c9eb6c2660c7fc1
+and XVAL_AIJ_01_Table.tbl SHA
+133c5aacb2fa8bd019bc9394b2da1d3a6121481d15ac0e301711709cceb8a68f.
+AIJ used one aperture (r=7). Mode (a) RMS(diff)=18.178 mmag
+n=134 (gate <=3.3). FW CVn AIJ table is not on disk; gate
+NOT MEASURED (not substituted). Known 1.52 mmag is era03 A-T1,
+not an AIJ tbl.
+
+P-A4 PASS on the harness (same estimator both modes).
+|rho| dmag vs QC FWHM: mode (a) BO 0.0868 FW 0.2311 GH 0.0948;
+mode (b) BO 0.0885 FW 0.1855 GH 0.0890. FW and GH (b)<=(a);
+BO 0.0017 (sampling). Production mode (a) rho BO +0.089
+FW -0.253 GH +0.079.
+
+### A4 C6-2 / C6-3 v4 / C6-4
+C6-2 skipped (lock skipped). Ledger v4:
+c63_era03_era04_ledger_v4.csv. Tags include [APERTURE-01] with
+P-A1 residual on BO/FW/GH. n_union=60; n_era04=56; [EDGE] 4;
+3 UNNAMED. C6-4 lock skipped: P-A1 and P-A3 FAIL. Default mode
+(a) recorded, not locked. SNAPSHOT_NAME remains era03
+(9902d918 / 472bc9e4).
+
+### A5 EDGE-ANNULUS-01 (record only; not wired)
+safe_bbox = NAXIS - r_out drops FR CVn (G 11.1) because the
+ANNULUS does not fit. Proposal: aperture fully on-chip +
+annulus >=50% on-chip (masked) -> measured with annulus_partial
+flag; else out_of_frame. Not wired in A1.
+
 ## C6-4 / C6-5
-Lock skipped (C6-3c STOP; C6-3d named APERTURE-RADIUS but fix
-not wired). SNAPSHOT_NAME remains era03 (9902d918 / 472bc9e4).
-INV-ANCHOR-00 pointer unchanged. No PUSH_AUTH SHA.
+Lock skipped (APERTURE-01 P-A1/P-A3 FAIL). SNAPSHOT_NAME
+remains era03 (9902d918 / 472bc9e4). INV-ANCHOR-00 pointer
+unchanged.
 
 ## Errors
-C6-0 R1'' skipped (KeyError frame). C6-3 STOP unnamed + sanity.
-C6-3b: D3 reconstruction n_in=3291 != log 2927 (bbox/variable-target
-static filters omitted); governing 1860 split is the C6-1 log.
-C6-1 first photometry INV-CAL-01 (fixed by copying cal_diag).
-C6-3c phot-only: INV-DAG-01 phase2a seq backwards (max stamped
-seq=7). LCs+PSF written; stamp failed at end of finalize_exports.
-C6-3d P1 FAIL as written (Gaussian EE); P2 FAIL (D5-1 Q1).
+APERTURE-01 first phot-only recut: NameError _ap_pol (Phase 2A
+state field). Second: used leftover SNR-table dao_flux (no
+catalog export) and VY_FWHM_GAUSS for policy FWHM. Third:
+catalog export r=2.0 correct but Labbe crowding -> missing
+sigma_bkg_ap (INV-ERR-MODE-01). Fill-sigma + Phase 2A succeeded.
+P-A1/P-A3 FAIL as measured. P-A3 first join n=0 (proc_*.csv vs
+.fits Label); fixed, then 18.178 mmag.
 
 ## Files changed
-- src_py/photometry_core.py (ct_ensemble_reference_maps; cfffa82)
-- dev/tests/test_photometry_core.py (CT-REF test; cfffa82)
-- dev/results/CURSOR_RESULT_ANCHOR_ERA04.md
+- src_py/aperture_policy.py (new)
+- src_py/photometry_core.py, pipeline.py, config.py, proc_frame_store.py, ui_settings.py
+- config.json, params_registry, docs/VYVAR_PARAMS.md
+- dev/tests/test_aperture_policy_01.py
+- dev/scripts/session_baseline_check.py (PSF LC step for --full; SNAPSHOT not pointed)
+- Archive era04 recut (not git-tracked); candidate1 kept
+- session_20260826_c6 a1_* scripts and P-A json
 - docs STATE / ROADMAP / JOURNAL / DECISIONS
-- C6-3c artifacts (prior)
-- C6-3d: c63d_measure.py, c63d_x6.json, c63d_x6a_stars.csv,
-  c63d_p1_per_epoch.csv, c63d_p3_recompute.csv, c63d_x6e_edge.csv,
-  c63d_era03_era04_ledger_v3.csv
-- Archive era04 snapshot photometry (not git-tracked)
+- this result file

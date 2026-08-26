@@ -346,14 +346,18 @@
   "annulus_outer_fwhm": 9.0,
   // Aperture size multiplier applied to comparison stars.
   "aperture_comp_factor": 1.1,
-  // Base aperture radius in FWHM units; the SNR-optimal sizing sweep may
-  // adapt the effective radius per star.
-  "aperture_fwhm_factor": 1.9,
+  // Base aperture radius in FWHM units (APERTURE-01 f). Same f for every
+  // star in the frame; r_ap = f x FWHM.
+  "aperture_fwhm_factor": 0.385228,
   // Master switch of aperture photometry - the production measurement method
   // of VYVAR.
   "aperture_photometry_enabled": true,
-  // Aperture radius authority for draft photometry: scatter (minimise non-
-  // variable LC scatter; IMPL-03) or snr (Howell single-measurement SNR).
+  // APERTURE-01: f_fixed_night = f x median FWHM of the night (one r for
+  // the draft); f_per_frame = f x QC FWHM of that frame. Same r for
+  // target, comps, and pool. The SNR mag-bin table is diagnostic only.
+  "aperture_policy_mode": "f_fixed_night",
+  // Aperture radius authority for the diagnostic table only: scatter
+  // (minimise non-variable LC scatter; IMPL-03) or snr (Howell).
   "aperture_selection_criterion": "scatter",
   // Aperture size multiplier applied to the variable (target) star.
   "aperture_variable_factor": 1.0,

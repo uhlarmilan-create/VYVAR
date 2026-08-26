@@ -10,20 +10,22 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-3d STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01 STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. [APERTURE-RADIUS] named (P3 0.0 mmag). D5-1 CONFIRMED.
+ref. APERTURE-01 is wired (option i) but P-A1/P-A3 FAIL at
+ladder f=0.385228 (r=2.0 px vs era03 mixed 6 px, COG off).
 era03 remains the `--full` gate. SEL-GHOST-01 not closed.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan GO: (i) one r/frame = f x FWHM, same f for target and comps, OR (ii) keep per-star SNR radii and enable COG. Then one recut and lock. Do not lock era04 first. |
-| **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
-| **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
-| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
-| **5** | **EXPORT-PARITY-01** (HIGH) |
+| **1** | Milan: keep ladder f=0.385 (accept P-A1 fail) or pick a larger f / enable COG (option ii) before lock. Do not retune from the P-A numbers in-session. |
+| **2** | EDGE-ANNULUS-01 (record only today): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
+| **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **5** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
+| **6** | **EXPORT-PARITY-01** (HIGH) |
 
 | Pri | Carry list |
 |-----|------------|
@@ -36,7 +38,7 @@ era03 remains the `--full` gate. SEL-GHOST-01 not closed.
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
 
-## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C6-0 resume STOP; era04 not locked)
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C6-3d STOP; era04 not locked)
 
 C6-0 A-only (6 files) imports. Chain FAIL: iter4 4-tuple vs
 c592ecf `lock_existing` 3-tuple. M not copied. era04 not locked.

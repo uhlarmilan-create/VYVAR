@@ -6,6 +6,29 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## APERTURE-01 STOP - era04 not locked (2026-08-26)
+
+Milan GO option (i) wired: one radius per frame for every star
+= f x FWHM(frame), annulus scaled by the same FWHM. FWHM-AUTH-01:
+authority is qc_metrics.fwhm_px (VY_FWHM). Modes (a) f_fixed_night
+and (b) f_per_frame are both wired; config default (a). f comes
+from the 516 scatter ladder once (joint demeaned RMS BO/FW/GH);
+no per-magnitude table in production. SNR table is diagnostic
+only. Continuous ee_r90 is diagnostic only.
+
+Recut at ladder f=0.385228 (r=2.0 px) failed P-A1 vs era03 mixed
+radii (BO +65.6, FW +24.0, GH -387.9 mmag) and P-A3 vs AIJ r=7
+(18.18 mmag). Do not retune f from those numbers. Lock waits a
+Milan pick: keep the RMS-optimal small r, or a larger f, or
+option (ii) COG. Default mode (a) if (a)/(b) tie.
+
+## EDGE-ANNULUS-01 (record only; not wired, 2026-08-26)
+
+safe_bbox = NAXIS - r_out drops FR CVn because the sky annulus
+does not fit. Proposal: aperture fully on-chip + annulus >=50%
+on-chip (masked) -> measure with `annulus_partial`; else
+out_of_frame. Not wired in APERTURE-01.
+
 ## C6-3d [APERTURE-RADIUS] STOP - era04 not locked (2026-08-26)
 
 SNR-optimal per-star radii without COG produced the era03->era04

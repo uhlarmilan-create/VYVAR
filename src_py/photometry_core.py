@@ -984,8 +984,15 @@ def measure_empty_aperture_sigma_bkg(
     excl_r = float(r_out) + margin_px
     edge_margin = float(r_out) + float(r_ap) + 1.0
     blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)
-    mask_hash = hashlib.sha256(np.ascontiguousarray(blocked).view(np.uint8)).hexdigest()
     free_y, free_x = np.nonzero(~blocked)
+    if free_x.size < n_min:
+        # APERTURE-01: FWHM-scaled sky annulus (~9 x FWHM) around every catalog
+        # star can fill the chip, so Labbe has nowhere to sit. Keep the aperture
+        # star-free (4 x r_ap) and still require the empty aperture+annulus on-chip.
+        excl_r = max(4.0 * float(r_ap), 8.0)
+        blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)
+        free_y, free_x = np.nonzero(~blocked)
+    mask_hash = hashlib.sha256(np.ascontiguousarray(blocked).view(np.uint8)).hexdigest()
     labbe_input_hash = hashlib.sha256(
         f"{star_list_hash}|{mask_hash}|{float(r_ap):.4f}|{seed_value}".encode("utf-8")
     ).hexdigest()
@@ -1660,10 +1667,9 @@ def measure_growth_curve_ee(
     ok = bool(cog.get("cog_ok")) and ee_radii is not None and ee_curve is not None
     r90 = float("nan")
     if ok:
-        rr = np.asarray(ee_radii, dtype=np.float64)
-        ee = np.asarray(ee_curve, dtype=np.float64)
-        if rr.size and ee.size == rr.size:
-            r90 = float(rr[int(np.argmin(np.abs(ee - 0.9)))])
+        from aperture_policy import ee_r90_continuous  # noqa: PLC0415
+
+        r90 = ee_r90_continuous(ee_radii, ee_curve)
     return {
         "ok": ok,
         "n_cog": int(cog.get("n_cog", 0) or 0),
@@ -1923,6 +1929,10 @@ def _draft_dir_from_phase2a_paths(output_dir: Path, masterstar_fits_path: Path) 
     for base in (Path(output_dir), Path(masterstar_fits_path)):
         for parent in [base, *base.parents]:
             if re.match(r"draft_\d+$", parent.name, re.IGNORECASE):
+                return parent
+            if re.match(r"draft_\d+_snapshot", parent.name, re.IGNORECASE):
+                return parent
+            if (parent / "calibrated" / "lights" / "qc_metrics.csv").is_file():
                 return parent
     return Path(output_dir).parent.parent
 
@@ -6271,6 +6281,7 @@ def save_lightcurve_csv(
     err_sem_rel: np.ndarray | None = None,
     err_scint_rel: np.ndarray | None = None,
     err_sigma_sys_rel: np.ndarray | None = None,
+    aperture_policy: dict[str, Any] | None = None,
 ) -> None:
     """Ulozi lightcurve CSV.
 
@@ -6417,6 +6428,22 @@ def save_lightcurve_csv(
     if err_sigma_sys_rel is not None:
         df["err_sigma_sys_rel"] = np.round(np.asarray(err_sigma_sys_rel, dtype=np.float64), 6)
     df["delta_mag_sysrem"] = np.round(np.full(n, float("nan"), dtype=np.float64), 6)
+    if isinstance(aperture_policy, dict) and aperture_policy:
+        df["aperture_policy"] = str(aperture_policy.get("mode") or "")
+        try:
+            df["aperture_f"] = np.round(
+                np.full(n, float(aperture_policy.get("f", float("nan"))), dtype=np.float64), 6
+            )
+        except (TypeError, ValueError):
+            df["aperture_f"] = np.full(n, float("nan"), dtype=np.float64)
+        try:
+            _fn = aperture_policy.get("fwhm_night_median_px")
+            df["fwhm_night_median_px"] = np.round(
+                np.full(n, float(_fn) if _fn is not None else float("nan"), dtype=np.float64),
+                4,
+            )
+        except (TypeError, ValueError):
+            df["fwhm_night_median_px"] = np.full(n, float("nan"), dtype=np.float64)
     df.to_csv(output_path, index=False)
 
 
@@ -8664,6 +8691,8 @@ class _Phase2AState:
     per_frame_sat_meta: dict[str, Any] = field(default_factory=dict)
     #: NIGHT_FIT v2 meta (empty when k2_fit_enabled=False).
     k2_fit_meta: dict[str, Any] = field(default_factory=dict)
+    #: APERTURE-01 policy record (mode, f, night FWHM, r_ap/r_in/r_out).
+    aperture_policy: dict[str, Any] | None = None
 
 
 def _build_phase2a_dynamic_params(
@@ -9398,7 +9427,7 @@ def _phase2a_prepare_shared_state(
             if not math.isfinite(_apt_fw) or _apt_fw <= 0:
                 _apt_fw = float(_cfg.aperture_fwhm_factor)
             else:
-                _apt_fw = max(0.5, min(6.0, _apt_fw))
+                _apt_fw = max(0.25, min(6.0, _apt_fw))
         except (TypeError, ValueError):
             _apt_fw = float(_cfg.aperture_fwhm_factor)
     else:
@@ -9914,11 +9943,11 @@ def _phase2a_prepare_shared_state(
     _median_sky = _median_sky_from_phase2a_csv_cache(_phase2a_csv_cache)
     _bkg_var_px = _median_bkg_var_adu2_per_px_from_proc_cache(_phase2a_csv_cache)
     _snr_ap_table: dict[str, Any] | None = None
+    _draft_dir_ee = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
     if force_aperture_px is None and bool(_cfg.aperture_photometry_enabled):
         from snr_cog_gates import evaluate_snr_cog_gates
 
         # Prefer a precomputed gated table (pipeline precompute / IMPL-02 rebuild).
-        _draft_dir_ee = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
         _existing = load_snr_aperture_table_from_draft_dir(Path(_draft_dir_ee))
         if isinstance(_existing, dict) and bool((_existing.get("impl02_gates") or {}).get("ok")):
             _snr_ap_table = _existing
@@ -10111,6 +10140,7 @@ def _phase2a_prepare_shared_state(
         if c
     )
 
+    _ap_pol: dict[str, Any] | None = None
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixna apertura pre vsetky hviezdy - debug/kalibracia
         apertures_px = {
@@ -10121,44 +10151,88 @@ def _phase2a_prepare_shared_state(
         logging.info(
             f"[FAZA 2A] FORCE apertura: {force_aperture_px:.2f}px pre vsetky hviezdy"
         )
-    elif _snr_ap_table is not None:
-        apertures_px = {}
-        for _, row in all_stars.iterrows():
-            cid = _normalize_gaia_id(row.get("catalog_id", ""))
-            if not cid:
-                continue
-            _star_mag = float(_star_mag_by_cid.get(cid, float("nan")))
-            if not math.isfinite(_star_mag):
-                try:
-                    _star_mag = float(pd.to_numeric(row.get("mag"), errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    _star_mag = float("nan")
-            apertures_px[cid] = _aperture_radius_from_snr_table(
-                _star_mag,
-                _snr_ap_table,
-                aperture_fwhm_factor=_apt_fw,
-                fwhm_px=float(_snr_fwhm_px),
-            )
-        if apertures_px:
-            _rvals = list(apertures_px.values())
-            logging.info(
-                "[FAZA 2A] SNR per-star apertures: min=%.3fpx median=%.3fpx max=%.3fpx (N=%d)",
-                float(min(_rvals)),
-                float(np.median(_rvals)),
-                float(max(_rvals)),
-                len(_rvals),
-            )
     else:
+        # APERTURE-01: one r for every star. SNR mag-bin table is diagnostic only.
+        from aperture_policy import (  # noqa: PLC0415
+            fwhm_for_radius,
+            load_qc_fwhm_map,
+            normalize_aperture_policy_mode,
+            policy_record,
+            resolve_aperture_geometry,
+        )
+        _ap_mode = normalize_aperture_policy_mode(
+            getattr(_cfg, "aperture_policy_mode", "f_fixed_night")
+        )
+        _qc_csv_p2a = None
+        _search_roots = [Path(_draft_dir_ee), Path(output_dir), Path(masterstar_fits_path)]
+        for _root in _search_roots:
+            if _qc_csv_p2a is not None:
+                break
+            for _parent in [_root, *_root.parents]:
+                for _cand in (
+                    _parent / "calibrated" / "lights" / "qc_metrics.csv",
+                    _parent / "processed" / "lights" / "qc_metrics.csv",
+                ):
+                    if _cand.is_file():
+                        _qc_csv_p2a = _cand
+                        break
+                if _qc_csv_p2a is not None:
+                    break
+        _qc_map_p2a, _night_p2a = load_qc_fwhm_map(_qc_csv_p2a)
+        _ = _qc_map_p2a
+        _fw_p2a = fwhm_for_radius(
+            _ap_mode,
+            fwhm_frame_px=_night_p2a,
+            fwhm_night_median_px=_night_p2a,
+        )
+        if _fw_p2a is None:
+            from aperture_policy import fwhm_from_header_vy_fwhm  # noqa: PLC0415
+
+            _fw_p2a = fwhm_from_header_vy_fwhm(_ms_header)
+        if _fw_p2a is None:
+            logging.warning(
+                "[APERTURE-01] QC fwhm_px missing (csv=%s); refusing VY_FWHM_GAUSS fallback",
+                _qc_csv_p2a,
+            )
+            _fw_p2a = 5.0
         apertures_px = compute_optimal_apertures(
             Path(masterstar_fits_path),
             all_stars,
-            fwhm_px,
+            float(_fw_p2a),
             aperture_fwhm_factor=_apt_fw,
             annulus_inner_fwhm=annulus_inner_fwhm,
             annulus_outer_fwhm=annulus_outer_fwhm,
         )
-
-    _apply_role_aware_aperture_scaling(apertures_px, at_df, _cfg)
+        _r_ap_p2a, _r_in_p2a, _r_out_p2a = resolve_aperture_geometry(
+            f=float(_apt_fw),
+            fwhm_px=float(_fw_p2a),
+            annulus_inner_fwhm=float(annulus_inner_fwhm),
+            annulus_outer_fwhm=float(annulus_outer_fwhm),
+        )
+        _ap_pol = policy_record(
+            mode=_ap_mode,
+            f=float(_apt_fw),
+            fwhm_frame_px=None,
+            fwhm_night_median_px=_night_p2a,
+            r_ap=_r_ap_p2a,
+            r_in=_r_in_p2a,
+            r_out=_r_out_p2a,
+            fwhm_used_px=_fw_p2a,
+        )
+        try:
+            _pol_path = Path(output_dir) / "aperture_policy.json"
+            with _pol_path.open("w", encoding="utf-8") as _pf:
+                json.dump(_ap_pol, _pf, indent=2)
+            logging.info(
+                "[FAZA 2A] APERTURE-01 %s f=%.3f FWHM_used=%.3f r_ap=%.3f (n_stars=%d)",
+                _ap_mode,
+                float(_apt_fw),
+                float(_fw_p2a),
+                float(_r_ap_p2a),
+                len(apertures_px),
+            )
+        except Exception as _pol_exc:  # noqa: BLE001
+            logging.warning("[FAZA 2A] aperture_policy.json write failed: %s", _pol_exc)
 
     star_xy: dict[str, tuple[float, float]] = {}
     for _, row in all_stars.iterrows():
@@ -10437,6 +10511,7 @@ def _phase2a_prepare_shared_state(
         cog_night_fallback_n_frames=_cog_n_frames,
         per_frame_sat_meta=dict(_per_frame_sat_meta or {}),
         k2_fit_meta=dict(_k2_fit_meta or {}),
+        aperture_policy=_ap_pol,
     )
 
 
@@ -11938,6 +12013,7 @@ def _phase2a_process_one_target(
         err_sem_rel=err_sem_rel_export,
         err_scint_rel=err_scint_rel_export,
         err_sigma_sys_rel=err_sigma_sys_rel_export,
+        aperture_policy=getattr(state, "aperture_policy", None),
     )
     # EPSF-LC-LOG-01 / INV-PSF-SUBMIT-01: PSF LC files are an internal diagnostic
     # product written by psf_internal_lc (RUN ePSF path), not Phase 2A.
@@ -12774,7 +12850,7 @@ def run_phase2a(
             if not math.isfinite(_apt_fw) or _apt_fw <= 0:
                 _apt_fw = float(_cfg.aperture_fwhm_factor)
             else:
-                _apt_fw = max(0.5, min(6.0, _apt_fw))
+                _apt_fw = max(0.25, min(6.0, _apt_fw))
         except (TypeError, ValueError):
             _apt_fw = float(_cfg.aperture_fwhm_factor)
     else:
@@ -14144,6 +14220,11 @@ def enhance_catalog_dataframe_aperture_bpm(
     aperture_variable_factor: float = 1.0,
     aperture_comp_factor: float = 1.0,
     variable_target_catalog_ids: frozenset[str] | None = None,
+    aperture_policy_mode: str | None = None,
+    fwhm_frame_px: float | None = None,
+    fwhm_night_median_px: float | None = None,
+    qc_fwhm_by_name: dict[str, float] | None = None,
+    frame_name: str | None = None,
 ) -> pd.DataFrame:
     """Replace DAO ``flux`` with aperture photometry when enabled; add linearity/BPM flags.
 
@@ -14190,8 +14271,61 @@ def enhance_catalog_dataframe_aperture_bpm(
         _fwhm_scope = "unknown"
     _snr_mode = "snr_table" if snr_aperture_table is not None else "global_fixed"
     _target_cids = variable_target_catalog_ids or frozenset()
+    _ap01_mode = None
+    if aperture_policy_mode is not None and str(aperture_policy_mode).strip():
+        from aperture_policy import (  # noqa: PLC0415
+            FWHM_AUTHORITY,
+            fwhm_for_radius,
+            normalize_aperture_policy_mode,
+            resolve_aperture_geometry,
+            resolve_frame_fwhm_px,
+        )
 
-    if aperture_enabled and math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0:
+        _ap01_mode = normalize_aperture_policy_mode(aperture_policy_mode)
+    _ap01_fwhm_frame = None
+    _ap01_fwhm_used = None
+    _ap01_r_ap = _ap01_r_in = _ap01_r_out = None
+    if _ap01_mode is not None:
+        _ap01_fwhm_frame = resolve_frame_fwhm_px(
+            hdr=hdr,
+            frame_name=frame_name,
+            qc_fwhm_by_name=qc_fwhm_by_name,
+            fwhm_night_median_px=fwhm_night_median_px,
+        )
+        if fwhm_frame_px is not None:
+            try:
+                _ff = float(fwhm_frame_px)
+                if math.isfinite(_ff) and 0.5 < _ff < 30.0:
+                    _ap01_fwhm_frame = _ff
+            except (TypeError, ValueError):
+                pass
+        _ap01_fwhm_used = fwhm_for_radius(
+            _ap01_mode,
+            fwhm_frame_px=_ap01_fwhm_frame,
+            fwhm_night_median_px=fwhm_night_median_px,
+        )
+        if _ap01_fwhm_used is None:
+            logging.warning("[APERTURE-01] QC/VY_FWHM missing; skip gauss fallback (FWHM-AUTH-01)")
+        if _ap01_fwhm_used is not None:
+            _ap01_r_ap, _ap01_r_in, _ap01_r_out = resolve_aperture_geometry(
+                f=float(aperture_fwhm_factor),
+                fwhm_px=float(_ap01_fwhm_used),
+                annulus_inner_fwhm=float(annulus_inner_fwhm),
+                annulus_outer_fwhm=float(annulus_outer_fwhm),
+            )
+            _snr_mode = "aperture_01"
+            _fwhm_scope = FWHM_AUTHORITY
+
+    _ap01_ok = (
+        _ap01_mode is not None
+        and _ap01_fwhm_used is not None
+        and math.isfinite(float(_ap01_fwhm_used))
+        and float(_ap01_fwhm_used) > 0
+    )
+    if aperture_enabled and (
+        _ap01_ok
+        or (math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0)
+    ):
         try:
             # Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
             from photutils.aperture import CircularAnnulus, CircularAperture
@@ -14199,10 +14333,13 @@ def enhance_catalog_dataframe_aperture_bpm(
 
             fw = float(fwhm_gaussian_f)
             global_aperture_r_px = max(0.5, float(aperture_fwhm_factor) * fw)
+            if _ap01_r_ap is not None:
+                global_aperture_r_px = float(_ap01_r_ap)
+                fw = float(_ap01_fwhm_used) if _ap01_fwhm_used is not None else fw
 
             pos = np.column_stack([np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)])
 
-            if snr_aperture_table is not None:
+            if snr_aperture_table is not None and _ap01_mode is None:
                 r_ap_arr = np.empty(n, dtype=np.float64)
                 _apertures_used: list[float] = []
                 _cid_series = out.get("catalog_id")
@@ -14239,8 +14376,12 @@ def enhance_catalog_dataframe_aperture_bpm(
                     enhance_catalog_dataframe_aperture_bpm._snr_ap_stats_logged = True
             else:
                 r_ap = global_aperture_r_px
-                r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
-                r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
+                if _ap01_r_in is not None and _ap01_r_out is not None:
+                    r_in = float(_ap01_r_in)
+                    r_out = float(_ap01_r_out)
+                else:
+                    r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
+                    r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
                 r_ap_arr = None
 
             d = np.asarray(arr, dtype=np.float64)
@@ -14302,6 +14443,25 @@ def enhance_catalog_dataframe_aperture_bpm(
                 out["sky_annulus_r_out_px"] = float(r_out)
                 out["noise_floor_adu"] = sky_pp_arr.astype(np.float64)
                 out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)
+
+            if _ap01_mode is not None:
+                _stamp_fwhm_frame = (
+                    float(_ap01_fwhm_frame)
+                    if _ap01_fwhm_frame is not None
+                    else float("nan")
+                )
+                out["aperture_policy_mode"] = str(_ap01_mode)
+                out["aperture_f"] = float(aperture_fwhm_factor)
+                out["fwhm_px_for_aperture"] = _stamp_fwhm_frame
+                out["fwhm_px_scope"] = _fwhm_scope
+                out["snr_aperture_mode"] = "aperture_01"
+                if _ap01_r_in is not None:
+                    out["sky_annulus_r_in_px"] = float(_ap01_r_in)
+                if _ap01_r_out is not None:
+                    out["sky_annulus_r_out_px"] = float(_ap01_r_out)
+                out["aperture_factor_applied"] = (
+                    f"aperture_01_{_ap01_mode}_{float(aperture_fwhm_factor):.3f}x"
+                )
 
             # Multi-apertura: rovnaky sky_pp_arr (ADU/px^2) x plocha apertury ako sky odcitanie.
             if r_small_px is not None and r_large_px is not None:

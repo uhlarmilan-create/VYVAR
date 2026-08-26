@@ -729,7 +729,9 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.9
-    #: IMPL-03: aperture radius authority - ``scatter`` (LC scatter min) or ``snr`` (Howell).
+    #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night) or ``f_per_frame``.
+    aperture_policy_mode: str = "f_fixed_night"
+    #: IMPL-03: aperture radius authority for the diagnostic table only - ``scatter`` or ``snr``.
     aperture_selection_criterion: str = "scatter"
     #: Scatter-selection fixed-pixel ladder bounds [px].
     aperture_scatter_r_min_px: float = 1.5
@@ -1748,9 +1750,13 @@ class AppConfig:
                 self.aperture_fwhm_factor = 2.75
         except (TypeError, ValueError):
             self.aperture_fwhm_factor = 2.75
-        self.aperture_fwhm_factor = max(0.5, min(6.0, float(self.aperture_fwhm_factor)))
+        self.aperture_fwhm_factor = max(0.25, min(6.0, float(self.aperture_fwhm_factor)))
         _crit = str(data.get("aperture_selection_criterion", self.aperture_selection_criterion) or "scatter").strip().lower()
         self.aperture_selection_criterion = _crit if _crit in ("scatter", "snr") else "scatter"
+        _apm = str(data.get("aperture_policy_mode", self.aperture_policy_mode) or "f_fixed_night").strip().lower()
+        self.aperture_policy_mode = (
+            _apm if _apm in ("f_fixed_night", "f_per_frame") else "f_fixed_night"
+        )
         try:
             self.aperture_scatter_r_min_px = float(
                 data.get("aperture_scatter_r_min_px", self.aperture_scatter_r_min_px)
@@ -2784,6 +2790,7 @@ class AppConfig:
             "epsf_min_stars": int(self.epsf_min_stars),
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
+            "aperture_policy_mode": str(self.aperture_policy_mode),
             "aperture_selection_criterion": str(self.aperture_selection_criterion),
             "aperture_scatter_r_min_px": float(self.aperture_scatter_r_min_px),
             "aperture_scatter_r_max_px": float(self.aperture_scatter_r_max_px),
@@ -2967,10 +2974,8 @@ DENSITY_OVERRIDES: dict[str, dict[str, float | int]] = {
     },
     "normal": {},
     "dense": {
-        # NOTE: aperture_fwhm_factor -0.3 removed (2026-05) - it was structurally dead:
-        # the science aperture comes from the SNR-optimal table, which ignores
-        # aperture_fwhm_factor (only a fallback when the table is absent). Verified
-        # 0-px effect on 361/362. No LC impact; removed for clarity.
+        # NOTE: aperture_fwhm_factor is production f in APERTURE-01 (r = f x FWHM).
+        # The SNR mag-bin table is a diagnostic artifact only.
         "annulus_inner_fwhm": +1.0,
         "phase01_comparison_min_dist_arcsec": +30.0,
         "comp_max_delta_bprp": -0.15,
@@ -3044,7 +3049,7 @@ def apply_density_overrides(cfg: AppConfig, density_class: str) -> AppConfig:
         except (TypeError, ValueError):
             continue
         if param == "aperture_fwhm_factor":
-            new_val = max(0.5, min(6.0, float(new_val)))
+            new_val = max(0.25, min(6.0, float(new_val)))
         elif param in {"annulus_inner_fwhm", "annulus_outer_fwhm"}:
             new_val = max(1.0, min(30.0, float(new_val)))
         elif param == "phase01_comparison_max_comp_rms":

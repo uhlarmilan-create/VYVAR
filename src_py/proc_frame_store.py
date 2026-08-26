@@ -48,6 +48,8 @@ PROC_STORE_COLS = [
     "fwhm_px_for_aperture",
     "fwhm_px_scope",
     "snr_aperture_mode",
+    "aperture_policy_mode",
+    "aperture_f",
     "flux_small",
     "flux_large",
     # Quality flags
@@ -70,6 +72,7 @@ PROC_STORE_COLS = [
     "ra_deg",
     "dec_deg",
     "sky_annulus_r_out_px",
+    "sky_annulus_r_in_px",
     # Atmosphere
     "airmass",
     # Catalog / color
@@ -151,6 +154,7 @@ _NUMERIC_COLS = (
     "fwhm_px_for_aperture",
     "fwhm_px_scope",
     "snr_aperture_mode",
+    "aperture_f",
     "peak_max_adu",
     "saturate_limit_adu_85pct",
     "psf_chi2",
@@ -165,6 +169,7 @@ _NUMERIC_COLS = (
     "ra_deg",
     "dec_deg",
     "sky_annulus_r_out_px",
+    "sky_annulus_r_in_px",
     "airmass",
     "mag",
     "bp_rp",

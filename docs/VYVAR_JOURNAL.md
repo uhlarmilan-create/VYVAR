@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT APERTURE-01 STOP (era04 not locked)
+
+Option (i) wired (one r/frame = f x QC FWHM). Ladder f=0.385228
+(r=2.0). P-A1/P-A3 FAIL; P-A2 GH outside 5%; P-A4 harness PASS.
+Mode (a) default if tie; not locked. [EDGE-ANNULUS-01] recorded.
+Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C6-3d STOP (era04 not locked)
 
 [APERTURE-RADIUS] named (SNR-table EE curve; P3 0.0 mmag).
