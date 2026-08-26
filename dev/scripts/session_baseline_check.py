@@ -1006,6 +1006,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "dev" / "scripts"))
+        from push_guard import install_hook  # noqa: PLC0415
+
+        install_hook(REPO_ROOT)
+    except Exception:  # noqa: BLE001
+        pass
+
     report = SessionReport(tier="full" if args.full else "fast")
     check_git_state(report)
     check_config_paths(report)

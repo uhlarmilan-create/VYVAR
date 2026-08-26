@@ -93,5 +93,8 @@ dev/orchestrator/api_key.txt
 **/api_key.txt
 GAIA_DR3/_*
 
+# One-time origin/main push authorization (CLOSE-OUT 2026-08-25)
+dev/PUSH_AUTH_main_*.txt
+
 # Validation harness generated FITS + truth sidecars
 dev/tests/validation/data/

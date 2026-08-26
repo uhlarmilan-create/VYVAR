@@ -44,6 +44,12 @@ for the full map.
 - **No git during `--full`:** do not run git operations (`add`, `commit`, `checkout`)
   while `session_baseline_check.py --full` is running; the 2026-08-21
   `index.lock` / `config.json` incident is the reason.
+  **Push refs by name (2026-08-25 incident):** never `git push origin HEAD`
+  and never a bare `git push`. Write `git push origin <local>:<remote>`
+  (example: `git push origin main:sel-ghost-01`). Updating `origin/main`
+  requires a gitignored `dev/PUSH_AUTH_main_<YYYYMMDD>.txt` containing the
+  target SHA; `dev/scripts/push_guard.py` is installed as `.git/hooks/pre-push`
+  by `session_baseline_check.py`. Branch pushes are unaffected.
 
 ### Full-suite pytest comparability
 

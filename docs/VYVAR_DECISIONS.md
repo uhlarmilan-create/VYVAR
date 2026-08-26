@@ -119,6 +119,18 @@ computed on frozen 516 (no SNR column).
 
 Evidence: `CURSOR_RESULT_COMP_RMS_DEF_01_A.md`.
 
+## 2026-08-25 push incident - do not rewrite origin/main (2026-08-26)
+
+`git push origin HEAD` advanced `origin/main` from `b1f5b8c` to `7c086e8`
+without authorization. Milan recommendation accepted: do **not**
+force-push main back. Every commit on that SHA passed `--fast --clean`.
+Rule: pushes name the ref (`git push origin <local>:<remote>`).
+`git push origin HEAD` and bare `git push` are banned. Updating main
+requires gitignored `dev/PUSH_AUTH_main_<YYYYMMDD>.txt` with the target
+SHA; `dev/scripts/push_guard.py` refuses otherwise.
+
+Evidence: CLOSE-OUT part 3; `CURSOR_RESULT_CLOSEOUT_C8.md`.
+
 ## COMP-RMS-DEF-01-B - LOO mag RMS, k=5, zone peak test (2026-08-25)
 
 Milan GO (chat, 2026-08-25): wire C2f. C3-0 k is p90 of
