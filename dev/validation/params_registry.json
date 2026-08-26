@@ -3952,6 +3952,36 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "psf_zp_membership": {
+    "help": "Internal PSF LC ZP membership (INV-PSF-LC-PIN-01). fit_ok_strict uses stored psf_fit_ok. fit_ok_for_zp also admits epochs with finite psf_flux>0 and finite psf_chi2. Production default fit_ok_for_zp on validated rigs only.",
+    "kind": "static",
+    "label": "PSF ZP Membership",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": "enum",
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "psf_zp_for_zp_validated_rigs": {
+    "help": "Rig identity keys equipment_id:telescope_id allowed to use fit_ok_for_zp. Draft 516/517 wide pair is 1:1. Unlisted rigs stay fit_ok_strict (EPSF-ZP-OK-XRIG-01).",
+    "kind": "static",
+    "label": "PSF ZP For ZP Validated Rigs",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "psf_group_sep_fwhm": {
     "help": "Separation (FWHM) within which stars are fitted together as a PSF group.",
     "kind": "static",

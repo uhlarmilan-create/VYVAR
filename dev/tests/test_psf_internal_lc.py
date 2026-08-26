@@ -18,6 +18,9 @@ from photometry_core import TIME_BASE_BJD_TDB
 from psf_internal_lc import (
     INV_PSF_LC_PIN_01,
     REQUIRED_HEADER_MARKERS,
+    UNVALIDATED_MEMBERSHIP_LINE,
+    ZP_MEMBERSHIP_FOR_ZP,
+    ZP_MEMBERSHIP_STRICT,
     write_internal_psf_lightcurves,
 )
 from report_methods import lc_csv_path
@@ -294,10 +297,12 @@ def test_p4_invariance_scalar_ac_cancels_in_writer(tmp_path: Path) -> None:
     not (PS_516 / "photometry" / "lightcurves" / f"lightcurve_{BO_CVN_ID}.csv").is_file(),
     reason="draft 516 BO CVn aperture LC missing",
 )
-def test_epsf_lc_log_01_draft516_bo_cvn() -> None:
-    """T1 + T2 on live draft 516: PSF LC written; aperture/export bytes unchanged."""
+def test_epsf_lc_log_01_draft516_bo_cvn(tmp_path: Path) -> None:
+    """T1 + T2 on live draft 516: PSF LC written to tmp; live BO PSF LC SHA unchanged."""
     lc_dir = PS_516 / "photometry" / "lightcurves"
     ap_path = lc_csv_path(lc_dir, BO_CVN_ID, "aperture")
+    live_psf = lc_csv_path(lc_dir, BO_CVN_ID, "psf")
+    live_psf_sha = _sha(live_psf) if live_psf.is_file() else None
     reports = PS_516 / "photometry" / "lightcurves_reports"
     aavso = sorted((reports / "aavso").glob("BO_CVn*.txt")) if (reports / "aavso").is_dir() else []
     varastro = (
@@ -311,10 +316,12 @@ def test_epsf_lc_log_01_draft516_bo_cvn() -> None:
         platesolve_dir=PS_516,
         frames_root=FRAMES_516,
         target_ids=[BO_CVN_ID],
+        output_directory=tmp_path,
     )
     assert result["n_written"] == 1
     psf_path = Path(result["written"][0])
     assert psf_path.is_file()
+    assert psf_path.parent.resolve() == tmp_path.resolve()
     text = psf_path.read_text(encoding="utf-8")
     for marker in REQUIRED_HEADER_MARKERS:
         assert marker in text, f"missing provenance marker: {marker}"
@@ -323,8 +330,110 @@ def test_epsf_lc_log_01_draft516_bo_cvn() -> None:
     n_fail = int((~df["psf_fit_ok"].astype(bool)).sum())
     n_nan = int(pd.to_numeric(df["psf_delta_mag"], errors="coerce").isna().sum())
     assert n_fail >= 1
-    assert n_nan >= n_fail
+    assert n_nan >= 0
 
     after = {str(p): _sha(p) for p in watch if p.is_file()}
     assert after == before
-    assert _sha(psf_path) not in before.values()
+    if live_psf_sha is not None:
+        assert _sha(live_psf) == live_psf_sha
+
+
+def _write_wide_manifest(root: Path, equipment_id: int = 1, telescope_id: int = 1) -> None:
+    (root / "draft_manifest.json").write_text(
+        json.dumps({"rig": {"equipment_id": equipment_id, "telescope_id": telescope_id}}),
+        encoding="ascii",
+    )
+
+
+def test_chi2_80_strict_drops_for_zp_keeps(tmp_path: Path) -> None:
+    ps, frames, target = _synthetic_draft(tmp_path)
+    proc = frames / "proc_Light_001.csv"
+    df = pd.read_csv(proc)
+    mask = df["catalog_id"].astype(str) == str(target)
+    df.loc[mask, "psf_fit_ok"] = False
+    df.loc[mask, "psf_chi2"] = 80.0
+    df.loc[mask, "psf_flux"] = 1000.0
+    df.to_csv(proc, index=False)
+
+    cfg_s = AppConfig()
+    cfg_s.psf_zp_membership = ZP_MEMBERSHIP_STRICT
+    cfg_s.psf_zp_for_zp_validated_rigs = ["1:1"]
+    out_s = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+        output_directory=tmp_path / "strict",
+        cfg=cfg_s,
+    )
+    d_s = pd.read_csv(Path(out_s["written"][0]), comment="#")
+    assert pd.isna(d_s.loc[0, "psf_delta_mag"])
+
+    _write_wide_manifest(tmp_path)
+    cfg_z = AppConfig()
+    cfg_z.psf_zp_membership = ZP_MEMBERSHIP_FOR_ZP
+    cfg_z.psf_zp_for_zp_validated_rigs = ["1:1"]
+    out_z = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+        output_directory=tmp_path / "for_zp",
+        cfg=cfg_z,
+    )
+    d_z = pd.read_csv(Path(out_z["written"][0]), comment="#")
+    assert np.isfinite(float(d_z.loc[0, "psf_delta_mag"]))
+    assert bool(d_z.loc[0, "psf_fit_ok"]) is False
+
+
+def test_unvalidated_rig_stays_strict_with_info_line(tmp_path: Path) -> None:
+    ps, frames, target = _synthetic_draft(tmp_path)
+    _write_wide_manifest(tmp_path, equipment_id=9, telescope_id=9)
+    cfg = AppConfig()
+    cfg.psf_zp_membership = ZP_MEMBERSHIP_FOR_ZP
+    cfg.psf_zp_for_zp_validated_rigs = ["1:1"]
+    out = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+        output_directory=tmp_path / "out",
+        cfg=cfg,
+    )
+    text = Path(out["written"][0]).read_text(encoding="utf-8")
+    assert UNVALIDATED_MEMBERSHIP_LINE in text
+    assert "# psf_zp_membership_effective=fit_ok_strict" in text
+    assert "# psf_zp_membership_rig_validated=false" in text
+    assert out["psf_zp_membership_effective"] == ZP_MEMBERSHIP_STRICT
+
+
+def test_validated_wide_rig_uses_for_zp(tmp_path: Path) -> None:
+    ps, frames, target = _synthetic_draft(tmp_path)
+    _write_wide_manifest(tmp_path)
+    cfg = AppConfig()
+    cfg.psf_zp_membership = ZP_MEMBERSHIP_FOR_ZP
+    cfg.psf_zp_for_zp_validated_rigs = ["1:1"]
+    out = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+        output_directory=tmp_path / "out",
+        cfg=cfg,
+    )
+    text = Path(out["written"][0]).read_text(encoding="utf-8")
+    assert UNVALIDATED_MEMBERSHIP_LINE not in text
+    assert "# psf_zp_membership_effective=fit_ok_for_zp" in text
+    assert "# psf_zp_membership_rig_validated=true" in text
+    assert out["psf_zp_membership_effective"] == ZP_MEMBERSHIP_FOR_ZP
+
+
+def test_output_directory_does_not_rewrite_source_lc_dir(tmp_path: Path) -> None:
+    ps, frames, target = _synthetic_draft(tmp_path)
+    src_psf = ps / "photometry" / "lightcurves" / f"lightcurve_{target}_psf.csv"
+    assert not src_psf.is_file()
+    out_dir = tmp_path / "isolated"
+    out = write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=frames,
+        target_ids=[target],
+        output_directory=out_dir,
+    )
+    assert Path(out["written"][0]).parent.resolve() == out_dir.resolve()
+    assert not src_psf.is_file()

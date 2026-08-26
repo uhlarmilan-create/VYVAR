@@ -85,8 +85,9 @@ def test_owner_groups_partition_every_key() -> None:
     # ERA-03: +14 MASTERSTAR DAO/pin registry keys (263 -> 277).
     # EPSF-AC-02: +1 config_runtime key psf_ac_policy (277 -> 278).
     # COMP-RMS-DEF-01-B: +1 config_runtime key comp_rms_loo_photon_k (278 -> 279).
+    # EPSF-ZP-OK-01-WIRE v2: +2 keys psf_zp_membership + psf_zp_for_zp_validated_rigs (279 -> 281).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 279, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 281, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

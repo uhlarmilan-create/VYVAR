@@ -29,6 +29,14 @@ TRUST_NOTE_LINE1 = "# PSF absolute scale untrusted pending EPSF-SHAPE-01;"
 TRUST_NOTE_LINE2 = "# relative photometry only"
 PRODUCT_NAME = "internal_psf_diagnostic"
 INV_PSF_LC_PIN_01 = "INV-PSF-LC-PIN-01"
+ZP_MEMBERSHIP_STRICT = "fit_ok_strict"
+ZP_MEMBERSHIP_FOR_ZP = "fit_ok_for_zp"
+# Draft 516 manifest: rig.equipment_id=1, rig.telescope_id=1 (pair, not scanning_id).
+WIDE_RIG_IDENTITY_KEY = "1:1"
+UNVALIDATED_MEMBERSHIP_LINE = (
+    "# psf_zp_membership: fit_ok_strict (psf_fit_ok_for_zp not "
+    "validated for this rig; see EPSF-ZP-OK-XRIG-01)"
+)
 
 # Substrings that T1 / header audits must find (every provenance line).
 REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
@@ -53,6 +61,8 @@ REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
     "psf_lc_n_epochs_full=",
     "psf_lc_n_epochs_dropped_pin=",
     "psf_ap_level_offset_mag=",
+    "psf_zp_membership_effective=",
+    "psf_zp_membership_rig_validated=",
 )
 
 _PROC_USECOLS = (
@@ -73,6 +83,96 @@ _PROC_USECOLS = (
     "flux",
     "dao_flux",
 )
+
+
+def rig_identity_key(equipment_id: Any, telescope_id: Any) -> str:
+    """Draft 516 identity is the equipment_id:telescope_id pair, not scanning_id."""
+    return f"{int(equipment_id)}:{int(telescope_id)}"
+
+
+def load_rig_identity_from_manifest(start: Path | str) -> tuple[str | None, Path | None]:
+    p = Path(start)
+    try:
+        p = p.resolve()
+    except OSError:
+        p = Path(start)
+    if p.is_file():
+        p = p.parent
+    for cand in (p, *p.parents):
+        man = cand / "draft_manifest.json"
+        if not man.is_file():
+            continue
+        try:
+            data = json.loads(man.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        rig = data.get("rig") if isinstance(data, dict) else None
+        if not isinstance(rig, dict):
+            rig = data if isinstance(data, dict) else {}
+        eq = rig.get("equipment_id")
+        tel = rig.get("telescope_id")
+        if eq is None or tel is None:
+            continue
+        try:
+            return rig_identity_key(eq, tel), man
+        except (TypeError, ValueError):
+            continue
+    return None, None
+
+
+def psf_fit_ok_for_zp_mask(
+    fit_ok: np.ndarray,
+    flux: np.ndarray,
+    chi2: np.ndarray,
+) -> np.ndarray:
+    """ZP membership: stored psf_fit_ok OR (finite flux>0 AND finite chi2). No refit."""
+    ok = np.asarray(fit_ok, dtype=bool)
+    fl = np.asarray(flux, dtype=np.float64)
+    ch = np.asarray(chi2, dtype=np.float64)
+    extra = np.isfinite(fl) & (fl > 0) & np.isfinite(ch)
+    return ok | extra
+
+
+def zp_membership_usable(
+    *,
+    mode: str,
+    fit_ok: np.ndarray,
+    flux: np.ndarray,
+    chi2: np.ndarray,
+) -> np.ndarray:
+    fl = np.asarray(flux, dtype=np.float64)
+    ok = np.asarray(fit_ok, dtype=bool)
+    if str(mode).strip() == ZP_MEMBERSHIP_FOR_ZP:
+        return psf_fit_ok_for_zp_mask(ok, fl, chi2)
+    return ok & np.isfinite(fl) & (fl > 0)
+
+
+def resolve_zp_membership(
+    *,
+    platesolve_dir: Path | str,
+    cfg: Any | None = None,
+) -> tuple[str, bool, list[str], str | None]:
+    """Return (effective_mode, rig_validated, extra_header_lines, rig_key)."""
+    requested = ZP_MEMBERSHIP_FOR_ZP
+    allow: list[str] = [WIDE_RIG_IDENTITY_KEY]
+    if cfg is not None:
+        requested = str(getattr(cfg, "psf_zp_membership", requested) or requested).strip()
+        raw = getattr(cfg, "psf_zp_for_zp_validated_rigs", allow)
+        if isinstance(raw, str):
+            allow = [x.strip() for x in raw.split(",") if x.strip()]
+        elif isinstance(raw, (list, tuple)):
+            allow = [str(x).strip() for x in raw if str(x).strip()]
+        else:
+            allow = [WIDE_RIG_IDENTITY_KEY]
+    if requested not in (ZP_MEMBERSHIP_STRICT, ZP_MEMBERSHIP_FOR_ZP):
+        requested = ZP_MEMBERSHIP_FOR_ZP
+    rig_key, _man = load_rig_identity_from_manifest(platesolve_dir)
+    validated = bool(rig_key and rig_key in set(allow))
+    extra: list[str] = []
+    if requested == ZP_MEMBERSHIP_FOR_ZP and not validated:
+        extra.append(UNVALIDATED_MEMBERSHIP_LINE)
+        return ZP_MEMBERSHIP_STRICT, False, extra, rig_key
+    return requested, validated, extra, rig_key
 
 
 def _norm_cid(raw: Any) -> str:
@@ -236,6 +336,9 @@ def build_provenance_header(
     n_epochs_full: int = 0,
     n_epochs_dropped_pin: int = 0,
     psf_ap_level_offset_mag: float = float("nan"),
+    zp_membership_effective: str = ZP_MEMBERSHIP_STRICT,
+    zp_membership_rig_validated: bool = False,
+    extra_header_lines: Sequence[str] = (),
 ) -> list[str]:
     gtxt = f"{gain_value:.6g}" if math.isfinite(float(gain_value)) else "nan"
     ids = ",".join(str(c) for c in pinned_ids)
@@ -265,7 +368,13 @@ def build_provenance_header(
         f"# psf_ap_level_offset_mag={psf_ap_level_offset_mag:.6g}"
         if math.isfinite(float(psf_ap_level_offset_mag))
         else "# psf_ap_level_offset_mag=nan",
+        f"# psf_zp_membership_effective={zp_membership_effective}",
+        f"# psf_zp_membership_rig_validated={'true' if zp_membership_rig_validated else 'false'}",
     ]
+    for extra in extra_header_lines:
+        s = str(extra).rstrip()
+        if s:
+            lines.append(s)
     return lines
 
 
@@ -363,6 +472,9 @@ def write_one_internal_psf_lc(
     gain_source: str,
     git_hash: str,
     git_dirty: str,
+    zp_membership: str = ZP_MEMBERSHIP_STRICT,
+    zp_membership_rig_validated: bool = False,
+    extra_header_lines: Sequence[str] = (),
 ) -> Path | None:
     from photometry_core import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag  # noqa: PLC0415
@@ -384,7 +496,11 @@ def write_one_internal_psf_lc(
 
     psf_ok = tgt["psf_fit_ok"].to_numpy(dtype=bool)
     psf_flux = tgt["psf_flux"].to_numpy(dtype=np.float64)
-    usable = psf_ok & np.isfinite(psf_flux) & (psf_flux > 0)
+    psf_chi2 = tgt["psf_chi2"].to_numpy(dtype=np.float64)
+    zp_mode = str(zp_membership).strip() or ZP_MEMBERSHIP_STRICT
+    usable = zp_membership_usable(
+        mode=zp_mode, fit_ok=psf_ok, flux=psf_flux, chi2=psf_chi2
+    )
     target_mag = np.full(n, np.nan, dtype=np.float64)
     target_mag[usable] = _flux_to_inst_mag(psf_flux)[usable]
 
@@ -393,7 +509,9 @@ def write_one_internal_psf_lc(
     for cid in comp_ids:
         ctab = _star_frame_table(stack, cid, epoch_keys)
         cf = ctab["psf_flux"].to_numpy(dtype=np.float64)
-        cok = ctab["psf_fit_ok"].to_numpy(dtype=bool) & np.isfinite(cf) & (cf > 0)
+        cchi = ctab["psf_chi2"].to_numpy(dtype=np.float64)
+        cok_fit = ctab["psf_fit_ok"].to_numpy(dtype=bool)
+        cok = zp_membership_usable(mode=zp_mode, fit_ok=cok_fit, flux=cf, chi2=cchi)
         mag = np.full(n, np.nan, dtype=np.float64)
         mag[cok] = _flux_to_inst_mag(cf)[cok]
         comp_mag[cid] = mag
@@ -501,6 +619,9 @@ def write_one_internal_psf_lc(
         n_epochs_full=n_full,
         n_epochs_dropped_pin=n_dropped_pin,
         psf_ap_level_offset_mag=level_off,
+        zp_membership_effective=zp_mode,
+        zp_membership_rig_validated=bool(zp_membership_rig_validated),
+        extra_header_lines=extra_header_lines,
     )
 
     def _num(arr: np.ndarray, nd: int) -> list[Any]:
@@ -547,6 +668,8 @@ def write_internal_psf_lightcurves(
     frames_root: Path | str,
     photometry_dir: Path | str | None = None,
     target_ids: Iterable[str] | None = None,
+    output_directory: Path | str | None = None,
+    cfg: Any | None = None,
 ) -> dict[str, Any]:
     """Write ``lightcurve_<id>_psf.csv`` for aperture LC targets. Additive only."""
     ps = Path(platesolve_dir)
@@ -555,6 +678,19 @@ def write_internal_psf_lightcurves(
     lc_dir = phot / "lightcurves"
     if not lc_dir.is_dir():
         raise FileNotFoundError(f"Aperture LC directory missing: {lc_dir}")
+    out_dir = Path(output_directory) if output_directory is not None else lc_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if cfg is None:
+        try:
+            from config import AppConfig as _AppConfig
+
+            cfg = _AppConfig()
+        except Exception:  # noqa: BLE001
+            cfg = None
+    zp_mode, zp_validated, zp_extra, zp_rig = resolve_zp_membership(
+        platesolve_dir=ps, cfg=cfg
+    )
 
     epsf_meta = load_epsf_build_meta(ps)
     gain_value, gain_source = _load_gain_authority(phot)
@@ -591,13 +727,16 @@ def write_internal_psf_lightcurves(
             target_cid=tid,
             stack=stack,
             aperture_lc=ap_lc,
-            lc_dir=lc_dir,
+            lc_dir=out_dir,
             photometry_dir=phot,
             epsf_meta=epsf_meta,
             gain_value=gain_value,
             gain_source=gain_source,
             git_hash=git_hash,
             git_dirty=git_dirty,
+            zp_membership=zp_mode,
+            zp_membership_rig_validated=zp_validated,
+            extra_header_lines=zp_extra,
         )
         if path is not None:
             written.append(str(path))
@@ -611,6 +750,10 @@ def write_internal_psf_lightcurves(
         "n_written": len(written),
         "n_skipped": len(skipped),
         "lc_dir": str(lc_dir),
+        "output_directory": str(out_dir),
+        "psf_zp_membership_effective": zp_mode,
+        "psf_zp_membership_rig_validated": zp_validated,
+        "psf_zp_membership_rig": zp_rig,
     }
 
 
@@ -633,11 +776,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--platesolve-dir", required=True, type=Path)
     parser.add_argument("--frames-root", required=True, type=Path)
     parser.add_argument("--target-id", action="append", default=None)
+    parser.add_argument("--output-directory", type=Path, default=None)
     args = parser.parse_args(argv)
     out = write_internal_psf_lightcurves(
         platesolve_dir=args.platesolve_dir,
         frames_root=args.frames_root,
         target_ids=args.target_id,
+        output_directory=args.output_directory,
     )
     print(json.dumps({"n_written": out["n_written"], "n_skipped": out["n_skipped"]}, indent=2))
     return 0

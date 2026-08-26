@@ -652,6 +652,12 @@ class AppConfig:
     #: uncorrected fit flux (``psf_ac_factor=1``). ``chi2_lt5_legacy`` is the
     #: named fallback: median DAO/PSF among chi2<5 stars (EPSF-AC-01 A2 defect).
     psf_ac_policy: str = "p4_none"
+    #: Internal PSF LC ZP membership (INV-PSF-LC-PIN-01). Production default
+    #: ``fit_ok_for_zp`` on validated rigs only (EPSF-ZP-OK-01-WIRE v2).
+    psf_zp_membership: str = "fit_ok_for_zp"
+    #: Rig identity keys ``equipment_id:telescope_id`` allowed to use fit_ok_for_zp.
+    #: Draft 516/517 wide pair is ``1:1``. Other rigs stay fit_ok_strict.
+    psf_zp_for_zp_validated_rigs: list[str] = field(default_factory=lambda: ["1:1"])
     #: PSF crowded-field joint-fit (SourceGrouper). Default OFF -> production unchanged.
     #: When enabled, each PSF target is fit jointly with its close neighbours so a
     #: bright neighbour does not corrupt a faint blended target.
@@ -1646,6 +1652,19 @@ class AppConfig:
             self.psf_chi2_threshold = 50.0
         _acp = str(data.get("psf_ac_policy", self.psf_ac_policy) or "p4_none").strip().lower()
         self.psf_ac_policy = _acp if _acp in ("p4_none", "chi2_lt5_legacy") else "p4_none"
+        _zpm = str(data.get("psf_zp_membership", self.psf_zp_membership) or "fit_ok_for_zp").strip()
+        self.psf_zp_membership = (
+            _zpm if _zpm in ("fit_ok_strict", "fit_ok_for_zp") else "fit_ok_for_zp"
+        )
+        _zpr = data.get("psf_zp_for_zp_validated_rigs", self.psf_zp_for_zp_validated_rigs)
+        if isinstance(_zpr, str):
+            self.psf_zp_for_zp_validated_rigs = [x.strip() for x in _zpr.split(",") if x.strip()]
+        elif isinstance(_zpr, (list, tuple)):
+            self.psf_zp_for_zp_validated_rigs = [str(x).strip() for x in _zpr if str(x).strip()]
+        else:
+            self.psf_zp_for_zp_validated_rigs = ["1:1"]
+        if not self.psf_zp_for_zp_validated_rigs:
+            self.psf_zp_for_zp_validated_rigs = ["1:1"]
         self.psf_grouper_enabled = bool(data.get("psf_grouper_enabled", self.psf_grouper_enabled))
         try:
             _gsf = float(data.get("psf_group_sep_fwhm", self.psf_group_sep_fwhm))
@@ -2734,6 +2753,8 @@ class AppConfig:
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
             "psf_ac_policy": str(self.psf_ac_policy),
+            "psf_zp_membership": str(self.psf_zp_membership),
+            "psf_zp_for_zp_validated_rigs": list(self.psf_zp_for_zp_validated_rigs),
             "psf_grouper_enabled": bool(self.psf_grouper_enabled),
             "psf_group_sep_fwhm": float(self.psf_group_sep_fwhm),
             "psf_neighbor_include_fwhm": float(self.psf_neighbor_include_fwhm),

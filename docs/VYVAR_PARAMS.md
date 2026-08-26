@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-25T21:36:27Z at git HEAD ba9fef3._
+_Generated 2026-08-26T06:25:23Z at git HEAD 7c086e8._
 
 ## Summary
 
-- Entries: 307
-- Tier: basic 13, advanced 72, expert 222
-- Kind: static 289, derived 0, resolved 18
-- Widget: auto 123, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 279, fits_dynamic 6, internal 13
-- Scope: universal 255, rig 34, site 10, session 8
-- Scope key: none 255, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 309
+- Tier: basic 13, advanced 74, expert 222
+- Kind: static 291, derived 0, resolved 18
+- Widget: auto 125, custom 159, hidden 25
+- Owner: db_static 9, config_runtime 281, fits_dynamic 6, internal 13
+- Scope: universal 257, rig 34, site 10, session 8
+- Scope key: none 257, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -263,6 +263,8 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `psf_spatial_grid` | 3x3 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Grid |
 | `psf_spatial_min_stars_per_cell` | 25 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Min Stars Per Cell |
 | `psf_spatial_order` | 0 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Order |
+| `psf_zp_for_zp_validated_rigs` | ['1:1'] | - | advanced | static | config_runtime | universal | none | n/a | auto | PSF ZP For ZP Validated Rigs |
+| `psf_zp_membership` | fit_ok_for_zp | - | advanced | static | config_runtime | universal | none | n/a | auto | PSF ZP Membership |
 | `pytics_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | PYTICS Enabled |
 | `pytics_n_iter` | 5 | 1 .. 20 | expert | static | config_runtime | universal | none | n/a | custom | PYTICS N Iter |
 | `read_noise` | 10.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Read Noise |
