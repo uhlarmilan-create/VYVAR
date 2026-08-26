@@ -16,6 +16,7 @@ Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
 ref. APERTURE-01 is wired (option i) but P-A1/P-A3 FAIL at
 ladder f=0.385228 (r=2.0 px vs era03 mixed 6 px, COG off).
+PUSH_AUTH SHA `a23ee3d` on origin/sel-ghost-01.
 era03 remains the `--full` gate. SEL-GHOST-01 not closed.
 
 | Step | Action |

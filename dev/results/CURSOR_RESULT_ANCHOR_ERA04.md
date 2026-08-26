@@ -601,7 +601,11 @@ flag; else out_of_frame. Not wired in A1.
 ## C6-4 / C6-5
 Lock skipped (APERTURE-01 P-A1/P-A3 FAIL). SNAPSHOT_NAME
 remains era03 (9902d918 / 472bc9e4). INV-ANCHOR-00 pointer
-unchanged.
+unchanged. C6-2 not run (would freeze a failing product).
+PUSH_AUTH SHA `a23ee3dee487720cf2916db9d1590fcc2cf21134`
+(`a23ee3d`) on origin/sel-ghost-01 (named ref
+`git push origin main:sel-ghost-01`). origin/main stays
+`7c086e8`. Archive era04 recut is on disk, not locked.
 
 ## Errors
 APERTURE-01 first phot-only recut: NameError _ap_pol (Phase 2A
