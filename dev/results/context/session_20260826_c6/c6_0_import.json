@@ -1,0 +1,40 @@
+{
+  "task": "C6-0 R1-prime three-file isolated import",
+  "utc": "2026-08-26T07:20:00Z",
+  "branch_tip_at_probe": "aa90d7f",
+  "worktree": ".worktrees/c6_r1p_c592ecf",
+  "worktree_sha": "c592ecf",
+  "copied_from": "0684ba9",
+  "copied_files": [
+    "src_py/dao_gaia_stage_01_iter2.py",
+    "src_py/dao_gaia_stage_01_iter3.py",
+    "src_py/dao_gaia_stage_01_iter4.py"
+  ],
+  "copied_bytes": {
+    "dao_gaia_stage_01_iter2.py": 29378,
+    "dao_gaia_stage_01_iter3.py": 26543,
+    "dao_gaia_stage_01_iter4.py": 24571
+  },
+  "sys_path": "HEAD src_py dropped; worktree src_py inserted at [0]",
+  "import_ok": false,
+  "missing_module": "dao_gaia_stage_01",
+  "traceback_site": "dao_gaia_stage_01_iter4.py:42 imports iter2; dao_gaia_stage_01_iter2.py:49 from dao_gaia_stage_01 import ...",
+  "lookup_paths": [
+    ".worktrees/c6_r1p_c592ecf/tmp (iter2 inserts REPO/tmp; file absent)",
+    ".worktrees/c6_r1p_c592ecf/src_py (c592ecf does not contain dao_gaia_stage_01.py)"
+  ],
+  "exists_at_0684ba9": "src_py/dao_gaia_stage_01.py (same commit first-tracked the three iter files)",
+  "exists_at_c592ecf": false,
+  "exists_on_HEAD_disk": "src_py/dao_gaia_stage_01.py",
+  "further_files_copied": false,
+  "chain_run": false,
+  "table_r2_vs_r1p": false,
+  "c6_1_started": false,
+  "era03_touched": false,
+  "elapsed_s": {
+    "worktree_add": 1.9,
+    "copy_three_files": 1.0,
+    "import_probe": 4.4,
+    "c6_0_total": 7.3
+  }
+}

@@ -6,6 +6,16 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## C6-0 R1' STOP - era04 not locked (2026-08-26)
+
+Milan GO on C6. Isolated worktree at `c592ecf` plus
+`dao_gaia_stage_01_iter{2,3,4}.py` from `0684ba9` still cannot import:
+missing module `dao_gaia_stage_01`. Fourth file not copied. C6-1 not
+started. era04 not locked. Anchor remains era03: core **9902d918**
+n=121, ext **472bc9e4** n=179. Resume needs a named GO on the fourth
+file, skip-table, or 0684ba9 worktree. Evidence:
+`CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## SEL-GHOST-01 - one identity, one geometry, no match-rate widening (2026-08-25)
 
 Part A (draft 520 `g_60_4`) binding facts:

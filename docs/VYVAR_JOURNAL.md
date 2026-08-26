@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C6-0 STOP (era04 not locked)
+
+Milan GO on C6. Isolated c592ecf + three iter files from 0684ba9:
+`ModuleNotFoundError: dao_gaia_stage_01`. No fourth file copied.
+C6-1..C6-4 not started. era03 untouched. No PUSH_AUTH SHA.
+Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`,
+`CURSOR_RESULT_SESSION_CLOSE_20260826.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C4 EPSF-ZP-OK-01-WIRE v2 (wide 1:1)
 
 W1-W4 wired. BO 134/134 demeaned 8.495 mmag; FW 134/134 5.218 mmag.

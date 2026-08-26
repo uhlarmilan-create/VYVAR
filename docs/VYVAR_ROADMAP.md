@@ -10,17 +10,16 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C8+C4 STOP; C6 waits GO)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-0 STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. C8 STOP. C4 ZP-OK v2 wired wide-rig only (`1:1`). C6 full-chain
-era04 waits Milan GO in chat (named-cause ledger; never overwrite
-era03).
+ref. C6 GO ran; R1' three-file import missing `dao_gaia_stage_01`.
+C6-1 not started. era03 untouched. era04 not locked.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: C6 full-chain era04 GO (after C8 + C4 STOPs; named-cause ledger) |
+| **1** | Milan: C6-0 resume GO (copy `dao_gaia_stage_01.py` from 0684ba9, or skip R1' table, or worktree at 0684ba9) then C6-1 full-chain era04 |
 | **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
 | **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
@@ -36,6 +35,14 @@ era03).
 | **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C8+C4 STOP; C6 waits GO)
+
+Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
+force-push `origin/main` (now `7c086e8` lineage). Pushes name the
+ref. C8 STOP. C4 ZP-OK v2 wired wide-rig only (`1:1`). C6 full-chain
+era04 waits Milan GO in chat (named-cause ledger; never overwrite
+era03). C6 GO then STOPPED at C6-0 (missing `dao_gaia_stage_01`).
 
 ## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C8 STOP; C4 next; C6 waits)
 
