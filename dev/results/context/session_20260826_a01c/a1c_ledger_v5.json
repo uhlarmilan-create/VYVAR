@@ -1,0 +1,31 @@
+{
+  "n_targets_union": 60,
+  "n_era03": 60,
+  "n_era04": 53,
+  "n_unnamed": 6,
+  "unnamed_ids": [
+    "1497227287309482624",
+    "1497245497969274240",
+    "1498425548825498112",
+    "1498752516095473664",
+    "1498842882207281152",
+    "1499842372636900992"
+  ],
+  "tag_counts": {
+    "APERTURE-01 f=1.35": 35,
+    "CT-REF;APERTURE-01 f=1.35": 9,
+    "UNNAMED": 6,
+    "EDGE": 4,
+    "D3-D5;CT-REF;APERTURE-01 f=1.35": 2,
+    "NAME-FIX;APERTURE-01 f=1.35": 1,
+    "FRAME-29;APERTURE-01 f=1.35": 1,
+    "APERTURE-01 f=1.35;CROWDING": 1,
+    "CT-REF": 1
+  },
+  "P-A1_residual_mmag": {
+    "BO": 49.4575,
+    "FW": 28.213,
+    "GH": -243.3215
+  },
+  "lock_ok": false
+}

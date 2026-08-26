@@ -1,0 +1,123 @@
+{
+  "task": "APERTURE-01c independent AIJ gate",
+  "f": 1.35,
+  "mode": "f_fixed_night",
+  "aij_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\XVAL_AIJ_01_bo_compare.csv",
+  "aij_tbl": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\XVAL_AIJ_01_Table.tbl",
+  "aij_csv_sha256": "4ffa9e8e43b0736809eff132db959e399fed53a8ccc6b6006c9eb6c2660c7fc1",
+  "aij_tbl_sha256": "133c5aacb2fa8bd019bc9394b2da1d3a6121481d15ac0e301711709cceb8a68f",
+  "ensemble_from_file": {
+    "ok": true,
+    "source_radius_px": 7.0,
+    "sky_in": 14.0,
+    "sky_out": 27.0,
+    "csv_has_comp_list": false,
+    "csv_cols": [
+      "Label",
+      "rel_flux_T1",
+      "rel_flux_err_T1",
+      "FWHM_Mean",
+      "AIRMASS",
+      "vy_rel",
+      "diff_mmag"
+    ]
+  },
+  "ensemble_stars_raw": {
+    "T1": {
+      "ra_hours": 13.985561167624128,
+      "ra_deg": 209.78341751436193,
+      "dec_deg": 40.81954938685756
+    },
+    "C2": {
+      "ra_hours": 13.791056891656241,
+      "ra_deg": 206.86585337484362,
+      "dec_deg": 42.79547489664211
+    },
+    "C3": {
+      "ra_hours": 14.039295175207508,
+      "ra_deg": 210.58942762811262,
+      "dec_deg": 40.18035217494379
+    },
+    "C4": {
+      "ra_hours": 14.079115736106708,
+      "ra_deg": 211.18673604160062,
+      "dec_deg": 42.80179771838843
+    },
+    "C5": {
+      "ra_hours": 14.035127989807707,
+      "ra_deg": 210.5269198471156,
+      "dec_deg": 41.34434765128761
+    },
+    "C6": {
+      "ra_hours": 13.896208899093626,
+      "ra_deg": 208.44313348640438,
+      "dec_deg": 41.09563539744657
+    }
+  },
+  "matched": {
+    "T1": {
+      "catalog_id": "1498613634033133184",
+      "sep_arcsec": 2.043,
+      "x": 957.659037924808,
+      "y": 822.4406097055581,
+      "ok": true
+    },
+    "C2": {
+      "catalog_id": "1500748301498613248",
+      "sep_arcsec": 2.5,
+      "x": 1744.0651639106495,
+      "y": 78.09331466856449,
+      "ok": true
+    },
+    "C3": {
+      "catalog_id": "1497771992240531712",
+      "sep_arcsec": 5.819,
+      "x": 731.5800461908852,
+      "y": 1057.7316932152837,
+      "ok": true
+    },
+    "C4": {
+      "catalog_id": "1499200223486564608",
+      "sep_arcsec": 1.927,
+      "x": 575.5118387153461,
+      "y": 90.4774072274511,
+      "ok": true
+    },
+    "C5": {
+      "catalog_id": "1497974027502858240",
+      "sep_arcsec": 5.325,
+      "x": 751.3238457327164,
+      "y": 629.0784130552261,
+      "ok": true
+    },
+    "C6": {
+      "catalog_id": "1497368849430107904",
+      "sep_arcsec": 4.327,
+      "x": 1329.288209639872,
+      "y": 716.5945185730459,
+      "ok": true
+    }
+  },
+  "t1": "1498613634033133184",
+  "comp_ids": [
+    "1500748301498613248",
+    "1497771992240531712",
+    "1499200223486564608",
+    "1497974027502858240",
+    "1497368849430107904"
+  ],
+  "night_fwhm_px": 5.191733,
+  "r_ap_px": 7.0088,
+  "r_in_px": 24.6607,
+  "r_out_px": 46.7256,
+  "aij_r_px": 7.0,
+  "qc_n": 300,
+  "n_frames": 134,
+  "n_join": 134,
+  "rms_diff_mmag": 2.7833,
+  "median_diff_mmag": -1.2209,
+  "max_abs_diff_mmag": 11.2977,
+  "gate_mmag": 4.0,
+  "pass": true,
+  "elapsed_s": 6.43
+}

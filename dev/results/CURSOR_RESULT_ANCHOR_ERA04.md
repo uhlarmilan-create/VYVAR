@@ -611,6 +611,13 @@ PUSH_AUTH SHA `a23ee3dee487720cf2916db9d1590fcc2cf21134`
 See `CURSOR_RESULT_APERTURE_01B.md`. Accuracy grid produced
 zero survivors. Lock still skipped. config f stays 0.385228.
 
+## APERTURE-01c STOP (f=1.35; 2026-08-26)
+See `CURSOR_RESULT_APERTURE_01C.md`. Independent AIJ gate
+2.7833 mmag PASS. era04 recut r=7.0088. Ledger v5: 6 UNNAMED.
+Lock skipped. C6-2 skipped. config f stays 1.35.
+SNAPSHOT_NAME remains era03 (9902d918 / 472bc9e4).
+candidate2 kept (not deleted). origin/main stays 7c086e8.
+
 ## Errors
 APERTURE-01 first phot-only recut: NameError _ap_pol (Phase 2A
 state field). Second: used leftover SNR-table dao_flux (no

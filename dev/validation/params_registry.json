@@ -236,7 +236,7 @@
     "scope_group": "n/a"
   },
   "aperture_fwhm_factor": {
-    "help": "Base aperture radius in FWHM units (APERTURE-01 f). Same f for every star in the frame; r_ap = f x FWHM.",
+    "help": "Base aperture radius in FWHM units (APERTURE-01c Milan GO f=1.35). Same f for every star in the frame; r_ap = f x FWHM. Scatter ladder is diagnostic only.",
     "kind": "resolved",
     "label": "Aperture FWHM Factor",
     "owner": "config_runtime",
@@ -4889,7 +4889,7 @@
     "scope_group": "n/a"
   },
   "aperture_scatter_r_min_px": {
-    "help": "Minimum radius of the scatter-selection photometry ladder.",
+    "help": "Diagnostic scatter-ladder pixel fallback. Production radii are f x FWHM; the diagnostic ladder r_min is 0.75 FWHM when FWHM is known.",
     "kind": "static",
     "label": "Aperture Scatter R Min",
     "owner": "config_runtime",

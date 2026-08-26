@@ -1,0 +1,11 @@
+# VYVAR Infolog - 20260826_215920
+# Draft: C:\ASTRO\python\VYVAR\dev\results\context\session_20260826_a01c\a1c_infolog
+# timestamps: UTC
+# session: durable append log (full run)
+#============================================================
+
+19:59:23  [PHOT] gaussian_fwhm_px_override = 3.3014px (z VY_FWHM alebo VY_FWHM_GAUSS)
+20:00:27  DEBUG: per-frame debug_pixel_match (first frame): {"file": "BO_CVn_Light_001.fits", "use_fast": true, "master_cols": ["name", "ra_deg", "dec_deg", "mag", "b_v", "catalog", "catalog_id", "match_sep_arcsec", "x", "y"], "have_x": true, "have_y": true, "match_mode": "master_reference_sky", "plate_scale_arcsec_per_px": null, "n_matched": 2406, "forced_photometry": {"n_injected": 1112, "n_geometry_miss": 0, "n_already_present": 2163, "centroid_bound_fwhm": 2.5, "fwhm_px": 2.5, "max_refine_shift_px": 6.990887272730908}}
+20:13:45  Per-frame catalog BO_CVn_Light_120.fits: Unable to allocate 2.77 MiB for an array with shape (1397, 2082) and data type bool
+20:14:04  Per-frame catalog BO_CVn_Light_123.fits: Unable to allocate 22.2 MiB for an array with shape (1397, 2082) and data type float64
+20:20:31  [PHOT] err_bkg howell_scaled setup=NoFilter_60_2 r_setup=1.6018 (n_empirical_ratios=430380, clamp=[0.05,2.0])

@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Changed
+- **APERTURE-01c (2026-08-26):** production `aperture_fwhm_factor` = 1.35
+  (mode `f_fixed_night`). Scatter ladder diagnostic only (r_min 0.75 FWHM).
+  Independent AIJ gate 2.7833 mmag PASS. era04 recut not locked (6 UNNAMED).
 - **DAO-GAIA ERA-03 (2026-08-20):** Canonical product SHA **9902d918** n=121
   (supersedes 477dc8cf n=97). Pinned ensembles for 48 baseline targets;
   check-star pinning with KNAME continuity; INV-PIN-01..04. Anchor freeze

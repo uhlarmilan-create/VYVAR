@@ -1,6 +1,13 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01b STOP.** No f* on the
+**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01c STOP.** Milan GO
+f=1.35 set (mode a). Independent AIJ gate PASS: RMS(diff)=
+**2.7833 mmag** (n=134, gate <=4; comps from Table.tbl). era04
+recut at r=7.0088 (candidate2 renamed, kept). Ledger v5: 6
+UNNAMED. era04 not locked. C6-2 skipped. config f stays 1.35.
+era03 freeze remains the `--full` gate: core **9902d918** n=121,
+ext **472bc9e4** n=179. origin/main stays `7c086e8`.
+**CLOSE-OUT 2026-08-26 APERTURE-01b STOP.** No f* on the
 accuracy grid. dEE<0.01 only at f=2.5; AIJ RMS never <=3.3 mmag
 (best 10.45 at f=0.75); GH COG never flat. Rule not relaxed.
 era04 not locked. config f stays 0.385228. era03 freeze remains
@@ -92,7 +99,16 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01c STOP, f=1.35 AIJ 2.7833 mmag PASS, ledger 6 UNNAMED, era04 not locked; APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-26 -- CLOSE-OUT APERTURE-01c STOP (f=1.35; era04 not locked)
+
+Milan GO f=1.35, mode (a). Independent AIJ gate (comps from
+Table.tbl, same r=7): RMS(diff)=2.7833 mmag PASS (<=4).
+era04 recut r=7.0088; candidate2 kept. Ledger v5: 6 UNNAMED
+(two lost LCs at r=7, one dmag undefined, three Phase1
+n_survivors<3). C6-2/lock skipped. SNAPSHOT_NAME stays era03.
+Evidence: `CURSOR_RESULT_APERTURE_01C.md`.
 
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01b STOP (no f*; era04 not locked)
 

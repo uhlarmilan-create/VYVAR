@@ -2,6 +2,12 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT APERTURE-01c STOP (f=1.35; era04 not locked)
+
+Milan GO f=1.35. Independent AIJ gate 2.7833 mmag PASS.
+era04 recut r=7.0088; candidate2 kept. Ledger v5: 6 UNNAMED.
+C6-2/lock skipped. Evidence: `CURSOR_RESULT_APERTURE_01C.md`.
+
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01b STOP (no f*; era04 not locked)
 
 Accuracy grid: no f with dEE<0.01 AND COG-flat AND AIJ<=3.3.

@@ -346,9 +346,10 @@
   "annulus_outer_fwhm": 9.0,
   // Aperture size multiplier applied to comparison stars.
   "aperture_comp_factor": 1.1,
-  // Base aperture radius in FWHM units (APERTURE-01 f). Same f for every
-  // star in the frame; r_ap = f x FWHM.
-  "aperture_fwhm_factor": 0.385228,
+  // Base aperture radius in FWHM units (APERTURE-01c Milan GO f=1.35).
+  // Same f for every star in the frame; r_ap = f x FWHM. Scatter ladder
+  // is diagnostic only (r_min = 0.75 FWHM).
+  "aperture_fwhm_factor": 1.35,
   // Master switch of aperture photometry - the production measurement method
   // of VYVAR.
   "aperture_photometry_enabled": true,

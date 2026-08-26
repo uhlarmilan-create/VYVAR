@@ -2678,8 +2678,8 @@ def _median_bkg_var_adu2_per_px_from_proc_cache(
         ok = sig.notna() & rap.notna() & (rap > 0) & (sig >= 0)
         if not ok.any():
             continue
-        area = math.pi * rap[ok].to_numpy(dtype=np.float64) ** 2
-        var_ap = sig[ok].to_numpy(dtype=np.float64) ** 2
+        area = math.pi * np.asarray(rap[ok], dtype=np.float64) ** 2
+        var_ap = np.asarray(sig[ok], dtype=np.float64) ** 2
         with np.errstate(divide="ignore", invalid="ignore"):
             var_px = var_ap / np.maximum(area, 1e-12)
         vals.extend([float(v) for v in var_px if math.isfinite(float(v)) and float(v) >= 0])
@@ -14242,7 +14242,10 @@ def enhance_catalog_dataframe_aperture_bpm(
 
     # Povodny DAO flux z detect_stars_and_match_catalog (historicky v stlpci ``flux``).
     # ``dao_flux``: sky-subtrahovany flux (po aperturnej fotometrii, ak je zapnuta).
-    flux_dao = pd.to_numeric(out.get("flux"), errors="coerce").to_numpy(dtype=np.float64)
+    if "flux" in out.columns:
+        flux_dao = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
+    else:
+        flux_dao = np.full(n, np.nan, dtype=np.float64)
     if "dao_flux" not in out.columns:
         out["dao_flux"] = flux_dao
 
@@ -14654,7 +14657,10 @@ def enhance_catalog_dataframe_aperture_bpm(
         out["dao_flux"] = flux_dao
         out["flux"] = flux_dao
 
-    peak = pd.to_numeric(out.get("peak_max_adu"), errors="coerce").to_numpy(dtype=np.float64)
+    if "peak_max_adu" in out.columns:
+        peak = pd.to_numeric(out["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
+    else:
+        peak = np.full(n, np.nan, dtype=np.float64)
     finite_pk = peak[np.isfinite(peak)]
     thr_pk = float("nan")
     if finite_pk.size > 0:
@@ -18740,6 +18746,8 @@ def run_full_photometry_pipeline(
         detrended_aligned_dir=Path(detrended_aligned_dir),
         output_dir=Path(output_dir),
         fwhm_px=float(fwhm_px),
+        annulus_inner_fwhm=float(_cfg.annulus_inner_fwhm),
+        annulus_outer_fwhm=float(_cfg.annulus_outer_fwhm),
         cfg=_cfg2a,
         progress_cb=progress_cb,
         db=db,

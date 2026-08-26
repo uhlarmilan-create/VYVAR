@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-26T17:35:10Z at git HEAD d0a6ddf._
+_Generated 2026-08-26T21:12:56Z at git HEAD 2509f02._
 
 ## Summary
 
@@ -198,7 +198,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `aperture_correction_max_contamination` | 0.15 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Contamination |
 | `aperture_correction_max_scatter_mag` | 0.03 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Scatter Mag |
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Min Ref Stars |
-| `aperture_fwhm_factor` | 1.9 | 0.25 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
+| `aperture_fwhm_factor` | 1.35 | 0.25 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Photometry Enabled |
 | `aperture_policy_mode` | f_fixed_night | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Policy Mode |
 | `aperture_scatter_r_max_px` | 12.0 | 1 .. 30 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Scatter R Max |

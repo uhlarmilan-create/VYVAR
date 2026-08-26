@@ -10,24 +10,24 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01b STOP; no f*)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01c STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. APERTURE-01b accuracy grid: no f satisfies dEE<0.01 AND
-COG-flat AND AIJ<=3.3 mmag. Architect expected 1.25-1.5; measured
-dEE there 0.040-0.028, AIJ 11-14 mmag, GH COG not flat.
-config f stays 0.385228. era03 remains the `--full` gate.
+ref. APERTURE-01c: f=1.35 set, independent AIJ gate PASS
+(2.7833 mmag). Ledger v5 vs era03: 6 UNNAMED, so era04 is not
+locked. SNAPSHOT_NAME stays era03. config f stays 1.35.
 SEL-GHOST-01 not closed.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: relax B3 (which gate), pick a listed f anyway, enable COG (option ii), or keep scatter f=0.385. Do not retune in-session. |
-| **2** | EDGE-ANNULUS-01 (record only): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
-| **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
-| **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
-| **5** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
-| **6** | **EXPORT-PARITY-01** (HIGH) |
+| **1** | Name the 6 UNNAMED (lost LC at r=7 / Phase1 n_survivors<3 / dmag undefined) or drop them from the union before lock |
+| **2** | Then C6-2 `--full` twice on era04 and lock (C6-4) |
+| **3** | EDGE-ANNULUS-01 (record only): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
+| **4** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **5** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **6** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
+| **7** | **EXPORT-PARITY-01** (HIGH) |
 
 | Pri | Carry list |
 |-----|------------|
@@ -39,6 +39,11 @@ SEL-GHOST-01 not closed.
 | **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT APERTURE-01b STOP; no f*)
+
+APERTURE-01b accuracy grid: no f*. config was 0.385228 then.
+era03 remains the `--full` gate. Evidence: `CURSOR_RESULT_APERTURE_01B.md`.
 
 ## NEXT SESSION - prior (2026-08-26 CLOSE-OUT APERTURE-01 STOP; era04 not locked)
 

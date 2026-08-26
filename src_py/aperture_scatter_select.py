@@ -16,25 +16,35 @@ import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
-# Default ladder: covers undersized cores (~0.3 FWHM) through ~2 FWHM for
-# FWHM~5 px, step 0.5 px to match CoG ladder granularity without SNR-table cost.
+# Diagnostic ladder only (APERTURE-01c): production radii are f x FWHM.
+# r_min = 0.75 FWHM. Pixel defaults below are fallbacks when FWHM is unknown.
+DEFAULT_R_MIN_FWHM = 0.75
 DEFAULT_R_MIN_PX = 1.5
 DEFAULT_R_MAX_PX = 12.0
 DEFAULT_R_STEP_PX = 0.5
-DEFAULT_K_FWHM = (0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 1.7, 2.0)
+DEFAULT_K_FWHM = (0.75, 1.0, 1.2, 1.35, 1.5, 1.7, 2.0, 2.5)
 
 
 @dataclass
 class LadderSpec:
-    """Fixed-pixel radius ladder used for one-pass photometry."""
+    """Diagnostic radius ladder. Production radii are APERTURE-01 f x FWHM."""
 
     r_min_px: float = DEFAULT_R_MIN_PX
     r_max_px: float = DEFAULT_R_MAX_PX
     r_step_px: float = DEFAULT_R_STEP_PX
+    r_min_fwhm: float = DEFAULT_R_MIN_FWHM
     why: str = (
-        "1.5-12 px step 0.5: spans deep-PSF-core (IMPL-02 faint opt) through "
-        "~2xFWHM at typical seeing; step matches CoG ladder; one photometry pass."
+        "Diagnostic only (APERTURE-01c). r_min = 0.75 FWHM; pixel 1.5-12 "
+        "step 0.5 is the FWHM-unknown fallback. Production r = f x FWHM."
     )
+
+    def radii_from_fwhm(self, fwhm_px: float) -> np.ndarray:
+        fw = float(fwhm_px)
+        if not math.isfinite(fw) or fw <= 0:
+            return self.radii_px()
+        r0 = max(0.5, float(self.r_min_fwhm) * fw)
+        r1 = max(r0 + float(self.r_step_px), float(self.r_max_px))
+        return np.arange(r0, r1 + 1e-9, float(self.r_step_px), dtype=np.float64)
 
     def radii_px(self) -> np.ndarray:
         step = float(self.r_step_px)

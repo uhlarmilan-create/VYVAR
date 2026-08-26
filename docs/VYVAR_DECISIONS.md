@@ -6,6 +6,21 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## APERTURE-01c STOP - f=1.35 set; era04 not locked (2026-08-26)
+
+Milan GO: production f=1.35, mode (a) f_fixed_night. Scatter
+ladder is diagnostic only (r_min = 0.75 FWHM). Independent
+unconfounded AIJ gate (VYVAR BO LC with comps pinned to
+XVAL_AIJ_01_Table.tbl C2-C6, same r=7): RMS(diff)=2.7833 mmag
+PASS (gate <=4). That number is not the APERTURE-01b pool-ZP
+14.04 mmag. Recut era04 at r=7.0088 (candidate2 renamed, kept).
+Ledger v5 vs era03: [APERTURE-01 f=1.35] with level residual
+per target; GH also [CROWDING] (D11-1). 6 UNNAMED remain
+(lost LC at r=7, Phase1 n_survivors<3, or dmag undefined).
+Anything without a tag = STOP. era04 not locked. SNAPSHOT_NAME
+stays era03 (9902d918 / 472bc9e4). config f stays 1.35.
+Evidence: `CURSOR_RESULT_APERTURE_01C.md`.
+
 ## APERTURE-01b STOP - no f* on the accuracy grid (2026-08-26)
 
 f is not taken from the scatter ladder. Pre-registered rule:

@@ -189,3 +189,11 @@ def test_per_frame_mode_tracks_frame_fwhm() -> None:
     r = float(out["aperture_r_px"].iloc[0])
     assert abs(r - 6.0) < 1e-6
     assert math.isfinite(float(out["flux"].iloc[0]))
+
+
+def test_scatter_ladder_r_min_is_075_fwhm() -> None:
+    from aperture_scatter_select import DEFAULT_R_MIN_FWHM, LadderSpec
+
+    assert DEFAULT_R_MIN_FWHM == 0.75
+    rr = LadderSpec().radii_from_fwhm(5.191733)
+    assert abs(float(rr[0]) - 0.75 * 5.191733) < 1e-6

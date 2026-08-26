@@ -728,7 +728,7 @@ class AppConfig:
     # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
-    aperture_fwhm_factor: float = 1.9
+    aperture_fwhm_factor: float = 1.35
     #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night) or ``f_per_frame``.
     aperture_policy_mode: str = "f_fixed_night"
     #: IMPL-03: aperture radius authority for the diagnostic table only - ``scatter`` or ``snr``.

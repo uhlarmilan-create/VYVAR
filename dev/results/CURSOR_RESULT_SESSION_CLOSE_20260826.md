@@ -1,20 +1,20 @@
 CURSOR RESULT - SESSION CLOSE 2026-08-26
 
-Architect handoff file. C6-3 STOP blocked era04 lock (C6-2 PASS).
+Architect handoff file. APERTURE-01c STOP blocked era04 lock
+(6 UNNAMED in ledger v5). Independent AIJ gate PASS (2.7833 mmag).
 No SHA for main fast-forward in this file.
 
 Date: 2026-08-26. Branch: sel-ghost-01. origin/main stays 7c086e8.
 era03 freeze: ad19e14; core 9902d918 n=121; ext 472bc9e4 n=179.
-era04 products: 961d590f n=169 / 59206a24 n=222; NOT LOCKED.
-era03 not overwritten. Live 516 SHA unchanged.
+era04 products (f=1.35 recut): 988a2e13 n=160 / e8fed401 n=210;
+NOT LOCKED. candidate2 (f=0.385) kept. era03 not overwritten.
+Live 516 SHA unchanged.
 
-C6-0 R1'' informational (declared 3-tuple shim) then KeyError skip.
-C6-1 full chain into draft_000516_snapshot_era04_20260826 (134 frames).
-C6-2 `--full` twice OVERALL PASS same SHAs. C6-3: 55 UNNAMED;
-same-ensemble mag_calib not 0 or AC constant (BO +2.8 mmag std 1.6;
-final +59 mmag).
+APERTURE-01c: config f=1.35 mode (a). AIJ comps from Table.tbl.
+Recut r_ap=7.0088 all 134 frames. C6-2 skipped. C6-5 = this file.
 
 ## Commits b1f5b8c..tip grouped by task
+
 
 ### SEL-GHOST-01 A
 - c592ecf docs: SEL-GHOST-01 A measured
@@ -78,16 +78,21 @@ final +59 mmag).
 - 6924998 C4 W4: ZP-OK v2 STOP, wide-rig only, XRIG-01 parked
 - aa90d7f C4: record --fast --clean PASS and W3b live BO PSF SHA
 
-### era04
-- not locked (C6-3 STOP; C6-2 PASS on 961d590f / 59206a24)
-- C6-0 STOP commits: 0b2f0c8 (missing dao_gaia_stage_01),
-  d75440f (A-only 4-tuple vs 3-tuple)
-- this STOP commit: docs + C6 context + _lc_map skip _psf
+### era04 / APERTURE-01c
+- not locked (ledger v5: 6 UNNAMED). C6-2 skipped.
+- f=1.35 recut products 988a2e13 n=160 / e8fed401 n=210
+- candidate2 (f=0.385) kept; candidate1 kept; era03 untouched
+- APERTURE-01 STOP a23ee3d; APERTURE-01b STOP 2509f02
+- this STOP commit: f=1.35 + gate + ledger v5 + docs
 
 ## era04 SHAs (products only; not the `--full` gate)
-core 961d590fd957a39ab4837ba82a2160a036d231dc5a288eefaf37bd3b2ac3cd32 n=169
-ext  59206a24319a796f5501de2eda14d8977981bf18046f53e821cd364fe296a5f1 n=222
-Do not write PUSH_AUTH. Gate remains era03 9902d918 / 472bc9e4.
+APERTURE-01c f=1.35 recut (not locked):
+core 988a2e135b37fcb0d88c7d08c98cf270428e4ce314cd29c8281665cbd3d54106 n=160
+ext  e8fed401667c6947dc0cf40f0050fe79a6f466d8cf45994edbfcc54b4f06998b n=210
+Prior C6-1 product (SNR-table / later overwritten): 961d590f n=169 /
+59206a24 n=222. candidate2 = APERTURE-01 f=0.385 recut, kept.
+Do not write PUSH_AUTH for origin/main. Gate remains era03
+9902d918 / 472bc9e4.
 
 ## Open ROADMAP ids
 - EPSF-SHAPE-01 HIGH (narrow ePSF core; routed to EPSF-CORE-01)
@@ -118,6 +123,7 @@ PUSH_AUTH after era04 is locked (not this STOP).
 - 520 selection wiring lives on the branch; 520 has no era snapshot
 - Newton 518 unchanged (gated pool 26; ZP-OK does not apply)
 - C6-0 R1'' skipped (KeyError frame); C6-3 STOP unnamed mag_calib
+- APERTURE-01c ledger v5: 6 UNNAMED (lost LC at r=7 / Phase1 starve)
 - T3 R1 remains contaminated; C6-0-P1 untested
 - `--full` on frozen era03 MS still raises until a locked recut
   (D3/C3 columns absent on freeze). era04 `--full` PASS is not the gate.
