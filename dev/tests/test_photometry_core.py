@@ -217,6 +217,44 @@ def test_color_term_extrapolation_out_of_range_blocks():
     assert _check_color_term_extrapolation(0.5, [0.8, 0.9, 1.1, 1.2]) is False
 
 
+def test_ct_ref_uses_full_ensemble_not_export_pool():
+    """4-member ensemble with 1 member in comparison_stars.csv -> CT ref uses all 4."""
+    import numpy as np
+
+    from photometry_core import apply_color_term, ct_ensemble_reference_maps
+
+    ens_bp = {
+        "1497771992240531712": 0.3280553817749023,
+        "1499200223486564608": 0.6063861846923828,
+        "1497974027502858240": 0.4753026962280273,
+        "1497368849430107904": 0.5014162063598633,
+    }
+    ens_q = {cid: {"quality": "good"} for cid in ens_bp}
+    weights = {
+        "1497771992240531712": 9241.188631814864,
+        "1499200223486564608": 6486.886182273987,
+        "1497974027502858240": 4701.614479402266,
+        "1497368849430107904": 1886.4056430480184,
+    }
+    export_only = {"1499200223486564608": 0.6063861846923828}
+    export_q = {"1499200223486564608": {"quality": "good"}}
+    bp, q = ct_ensemble_reference_maps(ens_bp, ens_q)
+    assert set(bp) == set(ens_bp)
+    mag = np.array([10.0], dtype=np.float64)
+    _, _, med_ens = apply_color_term(
+        mag, 0.458137, bp, q, -0.373, comp_weights=weights
+    )
+    _, _, med_export = apply_color_term(
+        mag, 0.458137, export_only, export_q, -0.373, comp_weights=weights
+    )
+    wsum = sum(weights.values())
+    want = sum(weights[c] * ens_bp[c] for c in ens_bp) / wsum
+    assert abs(float(med_ens) - want) < 1e-9
+    assert abs(float(med_ens) - 0.454638) < 1e-3
+    assert abs(float(med_export) - 0.606386) < 1e-3
+    assert abs(float(med_ens) - float(med_export)) > 0.1
+
+
 def test_color_term_extrapolation_tolerance():
     from photometry_core import _check_color_term_extrapolation
 

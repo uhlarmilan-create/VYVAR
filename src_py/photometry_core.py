@@ -4922,6 +4922,22 @@ def fit_color_term_c1(
     return c1, c1_stderr, int(x.size)
 
 
+def ct_ensemble_reference_maps(
+    ensemble_bp_rp: dict[str, float],
+    ensemble_quality: dict[str, dict],
+) -> tuple[dict[str, float], dict[str, dict]]:
+    """Per-target CT colour-ref membership is the ZP ensemble, never ``comparison_stars.csv``.
+
+    ``c1`` may still come from a field-level fit; ``ct_bp_rp_comp_med`` and the
+    weighted colour reference must use the same stars (and weights) as the
+    ensemble zero-point. An export-pool subset of the ensemble is not a valid
+    reference.
+    """
+    bp = dict(ensemble_bp_rp or {})
+    q = dict(ensemble_quality or {})
+    return bp, q
+
+
 def apply_color_term(
     mag_calib: np.ndarray,
     target_bp_rp: float,
@@ -4932,6 +4948,9 @@ def apply_color_term(
     comp_weights: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, float, float]:
     """Apply a constant colour correction to the calibrated light curve.
+
+    Caller must pass the ZP ensemble maps (``ct_ensemble_reference_maps``), not
+    the ``comparison_stars.csv`` export pool.
 
     Formula (existing path, removes PRE-IMPL-01 level bias):
       bp_rp_comp_ref = weighted_mean(bp_rp) when weights given, else median
@@ -11386,9 +11405,10 @@ def _phase2a_process_one_target(
         c1_stderr = float(_group_ct.c1_stderr)
         ct_mode = str(getattr(_group_ct, "mode", "fit") or "fit")
         ct_n_comp = int(_group_ct.n_comp)
+        _ref_bp, _ref_q = ct_ensemble_reference_maps(comp_bp_rp, comp_quality)
         _ct_in_range = _check_color_term_extrapolation(
             target_bp_rp=float(target_bp_rp),
-            comp_bp_rp_values=[float(v) for v in _group_ct.comp_bp_rp.values()],
+            comp_bp_rp_values=[float(v) for v in _ref_bp.values()],
             target_name=str(target_name),
             extrapolation_tol=float(_cfg.phase01_ct_extrapolation_tol),
         )
@@ -11407,8 +11427,8 @@ def _phase2a_process_one_target(
             mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
                 mag_calib,
                 target_bp_rp,
-                _group_ct.comp_bp_rp,
-                _group_ct.comp_quality,
+                _ref_bp,
+                _ref_q,
                 c1,
                 comp_weights=comp_weight_map if ct_mode == "clear_level" else None,
             )
