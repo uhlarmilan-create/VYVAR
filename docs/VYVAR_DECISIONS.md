@@ -6,6 +6,20 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## C6-3c STOP - era04 not locked (2026-08-26)
+
+[WCS-APERTURE] refused: per-frame aperture centres are MASTERSTAR
+snap + peak refine (`pipeline.py:7491`), not world2pix; proc x,y
+era03 vs era04 are identical; D2 six cards did not move centres;
+centroid truth residuals equal (p50 0.797 px). [CT-REF] in:
+`ct_bp_rp_comp_med` is the ZP ensemble, never `comparison_stars.csv`
+(`cfffa82`). After phot-only, BO `mag_calib_final` +2.787 mmag equals
+`mag_calib`; 10/12 CT-dominated LCs collapse. [EDGE]: four era03-only
+targets (`out_of_frame` / safe_bbox), including FR CVn. mag_calib
+2.8/10.8/6.8 mmag remains UNNAMED (measured aperture_r 5.999->5.499
+on BO). Anchor remains era03. Evidence:
+`CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## C6-3 STOP - era04 not locked (2026-08-26)
 
 C6-2 `--full` twice OVERALL PASS on

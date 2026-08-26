@@ -1,0 +1,22 @@
+{
+  "lock": false,
+  "wcs_aperture": "REFUSED",
+  "ct_ref": "ASSIGNED",
+  "edge": "ASSIGNED",
+  "x1d_regression": false,
+  "x1d_closer": "equal",
+  "phot_only_err": "INV-DAG-01 phase2a seq=6 goes backwards (max stamped seq=7); LCs and PSF LCs written",
+  "sha_core_after_phot": "233fce2ede5b6f50b18c37c579b91d4a766c3ff5ad07d03e356bacc095afb339",
+  "n_core": 169,
+  "live_unchanged": true,
+  "era03_still_present": true,
+  "bo_dmag_final_mmag": 2.7875,
+  "bo_dmag_calib_mmag": 2.787,
+  "ct_collapse_10_of_12": true,
+  "unnamed_residual": [
+    "BO mag_calib +2.787 mmag (aperture_r 5.999 -> 5.499 all 134 frames; mag_inst +18.62 mmag; ensemble absorbs most)",
+    "FW mag_calib -10.836 mmag (target r and mag_inst unchanged; several comps r/flux changed)",
+    "GH mag_calib -6.814 mmag (target r and mag_inst unchanged; comps r/flux changed)",
+    "field mag_calib median ~-10 mmag class; 42 UNNAMED in ledger v2"
+  ]
+}

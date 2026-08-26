@@ -1,12 +1,12 @@
-CURSOR RESULT - 2026-08-26T13:50:00Z
+CURSOR RESULT - 2026-08-26T16:55:00Z
 
 What I did
-C6 ANCHOR RE-CUT era04 (Milan GO 2026-08-26), C6-0 final through C6-3b.
-R1'' informational (declared shim); C6-1 full-chain products written
-into a new era04 snapshot; C6-3 STOP (unnamed mag_calib motion vs
-era03); C6-3b named the 55 (measure only). era04 is NOT locked.
+C6 ANCHOR RE-CUT era04 (Milan GO 2026-08-26), C6-0 final through
+C6-3c. C6-3c measured X1/X3, committed X2 [CT-REF] (cfffa82),
+photometry-only rerun on era04. Ledger v2. era04 is NOT locked
+(mag_calib residuals remain UNNAMED; X1d is not a regression).
 era03 untouched. origin/main stays 7c086e8. No PUSH_AUTH SHA.
-No config change. No C3-FLOOR fix. No era04 re-run.
+No config change. No C6-4 lock.
 
 ## Premise (Rule 0.1)
 Compared: (C6-0) isolated c592ecf + A files + one declared 3-tuple
@@ -248,35 +248,120 @@ motion with identical pixels remains UNNAMED and the recut waits.
 JSON: c63b_m3_tags.json  harness: c63b_measure.py
 elapsed_s total 30.3 (M1 7.6 + M2 22.7).
 
+## C6-3c measure X1/X3, fix X2  STOP (no lock)
+
+HEAD cfffa82 (CT-REF helper). era04 tree on disk, not locked.
+Photometry-only rerun wrote new LCs (core 233fce2e n=169) then
+INV-DAG-01 at phase2a stamp (seq=6 vs already-stamped seq=7).
+Science LCs + 56 PSF LCs are on disk. live 516 SHA unchanged
+(csv bfa24039 / fits 13e77cf8 / epsf 172f9540). era03 present.
+
+### X1 [WCS-APERTURE]  REFUSED
+
+a) Governing: aligned frames (VY_ALGN). Call pipeline.py:8401-8410
+   `_lock_matched_centroids_to_master_grid` :7491. DAO detect, match
+   to MASTERSTAR, snap matched stars to MASTERSTAR x,y, then brightest
+   pixel in ~2.5 FWHM window. Not per-frame WCS world2pix of Gaia.
+   Unaligned: `_apply_dao_centroid_wcs_guard` :7455. Aperture photometry
+   uses catalog x,y already written
+   (photometry_core.py:enhance_catalog_dataframe_aperture_bpm:14136).
+
+   Six WCS cards (CRPIX/PC) on era04 MASTERSTAR and aligned lights
+   differ from era03/live. Origin: D2 accepted optimizer refit on
+   era04 MS (c6_1_summary.json rejected=false, p95 1.307->1.228).
+   Not S3 match.
+
+b) BO+4 comps, FW+8, GH+8, all 134 frames: proc CSV dx=dy=|d|=0
+   exactly. MS x,y differ ~0.001 px. |d| vs CRPIX distance: undefined
+   (zero variance).
+
+c) Predicted Gaussian flux-loss (FWHM 5.15, r=5.499)=0. Correlation
+   dmag vs d_diff = nan. Does not explain 2.8/10.8/6.8 mmag.
+
+d) COM in 3xFWHM box on era04 aligned pixels (identical to era03):
+   res_e3_p50 = res_e4_p50 = 0.797 px, p95=1.66. Equal, not a
+   regression. No D2/S3 WCS regression on aperture centres.
+
+JSON: c63c_x1_x3.json  CSV: c63c_x1_xy_per_star.csv,
+c63c_x1_xy_per_frame.csv, c63c_x1_dmag_vs_dxy.csv,
+c63c_x1_centroid_truth.csv, c63c_x1_centroid_truth_per_star.csv
+
+Measured residual (not named; not WCS-APERTURE): aperture_r_px
+BO 5.999->5.499 all 134 frames, mag_inst +18.62 mmag, mag_calib
++2.787 mmag (ensemble absorbs most). FW/GH target r and mag_inst
+unchanged; several comps r/flux changed -> mag_calib -10.836 /
+-6.814. CSV: c63c_aperture_r.csv
+
+### X2 [CT-REF]  ASSIGNED (fix + photometry-only)
+
+ct_ensemble_reference_maps: per-target CT colour-ref is the ZP
+ensemble, never comparison_stars.csv. Test
+test_ct_ref_uses_full_ensemble_not_export_pool PASSED.
+Commit cfffa82.
+
+After phot-only: BO ct_bp_rp_comp_med 0.454638 (was 0.606);
+ct_correction -0.001305 (era03 match). mag_calib_final median
++2.7875 mmag = mag_calib +2.787 mmag (predicted ~+2.8).
+12 CT-dominated LCs: 10 collapse (dct=0 vs era03). Remaining 2:
+1499209638054824320 D3-D5 CT skipped; 1500410236033012352 dct
+-25 mmag (ensemble colour changed, n 2229->149). ct_n_comp column
+still stores the field-fit n (2345); the colour-ref value is the
+ensemble (log: comp_wmean bp_rp=0.455).
+
+JSON: c63c_x2_rerun.json  CSV: c63c_x2_ct_collapse.csv
+
+### X3  [EDGE]  (not STOP)
+
+era03 n_lc=60, era04 n_lc=56, only_era03=4, only_era04=0.
+Funnel: select_active_targets (photometry_core.py:14936). All four
+in variable_targets; excluded_targets.csv reason=out_of_frame
+(era04 out_of_frame n=176 vs era03 82). Chip enlarge then safe_bbox
+annulus-aware intersection. y~1376-1394 on NAXIS2=1397.
+
+  1485560025830226432  Gaia DR3 ... VAR   G=13.61  [EDGE]
+  1496037650087948160  TIC 23815847 EXOPLANET G=13.98  [EDGE]
+  1496733984545821696  FR CVn BY          G=11.14  [EDGE]
+  1497491273179203456  Gaia DR3 ... VAR   G=13.99  [EDGE]
+
+CSV: c63c_x3_era03_only.csv  JSON: c63c_x3.json
+
+### X4 ledger v2  STOP
+
+[WCS-APERTURE] REFUSED
+[CT-REF]       ASSIGNED (mag_calib_final; 10/12 collapse)
+[EDGE]         ASSIGNED (4 era03-only)
+UNNAMED        42 including FW/GH mag_calib and field median;
+               BO mag_calib +2.8 still UNNAMED (CT-REF named the
+               +59, not the +2.8)
+
+X1d not a regression. mag_calib 2.8/10.8/6.8 remain UNNAMED.
+C6-4 lock skipped. C6-2 twice and C6-5 inventory not run.
+
+CSV: c63c_era03_era04_ledger_v2.csv  JSON: c63c_x4.json
+
 ## C6-4 / C6-5
-Lock skipped (C6-3 STOP; C6-3b did not lock). SNAPSHOT_NAME remains
+Lock skipped (C6-3 / C6-3b / C6-3c STOP). SNAPSHOT_NAME remains
 era03 (9902d918 / 472bc9e4). INV-ANCHOR-00 pointer unchanged. No
-PUSH_AUTH SHA. `--fast --clean` OVERALL PASS (1575 passed, 32
-skipped; clean-tree pytest/ruff/pyflakes PASS). Push sel-ghost-01
-by name.
+PUSH_AUTH SHA.
 
 ## Errors
 C6-0 R1'' skipped (KeyError frame). C6-3 STOP unnamed + sanity.
 C6-3b: D3 reconstruction n_in=3291 != log 2927 (bbox/variable-target
 static filters omitted); governing 1860 split is the C6-1 log.
 C6-1 first photometry INV-CAL-01 (fixed by copying cal_diag).
+C6-3c phot-only: INV-DAG-01 phase2a seq backwards (max stamped
+seq=7). LCs+PSF written; stamp failed at end of finalize_exports.
 
 ## Files changed
+- src_py/photometry_core.py (ct_ensemble_reference_maps; cfffa82)
+- dev/tests/test_photometry_core.py (CT-REF test; cfffa82)
 - dev/results/CURSOR_RESULT_ANCHOR_ERA04.md
-- dev/results/context/session_20260826_c6/c6_0_r1pp_shim.json
-- dev/results/context/session_20260826_c6/c6_0_r1pp_skip.json
-- dev/results/context/session_20260826_c6/c6_1_qc_allowlist.json
-- dev/results/context/session_20260826_c6/c6_1_summary.json
-- dev/results/context/session_20260826_c6/c6_3_stop.json
-- dev/results/context/session_20260826_c6/c63_era03_era04.json
-- dev/results/context/session_20260826_c6/c63_era03_era04_ledger.csv
-- dev/results/session_20260826_c6/run_c61.py (harness)
-- dev/results/session_20260826_c6/compare_era034.py (harness)
-- `dev/tests/photometry_sha.py` (_lc_map skips `_psf` / `_adaptive`)
 - docs STATE / ROADMAP / JOURNAL / DECISIONS
-- `dev/results/CURSOR_RESULT_SESSION_CLOSE_20260826.md`
-- Archive era04 snapshot (not git-tracked)
-- C6-3b: c63b_measure.py, c63b_m1.json, c63b_m1_headers.json,
-  c63b_m1_frames.csv, c63b_m1_bo_dmag_dpix.csv, c63b_m2.json,
-  c63b_m2_drop_split.csv, c63b_m2_r_vs_g.csv, c63b_m2_replay.csv,
-  c63b_lc_census.csv, c63b_m3_tags.json, c63b_summary.json
+- C6-3c: c63c_measure.py, c63c_after_phot.py, c63c_x1_x3.json,
+  c63c_x1_xy_per_star.csv, c63c_x1_xy_per_frame.csv,
+  c63c_x1_dmag_vs_dxy.csv, c63c_x1_centroid_truth.csv,
+  c63c_x1_centroid_truth_per_star.csv, c63c_aperture_r.csv,
+  c63c_x3.json, c63c_x3_era03_only.csv, c63c_x2_rerun.json,
+  c63c_x2_ct_collapse.csv, c63c_era03_era04_ledger_v2.csv,
+  c63c_x4.json
+- Archive era04 snapshot photometry (not git-tracked)

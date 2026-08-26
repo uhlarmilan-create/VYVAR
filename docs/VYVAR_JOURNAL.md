@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C6-3c STOP (era04 not locked)
+
+X1 WCS-APERTURE refused (centres d=0; truth residuals equal).
+X2 CT-REF `cfffa82`; phot-only BO final +2.787 mmag = mag_calib;
+10/12 CT LCs collapse. X3 EDGE four out_of_frame. mag_calib
+2.8/10.8/6.8 UNNAMED (BO aperture_r 5.999->5.499). No lock.
+Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C6-3 STOP (era04 not locked)
 
 R1'' informational (declared 3-tuple shim) then KeyError skip.

@@ -1,0 +1,178 @@
+{
+  "utc": "2026-08-26T16:21:01.631302+00:00",
+  "git_sha": "cfffa82e9b5a7476c141306edb2f928652fb2d26",
+  "era03": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era03_20260820",
+  "era04": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826",
+  "err": "PHOT InvariantViolation: INV-DAG-01: stage 'phase2a' seq=6 goes backwards (max stamped seq=7)",
+  "timings_s": {
+    "copy_raw": 0.0,
+    "calibration": 0.0,
+    "preprocess": 0.0,
+    "platesolve_ms": 0.0,
+    "photometry": 1598.6,
+    "psf_lc": 20.7,
+    "total": 1621.0
+  },
+  "live_before": {
+    "516_csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "516_fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "516_epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "masterstar_top1": "BO_CVn_Light_109.fits",
+  "cal_out": {
+    "skipped": true,
+    "reason": "calibrated lights already present"
+  },
+  "ps_out": {
+    "skipped": true
+  },
+  "psf_out": {
+    "written": [
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1485534187306501376_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1485987151737107200_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1485987254816323328_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1496278752372040832_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1496293286541396480_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1496795041799526400_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1496998382733052928_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497096960821764224_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497132660589966976_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497154753901690624_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497169940906156032_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497227287309482624_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497236186481686016_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497245497969274240_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497284015237511808_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497343732462852864_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497350638770267520_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497418258735289472_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497425371201155072_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497561779362267392_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497603835681942400_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497639123133258752_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497683722074089728_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497683996951418880_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1497871669842349184_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498000793739050368_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498027456896444928_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498058827337611392_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498278351706325248_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498298211635183744_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498321301379345408_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498425548825498112_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498486880958321024_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498613634033133184_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498617482323461376_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498699086702005376_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498752516095473664_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498783199341798016_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498795809366255488_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498804639818507904_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498842882207281152_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499006984318088320_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499021174889970816_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499081819828174080_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499084499887740160_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499209638054824320_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499210016011946496_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1499842372636900992_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500327978819506944_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500410236033012352_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500418894687086208_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500424804562041984_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500461157165243648_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500549977088828160_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1500693841313325696_psf.csv",
+      "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1502012464992313088_psf.csv"
+    ],
+    "skipped": [],
+    "n_written": 56,
+    "n_skipped": 0,
+    "lc_dir": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves",
+    "output_directory": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826\\platesolve\\NoFilter_60_2\\photometry\\lightcurves",
+    "psf_zp_membership_effective": "fit_ok_for_zp",
+    "psf_zp_membership_rig_validated": true,
+    "psf_zp_membership_rig": "1:1"
+  },
+  "sha_core": "233fce2ede5b6f50b18c37c579b91d4a766c3ff5ad07d03e356bacc095afb339",
+  "n_core": 169,
+  "sha_ext": "1c1045b6e57d7c75c4e9783124f16717fd7522e9fe77c8f7c64a3dd470291ac2",
+  "n_ext": 222,
+  "inv": {
+    "identity_gate": {
+      "n": 3600,
+      "ok": 2623,
+      "warn": 7,
+      "fail": 0,
+      "pass": 0
+    },
+    "zone_saturated_n": 24,
+    "suspected_variables_n": 163,
+    "pipeline_meta_inv": [
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase01 seq=5 (cold_start)",
+        "ts": "2026-08-26T10:56:24.509230+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped phase2a seq=6",
+        "ts": "2026-08-26T11:09:53.672659+00:00"
+      },
+      {
+        "id": "INV-DAG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "stamped postprocess seq=7",
+        "ts": "2026-08-26T11:09:53.680657+00:00"
+      },
+      {
+        "id": "INV-PROV-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "prov_schema_version=1 ok",
+        "ts": "2026-08-26T11:09:53.680657+00:00"
+      },
+      {
+        "id": "INV-CFG-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "config<->behavior markers clean",
+        "ts": "2026-08-26T11:09:53.867445+00:00"
+      },
+      {
+        "id": "INV-SAT-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "sat_source='DERIVED' sat_adu=65535.0 (loaded sat_diag.json from draft root; meta block missing)",
+        "ts": "2026-08-26T11:09:53.873683+00:00"
+      },
+      {
+        "id": "INV-CAL-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "cal_diag keys=1 spec_version='CAL-DIAG-v2'",
+        "ts": "2026-08-26T11:09:53.874782+00:00"
+      },
+      {
+        "id": "INV-CAL-02",
+        "ok": true,
+        "policy": "WARN",
+        "detail": "cal_stage not stamped (legacy draft or pre-INV-CAL-02 run)",
+        "ts": "2026-08-26T11:09:53.874782+00:00"
+      }
+    ]
+  },
+  "live_after": {
+    "516_csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "516_fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "516_epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "live_unchanged": true,
+  "live_sha_guard": true,
+  "era03_still_present": true
+}

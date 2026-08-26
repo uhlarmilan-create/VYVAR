@@ -10,17 +10,18 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-3 STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-3c STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. C6-2 PASS on era04 products (961d590f / 59206a24); C6-3 STOP
-(55 UNNAMED vs era03; same-ensemble mag_calib not 0 or AC constant).
-era03 remains the `--full` gate. SEL-GHOST-01 not closed.
+ref. C6-3c: [CT-REF] in (`cfffa82`); [WCS-APERTURE] refused; [EDGE]
+named. mag_calib 2.8/10.8/6.8 still UNNAMED (measured: BO aperture_r
+5.999->5.499, not WCS centres). era03 remains the `--full` gate.
+SEL-GHOST-01 not closed.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: name a closed-list cause for the same-ensemble mag_calib motion, or hold the recut. era04 tree is kept, not locked. |
+| **1** | Milan: name the mag_calib residual (measured aperture_r 5.999->5.499 on BO; comps mixed on FW/GH) or hold the recut. era04 tree is kept, not locked. |
 | **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
 | **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |

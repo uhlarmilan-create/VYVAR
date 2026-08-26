@@ -1,0 +1,5 @@
+catalog_id,name,vsx_type,target_origin,G,skip_reason,tag,y_era04,note
+1485560025830226432,Gaia DR3 1485560025830226432,VAR,VSX,13.607,out_of_frame,EDGE,1381.33,y near chip top; safe_bbox annulus-aware intersection; NAXIS2=1397 edge_margin=50
+1496037650087948160,TIC 23815847,,EXOPLANET,13.980,out_of_frame,EDGE,1382.34,y near chip top; safe_bbox; excluded_targets name=TIC 23815847
+1496733984545821696,FR CVn,BY,VSX,11.142,out_of_frame,EDGE,1394.72,y near chip top; safe_bbox; excluded_targets name=FR CVn
+1497491273179203456,Gaia DR3 1497491273179203456,VAR,VSX,13.988,out_of_frame,EDGE,1376.31,y near chip top; safe_bbox annulus-aware intersection

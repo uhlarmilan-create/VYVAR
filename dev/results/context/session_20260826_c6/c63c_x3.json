@@ -1,0 +1,45 @@
+{
+  "n_era03_lc": 60,
+  "n_era04_lc": 56,
+  "n_only_era03": 4,
+  "n_only_era04": 0,
+  "funnel": "select_active_targets (photometry_core.py:14936). VSX in variable_targets.csv (n=873 both) but not in era04 active_targets.csv. excluded_targets.csv reason=out_of_frame for all four.",
+  "era03_excluded_out_of_frame_n": 82,
+  "era04_excluded_out_of_frame_n": 176,
+  "targets": [
+    {
+      "catalog_id": "1485560025830226432",
+      "name": "Gaia DR3 1485560025830226432",
+      "vsx_type": "VAR",
+      "G": 13.607,
+      "skip_reason": "out_of_frame",
+      "tag": "EDGE",
+      "note": "y~1381 on 1397-tall chip; 50 px margin / safe bbox"
+    },
+    {
+      "catalog_id": "1496037650087948160",
+      "name": "TIC 23815847",
+      "vsx_type": "",
+      "target_origin": "EXOPLANET",
+      "G": 13.980,
+      "skip_reason": "out_of_frame",
+      "tag": "EDGE"
+    },
+    {
+      "catalog_id": "1496733984545821696",
+      "name": "FR CVn",
+      "vsx_type": "BY",
+      "G": 11.142,
+      "skip_reason": "out_of_frame",
+      "tag": "EDGE"
+    },
+    {
+      "catalog_id": "1497491273179203456",
+      "name": "Gaia DR3 1497491273179203456",
+      "vsx_type": "VAR",
+      "G": 13.988,
+      "skip_reason": "out_of_frame",
+      "tag": "EDGE"
+    }
+  ]
+}
