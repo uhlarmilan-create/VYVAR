@@ -10,7 +10,35 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-25 CLOSE-OUT C3/C7 STOP)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C8 STOP; C4 next; C6 waits)
+
+Local `main` tracks `origin/sel-ghost-01`. 2026-08-25 push incident:
+`origin/main` is at `7c086e8` (same tip); do not force-push back to
+`b1f5b8c`. Pushes name the ref. C8: R1' one-file copy cannot import
+(iter4 needs iter2/iter3, all first-tracked at `0684ba9`). Frame 29
+QC admitted (n_stars 263). DEPTH-AUTH-01 recorded, not wired. C4
+ZP-OK v2 is the next wire. C6 waits Milan GO after C4 STOP.
+
+| Step | Action |
+|------|--------|
+| **1** | C4 EPSF-ZP-OK-01-WIRE v2 (W1-W4; push `sel-ghost-01` by name) |
+| **2** | Milan: C6 full-chain era04 GO (after C8 + C4 STOPs; named-cause ledger) |
+| **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **5** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **6** | **EXPORT-PARITY-01** (HIGH) |
+
+| Pri | Carry list |
+|-----|------------|
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **MED** | **MULTIFILTER-WCS-01** - sibling-seed for z_90_4 (see prior entry) |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp). C8-2: draft 516 frame 29 admitted (`status=ok`) with `n_stars_detected=263` vs ~100 on 028/030; FWHM/elongation normal. Do not wire in C8. |
+| **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
+| **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
+| **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-25 CLOSE-OUT C3/C7 STOP)
 
 Local `main` tracks `origin/sel-ghost-01`. `origin/main` stays
 `b1f5b8c` until C6. C3 wired (k=5). C7: R1 not a pre-B1 control;
@@ -683,6 +711,7 @@ Deferred findings from BO CVn UI run (`draft_000428`, `NoFilter_60_2`). Evidence
 | ID | Sev | Item |
 |----|-----|------|
 | **BATCH-E-PARAMS-REGISTRY** | MED | **DONE (2026-08-04).** Commits `8094af8..33ec2dc`. Six batch E fields registered; VYVAR_PARAMS.md 277 entries; dashboard owner assert 249 config_runtime; FLOW threshold 3.8; BLE001 + ASCII hygiene. Result: `dev/results/CURSOR_RESULT_batch_e_params_hygiene.md`. |
+| **DEPTH-AUTH-01** | LOW | Derive MASTERSTAR census/target depth from detection completeness vs Gaia (DAO-GAIA certificate per-mag recovery). Config constant G=15.0 today (`masterstar_gaia_census_target_depth_g`). C8-3: G=15.56 VSX stays absent at re-cut. Not wired. Evidence: `CURSOR_RESULT_CLOSEOUT_C8.md`. |
 | **NOQA-TRUNCATED-EXCEPT-BULK** | LOW | 15 malformed `# noqa` directives across 10 `src_py` files, from truncated EXCEPT-BULK 2026-07-08 census comments; ruff emits Invalid-directive warnings; risk is that a genuinely malformed suppression hides in the noise. Sites listed in `CURSOR_RESULT_batch_e_params_hygiene.md` STEP 5C. Not started. |
 | **ANCHOR-GATE-SEED** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Gates recut onto frozen 516: `session_baseline_check.py` DRAFT_ID=516 / snapshot `draft_000516_snapshot_cleanrebuild_20260818` / SHA `477dc8cf`; `test_invariants_p1_seed.py` same. 435 `5bccd85a` retired as superseded-with-pointer. |
 | **ANCHOR-CLEAN-BUILD** | -- | **CLOSED 2026-08-18 (ANCHOR-516-04).** Canonical product is a clean Phase 0+MASTERSTAR-reannotate+P1+P2A rebuild of 516 on tip `4a65675` (provenance n_stale=0). `--full` copies frozen snapshot inputs into tmp; git-staged is FAIL. 435 never had a clean-tree generation and is retired. |

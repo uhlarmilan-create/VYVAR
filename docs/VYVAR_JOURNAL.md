@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C8 STOP (push incident + R1' + frame 29)
+
+Push incident recorded; no force-push of main. P0 pre-push guard.
+R1' one-file copy cannot import (`0684ba9` tracked iter2/3/4 together).
+Frame 29 QC admitted (n_stars 263). DEPTH-AUTH-01 recorded, not wired.
+C6 not run. Live 516/520 SHA unchanged.
+Evidence: `CURSOR_RESULT_CLOSEOUT_C8.md`.
+
 ## 2026-08-25 -- CLOSE-OUT C3/C7 STOP (C4 ZP-OK next; C6 not asked)
 
 C3: k=5; LOO mag RMS; ZONE-SAT-01 peak test never skipped.

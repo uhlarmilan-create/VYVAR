@@ -1,6 +1,11 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-25 C3/C7 STOP.** C3 COMP-RMS-DEF-01-B
+**Status:** **CLOSE-OUT 2026-08-26 C8 STOP.** Push incident recorded;
+do not force-push `origin/main`. P0 guard in. C8-1 R1' blocked
+(iter4 one-file copy cannot import iter2). C8-2 frame 29 QC admitted
+(n_stars 263). DEPTH-AUTH-01 recorded. C4 ZP-OK v2 next. C6 waits
+Milan GO after C4 STOP. Live 516/520 SHA unchanged.
+**CLOSE-OUT 2026-08-25 C3/C7 STOP.** C3 COMP-RMS-DEF-01-B
 wired (k=5, LOO mag, ZONE-SAT-01). C7: R1 harness was contaminated;
 lost VSX `1500387696044768384` is depth+DAO, freeze LC already
 no_data; C6 not asked. C4 ZP-OK v2 task is on disk (run next, Push:
@@ -59,7 +64,7 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-25** (CLOSE-OUT C3/C7 STOP; C4 ZP-OK next; C6 not asked; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT C8 STOP; C4 ZP-OK next; C6 waits GO; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
 
 ## 2026-08-25 -- CLOSE-OUT C3 COMP-RMS-DEF-01-B STOP
 

@@ -1,0 +1,13 @@
+{
+  "c8_1": {
+    "first_tracked_iter4": "0684ba9",
+    "first_tracked_iter2": "0684ba9",
+    "first_tracked_iter3": "0684ba9",
+    "worktree": ".worktrees/c8_r1p_c592ecf",
+    "copied": ["src_py/dao_gaia_stage_01_iter4.py"],
+    "import": "ModuleNotFoundError No module named 'dao_gaia_stage_01_iter2'",
+    "extra_files_copied": false,
+    "chain_run": false,
+    "c8_p1_table": "blocked"
+  }
+}

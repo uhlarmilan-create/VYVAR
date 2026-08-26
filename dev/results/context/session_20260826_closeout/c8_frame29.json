@@ -1,0 +1,289 @@
+{
+  "tid": "1498000793739050368",
+  "qc_frames": {
+    "28": {
+      "status": "ok",
+      "fwhm_px": 5.152748288267686,
+      "elongation": 1.0719698448644728,
+      "n_sources": 92,
+      "n_stars_detected": 103,
+      "bg_median": 1699.2935791015625,
+      "sky_surface_order": 2,
+      "sky_surface_applied": true,
+      "sky_surface_p2p_adu": 142.22987365722656,
+      "sky_surface_median_adu": -0.1044904291629791,
+      "sky_surface_n_fit_pixels": 147980,
+      "sky_surface_fwhm_px": 2.5,
+      "sky_surface_bg_median_adu": 1699.1580490740114,
+      "sky_surface_calm_adu": 100.0,
+      "residual_flatness_p99_adu": 30.76562824541746,
+      "cal_stage": "SKYSF_2",
+      "cal_datasum": 931320706,
+      "cal_pstbg": 1699.2935791015625,
+      "frame": 28
+    },
+    "29": {
+      "status": "ok",
+      "fwhm_px": 5.146226485794146,
+      "elongation": 1.050784295269814,
+      "n_sources": 91,
+      "n_stars_detected": 263,
+      "bg_median": 1706.559814453125,
+      "sky_surface_order": 2,
+      "sky_surface_applied": true,
+      "sky_surface_p2p_adu": 141.18055725097656,
+      "sky_surface_median_adu": -1.4813518524169922,
+      "sky_surface_n_fit_pixels": 146123,
+      "sky_surface_fwhm_px": 2.5,
+      "sky_surface_bg_median_adu": 1705.941417186933,
+      "sky_surface_calm_adu": 100.0,
+      "residual_flatness_p99_adu": 47.78870434222875,
+      "cal_stage": "SKYSF_2",
+      "cal_datasum": 1036790070,
+      "cal_pstbg": 1706.559814453125,
+      "frame": 29
+    },
+    "30": {
+      "status": "ok",
+      "fwhm_px": 5.149044831578854,
+      "elongation": 1.058777546692079,
+      "n_sources": 89,
+      "n_stars_detected": 101,
+      "bg_median": 1693.66845703125,
+      "sky_surface_order": 2,
+      "sky_surface_applied": true,
+      "sky_surface_p2p_adu": 140.95982360839844,
+      "sky_surface_median_adu": -0.1611300408840179,
+      "sky_surface_n_fit_pixels": 147928,
+      "sky_surface_fwhm_px": 2.5,
+      "sky_surface_bg_median_adu": 1693.3356807901398,
+      "sky_surface_calm_adu": 100.0,
+      "residual_flatness_p99_adu": 31.15286827023124,
+      "cal_stage": "SKYSF_2",
+      "cal_datasum": 3951993675,
+      "cal_pstbg": 1693.66845703125,
+      "frame": 30
+    }
+  },
+  "proc_counts": {
+    "freeze": {
+      "28": {
+        "n": 3503,
+        "exists": true
+      },
+      "29": {
+        "n": 3506,
+        "exists": true
+      },
+      "30": {
+        "n": 3517,
+        "exists": true
+      }
+    },
+    "live": {
+      "28": {
+        "n": 3475,
+        "exists": true
+      },
+      "29": {
+        "n": 3472,
+        "exists": true
+      },
+      "30": {
+        "n": 3478,
+        "exists": true
+      }
+    },
+    "r2": {
+      "28": {
+        "n": 3475,
+        "exists": true
+      },
+      "29": {
+        "n": 3472,
+        "exists": true
+      },
+      "30": {
+        "n": 3478,
+        "exists": true
+      }
+    },
+    "era_cand": {
+      "28": {
+        "n": 3503,
+        "exists": true
+      },
+      "29": {
+        "n": 3506,
+        "exists": true
+      },
+      "30": {
+        "n": 3517,
+        "exists": true
+      }
+    },
+    "clean18": {
+      "28": {
+        "n": 3503,
+        "exists": true
+      },
+      "29": {
+        "n": 3506,
+        "exists": true
+      },
+      "30": {
+        "n": 3517,
+        "exists": true
+      }
+    }
+  },
+  "tid_presence": {
+    "freeze": {
+      "29": {
+        "present": true,
+        "dao_flux": 37387.451719517885,
+        "x": 703.0,
+        "y": 536.0
+      }
+    },
+    "live": {
+      "29": {
+        "present": false
+      }
+    },
+    "r2": {
+      "29": {
+        "present": false
+      }
+    },
+    "era_cand": {
+      "29": {
+        "present": true,
+        "dao_flux": 37387.451719517885,
+        "x": 703.0,
+        "y": 536.0
+      }
+    },
+    "clean18": {
+      "29": {
+        "present": true,
+        "dao_flux": 37387.451719517885,
+        "x": 703.0,
+        "y": 536.0
+      }
+    }
+  },
+  "r2_phot_files": [
+    "_crossmatch",
+    "active_targets.csv",
+    "comp_pool_admission.json",
+    "comparison_stars_per_target.csv",
+    "excluded_targets.csv",
+    "field_density.json",
+    "field_map.png",
+    "gain_photon_transfer.json",
+    "lightcurves",
+    "lightcurves_reports",
+    "photometry_summary.csv",
+    "pipeline_meta.json",
+    "suspected_variables.csv",
+    "target_depth.json",
+    "variability_candidates.csv"
+  ],
+  "r2_lc_exists": true,
+  "r2_lc_n": 134,
+  "r2_lc_flag_counts": {
+    "normal": 133,
+    "no_data": 1
+  },
+  "r2_lc_frame029": [
+    {
+      "bjd": NaN,
+      "hjd": NaN,
+      "jd": NaN,
+      "time_base": "BJD_TDB",
+      "airmass": 1.11072,
+      "is_flipped": false,
+      "alignment_failed": false,
+      "err_scatter_unmatched": false,
+      "catalog_match_mode": "master_reference_sky",
+      "wcs_untrusted": false,
+      "mag_inst": NaN,
+      "mag_calib_raw": NaN,
+      "mag_calib": NaN,
+      "mag_calib_ct": NaN,
+      "ct_correction": 0.016989,
+      "ct_c1": -0.373,
+      "ct_c1_stderr": 0.09,
+      "ct_mode": "clear_level",
+      "ct_bp_rp_target": 1.170489,
+      "ct_bp_rp_comp_med": 1.216037,
+      "ct_n_comp": 2345,
+      "ct_ok": true,
+      "k2_source": "none",
+      "k2_value": NaN,
+      "k2_colour_ref": NaN,
+      "ac_correction": -0.189655,
+      "ac_scatter": 0.013527,
+      "ac_n_ref": 8,
+      "ac_ok": true,
+      "mag_calib_ac": NaN,
+      "mag_calib_final": NaN,
+      "delta_mag": NaN,
+      "err": 0.005782,
+      "aperture_r_px": 2.499,
+      "flag": "no_data",
+      "method": "aperture",
+      "source_file": "proc_BO_CVn_Light_029.csv",
+      "dilution_factor": 1.0,
+      "lunar_phase_pct": 47.925609,
+      "lunar_separation_deg": 53.853174,
+      "lunar_risk": "MEDIUM",
+      "sigma_sys_mag": 0.0,
+      "err_photon": NaN,
+      "err_sem_rel": 0.0,
+      "err_scint_rel": 0.004078,
+      "err_sigma_sys_rel": 0.0,
+      "delta_mag_sysrem": NaN
+    }
+  ],
+  "freeze_lc_exists": true,
+  "freeze_lc_n": 134,
+  "freeze_lc_flag_counts": {
+    "normal": 134
+  },
+  "freeze_lc_frame029": [
+    {
+      "mag_calib": 10.734337,
+      "mag_calib_final": 10.561671,
+      "delta_mag": 3.477728,
+      "flag": "normal",
+      "source_file": "proc_BO_CVn_Light_029.csv"
+    }
+  ],
+  "qc_n_stars": {
+    "28": 103,
+    "29": 263,
+    "30": 101
+  },
+  "qc_status": {
+    "28": "ok",
+    "29": "ok",
+    "30": "ok"
+  },
+  "qc_fwhm": {
+    "28": 5.152748288267686,
+    "29": 5.146226485794146,
+    "30": 5.149044831578854
+  },
+  "qc_elong": {
+    "28": 1.0719698448644728,
+    "29": 1.050784295269814,
+    "30": 1.058777546692079
+  },
+  "qc_flat": {
+    "28": 30.76562824541746,
+    "29": 47.78870434222875,
+    "30": 31.15286827023124
+  }
+}
