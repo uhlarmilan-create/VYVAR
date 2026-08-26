@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C6-3 STOP (era04 not locked)
+
+R1'' informational (declared 3-tuple shim) then KeyError skip.
+C6-1 era04 core 961d590f n=169; C6-2 `--full` twice PASS. C6-3 STOP:
+55 UNNAMED; BO/FW/GH mag_calib not 0 or AC constant. era03 untouched.
+No PUSH_AUTH SHA. Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C6-0 resume STOP (A-only; 4-tuple vs 3-tuple)
 
 Six A files from c592ecf..0684ba9 copied. Import OK. Chain FAIL:

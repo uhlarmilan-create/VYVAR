@@ -1,0 +1,11 @@
+{
+  "label": "R1pp pre-B1 control, reconstructed with declared shim",
+  "informational": true,
+  "worktree": ".worktrees/c6_r1p_c592ecf",
+  "file": "src_py/dao_gaia_stage_01_iter4.py",
+  "bytes_after_shim": 24590,
+  "diff": {
+    "old": "        det_to_g, gaia_owner_p1, _, _ = lock_existing_and_leftover_assign(\n            dx, dy, gaia_g18, locked_pairs=None, leftover_radius_px=match_radius_px\n        )",
+    "new": "        res = lock_existing_and_leftover_assign(\n            dx, dy, gaia_g18, locked_pairs=None, leftover_radius_px=match_radius_px\n        )\n        det_to_g, gaia_owner_p1, _ = res[:3]"
+  }
+}

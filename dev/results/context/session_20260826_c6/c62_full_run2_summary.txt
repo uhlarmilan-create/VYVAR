@@ -1,0 +1,35 @@
+SESSION BASELINE CHECK (full)
+------------------------------------------------------------------------
+Check                        Status Detail
+------------------------------------------------------------------------
+git-branch                   PASS   main
+git-head                     PASS   d75440f
+git-staged                   PASS   none
+git-untracked-known          WARN   15 known untracked
+git-untracked                WARN   dev/results/CURSOR_TASK_DAO_COMPLETENESS_01.md; dev/results/CURSOR_TASK_DAO_GAIA
+git-origin-main              WARN   differs from origin/main (7c086e8); consider git pull
+config-paths                 PASS   all present
+pytest                       PASS   1575 passed, 32 skipped
+manifest-db-parity           PASS   draft_id=516
+db-quick-check               WARN   WAIVED (Milan 2026-08-22 files-only direction; MASTER_SO...): *** in database ma
+ledger                       PASS   v1 16 items
+ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430, VL-PFS-8F107CF
+deps-outdated                WARN   numpy 2.4.4->2.5.2 (+98 other) - gated upgrade, see docs/DEPS_POLICY.md
+full-provenance              PASS   anchor git_hash=d75440fac0d9...
+full-plan-regen              PASS   {"variable_targets_rows": 873, "gaia_match_source_histogram": {"gaia_dr3_direct"
+full-pipeline                PASS   1355s -> tmp\session_baseline\20260826T134307Z
+full-psf-lc                  PASS   wrote 56 in 21s
+full-catalog-provenance      PASS   gaia rows=211712600 g<=17.5 vsx rows=7827904
+full-science-compare         PASS   n_lc=56 failures=0
+full-provenance-hash         PASS   9b240d2782b414ce... (informational; git-bound, not cross-commit gate)
+full-snapshot-sha-core       PASS   961d590fd957a39a... n=169
+full-photometry-sha-core     PASS   961d590fd957a39a... n=169
+full-photometry-sha-extended PASS   59206a24319a796f... n=222
+full-counters-runtime        PASS   {}
+full-counters-meta           PASS   {}
+full-phase0-input-vt         PASS   {"variable_targets_rows": 873, "gaia_match_source_histogram": {"gaia_dr3_direct"
+full-phase0-funnel           PASS   {"active_targets_rows": 253, "skip_photometry_true": 197, "zone_flag_histogram":
+------------------------------------------------------------------------
+OVERALL: PASS
+
+

@@ -6,6 +6,19 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## C6-3 STOP - era04 not locked (2026-08-26)
+
+C6-2 `--full` twice OVERALL PASS on
+`draft_000516_snapshot_era04_20260826` (core **961d590f** n=169, ext
+**59206a24** n=222). C6-3 vs era03: 60/60 LC targets changed; 55
+UNNAMED. Same-ensemble per-epoch `mag_calib` is not 0 and not the
+~2.4 mmag AC overlay constant (BO CVn 4=4 comps, +2.8 mmag median,
+std 1.6 mmag, `mag_calib_final` +59 mmag). Named only FRAME-29,
+D3-D5, C3-K5, NAME-FIX. No new tag invented. Anchor remains era03:
+core **9902d918** n=121, ext **472bc9e4** n=179. R1'' is
+informational only (shim recorded; chain skipped on KeyError
+`frame`). Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## C6-0 R1' STOP - era04 not locked (2026-08-26)
 
 Resume (A-only `git diff --name-status c592ecf 0684ba9`): six files

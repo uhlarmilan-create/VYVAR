@@ -95,8 +95,8 @@ def main() -> int:
     _head_src = str((ROOT / "src_py").resolve())
     sys.path[:] = [p for p in sys.path if str(Path(p).resolve()) != _head_src]
     sys.path.insert(0, str(src_py.resolve()))
-    work_root = SESSION / "t3_r1p"
-    label = "c592ecf+A(0684ba9)"
+    work_root = SESSION / "t3_r1pp"
+    label = "c592ecf+A+shim3"
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     from config import AppConfig
@@ -125,7 +125,7 @@ def main() -> int:
     rec["n_lights"] = len(list(lights_dst.glob("*.fit*")))
     rec["cal_copied"] = True
 
-    infodir = SESSION / "t3_r1p_infolog"
+    infodir = SESSION / "t3_r1pp_infolog"
     infodir.mkdir(parents=True, exist_ok=True)
     start_infolog_session(infodir)
     t_ms0 = time.perf_counter()
@@ -152,9 +152,9 @@ def main() -> int:
         rec["ms_out"] = generate_masterstar_and_catalog(**ms_kw)
     except Exception as exc:
         rec["err"] = f"MS {type(exc).__name__}: {exc}"
-        logging.exception("C6-0 R1p MASTERSTAR failed")
+        logging.exception("C6-0 R1pp MASTERSTAR failed")
         end_infolog_session()
-        (SESSION / "t3_r1p.json").write_text(json.dumps(rec, indent=2, default=str), encoding="ascii")
+        (SESSION / "t3_r1pp.json").write_text(json.dumps(rec, indent=2, default=str), encoding="ascii")
         return 1
     rec["ms_s"] = round(time.perf_counter() - t_ms0, 1)
 
@@ -181,7 +181,7 @@ def main() -> int:
         )
     except Exception as exc:
         rec["err"] = f"PHOT {type(exc).__name__}: {exc}"
-        logging.exception("C6-0 R1p photometry failed")
+        logging.exception("C6-0 R1pp photometry failed")
     rec["phot_s"] = round(time.perf_counter() - t_ph0, 1)
     end_infolog_session()
     try:
@@ -198,9 +198,9 @@ def main() -> int:
     rec["live_unchanged"] = rec["live_after"] == live_before
     rec["live_sha_guard"] = rec["live_after"] == LIVE_SHA
     rec["elapsed_s"] = round(rec.get("copy_s", 0) + rec.get("ms_s", 0) + rec.get("phot_s", 0), 1)
-    (SESSION / "t3_r1p.json").write_text(json.dumps(rec, indent=2, default=str), encoding="ascii")
+    (SESSION / "t3_r1pp.json").write_text(json.dumps(rec, indent=2, default=str), encoding="ascii")
     print(
-        "C6-0 R1p",
+        "C6-0 R1pp",
         "err",
         rec.get("err"),
         "copy_s",

@@ -10,19 +10,20 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-0 resume STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT C6-3 STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. C6-0 A-only (6 files) imports. Chain FAIL: iter4 4-tuple vs
-c592ecf `lock_existing` 3-tuple. M not copied. era04 not locked.
+ref. C6-2 PASS on era04 products (961d590f / 59206a24); C6-3 STOP
+(55 UNNAMED vs era03; same-ensemble mag_calib not 0 or AC constant).
+era03 remains the `--full` gate. SEL-GHOST-01 not closed.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: C6-0 resume GO (copy M `masterstar_gaia_accounting.py`, or skip R1' table) then C6-1 full-chain era04 |
+| **1** | Milan: name a closed-list cause for the same-ensemble mag_calib motion, or hold the recut. era04 tree is kept, not locked. |
 | **2** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **3** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
-| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) |
+| **4** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
 | **5** | **EXPORT-PARITY-01** (HIGH) |
 
 | Pri | Carry list |
@@ -35,6 +36,11 @@ c592ecf `lock_existing` 3-tuple. M not copied. era04 not locked.
 | **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C6-0 resume STOP; era04 not locked)
+
+C6-0 A-only (6 files) imports. Chain FAIL: iter4 4-tuple vs
+c592ecf `lock_existing` 3-tuple. M not copied. era04 not locked.
 
 ## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C8+C4 STOP; C6 waits GO)
 

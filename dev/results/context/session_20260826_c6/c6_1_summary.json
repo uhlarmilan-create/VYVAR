@@ -1,0 +1,49 @@
+{
+  "git_sha": "d75440fac0d9603d880f480663ce5c378a3f1b3c",
+  "era04": "Archive/Drafts/draft_000516_snapshot_era04_20260826",
+  "masterstar_top1": "BO_CVn_Light_109.fits",
+  "n_frames_photometry": 134,
+  "qc_allowlist": "live rejected_prefilter_fwhm 16 basenames stamped onto era04 qc_metrics (draft_id=None; live DB not mutated). See c6_1_qc_allowlist.json.",
+  "sha_core": "961d590fd957a39ab4837ba82a2160a036d231dc5a288eefaf37bd3b2ac3cd32",
+  "n_core": 169,
+  "sha_ext": "59206a24319a796f5501de2eda14d8977981bf18046f53e821cd364fe296a5f1",
+  "n_ext": 222,
+  "n_lightcurves_aperture": 56,
+  "n_psf_lc": 56,
+  "timings_s": {
+    "photometry_phot_only": 1446.2,
+    "psf_lc": 19.8,
+    "platesolve_ms_from_ps": 1979.8,
+    "photometry_first_attempt_inv_cal": 2261.9
+  },
+  "identity_gate_csv": {"n": 3600, "ok": 2623, "warn": 7, "fail": 0, "pass": 0},
+  "identity_gate_ms_pipeline_meta": {
+    "passes": 2,
+    "ok": 5238,
+    "warn": 14,
+    "fail": 0,
+    "n_matched_out": 2626,
+    "n_lock_geometry_reject": 0,
+    "note": "Read from photometry/pipeline_meta.json after MASTERSTAR build, before phot-only overwrite."
+  },
+  "optimizer_refit_ms": {
+    "rejected": false,
+    "reason": "ok",
+    "rms_sip": 0.9117730473512798,
+    "n": 2630,
+    "p95_entry": 1.3065899814346102,
+    "p95_candidate": 1.2276807477519969
+  },
+  "comp_drops_d3_global_pool": {
+    "n_in": 2927,
+    "n_out": 1067,
+    "state": 766,
+    "gate": 0,
+    "resid": 0,
+    "snr_ap_pixscaled": 1094
+  },
+  "zone_saturated_n": 24,
+  "suspected_variables_n": 163,
+  "live_unchanged": true,
+  "era03_still_present": true
+}

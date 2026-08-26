@@ -1,0 +1,33 @@
+{
+  "stop": true,
+  "stop_unnamed": true,
+  "stop_sanity": true,
+  "n_changed": 60,
+  "n_unchanged_all_files": 0,
+  "tag_counts": {
+    "UNNAMED": 55,
+    "D3-D5": 2,
+    "C3-K5": 1,
+    "NAME-FIX": 1,
+    "FRAME-29": 1
+  },
+  "named_ok": ["FRAME-29", "D3-D5", "C3-K5", "NAME-FIX"],
+  "missing_closed_tags": ["DEPTH", "D1-AC", "ZONE", "ZP-OK"],
+  "DEPTH_VSX_1500387696044768384": "absent from both era03 and era04 LC sets (already no_data on freeze)",
+  "BO_CVn_file_join": {
+    "target": "1498613634033133184",
+    "n_frames_both": 134,
+    "source_files_identical": true,
+    "n_comps_both": 4,
+    "ids_swapped": "",
+    "mag_calib_median_mmag": 2.787,
+    "mag_calib_std_mmag": 1.555,
+    "mag_calib_min_mmag": -2.822,
+    "mag_calib_max_mmag": 6.887,
+    "mag_calib_final_median_mmag": 59.389,
+    "ac_correction_delta_mmag": 0.0,
+    "note": "Same ensemble, same 134 source files. mag_calib is not 0 and not an AC overlay constant (2.4+/-0.6). mag_calib_final shifted ~59 mmag. No closed-list tag applies. C6-3 STOP, no era04 lock."
+  },
+  "FW_CVn": "1497343732462852864 same 8 comps; median_dmag 10.836 mmag UNNAMED",
+  "GH_CVn": "1498804639818507904 same 8 comps; median_dmag 6.814 mmag UNNAMED"
+}

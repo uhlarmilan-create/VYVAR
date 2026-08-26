@@ -129,8 +129,12 @@ def _lc_map(root: Path, setup: str) -> dict[str, Path]:
     if not lc_dir.is_dir():
         return out
     for p in lc_dir.glob("lightcurve_*.csv"):
-        tid = p.stem.replace("lightcurve_", "").split("_")[0]
-        out[tid] = p
+        stem = p.stem
+        if stem.endswith("_psf") or stem.endswith("_adaptive"):
+            continue
+        tid = stem.replace("lightcurve_", "", 1)
+        if tid:
+            out[tid] = p
     return out
 
 

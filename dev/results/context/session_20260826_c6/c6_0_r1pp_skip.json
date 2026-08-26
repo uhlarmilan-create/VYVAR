@@ -1,0 +1,10 @@
+{
+  "informational": true,
+  "label": "pre-B1 control, reconstructed with declared shim",
+  "skipped": true,
+  "shim_ok": true,
+  "err": "KeyError: 'frame' in dao_gaia_stage_01.g2_empty_false_accept during STAGE-01 validation gate (empty_df has no 'frame' column; worktree lacks empty_positions_main.csv layout).",
+  "traceback_site": "dao_gaia_stage_01.py:404 g2_empty_false_accept",
+  "elapsed_s": 49.9,
+  "table": false
+}

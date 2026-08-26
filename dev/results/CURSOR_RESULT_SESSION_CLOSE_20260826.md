@@ -1,15 +1,18 @@
 CURSOR RESULT - SESSION CLOSE 2026-08-26
 
-Architect handoff file. C6-0 resume STOP blocked era04 lock.
+Architect handoff file. C6-3 STOP blocked era04 lock (C6-2 PASS).
 No SHA for main fast-forward in this file.
 
 Date: 2026-08-26. Branch: sel-ghost-01. origin/main stays 7c086e8.
 era03 freeze: ad19e14; core 9902d918 n=121; ext 472bc9e4 n=179.
-era04: NOT LOCKED. era03 not overwritten.
+era04 products: 961d590f n=169 / 59206a24 n=222; NOT LOCKED.
+era03 not overwritten. Live 516 SHA unchanged.
 
-C6-0 resume: A-only 6 files from c592ecf..0684ba9. Import OK. Chain
-FAIL ValueError unpack 4 vs 3 on lock_existing_and_leftover_assign
-(c592ecf accounting is 3-tuple; 0684ba9 M not copied).
+C6-0 R1'' informational (declared 3-tuple shim) then KeyError skip.
+C6-1 full chain into draft_000516_snapshot_era04_20260826 (134 frames).
+C6-2 `--full` twice OVERALL PASS same SHAs. C6-3: 55 UNNAMED;
+same-ensemble mag_calib not 0 or AC constant (BO +2.8 mmag std 1.6;
+final +59 mmag).
 
 ## Commits b1f5b8c..tip grouped by task
 
@@ -76,10 +79,15 @@ FAIL ValueError unpack 4 vs 3 on lock_existing_and_leftover_assign
 - aa90d7f C4: record --fast --clean PASS and W3b live BO PSF SHA
 
 ### era04
-- not locked (C6-0 STOP)
+- not locked (C6-3 STOP; C6-2 PASS on 961d590f / 59206a24)
+- C6-0 STOP commits: 0b2f0c8 (missing dao_gaia_stage_01),
+  d75440f (A-only 4-tuple vs 3-tuple)
+- this STOP commit: docs + C6 context + _lc_map skip _psf
 
-## era04 SHAs
-None. Do not write PUSH_AUTH for a recut that did not happen.
+## era04 SHAs (products only; not the `--full` gate)
+core 961d590fd957a39ab4837ba82a2160a036d231dc5a288eefaf37bd3b2ac3cd32 n=169
+ext  59206a24319a796f5501de2eda14d8977981bf18046f53e821cd364fe296a5f1 n=222
+Do not write PUSH_AUTH. Gate remains era03 9902d918 / 472bc9e4.
 
 ## Open ROADMAP ids
 - EPSF-SHAPE-01 HIGH (narrow ePSF core; routed to EPSF-CORE-01)
@@ -93,7 +101,8 @@ None. Do not write PUSH_AUTH for a recut that did not happen.
 - DAO-TOL-FLOOR-01 (carry; see ROADMAP body)
 - COMP-RMS-DEF-01 CLOSED (k=5 rule)
 - ZONE-SAT-01 CLOSED
-C6 full-chain era04 remains the next GO after this STOP is resolved.
+C6 full-chain era04 remains blocked until Milan names the
+same-ensemble mag_calib motion or holds the recut.
 
 ## Push-incident note
 2026-08-25 `git push origin HEAD` advanced origin/main from b1f5b8c
@@ -108,10 +117,10 @@ PUSH_AUTH after era04 is locked (not this STOP).
 - sqlite threading flake on malformed-DB WARN (C4 --fast: 13/13 in isolation)
 - 520 selection wiring lives on the branch; 520 has no era snapshot
 - Newton 518 unchanged (gated pool 26; ZP-OK does not apply)
-- C6-0 R1' blocked: A-only imports; chain FAIL 4-tuple vs 3-tuple lock_existing
+- C6-0 R1'' skipped (KeyError frame); C6-3 STOP unnamed mag_calib
 - T3 R1 remains contaminated; C6-0-P1 untested
-- `--full` on frozen era03 MS still raises until a full-chain recut
-  (D3/C3 columns absent on freeze)
+- `--full` on frozen era03 MS still raises until a locked recut
+  (D3/C3 columns absent on freeze). era04 `--full` PASS is not the gate.
 
 ## SHA for PUSH_AUTH_main_<date>.txt
 Do not write one. era04 is not locked. After a future C6 recut that
