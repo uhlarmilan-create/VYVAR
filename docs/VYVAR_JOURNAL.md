@@ -2,6 +2,12 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT APERTURE-01b STOP (no f*; era04 not locked)
+
+Accuracy grid: no f with dEE<0.01 AND COG-flat AND AIJ<=3.3.
+dEE<0.01 only at f=2.5; AIJ best 10.45 mmag; GH COG not flat.
+Rule not relaxed. Evidence: `CURSOR_RESULT_APERTURE_01B.md`.
+
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01 STOP (era04 not locked)
 
 Option (i) wired (one r/frame = f x QC FWHM). Ladder f=0.385228

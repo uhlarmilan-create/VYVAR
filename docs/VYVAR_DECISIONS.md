@@ -6,6 +6,30 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## APERTURE-01b STOP - no f* on the accuracy grid (2026-08-26)
+
+f is not taken from the scatter ladder. Pre-registered rule:
+f* = smallest f in {0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5}
+with ALL of: dEE(f)=|EE_Q1-EE_Q4|<0.01; |level(f)-level(2.5)|<3 mmag
+for BO, FW, and GH; AIJ RMS(diff)<=3.3 mmag on BO. Among survivors,
+lowest joint demeaned RMS. Mode (a), 516, night QC FWHM 5.191733 px.
+This table is the methods-paper figure for f. Rule not relaxed.
+
+f     EE_Q1   EE_Q4   dEE     dBO    dFW    dGH    AIJ    RMS
+0.75  0.828   0.750   0.078   -57.1  -8.8   -544   10.45  93.2
+1.00  0.900   0.844   0.056   -35.0  -11.4  -475   12.56  95.7
+1.25  0.943   0.902   0.040   -19.4  -8.6   -443   14.16  100.6
+1.35  0.955   0.919   0.036   -16.2  -7.1   -422   14.04  103.5
+1.50  0.968   0.940   0.028   -15.7  -5.1   -377   11.05  108.5
+1.75  0.983   0.965   0.019   -8.9   +0.5   -342   12.76  119.9
+2.00  0.992   0.980   0.012   -9.2   +0.6   -227   12.66  136.7
+2.50  0.999   0.995   0.004    0.0    0.0    0.0   15.36  208.9
+
+d* = mag_calib level vs f=2.5 (mmag). AIJ = RMS(diff) mmag.
+Architect expected f* in 1.25-1.5; none of those rows pass.
+f* = NONE. config f stays 0.385228. Evidence:
+`CURSOR_RESULT_APERTURE_01B.md`.
+
 ## APERTURE-01 STOP - era04 not locked (2026-08-26)
 
 Milan GO option (i) wired: one radius per frame for every star

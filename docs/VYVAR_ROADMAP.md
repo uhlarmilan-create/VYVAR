@@ -10,19 +10,20 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01 STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01b STOP; no f*)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
-ref. APERTURE-01 is wired (option i) but P-A1/P-A3 FAIL at
-ladder f=0.385228 (r=2.0 px vs era03 mixed 6 px, COG off).
-PUSH_AUTH SHA `a23ee3d` on origin/sel-ghost-01.
-era03 remains the `--full` gate. SEL-GHOST-01 not closed.
+ref. APERTURE-01b accuracy grid: no f satisfies dEE<0.01 AND
+COG-flat AND AIJ<=3.3 mmag. Architect expected 1.25-1.5; measured
+dEE there 0.040-0.028, AIJ 11-14 mmag, GH COG not flat.
+config f stays 0.385228. era03 remains the `--full` gate.
+SEL-GHOST-01 not closed.
 
 | Step | Action |
 |------|--------|
-| **1** | Milan: keep ladder f=0.385 (accept P-A1 fail) or pick a larger f / enable COG (option ii) before lock. Do not retune from the P-A numbers in-session. |
-| **2** | EDGE-ANNULUS-01 (record only today): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
+| **1** | Milan: relax B3 (which gate), pick a listed f anyway, enable COG (option ii), or keep scatter f=0.385. Do not retune in-session. |
+| **2** | EDGE-ANNULUS-01 (record only): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
 | **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
 | **5** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- hold until a locked ledger exists |
@@ -38,6 +39,11 @@ era03 remains the `--full` gate. SEL-GHOST-01 not closed.
 | **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT APERTURE-01 STOP; era04 not locked)
+
+APERTURE-01 wired (option i) but P-A1/P-A3 FAIL at ladder
+f=0.385228. PUSH_AUTH SHA `a23ee3d` on origin/sel-ghost-01.
 
 ## NEXT SESSION - prior (2026-08-26 CLOSE-OUT C6-3d STOP; era04 not locked)
 

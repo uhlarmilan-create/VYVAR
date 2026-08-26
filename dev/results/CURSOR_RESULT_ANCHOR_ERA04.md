@@ -607,6 +607,10 @@ PUSH_AUTH SHA `a23ee3dee487720cf2916db9d1590fcc2cf21134`
 `git push origin main:sel-ghost-01`). origin/main stays
 `7c086e8`. Archive era04 recut is on disk, not locked.
 
+## APERTURE-01b STOP (no f*; 2026-08-26)
+See `CURSOR_RESULT_APERTURE_01B.md`. Accuracy grid produced
+zero survivors. Lock still skipped. config f stays 0.385228.
+
 ## Errors
 APERTURE-01 first phot-only recut: NameError _ap_pol (Phase 2A
 state field). Second: used leftover SNR-table dao_flux (no

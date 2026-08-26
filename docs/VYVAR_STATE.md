@@ -1,6 +1,12 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01 STOP.** era04 not locked.
+**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01b STOP.** No f* on the
+accuracy grid. dEE<0.01 only at f=2.5; AIJ RMS never <=3.3 mmag
+(best 10.45 at f=0.75); GH COG never flat. Rule not relaxed.
+era04 not locked. config f stays 0.385228. era03 freeze remains
+the gate: core **9902d918** n=121, ext **472bc9e4** n=179.
+origin/main stays `7c086e8`.
+**CLOSE-OUT 2026-08-26 APERTURE-01 STOP.** era04 not locked.
 Option (i) wired: one r/frame = f x QC fwhm_px (FWHM-AUTH-01).
 f=0.385228 from the 516 scatter ladder (no retune). Mode (a)
 f_fixed_night is the recorded default. P-A1 FAIL (BO +65.6 /
@@ -86,7 +92,15 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-26 -- CLOSE-OUT APERTURE-01b STOP (no f*; era04 not locked)
+
+Accuracy grid (mode a, night QC FWHM 5.191733 px). dEE<0.01 only
+at f=2.5 (0.0037); at 1.25-1.5 dEE is 0.040-0.028. AIJ RMS never
+<=3.3 mmag (best 10.45 at f=0.75; 14.04 at f=1.35). GH |dlevel vs
+f=2.5| is 227-544 mmag. f*=NONE; rule not relaxed. config f stays
+0.385228. Evidence: `CURSOR_RESULT_APERTURE_01B.md`.
 
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01 STOP (era04 not locked)
 

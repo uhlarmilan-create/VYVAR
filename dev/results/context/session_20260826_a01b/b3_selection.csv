@@ -1,0 +1,9 @@
+f,dee,dee_ok,level_vs_f25_mmag,level_ok,aij_rms_diff_mmag,aij_ok,joint_mean_rms_mmag,all_three
+0.75,0.077636,False,"{'BO': -57.097, 'FW': -8.799, 'GH': -544.0}",False,10.4526,False,93.1758,False
+1.0,0.055705,False,"{'BO': -35.007, 'FW': -11.378, 'GH': -475.172}",False,12.5561,False,95.6679,False
+1.25,0.040415,False,"{'BO': -19.427, 'FW': -8.587, 'GH': -443.343}",False,14.1619,False,100.6431,False
+1.35,0.035666,False,"{'BO': -16.167, 'FW': -7.114, 'GH': -421.501}",False,14.0376,False,103.5388,False
+1.5,0.028424,False,"{'BO': -15.679, 'FW': -5.131, 'GH': -377.375}",False,11.0509,False,108.5317,False
+1.75,0.018604,False,"{'BO': -8.935, 'FW': 0.523, 'GH': -341.839}",False,12.7613,False,119.8592,False
+2.0,0.011776,False,"{'BO': -9.236, 'FW': 0.566, 'GH': -227.032}",False,12.6612,False,136.741,False
+2.5,0.003722,True,"{'BO': 0.0, 'FW': 0.0, 'GH': 0.0}",True,15.3562,False,208.8781,False
