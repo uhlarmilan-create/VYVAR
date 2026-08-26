@@ -8,8 +8,9 @@ telescope_id=1 -> identity `1:1`). Production default
 W2 regenerated 60 internal PSF LCs on live 516. Hash guards held.
 Pushed to `sel-ghost-01` by name. C6 not run.
 
-HEAD after W4 is recorded in Files changed. Live ePSF SHA
-`172f95403beae36d...` unchanged.
+HEAD after W4 `6924998`. Live ePSF SHA
+`172f95403beae36d...` unchanged. `--fast --clean` OVERALL PASS twice
+(1575 passed, 32 skipped). W3b live BO PSF SHA identical to W2.
 
 ## Premise (Rule 0.1)
 
@@ -76,13 +77,17 @@ is config-selected and rig-scoped.
 
 ## Gates
 
-| Gate | Status |
-|------|--------|
-| `--fast --clean` | recorded after this STOP |
-| 516 aperture/AAVSO/VarAstro byte-identical | PASS (W2) |
-| ePSF SHA unchanged | PASS |
-| INV-PSF-SUBMIT-01 | PASS (unit tests) |
-| W2 BO/FW meters | PASS |
+| Gate | Status | Detail |
+|------|--------|--------|
+| `--fast --clean` (1) | FAIL flake | `test_database_sqlite_threading` during malformed-DB WARN; 1574 passed. Same test 13/13 in isolation. Not a C4 regression. |
+| `--fast --clean` (2) | PASS | 1575 passed, 32 skipped at `6924998` |
+| `--fast --clean` (3) | PASS | 1575 passed, 32 skipped at `6924998` |
+| W3b live BO PSF SHA | PASS | `77adbc039dd6f247...` identical to W2a on all three runs |
+| 516 aperture/AAVSO/VarAstro | PASS | W2 127-file hash guard, 0 changed |
+| ePSF SHA | PASS | `172f95403beae36d...` |
+| INV-PSF-SUBMIT-01 | PASS | unit tests |
+
+HEAD `6924998`. Push: `git push origin HEAD:sel-ghost-01`.
 
 ## C6
 
