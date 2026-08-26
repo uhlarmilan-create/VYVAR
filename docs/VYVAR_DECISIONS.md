@@ -6,6 +6,19 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## C6-3d [APERTURE-RADIUS] STOP - era04 not locked (2026-08-26)
+
+SNR-optimal per-star radii without COG produced the era03->era04
+mag_calib 2.8/10.8/6.8 mmag (P3 restores era03 radii -> 0.0 mmag).
+Governing mover: measured growth curve in aperture_snr_table.json
+(ee_r90 6.0->5.5), not FWHM-AUTH-01, not ZP. D5-1 CONFIRMED:
+Howell 1989 pairs optimum apertures with growth curves; Collins
+2017 uses one r per frame for all stars. Fix is Milan GO (i)
+common f x FWHM or (ii) COG on; lock after that recut. [EDGE]:
+named variables with annulus off-chip are out_of_frame when
+safe_bbox_px is set (era03 had null). Evidence:
+`CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## C6-3c STOP - era04 not locked (2026-08-26)
 
 [WCS-APERTURE] refused: per-frame aperture centres are MASTERSTAR

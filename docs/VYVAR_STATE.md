@@ -1,14 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 C6-3c STOP.** era04 products exist
-under `draft_000516_snapshot_era04_20260826` (phot-only core
-**233fce2e** n=169 after [CT-REF] `cfffa82`) but are **not locked**:
-[WCS-APERTURE] refused (centres identical); [CT-REF] assigned (BO
-`mag_calib_final` +2.787 mmag = `mag_calib`); [EDGE] assigned (4
-era03-only, `out_of_frame`). Same-ensemble `mag_calib` 2.8/10.8/6.8
-mmag remains UNNAMED (aperture_r 5.999->5.499 on BO, not WCS). era03
-freeze remains the gate: core **9902d918** n=121, ext **472bc9e4**
-n=179. origin/main stays `7c086e8`. No PUSH_AUTH SHA.
+**Status:** **CLOSE-OUT 2026-08-26 C6-3d STOP.** era04 not locked.
+[APERTURE-RADIUS] named: SNR-table mag 9.5 5.999->5.499 from the
+measured growth curve (ee_r90 6.0->5.5), not FWHM-AUTH, not ZP.
+P3 collapses BO/FW/GH mag_calib to 0.0 mmag. P1/P2 FAIL as written.
+D5-1 CONFIRMED (Howell 1989 requires COG with optimum apertures).
+Milan chooses (i) one r/frame or (ii) keep per-star r + COG; recut
+after that. [EDGE] rule: safe_bbox_px null->chip-minus-r_out.
+era03 freeze remains the gate: core **9902d918** n=121, ext
+**472bc9e4** n=179. origin/main stays `7c086e8`. No PUSH_AUTH SHA.
 **CLOSE-OUT 2026-08-26 C6-0 resume STOP.** A-only copy from
 `c592ecf..0684ba9` (6 files) imports. Chain FAIL: iter4 unpacks
 4-tuple `lock_existing`; c592ecf accounting returns 3. M file not
@@ -76,7 +76,15 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT C6-3c STOP, era04 not locked; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-26** (CLOSE-OUT C6-3d STOP, era04 not locked; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-26 -- CLOSE-OUT C6-3d STOP (era04 not locked)
+
+[APERTURE-RADIUS] named from aperture_snr_table.json (EE curve
+primary; sky/bkg secondary). P3 BO/FW/GH 0.0 mmag. P1/P2 FAIL.
+D5-1 CONFIRMED. [EDGE] = safe_bbox_px null vs chip-minus-r_out.
+Fix (i) or (ii) not wired; lock after that recut. Evidence:
+`CURSOR_RESULT_ANCHOR_ERA04.md`.
 
 ## 2026-08-26 -- CLOSE-OUT C6-3c STOP (era04 not locked)
 

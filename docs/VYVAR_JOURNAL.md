@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-26 -- CLOSE-OUT C6-3d STOP (era04 not locked)
+
+[APERTURE-RADIUS] named (SNR-table EE curve; P3 0.0 mmag).
+P1/P2 FAIL as written. D5-1 CONFIRMED (Howell 1989 wants COG
+with optimum r). [EDGE] rule: safe_bbox_px. Fix (i)/(ii) not
+wired. Evidence: `CURSOR_RESULT_ANCHOR_ERA04.md`.
+
 ## 2026-08-26 -- CLOSE-OUT C6-3c STOP (era04 not locked)
 
 X1 WCS-APERTURE refused (centres d=0; truth residuals equal).

@@ -1,12 +1,11 @@
-CURSOR RESULT - 2026-08-26T16:55:00Z
+CURSOR RESULT - 2026-08-26T17:10:00Z
 
 What I did
-C6 ANCHOR RE-CUT era04 (Milan GO 2026-08-26), C6-0 final through
-C6-3c. C6-3c measured X1/X3, committed X2 [CT-REF] (cfffa82),
-photometry-only rerun on era04. Ledger v2. era04 is NOT locked
-(mag_calib residuals remain UNNAMED; X1d is not a regression).
+C6 ANCHOR RE-CUT era04 through C6-3d. Named [APERTURE-RADIUS]
+from SNR-table artifacts (not inferred). P1 FAIL / P2 FAIL /
+P3 PASS on BO/FW/GH (delta 0.0 mmag). Literature CONFIRMS
+D5-1. Fix direction for Milan GO, not wired. era04 NOT locked.
 era03 untouched. origin/main stays 7c086e8. No PUSH_AUTH SHA.
-No config change. No C6-4 lock.
 
 ## Premise (Rule 0.1)
 Compared: (C6-0) isolated c592ecf + A files + one declared 3-tuple
@@ -339,10 +338,174 @@ C6-4 lock skipped. C6-2 twice and C6-5 inventory not run.
 
 CSV: c63c_era03_era04_ledger_v2.csv  JSON: c63c_x4.json
 
+## C6-3d [APERTURE-RADIUS]  STOP (named; not locked; not wired)
+
+Premise (Rule 0.1): era04 snapshot_20260826 photometry after
+CT-REF vs era03 freeze snapshot_20260820. Aligned pixels identical
+(C6-3b). Centres identical (C6-3c). Compared: aperture_snr_table.json
+both trees, proc aperture_r_px, qc_metrics fwhm_px (era04; era03
+file absent), photometry_plan.safe_bbox_px.
+
+### X6a Governing  elapsed_s 0.18
+
+BO mag=9.720 both eras, bin 9.5 both. Bin did not move. The table
+at 9.5 moved 5.999 -> 5.499. proc_r matches table. Same for the
+two bright BO comps (bins 10.0 and 9.5). Two faint BO comps
+(bins 11.0, 11.5) r unchanged 3.999 / 3.499.
+
+SNR-table inputs (artifacts, not inferred):
+
+  fwhm_px            5.19465 = 5.19465  (dao_moment_median;
+                     fwhm_px_scope=masterstar_header_vy_fwhm_dao_preferred)
+  vy_fwhm_gauss      3.3014 = 3.3014
+  gain / RN          0.7925 / 15.2 both
+  zero_point         25.0 = 25.0; zp_cal ok=false reason=no_proc_csv both
+  ee_path            measured_growth_curve both
+  bound_hit 9.5      none / none
+  sky_adu_per_px     1919.18 -> 2002.64
+  bkg_var_adu2       1872.76 -> 1969.59
+  ee_n_cog           59 -> 58
+  ee_r90_px          6.0 -> 5.5
+
+Ablation of table[9.5]:
+  e3 EE + e4 sky/bkg     5.999  (sky/bkg alone do not move the bin)
+  e4 EE + e3 sky/bkg     5.649  (EE curve is the primary mover)
+  e4 full                5.499  (sky+bkg supply the remaining 0.15 px)
+
+Named mover: measured growth curve (ee_r90 6.0->5.5, n_cog 59->58),
+with a secondary sky/bkg_var term. NOT FWHM-AUTH-01 (fwhm_px identical).
+NOT D1/D3-pool ZP (calibration failed both; ZP=25 both).
+
+FW target bin 9.0 r stays 6.999; several FW/GH comps sit in bins
+whose table r moved (8.5: 7.999->7.549; 9.5: 5.999->5.499). That
+is the FW/GH mag_calib path (target mag_inst unchanged).
+
+CSV: c63d_x6a_stars.csv  JSON: c63d_x6.json
+
+### X6b Pre-registered tests  (no tuning)
+
+P1 FAIL. Gaussian EE 2.5*log10(EE(6.0)/EE(5.5)) at qc_metrics
+fwhm_px p50=5.192 px = +22.35 mmag. Obs mag_inst +18.62 mmag.
+|pred-18.62|=3.73 > 3 mmag. Architect 21 mmag at FWHM 5.15 is
+the same Gaussian model; production used measured EE (era04
+interp EE(6)/EE(5.5) = +19.93 mmag, 1.31 from obs). Verdict:
+Gaussian overpredicts; test as written FAIL.
+elapsed in P1+P2 <1 s. CSV: c63d_p1_per_epoch.csv
+
+P2 FAIL. Spearman dmag_calib vs qc fwhm_px:
+  BO  rho=+0.026 (p=0.76)
+  FW  rho=-0.277 (p=0.001)
+  GH  rho=-0.124 (p=0.16)
+All |rho|<0.5. Matches D5-1 Q1: radii are draft-constant, so the
+2.8/10.8/6.8 mmag is a night-level offset, not per-epoch seeing.
+
+P3 PASS on BO/FW/GH. Recompute era04 fluxes at era03 per-star
+radii (photutils circular + era04 annulus sky; n_meas=13149;
+33.4 s). Differential mag_calib vs era03:
+  BO  obs +2.787 -> p3 0.000 mmag
+  FW  obs -10.836 -> p3 0.000 mmag
+  GH  obs -6.814 -> p3 0.000 mmag
+34/40 of the v2 UNNAMED list collapse to ~0. Remaining 6: two
+are 2.8 mag / 0.46 mag (not a radius effect);
+1485534187306501376, 1485987151737107200; four have n=0
+(missing proc rows). Cause of the 2.8/10.8/6.8 mmag class is
+fully named [APERTURE-RADIUS].
+CSV: c63d_p3_recompute.csv
+
+### X6c Literature vs D5-1  CONFIRM
+
+Howell 1989 PASP 101, 616: SNR-optimal radius is a SINGLE-STAR
+S/N argument (CCD equation; max S/N near ~FWHM). The same paper
+introduces CCD growth curves "as a means of correcting the flux
+from faint or crowded sources, when measured with very small
+(optimum) apertures." Optimum r WITHOUT COG is not what Howell
+prescribed.
+
+Stetson 1990 PASP 102, 932 (DAOGROW): growth curves are how
+different apertures are put on one total-flux scale.
+
+Everett & Howell 2001 PASP 113, 1428: survey LCs; "the aperture
+size and corresponding light curve we choose to analyze depends
+on the brightness of the star of interest." That is per-target
+choice of which reduction to keep, not mixed radii inside one
+ensemble ZP without COG.
+
+Collins et al. 2017 AJ 153, 77 (AstroImageJ): one radius per
+frame for all apertures -- fixed, or (FWHM factor) x (average
+FWHM of all apertures in that image). Same r for target and
+comps. Variable-r warning: do not use in crowded fields.
+
+Naylor 1998 MNRAS 296, 339: optimal extraction is PSF-weighted,
+not per-magnitude circular apertures.
+
+Mighell 1999 (ASP CCD photometry): DAOPHOT-style growth curves
+when apertures vary.
+
+Zackay & Ofek 2017 ApJ: matched-filter / same PSF kernel across
+the field. Cross-check: SNR-optimal measurement is a common
+kernel, not a per-star radius table.
+
+None of these supports per-magnitude-bin radii with COG off in
+an ensemble. D5-1 (VYVAR_AUDIT_FINAL.md): radii track magnitude
+bins from a draft-constant FWHM table; they do not track
+per-frame seeing; COG default OFF. CONFIRM with the citations
+above. VYVAR implemented Howell's SNR table and left Howell's
+growth-curve correction off (`cog_aperture_correction_enabled=False`).
+
+### X6d Fix direction  (NOT wired; Milan GO)
+
+(i) One radius per frame for all stars = f x FWHM(frame), same f
+    for target and comps (Collins 2017 / one-r reading of
+    differential practice). f from the existing scatter ladder.
+    Predict: mag_calib LEVEL 2.8/10.8/6.8 -> 0 (P3). Demeaned RMS
+    almost unchanged (BO 145.7->146.0 mmag already; FW 13.78 vs
+    13.82; GH 107.97 vs 107.93) because the defect is a constant
+    offset (P2 |rho|<0.3). After (i) EE fraction is constant vs
+    seeing; predict |Spearman rho| remains <0.3.
+
+(ii) Keep per-star SNR radii and enable cog_aperture_correction
+    with a measured growth curve per frame (Stetson 1990; Howell
+    1989 as written). Predict: same level collapse if COG is
+    complete; RMS unchanged at the 0.2 mmag level; residual
+    seeing correlation only from COG-fit noise. Mixed-frame
+    all-or-nothing gate already exists (APCORR-MIXEDFRAME).
+
+Milan decides. era04 lock happens AFTER that change (one recut,
+not two). Do not wire in this task.
+
+### X6e [EDGE] rule
+
+Input that changed: photometry_plan.json safe_bbox_px
+  era03: null  (select_active_targets enlarges chip from max x,y)
+  era04: [46.75, 46.75, 2034.25, 1349.25]
+safe_bbox_r_out_px = 46.75 both. NAXIS 2082 x 1397 both.
+era04 bbox = full chip minus r_out (not a tighter alignment
+intersection; not MASTERSTAR WCS millipixels; not edge_margin=50).
+HEAD writes/requires safe_bbox (pipeline.py require_safe_bbox).
+era03 freeze plan left it null.
+
+FR CVn y=1393.7, x=2078.8: outside y and x.
+The other three: y=1376-1382 > 1349.25, x in-bounds.
+
+Rule: a named variable whose sky annulus cannot fit on-chip
+(y > NAXIS2 - r_out, or x similar) is out_of_frame when
+safe_bbox_px is set. That is a product rule, not only a tag.
+CSV: c63d_x6e_edge.csv
+
+### Ledger v3
+
+[APERTURE-RADIUS] assigned to BO/FW/GH and 34 mmag-class LCs
+(P3 collapse). [EDGE] 4. [CT-REF] mag_calib_final. 6 remain
+UNNAMED (two ~mag-class, four n=0). C6-4 lock still skipped:
+Milan has not chosen (i) vs (ii); recut waits that change.
+
+CSV: c63d_era03_era04_ledger_v3.csv
+elapsed_s total 33.6 (X6a 0.18, P3 33.4).
+
 ## C6-4 / C6-5
-Lock skipped (C6-3 / C6-3b / C6-3c STOP). SNAPSHOT_NAME remains
-era03 (9902d918 / 472bc9e4). INV-ANCHOR-00 pointer unchanged. No
-PUSH_AUTH SHA.
+Lock skipped (C6-3c STOP; C6-3d named APERTURE-RADIUS but fix
+not wired). SNAPSHOT_NAME remains era03 (9902d918 / 472bc9e4).
+INV-ANCHOR-00 pointer unchanged. No PUSH_AUTH SHA.
 
 ## Errors
 C6-0 R1'' skipped (KeyError frame). C6-3 STOP unnamed + sanity.
@@ -351,17 +514,15 @@ static filters omitted); governing 1860 split is the C6-1 log.
 C6-1 first photometry INV-CAL-01 (fixed by copying cal_diag).
 C6-3c phot-only: INV-DAG-01 phase2a seq backwards (max stamped
 seq=7). LCs+PSF written; stamp failed at end of finalize_exports.
+C6-3d P1 FAIL as written (Gaussian EE); P2 FAIL (D5-1 Q1).
 
 ## Files changed
 - src_py/photometry_core.py (ct_ensemble_reference_maps; cfffa82)
 - dev/tests/test_photometry_core.py (CT-REF test; cfffa82)
 - dev/results/CURSOR_RESULT_ANCHOR_ERA04.md
 - docs STATE / ROADMAP / JOURNAL / DECISIONS
-- C6-3c: c63c_measure.py, c63c_after_phot.py, c63c_x1_x3.json,
-  c63c_x1_xy_per_star.csv, c63c_x1_xy_per_frame.csv,
-  c63c_x1_dmag_vs_dxy.csv, c63c_x1_centroid_truth.csv,
-  c63c_x1_centroid_truth_per_star.csv, c63c_aperture_r.csv,
-  c63c_x3.json, c63c_x3_era03_only.csv, c63c_x2_rerun.json,
-  c63c_x2_ct_collapse.csv, c63c_era03_era04_ledger_v2.csv,
-  c63c_x4.json
+- C6-3c artifacts (prior)
+- C6-3d: c63d_measure.py, c63d_x6.json, c63d_x6a_stars.csv,
+  c63d_p1_per_epoch.csv, c63d_p3_recompute.csv, c63d_x6e_edge.csv,
+  c63d_era03_era04_ledger_v3.csv
 - Archive era04 snapshot photometry (not git-tracked)
