@@ -129,7 +129,8 @@ PUSH_AUTH after era04 is locked (not this STOP).
   (D3/C3 columns absent on freeze). era04 `--full` PASS is not the gate.
 
 ## SHA for PUSH_AUTH_main_<date>.txt
-Do not write one. era04 is not locked. After a future C6 recut that
-passes C6-2 and C6-3, the SHA is the sel-ghost-01 tip of that lock
-commit, not aa90d7f and not this STOP commit unless that commit is
-the lock.
+Do not write one. era04 is not locked. sel-ghost-01 STOP tip
+`57d9567daa0233162e499f8bf607ea05bfe67330` (`57d9567`) is the
+APERTURE-01c record, not a main fast-forward. After a future recut
+that names the 6 UNNAMED and passes C6-2, the SHA is that lock
+commit.
