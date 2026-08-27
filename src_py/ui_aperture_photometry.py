@@ -1104,7 +1104,6 @@ def render_aperture_photometry(
     draft_dir_override: Path | None = None,
 ) -> None:
     """Hlavna funkcia pre Aperture Photometry tab."""
-    _ = pipeline
     st.header("Aperture Photometry")
     st.caption("Phase 0+1 + Phase 2A as one integrated step.")
     st.session_state.setdefault("var_analysis_done", False)
@@ -1281,7 +1280,6 @@ def render_aperture_photometry(
         st.session_state["phase2a_running"] = False
 
     if run_btn:
-        from photometry_core import run_full_photometry_pipeline
         from vyvar_ui_status import vyvar_footer_idle, vyvar_footer_running
 
         try:
@@ -1302,53 +1300,39 @@ def render_aperture_photometry(
                 lines = [statuses.get(g, f"{g} ...") for g in run_groups]
                 lines_ph.markdown("\n".join(lines))
 
+            from night_run import run_ui_night_photometry
+
+            def _cb(msg: str) -> None:
+                vyvar_footer_running("Aperture Photometry", str(msg)[:800])
+
+            phot = run_ui_night_photometry(
+                cfg=cfg,
+                pipeline=pipeline,
+                draft_id=draft_id,
+                draft_dir_override=draft_dir,
+                progress_cb=_cb,
+                write_pdfs=False,
+                existing_draft=True,
+            )
+            _load_summary.clear()
+            logging.debug("[PERF-7] _load_summary cache cleared after pipeline run")
+            completed = set(str(x) for x in (phot.get("completed_setups") or []))
+            phot_err_list = list(phot.get("errors") or [])
+            if phot_err_list:
+                errors.extend(phot_err_list)
+
             for i, nm in enumerate(run_groups, start=1):
                 statuses[nm] = f"{nm} ###### ..."
                 _render_lines()
                 prog.progress(int(round(100 * (i - 1) / max(total, 1))), text=f"{nm}: starting...")
                 vyvar_footer_running("Aperture Photometry", f"{nm}: Phase 0+1 + 2A...")
-
-                p = all_setups.get(str(nm)) or {}
                 try:
-                    ms_fits = Path(p.get("masterstar_fits")) if p.get("masterstar_fits") else None
-                    og_dir = Path(p.get("obs_group_dir")) if p.get("obs_group_dir") else None
-                    ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
-                    vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
-                    pf_dir = Path(p.get("per_frame_csv_dir")) if p.get("per_frame_csv_dir") else None
-                    dt_dir = Path(p.get("detrended_aligned_dir")) if p.get("detrended_aligned_dir") else None
-                    out_d = Path(p.get("output_dir")) if p.get("output_dir") else None
+                    nm_errs = [e for e in phot_err_list if str(e).startswith(f"{nm}:")]
+                    if nm not in completed or nm_errs:
+                        raise RuntimeError(
+                            nm_errs[0] if nm_errs else (phot_err_list[0] if phot_err_list else "photometry failed")
+                        )
 
-                    missing: list[str] = []
-                    if ms_fits is None or not ms_fits.exists():
-                        missing.append("MASTERSTAR.fits")
-                    if ms_csv is None or not ms_csv.exists():
-                        missing.append("masterstars_full_match.csv")
-                    if vt_csv is None or not vt_csv.exists():
-                        missing.append("variable_targets.csv")
-                    if pf_dir is None or not pf_dir.exists():
-                        missing.append("per-frame CSV directory")
-                    if dt_dir is None or not dt_dir.exists():
-                        missing.append("detrended_aligned directory")
-                    if out_d is None:
-                        missing.append("output_dir")
-                    if missing:
-                        raise FileNotFoundError(", ".join(missing))
-
-                    def _cb(msg: str, nm=nm) -> None:
-                        vyvar_footer_running("Aperture Photometry", f"{nm}: {msg}")
-
-                    _ = run_full_photometry_pipeline(
-                        masterstar_fits_path=ms_fits,
-                        variable_targets_csv=vt_csv,
-                        masterstars_csv=ms_csv,
-                        per_frame_csv_dir=pf_dir,
-                        detrended_aligned_dir=dt_dir,
-                        output_dir=out_d,
-                        cfg=cfg,
-                        progress_cb=_cb,
-                    )
-                    _load_summary.clear()
-                    logging.debug("[PERF-7] _load_summary cache cleared after pipeline run")
                     n_ok += 1
                     statuses[nm] = f"{nm} ############ [OK]"
 
@@ -1382,7 +1366,8 @@ def render_aperture_photometry(
                         st.warning(f"PDF could not be generated: {_pdf_exc}")
                 except Exception as exc_nm:  # noqa: BLE001
                     statuses[nm] = f"{nm} ####### x"
-                    errors.append(f"{nm}: {exc_nm}")
+                    if not any(str(e).startswith(f"{nm}:") for e in errors):
+                        errors.append(f"{nm}: {exc_nm}")
                 _render_lines()
                 prog.progress(int(round(100 * i / max(total, 1))), text=f"{nm}: done")
 
