@@ -1,0 +1,12 @@
+{
+  "cfg_source": "live_no_snapshot",
+  "cfg_changed_keys": [],
+  "photometry_context": {
+    "plate_scale": 9.773972549787624,
+    "site": "draft:50.1121658:14.6982547:275.0",
+    "calibration_mode": "vyvar_calibrated"
+  },
+  "errors": [],
+  "n_lightcurves": 253,
+  "n_frames": 134
+}

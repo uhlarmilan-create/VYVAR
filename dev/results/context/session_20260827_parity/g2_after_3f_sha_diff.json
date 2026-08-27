@@ -1,0 +1,13 @@
+{
+  "work_root": "tmp/session_baseline/20260827T104844Z",
+  "snapshot": "draft_000516_snapshot_era04_20260826",
+  "n_core": 160,
+  "identical": 107,
+  "differ": 53,
+  "all_diff_are_psf_lc": true,
+  "aperture_lc_bytes_identical": 53,
+  "aperture_lc_bytes_differ": 0,
+  "run_core_prefix": "e31da59ecf2d1ac4",
+  "snap_core_prefix": "9367f99848c14b43",
+  "note": "SHA FAIL is PSF LC git_hash/git_dirty headers. Aperture product is byte-identical. Do not retune 9367f998."
+}
