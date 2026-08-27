@@ -39,12 +39,20 @@ class NightRunParams:
     telescope_id: int
     config_path: Path | None = None
     location_id: int | None = None
+    location_source_hint: str | None = None
     platesolve_equipment_id: int | None = None
     sysrem_enabled: bool | None = None
     sysrem_n_iter: int | None = None
     progress_cb: Callable[[str], None] | None = None
     dry_run: bool = False
     manual_flat_map: dict[str, str] | None = None
+    # UI session_state vyvar_flatfb_{group_key} -> source obs_key. Empty = bookkeeping only.
+    flat_fallback_choices: dict[str, str] | None = None
+    apply_smart_plan_flat_fallbacks: bool = False
+    masterdark_validity_days: int | None = None
+    masterflat_validity_days: int | None = None
+    # Resolved optics from W1; None = use equipment_id/telescope_id (current W2).
+    optics: Any | None = None
     roundness_reject_above: float = 1.25
     # Preprocess / platesolve (UI defaults from render_live_view)
     plate_fov_deg: float | None = None
@@ -541,8 +549,21 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         eq_id = int(params.equipment_id)
         tel_id = int(params.telescope_id)
+        if params.optics is not None:
+            eq_id = int(params.optics.equipment_id)
+            tel_id = int(params.optics.telescope_id)
         # Same camera as import/scan (platesolve_equipment_id deprecated alias).
         ps_eq = int(eq_id)
+        _md_days = (
+            int(params.masterdark_validity_days)
+            if params.masterdark_validity_days is not None
+            else int(cfg.masterdark_validity_days)
+        )
+        _mf_days = (
+            int(params.masterflat_validity_days)
+            if params.masterflat_validity_days is not None
+            else int(cfg.masterflat_validity_days)
+        )
 
         if params.dry_run:
             _p(f"DRY RUN - scan only: {source}")
@@ -550,8 +571,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             plan = smart_scan_source(
                 source_root=source,
                 calibration_library_root=cfg.calibration_library_root,
-                masterdark_validity_days=int(cfg.masterdark_validity_days),
-                masterflat_validity_days=int(cfg.masterflat_validity_days),
+                masterdark_validity_days=_md_days,
+                masterflat_validity_days=_mf_days,
                 db=pipeline.db,
                 id_equipments=eq_id,
                 id_telescope=tel_id,
@@ -575,8 +596,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         plan = smart_scan_source(
             source_root=source,
             calibration_library_root=cfg.calibration_library_root,
-            masterdark_validity_days=int(cfg.masterdark_validity_days),
-            masterflat_validity_days=int(cfg.masterflat_validity_days),
+            masterdark_validity_days=_md_days,
+            masterflat_validity_days=_mf_days,
             db=pipeline.db,
             id_equipments=eq_id,
             id_telescope=tel_id,
@@ -614,11 +635,14 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             resolve_observer_location_for_run,
         )
 
+        _loc_hint = params.location_source_hint
+        if _loc_hint is None:
+            _loc_hint = "cli_arg" if params.location_id is not None else None
         _resolved_site = resolve_observer_location_for_run(
             cfg.database_path,
             explicit_location_id=params.location_id,
             cfg=cfg,
-            source_hint="cli_arg" if params.location_id is not None else None,
+            source_hint=_loc_hint,
         )
         apply_resolved_observer_location_to_config(cfg, _resolved_site)
         t0 = time.time()
