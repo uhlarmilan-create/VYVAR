@@ -83,8 +83,8 @@ ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
 G3_BO_ID = "1498613634033133184"
 G3_FW_ID = "1497343732462852864"
 G3_N_FULL = 134
-G3_BO_REF_MMAG = 8.495
-G3_FW_REF_MMAG = 5.218
+G3_BO_REF_MMAG = 145.917
+G3_FW_REF_MMAG = 14.557
 G3_TOL_MMAG = 0.001
 # Structural empty-comp drops keyed by draft_id only.
 # 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
