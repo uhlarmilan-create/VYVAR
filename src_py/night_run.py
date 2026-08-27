@@ -71,6 +71,8 @@ class NightRunParams:
     saturate_level_fraction: float = 0.95
     post_platesolve_hook: Callable[[int, Path, AppConfig, AstroPipeline], None] | None = None
     pre_calibrated_mode: bool = False
+    # INV-EPSF-STAGE-01: ePSF build+fit+merge+internal LCs after aperture, before PDF.
+    epsf: bool = True
 
 
 @dataclass
@@ -108,6 +110,7 @@ class NightRunResult:
     completed_setups: list[str] = field(default_factory=list)
     photometry_context: dict[str, Any] = field(default_factory=dict)
     calibration_output: dict[str, Any] = field(default_factory=dict)
+    epsf_stage: dict[str, Any] = field(default_factory=dict)
 
 
 # Phase 2A must cover at least this fraction of active_targets in photometry_summary.
@@ -582,6 +585,7 @@ def audit_photometry_completeness(
     output_dir: Path,
     *,
     min_ratio: float = _PHOTOMETRY_COMPLETENESS_MIN_RATIO,
+    require_psf: bool = False,
 ) -> dict[str, Any]:
     """False-success guard: did photometry process every *measurable* active target?
 
@@ -673,7 +677,133 @@ def audit_photometry_completeness(
     measurable_ratio = (n_summary / n_measurable_active) if n_measurable_active > 0 else 1.0
     out["measurable_ratio"] = float(measurable_ratio)
     out["ok"] = measurable_ratio >= float(min_ratio)
+
+    psf_audit = audit_psf_lc_completeness(output_dir, require=bool(require_psf))
+    out["psf"] = psf_audit
+    if psf_audit.get("applicable") and not psf_audit.get("ok"):
+        out["ok"] = False
+        out["psf_error"] = psf_audit.get("error")
     return out
+
+
+def audit_psf_lc_completeness(
+    output_dir: Path,
+    *,
+    require: bool = False,
+) -> dict[str, Any]:
+    """INV-EPSF-COMPLETE-01: every aperture LC has a PSF LC with n_full>0 or a reason.
+
+    A run whose PSF LCs are all-dropped (n_full=0 for every target) FAILS even
+    when drop reasons are recorded. Aperture-only trees with zero PSF files are
+    not applicable unless ``require`` is True.
+    """
+    output_dir = Path(output_dir)
+    lc_dir = output_dir / "lightcurves"
+    out: dict[str, Any] = {
+        "applicable": False,
+        "ok": True,
+        "n_aperture_lc": 0,
+        "n_psf_lc": 0,
+        "n_missing_psf": 0,
+        "n_full_positive": 0,
+        "n_all_dropped": 0,
+        "n_no_reason": 0,
+        "error": None,
+    }
+    if not lc_dir.is_dir():
+        if require:
+            out["applicable"] = True
+            out["ok"] = False
+            out["error"] = "PSF LC audit required but lightcurves/ missing"
+        return out
+    ap_ids: list[str] = []
+    for p in sorted(lc_dir.glob("lightcurve_*.csv")):
+        stem = p.stem
+        if stem.endswith("_psf") or stem.endswith("_adaptive"):
+            continue
+        cid = stem.replace("lightcurve_", "", 1)
+        if cid:
+            ap_ids.append(cid)
+    out["n_aperture_lc"] = len(ap_ids)
+    psf_files = list(lc_dir.glob("lightcurve_*_psf.csv"))
+    out["n_psf_lc"] = len(psf_files)
+    if not ap_ids:
+        return out
+    if not psf_files and not require:
+        return out
+    out["applicable"] = True
+    missing = 0
+    n_full_pos = 0
+    n_dropped = 0
+    n_no_reason = 0
+    for cid in ap_ids:
+        psf_path = lc_dir / f"lightcurve_{cid}_psf.csv"
+        if not psf_path.is_file():
+            missing += 1
+            continue
+        n_full, has_reason = _psf_lc_n_full_and_reason(psf_path)
+        if n_full > 0:
+            n_full_pos += 1
+        else:
+            n_dropped += 1
+            if not has_reason:
+                n_no_reason += 1
+    out["n_missing_psf"] = missing
+    out["n_full_positive"] = n_full_pos
+    out["n_all_dropped"] = n_dropped
+    out["n_no_reason"] = n_no_reason
+    if missing:
+        out["ok"] = False
+        out["error"] = f"{missing} aperture LC(s) missing a PSF LC"
+        return out
+    if n_no_reason:
+        out["ok"] = False
+        out["error"] = f"{n_no_reason} PSF LC(s) have n_full=0 and no recorded drop reason"
+        return out
+    if n_dropped > 0 and n_full_pos == 0:
+        out["ok"] = False
+        out["error"] = (
+            f"all {n_dropped} PSF LC(s) dropped (n_full=0); refusing empty-file success"
+        )
+        return out
+    out["ok"] = True
+    return out
+
+
+def _psf_lc_n_full_and_reason(path: Path) -> tuple[int, bool]:
+    n_full = 0
+    n_dropped_hdr = 0
+    has_reason = False
+    try:
+        with Path(path).open("r", encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if not line.startswith("#"):
+                    break
+                if line.startswith("# psf_lc_n_epochs_full="):
+                    try:
+                        n_full = int(line.split("=", 1)[1].strip())
+                    except (TypeError, ValueError):
+                        n_full = 0
+                elif line.startswith("# psf_lc_n_epochs_dropped_pin="):
+                    try:
+                        n_dropped_hdr = int(line.split("=", 1)[1].strip())
+                    except (TypeError, ValueError):
+                        n_dropped_hdr = 0
+    except OSError:
+        return 0, False
+    if n_dropped_hdr > 0:
+        has_reason = True
+    try:
+        df = pd.read_csv(path, comment="#", low_memory=False, nrows=8)
+    except Exception:  # noqa: BLE001
+        df = pd.DataFrame()
+    for col in ("psf_epoch_drop_reason", "drop_reason"):
+        if col in df.columns:
+            vals = df[col].dropna().astype(str).str.strip()
+            if any(v and v.lower() not in ("nan", "none") for v in vals.tolist()):
+                has_reason = True
+                break
+    return int(n_full), bool(has_reason)
 
 
 def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
@@ -704,6 +834,7 @@ def run_night_photometry(
     timings: dict[str, float] | None = None,
     write_pdfs: bool = True,
     existing_draft: bool = False,
+    epsf: bool = True,
 ) -> dict[str, Any]:
     """Photometry-only slice shared by ``run_night_pipeline`` (C1/C2) and C3.
 
@@ -728,6 +859,7 @@ def run_night_photometry(
         "photometry_context": {},
         "cfg_source": "live",
         "cfg_changed_keys": [],
+        "epsf_stage": {},
     }
 
     def _p(msg: str) -> None:
@@ -892,7 +1024,42 @@ def run_night_photometry(
         if math.isfinite(med_rms):
             lc_rms_values.append(med_rms)
 
-        audit = audit_photometry_completeness(out_d)
+        if epsf:
+            from epsf_stage import EpsfStagePaths, run_epsf_stage
+
+            _p(f"Step 14b: ePSF photometry - {nm}")
+            t0 = time.time()
+            try:
+                epsf_out = run_epsf_stage(
+                    params=None,
+                    paths=EpsfStagePaths(
+                        platesolve_dir=og_dir,
+                        frames_root=dt_dir,
+                        masterstar_fits=ms_fits,
+                        masterstars_csv=ms_csv,
+                        photometry_dir=out_d,
+                    ),
+                    cfg=phot_cfg,
+                    progress_cb=_p,
+                    db=pipeline.db,
+                    draft_id=draft_id,
+                )
+                out["epsf_stage"][str(nm)] = {
+                    "epsf_model_sha256": epsf_out.get("epsf_model_sha256"),
+                    "n_stars": epsf_out.get("n_stars"),
+                    "lc": epsf_out.get("lc"),
+                    "merge": {
+                        "written": (epsf_out.get("merge") or {}).get("written"),
+                        "frames_total": (epsf_out.get("merge") or {}).get("frames_total"),
+                    },
+                }
+            except Exception as epsf_exc:  # noqa: BLE001
+                phot_errors.append(f"{nm}: ePSF stage failed: {epsf_exc}")
+                _t(f"epsf_{nm}", t0)
+                continue
+            _t(f"epsf_{nm}", t0)
+
+        audit = audit_photometry_completeness(out_d, require_psf=bool(epsf))
         completeness_by_setup[str(nm)] = audit
         if not audit.get("ok"):
             n_sm = int(audit.get("n_summary_rows") or 0)
@@ -905,7 +1072,7 @@ def run_night_photometry(
                 if mratio is not None and math.isfinite(float(mratio))
                 else "n/a"
             )
-            err_detail = audit.get("error")
+            err_detail = audit.get("error") or audit.get("psf_error")
             if err_detail:
                 completeness_issues.append(f"{nm}: {err_detail}")
             else:
@@ -962,6 +1129,7 @@ def run_ui_night_photometry(
     timings: dict[str, float] | None = None,
     write_pdfs: bool = False,
     existing_draft: bool = True,
+    epsf: bool = True,
 ) -> dict[str, Any]:
     """W1/C3 photometry entry (INV-ONE-ENTRY-01). Defaults match a draft re-run."""
     return run_night_photometry(
@@ -973,6 +1141,7 @@ def run_ui_night_photometry(
         timings=timings,
         write_pdfs=write_pdfs,
         existing_draft=existing_draft,
+        epsf=epsf,
     )
 
 
@@ -1532,6 +1701,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             timings=timings,
             write_pdfs=True,
             existing_draft=False,
+            epsf=bool(params.epsf),
         )
         result.cfg_source = str(phot.get("cfg_source") or "live")
         result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
@@ -1539,6 +1709,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.zero_target_setups = list(phot.get("zero_target_setups") or [])
         result.completed_setups = list(phot.get("completed_setups") or [])
         result.photometry_completeness = dict(phot.get("photometry_completeness") or {})
+        result.epsf_stage = dict(phot.get("epsf_stage") or {})
         result.warnings.extend(list(phot.get("warnings") or []))
         if phot.get("output_dir") is not None:
             result.output_dir = Path(phot["output_dir"])
