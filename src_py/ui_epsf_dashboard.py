@@ -387,16 +387,25 @@ def render_epsf_dashboard(
             st.error("Platesolve setup directory not found.")
         else:
             try:
-                from psf_internal_lc import write_internal_psf_lightcurves
+                from epsf_stage import EpsfStagePaths, run_epsf_stage
 
                 with st.spinner("Writing internal PSF light curves..."):
-                    _lc_out = write_internal_psf_lightcurves(
-                        platesolve_dir=ps_dir,
-                        frames_root=Path(pf_dir),
+                    _lc_out = run_epsf_stage(
+                        params=None,
+                        paths=EpsfStagePaths(
+                            platesolve_dir=ps_dir,
+                            frames_root=Path(pf_dir),
+                        ),
+                        cfg=cfg,
+                        do_build=False,
+                        do_fit_merge=False,
+                        do_lc=True,
                     )
+                _n_w = int((_lc_out.get("lc") or {}).get("n_written") or 0)
+                _n_s = int((_lc_out.get("lc") or {}).get("n_skipped") or 0)
                 st.success(
-                    f"Wrote {_lc_out.get('n_written', 0)} internal PSF LC file(s) "
-                    f"(skipped {_lc_out.get('n_skipped', 0)})."
+                    f"Wrote {_n_w} internal PSF LC file(s) "
+                    f"(skipped {_n_s})."
                 )
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Internal PSF LC write failed: {exc}")

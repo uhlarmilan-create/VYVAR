@@ -1356,9 +1356,7 @@ def _render_pending_job_dispatcher(
                     )
 
             elif pending.get("kind") == "run_epsf":
-                from psf_photometry import build_epsf_model
-
-                from epsf_psf_merge import run_epsf_psf_merge_job
+                from epsf_stage import EpsfStagePaths, run_epsf_stage
 
                 _ms_fits = Path(str(pending.get("masterstar_fits_path", "")).strip())
                 _ms_csv = Path(str(pending.get("masterstars_csv_path", "")).strip())
@@ -1381,50 +1379,43 @@ def _render_pending_job_dispatcher(
                     raise FileNotFoundError(f"Platesolve dir not found: {_ps_dir}")
 
                 _cfg_epsf = cfg
-                if not bool(getattr(_cfg_epsf, "psf_photometry_enabled", False)):
-                    log_event(
-                        "[ePSF job] warning: psf_photometry_enabled=False - PSF columns will be empty"
-                    )
+                _peq = pending.get("equipment_id")
 
-                log_event("[ePSF job] Building ePSF model...")
-                _epsf_path = build_epsf_model(
-                    masterstar_fits_path=_ms_fits,
-                    masterstars_csv_path=_ms_csv,
+                def _stage_cb(msg: str) -> None:
+                    log_event(f"[ePSF job] {msg}")
+                    parts = str(msg).split()
+                    if len(parts) >= 3 and parts[0] == "ePSF" and parts[1] == "fit" and "/" in parts[2]:
+                        cur, tot = parts[2].split("/", 1)
+                        try:
+                            _cb(int(cur), int(tot), msg)
+                        except (TypeError, ValueError):
+                            pass
+
+                log_event("[ePSF job] run_epsf_stage (build + fit + merge + LCs)")
+                stage_out = run_epsf_stage(
+                    params=None,
+                    paths=EpsfStagePaths(
+                        platesolve_dir=_ps_dir,
+                        frames_root=_frames_root,
+                        masterstar_fits=_ms_fits,
+                        masterstars_csv=_ms_csv,
+                    ),
+                    cfg=_cfg_epsf,
+                    progress_cb=_stage_cb,
                     db=pipeline.db,
                     draft_id=_draft_epsf,
-                )
-                log_event(f"[ePSF job] Model built: {_epsf_path.name}; re-exporting per-frame catalogs...")
-
-                _dao_fwhm = float(
-                    pending.get(
-                        "dao_fwhm_px",
-                        getattr(pipeline.config, "sips_dao_fwhm_px", 3.7),
-                    )
-                )
-                _dao_sigma = float(
-                    pending.get(
-                        "dao_threshold_sigma",
-                        getattr(pipeline.config, "sips_dao_threshold_sigma", 3.5),
-                    )
-                )
-                _peq = pending.get("equipment_id")
-                per_cat = run_epsf_psf_merge_job(
-                    frames_root=_frames_root,
-                    platesolve_dir=_ps_dir,
-                    app_config=_cfg_epsf,
-                    draft_id=_draft_epsf,
                     equipment_id=int(_peq) if _peq is not None else None,
-                    progress_cb=_cb,
                 )
-                if isinstance(per_cat.get("epsf_job_summary"), dict):
-                    _ejs = per_cat["epsf_job_summary"]
+                _ejs = (stage_out.get("merge") or {}).get("epsf_job_summary")
+                if isinstance(_ejs, dict):
                     log_event(
                         f"[ePSF job] frame accounting: "
                         f"{_ejs.get('frames_with_zero_ok', '?')}/{_ejs.get('frames_total', '?')} "
                         f"zero-ok frames; policy={_ejs.get('inv_psf_frame_01_policy', '?')}"
                     )
                 _n_proc = len(list(_frames_root.glob("proc_*.csv")))
-                _written = int(per_cat.get("written", 0) or 0)
+                _written = int((stage_out.get("merge") or {}).get("written") or 0)
+                _epsf_path = stage_out.get("epsf_path") or str(_ps_dir / "masterstar_epsf.fits")
                 _out_epsf = {
                     "job_kind": "run_epsf",
                     "status": "ok",
@@ -1432,6 +1423,8 @@ def _render_pending_job_dispatcher(
                     "setup_name": str(pending.get("setup_name") or ""),
                     "frames_written": _written,
                     "proc_csv_count": _n_proc,
+                    "epsf_model_sha256": stage_out.get("epsf_model_sha256"),
+                    "n_stars": stage_out.get("n_stars"),
                     "message": (
                         f"ePSF model built; {_written} frame catalog(s) written "
                         f"({_n_proc} proc_*.csv in {_frames_root.name})"
