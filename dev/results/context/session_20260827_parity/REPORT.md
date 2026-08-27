@@ -173,6 +173,9 @@ reads lightcurves, not a catalog rebuild. PDF reads products.
 ## Commits
 
 This STOP: report + `m1_c3_inputs.json` only. 3a-3e not started.
+Follow-up on this branch: APERTURE-01d `--full` logs were UTF-16-LE
+(PowerShell redirect BOM 0xFF). Rewritten as ASCII so `--fast` can
+pass; content unchanged.
 
 ## What a rewritten spec must use
 
