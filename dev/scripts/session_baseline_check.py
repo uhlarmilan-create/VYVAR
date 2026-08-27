@@ -1001,8 +1001,35 @@ def _stamp_params_dump(phot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _reset_parity_outputs(snapshot: Path, ps: Path, lights: Path) -> None:
+    """Wipe photometry/ and restore snapshot sidecars so a second sequential run is fair.
+
+    One freeze copy: W2 hashes, then this reset, then W1. Do not copy lights twice
+    (WinError 112 on a dual copy). Restore proc_*.csv and comparison_stars so a
+    W2 sidecar mutation cannot seed W1.
+    """
+    out_phot = ps / "photometry"
+    if out_phot.exists():
+        shutil.rmtree(out_phot)
+    out_phot.mkdir(parents=True, exist_ok=True)
+    ps_src = snapshot / "platesolve" / SETUP
+    dst_comp = ps / "comparison_stars_per_target.csv"
+    src_comp = ps_src / "comparison_stars_per_target.csv"
+    if src_comp.is_file():
+        shutil.copy2(src_comp, dst_comp)
+    elif dst_comp.is_file():
+        dst_comp.unlink()
+    lights_src = snapshot / "detrended_aligned" / "lights" / SETUP
+    for p in lights_src.glob("proc_*.csv"):
+        shutil.copy2(p, lights / p.name)
+
+
 def run_parity_baseline(report: SessionReport) -> None:
-    """G7: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match."""
+    """G7: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match.
+
+    Sequential one copy (W2 then wipe photometry/ then W1). Dual copy of the freeze
+    exhausted the disk (WinError 112).
+    """
     os.environ["VYVAR_P1_FORCE"] = "1"
     _ensure_import_paths()
 
@@ -1024,17 +1051,13 @@ def run_parity_baseline(report: SessionReport) -> None:
     report.add("parity-snapshot", "PASS", SNAPSHOT_NAME)
 
     ts = _full_work_stamp()
-    work_w1 = REPO_ROOT / "tmp" / "session_parity" / f"{ts}_w1"
-    work_w2 = REPO_ROOT / "tmp" / "session_parity" / f"{ts}_w2"
-    work_w1.mkdir(parents=True, exist_ok=True)
-    work_w2.mkdir(parents=True, exist_ok=True)
-    ps_w1, lights_w1 = _copy_frozen_anchor_inputs(snapshot, work_w1)
-    ps_w2, lights_w2 = _copy_frozen_anchor_inputs(snapshot, work_w2)
-    _ = (lights_w1, lights_w2, ps_w1, ps_w2)
+    work_root = REPO_ROOT / "tmp" / "session_parity" / ts
+    work_root.mkdir(parents=True, exist_ok=True)
+    ps, lights = _copy_frozen_anchor_inputs(snapshot, work_root)
 
     pipeline = AstroPipeline(cfg)
 
-    def _run(label: str, work_root: Path, fn: Any) -> dict[str, Any]:
+    def _run(label: str, fn: Any) -> dict[str, Any]:
         t0 = datetime.now(timezone.utc)
         phot = fn(
             cfg=cfg,
@@ -1050,20 +1073,30 @@ def run_parity_baseline(report: SessionReport) -> None:
             report.add(f"parity-{label}-run", "FAIL", f"{elapsed:.0f}s {errs[0]}"[:200])
         else:
             report.add(f"parity-{label}-run", "PASS", f"{elapsed:.0f}s")
-        dump_path = work_root / "parity_stamped_params.json"
+        dump_path = work_root / f"parity_stamped_params_{label}.json"
         dump_path.write_text(
             json.dumps(_stamp_params_dump(phot), indent=2, default=str) + "\n",
             encoding="ascii",
         )
         return phot
 
-    phot_w2 = _run("w2", work_w2, run_night_photometry)
-    phot_w1 = _run("w1", work_w1, run_ui_night_photometry)
+    phot_w2 = _run("w2", run_night_photometry)
+    core_w2, n_w2 = compute_photometry_sha(work_root, include_comp_qa=False)
+    ext_w2, n_w2e = compute_photometry_sha(work_root, include_comp_qa=True)
+    sha_w2 = {"core": core_w2, "n_core": n_w2, "ext": ext_w2, "n_ext": n_w2e}
+    (work_root / "parity_sha_w2.json").write_text(
+        json.dumps(sha_w2, indent=2) + "\n", encoding="ascii"
+    )
 
-    core_w1, n_w1 = compute_photometry_sha(work_w1, include_comp_qa=False)
-    ext_w1, n_w1e = compute_photometry_sha(work_w1, include_comp_qa=True)
-    core_w2, n_w2 = compute_photometry_sha(work_w2, include_comp_qa=False)
-    ext_w2, n_w2e = compute_photometry_sha(work_w2, include_comp_qa=True)
+    _reset_parity_outputs(snapshot, ps, lights)
+
+    phot_w1 = _run("w1", run_ui_night_photometry)
+    core_w1, n_w1 = compute_photometry_sha(work_root, include_comp_qa=False)
+    ext_w1, n_w1e = compute_photometry_sha(work_root, include_comp_qa=True)
+    sha_w1 = {"core": core_w1, "n_core": n_w1, "ext": ext_w1, "n_ext": n_w1e}
+    (work_root / "parity_sha_w1.json").write_text(
+        json.dumps(sha_w1, indent=2) + "\n", encoding="ascii"
+    )
 
     if core_w1 == core_w2 and n_w1 == n_w2 and ext_w1 == ext_w2 and n_w1e == n_w2e:
         report.add(
@@ -1143,11 +1176,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     check_git_state(report)
     check_config_paths(report)
-    check_pytest(report)
-    check_anchor_manifest_db_parity(report)
-    check_db_quick_check(report)
-    check_ledger_hint(report)
-    check_deps_outdated(report)
+    # Dedicated --parity is a W1/W2 hash gate. Pytest stays on --fast/--full so a
+    # flaky sqlite threading test cannot false-fail G7 (G1 already covers pytest).
+    if not (args.parity and not args.full and not args.fast):
+        check_pytest(report)
+        check_anchor_manifest_db_parity(report)
+        check_db_quick_check(report)
+        check_ledger_hint(report)
+        check_deps_outdated(report)
     if args.clean:
         check_clean_tree(report)
     if args.full:
