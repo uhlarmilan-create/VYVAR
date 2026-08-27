@@ -54,13 +54,42 @@ def non_psf_columns(columns) -> list[str]:
 
 
 def hash_non_psf_columns(df: pd.DataFrame) -> str:
-    """SHA-256 of non-psf columns via pandas (quoted headers must survive read_csv)."""
+    """SHA-256 of non-psf columns via pandas values (quoted headers survive read_csv).
+
+    Numeric columns are fingerprinted with a stable ``.10g`` text so CSV
+    write/read dtype round-trips do not false-trip INV-EXPORT-READ-ONLY-01.
+    """
     cols = non_psf_columns(df.columns)
+    h = hashlib.sha256()
+    h.update("\0".join(str(c) for c in cols).encode("utf-8"))
     if not cols:
-        return hashlib.sha256(b"empty-non-psf").hexdigest()
+        return h.hexdigest()
     sub = df.loc[:, list(cols)]
-    hashed = pd.util.hash_pandas_object(sub, index=True)
-    return hashlib.sha256(np.ascontiguousarray(hashed.values).tobytes()).hexdigest()
+    n = int(len(sub))
+    h.update(str(n).encode("ascii"))
+    for c in cols:
+        s = sub[c]
+        num = pd.to_numeric(s, errors="coerce")
+        n_num = int(num.notna().sum())
+        use_num = n_num >= max(1, (n + 1) // 2) if n else False
+        if use_num:
+            for v in num.tolist():
+                try:
+                    fv = float(v)
+                except (TypeError, ValueError):
+                    h.update(b"*")
+                    continue
+                if not math.isfinite(fv):
+                    h.update(b"nan")
+                else:
+                    h.update(f"{fv:.10g}".encode("ascii"))
+                h.update(b",")
+        else:
+            for v in s.tolist():
+                h.update(str("" if v is None else v).encode("utf-8"))
+                h.update(b",")
+        h.update(b"|")
+    return h.hexdigest()
 
 
 def guarded_psf_sidecar_write(
