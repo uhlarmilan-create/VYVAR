@@ -208,3 +208,28 @@ def test_export_read_only_raises_and_restores(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="INV-EXPORT-READ-ONLY-01"):
         guarded_psf_sidecar_write(sidecar, after, before)
     assert sidecar.read_bytes() == pre
+
+
+def test_export_read_only_sparse_float_roundtrip(tmp_path: Path) -> None:
+    """Sparse-finite float64 (1 value, rest NaN) must hash stable across CSV rewrite."""
+    from epsf_psf_merge import guarded_psf_sidecar_write, hash_non_psf_columns
+    from pipeline import _vyvar_df_to_csv
+
+    sidecar = tmp_path / "proc_sparse.csv"
+    n = 20
+    before = pd.DataFrame(
+        {
+            "catalog_id": [str(i) for i in range(n)],
+            "dao_flux": [100.0] * n,
+            "exo_match_sep_arcsec": [float("nan")] * n,
+        }
+    )
+    before.loc[3, "exo_match_sep_arcsec"] = 1.8121917245949797
+    _vyvar_df_to_csv(before, sidecar)
+    on_disk = pd.read_csv(sidecar, low_memory=False)
+    assert hash_non_psf_columns(before) == hash_non_psf_columns(on_disk)
+    after = on_disk.copy()
+    after["psf_flux"] = 1.5
+    guarded_psf_sidecar_write(sidecar, after, on_disk)
+    restored = pd.read_csv(sidecar, low_memory=False)
+    assert hash_non_psf_columns(restored) == hash_non_psf_columns(on_disk)

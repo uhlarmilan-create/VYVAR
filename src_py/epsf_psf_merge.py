@@ -71,7 +71,13 @@ def hash_non_psf_columns(df: pd.DataFrame) -> str:
         s = sub[c]
         num = pd.to_numeric(s, errors="coerce")
         n_num = int(num.notna().sum())
-        use_num = n_num >= max(1, (n + 1) // 2) if n else False
+        # Numeric dtypes (including sparse-finite: 1 value + NaNs) use .10g.
+        # Majority-numeric object columns keep the same path. String mode is
+        # only for true text so pyarrow float round-trips cannot false-trip
+        # INV-EXPORT-READ-ONLY-01 (era04 Light_006/064 exo_match_sep_arcsec).
+        use_num = bool(pd.api.types.is_numeric_dtype(s)) or (
+            n_num >= max(1, (n + 1) // 2) if n else False
+        )
         if use_num:
             for v in num.tolist():
                 try:
@@ -382,6 +388,8 @@ def run_epsf_psf_merge_job(
     equipment_id: int | None = None,
     progress_cb: Callable[[int, int, str], None] | None = None,
     pipeline_meta: dict[str, Any] | None = None,
+    write_internal_lc: bool = True,
+    max_frames: int | None = None,
 ) -> dict[str, Any]:
     """RUN ePSF photometry pass: science-light frames only, PSF columns merged into existing sidecars."""
     from epsf_frame_accounting import finalize_epsf_frame_job, list_epsf_science_light_fits
@@ -391,6 +399,8 @@ def run_epsf_psf_merge_job(
     ps = Path(platesolve_dir)
     root = Path(frames_root)
     files = list_epsf_science_light_fits(root)
+    if max_frames is not None:
+        files = files[: max(0, int(max_frames))]
     if not files:
         raise FileNotFoundError(f"No science-light FITS under {root}")
 
@@ -481,16 +491,17 @@ def run_epsf_psf_merge_job(
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[ePSF] pipeline_meta AC stamp skipped: %s", exc)
     psf_lc: dict[str, Any] | None = None
-    try:
-        from psf_internal_lc import write_internal_psf_lightcurves_after_epsf_job  # noqa: PLC0415
+    if write_internal_lc:
+        try:
+            from psf_internal_lc import write_internal_psf_lightcurves_after_epsf_job  # noqa: PLC0415
 
-        psf_lc = write_internal_psf_lightcurves_after_epsf_job(
-            platesolve_dir=ps,
-            frames_root=root,
-        )
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[ePSF] internal PSF LC write skipped: %s", exc)
-        psf_lc = {"error": str(exc)}
+            psf_lc = write_internal_psf_lightcurves_after_epsf_job(
+                platesolve_dir=ps,
+                frames_root=root,
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[ePSF] internal PSF LC write skipped: %s", exc)
+            psf_lc = {"error": str(exc)}
     return {
         "written": int(n_ok),
         "frames_total": len(files),

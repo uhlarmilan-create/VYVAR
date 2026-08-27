@@ -1533,32 +1533,47 @@ def main() -> int:
     print(f"Dry run     : {DRY_RUN}")
     print()
 
+    from epsf_stage import EpsfStagePaths, run_epsf_stage
+
     p = _paths()
-    if not args.skip_build:
-        epsf_path = step_1_build_epsf()
-    else:
-        epsf_path = p["epsf_fits"]
-        print(f"[--skip-build] Pouzivam existujuci ePSF: {epsf_path}")
-
-    if args.only_build:
-        print("[--only-build] Koniec.")
-        return 0
-
-    var_df, comp_df = step_2_load_targets()
-
-    # Special mode: --frames 0 means "skip PSF fitting, run only calibration"
-    # (useful when *_psf.csv + psf_summary.csv already exist and you only want step 5 outputs).
+    cfg = AppConfig()
+    db_path = _runner_database_path()
+    if not db_path.is_file():
+        raise FileNotFoundError(f"Database not found: {db_path}")
+    db = VyvarDatabase(db_path)
+    max_frames = args.frames
+    do_build = not args.skip_build
+    do_fit = not args.only_build
+    do_lc = not args.only_build
     if args.frames is not None and int(args.frames) == 0:
-        print("[--frames 0] Preskakujem krok 3+4, spustam len krok 5 (kalibracia).")
-        step_5_calibrate_lightcurve()
-        return 0
-
-    if args.frames:
-        print(f"[--frames {args.frames}] Obmedzujem na prvych {args.frames} framov")
-
-    step_3_run_psf_on_frames(var_df, comp_df, epsf_path, max_frames=args.frames)
-    step_4_build_summary()
-    step_5_calibrate_lightcurve()
+        do_fit = False
+        do_lc = False
+        max_frames = None
+        print("[--frames 0] skip fit+LC (build only if not --skip-build)")
+    try:
+        run_epsf_stage(
+            params=None,
+            paths=EpsfStagePaths(
+                platesolve_dir=p["ps_dir"],
+                frames_root=p["epsf_data_dir"],
+                masterstar_fits=p["masterstar_fits"],
+                masterstars_csv=p["masterstars_csv"],
+            ),
+            cfg=cfg,
+            progress_cb=lambda msg: print(msg),
+            db=db,
+            draft_id=int(DRAFT_ID),
+            do_build=do_build,
+            do_fit_merge=do_fit,
+            do_lc=do_lc,
+            max_frames=max_frames,
+            dry_run=bool(args.dry_run),
+        )
+    finally:
+        try:
+            db.conn.close()
+        except Exception:  # noqa: BLE001
+            pass
     return 0
 
 
