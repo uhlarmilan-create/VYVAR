@@ -38,8 +38,8 @@ def test_p1_snapshot_sha_matches_registered() -> None:
     cfg = AppConfig()
     snap = Path(cfg.archive_root) / "Drafts" / SNAPSHOT
     assert snap.is_dir(), f"missing snapshot {snap}"
-    core, nc = compute_photometry_sha(snap, include_comp_qa=False)
-    ext, ne = compute_photometry_sha(snap, include_comp_qa=True)
+    core, nc = compute_photometry_sha(snap, include_comp_qa=False, strip_provenance=False)
+    ext, ne = compute_photometry_sha(snap, include_comp_qa=True, strip_provenance=False)
     assert core == EXPECTED_CORE
     assert ext == EXPECTED_EXT
     assert nc == 121

@@ -5,12 +5,18 @@ full d5b72d08... (4285). **Note (2026-07-08):** draft_424 coherent anchor is
 ``draft_000424_snapshot_20260708_full`` (run_full_photometry_pipeline cut; core 92939fab... n=357,
 extended 76642318... n=535). Retired hybrid ``draft_000424_snapshot_20260708_hybrid_deprecated``.
 Verified via ``scripts/session_baseline_check.py --full``.
+
+ANCHOR-HASH-01 (2026-08-27): default SHA is a content hash. Provenance
+header lines matching PHOTOMETRY_SHA_PROVENANCE_HEADER_RE are dropped
+before hashing. era04 v1 raw-byte values (9367f998 / d3cefff3) stay in
+the ledger as history; v2 is the gate.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 
 import numpy as np
@@ -97,6 +103,46 @@ _SHA_PATTERNS_CORE = (
 )
 _SHA_PATTERN_COMP_QA = "**/photometry/**/lightcurves/comp_qa_*.json"
 
+# ANCHOR-HASH-01: drop only these `# key=` provenance lines. Census of
+# era04 LCs: aperture files have no `# ` headers; PSF files have git_hash
+# and git_dirty among many other keys. files/generated/timestamp/
+# vyvar_version are not present on era04 but stay in the exclusion set.
+PHOTOMETRY_SHA_PROVENANCE_HEADER_KEYS = frozenset(
+    {
+        "git_hash",
+        "git_dirty",
+        "files",
+        "generated",
+        "timestamp",
+        "vyvar_version",
+    }
+)
+PHOTOMETRY_SHA_PROVENANCE_HEADER_RE = re.compile(
+    rb"^# (git_hash|git_dirty|files|generated|timestamp|vyvar_version)="
+)
+
+
+def photometry_file_content_bytes(
+    path: Path,
+    *,
+    strip_provenance: bool = True,
+) -> bytes:
+    """Return file bytes for the photometry SHA.
+
+    When strip_provenance is True, drop header lines matching
+    PHOTOMETRY_SHA_PROVENANCE_HEADER_RE. Column data and every other
+    header line are unchanged.
+    """
+    raw = Path(path).read_bytes()
+    if not strip_provenance:
+        return raw
+    out = bytearray()
+    for line in raw.splitlines(keepends=True):
+        if PHOTOMETRY_SHA_PROVENANCE_HEADER_RE.match(line):
+            continue
+        out.extend(line)
+    return bytes(out)
+
 
 def photometry_sha_files(
     draft_root: Path,
@@ -113,16 +159,35 @@ def photometry_sha_files(
     return sorted(files)
 
 
+def photometry_file_hash_map(
+    draft_root: Path,
+    *,
+    include_comp_qa: bool = False,
+    strip_provenance: bool = True,
+) -> dict[str, str]:
+    """Relative posix path -> sha256 of (stripped) file bytes."""
+    draft_root = Path(draft_root)
+    out: dict[str, str] = {}
+    for p in photometry_sha_files(draft_root, include_comp_qa=include_comp_qa):
+        rel = p.relative_to(draft_root).as_posix()
+        out[rel] = hashlib.sha256(
+            photometry_file_content_bytes(p, strip_provenance=strip_provenance)
+        ).hexdigest()
+    return out
+
+
 def compute_photometry_sha(
     draft_root: Path,
     *,
     include_comp_qa: bool = False,
+    strip_provenance: bool = True,
 ) -> tuple[str, int]:
+    draft_root = Path(draft_root)
     files = photometry_sha_files(draft_root, include_comp_qa=include_comp_qa)
     h = hashlib.sha256()
     for p in files:
         h.update(p.relative_to(draft_root).as_posix().encode())
-        h.update(p.read_bytes())
+        h.update(photometry_file_content_bytes(p, strip_provenance=strip_provenance))
     return h.hexdigest(), len(files)
 
 

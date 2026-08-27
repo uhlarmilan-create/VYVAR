@@ -6,6 +6,18 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## era04 hash v2 (content), v1 9367f998/d3cefff3 kept as history (2026-08-27)
+
+Milan: redefine the --full anchor statistic as a content hash.
+`compute_photometry_sha` drops `# git_hash=` / `# git_dirty=` /
+`# files=` / `# generated=` / `# timestamp=` / `# vyvar_version=`
+header lines. Frozen era04 bytes are not rewritten. v1 raw-byte
+core 9367f998 n=160 / ext d3cefff3 n=210 stay in the ledger as
+history (reproducible only at dffe859 because PSF LCs stamp HEAD).
+v2 (gate): core af218acd n=160 / ext ada5caff n=210. Provenance
+is a separate PASS/DRIFT line, never a SHA FAIL.
+Evidence: `dev/results/context/session_20260827_anchor_hash/REPORT.md`.
+
 ## APERTURE-01d LOCK - annulus 2.7/5.2; era04 locked (2026-08-27)
 
 Annulus set to 2.7/5.2 FWHM (AIJ 14/27 px at 516 night FWHM 5.191733;

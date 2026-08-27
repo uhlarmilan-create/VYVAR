@@ -29,7 +29,7 @@ _RECUT = _ROOT / "tmp" / "rebaseline_387_sparse_fb_cut1"
 )
 def test_draft_387_historical_core_photometry_sha():
     """Frozen archive matches pre-sparse-fallback SHA."""
-    sha, n = compute_photometry_sha(_DRAFT387)
+    sha, n = compute_photometry_sha(_DRAFT387, strip_provenance=False)
     assert n == 2806
     assert sha == PHOTOMETRY_SHA_CORE_PRE_SPARSE_FB
 
@@ -39,7 +39,7 @@ def test_draft_387_historical_core_photometry_sha():
     reason="draft_000387 archive not present",
 )
 def test_draft_387_historical_extended_photometry_sha():
-    sha, n = compute_photometry_sha(_DRAFT387, include_comp_qa=True)
+    sha, n = compute_photometry_sha(_DRAFT387, include_comp_qa=True, strip_provenance=False)
     assert n == 4285
     assert sha == PHOTOMETRY_SHA_BASELINE_PRE_SPARSE_FB
 
@@ -49,7 +49,7 @@ def test_draft_387_historical_extended_photometry_sha():
     reason="rebaseline cut1 not present",
 )
 def test_rebaseline_cut1_core_photometry_sha():
-    sha, n = compute_photometry_sha(_RECUT)
+    sha, n = compute_photometry_sha(_RECUT, strip_provenance=False)
     assert n == 2806
     assert sha == PHOTOMETRY_SHA_CORE
 
@@ -59,7 +59,7 @@ def test_rebaseline_cut1_core_photometry_sha():
     reason="rebaseline cut1 not present",
 )
 def test_rebaseline_cut1_extended_photometry_sha():
-    sha, n = compute_photometry_sha(_RECUT, include_comp_qa=True)
+    sha, n = compute_photometry_sha(_RECUT, include_comp_qa=True, strip_provenance=False)
     assert n == 4285
     assert sha == PHOTOMETRY_SHA_BASELINE
 

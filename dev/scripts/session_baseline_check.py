@@ -59,13 +59,19 @@ ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 DRAFT_ID = 516
 SETUP = "NoFilter_60_2"
 SNAPSHOT_NAME = "draft_000516_snapshot_era04_20260826"
-# Canonical product SHA 9367f998 (APERTURE-01d f=1.35 annulus 2.7/5.2).
-EXPECTED_PHOTOMETRY_SHA_CORE = "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "9367f998"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "d3cefff3"
+# era04 v1 raw-byte SHA (history; freeze-reproducible only at dffe859).
+EXPECTED_PHOTOMETRY_SHA_CORE_V1 = "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_V1 = "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863"
+# ANCHOR-HASH-01 v2 content hash (provenance headers dropped). Gate values.
+EXPECTED_PHOTOMETRY_SHA_CORE = "af218acd32a4892cc4f0030168829852ced5c5140f83575301c1a39869437e66"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "ada5caff61692ff0489631e6278efedd8c92cb9bd26d05fcb67f2fb3729b1676"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "af218acd"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "ada5caff"
 EXPECTED_PHOTOMETRY_SHA_CORE_N = 160
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 210
+ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
+G3_BO_ID = "1498613634033133184"
+G3_FW_ID = "1497343732462852864"
 # Structural empty-comp drops keyed by draft_id only.
 # 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
@@ -442,6 +448,128 @@ def provenance_block_hash(phot_dir: Path) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
+def _load_anchor_manifest() -> dict[str, Any]:
+    if not ANCHOR_MANIFEST_PATH.is_file():
+        return {}
+    return json.loads(ANCHOR_MANIFEST_PATH.read_text(encoding="utf-8"))
+
+
+def _run_git_provenance() -> tuple[str, Any, list[str]]:
+    _ensure_import_paths()
+    from photometry_core import _resolve_git_provenance  # noqa: PLC0415
+
+    git_hash, git_dirty, dirty_files = _resolve_git_provenance()
+    files = [str(x) for x in (dirty_files or [])]
+    return str(git_hash or ""), git_dirty, files
+
+
+def _write_run_provenance(path: Path, *, git_hash: str, git_dirty: Any, files: list[str]) -> dict[str, Any]:
+    payload = {
+        "git_hash": git_hash,
+        "git_dirty": git_dirty,
+        "files": list(files),
+    }
+    path.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="ascii")
+    return payload
+
+
+def _compare_provenance_to_anchor(
+    report: SessionReport,
+    run_prov: dict[str, Any],
+    *,
+    check_name: str = "full-provenance-drift",
+) -> None:
+    """PASS if git_hash+files match the freeze manifest; DRIFT otherwise (never FAIL)."""
+    man = _load_anchor_manifest()
+    want_hash = str(man.get("git_hash") or "")
+    want_files = [str(x) for x in (man.get("files") or [])]
+    got_hash = str(run_prov.get("git_hash") or "")
+    got_files = [str(x) for x in (run_prov.get("files") or [])]
+    files_ok = got_files == want_files
+    if got_hash == want_hash and files_ok:
+        report.add(check_name, "PASS", f"git_hash={got_hash[:12]}... files={len(got_files)}")
+        return
+    bits = []
+    if got_hash != want_hash:
+        bits.append(f"git_hash run={got_hash[:12]}... freeze={want_hash[:12]}...")
+    if not files_ok:
+        bits.append(f"files n={len(got_files)} vs freeze n={len(want_files)}")
+    report.add(check_name, "DRIFT", "; ".join(bits)[:220])
+
+
+def _write_internal_psf_lcs(ps: Path, lights: Path, cfg: Any) -> dict[str, Any]:
+    from psf_internal_lc import write_internal_psf_lightcurves  # noqa: PLC0415
+
+    return write_internal_psf_lightcurves(
+        platesolve_dir=ps,
+        frames_root=lights,
+        photometry_dir=ps / "photometry",
+        cfg=cfg,
+    )
+
+
+def _report_v1_raw_identity(
+    report: SessionReport,
+    work_root: Path,
+    snapshot: Path,
+) -> None:
+    """One-shot v1 raw-byte record: expect 53 PSF LCs differ, 107 identical."""
+    from tests.photometry_sha import photometry_file_hash_map  # noqa: PLC0415
+
+    snap_map = photometry_file_hash_map(snapshot, include_comp_qa=False, strip_provenance=False)
+    run_map = photometry_file_hash_map(work_root, include_comp_qa=False, strip_provenance=False)
+    common = sorted(set(snap_map) & set(run_map))
+    differ = [k for k in common if snap_map[k] != run_map[k]]
+    identical = len(common) - len(differ)
+    psf_differ = [k for k in differ if Path(k).name.endswith("_psf.csv")]
+    other_differ = [k for k in differ if k not in psf_differ]
+    if other_differ:
+        report.add(
+            "full-sha-v1-identity",
+            "FAIL",
+            f"STOP: non-PSF v1 diffs n={len(other_differ)} sample={other_differ[:3]}",
+        )
+        return
+    report.add(
+        "full-sha-v1-identity",
+        "PASS",
+        f"v1 raw: {identical} identical, {len(psf_differ)} PSF differ (expected 107/53)",
+    )
+
+
+def _g3_zp_ok_meters(work_root: Path) -> dict[str, Any]:
+    import numpy as np  # noqa: PLC0415
+    import pandas as pd  # noqa: PLC0415
+
+    lc_dir = work_root / "platesolve" / SETUP / "photometry" / "lightcurves"
+
+    def _one(tid: str) -> dict[str, Any]:
+        path = lc_dir / f"lightcurve_{tid}_psf.csv"
+        if not path.is_file():
+            return {"path": str(path), "missing": True}
+        df = pd.read_csv(path, comment="#", low_memory=False)
+        if "psf_delta_mag" not in df.columns:
+            return {"path": str(path), "missing_col": True}
+        x = pd.to_numeric(df["psf_delta_mag"], errors="coerce").to_numpy(dtype=float)
+        fin = x[np.isfinite(x)]
+        n_fin = int(fin.size)
+        n = int(x.size)
+        if n_fin == 0:
+            dem = float("nan")
+        else:
+            med = float(np.median(fin))
+            dem = float(np.sqrt(np.mean((fin - med) ** 2))) * 1000.0
+        return {
+            "catalog_id": tid,
+            "n_finite": n_fin,
+            "n_rows": n,
+            "demeaned_rms_mmag": dem,
+            "missing": False,
+        }
+
+    return {"bo": _one(G3_BO_ID), "fw": _one(G3_FW_ID)}
+
+
 def _update_ledger_on_full_pass(commit: str) -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -714,14 +842,7 @@ def run_full_baseline(report: SessionReport) -> None:
 
     t_psf = datetime.now(timezone.utc)
     try:
-        from psf_internal_lc import write_internal_psf_lightcurves  # noqa: PLC0415
-
-        psf_out = write_internal_psf_lightcurves(
-            platesolve_dir=ps,
-            frames_root=lights,
-            photometry_dir=out_phot,
-            cfg=cfg,
-        )
+        psf_out = _write_internal_psf_lcs(ps, lights, cfg)
         n_psf = int(psf_out.get("n_written") or 0)
         psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
         report.add("full-psf-lc", "PASS", f"wrote {n_psf} in {psf_s:.0f}s")
@@ -762,11 +883,29 @@ def run_full_baseline(report: SessionReport) -> None:
         "PASS",
         f"{prov_hash[:16]}... (informational; git-bound, not cross-commit gate)",
     )
+    from tests.photometry_sha import photometry_sha_files  # noqa: PLC0415
+
+    sha_files = [p.relative_to(work_root).as_posix() for p in photometry_sha_files(work_root)]
+    git_hash, git_dirty, _dirty = _run_git_provenance()
+    run_prov = _write_run_provenance(
+        work_root / "provenance.json",
+        git_hash=git_hash,
+        git_dirty=git_dirty,
+        files=sha_files,
+    )
+    _write_run_provenance(
+        out_phot / "provenance.json",
+        git_hash=git_hash,
+        git_dirty=git_dirty,
+        files=sha_files,
+    )
+    _compare_provenance_to_anchor(report, run_prov)
 
     core_sha, core_n = compute_photometry_sha(work_root, include_comp_qa=False)
     ext_sha, ext_n = compute_photometry_sha(work_root, include_comp_qa=True)
     snap_core_sha, snap_core_n = compute_photometry_sha(snapshot, include_comp_qa=False)
     snap_ext_sha, snap_ext_n = compute_photometry_sha(snapshot, include_comp_qa=True)
+    _report_v1_raw_identity(report, work_root, snapshot)
     if snap_core_sha != EXPECTED_PHOTOMETRY_SHA_CORE:
         report.add(
             "full-snapshot-sha-core",
@@ -780,7 +919,7 @@ def run_full_baseline(report: SessionReport) -> None:
             f"snapshot n={snap_core_n} != expected {EXPECTED_PHOTOMETRY_SHA_CORE_N}",
         )
     else:
-        report.add("full-snapshot-sha-core", "PASS", f"{snap_core_sha[:16]}... n={snap_core_n}")
+        report.add("full-snapshot-sha-core", "PASS", f"v2 {snap_core_sha[:16]}... n={snap_core_n}")
     if not catalog_ok:
         report.add(
             "full-photometry-sha-core",
@@ -791,7 +930,7 @@ def run_full_baseline(report: SessionReport) -> None:
         report.add(
             "full-photometry-sha-core",
             "PASS",
-            f"{core_sha[:16]}... n={core_n}",
+            f"v2 {core_sha[:16]}... n={core_n}",
         )
     else:
         report.add(
@@ -803,13 +942,33 @@ def run_full_baseline(report: SessionReport) -> None:
         report.add(
             "full-photometry-sha-extended",
             "PASS",
-            f"{ext_sha[:16]}... n={ext_n}",
+            f"v2 {ext_sha[:16]}... n={ext_n}",
         )
     else:
         report.add(
             "full-photometry-sha-extended",
             "FAIL",
             f"run {ext_sha[:16]}... vs snapshot extended mismatch",
+        )
+
+    g3 = _g3_zp_ok_meters(work_root)
+    (work_root / "g3_zp_ok_meters.json").write_text(
+        json.dumps(g3, indent=2) + "\n", encoding="ascii"
+    )
+    bo = g3.get("bo") or {}
+    fw = g3.get("fw") or {}
+    if bo.get("missing") or fw.get("missing") or bo.get("missing_col") or fw.get("missing_col"):
+        report.add("full-g3-zp-ok", "FAIL", "missing BO/FW PSF LC or psf_delta_mag")
+    else:
+        report.add(
+            "full-g3-zp-ok",
+            "PASS",
+            (
+                f"BO {bo.get('n_finite')}/{bo.get('n_rows')} "
+                f"{float(bo.get('demeaned_rms_mmag')):.3f} mmag (ref 8.495); "
+                f"FW {fw.get('n_finite')}/{fw.get('n_rows')} "
+                f"{float(fw.get('demeaned_rms_mmag')):.3f} mmag (ref 5.218)"
+            ),
         )
 
     counters = get_except_fix_counters().snapshot()
@@ -1078,6 +1237,14 @@ def run_parity_baseline(report: SessionReport) -> None:
             json.dumps(_stamp_params_dump(phot), indent=2, default=str) + "\n",
             encoding="ascii",
         )
+        t_psf = datetime.now(timezone.utc)
+        try:
+            psf_out = _write_internal_psf_lcs(ps, lights, cfg)
+            n_psf = int(psf_out.get("n_written") or 0)
+            psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
+            report.add(f"parity-{label}-psf", "PASS", f"wrote {n_psf} in {psf_s:.0f}s")
+        except Exception as exc:  # noqa: BLE001
+            report.add(f"parity-{label}-psf", "FAIL", str(exc)[:200])
         return phot
 
     phot_w2 = _run("w2", run_night_photometry)
@@ -1098,11 +1265,16 @@ def run_parity_baseline(report: SessionReport) -> None:
         json.dumps(sha_w1, indent=2) + "\n", encoding="ascii"
     )
 
-    if core_w1 == core_w2 and n_w1 == n_w2 and ext_w1 == ext_w2 and n_w1e == n_w2e:
+    if (
+        core_w1 == core_w2 == EXPECTED_PHOTOMETRY_SHA_CORE
+        and n_w1 == n_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_N
+        and ext_w1 == ext_w2 == EXPECTED_PHOTOMETRY_SHA_EXTENDED
+        and n_w1e == n_w2e == EXPECTED_PHOTOMETRY_SHA_EXTENDED_N
+    ):
         report.add(
             "parity-sha",
             "PASS",
-            f"core={core_w1[:16]}... n={n_w1} ext={ext_w1[:16]}... n={n_w1e}",
+            f"v2 core={core_w1[:16]}... n={n_w1} ext={ext_w1[:16]}... n={n_w1e}",
         )
     else:
         dump_w1 = _stamp_params_dump(phot_w1)
@@ -1113,8 +1285,9 @@ def run_parity_baseline(report: SessionReport) -> None:
             (
                 f"w1 core={core_w1[:16]} n={n_w1} ext={ext_w1[:16]} n={n_w1e} "
                 f"w2 core={core_w2[:16]} n={n_w2} ext={ext_w2[:16]} n={n_w2e} "
-                f"params_w1={json.dumps(dump_w1, default=str)[:180]} "
-                f"params_w2={json.dumps(dump_w2, default=str)[:180]}"
+                f"want core={EXPECTED_PHOTOMETRY_SHA_CORE[:16]} n=160 "
+                f"params_w1={json.dumps(dump_w1, default=str)[:140]} "
+                f"params_w2={json.dumps(dump_w2, default=str)[:140]}"
             )[:400],
         )
 
