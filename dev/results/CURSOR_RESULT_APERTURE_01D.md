@@ -126,10 +126,10 @@ P1 mini / era03 freeze stay historical (9902d918 n=121).
 
 ## 8. C6-5 / PUSH_AUTH
 See CURSOR_RESULT_SESSION_CLOSE_20260827.md.
-PUSH_AUTH SHA is the lock commit on origin/sel-ghost-01
-(named ref git push origin main:sel-ghost-01). Not for
-origin/main. origin/main stays 7c086e8. No
-dev/PUSH_AUTH_main_<date>.txt was on disk.
+PUSH_AUTH SHA is dffe859c6a679fa2130bcec5f3a4460cfe23e856
+(dffe859) on origin/sel-ghost-01 (named ref git push origin
+main:sel-ghost-01). Not for origin/main. origin/main stays
+7c086e8. No dev/PUSH_AUTH_main_<date>.txt was on disk.
 
 ## Errors
 Prediction 2 FAIL (CSS/HAT-188 0 epochs; CROWDING).

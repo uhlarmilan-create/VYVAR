@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (core 9367f998 n=160; extended d3cefff3 n=210). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
       "last_verified": "2026-08-27",
-      "commit": "9d47e2b",
+      "commit": "dffe859",
       "notes": "APERTURE-01d lock. Supersedes ERA-03 core 9902d918 (n=121). era03 freeze kept on disk, not overwritten. candidate1/2/3 kept. Three POOL-STARVE empty_comp_drop allowlisted. CSS/HAT-188 tagged CROWDING (VSX not force-injected).",
       "census_fingerprint": {
         "n_raw_dao": 2246,

@@ -21,8 +21,8 @@ C6-4 lock. C6-5 = this file.
 See CURSOR_RESULT_SESSION_CLOSE_20260826.md for 7c086e8..APERTURE-01c.
 This lock commit is APERTURE-01d (annulus 2.7/5.2, ledger v6,
 era04 SNAPSHOT_NAME, A9 gold update, --full twice, lock docs).
-PUSH_AUTH SHA for sel-ghost-01 is the lock commit (filled after
-git commit). Not for origin/main.
+PUSH_AUTH SHA for sel-ghost-01 is `dffe859c6a679fa2130bcec5f3a4460cfe23e856`
+(`dffe859`). Not for origin/main.
 
 ### era04 / APERTURE-01d LOCK
 - locked. Ledger v6: 0 UNNAMED.
@@ -74,5 +74,6 @@ if a main fast-forward is wanted after this lock.
 
 ## SHA for PUSH_AUTH_main_<date>.txt
 Do not write one (file absent on disk). sel-ghost-01 lock tip
-is filled after commit + `git push origin main:sel-ghost-01`.
-That SHA is the named-ref push, not a main fast-forward.
+`dffe859c6a679fa2130bcec5f3a4460cfe23e856` (`dffe859`) is the
+APERTURE-01d lock, not a main fast-forward. Named-ref push:
+`git push origin main:sel-ghost-01`.
