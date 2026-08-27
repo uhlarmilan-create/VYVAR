@@ -1,0 +1,34 @@
+{
+  "task": "EXPORT-PARITY-01 M1",
+  "utc": "2026-08-27T06:55:00Z",
+  "base_sha": "45f3e5f834fdb839576d8ac19dfa3f7386381bbc",
+  "premise": "P1: C3 with draft_id=None on era04 snapshot inputs yields 150 epochs and a different core hash vs era04 9367f998 n=160. Compared: C3 path resolution on draft_dir_override=era04 vs era04 freeze (134 proc CSVs, 134 QC-ok frames).",
+  "frozen_tree_not_mutated": true,
+  "photometry_not_run": true,
+  "photometry_not_run_reason": "Input cardinality is 134 proc_*.csv. n_epochs cannot be 150. P1 fails before a hash run.",
+  "era04": {
+    "snapshot": "draft_000516_snapshot_era04_20260826",
+    "core_sha": "9367f998",
+    "core_n": 160,
+    "qc_metrics_n": 150,
+    "qc_status": {"ok": 134, "rejected_prefilter_fwhm": 16},
+    "proc_csv_n": 134,
+    "aligned_fits_n": 135
+  },
+  "c3_path_probe": {
+    "fn": "ui_aperture_photometry._find_phase2a_paths",
+    "draft_id_arg_to_finder": 516,
+    "draft_dir_override": "Archive/Drafts/draft_000516_snapshot_era04_20260826",
+    "setups": ["NoFilter_60_2"],
+    "per_frame_csv_dir_n_proc": 134
+  },
+  "c3_run_call": {
+    "file": "src_py/ui_aperture_photometry.py",
+    "line": 1340,
+    "passes_db": false,
+    "passes_draft_id": false,
+    "cfg": "UI session AppConfig"
+  },
+  "p1_150_epochs": false,
+  "p1_verdict": "FAIL"
+}
