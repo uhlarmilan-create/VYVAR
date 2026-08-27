@@ -1,6 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-26 APERTURE-01c STOP.** Milan GO
+**Status:** **CLOSE-OUT 2026-08-27 APERTURE-01d LOCK.** Annulus
+2.7/5.2 FWHM (AIJ 14/27 px). Independent AIJ gate PASS:
+RMS(diff)=**1.9503 mmag** (n=134, gate <=2.8). Ledger v6: 0
+UNNAMED (60/60 tagged). era04 locked: core **9367f998** n=160,
+ext **d3cefff3** n=210. SNAPSHOT_NAME is
+`draft_000516_snapshot_era04_20260826`. era03 freeze kept on
+disk (not overwritten). config f=1.35, annulus 2.7/5.2.
+origin/main stays `7c086e8`.
+**CLOSE-OUT 2026-08-26 APERTURE-01c STOP.** Milan GO
 f=1.35 set (mode a). Independent AIJ gate PASS: RMS(diff)=
 **2.7833 mmag** (n=134, gate <=4; comps from Table.tbl). era04
 recut at r=7.0088 (candidate2 renamed, kept). Ledger v5: 6
@@ -85,7 +93,7 @@ model archived. Draft 517 has first gated production ePSF (66 stars). FD-A full-
 live (`psf_weight_mode=full_ccd`); BO CVn PSF overlay **133/134** fit_ok post F6 re-merge.
 **EPSF-SHAPE-01** remains **OPEN HIGH** for the **narrow ePSF core** (FWHM 2.36 vs 3.30 px;
 bright chi2 ~68), now routed to **EPSF-CORE-01**. **EXPORT-PARITY-01** remains **OPEN HIGH**.
-Anchor era unchanged: core **9902d918** n=121; extended **472bc9e4** n=179; P1 golden **6af4539c** n=115.
+Anchor era: core **9367f998** n=160; extended **d3cefff3** n=210 (ERA-04 APERTURE-01d). era03 freeze on disk: **9902d918** n=121 / **472bc9e4** n=179. P1 golden **6af4539c** n=115 (historical).
 
 **vyvar.sqlite3:** MASTER_SOURCES btrees still corrupt in file; table **retired from code**
 (MS-SOURCES-RETIRE). **DB swap dropped** (Milan 2026-08-22 files-only direction);
@@ -99,7 +107,17 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-26** (CLOSE-OUT APERTURE-01c STOP, f=1.35 AIJ 2.7833 mmag PASS, ledger 6 UNNAMED, era04 not locked; APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-08-27** (CLOSE-OUT APERTURE-01d LOCK, annulus 2.7/5.2, AIJ 1.9503 mmag PASS, ledger v6 0 UNNAMED, era04 core 9367f998 n=160 / d3cefff3 n=210; CLOSE-OUT APERTURE-01c STOP, f=1.35 AIJ 2.7833 mmag PASS, ledger 6 UNNAMED, era04 not locked; APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+
+## 2026-08-27 -- CLOSE-OUT APERTURE-01d LOCK (annulus 2.7/5.2; era04 locked)
+
+Annulus 2.7/5.2 FWHM (stamped r_in=14.0177 r_out=26.997).
+Independent AIJ gate 1.9503 mmag PASS (<=2.8). Recut era04;
+candidate3 (01c f=1.35) kept. Ledger v6: 0 UNNAMED. CSS/HAT-188
+did not return (CROWDING; VSX not force-injected). BO vs v5
+moved -7.72 mmag (prediction <5 FAIL; reported, not retuned).
+C6-2 `--full` twice PASS (run3+run4; 9367f998 / d3cefff3). SNAPSHOT_NAME
+is era04. Evidence: `CURSOR_RESULT_APERTURE_01D.md`.
 
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01c STOP (f=1.35; era04 not locked)
 

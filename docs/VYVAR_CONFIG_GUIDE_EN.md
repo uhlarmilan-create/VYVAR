@@ -246,8 +246,8 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
-| `annulus_inner_fwhm` | 4.75; range 1 .. 10 | Setting + runtime auto-adjust | config.json | PSF photometry (`psf_photometry.py:1940`) | Inner radius of the sky annulus in FWHM units; density adaptation may tighten it on dense fields. |
-| `annulus_outer_fwhm` | 9.0; range 1.5 .. 12 | Setting + runtime auto-adjust | config.json | PSF photometry (`psf_photometry.py:1941`) | Outer radius of the sky annulus in FWHM units. |
+| `annulus_inner_fwhm` | 2.7; range 1 .. 10 | Setting + runtime auto-adjust | config.json | PSF photometry (`psf_photometry.py:1940`) | Inner radius of the sky annulus in FWHM units (APERTURE-01d; AIJ Sky_Inner 14 px on draft 516). Density adaptation may tighten it on dense fields. |
+| `annulus_outer_fwhm` | 5.2; range 1.5 .. 12 | Setting + runtime auto-adjust | config.json | PSF photometry (`psf_photometry.py:1941`) | Outer radius of the sky annulus in FWHM units (APERTURE-01d; AIJ Sky_Outer 27 px on draft 516). |
 | `aperture_comp_factor` | 1.1; range 0.25 .. 3 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:7092`) | Aperture size multiplier applied to comparison stars. |
 | `aperture_correction_enabled` | True | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8650`) | Enables aperture correction: transferring flux measured in a small aperture to the total-flux scale using bright reference stars. |
 | `aperture_correction_max_contamination` | 0.15; range 0 .. 2 | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:8656`) | Maximum neighbour contamination a reference star may have to be used for aperture correction. |

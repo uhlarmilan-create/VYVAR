@@ -6,6 +6,23 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## APERTURE-01d LOCK - annulus 2.7/5.2; era04 locked (2026-08-27)
+
+Annulus set to 2.7/5.2 FWHM (AIJ 14/27 px at 516 night FWHM 5.191733;
+Howell: just beyond aperture wings). Production r_ap stays f=1.35 x
+FWHM = 7.0088 px; stamped r_in=14.0177 r_out=26.997. Independent AIJ
+gate RMS(diff)=1.9503 mmag PASS (gate <=2.8; 01c was 2.7833 at
+annulus 4.75/9). Recut era04 (candidate3 = 01c f=1.35 tree, kept).
+Ledger v6: 60/60 tagged; 0 UNNAMED. POOL-STARVE (3) and EDGE-ANNULUS
+(4) are limitations, not lock blockers. CSS_J135929 and
+HAT-188-0003359 did not return (0 epochs); tagged [CROWDING] (VSX
+not force-injected; detection assigned to a neighbour). BO level vs
+era03 is +41.734 mmag (v5 was +49.458; move -7.72 mmag, outside the
+<5 mmag prediction). FW +32.853 (v5 +28.213; move +4.64). C6-2
+`--full` twice byte-identical core 9367f998 n=160 / ext d3cefff3
+n=210. SNAPSHOT_NAME is era04. era03 freeze kept on disk.
+Evidence: `CURSOR_RESULT_APERTURE_01D.md`.
+
 ## APERTURE-01c STOP - f=1.35 set; era04 not locked (2026-08-26)
 
 Milan GO: production f=1.35, mode (a) f_fixed_night. Scatter

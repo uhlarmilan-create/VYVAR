@@ -197,3 +197,14 @@ def test_scatter_ladder_r_min_is_075_fwhm() -> None:
     assert DEFAULT_R_MIN_FWHM == 0.75
     rr = LadderSpec().radii_from_fwhm(5.191733)
     assert abs(float(rr[0]) - 0.75 * 5.191733) < 1e-6
+
+
+def test_production_annulus_matches_aij_14_27() -> None:
+    """APERTURE-01d: 2.7/5.2 FWHM at 516 night FWHM is AIJ 14/27 px."""
+    r_ap, r_in, r_out = resolve_aperture_geometry(
+        f=1.35, fwhm_px=5.191733, annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2
+    )
+    assert abs(r_ap - 1.35 * 5.191733) < 1e-6
+    assert abs(r_in - 14.02) < 0.02
+    assert abs(r_out - 27.00) < 0.02
+    assert r_out > r_in > r_ap

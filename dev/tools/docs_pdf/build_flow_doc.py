@@ -374,8 +374,8 @@ st.append(P("Vstup: zarovnane kalibrovane snimky + per-frame katalogy + soubor k
 st.append(tab([
  ["Krok","Co se deje"],
  ["1 Centroid","pozice z per-frame katalogu (DAO centroid); zadne refitovani v aperture"],
- ["2 Apertura","polomer = trida jasnosti x FWHM (SNR-optimalni tabulka, 11.1); jasne vetsi, slabe mensi"],
- ["3 Pozadi","mezikruzi annulus 4.75..9.0 x FWHM; robustni odhad (median / sigma-clip, MAD)"],
+ ["2 Apertura","polomer = f x nocni QC FWHM (APERTURE-01; SNR tabulka je diagnostika)"],
+ ["3 Pozadi","mezikruzi annulus 2.7..5.2 x FWHM (AIJ 14/27 px na 516); robustni odhad (median / sigma-clip, MAD)"],
  ["4 Tok","suma pixelu v aperture minus pozadi x plocha; saturacni a dilucni vlajky"],
  ["5 Chyba","Howellova CCD rovnice + EMPIRICKY sum pozadi (prazdne apertury) + SEM ensemble + sigma_sys dno (11.4)"],
  ["6 Aperturni korekce","preskalovani na spolecnou skalu z jasnych referencnich kompu - Metoda B (11.5)"],
@@ -387,7 +387,7 @@ st.append(tab([
 
 st.append(P("11.1 Apertura per hvezda: growth curve a SNR optimum", H2))
 st.append(P("Polomer apertury se odvozuje z FWHM. Souvislost s Gaussovou sirkou: FWHM = 2 sqrt(2 ln 2) x sigma = 2.3548 sigma. VYVAR pracuje ve dvou krocich:", B))
-st.append(P("[b]Krok 1 - globalni pevna apertura z FWHM:[/b] vychozi polomer r = aperture_fwhm_factor=1.9 x FWHM. Pro gaussovsky profil zachyti r = 1.75 FWHM (= 4.12 sigma) ~99.99 % integralu 2D Gaussu; 1.9 FWHM je tedy bezpecny start a fallback. Role-aware skalovani: cil dostava faktor aperture_variable_factor=1.0, kompy aperture_comp_factor=1.1 (mirne vetsi apertura kompu snizi jejich citlivost na centrovaci sum).", B))
+st.append(P("[b]Krok 1 - globalni pevna apertura z FWHM:[/b] produkcni polomer r = aperture_fwhm_factor=1.35 x nocni QC FWHM (APERTURE-01d, rezim f_fixed_night; jeden r pro cil i kompy). SNR-tabulka a scatter ladder jsou diagnostika. Role-aware skalovani: cil dostava faktor aperture_variable_factor=1.0, kompy aperture_comp_factor=1.1.", B))
 st.append(P("[b]Krok 2 - per-hvezda SNR-optimalni apertura[/b] (compute_snr_optimal_aperture_table): pro magnitudove biny (rozsah 7..18 mag, krok 0.5) se z modelu Gaussova enclosed flux prohleda polomer r od r_min=0.8 x FWHM do r_max=2.5 x FWHM s krokem 0.05 px a vybere se r maximalizujici SNR dle CCD rovnice (Howell 1989; Merline & Howell 1995):", B))
 st.append(EQP("SNR(r) = F(r)/g / sqrt( F(r)/g + N_pix(r) x bkg_var/g^2 )    [vse v elektronech]"))
 st.append(P("kde F(r) je flux v aperture [ADU], g zisk [e-/ADU], N_pix(r) = pi r^2 pocet pixelu apertury a bkg_var rozptyl pozadi na pixel. Kdyz je k dispozici zmereny rozptyl pozadi z prazdnych pixelu tehoz snimku (bkg_var_adu2_per_px), pouzije se misto teoretickeho sky/g + (RN/g)^2. Sazba per trida jasnosti: aperture_snr_sizing = {small: 1.5, large: 4.0} x FWHM jsou meze prohledavaneho rozsahu pro slabe/jasne hvezdy - optimum pro slabe hvezdy lezi ~0.7 x FWHM (dominuje sum pozadi), pro jasne prevazi robustnost vetsi apertury. Pri FWHM = 3.7 px tak apertura ~5-6 px obsahuje ~94-98 % svetla a lezi blizko SNR optima. Tabulka se predpocitava per draft (precompute_and_save_snr_aperture_table_for_draft) a apertura per hvezda je pak KONZISTENTNE aplikovana napric snimky - pro diferencialni fotometrii se konstantni apertura rusi v rozdilu.", B))
@@ -398,7 +398,7 @@ st.append(box("Miniprimer: magnitudy a proc 1.0857", [
  "Diferencialni fotometrie meri ROZDIL magnitud cil-reference: cokoli spolecneho (pruhlednost, extinkce 1. radu, drobna rozostreni) se v rozdilu vyrusi - zbyva jen to, cim se cil od reference LISI (barva -> k'', pozice -> flat/vinetace, jasnost -> nelinearita)."]))
 st.append(P("[b]Enclosed flux Gaussova profilu[/b] (zaklad SNR tabulky): E(r) = 1 - exp(-r^2 / (2 sigma^2)), sigma = FWHM/2.3548. Odtud E(1.0 FWHM) ~ 93.7 %, E(1.5 FWHM) ~ 99.8 %, E(1.75 FWHM) ~ 99.99 %. Maly polomer ztraci svetlo (ale i sum pozadi ~ r^2), velky polomer sbira sum - odtud existence SNR optima zavisleho na jasnosti hvezdy.", B))
 st.append(P("11.2 Pozadi: sky annulus", H2))
-st.append(P("Pozadi se meri v mezikruzi okolo hvezdy, mimo kridla PSF: vnitrni polomer annulus_inner_fwhm=4.75 x FWHM, vnejsi annulus_outer_fwhm=9.0 x FWHM (siroke mezikruzi = dost pixelu na robustni odhad i na ridsich polich). Odhad na pixel je robustni: median (pripadne sigma-clipped median) hodnot v mezikruzi, rozptyl pres MAD - potlaci kontaminaci sousednimi hvezdami a horkymi pixely. Odectena hodnota v aperture = sky_per_pixel x N_pix(r_ap). Hustotni adaptace muze mezikruzi na hustych polich zuzit. Tradice DAOPHOT (Stetson 1987); optimalni apertura dle Howella (1989).", B))
+st.append(P("Pozadi se meri v mezikruzi okolo hvezdy, mimo kridla PSF: vnitrni polomer annulus_inner_fwhm=2.7 x FWHM, vnejsi annulus_outer_fwhm=5.2 x FWHM (APERTURE-01d; na 516 = AIJ Sky_Inner/Outer 14/27 px). Howell: annulus tesne za kridly apertury. Odhad na pixel je robustni: median (pripadne sigma-clipped median) hodnot v mezikruzi, rozptyl pres MAD - potlaci kontaminaci sousednimi hvezdami a horkymi pixely. Odectena hodnota v aperture = sky_per_pixel x N_pix(r_ap). Hustotni adaptace muze vnitrni polomer na hustych polich posunout v Phase 1 effective cfg; stamping r_in/r_out na katalogu cte surove AppConfig. Tradice DAOPHOT (Stetson 1987); optimalni apertura dle Howella (1989).", B))
 st.append(P("11.3 Tok a vlajky", H2))
 st.append(P("Tok = suma pixelu v kruzne aperture (photutils CircularAperture / aperture_photometry, presne pocitani zlomkovych pixelu) minus pozadi. K bodu se pripisuji vlajky: saturace (peak_max_adu vs limit), nelinearita (diagnostika nonlinearity_fwhm_ratio=1.25 na percentilu 20 nejjasnejsich), pripadne dilucni vlajky (11.11) a bad-column/BPM zasahy (enhance_catalog_dataframe_aperture_bpm, bad_columns_for_light_frame).", B))
 
@@ -471,7 +471,7 @@ st.append(tab([
 ], [42,126]))
 st.append(P("Spolecny jmenovatel: kazda z metod byla implementovana, otestovana injekcnimi ci populacnimi testy a rozhodnuti je zdokumentovano v DECISIONS. Citace se v reportu emituji JEN pro metody, ktere skutecne bezely (citations.py; gating priznak = citacni priznak).", B))
 st.append(fn("photometry_core.py: run_full_photometry_pipeline (PRODUKCNI VSTUP), run_phase2a, compute_snr_optimal_aperture_table, precompute_and_save_snr_aperture_table_for_draft, measure_empty_aperture_sigma_bkg, _photometric_error(_with_bkg_mode), compute_aperture_correction, ensemble_normalize, compute_mag_calib_final, apply_reporting_postprocess, detect_outliers, save_lightcurve_csv; sigma_floor_core.py: combine_production_err_rel, c4_small_sample, ensemble_sem_mag_from_residuals; k2_extinction.py: resolve_k2_bprp_value, apply_k2_to_comp_mag_inst, computed_k2_bprp_for_token; band_classify.py: classify_photometric_band, effective_band_for_extinction; dilution.py; photutils.aperture: CircularAperture, CircularAnnulus, aperture_photometry"))
-st.append(par("aperture_fwhm_factor=1.9, aperture_variable_factor=1.0, aperture_comp_factor=1.1, aperture_snr_sizing={small:1.5, large:4.0}, annulus 4.75..9.0 FWHM, err_background_mode='empirical' (n=64, min 16), sigma_sys_mag={'4':0.018}, aperture_correction ON (min_ref 3, contamination 0.15, scatter 0.03), k2_mode='literature' (ceiling 0.1, fit OFF), apply_color_term='off' (ct_min_comp 7, extrapolation 0.0), gs11 OFF, sysrem OFF (n_iter 3), temporal binning OFF, savgol OFF (polyorder 2, window 0.5), democratic OFF (window 0.5), pytics ON (n_iter 5), phase2a_airmass_before_outlier=false, photometry_mode='both', save_lightcurve_png=false"))
+st.append(par("aperture_fwhm_factor=1.35, aperture_variable_factor=1.0, aperture_comp_factor=1.1, aperture_snr_sizing={small:1.5, large:4.0}, annulus 2.7..5.2 FWHM, err_background_mode='empirical' (n=64, min 16), sigma_sys_mag={'4':0.018}, aperture_correction ON (min_ref 3, contamination 0.15, scatter 0.03), k2_mode='literature' (ceiling 0.1, fit OFF), apply_color_term='off' (ct_min_comp 7, extrapolation 0.0), gs11 OFF, sysrem OFF (n_iter 3), temporal binning OFF, savgol OFF (polyorder 2, window 0.5), democratic OFF (window 0.5), pytics ON (n_iter 5), phase2a_airmass_before_outlier=false, photometry_mode='both', save_lightcurve_png=false"))
 
 # ============================================================ CH 12 (Phase 2B ePSF)
 st.append(PageBreak())
@@ -727,7 +727,7 @@ st.append(tab([
  ["Klic (default)","Kdy sahat"],
  ["comp_max_delta_bprp (0.79)","uzsi na presnost pri dostatku kandidatu; sirsi na ridkych polich (radeji nechat density adaptaci)"],
  ["phase01_comparison_n_comp_max (8)","zvysovat nema smysl (saturace zisku ~6-8); snizeni jen pro experimenty"],
- ["aperture_fwhm_factor (1.9)","temer nikdy - SNR tabulka voli per hvezda; fallback hodnota"],
+ ["aperture_fwhm_factor (1.35)","APERTURE-01d produkcni f; SNR tabulka je diagnostika"],
  ["masterdark/flat_validity_days (90/200)","dle discipliny fotografovani kalibraci"],
  ["auto_fwhm_k_factor (1.5)","prisnejsi (1.2-1.3) pro vyber jen spickovych snimku pri prebytku dat"],
  ["VSX scope","automaticky (DAO+Gaia detekce); parametr odstranen 2026-07"],

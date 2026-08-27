@@ -139,6 +139,33 @@ Crowding and blend dilution are not fully propagated into the reported error bud
 as a proxy where crowding metrics are incomplete. Affects faint-end comp selection context, not
 the anchor differential aperture closure. Status: **DOCUMENTED**. Evidence: Stage 3 forensics.
 
+## POOL-STARVE -- pinned ensemble n_survivors < n_min
+
+A target with a frozen pin list does not produce a production aperture LC when
+`apply_pinned_ensemble` drops enough members that `n_survivors < n_comp_min`
+(typically 3). Each drop is logged `[PIN-DROP] target=... comp=... reason=...`
+with the predicate (`rms_violation`, `insufficient_frames`,
+`missing_from_masterstars`, colour/distance ceiling). APERTURE-01c at r=7
+lost three era03 LCs this way (one `rms_violation` each on
+`1500467303261764096`). This is a documented limitation of the pin-plus-ceiling
+rule, not an aperture-radius or annulus lock blocker. Ledger tag:
+`[POOL-STARVE]` with the per-comp predicate values. Status: **DOCUMENTED**.
+Evidence: `src_py/pinned_ensembles.py` (n_survivors gate);
+`CURSOR_RESULT_APERTURE_01C.md`; APERTURE-01d ledger v6.
+
+## EDGE-ANNULUS -- aperture on-chip, sky annulus off-chip
+
+Production photometry currently rejects a star when the sky annulus outer
+radius would leave the NAXIS box (`safe_bbox_px` null -> chip-minus-r_out).
+A star whose measuring aperture is fully on-chip can still be dropped because
+the annulus (2.7/5.2 FWHM after APERTURE-01d; previously 4.75/9) extends
+beyond the frame. That drops FR CVn and the four C6-3c `[EDGE]` IDs
+(`1485560025830226432`, `1496037650087948160`, `1496733984545821696`,
+`1497491273179203456`). The intended rule (ROADMAP EDGE-ANNULUS-01, record
+only) is aperture on-chip and annulus >=50% on-chip (masked). Not a lock
+blocker. Ledger tag: `[EDGE-ANNULUS]`. Status: **DOCUMENTED**. Evidence:
+C6-3c `[EDGE]`; `CURSOR_RESULT_ANCHOR_ERA04.md`; APERTURE-01d.
+
 ## D12-1 -- Sigma-clip bias in ensemble statistics
 
 Iterative sigma clipping on comparison-star ensembles introduces a small bias toward lower

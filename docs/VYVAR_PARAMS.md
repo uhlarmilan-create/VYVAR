@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-26T21:12:56Z at git HEAD 2509f02._
+_Generated 2026-08-26T22:32:04Z at git HEAD 9d47e2b._
 
 ## Summary
 
@@ -191,8 +191,8 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
-| `annulus_inner_fwhm` | 4.75 | 1 .. 10 | advanced | resolved | config_runtime | universal | none | n/a | auto | Annulus Inner FWHM |
-| `annulus_outer_fwhm` | 9.0 | 1.5 .. 12 | advanced | resolved | config_runtime | universal | none | n/a | auto | Annulus Outer FWHM |
+| `annulus_inner_fwhm` | 2.7 | 1 .. 10 | advanced | resolved | config_runtime | universal | none | n/a | auto | Annulus Inner FWHM |
+| `annulus_outer_fwhm` | 5.2 | 1.5 .. 12 | advanced | resolved | config_runtime | universal | none | n/a | auto | Annulus Outer FWHM |
 | `aperture_comp_factor` | 1.1 | 0.25 .. 3 | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Comp Factor |
 | `aperture_correction_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Enabled |
 | `aperture_correction_max_contamination` | 0.15 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Contamination |

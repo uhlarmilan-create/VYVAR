@@ -113,7 +113,7 @@
     "scope_group": "n/a"
   },
   "annulus_inner_fwhm": {
-    "help": "Inner radius of the sky annulus in FWHM units; density adaptation may tighten it on dense fields.",
+    "help": "Inner radius of the sky annulus in FWHM units (APERTURE-01d: 2.7, AIJ Sky_Inner at this FWHM). Stamped per frame as sky_annulus_r_in_px. Density +1.0 is Phase 1 effective cfg only.",
     "kind": "resolved",
     "label": "Annulus Inner FWHM",
     "owner": "config_runtime",
@@ -131,7 +131,7 @@
     "scope_group": "n/a"
   },
   "annulus_outer_fwhm": {
-    "help": "Outer radius of the sky annulus in FWHM units.",
+    "help": "Outer radius of the sky annulus in FWHM units (APERTURE-01d: 5.2, AIJ Sky_Outer at this FWHM). Stamped per frame as sky_annulus_r_out_px.",
     "kind": "resolved",
     "label": "Annulus Outer FWHM",
     "owner": "config_runtime",

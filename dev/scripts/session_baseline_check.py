@@ -58,18 +58,18 @@ ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
 DRAFT_ID = 516
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000516_snapshot_era03_20260820"
-# Canonical product SHA 9902d918 (DAO-Gaia ERA-03 close + pinned check stars; supersede 477dc8cf).
-EXPECTED_PHOTOMETRY_SHA_CORE = "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73"
-EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "9902d918"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "472bc9e4"
-EXPECTED_PHOTOMETRY_SHA_CORE_N = 121
-EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 179
+SNAPSHOT_NAME = "draft_000516_snapshot_era04_20260826"
+# Canonical product SHA 9367f998 (APERTURE-01d f=1.35 annulus 2.7/5.2).
+EXPECTED_PHOTOMETRY_SHA_CORE = "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863"
+EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "9367f998"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "d3cefff3"
+EXPECTED_PHOTOMETRY_SHA_CORE_N = 160
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 210
 # Structural empty-comp drops keyed by draft_id only.
-# 516: all-zero except_fix (no empty-comp drop). 435 retired.
+# 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
-    516: {},
+    516: {"phase2a_empty_comp_drop": 3},
 }
 
 # Phase 0 funnel fingerprints: frozen input VT + post-pipeline active_targets.
@@ -96,20 +96,20 @@ EXPECTED_PHASE0_FUNNEL_BY_DRAFT: dict[int, dict[str, Any]] = {
             "masterstars_exo": 2,
             "no_match": 156,
         },
-        "active_targets_rows": 265,
-        "skip_photometry_true": 205,
+        "active_targets_rows": 253,
+        "skip_photometry_true": 197,
         "skip_reason_histogram": {
-            "": 60,
-            "below_target_depth": 1,
+            "": 53,
+            "no_comps": 3,
             "per_frame_saturation": 1,
-            "vsx_type_out_of_scope": 190,
-            "zone_noise": 13,
+            "vsx_type_out_of_scope": 182,
+            "zone_noise": 14,
         },
         "zone_flag_histogram": {
-            "linear": 163,
-            "noise": 13,
+            "linear": 157,
+            "noise": 14,
             "saturated": 1,
-            "unknown": 88,
+            "unknown": 81,
         },
     },
 }
@@ -596,6 +596,12 @@ def _copy_frozen_anchor_inputs(snapshot: Path, work_root: Path) -> tuple[Path, P
     if lights_dst.exists():
         shutil.rmtree(lights_dst)
     shutil.copytree(lights_src, lights_dst)
+    # APERTURE-01d: night QC FWHM stamps fwhm_night_median_px on LCs (mode a).
+    qc_src = snapshot / "calibrated" / "lights" / "qc_metrics.csv"
+    if qc_src.is_file():
+        qc_dst = work_root / "calibrated" / "lights"
+        qc_dst.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(qc_src, qc_dst / "qc_metrics.csv")
     for name in ("cal_diag.json", "draft_manifest.json", "sat_diag.json"):
         src = snapshot / name
         if src.is_file():

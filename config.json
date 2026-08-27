@@ -339,11 +339,14 @@
   // the pipeline.
   // Which measurement families run: aperture, PSF, or both.
   "photometry_mode": "both",
-  // Inner radius of the sky annulus in FWHM units; density adaptation may
-  // tighten it on dense fields.
-  "annulus_inner_fwhm": 4.75,
-  // Outer radius of the sky annulus in FWHM units.
-  "annulus_outer_fwhm": 9.0,
+  // Inner radius of the sky annulus in FWHM units (APERTURE-01d).
+  // 2.7 x night FWHM = 14.02 px on 516, matching AIJ Sky_Inner=14.
+  // Howell: annulus just beyond the aperture wings. Density +1.0
+  // still applies to Phase 1 effective cfg only, not stamped r_in.
+  "annulus_inner_fwhm": 2.7,
+  // Outer radius of the sky annulus in FWHM units (APERTURE-01d).
+  // 5.2 x night FWHM = 27.00 px on 516, matching AIJ Sky_Outer=27.
+  "annulus_outer_fwhm": 5.2,
   // Aperture size multiplier applied to comparison stars.
   "aperture_comp_factor": 1.1,
   // Base aperture radius in FWHM units (APERTURE-01c Milan GO f=1.35).

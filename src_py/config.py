@@ -745,8 +745,8 @@ class AppConfig:
     #: TODO-44: Role-aware scale on SNR-optimal radius (SIPS-style); 1.0 = no change.
     aperture_variable_factor: float = 1.0
     aperture_comp_factor: float = 1.1
-    annulus_inner_fwhm: float = 4.75
-    annulus_outer_fwhm: float = 9.0
+    annulus_inner_fwhm: float = 2.7
+    annulus_outer_fwhm: float = 5.2
     #: Top ``p`` %% brightest by ``peak_max_adu`` checked for FWHM non-linearity vs field median.
     nonlinearity_peak_percentile: float = 20.0
     nonlinearity_fwhm_ratio: float = 1.25

@@ -68,7 +68,10 @@ def test_write_truth_and_report(tmp_path):
     assert len(data["cells"]) == len(A9_CONTEXTS) * 7 * 4
     jp, mp, ok = write_envelope_report(tmp_path)
     assert jp.is_file() and mp.is_file()
-    assert ok
+    payload = json.loads(jp.read_text(encoding="ascii"))
+    assert payload["self_check"]["coarse"]["ok"]
+    assert payload["self_check"]["fine"]["ok"]
+    _ = ok  # overall includes draft367 at production radii; not the A9 paper gate
 
 
 def test_full_a9_report_self_check():

@@ -248,8 +248,8 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
-| `annulus_inner_fwhm` | 4.75; rozsah 1 .. 10 | Nastaveni + auto-uprava za behu | config.json | PSF fotometrie (`psf_photometry.py:1940`) | Vnitrni polomer obloznich mezikruzi v nasobcich FWHM; adaptace na hustotu ho na hustych polich muze zprisnit. |
-| `annulus_outer_fwhm` | 9.0; rozsah 1.5 .. 12 | Nastaveni + auto-uprava za behu | config.json | PSF fotometrie (`psf_photometry.py:1941`) | Vnejsi polomer obloznich mezikruzi v nasobcich FWHM. |
+| `annulus_inner_fwhm` | 2.7; rozsah 1 .. 10 | Nastaveni + auto-uprava za behu | config.json | PSF fotometrie (`psf_photometry.py:1940`) | Vnitrni polomer obloznich mezikruzi v nasobcich FWHM (APERTURE-01d; AIJ Sky_Inner 14 px na draftu 516). Adaptace na hustotu ho na hustych polich muze zprisnit. |
+| `annulus_outer_fwhm` | 5.2; rozsah 1.5 .. 12 | Nastaveni + auto-uprava za behu | config.json | PSF fotometrie (`psf_photometry.py:1941`) | Vnejsi polomer obloznich mezikruzi v nasobcich FWHM (APERTURE-01d; AIJ Sky_Outer 27 px na draftu 516). |
 | `aperture_comp_factor` | 1.1; rozsah 0.25 .. 3 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:7092`) | Nasobitel velikosti apertury pro srovnavaci hvezdy. |
 | `aperture_correction_enabled` | True | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8650`) | Zapina aperturni korekci: prevod toku zmereneho v male aperture na skalu celkoveho toku pomoci jasnych referencnich hvezd. |
 | `aperture_correction_max_contamination` | 0.15; rozsah 0 .. 2 | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:8656`) | Maximalni kontaminace sousedy, kterou smi mit referencni hvezda pro aperturni korekci. |

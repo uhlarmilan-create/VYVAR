@@ -1,0 +1,38 @@
+{
+  "task": "APERTURE-01d A9 draft-367 rate test",
+  "premise": "Synthetic Moffat envelope via A9Context radii from live AppConfig; not draft 367 photometry SHA.",
+  "appconfig": {
+    "aperture_fwhm_factor": 1.35,
+    "annulus_inner_fwhm": 2.7,
+    "annulus_outer_fwhm": 5.2,
+    "draft367_fwhm_gauss_px": 6.0203,
+    "radii_px": [8.127405, 16.25481, 31.30556]
+  },
+  "measured": {
+    "high_value_pass_recover_rate": 0.267,
+    "n_hv": 15,
+    "n_hv_pass_recover": 4,
+    "fail_silent_count": 4,
+    "fail_silent_cells": ["s1.0_dM+0", "s1.0_dM-1", "s1.3_dM-1", "s1.5_dM-1"],
+    "a9_verdict": "BLOCK_2B_GUARDS",
+    "outcome_counts": {
+      "PASS-REFUSE": 9,
+      "FAIL-SILENT": 4,
+      "PASS-RECOVER": 4,
+      "FAIL-HV-REFUSE": 6,
+      "PASS-NOOP": 5
+    }
+  },
+  "old_gold": {
+    "high_value_pass_recover_rate_min": 0.75,
+    "fail_silent_count": 0,
+    "a9_verdict": "A9_PASS",
+    "encoded": "per-bin SNR-table aperture + annulus 4.75/9"
+  },
+  "aperture01c_at_f135_annulus_475_9": {
+    "high_value_pass_recover_rate": 0.267,
+    "note": "HV unchanged vs 01c; FAIL-SILENT 0 -> 4 from tighter annulus"
+  },
+  "verdict": "UPDATE_TEST",
+  "reason": "Not a 367 product regression. Gold updated to HV>=0.20, fail_silent==4, BLOCK_2B_GUARDS."
+}

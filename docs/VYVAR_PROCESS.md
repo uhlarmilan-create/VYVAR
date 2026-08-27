@@ -33,9 +33,10 @@ for the full map.
   Two consecutive `--full` OVERALL PASS byte-identical runs against that new
   freeze then confirm determinism.
   **`--full` copy list (C7-2, `_copy_frozen_anchor_inputs` at
-  `dev/scripts/session_baseline_check.py:578-608`):**
+  `dev/scripts/session_baseline_check.py:578-615`):**
   `platesolve/NoFilter_60_2/` except `photometry/`, `_hrd_cache/`, `*.pdf`;
-  `detrended_aligned/lights/NoFilter_60_2/`; `cal_diag.json`,
+  `detrended_aligned/lights/NoFilter_60_2/`; `calibrated/lights/qc_metrics.csv`
+  (APERTURE-01d night FWHM stamp); `cal_diag.json`,
   `draft_manifest.json`, `sat_diag.json`. Then destination `photometry/` is
   emptied. That list is the INV-ANCHOR-00 blind zone.
 - **Registry -> docs:** `python dev/tools/gen_params_md.py` regenerates

@@ -10,7 +10,36 @@ Priority legend: **HIGH / MEDIUM / LOW / FUTURE**. Each item is a short status, 
 
 ---
 
-## NEXT SESSION - entry point (2026-08-26 CLOSE-OUT APERTURE-01c STOP; era04 not locked)
+## NEXT SESSION - entry point (2026-08-27 CLOSE-OUT APERTURE-01d LOCK; era04 locked)
+
+Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
+force-push `origin/main` (now `7c086e8` lineage). Pushes name the
+ref. APERTURE-01d: annulus 2.7/5.2, independent AIJ gate PASS
+(1.9503 mmag). Ledger v6: 0 UNNAMED. era04 is the `--full` gate
+(core 9367f998 n=160 / ext d3cefff3 n=210). config f=1.35,
+annulus 2.7/5.2. era03 freeze kept on disk. SEL-GHOST-01 not
+closed. origin/main stays `7c086e8` until Milan writes PUSH_AUTH.
+
+| Step | Action |
+|------|--------|
+| **1** | EDGE-ANNULUS-01 (record only): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
+| **2** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- ledger locked |
+| **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
+| **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
+| **5** | **EXPORT-PARITY-01** (HIGH) |
+
+| Pri | Carry list |
+|-----|------------|
+| **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
+| **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **MED** | **EPSF-ZP-OK-XRIG-01** - extend `fit_ok_for_zp` past wide `1:1`. Requires (1) master dark+flat in CalibrationLibrary for that rig and (2) CENSUS-01 replay of pin-drop vs quality. Newton 518 gated pool 26 does not qualify. |
+| **MED** | **MULTIFILTER-WCS-01** - sibling-seed for z_90_4 (see prior entry) |
+| **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp). C8-2: draft 516 frame 29 admitted (`status=ok`) with `n_stars_detected=263` vs ~100 on 028/030; FWHM/elongation normal. Do not wire in C8. |
+| **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
+| **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
+| **OPEN** | **INPUT-PATH-ARCH-01** |
+
+## NEXT SESSION - prior (2026-08-26 CLOSE-OUT APERTURE-01c STOP; era04 not locked)
 
 Local `main` tracks `origin/sel-ghost-01`. Push incident: do not
 force-push `origin/main` (now `7c086e8` lineage). Pushes name the
@@ -356,10 +385,10 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 
 | ID | Pri | Status / deliverable |
 |----|-----|----------------------|
-| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Frozen `draft_000516_snapshot_era03_20260820`; core `9902d918` n=121. Supersedes ANCHOR-516-04 / `477dc8cf`. `--fast` + `--full` OVERALL PASS. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-27 (ERA-04).** Frozen `draft_000516_snapshot_era04_20260826`; core `9367f998` n=160; ext `d3cefff3` n=210. APERTURE-01d f=1.35 annulus 2.7/5.2. Supersedes ERA-03 / `9902d918`. era03 freeze kept on disk. `--fast` + `--full` twice OVERALL PASS. |
 | **P1-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Golden `draft_000516_p1mini` from era03 snapshot; core `6af4539c` n=115. |
 | **A-1-435-RECUT** | -- | **CLOSED 2026-08-18.** 435 golden retired by design (ROT out-of-scope is canonical policy; 435 predates it). Not repaired. Recut onto 516. |
-| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-20 (ERA-03).** Frozen `draft_000516_snapshot_era03_20260820`; core `9902d918` n=121. `--full` OVERALL PASS. |
+| **FULL-ANCHOR-RECUT** | -- | **CLOSED 2026-08-27 (ERA-04).** Frozen `draft_000516_snapshot_era04_20260826`; core `9367f998` n=160. era03 freeze `9902d918` n=121 kept on disk. `--full` OVERALL PASS twice. |
 | **TASK-A-REGRESSION** | MED | `test_masterstars_csv_write_survives_bp_rp_failure` (`dev/tests/test_invariants_p2.py`) reimplements fixed A2 control flow in the test body; never calls `generate_masterstar_and_catalog`. A2 CSV-write mechanism untested against pre-fix pipeline. |
 | **F-B01-F-B02** | HIGH | Calibration-path audit: PASSTHROUGH runs record `CALIBRATION_MODE=vyvar_calibrated` and PDF may claim VYVAR calibration when none applied. Fix order: `dev/results/CURSOR_RESULT_calpath_audit.md` section 14; decisions section 13. |
 | **QHY294MM-RN-DOUBLE** | LOW/MED | DB read-noise 7.6 e- appears to be bin2 measurement (`draft_303`) that `param_resolver` scales by binning again to 15.2 e-. Minor at current sky levels; material for short/dark exposures. |

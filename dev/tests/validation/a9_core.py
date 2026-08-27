@@ -55,9 +55,9 @@ class A9Context:
     name: str
     fwhm_px: float
     plate_scale_arcsec: float
-    aperture_fwhm_factor: float = field(default_factory=lambda: float(_cfg.aperture_fwhm_factor))
-    annulus_inner_fwhm: float = field(default_factory=lambda: float(_cfg.annulus_inner_fwhm))
-    annulus_outer_fwhm: float = field(default_factory=lambda: float(_cfg.annulus_outer_fwhm))
+    aperture_fwhm_factor: float = 1.9
+    annulus_inner_fwhm: float = 4.75
+    annulus_outer_fwhm: float = 9.0
 
     def radii_px(self) -> tuple[float, float, float]:
         fw = float(self.fwhm_px)
@@ -99,6 +99,9 @@ A9_CONTEXTS: dict[str, A9Context] = {
         "draft367",
         fwhm_px=DRAFT367_FWHM_GAUSS_PX,
         plate_scale_arcsec=DRAFT367_PLATE_SCALE_ARCSEC,
+        aperture_fwhm_factor=1.35,
+        annulus_inner_fwhm=2.7,
+        annulus_outer_fwhm=5.2,
     ),
 }
 

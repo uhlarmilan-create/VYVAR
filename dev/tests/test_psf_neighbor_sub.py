@@ -7,6 +7,7 @@ from config import AppConfig
 from psf_neighbor_sub import neighbor_sub_target_flux
 from tests.validation.a9_core import (
     A9_CONTEXTS,
+    A9Context,
     STAMP_C,
     build_blend_frame,
     measure_cell,
@@ -21,8 +22,21 @@ def _enabled_cfg() -> AppConfig:
     return c
 
 
+def _a9_envelope_ctx(name: str) -> A9Context:
+    """A9 joint-fit envelope at f=1.9 / annulus 4.75/9, not production APERTURE-01d radii."""
+    base = A9_CONTEXTS[name]
+    return A9Context(
+        name=base.name,
+        fwhm_px=base.fwhm_px,
+        plate_scale_arcsec=base.plate_scale_arcsec,
+        aperture_fwhm_factor=1.9,
+        annulus_inner_fwhm=4.75,
+        annulus_outer_fwhm=9.0,
+    )
+
+
 def test_joint_recovers_high_value_ideal():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     rng = np.random.default_rng(RNG_SEEDS["gen_a9"])
     tflux = ctx.target_flux_adu()
     nflux = tflux * 10.0 ** 0.8
@@ -100,7 +114,7 @@ def test_bright_close_regime_allows_sep13_dm3():
 
 
 def test_refuse_zone_sep_08_inclusive():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     rng = np.random.default_rng(RNG_SEEDS["gen_a9"] + 2)
     tflux = ctx.target_flux_adu()
     r_ap, r_in, r_out = ctx.radii_px()
@@ -127,7 +141,7 @@ def test_refuse_zone_sep_08_inclusive():
 
 
 def test_refuse_zone_sep_05():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     rng = np.random.default_rng(RNG_SEEDS["gen_a9"] + 1)
     tflux = ctx.target_flux_adu()
     r_ap, r_in, r_out = ctx.radii_px()
@@ -150,7 +164,7 @@ def test_refuse_zone_sep_05():
 
 
 def test_a9_ideal_scores_high_value_cell():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     from tests.validation.a9_core import A9Cell
 
     cell = A9Cell(sep_fwhm=1.3, delta_mag=-2, context="coarse")
@@ -159,7 +173,7 @@ def test_a9_ideal_scores_high_value_cell():
 
 
 def test_mismatch_degrades_vs_ideal():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     from tests.validation.a9_core import A9Cell
 
     cell = A9Cell(sep_fwhm=1.3, delta_mag=-3, context="coarse")
@@ -170,7 +184,7 @@ def test_mismatch_degrades_vs_ideal():
 
 def test_refuse_neighbor_overfit_realistic_mismatch():
     """Realistic PSF mismatch can over-estimate neighbour; catalog anchor must refuse."""
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     from tests.validation.a9_core import psf_variant_spec
 
     pspec = psf_variant_spec("realistic")
@@ -218,7 +232,7 @@ def test_refuse_neighbor_overfit_realistic_mismatch():
 
 
 def test_refuse_target_undershoot_when_cleaned_too_faint():
-    ctx = A9_CONTEXTS["coarse"]
+    ctx = _a9_envelope_ctx("coarse")
     rng = np.random.default_rng(RNG_SEEDS["gen_a9"] + 4)
     tflux = ctx.target_flux_adu()
     nflux = tflux * 100.0

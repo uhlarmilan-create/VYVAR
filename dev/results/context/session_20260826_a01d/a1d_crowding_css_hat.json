@@ -1,0 +1,33 @@
+{
+  "task": "APERTURE-01d CSS/HAT-188 CROWDING evidence",
+  "premise": "Predicted epochs >= era03 after annulus 2.7/5.2. Measured 0. Cause is catalog identity, not annulus.",
+  "vsx_not_force_injected": true,
+  "css": {
+    "id": "1498842882207281152",
+    "era03_epochs": 132,
+    "era04_epochs": 0,
+    "era04_proc_frames": 0,
+    "masterstar_xy": [931.015, 294.058],
+    "frame014_nearest": {
+      "catalog_id": "1498843633825520000",
+      "sep_px": 10.63,
+      "peak_max_adu": 2008.0,
+      "vsx_known_variable": false
+    }
+  },
+  "hat188": {
+    "id": "1499842372636900992",
+    "era03_epochs": 71,
+    "era04_epochs": 0,
+    "era04_proc_frames": 0,
+    "masterstar_xy": [1986.834, 1232.054],
+    "frame014_nearest": {
+      "catalog_id": "1499842132118731648",
+      "sep_px": 18.30,
+      "peak_max_adu": 1948.0,
+      "vsx_known_variable": false
+    }
+  },
+  "candidate3_same": true,
+  "tag": "CROWDING"
+}

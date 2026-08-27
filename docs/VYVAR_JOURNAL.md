@@ -2,6 +2,13 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-08-27 -- CLOSE-OUT APERTURE-01d LOCK (annulus 2.7/5.2; era04 locked)
+
+Annulus 2.7/5.2. AIJ gate 1.9503 mmag PASS. Ledger v6: 0 UNNAMED.
+C6-2 `--full` twice PASS. era04 core 9367f998 n=160 / d3cefff3
+n=210. SNAPSHOT_NAME is era04. era03 freeze kept on disk.
+Evidence: `CURSOR_RESULT_APERTURE_01D.md`.
+
 ## 2026-08-26 -- CLOSE-OUT APERTURE-01c STOP (f=1.35; era04 not locked)
 
 Milan GO f=1.35. Independent AIJ gate 2.7833 mmag PASS.

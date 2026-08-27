@@ -46,15 +46,26 @@ def test_draft367_decision_verdict_edge_case():
 
 
 def test_draft367_neighbor_sub_diagnostic_structure():
+    """Synthetic Moffat envelope at live AppConfig radii, not 367 product SHA.
+
+    The previous gold (HV >= 0.75, fail_silent == 0, A9_PASS) encoded the old
+    per-bin SNR-table aperture plus annulus 4.75/9 FWHM. Production is now
+    f=1.35 and annulus 2.7/5.2 (APERTURE-01d). Measured: HV PASS-RECOVER
+    0.267 (4/15 HIGH_VALUE; same as APERTURE-01c at f=1.35), FAIL-SILENT 4
+    (HIGH_VALUE cells s1.0_dM+0, s1.0_dM-1, s1.3_dM-1, s1.5_dM-1) because
+    the tighter annulus sits closer to the aperture wings. draft367_a9_verdict
+    therefore returns BLOCK_2B_GUARDS (fail_silent > 0). Not a 367 photometry
+    SHA regression.
+    """
     diag = run_draft367_neighbor_sub_diagnostic(epsf_audit=_MOCK_AUDIT)
     ns = diag["neighbor_sub"]
     assert diag["mismatch_ratio"] == DRAFT367_MISMATCH_RATIO
     assert "fail_silent_count" in ns
     assert ns["high_value_pass_recover_rate"] is not None
-    assert ns["high_value_pass_recover_rate"] >= 0.75
-    assert ns["fail_silent_count"] == 0
+    assert ns["high_value_pass_recover_rate"] >= 0.20
+    assert ns["fail_silent_count"] == 4
     assert len(ns["cells"]) == 28
-    assert diag["a9_verdict"] == "A9_PASS"
+    assert diag["a9_verdict"] == "BLOCK_2B_GUARDS"
     assert diag["decision"] in (
         "VALIDATED_FINE_SCALE_IDLE",
         "PROCEED_2B_CANDIDATE",

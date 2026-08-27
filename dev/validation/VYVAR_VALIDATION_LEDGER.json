@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-23",
+  "updated": "2026-08-27",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-08-23",
-      "commit": "ad19e14",
+      "last_verified": "2026-08-27",
+      "commit": "9d47e2b",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -142,16 +142,16 @@
     {
       "id": "VL-ANCHOR-WCSINV",
       "area": "photometry",
-      "description": "Frozen 516 ERA-03 snapshot draft_000516_snapshot_era03_20260820 (canonical --full; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
-      "verification": "scripts/session_baseline_check.py --full (core 9902d918 n=121; extended 472bc9e4 n=179). Photometers frozen snapshot inputs copied to tmp, never live 516.",
+      "description": "Frozen 516 ERA-04 snapshot draft_000516_snapshot_era04_20260826 (canonical --full; APERTURE-01d f=1.35 annulus 2.7/5.2; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
+      "verification": "scripts/session_baseline_check.py --full (core 9367f998 n=160; extended d3cefff3 n=210). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
-      "last_verified": "2026-08-23",
-      "commit": "ad19e14",
-      "notes": "DAO-GAIA ERA-03 close: supersedes ANCHOR-516-04 clean-rebuild core 477dc8cf (n=97). Pinned 48-target comp ensembles + check_catalog_id per target (INV-PIN-01..04). +14 additive LCs/comp_quality sidecars; -2 honest zone_noise missing. CV CVn 1497007144465726080 skip_reason=per_frame_saturation. Snapshot inputs frozen so the gate cannot photometer a live drifting draft.",
+      "last_verified": "2026-08-27",
+      "commit": "9d47e2b",
+      "notes": "APERTURE-01d lock. Supersedes ERA-03 core 9902d918 (n=121). era03 freeze kept on disk, not overwritten. candidate1/2/3 kept. Three POOL-STARVE empty_comp_drop allowlisted. CSS/HAT-188 tagged CROWDING (VSX not force-injected).",
       "census_fingerprint": {
         "n_raw_dao": 2246,
         "matched": 3546,
-        "targets": 265
+        "targets": 253
       },
       "plan_regen_fingerprint": {
         "variable_targets_rows": 873,
@@ -170,31 +170,31 @@
           "masterstars_exo": 2,
           "no_match": 156
         },
-        "active_targets_rows": 265,
-        "skip_photometry_true": 205,
+        "active_targets_rows": 253,
+        "skip_photometry_true": 197,
         "skip_reason_histogram": {
-          "": 60,
-          "below_target_depth": 1,
+          "": 53,
+          "no_comps": 3,
           "per_frame_saturation": 1,
-          "vsx_type_out_of_scope": 190,
-          "zone_noise": 13
+          "vsx_type_out_of_scope": 182,
+          "zone_noise": 14
         },
         "zone_flag_histogram": {
-          "linear": 163,
-          "noise": 13,
+          "linear": 157,
+          "noise": 14,
           "saturated": 1,
-          "unknown": 88
+          "unknown": 81
         }
       },
       "identity_p95_baseline_px": 1.7846151827213692,
-      "core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
-      "extended_sha": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
-      "core_n": 121,
-      "extended_n": 179,
-      "superseded_core_sha": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
-      "superseded_extended_sha": "f71e07226893a6b07e24999927bad0da8c16e6407656fc97ee02e0d57494be5d",
-      "superseded_snapshot": "draft_000516_snapshot_cleanrebuild_20260818",
-      "product_sha_lineage": "477dc8cf -> 9902d918"
+      "core_sha": "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7",
+      "extended_sha": "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863",
+      "core_n": 160,
+      "extended_n": 210,
+      "superseded_core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+      "superseded_extended_sha": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
+      "superseded_snapshot": "draft_000516_snapshot_era03_20260820",
+      "product_sha_lineage": "477dc8cf -> 9902d918 -> 9367f998"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
