@@ -1,0 +1,17 @@
+{
+  "bo": {
+    "catalog_id": "1498613634033133184",
+    "n_finite": 0,
+    "n_rows": 134,
+    "demeaned_rms_mmag": null,
+    "missing": false
+  },
+  "fw": {
+    "catalog_id": "1497343732462852864",
+    "n_finite": 0,
+    "n_rows": 134,
+    "demeaned_rms_mmag": null,
+    "missing": false
+  },
+  "note": "Measured from --full PSF LCs at tmp/session_baseline/20260827T133728Z. All epochs dropped (INV-PSF-LC-PIN-01 comp_psf_fail). Ref EPSF-ZP-OK-01 WIRE v2 live 516: BO 134/134 8.495 mmag, FW 134/134 5.218 mmag."
+}
