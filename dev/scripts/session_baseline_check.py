@@ -990,6 +990,102 @@ def check_clean_tree(report: SessionReport) -> None:
     report.add("clean-tree", "PASS" if ok else "FAIL", "; ".join(details)[:220])
 
 
+def _stamp_params_dump(phot: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "cfg_source": phot.get("cfg_source"),
+        "cfg_changed_keys": list(phot.get("cfg_changed_keys") or []),
+        "photometry_context": dict(phot.get("photometry_context") or {}),
+        "errors": list(phot.get("errors") or []),
+        "n_lightcurves": phot.get("n_lightcurves"),
+        "n_frames": phot.get("n_frames"),
+    }
+
+
+def run_parity_baseline(report: SessionReport) -> None:
+    """G7: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match."""
+    os.environ["VYVAR_P1_FORCE"] = "1"
+    _ensure_import_paths()
+
+    from config import AppConfig  # noqa: PLC0415
+    from night_run import run_night_photometry, run_ui_night_photometry  # noqa: PLC0415
+    from pipeline import AstroPipeline  # noqa: PLC0415
+    from tests.photometry_sha import compute_photometry_sha  # noqa: PLC0415
+
+    cfg = AppConfig()
+    cfg.k2_mode = "literature"
+    cfg.save_lightcurve_png = False
+    cfg.per_frame_saturation_enabled = True
+    cfg.export_err_mode = "calibrated"
+
+    snapshot = Path(cfg.archive_root) / "Drafts" / SNAPSHOT_NAME
+    if not snapshot.is_dir():
+        report.add("parity-snapshot", "FAIL", f"missing {snapshot}")
+        return
+    report.add("parity-snapshot", "PASS", SNAPSHOT_NAME)
+
+    ts = _full_work_stamp()
+    work_w1 = REPO_ROOT / "tmp" / "session_parity" / f"{ts}_w1"
+    work_w2 = REPO_ROOT / "tmp" / "session_parity" / f"{ts}_w2"
+    work_w1.mkdir(parents=True, exist_ok=True)
+    work_w2.mkdir(parents=True, exist_ok=True)
+    ps_w1, lights_w1 = _copy_frozen_anchor_inputs(snapshot, work_w1)
+    ps_w2, lights_w2 = _copy_frozen_anchor_inputs(snapshot, work_w2)
+    _ = (lights_w1, lights_w2, ps_w1, ps_w2)
+
+    pipeline = AstroPipeline(cfg)
+
+    def _run(label: str, work_root: Path, fn: Any) -> dict[str, Any]:
+        t0 = datetime.now(timezone.utc)
+        phot = fn(
+            cfg=cfg,
+            pipeline=pipeline,
+            draft_id=DRAFT_ID,
+            draft_dir_override=work_root,
+            write_pdfs=False,
+            existing_draft=True,
+        )
+        elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
+        errs = list(phot.get("errors") or [])
+        if errs:
+            report.add(f"parity-{label}-run", "FAIL", f"{elapsed:.0f}s {errs[0]}"[:200])
+        else:
+            report.add(f"parity-{label}-run", "PASS", f"{elapsed:.0f}s")
+        dump_path = work_root / "parity_stamped_params.json"
+        dump_path.write_text(
+            json.dumps(_stamp_params_dump(phot), indent=2, default=str) + "\n",
+            encoding="ascii",
+        )
+        return phot
+
+    phot_w2 = _run("w2", work_w2, run_night_photometry)
+    phot_w1 = _run("w1", work_w1, run_ui_night_photometry)
+
+    core_w1, n_w1 = compute_photometry_sha(work_w1, include_comp_qa=False)
+    ext_w1, n_w1e = compute_photometry_sha(work_w1, include_comp_qa=True)
+    core_w2, n_w2 = compute_photometry_sha(work_w2, include_comp_qa=False)
+    ext_w2, n_w2e = compute_photometry_sha(work_w2, include_comp_qa=True)
+
+    if core_w1 == core_w2 and n_w1 == n_w2 and ext_w1 == ext_w2 and n_w1e == n_w2e:
+        report.add(
+            "parity-sha",
+            "PASS",
+            f"core={core_w1[:16]}... n={n_w1} ext={ext_w1[:16]}... n={n_w1e}",
+        )
+    else:
+        dump_w1 = _stamp_params_dump(phot_w1)
+        dump_w2 = _stamp_params_dump(phot_w2)
+        report.add(
+            "parity-sha",
+            "FAIL",
+            (
+                f"w1 core={core_w1[:16]} n={n_w1} ext={ext_w1[:16]} n={n_w1e} "
+                f"w2 core={core_w2[:16]} n={n_w2} ext={ext_w2[:16]} n={n_w2e} "
+                f"params_w1={json.dumps(dump_w1, default=str)[:180]} "
+                f"params_w2={json.dumps(dump_w2, default=str)[:180]}"
+            )[:400],
+        )
+
+
 def print_summary(report: SessionReport) -> None:
     print()
     print(f"SESSION BASELINE CHECK ({report.tier})")
@@ -1027,6 +1123,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Also run the tracked-only worktree gate (pytest/ruff/pyflakes subset)",
     )
+    parser.add_argument(
+        "--parity",
+        action="store_true",
+        help="G7 EXPORT-PARITY: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -1037,7 +1138,9 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:  # noqa: BLE001
         pass
 
-    report = SessionReport(tier="full" if args.full else "fast")
+    report = SessionReport(
+        tier="parity" if args.parity and not args.full else ("full" if args.full else "fast")
+    )
     check_git_state(report)
     check_config_paths(report)
     check_pytest(report)
@@ -1049,6 +1152,8 @@ def main(argv: list[str] | None = None) -> int:
         check_clean_tree(report)
     if args.full:
         run_full_baseline(report)
+    if args.parity:
+        run_parity_baseline(report)
 
     print_summary(report)
     if report.suspended:
