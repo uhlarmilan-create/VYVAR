@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
@@ -50,6 +51,40 @@ def is_psf_column(name: str) -> bool:
 
 def non_psf_columns(columns) -> list[str]:
     return [c for c in columns if not is_psf_column(c)]
+
+
+def hash_non_psf_columns(df: pd.DataFrame) -> str:
+    """SHA-256 of non-psf columns via pandas (quoted headers must survive read_csv)."""
+    cols = non_psf_columns(df.columns)
+    if not cols:
+        return hashlib.sha256(b"empty-non-psf").hexdigest()
+    sub = df.loc[:, list(cols)]
+    hashed = pd.util.hash_pandas_object(sub, index=True)
+    return hashlib.sha256(np.ascontiguousarray(hashed.values).tobytes()).hexdigest()
+
+
+def guarded_psf_sidecar_write(
+    sidecar_path: Path,
+    after: pd.DataFrame,
+    before: pd.DataFrame,
+) -> None:
+    """Write sidecar; INV-EXPORT-READ-ONLY-01 restores if non-psf columns change."""
+    from pipeline import _vyvar_df_to_csv
+
+    pre_hash = hash_non_psf_columns(before)
+    pre_bytes = sidecar_path.read_bytes() if sidecar_path.is_file() else None
+    try:
+        _vyvar_df_to_csv(after, sidecar_path)
+        on_disk = read_vyvar_csv(sidecar_path, low_memory=False)
+        post_hash = hash_non_psf_columns(on_disk)
+        if pre_hash != post_hash:
+            raise RuntimeError(
+                "INV-EXPORT-READ-ONLY-01: non-psf columns changed; sidecar restored"
+            )
+    except Exception:
+        if pre_bytes is not None:
+            sidecar_path.write_bytes(pre_bytes)
+        raise
 
 
 def assert_inv_psf_additive_01(
@@ -166,8 +201,6 @@ def stamp_p4_none_sidecar(
     pipeline_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Rewrite one proc sidecar PSF columns to P4 (uncorrected). ADDITIVE-01 asserted."""
-    from pipeline import _vyvar_df_to_csv
-
     before = read_vyvar_csv(sidecar_path, low_memory=False)
     after = stamp_p4_none_on_dataframe(before)
     assert_inv_psf_additive_01(
@@ -176,7 +209,7 @@ def stamp_p4_none_sidecar(
         frame_name=sidecar_path.name,
         pipeline_meta=pipeline_meta,
     )
-    _vyvar_df_to_csv(after, sidecar_path)
+    guarded_psf_sidecar_write(sidecar_path, after, before)
     return {"csv": str(sidecar_path), "status": "ok"}
 
 
@@ -268,7 +301,7 @@ def merge_psf_into_sidecar(
     pipeline_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Read existing sidecar, update psf_* columns only, enforce INV-PSF-ADDITIVE-01."""
-    from pipeline import _fill_psf_catalog_columns, _vyvar_df_to_csv
+    from pipeline import _fill_psf_catalog_columns
 
     if not sidecar_path.is_file():
         raise FileNotFoundError(
@@ -301,7 +334,7 @@ def merge_psf_into_sidecar(
         frame_name=fits_path.name,
         pipeline_meta=pipeline_meta,
     )
-    _vyvar_df_to_csv(after, sidecar_path)
+    guarded_psf_sidecar_write(sidecar_path, after, before_snap)
     rec = st.get("_psf_frame_record")
     return {
         "file": fits_path.name,
