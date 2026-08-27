@@ -1,16 +1,17 @@
 """Headless VYVAR night pipeline runner.
 
-Extracted from ``app.py`` ``_run_vyvar_full_pipeline``.
-Called by:
-  - ``simulate_night_run.py`` (CLI / e2e test)
-  - ``app.py`` ``_run_vyvar_full_pipeline`` (UI wrapper - deferred)
-  - Future: TODO-11 auto-trigger watchdog
+Production entry: ``run_night_pipeline``. UI RUN VYVAR
+(``app._run_vyvar_full_pipeline``) is a wrapper that resolves optics /
+location / flats into ``NightRunParams`` and writes Streamlit state from
+the result. C3 (Aperture Photometry page) calls ``run_night_photometry``.
 
 No Streamlit dependencies. Progress via ``logging`` and optional callback.
 """
 
 from __future__ import annotations
 
+import copy
+import json
 import logging
 import math
 import time
@@ -38,6 +39,7 @@ class NightRunParams:
     equipment_id: int
     telescope_id: int
     config_path: Path | None = None
+    existing_pipeline: Any | None = None
     location_id: int | None = None
     location_source_hint: str | None = None
     platesolve_equipment_id: int | None = None
@@ -87,10 +89,207 @@ class NightRunResult:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     photometry_completeness: dict[str, dict[str, Any]] = field(default_factory=dict)
+    import_result: Any = None
+    plan: Any = None
+    archive_path: Path | None = None
+    ram_qc_summary: dict[str, Any] = field(default_factory=dict)
+    pointing: dict[str, Any] = field(default_factory=dict)
+    fwhm_limit_px: float = 0.0
+    fwhm_limit_source: str = "unset"
+    masterstar_path: str = ""
+    processing_hash: str | None = None
+    platesolve_job_output: Any = None
+    ra_ui: float | None = None
+    de_ui: float | None = None
+    memory_profile: Any = None
+    cfg_source: str = "live"
+    cfg_changed_keys: list[str] = field(default_factory=list)
+    zero_target_setups: list[str] = field(default_factory=list)
+    completed_setups: list[str] = field(default_factory=list)
+    photometry_context: dict[str, Any] = field(default_factory=dict)
+    calibration_output: dict[str, Any] = field(default_factory=dict)
 
 
 # Phase 2A must cover at least this fraction of active_targets in photometry_summary.
 _PHOTOMETRY_COMPLETENESS_MIN_RATIO = 0.90
+
+
+def apply_smart_plan_flat_fallbacks(
+    plan: Any,
+    choices: dict[str, str] | None = None,
+) -> None:
+    """Apply per-observation flat fallbacks (Streamlit-free).
+
+    ``choices`` maps group_key -> source obs_key. Missing / ``__skip__``
+    leaves that group unchanged and only refreshes missing-flat bookkeeping.
+    """
+    ogs = getattr(plan, "observation_groups", None) or {}
+    if not ogs:
+        return
+    mf = dict(getattr(plan, "masterflat_by_obs_key", None) or {})
+    choices = dict(choices or {})
+    for p in getattr(plan, "flat_fallback_prompts", None) or []:
+        gk = str(p.get("group_key") or "")
+        if not gk:
+            continue
+        choice = choices.get(gk, "__skip__")
+        if choice and choice != "__skip__":
+            src = mf.get(str(choice))
+            if src and Path(str(src)).is_file():
+                mf[gk] = src
+    missing = sorted(
+        gk
+        for gk in ogs
+        if not (mf.get(gk) and str(mf[gk]).strip() and Path(str(mf[gk])).is_file())
+    )
+    plan.masterflat_by_obs_key = mf
+    plan.missing_obs_keys = missing
+    plan.missing_flat_filters = sorted({ogs[gk]["filter"] for gk in missing})
+    mfb: dict[str, Any] = {}
+    for gk, g in ogs.items():
+        fln = g["filter"]
+        pth = mf.get(gk)
+        if fln not in mfb or pth is not None and mfb[fln] is None:
+            mfb[fln] = pth
+    plan.masterflat_by_filter = mfb
+
+
+def load_draft_config_snapshot(draft_dir: Path) -> dict[str, Any] | None:
+    """Return ``provenance.config_snapshot`` from a draft ``pipeline_meta.json``."""
+    root = Path(draft_dir)
+    paths: list[Path] = []
+    if root.is_dir():
+        paths.extend(sorted(root.glob("platesolve/*/photometry/pipeline_meta.json")))
+    direct = root / "photometry" / "pipeline_meta.json"
+    if direct.is_file():
+        paths.append(direct)
+    for meta_path in paths:
+        try:
+            raw = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        prov = raw.get("provenance") if isinstance(raw, dict) else None
+        snap = prov.get("config_snapshot") if isinstance(prov, dict) else None
+        if isinstance(snap, dict) and snap:
+            return dict(snap)
+    return None
+
+
+def overlay_config_snapshot(
+    live: AppConfig,
+    snapshot: dict[str, Any],
+) -> tuple[AppConfig, list[str]]:
+    """Copy snapshot keys onto a deepcopy of live cfg. Return (cfg, changed_keys)."""
+    cfg = copy.deepcopy(live)
+    live_d = live.to_dict() if hasattr(live, "to_dict") else {}
+    changed: list[str] = []
+    for k, v in snapshot.items():
+        if not str(k) or str(k).startswith("_"):
+            continue
+        if not hasattr(cfg, k):
+            continue
+        old = live_d.get(k, getattr(cfg, k, None))
+        if old == v:
+            continue
+        try:
+            setattr(cfg, k, v)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        changed.append(str(k))
+    return cfg, sorted(changed)
+
+
+def resolve_cfg_for_photometry(
+    live_cfg: AppConfig,
+    draft_dir: Path | None,
+    *,
+    existing_draft: bool,
+) -> tuple[AppConfig, str, list[str]]:
+    """INV-CFG-SOURCE-01: snapshot cfg on re-run; live cfg only for a new draft."""
+    if not existing_draft or draft_dir is None:
+        return live_cfg, "live", []
+    snap = load_draft_config_snapshot(Path(draft_dir))
+    if not snap:
+        return live_cfg, "live_no_snapshot", []
+    cfg, changed = overlay_config_snapshot(live_cfg, snap)
+    LOGGER.info(
+        "[NightRun] INV-CFG-SOURCE-01 source=draft_snapshot changed_keys=%s",
+        changed,
+    )
+    return cfg, "draft_snapshot", changed
+
+
+def stamp_frame_qc_provenance(
+    ap_root: Path,
+    *,
+    draft_id: int,
+    fwhm_limit_px: float,
+    fwhm_limit_source: str,
+    cfg_source: str = "live",
+    cfg_changed_keys: list[str] | None = None,
+) -> Path:
+    """Write FRAME-QC + cfg-source stamp next to the draft archive."""
+    payload = {
+        "quality_filter_draft_id": int(draft_id),
+        "fwhm_limit_px": float(fwhm_limit_px),
+        "fwhm_limit_source": str(fwhm_limit_source),
+        "cfg_source": str(cfg_source),
+        "cfg_changed_keys": list(cfg_changed_keys or []),
+    }
+    path = Path(ap_root) / "night_run_qc_provenance.json"
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="ascii")
+    LOGGER.info("[NightRun] FRAME-QC provenance: %s", payload)
+    return path
+
+
+def resolve_photometry_context_triple(
+    cfg: AppConfig,
+    *,
+    db: Any,
+    draft_id: int | None,
+    masterstar_fits: Path | None,
+) -> dict[str, Any]:
+    """Phase 2A plate scale / site / calibration_mode (C3 fire-proof)."""
+    from draft_provenance import resolve_calibration_mode
+    from param_resolver import resolve_site
+    from photometry_core import _get_plate_scale_from_cfg
+
+    hdr = None
+    ms = Path(masterstar_fits) if masterstar_fits is not None else None
+    if ms is not None and ms.is_file():
+        try:
+            from astropy.io import fits as astrofits
+
+            with astrofits.open(ms, memmap=False) as hdul:
+                hdr = hdul[0].header.copy()
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("MASTERSTAR header for context triple skipped: %s", exc)
+    plate = _get_plate_scale_from_cfg(
+        cfg,
+        db=db,
+        draft_id=draft_id,
+        fits_path=ms,
+        ms_header=hdr,
+    )
+    site = resolve_site(hdr, db=db, draft_id=draft_id, cfg=cfg)
+    cal = resolve_calibration_mode(draft_id=draft_id, db=db)
+    site_s = (
+        f"{site.source}:{site.lat}:{site.lon}:{site.elev}"
+        if site is not None
+        else None
+    )
+    out = {
+        "plate_scale": plate,
+        "site": site_s,
+        "calibration_mode": cal,
+    }
+    LOGGER.info(
+        "[NightRun] photometry context plate_scale=%s site=%s calibration_mode=%s",
+        out["plate_scale"],
+        out["site"],
+        out["calibration_mode"],
+    )
+    return out
 
 
 def _load_app_config(config_path: Path | None) -> AppConfig:
@@ -286,14 +485,9 @@ def _night_run_preprocess(
         )
         df = pd.concat(dfs_pp, ignore_index=True) if dfs_pp else pd.DataFrame()
     else:
-        if not source_dir.exists():
-            raise FileNotFoundError("Missing source lights directory. Run calibration/import first.")
-        df = qc_enrich_calibrated_lights_in_place(
-            calibrated_root=source_dir,
-            progress_cb=progress_cb,
-            db=pipeline.db,
-            draft_id=None,
-            **_pp_kw,
+        raise RuntimeError(
+            "INV-FRAME-QC-01: quality_filter_draft_id is required; "
+            "the unfiltered qc_enrich else-branch is removed"
         )
 
     pipeline.quick_preprocess_last_import(archive_path=ap_root, run=False)
@@ -500,6 +694,288 @@ def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
     return n_lc, med
 
 
+def run_night_photometry(
+    *,
+    cfg: AppConfig,
+    pipeline: AstroPipeline,
+    draft_id: int | None,
+    draft_dir_override: Path | None = None,
+    progress_cb: Callable[[str], None] | None = None,
+    timings: dict[str, float] | None = None,
+    write_pdfs: bool = True,
+    existing_draft: bool = False,
+) -> dict[str, Any]:
+    """Photometry-only slice shared by ``run_night_pipeline`` (C1/C2) and C3.
+
+    Forwards ``draft_id`` and ``db``. Completeness gate is shared: a UI run
+    can FAIL loudly. INV-CFG-SOURCE-01 applies when ``existing_draft`` is True.
+    """
+    from photometry_core import merge_photometry_pipeline_meta, run_full_photometry_pipeline
+    from ui_aperture_photometry import _find_phase2a_paths
+
+    timings = timings if timings is not None else {}
+    out: dict[str, Any] = {
+        "errors": [],
+        "warnings": [],
+        "n_lightcurves": 0,
+        "n_frames": 0,
+        "lc_rms_median": float("nan"),
+        "sysrem_improvement_pct": float("nan"),
+        "output_dir": None,
+        "photometry_completeness": {},
+        "zero_target_setups": [],
+        "completed_setups": [],
+        "photometry_context": {},
+        "cfg_source": "live",
+        "cfg_changed_keys": [],
+    }
+
+    def _p(msg: str) -> None:
+        LOGGER.info("[NightRun] %s", msg)
+        if progress_cb is not None:
+            progress_cb(msg)
+
+    def _t(label: str, t0: float) -> None:
+        elapsed = time.time() - t0
+        timings[label] = elapsed
+        LOGGER.info("[NightRun] [OK] %s - %.1fs", label, elapsed)
+
+    draft_dir = None
+    if draft_dir_override is not None:
+        draft_dir = Path(draft_dir_override).resolve()
+    elif draft_id is not None:
+        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
+
+    phot_cfg, cfg_source, changed_keys = resolve_cfg_for_photometry(
+        cfg,
+        draft_dir,
+        existing_draft=bool(existing_draft),
+    )
+    out["cfg_source"] = cfg_source
+    out["cfg_changed_keys"] = list(changed_keys)
+    if changed_keys:
+        _p(f"INV-CFG-SOURCE-01 changed_keys={changed_keys}")
+
+    _p("Step 13: Discover obs groups")
+    t0 = time.time()
+    all_setups = _find_phase2a_paths(
+        phot_cfg, draft_id, draft_dir_override=draft_dir_override
+    )
+    _t("discover_obs_groups", t0)
+
+    if not all_setups:
+        out["errors"].append("No platesolve setups (per_frame_catalog_index.csv)")
+        return out
+
+    if draft_dir is None:
+        out["errors"].append("No draft_dir for photometry")
+        return out
+
+    aligned_root = draft_dir / "detrended_aligned" / "lights"
+    run_groups: list[str] = []
+    for nm in sorted(all_setups.keys()):
+        og_dir = aligned_root / str(nm)
+        if og_dir.is_dir() and any(og_dir.glob("proc_*.csv")):
+            run_groups.append(str(nm))
+    if not run_groups:
+        run_groups = list(sorted(all_setups.keys()))
+
+    first_ms = None
+    for nm0 in run_groups:
+        p0 = all_setups.get(str(nm0)) or {}
+        if p0.get("masterstar_fits"):
+            first_ms = Path(p0["masterstar_fits"])
+            break
+    ctx = resolve_photometry_context_triple(
+        phot_cfg,
+        db=pipeline.db,
+        draft_id=draft_id,
+        masterstar_fits=first_ms,
+    )
+    out["photometry_context"] = ctx
+
+    phot_errors: list[str] = []
+    completeness_issues: list[str] = []
+    completeness_by_setup: dict[str, dict[str, Any]] = {}
+    total_lc = 0
+    total_frames = 0
+    lc_rms_values: list[float] = []
+    zero_target_setups: list[str] = []
+    completed: list[str] = []
+    sysrem_pct = float("nan")
+    last_out: Path | None = None
+
+    for nm in run_groups:
+        p = all_setups.get(str(nm)) or {}
+        ms_fits = Path(p["masterstar_fits"]) if p.get("masterstar_fits") else None
+        og_dir = Path(p["obs_group_dir"]) if p.get("obs_group_dir") else None
+        ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
+        vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
+        pf_dir = Path(p["per_frame_csv_dir"]) if p.get("per_frame_csv_dir") else None
+        dt_dir = Path(p["detrended_aligned_dir"]) if p.get("detrended_aligned_dir") else None
+        out_d = Path(p["output_dir"]) if p.get("output_dir") else None
+
+        missing: list[str] = []
+        if ms_fits is None or not ms_fits.exists():
+            missing.append("MASTERSTAR.fits")
+        if ms_csv is None or not ms_csv.exists():
+            missing.append("masterstars_full_match.csv")
+        if vt_csv is None or not vt_csv.exists():
+            missing.append("variable_targets.csv")
+        if pf_dir is None or not pf_dir.exists():
+            missing.append("per-frame CSV directory")
+        if dt_dir is None or not dt_dir.exists():
+            missing.append("detrended_aligned directory")
+        if out_d is None:
+            missing.append("output_dir")
+        if missing:
+            phot_errors.append(f"{nm}: missing {', '.join(missing)}")
+            continue
+
+        _p(f"Step 14: Photometry - {nm}")
+        t0 = time.time()
+        try:
+            phot_result = run_full_photometry_pipeline(
+                masterstar_fits_path=ms_fits,
+                variable_targets_csv=vt_csv,
+                masterstars_csv=ms_csv,
+                per_frame_csv_dir=pf_dir,
+                detrended_aligned_dir=dt_dir,
+                output_dir=out_d,
+                cfg=phot_cfg,
+                db=pipeline.db,
+                draft_id=draft_id,
+                progress_cb=_p,
+            )
+        except Exception as exc_nm:  # noqa: BLE001
+            phot_errors.append(f"{nm}: {exc_nm}")
+            continue
+        _t(f"photometry_{nm}", t0)
+
+        try:
+            merge_photometry_pipeline_meta(
+                out_d,
+                {
+                    "cfg_source": cfg_source,
+                    "cfg_changed_keys": list(changed_keys),
+                    "photometry_context": ctx,
+                },
+            )
+        except Exception as meta_exc:  # noqa: BLE001
+            out["warnings"].append(f"{nm}: provenance stamp: {meta_exc}")
+
+        if phot_result.get("zero_targets"):
+            zero_target_setups.append(str(nm))
+            completed.append(str(nm))
+            _p(f"{nm}: 0 active targets - photometry not run")
+            continue
+        if phot_result.get("error"):
+            phot_errors.append(f"{nm}: {phot_result.get('error')}")
+            continue
+
+        p2a = phot_result.get("phase2a") or {}
+        total_lc += int(p2a.get("n_lightcurves") or 0)
+        total_frames += int(p2a.get("n_frames") or 0)
+        last_out = out_d
+        completed.append(str(nm))
+
+        sysrem = phot_result.get("sysrem")
+        if sysrem:
+            try:
+                sysrem_pct = float(sysrem.get("rms_improvement_pct", float("nan")))
+            except (TypeError, ValueError):
+                pass
+
+        n_sum, med_rms = _collect_photometry_metrics(out_d)
+        if n_sum > 0:
+            total_lc = max(total_lc, n_sum)
+        if math.isfinite(med_rms):
+            lc_rms_values.append(med_rms)
+
+        audit = audit_photometry_completeness(out_d)
+        completeness_by_setup[str(nm)] = audit
+        if not audit.get("ok"):
+            n_sm = int(audit.get("n_summary_rows") or 0)
+            n_at = int(audit.get("n_active_targets") or 0)
+            n_meas = int(audit.get("n_measurable_active") or 0)
+            n_unmeas = int(audit.get("n_unmeasurable_missing") or 0)
+            mratio = audit.get("measurable_ratio")
+            mratio_s = (
+                f"{float(mratio):.1%}"
+                if mratio is not None and math.isfinite(float(mratio))
+                else "n/a"
+            )
+            err_detail = audit.get("error")
+            if err_detail:
+                completeness_issues.append(f"{nm}: {err_detail}")
+            else:
+                completeness_issues.append(
+                    f"{nm}: photometry_summary {n_sm}/{n_meas} measurable targets "
+                    f"({mratio_s} coverage, min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required; "
+                    f"{n_unmeas} of {n_at} active are below achieved depth -> unmeasurable)"
+                )
+
+        if write_pdfs:
+            try:
+                from photometry_report import generate_all_method_photometry_reports
+
+                pdf_paths = generate_all_method_photometry_reports(
+                    draft_dir=draft_dir,
+                    obs_group=str(nm),
+                    tess_results={},
+                    base_report_title="VYVAR - Summary Measure Report",
+                )
+                for pdf_path in pdf_paths:
+                    _p(f"PDF report: {Path(pdf_path).name}")
+            except Exception as pdf_err:  # noqa: BLE001
+                out["warnings"].append(f"PDF report {nm}: {pdf_err}")
+
+    out["photometry_completeness"] = completeness_by_setup
+    out["zero_target_setups"] = zero_target_setups
+    out["completed_setups"] = completed
+    out["output_dir"] = last_out
+    out["sysrem_improvement_pct"] = sysrem_pct
+    out["n_lightcurves"] = total_lc
+    out["n_frames"] = total_frames
+    if lc_rms_values:
+        out["lc_rms_median"] = float(np.median(lc_rms_values))
+
+    if phot_errors:
+        out["errors"].extend(phot_errors)
+        return out
+
+    if completeness_issues:
+        out["errors"].append("Photometry completeness gate FAILED")
+        out["errors"].extend(completeness_issues)
+        return out
+
+    return out
+
+
+def run_ui_night_photometry(
+    *,
+    cfg: AppConfig,
+    pipeline: AstroPipeline,
+    draft_id: int | None,
+    draft_dir_override: Path | None = None,
+    progress_cb: Callable[[str], None] | None = None,
+    timings: dict[str, float] | None = None,
+    write_pdfs: bool = False,
+    existing_draft: bool = True,
+) -> dict[str, Any]:
+    """W1/C3 photometry entry (INV-ONE-ENTRY-01). Defaults match a draft re-run."""
+    return run_night_photometry(
+        cfg=cfg,
+        pipeline=pipeline,
+        draft_id=draft_id,
+        draft_dir_override=draft_dir_override,
+        progress_cb=progress_cb,
+        timings=timings,
+        write_pdfs=write_pdfs,
+        existing_draft=existing_draft,
+    )
+
+
 def run_night_pipeline(params: NightRunParams) -> NightRunResult:
     """Run full VYVAR pipeline headless (mirrors ``_run_vyvar_full_pipeline``)."""
     result = NightRunResult(success=False)
@@ -533,12 +1009,16 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
     try:
         t0 = time.time()
-        cfg = _load_app_config(params.config_path)
+        if params.existing_pipeline is not None:
+            pipeline = params.existing_pipeline
+            cfg = pipeline.config
+        else:
+            cfg = _load_app_config(params.config_path)
+            pipeline = AstroPipeline(cfg)
         if params.sysrem_enabled is not None:
             cfg.sysrem_enabled = bool(params.sysrem_enabled)
         if params.sysrem_n_iter is not None:
             cfg.sysrem_n_iter = int(params.sysrem_n_iter)
-        pipeline = AstroPipeline(cfg)
         _t("config", t0)
 
         source = Path(params.source_dir).expanduser().resolve()
@@ -618,6 +1098,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 if pth and Path(pth).exists():
                     plan.masterflat_by_filter[flt] = pth
 
+        if params.apply_smart_plan_flat_fallbacks and not params.pre_calibrated_mode:
+            apply_smart_plan_flat_fallbacks(plan, params.flat_fallback_choices)
+
         if params.pre_calibrated_mode:
             from draft_provenance import (
                 CALIBRATION_MODE_PRE,
@@ -664,9 +1147,12 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         draft_id = int(import_result.draft_id)
         result.draft_id = draft_id
+        result.import_result = import_result
+        result.plan = plan
         ap = Path(str(import_result.archive_path))
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
         result.draft_dir = ap_root.resolve()
+        result.archive_path = ap
 
         from infolog import log_milestone, log_phase_boundary, start_infolog_session  # noqa: PLC0415
 
@@ -730,6 +1216,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 roundness_reject_above=float(params.roundness_reject_above),
             )
             _t("calibration", t0)
+        result.calibration_output = dict(_cal_out or {})
 
         from draft_provenance import resolve_draft_lights_root
 
@@ -756,7 +1243,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         )
 
         t0 = time.time()
-        estimate_archive_memory_profile(ap_root)
+        result.memory_profile = estimate_archive_memory_profile(ap_root)
         _t("memory_profile", t0)
 
         # Step 5: RAM QC (skipped when PERF-10: DAO QC already done in calibration)
@@ -785,6 +1272,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         else:
             LOGGER.info("[PERF-10] Step 5 skipped - DAO QC computed during calibration")
             timings["ram_qc"] = 0.0
+        result.ram_qc_summary = dict(qsum or {})
 
         # Step 6: Pointing
         t0 = time.time()
@@ -811,6 +1299,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 de_ui = float(mde_q)
         except (TypeError, ValueError):
             pass
+        result.pointing = pointing if isinstance(pointing, dict) else {}
+        result.ra_ui = ra_ui
+        result.de_ui = de_ui
         _t("pointing_scan", t0)
 
         # Step 7: Auto FWHM
@@ -835,6 +1326,12 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                             float(cfg.auto_fwhm_k_factor),
                         )
             _t("auto_fwhm", t0)
+
+        fwhm_limit_source = (
+            "compute_auto_fwhm_limit" if bool(cfg.auto_fwhm_enabled) else "auto_fwhm_disabled"
+        )
+        result.fwhm_limit_px = float(fwhm_lim)
+        result.fwhm_limit_source = fwhm_limit_source
 
         # Step 8: MASTERSTAR TOP1
         _p("Step 8: Auto-select MASTERSTAR (TOP1)")
@@ -954,7 +1451,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             "inject_pointing_ra_deg": (float(ira) if coords_ok else None),
             "inject_pointing_dec_deg": (float(ide) if coords_ok else None),
             "quality_filter_draft_id": draft_id,
-            "max_control_points": int(cfg.alignment_max_control_points),
+            "max_control_points": int(params.max_control_points),
             "min_detected_stars": int(params.min_detected_stars),
             "max_detected_stars": int(params.max_detected_stars),
             "astrometry_api_key": "",
@@ -978,6 +1475,16 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         if ph:
             job_ms["processing_hash"] = ph
             job_ms["overwrite_qc_processing"] = True
+        result.processing_hash = ph
+        result.masterstar_path = str(use_path or "")
+        stamp_frame_qc_provenance(
+            ap_root,
+            draft_id=draft_id,
+            fwhm_limit_px=float(fwhm_lim),
+            fwhm_limit_source=fwhm_limit_source,
+            cfg_source=result.cfg_source,
+            cfg_changed_keys=result.cfg_changed_keys,
+        )
 
         # Step 11: Preprocess
         _p("Step 11: Preprocess (calibrated -> processed)")
@@ -1000,6 +1507,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             result.errors.append(f"Platesolve failed: {ps_out.get('error')}")
             result.phase_timings = timings
             return result
+        result.platesolve_job_output = ps_out
 
         draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}").resolve()
         if params.post_platesolve_hook is not None:
@@ -1013,160 +1521,46 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 return result
             _t("post_platesolve_hook", t0)
 
-        # Steps 13-14: Photometry
-        from photometry_core import run_full_photometry_pipeline
-        from ui_aperture_photometry import _find_phase2a_paths
-
+        # Steps 13-15: Photometry (shared slice)
         _p("Step 13: Discover obs groups")
-        t0 = time.time()
-        all_setups = _find_phase2a_paths(cfg, draft_id, draft_dir_override=None)
-        _t("discover_obs_groups", t0)
+        phot = run_night_photometry(
+            cfg=cfg,
+            pipeline=pipeline,
+            draft_id=draft_id,
+            draft_dir_override=None,
+            progress_cb=params.progress_cb,
+            timings=timings,
+            write_pdfs=True,
+            existing_draft=False,
+        )
+        result.cfg_source = str(phot.get("cfg_source") or "live")
+        result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
+        result.photometry_context = dict(phot.get("photometry_context") or {})
+        result.zero_target_setups = list(phot.get("zero_target_setups") or [])
+        result.completed_setups = list(phot.get("completed_setups") or [])
+        result.photometry_completeness = dict(phot.get("photometry_completeness") or {})
+        result.warnings.extend(list(phot.get("warnings") or []))
+        if phot.get("output_dir") is not None:
+            result.output_dir = Path(phot["output_dir"])
+        try:
+            result.sysrem_improvement_pct = float(
+                phot.get("sysrem_improvement_pct", float("nan"))
+            )
+        except (TypeError, ValueError):
+            pass
 
-        if not all_setups:
-            result.errors.append("No platesolve setups (per_frame_catalog_index.csv)")
-            result.phase_timings = timings
-            return result
-
-        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}").resolve()
-        aligned_root = draft_dir / "detrended_aligned" / "lights"
-        run_groups: list[str] = []
-        for nm in sorted(all_setups.keys()):
-            og_dir = aligned_root / str(nm)
-            if og_dir.is_dir() and any(og_dir.glob("proc_*.csv")):
-                run_groups.append(str(nm))
-        if not run_groups:
-            run_groups = list(sorted(all_setups.keys()))
-
-        def _prog_phot(msg: str) -> None:
-            _p(str(msg))
-
-        phot_errors: list[str] = []
-        completeness_issues: list[str] = []
-        completeness_by_setup: dict[str, dict[str, Any]] = {}
-        total_lc = 0
-        total_frames = 0
-        lc_rms_values: list[float] = []
-
-        for nm in run_groups:
-            p = all_setups.get(str(nm)) or {}
-            ms_fits = Path(p["masterstar_fits"]) if p.get("masterstar_fits") else None
-            og_dir = Path(p["obs_group_dir"]) if p.get("obs_group_dir") else None
-            ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
-            vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
-            pf_dir = Path(p["per_frame_csv_dir"]) if p.get("per_frame_csv_dir") else None
-            dt_dir = Path(p["detrended_aligned_dir"]) if p.get("detrended_aligned_dir") else None
-            out_d = Path(p["output_dir"]) if p.get("output_dir") else None
-
-            missing: list[str] = []
-            if ms_fits is None or not ms_fits.exists():
-                missing.append("MASTERSTAR.fits")
-            if ms_csv is None or not ms_csv.exists():
-                missing.append("masterstars_full_match.csv")
-            if vt_csv is None or not vt_csv.exists():
-                missing.append("variable_targets.csv")
-            if pf_dir is None or not pf_dir.exists():
-                missing.append("per-frame CSV directory")
-            if dt_dir is None or not dt_dir.exists():
-                missing.append("detrended_aligned directory")
-            if out_d is None:
-                missing.append("output_dir")
-            if missing:
-                phot_errors.append(f"{nm}: missing {', '.join(missing)}")
-                continue
-
-            _p(f"Step 14: Photometry - {nm}")
-            t0 = time.time()
-            try:
-                phot_result = run_full_photometry_pipeline(
-                    masterstar_fits_path=ms_fits,
-                    variable_targets_csv=vt_csv,
-                    masterstars_csv=ms_csv,
-                    per_frame_csv_dir=pf_dir,
-                    detrended_aligned_dir=dt_dir,
-                    output_dir=out_d,
-                    cfg=cfg,
-                    db=pipeline.db,
-                    draft_id=draft_id,
-                    progress_cb=_prog_phot,
-                )
-            except Exception as exc_nm:  # noqa: BLE001
-                phot_errors.append(f"{nm}: {exc_nm}")
-                continue
-            _t(f"photometry_{nm}", t0)
-
-            p2a = phot_result.get("phase2a") or {}
-            total_lc += int(p2a.get("n_lightcurves") or 0)
-            total_frames += int(p2a.get("n_frames") or 0)
-            result.output_dir = out_d
-
-            sysrem = phot_result.get("sysrem")
-            if sysrem:
-                try:
-                    result.sysrem_improvement_pct = float(sysrem.get("rms_improvement_pct", float("nan")))
-                except (TypeError, ValueError):
-                    pass
-
-            n_sum, med_rms = _collect_photometry_metrics(out_d)
-            if n_sum > 0:
-                total_lc = max(total_lc, n_sum)
-            if math.isfinite(med_rms):
-                lc_rms_values.append(med_rms)
-
-            audit = audit_photometry_completeness(out_d)
-            completeness_by_setup[str(nm)] = audit
-            if not audit.get("ok"):
-                n_sm = int(audit.get("n_summary_rows") or 0)
-                n_at = int(audit.get("n_active_targets") or 0)
-                n_meas = int(audit.get("n_measurable_active") or 0)
-                n_unmeas = int(audit.get("n_unmeasurable_missing") or 0)
-                mratio = audit.get("measurable_ratio")
-                mratio_s = (
-                    f"{float(mratio):.1%}"
-                    if mratio is not None and math.isfinite(float(mratio))
-                    else "n/a"
-                )
-                err_detail = audit.get("error")
-                if err_detail:
-                    completeness_issues.append(f"{nm}: {err_detail}")
-                else:
-                    completeness_issues.append(
-                        f"{nm}: photometry_summary {n_sm}/{n_meas} measurable targets "
-                        f"({mratio_s} coverage, min {_PHOTOMETRY_COMPLETENESS_MIN_RATIO:.0%} required; "
-                        f"{n_unmeas} of {n_at} active are below achieved depth -> unmeasurable)"
-                    )
-
-            # Step 15: PDF per group
-            try:
-                from photometry_report import generate_all_method_photometry_reports
-
-                pdf_paths = generate_all_method_photometry_reports(
-                    draft_dir=draft_dir,
-                    obs_group=str(nm),
-                    tess_results={},
-                    base_report_title="VYVAR - Summary Measure Report",
-                )
-                for pdf_path in pdf_paths:
-                    _p(f"PDF report: {Path(pdf_path).name}")
-            except Exception as pdf_err:  # noqa: BLE001
-                result.warnings.append(f"PDF report {nm}: {pdf_err}")
-
-        result.photometry_completeness = completeness_by_setup
-
+        phot_errors = list(phot.get("errors") or [])
         if phot_errors:
             result.errors.extend(phot_errors)
             result.phase_timings = timings
             return result
 
-        if completeness_issues:
-            result.errors.append("Photometry completeness gate FAILED")
-            result.errors.extend(completeness_issues)
-            result.phase_timings = timings
-            return result
-
-        result.n_lightcurves = total_lc
-        result.n_frames = total_frames
-        if lc_rms_values:
-            result.lc_rms_median = float(np.median(lc_rms_values))
+        result.n_lightcurves = int(phot.get("n_lightcurves") or 0)
+        result.n_frames = int(phot.get("n_frames") or 0)
+        try:
+            result.lc_rms_median = float(phot.get("lc_rms_median", float("nan")))
+        except (TypeError, ValueError):
+            pass
 
         result.success = True
         timings["total"] = time.time() - t_run
@@ -1178,8 +1572,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             if saved:
                 _p(f"Infolog saved: {Path(saved).name}")
         _p(
-            f"Night run complete - draft {draft_id}, {total_lc} light curve(s), "
-            f"{total_frames} frame(s)"
+            f"Night run complete - draft {draft_id}, {result.n_lightcurves} light curve(s), "
+            f"{result.n_frames} frame(s)"
         )
         return result
 
