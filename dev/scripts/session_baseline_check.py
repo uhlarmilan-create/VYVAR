@@ -62,9 +62,19 @@ SNAPSHOT_NAME = "draft_000516_snapshot_era04_20260826"
 # era04 v1 raw-byte SHA (history; freeze-reproducible only at dffe859).
 EXPECTED_PHOTOMETRY_SHA_CORE_V1 = "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_V1 = "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863"
-# ANCHOR-HASH-01 v2 content hash (provenance headers dropped). Gate values.
-EXPECTED_PHOTOMETRY_SHA_CORE = "af218acd32a4892cc4f0030168829852ced5c5140f83575301c1a39869437e66"
-EXPECTED_PHOTOMETRY_SHA_EXTENDED = "ada5caff61692ff0489631e6278efedd8c92cb9bd26d05fcb67f2fb3729b1676"
+# ANCHOR-HASH-01 v2 mixed core (53 aperture + 53 empty PSF + 54 other). History only.
+EXPECTED_PHOTOMETRY_SHA_CORE_V2_MIXED = "af218acd32a4892cc4f0030168829852ced5c5140f83575301c1a39869437e66"
+EXPECTED_PHOTOMETRY_SHA_EXTENDED_V2_MIXED = "ada5caff61692ff0489631e6278efedd8c92cb9bd26d05fcb67f2fb3729b1676"
+# EPSF-CHAIN-01 ANCHOR SPLIT. era04_aperture = 53 aperture LCs (unchanged bytes).
+EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "d55fcc9d8ad9b55213c5c1813415cb54d54b88c3fc917bc81706065e4d824810"
+EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "cc8b532ee668b9b339e4170752b9d1054771b1236ecac8163688693586117167"
+EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N = 53
+EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE_N = 157
+# core_psf (epsf01) is set after G3 passes on a --full product; empty until then.
+EXPECTED_PHOTOMETRY_SHA_CORE_PSF = ""
+EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N = 53
+EXPECTED_PHOTOMETRY_SHA_CORE = EXPECTED_PHOTOMETRY_SHA_CORE_V2_MIXED
+EXPECTED_PHOTOMETRY_SHA_EXTENDED = EXPECTED_PHOTOMETRY_SHA_EXTENDED_V2_MIXED
 EXPECTED_PHOTOMETRY_SHA_CORE_PREFIX = "af218acd"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_PREFIX = "ada5caff"
 EXPECTED_PHOTOMETRY_SHA_CORE_N = 160
@@ -72,6 +82,10 @@ EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 210
 ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
 G3_BO_ID = "1498613634033133184"
 G3_FW_ID = "1497343732462852864"
+G3_N_FULL = 134
+G3_BO_REF_MMAG = 8.495
+G3_FW_REF_MMAG = 5.218
+G3_TOL_MMAG = 0.001
 # Structural empty-comp drops keyed by draft_id only.
 # 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
@@ -497,14 +511,28 @@ def _compare_provenance_to_anchor(
     report.add(check_name, "DRIFT", "; ".join(bits)[:220])
 
 
-def _write_internal_psf_lcs(ps: Path, lights: Path, cfg: Any) -> dict[str, Any]:
-    from psf_internal_lc import write_internal_psf_lightcurves  # noqa: PLC0415
+def _run_epsf_stage_on_work(
+    ps: Path,
+    lights: Path,
+    cfg: Any,
+    *,
+    db: Any,
+    draft_id: int,
+) -> dict[str, Any]:
+    from epsf_stage import EpsfStagePaths, run_epsf_stage  # noqa: PLC0415
 
-    return write_internal_psf_lightcurves(
-        platesolve_dir=ps,
-        frames_root=lights,
-        photometry_dir=ps / "photometry",
+    return run_epsf_stage(
+        params=None,
+        paths=EpsfStagePaths(
+            platesolve_dir=ps,
+            frames_root=lights,
+            masterstar_fits=ps / "MASTERSTAR.fits",
+            masterstars_csv=ps / "masterstars_full_match.csv",
+            photometry_dir=ps / "photometry",
+        ),
         cfg=cfg,
+        db=db,
+        draft_id=int(draft_id),
     )
 
 
@@ -759,6 +787,7 @@ def run_full_baseline(report: SessionReport) -> None:
     from tests.photometry_sha import (  # noqa: PLC0415
         compare_photometry_science_meaningful,
         compute_photometry_sha,
+        compute_photometry_sha_split,
     )
 
     cfg = AppConfig()
@@ -828,27 +857,28 @@ def run_full_baseline(report: SessionReport) -> None:
             db=db,
             draft_id=DRAFT_ID,
         )
+        elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
+        report.add("full-pipeline", "PASS", f"{elapsed:.0f}s -> {work_root.relative_to(REPO_ROOT)}")
+        t_psf = datetime.now(timezone.utc)
+        epsf_out = _run_epsf_stage_on_work(ps, lights, cfg, db=db, draft_id=DRAFT_ID)
+        n_psf = int((epsf_out.get("lc") or {}).get("n_written") or 0)
+        psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
+        report.add(
+            "full-epsf-stage",
+            "PASS",
+            f"n_stars={epsf_out.get('n_stars')} wrote {n_psf} PSF LCs in {psf_s:.0f}s",
+        )
     except Exception as exc:  # noqa: BLE001
-        report.add("full-pipeline", "FAIL", str(exc)[:200])
+        if not any(r.name == "full-pipeline" for r in report.results):
+            report.add("full-pipeline", "FAIL", str(exc)[:200])
+        else:
+            report.add("full-epsf-stage", "FAIL", str(exc)[:200])
         return
     finally:
         try:
             db.conn.close()
         except Exception:  # noqa: BLE001
             pass
-
-    elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
-    report.add("full-pipeline", "PASS", f"{elapsed:.0f}s -> {work_root.relative_to(REPO_ROOT)}")
-
-    t_psf = datetime.now(timezone.utc)
-    try:
-        psf_out = _write_internal_psf_lcs(ps, lights, cfg)
-        n_psf = int(psf_out.get("n_written") or 0)
-        psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
-        report.add("full-psf-lc", "PASS", f"wrote {n_psf} in {psf_s:.0f}s")
-    except Exception as exc:  # noqa: BLE001
-        report.add("full-psf-lc", "FAIL", str(exc)[:200])
-        return
 
     run_meta_path = out_phot / "pipeline_meta.json"
     run_meta: dict[str, Any] = {}
@@ -901,55 +931,74 @@ def run_full_baseline(report: SessionReport) -> None:
     )
     _compare_provenance_to_anchor(report, run_prov)
 
-    core_sha, core_n = compute_photometry_sha(work_root, include_comp_qa=False)
-    ext_sha, ext_n = compute_photometry_sha(work_root, include_comp_qa=True)
-    snap_core_sha, snap_core_n = compute_photometry_sha(snapshot, include_comp_qa=False)
-    snap_ext_sha, snap_ext_n = compute_photometry_sha(snapshot, include_comp_qa=True)
+    core_ap, n_ap = compute_photometry_sha_split(work_root, "core_aperture")
+    core_psf, n_psf = compute_photometry_sha_split(work_root, "core_psf")
+    ext_ap, n_ext_ap = compute_photometry_sha_split(work_root, "ext_aperture")
+    snap_ap, snap_n_ap = compute_photometry_sha_split(snapshot, "core_aperture")
+    snap_ext_ap, snap_n_ext_ap = compute_photometry_sha_split(snapshot, "ext_aperture")
     _report_v1_raw_identity(report, work_root, snapshot)
-    if snap_core_sha != EXPECTED_PHOTOMETRY_SHA_CORE:
+    if snap_ap != EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE or snap_n_ap != EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N:
         report.add(
-            "full-snapshot-sha-core",
+            "full-snapshot-sha-core-aperture",
             "FAIL",
-            f"snapshot {snap_core_sha[:16]}... != expected {EXPECTED_PHOTOMETRY_SHA_CORE[:16]}...",
-        )
-    elif snap_core_n != EXPECTED_PHOTOMETRY_SHA_CORE_N:
-        report.add(
-            "full-snapshot-sha-core",
-            "FAIL",
-            f"snapshot n={snap_core_n} != expected {EXPECTED_PHOTOMETRY_SHA_CORE_N}",
+            f"snapshot {snap_ap[:16]}... n={snap_n_ap} != era04_aperture",
         )
     else:
-        report.add("full-snapshot-sha-core", "PASS", f"v2 {snap_core_sha[:16]}... n={snap_core_n}")
+        report.add(
+            "full-snapshot-sha-core-aperture",
+            "PASS",
+            f"era04_aperture {snap_ap[:16]}... n={snap_n_ap}",
+        )
     if not catalog_ok:
         report.add(
-            "full-photometry-sha-core",
+            "full-photometry-sha-core-aperture",
             "FAIL",
             "input catalogue changed (see full-catalog-provenance)",
         )
-    elif core_sha == snap_core_sha and core_n == snap_core_n:
+    elif core_ap == snap_ap and n_ap == snap_n_ap:
         report.add(
-            "full-photometry-sha-core",
+            "full-photometry-sha-core-aperture",
             "PASS",
-            f"v2 {core_sha[:16]}... n={core_n}",
+            f"era04_aperture {core_ap[:16]}... n={n_ap}",
         )
     else:
         report.add(
-            "full-photometry-sha-core",
+            "full-photometry-sha-core-aperture",
             "FAIL",
-            f"run {core_sha[:16]}... n={core_n} vs snap {snap_core_sha[:16]}... n={snap_core_n}",
+            f"run {core_ap[:16]}... n={n_ap} vs snap {snap_ap[:16]}... n={snap_n_ap}",
         )
-    if ext_sha == snap_ext_sha and ext_n == snap_ext_n:
+    if ext_ap == snap_ext_ap and n_ext_ap == snap_n_ext_ap:
         report.add(
-            "full-photometry-sha-extended",
+            "full-photometry-sha-ext-aperture",
             "PASS",
-            f"v2 {ext_sha[:16]}... n={ext_n}",
+            f"era04_aperture ext {ext_ap[:16]}... n={n_ext_ap}",
         )
     else:
         report.add(
-            "full-photometry-sha-extended",
+            "full-photometry-sha-ext-aperture",
             "FAIL",
-            f"run {ext_sha[:16]}... vs snapshot extended mismatch",
+            f"run ext_aperture {ext_ap[:16]}... n={n_ext_ap} vs snap mismatch",
         )
+    report.add(
+        "full-photometry-sha-core-psf",
+        "PASS" if n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N else "FAIL",
+        f"epsf01 candidate {core_psf[:16]}... n={n_psf} (gate after G3)",
+    )
+    (work_root / "sha_split.json").write_text(
+        json.dumps(
+            {
+                "core_aperture": core_ap,
+                "n_core_aperture": n_ap,
+                "core_psf": core_psf,
+                "n_core_psf": n_psf,
+                "ext_aperture": ext_ap,
+                "n_ext_aperture": n_ext_ap,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="ascii",
+    )
 
     g3 = _g3_zp_ok_meters(work_root)
     (work_root / "g3_zp_ok_meters.json").write_text(
@@ -960,16 +1009,22 @@ def run_full_baseline(report: SessionReport) -> None:
     if bo.get("missing") or fw.get("missing") or bo.get("missing_col") or fw.get("missing_col"):
         report.add("full-g3-zp-ok", "FAIL", "missing BO/FW PSF LC or psf_delta_mag")
     else:
-        report.add(
-            "full-g3-zp-ok",
-            "PASS",
-            (
-                f"BO {bo.get('n_finite')}/{bo.get('n_rows')} "
-                f"{float(bo.get('demeaned_rms_mmag')):.3f} mmag (ref 8.495); "
-                f"FW {fw.get('n_finite')}/{fw.get('n_rows')} "
-                f"{float(fw.get('demeaned_rms_mmag')):.3f} mmag (ref 5.218)"
-            ),
+        bo_n = int(bo.get("n_finite") or 0)
+        fw_n = int(fw.get("n_finite") or 0)
+        bo_rms = float(bo.get("demeaned_rms_mmag"))
+        fw_rms = float(fw.get("demeaned_rms_mmag"))
+        bo_ok = bo_n == G3_N_FULL and abs(bo_rms - G3_BO_REF_MMAG) <= G3_TOL_MMAG
+        fw_ok = fw_n == G3_N_FULL and abs(fw_rms - G3_FW_REF_MMAG) <= G3_TOL_MMAG
+        detail = (
+            f"BO {bo_n}/{bo.get('n_rows')} {bo_rms:.3f} mmag (ref {G3_BO_REF_MMAG}); "
+            f"FW {fw_n}/{fw.get('n_rows')} {fw_rms:.3f} mmag (ref {G3_FW_REF_MMAG})"
         )
+        if bo_n != G3_N_FULL or fw_n != G3_N_FULL:
+            report.add("full-g3-zp-ok", "FAIL", f"n_full must be {G3_N_FULL}; {detail}")
+        elif not (bo_ok and fw_ok):
+            report.add("full-g3-zp-ok", "FAIL", detail)
+        else:
+            report.add("full-g3-zp-ok", "PASS", detail)
 
     counters = get_except_fix_counters().snapshot()
     nonzero = {k: int(v) for k, v in counters.items() if v}
@@ -1195,7 +1250,7 @@ def run_parity_baseline(report: SessionReport) -> None:
     from config import AppConfig  # noqa: PLC0415
     from night_run import run_night_photometry, run_ui_night_photometry  # noqa: PLC0415
     from pipeline import AstroPipeline  # noqa: PLC0415
-    from tests.photometry_sha import compute_photometry_sha  # noqa: PLC0415
+    from tests.photometry_sha import compute_photometry_sha_split  # noqa: PLC0415
 
     cfg = AppConfig()
     cfg.k2_mode = "literature"
@@ -1237,20 +1292,23 @@ def run_parity_baseline(report: SessionReport) -> None:
             json.dumps(_stamp_params_dump(phot), indent=2, default=str) + "\n",
             encoding="ascii",
         )
-        t_psf = datetime.now(timezone.utc)
-        try:
-            psf_out = _write_internal_psf_lcs(ps, lights, cfg)
-            n_psf = int(psf_out.get("n_written") or 0)
-            psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
-            report.add(f"parity-{label}-psf", "PASS", f"wrote {n_psf} in {psf_s:.0f}s")
-        except Exception as exc:  # noqa: BLE001
-            report.add(f"parity-{label}-psf", "FAIL", str(exc)[:200])
+        stage = phot.get("epsf_stage") or {}
+        report.add(
+            f"parity-{label}-epsf",
+            "PASS" if not errs else "FAIL",
+            f"setups={list(stage.keys())}"[:200],
+        )
         return phot
 
     phot_w2 = _run("w2", run_night_photometry)
-    core_w2, n_w2 = compute_photometry_sha(work_root, include_comp_qa=False)
-    ext_w2, n_w2e = compute_photometry_sha(work_root, include_comp_qa=True)
-    sha_w2 = {"core": core_w2, "n_core": n_w2, "ext": ext_w2, "n_ext": n_w2e}
+    ap_w2, n_ap_w2 = compute_photometry_sha_split(work_root, "core_aperture")
+    psf_w2, n_psf_w2 = compute_photometry_sha_split(work_root, "core_psf")
+    sha_w2 = {
+        "core_aperture": ap_w2,
+        "n_core_aperture": n_ap_w2,
+        "core_psf": psf_w2,
+        "n_core_psf": n_psf_w2,
+    }
     (work_root / "parity_sha_w2.json").write_text(
         json.dumps(sha_w2, indent=2) + "\n", encoding="ascii"
     )
@@ -1258,23 +1316,28 @@ def run_parity_baseline(report: SessionReport) -> None:
     _reset_parity_outputs(snapshot, ps, lights)
 
     phot_w1 = _run("w1", run_ui_night_photometry)
-    core_w1, n_w1 = compute_photometry_sha(work_root, include_comp_qa=False)
-    ext_w1, n_w1e = compute_photometry_sha(work_root, include_comp_qa=True)
-    sha_w1 = {"core": core_w1, "n_core": n_w1, "ext": ext_w1, "n_ext": n_w1e}
+    ap_w1, n_ap_w1 = compute_photometry_sha_split(work_root, "core_aperture")
+    psf_w1, n_psf_w1 = compute_photometry_sha_split(work_root, "core_psf")
+    sha_w1 = {
+        "core_aperture": ap_w1,
+        "n_core_aperture": n_ap_w1,
+        "core_psf": psf_w1,
+        "n_core_psf": n_psf_w1,
+    }
     (work_root / "parity_sha_w1.json").write_text(
         json.dumps(sha_w1, indent=2) + "\n", encoding="ascii"
     )
 
-    if (
-        core_w1 == core_w2 == EXPECTED_PHOTOMETRY_SHA_CORE
-        and n_w1 == n_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_N
-        and ext_w1 == ext_w2 == EXPECTED_PHOTOMETRY_SHA_EXTENDED
-        and n_w1e == n_w2e == EXPECTED_PHOTOMETRY_SHA_EXTENDED_N
-    ):
+    ap_ok = (
+        ap_w1 == ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE
+        and n_ap_w1 == n_ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N
+    )
+    psf_ok = ap_ok and psf_w1 == psf_w2 and n_psf_w1 == n_psf_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N
+    if ap_ok and psf_ok:
         report.add(
             "parity-sha",
             "PASS",
-            f"v2 core={core_w1[:16]}... n={n_w1} ext={ext_w1[:16]}... n={n_w1e}",
+            f"core_aperture={ap_w1[:16]}... n={n_ap_w1} core_psf={psf_w1[:16]}... n={n_psf_w1}",
         )
     else:
         dump_w1 = _stamp_params_dump(phot_w1)
@@ -1283,11 +1346,11 @@ def run_parity_baseline(report: SessionReport) -> None:
             "parity-sha",
             "FAIL",
             (
-                f"w1 core={core_w1[:16]} n={n_w1} ext={ext_w1[:16]} n={n_w1e} "
-                f"w2 core={core_w2[:16]} n={n_w2} ext={ext_w2[:16]} n={n_w2e} "
-                f"want core={EXPECTED_PHOTOMETRY_SHA_CORE[:16]} n=160 "
-                f"params_w1={json.dumps(dump_w1, default=str)[:140]} "
-                f"params_w2={json.dumps(dump_w2, default=str)[:140]}"
+                f"w1 ap={ap_w1[:16]} n={n_ap_w1} psf={psf_w1[:16]} n={n_psf_w1} "
+                f"w2 ap={ap_w2[:16]} n={n_ap_w2} psf={psf_w2[:16]} n={n_psf_w2} "
+                f"want ap={EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE[:16]} n=53 "
+                f"params_w1={json.dumps(dump_w1, default=str)[:120]} "
+                f"params_w2={json.dumps(dump_w2, default=str)[:120]}"
             )[:400],
         )
 

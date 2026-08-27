@@ -68,3 +68,22 @@ def test_tree_hash_matches_when_only_git_hash_differs(tmp_path: Path) -> None:
     raw1, _ = compute_photometry_sha(tmp_path / "snap", strip_provenance=False)
     raw2, _ = compute_photometry_sha(tmp_path / "run", strip_provenance=False)
     assert raw1 != raw2
+
+
+def test_sha_split_core_aperture_excludes_psf(tmp_path: Path) -> None:
+    from tests.photometry_sha import compute_photometry_sha_split
+
+    phot = tmp_path / "platesolve" / "S" / "photometry"
+    lc = phot / "lightcurves"
+    lc.mkdir(parents=True)
+    (lc / "lightcurve_1.csv").write_bytes(b"a\n1\n")
+    (lc / "lightcurve_1_psf.csv").write_bytes(b"a\n9\n")
+    (lc / "comp_quality_1.json").write_bytes(b"{}\n")
+    (phot / "comparison_stars_per_target.csv").write_bytes(b"x\n1\n")
+    ap, n_ap = compute_photometry_sha_split(tmp_path, "core_aperture")
+    psf, n_psf = compute_photometry_sha_split(tmp_path, "core_psf")
+    ext, n_ext = compute_photometry_sha_split(tmp_path, "ext_aperture")
+    assert n_ap == 1
+    assert n_psf == 1
+    assert n_ext == 3
+    assert ap != psf

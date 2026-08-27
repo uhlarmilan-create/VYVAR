@@ -159,6 +159,59 @@ def photometry_sha_files(
     return sorted(files)
 
 
+def _is_aperture_lc_name(name: str) -> bool:
+    n = str(name)
+    if not n.startswith("lightcurve_") or not n.endswith(".csv"):
+        return False
+    if n.endswith("_psf.csv") or n.endswith("_adaptive.csv"):
+        return False
+    return True
+
+
+def _is_psf_lc_name(name: str) -> bool:
+    return str(name).endswith("_psf.csv")
+
+
+def photometry_sha_files_split(
+    draft_root: Path,
+    *,
+    kind: str,
+) -> list[Path]:
+    """ANCHOR SPLIT: core_aperture / core_psf / ext_aperture file lists.
+
+    ``core_aperture``: lightcurve_*.csv without _psf/_adaptive (53 era04 files).
+    ``core_psf``: lightcurve_*_psf.csv.
+    ``ext_aperture``: previous extended set minus PSF LCs (aperture part unchanged).
+    """
+    draft_root = Path(draft_root)
+    kind = str(kind).strip().lower()
+    if kind == "core_aperture":
+        files = photometry_sha_files(draft_root, include_comp_qa=False)
+        return [p for p in files if _is_aperture_lc_name(p.name)]
+    if kind == "core_psf":
+        files = photometry_sha_files(draft_root, include_comp_qa=False)
+        return [p for p in files if _is_psf_lc_name(p.name)]
+    if kind == "ext_aperture":
+        files = photometry_sha_files(draft_root, include_comp_qa=True)
+        return [p for p in files if not _is_psf_lc_name(p.name)]
+    raise ValueError(f"unknown photometry sha split kind: {kind}")
+
+
+def compute_photometry_sha_split(
+    draft_root: Path,
+    kind: str,
+    *,
+    strip_provenance: bool = True,
+) -> tuple[str, int]:
+    draft_root = Path(draft_root)
+    files = photometry_sha_files_split(draft_root, kind=kind)
+    h = hashlib.sha256()
+    for p in files:
+        h.update(p.relative_to(draft_root).as_posix().encode())
+        h.update(photometry_file_content_bytes(p, strip_provenance=strip_provenance))
+    return h.hexdigest(), len(files)
+
+
 def photometry_file_hash_map(
     draft_root: Path,
     *,
