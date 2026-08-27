@@ -138,29 +138,10 @@ def _run_vyvar_full_pipeline(
     footer_placeholder: Any | None = None,
     pre_calibrated_mode: bool = False,
 ) -> bool:
-    """RUN VYVAR - automaticky retazec scan -> import -> kalibracia -> Analyze -> auto FWHM/TOP1 -> MAKE MASTERSTAR -> 0+1+2A."""
-    import numpy as np
-
-    from draft_provenance import (
-        CALIBRATION_MODE_PRE,
-        CALIBRATION_MODE_VYVAR,
-        apply_pre_calibrated_import_plan,
-        calibration_mode_report_line,
-        record_draft_calibration_provenance,
-        record_observer_location_provenance,
-        resolve_draft_lights_root,
-    )
-    from photometry_core import compute_auto_fwhm_limit, run_full_photometry_pipeline
-    from pipeline import (
-        estimate_archive_memory_profile,
-        generate_observation_hash,
-        run_draft_ram_calibration_qc_to_obs_files,
-        scan_calibrated_lights_pointing,
-    )
-    from ui_aperture_photometry import _find_phase2a_paths
+    """RUN VYVAR - UI resolution then night_run.run_night_pipeline (INV-ONE-ENTRY-01)."""
+    from night_run import NightRunParams, run_night_pipeline
 
     _run_label = "RUN VYVAR (non-cal)" if pre_calibrated_mode else "RUN VYVAR"
-
     _RUNVYVAR_FW_KEY = "_runvyvar_fwhm_threshold"
 
     def _update(proces: str, stav: str = "Running...") -> None:
@@ -201,32 +182,16 @@ def _run_vyvar_full_pipeline(
             )
         return False
 
-    def _prog_cb(i: int, total: int, msg: str) -> None:
-        log_event(f"[{_run_label}] [{i}/{max(total, 1)}] {msg}")
-        if footer_placeholder is not None:
-            pct = int(round(100 * (i / max(total, 1))))
-            _vyvar_footer_set(
-                footer_placeholder,
-                running=True,
-                process=f"{_run_label} - sub-step",
-                status_detail=str(msg)[:800],
-                pct=pct,
-                current_file="",
-                step=f"{i} / {total}",
-            )
-
-    def _prog_phot(msg: str) -> None:
+    def _prog(msg: str) -> None:
         log_event(f"[{_run_label}] {msg}")
         if footer_placeholder is not None:
             _vyvar_footer_set(
                 footer_placeholder,
                 running=True,
-                process=f"{_run_label} - Phase 0+1 + 2A",
+                process=f"{_run_label}",
                 status_detail=str(msg)[:800],
                 pct=None,
             )
-
-    _calibration_mode = CALIBRATION_MODE_PRE if pre_calibrated_mode else CALIBRATION_MODE_VYVAR
 
     try:
         st.session_state.pop("vyvar_last_preflight_error_log", None)
@@ -238,9 +203,6 @@ def _run_vyvar_full_pipeline(
         if not _root.is_dir():
             return _fail("Scan Source + Import", RuntimeError(f"Invalid Source Directory: {_root}"))
 
-        if pre_calibrated_mode:
-            log_event(calibration_mode_report_line(CALIBRATION_MODE_PRE))
-
         _run_optics = resolve_working_optics(
             pipeline.db,
             ui=VyvarOpticsSelection(
@@ -251,481 +213,109 @@ def _run_vyvar_full_pipeline(
         )
         sync_optics_session(_run_optics)
         log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI vyber)")
-        import_equipment_id = _run_optics.equipment_id
-        import_telescope_id = _run_optics.telescope_id
-
-        _import_step = (
-            "Scan Source + Import (pre-cal passthrough)"
-            if pre_calibrated_mode
-            else "Scan Source + Import + calibration"
-        )
-        _update(_import_step)
-        plan = smart_scan_source(
-            source_root=_root,
-            calibration_library_root=cfg.calibration_library_root,
-            masterdark_validity_days=dark_validity_days,
-            masterflat_validity_days=flat_validity_days,
-            db=pipeline.db,
-            id_equipments=int(import_equipment_id),
-            id_telescope=int(import_telescope_id),
-            calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
-        )
-        st.session_state["vyvar_smart_plan"] = plan
-        st.session_state.pop("vyvar_post_cal_archive_path", None)
-        st.session_state.pop("vyvar_post_cal_plan_source", None)
-
-        lights_bad = any(
-            r.type == "Lights" and r.status in ("missing", "empty") for r in plan.scan_rows
-        )
-        if lights_bad:
-            return _fail(
-                _import_step,
-                RuntimeError("Scan plan is missing or has empty light frames."),
-            )
 
         manual_flat_map = st.session_state.get("vyvar_manual_flat_map") or {}
-        if manual_flat_map and not pre_calibrated_mode:
-            for flt, pth in manual_flat_map.items():
-                if pth and Path(pth).exists():
-                    plan.masterflat_by_filter[flt] = pth
-        if not pre_calibrated_mode:
-            _vyvar_apply_smart_plan_flat_fallbacks(plan)
-        else:
-            apply_pre_calibrated_import_plan(plan)
+        choices: dict[str, str] = {}
+        for k, v in list(st.session_state.items()):
+            ks = str(k)
+            if ks.startswith("vyvar_flatfb_"):
+                choices[ks[len("vyvar_flatfb_") :]] = v
 
-        from observer_location import (  # noqa: PLC0415
-            apply_resolved_observer_location_to_config,
-            resolve_observer_location_for_run,
-        )
-
-        _resolved_site = resolve_observer_location_for_run(
-            cfg.database_path,
-            explicit_location_id=int(cfg.observer_location_id),
-            cfg=cfg,
-            source_hint="ui_selection",
-        )
-        apply_resolved_observer_location_to_config(cfg, _resolved_site)
-        result = smart_import_session(
-            plan=plan,
-            pipeline=pipeline,
-            id_equipment=int(import_equipment_id),
-            id_telescope=int(import_telescope_id),
-            id_location=_resolved_site.location_id,
-            location_source=_resolved_site.source,
-            cfg=cfg,
-        )
-        st.session_state["vyvar_last_import_equipment_id"] = int(import_equipment_id)
-        st.session_state["vyvar_last_import_result"] = result
-        st.session_state["vyvar_last_import_plan"] = plan
-        if getattr(result, "draft_id", None) is None:
-            return _fail(_import_step, RuntimeError("Import did not return draft_id."))
-        _did = int(result.draft_id)
-        st.session_state["vyvar_last_draft_id"] = _did
-
-        ap = Path(str(result.archive_path))
-        ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-        from infolog import log_milestone, log_phase_boundary, start_infolog_session  # noqa: PLC0415
-
-        start_infolog_session(ap_root)
-        log_milestone(_resolved_site.milestone_line())
-        record_draft_calibration_provenance(
-            db=pipeline.db,
-            archive_path=ap_root,
-            draft_id=int(_did),
-            calibration_mode=_calibration_mode,
-        )
-        record_observer_location_provenance(
-            archive_path=ap_root,
-            draft_id=int(_did),
-            resolved=_resolved_site,
-        )
-
-        md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
-        mf_map: dict[str, Path | None] = {}
-        if getattr(plan, "masterflat_by_filter", None):
-            for k, v in (plan.masterflat_by_filter or {}).items():
-                mf_map[str(k)] = Path(v) if v else None
-        mf_obs: dict[str, Path | None] = {}
-        for k, v in (getattr(plan, "masterflat_by_obs_key", None) or {}).items():
-            mf_obs[str(k)] = Path(str(v)) if v else None
-        dm_obs: dict[str, Path | None] = {}
-        for k, v in (getattr(plan, "dark_master_by_obs_key", None) or {}).items():
-            dm_obs[str(k)] = Path(str(v)) if v else None
-
-        if pre_calibrated_mode:
-            md = None
-            mf_map = {}
-            mf_obs = {}
-            dm_obs = {}
-            log_event(
-                "Pre-calibrated mode: skipping calibration - downstream reads "
-                f"{resolve_draft_lights_root(ap_root, draft_id=int(_did), db=pipeline.db)}"
-            )
-        else:
-            _update("Calibration")
-            cal_out = pipeline.quick_calibrate_last_import(
-                archive_path=ap,
-                master_dark_path=md if (md and md.exists()) else None,
-                masterflat_by_filter=mf_map,
-                progress_cb=_prog_cb,
-                equipment_id=int(import_equipment_id),
-                draft_id=int(_did),
-                observation_id=getattr(result, "observation_id", None),
-                masterflat_by_obs_key=mf_obs or None,
-                master_dark_by_obs_key=dm_obs or None,
-            )
-            st.session_state["vyvar_post_cal_archive_path"] = str(result.archive_path)
-            st.session_state["vyvar_post_cal_plan_source"] = str(plan.source_root)
-            st.session_state["vyvar_status_calibrated"] = True
-            last_job_snapshot(cal_out)
-            log_event(f"[{_run_label}] Import hotovy - draft {_did}, archiv {result.archive_path}")
-
-        _update("Analyze QC (RAM -> manifest files[])")
-        lights_root = resolve_draft_lights_root(
-            ap_root,
-            draft_id=int(_did),
-            db=pipeline.db,
-        )
-        if not lights_root.exists():
-            _missing = (
-                "Missing non_calibrated/lights after pre-cal import."
-                if pre_calibrated_mode
-                else "Missing /calibrated/lights after calibration."
-            )
-            return _fail("Analyze QC (RAM -> manifest files[])", FileNotFoundError(_missing))
-
-        st.session_state["vyvar_memory_profile"] = estimate_archive_memory_profile(ap)
-        _eq_a = int(import_equipment_id)
-        qsum = run_draft_ram_calibration_qc_to_obs_files(
-            db=pipeline.db,
-            draft_id=int(_did),
-            archive_path=ap_root,
-            master_dark_path=md if (md and md.exists()) else None,
-            masterflat_by_filter=mf_map,
-            masterflat_by_obs_key=mf_obs or None,
-            master_dark_by_obs_key=dm_obs or None,
-            equipment_id=_eq_a,
-            pipeline_config=pipeline.config,
-            progress_cb=_prog_cb,
-            roundness_reject_above=float(st.session_state.get("max_roundness_error", 1.25)),
-        )
-        pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
-        r_pref = next(
-            (
-                r
-                for r in pointing["rows"]
-                if r.get("display_ra_deg") is not None and r.get("display_dec_deg") is not None
-            ),
-            None,
-        )
-        _ra_ui: float | None = None
-        _de_ui: float | None = None
-        if r_pref:
-            _ra_ui = float(r_pref["display_ra_deg"])
-            _de_ui = float(r_pref["display_dec_deg"])
+        loc_id: int | None = None
         try:
-            _mra_q = qsum.get("median_ra_deg")
-            _mde_q = qsum.get("median_de_deg")
-            if _mra_q is not None and math.isfinite(float(_mra_q)):
-                _ra_ui = float(_mra_q)
-            if _mde_q is not None and math.isfinite(float(_mde_q)):
-                _de_ui = float(_mde_q)
+            loc_id = int(cfg.observer_location_id)
         except (TypeError, ValueError):
-            pass
-        if _ra_ui is not None and _de_ui is not None and math.isfinite(_ra_ui) and math.isfinite(_de_ui):
-            st.session_state["vyvar_pending_center_ra"] = float(_ra_ui)
-            st.session_state["vyvar_pending_center_de"] = float(_de_ui)
-        try:
-            st.session_state["vyvar_observation_processing_hash"] = generate_observation_hash(pipeline.db, int(_did))
-        except Exception:  # noqa: BLE001
-            st.session_state.pop("vyvar_observation_processing_hash", None)
+            loc_id = None
 
-        _mem_prof = st.session_state.get("vyvar_memory_profile") or {}
-        analyze_token = f"ram_qc:{int(_did)}:{qsum.get('n_lights')}:{qsum.get('median_fwhm')}"
+        params = NightRunParams(
+            source_dir=_root,
+            equipment_id=int(_run_optics.equipment_id),
+            telescope_id=int(_run_optics.telescope_id),
+            existing_pipeline=pipeline,
+            optics=_run_optics,
+            location_id=loc_id,
+            location_source_hint="ui_selection",
+            masterdark_validity_days=int(dark_validity_days),
+            masterflat_validity_days=int(flat_validity_days),
+            manual_flat_map=dict(manual_flat_map) if manual_flat_map else None,
+            flat_fallback_choices=choices or None,
+            apply_smart_plan_flat_fallbacks=not bool(pre_calibrated_mode),
+            plate_fov_deg=float(plate_fov_ui),
+            dao_fwhm_px=float(dao_fwhm_default),
+            dao_threshold_sigma=float(dao_sigma_default),
+            catalog_match_max_sep_arcsec=float(cat_match_arc),
+            max_catalog_rows=int(max_cat_rows),
+            max_extra_platesolve=int(max_extra_ps),
+            min_detected_stars=int(min_stars),
+            max_detected_stars=int(max_stars),
+            max_control_points=int(max_ctrl),
+            saturate_level_fraction=float(sat_level),
+            pre_calibrated_mode=bool(pre_calibrated_mode),
+            roundness_reject_above=float(st.session_state.get("max_roundness_error", 1.25)),
+            progress_cb=_prog,
+        )
+        _update("Night pipeline")
+        nr = run_night_pipeline(params)
+
+        if nr.plan is not None:
+            st.session_state["vyvar_smart_plan"] = nr.plan
+            st.session_state["vyvar_last_import_plan"] = nr.plan
+        st.session_state["vyvar_last_import_equipment_id"] = int(_run_optics.equipment_id)
+        if nr.import_result is not None:
+            st.session_state["vyvar_last_import_result"] = nr.import_result
+        if nr.draft_id is not None:
+            st.session_state["vyvar_last_draft_id"] = int(nr.draft_id)
+        if nr.archive_path is not None:
+            st.session_state["vyvar_post_cal_archive_path"] = str(nr.archive_path)
+            if nr.plan is not None:
+                st.session_state["vyvar_post_cal_plan_source"] = str(
+                    getattr(nr.plan, "source_root", "") or ""
+                )
+            st.session_state["vyvar_status_calibrated"] = True
+        if nr.memory_profile is not None:
+            st.session_state["vyvar_memory_profile"] = nr.memory_profile
+        if nr.ra_ui is not None:
+            st.session_state["vyvar_pending_center_ra"] = float(nr.ra_ui)
+        if nr.de_ui is not None:
+            st.session_state["vyvar_pending_center_de"] = float(nr.de_ui)
+        if nr.processing_hash:
+            st.session_state["vyvar_observation_processing_hash"] = nr.processing_hash
+        qsum = dict(nr.ram_qc_summary or {})
+        analyze_token = f"ram_qc:{nr.draft_id}:{qsum.get('n_lights')}:{qsum.get('median_fwhm')}"
         st.session_state["vyvar_last_job_output"] = {
             "job_kind": "analyze",
             "analyze_token": analyze_token,
-            "archive_path": str(ap_root),
-            "draft_id": int(_did),
+            "archive_path": str(nr.draft_dir or ""),
+            "draft_id": nr.draft_id,
             "ram_qc_summary": qsum,
             "qc_suggestions": {},
-            "pointing_scan": pointing,
+            "pointing_scan": nr.pointing,
             "prefill_ra_text": "",
             "prefill_dec_text": "",
             "suggested_reject_fwhm_px": None,
             "suggest_max_detected_stars": None,
-            "memory_profile": _mem_prof,
+            "memory_profile": nr.memory_profile,
         }
+        if nr.platesolve_job_output is not None:
+            st.session_state["vyvar_last_job_output"] = nr.platesolve_job_output
         st.session_state["vyvar_last_job_summary"] = {"kind": "analyze", **qsum}
         st.session_state["vyvar_status_analyzed"] = True
+        st.session_state[_RUNVYVAR_FW_KEY] = float(nr.fwhm_limit_px)
+        if nr.masterstar_path:
+            st.session_state["vyvar_masterstar_candidate_paths"] = [nr.masterstar_path]
+            st.session_state["vyvar_ms_candidate_top1_path"] = nr.masterstar_path
+        if nr.calibration_output:
+            last_job_snapshot(nr.calibration_output)
 
-        _update("Auto FWHM limit")
-        _fwhm_lim = 0.0
-        if bool(cfg.auto_fwhm_enabled):
-            rows_f = pipeline.db.fetch_draft_light_rows_for_quality(int(_did))
-            if rows_f:
-                df_f = pd.DataFrame(rows_f)
-                _col = next(
-                    (c for c in ("fwhm_mean", "FWHM", "fwhm") if c in df_f.columns),
-                    None,
-                )
-                if _col:
-                    _vals = df_f[_col].dropna().values
-                    _ar = compute_auto_fwhm_limit(_vals, k=float(cfg.auto_fwhm_k_factor))
-                    if _ar.get("auto_limit") is not None:
-                        _fwhm_lim = float(_ar["auto_limit"])
-                        st.session_state[_RUNVYVAR_FW_KEY] = float(_fwhm_lim)
-                        log_event(
-                            f"[RUN VYVAR] Auto FWHM limit={_fwhm_lim:.3f} px (k={float(cfg.auto_fwhm_k_factor):.2f})"
-                        )
+        if not nr.success:
+            err = " ; ".join(nr.errors) if nr.errors else "night run failed"
+            return _fail("Night pipeline", RuntimeError(err))
 
-        _update("Auto-select MASTERSTAR (TOP1)")
-        rows_ms = pipeline.db.fetch_draft_light_rows_for_quality(int(_did))
-        if not rows_ms:
-            return _fail("Auto-select MASTERSTAR (TOP1)", RuntimeError("Empty manifest files[] for draft."))
-        df_ms = pd.DataFrame(rows_ms)
-        for col in (
-            "CALIB_FLAGS",
-            "FWHM",
-            "SKY_LEVEL",
-            "STAR_COUNT",
-            "REJECTED_AUTO",
-            "IS_REJECTED",
-            "ELONGATION_MEAN",
-        ):
-            if col not in df_ms.columns:
-                df_ms[col] = np.nan if col != "IS_REJECTED" else 0
-        df_ms["FWHM"] = pd.to_numeric(df_ms["FWHM"], errors="coerce")
-        df_ms["IS_REJECTED"] = pd.to_numeric(df_ms["IS_REJECTED"], errors="coerce").fillna(0).astype(int)
-        _ms_eligible = df_ms[df_ms["IS_REJECTED"] == 0].copy()
-        if _fwhm_lim > 0.0:
-            _ms_eligible = _ms_eligible[_ms_eligible["FWHM"].notna() & (_ms_eligible["FWHM"] <= _fwhm_lim)]
-        if _ms_eligible.empty:
-            return _fail(
-                "Auto-select MASTERSTAR (TOP1)",
-                RuntimeError("No light row after IS_REJECTED and FWHM filter."),
-            )
-        _ms_eligible = _ms_eligible.copy()
-        _ms_eligible["_ms_score"] = ui_quality_dashboard._compute_masterstar_score(_ms_eligible)
-        _ms_eligible = _ms_eligible.sort_values("_ms_score", ascending=False).reset_index(drop=True)
-        _top_path = str(_ms_eligible["FILE_PATH"].iloc[0]).strip()
-        _p_job = ui_quality_dashboard._masterstar_candidate_path_for_job(
-            ap_root, _top_path, draft_id=int(_did), db=pipeline.db
-        )
-        _use_path = (_p_job or _top_path).strip()
-        if not _use_path:
-            return _fail("Auto-select MASTERSTAR (TOP1)", RuntimeError("TOP1 has an empty path."))
-        st.session_state["vyvar_masterstar_candidate_paths"] = [_use_path]
-        st.session_state["vyvar_ms_candidate_top1_path"] = _use_path
-        try:
-            pipeline.db.set_obs_draft_masterstar_source_path(int(_did), _use_path)
-        except Exception as exc:  # noqa: BLE001
-            # EXC-0001: T3 -- UI diagnostic/plot only (try: / pipeline.db.set_obs_draft_masterstar_source_path(int(_d... (EXCEPT-BULK 2026-07-08)
-            log_event(f"[RUN VYVAR] Zapis MASTERSTAR source do DB: {exc}")
-
-        _update("MAKE MASTERSTAR (detrend + plate-solve + zarovnanie)")
-        from pipeline import resolve_preprocess_target_coordinates
-
-        _ira, _ide = resolve_preprocess_target_coordinates(
-            db=pipeline.db,
-            draft_id=int(_did),
-            ui_ra_deg=_ra_ui,
-            ui_dec_deg=_de_ui,
-        )
-        try:
-            _coords_ok = (
-                _ira is not None
-                and _ide is not None
-                and math.isfinite(float(_ira))
-                and math.isfinite(float(_ide))
-                and not (abs(float(_ira)) < 1e-9 and abs(float(_ide)) < 1e-9)
-            )
-        except (TypeError, ValueError):
-            _coords_ok = False
-        _ph = None
-        try:
-            _ph = generate_observation_hash(pipeline.db, int(_did))
-            st.session_state["vyvar_observation_processing_hash"] = _ph
-        except Exception:  # noqa: BLE001
-            _ph = None
-
-        _j_ms: dict[str, Any] = {
-            "kind": "make_masterstar",
-            "label": "MAKE MASTERSTAR (RUN VYVAR)...",
-            "archive_path": str(ap),
-            "fwhm_limit_px": float(_fwhm_lim),
-            "inject_pointing_ra_deg": (float(_ira) if _coords_ok else None),
-            "inject_pointing_dec_deg": (float(_ide) if _coords_ok else None),
-            "quality_filter_draft_id": int(_did),
-            "max_control_points": int(max_ctrl),
-            "min_detected_stars": int(min_stars),
-            "max_detected_stars": int(max_stars),
-            "astrometry_api_key": "",
-            "platesolve_backend": "vyvar",
-            "plate_solve_fov_deg": float(plate_fov_ui),
-            "max_extra_platesolve": int(max_extra_ps),
-            "catalog_match_max_sep_arcsec": float(cat_match_arc),
-            "saturate_level_fraction": float(sat_level),
-            "max_catalog_rows": int(max_cat_rows),
-            "n_comparison_stars": 0,
-            "faintest_mag_limit": None,
-            "dao_threshold_sigma": float(dao_sigma_default),
-            "dao_fwhm_px": float(dao_fwhm_default),
-            "id_equipment": int(import_equipment_id),
-            "draft_id": int(_did),
-            "catalog_local_gaia_only": True,
-            "build_masterstar_and_catalogs": True,
-            "masterstar_candidate_paths": [_use_path],
-            "masterstar_selection_pct": float(_DEFAULT_MASTERSTAR_SELECTION_PCT),
-        }
-        if _ph:
-            _j_ms["processing_hash"] = _ph
-            _j_ms["overwrite_qc_processing"] = True
-
-        pipeline.config.sips_dao_fwhm_px = float(dao_fwhm_default)
-        pipeline.config.sips_dao_threshold_sigma = float(dao_sigma_default)
-        _vyvar_execute_preprocess_pending(
-            pending=_j_ms,
-            ap=ap,
-            pipeline=pipeline,
-            progress_cb=_prog_cb,
-        )
-        _vyvar_execute_platesolve_pending(
-            pending=_j_ms,
-            ap=ap,
-            pipeline=pipeline,
-            progress_cb=_prog_cb,
-        )
-        _ps_out = st.session_state.get("vyvar_last_job_output")
-        if isinstance(_ps_out, dict) and _ps_out.get("error"):
-            return _fail("MAKE MASTERSTAR", RuntimeError(str(_ps_out.get("error"))))
-
-        _update("Phase 0+1 + Phase 2A (photometry)")
-        all_setups = _find_phase2a_paths(cfg, int(_did), draft_dir_override=None)
-        if not all_setups:
-            return _fail(
-                "Phase 0+1 + Phase 2A (photometry)",
-                RuntimeError("No platesolve setups found (per_frame_catalog_index.csv)."),
-            )
-
-        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{int(_did):06d}").resolve()
-        aligned_root = draft_dir / "detrended_aligned" / "lights"
-        run_groups: list[str] = []
-        for nm in sorted(all_setups.keys()):
-            og_dir = aligned_root / str(nm)
-            if og_dir.is_dir() and any(og_dir.glob("proc_*.csv")):
-                run_groups.append(str(nm))
-        if not run_groups:
-            run_groups = list(sorted(all_setups.keys()))
-
-        errors: list[str] = []
-        error_exc: BaseException | None = None
-        completed: list[str] = []
-        zero_target_setups: list[str] = []
-        for nm in run_groups:
-            p = all_setups.get(str(nm)) or {}
-            ms_fits = Path(p.get("masterstar_fits")) if p.get("masterstar_fits") else None
-            og_dir = Path(p.get("obs_group_dir")) if p.get("obs_group_dir") else None
-            ms_csv = (og_dir / "masterstars_full_match.csv") if og_dir is not None else None
-            vt_csv = (og_dir / "variable_targets.csv") if og_dir is not None else None
-            pf_dir = Path(p.get("per_frame_csv_dir")) if p.get("per_frame_csv_dir") else None
-            dt_dir = Path(p.get("detrended_aligned_dir")) if p.get("detrended_aligned_dir") else None
-            out_d = Path(p.get("output_dir")) if p.get("output_dir") else None
-            missing: list[str] = []
-            if ms_fits is None or not ms_fits.exists():
-                missing.append("MASTERSTAR.fits")
-            if ms_csv is None or not ms_csv.exists():
-                missing.append("masterstars_full_match.csv")
-            if vt_csv is None or not vt_csv.exists():
-                missing.append("variable_targets.csv")
-            if pf_dir is None or not pf_dir.exists():
-                missing.append("per-frame CSV directory")
-            if dt_dir is None or not dt_dir.exists():
-                missing.append("detrended_aligned directory")
-            if out_d is None:
-                missing.append("output_dir")
-            if missing:
-                errors.append(f"{nm}: missing {', '.join(missing)}")
-                continue
-            try:
-                phot_result = run_full_photometry_pipeline(
-                    masterstar_fits_path=ms_fits,
-                    variable_targets_csv=vt_csv,
-                    masterstars_csv=ms_csv,
-                    per_frame_csv_dir=pf_dir,
-                    detrended_aligned_dir=dt_dir,
-                    output_dir=out_d,
-                    cfg=cfg,
-                    db=pipeline.db,
-                    draft_id=int(_did),
-                    progress_cb=_prog_phot,
-                )
-                if phot_result.get("zero_targets"):
-                    zero_target_setups.append(str(nm))
-                    completed.append(str(nm))
-                    log_event(
-                        f"[RUN VYVAR] ! {nm}: 0 aktivnych cielov - fotometria nespustena "
-                        "(skontroluj VSX katalog / target selection)"
-                    )
-                    continue
-                if phot_result.get("error"):
-                    errors.append(f"{nm}: {phot_result.get('error')}")
-                    continue
-                completed.append(str(nm))
-                try:
-                    from photometry_report import generate_all_method_photometry_reports  # noqa: PLC0415
-
-                    _pdf_paths = generate_all_method_photometry_reports(
-                        draft_dir=draft_dir,
-                        obs_group=str(nm),
-                        tess_results={},
-                        base_report_title="VYVAR - Summary Measure Report",
-                    )
-                    for _pdf_path in _pdf_paths:
-                        log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT: {Path(_pdf_path).name}")
-                except Exception as _pdf_err:  # noqa: BLE001
-                    # EXC-0002: T3 -- UI diagnostic/plot only (for _pdf_path in _pdf_paths: / log_event(f'[RUN VYVAR] SUMMARY... (EXCEPT-BULK 2026-07-08)
-                    log_event(f"[RUN VYVAR] SUMMARY MEASURE REPORT zlyhal: {_pdf_err}")
-            except Exception as exc_nm:  # noqa: BLE001
-                errors.append(f"{nm}: {exc_nm}")
-                if error_exc is None:
-                    error_exc = exc_nm
-        _astro_skips = (
-            [str(s.get("setup") or "?") for s in (_ps_out.get("skipped_subgroups") or [])]
-            if isinstance(_ps_out, dict)
-            else []
-        )
-        _all_problems = list(errors) + [f"{nm}: plate-solve skipped" for nm in _astro_skips]
-        if _all_problems and not completed:
-            # Prefer the original exception (keeps traceback) over a rebuilt RuntimeError.
-            _fail_exc: BaseException
-            if error_exc is not None and len(errors) == 1 and not _astro_skips:
-                _fail_exc = error_exc
-            else:
-                _fail_exc = RuntimeError(" ; ".join(_all_problems))
-                if error_exc is not None:
-                    try:
-                        _fail_exc.__cause__ = error_exc
-                    except Exception:  # noqa: BLE001
-                        pass
-            return _fail(
-                "Phase 0+1 + Phase 2A (photometry)",
-                _fail_exc,
-            )
-        if _all_problems:
-            log_event(
-                "! RUN VYVAR dokonceny CIASTOCNE - OK: ["
-                + ", ".join(completed)
-                + "]; preskocene/zlyhane: ["
-                + " ; ".join(_all_problems)
-                + "]"
-            )
-
-        # Fresh pipeline outputs: force Variability tab to re-run detection on next render.
         _vyvar_reset_variability_session_state()
-
+        zero_target_setups = list(nr.zero_target_setups or [])
+        completed = list(nr.completed_setups or [])
         _photometry_ran = [s for s in completed if s not in zero_target_setups]
-        if zero_target_setups and not _photometry_ran and not _all_problems:
+        if zero_target_setups and not _photometry_ran:
             _zero_msg = (
                 "Pipeline dokonceny - 0 aktivnych cielov, fotometria nespustena "
                 "(skontroluj VSX katalog / target selection)"
@@ -750,7 +340,7 @@ def _run_vyvar_full_pipeline(
                 + ", ".join(zero_target_setups)
                 + "]"
             )
-        elif not zero_target_setups:
+        else:
             log_event("[RUN VYVAR] [OK] Pipeline dokonceny uspesne")
         _vyvar_try_save_infolog_to_disk(cfg)
         if footer_placeholder is not None:
@@ -1108,34 +698,14 @@ section.main > div.block-container { padding-bottom: 3.5rem !important; }
 
 def _vyvar_apply_smart_plan_flat_fallbacks(plan: Any) -> None:
     """Apply per-observation flat fallback choices from session_state to the live SmartImportPlan."""
-    ogs = getattr(plan, "observation_groups", None) or {}
-    if not ogs:
-        return
-    mf = dict(getattr(plan, "masterflat_by_obs_key", None) or {})
-    for p in getattr(plan, "flat_fallback_prompts", None) or []:
-        gk = str(p.get("group_key") or "")
-        if not gk:
-            continue
-        choice = st.session_state.get(f"vyvar_flatfb_{gk}", "__skip__")
-        if choice and choice != "__skip__":
-            src = mf.get(str(choice))
-            if src and Path(str(src)).is_file():
-                mf[gk] = src
-    missing = sorted(
-        gk
-        for gk in ogs
-        if not (mf.get(gk) and str(mf[gk]).strip() and Path(str(mf[gk])).is_file())
-    )
-    plan.masterflat_by_obs_key = mf
-    plan.missing_obs_keys = missing
-    plan.missing_flat_filters = sorted({ogs[gk]["filter"] for gk in missing})
-    mfb: dict[str, Any] = {}
-    for gk, g in ogs.items():
-        fln = g["filter"]
-        pth = mf.get(gk)
-        if fln not in mfb or pth is not None and mfb[fln] is None:
-            mfb[fln] = pth
-    plan.masterflat_by_filter = mfb
+    from night_run import apply_smart_plan_flat_fallbacks
+
+    choices: dict[str, str] = {}
+    for k, v in list(st.session_state.items()):
+        ks = str(k)
+        if ks.startswith("vyvar_flatfb_"):
+            choices[ks[len("vyvar_flatfb_") :]] = v
+    apply_smart_plan_flat_fallbacks(plan, choices)
 
 
 def _vyvar_guess_filename_from_progress(msg: str) -> str:
