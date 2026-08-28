@@ -70,8 +70,11 @@ EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "d55fcc9d8ad9b55213c5c1813415cb54d54b88c
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "cc8b532ee668b9b339e4170752b9d1054771b1236ecac8163688693586117167"
 EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N = 53
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE_N = 157
-# core_psf (epsf01) is set after G3 passes on a --full product; empty until then.
-EXPECTED_PHOTOMETRY_SHA_CORE_PSF = ""
+# core_psf (epsf01 candidate). Locked after --full G3 PASS at 746db0f.
+# Milan PUSH_AUTH decides whether this is the first ePSF anchor.
+EXPECTED_PHOTOMETRY_SHA_CORE_PSF = (
+    "9515382571a61c4eda55e9ab96ab64cfa291e6b5e3cead186499a6ef37b565aa"
+)
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N = 53
 EXPECTED_PHOTOMETRY_SHA_CORE = EXPECTED_PHOTOMETRY_SHA_CORE_V2_MIXED
 EXPECTED_PHOTOMETRY_SHA_EXTENDED = EXPECTED_PHOTOMETRY_SHA_EXTENDED_V2_MIXED
@@ -979,11 +982,27 @@ def run_full_baseline(report: SessionReport) -> None:
             "FAIL",
             f"run ext_aperture {ext_ap[:16]}... n={n_ext_ap} vs snap mismatch",
         )
-    report.add(
-        "full-photometry-sha-core-psf",
-        "PASS" if n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N else "FAIL",
-        f"epsf01 candidate {core_psf[:16]}... n={n_psf} (gate after G3)",
-    )
+    if not EXPECTED_PHOTOMETRY_SHA_CORE_PSF:
+        report.add(
+            "full-photometry-sha-core-psf",
+            "PASS" if n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N else "FAIL",
+            f"epsf01 candidate {core_psf[:16]}... n={n_psf} (gate after G3)",
+        )
+    elif core_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF and n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N:
+        report.add(
+            "full-photometry-sha-core-psf",
+            "PASS",
+            f"epsf01 {core_psf[:16]}... n={n_psf}",
+        )
+    else:
+        report.add(
+            "full-photometry-sha-core-psf",
+            "FAIL",
+            (
+                f"run {core_psf[:16]}... n={n_psf} vs epsf01 "
+                f"{EXPECTED_PHOTOMETRY_SHA_CORE_PSF[:16]}... n={EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N}"
+            ),
+        )
     (work_root / "sha_split.json").write_text(
         json.dumps(
             {
@@ -1332,7 +1351,15 @@ def run_parity_baseline(report: SessionReport) -> None:
         ap_w1 == ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE
         and n_ap_w1 == n_ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N
     )
-    psf_ok = ap_ok and psf_w1 == psf_w2 and n_psf_w1 == n_psf_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N
+    psf_ok = (
+        ap_ok
+        and psf_w1 == psf_w2
+        and n_psf_w1 == n_psf_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N
+        and (
+            not EXPECTED_PHOTOMETRY_SHA_CORE_PSF
+            or psf_w1 == EXPECTED_PHOTOMETRY_SHA_CORE_PSF
+        )
+    )
     if ap_ok and psf_ok:
         report.add(
             "parity-sha",
