@@ -9,7 +9,8 @@ Verified via ``scripts/session_baseline_check.py --full``.
 ANCHOR-HASH-01 (2026-08-27): default SHA is a content hash. Provenance
 header lines matching PHOTOMETRY_SHA_PROVENANCE_HEADER_RE are dropped
 before hashing. era04 v1 raw-byte values (9367f998 / d3cefff3) stay in
-the ledger as history; v2 is the gate.
+the ledger as history; v2 is the gate. EPSF-CHAIN-01 G7 also drops
+epsf_build_timestamp (rebuild wall-clock; science bytes unchanged).
 """
 from __future__ import annotations
 
@@ -107,6 +108,8 @@ _SHA_PATTERN_COMP_QA = "**/photometry/**/lightcurves/comp_qa_*.json"
 # era04 LCs: aperture files have no `# ` headers; PSF files have git_hash
 # and git_dirty among many other keys. files/generated/timestamp/
 # vyvar_version are not present on era04 but stay in the exclusion set.
+# EPSF-CHAIN-01 G7: epsf_build_timestamp is rebuild wall-clock; two sequential
+# night runs cannot match if it stays in the hash. Science columns unchanged.
 PHOTOMETRY_SHA_PROVENANCE_HEADER_KEYS = frozenset(
     {
         "git_hash",
@@ -115,10 +118,11 @@ PHOTOMETRY_SHA_PROVENANCE_HEADER_KEYS = frozenset(
         "generated",
         "timestamp",
         "vyvar_version",
+        "epsf_build_timestamp",
     }
 )
 PHOTOMETRY_SHA_PROVENANCE_HEADER_RE = re.compile(
-    rb"^# (git_hash|git_dirty|files|generated|timestamp|vyvar_version)="
+    rb"^# (git_hash|git_dirty|files|generated|timestamp|vyvar_version|epsf_build_timestamp)="
 )
 
 

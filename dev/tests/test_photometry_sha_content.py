@@ -20,6 +20,7 @@ def test_provenance_exclusion_keys_are_the_frozen_set() -> None:
         "generated",
         "timestamp",
         "vyvar_version",
+        "epsf_build_timestamp",
     }
 
 
@@ -48,7 +49,7 @@ def test_content_hash_ignores_git_hash_and_git_dirty(tmp_path: Path) -> None:
 
 def test_quoted_header_and_non_excluded_keys_stay_in_hash(tmp_path: Path) -> None:
     p = tmp_path / "lightcurve_t.csv"
-    raw = b'# epsf_build_timestamp=2026-08-26\n# product="flux,adu"\nx,y\n1,2\n'
+    raw = b'# epsf_n_stars=12\n# product="flux,adu"\nx,y\n1,2\n'
     p.write_bytes(raw)
     assert photometry_file_content_bytes(p) == raw
 
@@ -87,3 +88,23 @@ def test_sha_split_core_aperture_excludes_psf(tmp_path: Path) -> None:
     assert n_psf == 1
     assert n_ext == 3
     assert ap != psf
+
+
+def test_core_psf_hash_ignores_epsf_build_timestamp(tmp_path: Path) -> None:
+    from tests.photometry_sha import compute_photometry_sha_split
+
+    def _tree(tag: str, ts: str) -> Path:
+        root = tmp_path / tag
+        d = root / "platesolve" / "S" / "photometry" / "lightcurves"
+        d.mkdir(parents=True)
+        (d / "lightcurve_1_psf.csv").write_bytes(
+            f"# epsf_model_sha256=abc\n# epsf_build_timestamp={ts}\n# git_hash=x\na,b\n1,2\n".encode(
+                "ascii"
+            )
+        )
+        return root
+
+    h1, n1 = compute_photometry_sha_split(_tree("a", "2026-08-27T20:44:04Z"), "core_psf")
+    h2, n2 = compute_photometry_sha_split(_tree("b", "2026-08-28T04:09:51Z"), "core_psf")
+    assert n1 == n2 == 1
+    assert h1 == h2
