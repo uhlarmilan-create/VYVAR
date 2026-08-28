@@ -15,6 +15,7 @@ REQUIRED_IDS = frozenset(
         "VL-PYTEST-FULL",
         "VL-ANCHOR-424",
         "VL-ANCHOR-WCSINV",
+        "VL-ANCHOR-EPSF01",
         "VL-COUNTERS-ZERO",
         "VL-K2-MATRIX",
         "VL-CALDIAG-424",
