@@ -124,7 +124,8 @@ Neither implemented.
 | Gate | Status | Detail |
 | --- | --- | --- |
 | G1 before | --clean PASS at da84d62. Dirty pytest FAIL was mid-edit race (config.json gained epsf_auto_run before registry). Not a product fail. | |
-| G1 after | PASS 1628 passed, 32 skipped (dirty tree, then again on --full). | |
+| G1 after (dirty) | PASS 1628 passed, 32 skipped (pre-commit tree). | |
+| G1 after commit | PASS 072e310; pytest 1628 passed, 32 skipped; clean-tree PASS. Log `g1_after_commit.txt`. | |
 | G2 --full | PASS era04_aperture d55fcc9d n=53 / ext cc8b532e n=157. Pipeline 1975s. ePSF OFF (no full-epsf-stage / no G3). | |
 | G3 residual refs | 12.505 / 4.629 from B2; n_full=134. Computed on work copy, not this --full tree. | |
 | G4 live 516 | PASS csv bfa24039778f437b / fits 13e77cf8a1dcb4e7 / epsf 172f95403beae36d (re-checked after --full) | |
