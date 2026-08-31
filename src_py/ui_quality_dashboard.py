@@ -18,9 +18,9 @@ from database import VyvarDatabase
 from infolog import log_event
 from importer import quicklook_preview_png_bytes
 from photometry_core import compute_auto_fwhm_limit
-from pipeline import _resolve_light_fits_for_quality_inspection, resolve_obs_file_to_processed_fits
+from pipeline import _resolve_light_fits_for_quality_inspection
 from pipeline import detect_field_jumps
-from night_run import _compute_masterstar_score
+from night_run import _compute_masterstar_score, _masterstar_candidate_path_for_job
 from ui_components import DRAFT_CENTER_DE_STATE_KEY, DRAFT_CENTER_RA_STATE_KEY
 from utils import resolve_draft_dir
 
@@ -36,54 +36,6 @@ _FILTER_LINE_COLORS = (
     "#FF6692",
     "#B6E880",
 )
-
-
-def _masterstar_candidate_path_for_job(
-    archive: Path | None,
-    path_any: str,
-    *,
-    draft_id: int | None = None,
-    db: Any = None,
-) -> str:
-    """Cesta pre MAKE MASTERSTAR: processed ``proc_*.fits`` or pre-cal ``non_calibrated/lights`` frame."""
-
-    def _has_raw_seg(pp: Path) -> bool:
-        try:
-            parts = pp.resolve().parts
-        except OSError:
-            parts = pp.parts
-        return any(seg.casefold() == "raw" for seg in parts)
-
-    p = (path_any or "").strip()
-    if not p:
-        return ""
-    if archive is None or not archive.is_dir():
-        return p
-    try:
-        from draft_provenance import is_pre_calibrated_draft
-
-        pre_cal = is_pre_calibrated_draft(archive, draft_id=draft_id, db=db)
-    except Exception:  # noqa: BLE001
-        pre_cal = False
-    for key in (p, Path(p).name):
-        try:
-            hit = resolve_obs_file_to_processed_fits(
-                archive,
-                str(key),
-                draft_id=draft_id,
-                db=db,
-            )
-        except Exception:  # noqa: BLE001
-            hit = None
-        if hit is not None and hit.is_file():
-            if pre_cal or not _has_raw_seg(hit):
-                return str(hit.resolve())
-    if not pre_cal and _has_raw_seg(Path(p)):
-        log_event(f"MASTERSTAR UI: nepodarilo namapat z RAW/non_cal na processed - `{Path(p).name}`.")
-        return ""
-    if Path(p).is_file():
-        return str(Path(p).resolve())
-    return p
 
 
 def _preview_path_from_plotly_state(state: Any) -> str | None:

@@ -491,7 +491,7 @@ def _compute_masterstar_score(df: pd.DataFrame) -> pd.Series:
 
 
 def _masterstar_candidate_path_for_job(
-    archive: Path,
+    archive: Path | None,
     path_any: str,
     *,
     draft_id: int | None = None,
@@ -510,7 +510,7 @@ def _masterstar_candidate_path_for_job(
     p = (path_any or "").strip()
     if not p:
         return ""
-    if not archive.is_dir():
+    if archive is None or not archive.is_dir():
         return p
     try:
         from draft_provenance import is_pre_calibrated_draft
