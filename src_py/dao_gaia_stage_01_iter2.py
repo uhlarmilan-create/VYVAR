@@ -30,6 +30,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
+from dao_gaia_common import _is_corner  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -133,11 +134,6 @@ def _gaia_on_chip(wcs: WCS, wpx: int, h: int, gaia_db: Path, *, max_mag: float) 
 
 def _is_edge(x: float, y: float, wpx: int, h: int, margin: float = EDGE_MARGIN_PX) -> bool:
     m = float(margin)
-    return x < m or y < m or x >= float(wpx) - m or y >= float(h) - m
-
-
-def _is_corner(x: float, y: float, wpx: int, h: int) -> bool:
-    m = float(CORNER_MARGIN_PX)
     return x < m or y < m or x >= float(wpx) - m or y >= float(h) - m
 
 

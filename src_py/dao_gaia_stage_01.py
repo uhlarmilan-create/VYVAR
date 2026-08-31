@@ -39,6 +39,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
+from dao_gaia_common import _is_corner  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -295,11 +296,6 @@ def run_dao(
         else np.asarray(tbl["flux"], dtype=np.float64)
     )
     return x, y, peak
-
-
-def _is_corner(x: float, y: float, wpx: int, h: int) -> bool:
-    m = float(CORNER_MARGIN_PX)
-    return x < m or y < m or x >= float(wpx) - m or y >= float(h) - m
 
 
 def _saturation_limit(hdr: fits.Header) -> float:
