@@ -875,10 +875,6 @@ def _stage1_net_masks(df: pd.DataFrame, *, nss_enabled: bool = False) -> dict[st
     return nets
 
 
-def _physics_net_mask(df: pd.DataFrame, *, nss_enabled: bool = False) -> pd.Series:
-    nets = _stage1_net_masks(df, nss_enabled=nss_enabled)
-    return nets["blue"] | nets["red"] | nets["wd"] | nets["luminous"]
-
 
 def _stage1_candidate_mask(df: pd.DataFrame, *, nss_enabled: bool = False) -> pd.Series:
     nets = _stage1_net_masks(df, nss_enabled=nss_enabled)
