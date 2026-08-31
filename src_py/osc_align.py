@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import shutil
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -13,7 +12,7 @@ import numpy as np
 import pandas as pd
 from astropy.io import fits
 
-from osc_extract import OSC_CHANNELS, channel_obs_group_folder, is_channel_obs_group_folder
+from osc_extract import OSC_CHANNELS, channel_obs_group_folder
 
 LOGGER = logging.getLogger(__name__)
 
@@ -387,23 +386,6 @@ def log_channel_match_rate_verification(
         log_event(f"OSC-2 channel {ch}: match_rate={mr * 100.0:.1f}% OK (propagated WCS)")
 
 
-def collect_handoff_from_alignment_results(
-    *,
-    reference_file: str,
-    star_counts: Sequence[dict[str, Any]],
-    registration_by_file: Mapping[str, dict[str, Any]],
-) -> dict[str, dict[str, Any]]:
-    frames: dict[str, dict[str, Any]] = {}
-    for sc in star_counts:
-        fname = str(sc.get("file") or "")
-        if not fname:
-            continue
-        entry = dict(registration_by_file.get(fname) or {})
-        entry.setdefault("method", str(sc.get("alignment_method") or sc.get("aligned_method") or "astroalign"))
-        entry["aligned"] = bool(sc.get("aligned", True))
-        frames[fname] = entry
-    return frames
-
 
 def require_osc_donor_products(donor_platesolve_dir: Path) -> None:
     ps = Path(donor_platesolve_dir)
@@ -413,24 +395,3 @@ def require_osc_donor_products(donor_platesolve_dir: Path) -> None:
             raise FileNotFoundError(f"OSC donor product missing: {p}")
 
 
-def copy_alignment_report_with_channel_paths(
-    donor_report: Path,
-    recipient_report: Path,
-    *,
-    channel_files: Mapping[str, Path],
-) -> None:
-    """Mirror oneRGGB alignment_report rows for channel paths (geometry reuse metadata)."""
-    df = pd.read_csv(donor_report)
-    if "file" not in df.columns:
-        shutil.copy2(donor_report, recipient_report)
-        return
-    rows: list[dict[str, Any]] = []
-    for _, row in df.iterrows():
-        r = dict(row)
-        fname = str(row.get("file") or "")
-        ch_path = channel_files.get(fname)
-        if ch_path is not None:
-            r["file"] = Path(ch_path).name
-            r["osc_registration_source"] = "oneRGGB"
-        rows.append(r)
-    pd.DataFrame(rows).to_csv(recipient_report, index=False)
