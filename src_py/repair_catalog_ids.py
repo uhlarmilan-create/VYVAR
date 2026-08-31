@@ -35,8 +35,8 @@ def _pick_gaia_table(con: sqlite3.Connection) -> str:
     raise RuntimeError(f"Gaia DB: neznama tabulka (najdene: {sorted(names)[:20]})")
 
 
-def _sep_arcsec(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
-    """Small-angle separation in arcsec (good for tiny offsets)."""
+def _sep_arcsec_small_angle(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
+    """Small-angle separation in arcsec (good for tiny offsets). Not SkyCoord.separation."""
     dra = (ra2 - ra1) * math.cos(math.radians(dec1))
     ddec = dec2 - dec1
     return math.sqrt(dra * dra + ddec * ddec) * 3600.0
@@ -161,7 +161,7 @@ def repair_csv_catalog_ids_from_gaia_db(
             new_id = int(r[0])
             ra2 = float(r[1]) if r[1] is not None else float("nan")
             dec2 = float(r[2]) if r[2] is not None else float("nan")
-            sep = _sep_arcsec(ra_f, dec_f, ra2, dec2) if (math.isfinite(ra2) and math.isfinite(dec2)) else float("nan")
+            sep = _sep_arcsec_small_angle(ra_f, dec_f, ra2, dec2) if (math.isfinite(ra2) and math.isfinite(dec2)) else float("nan")
 
             if math.isfinite(sep) and sep > float(max_sep_arcsec):
                 over_max_sep += 1

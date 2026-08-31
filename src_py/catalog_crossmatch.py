@@ -40,7 +40,8 @@ def _safe_float_blank_tokens(x: Any) -> float | None:
     return v
 
 
-def _sep_arcsec(coord: SkyCoord, ra_deg: Any, dec_deg: Any) -> float | None:
+def _sep_arcsec_skycoord(coord: SkyCoord, ra_deg: Any, dec_deg: Any) -> float | None:
+    """SkyCoord.separation in arcsec, or None. Not the small-angle RA/Dec formula."""
     try:
         c2 = SkyCoord(ra=_safe_float_blank_tokens(ra_deg) * u.deg, dec=_safe_float_blank_tokens(dec_deg) * u.deg, frame="icrs")
         if c2.ra.deg is None or c2.dec.deg is None:
@@ -216,7 +217,7 @@ def _query_simbad(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         try:
             cra = _row_get(row, "RA", "ra", "RA_ICRS")
             cde = _row_get(row, "DEC", "dec", "DE_ICRS")
-            dr = _sep_arcsec(coord, cra, cde)
+            dr = _sep_arcsec_skycoord(coord, cra, cde)
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[CROSSMATCH] Query failed for SIMBAD separation: %s", exc)
             dr = None
@@ -338,7 +339,7 @@ def _query_vsx(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         if mx is not None and mn is not None:
             amp = abs(mx - mn)
         ep = _safe_float_blank_tokens(_row_get(row, "Epoch"))
-        dr = _sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000"))
+        dr = _sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000"))
         mag = mx if mx is not None else mn
         out.append(
             CatalogMatch(
@@ -377,7 +378,7 @@ def _query_asassn(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 amplitude=_safe_float_blank_tokens(_row_get(row, "Amp")),
                 mag=_safe_float_blank_tokens(_row_get(row, "Vmag")),
                 epoch=_safe_float_blank_tokens(_row_get(row, "HJD")),
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
     return out
@@ -408,7 +409,7 @@ def _query_ztf(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 period=_safe_float_blank_tokens(_row_get(row, "Per")),
                 amplitude=amp,
                 mag=_safe_float_blank_tokens(_row_get(row, "rmag")),
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
     return out
@@ -430,7 +431,7 @@ def _query_gaia_varisum(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMa
                 name=sid,
                 var_type=flags or "-",
                 mag=gmag,
-                delta_r=_sep_arcsec(coord, _row_get(row, "RA_ICRS"), _row_get(row, "DE_ICRS")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RA_ICRS"), _row_get(row, "DE_ICRS")),
                 extra={k: _row_get(row, k) for k in _GAIA_VARISUM_FLAGS if k in getattr(row, "colnames", [])},
             )
         )
@@ -462,7 +463,7 @@ def _query_atlas(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 period=per,
                 amplitude=amp,
                 mag=mag,
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
                 extra={"columns": list(getattr(t, "colnames", []))},
             )
         )
@@ -486,7 +487,7 @@ def _query_css(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         name = str(int(kid)) if str(kid).replace(".", "").isdigit() else str(kid or "").strip()
         dra = _row_get(row, "_RA", "RAJ2000")
         dde = _row_get(row, "_DE", "DEJ2000")
-        dr_css = _sep_arcsec(coord, dra, dde) if (_safe_float_blank_tokens(dra) is not None and _safe_float_blank_tokens(dde) is not None) else None
+        dr_css = _sep_arcsec_skycoord(coord, dra, dde) if (_safe_float_blank_tokens(dra) is not None and _safe_float_blank_tokens(dde) is not None) else None
         out.append(
             CatalogMatch(
                 catalog="CSS",
@@ -524,7 +525,7 @@ def _query_kelt(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 var_type="",
                 period=_safe_float_blank_tokens(_row_get(row, "Per-LS")),
                 mag=_safe_float_blank_tokens(_row_get(row, "Tmag")),
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
                 extra={"2MASS": tm, "TIC": tic},
             )
         )
@@ -551,7 +552,7 @@ def _query_vsbs(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 period=_safe_float_blank_tokens(_row_get(row, "Per")),
                 amplitude=_safe_float_blank_tokens(_row_get(row, "Amp")),
                 mag=_safe_float_blank_tokens(_row_get(row, "Vmag")),
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
     return out
@@ -577,7 +578,7 @@ def _query_tess_eb(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 period=_safe_float_blank_tokens(_row_get(row, "Per")),
                 mag=_safe_float_blank_tokens(_row_get(row, "Tmag")),
                 epoch=_safe_float_blank_tokens(_row_get(row, "BJD0")),
-                delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
+                delta_r=_sep_arcsec_skycoord(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
     return out
