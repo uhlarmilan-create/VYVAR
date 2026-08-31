@@ -605,18 +605,6 @@ def resolve_binning(header: Any = None, *, db_value: float | None = None, cfg: A
 # --------------------------------------------------------------------------- #
 # SITE: per-draft ID_LOCATION -> header SITELAT/LONG/ELEV -> config (flagged)
 # --------------------------------------------------------------------------- #
-def _sqlite_row_field(row_obj: Any, index: int, name: str) -> Any:
-    if hasattr(row_obj, "keys"):
-        try:
-            if name in row_obj.keys():
-                return row_obj[name]
-        except Exception:  # noqa: BLE001
-            pass
-    try:
-        return row_obj[index]
-    except (IndexError, KeyError, TypeError):
-        return None
-
 
 def _draft_location(db: Any, draft_id: int | None) -> tuple[float, float, float] | None:
     if db is None or draft_id is None or not hasattr(db, "get_draft_location_id"):
