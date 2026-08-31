@@ -16,14 +16,7 @@ from masterstar_context import (
     masterstar_context_markdown,
     resolve_masterstar_fits_path,
 )
-
-
-def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
-    with st.expander(f"? {title}", expanded=False):
-        st.markdown(f"**Phase / process:** {phase}")
-        st.markdown(f"**Where and how it is used:** {used_in}")
-        if compute:
-            st.markdown(f"**Derivation / computation:** {compute}")
+from ui_help import _detail_help
 
 
 def _load_latest_pipeline_meta(

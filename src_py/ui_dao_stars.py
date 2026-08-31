@@ -11,14 +11,7 @@ import streamlit as st
 from config import AppConfig, save_config_json, ui_config_persist
 from masterstar_context import load_masterstar_context, resolve_masterstar_fits_path
 from platesolve_ui_paths import masterstars_csv_in_dir
-
-
-def _detail_help(title: str, *, phase: str, used_in: str, compute: str | None = None) -> None:
-    with st.expander(f"? {title}", expanded=False):
-        st.markdown(f"**Phase / process:** {phase}")
-        st.markdown(f"**Where and how it is used:** {used_in}")
-        if compute:
-            st.markdown(f"**Derivation / computation:** {compute}")
+from ui_help import _detail_help
 
 
 def _masterstar_detection_count(fits_path: Path, setup_dir: Path | None) -> int | None:
