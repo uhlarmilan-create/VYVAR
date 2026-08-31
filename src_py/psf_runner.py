@@ -230,7 +230,8 @@ def _runner_database_path() -> Path:
     return db_path
 
 
-def _fit_shape_for_cutout(cutout_size: int) -> tuple[int, int]:
+def _fit_shape_for_cutout_legacy_even_down(cutout_size: int) -> tuple[int, int]:
+    """Odd fit window: cutout-4, even values decremented. Differs from psf_photometry (FWHM path or even-up)."""
     fs = max(3, int(cutout_size) - 4)
     if fs % 2 == 0:
         fs -= 1
@@ -259,7 +260,7 @@ def _load_psf_photometry_bundle(epsf_path: Path) -> tuple[PSFPhotometry, int]:
     # Pozn.: sucet pixelov ePSF gridu (napr. ~4 pri oversampling=2) nie je priamo 'flux v ADU';
     # PSFPhotometry skaluje amplitudu voci datam. Pre ``psf_flux_norm`` by sa pouzil integral modelu z Photutils, nie len ``sum(psf_data)``.
     psf_model = ImagePSF(psf_data, oversampling=osamp)
-    fit_shape = _fit_shape_for_cutout(cutout_size)
+    fit_shape = _fit_shape_for_cutout_legacy_even_down(cutout_size)
     phot = PSFPhotometry(psf_model, fit_shape=fit_shape, progress_bar=False)
     return phot, cutout_size
 
