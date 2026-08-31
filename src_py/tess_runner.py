@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 
 from tess_verify import run_tess_analysis
+from crossmatch_runner import _load_radec_map
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,12 +79,6 @@ def _write_tess_result_txt(result_json_path: Path, result_txt_path: Path, catalo
         LOGGER.info("[TESS TXT] Wrote: %s", str(result_txt_path))
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[TESS TXT] write failed: %s", exc)
-
-
-def _load_radec_map(output_dir: Path) -> dict[str, tuple[float, float]]:
-    from crossmatch_runner import _load_radec_map as _load  # noqa: PLC0415
-
-    return _load(Path(output_dir))
 
 
 def _period_hint_from_crossmatch_cache(cache_path: Path) -> float | None:
