@@ -14,7 +14,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Sequence
 
 import numpy as np
 from astropy.io import fits
@@ -398,29 +398,6 @@ def resolve_sat_limit(
     )
 
 
-def expected_raw_from_aligned_centroid(
-    aligned_x: float,
-    aligned_y: float,
-    ra_deg: float,
-    dec_deg: float,
-    aligned_hdr: fits.Header,
-    raw_hdr: fits.Header,
-) -> tuple[float, float] | None:
-    """Map aligned DAO centroid to raw pixel via WCS residual (master-grid lock)."""
-    try:
-        wcs_a = WCS(aligned_hdr)
-        wcs_r = WCS(raw_hdr)
-        if not (wcs_a.has_celestial and wcs_r.has_celestial):
-            return None
-        with np.errstate(all="ignore"):
-            axw, ayw = wcs_a.all_world2pix(float(ra_deg), float(dec_deg), 0)
-            rxw, ryw = wcs_r.all_world2pix(float(ra_deg), float(dec_deg), 0)
-        if not all(math.isfinite(v) for v in (axw, ayw, rxw, ryw)):
-            return None
-        return float(rxw + (float(aligned_x) - axw)), float(ryw + (float(aligned_y) - ayw))
-    except Exception:  # noqa: BLE001
-        return None
-
 
 def _centroid_com_cutout(arr: np.ndarray, x0: float, y0: float, half: int) -> tuple[float, float] | None:
     """Centre-of-mass centroid in a small cutout (photutils-style, no max search)."""
@@ -457,76 +434,6 @@ def _select_drift_ref_indices(aligned_peak: np.ndarray) -> np.ndarray:
     return np.nonzero(fallback)[0]
 
 
-def compute_frame_drift(
-    arr: np.ndarray,
-    raw_hdr: fits.Header,
-    *,
-    ra_deg: np.ndarray,
-    dec_deg: np.ndarray,
-    aligned_peak: np.ndarray,
-    placed_x: np.ndarray,
-    placed_y: np.ndarray,
-    wcs_x: np.ndarray,
-    wcs_y: np.ndarray,
-) -> FrameDriftResult:
-    """Frame drift diagnostic: offset of placed positions from WCS on drift refs."""
-    ref_idx = _select_drift_ref_indices(aligned_peak)
-    n_refs = int(ref_idx.size)
-    if n_refs == 0:
-        return FrameDriftResult(0.0, 0.0, 0, float("nan"), "none")
-
-    dx_arr = placed_x[ref_idx] - wcs_x[ref_idx]
-    dy_arr = placed_y[ref_idx] - wcs_y[ref_idx]
-    ok = np.isfinite(dx_arr) & np.isfinite(dy_arr)
-    if not ok.any():
-        return FrameDriftResult(0.0, 0.0, 0, float("nan"), "none")
-
-    dx = float(np.median(dx_arr[ok]))
-    dy = float(np.median(dy_arr[ok]))
-    resid = np.sqrt((dx_arr[ok] - dx) ** 2 + (dy_arr[ok] - dy) ** 2)
-    rms = float(np.sqrt(np.mean(resid ** 2))) if resid.size else float("nan")
-    method = "aligned_wcs_residual" if n_refs >= DRIFT_REF_MIN_COUNT else "aligned_wcs_residual_sparse"
-    return FrameDriftResult(dx, dy, int(ok.sum()), rms, method)
-
-
-def compute_frame_drift_from_centroids(
-    arr: np.ndarray,
-    raw_hdr: fits.Header,
-    *,
-    ra_deg: np.ndarray,
-    dec_deg: np.ndarray,
-    aligned_peak: np.ndarray,
-) -> FrameDriftResult:
-    """Fallback drift: COM centroid on bright refs at WCS position (no max search)."""
-    try:
-        wcs = WCS(raw_hdr)
-        if not wcs.has_celestial:
-            return FrameDriftResult(0.0, 0.0, 0, float("nan"), "wcs_missing")
-        wx, wy = wcs.all_world2pix(ra_deg, dec_deg, 0)
-    except Exception:  # noqa: BLE001
-        return FrameDriftResult(0.0, 0.0, 0, float("nan"), "wcs_error")
-
-    ref_idx = _select_drift_ref_indices(aligned_peak)
-    dxs: list[float] = []
-    dys: list[float] = []
-    for i in ref_idx:
-        if not (math.isfinite(float(wx[i])) and math.isfinite(float(wy[i]))):
-            continue
-        hit = _centroid_com_cutout(arr, float(wx[i]), float(wy[i]), DRIFT_CENTROID_BOX_HALF)
-        if hit is None:
-            continue
-        cx, cy = hit
-        dxs.append(float(cx - wx[i]))
-        dys.append(float(cy - wy[i]))
-
-    if len(dxs) < DRIFT_REF_MIN_COUNT:
-        return FrameDriftResult(0.0, 0.0, len(dxs), float("nan"), "insufficient_refs")
-
-    dx = float(np.median(np.asarray(dxs)))
-    dy = float(np.median(np.asarray(dys)))
-    resid = np.sqrt((np.asarray(dxs) - dx) ** 2 + (np.asarray(dys) - dy) ** 2)
-    rms = float(np.sqrt(np.mean(resid ** 2)))
-    return FrameDriftResult(dx, dy, len(dxs), rms, "com_centroid_refs")
 
 
 def mag_guided_centroid(
@@ -952,31 +859,6 @@ def apply_raw_peaks_to_proc_df(
     ctx.raw_peaks_used = True
     return ctx
 
-
-def stamp_sat_fits_headers(hdr: fits.Header, ctx: SatDiagContext) -> None:
-    """VY_SAT* provenance headers (spec 10.1)."""
-    src_map = {
-        "HEADER": "HEADER",
-        "EQUIPMENT": "EQUIPMENT",
-        "DERIVED": "DERIVED",
-        "CONFLICT_DERIVED": "CONFLICT_DERIVED",
-        "DERIVED_NO_PILEUP": "DERIVED_NO_PILEUP",
-        "BITPIX": "DERIVED_NO_PILEUP",
-        "LEGACY_ALIGNED": "LEGACY_ALIGNED",
-    }
-    vy_src = src_map.get(str(ctx.sat_source), str(ctx.sat_source))
-    hdr["VY_SATSRC"] = (vy_src, "SAT-DIAG limit source")
-    if ctx.sat_adu is not None:
-        hdr["VY_SATADU"] = (float(ctx.sat_adu), "Saturation level image ADU")
-    if ctx.lin_adu is not None:
-        hdr["VY_LINADU"] = (float(ctx.lin_adu), "Linearity level image ADU")
-    hdr["VY_LINSRC"] = (str(ctx.lin_source), "Linearity provenance")
-    bf = ctx.xbinning or 1
-    hdr["VY_SATBF"] = (int(bf), "Binning key for SAT-DIAG")
-    hdr["VY_SATPS"] = (
-        str(ctx.sat_peak_source),
-        "Peak source for saturation (PLACED_APERTURE)",
-    )
 
 
 def resolve_drift_ref_sky_deg(
