@@ -150,7 +150,8 @@ def _header_value(header: Any, param: str) -> tuple[float | None, str | None]:
     return None, None
 
 
-def _clamp(param: str, v: float) -> float:
+def _clamp_param_sanity(param: str, v: float) -> float:
+    """Clamp ``v`` to ``SANITY[param]``. Not a generic lo/hi clamp."""
     lo, hi = SANITY.get(param, (-math.inf, math.inf))
     return max(lo, min(hi, float(v)))
 
@@ -706,7 +707,7 @@ def resolve_site(
     drv = _draft_location(db, draft_id)
     if drv is not None:
         la, lo, el = drv
-        res.lat, res.lon, res.elev = _clamp("lat", la), _clamp("lon", lo), _clamp("elev", el)
+        res.lat, res.lon, res.elev = _clamp_param_sanity("lat", la), _clamp_param_sanity("lon", lo), _clamp_param_sanity("elev", el)
         res.source, res.ok = "draft", True
         # Cross-check header site if present.
         hsv = _header_site(header)
@@ -724,7 +725,7 @@ def resolve_site(
 
     hsv = _header_site(header)
     if hsv is not None:
-        res.lat, res.lon, res.elev = _clamp("lat", hsv[0]), _clamp("lon", hsv[1]), _clamp("elev", hsv[2])
+        res.lat, res.lon, res.elev = _clamp_param_sanity("lat", hsv[0]), _clamp_param_sanity("lon", hsv[1]), _clamp_param_sanity("elev", hsv[2])
         res.source, res.ok = "header", True
         logger.debug("[RESOLVE site] -> header (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
         return _apply_null_island_guard(res, db=db, draft_id=draft_id)
@@ -737,7 +738,7 @@ def resolve_site(
         except (TypeError, ValueError):
             clat = clon = calt = 0.0
         if not is_null_island_coords(clat, clon):
-            res.lat, res.lon, res.elev = _clamp("lat", clat), _clamp("lon", clon), _clamp("elev", calt)
+            res.lat, res.lon, res.elev = _clamp_param_sanity("lat", clat), _clamp_param_sanity("lon", clon), _clamp_param_sanity("elev", calt)
             res.source, res.ok = "config", True
             _warn_once(
                 "site_config_fallback",

@@ -229,7 +229,8 @@ def _round_px(value: float, *, step: float = PX_ROUND_STEP) -> float:
     return round(float(value) / step) * step
 
 
-def _clamp(value: float, lo: float, hi: float) -> float:
+def _clamp_lo_hi(value: float, lo: float, hi: float) -> float:
+    """Clamp ``value`` into ``[lo, hi]``. Not param_resolver SANITY lookup."""
     return max(lo, min(hi, float(value)))
 
 
@@ -812,7 +813,7 @@ def derive_tolerances_from_diagnostic(
         seed_p95 = 1.9
 
     match_px = _round_px(float(match_k) * float(identity_p95))
-    centroid_raw = _clamp(seed_p95, centroid_floor_px, centroid_cap_px)
+    centroid_raw = _clamp_lo_hi(seed_p95, centroid_floor_px, centroid_cap_px)
     centroid_px = _round_px(centroid_raw)
     match_px = max(match_px, centroid_px)
 
@@ -880,7 +881,7 @@ def derive_tolerances_from_residuals(
         seed_p95 = 1.9
 
     match_px = _round_px(float(match_k) * float(identity_p95))
-    centroid_raw = _clamp(seed_p95, centroid_floor_px, centroid_cap_px)
+    centroid_raw = _clamp_lo_hi(seed_p95, centroid_floor_px, centroid_cap_px)
     centroid_px = _round_px(centroid_raw)
     match_px = max(match_px, centroid_px)
 
