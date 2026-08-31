@@ -178,10 +178,6 @@ def _mark_authoritative_session_infolog(path: Path) -> None:
     path.write_text("".join(lines), encoding="utf-8")
 
 
-def get_active_session_log_path() -> Path | None:
-    """Path to the durable session log for the current run, if any."""
-    return _session_log_path
-
 
 def log_phase_boundary(phase: str, *, status: str = "start") -> None:
     """Timestamped phase milestone (durable; survives ring-buffer eviction)."""
