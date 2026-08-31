@@ -245,13 +245,6 @@ def _apply_aperture_catalog_enhancements_from_st(
         return df
 
 
-def _fits_header_positive_float(hdr: fits.Header, *keys: str) -> float | None:
-    for k in keys:
-        v = _header_float_tu(hdr, k)
-        if v is not None and v > 0:
-            return v
-    return None
-
 
 def _fits_header_vy_algn_aligned(hdr: fits.Header) -> bool:
     """True when frame pixels are on the MASTERSTAR reference alignment grid (VY_ALGN)."""
@@ -768,27 +761,6 @@ def _cfg_calibration_library_native_binning(cfg: Any) -> int | None:
         return int(CALIBRATION_LIBRARY_NATIVE_BINNING)
 
 
-def _dark_np_for_calibration_path(
-    dark_cache: dict[str, Any],
-    master_binning: int | None,
-    p: Path | None,
-    light_binning: int,
-) -> Any:
-    """Cached dark master array for ``(path, light binning, library native binning)``."""
-    if p is None or not p.is_file():
-        return None
-    _mb_key = "hdr" if master_binning is None else str(int(master_binning))
-    key = f"{p.resolve()!s}|b{int(light_binning)}|mb{_mb_key}"
-    if key not in dark_cache:
-        pm = get_processed_master(
-            p,
-            int(light_binning),
-            kind="dark",
-            master_binning=master_binning,
-        )
-        dark_cache[key] = pm.data
-    return dark_cache[key]
-
 
 def _obs_group_key_from_light_path(src: Path) -> str:
     with fits.open(src, memmap=False) as hdul:
@@ -812,34 +784,6 @@ def _archive_root_from_lights_root(lights_root: Path) -> Path | None:
         return parent.parent
     return None
 
-
-def _dark_array_for_calibration(
-    *,
-    dark_path: Path,
-    light_binning: int,
-    master_binning: int | None,
-    light_shape: tuple[int, int],
-    light_filename: str,
-    cache: dict[str, Any] | None = None,
-) -> Any:
-    """Load/resample master dark for calibration (SUM convention)."""
-    if not dark_path.is_file():
-        return None
-    key = f"{dark_path.resolve()}|b{int(light_binning)}|mb{master_binning}|sum"
-    if cache is not None and key in cache:
-        return cache[key]
-    pm = get_processed_master(
-        dark_path,
-        int(light_binning),
-        kind="dark",
-        master_binning=master_binning,
-        light_shape=light_shape,
-        light_filename=light_filename,
-        dark_resample_mode="sum",
-    )
-    if cache is not None:
-        cache[key] = pm.data
-    return pm.data
 
 
 def _resolve_dark_path_for_light(
@@ -1530,30 +1474,6 @@ def _dao_star_table_mean_roundness(tbl: Any) -> float | None:
         return None
 
 
-def _dao_star_table_mean_elongation(tbl: Any) -> float | None:
-    """Mean elongation (semi-major / semi-minor axis ratio) over detected sources.
-    Values near 1.0 = round stars. High values (>1.5) suggest satellite/aircraft trail."""
-    import numpy as np
-
-    if tbl is None or len(tbl) == 0:
-        return None
-    try:
-        if "sharpness" not in tbl.colnames:
-            return None
-        # DAOStarFinder nema priamu elongation - odvodime z roundness1/roundness2.
-        # elongation ~ 1 + hypot(roundness1, roundness2)
-        if "roundness1" not in tbl.colnames or "roundness2" not in tbl.colnames:
-            return None
-        r1 = np.asarray(tbl["roundness1"], dtype=np.float64)
-        r2 = np.asarray(tbl["roundness2"], dtype=np.float64)
-        elong = 1.0 + np.hypot(np.abs(r1), np.abs(r2))
-        ok = np.isfinite(elong)
-        if not np.any(ok):
-            return None
-        return float(np.mean(elong[ok]))
-    except Exception:  # noqa: BLE001
-        return None
-
 
 def _quality_inspection_dao_metrics_array(
     data: "np.ndarray",
@@ -1758,19 +1678,6 @@ def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:
     except Exception:  # noqa: BLE001
         return None
 
-
-def _icrs_offset_arcmin(
-    ra_deg: float,
-    de_deg: float,
-    ref_ra_deg: float,
-    ref_de_deg: float,
-) -> float:
-    """Small-angle offset from reference (degrees -> arcminutes): sqrt((DeltaRA.cos delta)^2 + Deltadelta^2).60."""
-    dra = (float(ra_deg) - float(ref_ra_deg) + 180.0) % 360.0 - 180.0
-    dde = float(de_deg) - float(ref_de_deg)
-    cos_dec = math.cos(math.radians(float(ref_de_deg)))
-    sep_deg = math.hypot(dra * cos_dec, dde)
-    return sep_deg * 60.0
 
 
 def sync_obs_files_drift_arcmin_for_draft(
@@ -2737,15 +2644,6 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
 
     return out
 
-
-def _cupy_available() -> bool:
-    """Return True if CuPy + CUDA device is available (optional dependency)."""
-    try:
-        import cupy as cp  # type: ignore
-
-        return int(cp.cuda.runtime.getDeviceCount()) > 0
-    except Exception:  # noqa: BLE001
-        return False
 
 
 def _path_segments_forbidden_for_masterstar_physical_source(
@@ -4148,29 +4046,6 @@ def _solve_wcs_solve_field_cli(
     return {"solved": True, "method": "solve-field (local CLI)"}
 
 
-def _try_solve_wcs_astrometry_net_or_local_cli(
-    masterstar_path: Path,
-    api_key: str | None = None,
-    *,
-    expected_arcsec_per_pixel: float | None = None,
-) -> dict[str, Any]:
-    """Prefer local ``solve-field`` when installed; else nova Astrometry.net API (both use SIP tweak order)."""
-    r_loc = _solve_wcs_solve_field_cli(
-        masterstar_path,
-        expected_arcsec_per_pixel=expected_arcsec_per_pixel,
-    )
-    if r_loc.get("solved"):
-        return r_loc
-    r_api = _solve_wcs_astrometry_net(
-        masterstar_path,
-        api_key=api_key,
-        expected_arcsec_per_pixel=expected_arcsec_per_pixel,
-    )
-    if not r_api.get("solved") and r_loc.get("reason"):
-        r_api = dict(r_api)
-        r_api["solve_field_attempt"] = r_loc.get("reason")
-    return r_api
-
 
 def _solve_wcs_astrometry_net(
     masterstar_path: Path,
@@ -4539,23 +4414,6 @@ def _solve_wcs_external(
 def _has_valid_wcs(header: fits.Header) -> bool:
     return fits_header_has_celestial_wcs(header)
 
-
-def _wcs_astrometry_nearly_identical(wa: WCS, wb: WCS, rtol: float = 1e-6) -> bool:
-    """True if CRVAL, CRPIX and PC matrix match (frames aligned to reference share its astrometry)."""
-    import numpy as np
-
-    if not (wa.has_celestial and wb.has_celestial):
-        return False
-    try:
-        if not np.allclose(wa.wcs.crval, wb.wcs.crval, rtol=rtol, atol=1e-9):
-            return False
-        if not np.allclose(wa.wcs.crpix, wb.wcs.crpix, rtol=rtol, atol=1e-6):
-            return False
-        if not np.allclose(wa.wcs.get_pc(), wb.wcs.get_pc(), rtol=rtol, atol=1e-12):
-            return False
-        return True
-    except Exception:  # noqa: BLE001
-        return False
 
 
 def _bin2d_mean(arr: "np.ndarray", factor: int) -> "np.ndarray":
@@ -12089,64 +11947,6 @@ def _apply_wcs_tan_fragment_to_header(h: fits.Header, wh: fits.Header, history_n
     h.add_history(history_note)
 
 
-def _gaia_sky_match_wcs_fragment(
-    hdr: fits.Header,
-    data: "np.ndarray",
-    *,
-    app_config: AppConfig | None,
-    dao_threshold_sigma: float,
-    dao_fwhm_px: float,
-    plate_solve_fov_deg: float | None,
-    max_bright_stars: int = 200,
-    max_sky_match_arcsec: float = 25.0,
-    gaia_max_mag: float = 16.5,
-    min_pairs: int = 10,
-    log_gaia_sql: bool = True,
-    log_messages: bool = True,
-) -> tuple[fits.Header | None, dict[str, Any]]:
-    """Legacy WCS refinement removed in Gaia migration (no-op)."""
-    _ = (
-        hdr,
-        data,
-        app_config,
-        dao_threshold_sigma,
-        dao_fwhm_px,
-        plate_solve_fov_deg,
-        max_bright_stars,
-        max_sky_match_arcsec,
-        gaia_max_mag,
-        min_pairs,
-        log_gaia_sql,
-        log_messages,
-    )
-    return None, {"refined": False, "reason": "gaia_refine_removed"}
-
-
-def _refine_masterstar_wcs_gaia_sky_match_infile(
-    fits_path: Path,
-    *,
-    app_config: AppConfig | None,
-    equipment_id: int | None,
-    dao_threshold_sigma: float,
-    dao_fwhm_px: float | None = None,
-    max_bright_stars: int = 200,
-    max_sky_match_arcsec: float = 25.0,
-    gaia_max_mag: float = 16.5,
-    min_pairs: int = 10,
-) -> dict[str, Any]:
-    """Legacy WCS refinement removed (no-op)."""
-    _ = (
-        fits_path,
-        app_config,
-        equipment_id,
-        dao_threshold_sigma,
-        dao_fwhm_px,
-        max_bright_stars,
-        max_sky_match_arcsec,
-        gaia_max_mag,
-        min_pairs,
-    )
-    return {"refined": False, "reason": "gaia_refine_removed"}
 
 
 def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
@@ -17330,14 +17130,6 @@ def _calibrate_batch_process_one(
 def _has_usable_master_dark(path: Path | None) -> bool:
     return bool(path is not None and Path(path).is_file())
 
-
-def _has_any_usable_master_flat(masterflat_by_filter: dict[str, Path | None] | None) -> bool:
-    if not masterflat_by_filter:
-        return False
-    for _k, v in masterflat_by_filter.items():
-        if v is not None and Path(v).is_file():
-            return True
-    return False
 
 
 def _passthrough_lights_to_calibrated(
