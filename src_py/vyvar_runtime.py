@@ -44,9 +44,6 @@ _DATA_SKELETON_DIRS = (
 )
 
 
-def install_root_from_src_py(src_py_file: Path) -> Path:
-    return src_py_file.resolve().parent.parent
-
 
 def _ensure_data_skeleton(data_root: Path) -> None:
     for sub in ("Archive", "CalibrationLibrary", "GAIA_DR3", "VSX", "exoplanets", "logs"):
