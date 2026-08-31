@@ -33,6 +33,7 @@ import vyvar_alignment_frame  # A-durable: fresh-attr MP func lookup at dispatch
 from vyvar_alignment_frame import (
     _alignment_compute_one_frame,
     _alignment_detect_xy,
+    _as_fits_float32_image,
     _astrometry_align_mp_init,
     _astrometry_align_mp_task,
 )
@@ -2484,13 +2485,6 @@ def format_memory_bytes(n: float | int) -> str:
             return f"{x:.2f} {unit}"
         x /= 1024.0
     return f"{n} B"
-
-
-def _as_fits_float32_image(data: Any) -> "np.ndarray":
-    """Contiguous float32 image for FITS I/O and downstream QC (avoids astropy ``float32`` dtype errors)."""
-    import numpy as np
-
-    return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
 
 
 def _fits_primary_pixel_count(header: fits.Header) -> int:
