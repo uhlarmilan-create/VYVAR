@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 from astropy.io import fits as astrofits
 
+from stats_core import _flux_to_mag
 from comp_pool_rms import attach_comp_rms_to_pool_rows, compute_global_pool_rms_map
 from comp_rms_loo import (
     COMP_RMS_FRAMES_BASIS,
@@ -740,13 +741,6 @@ def compute_optimal_apertures(
 # ---------------------------------------------------------------------------
 # KROK 2: Aperturna fotometria per snimka - medianovy sky
 # ---------------------------------------------------------------------------
-
-
-def _flux_to_mag(flux: float) -> float:
-    """Instrumentalna magnituda z flux."""
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    return -2.5 * math.log10(flux)
 
 
 def _clamp_err_empty_apertures_n(n: int) -> int:

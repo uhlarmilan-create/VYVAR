@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from comp_pool_rms import _norm_id_val, sort_per_frame_csv_paths
+from stats_core import _flux_to_mag
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,12 +39,6 @@ def mad_sigma(values: np.ndarray) -> float:
         return float("nan")
     med = float(np.median(a))
     return float(1.4826 * np.median(np.abs(a - med)))
-
-
-def _flux_to_mag(flux: float) -> float:
-    if not (math.isfinite(flux) and flux > 0):
-        return float("nan")
-    return -2.5 * math.log10(flux)
 
 
 def compute_loo_mag_rms_map(
