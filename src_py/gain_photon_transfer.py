@@ -223,12 +223,6 @@ def estimate_photon_transfer_gain_from_proc_dir(
     )
 
 
-def container_scale_from_s1a(dominant_residue_frac: float = 1.0) -> float:
-    """Return ADU container scale (native->container). Default 4 for 14-in-16."""
-    if dominant_residue_frac >= 0.85:
-        return DEFAULT_CONTAINER_SCALE
-    return DEFAULT_CONTAINER_SCALE
-
 
 def resolve_photometric_gain(
     *,
@@ -352,14 +346,6 @@ def write_gain_pt_sidecar(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
-
-def read_gain_pt_sidecar(path: Path) -> dict[str, Any] | None:
-    if not path.is_file():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
 
 
 def apply_photometric_gain_authority(
