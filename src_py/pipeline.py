@@ -7503,24 +7503,7 @@ def _catalog_match_radius_px(
     return floor_px
 
 
-def _dao_pass2_annulus_stats(data0: "np.ndarray", cx: float, cy: float) -> tuple[float, float]:
-    """Local background median and std on annulus r=8-12 px (``data0`` = bgsub image)."""
-    import numpy as np
-
-    h, w = data0.shape
-    rmax = 13
-    ix, iy = int(round(cx)), int(round(cy))
-    x0, x1 = max(0, ix - rmax), min(w, ix + rmax + 1)
-    y0, y1 = max(0, iy - rmax), min(h, iy + rmax + 1)
-    if x1 <= x0 or y1 <= y0:
-        return float("nan"), float("nan")
-    yy, xx = np.mgrid[y0:y1, x0:x1]
-    rr = np.hypot(xx - cx, yy - cy)
-    ann = data0[y0:y1, x0:x1][(rr >= 8.0) & (rr <= 12.0)]
-    if ann.size < 10:
-        return float("nan"), float("nan")
-    _, md, sd = plain_mean_med_std(ann, sigma=3.0, maxiters=2)
-    return float(md), float(sd)
+from masterstar_gaia_accounting import _dao_pass2_annulus_stats  # noqa: E402,F401
 
 
 def _gaia_chip_xy_from_catalog(
