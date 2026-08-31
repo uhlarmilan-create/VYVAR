@@ -7475,14 +7475,7 @@ def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray",
     return b, f
 
 
-def _dao_xy_binned_to_full(x: "np.ndarray", y: "np.ndarray", f: int) -> tuple["np.ndarray", "np.ndarray"]:
-    import numpy as np
-
-    if f <= 1:
-        return np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
-    s = float(f)
-    off = float(f - 1) * 0.5
-    return np.asarray(x, dtype=np.float64) * s + off, np.asarray(y, dtype=np.float64) * s + off
+from masterstar_gaia_accounting import _dao_xy_binned_to_full  # noqa: E402,F401
 
 
 def _dao_full_to_binned_xy(x_full: float, y_full: float, bfac: int) -> tuple[float, float]:
