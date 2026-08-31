@@ -234,7 +234,11 @@ def _clamp_lo_hi(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, float(value)))
 
 
-def plate_scale_arcsec_per_px_from_wcs(wcs_obj: Any) -> float:
+def plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj: Any) -> float:
+    """Mean of proj_plane_pixel_scales (no abs); returns nan on failure.
+
+    Differs from unit_resolver.plate_scale_arcsec_per_px_from_wcs (uses abs, returns None).
+    """
     from astropy.wcs.utils import proj_plane_pixel_scales
 
     try:
@@ -1059,7 +1063,7 @@ def build_calibration_certificate(
     empty_n = int(getattr(_cfg, "masterstar_dao_empty_sky_target_n", DEFAULT_EMPTY_SKY_N))
 
     h, wpx = int(data0.shape[0]), int(data0.shape[1])
-    plate_scale = plate_scale_arcsec_per_px_from_wcs(wcs_obj)
+    plate_scale = plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj)
 
     if coarse_match_px is None:
         coarse_match_px = max(10.0, float(getattr(_cfg, "masterstar_lock_pair_tol_px", 3.0)) * 2.0)

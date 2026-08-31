@@ -260,7 +260,7 @@ def build_certificate_identity_stamps(
     root = _repo_root(repo_root)
     from config import AppConfig  # noqa: PLC0415
     from catalog_provenance import fingerprint_gaia_db, fingerprint_vsx_db  # noqa: PLC0415
-    from dao_gaia_calibration import plate_scale_arcsec_per_px_from_wcs  # noqa: PLC0415
+    from dao_gaia_calibration import plate_scale_arcsec_per_px_from_wcs_nan  # noqa: PLC0415
 
     cfg = AppConfig()
     gaia_fp = fingerprint_gaia_db(cfg.gaia_db_path)
@@ -306,7 +306,7 @@ def build_certificate_identity_stamps(
         with catch_warnings():
             simplefilter("ignore", FITSFixedWarning)
             wcs = WCS(hdr)
-        plate_scale = plate_scale_arcsec_per_px_from_wcs(wcs)
+        plate_scale = plate_scale_arcsec_per_px_from_wcs_nan(wcs)
         if not np.isfinite(plate_scale) or plate_scale <= 0.0:
             _identity_fail(f"sandbox MASTERSTAR plate scale unavailable: {ms_path}")
     except Exception as exc:  # noqa: BLE001

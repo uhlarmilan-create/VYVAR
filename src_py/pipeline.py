@@ -8848,7 +8848,7 @@ def detect_stars_and_match_catalog(
         from dao_gaia_calibration import (  # noqa: PLC0415
             compute_pass1_astrometric_residuals_px,
             derive_tolerances_from_residuals,
-            plate_scale_arcsec_per_px_from_wcs,
+            plate_scale_arcsec_per_px_from_wcs_nan,
         )
 
         _gg_sm = (
@@ -8871,7 +8871,7 @@ def detect_stars_and_match_catalog(
             _res_dr,
             np.asarray([], dtype=np.float64),
             fwhm_px=float(max(1.2, _base_fw)),
-            plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs(wcs_obj),
+            plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj),
             pass1_sigma=float(_thr_sigma),
             pass2_sigma=float(_sigma_p2_cfg),
             match_k=float(getattr(_cfg_df, "masterstar_dao_match_radius_k", 1.7)),
@@ -9366,11 +9366,11 @@ def detect_stars_and_match_catalog(
             nonlocal df_out, n_matched, match_sep_used, _match_sep_formula_inputs
             from dao_gaia_calibration import (
                 catalog_match_radius_d1_arcsec,
-                plate_scale_arcsec_per_px_from_wcs,
+                plate_scale_arcsec_per_px_from_wcs_nan,
                 solve_rms_px_from_fits_header,
             )
 
-            _ps_match = float(plate_scale_arcsec_per_px_from_wcs(wcs_obj))
+            _ps_match = float(plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj))
             _rms_match = solve_rms_px_from_fits_header(hdr)
             match_sep_used, _d1_inputs = catalog_match_radius_d1_arcsec(
                 solve_rms_px=_rms_match,
@@ -9689,7 +9689,7 @@ def detect_stars_and_match_catalog(
     n_matched_final = int(cat_nonempty.sum()) if len(df_out) else 0
     _ps_idg: float | None = None
     try:
-        from dao_gaia_calibration import plate_scale_arcsec_per_px_from_wcs as _ps_idg_fn
+        from dao_gaia_calibration import plate_scale_arcsec_per_px_from_wcs_nan as _ps_idg_fn
 
         _ps_try = float(_ps_idg_fn(wcs_obj))
         if math.isfinite(_ps_try) and _ps_try > 0:
