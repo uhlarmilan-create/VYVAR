@@ -108,7 +108,8 @@ def _row_mag(row: pd.Series) -> float:
     return 12.0
 
 
-def _norm_cid(x: object) -> str:
+def _norm_cid_int_dotzero(x: object) -> str:
+    """Strip; collapse ``123.0`` / ``123.00`` to ``123``. Not Gaia-canonical."""
     s = str(x or "").strip()
     if not s or s.lower() in ("nan", "none"):
         return ""
@@ -129,8 +130,8 @@ def load_star_list() -> pd.DataFrame:
     active = pd.read_csv(ACTIVE_CSV, dtype={"catalog_id": str, "name": str})
     summary = pd.read_csv(SUMMARY_CSV, dtype={"catalog_id": str})
 
-    active["catalog_id"] = active["catalog_id"].map(_norm_cid)
-    summary["catalog_id"] = summary["catalog_id"].map(_norm_cid)
+    active["catalog_id"] = active["catalog_id"].map(_norm_cid_int_dotzero)
+    summary["catalog_id"] = summary["catalog_id"].map(_norm_cid_int_dotzero)
     active = active[active["catalog_id"] != ""].copy()
     summary = summary[summary["catalog_id"] != ""].copy()
 
@@ -159,8 +160,8 @@ def load_comp_map() -> dict[str, list[str]]:
         dtype={"catalog_id": str, "target_catalog_id": str},
     )
     # catalog_id = comp star, target_catalog_id = target
-    comp_df["catalog_id"] = comp_df["catalog_id"].map(_norm_cid)
-    comp_df["target_catalog_id"] = comp_df["target_catalog_id"].map(_norm_cid)
+    comp_df["catalog_id"] = comp_df["catalog_id"].map(_norm_cid_int_dotzero)
+    comp_df["target_catalog_id"] = comp_df["target_catalog_id"].map(_norm_cid_int_dotzero)
     comp_df = comp_df[
         (comp_df["target_catalog_id"] != "") & (comp_df["catalog_id"] != "")
     ]
@@ -209,7 +210,7 @@ def build_flux_matrix(
             LOGGER.info("Loading frame %d/%d: %s", i + 1, n_frames, csv_path.name)
 
         frame_cat = pd.read_csv(csv_path, dtype={"catalog_id": str, "name": str})
-        frame_cat["catalog_id"] = frame_cat["catalog_id"].map(_norm_cid)
+        frame_cat["catalog_id"] = frame_cat["catalog_id"].map(_norm_cid_int_dotzero)
         frame_cat = frame_cat[
             frame_cat["catalog_id"].notna()
             & (frame_cat["catalog_id"] != "")
@@ -260,7 +261,7 @@ def build_iraf_flux_matrix(
         frame_lookups: list[pd.DataFrame] = []
         for csv_file in csv_files:
             fc = pd.read_csv(csv_file, dtype={"catalog_id": str, "name": str})
-            fc["catalog_id"] = fc["catalog_id"].map(_norm_cid)
+            fc["catalog_id"] = fc["catalog_id"].map(_norm_cid_int_dotzero)
             fc = fc[
                 fc["catalog_id"].notna()
                 & (fc["catalog_id"] != "")
@@ -400,7 +401,7 @@ def build_results(
 ) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     for _, star in stars.iterrows():
-        cid = _norm_cid(star["catalog_id"])
+        cid = _norm_cid_int_dotzero(star["catalog_id"])
         gaia_mag = star["gaia_mag"]
         lc_rms_vyvar = float(star["lc_rms_vyvar"])
 
@@ -529,7 +530,7 @@ def main() -> int:
     all_comp_cids: set[str] = set()
     for comps in comp_map.values():
         all_comp_cids.update(comps)
-    target_cids = [_norm_cid(x) for x in stars["catalog_id"]]
+    target_cids = [_norm_cid_int_dotzero(x) for x in stars["catalog_id"]]
     all_cids = list(dict.fromkeys([c for c in target_cids if c] + sorted(all_comp_cids)))
     LOGGER.info("Flux matrix: %d stars (targets + comps)", len(all_cids))
 

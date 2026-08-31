@@ -46,7 +46,7 @@ _AIRMASS_COLS = {
 }
 
 
-def _norm_cid(x: Any) -> str:
+def _norm_cid_decimal(x: Any) -> str:
     """Normalize Gaia ``catalog_id`` to canonical digit string (report / joins)."""
     s = str(x or "").strip()
     if not s or s.lower() in ("nan", "none"):
@@ -615,7 +615,7 @@ def _resolve_candidate_lc_mag_for_plot(df: pd.DataFrame) -> tuple[str, pd.Series
 class _PhotometryReportBuilder:
     """Internal PDF builder; section renderers extracted from generate_photometry_report."""
 
-    _norm_cid = staticmethod(_norm_cid)
+    _norm_cid_decimal = staticmethod(_norm_cid_decimal)
 
     def __init__(
         self,
@@ -728,15 +728,15 @@ class _PhotometryReportBuilder:
         )
 
         if "catalog_id" in self.summary_df.columns:
-            self.summary_df["_cid"] = self.summary_df["catalog_id"].map(_norm_cid)
+            self.summary_df["_cid"] = self.summary_df["catalog_id"].map(_norm_cid_decimal)
         if "catalog_id" in self.at_df.columns:
-            self.at_df["_cid"] = self.at_df["catalog_id"].map(_norm_cid)
+            self.at_df["_cid"] = self.at_df["catalog_id"].map(_norm_cid_decimal)
         if "target_catalog_id" in self.comp_df.columns:
-            self.comp_df["_tcid"] = self.comp_df["target_catalog_id"].map(_norm_cid)
+            self.comp_df["_tcid"] = self.comp_df["target_catalog_id"].map(_norm_cid_decimal)
         elif "catalog_id" in self.comp_df.columns:
-            self.comp_df["_tcid"] = self.comp_df["catalog_id"].map(_norm_cid)
+            self.comp_df["_tcid"] = self.comp_df["catalog_id"].map(_norm_cid_decimal)
 
-        self._candidates_norm = {_norm_cid(str(x)) for x in self._candidates_set if str(x).strip()}
+        self._candidates_norm = {_norm_cid_decimal(str(x)) for x in self._candidates_set if str(x).strip()}
 
         # Join metadata (vsx_type, bp_rp) into summary for report ordering/labels.
         if not self.at_df.empty and "_cid" in self.at_df.columns and "_cid" in self.summary_df.columns:
@@ -751,7 +751,7 @@ class _PhotometryReportBuilder:
             try:
                 ms_df = pd.read_csv(ms_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
                 if "catalog_id" in ms_df.columns:
-                    ms_df["_cid"] = ms_df["catalog_id"].map(_norm_cid)
+                    ms_df["_cid"] = ms_df["catalog_id"].map(_norm_cid_decimal)
                     exo_meta = [
                         c
                         for c in (
@@ -799,7 +799,7 @@ class _PhotometryReportBuilder:
             if cnorm_csv and not self._candidates_set:
                 self._candidates_set = set(str(x).strip() for x in cnorm_csv if str(x).strip())
             if self._candidates_set:
-                self._candidates_norm = {_norm_cid(str(x)) for x in self._candidates_set if str(x).strip()}
+                self._candidates_norm = {_norm_cid_decimal(str(x)) for x in self._candidates_set if str(x).strip()}
 
         self.obs_date_human = self._obs_date_str()
         self.date_token = datetime.today().strftime("%Y%m%d")
@@ -907,7 +907,7 @@ class _PhotometryReportBuilder:
         # ---------------------------------------------------------------------
         # QA page (FWHM + sky + masterstar candidate table)
         # ---------------------------------------------------------------------
-        self.bullets_by_cid = {_norm_cid(str(k)): str(v) for k, v in self._crossmatch_bullets.items()}
+        self.bullets_by_cid = {_norm_cid_decimal(str(k)): str(v) for k, v in self._crossmatch_bullets.items()}
 
     def _vsx_type_sort_rank(self, val: Any) -> int:
         """Sort key: EA, EB, EW, ROT, VAR, then other non-empty types, then unknown/nan."""
@@ -948,12 +948,12 @@ class _PhotometryReportBuilder:
 
             rms_like["catalog_id"] = normalize_gaia_source_id_series(rms_like["catalog_id"])
         except Exception:  # noqa: BLE001
-            rms_like["catalog_id"] = rms_like["catalog_id"].map(_norm_cid)
+            rms_like["catalog_id"] = rms_like["catalog_id"].map(_norm_cid_decimal)
         vsx_known: set[str] = set()
         if "_cid" in self.summary_df.columns and "vsx_name" in self.summary_df.columns:
             m = self.summary_df["vsx_name"].fillna("").astype(str).str.strip().ne("")
-            vsx_known = set(self.summary_df.loc[m, "_cid"].astype(str).map(_norm_cid))
-        rms_like["vsx_known_variable"] = rms_like["catalog_id"].astype(str).map(_norm_cid).isin(vsx_known)
+            vsx_known = set(self.summary_df.loc[m, "_cid"].astype(str).map(_norm_cid_decimal))
+        rms_like["vsx_known_variable"] = rms_like["catalog_id"].astype(str).map(_norm_cid_decimal).isin(vsx_known)
         rms_like["edge_ok"] = True
         if "edge_ok" in rms_like.columns:
             try:
@@ -976,7 +976,7 @@ class _PhotometryReportBuilder:
             rms_like["vdi_z_score"] = np.nan
         vdi_df = rms_like[["catalog_id", "vdi_score", "vdi_z_score"]].copy()
         vdi_df["is_variable_candidate"] = cr_vdi.astype(bool).values
-        return {"rms_df": rms_like, "vdi_df": vdi_df}, {_norm_cid(str(x)) for x in cands_raw}
+        return {"rms_df": rms_like, "vdi_df": vdi_df}, {_norm_cid_decimal(str(x)) for x in cands_raw}
     def _obs_date_str(self, ) -> str:
         # Prefer MASTERSTAR DATE-OBS if present.
         ms_fits = self.platesolve_dir / "MASTERSTAR.fits"
@@ -1235,7 +1235,7 @@ class _PhotometryReportBuilder:
         if "catalog_id" not in self.comp_df.columns:
             rows_out.append(("Comparison pool", "-"))
             return rows_out
-        ids = self.comp_df["catalog_id"].map(_norm_cid).astype(str)
+        ids = self.comp_df["catalog_id"].map(_norm_cid_decimal).astype(str)
         tcol = pd.to_numeric(self.comp_df.get("comp_tier"), errors="coerce")
         rms = pd.to_numeric(self.comp_df.get("comp_rms"), errors="coerce")
         magv = pd.to_numeric(self.comp_df.get("mag"), errors="coerce")
@@ -1308,7 +1308,7 @@ class _PhotometryReportBuilder:
             if vdf.empty or "catalog_id" not in vdf.columns:
                 continue
             for _, r in vdf.iterrows():
-                nk = self._norm_cid(r.get("catalog_id"))
+                nk = self._norm_cid_decimal(r.get("catalog_id"))
                 if nk:
                     out[nk] = r.to_dict()
             break
@@ -1460,7 +1460,7 @@ class _PhotometryReportBuilder:
         if not lc_col:
             return stats
         for _, row in self.summary_df.iterrows():
-            cid = self._norm_cid(row.get("catalog_id", row.get("_cid", "")))
+            cid = self._norm_cid_decimal(row.get("catalog_id", row.get("_cid", "")))
             if not cid:
                 continue
             pth = Path(str(row.get(lc_col) or "").strip())
@@ -1492,13 +1492,13 @@ class _PhotometryReportBuilder:
         return stats
 
     def _resolve_check_kname(self, check_cid: str, target_cid: str) -> str:
-        cc = self._norm_cid(check_cid)
+        cc = self._norm_cid_decimal(check_cid)
         if not cc:
             return "-"
         if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
-            sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(self._norm_cid(target_cid))]
+            sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(self._norm_cid_decimal(target_cid))]
             if not sub.empty and "catalog_id" in sub.columns:
-                m = sub["catalog_id"].map(_norm_cid).astype(str).eq(cc)
+                m = sub["catalog_id"].map(_norm_cid_decimal).astype(str).eq(cc)
                 if bool(m.any()) and "vsx_name" in sub.columns:
                     vn = str(sub.loc[m, "vsx_name"].iloc[0] or "").strip()
                     if vn and vn.lower() not in ("nan", "none"):
@@ -1513,7 +1513,7 @@ class _PhotometryReportBuilder:
 
     def _check_star_report_for(self, target_cid: str) -> dict[str, str]:
         out = {"kname": "-", "kmag": "-", "scatter": "-"}
-        cid = self._norm_cid(target_cid)
+        cid = self._norm_cid_decimal(target_cid)
         if not cid:
             return out
         try:
@@ -1560,15 +1560,15 @@ class _PhotometryReportBuilder:
                     )
                     chk_row = select_check_star(_chk_pool, ensemble_ids=ens, cfg=_chk_cfg)
                     if chk_row is not None:
-                        cc = self._norm_cid(chk_row.get("catalog_id", ""))
+                        cc = self._norm_cid_decimal(chk_row.get("catalog_id", ""))
                         out["kname"] = self._resolve_check_kname(cc, cid)
         except Exception:  # noqa: BLE001
-            # EXC-0238: T2 -- report/export may omit or misstate (cc = self._norm_cid(chk_row.get('catalog_id', '')) ... (EXCEPT-BULK 2026-07-08)
+            # EXC-0238: T2 -- report/export may omit or misstate (cc = self._norm_cid_decimal(chk_row.get('catalog_id', '')) ... (EXCEPT-BULK 2026-07-08)
             pass
         return out
 
     def _ground_variability_line(self, target_cid: str, vsx_type: str = "") -> str:
-        nk = self._norm_cid(target_cid)
+        nk = self._norm_cid_decimal(target_cid)
         if nk and nk in self._accepted_periods:
             p = pd.to_numeric(self._accepted_periods.get(nk), errors="coerce")
             if np.isfinite(float(p)) and float(p) > 0:
@@ -2481,17 +2481,17 @@ class _PhotometryReportBuilder:
                 df0["_rms_plot"] = df0[rms_c].astype(float) * 100.0
             else:
                 df0["_rms_plot"] = df0[rms_c].astype(float)
-            cands0 = {self._norm_cid(str(x)) for x in self._candidates_set if str(x).strip()}
+            cands0 = {self._norm_cid_decimal(str(x)) for x in self._candidates_set if str(x).strip()}
             fig0, ax0 = plt.subplots(figsize=(10, 4.5))
             try:
                 fig0.patch.set_facecolor("white")
                 if id_c:
-                    m0 = ~df0[id_c].astype(str).map(lambda s: self._norm_cid(str(s))).isin(cands0)
+                    m0 = ~df0[id_c].astype(str).map(lambda s: self._norm_cid_decimal(str(s))).isin(cands0)
                 else:
                     m0 = np.ones(len(df0), dtype=bool)
                 ax0.scatter(df0.loc[m0, mag_c], df0.loc[m0, "_rms_plot"], s=15, alpha=0.5, color="#4A90D9", label="Stars")
                 if id_c and cands0:
-                    m1 = df0[id_c].astype(str).map(lambda s: self._norm_cid(str(s))).isin(cands0)
+                    m1 = df0[id_c].astype(str).map(lambda s: self._norm_cid_decimal(str(s))).isin(cands0)
                     if bool(m1.any()):
                         ax0.scatter(
                             df0.loc[m1, mag_c],
@@ -2585,7 +2585,7 @@ class _PhotometryReportBuilder:
         if df.empty:
             return _legacy_simple_plot()
 
-        df["_nid"] = df[id_col].map(lambda s: self._norm_cid(str(s)))
+        df["_nid"] = df[id_col].map(lambda s: self._norm_cid_decimal(str(s)))
         df = df.reset_index(drop=True)
 
         vpaths = [photometry_dir_hs / "variability_candidates.csv", platesolve_dir_hs / "variability_candidates.csv"]
@@ -2601,7 +2601,7 @@ class _PhotometryReportBuilder:
             kat_v = self._col_pick(vdf, ("katalogy", "katalogy", "katalogy", "catalog_match")) if not vdf.empty else None
             if id_v and id_v in vdf.columns:
                 for _, vr in vdf.iterrows():
-                    nk = self._norm_cid(str(vr.get(id_v, "") or ""))
+                    nk = self._norm_cid_decimal(str(vr.get(id_v, "") or ""))
                     if nk:
                         cand_ids.add(nk)
                         if kat_v and kat_v in vdf.columns:
@@ -3553,7 +3553,7 @@ class _PhotometryReportBuilder:
         c.showPage()
     def _format_comp_catalog_id(self, row: Any) -> str:
         bv_src = str(row.get("bv_source", "") or "").strip().lower()
-        cid = self._norm_cid(row.get("catalog_id", ""))
+        cid = self._norm_cid_decimal(row.get("catalog_id", ""))
         if not cid:
             return "-"
         if bv_src in ("gaia_bprp", "gaia_teff", "unknown", ""):
@@ -3593,7 +3593,7 @@ class _PhotometryReportBuilder:
         proc_dir = self._proc_csv_dir()
         if proc_dir is None or not comp_ids:
             return {}
-        want = {_norm_cid(x) for x in comp_ids if _norm_cid(x)}
+        want = {_norm_cid_decimal(x) for x in comp_ids if _norm_cid_decimal(x)}
         flux_by_cid: dict[str, list[tuple[float, float]]] = {c: [] for c in want}
         for fp in sorted(glob.glob(str(proc_dir / "proc_*.csv"))):
             try:
@@ -3607,7 +3607,7 @@ class _PhotometryReportBuilder:
                 continue
             if df.empty or "catalog_id" not in df.columns:
                 continue
-            df["catalog_id"] = df["catalog_id"].map(_norm_cid)
+            df["catalog_id"] = df["catalog_id"].map(_norm_cid_decimal)
             tcol = next((c for c in ("bjd_tdb_mid", "jd_mid", "hjd_mid") if c in df.columns), None)
             tval = float(pd.to_numeric(df[tcol], errors="coerce").median()) if tcol else float("nan")
             flux_col = "dao_flux" if "dao_flux" in df.columns else "flux"
@@ -3642,7 +3642,7 @@ class _PhotometryReportBuilder:
 
                     qmap = parse_comp_quality_json_map(raw)
                     for ck, info in qmap.items():
-                        nk = _norm_cid(ck)
+                        nk = _norm_cid_decimal(ck)
                         if not nk:
                             continue
                         ent = raw.get(ck, raw.get(nk))
@@ -3656,7 +3656,7 @@ class _PhotometryReportBuilder:
                 parsed = {}
         proc_map = self._comp_rms_p2p_map_from_proc(comp_ids)
         for cid in comp_ids:
-            nk = _norm_cid(cid)
+            nk = _norm_cid_decimal(cid)
             if not nk:
                 continue
             if nk not in parsed or not math.isfinite(parsed.get(nk, float("nan"))):
@@ -3696,7 +3696,7 @@ class _PhotometryReportBuilder:
             else {}
         )
         excluded_for_note: list[tuple[str, str]] = []
-        comp_id_list = [_norm_cid(r.get("catalog_id", "")) for _, r in sub.iterrows()]
+        comp_id_list = [_norm_cid_decimal(r.get("catalog_id", "")) for _, r in sub.iterrows()]
         comp_id_list = [x for x in comp_id_list if x]
         rms_p2p_map = self._comp_rms_p2p_map_for_target(cid, comp_id_list)
 
@@ -3728,7 +3728,7 @@ class _PhotometryReportBuilder:
             r = sub.iloc[i]
             ccid = ""
             try:
-                ccid = self._norm_cid(r.get("catalog_id", ""))
+                ccid = self._norm_cid_decimal(r.get("catalog_id", ""))
             except Exception:  # noqa: BLE001
                 ccid = ""
             q_entry = qmap.get(ccid, {}) if ccid else {}
@@ -4168,7 +4168,7 @@ class _PhotometryReportBuilder:
         c.setPageSize(self.landscape(self.A4))
 
         y_cursor = self.PAGE_H - self.M_TOP
-        cid_key = self._norm_cid(str(star_data.get("catalog_id", "") or ""))
+        cid_key = self._norm_cid_decimal(str(star_data.get("catalog_id", "") or ""))
         is_cand = cid_key in self._candidates_norm
 
         vsx_name = str(star_data.get("vsx_name", "") or "")
@@ -4545,7 +4545,7 @@ class _PhotometryReportBuilder:
         work["lc_rms"] = pd.to_numeric(work.get("lc_rms"), errors="coerce")
         if mag_key and mag_key in work.columns:
             work[mag_key] = pd.to_numeric(work.get(mag_key), errors="coerce")
-        id_series = work[id_key].map(_norm_cid)
+        id_series = work[id_key].map(_norm_cid_decimal)
         for i, cid_v in enumerate(id_series.astype(str)):
             st = self._lc_stats_by_cid.get(str(cid_v).strip(), {})
             if "n_points" in work.columns:
@@ -5329,7 +5329,7 @@ class _PhotometryReportBuilder:
             raw_kat = rr.get(kat_c, "") if kat_c else ""
             pos_flags.append(self._katalogy_row_has_positive(raw_kat))
             row_h_pts.append(_kat_row_h_pts(raw_kat))
-            cid_full = self._norm_cid(rr.get(idc)) if idc else ""
+            cid_full = self._norm_cid_decimal(rr.get(idc)) if idc else ""
             data_rows.append(
                 [
                     cid_full if cid_full else "-",
@@ -5412,7 +5412,7 @@ class _PhotometryReportBuilder:
             return
 
         def _vsx_display_for_cid(cid_raw: str) -> str:
-            nk = self._norm_cid(str(cid_raw))
+            nk = self._norm_cid_decimal(str(cid_raw))
             if "_cid" in self.summary_df.columns and "vsx_name" in self.summary_df.columns:
                 m = self.summary_df["_cid"].astype(str).eq(nk)
                 if bool(m.any()):
@@ -6118,7 +6118,7 @@ class _PhotometryReportBuilder:
 
         for _, row in self.summary_df.iterrows():
             try:
-                cid = str(row.get("_cid", "") or self._norm_cid(row.get("catalog_id", "")))
+                cid = str(row.get("_cid", "") or self._norm_cid_decimal(row.get("catalog_id", "")))
                 vsx_name = str(row.get("vsx_name", cid) or cid)
                 _lc_rms = pd.to_numeric(row.get("lc_rms"), errors="coerce")
                 _n_frames = int(pd.to_numeric(row.get("n_frames"), errors="coerce") or 0)
@@ -6210,7 +6210,7 @@ class _PhotometryReportBuilder:
         # 3b) Detail pages for "new" variability self.candidates (no variability catalog matches)
         if self._candidates_set and self._crossmatch_bullets:
             for cid0 in [str(x).strip() for x in (self.candidates or []) if str(x).strip()]:
-                cid_key = self._norm_cid(cid0)
+                cid_key = self._norm_cid_decimal(cid0)
                 bullets = str(self._crossmatch_bullets.get(cid0, self._crossmatch_bullets.get(cid_key, "")) or "")
                 if self._should_trigger_tess_report(bullets):
                     row_pdf = self._get_candidate_row_pdf(self._var_results, str(cid0))

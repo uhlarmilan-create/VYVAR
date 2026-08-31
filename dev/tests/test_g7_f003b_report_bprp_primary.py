@@ -13,7 +13,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import cm, mm
 
 from config import AppConfig
-from photometry_report import _PhotometryReportBuilder, _norm_cid
+from photometry_report import _PhotometryReportBuilder, _norm_cid_decimal
 
 _NOTE_TXT = (
     "Gaia BP-RP colour | COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
@@ -118,7 +118,7 @@ def test_comp_rows_false_includes_bv_columns(
     builder = _minimal_report_builder(
         tmp_path, monkeypatch, bprp_primary=False, comp_df=comp_df
     )
-    rows, _ = builder._comp_rows_for_target(_norm_cid(target))
+    rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
     assert len(rows) == 1
     assert rows[0][3] == "0.550"
     assert rows[0][4] == "G-bp"
@@ -146,6 +146,6 @@ def test_comp_rows_true_skips_bv_columns(
     builder = _minimal_report_builder(
         tmp_path, monkeypatch, bprp_primary=True, comp_df=comp_df
     )
-    rows, _ = builder._comp_rows_for_target(_norm_cid(target))
+    rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
     assert len(rows) == 1
     assert rows[0][3] == "0.800"

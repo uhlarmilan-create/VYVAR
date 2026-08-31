@@ -29,7 +29,7 @@ _ROOT = _bootstrap.REPO_ROOT
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from validate_lc_crossval import MIN_COMP_PER_FRAME, MIN_FRAMES, _norm_cid, differential_lc_rms
+from validate_lc_crossval import MIN_COMP_PER_FRAME, MIN_FRAMES, _norm_cid_int_dotzero, differential_lc_rms
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 LOGGER = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ STARS: dict[str, tuple[str, str, str]] = {
 
 
 def _norm(x: object) -> str:
-    return _norm_cid(x)
+    return _norm_cid_int_dotzero(x)
 
 
 def annulus_radii(r_ap: float, mode: str, fwhm_px: float) -> tuple[float, float]:

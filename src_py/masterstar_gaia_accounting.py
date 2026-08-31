@@ -310,15 +310,15 @@ def merge_dao_pass1_pass2_born_owned(
     if gaia_chip is not None and not gaia_chip.empty:
         gx = pd.to_numeric(gaia_chip.get("x_gaia"), errors="coerce").to_numpy(dtype=np.float64)
         gy = pd.to_numeric(gaia_chip.get("y_gaia"), errors="coerce").to_numpy(dtype=np.float64)
-        cids = gaia_chip.get("catalog_id", pd.Series([""] * len(gaia_chip))).map(_norm_cid)
+        cids = gaia_chip.get("catalog_id", pd.Series([""] * len(gaia_chip))).map(_norm_cid_strip_dotzero)
         for j in range(len(gaia_chip)):
-            cid = _norm_cid(cids.iloc[j])
+            cid = _norm_cid_strip_dotzero(cids.iloc[j])
             if cid and math.isfinite(gx[j]) and math.isfinite(gy[j]):
                 cid_to_xy[cid] = (float(gx[j]), float(gy[j]))
 
     by_owner: dict[str, dict[str, Any]] = {}
     for row in pass2_rows:
-        cid = _norm_cid(row.get("vy_seed_catalog_id", ""))
+        cid = _norm_cid_strip_dotzero(row.get("vy_seed_catalog_id", ""))
         if not cid:
             continue
         prev = by_owner.get(cid)
@@ -392,7 +392,7 @@ def dao_pass2_born_owned_rows(
     gx = pd.to_numeric(gaia_chip["x_gaia"], errors="coerce").to_numpy(dtype=np.float64)
     gy = pd.to_numeric(gaia_chip["y_gaia"], errors="coerce").to_numpy(dtype=np.float64)
     gm = pd.to_numeric(gaia_chip.get("g_mag", gaia_chip.get("mag")), errors="coerce").to_numpy(dtype=np.float64)
-    cids = gaia_chip["catalog_id"].map(_norm_cid).to_numpy(dtype=object)
+    cids = gaia_chip["catalog_id"].map(_norm_cid_strip_dotzero).to_numpy(dtype=object)
 
     dao_x = np.asarray([], dtype=np.float64)
     dao_y = np.asarray([], dtype=np.float64)
@@ -426,7 +426,7 @@ def dao_pass2_born_owned_rows(
     n_empty = 0
     for j in unmatched:
         x0, y0 = float(gx[j]), float(gy[j])
-        cid = _norm_cid(cids[j])
+        cid = _norm_cid_strip_dotzero(cids[j])
         hit = dao_pass2_try_at_position(data0, x0, y0, wpx=int(wpx), h=int(h), params=pass2_params)
         if not hit.get("accepted"):
             if str(hit.get("reason", "")) == "no_detection":
@@ -451,7 +451,7 @@ def dao_pass2_born_owned_rows(
             ambiguous_pairs.append(
                 {
                     "owner_catalog_id": cid,
-                    "other_catalog_id": _norm_cid(cids[j_other]),
+                    "other_catalog_id": _norm_cid_strip_dotzero(cids[j_other]),
                     "x_det": xd,
                     "y_det": yd,
                 }
@@ -570,7 +570,8 @@ def _row_is_dao_detected(peak_dao: object, vy_dao_pass: object) -> tuple[bool, i
     return True, vp
 
 
-def _norm_cid(v: object) -> str:
+def _norm_cid_strip_dotzero(v: object) -> str:
+    """Strip whitespace and a trailing ``.0`` on all-digit strings. Not Gaia-canonical."""
     s = str(v or "").strip()
     if not s or s.lower() in {"nan", "none"}:
         return ""
@@ -612,8 +613,8 @@ def lock_existing_and_leftover_assign(
     gy = pd.to_numeric(gaia_df.get("y_gaia", gaia_df.get("y")), errors="coerce").to_numpy(
         dtype=np.float64
     )
-    cids = gaia_df["catalog_id"].map(_norm_cid).to_numpy(dtype=object) if "catalog_id" in gaia_df.columns else np.array([""] * n_g, dtype=object)
-    cid_to_row = {_norm_cid(cids[i]): i for i in range(n_g) if _norm_cid(cids[i])}
+    cids = gaia_df["catalog_id"].map(_norm_cid_strip_dotzero).to_numpy(dtype=object) if "catalog_id" in gaia_df.columns else np.array([""] * n_g, dtype=object)
+    cid_to_row = {_norm_cid_strip_dotzero(cids[i]): i for i in range(n_g) if _norm_cid_strip_dotzero(cids[i])}
 
     used_det: set[int] = set()
     used_g: set[int] = set()
@@ -624,15 +625,15 @@ def lock_existing_and_leftover_assign(
 
     if locked_pairs:
         det_cids = (
-            np.asarray([_norm_cid(c) for c in det_catalog_ids], dtype=object)
+            np.asarray([_norm_cid_strip_dotzero(c) for c in det_catalog_ids], dtype=object)
             if det_catalog_ids is not None
             else np.array([""] * n_d, dtype=object)
         )
         for cid, (_lx, _ly) in locked_pairs.items():
-            gr = cid_to_row.get(_norm_cid(cid))
+            gr = cid_to_row.get(_norm_cid_strip_dotzero(cid))
             if gr is None or gr in used_g:
                 continue
-            nc = _norm_cid(cid)
+            nc = _norm_cid_strip_dotzero(cid)
             gx_g = float(gx[gr]) if gr < len(gx) else float("nan")
             gy_g = float(gy[gr]) if gr < len(gy) else float("nan")
             best_i = -1
@@ -642,7 +643,7 @@ def lock_existing_and_leftover_assign(
             for i in range(n_d):
                 if i in used_det:
                     continue
-                dc = _norm_cid(det_cids[i]) if i < len(det_cids) else ""
+                dc = _norm_cid_strip_dotzero(det_cids[i]) if i < len(det_cids) else ""
                 if dc and dc == nc:
                     d_gaia = float(math.hypot(det_x[i] - gx_g, det_y[i] - gy_g))
                     if not math.isfinite(d_gaia):
@@ -774,7 +775,7 @@ def build_gaia_census_rows(
         dtype=np.float64
     )
     for j in range(len(gaia_on_chip)):
-        cid = _norm_cid(gaia_on_chip.iloc[j].get("catalog_id"))
+        cid = _norm_cid_strip_dotzero(gaia_on_chip.iloc[j].get("catalog_id"))
         xg, yg = float(gx[j]), float(gy[j])
         gmag = float(gm[j]) if math.isfinite(gm[j]) else float("nan")
         state = SOURCE_TOO_FAINT
@@ -932,11 +933,11 @@ def expand_detection_to_catalog_membership(
     present: set[str] = set()
     if "catalog_id" in out.columns:
         for raw in out["catalog_id"].tolist():
-            cid = _norm_cid(raw)
+            cid = _norm_cid_strip_dotzero(raw)
             if cid:
                 present.add(cid)
     if "catalog_id" in out.columns:
-        cid_col = out["catalog_id"].map(_norm_cid)
+        cid_col = out["catalog_id"].map(_norm_cid_strip_dotzero)
         meta["n_dao_only_preserved"] = int((cid_col.eq("")).sum())
 
     gdf = gaia_on_chip.copy()
@@ -957,13 +958,13 @@ def expand_detection_to_catalog_membership(
         if "zone" in out.columns:
             _sat |= out["zone"].astype(str).str.strip().str.lower().isin(["saturated", "nonlinear"])
         for _cid in out.loc[_sat, "catalog_id"].tolist():
-            _c = _norm_cid(_cid)
+            _c = _norm_cid_strip_dotzero(_cid)
             if _c:
                 sat_cids.add(_c)
     new_rows: list[dict[str, Any]] = []
 
     for j in range(len(gdf)):
-        cid = _norm_cid(gdf.iloc[j].get("catalog_id"))
+        cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
         if not cid or cid in present:
             continue
         xg, yg = float(gx[j]), float(gy[j])
@@ -1090,14 +1091,14 @@ def enrich_masterstar_gaia_complete(
     if locked_pairs is None:
         locked_pairs = {}
         if "catalog_id" in out.columns:
-            cids = out["catalog_id"].map(_norm_cid)
+            cids = out["catalog_id"].map(_norm_cid_strip_dotzero)
             _pass_col = (
                 pd.to_numeric(out.get("vy_dao_pass"), errors="coerce").fillna(1).to_numpy(dtype=np.int16)
                 if "vy_dao_pass" in out.columns
                 else np.ones(n_d, dtype=np.int16)
             )
             for i in range(n_d):
-                cid = _norm_cid(cids.iloc[i])
+                cid = _norm_cid_strip_dotzero(cids.iloc[i])
                 if cid and math.isfinite(det_x[i]) and math.isfinite(det_y[i]):
                     # Born-owned pass2 wins over pass1 when both carry the same catalog_id.
                     if cid not in locked_pairs or int(_pass_col[i]) == 2:
@@ -1135,7 +1136,7 @@ def enrich_masterstar_gaia_complete(
         lock_tol_px=lock_tol,
         identity_fail_px=identity_fail_px,
         det_catalog_ids=(
-            out["catalog_id"].map(_norm_cid).to_numpy(dtype=object)
+            out["catalog_id"].map(_norm_cid_strip_dotzero).to_numpy(dtype=object)
             if "catalog_id" in out.columns
             else None
         ),
@@ -1163,7 +1164,7 @@ def enrich_masterstar_gaia_complete(
                 out.loc[idx, "vy_match_mode"] = str(vy_modes[i])
         gr = int(det_to_g[i])
         if (not identity_lock_only) and gr >= 0 and gr < n_g:
-            cid = _norm_cid(gdf.iloc[gr].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(gdf.iloc[gr].get("catalog_id"))
             if cid:
                 out.loc[out.index[i], "catalog_id"] = cid
                 out.loc[out.index[i], "source_type"] = "GAIA_MATCHED"
@@ -1216,7 +1217,7 @@ def enrich_masterstar_gaia_complete(
         }
         forced_results[j] = fr
         if ok and not catalog_derived_membership:
-            cid = _norm_cid(gdf.iloc[j].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
             new_rows.append(
                 {
                     "name": cid or f"SEED_{j:05d}",
@@ -1241,9 +1242,9 @@ def enrich_masterstar_gaia_complete(
             )
             meta["n_forced_seed"] = int(meta["n_forced_seed"]) + 1
         elif ok and catalog_derived_membership:
-            cid = _norm_cid(gdf.iloc[j].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
             if cid and "catalog_id" in out.columns:
-                _cid_ms = out["catalog_id"].map(_norm_cid)
+                _cid_ms = out["catalog_id"].map(_norm_cid_strip_dotzero)
                 hit = _cid_ms.eq(cid)
                 if hit.any():
                     idx = out.index[hit][0]
@@ -1280,7 +1281,7 @@ def enrich_masterstar_gaia_complete(
     for j in range(n_g):
         bg = str(gdf.iloc[j].get("blend_group_id", "") or "").strip()
         if bg:
-            cid = _norm_cid(gdf.iloc[j].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
             if cid and int(gaia_owner[j]) < 0:
                 census.loc[census["catalog_id"] == cid, "source_state"] = SOURCE_BLENDED
                 census.loc[census["catalog_id"] == cid, "blend_group_id"] = bg
@@ -1290,16 +1291,16 @@ def enrich_masterstar_gaia_complete(
 
     if "source_state" not in out.columns:
         out["source_state"] = ""
-    cid_out = out.get("catalog_id", pd.Series([""] * len(out))).map(_norm_cid)
+    cid_out = out.get("catalog_id", pd.Series([""] * len(out))).map(_norm_cid_strip_dotzero)
     census_st: dict[str, str] = {}
     if len(census):
         for ci in range(len(census)):
-            cc = _norm_cid(census.iloc[ci].get("catalog_id"))
+            cc = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
             if cc:
                 census_st[cc] = str(census.iloc[ci].get("source_state", "")).strip()
     peak_dao = pd.to_numeric(out.get("peak_dao"), errors="coerce")
     for i in range(len(out)):
-        cid = _norm_cid(cid_out.iloc[i])
+        cid = _norm_cid_strip_dotzero(cid_out.iloc[i])
         _fp_raw = out.loc[out.index[i], "forced_photometry"] if "forced_photometry" in out.columns else False
         _fp_ok = False
         if _fp_raw is not None and not (isinstance(_fp_raw, float) and not math.isfinite(_fp_raw)):
@@ -1341,7 +1342,7 @@ def enrich_masterstar_gaia_complete(
     if "ambiguous_owner" in out.columns and len(census):
         amb_map: dict[str, bool] = {}
         for i in range(len(out)):
-            cid = _norm_cid(out.iloc[i].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(out.iloc[i].get("catalog_id"))
             if not cid:
                 continue
             raw_amb = out.iloc[i].get("ambiguous_owner")
@@ -1351,7 +1352,7 @@ def enrich_masterstar_gaia_complete(
                 else False
             )
         for ci in range(len(census)):
-            cid = _norm_cid(census.iloc[ci].get("catalog_id"))
+            cid = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
             if amb_map.get(cid):
                 census.loc[census.index[ci], "ambiguous_owner"] = True
     meta["identity_lock_only"] = bool(identity_lock_only)

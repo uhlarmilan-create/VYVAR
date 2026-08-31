@@ -175,7 +175,8 @@ def resolve_zp_membership(
     return requested, validated, extra, rig_key
 
 
-def _norm_cid(raw: Any) -> str:
+def _norm_cid_gaia(raw: Any) -> str:
+    """Gaia canonical id via ``normalize_gaia_source_id``; on exception return stripped raw."""
     if raw is None:
         return ""
     s = str(raw).strip()
@@ -293,12 +294,12 @@ def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[st
     """Pinned ensemble if present; else aperture comparison_stars_per_target membership."""
     from pinned_ensembles import get_pinned_members_for_target  # noqa: PLC0415
 
-    tid = _norm_cid(target_cid)
+    tid = _norm_cid_gaia(target_cid)
     members = get_pinned_members_for_target(tid)
     if members:
-        ids = [_norm_cid(m.comp_catalog_id) for m in members]
+        ids = [_norm_cid_gaia(m.comp_catalog_id) for m in members]
         ids = [c for c in ids if c]
-        weights = {_norm_cid(m.comp_catalog_id): float(m.comp_weight) for m in members}
+        weights = {_norm_cid_gaia(m.comp_catalog_id): float(m.comp_weight) for m in members}
         return ids, weights, "pinned"
     comp_pt = Path(photometry_dir) / "comparison_stars_per_target.csv"
     if not comp_pt.is_file():
@@ -306,14 +307,14 @@ def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[st
     df = pd.read_csv(comp_pt, low_memory=False, dtype={"catalog_id": str, "target_catalog_id": str})
     if "target_catalog_id" not in df.columns or "catalog_id" not in df.columns:
         return [], {}, "none"
-    tcol = df["target_catalog_id"].map(_norm_cid)
+    tcol = df["target_catalog_id"].map(_norm_cid_gaia)
     sub = df.loc[tcol == tid]
-    ids = [_norm_cid(v) for v in sub["catalog_id"].tolist()]
+    ids = [_norm_cid_gaia(v) for v in sub["catalog_id"].tolist()]
     ids = [c for c in ids if c]
     weights: dict[str, float] = {}
     if "comp_weight" in sub.columns:
         for _, row in sub.iterrows():
-            cid = _norm_cid(row.get("catalog_id"))
+            cid = _norm_cid_gaia(row.get("catalog_id"))
             w = float(pd.to_numeric(row.get("comp_weight"), errors="coerce"))
             if cid and math.isfinite(w) and w > 0:
                 weights[cid] = w
@@ -394,7 +395,7 @@ def _read_proc_stack(frames_root: Path) -> pd.DataFrame:
         if "catalog_id" not in keep:
             continue
         df = df[keep].copy()
-        df["catalog_id"] = df["catalog_id"].map(_norm_cid)
+        df["catalog_id"] = df["catalog_id"].map(_norm_cid_gaia)
         df["proc_csv"] = p.name
         if "source_file" in df.columns:
             df["epoch_key"] = [_proc_csv_key(str(s), p) for s in df["source_file"].tolist()]
@@ -479,7 +480,7 @@ def write_one_internal_psf_lc(
     from photometry_core import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag  # noqa: PLC0415
 
-    tid = _norm_cid(target_cid)
+    tid = _norm_cid_gaia(target_cid)
     if not tid or aperture_lc is None or aperture_lc.empty:
         return None
     ap = aperture_lc.copy()
@@ -705,10 +706,10 @@ def write_internal_psf_lightcurves(
                 continue
             cid = stem.replace("lightcurve_", "", 1)
             if cid:
-                wanted.append(_norm_cid(cid))
+                wanted.append(_norm_cid_gaia(cid))
         target_ids = [c for c in wanted if c]
     else:
-        target_ids = [_norm_cid(t) for t in target_ids if _norm_cid(t)]
+        target_ids = [_norm_cid_gaia(t) for t in target_ids if _norm_cid_gaia(t)]
 
     written: list[str] = []
     skipped: list[str] = []
