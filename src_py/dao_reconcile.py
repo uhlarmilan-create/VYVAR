@@ -218,7 +218,8 @@ def resolve_effective_match_depth(
     }
 
 
-def _normalize_ids(df: pd.DataFrame, col: str = "catalog_id") -> pd.Series:
+def _normalize_id_series(df: pd.DataFrame, col: str = "catalog_id") -> pd.Series:
+    """Per-row Gaia canonical ids from a DataFrame column. Not a unique-list helper."""
     if col not in df.columns:
         return pd.Series([""] * len(df), dtype=str)
     return normalize_gaia_source_id_series(df[col]).fillna("").astype(str).str.strip()
@@ -275,7 +276,7 @@ def gaia_db_rows_to_reference_df(rows: list[dict[str, Any]]) -> pd.DataFrame:
     for old, new in rename.items():
         if old in df.columns and new not in df.columns:
             df = df.rename(columns={old: new})
-    df["catalog_id"] = _normalize_ids(df)
+    df["catalog_id"] = _normalize_id_series(df)
     df["mag"] = pd.to_numeric(df.get("mag"), errors="coerce")
     df["ra_deg"] = pd.to_numeric(df.get("ra_deg"), errors="coerce")
     df["dec_deg"] = pd.to_numeric(df.get("dec_deg"), errors="coerce")
@@ -289,14 +290,14 @@ def augment_reference_with_matched_ids(
 ) -> pd.DataFrame:
     """Add bbox-missed but DAO-matched stars from per-id Gaia lookup + MASTERSTAR astrometry."""
     matched_ids = _matched_catalog_id_set(detections_df)
-    ref_ids = set(_normalize_ids(reference_df)) - {""}
+    ref_ids = set(_normalize_id_series(reference_df)) - {""}
     missing = sorted(matched_ids - ref_ids)
     if not missing:
         return reference_df
 
     got = query_local_gaia_by_source_ids(gaia_db_path, missing)
     det = detections_df.copy()
-    det["_cid"] = _normalize_ids(det)
+    det["_cid"] = _normalize_id_series(det)
     rows: list[dict[str, Any]] = []
     for cid in missing:
         sub = det.loc[det["_cid"] == cid]
@@ -387,12 +388,12 @@ def apply_footprint_filter(
 
 
 def _matched_catalog_id_set(detections_df: pd.DataFrame) -> set[str]:
-    cid = _normalize_ids(detections_df)
+    cid = _normalize_id_series(detections_df)
     return set(cid[cid != ""].unique())
 
 
 def _build_matched_xy(detections_df: pd.DataFrame) -> np.ndarray:
-    cid = _normalize_ids(detections_df)
+    cid = _normalize_id_series(detections_df)
     m = cid != ""
     if not m.any():
         return np.empty((0, 2), dtype=np.float64)
@@ -421,7 +422,7 @@ def check_reference_population_consistency(
     reference_df: pd.DataFrame,
 ) -> dict[str, Any]:
     """Assert matched stars are covered by the reference query (exact catalog_id + G depth)."""
-    matched_mask = _normalize_ids(detections_df) != ""
+    matched_mask = _normalize_id_series(detections_df) != ""
     matched_df = detections_df.loc[matched_mask]
     matched_ids = _matched_catalog_id_set(detections_df)
     ref_ids = set(reference_df["catalog_id"].astype(str).str.strip()) if len(reference_df) else set()
@@ -793,7 +794,7 @@ def classify_unmatched_dao(
     collinear_min_points: int = COLLINEAR_MIN_POINTS,
     collinear_max_perp_px: float = COLLINEAR_MAX_PERP_PX,
 ) -> dict[str, Any]:
-    cid = _normalize_ids(detections_df)
+    cid = _normalize_id_series(detections_df)
     unmatched = detections_df.loc[cid == ""].copy()
     n_total = int(len(unmatched))
     if n_total == 0:
@@ -951,7 +952,7 @@ def compute_gaia_dao_reconcile(
         completeness_label = f"measured to G <= {g_lim_50:.2f}"
     else:
         completeness_label = "completeness_50 unavailable"
-    cid = _normalize_ids(detections_df)
+    cid = _normalize_id_series(detections_df)
     n_matched_unique = int(cid[cid != ""].nunique())
     catalog_rows = int(len(cone_df)) if cone_df is not None else int(len(reference_df))
     raw_pct = raw_completeness_pct(n_matched_unique, catalog_rows) if cone_df is not None else None
@@ -1168,7 +1169,7 @@ def _dao_only_row_mask(df: pd.DataFrame) -> pd.Series:
     if "source_type" in df.columns:
         st = df["source_type"].fillna("").astype(str).str.strip().str.upper()
         return st.eq("DAO_ONLY")
-    cid = _normalize_ids(df)
+    cid = _normalize_id_series(df)
     return cid.eq("")
 
 

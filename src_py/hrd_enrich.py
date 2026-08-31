@@ -118,7 +118,8 @@ def _save_cache(cache_path: Path, data: dict[str, dict[str, Any]]) -> None:
         logger.debug("HRD enrich cache write failed (%s): %s", cache_path, exc)
 
 
-def _normalize_ids(source_ids: list[Any]) -> list[str]:
+def _unique_normalized_gaia_ids(source_ids: list[Any]) -> list[str]:
+    """Deduped Gaia canonical ids from a list. Not a DataFrame column mapper."""
     out: list[str] = []
     seen: set[str] = set()
     for raw in source_ids:
@@ -309,7 +310,7 @@ def enrich_candidates(
         out["enrich_source"] = "local"
         return out
 
-    ids = _normalize_ids(out["catalog_id"].tolist())
+    ids = _unique_normalized_gaia_ids(out["catalog_id"].tolist())
     cache_file = Path(cache_path) if cache_path is not None else None
     cache: dict[str, dict[str, Any]] = _load_cache(cache_file) if cache_file is not None else {}
 
