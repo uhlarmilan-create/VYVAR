@@ -1330,25 +1330,3 @@ def derive_target_depth_from_masterstar(
     )
 
 
-def derive_target_depth_limit(
-    stars: pd.DataFrame,
-    *,
-    bin_width: float = 0.5,
-    min_bin_n: int = 8,
-    linear_frac_thr: float = 0.5,
-    masterstar_n_combine: int = 1,
-    **_legacy_kwargs: Any,
-) -> TargetDepthLimit:
-    """TARGET-DEPTH-02: MASTERSTAR zone depth (supersedes TARGET-DEPTH-01 NP half-SNR proxy).
-
-    Accepts a MASTERSTAR table with ``zone`` + magnitude columns. Legacy keyword
-    arguments from TARGET-DEPTH-01 are ignored.
-    """
-    _ = _legacy_kwargs
-    return derive_target_depth_from_masterstar(
-        stars,
-        bin_width=bin_width,
-        min_bin_n=min_bin_n,
-        linear_frac_thr=linear_frac_thr,
-        masterstar_n_combine=masterstar_n_combine,
-    )
