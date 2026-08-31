@@ -127,11 +127,6 @@ def test_enhance_one_radius_all_stars_ignores_snr_table() -> None:
             "peak_max_adu": np.full(n, 120.0),
         }
     )
-    snr_table = {
-        "table": {f"{m:.1f}": 3.0 + 0.4 * i for i, m in enumerate(df["mag"])},
-        "fwhm_px": 5.0,
-        "fwhm_px_scope": "test",
-    }
     out = enhance_catalog_dataframe_aperture_bpm(
         df,
         data,
@@ -143,7 +138,6 @@ def test_enhance_one_radius_all_stars_ignores_snr_table() -> None:
         nonlinearity_peak_percentile=20.0,
         nonlinearity_fwhm_ratio=1.25,
         master_dark_path=None,
-        snr_aperture_table=snr_table,
         aperture_policy_mode=MODE_FIXED_NIGHT,
         fwhm_frame_px=5.2,
         fwhm_night_median_px=5.0,
@@ -191,12 +185,36 @@ def test_per_frame_mode_tracks_frame_fwhm() -> None:
     assert math.isfinite(float(out["flux"].iloc[0]))
 
 
-def test_scatter_ladder_r_min_is_075_fwhm() -> None:
-    from aperture_scatter_select import DEFAULT_R_MIN_FWHM, LadderSpec
+def test_resolve_aperture_geometry_raises_on_invalid_fwhm() -> None:
+    import pytest
 
-    assert DEFAULT_R_MIN_FWHM == 0.75
-    rr = LadderSpec().radii_from_fwhm(5.191733)
-    assert abs(float(rr[0]) - 0.75 * 5.191733) < 1e-6
+    with pytest.raises(ValueError, match="invalid fwhm_px"):
+        resolve_aperture_geometry(
+            f=1.35, fwhm_px=0.0, annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2
+        )
+    with pytest.raises(ValueError, match="cannot be resolved"):
+        resolve_aperture_geometry(
+            f=1.35, fwhm_px=None, annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2
+        )
+
+
+def test_star_fits_on_chip_matches_safe_bbox() -> None:
+    from aperture_policy import star_fits_on_chip, stars_fit_on_chip
+
+    geom = resolve_aperture_geometry(
+        f=1.35, fwhm_px=5.191733, annulus_inner_fwhm=2.7, annulus_outer_fwhm=5.2
+    )
+    r_out = geom[2]
+    nx, ny = 4096.0, 4096.0
+    assert star_fits_on_chip((r_out, r_out), geom, (nx, ny)) is True
+    assert star_fits_on_chip((r_out - 0.1, 100.0), geom, (nx, ny)) is False
+    bbox = (r_out, r_out, nx - r_out, ny - r_out)
+    dummy = (0.0, 0.0, 0.0)
+    assert star_fits_on_chip((r_out, r_out), dummy, bbox) is True
+    assert star_fits_on_chip((r_out - 0.1, 100.0), dummy, bbox) is False
+    mask = stars_fit_on_chip([r_out, r_out - 1.0], [r_out, 100.0], geom, (nx, ny))
+    assert bool(mask[0]) is True
+    assert bool(mask[1]) is False
 
 
 def test_production_annulus_matches_aij_14_27() -> None:

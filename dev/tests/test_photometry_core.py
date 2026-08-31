@@ -150,56 +150,6 @@ def test_zp_sigmaclip_preserves_good_data():
 
 
 # ---------------------------------------------------------------------------
-# Test 5 - SNR-optimal aperture table
-# ---------------------------------------------------------------------------
-def test_snr_aperture_increases_with_flux():
-    """
-    Brighter stars (higher flux) need larger optimal aperture.
-    Howell (1989) S3 - r_opt grows with flux in photon-noise regime.
-    """
-    from photometry_core import compute_snr_optimal_aperture_table
-
-    table_bright = compute_snr_optimal_aperture_table(
-        fwhm_px=3.0, sky_adu_per_px=500.0, gain=3.17, read_noise=7.6
-    )
-    table_faint = compute_snr_optimal_aperture_table(
-        fwhm_px=3.0, sky_adu_per_px=5000.0, gain=3.17, read_noise=7.6
-    )
-
-    # bright star (mag 8) should have larger aperture than faint (mag 14)
-    r_bright_8 = table_bright["table"][8.0]
-    r_bright_14 = table_bright["table"][14.0]
-    assert r_bright_8 >= r_bright_14, (
-        "Brighter stars need larger or equal optimal aperture"
-    )
-
-    # high sky -> smaller optimal aperture (minimize sky noise)
-    r_faint_12_lowsky = table_bright["table"][12.0]
-    r_faint_12_highsky = table_faint["table"][12.0]
-    assert r_faint_12_highsky <= r_faint_12_lowsky, (
-        "Higher sky background should yield smaller or equal optimal aperture"
-    )
-
-
-def test_snr_aperture_within_bounds():
-    """Optimal aperture must respect r_min and r_max bounds."""
-    from photometry_core import compute_snr_optimal_aperture_table
-
-    fwhm = 3.0
-    result = compute_snr_optimal_aperture_table(
-        fwhm_px=fwhm, sky_adu_per_px=1000.0, gain=3.17, read_noise=7.6
-    )
-    r_min = result["r_min_px"]
-    r_max = result["r_max_px"]
-
-    for mag_str, r in result["table"].items():
-        assert r_min - 1e-6 <= r <= r_max + 1e-6, (
-            f"Aperture r={r:.3f} for mag {mag_str} outside bounds "
-            f"[{r_min:.3f}, {r_max:.3f}]"
-        )
-
-
-# ---------------------------------------------------------------------------
 # Color term - BP-RP extrapolation guard
 # ---------------------------------------------------------------------------
 def test_color_term_extrapolation_in_range():

@@ -1,0 +1,34 @@
+{
+  "bo": {
+    "n_epochs": 134,
+    "n_full_membership": 134,
+    "n_dropped_pin": 0,
+    "coverage": 1.0,
+    "n_finite_pairs": 134,
+    "level_offset_mag": -0.009454499999999977,
+    "level_offset_mmag": -9.454499999999976,
+    "rms_mag": 0.014141950975309582,
+    "rms_mmag": 14.141950975309582,
+    "demeaned_rms_mmag": 12.504909944802156,
+    "rms_vs_abs_median": false,
+    "catalog_id": "1498613634033133184",
+    "missing": false,
+    "n_full": 134
+  },
+  "fw": {
+    "n_epochs": 134,
+    "n_full_membership": 134,
+    "n_dropped_pin": 0,
+    "coverage": 1.0,
+    "n_finite_pairs": 134,
+    "level_offset_mag": 0.0103494999999999,
+    "level_offset_mmag": 10.3494999999999,
+    "rms_mag": 0.011018933771589995,
+    "rms_mmag": 11.018933771589994,
+    "demeaned_rms_mmag": 4.629354448323098,
+    "rms_vs_abs_median": true,
+    "catalog_id": "1497343732462852864",
+    "missing": false,
+    "n_full": 134
+  }
+}

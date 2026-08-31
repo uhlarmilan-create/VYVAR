@@ -31,7 +31,6 @@ from photometry_core import (
     _sigma_bkg_r_key,
     bkg_scale_ratio_empirical_over_howell,
     compute_setup_bkg_scale_r,
-    compute_snr_optimal_aperture_table,
     enhance_catalog_dataframe_aperture_bpm,
     finalize_hybrid_bkg_fallback_proc_dir,
     measure_empty_aperture_sigma_bkg,
@@ -296,23 +295,6 @@ def test_finalize_zero_empirical_keeps_raw_fallback(tmp_path: Path) -> None:
     assert out.loc[0, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_FALLBACK
 
 
-def test_snr_table_uses_measured_bkg_var() -> None:
-    legacy = compute_snr_optimal_aperture_table(
-        fwhm_px=4.0,
-        sky_adu_per_px=1200.0,
-        gain=12.0,
-        read_noise=14.0,
-    )
-    measured = compute_snr_optimal_aperture_table(
-        fwhm_px=4.0,
-        sky_adu_per_px=1200.0,
-        gain=12.0,
-        read_noise=14.0,
-        bkg_var_adu2_per_px=25.0,
-    )
-    assert legacy["table"] != measured["table"]
-
-
 def test_phase2a_cache_columns_cover_named_requirements() -> None:
     req = _phase2a_proc_column_requirements()
     cols = set(_phase2a_cache_columns())
@@ -464,7 +446,6 @@ def test_global_fixed_518_r_ap_emits_empirical_sigma(monkeypatch: pytest.MonkeyP
         nonlinearity_peak_percentile=20.0,
         nonlinearity_fwhm_ratio=1.25,
         master_dark_path=None,
-        snr_aperture_table=None,
         gaussian_fwhm_px_override=2.2919,
         err_background_mode=ERR_BKG_MODE_EMPIRICAL,
         err_empty_apertures_n=32,
@@ -492,7 +473,7 @@ def test_inv_err_sigma_acct_01_fires_on_desynced_keys() -> None:
 
 
 def test_snr_table_path_sigma_projection_unchanged() -> None:
-    """snr_table radii already rounded; projection must stay stable."""
+    """Scalar APERTURE-01 radii; projection must stay stable across identical calls."""
     rng = np.random.default_rng(516)
     ny, nx = 400, 400
     data = rng.normal(900.0, 2.0, size=(ny, nx)).astype(np.float32)
@@ -511,11 +492,6 @@ def test_snr_table_path_sigma_projection_unchanged() -> None:
             "peak_max_adu": np.full(n_stars, 120.0),
         }
     )
-    snr_table = {
-        "table": {f"{m:.1f}": 3.0 + 0.1 * i for i, m in enumerate(mags)},
-        "fwhm_px": 4.0,
-        "fwhm_px_scope": "test",
-    }
     kw = dict(
         aperture_enabled=True,
         aperture_fwhm_factor=1.7,
@@ -524,7 +500,6 @@ def test_snr_table_path_sigma_projection_unchanged() -> None:
         nonlinearity_peak_percentile=20.0,
         nonlinearity_fwhm_ratio=1.25,
         master_dark_path=None,
-        snr_aperture_table=snr_table,
         err_background_mode=ERR_BKG_MODE_EMPIRICAL,
         err_empty_apertures_n=32,
         err_empty_apertures_min=8,

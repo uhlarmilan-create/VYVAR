@@ -167,100 +167,6 @@ def _median_fwhm_obs_files(db: VyvarDatabase, draft_id: int) -> float | None:
     return float(np.median(np.asarray(vals, dtype=np.float64)))
 
 
-def _epsf_allowed_catalog_ids(platesolve_dir: Path) -> tuple[set[str], int, int]:
-    """Catalog IDs for ePSF build: active_targets + comparison_stars pool."""
-    root = Path(platesolve_dir)
-    phot = root / "photometry"
-    ms_ids: set[str] = set()
-    comp_ids: set[str] = set()
-
-    def _add_cid(raw: Any, bucket: set[str]) -> None:
-        if raw is None:
-            return
-        s = str(raw).strip()
-        if not s or s.lower() in ("nan", "none"):
-            return
-        try:
-            bucket.add(str(_norm_catalog_id(s)).strip())
-        except Exception:  # noqa: BLE001
-            bucket.add(s)
-
-    at_p = phot / "active_targets.csv"
-    if at_p.is_file():
-        try:
-            at = pd.read_csv(at_p, low_memory=False, dtype={"catalog_id": str})
-            for _, row in at.iterrows():
-                _add_cid(row.get("catalog_id"), ms_ids)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[ePSF] active_targets load failed: %s", exc)
-
-    for comp_p in (phot / "comparison_stars.csv", root / "comparison_stars.csv"):
-        if not comp_p.is_file():
-            continue
-        try:
-            cs = pd.read_csv(comp_p, low_memory=False, dtype={"catalog_id": str})
-            for _, row in cs.iterrows():
-                _add_cid(row.get("catalog_id"), comp_ids)
-            break
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[ePSF] comparison_stars load failed (%s): %s", comp_p.name, exc)
-
-    all_ids = ms_ids | comp_ids
-    return all_ids, len(ms_ids), len(comp_ids)
-
-
-def _epsf_positions_from_csvs(
-    platesolve_dir: Path,
-    allowed_ids: set[str],
-    existing: set[str],
-) -> list[dict[str, Any]]:
-    """Add x/y positions for allowed IDs missing from the primary CSV candidate set."""
-    root = Path(platesolve_dir)
-    phot = root / "photometry"
-    extra: list[dict[str, Any]] = []
-    need = allowed_ids - existing
-    if not need:
-        return extra
-
-    def _try_csv(path: Path) -> None:
-        nonlocal need, extra
-        if not path.is_file() or not need:
-            return
-        try:
-            df = pd.read_csv(path, low_memory=False, dtype={"catalog_id": str})
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0446] Auxiliary CSV read for PSF star x/y fails - those catalog_ids missing from PSF star_pos...: %s', exc)
-            return
-        for _, row in df.iterrows():
-            cid = str(_norm_catalog_id(row.get("catalog_id", "")) or "").strip()
-            if not cid or cid not in need:
-                continue
-            try:
-                x_f = float(pd.to_numeric(row.get("x"), errors="coerce"))
-                y_f = float(pd.to_numeric(row.get("y"), errors="coerce"))
-            except (TypeError, ValueError):
-                continue
-            if not (math.isfinite(x_f) and math.isfinite(y_f)):
-                continue
-            ra_v = float(pd.to_numeric(row.get("ra_deg"), errors="coerce"))
-            de_v = float(pd.to_numeric(row.get("dec_deg"), errors="coerce"))
-            extra.append(
-                {
-                    "catalog_id": cid,
-                    "x": x_f,
-                    "y": y_f,
-                    "ra_deg": ra_v if math.isfinite(ra_v) else float("nan"),
-                    "dec_deg": de_v if math.isfinite(de_v) else float("nan"),
-                }
-            )
-            need.discard(cid)
-
-    _try_csv(phot / "active_targets.csv")
-    for comp_p in (phot / "comparison_stars.csv", root / "comparison_stars.csv"):
-        _try_csv(comp_p)
-    return extra
-
-
 def get_epsf_fwhm_from_context(
     masterstar_fits_path: Path,
     db: VyvarDatabase,
@@ -2140,20 +2046,16 @@ def fit_moffat_psf_stars(
 
 def _aperture_annulus_radii_px(fwhm_px: float) -> tuple[float, float, float]:
     """``r_ap``, ``r_in``, ``r_out`` matching ``photometry_core`` catalog-only aperture path."""
-    try:
-        from config import AppConfig
+    from aperture_policy import resolve_aperture_geometry
+    from config import AppConfig
 
-        cfg = AppConfig()
-        af = float(cfg.aperture_fwhm_factor)
-        ai = float(cfg.annulus_inner_fwhm)
-        ao = float(cfg.annulus_outer_fwhm)
-    except Exception:  # noqa: BLE001
-        af, ai, ao = 1.9, 4.75, 9.0
-    fw = float(fwhm_px)
-    r_ap = max(0.5, af * fw)
-    r_in = max(r_ap + 0.5, ai * fw)
-    r_out = max(r_in + 0.5, ao * fw)
-    return r_ap, r_in, r_out
+    cfg = AppConfig()
+    return resolve_aperture_geometry(
+        f=float(cfg.aperture_fwhm_factor),
+        fwhm_px=float(fwhm_px),
+        annulus_inner_fwhm=float(cfg.annulus_inner_fwhm),
+        annulus_outer_fwhm=float(cfg.annulus_outer_fwhm),
+    )
 
 
 def _border_median_sky_from_cutout(cut: np.ndarray) -> float:
@@ -2175,13 +2077,18 @@ def _psf_annulus_radii_px(
     outer_fwhm: float | None = None,
 ) -> tuple[float, float, float]:
     """Annulus radii for PSF sky (defaults match aperture path; overrides PSF-only)."""
-    r_ap, r_in, r_out = _aperture_annulus_radii_px(fwhm_px)
-    fw = float(fwhm_px)
-    if inner_fwhm is not None and fw > 0:
-        r_in = max(r_ap + 0.5, float(inner_fwhm) * fw)
-    if outer_fwhm is not None and fw > 0:
-        r_out = max(r_in + 0.5, float(outer_fwhm) * fw)
-    return r_ap, r_in, r_out
+    from aperture_policy import resolve_aperture_geometry
+    from config import AppConfig
+
+    cfg = AppConfig()
+    ai = float(inner_fwhm) if inner_fwhm is not None else float(cfg.annulus_inner_fwhm)
+    ao = float(outer_fwhm) if outer_fwhm is not None else float(cfg.annulus_outer_fwhm)
+    return resolve_aperture_geometry(
+        f=float(cfg.aperture_fwhm_factor),
+        fwhm_px=float(fwhm_px),
+        annulus_inner_fwhm=ai,
+        annulus_outer_fwhm=ao,
+    )
 
 
 def _annulus_median_per_px(
@@ -2215,7 +2122,9 @@ def _annulus_median_per_px(
             cut = np.asarray(amask.get_values(d), dtype=np.float64).ravel()
             cut = cut[np.isfinite(cut)]
             if cut.size >= 8:
-                return float(np.median(cut))
+                from sky_estimation import sky_median_mask  # noqa: PLC0415
+
+                return sky_median_mask(values=cut, min_pix=8)
         except Exception:  # noqa: BLE001
             continue
     return float("nan")
@@ -2483,25 +2392,6 @@ def _psf_fit_error_cutout_full_ccd(
         if np.any(pos):
             err_fit = np.where(pos, err_fit, np.sqrt(var)).astype(np.float64, copy=False)
     return err_fit.astype(np.float64, copy=False)
-
-
-def _psf_fit_region_mask(
-    shape: tuple[int, ...],
-    cy: float,
-    cx: float,
-    fit_shape: tuple[int, int],
-) -> np.ndarray:
-    """Boolean mask for the PSF fit window centered on (cx, cy) in cutout coords."""
-    mask = np.zeros(shape, dtype=bool)
-    fh = max(int(fit_shape[0]), int(fit_shape[1])) // 2
-    iy = int(round(cy))
-    ix = int(round(cx))
-    y0 = max(0, iy - fh)
-    y1 = min(shape[0], iy + fh + 1)
-    x0 = max(0, ix - fh)
-    x1 = min(shape[1], ix + fh + 1)
-    mask[y0:y1, x0:x1] = True
-    return mask
 
 
 def _psf_sandwich_flux_err(

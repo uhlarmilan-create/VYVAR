@@ -90,6 +90,7 @@ def test_border_deferred_when_no_aligned_frames(tmp_path: Path, monkeypatch: pyt
     hdr["NAXIS"] = 2
     hdr["NAXIS1"] = 64
     hdr["NAXIS2"] = 64
+    hdr["VY_FWHM"] = 3.5
     w = WCS(naxis=2)
     w.wcs.crpix = [32.0, 32.0]
     w.wcs.crval = [180.0, 45.0]
@@ -103,7 +104,9 @@ def test_border_deferred_when_no_aligned_frames(tmp_path: Path, monkeypatch: pyt
 
     class _Cfg:
         vsx_local_db_path = str(vsx)
-        annulus_outer_fwhm = 10.5
+        aperture_fwhm_factor = 1.35
+        annulus_inner_fwhm = 2.7
+        annulus_outer_fwhm = 5.2
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 

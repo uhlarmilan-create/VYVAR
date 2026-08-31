@@ -27,7 +27,6 @@ from param_resolver import resolve_gain, resolve_read_noise
 from photometry_core import (
     _howell_variance_adu2,
     _photometric_error_with_bkg_mode,
-    precompute_and_save_snr_aperture_table_for_draft,
     read_flux_from_csv,
     run_full_photometry_pipeline,
     select_comparison_stars_per_target,
@@ -280,19 +279,6 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
     assert float(rn_hdr.value) == pytest.approx(rn_eff)
     assert rn_hdr.key == "VY_RDNOIS"
 
-    snr_out = precompute_and_save_snr_aperture_table_for_draft(
-        tmp_path,
-        masterstar_fits_path=ch_ms,
-        fwhm_fallback_px=3.2,
-        database_path=db_path,
-        equipment_id=2,
-        sky_fallback=40.0,
-    )
-    assert snr_out is not None
-    tbl = json.loads((tmp_path / "aperture_snr_table.json").read_text(encoding="utf-8"))
-    assert float(tbl["gain"]) == pytest.approx(g_eff)
-    assert float(tbl["read_noise"]) == pytest.approx(float(rn_res.value))
-
     flux = 12_000.0
     sky_pp = 40.0
     area = math.pi * 7.0 * 7.0
@@ -333,26 +319,6 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
     assert float(lc.iloc[0]["err"]) == pytest.approx(err_target)
     assert (math.sqrt(var_target) / flux) == pytest.approx(err_target)
 
-    mono_ms = tmp_path / "mono_ms.fits"
-    mono_draft = tmp_path / "mono_draft"
-    mono_draft.mkdir()
-    mono_hdr = fits.Header()
-    mono_hdr["EGAIN"] = (g_raw, "Effective gain e-/ADU")
-    mono_hdr["RDNOISE"] = (rn_raw, "Read noise e-")
-    mono_hdr["VY_FWHM"] = (3.2, "FWHM px")
-    fits.writeto(mono_ms, np.ones((16, 16), dtype=np.float32), mono_hdr, overwrite=True)
-    mono_out = precompute_and_save_snr_aperture_table_for_draft(
-        mono_draft,
-        masterstar_fits_path=mono_ms,
-        fwhm_fallback_px=3.2,
-        database_path=db_path,
-        equipment_id=2,
-        sky_fallback=40.0,
-    )
-    assert mono_out is not None
-    mono_tbl = json.loads((mono_draft / "aperture_snr_table.json").read_text(encoding="utf-8"))
-    assert float(mono_tbl["gain"]) == pytest.approx(g_raw)
-    assert float(mono_tbl["read_noise"]) == pytest.approx(1.3)
     var_mono = _howell_variance_adu2(flux, sky_pp, area, gain=g_raw, read_noise=1.3)
     assert var_mono > var_target
 

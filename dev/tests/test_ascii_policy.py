@@ -31,7 +31,10 @@ def test_tracked_text_files_are_ascii() -> None:
         key = rel.as_posix()
         if key in ASCII_POLICY_ALLOWLIST:
             continue
-        data = (REPO_ROOT / rel).read_bytes()
+        path = REPO_ROOT / rel
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
         if any(b >= 0x80 for b in data):
             # locate first offender byte for a short diagnostic
             idx = next(i for i, b in enumerate(data) if b >= 0x80)

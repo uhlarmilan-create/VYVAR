@@ -82,11 +82,7 @@ from cal_diag import (
 )
 from photometry_core import (
     _fwhm_moment_at,
-    discover_aligned_science_fits,
-    load_snr_aperture_table_from_draft_dir,
     merge_photometry_pipeline_meta,
-    precompute_and_save_snr_aperture_table_for_draft,
-    resolve_draft_dir_for_snr_aperture_table,
     stamp_masterstar_snr_columns,
 )
 from proc_frame_store import proc_csv_path_for_aligned_fits
@@ -224,7 +220,6 @@ def _apply_aperture_catalog_enhancements_from_st(
             gaussian_fwhm_px_override=_go_f,
             r_small_px=r_small_px,
             r_large_px=r_large_px,
-            snr_aperture_table=st.get("snr_aperture_table"),
             cog_params=cog_params,
             err_background_mode=str(st.get("err_background_mode", "empirical")),
             err_empty_apertures_n=int(st.get("err_empty_apertures_n", 64)),
@@ -6130,9 +6125,15 @@ def select_comparison_stars_spatial_grid(
     # (intersection of aligned frames shrunk by sky-annulus outer radius).
     if safe_bbox is not None and "x" in work.columns and "y" in work.columns:
         try:
+            from aperture_policy import stars_fit_on_chip  # noqa: PLC0415
+
             x0b, y0b, x1b, y1b = safe_bbox
             before = int(len(work))
-            work = work[work["x"].between(x0b, x1b) & work["y"].between(y0b, y1b)]
+            # 4-tuple naxis = precomputed safe bbox (already shrunk by resolver r_out).
+            _on = stars_fit_on_chip(
+                work["x"], work["y"], (0.0, 0.0, 0.0), (float(x0b), float(y0b), float(x1b), float(y1b))
+            )
+            work = work[np.asarray(_on, dtype=bool)]
             removed = before - int(len(work))
             if removed > 0:
                 logging.info(
@@ -6580,18 +6581,24 @@ def write_photometry_plan_files(
 
     # --- Annulus-aware intersection bbox (Variant A2) ---
     # Compute a "safe" bbox from the intersection of aligned frames, shrunk by the sky-annulus outer radius.
+    # CONSOLIDATE-01B A2: FWHM source stays MASTERSTAR VY_FWHM (qc vs header differ on all
+    # 134 era04 frames at FITS-card rounding; night-median qc vs MASTERSTAR is also not
+    # last-ulp identical). Do not invent 3.5 / 10.5.
     _safe_bbox: tuple[float, float, float, float] | None = None
     _r_out: float | None = None
     try:
-        try:
-            _fwhm_px = float(hdr.get("VY_FWHM", 3.5) or 3.5)
-        except Exception:  # noqa: BLE001
-            _fwhm_px = 3.5
-        try:
-            _ann_outer_fwhm = float(_cfg_plan.annulus_outer_fwhm)
-        except Exception:  # noqa: BLE001
-            _ann_outer_fwhm = 10.5
-        _r_out = float(_ann_outer_fwhm) * float(_fwhm_px)
+        from aperture_policy import fwhm_from_header_vy_fwhm, resolve_aperture_geometry  # noqa: PLC0415
+
+        _fwhm_px = fwhm_from_header_vy_fwhm(hdr)
+        if _fwhm_px is None:
+            raise ValueError("MASTERSTAR VY_FWHM missing; cannot resolve annulus r_out")
+        _r_ap_b, _r_in_b, _r_out = resolve_aperture_geometry(
+            f=float(_cfg_plan.aperture_fwhm_factor),
+            fwhm_px=float(_fwhm_px),
+            annulus_inner_fwhm=float(_cfg_plan.annulus_inner_fwhm),
+            annulus_outer_fwhm=float(_cfg_plan.annulus_outer_fwhm),
+        )
+        _ = (_r_ap_b, _r_in_b)
 
         draft_root = ps.parent.parent
         aligned_dir = draft_root / "detrended_aligned" / "lights" / ps.name
@@ -10736,13 +10743,6 @@ def export_per_frame_catalogs(
         _mp = Path(str(master_dark_path))
         if _mp.is_file():
             _md_bpm_str = str(_mp.resolve())
-    _draft_dir_snr = resolve_draft_dir_for_snr_aperture_table(
-        archive_root=_cfg_ap.archive_root,
-        draft_id=int(draft_id) if draft_id is not None else None,
-        platesolve_dir=platesolve_dir,
-        masterstar_fits_path=masterstar_fits,
-    )
-    _snr_ap_table_for_bpm = load_snr_aperture_table_from_draft_dir(_draft_dir_snr)
 
     ps = Path(platesolve_dir) if platesolve_dir is not None else None
     _qc_fwhm_by_name: dict[str, float] = {}
@@ -10780,7 +10780,6 @@ def export_per_frame_catalogs(
         "aperture_correction_enabled": bool(_cfg_ap.aperture_correction_enabled),
         "aperture_fwhm_factor_small": float(_cfg_ap.aperture_snr_sizing.get("small", 1.5)),
         "aperture_fwhm_factor_large": float(_cfg_ap.aperture_snr_sizing.get("large", 4.0)),
-        "snr_aperture_table": _snr_ap_table_for_bpm,
         "aperture_policy_mode": str(_ap_policy_mode),
         "fwhm_night_median_px": _fwhm_night_median_px,
         "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
@@ -11575,7 +11574,6 @@ def export_per_frame_catalogs(
             "aperture_correction_enabled": bool(_cfg_ap.aperture_correction_enabled),
             "aperture_fwhm_factor_small": float(_cfg_ap.aperture_snr_sizing.get("small", 1.5)),
             "aperture_fwhm_factor_large": float(_cfg_ap.aperture_snr_sizing.get("large", 4.0)),
-            "snr_aperture_table": _snr_ap_table_for_bpm,
             "aperture_policy_mode": str(_ap_policy_mode),
             "fwhm_night_median_px": _fwhm_night_median_px,
             "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
@@ -15778,62 +15776,10 @@ def _astrometry_align_impl_body(
 
     export_base = prog_i[0]
     _catalog_app_cfg = _cfg_align
-    _run_aperture, _run_epsf = _photometry_mode_run_flags(
+    _, _run_epsf = _photometry_mode_run_flags(
         _catalog_app_cfg,
         platesolve_dir=platesolve_dir,
     )
-
-    if _run_aperture:
-        try:
-            _ms_for_snr = ms_fits
-            if _ms_for_snr is None or not Path(_ms_for_snr).is_file():
-                _ms_try = platesolve_dir / "MASTERSTAR.fits"
-                if _ms_try.is_file():
-                    _ms_for_snr = _ms_try
-            _draft_dir_snr_pre = resolve_draft_dir_for_snr_aperture_table(
-                archive_root=_catalog_app_cfg.archive_root,
-                draft_id=int(draft_id) if draft_id is not None else None,
-                platesolve_dir=platesolve_dir,
-                masterstar_fits_path=_ms_for_snr,
-            )
-            if _draft_dir_snr_pre is not None:
-                _sel_meta = (
-                    (_cat_info_root.get("masterstar_selection") if isinstance(_cat_info_root, dict) else None)
-                    or {}
-                )
-                _aligned_for_sky: list[Path] = []
-                try:
-                    _aligned_for_sky = discover_aligned_science_fits(aligned_root)
-                except Exception:  # noqa: BLE001
-                    _aligned_for_sky = []
-                if not _aligned_for_sky:
-                    try:
-                        _aligned_for_sky = sorted(aligned_root.glob("proc_*.fits"))
-                    except Exception:  # noqa: BLE001
-                        _aligned_for_sky = []
-                if not _aligned_for_sky:
-                    try:
-                        _aligned_for_sky = sorted(_iter_fits_recursive(aligned_root))
-                    except Exception:  # noqa: BLE001
-                        _aligned_for_sky = []
-                _sky_fb = float(_SKY_ADU_FALLBACK)
-                _prematch_k = float(_catalog_app_cfg.masterstar_prematch_peak_sigma_floor)
-                precompute_and_save_snr_aperture_table_for_draft(
-                    _draft_dir_snr_pre,
-                    masterstar_fits_path=_ms_for_snr,
-                    masterstar_selection=_sel_meta,
-                    fwhm_fallback_px=float(_align_fwhm_ref),
-                    aligned_fits_paths=_aligned_for_sky,
-                    aligned_ram_frames=aligned_ram_buffer if use_ram_handoff and aligned_ram_buffer else None,
-                    database_path=_catalog_app_cfg.database_path,
-                    draft_id=int(draft_id) if draft_id is not None else None,
-                    equipment_id=int(id_equipment) if id_equipment is not None else None,
-                    sky_fallback=_sky_fb,
-                    prematch_peak_sigma_floor=_prematch_k,
-                    cfg=_catalog_app_cfg,
-                )
-        except Exception as _snr_pre_exc:  # noqa: BLE001
-            LOGGER.warning("[PIPELINE] SNR aperture table precompute failed: %s", _snr_pre_exc)
 
     # TODO-8: Build ePSF model after MASTERSTAR (Phase 2B prep)
     if _run_epsf:

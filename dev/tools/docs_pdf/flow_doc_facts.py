@@ -53,7 +53,6 @@ DOC_CONFIG_FACTS: dict[str, object] = {
 DOC_FUNCTIONS: list[tuple[str, str]] = [
     ("src_py/photometry_core.py", "run_full_photometry_pipeline"),
     ("src_py/photometry_core.py", "measure_empty_aperture_sigma_bkg"),
-    ("src_py/photometry_core.py", "compute_snr_optimal_aperture_table"),
     ("src_py/photometry_core.py", "compute_aperture_correction"),
     ("src_py/photometry_core.py", "ensemble_normalize"),
     ("src_py/photometry_core.py", "compute_mag_calib_final"),

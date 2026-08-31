@@ -18,7 +18,15 @@ from photutils.utils.exceptions import NoDetectionsWarning
 from scipy.spatial import cKDTree
 
 from plain_stats import plain_mean_med_std
+from sky_estimation import sky_clipped_mean_med_std
 from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER
+
+# Seed-specific sky annulus pads (px), not APERTURE-01 geometry. Forced-seed
+# acceptance on era04 is byte-locked to r_in = r_ap+4, r_out = r_ap+8.
+# Production resolver (f=1.35, inner=2.7, outer=5.2) would change those
+# radii and retune MASTERSTAR forced seeds. Keep pads for byte-identity.
+SEED_ANNULUS_INNER_PAD_PX = 4.0
+SEED_ANNULUS_OUTER_PAD_PX = 8.0
 
 # --- source_state values (Part C) ---
 SOURCE_DETECTED_P1 = "DETECTED_P1"
@@ -475,7 +483,11 @@ def forced_seed_measure_at_position(
             "local_sigma": float("nan"),
         }
     ap = CircularAperture((x, y), r=float(r_px))
-    ann = CircularAnnulus((x, y), r_in=float(r_px) + 4.0, r_out=float(r_px) + 8.0)
+    ann = CircularAnnulus(
+        (x, y),
+        r_in=float(r_px) + SEED_ANNULUS_INNER_PAD_PX,
+        r_out=float(r_px) + SEED_ANNULUS_OUTER_PAD_PX,
+    )
     phot = aperture_photometry(data0, ap)
     flux_raw = float(phot["aperture_sum"][0])
     try:
@@ -484,7 +496,7 @@ def forced_seed_measure_at_position(
         vals = vals[ann_mask.data > 0]
         vals = vals[np.isfinite(vals)]
         _, md, sd = (
-            plain_mean_med_std(vals, sigma=3.0, maxiters=2)
+            sky_clipped_mean_med_std(vals, sigma=3.0, maxiters=2)
             if vals.size >= 10
             else (float("nan"), float("nan"), float("nan"))
         )

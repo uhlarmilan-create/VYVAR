@@ -79,17 +79,81 @@ def resolve_aperture_geometry(
     annulus_inner_fwhm: float,
     annulus_outer_fwhm: float,
 ) -> tuple[float, float, float]:
-    """Return (r_ap, r_in, r_out) in pixels. Same FWHM scales aperture and annulus."""
-    fw = float(fwhm_px)
-    fac = float(f)
+    """Return (r_ap, r_in, r_out) in pixels. Same FWHM scales aperture and annulus.
+
+    CONSOLIDATE-01B A1: never invent fallbacks. If FWHM or the annulus factors
+    cannot be resolved, raise.
+    """
+    try:
+        fw = float(fwhm_px)
+        fac = float(f)
+        ain = float(annulus_inner_fwhm)
+        aout = float(annulus_outer_fwhm)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "resolve_aperture_geometry: FWHM or annulus factors cannot be resolved"
+        ) from exc
     if not math.isfinite(fw) or fw <= 0:
-        fw = 3.5
+        raise ValueError(f"resolve_aperture_geometry: invalid fwhm_px={fwhm_px!r}")
     if not math.isfinite(fac) or fac <= 0:
-        fac = 1.9
+        raise ValueError(f"resolve_aperture_geometry: invalid f={f!r}")
+    if not math.isfinite(ain) or ain <= 0:
+        raise ValueError(
+            f"resolve_aperture_geometry: invalid annulus_inner_fwhm={annulus_inner_fwhm!r}"
+        )
+    if not math.isfinite(aout) or aout <= 0:
+        raise ValueError(
+            f"resolve_aperture_geometry: invalid annulus_outer_fwhm={annulus_outer_fwhm!r}"
+        )
     r_ap = max(0.5, fac * fw)
-    r_in = max(r_ap + 0.5, float(annulus_inner_fwhm) * fw)
-    r_out = max(r_in + 0.5, float(annulus_outer_fwhm) * fw)
+    r_in = max(r_ap + 0.5, ain * fw)
+    r_out = max(r_in + 0.5, aout * fw)
     return float(r_ap), float(r_in), float(r_out)
+
+
+def star_fits_on_chip(
+    xy: tuple[float, float],
+    geometry: tuple[float, float, float],
+    naxis: tuple[float, ...],
+) -> bool:
+    """True iff aperture AND sky annulus lie fully on-chip (EDGE-ANNULUS-01).
+
+    ``geometry`` is ``(r_ap, r_in, r_out)`` from ``resolve_aperture_geometry``.
+    ``naxis`` is ``(NAXIS1, NAXIS2)`` of the usable region, or a precomputed
+    ``(x0, y0, x1, y1)`` safe bbox already shrunk by ``r_out`` (aligned-frame
+    intersection; current production semantics).
+    """
+    x, y = float(xy[0]), float(xy[1])
+    if not (math.isfinite(x) and math.isfinite(y)):
+        return False
+    if len(naxis) >= 4:
+        x0, y0, x1, y1 = (float(naxis[0]), float(naxis[1]), float(naxis[2]), float(naxis[3]))
+        return x0 <= x <= x1 and y0 <= y <= y1
+    r_out = float(geometry[2])
+    nx, ny = float(naxis[0]), float(naxis[1])
+    return r_out <= x <= nx - r_out and r_out <= y <= ny - r_out
+
+
+def stars_fit_on_chip(
+    x: Any,
+    y: Any,
+    geometry: tuple[float, float, float],
+    naxis: tuple[float, ...],
+) -> Any:
+    """Vectorized ``star_fits_on_chip`` (pandas Series or ndarray in, boolean mask out)."""
+    import numpy as np
+
+    xa = np.asarray(x, dtype=np.float64)
+    ya = np.asarray(y, dtype=np.float64)
+    finite = np.isfinite(xa) & np.isfinite(ya)
+    if len(naxis) >= 4:
+        x0, y0, x1, y1 = (float(naxis[0]), float(naxis[1]), float(naxis[2]), float(naxis[3]))
+        inside = (xa >= x0) & (xa <= x1) & (ya >= y0) & (ya <= y1)
+    else:
+        r_out = float(geometry[2])
+        nx, ny = float(naxis[0]), float(naxis[1])
+        inside = (xa >= r_out) & (xa <= nx - r_out) & (ya >= r_out) & (ya <= ny - r_out)
+    return finite & inside
 
 
 def fwhm_from_header_vy_fwhm(hdr: Any) -> float | None:

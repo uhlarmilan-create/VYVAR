@@ -360,9 +360,6 @@
   // the draft); f_per_frame = f x QC FWHM of that frame. Same r for
   // target, comps, and pool. The SNR mag-bin table is diagnostic only.
   "aperture_policy_mode": "f_fixed_night",
-  // Aperture radius authority for the diagnostic table only: scatter
-  // (minimise non-variable LC scatter; IMPL-03) or snr (Howell).
-  "aperture_selection_criterion": "scatter",
   // Aperture size multiplier applied to the variable (target) star.
   "aperture_variable_factor": 1.0,
   // Optional 'democratic' detrend of the light curve (median trend of the
@@ -416,12 +413,6 @@
   "aperture_correction_max_scatter_mag": 0.03,
   // Minimum reference stars required to compute an aperture correction.
   "aperture_correction_min_ref_stars": 3,
-  // Maximum radius of the scatter-selection photometry ladder.
-  "aperture_scatter_r_max_px": 12.0,
-  // Minimum radius of the scatter-selection photometry ladder.
-  "aperture_scatter_r_min_px": 1.5,
-  // Step size of the scatter-selection photometry ladder.
-  "aperture_scatter_r_step_px": 0.5,
   // SNR-optimal aperture sizing sweep bounds as FWHM multiples: 'small' is
   // the minimum radius (best for faint stars), 'large' the maximum. WAVE-B
   // merged the former aperture_fwhm_factor_small/_large scalars into this

@@ -63,7 +63,9 @@ def test_require_safe_bbox_from_ram_frames(tmp_path: Path, monkeypatch: pytest.M
 
     class _Cfg:
         vsx_local_db_path = ""
-        annulus_outer_fwhm = 10.5
+        aperture_fwhm_factor = 1.35
+        annulus_inner_fwhm = 2.7
+        annulus_outer_fwhm = 5.2
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 
@@ -93,7 +95,9 @@ def test_require_safe_bbox_raises_without_frames(tmp_path: Path, monkeypatch: py
 
     class _Cfg:
         vsx_local_db_path = ""
-        annulus_outer_fwhm = 10.5
+        aperture_fwhm_factor = 1.35
+        annulus_inner_fwhm = 2.7
+        annulus_outer_fwhm = 5.2
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 

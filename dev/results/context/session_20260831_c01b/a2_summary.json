@@ -1,0 +1,19 @@
+{
+  "n_qc_rows": 150,
+  "n_ok": 134,
+  "n_measured": 134,
+  "n_diff": 134,
+  "n_missing_fits": 0,
+  "n_missing_vy_fwhm": 0,
+  "max_abs_delta": 0.0002510989919670692,
+  "swap_free": false,
+  "cfg_f": 1.35,
+  "cfg_inner": 2.7,
+  "cfg_outer": 5.2,
+  "masterstar_vy_fwhm": 5.19465,
+  "night_median_qc_fwhm_ok": 5.1917332681208865,
+  "bbox_old_outer_times_ms": 27.01218,
+  "bbox_resolver_ms": 27.01218,
+  "bbox_resolver_night_med": 26.997012994228612,
+  "bbox_ms_vs_night_r_out_equal": false
+}

@@ -114,6 +114,18 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "phase01_match_radius_arcsec": (
         "phase01_match_radius_arcsec removed 2026-07; Phase 0 uses catalog_id identity join (PHASE0-IDENTITY-GATE)"
     ),
+    "aperture_selection_criterion": (
+        "aperture_selection_criterion removed 2026-08-31 CONSOLIDATE-01B; scatter/SNR diagnostic table deleted"
+    ),
+    "aperture_scatter_r_min_px": (
+        "aperture_scatter_r_min_px removed 2026-08-31 CONSOLIDATE-01B; scatter ladder module deleted"
+    ),
+    "aperture_scatter_r_max_px": (
+        "aperture_scatter_r_max_px removed 2026-08-31 CONSOLIDATE-01B; scatter ladder module deleted"
+    ),
+    "aperture_scatter_r_step_px": (
+        "aperture_scatter_r_step_px removed 2026-08-31 CONSOLIDATE-01B; scatter ladder module deleted"
+    ),
 }
 
 
@@ -735,12 +747,6 @@ class AppConfig:
     aperture_fwhm_factor: float = 1.35
     #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night) or ``f_per_frame``.
     aperture_policy_mode: str = "f_fixed_night"
-    #: IMPL-03: aperture radius authority for the diagnostic table only - ``scatter`` or ``snr``.
-    aperture_selection_criterion: str = "scatter"
-    #: Scatter-selection fixed-pixel ladder bounds [px].
-    aperture_scatter_r_min_px: float = 1.5
-    aperture_scatter_r_max_px: float = 12.0
-    aperture_scatter_r_step_px: float = 0.5
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.
     aperture_snr_sizing: dict[str, float] = field(
@@ -1756,30 +1762,10 @@ class AppConfig:
         except (TypeError, ValueError):
             self.aperture_fwhm_factor = 2.75
         self.aperture_fwhm_factor = max(0.25, min(6.0, float(self.aperture_fwhm_factor)))
-        _crit = str(data.get("aperture_selection_criterion", self.aperture_selection_criterion) or "scatter").strip().lower()
-        self.aperture_selection_criterion = _crit if _crit in ("scatter", "snr") else "scatter"
         _apm = str(data.get("aperture_policy_mode", self.aperture_policy_mode) or "f_fixed_night").strip().lower()
         self.aperture_policy_mode = (
             _apm if _apm in ("f_fixed_night", "f_per_frame") else "f_fixed_night"
         )
-        try:
-            self.aperture_scatter_r_min_px = float(
-                data.get("aperture_scatter_r_min_px", self.aperture_scatter_r_min_px)
-            )
-        except (TypeError, ValueError):
-            self.aperture_scatter_r_min_px = 1.5
-        try:
-            self.aperture_scatter_r_max_px = float(
-                data.get("aperture_scatter_r_max_px", self.aperture_scatter_r_max_px)
-            )
-        except (TypeError, ValueError):
-            self.aperture_scatter_r_max_px = 12.0
-        try:
-            self.aperture_scatter_r_step_px = float(
-                data.get("aperture_scatter_r_step_px", self.aperture_scatter_r_step_px)
-            )
-        except (TypeError, ValueError):
-            self.aperture_scatter_r_step_px = 0.5
         # aperture_snr_sizing (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large).
         # New structured form wins; legacy scalar keys are accepted for one transition release.
         _asz = data.get("aperture_snr_sizing")
@@ -2797,10 +2783,6 @@ class AppConfig:
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
             "aperture_policy_mode": str(self.aperture_policy_mode),
-            "aperture_selection_criterion": str(self.aperture_selection_criterion),
-            "aperture_scatter_r_min_px": float(self.aperture_scatter_r_min_px),
-            "aperture_scatter_r_max_px": float(self.aperture_scatter_r_max_px),
-            "aperture_scatter_r_step_px": float(self.aperture_scatter_r_step_px),
             "aperture_snr_sizing": {
                 "small": float(self.aperture_snr_sizing.get("small", 1.5)),
                 "large": float(self.aperture_snr_sizing.get("large", 4.0)),

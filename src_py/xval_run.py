@@ -106,7 +106,7 @@ def main():
     import astropy.units as u
     from astropy.time import Time
     from photutils.aperture import (CircularAperture, CircularAnnulus,
-                                    aperture_photometry, ApertureStats)
+                                    aperture_photometry)
     from photutils.centroids import centroid_sources, centroid_com
     from scipy.spatial import cKDTree
     try:
@@ -138,7 +138,17 @@ def main():
 
     fwhm = estimate_fwhm(mdata, gdf.sort_values("phot_g_mean_mag").head(40)["x"].values,
                          gdf.sort_values("phot_g_mean_mag").head(40)["y"].values)
-    r_ap = max(2.0*fwhm, 2.5); r_in, r_out = r_ap+3, r_ap+8; r_small = 3.0
+    from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
+    from config import AppConfig  # noqa: PLC0415
+
+    _xcfg = AppConfig()
+    r_ap, r_in, r_out = resolve_aperture_geometry(
+        f=float(_xcfg.aperture_fwhm_factor),
+        fwhm_px=float(fwhm),
+        annulus_inner_fwhm=float(_xcfg.annulus_inner_fwhm),
+        annulus_outer_fwhm=float(_xcfg.annulus_outer_fwhm),
+    )
+    r_small = 3.0
     log(f"FWHM {fwhm:.2f}px | r_ap {r_ap:.2f} small {r_small} ann {r_in:.1f}-{r_out:.1f}")
 
     must = set()
@@ -178,7 +188,16 @@ def main():
         bad = ~(np.isfinite(xc) & np.isfinite(yc)); xc[bad], yc[bad] = x0[bad], y0[bad]
         pos = np.column_stack([xc, yc])
         # No SigmaClip on annulus (zero-clipping policy 2026-08-12).
-        sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=None).median
+        from sky_estimation import sky_median_mask  # noqa: PLC0415
+
+        ann = CircularAnnulus(pos, r_in, r_out)
+        masks = ann.to_mask(method="center")
+        if not isinstance(masks, (list, tuple)):
+            masks = [masks]
+        sky = np.array(
+            [sky_median_mask(d, m.to_image(d.shape)) for m in masks],
+            dtype=float,
+        )
         fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))["aperture_sum"]) - sky*np.pi*r_small**2
         try: mjd = Time(hdr.get("DATE-OBS"), format="isot").mjd
         except Exception: mjd = np.nan  # noqa: BLE001

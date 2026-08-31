@@ -94,12 +94,16 @@ radii (BO +65.6, FW +24.0, GH -387.9 mmag) and P-A3 vs AIJ r=7
 Milan pick: keep the RMS-optimal small r, or a larger f, or
 option (ii) COG. Default mode (a) if (a)/(b) tie.
 
-## EDGE-ANNULUS-01 (record only; not wired, 2026-08-26)
+## EDGE-ANNULUS-01 CLOSED-DECIDED (Milan 2026-08-31)
 
-safe_bbox = NAXIS - r_out drops FR CVn because the sky annulus
-does not fit. Proposal: aperture fully on-chip + annulus >=50%
-on-chip (masked) -> measure with `annulus_partial`; else
-out_of_frame. Not wired in APERTURE-01.
+Edge stars are not used (Milan 2026-08-31). Aperture and annulus
+must lie fully on-chip; no partial-annulus mode. Consequence
+accepted: FR CVn and the 4 EDGE ids stay outside the 516 product.
+
+Predicate: `aperture_policy.star_fits_on_chip` (CONSOLIDATE-01B).
+PHASE0-BORDER-MARGIN-GEOMETRY is a different margin (fixed 50 px
+`phase01_chip_interior_margin_px` vs EDGE `r_out` ~27 px at 5.2 x
+FWHM) and is not merged into this closure.
 
 ## C6-3d [APERTURE-RADIUS] STOP - era04 not locked (2026-08-26)
 

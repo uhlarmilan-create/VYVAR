@@ -22,7 +22,7 @@ closed. origin/main stays `7c086e8` until Milan writes PUSH_AUTH.
 
 | Step | Action |
 |------|--------|
-| **1** | EDGE-ANNULUS-01 (record only): aperture on-chip + annulus >=50% on-chip (masked) vs current NAXIS-r_out dropping FR CVn |
+| **1** | EDGE-ANNULUS-01 **CLOSED-DECIDED** (Milan 2026-08-31): Edge stars are not used. Aperture and annulus must lie fully on-chip; no partial-annulus mode. Consequence accepted: FR CVn and the 4 EDGE ids stay outside the 516 product. PHASE0-BORDER-MARGIN-GEOMETRY is a different 50 px margin -- not merged. |
 | **2** | First AAVSO/VarAstro uploads **BO -> FW** (band **CV**) -- ledger locked |
 | **3** | MULTIFILTER-WCS-01 sibling-seed for z_90_4 |
 | **4** | INPUT-PATH-ARCH-01 discussion (non-cal stays; raw-without-masters split) |
@@ -369,7 +369,7 @@ Frozen deps for release track: numpy 2.4.4, astropy 8.0.1, photutils 3.0.0.
 | **CITATIONS.bib ASCII disposition** | LOW | Open encoding/normalization decision for bundled citations file. |
 | **KNOWN_REMOVED_KEYS builder-prose sweep** | LOW | Docs-guard sweep for removed config keys still mentioned in builder prose. |
 | **preprocess-QC summary durability** | MED | Persist QC summary into `pipeline_meta.json` (survive reruns). |
-| **PHASE0-BORDER-MARGIN-GEOMETRY** | MED | Derive Phase 0 `out_of_frame` border margin from aperture + sky annulus outer radius (FWHM-driven), not a fixed 50 px constant. Draft 451 `out_of_frame=78` is consistent with a 50 px strip (~12% frame area) -- count is not anomalous; only the constant is arbitrary. **No implementation in POST-451 closeout.** |
+| **PHASE0-BORDER-MARGIN-GEOMETRY** | MED | Derive Phase 0 `out_of_frame` border margin from aperture + sky annulus outer radius (FWHM-driven), not a fixed 50 px constant. Draft 451 `out_of_frame=78` is consistent with a 50 px strip (~12% frame area) -- count is not anomalous; only the constant is arbitrary. **Not merged into EDGE-ANNULUS-01 CLOSED-DECIDED (2026-08-31):** Phase 0 uses `phase01_chip_interior_margin_px` = 50 px; EDGE `r_out` is ~27 px at 5.2 x FWHM. Different margin. **No implementation in POST-451 closeout.** |
 | **D1** | MED | **DONE (2026-08-05).** Inactive unit-normalisation plumbing: `unit_resolver.py`, 10 arcsec/FWHM companion fields (`None` defaults), registry + call-site wiring. Result: `dev/results/CURSOR_RESULT_d1_unit_normalisation.md`. |
 | **D1b** | MED | **OPEN.** Conversion table and proposed normalised defaults in D1 result; companions remain `None` -- behaviour unchanged. Awaits Milan review before activating defaults. |
 | **D2** | HIGH | **OPEN (design done 2026-08-05).** Per-rig storage for group (a) parameters. Implementation blocked on storage choice: nested dict in `config.json` (`sigma_sys_mag` pattern) vs DB table keyed on `(ID_EQUIPMENTS`, `ID_TELESCOPE)`. Cursor recommended DB table. Result: `dev/results/CURSOR_RESULT_d2_per_rig_storage.md`. |
