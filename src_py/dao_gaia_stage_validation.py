@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -408,24 +407,3 @@ def run_validation_gate(
     )
 
 
-def write_validation_artifact(
-    result: ValidationGateResult,
-    out_dir: Path | str,
-    *,
-    derived_params: dict[str, float],
-) -> Path:
-    out = Path(out_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / "validation_gate.json"
-    payload = {
-        "status": result.status,
-        "fail_reason": result.fail_reason,
-        "max_regression_pp": result.max_regression_pp,
-        "g2_pass": result.g2_pass,
-        "sandbox_params": "hand_validated",
-        "derived_params_production_scope": derived_params,
-        "sandbox_scores": result.derived_scores,
-        "regressions": result.regressions,
-    }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return path
