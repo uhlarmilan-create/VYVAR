@@ -40,26 +40,6 @@ def list_epsf_science_light_fits(root: Path | str) -> list[Path]:
     ]
 
 
-def make_empty_frame_record(
-    *,
-    frame_name: str = "",
-    frame_index: int | None = None,
-) -> dict[str, Any]:
-    return {
-        "frame_name": frame_name,
-        "frame_index": frame_index,
-        "n_fit": 0,
-        "n_ok": 0,
-        "exception_class": None,
-        "exception_message": None,
-        "traceback_tail": None,
-    }
-
-
-def record_from_worker(raw: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    if not raw or not isinstance(raw, Mapping):
-        return None
-    return dict(raw)
 
 
 def summarize_epsf_frame_job(
