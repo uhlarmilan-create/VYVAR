@@ -152,9 +152,6 @@ def render_modified_counter(cfg: Any) -> int:
     return n
 
 
-def _default_of(defaults: dict[str, Any], key: str) -> Any:
-    return defaults.get(key)
-
 
 def _coerce_for_save(key: str, kind: str, raw: Any, entry: dict[str, Any], cur: Any) -> Any:
     rng = entry.get("range")
