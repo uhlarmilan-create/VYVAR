@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from invariants_runtime import load_pipeline_meta  # noqa: F401  # re-export
 
 try:
     from config import AppConfig
@@ -352,19 +353,6 @@ def _resolve_k2_matrix_fields(
     except (TypeError, ValueError):
         val = None
     return label, val
-
-
-def load_pipeline_meta(photometry_dir: Path | str | None) -> dict[str, Any]:
-    if photometry_dir is None:
-        return {}
-    p = Path(photometry_dir) / "pipeline_meta.json"
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        logging.debug("[EXC-0028] optional enrichment skipped (try: / return json.loads(p.read_text(encoding='utf-8')) / ...: %s", exc)
-        return {}
 
 
 def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]]:

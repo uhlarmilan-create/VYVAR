@@ -608,7 +608,9 @@ def stamp_pipeline_stage(
     return rec
 
 
-def load_pipeline_meta(photometry_dir: Path | str) -> dict[str, Any]:
+def load_pipeline_meta(photometry_dir: Path | str | None) -> dict[str, Any]:
+    if photometry_dir is None:
+        return {}
     path = Path(photometry_dir) / "pipeline_meta.json"
     if not path.is_file():
         return {}
