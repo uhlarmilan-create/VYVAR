@@ -268,41 +268,6 @@ def _overlay_manifest_scalar(
     row_dict[db_col] = man_val
 
 
-def apply_manifest_core_to_draft_row(
-    draft_id: int,
-    row_dict: dict[str, Any],
-    *,
-    db: Any | None = None,
-) -> None:
-    """Overlay manifest-first rig ids and core draft fields onto an draft manifest row dict."""
-    apply_manifest_rig_to_draft_row(int(draft_id), row_dict, db=db)
-    did = int(draft_id)
-    root = _resolve_archive_root_for_shadow(did, row_dict, db)
-    if root is None:
-        for db_col in list(_PATH_MANIFEST_TO_DB.values()) + list(_SCALAR_MANIFEST_TO_DB.values()):
-            _log_manifest_fallback(did, db_col, "archive root not resolvable")
-        _log_manifest_fallback(did, "center", "archive root not resolvable")
-        return
-
-    manifest = _load_manifest_for_shadow(did, root)
-    if not manifest:
-        for db_col in list(_PATH_MANIFEST_TO_DB.values()) + list(_SCALAR_MANIFEST_TO_DB.values()):
-            _log_manifest_fallback(did, db_col, "manifest absent")
-        _log_manifest_fallback(did, "center", "manifest absent")
-        return
-
-    for path, db_col in _PATH_MANIFEST_TO_DB.items():
-        _overlay_manifest_scalar(did, row_dict, manifest, path, db_col)
-    for path, db_col in _SCALAR_MANIFEST_TO_DB.items():
-        _overlay_manifest_scalar(did, row_dict, manifest, path, db_col)
-
-    center_m = manifest.get("center")
-    if isinstance(center_m, dict):
-        if "ra_deg" in center_m:
-            row_dict["CENTEROFFIELDRA"] = center_m.get("ra_deg")
-        if "de_deg" in center_m:
-            row_dict["CENTEROFFIELDDE"] = center_m.get("de_deg")
-
 
 def apply_manifest_rig_to_draft_row(
     draft_id: int,
@@ -358,49 +323,7 @@ def _optional_float(value: Any) -> float | None:
     return v if math.isfinite(v) else None
 
 
-def _center_from_draft_row(row: dict[str, Any]) -> dict[str, float | None]:
-    ra = _optional_float(row.get("CENTEROFFIELDRA"))
-    de = _optional_float(row.get("CENTEROFFIELDDE"))
-    if ra is None or de is None:
-        return {"ra_deg": None, "de_deg": None}
-    if ra == 0.0 and de == 0.0:
-        return {"ra_deg": None, "de_deg": None}
-    return {"ra_deg": ra, "de_deg": de}
 
-
-def _paths_from_draft_row(row: dict[str, Any]) -> dict[str, str | None]:
-    def _s(key: str) -> str | None:
-        v = row.get(key)
-        if v is None:
-            return None
-        s = str(v).strip()
-        return s or None
-
-    return {
-        "lights": _s("LIGHTS_PATH"),
-        "calib": _s("CALIB_PATH"),
-        "archive": _s("ARCHIVE_PATH"),
-        "masterstar": _s("MASTERSTAR_PATH"),
-        "masterstar_fits": _s("MASTERSTAR_FITS_PATH"),
-    }
-
-
-def _rig_from_draft_row(row: dict[str, Any]) -> dict[str, int | None]:
-    def _i(key: str) -> int | None:
-        v = row.get(key)
-        if v is None:
-            return None
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return None
-
-    return {
-        "equipment_id": _i("ID_EQUIPMENTS"),
-        "telescope_id": _i("ID_TELESCOPE"),
-        "location_id": _i("ID_LOCATION"),
-        "scanning_id": _i("ID_SCANNING"),
-    }
 
 
 def _optional_int(value: Any) -> int | None:
@@ -637,74 +560,6 @@ def _manifest_file_entry_mismatch(label: str, db_val: Any, man_val: Any) -> str 
         return f"{label} DB={db_val!r} manifest={man_val!r}"
     return None
 
-
-def _compare_manifest_file_entries(
-    draft_id: int,
-    file_path: str,
-    db_entry: dict[str, Any],
-    man_entry: dict[str, Any],
-) -> list[str]:
-    errors: list[str] = []
-    prefix = f"draft_id={draft_id}: files[{file_path!r}]"
-
-    for key in ("imagetyp", "filter", "group_key", "calib_type", "calib_flags"):
-        err = _manifest_file_entry_mismatch(
-            f"{prefix}.{key}",
-            db_entry.get(key),
-            man_entry.get(key),
-        )
-        if err:
-            errors.append(err)
-
-    for key in ("id_scanning", "is_calibrated"):
-        err = _manifest_file_entry_mismatch(
-            f"{prefix}.{key}",
-            db_entry.get(key),
-            man_entry.get(key),
-        )
-        if err:
-            errors.append(err)
-
-    db_qc = db_entry.get("qc") if isinstance(db_entry.get("qc"), dict) else {}
-    man_qc = man_entry.get("qc") if isinstance(man_entry.get("qc"), dict) else {}
-    for key in ("hfr", "stars", "background", "bg_rms", "passed"):
-        err = _manifest_file_entry_mismatch(
-            f"{prefix}.qc.{key}",
-            db_qc.get(key),
-            man_qc.get(key),
-        )
-        if err:
-            errors.append(err)
-            break
-
-    db_insp = db_entry.get("inspection") if isinstance(db_entry.get("inspection"), dict) else {}
-    man_insp = man_entry.get("inspection") if isinstance(man_entry.get("inspection"), dict) else {}
-    for key in (
-        "fwhm",
-        "sky_level",
-        "star_count",
-        "rejected_auto",
-        "is_rejected",
-        "inspection_jd",
-        "ra",
-        "de",
-        "exptime",
-        "drift",
-        "drift_dra",
-        "drift_dde",
-        "roundness_mean",
-        "elongation_mean",
-    ):
-        err = _manifest_file_entry_mismatch(
-            f"{prefix}.inspection.{key}",
-            db_insp.get(key),
-            man_insp.get(key),
-        )
-        if err:
-            errors.append(err)
-            break
-
-    return errors
 
 
 def is_pre_calibrated_draft(
@@ -1125,10 +980,6 @@ def reset_manifest_light_is_rejected(db: Any, draft_id: int) -> None:
     if changed:
         patch_draft_manifest(root, int(draft_id), files=files)
 
-
-def _fetch_obs_draft_row_raw(db: Any, draft_id: int) -> dict[str, Any] | None:
-    """Deprecated: manifest is sole store. Kept for transition callers."""
-    return fetch_obs_draft_row_manifest(db, int(draft_id))
 
 
 def resolve_calibration_mode(
