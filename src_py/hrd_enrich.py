@@ -33,7 +33,8 @@ _GAIA_CACHE_KEYS = (
 _SIMBAD_CACHE_KEYS = ("simbad_main_id", "simbad_otype", "simbad_sp_type")
 
 
-def _safe_float(val: Any) -> float | None:
+def _safe_float_masked(val: Any) -> float | None:
+    """Parse float; honor array-like ``.mask``. No catalog blank-token list."""
     if val is None:
         return None
     try:
@@ -171,12 +172,12 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
                 if not sid:
                     continue
                 out[sid] = {
-                    "teff_gspphot": _safe_float(row["teff_gspphot"]),
-                    "logg_gspphot": _safe_float(row["logg_gspphot"]),
-                    "classprob_dsc_combmod_whitedwarf": _safe_float(
+                    "teff_gspphot": _safe_float_masked(row["teff_gspphot"]),
+                    "logg_gspphot": _safe_float_masked(row["logg_gspphot"]),
+                    "classprob_dsc_combmod_whitedwarf": _safe_float_masked(
                         row["classprob_dsc_combmod_whitedwarf"]
                     ),
-                    "classprob_dsc_combmod_binarystar": _safe_float(
+                    "classprob_dsc_combmod_binarystar": _safe_float_masked(
                         row["classprob_dsc_combmod_binarystar"]
                     ),
                     "spectraltype_esphs": (

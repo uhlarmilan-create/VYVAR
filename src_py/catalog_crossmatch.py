@@ -23,7 +23,8 @@ warnings.simplefilter("ignore", category=UserWarning, append=True)
 LOGGER = logging.getLogger(__name__)
 
 
-def _safe_float(x: Any) -> float | None:
+def _safe_float_blank_tokens(x: Any) -> float | None:
+    """Parse float; treat blank / '--' / 'nan' tokens as None. Not mask-aware."""
     if x is None:
         return None
     if isinstance(x, str):
@@ -41,7 +42,7 @@ def _safe_float(x: Any) -> float | None:
 
 def _sep_arcsec(coord: SkyCoord, ra_deg: Any, dec_deg: Any) -> float | None:
     try:
-        c2 = SkyCoord(ra=_safe_float(ra_deg) * u.deg, dec=_safe_float(dec_deg) * u.deg, frame="icrs")
+        c2 = SkyCoord(ra=_safe_float_blank_tokens(ra_deg) * u.deg, dec=_safe_float_blank_tokens(dec_deg) * u.deg, frame="icrs")
         if c2.ra.deg is None or c2.dec.deg is None:
             return None
         return float(coord.separation(c2).to(u.arcsec).value)
@@ -171,7 +172,7 @@ def _gaia_varisum_types(row: Any) -> str:
         if isinstance(v, (bool, np.bool_)):
             ok = bool(v)
         else:
-            fv = _safe_float(v)
+            fv = _safe_float_blank_tokens(v)
             if (fv is not None and fv > 0) or (
                 isinstance(v, str) and v.strip() not in ("", "0", "N", "n", "F", "f", "--")
             ):
@@ -210,7 +211,7 @@ def _query_simbad(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     for row in res:
         name = str(_row_get(row, "MAIN_ID", "main_id") or "").strip()
         otype = str(_row_get(row, "OTYPE", "otype") or "").strip()
-        mag = _safe_float(_row_get(row, "V", "FLUX_V", "flux(V)"))
+        mag = _safe_float_blank_tokens(_row_get(row, "V", "FLUX_V", "flux(V)"))
         dr = None
         try:
             cra = _row_get(row, "RA", "ra", "RA_ICRS")
@@ -278,8 +279,8 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
 
     out: list[CatalogMatch] = []
     for row in rows:
-        cra = _safe_float(row.get("ra_deg"))
-        cde = _safe_float(row.get("dec_deg"))
+        cra = _safe_float_blank_tokens(row.get("ra_deg"))
+        cde = _safe_float_blank_tokens(row.get("dec_deg"))
         if cra is None or cde is None:
             continue
         try:
@@ -292,13 +293,13 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
             continue
         name = str(row.get("name") or "").strip() or "-"
         vtype = str(row.get("var_type") or "").strip()
-        per = _safe_float(row.get("period"))
+        per = _safe_float_blank_tokens(row.get("period"))
         if per is None:
-            per = _safe_float(row.get("varperiod"))
+            per = _safe_float_blank_tokens(row.get("varperiod"))
         if per is None:
-            per = _safe_float(row.get("var_period"))
-        mx = _safe_float(row.get("mag_max"))
-        mn = _safe_float(row.get("mag_min"))
+            per = _safe_float_blank_tokens(row.get("var_period"))
+        mx = _safe_float_blank_tokens(row.get("mag_max"))
+        mn = _safe_float_blank_tokens(row.get("mag_min"))
         amp = abs(mx - mn) if mx is not None and mn is not None else None
         mag = mx if mx is not None else mn
         out.append(
@@ -330,13 +331,13 @@ def _query_vsx(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     for row in t:
         name = str(_row_get(row, "Name") or "").strip()
         vtype = str(_row_get(row, "Type") or "").strip()
-        per = _safe_float(_row_get(row, "Period"))
-        mx = _safe_float(_row_get(row, "max"))
-        mn = _safe_float(_row_get(row, "min"))
+        per = _safe_float_blank_tokens(_row_get(row, "Period"))
+        mx = _safe_float_blank_tokens(_row_get(row, "max"))
+        mn = _safe_float_blank_tokens(_row_get(row, "min"))
         amp = None
         if mx is not None and mn is not None:
             amp = abs(mx - mn)
-        ep = _safe_float(_row_get(row, "Epoch"))
+        ep = _safe_float_blank_tokens(_row_get(row, "Epoch"))
         dr = _sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000"))
         mag = mx if mx is not None else mn
         out.append(
@@ -372,10 +373,10 @@ def _query_asassn(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 catalog="ASAS-SN",
                 name=name,
                 var_type=str(_row_get(row, "Type") or "").strip(),
-                period=_safe_float(_row_get(row, "Per")),
-                amplitude=_safe_float(_row_get(row, "Amp")),
-                mag=_safe_float(_row_get(row, "Vmag")),
-                epoch=_safe_float(_row_get(row, "HJD")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per")),
+                amplitude=_safe_float_blank_tokens(_row_get(row, "Amp")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Vmag")),
+                epoch=_safe_float_blank_tokens(_row_get(row, "HJD")),
                 delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
@@ -396,17 +397,17 @@ def _query_ztf(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     out: list[CatalogMatch] = []
     for row in t:
         name = str(_row_get(row, "ID") or "").strip()
-        ramp = _safe_float(_row_get(row, "rAmp"))
-        gamp = _safe_float(_row_get(row, "gAmp"))
+        ramp = _safe_float_blank_tokens(_row_get(row, "rAmp"))
+        gamp = _safe_float_blank_tokens(_row_get(row, "gAmp"))
         amp = ramp if ramp is not None else gamp
         out.append(
             CatalogMatch(
                 catalog="ZTF",
                 name=name,
                 var_type=str(_row_get(row, "Type") or "").strip(),
-                period=_safe_float(_row_get(row, "Per")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per")),
                 amplitude=amp,
-                mag=_safe_float(_row_get(row, "rmag")),
+                mag=_safe_float_blank_tokens(_row_get(row, "rmag")),
                 delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
@@ -421,7 +422,7 @@ def _query_gaia_varisum(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMa
     out: list[CatalogMatch] = []
     for row in t:
         sid = str(_row_get(row, "Source") or "").strip()
-        gmag = _safe_float(_row_get(row, "Gmagmean"))
+        gmag = _safe_float_blank_tokens(_row_get(row, "Gmagmean"))
         flags = _gaia_varisum_types(row)
         out.append(
             CatalogMatch(
@@ -444,11 +445,11 @@ def _query_atlas(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     out: list[CatalogMatch] = []
     for row in t:
         oid = str(_row_get(row, "ATOID", "ID") or "").strip()
-        per = _safe_float(_row_get(row, "fp-period"))
-        mn = _safe_float(_row_get(row, "fp-min-o"))
-        mx = _safe_float(_row_get(row, "fp-max-o"))
+        per = _safe_float_blank_tokens(_row_get(row, "fp-period"))
+        mn = _safe_float_blank_tokens(_row_get(row, "fp-min-o"))
+        mx = _safe_float_blank_tokens(_row_get(row, "fp-max-o"))
         amp = abs(mx - mn) if (mx is not None and mn is not None) else None
-        mag = _safe_float(_row_get(row, "df-meanPvar"))
+        mag = _safe_float_blank_tokens(_row_get(row, "df-meanPvar"))
         if mag is None or mag <= 0.0 or mag > 30.0:
             mag = mn
         if mag is not None and (mag <= 0.0 or mag > 30.0):
@@ -485,16 +486,16 @@ def _query_css(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
         name = str(int(kid)) if str(kid).replace(".", "").isdigit() else str(kid or "").strip()
         dra = _row_get(row, "_RA", "RAJ2000")
         dde = _row_get(row, "_DE", "DEJ2000")
-        dr_css = _sep_arcsec(coord, dra, dde) if (_safe_float(dra) is not None and _safe_float(dde) is not None) else None
+        dr_css = _sep_arcsec(coord, dra, dde) if (_safe_float_blank_tokens(dra) is not None and _safe_float_blank_tokens(dde) is not None) else None
         out.append(
             CatalogMatch(
                 catalog="CSS",
                 name=name or "-",
                 var_type=str(_row_get(row, "Type") or "").strip(),
-                period=_safe_float(_row_get(row, "Per")),
-                amplitude=_safe_float(_row_get(row, "Depth")),
-                mag=_safe_float(_row_get(row, "Kpmag")),
-                epoch=_safe_float(_row_get(row, "BJD")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per")),
+                amplitude=_safe_float_blank_tokens(_row_get(row, "Depth")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Kpmag")),
+                epoch=_safe_float_blank_tokens(_row_get(row, "BJD")),
                 delta_r=dr_css,
             )
         )
@@ -521,8 +522,8 @@ def _query_kelt(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 catalog="KELT",
                 name=name,
                 var_type="",
-                period=_safe_float(_row_get(row, "Per-LS")),
-                mag=_safe_float(_row_get(row, "Tmag")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per-LS")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Tmag")),
                 delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
                 extra={"2MASS": tm, "TIC": tic},
             )
@@ -547,9 +548,9 @@ def _query_vsbs(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 catalog="VSBS",
                 name=str(_row_get(row, "Name") or "").strip() or "-",
                 var_type=str(_row_get(row, "Type") or "").strip(),
-                period=_safe_float(_row_get(row, "Per")),
-                amplitude=_safe_float(_row_get(row, "Amp")),
-                mag=_safe_float(_row_get(row, "Vmag")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per")),
+                amplitude=_safe_float_blank_tokens(_row_get(row, "Amp")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Vmag")),
                 delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
@@ -573,9 +574,9 @@ def _query_tess_eb(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
                 catalog="TESS-EB",
                 name=str(_row_get(row, "TIC") or "").strip() or "-",
                 var_type="EB",
-                period=_safe_float(_row_get(row, "Per")),
-                mag=_safe_float(_row_get(row, "Tmag")),
-                epoch=_safe_float(_row_get(row, "BJD0")),
+                period=_safe_float_blank_tokens(_row_get(row, "Per")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Tmag")),
+                epoch=_safe_float_blank_tokens(_row_get(row, "BJD0")),
                 delta_r=_sep_arcsec(coord, _row_get(row, "RAJ2000"), _row_get(row, "DEJ2000")),
             )
         )
