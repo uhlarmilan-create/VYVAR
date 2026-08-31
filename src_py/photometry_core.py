@@ -516,13 +516,6 @@ def _mad_sigma(arr: np.ndarray) -> float:
     return mad / _MAD_CONSISTENCY
 
 
-def _aperture_to_mask_single(ap: Any) -> Any:
-    """photutils moze vratit jednu masku alebo zoznam (jedna pozicia -> prvy prvok)."""
-    m = ap.to_mask(method="center")
-    if isinstance(m, (list, tuple)):
-        return m[0]
-    return m
-
 
 def measure_fwhm_from_masterstar(
     masterstar_fits_path: Path,
@@ -5144,23 +5137,6 @@ def _obs_group_filter_key(obs_group: str) -> str:
     return part.lower() if part else raw.lower()
 
 
-def _is_nofilter_obs_group(obs_group: str) -> bool:
-    filter_norm = _obs_group_filter_key(obs_group)
-    no_filter_names = {
-        "nofilter",
-        "no_filter",
-        "no filter",
-        "clear",
-        "clr",
-        "cl",
-        "none",
-        "lum",
-        "luminance",
-        "l",
-        "",
-    }
-    return filter_norm in no_filter_names
-
 
 def _is_broadband_photometric_filter(obs_group: str) -> bool:
     """True for Johnson/Cousins/Sloan broadband filters (B/V/Rc/...); false for L/Clear/unknown."""
@@ -9189,40 +9165,6 @@ def load_epsf_metrics_for_draft(
         result = result.sort_values("pct_psf_ok", ascending=False).reset_index(drop=True)
     return result
 
-
-def _apply_role_aware_aperture_scaling(
-    apertures_px: dict[str, float],
-    at_df: pd.DataFrame,
-    cfg: AppConfig,
-) -> None:
-    """TODO-44: Scale SNR-optimal radii by star role (variable vs comp/check)."""
-    _var_factor = float(cfg.aperture_variable_factor)
-    _comp_factor = float(cfg.aperture_comp_factor)
-    if _var_factor == 1.0 and _comp_factor == 1.0:
-        return
-    _target_cids = set(
-        _normalize_gaia_id(str(r.get("catalog_id", "")))
-        for _, r in at_df.iterrows()
-    )
-    _n_var_scaled = 0
-    _n_comp_scaled = 0
-    for _cid in list(apertures_px.keys()):
-        if _cid in _target_cids:
-            if _var_factor != 1.0:
-                apertures_px[_cid] = round(apertures_px[_cid] * _var_factor, 3)
-                _n_var_scaled += 1
-        else:
-            if _comp_factor != 1.0:
-                apertures_px[_cid] = round(apertures_px[_cid] * _comp_factor, 3)
-                _n_comp_scaled += 1
-    LOGGER.info(
-        "[TODO-44] Role-aware aperture: var_factor=%.2f (%d targets), "
-        "comp_factor=%.2f (%d comps/checks)",
-        _var_factor,
-        _n_var_scaled,
-        _comp_factor,
-        _n_comp_scaled,
-    )
 
 
 def _preserve_nondetection_flags_helper(
