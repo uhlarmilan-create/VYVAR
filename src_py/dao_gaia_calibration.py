@@ -389,39 +389,6 @@ def _tail_correct_core_separations(
     return core, method, tail_est
 
 
-def _mutual_nearest_separations_px(
-    ax: np.ndarray,
-    ay: np.ndarray,
-    bx: np.ndarray,
-    by: np.ndarray,
-    *,
-    radius_px: float,
-) -> np.ndarray:
-    """Mutual nearest-neighbour separations within ``radius_px``."""
-    ax = np.asarray(ax, dtype=np.float64).ravel()
-    ay = np.asarray(ay, dtype=np.float64).ravel()
-    bx = np.asarray(bx, dtype=np.float64).ravel()
-    by = np.asarray(by, dtype=np.float64).ravel()
-    ok_a = np.isfinite(ax) & np.isfinite(ay)
-    ok_b = np.isfinite(bx) & np.isfinite(by)
-    if not (bool(ok_a.any()) and bool(ok_b.any())):
-        return np.asarray([], dtype=np.float64)
-    pts_a = np.column_stack([ax[ok_a], ay[ok_a]])
-    pts_b = np.column_stack([bx[ok_b], by[ok_b]])
-    tree_b = cKDTree(pts_b)
-    tree_a = cKDTree(pts_a)
-    dist_ab, idx_ab = tree_b.query(pts_a, distance_upper_bound=float(radius_px))
-    dist_ba, idx_ba = tree_a.query(pts_b, distance_upper_bound=float(radius_px))
-    seps: list[float] = []
-    for i in range(len(pts_a)):
-        j = int(idx_ab[i])
-        d = float(dist_ab[i])
-        if not (np.isfinite(d) and j >= 0 and d <= float(radius_px)):
-            continue
-        if int(idx_ba[j]) == i:
-            seps.append(d)
-    return np.asarray(seps, dtype=np.float64)
-
 
 def _diagnostic_identity_separations_px(
     data0: np.ndarray,
@@ -809,23 +776,6 @@ def compute_seed_acceptance_centroid_offsets_px(
     fin = dr[np.isfinite(dr)]
     return fin, f"pass2_only_faint_proxy|G={faint_g_lo:.1f}-{faint_g_hi:.1f}"
 
-
-def compute_faint_star_centroid_offsets_px(
-    ms_df: pd.DataFrame,
-    census_df: pd.DataFrame,
-    *,
-    g_lo: float = 13.0,
-    g_hi: float = 15.0,
-    detected_states: frozenset[str] | None = None,
-) -> np.ndarray:
-    """Deprecated alias: use compute_seed_acceptance_centroid_offsets_px."""
-    dr, _ = compute_seed_acceptance_centroid_offsets_px(
-        ms_df,
-        census_df,
-        faint_g_lo=float(g_lo),
-        faint_g_hi=float(g_hi),
-    )
-    return dr
 
 
 def _population_stats(name: str, dr: np.ndarray, *, g_band: str | None = None, states: str | None = None) -> PopulationStats:
@@ -1350,12 +1300,6 @@ def write_calibration_certificate(
         )
     return path
 
-
-def load_calibration_certificate(platesolve_dir: Path | str) -> dict[str, Any] | None:
-    path = Path(platesolve_dir) / CERT_FILENAME
-    if not path.is_file():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def census_completeness_above_depth(
