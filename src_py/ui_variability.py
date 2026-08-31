@@ -11,7 +11,7 @@ import streamlit as st
 
 from catalog_crossmatch import check_candidate_in_catalogs
 from config import AppConfig
-from gaia_catalog_id import normalize_gaia_source_id, read_vyvar_csv
+from gaia_catalog_id import read_vyvar_csv
 from tess_verify import TessResult, run_tess_analysis
 from utils import resolve_draft_dir_path
 from variability_detector import compute_rms_variability, compute_vdi, load_field_flux_matrix
@@ -91,37 +91,6 @@ def _vizier_link(ra: float, dec: float) -> str:
     )
     return vizier_url
 
-
-def _raw_lightcurve_from_frames(per_frame_dir: Path, catalog_id: str, flux_col: str) -> pd.DataFrame:
-    frames = sorted(Path(per_frame_dir).glob("proc_*.csv"))
-    rows: list[dict[str, Any]] = []
-    for p in frames:
-        try:
-            df = read_vyvar_csv(
-                p,
-                usecols=["catalog_id", flux_col, "bjd_tdb_mid"],
-                low_memory=False,
-            )
-        except Exception:  # noqa: BLE001
-            # EXC-0542: T3 -- UI diagnostic/plot only (low_memory=False, / ) / except Exception:  # noqa: BLE001 / co... (EXCEPT-BULK 2026-07-08)
-            continue
-        _want = normalize_gaia_source_id(catalog_id)
-        df["_cid"] = df["catalog_id"].map(normalize_gaia_source_id)
-        sub = df[df["_cid"] == _want] if _want else df.iloc[0:0]
-        if sub.empty:
-            continue
-        # Use first match
-        r = sub.iloc[0]
-        flux = float(pd.to_numeric(r.get(flux_col), errors="coerce"))
-        bjd = float(pd.to_numeric(r.get("bjd_tdb_mid"), errors="coerce"))
-        if not (np.isfinite(flux) and flux > 0 and np.isfinite(bjd)):
-            continue
-        mag_inst = -2.5 * float(np.log10(flux))
-        rows.append({"bjd_tdb_mid": bjd, "mag_inst": mag_inst})
-    if not rows:
-        return pd.DataFrame()
-    out = pd.DataFrame(rows).sort_values("bjd_tdb_mid").reset_index(drop=True)
-    return out
 
 
 def _find_active_targets_csv(draft_dir: Path | str | None) -> Path | None:
@@ -650,72 +619,6 @@ def run_variability_detection_session(
     n_cand = count_edge_safe_combined_candidates(rms_df2, vdi_df, platesolve_dir, cfg_dict)
     return results, n_cand, var_sig
 
-
-@st.cache_data(ttl=600, show_spinner=False)
-def _render_field_image_with_candidate(
-    masterstar_fits_path_s: str,
-    *,
-    x: float,
-    y: float,
-    label: str,
-    percentile_lo: float = 5.0,
-    percentile_hi: float = 99.5,
-) -> bytes | None:
-    """Render MASTERSTAR FITS as PNG and mark candidate at (x,y)."""
-    try:
-        from astropy.io import fits as astrofits
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        from io import BytesIO
-    except Exception:  # noqa: BLE001
-        # EXC-0554: T3 -- UI diagnostic/plot only (import matplotlib.pyplot as plt / from io import BytesIO / exc... (EXCEPT-BULK 2026-07-08)
-        return None
-
-    p = Path(masterstar_fits_path_s)
-    if not p.exists():
-        return None
-
-    try:
-        with astrofits.open(p, memmap=False) as hdul:
-            data = np.asarray(hdul[0].data, dtype=np.float64)
-    except Exception:  # noqa: BLE001
-        # EXC-0555: T3 -- UI diagnostic/plot only (with astrofits.open(p, memmap=False) as hdul: / data = np.asar... (EXCEPT-BULK 2026-07-08)
-        return None
-
-    if data.size == 0:
-        return None
-
-    ok = np.isfinite(data)
-    if not ok.any():
-        return None
-    try:
-        vmin = float(np.percentile(data[ok], float(percentile_lo)))
-        vmax = float(np.percentile(data[ok], float(percentile_hi)))
-    except Exception:  # noqa: BLE001
-        vmin, vmax = float("nan"), float("nan")
-
-    fig, ax = plt.subplots(figsize=(11.5, 7.0), dpi=140)
-    ax.imshow(
-        data,
-        origin="lower",
-        cmap="gray",
-        vmin=vmin if np.isfinite(vmin) else None,
-        vmax=vmax if np.isfinite(vmax) else None,
-        aspect="equal",
-    )
-    ax.scatter([float(x)], [float(y)], s=140, facecolors="none", edgecolors="#ff3333", linewidths=2.0)
-    ax.scatter([float(x)], [float(y)], s=18, c="#ff3333", alpha=0.95)
-    ax.text(float(x) + 18, float(y), str(label)[:24], color="#ff3333", fontsize=9, va="center")
-    ax.set_title("Star field (MASTERSTAR) - selected candidate", fontsize=11)
-    ax.axis("off")
-
-    buf = BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    plt.close(fig)
-    buf.seek(0)
-    return buf.read()
 
 
 @st.cache_data(ttl=600, show_spinner=False)
