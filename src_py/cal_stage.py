@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -377,53 +375,6 @@ def verify_cal_stage_frame(
     )
 
 
-def verify_calibrated_tree(
-    root: Path | str,
-    *,
-    manifest_files: list[dict[str, Any]] | None = None,
-    glob_pattern: str = "**/*.fits",
-) -> CalStageVerifyReport:
-    """Verify all calibrated light FITS under ``root``."""
-    root_p = Path(root)
-    manifest_by_cal: dict[str, dict[str, Any]] = {}
-    if manifest_files:
-        for row in manifest_files:
-            if not isinstance(row, dict):
-                continue
-            cal_p = row.get("calibrated_path") or row.get("cal_path")
-            if cal_p:
-                manifest_by_cal[str(Path(cal_p).as_posix())] = row
-            rel = row.get("calibrated_rel")
-            if rel:
-                manifest_by_cal[str((root_p / rel).resolve())] = row
-
-    report = CalStageVerifyReport()
-    for fp in sorted(root_p.glob(glob_pattern)):
-        if not fp.is_file():
-            continue
-        report.frames_total += 1
-        with fits.open(fp, memmap=False) as hdul:
-            data = np.asarray(hdul[0].data)
-            hdr = hdul[0].header
-        man = manifest_by_cal.get(str(fp.resolve())) or manifest_by_cal.get(str(fp.as_posix()))
-        frame = verify_cal_stage_frame(hdr, data, manifest_row=man, path=str(fp))
-        report.frames.append(frame)
-        outcome = frame.outcome
-        if outcome == "PASS":
-            report.pass_n += 1
-        elif outcome == "WARN_COHERENCE":
-            report.warn_coherence += 1
-            report.pass_n += 1
-        elif outcome == "FAIL_STAMP":
-            report.fail_stamp += 1
-        elif outcome == "FAIL_CORRUPT":
-            report.fail_corrupt += 1
-        elif outcome == "INDETERMINATE_LEGACY":
-            report.indeterminate_legacy += 1
-        elif outcome == "INDETERMINATE_UNKNOWN":
-            report.indeterminate_unknown += 1
-    return report
-
 
 def archive_stage_census(root: Path | str, *, glob_pattern: str = "**/*.fits") -> dict[str, int]:
     """Count resolver outcomes under a directory tree."""
@@ -441,34 +392,3 @@ def archive_stage_census(root: Path | str, *, glob_pattern: str = "**/*.fits") -
     return counts
 
 
-def write_cal_stage_json(
-    draft_dir: Path | str,
-    report: CalStageVerifyReport,
-    *,
-    draft_id: int | None = None,
-) -> Path:
-    """Write draft-level ``cal_stage.json`` summary."""
-    draft_dir = Path(draft_dir)
-    stages: dict[str, int] = {}
-    for fr in report.frames:
-        if fr.stage and not str(fr.stage).startswith("INDETERMINATE"):
-            stages[fr.stage] = stages.get(fr.stage, 0) + 1
-    payload = {
-        "schema": "vyvar_cal_stage_v1",
-        "spec_version": CAL_STAGE_SPEC_VERSION,
-        "draft_id": draft_id,
-        "frames_total": report.frames_total,
-        "stages": stages,
-        "verify_last": {
-            "ut": datetime.now(timezone.utc).isoformat(),
-            "pass": report.pass_n,
-            "warn_coherence": report.warn_coherence,
-            "fail_stamp": report.fail_stamp,
-            "fail_corrupt": report.fail_corrupt,
-            "indeterminate_legacy": report.indeterminate_legacy,
-            "indeterminate_unknown": report.indeterminate_unknown,
-        },
-    }
-    out = draft_dir / "cal_stage.json"
-    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return out
