@@ -30,7 +30,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
-from dao_gaia_common import _is_corner  # noqa: E402
+from dao_gaia_common import _is_corner, _peak_at  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -147,15 +147,6 @@ def _saturation_limit(hdr: fits.Header) -> float:
             except (TypeError, ValueError):
                 pass
     return 60000.0
-
-
-def _peak_at(data0: np.ndarray, x: float, y: float, r: int = 3) -> float:
-    h, w = data0.shape
-    ix, iy = int(round(x)), int(round(y))
-    x0, x1 = max(0, ix - r), min(w, ix + r + 1)
-    y0, y1 = max(0, iy - r), min(h, iy + r + 1)
-    patch = data0[y0:y1, x0:x1]
-    return float(np.max(patch)) if patch.size else float("nan")
 
 
 def _local_snr(data0: np.ndarray, x: float, y: float, fwhm_px: float) -> float:
