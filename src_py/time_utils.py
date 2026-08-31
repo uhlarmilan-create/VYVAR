@@ -30,21 +30,7 @@ def _warn_once(key: str, message: str) -> None:
     log_event(message)
 
 
-def _clamp_lat(v: float) -> float:
-    return max(-90.0, min(90.0, float(v)))
 
-
-def _clamp_lon(v: float) -> float:
-    x = float(v)
-    while x > 180.0:
-        x -= 360.0
-    while x < -180.0:
-        x += 360.0
-    return max(-180.0, min(180.0, x))
-
-
-def _clamp_elev(v: float) -> float:
-    return max(-500.0, min(9000.0, float(v)))
 
 
 def _header_float(hdr: fits.Header, key: str) -> float | None:
