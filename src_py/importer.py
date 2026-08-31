@@ -403,10 +403,6 @@ def _format_exp_seconds(exposure: float) -> str:
     return f"{exposure:.2f}".rstrip("0").rstrip(".")
 
 
-def _format_temp(temp: float) -> str:
-    # Keep sign, avoid extra dots in filename
-    return f"{temp:.1f}".replace(".", "p")
-
 
 def _format_temp_deg_for_name(temp: float) -> str:
     """Format temperature token for filenames like -15deg."""
@@ -454,15 +450,6 @@ def _classify_imagetyp(value: Any) -> str:
     return "unknown"
 
 
-def _find_lights_subdirectory(session_root: Path) -> Path | None:
-    """Return ``Lights`` / ``lights`` child if present (case-insensitive folder name)."""
-    if not session_root.is_dir():
-        return None
-    return next(
-        (d for d in session_root.iterdir() if d.is_dir() and d.name.lower() == "lights"),
-        None,
-    )
-
 
 def _imaging_kind_for_file(fp: Path, db: VyvarDatabase | None) -> str:
     """Classify one FITS as light/dark/flat/unknown using header cache or primary header."""
@@ -490,18 +477,6 @@ def _imaging_kind_for_file(fp: Path, db: VyvarDatabase | None) -> str:
         logger.error("[IMPORT] IMAGETYP classification failed for %s: %s", fp, exc)
         return "unknown"
 
-
-def _list_top_level_light_fits(source_dir: Path, db: VyvarDatabase | None = None) -> list[Path]:
-    """FITS directly under ``source_dir`` whose IMAGETYP classifies as light (non-recursive)."""
-    out: list[Path] = []
-    if not source_dir.is_dir():
-        return out
-    for fp in sorted(source_dir.iterdir(), key=lambda p: str(p).casefold()):
-        if not fp.is_file() or not path_suffix_is_fits(fp):
-            continue
-        if _imaging_kind_for_file(fp, db) == "light":
-            out.append(fp)
-    return out
 
 
 def _collect_fits_by_type(
