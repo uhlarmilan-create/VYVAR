@@ -13,3 +13,13 @@ def _flux_to_mag(flux: float) -> float:
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
     return -2.5 * math.log10(flux)
+
+
+def _coerce_bool(raw) -> bool:
+    """Truthy parser for CSV/JSON flags. None/non-finite -> False."""
+    if isinstance(raw, bool):
+        return bool(raw)
+    if raw is None or (isinstance(raw, float) and not math.isfinite(raw)):
+        return False
+    t = str(raw).strip().lower()
+    return t in ("1", "true", "t", "yes", "y")

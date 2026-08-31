@@ -21,6 +21,7 @@ import pandas as pd
 from gaia_catalog_id import normalize_gaia_source_id
 from mag_constants import MAG_ERR_SCALE
 from report_methods import lc_csv_path
+from stats_core import _coerce_bool
 
 LOGGER = logging.getLogger(__name__)
 
@@ -186,15 +187,6 @@ def _norm_cid_gaia(raw: Any) -> str:
         return str(normalize_gaia_source_id(s)).strip()
     except Exception:  # noqa: BLE001
         return s
-
-
-def _coerce_bool(raw: Any) -> bool:
-    if isinstance(raw, bool):
-        return bool(raw)
-    if raw is None or (isinstance(raw, float) and not math.isfinite(raw)):
-        return False
-    t = str(raw).strip().lower()
-    return t in ("1", "true", "t", "yes", "y")
 
 
 def sha256_file(path: Path) -> str:

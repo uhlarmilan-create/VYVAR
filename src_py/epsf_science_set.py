@@ -14,13 +14,7 @@ from typing import Any
 import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id, read_vyvar_csv
-
-
-def _coerce_bool(raw: Any) -> bool:
-    if isinstance(raw, bool):
-        return raw
-    t = str(raw).strip().lower()
-    return t in ("1", "true", "t", "yes", "y")
+from stats_core import _coerce_bool
 
 
 def _norm_id_gaia_or_raw(raw: Any) -> str:
