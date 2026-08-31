@@ -7478,13 +7478,7 @@ def _mean_bin2d_for_dao(data0: "np.ndarray", factor: int) -> tuple["np.ndarray",
 from masterstar_gaia_accounting import _dao_xy_binned_to_full  # noqa: E402,F401
 
 
-def _dao_full_to_binned_xy(x_full: float, y_full: float, bfac: int) -> tuple[float, float]:
-    """Inverse of :func:`_dao_xy_binned_to_full` for a single point."""
-    if int(bfac) <= 1:
-        return float(x_full), float(y_full)
-    s = float(bfac)
-    off = float(bfac - 1) * 0.5
-    return (float(x_full) - off) / s, (float(y_full) - off) / s
+from masterstar_gaia_accounting import _dao_full_to_binned_xy  # noqa: E402,F401
 
 
 def _catalog_match_radius_px(
