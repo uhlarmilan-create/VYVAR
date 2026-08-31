@@ -11,7 +11,7 @@ from comp_rms_loo import (
     COMP_RMS_LOO_PHOTON_K_DEFAULT,
     compute_loo_mag_rms_map,
     loo_ceiling_mag,
-    mad_sigma,
+    mad_sigma_scale_or_zero,
     photon_sigma_mag,
 )
 from photometry_core import _select_comps_by_rms_then_color
@@ -123,4 +123,4 @@ def test_photon_sigma_and_k_default() -> None:
     assert COMP_RMS_LOO_PHOTON_K_DEFAULT == 5.0
     assert abs(photon_sigma_mag(10.0) - 0.10857362047581294) < 1e-9
     assert math.isnan(photon_sigma_mag(float("nan")))
-    assert abs(mad_sigma(np.array([1.0, 1.0, 1.0, 2.0])) - 0.0) < 1.0
+    assert abs(mad_sigma_scale_or_zero(np.array([1.0, 1.0, 1.0, 2.0])) - 0.0) < 1.0

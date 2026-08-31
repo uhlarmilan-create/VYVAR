@@ -32,7 +32,8 @@ def photon_sigma_mag(snr_ap_pixscaled: Any) -> float:
     return LN10_OVER_2P5 / snr
 
 
-def mad_sigma(values: np.ndarray) -> float:
+def mad_sigma_scale_or_zero(values: np.ndarray) -> float:
+    """1.4826*MAD after dropping non-finite; n<3 returns nan; MAD==0 returns 0.0."""
     a = np.asarray(values, dtype=np.float64)
     a = a[np.isfinite(a)]
     if a.size < 3:
@@ -99,7 +100,7 @@ def compute_loo_mag_rms_map(
     for cid, vals in dmag_map.items():
         if len(vals) < min_frames:
             continue
-        rms = mad_sigma(np.asarray(vals, dtype=np.float64))
+        rms = mad_sigma_scale_or_zero(np.asarray(vals, dtype=np.float64))
         if math.isfinite(rms):
             out[cid] = rms
     LOGGER.info(

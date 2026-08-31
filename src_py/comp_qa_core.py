@@ -30,7 +30,8 @@ _CAL_MAG_COLS = ("mag_calib", "comp_mag_calib", "lc_median_mag", "vyvar_calibrat
 _QA_POOL_MAX_MULT = 4
 
 
-def mad_sigma(x: np.ndarray) -> float:
+def mad_sigma_normalized_or_nan(x: np.ndarray) -> float:
+    """MAD/0.6745 after dropping non-finite; n<2 or MAD==0 returns nan (no std fallback)."""
     x = np.asarray(x, dtype=float)
     x = x[np.isfinite(x)]
     if x.size < 2:
@@ -45,7 +46,7 @@ def robust_thr(vals: list[float], k: float = 4.0) -> float:
     arr = arr[np.isfinite(arr)]
     if arr.size < 2:
         return float("inf")
-    sig = mad_sigma(arr)
+    sig = mad_sigma_normalized_or_nan(arr)
     if not math.isfinite(sig) or sig <= 0:
         return float("inf")
     return float(np.median(arr) + k * sig)

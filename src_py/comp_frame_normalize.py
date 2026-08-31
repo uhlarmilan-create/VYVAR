@@ -137,7 +137,8 @@ def assign_relative_flux(
     return work
 
 
-def mad_sigma(values: np.ndarray) -> float:
+def mad_sigma_or_std(values: np.ndarray) -> float:
+    """1.4826*MAD after dropping non-finite; n<3 or MAD==0 falls back to std or inf."""
     v = np.asarray(values, dtype=np.float64)
     v = v[np.isfinite(v)]
     if int(v.size) < 3:
@@ -176,5 +177,5 @@ def robust_comp_rms(
     resid = arr - med
     if not np.any(np.abs(resid) > 1e-9):
         return 0.0
-    rms = mad_sigma(resid)
+    rms = mad_sigma_or_std(resid)
     return float(rms) if math.isfinite(rms) else float("nan")
