@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 _WARNED_ONCE: set[str] = set()
 
 
-def _warn_once(key: str, message: str) -> None:
+def _warn_once_infolog(key: str, message: str) -> None:
+    """First-time infolog.log_event for ``key``. Not logger.warning."""
     if key in _WARNED_ONCE:
         return
     _WARNED_ONCE.add(key)
@@ -50,14 +51,14 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
     try:
         raw = header.get("DATE-OBS")
         if raw is None:
-            _warn_once(
+            _warn_once_infolog(
                 "date_obs_missing",
                 "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
             )
             return None
         s = str(raw).strip()
         if not s:
-            _warn_once(
+            _warn_once_infolog(
                 "date_obs_empty",
                 "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
             )
@@ -103,7 +104,7 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
             except (TypeError, ValueError):
                 continue
         if not exptime_ok:
-            _warn_once(
+            _warn_once_infolog(
                 "exptime_missing_or_invalid",
                 "VYVAR time_utils: EXPTIME/EXPOSURE missing or <=0 - jd_mid equals shutter-open "
                 "(not mid-exposure); BJD/HJD may be offset by up to EXPTIME/2 for affected frames.",
@@ -269,7 +270,7 @@ def compute_time_columns(
 
     if None in (lat, lon, ra, dec):
         if lat is None or lon is None:
-            _warn_once(
+            _warn_once_infolog(
                 "observer_location_incomplete",
                 "VYVAR time_utils: observer site (SITELAT/SITELONG or LOCATION via draft) missing - "
                 "jd_mid filled; hjd_mid / bjd_tdb_mid left empty until location is available.",

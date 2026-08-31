@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 _WARNED_ONCE: set[str] = set()
 
 
-def _warn_once(key: str, message: str) -> None:
+def _warn_once_logger(key: str, message: str) -> None:
+    """First-time logger.warning for ``key``. Not infolog.log_event."""
     if key in _WARNED_ONCE:
         return
     _WARNED_ONCE.add(key)
@@ -212,7 +213,7 @@ def _scale_bin1_db_for_header(
         return None
     binning = _binning_from_header(header)
     if binning is None:
-        _warn_once(
+        _warn_once_logger(
             f"bin1_scale_skip_{param_label}",
             (
                 f"[RESOLVE {param_label}] binning unresolved - using raw DB bin1 value "
@@ -262,13 +263,13 @@ def _resolve_equipment_intrinsic(
                 f"DB={float(db_value):g} (>{CROSS_CHECK_RTOL:.0%}); using DB (equipment-intrinsic authority)"
             )
             res.warnings.append(msg)
-            _warn_once(f"xcheck_{param}", msg)
+            _warn_once_logger(f"xcheck_{param}", msg)
     elif hdr_v is not None:
         res.value = float(hdr_v)
         res.source = "header"
         res.key = hdr_key
         res.ok = True
-        _warn_once(
+        _warn_once_logger(
             f"hdrfallback_{param}",
             f"[RESOLVE {log_label}] DB value missing/invalid; falling back to header {hdr_key}={hdr_v:g}",
         )
@@ -404,7 +405,7 @@ def _resolve_gain_header_first(
                     f"DB={float(db_value):g} (>{CROSS_CHECK_RTOL:.0%}); using header (session truth)"
                 )
                 res.warnings.append(msg)
-                _warn_once("xcheck_gain_header_wins", msg)
+                _warn_once_logger("xcheck_gain_header_wins", msg)
             logger.debug("[RESOLVE gain] -> %s (source=%s, key=%s)", res.value, res.source, res.key)
             return res
 
@@ -424,7 +425,7 @@ def _resolve_gain_header_first(
                     f"{float(db_value):g} e-/ADU"
                 )
                 res.warnings.append(msg)
-                _warn_once(f"gain_index_unmapped_{equipment_id}_{setting}", msg)
+                _warn_once_logger(f"gain_index_unmapped_{equipment_id}_{setting}", msg)
                 eff_db = _scale_bin1_db_for_header(
                     float(db_value), header, exponent=2, param_label="gain"
                 )
@@ -680,7 +681,7 @@ def _apply_null_island_guard(
         detail += f" ID_LOCATION={id_loc}"
     msg = f"[RESOLVE site] null-island observer coordinates {detail} - treated as UNRESOLVED"
     logger.error(msg)
-    _warn_once("site_null_island", msg)
+    _warn_once_logger("site_null_island", msg)
     res.warnings.append(msg)
     res.ok = False
     res.source = "unresolved"
@@ -719,7 +720,7 @@ def resolve_site(
                 f"header SITELAT/LONG ({hsv[0]:.4f},{hsv[1]:.4f}); using draft location"
             )
             res.warnings.append(msg)
-            _warn_once("xcheck_site", msg)
+            _warn_once_logger("xcheck_site", msg)
         logger.debug("[RESOLVE site] -> draft (%.4f,%.4f,%.0f)", res.lat, res.lon, res.elev or 0.0)
         return _apply_null_island_guard(res, db=db, draft_id=draft_id)
 
@@ -740,7 +741,7 @@ def resolve_site(
         if not is_null_island_coords(clat, clon):
             res.lat, res.lon, res.elev = _clamp_param_sanity("lat", clat), _clamp_param_sanity("lon", clon), _clamp_param_sanity("elev", calt)
             res.source, res.ok = "config", True
-            _warn_once(
+            _warn_once_logger(
                 "site_config_fallback",
                 "[RESOLVE site] no per-draft ID_LOCATION and no header SITELAT/LONG; "
                 "using config observer location as a FLAGGED fallback - verify it belongs to this session.",
@@ -749,7 +750,7 @@ def resolve_site(
             return _apply_null_island_guard(res, db=db, draft_id=draft_id)
 
     res.source, res.ok = "unresolved", False
-    _warn_once(
+    _warn_once_logger(
         "site_unresolved",
         "[RESOLVE site] observer site unresolved (no draft location, no header, no config) - "
         "BJD/HJD/airmass left empty; surface in poor-FITS prompt.",
