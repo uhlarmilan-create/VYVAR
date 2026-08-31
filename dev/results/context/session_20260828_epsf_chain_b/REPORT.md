@@ -140,5 +140,7 @@ None. Residual BO 12.505 is 1.47x live 8.495 (below 3x).
 New: `src_py/epsf_zp_ok.py`, `dev/tests/test_epsf_chain_01b.py`,
 `dev/results/context/session_20260828_epsf_chain_b/`.
 Also config/registry/guides, night_run CLI, session_baseline_check A4/G3,
-ledger/DECISIONS/ROADMAP. Commits on consolidate-01; push
-`git push origin consolidate-01:consolidate-01`.
+ledger/DECISIONS/ROADMAP.
+
+Product commit on consolidate-01: `362043f`.
+Push: `git push origin consolidate-01:consolidate-01`.
