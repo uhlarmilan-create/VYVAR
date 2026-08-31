@@ -1,11 +1,11 @@
 """E2E pipeline simulation for a post-observation session (e.g. D:\\BO_CVn).
 
 Usage:
-    python simulate_night_run.py
-    python simulate_night_run.py --dry-run
-    python simulate_night_run.py --source D:\\BO_CVn --eq 1 --tel 1
+    python simulate_night_run.py --source D:\\BO_CVn --eq 1 --tel 1 --site 1
+    python simulate_night_run.py --dry-run --source D:\\BO_CVn --eq 1 --tel 1 --site 1
 
-Simulates the VYVAR run equivalent to UI **Session Upload Automation -> RUN VYVAR**.
+Same three required inputs as UI RUN VYVAR (camera, telescope, observing site).
+No silent 1/1 defaults.
 """
 
 from __future__ import annotations
@@ -19,10 +19,6 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
-
-# Defaults from vyvar.sqlite3 (QHY294MM / Carl-Zeiss 200mm)
-_DEFAULT_EQUIPMENT_ID = 1
-_DEFAULT_TELESCOPE_ID = 1
 
 
 def _setup_logging(log_path: Path) -> None:
@@ -53,15 +49,27 @@ def main() -> None:
     )
     parser.add_argument(
         "--eq",
+        "--camera",
+        dest="eq",
         type=int,
-        default=_DEFAULT_EQUIPMENT_ID,
-        help=f"Equipment DB ID (default {_DEFAULT_EQUIPMENT_ID}=QHY294MM Camera1)",
+        default=None,
+        help="Equipment / camera DB ID (required unless draft manifest / this flag)",
     )
     parser.add_argument(
         "--tel",
+        "--telescope",
+        dest="tel",
         type=int,
-        default=_DEFAULT_TELESCOPE_ID,
-        help=f"Telescope DB ID (default {_DEFAULT_TELESCOPE_ID}=Carl-Zeiss 200mm)",
+        default=None,
+        help="Telescope DB ID (required unless draft manifest / this flag)",
+    )
+    parser.add_argument(
+        "--site",
+        "--location",
+        dest="site",
+        type=int,
+        default=None,
+        help="Observing site LOCATION id (else config observer_location_id)",
     )
     parser.add_argument(
         "--config",
@@ -95,14 +103,32 @@ def main() -> None:
 
     _setup_logging(args.log.resolve())
 
-    from night_run import NightRunParams, run_night_pipeline
+    from config import AppConfig
+    from night_run import (
+        NightRunParams,
+        _load_app_config,
+        night_run_missing_message,
+        resolve_night_run_cli_ids,
+        run_night_pipeline,
+    )
 
-    sysrem_on = not args.no_sysrem
+    cfg = _load_app_config(args.config)
+    eq, tel, loc, missing = resolve_night_run_cli_ids(
+        equipment_id=args.eq,
+        telescope_id=args.tel,
+        location_id=args.site,
+        cfg=cfg,
+    )
+    if missing:
+        logging.error("%s", night_run_missing_message(missing))
+        sys.exit(2)
+
     logging.info("=" * 60)
     logging.info("VYVAR Night Run Simulation")
     logging.info("Source:    %s", args.source)
-    logging.info("Equipment: ID=%d", args.eq)
-    logging.info("Telescope: ID=%d", args.tel)
+    logging.info("Equipment: ID=%d", int(eq))
+    logging.info("Telescope: ID=%d", int(tel))
+    logging.info("Site:      ID=%d", int(loc))
     logging.info("SysRem:    %s", "disabled via --no-sysrem" if args.no_sysrem else "from config.json")
     logging.info("Dry run:   %s", args.dry_run)
     logging.info("Log file:  %s", args.log.resolve())
@@ -110,8 +136,10 @@ def main() -> None:
 
     params = NightRunParams(
         source_dir=Path(args.source),
-        equipment_id=int(args.eq),
-        telescope_id=int(args.tel),
+        equipment_id=int(eq),
+        telescope_id=int(tel),
+        location_id=int(loc),
+        location_source_hint="cli_arg",
         config_path=args.config,
         sysrem_enabled=False if args.no_sysrem else None,
         sysrem_n_iter=int(args.sysrem_iter) if args.no_sysrem is False else None,

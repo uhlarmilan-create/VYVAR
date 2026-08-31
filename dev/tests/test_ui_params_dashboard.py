@@ -86,8 +86,9 @@ def test_owner_groups_partition_every_key() -> None:
     # EPSF-AC-02: +1 config_runtime key psf_ac_policy (277 -> 278).
     # COMP-RMS-DEF-01-B: +1 config_runtime key comp_rms_loo_photon_k (278 -> 279).
     # APERTURE-01: +1 config_runtime key aperture_policy_mode (281 -> 282).
+    # EPSF-CHAIN-01B: +1 config_runtime key epsf_auto_run (282 -> 283).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 282, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 283, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

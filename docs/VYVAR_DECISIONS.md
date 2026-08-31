@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## VL-ANCHOR-EPSF01 accepted as first ePSF repeatability anchor (2026-08-28)
+
+science validation pending; external independent gate for ePSF (AIJ-class) on ROADMAP.
+
 ## era04 hash v2 (content), v1 9367f998/d3cefff3 kept as history (2026-08-27)
 
 Milan: redefine the --full anchor statistic as a content hash.

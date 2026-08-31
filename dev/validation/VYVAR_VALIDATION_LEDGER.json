@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-28",
+  "updated": "2026-08-31",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-08-28",
-      "commit": "746db0f",
+      "last_verified": "2026-08-31",
+      "commit": "da84d62",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -145,8 +145,8 @@
       "description": "Frozen 516 ERA-04 snapshot draft_000516_snapshot_era04_20260826 (canonical --full; APERTURE-01d f=1.35 annulus 2.7/5.2; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
       "verification": "scripts/session_baseline_check.py --full (v2 content core af218acd n=160; extended ada5caff n=210; v1 history 9367f998/d3cefff3). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
-      "last_verified": "2026-08-28",
-      "commit": "746db0f",
+      "last_verified": "2026-08-31",
+      "commit": "da84d62",
       "notes": "APERTURE-01d lock. ANCHOR-HASH-01: mixed v2 sha_core_v2/sha_ext_v2 (empty PSF LCs) kept as history. EPSF-CHAIN-01 split: gate is sha_core_aperture era04_aperture d55fcc9d n=53 and sha_ext_aperture cc8b532e n=157. core_psf is VL-ANCHOR-EPSF01. v1 9367f998/d3cefff3 kept as history. Supersedes ERA-03 core 9902d918 (n=121). era03 freeze kept on disk, not overwritten. candidate1/2/3 kept. Three POOL-STARVE empty_comp_drop allowlisted. CSS/HAT-188 tagged CROWDING (VSX not force-injected).",
       "census_fingerprint": {
         "n_raw_dao": 2246,
@@ -207,12 +207,12 @@
     {
       "id": "VL-ANCHOR-EPSF01",
       "area": "photometry",
-      "description": "EPSF-CHAIN-01 core_psf content hash of 53 internal PSF LCs from the era04 freeze through run_night_pipeline (G3 BO/FW 145.917/14.557 mmag, n_full=134). Milan PUSH_AUTH decides whether this is the first ePSF anchor.",
-      "verification": "scripts/session_baseline_check.py --full and --parity; core_psf c743b8ba89f4ac54 n=53; core_aperture d55fcc9d n=53 unchanged vs era04",
+      "description": "EPSF-CHAIN-01 core_psf content hash of 53 internal PSF LCs from the era04 freeze through run_night_pipeline. ACCEPTED 2026-08-28 as the first ePSF REPEATABILITY anchor. G3 residual (psf_delta - ap_delta) BO/FW 12.505/4.629 mmag, n_full=134.",
+      "verification": "scripts/session_baseline_check.py --full (aperture d55fcc9d n=53 / ext cc8b532e n=157); --full-epsf for core_psf c743b8ba89f4ac54 n=53 and G3 residual",
       "passes": true,
       "last_verified": "2026-08-28",
       "commit": "f2941fe",
-      "notes": "Science bytes identical on --full, W1, and W2 after dropping epsf_build_timestamp from the content hash. With-timestamp history 95153825. Live 516 ePSF 172f9540 untouched. Not a tune toward live regenerate 8.495/5.218 (pool 63 vs 67)."
+      "notes": "Science bytes identical on --full, W1, and W2 after dropping epsf_build_timestamp from the content hash. With-timestamp history 95153825. Live 516 ePSF 172f9540 untouched. Not a tune toward live regenerate 8.495/5.218 (pool 63 vs 67). science validation pending; external independent gate for ePSF (AIJ-class) on ROADMAP"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",

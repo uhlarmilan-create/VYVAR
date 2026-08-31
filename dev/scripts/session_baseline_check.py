@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Session-start baseline check (--fast default; --full for frozen 516 anchor).
+"""Session-start baseline check (--fast default; --full aperture; --full-epsf lock-time).
 
 Exit 0 = PASS or SUSPENDED, 1 = FAIL. ASCII output; concise summary table at end.
 """
@@ -87,8 +87,10 @@ ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
 G3_BO_ID = "1498613634033133184"
 G3_FW_ID = "1497343732462852864"
 G3_N_FULL = 134
-G3_BO_REF_MMAG = 145.917
-G3_FW_REF_MMAG = 14.557
+# Residual (psf_delta - ap_delta) on work-copy tmp/epsf_chain_m2_era04. Not raw
+# psf_delta_mag (architect error #11: BO is a variable; raw 145.917 was phase).
+G3_BO_REF_MMAG = 12.505
+G3_FW_REF_MMAG = 4.629
 G3_TOL_MMAG = 0.001
 # Structural empty-comp drops keyed by draft_id only.
 # 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
@@ -569,37 +571,13 @@ def _report_v1_raw_identity(
     )
 
 
-def _g3_zp_ok_meters(work_root: Path) -> dict[str, Any]:
-    import numpy as np  # noqa: PLC0415
-    import pandas as pd  # noqa: PLC0415
+def _g3_residual_meters(work_root: Path) -> dict[str, Any]:
+    from epsf_zp_ok import residual_meters_from_lightcurves  # noqa: PLC0415
 
-    lc_dir = work_root / "platesolve" / SETUP / "photometry" / "lightcurves"
-
-    def _one(tid: str) -> dict[str, Any]:
-        path = lc_dir / f"lightcurve_{tid}_psf.csv"
-        if not path.is_file():
-            return {"path": str(path), "missing": True}
-        df = pd.read_csv(path, comment="#", low_memory=False)
-        if "psf_delta_mag" not in df.columns:
-            return {"path": str(path), "missing_col": True}
-        x = pd.to_numeric(df["psf_delta_mag"], errors="coerce").to_numpy(dtype=float)
-        fin = x[np.isfinite(x)]
-        n_fin = int(fin.size)
-        n = int(x.size)
-        if n_fin == 0:
-            dem = float("nan")
-        else:
-            med = float(np.median(fin))
-            dem = float(np.sqrt(np.mean((fin - med) ** 2))) * 1000.0
-        return {
-            "catalog_id": tid,
-            "n_finite": n_fin,
-            "n_rows": n,
-            "demeaned_rms_mmag": dem,
-            "missing": False,
-        }
-
-    return {"bo": _one(G3_BO_ID), "fw": _one(G3_FW_ID)}
+    return {
+        "bo": residual_meters_from_lightcurves(work_root, G3_BO_ID, setup=SETUP),
+        "fw": residual_meters_from_lightcurves(work_root, G3_FW_ID, setup=SETUP),
+    }
 
 
 def _update_ledger_on_full_pass(commit: str) -> None:
@@ -774,7 +752,7 @@ def _copy_frozen_anchor_inputs(snapshot: Path, work_root: Path) -> tuple[Path, P
     return ps_dst, lights_dst
 
 
-def run_full_baseline(report: SessionReport) -> None:
+def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
     """Deliberate full tier: photometer frozen 516 snapshot inputs into tmp."""
     os.environ["VYVAR_P1_FORCE"] = "1"
     suspend_msg = _full_baseline_suspend_message()
@@ -863,15 +841,16 @@ def run_full_baseline(report: SessionReport) -> None:
         )
         elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
         report.add("full-pipeline", "PASS", f"{elapsed:.0f}s -> {work_root.relative_to(REPO_ROOT)}")
-        t_psf = datetime.now(timezone.utc)
-        epsf_out = _run_epsf_stage_on_work(ps, lights, cfg, db=db, draft_id=DRAFT_ID)
-        n_psf = int((epsf_out.get("lc") or {}).get("n_written") or 0)
-        psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
-        report.add(
-            "full-epsf-stage",
-            "PASS",
-            f"n_stars={epsf_out.get('n_stars')} wrote {n_psf} PSF LCs in {psf_s:.0f}s",
-        )
+        if epsf:
+            t_psf = datetime.now(timezone.utc)
+            epsf_out = _run_epsf_stage_on_work(ps, lights, cfg, db=db, draft_id=DRAFT_ID)
+            n_psf_written = int((epsf_out.get("lc") or {}).get("n_written") or 0)
+            psf_s = (datetime.now(timezone.utc) - t_psf).total_seconds()
+            report.add(
+                "full-epsf-stage",
+                "PASS",
+                f"n_stars={epsf_out.get('n_stars')} wrote {n_psf_written} PSF LCs in {psf_s:.0f}s",
+            )
     except Exception as exc:  # noqa: BLE001
         if not any(r.name == "full-pipeline" for r in report.results):
             report.add("full-pipeline", "FAIL", str(exc)[:200])
@@ -940,7 +919,8 @@ def run_full_baseline(report: SessionReport) -> None:
     ext_ap, n_ext_ap = compute_photometry_sha_split(work_root, "ext_aperture")
     snap_ap, snap_n_ap = compute_photometry_sha_split(snapshot, "core_aperture")
     snap_ext_ap, snap_n_ext_ap = compute_photometry_sha_split(snapshot, "ext_aperture")
-    _report_v1_raw_identity(report, work_root, snapshot)
+    if epsf:
+        _report_v1_raw_identity(report, work_root, snapshot)
     if snap_ap != EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE or snap_n_ap != EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N:
         report.add(
             "full-snapshot-sha-core-aperture",
@@ -983,27 +963,28 @@ def run_full_baseline(report: SessionReport) -> None:
             "FAIL",
             f"run ext_aperture {ext_ap[:16]}... n={n_ext_ap} vs snap mismatch",
         )
-    if not EXPECTED_PHOTOMETRY_SHA_CORE_PSF:
-        report.add(
-            "full-photometry-sha-core-psf",
-            "PASS" if n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N else "FAIL",
-            f"epsf01 candidate {core_psf[:16]}... n={n_psf} (gate after G3)",
-        )
-    elif core_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF and n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N:
-        report.add(
-            "full-photometry-sha-core-psf",
-            "PASS",
-            f"epsf01 {core_psf[:16]}... n={n_psf}",
-        )
-    else:
-        report.add(
-            "full-photometry-sha-core-psf",
-            "FAIL",
-            (
-                f"run {core_psf[:16]}... n={n_psf} vs epsf01 "
-                f"{EXPECTED_PHOTOMETRY_SHA_CORE_PSF[:16]}... n={EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N}"
-            ),
-        )
+    if epsf:
+        if not EXPECTED_PHOTOMETRY_SHA_CORE_PSF:
+            report.add(
+                "full-photometry-sha-core-psf",
+                "PASS" if n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N else "FAIL",
+                f"epsf01 candidate {core_psf[:16]}... n={n_psf} (gate after G3)",
+            )
+        elif core_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF and n_psf == EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N:
+            report.add(
+                "full-photometry-sha-core-psf",
+                "PASS",
+                f"epsf01 {core_psf[:16]}... n={n_psf}",
+            )
+        else:
+            report.add(
+                "full-photometry-sha-core-psf",
+                "FAIL",
+                (
+                    f"run {core_psf[:16]}... n={n_psf} vs epsf01 "
+                    f"{EXPECTED_PHOTOMETRY_SHA_CORE_PSF[:16]}... n={EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N}"
+                ),
+            )
     (work_root / "sha_split.json").write_text(
         json.dumps(
             {
@@ -1020,31 +1001,38 @@ def run_full_baseline(report: SessionReport) -> None:
         encoding="ascii",
     )
 
-    g3 = _g3_zp_ok_meters(work_root)
-    (work_root / "g3_zp_ok_meters.json").write_text(
-        json.dumps(g3, indent=2) + "\n", encoding="ascii"
-    )
-    bo = g3.get("bo") or {}
-    fw = g3.get("fw") or {}
-    if bo.get("missing") or fw.get("missing") or bo.get("missing_col") or fw.get("missing_col"):
-        report.add("full-g3-zp-ok", "FAIL", "missing BO/FW PSF LC or psf_delta_mag")
-    else:
-        bo_n = int(bo.get("n_finite") or 0)
-        fw_n = int(fw.get("n_finite") or 0)
-        bo_rms = float(bo.get("demeaned_rms_mmag"))
-        fw_rms = float(fw.get("demeaned_rms_mmag"))
-        bo_ok = bo_n == G3_N_FULL and abs(bo_rms - G3_BO_REF_MMAG) <= G3_TOL_MMAG
-        fw_ok = fw_n == G3_N_FULL and abs(fw_rms - G3_FW_REF_MMAG) <= G3_TOL_MMAG
-        detail = (
-            f"BO {bo_n}/{bo.get('n_rows')} {bo_rms:.3f} mmag (ref {G3_BO_REF_MMAG}); "
-            f"FW {fw_n}/{fw.get('n_rows')} {fw_rms:.3f} mmag (ref {G3_FW_REF_MMAG})"
+    if epsf:
+        g3 = _g3_residual_meters(work_root)
+        (work_root / "g3_residual_meters.json").write_text(
+            json.dumps(g3, indent=2) + "\n", encoding="ascii"
         )
-        if bo_n != G3_N_FULL or fw_n != G3_N_FULL:
-            report.add("full-g3-zp-ok", "FAIL", f"n_full must be {G3_N_FULL}; {detail}")
-        elif not (bo_ok and fw_ok):
-            report.add("full-g3-zp-ok", "FAIL", detail)
+        bo = g3.get("bo") or {}
+        fw = g3.get("fw") or {}
+        if bo.get("missing") or fw.get("missing") or bo.get("missing_col") or fw.get("missing_col"):
+            report.add("full-g3-residual", "FAIL", "missing BO/FW PSF or aperture LC")
         else:
-            report.add("full-g3-zp-ok", "PASS", detail)
+            bo_n = int(bo.get("n_full") or 0)
+            fw_n = int(fw.get("n_full") or 0)
+            bo_rms = float(bo.get("demeaned_rms_mmag"))
+            fw_rms = float(fw.get("demeaned_rms_mmag"))
+            bo_ok = bo_n == G3_N_FULL and abs(bo_rms - G3_BO_REF_MMAG) <= G3_TOL_MMAG
+            fw_ok = fw_n == G3_N_FULL and abs(fw_rms - G3_FW_REF_MMAG) <= G3_TOL_MMAG
+            detail = (
+                f"BO n_full={bo_n} cov={bo.get('coverage')} "
+                f"off={float(bo.get('level_offset_mmag')):.3f} "
+                f"rms={float(bo.get('rms_mmag')):.3f} "
+                f"dem={bo_rms:.3f} (ref {G3_BO_REF_MMAG}); "
+                f"FW n_full={fw_n} cov={fw.get('coverage')} "
+                f"off={float(fw.get('level_offset_mmag')):.3f} "
+                f"rms={float(fw.get('rms_mmag')):.3f} "
+                f"dem={fw_rms:.3f} (ref {G3_FW_REF_MMAG})"
+            )
+            if bo_n != G3_N_FULL or fw_n != G3_N_FULL:
+                report.add("full-g3-residual", "FAIL", f"n_full must be {G3_N_FULL}; {detail}")
+            elif not (bo_ok and fw_ok):
+                report.add("full-g3-residual", "FAIL", detail)
+            else:
+                report.add("full-g3-residual", "PASS", detail)
 
     counters = get_except_fix_counters().snapshot()
     nonzero = {k: int(v) for k, v in counters.items() if v}
@@ -1258,7 +1246,7 @@ def _reset_parity_outputs(snapshot: Path, ps: Path, lights: Path) -> None:
         shutil.copy2(p, lights / p.name)
 
 
-def run_parity_baseline(report: SessionReport) -> None:
+def run_parity_baseline(report: SessionReport, *, epsf: bool = False) -> None:
     """G7: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match.
 
     Sequential one copy (W2 then wipe photometry/ then W1). Dual copy of the freeze
@@ -1300,6 +1288,7 @@ def run_parity_baseline(report: SessionReport) -> None:
             draft_dir_override=work_root,
             write_pdfs=False,
             existing_draft=True,
+            epsf=bool(epsf),
         )
         elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
         errs = list(phot.get("errors") or [])
@@ -1316,7 +1305,7 @@ def run_parity_baseline(report: SessionReport) -> None:
         report.add(
             f"parity-{label}-epsf",
             "PASS" if not errs else "FAIL",
-            f"setups={list(stage.keys())}"[:200],
+            ("skipped (ePSF OFF)" if not epsf else f"setups={list(stage.keys())}")[:200],
         )
         return phot
 
@@ -1352,6 +1341,23 @@ def run_parity_baseline(report: SessionReport) -> None:
         ap_w1 == ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE
         and n_ap_w1 == n_ap_w2 == EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N
     )
+    if not epsf:
+        if ap_ok:
+            report.add(
+                "parity-sha",
+                "PASS",
+                f"core_aperture={ap_w1[:16]}... n={n_ap_w1} (ePSF OFF)",
+            )
+        else:
+            report.add(
+                "parity-sha",
+                "FAIL",
+                (
+                    f"w1 ap={ap_w1[:16]} n={n_ap_w1} w2 ap={ap_w2[:16]} n={n_ap_w2} "
+                    f"want ap={EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE[:16]} n=53"
+                )[:400],
+            )
+        return
     psf_ok = (
         ap_ok
         and psf_w1 == psf_w2
@@ -1413,7 +1419,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Deliberate full tier: frozen 516 snapshot headless run + anchor + counters",
+        help=(
+            "Aperture-only frozen 516 snapshot: era04_aperture d55fcc9d n=53 / "
+            "ext cc8b532e n=157. ePSF OFF (minutes)."
+        ),
+    )
+    parser.add_argument(
+        "--full-epsf",
+        action="store_true",
+        dest="full_epsf",
+        help=(
+            "Lock-time: --full plus ePSF stage; gate epsf01 c743b8ba n=53 and "
+            "G3 residual meter (psf_delta - ap_delta)."
+        ),
     )
     parser.add_argument(
         "--clean",
@@ -1423,7 +1441,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--parity",
         action="store_true",
-        help="G7 EXPORT-PARITY: era04 snapshot through W1-as-wrapper and W2; core+ext hashes must match",
+        help="W1/W2 aperture hash parity on era04 snapshot; ePSF OFF",
+    )
+    parser.add_argument(
+        "--parity-epsf",
+        action="store_true",
+        dest="parity_epsf",
+        help="Lock-time: W1/W2 including ePSF stage; gate epsf01 c743b8ba n=53",
     )
     args = parser.parse_args(argv)
 
@@ -1435,14 +1459,16 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:  # noqa: BLE001
         pass
 
+    want_full = bool(args.full or args.full_epsf)
+    want_parity = bool(args.parity or args.parity_epsf)
     report = SessionReport(
-        tier="parity" if args.parity and not args.full else ("full" if args.full else "fast")
+        tier="parity" if want_parity and not want_full else ("full" if want_full else "fast")
     )
     check_git_state(report)
     check_config_paths(report)
     # Dedicated --parity is a W1/W2 hash gate. Pytest stays on --fast/--full so a
     # flaky sqlite threading test cannot false-fail G7 (G1 already covers pytest).
-    if not (args.parity and not args.full and not args.fast):
+    if not (want_parity and not want_full and not args.fast):
         check_pytest(report)
         check_anchor_manifest_db_parity(report)
         check_db_quick_check(report)
@@ -1450,10 +1476,10 @@ def main(argv: list[str] | None = None) -> int:
         check_deps_outdated(report)
     if args.clean:
         check_clean_tree(report)
-    if args.full:
-        run_full_baseline(report)
-    if args.parity:
-        run_parity_baseline(report)
+    if want_full:
+        run_full_baseline(report, epsf=bool(args.full_epsf))
+    if want_parity:
+        run_parity_baseline(report, epsf=bool(args.parity_epsf))
 
     print_summary(report)
     if report.suspended:

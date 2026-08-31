@@ -640,6 +640,10 @@ class AppConfig:
     export_arcsec_per_px: float = 1.3
     #: Opt-in ePSF fitting on per-frame catalogs (adds ``psf_*`` columns; requires ``masterstar_epsf.fits``).
     psf_photometry_enabled: bool = False
+    #: Night-run automatic ePSF stage after aperture photometry (EPSF-CHAIN-01B).
+    #: Default OFF. Distinct from ``psf_photometry_enabled`` (Phase 2A psf_* columns).
+    #: ``NightRunParams.epsf`` True/False overrides; None reads this key.
+    epsf_auto_run: bool = False
     #: ePSF spatial variation order when photutils EPSFBuilder supports it:
     #: 0 = single global ePSF (default; sufficient for well-corrected optics).
     #: 1 = linear spatial variation (better for Newton/fast optics with field coma).
@@ -1642,6 +1646,7 @@ class AppConfig:
         # WAVE-B STEP 5 (DELETE-DB-DUP): export_arcsec_per_px derivable from WCS/optics; no longer
         # loaded from or saved to config.json. Field keeps its dataclass default as a label fallback.
         self.psf_photometry_enabled = bool(data.get("psf_photometry_enabled", self.psf_photometry_enabled))
+        self.epsf_auto_run = bool(data.get("epsf_auto_run", self.epsf_auto_run))
         try:
             _pso = int(data.get("psf_spatial_order", self.psf_spatial_order))
             self.psf_spatial_order = max(0, min(2, _pso))
@@ -2756,6 +2761,7 @@ class AppConfig:
             "aavso_filter_map": dict(self.aavso_filter_map),
             "observer_location_id": int(self.observer_location_id),
             "psf_photometry_enabled": bool(self.psf_photometry_enabled),
+            "epsf_auto_run": bool(self.epsf_auto_run),
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
             "psf_ac_policy": str(self.psf_ac_policy),

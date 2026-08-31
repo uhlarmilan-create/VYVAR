@@ -32,11 +32,13 @@ closed. origin/main stays `7c086e8` until Milan writes PUSH_AUTH.
 |-----|------------|
 | **HIGH** | **EPSF-SHAPE-01** - root narrow ePSF core OPEN (FWHM 2.36 vs 3.30); routed to EPSF-CORE-01 |
 | **HIGH** | **EXPORT-PARITY-01** - standing two-path defect (R5 audit); PSF merge path fixed |
+| **MED** | **EPSF-XVAL-01** - external ePSF gate: same ensemble, same frames, independent PSF photometry reference (e.g. DAOPHOT/ALLSTAR or photutils forced). Method to be specced with literature when scheduled. |
 | **MED** | **EPSF-ZP-OK-XRIG-01** - extend `fit_ok_for_zp` past wide `1:1`. Requires (1) master dark+flat in CalibrationLibrary for that rig and (2) CENSUS-01 replay of pin-drop vs quality. Newton 518 gated pool 26 does not qualify. |
 | **MED** | **MULTIFILTER-WCS-01** - sibling-seed for z_90_4 (see prior entry) |
 | **MED** | **FRAME-QC-PARITY phase 2** (Layer A log honesty + QC provenance stamp). C8-2: draft 516 frame 29 admitted (`status=ok`) with `n_stars_detected=263` vs ~100 on 028/030; FWHM/elongation normal. Do not wire in C8. |
 | **LOW** | **DEPTH-AUTH-01** - derive `masterstar_gaia_census_target_depth_g` from MASTERSTAR completeness vs Gaia (DAO-GAIA certificate bins). Not wired. G=15.56 VSX stays absent at re-cut. |
 | **FUTURE** | **EPSF-CORE-01** - literature-parameter ePSF rebuild |
+| **FUTURE** | **EPSF-PERF-01** - forced linear refit path; deferred by Milan. |
 | **OPEN** | **INPUT-PATH-ARCH-01** |
 
 ## NEXT SESSION - prior (2026-08-26 CLOSE-OUT APERTURE-01c STOP; era04 not locked)

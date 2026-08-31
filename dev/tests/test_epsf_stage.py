@@ -15,10 +15,33 @@ def test_run_epsf_stage_skips_when_params_epsf_false(tmp_path: Path) -> None:
     out = run_epsf_stage(
         params,
         EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
-        cfg=SimpleNamespace(),
+        cfg=SimpleNamespace(epsf_auto_run=True),
     )
     assert out["skipped"] is True
     assert out["reason"] == "epsf=False"
+
+
+def test_run_epsf_stage_skips_when_params_epsf_none_and_config_off(tmp_path: Path) -> None:
+    params = SimpleNamespace(epsf=None)
+    out = run_epsf_stage(
+        params,
+        EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
+        cfg=SimpleNamespace(epsf_auto_run=False),
+    )
+    assert out["skipped"] is True
+    assert out["reason"] == "epsf=False"
+
+
+def test_run_epsf_stage_params_none_runs_when_config_off(tmp_path: Path) -> None:
+    """A2: UI ePSF button (params=None) forces the stage regardless of the key."""
+    out = run_epsf_stage(
+        None,
+        {"platesolve_dir": tmp_path, "frames_root": tmp_path},
+        cfg=SimpleNamespace(epsf_auto_run=False),
+        dry_run=True,
+    )
+    assert out.get("skipped") is False
+    assert out["dry_run"] is True
 
 
 def test_run_epsf_stage_dry_run(tmp_path: Path) -> None:

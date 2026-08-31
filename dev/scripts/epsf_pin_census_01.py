@@ -25,6 +25,7 @@ if str(SRC) not in sys.path:
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from epsf_zp_ok import residual_stats  # noqa: E402
 from gaia_catalog_id import normalize_gaia_source_id  # noqa: E402
 from photometry_core import ensemble_normalize  # noqa: E402
 from psf_internal_lc import (  # noqa: E402
@@ -288,29 +289,7 @@ def meters_for_target(
     _ = _cal
     psf_delta = np.asarray(psf_delta, dtype=float)
     psf_delta[~pin_ok] = np.nan
-    n_full = int(pin_ok.sum())
-    both = pin_ok & np.isfinite(psf_delta) & np.isfinite(ap_delta)
-    res = psf_delta[both] - ap_delta[both]
-    n_both = int(both.sum())
-    med = float(np.median(res)) if n_both else float("nan")
-    rms = float(np.sqrt(np.mean(res**2))) if n_both else float("nan")
-    dem = float(np.sqrt(np.mean((res - med) ** 2))) if n_both else float("nan")
-    rms_vs = bool(
-        n_both > 0 and abs(rms - abs(med)) <= 0.25 * max(abs(med), abs(rms), 1e-12)
-    )
-    return {
-        "n_epochs": n,
-        "n_full_membership": n_full,
-        "n_dropped_pin": n - n_full,
-        "coverage": (n_full / n) if n else float("nan"),
-        "n_finite_pairs": n_both,
-        "level_offset_mag": med,
-        "level_offset_mmag": med * 1000.0 if math.isfinite(med) else float("nan"),
-        "rms_mag": rms,
-        "rms_mmag": rms * 1000.0 if math.isfinite(rms) else float("nan"),
-        "demeaned_rms_mmag": dem * 1000.0 if math.isfinite(dem) else float("nan"),
-        "rms_vs_abs_median": rms_vs,
-    }
+    return residual_stats(psf_delta, ap_delta, pin_ok)
 
 
 def copy_context() -> None:

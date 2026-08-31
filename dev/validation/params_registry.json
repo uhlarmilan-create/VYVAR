@@ -1426,6 +1426,21 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "epsf_auto_run": {
+    "help": "When true, RUN VYVAR / night_run automatically runs the ePSF stage after aperture photometry. Default OFF. Distinct from psf_photometry_enabled (Phase 2A psf_* columns). UI ePSF buttons still force the stage.",
+    "kind": "static",
+    "label": "EPSF Auto Run",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "basic",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "epsf_min_stars": {
     "help": "Minimum suitable stars required to build an empirical PSF model (ePSF) for PSF photometry.",
     "kind": "static",

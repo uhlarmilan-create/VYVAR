@@ -10,10 +10,12 @@ No Streamlit dependencies. Progress via ``logging`` and optional callback.
 
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import logging
 import math
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -71,8 +73,9 @@ class NightRunParams:
     saturate_level_fraction: float = 0.95
     post_platesolve_hook: Callable[[int, Path, AppConfig, AstroPipeline], None] | None = None
     pre_calibrated_mode: bool = False
-    # INV-EPSF-STAGE-01: ePSF build+fit+merge+internal LCs after aperture, before PDF.
-    epsf: bool = True
+    # INV-EPSF-STAGE-01: ePSF after aperture. None = read config epsf_auto_run (default OFF).
+    # Explicit True/False overrides the config key (UI buttons / gates).
+    epsf: bool | None = None
 
 
 @dataclass
@@ -115,6 +118,149 @@ class NightRunResult:
 
 # Phase 2A must cover at least this fraction of active_targets in photometry_summary.
 _PHOTOMETRY_COMPLETENESS_MIN_RATIO = 0.90
+
+_NIGHT_RUN_INPUT_CAMERA = "camera"
+_NIGHT_RUN_INPUT_TELESCOPE = "telescope"
+_NIGHT_RUN_INPUT_SITE = "observing site"
+
+
+def resolve_epsf_run(epsf: bool | None, cfg: Any | None = None) -> bool:
+    """Whether to run the ePSF night-run stage.
+
+    Explicit True/False wins. None (or omitted) reads ``cfg.epsf_auto_run``
+    (default False). ``run_epsf_stage(params=None)`` is the button path and
+    always runs -- it does not call this helper.
+    """
+    if epsf is True:
+        return True
+    if epsf is False:
+        return False
+    if cfg is None:
+        return False
+    return bool(getattr(cfg, "epsf_auto_run", False))
+
+
+def _positive_id(value: Any) -> int | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
+
+
+def resolve_night_run_cli_ids(
+    *,
+    equipment_id: int | None = None,
+    telescope_id: int | None = None,
+    location_id: int | None = None,
+    draft_dir: Path | str | None = None,
+    cfg: Any | None = None,
+) -> tuple[int | None, int | None, int | None, list[str]]:
+    """Resolve camera / telescope / observing site the way W1 does.
+
+    Explicit CLI ids win. Else draft manifest ``rig`` (equipment_id,
+    telescope_id, location_id). Else ``cfg.observer_location_id`` for site
+    only (W1). Missing names: camera, telescope, observing site.
+    """
+    eq = _positive_id(equipment_id)
+    tel = _positive_id(telescope_id)
+    loc = _positive_id(location_id)
+    if draft_dir is not None:
+        from draft_provenance import _manifest_rig_pair, _optional_int, load_draft_manifest
+
+        manifest = load_draft_manifest(Path(draft_dir))
+        if manifest:
+            m_eq, m_tel = _manifest_rig_pair(manifest)
+            rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
+            m_loc = _optional_int(rig.get("location_id"))
+            if eq is None:
+                eq = _positive_id(m_eq)
+            if tel is None:
+                tel = _positive_id(m_tel)
+            if loc is None:
+                loc = _positive_id(m_loc)
+    if loc is None and cfg is not None:
+        loc = _positive_id(getattr(cfg, "observer_location_id", 0))
+    missing: list[str] = []
+    if eq is None:
+        missing.append(_NIGHT_RUN_INPUT_CAMERA)
+    if tel is None:
+        missing.append(_NIGHT_RUN_INPUT_TELESCOPE)
+    if loc is None:
+        missing.append(_NIGHT_RUN_INPUT_SITE)
+    return eq, tel, loc, missing
+
+
+def missing_night_run_inputs(
+    *,
+    equipment_id: int | None = None,
+    telescope_id: int | None = None,
+    location_id: int | None = None,
+    draft_dir: Path | str | None = None,
+    cfg: Any | None = None,
+) -> list[str]:
+    """Names of unresolved required night-run inputs (camera, telescope, observing site)."""
+    _eq, _tel, _loc, missing = resolve_night_run_cli_ids(
+        equipment_id=equipment_id,
+        telescope_id=telescope_id,
+        location_id=location_id,
+        draft_dir=draft_dir,
+        cfg=cfg,
+    )
+    return missing
+
+
+def night_run_missing_message(missing: list[str]) -> str:
+    named = ", ".join(missing)
+    return (
+        f"Night run refused: missing {named}. "
+        "Provide --camera/--eq, --telescope/--tel, and --site/--location "
+        "(or a draft manifest that resolves them; site may also come from "
+        "config observer_location_id)."
+    )
+
+
+def parse_night_run_cli(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "VYVAR night run. Requires the same three inputs as UI RUN VYVAR: "
+            "telescope, camera, observing site."
+        )
+    )
+    parser.add_argument("--source", required=True, help="Source directory with FITS files")
+    parser.add_argument(
+        "--camera",
+        "--eq",
+        dest="equipment_id",
+        type=int,
+        default=None,
+        help="Camera / equipment DB id (no silent default)",
+    )
+    parser.add_argument(
+        "--telescope",
+        "--tel",
+        dest="telescope_id",
+        type=int,
+        default=None,
+        help="Telescope DB id (no silent default)",
+    )
+    parser.add_argument(
+        "--site",
+        "--location",
+        dest="location_id",
+        type=int,
+        default=None,
+        help="Observing site LOCATION id (else config observer_location_id)",
+    )
+    parser.add_argument(
+        "--draft-dir",
+        type=Path,
+        default=None,
+        help="Optional draft directory whose manifest can supply the three ids",
+    )
+    parser.add_argument("--config", type=Path, default=None, help="Path to config.json")
+    parser.add_argument("--dry-run", action="store_true", help="Scan only; no pipeline")
+    return parser.parse_args(argv)
 
 
 def apply_smart_plan_flat_fallbacks(
@@ -834,7 +980,7 @@ def run_night_photometry(
     timings: dict[str, float] | None = None,
     write_pdfs: bool = True,
     existing_draft: bool = False,
-    epsf: bool = True,
+    epsf: bool | None = None,
 ) -> dict[str, Any]:
     """Photometry-only slice shared by ``run_night_pipeline`` (C1/C2) and C3.
 
@@ -1024,7 +1170,8 @@ def run_night_photometry(
         if math.isfinite(med_rms):
             lc_rms_values.append(med_rms)
 
-        if epsf:
+        do_epsf = resolve_epsf_run(epsf, phot_cfg)
+        if do_epsf:
             from epsf_stage import EpsfStagePaths, run_epsf_stage
 
             _p(f"Step 14b: ePSF photometry - {nm}")
@@ -1059,7 +1206,7 @@ def run_night_photometry(
                 continue
             _t(f"epsf_{nm}", t0)
 
-        audit = audit_photometry_completeness(out_d, require_psf=bool(epsf))
+        audit = audit_photometry_completeness(out_d, require_psf=bool(do_epsf))
         completeness_by_setup[str(nm)] = audit
         if not audit.get("ok"):
             n_sm = int(audit.get("n_summary_rows") or 0)
@@ -1129,7 +1276,7 @@ def run_ui_night_photometry(
     timings: dict[str, float] | None = None,
     write_pdfs: bool = False,
     existing_draft: bool = True,
-    epsf: bool = True,
+    epsf: bool | None = None,
 ) -> dict[str, Any]:
     """W1/C3 photometry entry (INV-ONE-ENTRY-01). Defaults match a draft re-run."""
     return run_night_photometry(
@@ -1701,7 +1848,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             timings=timings,
             write_pdfs=True,
             existing_draft=False,
-            epsf=bool(params.epsf),
+            epsf=params.epsf,
         )
         result.cfg_source = str(phot.get("cfg_source") or "live")
         result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
@@ -1754,3 +1901,40 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         timings["total"] = time.time() - t_run
         result.phase_timings = timings
         return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry: same three required inputs as UI RUN VYVAR."""
+    args = parse_night_run_cli(argv)
+    cfg = _load_app_config(args.config)
+    eq, tel, loc, missing = resolve_night_run_cli_ids(
+        equipment_id=args.equipment_id,
+        telescope_id=args.telescope_id,
+        location_id=args.location_id,
+        draft_dir=args.draft_dir,
+        cfg=cfg,
+    )
+    if missing:
+        print(night_run_missing_message(missing), file=sys.stderr)
+        return 2
+    params = NightRunParams(
+        source_dir=Path(args.source),
+        equipment_id=int(eq),
+        telescope_id=int(tel),
+        location_id=int(loc),
+        location_source_hint="cli_arg",
+        config_path=args.config,
+        dry_run=bool(args.dry_run),
+        progress_cb=lambda msg: LOGGER.info("[Progress] %s", msg),
+    )
+    result = run_night_pipeline(params)
+    if result.success:
+        return 0
+    for err in result.errors:
+        print(f"ERROR: {err}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

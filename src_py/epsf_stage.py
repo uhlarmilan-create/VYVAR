@@ -84,13 +84,21 @@ def run_epsf_stage(
 ) -> dict[str, Any]:
     """Build ePSF, fit+merge psf_* into proc sidecars, write internal PSF LCs.
 
-    ``params.epsf`` (NightRunParams) default ON. When ``params`` is None the
-    stage always runs (CLI / dashboard sub-steps). Sub-steps are selected by
-    ``do_build`` / ``do_fit_merge`` / ``do_lc``.
+    ``params.epsf`` True/False overrides config. None reads ``cfg.epsf_auto_run``
+    (default OFF). When ``params`` is None the stage always runs (UI ePSF button
+    / dashboard). Sub-steps are selected by ``do_build`` / ``do_fit_merge`` /
+    ``do_lc``.
     """
-    if params is not None and not bool(getattr(params, "epsf", True)):
-        _p(progress_cb, "skipped (NightRunParams.epsf=False)")
-        return {"skipped": True, "reason": "epsf=False"}
+    if params is not None:
+        flag = getattr(params, "epsf", None)
+        if flag is False:
+            _p(progress_cb, "skipped (NightRunParams.epsf=False)")
+            return {"skipped": True, "reason": "epsf=False"}
+        if flag is not True:
+            auto = bool(getattr(cfg, "epsf_auto_run", False)) if cfg is not None else False
+            if not auto:
+                _p(progress_cb, "skipped (epsf_auto_run=False)")
+                return {"skipped": True, "reason": "epsf=False"}
 
     resolved = _resolve_paths(paths)
     ps = resolved.platesolve_dir
