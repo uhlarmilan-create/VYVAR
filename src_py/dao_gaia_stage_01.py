@@ -39,7 +39,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
-from dao_gaia_common import _is_corner, _peak_at  # noqa: E402
+from dao_gaia_common import _is_corner, _peak_at, _saturation_limit  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -296,18 +296,6 @@ def run_dao(
         else np.asarray(tbl["flux"], dtype=np.float64)
     )
     return x, y, peak
-
-
-def _saturation_limit(hdr: fits.Header) -> float:
-    for key in ("SATURATE", "VY_SATURATE", "HISTCUTLO"):
-        if key in hdr:
-            try:
-                v = float(hdr[key])
-                if math.isfinite(v) and v > 0:
-                    return v
-            except (TypeError, ValueError):
-                pass
-    return 60000.0
 
 
 def assign_states(

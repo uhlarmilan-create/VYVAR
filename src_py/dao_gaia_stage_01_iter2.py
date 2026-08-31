@@ -30,7 +30,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
-from dao_gaia_common import _is_corner, _peak_at  # noqa: E402
+from dao_gaia_common import _is_corner, _peak_at, _saturation_limit  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -135,18 +135,6 @@ def _gaia_on_chip(wcs: WCS, wpx: int, h: int, gaia_db: Path, *, max_mag: float) 
 def _is_edge(x: float, y: float, wpx: int, h: int, margin: float = EDGE_MARGIN_PX) -> bool:
     m = float(margin)
     return x < m or y < m or x >= float(wpx) - m or y >= float(h) - m
-
-
-def _saturation_limit(hdr: fits.Header) -> float:
-    for key in ("SATURATE", "VY_SATURATE", "HISTCUTLO"):
-        if key in hdr:
-            try:
-                v = float(hdr[key])
-                if math.isfinite(v) and v > 0:
-                    return v
-            except (TypeError, ValueError):
-                pass
-    return 60000.0
 
 
 def _local_snr(data0: np.ndarray, x: float, y: float, fwhm_px: float) -> float:
