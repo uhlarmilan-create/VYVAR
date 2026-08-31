@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass
@@ -110,8 +109,3 @@ def get_except_fix_counters() -> ExceptFixCounters:
     return _COUNTERS
 
 
-def merge_except_fix_summary(extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    out: dict[str, Any] = {"except_fix_counters": _COUNTERS.snapshot()}
-    if extra:
-        out.update(extra)
-    return out
