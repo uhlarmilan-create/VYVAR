@@ -3189,7 +3189,7 @@ class _PhotometryReportBuilder:
         dfq = dfq.reset_index(drop=True)
         dfq["frame_index"] = np.arange(1, len(dfq) + 1, dtype=int)
         return dfq
-    def _compute_masterstar_score(self, df: pd.DataFrame) -> pd.Series:
+    def _compute_masterstar_score_fwhm_px(self, df: pd.DataFrame) -> pd.Series:
         score = pd.Series(0.0, index=df.index)
         if df.empty:
             return score

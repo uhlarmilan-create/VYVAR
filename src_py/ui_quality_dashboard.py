@@ -20,51 +20,11 @@ from importer import quicklook_preview_png_bytes
 from photometry_core import compute_auto_fwhm_limit
 from pipeline import _resolve_light_fits_for_quality_inspection, resolve_obs_file_to_processed_fits
 from pipeline import detect_field_jumps
+from night_run import _compute_masterstar_score
 from ui_components import DRAFT_CENTER_DE_STATE_KEY, DRAFT_CENTER_RA_STATE_KEY
 from utils import resolve_draft_dir
 
 X_AXIS_FRAME_TITLE = "Frame number (Frame Index)"
-
-
-def _compute_masterstar_score(df: pd.DataFrame) -> pd.Series:
-    """Skore vhodnosti snimky pre MASTERSTAR (vyssie = lepsie).
-    Kombinacia: FWHM (nizke), elongation (nizka = bez stopy), star_count (vysoky), sky_level (nizke).
-    Kazda metrika sa normalizuje 0-1, vahy su empiricke.
-    """
-    score = pd.Series(0.0, index=df.index)
-    n = len(df)
-    if n == 0:
-        return score
-
-    def _norm_inverse(s: pd.Series) -> pd.Series:
-        """Nizka hodnota = lepsie -> invertovana normalizacia 0-1."""
-        mn, mx = s.min(), s.max()
-        if not math.isfinite(mn) or not math.isfinite(mx) or mx <= mn:
-            return pd.Series(1.0, index=s.index)
-        return 1.0 - (s - mn) / (mx - mn)
-
-    def _norm_direct(s: pd.Series) -> pd.Series:
-        """Vysoka hodnota = lepsie -> priama normalizacia 0-1."""
-        mn, mx = s.min(), s.max()
-        if not math.isfinite(mn) or not math.isfinite(mx) or mx <= mn:
-            return pd.Series(1.0, index=s.index)
-        return (s - mn) / (mx - mn)
-
-    fwhm = pd.to_numeric(df["FWHM"], errors="coerce")
-    elong = pd.to_numeric(df.get("ELONGATION_MEAN", pd.Series(np.nan, index=df.index)), errors="coerce")
-    stars = pd.to_numeric(df["STAR_COUNT"], errors="coerce")
-    sky = pd.to_numeric(df["SKY_LEVEL"], errors="coerce")
-
-    if fwhm.notna().sum() >= 2:
-        score += 0.45 * _norm_inverse(fwhm.fillna(fwhm.max()))
-    if elong.notna().sum() >= 2:
-        score += 0.30 * _norm_inverse(elong.fillna(elong.max()))
-    if stars.notna().sum() >= 2:
-        score += 0.15 * _norm_direct(stars.fillna(stars.min()))
-    if sky.notna().sum() >= 2:
-        score += 0.10 * _norm_inverse(sky.fillna(sky.max()))
-
-    return score
 
 _FILTER_LINE_COLORS = (
     "#636EFA",
