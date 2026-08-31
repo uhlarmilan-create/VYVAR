@@ -384,7 +384,8 @@ def _bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
         return "unknown"
 
 
-def _fmt_opt_num(v: Any, fmt: str, *, na: str = "na") -> str:
+def _fmt_opt_num_na(v: Any, fmt: str, *, na: str = "na") -> str:
+    """Format a number via pandas to_numeric; missing -> ``na``. Not the UI empty='-' helper."""
     try:
         f = float(pd.to_numeric(v, errors="coerce"))
     except (TypeError, ValueError) as exc:  # noqa: BLE001
@@ -1470,7 +1471,7 @@ def export_lightcurve_reports(
         v_lines.append(
             f"#   n_frames: {_fmt_opt_int(n_frames)} | "
             f"n_ensemble_comp: {_fmt_opt_int(n_good_comp)} (stability good+suspect; not comp_qa n_clean) | "
-            f"lc_rms: {_fmt_opt_num(lc_rms, '.4f')}\n"
+            f"lc_rms: {_fmt_opt_num_na(lc_rms, '.4f')}\n"
         )
     _trust = str(summary_row.get("trust", "") or "").strip().upper()
     _trust_reason = str(summary_row.get("trust_reason", "") or "").strip()
@@ -1483,8 +1484,8 @@ def export_lightcurve_reports(
     v_lines.append(f"# VAR Name: {vsx_name} | Type: {vsx_type}\n")
     v_lines.append(f"#   Catalog: GaiaDR3 | CatalogId: {target_cid or 'na'}\n")
     v_lines.append(
-        f"#   CatalogMag: {_fmt_opt_num(t_mag, '.3f')} | "
-        f"BP-RP: {_fmt_opt_num(t_bprp, '.3f')}\n"
+        f"#   CatalogMag: {_fmt_opt_num_na(t_mag, '.3f')} | "
+        f"BP-RP: {_fmt_opt_num_na(t_bprp, '.3f')}\n"
     )
     v_lines.append("#\n")
     v_lines.append("# COMP TABLE:\n")
@@ -1507,8 +1508,8 @@ def export_lightcurve_reports(
             chk_mag = pd.to_numeric(check_row.get("mag", float("nan")), errors="coerce")
         chk_p2p = pd.to_numeric(check_row.get("p2p_rms", float("nan")), errors="coerce")
         v_lines.append(
-            f"# CHK CatalogId: {check_cid} | Mag: {_fmt_opt_num(chk_mag, '.3f')} | "
-            f"p2p_rms: {_fmt_opt_num(chk_p2p, '.4f')}\n"
+            f"# CHK CatalogId: {check_cid} | Mag: {_fmt_opt_num_na(chk_mag, '.3f')} | "
+            f"p2p_rms: {_fmt_opt_num_na(chk_p2p, '.4f')}\n"
         )
     else:
         v_lines.append("# CHK CatalogId: na\n")
@@ -1541,7 +1542,7 @@ def export_lightcurve_reports(
         mag_cal = pd.to_numeric(row.get("mag_calib", float("nan")), errors="coerce")
         if not math.isfinite(float(bjd)):
             continue
-        v_lines.append(f"{float(bjd):.6f}   {_fmt_opt_num(dmag, '.4f'):>7}   {_fmt_opt_num(err, '.4f'):>7}   {_fmt_opt_num(mag_cal, '.4f'):>7}\n")
+        v_lines.append(f"{float(bjd):.6f}   {_fmt_opt_num_na(dmag, '.4f'):>7}   {_fmt_opt_num_na(err, '.4f'):>7}   {_fmt_opt_num_na(mag_cal, '.4f'):>7}\n")
 
     try:
         var_path.write_text("".join(v_lines), encoding="utf-8")

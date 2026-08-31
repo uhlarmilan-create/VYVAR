@@ -434,7 +434,8 @@ def _float_coord_row(row: pd.Series, *keys: str) -> float:
     return 0.0
 
 
-def _fmt_opt_num(v: Any, fmt: str, empty: str = "-") -> str:
+def _fmt_opt_num_empty(v: Any, fmt: str, empty: str = "-") -> str:
+    """Format a number for UI; missing/non-finite -> ``empty``. Not the AAVSO ``na`` helper."""
     if v is None:
         return empty
     if isinstance(v, float) and not math.isfinite(v):
@@ -771,9 +772,9 @@ def _render_target_detail(
     vt = str(target_row.get("vsx_type", "") or "").strip()
     zf = str(target_row.get("zone_flag", "") or "").strip().lower()
     bp = target_row.get("bp_rp")
-    bp_s = _fmt_opt_num(bp, ".3f")
+    bp_s = _fmt_opt_num_empty(bp, ".3f")
     bv = target_row.get("b_v")
-    bv_s = _fmt_opt_num(bv, ".2f")
+    bv_s = _fmt_opt_num_empty(bv, ".2f")
     hide_bv_meta = bool(phase01_use_bprp_primary)
     if vt or zf or bp_s or (bv_s and not hide_bv_meta):
         badge = ""
@@ -951,16 +952,16 @@ def _render_target_detail(
                     f"https://vizier.cds.unistra.fr/viz-bin/VizieR?"
                     f"&-c={ra_c:.6f}{dec_c:+.6f}&-c.rs=2"
                 )
-                mag_str = _fmt_opt_num(mag_c, ".3f")
+                mag_str = _fmt_opt_num_empty(mag_c, ".3f")
                 catalog_id_str = _format_comp_catalog_id(row)
-                bv_str = _fmt_opt_num(bv_c, ".3f")
+                bv_str = _fmt_opt_num_empty(bv_c, ".3f")
                 bv_src_str = (bv_src_c or "unknown")
-                bp_str = _fmt_opt_num(bp_c, ".3f")
-                dbprp_str = _fmt_opt_num(dbprp_c, ".3f")
+                bp_str = _fmt_opt_num_empty(bp_c, ".3f")
+                dbprp_str = _fmt_opt_num_empty(dbprp_c, ".3f")
                 tier_color_raw = row.get("color_tier_src", "")
-                dist_str = _fmt_opt_num(dist_deg_c, ".6f")
-                nfr_str = _fmt_opt_num(nfr_c, ".0f")
-                rms_str = _fmt_opt_num(rms_c, ".4f")
+                dist_str = _fmt_opt_num_empty(dist_deg_c, ".6f")
+                nfr_str = _fmt_opt_num_empty(nfr_c, ".0f")
+                rms_str = _fmt_opt_num_empty(rms_c, ".4f")
                 wrel_str = (
                     f"{float(w_c) / max_w:.3f}"
                     if np.isfinite(pd.to_numeric(w_c, errors="coerce")) and float(pd.to_numeric(w_c, errors="coerce")) > 0 and np.isfinite(max_w) and max_w > 0
