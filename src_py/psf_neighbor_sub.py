@@ -20,7 +20,8 @@ _DEFAULT_NN_CONTAM_DMAG = 2.5
 _DEFAULT_FLUX_ZP = 25.0
 
 
-def _flux_to_mag(flux: float, zp: float) -> float:
+def _flux_to_mag_with_zp(flux: float, zp: float) -> float:
+    """Instrumental mag with a zero-point; non-positive flux returns +inf (not nan)."""
     if not math.isfinite(flux) or flux <= 0.0:
         return float("inf")
     return float(zp) - 2.5 * math.log10(float(flux))
@@ -351,7 +352,7 @@ def neighbor_sub_target_flux(
         refuse_reason = "low_recovered_snr"
     if not refuse_reason and nn_mag is not None and math.isfinite(float(nn_mag)) and neighbor_fit_fluxes:
         for nfit in neighbor_fit_fluxes:
-            fit_nn_mag = _flux_to_mag(nfit, zp)
+            fit_nn_mag = _flux_to_mag_with_zp(nfit, zp)
             if math.isfinite(fit_nn_mag) and fit_nn_mag < float(nn_mag) - max_nn_over:
                 refuse_reason = "neighbor_overfit"
                 break
@@ -361,7 +362,7 @@ def neighbor_sub_target_flux(
         and math.isfinite(float(target_mag))
         and clean_flux > 0.0
     ):
-        rec_mag = _flux_to_mag(clean_flux, zp)
+        rec_mag = _flux_to_mag_with_zp(clean_flux, zp)
         if math.isfinite(rec_mag) and rec_mag > float(target_mag) + max_t_under:
             refuse_reason = "target_undershoot"
     if (
