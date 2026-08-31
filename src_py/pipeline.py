@@ -18260,15 +18260,7 @@ class SkySurfaceOrderConflictError(RuntimeError):
     """``VY_SKYSF`` present but ``VYSKYORD`` differs from the requested preprocess order."""
 
 
-def _header_has_vy_skysf(hdr: fits.Header) -> bool:
-    if "VY_SKYSF" not in hdr:
-        return False
-    v = hdr["VY_SKYSF"]
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, (int, float)):
-        return bool(v)
-    return str(v).strip().lower() in ("true", "1", "t", "yes")
+from cal_stage import _header_has_vy_skysf  # noqa: E402,F401  # re-export; survivor in cal_stage.py
 
 
 def _header_vyskyord(hdr: fits.Header) -> int | None:
