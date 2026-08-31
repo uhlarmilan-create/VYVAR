@@ -37,3 +37,10 @@ def _saturation_limit(hdr: fits.Header) -> float:
             except (TypeError, ValueError):
                 pass
     return 60000.0
+
+
+def asinh_rgb(data0: np.ndarray) -> np.ndarray:
+    pos = np.clip(data0, 0, None)
+    scale = float(np.percentile(pos[pos > 0], 99.5)) if np.any(pos > 0) else 1.0
+    scale = max(scale, 1.0)
+    return np.arcsinh(pos / scale) / np.arcsinh(1.0)

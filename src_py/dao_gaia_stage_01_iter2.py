@@ -30,7 +30,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from config import AppConfig  # noqa: E402
-from dao_gaia_common import _is_corner, _peak_at, _saturation_limit  # noqa: E402
+from dao_gaia_common import _is_corner, _peak_at, _saturation_limit, asinh_rgb  # noqa: E402
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
     SOURCE_EDGE,
@@ -437,13 +437,6 @@ def load_detections(path: Path) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]
     z = np.load(path)
     meta = json.loads(str(z["meta"]))
     return np.asarray(z["det_x"], dtype=np.float64), np.asarray(z["det_y"], dtype=np.float64), meta
-
-
-def asinh_rgb(data0: np.ndarray) -> np.ndarray:
-    pos = np.clip(data0, 0, None)
-    scale = float(np.percentile(pos[pos > 0], 99.5)) if np.any(pos > 0) else 1.0
-    scale = max(scale, 1.0)
-    return np.arcsinh(pos / scale) / np.arcsinh(1.0)
 
 
 def render_overlay_v2(
