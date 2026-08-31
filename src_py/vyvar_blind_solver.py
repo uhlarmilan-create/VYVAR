@@ -770,37 +770,6 @@ def _iter_blind_pass_results(
         )
 
 
-def _cluster_centroid_votes(
-    vote_centers: list[np.ndarray],
-    *,
-    radius_deg: float = CLUSTER_RADIUS_DEG,
-) -> list[tuple[float, float, int]]:
-    if len(vote_centers) < 2:
-        return []
-    votes_arr = np.array(vote_centers, dtype=np.float64)
-    r_deg = float(radius_deg)
-    clusters: list[tuple[float, float, int]] = []
-    used = np.zeros(len(votes_arr), dtype=bool)
-    for i in range(len(votes_arr)):
-        if used[i]:
-            continue
-        ra_i, dec_i = float(votes_arr[i, 0]), float(votes_arr[i, 1])
-        dra = (votes_arr[:, 0] - ra_i) * math.cos(math.radians(dec_i))
-        ddec = votes_arr[:, 1] - dec_i
-        sep = np.sqrt(dra * dra + ddec * ddec)
-        in_cluster = sep < r_deg
-        used |= in_cluster
-        count = int(np.count_nonzero(in_cluster))
-        clusters.append(
-            (
-                float(np.median(votes_arr[in_cluster, 0])),
-                float(np.median(votes_arr[in_cluster, 1])),
-                count,
-            )
-        )
-    clusters.sort(key=lambda t: t[2], reverse=True)
-    return clusters
-
 
 def _cluster_match_hits_weighted(
     hits: list[_MatchHit],
