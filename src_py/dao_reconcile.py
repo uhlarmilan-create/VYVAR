@@ -1384,67 +1384,6 @@ def format_dao_only_census_log(meta: dict[str, Any], *, n_total: int) -> str:
     )
 
 
-def dao_only_report_lines(pipeline_meta: dict[str, Any] | None) -> list[str]:
-    """PDF/UI lines for DAO_ONLY magnitude classification (informational, not a gate)."""
-    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
-    n_dao = meta.get("n_dao_unmatched")
-    if n_dao is None:
-        counts = meta.get("dao_only_class_counts")
-        if isinstance(counts, dict):
-            n_dao = sum(int(v) for v in counts.values())
-    if n_dao is None:
-        return []
-    depth = meta.get("confirmable_depth_g")
-    winner = meta.get("confirmable_depth_winner") or "?"
-    depth_s = f"{float(depth):.2f}" if depth is not None and math.isfinite(float(depth)) else "unresolved"
-    lines = [
-        f"  DAO_ONLY unmatched: {int(n_dao)} (informational, not a gate; counts are installation-specific)",
-        f"  Confirmable depth: G={depth_s} (winning limit: {winner})",
-    ]
-    inputs = meta.get("confirmable_depth_inputs")
-    if isinstance(inputs, dict):
-        for k, v in inputs.items():
-            vs = f"{float(v):.2f}" if v is not None and math.isfinite(float(v)) else "n/a"
-            lines.append(f"    depth input {k}: {vs}")
-    cap = meta.get("gaia_db_max_g_mag")
-    if cap is not None:
-        lines.append(f"  Local Gaia DB max G: {float(cap):.2f}")
-    fp = meta.get("gaia_db_fingerprint_sha256")
-    if fp:
-        lines.append(f"  Gaia DB fingerprint: {fp[:16]}...")
-    for key, label in (
-        ("dao_only_n_artifact_negative", "artifact_negative"),
-        ("dao_only_n_unmatched_in_range", "unmatched_in_range (purity signal)"),
-        ("dao_only_n_ambiguous_depth", "ambiguous_depth"),
-        ("dao_only_n_beyond_catalogue", "beyond_catalogue"),
-        ("dao_only_n_indeterminate", "indeterminate"),
-    ):
-        if meta.get(key) is not None:
-            lines.append(f"    {label}: {int(meta[key])}")
-    med = meta.get("dao_only_sigma_g_row_median")
-    if med is not None and math.isfinite(float(med)):
-        lines.append(f"  Per-row sigma_g median: {float(med):.3f} mag")
-    fleming = meta.get("fleming_sigma_mag_population")
-    if fleming is not None:
-        lines.append(f"  Fleming sigma_mag (population diagnostic only): {float(fleming):.3f} mag")
-    zp = meta.get("dao_only_flux_fit_zp")
-    rms = meta.get("dao_only_flux_fit_residual_rms")
-    if zp is not None and rms is not None:
-        lines.append(f"  Flux-to-G fit: zp={float(zp):.3f}, residual RMS={float(rms):.3f} mag")
-        if rms is not None and float(rms) > 0.6:
-            lines.append(
-                "  Note: large flux-to-G scatter weakens implied-G classification precision on this draft."
-            )
-    un_frac = meta.get("dao_only_sigma_g_unmeasurable_fraction")
-    if un_frac is not None:
-        thr = meta.get("dao_only_sigma_g_unmeasurable_threshold_mag", SIGMA_G_UNMEASURABLE_THRESHOLD_MAG)
-        n_u = meta.get("dao_only_sigma_g_unmeasurable_n")
-        lines.append(
-            f"  Unmeasurable fraction (sigma_g>{float(thr):.1f} mag): {float(un_frac):.3f}"
-            + (f" ({int(n_u)} rows)" if n_u is not None else "")
-        )
-    return lines
-
 
 def dao_only_class_meta_flat(meta: dict[str, Any]) -> dict[str, Any]:
     """Flat keys for pipeline_meta."""
