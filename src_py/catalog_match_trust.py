@@ -48,5 +48,3 @@ def is_wcs_untrusted_catalog_match_mode(mode: str | None) -> bool:
     return normalize_catalog_match_mode(mode) in UNTRUSTED_FLUX_CATALOG_MATCH_MODES
 
 
-def is_trusted_catalog_match_mode(mode: str | None) -> bool:
-    return normalize_catalog_match_mode(mode) in TRUSTED_CATALOG_MATCH_MODES
