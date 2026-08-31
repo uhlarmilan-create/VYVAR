@@ -23,7 +23,8 @@ def _coerce_bool(raw: Any) -> bool:
     return t in ("1", "true", "t", "yes", "y")
 
 
-def _norm_id(raw: Any) -> str:
+def _norm_id_gaia_or_raw(raw: Any) -> str:
+    """Gaia canonical id; on exception return stripped raw. Differs from astrometry's direct normalize."""
     if raw is None:
         return ""
     s = str(raw).strip()
@@ -78,7 +79,7 @@ def build_epsf_science_set(platesolve_dir: Path | str) -> EpsfScienceSetResult:
                     z = str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower()
                     if z == "catalog_only":
                         continue
-                    cid = _norm_id(row.get("catalog_id"))
+                    cid = _norm_id_gaia_or_raw(row.get("catalog_id"))
                     if cid:
                         targets.add(cid)
         except Exception as exc:  # noqa: BLE001
@@ -99,7 +100,7 @@ def build_epsf_science_set(platesolve_dir: Path | str) -> EpsfScienceSetResult:
             cdf = read_vyvar_csv(cpt, low_memory=False)
             if "catalog_id" in cdf.columns:
                 for raw in cdf["catalog_id"].fillna("").astype(str):
-                    cid = _norm_id(raw)
+                    cid = _norm_id_gaia_or_raw(raw)
                     if cid:
                         per_target_comps.add(cid)
         except Exception as exc:  # noqa: BLE001
@@ -121,7 +122,7 @@ def build_epsf_science_set(platesolve_dir: Path | str) -> EpsfScienceSetResult:
             if "is_check_star" in psdf.columns and "catalog_id" in psdf.columns:
                 chk = psdf[psdf["is_check_star"].map(_coerce_bool)]
                 for raw in chk["catalog_id"].fillna("").astype(str):
-                    cid = _norm_id(raw)
+                    cid = _norm_id_gaia_or_raw(raw)
                     if cid:
                         check_stars.add(cid)
         except Exception:  # noqa: BLE001
@@ -138,7 +139,7 @@ def build_epsf_science_set(platesolve_dir: Path | str) -> EpsfScienceSetResult:
             if "is_blended" in ms.columns:
                 blend_mask |= ms["is_blended"].map(_coerce_bool)
             for raw in ms.loc[blend_mask, "catalog_id"].fillna("").astype(str):
-                cid = _norm_id(raw)
+                cid = _norm_id_gaia_or_raw(raw)
                 if cid:
                     blended.add(cid)
         except Exception:  # noqa: BLE001

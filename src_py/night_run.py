@@ -789,14 +789,14 @@ def audit_photometry_completeness(
     out["ratio"] = float(raw_ratio)
 
     # Classify missing targets (active but no summary row) by achieved depth.
-    def _norm_id(s: pd.Series) -> pd.Series:
+    def _strip_id_series(s: pd.Series) -> pd.Series:
         return s.astype(str).str.strip()
 
     n_measurable_missing = n_active - n_summary  # conservative default (treat all as measurable)
     achieved_depth = float("nan")
     if "catalog_id" in at_df.columns and "catalog_id" in sm_df.columns:
-        measured_ids = set(_norm_id(sm_df["catalog_id"]).tolist())
-        at_ids = _norm_id(at_df["catalog_id"])
+        measured_ids = set(_strip_id_series(sm_df["catalog_id"]).tolist())
+        at_ids = _strip_id_series(at_df["catalog_id"])
         is_measured = at_ids.isin(measured_ids)
         at_mag = pd.to_numeric(at_df.get("mag"), errors="coerce") if "mag" in at_df.columns else None
         if at_mag is not None:

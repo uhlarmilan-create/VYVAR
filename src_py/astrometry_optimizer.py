@@ -360,11 +360,6 @@ def _apply_wcs_pc_parity_flip_to_primary(fits_path: Path, *, set_vy_optpf: bool 
         return False
 
 
-def _norm_id(v: Any) -> str:
-    """Gaia ``source_id`` / ``catalog_id`` key for joins (``float64``/CSV float must not round large IDs)."""
-    return normalize_gaia_source_id(v)
-
-
 def _poly_features(xn: np.ndarray, yn: np.ndarray) -> np.ndarray:
     r2 = xn * xn + yn * yn
     r4 = r2 * r2
@@ -457,7 +452,7 @@ def _backfill_bp_rp_from_gdf_and_db(
     if "bp_rp" not in df.columns:
         df["bp_rp"] = np.nan
     for i in range(len(df)):
-        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        sid = normalize_gaia_source_id(masterstar_row_gaia_key(df.iloc[i]))
         if not sid or sid not in gmap:
             continue
         cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
@@ -475,7 +470,7 @@ def _backfill_bp_rp_from_gdf_and_db(
             df.at[i, "bp_rp"] = float(v)
     missing: list[str] = []
     for i in range(len(df)):
-        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        sid = normalize_gaia_source_id(masterstar_row_gaia_key(df.iloc[i]))
         if not sid:
             continue
         cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
@@ -486,7 +481,7 @@ def _backfill_bp_rp_from_gdf_and_db(
         return
     got = query_local_gaia_by_source_ids(gaia_db_path, missing)
     for i in range(len(df)):
-        sid = _norm_id(masterstar_row_gaia_key(df.iloc[i]))
+        sid = normalize_gaia_source_id(masterstar_row_gaia_key(df.iloc[i]))
         if not sid:
             continue
         cur = pd.to_numeric(df.at[i, "bp_rp"], errors="coerce")
@@ -654,11 +649,11 @@ def optimize_masterstar_matches(
         f"matched_nonempty={int(cid.astype(str).str.strip().ne('').sum())}/{len(df)}"
     )
 
-    gmap = {_norm_id(sid): i for i, sid in enumerate(gdf["source_id"].astype(str).tolist())}
+    gmap = {normalize_gaia_source_id(sid): i for i, sid in enumerate(gdf["source_id"].astype(str).tolist())}
     matched_idx: list[int] = []
     gm_idx: list[int] = []
     for i, sid in enumerate(cid.tolist()):
-        sid_n = _norm_id(sid)
+        sid_n = normalize_gaia_source_id(sid)
         if not sid_n or sid_n not in gmap:
             continue
         if not (np.isfinite(x[i]) and np.isfinite(y[i])):
@@ -713,7 +708,7 @@ def optimize_masterstar_matches(
         dec=pd.to_numeric(df.get(de_col), errors="coerce").to_numpy(dtype=np.float64) * u.deg,
         frame="icrs",
     )
-    used_ids = set([_norm_id(s) for s in cid.tolist() if _norm_id(s)])
+    used_ids = set([normalize_gaia_source_id(s) for s in cid.tolist() if normalize_gaia_source_id(s)])
     g_ra = pd.to_numeric(gdf["ra"], errors="coerce").to_numpy(dtype=np.float64)
     g_de = pd.to_numeric(gdf["dec"], errors="coerce").to_numpy(dtype=np.float64)
     g_mag = pd.to_numeric(gdf.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)
@@ -758,7 +753,7 @@ def optimize_masterstar_matches(
     _identity_fail = 0
 
     def _is_unmatched_row(row_idx: int) -> bool:
-        return _norm_id(cid_series.iloc[row_idx]) == ""
+        return normalize_gaia_source_id(cid_series.iloc[row_idx]) == ""
 
     def _write_match(row_idx: int, picked_idx: int, sep_arcsec: float) -> bool:
         dpx = float(math.hypot(float(gx0[picked_idx]) - float(x[row_idx]), float(gy0[picked_idx]) - float(y[row_idx])))
@@ -769,7 +764,7 @@ def optimize_masterstar_matches(
         if dpx > 1.5 * _fwhm_hdr:
             nonlocal _identity_warn
             _identity_warn += 1
-        sid = _norm_id(gdf.iloc[picked_idx]["source_id"])
+        sid = normalize_gaia_source_id(gdf.iloc[picked_idx]["source_id"])
         used_ids.add(sid)
         cid_series.iloc[row_idx] = sid
         df.at[row_idx, "catalog"] = "GAIA_DR3"
@@ -790,7 +785,7 @@ def optimize_masterstar_matches(
         mi: list[int] = []
         gj: list[int] = []
         for ii in range(len(df)):
-            sid = _norm_id(cid_series.iloc[ii])
+            sid = normalize_gaia_source_id(cid_series.iloc[ii])
             if not sid or sid not in gmap:
                 continue
             if not (np.isfinite(x[ii]) and np.isfinite(y[ii])):
@@ -833,7 +828,7 @@ def optimize_masterstar_matches(
                     continue
                 if float(dpx[j_idx]) > float(_BRIGHT_MAX_MATCH_DPX):
                     break
-                sid = _norm_id(gdf.iloc[int(j)]["source_id"])
+                sid = normalize_gaia_source_id(gdf.iloc[int(j)]["source_id"])
                 if sid in used_ids:
                     continue
                 picked = int(j)
@@ -876,7 +871,7 @@ def optimize_masterstar_matches(
             order = np.argsort(dpx)
             picked = None
             for j in cand[order]:
-                sid = _norm_id(gdf.iloc[int(j)]["source_id"])
+                sid = normalize_gaia_source_id(gdf.iloc[int(j)]["source_id"])
                 if sid in used_ids:
                     continue
                 picked = int(j)
@@ -913,7 +908,7 @@ def optimize_masterstar_matches(
             ra_gaia: list[float] = []
             de_gaia: list[float] = []
             for sid_raw in cid2.loc[okm].tolist():
-                sid = _norm_id(sid_raw)
+                sid = normalize_gaia_source_id(sid_raw)
                 j = gmap.get(sid)
                 if j is None:
                     ra_gaia.append(float("nan"))
@@ -1230,7 +1225,7 @@ def optimize_masterstar_matches(
                 dxm: list[float] = []
                 dym: list[float] = []
                 for ii in range(len(df)):
-                    sid = _norm_id(cid_series.iloc[ii])
+                    sid = normalize_gaia_source_id(cid_series.iloc[ii])
                     if not sid or sid not in gmap:
                         continue
                     jj = int(gmap[sid])
@@ -1323,7 +1318,7 @@ def optimize_masterstar_matches(
             order = np.argsort(dpx)
             picked = None
             for j in cand[order]:
-                sid = _norm_id(gdf.iloc[int(j)]["source_id"])
+                sid = normalize_gaia_source_id(gdf.iloc[int(j)]["source_id"])
                 if sid in used_ids:
                     continue
                 picked = int(j)
@@ -1403,7 +1398,7 @@ def optimize_masterstar_matches(
                 order = np.argsort(dpx)
                 picked = None
                 for j in cand[order]:
-                    sid = _norm_id(gdf.iloc[int(j)]["source_id"])
+                    sid = normalize_gaia_source_id(gdf.iloc[int(j)]["source_id"])
                     if sid in used_ids:
                         continue
                     picked = int(j)
@@ -1438,7 +1433,7 @@ def optimize_masterstar_matches(
                 dxs: list[float] = []
                 dys: list[float] = []
                 for ii in idx_g.tolist():
-                    sid = _norm_id(cid_s.iloc[int(ii)])
+                    sid = normalize_gaia_source_id(cid_s.iloc[int(ii)])
                     if not sid or sid not in gmap:
                         continue
                     jj = int(gmap[sid])
@@ -1477,7 +1472,7 @@ def optimize_masterstar_matches(
                                 raise
 
                             # One re-match pass (15") to refresh catalog assignments under corrected WCS.
-                            used_ids = set([_norm_id(s) for s in cid_s.tolist() if _norm_id(s)])
+                            used_ids = set([normalize_gaia_source_id(s) for s in cid_s.tolist() if normalize_gaia_source_id(s)])
                             idx_nn2, sep2d2, _ = dcoo.match_to_catalog_sky(gcoo_all)
                             sep_arc2 = np.asarray(sep2d2.arcsecond, dtype=np.float64)
                             rad15 = 15.0
@@ -1488,12 +1483,12 @@ def optimize_masterstar_matches(
                                 j = int(idx_nn2[i])
                                 if not np.isfinite(sep_arc2[i]) or float(sep_arc2[i]) > rad15:
                                     continue
-                                sid = _norm_id(gdf.iloc[j]["source_id"])
+                                sid = normalize_gaia_source_id(gdf.iloc[j]["source_id"])
                                 if not sid:
                                     continue
-                                if sid in used_ids and _norm_id(cid_s.iloc[i]) != sid:
+                                if sid in used_ids and normalize_gaia_source_id(cid_s.iloc[i]) != sid:
                                     continue
-                                if _norm_id(cid_s.iloc[i]) == "":
+                                if normalize_gaia_source_id(cid_s.iloc[i]) == "":
                                     _write_match(i, int(j), float(sep_arc2[i]))
                                     used_ids.add(sid)
                                     added15 += 1
