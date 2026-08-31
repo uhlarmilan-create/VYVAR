@@ -1199,21 +1199,6 @@ def _compute_comp_contamination_map(
     return contamination_map
 
 
-_MAD_SIGMA_SCALE = 1.4826
-
-
-def _mad_sigma(values: np.ndarray) -> float:
-    v = np.asarray(values, dtype=np.float64)
-    v = v[np.isfinite(v)]
-    if int(v.size) < 3:
-        return float(np.std(v)) if int(v.size) > 0 else float("inf")
-    med = float(np.median(v))
-    mad = float(np.median(np.abs(v - med)))
-    if mad > 0:
-        return float(_MAD_SIGMA_SCALE * mad)
-    return float(np.std(v)) if float(np.std(v)) > 0 else float("inf")
-
-
 def _flux_series_to_mag_bjd(
     flux_map: dict[str, list[float]],
     bjd_map: dict[str, list[float]],

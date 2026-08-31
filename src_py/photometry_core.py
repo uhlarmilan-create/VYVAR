@@ -506,8 +506,8 @@ def _sat_limit_peak_adu(cfg: AppConfig | None = None) -> float | None:
     return None
 
 
-def _mad_sigma(arr: np.ndarray) -> float:
-    """Robustny sigma estimator cez MAD / 0.6745."""
+def _mad_sigma_or_std_floor(arr: np.ndarray) -> float:
+    """MAD/0.6745; no finite filter. Zero MAD falls back to std/0.6745 or 1e-9."""
     med = float(np.median(arr))
     mad = float(np.median(np.abs(arr - med)))
     if not math.isfinite(mad) or mad <= 0:
@@ -4615,7 +4615,7 @@ def detect_outliers(
 
     finite_vals = mag_calib[clip_mask]
     med = float(np.median(finite_vals))
-    sigma = _mad_sigma(finite_vals)
+    sigma = _mad_sigma_or_std_floor(finite_vals)
     thr = outlier_sigma * sigma
 
     for i in range(n):

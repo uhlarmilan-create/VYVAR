@@ -399,7 +399,7 @@ def _comp_bp_rp(comp_df: pd.DataFrame) -> dict[str, float]:
 
 
 def _fit_resid_rms(comp_mag_inst, comp_catalog_mag, comp_bp_rp, comp_quality, c1) -> float:
-    from photometry_core import _mad_sigma, _safe_polyfit
+    from photometry_core import _mad_sigma_or_std_floor, _safe_polyfit
 
     usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
     ys: list[float] = []
@@ -430,7 +430,7 @@ def _fit_resid_rms(comp_mag_inst, comp_catalog_mag, comp_bp_rp, comp_quality, c1
         return float("nan")
     c1_init, zp_init = float(p0[0]), float(p0[1])
     resid = y - (c1_init * xs + zp_init)
-    sig = _mad_sigma(resid)
+    sig = _mad_sigma_or_std_floor(resid)
     mask = np.abs(resid) <= 3.0 * float(sig) if math.isfinite(sig) and sig > 0 else np.ones_like(resid, dtype=bool)
     x_cl, y_cl = xs[mask], y[mask]
     if x_cl.size < 2:

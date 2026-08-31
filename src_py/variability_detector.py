@@ -39,7 +39,8 @@ _VARIABILITY_FRAME_COLS = [
 ]
 
 
-def _mad_sigma(x: np.ndarray) -> float:
+def _mad_sigma_or_nan(x: np.ndarray) -> float:
+    """MAD/0.6745 after dropping non-finite; n<3 or MAD<=0 returns nan (no std fallback)."""
     x = np.asarray(x, dtype=float)
     x = x[np.isfinite(x)]
     if x.size < 3:
@@ -600,7 +601,7 @@ def compute_rms_variability(
             expected_vals = np.power(10.0, fit_all)
             expected[:] = expected_vals
             resid = y - (a + b * x)
-            sigma_log = _mad_sigma(resid)
+            sigma_log = _mad_sigma_or_nan(resid)
         except Exception as exc:  # noqa: BLE001
             logging.debug('[EXC-0576] intent unclear (resid = y - (a + b * x) / sigma_log = _mad_sigma(resid) / except Except...: %s', exc)
             pass
@@ -608,7 +609,7 @@ def compute_rms_variability(
     if expected.isna().all():
         med = float(np.nanmedian(field_rms.to_numpy(dtype=float))) if len(field_rms) else float("nan")
         expected[:] = med
-        sigma_log = _mad_sigma(np.log10(np.clip(field_rms.to_numpy(dtype=float), 1e-6, np.inf)))
+        sigma_log = _mad_sigma_or_nan(np.log10(np.clip(field_rms.to_numpy(dtype=float), 1e-6, np.inf)))
 
     out["expected_rms_pct"] = pd.to_numeric(expected, errors="coerce")
 
@@ -799,7 +800,7 @@ def compute_vdi(
 
     vdi_arr = np.asarray(vdi_vals, dtype=float)
     med_vdi = float(np.nanmedian(vdi_arr))
-    sig_vdi = _mad_sigma(vdi_arr)
+    sig_vdi = _mad_sigma_or_nan(vdi_arr)
 
     z = (vdi_arr - med_vdi) / (sig_vdi if math.isfinite(sig_vdi) and sig_vdi > 0 else float("nan"))
 

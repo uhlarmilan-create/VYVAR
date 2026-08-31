@@ -129,7 +129,7 @@ def _fit_resid_rms(
     sigma_clip_sigma: float = 3.0,
 ) -> float:
     """RMS of sigma-clipped comp residuals after c1 fit (matches fit_color_term_c1 logic)."""
-    from photometry_core import _mad_sigma, _safe_polyfit  # noqa: PLC0415
+    from photometry_core import _mad_sigma_or_std_floor, _safe_polyfit  # noqa: PLC0415
 
     usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
     ys: list[float] = []
@@ -160,7 +160,7 @@ def _fit_resid_rms(
         return float("nan")
     c1_init, zp_init = float(p0[0]), float(p0[1])
     resid = y - (c1_init * xs + zp_init)
-    sig = _mad_sigma(resid)
+    sig = _mad_sigma_or_std_floor(resid)
     if not math.isfinite(sig) or sig <= 0:
         mask = np.ones_like(resid, dtype=bool)
     else:
