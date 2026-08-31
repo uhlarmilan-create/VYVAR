@@ -1,0 +1,2032 @@
+[
+  {
+    "path": "src_py/aperture_policy.py",
+    "module": "aperture_policy",
+    "line": 179,
+    "kind": "function",
+    "name": "policy_header_line",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_policy.py:179: unused function 'policy_header_line' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 41,
+    "kind": "method",
+    "name": "radii_from_fwhm",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:41: unused method 'radii_from_fwhm' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 148,
+    "kind": "function",
+    "name": "split_selection_holdout",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:148: unused function 'split_selection_holdout' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 227,
+    "kind": "function",
+    "name": "build_scatter_curve",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:227: unused function 'build_scatter_curve' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 294,
+    "kind": "function",
+    "name": "measure_flux_ladder_frame",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:294: unused function 'measure_flux_ladder_frame' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 375,
+    "kind": "function",
+    "name": "ac_delta_m_from_ee",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:375: unused function 'ac_delta_m_from_ee' (60% confidence)"
+  },
+  {
+    "path": "src_py/aperture_scatter_select.py",
+    "module": "aperture_scatter_select",
+    "line": 395,
+    "kind": "function",
+    "name": "flat_aperture_table_from_radius",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\aperture_scatter_select.py:395: unused function 'flat_aperture_table_from_radius' (60% confidence)"
+  },
+  {
+    "path": "src_py/band_classify.py",
+    "module": "band_classify",
+    "line": 330,
+    "kind": "function",
+    "name": "effective_band_for_extinction",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\band_classify.py:330: unused function 'effective_band_for_extinction' (60% confidence)"
+  },
+  {
+    "path": "src_py/band_classify.py",
+    "module": "band_classify",
+    "line": 342,
+    "kind": "function",
+    "name": "compare_legacy_color_term_auto",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\band_classify.py:342: unused function 'compare_legacy_color_term_auto' (60% confidence)"
+  },
+  {
+    "path": "src_py/band_classify.py",
+    "module": "band_classify",
+    "line": 358,
+    "kind": "function",
+    "name": "guess_aavso_code_from_obs_group",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\band_classify.py:358: unused function 'guess_aavso_code_from_obs_group' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_diag.py",
+    "module": "cal_diag",
+    "line": 805,
+    "kind": "function",
+    "name": "calibrated_stage_from_header",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_diag.py:805: unused function 'calibrated_stage_from_header' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_diag.py",
+    "module": "cal_diag",
+    "line": 820,
+    "kind": "function",
+    "name": "apply_calibrated_stage_for_compare",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_diag.py:820: unused function 'apply_calibrated_stage_for_compare' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_diag.py",
+    "module": "cal_diag",
+    "line": 851,
+    "kind": "function",
+    "name": "calibrated_compare_refused",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_diag.py:851: unused function 'calibrated_compare_refused' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_stage.py",
+    "module": "cal_stage",
+    "line": 380,
+    "kind": "function",
+    "name": "verify_calibrated_tree",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_stage.py:380: unused function 'verify_calibrated_tree' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_stage.py",
+    "module": "cal_stage",
+    "line": 428,
+    "kind": "function",
+    "name": "archive_stage_census",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_stage.py:428: unused function 'archive_stage_census' (60% confidence)"
+  },
+  {
+    "path": "src_py/cal_stage.py",
+    "module": "cal_stage",
+    "line": 444,
+    "kind": "function",
+    "name": "write_cal_stage_json",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\cal_stage.py:444: unused function 'write_cal_stage_json' (60% confidence)"
+  },
+  {
+    "path": "src_py/catalog_match_trust.py",
+    "module": "catalog_match_trust",
+    "line": 51,
+    "kind": "function",
+    "name": "is_trusted_catalog_match_mode",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\catalog_match_trust.py:51: unused function 'is_trusted_catalog_match_mode' (60% confidence)"
+  },
+  {
+    "path": "src_py/catalog_provenance.py",
+    "module": "catalog_provenance",
+    "line": 92,
+    "kind": "function",
+    "name": "summarize_catalog_delta",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\catalog_provenance.py:92: unused function 'summarize_catalog_delta' (60% confidence)"
+  },
+  {
+    "path": "src_py/check_star_kmag.py",
+    "module": "check_star_kmag",
+    "line": 349,
+    "kind": "function",
+    "name": "_target_mag_from_row",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\check_star_kmag.py:349: unused function '_target_mag_from_row' (60% confidence)"
+  },
+  {
+    "path": "src_py/check_star_kmag.py",
+    "module": "check_star_kmag",
+    "line": 366,
+    "kind": "function",
+    "name": "_ensemble_median_bprp",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\check_star_kmag.py:366: unused function '_ensemble_median_bprp' (60% confidence)"
+  },
+  {
+    "path": "src_py/check_star_kmag.py",
+    "module": "check_star_kmag",
+    "line": 386,
+    "kind": "function",
+    "name": "select_external_check_star",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\check_star_kmag.py:386: unused function 'select_external_check_star' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_pool_noise.py",
+    "module": "comp_pool_noise",
+    "line": 1333,
+    "kind": "function",
+    "name": "derive_target_depth_limit",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_pool_noise.py:1333: unused function 'derive_target_depth_limit' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_pool_rms.py",
+    "module": "comp_pool_rms",
+    "line": 52,
+    "kind": "function",
+    "name": "_norm_id_series",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_pool_rms.py:52: unused function '_norm_id_series' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_rms_loo.py",
+    "module": "comp_rms_loo",
+    "line": 120,
+    "kind": "function",
+    "name": "loo_ceiling_mag",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_rms_loo.py:120: unused function 'loo_ceiling_mag' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_selection_per_target.py",
+    "module": "comp_selection_per_target",
+    "line": 1217,
+    "kind": "function",
+    "name": "_flux_series_to_mag_bjd",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_selection_per_target.py:1217: unused function '_flux_series_to_mag_bjd' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_selection_per_target.py",
+    "module": "comp_selection_per_target",
+    "line": 1242,
+    "kind": "function",
+    "name": "_common_mode_detrend_mag_lcs",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_selection_per_target.py:1242: unused function '_common_mode_detrend_mag_lcs' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_weights.py",
+    "module": "comp_weights",
+    "line": 81,
+    "kind": "function",
+    "name": "compute_comp_weights",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_weights.py:81: unused function 'compute_comp_weights' (60% confidence)"
+  },
+  {
+    "path": "src_py/comp_weights.py",
+    "module": "comp_weights",
+    "line": 283,
+    "kind": "function",
+    "name": "weights_table",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\comp_weights.py:283: unused function 'weights_table' (60% confidence)"
+  },
+  {
+    "path": "src_py/config.py",
+    "module": "config",
+    "line": 241,
+    "kind": "function",
+    "name": "resolve_comp_sparse_fallback_min",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\config.py:241: unused function 'resolve_comp_sparse_fallback_min' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_gaia_calibration.py",
+    "module": "dao_gaia_calibration",
+    "line": 392,
+    "kind": "function",
+    "name": "_mutual_nearest_separations_px",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_gaia_calibration.py:392: unused function '_mutual_nearest_separations_px' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_gaia_calibration.py",
+    "module": "dao_gaia_calibration",
+    "line": 813,
+    "kind": "function",
+    "name": "compute_faint_star_centroid_offsets_px",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_gaia_calibration.py:813: unused function 'compute_faint_star_centroid_offsets_px' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_gaia_calibration.py",
+    "module": "dao_gaia_calibration",
+    "line": 1354,
+    "kind": "function",
+    "name": "load_calibration_certificate",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_gaia_calibration.py:1354: unused function 'load_calibration_certificate' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_gaia_stage_validation.py",
+    "module": "dao_gaia_stage_validation",
+    "line": 411,
+    "kind": "function",
+    "name": "write_validation_artifact",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_gaia_stage_validation.py:411: unused function 'write_validation_artifact' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_reconcile.py",
+    "module": "dao_reconcile",
+    "line": 406,
+    "kind": "function",
+    "name": "is_blended_with_matched",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_reconcile.py:406: unused function 'is_blended_with_matched' (60% confidence)"
+  },
+  {
+    "path": "src_py/dao_reconcile.py",
+    "module": "dao_reconcile",
+    "line": 1387,
+    "kind": "function",
+    "name": "dao_only_report_lines",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dao_reconcile.py:1387: unused function 'dao_only_report_lines' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 663,
+    "kind": "function",
+    "name": "require_gaia_db_path",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:663: unused function 'require_gaia_db_path' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1181,
+    "kind": "method",
+    "name": "_enable_foreign_keys",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1181: unused method '_enable_foreign_keys' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1386,
+    "kind": "method",
+    "name": "count_final_data_for_equipment_id",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1386: unused method 'count_final_data_for_equipment_id' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1391,
+    "kind": "method",
+    "name": "count_final_data_for_telescope_id",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1391: unused method 'count_final_data_for_telescope_id' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1812,
+    "kind": "method",
+    "name": "get_draft_scanning_id",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1812: unused method 'get_draft_scanning_id' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1820,
+    "kind": "method",
+    "name": "update_obs_draft_center",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1820: unused method 'update_obs_draft_center' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 1858,
+    "kind": "method",
+    "name": "get_obs_draft_masterstar_path",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:1858: unused method 'get_obs_draft_masterstar_path' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 2553,
+    "kind": "method",
+    "name": "set_obs_draft_calibration_mode",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:2553: unused method 'set_obs_draft_calibration_mode' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 2984,
+    "kind": "method",
+    "name": "insert_equipment",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:2984: unused method 'insert_equipment' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 3228,
+    "kind": "method",
+    "name": "insert_telescope",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:3228: unused method 'insert_telescope' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 3245,
+    "kind": "method",
+    "name": "insert_location",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:3245: unused method 'insert_location' (60% confidence)"
+  },
+  {
+    "path": "src_py/database.py",
+    "module": "database",
+    "line": 3302,
+    "kind": "method",
+    "name": "resolve_import_location_id",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\database.py:3302: unused method 'resolve_import_location_id' (60% confidence)"
+  },
+  {
+    "path": "src_py/dilution.py",
+    "module": "dilution",
+    "line": 280,
+    "kind": "function",
+    "name": "compute_dilution_batch",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\dilution.py:280: unused function 'compute_dilution_batch' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 50,
+    "kind": "function",
+    "name": "reset_manifest_shadow_counters",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:50: unused function 'reset_manifest_shadow_counters' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 64,
+    "kind": "function",
+    "name": "manifest_shadow_counter_snapshot",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:64: unused function 'manifest_shadow_counter_snapshot' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 271,
+    "kind": "function",
+    "name": "apply_manifest_core_to_draft_row",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:271: unused function 'apply_manifest_core_to_draft_row' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 361,
+    "kind": "function",
+    "name": "_center_from_draft_row",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:361: unused function '_center_from_draft_row' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 371,
+    "kind": "function",
+    "name": "_paths_from_draft_row",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:371: unused function '_paths_from_draft_row' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 388,
+    "kind": "function",
+    "name": "_rig_from_draft_row",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:388: unused function '_rig_from_draft_row' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 641,
+    "kind": "function",
+    "name": "_compare_manifest_file_entries",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:641: unused function '_compare_manifest_file_entries' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1129,
+    "kind": "function",
+    "name": "_fetch_obs_draft_row_raw",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1129: unused function '_fetch_obs_draft_row_raw' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1159,
+    "kind": "function",
+    "name": "backfill_draft_manifest_from_db",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1159: unused function 'backfill_draft_manifest_from_db' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1170,
+    "kind": "function",
+    "name": "record_draft_manifest_core",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1170: unused function 'record_draft_manifest_core' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1238,
+    "kind": "function",
+    "name": "manifest_db_parity_errors",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1238: unused function 'manifest_db_parity_errors' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1297,
+    "kind": "function",
+    "name": "collect_manifest_draft_rows",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1297: unused function 'collect_manifest_draft_rows' (60% confidence)"
+  },
+  {
+    "path": "src_py/draft_provenance.py",
+    "module": "draft_provenance",
+    "line": 1359,
+    "kind": "function",
+    "name": "collect_manifest_observation_rows",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\draft_provenance.py:1359: unused function 'collect_manifest_observation_rows' (60% confidence)"
+  },
+  {
+    "path": "src_py/epsf_frame_accounting.py",
+    "module": "epsf_frame_accounting",
+    "line": 43,
+    "kind": "function",
+    "name": "make_empty_frame_record",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\epsf_frame_accounting.py:43: unused function 'make_empty_frame_record' (60% confidence)"
+  },
+  {
+    "path": "src_py/epsf_frame_accounting.py",
+    "module": "epsf_frame_accounting",
+    "line": 59,
+    "kind": "function",
+    "name": "record_from_worker",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\epsf_frame_accounting.py:59: unused function 'record_from_worker' (60% confidence)"
+  },
+  {
+    "path": "src_py/epsf_psf_merge.py",
+    "module": "epsf_psf_merge",
+    "line": 281,
+    "kind": "function",
+    "name": "stamp_p4_none_science_sidecars",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\epsf_psf_merge.py:281: unused function 'stamp_p4_none_science_sidecars' (60% confidence)"
+  },
+  {
+    "path": "src_py/epsf_zp_ok.py",
+    "module": "epsf_zp_ok",
+    "line": 76,
+    "kind": "function",
+    "name": "residual_meters_from_lightcurves",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\epsf_zp_ok.py:76: unused function 'residual_meters_from_lightcurves' (60% confidence)"
+  },
+  {
+    "path": "src_py/err_calibration.py",
+    "module": "err_calibration",
+    "line": 67,
+    "kind": "function",
+    "name": "write_identity_sidecar",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\err_calibration.py:67: unused function 'write_identity_sidecar' (60% confidence)"
+  },
+  {
+    "path": "src_py/err_calibration.py",
+    "module": "err_calibration",
+    "line": 242,
+    "kind": "function",
+    "name": "choose_form_by_heldout",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\err_calibration.py:242: unused function 'choose_form_by_heldout' (60% confidence)"
+  },
+  {
+    "path": "src_py/err_calibration.py",
+    "module": "err_calibration",
+    "line": 285,
+    "kind": "function",
+    "name": "calibrate_bins",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\err_calibration.py:285: unused function 'calibrate_bins' (60% confidence)"
+  },
+  {
+    "path": "src_py/err_calibration.py",
+    "module": "err_calibration",
+    "line": 328,
+    "kind": "function",
+    "name": "apply_calibration_mmag",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\err_calibration.py:328: unused function 'apply_calibration_mmag' (60% confidence)"
+  },
+  {
+    "path": "src_py/err_calibration.py",
+    "module": "err_calibration",
+    "line": 416,
+    "kind": "function",
+    "name": "bins_to_dicts",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\err_calibration.py:416: unused function 'bins_to_dicts' (60% confidence)"
+  },
+  {
+    "path": "src_py/except_fix_counters.py",
+    "module": "except_fix_counters",
+    "line": 113,
+    "kind": "function",
+    "name": "merge_except_fix_summary",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\except_fix_counters.py:113: unused function 'merge_except_fix_summary' (60% confidence)"
+  },
+  {
+    "path": "src_py/gain_photon_transfer.py",
+    "module": "gain_photon_transfer",
+    "line": 43,
+    "kind": "function",
+    "name": "legacy_pt_aperture_from_leftover_dynamic_params",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\gain_photon_transfer.py:43: unused function 'legacy_pt_aperture_from_leftover_dynamic_params' (60% confidence)"
+  },
+  {
+    "path": "src_py/gain_photon_transfer.py",
+    "module": "gain_photon_transfer",
+    "line": 226,
+    "kind": "function",
+    "name": "container_scale_from_s1a",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\gain_photon_transfer.py:226: unused function 'container_scale_from_s1a' (60% confidence)"
+  },
+  {
+    "path": "src_py/gain_photon_transfer.py",
+    "module": "gain_photon_transfer",
+    "line": 328,
+    "kind": "function",
+    "name": "fire_proof_bare_db_vs_gpt",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\gain_photon_transfer.py:328: unused function 'fire_proof_bare_db_vs_gpt' (60% confidence)"
+  },
+  {
+    "path": "src_py/gain_photon_transfer.py",
+    "module": "gain_photon_transfer",
+    "line": 356,
+    "kind": "function",
+    "name": "read_gain_pt_sidecar",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\gain_photon_transfer.py:356: unused function 'read_gain_pt_sidecar' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_analysis.py",
+    "module": "hrd_analysis",
+    "line": 76,
+    "kind": "function",
+    "name": "is_hrd_parallax_reliable",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_analysis.py:76: unused function 'is_hrd_parallax_reliable' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_analysis.py",
+    "module": "hrd_analysis",
+    "line": 878,
+    "kind": "function",
+    "name": "_physics_net_mask",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_analysis.py:878: unused function '_physics_net_mask' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_colorfield.py",
+    "module": "hrd_colorfield",
+    "line": 826,
+    "kind": "function",
+    "name": "background_neutrality_grid",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_colorfield.py:826: unused function 'background_neutrality_grid' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_colorfield.py",
+    "module": "hrd_colorfield",
+    "line": 881,
+    "kind": "function",
+    "name": "save_g2_heatmap_png",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_colorfield.py:881: unused function 'save_g2_heatmap_png' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_colorfield.py",
+    "module": "hrd_colorfield",
+    "line": 900,
+    "kind": "function",
+    "name": "color_field_stats",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_colorfield.py:900: unused function 'color_field_stats' (60% confidence)"
+  },
+  {
+    "path": "src_py/hrd_colorfield.py",
+    "module": "hrd_colorfield",
+    "line": 929,
+    "kind": "function",
+    "name": "timed_render_catalog_color_field",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\hrd_colorfield.py:929: unused function 'timed_render_catalog_color_field' (60% confidence)"
+  },
+  {
+    "path": "src_py/importer.py",
+    "module": "importer",
+    "line": 406,
+    "kind": "function",
+    "name": "_format_temp",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\importer.py:406: unused function '_format_temp' (60% confidence)"
+  },
+  {
+    "path": "src_py/importer.py",
+    "module": "importer",
+    "line": 457,
+    "kind": "function",
+    "name": "_find_lights_subdirectory",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\importer.py:457: unused function '_find_lights_subdirectory' (60% confidence)"
+  },
+  {
+    "path": "src_py/importer.py",
+    "module": "importer",
+    "line": 494,
+    "kind": "function",
+    "name": "_list_top_level_light_fits",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\importer.py:494: unused function '_list_top_level_light_fits' (60% confidence)"
+  },
+  {
+    "path": "src_py/infolog.py",
+    "module": "infolog",
+    "line": 181,
+    "kind": "function",
+    "name": "get_active_session_log_path",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\infolog.py:181: unused function 'get_active_session_log_path' (60% confidence)"
+  },
+  {
+    "path": "src_py/invariants_runtime.py",
+    "module": "invariants_runtime",
+    "line": 248,
+    "kind": "function",
+    "name": "uniform_sum_preserving_upscale",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\invariants_runtime.py:248: unused function 'uniform_sum_preserving_upscale' (60% confidence)"
+  },
+  {
+    "path": "src_py/invariants_runtime.py",
+    "module": "invariants_runtime",
+    "line": 463,
+    "kind": "function",
+    "name": "check_residual_flatness",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\invariants_runtime.py:463: unused function 'check_residual_flatness' (60% confidence)"
+  },
+  {
+    "path": "src_py/k2_cohort_core.py",
+    "module": "k2_cohort_core",
+    "line": 171,
+    "kind": "function",
+    "name": "lag1_autocorrelation",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\k2_cohort_core.py:171: unused function 'lag1_autocorrelation' (60% confidence)"
+  },
+  {
+    "path": "src_py/k2_cohort_core.py",
+    "module": "k2_cohort_core",
+    "line": 185,
+    "kind": "function",
+    "name": "expected_k2_sign",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\k2_cohort_core.py:185: unused function 'expected_k2_sign' (60% confidence)"
+  },
+  {
+    "path": "src_py/k2_cohort_core.py",
+    "module": "k2_cohort_core",
+    "line": 448,
+    "kind": "function",
+    "name": "extract_cell_report_stats",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\k2_cohort_core.py:448: unused function 'extract_cell_report_stats' (60% confidence)"
+  },
+  {
+    "path": "src_py/k2_cohort_core.py",
+    "module": "k2_cohort_core",
+    "line": 505,
+    "kind": "function",
+    "name": "k2_priority_verdict",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\k2_cohort_core.py:505: unused function 'k2_priority_verdict' (60% confidence)"
+  },
+  {
+    "path": "src_py/masterstar_gaia_accounting.py",
+    "module": "masterstar_gaia_accounting",
+    "line": 810,
+    "kind": "function",
+    "name": "verify_ms_identity",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\masterstar_gaia_accounting.py:810: unused function 'verify_ms_identity' (60% confidence)"
+  },
+  {
+    "path": "src_py/masterstar_gaia_accounting.py",
+    "module": "masterstar_gaia_accounting",
+    "line": 1350,
+    "kind": "function",
+    "name": "overlay_gaia_complete_on_existing_masterstar",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\masterstar_gaia_accounting.py:1350: unused function 'overlay_gaia_complete_on_existing_masterstar' (60% confidence)"
+  },
+  {
+    "path": "src_py/method_lc_output.py",
+    "module": "method_lc_output",
+    "line": 77,
+    "kind": "function",
+    "name": "save_method_variant_lightcurve",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\method_lc_output.py:77: unused function 'save_method_variant_lightcurve' (60% confidence)"
+  },
+  {
+    "path": "src_py/night_run.py",
+    "module": "night_run",
+    "line": 194,
+    "kind": "function",
+    "name": "missing_night_run_inputs",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\night_run.py:194: unused function 'missing_night_run_inputs' (60% confidence)"
+  },
+  {
+    "path": "src_py/optics_autodetect.py",
+    "module": "optics_autodetect",
+    "line": 49,
+    "kind": "property",
+    "name": "autofill",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\optics_autodetect.py:49: unused property 'autofill' (60% confidence)"
+  },
+  {
+    "path": "src_py/osc_align.py",
+    "module": "osc_align",
+    "line": 390,
+    "kind": "function",
+    "name": "collect_handoff_from_alignment_results",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\osc_align.py:390: unused function 'collect_handoff_from_alignment_results' (60% confidence)"
+  },
+  {
+    "path": "src_py/osc_align.py",
+    "module": "osc_align",
+    "line": 416,
+    "kind": "function",
+    "name": "copy_alignment_report_with_channel_paths",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\osc_align.py:416: unused function 'copy_alignment_report_with_channel_paths' (60% confidence)"
+  },
+  {
+    "path": "src_py/osc_extract.py",
+    "module": "osc_extract",
+    "line": 182,
+    "kind": "function",
+    "name": "checkerboard_column_delta",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\osc_extract.py:182: unused function 'checkerboard_column_delta' (60% confidence)"
+  },
+  {
+    "path": "src_py/param_resolver.py",
+    "module": "param_resolver",
+    "line": 517,
+    "kind": "function",
+    "name": "resolve_pixel_um",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\param_resolver.py:517: unused function 'resolve_pixel_um' (60% confidence)"
+  },
+  {
+    "path": "src_py/param_resolver.py",
+    "module": "param_resolver",
+    "line": 535,
+    "kind": "function",
+    "name": "resolve_focal_mm",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\param_resolver.py:535: unused function 'resolve_focal_mm' (60% confidence)"
+  },
+  {
+    "path": "src_py/param_resolver.py",
+    "module": "param_resolver",
+    "line": 599,
+    "kind": "function",
+    "name": "resolve_binning",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\param_resolver.py:599: unused function 'resolve_binning' (60% confidence)"
+  },
+  {
+    "path": "src_py/param_resolver.py",
+    "module": "param_resolver",
+    "line": 608,
+    "kind": "function",
+    "name": "_sqlite_row_field",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\param_resolver.py:608: unused function '_sqlite_row_field' (60% confidence)"
+  },
+  {
+    "path": "src_py/phase0_funnel.py",
+    "module": "phase0_funnel",
+    "line": 17,
+    "kind": "function",
+    "name": "compute_phase0_funnel_fingerprint",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\phase0_funnel.py:17: unused function 'compute_phase0_funnel_fingerprint' (60% confidence)"
+  },
+  {
+    "path": "src_py/phase0_funnel.py",
+    "module": "phase0_funnel",
+    "line": 56,
+    "kind": "function",
+    "name": "compare_phase0_funnel_fingerprints",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\phase0_funnel.py:56: unused function 'compare_phase0_funnel_fingerprints' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 519,
+    "kind": "function",
+    "name": "_aperture_to_mask_single",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:519: unused function '_aperture_to_mask_single' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 2313,
+    "kind": "function",
+    "name": "_noise_floor_adu_from_image_array",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:2313: unused function '_noise_floor_adu_from_image_array' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 5147,
+    "kind": "function",
+    "name": "_is_nofilter_obs_group",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:5147: unused function '_is_nofilter_obs_group' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 5165,
+    "kind": "function",
+    "name": "_is_broadband_photometric_filter",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:5165: unused function '_is_broadband_photometric_filter' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 9193,
+    "kind": "function",
+    "name": "_apply_role_aware_aperture_scaling",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:9193: unused function '_apply_role_aware_aperture_scaling' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 9239,
+    "kind": "function",
+    "name": "_frame_quality_gate_select",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:9239: unused function '_frame_quality_gate_select' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 10597,
+    "kind": "function",
+    "name": "_recompute_bjd_hjd_per_target",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:10597: unused function '_recompute_bjd_hjd_per_target' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 12688,
+    "kind": "function",
+    "name": "photometer_check_star_production_path",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:12688: unused function 'photometer_check_star_production_path' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 15956,
+    "kind": "function",
+    "name": "_select_comps_by_color_then_rms",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:15956: unused function '_select_comps_by_color_then_rms' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_core.py",
+    "module": "photometry_core",
+    "line": 15980,
+    "kind": "function",
+    "name": "_select_comps_tiered",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_core.py:15980: unused function '_select_comps_tiered' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_report.py",
+    "module": "photometry_report",
+    "line": 282,
+    "kind": "function",
+    "name": "vsx_limit_vs_depth_status",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_report.py:282: unused function 'vsx_limit_vs_depth_status' (60% confidence)"
+  },
+  {
+    "path": "src_py/photometry_report.py",
+    "module": "photometry_report",
+    "line": 328,
+    "kind": "function",
+    "name": "load_field_depth_metrics",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\photometry_report.py:328: unused function 'load_field_depth_metrics' (60% confidence)"
+  },
+  {
+    "path": "src_py/pinned_ensembles.py",
+    "module": "pinned_ensembles",
+    "line": 767,
+    "kind": "function",
+    "name": "verify_inv_pin_01",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pinned_ensembles.py:767: unused function 'verify_inv_pin_01' (60% confidence)"
+  },
+  {
+    "path": "src_py/pinned_ensembles.py",
+    "module": "pinned_ensembles",
+    "line": 799,
+    "kind": "function",
+    "name": "verify_inv_pin_02",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pinned_ensembles.py:799: unused function 'verify_inv_pin_02' (60% confidence)"
+  },
+  {
+    "path": "src_py/pinned_ensembles.py",
+    "module": "pinned_ensembles",
+    "line": 881,
+    "kind": "function",
+    "name": "verify_inv_pin_03",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pinned_ensembles.py:881: unused function 'verify_inv_pin_03' (60% confidence)"
+  },
+  {
+    "path": "src_py/pinned_ensembles.py",
+    "module": "pinned_ensembles",
+    "line": 917,
+    "kind": "function",
+    "name": "generate_pinned_ensembles_csv",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pinned_ensembles.py:917: unused function 'generate_pinned_ensembles_csv' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 248,
+    "kind": "function",
+    "name": "_fits_header_positive_float",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:248: unused function '_fits_header_positive_float' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 296,
+    "kind": "function",
+    "name": "_per_frame_noise_error_map",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:296: unused function '_per_frame_noise_error_map' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 413,
+    "kind": "function",
+    "name": "_epsf_lc_catalog_ids",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:413: unused function '_epsf_lc_catalog_ids' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 771,
+    "kind": "function",
+    "name": "_dark_np_for_calibration_path",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:771: unused function '_dark_np_for_calibration_path' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 816,
+    "kind": "function",
+    "name": "_dark_array_for_calibration",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:816: unused function '_dark_array_for_calibration' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 1533,
+    "kind": "function",
+    "name": "_dao_star_table_mean_elongation",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:1533: unused function '_dao_star_table_mean_elongation' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 1762,
+    "kind": "function",
+    "name": "_icrs_offset_arcmin",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:1762: unused function '_icrs_offset_arcmin' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 2741,
+    "kind": "function",
+    "name": "_cupy_available",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:2741: unused function '_cupy_available' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 3510,
+    "kind": "function",
+    "name": "get_auto_fov",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:3510: unused function 'get_auto_fov' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 4151,
+    "kind": "function",
+    "name": "_try_solve_wcs_astrometry_net_or_local_cli",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:4151: unused function '_try_solve_wcs_astrometry_net_or_local_cli' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 4543,
+    "kind": "function",
+    "name": "_wcs_astrometry_nearly_identical",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:4543: unused function '_wcs_astrometry_nearly_identical' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 5768,
+    "kind": "function",
+    "name": "_star_saturation_flags",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:5768: unused function '_star_saturation_flags' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 11930,
+    "kind": "function",
+    "name": "validate_comparison_ensemble_flatness",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:11930: unused function 'validate_comparison_ensemble_flatness' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 12092,
+    "kind": "function",
+    "name": "_gaia_sky_match_wcs_fragment",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:12092: unused function '_gaia_sky_match_wcs_fragment' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 12125,
+    "kind": "function",
+    "name": "_refine_masterstar_wcs_gaia_sky_match_infile",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:12125: unused function '_refine_masterstar_wcs_gaia_sky_match_infile' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 17334,
+    "kind": "function",
+    "name": "_has_any_usable_master_flat",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:17334: unused function '_has_any_usable_master_flat' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 19766,
+    "kind": "method",
+    "name": "calibrate",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:19766: unused method 'calibrate' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 19868,
+    "kind": "method",
+    "name": "calibrate_batch",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:19868: unused method 'calibrate_batch' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 20184,
+    "kind": "method",
+    "name": "quick_analyze_last_import",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:20184: unused method 'quick_analyze_last_import' (60% confidence)"
+  },
+  {
+    "path": "src_py/pipeline.py",
+    "module": "pipeline",
+    "line": 20228,
+    "kind": "method",
+    "name": "prepare_observation_from_session",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\pipeline.py:20228: unused method 'prepare_observation_from_session' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_neighbor_sub.py",
+    "module": "psf_neighbor_sub",
+    "line": 193,
+    "kind": "function",
+    "name": "neighbor_sub_target_flux",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_neighbor_sub.py:193: unused function 'neighbor_sub_target_flux' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 170,
+    "kind": "function",
+    "name": "_epsf_allowed_catalog_ids",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:170: unused function '_epsf_allowed_catalog_ids' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 212,
+    "kind": "function",
+    "name": "_epsf_positions_from_csvs",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:212: unused function '_epsf_positions_from_csvs' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 607,
+    "kind": "function",
+    "name": "_epsf_fwhm_native_legacy_px",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:607: unused function '_epsf_fwhm_native_legacy_px' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 828,
+    "kind": "function",
+    "name": "_epsf_augment_candidates_from_detected_pool",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:828: unused function '_epsf_augment_candidates_from_detected_pool' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 1665,
+    "kind": "function",
+    "name": "build_epsf_grid_model",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:1665: unused function 'build_epsf_grid_model' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 2224,
+    "kind": "function",
+    "name": "_annulus_sky_per_px_custom",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:2224: unused function '_annulus_sky_per_px_custom' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 2445,
+    "kind": "function",
+    "name": "_psf_fit_error_cutout",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:2445: unused function '_psf_fit_error_cutout' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_photometry.py",
+    "module": "psf_photometry",
+    "line": 2488,
+    "kind": "function",
+    "name": "_psf_fit_region_mask",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_photometry.py:2488: unused function '_psf_fit_region_mask' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_runner.py",
+    "module": "psf_runner",
+    "line": 640,
+    "kind": "function",
+    "name": "step_1_build_epsf",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_runner.py:640: unused function 'step_1_build_epsf' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_runner.py",
+    "module": "psf_runner",
+    "line": 697,
+    "kind": "function",
+    "name": "step_2_load_targets",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_runner.py:697: unused function 'step_2_load_targets' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_runner.py",
+    "module": "psf_runner",
+    "line": 803,
+    "kind": "function",
+    "name": "step_3_run_psf_on_frames",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_runner.py:803: unused function 'step_3_run_psf_on_frames' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_runner.py",
+    "module": "psf_runner",
+    "line": 1159,
+    "kind": "function",
+    "name": "step_4_build_summary",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_runner.py:1159: unused function 'step_4_build_summary' (60% confidence)"
+  },
+  {
+    "path": "src_py/psf_runner.py",
+    "module": "psf_runner",
+    "line": 1283,
+    "kind": "function",
+    "name": "step_5_calibrate_lightcurve",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\psf_runner.py:1283: unused function 'step_5_calibrate_lightcurve' (60% confidence)"
+  },
+  {
+    "path": "src_py/report_methods.py",
+    "module": "report_methods",
+    "line": 16,
+    "kind": "function",
+    "name": "have_psf_frame_columns",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\report_methods.py:16: unused function 'have_psf_frame_columns' (60% confidence)"
+  },
+  {
+    "path": "src_py/sat_diag.py",
+    "module": "sat_diag",
+    "line": 144,
+    "kind": "method",
+    "name": "may_exclude_linearity",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sat_diag.py:144: unused method 'may_exclude_linearity' (60% confidence)"
+  },
+  {
+    "path": "src_py/sat_diag.py",
+    "module": "sat_diag",
+    "line": 401,
+    "kind": "function",
+    "name": "expected_raw_from_aligned_centroid",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sat_diag.py:401: unused function 'expected_raw_from_aligned_centroid' (60% confidence)"
+  },
+  {
+    "path": "src_py/sat_diag.py",
+    "module": "sat_diag",
+    "line": 460,
+    "kind": "function",
+    "name": "compute_frame_drift",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sat_diag.py:460: unused function 'compute_frame_drift' (60% confidence)"
+  },
+  {
+    "path": "src_py/sat_diag.py",
+    "module": "sat_diag",
+    "line": 492,
+    "kind": "function",
+    "name": "compute_frame_drift_from_centroids",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sat_diag.py:492: unused function 'compute_frame_drift_from_centroids' (60% confidence)"
+  },
+  {
+    "path": "src_py/sat_diag.py",
+    "module": "sat_diag",
+    "line": 956,
+    "kind": "function",
+    "name": "stamp_sat_fits_headers",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sat_diag.py:956: unused function 'stamp_sat_fits_headers' (60% confidence)"
+  },
+  {
+    "path": "src_py/sigma_budget.py",
+    "module": "sigma_budget",
+    "line": 36,
+    "kind": "function",
+    "name": "combine_sigma_mag_quadrature",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sigma_budget.py:36: unused function 'combine_sigma_mag_quadrature' (60% confidence)"
+  },
+  {
+    "path": "src_py/sigma_budget.py",
+    "module": "sigma_budget",
+    "line": 138,
+    "kind": "function",
+    "name": "total_sigma",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sigma_budget.py:138: unused function 'total_sigma' (60% confidence)"
+  },
+  {
+    "path": "src_py/sigma_floor_core.py",
+    "module": "sigma_floor_core",
+    "line": 236,
+    "kind": "function",
+    "name": "pzq_fit_sigma_r",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sigma_floor_core.py:236: unused function 'pzq_fit_sigma_r' (60% confidence)"
+  },
+  {
+    "path": "src_py/sparse_trust_core.py",
+    "module": "sparse_trust_core",
+    "line": 97,
+    "kind": "function",
+    "name": "triangulation_hat_ci",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\sparse_trust_core.py:97: unused function 'triangulation_hat_ci' (60% confidence)"
+  },
+  {
+    "path": "src_py/tess_verify.py",
+    "module": "tess_verify",
+    "line": 339,
+    "kind": "method",
+    "name": "summary_text",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\tess_verify.py:339: unused method 'summary_text' (60% confidence)"
+  },
+  {
+    "path": "src_py/time_utils.py",
+    "module": "time_utils",
+    "line": 33,
+    "kind": "function",
+    "name": "_clamp_lat",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\time_utils.py:33: unused function '_clamp_lat' (60% confidence)"
+  },
+  {
+    "path": "src_py/time_utils.py",
+    "module": "time_utils",
+    "line": 37,
+    "kind": "function",
+    "name": "_clamp_lon",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\time_utils.py:37: unused function '_clamp_lon' (60% confidence)"
+  },
+  {
+    "path": "src_py/time_utils.py",
+    "module": "time_utils",
+    "line": 46,
+    "kind": "function",
+    "name": "_clamp_elev",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\time_utils.py:46: unused function '_clamp_elev' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_calibration.py",
+    "module": "ui_calibration",
+    "line": 268,
+    "kind": "function",
+    "name": "draft_runtime_status",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_calibration.py:268: unused function 'draft_runtime_status' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_components.py",
+    "module": "ui_components",
+    "line": 33,
+    "kind": "function",
+    "name": "persist_draft_center_on_change",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_components.py:33: unused function 'persist_draft_center_on_change' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_components.py",
+    "module": "ui_components",
+    "line": 86,
+    "kind": "function",
+    "name": "render_masterstar_selection_qc",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_components.py:86: unused function 'render_masterstar_selection_qc' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_components.py",
+    "module": "ui_components",
+    "line": 165,
+    "kind": "function",
+    "name": "render_photometric_grid_qa",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_components.py:165: unused function 'render_photometric_grid_qa' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_finalization.py",
+    "module": "ui_finalization",
+    "line": 132,
+    "kind": "function",
+    "name": "render_finalization",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_finalization.py:132: unused function 'render_finalization' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_params_dashboard.py",
+    "module": "ui_params_dashboard",
+    "line": 79,
+    "kind": "function",
+    "name": "plan_auto_widgets",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_params_dashboard.py:79: unused function 'plan_auto_widgets' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_params_dashboard.py",
+    "module": "ui_params_dashboard",
+    "line": 155,
+    "kind": "function",
+    "name": "_default_of",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_params_dashboard.py:155: unused function '_default_of' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_variability.py",
+    "module": "ui_variability",
+    "line": 95,
+    "kind": "function",
+    "name": "_raw_lightcurve_from_frames",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_variability.py:95: unused function '_raw_lightcurve_from_frames' (60% confidence)"
+  },
+  {
+    "path": "src_py/ui_variability.py",
+    "module": "ui_variability",
+    "line": 654,
+    "kind": "function",
+    "name": "_render_field_image_with_candidate",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\ui_variability.py:654: unused function '_render_field_image_with_candidate' (60% confidence)"
+  },
+  {
+    "path": "src_py/unit_resolver.py",
+    "module": "unit_resolver",
+    "line": 29,
+    "kind": "function",
+    "name": "reset_unit_resolver_logs",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\unit_resolver.py:29: unused function 'reset_unit_resolver_logs' (60% confidence)"
+  },
+  {
+    "path": "src_py/validate_lc_crossval.py",
+    "module": "validate_lc_crossval",
+    "line": 102,
+    "kind": "function",
+    "name": "_row_mag",
+    "confidence": 60,
+    "reachable_module": false,
+    "raw": "src_py\\validate_lc_crossval.py:102: unused function '_row_mag' (60% confidence)"
+  },
+  {
+    "path": "src_py/vsx_gaia_crossmatch.py",
+    "module": "vsx_gaia_crossmatch",
+    "line": 353,
+    "kind": "function",
+    "name": "fit_sigma_q_from_separations",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\vsx_gaia_crossmatch.py:353: unused function 'fit_sigma_q_from_separations' (60% confidence)"
+  },
+  {
+    "path": "src_py/vyvar_blind_series.py",
+    "module": "vyvar_blind_series",
+    "line": 24,
+    "kind": "function",
+    "name": "target_density_deg2",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\vyvar_blind_series.py:24: unused function 'target_density_deg2' (60% confidence)"
+  },
+  {
+    "path": "src_py/vyvar_blind_solver.py",
+    "module": "vyvar_blind_solver",
+    "line": 773,
+    "kind": "function",
+    "name": "_cluster_centroid_votes",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\vyvar_blind_solver.py:773: unused function '_cluster_centroid_votes' (60% confidence)"
+  },
+  {
+    "path": "src_py/vyvar_runtime.py",
+    "module": "vyvar_runtime",
+    "line": 47,
+    "kind": "function",
+    "name": "install_root_from_src_py",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\vyvar_runtime.py:47: unused function 'install_root_from_src_py' (60% confidence)"
+  },
+  {
+    "path": "src_py/vyvar_runtime.py",
+    "module": "vyvar_runtime",
+    "line": 51,
+    "kind": "function",
+    "name": "_ensure_data_skeleton",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\vyvar_runtime.py:51: unused function '_ensure_data_skeleton' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 80,
+    "kind": "function",
+    "name": "slope_se_audit_steps",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:80: unused function 'slope_se_audit_steps' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 216,
+    "kind": "function",
+    "name": "excess_variance_by_tertile",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:216: unused function 'excess_variance_by_tertile' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 289,
+    "kind": "function",
+    "name": "star_drift_metrics",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:289: unused function 'star_drift_metrics' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 328,
+    "kind": "function",
+    "name": "apply_affine_xy",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:328: unused function 'apply_affine_xy' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 347,
+    "kind": "function",
+    "name": "invert_affine_2x3",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:347: unused function 'invert_affine_2x3' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 400,
+    "kind": "function",
+    "name": "track_detector_positions",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:400: unused function 'track_detector_positions' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 419,
+    "kind": "function",
+    "name": "fwhm_sensitivity",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:419: unused function 'fwhm_sensitivity' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 471,
+    "kind": "function",
+    "name": "physical_effect_size_table",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:471: unused function 'physical_effect_size_table' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 633,
+    "kind": "function",
+    "name": "variance_decomposition_regression",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:633: unused function 'variance_decomposition_regression' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 840,
+    "kind": "function",
+    "name": "rms_predicted_mmag",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:840: unused function 'rms_predicted_mmag' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 853,
+    "kind": "function",
+    "name": "p4_noise_consistency_check",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:853: unused function 'p4_noise_consistency_check' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 919,
+    "kind": "function",
+    "name": "contamination_fraction",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:919: unused function 'contamination_fraction' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 941,
+    "kind": "function",
+    "name": "neighbor_sensitivity_mag_per_fwhm_px",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:941: unused function 'neighbor_sensitivity_mag_per_fwhm_px' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 954,
+    "kind": "function",
+    "name": "attainable_neighbor_slope",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:954: unused function 'attainable_neighbor_slope' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 974,
+    "kind": "function",
+    "name": "p4_excess_integration",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:974: unused function 'p4_excess_integration' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 1104,
+    "kind": "function",
+    "name": "neighbor_attainable_table",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:1104: unused function 'neighbor_attainable_table' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 1131,
+    "kind": "function",
+    "name": "final_wsn_outcome",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:1131: unused function 'final_wsn_outcome' (60% confidence)"
+  },
+  {
+    "path": "src_py/wide_slope_noise_core.py",
+    "module": "wide_slope_noise_core",
+    "line": 1175,
+    "kind": "function",
+    "name": "univariate_hypothesis_scan",
+    "confidence": 60,
+    "reachable_module": true,
+    "raw": "src_py\\wide_slope_noise_core.py:1175: unused function 'univariate_hypothesis_scan' (60% confidence)"
+  }
+]

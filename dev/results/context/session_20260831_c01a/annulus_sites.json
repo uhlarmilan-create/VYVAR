@@ -1,0 +1,197 @@
+{
+  "n": 32,
+  "sites": [
+    {
+      "file": "src_py/aperture_scatter_select.py",
+      "line": 325,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture",
+      "window": "\n    if str(method).strip().lower() != \"exact\":\n        # Fire-proof path only: intentional broken masking (parity sawtooth).\n        from photutils.aperture import CircularAnnulus, CircularAperture\n        from photutils.aperture import aperture_photometry as _aphot\n\n        if (\n            math.isfinite(r_in)\n            and math.isfinite(r_out)\n            and r_out > r_in > 0\n            and n > 0\n        ):"
+    },
+    {
+      "file": "src_py/aperture_scatter_select.py",
+      "line": 335,
+      "code": "ann = CircularAnnulus(pos, r_in=r_in, r_out=r_out)",
+      "window": "            and n > 0\n        ):\n            try:\n                ann = CircularAnnulus(pos, r_in=r_in, r_out=r_out)\n                masks = ann.to_mask(method=\"center\")\n                if not isinstance(masks, (list, tuple)):\n                    masks = [masks]\n                for i, m in enumerate(masks):\n                    try:\n                        img = m.get_values(d)\n                        img = np.asarray(img, dtype=np.float64)\n                        img = img[np.isfinite(img)]"
+    },
+    {
+      "file": "src_py/aperture_scatter_select.py",
+      "line": 353,
+      "code": "ap = CircularAperture(pos, r=float(r))",
+      "window": "        for r in r_list:\n            flux = np.full(n, np.nan, dtype=np.float64)\n            try:\n                ap = CircularAperture(pos, r=float(r))\n                phot = _aphot(d, ap, method=method)\n                area = float(math.pi * float(r) ** 2)\n                sums = np.asarray(phot[\"aperture_sum\"], dtype=np.float64)\n                flux = sums - sky_pp * area\n            except Exception as exc:  # noqa: BLE001\n                LOGGER.debug(\"[SCATTER-AP] r=%.2f photometry failed: %s\", r, exc)\n            out[float(r)] = flux\n        return out, sky_pp"
+    },
+    {
+      "file": "src_py/masterstar_gaia_accounting.py",
+      "line": 15,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture, aperture_photometry",
+      "window": "\nimport numpy as np\nimport pandas as pd\nfrom photutils.aperture import CircularAnnulus, CircularAperture, aperture_photometry\nfrom photutils.detection import DAOStarFinder\nfrom photutils.utils.exceptions import NoDetectionsWarning\nfrom scipy.spatial import cKDTree\n\nfrom plain_stats import plain_mean_med_std\nfrom utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER\n\n# --- source_state values (Part C) ---"
+    },
+    {
+      "file": "src_py/masterstar_gaia_accounting.py",
+      "line": 477,
+      "code": "ap = CircularAperture((x, y), r=float(r_px))",
+      "window": "            \"centroid_px\": float(\"nan\"),\n            \"local_sigma\": float(\"nan\"),\n        }\n    ap = CircularAperture((x, y), r=float(r_px))\n    ann = CircularAnnulus((x, y), r_in=float(r_px) + 4.0, r_out=float(r_px) + 8.0)\n    phot = aperture_photometry(data0, ap)\n    flux_raw = float(phot[\"aperture_sum\"][0])\n    try:\n        ann_mask = ann.to_mask(method=\"center\")\n        vals = ann_mask.multiply(data0)\n        vals = vals[ann_mask.data > 0]\n        vals = vals[np.isfinite(vals)]"
+    },
+    {
+      "file": "src_py/masterstar_gaia_accounting.py",
+      "line": 478,
+      "code": "ann = CircularAnnulus((x, y), r_in=float(r_px) + 4.0, r_out=float(r_px) + 8.0)",
+      "window": "            \"local_sigma\": float(\"nan\"),\n        }\n    ap = CircularAperture((x, y), r=float(r_px))\n    ann = CircularAnnulus((x, y), r_in=float(r_px) + 4.0, r_out=float(r_px) + 8.0)\n    phot = aperture_photometry(data0, ap)\n    flux_raw = float(phot[\"aperture_sum\"][0])\n    try:\n        ann_mask = ann.to_mask(method=\"center\")\n        vals = ann_mask.multiply(data0)\n        vals = vals[ann_mask.data > 0]\n        vals = vals[np.isfinite(vals)]\n        _, md, sd = ("
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 1359,
+      "code": "- ``flux_ap``: CircularAperture+annulus on ``image`` when provided and (x,y)",
+      "window": "    \"\"\"Stamp MASTERSTAR ``snr_ap_pixscaled`` = flux_ap/err_ap_pixscaled and ``snr_peak``.\n\n    Columns used:\n    - ``flux_ap``: CircularAperture+annulus on ``image`` when provided and (x,y)\n      are finite; otherwise the existing ``flux`` column (DAO/aperture flux\n      already in the table).\n    - ``err_ap``: pixel-scaled estimate ``sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2)``\n      (``_photometric_error_with_bkg_mode``). This is **not** the production\n      empty-aperture ``sigma_bkg_ap`` measurement. D3 gates on this estimate\n      (floor 10); do not quote it as the empirical error.\n    - ``"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 2844,
+      "code": "from photutils.aperture import CircularAnnulus, aperture_photometry as _aphot",
+      "window": "    r_out: float,\n) -> np.ndarray:\n    \"\"\"Per-star median annulus sky (ADU/px) for COG when catalog sky is missing.\"\"\"\n    from photutils.aperture import CircularAnnulus, aperture_photometry as _aphot\n\n    n = int(len(x))\n    out = np.full(n, float(\"nan\"), dtype=np.float64)\n    d = np.asarray(data, dtype=np.float64)\n    for i in range(n):\n        try:\n            xi, yi = float(x[i]), float(y[i])\n            if not (math.isfinite(xi) and math.isfinite(yi)):"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 2854,
+      "code": "ann = CircularAnnulus([(xi, yi)], r_in=float(r_in), r_out=float(r_out))",
+      "window": "            xi, yi = float(x[i]), float(y[i])\n            if not (math.isfinite(xi) and math.isfinite(yi)):\n                continue\n            ann = CircularAnnulus([(xi, yi)], r_in=float(r_in), r_out=float(r_out))\n            tab = _aphot(d, ann, method=\"exact\")\n            area = float(ann.area)\n            if area > 0 and math.isfinite(float(tab[\"aperture_sum\"][0])):\n                out[i] = float(tab[\"aperture_sum\"][0]) / area\n        except Exception:  # noqa: BLE001\n            continue\n    return out\n"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 3680,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture",
+      "window": "    if not (math.isfinite(x_c) and math.isfinite(y_c) and math.isfinite(r_ap) and r_ap > 0):\n        return float(\"nan\"), float(\"nan\"), float(\"nan\")\n    try:\n        from photutils.aperture import CircularAnnulus, CircularAperture\n        from photutils.aperture import aperture_photometry as _aphot\n    except ImportError:\n        return float(\"nan\"), float(\"nan\"), float(\"nan\")\n\n    d = np.asarray(data, dtype=np.float64)\n    if np.any(~np.isfinite(d)):\n        fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0\n        d = np.where(np.isfinite(d), d, fill)"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 3691,
+      "code": "ap = CircularAperture(pos, r=float(r_ap))",
+      "window": "        d = np.where(np.isfinite(d), d, fill)\n\n    pos = np.array([[float(x_c), float(y_c)]], dtype=np.float64)\n    ap = CircularAperture(pos, r=float(r_ap))\n    an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))\n\n    phot_ap = _aphot(d, ap, method=\"exact\")\n    sum_ap = float(np.asarray(phot_ap[\"aperture_sum\"], dtype=np.float64).ravel()[0])\n    area_ap = float(ap.area)\n\n    sky_pp = float(\"nan\")\n    sky_ok = False"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 3692,
+      "code": "an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))",
+      "window": "\n    pos = np.array([[float(x_c), float(y_c)]], dtype=np.float64)\n    ap = CircularAperture(pos, r=float(r_ap))\n    an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))\n\n    phot_ap = _aphot(d, ap, method=\"exact\")\n    sum_ap = float(np.asarray(phot_ap[\"aperture_sum\"], dtype=np.float64).ravel()[0])\n    area_ap = float(ap.area)\n\n    sky_pp = float(\"nan\")\n    sky_ok = False\n    ann_masks = an.to_mask(method=\"center\")"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13900,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture",
+      "window": "    Shared by production per-star photometry and the scatter/CoG radius ladder\n    (IMPL-04). When all stars share one radius, uses one batch aperture call.\n    \"\"\"\n    from photutils.aperture import CircularAnnulus, CircularAperture\n    from photutils.aperture import aperture_photometry as _aphot\n\n    pos = np.asarray(pos, dtype=np.float64)\n    n = int(pos.shape[0])\n    flux_arr = np.full(n, np.nan, dtype=np.float64)\n    sky_pp_arr = np.full(n, np.nan, dtype=np.float64)\n    if n == 0:\n        return flux_arr, sky_pp_arr"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13929,
+      "code": "ap = CircularAperture(pos, r=r0)",
+      "window": "        rin = float(r_in_arr[0])\n        rout = float(r_out_arr[0])\n        try:\n            ap = CircularAperture(pos, r=r0)\n            phot = _aphot(d, ap, method=\"exact\")\n            sums = np.asarray(phot[\"aperture_sum\"], dtype=np.float64)\n            area = float(ap.area)\n            an = CircularAnnulus(pos, r_in=rin, r_out=rout)\n            masks = an.to_mask(method=\"center\")\n            if not isinstance(masks, (list, tuple)):\n                masks = [masks]\n            for i, m in enumerate(masks):"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13933,
+      "code": "an = CircularAnnulus(pos, r_in=rin, r_out=rout)",
+      "window": "            phot = _aphot(d, ap, method=\"exact\")\n            sums = np.asarray(phot[\"aperture_sum\"], dtype=np.float64)\n            area = float(ap.area)\n            an = CircularAnnulus(pos, r_in=rin, r_out=rout)\n            masks = an.to_mask(method=\"center\")\n            if not isinstance(masks, (list, tuple)):\n                masks = [masks]\n            for i, m in enumerate(masks):\n                try:\n                    ann_img = m.to_image(d.shape)\n                    sky_pp_arr[i] = _sky_pp_from_annulus_image(d, ann_img)\n                except Exception:  # noqa: BLE001"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13965,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture",
+      "window": "    ``center`` masking produces radius-parity sawtooth in growth/scatter ladders\n    (IMPL-04). Annulus sky still uses ``center`` masks for median sampling only.\n    \"\"\"\n    from photutils.aperture import CircularAnnulus, CircularAperture\n    from photutils.aperture import aperture_photometry as _aphot\n\n    n = int(len(pos))\n    flux_arr = np.full(n, np.nan, dtype=np.float64)\n    sky_pp_arr = np.full(n, np.nan, dtype=np.float64)\n    n_fail = 0\n    for idx in range(n):\n        try:"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13988,
+      "code": "ap_i = CircularAperture([xy], r=r_ap)",
+      "window": "                n_fail += 1\n                continue\n            xy = (float(pos[idx, 0]), float(pos[idx, 1]))\n            ap_i = CircularAperture([xy], r=r_ap)\n            an_i = CircularAnnulus([xy], r_in=r_in, r_out=r_out)\n            phot_i = _aphot(d, ap_i, method=\"exact\")\n            ann_masks = an_i.to_mask(method=\"center\")\n            if not isinstance(ann_masks, (list, tuple)):\n                ann_masks = [ann_masks]\n            ann_img = ann_masks[0].to_image(d.shape)\n            sky_pp = _sky_pp_from_annulus_image(d, ann_img)\n            area = float(ap_i.area)"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 13989,
+      "code": "an_i = CircularAnnulus([xy], r_in=r_in, r_out=r_out)",
+      "window": "                continue\n            xy = (float(pos[idx, 0]), float(pos[idx, 1]))\n            ap_i = CircularAperture([xy], r=r_ap)\n            an_i = CircularAnnulus([xy], r_in=r_in, r_out=r_out)\n            phot_i = _aphot(d, ap_i, method=\"exact\")\n            ann_masks = an_i.to_mask(method=\"center\")\n            if not isinstance(ann_masks, (list, tuple)):\n                ann_masks = [ann_masks]\n            ann_img = ann_masks[0].to_image(d.shape)\n            sky_pp = _sky_pp_from_annulus_image(d, ann_img)\n            area = float(ap_i.area)\n            flux_arr[idx] = float(phot_i[\"apertur"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14152,
+      "code": "float(_aphot(d, CircularAperture(xy, r=float(rr)), method=\"exact\")[\"aperture_sum\"][0])",
+      "window": "            xy = [(float(xx[i]), float(yy[i]))]\n            sums = np.array(\n                [\n                    float(_aphot(d, CircularAperture(xy, r=float(rr)), method=\"exact\")[\"aperture_sum\"][0])\n                    for rr in radii\n                ],\n                dtype=np.float64,\n            )\n            ee = sums - float(skp[i]) * math.pi * np.square(radii)\n            ref_val = float(ee[i_norm])\n            if math.isfinite(ref_val) and ref_val > 0:\n                fr = ee / ref_val"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14333,
+      "code": "# Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.",
+      "window": "        or (math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0)\n    ):\n        try:\n            # Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.\n            from photutils.aperture import CircularAnnulus, CircularAperture\n            from photutils.aperture import aperture_photometry as _aphot\n\n            fw = float(fwhm_gaussian_f)\n            global_aperture_r_px = max(0.5, float(aperture_fwhm_factor) * fw)\n            if _ap01_r_ap is not None:\n                global_aperture_r_px = float(_ap01_r_ap)\n                fw = float(_ap01_fwh"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14334,
+      "code": "from photutils.aperture import CircularAnnulus, CircularAperture",
+      "window": "    ):\n        try:\n            # Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.\n            from photutils.aperture import CircularAnnulus, CircularAperture\n            from photutils.aperture import aperture_photometry as _aphot\n\n            fw = float(fwhm_gaussian_f)\n            global_aperture_r_px = max(0.5, float(aperture_fwhm_factor) * fw)\n            if _ap01_r_ap is not None:\n                global_aperture_r_px = float(_ap01_r_ap)\n                fw = float(_ap01_fwhm_used) if _ap01_fwhm_used is not None else fw\n"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14396,
+      "code": "# photutils 2.3: CircularAperture.r must be scalar - one aperture per star.",
+      "window": "                d = np.where(np.isfinite(d), d, fill)\n\n            if r_ap_arr is not None:\n                # photutils 2.3: CircularAperture.r must be scalar - one aperture per star.\n                flux_arr, sky_pp_arr = _aperture_flux_sky_batch(d, pos, r_ap_arr, r_in_arr, r_out_arr)\n                out[\"flux\"] = flux_arr.astype(np.float64)\n                out[\"dao_flux\"] = out[\"flux\"]\n                out[\"aperture_r_px\"] = r_ap_arr.astype(np.float64)\n                _fac_labels = []\n                for i in range(n):\n                    _cid_i = \"\"\n                    if _cid_series is not "
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14423,
+      "code": "ap = CircularAperture(pos, r=r_ap)",
+      "window": "                out[\"noise_floor_adu\"] = sky_pp_arr.astype(np.float64)\n                out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)\n            else:\n                ap = CircularAperture(pos, r=r_ap)\n                an = CircularAnnulus(pos, r_in=r_in, r_out=r_out)\n                phot_ap = _aphot(d, ap, method=\"exact\")\n                sum_ap = np.asarray(phot_ap[\"aperture_sum\"], dtype=np.float64)\n                area_ap_per = float(ap.area)\n                sky_pp_arr = np.zeros(n, dtype=np.float64)\n                ann_masks = an.to_mask(method=\"center\")\n                if "
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14424,
+      "code": "an = CircularAnnulus(pos, r_in=r_in, r_out=r_out)",
+      "window": "                out[SKY_ADU_PER_PX_ANNULUS_COL] = sky_pp_arr.astype(np.float64)\n            else:\n                ap = CircularAperture(pos, r=r_ap)\n                an = CircularAnnulus(pos, r_in=r_in, r_out=r_out)\n                phot_ap = _aphot(d, ap, method=\"exact\")\n                sum_ap = np.asarray(phot_ap[\"aperture_sum\"], dtype=np.float64)\n                area_ap_per = float(ap.area)\n                sky_pp_arr = np.zeros(n, dtype=np.float64)\n                ann_masks = an.to_mask(method=\"center\")\n                if not isinstance(ann_masks, (list, tuple)):\n                    ann_masks"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14484,
+      "code": "ap_sm = CircularAperture(pos, r=_rs)",
+      "window": "                    and int(sky_pp_arr.shape[0]) == n\n                ):\n                    try:\n                        ap_sm = CircularAperture(pos, r=_rs)\n                        ap_lg = CircularAperture(pos, r=_rl)\n                        phot_sm = _aphot(d, ap_sm, method=\"exact\")\n                        phot_lg = _aphot(d, ap_lg, method=\"exact\")\n                        sum_sm = np.asarray(phot_sm[\"aperture_sum\"], dtype=np.float64).ravel()\n                        sum_lg = np.asarray(phot_lg[\"aperture_sum\"], dtype=np.float64).ravel()\n                        if sum_sm.size != n or sum_lg.si"
+    },
+    {
+      "file": "src_py/photometry_core.py",
+      "line": 14485,
+      "code": "ap_lg = CircularAperture(pos, r=_rl)",
+      "window": "                ):\n                    try:\n                        ap_sm = CircularAperture(pos, r=_rs)\n                        ap_lg = CircularAperture(pos, r=_rl)\n                        phot_sm = _aphot(d, ap_sm, method=\"exact\")\n                        phot_lg = _aphot(d, ap_lg, method=\"exact\")\n                        sum_sm = np.asarray(phot_sm[\"aperture_sum\"], dtype=np.float64).ravel()\n                        sum_lg = np.asarray(phot_lg[\"aperture_sum\"], dtype=np.float64).ravel()\n                        if sum_sm.size != n or sum_lg.size != n:\n                            raise ValueError("
+    },
+    {
+      "file": "src_py/psf_photometry.py",
+      "line": 2201,
+      "code": "from photutils.aperture import CircularAnnulus",
+      "window": "    if r_out <= r_in:\n        return float(\"nan\")\n    try:\n        from photutils.aperture import CircularAnnulus\n    except ImportError:\n        return float(\"nan\")\n    d = np.asarray(frame_data, dtype=np.float64)\n    if np.any(~np.isfinite(d)):\n        fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0\n        d = np.where(np.isfinite(d), d, fill)\n    pos = np.array([[float(x), float(y)]], dtype=np.float64)\n    an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))"
+    },
+    {
+      "file": "src_py/psf_photometry.py",
+      "line": 2209,
+      "code": "an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))",
+      "window": "        fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0\n        d = np.where(np.isfinite(d), d, fill)\n    pos = np.array([[float(x), float(y)]], dtype=np.float64)\n    an = CircularAnnulus(pos, r_in=float(r_in), r_out=float(r_out))\n    ann_masks = an.to_mask(method=\"center\")\n    if not isinstance(ann_masks, (list, tuple)):\n        ann_masks = [ann_masks]\n    for amask in ann_masks:\n        try:\n            cut = np.asarray(amask.get_values(d), dtype=np.float64).ravel()\n            cut = cut[np.isfinite(cut)]\n            if cut.size >= 8:"
+    },
+    {
+      "file": "src_py/ui_photometry.py",
+      "line": 68,
+      "code": "used_in=\"Pipeline chooses between DAO summed flux and `photutils` CircularAperture / CircularAnnulus per this setting.\",",
+      "window": "    _detail_help(\n        \"aperture_photometry_enabled\",\n        phase=\"Phase 2 / lightcurve - flux on the star.\",\n        used_in=\"Pipeline chooses between DAO summed flux and `photutils` CircularAperture / CircularAnnulus per this setting.\",\n        compute=\"Aperture and annulus radii: `aperture_fwhm_factor`, `annulus_*_fwhm` x local FWHM (Settings).\",\n    )\n    save_png = st.checkbox(\n        \"Save PNG light curve / field map (Phase 2A)\",\n        value=bool(cfg.save_lightcurve_png),\n        key=\"vyvar_save_lightcurve_png\",\n        help=\"Export charts to disk after Phase 2A run.\",\n    )"
+    },
+    {
+      "file": "src_py/xval_run.py",
+      "line": 108,
+      "code": "from photutils.aperture import (CircularAperture, CircularAnnulus,",
+      "window": "    from astropy.coordinates import SkyCoord\n    import astropy.units as u\n    from astropy.time import Time\n    from photutils.aperture import (CircularAperture, CircularAnnulus,\n                                    aperture_photometry, ApertureStats)\n    from photutils.centroids import centroid_sources, centroid_com\n    from scipy.spatial import cKDTree\n    try:\n        import sep; HAVE_SEP = True\n    except ImportError:\n        sep = None; HAVE_SEP = False\n        log(\"note: sep not installed -> photutils-only (pip install sep --break-system-packages)\")"
+    },
+    {
+      "file": "src_py/xval_run.py",
+      "line": 181,
+      "code": "sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=None).median",
+      "window": "        bad = ~(np.isfinite(xc) & np.isfinite(yc)); xc[bad], yc[bad] = x0[bad], y0[bad]\n        pos = np.column_stack([xc, yc])\n        # No SigmaClip on annulus (zero-clipping policy 2026-08-12).\n        sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=None).median\n        fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))[\"aperture_sum\"]) - sky*np.pi*r_small**2\n        try: mjd = Time(hdr.get(\"DATE-OBS\"), format=\"isot\").mjd\n        except Exception: mjd = np.nan  # noqa: BLE001\n        times.append(mjd)\n        for sid, v in zip(sids, fp_s, strict=Tr"
+    },
+    {
+      "file": "src_py/xval_run.py",
+      "line": 182,
+      "code": "fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))[\"aperture_sum\"]) - sky*np.pi*r_small**2",
+      "window": "        pos = np.column_stack([xc, yc])\n        # No SigmaClip on annulus (zero-clipping policy 2026-08-12).\n        sky = ApertureStats(d, CircularAnnulus(pos, r_in, r_out), sigma_clip=None).median\n        fp_s = np.asarray(aperture_photometry(d, CircularAperture(pos, r_small))[\"aperture_sum\"]) - sky*np.pi*r_small**2\n        try: mjd = Time(hdr.get(\"DATE-OBS\"), format=\"isot\").mjd\n        except Exception: mjd = np.nan  # noqa: BLE001\n        times.append(mjd)\n        for sid, v in zip(sids, fp_s, strict=True): rows_p.append((fp.name, mjd, sid, float(v)))\n        if HAVE_SEP:\n            ds = "
+    }
+  ]
+}

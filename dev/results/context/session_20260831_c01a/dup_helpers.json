@@ -1,0 +1,1152 @@
+{
+  "n": 41,
+  "items": [
+    {
+      "name": "_as_fits_float32_image",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/pipeline.py",
+          "line": 2587,
+          "end": 2591,
+          "sha": "6cd257ab761e6527",
+          "nbytes": 255
+        },
+        {
+          "file": "src_py/vyvar_alignment_frame.py",
+          "line": 40,
+          "end": 41,
+          "sha": "abf0d3312dd199f9",
+          "nbytes": 120
+        }
+      ]
+    },
+    {
+      "name": "_clamp",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 232,
+          "end": 233,
+          "sha": "9194bf21c603f166",
+          "nbytes": 98
+        },
+        {
+          "file": "src_py/param_resolver.py",
+          "line": 153,
+          "end": 155,
+          "sha": "f8f76374bcb2f8c7",
+          "nbytes": 134
+        }
+      ]
+    },
+    {
+      "name": "_coerce_bool",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/epsf_science_set.py",
+          "line": 19,
+          "end": 23,
+          "sha": "890a777d43d7ed8f",
+          "nbytes": 164
+        },
+        {
+          "file": "src_py/psf_internal_lc.py",
+          "line": 190,
+          "end": 196,
+          "sha": "39312369ca89ccb5",
+          "nbytes": 266
+        }
+      ]
+    },
+    {
+      "name": "_compute_masterstar_score",
+      "n_defs": 3,
+      "n_files": 3,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/night_run.py",
+          "line": 457,
+          "end": 490,
+          "sha": "1b96f767f6220df9",
+          "nbytes": 1440
+        },
+        {
+          "file": "src_py/photometry_report.py",
+          "line": 3192,
+          "end": 3222,
+          "sha": "3039390ffb0b6a0f",
+          "nbytes": 1415,
+          "class": "_PhotometryReportBuilder"
+        },
+        {
+          "file": "src_py/ui_quality_dashboard.py",
+          "line": 29,
+          "end": 67,
+          "sha": "9dc6012afa454788",
+          "nbytes": 1690
+        }
+      ]
+    },
+    {
+      "name": "_dao_full_to_binned_xy",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/masterstar_gaia_accounting.py",
+          "line": 356,
+          "end": 361,
+          "sha": "c2c8e25e4fab5b4e",
+          "nbytes": 274
+        },
+        {
+          "file": "src_py/pipeline.py",
+          "line": 7629,
+          "end": 7635,
+          "sha": "f6fc29e87bba8512",
+          "nbytes": 346
+        }
+      ]
+    },
+    {
+      "name": "_dao_pass2_annulus_stats",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/masterstar_gaia_accounting.py",
+          "line": 80,
+          "end": 95,
+          "sha": "1da6dcbb6db53edc",
+          "nbytes": 728
+        },
+        {
+          "file": "src_py/pipeline.py",
+          "line": 7660,
+          "end": 7677,
+          "sha": "8ba00a2b61cc4ba6",
+          "nbytes": 758
+        }
+      ]
+    },
+    {
+      "name": "_dao_xy_binned_to_full",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/masterstar_gaia_accounting.py",
+          "line": 348,
+          "end": 353,
+          "sha": "275818f1c89b28e1",
+          "nbytes": 335
+        },
+        {
+          "file": "src_py/pipeline.py",
+          "line": 7619,
+          "end": 7626,
+          "sha": "e616f247a6ffe579",
+          "nbytes": 367
+        }
+      ]
+    },
+    {
+      "name": "_detail_help",
+      "n_defs": 3,
+      "n_files": 3,
+      "byte_equal": true,
+      "locs": [
+        {
+          "file": "src_py/ui_dao_stars.py",
+          "line": 16,
+          "end": 21,
+          "sha": "04bb383f83f46e82",
+          "nbytes": 351
+        },
+        {
+          "file": "src_py/ui_photometry.py",
+          "line": 10,
+          "end": 15,
+          "sha": "04bb383f83f46e82",
+          "nbytes": 351
+        },
+        {
+          "file": "src_py/ui_settings.py",
+          "line": 21,
+          "end": 26,
+          "sha": "04bb383f83f46e82",
+          "nbytes": 351
+        }
+      ]
+    },
+    {
+      "name": "_eligible_mask",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 274,
+          "end": 277,
+          "sha": "380dff816bd510b7",
+          "nbytes": 378
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter4.py",
+          "line": 128,
+          "end": 131,
+          "sha": "fb4bafbe6619dae3",
+          "nbytes": 370
+        }
+      ]
+    },
+    {
+      "name": "_eval_poly",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/astrometry_optimizer.py",
+          "line": 389,
+          "end": 394,
+          "sha": "bce9fb48ff672624",
+          "nbytes": 219
+        },
+        {
+          "file": "src_py/gaia_johnson.py",
+          "line": 93,
+          "end": 94,
+          "sha": "8d4515bc152568e3",
+          "nbytes": 125
+        }
+      ]
+    },
+    {
+      "name": "_fit_shape_for_cutout",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/psf_photometry.py",
+          "line": 431,
+          "end": 445,
+          "sha": "8193f23969dc5c9c",
+          "nbytes": 575
+        },
+        {
+          "file": "src_py/psf_runner.py",
+          "line": 233,
+          "end": 238,
+          "sha": "bc54595abfa0386a",
+          "nbytes": 177
+        }
+      ]
+    },
+    {
+      "name": "_flux_to_mag",
+      "n_defs": 3,
+      "n_files": 3,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/comp_rms_loo.py",
+          "line": 43,
+          "end": 46,
+          "sha": "99e73a8b69523da7",
+          "nbytes": 149
+        },
+        {
+          "file": "src_py/photometry_core.py",
+          "line": 755,
+          "end": 759,
+          "sha": "a2f0e7d2a60c411d",
+          "nbytes": 190
+        },
+        {
+          "file": "src_py/psf_neighbor_sub.py",
+          "line": 23,
+          "end": 26,
+          "sha": "79515fe5182c8e64",
+          "nbytes": 178
+        }
+      ]
+    },
+    {
+      "name": "_fmt_opt_num",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/export_reports.py",
+          "line": 387,
+          "end": 392,
+          "sha": "b7017a7962628bbb",
+          "nbytes": 256
+        },
+        {
+          "file": "src_py/ui_aperture_photometry.py",
+          "line": 437,
+          "end": 450,
+          "sha": "bfb37a95233ec303",
+          "nbytes": 400
+        }
+      ]
+    },
+    {
+      "name": "_gaia_on_chip",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 160,
+          "end": 195,
+          "sha": "bfe39e155acfab3c",
+          "nbytes": 1336
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 101,
+          "end": 131,
+          "sha": "e082b5ec608580af",
+          "nbytes": 1309
+        }
+      ]
+    },
+    {
+      "name": "_header_has_vy_skysf",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/cal_stage.py",
+          "line": 139,
+          "end": 141,
+          "sha": "f090cbde4b781b1a",
+          "nbytes": 108
+        },
+        {
+          "file": "src_py/pipeline.py",
+          "line": 18531,
+          "end": 18539,
+          "sha": "1eb5d6685b9b812d",
+          "nbytes": 293
+        }
+      ]
+    },
+    {
+      "name": "_is_corner",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": true,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 300,
+          "end": 302,
+          "sha": "962deeb3de018589",
+          "nbytes": 163
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 139,
+          "end": 141,
+          "sha": "962deeb3de018589",
+          "nbytes": 163
+        }
+      ]
+    },
+    {
+      "name": "_katalogy_positive_lines",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/photometry_report.py",
+          "line": 2399,
+          "end": 2412,
+          "sha": "8dc33c902f16deed",
+          "nbytes": 474,
+          "class": "_PhotometryReportBuilder"
+        },
+        {
+          "file": "src_py/ui_variability.py",
+          "line": 270,
+          "end": 284,
+          "sha": "990c0f7258574e0f",
+          "nbytes": 508
+        }
+      ]
+    },
+    {
+      "name": "_load_radec_map",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/crossmatch_runner.py",
+          "line": 99,
+          "end": 136,
+          "sha": "5345163dd8d8f68f",
+          "nbytes": 1747
+        },
+        {
+          "file": "src_py/tess_runner.py",
+          "line": 83,
+          "end": 86,
+          "sha": "40bf69bae2a398b3",
+          "nbytes": 184
+        }
+      ]
+    },
+    {
+      "name": "_mad_sigma",
+      "n_defs": 3,
+      "n_files": 3,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/comp_selection_per_target.py",
+          "line": 1205,
+          "end": 1214,
+          "sha": "65c11762139de47d",
+          "nbytes": 413
+        },
+        {
+          "file": "src_py/photometry_core.py",
+          "line": 510,
+          "end": 516,
+          "sha": "1febab5f2ae7b11a",
+          "nbytes": 310
+        },
+        {
+          "file": "src_py/variability_detector.py",
+          "line": 42,
+          "end": 51,
+          "sha": "df2729fcbffa6571",
+          "nbytes": 326
+        }
+      ]
+    },
+    {
+      "name": "_masterstar_candidate_path_for_job",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/night_run.py",
+          "line": 493,
+          "end": 542,
+          "sha": "ebd49934711f40f7",
+          "nbytes": 1545
+        },
+        {
+          "file": "src_py/ui_quality_dashboard.py",
+          "line": 81,
+          "end": 126,
+          "sha": "9f861256acb28ffe",
+          "nbytes": 1479
+        }
+      ]
+    },
+    {
+      "name": "_norm_cid",
+      "n_defs": 4,
+      "n_files": 4,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/masterstar_gaia_accounting.py",
+          "line": 561,
+          "end": 567,
+          "sha": "437dabcad54cc204",
+          "nbytes": 203
+        },
+        {
+          "file": "src_py/photometry_report.py",
+          "line": 49,
+          "end": 61,
+          "sha": "fa033d4f61f7ec22",
+          "nbytes": 569
+        },
+        {
+          "file": "src_py/psf_internal_lc.py",
+          "line": 178,
+          "end": 187,
+          "sha": "589dad91ba0484bb",
+          "nbytes": 278
+        },
+        {
+          "file": "src_py/validate_lc_crossval.py",
+          "line": 111,
+          "end": 117,
+          "sha": "d90d1f64a0eb0511",
+          "nbytes": 208
+        }
+      ]
+    },
+    {
+      "name": "_norm_id",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/astrometry_optimizer.py",
+          "line": 363,
+          "end": 365,
+          "sha": "92f287cf455da368",
+          "nbytes": 177
+        },
+        {
+          "file": "src_py/epsf_science_set.py",
+          "line": 26,
+          "end": 35,
+          "sha": "a7e6f4d741956da8",
+          "nbytes": 277
+        }
+      ]
+    },
+    {
+      "name": "_normalize_ids",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_reconcile.py",
+          "line": 221,
+          "end": 224,
+          "sha": "c3f09336f34cc97c",
+          "nbytes": 244
+        },
+        {
+          "file": "src_py/hrd_enrich.py",
+          "line": 121,
+          "end": 129,
+          "sha": "7e91f7775c541c9d",
+          "nbytes": 282
+        }
+      ]
+    },
+    {
+      "name": "_peak_at",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": true,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 317,
+          "end": 323,
+          "sha": "80513161aa76a996",
+          "nbytes": 330
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 156,
+          "end": 162,
+          "sha": "80513161aa76a996",
+          "nbytes": 330
+        }
+      ]
+    },
+    {
+      "name": "_safe_float",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/catalog_crossmatch.py",
+          "line": 26,
+          "end": 39,
+          "sha": "bbd8f1531f50a67a",
+          "nbytes": 367
+        },
+        {
+          "file": "src_py/hrd_enrich.py",
+          "line": 36,
+          "end": 45,
+          "sha": "ae0b221f22fa3a49",
+          "nbytes": 312
+        }
+      ]
+    },
+    {
+      "name": "_saturation_limit",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": true,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 305,
+          "end": 314,
+          "sha": "921c1c3b4a796e76",
+          "nbytes": 342
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 144,
+          "end": 153,
+          "sha": "921c1c3b4a796e76",
+          "nbytes": 342
+        }
+      ]
+    },
+    {
+      "name": "_sep_arcsec",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/catalog_crossmatch.py",
+          "line": 42,
+          "end": 50,
+          "sha": "c65272581cb089c6",
+          "nbytes": 470
+        },
+        {
+          "file": "src_py/repair_catalog_ids.py",
+          "line": 38,
+          "end": 42,
+          "sha": "06f2b6af400b2afa",
+          "nbytes": 274
+        }
+      ]
+    },
+    {
+      "name": "_warn_once",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/param_resolver.py",
+          "line": 40,
+          "end": 44,
+          "sha": "73998eb65f6b68db",
+          "nbytes": 144
+        },
+        {
+          "file": "src_py/time_utils.py",
+          "line": 26,
+          "end": 30,
+          "sha": "4a4bfdbdc3b2feed",
+          "nbytes": 139
+        }
+      ]
+    },
+    {
+      "name": "asinh_rgb",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": true,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 492,
+          "end": 496,
+          "sha": "953b10554d510a3e",
+          "nbytes": 243
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 467,
+          "end": 471,
+          "sha": "953b10554d510a3e",
+          "nbytes": 243
+        }
+      ]
+    },
+    {
+      "name": "assign_states",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 326,
+          "end": 367,
+          "sha": "54bbe0b7c936442a",
+          "nbytes": 1482
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 207,
+          "end": 243,
+          "sha": "d8571f0fc822e684",
+          "nbytes": 1378
+        }
+      ]
+    },
+    {
+      "name": "best_period",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/catalog_crossmatch.py",
+          "line": 90,
+          "end": 102,
+          "sha": "c4bf206edeb3c030",
+          "nbytes": 631,
+          "class": "CrossmatchResult"
+        },
+        {
+          "file": "src_py/tess_verify.py",
+          "line": 336,
+          "end": 337,
+          "sha": "62fc2a84a2d344a6",
+          "nbytes": 79,
+          "class": "TessResult"
+        }
+      ]
+    },
+    {
+      "name": "derive_scanning_id",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/database.py",
+          "line": 3262,
+          "end": 3266,
+          "sha": "4d4c289916ff1bc4",
+          "nbytes": 273,
+          "class": "VyvarDatabase"
+        },
+        {
+          "file": "src_py/draft_provenance.py",
+          "line": 37,
+          "end": 47,
+          "sha": "122db4a7e7211ae3",
+          "nbytes": 569
+        }
+      ]
+    },
+    {
+      "name": "g3_spurious",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 424,
+          "end": 449,
+          "sha": "23237cff73f0ac17",
+          "nbytes": 966
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 246,
+          "end": 271,
+          "sha": "411f6f126602ed62",
+          "nbytes": 1006
+        }
+      ]
+    },
+    {
+      "name": "load_pipeline_meta",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/citations.py",
+          "line": 357,
+          "end": 367,
+          "sha": "f8dcaadb2f0ffc5e",
+          "nbytes": 484
+        },
+        {
+          "file": "src_py/invariants_runtime.py",
+          "line": 611,
+          "end": 621,
+          "sha": "d4d100d2378af295",
+          "nbytes": 366
+        }
+      ]
+    },
+    {
+      "name": "log",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/comp_qa.py",
+          "line": 13,
+          "end": 14,
+          "sha": "5e27422f9ec494f2",
+          "nbytes": 58
+        },
+        {
+          "file": "src_py/xval_run.py",
+          "line": 42,
+          "end": 42,
+          "sha": "b3145a9b905c993d",
+          "nbytes": 35
+        }
+      ]
+    },
+    {
+      "name": "mad_sigma",
+      "n_defs": 3,
+      "n_files": 3,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/comp_frame_normalize.py",
+          "line": 140,
+          "end": 150,
+          "sha": "78eb4e1cf2185737",
+          "nbytes": 413
+        },
+        {
+          "file": "src_py/comp_qa_core.py",
+          "line": 33,
+          "end": 40,
+          "sha": "6df7b98b3a40d50b",
+          "nbytes": 277
+        },
+        {
+          "file": "src_py/comp_rms_loo.py",
+          "line": 34,
+          "end": 40,
+          "sha": "afc8ad88a2516015",
+          "nbytes": 245
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "n_defs": 17,
+      "n_files": 17,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/app.py",
+          "line": 2310,
+          "end": 2467,
+          "sha": "3c8e4492d8ec6940",
+          "nbytes": 5859
+        },
+        {
+          "file": "src_py/comp_qa.py",
+          "line": 17,
+          "end": 79,
+          "sha": "1fdea97d87c984cf",
+          "nbytes": 2462
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01.py",
+          "line": 819,
+          "end": 826,
+          "sha": "71e7d0dbdf234a16",
+          "nbytes": 441
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter2.py",
+          "line": 720,
+          "end": 765,
+          "sha": "6989258f0cd48169",
+          "nbytes": 2073
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter3.py",
+          "line": 567,
+          "end": 656,
+          "sha": "5046dfa7bb18236a",
+          "nbytes": 3845
+        },
+        {
+          "file": "src_py/dao_gaia_stage_01_iter4.py",
+          "line": 554,
+          "end": 637,
+          "sha": "2cf5b4039444b2b8",
+          "nbytes": 3767
+        },
+        {
+          "file": "src_py/inspect_drafts.py",
+          "line": 120,
+          "end": 155,
+          "sha": "ef30a42ff21dde4c",
+          "nbytes": 1520
+        },
+        {
+          "file": "src_py/night_run.py",
+          "line": 1906,
+          "end": 1935,
+          "sha": "2ce3c9be1649f535",
+          "nbytes": 1030
+        },
+        {
+          "file": "src_py/psf_internal_lc.py",
+          "line": 774,
+          "end": 788,
+          "sha": "7b8e82cc7ef2adbc",
+          "nbytes": 778
+        },
+        {
+          "file": "src_py/psf_runner.py",
+          "line": 1499,
+          "end": 1577,
+          "sha": "8c49fef9684624b2",
+          "nbytes": 2313
+        },
+        {
+          "file": "src_py/repair_catalog_ids.py",
+          "line": 232,
+          "end": 250,
+          "sha": "0dfe645094c15c8d",
+          "nbytes": 958
+        },
+        {
+          "file": "src_py/run_crowding_index.py",
+          "line": 23,
+          "end": 82,
+          "sha": "11749b29e8ff7998",
+          "nbytes": 2572
+        },
+        {
+          "file": "src_py/run_smoothness_report.py",
+          "line": 11,
+          "end": 56,
+          "sha": "d98a031004a22f84",
+          "nbytes": 1755
+        },
+        {
+          "file": "src_py/simulate_night_run.py",
+          "line": 43,
+          "end": 189,
+          "sha": "60cc7c62d0cc1f34",
+          "nbytes": 4925
+        },
+        {
+          "file": "src_py/trust_flag.py",
+          "line": 15,
+          "end": 61,
+          "sha": "dba362d978b5e40b",
+          "nbytes": 1642
+        },
+        {
+          "file": "src_py/validate_lc_crossval.py",
+          "line": 521,
+          "end": 580,
+          "sha": "521089017888ec5e",
+          "nbytes": 2054
+        },
+        {
+          "file": "src_py/xval_run.py",
+          "line": 88,
+          "end": 251,
+          "sha": "8a159b6efe469b6e",
+          "nbytes": 8559
+        }
+      ]
+    },
+    {
+      "name": "ok",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/cal_stage.py",
+          "line": 79,
+          "end": 80,
+          "sha": "cb90d890c5498eae",
+          "nbytes": 88,
+          "class": "CalStageVerifyReport"
+        },
+        {
+          "file": "src_py/optics_autodetect.py",
+          "line": 45,
+          "end": 47,
+          "sha": "c8ea35e02a3ad3f2",
+          "nbytes": 193,
+          "class": "Detection"
+        }
+      ]
+    },
+    {
+      "name": "plate_scale_arcsec_per_px_from_wcs",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 236,
+          "end": 246,
+          "sha": "2b79043c67295171",
+          "nbytes": 387
+        },
+        {
+          "file": "src_py/unit_resolver.py",
+          "line": 34,
+          "end": 47,
+          "sha": "b45a23a836b8df5b",
+          "nbytes": 508
+        }
+      ]
+    },
+    {
+      "name": "to_dict",
+      "n_defs": 12,
+      "n_files": 7,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/aperture_scatter_select.py",
+          "line": 79,
+          "end": 99,
+          "sha": "315a42e279bb88ee",
+          "nbytes": 821,
+          "class": "ScatterCurve"
+        },
+        {
+          "file": "src_py/config.py",
+          "line": 2964,
+          "end": 2965,
+          "sha": "b89168b73073c5a2",
+          "nbytes": 70,
+          "class": "AppConfig"
+        },
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 60,
+          "end": 61,
+          "sha": "9131b50d21ed206a",
+          "nbytes": 68,
+          "class": "DiagnosticPopulationStats"
+        },
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 75,
+          "end": 76,
+          "sha": "9131b50d21ed206a",
+          "nbytes": 68,
+          "class": "PopulationStats"
+        },
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 98,
+          "end": 114,
+          "sha": "7af133199248b2aa",
+          "nbytes": 743,
+          "class": "DerivedTolerances"
+        },
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 194,
+          "end": 195,
+          "sha": "9131b50d21ed206a",
+          "nbytes": 68,
+          "class": "ValidationGateResult"
+        },
+        {
+          "file": "src_py/dao_gaia_calibration.py",
+          "line": 210,
+          "end": 223,
+          "sha": "b4d502a177af12be",
+          "nbytes": 556,
+          "class": "DaoGaiaCalibrationCertificate"
+        },
+        {
+          "file": "src_py/err_calibration.py",
+          "line": 49,
+          "end": 50,
+          "sha": "9131b50d21ed206a",
+          "nbytes": 68,
+          "class": "SmoothCalibration"
+        },
+        {
+          "file": "src_py/gain_photon_transfer.py",
+          "line": 89,
+          "end": 92,
+          "sha": "47a2d11d3d267768",
+          "nbytes": 136,
+          "class": "PhotonTransferGain"
+        },
+        {
+          "file": "src_py/gain_photon_transfer.py",
+          "line": 108,
+          "end": 109,
+          "sha": "9131b50d21ed206a",
+          "nbytes": 68,
+          "class": "PhotometricGainAuthority"
+        },
+        {
+          "file": "src_py/photometry_report.py",
+          "line": 114,
+          "end": 123,
+          "sha": "cd8cab295d274110",
+          "nbytes": 436,
+          "class": "_ReportConfigView"
+        },
+        {
+          "file": "src_py/sigma_budget.py",
+          "line": 68,
+          "end": 77,
+          "sha": "29b0fbfbe82eead4",
+          "nbytes": 370,
+          "class": "RigScintillationParams"
+        }
+      ]
+    },
+    {
+      "name": "to_json_dict",
+      "n_defs": 2,
+      "n_files": 2,
+      "byte_equal": false,
+      "locs": [
+        {
+          "file": "src_py/cal_diag.py",
+          "line": 85,
+          "end": 86,
+          "sha": "50380261ca67869e",
+          "nbytes": 73,
+          "class": "CalDiagGateResult"
+        },
+        {
+          "file": "src_py/sat_diag.py",
+          "line": 118,
+          "end": 139,
+          "sha": "53c7bd63fb4d3efb",
+          "nbytes": 1089,
+          "class": "SatDiagContext"
+        }
+      ]
+    }
+  ]
+}

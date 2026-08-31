@@ -1,0 +1,4659 @@
+{
+  "meta": {
+    "head": "d320697",
+    "n_modules": 139,
+    "n_reachable": 135,
+    "n_unreachable": 4,
+    "unreachable": [
+      "inspect_drafts",
+      "run_crowding_index",
+      "run_smoothness_report",
+      "validate_lc_crossval"
+    ],
+    "zero_src_py_importers": [
+      "app",
+      "comp_qa",
+      "epsf_zp_ok",
+      "inspect_drafts",
+      "method_lc_output",
+      "phase0_funnel",
+      "psf_neighbor_sub",
+      "psf_runner",
+      "run_crowding_index",
+      "run_smoothness_report",
+      "simulate_night_run",
+      "trust_flag",
+      "validate_lc_crossval",
+      "wide_slope_noise_core",
+      "xval_run"
+    ],
+    "r2_main_argparse": [
+      "comp_qa",
+      "dao_gaia_stage_01",
+      "dao_gaia_stage_01_iter2",
+      "dao_gaia_stage_01_iter3",
+      "dao_gaia_stage_01_iter4",
+      "night_run",
+      "psf_internal_lc",
+      "psf_runner",
+      "repair_catalog_ids",
+      "simulate_night_run",
+      "trust_flag",
+      "xval_run"
+    ],
+    "r2_main_no_argparse": [
+      "app",
+      "inspect_drafts",
+      "run_crowding_index",
+      "run_smoothness_report",
+      "validate_lc_crossval"
+    ],
+    "r5_doc_hits": {
+      "app": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md",
+        "VYVAR_PROCESS.md"
+      ],
+      "band_classify": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md"
+      ],
+      "catalog_provenance": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "check_star_kmag": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "citations": [
+        "VYVAR_PROCESS.md"
+      ],
+      "comp_qa_core": [
+        "VYVAR_PROCESS.md"
+      ],
+      "config": [
+        "VYVAR_PROCESS.md"
+      ],
+      "dao_gaia_stage_01": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "except_fix_counters": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "gaia_johnson": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "hrd_analysis": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "hrd_enrich": [
+        "VYVAR_STATE.md"
+      ],
+      "invariants_runtime": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md"
+      ],
+      "k2_extinction": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md"
+      ],
+      "masterstar_context": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "method_lc_output": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "night_run": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "osc_align": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "osc_extract": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "param_resolver": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "photometry_core": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md",
+        "VYVAR_PROCESS.md"
+      ],
+      "photometry_report": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "pipeline": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "psf_neighbor_sub": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "run_preflight_log": [
+        "VYVAR_STATE.md"
+      ],
+      "sat_diag": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "sigma_budget": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md"
+      ],
+      "sigma_floor_core": [
+        "VYVAR_STATE.md"
+      ],
+      "tess_verify": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "trust_flag_core": [
+        "VYVAR_PROCESS.md"
+      ],
+      "unit_resolver": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "vyvar_blind_series": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "vyvar_platesolver": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "vyvar_runtime": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md"
+      ],
+      "wcs_invertibility": [
+        "VYVAR_ROADMAP.md"
+      ],
+      "xval_run": [
+        "VYVAR_STATE.md",
+        "VYVAR_ROADMAP.md",
+        "VYVAR_PROCESS.md"
+      ]
+    },
+    "r1": [
+      "app"
+    ]
+  },
+  "modules": {
+    "aperture_policy": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "pipeline",
+        "str:photometry_core:str",
+        "test:dev/tests/test_aperture_policy_01.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:pipeline"
+      ]
+    },
+    "aperture_scatter_select": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "test:dev/tests/test_aperture_policy_01.py",
+        "test:dev/tests/test_impl_02_snr_cog_gates.py",
+        "test:dev/tests/test_impl_03_scatter_aperture.py"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_core"
+      ]
+    },
+    "app": {
+      "roots": [
+        "R1",
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_PROCESS.md",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "str:config:str",
+        "str:database:str",
+        "str:night_run:str",
+        "str:photometry_core:str",
+        "str:photometry_core:strpath",
+        "str:ui_quality_dashboard:str",
+        "str:ui_settings:str",
+        "test:dev/tests/test_fail_safety_hygiene.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R1",
+        "R3",
+        "R5",
+        "via:config",
+        "via:database",
+        "via:night_run",
+        "via:photometry_core",
+        "via:ui_quality_dashboard",
+        "via:ui_settings"
+      ]
+    },
+    "astrometry_optimizer": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:pipeline:str",
+        "str:wcs_header_io:str",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_s4_optimizer_d2.py"
+      ],
+      "src_py_importers": [
+        "pipeline"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:pipeline",
+        "via:wcs_header_io"
+      ]
+    },
+    "band_classify": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "k2_extinction",
+        "osc_align",
+        "photometry_core",
+        "test:dev/tests/test_band_classify.py"
+      ],
+      "src_py_importers": [
+        "k2_extinction",
+        "osc_align",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:k2_extinction",
+        "via:osc_align",
+        "via:photometry_core"
+      ]
+    },
+    "cal_diag": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "pipeline",
+        "str:invariants_runtime:str",
+        "str:photometry_core:str",
+        "test:dev/tests/test_cal_diag_v2_gate.py",
+        "test:dev/tests/test_cal_stage_gate.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:invariants_runtime",
+        "via:photometry_core",
+        "via:pipeline"
+      ]
+    },
+    "cal_stage": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "cal_diag",
+        "invariants_runtime",
+        "pipeline",
+        "str:cal_diag:str",
+        "str:database:str",
+        "str:draft_provenance:str",
+        "str:invariants_runtime:str",
+        "str:pipeline:str",
+        "test:dev/tests/test_cal_stage_gate.py",
+        "test:dev/tests/test_inv_cal_sat_gates.py"
+      ],
+      "src_py_importers": [
+        "cal_diag",
+        "invariants_runtime",
+        "pipeline"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:cal_diag",
+        "via:database",
+        "via:draft_provenance",
+        "via:invariants_runtime",
+        "via:pipeline"
+      ]
+    },
+    "calibration": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "cal_diag",
+        "importer",
+        "pipeline",
+        "str:app:str",
+        "str:cal_diag:str",
+        "str:cal_stage:str",
+        "str:config:str",
+        "str:dao_gaia_calibration:str",
+        "str:database:str",
+        "str:draft_provenance:str",
+        "str:err_calibration:str",
+        "str:importer:str",
+        "str:invariants_runtime:str",
+        "str:night_run:str",
+        "str:optics_autodetect:str",
+        "str:optics_selection:str",
+        "str:params_registry:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:pipeline:str",
+        "str:sigma_floor_core:str",
+        "str:ui_calibration:str",
+        "str:ui_components:str",
+        "str:ui_finalization:str",
+        "str:ui_quality_dashboard:str",
+        "str:ui_settings:str",
+        "str:ui_variability:str",
+        "test:dev/tests/test_cal_age_clock.py",
+        "test:dev/tests/test_cal_diag_v2_gate.py",
+        "test:dev/tests/validation/recover.py",
+        "ui_calibration",
+        "ui_calibration_library"
+      ],
+      "src_py_importers": [
+        "cal_diag",
+        "importer",
+        "pipeline",
+        "ui_calibration",
+        "ui_calibration_library"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "via:app",
+        "via:cal_diag",
+        "via:cal_stage",
+        "via:config",
+        "via:dao_gaia_calibration",
+        "via:database",
+        "via:draft_provenance",
+        "via:err_calibration",
+        "via:importer",
+        "via:invariants_runtime",
+        "via:night_run",
+        "via:optics_autodetect",
+        "via:optics_selection",
+        "via:params_registry",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pipeline",
+        "via:sigma_floor_core",
+        "via:ui_calibration",
+        "via:ui_calibration_library",
+        "via:ui_components",
+        "via:ui_finalization",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:ui_variability"
+      ]
+    },
+    "catalog_crossmatch": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "crossmatch_runner",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "crossmatch_runner",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "via:crossmatch_runner",
+        "via:ui_aperture_photometry",
+        "via:ui_variability"
+      ]
+    },
+    "catalog_match_trust": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "pipeline",
+        "test:dev/tests/test_g2_f002b_wcs_untrusted.py",
+        "test:dev/tests/test_proc_store_trust_cols.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:pipeline"
+      ]
+    },
+    "catalog_provenance": {
+      "roots": [
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_validation",
+        "dao_reconcile",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_ROADMAP.md",
+        "photometry_core"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_validation",
+        "dao_reconcile",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R4",
+        "R5",
+        "via:dao_gaia_stage_validation",
+        "via:dao_reconcile",
+        "via:photometry_core"
+      ]
+    },
+    "check_star_kmag": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "export_reports",
+        "photometry_core",
+        "photometry_report",
+        "test:dev/tests/test_check_star_selection.py",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_export_hdr_01.py",
+        "test:dev/tests/test_sparse_external_k.py"
+      ],
+      "src_py_importers": [
+        "export_reports",
+        "photometry_core",
+        "photometry_report"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:export_reports",
+        "via:photometry_core",
+        "via:photometry_report"
+      ]
+    },
+    "citations": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_PROCESS.md",
+        "export_reports",
+        "photometry_core",
+        "photometry_report",
+        "test:dev/tests/test_export_citations.py",
+        "test:dev/tests/test_osc3_band_exports.py"
+      ],
+      "src_py_importers": [
+        "export_reports",
+        "photometry_core",
+        "photometry_report"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:export_reports",
+        "via:photometry_core",
+        "via:photometry_report"
+      ]
+    },
+    "comp_frame_normalize": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_pool_rms",
+        "comp_selection_per_target",
+        "test:dev/tests/test_comp_frame_normalize.py"
+      ],
+      "src_py_importers": [
+        "comp_pool_rms",
+        "comp_selection_per_target"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:comp_pool_rms",
+        "via:comp_selection_per_target"
+      ]
+    },
+    "comp_pool_noise": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "test:dev/tests/test_comp_pool_noise_s1.py",
+        "test:dev/tests/test_comp_pool_noise_s2.py",
+        "test:dev/tests/test_comp_weights_universal.py",
+        "test:dev/tests/test_gate_regime_01.py",
+        "test:dev/tests/test_noise_floor_01.py",
+        "test:dev/tests/test_target_depth_01.py"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_core"
+      ]
+    },
+    "comp_pool_rms": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_rms_loo",
+        "comp_selection_per_target",
+        "photometry_core",
+        "str:simulate_night_run:str",
+        "test:dev/tests/test_comp_determinism_synthetic.py",
+        "test:dev/tests/test_comp_iterative_clip.py"
+      ],
+      "src_py_importers": [
+        "comp_rms_loo",
+        "comp_selection_per_target",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:comp_rms_loo",
+        "via:comp_selection_per_target",
+        "via:photometry_core",
+        "via:simulate_night_run"
+      ]
+    },
+    "comp_qa": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [
+        "str:export_reports:str",
+        "str:photometry_report:str",
+        "str:trust_flag_core:str"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R2",
+        "via:export_reports",
+        "via:photometry_report",
+        "via:trust_flag_core"
+      ]
+    },
+    "comp_qa_core": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_qa",
+        "docs/VYVAR_PROCESS.md",
+        "photometry_core",
+        "str:comp_qa:str",
+        "test:dev/tests/comp_qa_legacy_iterative.py",
+        "test:dev/tests/test_comp_qa_fix_once_locus.py",
+        "test:dev/tests/test_comp_qa_pool_guard.py",
+        "test:dev/tests/test_pre_cal_proc_csv_naming_e2e.py",
+        "test:dev/tests/test_proc_csv_glob.py",
+        "test:dev/tests/validation/recover.py"
+      ],
+      "src_py_importers": [
+        "comp_qa",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "R5",
+        "via:comp_qa",
+        "via:photometry_core"
+      ]
+    },
+    "comp_rms_loo": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "test:dev/tests/test_c3_comp_rms_loo.py"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_core"
+      ]
+    },
+    "comp_selection_per_target": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "pinned_ensembles",
+        "str:sky_separation:str",
+        "test:dev/tests/test_c0a_dist_deg.py",
+        "test:dev/tests/test_comp_determinism_synthetic.py",
+        "test:dev/tests/test_comp_iterative_clip.py",
+        "test:dev/tests/test_comp_pool_assignment_s3.py",
+        "test:dev/tests/test_comp_rms_gate_authoritative.py",
+        "test:dev/tests/test_except_fix_top10.py",
+        "test:dev/tests/test_gs11_pipeline.py",
+        "test:dev/tests/test_phase1_duplicate_comp_pool.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pinned_ensembles"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:pinned_ensembles",
+        "via:sky_separation"
+      ]
+    },
+    "comp_weights": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_selection_per_target",
+        "photometry_core",
+        "str:comp_pool_noise:str",
+        "test:dev/tests/test_comp_weight_rewrite.py",
+        "test:dev/tests/test_comp_weights_universal.py",
+        "test:dev/tests/test_forced_phot_and_weights.py"
+      ],
+      "src_py_importers": [
+        "comp_selection_per_target",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:comp_pool_noise",
+        "via:comp_selection_per_target",
+        "via:photometry_core"
+      ]
+    },
+    "config": {
+      "roots": [
+        "R3",
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "band_classify",
+        "check_star_kmag",
+        "citations",
+        "comp_selection_per_target",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "dao_gaia_stage_validation",
+        "database",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_PROCESS.md",
+        "export_reports",
+        "importer",
+        "masterstar_context",
+        "masterstar_gaia_accounting",
+        "night_run",
+        "params_registry",
+        "photometry_core",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_internal_lc",
+        "psf_neighbor_sub",
+        "psf_photometry",
+        "psf_runner",
+        "report_methods",
+        "run_crowding_index",
+        "sigma_budget",
+        "simulate_night_run",
+        "str:app:str",
+        "str:band_classify:str",
+        "str:comp_frame_normalize:str",
+        "str:dao_gaia_calibration:str",
+        "str:dao_gaia_stage_01:str",
+        "str:dao_gaia_stage_01_iter4:str",
+        "str:database:str",
+        "str:epsf_stage:str",
+        "str:export_reports:str",
+        "str:hrd_analysis:str",
+        "str:importer:str",
+        "str:invariants_runtime:str",
+        "str:k2_extinction:str",
+        "str:night_run:str",
+        "str:observer_location:str",
+        "str:param_resolver:str",
+        "str:params_registry:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:pipeline:str",
+        "str:psf_photometry:str",
+        "str:run_preflight_log:str",
+        "str:sigma_floor_core:str",
+        "str:simulate_night_run:str",
+        "str:tess_verify:str",
+        "str:time_utils:str",
+        "str:ui_dao_stars:str",
+        "str:ui_params_dashboard:str",
+        "str:ui_photometry:str",
+        "str:ui_settings:str",
+        "str:ui_variability:str",
+        "str:unit_resolver:str",
+        "str:vsx_type_scope:str",
+        "str:vyvar_blind_series:str",
+        "str:vyvar_platesolver:str",
+        "str:vyvar_runtime:str",
+        "tess_verify",
+        "test:dev/tests/test_alg_functions.py",
+        "test:dev/tests/test_alignment_max_control_points.py",
+        "test:dev/tests/test_apply_install_config.py",
+        "test:dev/tests/test_auto_vsx_limit_report.py",
+        "test:dev/tests/test_batch_e_recut.py",
+        "test:dev/tests/test_blind_rig_prior.py",
+        "test:dev/tests/test_blind_series.py",
+        "test:dev/tests/test_blind_solver_debug.py",
+        "test:dev/tests/test_blind_verify.py",
+        "test:dev/tests/test_bootstrap_release_data_dir.py",
+        "test:dev/tests/test_cal_stage_gate.py",
+        "test:dev/tests/test_calibration_library_match.py",
+        "test:dev/tests/test_catalog_db_path_resolution.py",
+        "test:dev/tests/test_check_star_selection.py",
+        "test:dev/tests/test_comp_determinism_synthetic.py",
+        "test:dev/tests/test_comp_qa_fix_once_locus.py",
+        "test:dev/tests/test_comp_sparse_fallback.py",
+        "test:dev/tests/test_config_data_root.py",
+        "test:dev/tests/test_config_jsonc_loader.py",
+        "test:dev/tests/test_config_jsonc_writer.py",
+        "test:dev/tests/test_config_observer_location_hydrate.py",
+        "test:dev/tests/test_config_write_guard.py",
+        "test:dev/tests/test_dao_gaia_calibration.py",
+        "test:dev/tests/test_dao_reconcile.py",
+        "test:dev/tests/test_database_sqlite_threading.py",
+        "test:dev/tests/test_docs_sync_guard.py",
+        "test:dev/tests/test_err_background_empirical.py",
+        "test:dev/tests/test_exoplanet_promotion_restore.py",
+        "test:dev/tests/test_export_citations.py",
+        "test:dev/tests/test_export_g5_f004.py",
+        "test:dev/tests/test_export_g5_f007.py",
+        "test:dev/tests/test_export_g5_f008.py",
+        "test:dev/tests/test_export_parity_01.py",
+        "test:dev/tests/test_export_time_base_refusal.py",
+        "test:dev/tests/test_forced_phot_and_weights.py",
+        "test:dev/tests/test_frame_quality_gate.py",
+        "test:dev/tests/test_fresh_machine_startup.py",
+        "test:dev/tests/test_g7_f003_phase01_use_bprp_primary.py",
+        "test:dev/tests/test_g7_f003b_report_bprp_primary.py",
+        "test:dev/tests/test_g7_f003c_report_cfg_snapshot.py",
+        "test:dev/tests/test_gate_regime_01.py",
+        "test:dev/tests/test_geo.py",
+        "test:dev/tests/test_gs11_pipeline.py",
+        "test:dev/tests/test_hrd_extreme.py",
+        "test:dev/tests/test_hrd_ident_tiers.py",
+        "test:dev/tests/test_inv_source_state_01.py",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "test:dev/tests/test_invariants_p1_seed.py",
+        "test:dev/tests/test_k2_extinction.py",
+        "test:dev/tests/test_k2_night_fit_recovery.py",
+        "test:dev/tests/test_master_validity_days_g6_f002.py",
+        "test:dev/tests/test_masterstar_gaia_01.py",
+        "test:dev/tests/test_no_destructive_lacosmic.py",
+        "test:dev/tests/test_obsloc_null_island.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_phase0_identity_gate.py",
+        "test:dev/tests/test_phase2a_saturated_skip.py",
+        "test:dev/tests/test_photometry_core.py",
+        "test:dev/tests/test_pipeline_meta_provenance.py",
+        "test:dev/tests/test_pre_cal_proc_csv_naming_e2e.py",
+        "test:dev/tests/test_psf_internal_lc.py",
+        "test:dev/tests/test_psf_lc_routing.py",
+        "test:dev/tests/test_psf_neighbor_sub.py",
+        "test:dev/tests/test_s2_tol_stamps.py",
+        "test:dev/tests/test_session_baseline_check.py",
+        "test:dev/tests/test_sibling_wcs_recovery.py",
+        "test:dev/tests/test_skipproc_qc_allowlist.py",
+        "test:dev/tests/test_skysf_double_guard.py",
+        "test:dev/tests/test_sparse_external_k.py",
+        "test:dev/tests/test_time_base_flag.py",
+        "test:dev/tests/test_trust_flag.py",
+        "test:dev/tests/test_ui_params_dashboard.py",
+        "test:dev/tests/test_unit_resolver.py",
+        "test:dev/tests/test_vsx_out_of_scope_types.py",
+        "test:dev/tests/test_wave_a_report_config.py",
+        "test:dev/tests/test_wave_b_internalized.py",
+        "test:dev/tests/test_wave_b_merged_keys.py",
+        "test:dev/tests/validation/a9_core.py",
+        "test:dev/tests/validation/crowding_audit_367.py",
+        "test:dev/tests/validation/epsf_fwhm_audit.py",
+        "test:dev/tests/validation/recover.py",
+        "test:dev/tests/validation/v3d_fine_scale.py",
+        "time_utils",
+        "ui_aperture_photometry",
+        "ui_dao_stars",
+        "ui_epsf_dashboard",
+        "ui_hrd",
+        "ui_masterstar_qa",
+        "ui_params_dashboard",
+        "ui_photometry",
+        "ui_quality_dashboard",
+        "ui_settings",
+        "ui_variability",
+        "vyvar_blind_series",
+        "vyvar_blind_solver",
+        "vyvar_platesolver",
+        "vyvar_runtime"
+      ],
+      "src_py_importers": [
+        "app",
+        "band_classify",
+        "check_star_kmag",
+        "citations",
+        "comp_selection_per_target",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "dao_gaia_stage_validation",
+        "database",
+        "export_reports",
+        "importer",
+        "masterstar_context",
+        "masterstar_gaia_accounting",
+        "night_run",
+        "params_registry",
+        "photometry_core",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_internal_lc",
+        "psf_neighbor_sub",
+        "psf_photometry",
+        "psf_runner",
+        "report_methods",
+        "run_crowding_index",
+        "sigma_budget",
+        "simulate_night_run",
+        "tess_verify",
+        "time_utils",
+        "ui_aperture_photometry",
+        "ui_dao_stars",
+        "ui_epsf_dashboard",
+        "ui_hrd",
+        "ui_masterstar_qa",
+        "ui_params_dashboard",
+        "ui_photometry",
+        "ui_quality_dashboard",
+        "ui_settings",
+        "ui_variability",
+        "vyvar_blind_series",
+        "vyvar_blind_solver",
+        "vyvar_platesolver",
+        "vyvar_runtime"
+      ],
+      "n_src_py_importers": 46,
+      "via": [
+        "R3",
+        "R4",
+        "R5",
+        "via:app",
+        "via:band_classify",
+        "via:check_star_kmag",
+        "via:citations",
+        "via:comp_frame_normalize",
+        "via:comp_selection_per_target",
+        "via:dao_gaia_calibration",
+        "via:dao_gaia_stage_01",
+        "via:dao_gaia_stage_01_iter2",
+        "via:dao_gaia_stage_01_iter3",
+        "via:dao_gaia_stage_01_iter4",
+        "via:dao_gaia_stage_validation",
+        "via:database",
+        "via:epsf_stage",
+        "via:export_reports",
+        "via:hrd_analysis",
+        "via:importer",
+        "via:invariants_runtime",
+        "via:k2_extinction",
+        "via:masterstar_context",
+        "via:masterstar_gaia_accounting",
+        "via:night_run",
+        "via:observer_location",
+        "via:param_resolver",
+        "via:params_registry",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pinned_ensembles",
+        "via:pipeline",
+        "via:psf_internal_lc",
+        "via:psf_neighbor_sub",
+        "via:psf_photometry",
+        "via:psf_runner",
+        "via:report_methods",
+        "via:run_preflight_log",
+        "via:sigma_budget",
+        "via:sigma_floor_core",
+        "via:simulate_night_run",
+        "via:tess_verify",
+        "via:time_utils",
+        "via:ui_aperture_photometry",
+        "via:ui_dao_stars",
+        "via:ui_epsf_dashboard",
+        "via:ui_hrd",
+        "via:ui_masterstar_qa",
+        "via:ui_params_dashboard",
+        "via:ui_photometry",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:ui_variability",
+        "via:unit_resolver",
+        "via:vsx_type_scope",
+        "via:vyvar_blind_series",
+        "via:vyvar_blind_solver",
+        "via:vyvar_platesolver",
+        "via:vyvar_runtime"
+      ]
+    },
+    "crossmatch_runner": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "str:ui_variability:str",
+        "tess_runner"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "tess_runner"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:photometry_core",
+        "via:tess_runner",
+        "via:ui_variability"
+      ]
+    },
+    "crowding_index": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "photometry_report",
+        "run_crowding_index",
+        "str:config:str",
+        "str:dao_reconcile:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:run_crowding_index:str",
+        "test:dev/tests/validation/crowding_audit_367.py",
+        "test:dev/tests/validation/epsf_fwhm_audit.py",
+        "test:dev/tests/validation/recover.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "photometry_report",
+        "run_crowding_index"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:config",
+        "via:dao_reconcile",
+        "via:photometry_core",
+        "via:photometry_report"
+      ]
+    },
+    "d3_comparison_candidacy": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_selection_per_target",
+        "dev/scripts/session_baseline_check.py",
+        "photometry_core",
+        "test:dev/tests/test_s5_d3_candidacy.py"
+      ],
+      "src_py_importers": [
+        "comp_selection_per_target",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "R4",
+        "via:comp_selection_per_target",
+        "via:photometry_core"
+      ]
+    },
+    "dao_gaia_calibration": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_validation",
+        "pipeline",
+        "str:pipeline:str",
+        "test:dev/tests/test_dao_gaia_calibration.py",
+        "test:dev/tests/test_dao_gaia_xfer_01.py",
+        "test:dev/tests/test_s2_tol_stamps.py",
+        "test:dev/tests/test_s3_match_radius_d1.py",
+        "ui_masterstar_qa"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_validation",
+        "pipeline",
+        "ui_masterstar_qa"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:dao_gaia_stage_validation",
+        "via:pipeline",
+        "via:ui_masterstar_qa"
+      ]
+    },
+    "dao_gaia_stage_01": {
+      "roots": [
+        "R2",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "dao_gaia_stage_validation",
+        "docs/VYVAR_ROADMAP.md"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "dao_gaia_stage_validation"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R2",
+        "R5",
+        "via:dao_gaia_stage_01_iter2",
+        "via:dao_gaia_stage_01_iter3",
+        "via:dao_gaia_stage_01_iter4",
+        "via:dao_gaia_stage_validation"
+      ]
+    },
+    "dao_gaia_stage_01_iter2": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R2",
+        "via:dao_gaia_stage_01_iter3",
+        "via:dao_gaia_stage_01_iter4"
+      ]
+    },
+    "dao_gaia_stage_01_iter3": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_01_iter4"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_01_iter4"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R2",
+        "via:dao_gaia_stage_01_iter4"
+      ]
+    },
+    "dao_gaia_stage_01_iter4": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_stage_validation"
+      ],
+      "src_py_importers": [
+        "dao_gaia_stage_validation"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R2",
+        "via:dao_gaia_stage_validation"
+      ]
+    },
+    "dao_gaia_stage_validation": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "dao_gaia_calibration",
+        "test:dev/tests/test_dao_gaia_xfer_01.py"
+      ],
+      "src_py_importers": [
+        "dao_gaia_calibration"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:dao_gaia_calibration"
+      ]
+    },
+    "dao_reconcile": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:photometry_report:str",
+        "test:dev/tests/test_dao_reconcile.py"
+      ],
+      "src_py_importers": [
+        "pipeline"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_report",
+        "via:pipeline"
+      ]
+    },
+    "database": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "astrometry_optimizer",
+        "calibration",
+        "catalog_crossmatch",
+        "catalog_provenance",
+        "config",
+        "dao_reconcile",
+        "dev/scripts/session_baseline_check.py",
+        "dilution",
+        "importer",
+        "observer_location",
+        "photometry_core",
+        "photometry_report",
+        "pipeline",
+        "psf_photometry",
+        "psf_runner",
+        "run_crowding_index",
+        "sigma_budget",
+        "str:app:str",
+        "str:calibration:str",
+        "str:catalog_provenance:str",
+        "str:param_resolver:str",
+        "str:photometry_report:str",
+        "str:run_preflight_log:str",
+        "str:ui_calibration_library:str",
+        "str:ui_database_explorer:str",
+        "str:ui_finalization:str",
+        "str:ui_masterstar_qa:str",
+        "str:ui_params_dashboard:str",
+        "str:ui_quality_dashboard:str",
+        "str:ui_settings:str",
+        "test:dev/tests/test_bootstrap_release_data_dir.py",
+        "test:dev/tests/test_calibration_library_match.py",
+        "test:dev/tests/test_catalog_db_path_resolution.py",
+        "test:dev/tests/test_database_fk_draft.py",
+        "test:dev/tests/test_database_master_sources_retire.py",
+        "test:dev/tests/test_database_sqlite_threading.py",
+        "test:dev/tests/test_database_sqlite_wal.py",
+        "test:dev/tests/test_draft_manifest_parity.py",
+        "test:dev/tests/test_epsf_build_guard.py",
+        "test:dev/tests/test_epsf_csv_prepare.py",
+        "test:dev/tests/test_exoplanet_local_match.py",
+        "test:dev/tests/test_exoplanet_promotion_restore.py",
+        "test:dev/tests/test_export_parity_01.py",
+        "test:dev/tests/test_field_run_findings.py",
+        "test:dev/tests/test_fix_draft_equipment.py",
+        "test:dev/tests/test_fresh_machine_startup.py",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "test:dev/tests/test_manifest_core_overlay.py",
+        "test:dev/tests/test_manifest_rig_accessors.py",
+        "test:dev/tests/test_manifest_rig_flip.py",
+        "test:dev/tests/test_manifest_shadow_rig.py",
+        "test:dev/tests/test_master_validity_days_g6_f002.py",
+        "test:dev/tests/test_observer_location.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_pre_calibrated_run.py",
+        "test:dev/tests/test_query_local_gaia_g3_f002.py",
+        "test:dev/tests/test_reference_seed.py",
+        "test:dev/tests/test_run_preflight_error_log.py",
+        "test:dev/tests/test_run_vyvar_fk_milan_state.py",
+        "test:dev/tests/validation/crowding_audit_367.py",
+        "test:dev/tests/validation/epsf_fwhm_audit.py",
+        "time_utils",
+        "ui_calibration",
+        "ui_calibration_library",
+        "ui_database_explorer",
+        "ui_quality_dashboard",
+        "ui_settings",
+        "vsx_gaia_crossmatch",
+        "vyvar_platesolver",
+        "vyvar_runtime"
+      ],
+      "src_py_importers": [
+        "app",
+        "astrometry_optimizer",
+        "calibration",
+        "catalog_crossmatch",
+        "catalog_provenance",
+        "config",
+        "dao_reconcile",
+        "dilution",
+        "importer",
+        "observer_location",
+        "photometry_core",
+        "photometry_report",
+        "pipeline",
+        "psf_photometry",
+        "psf_runner",
+        "run_crowding_index",
+        "sigma_budget",
+        "time_utils",
+        "ui_calibration",
+        "ui_calibration_library",
+        "ui_database_explorer",
+        "ui_quality_dashboard",
+        "ui_settings",
+        "vsx_gaia_crossmatch",
+        "vyvar_platesolver",
+        "vyvar_runtime"
+      ],
+      "n_src_py_importers": 26,
+      "via": [
+        "R3",
+        "R4",
+        "via:app",
+        "via:astrometry_optimizer",
+        "via:calibration",
+        "via:catalog_crossmatch",
+        "via:catalog_provenance",
+        "via:config",
+        "via:dao_reconcile",
+        "via:dilution",
+        "via:importer",
+        "via:observer_location",
+        "via:param_resolver",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:psf_runner",
+        "via:run_preflight_log",
+        "via:sigma_budget",
+        "via:time_utils",
+        "via:ui_calibration",
+        "via:ui_calibration_library",
+        "via:ui_database_explorer",
+        "via:ui_finalization",
+        "via:ui_masterstar_qa",
+        "via:ui_params_dashboard",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:vsx_gaia_crossmatch",
+        "via:vyvar_platesolver",
+        "via:vyvar_runtime"
+      ]
+    },
+    "dilution": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_pool_noise",
+        "method_lc_output",
+        "photometry_core",
+        "str:citations:str",
+        "str:comp_pool_noise:str",
+        "str:export_reports:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "test:dev/tests/test_dilution.py",
+        "test:dev/tests/test_gs11_pipeline.py"
+      ],
+      "src_py_importers": [
+        "comp_pool_noise",
+        "method_lc_output",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:citations",
+        "via:comp_pool_noise",
+        "via:export_reports",
+        "via:method_lc_output",
+        "via:photometry_core",
+        "via:photometry_report"
+      ]
+    },
+    "draft_provenance": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "database",
+        "dev/scripts/session_baseline_check.py",
+        "night_run",
+        "photometry_core",
+        "photometry_report",
+        "pipeline",
+        "test:dev/tests/test_draft_manifest_parity.py",
+        "test:dev/tests/test_fix_draft_equipment.py",
+        "test:dev/tests/test_manifest_core_overlay.py",
+        "test:dev/tests/test_manifest_rig_accessors.py",
+        "test:dev/tests/test_manifest_rig_flip.py",
+        "test:dev/tests/test_manifest_shadow_rig.py",
+        "test:dev/tests/test_manifest_ui_helpers.py",
+        "test:dev/tests/test_pre_calibrated_run.py",
+        "ui_finalization",
+        "ui_quality_dashboard"
+      ],
+      "src_py_importers": [
+        "app",
+        "database",
+        "night_run",
+        "photometry_core",
+        "photometry_report",
+        "pipeline",
+        "ui_finalization",
+        "ui_quality_dashboard"
+      ],
+      "n_src_py_importers": 8,
+      "via": [
+        "R3",
+        "R4",
+        "via:app",
+        "via:database",
+        "via:night_run",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pipeline",
+        "via:ui_finalization",
+        "via:ui_quality_dashboard"
+      ]
+    },
+    "epsf_frame_accounting": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "epsf_psf_merge",
+        "pipeline",
+        "test:dev/tests/test_epsf_frame_accounting.py",
+        "test:dev/tests/test_epsf_science_light_fits.py"
+      ],
+      "src_py_importers": [
+        "epsf_psf_merge",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:epsf_psf_merge",
+        "via:pipeline"
+      ]
+    },
+    "epsf_psf_merge": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "epsf_stage",
+        "test:dev/tests/test_epsf_psf_merge.py",
+        "test:dev/tests/test_export_parity_01.py"
+      ],
+      "src_py_importers": [
+        "epsf_stage"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:epsf_stage"
+      ]
+    },
+    "epsf_science_set": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "epsf_psf_merge",
+        "pipeline",
+        "psf_photometry",
+        "test:dev/tests/test_epsf_science_set.py",
+        "ui_epsf_dashboard"
+      ],
+      "src_py_importers": [
+        "epsf_psf_merge",
+        "pipeline",
+        "psf_photometry",
+        "ui_epsf_dashboard"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R3",
+        "via:epsf_psf_merge",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:ui_epsf_dashboard"
+      ]
+    },
+    "epsf_stage": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "dev/scripts/session_baseline_check.py",
+        "night_run",
+        "psf_runner",
+        "str:night_run:str",
+        "test:dev/tests/test_epsf_stage.py",
+        "ui_epsf_dashboard"
+      ],
+      "src_py_importers": [
+        "app",
+        "night_run",
+        "psf_runner",
+        "ui_epsf_dashboard"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R3",
+        "R4",
+        "via:app",
+        "via:night_run",
+        "via:psf_runner",
+        "via:ui_epsf_dashboard"
+      ]
+    },
+    "epsf_zp_ok": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "dev/scripts/session_baseline_check.py",
+        "test:dev/tests/test_epsf_chain_01b.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R3",
+        "R4"
+      ]
+    },
+    "err_calibration": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "export_reports",
+        "photometry_core"
+      ],
+      "src_py_importers": [
+        "export_reports",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:export_reports",
+        "via:photometry_core"
+      ]
+    },
+    "except_fix_counters": {
+      "roots": [
+        "R3",
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "check_star_kmag",
+        "comp_selection_per_target",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_ROADMAP.md",
+        "export_reports",
+        "importer",
+        "k2_extinction",
+        "optics_selection",
+        "photometry_core",
+        "pipeline",
+        "psf_photometry",
+        "test:dev/tests/test_except_fix2_top10.py",
+        "test:dev/tests/test_except_fix3.py",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_except_fix_top10.py",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "time_utils",
+        "trust_flag_core",
+        "ui_variability",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wcs_header_io"
+      ],
+      "src_py_importers": [
+        "check_star_kmag",
+        "comp_selection_per_target",
+        "export_reports",
+        "importer",
+        "k2_extinction",
+        "optics_selection",
+        "photometry_core",
+        "pipeline",
+        "psf_photometry",
+        "time_utils",
+        "trust_flag_core",
+        "ui_variability",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wcs_header_io"
+      ],
+      "n_src_py_importers": 15,
+      "via": [
+        "R3",
+        "R4",
+        "R5",
+        "via:check_star_kmag",
+        "via:comp_selection_per_target",
+        "via:export_reports",
+        "via:importer",
+        "via:k2_extinction",
+        "via:optics_selection",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:time_utils",
+        "via:trust_flag_core",
+        "via:ui_variability",
+        "via:vyvar_alignment_frame",
+        "via:vyvar_platesolver",
+        "via:wcs_header_io"
+      ]
+    },
+    "export_reports": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "band_classify",
+        "photometry_core",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_export_citations.py",
+        "test:dev/tests/test_export_g5_f004.py",
+        "test:dev/tests/test_export_g5_f007.py",
+        "test:dev/tests/test_export_g5_f008.py",
+        "test:dev/tests/test_export_hdr_01.py",
+        "test:dev/tests/test_export_time_base_refusal.py",
+        "test:dev/tests/test_gs11_pipeline.py",
+        "test:dev/tests/test_mag_calib_final_g5_f011.py",
+        "test:dev/tests/test_osc3_band_exports.py",
+        "test:dev/tests/test_psf_internal_lc.py"
+      ],
+      "src_py_importers": [
+        "band_classify",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:band_classify",
+        "via:photometry_core"
+      ]
+    },
+    "fits_suffixes": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "importer",
+        "osc_extract",
+        "pipeline",
+        "utils"
+      ],
+      "src_py_importers": [
+        "importer",
+        "osc_extract",
+        "pipeline",
+        "utils"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "via:importer",
+        "via:osc_extract",
+        "via:pipeline",
+        "via:utils"
+      ]
+    },
+    "forced_photometry": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:masterstar_gaia_accounting:str",
+        "str:pipeline:str",
+        "str:ui_masterstar_qa:str",
+        "test:dev/tests/test_forced_phot_and_weights.py"
+      ],
+      "src_py_importers": [
+        "pipeline"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:masterstar_gaia_accounting",
+        "via:pipeline",
+        "via:ui_masterstar_qa"
+      ]
+    },
+    "gaia_catalog_id": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "astrometry_optimizer",
+        "check_star_kmag",
+        "comp_qa_core",
+        "comp_selection_per_target",
+        "dao_reconcile",
+        "database",
+        "dilution",
+        "epsf_psf_merge",
+        "epsf_science_set",
+        "export_reports",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "hrd_enrich",
+        "invariants_runtime",
+        "photometry_core",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "proc_frame_store",
+        "psf_internal_lc",
+        "psf_photometry",
+        "psf_runner",
+        "run_smoothness_report",
+        "test:dev/tests/test_dao_gaia_calibration.py",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_f428_msstamp_coord.py",
+        "test:dev/tests/test_forced_phot_and_weights.py",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_phase1_duplicate_comp_pool.py",
+        "trust_flag_core",
+        "ui_epsf_dashboard",
+        "ui_masterstar_qa",
+        "ui_variability",
+        "variability_detector",
+        "vsx_gaia_crossmatch",
+        "wcs_invertibility"
+      ],
+      "src_py_importers": [
+        "astrometry_optimizer",
+        "check_star_kmag",
+        "comp_qa_core",
+        "comp_selection_per_target",
+        "dao_reconcile",
+        "database",
+        "dilution",
+        "epsf_psf_merge",
+        "epsf_science_set",
+        "export_reports",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "hrd_enrich",
+        "invariants_runtime",
+        "photometry_core",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "proc_frame_store",
+        "psf_internal_lc",
+        "psf_photometry",
+        "psf_runner",
+        "run_smoothness_report",
+        "trust_flag_core",
+        "ui_epsf_dashboard",
+        "ui_masterstar_qa",
+        "ui_variability",
+        "variability_detector",
+        "vsx_gaia_crossmatch",
+        "wcs_invertibility"
+      ],
+      "n_src_py_importers": 30,
+      "via": [
+        "R3",
+        "via:astrometry_optimizer",
+        "via:check_star_kmag",
+        "via:comp_qa_core",
+        "via:comp_selection_per_target",
+        "via:dao_reconcile",
+        "via:database",
+        "via:dilution",
+        "via:epsf_psf_merge",
+        "via:epsf_science_set",
+        "via:export_reports",
+        "via:hrd_analysis",
+        "via:hrd_colorfield",
+        "via:hrd_enrich",
+        "via:invariants_runtime",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pinned_ensembles",
+        "via:pipeline",
+        "via:proc_frame_store",
+        "via:psf_internal_lc",
+        "via:psf_photometry",
+        "via:psf_runner",
+        "via:trust_flag_core",
+        "via:ui_epsf_dashboard",
+        "via:ui_masterstar_qa",
+        "via:ui_variability",
+        "via:variability_detector",
+        "via:vsx_gaia_crossmatch",
+        "via:wcs_invertibility"
+      ]
+    },
+    "gaia_johnson": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "citations",
+        "docs/VYVAR_ROADMAP.md",
+        "export_reports",
+        "test:dev/tests/test_osc3_band_exports.py"
+      ],
+      "src_py_importers": [
+        "citations",
+        "export_reports"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "R5",
+        "via:citations",
+        "via:export_reports"
+      ]
+    },
+    "gain_photon_transfer": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "psf_internal_lc",
+        "str:export_reports:str",
+        "str:photometry_core:str",
+        "test:dev/tests/test_gain_pt_radius_01.py",
+        "test:dev/tests/test_wide_err_03_gain.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "psf_internal_lc"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:export_reports",
+        "via:photometry_core",
+        "via:psf_internal_lc"
+      ]
+    },
+    "hrd_analysis": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "hrd_colorfield",
+        "photometry_report",
+        "test:dev/tests/test_hrd_details.py",
+        "test:dev/tests/test_hrd_extreme.py",
+        "test:dev/tests/test_hrd_gaia_row_fetch.py",
+        "test:dev/tests/test_hrd_ident_tiers.py",
+        "ui_hrd"
+      ],
+      "src_py_importers": [
+        "hrd_colorfield",
+        "photometry_report",
+        "ui_hrd"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:hrd_colorfield",
+        "via:photometry_report",
+        "via:ui_hrd"
+      ]
+    },
+    "hrd_colorfield": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "test:dev/tests/test_hrd_colorfield.py",
+        "ui_hrd"
+      ],
+      "src_py_importers": [
+        "ui_hrd"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:ui_hrd"
+      ]
+    },
+    "hrd_enrich": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_STATE.md",
+        "hrd_analysis",
+        "str:hrd_colorfield:str",
+        "str:photometry_report:str",
+        "str:ui_hrd:str",
+        "test:dev/tests/test_f428_fixbatch.py",
+        "test:dev/tests/test_hrd_extreme.py",
+        "test:dev/tests/test_hrd_ident_tiers.py"
+      ],
+      "src_py_importers": [
+        "hrd_analysis"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "R5",
+        "via:hrd_analysis",
+        "via:hrd_colorfield",
+        "via:photometry_report",
+        "via:ui_hrd"
+      ]
+    },
+    "importer": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "draft_provenance",
+        "night_run",
+        "str:app:str",
+        "str:infolog:str",
+        "str:pipeline:str",
+        "test:dev/tests/test_cal_age_clock.py",
+        "test:dev/tests/test_calibration_library_match.py",
+        "test:dev/tests/test_except_fix3.py",
+        "test:dev/tests/test_pre_calibrated_run.py",
+        "test:dev/tests/test_run_vyvar_fk_milan_state.py",
+        "ui_calibration",
+        "ui_calibration_library",
+        "ui_finalization",
+        "ui_quality_dashboard"
+      ],
+      "src_py_importers": [
+        "app",
+        "draft_provenance",
+        "night_run",
+        "ui_calibration",
+        "ui_calibration_library",
+        "ui_finalization",
+        "ui_quality_dashboard"
+      ],
+      "n_src_py_importers": 7,
+      "via": [
+        "R3",
+        "via:app",
+        "via:draft_provenance",
+        "via:infolog",
+        "via:night_run",
+        "via:pipeline",
+        "via:ui_calibration",
+        "via:ui_calibration_library",
+        "via:ui_finalization",
+        "via:ui_quality_dashboard"
+      ]
+    },
+    "infolog": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "astrometry_optimizer",
+        "cal_diag",
+        "calibration",
+        "comp_selection_per_target",
+        "database",
+        "draft_provenance",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "hrd_enrich",
+        "importer",
+        "night_run",
+        "optics_selection",
+        "photometry_core",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_photometry",
+        "str:pipeline:str",
+        "str:run_preflight_log:str",
+        "str:ui_masterstar_qa:str",
+        "test:dev/tests/test_blind_solver_debug.py",
+        "test:dev/tests/test_f428_fixbatch.py",
+        "test:dev/tests/test_field_run_findings.py",
+        "test:dev/tests/test_post451_part_b.py",
+        "test:dev/tests/test_post453_infolog.py",
+        "time_utils",
+        "ui_components",
+        "ui_finalization",
+        "ui_quality_dashboard",
+        "vsx_gaia_crossmatch",
+        "vyvar_alignment_frame",
+        "vyvar_blind_series",
+        "vyvar_blind_solver",
+        "vyvar_platesolver",
+        "vyvar_ui_status"
+      ],
+      "src_py_importers": [
+        "app",
+        "astrometry_optimizer",
+        "cal_diag",
+        "calibration",
+        "comp_selection_per_target",
+        "database",
+        "draft_provenance",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "hrd_enrich",
+        "importer",
+        "night_run",
+        "optics_selection",
+        "photometry_core",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_photometry",
+        "time_utils",
+        "ui_components",
+        "ui_finalization",
+        "ui_quality_dashboard",
+        "vsx_gaia_crossmatch",
+        "vyvar_alignment_frame",
+        "vyvar_blind_series",
+        "vyvar_blind_solver",
+        "vyvar_platesolver",
+        "vyvar_ui_status"
+      ],
+      "n_src_py_importers": 27,
+      "via": [
+        "R3",
+        "via:app",
+        "via:astrometry_optimizer",
+        "via:cal_diag",
+        "via:calibration",
+        "via:comp_selection_per_target",
+        "via:database",
+        "via:draft_provenance",
+        "via:hrd_analysis",
+        "via:hrd_colorfield",
+        "via:hrd_enrich",
+        "via:importer",
+        "via:night_run",
+        "via:optics_selection",
+        "via:photometry_core",
+        "via:pinned_ensembles",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:run_preflight_log",
+        "via:time_utils",
+        "via:ui_components",
+        "via:ui_finalization",
+        "via:ui_masterstar_qa",
+        "via:ui_quality_dashboard",
+        "via:vsx_gaia_crossmatch",
+        "via:vyvar_alignment_frame",
+        "via:vyvar_blind_series",
+        "via:vyvar_blind_solver",
+        "via:vyvar_platesolver",
+        "via:vyvar_ui_status"
+      ]
+    },
+    "inspect_drafts": {
+      "roots": [],
+      "reachable": false,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": []
+    },
+    "invariants_runtime": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "astrometry_optimizer",
+        "calibration",
+        "comp_qa_core",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_validation",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "epsf_frame_accounting",
+        "epsf_psf_merge",
+        "export_reports",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pinned_ensembles",
+        "pipeline",
+        "test:dev/tests/test_comp_qa_pool_guard.py",
+        "test:dev/tests/test_dao_gaia_calibration.py",
+        "test:dev/tests/test_dao_gaia_xfer_01.py",
+        "test:dev/tests/test_epsf_frame_accounting.py",
+        "test:dev/tests/test_epsf_psf_merge.py",
+        "test:dev/tests/test_err_background_empirical.py",
+        "test:dev/tests/test_gate_regime_01.py",
+        "test:dev/tests/test_inv_cal_sat_gates.py",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_invariants_p2.py",
+        "test:dev/tests/test_masterstar_gaia_01.py",
+        "test:dev/tests/test_osc1_extraction.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_osc3_band_exports.py",
+        "test:dev/tests/test_post451_part_b.py",
+        "test:dev/tests/test_preprocess_sky_surface.py",
+        "test:dev/tests/test_psf_internal_lc.py",
+        "test:dev/tests/test_skipproc_qc_allowlist.py"
+      ],
+      "src_py_importers": [
+        "astrometry_optimizer",
+        "calibration",
+        "comp_qa_core",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_validation",
+        "epsf_frame_accounting",
+        "epsf_psf_merge",
+        "export_reports",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pinned_ensembles",
+        "pipeline"
+      ],
+      "n_src_py_importers": 12,
+      "via": [
+        "R3",
+        "R5",
+        "via:astrometry_optimizer",
+        "via:calibration",
+        "via:comp_qa_core",
+        "via:dao_gaia_calibration",
+        "via:dao_gaia_stage_validation",
+        "via:epsf_frame_accounting",
+        "via:epsf_psf_merge",
+        "via:export_reports",
+        "via:masterstar_gaia_accounting",
+        "via:photometry_core",
+        "via:pinned_ensembles",
+        "via:pipeline"
+      ]
+    },
+    "jd_axis_format": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:photometry_core",
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "k2_cohort_core": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "test:dev/tests/test_k2_cohort_core.py",
+        "wide_slope_noise_core"
+      ],
+      "src_py_importers": [
+        "wide_slope_noise_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:wide_slope_noise_core"
+      ]
+    },
+    "k2_extinction": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "citations",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "method_lc_output",
+        "photometry_core",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_k2_extinction.py",
+        "test:dev/tests/test_k2_night_fit_recovery.py",
+        "test:dev/tests/test_osc3_band_exports.py"
+      ],
+      "src_py_importers": [
+        "citations",
+        "method_lc_output",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:citations",
+        "via:method_lc_output",
+        "via:photometry_core"
+      ]
+    },
+    "lunar_context": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "test:dev/tests/test_lunar_context.py"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:photometry_report"
+      ]
+    },
+    "mag_constants": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_pool_noise",
+        "err_calibration",
+        "photometry_core",
+        "psf_internal_lc",
+        "sigma_budget",
+        "sigma_floor_core",
+        "sparse_trust_core",
+        "test:dev/tests/test_sigma_floor.py",
+        "test:dev/tests/test_sparse_external_k.py"
+      ],
+      "src_py_importers": [
+        "comp_pool_noise",
+        "err_calibration",
+        "photometry_core",
+        "psf_internal_lc",
+        "sigma_budget",
+        "sigma_floor_core",
+        "sparse_trust_core"
+      ],
+      "n_src_py_importers": 7,
+      "via": [
+        "R3",
+        "via:comp_pool_noise",
+        "via:err_calibration",
+        "via:photometry_core",
+        "via:psf_internal_lc",
+        "via:sigma_budget",
+        "via:sigma_floor_core",
+        "via:sparse_trust_core"
+      ]
+    },
+    "masterstar_context": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "crowding_index",
+        "docs/VYVAR_ROADMAP.md",
+        "pipeline",
+        "psf_photometry",
+        "test:dev/tests/validation/epsf_fwhm_audit.py",
+        "ui_dao_stars",
+        "ui_settings"
+      ],
+      "src_py_importers": [
+        "crowding_index",
+        "pipeline",
+        "psf_photometry",
+        "ui_dao_stars",
+        "ui_settings"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "R5",
+        "via:crowding_index",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:ui_dao_stars",
+        "via:ui_settings"
+      ]
+    },
+    "masterstar_gaia_accounting": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "d3_comparison_candidacy",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "pipeline",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_inv_source_state_01.py",
+        "test:dev/tests/test_masterstar_gaia_01.py"
+      ],
+      "src_py_importers": [
+        "d3_comparison_candidacy",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dao_gaia_stage_01_iter4",
+        "pipeline"
+      ],
+      "n_src_py_importers": 7,
+      "via": [
+        "R3",
+        "via:d3_comparison_candidacy",
+        "via:dao_gaia_calibration",
+        "via:dao_gaia_stage_01",
+        "via:dao_gaia_stage_01_iter2",
+        "via:dao_gaia_stage_01_iter3",
+        "via:dao_gaia_stage_01_iter4",
+        "via:pipeline"
+      ]
+    },
+    "masterstar_qa_plot": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_masterstar_qa",
+        "ui_photometry_quality"
+      ],
+      "src_py_importers": [
+        "ui_masterstar_qa",
+        "ui_photometry_quality"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:ui_masterstar_qa",
+        "via:ui_photometry_quality"
+      ]
+    },
+    "masterstars_enrichment": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "test:dev/tests/test_masterstars_enrichment.py",
+        "ui_components"
+      ],
+      "src_py_importers": [
+        "pipeline",
+        "ui_components"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:pipeline",
+        "via:ui_components"
+      ]
+    },
+    "method_lc_output": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "test:dev/tests/test_get_lc_psf_strict.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R3",
+        "R5"
+      ]
+    },
+    "night_run": {
+      "roots": [
+        "R2",
+        "R3",
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_ROADMAP.md",
+        "simulate_night_run",
+        "str:app:str",
+        "test:dev/tests/test_completeness_gate_measurable.py",
+        "test:dev/tests/test_epsf_chain_01b.py",
+        "test:dev/tests/test_epsf_completeness.py",
+        "test:dev/tests/test_export_parity_01.py",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "test:dev/tests/test_photometry_completeness.py",
+        "test:dev/tests/test_post453_equivalence.py",
+        "test:dev/tests/test_pre_calibrated_run.py",
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "app",
+        "simulate_night_run",
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "via:app",
+        "via:simulate_night_run",
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "observer_location": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "database",
+        "importer",
+        "night_run",
+        "str:draft_provenance:str",
+        "str:export_reports:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:sigma_budget:str",
+        "test:dev/tests/test_observer_location.py",
+        "test:dev/tests/test_wave_a_report_config.py:text"
+      ],
+      "src_py_importers": [
+        "database",
+        "importer",
+        "night_run"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:database",
+        "via:draft_provenance",
+        "via:export_reports",
+        "via:importer",
+        "via:night_run",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:sigma_budget"
+      ]
+    },
+    "optics_autodetect": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "optics_selection": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "pipeline",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_g1_f005_db_optics_lookup.py",
+        "test:dev/tests/test_optics_resolve.py"
+      ],
+      "src_py_importers": [
+        "app",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:app",
+        "via:pipeline"
+      ]
+    },
+    "osc_align": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "citations",
+        "docs/VYVAR_ROADMAP.md",
+        "export_reports",
+        "invariants_runtime",
+        "k2_extinction",
+        "photometry_report",
+        "pipeline",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_osc3_band_exports.py"
+      ],
+      "src_py_importers": [
+        "citations",
+        "export_reports",
+        "invariants_runtime",
+        "k2_extinction",
+        "photometry_report",
+        "pipeline"
+      ],
+      "n_src_py_importers": 6,
+      "via": [
+        "R3",
+        "R5",
+        "via:citations",
+        "via:export_reports",
+        "via:invariants_runtime",
+        "via:k2_extinction",
+        "via:photometry_report",
+        "via:pipeline"
+      ]
+    },
+    "osc_extract": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "database",
+        "docs/VYVAR_ROADMAP.md",
+        "importer",
+        "invariants_runtime",
+        "osc_align",
+        "pipeline",
+        "test:dev/tests/test_osc1_extraction.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py"
+      ],
+      "src_py_importers": [
+        "database",
+        "importer",
+        "invariants_runtime",
+        "osc_align",
+        "pipeline"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "R5",
+        "via:database",
+        "via:importer",
+        "via:invariants_runtime",
+        "via:osc_align",
+        "via:pipeline"
+      ]
+    },
+    "param_resolver": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "crowding_index",
+        "docs/VYVAR_ROADMAP.md",
+        "night_run",
+        "photometry_core",
+        "pipeline",
+        "psf_photometry",
+        "str:database:str",
+        "str:export_reports:str",
+        "str:photometry_core:str",
+        "str:pipeline:str",
+        "str:time_utils:str",
+        "test:dev/tests/test_gain_header_resolution.py",
+        "test:dev/tests/test_obsloc_null_island.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_param_resolver_binning_scale.py",
+        "time_utils",
+        "ui_quality_dashboard"
+      ],
+      "src_py_importers": [
+        "crowding_index",
+        "night_run",
+        "photometry_core",
+        "pipeline",
+        "psf_photometry",
+        "time_utils",
+        "ui_quality_dashboard"
+      ],
+      "n_src_py_importers": 7,
+      "via": [
+        "R3",
+        "R5",
+        "via:crowding_index",
+        "via:database",
+        "via:export_reports",
+        "via:night_run",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:psf_photometry",
+        "via:time_utils",
+        "via:ui_quality_dashboard"
+      ]
+    },
+    "params_registry": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "config",
+        "dev/scripts/session_baseline_check.py",
+        "photometry_report",
+        "str:ui_params_dashboard:str",
+        "test:dev/tests/test_bootstrap_release_data_dir.py",
+        "test:dev/tests/test_config_jsonc_writer.py",
+        "test:dev/tests/test_params_registry.py",
+        "test:dev/tests/test_s7_clean_tree_name.py",
+        "test:dev/tests/test_ui_params_dashboard.py",
+        "test:dev/tests/test_wave_a_report_config.py",
+        "ui_params_dashboard"
+      ],
+      "src_py_importers": [
+        "config",
+        "photometry_report",
+        "ui_params_dashboard"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R4",
+        "via:config",
+        "via:photometry_report",
+        "via:ui_params_dashboard"
+      ]
+    },
+    "pdf_report": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "phase0_funnel": {
+      "roots": [
+        "R3",
+        "R4"
+      ],
+      "reachable": true,
+      "importers": [
+        "dev/scripts/session_baseline_check.py",
+        "test:dev/tests/test_session_baseline_check.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R3",
+        "R4"
+      ]
+    },
+    "photometry": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "importer",
+        "pipeline",
+        "str:aperture_scatter_select:str",
+        "str:app:str",
+        "str:catalog_match_trust:str",
+        "str:citations:str",
+        "str:comp_frame_normalize:str",
+        "str:comp_pool_noise:str",
+        "str:comp_qa:str",
+        "str:comp_qa_core:str",
+        "str:config:str",
+        "str:crowding_index:str",
+        "str:dao_gaia_stage_validation:str",
+        "str:database:str",
+        "str:epsf_psf_merge:str",
+        "str:epsf_science_set:str",
+        "str:epsf_stage:str",
+        "str:epsf_zp_ok:str",
+        "str:export_reports:str",
+        "str:hrd_analysis:str",
+        "str:hrd_colorfield:str",
+        "str:invariants_runtime:str",
+        "str:k2_extinction:str",
+        "str:night_run:str",
+        "str:osc_align:str",
+        "str:params_registry:str",
+        "str:pdf_report:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:pinned_ensembles:str",
+        "str:pipeline:str",
+        "str:plain_stats:str",
+        "str:psf_internal_lc:str",
+        "str:psf_photometry:str",
+        "str:report_methods:str",
+        "str:sat_diag:str",
+        "str:sky_separation:str",
+        "str:trust_flag:str",
+        "str:trust_flag_core:str",
+        "str:ui_aperture_photometry:str",
+        "str:ui_epsf_dashboard:str",
+        "str:ui_masterstar_qa:str",
+        "str:ui_photometry:str",
+        "str:ui_quality_dashboard:str",
+        "str:ui_settings:str",
+        "str:ui_variability:str",
+        "str:validate_lc_crossval:str",
+        "str:vyvar_platesolver:str",
+        "str:vyvar_runtime:str",
+        "str:xval_run:str"
+      ],
+      "src_py_importers": [
+        "importer",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:aperture_scatter_select",
+        "via:app",
+        "via:catalog_match_trust",
+        "via:citations",
+        "via:comp_frame_normalize",
+        "via:comp_pool_noise",
+        "via:comp_qa",
+        "via:comp_qa_core",
+        "via:config",
+        "via:crowding_index",
+        "via:dao_gaia_stage_validation",
+        "via:database",
+        "via:epsf_psf_merge",
+        "via:epsf_science_set",
+        "via:epsf_stage",
+        "via:epsf_zp_ok",
+        "via:export_reports",
+        "via:hrd_analysis",
+        "via:hrd_colorfield",
+        "via:importer",
+        "via:invariants_runtime",
+        "via:k2_extinction",
+        "via:night_run",
+        "via:osc_align",
+        "via:params_registry",
+        "via:pdf_report",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:pinned_ensembles",
+        "via:pipeline",
+        "via:plain_stats",
+        "via:psf_internal_lc",
+        "via:psf_photometry",
+        "via:report_methods",
+        "via:sat_diag",
+        "via:sky_separation",
+        "via:trust_flag",
+        "via:trust_flag_core",
+        "via:ui_aperture_photometry",
+        "via:ui_epsf_dashboard",
+        "via:ui_masterstar_qa",
+        "via:ui_photometry",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:ui_variability",
+        "via:vyvar_platesolver",
+        "via:vyvar_runtime",
+        "via:xval_run"
+      ]
+    },
+    "photometry_core": {
+      "roots": [
+        "R3",
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "aperture_scatter_select",
+        "band_classify",
+        "check_star_kmag",
+        "comp_selection_per_target",
+        "crowding_index",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_PROCESS.md",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "epsf_psf_merge",
+        "epsf_stage",
+        "export_reports",
+        "method_lc_output",
+        "night_run",
+        "photometry",
+        "photometry_phase2a",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_internal_lc",
+        "psf_neighbor_sub",
+        "psf_photometry",
+        "sigma_budget",
+        "str:aperture_scatter_select:str",
+        "str:comp_pool_rms:str",
+        "str:comp_selection_per_target:str",
+        "str:photometry:str",
+        "str:photometry_phase2a:str",
+        "str:pipeline:str",
+        "str:psf_photometry:str",
+        "str:sky_separation:str",
+        "tess_verify",
+        "test:dev/tests/test_alg_functions.py",
+        "test:dev/tests/test_apcorr_mixedframe_night_gate.py",
+        "test:dev/tests/test_aperture_policy_01.py",
+        "test:dev/tests/test_batch_d_audit_closure.py",
+        "test:dev/tests/test_border_ram_handoff.py",
+        "test:dev/tests/test_c3_comp_rms_loo.py",
+        "test:dev/tests/test_comp_determinism_synthetic.py",
+        "test:dev/tests/test_comp_quality_json.py",
+        "test:dev/tests/test_comp_rms_gate_authoritative.py",
+        "test:dev/tests/test_comp_stability.py",
+        "test:dev/tests/test_ensemble_normalize_no_zp_clip.py",
+        "test:dev/tests/test_err_background_empirical.py",
+        "test:dev/tests/test_except_fix_top10.py",
+        "test:dev/tests/test_export_g5_f004.py",
+        "test:dev/tests/test_export_g5_f007.py",
+        "test:dev/tests/test_export_g5_f008.py",
+        "test:dev/tests/test_export_time_base_refusal.py",
+        "test:dev/tests/test_f428_fixbatch.py",
+        "test:dev/tests/test_f428_msstamp_coord.py",
+        "test:dev/tests/test_f431_labbe_provenance.py",
+        "test:dev/tests/test_fail_safety_hygiene.py",
+        "test:dev/tests/test_field_map_no_catalog_only.py",
+        "test:dev/tests/test_field_run_findings.py",
+        "test:dev/tests/test_forced_phot_and_weights.py",
+        "test:dev/tests/test_frame_hw_from_naxis.py",
+        "test:dev/tests/test_frame_quality_gate.py",
+        "test:dev/tests/test_g1_f003_alignment_pixel_fallback.py",
+        "test:dev/tests/test_g2_f002b_wcs_untrusted.py",
+        "test:dev/tests/test_g2_f004_err_scatter_keyed.py",
+        "test:dev/tests/test_gate_regime_01.py",
+        "test:dev/tests/test_geo.py",
+        "test:dev/tests/test_get_lc_psf_strict.py",
+        "test:dev/tests/test_git_dirty_code_classifier.py",
+        "test:dev/tests/test_gs11_dilution_aperture_g2_f003.py",
+        "test:dev/tests/test_gs11_pipeline.py",
+        "test:dev/tests/test_impl_01_snr_cog.py",
+        "test:dev/tests/test_impl_03_scatter_aperture.py",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "test:dev/tests/test_labbe_det_determinism.py",
+        "test:dev/tests/test_lc_quality.py",
+        "test:dev/tests/test_mag_calib_final_g5_f011.py",
+        "test:dev/tests/test_manifest_rig_accessors.py",
+        "test:dev/tests/test_obsloc_null_island.py",
+        "test:dev/tests/test_osc1_extraction.py",
+        "test:dev/tests/test_osc2_wcs_photometry.py",
+        "test:dev/tests/test_per_frame_saturation.py",
+        "test:dev/tests/test_pfs_semantics_01.py",
+        "test:dev/tests/test_phase0_identity_gate.py",
+        "test:dev/tests/test_phase1_duplicate_comp_pool.py",
+        "test:dev/tests/test_phase2a_saturated_skip.py",
+        "test:dev/tests/test_photometric_error_sky_column.py",
+        "test:dev/tests/test_photometry_core.py",
+        "test:dev/tests/test_pipeline_meta_provenance.py",
+        "test:dev/tests/test_post451_part_b.py",
+        "test:dev/tests/test_post453_equivalence.py",
+        "test:dev/tests/test_psf_internal_lc.py",
+        "test:dev/tests/test_psf_lc_routing.py",
+        "test:dev/tests/test_read_flux_variable_xy_fallback.py",
+        "test:dev/tests/test_select_active_targets_excludes_unmatched_vsx.py",
+        "test:dev/tests/test_sigma_budget.py",
+        "test:dev/tests/test_sigma_floor.py",
+        "test:dev/tests/test_snr_table_dao_fwhm_authority.py",
+        "test:dev/tests/test_snr_table_rn_header.py",
+        "test:dev/tests/test_sparse_external_k.py",
+        "test:dev/tests/test_sysrem.py",
+        "test:dev/tests/test_t2_aperture_snr.py",
+        "test:dev/tests/test_target_depth_01.py",
+        "test:dev/tests/test_time_base_flag.py",
+        "test:dev/tests/test_vsx_out_of_scope_types.py",
+        "test:dev/tests/test_wave_a_report_config.py",
+        "test:dev/tests/validation/a9_core.py",
+        "test:dev/tests/validation/recover.py",
+        "test:dev/tests/validation/v3d_fine_scale.py",
+        "trust_flag_core",
+        "ui_aperture_photometry",
+        "ui_epsf_dashboard",
+        "ui_quality_dashboard",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "aperture_scatter_select",
+        "band_classify",
+        "check_star_kmag",
+        "comp_selection_per_target",
+        "crowding_index",
+        "epsf_psf_merge",
+        "epsf_stage",
+        "export_reports",
+        "method_lc_output",
+        "night_run",
+        "photometry",
+        "photometry_phase2a",
+        "photometry_report",
+        "pinned_ensembles",
+        "pipeline",
+        "psf_internal_lc",
+        "psf_neighbor_sub",
+        "psf_photometry",
+        "sigma_budget",
+        "tess_verify",
+        "trust_flag_core",
+        "ui_aperture_photometry",
+        "ui_epsf_dashboard",
+        "ui_quality_dashboard",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 25,
+      "via": [
+        "R3",
+        "R4",
+        "R5",
+        "via:aperture_scatter_select",
+        "via:band_classify",
+        "via:check_star_kmag",
+        "via:comp_pool_rms",
+        "via:comp_selection_per_target",
+        "via:crowding_index",
+        "via:epsf_psf_merge",
+        "via:epsf_stage",
+        "via:export_reports",
+        "via:method_lc_output",
+        "via:night_run",
+        "via:photometry",
+        "via:photometry_phase2a",
+        "via:photometry_report",
+        "via:pinned_ensembles",
+        "via:pipeline",
+        "via:psf_internal_lc",
+        "via:psf_neighbor_sub",
+        "via:psf_photometry",
+        "via:sigma_budget",
+        "via:sky_separation",
+        "via:tess_verify",
+        "via:trust_flag_core",
+        "via:ui_aperture_photometry",
+        "via:ui_epsf_dashboard",
+        "via:ui_quality_dashboard",
+        "via:ui_variability"
+      ]
+    },
+    "photometry_phase2a": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:photometry_core:str",
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "pipeline",
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:photometry_core",
+        "via:pipeline",
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "photometry_report": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "night_run",
+        "pdf_report",
+        "str:hrd_analysis:str",
+        "str:params_registry:str",
+        "str:pdf_report:str",
+        "test:dev/tests/test_auto_vsx_limit_report.py",
+        "test:dev/tests/test_export_g5_f006.py",
+        "test:dev/tests/test_g5_f003_candidate_lc.py",
+        "test:dev/tests/test_g7_f003b_report_bprp_primary.py",
+        "test:dev/tests/test_g7_f003c_report_cfg_snapshot.py",
+        "test:dev/tests/test_gs11_pipeline.py",
+        "test:dev/tests/test_hrd_details.py",
+        "test:dev/tests/test_mag_calib_final_g5_f011.py",
+        "test:dev/tests/test_report_config_page.py",
+        "test:dev/tests/test_wave_a_report_config.py",
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "night_run",
+        "pdf_report",
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:hrd_analysis",
+        "via:night_run",
+        "via:params_registry",
+        "via:pdf_report",
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "pinned_ensembles": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "psf_internal_lc",
+        "str:sky_separation:str",
+        "test:dev/tests/test_pinned_ensembles.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "psf_internal_lc"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:psf_internal_lc",
+        "via:sky_separation"
+      ]
+    },
+    "pipeline": {
+      "roots": [
+        "R3",
+        "R4",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "cal_diag",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "dev/scripts/session_baseline_check.py",
+        "docs/VYVAR_ROADMAP.md",
+        "epsf_psf_merge",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "importer",
+        "invariants_runtime",
+        "masterstar_gaia_accounting",
+        "night_run",
+        "photometry_core",
+        "photometry_report",
+        "sat_diag",
+        "str:app:str",
+        "str:band_classify:str",
+        "str:calibration:str",
+        "str:comp_qa:str",
+        "str:comp_qa_core:str",
+        "str:config:str",
+        "str:database:str",
+        "str:infolog:str",
+        "str:invariants_runtime:str",
+        "str:method_lc_output:str",
+        "str:night_run:str",
+        "str:optics_selection:str",
+        "str:params_registry:str",
+        "str:photometry_core:str",
+        "str:photometry_report:str",
+        "str:proc_frame_store:str",
+        "str:psf_photometry:str",
+        "str:run_crowding_index:str",
+        "str:simulate_night_run:str",
+        "str:trust_flag_core:str",
+        "str:ui_aperture_photometry:str",
+        "str:ui_epsf_dashboard:str",
+        "str:ui_params_dashboard:str",
+        "str:ui_photometry:str",
+        "str:ui_settings:str",
+        "str:ui_variability:str",
+        "str:vyvar_alignment_frame:str",
+        "str:vyvar_runtime:str",
+        "str:xval_harness_core:str",
+        "str:xval_run:str",
+        "test:dev/tests/test_astrometry_fault_isolation.py",
+        "test:dev/tests/test_batch_e_recut.py",
+        "test:dev/tests/test_border_ram_handoff.py",
+        "test:dev/tests/test_c3_comp_rms_loo.py",
+        "test:dev/tests/test_cal_diag_v2_gate.py",
+        "test:dev/tests/test_cal_stage_gate.py",
+        "test:dev/tests/test_calibration_library_match.py",
+        "test:dev/tests/test_dao_convolved_threshold_option_b.py",
+        "test:dev/tests/test_dao_sigma_pp_estimator.py",
+        "test:dev/tests/test_database_sqlite_threading.py",
+        "test:dev/tests/test_epsf_psf_merge.py",
+        "test:dev/tests/test_epsf_science_set.py",
+        "test:dev/tests/test_err_background_empirical.py",
+        "test:dev/tests/test_except_fix2_top10.py",
+        "test:dev/tests/test_exoplanet_local_match.py",
+        "test:dev/tests/test_exoplanet_promotion_restore.py",
+        "test:dev/tests/test_exoplanet_variable_targets_merge.py",
+        "test:dev/tests/test_export_parity_01.py",
+        "test:dev/tests/test_field_run_findings.py",
+        "test:dev/tests/test_g1_f003_alignment_pixel_fallback.py",
+        "test:dev/tests/test_geo.py",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_invariants_p2.py",
+        "test:dev/tests/test_kwarg_compat.py:text",
+        "test:dev/tests/test_master_grid_photometry.py",
+        "test:dev/tests/test_masterstar_gaia_01.py",
+        "test:dev/tests/test_masterstar_obs_group.py",
+        "test:dev/tests/test_masterstar_zone_classifier.py",
+        "test:dev/tests/test_no_destructive_lacosmic.py",
+        "test:dev/tests/test_obsloc_null_island.py",
+        "test:dev/tests/test_osc1_extraction.py",
+        "test:dev/tests/test_pfs_semantics_01.py",
+        "test:dev/tests/test_pre_cal_proc_csv_naming_e2e.py",
+        "test:dev/tests/test_pre_calibrated_run.py",
+        "test:dev/tests/test_preprocess_sky_surface.py",
+        "test:dev/tests/test_proc_catalog_dedupe.py",
+        "test:dev/tests/test_proc_dedupe_catalog_id.py",
+        "test:dev/tests/test_robust_frame_fwhm.py",
+        "test:dev/tests/test_sibling_wcs_recovery.py",
+        "test:dev/tests/test_skipproc_qc_allowlist.py",
+        "test:dev/tests/test_skysf_double_guard.py",
+        "test:dev/tests/validation/recover.py",
+        "ui_aperture_photometry",
+        "ui_components",
+        "ui_database_explorer",
+        "ui_masterstar_qa",
+        "ui_quality_dashboard",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "app",
+        "cal_diag",
+        "dao_gaia_calibration",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "dao_gaia_stage_01_iter3",
+        "epsf_psf_merge",
+        "hrd_analysis",
+        "hrd_colorfield",
+        "importer",
+        "invariants_runtime",
+        "masterstar_gaia_accounting",
+        "night_run",
+        "photometry_core",
+        "photometry_report",
+        "sat_diag",
+        "ui_aperture_photometry",
+        "ui_components",
+        "ui_database_explorer",
+        "ui_masterstar_qa",
+        "ui_quality_dashboard",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 22,
+      "via": [
+        "R3",
+        "R4",
+        "R5",
+        "via:app",
+        "via:band_classify",
+        "via:cal_diag",
+        "via:calibration",
+        "via:comp_qa",
+        "via:comp_qa_core",
+        "via:config",
+        "via:dao_gaia_calibration",
+        "via:dao_gaia_stage_01",
+        "via:dao_gaia_stage_01_iter2",
+        "via:dao_gaia_stage_01_iter3",
+        "via:database",
+        "via:epsf_psf_merge",
+        "via:hrd_analysis",
+        "via:hrd_colorfield",
+        "via:importer",
+        "via:infolog",
+        "via:invariants_runtime",
+        "via:masterstar_gaia_accounting",
+        "via:method_lc_output",
+        "via:night_run",
+        "via:optics_selection",
+        "via:params_registry",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:proc_frame_store",
+        "via:psf_photometry",
+        "via:sat_diag",
+        "via:simulate_night_run",
+        "via:trust_flag_core",
+        "via:ui_aperture_photometry",
+        "via:ui_components",
+        "via:ui_database_explorer",
+        "via:ui_epsf_dashboard",
+        "via:ui_masterstar_qa",
+        "via:ui_params_dashboard",
+        "via:ui_photometry",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:ui_variability",
+        "via:vyvar_alignment_frame",
+        "via:vyvar_runtime",
+        "via:xval_harness_core",
+        "via:xval_run"
+      ]
+    },
+    "plain_stats": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "astrometry_optimizer",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pipeline",
+        "psf_runner",
+        "test:dev/tests/test_dao_gaia_calibration.py",
+        "test:dev/tests/test_snr_gate_01_sky_mad.py",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wide_slope_noise_core"
+      ],
+      "src_py_importers": [
+        "astrometry_optimizer",
+        "dao_gaia_stage_01",
+        "dao_gaia_stage_01_iter2",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pipeline",
+        "psf_runner",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wide_slope_noise_core"
+      ],
+      "n_src_py_importers": 10,
+      "via": [
+        "R3",
+        "via:astrometry_optimizer",
+        "via:dao_gaia_stage_01",
+        "via:dao_gaia_stage_01_iter2",
+        "via:masterstar_gaia_accounting",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:psf_runner",
+        "via:vyvar_alignment_frame",
+        "via:vyvar_platesolver",
+        "via:wide_slope_noise_core"
+      ]
+    },
+    "platesolve_ui_paths": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app",
+        "masterstar_context",
+        "photometry_core",
+        "ui_aperture_photometry",
+        "ui_dao_stars",
+        "ui_masterstar_qa",
+        "ui_photometry_quality"
+      ],
+      "src_py_importers": [
+        "app",
+        "masterstar_context",
+        "photometry_core",
+        "ui_aperture_photometry",
+        "ui_dao_stars",
+        "ui_masterstar_qa",
+        "ui_photometry_quality"
+      ],
+      "n_src_py_importers": 7,
+      "via": [
+        "via:app",
+        "via:masterstar_context",
+        "via:photometry_core",
+        "via:ui_aperture_photometry",
+        "via:ui_dao_stars",
+        "via:ui_masterstar_qa",
+        "via:ui_photometry_quality"
+      ]
+    },
+    "proc_frame_store": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_qa_core",
+        "epsf_psf_merge",
+        "photometry_core",
+        "pipeline",
+        "str:photometry_core:str",
+        "str:ui_variability:str",
+        "test:dev/tests/test_except_fix2_top10.py",
+        "test:dev/tests/test_pre_cal_proc_csv_naming_e2e.py",
+        "test:dev/tests/test_proc_csv_glob.py",
+        "test:dev/tests/test_proc_frame_store.py",
+        "test:dev/tests/test_proc_store_trust_cols.py",
+        "xval_run"
+      ],
+      "src_py_importers": [
+        "comp_qa_core",
+        "epsf_psf_merge",
+        "photometry_core",
+        "pipeline",
+        "xval_run"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "via:comp_qa_core",
+        "via:epsf_psf_merge",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:ui_variability",
+        "via:xval_run"
+      ]
+    },
+    "psf_internal_lc": {
+      "roots": [
+        "R2",
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "epsf_psf_merge",
+        "epsf_stage",
+        "test:dev/tests/test_psf_internal_lc.py"
+      ],
+      "src_py_importers": [
+        "epsf_psf_merge",
+        "epsf_stage"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R2",
+        "R3",
+        "via:epsf_psf_merge",
+        "via:epsf_stage"
+      ]
+    },
+    "psf_neighbor_sub": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "test:dev/tests/test_psf_neighbor_sub.py",
+        "test:dev/tests/validation/a9_core.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R3",
+        "R5"
+      ]
+    },
+    "psf_photometry": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "epsf_psf_merge",
+        "epsf_stage",
+        "pipeline",
+        "psf_runner",
+        "test:dev/tests/test_epsf_build_guard.py",
+        "test:dev/tests/test_epsf_csv_prepare.py",
+        "test:dev/tests/test_epsf_psf_merge.py",
+        "test:dev/tests/test_except_fix_top10.py",
+        "test:dev/tests/test_psf_variance_fd_a.py",
+        "test:dev/tests/test_v3d_fine_scale.py",
+        "test:dev/tests/validation/epsf_fwhm_audit.py",
+        "test:dev/tests/validation/recover.py",
+        "test:dev/tests/validation/run_v3d_fit_shape_proof.py",
+        "test:dev/tests/validation/sky_option_sweep.py",
+        "test:dev/tests/validation/v3d_bias_decomposition_v2.py",
+        "test:dev/tests/validation/v3d_fine_scale.py",
+        "test:dev/tests/validation/v3e_epsf_fwhm.py"
+      ],
+      "src_py_importers": [
+        "epsf_psf_merge",
+        "epsf_stage",
+        "pipeline",
+        "psf_runner"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R3",
+        "via:epsf_psf_merge",
+        "via:epsf_stage",
+        "via:pipeline",
+        "via:psf_runner"
+      ]
+    },
+    "psf_runner": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [
+        "str:epsf_stage:str"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R2",
+        "via:epsf_stage"
+      ]
+    },
+    "repair_catalog_ids": {
+      "roots": [
+        "R2",
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "pipeline",
+        "test:dev/tests/test_f428_fixbatch.py",
+        "wcs_invertibility"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pipeline",
+        "wcs_invertibility"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R2",
+        "R3",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:wcs_invertibility"
+      ]
+    },
+    "report_methods": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "export_reports",
+        "method_lc_output",
+        "photometry_core",
+        "photometry_report",
+        "psf_internal_lc",
+        "test:dev/tests/test_psf_internal_lc.py",
+        "test:dev/tests/test_report_methods.py"
+      ],
+      "src_py_importers": [
+        "export_reports",
+        "method_lc_output",
+        "photometry_core",
+        "photometry_report",
+        "psf_internal_lc"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "via:export_reports",
+        "via:method_lc_output",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:psf_internal_lc"
+      ]
+    },
+    "run_crowding_index": {
+      "roots": [],
+      "reachable": false,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": []
+    },
+    "run_lifecycle": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "test:dev/tests/test_run_lifecycle.py",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "app",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:app",
+        "via:ui_aperture_photometry",
+        "via:ui_variability"
+      ]
+    },
+    "run_preflight_log": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "docs/VYVAR_STATE.md",
+        "test:dev/tests/test_preflight_traceback.py",
+        "test:dev/tests/test_run_preflight_error_log.py"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "R5",
+        "via:app"
+      ]
+    },
+    "run_smoothness_report": {
+      "roots": [],
+      "reachable": false,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": []
+    },
+    "sat_diag": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "photometry_core",
+        "pipeline",
+        "str:invariants_runtime:str",
+        "str:photometry_core:str",
+        "str:pipeline:str",
+        "test:dev/tests/test_sat_diag.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "R5",
+        "via:invariants_runtime",
+        "via:photometry_core",
+        "via:pipeline"
+      ]
+    },
+    "sigma_budget": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_pool_noise",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "photometry_core",
+        "sigma_floor_core",
+        "str:sigma_floor_core:str",
+        "test:dev/tests/test_batch_d_audit_closure.py",
+        "test:dev/tests/test_sigma_a2.py",
+        "test:dev/tests/test_sigma_a3.py",
+        "test:dev/tests/test_sigma_budget.py"
+      ],
+      "src_py_importers": [
+        "comp_pool_noise",
+        "photometry_core",
+        "sigma_floor_core"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:comp_pool_noise",
+        "via:photometry_core",
+        "via:sigma_floor_core"
+      ]
+    },
+    "sigma_floor_core": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_STATE.md",
+        "photometry_core",
+        "psf_internal_lc",
+        "str:sigma_budget:str",
+        "test:dev/tests/test_batch_d_audit_closure.py",
+        "test:dev/tests/test_sigma_floor.py",
+        "test:dev/tests/test_wide_err_03_gain.py"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "psf_internal_lc"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "R5",
+        "via:photometry_core",
+        "via:psf_internal_lc",
+        "via:sigma_budget"
+      ]
+    },
+    "simulate_night_run": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R2"
+      ]
+    },
+    "sky_separation": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "comp_selection_per_target",
+        "comp_weights",
+        "photometry_core",
+        "pinned_ensembles",
+        "psf_photometry",
+        "str:vyvar_platesolver:str",
+        "test:dev/tests/test_c0a_dist_deg.py"
+      ],
+      "src_py_importers": [
+        "comp_selection_per_target",
+        "comp_weights",
+        "photometry_core",
+        "pinned_ensembles",
+        "psf_photometry"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "via:comp_selection_per_target",
+        "via:comp_weights",
+        "via:photometry_core",
+        "via:pinned_ensembles",
+        "via:psf_photometry",
+        "via:vyvar_platesolver"
+      ]
+    },
+    "snr_cog_gates": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "test:dev/tests/test_impl_02_snr_cog_gates.py"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:photometry_core"
+      ]
+    },
+    "sparse_trust_core": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "check_star_kmag",
+        "test:dev/tests/test_sparse_external_k.py",
+        "test:dev/tests/test_sparse_trust_core.py",
+        "trust_flag_core"
+      ],
+      "src_py_importers": [
+        "check_star_kmag",
+        "trust_flag_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:check_star_kmag",
+        "via:trust_flag_core"
+      ]
+    },
+    "tess_runner": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "photometry_core"
+      ],
+      "src_py_importers": [
+        "photometry_core"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:photometry_core"
+      ]
+    },
+    "tess_verify": {
+      "roots": [
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "tess_runner",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "tess_runner",
+        "ui_aperture_photometry",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R5",
+        "via:tess_runner",
+        "via:ui_aperture_photometry",
+        "via:ui_variability"
+      ]
+    },
+    "time_utils": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:param_resolver:str",
+        "str:photometry_core:str",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_geo.py",
+        "test:dev/tests/test_obsloc_null_island.py",
+        "test:dev/tests/test_time_utils_mid_exposure.py",
+        "test:dev/tests/validation/recover.py"
+      ],
+      "src_py_importers": [
+        "pipeline"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:param_resolver",
+        "via:photometry_core",
+        "via:pipeline"
+      ]
+    },
+    "trust_flag": {
+      "roots": [
+        "R2"
+      ],
+      "reachable": true,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R2"
+      ]
+    },
+    "trust_flag_core": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_PROCESS.md",
+        "export_reports",
+        "photometry_core",
+        "test:dev/tests/test_comp_qa_fix_once_locus.py",
+        "test:dev/tests/test_except_fix4.py",
+        "test:dev/tests/test_g1_f003_alignment_pixel_fallback.py",
+        "test:dev/tests/test_g2_f002b_wcs_untrusted.py",
+        "test:dev/tests/test_trust_checkstar_hardening.py",
+        "test:dev/tests/test_trust_flag.py",
+        "test:dev/tests/validation/recover.py",
+        "trust_flag"
+      ],
+      "src_py_importers": [
+        "export_reports",
+        "photometry_core",
+        "trust_flag"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "R5",
+        "via:export_reports",
+        "via:photometry_core",
+        "via:trust_flag"
+      ]
+    },
+    "ui_aperture_photometry": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "night_run",
+        "photometry_report",
+        "test:dev/tests/test_invariants_p1_golden.py",
+        "ui_dao_stars",
+        "ui_epsf_dashboard"
+      ],
+      "src_py_importers": [
+        "app",
+        "night_run",
+        "photometry_report",
+        "ui_dao_stars",
+        "ui_epsf_dashboard"
+      ],
+      "n_src_py_importers": 5,
+      "via": [
+        "R3",
+        "via:app",
+        "via:night_run",
+        "via:photometry_report",
+        "via:ui_dao_stars",
+        "via:ui_epsf_dashboard"
+      ]
+    },
+    "ui_calibration": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "ui_calibration_library": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "ui_components": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app",
+        "ui_quality_dashboard"
+      ],
+      "src_py_importers": [
+        "app",
+        "ui_quality_dashboard"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "via:app",
+        "via:ui_quality_dashboard"
+      ]
+    },
+    "ui_dao_stars": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_settings"
+      ],
+      "src_py_importers": [
+        "ui_settings"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_settings"
+      ]
+    },
+    "ui_database_explorer": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "test:dev/tests/test_database_sqlite_threading.py"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:app"
+      ]
+    },
+    "ui_epsf_dashboard": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "test:dev/tests/test_epsf_dashboard_pct.py"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:app"
+      ]
+    },
+    "ui_finalization": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "ui_hrd": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "ui_masterstar_qa": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "ui_params_dashboard": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "str:params_registry:str",
+        "test:dev/tests/test_ui_params_dashboard.py",
+        "ui_settings"
+      ],
+      "src_py_importers": [
+        "ui_settings"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:params_registry",
+        "via:ui_settings"
+      ]
+    },
+    "ui_photometry": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_settings"
+      ],
+      "src_py_importers": [
+        "ui_settings"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_settings"
+      ]
+    },
+    "ui_photometry_quality": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_settings"
+      ],
+      "src_py_importers": [
+        "ui_settings"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_settings"
+      ]
+    },
+    "ui_quality_dashboard": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app",
+        "str:night_run:str",
+        "str:photometry_report:str"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app",
+        "via:night_run",
+        "via:photometry_report"
+      ]
+    },
+    "ui_settings": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:app"
+      ]
+    },
+    "ui_variability": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "app",
+        "photometry_report",
+        "str:photometry_core:str",
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "app",
+        "photometry_report",
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "via:app",
+        "via:photometry_core",
+        "via:photometry_report",
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "unit_resolver": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "hrd_colorfield",
+        "photometry_core",
+        "pipeline",
+        "test:dev/tests/test_unit_resolver.py",
+        "vyvar_platesolver"
+      ],
+      "src_py_importers": [
+        "hrd_colorfield",
+        "photometry_core",
+        "pipeline",
+        "vyvar_platesolver"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R3",
+        "R5",
+        "via:hrd_colorfield",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:vyvar_platesolver"
+      ]
+    },
+    "utils": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "astrometry_optimizer",
+        "calibration",
+        "crossmatch_runner",
+        "dao_gaia_calibration",
+        "database",
+        "epsf_frame_accounting",
+        "importer",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pipeline",
+        "str:app:str",
+        "str:photometry_core:str",
+        "str:ui_settings:str",
+        "test:dev/tests/test_alignment_determinism.py",
+        "test:dev/tests/test_except_fix2_top10.py",
+        "test:dev/tests/test_fits_binning.py",
+        "test:dev/tests/test_unit_resolver.py:text",
+        "ui_aperture_photometry",
+        "ui_components",
+        "ui_epsf_dashboard",
+        "ui_masterstar_qa",
+        "ui_quality_dashboard",
+        "ui_variability",
+        "unit_resolver",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wcs_invertibility"
+      ],
+      "src_py_importers": [
+        "app",
+        "astrometry_optimizer",
+        "calibration",
+        "crossmatch_runner",
+        "dao_gaia_calibration",
+        "database",
+        "epsf_frame_accounting",
+        "importer",
+        "masterstar_gaia_accounting",
+        "photometry_core",
+        "pipeline",
+        "ui_aperture_photometry",
+        "ui_components",
+        "ui_epsf_dashboard",
+        "ui_masterstar_qa",
+        "ui_quality_dashboard",
+        "ui_variability",
+        "unit_resolver",
+        "vyvar_alignment_frame",
+        "vyvar_platesolver",
+        "wcs_invertibility"
+      ],
+      "n_src_py_importers": 21,
+      "via": [
+        "R3",
+        "via:app",
+        "via:astrometry_optimizer",
+        "via:calibration",
+        "via:crossmatch_runner",
+        "via:dao_gaia_calibration",
+        "via:database",
+        "via:epsf_frame_accounting",
+        "via:importer",
+        "via:masterstar_gaia_accounting",
+        "via:photometry_core",
+        "via:pipeline",
+        "via:ui_aperture_photometry",
+        "via:ui_components",
+        "via:ui_epsf_dashboard",
+        "via:ui_masterstar_qa",
+        "via:ui_quality_dashboard",
+        "via:ui_settings",
+        "via:ui_variability",
+        "via:unit_resolver",
+        "via:vyvar_alignment_frame",
+        "via:vyvar_platesolver",
+        "via:wcs_invertibility"
+      ]
+    },
+    "validate_lc_crossval": {
+      "roots": [],
+      "reachable": false,
+      "importers": [],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": []
+    },
+    "variability_detector": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "photometry_core",
+        "run_smoothness_report",
+        "test:dev/tests/test_f428_fixbatch.py",
+        "test:dev/tests/test_fail_safety_hygiene.py",
+        "ui_variability"
+      ],
+      "src_py_importers": [
+        "photometry_core",
+        "run_smoothness_report",
+        "ui_variability"
+      ],
+      "n_src_py_importers": 3,
+      "via": [
+        "R3",
+        "via:photometry_core",
+        "via:ui_variability"
+      ]
+    },
+    "vsx_gaia_crossmatch": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "pipeline",
+        "str:pipeline:str",
+        "test:dev/tests/test_post451_part_b.py",
+        "test:dev/tests/test_vsx_gaia_crossmatch.py"
+      ],
+      "src_py_importers": [
+        "pipeline"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "via:pipeline"
+      ]
+    },
+    "vsx_type_scope": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "invariants_runtime",
+        "photometry_core",
+        "test:dev/tests/test_vsx_out_of_scope_types.py"
+      ],
+      "src_py_importers": [
+        "invariants_runtime",
+        "photometry_core"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:invariants_runtime",
+        "via:photometry_core"
+      ]
+    },
+    "vyvar_alignment_frame": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "osc_align",
+        "pipeline",
+        "test:dev/tests/test_alignment_determinism.py",
+        "test:dev/tests/test_alignment_max_control_points.py",
+        "test:dev/tests/test_except_fix3.py"
+      ],
+      "src_py_importers": [
+        "osc_align",
+        "pipeline"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:osc_align",
+        "via:pipeline"
+      ]
+    },
+    "vyvar_blind_series": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_ROADMAP.md",
+        "test:dev/tests/test_blind_series.py",
+        "vyvar_platesolver"
+      ],
+      "src_py_importers": [
+        "vyvar_platesolver"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "R5",
+        "via:vyvar_platesolver"
+      ]
+    },
+    "vyvar_blind_solver": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "test:dev/tests/test_blind_knn_construction.py",
+        "test:dev/tests/test_blind_rig_prior.py",
+        "test:dev/tests/test_blind_solver_debug.py",
+        "test:dev/tests/test_blind_verify.py",
+        "vyvar_blind_series",
+        "vyvar_platesolver"
+      ],
+      "src_py_importers": [
+        "vyvar_blind_series",
+        "vyvar_platesolver"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:vyvar_blind_series",
+        "via:vyvar_platesolver"
+      ]
+    },
+    "vyvar_platesolver": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "astrometry_optimizer",
+        "dao_gaia_stage_01_iter3",
+        "docs/VYVAR_ROADMAP.md",
+        "osc_align",
+        "pipeline",
+        "str:pipeline:str",
+        "test:dev/tests/test_blind_verify.py",
+        "test:dev/tests/test_fail_safety_hygiene.py",
+        "test:dev/tests/test_masterstar_catalog_recovery_gate.py",
+        "test:dev/tests/test_masterstar_odds_acceptance.py",
+        "test:dev/tests/test_platesolver_sip_roworder.py",
+        "test:dev/tests/test_pm_correction_logging.py",
+        "test:dev/tests/test_sibling_wcs_recovery.py",
+        "vsx_gaia_crossmatch",
+        "vyvar_blind_series"
+      ],
+      "src_py_importers": [
+        "astrometry_optimizer",
+        "dao_gaia_stage_01_iter3",
+        "osc_align",
+        "pipeline",
+        "vsx_gaia_crossmatch",
+        "vyvar_blind_series"
+      ],
+      "n_src_py_importers": 6,
+      "via": [
+        "R3",
+        "R5",
+        "via:astrometry_optimizer",
+        "via:dao_gaia_stage_01_iter3",
+        "via:osc_align",
+        "via:pipeline",
+        "via:vsx_gaia_crossmatch",
+        "via:vyvar_blind_series"
+      ]
+    },
+    "vyvar_runtime": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "app",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "test:dev/tests/test_bootstrap_release_data_dir.py",
+        "test:dev/tests/test_ui_params_dashboard.py"
+      ],
+      "src_py_importers": [
+        "app"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "R3",
+        "R5",
+        "via:app"
+      ]
+    },
+    "vyvar_ui_status": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "ui_aperture_photometry"
+      ],
+      "src_py_importers": [
+        "ui_aperture_photometry"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:ui_aperture_photometry"
+      ]
+    },
+    "wcs_header_io": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "test:dev/tests/test_except_fix3.py",
+        "vyvar_platesolver",
+        "wcs_invertibility"
+      ],
+      "src_py_importers": [
+        "vyvar_platesolver",
+        "wcs_invertibility"
+      ],
+      "n_src_py_importers": 2,
+      "via": [
+        "R3",
+        "via:vyvar_platesolver",
+        "via:wcs_invertibility"
+      ]
+    },
+    "wcs_invertibility": {
+      "roots": [
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "astrometry_optimizer",
+        "docs/VYVAR_ROADMAP.md",
+        "masterstar_gaia_accounting",
+        "pipeline",
+        "test:dev/tests/test_inv_match_identity_01.py",
+        "test:dev/tests/test_wcs_invertibility.py",
+        "vyvar_platesolver"
+      ],
+      "src_py_importers": [
+        "astrometry_optimizer",
+        "masterstar_gaia_accounting",
+        "pipeline",
+        "vyvar_platesolver"
+      ],
+      "n_src_py_importers": 4,
+      "via": [
+        "R3",
+        "R5",
+        "via:astrometry_optimizer",
+        "via:masterstar_gaia_accounting",
+        "via:pipeline",
+        "via:vyvar_platesolver"
+      ]
+    },
+    "wide_slope_noise_core": {
+      "roots": [
+        "R3"
+      ],
+      "reachable": true,
+      "importers": [
+        "test:dev/tests/test_wide_slope_noise_core.py"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R3"
+      ]
+    },
+    "xval_harness_core": {
+      "roots": [],
+      "reachable": true,
+      "importers": [
+        "str:trust_flag_core:str",
+        "xval_run"
+      ],
+      "src_py_importers": [
+        "xval_run"
+      ],
+      "n_src_py_importers": 1,
+      "via": [
+        "via:trust_flag_core",
+        "via:xval_run"
+      ]
+    },
+    "xval_run": {
+      "roots": [
+        "R2",
+        "R3",
+        "R5"
+      ],
+      "reachable": true,
+      "importers": [
+        "docs/VYVAR_PROCESS.md",
+        "docs/VYVAR_ROADMAP.md",
+        "docs/VYVAR_STATE.md",
+        "str:trust_flag_core:str",
+        "str:xval_harness_core:str",
+        "test:dev/tests/test_no_xval_in_production.py:text"
+      ],
+      "src_py_importers": [],
+      "n_src_py_importers": 0,
+      "via": [
+        "R2",
+        "R3",
+        "R5",
+        "via:trust_flag_core",
+        "via:xval_harness_core"
+      ]
+    }
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "head": "d320697",
+  "n_modules": 139,
+  "n_reachable": 135,
+  "n_unreachable": 4,
+  "unreachable": [
+    "inspect_drafts",
+    "run_crowding_index",
+    "run_smoothness_report",
+    "validate_lc_crossval"
+  ],
+  "zero_src_py_importers": [
+    "app",
+    "comp_qa",
+    "epsf_zp_ok",
+    "inspect_drafts",
+    "method_lc_output",
+    "phase0_funnel",
+    "psf_neighbor_sub",
+    "psf_runner",
+    "run_crowding_index",
+    "run_smoothness_report",
+    "simulate_night_run",
+    "trust_flag",
+    "validate_lc_crossval",
+    "wide_slope_noise_core",
+    "xval_run"
+  ],
+  "r2_main_argparse": [
+    "comp_qa",
+    "dao_gaia_stage_01",
+    "dao_gaia_stage_01_iter2",
+    "dao_gaia_stage_01_iter3",
+    "dao_gaia_stage_01_iter4",
+    "night_run",
+    "psf_internal_lc",
+    "psf_runner",
+    "repair_catalog_ids",
+    "simulate_night_run",
+    "trust_flag",
+    "xval_run"
+  ],
+  "r2_main_no_argparse": [
+    "app",
+    "inspect_drafts",
+    "run_crowding_index",
+    "run_smoothness_report",
+    "validate_lc_crossval"
+  ],
+  "r5_doc_hits": {
+    "app": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md",
+      "VYVAR_PROCESS.md"
+    ],
+    "band_classify": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md"
+    ],
+    "catalog_provenance": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "check_star_kmag": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "citations": [
+      "VYVAR_PROCESS.md"
+    ],
+    "comp_qa_core": [
+      "VYVAR_PROCESS.md"
+    ],
+    "config": [
+      "VYVAR_PROCESS.md"
+    ],
+    "dao_gaia_stage_01": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "except_fix_counters": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "gaia_johnson": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "hrd_analysis": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "hrd_enrich": [
+      "VYVAR_STATE.md"
+    ],
+    "invariants_runtime": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md"
+    ],
+    "k2_extinction": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md"
+    ],
+    "masterstar_context": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "method_lc_output": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "night_run": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "osc_align": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "osc_extract": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "param_resolver": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "photometry_core": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md",
+      "VYVAR_PROCESS.md"
+    ],
+    "photometry_report": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "pipeline": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "psf_neighbor_sub": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "run_preflight_log": [
+      "VYVAR_STATE.md"
+    ],
+    "sat_diag": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "sigma_budget": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md"
+    ],
+    "sigma_floor_core": [
+      "VYVAR_STATE.md"
+    ],
+    "tess_verify": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "trust_flag_core": [
+      "VYVAR_PROCESS.md"
+    ],
+    "unit_resolver": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "vyvar_blind_series": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "vyvar_platesolver": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "vyvar_runtime": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md"
+    ],
+    "wcs_invertibility": [
+      "VYVAR_ROADMAP.md"
+    ],
+    "xval_run": [
+      "VYVAR_STATE.md",
+      "VYVAR_ROADMAP.md",
+      "VYVAR_PROCESS.md"
+    ]
+  },
+  "r1": [
+    "app"
+  ]
+}

@@ -1,0 +1,557 @@
+{
+  "total_lines": 1977,
+  "modules": [
+    {
+      "module": "cal_stage",
+      "nlines": 77,
+      "funcs": [
+        {
+          "name": "verify_calibrated_tree",
+          "start": 380,
+          "end": 425,
+          "nlines": 46
+        },
+        {
+          "name": "write_cal_stage_json",
+          "start": 444,
+          "end": 474,
+          "nlines": 31
+        }
+      ]
+    },
+    {
+      "module": "catalog_match_trust",
+      "nlines": 2,
+      "funcs": [
+        {
+          "name": "is_trusted_catalog_match_mode",
+          "start": 51,
+          "end": 52,
+          "nlines": 2
+        }
+      ]
+    },
+    {
+      "module": "comp_pool_noise",
+      "nlines": 22,
+      "funcs": [
+        {
+          "name": "derive_target_depth_limit",
+          "start": 1333,
+          "end": 1354,
+          "nlines": 22
+        }
+      ]
+    },
+    {
+      "module": "dao_gaia_calibration",
+      "nlines": 53,
+      "funcs": [
+        {
+          "name": "_mutual_nearest_separations_px",
+          "start": 392,
+          "end": 423,
+          "nlines": 32
+        },
+        {
+          "name": "compute_faint_star_centroid_offsets_px",
+          "start": 813,
+          "end": 828,
+          "nlines": 16
+        },
+        {
+          "name": "load_calibration_certificate",
+          "start": 1354,
+          "end": 1358,
+          "nlines": 5
+        }
+      ]
+    },
+    {
+      "module": "dao_gaia_stage_validation",
+      "nlines": 21,
+      "funcs": [
+        {
+          "name": "write_validation_artifact",
+          "start": 411,
+          "end": 431,
+          "nlines": 21
+        }
+      ]
+    },
+    {
+      "module": "dao_reconcile",
+      "nlines": 60,
+      "funcs": [
+        {
+          "name": "dao_only_report_lines",
+          "start": 1387,
+          "end": 1446,
+          "nlines": 60
+        }
+      ]
+    },
+    {
+      "module": "draft_provenance",
+      "nlines": 143,
+      "funcs": [
+        {
+          "name": "apply_manifest_core_to_draft_row",
+          "start": 271,
+          "end": 304,
+          "nlines": 34
+        },
+        {
+          "name": "_center_from_draft_row",
+          "start": 361,
+          "end": 368,
+          "nlines": 8
+        },
+        {
+          "name": "_paths_from_draft_row",
+          "start": 371,
+          "end": 385,
+          "nlines": 15
+        },
+        {
+          "name": "_rig_from_draft_row",
+          "start": 388,
+          "end": 403,
+          "nlines": 16
+        },
+        {
+          "name": "_compare_manifest_file_entries",
+          "start": 641,
+          "end": 707,
+          "nlines": 67
+        },
+        {
+          "name": "_fetch_obs_draft_row_raw",
+          "start": 1129,
+          "end": 1131,
+          "nlines": 3
+        }
+      ]
+    },
+    {
+      "module": "epsf_frame_accounting",
+      "nlines": 18,
+      "funcs": [
+        {
+          "name": "make_empty_frame_record",
+          "start": 43,
+          "end": 56,
+          "nlines": 14
+        },
+        {
+          "name": "record_from_worker",
+          "start": 59,
+          "end": 62,
+          "nlines": 4
+        }
+      ]
+    },
+    {
+      "module": "except_fix_counters",
+      "nlines": 5,
+      "funcs": [
+        {
+          "name": "merge_except_fix_summary",
+          "start": 113,
+          "end": 117,
+          "nlines": 5
+        }
+      ]
+    },
+    {
+      "module": "gain_photon_transfer",
+      "nlines": 12,
+      "funcs": [
+        {
+          "name": "container_scale_from_s1a",
+          "start": 226,
+          "end": 230,
+          "nlines": 5
+        },
+        {
+          "name": "read_gain_pt_sidecar",
+          "start": 356,
+          "end": 362,
+          "nlines": 7
+        }
+      ]
+    },
+    {
+      "module": "hrd_analysis",
+      "nlines": 3,
+      "funcs": [
+        {
+          "name": "_physics_net_mask",
+          "start": 878,
+          "end": 880,
+          "nlines": 3
+        }
+      ]
+    },
+    {
+      "module": "importer",
+      "nlines": 22,
+      "funcs": [
+        {
+          "name": "_format_temp",
+          "start": 406,
+          "end": 408,
+          "nlines": 3
+        },
+        {
+          "name": "_find_lights_subdirectory",
+          "start": 457,
+          "end": 464,
+          "nlines": 8
+        },
+        {
+          "name": "_list_top_level_light_fits",
+          "start": 494,
+          "end": 504,
+          "nlines": 11
+        }
+      ]
+    },
+    {
+      "module": "infolog",
+      "nlines": 3,
+      "funcs": [
+        {
+          "name": "get_active_session_log_path",
+          "start": 181,
+          "end": 183,
+          "nlines": 3
+        }
+      ]
+    },
+    {
+      "module": "masterstar_gaia_accounting",
+      "nlines": 82,
+      "funcs": [
+        {
+          "name": "overlay_gaia_complete_on_existing_masterstar",
+          "start": 1350,
+          "end": 1431,
+          "nlines": 82
+        }
+      ]
+    },
+    {
+      "module": "osc_align",
+      "nlines": 37,
+      "funcs": [
+        {
+          "name": "collect_handoff_from_alignment_results",
+          "start": 390,
+          "end": 405,
+          "nlines": 16
+        },
+        {
+          "name": "copy_alignment_report_with_channel_paths",
+          "start": 416,
+          "end": 436,
+          "nlines": 21
+        }
+      ]
+    },
+    {
+      "module": "param_resolver",
+      "nlines": 11,
+      "funcs": [
+        {
+          "name": "_sqlite_row_field",
+          "start": 608,
+          "end": 618,
+          "nlines": 11
+        }
+      ]
+    },
+    {
+      "module": "photometry_core",
+      "nlines": 55,
+      "funcs": [
+        {
+          "name": "_aperture_to_mask_single",
+          "start": 519,
+          "end": 524,
+          "nlines": 6
+        },
+        {
+          "name": "_is_nofilter_obs_group",
+          "start": 5147,
+          "end": 5162,
+          "nlines": 16
+        },
+        {
+          "name": "_apply_role_aware_aperture_scaling",
+          "start": 9193,
+          "end": 9225,
+          "nlines": 33
+        }
+      ]
+    },
+    {
+      "module": "pipeline",
+      "nlines": 197,
+      "funcs": [
+        {
+          "name": "_fits_header_positive_float",
+          "start": 248,
+          "end": 253,
+          "nlines": 6
+        },
+        {
+          "name": "_dark_np_for_calibration_path",
+          "start": 771,
+          "end": 790,
+          "nlines": 20
+        },
+        {
+          "name": "_dark_array_for_calibration",
+          "start": 816,
+          "end": 842,
+          "nlines": 27
+        },
+        {
+          "name": "_dao_star_table_mean_elongation",
+          "start": 1533,
+          "end": 1555,
+          "nlines": 23
+        },
+        {
+          "name": "_icrs_offset_arcmin",
+          "start": 1762,
+          "end": 1773,
+          "nlines": 12
+        },
+        {
+          "name": "_cupy_available",
+          "start": 2741,
+          "end": 2748,
+          "nlines": 8
+        },
+        {
+          "name": "_try_solve_wcs_astrometry_net_or_local_cli",
+          "start": 4151,
+          "end": 4172,
+          "nlines": 22
+        },
+        {
+          "name": "_wcs_astrometry_nearly_identical",
+          "start": 4543,
+          "end": 4558,
+          "nlines": 16
+        },
+        {
+          "name": "_gaia_sky_match_wcs_fragment",
+          "start": 12092,
+          "end": 12122,
+          "nlines": 31
+        },
+        {
+          "name": "_refine_masterstar_wcs_gaia_sky_match_infile",
+          "start": 12125,
+          "end": 12149,
+          "nlines": 25
+        },
+        {
+          "name": "_has_any_usable_master_flat",
+          "start": 17334,
+          "end": 17340,
+          "nlines": 7
+        }
+      ]
+    },
+    {
+      "module": "psf_photometry",
+      "nlines": 107,
+      "funcs": [
+        {
+          "name": "_epsf_allowed_catalog_ids",
+          "start": 170,
+          "end": 209,
+          "nlines": 40
+        },
+        {
+          "name": "_epsf_positions_from_csvs",
+          "start": 212,
+          "end": 261,
+          "nlines": 50
+        },
+        {
+          "name": "_psf_fit_region_mask",
+          "start": 2488,
+          "end": 2504,
+          "nlines": 17
+        }
+      ]
+    },
+    {
+      "module": "psf_runner",
+      "nlines": 745,
+      "funcs": [
+        {
+          "name": "step_1_build_epsf",
+          "start": 640,
+          "end": 694,
+          "nlines": 55
+        },
+        {
+          "name": "step_3_run_psf_on_frames",
+          "start": 803,
+          "end": 1156,
+          "nlines": 354
+        },
+        {
+          "name": "step_4_build_summary",
+          "start": 1159,
+          "end": 1280,
+          "nlines": 122
+        },
+        {
+          "name": "step_5_calibrate_lightcurve",
+          "start": 1283,
+          "end": 1496,
+          "nlines": 214
+        }
+      ]
+    },
+    {
+      "module": "report_methods",
+      "nlines": 9,
+      "funcs": [
+        {
+          "name": "have_psf_frame_columns",
+          "start": 16,
+          "end": 24,
+          "nlines": 9
+        }
+      ]
+    },
+    {
+      "module": "sat_diag",
+      "nlines": 114,
+      "funcs": [
+        {
+          "name": "expected_raw_from_aligned_centroid",
+          "start": 401,
+          "end": 422,
+          "nlines": 22
+        },
+        {
+          "name": "compute_frame_drift",
+          "start": 460,
+          "end": 489,
+          "nlines": 30
+        },
+        {
+          "name": "compute_frame_drift_from_centroids",
+          "start": 492,
+          "end": 529,
+          "nlines": 38
+        },
+        {
+          "name": "stamp_sat_fits_headers",
+          "start": 956,
+          "end": 979,
+          "nlines": 24
+        }
+      ]
+    },
+    {
+      "module": "time_utils",
+      "nlines": 11,
+      "funcs": [
+        {
+          "name": "_clamp_lat",
+          "start": 33,
+          "end": 34,
+          "nlines": 2
+        },
+        {
+          "name": "_clamp_lon",
+          "start": 37,
+          "end": 43,
+          "nlines": 7
+        },
+        {
+          "name": "_clamp_elev",
+          "start": 46,
+          "end": 47,
+          "nlines": 2
+        }
+      ]
+    },
+    {
+      "module": "ui_calibration",
+      "nlines": 39,
+      "funcs": [
+        {
+          "name": "draft_runtime_status",
+          "start": 268,
+          "end": 306,
+          "nlines": 39
+        }
+      ]
+    },
+    {
+      "module": "ui_params_dashboard",
+      "nlines": 2,
+      "funcs": [
+        {
+          "name": "_default_of",
+          "start": 155,
+          "end": 156,
+          "nlines": 2
+        }
+      ]
+    },
+    {
+      "module": "ui_variability",
+      "nlines": 95,
+      "funcs": [
+        {
+          "name": "_raw_lightcurve_from_frames",
+          "start": 95,
+          "end": 124,
+          "nlines": 30
+        },
+        {
+          "name": "_render_field_image_with_candidate",
+          "start": 654,
+          "end": 718,
+          "nlines": 65
+        }
+      ]
+    },
+    {
+      "module": "vyvar_blind_solver",
+      "nlines": 30,
+      "funcs": [
+        {
+          "name": "_cluster_centroid_votes",
+          "start": 773,
+          "end": 802,
+          "nlines": 30
+        }
+      ]
+    },
+    {
+      "module": "vyvar_runtime",
+      "nlines": 2,
+      "funcs": [
+        {
+          "name": "install_root_from_src_py",
+          "start": 47,
+          "end": 48,
+          "nlines": 2
+        }
+      ]
+    }
+  ]
+}
