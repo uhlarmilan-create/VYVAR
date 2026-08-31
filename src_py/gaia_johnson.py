@@ -90,7 +90,8 @@ class JohnsonTransformResult:
     source: str = "gdr3_table59"
 
 
-def _eval_poly(coeffs: tuple[float, ...], x: float) -> float:
+def _eval_poly1d(coeffs: tuple[float, ...], x: float) -> float:
+    """Horner-style 1-D polynomial. Not the 2-D astrometry evaluator."""
     return float(sum(a * (x**i) for i, a in enumerate(coeffs)))
 
 
@@ -153,7 +154,7 @@ def transform_gaia_to_johnson(
             johnson_band=jb,
             reason=f"BP-RP={c:.3f} outside [{bprp_min},{bprp_max}]",
         )
-    g_minus_x = _eval_poly(coeffs, c)
+    g_minus_x = _eval_poly1d(coeffs, c)
     x_mag = g - g_minus_x
     scatter = float(SCATTER_SIGMA.get(jb, 0.05))
     err = _combine_mag_err(g_mag_err, scatter)

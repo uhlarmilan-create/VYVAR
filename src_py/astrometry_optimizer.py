@@ -381,7 +381,8 @@ def _fit_poly_model(x: np.ndarray, y: np.ndarray, dx: np.ndarray, dy: np.ndarray
     return np.concatenate([norm, cx]), np.concatenate([norm, cy])
 
 
-def _eval_poly(model: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def _eval_poly2d(model: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Evaluate packed 2-D astrometry polynomial. Not the 1-D Johnson poly."""
     x0, y0, sx, sy = model[:4]
     coeff = model[4:]
     xn = (x - x0) / sx
@@ -683,8 +684,8 @@ def optimize_masterstar_matches(
     # Rule: never drop bright anchors (g_mag < 10) for RMS - keep them even if resid > 3px.
     mdl_x0, mdl_y0 = _fit_poly_model(x[mm], y[mm], dx, dy)
     try:
-        rx = dx - _eval_poly(mdl_x0, x[mm], y[mm])
-        ry = dy - _eval_poly(mdl_y0, x[mm], y[mm])
+        rx = dx - _eval_poly2d(mdl_x0, x[mm], y[mm])
+        ry = dy - _eval_poly2d(mdl_y0, x[mm], y[mm])
         r = np.hypot(rx, ry)
         bright_anchor = np.isfinite(g_mag_c) & (g_mag_c < float(_BRIGHT_MAG_ANCHOR))
         keep = np.isfinite(r) & ((r <= 3.0) | bright_anchor)
@@ -715,8 +716,8 @@ def optimize_masterstar_matches(
     g_bprp = pd.to_numeric(gdf.get("bp_rp"), errors="coerce").to_numpy(dtype=np.float64)
     gx0 = gdf["x_wcs"].to_numpy(dtype=np.float64)
     gy0 = gdf["y_wcs"].to_numpy(dtype=np.float64)
-    gx_corr = gx0 + _eval_poly(mdl_x, gx0, gy0)
-    gy_corr = gy0 + _eval_poly(mdl_y, gx0, gy0)
+    gx_corr = gx0 + _eval_poly2d(mdl_x, gx0, gy0)
+    gy_corr = gy0 + _eval_poly2d(mdl_y, gx0, gy0)
     # Initial jump (before any Grip rematch): median dx/dy over ALL detection<->nearest-Gaia candidates.
     # Without this global shift the center hole persists. Kept additive across displacement refits.
     mdx0_pass0 = 0.0
@@ -803,8 +804,8 @@ def optimize_masterstar_matches(
         dx_ = xs_ - gxj
         dy_ = ys_ - gyj
         mdl_x, mdl_y = _fit_poly_model(xs_, ys_, dx_, dy_)
-        gx_corr = gx0 + _eval_poly(mdl_x, gx0, gy0) + float(mdx0_pass0)
-        gy_corr = gy0 + _eval_poly(mdl_y, gx0, gy0) + float(mdy0_pass0)
+        gx_corr = gx0 + _eval_poly2d(mdl_x, gx0, gy0) + float(mdx0_pass0)
+        gy_corr = gy0 + _eval_poly2d(mdl_y, gx0, gy0) + float(mdy0_pass0)
 
     def _match_bright_anchor_stars() -> int:
         """Bright anchors (g_mag < 10.5): match within pixel tolerance even at high RMS."""
@@ -1205,8 +1206,8 @@ def optimize_masterstar_matches(
                 mdl_x0_pf, mdl_y0_pf = _fit_poly_model(x[mm_pf], y[mm_pf], dx_pf, dy_pf)
                 mdl_x, mdl_y = mdl_x0_pf, mdl_y0_pf
                 try:
-                    rx_p = dx_pf - _eval_poly(mdl_x0_pf, x[mm_pf], y[mm_pf])
-                    ry_p = dy_pf - _eval_poly(mdl_y0_pf, x[mm_pf], y[mm_pf])
+                    rx_p = dx_pf - _eval_poly2d(mdl_x0_pf, x[mm_pf], y[mm_pf])
+                    ry_p = dy_pf - _eval_poly2d(mdl_y0_pf, x[mm_pf], y[mm_pf])
                     r_p = np.hypot(rx_p, ry_p)
                     g_mag_pf = pd.to_numeric(gdf.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)[gg_pf]
                     bright_pf = np.isfinite(g_mag_pf) & (g_mag_pf < float(_BRIGHT_MAG_ANCHOR))
@@ -1218,8 +1219,8 @@ def optimize_masterstar_matches(
                 except Exception:  # noqa: BLE001
                     # EXC-0015: T4 -- post-flip poly refit fail -> silently keeps previous model (acceptable fallback) (EXCEPT-BULK-2 2026-07-08)
                     pass
-                gx_base = gx0 + _eval_poly(mdl_x, gx0, gy0)
-                gy_base = gy0 + _eval_poly(mdl_y, gx0, gy0)
+                gx_base = gx0 + _eval_poly2d(mdl_x, gx0, gy0)
+                gy_base = gy0 + _eval_poly2d(mdl_y, gx0, gy0)
                 mdx_pf = 0.0
                 mdy_pf = 0.0
                 dxm: list[float] = []
