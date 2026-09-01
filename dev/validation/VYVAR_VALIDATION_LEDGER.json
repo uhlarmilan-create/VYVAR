@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-31",
+  "updated": "2026-09-01",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-08-31",
-      "commit": "22391ca",
+      "last_verified": "2026-09-01",
+      "commit": "dcc52b4",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -145,8 +145,8 @@
       "description": "Frozen 516 ERA-04 snapshot draft_000516_snapshot_era04_20260826 (canonical --full; APERTURE-01d f=1.35 annulus 2.7/5.2; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
       "verification": "scripts/session_baseline_check.py --full (v2 content core af218acd n=160; extended ada5caff n=210; v1 history 9367f998/d3cefff3). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
-      "last_verified": "2026-08-31",
-      "commit": "22391ca",
+      "last_verified": "2026-09-01",
+      "commit": "dcc52b4",
       "notes": "APERTURE-01d lock. ANCHOR-HASH-01: mixed v2 sha_core_v2/sha_ext_v2 (empty PSF LCs) kept as history. EPSF-CHAIN-01 split: gate is sha_core_aperture era04_aperture d55fcc9d n=53 and sha_ext_aperture cc8b532e n=157. core_psf is VL-ANCHOR-EPSF01. v1 9367f998/d3cefff3 kept as history. Supersedes ERA-03 core 9902d918 (n=121). era03 freeze kept on disk, not overwritten. candidate1/2/3 kept. Three POOL-STARVE empty_comp_drop allowlisted. CSS/HAT-188 tagged CROWDING (VSX not force-injected).",
       "census_fingerprint": {
         "n_raw_dao": 2246,
