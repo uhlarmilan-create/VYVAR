@@ -21,7 +21,10 @@ PIPELINE_E1 = (
     "preprocess_sky_summary_from_df",
 )
 
-PHOTOMETRY_E1: tuple[str, ...] = ()
+PHOTOMETRY_E1: tuple[str, ...] = (
+    "resolve_lc_time_base",
+    "lc_time_axis_short_label",
+)
 
 
 def test_e1_pipeline_facade_getattr() -> None:
