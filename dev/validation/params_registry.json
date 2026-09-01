@@ -2335,21 +2335,6 @@
     "scope_key": "rig",
     "scope_group": "c"
   },
-  "masterstar_accept_mode": {
-    "help": "Acceptance strategy of the masterstar plate solution ('odds' = statistical odds-ratio test).",
-    "kind": "static",
-    "label": "Masterstar Accept Mode",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "masterstar_best_of_n": {
     "help": "How many best frames are stacked/considered when building the masterstar reference.",
     "kind": "static",

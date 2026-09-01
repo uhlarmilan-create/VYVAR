@@ -300,7 +300,6 @@ INTENTIONALLY_HIDDEN = {
     "masterstar_min_matched_floor",
     "masterstar_centre_rms_max_px",
     "masterstar_distortion_benign_ratio_max",
-    "masterstar_accept_mode",
     "masterstar_odds_match_floor",
     "masterstar_odds_k",
     "masterstar_odds_min_quadrants",

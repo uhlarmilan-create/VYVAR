@@ -78,7 +78,6 @@ LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {
     "hrd_color_white_point": ("field_median", "d65"),
     "blind_index_select_mode": ("auto", "series_all", "single"),
     "blind_img_select_mode": ("per_cell", "central"),
-    "masterstar_accept_mode": ("odds", "fraction"),
     "phase01_flux_col": ("dao_flux", "psf_flux"),
     "psf_ac_policy": ("p4_none", "chi2_lt5_legacy"),
 }

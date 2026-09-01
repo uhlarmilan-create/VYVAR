@@ -10,9 +10,12 @@ from vyvar_platesolver import _masterstar_solve_acceptance
 
 def _accept(**kwargs):
     defaults = dict(
-        accept_mode="fraction",
+        accept_mode="odds",
         catalog_recovery_tight=0.84,
         n_matched_tight=126,
+        quadrants_with_match=4,
+        expected_random=2.0,
+        false_alarm_p=1e-12,
         dist_benign=False,
         centre_rms=0.9,
         recovery_min=0.65,
@@ -34,7 +37,13 @@ def test_verified_solve_large_hint_sep_is_warning_not_reject():
 
 
 def test_low_recovery_solve_rejected():
-    out = _accept(catalog_recovery_tight=0.34, n_matched_tight=51, hint_sep_deg=0.05)
+    out = _accept(
+        catalog_recovery_tight=0.34,
+        n_matched_tight=51,
+        hint_sep_deg=0.05,
+        false_alarm_p=1.0,
+        quadrants_with_match=0,
+    )
     assert out["masterstar_verified"] is False
     assert out["hint_sep_warn"] is False
     assert out["hint_sep_bad_hard"] is False
@@ -46,6 +55,8 @@ def test_wrong_field_high_hint_sep_non_verified_rejected():
         n_matched_tight=51,
         hint_sep_deg=2.0,
         fov_diameter_deg=1.0,
+        false_alarm_p=1.0,
+        quadrants_with_match=0,
     )
     assert out["masterstar_verified"] is False
     assert out["hint_sep_bad_hard"] is True
@@ -89,7 +100,12 @@ def test_invalid_composition_matches_task_spec():
     )
     assert invalid is False
 
-    out_bad = _accept(catalog_recovery_tight=0.34, n_matched_tight=51)
+    out_bad = _accept(
+        catalog_recovery_tight=0.34,
+        n_matched_tight=51,
+        false_alarm_p=1.0,
+        quadrants_with_match=0,
+    )
     invalid_bad = (
         (not out_bad["masterstar_verified"])
         or (not math.isfinite(float(rms_px)))

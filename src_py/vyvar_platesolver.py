@@ -2435,12 +2435,13 @@ def _masterstar_solve_acceptance(
     false_alarm_p_max: float = 1e-6,
     crowded_n_cat_min: int = 800,
 ) -> dict[str, Any]:
-    """MASTERSTAR verified-solve gate: odds-based acceptance (default) or legacy fraction."""
+    """MASTERSTAR verified-solve gate: odds-based acceptance (CONSOLIDATE-01D; fraction branch deleted)."""
     _centre_ok = False
     if centre_rms is not None and math.isfinite(float(centre_rms)):
         _centre_ok = float(centre_rms) <= float(centre_rms_max)
     _dist_ok = bool(dist_benign) or _centre_ok
-    _mode = str(accept_mode or "odds").strip().lower()
+    _ = accept_mode  # retained for call-site compatibility; policy is always odds
+    _mode = "odds"
     _gate_frac = (
         float(catalog_recovery_tight_gate)
         if catalog_recovery_tight_gate is not None
@@ -2448,19 +2449,12 @@ def _masterstar_solve_acceptance(
     )
     exp_r = float(expected_random) if expected_random is not None else 0.0
     p_false = float(false_alarm_p) if false_alarm_p is not None else 1.0
-    if _mode == "odds":
-        k_thr = max(float(matched_floor), float(odds_k) * max(0.0, exp_r))
-        _verified = (
-            int(n_matched_tight) >= int(math.ceil(k_thr))
-            and int(quadrants_with_match) >= int(odds_min_quadrants)
-            and p_false <= float(false_alarm_p_max)
-        )
-    else:
-        _verified = (
-            float(_gate_frac) >= float(recovery_min)
-            and int(n_matched_tight) >= int(matched_floor)
-            and bool(_dist_ok)
-        )
+    k_thr = max(float(matched_floor), float(odds_k) * max(0.0, exp_r))
+    _verified = (
+        int(n_matched_tight) >= int(math.ceil(k_thr))
+        and int(quadrants_with_match) >= int(odds_min_quadrants)
+        and p_false <= float(false_alarm_p_max)
+    )
     qmeta = _masterstar_quality_flags(
         catalog_recovery_tight_gate=float(_gate_frac),
         recovery_min=float(recovery_min),
@@ -3708,7 +3702,7 @@ def _solve_wcs_validate_and_refine(
         except (TypeError, ValueError):
             _centre_rms_f = None
         _accept = _masterstar_solve_acceptance(
-            accept_mode=str(getattr(_cfg_val, "masterstar_accept_mode", "odds")),
+            accept_mode="odds",
             catalog_recovery_tight=float(
                 _catalog_recovery.get("catalog_recovery_tight", 0.0)
             ),
@@ -3728,11 +3722,7 @@ def _solve_wcs_validate_and_refine(
             centre_rms=_centre_rms_f,
             edge_rms=_dist_assess.get("distortion_edge_rms_px"),
             recovery_min=float(_recovery_min),
-            matched_floor=int(
-                _MASTERSTAR_ODDS_MATCH_FLOOR
-                if str(getattr(_cfg_val, "masterstar_accept_mode", "odds")).strip().lower() == "odds"
-                else _matched_floor
-            ),
+            matched_floor=int(_MASTERSTAR_ODDS_MATCH_FLOOR),
             centre_rms_max=float(_centre_rms_max),
             hint_sep_deg=float(_hint_sep_deg),
             hint_sep_limit=float(hint_sep_limit),

@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T06:58:13Z at git HEAD 47a8d76._
+_Generated 2026-09-01T07:03:44Z at git HEAD 6ec0859._
 
 ## Summary
 
-- Entries: 304
-- Tier: basic 14, advanced 73, expert 217
-- Kind: static 286, derived 0, resolved 18
-- Widget: auto 120, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 276, fits_dynamic 6, internal 13
-- Scope: universal 253, rig 33, site 10, session 8
-- Scope key: none 253, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 303
+- Tier: basic 14, advanced 73, expert 216
+- Kind: static 285, derived 0, resolved 18
+- Widget: auto 120, custom 158, hidden 25
+- Owner: db_static 9, config_runtime 275, fits_dynamic 6, internal 13
+- Scope: universal 252, rig 33, site 10, session 8
+- Scope key: none 252, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -125,7 +125,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `field_density_sparse_threshold` | 300.0 | 1 .. 50000 | expert | static | config_runtime | universal | none | n/a | custom | Field Density Sparse Threshold |
 | `frame_height_px` | 1397 | - | expert | resolved | internal | session | frame | n/a | hidden | Frame Height PX |
 | `frame_width_px` | 2082 | - | expert | resolved | internal | session | frame | n/a | hidden | Frame Width PX |
-| `masterstar_accept_mode` | odds | - | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Accept Mode |
 | `masterstar_best_of_n` | 10 | 1 .. 25 | expert | static | config_runtime | universal | none | n/a | custom | Masterstar Best Of N |
 | `masterstar_catalog_recovery_min` | 0.65 | 0.4 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | custom | Masterstar Catalog Recovery Min |
 | `masterstar_centre_rms_max_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Masterstar Centre RMS Max Arcsec |

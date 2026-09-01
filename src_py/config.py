@@ -135,6 +135,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "err_background_mode": (
         "err_background_mode removed 2026-09-01 CONSOLIDATE-01D; empirical empty-aperture term is always on (F-BINGAIN-1); Howell math remains as missing-sigma fallback"
     ),
+    "masterstar_accept_mode": (
+        "masterstar_accept_mode removed 2026-09-01 CONSOLIDATE-01D; MASTERSTAR odds gate is the only accept policy"
+    ),
 }
 
 
@@ -837,8 +840,6 @@ class AppConfig:
     #: MASTERSTAR distortion-limited benign: max edge/centre residual ratio (was 2.50; Brno r ~3.0).
     masterstar_distortion_benign_ratio_max: float = 3.20
 
-    #: MASTERSTAR accept gate: ``odds`` (Bayesian false-alarm) or legacy ``fraction``.
-    masterstar_accept_mode: str = "odds"
     # WAVE-B STEP 6: masterstar_odds_match_floor / _odds_k / _odds_min_quadrants /
     # _false_alarm_p_max hardcoded as odds-verification internals (module constants in
     # vyvar_platesolver.py).
@@ -2210,8 +2211,6 @@ class AppConfig:
         self.masterstar_distortion_benign_ratio_max = max(
             2.0, min(5.0, float(self.masterstar_distortion_benign_ratio_max))
         )
-        _mode = str(data.get("masterstar_accept_mode", self.masterstar_accept_mode) or "odds").strip().lower()
-        self.masterstar_accept_mode = _mode if _mode in ("odds", "fraction") else "odds"
         # WAVE-B STEP 6: masterstar_odds_match_floor / _odds_k / _odds_min_quadrants /
         # _false_alarm_p_max hardcoded as odds-verification internals (module constants in
         # vyvar_platesolver.py).
@@ -2825,7 +2824,6 @@ class AppConfig:
             "masterstar_distortion_benign_ratio_max": float(
                 self.masterstar_distortion_benign_ratio_max
             ),
-            "masterstar_accept_mode": str(self.masterstar_accept_mode),
             "masterstar_quality_crowded_n_cat_min": int(self.masterstar_quality_crowded_n_cat_min),
             "masterstar_detection_cap_adaptive": bool(self.masterstar_detection_cap_adaptive),
             "masterstar_detection_cap_min": int(self.masterstar_detection_cap_min),

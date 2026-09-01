@@ -269,9 +269,6 @@
   // Matched-star count below which the field is treated as sparse (looser
   // criteria so an ensemble can still be formed).
   "field_density_sparse_threshold": 300.0,
-  // Acceptance strategy of the masterstar plate solution ('odds' =
-  // statistical odds-ratio test).
-  "masterstar_accept_mode": "odds",
   // How many best frames are stacked/considered when building the masterstar
   // reference.
   "masterstar_best_of_n": 10,

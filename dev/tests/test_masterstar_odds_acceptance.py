@@ -45,7 +45,7 @@ def _grid(ra: float, dec: float, n: int = 200) -> tuple[np.ndarray, np.ndarray, 
 
 
 def test_draft_406_dense_field_odds_accepts_low_fraction():
-    """Dense field: low recovery % but many tight matches - odds accepts; legacy fraction rejects."""
+    """Dense field: low recovery % but many tight matches - odds accepts."""
     ra, de, xs, ys = _grid(150.0, 45.0, n=196)
     w = _make_tan_wcs(150.0, 45.0)
     rec = _compute_masterstar_catalog_recovery(
@@ -91,25 +91,9 @@ def test_draft_406_dense_field_odds_accepts_low_fraction():
         fov_diameter_deg=2.0,
         crowded_n_cat_min=800,
     )
-    legacy = _masterstar_solve_acceptance(
-        accept_mode="fraction",
-        catalog_recovery_tight=float(rec["catalog_recovery_tight"]),
-        catalog_recovery_tight_gate=float(rec["catalog_recovery_tight_gate"]),
-        n_matched_tight=int(rec["n_matched_tight"]),
-        dist_benign=False,
-        centre_rms=5.72,
-        edge_rms=1.55,
-        recovery_min=0.65,
-        matched_floor=40,
-        centre_rms_max=1.2,
-        hint_sep_deg=0.03,
-        hint_sep_limit=0.15,
-        fov_diameter_deg=2.0,
-    )
     assert odds["masterstar_verified"] is True
     assert float(rec["catalog_recovery_tight"]) < 0.10
     assert float(rec["catalog_recovery_tight_gate"]) >= 0.70
-    assert legacy["masterstar_verified"] is False
     assert odds["quality_flag_primary"] in ("crowded", "blurred", "ok")
 
 

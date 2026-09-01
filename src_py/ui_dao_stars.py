@@ -143,8 +143,7 @@ def render_dao_stars_dashboard(
     st.markdown("#### Catalog-recovery verification (MASTERSTAR accept gate)")
     st.caption(
         "Default **odds** mode: accept when tight matches vastly exceed chance (false-alarm p). "
-        "Recovery fraction, centre RMS, and distortion are **quality flags only** (VY_QFLAG). "
-        "Legacy **fraction** mode still available via ``masterstar_accept_mode``."
+        "Recovery fraction, centre RMS, and distortion are **quality flags only** (VY_QFLAG)."
     )
     _cur_rec = float(getattr(cfg, "masterstar_catalog_recovery_min", 0.65))
     _cur_floor = int(getattr(cfg, "masterstar_min_matched_floor", 40))

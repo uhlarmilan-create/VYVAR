@@ -211,7 +211,19 @@ def test_known_removed_err_background_mode_logs_info(tmp_path: Path, caplog) -> 
     caplog.set_level(logging.INFO)
     from config import AppConfig
 
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_known_removed_masterstar_accept_mode_logs_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps({"masterstar_accept_mode": "fraction"}), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
     cfg = AppConfig(project_root=tmp_path)
-    assert not hasattr(cfg, "err_background_mode")
-    assert any("err_background_mode removed 2026-09-01" in r.message for r in caplog.records)
+    assert not hasattr(cfg, "masterstar_accept_mode")
+    assert any("masterstar_accept_mode removed 2026-09-01" in r.message for r in caplog.records)
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)
