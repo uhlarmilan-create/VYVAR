@@ -1256,7 +1256,7 @@ def export_lightcurve_reports(
     try:
         from err_calibration import ERR_CALIB_SIDECAR, load_sidecar  # noqa: PLC0415
 
-        _eem = str(getattr(fresh_cfg, "export_err_mode", "calibrated") or "calibrated")
+        _eem = "calibrated"  # CONSOLIDATE-01D: ERR-CALIB is the only export err mode
         _g_note = "g_pt/container"
         _cal_note = "none"
         if _phot_dir is not None:
@@ -1528,7 +1528,7 @@ def export_lightcurve_reports(
     else:
         v_lines.append("# FIELD IMAGE: not available\n")
     try:
-        _eem_v = str(getattr(fresh_cfg, "export_err_mode", "calibrated") or "calibrated")
+        _eem_v = "calibrated"  # CONSOLIDATE-01D: ERR-CALIB is the only export err mode
         v_lines.append(f"# ERR_MODEL: mode={_eem_v} (see AAVSO #ERR_MODEL line)\n")
     except Exception:  # noqa: BLE001
         pass

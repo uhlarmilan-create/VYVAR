@@ -789,10 +789,6 @@
   // === Export ===
   // Output for the outside world: AAVSO/VarAstro submission and TESS cross-
   // analysis.
-  // Exported per-epoch err: calibrated applies optional (s, sigma_r) sidecar
-  // (WIDE-ERR-04 default identity s=1, sigma_r=0 = pure physical model with
-  // g_pt + weighted SEM); model skips sidecar.
-  "export_err_mode": "calibrated",
   // Enables the TESS cross-analysis block (comparing your light curve against
   // TESS data).
   "tess_enabled": false,

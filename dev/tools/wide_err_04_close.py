@@ -145,7 +145,6 @@ def reexport() -> dict:
     )
 
     cfg = AppConfig()
-    cfg.export_err_mode = "calibrated"
     db = VyvarDatabase(Path(cfg.database_path))
     meta = load_pipeline_meta(PHOT)
     stages = meta.get("stages") if isinstance(meta.get("stages"), list) else []

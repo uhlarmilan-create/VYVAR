@@ -185,3 +185,18 @@ def test_known_removed_global_comp_pool_enabled_logs_info(tmp_path: Path, caplog
     assert not hasattr(cfg, "global_comp_pool_enabled")
     assert any("global_comp_pool_enabled removed 2026-09-01" in r.message for r in caplog.records)
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_known_removed_export_err_mode_logs_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps({"export_err_mode": "model"}), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=tmp_path)
+    assert not hasattr(cfg, "export_err_mode")
+    assert any("export_err_mode removed 2026-09-01" in r.message for r in caplog.records)
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)

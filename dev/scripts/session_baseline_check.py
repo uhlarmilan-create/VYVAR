@@ -776,7 +776,6 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
     cfg.k2_mode = "literature"
     cfg.save_lightcurve_png = False
     cfg.per_frame_saturation_enabled = True
-    cfg.export_err_mode = "calibrated"
 
     snapshot = Path(cfg.archive_root) / "Drafts" / SNAPSHOT_NAME
 
@@ -1264,7 +1263,6 @@ def run_parity_baseline(report: SessionReport, *, epsf: bool = False) -> None:
     cfg.k2_mode = "literature"
     cfg.save_lightcurve_png = False
     cfg.per_frame_saturation_enabled = True
-    cfg.export_err_mode = "calibrated"
 
     snapshot = Path(cfg.archive_root) / "Drafts" / SNAPSHOT_NAME
     if not snapshot.is_dir():

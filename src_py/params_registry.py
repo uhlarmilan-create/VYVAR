@@ -75,7 +75,6 @@ LITERAL_OPTIONS: dict[str, tuple[str, ...]] = {
     "apply_color_term": ("off", "auto", "on"),
     "k2_mode": ("off", "literature", "fit_else_literature"),
     "err_background_mode": ("empirical", "howell"),
-    "export_err_mode": ("calibrated", "model"),
     "hrd_color_highlight_mode": ("soft", "scale"),
     "hrd_color_white_point": ("field_median", "d65"),
     "blind_index_select_mode": ("auto", "series_all", "single"),

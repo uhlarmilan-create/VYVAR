@@ -223,7 +223,6 @@ def b_phase2a_and_export(a3: dict) -> dict:
     save_pipeline_meta(PHOT, meta)
 
     cfg = AppConfig()
-    cfg.export_err_mode = "calibrated"
     # Match 36a53b0 product: PFS ON via per-run override.
     cfg.per_frame_saturation_enabled = True
     db = VyvarDatabase(Path(cfg.database_path))

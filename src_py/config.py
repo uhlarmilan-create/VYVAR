@@ -129,6 +129,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "global_comp_pool_enabled": (
         "global_comp_pool_enabled removed 2026-09-01 CONSOLIDATE-01D; global pool is always on (COMP-POOL-01)"
     ),
+    "export_err_mode": (
+        "export_err_mode removed 2026-09-01 CONSOLIDATE-01D; exported err is always ERR-CALIB calibrated"
+    ),
 }
 
 
@@ -955,8 +958,6 @@ class AppConfig:
     gain_container_scale: float = 4.0
     #: Max CI width factor (hi/lo) to accept photon-transfer g_pt as authority.
     photon_transfer_ci_max_width_factor: float = 3.0
-    #: Exported per-epoch err: ``calibrated`` (s, sigma_r) or ``model`` (legacy quadrature).
-    export_err_mode: str = "calibrated"
     #: Hard plausibility ceiling for fitted k'' (v2 pre-gate).
     k2_ceiling: float = 0.1
     #: Enable per-night k'' fit (v2; off in v1 activation bundle).
@@ -1998,8 +1999,6 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.photon_transfer_ci_max_width_factor = 3.0
-        _eem = str(data.get("export_err_mode", self.export_err_mode) or "calibrated").strip().lower()
-        self.export_err_mode = "model" if _eem == "model" else "calibrated"
         self.k2_fit_enabled = bool(data.get("k2_fit_enabled", self.k2_fit_enabled))
         try:
             self.k2_ceiling = max(0.0, float(data.get("k2_ceiling", self.k2_ceiling)))
@@ -2879,7 +2878,6 @@ class AppConfig:
             "sigma_sys_mag": dict(self.sigma_sys_mag),
             "gain_container_scale": float(self.gain_container_scale),
             "photon_transfer_ci_max_width_factor": float(self.photon_transfer_ci_max_width_factor),
-            "export_err_mode": str(self.export_err_mode),
             "k2_ceiling": float(self.k2_ceiling),
             "k2_fit_enabled": bool(self.k2_fit_enabled),
             "k2_fit_min_detectability": float(self.k2_fit_min_detectability),

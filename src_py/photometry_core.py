@@ -10167,49 +10167,48 @@ def _phase2a_process_one_target(
         sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
-    # WIDE-ERR-03: optional Pont/Gillon calibration layer on combined model err.
-    _export_mode = str(getattr(_cfg, "export_err_mode", "calibrated") or "calibrated").strip().lower()
-    if _export_mode != "model":
-        try:
-            from err_calibration import (  # noqa: PLC0415
-                ERR_CALIB_SIDECAR,
-                apply_calibration_rel,
-                bins_from_sidecar,
-                load_sidecar,
-                smooth_from_sidecar,
-            )
+    # WIDE-ERR-03: Pont/Gillon calibration layer on combined model err.
+    # CONSOLIDATE-01D: always ERR-CALIB calibrated (export_err_mode=model branch deleted).
+    try:
+        from err_calibration import (  # noqa: PLC0415
+            ERR_CALIB_SIDECAR,
+            apply_calibration_rel,
+            bins_from_sidecar,
+            load_sidecar,
+            smooth_from_sidecar,
+        )
 
-            _cal_path = Path(output_dir) / ERR_CALIB_SIDECAR if output_dir is not None else None
-            _cal = load_sidecar(_cal_path) if _cal_path is not None else None
-            if _cal:
-                _smooth = smooth_from_sidecar(_cal)
-                _bins = bins_from_sidecar(_cal) if not _smooth else []
-                _calib_obj = _smooth if _smooth is not None else _bins
+        _cal_path = Path(output_dir) / ERR_CALIB_SIDECAR if output_dir is not None else None
+        _cal = load_sidecar(_cal_path) if _cal_path is not None else None
+        if _cal:
+            _smooth = smooth_from_sidecar(_cal)
+            _bins = bins_from_sidecar(_cal) if not _smooth else []
+            _calib_obj = _smooth if _smooth is not None else _bins
+            _g_tgt = float("nan")
+            try:
+                _g_tgt = float(
+                    pd.to_numeric(
+                        target_row.get("phot_g_mean_mag", target_row.get("mag", float("nan"))),
+                        errors="coerce",
+                    )
+                )
+            except Exception:  # noqa: BLE001
                 _g_tgt = float("nan")
-                try:
-                    _g_tgt = float(
-                        pd.to_numeric(
-                            target_row.get("phot_g_mean_mag", target_row.get("mag", float("nan"))),
-                            errors="coerce",
-                        )
-                    )
-                except Exception:  # noqa: BLE001
-                    _g_tgt = float("nan")
-                if math.isfinite(_g_tgt) and _calib_obj:
-                    err = np.asarray(
-                        [
-                            apply_calibration_rel(float(e), _g_tgt, _calib_obj)
-                            for e in np.asarray(err, dtype=np.float64)
-                        ],
-                        dtype=np.float64,
-                    )
-                    logging.info(
-                        "[ERR-CALIB] applied export_err_mode=calibrated for G=%.3f (%s)",
-                        _g_tgt,
-                        "smooth" if _smooth is not None else f"{len(_bins)} bins",
-                    )
-        except Exception as _cal_exc:  # noqa: BLE001
-            logging.warning("[ERR-CALIB] skip apply: %s", _cal_exc)
+            if math.isfinite(_g_tgt) and _calib_obj:
+                err = np.asarray(
+                    [
+                        apply_calibration_rel(float(e), _g_tgt, _calib_obj)
+                        for e in np.asarray(err, dtype=np.float64)
+                    ],
+                    dtype=np.float64,
+                )
+                logging.info(
+                    "[ERR-CALIB] applied export_err_mode=calibrated for G=%.3f (%s)",
+                    _g_tgt,
+                    "smooth" if _smooth is not None else f"{len(_bins)} bins",
+                )
+    except Exception as _cal_exc:  # noqa: BLE001
+        logging.warning("[ERR-CALIB] skip apply: %s", _cal_exc)
     # Propagate colour-level coefficient uncertainty into exported err (constant per LC).
     if bool(ct_ok) and math.isfinite(float(c1_stderr)) and math.isfinite(float(ct_corr)):
         # corr = c1 * (target - ref) => sigma_corr = |target-ref| * sigma_c1

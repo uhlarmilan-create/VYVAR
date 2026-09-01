@@ -4908,20 +4908,5 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
-  },
-  "export_err_mode": {
-    "help": "Exported per-epoch err: calibrated applies optional (s, sigma_r) sidecar (WIDE-ERR-04 default identity s=1, sigma_r=0 = pure physical model with g_pt + weighted SEM); model skips sidecar.",
-    "kind": "static",
-    "label": "Export Err Mode",
-    "owner": "config_runtime",
-    "phase": "export",
-    "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
   }
 }

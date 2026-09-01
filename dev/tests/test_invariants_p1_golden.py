@@ -101,7 +101,6 @@ def _cfg_for_p1() -> AppConfig:
     cfg.k2_mode = "literature"
     cfg.save_lightcurve_png = False
     cfg.per_frame_saturation_enabled = True
-    cfg.export_err_mode = "calibrated"
     return cfg
 
 
