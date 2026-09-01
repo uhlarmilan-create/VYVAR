@@ -41,6 +41,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **CR-1** | Same as CR-REJECTION (closure Step 9) | Cursor | TODO-A |
 | **CR-REJECTION** | Cosmic-ray rejection (L.A.Cosmic or equivalent); no CR step in src_py today | Cursor | TODO-A |
 | **D1-2-LINEARITY-RAMP** | Exposure ramp at telescope; nothing else substitutes | Milan | telescope night |
+| **D1B-UNITS-01** | Decide preferred-unit defaults for the three px/unit pairs (qc_max_hfr[_fwhm_ratio], hrd_color_bg_box_px[_arcsec], masterstar_centre_rms_max_px[_arcsec]); behaviour change, must be measured per rig before flipping any default | Milan | per-rig measure |
 | **D10-1** | D10-1 leftover from audit register | Cursor | LOW |
 | **DAO-TOL-FLOOR-01** | DAO tolerance floor leftover | Cursor | LOW |
 | **DB-DEFECT-DIAMETER** | DB defect diameter | Cursor | LOW |
@@ -152,6 +153,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **COMP-RMS-DEF-01** -- Wired C3 2026-08-25 (k=5 LOO mag).
 - **COMP-RMS-DEF-01-B** -- Wired C3 2026-08-25.
 - **CONFIG-MATERIALIZE-CHECK** -- DONE 2026-07-24 BUNDLE-BOOTSTRAP-WIRING.
+- **CONFIG-PREREZ** -- DONE 2026-09-01 CONSOLIDATE-01D P2 except remaining OPEN **D1B-UNITS-01**.
 - **CYTHON-RELEASE** -- DONE closed-source bundle preview 2026-07-23.
 - **DAO-THRESHOLD-PARAMS** -- CLOSED 2026-08-07; reopen only on two-rig empirical sweep.
 - **DEV-PROCESS-A** -- DONE 2026-07-08 validation ledger.
