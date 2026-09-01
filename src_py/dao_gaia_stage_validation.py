@@ -107,12 +107,16 @@ def _load_hand_baseline(repo_root: Path) -> tuple[Path, dict[str, dict[str, Any]
 
 
 def _import_iter4(repo_root: Path):
+    """Load production iter4 from src_py (not gitignored tmp/ sandbox copies)."""
     src = repo_root / "src_py"
-    tmp = repo_root / "tmp"
-    for p in (src, tmp):
-        ps = str(p)
-        if ps not in sys.path:
-            sys.path.insert(0, ps)
+    ps = str(src)
+    tmp = str(repo_root / "tmp")
+    sys.path = [p for p in sys.path if p != tmp]
+    if ps not in sys.path:
+        sys.path.insert(0, ps)
+    elif sys.path[0] != ps:
+        sys.path.insert(0, ps)
+    sys.modules.pop("dao_gaia_stage_01_iter4", None)
     import dao_gaia_stage_01_iter4 as iter4  # noqa: PLC0415
 
     return iter4

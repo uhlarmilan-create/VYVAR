@@ -1,6 +1,8 @@
 """MERGE-MAIN-01: iter4 overlay branch must not TypeError on decompose_holes_le13."""
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -8,10 +10,21 @@ import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+_ITER4_PATH = ROOT / "src_py" / "dao_gaia_stage_01_iter4.py"
 
 
-def _fake_frame_result(frame: str):
-    from dao_gaia_stage_01_iter4 import FrameResult
+def _load_src_iter4():
+    """Load src_py iter4 by file path so gitignored tmp/ copies cannot shadow it."""
+    sys.modules.pop("dao_gaia_stage_01_iter4", None)
+    spec = importlib.util.spec_from_file_location("dao_gaia_stage_01_iter4", _ITER4_PATH)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["dao_gaia_stage_01_iter4"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _fake_frame_result(iter4, frame: str):
     from masterstar_gaia_accounting import SOURCE_TOO_FAINT
 
     census = pd.DataFrame(
@@ -25,7 +38,7 @@ def _fake_frame_result(frame: str):
     )
     gaia = pd.DataFrame({"x_gaia": [40.0], "y_gaia": [40.0], "phot_g_mean_mag": [12.0]})
     data0 = np.ones((120, 120), dtype=np.float32)
-    return FrameResult(
+    return iter4.FrameResult(
         frame=frame,
         detections=[],
         gaia_le16=gaia,
@@ -57,7 +70,8 @@ def test_iter4_overlay_branch_accepts_single_holes_dataframe(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Catches the P2-6 leftover TypeError: unpacking a DataFrame as (holes, summ)."""
-    import dao_gaia_stage_01_iter4 as iter4
+    iter4 = _load_src_iter4()
+    assert Path(iter4.__file__).resolve() == _ITER4_PATH.resolve()
 
     dummy_fits = tmp_path / "MASTERSTAR.fits"
     dummy_fits.write_bytes(b"x")
@@ -80,11 +94,12 @@ def test_iter4_overlay_branch_accepts_single_holes_dataframe(
     monkeypatch.setattr(
         iter4,
         "run_frame_i6_i7",
-        lambda frame_label, *_a, **_k: _fake_frame_result(frame_label),
+        lambda frame_label, *_a, **_k: _fake_frame_result(iter4, frame_label),
     )
     monkeypatch.setattr(iter4, "render_overlay_final", lambda *_a, **_k: None)
     monkeypatch.setattr(
-        "sys.argv",
+        sys,
+        "argv",
         ["dao_gaia_stage_01_iter4.py", "--ctx", str(tmp_path / "ctx")],
     )
 
