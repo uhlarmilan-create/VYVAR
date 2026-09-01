@@ -56,14 +56,13 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-XVAL-01** | External ePSF gate: same ensemble/frames, independent PSF photometry reference; method unspecced | Milan | literature spec |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
-| **EXPORT-PARITY-01** | Standing two-path export vs pipeline photometry defect (R5); PSF merge path fixed | Cursor | schedule |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
 | **F-B01-F-B02** | PASSTHROUGH runs may claim VYVAR calibration; PDF honesty | Cursor | calpath audit s14 |
 | **F-BINGAIN-1** | Newton bin4 chi2 gate still open; do not flip ensemble to Broeg IVW until it passes | Cursor | Newton gate |
 | **F-BJD-1** | BJD time-base follow-up | Cursor | LOW |
 | **F-EXCEPT-TIER1** | Remaining tier-1 except hygiene | Cursor | LOW |
 | **F-HOWELL-3** | Howell citation/path follow-up after F-BINGAIN-1 | Cursor | F-BINGAIN-1 |
-| **FRAME-QC-PARITY** | Phase 2: Layer A log honesty + QC provenance stamp; draft 516 frame 29 n_stars 263 vs ~100 | Cursor | not C8 |
+| **FRAME-QC-PARITY** | Remaining: Layer A log honesty + n_stars outlier gate (frame 29, 263 vs ~100). Landed INV-FRAME-QC-01: `_dqf` None raises; provenance stamp | Cursor | not C8 |
 | **GAIA-ID-FLOAT-GUARD** | Gaia id float guard follow-up if any residual | Cursor | LOW |
 | **GAIA-PM-COLUMNS** | Gaia DB lacks pmra/pmdec; defer to DR4 ~Dec 2026 | Milan | DR4 |
 | **HRD-PLOT-TUPLE** | HRD plot tuple hygiene | Cursor | LOW |
@@ -165,6 +164,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **EPSF-VALID-02** -- CLOSED 2026-08-22 gated 67-star production ePSF on 516.
 - **ERA-03** -- era03 freeze kept on disk; superseded as --full gate by era04.
 - **EXCEPT-BULK** -- CLOSED 2026-07-08 silent broad-except census.
+- **EXPORT-PARITY-01** -- CLOSED this arc (v2, d6c84e0: one production entry, G7 --parity permanent).
 - **F-428** -- CLOSED 2026-07-15 draft_428 forensics.
 - **F-429** -- CLOSED 2026-07-16 validate + regressions.
 - **F-431-HEADLESS-DIVERGENCE** -- CLOSED 2026-07-16 / T3 (DECISIONS).
