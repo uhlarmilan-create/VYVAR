@@ -403,58 +403,8 @@ def _epsf_target_catalog_ids(platesolve_dir: Path, *, top_comps: int = 40) -> se
     return ids if ids else None
 
 
-def _add_catalog_ids_from_csv(ids: set[str], comp_p: Path) -> None:
-    """Merge ``catalog_id`` values from a comparison-star CSV into *ids*."""
-    if not comp_p.is_file():
-        return
-    try:
-        cdf = read_vyvar_csv(comp_p, low_memory=False)
-        if "catalog_id" not in cdf.columns or cdf.empty:
-            return
-        for raw in cdf["catalog_id"].fillna("").astype(str).str.strip():
-            if not raw or raw.lower() in ("nan", "none"):
-                continue
-            try:
-                ids.add(str(normalize_gaia_source_id(raw)).strip())
-            except Exception:  # noqa: BLE001
-                ids.add(raw)
-    except Exception as _comp_exc:  # noqa: BLE001
-        LOGGER.warning("[ePSF] comparison star load failed (%s): %s", comp_p.name, _comp_exc)
 
 
-def _epsf_lc_catalog_ids(platesolve_dir: Path) -> set[str] | None:
-    """Full LC star set: active targets + comp pool + all per-target comps (gated PSF coverage)."""
-    phot = Path(platesolve_dir) / "photometry"
-    ids: set[str] = set()
-    at_p = phot / "active_targets.csv"
-    if at_p.is_file():
-        try:
-            at = read_vyvar_csv(at_p, low_memory=False)
-            if "catalog_id" in at.columns:
-                for _, row in at.iterrows():
-                    z = str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower()
-                    if z == "catalog_only":
-                        continue
-                    raw = row.get("catalog_id")
-                    if raw is None:
-                        continue
-                    s = str(raw).strip()
-                    if not s or s.lower() in ("nan", "none"):
-                        continue
-                    try:
-                        ids.add(str(normalize_gaia_source_id(s)).strip())
-                    except Exception:  # noqa: BLE001
-                        ids.add(s)
-        except Exception:  # noqa: BLE001
-            pass
-    for comp_p in (phot / "comparison_stars.csv", Path(platesolve_dir) / "comparison_stars.csv"):
-        _add_catalog_ids_from_csv(ids, comp_p)
-        if comp_p.is_file():
-            break
-    _add_catalog_ids_from_csv(ids, phot / "comparison_stars_per_target.csv")
-    if ids:
-        LOGGER.debug("[ePSF] LC catalog_ids loaded: %d (targets+full comp pool)", len(ids))
-    return ids if ids else None
 
 
 def _epsf_fit_catalog_ids(
@@ -19131,3 +19081,8 @@ from pipeline_ui_helpers import (  # noqa: E402,F401
 )
 
 from pipeline_gate_helpers import validate_comparison_ensemble_flatness  # noqa: E402,F401
+
+from epsf_hooks import (  # noqa: E402,F401
+    _add_catalog_ids_from_csv,
+    _epsf_lc_catalog_ids,
+)

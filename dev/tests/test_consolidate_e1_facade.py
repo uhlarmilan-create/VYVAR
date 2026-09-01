@@ -20,6 +20,8 @@ PIPELINE_E1 = (
     "resolve_masterstars_metadata_csv",
     "preprocess_sky_summary_from_df",
     "validate_comparison_ensemble_flatness",
+    "_epsf_lc_catalog_ids",
+    "_add_catalog_ids_from_csv",
 )
 
 PHOTOMETRY_E1: tuple[str, ...] = (
@@ -56,6 +58,7 @@ PHOTOMETRY_E1: tuple[str, ...] = (
     "_get_lc_psf_strict",
     "lc_has_finite_airmass",
     "_get_lc_adaptive_per_star",
+    "load_epsf_metrics_for_draft",
 )
 
 
@@ -87,3 +90,10 @@ def test_e1_annulus_patch_string_path() -> None:
     fn = photometry_core._annulus_sky_subtracted_flux
     assert callable(fn)
     assert fn.__module__ == "photometry_gate_helpers"
+
+
+def test_e1_epsf_hooks_private_and_all() -> None:
+    """_epsf_lc_catalog_ids is a private test import; load_epsf_metrics_for_draft is in __all__."""
+    assert pipeline._epsf_lc_catalog_ids.__module__ == "epsf_hooks"
+    assert photometry_core.load_epsf_metrics_for_draft.__module__ == "epsf_hooks"
+    assert photometry.load_epsf_metrics_for_draft is photometry_core.load_epsf_metrics_for_draft
