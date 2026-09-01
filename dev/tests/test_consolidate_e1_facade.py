@@ -14,6 +14,11 @@ PIPELINE_E1 = (
     "generate_observation_hash",
     "observation_group_key_from_metadata",
     "log_lights_binning_from_headers_preflight",
+    "run_quality_analysis",
+    "list_best_processed_light_paths_for_masterstar",
+    "_resolve_light_fits_for_quality_inspection",
+    "resolve_masterstars_metadata_csv",
+    "preprocess_sky_summary_from_df",
 )
 
 PHOTOMETRY_E1: tuple[str, ...] = ()
