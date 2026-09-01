@@ -141,6 +141,21 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "psf_ac_policy": (
         "psf_ac_policy removed 2026-09-01 CONSOLIDATE-01D; p4_none is the only ePSF AC policy (ZP-OK v2 / P4)"
     ),
+    "qc_fwhm_limit": (
+        "qc_fwhm_limit removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
+    ),
+    "qc_elong_limit": (
+        "qc_elong_limit removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
+    ),
+    "psf_spatial_grid": (
+        "psf_spatial_grid removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
+    ),
+    "psf_spatial_min_stars_per_cell": (
+        "psf_spatial_min_stars_per_cell removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
+    ),
+    "gs11_comp_suspect_dilution": (
+        "gs11_comp_suspect_dilution removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
+    ),
 }
 
 
@@ -719,10 +734,6 @@ class AppConfig:
     #: When enabled, ePSFs are built per detector-region cell and interpolated by (x,y),
     #: which matters on wide fields where the PSF varies (coma / field curvature at edges).
     psf_spatial_enabled: bool = False
-    #: Grid layout "NxM" (columns x rows) of detector regions for the spatial ePSF.
-    psf_spatial_grid: str = "3x3"
-    #: Minimum isolated stars per cell; cells below this fall back to the global ePSF (flagged).
-    psf_spatial_min_stars_per_cell: int = 25
     #: When a per-star PSF fit is graded ``bad``, do not emit its PSF flux as usable -
     #: fall back to aperture for that star (sets ``psf_quality_fallback``). Default ON: a bad
     #: PSF fit must never silently become the reported value (the RMS-20.4 lesson).
@@ -744,10 +755,6 @@ class AppConfig:
     preprocess_sky_surface_force_reapply: bool = False
     #: OSC: post-extraction NxN average binning on each channel plane (1-4; default 2). Total scale vs raw = 2 x N.
     osc_channel_binning: int = 2
-    #: In-place QC diagnostic threshold for estimated FWHM [pix] (legacy; selection uses DB prefilter).
-    qc_fwhm_limit: float = 8.0
-    #: In-place QC diagnostic threshold for elongation a/b.
-    qc_elong_limit: float = 1.8
     #: Minimum clean stars required to build the ePSF model.
     epsf_min_stars: int = 30
     #: Per-frame photometry routing: ``aperture``, ``epsf``, or ``both``.
@@ -1007,7 +1014,6 @@ class AppConfig:
     gs11_dilution_aperture_arcsec: float = 0.0
     gs11_dilution_mag_limit_delta: float = 5.0
     gs11_comp_max_dilution: float = 0.90
-    gs11_comp_suspect_dilution: float = 0.98
     gs11_target_min_dilution: float = 0.50
 
     #: Aperture correction (Method B): reserved for future pipeline; off by default.
@@ -1711,13 +1717,6 @@ class AppConfig:
             except (TypeError, ValueError):
                 setattr(self, _attr, _default)
         self.psf_spatial_enabled = bool(data.get("psf_spatial_enabled", self.psf_spatial_enabled))
-        _grid = str(data.get("psf_spatial_grid", self.psf_spatial_grid) or "3x3").lower().strip()
-        self.psf_spatial_grid = _grid if "x" in _grid else "3x3"
-        try:
-            _mspc = int(data.get("psf_spatial_min_stars_per_cell", self.psf_spatial_min_stars_per_cell))
-            self.psf_spatial_min_stars_per_cell = _mspc if _mspc >= 1 else 25
-        except (TypeError, ValueError):
-            self.psf_spatial_min_stars_per_cell = 25
         self.psf_quality_fallback_enabled = bool(
             data.get("psf_quality_fallback_enabled", self.psf_quality_fallback_enabled)
         )
@@ -2378,10 +2377,7 @@ class AppConfig:
         _f01("gs11_dilution_aperture_arcsec", 0.0, 0.0, 120.0)
         _f01("gs11_dilution_mag_limit_delta", 5.0, 0.5, 15.0)
         _f01("gs11_comp_max_dilution", 0.90, 0.01, 1.0)
-        _f01("gs11_comp_suspect_dilution", 0.98, 0.01, 1.0)
         _f01("gs11_target_min_dilution", 0.50, 0.01, 1.0)
-        if float(self.gs11_comp_suspect_dilution) < float(self.gs11_comp_max_dilution):
-            self.gs11_comp_suspect_dilution = float(self.gs11_comp_max_dilution)
         _i01("phase01_comparison_n_comp_min", 3, 2, 12)
         _i01("phase01_comparison_n_comp_max", 12, 3, 20)
         if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
@@ -2758,8 +2754,6 @@ class AppConfig:
             "neighbor_sub_regime_dmag_min": float(self.neighbor_sub_regime_dmag_min),
             "neighbor_sub_regime_sep_max": float(self.neighbor_sub_regime_sep_max),
             "psf_spatial_enabled": bool(self.psf_spatial_enabled),
-            "psf_spatial_grid": str(self.psf_spatial_grid),
-            "psf_spatial_min_stars_per_cell": int(self.psf_spatial_min_stars_per_cell),
             "psf_quality_fallback_enabled": bool(self.psf_quality_fallback_enabled),
             "psf_adaptive_enabled": bool(self.psf_adaptive_enabled),
             "psf_adaptive_resolve_fwhm": float(self.psf_adaptive_resolve_fwhm),
@@ -2767,8 +2761,6 @@ class AppConfig:
             "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
             "preprocess_sky_surface_force_reapply": bool(self.preprocess_sky_surface_force_reapply),
             "osc_channel_binning": int(self.osc_channel_binning),
-            "qc_fwhm_limit": float(self.qc_fwhm_limit),
-            "qc_elong_limit": float(self.qc_elong_limit),
             "epsf_min_stars": int(self.epsf_min_stars),
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
@@ -2892,7 +2884,6 @@ class AppConfig:
             "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
             "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),
             "gs11_comp_max_dilution": float(self.gs11_comp_max_dilution),
-            "gs11_comp_suspect_dilution": float(self.gs11_comp_suspect_dilution),
             "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
             "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
             "phase01_chip_interior_margin_arcsec": self.phase01_chip_interior_margin_arcsec,

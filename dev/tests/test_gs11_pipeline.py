@@ -16,7 +16,6 @@ def _cfg_gs11_on(**overrides: object) -> AppConfig:
     c = AppConfig()
     c.gs11_dilution_enabled = True
     c.gs11_comp_max_dilution = 0.90
-    c.gs11_comp_suspect_dilution = 0.98
     c.gs11_target_min_dilution = 0.50
     c.gs11_dilution_mag_limit_delta = 5.0
     for k, v in overrides.items():

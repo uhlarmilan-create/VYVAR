@@ -1762,24 +1762,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "gs11_comp_suspect_dilution": {
-    "help": "Dilution level at which a comparison star is marked suspect.",
-    "kind": "static",
-    "label": "GS11 Comp Suspect Dilution",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.01,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "gs11_dilution_aperture_arcsec": {
     "help": "Aperture (arcsec) used when computing catalog-based dilution; 0 derives it from the photometric aperture.",
     "kind": "static",
@@ -4057,36 +4039,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "psf_spatial_grid": {
-    "help": "Grid of spatial PSF cells (e.g. 3x3).",
-    "kind": "static",
-    "label": "PSF Spatial Grid",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "psf_spatial_min_stars_per_cell": {
-    "help": "Minimum stars per cell to build a local PSF model.",
-    "kind": "static",
-    "label": "PSF Spatial Min Stars Per Cell",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "psf_spatial_order": {
     "help": "Polynomial order of PSF spatial variation (0 = constant PSF).",
     "kind": "static",
@@ -4167,36 +4119,6 @@
     "scope_confidence": "low",
     "scope_key": "rig_sampling",
     "scope_group": "a"
-  },
-  "qc_elong_limit": {
-    "help": "Maximum acceptable star elongation; higher values indicate trailing (guiding/wind) and flag the frame.",
-    "kind": "static",
-    "label": "QC Elong Limit",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "low",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "qc_fwhm_limit": {
-    "help": "Absolute upper FWHM limit (px) a frame may have before being flagged as too soft (used when auto-FWHM is off).",
-    "kind": "static",
-    "label": "QC FWHM Limit",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
   },
   "qc_max_background_rms": {
     "help": "Optional cap on background noise RMS per frame; None disables the check.",

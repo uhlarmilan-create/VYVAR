@@ -109,7 +109,6 @@ def test_skip_mode_never_emits_segmentation_reject_statuses(tmp_path: Path) -> N
     fp = root / "one.fits"
     _write_light_fits(fp)
     cfg = AppConfig()
-    cfg.qc_fwhm_limit = 0.5
     out = _qc_enrich_calibrated_in_place(root, app_config=cfg, fwhm_reject_limit=0.5)
     statuses = {str(r.get("status")) for r in out.get("results") or []}
     assert "rejected_fwhm" not in statuses
@@ -238,4 +237,27 @@ def test_known_removed_psf_ac_policy_logs_info(tmp_path: Path, caplog) -> None:
     cfg = AppConfig(project_root=tmp_path)
     assert not hasattr(cfg, "psf_ac_policy")
     assert any("psf_ac_policy removed 2026-09-01" in r.message for r in caplog.records)
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_known_removed_dead_persist_only_keys_log_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    payload = {
+        "qc_fwhm_limit": 8.0,
+        "qc_elong_limit": 1.8,
+        "psf_spatial_grid": "3x3",
+        "psf_spatial_min_stars_per_cell": 25,
+        "gs11_comp_suspect_dilution": 0.98,
+    }
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps(payload), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=tmp_path)
+    for key in payload:
+        assert not hasattr(cfg, key)
+        assert any(f"{key} removed 2026-09-01" in r.message for r in caplog.records)
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)

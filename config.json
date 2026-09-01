@@ -112,12 +112,6 @@
   // Detection sensitivity (sigma above background) of the star finder used by
   // QC to count stars per frame.
   "qc_dao_detection_sigma": 5.0,
-  // Maximum acceptable star elongation; higher values indicate trailing
-  // (guiding/wind) and flag the frame.
-  "qc_elong_limit": 1.8,
-  // Absolute upper FWHM limit (px) a frame may have before being flagged as
-  // too soft (used when auto-FWHM is off).
-  "qc_fwhm_limit": 8.0,
   // Optional cap on background noise RMS per frame; None disables the check.
   "qc_max_background_rms": null,
   // QC HFR limit as multiple of measured FWHM. None uses legacy qc_max_hfr px
@@ -450,8 +444,6 @@
   // Maximum dilution (flux contamination) a comparison star may have under
   // the GS11 dilution model.
   "gs11_comp_max_dilution": 0.9,
-  // Dilution level at which a comparison star is marked suspect.
-  "gs11_comp_suspect_dilution": 0.98,
   // Aperture (arcsec) used when computing catalog-based dilution; 0 derives
   // it from the photometric aperture.
   "gs11_dilution_aperture_arcsec": 0.0,
@@ -516,10 +508,6 @@
   "psf_quality_fallback_enabled": true,
   // Enables spatially varying PSF models across the frame.
   "psf_spatial_enabled": false,
-  // Grid of spatial PSF cells (e.g. 3x3).
-  "psf_spatial_grid": "3x3",
-  // Minimum stars per cell to build a local PSF model.
-  "psf_spatial_min_stars_per_cell": 25,
   // Polynomial order of PSF spatial variation (0 = constant PSF).
   "psf_spatial_order": 0,
   // Iteration count of the PyTICS-style calibration.

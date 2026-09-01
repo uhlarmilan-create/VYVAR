@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - DEAD persist-only keys removed (2026-09-01)
+
+`qc_fwhm_limit`, `qc_elong_limit`, `psf_spatial_grid`, `psf_spatial_min_stars_per_cell`, `gs11_comp_suspect_dilution` removed; persist-only, never consumed.
+
 ## CONSOLIDATE-01D P2 - psf_ac_policy removed (2026-09-01)
 
 `psf_ac_policy` removed; p4_none is the only ePSF AC policy (ZP-OK v2 / P4).

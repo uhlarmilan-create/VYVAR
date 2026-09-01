@@ -231,13 +231,9 @@ INTENTIONALLY_HIDDEN = {
     "psf_group_sep_fwhm",
     "psf_neighbor_include_fwhm",
     "psf_spatial_enabled",
-    "psf_spatial_grid",
-    "psf_spatial_min_stars_per_cell",
     "psf_spatial_order",
     "psf_chi2_threshold",
     "psf_quality_fallback_enabled",
-    "qc_fwhm_limit",
-    "qc_elong_limit",
     "phase2a_airmass_before_outlier",
     "sysrem_enabled",
     "sysrem_n_iter",
@@ -327,7 +323,6 @@ INTENTIONALLY_HIDDEN = {
     "gs11_dilution_aperture_arcsec",
     "gs11_dilution_mag_limit_delta",
     "gs11_comp_max_dilution",
-    "gs11_comp_suspect_dilution",
     "gs11_target_min_dilution",
     "temporal_bin_window",
     "savgol_window_frac",
@@ -519,8 +514,6 @@ def main() -> None:
         "psf_adaptive_enabled",
         "psf_grouper_enabled",
         "psf_spatial_enabled",
-        "qc_fwhm_limit",
-        "qc_elong_limit",
     ]
 
     lines += [

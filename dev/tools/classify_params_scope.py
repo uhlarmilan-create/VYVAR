@@ -169,7 +169,6 @@ EXPLICIT: dict[str, ScopeResult] = {
     "crowding_comp_availability_loosen_count": ScopeResult("universal", "none", "n/a", "high", "Integer trigger."),
     "err_empty_apertures_min": ScopeResult("universal", "none", "n/a", "high", "Integer count."),
     "err_empty_apertures_n": ScopeResult("universal", "none", "n/a", "high", "Integer count."),
-    "gs11_comp_suspect_dilution": ScopeResult("universal", "none", "n/a", "high", "Dimensionless dilution ratio."),
     "masterstar_best_of_n": ScopeResult("universal", "none", "n/a", "high", "Integer frame count."),
     "masterstar_catalog_recovery_min": ScopeResult("universal", "none", "n/a", "high", "Integer recovery count."),
     "masterstar_detection_cap_k": ScopeResult("universal", "none", "n/a", "high", "Dimensionless cap scale."),

@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T07:07:58Z at git HEAD 639b303._
+_Generated 2026-09-01T07:14:51Z at git HEAD a2c94a1._
 
 ## Summary
 
-- Entries: 302
-- Tier: basic 14, advanced 72, expert 216
-- Kind: static 284, derived 0, resolved 18
-- Widget: auto 119, custom 158, hidden 25
-- Owner: db_static 9, config_runtime 274, fits_dynamic 6, internal 13
-- Scope: universal 251, rig 33, site 10, session 8
-- Scope key: none 251, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 297
+- Tier: basic 14, advanced 72, expert 211
+- Kind: static 279, derived 0, resolved 18
+- Widget: auto 117, custom 155, hidden 25
+- Owner: db_static 9, config_runtime 269, fits_dynamic 6, internal 13
+- Scope: universal 246, rig 33, site 10, session 8
+- Scope key: none 246, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -78,8 +78,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Order |
 | `qc_after_calibrate_enabled` | True | - | basic | static | config_runtime | universal | none | n/a | auto | QC After Calibrate Enabled |
 | `qc_dao_detection_sigma` | 5.0 | - | expert | static | config_runtime | rig | rig_sampling | a | auto | QC DAO Detection Sigma |
-| `qc_elong_limit` | 1.8 | - | expert | static | config_runtime | universal | none | n/a | auto | QC Elong Limit |
-| `qc_fwhm_limit` | 8.0 | - | expert | static | config_runtime | universal | none | n/a | auto | QC FWHM Limit |
 | `qc_max_background_rms` | None | - | expert | static | config_runtime | universal | none | n/a | auto | QC Max Background RMS |
 | `qc_max_hfr` | 5.0 | - | advanced | static | config_runtime | rig | rig_sampling | b | auto | QC Max HFR |
 | `qc_max_hfr_fwhm_ratio` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | QC Max HFR FWHM Ratio |
@@ -222,7 +220,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `gain` | 1.0 | - | expert | resolved | fits_dynamic | rig | rig | a | auto | Gain |
 | `gain_container_scale` | 4.0 | 1 .. 16 | expert | static | config_runtime | rig | rig | a | auto | Gain Container Scale |
 | `gs11_comp_max_dilution` | 0.9 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Max Dilution |
-| `gs11_comp_suspect_dilution` | 0.98 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Comp Suspect Dilution |
 | `gs11_dilution_aperture_arcsec` | 0.0 | 0 .. 120 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Aperture Arcsec |
 | `gs11_dilution_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Enabled |
 | `gs11_dilution_mag_limit_delta` | 5.0 | 0.5 .. 15 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Mag Limit Delta |
@@ -255,8 +252,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `psf_photometry_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | custom | PSF Photometry Enabled |
 | `psf_quality_fallback_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Quality Fallback Enabled |
 | `psf_spatial_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Enabled |
-| `psf_spatial_grid` | 3x3 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Grid |
-| `psf_spatial_min_stars_per_cell` | 25 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Min Stars Per Cell |
 | `psf_spatial_order` | 0 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | custom | PSF Spatial Order |
 | `psf_zp_for_zp_validated_rigs` | ['1:1'] | - | advanced | static | config_runtime | universal | none | n/a | auto | PSF ZP For ZP Validated Rigs |
 | `psf_zp_membership` | fit_ok_for_zp | - | advanced | static | config_runtime | universal | none | n/a | auto | PSF ZP Membership |
