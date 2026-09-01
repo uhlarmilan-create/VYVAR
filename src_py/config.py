@@ -100,6 +100,9 @@ _LEGACY_CONFIG_KEYS: frozenset[str] = frozenset({
     "phase01_tier2_mag",
     "phase01_tier3_mag",
     "phase01_tier4_mag",
+    "comp_iterative_clip_enabled",
+    "blind_index_path",
+    "aavso_observer_code",
 })
 
 
@@ -272,12 +275,10 @@ def load_config_json(project_root: Path) -> dict[str, Any]:
 
 
 def resolve_comp_sparse_fallback_enabled(cfg: AppConfig | None) -> bool:
-    """True when per-target sparse comp fallback is enabled (includes legacy alias)."""
+    """True when per-target sparse comp fallback is enabled."""
     if cfg is None:
         return False
-    if bool(getattr(cfg, "comp_sparse_fallback_enabled", False)):
-        return True
-    return bool(getattr(cfg, "comp_iterative_clip_enabled", False))
+    return bool(getattr(cfg, "comp_sparse_fallback_enabled", False))
 
 
 def resolve_comp_sparse_fallback_min(
@@ -591,8 +592,6 @@ class AppConfig:
     blind_index_fine_path: str = ""
     #: Wide blind index (Carl-Zeiss / ~9.77 arcsec/px rigs); built by ``build_blind_index.py``.
     blind_index_wide_path: str = ""
-    #: Deprecated alias of ``blind_index_fine_path`` (``single`` mode and legacy readers).
-    blind_index_path: str = ""
     #: ``auto`` = scale-aware tier order + verify; ``series_all`` = all tiers; ``single`` = fine path only.
     blind_index_select_mode: str = "auto"
     #: Blind solver: geometric verification of top-N vote candidates (astrometry.net-style).
@@ -668,8 +667,6 @@ class AppConfig:
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
-    #: Legacy mirror - synced from ``observer_code`` in ``__post_init__`` (kept for older callers).
-    aavso_observer_code: str = "UMIA"
     #: User overrides: filter/setup name (uppercase key) -> AAVSO FILT code (e.g. ``"MYLUM": "CV"``).
     aavso_filter_map: dict[str, str] = field(default_factory=dict)
     # Observer location - used for BJD, airmass, lunar context
@@ -1006,8 +1003,6 @@ class AppConfig:
     comp_sparse_fallback_enabled: bool = True
     #: Trigger fallback when default yields fewer than this many comps (0 -> use ``n_comp_min``).
     comp_sparse_fallback_min: int = 0
-    #: Deprecated alias for ``comp_sparse_fallback_enabled`` (config/UI backward compat).
-    comp_iterative_clip_enabled: bool = False
 
     # GS11 - Flux dilution correction
     gs11_dilution_enabled: bool = False
@@ -1352,7 +1347,6 @@ class AppConfig:
             wide = _wide_default
         self.blind_index_fine_path = resolve_config_path(fine, self.data_root) if fine else ""
         self.blind_index_wide_path = resolve_config_path(wide, self.data_root) if wide else ""
-        self.blind_index_path = fine
         _mode = str(data.get("blind_index_select_mode", self.blind_index_select_mode) or "auto")
         _mode = _mode.strip().lower()
         self.blind_index_select_mode = (
@@ -1616,7 +1610,6 @@ class AppConfig:
         if _obc is None:
             _obc = data.get("aavso_observer_code", self.observer_code)
         self.observer_code = str(_obc or "").strip()
-        self.aavso_observer_code = str(self.observer_code)
         _ffm = data.get("aavso_filter_map", {})
         if isinstance(_ffm, dict):
             self.aavso_filter_map = {
@@ -2063,7 +2056,7 @@ class AppConfig:
             )
         except (TypeError, ValueError):
             self.comp_slope_significance_k = 3.0
-        _legacy_iter = bool(data.get("comp_iterative_clip_enabled", self.comp_iterative_clip_enabled))
+        _legacy_iter = bool(data.get("comp_iterative_clip_enabled", False))
         self.comp_sparse_fallback_enabled = bool(
             data.get(
                 "comp_sparse_fallback_enabled",
@@ -2072,7 +2065,6 @@ class AppConfig:
         )
         if _legacy_iter and not self.comp_sparse_fallback_enabled:
             self.comp_sparse_fallback_enabled = True
-        self.comp_iterative_clip_enabled = bool(self.comp_sparse_fallback_enabled)
         try:
             self.comp_sparse_fallback_min = int(
                 data.get("comp_sparse_fallback_min", self.comp_sparse_fallback_min)
@@ -2730,7 +2722,6 @@ class AppConfig:
             "sysrem_n_iter": int(self.sysrem_n_iter),
             "observer_name": str(self.observer_name),
             "observer_code": str(self.observer_code),
-            "aavso_observer_code": str(self.aavso_observer_code),
             "aavso_filter_map": dict(self.aavso_filter_map),
             "observer_location_id": int(self.observer_location_id),
             "psf_photometry_enabled": bool(self.psf_photometry_enabled),
@@ -2879,7 +2870,6 @@ class AppConfig:
             "comp_slope_significance_k": float(self.comp_slope_significance_k),
             "comp_sparse_fallback_enabled": bool(self.comp_sparse_fallback_enabled),
             "comp_sparse_fallback_min": int(self.comp_sparse_fallback_min),
-            "comp_iterative_clip_enabled": bool(self.comp_sparse_fallback_enabled),
             "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
             "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
             "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),

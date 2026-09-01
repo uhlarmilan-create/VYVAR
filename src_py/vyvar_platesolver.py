@@ -4345,7 +4345,7 @@ def solve_wcs_with_local_gaia(
 
     **RA/Dec:** najprv z FITS hlavicky (``VY_TARG*``, ``RA``/``DEC``, ...); ak chybaju, pouzije sa hint z argumentov
     ``hint_ra_deg`` / ``hint_dec_deg``; ak stale chyba, spusti sa **blind** trojuholnikovy solver
-    (``blind_index_path``).
+    (``blind_index_fine_path``).
 
     **Mierka:** FOCALLEN+PIXSIZE alebo SECPIX/PIXSCALE/SCALE v hlavicke alebo argument
     ``expected_plate_scale_arcsec_per_px`` (napr. MASTERSTAR).

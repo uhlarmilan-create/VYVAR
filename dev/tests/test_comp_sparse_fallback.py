@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from config import AppConfig, resolve_comp_sparse_fallback_enabled, resolve_comp_sparse_fallback_min
 
 
-def test_sparse_fallback_legacy_alias() -> None:
-    cfg = AppConfig()
-    cfg.comp_sparse_fallback_enabled = False
-    cfg.comp_iterative_clip_enabled = True
+def test_sparse_fallback_legacy_alias(tmp_path: Path) -> None:
+    (tmp_path / "config.json").write_text(
+        json.dumps({"comp_iterative_clip_enabled": True}),
+        encoding="utf-8",
+    )
+    cfg = AppConfig(project_root=tmp_path)
+    assert not hasattr(cfg, "comp_iterative_clip_enabled")
     assert resolve_comp_sparse_fallback_enabled(cfg) is True
 
 

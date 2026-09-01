@@ -77,7 +77,7 @@ def test_config_migration_from_legacy_blind_index_path(tmp_path: Path) -> None:
     cfg = AppConfig(project_root=tmp_path)
     assert cfg.blind_index_fine_path.endswith("gaia_triangles_fine.pkl")
     assert cfg.blind_index_wide_path.endswith("gaia_triangles_wide.pkl")
-    assert cfg.blind_index_path == cfg.blind_index_fine_path
+    assert not hasattr(cfg, "blind_index_path")
 
 
 def test_estimate_rho_img_positive() -> None:

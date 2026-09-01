@@ -157,7 +157,7 @@ def check_header(header_dict: dict[str, str], filepath: Path) -> tuple[list[str]
     if not obscode:
         warnings.append(
             f"HEADER: observer code not set - AAVSO submission requires an "
-            f"observer code (config: aavso_observer_code) ({name})"
+            f"observer code (config: observer_code) ({name})"
         )
 
     warn_msg = header_dict.get("WARNING", "")

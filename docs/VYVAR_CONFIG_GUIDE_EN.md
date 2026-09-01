@@ -94,9 +94,8 @@ Who observed and from where. These are observatory facts: they identify you in A
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
 | `aavso_filter_map` | {} | Static (database) | config.json | config assembly & validation (`config.py:1196`) | Optional mapping of your local filter names to official AAVSO filter codes used in exports (e.g. 'NoFilter' -> 'CV'). |
-| `aavso_observer_code` | UMIA | Static (database) | config.json | config assembly & validation (`config.py:1193`) | Your official AAVSO observer code (UMIA); stamped into every AAVSO submission so the observation is credited to you. |
 | `observer_alt_m` | 275.0 | Static (database) | database (LOCATION) | main application UI (`app.py:2045`) | Altitude of the observing site above sea level in meters; part of the site definition used for airmass and time corrections. WAVE-B removed the config.json copy - hydrated from the LOCATION row. |
-| `observer_code` | (empty) | Static (database) | config.json | photometry engine (Phase 2A) (`photometry_core.py:9690`) | Short observer identifier printed in reports and exports (separate from the AAVSO code). |
+| `observer_code` | (empty) | Static (database) | config.json | photometry engine (Phase 2A) (`photometry_core.py:9690`) | Official AAVSO observer code stamped into every AAVSO export as #OBSCODE (and printed in reports). A warning is emitted only when this value is missing/empty. |
 | `observer_lat` | 50.1121658 | Static (database) | database (LOCATION) | main application UI (`app.py:2043`) | Latitude of the observing site in degrees. Hydrated from the draft's LOCATION record; WAVE-B removed the config.json copy. |
 | `observer_location_id` | 2 | Static (database) | config.json | main application UI (`app.py:1965`) | Database ID of the currently selected observing site (LOCATION table row). This id stays in config.json and drives the hydration of the coordinates. |
 | `observer_location_name` | (empty) | Static (database) | database (LOCATION) | main application UI (`app.py:2046`) | Human-readable name of the selected observing site (e.g. Jirny, Dablice). WAVE-B removed the config.json copy - hydrated from the LOCATION row. |
@@ -111,7 +110,6 @@ Where VYVAR finds its data on disk: the star catalogs (Gaia, VSX, exoplanets), t
 |---|---|---|---|---|---|
 | `archive_root` | (resolved at runtime) | Internal | config.json | main application UI (`app.py:76`) | Root folder of the observation archive (raw and processed drafts). Resolved per machine at startup. |
 | `blind_index_fine_path` | (empty) | Internal | config.json | Settings UI (`ui_settings.py:1065`) | Path to the fine-scale astrometric index used by the blind plate solver for narrow-field rigs. |
-| `blind_index_path` | (empty) | Internal | code default only | Settings UI (`ui_settings.py:1067`) | Legacy single-index path for the blind solver; superseded by the fine/wide pair with automatic selection. |
 | `blind_index_select_mode` | auto | Setting (config.json) | config.json | config assembly & validation (`config.py:868`) | How the blind solver picks its index: 'auto' chooses fine or wide by the rig's field of view; can be forced manually. |
 | `blind_index_wide_path` | (empty) | Internal | config.json | Settings UI (`ui_settings.py:1066`) | Path to the wide-field astrometric index used by the blind plate solver for wide rigs (e.g. the 200mm Zeiss). |
 | `calibration_library_root` | (resolved at runtime) | Internal | config.json | main application UI (`app.py:233`) | Root folder of the calibration library (master darks/flats organized by camera, binning and temperature). Resolved per machine. |
@@ -321,7 +319,6 @@ Choosing the ensemble of constant stars against which the target is measured (di
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
 | `comp_contamination_penalty_k` | 3.0; range 0 .. 20 | Setting (config.json) | config.json | config assembly & validation (`config.py:2359`) | Weight penalty strength for contaminated comparison stars in ensemble weighting. |
-| `comp_iterative_clip_enabled` | False | Setting (config.json) | config.json | Settings UI (`ui_settings.py:1129`) | Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop); ON in production since the Brno fix of 2026-06-14. |
 | `comp_max_delta_bprp` | 0.79; range 0 .. 5 | Setting + runtime auto-adjust | config.json | comparison-star selection (`comp_selection_per_target.py:239`) | Maximum Gaia BP-RP color difference between a comparison star and the target - the primary defense against extinction systematics on unfiltered data; density adaptation adjusts it. |
 | `comp_max_slope_mmag_hr` | 5.0; range 0 .. 500 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:116`) | Maximum linear trend (mmag/hour) a comparison star may show before being rejected as drifting. |
 | `comp_select_rms_floor` | 1e-06 | Setting (config.json) | config.json | config assembly & validation (`config.py:2211`) | Numerical floor of comparison RMS in weighting (prevents division blow-ups). |

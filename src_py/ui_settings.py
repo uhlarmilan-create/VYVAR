@@ -1047,7 +1047,6 @@ def render_settings_dashboard(
         cfg.gaia_db_path = str(gaia_db_path).strip()
         cfg.blind_index_fine_path = str(blind_index_fine_path).strip()
         cfg.blind_index_wide_path = str(blind_index_wide_path).strip()
-        cfg.blind_index_path = cfg.blind_index_fine_path
         cfg.vsx_local_db_path = str(vsx_db_path).strip()
         cfg.exoplanet_local_db_path = str(exo_db_path).strip()
         cfg.qc_max_hfr = float(qc_hfr)
@@ -1105,7 +1104,6 @@ def render_settings_dashboard(
             cfg.phase01_comparison_n_comp_max = cfg.phase01_comparison_n_comp_min
         cfg.phase01_comparison_max_comp_rms = float(max(0.01, min(0.5, p01_rms)))
         cfg.comp_sparse_fallback_enabled = bool(p01_sparse_fb)
-        cfg.comp_iterative_clip_enabled = bool(p01_sparse_fb)
         _fb_min_raw = int(p01_sparse_fb_min)
         cfg.comp_sparse_fallback_min = 0 if _fb_min_raw == int(cfg.phase01_comparison_n_comp_min) else _fb_min_raw
         cfg.phase01_comparison_min_dist_arcsec = float(max(0.0, min(600.0, p01_mind)))

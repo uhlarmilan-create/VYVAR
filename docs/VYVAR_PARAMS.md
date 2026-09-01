@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T07:14:51Z at git HEAD a2c94a1._
+_Generated 2026-09-01T07:23:35Z at git HEAD 470a0f1._
 
 ## Summary
 
-- Entries: 297
-- Tier: basic 14, advanced 72, expert 211
-- Kind: static 279, derived 0, resolved 18
-- Widget: auto 117, custom 155, hidden 25
-- Owner: db_static 9, config_runtime 269, fits_dynamic 6, internal 13
-- Scope: universal 246, rig 33, site 10, session 8
-- Scope key: none 246, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 294
+- Tier: basic 13, advanced 71, expert 210
+- Kind: static 276, derived 0, resolved 18
+- Widget: auto 115, custom 155, hidden 24
+- Owner: db_static 8, config_runtime 268, fits_dynamic 6, internal 12
+- Scope: universal 244, rig 33, site 9, session 8
+- Scope key: none 244, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -26,7 +26,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `aavso_filter_map` | {} | - | expert | static | db_static | site | site | n/a | auto | AAVSO Filter Map |
-| `aavso_observer_code` | UMIA | - | basic | static | db_static | site | site | n/a | auto | AAVSO Observer Code |
 | `observer_alt_m` | 275.0 | - | basic | static | db_static | site | site | n/a | auto | Observer Alt M |
 | `observer_code` |  | - | basic | static | db_static | site | site | n/a | auto | Observer Code |
 | `observer_lat` | 50.1121658 | - | basic | static | db_static | site | site | n/a | auto | Observer Lat |
@@ -41,7 +40,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `archive_root` | (resolved at runtime) | - | expert | static | internal | universal | none | n/a | hidden | Archive Root |
 | `blind_index_fine_path` |  | - | expert | static | internal | universal | none | n/a | hidden | Blind Index Fine Path |
-| `blind_index_path` |  | - | expert | static | internal | universal | none | n/a | hidden | Blind Index Path |
 | `blind_index_select_mode` | auto | - | expert | static | config_runtime | session | frame | n/a | hidden | Blind Index Select Mode |
 | `blind_index_wide_path` |  | - | expert | static | internal | universal | none | n/a | hidden | Blind Index Wide Path |
 | `calibration_library_root` | (resolved at runtime) | - | expert | static | internal | universal | none | n/a | hidden | Calibration Library Root |
@@ -276,7 +274,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `admission_sat_peak_frac` | 0.7 | 0.5 .. 0.95 | expert | static | config_runtime | rig | rig | a | auto | Admission Sat Peak Frac |
 | `comp_color_tiers` | [{'bprp': 0.15, 'w': 1.0}, {'bprp': 0.3, 'w': 0.85}, {'bprp': 0.55, 'w': 0.5}, {'bprp': 1.1, 'w': 0.25}] | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Color Tiers |
 | `comp_contamination_penalty_k` | 3.0 | 0 .. 20 | expert | static | config_runtime | universal | none | n/a | auto | Comp Contamination Penalty K |
-| `comp_iterative_clip_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | Comp Iterative Clip Enabled |
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | resolved | config_runtime | universal | none | n/a | auto | Comp Max Delta BPRP |
 | `comp_max_slope_mmag_hr` | 5.0 | 0 .. 500 | expert | static | config_runtime | universal | none | n/a | auto | Comp Max Slope Mmag Hr |
 | `comp_pool_derived_admission` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Pool Derived Admission |

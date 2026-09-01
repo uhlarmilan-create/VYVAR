@@ -161,7 +161,6 @@ def test_slim_methods_citations_conditional_only() -> None:
     off.savgol_detrend_enabled = False
     off.k2_mode = "off"
     off.comp_sparse_fallback_enabled = False
-    off.comp_iterative_clip_enabled = False
     off_text = _citation_text(off)
     assert "Tamuz" not in off_text
     assert "[METHODS - this run]" not in off_text
@@ -259,7 +258,6 @@ def test_citation_lines_data_quality_gate_conditional_pdf() -> None:
 def test_citation_lines_iterative_comp_clip_conditional() -> None:
     cfg_off = AppConfig()
     cfg_off.comp_sparse_fallback_enabled = False
-    cfg_off.comp_iterative_clip_enabled = False
     off = build_run_citation_context(cfg_off, pipeline_meta={"comp_sparse_fallback_used": False})
     on_cfg = AppConfig()
     on_cfg.comp_sparse_fallback_enabled = True
@@ -304,7 +302,7 @@ def test_obscode_warning_only_when_unset() -> None:
     src = inspect.getsource(er)
     assert "default placeholder" not in src
     assert "_AAVSO_OBSCODE_PLACEHOLDER" not in src
-    assert "aavso_observer_code" in src
+    assert "observer_code" in src
     assert "observer code not set" in src
 
 

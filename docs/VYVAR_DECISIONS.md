@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - ALIAS 3 fields dropped (2026-09-01)
+
+`comp_iterative_clip_enabled`, `blind_index_path`, `aavso_observer_code` removed as AppConfig fields; JSON loader still maps them onto `comp_sparse_fallback_enabled`, `blind_index_fine_path`, `observer_code`.
+
 ## CONSOLIDATE-01D P2 - DEAD persist-only keys removed (2026-09-01)
 
 `qc_fwhm_limit`, `qc_elong_limit`, `psf_spatial_grid`, `psf_spatial_min_stars_per_cell`, `gs11_comp_suspect_dilution` removed; persist-only, never consumed.

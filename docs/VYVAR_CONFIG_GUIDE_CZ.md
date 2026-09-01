@@ -96,9 +96,8 @@ Kdo pozoroval a odkud. Jde o fakta observatore: identifikuji vas v exportech pro
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
 | `aavso_filter_map` | {} | Staticky (databaze) | config.json | sestaveni a validace konfigurace (`config.py:1196`) | Volitelna mapa vasich nazvu filtru na oficialni AAVSO kody pouzite v exportu (napr. 'NoFilter' -> 'CV'). |
-| `aavso_observer_code` | UMIA | Staticky (databaze) | config.json | sestaveni a validace konfigurace (`config.py:1193`) | Vas oficialni AAVSO kod pozorovatele (UMIA); vklada se do kazdeho AAVSO exportu, aby bylo pozorovani pripsano vam. |
 | `observer_alt_m` | 275.0 | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2045`) | Nadmorska vyska stanoviste v metrech; soucast definice stanoviste pro vypocet airmass a casovych korekci. WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
-| `observer_code` | (prazdne) | Staticky (databaze) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:9690`) | Kratky identifikator pozorovatele tisteny v reportech a exportech (odlisny od AAVSO kodu). |
+| `observer_code` | (prazdne) | Staticky (databaze) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:9690`) | Oficialni AAVSO kod pozorovatele tisteny v kazdem AAVSO exportu jako #OBSCODE (a v reportech). Varovani se emituje jen kdyz hodnota chybi/je prazdna. |
 | `observer_lat` | 50.1121658 | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2043`) | Zemepisna sirka stanoviste ve stupnich. Vedecke behy berou stanoviste ze zaznamu LOCATION daneho draftu. WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
 | `observer_location_id` | 2 | Staticky (databaze) | config.json (autoritativni kopie v DB) | hlavni UI aplikace (`app.py:1965`) | Databazove ID aktualne vybraneho stanoviste (radek tabulky LOCATION). |
 | `observer_location_name` | (prazdne) | Staticky (databaze) | databaze (LOCATION) | hlavni UI aplikace (`app.py:2046`) | Citelny nazev vybraneho stanoviste (napr. Jirny, Dablice). WAVE-B odstranila kopii v config.json - hydratuje se z DB podle observer_location_id. |
@@ -113,7 +112,6 @@ Kde VYVAR na disku najde sva data: hvezdne katalogy (Gaia, VSX, exoplanety), ind
 |---|---|---|---|---|---|
 | `archive_root` | (resolved at runtime) | Interni | config.json | hlavni UI aplikace (`app.py:76`) | Korenova slozka archivu pozorovani (surove i zpracovane drafty). Vyhodnocuje se pro dany pocitac pri startu. |
 | `blind_index_fine_path` | (prazdne) | Interni | config.json | UI Nastaveni (`ui_settings.py:1065`) | Cesta k jemnemu astrometrickemu indexu pro slepe reseni souradnic u uzkouhlych sestav. |
-| `blind_index_path` | (prazdne) | Interni | pouze vychozi v kodu | UI Nastaveni (`ui_settings.py:1067`) | Starsi cesta k jedinemu indexu pro slepe reseni; nahrazena dvojici fine/wide s automatickym vyberem. |
 | `blind_index_select_mode` | auto | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:868`) | Jak si slepy solver vybira index: 'auto' voli fine nebo wide podle zorneho pole sestavy; lze vynutit rucne. |
 | `blind_index_wide_path` | (prazdne) | Interni | config.json | UI Nastaveni (`ui_settings.py:1066`) | Cesta k sirokouhlemu astrometrickemu indexu pro slepe reseni u sirokych sestav (napr. 200mm Zeiss). |
 | `calibration_library_root` | (resolved at runtime) | Interni | config.json | hlavni UI aplikace (`app.py:233`) | Korenova slozka knihovny kalibraci (master darky/flaty trizene dle kamery, binningu a teploty). Vyhodnocuje se pro dany pocitac. |
@@ -323,7 +321,6 @@ Vyber souboru stalych hvezd, vuci nimz se cil meri (diferencialni fotometrie). K
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
 | `comp_contamination_penalty_k` | 3.0; rozsah 0 .. 20 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2359`) | Sila penalizace vahy kontaminovanych srovnavacich hvezd pri vazeni souboru. |
-| `comp_iterative_clip_enabled` | False | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:1129`) | Iteracni pre-clipovani souboru srovnavacich hvezd (smycka vyrad-a-prevazi); v produkci ZAPNUTO od brnenskeho fixu 14. 6. 2026. |
 | `comp_max_delta_bprp` | 0.79; rozsah 0 .. 5 | Nastaveni + auto-uprava za behu | config.json | vyber srovnavacich hvezd (`comp_selection_per_target.py:239`) | Maximalni rozdil barvy Gaia BP-RP mezi srovnavaci hvezdou a cilem - hlavni obrana proti extinkcnim systematikam u nefiltrovanych dat; adaptace na hustotu ji upravuje. |
 | `comp_max_slope_mmag_hr` | 5.0; rozsah 0 .. 500 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:116`) | Maximalni linearni trend (mmag/hod), ktery smi srovnavaci hvezda vykazovat, nez je vyrazena jako drifujici. |
 | `comp_select_rms_floor` | 1e-06 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2211`) | Numericke dno RMS srovnavacich hvezd pri vazeni (brani numerickym explozim pri deleni). |

@@ -27,13 +27,9 @@
   // Who observed and from where: AAVSO identity and observing-site
   // coordinates. Observatory facts; the database LOCATION table is the source
   // of truth.
-  // Your official AAVSO observer code (e.g. UMIA). Stamped into every AAVSO
-  // export as #OBSCODE. A warning is emitted ONLY when this value is
-  // missing/empty; any explicitly configured code (including UMIA) is
-  // accepted with no placeholder warning.
-  "aavso_observer_code": "UMIA",
-  // Short observer identifier printed in reports and exports (separate from
-  // the AAVSO code).
+  // Official AAVSO observer code stamped into every AAVSO export as #OBSCODE
+  // (and printed in reports). A warning is emitted only when this value is
+  // missing/empty.
   "observer_code": "UMIA",
   // Database ID of the currently selected observing site (LOCATION table
   // row). This id stays in config.json and drives the hydration of the
@@ -541,9 +537,6 @@
   // weight ('w') for stars in that tier. WAVE-B merged the eight
   // comp_tier{1..4}_bprp_limit / _weight scalars into this list of dicts.
   "comp_color_tiers": [{"bprp": 0.15, "w": 1.0}, {"bprp": 0.3, "w": 0.85}, {"bprp": 0.55, "w": 0.5}, {"bprp": 1.1, "w": 0.25}],
-  // Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop);
-  // ON in production since the Brno fix of 2026-06-14.
-  "comp_iterative_clip_enabled": true,
   // Maximum Gaia BP-RP color difference between a comparison star and the
   // target - the primary defense against extinction systematics on unfiltered
   // data; density adaptation adjusts it.

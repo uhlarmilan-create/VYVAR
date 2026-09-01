@@ -279,8 +279,6 @@ D['phase01_comparison_max_comp_rms'] = dict(
  proc="Prah nad RMS-mag obalkou pole; dense/tighten adaptace smi zprisnit.")
 D['comp_max_slope_mmag_hr'] = dict(
  proc="Linearni drift kompu (mmag/hod) = bud skutecna pomala promennost, nebo barevny extinkci clen. Oboje je pro komp diskvalifikace. Prah spolupracuje se significance testem - drift musi byt STATISTICKY prokazany, ne jen sumovy.")
-D['comp_iterative_clip_enabled'] = dict(
- proc="ZAPNUTO v produkci (od brnenskeho fixu 06/2026): po prvnim sestaveni krivky se kompy preveri proti souboru a odlehle se vyradi/prevazi - iterace 'vyrad a prevaz' konverguje k cistemu souboru.")
 D['comp_sparse_fallback_enabled'] = dict(
  proc="Na extremne ridkem poli je 1 slabsi komp lepsi nez zadny - fallback to umozni, ale vysledek nese YELLOW/RED trust, nikdy GREEN.")
 D['phase01_comparison_exclude_gaia_nss'] = dict(

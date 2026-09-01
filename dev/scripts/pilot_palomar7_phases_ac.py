@@ -273,8 +273,8 @@ def main() -> int:
             "gaia_db_path": str(cfg.gaia_db_path),
             "gaia_max_g_mag": get_gaia_db_max_g_mag(cfg.gaia_db_path),
             "vsx_local_db_path": str(cfg.vsx_local_db_path),
-            "blind_index_path": str(cfg.blind_index_path),
-            "blind_index_exists": Path(cfg.blind_index_path).is_file(),
+            "blind_index_fine_path": str(cfg.blind_index_fine_path),
+            "blind_index_exists": Path(cfg.blind_index_fine_path).is_file(),
         },
     }
     report["phase_c"] = phase_c_pilot(report["phase_a"])

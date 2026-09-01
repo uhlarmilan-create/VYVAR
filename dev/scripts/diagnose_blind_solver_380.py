@@ -496,7 +496,7 @@ def main() -> int:
     cfg = AppConfig()
     draft = args.draft.expanduser().resolve()
     index_path = Path(
-        args.index or cfg.blind_index_fine_path or cfg.blind_index_path
+        args.index or cfg.blind_index_fine_path
     ).expanduser().resolve()
     out_dir = (args.out or (draft / "diag" / "blind_solver")).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)

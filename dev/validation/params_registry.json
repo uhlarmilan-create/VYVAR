@@ -31,21 +31,6 @@
     "scope_key": "site",
     "scope_group": "n/a"
   },
-  "aavso_observer_code": {
-    "help": "Your official AAVSO observer code (e.g. UMIA). Stamped into every AAVSO export as #OBSCODE. A warning is emitted ONLY when this value is missing/empty; any explicitly configured code (including UMIA) is accepted with no placeholder warning.",
-    "kind": "static",
-    "label": "AAVSO Observer Code",
-    "owner": "db_static",
-    "phase": "observer",
-    "range": null,
-    "tier": "basic",
-    "unit": null,
-    "widget": "auto",
-    "scope": "site",
-    "scope_confidence": "high",
-    "scope_key": "site",
-    "scope_group": "n/a"
-  },
   "admission_sat_peak_frac": {
     "help": "D5-2 / C-1 admission gate. Reject comparison stars whose peak exceeds this fraction of full well. Distinct from the 85 percent is_saturated flag; 0.70 was set by the batch E re-cut.",
     "kind": "static",
@@ -440,21 +425,6 @@
     "help": "Path to the fine-scale astrometric index used by the blind plate solver for narrow-field rigs.",
     "kind": "static",
     "label": "Blind Index Fine Path",
-    "owner": "internal",
-    "phase": "paths",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "blind_index_path": {
-    "help": "Legacy single-index path for the blind solver; superseded by the fine/wide pair with automatic selection.",
-    "kind": "static",
-    "label": "Blind Index Path",
     "owner": "internal",
     "phase": "paths",
     "range": null,
@@ -990,21 +960,6 @@
       20.0
     ],
     "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_iterative_clip_enabled": {
-    "help": "Iterative re-clipping of the comparison ensemble (drop-and-reweigh loop); ON in production since the Brno fix of 2026-06-14.",
-    "kind": "static",
-    "label": "Comp Iterative Clip Enabled",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "advanced",
     "unit": null,
     "widget": "auto",
     "scope": "universal",
@@ -3131,7 +3086,7 @@
     "scope_group": "n/a"
   },
   "observer_code": {
-    "help": "Short observer identifier printed in reports and exports (separate from the AAVSO code).",
+    "help": "Official AAVSO observer code stamped into every AAVSO export as #OBSCODE (and printed in reports). A warning is emitted only when this value is missing/empty.",
     "kind": "static",
     "label": "Observer Code",
     "owner": "db_static",

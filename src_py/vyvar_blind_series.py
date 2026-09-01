@@ -304,10 +304,7 @@ def _solve_single(
     max_cat_mag: float,
     debug_sink: dict[str, Any] | None,
 ) -> tuple[float, float, str] | None:
-    idx = (
-        str(getattr(cfg, "blind_index_fine_path", "") or "").strip()
-        or str(getattr(cfg, "blind_index_path", "") or "").strip()
-    )
+    idx = str(getattr(cfg, "blind_index_fine_path", "") or "").strip()
     if not idx or not Path(str(idx)).is_file():
         return None
     from vyvar_platesolver import _verify_blind_candidates

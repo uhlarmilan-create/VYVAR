@@ -261,3 +261,30 @@ def test_known_removed_dead_persist_only_keys_log_info(tmp_path: Path, caplog) -
         assert not hasattr(cfg, key)
         assert any(f"{key} removed 2026-09-01" in r.message for r in caplog.records)
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_legacy_alias_keys_map_silently(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    payload = {
+        "comp_iterative_clip_enabled": True,
+        "blind_index_path": str(tmp_path / "GAIA_DR3" / "gaia_triangles.pkl"),
+        "aavso_observer_code": "UMIA",
+    }
+    (tmp_path / "GAIA_DR3").mkdir()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles.pkl").touch()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles_fine.pkl").touch()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles_wide.pkl").touch()
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps(payload), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=tmp_path)
+    for key in payload:
+        assert not hasattr(cfg, key)
+    assert cfg.comp_sparse_fallback_enabled is True
+    assert cfg.observer_code == "UMIA"
+    assert cfg.blind_index_fine_path.endswith("gaia_triangles_fine.pkl")
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)

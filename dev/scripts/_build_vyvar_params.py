@@ -350,7 +350,6 @@ INTENTIONALLY_HIDDEN = {
     "qc_dao_detection_sigma",
     "per_frame_mp_reserve_ram_gb",
     "platesolve_anisotropy_threshold",
-    "aavso_observer_code",
     "comp_contamination_penalty_k",
 }
 

@@ -1243,10 +1243,10 @@ def export_lightcurve_reports(
         # Fail-open for local files: still write OBSCODE= empty; warn only when unset.
         a_lines.append(
             "#WARNING=observer code not set - AAVSO submission requires an "
-            "observer code (config: aavso_observer_code)\n"
+            "observer code (config: observer_code)\n"
         )
         logging.warning(
-            "[EXPORT] observer code not set for %s - set aavso_observer_code in config",
+            "[EXPORT] observer code not set for %s - set observer_code in config",
             str(vsx_name),
         )
     a_lines.append(f"#OBSCODE={_obc}\n")

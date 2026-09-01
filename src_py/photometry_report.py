@@ -1334,7 +1334,7 @@ class _PhotometryReportBuilder:
             if not name:
                 name = str(getattr(cfg, "observer_name", "") or "").strip()
             if not code:
-                code = str(getattr(cfg, "observer_code", "") or getattr(cfg, "aavso_observer_code", "") or "").strip()
+                code = str(getattr(cfg, "observer_code", "") or "").strip()
         if not name:
             name = "-"
         if not code:
