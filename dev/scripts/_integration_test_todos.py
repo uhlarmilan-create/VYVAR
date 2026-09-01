@@ -152,7 +152,7 @@ def main() -> int:
     passed = failed = 0
     for num in range(1, 19):
         if num == 11:
-            print("  Test 11: [--] SKIP (manual - global_comp_pool_enabled off, compare LC count)")
+            print("  Test 11: [--] SKIP (manual - global pool is always on as of CONSOLIDATE-01D)")
             continue
         ok = results[num]
         status = "PASS" if ok else "FAIL"
@@ -171,7 +171,7 @@ def main() -> int:
     print()
     print(f"Celkom (automaticke 1-18, bez 11): {passed}/{passed + failed} PASS")
     print()
-    print("Test 11 (manual): set global_comp_pool_enabled false, re-run smoke, LC count within +/-5.")
+    print("Test 11 (manual): retired; global_comp_pool_enabled removed CONSOLIDATE-01D (always on).")
     print("Tests 19-20: Settings tab - BP-RP toggle and sliders visibility.")
     print()
 

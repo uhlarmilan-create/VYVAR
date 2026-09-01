@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - global_comp_pool_enabled removed (2026-09-01)
+
+`global_comp_pool_enabled` removed; production is always the COMP-POOL-01 global pool.
+
 ## VL-ANCHOR-EPSF01 accepted as first ePSF repeatability anchor (2026-08-28)
 
 science validation pending; external independent gate for ePSF (AIJ-class) on ROADMAP.

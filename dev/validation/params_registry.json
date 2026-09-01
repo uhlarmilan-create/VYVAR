@@ -1759,21 +1759,6 @@
     "scope_key": "rig",
     "scope_group": "a"
   },
-  "global_comp_pool_enabled": {
-    "help": "Builds one field-wide comparison pool reused across targets instead of fully per-target pools.",
-    "kind": "static",
-    "label": "Global Comp Pool Enabled",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "gs11_comp_max_dilution": {
     "help": "Maximum dilution (flux contamination) a comparison star may have under the GS11 dilution model.",
     "kind": "static",

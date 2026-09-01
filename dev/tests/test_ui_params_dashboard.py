@@ -88,8 +88,9 @@ def test_owner_groups_partition_every_key() -> None:
     # APERTURE-01: +1 config_runtime key aperture_policy_mode (281 -> 282).
     # EPSF-CHAIN-01B: +1 config_runtime key epsf_auto_run (282 -> 283).
     # CONSOLIDATE-01B: -4 scatter/SNR diagnostic keys (283 -> 279).
+    # CONSOLIDATE-01D P2: -1 LEGACY global_comp_pool_enabled (279 -> 278).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 9, "config_runtime": 279, "fits_dynamic": 6, "internal": 13}, dist
+    assert dist == {"db_static": 9, "config_runtime": 278, "fits_dynamic": 6, "internal": 13}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

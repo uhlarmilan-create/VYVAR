@@ -126,6 +126,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "aperture_scatter_r_step_px": (
         "aperture_scatter_r_step_px removed 2026-08-31 CONSOLIDATE-01B; scatter ladder module deleted"
     ),
+    "global_comp_pool_enabled": (
+        "global_comp_pool_enabled removed 2026-09-01 CONSOLIDATE-01D; global pool is always on (COMP-POOL-01)"
+    ),
 }
 
 
@@ -1118,8 +1121,6 @@ class AppConfig:
     #: (Nyquist is 2 px; PSF-fit/deblend guidance wants >=3 px) - only there does a high
     #: comp-RMS mean real contamination, so tighten pays off (e.g. the Newton cluster).
     crowding_tighten_min_fwhm_px: float = 3.0
-    #: ``True`` = jeden globalny comp pool (safe_bbox + RMS) pred per-target vyberom; ``False`` = legacy.
-    global_comp_pool_enabled: bool = True
     #: COMP-POOL-01 Stage 2 / COMP-ADMIT-03: derived path now only drops known variables;
     #: scatter/colour/distance enter continuous weights (``comp_weights``).
     comp_pool_derived_admission: bool = True
@@ -2541,7 +2542,6 @@ class AppConfig:
         except (TypeError, ValueError):
             self.crowding_tighten_min_fwhm_px = 3.0
         self.crowding_tighten_min_fwhm_px = max(0.0, min(30.0, float(self.crowding_tighten_min_fwhm_px)))
-        self.global_comp_pool_enabled = bool(data.get("global_comp_pool_enabled", self.global_comp_pool_enabled))
         self.comp_pool_derived_admission = bool(
             data.get("comp_pool_derived_admission", self.comp_pool_derived_admission)
         )
@@ -2930,7 +2930,6 @@ class AppConfig:
             "crowding_blend_tighten_threshold": float(self.crowding_blend_tighten_threshold),
             "crowding_comp_availability_loosen_count": float(self.crowding_comp_availability_loosen_count),
             "crowding_tighten_min_fwhm_px": float(self.crowding_tighten_min_fwhm_px),
-            "global_comp_pool_enabled": bool(self.global_comp_pool_enabled),
             "comp_pool_derived_admission": bool(self.comp_pool_derived_admission),
             "comparison_stars_pool_n": int(self.comparison_stars_pool_n),
             "comp_weight_c_col_mag_per_bprp": self.comp_weight_c_col_mag_per_bprp,

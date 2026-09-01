@@ -336,7 +336,6 @@ INTENTIONALLY_HIDDEN = {
     "savgol_polyorder",
     "democratic_sg_window_frac",
     "pytics_n_iter",
-    "global_comp_pool_enabled",
     "field_density_adaptive_enabled",
     "field_density_sparse_threshold",
     "field_density_dense_threshold",

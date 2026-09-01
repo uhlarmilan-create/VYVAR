@@ -170,3 +170,18 @@ def test_known_removed_skip_processed_directory_logs_info(tmp_path: Path, caplog
 
     AppConfig(project_root=tmp_path)
     assert any("skip_processed_directory removed 2026-07" in r.message for r in caplog.records)
+
+
+def test_known_removed_global_comp_pool_enabled_logs_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps({"global_comp_pool_enabled": False}), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=tmp_path)
+    assert not hasattr(cfg, "global_comp_pool_enabled")
+    assert any("global_comp_pool_enabled removed 2026-09-01" in r.message for r in caplog.records)
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)

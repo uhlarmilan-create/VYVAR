@@ -643,9 +643,6 @@
   // Plan/spatial comparison pool size. 0 = uncapped (COMP-POOL-01); legacy
   // default was 150.
   "comparison_stars_pool_n": 0,
-  // Builds one field-wide comparison pool reused across targets instead of
-  // fully per-target pools.
-  "global_comp_pool_enabled": true,
   // Chip interior margin in arcsec. None uses legacy
   // phase01_chip_interior_margin_px.
   "phase01_chip_interior_margin_arcsec": null,

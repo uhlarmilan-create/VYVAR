@@ -16254,40 +16254,40 @@ def run_phase0_and_phase1(
 
     _cfg_gp = _cfg_for_2a if _adaptive_on else _cfg_base
     _global_pool_df: pd.DataFrame | None = None
-    if bool(_cfg_gp.global_comp_pool_enabled):
-        try:
-            _global_pool_df = build_global_comp_pool(
-                masterstars_df=ms_df,
-                per_frame_csv_paths=csv_paths,
-                csv_cache=shared_csv_cache,
-                variable_target_catalog_ids=_vt_cid_exclude or frozenset(),
-                safe_bbox=_safe_bbox,
-                chip_fw=int(_fw_chip),
-                chip_fh=int(_fh_chip),
-                chip_interior_margin_px=int(chip_interior_margin_px),
-                max_comp_rms=float(max_comp_rms),
-                cfg=_cfg_gp,
-                flux_col=flux_col,
-                min_frames_frac=float(min_frames_frac),
-                fwhm_px=float(fwhm_px),
-                max_psf_chi2=float("inf"),  # global pool: skip PSF chi^2 (per-target filter unchanged)
-                max_fwhm_factor=float(max_fwhm_factor),
-                admission_artifact_dir=Path(output_dir),
-                photometry_dir_for_meta=Path(output_dir),
-            )
-            if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
-                _global_pool_df = None
-        except Exception as _gcp_exc:  # noqa: BLE001
-            from comp_pool_noise import CompPoolAdmissionError  # noqa: PLC0415
-            from invariants_runtime import PopulationEmptiedError  # noqa: PLC0415
-
-            if isinstance(_gcp_exc, (CompPoolAdmissionError, PopulationEmptiedError)):
-                raise
-            logging.warning(
-                "[GLOBAL COMP POOL] zostavenie zlyhalo: %s - fallback na per-target masterstars",
-                _gcp_exc,
-            )
+    # CONSOLIDATE-01D: global pool is always on (COMP-POOL-01); False branch deleted.
+    try:
+        _global_pool_df = build_global_comp_pool(
+            masterstars_df=ms_df,
+            per_frame_csv_paths=csv_paths,
+            csv_cache=shared_csv_cache,
+            variable_target_catalog_ids=_vt_cid_exclude or frozenset(),
+            safe_bbox=_safe_bbox,
+            chip_fw=int(_fw_chip),
+            chip_fh=int(_fh_chip),
+            chip_interior_margin_px=int(chip_interior_margin_px),
+            max_comp_rms=float(max_comp_rms),
+            cfg=_cfg_gp,
+            flux_col=flux_col,
+            min_frames_frac=float(min_frames_frac),
+            fwhm_px=float(fwhm_px),
+            max_psf_chi2=float("inf"),  # global pool: skip PSF chi^2 (per-target filter unchanged)
+            max_fwhm_factor=float(max_fwhm_factor),
+            admission_artifact_dir=Path(output_dir),
+            photometry_dir_for_meta=Path(output_dir),
+        )
+        if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
             _global_pool_df = None
+    except Exception as _gcp_exc:  # noqa: BLE001
+        from comp_pool_noise import CompPoolAdmissionError  # noqa: PLC0415
+        from invariants_runtime import PopulationEmptiedError  # noqa: PLC0415
+
+        if isinstance(_gcp_exc, (CompPoolAdmissionError, PopulationEmptiedError)):
+            raise
+        logging.warning(
+            "[GLOBAL COMP POOL] zostavenie zlyhalo: %s - fallback na per-target masterstars",
+            _gcp_exc,
+        )
+        _global_pool_df = None
 
     if _global_pool_df is not None and "catalog_id" in _global_pool_df.columns:
         _global_pool_df = _global_pool_df.sort_values("catalog_id", kind="mergesort").reset_index(

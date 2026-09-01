@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-08-31T11:17:13Z at git HEAD 22391ca._
+_Generated 2026-09-01T06:42:58Z at git HEAD 6c95ac4._
 
 ## Summary
 
-- Entries: 307
-- Tier: basic 14, advanced 74, expert 219
-- Kind: static 289, derived 0, resolved 18
-- Widget: auto 123, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 279, fits_dynamic 6, internal 13
-- Scope: universal 255, rig 34, site 10, session 8
-- Scope key: none 255, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 306
+- Tier: basic 14, advanced 74, expert 218
+- Kind: static 288, derived 0, resolved 18
+- Widget: auto 122, custom 159, hidden 25
+- Owner: db_static 9, config_runtime 278, fits_dynamic 6, internal 13
+- Scope: universal 254, rig 34, site 10, session 8
+- Scope key: none 254, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 21, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -298,7 +298,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_weight_c_dist_mag_per_deg` | None | 0 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight c_dist |
 | `comp_weight_optics_kind` | unknown | - | expert | static | config_runtime | universal | none | n/a | auto | Comp Weight Optics Kind |
 | `comparison_stars_pool_n` | 0 | 0 .. 50000 | expert | static | config_runtime | universal | none | n/a | auto | Comparison Stars Pool N |
-| `global_comp_pool_enabled` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Global Comp Pool Enabled |
 | `phase01_chip_interior_margin_arcsec` | None | - | expert | static | config_runtime | universal | none | n/a | hidden | Phase01 Chip Interior Margin Arcsec |
 | `phase01_comparison_exclude_gaia_extobj` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia Extobj |
 | `phase01_comparison_exclude_gaia_nss` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Phase01 Comparison Exclude Gaia NSS |
