@@ -1,0 +1,14 @@
+{
+  "n_before": 158,
+  "n_after": 158,
+  "drop": [],
+  "add": [],
+  "missing_open_not_in_before": [],
+  "missing_retired_not_in_before": [],
+  "dropped_unassigned": [],
+  "extra_assigned": [],
+  "n_open": 110,
+  "n_closed": 42,
+  "n_retired": 6,
+  "closed_default_ids": []
+}

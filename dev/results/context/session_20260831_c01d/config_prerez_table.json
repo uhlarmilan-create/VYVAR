@@ -1,0 +1,5480 @@
+{
+  "n": 279,
+  "note": "CONSOLIDATE-01D D1+D2 2026-08-31. 279 config_runtime keys. No deletions. Extra AppConfig aliases outside this 279: blind_index_path (owner=internal), aavso_observer_code (owner=db_static).",
+  "rows": [
+    {
+      "key": "admission_sat_peak_frac",
+      "type_default": "float = 0.7",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:773",
+        "src_py/comp_selection_per_target.py:798",
+        "src_py/comp_selection_per_target.py:1069",
+        "src_py/config.py:784",
+        "src_py/config.py:2154",
+        "src_py/config.py:2155",
+        "src_py/config.py:2158",
+        "src_py/config.py:2159",
+        "src_py/config.py:2825"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "alignment_detection_sigma",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:870",
+        "src_py/config.py:1497",
+        "src_py/config.py:1498",
+        "src_py/config.py:1500",
+        "src_py/config.py:1501",
+        "src_py/config.py:1503",
+        "src_py/config.py:2705",
+        "src_py/pipeline.py:14942",
+        "src_py/pipeline.py:14951",
+        "src_py/pipeline.py:15902",
+        "src_py/ui_settings.py:115",
+        "src_py/ui_settings.py:480",
+        "src_py/ui_settings.py:483",
+        "src_py/ui_settings.py:488",
+        "src_py/ui_settings.py:1059"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "alignment_max_control_points",
+      "type_default": "int = 80",
+      "consumers": [
+        "src_py/app.py:600",
+        "src_py/app.py:1850",
+        "src_py/config.py:868",
+        "src_py/config.py:1487",
+        "src_py/config.py:1491",
+        "src_py/config.py:1495",
+        "src_py/config.py:2704",
+        "src_py/night_run.py:702",
+        "src_py/pipeline.py:15427",
+        "src_py/ui_settings.py:466",
+        "src_py/ui_settings.py:469",
+        "src_py/ui_settings.py:474",
+        "src_py/ui_settings.py:477",
+        "src_py/ui_settings.py:1057"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "alignment_max_stars",
+      "type_default": "int = 160",
+      "consumers": [
+        "src_py/config.py:866",
+        "src_py/config.py:1481",
+        "src_py/config.py:1482",
+        "src_py/config.py:1485",
+        "src_py/config.py:2703",
+        "src_py/pipeline.py:14936",
+        "src_py/ui_settings.py:115",
+        "src_py/ui_settings.py:452",
+        "src_py/ui_settings.py:455",
+        "src_py/ui_settings.py:460",
+        "src_py/ui_settings.py:463",
+        "src_py/ui_settings.py:1056"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "annulus_inner_fwhm",
+      "type_default": "float = 2.7",
+      "consumers": [
+        "src_py/aperture_policy.py:79",
+        "src_py/aperture_policy.py:90",
+        "src_py/aperture_policy.py:102",
+        "src_py/config.py:758",
+        "src_py/config.py:2090",
+        "src_py/config.py:2093",
+        "src_py/config.py:2095",
+        "src_py/config.py:2096",
+        "src_py/config.py:2815",
+        "src_py/config.py:2967",
+        "src_py/config.py:2991",
+        "src_py/config.py:3041",
+        "src_py/config.py:3054",
+        "src_py/config.py:3118",
+        "src_py/config.py:3132",
+        "src_py/photometry_core.py:699",
+        "src_py/photometry_core.py:715",
+        "src_py/photometry_core.py:722",
+        "src_py/photometry_core.py:1337",
+        "src_py/photometry_core.py:1370",
+        "src_py/photometry_core.py:8085",
+        "src_py/photometry_core.py:8701",
+        "src_py/photometry_core.py:8707",
+        "src_py/photometry_core.py:9133",
+        "src_py/photometry_core.py:11194",
+        "src_py/photometry_core.py:11245",
+        "src_py/photometry_core.py:11268",
+        "src_py/photometry_core.py:11318",
+        "src_py/photometry_core.py:11452",
+        "src_py/photometry_core.py:12701",
+        "src_py/photometry_core.py:12807",
+        "src_py/photometry_core.py:12845",
+        "src_py/photometry_core.py:17172",
+        "src_py/pipeline.py:216",
+        "src_py/pipeline.py:6592",
+        "src_py/pipeline.py:9817",
+        "src_py/pipeline.py:9832",
+        "src_py/pipeline.py:10735",
+        "src_py/pipeline.py:11528",
+        "src_py/psf_photometry.py:2056"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "annulus_outer_fwhm",
+      "type_default": "float = 5.2",
+      "consumers": [
+        "src_py/aperture_policy.py:80",
+        "src_py/aperture_policy.py:91",
+        "src_py/aperture_policy.py:106",
+        "src_py/config.py:759",
+        "src_py/config.py:2091",
+        "src_py/config.py:2094",
+        "src_py/config.py:2095",
+        "src_py/config.py:2096",
+        "src_py/config.py:2816",
+        "src_py/config.py:3041",
+        "src_py/config.py:3055",
+        "src_py/config.py:3057",
+        "src_py/config.py:3118",
+        "src_py/config.py:3133",
+        "src_py/config.py:3135",
+        "src_py/photometry_core.py:700",
+        "src_py/photometry_core.py:716",
+        "src_py/photometry_core.py:723",
+        "src_py/photometry_core.py:1338",
+        "src_py/photometry_core.py:1371",
+        "src_py/photometry_core.py:5639",
+        "src_py/photometry_core.py:8086",
+        "src_py/photometry_core.py:8702",
+        "src_py/photometry_core.py:8708",
+        "src_py/photometry_core.py:9134",
+        "src_py/photometry_core.py:11195",
+        "src_py/photometry_core.py:11246",
+        "src_py/photometry_core.py:11269",
+        "src_py/photometry_core.py:11319",
+        "src_py/photometry_core.py:11453",
+        "src_py/photometry_core.py:12702",
+        "src_py/photometry_core.py:12808",
+        "src_py/photometry_core.py:12846",
+        "src_py/photometry_core.py:17173",
+        "src_py/pipeline.py:217",
+        "src_py/pipeline.py:6593",
+        "src_py/pipeline.py:9821",
+        "src_py/pipeline.py:9833",
+        "src_py/pipeline.py:10736",
+        "src_py/pipeline.py:11529"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_comp_factor",
+      "type_default": "float = 1.1",
+      "consumers": [
+        "src_py/config.py:757",
+        "src_py/config.py:1802",
+        "src_py/config.py:1804",
+        "src_py/config.py:1807",
+        "src_py/config.py:2791",
+        "src_py/photometry_core.py:12714",
+        "src_py/photometry_report.py:2999",
+        "src_py/pipeline.py:229",
+        "src_py/ui_settings.py:619",
+        "src_py/ui_settings.py:623",
+        "src_py/ui_settings.py:1068"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_correction_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/citations.py:255",
+        "src_py/config.py:1007",
+        "src_py/config.py:1808",
+        "src_py/config.py:1809",
+        "src_py/config.py:2792",
+        "src_py/photometry_core.py:9705",
+        "src_py/photometry_core.py:10708",
+        "src_py/pipeline.py:172",
+        "src_py/pipeline.py:10744",
+        "src_py/pipeline.py:11538"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "aperture_correction_max_contamination",
+      "type_default": "float = 0.15",
+      "consumers": [
+        "src_py/check_star_kmag.py:177",
+        "src_py/config.py:1009",
+        "src_py/config.py:1820",
+        "src_py/config.py:1822",
+        "src_py/config.py:1826",
+        "src_py/config.py:1827",
+        "src_py/config.py:2794",
+        "src_py/photometry_core.py:9711"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_correction_max_scatter_mag",
+      "type_default": "float = 0.03",
+      "consumers": [
+        "src_py/config.py:1011",
+        "src_py/config.py:1830",
+        "src_py/config.py:1832",
+        "src_py/config.py:1836",
+        "src_py/config.py:1890",
+        "src_py/config.py:1891",
+        "src_py/config.py:2795",
+        "src_py/photometry_core.py:9712"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_correction_min_ref_stars",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:1008",
+        "src_py/config.py:1812",
+        "src_py/config.py:1814",
+        "src_py/config.py:1817",
+        "src_py/config.py:2793",
+        "src_py/photometry_core.py:9710"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_fwhm_factor",
+      "type_default": "float = 1.35",
+      "consumers": [
+        "src_py/config.py:747",
+        "src_py/config.py:1759",
+        "src_py/config.py:1760",
+        "src_py/config.py:1761",
+        "src_py/config.py:1763",
+        "src_py/config.py:1764",
+        "src_py/config.py:2784",
+        "src_py/config.py:2965",
+        "src_py/config.py:3039",
+        "src_py/photometry_core.py:698",
+        "src_py/photometry_core.py:702",
+        "src_py/photometry_core.py:714",
+        "src_py/photometry_core.py:725",
+        "src_py/photometry_core.py:729",
+        "src_py/photometry_core.py:1336",
+        "src_py/photometry_core.py:1366",
+        "src_py/photometry_core.py:1898",
+        "src_py/photometry_core.py:1905",
+        "src_py/photometry_core.py:4134",
+        "src_py/photometry_core.py:7425",
+        "src_py/photometry_core.py:7484",
+        "src_py/photometry_core.py:8087",
+        "src_py/photometry_core.py:8112",
+        "src_py/photometry_core.py:8114",
+        "src_py/photometry_core.py:8116",
+        "src_py/photometry_core.py:8120",
+        "src_py/photometry_core.py:8122",
+        "src_py/photometry_core.py:8700",
+        "src_py/photometry_core.py:9839",
+        "src_py/photometry_core.py:11231",
+        "src_py/photometry_core.py:11270",
+        "src_py/photometry_core.py:11286",
+        "src_py/photometry_core.py:11320",
+        "src_py/photometry_core.py:11345",
+        "src_py/photometry_core.py:11347",
+        "src_py/photometry_core.py:11349",
+        "src_py/photometry_core.py:11353",
+        "src_py/photometry_core.py:11355",
+        "src_py/photometry_core.py:11362",
+        "src_py/photometry_core.py:12301"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_photometry_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:610",
+        "src_py/config.py:1589",
+        "src_py/config.py:2727",
+        "src_py/pipeline.py:165",
+        "src_py/pipeline.py:10733",
+        "src_py/pipeline.py:11526",
+        "src_py/ui_photometry.py:54",
+        "src_py/ui_photometry.py:59",
+        "src_py/ui_photometry.py:96"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "aperture_policy_mode",
+      "type_default": "str = 'f_fixed_night'",
+      "consumers": [
+        "src_py/config.py:749",
+        "src_py/config.py:1765",
+        "src_py/config.py:1766",
+        "src_py/config.py:2785",
+        "src_py/photometry_core.py:8662",
+        "src_py/photometry_core.py:12716",
+        "src_py/photometry_core.py:12769",
+        "src_py/photometry_core.py:12778",
+        "src_py/photometry_core.py:12887",
+        "src_py/pipeline.py:231",
+        "src_py/pipeline.py:10726",
+        "src_py/pipeline.py:10747",
+        "src_py/pipeline.py:11541",
+        "src_py/proc_frame_store.py:51"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_snr_sizing",
+      "type_default": "dict[str, float] = {'small': 1.5, 'large': 4.0}",
+      "consumers": [
+        "src_py/config.py:752",
+        "src_py/config.py:1769",
+        "src_py/config.py:1771",
+        "src_py/config.py:1779",
+        "src_py/config.py:1788",
+        "src_py/config.py:2786",
+        "src_py/config.py:2787",
+        "src_py/config.py:2788",
+        "src_py/pipeline.py:10745",
+        "src_py/pipeline.py:10746",
+        "src_py/pipeline.py:11539",
+        "src_py/pipeline.py:11540"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "aperture_variable_factor",
+      "type_default": "float = 1.0",
+      "consumers": [
+        "src_py/config.py:756",
+        "src_py/config.py:1795",
+        "src_py/config.py:1797",
+        "src_py/config.py:1800",
+        "src_py/config.py:2790",
+        "src_py/photometry_core.py:12713",
+        "src_py/photometry_report.py:3000",
+        "src_py/pipeline.py:228",
+        "src_py/ui_settings.py:610",
+        "src_py/ui_settings.py:614",
+        "src_py/ui_settings.py:1067"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "apply_color_term",
+      "type_default": "str = 'off'",
+      "consumers": [
+        "src_py/band_classify.py:338",
+        "src_py/band_classify.py:343",
+        "src_py/band_classify.py:352",
+        "src_py/citations.py:260",
+        "src_py/config.py:936",
+        "src_py/config.py:1931",
+        "src_py/config.py:1933",
+        "src_py/config.py:1935",
+        "src_py/config.py:1937",
+        "src_py/config.py:2873",
+        "src_py/k2_extinction.py:228",
+        "src_py/method_lc_output.py:81",
+        "src_py/method_lc_output.py:269",
+        "src_py/params_registry.py:75",
+        "src_py/photometry_core.py:3692",
+        "src_py/photometry_core.py:3910",
+        "src_py/photometry_core.py:7391",
+        "src_py/photometry_core.py:8938",
+        "src_py/photometry_core.py:9000",
+        "src_py/photometry_core.py:9976",
+        "src_py/photometry_core.py:10000",
+        "src_py/photometry_core.py:10038",
+        "src_py/ui_settings.py:638"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "auto_fwhm_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1155",
+        "src_py/config.py:1550",
+        "src_py/config.py:2720",
+        "src_py/night_run.py:1625",
+        "src_py/night_run.py:1647",
+        "src_py/photometry_report.py:3257",
+        "src_py/ui_quality_dashboard.py:431",
+        "src_py/ui_quality_dashboard.py:435",
+        "src_py/ui_quality_dashboard.py:476"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "auto_fwhm_k_factor",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:1156",
+        "src_py/config.py:1552",
+        "src_py/config.py:1554",
+        "src_py/config.py:1565",
+        "src_py/config.py:1566",
+        "src_py/config.py:2721",
+        "src_py/night_run.py:1636",
+        "src_py/night_run.py:1642",
+        "src_py/photometry_report.py:3258",
+        "src_py/ui_quality_dashboard.py:432",
+        "src_py/ui_quality_dashboard.py:479",
+        "src_py/ui_quality_dashboard.py:492"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "auto_fwhm_k_max",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:1158",
+        "src_py/config.py:1560",
+        "src_py/config.py:1562",
+        "src_py/config.py:1563",
+        "src_py/config.py:1564",
+        "src_py/config.py:1566",
+        "src_py/config.py:2723",
+        "src_py/ui_quality_dashboard.py:498"
+      ],
+      "class": "DIAG",
+      "proposal": "move-to-diag",
+      "risk": "UI/app only at tip",
+      "d2_evidence": "no pipeline/night_run consumer in grep"
+    },
+    {
+      "key": "auto_fwhm_k_min",
+      "type_default": "float = 1.0",
+      "consumers": [
+        "src_py/config.py:1157",
+        "src_py/config.py:1556",
+        "src_py/config.py:1558",
+        "src_py/config.py:1563",
+        "src_py/config.py:1564",
+        "src_py/config.py:1566",
+        "src_py/config.py:2722",
+        "src_py/ui_quality_dashboard.py:497"
+      ],
+      "class": "DIAG",
+      "proposal": "move-to-diag",
+      "risk": "UI/app only at tip",
+      "d2_evidence": "no pipeline/night_run consumer in grep"
+    },
+    {
+      "key": "blind_img_select_mode",
+      "type_default": "str = 'per_cell'",
+      "consumers": [
+        "src_py/config.py:589",
+        "src_py/config.py:1416",
+        "src_py/config.py:1417",
+        "src_py/config.py:2694",
+        "src_py/params_registry.py:82",
+        "src_py/vyvar_blind_solver.py:56"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_img_star_budget",
+      "type_default": "int = 80",
+      "consumers": [
+        "src_py/config.py:587",
+        "src_py/config.py:1410",
+        "src_py/config.py:1411",
+        "src_py/config.py:1414",
+        "src_py/config.py:1415",
+        "src_py/config.py:2693",
+        "src_py/vyvar_blind_series.py:170",
+        "src_py/vyvar_blind_solver.py:39"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_index_select_mode",
+      "type_default": "str = 'auto'",
+      "consumers": [
+        "src_py/config.py:567",
+        "src_py/config.py:1347",
+        "src_py/config.py:1349",
+        "src_py/config.py:2681",
+        "src_py/params_registry.py:81",
+        "src_py/vyvar_blind_series.py:137"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_use_rig_prior",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:591",
+        "src_py/config.py:1420",
+        "src_py/config.py:1421",
+        "src_py/config.py:2695",
+        "src_py/vyvar_blind_solver.py:192"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "blind_verify_early_accept",
+      "type_default": "int = 30",
+      "consumers": [
+        "src_py/config.py:581",
+        "src_py/config.py:1388",
+        "src_py/config.py:1389",
+        "src_py/config.py:1392",
+        "src_py/config.py:1393",
+        "src_py/config.py:2690",
+        "src_py/vyvar_platesolver.py:1733"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_early_floor",
+      "type_default": "int = 0",
+      "consumers": [
+        "src_py/config.py:583",
+        "src_py/config.py:1395",
+        "src_py/config.py:1396",
+        "src_py/config.py:1399",
+        "src_py/config.py:1400",
+        "src_py/config.py:2691",
+        "src_py/vyvar_platesolver.py:1734"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_early_fraction",
+      "type_default": "float = 0.2",
+      "consumers": [
+        "src_py/config.py:585",
+        "src_py/config.py:1402",
+        "src_py/config.py:1403",
+        "src_py/config.py:1406",
+        "src_py/config.py:1407",
+        "src_py/config.py:2692",
+        "src_py/vyvar_platesolver.py:1735"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:569",
+        "src_py/config.py:1352",
+        "src_py/config.py:2682",
+        "src_py/vyvar_blind_series.py:199",
+        "src_py/vyvar_blind_series.py:316",
+        "src_py/vyvar_blind_solver.py:1144",
+        "src_py/vyvar_platesolver.py:4565"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "blind_verify_inmemory_catalog",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:577",
+        "src_py/config.py:1379",
+        "src_py/config.py:1380",
+        "src_py/config.py:2688",
+        "src_py/vyvar_platesolver.py:1730"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "blind_verify_match_tol_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:573",
+        "src_py/config.py:2619",
+        "src_py/config.py:2685",
+        "src_py/unit_resolver.py:213"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_match_tol_px",
+      "type_default": "float = 2.5",
+      "consumers": [
+        "src_py/config.py:571",
+        "src_py/config.py:572",
+        "src_py/config.py:1359",
+        "src_py/config.py:1360",
+        "src_py/config.py:1363",
+        "src_py/config.py:1364",
+        "src_py/config.py:2684",
+        "src_py/unit_resolver.py:211",
+        "src_py/unit_resolver.py:214",
+        "src_py/unit_resolver.py:216",
+        "src_py/vyvar_blind_series.py:215",
+        "src_py/vyvar_blind_series.py:222",
+        "src_py/vyvar_platesolver.py:35"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_min_fraction",
+      "type_default": "float = 0.15",
+      "consumers": [
+        "src_py/config.py:575",
+        "src_py/config.py:1373",
+        "src_py/config.py:1374",
+        "src_py/config.py:1377",
+        "src_py/config.py:1378",
+        "src_py/config.py:2687",
+        "src_py/vyvar_platesolver.py:1726"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_min_matches",
+      "type_default": "int = 12",
+      "consumers": [
+        "src_py/config.py:574",
+        "src_py/config.py:1366",
+        "src_py/config.py:1367",
+        "src_py/config.py:1370",
+        "src_py/config.py:1371",
+        "src_py/config.py:2686",
+        "src_py/vyvar_blind_series.py:217",
+        "src_py/vyvar_blind_series.py:223",
+        "src_py/vyvar_platesolver.py:1725"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "blind_verify_top_n",
+      "type_default": "int = 15",
+      "consumers": [
+        "src_py/config.py:570",
+        "src_py/config.py:1354",
+        "src_py/config.py:1356",
+        "src_py/config.py:1357",
+        "src_py/config.py:2683",
+        "src_py/vyvar_blind_series.py:244",
+        "src_py/vyvar_blind_series.py:323"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "bpm_dark_mad_sigma",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:764",
+        "src_py/config.py:2110",
+        "src_py/config.py:2112",
+        "src_py/config.py:2113",
+        "src_py/config.py:2819",
+        "src_py/importer.py:1078",
+        "src_py/pipeline.py:10739",
+        "src_py/pipeline.py:11532"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "calibration_library_native_binning",
+      "type_default": "int | None = 1",
+      "consumers": [
+        "src_py/config.py:516",
+        "src_py/config.py:1206",
+        "src_py/config.py:1208",
+        "src_py/config.py:1212",
+        "src_py/config.py:1214",
+        "src_py/config.py:2652",
+        "src_py/config.py:2654",
+        "src_py/config.py:2655",
+        "src_py/params_registry.py:65",
+        "src_py/pipeline.py:750",
+        "src_py/pipeline.py:751",
+        "src_py/pipeline.py:16532",
+        "src_py/ui_settings.py:386",
+        "src_py/ui_settings.py:387",
+        "src_py/ui_settings.py:391",
+        "src_py/ui_settings.py:394",
+        "src_py/ui_settings.py:399",
+        "src_py/ui_settings.py:1046"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "calibration_master_ccd_temp_tolerance_c",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/app.py:1772",
+        "src_py/config.py:518",
+        "src_py/config.py:1218",
+        "src_py/config.py:1219",
+        "src_py/config.py:1223",
+        "src_py/config.py:2382",
+        "src_py/config.py:2657",
+        "src_py/config.py:2658",
+        "src_py/importer.py:1151",
+        "src_py/importer.py:1153",
+        "src_py/importer.py:1163",
+        "src_py/night_run.py:1375",
+        "src_py/night_run.py:1400"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "catalog_query_max_rows",
+      "type_default": "int = 15000",
+      "consumers": [
+        "src_py/config.py:607",
+        "src_py/config.py:1460",
+        "src_py/config.py:1461",
+        "src_py/config.py:1464",
+        "src_py/config.py:2701",
+        "src_py/pipeline.py:4508",
+        "src_py/pipeline.py:4657",
+        "src_py/pipeline.py:4755",
+        "src_py/pipeline.py:5210",
+        "src_py/pipeline.py:6764",
+        "src_py/pipeline.py:8581",
+        "src_py/vyvar_platesolver.py:1736"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "check_select_rms_floor",
+      "type_default": "float = 0.0001",
+      "consumers": [
+        "src_py/check_star_kmag.py:118",
+        "src_py/check_star_kmag.py:247",
+        "src_py/check_star_kmag.py:272",
+        "src_py/config.py:635",
+        "src_py/config.py:2409",
+        "src_py/config.py:2741"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "check_star_min_epochs",
+      "type_default": "int = 5",
+      "consumers": [
+        "src_py/config.py:629",
+        "src_py/config.py:2405",
+        "src_py/config.py:2737",
+        "src_py/trust_flag_core.py:78",
+        "src_py/ui_settings.py:736",
+        "src_py/ui_settings.py:739",
+        "src_py/ui_settings.py:1082"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_ac_factor_max",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:1032",
+        "src_py/config.py:1873",
+        "src_py/config.py:1874",
+        "src_py/config.py:1876",
+        "src_py/config.py:2804",
+        "src_py/pipeline.py:201",
+        "src_py/pipeline.py:10759"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_aperture_correction_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:256",
+        "src_py/config.py:1016",
+        "src_py/config.py:1839",
+        "src_py/config.py:1840",
+        "src_py/config.py:2796",
+        "src_py/invariants_runtime.py:658",
+        "src_py/invariants_runtime.py:982",
+        "src_py/photometry_core.py:7406",
+        "src_py/photometry_core.py:8777",
+        "src_py/photometry_core.py:11416",
+        "src_py/pipeline.py:190",
+        "src_py/pipeline.py:10751"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "cog_isolation_fwhm",
+      "type_default": "float = 6.0",
+      "consumers": [
+        "src_py/config.py:1022",
+        "src_py/config.py:1853",
+        "src_py/config.py:1854",
+        "src_py/config.py:1856",
+        "src_py/config.py:2799",
+        "src_py/pipeline.py:196",
+        "src_py/pipeline.py:10754"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_ladder_step_fwhm",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1030",
+        "src_py/config.py:2620",
+        "src_py/config.py:2803",
+        "src_py/pipeline.py:194",
+        "src_py/pipeline.py:10758",
+        "src_py/unit_resolver.py:222"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_ladder_step_px",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:1028",
+        "src_py/config.py:1029",
+        "src_py/config.py:1868",
+        "src_py/config.py:1869",
+        "src_py/config.py:1871",
+        "src_py/config.py:2802",
+        "src_py/photometry_core.py:13032",
+        "src_py/pipeline.py:193",
+        "src_py/pipeline.py:10757",
+        "src_py/unit_resolver.py:220",
+        "src_py/unit_resolver.py:223",
+        "src_py/unit_resolver.py:225"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_min_stars",
+      "type_default": "int = 8",
+      "consumers": [
+        "src_py/config.py:1020",
+        "src_py/config.py:1849",
+        "src_py/config.py:1851",
+        "src_py/config.py:2798",
+        "src_py/photometry_core.py:1571",
+        "src_py/pipeline.py:195",
+        "src_py/pipeline.py:10753"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_ref_fwhm",
+      "type_default": "float = 4.5",
+      "consumers": [
+        "src_py/config.py:1018",
+        "src_py/config.py:1843",
+        "src_py/config.py:1844",
+        "src_py/config.py:1846",
+        "src_py/config.py:1847",
+        "src_py/config.py:2797",
+        "src_py/pipeline.py:192",
+        "src_py/pipeline.py:10752"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_sat_frac",
+      "type_default": "float = 0.85",
+      "consumers": [
+        "src_py/config.py:1026",
+        "src_py/config.py:1863",
+        "src_py/config.py:1864",
+        "src_py/config.py:1866",
+        "src_py/config.py:2801",
+        "src_py/pipeline.py:198",
+        "src_py/pipeline.py:10756"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "cog_snr_min",
+      "type_default": "float = 50.0",
+      "consumers": [
+        "src_py/config.py:1024",
+        "src_py/config.py:1858",
+        "src_py/config.py:1859",
+        "src_py/config.py:1861",
+        "src_py/config.py:2800",
+        "src_py/pipeline.py:197",
+        "src_py/pipeline.py:10755"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "color_level_k_mag_per_bprp",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/band_classify.py:345",
+        "src_py/band_classify.py:353",
+        "src_py/config.py:940",
+        "src_py/config.py:941",
+        "src_py/config.py:1938",
+        "src_py/config.py:2874",
+        "src_py/photometry_core.py:3831",
+        "src_py/photometry_core.py:3924",
+        "src_py/photometry_core.py:4200"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "color_level_k_stderr_mag_per_bprp",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/band_classify.py:354",
+        "src_py/config.py:942",
+        "src_py/config.py:1938",
+        "src_py/config.py:2875",
+        "src_py/photometry_core.py:3833",
+        "src_py/photometry_core.py:4201"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_color_tiers",
+      "type_default": "list[dict[str, float]] = [{'bprp': 0.15, 'w': 1.0}, {'bprp': 0.3, 'w': 0.85}, {'bprp': 0.55, 'w': 0.5}, {'bprp': 1.1, 'w': 0.25}]",
+      "consumers": [
+        "src_py/config.py:916",
+        "src_py/config.py:2324",
+        "src_py/config.py:2339",
+        "src_py/config.py:2354",
+        "src_py/config.py:2358",
+        "src_py/config.py:2369",
+        "src_py/config.py:2634",
+        "src_py/config.py:2635",
+        "src_py/config.py:2638",
+        "src_py/config.py:2639",
+        "src_py/config.py:2857",
+        "src_py/config.py:2859",
+        "src_py/ui_settings.py:863",
+        "src_py/ui_settings.py:1092"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live via method/resolver wrapper; do not treat as DEAD/DIAG",
+      "d2_evidence": "comp_selection_per_target.py:265 calls cfg.comp_tier_bprp_limits() from this field (config.py:2634). Production colour tiers. UI also edits the structured key."
+    },
+    {
+      "key": "comp_contamination_penalty_k",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:1487",
+        "src_py/config.py:925",
+        "src_py/config.py:2381",
+        "src_py/config.py:2862"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_iterative_clip_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:250",
+        "src_py/config.py:996",
+        "src_py/config.py:2073",
+        "src_py/config.py:2077",
+        "src_py/config.py:2082",
+        "src_py/config.py:2903",
+        "src_py/ui_settings.py:1108"
+      ],
+      "class": "ALIAS",
+      "proposal": "remove-alias",
+      "risk": "loader-migrated alias of comp_sparse_fallback_enabled (config.py:995 loader 2073-2082)",
+      "d2_evidence": "After load, field is forced equal to comp_sparse_fallback_enabled. Default JSON False is overwritten. Flip of this key alone with sparse True is a no-op. Removable alias."
+    },
+    {
+      "key": "comp_max_delta_bprp",
+      "type_default": "float = 0.79",
+      "consumers": [
+        "src_py/check_star_kmag.py:409",
+        "src_py/check_star_kmag.py:587",
+        "src_py/comp_selection_per_target.py:247",
+        "src_py/comp_selection_per_target.py:1691",
+        "src_py/comp_selection_per_target.py:1775",
+        "src_py/config.py:913",
+        "src_py/config.py:2323",
+        "src_py/config.py:2856",
+        "src_py/config.py:2960",
+        "src_py/config.py:2969",
+        "src_py/config.py:2980",
+        "src_py/config.py:2984",
+        "src_py/config.py:2989",
+        "src_py/config.py:3045",
+        "src_py/config.py:3075",
+        "src_py/config.py:3122",
+        "src_py/photometry_core.py:14059",
+        "src_py/photometry_core.py:14066",
+        "src_py/photometry_core.py:15753",
+        "src_py/photometry_core.py:15899",
+        "src_py/photometry_core.py:15943",
+        "src_py/photometry_core.py:15968",
+        "src_py/photometry_core.py:16421",
+        "src_py/photometry_core.py:17107",
+        "src_py/ui_settings.py:906",
+        "src_py/ui_settings.py:1098"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_max_slope_mmag_hr",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:988",
+        "src_py/config.py:2060",
+        "src_py/config.py:2062",
+        "src_py/config.py:2065",
+        "src_py/config.py:2899",
+        "src_py/method_lc_output.py:117",
+        "src_py/photometry_core.py:10528",
+        "src_py/ui_settings.py:680"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_pool_derived_admission",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1125",
+        "src_py/config.py:2545",
+        "src_py/config.py:2546",
+        "src_py/config.py:2934",
+        "src_py/photometry_core.py:14604"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "comp_qa_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/citations.py:236",
+        "src_py/config.py:619",
+        "src_py/config.py:1599",
+        "src_py/config.py:2731",
+        "src_py/photometry_core.py:10837"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "comp_rms_loo_photon_k",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:904",
+        "src_py/config.py:2412",
+        "src_py/config.py:2866",
+        "src_py/photometry_core.py:14145"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_select_rms_floor",
+      "type_default": "float = 1e-06",
+      "consumers": [
+        "src_py/config.py:637",
+        "src_py/config.py:2410",
+        "src_py/config.py:2742",
+        "src_py/photometry_core.py:14111"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_slope_significance_k",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:990",
+        "src_py/config.py:2067",
+        "src_py/config.py:2069",
+        "src_py/config.py:2072",
+        "src_py/config.py:2900",
+        "src_py/method_lc_output.py:118",
+        "src_py/photometry_core.py:2888",
+        "src_py/photometry_core.py:2991",
+        "src_py/photometry_core.py:2999",
+        "src_py/photometry_core.py:10529",
+        "src_py/ui_settings.py:670",
+        "src_py/ui_settings.py:673",
+        "src_py/ui_settings.py:678",
+        "src_py/ui_settings.py:1074"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_sparse_fallback_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:248",
+        "src_py/config.py:992",
+        "src_py/config.py:995",
+        "src_py/config.py:2074",
+        "src_py/config.py:2076",
+        "src_py/config.py:2077",
+        "src_py/config.py:2080",
+        "src_py/config.py:2081",
+        "src_py/config.py:2082",
+        "src_py/config.py:2901",
+        "src_py/config.py:2903",
+        "src_py/ui_settings.py:958",
+        "src_py/ui_settings.py:959",
+        "src_py/ui_settings.py:1107"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "live via method/resolver wrapper; do not treat as DEAD/DIAG",
+      "d2_evidence": "photometry_core.py:15073 via resolve_comp_sparse_fallback_enabled (config.py:244). Default True. Production sparse fallback. Key-grep misses pipeline because it uses the resolver."
+    },
+    {
+      "key": "comp_sparse_fallback_min",
+      "type_default": "int = 0",
+      "consumers": [
+        "src_py/config.py:263",
+        "src_py/config.py:994",
+        "src_py/config.py:2084",
+        "src_py/config.py:2085",
+        "src_py/config.py:2088",
+        "src_py/config.py:2902",
+        "src_py/ui_settings.py:966",
+        "src_py/ui_settings.py:969",
+        "src_py/ui_settings.py:1110"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live via method/resolver wrapper; do not treat as DEAD/DIAG",
+      "d2_evidence": "photometry_core.py:15061 via resolve_comp_sparse_fallback_min. Production. Key-grep misses pipeline."
+    },
+    {
+      "key": "comp_trust_min_comps",
+      "type_default": "int = 5",
+      "consumers": [
+        "src_py/config.py:627",
+        "src_py/config.py:2397",
+        "src_py/config.py:2398",
+        "src_py/config.py:2399",
+        "src_py/config.py:2736",
+        "src_py/trust_flag_core.py:13",
+        "src_py/trust_flag_core.py:55",
+        "src_py/trust_flag_core.py:62",
+        "src_py/trust_flag_core.py:65",
+        "src_py/trust_flag_core.py:66",
+        "src_py/ui_settings.py:729",
+        "src_py/ui_settings.py:732",
+        "src_py/ui_settings.py:1079",
+        "src_py/ui_settings.py:1080",
+        "src_py/ui_settings.py:1081"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_weight_airmass_span",
+      "type_default": "float = 0.0",
+      "consumers": [
+        "src_py/config.py:1133",
+        "src_py/config.py:2569",
+        "src_py/config.py:2570",
+        "src_py/config.py:2573",
+        "src_py/config.py:2574",
+        "src_py/config.py:2575",
+        "src_py/config.py:2938",
+        "src_py/photometry_core.py:9329",
+        "src_py/ui_settings.py:856",
+        "src_py/ui_settings.py:857",
+        "src_py/ui_settings.py:1101"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_weight_c_col_mag_per_bprp",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1129",
+        "src_py/config.py:2556",
+        "src_py/config.py:2936",
+        "src_py/photometry_core.py:9312",
+        "src_py/ui_settings.py:835",
+        "src_py/ui_settings.py:836",
+        "src_py/ui_settings.py:837",
+        "src_py/ui_settings.py:1099"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_weight_c_dist_mag_per_deg",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1131",
+        "src_py/config.py:2557",
+        "src_py/config.py:2937",
+        "src_py/photometry_core.py:9313",
+        "src_py/ui_settings.py:846",
+        "src_py/ui_settings.py:847",
+        "src_py/ui_settings.py:848",
+        "src_py/ui_settings.py:1100"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comp_weight_optics_kind",
+      "type_default": "str = 'unknown'",
+      "consumers": [
+        "src_py/config.py:1135",
+        "src_py/config.py:2576",
+        "src_py/config.py:2577",
+        "src_py/config.py:2939",
+        "src_py/photometry_core.py:9357"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "comparison_stars_pool_n",
+      "type_default": "int = 0",
+      "consumers": [
+        "src_py/config.py:1127",
+        "src_py/config.py:2549",
+        "src_py/config.py:2550",
+        "src_py/config.py:2553",
+        "src_py/config.py:2554",
+        "src_py/config.py:2935",
+        "src_py/photometry_core.py:4329",
+        "src_py/photometry_core.py:4393"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "crowding_blend_tighten_threshold",
+      "type_default": "float = 0.04",
+      "consumers": [
+        "src_py/config.py:1110",
+        "src_py/config.py:2522",
+        "src_py/config.py:2523",
+        "src_py/config.py:2526",
+        "src_py/config.py:2527",
+        "src_py/config.py:2930",
+        "src_py/photometry_core.py:15885",
+        "src_py/photometry_core.py:15909",
+        "src_py/photometry_core.py:15935"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "crowding_classifier_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:1108",
+        "src_py/config.py:2518",
+        "src_py/config.py:2519",
+        "src_py/config.py:2929",
+        "src_py/config.py:2976",
+        "src_py/crowding_index.py:6",
+        "src_py/photometry_core.py:15866"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "crowding_comp_availability_loosen_count",
+      "type_default": "float = 500.0",
+      "consumers": [
+        "src_py/config.py:1112",
+        "src_py/config.py:2529",
+        "src_py/config.py:2530",
+        "src_py/config.py:2533",
+        "src_py/config.py:2534",
+        "src_py/config.py:2535",
+        "src_py/config.py:2931",
+        "src_py/photometry_core.py:15889",
+        "src_py/photometry_core.py:15914",
+        "src_py/photometry_core.py:15938"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "crowding_tighten_min_fwhm_px",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:1120",
+        "src_py/config.py:2538",
+        "src_py/config.py:2539",
+        "src_py/config.py:2542",
+        "src_py/config.py:2543",
+        "src_py/config.py:2932",
+        "src_py/photometry_core.py:15882"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "dao_centroid_max_shift_fwhm",
+      "type_default": "float = 1.0",
+      "consumers": [
+        "src_py/config.py:782",
+        "src_py/config.py:2147",
+        "src_py/config.py:2148",
+        "src_py/config.py:2151",
+        "src_py/config.py:2152",
+        "src_py/config.py:2824",
+        "src_py/pipeline.py:8252"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "dao_detection_n_equiv",
+      "type_default": "float = 4.5",
+      "consumers": [
+        "src_py/comp_pool_noise.py:1217",
+        "src_py/comp_pool_noise.py:1225",
+        "src_py/config.py:780",
+        "src_py/config.py:2142",
+        "src_py/config.py:2144",
+        "src_py/config.py:2145",
+        "src_py/config.py:2823",
+        "src_py/pipeline.py:6226",
+        "src_py/pipeline.py:6230",
+        "src_py/pipeline.py:6360",
+        "src_py/pipeline.py:6364",
+        "src_py/pipeline.py:6465",
+        "src_py/pipeline.py:6469",
+        "src_py/pipeline.py:7307",
+        "src_py/pipeline.py:9690",
+        "src_py/pipeline.py:13445",
+        "src_py/pipeline.py:13446",
+        "src_py/pipeline.py:13447",
+        "src_py/pipeline.py:13448"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "STOP vs spec: not a loader alias. Detection uses masterstar_dao_threshold_sigma (config.py:778). This field is zone-classifier T1 (pipeline.py:6226, 7307). Loaded independently (config.py:2142). Can diverge.",
+      "d2_evidence": "Live on production MASTERSTAR zone path with default config. Not flip-only."
+    },
+    {
+      "key": "dao_qc_in_calibrate",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1146",
+        "src_py/config.py:1529",
+        "src_py/config.py:1530",
+        "src_py/config.py:2711",
+        "src_py/night_run.py:1568",
+        "src_py/pipeline.py:16252",
+        "src_py/pipeline.py:16787",
+        "src_py/pipeline.py:16863",
+        "src_py/pipeline.py:19536"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "debug_platesolver",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:772",
+        "src_py/config.py:2117",
+        "src_py/config.py:2696",
+        "src_py/pipeline.py:4216",
+        "src_py/pipeline.py:4328",
+        "src_py/vyvar_blind_solver.py:515",
+        "src_py/vyvar_platesolver.py:1727",
+        "src_py/vyvar_platesolver.py:4309",
+        "src_py/vyvar_platesolver.py:4479",
+        "src_py/vyvar_platesolver.py:4526",
+        "src_py/vyvar_platesolver.py:4561"
+      ],
+      "class": "DIAG",
+      "proposal": "keep",
+      "risk": "platesolver verbose logs",
+      "d2_evidence": "diagnostic switch"
+    },
+    {
+      "key": "democratic_detrend_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:232",
+        "src_py/config.py:980",
+        "src_py/config.py:2041",
+        "src_py/config.py:2042",
+        "src_py/config.py:2895",
+        "src_py/method_lc_output.py:325",
+        "src_py/photometry_core.py:10315",
+        "src_py/ui_settings.py:664",
+        "src_py/ui_settings.py:666",
+        "src_py/ui_settings.py:1072"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "democratic_sg_window_frac",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:981",
+        "src_py/config.py:2045",
+        "src_py/config.py:2049",
+        "src_py/config.py:2053",
+        "src_py/config.py:2896",
+        "src_py/method_lc_output.py:331",
+        "src_py/photometry_core.py:10324"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "epsf_auto_run",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:658",
+        "src_py/config.py:1655",
+        "src_py/config.py:2750",
+        "src_py/epsf_stage.py:87",
+        "src_py/epsf_stage.py:98",
+        "src_py/epsf_stage.py:100",
+        "src_py/night_run.py:76",
+        "src_py/night_run.py:130",
+        "src_py/night_run.py:140"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "epsf_min_stars",
+      "type_default": "int = 30",
+      "consumers": [
+        "src_py/config.py:741",
+        "src_py/config.py:1752",
+        "src_py/config.py:1753",
+        "src_py/config.py:1755",
+        "src_py/config.py:2782",
+        "src_py/psf_photometry.py:936"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "err_background_mode",
+      "type_default": "str = 'empirical'",
+      "consumers": [
+        "src_py/check_star_kmag.py:804",
+        "src_py/check_star_kmag.py:817",
+        "src_py/citations.py:258",
+        "src_py/config.py:1048",
+        "src_py/config.py:1897",
+        "src_py/config.py:1899",
+        "src_py/config.py:1901",
+        "src_py/config.py:2807",
+        "src_py/params_registry.py:77",
+        "src_py/photometry_core.py:1302",
+        "src_py/photometry_core.py:1314",
+        "src_py/photometry_core.py:1499",
+        "src_py/photometry_core.py:1509",
+        "src_py/photometry_core.py:1518",
+        "src_py/photometry_core.py:2122",
+        "src_py/photometry_core.py:2385",
+        "src_py/photometry_core.py:2391",
+        "src_py/photometry_core.py:8815",
+        "src_py/photometry_core.py:9642",
+        "src_py/photometry_core.py:12710",
+        "src_py/photometry_core.py:12937",
+        "src_py/pipeline.py:225",
+        "src_py/pipeline.py:10621",
+        "src_py/pipeline.py:10629",
+        "src_py/pipeline.py:10762",
+        "src_py/pipeline.py:11703",
+        "src_py/pipeline.py:15847"
+      ],
+      "class": "LEGACY",
+      "proposal": "remove-key+dead-branch",
+      "risk": "legacy value howell; F-BINGAIN-1 empirical empty-aperture; howell = full Howell variance",
+      "d2_evidence": "Default empirical. Config value howell is flip-only (skips empirical term). Howell MATH remains reachable under empirical when sigma_bkg_ap is missing (howell_fallback) -- that is a data condition, not the key's howell value. Removing the howell KEY does not delete fallback math."
+    },
+    {
+      "key": "err_empty_apertures_min",
+      "type_default": "int = 16",
+      "consumers": [
+        "src_py/config.py:1052",
+        "src_py/config.py:1910",
+        "src_py/config.py:1912",
+        "src_py/config.py:1915",
+        "src_py/config.py:2809",
+        "src_py/photometry_core.py:12712",
+        "src_py/photometry_core.py:12939",
+        "src_py/pipeline.py:227",
+        "src_py/pipeline.py:10764"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "err_empty_apertures_n",
+      "type_default": "int = 64",
+      "consumers": [
+        "src_py/config.py:1050",
+        "src_py/config.py:1903",
+        "src_py/config.py:1905",
+        "src_py/config.py:1908",
+        "src_py/config.py:2808",
+        "src_py/photometry_core.py:747",
+        "src_py/photometry_core.py:12711",
+        "src_py/photometry_core.py:12938",
+        "src_py/pipeline.py:226",
+        "src_py/pipeline.py:10763"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "exoplanet_match_max_sep_arcsec",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:604",
+        "src_py/config.py:1453",
+        "src_py/config.py:1456",
+        "src_py/config.py:1458",
+        "src_py/config.py:2432",
+        "src_py/config.py:2700",
+        "src_py/pipeline.py:4896",
+        "src_py/pipeline.py:5028",
+        "src_py/pipeline.py:8632",
+        "src_py/pipeline.py:11327",
+        "src_py/pipeline.py:11549"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "export_err_mode",
+      "type_default": "str = 'calibrated'",
+      "consumers": [
+        "src_py/config.py:956",
+        "src_py/config.py:2000",
+        "src_py/config.py:2001",
+        "src_py/config.py:2882",
+        "src_py/export_reports.py:1259",
+        "src_py/export_reports.py:1531",
+        "src_py/params_registry.py:78",
+        "src_py/photometry_core.py:10171",
+        "src_py/photometry_core.py:10207"
+      ],
+      "class": "LEGACY",
+      "proposal": "remove-key+dead-branch",
+      "risk": "legacy value model; calibrated (s, sigma_r); model = legacy quadrature",
+      "d2_evidence": "Default calibrated. model skips ERR-CALIB apply. Flip-only. Production LC export uses calibrated at default."
+    },
+    {
+      "key": "field_density_adaptive_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1102",
+        "src_py/config.py:2515",
+        "src_py/config.py:2516",
+        "src_py/config.py:2928",
+        "src_py/photometry_core.py:15859"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "field_density_dense_threshold",
+      "type_default": "float = 1000.0",
+      "consumers": [
+        "src_py/config.py:1101",
+        "src_py/config.py:2506",
+        "src_py/config.py:2507",
+        "src_py/config.py:2510",
+        "src_py/config.py:2511",
+        "src_py/config.py:2513",
+        "src_py/config.py:2927",
+        "src_py/photometry_core.py:15848"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "field_density_sparse_threshold",
+      "type_default": "float = 300.0",
+      "consumers": [
+        "src_py/config.py:1100",
+        "src_py/config.py:2499",
+        "src_py/config.py:2500",
+        "src_py/config.py:2503",
+        "src_py/config.py:2504",
+        "src_py/config.py:2512",
+        "src_py/config.py:2926",
+        "src_py/photometry_core.py:15847"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "forced_photometry_centroid_bound_fwhm",
+      "type_default": "float = 2.5",
+      "consumers": [
+        "src_py/config.py:1139",
+        "src_py/config.py:2583",
+        "src_py/config.py:2585",
+        "src_py/config.py:2586",
+        "src_py/config.py:2590",
+        "src_py/config.py:2592",
+        "src_py/config.py:2593",
+        "src_py/config.py:2595",
+        "src_py/config.py:2941",
+        "src_py/pipeline.py:10389",
+        "src_py/pipeline.py:11505",
+        "src_py/pipeline.py:11506"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "forced_photometry_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1137",
+        "src_py/config.py:2579",
+        "src_py/config.py:2580",
+        "src_py/config.py:2940",
+        "src_py/pipeline.py:10379",
+        "src_py/pipeline.py:11502",
+        "src_py/pipeline.py:11503"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "forced_photometry_margin_px",
+      "type_default": "float = 0.0",
+      "consumers": [
+        "src_py/config.py:1141",
+        "src_py/config.py:2597",
+        "src_py/config.py:2598",
+        "src_py/config.py:2601",
+        "src_py/config.py:2602",
+        "src_py/config.py:2603",
+        "src_py/config.py:2942",
+        "src_py/pipeline.py:10390",
+        "src_py/pipeline.py:11508",
+        "src_py/pipeline.py:11509"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "frame_align_residual_gate_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:1166",
+        "src_py/config.py:1569",
+        "src_py/config.py:1570",
+        "src_py/config.py:2724",
+        "src_py/photometry_core.py:8052",
+        "src_py/photometry_core.py:8299",
+        "src_py/ui_settings.py:752",
+        "src_py/ui_settings.py:753",
+        "src_py/ui_settings.py:754",
+        "src_py/ui_settings.py:1083"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "frame_align_residual_max_frac",
+      "type_default": "float = 0.25",
+      "consumers": [
+        "src_py/config.py:1163",
+        "src_py/config.py:1167",
+        "src_py/config.py:1573",
+        "src_py/config.py:1574",
+        "src_py/config.py:1577",
+        "src_py/config.py:2725",
+        "src_py/photometry_core.py:4135",
+        "src_py/photometry_core.py:8044",
+        "src_py/photometry_core.py:8057",
+        "src_py/photometry_core.py:8311",
+        "src_py/ui_settings.py:759",
+        "src_py/ui_settings.py:760",
+        "src_py/ui_settings.py:763",
+        "src_py/ui_settings.py:1084"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "frame_align_residual_min_keep_frames",
+      "type_default": "int = 10",
+      "consumers": [
+        "src_py/config.py:1168",
+        "src_py/config.py:1579",
+        "src_py/config.py:1583",
+        "src_py/config.py:1587",
+        "src_py/config.py:2726",
+        "src_py/photometry_core.py:8047",
+        "src_py/photometry_core.py:8062",
+        "src_py/photometry_core.py:8066",
+        "src_py/ui_settings.py:768",
+        "src_py/ui_settings.py:769",
+        "src_py/ui_settings.py:772",
+        "src_py/ui_settings.py:1085"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "gain_container_scale",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:952",
+        "src_py/config.py:1983",
+        "src_py/config.py:1984",
+        "src_py/config.py:1987",
+        "src_py/config.py:2880",
+        "src_py/photometry_core.py:8604"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "global_comp_pool_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1122",
+        "src_py/config.py:2544",
+        "src_py/config.py:2933",
+        "src_py/photometry_core.py:16257"
+      ],
+      "class": "LEGACY",
+      "proposal": "remove-key+dead-branch",
+      "risk": "legacy value False; COMP-POOL-01 (default True = production global pool)",
+      "d2_evidence": "Default True. False skips build_global_comp_pool and uses per-target masterstars. Flip-only; not data-conditioned. run_night_pipeline / Phase 0+1 takes True at default config."
+    },
+    {
+      "key": "gs11_comp_max_dilution",
+      "type_default": "float = 0.9",
+      "consumers": [
+        "src_py/config.py:1002",
+        "src_py/config.py:2388",
+        "src_py/config.py:2391",
+        "src_py/config.py:2392",
+        "src_py/config.py:2907",
+        "src_py/photometry_core.py:15407"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "gs11_comp_suspect_dilution",
+      "type_default": "float = 0.98",
+      "consumers": [
+        "src_py/config.py:1003",
+        "src_py/config.py:2389",
+        "src_py/config.py:2391",
+        "src_py/config.py:2392",
+        "src_py/config.py:2908"
+      ],
+      "class": "DEAD",
+      "proposal": "remove-key+dead-branch",
+      "risk": "config.py:1003 persist + clamp vs gs11_comp_max_dilution; production uses gs11_comp_max_dilution (photometry_core.py:15407)",
+      "d2_evidence": "zero src_py consumers outside config.py load/save; getattr scan negative"
+    },
+    {
+      "key": "gs11_dilution_aperture_arcsec",
+      "type_default": "float = 0.0",
+      "consumers": [
+        "src_py/config.py:1000",
+        "src_py/config.py:2386",
+        "src_py/config.py:2905",
+        "src_py/method_lc_output.py:166",
+        "src_py/photometry_core.py:6743",
+        "src_py/photometry_core.py:9829",
+        "src_py/photometry_core.py:13496",
+        "src_py/photometry_core.py:15349"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "gs11_dilution_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:233",
+        "src_py/config.py:999",
+        "src_py/config.py:2383",
+        "src_py/config.py:2384",
+        "src_py/config.py:2904",
+        "src_py/dilution.py:346",
+        "src_py/export_reports.py:398",
+        "src_py/method_lc_output.py:145",
+        "src_py/photometry_core.py:6741",
+        "src_py/photometry_core.py:9802",
+        "src_py/photometry_core.py:15346",
+        "src_py/photometry_report.py:544"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "gs11_dilution_mag_limit_delta",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:1001",
+        "src_py/config.py:2387",
+        "src_py/config.py:2906",
+        "src_py/method_lc_output.py:184",
+        "src_py/photometry_core.py:9880",
+        "src_py/photometry_core.py:13497",
+        "src_py/photometry_core.py:15384"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "gs11_target_min_dilution",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:1004",
+        "src_py/config.py:2390",
+        "src_py/config.py:2909",
+        "src_py/dilution.py:356",
+        "src_py/photometry_core.py:6742"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_color_bg_box_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:558",
+        "src_py/config.py:2621",
+        "src_py/config.py:2678",
+        "src_py/unit_resolver.py:231"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "preferred unit; unused at default (None). Fallback hrd_color_bg_box_px is live. Set this and drop px, or keep both?",
+      "d2_evidence": "Default None. MODE unused at default."
+    },
+    {
+      "key": "hrd_color_bg_box_px",
+      "type_default": "int = 96",
+      "consumers": [
+        "src_py/config.py:556",
+        "src_py/config.py:557",
+        "src_py/config.py:1317",
+        "src_py/config.py:1318",
+        "src_py/config.py:1321",
+        "src_py/config.py:1322",
+        "src_py/config.py:2677",
+        "src_py/hrd_colorfield.py:385",
+        "src_py/unit_resolver.py:229",
+        "src_py/unit_resolver.py:232",
+        "src_py/unit_resolver.py:234"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "px path is the default production path; preferred hrd_color_bg_box_arcsec is None. Is px still wanted as default, or should the preferred unit be set?",
+      "d2_evidence": "Default px=96, arcsec=None. unit_resolver.hrd_color_bg_box_px takes px at default. MODE."
+    },
+    {
+      "key": "hrd_color_chroma_boost",
+      "type_default": "float = 2.2",
+      "consumers": [
+        "src_py/config.py:554",
+        "src_py/config.py:1310",
+        "src_py/config.py:1311",
+        "src_py/config.py:1314",
+        "src_py/config.py:1315",
+        "src_py/config.py:2676",
+        "src_py/hrd_colorfield.py:375"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_color_chroma_snr",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:550",
+        "src_py/config.py:1301",
+        "src_py/config.py:1302",
+        "src_py/config.py:1305",
+        "src_py/config.py:1306",
+        "src_py/config.py:2674",
+        "src_py/hrd_colorfield.py:395"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_color_field_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:544",
+        "src_py/config.py:1288",
+        "src_py/config.py:1289",
+        "src_py/config.py:2671",
+        "src_py/hrd_colorfield.py:425",
+        "src_py/hrd_colorfield.py:428",
+        "src_py/hrd_colorfield.py:678",
+        "src_py/ui_hrd.py:289",
+        "src_py/ui_hrd.py:291"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "hrd_color_highlight_mode",
+      "type_default": "str = 'soft'",
+      "consumers": [
+        "src_py/config.py:548",
+        "src_py/config.py:1298",
+        "src_py/config.py:1299",
+        "src_py/config.py:2673",
+        "src_py/hrd_colorfield.py:405",
+        "src_py/hrd_colorfield.py:409",
+        "src_py/params_registry.py:79"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_color_saturation",
+      "type_default": "float = 0.85",
+      "consumers": [
+        "src_py/config.py:546",
+        "src_py/config.py:1292",
+        "src_py/config.py:1293",
+        "src_py/config.py:1296",
+        "src_py/config.py:1297",
+        "src_py/config.py:2672",
+        "src_py/hrd_colorfield.py:364"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_color_white_point",
+      "type_default": "str = 'field_median'",
+      "consumers": [
+        "src_py/config.py:552",
+        "src_py/config.py:1307",
+        "src_py/config.py:1308",
+        "src_py/config.py:2675",
+        "src_py/hrd_colorfield.py:417",
+        "src_py/hrd_colorfield.py:421",
+        "src_py/params_registry.py:80"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_dsc_confirm_prob",
+      "type_default": "float = 0.9",
+      "consumers": [
+        "src_py/config.py:542",
+        "src_py/config.py:1282",
+        "src_py/config.py:1283",
+        "src_py/config.py:1286",
+        "src_py/config.py:1287",
+        "src_py/config.py:2670",
+        "src_py/hrd_analysis.py:135"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_enrich_max_candidates",
+      "type_default": "int = 20",
+      "consumers": [
+        "src_py/config.py:528",
+        "src_py/config.py:1239",
+        "src_py/config.py:1240",
+        "src_py/config.py:1243",
+        "src_py/config.py:1244",
+        "src_py/config.py:2663",
+        "src_py/hrd_analysis.py:1047"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_enrich_tap_timeout_s",
+      "type_default": "float = 20.0",
+      "consumers": [
+        "src_py/config.py:530",
+        "src_py/config.py:1246",
+        "src_py/config.py:1247",
+        "src_py/config.py:1250",
+        "src_py/config.py:1251",
+        "src_py/config.py:2664",
+        "src_py/hrd_analysis.py:1079"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_max_per_category",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:536",
+        "src_py/config.py:1267",
+        "src_py/config.py:1268",
+        "src_py/config.py:1271",
+        "src_py/config.py:1272",
+        "src_py/config.py:2667",
+        "src_py/hrd_analysis.py:1052"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_min_per_net",
+      "type_default": "int = 4",
+      "consumers": [
+        "src_py/config.py:538",
+        "src_py/config.py:1274",
+        "src_py/config.py:1276",
+        "src_py/config.py:1277",
+        "src_py/config.py:2668",
+        "src_py/hrd_analysis.py:1057"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_nss_category_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:540",
+        "src_py/config.py:1278",
+        "src_py/config.py:1279",
+        "src_py/config.py:2669",
+        "src_py/hrd_analysis.py:51",
+        "src_py/hrd_analysis.py:55",
+        "src_py/hrd_analysis.py:1064",
+        "src_py/photometry_report.py:4910",
+        "src_py/ui_hrd.py:274"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "hrd_online_enrich_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/citations.py:254",
+        "src_py/config.py:524",
+        "src_py/config.py:1232",
+        "src_py/config.py:1233",
+        "src_py/config.py:2661",
+        "src_py/hrd_analysis.py:1061"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "hrd_parallax_min_mas",
+      "type_default": "float = 0.15",
+      "consumers": [
+        "src_py/config.py:532",
+        "src_py/config.py:1253",
+        "src_py/config.py:1254",
+        "src_py/config.py:1257",
+        "src_py/config.py:1258",
+        "src_py/config.py:2665",
+        "src_py/hrd_analysis.py:64"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_parallax_snr_min",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:534",
+        "src_py/config.py:1260",
+        "src_py/config.py:1261",
+        "src_py/config.py:1264",
+        "src_py/config.py:1265",
+        "src_py/config.py:2666",
+        "src_py/hrd_analysis.py:68"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "hrd_simbad_enrich_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:526",
+        "src_py/config.py:1235",
+        "src_py/config.py:1236",
+        "src_py/config.py:2662",
+        "src_py/hrd_analysis.py:1062"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "k2_ceiling",
+      "type_default": "float = 0.1",
+      "consumers": [
+        "src_py/config.py:958",
+        "src_py/config.py:2004",
+        "src_py/config.py:2006",
+        "src_py/config.py:2883",
+        "src_py/k2_extinction.py:484",
+        "src_py/k2_extinction.py:530",
+        "src_py/k2_extinction.py:557",
+        "src_py/k2_extinction.py:719",
+        "src_py/k2_extinction.py:850",
+        "src_py/k2_extinction.py:859"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "k2_defaults_bprp",
+      "type_default": "dict[str, float] = {}",
+      "consumers": [
+        "src_py/config.py:948",
+        "src_py/config.py:1960",
+        "src_py/config.py:1970",
+        "src_py/config.py:2878",
+        "src_py/k2_extinction.py:168"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "k2_fit_consistency_sigma",
+      "type_default": "float = 2.0",
+      "consumers": [
+        "src_py/config.py:962",
+        "src_py/config.py:2014",
+        "src_py/config.py:2015",
+        "src_py/config.py:2018",
+        "src_py/config.py:2886",
+        "src_py/k2_extinction.py:486",
+        "src_py/k2_extinction.py:498",
+        "src_py/k2_extinction.py:505",
+        "src_py/k2_extinction.py:559",
+        "src_py/k2_extinction.py:721",
+        "src_py/k2_extinction.py:861"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "k2_fit_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:960",
+        "src_py/config.py:2002",
+        "src_py/config.py:2884",
+        "src_py/k2_extinction.py:8",
+        "src_py/k2_extinction.py:186",
+        "src_py/k2_extinction.py:187",
+        "src_py/k2_extinction.py:203",
+        "src_py/k2_extinction.py:205",
+        "src_py/photometry_core.py:7415",
+        "src_py/photometry_core.py:8888",
+        "src_py/photometry_core.py:8891",
+        "src_py/photometry_core.py:11429"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "k2_fit_lit_factor",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:963",
+        "src_py/config.py:2020",
+        "src_py/config.py:2022",
+        "src_py/config.py:2887",
+        "src_py/k2_extinction.py:487",
+        "src_py/k2_extinction.py:537",
+        "src_py/k2_extinction.py:560",
+        "src_py/k2_extinction.py:722",
+        "src_py/k2_extinction.py:862"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "k2_fit_min_detectability",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:961",
+        "src_py/config.py:2008",
+        "src_py/config.py:2009",
+        "src_py/config.py:2012",
+        "src_py/config.py:2885",
+        "src_py/k2_extinction.py:485",
+        "src_py/k2_extinction.py:494",
+        "src_py/k2_extinction.py:558",
+        "src_py/k2_extinction.py:720",
+        "src_py/k2_extinction.py:860"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "k2_mode",
+      "type_default": "str = 'literature'",
+      "consumers": [
+        "src_py/citations.py:165",
+        "src_py/citations.py:252",
+        "src_py/citations.py:263",
+        "src_py/citations.py:299",
+        "src_py/citations.py:312",
+        "src_py/citations.py:335",
+        "src_py/citations.py:340",
+        "src_py/citations.py:341",
+        "src_py/citations.py:346",
+        "src_py/config.py:946",
+        "src_py/config.py:1953",
+        "src_py/config.py:1955",
+        "src_py/config.py:1957",
+        "src_py/config.py:1959",
+        "src_py/config.py:2877",
+        "src_py/k2_extinction.py:144",
+        "src_py/params_registry.py:76",
+        "src_py/ui_settings.py:629",
+        "src_py/ui_settings.py:632",
+        "src_py/ui_settings.py:633",
+        "src_py/ui_settings.py:1073"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "lc_quality_min_frames",
+      "type_default": "int = 20",
+      "consumers": [
+        "src_py/config.py:623",
+        "src_py/config.py:2400",
+        "src_py/config.py:2403",
+        "src_py/config.py:2404",
+        "src_py/config.py:2733",
+        "src_py/photometry_core.py:6824",
+        "src_py/ui_settings.py:707",
+        "src_py/ui_settings.py:710",
+        "src_py/ui_settings.py:743",
+        "src_py/ui_settings.py:1076",
+        "src_py/ui_settings.py:1077"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "lc_quality_min_normal_frac",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:625",
+        "src_py/config.py:2402",
+        "src_py/config.py:2735",
+        "src_py/photometry_core.py:6826",
+        "src_py/ui_settings.py:721",
+        "src_py/ui_settings.py:724",
+        "src_py/ui_settings.py:1078"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "lc_quality_short_min_frames",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:624",
+        "src_py/config.py:2401",
+        "src_py/config.py:2403",
+        "src_py/config.py:2404",
+        "src_py/config.py:2734",
+        "src_py/photometry_core.py:6825",
+        "src_py/ui_settings.py:714",
+        "src_py/ui_settings.py:717",
+        "src_py/ui_settings.py:743",
+        "src_py/ui_settings.py:1075",
+        "src_py/ui_settings.py:1076",
+        "src_py/ui_settings.py:1077"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterdark_validity_days",
+      "type_default": "int = 90",
+      "consumers": [
+        "src_py/app.py:238",
+        "src_py/app.py:1526",
+        "src_py/app.py:1767",
+        "src_py/app.py:2452",
+        "src_py/config.py:505",
+        "src_py/config.py:1200",
+        "src_py/config.py:2650",
+        "src_py/importer.py:1145",
+        "src_py/importer.py:1338",
+        "src_py/importer.py:1428",
+        "src_py/importer.py:1474",
+        "src_py/night_run.py:56",
+        "src_py/night_run.py:1354",
+        "src_py/night_run.py:1355",
+        "src_py/night_run.py:1356",
+        "src_py/night_run.py:1370",
+        "src_py/night_run.py:1395",
+        "src_py/ui_settings.py:360",
+        "src_py/ui_settings.py:363",
+        "src_py/ui_settings.py:367",
+        "src_py/ui_settings.py:1044"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterflat_validity_days",
+      "type_default": "int = 200",
+      "consumers": [
+        "src_py/app.py:239",
+        "src_py/app.py:1527",
+        "src_py/app.py:1768",
+        "src_py/app.py:2453",
+        "src_py/config.py:506",
+        "src_py/config.py:1201",
+        "src_py/config.py:2651",
+        "src_py/importer.py:1146",
+        "src_py/importer.py:1306",
+        "src_py/importer.py:1428",
+        "src_py/night_run.py:57",
+        "src_py/night_run.py:1359",
+        "src_py/night_run.py:1360",
+        "src_py/night_run.py:1361",
+        "src_py/night_run.py:1371",
+        "src_py/night_run.py:1396",
+        "src_py/ui_settings.py:373",
+        "src_py/ui_settings.py:376",
+        "src_py/ui_settings.py:380",
+        "src_py/ui_settings.py:1045"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_accept_mode",
+      "type_default": "str = 'odds'",
+      "consumers": [
+        "src_py/config.py:832",
+        "src_py/config.py:2217",
+        "src_py/config.py:2218",
+        "src_py/config.py:2834",
+        "src_py/params_registry.py:83",
+        "src_py/ui_dao_stars.py:147",
+        "src_py/vyvar_platesolver.py:3711",
+        "src_py/vyvar_platesolver.py:3733",
+        "src_py/vyvar_platesolver.py:3749"
+      ],
+      "class": "LEGACY",
+      "proposal": "remove-key+dead-branch",
+      "risk": "legacy value fraction; odds (Bayesian); fraction = legacy",
+      "d2_evidence": "Default odds. fraction is flip-only in _masterstar_solve_acceptance. Production MASTERSTAR solve uses odds at default."
+    },
+    {
+      "key": "masterstar_best_of_n",
+      "type_default": "int = 10",
+      "consumers": [
+        "src_py/config.py:1055",
+        "src_py/config.py:1917",
+        "src_py/config.py:1919",
+        "src_py/config.py:1922",
+        "src_py/config.py:2810",
+        "src_py/pipeline.py:12327"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_catalog_recovery_min",
+      "type_default": "float = 0.65",
+      "consumers": [
+        "src_py/config.py:821",
+        "src_py/config.py:2173",
+        "src_py/config.py:2174",
+        "src_py/config.py:2176",
+        "src_py/config.py:2177",
+        "src_py/config.py:2179",
+        "src_py/config.py:2180",
+        "src_py/config.py:2181",
+        "src_py/config.py:2827",
+        "src_py/ui_dao_stars.py:149",
+        "src_py/ui_dao_stars.py:154",
+        "src_py/ui_dao_stars.py:190",
+        "src_py/ui_dao_stars.py:347",
+        "src_py/vyvar_platesolver.py:3576",
+        "src_py/vyvar_platesolver.py:3756"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_centre_rms_max_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:827",
+        "src_py/config.py:2622",
+        "src_py/config.py:2830",
+        "src_py/unit_resolver.py:241"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "preferred unit; unused at default (None). Fallback masterstar_centre_rms_max_px is live. Set this and drop px, or keep both?",
+      "d2_evidence": "Default None. MODE unused at default."
+    },
+    {
+      "key": "masterstar_centre_rms_max_px",
+      "type_default": "float = 1.2",
+      "consumers": [
+        "src_py/config.py:825",
+        "src_py/config.py:826",
+        "src_py/config.py:2193",
+        "src_py/config.py:2194",
+        "src_py/config.py:2196",
+        "src_py/config.py:2197",
+        "src_py/config.py:2199",
+        "src_py/config.py:2200",
+        "src_py/config.py:2201",
+        "src_py/config.py:2829",
+        "src_py/ui_dao_stars.py:151",
+        "src_py/ui_dao_stars.py:172",
+        "src_py/ui_dao_stars.py:349",
+        "src_py/unit_resolver.py:239",
+        "src_py/unit_resolver.py:242",
+        "src_py/unit_resolver.py:244",
+        "src_py/vyvar_platesolver.py:36",
+        "src_py/vyvar_platesolver.py:3758"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "px path is the default production path; preferred masterstar_centre_rms_max_arcsec is None. Is px still wanted as default, or should the preferred unit be set?",
+      "d2_evidence": "Default px=1.20, arcsec=None. unit_resolver.masterstar_centre_rms_max_px takes px at default. MODE."
+    },
+    {
+      "key": "masterstar_dao_centroid_qa_cap_px",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:813",
+        "src_py/dao_gaia_calibration.py:1061",
+        "src_py/pipeline.py:8843"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_centroid_qa_floor_px",
+      "type_default": "float = 1.0",
+      "consumers": [
+        "src_py/config.py:812",
+        "src_py/dao_gaia_calibration.py:1060",
+        "src_py/pipeline.py:8842"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_empty_sky_false_accept_max",
+      "type_default": "float = 0.01",
+      "consumers": [
+        "src_py/config.py:815",
+        "src_py/dao_gaia_calibration.py:1062"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_empty_sky_target_n",
+      "type_default": "int = 2200",
+      "consumers": [
+        "src_py/config.py:816",
+        "src_py/dao_gaia_calibration.py:1063"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_match_radius_k",
+      "type_default": "float = 1.7",
+      "consumers": [
+        "src_py/config.py:810",
+        "src_py/dao_gaia_calibration.py:1059",
+        "src_py/pipeline.py:8841"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_pass1_dedup_px",
+      "type_default": "float = 0.75",
+      "consumers": [
+        "src_py/config.py:794",
+        "src_py/pipeline.py:8786"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_pass2_center_tol_px",
+      "type_default": "float = 2.0",
+      "consumers": [
+        "src_py/config.py:792",
+        "src_py/dao_gaia_calibration.py:131",
+        "src_py/dao_gaia_calibration.py:1133",
+        "src_py/pipeline.py:7944"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_pass2_sigma",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:790",
+        "src_py/pipeline.py:7940",
+        "src_py/pipeline.py:8792",
+        "src_py/pipeline.py:13536"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_dao_threshold_sigma",
+      "type_default": "float = 4.5",
+      "consumers": [
+        "src_py/config.py:778",
+        "src_py/config.py:779",
+        "src_py/config.py:2135",
+        "src_py/config.py:2136",
+        "src_py/config.py:2139",
+        "src_py/config.py:2140",
+        "src_py/config.py:2822",
+        "src_py/pipeline.py:8753",
+        "src_py/pipeline.py:9380",
+        "src_py/pipeline.py:12453",
+        "src_py/pipeline.py:12461",
+        "src_py/pipeline.py:13535",
+        "src_py/pipeline.py:14652",
+        "src_py/pipeline.py:14820",
+        "src_py/ui_dao_stars.py:74",
+        "src_py/ui_dao_stars.py:93",
+        "src_py/ui_dao_stars.py:122",
+        "src_py/ui_dao_stars.py:131",
+        "src_py/ui_dao_stars.py:286",
+        "src_py/ui_dao_stars.py:294",
+        "src_py/ui_dao_stars.py:341",
+        "src_py/ui_dao_stars.py:365",
+        "src_py/vyvar_platesolver.py:6386"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_detection_cap_adaptive",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:839",
+        "src_py/config.py:2231",
+        "src_py/config.py:2232",
+        "src_py/config.py:2836",
+        "src_py/vyvar_platesolver.py:4879"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "masterstar_detection_cap_k",
+      "type_default": "float = 0.08",
+      "consumers": [
+        "src_py/config.py:842",
+        "src_py/config.py:2252",
+        "src_py/config.py:2253",
+        "src_py/config.py:2255",
+        "src_py/config.py:2256",
+        "src_py/config.py:2258",
+        "src_py/config.py:2259",
+        "src_py/config.py:2839",
+        "src_py/vyvar_platesolver.py:4882"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_detection_cap_max",
+      "type_default": "int = 800",
+      "consumers": [
+        "src_py/config.py:841",
+        "src_py/config.py:2242",
+        "src_py/config.py:2243",
+        "src_py/config.py:2246",
+        "src_py/config.py:2247",
+        "src_py/config.py:2249",
+        "src_py/config.py:2838",
+        "src_py/vyvar_platesolver.py:4881"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_detection_cap_min",
+      "type_default": "int = 250",
+      "consumers": [
+        "src_py/config.py:840",
+        "src_py/config.py:2235",
+        "src_py/config.py:2236",
+        "src_py/config.py:2239",
+        "src_py/config.py:2240",
+        "src_py/config.py:2248",
+        "src_py/config.py:2837",
+        "src_py/vyvar_platesolver.py:4880"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_distortion_benign_ratio_max",
+      "type_default": "float = 3.2",
+      "consumers": [
+        "src_py/config.py:829",
+        "src_py/config.py:2204",
+        "src_py/config.py:2206",
+        "src_py/config.py:2207",
+        "src_py/config.py:2210",
+        "src_py/config.py:2211",
+        "src_py/config.py:2213",
+        "src_py/config.py:2214",
+        "src_py/config.py:2215",
+        "src_py/config.py:2831",
+        "src_py/config.py:2832",
+        "src_py/ui_dao_stars.py:152",
+        "src_py/ui_dao_stars.py:181",
+        "src_py/ui_dao_stars.py:350",
+        "src_py/vyvar_platesolver.py:3570"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_forced_seed_centroid_max_px",
+      "type_default": "float = 2.0",
+      "consumers": [
+        "src_py/config.py:798",
+        "src_py/masterstar_gaia_accounting.py:1178"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_forced_seed_comp_pool_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:808",
+        "src_py/pipeline.py:6057"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "masterstar_forced_seed_snr_min",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:800",
+        "src_py/masterstar_gaia_accounting.py:1181",
+        "src_py/pipeline.py:13537"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_gaia_census_edge_margin_px",
+      "type_default": "float = 10.0",
+      "consumers": [
+        "src_py/config.py:806",
+        "src_py/dao_gaia_stage_01_iter2.py:70",
+        "src_py/masterstar_gaia_accounting.py:1183",
+        "src_py/pipeline.py:8800",
+        "src_py/pipeline.py:13539"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_gaia_census_target_depth_g",
+      "type_default": "float = 15.0",
+      "consumers": [
+        "src_py/config.py:796",
+        "src_py/pipeline.py:8796",
+        "src_py/pipeline.py:13406",
+        "src_py/pipeline.py:13493",
+        "src_py/ui_masterstar_qa.py:562"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_lock_leftover_radius_px",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:802",
+        "src_py/dao_gaia_calibration.py:132",
+        "src_py/masterstar_gaia_accounting.py:1115"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_lock_pair_tol_px",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:804",
+        "src_py/dao_gaia_calibration.py:130",
+        "src_py/dao_gaia_calibration.py:1069",
+        "src_py/masterstar_gaia_accounting.py:1122"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_min_matched_floor",
+      "type_default": "int = 40",
+      "consumers": [
+        "src_py/config.py:823",
+        "src_py/config.py:2184",
+        "src_py/config.py:2185",
+        "src_py/config.py:2188",
+        "src_py/config.py:2189",
+        "src_py/config.py:2190",
+        "src_py/config.py:2828",
+        "src_py/ui_dao_stars.py:150",
+        "src_py/ui_dao_stars.py:163",
+        "src_py/ui_dao_stars.py:348",
+        "src_py/vyvar_platesolver.py:3581",
+        "src_py/vyvar_platesolver.py:3757"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_platesolve_sip_max_order",
+      "type_default": "int = 4",
+      "consumers": [
+        "src_py/config.py:774",
+        "src_py/config.py:2119",
+        "src_py/config.py:2120",
+        "src_py/config.py:2123",
+        "src_py/config.py:2124",
+        "src_py/config.py:2132",
+        "src_py/config.py:2133",
+        "src_py/config.py:2820",
+        "src_py/pipeline.py:12473",
+        "src_py/ui_dao_stars.py:307",
+        "src_py/ui_dao_stars.py:312",
+        "src_py/ui_dao_stars.py:325",
+        "src_py/ui_dao_stars.py:345",
+        "src_py/ui_dao_stars.py:366"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_platesolve_sip_min_order",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:773",
+        "src_py/config.py:776",
+        "src_py/config.py:2126",
+        "src_py/config.py:2127",
+        "src_py/config.py:2130",
+        "src_py/config.py:2131",
+        "src_py/config.py:2132",
+        "src_py/config.py:2133",
+        "src_py/config.py:2821",
+        "src_py/pipeline.py:12478",
+        "src_py/ui_dao_stars.py:308",
+        "src_py/ui_dao_stars.py:319",
+        "src_py/ui_dao_stars.py:346",
+        "src_py/ui_dao_stars.py:366"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_prematch_peak_sigma_floor",
+      "type_default": "float = 1.8",
+      "consumers": [
+        "src_py/config.py:786",
+        "src_py/config.py:2161",
+        "src_py/config.py:2162",
+        "src_py/config.py:2165",
+        "src_py/config.py:2166",
+        "src_py/config.py:2826",
+        "src_py/pipeline.py:13069",
+        "src_py/ui_dao_stars.py:75",
+        "src_py/ui_dao_stars.py:92",
+        "src_py/ui_dao_stars.py:101",
+        "src_py/ui_dao_stars.py:110",
+        "src_py/ui_dao_stars.py:287",
+        "src_py/ui_dao_stars.py:295",
+        "src_py/ui_dao_stars.py:340",
+        "src_py/ui_dao_stars.py:364"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_quality_crowded_n_cat_min",
+      "type_default": "int = 800",
+      "consumers": [
+        "src_py/config.py:837",
+        "src_py/config.py:2223",
+        "src_py/config.py:2224",
+        "src_py/config.py:2227",
+        "src_py/config.py:2228",
+        "src_py/config.py:2229",
+        "src_py/config.py:2835",
+        "src_py/vyvar_platesolver.py:3743"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_sibling_min_matched",
+      "type_default": "int = 40",
+      "consumers": [
+        "src_py/config.py:847",
+        "src_py/config.py:2264",
+        "src_py/config.py:2265",
+        "src_py/config.py:2268",
+        "src_py/config.py:2269",
+        "src_py/config.py:2270",
+        "src_py/config.py:2841",
+        "src_py/ui_dao_stars.py:202",
+        "src_py/ui_dao_stars.py:213",
+        "src_py/ui_dao_stars.py:352",
+        "src_py/vyvar_platesolver.py:5798"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_sibling_min_quadrants",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:853",
+        "src_py/config.py:2284",
+        "src_py/config.py:2285",
+        "src_py/config.py:2288",
+        "src_py/config.py:2289",
+        "src_py/config.py:2290",
+        "src_py/config.py:2844",
+        "src_py/ui_dao_stars.py:204",
+        "src_py/ui_dao_stars.py:229",
+        "src_py/ui_dao_stars.py:354",
+        "src_py/vyvar_platesolver.py:5806"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_sibling_recovery_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:845",
+        "src_py/config.py:2260",
+        "src_py/config.py:2261",
+        "src_py/config.py:2840",
+        "src_py/pipeline.py:14517",
+        "src_py/ui_dao_stars.py:201",
+        "src_py/ui_dao_stars.py:207",
+        "src_py/ui_dao_stars.py:351"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "masterstar_sibling_rms_max_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:851",
+        "src_py/config.py:2623",
+        "src_py/config.py:2843",
+        "src_py/unit_resolver.py:250"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_sibling_rms_max_px",
+      "type_default": "float = 2.0",
+      "consumers": [
+        "src_py/config.py:849",
+        "src_py/config.py:850",
+        "src_py/config.py:2273",
+        "src_py/config.py:2274",
+        "src_py/config.py:2276",
+        "src_py/config.py:2277",
+        "src_py/config.py:2279",
+        "src_py/config.py:2280",
+        "src_py/config.py:2281",
+        "src_py/config.py:2842",
+        "src_py/ui_dao_stars.py:203",
+        "src_py/ui_dao_stars.py:221",
+        "src_py/ui_dao_stars.py:353",
+        "src_py/unit_resolver.py:248",
+        "src_py/unit_resolver.py:251",
+        "src_py/unit_resolver.py:253",
+        "src_py/vyvar_platesolver.py:37"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_sibling_stack_n",
+      "type_default": "int = 10",
+      "consumers": [
+        "src_py/config.py:855",
+        "src_py/config.py:2293",
+        "src_py/config.py:2294",
+        "src_py/config.py:2297",
+        "src_py/config.py:2298",
+        "src_py/config.py:2845",
+        "src_py/ui_dao_stars.py:205",
+        "src_py/ui_dao_stars.py:237",
+        "src_py/ui_dao_stars.py:355",
+        "src_py/vyvar_platesolver.py:5811"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "masterstar_use_best_frame_fwhm",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:788",
+        "src_py/pipeline.py:12973"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "neighbor_sub_centroid_max_fwhm",
+      "type_default": "float = 1.0",
+      "consumers": [
+        "src_py/config.py:694",
+        "src_py/config.py:1699",
+        "src_py/config.py:2763",
+        "src_py/psf_neighbor_sub.py:295"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_chi2_max",
+      "type_default": "float = 120.0",
+      "consumers": [
+        "src_py/config.py:688",
+        "src_py/config.py:1696",
+        "src_py/config.py:2760",
+        "src_py/psf_neighbor_sub.py:324"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_max_neighbor_overmag",
+      "type_default": "float = 0.3",
+      "consumers": [
+        "src_py/config.py:698",
+        "src_py/config.py:1701",
+        "src_py/config.py:2765",
+        "src_py/psf_neighbor_sub.py:336"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_max_target_undermag",
+      "type_default": "float = 0.2",
+      "consumers": [
+        "src_py/config.py:700",
+        "src_py/config.py:1702",
+        "src_py/config.py:2766",
+        "src_py/psf_neighbor_sub.py:337"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_min_recovered_snr",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:702",
+        "src_py/config.py:1703",
+        "src_py/config.py:2767",
+        "src_py/psf_neighbor_sub.py:338"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_nn_contam_dmag",
+      "type_default": "float = 2.5",
+      "consumers": [
+        "src_py/config.py:696",
+        "src_py/config.py:1700",
+        "src_py/config.py:2764",
+        "src_py/psf_neighbor_sub.py:217"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_refuse_sep_fwhm",
+      "type_default": "float = 0.8",
+      "consumers": [
+        "src_py/config.py:692",
+        "src_py/config.py:1698",
+        "src_py/config.py:2762",
+        "src_py/psf_neighbor_sub.py:253"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_regime_dmag_min",
+      "type_default": "float = 2.5",
+      "consumers": [
+        "src_py/config.py:704",
+        "src_py/config.py:1704",
+        "src_py/config.py:2768",
+        "src_py/psf_neighbor_sub.py:270"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_regime_sep_max",
+      "type_default": "float = 1.1",
+      "consumers": [
+        "src_py/config.py:705",
+        "src_py/config.py:1705",
+        "src_py/config.py:2769",
+        "src_py/psf_neighbor_sub.py:271"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "neighbor_sub_residual_rms_max",
+      "type_default": "float = 150.0",
+      "consumers": [
+        "src_py/config.py:690",
+        "src_py/config.py:1697",
+        "src_py/config.py:2761",
+        "src_py/psf_neighbor_sub.py:325"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "nonlinearity_fwhm_ratio",
+      "type_default": "float = 1.25",
+      "consumers": [
+        "src_py/config.py:762",
+        "src_py/config.py:2105",
+        "src_py/config.py:2107",
+        "src_py/config.py:2108",
+        "src_py/config.py:2818",
+        "src_py/photometry_core.py:12704",
+        "src_py/photometry_core.py:13085",
+        "src_py/pipeline.py:219",
+        "src_py/pipeline.py:10738",
+        "src_py/pipeline.py:11531",
+        "src_py/pipeline.py:14210",
+        "src_py/ui_settings.py:691",
+        "src_py/ui_settings.py:694",
+        "src_py/ui_settings.py:698",
+        "src_py/ui_settings.py:1066"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "nonlinearity_peak_percentile",
+      "type_default": "float = 20.0",
+      "consumers": [
+        "src_py/config.py:761",
+        "src_py/config.py:2098",
+        "src_py/config.py:2099",
+        "src_py/config.py:2102",
+        "src_py/config.py:2103",
+        "src_py/config.py:2817",
+        "src_py/photometry_core.py:12703",
+        "src_py/photometry_core.py:13082",
+        "src_py/pipeline.py:218",
+        "src_py/pipeline.py:10737",
+        "src_py/pipeline.py:11530",
+        "src_py/pipeline.py:14203",
+        "src_py/ui_settings.py:684",
+        "src_py/ui_settings.py:687",
+        "src_py/ui_settings.py:698",
+        "src_py/ui_settings.py:1065"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "osc_channel_binning",
+      "type_default": "int = 2",
+      "consumers": [
+        "src_py/citations.py:169",
+        "src_py/citations.py:271",
+        "src_py/citations.py:303",
+        "src_py/citations.py:549",
+        "src_py/config.py:735",
+        "src_py/config.py:1747",
+        "src_py/config.py:1748",
+        "src_py/config.py:1750",
+        "src_py/config.py:2779",
+        "src_py/export_reports.py:580",
+        "src_py/export_reports.py:585",
+        "src_py/osc_extract.py:5",
+        "src_py/osc_extract.py:178",
+        "src_py/params_registry.py:53",
+        "src_py/params_registry.py:56",
+        "src_py/params_registry.py:65",
+        "src_py/pipeline.py:18151"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "per_frame_mp_reserve_ram_gb",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:863",
+        "src_py/config.py:1467",
+        "src_py/config.py:1468",
+        "src_py/config.py:1470",
+        "src_py/config.py:1471",
+        "src_py/config.py:1473",
+        "src_py/config.py:1476",
+        "src_py/config.py:2702",
+        "src_py/pipeline.py:10693",
+        "src_py/pipeline.py:11121",
+        "src_py/pipeline.py:17897"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "per_frame_sat_min_clean_frac",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:1036",
+        "src_py/config.py:1040",
+        "src_py/config.py:1881",
+        "src_py/config.py:1882",
+        "src_py/config.py:1886",
+        "src_py/config.py:1887",
+        "src_py/config.py:1888",
+        "src_py/config.py:2806",
+        "src_py/invariants_runtime.py:91",
+        "src_py/photometry_core.py:6475",
+        "src_py/photometry_core.py:8467"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "per_frame_saturation_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:257",
+        "src_py/config.py:1037",
+        "src_py/config.py:1039",
+        "src_py/config.py:1877",
+        "src_py/config.py:1878",
+        "src_py/config.py:2805",
+        "src_py/invariants_runtime.py:663",
+        "src_py/invariants_runtime.py:667",
+        "src_py/invariants_runtime.py:683",
+        "src_py/photometry_core.py:8466",
+        "src_py/photometry_core.py:9188",
+        "src_py/photometry_core.py:11426"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "phase01_chip_interior_margin_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1077",
+        "src_py/config.py:2624",
+        "src_py/config.py:2911",
+        "src_py/photometry_core.py:5628",
+        "src_py/unit_resolver.py:259"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_chip_interior_margin_px",
+      "type_default": "int = 50",
+      "consumers": [
+        "src_py/config.py:1075",
+        "src_py/config.py:1076",
+        "src_py/config.py:2446",
+        "src_py/config.py:2451",
+        "src_py/config.py:2453",
+        "src_py/config.py:2910",
+        "src_py/photometry_core.py:60",
+        "src_py/photometry_core.py:5629",
+        "src_py/photometry_core.py:5634",
+        "src_py/ui_settings.py:1009",
+        "src_py/ui_settings.py:1012",
+        "src_py/ui_settings.py:1016",
+        "src_py/ui_settings.py:1115",
+        "src_py/ui_variability.py:433",
+        "src_py/unit_resolver.py:257",
+        "src_py/unit_resolver.py:260",
+        "src_py/unit_resolver.py:262"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_exclude_gaia_extobj",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:908",
+        "src_py/config.py:2418",
+        "src_py/config.py:2419",
+        "src_py/config.py:2870",
+        "src_py/photometry_core.py:14590",
+        "src_py/photometry_core.py:17119",
+        "src_py/ui_settings.py:999",
+        "src_py/ui_settings.py:1000",
+        "src_py/ui_settings.py:1114"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "phase01_comparison_exclude_gaia_nss",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:907",
+        "src_py/config.py:2415",
+        "src_py/config.py:2416",
+        "src_py/config.py:2869",
+        "src_py/photometry_core.py:14588",
+        "src_py/photometry_core.py:17118",
+        "src_py/ui_settings.py:995",
+        "src_py/ui_settings.py:996",
+        "src_py/ui_settings.py:1113"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "phase01_comparison_fov_fraction",
+      "type_default": "float = 0.75",
+      "consumers": [
+        "src_py/config.py:892",
+        "src_py/photometry_core.py:17098"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_isolation_radius_arcsec",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1067",
+        "src_py/config.py:2625",
+        "src_py/config.py:2814",
+        "src_py/unit_resolver.py:272"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_isolation_radius_px",
+      "type_default": "float = 25.0",
+      "consumers": [
+        "src_py/config.py:1065",
+        "src_py/config.py:1066",
+        "src_py/config.py:2435",
+        "src_py/config.py:2813",
+        "src_py/photometry_core.py:61",
+        "src_py/unit_resolver.py:266",
+        "src_py/unit_resolver.py:273",
+        "src_py/unit_resolver.py:275"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_mag_bright_threshold",
+      "type_default": "float = 12.75",
+      "consumers": [
+        "src_py/config.py:886",
+        "src_py/config.py:894",
+        "src_py/config.py:2320",
+        "src_py/config.py:2849",
+        "src_py/photometry_core.py:17120",
+        "src_py/ui_settings.py:802",
+        "src_py/ui_settings.py:805",
+        "src_py/ui_settings.py:1089"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_comp_rms",
+      "type_default": "float = 0.1",
+      "consumers": [
+        "src_py/check_star_kmag.py:276",
+        "src_py/check_star_kmag.py:280",
+        "src_py/check_star_kmag.py:380",
+        "src_py/config.py:885",
+        "src_py/config.py:901",
+        "src_py/config.py:2411",
+        "src_py/config.py:2865",
+        "src_py/config.py:2970",
+        "src_py/config.py:2990",
+        "src_py/config.py:3043",
+        "src_py/config.py:3120",
+        "src_py/method_lc_output.py:116",
+        "src_py/photometry_core.py:2897",
+        "src_py/photometry_core.py:9478",
+        "src_py/photometry_core.py:10527",
+        "src_py/photometry_core.py:14090",
+        "src_py/photometry_core.py:14116",
+        "src_py/photometry_core.py:15900",
+        "src_py/photometry_core.py:15969",
+        "src_py/photometry_core.py:17114",
+        "src_py/ui_settings.py:951",
+        "src_py/ui_settings.py:954",
+        "src_py/ui_settings.py:1106"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_dist_deg",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:884",
+        "src_py/config.py:889",
+        "src_py/config.py:890",
+        "src_py/config.py:2318",
+        "src_py/config.py:2846",
+        "src_py/config.py:2955",
+        "src_py/config.py:2961",
+        "src_py/config.py:2985",
+        "src_py/config.py:3017",
+        "src_py/config.py:3088",
+        "src_py/photometry_core.py:15971",
+        "src_py/ui_dao_stars.py:76",
+        "src_py/ui_dao_stars.py:288",
+        "src_py/ui_dao_stars.py:296",
+        "src_py/ui_settings.py:782",
+        "src_py/ui_settings.py:785",
+        "src_py/ui_settings.py:789",
+        "src_py/ui_settings.py:1087",
+        "src_py/unit_resolver.py:172",
+        "src_py/unit_resolver.py:176",
+        "src_py/unit_resolver.py:177",
+        "src_py/unit_resolver.py:183",
+        "src_py/unit_resolver.py:194",
+        "src_py/unit_resolver.py:201"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_dist_fov_frac",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:891",
+        "src_py/config.py:2626",
+        "src_py/config.py:2847",
+        "src_py/unit_resolver.py:173",
+        "src_py/unit_resolver.py:184",
+        "src_py/unit_resolver.py:195",
+        "src_py/unit_resolver.py:202"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_fwhm_factor",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:1063",
+        "src_py/config.py:2434",
+        "src_py/config.py:2812",
+        "src_py/photometry_core.py:17125"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_mag_diff",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:2060",
+        "src_py/config.py:884",
+        "src_py/config.py:893",
+        "src_py/config.py:2319",
+        "src_py/config.py:2848",
+        "src_py/config.py:2958",
+        "src_py/config.py:2982",
+        "src_py/config.py:3091",
+        "src_py/config.py:3126",
+        "src_py/photometry_core.py:15897",
+        "src_py/photometry_core.py:15966",
+        "src_py/photometry_core.py:17106",
+        "src_py/ui_settings.py:116",
+        "src_py/ui_settings.py:795",
+        "src_py/ui_settings.py:798",
+        "src_py/ui_settings.py:823",
+        "src_py/ui_settings.py:1088"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_mag_diff_absolute",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:569",
+        "src_py/config.py:898",
+        "src_py/config.py:2322",
+        "src_py/config.py:2853",
+        "src_py/config.py:2854",
+        "src_py/ui_settings.py:819",
+        "src_py/ui_settings.py:1091"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_mag_diff_bright_floor",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:887",
+        "src_py/config.py:895",
+        "src_py/config.py:2321",
+        "src_py/config.py:2850",
+        "src_py/config.py:2851",
+        "src_py/photometry_core.py:17122",
+        "src_py/ui_settings.py:809",
+        "src_py/ui_settings.py:812",
+        "src_py/ui_settings.py:1090"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_max_psf_chi2",
+      "type_default": "float = 50.0",
+      "consumers": [
+        "src_py/config.py:1061",
+        "src_py/config.py:2433",
+        "src_py/config.py:2811",
+        "src_py/photometry_core.py:17124"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_min_dist_arcsec",
+      "type_default": "float = 60.0",
+      "consumers": [
+        "src_py/config.py:905",
+        "src_py/config.py:2413",
+        "src_py/config.py:2867",
+        "src_py/config.py:2968",
+        "src_py/config.py:2988",
+        "src_py/config.py:3047",
+        "src_py/config.py:3124",
+        "src_py/photometry_core.py:9477",
+        "src_py/photometry_core.py:15901",
+        "src_py/photometry_core.py:15970",
+        "src_py/photometry_core.py:17115",
+        "src_py/ui_settings.py:975",
+        "src_py/ui_settings.py:978",
+        "src_py/ui_settings.py:1111"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_min_frames_frac",
+      "type_default": "float = 0.2",
+      "consumers": [
+        "src_py/config.py:885",
+        "src_py/config.py:906",
+        "src_py/config.py:2414",
+        "src_py/config.py:2868",
+        "src_py/photometry_core.py:17116",
+        "src_py/ui_quality_dashboard.py:777",
+        "src_py/ui_settings.py:116",
+        "src_py/ui_settings.py:982",
+        "src_py/ui_settings.py:985",
+        "src_py/ui_settings.py:989",
+        "src_py/ui_settings.py:1112"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_n_comp_max",
+      "type_default": "int = 8",
+      "consumers": [
+        "src_py/check_star_kmag.py:105",
+        "src_py/check_star_kmag.py:579",
+        "src_py/config.py:900",
+        "src_py/config.py:2394",
+        "src_py/config.py:2395",
+        "src_py/config.py:2396",
+        "src_py/config.py:2398",
+        "src_py/config.py:2399",
+        "src_py/config.py:2864",
+        "src_py/method_lc_output.py:137",
+        "src_py/photometry_core.py:9788",
+        "src_py/photometry_core.py:10357",
+        "src_py/photometry_core.py:10848",
+        "src_py/photometry_core.py:17113",
+        "src_py/trust_flag_core.py:13",
+        "src_py/trust_flag_core.py:69",
+        "src_py/ui_settings.py:945",
+        "src_py/ui_settings.py:948",
+        "src_py/ui_settings.py:968",
+        "src_py/ui_settings.py:1080",
+        "src_py/ui_settings.py:1081",
+        "src_py/ui_settings.py:1103",
+        "src_py/ui_settings.py:1104",
+        "src_py/ui_settings.py:1105"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_comparison_n_comp_min",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:626",
+        "src_py/config.py:899",
+        "src_py/config.py:2393",
+        "src_py/config.py:2395",
+        "src_py/config.py:2396",
+        "src_py/config.py:2863",
+        "src_py/config.py:2959",
+        "src_py/config.py:2983",
+        "src_py/config.py:3030",
+        "src_py/config.py:3109",
+        "src_py/photometry_core.py:9787",
+        "src_py/photometry_core.py:10847",
+        "src_py/photometry_core.py:15898",
+        "src_py/photometry_core.py:15967",
+        "src_py/photometry_core.py:17112",
+        "src_py/trust_flag_core.py:14",
+        "src_py/trust_flag_core.py:68",
+        "src_py/ui_settings.py:939",
+        "src_py/ui_settings.py:942",
+        "src_py/ui_settings.py:969",
+        "src_py/ui_settings.py:1102",
+        "src_py/ui_settings.py:1104",
+        "src_py/ui_settings.py:1105",
+        "src_py/ui_settings.py:1110"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_ct_extrapolation_tol",
+      "type_default": "float = 0.0",
+      "consumers": [
+        "src_py/config.py:965",
+        "src_py/config.py:2024",
+        "src_py/config.py:2026",
+        "src_py/config.py:2029",
+        "src_py/config.py:2888",
+        "src_py/photometry_core.py:9986"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_ct_min_comp",
+      "type_default": "int = 7",
+      "consumers": [
+        "src_py/config.py:934",
+        "src_py/config.py:1925",
+        "src_py/config.py:1927",
+        "src_py/config.py:1930",
+        "src_py/config.py:2872",
+        "src_py/method_lc_output.py:251",
+        "src_py/photometry_core.py:4279",
+        "src_py/photometry_core.py:10062"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_flux_col",
+      "type_default": "str = 'dao_flux'",
+      "consumers": [
+        "src_py/config.py:967",
+        "src_py/config.py:2030",
+        "src_py/config.py:2889",
+        "src_py/params_registry.py:84",
+        "src_py/photometry_core.py:17127"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "phase01_tiers",
+      "type_default": "list[float] = [0.5, 1.0, 1.5, 2.0]",
+      "consumers": [
+        "src_py/config.py:927",
+        "src_py/config.py:2370",
+        "src_py/config.py:2371",
+        "src_py/config.py:2380",
+        "src_py/config.py:2642",
+        "src_py/config.py:2643",
+        "src_py/config.py:2861"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live via method/resolver wrapper; do not treat as DEAD/DIAG",
+      "d2_evidence": "photometry_core.py:17083 calls cfg.phase01_tier_mags() which reads phase01_tiers (config.py:2641). Production Phase 0+1 mag-tier bounds. Naive key grep is config-only; NOT DEAD."
+    },
+    {
+      "key": "phase01_use_bprp_primary",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:911",
+        "src_py/config.py:2421",
+        "src_py/config.py:2422",
+        "src_py/config.py:2871",
+        "src_py/photometry_report.py:789",
+        "src_py/ui_aperture_photometry.py:467",
+        "src_py/ui_aperture_photometry.py:778",
+        "src_py/ui_aperture_photometry.py:836",
+        "src_py/ui_aperture_photometry.py:1703",
+        "src_py/ui_aperture_photometry.py:1778",
+        "src_py/ui_aperture_photometry.py:1788"
+      ],
+      "class": "DIAG",
+      "proposal": "needs-Milan",
+      "risk": "Comment says False restores |dB-V| via comp_tier*_bv_limit (gone; those keys are _LEGACY_CONFIG_KEYS). Live readers are photometry_report.py:789 and ui_aperture_photometry.py:1703 (display). comp_selection_per_target does not read the flag.",
+      "d2_evidence": "Default True. False does not restore |dB-V| selection. Flip only changes report/UI BV column hiding. Question: delete key as display-only, or restore a real |dB-V| branch?"
+    },
+    {
+      "key": "phase2a_airmass_before_outlier",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:614",
+        "src_py/config.py:1591",
+        "src_py/config.py:1592",
+        "src_py/config.py:2729",
+        "src_py/photometry_core.py:4681",
+        "src_py/photometry_core.py:4683"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "photometry_mode",
+      "type_default": "str = 'both'",
+      "consumers": [
+        "src_py/app.py:1519",
+        "src_py/config.py:743",
+        "src_py/config.py:1756",
+        "src_py/config.py:1757",
+        "src_py/config.py:2783",
+        "src_py/epsf_stage.py:121",
+        "src_py/params_registry.py:74",
+        "src_py/pipeline.py:137",
+        "src_py/pipeline.py:139",
+        "src_py/pipeline.py:151",
+        "src_py/pipeline.py:303",
+        "src_py/ui_photometry.py:25",
+        "src_py/ui_photometry.py:44",
+        "src_py/ui_photometry.py:95"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "photon_transfer_ci_max_width_factor",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:954",
+        "src_py/config.py:1989",
+        "src_py/config.py:1993",
+        "src_py/config.py:1994",
+        "src_py/config.py:1999",
+        "src_py/config.py:2881",
+        "src_py/photometry_core.py:8605"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "preprocess_sky_surface_force_reapply",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:733",
+        "src_py/config.py:1740",
+        "src_py/config.py:1742",
+        "src_py/config.py:1743",
+        "src_py/config.py:2778",
+        "src_py/pipeline.py:18308",
+        "src_py/pipeline.py:18497",
+        "src_py/pipeline.py:18595",
+        "src_py/pipeline.py:18717"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "preprocess_sky_surface_order",
+      "type_default": "int = 2",
+      "consumers": [
+        "src_py/config.py:731",
+        "src_py/config.py:1736",
+        "src_py/config.py:1737",
+        "src_py/config.py:1739",
+        "src_py/config.py:2777",
+        "src_py/photometry_report.py:193",
+        "src_py/photometry_report.py:5823",
+        "src_py/pipeline.py:18496",
+        "src_py/pipeline.py:18671",
+        "src_py/pipeline.py:18697"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_ac_policy",
+      "type_default": "str = 'p4_none'",
+      "consumers": [
+        "src_py/config.py:670",
+        "src_py/config.py:1666",
+        "src_py/config.py:1667",
+        "src_py/config.py:2753",
+        "src_py/epsf_psf_merge.py:35",
+        "src_py/epsf_psf_merge.py:229",
+        "src_py/epsf_psf_merge.py:268",
+        "src_py/epsf_psf_merge.py:315",
+        "src_py/epsf_psf_merge.py:475",
+        "src_py/epsf_psf_merge.py:478",
+        "src_py/epsf_psf_merge.py:489",
+        "src_py/params_registry.py:85",
+        "src_py/photometry_core.py:1478",
+        "src_py/pipeline.py:308",
+        "src_py/pipeline.py:551",
+        "src_py/pipeline.py:560",
+        "src_py/pipeline.py:573",
+        "src_py/proc_frame_store.py:96",
+        "src_py/psf_internal_lc.py:54",
+        "src_py/psf_internal_lc.py:83",
+        "src_py/psf_internal_lc.py:321",
+        "src_py/psf_internal_lc.py:349",
+        "src_py/psf_internal_lc.py:423",
+        "src_py/psf_internal_lc.py:442",
+        "src_py/psf_internal_lc.py:583",
+        "src_py/psf_internal_lc.py:596",
+        "src_py/psf_internal_lc.py:604",
+        "src_py/psf_photometry.py:2743",
+        "src_py/psf_photometry.py:2959",
+        "src_py/psf_photometry.py:2982",
+        "src_py/psf_photometry.py:3298",
+        "src_py/ui_epsf_dashboard.py:170"
+      ],
+      "class": "LEGACY",
+      "proposal": "remove-key+dead-branch",
+      "risk": "phase 2 of this row needs --full-epsf",
+      "d2_evidence": "Default p4_none. chi2_lt5_legacy is flip-only. On ePSF graph; phase 2 of this row needs --full-epsf."
+    },
+    {
+      "key": "psf_adaptive_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:224",
+        "src_py/config.py:722",
+        "src_py/config.py:1723",
+        "src_py/config.py:2774",
+        "src_py/crowding_index.py:276",
+        "src_py/photometry_core.py:7761",
+        "src_py/photometry_core.py:8250",
+        "src_py/photometry_core.py:9742",
+        "src_py/photometry_core.py:10905",
+        "src_py/photometry_report.py:6312",
+        "src_py/photometry_report.py:6392",
+        "src_py/report_methods.py:28"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_adaptive_resolve_fwhm",
+      "type_default": "float = 2.0",
+      "consumers": [
+        "src_py/config.py:725",
+        "src_py/config.py:1725",
+        "src_py/config.py:1726",
+        "src_py/config.py:1729",
+        "src_py/config.py:2775",
+        "src_py/photometry_core.py:9749"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_adaptive_snr_lo",
+      "type_default": "float = 15.0",
+      "consumers": [
+        "src_py/config.py:728",
+        "src_py/config.py:1731",
+        "src_py/config.py:1733",
+        "src_py/config.py:2776",
+        "src_py/photometry_core.py:9750"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_chi2_threshold",
+      "type_default": "float = 50.0",
+      "consumers": [
+        "src_py/config.py:666",
+        "src_py/config.py:1662",
+        "src_py/config.py:1663",
+        "src_py/config.py:1665",
+        "src_py/config.py:2752",
+        "src_py/photometry_report.py:4728",
+        "src_py/psf_photometry.py:2918",
+        "src_py/psf_photometry.py:3229",
+        "src_py/ui_epsf_dashboard.py:168"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_group_sep_fwhm",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:682",
+        "src_py/config.py:1683",
+        "src_py/config.py:1684",
+        "src_py/config.py:1686",
+        "src_py/config.py:2757",
+        "src_py/psf_photometry.py:2908"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_grouper_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:680",
+        "src_py/config.py:1681",
+        "src_py/config.py:2756",
+        "src_py/psf_photometry.py:2903"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_neighbor_include_fwhm",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:684",
+        "src_py/config.py:1688",
+        "src_py/config.py:1689",
+        "src_py/config.py:1691",
+        "src_py/config.py:2758",
+        "src_py/psf_photometry.py:2913"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_neighbor_sub_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:686",
+        "src_py/config.py:1692",
+        "src_py/config.py:1693",
+        "src_py/config.py:2759",
+        "src_py/psf_neighbor_sub.py:3",
+        "src_py/psf_neighbor_sub.py:237"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_photometry_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:223",
+        "src_py/config.py:654",
+        "src_py/config.py:656",
+        "src_py/config.py:1654",
+        "src_py/config.py:2749",
+        "src_py/epsf_psf_merge.py:408",
+        "src_py/epsf_psf_merge.py:409",
+        "src_py/epsf_psf_merge.py:418",
+        "src_py/epsf_stage.py:120",
+        "src_py/invariants_runtime.py:699",
+        "src_py/invariants_runtime.py:714",
+        "src_py/photometry_core.py:9741",
+        "src_py/photometry_core.py:10904",
+        "src_py/photometry_report.py:6101",
+        "src_py/photometry_report.py:6311",
+        "src_py/photometry_report.py:6391",
+        "src_py/pipeline.py:302",
+        "src_py/pipeline.py:440",
+        "src_py/pipeline.py:443",
+        "src_py/pipeline.py:10427",
+        "src_py/pipeline.py:10429",
+        "src_py/pipeline.py:10783",
+        "src_py/pipeline.py:11344",
+        "src_py/pipeline.py:11346",
+        "src_py/pipeline.py:11722",
+        "src_py/report_methods.py:26",
+        "src_py/ui_epsf_dashboard.py:319",
+        "src_py/ui_epsf_dashboard.py:321",
+        "src_py/ui_photometry.py:78",
+        "src_py/ui_photometry.py:83",
+        "src_py/ui_photometry.py:98"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_quality_fallback_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:718",
+        "src_py/config.py:1720",
+        "src_py/config.py:1721",
+        "src_py/config.py:2773",
+        "src_py/psf_photometry.py:2975"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_spatial_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:707",
+        "src_py/config.py:710",
+        "src_py/config.py:1712",
+        "src_py/config.py:2770",
+        "src_py/psf_photometry.py:1391"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "psf_spatial_grid",
+      "type_default": "str = '3x3'",
+      "consumers": [
+        "src_py/config.py:712",
+        "src_py/config.py:1713",
+        "src_py/config.py:1714",
+        "src_py/config.py:2771"
+      ],
+      "class": "DEAD",
+      "proposal": "remove-key+dead-branch",
+      "risk": "config.py:712 persist only; psf_photometry uses psf_spatial_order/enabled",
+      "d2_evidence": "zero src_py consumers outside config.py load/save; getattr scan negative"
+    },
+    {
+      "key": "psf_spatial_min_stars_per_cell",
+      "type_default": "int = 25",
+      "consumers": [
+        "src_py/config.py:714",
+        "src_py/config.py:1716",
+        "src_py/config.py:1717",
+        "src_py/config.py:1719",
+        "src_py/config.py:2772"
+      ],
+      "class": "DEAD",
+      "proposal": "remove-key+dead-branch",
+      "risk": "config.py:714 persist only",
+      "d2_evidence": "zero src_py consumers outside config.py load/save; getattr scan negative"
+    },
+    {
+      "key": "psf_spatial_order",
+      "type_default": "int = 0",
+      "consumers": [
+        "src_py/config.py:664",
+        "src_py/config.py:707",
+        "src_py/config.py:1657",
+        "src_py/config.py:1658",
+        "src_py/config.py:1660",
+        "src_py/config.py:2751",
+        "src_py/psf_photometry.py:1389"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_zp_for_zp_validated_rigs",
+      "type_default": "list[str] = ['1:1']",
+      "consumers": [
+        "src_py/config.py:676",
+        "src_py/config.py:1672",
+        "src_py/config.py:1674",
+        "src_py/config.py:1676",
+        "src_py/config.py:1678",
+        "src_py/config.py:1679",
+        "src_py/config.py:1680",
+        "src_py/config.py:2755",
+        "src_py/psf_internal_lc.py:161"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "psf_zp_membership",
+      "type_default": "str = 'fit_ok_for_zp'",
+      "consumers": [
+        "src_py/config.py:673",
+        "src_py/config.py:1668",
+        "src_py/config.py:1669",
+        "src_py/config.py:2754",
+        "src_py/psf_internal_lc.py:38",
+        "src_py/psf_internal_lc.py:160"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "pytics_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/citations.py:229",
+        "src_py/config.py:984",
+        "src_py/config.py:2054",
+        "src_py/config.py:2897",
+        "src_py/export_reports.py:880",
+        "src_py/method_lc_output.py:126",
+        "src_py/photometry_core.py:9774",
+        "src_py/ui_settings.py:653",
+        "src_py/ui_settings.py:655",
+        "src_py/ui_settings.py:1070"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "pytics_n_iter",
+      "type_default": "int = 5",
+      "consumers": [
+        "src_py/config.py:985",
+        "src_py/config.py:2056",
+        "src_py/config.py:2058",
+        "src_py/config.py:2898",
+        "src_py/export_reports.py:879",
+        "src_py/method_lc_output.py:125",
+        "src_py/photometry_core.py:9773"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "qc_after_calibrate_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/config.py:1144",
+        "src_py/config.py:1526",
+        "src_py/config.py:1527",
+        "src_py/config.py:2710",
+        "src_py/pipeline.py:16228",
+        "src_py/ui_settings.py:114",
+        "src_py/ui_settings.py:408",
+        "src_py/ui_settings.py:409",
+        "src_py/ui_settings.py:413",
+        "src_py/ui_settings.py:1055"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "qc_dao_detection_sigma",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:871",
+        "src_py/config.py:873",
+        "src_py/config.py:1505",
+        "src_py/config.py:1506",
+        "src_py/config.py:1507",
+        "src_py/config.py:1509",
+        "src_py/config.py:2706",
+        "src_py/pipeline.py:16229"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "qc_elong_limit",
+      "type_default": "float = 1.8",
+      "consumers": [
+        "src_py/config.py:739",
+        "src_py/config.py:2781"
+      ],
+      "class": "DEAD",
+      "proposal": "remove-key+dead-branch",
+      "risk": "config.py:738 persist only; no QC reader",
+      "d2_evidence": "zero src_py consumers outside config.py load/save; getattr scan negative"
+    },
+    {
+      "key": "qc_fwhm_limit",
+      "type_default": "float = 8.0",
+      "consumers": [
+        "src_py/config.py:737",
+        "src_py/config.py:2780"
+      ],
+      "class": "DEAD",
+      "proposal": "remove-key+dead-branch",
+      "risk": "config.py:736 persist only; night_run uses auto_fwhm / DB prefilter",
+      "d2_evidence": "zero src_py consumers outside config.py load/save; getattr scan negative"
+    },
+    {
+      "key": "qc_max_background_rms",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1152",
+        "src_py/config.py:1540",
+        "src_py/config.py:1542",
+        "src_py/config.py:1546",
+        "src_py/config.py:1548",
+        "src_py/config.py:2715",
+        "src_py/config.py:2716",
+        "src_py/config.py:2717",
+        "src_py/pipeline.py:16246",
+        "src_py/ui_settings.py:419"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "qc_max_hfr",
+      "type_default": "float = 5.0",
+      "consumers": [
+        "src_py/config.py:1147",
+        "src_py/config.py:1148",
+        "src_py/config.py:1533",
+        "src_py/config.py:1535",
+        "src_py/config.py:2712",
+        "src_py/pipeline.py:16243",
+        "src_py/pipeline.py:16397",
+        "src_py/ui_settings.py:114",
+        "src_py/ui_settings.py:422",
+        "src_py/ui_settings.py:425",
+        "src_py/ui_settings.py:430",
+        "src_py/ui_settings.py:1053",
+        "src_py/unit_resolver.py:142",
+        "src_py/unit_resolver.py:143",
+        "src_py/unit_resolver.py:146",
+        "src_py/unit_resolver.py:152",
+        "src_py/unit_resolver.py:158",
+        "src_py/unit_resolver.py:159"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "px path is the default production path; preferred qc_max_hfr_fwhm_ratio is None. Is px still wanted as default, or should the preferred unit be set?",
+      "d2_evidence": "Default qc_max_hfr=5.0, ratio=None. unit_resolver.py:142-146 takes legacy px at default. Data/config condition (None) => MODE not removable-with-key."
+    },
+    {
+      "key": "qc_max_hfr_fwhm_ratio",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:1149",
+        "src_py/config.py:2627",
+        "src_py/config.py:2713",
+        "src_py/pipeline.py:16244",
+        "src_py/pipeline.py:16398",
+        "src_py/unit_resolver.py:144",
+        "src_py/unit_resolver.py:153"
+      ],
+      "class": "MODE",
+      "proposal": "needs-Milan",
+      "risk": "preferred unit; unused at default (None). Fallback qc_max_hfr is live. Set this and drop px, or keep both?",
+      "d2_evidence": "Default None. Setting it switches QC HFR to ratio x FWHM. Unused at default. MODE."
+    },
+    {
+      "key": "qc_min_stars",
+      "type_default": "int = 10",
+      "consumers": [
+        "src_py/config.py:1150",
+        "src_py/config.py:1537",
+        "src_py/config.py:1539",
+        "src_py/config.py:2714",
+        "src_py/pipeline.py:16245",
+        "src_py/ui_settings.py:114",
+        "src_py/ui_settings.py:436",
+        "src_py/ui_settings.py:439",
+        "src_py/ui_settings.py:444",
+        "src_py/ui_settings.py:1054"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "saturate_limit_fraction",
+      "type_default": "float = 0.8",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:777",
+        "src_py/comp_selection_per_target.py:802",
+        "src_py/config.py:769",
+        "src_py/pipeline.py:6354",
+        "src_py/pipeline.py:6391",
+        "src_py/pipeline.py:13439"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "save_lightcurve_png",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/config.py:612",
+        "src_py/config.py:1590",
+        "src_py/config.py:2728",
+        "src_py/photometry_core.py:5178",
+        "src_py/photometry_core.py:8109",
+        "src_py/photometry_core.py:10595",
+        "src_py/photometry_core.py:11344",
+        "src_py/photometry_core.py:17523",
+        "src_py/ui_photometry.py:66",
+        "src_py/ui_photometry.py:71",
+        "src_py/ui_photometry.py:97"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "savgol_detrend_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:231",
+        "src_py/config.py:975",
+        "src_py/config.py:2892",
+        "src_py/method_lc_output.py:311",
+        "src_py/photometry_core.py:4880",
+        "src_py/photometry_core.py:10301",
+        "src_py/ui_settings.py:659",
+        "src_py/ui_settings.py:661",
+        "src_py/ui_settings.py:1071"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "savgol_polyorder",
+      "type_default": "int = 2",
+      "consumers": [
+        "src_py/config.py:977",
+        "src_py/config.py:2894",
+        "src_py/method_lc_output.py:317",
+        "src_py/photometry_core.py:10308"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "savgol_window_frac",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:976",
+        "src_py/config.py:2893",
+        "src_py/method_lc_output.py:316",
+        "src_py/photometry_core.py:4879",
+        "src_py/photometry_core.py:10307"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sigma_sys_mag",
+      "type_default": "dict[str, float] = {}",
+      "consumers": [
+        "src_py/check_star_kmag.py:548",
+        "src_py/check_star_kmag.py:622",
+        "src_py/check_star_kmag.py:705",
+        "src_py/comp_pool_noise.py:120",
+        "src_py/comp_pool_noise.py:720",
+        "src_py/comp_pool_noise.py:767",
+        "src_py/comp_pool_noise.py:768",
+        "src_py/comp_pool_noise.py:783",
+        "src_py/comp_pool_noise.py:839",
+        "src_py/comp_pool_noise.py:862",
+        "src_py/comp_pool_noise.py:910",
+        "src_py/comp_pool_noise.py:1124",
+        "src_py/comp_pool_noise.py:1127",
+        "src_py/comp_pool_noise.py:1161",
+        "src_py/config.py:950",
+        "src_py/config.py:1971",
+        "src_py/config.py:1981",
+        "src_py/config.py:2879",
+        "src_py/photometry_core.py:3462",
+        "src_py/photometry_core.py:3470",
+        "src_py/photometry_core.py:3483",
+        "src_py/photometry_core.py:3508",
+        "src_py/photometry_core.py:3527",
+        "src_py/photometry_core.py:3537",
+        "src_py/photometry_core.py:5002",
+        "src_py/photometry_core.py:5143",
+        "src_py/photometry_core.py:5144",
+        "src_py/photometry_core.py:7512",
+        "src_py/photometry_core.py:10166",
+        "src_py/photometry_core.py:10231",
+        "src_py/photometry_core.py:10359",
+        "src_py/photometry_core.py:10509",
+        "src_py/photometry_core.py:14672",
+        "src_py/sigma_floor_core.py:126",
+        "src_py/sigma_floor_core.py:139",
+        "src_py/sigma_floor_core.py:151",
+        "src_py/sigma_floor_core.py:158",
+        "src_py/sigma_floor_core.py:205",
+        "src_py/sigma_floor_core.py:221",
+        "src_py/sigma_floor_core.py:228"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sips_dao_fwhm_fwhm_factor",
+      "type_default": "float | None = None",
+      "consumers": [
+        "src_py/config.py:878",
+        "src_py/config.py:2628",
+        "src_py/config.py:2708",
+        "src_py/unit_resolver.py:281"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sips_dao_fwhm_px",
+      "type_default": "float = 2.5",
+      "consumers": [
+        "src_py/app.py:527",
+        "src_py/app.py:539",
+        "src_py/app.py:543",
+        "src_py/app.py:544",
+        "src_py/app.py:1204",
+        "src_py/app.py:1216",
+        "src_py/app.py:1220",
+        "src_py/app.py:1221",
+        "src_py/app.py:1821",
+        "src_py/config.py:876",
+        "src_py/config.py:877",
+        "src_py/config.py:1511",
+        "src_py/config.py:1512",
+        "src_py/config.py:1513",
+        "src_py/config.py:1515",
+        "src_py/config.py:1516",
+        "src_py/config.py:2707",
+        "src_py/night_run.py:671",
+        "src_py/night_run.py:672",
+        "src_py/night_run.py:1747",
+        "src_py/night_run.py:1760",
+        "src_py/photometry_core.py:66",
+        "src_py/pipeline.py:4467",
+        "src_py/pipeline.py:7862",
+        "src_py/pipeline.py:8664",
+        "src_py/pipeline.py:11114",
+        "src_py/pipeline.py:12302",
+        "src_py/pipeline.py:12964",
+        "src_py/pipeline.py:12989",
+        "src_py/pipeline.py:14956",
+        "src_py/pipeline.py:15212",
+        "src_py/pipeline.py:15283",
+        "src_py/ui_epsf_dashboard.py:433",
+        "src_py/unit_resolver.py:279",
+        "src_py/unit_resolver.py:282",
+        "src_py/unit_resolver.py:284",
+        "src_py/vyvar_platesolver.py:4812"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sips_dao_threshold_sigma",
+      "type_default": "float = 3.5",
+      "consumers": [
+        "src_py/app.py:535",
+        "src_py/app.py:540",
+        "src_py/app.py:549",
+        "src_py/app.py:552",
+        "src_py/app.py:1212",
+        "src_py/app.py:1217",
+        "src_py/app.py:1226",
+        "src_py/app.py:1229",
+        "src_py/app.py:1824",
+        "src_py/config.py:881",
+        "src_py/config.py:1518",
+        "src_py/config.py:1519",
+        "src_py/config.py:1521",
+        "src_py/config.py:1522",
+        "src_py/config.py:1524",
+        "src_py/config.py:2709",
+        "src_py/night_run.py:677",
+        "src_py/night_run.py:678",
+        "src_py/night_run.py:716",
+        "src_py/night_run.py:1752",
+        "src_py/night_run.py:1761",
+        "src_py/pipeline.py:14939",
+        "src_py/pipeline.py:14951",
+        "src_py/ui_epsf_dashboard.py:435",
+        "src_py/vyvar_platesolver.py:4815"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "snr_cog_isolation_fwhm",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/comp_selection_per_target.py:1734",
+        "src_py/comp_selection_per_target.py:1735",
+        "src_py/config.py:944",
+        "src_py/config.py:1949",
+        "src_py/config.py:1950",
+        "src_py/config.py:1952",
+        "src_py/config.py:2876",
+        "src_py/photometry_core.py:14095",
+        "src_py/photometry_core.py:14121",
+        "src_py/photometry_core.py:15780",
+        "src_py/photometry_core.py:15805",
+        "src_py/photometry_core.py:15806"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sparse_trust_T_green",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:631",
+        "src_py/config.py:2406",
+        "src_py/config.py:2738",
+        "src_py/sparse_trust_core.py:532"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sparse_trust_T_red",
+      "type_default": "float = 4.0",
+      "consumers": [
+        "src_py/config.py:632",
+        "src_py/config.py:2407",
+        "src_py/config.py:2739",
+        "src_py/sparse_trust_core.py:533"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sparse_trust_X2_RED",
+      "type_default": "float = 0.0004",
+      "consumers": [
+        "src_py/config.py:633",
+        "src_py/config.py:2408",
+        "src_py/config.py:2740",
+        "src_py/sparse_trust_core.py:534"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "sysrem_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:230",
+        "src_py/config.py:616",
+        "src_py/config.py:1594",
+        "src_py/config.py:2730",
+        "src_py/night_run.py:48",
+        "src_py/night_run.py:1334",
+        "src_py/night_run.py:1335",
+        "src_py/photometry_core.py:17182",
+        "src_py/simulate_night_run.py:144"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "sysrem_n_iter",
+      "type_default": "int = 3",
+      "consumers": [
+        "src_py/config.py:617",
+        "src_py/config.py:1596",
+        "src_py/config.py:1598",
+        "src_py/config.py:2743",
+        "src_py/night_run.py:49",
+        "src_py/night_run.py:1336",
+        "src_py/night_run.py:1337",
+        "src_py/photometry_core.py:17187",
+        "src_py/simulate_night_run.py:145"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "temporal_bin_window",
+      "type_default": "int = 0",
+      "consumers": [
+        "src_py/config.py:972",
+        "src_py/config.py:2035",
+        "src_py/config.py:2037",
+        "src_py/config.py:2040",
+        "src_py/config.py:2891",
+        "src_py/method_lc_output.py:106",
+        "src_py/photometry_core.py:9760"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "temporal_binning_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:228",
+        "src_py/config.py:971",
+        "src_py/config.py:2031",
+        "src_py/config.py:2032",
+        "src_py/config.py:2890",
+        "src_py/invariants_runtime.py:695",
+        "src_py/invariants_runtime.py:697",
+        "src_py/method_lc_output.py:107",
+        "src_py/photometry_core.py:9761",
+        "src_py/ui_settings.py:645",
+        "src_py/ui_settings.py:647",
+        "src_py/ui_settings.py:1069"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "tess_enabled",
+      "type_default": "bool = False",
+      "consumers": [
+        "src_py/citations.py:235",
+        "src_py/config.py:1096",
+        "src_py/config.py:1097",
+        "src_py/config.py:2605",
+        "src_py/config.py:2925",
+        "src_py/tess_runner.py:127",
+        "src_py/tess_runner.py:128",
+        "src_py/tess_verify.py:1360",
+        "src_py/tess_verify.py:1361",
+        "src_py/tess_verify.py:1370",
+        "src_py/ui_aperture_photometry.py:1498",
+        "src_py/ui_aperture_photometry.py:1500",
+        "src_py/ui_variability.py:790",
+        "src_py/ui_variability.py:793",
+        "src_py/ui_variability.py:794",
+        "src_py/ui_variability.py:814",
+        "src_py/ui_variability.py:857",
+        "src_py/ui_variability.py:873",
+        "src_py/ui_variability.py:1518",
+        "src_py/ui_variability.py:1533",
+        "src_py/ui_variability.py:1536"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "trust_flag_enabled",
+      "type_default": "bool = True",
+      "consumers": [
+        "src_py/citations.py:237",
+        "src_py/config.py:621",
+        "src_py/config.py:1600",
+        "src_py/config.py:2732",
+        "src_py/photometry_core.py:10855"
+      ],
+      "class": "MODE",
+      "proposal": "keep",
+      "risk": "bool switch; both branches assumed wanted",
+      "d2_evidence": "not probed as LEGACY; default-path live"
+    },
+    {
+      "key": "variability_clip_ratio_min",
+      "type_default": "float = 0.8",
+      "consumers": [
+        "src_py/config.py:1091",
+        "src_py/config.py:2494",
+        "src_py/config.py:2922",
+        "src_py/variability_detector.py:433"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_comp_floor_factor",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:1086",
+        "src_py/config.py:2489",
+        "src_py/config.py:2917",
+        "src_py/variability_detector.py:441"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_mag_limit",
+      "type_default": "float = 14.5",
+      "consumers": [
+        "src_py/config.py:1088",
+        "src_py/config.py:2491",
+        "src_py/config.py:2919",
+        "src_py/photometry_core.py:5827",
+        "src_py/photometry_core.py:5890",
+        "src_py/ui_aperture_photometry.py:1397",
+        "src_py/ui_settings.py:354",
+        "src_py/ui_variability.py:571",
+        "src_py/ui_variability.py:1133",
+        "src_py/ui_variability.py:1135",
+        "src_py/variability_detector.py:421"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_min_amplitude_mag",
+      "type_default": "float = 0.01",
+      "consumers": [
+        "src_py/config.py:1090",
+        "src_py/config.py:2493",
+        "src_py/config.py:2921",
+        "src_py/variability_detector.py:437"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_min_frames",
+      "type_default": "int = 30",
+      "consumers": [
+        "src_py/config.py:1080",
+        "src_py/config.py:2457",
+        "src_py/config.py:2458",
+        "src_py/config.py:2461",
+        "src_py/config.py:2912",
+        "src_py/photometry_core.py:5902",
+        "src_py/ui_variability.py:583",
+        "src_py/variability_detector.py:425",
+        "src_py/variability_detector.py:767"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_min_frames_frac",
+      "type_default": "float = 0.5",
+      "consumers": [
+        "src_py/config.py:1081",
+        "src_py/config.py:2463",
+        "src_py/config.py:2464",
+        "src_py/config.py:2467",
+        "src_py/config.py:2468",
+        "src_py/config.py:2913",
+        "src_py/photometry_core.py:5836",
+        "src_py/photometry_core.py:5891",
+        "src_py/ui_variability.py:515",
+        "src_py/ui_variability.py:572",
+        "src_py/variability_detector.py:306"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_min_points_rms",
+      "type_default": "int = 20",
+      "consumers": [
+        "src_py/config.py:1093",
+        "src_py/config.py:2496",
+        "src_py/config.py:2924",
+        "src_py/variability_detector.py:405"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_min_rms_pct",
+      "type_default": "float = 1.5",
+      "consumers": [
+        "src_py/config.py:1089",
+        "src_py/config.py:2492",
+        "src_py/config.py:2920",
+        "src_py/variability_detector.py:429"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_p85_filter",
+      "type_default": "int = 85",
+      "consumers": [
+        "src_py/config.py:1082",
+        "src_py/config.py:2486",
+        "src_py/config.py:2914",
+        "src_py/variability_detector.py:409"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_sigma_threshold",
+      "type_default": "float = 2.3",
+      "consumers": [
+        "src_py/config.py:1084",
+        "src_py/config.py:2488",
+        "src_py/config.py:2916",
+        "src_py/photometry_core.py:5823",
+        "src_py/photometry_core.py:5889",
+        "src_py/ui_aperture_photometry.py:1395",
+        "src_py/ui_variability.py:570",
+        "src_py/ui_variability.py:1128",
+        "src_py/variability_detector.py:401"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_slope_floor",
+      "type_default": "float = 0.02",
+      "consumers": [
+        "src_py/config.py:1083",
+        "src_py/config.py:2487",
+        "src_py/config.py:2915",
+        "src_py/variability_detector.py:413"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_smoothness_max",
+      "type_default": "float = 0.8",
+      "consumers": [
+        "src_py/config.py:1087",
+        "src_py/config.py:2490",
+        "src_py/config.py:2918",
+        "src_py/variability_detector.py:417"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "variability_vdi_z_threshold",
+      "type_default": "float = 3.0",
+      "consumers": [
+        "src_py/config.py:1092",
+        "src_py/config.py:2495",
+        "src_py/config.py:2923",
+        "src_py/variability_detector.py:771"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "verify_mag_limit",
+      "type_default": "float = 14.0",
+      "consumers": [
+        "src_py/config.py:579",
+        "src_py/config.py:1383",
+        "src_py/config.py:1385",
+        "src_py/config.py:1386",
+        "src_py/config.py:2689",
+        "src_py/vyvar_platesolver.py:1731",
+        "src_py/vyvar_platesolver.py:2168"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    },
+    {
+      "key": "vsx_out_of_scope_types",
+      "type_default": "list[str] = []",
+      "consumers": [
+        "src_py/config.py:599",
+        "src_py/config.py:1431",
+        "src_py/config.py:1433",
+        "src_py/config.py:1435",
+        "src_py/config.py:1437",
+        "src_py/config.py:1439",
+        "src_py/config.py:2698",
+        "src_py/invariants_runtime.py:719",
+        "src_py/invariants_runtime.py:725",
+        "src_py/invariants_runtime.py:727",
+        "src_py/invariants_runtime.py:754",
+        "src_py/invariants_runtime.py:766",
+        "src_py/invariants_runtime.py:793",
+        "src_py/photometry_core.py:13545",
+        "src_py/photometry_core.py:13732",
+        "src_py/photometry_core.py:13876",
+        "src_py/photometry_core.py:13885"
+      ],
+      "class": "ACTIVE",
+      "proposal": "keep",
+      "risk": "live consumer outside config.py",
+      "d2_evidence": ""
+    }
+  ],
+  "counts": {
+    "ACTIVE": 212,
+    "MODE": 52,
+    "DIAG": 4,
+    "ALIAS": 1,
+    "LEGACY": 5,
+    "DEAD": 5
+  },
+  "needs_milan": [
+    {
+      "key": "hrd_color_bg_box_arcsec",
+      "question": "preferred unit; unused at default (None). Fallback hrd_color_bg_box_px is live. Set this and drop px, or keep both?"
+    },
+    {
+      "key": "hrd_color_bg_box_px",
+      "question": "px path is the default production path; preferred hrd_color_bg_box_arcsec is None. Is px still wanted as default, or should the preferred unit be set?"
+    },
+    {
+      "key": "masterstar_centre_rms_max_arcsec",
+      "question": "preferred unit; unused at default (None). Fallback masterstar_centre_rms_max_px is live. Set this and drop px, or keep both?"
+    },
+    {
+      "key": "masterstar_centre_rms_max_px",
+      "question": "px path is the default production path; preferred masterstar_centre_rms_max_arcsec is None. Is px still wanted as default, or should the preferred unit be set?"
+    },
+    {
+      "key": "phase01_use_bprp_primary",
+      "question": "Comment says False restores |dB-V| via comp_tier*_bv_limit (gone; those keys are _LEGACY_CONFIG_KEYS). Live readers are photometry_report.py:789 and ui_aperture_photometry.py:1703 (display). comp_selection_per_target does not read the flag."
+    },
+    {
+      "key": "qc_max_hfr",
+      "question": "px path is the default production path; preferred qc_max_hfr_fwhm_ratio is None. Is px still wanted as default, or should the preferred unit be set?"
+    },
+    {
+      "key": "qc_max_hfr_fwhm_ratio",
+      "question": "preferred unit; unused at default (None). Fallback qc_max_hfr is live. Set this and drop px, or keep both?"
+    }
+  ],
+  "extra_aliases_not_in_279": [
+    {
+      "key": "blind_index_path",
+      "owner": "internal",
+      "class": "ALIAS",
+      "proposal": "remove-alias",
+      "target": "blind_index_fine_path",
+      "loc": "config.py:564"
+    },
+    {
+      "key": "aavso_observer_code",
+      "owner": "db_static",
+      "class": "ALIAS",
+      "proposal": "remove-alias",
+      "target": "observer_code",
+      "loc": "config.py:641"
+    }
+  ]
+}
