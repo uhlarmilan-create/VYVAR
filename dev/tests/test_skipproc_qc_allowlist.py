@@ -288,3 +288,45 @@ def test_legacy_alias_keys_map_silently(tmp_path: Path, caplog) -> None:
     assert cfg.observer_code == "UMIA"
     assert cfg.blind_index_fine_path.endswith("gaia_triangles_fine.pkl")
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_g_config_all_removed_and_aliased_keys_load_silently(tmp_path: Path, caplog) -> None:
+    """G-CONFIG: old config.json with every CONSOLIDATE-01D P2 removed/aliased key."""
+    import json
+    import logging
+
+    removed = {
+        "global_comp_pool_enabled": False,
+        "export_err_mode": "model",
+        "err_background_mode": "howell",
+        "masterstar_accept_mode": "fraction",
+        "psf_ac_policy": "chi2_lt5_legacy",
+        "qc_fwhm_limit": 8.0,
+        "qc_elong_limit": 1.8,
+        "psf_spatial_grid": "3x3",
+        "psf_spatial_min_stars_per_cell": 25,
+        "gs11_comp_suspect_dilution": 0.98,
+        "phase01_use_bprp_primary": False,
+    }
+    aliased = {
+        "comp_iterative_clip_enabled": True,
+        "blind_index_path": str(tmp_path / "GAIA_DR3" / "gaia_triangles.pkl"),
+        "aavso_observer_code": "UMIA",
+    }
+    (tmp_path / "GAIA_DR3").mkdir()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles.pkl").touch()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles_fine.pkl").touch()
+    (tmp_path / "GAIA_DR3" / "gaia_triangles_wide.pkl").touch()
+    payload = {**removed, **aliased}
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps(payload), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
+    cfg = AppConfig(project_root=tmp_path)
+    for key in payload:
+        assert not hasattr(cfg, key), key
+    assert cfg.comp_sparse_fallback_enabled is True
+    assert cfg.observer_code == "UMIA"
+    assert cfg.blind_index_fine_path.endswith("gaia_triangles_fine.pkl")
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
