@@ -22,7 +22,6 @@ from scipy.spatial import cKDTree
 REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src_py"
 sys.path.insert(0, str(SRC))
-sys.path.insert(0, str(REPO / "tmp"))
 
 from masterstar_gaia_accounting import (  # noqa: E402
     SOURCE_BLENDED,
@@ -39,9 +38,27 @@ from masterstar_gaia_accounting import (  # noqa: E402
     lock_existing_and_leftover_assign,
 )
 
-import dao_gaia_stage_01_iter2 as i2  # noqa: E402
-import dao_gaia_stage_01_iter3 as i3  # noqa: E402
-from dao_gaia_stage_01 import FRAMES, SHARPNESS_OPEN, crop_boxes, estimate_sky, load_frame, run_dao  # noqa: E402
+from dao_gaia_common import (  # noqa: E402
+    EDGE_MARGIN_PX,
+    FRAMES,
+    G3_GAIA_MAX,
+    GAIA_QUERY_G,
+    OVERLAY_G_MAX,
+    SHARPNESS_OPEN,
+    SOURCE_CROWDED_MISS,
+    _gaia_on_chip_pm,
+    _is_edge,
+    _peak_at,
+    _saturation_limit,
+    asinh_rgb,
+    crop_boxes,
+    decompose_holes_le13,
+    estimate_sky,
+    g2_empty_false_accept,
+    g3_spurious,
+    load_frame,
+    run_dao,
+)
 from config import AppConfig  # noqa: E402
 
 DEFAULT_CTX = REPO / "dev" / "results" / "context" / "session_20260819_daostage01_iter4"
@@ -128,7 +145,7 @@ class FrameResult:
 def _eligible_mask(gaia_df: pd.DataFrame, wpx: int, h: int) -> np.ndarray:
     gx = pd.to_numeric(gaia_df["x_gaia"], errors="coerce").to_numpy(dtype=np.float64)
     gy = pd.to_numeric(gaia_df["y_gaia"], errors="coerce").to_numpy(dtype=np.float64)
-    return np.array([not i2._is_edge(float(x), float(y), wpx, h, i2.EDGE_MARGIN_PX) for x, y in zip(gx, gy, strict=False)])
+    return np.array([not _is_edge(float(x), float(y), wpx, h, EDGE_MARGIN_PX) for x, y in zip(gx, gy, strict=False)])
 
 
 def _nearest_gaia_dist(x: float, y: float, gaia_df: pd.DataFrame, skip_j: int = -1) -> tuple[float, int]:
@@ -217,9 +234,9 @@ def run_frame_i6_i7(
     pass2_center_tol = float(p.pass2_center_tol_px)
     seed_params = p.seed_params()
     _raw, data0, hdr, wcs, fwhm, wpx, h = load_frame(fpath)
-    gaia_pm, _, _ = i3._gaia_on_chip_pm(wcs, wpx, h, gaia_db, hdr, max_mag=i2.GAIA_QUERY_G)
-    gaia_g18 = gaia_pm[pd.to_numeric(gaia_pm["g_mag"], errors="coerce") <= i2.G3_GAIA_MAX].copy().reset_index(drop=True)
-    gaia_le16 = gaia_pm[pd.to_numeric(gaia_pm["g_mag"], errors="coerce") <= i2.OVERLAY_G_MAX].copy().reset_index(drop=True)
+    gaia_pm, _, _ = _gaia_on_chip_pm(wcs, wpx, h, gaia_db, hdr, max_mag=GAIA_QUERY_G)
+    gaia_g18 = gaia_pm[pd.to_numeric(gaia_pm["g_mag"], errors="coerce") <= G3_GAIA_MAX].copy().reset_index(drop=True)
+    gaia_le16 = gaia_pm[pd.to_numeric(gaia_pm["g_mag"], errors="coerce") <= OVERLAY_G_MAX].copy().reset_index(drop=True)
     gaia_le15 = gaia_le16[pd.to_numeric(gaia_le16["g_mag"], errors="coerce") <= TARGET_DEPTH_G].copy().reset_index(drop=True)
     le15_to_le16 = {str(gaia_le15.iloc[j]["catalog_id"]).strip(): int(gaia_le16.index[gaia_le16["catalog_id"] == gaia_le15.iloc[j]["catalog_id"]][0]) if len(gaia_le16.index[gaia_le16["catalog_id"] == gaia_le15.iloc[j]["catalog_id"]]) else j for j in range(len(gaia_le15))}
     # simpler map by catalog_id
@@ -271,7 +288,7 @@ def run_frame_i6_i7(
             continue
         xg = float(gaia_le15.iloc[j15]["x_gaia"])
         yg = float(gaia_le15.iloc[j15]["y_gaia"])
-        if i2._is_edge(xg, yg, wpx, h, i2.EDGE_MARGIN_PX):
+        if _is_edge(xg, yg, wpx, h, EDGE_MARGIN_PX):
             continue
         n_p2_try += 1
         hit = dao_pass2_try_at_position(data0, xg, yg, wpx=wpx, h=h, params=p2_params)
@@ -323,7 +340,7 @@ def run_frame_i6_i7(
             continue
         xg = float(gaia_le15.iloc[j15]["x_gaia"])
         yg = float(gaia_le15.iloc[j15]["y_gaia"])
-        if i2._is_edge(xg, yg, wpx, h, i2.EDGE_MARGIN_PX):
+        if _is_edge(xg, yg, wpx, h, EDGE_MARGIN_PX):
             continue
         meas = forced_seed_measure_at_position(data0, xg, yg, fwhm_px=fwhm, params=seed_params)
         ok, reason = forced_seed_accept(meas, params=seed_params)
@@ -348,10 +365,10 @@ def run_frame_i6_i7(
     all_x = np.array([d.x for d in dets], dtype=np.float64)
     all_y = np.array([d.y for d in dets], dtype=np.float64)
     empty_df = pd.read_csv(EMPTY_SKY_CSV) if EMPTY_SKY_CSV.is_file() else pd.DataFrame()
-    g2 = i2.g2_empty_false_accept(
+    g2 = g2_empty_false_accept(
         all_x, all_y, empty_df, frame_label, match_radius_px=match_radius_px
     )
-    g3, _ = i2.g3_spurious(
+    g3, _ = g3_spurious(
         all_x, all_y, gaia_g18, wpx=wpx, h=h, match_radius_px=match_radius_px
     )
 
@@ -390,7 +407,7 @@ def run_frame_i6_i7(
         n_det_pass2=int(sum(1 for d in dets if d.source == "pass2")),
         n_forced_seed=n_forced,
         n_ambiguous=int(sum(1 for d in dets if d.ambiguous)),
-        n_crowded_miss=int(state_counts.get(i3.SOURCE_CROWDED_MISS, 0)),
+        n_crowded_miss=int(state_counts.get(SOURCE_CROWDED_MISS, 0)),
         state_counts={str(k): int(v) for k, v in state_counts.items()},
         g4_ok=g4_ok,
         data0=data0,
@@ -410,7 +427,7 @@ def _build_census(
     h: int,
 ) -> pd.DataFrame:
     gdf = annotate_blended_groups(gaia_df.copy(), gaia_owner, fwhm_px=fwhm_px)
-    sat_lim = i2._saturation_limit(hdr) * 0.999
+    sat_lim = _saturation_limit(hdr) * 0.999
     states: list[str] = []
     for j in range(len(gdf)):
         xg = float(gdf.iloc[j]["x_gaia"])
@@ -419,7 +436,7 @@ def _build_census(
         blend_gid = str(gdf.iloc[j].get("blend_group_id", "") or "")
         kind = str(owner_kind[j]) if j < len(owner_kind) else ""
         owner = int(gaia_owner[j]) if j < len(gaia_owner) else -1
-        if i2._is_edge(xg, yg, wpx, h, i2.EDGE_MARGIN_PX):
+        if _is_edge(xg, yg, wpx, h, EDGE_MARGIN_PX):
             states.append(SOURCE_EDGE)
         elif math.isfinite(gmag) and gmag > TARGET_DEPTH_G:
             states.append(SOURCE_TOO_FAINT)
@@ -429,7 +446,7 @@ def _build_census(
             states.append(SOURCE_DETECTED)
         elif blend_gid:
             states.append(SOURCE_BLENDED)
-        elif i2._peak_at(data0, xg, yg) >= sat_lim:
+        elif _peak_at(data0, xg, yg) >= sat_lim:
             states.append(SOURCE_SATURATED)
         elif math.isfinite(gmag) and gmag <= TARGET_DEPTH_G:
             states.append(SOURCE_TOO_FAINT)
@@ -468,7 +485,7 @@ def render_overlay_final(
 ) -> None:
     data0 = res.data0
     census = res.census
-    rgb = i2.asinh_rgb(data0)
+    rgb = asinh_rgb(data0)
     ox = oy = 0
     if crop is not None:
         x0, y0, cw, ch = crop
@@ -485,7 +502,7 @@ def render_overlay_final(
         if not (math.isfinite(gx[j]) and math.isfinite(gy[j])):
             continue
         g = gm[j] if math.isfinite(gm[j]) else 99.0
-        if g > i2.OVERLAY_G_MAX:
+        if g > OVERLAY_G_MAX:
             continue
         x, y = gx[j] - ox, gy[j] - oy
         if crop is not None and (x < 0 or y < 0 or x >= crop[2] or y >= crop[3]):
@@ -609,7 +626,7 @@ def main() -> None:
         for name, box in crop_boxes(res.wpx, res.h,).items():
             render_overlay_final(res, out_path=od / f"overlay_crop_{name}.png", title=f"{frame_label} {name}", crop=box)
 
-        holes, summ = i2.decompose_holes_le13(census, res.gaia_le16, res.data0, fwhm)
+        holes, summ = decompose_holes_le13(census, res.gaia_le16, res.data0, fwhm)
         if frame_label == "MASTERSTAR":
             holes.to_csv(ctx / "holes_le13_final.csv", index=False)
             summ.to_csv(ctx / "holes_le13_decompose_final.csv", index=False)

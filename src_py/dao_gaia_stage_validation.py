@@ -122,7 +122,7 @@ def sandbox_frame_paths(repo_root: Path | str | None = None) -> list[tuple[str, 
     """Frames actually scored by STAGE-01 iter4 (draft 516 WIDE sandbox)."""
     root = _repo_root(repo_root)
     _import_iter4(root)
-    from dao_gaia_stage_01 import FRAMES  # noqa: PLC0415
+    from dao_gaia_common import FRAMES  # noqa: PLC0415
 
     out: list[tuple[str, Path]] = []
     for label, fpath in FRAMES:

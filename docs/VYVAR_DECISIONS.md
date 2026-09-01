@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - dao_gaia flatten (2026-09-01)
+
+`dao_gaia_stage_01.py` / `_iter2.py` / `_iter3.py` deleted; helpers live in `dao_gaia_common.py`. `dao_gaia_stage_01_iter4.py` is not renamed; follow-up `dao_gaia_stage.py` only if Milan asks.
+
 ## CONSOLIDATE-01D P2 - phase01_use_bprp_primary removed (2026-09-01)
 
 `phase01_use_bprp_primary` removed; BP-RP is the only color display basis (selection already used BP-RP).
