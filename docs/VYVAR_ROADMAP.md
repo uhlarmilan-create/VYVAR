@@ -95,7 +95,6 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
 | **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |
 | **RUN-WORKER-01** | Run-worker follow-up | Cursor | LOW |
-| **SEL-GHOST-01** | Not closed; origin/main stays 7c086e8 until Milan writes PUSH_AUTH | Milan | PUSH_AUTH |
 | **SIGMA-BKG-VAR-01** | Sigma background variance follow-up | Cursor | LOW |
 | **SIGMA-BUDGET-EMPIRICAL** | Empirical sigma budget remaining Newton gate | Cursor | F-BINGAIN-1 |
 | **SIGMA-PROV-FORENSIC** | Sigma provenance forensic leftover | Cursor | LOW |
@@ -130,7 +129,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 
 Standing operator items without a hyphenated id (kept as prose, not an id row):
 first AAVSO/VarAstro uploads BO -> FW (band CV) once a locked ledger exists;
-`origin/main` stays `7c086e8` until Milan writes PUSH_AUTH.
+`origin/main` is `5b1068d` (MERGE-MAIN-01; SEL-GHOST-01 MERGED 2026-09-01).
 
 ---
 
@@ -175,6 +174,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **P1-RECUT** -- CLOSED 2026-08-20 ERA-03 golden mini.
 - **REG-520-01** -- STOP 2026-08-24 measure; ghost/WCS notes carried in SEL-GHOST-01.
 - **SAT-DIAG** -- DONE saturation and linearity limit gate.
+- **SEL-GHOST-01** -- MERGED 2026-09-01; origin/main `5b1068d` (fast-forward from 7c086e8 via consolidate-01).
 - **TODO-COMP-P2P-RESIDUAL** -- DONE already implemented; found stale 2026-07-19.
 - **TODO-DEV-PROCESS** -- DONE 2026-07-08 as DEV-PROCESS-A + DEV-PROCESS-B.
 - **TODO-EPSF-1-FWHM-QC** -- DONE 2026-06-08.
