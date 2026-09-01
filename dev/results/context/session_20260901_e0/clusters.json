@@ -1,0 +1,2030 @@
+{
+  "algorithm": "label-propagation, nodes sorted, neighbor-label weight then lex tie-break, then merge if cross>internal",
+  "n_clusters": 50,
+  "clusters": [
+    {
+      "id": "pipeline.py:_astrometry_align_impl_body",
+      "n_defs": 83,
+      "lines": 8213,
+      "internal_edges": 121,
+      "cross_edges": 61,
+      "not_a_module": false,
+      "members": [
+        "generate_masterstar_and_catalog",
+        "_astrometry_align_impl_body",
+        "write_photometry_plan_files",
+        "_solve_wcs_external",
+        "astrometry_align_and_build_masterstar",
+        "select_comparison_stars_spatial_grid",
+        "_qc_enrich_calibrated_in_place",
+        "_pass2_sibling_wcs_recovery",
+        "scan_calibrated_lights_pointing",
+        "_run_osc_multi_group_alignment",
+        "detect_field_jumps",
+        "_try_rescale_masterstar_linear_wcs_to_expected_plate_scale",
+        "_passthrough_lights_to_calibrated",
+        "run_osc_channel_extraction_for_archive",
+        "_plate_solve_input_bundle",
+        "_solve_wcs_solve_field_cli",
+        "_query_vsx_local_frame_bbox",
+        "stamp_vsx_known_variable_on_masterstars",
+        "estimate_archive_memory_profile",
+        "get_masterstar_candidate_rows",
+        "get_auto_fov",
+        "_update_masterstar_obs_file_status",
+        "analyze_calibrated_qc",
+        "_solve_wcs_astrometry_net",
+        "vsx_is_known_variable_top3_per_bin",
+        "_merge_vsx_exoplanet_variable_targets",
+        "resolve_plate_solve_fov_deg_hint",
+        "list_best_processed_light_paths_for_masterstar",
+        "_enrich_calibration_metadata_from_header",
+        "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+        "_sync_comparison_stars_across_setups",
+        "_apply_draft_combined_to_pipeline_meta",
+        "_merge_platesolve_gaia_pairs_into_masterstars_df",
+        "_resolve_focal_mm_for_plate_scale",
+        "resolve_masterstar_input_root",
+        "_filter_light_paths_maybe",
+        "_qc_fwhm_elongation",
+        "resolve_obs_file_to_processed_fits",
+        "_vyvar_parallel_worker_count",
+        "compute_plate_scale_from_db",
+        "estimate_memory_from_fits_headers",
+        "recommended_aperture_by_color",
+        "_analyze_calibrated_qc_one",
+        "_merge_astrometry_group_reports",
+        "_sync_manifest_cal_stage_from_qc_row",
+        "_photometry_mode_run_flags",
+        "_obs_fwhm_basename_map_from_db",
+        "_vyvar_df_to_csv",
+        "_partition_detrended_by_subfolder",
+        "_wcs_field_center_radec_deg",
+        "filter_files_by_qc_metrics_allowlist",
+        "_archive_preprocess_lights_root",
+        "_equipment_saturate_adu_from_db",
+        "_path_segments_forbidden_for_masterstar_physical_source",
+        "_pipeline_ui_info",
+        "load_qc_metrics_status_by_path",
+        "_apply_wcs_header_to_fits",
+        "_fits_primary_pixel_count",
+        "_header_focal_length_mm",
+        "draft_obs_group_count",
+        "_export_catalog_psf_st_fields",
+        "build_prefilter_rejected_map",
+        "_sat_adu_from_draft_sat_diag",
+        "format_memory_bytes",
+        "_field_jump_empty_result",
+        "_infer_raw_light_path_for_calibrated",
+        "_finite_positive_adu",
+        "_vyvar_df_round_time_jd_for_csv",
+        "_assert_alignment_produced_fits",
+        "_available_system_ram_bytes",
+        "_vyvar_parallel_pool",
+        "_vyvar_per_frame_csv_workers",
+        "get_masterstar_candidates",
+        "norm_fits_path_key",
+        "_header_pick_first",
+        "_vyvar_open_database",
+        "_vyvar_parallel_use_processes",
+        "_ensure_parent_dirs_for_aligned_fits",
+        "_iter_light_fits",
+        "_vyvar_qc_preprocess_workers",
+        "_focal_mm_plausible",
+        "_has_valid_wcs",
+        "draft_is_multi_group_obs"
+      ],
+      "qids": [
+        "photometry_core.py:recommended_aperture_by_color",
+        "photometry_core.py:stamp_vsx_known_variable_on_masterstars",
+        "photometry_core.py:vsx_is_known_variable_top3_per_bin",
+        "pipeline.py:_analyze_calibrated_qc_one",
+        "pipeline.py:_apply_draft_combined_to_pipeline_meta",
+        "pipeline.py:_apply_wcs_header_to_fits",
+        "pipeline.py:_archive_preprocess_lights_root",
+        "pipeline.py:_assert_alignment_produced_fits",
+        "pipeline.py:_astrometry_align_impl_body",
+        "pipeline.py:_available_system_ram_bytes",
+        "pipeline.py:_enrich_calibration_metadata_from_header",
+        "pipeline.py:_ensure_parent_dirs_for_aligned_fits",
+        "pipeline.py:_equipment_saturate_adu_from_db",
+        "pipeline.py:_export_catalog_psf_st_fields",
+        "pipeline.py:_field_jump_empty_result",
+        "pipeline.py:_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+        "pipeline.py:_filter_light_paths_maybe",
+        "pipeline.py:_finite_positive_adu",
+        "pipeline.py:_fits_primary_pixel_count",
+        "pipeline.py:_focal_mm_plausible",
+        "pipeline.py:_has_valid_wcs",
+        "pipeline.py:_header_focal_length_mm",
+        "pipeline.py:_header_pick_first",
+        "pipeline.py:_infer_raw_light_path_for_calibrated",
+        "pipeline.py:_iter_light_fits",
+        "pipeline.py:_merge_astrometry_group_reports",
+        "pipeline.py:_merge_platesolve_gaia_pairs_into_masterstars_df",
+        "pipeline.py:_merge_vsx_exoplanet_variable_targets",
+        "pipeline.py:_obs_fwhm_basename_map_from_db",
+        "pipeline.py:_partition_detrended_by_subfolder",
+        "pipeline.py:_pass2_sibling_wcs_recovery",
+        "pipeline.py:_passthrough_lights_to_calibrated",
+        "pipeline.py:_path_segments_forbidden_for_masterstar_physical_source",
+        "pipeline.py:_photometry_mode_run_flags",
+        "pipeline.py:_pipeline_ui_info",
+        "pipeline.py:_plate_solve_input_bundle",
+        "pipeline.py:_qc_enrich_calibrated_in_place",
+        "pipeline.py:_qc_fwhm_elongation",
+        "pipeline.py:_query_vsx_local_frame_bbox",
+        "pipeline.py:_resolve_focal_mm_for_plate_scale",
+        "pipeline.py:_run_osc_multi_group_alignment",
+        "pipeline.py:_sat_adu_from_draft_sat_diag",
+        "pipeline.py:_solve_wcs_astrometry_net",
+        "pipeline.py:_solve_wcs_external",
+        "pipeline.py:_solve_wcs_solve_field_cli",
+        "pipeline.py:_sync_comparison_stars_across_setups",
+        "pipeline.py:_sync_manifest_cal_stage_from_qc_row",
+        "pipeline.py:_try_rescale_masterstar_linear_wcs_to_expected_plate_scale",
+        "pipeline.py:_update_masterstar_obs_file_status",
+        "pipeline.py:_vyvar_df_round_time_jd_for_csv",
+        "pipeline.py:_vyvar_df_to_csv",
+        "pipeline.py:_vyvar_open_database",
+        "pipeline.py:_vyvar_parallel_pool",
+        "pipeline.py:_vyvar_parallel_use_processes",
+        "pipeline.py:_vyvar_parallel_worker_count",
+        "pipeline.py:_vyvar_per_frame_csv_workers",
+        "pipeline.py:_vyvar_qc_preprocess_workers",
+        "pipeline.py:_wcs_field_center_radec_deg",
+        "pipeline.py:analyze_calibrated_qc",
+        "pipeline.py:astrometry_align_and_build_masterstar",
+        "pipeline.py:build_prefilter_rejected_map",
+        "pipeline.py:compute_plate_scale_from_db",
+        "pipeline.py:detect_field_jumps",
+        "pipeline.py:draft_is_multi_group_obs",
+        "pipeline.py:draft_obs_group_count",
+        "pipeline.py:estimate_archive_memory_profile",
+        "pipeline.py:estimate_memory_from_fits_headers",
+        "pipeline.py:filter_files_by_qc_metrics_allowlist",
+        "pipeline.py:format_memory_bytes",
+        "pipeline.py:generate_masterstar_and_catalog",
+        "pipeline.py:get_auto_fov",
+        "pipeline.py:get_masterstar_candidate_rows",
+        "pipeline.py:get_masterstar_candidates",
+        "pipeline.py:list_best_processed_light_paths_for_masterstar",
+        "pipeline.py:load_qc_metrics_status_by_path",
+        "pipeline.py:norm_fits_path_key",
+        "pipeline.py:resolve_masterstar_input_root",
+        "pipeline.py:resolve_obs_file_to_processed_fits",
+        "pipeline.py:resolve_plate_solve_fov_deg_hint",
+        "pipeline.py:run_osc_channel_extraction_for_archive",
+        "pipeline.py:scan_calibrated_lights_pointing",
+        "pipeline.py:select_comparison_stars_spatial_grid",
+        "pipeline.py:write_photometry_plan_files"
+      ],
+      "primary_stages": [
+        "UI-only",
+        "astrometry-MASTERSTAR",
+        "calibration",
+        "import",
+        "photometry-shared",
+        "unreachable"
+      ],
+      "cluster": "C01"
+    },
+    {
+      "id": "photometry_core.py:_normalize_gaia_id",
+      "n_defs": 68,
+      "lines": 7300,
+      "internal_edges": 95,
+      "cross_edges": 38,
+      "not_a_module": false,
+      "members": [
+        "run_phase0_and_phase1",
+        "_phase2a_prepare_shared_state",
+        "select_comparison_stars_per_target",
+        "_phase2a_finalize_exports",
+        "select_active_targets",
+        "auto_export_variability_candidates_csv",
+        "build_global_comp_pool",
+        "read_flux_from_csv",
+        "_write_suspected_variables",
+        "measure_fwhm_from_masterstar",
+        "compute_aperture_correction",
+        "save_field_map_png",
+        "_enrich_comp_bp_rp",
+        "_edge_ok_from_masterstar_pipeline",
+        "_phase2a_write_summary",
+        "_enrich_active_targets_bp_rp",
+        "_phase2a_proc_column_requirements",
+        "_enrich_target_bp_rp_from_gaia_db",
+        "_batch_enrich_targets_bp_rp_from_gaia_db",
+        "classify_lc_quality",
+        "_compute_frame_align_residuals",
+        "_refresh_variable_targets_xy",
+        "_read_field_density_inputs",
+        "build_gs11_summary",
+        "_resolve_frame_hw_px_from_masterstar",
+        "_phase2a_star_mag_lookup",
+        "compute_optimal_apertures",
+        "build_lc_quality_summary",
+        "_ensure_group_comp_pool_csv",
+        "_lookup_star_in_csv",
+        "_auto_repair_catalog_ids",
+        "_build_csv_lookup",
+        "resolve_variable_targets_csv",
+        "_warn_zero_compstars_edge",
+        "_propagate_phase2a_skip_reason_to_active",
+        "_resolve_plate_scale_arcsec_per_px",
+        "_frame_align_residual_gate_select",
+        "resolve_apply_color_term",
+        "_count_gate_passing_comps",
+        "_attach_predicted_dilution_report",
+        "_measured_aperture_from_proc_cache",
+        "_resolve_phase2a_equipment_id",
+        "_photometric_error_with_bkg_mode",
+        "merge_photometry_pipeline_meta",
+        "_phase0_effective_frame_hw_px",
+        "_howell_variance_adu2",
+        "_phase2a_empirical_sigma_bkg_ap",
+        "_dedupe_comp_pool_by_gaia_key",
+        "_resolve_photometric_aperture_px_for_gs11",
+        "_target_display_name",
+        "parse_comp_quality_json_map",
+        "_photometric_error",
+        "_record_align_residuals_to_report",
+        "_sky_pp_for_photometric_error",
+        "_active_target_zone_flag",
+        "_require_comparison_stars_per_target_schema",
+        "_ensure_active_target_display_names",
+        "_phase2a_coerce_skip_photometry",
+        "expected_rms_from_model",
+        "_normalize_id_value",
+        "_sid_int",
+        "_normalize_gaia_id",
+        "_phase2a_cache_columns",
+        "_angular_distance_deg",
+        "_proc_stem",
+        "_sat_limit_peak_adu",
+        "_bool_col",
+        "_normalize_id_series"
+      ],
+      "qids": [
+        "photometry_core.py:_active_target_zone_flag",
+        "photometry_core.py:_angular_distance_deg",
+        "photometry_core.py:_attach_predicted_dilution_report",
+        "photometry_core.py:_auto_repair_catalog_ids",
+        "photometry_core.py:_batch_enrich_targets_bp_rp_from_gaia_db",
+        "photometry_core.py:_bool_col",
+        "photometry_core.py:_build_csv_lookup",
+        "photometry_core.py:_compute_frame_align_residuals",
+        "photometry_core.py:_count_gate_passing_comps",
+        "photometry_core.py:_dedupe_comp_pool_by_gaia_key",
+        "photometry_core.py:_edge_ok_from_masterstar_pipeline",
+        "photometry_core.py:_enrich_active_targets_bp_rp",
+        "photometry_core.py:_enrich_comp_bp_rp",
+        "photometry_core.py:_enrich_target_bp_rp_from_gaia_db",
+        "photometry_core.py:_ensure_active_target_display_names",
+        "photometry_core.py:_ensure_group_comp_pool_csv",
+        "photometry_core.py:_frame_align_residual_gate_select",
+        "photometry_core.py:_howell_variance_adu2",
+        "photometry_core.py:_lookup_star_in_csv",
+        "photometry_core.py:_measured_aperture_from_proc_cache",
+        "photometry_core.py:_normalize_gaia_id",
+        "photometry_core.py:_normalize_id_series",
+        "photometry_core.py:_normalize_id_value",
+        "photometry_core.py:_phase0_effective_frame_hw_px",
+        "photometry_core.py:_phase2a_cache_columns",
+        "photometry_core.py:_phase2a_coerce_skip_photometry",
+        "photometry_core.py:_phase2a_empirical_sigma_bkg_ap",
+        "photometry_core.py:_phase2a_finalize_exports",
+        "photometry_core.py:_phase2a_prepare_shared_state",
+        "photometry_core.py:_phase2a_proc_column_requirements",
+        "photometry_core.py:_phase2a_star_mag_lookup",
+        "photometry_core.py:_phase2a_write_summary",
+        "photometry_core.py:_photometric_error",
+        "photometry_core.py:_photometric_error_with_bkg_mode",
+        "photometry_core.py:_proc_stem",
+        "photometry_core.py:_propagate_phase2a_skip_reason_to_active",
+        "photometry_core.py:_read_field_density_inputs",
+        "photometry_core.py:_record_align_residuals_to_report",
+        "photometry_core.py:_refresh_variable_targets_xy",
+        "photometry_core.py:_require_comparison_stars_per_target_schema",
+        "photometry_core.py:_resolve_frame_hw_px_from_masterstar",
+        "photometry_core.py:_resolve_phase2a_equipment_id",
+        "photometry_core.py:_resolve_photometric_aperture_px_for_gs11",
+        "photometry_core.py:_resolve_plate_scale_arcsec_per_px",
+        "photometry_core.py:_sat_limit_peak_adu",
+        "photometry_core.py:_sid_int",
+        "photometry_core.py:_sky_pp_for_photometric_error",
+        "photometry_core.py:_target_display_name",
+        "photometry_core.py:_warn_zero_compstars_edge",
+        "photometry_core.py:_write_suspected_variables",
+        "photometry_core.py:auto_export_variability_candidates_csv",
+        "photometry_core.py:build_global_comp_pool",
+        "photometry_core.py:build_gs11_summary",
+        "photometry_core.py:build_lc_quality_summary",
+        "photometry_core.py:classify_lc_quality",
+        "photometry_core.py:compute_aperture_correction",
+        "photometry_core.py:compute_optimal_apertures",
+        "photometry_core.py:expected_rms_from_model",
+        "photometry_core.py:measure_fwhm_from_masterstar",
+        "photometry_core.py:merge_photometry_pipeline_meta",
+        "photometry_core.py:parse_comp_quality_json_map",
+        "photometry_core.py:read_flux_from_csv",
+        "photometry_core.py:resolve_apply_color_term",
+        "photometry_core.py:resolve_variable_targets_csv",
+        "photometry_core.py:run_phase0_and_phase1",
+        "photometry_core.py:save_field_map_png",
+        "photometry_core.py:select_active_targets",
+        "photometry_core.py:select_comparison_stars_per_target"
+      ],
+      "primary_stages": [
+        "gate-only",
+        "phase0+1 comp selection",
+        "phase2a photometry",
+        "photometry-shared"
+      ],
+      "cluster": "C02"
+    },
+    {
+      "id": "pipeline.py:_cal_diag_export_for_workers",
+      "n_defs": 74,
+      "lines": 3943,
+      "internal_edges": 127,
+      "cross_edges": 18,
+      "not_a_module": false,
+      "members": [
+        "AstroPipeline",
+        "calibrate_lights_to_calibrated",
+        "run_draft_ram_calibration_qc_to_obs_files",
+        "_calibrate_one_light_apply_masters_in_ram",
+        "validate_comparison_ensemble_flatness",
+        "calibrated_paths_for_draft_apply_filters",
+        "run_quality_analysis",
+        "fits_metadata_from_primary_header",
+        "_calibrate_one_light_disk",
+        "_robust_frame_fwhm_median",
+        "extract_fits_metadata",
+        "_calibrate_batch_process_one",
+        "apply_perf10_dao_qc_to_obs_files",
+        "_quality_inspection_dao_metrics_array",
+        "_post_calibration_qc_eval",
+        "qc_enrich_calibrated_lights_in_place",
+        "_mean_hfr_bright_stars_dao",
+        "sync_obs_files_drift_arcmin_for_draft",
+        "_moment_fwhm_elong_peak_at",
+        "resolve_preprocess_target_coordinates",
+        "_sync_obs_calibration_state_with_retry",
+        "_qc_suggest_thresholds",
+        "_inspection_jd_from_header",
+        "_merge_equipment_pixel_into_metadata",
+        "preprocess_calibrated_to_processed",
+        "_log_calibration_io_preflight",
+        "_qc_pack_from_config",
+        "_estimate_fov_deg_from_header",
+        "log_lights_binning_from_headers_preflight",
+        "_archive_raw_to_calibrated_light",
+        "draft_median_pointing_icrs_deg",
+        "_resolve_draft_light_raw_path",
+        "_quality_inspection_dao_metrics",
+        "_strip_raw_linearity_header_keywords",
+        "_init_calibrate_batch_worker",
+        "_calibration_flags",
+        "_dao_star_table_mean_roundness",
+        "_half_flux_radius_in_cutout",
+        "_saturation_adu_for_cal_diag",
+        "_recompute_effective_pixel_from_physical",
+        "_resolve_dark_path_for_light",
+        "_load_raw_for_frame",
+        "_log_calibration_metadata_diagnostic",
+        "_log_effective_pixel_pitch",
+        "_pipeline_ui_error",
+        "_qc_center_crop_for_stars",
+        "_summarize_lights_binning_from_headers",
+        "_db_for_calibration_tasks",
+        "_perf10_lookup_qc",
+        "_calibration_type_from_flags",
+        "_exposure_sec_from_header",
+        "_resolve_light_fits_for_quality_inspection",
+        "_load_raw_hdr_for_frame",
+        "_cal_diag_session_from_export",
+        "_match_and_crop_pair",
+        "_pick_light_for_metadata_diagnostic",
+        "_fits_pixel_raw_to_micrometres",
+        "_cfg_calibration_library_native_binning",
+        "_estimate_dao_fwhm_guess",
+        "_estimate_fov_deg_from_fits_path",
+        "observation_group_key_from_metadata",
+        "_archive_root_from_lights_root",
+        "_vy_calib_status_numeric",
+        "_hdr_vy_cflag_str",
+        "_obs_group_key_from_light_path",
+        "_safe_filter_token",
+        "_cal_diag_export_for_workers",
+        "_light_binning_from_path",
+        "_parse_fits_binning_int",
+        "_valid_bayerpat_from_header",
+        "_vyvar_calibrate_multiprocessing_enabled",
+        "_fits_meta_dec_deg",
+        "_fits_meta_ra_deg",
+        "_has_usable_master_dark"
+      ],
+      "qids": [
+        "pipeline.py:AstroPipeline",
+        "pipeline.py:_archive_raw_to_calibrated_light",
+        "pipeline.py:_archive_root_from_lights_root",
+        "pipeline.py:_cal_diag_export_for_workers",
+        "pipeline.py:_cal_diag_session_from_export",
+        "pipeline.py:_calibrate_batch_process_one",
+        "pipeline.py:_calibrate_one_light_apply_masters_in_ram",
+        "pipeline.py:_calibrate_one_light_disk",
+        "pipeline.py:_calibration_flags",
+        "pipeline.py:_calibration_type_from_flags",
+        "pipeline.py:_cfg_calibration_library_native_binning",
+        "pipeline.py:_dao_star_table_mean_roundness",
+        "pipeline.py:_db_for_calibration_tasks",
+        "pipeline.py:_estimate_dao_fwhm_guess",
+        "pipeline.py:_estimate_fov_deg_from_fits_path",
+        "pipeline.py:_estimate_fov_deg_from_header",
+        "pipeline.py:_exposure_sec_from_header",
+        "pipeline.py:_fits_meta_dec_deg",
+        "pipeline.py:_fits_meta_ra_deg",
+        "pipeline.py:_fits_pixel_raw_to_micrometres",
+        "pipeline.py:_half_flux_radius_in_cutout",
+        "pipeline.py:_has_usable_master_dark",
+        "pipeline.py:_hdr_vy_cflag_str",
+        "pipeline.py:_init_calibrate_batch_worker",
+        "pipeline.py:_inspection_jd_from_header",
+        "pipeline.py:_light_binning_from_path",
+        "pipeline.py:_load_raw_for_frame",
+        "pipeline.py:_load_raw_hdr_for_frame",
+        "pipeline.py:_log_calibration_io_preflight",
+        "pipeline.py:_log_calibration_metadata_diagnostic",
+        "pipeline.py:_log_effective_pixel_pitch",
+        "pipeline.py:_match_and_crop_pair",
+        "pipeline.py:_mean_hfr_bright_stars_dao",
+        "pipeline.py:_merge_equipment_pixel_into_metadata",
+        "pipeline.py:_moment_fwhm_elong_peak_at",
+        "pipeline.py:_obs_group_key_from_light_path",
+        "pipeline.py:_parse_fits_binning_int",
+        "pipeline.py:_perf10_lookup_qc",
+        "pipeline.py:_pick_light_for_metadata_diagnostic",
+        "pipeline.py:_pipeline_ui_error",
+        "pipeline.py:_post_calibration_qc_eval",
+        "pipeline.py:_qc_center_crop_for_stars",
+        "pipeline.py:_qc_pack_from_config",
+        "pipeline.py:_qc_suggest_thresholds",
+        "pipeline.py:_quality_inspection_dao_metrics",
+        "pipeline.py:_quality_inspection_dao_metrics_array",
+        "pipeline.py:_recompute_effective_pixel_from_physical",
+        "pipeline.py:_resolve_dark_path_for_light",
+        "pipeline.py:_resolve_draft_light_raw_path",
+        "pipeline.py:_resolve_light_fits_for_quality_inspection",
+        "pipeline.py:_robust_frame_fwhm_median",
+        "pipeline.py:_safe_filter_token",
+        "pipeline.py:_saturation_adu_for_cal_diag",
+        "pipeline.py:_strip_raw_linearity_header_keywords",
+        "pipeline.py:_summarize_lights_binning_from_headers",
+        "pipeline.py:_sync_obs_calibration_state_with_retry",
+        "pipeline.py:_valid_bayerpat_from_header",
+        "pipeline.py:_vy_calib_status_numeric",
+        "pipeline.py:_vyvar_calibrate_multiprocessing_enabled",
+        "pipeline.py:apply_perf10_dao_qc_to_obs_files",
+        "pipeline.py:calibrate_lights_to_calibrated",
+        "pipeline.py:calibrated_paths_for_draft_apply_filters",
+        "pipeline.py:draft_median_pointing_icrs_deg",
+        "pipeline.py:extract_fits_metadata",
+        "pipeline.py:fits_metadata_from_primary_header",
+        "pipeline.py:log_lights_binning_from_headers_preflight",
+        "pipeline.py:observation_group_key_from_metadata",
+        "pipeline.py:preprocess_calibrated_to_processed",
+        "pipeline.py:qc_enrich_calibrated_lights_in_place",
+        "pipeline.py:resolve_preprocess_target_coordinates",
+        "pipeline.py:run_draft_ram_calibration_qc_to_obs_files",
+        "pipeline.py:run_quality_analysis",
+        "pipeline.py:sync_obs_files_drift_arcmin_for_draft",
+        "pipeline.py:validate_comparison_ensemble_flatness"
+      ],
+      "primary_stages": [
+        "UI-only",
+        "astrometry-MASTERSTAR",
+        "calibration",
+        "gate-only",
+        "import",
+        "unreachable"
+      ],
+      "cluster": "C03"
+    },
+    {
+      "id": "photometry_core.py:_phase2a_process_one_target",
+      "n_defs": 31,
+      "lines": 3247,
+      "internal_edges": 30,
+      "cross_edges": 19,
+      "not_a_module": false,
+      "members": [
+        "_phase2a_process_one_target",
+        "save_lightcurve_csv",
+        "ensemble_normalize",
+        "save_target_field_map_png",
+        "temporal_bin_comp_lc",
+        "save_lightcurve_png",
+        "savgol_detrend_lc",
+        "pytics_iterative_weights",
+        "_recompute_bjd_hjd_with_status",
+        "apply_color_term",
+        "save_cutout_png",
+        "_combine_err_with_ensemble_scatter_keyed",
+        "_color_term_cat_inst_scatter_pair",
+        "_check_color_term_extrapolation",
+        "_load_blend_worklist",
+        "compute_mag_calib_final",
+        "_err_budget_components_keyed",
+        "compute_lc_rms_ooe",
+        "_ensemble_scatter_by_source_file",
+        "_phase2a_skip_empty_comps_target",
+        "_recompute_bjd_hjd_per_target",
+        "_phase2a_empty_comp_summary_row",
+        "_route_lc_per_frame_err",
+        "_ac_summary_fields",
+        "_append_ct_prototype_row",
+        "_exclude_err_scatter_unmatched_epochs",
+        "ct_ensemble_reference_maps",
+        "_get_comp_bjd_series",
+        "BlendMapEntry",
+        "_load_adaptive_blend_map",
+        "_ct_prototype_enabled"
+      ],
+      "qids": [
+        "photometry_core.py:BlendMapEntry",
+        "photometry_core.py:_ac_summary_fields",
+        "photometry_core.py:_append_ct_prototype_row",
+        "photometry_core.py:_check_color_term_extrapolation",
+        "photometry_core.py:_color_term_cat_inst_scatter_pair",
+        "photometry_core.py:_combine_err_with_ensemble_scatter_keyed",
+        "photometry_core.py:_ct_prototype_enabled",
+        "photometry_core.py:_ensemble_scatter_by_source_file",
+        "photometry_core.py:_err_budget_components_keyed",
+        "photometry_core.py:_exclude_err_scatter_unmatched_epochs",
+        "photometry_core.py:_get_comp_bjd_series",
+        "photometry_core.py:_load_adaptive_blend_map",
+        "photometry_core.py:_load_blend_worklist",
+        "photometry_core.py:_phase2a_empty_comp_summary_row",
+        "photometry_core.py:_phase2a_process_one_target",
+        "photometry_core.py:_phase2a_skip_empty_comps_target",
+        "photometry_core.py:_recompute_bjd_hjd_per_target",
+        "photometry_core.py:_recompute_bjd_hjd_with_status",
+        "photometry_core.py:_route_lc_per_frame_err",
+        "photometry_core.py:apply_color_term",
+        "photometry_core.py:compute_lc_rms_ooe",
+        "photometry_core.py:compute_mag_calib_final",
+        "photometry_core.py:ct_ensemble_reference_maps",
+        "photometry_core.py:ensemble_normalize",
+        "photometry_core.py:pytics_iterative_weights",
+        "photometry_core.py:save_cutout_png",
+        "photometry_core.py:save_lightcurve_csv",
+        "photometry_core.py:save_lightcurve_png",
+        "photometry_core.py:save_target_field_map_png",
+        "photometry_core.py:savgol_detrend_lc",
+        "photometry_core.py:temporal_bin_comp_lc"
+      ],
+      "primary_stages": [
+        "gate-only",
+        "phase2a photometry"
+      ],
+      "cluster": "C04"
+    },
+    {
+      "id": "pipeline.py:_effective_field_catalog_cone_radius_deg",
+      "n_defs": 33,
+      "lines": 3035,
+      "internal_edges": 50,
+      "cross_edges": 37,
+      "not_a_module": false,
+      "members": [
+        "export_per_frame_catalogs",
+        "_export_per_frame_run_catalog_core",
+        "_fill_psf_catalog_columns",
+        "_build_exoplanet_promotion_rows_from_masterstars",
+        "_apply_exo_host_columns_to_proc_df",
+        "_query_gaia_local",
+        "_query_vsx_local",
+        "_prefetch_export_shared_catalog_for_process_pool",
+        "_epsf_target_catalog_ids",
+        "_query_exoplanet_local",
+        "_exo_host_annotation_arrays",
+        "_gaia_catalog_cone_radius_optics_floor_deg",
+        "_invalidate_field_catalog_cone_cache_if_needed",
+        "_effective_field_catalog_cone_radius_deg",
+        "_field_center_and_radius_from_wcs",
+        "_proc_deduplicate_matched_catalog_rows",
+        "_export_per_frame_ram_worker_task",
+        "_export_first_icrs_center_radius",
+        "_epsf_fit_catalog_ids",
+        "_icrs_center_radius_from_hdr_data",
+        "_write_field_catalog_cone_meta",
+        "_estimate_catalog_frame_hw",
+        "_init_export_per_frame_worker",
+        "_vyvar_cap_mp_workers_for_catalog",
+        "build_ucac_catalog_kdtree",
+        "_export_per_frame_disk_worker_task",
+        "_catalog_df_cap_brightest_by_mag",
+        "_sat_ctx_from_worker",
+        "_proc_catalog_keep_matched_rows_only",
+        "_proc_drop_unmatched_dao_rows",
+        "_fits_header_first_positive_float",
+        "_cfg_from_export_worker_state",
+        "_field_catalog_cone_meta_path"
+      ],
+      "qids": [
+        "pipeline.py:_apply_exo_host_columns_to_proc_df",
+        "pipeline.py:_build_exoplanet_promotion_rows_from_masterstars",
+        "pipeline.py:_catalog_df_cap_brightest_by_mag",
+        "pipeline.py:_cfg_from_export_worker_state",
+        "pipeline.py:_effective_field_catalog_cone_radius_deg",
+        "pipeline.py:_epsf_fit_catalog_ids",
+        "pipeline.py:_epsf_target_catalog_ids",
+        "pipeline.py:_estimate_catalog_frame_hw",
+        "pipeline.py:_exo_host_annotation_arrays",
+        "pipeline.py:_export_first_icrs_center_radius",
+        "pipeline.py:_export_per_frame_disk_worker_task",
+        "pipeline.py:_export_per_frame_ram_worker_task",
+        "pipeline.py:_export_per_frame_run_catalog_core",
+        "pipeline.py:_field_catalog_cone_meta_path",
+        "pipeline.py:_field_center_and_radius_from_wcs",
+        "pipeline.py:_fill_psf_catalog_columns",
+        "pipeline.py:_fits_header_first_positive_float",
+        "pipeline.py:_gaia_catalog_cone_radius_optics_floor_deg",
+        "pipeline.py:_icrs_center_radius_from_hdr_data",
+        "pipeline.py:_init_export_per_frame_worker",
+        "pipeline.py:_invalidate_field_catalog_cone_cache_if_needed",
+        "pipeline.py:_prefetch_export_shared_catalog_for_process_pool",
+        "pipeline.py:_proc_catalog_keep_matched_rows_only",
+        "pipeline.py:_proc_deduplicate_matched_catalog_rows",
+        "pipeline.py:_proc_drop_unmatched_dao_rows",
+        "pipeline.py:_query_exoplanet_local",
+        "pipeline.py:_query_gaia_local",
+        "pipeline.py:_query_vsx_local",
+        "pipeline.py:_sat_ctx_from_worker",
+        "pipeline.py:_vyvar_cap_mp_workers_for_catalog",
+        "pipeline.py:_write_field_catalog_cone_meta",
+        "pipeline.py:build_ucac_catalog_kdtree",
+        "pipeline.py:export_per_frame_catalogs"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C05"
+    },
+    {
+      "id": "pipeline.py:detect_stars_and_match_catalog",
+      "n_defs": 30,
+      "lines": 2667,
+      "internal_edges": 44,
+      "cross_edges": 24,
+      "not_a_module": false,
+      "members": [
+        "detect_stars_and_match_catalog",
+        "detect_stars_match_master_reference",
+        "_lock_matched_centroids_to_master_grid",
+        "_dao_spatial_flux_cap_row_indices",
+        "_vectorized_star_saturation_columns",
+        "_effective_saturation_limit",
+        "_resolve_peak_saturation_limit_adu",
+        "_box_peaks_at_centroids",
+        "_apply_dao_centroid_wcs_guard",
+        "_pixel_noise_sigma_pp_adu",
+        "_saturated_core_plateau_vectorized",
+        "_gaia_chip_xy_from_catalog",
+        "_dao_convolved_background_rms_adu",
+        "nearest_sky_nn_kdtree",
+        "_dao_detection_threshold_adu",
+        "_infer_sat_limit_from_bitpix",
+        "_detect_empirical_clip_level_adu",
+        "_dao_noise_sigma_adu",
+        "_fits_header_vy_algn_aligned",
+        "_proc_rename_det_names_to_catalog_id",
+        "_saturate_limit_adu_from_header",
+        "_all_pix2world_icrs_deg",
+        "_mean_bin2d_for_dao",
+        "_apply_wcs_tan_fragment_to_header",
+        "_proc_sat_block_for_csv",
+        "_prefilter_dao_table_brightest",
+        "_icrs_deg_to_unitxyz",
+        "_chord_to_arcsec",
+        "_dao_auto_binning_factor",
+        "_slice_exo_annotation"
+      ],
+      "qids": [
+        "pipeline.py:_all_pix2world_icrs_deg",
+        "pipeline.py:_apply_dao_centroid_wcs_guard",
+        "pipeline.py:_apply_wcs_tan_fragment_to_header",
+        "pipeline.py:_box_peaks_at_centroids",
+        "pipeline.py:_chord_to_arcsec",
+        "pipeline.py:_dao_auto_binning_factor",
+        "pipeline.py:_dao_convolved_background_rms_adu",
+        "pipeline.py:_dao_detection_threshold_adu",
+        "pipeline.py:_dao_noise_sigma_adu",
+        "pipeline.py:_dao_spatial_flux_cap_row_indices",
+        "pipeline.py:_detect_empirical_clip_level_adu",
+        "pipeline.py:_effective_saturation_limit",
+        "pipeline.py:_fits_header_vy_algn_aligned",
+        "pipeline.py:_gaia_chip_xy_from_catalog",
+        "pipeline.py:_icrs_deg_to_unitxyz",
+        "pipeline.py:_infer_sat_limit_from_bitpix",
+        "pipeline.py:_lock_matched_centroids_to_master_grid",
+        "pipeline.py:_mean_bin2d_for_dao",
+        "pipeline.py:_pixel_noise_sigma_pp_adu",
+        "pipeline.py:_prefilter_dao_table_brightest",
+        "pipeline.py:_proc_rename_det_names_to_catalog_id",
+        "pipeline.py:_proc_sat_block_for_csv",
+        "pipeline.py:_resolve_peak_saturation_limit_adu",
+        "pipeline.py:_saturate_limit_adu_from_header",
+        "pipeline.py:_saturated_core_plateau_vectorized",
+        "pipeline.py:_slice_exo_annotation",
+        "pipeline.py:_vectorized_star_saturation_columns",
+        "pipeline.py:detect_stars_and_match_catalog",
+        "pipeline.py:detect_stars_match_master_reference",
+        "pipeline.py:nearest_sky_nn_kdtree"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "calibration"
+      ],
+      "cluster": "C06"
+    },
+    {
+      "id": "photometry_core.py:_Phase2AState",
+      "n_defs": 24,
+      "lines": 1385,
+      "internal_edges": 25,
+      "cross_edges": 24,
+      "not_a_module": false,
+      "members": [
+        "run_phase2a",
+        "democratic_detrend_lc",
+        "_compute_group_color_term_fit",
+        "_build_phase2a_dynamic_params",
+        "_phase2a_attempt_k2_night_fit",
+        "fit_color_term_c1",
+        "should_apply_color_term",
+        "photometer_check_star_production_path",
+        "_Phase2AState",
+        "build_rms_mag_model",
+        "_phase2a_compute_lunar_context",
+        "_phase2a_observer_location_dict",
+        "_group_comp_mag_inst_from_proc_csvs",
+        "_sky_surface_meta_from_qc",
+        "_phase2a_resolve_field_center_ra_dec",
+        "_safe_polyfit",
+        "_comp_maps_from_comparison_stars_csv",
+        "_group_comp_mag_inst_from_flux_matrix",
+        "find_qc_metrics_csv",
+        "_median_sky_from_phase2a_csv_cache",
+        "_phase2a_collect_session_jd_values",
+        "_ColorTermGroupFit",
+        "_draft_dir_from_phase2a_paths",
+        "_obs_group_filter_key"
+      ],
+      "qids": [
+        "photometry_core.py:_ColorTermGroupFit",
+        "photometry_core.py:_Phase2AState",
+        "photometry_core.py:_build_phase2a_dynamic_params",
+        "photometry_core.py:_comp_maps_from_comparison_stars_csv",
+        "photometry_core.py:_compute_group_color_term_fit",
+        "photometry_core.py:_draft_dir_from_phase2a_paths",
+        "photometry_core.py:_group_comp_mag_inst_from_flux_matrix",
+        "photometry_core.py:_group_comp_mag_inst_from_proc_csvs",
+        "photometry_core.py:_median_sky_from_phase2a_csv_cache",
+        "photometry_core.py:_obs_group_filter_key",
+        "photometry_core.py:_phase2a_attempt_k2_night_fit",
+        "photometry_core.py:_phase2a_collect_session_jd_values",
+        "photometry_core.py:_phase2a_compute_lunar_context",
+        "photometry_core.py:_phase2a_observer_location_dict",
+        "photometry_core.py:_phase2a_resolve_field_center_ra_dec",
+        "photometry_core.py:_safe_polyfit",
+        "photometry_core.py:_sky_surface_meta_from_qc",
+        "photometry_core.py:build_rms_mag_model",
+        "photometry_core.py:democratic_detrend_lc",
+        "photometry_core.py:fit_color_term_c1",
+        "photometry_core.py:photometer_check_star_production_path",
+        "photometry_core.py:run_phase2a",
+        "photometry_core.py:should_apply_color_term",
+        "pipeline.py:find_qc_metrics_csv"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "gate-only",
+        "phase2a photometry",
+        "photometry-shared"
+      ],
+      "cluster": "C07"
+    },
+    {
+      "id": "photometry_core.py:enhance_catalog_dataframe_aperture_bpm",
+      "n_defs": 18,
+      "lines": 1335,
+      "internal_edges": 22,
+      "cross_edges": 7,
+      "not_a_module": false,
+      "members": [
+        "enhance_catalog_dataframe_aperture_bpm",
+        "compute_per_frame_cog_correction",
+        "measure_empty_aperture_sigma_bkg",
+        "measure_growth_curve_ee",
+        "_apply_aperture_catalog_enhancements_from_st",
+        "compute_fwhm_gaussian_for_aperture_catalog",
+        "_assert_inv_err_sigma_acct_01",
+        "_build_star_exclusion_mask",
+        "_median_bkg_var_from_aligned_frames",
+        "_fwhm_moment_at",
+        "estimate_star_free_per_pixel_variance_adu2",
+        "bad_columns_for_light_frame",
+        "_canonicalize_star_xy",
+        "_labbe_content_seed_from_header",
+        "_robust_scatter_mad",
+        "_sigma_bkg_r_key",
+        "_clamp_err_empty_apertures_n",
+        "_clamp_err_empty_apertures_min"
+      ],
+      "qids": [
+        "photometry_core.py:_assert_inv_err_sigma_acct_01",
+        "photometry_core.py:_build_star_exclusion_mask",
+        "photometry_core.py:_canonicalize_star_xy",
+        "photometry_core.py:_clamp_err_empty_apertures_min",
+        "photometry_core.py:_clamp_err_empty_apertures_n",
+        "photometry_core.py:_fwhm_moment_at",
+        "photometry_core.py:_labbe_content_seed_from_header",
+        "photometry_core.py:_median_bkg_var_from_aligned_frames",
+        "photometry_core.py:_robust_scatter_mad",
+        "photometry_core.py:_sigma_bkg_r_key",
+        "photometry_core.py:bad_columns_for_light_frame",
+        "photometry_core.py:compute_fwhm_gaussian_for_aperture_catalog",
+        "photometry_core.py:compute_per_frame_cog_correction",
+        "photometry_core.py:enhance_catalog_dataframe_aperture_bpm",
+        "photometry_core.py:estimate_star_free_per_pixel_variance_adu2",
+        "photometry_core.py:measure_empty_aperture_sigma_bkg",
+        "photometry_core.py:measure_growth_curve_ee",
+        "pipeline.py:_apply_aperture_catalog_enhancements_from_st"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "gate-only",
+        "photometry-shared",
+        "unreachable"
+      ],
+      "cluster": "C08"
+    },
+    {
+      "id": "photometry_core.py:_read_plate_scale_from_fits_path",
+      "n_defs": 8,
+      "lines": 766,
+      "internal_edges": 8,
+      "cross_edges": 5,
+      "not_a_module": false,
+      "members": [
+        "run_full_photometry_pipeline",
+        "run_sysrem_field",
+        "_get_plate_scale_from_cfg",
+        "_read_plate_scale_from_fits_path",
+        "_compute_fov_max_dist",
+        "_cd_matrix_scale_arcsec_per_px",
+        "ensure_full_variable_targets_if_presel_stub",
+        "_variable_targets_looks_like_ct_presel_stub"
+      ],
+      "qids": [
+        "photometry_core.py:_cd_matrix_scale_arcsec_per_px",
+        "photometry_core.py:_compute_fov_max_dist",
+        "photometry_core.py:_get_plate_scale_from_cfg",
+        "photometry_core.py:_read_plate_scale_from_fits_path",
+        "photometry_core.py:_variable_targets_looks_like_ct_presel_stub",
+        "photometry_core.py:ensure_full_variable_targets_if_presel_stub",
+        "photometry_core.py:run_full_photometry_pipeline",
+        "photometry_core.py:run_sysrem_field"
+      ],
+      "primary_stages": [
+        "gate-only",
+        "phase0+1 comp selection",
+        "phase2a photometry",
+        "photometry-shared"
+      ],
+      "cluster": "C09"
+    },
+    {
+      "id": "photometry_core.py:_frame_has_usable_cog",
+      "n_defs": 13,
+      "lines": 485,
+      "internal_edges": 13,
+      "cross_edges": 9,
+      "not_a_module": false,
+      "members": [
+        "decide_target_saturation_policy",
+        "apply_per_frame_saturation_to_active_targets",
+        "_per_frame_sat_flags_for_catalog_id",
+        "compute_lc_flux_method",
+        "evaluate_cog_night_apcorr_gate",
+        "_resolve_pfs_peak_test",
+        "_get_lc_adaptive",
+        "pfs_rescue_eligible",
+        "_get_lc_psf_strict",
+        "_frame_has_usable_cog",
+        "_coerce_bool_cell",
+        "_keep_recorded_skip_reason",
+        "inv_sat_limit_peak_test_adu"
+      ],
+      "qids": [
+        "photometry_core.py:_coerce_bool_cell",
+        "photometry_core.py:_frame_has_usable_cog",
+        "photometry_core.py:_get_lc_adaptive",
+        "photometry_core.py:_get_lc_psf_strict",
+        "photometry_core.py:_keep_recorded_skip_reason",
+        "photometry_core.py:_per_frame_sat_flags_for_catalog_id",
+        "photometry_core.py:_resolve_pfs_peak_test",
+        "photometry_core.py:apply_per_frame_saturation_to_active_targets",
+        "photometry_core.py:compute_lc_flux_method",
+        "photometry_core.py:decide_target_saturation_policy",
+        "photometry_core.py:evaluate_cog_night_apcorr_gate",
+        "photometry_core.py:pfs_rescue_eligible",
+        "pipeline.py:inv_sat_limit_peak_test_adu"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "exports-reports",
+        "phase2a photometry",
+        "photometry-shared"
+      ],
+      "cluster": "C10"
+    },
+    {
+      "id": "pipeline.py:_pick_preferred_masterstar_basename_hit",
+      "n_defs": 8,
+      "lines": 368,
+      "internal_edges": 10,
+      "cross_edges": 10,
+      "not_a_module": false,
+      "members": [
+        "build_masterstar_from_detrended",
+        "_resolve_best_effort_path_under",
+        "_sort_masterstar_paths_by_fwhm",
+        "_strip_external_platesolve_header",
+        "_pick_preferred_masterstar_basename_hit",
+        "_header_vy_fwhm_px",
+        "_safe_proc_name",
+        "_path_is_under_tree"
+      ],
+      "qids": [
+        "pipeline.py:_header_vy_fwhm_px",
+        "pipeline.py:_path_is_under_tree",
+        "pipeline.py:_pick_preferred_masterstar_basename_hit",
+        "pipeline.py:_resolve_best_effort_path_under",
+        "pipeline.py:_safe_proc_name",
+        "pipeline.py:_sort_masterstar_paths_by_fwhm",
+        "pipeline.py:_strip_external_platesolve_header",
+        "pipeline.py:build_masterstar_from_detrended"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C11"
+    },
+    {
+      "id": "photometry_core.py:_select_comps_by_rms_then_color",
+      "n_defs": 3,
+      "lines": 339,
+      "internal_edges": 2,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_select_comps_by_rms_then_color",
+        "_select_comps_by_color_then_rms",
+        "_bprp_tier_ladder_for_selection"
+      ],
+      "qids": [
+        "photometry_core.py:_bprp_tier_ladder_for_selection",
+        "photometry_core.py:_select_comps_by_color_then_rms",
+        "photometry_core.py:_select_comps_by_rms_then_color"
+      ],
+      "primary_stages": [
+        "phase0+1 comp selection"
+      ],
+      "cluster": "C12"
+    },
+    {
+      "id": "pipeline.py:_decide_preprocess_sky_action",
+      "n_defs": 5,
+      "lines": 312,
+      "internal_edges": 5,
+      "cross_edges": 4,
+      "not_a_module": false,
+      "members": [
+        "_qc_enrich_one_frame",
+        "_fit_subtract_preprocess_sky_surface",
+        "_decide_preprocess_sky_action",
+        "_header_vyskyord",
+        "SkySurfaceOrderConflictError"
+      ],
+      "qids": [
+        "pipeline.py:SkySurfaceOrderConflictError",
+        "pipeline.py:_decide_preprocess_sky_action",
+        "pipeline.py:_fit_subtract_preprocess_sky_surface",
+        "pipeline.py:_header_vyskyord",
+        "pipeline.py:_qc_enrich_one_frame"
+      ],
+      "primary_stages": [
+        "calibration"
+      ],
+      "cluster": "C13"
+    },
+    {
+      "id": "photometry_core.py:_aperture_flux_sky_per_star",
+      "n_defs": 5,
+      "lines": 296,
+      "internal_edges": 5,
+      "cross_edges": 3,
+      "not_a_module": false,
+      "members": [
+        "_annulus_sky_subtracted_flux",
+        "stamp_masterstar_snr_columns",
+        "_aperture_flux_sky_batch",
+        "_aperture_flux_sky_per_star",
+        "_sky_pp_from_annulus_image"
+      ],
+      "qids": [
+        "photometry_core.py:_annulus_sky_subtracted_flux",
+        "photometry_core.py:_aperture_flux_sky_batch",
+        "photometry_core.py:_aperture_flux_sky_per_star",
+        "photometry_core.py:_sky_pp_from_annulus_image",
+        "photometry_core.py:stamp_masterstar_snr_columns"
+      ],
+      "primary_stages": [
+        "ePSF hooks",
+        "gate-only",
+        "photometry-shared",
+        "unreachable"
+      ],
+      "cluster": "C14"
+    },
+    {
+      "id": "photometry_core.py:check_comparison_stability",
+      "n_defs": 3,
+      "lines": 251,
+      "internal_edges": 2,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "check_comparison_stability",
+        "_common_mode_detrend_comp_lc",
+        "_comp_lc_frame_ensemble_residual"
+      ],
+      "qids": [
+        "photometry_core.py:_common_mode_detrend_comp_lc",
+        "photometry_core.py:_comp_lc_frame_ensemble_residual",
+        "photometry_core.py:check_comparison_stability"
+      ],
+      "primary_stages": [
+        "phase2a photometry"
+      ],
+      "cluster": "C15"
+    },
+    {
+      "id": "pipeline.py:_finite_positive_adu",
+      "n_defs": 4,
+      "lines": 201,
+      "internal_edges": 4,
+      "cross_edges": 3,
+      "not_a_module": false,
+      "members": [
+        "_annotate_masterstars_flux_zones",
+        "_resolve_masterstar_bg_sigma_adu",
+        "_masterstar_zone_linear_threshold",
+        "_masterstar_zone_log_once"
+      ],
+      "qids": [
+        "pipeline.py:_annotate_masterstars_flux_zones",
+        "pipeline.py:_masterstar_zone_linear_threshold",
+        "pipeline.py:_masterstar_zone_log_once",
+        "pipeline.py:_resolve_masterstar_bg_sigma_adu"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C16"
+    },
+    {
+      "id": "photometry_core.py:apply_reporting_postprocess",
+      "n_defs": 6,
+      "lines": 184,
+      "internal_edges": 5,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "detect_outliers",
+        "apply_reporting_postprocess",
+        "empirical_feature_mask_mag",
+        "_preserve_nondetection_flags_helper",
+        "_target_row_is_vsx_known_variable",
+        "_mad_sigma_or_std_floor"
+      ],
+      "qids": [
+        "photometry_core.py:_mad_sigma_or_std_floor",
+        "photometry_core.py:_preserve_nondetection_flags_helper",
+        "photometry_core.py:_target_row_is_vsx_known_variable",
+        "photometry_core.py:apply_reporting_postprocess",
+        "photometry_core.py:detect_outliers",
+        "photometry_core.py:empirical_feature_mask_mag"
+      ],
+      "primary_stages": [
+        "phase2a photometry"
+      ],
+      "cluster": "C17"
+    },
+    {
+      "id": "photometry_core.py:bkg_scale_ratio_empirical_over_howell",
+      "n_defs": 7,
+      "lines": 172,
+      "internal_edges": 8,
+      "cross_edges": 3,
+      "not_a_module": false,
+      "members": [
+        "finalize_hybrid_bkg_fallback_proc_dir",
+        "_finalize_hybrid_bkg_fallback_sidecar",
+        "bkg_scale_ratio_empirical_over_howell",
+        "_howell_bkg_variance_adu2",
+        "scaled_sigma_bkg_ap_from_howell",
+        "compute_setup_bkg_scale_r",
+        "_clamp_bkg_scale_r"
+      ],
+      "qids": [
+        "photometry_core.py:_clamp_bkg_scale_r",
+        "photometry_core.py:_howell_bkg_variance_adu2",
+        "photometry_core.py:bkg_scale_ratio_empirical_over_howell",
+        "photometry_core.py:compute_setup_bkg_scale_r",
+        "photometry_core.py:finalize_hybrid_bkg_fallback_proc_dir",
+        "photometry_core.py:scaled_sigma_bkg_ap_from_howell",
+        "pipeline.py:_finalize_hybrid_bkg_fallback_sidecar"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "gate-only",
+        "photometry-shared"
+      ],
+      "cluster": "C18"
+    },
+    {
+      "id": "pipeline.py:_dao_targeted_pass2_unmatched_gaia",
+      "n_defs": 3,
+      "lines": 169,
+      "internal_edges": 2,
+      "cross_edges": 2,
+      "not_a_module": false,
+      "members": [
+        "_dao_targeted_pass2_unmatched_gaia",
+        "_merge_dao_pass1_pass2_tables",
+        "_catalog_match_radius_px"
+      ],
+      "qids": [
+        "pipeline.py:_catalog_match_radius_px",
+        "pipeline.py:_dao_targeted_pass2_unmatched_gaia",
+        "pipeline.py:_merge_dao_pass1_pass2_tables"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C19"
+    },
+    {
+      "id": "photometry_core.py:_complete_config_snapshot",
+      "n_defs": 4,
+      "lines": 145,
+      "internal_edges": 3,
+      "cross_edges": 2,
+      "not_a_module": false,
+      "members": [
+        "_resolve_git_provenance",
+        "_build_pipeline_provenance_block",
+        "_complete_config_snapshot",
+        "_json_safe_snapshot_value"
+      ],
+      "qids": [
+        "photometry_core.py:_build_pipeline_provenance_block",
+        "photometry_core.py:_complete_config_snapshot",
+        "photometry_core.py:_json_safe_snapshot_value",
+        "photometry_core.py:_resolve_git_provenance"
+      ],
+      "primary_stages": [
+        "photometry-shared"
+      ],
+      "cluster": "C20"
+    },
+    {
+      "id": "pipeline.py:_compute_airmass_from_altaz",
+      "n_defs": 3,
+      "lines": 119,
+      "internal_edges": 3,
+      "cross_edges": 2,
+      "not_a_module": false,
+      "members": [
+        "_compute_airmass_from_altaz",
+        "_extract_airmass_from_header",
+        "_airmass_from_altitude_deg"
+      ],
+      "qids": [
+        "pipeline.py:_airmass_from_altitude_deg",
+        "pipeline.py:_compute_airmass_from_altaz",
+        "pipeline.py:_extract_airmass_from_header"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C21"
+    },
+    {
+      "id": "pipeline.py:scan_usb_folder",
+      "n_defs": 1,
+      "lines": 110,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "scan_usb_folder"
+      ],
+      "qids": [
+        "pipeline.py:scan_usb_folder"
+      ],
+      "primary_stages": [
+        "import"
+      ],
+      "cluster": "C22"
+    },
+    {
+      "id": "photometry_core.py:load_epsf_metrics_for_draft",
+      "n_defs": 1,
+      "lines": 104,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "load_epsf_metrics_for_draft"
+      ],
+      "qids": [
+        "photometry_core.py:load_epsf_metrics_for_draft"
+      ],
+      "primary_stages": [
+        "ePSF hooks"
+      ],
+      "cluster": "C23"
+    },
+    {
+      "id": "photometry_core.py:_fits_header_facts",
+      "n_defs": 2,
+      "lines": 103,
+      "internal_edges": 1,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "_build_phase2a_resolved_facts",
+        "_fits_header_facts"
+      ],
+      "qids": [
+        "photometry_core.py:_build_phase2a_resolved_facts",
+        "photometry_core.py:_fits_header_facts"
+      ],
+      "primary_stages": [
+        "phase2a photometry"
+      ],
+      "cluster": "C24"
+    },
+    {
+      "id": "photometry_core.py:stress_test_relative_rms_from_sidecars",
+      "n_defs": 2,
+      "lines": 90,
+      "internal_edges": 1,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "stress_test_relative_rms_from_sidecars",
+        "StressTestResult"
+      ],
+      "qids": [
+        "photometry_core.py:StressTestResult",
+        "photometry_core.py:stress_test_relative_rms_from_sidecars"
+      ],
+      "primary_stages": [
+        "photometry-shared"
+      ],
+      "cluster": "C25"
+    },
+    {
+      "id": "photometry_core.py:common_field_intersection_bbox_px",
+      "n_defs": 4,
+      "lines": 87,
+      "internal_edges": 4,
+      "cross_edges": 3,
+      "not_a_module": false,
+      "members": [
+        "common_field_intersection_bbox_px",
+        "_finite_pixel_bbox_from_array",
+        "_intersection_bbox_from_frame_bboxes",
+        "common_field_intersection_bbox_px_from_arrays"
+      ],
+      "qids": [
+        "photometry_core.py:_finite_pixel_bbox_from_array",
+        "photometry_core.py:_intersection_bbox_from_frame_bboxes",
+        "photometry_core.py:common_field_intersection_bbox_px",
+        "photometry_core.py:common_field_intersection_bbox_px_from_arrays"
+      ],
+      "primary_stages": [
+        "photometry-shared",
+        "unreachable"
+      ],
+      "cluster": "C26"
+    },
+    {
+      "id": "pipeline.py:_box_peaks_at_centroids",
+      "n_defs": 3,
+      "lines": 87,
+      "internal_edges": 2,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "_saturated_core_plateau",
+        "_star_saturation_flags",
+        "_box_peak_max_adu"
+      ],
+      "qids": [
+        "pipeline.py:_box_peak_max_adu",
+        "pipeline.py:_saturated_core_plateau",
+        "pipeline.py:_star_saturation_flags"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR",
+        "unreachable"
+      ],
+      "cluster": "C27"
+    },
+    {
+      "id": "photometry_core.py:_select_comps_tiered",
+      "n_defs": 1,
+      "lines": 74,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_select_comps_tiered"
+      ],
+      "qids": [
+        "photometry_core.py:_select_comps_tiered"
+      ],
+      "primary_stages": [
+        "phase0+1 comp selection"
+      ],
+      "cluster": "C28"
+    },
+    {
+      "id": "pipeline.py:_pick_reference_frame_by_star_count",
+      "n_defs": 3,
+      "lines": 68,
+      "internal_edges": 2,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "_dao_star_count_from_array",
+        "_pick_reference_frame_by_star_count",
+        "_bin2d_mean"
+      ],
+      "qids": [
+        "pipeline.py:_bin2d_mean",
+        "pipeline.py:_dao_star_count_from_array",
+        "pipeline.py:_pick_reference_frame_by_star_count"
+      ],
+      "primary_stages": [
+        "astrometry-MASTERSTAR"
+      ],
+      "cluster": "C29"
+    },
+    {
+      "id": "pipeline.py:_epsf_lc_catalog_ids",
+      "n_defs": 2,
+      "lines": 50,
+      "internal_edges": 1,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_epsf_lc_catalog_ids",
+        "_add_catalog_ids_from_csv"
+      ],
+      "qids": [
+        "pipeline.py:_add_catalog_ids_from_csv",
+        "pipeline.py:_epsf_lc_catalog_ids"
+      ],
+      "primary_stages": [
+        "ePSF hooks"
+      ],
+      "cluster": "C30"
+    },
+    {
+      "id": "photometry_core.py:classify_git_dirty_paths",
+      "n_defs": 3,
+      "lines": 49,
+      "internal_edges": 2,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "classify_git_dirty_paths",
+        "_is_import_relevant_py_path",
+        "_porcelain_status_by_path"
+      ],
+      "qids": [
+        "photometry_core.py:_is_import_relevant_py_path",
+        "photometry_core.py:_porcelain_status_by_path",
+        "photometry_core.py:classify_git_dirty_paths"
+      ],
+      "primary_stages": [
+        "photometry-shared"
+      ],
+      "cluster": "C31"
+    },
+    {
+      "id": "pipeline.py:generate_observation_hash",
+      "n_defs": 1,
+      "lines": 45,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "generate_observation_hash"
+      ],
+      "qids": [
+        "pipeline.py:generate_observation_hash"
+      ],
+      "primary_stages": [
+        "import"
+      ],
+      "cluster": "C32"
+    },
+    {
+      "id": "photometry_core.py:comp_quality_quality_strings",
+      "n_defs": 2,
+      "lines": 40,
+      "internal_edges": 1,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "apply_comp_w_rel_for_display",
+        "comp_quality_quality_strings"
+      ],
+      "qids": [
+        "photometry_core.py:apply_comp_w_rel_for_display",
+        "photometry_core.py:comp_quality_quality_strings"
+      ],
+      "primary_stages": [
+        "exports-reports",
+        "gate-only"
+      ],
+      "cluster": "C33"
+    },
+    {
+      "id": "photometry_core.py:compute_auto_fwhm_limit",
+      "n_defs": 1,
+      "lines": 39,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "compute_auto_fwhm_limit"
+      ],
+      "qids": [
+        "photometry_core.py:compute_auto_fwhm_limit"
+      ],
+      "primary_stages": [
+        "calibration"
+      ],
+      "cluster": "C34"
+    },
+    {
+      "id": "photometry_core.py:ensemble_member_ids",
+      "n_defs": 1,
+      "lines": 38,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "ensemble_member_ids"
+      ],
+      "qids": [
+        "photometry_core.py:ensemble_member_ids"
+      ],
+      "primary_stages": [
+        "exports-reports"
+      ],
+      "cluster": "C35"
+    },
+    {
+      "id": "photometry_core.py:_get_lc_star_method",
+      "n_defs": 4,
+      "lines": 30,
+      "internal_edges": 3,
+      "cross_edges": 2,
+      "not_a_module": false,
+      "members": [
+        "_resolve_star_flux_method",
+        "_get_lc_star_method",
+        "_get_lc",
+        "_get_lc_adaptive_per_star"
+      ],
+      "qids": [
+        "photometry_core.py:_get_lc",
+        "photometry_core.py:_get_lc_adaptive_per_star",
+        "photometry_core.py:_get_lc_star_method",
+        "photometry_core.py:_resolve_star_flux_method"
+      ],
+      "primary_stages": [
+        "exports-reports",
+        "gate-only",
+        "phase2a photometry",
+        "unreachable"
+      ],
+      "cluster": "C36"
+    },
+    {
+      "id": "pipeline.py:_per_frame_noise_error_map",
+      "n_defs": 2,
+      "lines": 27,
+      "internal_edges": 1,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_frame_gain_readnoise_for_error_map",
+        "_per_frame_noise_error_map"
+      ],
+      "qids": [
+        "pipeline.py:_frame_gain_readnoise_for_error_map",
+        "pipeline.py:_per_frame_noise_error_map"
+      ],
+      "primary_stages": [
+        "unreachable"
+      ],
+      "cluster": "C37"
+    },
+    {
+      "id": "photometry_core.py:_labbe_debug_dump_enabled",
+      "n_defs": 3,
+      "lines": 26,
+      "internal_edges": 2,
+      "cross_edges": 1,
+      "not_a_module": false,
+      "members": [
+        "_labbe_append_debug_record",
+        "_labbe_debug_dump_enabled",
+        "_labbe_debug_dump_path"
+      ],
+      "qids": [
+        "photometry_core.py:_labbe_append_debug_record",
+        "photometry_core.py:_labbe_debug_dump_enabled",
+        "photometry_core.py:_labbe_debug_dump_path"
+      ],
+      "primary_stages": [
+        "unreachable"
+      ],
+      "cluster": "C38"
+    },
+    {
+      "id": "photometry_core.py:discover_aligned_science_fits",
+      "n_defs": 1,
+      "lines": 26,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "discover_aligned_science_fits"
+      ],
+      "qids": [
+        "photometry_core.py:discover_aligned_science_fits"
+      ],
+      "primary_stages": [
+        "gate-only"
+      ],
+      "cluster": "C39"
+    },
+    {
+      "id": "photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache",
+      "n_defs": 1,
+      "lines": 24,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_median_bkg_var_adu2_per_px_from_proc_cache"
+      ],
+      "qids": [
+        "photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache"
+      ],
+      "primary_stages": [
+        "unreachable"
+      ],
+      "cluster": "C40"
+    },
+    {
+      "id": "photometry_core.py:_estimate_annulus_sky_pp",
+      "n_defs": 1,
+      "lines": 20,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_estimate_annulus_sky_pp"
+      ],
+      "qids": [
+        "photometry_core.py:_estimate_annulus_sky_pp"
+      ],
+      "primary_stages": [
+        "gate-only"
+      ],
+      "cluster": "C41"
+    },
+    {
+      "id": "photometry_core.py:_star_mag_for_aperture_sizing",
+      "n_defs": 1,
+      "lines": 17,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_star_mag_for_aperture_sizing"
+      ],
+      "qids": [
+        "photometry_core.py:_star_mag_for_aperture_sizing"
+      ],
+      "primary_stages": [
+        "unreachable"
+      ],
+      "cluster": "C42"
+    },
+    {
+      "id": "photometry_core.py:resolve_lc_time_base",
+      "n_defs": 1,
+      "lines": 17,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "resolve_lc_time_base"
+      ],
+      "qids": [
+        "photometry_core.py:resolve_lc_time_base"
+      ],
+      "primary_stages": [
+        "UI-only"
+      ],
+      "cluster": "C43"
+    },
+    {
+      "id": "photometry_core.py:_frame_quality_gate_select",
+      "n_defs": 1,
+      "lines": 11,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_frame_quality_gate_select"
+      ],
+      "qids": [
+        "photometry_core.py:_frame_quality_gate_select"
+      ],
+      "primary_stages": [
+        "gate-only"
+      ],
+      "cluster": "C44"
+    },
+    {
+      "id": "pipeline.py:resolve_masterstars_metadata_csv",
+      "n_defs": 1,
+      "lines": 8,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "resolve_masterstars_metadata_csv"
+      ],
+      "qids": [
+        "pipeline.py:resolve_masterstars_metadata_csv"
+      ],
+      "primary_stages": [
+        "UI-only"
+      ],
+      "cluster": "C45"
+    },
+    {
+      "id": "photometry_core.py:lc_time_axis_short_label",
+      "n_defs": 1,
+      "lines": 7,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "lc_time_axis_short_label"
+      ],
+      "qids": [
+        "photometry_core.py:lc_time_axis_short_label"
+      ],
+      "primary_stages": [
+        "UI-only"
+      ],
+      "cluster": "C46"
+    },
+    {
+      "id": "pipeline.py:preprocess_sky_summary_from_df",
+      "n_defs": 1,
+      "lines": 7,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "preprocess_sky_summary_from_df"
+      ],
+      "qids": [
+        "pipeline.py:preprocess_sky_summary_from_df"
+      ],
+      "primary_stages": [
+        "UI-only"
+      ],
+      "cluster": "C47"
+    },
+    {
+      "id": "photometry_core.py:_is_broadband_photometric_filter",
+      "n_defs": 1,
+      "lines": 6,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_is_broadband_photometric_filter"
+      ],
+      "qids": [
+        "photometry_core.py:_is_broadband_photometric_filter"
+      ],
+      "primary_stages": [
+        "unreachable"
+      ],
+      "cluster": "C48"
+    },
+    {
+      "id": "photometry_core.py:lc_has_finite_airmass",
+      "n_defs": 1,
+      "lines": 6,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "lc_has_finite_airmass"
+      ],
+      "qids": [
+        "photometry_core.py:lc_has_finite_airmass"
+      ],
+      "primary_stages": [
+        "exports-reports"
+      ],
+      "cluster": "C49"
+    },
+    {
+      "id": "photometry_core.py:_normalize_err_background_mode",
+      "n_defs": 1,
+      "lines": 5,
+      "internal_edges": 0,
+      "cross_edges": 0,
+      "not_a_module": false,
+      "members": [
+        "_normalize_err_background_mode"
+      ],
+      "qids": [
+        "photometry_core.py:_normalize_err_background_mode"
+      ],
+      "primary_stages": [
+        "gate-only"
+      ],
+      "cluster": "C50"
+    }
+  ],
+  "top20_cross_cluster_edges": [
+    {
+      "a": "AstroPipeline",
+      "a_file": "pipeline.py",
+      "a_cluster": "C03",
+      "b": "analyze_calibrated_qc",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "AstroPipeline",
+      "a_file": "pipeline.py",
+      "a_cluster": "C03",
+      "b": "run_osc_channel_extraction_for_archive",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_analyze_calibrated_qc_one",
+      "a_file": "pipeline.py",
+      "a_cluster": "C01",
+      "b": "_safe_filter_token",
+      "b_file": "pipeline.py",
+      "b_cluster": "C03",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_annotate_masterstars_flux_zones",
+      "a_file": "pipeline.py",
+      "a_cluster": "C16",
+      "b": "_finite_positive_adu",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_annotate_masterstars_flux_zones",
+      "a_file": "pipeline.py",
+      "a_cluster": "C16",
+      "b": "_resolve_peak_saturation_limit_adu",
+      "b_file": "pipeline.py",
+      "b_cluster": "C06",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_apply_exo_host_columns_to_proc_df",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "resolve_plate_solve_fov_deg_hint",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_astrometry_align_impl_body",
+      "a_file": "pipeline.py",
+      "a_cluster": "C01",
+      "b": "_finalize_hybrid_bkg_fallback_sidecar",
+      "b_file": "pipeline.py",
+      "b_cluster": "C18",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_astrometry_align_impl_body",
+      "a_file": "pipeline.py",
+      "a_cluster": "C01",
+      "b": "_pick_reference_frame_by_star_count",
+      "b_file": "pipeline.py",
+      "b_cluster": "C29",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_astrometry_align_impl_body",
+      "a_file": "pipeline.py",
+      "a_cluster": "C01",
+      "b": "_pipeline_ui_error",
+      "b_file": "pipeline.py",
+      "b_cluster": "C03",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_astrometry_align_impl_body",
+      "a_file": "pipeline.py",
+      "a_cluster": "C01",
+      "b": "export_per_frame_catalogs",
+      "b_file": "pipeline.py",
+      "b_cluster": "C05",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_box_peaks_at_centroids",
+      "a_file": "pipeline.py",
+      "a_cluster": "C06",
+      "b": "_box_peak_max_adu",
+      "b_file": "pipeline.py",
+      "b_cluster": "C27",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_build_pipeline_provenance_block",
+      "a_file": "photometry_core.py",
+      "a_cluster": "C20",
+      "b": "classify_git_dirty_paths",
+      "b_file": "photometry_core.py",
+      "b_cluster": "C31",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_comp_maps_from_comparison_stars_csv",
+      "a_file": "photometry_core.py",
+      "a_cluster": "C07",
+      "b": "_normalize_gaia_id",
+      "b_file": "photometry_core.py",
+      "b_cluster": "C02",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_ensure_group_comp_pool_csv",
+      "a_file": "photometry_core.py",
+      "a_cluster": "C02",
+      "b": "write_photometry_plan_files",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_apply_aperture_catalog_enhancements_from_st",
+      "b_file": "pipeline.py",
+      "b_cluster": "C08",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_extract_airmass_from_header",
+      "b_file": "pipeline.py",
+      "b_cluster": "C21",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_has_valid_wcs",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_load_raw_for_frame",
+      "b_file": "pipeline.py",
+      "b_cluster": "C03",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_load_raw_hdr_for_frame",
+      "b_file": "pipeline.py",
+      "b_cluster": "C03",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    },
+    {
+      "a": "_export_per_frame_run_catalog_core",
+      "a_file": "pipeline.py",
+      "a_cluster": "C05",
+      "b": "_vyvar_df_to_csv",
+      "b_file": "pipeline.py",
+      "b_cluster": "C01",
+      "weight": 1,
+      "a_to_b": 1,
+      "b_to_a": 0
+    }
+  ],
+  "n_cross_cluster_edges": 142,
+  "weak_clusters_remaining": []
+}

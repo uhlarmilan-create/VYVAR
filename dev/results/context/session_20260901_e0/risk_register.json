@@ -1,0 +1,483 @@
+{
+  "in__all__": [
+    "StressTestResult",
+    "_get_lc_adaptive",
+    "apply_reporting_postprocess",
+    "check_comparison_stability",
+    "common_field_intersection_bbox_px",
+    "compute_aperture_correction",
+    "compute_fwhm_gaussian_for_aperture_catalog",
+    "compute_lc_rms_ooe",
+    "compute_mag_calib_final",
+    "compute_optimal_apertures",
+    "detect_outliers",
+    "empirical_feature_mask_mag",
+    "enhance_catalog_dataframe_aperture_bpm",
+    "ensemble_normalize",
+    "ensure_full_variable_targets_if_presel_stub",
+    "load_epsf_metrics_for_draft",
+    "measure_fwhm_from_masterstar",
+    "pytics_iterative_weights",
+    "read_flux_from_csv",
+    "recommended_aperture_by_color",
+    "resolve_apply_color_term",
+    "run_full_photometry_pipeline",
+    "run_phase0_and_phase1",
+    "run_phase2a",
+    "run_sysrem_field",
+    "save_cutout_png",
+    "save_field_map_png",
+    "save_lightcurve_csv",
+    "save_lightcurve_png",
+    "save_target_field_map_png",
+    "select_active_targets",
+    "select_comparison_stars_per_target",
+    "stress_test_relative_rms_from_sidecars",
+    "vsx_is_known_variable_top3_per_bin"
+  ],
+  "string_or_getattr": {
+    "_all_pix2world_icrs_deg": [
+      {
+        "file": "dev/tests/test_except_fix2_top10.py",
+        "lineno": 130,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "_annulus_sky_subtracted_flux": [
+      {
+        "file": "dev/tests/validation/a9_core.py",
+        "lineno": 569,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      },
+      {
+        "file": "dev/tests/validation/recover.py",
+        "lineno": 373,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "_edge_ok_from_masterstar_pipeline": [
+      {
+        "file": "dev/tests/test_f428_fixbatch.py",
+        "lineno": 117,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      },
+      {
+        "file": "dev/tests/test_fail_safety_hygiene.py",
+        "lineno": 115,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "_enrich_active_targets_bp_rp": [
+      {
+        "file": "dev/tests/test_f428_fixbatch.py",
+        "lineno": 262,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "_ensure_active_target_display_names": [
+      {
+        "file": "dev/tests/test_f428_fixbatch.py",
+        "lineno": 266,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "_plate_solve_input_bundle": [
+      {
+        "file": "dev/tests/test_except_fix2_top10.py",
+        "lineno": 119,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "apply_color_term": [
+      {
+        "file": "src_py/citations.py",
+        "lineno": 259,
+        "how": "getattr",
+        "bucket": "src_other"
+      },
+      {
+        "file": "src_py/photometry_core.py",
+        "lineno": 3909,
+        "how": "getattr",
+        "bucket": "src_other"
+      }
+    ],
+    "enhance_catalog_dataframe_aperture_bpm": [
+      {
+        "file": "dev/tests/test_except_fix2_top10.py",
+        "lineno": 201,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "extract_fits_metadata": [
+      {
+        "file": "dev/tests/test_except_fix2_top10.py",
+        "lineno": 86,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      },
+      {
+        "file": "dev/tests/test_except_fix2_top10.py",
+        "lineno": 259,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "fit_color_term_c1": [
+      {
+        "file": "dev/tests/validation/recover.py",
+        "lineno": 538,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "merge_photometry_pipeline_meta": [
+      {
+        "file": "dev/tests/test_epsf_chain_01b.py",
+        "lineno": 191,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      },
+      {
+        "file": "dev/tests/test_epsf_stage.py",
+        "lineno": 69,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      },
+      {
+        "file": "dev/tests/test_epsf_stage.py",
+        "lineno": 99,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "read_flux_from_csv": [
+      {
+        "file": "dev/tests/test_phase2a_saturated_skip.py",
+        "lineno": 127,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ],
+    "run_full_photometry_pipeline": [
+      {
+        "file": "dev/tests/test_epsf_chain_01b.py",
+        "lineno": 190,
+        "how": "patch-string",
+        "bucket": "gate-only"
+      }
+    ]
+  },
+  "private_test_imports": {
+    "_MASTERSTAR_ZONE_LOG_ONCE": [
+      "dev/tests/test_masterstar_zone_classifier.py"
+    ],
+    "_PSF_ERR_MAG_SCALE": [
+      "dev/tests/test_g2_f004_err_scatter_keyed.py",
+      "dev/tests/test_psf_lc_routing.py"
+    ],
+    "_Phase2AState": [
+      "dev/tests/test_phase2a_saturated_skip.py"
+    ],
+    "_annotate_masterstars_flux_zones": [
+      "dev/tests/test_c3_comp_rms_loo.py",
+      "dev/tests/test_masterstar_zone_classifier.py",
+      "dev/tests/test_pfs_semantics_01.py"
+    ],
+    "_annulus_sky_subtracted_flux": [
+      "dev/tests/test_except_fix_top10.py",
+      "dev/tests/validation/a9_core.py",
+      "dev/tests/validation/recover.py",
+      "dev/tests/validation/v3d_fine_scale.py"
+    ],
+    "_apply_aperture_catalog_enhancements_from_st": [
+      "dev/tests/test_except_fix2_top10.py"
+    ],
+    "_apply_dao_centroid_wcs_guard": [
+      "dev/tests/test_batch_e_recut.py"
+    ],
+    "_assert_inv_err_sigma_acct_01": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_build_csv_lookup": [
+      "dev/tests/test_read_flux_variable_xy_fallback.py"
+    ],
+    "_build_exoplanet_promotion_rows_from_masterstars": [
+      "dev/tests/test_exoplanet_promotion_restore.py"
+    ],
+    "_build_pipeline_provenance_block": [
+      "dev/tests/test_f431_labbe_provenance.py"
+    ],
+    "_cal_diag_session_from_export": [
+      "dev/tests/test_cal_diag_v2_gate.py"
+    ],
+    "_calibrate_one_light_disk": [
+      "dev/tests/test_cal_stage_gate.py"
+    ],
+    "_check_color_term_extrapolation": [
+      "dev/tests/test_photometry_core.py"
+    ],
+    "_clamp_bkg_scale_r": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_clamp_err_empty_apertures_n": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_combine_err_with_ensemble_scatter_keyed": [
+      "dev/tests/test_batch_d_audit_closure.py",
+      "dev/tests/test_g2_f004_err_scatter_keyed.py",
+      "dev/tests/test_sigma_floor.py"
+    ],
+    "_compute_airmass_from_altaz": [
+      "dev/tests/test_geo.py",
+      "dev/tests/test_obsloc_null_island.py",
+      "dev/tests/validation/recover.py"
+    ],
+    "_count_gate_passing_comps": [
+      "dev/tests/test_comp_rms_gate_authoritative.py"
+    ],
+    "_dao_convolved_background_rms_adu": [
+      "dev/tests/test_dao_convolved_threshold_option_b.py"
+    ],
+    "_dao_detection_threshold_adu": [
+      "dev/tests/test_batch_e_recut.py"
+    ],
+    "_dao_noise_sigma_adu": [
+      "dev/tests/test_dao_sigma_pp_estimator.py"
+    ],
+    "_decide_preprocess_sky_action": [
+      "dev/tests/test_skysf_double_guard.py"
+    ],
+    "_dedupe_comp_pool_by_gaia_key": [
+      "dev/tests/test_phase1_duplicate_comp_pool.py"
+    ],
+    "_draft_dir_from_phase2a_paths": [
+      "dev/tests/test_aperture_policy_01.py"
+    ],
+    "_edge_ok_from_masterstar_pipeline": [
+      "dev/tests/test_fail_safety_hygiene.py"
+    ],
+    "_effective_saturation_limit": [
+      "dev/tests/test_masterstar_zone_classifier.py"
+    ],
+    "_ensemble_scatter_by_source_file": [
+      "dev/tests/test_g2_f004_err_scatter_keyed.py",
+      "dev/tests/test_labbe_det_determinism.py"
+    ],
+    "_epsf_lc_catalog_ids": [
+      "dev/tests/test_epsf_science_set.py"
+    ],
+    "_exo_host_annotation_arrays": [
+      "dev/tests/test_exoplanet_local_match.py"
+    ],
+    "_extract_airmass_from_header": [
+      "dev/tests/test_geo.py",
+      "dev/tests/validation/recover.py"
+    ],
+    "_finalize_hybrid_bkg_fallback_sidecar": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_fit_subtract_preprocess_sky_surface": [
+      "dev/tests/test_cal_diag_v2_gate.py",
+      "dev/tests/test_preprocess_sky_surface.py"
+    ],
+    "_frame_quality_gate_select": [
+      "dev/tests/test_frame_quality_gate.py"
+    ],
+    "_gaia_catalog_cone_radius_optics_floor_deg": [
+      "dev/tests/test_except_fix2_top10.py"
+    ],
+    "_get_lc_adaptive": [
+      "dev/tests/test_psf_lc_routing.py"
+    ],
+    "_get_lc_psf_strict": [
+      "dev/tests/test_get_lc_psf_strict.py"
+    ],
+    "_group_comp_mag_inst_from_proc_csvs": [
+      "dev/tests/test_except_fix_top10.py"
+    ],
+    "_has_valid_wcs": [
+      "dev/tests/test_sibling_wcs_recovery.py"
+    ],
+    "_header_has_vy_skysf": [
+      "dev/tests/test_skysf_double_guard.py"
+    ],
+    "_howell_bkg_variance_adu2": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_howell_variance_adu2": [
+      "dev/tests/test_osc1_extraction.py",
+      "dev/tests/test_osc2_wcs_photometry.py"
+    ],
+    "_is_import_relevant_py_path": [
+      "dev/tests/test_git_dirty_code_classifier.py"
+    ],
+    "_labbe_content_seed_from_header": [
+      "dev/tests/test_f431_labbe_provenance.py"
+    ],
+    "_lock_matched_centroids_to_master_grid": [
+      "dev/tests/test_master_grid_photometry.py"
+    ],
+    "_masterstar_zone_linear_threshold": [
+      "dev/tests/test_masterstar_zone_classifier.py"
+    ],
+    "_match_and_crop_pair": [
+      "dev/tests/test_cal_diag_v2_gate.py"
+    ],
+    "_merge_vsx_exoplanet_variable_targets": [
+      "dev/tests/test_exoplanet_promotion_restore.py",
+      "dev/tests/test_exoplanet_variable_targets_merge.py"
+    ],
+    "_normalize_err_background_mode": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_normalize_gaia_id": [
+      "dev/tests/test_phase2a_saturated_skip.py"
+    ],
+    "_pass2_sibling_wcs_recovery": [
+      "dev/tests/test_sibling_wcs_recovery.py"
+    ],
+    "_per_frame_sat_flags_for_catalog_id": [
+      "dev/tests/test_pfs_semantics_01.py"
+    ],
+    "_phase2a_cache_columns": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_phase2a_empirical_sigma_bkg_ap": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_phase2a_proc_column_requirements": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_phase2a_process_one_target": [
+      "dev/tests/test_phase2a_saturated_skip.py"
+    ],
+    "_phase2a_skip_empty_comps_target": [
+      "dev/tests/test_except_fix_top10.py"
+    ],
+    "_photometric_error": [
+      "dev/tests/test_err_background_empirical.py",
+      "dev/tests/test_photometric_error_sky_column.py",
+      "dev/tests/test_photometry_core.py",
+      "dev/tests/test_sigma_budget.py"
+    ],
+    "_photometric_error_with_bkg_mode": [
+      "dev/tests/test_batch_d_audit_closure.py",
+      "dev/tests/test_err_background_empirical.py",
+      "dev/tests/test_osc2_wcs_photometry.py",
+      "dev/tests/test_sparse_external_k.py"
+    ],
+    "_pixel_noise_sigma_pp_adu": [
+      "dev/tests/test_dao_sigma_pp_estimator.py"
+    ],
+    "_plate_solve_input_bundle": [
+      "dev/tests/test_except_fix2_top10.py"
+    ],
+    "_proc_deduplicate_matched_catalog_rows": [
+      "dev/tests/test_proc_catalog_dedupe.py",
+      "dev/tests/test_proc_dedupe_catalog_id.py"
+    ],
+    "_propagate_phase2a_skip_reason_to_active": [
+      "dev/tests/test_post451_part_b.py"
+    ],
+    "_qc_enrich_calibrated_in_place": [
+      "dev/tests/test_skipproc_qc_allowlist.py",
+      "dev/tests/test_skysf_double_guard.py"
+    ],
+    "_qc_enrich_one_frame": [
+      "dev/tests/test_cal_stage_gate.py",
+      "dev/tests/test_skysf_double_guard.py"
+    ],
+    "_qc_fwhm_elongation": [
+      "dev/tests/test_robust_frame_fwhm.py"
+    ],
+    "_query_exoplanet_local": [
+      "dev/tests/test_exoplanet_local_match.py"
+    ],
+    "_query_vsx_local": [
+      "dev/tests/test_field_run_findings.py"
+    ],
+    "_query_vsx_local_frame_bbox": [
+      "dev/tests/test_except_fix2_top10.py",
+      "dev/tests/test_field_run_findings.py"
+    ],
+    "_recompute_bjd_hjd_per_target": [
+      "dev/tests/test_geo.py",
+      "dev/tests/test_time_base_flag.py"
+    ],
+    "_recompute_bjd_hjd_with_status": [
+      "dev/tests/test_obsloc_null_island.py",
+      "dev/tests/test_time_base_flag.py"
+    ],
+    "_require_comparison_stars_per_target_schema": [
+      "dev/tests/test_except_fix_top10.py"
+    ],
+    "_resolve_frame_hw_px_from_masterstar": [
+      "dev/tests/test_frame_hw_from_naxis.py"
+    ],
+    "_resolve_phase2a_equipment_id": [
+      "dev/tests/test_manifest_rig_accessors.py"
+    ],
+    "_resolve_photometric_aperture_px_for_gs11": [
+      "dev/tests/test_gs11_dilution_aperture_g2_f003.py"
+    ],
+    "_resolve_star_flux_method": [
+      "dev/tests/test_psf_lc_routing.py"
+    ],
+    "_robust_frame_fwhm_median": [
+      "dev/tests/test_robust_frame_fwhm.py"
+    ],
+    "_route_lc_per_frame_err": [
+      "dev/tests/test_psf_lc_routing.py"
+    ],
+    "_select_comps_by_rms_then_color": [
+      "dev/tests/test_c3_comp_rms_loo.py",
+      "dev/tests/test_forced_phot_and_weights.py"
+    ],
+    "_sigma_bkg_r_key": [
+      "dev/tests/test_err_background_empirical.py"
+    ],
+    "_sky_pp_for_photometric_error": [
+      "dev/tests/test_batch_d_audit_closure.py",
+      "dev/tests/test_photometric_error_sky_column.py",
+      "dev/tests/test_sparse_external_k.py"
+    ],
+    "_sync_obs_calibration_state_with_retry": [
+      "dev/tests/test_except_fix2_top10.py"
+    ],
+    "_target_display_name": [
+      "dev/tests/test_photometry_core.py"
+    ],
+    "_try_rescale_masterstar_linear_wcs_to_expected_plate_scale": [
+      "dev/tests/test_except_fix2_top10.py"
+    ],
+    "_variable_targets_looks_like_ct_presel_stub": [
+      "dev/tests/test_photometry_core.py"
+    ],
+    "_vyvar_df_to_csv": [
+      "dev/tests/test_export_parity_01.py",
+      "dev/tests/test_inv_match_identity_01.py"
+    ]
+  },
+  "mp_spawn_workers": [
+    "_init_calibrate_batch_worker",
+    "_calibrate_batch_process_one",
+    "_init_export_per_frame_worker",
+    "_export_per_frame_ram_worker_task",
+    "_calibrate_one_light_disk"
+  ],
+  "pickle_in_files": [
+    "pipeline.py"
+  ],
+  "name_collisions_across_two_files": [],
+  "photometry_star_import": "src_py/photometry.py re-exports photometry_core via star import"
+}
