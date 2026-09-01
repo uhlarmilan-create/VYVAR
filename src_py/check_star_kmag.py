@@ -801,7 +801,7 @@ def build_comp_photon_mag_from_frames(
         work["_nid"] = work.get("name", pd.Series(dtype=str)).astype(str)
     sf_col = "source_file" if "source_file" in work.columns else None
     _cfg = cfg or AppConfig()
-    bkg_mode = str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL) or ERR_BKG_MODE_EMPIRICAL)
+    bkg_mode = ERR_BKG_MODE_EMPIRICAL
 
     def _row_rel_err(row: pd.Series) -> float:
         e = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))

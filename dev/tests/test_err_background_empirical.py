@@ -53,9 +53,9 @@ def test_normalize_err_background_mode() -> None:
     assert _normalize_err_background_mode(None) == ERR_BKG_MODE_EMPIRICAL
 
 
-def test_howell_mode_byte_identical() -> None:
-    flux, sky, area, g, rn = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08
-    legacy = _photometric_error(flux, sky, area, gain=g, read_noise=rn)
+def test_howell_key_flip_ignored_uses_empirical_when_sigma_present() -> None:
+    """CONSOLIDATE-01D: passing howell no longer skips empirical when sigma_bkg_ap is finite."""
+    flux, sky, area, g, rn, sig_ap = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08, 42.0
     err, src = _photometric_error_with_bkg_mode(
         flux,
         err_background_mode=ERR_BKG_MODE_HOWELL,
@@ -63,9 +63,26 @@ def test_howell_mode_byte_identical() -> None:
         area=area,
         gain=g,
         read_noise=rn,
-        sigma_bkg_ap=999.0,
+        sigma_bkg_ap=sig_ap,
     )
-    assert src == ERR_BKG_MODE_HOWELL
+    var = flux / g + sig_ap**2
+    assert src == ERR_BKG_SOURCE_EMPIRICAL
+    assert err == pytest.approx(math.sqrt(var) / flux, rel=1e-12)
+
+
+def test_howell_fallback_when_sigma_missing() -> None:
+    flux, sky, area, g, rn = 5000.0, 1200.0, math.pi * 5.0**2, 12.48, 14.08
+    legacy = _photometric_error(flux, sky, area, gain=g, read_noise=rn)
+    err, src = _photometric_error_with_bkg_mode(
+        flux,
+        err_background_mode=ERR_BKG_MODE_EMPIRICAL,
+        sky_pp=sky,
+        area=area,
+        gain=g,
+        read_noise=rn,
+        sigma_bkg_ap=None,
+    )
+    assert src == ERR_BKG_SOURCE_HOWELL_FALLBACK
     assert err == pytest.approx(legacy, rel=0, abs=1e-15)
 
 
@@ -203,7 +220,7 @@ def test_enhance_catalog_emits_provenance_columns() -> None:
 
 def test_config_defaults_and_clamps() -> None:
     cfg = AppConfig()
-    assert cfg.err_background_mode == "empirical"
+    assert not hasattr(cfg, "err_background_mode")
     assert cfg.err_empty_apertures_n == 64
     assert cfg.err_empty_apertures_min == 16
     cfg.err_empty_apertures_n = 8

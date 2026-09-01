@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - err_background_mode removed (2026-09-01)
+
+`err_background_mode` removed; empirical empty-aperture term is always on (F-BINGAIN-1); Howell math remains as missing-sigma fallback.
+
 ## CONSOLIDATE-01D P2 - export_err_mode removed (2026-09-01)
 
 `export_err_mode` removed; exported err is always ERR-CALIB calibrated.

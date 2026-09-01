@@ -93,7 +93,6 @@ EXPLICIT: dict[str, ScopeResult] = {
         "Angular aperture on sky; 0 derives from photometric aperture -- not rig-scoped when expressed in arcsec.",
     ),
     # --- group (a) rig physics ---
-    "err_background_mode": ScopeResult("rig", "rig", "a", "high", "F-BINGAIN-1: empirical vs Howell differed Newton/bin4 vs wide."),
     "sigma_sys_mag": ScopeResult("rig", "rig", "a", "high", "PROD-SIGMA-FLOOR; keyed on equipment_id in sigma_floor_core."),
     "bpm_dark_mad_sigma": ScopeResult("rig", "rig", "a", "high", "Hot-pixel MAD depends on dark noise per detector."),
     "calibration_library_native_binning": ScopeResult("rig", "rig", "a", "high", "Defines native binning; input to rig_sampling, not resolved by it."),

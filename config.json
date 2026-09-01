@@ -441,9 +441,6 @@
   "cog_snr_min": 50.0,
   // Window width (fraction of the night) of the democratic detrend smoother.
   "democratic_sg_window_frac": 0.5,
-  // How the background-noise term of the error model is estimated
-  // ('empirical' = measured from empty apertures on the frame).
-  "err_background_mode": "empirical",
   // Minimum empty apertures required for a valid empirical background
   // estimate.
   "err_empty_apertures_min": 16,

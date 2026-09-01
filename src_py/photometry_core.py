@@ -1306,23 +1306,24 @@ def _photometric_error_with_bkg_mode(
     read_noise: float = 10.0,
     sigma_bkg_ap: float | None = None,
 ) -> tuple[float, str]:
-    """Relative err/flux with empirical or legacy Howell background term.
+    """Relative err/flux with empirical background term (F-BINGAIN-1).
 
-    Empirical (default): ``var = F/g + sigma_bkg_ap^2`` - photutils/SExtractor pattern with
-    measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
+    Empirical (production): ``var = F/g + sigma_bkg_ap^2`` - photutils/SExtractor
+    pattern with measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
+    When ``sigma_bkg_ap`` is missing, Howell variance is the data-conditioned
+    fallback. ``err_background_mode`` is ignored (CONSOLIDATE-01D; key removed).
     """
-    mode = _normalize_err_background_mode(err_background_mode)
+    _ = err_background_mode
     if not math.isfinite(flux) or flux <= 0:
         return float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK
     g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
     sig_ap = float(sigma_bkg_ap) if sigma_bkg_ap is not None else float("nan")
-    if mode == ERR_BKG_MODE_EMPIRICAL and math.isfinite(sig_ap) and sig_ap >= 0:
+    if math.isfinite(sig_ap) and sig_ap >= 0:
         variance = flux / g + sig_ap * sig_ap
         if math.isfinite(variance) and variance >= 0:
             return math.sqrt(variance) / flux, ERR_BKG_SOURCE_EMPIRICAL
     err = _photometric_error(flux, sky_pp, area, gain=gain, read_noise=read_noise)
-    src = ERR_BKG_MODE_HOWELL if mode == ERR_BKG_MODE_HOWELL else ERR_BKG_SOURCE_HOWELL_FALLBACK
-    return err, src
+    return err, ERR_BKG_SOURCE_HOWELL_FALLBACK
 
 
 def stamp_masterstar_snr_columns(
@@ -1502,16 +1503,14 @@ def _phase2a_empirical_sigma_bkg_ap(
 ) -> float | None:
     """Return per-row empirical ``sigma_bkg_ap`` or raise on missing input.
 
-    INV-ERR-MODE-01: if Phase 2A is configured for empirical background errors,
-    missing required proc-CSV inputs are a hard failure, not a silent Howell
-    fallback caused by a starved cache projection.
+    INV-ERR-MODE-01: Phase 2A empirical background errors are the only policy
+    (CONSOLIDATE-01D); missing required proc-CSV inputs are a hard failure, not a
+    silent Howell fallback caused by a starved cache projection.
     """
-    mode = _normalize_err_background_mode(err_background_mode)
     sig = float(pd.to_numeric(row_csv.get(SIGMA_BKG_AP_COL), errors="coerce"))
     if math.isfinite(sig):
         return sig
-    if mode != ERR_BKG_MODE_EMPIRICAL:
-        return None
+    _ = err_background_mode
     src_raw = row_csv.get(ERR_BKG_SOURCE_COL, "")
     src = str(src_raw).strip().lower() if src_raw is not None else ""
     raise ValueError(
@@ -8812,7 +8811,7 @@ def _phase2a_prepare_shared_state(
             read_noise=float(_rn_phot),
             use_apcorr_flux=_use_apcorr_flux,
             variable_target_catalog_ids=_variable_target_cids,
-            err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
+            err_background_mode=ERR_BKG_MODE_EMPIRICAL,
         )
         if not _df_all.empty:
             _flux_matrix_rows.append(_df_all)
@@ -9639,7 +9638,7 @@ def _phase2a_process_one_target(
                 read_noise=float(_rn_phot),
                 use_apcorr_flux=bool(state.use_apcorr_flux),
                 variable_target_catalog_ids=state.variable_target_catalog_ids,
-                err_background_mode=str(getattr(_cfg, "err_background_mode", ERR_BKG_MODE_EMPIRICAL)),
+                err_background_mode=ERR_BKG_MODE_EMPIRICAL,
             )
             if not df_frame.empty:
                 if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
@@ -12933,76 +12932,73 @@ def enhance_catalog_dataframe_aperture_bpm(
                         logging.debug("[PHOT] multi-aperture flux_small/flux_large skipped: %s", _ma_exc)
 
             # F-BINGAIN-1: per-frame empirical background noise at production aperture radii.
-            _bkg_mode = _normalize_err_background_mode(err_background_mode)
+            # CONSOLIDATE-01D: howell-only skip (no empty-aperture measurement) deleted.
+            _ = err_background_mode  # call-site kw retained; policy is always empirical
             _n_empty = _clamp_err_empty_apertures_n(err_empty_apertures_n)
             _n_empty_min = _clamp_err_empty_apertures_min(err_empty_apertures_min)
             _sigma_by_r: dict[float, tuple[float, str]] = {}
-            if _bkg_mode == ERR_BKG_MODE_EMPIRICAL:
-                _unique_r = np.array([float(r_ap)], dtype=np.float64)
-                for _r_u in _unique_r:
-                    if not math.isfinite(float(_r_u)) or float(_r_u) <= 0:
-                        continue
-                    _ri = float(r_in)
-                    _ro = float(r_out)
-                    _seed = _labbe_content_seed_from_header(hdr, r_ap=float(_r_u))
-                    _frame_id = str(
-                        hdr.get("DATE-OBS")
-                        or hdr.get("FILENAME")
-                        or hdr.get("FRAME")
-                        or ""
-                    )
-                    _sig, _nv, _reason = measure_empty_aperture_sigma_bkg(
-                        d,
-                        np.asarray(x, dtype=np.float64),
-                        np.asarray(y, dtype=np.float64),
-                        float(_r_u),
-                        float(_ri),
-                        float(_ro),
-                        n_apertures=_n_empty,
-                        min_valid=_n_empty_min,
-                        seed=int(_seed),
-                        frame_id=_frame_id,
-                        star_list_source="catalog_df_in_memory",
-                    )
-                    if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_labbe_seeds"):
-                        enhance_catalog_dataframe_aperture_bpm._labbe_seeds = []
-                    enhance_catalog_dataframe_aperture_bpm._labbe_seeds.append(
-                        {"r_ap": float(_r_u), "seed": int(_seed), "n_valid": int(_nv)}
-                    )
-                    if math.isfinite(_sig) and _sig >= 0:
-                        _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)
-                    else:
-                        _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK)
-                        if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_err_bkg_logged"):
-                            enhance_catalog_dataframe_aperture_bpm._err_bkg_logged = set()
-                        _log_id = str(hdr.get("FRAME") or hdr.get("VY_FRAME") or id(hdr))
-                        if _log_id not in enhance_catalog_dataframe_aperture_bpm._err_bkg_logged:
-                            log_event(
-                                f"[PHOT] err_bkg empirical fallback (howell): r_ap={float(_r_u):.2f}px "
-                                f"n_valid={_nv} reason={_reason or 'unknown'}"
-                            )
-                            enhance_catalog_dataframe_aperture_bpm._err_bkg_logged.add(_log_id)
+            _unique_r = np.array([float(r_ap)], dtype=np.float64)
+            for _r_u in _unique_r:
+                if not math.isfinite(float(_r_u)) or float(_r_u) <= 0:
+                    continue
+                _ri = float(r_in)
+                _ro = float(r_out)
+                _seed = _labbe_content_seed_from_header(hdr, r_ap=float(_r_u))
+                _frame_id = str(
+                    hdr.get("DATE-OBS")
+                    or hdr.get("FILENAME")
+                    or hdr.get("FRAME")
+                    or ""
+                )
+                _sig, _nv, _reason = measure_empty_aperture_sigma_bkg(
+                    d,
+                    np.asarray(x, dtype=np.float64),
+                    np.asarray(y, dtype=np.float64),
+                    float(_r_u),
+                    float(_ri),
+                    float(_ro),
+                    n_apertures=_n_empty,
+                    min_valid=_n_empty_min,
+                    seed=int(_seed),
+                    frame_id=_frame_id,
+                    star_list_source="catalog_df_in_memory",
+                )
+                if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_labbe_seeds"):
+                    enhance_catalog_dataframe_aperture_bpm._labbe_seeds = []
+                enhance_catalog_dataframe_aperture_bpm._labbe_seeds.append(
+                    {"r_ap": float(_r_u), "seed": int(_seed), "n_valid": int(_nv)}
+                )
+                if math.isfinite(_sig) and _sig >= 0:
+                    _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float(_sig), ERR_BKG_SOURCE_EMPIRICAL)
+                else:
+                    _sigma_by_r[_sigma_bkg_r_key(_r_u)] = (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK)
+                    if not hasattr(enhance_catalog_dataframe_aperture_bpm, "_err_bkg_logged"):
+                        enhance_catalog_dataframe_aperture_bpm._err_bkg_logged = set()
+                    _log_id = str(hdr.get("FRAME") or hdr.get("VY_FRAME") or id(hdr))
+                    if _log_id not in enhance_catalog_dataframe_aperture_bpm._err_bkg_logged:
+                        log_event(
+                            f"[PHOT] err_bkg empirical fallback (howell): r_ap={float(_r_u):.2f}px "
+                            f"n_valid={_nv} reason={_reason or 'unknown'}"
+                        )
+                        enhance_catalog_dataframe_aperture_bpm._err_bkg_logged.add(_log_id)
 
-                _sigma_col = np.full(n, np.nan, dtype=np.float64)
-                _src_col = np.full(n, ERR_BKG_SOURCE_HOWELL_FALLBACK, dtype=object)
-                _sig_v, _src_v = _sigma_by_r.get(
-                    _sigma_bkg_r_key(float(r_ap)),
-                    (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
-                )
-                _sigma_col[:] = _sig_v
-                _src_col[:] = _src_v
-                _assert_inv_err_sigma_acct_01(
-                    _sigma_by_r,
-                    _src_col,
-                    n=n,
-                    r_ap_arr=None,
-                    r_ap=float(r_ap),
-                )
-                out[SIGMA_BKG_AP_COL] = _sigma_col
-                out[ERR_BKG_SOURCE_COL] = _src_col
-            elif _bkg_mode == ERR_BKG_MODE_HOWELL:
-                out[SIGMA_BKG_AP_COL] = np.full(n, np.nan, dtype=np.float64)
-                out[ERR_BKG_SOURCE_COL] = np.full(n, ERR_BKG_MODE_HOWELL, dtype=object)
+            _sigma_col = np.full(n, np.nan, dtype=np.float64)
+            _src_col = np.full(n, ERR_BKG_SOURCE_HOWELL_FALLBACK, dtype=object)
+            _sig_v, _src_v = _sigma_by_r.get(
+                _sigma_bkg_r_key(float(r_ap)),
+                (float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK),
+            )
+            _sigma_col[:] = _sig_v
+            _src_col[:] = _src_v
+            _assert_inv_err_sigma_acct_01(
+                _sigma_by_r,
+                _src_col,
+                n=n,
+                r_ap_arr=None,
+                r_ap=float(r_ap),
+            )
+            out[SIGMA_BKG_AP_COL] = _sigma_col
+            out[ERR_BKG_SOURCE_COL] = _src_col
 
             # Per-frame curve-of-growth aperture correction (gated; never overwrites dao_flux).
             if cog_params is not None:

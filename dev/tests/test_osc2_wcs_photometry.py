@@ -27,7 +27,6 @@ from param_resolver import resolve_gain, resolve_read_noise
 from photometry_core import (
     _howell_variance_adu2,
     _photometric_error_with_bkg_mode,
-    read_flux_from_csv,
     run_full_photometry_pipeline,
     select_comparison_stars_per_target,
 )
@@ -249,7 +248,7 @@ def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path]
 
 
 def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) -> None:
-    """Phase-2A path inside run_full_photometry_pipeline: read_flux_from_csv -> _howell_variance_adu2."""
+    """Howell fallback (missing sigma_bkg_ap) uses resolved VY_EGAIN / VY_RDNOIS."""
     assert callable(run_full_photometry_pipeline)
     g_raw, rn_raw = 1.5, 3.0
     g_eff, rn_eff = effective_gain_rn(g_raw, rn_raw, "G", 2)
@@ -282,43 +281,19 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
     flux = 12_000.0
     sky_pp = 40.0
     area = math.pi * 7.0 * 7.0
-    proc = tmp_path / "proc_001.csv"
-    pd.DataFrame(
-        [
-            {
-                "catalog_id": "G005",
-                "name": "G005",
-                "x": 100.0,
-                "y": 100.0,
-                "dao_flux": flux,
-                "aperture_r_px": 7.0,
-                "noise_floor_adu": sky_pp,
-                "peak_max_adu": 100.0,
-            }
-        ]
-    ).to_csv(proc, index=False)
-    lc = read_flux_from_csv(
-        proc,
-        ["G005"],
-        {"G005": 7.0},
-        csv_df=pd.read_csv(proc),
-        gain=float(g_res.value),
-        read_noise=float(rn_hdr.value),
-        err_background_mode="howell",
-    )
-    assert len(lc) == 1
-    var_target = _howell_variance_adu2(flux, sky_pp, area, gain=g_eff, read_noise=rn_eff)
-    err_target, _ = _photometric_error_with_bkg_mode(
+    # CONSOLIDATE-01D: howell key flip is gone; missing sigma_bkg_ap still uses Howell math.
+    err_target, src = _photometric_error_with_bkg_mode(
         flux,
-        err_background_mode="howell",
+        err_background_mode="empirical",
         sky_pp=sky_pp,
         area=area,
         gain=g_eff,
         read_noise=rn_eff,
+        sigma_bkg_ap=None,
     )
-    assert float(lc.iloc[0]["err"]) == pytest.approx(err_target)
-    assert (math.sqrt(var_target) / flux) == pytest.approx(err_target)
-
+    assert src == "howell_fallback"
+    var_target = _howell_variance_adu2(flux, sky_pp, area, gain=g_eff, read_noise=rn_eff)
+    assert err_target == pytest.approx(math.sqrt(var_target) / flux)
     var_mono = _howell_variance_adu2(flux, sky_pp, area, gain=g_raw, read_noise=1.3)
     assert var_mono > var_target
 

@@ -462,7 +462,6 @@ def main() -> int:
     cfg = AppConfig()
     archive_root = resolve_archive_root(args.archive_root, cfg=cfg)
     cfg.archive_root = archive_root
-    cfg.err_background_mode = "empirical"
     cfg.save_lightcurve_png = False
 
     cases = ACCEPTANCE_CASES

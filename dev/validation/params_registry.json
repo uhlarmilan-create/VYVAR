@@ -1456,21 +1456,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "err_background_mode": {
-    "help": "How the background-noise term of the error model is estimated ('empirical' = measured from empty apertures on the frame).",
-    "kind": "static",
-    "label": "Err Background Mode",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
-  },
   "err_empty_apertures_min": {
     "help": "Minimum empty apertures required for a valid empirical background estimate.",
     "kind": "static",

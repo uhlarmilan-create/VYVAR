@@ -132,6 +132,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "export_err_mode": (
         "export_err_mode removed 2026-09-01 CONSOLIDATE-01D; exported err is always ERR-CALIB calibrated"
     ),
+    "err_background_mode": (
+        "err_background_mode removed 2026-09-01 CONSOLIDATE-01D; empirical empty-aperture term is always on (F-BINGAIN-1); Howell math remains as missing-sigma fallback"
+    ),
 }
 
 
@@ -1048,8 +1051,6 @@ class AppConfig:
     #: CCD read noise (e-) - used in noise model.
     read_noise: float = 10.0
 
-    #: F-BINGAIN-1: background error term - ``empirical`` (empty-aperture scatter) or ``howell`` (legacy).
-    err_background_mode: str = "empirical"
     #: Number of random empty apertures per frame/radius for ``sigma_bkg_ap`` (clamped 16..256).
     err_empty_apertures_n: int = 64
     #: Minimum valid empty apertures before Howell fallback for that frame.
@@ -1896,11 +1897,6 @@ class AppConfig:
         # read_noise (DB EQUIPMENTS.READNOISE_E then FITS) are resolver-authoritative via
         # param_resolver at run time; no longer loaded from or saved to config.json. The fields
         # keep their dataclass defaults as last-resort fallbacks.
-        _ebm = str(data.get("err_background_mode", self.err_background_mode) or "empirical").strip().lower()
-        if _ebm in ("howell", "legacy"):
-            self.err_background_mode = "howell"
-        else:
-            self.err_background_mode = "empirical"
         try:
             self.err_empty_apertures_n = max(
                 16,
@@ -2803,7 +2799,6 @@ class AppConfig:
             "cog_ac_factor_max": float(self.cog_ac_factor_max),
             "per_frame_saturation_enabled": bool(self.per_frame_saturation_enabled),
             "per_frame_sat_min_clean_frac": float(self.per_frame_sat_min_clean_frac),
-            "err_background_mode": str(self.err_background_mode),
             "err_empty_apertures_n": int(self.err_empty_apertures_n),
             "err_empty_apertures_min": int(self.err_empty_apertures_min),
             "masterstar_best_of_n": int(self.masterstar_best_of_n),

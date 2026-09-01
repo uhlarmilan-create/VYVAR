@@ -71,7 +71,7 @@ def test_tier_ordering_within_section() -> None:
     # pick photometry keys of differing tiers that persist
     payload = {
         "aperture_fwhm_factor": 1.9,  # basic
-        "err_background_mode": "empirical",  # advanced/expert
+        "err_empty_apertures_n": 64,  # expert
         "psf_chi2_threshold": 5.0,
     }
     # keep only keys that exist in registry & their tiers

@@ -255,8 +255,7 @@ def build_run_citation_context(
     use_ac_b = bool(getattr(cfg, "aperture_correction_enabled", True)) if cfg else True
     use_cog = bool(getattr(cfg, "cog_aperture_correction_enabled", False)) if cfg else False
     use_pfs = bool(getattr(cfg, "per_frame_saturation_enabled", False)) if cfg else False
-    _ebm = str(getattr(cfg, "err_background_mode", "empirical") or "empirical").strip().lower() if cfg else "empirical"
-    use_emp_bkg = _ebm == "empirical"
+    use_emp_bkg = True  # CONSOLIDATE-01D: empirical is the only background-err policy
     _ct = str(getattr(cfg, "apply_color_term", "off") or "off").strip().lower() if cfg else "off"
     if _ct in ("0", "false", "no"):
         _ct = "off"

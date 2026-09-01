@@ -125,7 +125,6 @@ def test_methods_matrix_reflects_flags() -> None:
     off.trust_flag_enabled = False
     off.apply_color_term = "off"
     off.k2_mode = "off"
-    off.err_background_mode = "howell"
     ctx_off = build_run_citation_context(off)
     mat_off = "\n".join(build_methods_matrix_lines(ctx_off))
     assert "PyTICS: OFF" in mat_off
@@ -134,7 +133,7 @@ def test_methods_matrix_reflects_flags() -> None:
     assert "color term: OFF" in mat_off
     assert "PSF branch: OFF" in mat_off
     assert "trust gate: OFF" in mat_off
-    assert "empirical background mode: OFF" in mat_off
+    assert "empirical background mode: ON" in mat_off
     assert "ensemble flux-sum: ON" in mat_off
 
     on = AppConfig()
@@ -143,7 +142,6 @@ def test_methods_matrix_reflects_flags() -> None:
     on.apply_color_term = "auto"
     on.k2_mode = "literature"
     on.psf_photometry_enabled = True
-    on.err_background_mode = "empirical"
     ctx_on = build_run_citation_context(on)
     mat_on = "\n".join(build_methods_matrix_lines(ctx_on))
     assert "PyTICS: ON" in mat_on

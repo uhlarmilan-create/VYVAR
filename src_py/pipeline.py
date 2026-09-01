@@ -222,7 +222,7 @@ def _apply_aperture_catalog_enhancements_from_st(
             r_small_px=r_small_px,
             r_large_px=r_large_px,
             cog_params=cog_params,
-            err_background_mode=str(st.get("err_background_mode", "empirical")),
+            err_background_mode="empirical",
             err_empty_apertures_n=int(st.get("err_empty_apertures_n", 64)),
             err_empty_apertures_min=int(st.get("err_empty_apertures_min", 16)),
             aperture_variable_factor=float(st.get("aperture_variable_factor", 1.0)),
@@ -10625,10 +10625,8 @@ def _finalize_hybrid_bkg_fallback_sidecar(
     setup_label: str,
 ) -> dict[str, Any]:
     """Post-export hybrid Howell fallback scaling when sidecar proc CSVs exist."""
-    if (
-        str(err_background_mode).strip().lower() != "empirical"
-        or not write_sidecar
-    ):
+    _ = err_background_mode  # CONSOLIDATE-01D: empirical is the only policy
+    if not write_sidecar:
         return {}
     try:
         from photometry_core import finalize_hybrid_bkg_fallback_proc_dir
@@ -10759,7 +10757,7 @@ def export_per_frame_catalogs(
         "cog_ac_factor_max": float(_cfg_ap.cog_ac_factor_max),
         "gain": float(_cfg_ap.gain),
         "read_noise": float(_cfg_ap.read_noise),
-        "err_background_mode": str(_cfg_ap.err_background_mode),
+        "err_background_mode": "empirical",
         "err_empty_apertures_n": int(_cfg_ap.err_empty_apertures_n),
         "err_empty_apertures_min": int(_cfg_ap.err_empty_apertures_min),
     }
@@ -11700,7 +11698,7 @@ def export_per_frame_catalogs(
     if not defer_disk_writes:
         _hybrid_stats = _finalize_hybrid_bkg_fallback_sidecar(
             root,
-            err_background_mode=str(_ap_st.get("err_background_mode", "empirical")),
+            err_background_mode="empirical",
             write_sidecar=bool(write_sidecar_csv_next_to_fits),
             gain=float(_ap_st.get("gain", _cfg_ap.gain)),
             read_noise=float(_ap_st.get("read_noise", _cfg_ap.read_noise)),
@@ -15844,7 +15842,7 @@ def _astrometry_align_impl_body(
         if per_cat.get("deferred_csv_writes"):
             _hybrid_ram = _finalize_hybrid_bkg_fallback_sidecar(
                 aligned_root,
-                err_background_mode=str(_catalog_app_cfg.err_background_mode),
+                err_background_mode="empirical",
                 write_sidecar=True,
                 gain=float(_catalog_app_cfg.gain),
                 read_noise=float(_catalog_app_cfg.read_noise),

@@ -6,18 +6,18 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T06:50:23Z at git HEAD b3aa740._
+_Generated 2026-09-01T06:58:13Z at git HEAD 47a8d76._
 
 ## Summary
 
-- Entries: 305
-- Tier: basic 14, advanced 73, expert 218
-- Kind: static 287, derived 0, resolved 18
-- Widget: auto 121, custom 159, hidden 25
-- Owner: db_static 9, config_runtime 277, fits_dynamic 6, internal 13
-- Scope: universal 253, rig 34, site 10, session 8
-- Scope key: none 253, rig 16, rig_band 4, rig_sampling 14, site 10, frame 8
-- Rig triage group: a 21, b 10, c 3
+- Entries: 304
+- Tier: basic 14, advanced 73, expert 217
+- Kind: static 286, derived 0, resolved 18
+- Widget: auto 120, custom 159, hidden 25
+- Owner: db_static 9, config_runtime 276, fits_dynamic 6, internal 13
+- Scope: universal 253, rig 33, site 10, session 8
+- Scope key: none 253, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
 
@@ -215,7 +215,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `democratic_detrend_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | custom | Democratic Detrend Enabled |
 | `democratic_sg_window_frac` | 0.5 | 0.05 .. 0.95 | expert | static | config_runtime | universal | none | n/a | custom | Democratic SG Window Frac |
 | `epsf_auto_run` | False | - | basic | static | config_runtime | universal | none | n/a | auto | EPSF Auto Run |
-| `err_background_mode` | empirical | - | expert | static | config_runtime | rig | rig | a | auto | Err Background Mode |
 | `err_empty_apertures_min` | 16 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures Min |
 | `err_empty_apertures_n` | 64 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures N |
 | `forced_photometry_centroid_bound_fwhm` | 2.5 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Centroid Bound Fwhm |
