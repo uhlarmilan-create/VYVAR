@@ -626,10 +626,9 @@ def main() -> None:
         for name, box in crop_boxes(res.wpx, res.h,).items():
             render_overlay_final(res, out_path=od / f"overlay_crop_{name}.png", title=f"{frame_label} {name}", crop=box)
 
-        holes, summ = decompose_holes_le13(census, res.gaia_le16, res.data0, fwhm)
+        holes = decompose_holes_le13(census, res.gaia_le16, res.data0, fwhm)
         if frame_label == "MASTERSTAR":
             holes.to_csv(ctx / "holes_le13_final.csv", index=False)
-            summ.to_csv(ctx / "holes_le13_decompose_final.csv", index=False)
 
     pd.DataFrame(score_rows).to_csv(ctx / "final_scores.csv", index=False)
     pd.DataFrame(all_ambiguous).to_csv(ctx / "ambiguous_owner_flags.csv", index=False)
