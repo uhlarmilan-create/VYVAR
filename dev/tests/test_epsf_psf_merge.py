@@ -222,7 +222,8 @@ def test_resolve_psf_ac_policy_and_legacy_ac_formula() -> None:
 
     assert resolve_psf_ac_policy(None) == "p4_none"
     assert resolve_psf_ac_policy("p4_none", apply_aperture_correction=True) == "p4_none"
-    assert resolve_psf_ac_policy(None, apply_aperture_correction=True) == "chi2_lt5_legacy"
+    assert resolve_psf_ac_policy(None, apply_aperture_correction=True) == "p4_none"
+    assert resolve_psf_ac_policy("chi2_lt5_legacy") == "p4_none"
     psf = np.array([10.0, 20.0, 30.0, 40.0, 50.0, 60.0])
     ref = np.array([20.0, 40.0, 60.0, 80.0, 100.0, 120.0])
     chi2 = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])

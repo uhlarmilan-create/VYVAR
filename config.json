@@ -374,12 +374,6 @@
   // When true, target saturation uses per-frame clean fraction instead of
   // whole-star master zone skip (default false keeps legacy zone skip).
   "per_frame_saturation_enabled": false,
-  // F6 ePSF aperture-correction policy. p4_none stamps uncorrected fit flux
-  // (psf_ac_factor=1). chi2_lt5_legacy is the named fallback: median DAO/PSF
-  // among chi2<5 stars (EPSF-AC-01 A2 brightness-cut defect). Absolute PSF
-  // scale, when wanted, belongs to a DAOGROW/DOLPHOT-style growth-curve path,
-  // not this gate.
-  "psf_ac_policy": "p4_none",
   // Chi-square limit of an acceptable PSF fit.
   "psf_chi2_threshold": 50.0,
   // When true, RUN VYVAR / night_run automatically runs the ePSF stage after

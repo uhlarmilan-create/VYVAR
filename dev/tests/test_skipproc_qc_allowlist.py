@@ -223,7 +223,19 @@ def test_known_removed_masterstar_accept_mode_logs_info(tmp_path: Path, caplog) 
     caplog.set_level(logging.INFO)
     from config import AppConfig
 
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+def test_known_removed_psf_ac_policy_logs_info(tmp_path: Path, caplog) -> None:
+    import json
+    import logging
+
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps({"psf_ac_policy": "chi2_lt5_legacy"}), encoding="utf-8")
+    caplog.set_level(logging.INFO)
+    from config import AppConfig
+
     cfg = AppConfig(project_root=tmp_path)
-    assert not hasattr(cfg, "masterstar_accept_mode")
-    assert any("masterstar_accept_mode removed 2026-09-01" in r.message for r in caplog.records)
+    assert not hasattr(cfg, "psf_ac_policy")
+    assert any("psf_ac_policy removed 2026-09-01" in r.message for r in caplog.records)
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)

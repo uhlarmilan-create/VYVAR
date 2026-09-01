@@ -590,12 +590,7 @@ def write_one_internal_psf_lc(
         else:
             ac_policy = vals[0] if vals else default
     if not ac_policy:
-        try:
-            from config import AppConfig as _AppConfig
-
-            ac_policy = str(getattr(_AppConfig(), "psf_ac_policy", "p4_none") or "p4_none")
-        except Exception:  # noqa: BLE001
-            ac_policy = "p4_none"
+        ac_policy = "p4_none"
 
     header = build_provenance_header(
         epsf_meta=epsf_meta,

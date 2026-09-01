@@ -403,8 +403,6 @@ def _compute_aperture_correction(
 
 
 PSF_AC_POLICY_P4_NONE = "p4_none"
-PSF_AC_POLICY_CHI2_LT5_LEGACY = "chi2_lt5_legacy"
-PSF_AC_POLICIES = frozenset({PSF_AC_POLICY_P4_NONE, PSF_AC_POLICY_CHI2_LT5_LEGACY})
 
 
 def resolve_psf_ac_policy(
@@ -412,14 +410,8 @@ def resolve_psf_ac_policy(
     *,
     apply_aperture_correction: bool | None = None,
 ) -> str:
-    """Return ``p4_none`` or ``chi2_lt5_legacy``. Explicit policy wins over the bool."""
-    s = str(raw or "").strip().lower()
-    if s in PSF_AC_POLICIES:
-        return s
-    if apply_aperture_correction is False:
-        return PSF_AC_POLICY_P4_NONE
-    if apply_aperture_correction is True:
-        return PSF_AC_POLICY_CHI2_LT5_LEGACY
+    """Return ``p4_none``. CONSOLIDATE-01D: chi2_lt5_legacy branch deleted (ZP-OK v2 / P4)."""
+    _ = (raw, apply_aperture_correction)
     return PSF_AC_POLICY_P4_NONE
 
 
@@ -2739,7 +2731,7 @@ def psf_photometry_stars(
     use_iterative: bool = True,
     max_fit_iters: int = 3,
     ref_fluxes: np.ndarray | None = None,
-    apply_aperture_correction: bool = True,
+    apply_aperture_correction: bool = False,
     psf_ac_policy: str | None = None,
     grouper_enabled: bool | None = None,
     neighbor_catalog: pd.DataFrame | None = None,
@@ -2978,10 +2970,7 @@ def psf_photometry_stars(
     )
     _nn_map = nn_dist_fwhm_map or {}
     _nn_dmag_map = nn_delta_mag_map or {}
-    _ac_policy = resolve_psf_ac_policy(
-        psf_ac_policy, apply_aperture_correction=apply_aperture_correction
-    )
-    _do_ac = _ac_policy == PSF_AC_POLICY_CHI2_LT5_LEGACY
+    _ac_policy = PSF_AC_POLICY_P4_NONE
     if star_positions.empty:
         return pd.DataFrame(columns=_cols)
 
@@ -3260,46 +3249,16 @@ def psf_photometry_stars(
         except Exception:  # noqa: BLE001
             out_rows.append(base)
 
-    # --- Aperture correction ---
+    # --- Aperture correction: P4 none (CONSOLIDATE-01D; chi2_lt5_legacy branch deleted) ---
     _ac_factor = 1.0
     _ac_n_used = 0
-    if _do_ac and ref_fluxes is not None:
-        _psf_flux_arr = np.array([r.get("psf_flux", np.nan) for r in out_rows], dtype=float)
-        _ref_flux_arr = np.asarray(ref_fluxes, dtype=float)
-        _chi2_arr = np.array([r.get("psf_chi2", np.nan) for r in out_rows], dtype=float)
-        if len(_psf_flux_arr) == len(_ref_flux_arr):
-            _ac_factor, _ac_n_used = _compute_aperture_correction(
-                _psf_flux_arr,
-                _ref_flux_arr,
-                _chi2_arr,
-                chi2_limit=5.0,
-                min_ref_stars=5,
-            )
-            if _ac_factor != 1.0:
-                log_event(
-                    f"ePSF aperture correction: factor={_ac_factor:.4f}, "
-                    f"n_ref_stars={_ac_n_used}"
-                )
-                for r in out_rows:
-                    if np.isfinite(r.get("psf_flux", np.nan)) and r["psf_flux"] > 0:
-                        r["psf_flux"] = r["psf_flux"] * _ac_factor
-                        if np.isfinite(r.get("psf_flux_err", np.nan)):
-                            r["psf_flux_err"] = r["psf_flux_err"] * _ac_factor
-            else:
-                log_event(
-                    f"ePSF aperture correction: not applied "
-                    f"(n_clean_stars={_ac_n_used} < min_ref_stars=5)"
-                )
-    # --- end aperture correction ---
+    _ = (apply_aperture_correction, psf_ac_policy)
 
     for r in out_rows:
         r["psf_ac_factor"] = _ac_factor
         r["psf_ac_n_used"] = _ac_n_used
         r["psf_ac_policy"] = _ac_policy
-        if _do_ac:
-            r["psf_ac_applied"] = bool(_ac_n_used >= 5)
-        else:
-            r["psf_ac_applied"] = False
+        r["psf_ac_applied"] = False
         # Per-star quality grade (always computed) + auto-fallback (default on).
         _cid_s = str(r.get("catalog_id", "")).strip()
         _nn = _nn_map.get(_cid_s, float("nan"))

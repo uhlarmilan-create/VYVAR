@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - psf_ac_policy removed (2026-09-01)
+
+`psf_ac_policy` removed; p4_none is the only ePSF AC policy (ZP-OK v2 / P4).
+
 ## CONSOLIDATE-01D P2 - masterstar_accept_mode removed (2026-09-01)
 
 `masterstar_accept_mode` removed; MASTERSTAR odds gate is the only accept policy.

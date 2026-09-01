@@ -3922,21 +3922,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "psf_ac_policy": {
-    "help": "F6 ePSF aperture-correction policy. p4_none stamps uncorrected fit flux (psf_ac_factor=1). chi2_lt5_legacy is the named fallback: median DAO/PSF among chi2<5 stars (EPSF-AC-01 A2 brightness-cut defect). Absolute PSF scale, when wanted, belongs to a DAOGROW/DOLPHOT-style growth-curve path, not this gate.",
-    "kind": "static",
-    "label": "PSF AC Policy",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "psf_zp_membership": {
     "help": "Internal PSF LC ZP membership (INV-PSF-LC-PIN-01). fit_ok_strict uses stored psf_fit_ok. fit_ok_for_zp also admits epochs with finite psf_flux>0 and finite psf_chi2. Production default fit_ok_for_zp on validated rigs only.",
     "kind": "static",

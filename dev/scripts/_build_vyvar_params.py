@@ -235,7 +235,6 @@ INTENTIONALLY_HIDDEN = {
     "psf_spatial_min_stars_per_cell",
     "psf_spatial_order",
     "psf_chi2_threshold",
-    "psf_ac_policy",
     "psf_quality_fallback_enabled",
     "qc_fwhm_limit",
     "qc_elong_limit",

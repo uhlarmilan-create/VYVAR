@@ -305,7 +305,7 @@ def _export_catalog_psf_st_fields(cfg: AppConfig, platesolve_dir: Path) -> dict[
         "_run_epsf": bool(_run_epsf),
         "gain": float(cfg.gain),
         "read_noise": float(cfg.read_noise),
-        "psf_ac_policy": str(getattr(cfg, "psf_ac_policy", "p4_none") or "p4_none"),
+        "psf_ac_policy": "p4_none",
     }
 
 
@@ -548,7 +548,6 @@ def _fill_psf_catalog_columns(
                     if len(_ref_fluxes) != len(_pos):
                         _ref_fluxes = None
 
-                _ac_policy = str(st.get("psf_ac_policy") or "p4_none")
                 _psf_df = _psf_phot(
                     frame_data=d_arr,
                     frame_hdr=hdr,
@@ -556,8 +555,8 @@ def _fill_psf_catalog_columns(
                     epsf_model_path=_epsf_path,
                     error=_err_map,
                     ref_fluxes=_ref_fluxes,
-                    apply_aperture_correction=(_ac_policy == "chi2_lt5_legacy"),
-                    psf_ac_policy=_ac_policy,
+                    apply_aperture_correction=False,
+                    psf_ac_policy="p4_none",
                 )
                 _psf_idx = _psf_df.drop_duplicates(subset=["catalog_id"], keep="last").set_index(
                     "catalog_id"

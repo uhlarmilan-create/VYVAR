@@ -138,6 +138,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "masterstar_accept_mode": (
         "masterstar_accept_mode removed 2026-09-01 CONSOLIDATE-01D; MASTERSTAR odds gate is the only accept policy"
     ),
+    "psf_ac_policy": (
+        "psf_ac_policy removed 2026-09-01 CONSOLIDATE-01D; p4_none is the only ePSF AC policy (ZP-OK v2 / P4)"
+    ),
 }
 
 
@@ -676,10 +679,6 @@ class AppConfig:
     psf_spatial_order: int = 0
     #: Reduced chi^2 cutoff for PSF fit acceptance (``psf_fit_ok``).
     psf_chi2_threshold: float = 50.0
-    #: F6 ePSF aperture-correction policy (EPSF-AC-02). ``p4_none`` stamps
-    #: uncorrected fit flux (``psf_ac_factor=1``). ``chi2_lt5_legacy`` is the
-    #: named fallback: median DAO/PSF among chi2<5 stars (EPSF-AC-01 A2 defect).
-    psf_ac_policy: str = "p4_none"
     #: Internal PSF LC ZP membership (INV-PSF-LC-PIN-01). Production default
     #: ``fit_ok_for_zp`` on validated rigs only (EPSF-ZP-OK-01-WIRE v2).
     psf_zp_membership: str = "fit_ok_for_zp"
@@ -1667,8 +1666,6 @@ class AppConfig:
             self.psf_chi2_threshold = _pct if math.isfinite(_pct) and _pct > 0 else 50.0
         except (TypeError, ValueError):
             self.psf_chi2_threshold = 50.0
-        _acp = str(data.get("psf_ac_policy", self.psf_ac_policy) or "p4_none").strip().lower()
-        self.psf_ac_policy = _acp if _acp in ("p4_none", "chi2_lt5_legacy") else "p4_none"
         _zpm = str(data.get("psf_zp_membership", self.psf_zp_membership) or "fit_ok_for_zp").strip()
         self.psf_zp_membership = (
             _zpm if _zpm in ("fit_ok_strict", "fit_ok_for_zp") else "fit_ok_for_zp"
@@ -2744,7 +2741,6 @@ class AppConfig:
             "epsf_auto_run": bool(self.epsf_auto_run),
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
-            "psf_ac_policy": str(self.psf_ac_policy),
             "psf_zp_membership": str(self.psf_zp_membership),
             "psf_zp_for_zp_validated_rigs": list(self.psf_zp_for_zp_validated_rigs),
             "psf_grouper_enabled": bool(self.psf_grouper_enabled),

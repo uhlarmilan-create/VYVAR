@@ -249,10 +249,8 @@ def stamp_p4_none_sidecar(
 
 
 def psf_ac_policy_params(policy: str) -> dict[str, Any]:
-    """Named parameters stamped with the F6 AC policy."""
-    p = str(policy or "").strip().lower()
-    if p == "chi2_lt5_legacy":
-        return {"chi2_limit": 5.0, "min_ref_stars": 5}
+    """Named parameters stamped with the F6 AC policy (p4_none only)."""
+    _ = policy
     return {"psf_ac_factor": 1.0, "psf_ac_applied": False}
 
 
@@ -472,7 +470,7 @@ def run_epsf_psf_merge_job(
         )
 
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
-    _policy = str(getattr(_cfg, "psf_ac_policy", "p4_none") or "p4_none")
+    _policy = "p4_none"
     _ac_params = psf_ac_policy_params(_policy)
     if _epsf_job_summary is not None:
         _epsf_job_summary["psf_ac_policy"] = _policy

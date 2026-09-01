@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T07:03:44Z at git HEAD 6ec0859._
+_Generated 2026-09-01T07:07:58Z at git HEAD 639b303._
 
 ## Summary
 
-- Entries: 303
-- Tier: basic 14, advanced 73, expert 216
-- Kind: static 285, derived 0, resolved 18
-- Widget: auto 120, custom 158, hidden 25
-- Owner: db_static 9, config_runtime 275, fits_dynamic 6, internal 13
-- Scope: universal 252, rig 33, site 10, session 8
-- Scope key: none 252, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
+- Entries: 302
+- Tier: basic 14, advanced 72, expert 216
+- Kind: static 284, derived 0, resolved 18
+- Widget: auto 119, custom 158, hidden 25
+- Owner: db_static 9, config_runtime 274, fits_dynamic 6, internal 13
+- Scope: universal 251, rig 33, site 10, session 8
+- Scope key: none 251, rig 15, rig_band 4, rig_sampling 14, site 10, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -244,7 +244,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `phase2a_airmass_before_outlier` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Phase2a Airmass Before Outlier |
 | `photometry_mode` | both | - | basic | static | config_runtime | universal | none | n/a | auto | Photometry Mode |
 | `photon_transfer_ci_max_width_factor` | 3.0 | 1 .. 10 | expert | static | config_runtime | universal | none | n/a | auto | Photon Transfer CI Max Width Factor |
-| `psf_ac_policy` | p4_none | - | advanced | static | config_runtime | universal | none | n/a | auto | PSF AC Policy |
 | `psf_adaptive_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive Enabled |
 | `psf_adaptive_resolve_fwhm` | 2.0 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive Resolve FWHM |
 | `psf_adaptive_snr_lo` | 15.0 | - | expert | static | config_runtime | universal | none | n/a | custom | PSF Adaptive SNR Lo |
