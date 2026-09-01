@@ -112,10 +112,10 @@ Lists: roadmap_ids_before.json, roadmap_ids_after.json, roadmap_id_diff.json.
 | gate | result |
 | --- | --- |
 | G1 --fast --clean before | PASS at bf8e78c (01C tip): 1603 passed, 32 skipped. clean-tree PASS. Log: g1_before.txt |
-| G1 --fast --clean after | PENDING |
-| G2 --full aperture | PENDING; expect byte-identical (no product code). |
-| G-EPSF | skip for 01D (no ePSF product-code change) |
-| G4 live 516 | hashed read-only: csv bfa24039778f437b / fits 13e77cf8a1dcb4e7 / epsf 172f95403beae36d |
+| G1 --fast --clean after | PASS at fa66bfa: 1603 passed, 32 skipped (same as before; docs did not move tests). Log: g1_after.txt |
+| G2 --full aperture | PASS era04_aperture d55fcc9d n=53 / ext cc8b532e n=157. Log: g2_full.txt |
+| G-EPSF | skip (no ePSF product-code change) |
+| G4 live 516 | PASS after G2: csv bfa24039778f437b / fits 13e77cf8a1dcb4e7 / epsf 172f95403beae36d |
 
 ## Phase 2
 
