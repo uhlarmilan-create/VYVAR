@@ -51,6 +51,11 @@ PHOTOMETRY_E1: tuple[str, ...] = (
     "compute_setup_bkg_scale_r",
     "_normalize_err_background_mode",
     "_clamp_bkg_scale_r",
+    "ensemble_member_ids",
+    "apply_comp_w_rel_for_display",
+    "_get_lc_psf_strict",
+    "lc_has_finite_airmass",
+    "_get_lc_adaptive_per_star",
 )
 
 
