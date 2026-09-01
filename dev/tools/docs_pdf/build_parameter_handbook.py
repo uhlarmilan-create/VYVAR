@@ -283,8 +283,6 @@ D['comp_sparse_fallback_enabled'] = dict(
  proc="Na extremne ridkem poli je 1 slabsi komp lepsi nez zadny - fallback to umozni, ale vysledek nese YELLOW/RED trust, nikdy GREEN.")
 D['phase01_comparison_exclude_gaia_nss'] = dict(
  proc="Gaia non-single-star = znama dvojhvezda; potencialne promenna (zakryty, elipsoidalni) - jako komp nepripustna.")
-D['phase01_use_bprp_primary'] = dict(
- proc="BP-RP primo z Gaia je homogenni, presna barva pro cele nebe - lepsi nez pocitane B-V pres transformace (Jordi 2010, Riello 2021), ktere pridavaji chybu transformace.")
 D['comp_trust_min_comps'] = dict(
  proc="Prah pro GREEN duveru (od 06/2026 uz NE tvrde minimum!): >= prah dobrych kompu = GREEN; 1 az prah-1 = YELLOW se sigma skalovanym dle N; degradace je plynula, ne binarni. Kodovy vychozi 5 = literaturni doporuceni; produkce bezi validovane na 3 (DECISIONS zaznam) - mereni s 3 kompy JE korektni, jen nese vetsi chybu.",
  mensi="GREEN i pro male soubory - odznak ztraci vypovidaci hodnotu.",

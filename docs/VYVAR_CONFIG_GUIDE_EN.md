@@ -348,7 +348,6 @@ Choosing the ensemble of constant stars against which the target is measured (di
 | `phase01_ct_min_comp` | 7; range 2 .. 30 | Setting (config.json) | config.json | light-curve construction (`method_lc_output.py:249`) | Minimum comparisons required to fit a color-term relation. |
 | `phase01_flux_col` | dao_flux | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py:14763`) | Which flux column feeds Phase-1 comparison statistics (dao_flux = detection-stage flux). |
 | `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | Setting (config.json) | config.json | photometry engine (Phase 2A) (`photometry_core.py`) | Brightness-difference bounds (mag) of the candidate magnitude tiers, ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this list. |
-| `phase01_use_bprp_primary` | True | Setting (config.json) | config.json | Aperture photometry UI (`ui_aperture_photometry.py:1701`) | Uses Gaia BP-RP directly as the primary color criterion (instead of a computed B-V) - the grounded design choice of VYVAR. |
 
 ## Trust & quality flags
 

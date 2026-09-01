@@ -96,8 +96,9 @@ def test_owner_groups_partition_every_key() -> None:
     # CONSOLIDATE-01D P2: -5 DEAD persist-only keys (274 -> 269).
     # CONSOLIDATE-01D P2: ALIAS 3 field drop (config_runtime 269 -> 268;
     # db_static 9 -> 8; internal 13 -> 12).
+    # CONSOLIDATE-01D P2: -1 phase01_use_bprp_primary (268 -> 267).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 8, "config_runtime": 268, "fits_dynamic": 6, "internal": 12}, dist
+    assert dist == {"db_static": 8, "config_runtime": 267, "fits_dynamic": 6, "internal": 12}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

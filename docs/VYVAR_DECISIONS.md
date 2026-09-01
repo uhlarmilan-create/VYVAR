@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - phase01_use_bprp_primary removed (2026-09-01)
+
+`phase01_use_bprp_primary` removed; BP-RP is the only color display basis (selection already used BP-RP).
+
 ## CONSOLIDATE-01D P2 - ALIAS 3 fields dropped (2026-09-01)
 
 `comp_iterative_clip_enabled`, `blind_index_path`, `aavso_observer_code` removed as AppConfig fields; JSON loader still maps them onto `comp_sparse_fallback_enabled`, `blind_index_fine_path`, `observer_code`.

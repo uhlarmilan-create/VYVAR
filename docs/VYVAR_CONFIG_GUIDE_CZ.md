@@ -350,7 +350,6 @@ Vyber souboru stalych hvezd, vuci nimz se cil meri (diferencialni fotometrie). K
 | `phase01_ct_min_comp` | 7; rozsah 2 .. 30 | Nastaveni (config.json) | config.json | tvorba svetelne krivky (`method_lc_output.py:249`) | Minimalni pocet srovnavacich hvezd pro fit vztahu barevneho clenu. |
 | `phase01_flux_col` | dao_flux | Nastaveni (config.json) | config.json | fotometricke jadro (Phase 2A) (`photometry_core.py:14763`) | Ktery sloupec toku syti statistiku srovnavacich hvezd Phase 1 (dao_flux = tok z detekcni faze). |
 | `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | Nastaveni (config.json) | pouze vychozi v kodu | fotometricke jadro (Phase 2A) (`photometry_core.py:14744`) | Meze rozdilu jasnosti (mag) pro trideni kandidatu na srovnavaci hvezdy do urovni podle jasnosti, jako rostouci seznam. WAVE-B slucila puvodni skalary phase01_tier{1..4}_mag do tohoto jednoho seznamu. |
-| `phase01_use_bprp_primary` | True | Nastaveni (config.json) | config.json | UI aperturni fotometrie (`ui_aperture_photometry.py:1701`) | Pouziva Gaia BP-RP primo jako hlavni barevne kriterium (misto pocitaneho B-V) - podlozena navrhova volba VYVAR. |
 
 ## Duveryhodnost a kvalita vysledku
 

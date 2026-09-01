@@ -3673,21 +3673,6 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "phase01_use_bprp_primary": {
-    "help": "Uses Gaia BP-RP directly as the primary color criterion (instead of a computed B-V) - the grounded design choice of VYVAR.",
-    "kind": "static",
-    "label": "Phase01 Use BPRP Primary",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "phase2a_airmass_before_outlier": {
     "help": "Order switch: apply the airmass detrend before (True) or after (False) outlier rejection in Phase 2A.",
     "kind": "static",

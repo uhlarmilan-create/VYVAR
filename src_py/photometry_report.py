@@ -786,11 +786,10 @@ class _PhotometryReportBuilder:
 
         try:
             self._cfg, self._cfg_source_label = resolve_report_config(self._pipeline_meta)
-            self._use_bprp_primary = bool(getattr(self._cfg, "phase01_use_bprp_primary", True))
         except Exception:  # noqa: BLE001
             self._cfg = None
             self._cfg_source_label = "live (no run snapshot)"
-            self._use_bprp_primary = True
+        self._use_bprp_primary = True
 
         if (self._var_results is None) or (not self._candidates_set):
             vr_csv, cnorm_csv = self._try_load_variability_from_csv()

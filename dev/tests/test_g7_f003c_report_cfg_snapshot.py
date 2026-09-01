@@ -71,21 +71,19 @@ def test_resolve_report_config_uses_snapshot_not_live(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     (tmp_path / "config.json").write_text(
-        json.dumps({"phase01_use_bprp_primary": True, "aperture_comp_factor": 9.9}),
+        json.dumps({"aperture_comp_factor": 9.9}),
         encoding="utf-8",
     )
     _patch_appconfig_root(monkeypatch, tmp_path)
     meta = {
         "provenance": {
             "config_snapshot": {
-                "phase01_use_bprp_primary": False,
                 "aperture_comp_factor": 1.25,
             }
         }
     }
     cfg, label = resolve_report_config(meta)
     assert label == "run snapshot"
-    assert bool(getattr(cfg, "phase01_use_bprp_primary")) is False
     assert float(getattr(cfg, "aperture_comp_factor")) == 1.25
 
 
@@ -102,14 +100,14 @@ def test_builder_uses_snapshot_decoupled_from_live_config(
         json.dumps(
             {
                 "provenance": {
-                    "config_snapshot": {"phase01_use_bprp_primary": False},
+                    "config_snapshot": {"aperture_comp_factor": 1.25},
                 }
             }
         ),
         encoding="utf-8",
     )
     (tmp_path / "config.json").write_text(
-        json.dumps({"phase01_use_bprp_primary": True}),
+        json.dumps({"aperture_comp_factor": 9.9}),
         encoding="utf-8",
     )
     _patch_appconfig_root(monkeypatch, tmp_path)
@@ -142,7 +140,8 @@ def test_builder_uses_snapshot_decoupled_from_live_config(
         ta_left_mod=MagicMock(),
     )
     assert builder._cfg_source_label == "run snapshot"
-    assert builder._use_bprp_primary is False
+    assert builder._use_bprp_primary is True
+    assert float(getattr(builder._cfg, "aperture_comp_factor")) == 1.25
 
 
 def test_builder_without_snapshot_labels_live_footer(

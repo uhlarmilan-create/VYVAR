@@ -1,4 +1,4 @@
-"""G7-F003b: photometry_report reads cfg.phase01_use_bprp_primary (not hardcoded True)."""
+"""G7-F003b: photometry_report always uses BP-RP-primary display."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def _minimal_report_builder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     *,
-    bprp_primary: bool,
+    extra_cfg: dict | None = None,
     comp_df: pd.DataFrame | None = None,
 ) -> _PhotometryReportBuilder:
     obs_group = "V_test"
@@ -44,7 +44,7 @@ def _minimal_report_builder(
         comp_df.to_csv(phot / "comparison_stars_per_target.csv", index=False)
 
     (tmp_path / "config.json").write_text(
-        json.dumps({"phase01_use_bprp_primary": bprp_primary}),
+        json.dumps(extra_cfg or {}),
         encoding="utf-8",
     )
     _patch_appconfig_root(monkeypatch, tmp_path)
@@ -82,21 +82,23 @@ def _minimal_report_builder(
 def test_report_use_bprp_primary_true_matches_legacy_wording(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    builder = _minimal_report_builder(tmp_path, monkeypatch, bprp_primary=True)
+    builder = _minimal_report_builder(tmp_path, monkeypatch)
     assert builder._use_bprp_primary is True
     assert builder.NOTE_TXT == _NOTE_TXT
 
 
-def test_report_use_bprp_primary_false_still_uses_bprp_note(
+def test_report_legacy_flag_false_still_uses_bprp_display(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    builder = _minimal_report_builder(tmp_path, monkeypatch, bprp_primary=False)
-    assert builder._use_bprp_primary is False
+    builder = _minimal_report_builder(
+        tmp_path, monkeypatch, extra_cfg={"phase01_use_bprp_primary": False}
+    )
+    assert builder._use_bprp_primary is True
     assert builder.NOTE_TXT == _NOTE_TXT
     assert "Riello" not in builder.NOTE_TXT
 
 
-def test_comp_rows_false_includes_bv_columns(
+def test_comp_rows_legacy_flag_false_still_skips_bv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     target = "486430957815961344"
@@ -116,12 +118,11 @@ def test_comp_rows_false_includes_bv_columns(
         }
     )
     builder = _minimal_report_builder(
-        tmp_path, monkeypatch, bprp_primary=False, comp_df=comp_df
+        tmp_path, monkeypatch, extra_cfg={"phase01_use_bprp_primary": False}, comp_df=comp_df
     )
     rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
     assert len(rows) == 1
-    assert rows[0][3] == "0.550"
-    assert rows[0][4] == "G-bp"
+    assert rows[0][3] == "0.800"
 
 
 def test_comp_rows_true_skips_bv_columns(
@@ -144,7 +145,7 @@ def test_comp_rows_true_skips_bv_columns(
         }
     )
     builder = _minimal_report_builder(
-        tmp_path, monkeypatch, bprp_primary=True, comp_df=comp_df
+        tmp_path, monkeypatch, extra_cfg={"phase01_use_bprp_primary": True}, comp_df=comp_df
     )
     rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
     assert len(rows) == 1

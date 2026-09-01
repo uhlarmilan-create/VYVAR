@@ -464,7 +464,6 @@ def _render_target_detail(
     *,
     show_detrended: bool = True,
     show_airmass: bool = False,
-    phase01_use_bprp_primary: bool = True,
 ) -> None:
     """Interaktivna krivka (Plotly z CSV), field map PNG, metriky, odkazy Vizier/VSX."""
     from photometry_phase2a import _normalize_gaia_id
@@ -775,7 +774,7 @@ def _render_target_detail(
     bp_s = _fmt_opt_num_empty(bp, ".3f")
     bv = target_row.get("b_v")
     bv_s = _fmt_opt_num_empty(bv, ".2f")
-    hide_bv_meta = bool(phase01_use_bprp_primary)
+    hide_bv_meta = True
     if vt or zf or bp_s or (bv_s and not hide_bv_meta):
         badge = ""
         if zf == "linear":
@@ -833,7 +832,7 @@ def _render_target_detail(
 
         if not target_comps.empty:
             st.markdown("**Comparison stars**")
-            hide_bv = bool(phase01_use_bprp_primary)
+            hide_bv = True
             has_bv_tab = any(is_bv_related_phase01_ui_column(c) for c in target_comps.columns)
             if hide_bv and has_bv_tab:
                 log_if_ui_hiding_bv_for_bprp_primary(bprp_primary_ui_active=True)
@@ -1700,8 +1699,6 @@ def render_aperture_photometry(
             key="phase2a_show_all_filters",
         )
 
-        _phase01_bprp_pri = bool(cfg.phase01_use_bprp_primary)
-
         if show_all_filters and catalog_id:
             try:
                 import plotly.graph_objects as go  # type: ignore
@@ -1775,7 +1772,6 @@ def render_aperture_photometry(
                     comp_df=comp_df,
                     show_detrended=show_detrended,
                     show_airmass=show_airmass,
-                    phase01_use_bprp_primary=_phase01_bprp_pri,
                 )
         else:
             _render_target_detail(
@@ -1785,7 +1781,6 @@ def render_aperture_photometry(
                 comp_df=comp_df,
                 show_detrended=show_detrended,
                 show_airmass=show_airmass,
-                phase01_use_bprp_primary=_phase01_bprp_pri,
             )
 
     with tab_hrd:

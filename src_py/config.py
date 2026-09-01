@@ -159,6 +159,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "gs11_comp_suspect_dilution": (
         "gs11_comp_suspect_dilution removed 2026-09-01 CONSOLIDATE-01D; persist-only, never consumed"
     ),
+    "phase01_use_bprp_primary": (
+        "phase01_use_bprp_primary removed 2026-09-01 CONSOLIDATE-01D; BP-RP is always the color display basis"
+    ),
 }
 
 
@@ -919,9 +922,6 @@ class AppConfig:
     phase01_comparison_min_frames_frac: float = 0.2
     phase01_comparison_exclude_gaia_nss: bool = True
     phase01_comparison_exclude_gaia_extobj: bool = True
-    #: ``True`` = tier + colour hard filter via BP-RP (Riello linear B-V fallback when needed).
-    #: ``False`` = legacy |DeltaB-V| tiers via ``comp_tier*_bv_limit``.
-    phase01_use_bprp_primary: bool = True
     #: Max |DeltaBP-RP| v efektivnom farebnom priestore (hard filter pri vybere comp).
     comp_max_delta_bprp: float = 0.79
     #: Comparison-star colour tiers (WAVE-B STEP 4 merge of comp_tier{1..4}_{bprp_limit,weight}).
@@ -2398,9 +2398,6 @@ class AppConfig:
         self.phase01_comparison_exclude_gaia_extobj = bool(
             data.get("phase01_comparison_exclude_gaia_extobj", self.phase01_comparison_exclude_gaia_extobj)
         )
-        self.phase01_use_bprp_primary = bool(
-            data.get("phase01_use_bprp_primary", self.phase01_use_bprp_primary)
-        )
         # Plate-scale ceiling matches the runtime resolver clamp [0.1, 30.0] so that a
         # wide-field config value (e.g. 9.77"/px) survives load instead of being capped
         # at 5.0. phase01_* keeps lo=0.0 because 0.0 is the "auto / unset" sentinel
@@ -2839,7 +2836,6 @@ class AppConfig:
             "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
             "phase01_comparison_exclude_gaia_nss": bool(self.phase01_comparison_exclude_gaia_nss),
             "phase01_comparison_exclude_gaia_extobj": bool(self.phase01_comparison_exclude_gaia_extobj),
-            "phase01_use_bprp_primary": bool(self.phase01_use_bprp_primary),
             "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
             "apply_color_term": str(self.apply_color_term),
             "color_level_k_mag_per_bprp": self.color_level_k_mag_per_bprp,

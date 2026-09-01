@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-01T07:23:35Z at git HEAD 470a0f1._
+_Generated 2026-09-01T07:30:08Z at git HEAD 4479c22._
 
 ## Summary
 
-- Entries: 294
-- Tier: basic 13, advanced 71, expert 210
-- Kind: static 276, derived 0, resolved 18
-- Widget: auto 115, custom 155, hidden 24
-- Owner: db_static 8, config_runtime 268, fits_dynamic 6, internal 12
-- Scope: universal 244, rig 33, site 9, session 8
-- Scope key: none 244, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
+- Entries: 293
+- Tier: basic 13, advanced 71, expert 209
+- Kind: static 275, derived 0, resolved 18
+- Widget: auto 114, custom 155, hidden 24
+- Owner: db_static 8, config_runtime 267, fits_dynamic 6, internal 12
+- Scope: universal 243, rig 33, site 9, session 8
+- Scope key: none 243, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -310,7 +310,6 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `phase01_ct_min_comp` | 7 | 2 .. 30 | expert | static | config_runtime | universal | none | n/a | auto | Phase01 CT Min Comp |
 | `phase01_flux_col` | dao_flux | - | expert | static | config_runtime | session | frame | n/a | auto | Phase01 Flux Col |
 | `phase01_tiers` | [0.5, 1.0, 1.5, 2.0] | - | expert | static | config_runtime | universal | none | n/a | auto | Phase01 Tiers |
-| `phase01_use_bprp_primary` | True | - | expert | static | config_runtime | universal | none | n/a | auto | Phase01 Use BPRP Primary |
 
 ## trust
 

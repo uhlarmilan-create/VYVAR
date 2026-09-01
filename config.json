@@ -641,9 +641,6 @@
   // ascending. WAVE-B merged the phase01_tier{1..4}_mag scalars into this
   // list.
   "phase01_tiers": [0.5, 1.0, 1.5, 2.0],
-  // Uses Gaia BP-RP directly as the primary color criterion (instead of a
-  // computed B-V) - the grounded design choice of VYVAR.
-  "phase01_use_bprp_primary": true,
 
   // === Trust & quality flags ===
   // How VYVAR grades its own results: GREEN/YELLOW/RED trust of the
