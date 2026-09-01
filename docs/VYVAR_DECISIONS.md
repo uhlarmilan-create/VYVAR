@@ -6,6 +6,10 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## CONSOLIDATE-01D P2 - FLOW doc sync (2026-09-01)
+
+FLOW builder + `flow_doc_facts.py` + `docs/VYVAR_FLOW_CZ.pdf` drop removed config keys (`err_background_mode` was the G1 `test_flow_doc_config_facts` miss).
+
 ## CONSOLIDATE-01D P2 - dao_gaia flatten (2026-09-01)
 
 `dao_gaia_stage_01.py` / `_iter2.py` / `_iter3.py` deleted; helpers live in `dao_gaia_common.py`. `dao_gaia_stage_01_iter4.py` is not renamed; follow-up `dao_gaia_stage.py` only if Milan asks.

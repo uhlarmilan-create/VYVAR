@@ -16,7 +16,6 @@ DOC_CONFIG_FACTS: dict[str, object] = {
     "aperture_fwhm_factor": 1.35,
     "annulus_inner_fwhm": 2.7,
     "annulus_outer_fwhm": 5.2,
-    "err_background_mode": "empirical",
     "err_empty_apertures_n": 64,
     "sigma_sys_mag": {"4": 0.018},
     "k2_mode": "literature",
