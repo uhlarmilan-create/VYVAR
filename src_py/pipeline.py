@@ -19081,6 +19081,13 @@ from pipeline_ui_helpers import (  # noqa: E402,F401
 )
 
 from pipeline_gate_helpers import validate_comparison_ensemble_flatness  # noqa: E402,F401
+import pipeline_gate_helpers as _pipeline_gate_helpers
+
+# Call-time follow so monkeypatch.setattr("pipeline.extract_fits_metadata", ...)
+# still reaches validate_comparison_ensemble_flatness (moved; risk_register patch-string).
+_pipeline_gate_helpers.extract_fits_metadata = (
+    lambda *a, **k: extract_fits_metadata(*a, **k)
+)
 
 from epsf_hooks import (  # noqa: E402,F401
     _add_catalog_ids_from_csv,
