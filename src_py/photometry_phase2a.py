@@ -34,7 +34,6 @@ from photometry_core import (
     _GAIA_ID_DTYPE,
     _LC_QUALITY_FLAGS,
     _MAD_CONSISTENCY,
-    _phase2a_process_one_target,
 )
 from photometry_lightcurve import _coerce_bool_cell
 
@@ -4186,3 +4185,10 @@ _photometry_shared._sky_pp_for_photometric_error = _sky_pp_for_photometric_error
 
 from phase2a_state import _phase2a_prepare_shared_state  # noqa: E402
 _photometry_core._phase2a_prepare_shared_state = _phase2a_prepare_shared_state
+
+from phase2a_target import _phase2a_process_one_target  # noqa: E402
+_photometry_core._phase2a_process_one_target = _phase2a_process_one_target
+import phase2a_target as _phase2a_target  # noqa: E402
+_phase2a_target.read_flux_from_csv = (
+    lambda *a, **k: _photometry_core.read_flux_from_csv(*a, **k)
+)

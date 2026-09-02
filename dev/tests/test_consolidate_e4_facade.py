@@ -82,5 +82,15 @@ def test_e4_state_facade() -> None:
     assert obj is phase2a_state._phase2a_prepare_shared_state
 
 
-def test_e4_target_still_in_core_until_last_commit() -> None:
-    assert photometry_core._phase2a_process_one_target.__module__ == "photometry_core"
+def test_e4_target_facade() -> None:
+    import phase2a_target
+
+    obj = photometry_core._phase2a_process_one_target
+    assert obj.__module__ == "phase2a_target"
+    assert obj is phase2a_target._phase2a_process_one_target
+
+
+def test_e4_spatial_grid_stayed_in_pipeline() -> None:
+    import pipeline
+
+    assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline"
