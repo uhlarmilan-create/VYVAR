@@ -34,7 +34,6 @@ from photometry_core import (
     _GAIA_ID_DTYPE,
     _LC_QUALITY_FLAGS,
     _MAD_CONSISTENCY,
-    _phase2a_prepare_shared_state,
     _phase2a_process_one_target,
 )
 from photometry_lightcurve import _coerce_bool_cell
@@ -4184,3 +4183,6 @@ _E4_PHASE2A_NAMES = (
 for _n in _E4_PHASE2A_NAMES:
     setattr(_photometry_core, _n, globals()[_n])
 _photometry_shared._sky_pp_for_photometric_error = _sky_pp_for_photometric_error
+
+from phase2a_state import _phase2a_prepare_shared_state  # noqa: E402
+_photometry_core._phase2a_prepare_shared_state = _phase2a_prepare_shared_state

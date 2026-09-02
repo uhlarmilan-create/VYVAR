@@ -74,6 +74,13 @@ def test_e4_lightcurve_facade_getattr() -> None:
         assert obj.__module__ == "photometry_lightcurve", name
 
 
-def test_e4_giants_still_in_core_until_later_commits() -> None:
-    assert photometry_core._phase2a_prepare_shared_state.__module__ == "photometry_core"
+def test_e4_state_facade() -> None:
+    import phase2a_state
+
+    obj = photometry_core._phase2a_prepare_shared_state
+    assert obj.__module__ == "phase2a_state"
+    assert obj is phase2a_state._phase2a_prepare_shared_state
+
+
+def test_e4_target_still_in_core_until_last_commit() -> None:
     assert photometry_core._phase2a_process_one_target.__module__ == "photometry_core"
