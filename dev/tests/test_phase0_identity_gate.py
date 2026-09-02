@@ -210,7 +210,7 @@ def test_vsx_out_of_scope_types_masks_when_configured(tmp_path: Path) -> None:
 
 
 def test_no_fixed_radius_in_select_active_targets_source() -> None:
-    src = (Path(__file__).resolve().parents[2] / "src_py" / "photometry_core.py").read_text(
+    src = (Path(__file__).resolve().parents[2] / "src_py" / "photometry_comp.py").read_text(
         encoding="utf-8"
     )
     fn_start = src.index("def select_active_targets(")
