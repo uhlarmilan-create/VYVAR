@@ -1,0 +1,751 @@
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+ERROR:root:[COMP-SELECTION] comp-selection enrichment unavailable for this draft: columns ['likely_nonlinear', 'on_bad_column'] absent from masterstars_full_match.csv - selection proceeds without nonlinearity/bad-column exclusion
+WARNING:pipeline:[EXO MATCH] 2 exoplanet hosts within 3 arcsec of detection index 769
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+WARNING: FITSFixedWarning: RADECSYS= 'FK5 ' / RADECSYS 
+the RADECSYS keyword is deprecated, use RADESYSa. [astropy.wcs.wcs]
+WARNING:astropy:FITSFixedWarning: RADECSYS= 'FK5 ' / RADECSYS 
+the RADECSYS keyword is deprecated, use RADESYSa.
+2026-09-02 14:38:42.725 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-09-02 14:38:42.726 WARNING streamlit.runtime.state.session_state_proxy: Session state does not function when running a script without `streamlit run`
+2026-09-02 14:38:42.726 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+WARNING:root:[COMP] color filter relaxed to full under-ceiling single-source set (no ladder step reached n_comp_min=3; lim=0.640; n=95)
+WARNING:root:[PHASE1] 1497245497969274240: neocakavana chyba, preskakujem: target=1497245497969274240 n_survivors=2 n_min=3 drops=[('1500467303261764096', 'rms_violation')]
+WARNING:root:[COMP] color filter relaxed to full under-ceiling single-source set (no ladder step reached n_comp_min=3; lim=0.640; n=95)
+WARNING:root:[PHASE1] 1498425548825498112: neocakavana chyba, preskakujem: target=1498425548825498112 n_survivors=2 n_min=3 drops=[('1500467303261764096', 'rms_violation')]
+WARNING:root:[PHASE1] 1497227287309482624: neocakavana chyba, preskakujem: target=1497227287309482624 n_survivors=2 n_min=3 drops=[('1500467303261764096', 'rms_violation')]
+WARNING:root:[COLOR TERM] Target R CVn BP-RP=5.675 je mimo rozsahu comp [0.046, 1.533] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HAT-188-0003359 BP-RP=1.865 je mimo rozsahu comp [1.573, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HAT-188-0001788 BP-RP=1.704 je mimo rozsahu comp [1.571, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target ASASSN-V J135313.56+394107.4 BP-RP=1.784 je mimo rozsahu comp [1.533, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target FY CVn BP-RP=0.574 je mimo rozsahu comp [0.606, 0.713] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target CSS_J134925.3+393524 BP-RP=0.578 je mimo rozsahu comp [0.606, 0.713] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+ERROR:root:[FAZA 2A] Target HAT-188-0000323 (1497245497969274240): ziadne comp hviezdy - preskocene (phase2a_empty_comp_drop=1)
+WARNING:root:[COLOR TERM] Target HAT-188-0001516 BP-RP=2.304 je mimo rozsahu comp [0.046, 1.533] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target ASASSN-V J140843.29+402701.8 BP-RP=1.969 je mimo rozsahu comp [1.419, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HAT-188-0000203 BP-RP=1.638 je mimo rozsahu comp [1.533, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HAT-188-0002048 BP-RP=2.496 je mimo rozsahu comp [0.679, 1.624] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target ASASSN-V J140153.60+422535.6 BP-RP=1.985 je mimo rozsahu comp [1.446, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HAT-145-0004529 BP-RP=1.773 je mimo rozsahu comp [1.573, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target RX CVn BP-RP=0.588 je mimo rozsahu comp [0.606, 0.713] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target HIP 67011 BP-RP=1.868 je mimo rozsahu comp [1.571, 1.632] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+ERROR:root:[FAZA 2A] Target ASASSN-V J140619.34+422109.5 (1498425548825498112): ziadne comp hviezdy - preskocene (phase2a_empty_comp_drop=2)
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+ERROR:root:[FAZA 2A] Target Gaia DR3 1497227287309482624 (1497227287309482624): ziadne comp hviezdy - preskocene (phase2a_empty_comp_drop=3)
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+WARNING:root:[COLOR TERM] Target Gaia DR3 1499006984318088320 BP-RP=0.562 je mimo rozsahu comp [0.606, 0.705] - color term extrapolacia moze viest k systematike.
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+C:\ASTRO\python\VYVAR\src_py\photometry_core.py:8521: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  target_frames["is_flipped"].fillna(False).astype(bool).to_numpy()
+ERROR:root:[EXPORT] failed 1499842372636900992 method=aperture: no exportable LC points (flags/mag empty)
+ERROR:root:[EXPORT] failed 1498842882207281152 method=aperture: no exportable LC points (flags/mag empty)
+ERROR:root:[EXPORT] failed 1500410236033012352 method=aperture: no exportable LC points (flags/mag empty)
+ERROR:root:[EXPORT] batch finished with 3 export failure(s) across 3 target(s)
+ERROR:root:[EXPORT] failed target ids: 1498842882207281152,1499842372636900992,1500410236033012352
+ERROR:root:[EXPORT]   1499842372636900992 | method=aperture | no exportable LC points (flags/mag empty)
+ERROR:root:[EXPORT]   1498842882207281152 | method=aperture | no exportable LC points (flags/mag empty)
+ERROR:root:[EXPORT]   1500410236033012352 | method=aperture | no exportable LC points (flags/mag empty)
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:98: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  sub = sub[sub[col].fillna(False).astype(bool) == bool(want)]
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:189: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  .fillna(False)
+C:\ASTRO\python\VYVAR\src_py\variability_detector.py:687: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  ok_snr = out["snr50_ok"].fillna(False).astype(bool)
+WARNING: FITSFixedWarning: RADECSYS= 'FK5 ' / RADECSYS 
+the RADECSYS keyword is deprecated, use RADESYSa. [astropy.wcs.wcs]
+WARNING:astropy:FITSFixedWarning: RADECSYS= 'FK5 ' / RADECSYS 
+the RADECSYS keyword is deprecated, use RADESYSa.
+ERROR:root:[EXCEPT-FIX] Phase 2A terminal-failure counters: {'sky_annulus_mask_fail': 0, 'sky_annulus_invalid': 0, 'phase2a_csv_cache_skip': 0, 'comp_pool_csv_skip': 0, 'phase1_csv_cache_skip': 0, 'comp_frame_accumulation_skip': 0, 'comp_detrend_skip': 0, 'vt_wcs_refresh_fail': 0, 'psf_epsf_sky_inject_fail': 0, 'psf_local_sky_fail': 0, 'psf_grouped_fit_fail': 0, 'phase2a_empty_comp_drop': 3, 'catalog_bpm_enhance_fail': 0, 'plate_solve_bundle_fail': 0, 'masterstars_rescale_coords_fail': 0, 'vytarg_header_write_fail': 0, 'vsx_frame_bbox_wcs_fail': 0, 'gaia_cone_optics_floor_fail': 0, 'vsx_variable_coord_drop': 0, 'stress_sidecar_skip': 0, 'masterstar_ref_swap_fail': 0, 'calibrate_db_sync_fail': 0, 'importer_filter_read_fail': 0, 'dark_bpm_sidecar_write_fail': 0, 'calib_scope_conflict_check_fail': 0, 'calib_library_register_fail': 0, 'importer_capture_date_fallback': 0, 'importer_imagetyp_read_fail': 0, 'importer_obs_group_meta_skip': 0, 'wcs_header_key_copy_fail': 0, 'align_unique_sample_fail': 0, 'platesolve_match_rate_meta_fail': 0, 'timeobs_parse_fallback': 0, 'jd_mid_compute_fail': 0, 'hjd_bjd_compute_fail': 0, 'trust_kmag_sidecar_read_fail': 0, 'variability_gaia_id_norm_skip': 0, 'k2_airmass_read_fail': 0, 'export_observer_location_read_fail': 0, 'optics_draft_override_read_fail': 0, 'check_star_ensemble_filter_skip': 0}
+
+SESSION BASELINE CHECK (full)
+------------------------------------------------------------------------
+Check                        Status Detail
+------------------------------------------------------------------------
+git-branch                   PASS   consolidate-01
+git-head                     PASS   e985074
+git-staged                   PASS   none
+git-untracked-known          WARN   15 known untracked
+git-untracked                WARN   dev/results/CURSOR_TASK_DAO_COMPLETENESS_01.md; dev/results/CURSOR_TASK_DAO_GAIA
+git-origin-main              WARN   differs from origin/main (5b1068d); consider git pull
+config-paths                 PASS   all present
+pytest                       PASS   1630 passed, 32 skipped
+manifest-db-parity           PASS   draft_id=516
+db-quick-check               WARN   WAIVED (Milan 2026-08-22 files-only direction; MASTER_SO...): *** in database ma
+ledger                       PASS   v1 17 items
+ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430, VL-PFS-8F107CF
+deps-outdated                WARN   numpy 2.4.4->2.5.2 (+102 other) - gated upgrade, see docs/DEPS_POLICY.md
+full-provenance              PASS   anchor git_hash=9d47e2b489f3...
+full-plan-regen              PASS   {"variable_targets_rows": 873, "gaia_match_source_histogram": {"gaia_dr3_direct"
+full-pipeline                PASS   1376s -> tmp\session_baseline\20260902T123827Z
+full-epsf-stage              PASS   n_stars=63 wrote 53 PSF LCs in 14814s
+full-catalog-provenance      PASS   gaia rows=211712600 g<=17.5 vsx rows=7827904
+full-science-compare         PASS   n_lc=53 failures=0
+full-provenance-hash         PASS   e8811301bdfa6530... (informational; git-bound, not cross-commit gate)
+full-provenance-drift        DRIFT  git_hash run=e9850747c7b5... freeze=9d47e2b489f3...
+full-sha-v1-identity         PASS   v1 raw: 107 identical, 53 PSF differ (expected 107/53)
+full-snapshot-sha-core-aperture PASS   era04_aperture d55fcc9d8ad9b552... n=53
+full-photometry-sha-core-aperture PASS   era04_aperture d55fcc9d8ad9b552... n=53
+full-photometry-sha-ext-aperture PASS   era04_aperture ext cc8b532ee668b9b3... n=157
+full-photometry-sha-core-psf PASS   epsf01 c743b8ba89f4ac54... n=53
+full-g3-residual             PASS   BO n_full=134 cov=1.0 off=-9.454 rms=14.142 dem=12.505 (ref 12.505); FW n_full=1
+full-counters-runtime        PASS   {"phase2a_empty_comp_drop": 3}
+full-counters-meta           PASS   {"phase2a_empty_comp_drop": 3}
+full-counters-expected       PASS   allowlisted {"phase2a_empty_comp_drop": 3} (structural empty-comp drops)
+full-phase0-input-vt         PASS   {"variable_targets_rows": 873, "gaia_match_source_histogram": {"gaia_dr3_direct"
+full-phase0-funnel           PASS   {"active_targets_rows": 253, "skip_photometry_true": 197, "zone_flag_histogram":
+------------------------------------------------------------------------
+OVERALL: PASS
+
