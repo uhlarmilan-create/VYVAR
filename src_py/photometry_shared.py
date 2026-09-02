@@ -34,7 +34,6 @@ from photometry_core import (
     _GAIA_ID_DTYPE,
     _aperture_flux_sky_batch,
     _clamp_err_empty_apertures_min,
-    _coerce_bool_cell,
     _finite_pixel_bbox_from_array,
     _intersection_bbox_from_frame_bboxes,
     compute_per_frame_cog_correction,
@@ -44,6 +43,7 @@ from photometry_core import (
 # this module provides _normalize_gaia_id that gate_helpers imports from the facade).
 # E4: _sky_pp_for_photometric_error moved to photometry_phase2a; injected after that import.
 _sky_pp_for_photometric_error = None
+_coerce_bool_cell = None
 _assert_inv_err_sigma_acct_01 = None
 _clamp_err_empty_apertures_n = None
 _labbe_content_seed_from_header = None

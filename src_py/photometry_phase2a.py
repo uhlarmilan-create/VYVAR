@@ -34,10 +34,10 @@ from photometry_core import (
     _GAIA_ID_DTYPE,
     _LC_QUALITY_FLAGS,
     _MAD_CONSISTENCY,
-    _coerce_bool_cell,
     _phase2a_prepare_shared_state,
     _phase2a_process_one_target,
 )
+from photometry_lightcurve import _coerce_bool_cell
 
 
 def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:

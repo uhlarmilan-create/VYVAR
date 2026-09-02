@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import photometry
 import photometry_core
+import photometry_lightcurve
 import photometry_phase2a
 
 
@@ -50,6 +51,27 @@ def test_e4_normalize_gaia_id_still_on_phase2a() -> None:
 
 def test_e4_c_d_full_entry_stays() -> None:
     assert photometry_core.run_full_photometry_pipeline.__module__ == "photometry_core"
+
+
+PHOTOMETRY_E4_LC: tuple[str, ...] = (
+    "ensemble_normalize",
+    "compute_mag_calib_final",
+    "save_lightcurve_csv",
+    "apply_color_term",
+    "_coerce_bool_cell",
+    "BlendMapEntry",
+    "_get_lc",
+    "_route_lc_per_frame_err",
+    "_recompute_bjd_hjd_with_status",
+    "run_sysrem_field",
+)
+
+
+def test_e4_lightcurve_facade_getattr() -> None:
+    for name in PHOTOMETRY_E4_LC:
+        obj = getattr(photometry_core, name)
+        assert getattr(photometry_lightcurve, name) is obj, name
+        assert obj.__module__ == "photometry_lightcurve", name
 
 
 def test_e4_giants_still_in_core_until_later_commits() -> None:
