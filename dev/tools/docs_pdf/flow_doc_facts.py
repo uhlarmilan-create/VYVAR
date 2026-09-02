@@ -55,7 +55,7 @@ DOC_FUNCTIONS: list[tuple[str, str]] = [
     ("src_py/photometry_core.py", "compute_aperture_correction"),
     ("src_py/photometry_core.py", "ensemble_normalize"),
     ("src_py/photometry_core.py", "compute_mag_calib_final"),
-    ("src_py/photometry_core.py", "build_global_comp_pool"),
+    ("src_py/photometry_comp.py", "build_global_comp_pool"),
     ("src_py/k2_extinction.py", "apply_k2_to_comp_mag_inst"),
     ("src_py/band_classify.py", "classify_photometric_band"),
     ("src_py/sigma_floor_core.py", "combine_production_err_rel"),

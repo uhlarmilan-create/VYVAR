@@ -92,3 +92,11 @@ def test_e3_spatial_grid_stays_in_pipeline() -> None:
     import pipeline
 
     assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline"
+
+
+def test_e3_phase01_run_facade() -> None:
+    import phase01_run
+
+    assert photometry_core.run_phase0_and_phase1.__module__ == "phase01_run"
+    assert photometry_core.run_phase0_and_phase1 is phase01_run.run_phase0_and_phase1
+    assert photometry.run_phase0_and_phase1 is photometry_core.run_phase0_and_phase1
