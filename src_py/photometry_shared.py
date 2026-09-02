@@ -41,6 +41,18 @@ from photometry_core import (
     compute_per_frame_cog_correction,
 )
 
+# Bound by photometry_core after photometry_gate_helpers loads (cycle break:
+# this module provides _normalize_gaia_id that gate_helpers imports from the facade).
+_assert_inv_err_sigma_acct_01 = None
+_clamp_err_empty_apertures_n = None
+_labbe_content_seed_from_header = None
+_sigma_bkg_r_key = None
+_sky_pp_from_annulus_image = None
+bkg_scale_ratio_empirical_over_howell = None
+compute_setup_bkg_scale_r = None
+measure_empty_aperture_sigma_bkg = None
+scaled_sigma_bkg_ap_from_howell = None
+
 def _safe_polyfit(
     x: np.ndarray,
     y: np.ndarray,
