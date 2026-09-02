@@ -28,7 +28,7 @@ def test_target_field_map_png_no_catalog_only_legend(tmp_path: Path) -> None:
     assert out.is_file() and out.stat().st_size > 0
 
     # Source-level: legend string must not advertise catalog_only
-    src = Path(__file__).resolve().parents[2] / "src_py" / "photometry_core.py"
+    src = Path(__file__).resolve().parents[2] / "src_py" / "photometry_lightcurve.py"
     text = src.read_text(encoding="ascii")
     assert "cyan=catalog_only" not in text
     assert "catalog_only (no DAO)" not in text

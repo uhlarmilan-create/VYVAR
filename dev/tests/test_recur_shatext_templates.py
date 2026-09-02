@@ -31,8 +31,8 @@ def test_comp_quality_slope_note_templates_ascii_sigma() -> None:
 
 
 def test_comp_quality_slope_note_templates_match_photometry_core_source() -> None:
-    """Pinned strings must stay in sync with photometry_core slope note f-strings."""
-    src = (Path(__file__).resolve().parents[2] / "src_py" / "photometry_core.py").read_text(
+    """Pinned strings must stay in sync with the slope-note f-strings (E4: lightcurve)."""
+    src = (Path(__file__).resolve().parents[2] / "src_py" / "photometry_lightcurve.py").read_text(
         encoding="utf-8"
     )
     assert (
@@ -44,8 +44,8 @@ def test_comp_quality_slope_note_templates_match_photometry_core_source() -> Non
 
 def test_comp_quality_aperture_correction_reason_literals() -> None:
     """Stable reason tokens written into comp_quality JSON (SHA-covered extended set)."""
-    src = (Path(__file__).resolve().parents[2] / "src_py" / "photometry_core.py").read_text(
-        encoding="utf-8"
-    )
+    root = Path(__file__).resolve().parents[2] / "src_py"
+    src = (root / "photometry_phase2a.py").read_text(encoding="utf-8")
+    src += (root / "phase2a_target.py").read_text(encoding="utf-8")
     for token in ("insufficient_ref_stars", "disabled"):
         assert token in src

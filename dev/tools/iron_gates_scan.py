@@ -244,7 +244,7 @@ def scan_master(scope: frozenset[str] | None = None) -> list[Violation]:
 
 def check_comp_membership_ensemble_normalize() -> list[Violation]:
     """INV-COMP-MEMBERSHIP: good_ids selected outside per-frame loop."""
-    path = SRC / "photometry_core.py"
+    path = SRC / "photometry_lightcurve.py"
     text = path.read_text(encoding="utf-8", errors="replace")
     tree = ast.parse(text, filename=str(path))
     fn = next(
@@ -255,7 +255,7 @@ def check_comp_membership_ensemble_normalize() -> list[Violation]:
         return [
             Violation(
                 rule_id="INV-COMP-MEMBERSHIP",
-                module="photometry_core.py",
+                module="photometry_lightcurve.py",
                 line=0,
                 kind="missing_function",
                 snippet="ensemble_normalize not found",
@@ -267,7 +267,7 @@ def check_comp_membership_ensemble_normalize() -> list[Violation]:
         hits.append(
             Violation(
                 rule_id="INV-COMP-MEMBERSHIP",
-                module="photometry_core.py",
+                module="photometry_lightcurve.py",
                 line=fn.lineno,
                 kind="good_ids_not_before_frame_loop",
                 snippet="good_ids assignment missing before frame loop",
@@ -277,7 +277,7 @@ def check_comp_membership_ensemble_normalize() -> list[Violation]:
         hits.append(
             Violation(
                 rule_id="INV-COMP-MEMBERSHIP",
-                module="photometry_core.py",
+                module="photometry_lightcurve.py",
                 line=fn.lineno,
                 kind="per_frame_selection",
                 snippet="selected recomputed inside frame loop",
@@ -288,7 +288,7 @@ def check_comp_membership_ensemble_normalize() -> list[Violation]:
         hits.append(
             Violation(
                 rule_id="INV-COMP-MEMBERSHIP",
-                module="photometry_core.py",
+                module="photometry_lightcurve.py",
                 line=fn.lineno,
                 kind="per_frame_zp_clip",
                 snippet="per-frame ZP clip pattern",
