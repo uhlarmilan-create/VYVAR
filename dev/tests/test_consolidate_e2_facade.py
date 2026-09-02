@@ -66,11 +66,10 @@ PHOTOMETRY_E2_SHARED: tuple[str, ...] = (
     "StressTestResult",
 )
 
-# C-D: production entry stays in the facade.
+# C-D: production entry stays in the facade. E4 moved run_phase2a and
+# measure_fwhm_from_masterstar to photometry_phase2a.py.
 PHOTOMETRY_E2_STAY: tuple[str, ...] = (
     "run_full_photometry_pipeline",
-    "run_phase2a",
-    "measure_fwhm_from_masterstar",
 )
 
 

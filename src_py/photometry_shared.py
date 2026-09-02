@@ -37,12 +37,13 @@ from photometry_core import (
     _coerce_bool_cell,
     _finite_pixel_bbox_from_array,
     _intersection_bbox_from_frame_bboxes,
-    _sky_pp_for_photometric_error,
     compute_per_frame_cog_correction,
 )
 
 # Bound by photometry_core after photometry_gate_helpers loads (cycle break:
 # this module provides _normalize_gaia_id that gate_helpers imports from the facade).
+# E4: _sky_pp_for_photometric_error moved to photometry_phase2a; injected after that import.
+_sky_pp_for_photometric_error = None
 _assert_inv_err_sigma_acct_01 = None
 _clamp_err_empty_apertures_n = None
 _labbe_content_seed_from_header = None

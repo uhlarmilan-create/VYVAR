@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 import logging
 import math
 from astropy.io import fits as astrofits
@@ -20,17 +20,17 @@ from photometry_core import (
     ERR_BKG_SOURCE_EMPIRICAL,
     _APERTURE_SIZING_MAG_COLS,
     _GAIA_ID_DTYPE,
-    _Phase2AState,
     _build_star_exclusion_mask,
     _canonicalize_star_xy,
     _clamp_err_empty_apertures_min,
     _labbe_append_debug_record,
     _normalize_gaia_id,
-    _phase2a_process_one_target,
-    _recompute_bjd_hjd_with_status,
     _robust_scatter_mad,
     compute_per_frame_cog_correction,
 )
+
+if TYPE_CHECKING:
+    from photometry_core import _Phase2AState
 
 def _sigma_bkg_r_key(r: float) -> float:
     """Canonical dict key for per-radius ``sigma_bkg_ap`` transport.
@@ -759,6 +759,8 @@ def _recompute_bjd_hjd_per_target(
         Eastman, Siverd & Gaudi (2010) PASP 122, 935 - BJD standards
         time_utils.compute_hjd_bjd() for scalar equivalence
     """
+    from photometry_core import _recompute_bjd_hjd_with_status
+
     bjd, hjd, _ = _recompute_bjd_hjd_with_status(jd_array, ra_deg, dec_deg, cfg, site=site)
     return bjd, hjd
 
@@ -783,6 +785,8 @@ def photometer_check_star_production_path(
     ``err`` from ``save_lightcurve_csv``. Intended for check-star chi2 validation.
     """
     from dataclasses import replace
+
+    from photometry_core import _phase2a_process_one_target
 
     parent_target_cid = _normalize_gaia_id(parent_target_cid)
     check_cid = _normalize_gaia_id(check_cid)
