@@ -868,15 +868,6 @@ from pipeline_calibrate import (  # noqa: E402,F401
     scan_calibrated_lights_pointing,
     sync_obs_files_drift_arcmin_for_draft,
 )
-import pipeline_calibrate as _pipeline_calibrate  # noqa: E402
-
-# Call-time follow so monkeypatch.setattr(pipeline, "_fit_subtract_preprocess_sky_surface", ...)
-# still reaches _qc_enrich_one_frame (moved).
-_pipeline_calibrate._fit_subtract_preprocess_sky_surface = (
-    lambda *a, **k: _fit_subtract_preprocess_sky_surface(*a, **k)
-)
-
-
 from pipeline_preprocess import (  # noqa: E402,F401
     _archive_raw_to_calibrated_light,
     _load_raw_for_frame,

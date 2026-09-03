@@ -840,7 +840,7 @@ def apply_calibrated_stage_for_compare(
         return np.asarray(data, dtype=np.float32)
     sky_order = archive_res.sky_order if archive_res.sky_order is not None else int(default_sky_order)
     pass_n = max(1, int(archive_res.sky_pass))
-    from pipeline import _fit_subtract_preprocess_sky_surface  # noqa: PLC0415
+    from pipeline_calibrate import _fit_subtract_preprocess_sky_surface  # noqa: PLC0415
 
     out = np.asarray(data, dtype=np.float32)
     for _ in range(pass_n):

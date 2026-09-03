@@ -190,6 +190,7 @@ def test_extract_writes_headers_and_reduces_checkerboard(tmp_path: Path) -> None
 
 def test_sky_surface_not_on_mosaic_regression(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     import pipeline as pl
+    import pipeline_calibrate as pc
 
     calls: list[str] = []
 
@@ -197,7 +198,7 @@ def test_sky_surface_not_on_mosaic_regression(monkeypatch: pytest.MonkeyPatch, t
         calls.append(f"order={order}")
         return data, {"sky_surface_applied": False, "sky_surface_order": order}
 
-    monkeypatch.setattr(pl, "_fit_subtract_preprocess_sky_surface", _track)
+    monkeypatch.setattr(pc, "_fit_subtract_preprocess_sky_surface", _track)
     mosaic = tmp_path / "mosaic.fits"
     hdr = fits.Header()
     hdr["BAYERPAT"] = "RGGB"
