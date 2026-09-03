@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from astropy.io import fits
 from typing import Any, Callable
 import math
 import pandas as pd
@@ -12,16 +13,71 @@ from utils import iter_fits_paths_recursive as _iter_fits_recursive
 from pipeline import (
     LOGGER,
     _archive_raw_to_calibrated_light,
-    _estimate_fov_deg_from_fits_path,
-    _obs_fwhm_basename_map_from_db,
     _path_segments_forbidden_for_masterstar_physical_source,
-    _quality_inspection_dao_metrics,
     _sort_masterstar_paths_by_fwhm,
     _vyvar_open_database,
     draft_median_pointing_icrs_deg,
     resolve_masterstar_input_root,
     sync_obs_files_drift_arcmin_for_draft,
 )
+
+def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:
+    """Fast DAOStarFinder + moment FWHM on brightest sources; sky median; star count."""
+    import numpy as np
+
+    out0: dict[str, Any] = {
+        "fwhm_mean": None,
+        "sky_background": None,
+        "star_count": 0,
+        "inspection_jd": None,
+    }
+    fp = Path(fp)
+    if not fp.is_file():
+        return {**out0, "error": "missing_file"}
+    try:
+        with fits.open(fp, memmap=True) as hdul:
+            hdr = hdul[0].header
+            data = np.asarray(hdul[0].data, dtype=np.float32)
+    except Exception as exc:  # noqa: BLE001
+        return {**out0, "error": str(exc)}
+    from pipeline_calibrate import _quality_inspection_dao_metrics_array  # noqa: PLC0415
+    return _quality_inspection_dao_metrics_array(data, hdr)
+
+
+def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:
+    p = Path(fp)
+    if not p.is_file():
+        return None
+    try:
+        with fits.open(p, memmap=False) as hdul:
+            from pipeline_calibrate import _estimate_fov_deg_from_header  # noqa: PLC0415
+            return _estimate_fov_deg_from_header(hdul[0].header)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:
+    """Map ``basename.casefold()`` -> FWHM from ``manifest files[]`` for draft lights (last row wins per name)."""
+    out: dict[str, float] = {}
+    for row in db.fetch_draft_light_rows_for_quality(int(draft_id)):
+        try:
+            fv = row.get("FWHM")
+            if fv is None:
+                continue
+            v = float(fv)
+            if not math.isfinite(v) or v <= 0.5 or v >= 80.0:
+                continue
+            bn = Path(str(row.get("FILE_PATH") or "")).name.casefold()
+            if bn:
+                out[bn] = float(v)
+                if bn.startswith("proc_"):
+                    out.setdefault(bn[5:], float(v))
+                else:
+                    out.setdefault(f"proc_{bn}", float(v))
+        except (TypeError, ValueError):
+            continue
+    return out
+
 
 def _resolve_light_fits_for_quality_inspection(archive: Path, raw_fp: Path | str) -> Path | None:
     """Prefer calibrated counterpart; else existing raw path under archive."""

@@ -5,6 +5,8 @@ import photometry_core
 import photometry_exports
 import photometry_gate_helpers
 import photometry_shared
+import pipeline
+import pipeline_ui_helpers
 
 
 PHOTOMETRY_EDEAD_SHARED: tuple[str, ...] = (
@@ -49,3 +51,25 @@ def test_edead_gate_facade_getattr() -> None:
         assert obj is home, name
         assert obj.__module__ == "photometry_gate_helpers", name
         assert callable(obj), name
+
+
+PIPELINE_EDEAD_UI: tuple[str, ...] = (
+    "_quality_inspection_dao_metrics",
+    "_estimate_fov_deg_from_fits_path",
+    "_obs_fwhm_basename_map_from_db",
+)
+
+
+def test_edead_ui_facade_getattr() -> None:
+    for name in PIPELINE_EDEAD_UI:
+        obj = getattr(pipeline, name)
+        home = getattr(pipeline_ui_helpers, name)
+        assert obj is home, name
+        assert obj.__module__ == "pipeline_ui_helpers", name
+        assert callable(obj), name
+
+
+def test_edead_qc_stays_in_pipeline() -> None:
+    assert pipeline.analyze_calibrated_qc.__module__ == "pipeline"
+    assert pipeline._analyze_calibrated_qc_one.__module__ == "pipeline"
+    assert pipeline.AstroPipeline.__module__ == "pipeline"

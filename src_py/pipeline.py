@@ -162,62 +162,6 @@ _MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO = 1.15          # was cfg.masterstar_sip_f
 _PLATESOLVE_ANISOTROPY_THRESHOLD = 1.3                # was cfg.platesolve_anisotropy_threshold (1.3)
 
 
-def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:
-    """Fast DAOStarFinder + moment FWHM on brightest sources; sky median; star count."""
-    import numpy as np
-
-    out0: dict[str, Any] = {
-        "fwhm_mean": None,
-        "sky_background": None,
-        "star_count": 0,
-        "inspection_jd": None,
-    }
-    fp = Path(fp)
-    if not fp.is_file():
-        return {**out0, "error": "missing_file"}
-    try:
-        with fits.open(fp, memmap=True) as hdul:
-            hdr = hdul[0].header
-            data = np.asarray(hdul[0].data, dtype=np.float32)
-    except Exception as exc:  # noqa: BLE001
-        return {**out0, "error": str(exc)}
-    return _quality_inspection_dao_metrics_array(data, hdr)
-
-
-def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:
-    p = Path(fp)
-    if not p.is_file():
-        return None
-    try:
-        with fits.open(p, memmap=False) as hdul:
-            return _estimate_fov_deg_from_header(hdul[0].header)
-    except Exception:  # noqa: BLE001
-        return None
-
-
-
-def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:
-    """Map ``basename.casefold()`` -> FWHM from ``manifest files[]`` for draft lights (last row wins per name)."""
-    out: dict[str, float] = {}
-    for row in db.fetch_draft_light_rows_for_quality(int(draft_id)):
-        try:
-            fv = row.get("FWHM")
-            if fv is None:
-                continue
-            v = float(fv)
-            if not math.isfinite(v) or v <= 0.5 or v >= 80.0:
-                continue
-            bn = Path(str(row.get("FILE_PATH") or "")).name.casefold()
-            if bn:
-                out[bn] = float(v)
-                if bn.startswith("proc_"):
-                    out.setdefault(bn[5:], float(v))
-                else:
-                    out.setdefault(f"proc_{bn}", float(v))
-        except (TypeError, ValueError):
-            continue
-    return out
-
 
 
 _EXO_HOST_ANNOTATION_COLUMNS: tuple[str, ...] = (
@@ -1125,6 +1069,9 @@ from pipeline_ui_helpers import (  # noqa: E402,F401
     list_best_processed_light_paths_for_masterstar,
     resolve_masterstars_metadata_csv,
     preprocess_sky_summary_from_df,
+    _quality_inspection_dao_metrics,
+    _estimate_fov_deg_from_fits_path,
+    _obs_fwhm_basename_map_from_db,
 )
 
 from pipeline_gate_helpers import validate_comparison_ensemble_flatness  # noqa: E402,F401
