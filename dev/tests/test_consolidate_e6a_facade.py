@@ -209,4 +209,7 @@ def test_e6a_export_init_arity_one() -> None:
 def test_e6a_sat_limit_peak_source_stays() -> None:
     assert pipeline.SAT_LIMIT_PEAK_TEST_SOURCE.__class__ is str
     assert "INV-SAT-LIMIT" in pipeline.SAT_LIMIT_PEAK_TEST_SOURCE
-    assert not hasattr(pipeline_catalog, "SAT_LIMIT_PEAK_TEST_SOURCE")
+    # Defined in pipeline.py next to SAT_LIMIT_CONTAINER_CLIP_ADU.
+    # catalog must not re-export a second object (identity).
+    cat_src = getattr(pipeline_catalog, "SAT_LIMIT_PEAK_TEST_SOURCE", None)
+    assert cat_src is None or cat_src is pipeline.SAT_LIMIT_PEAK_TEST_SOURCE
