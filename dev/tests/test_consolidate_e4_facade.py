@@ -91,6 +91,7 @@ def test_e4_target_facade() -> None:
 
 
 def test_e4_spatial_grid_stayed_in_pipeline() -> None:
+    """E4: not in photometry_lightcurve. E6a C2 moved it to pipeline_astrometry."""
     import pipeline
 
-    assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline"
+    assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline_astrometry"

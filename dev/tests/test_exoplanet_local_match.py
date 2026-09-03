@@ -176,9 +176,10 @@ def test_catalog_known_variable_not_includes_exoplanet():
         "pipeline",
         "source text scan requires interpreted pipeline.py",
     )
+    import inspect
     import pipeline
 
-    text = Path(pipeline.__file__).resolve()
-    for line in text.read_text(encoding="utf-8").splitlines():
+    src_path = Path(inspect.getfile(pipeline.select_comparison_stars_spatial_grid)).resolve()
+    for line in src_path.read_text(encoding="utf-8").splitlines():
         if "catalog_known_variable" in line and "exo" in line.lower():
             raise AssertionError(f"exo referenced on catalog_known_variable line: {line.strip()}")
