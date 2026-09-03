@@ -21,10 +21,9 @@ from photometry_core import (
     ERR_BKG_SOURCE_EMPIRICAL,
     _APERTURE_SIZING_MAG_COLS,
     _GAIA_ID_DTYPE,
-    _normalize_gaia_id,
-    compute_per_frame_cog_correction,
     _MAD_CONSISTENCY,
 )
+from photometry_shared import _normalize_gaia_id, compute_per_frame_cog_correction
 
 if TYPE_CHECKING:
     from photometry_core import _Phase2AState

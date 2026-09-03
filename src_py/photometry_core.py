@@ -1130,10 +1130,6 @@ from photometry_lightcurve import (  # noqa: E402,F401
     run_sysrem_field,
 )
 
-import photometry_shared as _photometry_shared_e4c  # noqa: E402
-_photometry_shared_e4c._coerce_bool_cell = _coerce_bool_cell
-
-
 from photometry_gate_helpers import (  # noqa: E402,F401
     _sigma_bkg_r_key,
     _assert_inv_err_sigma_acct_01,
@@ -1169,20 +1165,6 @@ from photometry_gate_helpers import (  # noqa: E402,F401
     _labbe_debug_dump_path,
     _labbe_append_debug_record,
 )
-
-import photometry_shared as _photometry_shared  # noqa: E402
-_photometry_shared._assert_inv_err_sigma_acct_01 = _assert_inv_err_sigma_acct_01
-_photometry_shared._clamp_err_empty_apertures_n = _clamp_err_empty_apertures_n
-_photometry_shared._clamp_err_empty_apertures_min = _clamp_err_empty_apertures_min
-_photometry_shared._labbe_content_seed_from_header = _labbe_content_seed_from_header
-_photometry_shared._sigma_bkg_r_key = _sigma_bkg_r_key
-_photometry_shared._sky_pp_from_annulus_image = _sky_pp_from_annulus_image
-_photometry_shared.bkg_scale_ratio_empirical_over_howell = (
-    bkg_scale_ratio_empirical_over_howell
-)
-_photometry_shared.compute_setup_bkg_scale_r = compute_setup_bkg_scale_r
-_photometry_shared.measure_empty_aperture_sigma_bkg = measure_empty_aperture_sigma_bkg
-_photometry_shared.scaled_sigma_bkg_ap_from_howell = scaled_sigma_bkg_ap_from_howell
 
 from photometry_exports import (  # noqa: E402,F401
     lc_has_finite_airmass,

@@ -34,21 +34,6 @@ from photometry_core import (
     _GAIA_ID_DTYPE,
 )
 
-# Bound by photometry_core after photometry_gate_helpers loads (cycle break:
-# this module provides _normalize_gaia_id that gate_helpers imports from the facade).
-# E4: _sky_pp_for_photometric_error moved to photometry_phase2a; injected after that import.
-_sky_pp_for_photometric_error = None
-_coerce_bool_cell = None
-_assert_inv_err_sigma_acct_01 = None
-_clamp_err_empty_apertures_n = None
-_clamp_err_empty_apertures_min = None
-_labbe_content_seed_from_header = None
-_sigma_bkg_r_key = None
-_sky_pp_from_annulus_image = None
-bkg_scale_ratio_empirical_over_howell = None
-compute_setup_bkg_scale_r = None
-measure_empty_aperture_sigma_bkg = None
-scaled_sigma_bkg_ap_from_howell = None
 
 def _finite_pixel_bbox_from_array(
     data: "np.ndarray",
@@ -1872,3 +1857,19 @@ def enhance_catalog_dataframe_aperture_bpm(
             out["flux_large"] = _nan_vec.copy()
 
     return out
+
+
+from photometry_gate_helpers import (  # noqa: E402
+    _assert_inv_err_sigma_acct_01,
+    _clamp_err_empty_apertures_min,
+    _clamp_err_empty_apertures_n,
+    _labbe_content_seed_from_header,
+    _sigma_bkg_r_key,
+    _sky_pp_from_annulus_image,
+    bkg_scale_ratio_empirical_over_howell,
+    compute_setup_bkg_scale_r,
+    measure_empty_aperture_sigma_bkg,
+    scaled_sigma_bkg_ap_from_howell,
+)
+from photometry_lightcurve import _coerce_bool_cell  # noqa: E402
+from photometry_phase2a import _sky_pp_for_photometric_error  # noqa: E402

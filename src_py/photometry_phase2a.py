@@ -4112,7 +4112,6 @@ from photometry_shared import (  # noqa: E402,F401
 # When this module is imported first (pipeline.py / ui), photometry_core skips the
 # late from-import. Bind the moved names onto the facade (and shared) here.
 import photometry_core as _photometry_core  # noqa: E402
-import photometry_shared as _photometry_shared  # noqa: E402
 
 _E4_PHASE2A_NAMES = (
     "parse_comp_quality_json_map",
@@ -4181,7 +4180,6 @@ _E4_PHASE2A_NAMES = (
 )
 for _n in _E4_PHASE2A_NAMES:
     setattr(_photometry_core, _n, globals()[_n])
-_photometry_shared._sky_pp_for_photometric_error = _sky_pp_for_photometric_error
 
 from phase2a_state import _phase2a_prepare_shared_state  # noqa: E402
 _photometry_core._phase2a_prepare_shared_state = _phase2a_prepare_shared_state
