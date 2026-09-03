@@ -1,4 +1,4 @@
-# MASTERSTAR-GAIA-01 Part F — E3b PAUSE REPORT
+# MASTERSTAR-GAIA-01 Part F - E3b PAUSE REPORT
 
 Date: 2026-08-19  
 Status: **PAUSE before Phase 1** (comp-pool survival 77.8% < 90% gate)
@@ -45,10 +45,10 @@ Raw: `dev/results/context/session_20260819_msgaia01/e3b_comp_survival.csv`, `e3b
 
 523 comp-pool members (22.2%) would lose pass-2 detection under tightened params; only 116 recover via FORCED_SEED admission. Options:
 
-1. **Proceed anyway** — accept comp pool shrink; E4 MAG gate still binding; photometry may shift if comps drop.
-2. **Enable FORCED_SEED comp-pool admission** — recovers +116 (still ~78%, below 90%).
-3. **Intermediate pass-2 params** — re-sweep empty-sky vs survival tradeoff (e.g. ?=4, tol=2.5) with new empty-sky audit.
-4. **Hybrid** — keep tightened empty-sky gate but relax pass-2 only for stars already in comp pool (membership-specific; needs explicit DECISIONS entry).
+1. **Proceed anyway** - accept comp pool shrink; E4 MAG gate still binding; photometry may shift if comps drop.
+2. **Enable FORCED_SEED comp-pool admission** - recovers +116 (still ~78%, below 90%).
+3. **Intermediate pass-2 params** - re-sweep empty-sky vs survival tradeoff (e.g. ?=4, tol=2.5) with new empty-sky audit.
+4. **Hybrid** - keep tightened empty-sky gate but relax pass-2 only for stars already in comp pool (membership-specific; needs explicit DECISIONS entry).
 
 ## Not executed (blocked by PAUSE)
 

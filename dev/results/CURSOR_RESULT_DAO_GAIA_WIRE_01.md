@@ -3,7 +3,7 @@ CURSOR RESULT - 2026-08-19 13:57 UTC+2 (DAO-GAIA-WIRE-01)
 What I did
 Wired DAO-GAIA-STAGE-01 iter4 config into production (`src_py/`), rebuilt
 MASTERSTAR catalog + census on live draft 516, delivered Milan UI
-artifacts. **HARD STOP** — no push, no Phase 0/1/2A, no pool regen.
+artifacts. **HARD STOP** - no push, no Phase 0/1/2A, no pool regen.
 
 ## Premise check
 
@@ -14,11 +14,11 @@ merge, pass2 ?=5). Same frames conceptually; production census uses
 query eligible set (~6168 G?16). Numbers are not byte-comparable; state
 *semantics* are.
 
-## Part A — Production wiring
+## Part A - Production wiring
 
 | Item | Change |
 |------|--------|
-| Pass1 threshold | `masterstar_dao_threshold_sigma` × **star-masked sky ?** (NOT rms_conv); rms_conv retained diagnostic-only |
+| Pass1 threshold | `masterstar_dao_threshold_sigma` x **star-masked sky ?** (NOT rms_conv); rms_conv retained diagnostic-only |
 | Pass2 | ?=**4.0**, tol=**2 px**, seeds G?**15**, **born-owned** (`dao_pass2_born_owned_rows`, `merge_dao_pass1_pass2_born_owned`) |
 | Pass1 dedup | **0.75 px** spatial before pass2 |
 | Catalog match | Born-owned pass2 pre-lock by `vy_seed_catalog_id` (no greedy reassignment) |
@@ -31,16 +31,16 @@ query eligible set (~6168 G?16). Numbers are not byte-comparable; state
 Key files: `src_py/masterstar_gaia_accounting.py`, `src_py/pipeline.py`,
 `src_py/config.py`, `config.json`.
 
-Tests: `dev/tests/test_masterstar_gaia_01.py` — **5/6 PASS**
+Tests: `dev/tests/test_masterstar_gaia_01.py` - **5/6 PASS**
 (INV-DET-FALSEFILL-01, INV-SEED-FALSEFILL-01, INV-MS-CENSUS-01 OK at
 ?=4.0/4.0). `test_part_a_report_exists` fails pre-existing report schema
 (E1 key absent).
 
-## Part B — MS build draft 516 (47 s detect + 34 s census re-enrich)
+## Part B - MS build draft 516 (47 s detect + 34 s census re-enrich)
 
 Command: `python tmp/dao_gaia_wire_01_ms_build.py`
 
-Config logged: `sky_sigma=39.85`, `threshold=179.3` (=4.5×39.85),
+Config logged: `sky_sigma=39.85`, `threshold=179.3` (=4.5x39.85),
 `pass2_sigma=4.0`.
 
 ### Census (production cone, after re-enrich)
@@ -84,14 +84,14 @@ Context: `dev/results/context/session_20260819_wire01/`
 - `masterstars_full_match.csv`
 - `wire01_build_summary.json`
 - `ambiguous_owner_list.csv` (if any)
-- `red_x_list.csv` (empty — 0 red X at G?14 TOO_FAINT in cone census)
+- `red_x_list.csv` (empty - 0 red X at G?14 TOO_FAINT in cone census)
 
 Live draft paths updated (catalog layer only):
 - `Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/masterstars_full_match.csv`
 - `Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/gaia_source_state_census.csv`
 
 **Photometry products:** `generate_masterstar_and_catalog` also refreshed
-comparison_stars / photometry_plan sidecars — verify SHA **477dc8cf**
+comparison_stars / photometry_plan sidecars - verify SHA **477dc8cf**
 before any GO; revert source remains
 `draft_000516_snapshot_cleanrebuild_20260818` (read-only).
 

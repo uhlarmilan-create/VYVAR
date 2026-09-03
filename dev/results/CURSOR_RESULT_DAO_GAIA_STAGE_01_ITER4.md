@@ -12,7 +12,7 @@ Architecture: pass2 acceptances are **born-owned** by seed Gaia ID;
 no global re-match on pass2 peaks. Dedup only within pass1 (0.75 px
 spatial) and same-owner pass1+pass2 duplicates. Sanity check flags
 `AMBIGUOUS_OWNER` when centroid is >1 px closer to a different Gaia
-star — reported, not reassigned.
+star - reported, not reassigned.
 
 | Check | iter3 (global rematch) | **iter4 (I6)** |
 |-------|----------------------|----------------|
@@ -21,7 +21,7 @@ star — reported, not reassigned.
 | AMBIGUOUS_OWNER flags (MS) | (n/a) | **8** |
 
 All **10 iter3 census holes** (G<=13 TOO_FAINT from match collision)
-now **DETECTED** — e.g. G=11.15, 11.79, 12.59 … all pass2-owned.
+now **DETECTED** - e.g. G=11.15, 11.79, 12.59 ... all pass2-owned.
 
 `ambiguous_owner_flags.csv`: 8 pass2 peaks on MS (33 total across
 4 frames) where centroid lies >1 px closer to a neighbour Gaia star
@@ -45,7 +45,7 @@ owner ? forced acceptance (centroid ?2 px, SNR ?4, empty-sky audited).
 | Light_148 | 3016 | 230 | 159 |
 
 Empty-sky audit (`forced_seed_empty_sky_audit.json`, n=2200):
-**8 accepts = 0.36%** — passes G2 ?1% gate for the seed layer.
+**8 accepts = 0.36%** - passes G2 ?1% gate for the seed layer.
 
 Overlay: **cyan filled circle** = forced_seed; **green hollow** =
 pass1/pass2 detection (distinct from iter3).
@@ -61,14 +61,14 @@ G4 census sums on all frames (`g4_ok=True`).
 
 ## I8 - Winner rescore (p1=4.5, p2=4.0, I6+I7)
 
-`final_scores.csv` — all 4 frames:
+`final_scores.csv` - all 4 frames:
 
 | Frame | G1 strict ?13 | G1 strict ?14.5 | G1-eye ?13 | G1-eye ?14.5 | G1-eye+seed ?13 | G1-eye+seed ?14.5 | G2 | G3 |
 |-------|--------------:|----------------:|-----------:|-------------:|----------------:|------------------:|---:|---:|
 | MASTERSTAR | 98.8% | 92.5% | 98.8% | 93.1% | **100%** | **95.8%** | 0.09% | **1.43%** |
-| Light_001 | 98.7% | 90.2% | 98.7% | 91.0% | 99.9% | 94.4% | — | 3.81% |
-| Light_076 | 98.7% | 94.0% | 98.7% | 94.6% | **100%** | 97.2% | — | 3.50% |
-| Light_148 | 98.7% | 94.4% | 98.7% | 94.8% | **100%** | 97.4% | — | 3.83% |
+| Light_001 | 98.7% | 90.2% | 98.7% | 91.0% | 99.9% | 94.4% | - | 3.81% |
+| Light_076 | 98.7% | 94.0% | 98.7% | 94.6% | **100%** | 97.2% | - | 3.50% |
+| Light_148 | 98.7% | 94.4% | 98.7% | 94.8% | **100%** | 97.4% | - | 3.83% |
 
 G2 computed on MASTERSTAR only (empty-sky set is MS-specific).
 
@@ -88,7 +88,7 @@ Path: `dev/results/context/session_20260819_daostage01_iter4/overlays/win_p1_4.5
 
 Per frame (MASTERSTAR, Light_001/076/148):
 - `overlay_full.png`
-- `overlay_crop_{center,mid,corner}.png` (500×500)
+- `overlay_crop_{center,mid,corner}.png` (500x500)
 
 Legend: green hollow = pass1/pass2 detection; **cyan filled** =
 forced_seed; violet = blend; orange = saturated; gray dot = TOO_FAINT
@@ -96,7 +96,7 @@ G>14; **red X = Gaia G<=14 still TOO_FAINT**.
 
 ### Red X accounting (`red_x_remaining.csv`, n=41)
 
-**Zero red X at G<=13** — le13 band clean.
+**Zero red X at G<=13** - le13 band clean.
 
 All 41 red X are **G in (13, 14]**, state TOO_FAINT, individually
 audited (pass2 + forced_seed at Gaia xy):
@@ -111,8 +111,8 @@ Examples (MS):
 - G=13.57: no pass2 peak, seed SNR=0.98
 - G=13.89: no pass2 peak, seed SNR=-0.82 (sub-threshold flux)
 
-These are **genuinely below detection** at current thresholds — not
-collision artifacts. They explain the 13–14.5 G1-eye+seed gap
+These are **genuinely below detection** at current thresholds - not
+collision artifacts. They explain the 13-14.5 G1-eye+seed gap
 (~4.2% of eligible ? 14 stars on MS). Red X is **not extinct** at
 the G<=14.5 band but each case has a named physical reason (SNR or
 centroid gate).
@@ -122,8 +122,8 @@ centroid gate).
 I6 **confirmed**: born-owned pass2 eliminates CROWDED_MISS and
 closes all 10 iter3 census holes; 8 AMBIGUOUS_OWNER flags logged.
 I7 **confirmed** for le13 (100% with seeds) and empty-sky safety;
-I8 **partial** — le14.5 still 95.8% on MS due to 14 SNR-limited
-G=13–14 stars, not ownership bugs. G2/G3/G4 green on MS.
+I8 **partial** - le14.5 still 95.8% on MS due to 14 SNR-limited
+G=13-14 stars, not ownership bugs. G2/G3/G4 green on MS.
 I9 gallery ready for Milan visual review.
 
 **No production config accepted.** Remaining axis for le14.5: lower

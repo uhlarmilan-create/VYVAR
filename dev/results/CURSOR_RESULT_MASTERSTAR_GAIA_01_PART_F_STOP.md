@@ -1,4 +1,4 @@
-# MASTERSTAR-GAIA-01 Part F — STOP REPORT (E4)
+# MASTERSTAR-GAIA-01 Part F - STOP REPORT (E4)
 
 Date: 2026-08-19  
 Decision: Option 1 proceed (seed-pool gate OFF). Options 3/4 rejected. Option 2 deferred.
@@ -21,14 +21,14 @@ Harness: `tmp/masterstar_gaia_01_part_f_rebuild.py`
 Runtime: ~2676 s (Phase 0 0.4 s, Phase 1 1999 s, Phase 2A 407 s) + MS rebuild ~57 s
 
 Steps executed:
-1. `generate_masterstar_and_catalog(skip_build=True, skip_solve=True)` — **MS catalog redetected with tightened pass2**
+1. `generate_masterstar_and_catalog(skip_build=True, skip_solve=True)` - **MS catalog redetected with tightened pass2**
 2. Zone re-annotation, comp pool regen, photometry wipe, Phase 0+1+2A
 
 ### Critical failure: MS catalog shrink
 
 | Metric | Anchor (477dc8cf) | After MS rebuild |
 |--------|-------------------|------------------|
-| masterstars rows | 3621 | **2113–2114** |
+| masterstars rows | 3621 | **2113-2114** |
 | comparison_stars | 2356 | **1907** |
 | LC targets | 48 | **45** |
 | gaia_source_state_census.csv | n/a | **missing** (enrich did not write) |
@@ -60,7 +60,7 @@ Full delta list: `part_f_rebuild.json` ? `E4.mag_deltas`
 
 ## E3a
 
-Not evaluable — `gaia_source_state_census.csv` was not produced (enrich hook did not run on MS rebuild path).
+Not evaluable - `gaia_source_state_census.csv` was not produced (enrich hook did not run on MS rebuild path).
 
 ## E5 (informational)
 
@@ -71,7 +71,7 @@ Not evaluable — `gaia_source_state_census.csv` was not produced (enrich hook did
 
 ## Recovery action taken
 
-Live `draft_000516` **restored from** `draft_000516_snapshot_cleanrebuild_20260818` (477dc8cf product) after STOP to honor “anchor untouched until F13 green”.
+Live `draft_000516` **restored from** `draft_000516_snapshot_cleanrebuild_20260818` (477dc8cf product) after STOP to honor 'anchor untouched until F13 green'.
 
 Verify: `compute_photometry_sha(draft_000516)` should return prefix `477dc8cf`, n=97.
 
@@ -86,7 +86,7 @@ Recommended path for a retry:
 3. Re-annotate zones + regen pool + Phase 0+1+2A **without** `generate_masterstar_and_catalog` redetection.
 4. Re-run E4 gate.
 
-Alternative: accept MS membership change as a **new anchor product** (explicit Milan authorization) — E4 would not apply; new golden SHAs required.
+Alternative: accept MS membership change as a **new anchor product** (explicit Milan authorization) - E4 would not apply; new golden SHAs required.
 
 ## Not executed
 
