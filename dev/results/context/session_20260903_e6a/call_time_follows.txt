@@ -1,0 +1,59 @@
+Call-time follows and patch-by-string sweep (E6a).
+
+Lambda follow (same-module caller + facade patch):
+  _plate_solve_input_bundle
+    test: test_except_fix2_top10.py:118 (also direct-call test at :77)
+    home: pipeline_astrometry
+    follow: pipeline.py
+      _pipeline_astrometry._plate_solve_input_bundle =
+          lambda *a, **k: _plate_solve_input_bundle(*a, **k)
+
+Call-time `from pipeline import` (no lambda; patch bites at call time):
+  extract_fits_metadata
+    test: test_except_fix2_top10.py:86
+    caller: _plate_solve_input_bundle (M2)
+  maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel
+    test: test_except_fix2_top10.py:122
+    caller: _try_rescale_masterstar_linear_wcs_to_expected_plate_scale (M2)
+  _all_pix2world_icrs_deg
+    test: test_except_fix2_top10.py:130
+    caller: _try_rescale_masterstar_linear_wcs_to_expected_plate_scale (M2)
+  catalog_cone_radius_deg_from_optics
+    test: test_except_fix2_top10.py:27
+    caller: _gaia_catalog_cone_radius_optics_floor_deg (M3)
+  enhance_catalog_dataframe_aperture_bpm
+    test: test_except_fix2_top10.py:200
+    caller: _apply_aperture_catalog_enhancements_from_st (M3)
+  _dao_targeted_pass2_unmatched_gaia
+    test: test_g1_f003_alignment_pixel_fallback.py:87 (patch.object)
+    caller: detect_stars_match_master_reference (M3)
+
+Re-export suffices (caller uses call-time facade import already):
+  _fill_psf_catalog_columns
+    test: test_epsf_psf_merge.py:90,148
+    exercised caller: epsf_psf_merge.merge_psf_into_sidecar
+    internal M3 caller _export_per_frame_run_catalog_core is same-module
+    and is NOT the path this test exercises. No follow.
+
+NO follow this wave (caller is a staying giant):
+  _fill_masterstars_gaia_matched_bp_rp_from_local_db
+    test: test_invariants_p2.py:362
+    sole caller: generate_masterstar_and_catalog (stays)
+    E6b NOTE: add the lambda follow when that giant moves.
+
+Name STAYS (giant):
+  _astrometry_align_impl_body
+    test: test_astrometry_fault_isolation.py:59,82,96
+    moved callers use call-time `from pipeline import`. Covered.
+
+Identity-sensitive objects among the 138: none (no Exception subclass,
+no sentinel). SAT_LIMIT_PEAK_TEST_SOURCE stays in pipeline.py.
+_EXO_HOST_ANNOTATION_COLUMNS stays in pipeline.py (shared M2+M3
+immutable tuple; SAT_LIMIT analog). Facade re-export not needed;
+both modules lazy-import it.
+
+Delta vs architect's four names: fifth patched E6a name
+_dao_targeted_pass2_unmatched_gaia (follow mechanism fits: lazy
+facade import in the M3 caller). Plus two patched utils/photometry
+names that live on the facade (catalog_cone_radius_deg_from_optics,
+enhance_catalog_dataframe_aperture_bpm).

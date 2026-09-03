@@ -1,0 +1,15 @@
+G4 live 516 at bcead65 (after G2 --full / G-EPSF)
+
+path: Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/
+
+masterstars_full_match.csv
+  bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a
+  expected prefix bfa24039 PASS (unchanged)
+
+MASTERSTAR.fits
+  13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345
+  expected prefix 13e77cf8 PASS (unchanged)
+
+masterstar_epsf.fits
+  172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20
+  expected prefix 172f9540 PASS (unchanged)

@@ -1,0 +1,25 @@
+only_bucket_mod AST sweep (on 9b48a32, before moves)
+
+M1: (empty)
+
+M2:
+  _EPSF_SKIP_LOGGED          (moved with _photometry_mode_run_flags)
+  _VYVAR_TIME_JD_CSV_COLS    (moved with _vyvar_df_round_time_jd_for_csv)
+
+M3:
+  SAT_LIMIT_PEAK_TEST_SOURCE (NOT moved; f-string over stay-behind SAT_LIMIT_*;
+                              circular import if catalog defines it then
+                              `from pipeline import SAT_LIMIT_*` at load)
+  _BATCH_E_N_EQUIV_LOGGED    (moved; global in _dao_detection_threshold_adu)
+  _EXPORT_PER_FRAME_WORKER_STATE  (moved with initializer + workers)
+  _MASTERSTAR_ZONE_LOG_ONCE  (moved)
+  _MOFFAT_CHI2_LIMIT         (moved)
+
+shared_mod:
+  LOGGER -- each module binds logging.getLogger("pipeline")
+  _EXO_HOST_ANNOTATION_COLUMNS -- immutable tuple used by M2 and M3.
+    Left in pipeline.py. Both modules lazy-import. Not a spawn-global
+    co-location conflict. Architect home = stay-behind (SAT_LIMIT analog).
+
+Cone cache: file-based, no module global.
+No KD-tree / DB-handle module cache found.

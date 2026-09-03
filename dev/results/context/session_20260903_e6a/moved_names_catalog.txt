@@ -1,0 +1,24 @@
+Moved names C3 pipeline_catalog.py (73 defs + 4 state, 3927 lines after assembly)
+
+defs: see facade list in test_consolidate_e6a_facade.py PIPELINE_E6A_CATALOG
+(73 functions + _BATCH_E_N_EQUIV_LOGGED, _EXPORT_PER_FRAME_WORKER_STATE,
+_MASTERSTAR_ZONE_LOG_ONCE, _MOFFAT_CHI2_LIMIT)
+
+SAT_LIMIT_PEAK_TEST_SOURCE stays in pipeline.py (f-string over stay-behind
+SAT_LIMIT_CONTAINER_CLIP_ADU / SAT_LIMIT_NO_KNEE_FRAC). Moving it caused a
+circular import at facade load. catalog has a numeric twin
+SAT_LIMIT_NO_KNEE_FRAC = 0.80 for default-arg evaluation only (not re-exported).
+
+Spawn-worker state moved with initializer + workers:
+_EXPORT_PER_FRAME_WORKER_STATE
+_init_export_per_frame_worker
+_export_per_frame_ram_worker_task
+_export_per_frame_disk_worker_task
+_sat_ctx_from_worker
+_cfg_from_export_worker_state
+_prefetch_export_shared_catalog_for_process_pool
+
+Cone cache is file-based (_field_catalog_cone_meta_path /
+_write_field_catalog_cone_meta). No module-level cone/KD-tree/DB-handle cache.
+
+_PIXEL_MATCH_DEBUG_LOGGED left in pipeline.py (assigned, never loaded).

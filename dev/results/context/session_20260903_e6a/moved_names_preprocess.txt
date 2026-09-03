@@ -1,0 +1,29 @@
+Moved names C1 pipeline_preprocess.py (13 defs, 570 lines after assembly)
+
+preprocess_calibrated_to_processed
+qc_enrich_calibrated_lights_in_place
+calibrated_paths_for_draft_apply_filters
+filter_files_by_qc_metrics_allowlist
+load_qc_metrics_status_by_path
+_qc_suggest_thresholds
+_archive_raw_to_calibrated_light
+_load_raw_for_frame
+_load_raw_hdr_for_frame
+resolve_preprocess_target_coordinates
+_partition_detrended_by_subfolder
+build_prefilter_rejected_map
+resolve_obs_file_to_processed_fits
+
+module-level state moved: none (only_bucket_mod empty)
+
+lazy from pipeline (M2 names, still physical at C1; facade after C2):
+  resolve_obs_file_to_processed_fits:
+    _path_segments_forbidden_for_masterstar_physical_source
+    _resolve_best_effort_path_under
+    resolve_masterstar_input_root
+
+real-module imports: pipeline_calibrate
+  (_qc_enrich_calibrated_in_place, _resolve_draft_light_raw_path,
+   draft_median_pointing_icrs_deg, norm_fits_path_key)
+
+LOGGER = logging.getLogger("pipeline")

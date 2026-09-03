@@ -1,0 +1,225 @@
+{
+  "module": "preprocess",
+  "out": "pipeline_preprocess.py",
+  "move_n": 13,
+  "state": [],
+  "missing": [],
+  "pipeline_lines_new": 571,
+  "stay_called": [
+    "_path_segments_forbidden_for_masterstar_physical_source",
+    "_resolve_best_effort_path_under",
+    "resolve_masterstar_input_root"
+  ],
+  "later_called": [
+    "_path_segments_forbidden_for_masterstar_physical_source",
+    "_resolve_best_effort_path_under",
+    "resolve_masterstar_input_root"
+  ],
+  "func_lazy": {
+    "resolve_obs_file_to_processed_fits": [
+      "_path_segments_forbidden_for_masterstar_physical_source",
+      "_resolve_best_effort_path_under",
+      "resolve_masterstar_input_root"
+    ]
+  },
+  "unknown_loaded": [
+    "_de_eff",
+    "_nonnull_cnt",
+    "_out",
+    "_r",
+    "_ra_eff",
+    "_robust_suggest",
+    "_skip_n",
+    "all_paths",
+    "all_rows",
+    "ap",
+    "app_config",
+    "arch",
+    "archive",
+    "archive_path",
+    "cal_paths",
+    "cal_root",
+    "calibrated_root",
+    "cand",
+    "cand_m",
+    "cfg",
+    "db",
+    "db_names",
+    "db_stems",
+    "de_db",
+    "de_f",
+    "de_ui",
+    "detrended_root",
+    "df",
+    "disk_fits",
+    "draft_archive_root",
+    "draft_id",
+    "drift_max_arcmin",
+    "drow",
+    "e",
+    "e_ok",
+    "f",
+    "f_ok",
+    "files",
+    "fname",
+    "fp",
+    "fwhm_limit",
+    "fwhm_max_px",
+    "hdul",
+    "hit",
+    "image_adu_array",
+    "inject_pointing_dec_deg",
+    "inject_pointing_only_if_missing",
+    "inject_pointing_ra_deg",
+    "is_pre_calibrated_draft",
+    "k",
+    "key",
+    "lim_active",
+    "lim_v",
+    "m",
+    "mad",
+    "matched",
+    "med",
+    "med_de",
+    "med_ra",
+    "n",
+    "obs_file_path",
+    "ok_keys",
+    "only_paths",
+    "out",
+    "p",
+    "pairs",
+    "parent_rel",
+    "pass_keys",
+    "passing_paths",
+    "pre_cal",
+    "prefilter_rejected",
+    "processed_root",
+    "progress_cb",
+    "qc_csv",
+    "r",
+    "ra_db",
+    "ra_f",
+    "ra_ui",
+    "raw",
+    "raw_fp",
+    "raw_p",
+    "raw_path",
+    "raw_root",
+    "reason",
+    "reject_elongation",
+    "reject_fwhm_px",
+    "rel",
+    "rescue_rows",
+    "reset_manifest_light_is_rejected",
+    "resolve_draft_lights_root",
+    "resolved_raw",
+    "root",
+    "row",
+    "rows",
+    "s",
+    "selected",
+    "setup_name",
+    "sigma",
+    "source_dir",
+    "src_col",
+    "src_root",
+    "st",
+    "status_map",
+    "ui_dec_deg",
+    "ui_ra_deg",
+    "use_gpu_if_available",
+    "v",
+    "x"
+  ],
+  "imported_used": [
+    "Any",
+    "AppConfig",
+    "Callable",
+    "Mapping",
+    "Path",
+    "Sequence",
+    "VyvarDatabase",
+    "_iter_fits_recursive",
+    "_qc_enrich_calibrated_in_place",
+    "_resolve_draft_light_raw_path",
+    "draft_median_pointing_icrs_deg",
+    "fits",
+    "log_event",
+    "log_milestone",
+    "math",
+    "norm_fits_path_key",
+    "np",
+    "pd"
+  ],
+  "extra_real": [
+    "from pipeline_calibrate import (\n    LOGGER,\n    _qc_enrich_calibrated_in_place,\n    _resolve_draft_light_raw_path,\n    draft_median_pointing_icrs_deg,\n    norm_fits_path_key,\n)"
+  ],
+  "merged_ranges": [
+    {
+      "lo": 767,
+      "hi": 792,
+      "tag": "def:_archive_raw_to_calibrated_light"
+    },
+    {
+      "lo": 814,
+      "hi": 829,
+      "tag": "def:_load_raw_for_frame"
+    },
+    {
+      "lo": 832,
+      "hi": 843,
+      "tag": "def:_load_raw_hdr_for_frame"
+    },
+    {
+      "lo": 867,
+      "hi": 882,
+      "tag": "def:load_qc_metrics_status_by_path"
+    },
+    {
+      "lo": 885,
+      "hi": 901,
+      "tag": "def:filter_files_by_qc_metrics_allowlist"
+    },
+    {
+      "lo": 904,
+      "hi": 917,
+      "tag": "def:build_prefilter_rejected_map"
+    },
+    {
+      "lo": 1009,
+      "hi": 1063,
+      "tag": "def:resolve_preprocess_target_coordinates"
+    },
+    {
+      "lo": 1078,
+      "hi": 1214,
+      "tag": "def:calibrated_paths_for_draft_apply_filters"
+    },
+    {
+      "lo": 1697,
+      "hi": 1737,
+      "tag": "def:resolve_obs_file_to_processed_fits"
+    },
+    {
+      "lo": 12755,
+      "hi": 12774,
+      "tag": "def:_partition_detrended_by_subfolder"
+    },
+    {
+      "lo": 14368,
+      "hi": 14439,
+      "tag": "def:qc_enrich_calibrated_lights_in_place"
+    },
+    {
+      "lo": 14442,
+      "hi": 14477,
+      "tag": "def:preprocess_calibrated_to_processed"
+    },
+    {
+      "lo": 14545,
+      "hi": 14591,
+      "tag": "def:_qc_suggest_thresholds"
+    }
+  ]
+}

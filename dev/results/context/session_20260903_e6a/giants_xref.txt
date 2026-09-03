@@ -1,0 +1,60 @@
+Staying giants (physical in pipeline.py this wave) vs moved names they Load.
+
+_astrometry_align_impl_body:
+  _apply_wcs_header_to_fits, _assert_alignment_produced_fits,
+  _ensure_parent_dirs_for_aligned_fits, _equipment_saturate_adu_from_db,
+  _finalize_hybrid_bkg_fallback_sidecar, _photometry_mode_run_flags,
+  _pick_reference_frame_by_star_count, _pipeline_ui_info, _solve_wcs_external,
+  _vyvar_open_database, _wcs_field_center_radec_deg, compute_plate_scale_from_db,
+  resolve_plate_solve_fov_deg_hint, write_photometry_plan_files
+
+detect_stars_and_match_catalog:
+  _all_pix2world_icrs_deg, _apply_wcs_tan_fragment_to_header,
+  _box_peaks_at_centroids, _catalog_df_cap_brightest_by_mag,
+  _catalog_match_radius_px, _chord_to_arcsec, _dao_auto_binning_factor,
+  _dao_convolved_background_rms_adu, _dao_noise_sigma_adu,
+  _dao_spatial_flux_cap_row_indices, _detect_empirical_clip_level_adu,
+  _effective_field_catalog_cone_radius_deg, _exo_host_annotation_arrays,
+  _gaia_chip_xy_from_catalog, _icrs_deg_to_unitxyz, _mean_bin2d_for_dao,
+  _prefilter_dao_table_brightest, _proc_rename_det_names_to_catalog_id,
+  _proc_sat_block_for_csv, _query_exoplanet_local, _query_gaia_local,
+  _query_vsx_local, _resolve_peak_saturation_limit_adu, _slice_exo_annotation,
+  _vectorized_star_saturation_columns, _vyvar_df_to_csv,
+  _write_field_catalog_cone_meta, build_ucac_catalog_kdtree,
+  nearest_sky_nn_kdtree, resolve_plate_solve_fov_deg_hint
+
+export_per_frame_catalogs:
+  _apply_aperture_catalog_enhancements_from_st, _apply_exo_host_columns_to_proc_df,
+  _effective_field_catalog_cone_radius_deg, _epsf_fit_catalog_ids,
+  _equipment_saturate_adu_from_db, _estimate_catalog_frame_hw,
+  _export_catalog_psf_st_fields, _export_per_frame_disk_worker_task,
+  _export_per_frame_ram_worker_task, _extract_airmass_from_header,
+  _field_catalog_cone_meta_path, _fill_psf_catalog_columns,
+  _finalize_hybrid_bkg_fallback_sidecar, _init_export_per_frame_worker,
+  _invalidate_field_catalog_cone_cache_if_needed,
+  _prefetch_export_shared_catalog_for_process_pool,
+  _proc_catalog_keep_matched_rows_only, _proc_deduplicate_matched_catalog_rows,
+  _proc_drop_unmatched_dao_rows, _query_gaia_local, _query_vsx_local,
+  _vyvar_cap_mp_workers_for_catalog, _vyvar_df_to_csv,
+  _vyvar_per_frame_csv_workers, _write_field_catalog_cone_meta,
+  build_ucac_catalog_kdtree, detect_stars_match_master_reference,
+  find_qc_metrics_csv, resolve_plate_solve_fov_deg_hint
+
+generate_masterstar_and_catalog:
+  _annotate_masterstars_flux_zones, _effective_field_catalog_cone_radius_deg,
+  _equipment_saturate_adu_from_db, _fill_masterstars_gaia_matched_bp_rp_from_local_db,
+  _invalidate_field_catalog_cone_cache_if_needed,
+  _merge_platesolve_gaia_pairs_into_masterstars_df, _path_is_under_tree,
+  _path_segments_forbidden_for_masterstar_physical_source,
+  _plate_solve_input_bundle, _resolve_best_effort_path_under,
+  _sat_adu_from_draft_sat_diag, _sync_comparison_stars_across_setups,
+  _try_rescale_masterstar_linear_wcs_to_expected_plate_scale,
+  _update_masterstar_obs_file_status, _vyvar_df_to_csv, _vyvar_open_database,
+  build_masterstar_from_detrended, compute_plate_scale_from_db,
+  draft_is_multi_group_obs, get_masterstar_candidate_rows,
+  get_masterstar_candidates, resolve_masterstar_input_root,
+  resolve_obs_file_to_processed_fits, resolve_plate_solve_fov_deg_hint,
+  write_photometry_plan_files
+
+Giants resolve these as plain names; facade re-exports bind them in pipeline.
+No giant-body edits this wave.

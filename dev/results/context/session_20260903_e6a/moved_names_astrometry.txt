@@ -1,0 +1,75 @@
+Moved names C2 pipeline_astrometry.py (52 defs, 3675 lines after assembly)
+
+write_photometry_plan_files
+_solve_wcs_external
+astrometry_align_and_build_masterstar
+select_comparison_stars_spatial_grid
+_pass2_sibling_wcs_recovery
+_run_osc_multi_group_alignment
+detect_field_jumps
+_try_rescale_masterstar_linear_wcs_to_expected_plate_scale
+_plate_solve_input_bundle
+_query_vsx_local_frame_bbox
+get_masterstar_candidate_rows
+_update_masterstar_obs_file_status
+_merge_vsx_exoplanet_variable_targets
+resolve_plate_solve_fov_deg_hint
+_fill_masterstars_gaia_matched_bp_rp_from_local_db
+_sync_comparison_stars_across_setups
+_merge_platesolve_gaia_pairs_into_masterstars_df
+_resolve_focal_mm_for_plate_scale
+resolve_masterstar_input_root
+compute_plate_scale_from_db
+_merge_astrometry_group_reports
+_photometry_mode_run_flags
+_vyvar_df_to_csv
+_wcs_field_center_radec_deg
+_equipment_saturate_adu_from_db
+_path_segments_forbidden_for_masterstar_physical_source
+_pipeline_ui_info
+_apply_wcs_header_to_fits
+_header_focal_length_mm
+draft_obs_group_count
+_export_catalog_psf_st_fields
+_sat_adu_from_draft_sat_diag
+_field_jump_empty_result
+_finite_positive_adu
+_vyvar_df_round_time_jd_for_csv
+_assert_alignment_produced_fits
+_vyvar_per_frame_csv_workers
+get_masterstar_candidates
+_vyvar_open_database
+_ensure_parent_dirs_for_aligned_fits
+draft_is_multi_group_obs
+build_masterstar_from_detrended
+_resolve_best_effort_path_under
+_sort_masterstar_paths_by_fwhm
+_strip_external_platesolve_header
+_pick_preferred_masterstar_basename_hit
+_header_vy_fwhm_px
+_safe_proc_name
+_path_is_under_tree
+_dao_targeted_pass2_unmatched_gaia
+_merge_dao_pass1_pass2_tables
+_catalog_match_radius_px
+
+module-level state moved:
+_EPSF_SKIP_LOGGED
+_VYVAR_TIME_JD_CSV_COLS
+
+leave-behind (shared with M3, immutable tuple):
+_EXO_HOST_ANNOTATION_COLUMNS  (lazy from pipeline in _merge_vsx_exoplanet_variable_targets)
+
+lazy from pipeline (giants + not-yet-moved M3 + patched facade names):
+_astrometry_align_impl_body, generate_masterstar_and_catalog
+_all_pix2world_icrs_deg, _build_exoplanet_promotion_rows_from_masterstars
+_effective_field_catalog_cone_radius_deg, find_qc_metrics_csv
+extract_fits_metadata (test_except_fix2_top10 patches the facade)
+maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel (same test)
+
+call-time follow on pipeline_astrometry:
+_plate_solve_input_bundle  (same-module caller + facade patch)
+
+E6b NOTE: _fill_masterstars_gaia_matched_bp_rp_from_local_db is patched
+in test_invariants_p2.py:362; sole caller sits in generate_masterstar_and_catalog
+(giant, stays this wave). Follow moves to E6b when that giant moves.

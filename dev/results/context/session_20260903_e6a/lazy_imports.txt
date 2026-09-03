@@ -1,0 +1,38 @@
+Lazy / call-time imports from the pipeline facade (E4 mechanism).
+
+M1 pipeline_preprocess (C1; M2 names still physical then, facade after C2):
+  resolve_obs_file_to_processed_fits:
+    _path_segments_forbidden_for_masterstar_physical_source
+    _resolve_best_effort_path_under
+    resolve_masterstar_input_root
+
+M2 pipeline_astrometry:
+  giants: _astrometry_align_impl_body, generate_masterstar_and_catalog
+  M3 (call-time so C3 facade still works):
+    _all_pix2world_icrs_deg
+    _build_exoplanet_promotion_rows_from_masterstars
+    _effective_field_catalog_cone_radius_deg
+    find_qc_metrics_csv
+  patched facade names:
+    extract_fits_metadata  (test_except_fix2_top10)
+    maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel  (same)
+  leave-behind:
+    _EXO_HOST_ANNOTATION_COLUMNS
+
+M3 pipeline_catalog:
+  giant: detect_stars_and_match_catalog
+  patched facade names:
+    _dao_targeted_pass2_unmatched_gaia  (test_g1_f003; M2 name)
+    enhance_catalog_dataframe_aperture_bpm  (test_except_fix2_top10)
+    catalog_cone_radius_deg_from_optics  (test_except_fix2_top10)
+    SAT_LIMIT_CONTAINER_CLIP_ADU / SAT_LIMIT_NO_KNEE_FRAC /
+    SAT_LIMIT_PEAK_TEST_SOURCE  (inv_sat_limit_peak_test_adu)
+  leave-behind:
+    _EXO_HOST_ANNOTATION_COLUMNS
+
+Real-module imports (E3): pipeline_calibrate, pipeline_preprocess,
+pipeline_astrometry, fits_meta, utils, photometry, database, ...
+
+LOGGER = logging.getLogger("pipeline") in each new module.
+No module-level `from pipeline import` except the SAT_LIMIT attempt
+that was reverted (cycle).

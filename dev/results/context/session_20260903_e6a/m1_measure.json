@@ -1,0 +1,1134 @@
+{
+  "tip_note": "measured on working tree pipeline.py",
+  "e0_b1_n": 65,
+  "e0_b1_lines": 3995,
+  "e0_b2_n": 73,
+  "e0_b2_lines": 3687,
+  "missing": [],
+  "M1": {
+    "n": 13,
+    "def_lines": 509,
+    "defs": [
+      "preprocess_calibrated_to_processed",
+      "qc_enrich_calibrated_lights_in_place",
+      "calibrated_paths_for_draft_apply_filters",
+      "filter_files_by_qc_metrics_allowlist",
+      "load_qc_metrics_status_by_path",
+      "_qc_suggest_thresholds",
+      "_archive_raw_to_calibrated_light",
+      "_load_raw_for_frame",
+      "_load_raw_hdr_for_frame",
+      "resolve_preprocess_target_coordinates",
+      "_partition_detrended_by_subfolder",
+      "build_prefilter_rejected_map",
+      "resolve_obs_file_to_processed_fits"
+    ]
+  },
+  "M2": {
+    "n": 52,
+    "def_lines": 3486,
+    "defs": [
+      "write_photometry_plan_files",
+      "_solve_wcs_external",
+      "astrometry_align_and_build_masterstar",
+      "select_comparison_stars_spatial_grid",
+      "_pass2_sibling_wcs_recovery",
+      "_run_osc_multi_group_alignment",
+      "detect_field_jumps",
+      "_try_rescale_masterstar_linear_wcs_to_expected_plate_scale",
+      "_plate_solve_input_bundle",
+      "_query_vsx_local_frame_bbox",
+      "get_masterstar_candidate_rows",
+      "_update_masterstar_obs_file_status",
+      "_merge_vsx_exoplanet_variable_targets",
+      "resolve_plate_solve_fov_deg_hint",
+      "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+      "_sync_comparison_stars_across_setups",
+      "_merge_platesolve_gaia_pairs_into_masterstars_df",
+      "_resolve_focal_mm_for_plate_scale",
+      "resolve_masterstar_input_root",
+      "compute_plate_scale_from_db",
+      "_merge_astrometry_group_reports",
+      "_photometry_mode_run_flags",
+      "_vyvar_df_to_csv",
+      "_wcs_field_center_radec_deg",
+      "_equipment_saturate_adu_from_db",
+      "_path_segments_forbidden_for_masterstar_physical_source",
+      "_pipeline_ui_info",
+      "_apply_wcs_header_to_fits",
+      "_header_focal_length_mm",
+      "draft_obs_group_count",
+      "_export_catalog_psf_st_fields",
+      "_sat_adu_from_draft_sat_diag",
+      "_field_jump_empty_result",
+      "_finite_positive_adu",
+      "_vyvar_df_round_time_jd_for_csv",
+      "_assert_alignment_produced_fits",
+      "_vyvar_per_frame_csv_workers",
+      "get_masterstar_candidates",
+      "_vyvar_open_database",
+      "_ensure_parent_dirs_for_aligned_fits",
+      "draft_is_multi_group_obs",
+      "build_masterstar_from_detrended",
+      "_resolve_best_effort_path_under",
+      "_sort_masterstar_paths_by_fwhm",
+      "_strip_external_platesolve_header",
+      "_pick_preferred_masterstar_basename_hit",
+      "_header_vy_fwhm_px",
+      "_safe_proc_name",
+      "_path_is_under_tree",
+      "_dao_targeted_pass2_unmatched_gaia",
+      "_merge_dao_pass1_pass2_tables",
+      "_catalog_match_radius_px"
+    ]
+  },
+  "M3": {
+    "n": 73,
+    "def_lines": 3687,
+    "defs": [
+      "_export_per_frame_run_catalog_core",
+      "_fill_psf_catalog_columns",
+      "_build_exoplanet_promotion_rows_from_masterstars",
+      "_apply_exo_host_columns_to_proc_df",
+      "_query_gaia_local",
+      "_query_vsx_local",
+      "_prefetch_export_shared_catalog_for_process_pool",
+      "_epsf_target_catalog_ids",
+      "_query_exoplanet_local",
+      "_exo_host_annotation_arrays",
+      "_gaia_catalog_cone_radius_optics_floor_deg",
+      "_invalidate_field_catalog_cone_cache_if_needed",
+      "_effective_field_catalog_cone_radius_deg",
+      "_field_center_and_radius_from_wcs",
+      "_proc_deduplicate_matched_catalog_rows",
+      "_export_per_frame_ram_worker_task",
+      "_export_first_icrs_center_radius",
+      "_epsf_fit_catalog_ids",
+      "_icrs_center_radius_from_hdr_data",
+      "_write_field_catalog_cone_meta",
+      "_estimate_catalog_frame_hw",
+      "_init_export_per_frame_worker",
+      "_vyvar_cap_mp_workers_for_catalog",
+      "build_ucac_catalog_kdtree",
+      "_export_per_frame_disk_worker_task",
+      "_catalog_df_cap_brightest_by_mag",
+      "_sat_ctx_from_worker",
+      "_proc_catalog_keep_matched_rows_only",
+      "_proc_drop_unmatched_dao_rows",
+      "_fits_header_first_positive_float",
+      "_cfg_from_export_worker_state",
+      "_field_catalog_cone_meta_path",
+      "detect_stars_match_master_reference",
+      "_lock_matched_centroids_to_master_grid",
+      "_dao_spatial_flux_cap_row_indices",
+      "_vectorized_star_saturation_columns",
+      "_resolve_peak_saturation_limit_adu",
+      "_box_peaks_at_centroids",
+      "_apply_dao_centroid_wcs_guard",
+      "_pixel_noise_sigma_pp_adu",
+      "_saturated_core_plateau_vectorized",
+      "_gaia_chip_xy_from_catalog",
+      "_dao_convolved_background_rms_adu",
+      "nearest_sky_nn_kdtree",
+      "_dao_detection_threshold_adu",
+      "_detect_empirical_clip_level_adu",
+      "_dao_noise_sigma_adu",
+      "_fits_header_vy_algn_aligned",
+      "_proc_rename_det_names_to_catalog_id",
+      "_all_pix2world_icrs_deg",
+      "_mean_bin2d_for_dao",
+      "_apply_wcs_tan_fragment_to_header",
+      "_proc_sat_block_for_csv",
+      "_prefilter_dao_table_brightest",
+      "_icrs_deg_to_unitxyz",
+      "_chord_to_arcsec",
+      "_dao_auto_binning_factor",
+      "_slice_exo_annotation",
+      "_annotate_masterstars_flux_zones",
+      "_resolve_masterstar_bg_sigma_adu",
+      "_masterstar_zone_linear_threshold",
+      "_masterstar_zone_log_once",
+      "_compute_airmass_from_altaz",
+      "_extract_airmass_from_header",
+      "_airmass_from_altitude_deg",
+      "_apply_aperture_catalog_enhancements_from_st",
+      "_dao_star_count_from_array",
+      "_pick_reference_frame_by_star_count",
+      "_bin2d_mean",
+      "_finalize_hybrid_bkg_fallback_sidecar",
+      "find_qc_metrics_csv",
+      "_box_peak_max_adu",
+      "inv_sat_limit_peak_test_adu"
+    ]
+  },
+  "total_move": 138,
+  "only_bucket_mod": {
+    "M1": [],
+    "M2": [
+      "_EPSF_SKIP_LOGGED",
+      "_VYVAR_TIME_JD_CSV_COLS"
+    ],
+    "M3": [
+      "SAT_LIMIT_PEAK_TEST_SOURCE",
+      "_BATCH_E_N_EQUIV_LOGGED",
+      "_EXPORT_PER_FRAME_WORKER_STATE",
+      "_MASTERSTAR_ZONE_LOG_ONCE",
+      "_MOFFAT_CHI2_LIMIT"
+    ]
+  },
+  "shared_mod": [
+    "LOGGER used_by ['M1', 'M2', 'M3']",
+    "LOGGER used_by ['M2', 'M1', 'M3']",
+    "LOGGER used_by ['M3', 'M1', 'M2']",
+    "_EXO_HOST_ANNOTATION_COLUMNS used_by ['M2', 'M3']",
+    "_EXO_HOST_ANNOTATION_COLUMNS used_by ['M3', 'M2']"
+  ],
+  "stay_called": {
+    "M1": [],
+    "M2": [
+      "_astrometry_align_impl_body",
+      "generate_masterstar_and_catalog"
+    ],
+    "M3": [
+      "detect_stars_and_match_catalog"
+    ]
+  },
+  "cross": {
+    "M1": {
+      "M2": [
+        "_path_segments_forbidden_for_masterstar_physical_source",
+        "_resolve_best_effort_path_under",
+        "resolve_masterstar_input_root"
+      ]
+    },
+    "M2": {
+      "M1": [
+        "_partition_detrended_by_subfolder",
+        "filter_files_by_qc_metrics_allowlist"
+      ],
+      "M3": [
+        "_all_pix2world_icrs_deg",
+        "_build_exoplanet_promotion_rows_from_masterstars",
+        "_effective_field_catalog_cone_radius_deg",
+        "find_qc_metrics_csv"
+      ]
+    },
+    "M3": {
+      "M1": [
+        "_load_raw_for_frame",
+        "_load_raw_hdr_for_frame"
+      ],
+      "M2": [
+        "_dao_targeted_pass2_unmatched_gaia",
+        "_finite_positive_adu",
+        "_vyvar_df_to_csv",
+        "resolve_plate_solve_fov_deg_hint"
+      ]
+    }
+  },
+  "giant_xref": {
+    "_astrometry_align_impl_body": [
+      "_apply_wcs_header_to_fits",
+      "_assert_alignment_produced_fits",
+      "_ensure_parent_dirs_for_aligned_fits",
+      "_equipment_saturate_adu_from_db",
+      "_finalize_hybrid_bkg_fallback_sidecar",
+      "_photometry_mode_run_flags",
+      "_pick_reference_frame_by_star_count",
+      "_pipeline_ui_info",
+      "_solve_wcs_external",
+      "_vyvar_open_database",
+      "_wcs_field_center_radec_deg",
+      "compute_plate_scale_from_db",
+      "resolve_plate_solve_fov_deg_hint",
+      "write_photometry_plan_files"
+    ],
+    "detect_stars_and_match_catalog": [
+      "_all_pix2world_icrs_deg",
+      "_apply_wcs_tan_fragment_to_header",
+      "_box_peaks_at_centroids",
+      "_catalog_df_cap_brightest_by_mag",
+      "_catalog_match_radius_px",
+      "_chord_to_arcsec",
+      "_dao_auto_binning_factor",
+      "_dao_convolved_background_rms_adu",
+      "_dao_noise_sigma_adu",
+      "_dao_spatial_flux_cap_row_indices",
+      "_detect_empirical_clip_level_adu",
+      "_effective_field_catalog_cone_radius_deg",
+      "_exo_host_annotation_arrays",
+      "_gaia_chip_xy_from_catalog",
+      "_icrs_deg_to_unitxyz",
+      "_mean_bin2d_for_dao",
+      "_prefilter_dao_table_brightest",
+      "_proc_rename_det_names_to_catalog_id",
+      "_proc_sat_block_for_csv",
+      "_query_exoplanet_local",
+      "_query_gaia_local",
+      "_query_vsx_local",
+      "_resolve_peak_saturation_limit_adu",
+      "_slice_exo_annotation",
+      "_vectorized_star_saturation_columns",
+      "_vyvar_df_to_csv",
+      "_write_field_catalog_cone_meta",
+      "build_ucac_catalog_kdtree",
+      "nearest_sky_nn_kdtree",
+      "resolve_plate_solve_fov_deg_hint"
+    ],
+    "export_per_frame_catalogs": [
+      "_apply_aperture_catalog_enhancements_from_st",
+      "_apply_exo_host_columns_to_proc_df",
+      "_effective_field_catalog_cone_radius_deg",
+      "_epsf_fit_catalog_ids",
+      "_equipment_saturate_adu_from_db",
+      "_estimate_catalog_frame_hw",
+      "_export_catalog_psf_st_fields",
+      "_export_per_frame_disk_worker_task",
+      "_export_per_frame_ram_worker_task",
+      "_extract_airmass_from_header",
+      "_field_catalog_cone_meta_path",
+      "_fill_psf_catalog_columns",
+      "_finalize_hybrid_bkg_fallback_sidecar",
+      "_init_export_per_frame_worker",
+      "_invalidate_field_catalog_cone_cache_if_needed",
+      "_prefetch_export_shared_catalog_for_process_pool",
+      "_proc_catalog_keep_matched_rows_only",
+      "_proc_deduplicate_matched_catalog_rows",
+      "_proc_drop_unmatched_dao_rows",
+      "_query_gaia_local",
+      "_query_vsx_local",
+      "_vyvar_cap_mp_workers_for_catalog",
+      "_vyvar_df_to_csv",
+      "_vyvar_per_frame_csv_workers",
+      "_write_field_catalog_cone_meta",
+      "build_ucac_catalog_kdtree",
+      "detect_stars_match_master_reference",
+      "find_qc_metrics_csv",
+      "resolve_plate_solve_fov_deg_hint"
+    ],
+    "generate_masterstar_and_catalog": [
+      "_annotate_masterstars_flux_zones",
+      "_effective_field_catalog_cone_radius_deg",
+      "_equipment_saturate_adu_from_db",
+      "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+      "_invalidate_field_catalog_cone_cache_if_needed",
+      "_merge_platesolve_gaia_pairs_into_masterstars_df",
+      "_path_is_under_tree",
+      "_path_segments_forbidden_for_masterstar_physical_source",
+      "_plate_solve_input_bundle",
+      "_resolve_best_effort_path_under",
+      "_sat_adu_from_draft_sat_diag",
+      "_sync_comparison_stars_across_setups",
+      "_try_rescale_masterstar_linear_wcs_to_expected_plate_scale",
+      "_update_masterstar_obs_file_status",
+      "_vyvar_df_to_csv",
+      "_vyvar_open_database",
+      "build_masterstar_from_detrended",
+      "compute_plate_scale_from_db",
+      "draft_is_multi_group_obs",
+      "get_masterstar_candidate_rows",
+      "get_masterstar_candidates",
+      "resolve_masterstar_input_root",
+      "resolve_obs_file_to_processed_fits",
+      "resolve_plate_solve_fov_deg_hint",
+      "write_photometry_plan_files"
+    ]
+  },
+  "identity": [],
+  "patch_hits": [
+    {
+      "file": "dev/tests/test_epsf_psf_merge.py",
+      "line": 90,
+      "name": "_fill_psf_catalog_columns",
+      "text": "monkeypatch.setattr(pipeline, \"_fill_psf_catalog_columns\", _fake_fill)"
+    },
+    {
+      "file": "dev/tests/test_epsf_psf_merge.py",
+      "line": 148,
+      "name": "_fill_psf_catalog_columns",
+      "text": "monkeypatch.setattr(pipeline, \"_fill_psf_catalog_columns\", _fake_fill)"
+    },
+    {
+      "file": "dev/tests/test_except_fix2_top10.py",
+      "line": 130,
+      "name": "_all_pix2world_icrs_deg",
+      "text": "monkeypatch.setattr(\"pipeline._all_pix2world_icrs_deg\", _boom)"
+    },
+    {
+      "file": "dev/tests/test_g1_f003_alignment_pixel_fallback.py",
+      "line": 87,
+      "name": "_dao_targeted_pass2_unmatched_gaia",
+      "text": "with patch.object(pl, \"_dao_targeted_pass2_unmatched_gaia\", _pass2):"
+    },
+    {
+      "file": "dev/tests/test_invariants_p2.py",
+      "line": 362,
+      "name": "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+      "text": "monkeypatch.setattr(pl, \"_fill_masterstars_gaia_matched_bp_rp_from_local_db\", _boom)"
+    }
+  ],
+  "epsf_imports": [
+    {
+      "file": "epsf_psf_merge.py",
+      "lineno": 107,
+      "name": "_vyvar_df_to_csv",
+      "in_e6a": true,
+      "bucket": "M2"
+    },
+    {
+      "file": "epsf_psf_merge.py",
+      "lineno": 337,
+      "name": "_fill_psf_catalog_columns",
+      "in_e6a": true,
+      "bucket": "M3"
+    },
+    {
+      "file": "epsf_psf_merge.py",
+      "lineno": 395,
+      "name": "_epsf_fit_catalog_ids",
+      "in_e6a": true,
+      "bucket": "M3"
+    },
+    {
+      "file": "epsf_psf_merge.py",
+      "lineno": 395,
+      "name": "_export_catalog_psf_st_fields",
+      "in_e6a": true,
+      "bucket": "M2"
+    }
+  ],
+  "init_arity": [
+    "state"
+  ],
+  "globals_in_move": [
+    {
+      "def": "_init_export_per_frame_worker",
+      "names": [
+        "_EXPORT_PER_FRAME_WORKER_STATE"
+      ],
+      "lineno": 8224
+    },
+    {
+      "def": "_dao_detection_threshold_adu",
+      "names": [
+        "_BATCH_E_N_EQUIV_LOGGED"
+      ],
+      "lineno": 5540
+    }
+  ],
+  "mod_assign_names": [
+    "LOGGER",
+    "SAT_LIMIT_CONTAINER_CLIP_ADU",
+    "SAT_LIMIT_NO_KNEE_FRAC",
+    "SAT_LIMIT_PEAK_TEST_SOURCE",
+    "_BATCH_E_N_EQUIV_LOGGED",
+    "_EPSF_SKIP_LOGGED",
+    "_EXO_HOST_ANNOTATION_COLUMNS",
+    "_EXPORT_PER_FRAME_WORKER_STATE",
+    "_MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG",
+    "_MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX",
+    "_MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX",
+    "_MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX",
+    "_MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO",
+    "_MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG",
+    "_MASTERSTAR_ZONE_LOG_ONCE",
+    "_MOFFAT_CHI2_LIMIT",
+    "_PIXEL_MATCH_DEBUG_LOGGED",
+    "_PLATESOLVE_ANISOTROPY_THRESHOLD",
+    "_SKY_ADU_FALLBACK",
+    "_VYVAR_TIME_JD_CSV_COLS",
+    "pointing_hint_from_header"
+  ],
+  "spans": {
+    "preprocess_calibrated_to_processed": {
+      "lineno": 14442,
+      "end": 14477,
+      "lines": 36
+    },
+    "qc_enrich_calibrated_lights_in_place": {
+      "lineno": 14368,
+      "end": 14439,
+      "lines": 72
+    },
+    "calibrated_paths_for_draft_apply_filters": {
+      "lineno": 1078,
+      "end": 1214,
+      "lines": 137
+    },
+    "filter_files_by_qc_metrics_allowlist": {
+      "lineno": 885,
+      "end": 901,
+      "lines": 17
+    },
+    "load_qc_metrics_status_by_path": {
+      "lineno": 867,
+      "end": 882,
+      "lines": 16
+    },
+    "_qc_suggest_thresholds": {
+      "lineno": 14545,
+      "end": 14591,
+      "lines": 47
+    },
+    "_archive_raw_to_calibrated_light": {
+      "lineno": 767,
+      "end": 792,
+      "lines": 26
+    },
+    "_load_raw_for_frame": {
+      "lineno": 814,
+      "end": 829,
+      "lines": 16
+    },
+    "_load_raw_hdr_for_frame": {
+      "lineno": 832,
+      "end": 843,
+      "lines": 12
+    },
+    "resolve_preprocess_target_coordinates": {
+      "lineno": 1009,
+      "end": 1063,
+      "lines": 55
+    },
+    "_partition_detrended_by_subfolder": {
+      "lineno": 12755,
+      "end": 12774,
+      "lines": 20
+    },
+    "build_prefilter_rejected_map": {
+      "lineno": 904,
+      "end": 917,
+      "lines": 14
+    },
+    "resolve_obs_file_to_processed_fits": {
+      "lineno": 1697,
+      "end": 1737,
+      "lines": 41
+    },
+    "write_photometry_plan_files": {
+      "lineno": 4739,
+      "end": 5388,
+      "lines": 650
+    },
+    "_solve_wcs_external": {
+      "lineno": 2456,
+      "end": 2739,
+      "lines": 284
+    },
+    "astrometry_align_and_build_masterstar": {
+      "lineno": 14012,
+      "end": 14264,
+      "lines": 253
+    },
+    "select_comparison_stars_spatial_grid": {
+      "lineno": 4258,
+      "end": 4457,
+      "lines": 200
+    },
+    "_pass2_sibling_wcs_recovery": {
+      "lineno": 12580,
+      "end": 12752,
+      "lines": 173
+    },
+    "_run_osc_multi_group_alignment": {
+      "lineno": 12804,
+      "end": 12958,
+      "lines": 155
+    },
+    "detect_field_jumps": {
+      "lineno": 15116,
+      "end": 15268,
+      "lines": 153
+    },
+    "_try_rescale_masterstar_linear_wcs_to_expected_plate_scale": {
+      "lineno": 2175,
+      "end": 2277,
+      "lines": 103
+    },
+    "_plate_solve_input_bundle": {
+      "lineno": 2039,
+      "end": 2133,
+      "lines": 95
+    },
+    "_query_vsx_local_frame_bbox": {
+      "lineno": 3523,
+      "end": 3616,
+      "lines": 94
+    },
+    "get_masterstar_candidate_rows": {
+      "lineno": 1742,
+      "end": 1822,
+      "lines": 81
+    },
+    "_update_masterstar_obs_file_status": {
+      "lineno": 1563,
+      "end": 1624,
+      "lines": 62
+    },
+    "_merge_vsx_exoplanet_variable_targets": {
+      "lineno": 3468,
+      "end": 3520,
+      "lines": 53
+    },
+    "resolve_plate_solve_fov_deg_hint": {
+      "lineno": 1859,
+      "end": 1911,
+      "lines": 53
+    },
+    "_fill_masterstars_gaia_matched_bp_rp_from_local_db": {
+      "lineno": 9986,
+      "end": 10035,
+      "lines": 50
+    },
+    "_sync_comparison_stars_across_setups": {
+      "lineno": 5391,
+      "end": 5439,
+      "lines": 49
+    },
+    "_merge_platesolve_gaia_pairs_into_masterstars_df": {
+      "lineno": 6655,
+      "end": 6698,
+      "lines": 44
+    },
+    "_resolve_focal_mm_for_plate_scale": {
+      "lineno": 1983,
+      "end": 2026,
+      "lines": 44
+    },
+    "resolve_masterstar_input_root": {
+      "lineno": 941,
+      "end": 984,
+      "lines": 44
+    },
+    "compute_plate_scale_from_db": {
+      "lineno": 2136,
+      "end": 2172,
+      "lines": 37
+    },
+    "_merge_astrometry_group_reports": {
+      "lineno": 12777,
+      "end": 12801,
+      "lines": 25
+    },
+    "_photometry_mode_run_flags": {
+      "lineno": 155,
+      "end": 178,
+      "lines": 24
+    },
+    "_vyvar_df_to_csv": {
+      "lineno": 4018,
+      "end": 4038,
+      "lines": 21
+    },
+    "_wcs_field_center_radec_deg": {
+      "lineno": 2816,
+      "end": 2834,
+      "lines": 19
+    },
+    "_equipment_saturate_adu_from_db": {
+      "lineno": 3670,
+      "end": 3685,
+      "lines": 16
+    },
+    "_path_segments_forbidden_for_masterstar_physical_source": {
+      "lineno": 1217,
+      "end": 1232,
+      "lines": 16
+    },
+    "_pipeline_ui_info": {
+      "lineno": 734,
+      "end": 749,
+      "lines": 16
+    },
+    "_apply_wcs_header_to_fits": {
+      "lineno": 2439,
+      "end": 2453,
+      "lines": 15
+    },
+    "_header_focal_length_mm": {
+      "lineno": 1842,
+      "end": 1856,
+      "lines": 15
+    },
+    "draft_obs_group_count": {
+      "lineno": 920,
+      "end": 934,
+      "lines": 15
+    },
+    "_export_catalog_psf_st_fields": {
+      "lineno": 319,
+      "end": 332,
+      "lines": 14
+    },
+    "_sat_adu_from_draft_sat_diag": {
+      "lineno": 3655,
+      "end": 3667,
+      "lines": 13
+    },
+    "_field_jump_empty_result": {
+      "lineno": 15102,
+      "end": 15113,
+      "lines": 12
+    },
+    "_finite_positive_adu": {
+      "lineno": 3642,
+      "end": 3652,
+      "lines": 11
+    },
+    "_vyvar_df_round_time_jd_for_csv": {
+      "lineno": 4007,
+      "end": 4015,
+      "lines": 9
+    },
+    "_assert_alignment_produced_fits": {
+      "lineno": 757,
+      "end": 764,
+      "lines": 8
+    },
+    "_vyvar_per_frame_csv_workers": {
+      "lineno": 14328,
+      "end": 14334,
+      "lines": 7
+    },
+    "get_masterstar_candidates": {
+      "lineno": 1825,
+      "end": 1830,
+      "lines": 6
+    },
+    "_vyvar_open_database": {
+      "lineno": 1833,
+      "end": 1837,
+      "lines": 5
+    },
+    "_ensure_parent_dirs_for_aligned_fits": {
+      "lineno": 752,
+      "end": 754,
+      "lines": 3
+    },
+    "draft_is_multi_group_obs": {
+      "lineno": 937,
+      "end": 938,
+      "lines": 2
+    },
+    "build_masterstar_from_detrended": {
+      "lineno": 1351,
+      "end": 1560,
+      "lines": 210
+    },
+    "_resolve_best_effort_path_under": {
+      "lineno": 1627,
+      "end": 1694,
+      "lines": 68
+    },
+    "_sort_masterstar_paths_by_fwhm": {
+      "lineno": 1299,
+      "end": 1326,
+      "lines": 28
+    },
+    "_strip_external_platesolve_header": {
+      "lineno": 1329,
+      "end": 1348,
+      "lines": 20
+    },
+    "_pick_preferred_masterstar_basename_hit": {
+      "lineno": 1243,
+      "end": 1260,
+      "lines": 18
+    },
+    "_header_vy_fwhm_px": {
+      "lineno": 1263,
+      "end": 1273,
+      "lines": 11
+    },
+    "_safe_proc_name": {
+      "lineno": 14271,
+      "end": 14277,
+      "lines": 7
+    },
+    "_path_is_under_tree": {
+      "lineno": 1235,
+      "end": 1240,
+      "lines": 6
+    },
+    "_dao_targeted_pass2_unmatched_gaia": {
+      "lineno": 5830,
+      "end": 5927,
+      "lines": 98
+    },
+    "_merge_dao_pass1_pass2_tables": {
+      "lineno": 5777,
+      "end": 5827,
+      "lines": 51
+    },
+    "_catalog_match_radius_px": {
+      "lineno": 5721,
+      "end": 5740,
+      "lines": 20
+    },
+    "_export_per_frame_run_catalog_core": {
+      "lineno": 8380,
+      "end": 8780,
+      "lines": 401
+    },
+    "_fill_psf_catalog_columns": {
+      "lineno": 438,
+      "end": 712,
+      "lines": 275
+    },
+    "_build_exoplanet_promotion_rows_from_masterstars": {
+      "lineno": 3302,
+      "end": 3465,
+      "lines": 164
+    },
+    "_apply_exo_host_columns_to_proc_df": {
+      "lineno": 3201,
+      "end": 3297,
+      "lines": 97
+    },
+    "_query_gaia_local": {
+      "lineno": 2857,
+      "end": 2953,
+      "lines": 97
+    },
+    "_query_vsx_local": {
+      "lineno": 2956,
+      "end": 3052,
+      "lines": 97
+    },
+    "_prefetch_export_shared_catalog_for_process_pool": {
+      "lineno": 8131,
+      "end": 8216,
+      "lines": 86
+    },
+    "_epsf_target_catalog_ids": {
+      "lineno": 335,
+      "end": 403,
+      "lines": 69
+    },
+    "_query_exoplanet_local": {
+      "lineno": 3064,
+      "end": 3127,
+      "lines": 64
+    },
+    "_exo_host_annotation_arrays": {
+      "lineno": 3130,
+      "end": 3191,
+      "lines": 62
+    },
+    "_gaia_catalog_cone_radius_optics_floor_deg": {
+      "lineno": 4054,
+      "end": 4097,
+      "lines": 44
+    },
+    "_invalidate_field_catalog_cone_cache_if_needed": {
+      "lineno": 4183,
+      "end": 4226,
+      "lines": 44
+    },
+    "_effective_field_catalog_cone_radius_deg": {
+      "lineno": 4141,
+      "end": 4180,
+      "lines": 40
+    },
+    "_field_center_and_radius_from_wcs": {
+      "lineno": 4100,
+      "end": 4138,
+      "lines": 39
+    },
+    "_proc_deduplicate_matched_catalog_rows": {
+      "lineno": 5660,
+      "end": 5697,
+      "lines": 38
+    },
+    "_export_per_frame_ram_worker_task": {
+      "lineno": 8804,
+      "end": 8835,
+      "lines": 32
+    },
+    "_export_first_icrs_center_radius": {
+      "lineno": 8102,
+      "end": 8128,
+      "lines": 27
+    },
+    "_epsf_fit_catalog_ids": {
+      "lineno": 410,
+      "end": 435,
+      "lines": 26
+    },
+    "_icrs_center_radius_from_hdr_data": {
+      "lineno": 8075,
+      "end": 8099,
+      "lines": 25
+    },
+    "_write_field_catalog_cone_meta": {
+      "lineno": 4233,
+      "end": 4255,
+      "lines": 23
+    },
+    "_estimate_catalog_frame_hw": {
+      "lineno": 14281,
+      "end": 14302,
+      "lines": 22
+    },
+    "_init_export_per_frame_worker": {
+      "lineno": 8223,
+      "end": 8243,
+      "lines": 21
+    },
+    "_vyvar_cap_mp_workers_for_catalog": {
+      "lineno": 14305,
+      "end": 14325,
+      "lines": 21
+    },
+    "build_ucac_catalog_kdtree": {
+      "lineno": 3765,
+      "end": 3785,
+      "lines": 21
+    },
+    "_export_per_frame_disk_worker_task": {
+      "lineno": 8783,
+      "end": 8801,
+      "lines": 19
+    },
+    "_catalog_df_cap_brightest_by_mag": {
+      "lineno": 2837,
+      "end": 2854,
+      "lines": 18
+    },
+    "_sat_ctx_from_worker": {
+      "lineno": 797,
+      "end": 811,
+      "lines": 15
+    },
+    "_proc_catalog_keep_matched_rows_only": {
+      "lineno": 5961,
+      "end": 5974,
+      "lines": 14
+    },
+    "_proc_drop_unmatched_dao_rows": {
+      "lineno": 5946,
+      "end": 5958,
+      "lines": 13
+    },
+    "_fits_header_first_positive_float": {
+      "lineno": 4041,
+      "end": 4051,
+      "lines": 11
+    },
+    "_cfg_from_export_worker_state": {
+      "lineno": 8371,
+      "end": 8377,
+      "lines": 7
+    },
+    "_field_catalog_cone_meta_path": {
+      "lineno": 4229,
+      "end": 4230,
+      "lines": 2
+    },
+    "detect_stars_match_master_reference": {
+      "lineno": 6042,
+      "end": 6652,
+      "lines": 611
+    },
+    "_lock_matched_centroids_to_master_grid": {
+      "lineno": 5591,
+      "end": 5657,
+      "lines": 67
+    },
+    "_dao_spatial_flux_cap_row_indices": {
+      "lineno": 5989,
+      "end": 6039,
+      "lines": 51
+    },
+    "_vectorized_star_saturation_columns": {
+      "lineno": 3938,
+      "end": 3987,
+      "lines": 50
+    },
+    "_resolve_peak_saturation_limit_adu": {
+      "lineno": 4496,
+      "end": 4540,
+      "lines": 45
+    },
+    "_box_peaks_at_centroids": {
+      "lineno": 3705,
+      "end": 3743,
+      "lines": 39
+    },
+    "_apply_dao_centroid_wcs_guard": {
+      "lineno": 5555,
+      "end": 5588,
+      "lines": 34
+    },
+    "_pixel_noise_sigma_pp_adu": {
+      "lineno": 5450,
+      "end": 5481,
+      "lines": 32
+    },
+    "_saturated_core_plateau_vectorized": {
+      "lineno": 3905,
+      "end": 3935,
+      "lines": 31
+    },
+    "_gaia_chip_xy_from_catalog": {
+      "lineno": 5746,
+      "end": 5774,
+      "lines": 29
+    },
+    "_dao_convolved_background_rms_adu": {
+      "lineno": 5504,
+      "end": 5527,
+      "lines": 24
+    },
+    "nearest_sky_nn_kdtree": {
+      "lineno": 3788,
+      "end": 3811,
+      "lines": 24
+    },
+    "_dao_detection_threshold_adu": {
+      "lineno": 5533,
+      "end": 5552,
+      "lines": 20
+    },
+    "_detect_empirical_clip_level_adu": {
+      "lineno": 4475,
+      "end": 4493,
+      "lines": 19
+    },
+    "_dao_noise_sigma_adu": {
+      "lineno": 5484,
+      "end": 5501,
+      "lines": 18
+    },
+    "_fits_header_vy_algn_aligned": {
+      "lineno": 268,
+      "end": 285,
+      "lines": 18
+    },
+    "_proc_rename_det_names_to_catalog_id": {
+      "lineno": 5930,
+      "end": 5943,
+      "lines": 14
+    },
+    "_all_pix2world_icrs_deg": {
+      "lineno": 3890,
+      "end": 3902,
+      "lines": 13
+    },
+    "_mean_bin2d_for_dao": {
+      "lineno": 5700,
+      "end": 5712,
+      "lines": 13
+    },
+    "_apply_wcs_tan_fragment_to_header": {
+      "lineno": 9970,
+      "end": 9981,
+      "lines": 12
+    },
+    "_proc_sat_block_for_csv": {
+      "lineno": 3990,
+      "end": 4001,
+      "lines": 12
+    },
+    "_prefilter_dao_table_brightest": {
+      "lineno": 5977,
+      "end": 5986,
+      "lines": 10
+    },
+    "_icrs_deg_to_unitxyz": {
+      "lineno": 3746,
+      "end": 3753,
+      "lines": 8
+    },
+    "_chord_to_arcsec": {
+      "lineno": 3756,
+      "end": 3762,
+      "lines": 7
+    },
+    "_dao_auto_binning_factor": {
+      "lineno": 5442,
+      "end": 5447,
+      "lines": 6
+    },
+    "_slice_exo_annotation": {
+      "lineno": 3194,
+      "end": 3198,
+      "lines": 5
+    },
+    "_annotate_masterstars_flux_zones": {
+      "lineno": 4584,
+      "end": 4736,
+      "lines": 153
+    },
+    "_resolve_masterstar_bg_sigma_adu": {
+      "lineno": 4550,
+      "end": 4581,
+      "lines": 32
+    },
+    "_masterstar_zone_linear_threshold": {
+      "lineno": 4462,
+      "end": 4472,
+      "lines": 11
+    },
+    "_masterstar_zone_log_once": {
+      "lineno": 4543,
+      "end": 4547,
+      "lines": 5
+    },
+    "_compute_airmass_from_altaz": {
+      "lineno": 8254,
+      "end": 8319,
+      "lines": 66
+    },
+    "_extract_airmass_from_header": {
+      "lineno": 8322,
+      "end": 8368,
+      "lines": 47
+    },
+    "_airmass_from_altitude_deg": {
+      "lineno": 8246,
+      "end": 8251,
+      "lines": 6
+    },
+    "_apply_aperture_catalog_enhancements_from_st": {
+      "lineno": 181,
+      "end": 264,
+      "lines": 84
+    },
+    "_dao_star_count_from_array": {
+      "lineno": 2758,
+      "end": 2785,
+      "lines": 28
+    },
+    "_pick_reference_frame_by_star_count": {
+      "lineno": 2788,
+      "end": 2813,
+      "lines": 26
+    },
+    "_bin2d_mean": {
+      "lineno": 2742,
+      "end": 2755,
+      "lines": 14
+    },
+    "_finalize_hybrid_bkg_fallback_sidecar": {
+      "lineno": 8838,
+      "end": 8862,
+      "lines": 25
+    },
+    "find_qc_metrics_csv": {
+      "lineno": 846,
+      "end": 864,
+      "lines": 19
+    },
+    "_box_peak_max_adu": {
+      "lineno": 3688,
+      "end": 3702,
+      "lines": 15
+    },
+    "inv_sat_limit_peak_test_adu": {
+      "lineno": 3630,
+      "end": 3639,
+      "lines": 10
+    }
+  }
+}

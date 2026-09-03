@@ -1,0 +1,132 @@
+[
+  {
+    "file": "dev/tests/test_border_ram_handoff.py",
+    "line": 72,
+    "name": "AppConfig",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.AppConfig"
+    ]
+  },
+  {
+    "file": "dev/tests/test_border_ram_handoff.py",
+    "line": 104,
+    "name": "AppConfig",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.AppConfig"
+    ]
+  },
+  {
+    "file": "dev/tests/test_epsf_psf_merge.py",
+    "line": 90,
+    "name": "_fill_psf_catalog_columns",
+    "bucket": "M3",
+    "call": "setattr",
+    "strs": [
+      "_fill_psf_catalog_columns"
+    ]
+  },
+  {
+    "file": "dev/tests/test_epsf_psf_merge.py",
+    "line": 148,
+    "name": "_fill_psf_catalog_columns",
+    "bucket": "M3",
+    "call": "setattr",
+    "strs": [
+      "_fill_psf_catalog_columns"
+    ]
+  },
+  {
+    "file": "dev/tests/test_except_fix2_top10.py",
+    "line": 86,
+    "name": "extract_fits_metadata",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.extract_fits_metadata"
+    ]
+  },
+  {
+    "file": "dev/tests/test_except_fix2_top10.py",
+    "line": 118,
+    "name": "_plate_solve_input_bundle",
+    "bucket": "M2",
+    "call": "setattr",
+    "strs": [
+      "pipeline._plate_solve_input_bundle"
+    ]
+  },
+  {
+    "file": "dev/tests/test_except_fix2_top10.py",
+    "line": 122,
+    "name": "maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel"
+    ]
+  },
+  {
+    "file": "dev/tests/test_except_fix2_top10.py",
+    "line": 130,
+    "name": "_all_pix2world_icrs_deg",
+    "bucket": "M3",
+    "call": "setattr",
+    "strs": [
+      "pipeline._all_pix2world_icrs_deg"
+    ]
+  },
+  {
+    "file": "dev/tests/test_except_fix2_top10.py",
+    "line": 258,
+    "name": "extract_fits_metadata",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.extract_fits_metadata"
+    ]
+  },
+  {
+    "file": "dev/tests/test_field_run_findings.py",
+    "line": 113,
+    "name": "AppConfig",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "pipeline.AppConfig"
+    ]
+  },
+  {
+    "file": "dev/tests/test_invariants_p2.py",
+    "line": 362,
+    "name": "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+    "bucket": "M2",
+    "call": "setattr",
+    "strs": [
+      "_fill_masterstars_gaia_matched_bp_rp_from_local_db"
+    ]
+  },
+  {
+    "file": "dev/tests/test_invariants_p2.py",
+    "line": 364,
+    "name": "log_event",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "log_event"
+    ]
+  },
+  {
+    "file": "dev/tests/test_invariants_p2.py",
+    "line": 365,
+    "name": "LOGGER",
+    "bucket": "watch",
+    "call": "setattr",
+    "strs": [
+      "LOGGER"
+    ]
+  }
+]
