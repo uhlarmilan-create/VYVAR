@@ -210,9 +210,6 @@ _COMP_QUALITY_JSON_META_KEYS = frozenset(
 
 
 
-LAST_EXCLUDED_TARGETS: pd.DataFrame = pd.DataFrame(
-    columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"]
-)
 
 
 
@@ -1242,21 +1239,13 @@ from photometry_comp import (  # noqa: E402,F401
     _write_suspected_variables,
 )
 
-import functools
-import sys
-import photometry_comp as _photometry_comp  # noqa: E402
-_e3_select_active_targets = _photometry_comp.select_active_targets
-
-@functools.wraps(_e3_select_active_targets)
-def select_active_targets(*a, **k):
-    out = _e3_select_active_targets(*a, **k)
-    global LAST_EXCLUDED_TARGETS
-    LAST_EXCLUDED_TARGETS = _photometry_comp.LAST_EXCLUDED_TARGETS
-    _p01 = sys.modules.get("phase01_run")
-    if _p01 is not None:
-        _p01.LAST_EXCLUDED_TARGETS = LAST_EXCLUDED_TARGETS
-    return out
-
-_photometry_comp.select_active_targets = select_active_targets
-
 from phase01_run import run_phase0_and_phase1  # noqa: E402,F401
+
+
+def __getattr__(name: str) -> Any:
+    """PEP 562: LAST_EXCLUDED_TARGETS lives in photometry_comp (D-FACADE-PERMANENT-01)."""
+    if name == "LAST_EXCLUDED_TARGETS":
+        import photometry_comp as _photometry_comp
+
+        return _photometry_comp.LAST_EXCLUDED_TARGETS
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

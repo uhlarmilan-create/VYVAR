@@ -37,12 +37,12 @@ from photometry_comp import (
     select_active_targets,
     select_comparison_stars_per_target,
 )
+import photometry_comp as _photometry_comp
 from photometry_provenance import merge_photometry_pipeline_meta
 from photometry_shared import _angular_distance_deg, _resolve_plate_scale_arcsec_per_px, build_gs11_summary
 from proc_frame_store import PROC_CSV_GLOB, PROC_STORE_COLS, ProcFrameStore
 
 from photometry_core import (
-    LAST_EXCLUDED_TARGETS,
     _GAIA_ID_DTYPE,
 )
 
@@ -497,7 +497,7 @@ def run_phase0_and_phase1(
             )
         except Exception as exc:  # noqa: BLE001
             logging.error("[TARGET-DEPTH-01] target_depth.json write failed: %s", exc)
-    _excluded = LAST_EXCLUDED_TARGETS
+    _excluded = _photometry_comp.LAST_EXCLUDED_TARGETS
     if _excluded is not None and not _excluded.empty:
         excluded_csv = output_dir / "excluded_targets.csv"
         _excluded.to_csv(excluded_csv, index=False)

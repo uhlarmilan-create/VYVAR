@@ -224,6 +224,7 @@ def test_hrd_enrich_tap_fail_records_skip_reason(tmp_path: Path) -> None:
 
 
 def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> None:
+    import photometry_comp
     import photometry_core as pc
 
     vt = pd.DataFrame(
@@ -274,7 +275,7 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
         frame_h_px=2000,
     )
     assert active.empty
-    excluded = pc.LAST_EXCLUDED_TARGETS
+    excluded = photometry_comp.LAST_EXCLUDED_TARGETS
     assert not excluded.empty
     assert excluded.iloc[0]["reason"] == "no_dao_detection"
     assert excluded.iloc[0]["vsx_name"] == "BO CVn"
