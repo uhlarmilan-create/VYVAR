@@ -26,7 +26,8 @@ from photometry import common_field_intersection_bbox_px
 from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id, read_vyvar_csv
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
-from utils import fits_binning_xy_from_header, iter_fits_paths_recursive as _iter_fits_recursive, maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, plate_solve_fov_deg_diagonal_from_scale, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
+import utils
+from utils import fits_binning_xy_from_header, iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, plate_solve_fov_deg_diagonal_from_scale, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import itertools
 import fits_meta
 from fits_meta import _focal_mm_plausible
@@ -1012,10 +1013,7 @@ def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
     draft_id: int | None = None,
 ) -> dict[str, Any]:
     """If DB/optics yield expected arcsec/pixel and the on-disk WCS is linear (no SIP), rescale CD when mismatch is large."""
-    from pipeline import (  # noqa: PLC0415
-        _all_pix2world_icrs_deg,
-        maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel,
-    )
+    from pipeline_catalog import _all_pix2world_icrs_deg  # noqa: PLC0415
 
     out: dict[str, Any] = {"rescaled": False}
     try:
@@ -1044,7 +1042,7 @@ def _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(
             _old_scale = float(np.sqrt(np.abs(np.linalg.det(_psm0))) * 3600.0)
         except Exception:  # noqa: BLE001
             _old_scale = float("nan")
-        w2, changed = maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(w0, exp_f)
+        w2, changed = utils.maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel(w0, exp_f)
         if not changed:
             return out
         _target_scale = exp_f

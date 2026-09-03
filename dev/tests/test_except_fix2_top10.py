@@ -120,14 +120,14 @@ def test_exc0317_rescale_coords_failure_counted(
         lambda *_a, **_k: {"expected_arcsec_per_px": 1.0},
     )
     monkeypatch.setattr(
-        "pipeline.maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel",
+        "utils.maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel",
         lambda w, _t: (w, True),
     )
 
     def _boom(*_a, **_k):
         raise RuntimeError("wcs pix2world fail")
 
-    monkeypatch.setattr("pipeline._all_pix2world_icrs_deg", _boom)
+    monkeypatch.setattr("pipeline_catalog._all_pix2world_icrs_deg", _boom)
     reset_except_fix_counters()
     caplog.set_level(logging.ERROR)
     _try_rescale_masterstar_linear_wcs_to_expected_plate_scale(fp, app_config=None, equipment_id=None)
