@@ -12,7 +12,7 @@ import os
 import shutil
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 import astropy.units as u
 import numpy as np
 from astropy.io import fits

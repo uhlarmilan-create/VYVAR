@@ -89,9 +89,10 @@ def test_e3_ensure_full_vt_smoke_tmp_draft(tmp_path: Path) -> None:
 
 
 def test_e3_spatial_grid_stays_in_pipeline() -> None:
+    """E3: not in photometry_comp. E6a C2 moved it to pipeline_astrometry."""
     import pipeline
 
-    assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline"
+    assert pipeline.select_comparison_stars_spatial_grid.__module__ == "pipeline_astrometry"
 
 
 def test_e3_phase01_run_facade() -> None:
