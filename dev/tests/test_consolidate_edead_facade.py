@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import photometry_core
+import photometry_exports
 import photometry_gate_helpers
 import photometry_shared
 
@@ -31,6 +32,14 @@ def test_edead_shared_facade_getattr() -> None:
         assert obj is home, name
         assert obj.__module__ == "photometry_shared", name
         assert callable(obj), name
+
+
+def test_edead_exports_facade_getattr() -> None:
+    obj = photometry_core._get_lc_star_method
+    home = photometry_exports._get_lc_star_method
+    assert obj is home
+    assert obj.__module__ == "photometry_exports"
+    assert callable(obj)
 
 
 def test_edead_gate_facade_getattr() -> None:

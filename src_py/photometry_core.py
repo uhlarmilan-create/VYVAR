@@ -527,16 +527,6 @@ _PSF_ERR_MAG_SCALE = MAG_ERR_SCALE
 
 
 
-def _get_lc_star_method(cid: str, all_frames: pd.DataFrame, star_method: str) -> np.ndarray:
-    """Inst mag for one star using a fixed method for all frames (NaN if PSF missing)."""
-    sub = all_frames[all_frames["catalog_id"] == cid]
-    if sub.empty:
-        return np.array([], dtype=float)
-    if str(star_method).strip().lower() != "psf":
-        return _get_lc(cid, all_frames)
-    return _get_lc_psf_strict(cid, all_frames)
-
-
 
 
 
@@ -1203,6 +1193,8 @@ from photometry_exports import (  # noqa: E402,F401
     ensemble_member_ids,
     _get_lc_psf_strict,
     _get_lc_adaptive_per_star,
+    _get_lc_star_method,
+
 )
 
 from epsf_hooks import load_epsf_metrics_for_draft  # noqa: E402,F401

@@ -9,8 +9,18 @@ from photometry_gate_helpers import _resolve_star_flux_method, comp_quality_qual
 
 from photometry_core import (
     _coerce_bool_cell,
-    _get_lc_star_method,
 )
+
+def _get_lc_star_method(cid: str, all_frames: pd.DataFrame, star_method: str) -> np.ndarray:
+    """Inst mag for one star using a fixed method for all frames (NaN if PSF missing)."""
+    from photometry_lightcurve import _get_lc  # noqa: PLC0415
+    sub = all_frames[all_frames["catalog_id"] == cid]
+    if sub.empty:
+        return np.array([], dtype=float)
+    if str(star_method).strip().lower() != "psf":
+        return _get_lc(cid, all_frames)
+    return _get_lc_psf_strict(cid, all_frames)
+
 
 def lc_has_finite_airmass(lc_df: pd.DataFrame) -> bool:
     """True when the LC carries at least one finite airmass value."""
