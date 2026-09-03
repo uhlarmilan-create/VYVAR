@@ -1,9 +1,6 @@
 """CONSOLIDATE-01E5: MP spawn smoke for the calibrate batch worker.
 
-Imports the worker names from the pipeline facade so the test is unchanged
-across C1 (signature fix) and C2 (pure move). After C2, pickle follows
-__module__ into pipeline_calibrate in the spawn child. Note for E-final
-retarget: this file still imports from pipeline on purpose.
+Imports the worker names from pipeline_calibrate (real home after E5).
 
 Exercises the production initargs SHAPE (3-tuple) and one
 _calibrate_batch_process_one item on a tiny synthetic light. No masters:
@@ -20,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from astropy.io import fits
 
-from pipeline import _calibrate_batch_process_one, _init_calibrate_batch_worker
+from pipeline_calibrate import _calibrate_batch_process_one, _init_calibrate_batch_worker
 
 
 def _write_tiny_light(path: Path) -> None:
