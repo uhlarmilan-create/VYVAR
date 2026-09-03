@@ -1,0 +1,4 @@
+# vulture unused function/method hits for the 27 E-DEAD names
+# run after C6 (8006c88), --min-confidence 60, src_py/
+# empty = none of the 27 remain as unused-function hits
+# (deleted names gone; moved names have local callers)

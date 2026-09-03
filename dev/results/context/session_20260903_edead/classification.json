@@ -1,0 +1,23 @@
+{
+  "tip": "b44c82f",
+  "product_sha": "8006c88",
+  "epsf_graph": {
+    "photometry_core_imports": [
+      "merge_photometry_pipeline_meta",
+      "_annulus_sky_subtracted_flux",
+      "_resolve_git_provenance",
+      "ensemble_normalize"
+    ],
+    "pipeline_imports": [
+      "_vyvar_df_to_csv",
+      "_fill_psf_catalog_columns",
+      "_epsf_fit_catalog_ids",
+      "_export_catalog_psf_st_fields"
+    ],
+    "none_of_27": true
+  },
+  "refutations": [
+    "_is_broadband_photometric_filter: architect said REAL caller band_classify.py; measured DOCSTRING-only comment at band_classify.py:250 (legacy heuristic). DELETE.",
+    "test_comp_pool_noise_s1.py:22 test_robust_scatter_mad_on_gaussian calls comp_pool_noise._robust_scatter_mag, NOT photometry_core._robust_scatter_mad. Not a TEST-ROOT. _robust_scatter_mad is still ALIVE via measure_empty_aperture_sigma_bkg."
+  ]
+}

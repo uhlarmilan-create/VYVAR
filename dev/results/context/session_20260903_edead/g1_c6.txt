@@ -1,0 +1,26 @@
+
+SESSION BASELINE CHECK (fast)
+------------------------------------------------------------------------
+Check                        Status Detail
+------------------------------------------------------------------------
+git-branch                   PASS   consolidate-01
+git-head                     PASS   8006c88
+git-staged                   PASS   none
+git-untracked                WARN   dev/results/context/session_20260818_msgaia00/blend_pairs.csv; dev/results/conte
+git-origin-main              WARN   differs from origin/main (5b1068d); consider git pull
+config-paths                 PASS   all present
+pytest                       PASS   1663 passed, 32 skipped
+manifest-db-parity           PASS   draft_id=516
+db-quick-check               WARN   WAIVED (Milan 2026-08-22 files-only direction; MASTER_SO...): *** in database ma
+ledger                       PASS   v1 17 items
+ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430, VL-PFS-8F107CF
+deps-outdated                WARN   numpy 2.4.4->2.5.2 (+103 other) - gated upgrade, see docs/DEPS_POLICY.md
+clean-tree                   PASS   worktree=b1b_clean_327494ac; pytest 32 passed; ruff PASS; pyflakes PASS
+------------------------------------------------------------------------
+OVERALL: PASS
+
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).

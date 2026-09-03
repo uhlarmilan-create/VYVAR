@@ -1,0 +1,3335 @@
+[
+  {
+    "name": "compute_per_frame_cog_correction",
+    "home": "src_py/photometry_core.py:966-1153",
+    "n_hits": 21,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 966,
+        "cls": "DEF",
+        "text": "def compute_per_frame_cog_correction("
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 29,
+        "cls": "GLUE-OR-REAL",
+        "text": "compute_per_frame_cog_correction,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 441,
+        "cls": "GLUE-OR-REAL",
+        "text": "cog = compute_per_frame_cog_correction("
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 39,
+        "cls": "GLUE-OR-REAL",
+        "text": "compute_per_frame_cog_correction,"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 1453,
+        "cls": "GLUE-OR-REAL",
+        "text": "_cog = compute_per_frame_cog_correction("
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_IMPL_01.md",
+        "line": 16,
+        "cls": "DOCSTRING",
+        "text": "growth curve from existing `compute_per_frame_cog_correction` / COG-A1 machinery."
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 784,
+        "cls": "DOCSTRING",
+        "text": "| 9687 | `compute_per_frame_cog_correction` | `data, x, y, dao_flux, aperture_r_px, sky_pp, fwhm_px, peak_max_adu, sa...` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/validation/gates_inventory.json",
+        "line": 1023,
+        "cls": "DOCSTRING",
+        "text": "\"function\": \"compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 830,
+        "cls": "DOCSTRING",
+        "text": "\"compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 861,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1299,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2198,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:compute_per_frame_cog_correction\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2262,
+        "cls": "DOCSTRING",
+        "text": "\"compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2279,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 951,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:compute_per_frame_cog_correction`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 2686,
+        "cls": "DOCSTRING",
+        "text": "\"compute_per_frame_cog_correction\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11733,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11754,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11777,
+        "cls": "DOCSTRING",
+        "text": "\"compute_per_frame_cog_correction\","
+      },
+      {
+        "file": "docs/VYVAR_JOURNAL.md",
+        "line": 3737,
+        "cls": "DOCSTRING",
+        "text": "bias + seeing-correlated systematic. New `compute_per_frame_cog_correction` builds a"
+      }
+    ]
+  },
+  {
+    "name": "_aperture_flux_sky_batch",
+    "home": "src_py/photometry_core.py:900-961",
+    "n_hits": 33,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 900,
+        "cls": "DEF",
+        "text": "def _aperture_flux_sky_batch("
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 35,
+        "cls": "GLUE-OR-REAL",
+        "text": "_aperture_flux_sky_batch,"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 248,
+        "cls": "GLUE-OR-REAL",
+        "text": "flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out)"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_IMPL_04.md",
+        "line": 26,
+        "cls": "DOCSTRING",
+        "text": "`photometry_core._aperture_flux_sky_batch` -> (heterogeneous radii)"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_IMPL_04.md",
+        "line": 111,
+        "cls": "DOCSTRING",
+        "text": "- `src_py/photometry_core.py` - `_aperture_flux_sky_batch` / exact sums"
+      },
+      {
+        "file": "dev/results/IMPL_04_scatter_scan.json",
+        "line": 219,
+        "cls": "DOCSTRING",
+        "text": "\"aperture_sum_path\": \"photometry_core._aperture_flux_sky_batch -> _aperture_flux_sky_per_star (method=exact)\""
+      },
+      {
+        "file": "dev/results/IMPL_04_scatter_scan.json",
+        "line": 1004,
+        "cls": "DOCSTRING",
+        "text": "\"aperture_sum_path\": \"photometry_core._aperture_flux_sky_batch -> _aperture_flux_sky_per_star (method=exact)\""
+      },
+      {
+        "file": "dev/results/context/session_20260826_a01c/a1c_aij_gate.py",
+        "line": 29,
+        "cls": "DOCSTRING",
+        "text": "from photometry_core import _aperture_flux_sky_batch  # noqa: E402"
+      },
+      {
+        "file": "dev/results/context/session_20260826_a01c/a1c_aij_gate.py",
+        "line": 192,
+        "cls": "DOCSTRING",
+        "text": "fl, _sky = _aperture_flux_sky_batch(data, pos, r_ap, r_in, r_out)"
+      },
+      {
+        "file": "dev/results/context/session_20260826_a01d/a1d_aij_gate.py",
+        "line": 27,
+        "cls": "DOCSTRING",
+        "text": "from photometry_core import _aperture_flux_sky_batch  # noqa: E402"
+      },
+      {
+        "file": "dev/results/context/session_20260826_a01d/a1d_aij_gate.py",
+        "line": 195,
+        "cls": "DOCSTRING",
+        "text": "fl, _sky = _aperture_flux_sky_batch(data, pos, r_ap, r_in, r_out)"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/a1_mode_a_harness.py",
+        "line": 24,
+        "cls": "DOCSTRING",
+        "text": "from photometry_core import _aperture_flux_sky_batch  # noqa: E402"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/a1_mode_a_harness.py",
+        "line": 123,
+        "cls": "DOCSTRING",
+        "text": "fl, _sky = _aperture_flux_sky_batch(data, pos, r_ap, r_in, r_out)"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/a1_mode_b_harness.py",
+        "line": 27,
+        "cls": "DOCSTRING",
+        "text": "from photometry_core import _aperture_flux_sky_batch  # noqa: E402"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/a1_mode_b_harness.py",
+        "line": 126,
+        "cls": "DOCSTRING",
+        "text": "fl, _sky = _aperture_flux_sky_batch(data, pos, r_ap, r_in, r_out)"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/annulus_sites.json",
+        "line": 134,
+        "cls": "DOCSTRING",
+        "text": "\"window\": \"                d = np.where(np.isfinite(d), d, fill)\\n\\n            if r_ap_arr is not None:\\n                # photutils 2.3: CircularAperture.r mu"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/REPORT.md",
+        "line": 207,
+        "cls": "DOCSTRING",
+        "text": "and `enhance_catalog_dataframe_aperture_bpm` :14424 / `_aperture_flux_sky_batch` :13933."
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/REPORT.md",
+        "line": 215,
+        "cls": "DOCSTRING",
+        "text": "| photometry_core.py:13933 / :13989 `_aperture_flux_sky_batch` | caller | caller | median mask |"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1046,
+        "cls": "DOCSTRING",
+        "text": "\"_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1052,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1285,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2182,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2263,
+        "cls": "DOCSTRING",
+        "text": "\"_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2280,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 586,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_aperture_flux_sky_batch`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 935,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_aperture_flux_sky_batch`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 2346,
+        "cls": "DOCSTRING",
+        "text": "\"_aperture_flux_sky_batch\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11587,
+        "cls": "DOCSTRING",
+        "text": "\"_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11646,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11669,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_aperture_flux_sky_batch\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11689,
+        "cls": "DOCSTRING",
+        "text": "\"_aperture_flux_sky_batch\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e1/REPORT.md",
+        "line": 62,
+        "cls": "DOCSTRING",
+        "text": "2. Aperture path: `measure_empty_aperture_sigma_bkg` (same gate-helpers module) calls `_annulus_sky_subtracted_flux`. `_aperture_flux_sky_per_star` (gate-helper"
+      }
+    ]
+  },
+  {
+    "name": "_build_star_exclusion_mask",
+    "home": "src_py/photometry_core.py:192-227",
+    "n_hits": 16,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 192,
+        "cls": "DEF",
+        "text": "def _build_star_exclusion_mask("
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 23,
+        "cls": "GLUE-OR-REAL",
+        "text": "_build_star_exclusion_mask,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 200,
+        "cls": "GLUE-OR-REAL",
+        "text": "blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 207,
+        "cls": "GLUE-OR-REAL",
+        "text": "blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 303,
+        "cls": "GLUE-OR-REAL",
+        "text": "blocked = _build_star_exclusion_mask("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 836,
+        "cls": "DOCSTRING",
+        "text": "\"_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 850,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2190,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2264,
+        "cls": "DOCSTRING",
+        "text": "\"_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2281,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 943,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_build_star_exclusion_mask`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1289,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1310,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1479,
+        "cls": "DOCSTRING",
+        "text": "\"_build_star_exclusion_mask\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1598,
+        "cls": "DOCSTRING",
+        "text": "\"_build_star_exclusion_mask\","
+      }
+    ]
+  },
+  {
+    "name": "_canonicalize_star_xy",
+    "home": "src_py/photometry_core.py:230-254",
+    "n_hits": 13,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 230,
+        "cls": "DEF",
+        "text": "def _canonicalize_star_xy("
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 24,
+        "cls": "GLUE-OR-REAL",
+        "text": "_canonicalize_star_xy,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 170,
+        "cls": "GLUE-OR-REAL",
+        "text": "xs_c, ys_c, star_list_hash = _canonicalize_star_xy(star_x, star_y)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 841,
+        "cls": "DOCSTRING",
+        "text": "\"_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 851,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2191,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2265,
+        "cls": "DOCSTRING",
+        "text": "\"_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2282,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 944,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_canonicalize_star_xy`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1317,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1337,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_canonicalize_star_xy\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1480,
+        "cls": "DOCSTRING",
+        "text": "\"_canonicalize_star_xy\","
+      }
+    ]
+  },
+  {
+    "name": "_median_bkg_var_adu2_per_px_from_proc_cache",
+    "home": "src_py/photometry_core.py:352-375",
+    "n_hits": 9,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 352,
+        "cls": "DEF",
+        "text": "def _median_bkg_var_adu2_per_px_from_proc_cache("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1608,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1615,
+        "cls": "DOCSTRING",
+        "text": "\"_median_bkg_var_adu2_per_px_from_proc_cache\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1618,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2266,
+        "cls": "DOCSTRING",
+        "text": "\"_median_bkg_var_adu2_per_px_from_proc_cache\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2283,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 3167,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_median_bkg_var_adu2_per_px_from_proc_cache\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 3185,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_median_bkg_var_adu2_per_px_from_proc_cache\","
+      }
+    ]
+  },
+  {
+    "name": "_finite_pixel_bbox_from_array",
+    "home": "src_py/photometry_core.py:802-823",
+    "n_hits": 15,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 802,
+        "cls": "DEF",
+        "text": "def _finite_pixel_bbox_from_array("
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 37,
+        "cls": "GLUE-OR-REAL",
+        "text": "_finite_pixel_bbox_from_array,"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 923,
+        "cls": "GLUE-OR-REAL",
+        "text": "bb = _finite_pixel_bbox_from_array(arr, finite_stride=finite_stride)"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 955,
+        "cls": "GLUE-OR-REAL",
+        "text": "bb = _finite_pixel_bbox_from_array(data, finite_stride=finite_stride)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1324,
+        "cls": "DOCSTRING",
+        "text": "\"_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1329,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1291,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2267,
+        "cls": "DOCSTRING",
+        "text": "\"_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2284,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 592,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_finite_pixel_bbox_from_array`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11097,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11118,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11161,
+        "cls": "DOCSTRING",
+        "text": "\"_finite_pixel_bbox_from_array\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11217,
+        "cls": "DOCSTRING",
+        "text": "\"_finite_pixel_bbox_from_array\","
+      }
+    ]
+  },
+  {
+    "name": "_intersection_bbox_from_frame_bboxes",
+    "home": "src_py/photometry_core.py:826-842",
+    "n_hits": 15,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 826,
+        "cls": "DEF",
+        "text": "def _intersection_bbox_from_frame_bboxes("
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 38,
+        "cls": "GLUE-OR-REAL",
+        "text": "_intersection_bbox_from_frame_bboxes,"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 926,
+        "cls": "GLUE-OR-REAL",
+        "text": "return _intersection_bbox_from_frame_bboxes(bboxes)"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 958,
+        "cls": "GLUE-OR-REAL",
+        "text": "return _intersection_bbox_from_frame_bboxes(bboxes)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1325,
+        "cls": "DOCSTRING",
+        "text": "\"_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1330,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1292,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2268,
+        "cls": "DOCSTRING",
+        "text": "\"_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2285,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 593,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_intersection_bbox_from_frame_bboxes`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11125,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11146,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_intersection_bbox_from_frame_bboxes\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11162,
+        "cls": "DOCSTRING",
+        "text": "\"_intersection_bbox_from_frame_bboxes\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11218,
+        "cls": "DOCSTRING",
+        "text": "\"_intersection_bbox_from_frame_bboxes\""
+      }
+    ]
+  },
+  {
+    "name": "_star_mag_for_aperture_sizing",
+    "home": "src_py/photometry_core.py:419-435",
+    "n_hits": 14,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 419,
+        "cls": "DEF",
+        "text": "def _star_mag_for_aperture_sizing(row: Any) -> float | None:"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_closure_step1b.md",
+        "line": 190,
+        "cls": "DOCSTRING",
+        "text": "| `_star_mag_for_aperture_sizing` equivalent | **14.203** | proc CSV `mag` / `phot_g_mean_mag` |"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 686,
+        "cls": "DOCSTRING",
+        "text": "| 1956 | `_star_mag_for_aperture_sizing` | `row` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/c63d_measure.py",
+        "line": 21,
+        "cls": "DOCSTRING",
+        "text": "_star_mag_for_aperture_sizing,"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/c63d_measure.py",
+        "line": 131,
+        "cls": "DOCSTRING",
+        "text": "mag3 = _star_mag_for_aperture_sizing(r3s)"
+      },
+      {
+        "file": "dev/results/context/session_20260826_c6/c63d_measure.py",
+        "line": 132,
+        "cls": "DOCSTRING",
+        "text": "mag4 = _star_mag_for_aperture_sizing(r4s)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1644,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"photometry_core.py:_star_mag_for_aperture_sizing\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1651,
+        "cls": "DOCSTRING",
+        "text": "\"_star_mag_for_aperture_sizing\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1654,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_star_mag_for_aperture_sizing\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2269,
+        "cls": "DOCSTRING",
+        "text": "\"_star_mag_for_aperture_sizing\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2286,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_star_mag_for_aperture_sizing\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 3947,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_star_mag_for_aperture_sizing\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 3965,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_star_mag_for_aperture_sizing\","
+      }
+    ]
+  },
+  {
+    "name": "_robust_scatter_mad",
+    "home": "src_py/photometry_core.py:179-189",
+    "n_hits": 16,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 179,
+        "cls": "DEF",
+        "text": "def _robust_scatter_mad(values: np.ndarray) -> float:"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 28,
+        "cls": "GLUE-OR-REAL",
+        "text": "_robust_scatter_mad,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 269,
+        "cls": "GLUE-OR-REAL",
+        "text": "sigma = _robust_scatter_mad(np.asarray(net_sums, dtype=np.float64))"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 316,
+        "cls": "GLUE-OR-REAL",
+        "text": "sig = _robust_scatter_mad(resid)"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_U_SCATTER_DEF.md",
+        "line": 37,
+        "cls": "DOCSTRING",
+        "text": "| S13 | `_robust_scatter_mad` | MAD-based scatter helper | generic | MAD | internal | `photometry_core.py:728` | color-term diagnostics |"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 843,
+        "cls": "DOCSTRING",
+        "text": "\"_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 857,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2197,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2270,
+        "cls": "DOCSTRING",
+        "text": "\"_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2287,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 950,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_robust_scatter_mad`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1261,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1282,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_robust_scatter_mad\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1484,
+        "cls": "DOCSTRING",
+        "text": "\"_robust_scatter_mad\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1599,
+        "cls": "DOCSTRING",
+        "text": "\"_robust_scatter_mad\""
+      }
+    ]
+  },
+  {
+    "name": "_labbe_append_debug_record",
+    "home": "src_py/photometry_core.py:277-286",
+    "n_hits": 17,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 277,
+        "cls": "DEF",
+        "text": "def _labbe_append_debug_record(record: dict[str, Any]) -> None:"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 26,
+        "cls": "GLUE-OR-REAL",
+        "text": "_labbe_append_debug_record,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 215,
+        "cls": "GLUE-OR-REAL",
+        "text": "_labbe_append_debug_record("
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 251,
+        "cls": "GLUE-OR-REAL",
+        "text": "_labbe_append_debug_record("
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 272,
+        "cls": "GLUE-OR-REAL",
+        "text": "_labbe_append_debug_record("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1575,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1580,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2193,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2271,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2288,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 946,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_labbe_append_debug_record`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1355,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_append_debug_record\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1382,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_append_debug_record\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1398,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1421,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_labbe_append_debug_record\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1483,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_append_debug_record\","
+      }
+    ]
+  },
+  {
+    "name": "_labbe_debug_dump_enabled",
+    "home": "src_py/photometry_core.py:257-265",
+    "n_hits": 11,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 257,
+        "cls": "DEF",
+        "text": "def _labbe_debug_dump_enabled() -> bool:"
+      },
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 278,
+        "cls": "REAL-OR-OTHER",
+        "text": "if not _labbe_debug_dump_enabled():"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1568,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"photometry_core.py:_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1576,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1581,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2272,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2289,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1344,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1364,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_labbe_debug_dump_enabled\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1406,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_enabled\","
+      }
+    ]
+  },
+  {
+    "name": "_get_lc_star_method",
+    "home": "src_py/photometry_core.py:704-711",
+    "n_hits": 21,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 704,
+        "cls": "DEF",
+        "text": "def _get_lc_star_method(cid: str, all_frames: pd.DataFrame, star_method: str) -> np.ndarray:"
+      },
+      {
+        "file": "src_py/photometry_exports.py",
+        "line": 12,
+        "cls": "REAL-OR-OTHER",
+        "text": "_get_lc_star_method,"
+      },
+      {
+        "file": "src_py/photometry_exports.py",
+        "line": 112,
+        "cls": "REAL-OR-OTHER",
+        "text": "return _get_lc_star_method(cid, all_frames, sm)"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 747,
+        "cls": "DOCSTRING",
+        "text": "| 5727 | `_get_lc_star_method` | `cid, all_frames, star_method` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1521,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"photometry_core.py:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1529,
+        "cls": "DOCSTRING",
+        "text": "\"_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1536,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1866,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2029,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2031,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2273,
+        "cls": "DOCSTRING",
+        "text": "\"_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2290,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 789,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_get_lc_star_method`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 872,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_get_lc_star_method`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 874,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_get_lc_star_method`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 8871,
+        "cls": "DOCSTRING",
+        "text": "\"_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 8993,
+        "cls": "DOCSTRING",
+        "text": "\"_get_lc_star_method\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 9115,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 9138,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_get_lc_star_method\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 9153,
+        "cls": "DOCSTRING",
+        "text": "\"_get_lc_star_method\","
+      }
+    ]
+  },
+  {
+    "name": "_labbe_debug_dump_path",
+    "home": "src_py/photometry_core.py:268-274",
+    "n_hits": 10,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 268,
+        "cls": "DEF",
+        "text": "def _labbe_debug_dump_path() -> Path:"
+      },
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 280,
+        "cls": "REAL-OR-OTHER",
+        "text": "path = _labbe_debug_dump_path()"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1577,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_path\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1582,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_debug_dump_path\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2274,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2291,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_labbe_debug_dump_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1371,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_labbe_debug_dump_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1391,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_labbe_debug_dump_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1407,
+        "cls": "DOCSTRING",
+        "text": "\"_labbe_debug_dump_path\""
+      }
+    ]
+  },
+  {
+    "name": "_clamp_err_empty_apertures_min",
+    "home": "src_py/photometry_core.py:169-174",
+    "n_hits": 18,
+    "hits": [
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 169,
+        "cls": "DEF",
+        "text": "def _clamp_err_empty_apertures_min(n: int) -> int:"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 25,
+        "cls": "GLUE-OR-REAL",
+        "text": "_clamp_err_empty_apertures_min,"
+      },
+      {
+        "file": "src_py/photometry_gate_helpers.py",
+        "line": 182,
+        "cls": "GLUE-OR-REAL",
+        "text": "n_min = _clamp_err_empty_apertures_min(min_valid)"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 36,
+        "cls": "GLUE-OR-REAL",
+        "text": "_clamp_err_empty_apertures_min,"
+      },
+      {
+        "file": "src_py/photometry_shared.py",
+        "line": 1380,
+        "cls": "GLUE-OR-REAL",
+        "text": "_n_empty_min = _clamp_err_empty_apertures_min(err_empty_apertures_min)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 846,
+        "cls": "DOCSTRING",
+        "text": "\"_clamp_err_empty_apertures_min\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 852,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 1287,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2192,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2275,
+        "cls": "DOCSTRING",
+        "text": "\"_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2292,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 588,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_clamp_err_empty_apertures_min`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 945,
+        "cls": "DOCSTRING",
+        "text": "- `photometry_core.py:_clamp_err_empty_apertures_min`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1175,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1196,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 1481,
+        "cls": "DOCSTRING",
+        "text": "\"_clamp_err_empty_apertures_min\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 11770,
+        "cls": "DOCSTRING",
+        "text": "\"_clamp_err_empty_apertures_min\","
+      }
+    ]
+  },
+  {
+    "name": "_is_broadband_photometric_filter",
+    "home": "src_py/photometry_core.py:482-487",
+    "n_hits": 21,
+    "hits": [
+      {
+        "file": "src_py/band_classify.py",
+        "line": 250,
+        "cls": "DOCSTRING",
+        "text": "# Legacy broadband prefix heuristic (matches old ``_is_broadband_photometric_filter``)"
+      },
+      {
+        "file": "src_py/photometry_core.py",
+        "line": 482,
+        "cls": "DEF",
+        "text": "def _is_broadband_photometric_filter(obs_group: str) -> bool:"
+      },
+      {
+        "file": "dev/results/VYVAR_AUDIT_LEDGER.md",
+        "line": 338,
+        "cls": "DOCSTRING",
+        "text": "**NOTE:** Classifier consolidates `_is_nofilter_obs_group` / `_is_broadband_photometric_filter` /"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 700,
+        "cls": "DOCSTRING",
+        "text": "| 3013 | `_is_broadband_photometric_filter` | `obs_group` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/results/specs/VYVAR_K2_DESIGN_SPEC.md",
+        "line": 109,
+        "cls": "DOCSTRING",
+        "text": "returns `_is_broadband_photometric_filter(obs_group)`, treating CV/CR as broadband,"
+      },
+      {
+        "file": "dev/results/specs/VYVAR_K2_DESIGN_SPEC.md",
+        "line": 114,
+        "cls": "DOCSTRING",
+        "text": "`_is_broadband_photometric_filter` to band_classify (single source, no drift). Wiring"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 1900,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_is_broadband_photometric_filter\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 1903,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\photometry_core.py:5165: unused function '_is_broadband_photometric_filter' (60% confidence)\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 1908,
+        "cls": "DOCSTRING",
+        "text": "\"src_py/band_classify.py:250:# Legacy broadband prefix heuristic (matches old ``_is_broadband_photometric_filter``)\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1087,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_is_broadband_photometric_filter\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1090,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\photometry_core.py:5165: unused function '_is_broadband_photometric_filter' (60% confidence)\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_raw.txt",
+        "line": 260,
+        "cls": "TXT-DUMP",
+        "text": "src_py\\photometry_core.py:5165: unused function '_is_broadband_photometric_filter' (60% confidence)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1752,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"photometry_core.py:_is_broadband_photometric_filter\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1759,
+        "cls": "DOCSTRING",
+        "text": "\"_is_broadband_photometric_filter\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1762,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_is_broadband_photometric_filter\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2276,
+        "cls": "DOCSTRING",
+        "text": "\"_is_broadband_photometric_filter\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2293,
+        "cls": "DOCSTRING",
+        "text": "\"photometry_core.py:_is_broadband_photometric_filter\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 998,
+        "cls": "DOCSTRING",
+        "text": "`compute_per_frame_cog_correction`, `_aperture_flux_sky_batch`, `_build_star_exclusion_mask`, `_canonicalize_star_xy`, `_median_bkg_var_adu2_per_px_from_proc_ca"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 5296,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_is_broadband_photometric_filter\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 5314,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"photometry_core.py:_is_broadband_photometric_filter\","
+      },
+      {
+        "file": "docs/VYVAR_JOURNAL.md",
+        "line": 2311,
+        "cls": "DOCSTRING",
+        "text": "consolidating `_is_nofilter_obs_group`, `_is_broadband_photometric_filter`, and"
+      }
+    ]
+  },
+  {
+    "name": "_solve_wcs_solve_field_cli",
+    "home": "src_py/pipeline.py:322-416",
+    "n_hits": 17,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 322,
+        "cls": "DEF",
+        "text": "def _solve_wcs_solve_field_cli("
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 190,
+        "cls": "DOCSTRING",
+        "text": "| 3725 | `_solve_wcs_solve_field_cli` | `masterstar_path, expected_arcsec_per_pixel` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 894,
+        "cls": "TXT-DUMP",
+        "text": "2944  def _solve_wcs_solve_field_cli"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 430,
+        "cls": "TXT-DUMP",
+        "text": "L2921: def _solve_wcs_solve_field_cli("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 28,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 142,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 733,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2322,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2336,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 358,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_solve_wcs_solve_field_cli`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17543,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17563,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_solve_wcs_solve_field_cli\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17610,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_solve_field_cli\""
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 119,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `_solve_wcs_astrometry_net`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 894,
+        "cls": "TXT-DUMP",
+        "text": "2944  def _solve_wcs_solve_field_cli"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 430,
+        "cls": "TXT-DUMP",
+        "text": "L2921: def _solve_wcs_solve_field_cli("
+      }
+    ]
+  },
+  {
+    "name": "get_auto_fov",
+    "home": "src_py/pipeline.py:253-317",
+    "n_hits": 28,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 253,
+        "cls": "DEF",
+        "text": "def get_auto_fov("
+      },
+      {
+        "file": "dev/results/VYVAR_CODE_AUDIT.md",
+        "line": 51,
+        "cls": "DOCSTRING",
+        "text": ":1466 `_icrs_offset_arcmin`, :3185 `get_auto_fov`, :3821 `_try_solve_wcs_astrometry_net_or_local_cli`, :4210"
+      },
+      {
+        "file": "dev/results/VYVAR_CODE_AUDIT.md",
+        "line": 296,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:3185 get_auto_fov` - [V] no callers/refs in tree (incl. Streamlit app.py)."
+      },
+      {
+        "file": "dev/results/VYVAR_EXCEPT_CENSUS.md",
+        "line": 782,
+        "cls": "DOCSTRING",
+        "text": "| EXC-0310 | `pipeline.py:3421` | Exception | mixed-silent (return) | T1-SCIENCE | WCS corner separation failure makes get_auto_fov return None when header opti"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 59,
+        "cls": "DOCSTRING",
+        "text": "| G1-F008 | **LOW** | L5 | `pipeline.py` (11 funcs) | Dead code confirmed by AST ref-count: `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_au"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 178,
+        "cls": "DOCSTRING",
+        "text": "| 3185 | `get_auto_fov` | `archive_path, masterstar_path, database_path, equipment_id, draft_id` | DEAD |"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 1170,
+        "cls": "DOCSTRING",
+        "text": "| G1 (5/5) | `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_auto_fov`, `_cluster_centroid_votes`, `autofill` | **TRULY-DEAD** (all 5) |"
+      },
+      {
+        "file": "dev/sandbox/_except_retriage2_apply.py",
+        "line": 14,
+        "cls": "IMPORT",
+        "text": "TRIAGE: dict[str, dict] = {'EXC-0275': {'tier': 'T1-SCIENCE', 'disposition': 'fix-now', 'evidence': 'Aperture/BPM/COG enhancement failure returns the input cata"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 881,
+        "cls": "TXT-DUMP",
+        "text": "2454  def get_auto_fov"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 418,
+        "cls": "TXT-DUMP",
+        "text": "L2480: def get_auto_fov(*, archive_path: Path | None = None, masterstar_path: Path | None = None) -> float | None:"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2284,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2287,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:3510: unused function 'get_auto_fov' (60% confidence)\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1297,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1300,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:3510: unused function 'get_auto_fov' (60% confidence)\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_raw.txt",
+        "line": 297,
+        "cls": "TXT-DUMP",
+        "text": "src_py\\pipeline.py:3510: unused function 'get_auto_fov' (60% confidence)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 33,
+        "cls": "DOCSTRING",
+        "text": "\"get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 168,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 738,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2323,
+        "cls": "DOCSTRING",
+        "text": "\"get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2337,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 363,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:get_auto_fov`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17091,
+        "cls": "DOCSTRING",
+        "text": "\"get_auto_fov\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17109,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17131,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:get_auto_fov\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 118,
+        "cls": "DOCSTRING",
+        "text": "`_obs_fwhm_basename_map_from_db`, `get_auto_fov`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 881,
+        "cls": "TXT-DUMP",
+        "text": "2454  def get_auto_fov"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 418,
+        "cls": "TXT-DUMP",
+        "text": "L2480: def get_auto_fov(*, archive_path: Path | None = None, masterstar_path: Path | None = None) -> float | None:"
+      }
+    ]
+  },
+  {
+    "name": "analyze_calibrated_qc",
+    "home": "src_py/pipeline.py:630-689",
+    "n_hits": 32,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 630,
+        "cls": "DEF",
+        "text": "def analyze_calibrated_qc("
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 1133,
+        "cls": "REAL-OR-OTHER",
+        "text": "df = analyze_calibrated_qc("
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_carry01_carry02.md",
+        "line": 148,
+        "cls": "DOCSTRING",
+        "text": "`analyze_calibrated_qc` (`pipeline.py:17252`) does **not** subtract sky surface."
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 309,
+        "cls": "DOCSTRING",
+        "text": "| 15631 | `analyze_calibrated_qc` | `calibrated_root, max_frames, progress_cb, only_paths` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 1041,
+        "cls": "TXT-DUMP",
+        "text": "13812  def analyze_calibrated_qc"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 558,
+        "cls": "TXT-DUMP",
+        "text": "L12706: def analyze_calibrated_qc("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 35,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 156,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1811,
+        "cls": "DOCSTRING",
+        "text": "\"b\": \"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 280,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 298,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2324,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2338,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 97,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:analyze_calibrated_qc`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 115,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:analyze_calibrated_qc`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 14544,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 14718,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 16239,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 16335,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 21290,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 23622,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 23745,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 24569,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 24597,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 25309,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 25401,
+        "cls": "DOCSTRING",
+        "text": "\"analyze_calibrated_qc\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e5/astropipeline_xref.txt",
+        "line": 23,
+        "cls": "TXT-DUMP",
+        "text": "analyze_calibrated_qc"
+      },
+      {
+        "file": "dev/results/context/session_20260903_e5/REPORT.md",
+        "line": 78,
+        "cls": "DOCSTRING",
+        "text": "- Stay-behind `analyze_calibrated_qc` resolves `_vyvar_parallel_pool`"
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 121,
+        "cls": "DOCSTRING",
+        "text": "`_analyze_calibrated_qc_one`, `analyze_calibrated_qc`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 1041,
+        "cls": "TXT-DUMP",
+        "text": "13812  def analyze_calibrated_qc"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 558,
+        "cls": "TXT-DUMP",
+        "text": "L12706: def analyze_calibrated_qc("
+      }
+    ]
+  },
+  {
+    "name": "_solve_wcs_astrometry_net",
+    "home": "src_py/pipeline.py:420-478",
+    "n_hits": 17,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 420,
+        "cls": "DEF",
+        "text": "def _solve_wcs_astrometry_net("
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 192,
+        "cls": "DOCSTRING",
+        "text": "| 3845 | `_solve_wcs_astrometry_net` | `masterstar_path, api_key, expected_arcsec_per_pixel` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 896,
+        "cls": "TXT-DUMP",
+        "text": "3064  def _solve_wcs_astrometry_net"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 432,
+        "cls": "TXT-DUMP",
+        "text": "L3041: def _solve_wcs_astrometry_net("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 36,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 140,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 732,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2325,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2339,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 357,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_solve_wcs_astrometry_net`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17570,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17590,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 17609,
+        "cls": "DOCSTRING",
+        "text": "\"_solve_wcs_astrometry_net\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 119,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `_solve_wcs_astrometry_net`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 896,
+        "cls": "TXT-DUMP",
+        "text": "3064  def _solve_wcs_astrometry_net"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 432,
+        "cls": "TXT-DUMP",
+        "text": "L3041: def _solve_wcs_astrometry_net("
+      }
+    ]
+  },
+  {
+    "name": "_saturated_core_plateau",
+    "home": "src_py/pipeline.py:501-536",
+    "n_hits": 19,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 501,
+        "cls": "DEF",
+        "text": "def _saturated_core_plateau("
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 558,
+        "cls": "REAL-OR-OTHER",
+        "text": "sat_by_plateau = _saturated_core_plateau(arr, float(x), float(y))"
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 564,
+        "cls": "REAL-OR-OTHER",
+        "text": "sat_by_plateau = _saturated_core_plateau(arr, float(x), float(y))"
+      },
+      {
+        "file": "src_py/pipeline_catalog.py",
+        "line": 1454,
+        "cls": "DOCSTRING",
+        "text": "\"\"\"Same criterion as ``_saturated_core_plateau``, vectorized over ``(x,y)`` centroids (3x3 patch per star).\"\"\""
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_saturated_core_punch.md",
+        "line": 21,
+        "cls": "DOCSTRING",
+        "text": "| `pipeline.py::_star_saturation_flags` / `_vectorized_star_saturation_columns` / `_saturated_core_plateau*` | Sets `likely_saturated`, `saturated_from_peak`, `"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 215,
+        "cls": "DOCSTRING",
+        "text": "| 4811 | `_saturated_core_plateau` | `data, x, y, half_inner, plateau_rel, min_plateau_pixels` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 920,
+        "cls": "TXT-DUMP",
+        "text": "3958  def _saturated_core_plateau"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 456,
+        "cls": "TXT-DUMP",
+        "text": "L3775: def _saturated_core_plateau("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1348,
+        "cls": "DOCSTRING",
+        "text": "\"_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1354,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2326,
+        "cls": "DOCSTRING",
+        "text": "\"_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2340,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 18999,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 19019,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_saturated_core_plateau\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 19035,
+        "cls": "DOCSTRING",
+        "text": "\"_saturated_core_plateau\""
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 120,
+        "cls": "DOCSTRING",
+        "text": "`_saturated_core_plateau`, `_star_saturation_flags`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 920,
+        "cls": "TXT-DUMP",
+        "text": "3958  def _saturated_core_plateau"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 456,
+        "cls": "TXT-DUMP",
+        "text": "L3775: def _saturated_core_plateau("
+      }
+    ]
+  },
+  {
+    "name": "_star_saturation_flags",
+    "home": "src_py/pipeline.py:539-574",
+    "n_hits": 28,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 539,
+        "cls": "DEF",
+        "text": "def _star_saturation_flags("
+      },
+      {
+        "file": "src_py/pipeline_catalog.py",
+        "line": 1488,
+        "cls": "DOCSTRING",
+        "text": "\"\"\"Per-star saturation flags as column arrays (replaces ``N`` calls to ``_star_saturation_flags``).\"\"\""
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_saturated_core_punch.md",
+        "line": 21,
+        "cls": "DOCSTRING",
+        "text": "| `pipeline.py::_star_saturation_flags` / `_vectorized_star_saturation_columns` / `_saturated_core_plateau*` | Sets `likely_saturated`, `saturated_from_peak`, `"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_saturation_binning_draft510.md",
+        "line": 79,
+        "cls": "DOCSTRING",
+        "text": "| `pipeline.py:5491-5525` | `_star_saturation_flags` | `peak_max_adu` vs `sat_limit * sat_frac` |"
+      },
+      {
+        "file": "dev/results/CURSOR_RESULT_saturation_binning_draft510.md",
+        "line": 109,
+        "cls": "DOCSTRING",
+        "text": "| **B2 - Store unbinned, scale at compare** | Keep 16384 | Multiply by `XBINNING*YBINNING` in `_effective_saturation_limit` / `_star_saturation_flags` | Limits "
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 216,
+        "cls": "DOCSTRING",
+        "text": "| 4849 | `_star_saturation_flags` | `arr, x, y, sat_limit, sat_frac, peak_dao_val, peak_max_adu` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 921,
+        "cls": "TXT-DUMP",
+        "text": "3996  def _star_saturation_flags"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 457,
+        "cls": "TXT-DUMP",
+        "text": "L3813: def _star_saturation_flags("
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2331,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2334,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:5768: unused function '_star_saturation_flags' (60% confidence)\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2339,
+        "cls": "DOCSTRING",
+        "text": "\"src_py/pipeline.py:5864:\\\"\\\"\\\"Per-star saturation flags as column arrays (replaces ``N`` calls to ``_star_saturation_flags``).\\\"\\\"\\\"\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1327,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1330,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:5768: unused function '_star_saturation_flags' (60% confidence)\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_raw.txt",
+        "line": 302,
+        "cls": "TXT-DUMP",
+        "text": "src_py\\pipeline.py:5768: unused function '_star_saturation_flags' (60% confidence)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1349,
+        "cls": "DOCSTRING",
+        "text": "\"_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1355,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_star_saturation_flags\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 959,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2327,
+        "cls": "DOCSTRING",
+        "text": "\"_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2341,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 423,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_star_saturation_flags`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 18791,
+        "cls": "DOCSTRING",
+        "text": "\"_star_saturation_flags\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 19010,
+        "cls": "DOCSTRING",
+        "text": "\"_star_saturation_flags\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 19026,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 19047,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_star_saturation_flags\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 120,
+        "cls": "DOCSTRING",
+        "text": "`_saturated_core_plateau`, `_star_saturation_flags`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 921,
+        "cls": "TXT-DUMP",
+        "text": "3996  def _star_saturation_flags"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 457,
+        "cls": "TXT-DUMP",
+        "text": "L3813: def _star_saturation_flags("
+      }
+    ]
+  },
+  {
+    "name": "_analyze_calibrated_qc_one",
+    "home": "src_py/pipeline.py:599-624",
+    "n_hits": 26,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 599,
+        "cls": "DEF",
+        "text": "def _analyze_calibrated_qc_one(src: Path) -> dict[str, Any]:"
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 670,
+        "cls": "REAL-OR-OTHER",
+        "text": "ex.submit(_analyze_calibrated_qc_one, src): src"
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 687,
+        "cls": "REAL-OR-OTHER",
+        "text": "rows.append(_analyze_calibrated_qc_one(src))"
+      },
+      {
+        "file": "dev/results/VYVAR_EXCEPT_CENSUS.md",
+        "line": 910,
+        "cls": "DOCSTRING",
+        "text": "| EXC-0438 | `pipeline.py:15917` | Exception | mixed-silent (return) | T1-SCIENCE | `_analyze_calibrated_qc_one` returns `{status: error}` without ERROR log; fr"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 305,
+        "cls": "DOCSTRING",
+        "text": "| 15185 | `_analyze_calibrated_qc_one` | `src` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/sandbox/_except_retriage2_apply.py",
+        "line": 14,
+        "cls": "IMPORT",
+        "text": "TRIAGE: dict[str, dict] = {'EXC-0275': {'tier': 'T1-SCIENCE', 'disposition': 'fix-now', 'evidence': 'Aperture/BPM/COG enhancement failure returns the input cata"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 1036,
+        "cls": "TXT-DUMP",
+        "text": "13350  def _analyze_calibrated_qc_one"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 553,
+        "cls": "TXT-DUMP",
+        "text": "L12244: def _analyze_calibrated_qc_one("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 55,
+        "cls": "DOCSTRING",
+        "text": "\"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 101,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1830,
+        "cls": "DOCSTRING",
+        "text": "\"a\": \"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 59,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 272,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2328,
+        "cls": "DOCSTRING",
+        "text": "\"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2342,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 47,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_analyze_calibrated_qc_one`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 89,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_analyze_calibrated_qc_one`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 14473,
+        "cls": "DOCSTRING",
+        "text": "\"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 23539,
+        "cls": "DOCSTRING",
+        "text": "\"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 23731,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 23754,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 24577,
+        "cls": "DOCSTRING",
+        "text": "\"_analyze_calibrated_qc_one\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 121,
+        "cls": "DOCSTRING",
+        "text": "`_analyze_calibrated_qc_one`, `analyze_calibrated_qc`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 1036,
+        "cls": "TXT-DUMP",
+        "text": "13350  def _analyze_calibrated_qc_one"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 553,
+        "cls": "TXT-DUMP",
+        "text": "L12244: def _analyze_calibrated_qc_one("
+      }
+    ]
+  },
+  {
+    "name": "_obs_fwhm_basename_map_from_db",
+    "home": "src_py/pipeline.py:230-250",
+    "n_hits": 19,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 230,
+        "cls": "DEF",
+        "text": "def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:"
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 16,
+        "cls": "REAL-OR-OTHER",
+        "text": "_obs_fwhm_basename_map_from_db,"
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 218,
+        "cls": "REAL-OR-OTHER",
+        "text": "_fb = _obs_fwhm_basename_map_from_db(_dbc, int(draft_id))"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 164,
+        "cls": "DOCSTRING",
+        "text": "| 2495 | `_obs_fwhm_basename_map_from_db` | `db, draft_id` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 866,
+        "cls": "TXT-DUMP",
+        "text": "1795  def _obs_fwhm_basename_map_from_db"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 403,
+        "cls": "TXT-DUMP",
+        "text": "L1748: def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 59,
+        "cls": "DOCSTRING",
+        "text": "\"_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 126,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2098,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2329,
+        "cls": "DOCSTRING",
+        "text": "\"_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2343,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 910,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:_obs_fwhm_basename_map_from_db`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 16584,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 16604,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 16861,
+        "cls": "DOCSTRING",
+        "text": "\"_obs_fwhm_basename_map_from_db\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 118,
+        "cls": "DOCSTRING",
+        "text": "`_obs_fwhm_basename_map_from_db`, `get_auto_fov`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 866,
+        "cls": "TXT-DUMP",
+        "text": "1795  def _obs_fwhm_basename_map_from_db"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 403,
+        "cls": "TXT-DUMP",
+        "text": "L1748: def _obs_fwhm_basename_map_from_db(db: VyvarDatabase, draft_id: int) -> dict[str, float]:"
+      }
+    ]
+  },
+  {
+    "name": "_quality_inspection_dao_metrics",
+    "home": "src_py/pipeline.py:196-215",
+    "n_hits": 23,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 196,
+        "cls": "DEF",
+        "text": "def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:"
+      },
+      {
+        "file": "src_py/pipeline_calibrate.py",
+        "line": 432,
+        "cls": "DOCSTRING",
+        "text": "\"\"\"Same as :func:`_quality_inspection_dao_metrics` but on an in-memory calibrated image."
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 18,
+        "cls": "REAL-OR-OTHER",
+        "text": "_quality_inspection_dao_metrics,"
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 87,
+        "cls": "REAL-OR-OTHER",
+        "text": "m = _quality_inspection_dao_metrics(tgt)"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 137,
+        "cls": "DOCSTRING",
+        "text": "| 1163 | `_quality_inspection_dao_metrics` | `fp` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 837,
+        "cls": "TXT-DUMP",
+        "text": "550  def _quality_inspection_dao_metrics"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 378,
+        "cls": "TXT-DUMP",
+        "text": "L567: def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 387,
+        "cls": "DOCSTRING",
+        "text": "\"_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 475,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 278,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2100,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2330,
+        "cls": "DOCSTRING",
+        "text": "\"_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2344,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 95,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_quality_inspection_dao_metrics`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 912,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:_quality_inspection_dao_metrics`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15627,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15649,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15704,
+        "cls": "DOCSTRING",
+        "text": "\"_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15984,
+        "cls": "DOCSTRING",
+        "text": "\"_quality_inspection_dao_metrics\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 117,
+        "cls": "DOCSTRING",
+        "text": "`_quality_inspection_dao_metrics`, `_estimate_fov_deg_from_fits_path`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 837,
+        "cls": "TXT-DUMP",
+        "text": "550  def _quality_inspection_dao_metrics"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 378,
+        "cls": "TXT-DUMP",
+        "text": "L567: def _quality_inspection_dao_metrics(fp: Path) -> dict[str, Any]:"
+      }
+    ]
+  },
+  {
+    "name": "_frame_gain_readnoise_for_error_map",
+    "home": "src_py/pipeline.py:149-166",
+    "n_hits": 16,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 149,
+        "cls": "DEF",
+        "text": "def _frame_gain_readnoise_for_error_map("
+      },
+      {
+        "file": "src_py/pipeline.py",
+        "line": 173,
+        "cls": "REAL-OR-OTHER",
+        "text": "gain, rn = _frame_gain_readnoise_for_error_map(hdr, db=db, equipment_id=equipment_id)"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 101,
+        "cls": "DOCSTRING",
+        "text": "| 215 | `_frame_gain_readnoise_for_error_map` | `hdr, db, equipment_id` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 814,
+        "cls": "TXT-DUMP",
+        "text": "163  def _frame_gain_readnoise_for_error_map"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 354,
+        "cls": "TXT-DUMP",
+        "text": "L92: def _frame_gain_readnoise_for_error_map("
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1555,
+        "cls": "DOCSTRING",
+        "text": "\"_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1559,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2331,
+        "cls": "DOCSTRING",
+        "text": "\"_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2345,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13544,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13564,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_frame_gain_readnoise_for_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13579,
+        "cls": "DOCSTRING",
+        "text": "\"_frame_gain_readnoise_for_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 116,
+        "cls": "DOCSTRING",
+        "text": "`_frame_gain_readnoise_for_error_map`, `_per_frame_noise_error_map`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 814,
+        "cls": "TXT-DUMP",
+        "text": "163  def _frame_gain_readnoise_for_error_map"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 354,
+        "cls": "TXT-DUMP",
+        "text": "L92: def _frame_gain_readnoise_for_error_map("
+      }
+    ]
+  },
+  {
+    "name": "_estimate_fov_deg_from_fits_path",
+    "home": "src_py/pipeline.py:218-226",
+    "n_hits": 22,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 218,
+        "cls": "DEF",
+        "text": "def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:"
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 15,
+        "cls": "REAL-OR-OTHER",
+        "text": "_estimate_fov_deg_from_fits_path,"
+      },
+      {
+        "file": "src_py/pipeline_ui_helpers.py",
+        "line": 89,
+        "cls": "REAL-OR-OTHER",
+        "text": "fov_sample_deg = _estimate_fov_deg_from_fits_path(tgt)"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 144,
+        "cls": "DOCSTRING",
+        "text": "| 1455 | `_estimate_fov_deg_from_fits_path` | `fp` | AUDITED-CLEAN |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 844,
+        "cls": "TXT-DUMP",
+        "text": "842  def _estimate_fov_deg_from_fits_path"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 384,
+        "cls": "TXT-DUMP",
+        "text": "L832: def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 414,
+        "cls": "DOCSTRING",
+        "text": "\"_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 445,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 274,
+        "cls": "DOCSTRING",
+        "text": "\"caller-in-other-module:_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2097,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2332,
+        "cls": "DOCSTRING",
+        "text": "\"_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2346,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 91,
+        "cls": "DOCSTRING",
+        "text": "- `caller-in-other-module:_estimate_fov_deg_from_fits_path`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 909,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:_estimate_fov_deg_from_fits_path`"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15841,
+        "cls": "DOCSTRING",
+        "text": "\"_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15860,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15882,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 15983,
+        "cls": "DOCSTRING",
+        "text": "\"_estimate_fov_deg_from_fits_path\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 117,
+        "cls": "DOCSTRING",
+        "text": "`_quality_inspection_dao_metrics`, `_estimate_fov_deg_from_fits_path`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 844,
+        "cls": "TXT-DUMP",
+        "text": "842  def _estimate_fov_deg_from_fits_path"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 384,
+        "cls": "TXT-DUMP",
+        "text": "L832: def _estimate_fov_deg_from_fits_path(fp: Path) -> float | None:"
+      }
+    ]
+  },
+  {
+    "name": "_per_frame_noise_error_map",
+    "home": "src_py/pipeline.py:169-177",
+    "n_hits": 27,
+    "hits": [
+      {
+        "file": "src_py/pipeline.py",
+        "line": 169,
+        "cls": "DEF",
+        "text": "def _per_frame_noise_error_map(data: Any, hdr: fits.Header, *, db: VyvarDatabase | None, equipment_id: int | None):"
+      },
+      {
+        "file": "dev/results/VYVAR_CODE_AUDIT.md",
+        "line": 50,
+        "cls": "DOCSTRING",
+        "text": "`_katalogy_cell_for_pdf`; pipeline.py:207 `_fits_header_positive_float`, :235 `_per_frame_noise_error_map`,"
+      },
+      {
+        "file": "dev/results/VYVAR_CODE_AUDIT.md",
+        "line": 295,
+        "cls": "DOCSTRING",
+        "text": "- `pipeline.py:235 _per_frame_noise_error_map` - [V] no callers/refs in tree (incl. app.py)."
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 59,
+        "cls": "DOCSTRING",
+        "text": "| G1-F008 | **LOW** | L5 | `pipeline.py` (11 funcs) | Dead code confirmed by AST ref-count: `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_au"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 102,
+        "cls": "DOCSTRING",
+        "text": "| 235 | `_per_frame_noise_error_map` | `data, hdr, db, equipment_id` | DEAD |"
+      },
+      {
+        "file": "dev/results/VYVAR_FULL_AUDIT_LEDGER.md",
+        "line": 1170,
+        "cls": "DOCSTRING",
+        "text": "| G1 (5/5) | `_fits_header_positive_float`, `_per_frame_noise_error_map`, `get_auto_fov`, `_cluster_centroid_votes`, `autofill` | **TRULY-DEAD** (all 5) |"
+      },
+      {
+        "file": "dev/scripts/solver_audit.txt",
+        "line": 815,
+        "cls": "TXT-DUMP",
+        "text": "187  def _per_frame_noise_error_map"
+      },
+      {
+        "file": "dev/scripts/vyvar_audit.txt",
+        "line": 355,
+        "cls": "TXT-DUMP",
+        "text": "L116: def _per_frame_noise_error_map(data: Any, hdr: fits.Header, *, db: VyvarDatabase | None, equipment_id: int | None):"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2168,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_per_frame_noise_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2171,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:296: unused function '_per_frame_noise_error_map' (60% confidence)\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/function_class.json",
+        "line": 2176,
+        "cls": "DOCSTRING",
+        "text": "\"dev/tools/docs_pdf/build_flow_doc.py:303:st.append(fn(\\\"photutils.detection.DAOStarFinder (49 vyskytu napric QC/alignment/masterstar/SIPS presety); pipeline.py"
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1227,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_per_frame_noise_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_functions.json",
+        "line": 1230,
+        "cls": "DOCSTRING",
+        "text": "\"raw\": \"src_py\\\\pipeline.py:296: unused function '_per_frame_noise_error_map' (60% confidence)\""
+      },
+      {
+        "file": "dev/results/context/session_20260831_c01a/vulture_raw.txt",
+        "line": 290,
+        "cls": "TXT-DUMP",
+        "text": "src_py\\pipeline.py:296: unused function '_per_frame_noise_error_map' (60% confidence)"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1548,
+        "cls": "DOCSTRING",
+        "text": "\"id\": \"pipeline.py:_per_frame_noise_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1556,
+        "cls": "DOCSTRING",
+        "text": "\"_per_frame_noise_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/clusters.json",
+        "line": 1560,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_per_frame_noise_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2333,
+        "cls": "DOCSTRING",
+        "text": "\"_per_frame_noise_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/modules_raw.json",
+        "line": 2347,
+        "cls": "DOCSTRING",
+        "text": "\"pipeline.py:_per_frame_noise_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/module_map_proposal.md",
+        "line": 1020,
+        "cls": "DOCSTRING",
+        "text": "`_solve_wcs_solve_field_cli`, `get_auto_fov`, `analyze_calibrated_qc`, `_solve_wcs_astrometry_net`, `_saturated_core_plateau`, `_star_saturation_flags`, `_analy"
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13555,
+        "cls": "DOCSTRING",
+        "text": "\"_per_frame_noise_error_map\""
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13571,
+        "cls": "DOCSTRING",
+        "text": "\"name\": \"_per_frame_noise_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260901_e0/symbol_map.json",
+        "line": 13591,
+        "cls": "DOCSTRING",
+        "text": "\"qid\": \"pipeline.py:_per_frame_noise_error_map\","
+      },
+      {
+        "file": "dev/results/context/session_20260903_e6b/REPORT.md",
+        "line": 116,
+        "cls": "DOCSTRING",
+        "text": "`_frame_gain_readnoise_for_error_map`, `_per_frame_noise_error_map`,"
+      },
+      {
+        "file": "dev/sandbox/scripts/solver_audit.txt",
+        "line": 815,
+        "cls": "TXT-DUMP",
+        "text": "187  def _per_frame_noise_error_map"
+      },
+      {
+        "file": "dev/sandbox/scripts/vyvar_audit.txt",
+        "line": 355,
+        "cls": "TXT-DUMP",
+        "text": "L116: def _per_frame_noise_error_map(data: Any, hdr: fits.Header, *, db: VyvarDatabase | None, equipment_id: int | None):"
+      },
+      {
+        "file": "dev/tools/docs_pdf/build_flow_doc.py",
+        "line": 303,
+        "cls": "REAL-OR-OTHER",
+        "text": "st.append(fn(\"photutils.detection.DAOStarFinder (49 vyskytu napric QC/alignment/masterstar/SIPS presety); pipeline.py: per-frame katalogova cesta, _per_frame_no"
+      }
+    ]
+  }
+]

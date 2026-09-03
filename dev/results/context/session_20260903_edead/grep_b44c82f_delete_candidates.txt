@@ -1,0 +1,56 @@
+Word-boundary git grep on b44c82f for the 10 DELETE names.
+Scope: src_py, dev/tests, docs/VYVAR_STATE.md, docs/VYVAR_ROADMAP.md,
+docs/VYVAR_PROCESS.md.
+
+STATE / ROADMAP / PROCESS: zero hits (R5 miss).
+
+src_py / tests (excluding the def lines themselves):
+
+_median_bkg_var_adu2_per_px_from_proc_cache
+  only the def in photometry_core.py:352
+
+_star_mag_for_aperture_sizing
+  only the def in photometry_core.py:419
+
+_is_broadband_photometric_filter
+  def photometry_core.py:482
+  DOCSTRING/comment band_classify.py:250
+    # Legacy broadband prefix heuristic (matches old ``_is_broadband_photometric_filter``)
+  reworded on delete (89a34c7)
+
+get_auto_fov
+  only the def in pipeline.py:253
+
+_solve_wcs_solve_field_cli
+  only the def in pipeline.py:322
+  TXT-DUMP: dev/scripts/vyvar_audit.txt:430, solver_audit.txt:894
+  (not executed)
+
+_solve_wcs_astrometry_net
+  only the def in pipeline.py:420
+  TXT-DUMP: vyvar_audit.txt:432, solver_audit.txt:896
+  neighbor name _try_solve_wcs_astrometry_net_or_local_cli is different
+  _solve_wcs_external in pipeline_astrometry.py is different and stays
+
+_per_frame_noise_error_map
+  def pipeline.py:169
+  sole internal callee of _frame_gain_readnoise_for_error_map at :173
+  zero external refs
+
+_frame_gain_readnoise_for_error_map
+  def pipeline.py:149
+  sole caller _per_frame_noise_error_map (transitive)
+
+_saturated_core_plateau
+  def pipeline.py:501
+  internal calls from _star_saturation_flags :558/:564
+  DOCSTRING pipeline_catalog.py:1454 (vectorized replacement)
+  SUBSTRING _saturated_core_plateau_vectorized (different name; stays)
+
+_star_saturation_flags
+  def pipeline.py:539
+  DOCSTRING pipeline_catalog.py:1488
+  no other callers
+
+Facade getattr tests: no entries for these 10 names
+(test_consolidate_e6a_facade lists _saturated_core_plateau_vectorized only).
