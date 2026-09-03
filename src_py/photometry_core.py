@@ -1245,12 +1245,6 @@ from photometry_comp import (  # noqa: E402,F401
 import functools
 import sys
 import photometry_comp as _photometry_comp  # noqa: E402
-_photometry_comp._enrich_active_targets_bp_rp = (
-    lambda *a, **k: _enrich_active_targets_bp_rp(*a, **k)
-)
-_photometry_comp._ensure_active_target_display_names = (
-    lambda *a, **k: _ensure_active_target_display_names(*a, **k)
-)
 _e3_select_active_targets = _photometry_comp.select_active_targets
 
 @functools.wraps(_e3_select_active_targets)

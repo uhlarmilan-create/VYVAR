@@ -259,11 +259,11 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
     vt.to_csv(vt_csv, index=False)
 
     monkeypatch.setattr(
-        "photometry_core._enrich_active_targets_bp_rp",
+        "photometry_comp._enrich_active_targets_bp_rp",
         lambda df, **k: df,
     )
     monkeypatch.setattr(
-        "photometry_core._ensure_active_target_display_names",
+        "photometry_comp._ensure_active_target_display_names",
         lambda df: df,
     )
 
