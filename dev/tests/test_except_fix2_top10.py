@@ -256,7 +256,7 @@ def test_exc0389_stress_sidecar_skip_counted(
     bad = proc_csv_path_for_aligned_fits(frames / "f1.fits")
     bad.write_bytes(b"\xff\xfe bad")
     monkeypatch.setattr(
-        "pipeline.extract_fits_metadata",
+        "pipeline_gate_helpers.extract_fits_metadata",
         lambda *_a, **_k: {"jd_start": 2450000.5},
     )
     reset_except_fix_counters()
