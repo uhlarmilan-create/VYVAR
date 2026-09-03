@@ -16237,12 +16237,13 @@ _cal_batch_cal_diag: CalDiagSession | None = None
 
 
 def _init_calibrate_batch_worker(
-    initargs: tuple[str | None, int | None, dict[str, Any] | None],
+    _md_s: str | None,
+    native_b: int | None,
+    cal_diag_blob: dict[str, Any] | None,
 ) -> None:
     """Per-subprocess caches; ``native_binning`` = CalibrationLibrary master convention (``None`` = read FITS)."""
     global _cal_batch_flat_cache, _cal_batch_flat_median, _cal_batch_md_preload
     global _cal_batch_native_binning, _cal_batch_cal_diag
-    _md_s, native_b, cal_diag_blob = initargs
     _ = _md_s  # path reserved for future worker-side dark preload
     _cal_batch_flat_cache = {}
     _cal_batch_flat_median = {}
