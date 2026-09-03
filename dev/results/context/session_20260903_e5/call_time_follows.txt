@@ -1,0 +1,24 @@
+Call-time follows (R-FACADE / patch-by-string):
+
+_fit_subtract_preprocess_sky_surface
+    test: dev/tests/test_osc1_extraction.py:200
+        monkeypatch.setattr(pl, "_fit_subtract_preprocess_sky_surface", _track)
+    caller: _qc_enrich_one_frame in pipeline_calibrate
+    follow: pipeline.py EOF
+        _pipeline_calibrate._fit_subtract_preprocess_sky_surface = (
+            lambda *a, **k: _fit_subtract_preprocess_sky_surface(*a, **k)
+        )
+    verified: test_sky_surface_not_on_mosaic_regression PASS after C2
+
+Sweep of monkeypatch.setattr on pipeline names in dev/tests:
+    pipeline.AppConfig -- not an E5 name
+    pipeline._fill_masterstars_gaia_matched_bp_rp_from_local_db -- not E5
+    pipeline.log_event / LOGGER -- not E5
+    pipeline._fit_subtract_preprocess_sky_surface -- FOLLOWED (above)
+    pipeline._astrometry_align_impl_body -- not E5
+    pipeline.catalog_cone_radius_deg_from_optics -- not E5
+    pipeline.extract_fits_metadata -- already followed in E1
+    pipeline._all_pix2world_icrs_deg -- not E5
+    pipeline._fill_psf_catalog_columns -- not E5
+
+No additional follows.

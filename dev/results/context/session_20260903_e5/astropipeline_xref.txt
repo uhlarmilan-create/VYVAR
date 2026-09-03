@@ -1,0 +1,28 @@
+AstroPipeline (stays in pipeline.py) references these E5 bucket names
+as plain names. Facade re-exports keep them bound in pipeline's namespace.
+
+_cal_diag_export_for_workers
+_calibrate_batch_process_one
+_calibrate_one_light_disk
+_cfg_calibration_library_native_binning
+_db_for_calibration_tasks
+_init_calibrate_batch_worker
+_light_binning_from_path
+_log_calibration_io_preflight
+_match_and_crop_pair
+_obs_group_key_from_light_path
+_pipeline_ui_error
+_qc_pack_from_config
+_saturation_adu_for_cal_diag
+_vyvar_calibrate_multiprocessing_enabled
+apply_perf10_dao_qc_to_obs_files
+calibrate_lights_to_calibrated
+run_osc_channel_extraction_for_archive
+
+Also uses stay-behind names (not moved):
+analyze_calibrated_qc
+preprocess_calibrated_to_processed
+_qc_suggest_thresholds
+extract_fits_metadata (fits_meta via facade)
+run_cal_diag_pregate / is_obs_group_aborted / gate_result_for_frame / dark_np_for_cal_diag
+LOGGER

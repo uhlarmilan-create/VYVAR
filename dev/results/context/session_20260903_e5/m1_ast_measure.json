@@ -1,0 +1,448 @@
+{
+  "head_note": "measured on current pipeline.py AST",
+  "n_bucket": 76,
+  "n_found": 76,
+  "missing": [],
+  "total_span_lines_incl_ap": 4121,
+  "move_span_lines": 3614,
+  "astro_pipeline": {
+    "start": 18399,
+    "end": 18905,
+    "lines": 507
+  },
+  "init_args": [
+    "initargs"
+  ],
+  "spans": {
+    "AstroPipeline": {
+      "start": 18399,
+      "end": 18905,
+      "lines": 507
+    },
+    "calibrate_lights_to_calibrated": {
+      "start": 16487,
+      "end": 16956,
+      "lines": 470
+    },
+    "run_draft_ram_calibration_qc_to_obs_files": {
+      "start": 1770,
+      "end": 2055,
+      "lines": 286
+    },
+    "_calibrate_one_light_apply_masters_in_ram": {
+      "start": 15852,
+      "end": 16049,
+      "lines": 198
+    },
+    "_qc_enrich_calibrated_in_place": {
+      "start": 17802,
+      "end": 17988,
+      "lines": 187
+    },
+    "scan_calibrated_lights_pointing": {
+      "start": 18217,
+      "end": 18384,
+      "lines": 168
+    },
+    "_qc_enrich_one_frame": {
+      "start": 17607,
+      "end": 17758,
+      "lines": 152
+    },
+    "_fit_subtract_preprocess_sky_surface": {
+      "start": 17332,
+      "end": 17460,
+      "lines": 129
+    },
+    "_calibrate_one_light_disk": {
+      "start": 16104,
+      "end": 16229,
+      "lines": 126
+    },
+    "_robust_frame_fwhm_median": {
+      "start": 17038,
+      "end": 17158,
+      "lines": 121
+    },
+    "_calibrate_batch_process_one": {
+      "start": 16260,
+      "end": 16375,
+      "lines": 116
+    },
+    "apply_perf10_dao_qc_to_obs_files": {
+      "start": 1664,
+      "end": 1767,
+      "lines": 104
+    },
+    "_passthrough_lights_to_calibrated": {
+      "start": 16383,
+      "end": 16484,
+      "lines": 102
+    },
+    "run_osc_channel_extraction_for_archive": {
+      "start": 17463,
+      "end": 17564,
+      "lines": 102
+    },
+    "estimate_archive_memory_profile": {
+      "start": 2273,
+      "end": 2356,
+      "lines": 84
+    },
+    "_quality_inspection_dao_metrics_array": {
+      "start": 1377,
+      "end": 1455,
+      "lines": 79
+    },
+    "_post_calibration_qc_eval": {
+      "start": 15696,
+      "end": 15772,
+      "lines": 77
+    },
+    "_mean_hfr_bright_stars_dao": {
+      "start": 15631,
+      "end": 15693,
+      "lines": 63
+    },
+    "sync_obs_files_drift_arcmin_for_draft": {
+      "start": 1582,
+      "end": 1641,
+      "lines": 60
+    },
+    "_moment_fwhm_elong_peak_at": {
+      "start": 16980,
+      "end": 17035,
+      "lines": 56
+    },
+    "_sync_obs_calibration_state_with_retry": {
+      "start": 16052,
+      "end": 16101,
+      "lines": 50
+    },
+    "_effective_saturation_limit": {
+      "start": 4892,
+      "end": 4940,
+      "lines": 49
+    },
+    "_filter_light_paths_maybe": {
+      "start": 962,
+      "end": 1003,
+      "lines": 42
+    },
+    "_inspection_jd_from_header": {
+      "start": 1276,
+      "end": 1316,
+      "lines": 41
+    },
+    "_qc_fwhm_elongation": {
+      "start": 17161,
+      "end": 17201,
+      "lines": 41
+    },
+    "_vyvar_parallel_worker_count": {
+      "start": 17203,
+      "end": 17240,
+      "lines": 38
+    },
+    "_log_calibration_io_preflight": {
+      "start": 819,
+      "end": 852,
+      "lines": 34
+    },
+    "_qc_pack_from_config": {
+      "start": 15559,
+      "end": 15591,
+      "lines": 33
+    },
+    "estimate_memory_from_fits_headers": {
+      "start": 2239,
+      "end": 2270,
+      "lines": 32
+    },
+    "_estimate_fov_deg_from_header": {
+      "start": 1540,
+      "end": 1567,
+      "lines": 28
+    },
+    "_sync_manifest_cal_stage_from_qc_row": {
+      "start": 17775,
+      "end": 17799,
+      "lines": 25
+    },
+    "draft_median_pointing_icrs_deg": {
+      "start": 1458,
+      "end": 1480,
+      "lines": 23
+    },
+    "_decide_preprocess_sky_action": {
+      "start": 17583,
+      "end": 17604,
+      "lines": 22
+    },
+    "_resolve_draft_light_raw_path": {
+      "start": 1036,
+      "end": 1057,
+      "lines": 22
+    },
+    "_infer_sat_limit_from_bitpix": {
+      "start": 4852,
+      "end": 4871,
+      "lines": 20
+    },
+    "_strip_raw_linearity_header_keywords": {
+      "start": 15776,
+      "end": 15795,
+      "lines": 20
+    },
+    "_init_calibrate_batch_worker": {
+      "start": 16239,
+      "end": 16257,
+      "lines": 19
+    },
+    "_calibration_flags": {
+      "start": 15817,
+      "end": 15834,
+      "lines": 18
+    },
+    "_dao_star_table_mean_roundness": {
+      "start": 1356,
+      "end": 1373,
+      "lines": 18
+    },
+    "_half_flux_radius_in_cutout": {
+      "start": 15611,
+      "end": 15628,
+      "lines": 18
+    },
+    "_saturation_adu_for_cal_diag": {
+      "start": 776,
+      "end": 793,
+      "lines": 18
+    },
+    "_resolve_dark_path_for_light": {
+      "start": 757,
+      "end": 773,
+      "lines": 17
+    },
+    "_archive_preprocess_lights_root": {
+      "start": 1191,
+      "end": 1206,
+      "lines": 16
+    },
+    "_log_calibration_metadata_diagnostic": {
+      "start": 3182,
+      "end": 3197,
+      "lines": 16
+    },
+    "_fits_primary_pixel_count": {
+      "start": 2212,
+      "end": 2226,
+      "lines": 15
+    },
+    "_pipeline_ui_error": {
+      "start": 891,
+      "end": 905,
+      "lines": 15
+    },
+    "_qc_center_crop_for_stars": {
+      "start": 15594,
+      "end": 15608,
+      "lines": 15
+    },
+    "_db_for_calibration_tasks": {
+      "start": 15543,
+      "end": 15556,
+      "lines": 14
+    },
+    "_perf10_lookup_qc": {
+      "start": 1648,
+      "end": 1661,
+      "lines": 14
+    },
+    "_saturate_limit_adu_from_header": {
+      "start": 4785,
+      "end": 4798,
+      "lines": 14
+    },
+    "_calibration_type_from_flags": {
+      "start": 15837,
+      "end": 15849,
+      "lines": 13
+    },
+    "_exposure_sec_from_header": {
+      "start": 1319,
+      "end": 1331,
+      "lines": 13
+    },
+    "format_memory_bytes": {
+      "start": 2197,
+      "end": 2209,
+      "lines": 13
+    },
+    "_infer_raw_light_path_for_calibrated": {
+      "start": 17761,
+      "end": 17772,
+      "lines": 12
+    },
+    "_cal_diag_session_from_export": {
+      "start": 796,
+      "end": 806,
+      "lines": 11
+    },
+    "_match_and_crop_pair": {
+      "start": 923,
+      "end": 933,
+      "lines": 11
+    },
+    "_pick_light_for_metadata_diagnostic": {
+      "start": 949,
+      "end": 959,
+      "lines": 11
+    },
+    "_cfg_calibration_library_native_binning": {
+      "start": 721,
+      "end": 729,
+      "lines": 9
+    },
+    "_estimate_dao_fwhm_guess": {
+      "start": 16969,
+      "end": 16977,
+      "lines": 9
+    },
+    "_archive_root_from_lights_root": {
+      "start": 746,
+      "end": 753,
+      "lines": 8
+    },
+    "_available_system_ram_bytes": {
+      "start": 2229,
+      "end": 2236,
+      "lines": 8
+    },
+    "_vy_calib_status_numeric": {
+      "start": 15798,
+      "end": 15805,
+      "lines": 8
+    },
+    "_vyvar_parallel_pool": {
+      "start": 9337,
+      "end": 9344,
+      "lines": 8
+    },
+    "_hdr_vy_cflag_str": {
+      "start": 15808,
+      "end": 15814,
+      "lines": 7
+    },
+    "_header_vyskyord": {
+      "start": 17574,
+      "end": 17580,
+      "lines": 7
+    },
+    "norm_fits_path_key": {
+      "start": 1130,
+      "end": 1135,
+      "lines": 6
+    },
+    "_obs_group_key_from_light_path": {
+      "start": 733,
+      "end": 737,
+      "lines": 5
+    },
+    "_cal_diag_export_for_workers": {
+      "start": 809,
+      "end": 812,
+      "lines": 4
+    },
+    "_light_binning_from_path": {
+      "start": 740,
+      "end": 743,
+      "lines": 4
+    },
+    "_vyvar_calibrate_multiprocessing_enabled": {
+      "start": 715,
+      "end": 718,
+      "lines": 4
+    },
+    "_vyvar_parallel_use_processes": {
+      "start": 9330,
+      "end": 9333,
+      "lines": 4
+    },
+    "_iter_light_fits": {
+      "start": 940,
+      "end": 942,
+      "lines": 3
+    },
+    "_vyvar_qc_preprocess_workers": {
+      "start": 17243,
+      "end": 17245,
+      "lines": 3
+    },
+    "SkySurfaceOrderConflictError": {
+      "start": 17567,
+      "end": 17568,
+      "lines": 2
+    },
+    "_has_usable_master_dark": {
+      "start": 16378,
+      "end": 16379,
+      "lines": 2
+    },
+    "_has_valid_wcs": {
+      "start": 3903,
+      "end": 3904,
+      "lines": 2
+    }
+  },
+  "stay_top_called_by_move": [],
+  "stay_mod_used_by_move": [
+    "LOGGER",
+    "SAT_LIMIT_CONTAINER_CLIP_ADU"
+  ],
+  "module_level_only_bucket": [],
+  "known_state": [
+    "_CALIB_MASTER_NB_UNSET",
+    "_cal_batch_cal_diag",
+    "_cal_batch_flat_cache",
+    "_cal_batch_flat_median",
+    "_cal_batch_md_preload",
+    "_cal_batch_native_binning"
+  ],
+  "epsf_pipeline_imports": [
+    {
+      "file": "epsf_psf_merge.py",
+      "line": 107,
+      "text": "from pipeline import _vyvar_df_to_csv"
+    },
+    {
+      "file": "epsf_psf_merge.py",
+      "line": 337,
+      "text": "from pipeline import _fill_psf_catalog_columns"
+    },
+    {
+      "file": "epsf_psf_merge.py",
+      "line": 395,
+      "text": "from pipeline import _epsf_fit_catalog_ids, _export_catalog_psf_st_fields"
+    }
+  ],
+  "astropipeline_move_name_refs": [
+    "_cal_diag_export_for_workers",
+    "_calibrate_batch_process_one",
+    "_calibrate_one_light_disk",
+    "_cfg_calibration_library_native_binning",
+    "_db_for_calibration_tasks",
+    "_init_calibrate_batch_worker",
+    "_light_binning_from_path",
+    "_log_calibration_io_preflight",
+    "_match_and_crop_pair",
+    "_obs_group_key_from_light_path",
+    "_pipeline_ui_error",
+    "_qc_pack_from_config",
+    "_saturation_adu_for_cal_diag",
+    "_vyvar_calibrate_multiprocessing_enabled",
+    "apply_perf10_dao_qc_to_obs_files",
+    "calibrate_lights_to_calibrated",
+    "run_osc_channel_extraction_for_archive"
+  ]
+}

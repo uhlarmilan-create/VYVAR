@@ -1,0 +1,16 @@
+Lazy imports (E4 mechanism) inside pipeline_calibrate for names
+still physical in pipeline.py:
+
+_effective_saturation_limit:
+    from pipeline import SAT_LIMIT_CONTAINER_CLIP_ADU
+
+No stay-behind function names are called by the 75 moved defs
+(AST Load sweep: stay_top_called = []).
+
+LOGGER is not imported from pipeline (that would be a spawn cycle).
+pipeline_calibrate binds LOGGER = logging.getLogger("pipeline") so
+log records stay on the same named logger as pipeline.LOGGER
+(logging.getLogger singleton).
+
+SAT_LIMIT_* constants stay in pipeline.py (used by stay-behind
+inv_sat_limit_peak_test_adu and MASTERSTAR zone path).
