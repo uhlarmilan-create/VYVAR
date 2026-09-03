@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
+import json
 import logging
 import math
 from astropy.io import fits as astrofits
@@ -20,17 +21,131 @@ from photometry_core import (
     ERR_BKG_SOURCE_EMPIRICAL,
     _APERTURE_SIZING_MAG_COLS,
     _GAIA_ID_DTYPE,
-    _build_star_exclusion_mask,
-    _canonicalize_star_xy,
-    _clamp_err_empty_apertures_min,
-    _labbe_append_debug_record,
     _normalize_gaia_id,
-    _robust_scatter_mad,
     compute_per_frame_cog_correction,
+    _MAD_CONSISTENCY,
 )
 
 if TYPE_CHECKING:
     from photometry_core import _Phase2AState
+
+def _clamp_err_empty_apertures_min(n: int) -> int:
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        v = 16
+    return max(1, min(256, v))
+
+
+def _robust_scatter_mad(values: np.ndarray) -> float:
+    """Sigma-clipped MAD scatter (Labbe et al. 2003 empty-aperture convention)."""
+    arr = np.asarray(values, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size < 3:
+        return float("nan")
+    med = float(np.median(arr))
+    mad = float(np.median(np.abs(arr - med)))
+    if mad <= 0:
+        return 0.0
+    return mad / _MAD_CONSISTENCY
+
+
+def _build_star_exclusion_mask(
+    shape: tuple[int, ...],
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+    exclusion_radius_px: float,
+    edge_margin_px: float,
+) -> np.ndarray:
+    """Boolean mask: True where empty apertures must not be placed."""
+    ny, nx = int(shape[0]), int(shape[1])
+    blocked = np.zeros((ny, nx), dtype=bool)
+    em = int(math.ceil(max(0.0, float(edge_margin_px))))
+    if em > 0:
+        blocked[:em, :] = True
+        blocked[-em:, :] = True
+        blocked[:, :em] = True
+        blocked[:, -em:] = True
+    ex_r = float(exclusion_radius_px)
+    if ex_r <= 0:
+        return blocked
+    ex_r2 = ex_r * ex_r
+    xs = np.asarray(star_x, dtype=np.float64)
+    ys = np.asarray(star_y, dtype=np.float64)
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    # Canonical order: mask is OR-commutative, but keep draw/debug paths order-stable.
+    order = np.lexsort((xs[ok], ys[ok]))
+    xs_s = xs[ok][order]
+    ys_s = ys[ok][order]
+    for xi, yi in zip(xs_s, ys_s):
+        x0 = max(0, int(math.floor(float(xi) - ex_r)) - 1)
+        x1 = min(nx, int(math.ceil(float(xi) + ex_r)) + 2)
+        y0 = max(0, int(math.floor(float(yi) - ex_r)) - 1)
+        y1 = min(ny, int(math.ceil(float(yi) + ex_r)) + 2)
+        yy, xx = np.ogrid[y0:y1, x0:x1]
+        dist2 = (xx - float(xi)) ** 2 + (yy - float(yi)) ** 2
+        blocked[y0:y1, x0:x1] |= dist2 <= ex_r2
+    return blocked
+
+
+def _canonicalize_star_xy(
+    star_x: np.ndarray,
+    star_y: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """Sort finite (x,y) pairs and return (xs, ys, sha256 hex of canonical list)."""
+    import hashlib
+
+    xs = np.asarray(star_x, dtype=np.float64).ravel()
+    ys = np.asarray(star_y, dtype=np.float64).ravel()
+    n = min(xs.size, ys.size)
+    xs, ys = xs[:n], ys[:n]
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    xs, ys = xs[ok], ys[ok]
+    if xs.size == 0:
+        return xs, ys, hashlib.sha256(b"").hexdigest()
+    order = np.lexsort((xs, ys))
+    xs, ys = xs[order], ys[order]
+    # Deduplicate exact duplicates after sort (stable membership).
+    if xs.size > 1:
+        keep = np.empty(xs.size, dtype=bool)
+        keep[0] = True
+        keep[1:] = (xs[1:] != xs[:-1]) | (ys[1:] != ys[:-1])
+        xs, ys = xs[keep], ys[keep]
+    blob = np.column_stack([xs, ys]).astype("<f8", copy=False).tobytes()
+    return xs, ys, hashlib.sha256(blob).hexdigest()
+
+
+def _labbe_debug_dump_enabled() -> bool:
+    import os
+
+    return str(os.environ.get("VYVAR_LABBE_DEBUG_DUMP", "")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _labbe_debug_dump_path() -> Path:
+    import os
+
+    raw = str(os.environ.get("VYVAR_LABBE_DEBUG_DUMP_PATH", "")).strip()
+    if raw:
+        return Path(raw)
+    return Path("tmp") / "labbe_debug_dump.jsonl"
+
+
+def _labbe_append_debug_record(record: dict[str, Any]) -> None:
+    if not _labbe_debug_dump_enabled():
+        return
+    path = _labbe_debug_dump_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, sort_keys=True, default=str) + "\n")
+    except OSError:
+        pass
+
 
 def _sigma_bkg_r_key(r: float) -> float:
     """Canonical dict key for per-radius ``sigma_bkg_ap`` transport.

@@ -32,7 +32,6 @@ from photometry_core import (
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
     _GAIA_ID_DTYPE,
-    _clamp_err_empty_apertures_min,
 )
 
 # Bound by photometry_core after photometry_gate_helpers loads (cycle break:
@@ -42,6 +41,7 @@ _sky_pp_for_photometric_error = None
 _coerce_bool_cell = None
 _assert_inv_err_sigma_acct_01 = None
 _clamp_err_empty_apertures_n = None
+_clamp_err_empty_apertures_min = None
 _labbe_content_seed_from_header = None
 _sigma_bkg_r_key = None
 _sky_pp_from_annulus_image = None
