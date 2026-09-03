@@ -1,0 +1,52 @@
+Call-time follows CONSOLIDATE-01E6b.
+
+Lambda-equivalent (call-time facade import inside giant body):
+
+  _fill_masterstars_gaia_matched_bp_rp_from_local_db
+    test: test_invariants_p2.py:362 (monkeypatch.setattr on pipeline facade)
+    home: pipeline_astrometry (E6a)
+    caller: generate_masterstar_and_catalog (now masterstar_build.py:1715)
+    mechanism: `from pipeline import _fill_masterstars_gaia_matched_bp_rp_from_local_db`
+      immediately before the call site (not module-level from pipeline_astrometry).
+    E6a carry-forward: DONE this wave.
+
+Call-time `from pipeline import` (pipeline-physical constants / sibling giants):
+
+  masterstar_build.generate_masterstar_and_catalog (function start):
+    SAT_LIMIT_CONTAINER_CLIP_ADU
+    SAT_LIMIT_NO_KNEE_FRAC
+    _MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG
+    _MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX
+    _MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX
+    _MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX
+    _MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO
+    _MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG
+    _PLATESOLVE_ANISOTROPY_THRESHOLD
+    detect_stars_and_match_catalog  (also E3-importable from catalog_match;
+      call-time facade keeps a single resolution path)
+
+  astrometry_align._astrometry_align_impl_body (function start):
+    export_per_frame_catalogs
+    generate_masterstar_and_catalog
+
+  pipeline_astrometry callers of _astrometry_align_impl_body:
+    already used call-time facade imports (E6a); no change this wave.
+    test_astrometry_fault_isolation.py:59/82/96 patches still bite.
+
+Re-export suffices (no follow):
+  export_per_frame_catalogs -- test_pre_cal_proc_csv_naming_e2e.py:70
+    facade import; re-export covers.
+  detect_stars_and_match_catalog -- pipeline_catalog.py:3386 call-time facade.
+  E6a spawn smoke -- still imports worker names from the facade on purpose.
+
+Monkeypatch sweep delta vs E6a four-name list:
+  same names as E6a plus the four giant names themselves.
+  _astrometry_align_impl_body patches stay on facade (callers already call-time).
+  _fill_masterstars... follow added this wave (above).
+  LOGGER patch in test_invariants_p2.py:365 is on the facade logger; giants
+    bind logging.getLogger("pipeline") which is the same named logger.
+  No fifth patched name whose exercised caller is a giant and whose
+    call-time-import mechanism does not fit.
+
+No lambda follows added on the facade this wave (the fill-masterstars
+follow is inside the moved body, not a facade-to-home lambda).

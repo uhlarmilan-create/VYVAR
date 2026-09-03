@@ -1,0 +1,16 @@
+Moved names CONSOLIDATE-01E6b (four giants)
+
+catalog_match.py
+  detect_stars_and_match_catalog  (1372 def-lines; 1450 assembled)
+
+frame_export.py
+  export_per_frame_catalogs  (1101 def-lines; 1179 assembled)
+
+masterstar_build.py
+  generate_masterstar_and_catalog  (2540 def-lines; 2643 assembled)
+
+astrometry_align.py
+  _astrometry_align_impl_body  (1049 def-lines; 1135 assembled)
+
+pipeline.py after C4: 1476 lines (was 7533 at E6a close).
+AstroPipeline stays (C-C).

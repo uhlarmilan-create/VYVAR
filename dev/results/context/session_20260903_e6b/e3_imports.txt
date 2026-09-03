@@ -1,0 +1,65 @@
+E3 module-level imports in the four giant modules (CONSOLIDATE-01E6b).
+
+catalog_match.py
+  pipeline_catalog: _all_pix2world_icrs_deg, _apply_wcs_tan_fragment_to_header,
+    _box_peaks_at_centroids, _catalog_df_cap_brightest_by_mag, _chord_to_arcsec,
+    _dao_auto_binning_factor, _dao_convolved_background_rms_adu, _dao_noise_sigma_adu,
+    _dao_spatial_flux_cap_row_indices, _detect_empirical_clip_level_adu,
+    _effective_field_catalog_cone_radius_deg, _exo_host_annotation_arrays,
+    _gaia_chip_xy_from_catalog, _icrs_deg_to_unitxyz, _mean_bin2d_for_dao,
+    _prefilter_dao_table_brightest, _proc_rename_det_names_to_catalog_id,
+    _proc_sat_block_for_csv, _query_exoplanet_local, _query_gaia_local,
+    _query_vsx_local, _resolve_peak_saturation_limit_adu, _slice_exo_annotation,
+    _vectorized_star_saturation_columns, _write_field_catalog_cone_meta,
+    build_ucac_catalog_kdtree, nearest_sky_nn_kdtree
+  pipeline_astrometry: _catalog_match_radius_px, _vyvar_df_to_csv,
+    resolve_plate_solve_fov_deg_hint
+  pipeline_calibrate: _effective_saturation_limit
+  outer: utils (DAO_STAR_FINDER_NO_ROUNDNESS_FILTER, dao_detection_fwhm_pixels,
+    fits_binning_xy_from_header, wcs_distortion_log_suffix),
+    masterstar_gaia_accounting (_dao_xy_binned_to_full),
+    plain_stats, infolog, dao_reconcile, photometry_core, gaia_catalog_id, config
+
+frame_export.py
+  pipeline_catalog: _EXPORT_PER_FRAME_WORKER_STATE, initializer, both worker
+    tasks, cone-cache helpers, fill/export catalog helpers, query_gaia/vsx,
+    detect_stars_match_master_reference, find_qc_metrics_csv, ...
+  pipeline_astrometry: _equipment_saturate_adu_from_db, _export_catalog_psf_st_fields,
+    _vyvar_df_to_csv, _vyvar_per_frame_csv_workers, resolve_plate_solve_fov_deg_hint
+  pipeline_calibrate: _has_valid_wcs, _resolve_draft_light_raw_path
+  catalog_match: detect_stars_and_match_catalog  (E3 after C1)
+  outer: database.VyvarDatabase, utils.iter_fits_paths_recursive (aliased),
+    infolog, proc_frame_store, config
+
+masterstar_build.py
+  pipeline_astrometry: equipment saturate, plate-solve bundle, path helpers,
+    sync comparison stars, rescale WCS, update obs status, _vyvar_df_to_csv,
+    _vyvar_open_database, build_masterstar_from_detrended, compute_plate_scale_from_db,
+    draft_is_multi_group_obs, get_masterstar_candidate(s), resolve_masterstar_input_root,
+    resolve_plate_solve_fov_deg_hint, write_photometry_plan_files
+    NOTE: _fill_masterstars_gaia_matched_bp_rp_from_local_db is NOT E3
+    (call-time facade import; patched by test_invariants_p2.py:362)
+  pipeline_catalog: _annotate_masterstars_flux_zones,
+    _effective_field_catalog_cone_radius_deg, _invalidate_field_catalog_cone_cache_if_needed
+  pipeline_calibrate: _effective_saturation_limit, _has_valid_wcs,
+    draft_median_pointing_icrs_deg
+  pipeline_preprocess: resolve_obs_file_to_processed_fits
+  outer: database, photometry, utils (iter_fits aliased), vyvar_platesolver
+    (pointing_hint_from_header aliased), plain_stats, infolog, optics_selection,
+    gaia_catalog_id, masterstar_context, photometry_core, dao_reconcile, config
+
+astrometry_align.py
+  pipeline_astrometry: _apply_wcs_header_to_fits, _assert_alignment_produced_fits,
+    _ensure_parent_dirs_for_aligned_fits, _equipment_saturate_adu_from_db,
+    _photometry_mode_run_flags, _pipeline_ui_info, _solve_wcs_external,
+    _vyvar_open_database, _wcs_field_center_radec_deg, compute_plate_scale_from_db,
+    resolve_plate_solve_fov_deg_hint, write_photometry_plan_files
+  pipeline_catalog: _finalize_hybrid_bkg_fallback_sidecar,
+    _pick_reference_frame_by_star_count
+  pipeline_calibrate: _has_valid_wcs, _pipeline_ui_error,
+    _vyvar_parallel_worker_count, estimate_archive_memory_profile
+  outer: vyvar_alignment_frame (A-durable MP init/task), database, utils,
+    vyvar_platesolver (pointing_hint aliased), infolog, optics_selection, config
+
+No module-level from pipeline import (except inside function bodies as
+sanctioned call-time imports). No cycle observed.

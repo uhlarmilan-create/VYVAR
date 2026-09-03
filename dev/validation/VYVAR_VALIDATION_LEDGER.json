@@ -45,7 +45,7 @@
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
       "last_verified": "2026-09-03",
-      "commit": "bcead65",
+      "commit": "bf0ddfb",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (v2 content core af218acd n=160; extended ada5caff n=210; v1 history 9367f998/d3cefff3). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
       "last_verified": "2026-09-03",
-      "commit": "bcead65",
+      "commit": "bf0ddfb",
       "notes": "APERTURE-01d lock. ANCHOR-HASH-01: mixed v2 sha_core_v2/sha_ext_v2 (empty PSF LCs) kept as history. EPSF-CHAIN-01 split: gate is sha_core_aperture era04_aperture d55fcc9d n=53 and sha_ext_aperture cc8b532e n=157. core_psf is VL-ANCHOR-EPSF01. v1 9367f998/d3cefff3 kept as history. Supersedes ERA-03 core 9902d918 (n=121). era03 freeze kept on disk, not overwritten. candidate1/2/3 kept. Three POOL-STARVE empty_comp_drop allowlisted. CSS/HAT-188 tagged CROWDING (VSX not force-injected).",
       "census_fingerprint": {
         "n_raw_dao": 2246,

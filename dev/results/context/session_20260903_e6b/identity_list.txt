@@ -1,0 +1,21 @@
+Identity list CONSOLIDATE-01E6b (four giant bodies).
+
+Exception classes raised/caught in the four bodies:
+  ValueError, RuntimeError, FileNotFoundError -- builtins.
+  InvariantViolation -- already call-time imported from invariants_runtime
+    inside generate_masterstar_and_catalog (pipeline.py historically 4369,
+    4659, 4672, 4800). Moves with the body; not a pipeline.py sentinel.
+  last_exc -- a local variable used in `raise last_exc`, not a class.
+
+Sentinels / identity-sensitive objects:
+  none defined in the four bodies.
+  SAT_LIMIT_* stay in pipeline.py (call-time imported into masterstar_build).
+  _EXO_HOST_ANNOTATION_COLUMNS stays in pipeline.py; not loaded by the
+    four bodies (lazy-imported by M2/M3 helpers they call).
+  _CALIB_MASTER_NB_UNSET / SkySurfaceOrderConflictError -- E5, not this wave.
+
+SAT_LIMIT twin (documented, not identity-sensitive):
+  pipeline.py:493 SAT_LIMIT_NO_KNEE_FRAC = 0.80
+  pipeline_catalog.py:59 SAT_LIMIT_NO_KNEE_FRAC = 0.80
+  Guard: test_sat_limit_twin_guard.py (C5).
+  No other numeric twin introduced this wave.
