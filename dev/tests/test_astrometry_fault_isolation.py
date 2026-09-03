@@ -56,7 +56,9 @@ def test_astrometry_multi_group_skips_failed_set(tmp_path: Path, monkeypatch):
             "solved": True,
         }
 
-    monkeypatch.setattr(pl, "_astrometry_align_impl_body", _fake_impl)
+    import astrometry_align
+
+    monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _fake_impl)
 
     result = pl.astrometry_align_and_build_masterstar(archive_path=ap)
 
@@ -79,7 +81,9 @@ def test_astrometry_multi_group_all_fail_raises(tmp_path: Path, monkeypatch):
         setup = Path(gkey).name if gkey else "(root)"
         raise RuntimeError(f"boom-{setup}")
 
-    monkeypatch.setattr(pl, "_astrometry_align_impl_body", _always_fail)
+    import astrometry_align
+
+    monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _always_fail)
 
     with pytest.raises(RuntimeError, match="ziadny set nepresiel"):
         pl.astrometry_align_and_build_masterstar(archive_path=ap)
@@ -93,7 +97,9 @@ def test_astrometry_single_group_failure_propagates(tmp_path: Path, monkeypatch)
     def _fail(*, job, **_kwargs):
         raise RuntimeError("solo fail")
 
-    monkeypatch.setattr(pl, "_astrometry_align_impl_body", _fail)
+    import astrometry_align
+
+    monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _fail)
 
     with pytest.raises(RuntimeError, match="solo fail"):
         pl.astrometry_align_and_build_masterstar(archive_path=ap)

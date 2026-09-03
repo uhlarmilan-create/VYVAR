@@ -2864,10 +2864,8 @@ def _pass2_sibling_wcs_recovery(
     align_kw: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Pass 2: recover failed filter sub-groups via verified sibling WCS + bulk-shift."""
-    from pipeline import (  # noqa: PLC0415
-        _astrometry_align_impl_body,
-        generate_masterstar_and_catalog,
-    )
+    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
+    from pipeline import generate_masterstar_and_catalog  # noqa: PLC0415
 
     cfg = align_kw.get("app_config") or AppConfig()
     if not bool(getattr(cfg, "masterstar_sibling_recovery_enabled", True)):
@@ -3070,10 +3068,8 @@ def _run_osc_multi_group_alignment(
     align_kw: dict[str, Any],
 ) -> dict[str, Any]:
     """OSC-2: oneRGGB full solve+align first; R/G/B reuse WCS + registration handoff."""
-    from pipeline import (  # noqa: PLC0415
-        _astrometry_align_impl_body,
-        generate_masterstar_and_catalog,
-    )
+    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
+    from pipeline import generate_masterstar_and_catalog  # noqa: PLC0415
 
     from osc_align import (
         OSC_REGISTRATION_HANDOFF,
@@ -3260,10 +3256,8 @@ def astrometry_align_and_build_masterstar(
     alignment, ``MASTERSTAR``, and ``platesolve/<group>/`` outputs. Frames stored directly in ``lights/``
     form a single group.
     """
-    from pipeline import (  # noqa: PLC0415
-        _astrometry_align_impl_body,
-        find_qc_metrics_csv,
-    )
+    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
+    from pipeline import find_qc_metrics_csv  # noqa: PLC0415
 
     ap = Path(archive_path)
     _cfg_align_root = app_config or AppConfig()

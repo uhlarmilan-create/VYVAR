@@ -3,8 +3,8 @@
 _astrometry_align_impl_body: frame-alignment MP loop, plate-solve, WCS.
 Alignment MP init/task resolved from vyvar_alignment_frame by
 fresh module attribute (A-durable; location-independent).
-test_astrometry_fault_isolation patches on pipeline facade still bite
-because pipeline_astrometry callers use call-time facade imports.
+pipeline_astrometry callers import _astrometry_align_impl_body from this
+module at call time (cycle: this file imports pipeline_astrometry).
 export_per_frame_catalogs / generate_masterstar_and_catalog imported
 at call time from the pipeline facade.
 """
