@@ -1557,8 +1557,6 @@ def _gaia_catalog_cone_radius_optics_floor_deg(
     A solved TAN-without-SIP header often under-predicts corner separation vs true sky; the rectangular
     SQL prefilter then clips the catalog so QA shows 'missing Gaia' stripes at left/right edges.
     """
-    from pipeline import catalog_cone_radius_deg_from_optics  # noqa: PLC0415
-
     if hdr is None:
         return 0.0
     foc = _fits_header_first_positive_float(

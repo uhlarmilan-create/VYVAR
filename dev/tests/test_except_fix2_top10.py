@@ -24,7 +24,7 @@ def test_exc0342_optics_floor_returns_fallback_not_zero(
     def _boom(*_a, **_k):
         raise RuntimeError("optics blew up")
 
-    monkeypatch.setattr("pipeline.catalog_cone_radius_deg_from_optics", _boom)
+    monkeypatch.setattr("pipeline_catalog.catalog_cone_radius_deg_from_optics", _boom)
     reset_except_fix_counters()
     caplog.set_level(logging.ERROR)
     hdr = fits.Header()
