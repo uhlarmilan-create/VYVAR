@@ -2,8 +2,6 @@
 
 generate_masterstar_and_catalog: masterstar FITS build, plate-solve,
 comparison-star sync, VSX/exo merge.
-Call-time follow for _fill_masterstars_gaia_matched_bp_rp_from_local_db
-so test_invariants_p2.py:362 patch on the facade keeps biting.
 """
 from __future__ import annotations
 
@@ -42,6 +40,7 @@ from photometry import (
     stress_test_relative_rms_from_sidecars,
     vsx_is_known_variable_top3_per_bin,
 )
+from pipeline_astrometry import _fill_masterstars_gaia_matched_bp_rp_from_local_db
 from pipeline_constants import (
     SAT_LIMIT_CONTAINER_CLIP_ADU,
     SAT_LIMIT_NO_KNEE_FRAC,
@@ -1722,7 +1721,6 @@ def generate_masterstar_and_catalog(
             f"INV-MS-CENSUS-01 {_census_inv.get('detail')}"
         )
         _gdb_fill = str(_cfg_ms.gaia_db_path or "").strip()
-        from pipeline import _fill_masterstars_gaia_matched_bp_rp_from_local_db  # noqa: PLC0415  # call-time follow: patch in test_invariants_p2.py:362
         df_final, _n_bp_fill, _n_bp_miss = _fill_masterstars_gaia_matched_bp_rp_from_local_db(
             df_final,
             gaia_db_path=_gdb_fill,

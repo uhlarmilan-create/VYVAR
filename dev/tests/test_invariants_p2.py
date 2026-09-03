@@ -352,6 +352,7 @@ def test_masterstars_csv_write_survives_bp_rp_failure(tmp_path: Path, monkeypatc
     import pandas as pd
 
     import pipeline as pl
+    import pipeline_astrometry
 
     df_final = pd.DataFrame({"catalog_id": ["1111111111111111111", ""], "flux": [100.0, 50.0]})
     csv_path = tmp_path / "masterstars_full_match.csv"
@@ -359,7 +360,11 @@ def test_masterstars_csv_write_survives_bp_rp_failure(tmp_path: Path, monkeypatc
     def _boom(*_args: object, **_kwargs: object) -> tuple[pd.DataFrame, int, int]:
         raise RuntimeError("simulated Gaia DB lock")
 
-    monkeypatch.setattr(pl, "_fill_masterstars_gaia_matched_bp_rp_from_local_db", _boom)
+    monkeypatch.setattr(
+        pipeline_astrometry,
+        "_fill_masterstars_gaia_matched_bp_rp_from_local_db",
+        _boom,
+    )
     log_events: list[str] = []
     monkeypatch.setattr(pl, "log_event", lambda msg: log_events.append(str(msg)))
     monkeypatch.setattr(pl, "LOGGER", logging.getLogger("test.masterstars_csv"))
@@ -368,7 +373,7 @@ def test_masterstars_csv_write_survives_bp_rp_failure(tmp_path: Path, monkeypatc
         cid = df_final.get("catalog_id", pd.Series([""] * len(df_final))).fillna("").astype(str).str.strip()
         df_final["source_type"] = np.where(cid.ne(""), "GAIA_MATCHED", "DAO_ONLY")
         _gdb_fill = ""
-        df_final, _n_bp_fill, _n_bp_miss = pl._fill_masterstars_gaia_matched_bp_rp_from_local_db(
+        df_final, _n_bp_fill, _n_bp_miss = pipeline_astrometry._fill_masterstars_gaia_matched_bp_rp_from_local_db(
             df_final,
             gaia_db_path=_gdb_fill,
         )

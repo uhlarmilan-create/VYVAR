@@ -46,10 +46,8 @@ def test_e6b_astropipeline_stays() -> None:
 
 
 def test_e6b_fill_masterstars_follow() -> None:
-    """_fill_masterstars_gaia_matched_bp_rp_from_local_db is patched on the facade
-    (test_invariants_p2.py:362). The call-time follow in masterstar_build resolves
-    via the facade at call time; confirm the facade binding exists and is in
-    pipeline_astrometry (home module)."""
+    """Facade re-exports _fill_masterstars_gaia_matched_bp_rp_from_local_db
+    from pipeline_astrometry (home). Call-time follow dismantled in E-FINAL."""
     import pipeline_astrometry
     facade = pipeline._fill_masterstars_gaia_matched_bp_rp_from_local_db
     home = pipeline_astrometry._fill_masterstars_gaia_matched_bp_rp_from_local_db
