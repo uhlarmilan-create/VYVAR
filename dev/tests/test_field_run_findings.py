@@ -110,7 +110,7 @@ def test_border_deferred_when_no_aligned_frames(tmp_path: Path, monkeypatch: pyt
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 
-    monkeypatch.setattr("pipeline.AppConfig", lambda *a, **k: _Cfg())
+    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     clear_log()
     write_photometry_plan_files(

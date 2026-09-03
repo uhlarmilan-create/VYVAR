@@ -20,6 +20,7 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 import pandas as pd
+import config
 from config import AppConfig
 from database import DraftTechnicalMetadataError, VyvarDatabase, _db_header_pixel_native_um_mean, query_local_gaia_by_source_ids, query_local_vsx
 from photometry import common_field_intersection_bbox_px
@@ -1946,7 +1947,7 @@ def write_photometry_plan_files(
     if wpx <= 0 or h <= 0:
         return {"comparison_stars_csv": "", "error": "MASTERSTAR has no data"}
 
-    _cfg_plan = AppConfig()
+    _cfg_plan = config.AppConfig()
 
     comp_path = ps / "comparison_stars.csv"
     var_path = ps / "variable_targets.csv"

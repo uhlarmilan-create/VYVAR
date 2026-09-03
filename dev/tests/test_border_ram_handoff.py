@@ -69,7 +69,7 @@ def test_require_safe_bbox_from_ram_frames(tmp_path: Path, monkeypatch: pytest.M
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 
-    monkeypatch.setattr("pipeline.AppConfig", lambda *a, **k: _Cfg())
+    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     a1 = np.full((512, 512), np.nan, dtype=np.float32)
     a1[64:448, 64:448] = 100.0
@@ -101,7 +101,7 @@ def test_require_safe_bbox_raises_without_frames(tmp_path: Path, monkeypatch: py
         gaia_db_path = ""
         exoplanet_local_db_path = ""
 
-    monkeypatch.setattr("pipeline.AppConfig", lambda *a, **k: _Cfg())
+    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     with pytest.raises(RuntimeError, match="Post-alignment border filter"):
         write_photometry_plan_files(
