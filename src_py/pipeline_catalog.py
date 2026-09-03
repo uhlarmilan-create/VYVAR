@@ -48,15 +48,16 @@ from pipeline_astrometry import (
     _vyvar_df_to_csv,
     resolve_plate_solve_fov_deg_hint,
 )
+from pipeline_constants import (
+    SAT_LIMIT_CONTAINER_CLIP_ADU,
+    SAT_LIMIT_NO_KNEE_FRAC,
+    SAT_LIMIT_PEAK_TEST_SOURCE,
+    _EXO_HOST_ANNOTATION_COLUMNS,
+)
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_catalog -> pipeline at module load.
 LOGGER = logging.getLogger("pipeline")
-
-# Default-arg / in-module numeric twin of pipeline.SAT_LIMIT_NO_KNEE_FRAC.
-# The identity-sensitive provenance string SAT_LIMIT_PEAK_TEST_SOURCE stays
-# in pipeline.py (it is an f-string over the stay-behind SAT_LIMIT_* names).
-SAT_LIMIT_NO_KNEE_FRAC = 0.80
 
 def _apply_aperture_catalog_enhancements_from_st(
     df: pd.DataFrame,
@@ -1008,8 +1009,6 @@ def _exo_host_annotation_arrays(
 
 
 def _slice_exo_annotation(exo_ann: dict[str, Any], keep: Any) -> dict[str, Any]:
-    from pipeline import _EXO_HOST_ANNOTATION_COLUMNS  # noqa: PLC0415
-
     import numpy as np
 
     k = np.asarray(keep, dtype=bool)
@@ -1028,8 +1027,6 @@ def _apply_exo_host_columns_to_proc_df(
 
     ``detect_stars_and_match_catalog`` already annotates; this covers the MASTERSTAR fast path.
     """
-    from pipeline import _EXO_HOST_ANNOTATION_COLUMNS  # noqa: PLC0415
-
     if df is None or df.empty:
         return df
     if any(c in df.columns for c in _EXO_HOST_ANNOTATION_COLUMNS):
@@ -1291,12 +1288,6 @@ def inv_sat_limit_peak_test_adu() -> tuple[float, str]:
     ``zone==saturated``: currently 0.80 x 65535 = 52428 ADU when the D1-2 knee
     is unmeasured. n_stack is not applied here: per-frame CSVs are one exposure.
     """
-    from pipeline import (  # noqa: PLC0415
-        SAT_LIMIT_CONTAINER_CLIP_ADU,
-        SAT_LIMIT_NO_KNEE_FRAC,
-        SAT_LIMIT_PEAK_TEST_SOURCE,
-    )
-
     peak = float(SAT_LIMIT_CONTAINER_CLIP_ADU) * float(SAT_LIMIT_NO_KNEE_FRAC)
     return peak, SAT_LIMIT_PEAK_TEST_SOURCE
 
@@ -1908,8 +1899,6 @@ def _annotate_masterstars_flux_zones(
     ``noise_floor_adu`` must match the DAO pre-match SNR filter (``median + kxsigma``) from
     :func:`detect_stars_and_match_catalog` (see ``det_meta["noise_floor_adu"]``).
     """
-    from pipeline import SAT_LIMIT_CONTAINER_CLIP_ADU  # noqa: PLC0415
-
     import numpy as np
 
     out = df.copy()
