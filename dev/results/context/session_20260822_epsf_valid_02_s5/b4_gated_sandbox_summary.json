@@ -1,0 +1,9 @@
+{
+  "n_frames": 10,
+  "n_rows_ok": 25,
+  "psf_dao_ratio_median": 0.8034467225166032,
+  "chi2_median": 44.686457803338676,
+  "ac_factor_median": 1.0,
+  "ac_applied_frac": 0.0,
+  "method": "R4-aligned: 10 science frames, full science_set, apply_aperture_correction=True"
+}

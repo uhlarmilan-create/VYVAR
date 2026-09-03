@@ -1,0 +1,17 @@
+{
+  "n_odd_requested": 34,
+  "n_even_requested": 33,
+  "odd_build_error": "ValueError: All elements of input data must be finite",
+  "n_frames": 12,
+  "compare_mode": "even33_vs_ref67_fallback",
+  "n_star_frame_pairs": 5,
+  "per_star_median_delta_mmag": -32.38268170683233,
+  "per_star_rms_delta_mmag": 41.76085446388689,
+  "err_budget": {
+    "median_err_bkg_source_mmag": NaN,
+    "n_samples": 0,
+    "source_column": "err_bkg_source",
+    "n_frames_sampled": 30
+  },
+  "verdict": "CONCERN"
+}

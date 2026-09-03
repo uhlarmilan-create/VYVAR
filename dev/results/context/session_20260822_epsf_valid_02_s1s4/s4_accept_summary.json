@@ -1,0 +1,9 @@
+{
+  "frames_total": 134,
+  "written": 134,
+  "aperture_mismatches": 0,
+  "css_frames_with_row": 134,
+  "css_frames_psf_ok": 134,
+  "inv_frame_01_policy": "ok",
+  "frames_with_zero_ok": 0
+}

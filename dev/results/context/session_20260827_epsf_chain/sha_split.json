@@ -1,0 +1,9 @@
+{
+  "core_aperture": "d55fcc9d8ad9b55213c5c1813415cb54d54b88c3fc917bc81706065e4d824810",
+  "n_core_aperture": 53,
+  "core_psf": "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8",
+  "n_core_psf": 53,
+  "ext_aperture": "cc8b532ee668b9b339e4170752b9d1054771b1236ecac8163688693586117167",
+  "n_ext_aperture": 157,
+  "core_psf_with_timestamp_history": "9515382571a61c4eda55e9ab96ab64cfa291e6b5e3cead186499a6ef37b565aa"
+}

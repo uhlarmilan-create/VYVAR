@@ -1,0 +1,16 @@
+{
+  "threshold_sigma": 3.8,
+  "sharpness_production": [
+    0.0,
+    2.0
+  ],
+  "sharpness_open": [
+    0.0,
+    10.0
+  ],
+  "masterstar_bright_le13_total": 1026,
+  "killed_by_production_sharpness": 0,
+  "production_g1_le13": 0.9473684210526315,
+  "production_g1_le145": 0.9045471627207816,
+  "open_reference_g1_le13": null
+}

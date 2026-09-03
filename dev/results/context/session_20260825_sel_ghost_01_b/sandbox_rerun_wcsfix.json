@@ -1,0 +1,158 @@
+{
+  "utc": "2026-08-25T12:51:43.956535+00:00",
+  "live_before": {
+    "520_csv": "5ce9b07fe0490103b2e16f6fbe3b18ffc7cd987fbee8a334722cc2fd46c6a683",
+    "520_fits": "2862552040ec30f98481521a512497f7e86d2a0a0203185884a2d3f1ef07c997",
+    "516_csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "516_fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "516_epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "err520": null,
+  "err516": null,
+  "out520": {
+    "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\MASTERSTAR.fits",
+    "masterstars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\masterstars_full_match.csv",
+    "frames_used": 1,
+    "masterstar_selection": {
+      "source": "platesolve_existing",
+      "file": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\MASTERSTAR.fits"
+    },
+    "n_raw_dao": 714,
+    "detected_stars": 791,
+    "catalog_matched": 113,
+    "catalog_rows": 24571,
+    "catalog_match_max_sep_arcsec": 10.0,
+    "max_catalog_rows": 100000,
+    "n_likely_saturated": 229,
+    "saturate_limit_adu": 65535.0,
+    "saturate_limit_source": "header_datamax",
+    "solve": {
+      "solved": true,
+      "method": "sibling_recovered",
+      "match_rate": 1.0,
+      "sip_meta": {
+        "masterstar_verified": true,
+        "route": "sibling_recovered",
+        "n_matched_tight": 0
+      },
+      "wcs_plate_scale_adjustment": {
+        "rescaled": false
+      },
+      "wcs_roundtrip_p99_px": 2.874672149591921e-10,
+      "wcs_roundtrip_pass": true
+    },
+    "n_comparison_stars_requested": 0,
+    "faintest_mag_limit": 18.0,
+    "n_dropped_fainter_than_limit": 0,
+    "field_catalog_cone_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\field_catalog_cone.csv",
+    "catalog_derived_membership": {
+      "membership_depth_g": 15.0,
+      "n_detection_rows_in": 685,
+      "n_catalog_rows_added": 106,
+      "n_dao_only_preserved": 678,
+      "n_rows_out": 791
+    },
+    "dao_threshold_sigma": 4.5,
+    "masterstar_match_png": "",
+    "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\comparison_stars.csv",
+    "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\variable_targets.csv",
+    "photometry_plan_json": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_520\\g_60_4\\photometry_plan.json",
+    "comparison_selection": {
+      "n_selected": 2,
+      "grid_nx": 0,
+      "grid_ny": 0,
+      "n_comp_requested": 0,
+      "pool_uncapped": true,
+      "width_px": 3552.0,
+      "height_px": 2664.0,
+      "require_non_variable": true,
+      "exclude_nonlinear_badcolumn": true
+    },
+    "comp_selection_enrichment": {
+      "source": "masterstars_full_match.csv",
+      "enrichment_missing_columns": [
+        "likely_nonlinear",
+        "on_bad_column"
+      ],
+      "nonlinearity_badcolumn_exclusion": false,
+      "message": "comp-selection enrichment unavailable for this draft: columns ['likely_nonlinear', 'on_bad_column'] absent from masterstars_full_match.csv - selection proceeds without nonlinearity/bad-column exclusion"
+    }
+  },
+  "out516": {
+    "masterstar_fits": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\MASTERSTAR.fits",
+    "masterstars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\masterstars_full_match.csv",
+    "frames_used": 1,
+    "masterstar_selection": {
+      "source": "platesolve_existing",
+      "file": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\MASTERSTAR.fits"
+    },
+    "n_raw_dao": 2245,
+    "detected_stars": 3606,
+    "catalog_matched": 3571,
+    "catalog_rows": 100000,
+    "catalog_match_max_sep_arcsec": 10.0,
+    "max_catalog_rows": 100000,
+    "n_likely_saturated": 14,
+    "saturate_limit_adu": 65535.0,
+    "saturate_limit_source": "equipment_db",
+    "solve": {
+      "solved": true,
+      "method": "sibling_recovered",
+      "match_rate": 1.0,
+      "sip_meta": {
+        "masterstar_verified": true,
+        "route": "sibling_recovered",
+        "n_matched_tight": 0
+      },
+      "wcs_plate_scale_adjustment": {
+        "rescaled": false
+      },
+      "wcs_roundtrip_p99_px": 1.0993453906477542e-11,
+      "wcs_roundtrip_pass": true
+    },
+    "n_comparison_stars_requested": 0,
+    "faintest_mag_limit": 18.0,
+    "n_dropped_fainter_than_limit": 0,
+    "field_catalog_cone_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\field_catalog_cone.csv",
+    "catalog_derived_membership": {
+      "membership_depth_g": 15.0,
+      "n_detection_rows_in": 2643,
+      "n_catalog_rows_added": 963,
+      "n_dao_only_preserved": 25,
+      "n_rows_out": 3606
+    },
+    "dao_threshold_sigma": 4.5,
+    "masterstar_match_png": "",
+    "comparison_stars_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\comparison_stars.csv",
+    "variable_targets_csv": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\variable_targets.csv",
+    "photometry_plan_json": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\session_20260825_sel_ghost_01_b\\sandbox_516\\NoFilter_60_2\\photometry_plan.json",
+    "comparison_selection": {
+      "n_selected": 2231,
+      "grid_nx": 0,
+      "grid_ny": 0,
+      "n_comp_requested": 0,
+      "pool_uncapped": true,
+      "width_px": 2082.0,
+      "height_px": 1397.0,
+      "require_non_variable": true,
+      "exclude_nonlinear_badcolumn": true
+    },
+    "comp_selection_enrichment": {
+      "source": "masterstars_full_match.csv",
+      "enrichment_missing_columns": [
+        "likely_nonlinear",
+        "on_bad_column"
+      ],
+      "nonlinearity_badcolumn_exclusion": false,
+      "message": "comp-selection enrichment unavailable for this draft: columns ['likely_nonlinear', 'on_bad_column'] absent from masterstars_full_match.csv - selection proceeds without nonlinearity/bad-column exclusion"
+    }
+  },
+  "live_after": {
+    "520_csv": "5ce9b07fe0490103b2e16f6fbe3b18ffc7cd987fbee8a334722cc2fd46c6a683",
+    "520_fits": "2862552040ec30f98481521a512497f7e86d2a0a0203185884a2d3f1ef07c997",
+    "516_csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "516_fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "516_epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20"
+  },
+  "live_unchanged": true
+}

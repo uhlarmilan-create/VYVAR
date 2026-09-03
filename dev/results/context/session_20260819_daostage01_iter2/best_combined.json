@@ -1,0 +1,10 @@
+{
+  "best_iter_id": "comb_thr4.5_p2",
+  "masterstar_g1_eye_le13": 0.9890438247011952,
+  "masterstar_g1_eye_le145": 0.9251726784343822,
+  "masterstar_g1_strict_le13": 0.953187250996016,
+  "masterstar_g2": 0.0009090909090909091,
+  "masterstar_g3_g18": 0.015065913370998116,
+  "edge_margin_px": 10.0,
+  "n_edge": 146
+}

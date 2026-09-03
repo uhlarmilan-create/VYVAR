@@ -1,0 +1,1910 @@
+[
+  {
+    "target_catalog_id": "1496795041799526400",
+    "target_name": "R CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497561779362267392",
+    "target_name": "HAT-188-0001788",
+    "n_selected": 5,
+    "n_detected_p1_p2": 5,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1496998382733052928",
+    "target_name": "ASASSN-V J135313.56+394107.4",
+    "n_selected": 7,
+    "n_detected_p1_p2": 7,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500579870061241088",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497169940906156032",
+    "target_name": "CSS_J134925.3+393524",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498244610443240192",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1496278752372040832",
+    "target_name": "FY CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498244610443240192",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497245497969274240",
+    "target_name": "HAT-188-0000323",
+    "n_selected": 3,
+    "n_detected_p1_p2": 3,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497236186481686016",
+    "target_name": "SS CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1485609641291887872",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497326621313118976",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497977291678057472",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497683722074089728",
+    "target_name": "HAT-188-0000203",
+    "n_selected": 6,
+    "n_detected_p1_p2": 6,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500579870061241088",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1496293286541396480",
+    "target_name": "FZ CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498617482323461376",
+    "target_name": "ZTF J140033.29+405446.7",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497613731286514432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497617407778562304",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498062332030906880",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498994786610872576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1502007585909464064",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498613634033133184",
+    "target_name": "BO CVn",
+    "n_selected": 4,
+    "n_detected_p1_p2": 4,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498027456896444928",
+    "target_name": "ASASSN-V J140843.29+402701.8",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496786967262035712",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498645691668588288",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1498994786610872576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498064771572297856",
+    "target_name": "ZTF J141004.59+410003.7",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497343732462852864",
+    "target_name": "FW CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498699086702005376",
+    "target_name": "ASASSN-V J135757.22+412518.4",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497418258735289472",
+    "target_name": "FU CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497425371201155072",
+    "target_name": "NSV 19982",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1500549977088828160",
+    "target_name": "HIP 67011",
+    "n_selected": 5,
+    "n_detected_p1_p2": 5,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500602959805382656",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498298211635183744",
+    "target_name": "NSVS 5096293",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1496994156484645632",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1500424804562041984",
+    "target_name": "RX CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498244610443240192",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497350638770267520",
+    "target_name": "HAT-188-0001516",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1500461157165243648",
+    "target_name": "CSS_J134948.9+415037",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498804639818507904",
+    "target_name": "GH CVn",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497196054307837696",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498321301379345408",
+    "target_name": "ZTF J140640.73+413639.0",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496874408500111104",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498000793739050368",
+    "target_name": "ZTF J140300.57+413339.3",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497894828305963776",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498425548825498112",
+    "target_name": "ASASSN-V J140619.34+422109.5",
+    "n_selected": 3,
+    "n_detected_p1_p2": 3,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1499021174889970816",
+    "target_name": "ZTF J135636.59+422135.5",
+    "n_selected": 7,
+    "n_detected_p1_p2": 7,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498842882207281152",
+    "target_name": "CSS_J135929.8+421520",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496874408500111104",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498486880958321024",
+    "target_name": "CSS_J140918.7+423422",
+    "n_selected": 4,
+    "n_detected_p1_p2": 4,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497132660589966976",
+    "target_name": "TOI-3919",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497196054307837696",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497603835681942400",
+    "target_name": "Gaia DR3 1497603835681942400",
+    "n_selected": 6,
+    "n_detected_p1_p2": 6,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1485534187306501376",
+    "target_name": "Gaia DR3 1485534187306501376",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497181966814590848",
+    "target_name": "Gaia DR3 1497181966814590848",
+    "n_selected": 3,
+    "n_detected_p1_p2": 3,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500403089207449856",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497639123133258752",
+    "target_name": "Gaia DR3 1497639123133258752",
+    "n_selected": 5,
+    "n_detected_p1_p2": 5,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500403089207449856",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497227287309482624",
+    "target_name": "Gaia DR3 1497227287309482624",
+    "n_selected": 3,
+    "n_detected_p1_p2": 3,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500467303261764096",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1485987254816323328",
+    "target_name": "Gaia DR3 1485987254816323328",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496994156484645632",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497871669842349184",
+    "target_name": "Gaia DR3 1497871669842349184",
+    "n_selected": 6,
+    "n_detected_p1_p2": 6,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1497154753901690624",
+    "target_name": "Gaia DR3 1497154753901690624",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496798993170465536",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497617407778562304",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498062332030906880",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500296402219939584",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1500327978819506944",
+    "target_name": "Gaia DR3 1500327978819506944",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496874408500111104",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497145751650265600",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498058827337611392",
+    "target_name": "Gaia DR3 1498058827337611392",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1485609641291887872",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497326621313118976",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497977291678057472",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498795809366255488",
+    "target_name": "Gaia DR3 1498795809366255488",
+    "n_selected": 7,
+    "n_detected_p1_p2": 7,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1485609641291887872",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497326621313118976",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1500693841313325696",
+    "target_name": "Gaia DR3 1500693841313325696",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496874408500111104",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498278351706325248",
+    "target_name": "Gaia DR3 1498278351706325248",
+    "n_selected": 5,
+    "n_detected_p1_p2": 5,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500403089207449856",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1498783199341798016",
+    "target_name": "Gaia DR3 1498783199341798016",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497196054307837696",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1499006984318088320",
+    "target_name": "Gaia DR3 1499006984318088320",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496315070616056064",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497429837967596800",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497719902878053888",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498244610443240192",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1499210016011946496",
+    "target_name": "Gaia DR3 1499210016011946496",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1496948904709272576",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497894828305963776",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "final": "DETECTED_P1"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1499084499887740160",
+    "target_name": "Gaia DR3 1499084499887740160",
+    "n_selected": 8,
+    "n_detected_p1_p2": 8,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1485609641291887872",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497119157212720896",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  },
+  {
+    "target_catalog_id": "1502012464992313088",
+    "target_name": "Gaia DR3 1502012464992313088",
+    "n_selected": 6,
+    "n_detected_p1_p2": 6,
+    "n_forced_seed": 0,
+    "n_seed_rejected": 0,
+    "n_other_missing": 0,
+    "all_detected": true,
+    "members": [
+      {
+        "catalog_id": "1497368849430107904",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497771992240531712",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1497974027502858240",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1498222615914114816",
+        "final": "DETECTED_P2"
+      },
+      {
+        "catalog_id": "1499200223486564608",
+        "final": "DETECTED_P1"
+      },
+      {
+        "catalog_id": "1499867867561302272",
+        "final": "DETECTED_P2"
+      }
+    ]
+  }
+]

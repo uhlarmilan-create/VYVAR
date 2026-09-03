@@ -1,0 +1,11 @@
+{
+  "n_ms_gaia": 3546,
+  "n_hung3": 3345,
+  "n_lost": 264,
+  "n_gained": 63,
+  "n_pairing_diff_rows": 381,
+  "locked_hung3_s": 0.005349799990653992,
+  "n_lost_locked": 194,
+  "n_gained_locked": 5,
+  "n_holes_locked": 24
+}

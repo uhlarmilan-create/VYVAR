@@ -1,0 +1,9 @@
+{
+  "n_frames": 134,
+  "n_rows_ok": 10379,
+  "ratio_median": 1.3252056669848387,
+  "chi2_median": 11.619559483617898,
+  "ac_factor_median": 0.529280505838572,
+  "ac_n_median": 83.0,
+  "note": "S4 proc CSVs retain production 1475-star model PSF columns (not gated swap)"
+}

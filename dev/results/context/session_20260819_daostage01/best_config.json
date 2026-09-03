@@ -1,0 +1,10 @@
+{
+  "best_iter_id": "thr4.5_sharp_open",
+  "threshold_sigma": 4.5,
+  "masterstar_g1_le13": 0.9473684210526315,
+  "masterstar_g1_le145": 0.874859075535513,
+  "masterstar_g2": 0.0009090909090909091,
+  "masterstar_g3": 0.01642710472279261,
+  "verdict": "FAIL:G1<=13+G1<=14.5+G3",
+  "pass2_needed": true
+}

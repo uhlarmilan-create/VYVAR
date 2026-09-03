@@ -1,0 +1,68 @@
+{
+  "created_utc": "2026-08-22T16:53:37Z",
+  "head": "2ba3d58",
+  "b4_proc": {
+    "n_frames": 134,
+    "n_rows_ok": 10379,
+    "ratio_median": 1.3252056669848387,
+    "chi2_median": 11.619559483617898,
+    "ac_factor_median": 0.529280505838572,
+    "ac_n_median": 83.0,
+    "note": "S4 proc CSVs retain production 1475-star model PSF columns (not gated swap)"
+  },
+  "b4_gated": {
+    "n_frames": 10,
+    "n_rows_ok": 25,
+    "psf_dao_ratio_median": 0.8034467225166032,
+    "chi2_median": 44.686457803338676,
+    "ac_factor_median": 1.0,
+    "ac_applied_frac": 0.0,
+    "method": "R4-aligned: 10 science frames, full science_set, apply_aperture_correction=True"
+  },
+  "d1": {
+    "n_odd_requested": 34,
+    "n_even_requested": 33,
+    "odd_build_error": "ValueError: All elements of input data must be finite",
+    "n_frames": 12,
+    "compare_mode": "even33_vs_ref67_fallback",
+    "n_star_frame_pairs": 5,
+    "per_star_median_delta_mmag": -32.38268170683233,
+    "per_star_rms_delta_mmag": 41.76085446388689,
+    "err_budget": {
+      "median_err_bkg_source_mmag": NaN,
+      "n_samples": 0,
+      "source_column": "err_bkg_source",
+      "n_frames_sampled": 30
+    },
+    "verdict": "CONCERN"
+  },
+  "d2": {
+    "curve": [
+      {
+        "n_build": 15,
+        "n_matched": 59,
+        "median_delta_mmag": -324.84480120500035,
+        "rms_delta_mmag": 327.57343970156074
+      },
+      {
+        "n_build": 30,
+        "n_matched": 56,
+        "median_delta_mmag": -427.27531947942543,
+        "rms_delta_mmag": 430.45838625537357
+      },
+      {
+        "n_build": 50,
+        "n_matched": 59,
+        "median_delta_mmag": -300.4334422592803,
+        "rms_delta_mmag": 299.3044413480033
+      },
+      {
+        "n_build": 67,
+        "n_matched": 74,
+        "median_delta_mmag": 0.0,
+        "rms_delta_mmag": 0.0
+      }
+    ],
+    "break_note": "n=15 intentionally included; largest deviation expected"
+  }
+}

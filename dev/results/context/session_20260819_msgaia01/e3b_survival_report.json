@@ -1,0 +1,20 @@
+{
+  "part": "E3b",
+  "runtime_s": 25.788877099985257,
+  "n_pass1": 307,
+  "n_pass2_old": 3315,
+  "n_pass2_survive_new": 1796,
+  "pass2_survival_rate": 0.5417797888386123,
+  "pass2_destination": {
+    "DETECTED_P2": 1796,
+    "SEED_REJECTED": 1265,
+    "FORCED_SEED": 254
+  },
+  "n_comp_pool": 2356,
+  "n_comp_pass1_origin": 250,
+  "n_comp_pass2_origin": 2106,
+  "n_comp_remain_detected": 1833,
+  "comp_detected_survival_rate": 0.7780135823429541,
+  "pause_required": true,
+  "pause_threshold": 0.9
+}

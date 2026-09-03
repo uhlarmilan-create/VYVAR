@@ -1,0 +1,49 @@
+{
+  "overlay_s": 3.4593298999825493,
+  "n_ms_before": 3621,
+  "n_ms_after": 3621,
+  "n_forced_seed": 184,
+  "identity_ok": true,
+  "identity_detail": "ok n=3546",
+  "census_by_state": {
+    "DETECTED_P1": 3453,
+    "SEED_REJECTED": 370,
+    "FORCED_SEED": 116,
+    "BLENDED": 109,
+    "EDGE": 83
+  },
+  "census_inv": {
+    "ok": true,
+    "detail": "ok n=4131",
+    "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\gaia_source_state_census.csv",
+    "n": 4131,
+    "invariants": [
+      {
+        "id": "INV-MS-CENSUS-01",
+        "ok": true,
+        "policy": "FAIL",
+        "detail": "ok n=4131",
+        "ts": "2026-08-19T08:56:09.781687+00:00"
+      }
+    ]
+  },
+  "annot": {
+    "zone_counts": {
+      "linear": 2884,
+      "noise": 713,
+      "saturated": 24
+    },
+    "bg_sigma": 24.360535636780753,
+    "n": 3621
+  },
+  "pool": {
+    "n_old": 2356,
+    "n_new": 2356,
+    "n_snap": 2356,
+    "id_delta_added": [],
+    "id_delta_removed": [],
+    "n_added": 0,
+    "n_removed": 0,
+    "identical_to_snapshot": true
+  }
+}

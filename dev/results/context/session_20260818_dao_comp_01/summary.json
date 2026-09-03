@@ -1,0 +1,236 @@
+{
+  "draft_id": 516,
+  "setup": "NoFilter_60_2",
+  "n_aligned_fits": 134,
+  "frames": [
+    "BO_CVn_Light_001",
+    "BO_CVn_Light_037",
+    "BO_CVn_Light_076",
+    "BO_CVn_Light_109",
+    "BO_CVn_Light_148"
+  ],
+  "pixscale_arcsec": 9.773978049430486,
+  "shape": [
+    2082,
+    1397
+  ],
+  "r_chip_deg": 3.553592471028573,
+  "n_gaia_query": 20083,
+  "gaia_query_s": 0.5469579999917187,
+  "target_depth_g": 15.0,
+  "night_median_edge50": 15.0,
+  "delta_edge_minus_target_depth": 0.0,
+  "fwhm_px": 5.3046,
+  "n_equiv": 3.78,
+  "pass2_sigma": 1.9,
+  "match_r_px": 10.0,
+  "ms_source_type": {
+    "GAIA_MATCHED": 3546,
+    "DAO_ONLY": 75
+  },
+  "overlay": {
+    "draft_id": 516,
+    "setup": "NoFilter_60_2",
+    "frame": "BO_CVn_Light_001",
+    "n_proc": 3500,
+    "GAIA_MATCHED": 3500,
+    "FORCED_APERTURE": 0,
+    "DAO_ONLY": 0,
+    "forced_photometry_true": 360,
+    "FORCED_SOURCE_TYPE_in_code": "GAIA_MATCHED",
+    "display_counts_source_type_FORCED_APERTURE": "always 0 if writer uses GAIA_MATCHED"
+  },
+  "elapsed_s": 132.14145139994798,
+  "n_holes": 325,
+  "pass2": [
+    {
+      "frame": "BO_CVn_Light_001",
+      "n_pass1": 307,
+      "n_unmatched_gaia": 11272,
+      "n_pass2_raw": 8567,
+      "n_merged": 8874,
+      "rms_conv": 633.7382394946163,
+      "thr_adu": 2395.5305452896496
+    },
+    {
+      "frame": "BO_CVn_Light_037",
+      "n_pass1": 315,
+      "n_unmatched_gaia": 11262,
+      "n_pass2_raw": 8553,
+      "n_merged": 8868,
+      "rms_conv": 638.0666222295903,
+      "thr_adu": 2411.8918320278513
+    },
+    {
+      "frame": "BO_CVn_Light_076",
+      "n_pass1": 309,
+      "n_unmatched_gaia": 11269,
+      "n_pass2_raw": 8554,
+      "n_merged": 8863,
+      "rms_conv": 637.7317326445949,
+      "thr_adu": 2410.6259493965686
+    },
+    {
+      "frame": "BO_CVn_Light_109",
+      "n_pass1": 307,
+      "n_unmatched_gaia": 11274,
+      "n_pass2_raw": 7740,
+      "n_merged": 8047,
+      "rms_conv": 648.7995301989515,
+      "thr_adu": 2452.4622241520365
+    },
+    {
+      "frame": "BO_CVn_Light_148",
+      "n_pass1": 301,
+      "n_unmatched_gaia": 11283,
+      "n_pass2_raw": 8489,
+      "n_merged": 8790,
+      "rms_conv": 628.3965216946223,
+      "thr_adu": 2375.338852005672
+    }
+  ],
+  "edges": [
+    {
+      "frame": "BO_CVn_Light_001",
+      "date_obs": "2026-04-23T19:35:20.355",
+      "n_gaia_onchip": 11953,
+      "n_dao_matched": 2992,
+      "n_forced_ok": 336,
+      "n_in_proc": 3328,
+      "edge50_dao": 15.0,
+      "sky_med": 2416.1796264648438,
+      "sigma_bkg_med": 169.03758072991957,
+      "bgsub_std": 552.6407850472801
+    },
+    {
+      "frame": "BO_CVn_Light_037",
+      "date_obs": "2026-04-23T20:47:56.634",
+      "n_gaia_onchip": 11953,
+      "n_dao_matched": 3075,
+      "n_forced_ok": 263,
+      "n_in_proc": 3338,
+      "edge50_dao": 15.0,
+      "sky_med": 1677.48193359375,
+      "sigma_bkg_med": 143.63300294256095,
+      "bgsub_std": 557.6566690662826
+    },
+    {
+      "frame": "BO_CVn_Light_076",
+      "date_obs": "2026-04-23T22:06:35.621",
+      "n_gaia_onchip": 11953,
+      "n_dao_matched": 3097,
+      "n_forced_ok": 242,
+      "n_in_proc": 3339,
+      "edge50_dao": 15.0,
+      "sky_med": 1548.5635986328125,
+      "sigma_bkg_med": 138.65677526116767,
+      "bgsub_std": 560.4517275002796
+    },
+    {
+      "frame": "BO_CVn_Light_109",
+      "date_obs": "2026-04-23T23:13:08.655",
+      "n_gaia_onchip": 11953,
+      "n_dao_matched": 3192,
+      "n_forced_ok": 151,
+      "n_in_proc": 3343,
+      "edge50_dao": 15.0,
+      "sky_med": 1400.6656799316406,
+      "sigma_bkg_med": 148.24059967463538,
+      "bgsub_std": 569.9326150049914
+    },
+    {
+      "frame": "BO_CVn_Light_148",
+      "date_obs": "2026-04-24T00:31:47.639",
+      "n_gaia_onchip": 11953,
+      "n_dao_matched": 3081,
+      "n_forced_ok": 259,
+      "n_in_proc": 3340,
+      "edge50_dao": 15.0,
+      "sky_med": 1346.2227172851562,
+      "sigma_bkg_med": 158.7412056365648,
+      "bgsub_std": 554.115107994786
+    }
+  ],
+  "frame_meta": [
+    {
+      "frame": "BO_CVn_Light_001",
+      "date_obs": "2026-04-23T19:35:20.355",
+      "elapsed_s": 25.637584100011736,
+      "n_gaia_onchip": 11953,
+      "n_bright": 974,
+      "n_bright_dao": 884,
+      "bright_complete": 0.9075975359342916,
+      "class_cut_g": 13.5,
+      "n_unmatched_lt_cut": 133,
+      "TOO_FAINT": 26,
+      "BLENDED": 34,
+      "DETECTION_HOLE": 63,
+      "EDGE": 8,
+      "SATURATED": 2
+    },
+    {
+      "frame": "BO_CVn_Light_037",
+      "date_obs": "2026-04-23T20:47:56.634",
+      "elapsed_s": 26.130077100009657,
+      "n_gaia_onchip": 11953,
+      "n_bright": 974,
+      "n_bright_dao": 886,
+      "bright_complete": 0.9096509240246407,
+      "class_cut_g": 13.5,
+      "n_unmatched_lt_cut": 134,
+      "TOO_FAINT": 24,
+      "BLENDED": 34,
+      "DETECTION_HOLE": 67,
+      "EDGE": 7,
+      "SATURATED": 2
+    },
+    {
+      "frame": "BO_CVn_Light_076",
+      "date_obs": "2026-04-23T22:06:35.621",
+      "elapsed_s": 26.454426300013438,
+      "n_gaia_onchip": 11953,
+      "n_bright": 974,
+      "n_bright_dao": 889,
+      "bright_complete": 0.9127310061601642,
+      "class_cut_g": 13.5,
+      "n_unmatched_lt_cut": 124,
+      "TOO_FAINT": 24,
+      "BLENDED": 31,
+      "DETECTION_HOLE": 65,
+      "EDGE": 2,
+      "SATURATED": 2
+    },
+    {
+      "frame": "BO_CVn_Light_109",
+      "date_obs": "2026-04-23T23:13:08.655",
+      "elapsed_s": 26.312344199977815,
+      "n_gaia_onchip": 11953,
+      "n_bright": 974,
+      "n_bright_dao": 888,
+      "bright_complete": 0.9117043121149897,
+      "class_cut_g": 13.5,
+      "n_unmatched_lt_cut": 126,
+      "TOO_FAINT": 24,
+      "BLENDED": 33,
+      "DETECTION_HOLE": 65,
+      "EDGE": 2,
+      "SATURATED": 2
+    },
+    {
+      "frame": "BO_CVn_Light_148",
+      "date_obs": "2026-04-24T00:31:47.639",
+      "elapsed_s": 26.97377600002801,
+      "n_gaia_onchip": 11953,
+      "n_bright": 974,
+      "n_bright_dao": 888,
+      "bright_complete": 0.9117043121149897,
+      "class_cut_g": 13.5,
+      "n_unmatched_lt_cut": 128,
+      "TOO_FAINT": 26,
+      "BLENDED": 33,
+      "DETECTION_HOLE": 65,
+      "EDGE": 2,
+      "SATURATED": 2
+    }
+  ]
+}

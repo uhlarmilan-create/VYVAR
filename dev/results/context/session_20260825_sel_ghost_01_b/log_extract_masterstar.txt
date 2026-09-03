@@ -1,0 +1,19 @@
+12:51:50  DAO po SNR filtri (sky_mad median+1.8xsigma; pass2 exempt): 685/712 bodov (noise_floor~35763.4 ADU sky_sig~9.3; pass2_kept=0; dropped=27; pred matchom s katalogom).
+12:51:51  post_match_identity_gate: ok=0 warn=7 fail=339 (FWHM=1.25px)
+12:51:55  post_match_identity_gate: ok=0 warn=7 fail=0 (FWHM=1.25px)
+12:51:55  [chart] MATCH STATS (raw): Found 685 stars on image | 7 matched with Gaia | Match Rate: 1.02% | Gaia->DAO: 0.03% (7/24571)
+12:51:55  post_match_identity_gate: ok=0 warn=7 fail=0 (FWHM=1.25px)
+12:51:55  Astrometry optimizer entry identity gate: ok=0 warn=7 fail=0 (DAO FWHM=1.25px)
+12:51:55  Astrometry optimizer input columns: id_col=catalog_id, sep_col=match_sep_arcsec, matched_nonempty=7/685
+12:51:55  MASTERSTAR optimizer skipped/fallback: Not enough matched stars to build displacement model (need >=50, got 7).
+12:51:55  MASTERSTAR catalog-derived membership: +106 Gaia rows (depth G<=15.0), n_out=791
+12:52:47  [chart] MATCH STATS (optimized): Found 791 stars on image | 113 matched with Gaia | Match Rate: 14.29% | Gaia->DAO: 0.46% (113/24571)
+12:53:18  [chart] MATCH STATS (raw): Found 2643 stars on image | 2523 matched with Gaia | Match Rate: 95.46% | Gaia->DAO: 2.52% (2523/100000)
+12:53:19  Astrometry optimizer input columns: id_col=catalog_id, sep_col=match_sep_arcsec, matched_nonempty=2523/2643
+12:53:20  Astrometry optimizer Grip1: SIP3 n_pairs=2560 (rms_lin=0.5956002542050325, rms_sip=0.7521062152673731)
+12:53:20  Astrometry optimizer final shift probe: median dx=0.02px dy=0.01px from 1601 pairs (match_sep<=5").
+12:53:21  Astrometry optimizer input columns: id_col=catalog_id, sep_col=match_sep_arcsec, matched_nonempty=2618/2643
+12:53:22  Astrometry optimizer Grip1: SIP3 n_pairs=2618 (rms_lin=0.659368198434594, rms_sip=0.8456597551810653)
+12:53:22  Astrometry optimizer final shift probe: median dx=0.02px dy=0.01px from 1601 pairs (match_sep<=5").
+12:53:23  MASTERSTAR catalog-derived membership: +963 Gaia rows (depth G<=15.0), n_out=3606
+12:54:21  [chart] MATCH STATS (optimized): Found 3606 stars on image | 3571 matched with Gaia | Match Rate: 99.03% | Gaia->DAO: 3.57% (3571/100000)

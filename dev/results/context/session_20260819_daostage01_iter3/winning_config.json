@@ -1,0 +1,20 @@
+{
+  "iter_id": "win_p1_4.5_p2_4.0",
+  "pass1_sigma": 4.5,
+  "pass2_sigma": 4.0,
+  "pass2_window": "G<=15",
+  "pass2_center_tol_px": 2.0,
+  "pm_corrected": true,
+  "n_pm_corrected": 0,
+  "masterstar_g1_eye_le13": 0.9900398406374502,
+  "masterstar_g1_eye_le145": 0.9270913277052955,
+  "masterstar_g2": 0.0009090909090909091,
+  "masterstar_g3_g18": 0.013593882752761258,
+  "state_counts": {
+    "TOO_FAINT": 3271,
+    "DETECTED": 2595,
+    "BLENDED": 148,
+    "EDGE": 146,
+    "CROWDED_MISS": 8
+  }
+}

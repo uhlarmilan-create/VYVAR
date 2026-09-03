@@ -1,0 +1,191 @@
+live epsf sha 172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20
+copying freeze to work copy...
+resume: reusing existing work copy
+copy 0.0s
+science set n_total 317
+resume: skip rebuild, using existing ePSF
+M2 step2/3 fit+merge 134 frames x 317 ids...
+  frame 1/134 BO_CVn_Light_001.fits skipped_resume
+  frame 2/134 BO_CVn_Light_003.fits skipped_resume
+  frame 3/134 BO_CVn_Light_004.fits skipped_resume
+  frame 4/134 BO_CVn_Light_005.fits skipped_resume
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 5/134 BO_CVn_Light_006.fits n_fit=222 n_ok=181 150.15s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 10/134 BO_CVn_Light_013.fits n_fit=226 n_ok=195 146.74s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 15/134 BO_CVn_Light_018.fits n_fit=218 n_ok=185 137.71s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 20/134 BO_CVn_Light_023.fits n_fit=220 n_ok=182 136.46s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 25/134 BO_CVn_Light_028.fits n_fit=222 n_ok=186 139.29s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 30/134 BO_CVn_Light_033.fits n_fit=229 n_ok=191 116.45s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 35/134 BO_CVn_Light_038.fits n_fit=227 n_ok=192 144.02s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 40/134 BO_CVn_Light_043.fits n_fit=221 n_ok=187 136.28s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 45/134 BO_CVn_Light_048.fits n_fit=214 n_ok=172 133.06s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 50/134 BO_CVn_Light_054.fits n_fit=222 n_ok=189 138.05s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 55/134 BO_CVn_Light_061.fits n_fit=225 n_ok=186 139.30s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 60/134 BO_CVn_Light_067.fits n_fit=221 n_ok=187 138.70s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 65/134 BO_CVn_Light_072.fits n_fit=226 n_ok=190 140.09s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 70/134 BO_CVn_Light_078.fits n_fit=216 n_ok=186 134.92s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 75/134 BO_CVn_Light_083.fits n_fit=229 n_ok=195 141.82s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 80/134 BO_CVn_Light_088.fits n_fit=232 n_ok=195 143.28s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 85/134 BO_CVn_Light_093.fits n_fit=227 n_ok=193 93.84s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 90/134 BO_CVn_Light_098.fits n_fit=224 n_ok=189 92.68s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 95/134 BO_CVn_Light_103.fits n_fit=239 n_ok=202 98.23s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 100/134 BO_CVn_Light_108.fits n_fit=218 n_ok=181 91.49s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 105/134 BO_CVn_Light_114.fits n_fit=224 n_ok=187 92.28s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 110/134 BO_CVn_Light_119.fits n_fit=235 n_ok=193 96.64s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 115/134 BO_CVn_Light_125.fits n_fit=226 n_ok=177 93.44s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 120/134 BO_CVn_Light_130.fits n_fit=229 n_ok=193 94.29s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 125/134 BO_CVn_Light_136.fits n_fit=229 n_ok=192 95.36s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 130/134 BO_CVn_Light_143.fits n_fit=223 n_ok=184 91.34s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+  frame 134/134 BO_CVn_Light_148.fits n_fit=224 n_ok=187 92.23s
+fit+merge 15748.7s (11.23 x aperture 1402s) n_ok median=188.5
+M2 step4 write_internal_psf_lightcurves...
+LC 14.5s written=53
+wrote m2_m3.json
+M3 BO {'missing': False, 'catalog_id': '1498613634033133184', 'n_finite': 134, 'n_rows': 134, 'demeaned_rms_mmag': 145.9168982587656, 'drop_reason_sample': None}
+M3 FW {'missing': False, 'catalog_id': '1497343732462852864', 'n_finite': 134, 'n_rows': 134, 'demeaned_rms_mmag': 14.557351778473945, 'drop_reason_sample': None}
+cost_stop True total_s 15763.364

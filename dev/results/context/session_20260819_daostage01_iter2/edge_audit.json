@@ -1,0 +1,11 @@
+{
+  "edge_margin_px": 10.0,
+  "frame_w_px": 2082,
+  "frame_h_px": 1397,
+  "n_onchip_le16": 6168,
+  "geometric_edge_fraction": 0.023785014821798067,
+  "geometric_edge_count_expected": 146.7059714208505,
+  "note": "Uniform-density approximation; real edge excess comes from WCS distortion + border crowding.",
+  "observed_edge_count_margin10": 146,
+  "observed_edge_count_iter1_margin50": 714
+}

@@ -1,0 +1,46 @@
+live epsf sha 172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20
+copying freeze to work copy...
+copy 2.5s
+science set n_total 317
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+M2 step1 build_epsf_model...
+build 3.3s n_stars=63 sha=849be1fd7187feb8
+M2 step2/3 fit+merge 134 frames x 317 ids...
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+  frame 1/134 BO_CVn_Light_001.fits n_fit=214 n_ok=186 150.26s
+  first-frame ETA remaining ~20134s
+wrote m2_progress.json
+  frame 2/134 BO_CVn_Light_003.fits n_fit=225 n_ok=198 119.09s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+  frame 3/134 BO_CVn_Light_004.fits n_fit=219 n_ok=182 103.40s
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+WARNING: One or more fit(s) may not have converged. Please check the "flags" column in the output table. [photutils.psf._components]
+WARNING:astropy:One or more fit(s) may not have converged. Please check the "flags" column in the output table.
+Traceback (most recent call last):
+  File "C:\ASTRO\python\VYVAR\dev\results\context\session_20260827_epsf_chain\m2_m3_run.py", line 281, in <module>
+    main()
+  File "C:\ASTRO\python\VYVAR\dev\results\context\session_20260827_epsf_chain\m2_m3_run.py", line 207, in main
+    row = merge_psf_into_sidecar(
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\ASTRO\python\VYVAR\src_py\epsf_psf_merge.py", line 366, in merge_psf_into_sidecar
+    guarded_psf_sidecar_write(sidecar_path, after, before_snap)
+  File "C:\ASTRO\python\VYVAR\src_py\epsf_psf_merge.py", line 110, in guarded_psf_sidecar_write
+    raise RuntimeError(
+RuntimeError: INV-EXPORT-READ-ONLY-01: non-psf columns changed; sidecar restored

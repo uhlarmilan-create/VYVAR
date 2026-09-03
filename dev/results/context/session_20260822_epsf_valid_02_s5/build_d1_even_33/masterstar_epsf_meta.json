@@ -1,0 +1,209 @@
+{
+  "fwhm_px": 3.3014,
+  "cutout_size": 17,
+  "oversampling": 2,
+  "spatial_order": 0,
+  "smoothing_kernel": "quadratic",
+  "fit_shape": [
+    9,
+    9
+  ],
+  "epsf_qc": {
+    "epsf_fwhm_native_px": 2.088,
+    "epsf_vs_input_fwhm_ratio": 0.632,
+    "epsf_nan_fraction": 0.0,
+    "epsf_asymmetry": 0.0529
+  },
+  "epsf_norm_factor": 1.0,
+  "epsf_sum_native": 1.0,
+  "phase2_moffat_centroids_used": 0,
+  "isolation_radius_px": 9.9042,
+  "plate_scale_arcsec_px": 9.773890066483727,
+  "n_stars_used": 33,
+  "n_stars_after_join": 33,
+  "draft_id": 516,
+  "created_utc": "2026-08-22T16:56:01Z",
+  "build_funnel": {
+    "n_csv_input": 33,
+    "n_after_variable_excluded": 33,
+    "n_after_peak_sat_likely": 33,
+    "n_after_peak_sat_is_saturated": 33,
+    "n_after_photometry_ok": 33,
+    "n_after_not_noisy": 33,
+    "n_after_usable": 33,
+    "n_after_snr_cut": null,
+    "n_after_snr_cut_reason": "not applied in this function",
+    "n_build_input": 33,
+    "n_after_zone_linear": 33,
+    "n_after_clean_source_state": 33,
+    "n_after_science_scope": 33,
+    "n_after_edge_safe_cutout": 33,
+    "n_after_interim_top_n": 33,
+    "build_interim_top_n": 200,
+    "build_interim_top_n_mark": "INTERIM",
+    "n_csv_with_catalog_id": 33,
+    "used_broad_pool": false,
+    "n_safe_comp_csv_join": 33,
+    "n_after_csv_select": 33,
+    "n_after_db_join": 33,
+    "n_after_targeting": 33,
+    "n_before_isolation": 33,
+    "n_after_isolation": 33,
+    "n_after_extract_stars": 33,
+    "n_final": 33
+  },
+  "build_selection": {
+    "gates": [
+      "zone_linear",
+      "non_variable",
+      "non_saturated",
+      "photometry_ok",
+      "clean_source_state",
+      "science_scope",
+      "edge_safe_cutout",
+      "isolated",
+      "interim_top_n"
+    ],
+    "interim_top_n": 200,
+    "interim_top_n_mark": "INTERIM",
+    "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+  },
+  "iteration_failure_curve": [
+    {
+      "iteration": 1,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 2,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 3,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 4,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 5,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 6,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 7,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 8,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 9,
+      "n_stars": 33,
+      "n_fail": 0,
+      "n_status_0": 33,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 0
+    },
+    {
+      "iteration": 10,
+      "n_stars": 33,
+      "n_fail": 6,
+      "n_status_0": 27,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 6
+    },
+    {
+      "iteration": 11,
+      "n_stars": 33,
+      "n_fail": 15,
+      "n_status_0": 18,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 15
+    },
+    {
+      "iteration": 12,
+      "n_stars": 33,
+      "n_fail": 20,
+      "n_status_0": 13,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 20
+    },
+    {
+      "iteration": 13,
+      "n_stars": 33,
+      "n_fail": 22,
+      "n_status_0": 11,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 22
+    },
+    {
+      "iteration": 14,
+      "n_stars": 33,
+      "n_fail": 22,
+      "n_status_0": 11,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 22
+    },
+    {
+      "iteration": 15,
+      "n_stars": 33,
+      "n_fail": 22,
+      "n_status_0": 11,
+      "n_status_1": 0,
+      "n_status_2": 0,
+      "n_status_3": 22
+    }
+  ],
+  "sandbox_output": true
+}

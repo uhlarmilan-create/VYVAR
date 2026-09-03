@@ -1,0 +1,8 @@
+{
+  "n_production_pool": 1475,
+  "n_gated": 67,
+  "n_prod_only": 1408,
+  "violation_primary_counts": {
+    "out_of_science_scope": 1408
+  }
+}

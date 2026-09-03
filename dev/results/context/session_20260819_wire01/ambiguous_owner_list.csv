@@ -1,0 +1,2 @@
+catalog_id,x_gaia,y_gaia,g_mag,source_state,seed_reject_reason,ambiguous_owner,seed_centroid_px,seed_snr,seed_local_sigma,seed_flux,blend_group_id,blend_flux_ratio
+1498401943685255424,465.4917917260483,384.76236271730414,14.976521492004396,DETECTED_P2,,True,,,,,,

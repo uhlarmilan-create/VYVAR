@@ -1,0 +1,10 @@
+{
+  "n_forced_seed_ms_new": 156,
+  "n_mag_in_comp_range": 156,
+  "n_edge_ok": 156,
+  "n_nn_ge2": 156,
+  "comp_pool_now": 2356,
+  "comp_mag_lo": 7.989812850952148,
+  "comp_mag_hi": 17.347734451293945,
+  "n_blend_pairs_ms": 2048
+}

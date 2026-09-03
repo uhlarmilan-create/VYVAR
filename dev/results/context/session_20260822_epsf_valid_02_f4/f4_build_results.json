@@ -1,0 +1,431 @@
+[
+  {
+    "label": "516_sandbox_gated",
+    "status": "ok",
+    "path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260822_epsf_valid_02_f4\\sandbox_516_gated_build\\masterstar_epsf.fits",
+    "meta": {
+      "fwhm_px": 3.3014,
+      "cutout_size": 17,
+      "oversampling": 2,
+      "spatial_order": 0,
+      "smoothing_kernel": "quadratic",
+      "fit_shape": [
+        9,
+        9
+      ],
+      "epsf_qc": {
+        "epsf_fwhm_native_px": 2.364,
+        "epsf_vs_input_fwhm_ratio": 0.716,
+        "epsf_nan_fraction": 0.0,
+        "epsf_asymmetry": 0.0369
+      },
+      "epsf_norm_factor": 1.0,
+      "epsf_sum_native": 1.0,
+      "phase2_moffat_centroids_used": 0,
+      "isolation_radius_px": 9.9042,
+      "plate_scale_arcsec_px": 9.773890066483727,
+      "n_stars_used": 67,
+      "n_stars_after_join": 68,
+      "draft_id": 516,
+      "created_utc": "2026-08-22T08:16:33Z",
+      "build_funnel": {
+        "n_csv_input": 3610,
+        "n_after_variable_excluded": 3325,
+        "n_after_peak_sat_likely": 2442,
+        "n_after_peak_sat_is_saturated": 2432,
+        "n_after_photometry_ok": 2432,
+        "n_after_not_noisy": 2264,
+        "n_after_usable": 2264,
+        "n_after_snr_cut": null,
+        "n_after_snr_cut_reason": "not applied in this function",
+        "n_build_input": 2264,
+        "n_after_zone_linear": 2264,
+        "n_after_clean_source_state": 2200,
+        "n_after_science_scope": 68,
+        "n_after_edge_safe_cutout": 68,
+        "n_after_interim_top_n": 68,
+        "build_interim_top_n": 200,
+        "build_interim_top_n_mark": "INTERIM",
+        "n_csv_with_catalog_id": 68,
+        "used_broad_pool": false,
+        "n_safe_comp_csv_join": 68,
+        "n_after_csv_select": 68,
+        "n_after_db_join": 68,
+        "n_after_targeting": 68,
+        "n_before_isolation": 68,
+        "n_after_isolation": 67,
+        "n_after_extract_stars": 67,
+        "n_final": 67
+      },
+      "build_selection": {
+        "gates": [
+          "zone_linear",
+          "non_variable",
+          "non_saturated",
+          "photometry_ok",
+          "clean_source_state",
+          "science_scope",
+          "edge_safe_cutout",
+          "isolated",
+          "interim_top_n"
+        ],
+        "interim_top_n": 200,
+        "interim_top_n_mark": "INTERIM",
+        "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+      },
+      "iteration_failure_curve": [
+        {
+          "iteration": 1,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 2,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 3,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 4,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 5,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 6,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 7,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 8,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 9,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 10,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 11,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 12,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 13,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 14,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 15,
+          "n_stars": 67,
+          "n_fail": 0,
+          "n_status_0": 67,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        }
+      ],
+      "sandbox_output": true
+    },
+    "production_n_stars_used": 1475
+  },
+  {
+    "label": "517_gated",
+    "status": "ok",
+    "path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260822_epsf_valid_02_f4\\build_517_gated\\masterstar_epsf.fits",
+    "meta": {
+      "fwhm_px": 3.3014,
+      "cutout_size": 17,
+      "oversampling": 2,
+      "spatial_order": 0,
+      "smoothing_kernel": "quadratic",
+      "fit_shape": [
+        9,
+        9
+      ],
+      "epsf_qc": {
+        "epsf_fwhm_native_px": 2.438,
+        "epsf_vs_input_fwhm_ratio": 0.739,
+        "epsf_nan_fraction": 0.0,
+        "epsf_asymmetry": 0.0136
+      },
+      "epsf_norm_factor": 1.0,
+      "epsf_sum_native": 1.0,
+      "phase2_moffat_centroids_used": 0,
+      "isolation_radius_px": 9.9042,
+      "plate_scale_arcsec_px": 9.773925823247218,
+      "n_stars_used": 66,
+      "n_stars_after_join": 67,
+      "draft_id": 517,
+      "created_utc": "2026-08-22T08:16:36Z",
+      "build_funnel": {
+        "n_csv_input": 3606,
+        "n_after_variable_excluded": 3321,
+        "n_after_peak_sat_likely": 2437,
+        "n_after_peak_sat_is_saturated": 2434,
+        "n_after_photometry_ok": 2434,
+        "n_after_not_noisy": 2268,
+        "n_after_usable": 2268,
+        "n_after_snr_cut": null,
+        "n_after_snr_cut_reason": "not applied in this function",
+        "n_build_input": 2268,
+        "n_after_zone_linear": 2268,
+        "n_after_clean_source_state": 2207,
+        "n_after_science_scope": 67,
+        "n_after_edge_safe_cutout": 67,
+        "n_after_interim_top_n": 67,
+        "build_interim_top_n": 200,
+        "build_interim_top_n_mark": "INTERIM",
+        "n_csv_with_catalog_id": 67,
+        "used_broad_pool": false,
+        "n_safe_comp_csv_join": 67,
+        "n_after_csv_select": 67,
+        "n_after_db_join": 67,
+        "n_after_targeting": 67,
+        "n_before_isolation": 67,
+        "n_after_isolation": 66,
+        "n_after_extract_stars": 66,
+        "n_final": 66
+      },
+      "build_selection": {
+        "gates": [
+          "zone_linear",
+          "non_variable",
+          "non_saturated",
+          "photometry_ok",
+          "clean_source_state",
+          "science_scope",
+          "edge_safe_cutout",
+          "isolated",
+          "interim_top_n"
+        ],
+        "interim_top_n": 200,
+        "interim_top_n_mark": "INTERIM",
+        "instrumented_builder": "InstrumentedEPSFBuilder._process_iteration"
+      },
+      "iteration_failure_curve": [
+        {
+          "iteration": 1,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 2,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 3,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 4,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 5,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 6,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 7,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 8,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 9,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 10,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 11,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 12,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 13,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 14,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        },
+        {
+          "iteration": 15,
+          "n_stars": 66,
+          "n_fail": 0,
+          "n_status_0": 66,
+          "n_status_1": 0,
+          "n_status_2": 0,
+          "n_status_3": 0
+        }
+      ],
+      "sandbox_output": true
+    }
+  }
+]

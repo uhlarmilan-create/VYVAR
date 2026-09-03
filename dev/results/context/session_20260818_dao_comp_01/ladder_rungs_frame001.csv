@@ -1,0 +1,6 @@
+rung,n,note
+DETECTED,2992,proc forced_photometry=False and catalog_id in on-chip Gaia G<=17.5
+FORCED_OK,336,proc forced_photometry=True; MS members missed by this-frame DAO
+MS_INELIGIBLE,42,on-chip in MS (3370) minus in-proc (3328); sat/var/qso not force-injected
+TOO_FAINT_Ggt15,8184,on-chip not in MS and G>15 (8583-399); below 50pct edge
+UNACCOUNTED_Gle15,399,on-chip G<=15 not in MS: blend/hole/edge/sat mix

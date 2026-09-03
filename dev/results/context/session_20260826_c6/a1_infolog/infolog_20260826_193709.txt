@@ -1,0 +1,11 @@
+# VYVAR Infolog - 20260826_193709
+# Draft: C:\ASTRO\python\VYVAR\dev\results\context\session_20260826_c6\a1_infolog
+# timestamps: UTC
+# session: durable append log (full run)
+#============================================================
+
+17:37:09  [COMP SELECT] Distance mode: radec-haversine
+17:37:09  REPAIR summary: checked=156 repaired=0 kept_placeholder=0 no_gaia_in_box=156 over_max_sep=0
+17:37:10  select_active_targets: deduped to 253 unique catalog_ids (prefer real VSX name over Gaia placeholder)
+17:37:10  select_active_targets: linear=157 noise=14 saturated=1 no_catalog_id=0 no_gaia_id=0 no_dao_detection=0 out_of_frame=176
+17:37:10  FAZA 0 funnel: vsx_bbox=873 -> in_frame=697 -> gaia_id_assigned=575 (contamination=n/a) -> dao_detected=253 -> active=253 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=444 out_of_frame=176 | masked: zone_flag=1 zone_noise=14 vsx_type_out_of_scope=182 below_target_depth=0

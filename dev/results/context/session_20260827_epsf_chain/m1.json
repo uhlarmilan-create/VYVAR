@@ -1,0 +1,193 @@
+{
+  "n_proc": 134,
+  "n_fits": 134,
+  "frame0": "proc_BO_CVn_Light_001.csv",
+  "frame60": "proc_BO_CVn_Light_068.csv",
+  "ensemble_source": "pinned",
+  "n_comps": 4,
+  "comp_ids": [
+    "1497771992240531712",
+    "1499200223486564608",
+    "1497974027502858240",
+    "1497368849430107904"
+  ],
+  "weights": {
+    "1497771992240531712": 9241.188631814864,
+    "1499200223486564608": 6486.886182273987,
+    "1497974027502858240": 4701.614479402266,
+    "1497368849430107904": 1886.4056430480184
+  },
+  "pinned_n": 4,
+  "frames": {
+    "frame0": {
+      "file": "proc_BO_CVn_Light_001.csv",
+      "n_rows": 3463,
+      "psf_columns": [
+        "psf_flux",
+        "psf_flux_err",
+        "psf_chi2",
+        "psf_fit_ok"
+      ],
+      "comps": [
+        {
+          "catalog_id": "1497771992240531712",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1499200223486564608",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        }
+      ],
+      "comps_not_in_csv": []
+    },
+    "frame60": {
+      "file": "proc_BO_CVn_Light_068.csv",
+      "n_rows": 3475,
+      "psf_columns": [
+        "psf_flux",
+        "psf_flux_err",
+        "psf_chi2",
+        "psf_fit_ok"
+      ],
+      "comps": [
+        {
+          "catalog_id": "1497771992240531712",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1499200223486564608",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1497974027502858240",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        },
+        {
+          "catalog_id": "1497368849430107904",
+          "in_csv": true,
+          "psf_fit_ok": {
+            "present": true,
+            "value": false
+          },
+          "psf_flux": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          },
+          "psf_chi2": {
+            "present": true,
+            "value": null,
+            "isnan": true
+          }
+        }
+      ],
+      "comps_not_in_csv": []
+    }
+  }
+}

@@ -1,0 +1,214 @@
+# VYVAR Infolog - 20260826_193815
+# Draft: C:\ASTRO\python\VYVAR\dev\results\context\session_20260826_c6\a1_infolog
+# timestamps: UTC
+# session: durable append log (full run)
+#============================================================
+
+17:38:15  [COMP SELECT] Distance mode: radec-haversine
+17:38:15  REPAIR summary: checked=156 repaired=0 kept_placeholder=0 no_gaia_in_box=156 over_max_sep=0
+17:38:16  select_active_targets: deduped to 253 unique catalog_ids (prefer real VSX name over Gaia placeholder)
+17:38:16  select_active_targets: linear=157 noise=14 saturated=1 no_catalog_id=0 no_gaia_id=0 no_dao_detection=0 out_of_frame=176
+17:38:16  FAZA 0 funnel: vsx_bbox=873 -> in_frame=697 -> gaia_id_assigned=575 (contamination=n/a) -> dao_detected=253 -> active=253 | excluded: no_dao_detection=0 no_gaia_id=0 not_target_eligible=444 out_of_frame=176 | masked: zone_flag=1 zone_noise=14 vsx_type_out_of_scope=182 below_target_depth=0
+17:39:10  GAIA SQL by source_id: fetched 253 / 253 unique ids (batched).
+17:39:10  GAIA SQL by source_id: fetched 1788 / 3570 unique ids (batched).
+17:39:10  [COMP] BP-RP=5.675 for target 1496795041799526400
+17:39:10  [COMP] BP-RP=5.675 for target 1496795041799526400
+17:39:12  [PIN-OK] target=1496795041799526400 n=8 mode=pinned provenance=477dc8cf
+17:39:12  [COMP] BP-RP=1.865 for target 1499842372636900992
+17:39:30  [COMP] 1499842372636900992: selected=4 T1=1 T2=3 T3=0 T4=0 note=color_rms_t2
+17:39:30  [COMP] WARNING 1499842372636900992: color_rms_t2 - widened colour window / sparse pool
+17:39:30  [COMP] BP-RP=1.704 for target 1497561779362267392
+17:39:30  [COMP] BP-RP=1.704 for target 1497561779362267392
+17:39:32  [PIN-OK] target=1497561779362267392 n=5 mode=pinned provenance=477dc8cf
+17:39:32  [COMP] BP-RP=1.784 for target 1496998382733052928
+17:39:32  [COMP] BP-RP=1.784 for target 1496998382733052928
+17:39:35  [PIN-OK] target=1496998382733052928 n=7 mode=pinned provenance=477dc8cf
+17:39:35  [COMP] BP-RP=3.038 for target 1497007144465726080
+17:39:54  [COMP] 1497007144465726080: selected=8 T1=0 T2=0 T3=0 T4=8 note=color_rms_wide
+17:39:54  [COMP] WARNING 1497007144465726080: color_rms_wide - widened colour window / sparse pool
+17:39:54  WARNING: [COMP] 1497007144465726080: SPARSE FIELD - all 8 comp stars TIER3/4 (color mismatch, penalty applied). LC quality may be reduced.
+17:39:54  [COMP] BP-RP=0.574 for target 1496278752372040832
+17:39:54  [COMP] BP-RP=0.574 for target 1496278752372040832
+17:39:56  [PIN-OK] target=1496278752372040832 n=8 mode=pinned provenance=477dc8cf
+17:39:56  [COMP] BP-RP=0.578 for target 1497169940906156032
+17:39:56  [COMP] BP-RP=0.578 for target 1497169940906156032
+17:39:59  [PIN-OK] target=1497169940906156032 n=8 mode=pinned provenance=477dc8cf
+17:39:59  [COMP] BP-RP=0.797 for target 1496293286541396480
+17:39:59  [COMP] BP-RP=0.797 for target 1496293286541396480
+17:40:01  [PIN-OK] target=1496293286541396480 n=8 mode=pinned provenance=477dc8cf
+17:40:01  [COMP] BP-RP=0.504 for target 1497236186481686016
+17:40:01  [COMP] BP-RP=0.504 for target 1497236186481686016
+17:40:04  [PIN-OK] target=1497236186481686016 n=8 mode=pinned provenance=477dc8cf
+17:40:04  [COMP] BP-RP=2.249 for target 1497245497969274240
+17:40:04  [COMP] BP-RP=2.249 for target 1497245497969274240
+17:40:06  [PIN-OK] target=1497245497969274240 n=3 mode=pinned provenance=477dc8cf
+17:40:06  [COMP] BP-RP=2.304 for target 1497350638770267520
+17:40:06  [COMP] BP-RP=2.304 for target 1497350638770267520
+17:40:09  [PIN-OK] target=1497350638770267520 n=8 mode=pinned provenance=477dc8cf
+17:40:09  [COMP] BP-RP=1.466 for target 1498617482323461376
+17:40:09  [COMP] BP-RP=1.466 for target 1498617482323461376
+17:40:11  [PIN-OK] target=1498617482323461376 n=8 mode=pinned provenance=477dc8cf
+17:40:11  [COMP] BP-RP=1.205 for target 1498064771572297856
+17:40:11  [COMP] BP-RP=1.205 for target 1498064771572297856
+17:40:14  [PIN-OK] target=1498064771572297856 n=8 mode=pinned provenance=477dc8cf
+17:40:14  [COMP] BP-RP=1.969 for target 1498027456896444928
+17:40:14  [COMP] BP-RP=1.969 for target 1498027456896444928
+17:40:16  [PIN-OK] target=1498027456896444928 n=8 mode=pinned provenance=477dc8cf
+17:40:16  [COMP] BP-RP=1.638 for target 1497683722074089728
+17:40:16  [COMP] BP-RP=1.638 for target 1497683722074089728
+17:40:18  [PIN-OK] target=1497683722074089728 n=6 mode=pinned provenance=477dc8cf
+17:40:18  [COMP] BP-RP=2.496 for target 1497683996951418880
+17:40:36  [COMP] 1497683996951418880: selected=8 T1=0 T2=0 T3=0 T4=8 note=color_rms_wide
+17:40:36  [COMP] WARNING 1497683996951418880: color_rms_wide - widened colour window / sparse pool
+17:40:36  WARNING: [COMP] 1497683996951418880: SPARSE FIELD - all 8 comp stars TIER3/4 (color mismatch, penalty applied). LC quality may be reduced.
+17:40:36  [COMP] BP-RP=0.815 for target 1497343732462852864
+17:40:36  [COMP] BP-RP=0.815 for target 1497343732462852864
+17:40:39  [PIN-OK] target=1497343732462852864 n=8 mode=pinned provenance=477dc8cf
+17:40:39  [COMP] BP-RP=0.458 for target 1498613634033133184
+17:40:39  [COMP] BP-RP=0.458 for target 1498613634033133184
+17:40:41  [PIN-OK] target=1498613634033133184 n=4 mode=pinned provenance=477dc8cf
+17:40:41  [COMP] BP-RP=1.985 for target 1499209638054824320
+17:40:58  [COMP] 1499209638054824320: selected=7 T1=0 T2=1 T3=6 T4=0 note=color_rms_t3
+17:40:58  [COMP] WARNING 1499209638054824320: color_rms_t3 - widened colour window / sparse pool
+17:40:58  [COMP] BP-RP=0.314 for target 1499021174889970816
+17:40:58  [COMP] BP-RP=0.314 for target 1499021174889970816
+17:41:00  [PIN-OK] target=1499021174889970816 n=7 mode=pinned provenance=477dc8cf
+17:41:00  [COMP] BP-RP=0.966 for target 1498321301379345408
+17:41:01  [COMP] BP-RP=0.966 for target 1498321301379345408
+17:41:03  [PIN-OK] target=1498321301379345408 n=8 mode=pinned provenance=477dc8cf
+17:41:03  [COMP] BP-RP=0.704 for target 1498804639818507904
+17:41:03  [COMP] BP-RP=0.704 for target 1498804639818507904
+17:41:05  [PIN-OK] target=1498804639818507904 n=8 mode=pinned provenance=477dc8cf
+17:41:05  [COMP] BP-RP=1.208 for target 1500461157165243648
+17:41:05  [COMP] BP-RP=1.208 for target 1500461157165243648
+17:41:07  [PIN-OK] target=1500461157165243648 n=8 mode=pinned provenance=477dc8cf
+17:41:07  [COMP] BP-RP=1.773 for target 1498752516095473664
+17:41:24  [COMP] 1498752516095473664: selected=3 T1=3 T2=0 T3=0 T4=0 note=color_rms_t1
+17:41:24  [COMP] BP-RP=0.588 for target 1500424804562041984
+17:41:24  [COMP] BP-RP=0.588 for target 1500424804562041984
+17:41:27  [PIN-OK] target=1500424804562041984 n=8 mode=pinned provenance=477dc8cf
+17:41:27  [COMP] BP-RP=1.170 for target 1498000793739050368
+17:41:27  [COMP] BP-RP=1.170 for target 1498000793739050368
+17:41:29  [PIN-OK] target=1498000793739050368 n=8 mode=pinned provenance=477dc8cf
+17:41:29  [COMP] BP-RP=0.828 for target 1498699086702005376
+17:41:29  [COMP] BP-RP=0.828 for target 1498699086702005376
+17:41:31  [PIN-OK] target=1498699086702005376 n=8 mode=pinned provenance=477dc8cf
+17:41:31  [COMP] BP-RP=1.208 for target 1497425371201155072
+17:41:31  [COMP] BP-RP=1.208 for target 1497425371201155072
+17:41:34  [PIN-OK] target=1497425371201155072 n=8 mode=pinned provenance=477dc8cf
+17:41:34  [COMP] BP-RP=0.616 for target 1497418258735289472
+17:41:34  [COMP] BP-RP=0.616 for target 1497418258735289472
+17:41:37  [PIN-OK] target=1497418258735289472 n=8 mode=pinned provenance=477dc8cf
+17:41:37  [COMP] BP-RP=1.131 for target 1498298211635183744
+17:41:37  [COMP] BP-RP=1.131 for target 1498298211635183744
+17:41:40  [PIN-OK] target=1498298211635183744 n=8 mode=pinned provenance=477dc8cf
+17:41:40  [COMP] BP-RP=1.868 for target 1500549977088828160
+17:41:40  [COMP] BP-RP=1.868 for target 1500549977088828160
+17:41:43  [PIN-OK] target=1500549977088828160 n=5 mode=pinned provenance=477dc8cf
+17:41:43  [COMP] BP-RP=0.971 for target 1498842882207281152
+17:41:43  [COMP] BP-RP=0.971 for target 1498842882207281152
+17:41:45  [PIN-OK] target=1498842882207281152 n=8 mode=pinned provenance=477dc8cf
+17:41:45  [COMP] BP-RP=1.727 for target 1498425548825498112
+17:41:45  [COMP] BP-RP=1.727 for target 1498425548825498112
+17:41:48  [PIN-OK] target=1498425548825498112 n=3 mode=pinned provenance=477dc8cf
+17:41:48  [COMP] BP-RP=0.458 for target 1498486880958321024
+17:41:48  [COMP] BP-RP=0.458 for target 1498486880958321024
+17:41:50  [PIN-OK] target=1498486880958321024 n=4 mode=pinned provenance=477dc8cf
+17:41:50  [COMP] BP-RP=0.711 for target 1497132660589966976
+17:41:50  [COMP] BP-RP=0.711 for target 1497132660589966976
+17:41:53  [PIN-OK] target=1497132660589966976 n=8 mode=pinned provenance=477dc8cf
+17:41:53  [COMP] BP-RP=1.255 for target 1497622939696499840
+17:42:10  [COMP] 1497622939696499840: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:42:10  [COMP] BP-RP=0.148 for target 1497181966814590848
+17:42:10  [COMP] BP-RP=0.148 for target 1497181966814590848
+17:42:13  [PIN-OK] target=1497181966814590848 n=3 mode=pinned provenance=477dc8cf
+17:42:13  [COMP] BP-RP=0.909 for target 1496248206564680064
+17:42:31  [COMP] 1496248206564680064: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:42:31  [COMP] BP-RP=0.774 for target 1485534187306501376
+17:42:31  [COMP] BP-RP=0.774 for target 1485534187306501376
+17:42:33  [PIN-OK] target=1485534187306501376 n=8 mode=pinned provenance=477dc8cf
+17:42:33  [COMP] BP-RP=1.053 for target 1485987254816323328
+17:42:33  [COMP] BP-RP=1.053 for target 1485987254816323328
+17:42:36  [PIN-OK] target=1485987254816323328 n=8 mode=pinned provenance=477dc8cf
+17:42:36  [COMP] BP-RP=0.232 for target 1497639123133258752
+17:42:36  [COMP] BP-RP=0.232 for target 1497639123133258752
+17:42:38  [PIN-OK] target=1497639123133258752 n=5 mode=pinned provenance=477dc8cf
+17:42:38  [COMP] BP-RP=0.461 for target 1497871669842349184
+17:42:38  [COMP] BP-RP=0.461 for target 1497871669842349184
+17:42:41  [PIN-OK] target=1497871669842349184 n=6 mode=pinned provenance=477dc8cf
+17:42:41  [COMP] BP-RP=1.724 for target 1497227287309482624
+17:42:41  [COMP] BP-RP=1.724 for target 1497227287309482624
+17:42:43  [PIN-OK] target=1497227287309482624 n=3 mode=pinned provenance=477dc8cf
+17:42:43  [COMP] BP-RP=1.616 for target 1497284015237511808
+17:43:03  [COMP] 1497284015237511808: selected=4 T1=4 T2=0 T3=0 T4=0 note=color_rms_t1
+17:43:03  [COMP] BP-RP=1.487 for target 1497154753901690624
+17:43:03  [COMP] BP-RP=1.487 for target 1497154753901690624
+17:43:06  [PIN-OK] target=1497154753901690624 n=8 mode=pinned provenance=477dc8cf
+17:43:06  [COMP] BP-RP=1.283 for target 1497345278651080576
+17:43:24  [COMP] 1497345278651080576: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:43:24  [COMP] BP-RP=0.467 for target 1497603835681942400
+17:43:24  [COMP] BP-RP=0.467 for target 1497603835681942400
+17:43:26  [PIN-OK] target=1497603835681942400 n=6 mode=pinned provenance=477dc8cf
+17:43:26  [COMP] BP-RP=1.049 for target 1497096960821764224
+17:43:44  [COMP] 1497096960821764224: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:43:44  [COMP] BP-RP=0.769 for target 1485987151737107200
+17:44:01  [COMP] 1485987151737107200: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:44:01  [COMP] BP-RP=0.796 for target 1497971450522478080
+17:44:18  [COMP] 1497971450522478080: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:44:18  [COMP] BP-RP=1.015 for target 1500327978819506944
+17:44:18  [COMP] BP-RP=1.015 for target 1500327978819506944
+17:44:20  [PIN-OK] target=1500327978819506944 n=8 mode=pinned provenance=477dc8cf
+17:44:20  [COMP] BP-RP=0.491 for target 1498058827337611392
+17:44:20  [COMP] BP-RP=0.491 for target 1498058827337611392
+17:44:23  [PIN-OK] target=1498058827337611392 n=8 mode=pinned provenance=477dc8cf
+17:44:23  [COMP] BP-RP=1.504 for target 1497395615667678848
+17:44:40  [COMP] 1497395615667678848: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:44:40  [COMP] BP-RP=0.926 for target 1500418894687086208
+17:44:57  [COMP] 1500418894687086208: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:44:57  [COMP] BP-RP=1.200 for target 1500410236033012352
+17:45:14  [COMP] 1500410236033012352: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:45:14  [COMP] BP-RP=1.330 for target 1500373574192295808
+17:45:31  [COMP] 1500373574192295808: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:45:31  [COMP] BP-RP=2.099 for target 1498322916287022976
+17:45:48  [COMP] 1498322916287022976: selected=4 T1=0 T2=0 T3=4 T4=0 note=color_rms_t3
+17:45:48  [COMP] WARNING 1498322916287022976: color_rms_t3 - widened colour window / sparse pool
+17:45:48  [COMP] BP-RP=1.500 for target 1498229629597339776
+17:46:05  [COMP] 1498229629597339776: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:46:05  [COMP] BP-RP=0.481 for target 1498795809366255488
+17:46:05  [COMP] BP-RP=0.481 for target 1498795809366255488
+17:46:08  [PIN-OK] target=1498795809366255488 n=7 mode=pinned provenance=477dc8cf
+17:46:08  [COMP] BP-RP=1.003 for target 1500693841313325696
+17:46:08  [COMP] BP-RP=1.003 for target 1500693841313325696
+17:46:10  [PIN-OK] target=1500693841313325696 n=8 mode=pinned provenance=477dc8cf
+17:46:10  [COMP] BP-RP=0.838 for target 1498783199341798016
+17:46:10  [COMP] BP-RP=0.838 for target 1498783199341798016
+17:46:13  [PIN-OK] target=1498783199341798016 n=8 mode=pinned provenance=477dc8cf
+17:46:13  [COMP] BP-RP=0.562 for target 1499006984318088320
+17:46:13  [COMP] BP-RP=0.562 for target 1499006984318088320
+17:46:15  [PIN-OK] target=1499006984318088320 n=8 mode=pinned provenance=477dc8cf
+17:46:15  [COMP] BP-RP=1.083 for target 1499020831292586624
+17:46:32  [COMP] 1499020831292586624: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:46:32  [COMP] BP-RP=1.151 for target 1499210016011946496
+17:46:32  [COMP] BP-RP=1.151 for target 1499210016011946496
+17:46:34  [PIN-OK] target=1499210016011946496 n=8 mode=pinned provenance=477dc8cf
+17:46:34  [COMP] BP-RP=0.237 for target 1498278351706325248
+17:46:34  [COMP] BP-RP=0.237 for target 1498278351706325248
+17:46:37  [PIN-OK] target=1498278351706325248 n=5 mode=pinned provenance=477dc8cf
+17:46:37  [COMP] BP-RP=0.325 for target 1499084499887740160
+17:46:37  [COMP] BP-RP=0.325 for target 1499084499887740160
+17:46:39  [PIN-OK] target=1499084499887740160 n=8 mode=pinned provenance=477dc8cf
+17:46:39  [COMP] BP-RP=0.791 for target 1498480077730173056
+17:46:56  [COMP] 1498480077730173056: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:46:56  [COMP] BP-RP=0.466 for target 1502012464992313088
+17:46:56  [COMP] BP-RP=0.466 for target 1502012464992313088
+17:46:59  [PIN-OK] target=1502012464992313088 n=6 mode=pinned provenance=477dc8cf
+17:46:59  [COMP] BP-RP=1.186 for target 1499081819828174080
+17:47:16  [COMP] 1499081819828174080: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:47:16  [COMP] BP-RP=1.720 for target 1499119546820866176
+17:47:33  [COMP] 1499119546820866176: selected=4 T1=4 T2=0 T3=0 T4=0 note=color_rms_t1
+17:47:33  [COMP] BP-RP=0.849 for target 1502098570497419520
+17:47:51  [COMP] 1502098570497419520: selected=8 T1=8 T2=0 T3=0 T4=0 note=color_rms_t1
+17:49:38  [COLOR TERM] group pool fit (NoFilter|60|2): clear_unfiltered clear_level k=-0.3730 +- 0.0900 mag/BP-RP (export-only; shape term null)
+17:49:43  GAIA DB: MAX(g_mag) v gaia_dr3 = 17.500 (vyvar_gaia_dr3.db)
+17:49:43  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1496795041799526400
+17:49:44  [AC] skipped: scatter_too_high

@@ -1,0 +1,29 @@
+{
+  "curve": [
+    {
+      "n_build": 15,
+      "n_matched": 59,
+      "median_delta_mmag": -324.84480120500035,
+      "rms_delta_mmag": 327.57343970156074
+    },
+    {
+      "n_build": 30,
+      "n_matched": 56,
+      "median_delta_mmag": -427.27531947942543,
+      "rms_delta_mmag": 430.45838625537357
+    },
+    {
+      "n_build": 50,
+      "n_matched": 59,
+      "median_delta_mmag": -300.4334422592803,
+      "rms_delta_mmag": 299.3044413480033
+    },
+    {
+      "n_build": 67,
+      "n_matched": 74,
+      "median_delta_mmag": 0.0,
+      "rms_delta_mmag": 0.0
+    }
+  ],
+  "break_note": "n=15 intentionally included; largest deviation expected"
+}

@@ -1,0 +1,1181 @@
+{
+  "started_utc": "2026-08-27T15:46:00Z",
+  "work": "C:\\ASTRO\\python\\VYVAR\\tmp\\epsf_chain_m2_era04",
+  "snapshot": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era04_20260826",
+  "live_516": {
+    "epsf_exists": true,
+    "epsf_sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+    "meta": {
+      "n_stars_used": 67,
+      "fwhm_px": 3.3014,
+      "cutout_size": 17,
+      "oversampling": 2,
+      "spatial_order": 0,
+      "smoothing_kernel": "quadratic",
+      "created_utc": "2026-08-22T19:11:31Z",
+      "draft_id": 516,
+      "n_after_science_scope": 68,
+      "n_after_isolation": 67,
+      "n_final": 67,
+      "epsf_qc": {
+        "epsf_fwhm_native_px": 2.364,
+        "epsf_vs_input_fwhm_ratio": 0.716,
+        "epsf_nan_fraction": 0.0,
+        "epsf_asymmetry": 0.0369
+      }
+    }
+  },
+  "copy_s": 0.0,
+  "science_set": {
+    "n_total": 317,
+    "n_targets": 253,
+    "n_per_target_comps": 64,
+    "n_check_stars": 0,
+    "n_blended": 0,
+    "composition": {
+      "targets": 253,
+      "per_target_comps_only": 64,
+      "check_stars_only": 0,
+      "blended_only": 0
+    },
+    "empty_reason": null
+  },
+  "build_s": 0.0,
+  "epsf_path": "C:\\ASTRO\\python\\VYVAR\\tmp\\epsf_chain_m2_era04\\platesolve\\NoFilter_60_2\\masterstar_epsf.fits",
+  "work_epsf_sha256": "849be1fd7187feb89bcd12c8cdf84095fdac067b990339cf80a725e069b31295",
+  "work_meta": {
+    "n_stars_used": 63,
+    "fwhm_px": 3.3014,
+    "cutout_size": 17,
+    "oversampling": 2,
+    "spatial_order": 0,
+    "smoothing_kernel": "quadratic",
+    "created_utc": "2026-08-27T15:26:24Z",
+    "draft_id": 516,
+    "n_after_science_scope": 64,
+    "n_after_isolation": 63,
+    "n_final": 63,
+    "epsf_qc": {
+      "epsf_fwhm_native_px": 2.354,
+      "epsf_vs_input_fwhm_ratio": 0.713,
+      "epsf_nan_fraction": 0.0,
+      "epsf_asymmetry": 0.0092
+    }
+  },
+  "build_n_stars": 63,
+  "n_frames": 134,
+  "n_fit_ids": 317,
+  "fit_merge_s": 15748.741,
+  "per_frame": [
+    {
+      "i": 1,
+      "file": "BO_CVn_Light_001.fits",
+      "s": 0.0,
+      "n_fit": null,
+      "n_ok": null,
+      "status": "skipped_resume"
+    },
+    {
+      "i": 2,
+      "file": "BO_CVn_Light_003.fits",
+      "s": 0.0,
+      "n_fit": null,
+      "n_ok": null,
+      "status": "skipped_resume"
+    },
+    {
+      "i": 3,
+      "file": "BO_CVn_Light_004.fits",
+      "s": 0.0,
+      "n_fit": null,
+      "n_ok": null,
+      "status": "skipped_resume"
+    },
+    {
+      "i": 4,
+      "file": "BO_CVn_Light_005.fits",
+      "s": 0.0,
+      "n_fit": null,
+      "n_ok": null,
+      "status": "skipped_resume"
+    },
+    {
+      "i": 5,
+      "file": "BO_CVn_Light_006.fits",
+      "s": 150.145,
+      "n_fit": 222,
+      "n_ok": 181,
+      "status": "ok"
+    },
+    {
+      "i": 6,
+      "file": "BO_CVn_Light_008.fits",
+      "s": 150.615,
+      "n_fit": 223,
+      "n_ok": 188,
+      "status": "ok"
+    },
+    {
+      "i": 7,
+      "file": "BO_CVn_Light_010.fits",
+      "s": 142.729,
+      "n_fit": 211,
+      "n_ok": 167,
+      "status": "ok"
+    },
+    {
+      "i": 8,
+      "file": "BO_CVn_Light_011.fits",
+      "s": 151.491,
+      "n_fit": 222,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 9,
+      "file": "BO_CVn_Light_012.fits",
+      "s": 128.551,
+      "n_fit": 230,
+      "n_ok": 196,
+      "status": "ok"
+    },
+    {
+      "i": 10,
+      "file": "BO_CVn_Light_013.fits",
+      "s": 146.741,
+      "n_fit": 226,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 11,
+      "file": "BO_CVn_Light_014.fits",
+      "s": 142.523,
+      "n_fit": 219,
+      "n_ok": 184,
+      "status": "ok"
+    },
+    {
+      "i": 12,
+      "file": "BO_CVn_Light_015.fits",
+      "s": 136.275,
+      "n_fit": 217,
+      "n_ok": 180,
+      "status": "ok"
+    },
+    {
+      "i": 13,
+      "file": "BO_CVn_Light_016.fits",
+      "s": 142.453,
+      "n_fit": 227,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 14,
+      "file": "BO_CVn_Light_017.fits",
+      "s": 140.717,
+      "n_fit": 222,
+      "n_ok": 177,
+      "status": "ok"
+    },
+    {
+      "i": 15,
+      "file": "BO_CVn_Light_018.fits",
+      "s": 137.711,
+      "n_fit": 218,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 16,
+      "file": "BO_CVn_Light_019.fits",
+      "s": 145.515,
+      "n_fit": 225,
+      "n_ok": 188,
+      "status": "ok"
+    },
+    {
+      "i": 17,
+      "file": "BO_CVn_Light_020.fits",
+      "s": 138.97,
+      "n_fit": 221,
+      "n_ok": 179,
+      "status": "ok"
+    },
+    {
+      "i": 18,
+      "file": "BO_CVn_Light_021.fits",
+      "s": 136.601,
+      "n_fit": 219,
+      "n_ok": 173,
+      "status": "ok"
+    },
+    {
+      "i": 19,
+      "file": "BO_CVn_Light_022.fits",
+      "s": 135.277,
+      "n_fit": 219,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 20,
+      "file": "BO_CVn_Light_023.fits",
+      "s": 136.464,
+      "n_fit": 220,
+      "n_ok": 182,
+      "status": "ok"
+    },
+    {
+      "i": 21,
+      "file": "BO_CVn_Light_024.fits",
+      "s": 146.539,
+      "n_fit": 232,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 22,
+      "file": "BO_CVn_Light_025.fits",
+      "s": 138.086,
+      "n_fit": 219,
+      "n_ok": 177,
+      "status": "ok"
+    },
+    {
+      "i": 23,
+      "file": "BO_CVn_Light_026.fits",
+      "s": 138.327,
+      "n_fit": 223,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 24,
+      "file": "BO_CVn_Light_027.fits",
+      "s": 142.9,
+      "n_fit": 225,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 25,
+      "file": "BO_CVn_Light_028.fits",
+      "s": 139.292,
+      "n_fit": 222,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 26,
+      "file": "BO_CVn_Light_029.fits",
+      "s": 106.263,
+      "n_fit": 219,
+      "n_ok": 184,
+      "status": "ok"
+    },
+    {
+      "i": 27,
+      "file": "BO_CVn_Light_030.fits",
+      "s": 91.858,
+      "n_fit": 222,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 28,
+      "file": "BO_CVn_Light_031.fits",
+      "s": 91.838,
+      "n_fit": 223,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 29,
+      "file": "BO_CVn_Light_032.fits",
+      "s": 93.057,
+      "n_fit": 225,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 30,
+      "file": "BO_CVn_Light_033.fits",
+      "s": 116.445,
+      "n_fit": 229,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 31,
+      "file": "BO_CVn_Light_034.fits",
+      "s": 144.221,
+      "n_fit": 220,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 32,
+      "file": "BO_CVn_Light_035.fits",
+      "s": 144.697,
+      "n_fit": 223,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 33,
+      "file": "BO_CVn_Light_036.fits",
+      "s": 141.889,
+      "n_fit": 224,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 34,
+      "file": "BO_CVn_Light_037.fits",
+      "s": 148.276,
+      "n_fit": 229,
+      "n_ok": 196,
+      "status": "ok"
+    },
+    {
+      "i": 35,
+      "file": "BO_CVn_Light_038.fits",
+      "s": 144.015,
+      "n_fit": 227,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 36,
+      "file": "BO_CVn_Light_039.fits",
+      "s": 147.95,
+      "n_fit": 236,
+      "n_ok": 197,
+      "status": "ok"
+    },
+    {
+      "i": 37,
+      "file": "BO_CVn_Light_040.fits",
+      "s": 135.437,
+      "n_fit": 218,
+      "n_ok": 182,
+      "status": "ok"
+    },
+    {
+      "i": 38,
+      "file": "BO_CVn_Light_041.fits",
+      "s": 137.409,
+      "n_fit": 222,
+      "n_ok": 183,
+      "status": "ok"
+    },
+    {
+      "i": 39,
+      "file": "BO_CVn_Light_042.fits",
+      "s": 138.067,
+      "n_fit": 222,
+      "n_ok": 188,
+      "status": "ok"
+    },
+    {
+      "i": 40,
+      "file": "BO_CVn_Light_043.fits",
+      "s": 136.279,
+      "n_fit": 221,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 41,
+      "file": "BO_CVn_Light_044.fits",
+      "s": 137.307,
+      "n_fit": 223,
+      "n_ok": 184,
+      "status": "ok"
+    },
+    {
+      "i": 42,
+      "file": "BO_CVn_Light_045.fits",
+      "s": 142.198,
+      "n_fit": 226,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 43,
+      "file": "BO_CVn_Light_046.fits",
+      "s": 148.399,
+      "n_fit": 235,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 44,
+      "file": "BO_CVn_Light_047.fits",
+      "s": 141.125,
+      "n_fit": 225,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 45,
+      "file": "BO_CVn_Light_048.fits",
+      "s": 133.058,
+      "n_fit": 214,
+      "n_ok": 172,
+      "status": "ok"
+    },
+    {
+      "i": 46,
+      "file": "BO_CVn_Light_050.fits",
+      "s": 137.082,
+      "n_fit": 218,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 47,
+      "file": "BO_CVn_Light_051.fits",
+      "s": 137.215,
+      "n_fit": 222,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 48,
+      "file": "BO_CVn_Light_052.fits",
+      "s": 136.382,
+      "n_fit": 218,
+      "n_ok": 182,
+      "status": "ok"
+    },
+    {
+      "i": 49,
+      "file": "BO_CVn_Light_053.fits",
+      "s": 143.243,
+      "n_fit": 229,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 50,
+      "file": "BO_CVn_Light_054.fits",
+      "s": 138.05,
+      "n_fit": 222,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 51,
+      "file": "BO_CVn_Light_055.fits",
+      "s": 134.727,
+      "n_fit": 217,
+      "n_ok": 182,
+      "status": "ok"
+    },
+    {
+      "i": 52,
+      "file": "BO_CVn_Light_057.fits",
+      "s": 137.408,
+      "n_fit": 222,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 53,
+      "file": "BO_CVn_Light_059.fits",
+      "s": 148.686,
+      "n_fit": 224,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 54,
+      "file": "BO_CVn_Light_060.fits",
+      "s": 151.586,
+      "n_fit": 227,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 55,
+      "file": "BO_CVn_Light_061.fits",
+      "s": 139.302,
+      "n_fit": 225,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 56,
+      "file": "BO_CVn_Light_062.fits",
+      "s": 145.986,
+      "n_fit": 231,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 57,
+      "file": "BO_CVn_Light_063.fits",
+      "s": 143.376,
+      "n_fit": 229,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 58,
+      "file": "BO_CVn_Light_064.fits",
+      "s": 140.177,
+      "n_fit": 225,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 59,
+      "file": "BO_CVn_Light_065.fits",
+      "s": 139.103,
+      "n_fit": 224,
+      "n_ok": 194,
+      "status": "ok"
+    },
+    {
+      "i": 60,
+      "file": "BO_CVn_Light_067.fits",
+      "s": 138.695,
+      "n_fit": 221,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 61,
+      "file": "BO_CVn_Light_068.fits",
+      "s": 139.718,
+      "n_fit": 225,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 62,
+      "file": "BO_CVn_Light_069.fits",
+      "s": 141.132,
+      "n_fit": 227,
+      "n_ok": 194,
+      "status": "ok"
+    },
+    {
+      "i": 63,
+      "file": "BO_CVn_Light_070.fits",
+      "s": 142.336,
+      "n_fit": 230,
+      "n_ok": 197,
+      "status": "ok"
+    },
+    {
+      "i": 64,
+      "file": "BO_CVn_Light_071.fits",
+      "s": 142.248,
+      "n_fit": 228,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 65,
+      "file": "BO_CVn_Light_072.fits",
+      "s": 140.092,
+      "n_fit": 226,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 66,
+      "file": "BO_CVn_Light_073.fits",
+      "s": 140.206,
+      "n_fit": 223,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 67,
+      "file": "BO_CVn_Light_075.fits",
+      "s": 140.466,
+      "n_fit": 225,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 68,
+      "file": "BO_CVn_Light_076.fits",
+      "s": 139.153,
+      "n_fit": 225,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 69,
+      "file": "BO_CVn_Light_077.fits",
+      "s": 138.439,
+      "n_fit": 224,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 70,
+      "file": "BO_CVn_Light_078.fits",
+      "s": 134.917,
+      "n_fit": 216,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 71,
+      "file": "BO_CVn_Light_079.fits",
+      "s": 138.081,
+      "n_fit": 223,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 72,
+      "file": "BO_CVn_Light_080.fits",
+      "s": 138.728,
+      "n_fit": 222,
+      "n_ok": 176,
+      "status": "ok"
+    },
+    {
+      "i": 73,
+      "file": "BO_CVn_Light_081.fits",
+      "s": 136.455,
+      "n_fit": 219,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 74,
+      "file": "BO_CVn_Light_082.fits",
+      "s": 141.881,
+      "n_fit": 228,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 75,
+      "file": "BO_CVn_Light_083.fits",
+      "s": 141.815,
+      "n_fit": 229,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 76,
+      "file": "BO_CVn_Light_084.fits",
+      "s": 137.127,
+      "n_fit": 220,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 77,
+      "file": "BO_CVn_Light_085.fits",
+      "s": 138.404,
+      "n_fit": 221,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 78,
+      "file": "BO_CVn_Light_086.fits",
+      "s": 136.271,
+      "n_fit": 221,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 79,
+      "file": "BO_CVn_Light_087.fits",
+      "s": 145.145,
+      "n_fit": 234,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 80,
+      "file": "BO_CVn_Light_088.fits",
+      "s": 143.276,
+      "n_fit": 232,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 81,
+      "file": "BO_CVn_Light_089.fits",
+      "s": 142.909,
+      "n_fit": 230,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 82,
+      "file": "BO_CVn_Light_090.fits",
+      "s": 142.785,
+      "n_fit": 231,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 83,
+      "file": "BO_CVn_Light_091.fits",
+      "s": 137.637,
+      "n_fit": 223,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 84,
+      "file": "BO_CVn_Light_092.fits",
+      "s": 103.561,
+      "n_fit": 232,
+      "n_ok": 196,
+      "status": "ok"
+    },
+    {
+      "i": 85,
+      "file": "BO_CVn_Light_093.fits",
+      "s": 93.845,
+      "n_fit": 227,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 86,
+      "file": "BO_CVn_Light_094.fits",
+      "s": 94.78,
+      "n_fit": 229,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 87,
+      "file": "BO_CVn_Light_095.fits",
+      "s": 94.826,
+      "n_fit": 230,
+      "n_ok": 197,
+      "status": "ok"
+    },
+    {
+      "i": 88,
+      "file": "BO_CVn_Light_096.fits",
+      "s": 95.256,
+      "n_fit": 231,
+      "n_ok": 199,
+      "status": "ok"
+    },
+    {
+      "i": 89,
+      "file": "BO_CVn_Light_097.fits",
+      "s": 95.817,
+      "n_fit": 232,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 90,
+      "file": "BO_CVn_Light_098.fits",
+      "s": 92.683,
+      "n_fit": 224,
+      "n_ok": 189,
+      "status": "ok"
+    },
+    {
+      "i": 91,
+      "file": "BO_CVn_Light_099.fits",
+      "s": 94.829,
+      "n_fit": 230,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 92,
+      "file": "BO_CVn_Light_100.fits",
+      "s": 93.449,
+      "n_fit": 226,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 93,
+      "file": "BO_CVn_Light_101.fits",
+      "s": 96.619,
+      "n_fit": 234,
+      "n_ok": 195,
+      "status": "ok"
+    },
+    {
+      "i": 94,
+      "file": "BO_CVn_Light_102.fits",
+      "s": 94.212,
+      "n_fit": 229,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 95,
+      "file": "BO_CVn_Light_103.fits",
+      "s": 98.23,
+      "n_fit": 239,
+      "n_ok": 202,
+      "status": "ok"
+    },
+    {
+      "i": 96,
+      "file": "BO_CVn_Light_104.fits",
+      "s": 93.429,
+      "n_fit": 227,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 97,
+      "file": "BO_CVn_Light_105.fits",
+      "s": 91.556,
+      "n_fit": 223,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 98,
+      "file": "BO_CVn_Light_106.fits",
+      "s": 89.411,
+      "n_fit": 218,
+      "n_ok": 178,
+      "status": "ok"
+    },
+    {
+      "i": 99,
+      "file": "BO_CVn_Light_107.fits",
+      "s": 94.72,
+      "n_fit": 209,
+      "n_ok": 174,
+      "status": "ok"
+    },
+    {
+      "i": 100,
+      "file": "BO_CVn_Light_108.fits",
+      "s": 91.489,
+      "n_fit": 218,
+      "n_ok": 181,
+      "status": "ok"
+    },
+    {
+      "i": 101,
+      "file": "BO_CVn_Light_109.fits",
+      "s": 90.642,
+      "n_fit": 219,
+      "n_ok": 180,
+      "status": "ok"
+    },
+    {
+      "i": 102,
+      "file": "BO_CVn_Light_110.fits",
+      "s": 89.893,
+      "n_fit": 217,
+      "n_ok": 180,
+      "status": "ok"
+    },
+    {
+      "i": 103,
+      "file": "BO_CVn_Light_112.fits",
+      "s": 94.128,
+      "n_fit": 228,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 104,
+      "file": "BO_CVn_Light_113.fits",
+      "s": 95.643,
+      "n_fit": 233,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 105,
+      "file": "BO_CVn_Light_114.fits",
+      "s": 92.279,
+      "n_fit": 224,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 106,
+      "file": "BO_CVn_Light_115.fits",
+      "s": 90.649,
+      "n_fit": 219,
+      "n_ok": 181,
+      "status": "ok"
+    },
+    {
+      "i": 107,
+      "file": "BO_CVn_Light_116.fits",
+      "s": 95.333,
+      "n_fit": 231,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 108,
+      "file": "BO_CVn_Light_117.fits",
+      "s": 94.133,
+      "n_fit": 229,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 109,
+      "file": "BO_CVn_Light_118.fits",
+      "s": 95.847,
+      "n_fit": 232,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 110,
+      "file": "BO_CVn_Light_119.fits",
+      "s": 96.638,
+      "n_fit": 235,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 111,
+      "file": "BO_CVn_Light_120.fits",
+      "s": 96.6,
+      "n_fit": 234,
+      "n_ok": 197,
+      "status": "ok"
+    },
+    {
+      "i": 112,
+      "file": "BO_CVn_Light_121.fits",
+      "s": 96.282,
+      "n_fit": 233,
+      "n_ok": 188,
+      "status": "ok"
+    },
+    {
+      "i": 113,
+      "file": "BO_CVn_Light_123.fits",
+      "s": 97.447,
+      "n_fit": 236,
+      "n_ok": 199,
+      "status": "ok"
+    },
+    {
+      "i": 114,
+      "file": "BO_CVn_Light_124.fits",
+      "s": 93.724,
+      "n_fit": 228,
+      "n_ok": 185,
+      "status": "ok"
+    },
+    {
+      "i": 115,
+      "file": "BO_CVn_Light_125.fits",
+      "s": 93.441,
+      "n_fit": 226,
+      "n_ok": 177,
+      "status": "ok"
+    },
+    {
+      "i": 116,
+      "file": "BO_CVn_Light_126.fits",
+      "s": 98.001,
+      "n_fit": 237,
+      "n_ok": 198,
+      "status": "ok"
+    },
+    {
+      "i": 117,
+      "file": "BO_CVn_Light_127.fits",
+      "s": 101.22,
+      "n_fit": 246,
+      "n_ok": 207,
+      "status": "ok"
+    },
+    {
+      "i": 118,
+      "file": "BO_CVn_Light_128.fits",
+      "s": 95.567,
+      "n_fit": 232,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 119,
+      "file": "BO_CVn_Light_129.fits",
+      "s": 96.635,
+      "n_fit": 234,
+      "n_ok": 190,
+      "status": "ok"
+    },
+    {
+      "i": 120,
+      "file": "BO_CVn_Light_130.fits",
+      "s": 94.289,
+      "n_fit": 229,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 121,
+      "file": "BO_CVn_Light_132.fits",
+      "s": 96.301,
+      "n_fit": 233,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 122,
+      "file": "BO_CVn_Light_133.fits",
+      "s": 94.151,
+      "n_fit": 228,
+      "n_ok": 188,
+      "status": "ok"
+    },
+    {
+      "i": 123,
+      "file": "BO_CVn_Light_134.fits",
+      "s": 94.855,
+      "n_fit": 230,
+      "n_ok": 186,
+      "status": "ok"
+    },
+    {
+      "i": 124,
+      "file": "BO_CVn_Light_135.fits",
+      "s": 92.593,
+      "n_fit": 224,
+      "n_ok": 174,
+      "status": "ok"
+    },
+    {
+      "i": 125,
+      "file": "BO_CVn_Light_136.fits",
+      "s": 95.364,
+      "n_fit": 229,
+      "n_ok": 192,
+      "status": "ok"
+    },
+    {
+      "i": 126,
+      "file": "BO_CVn_Light_137.fits",
+      "s": 94.419,
+      "n_fit": 229,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 127,
+      "file": "BO_CVn_Light_138.fits",
+      "s": 95.709,
+      "n_fit": 231,
+      "n_ok": 191,
+      "status": "ok"
+    },
+    {
+      "i": 128,
+      "file": "BO_CVn_Light_139.fits",
+      "s": 91.661,
+      "n_fit": 221,
+      "n_ok": 179,
+      "status": "ok"
+    },
+    {
+      "i": 129,
+      "file": "BO_CVn_Light_140.fits",
+      "s": 93.2,
+      "n_fit": 226,
+      "n_ok": 183,
+      "status": "ok"
+    },
+    {
+      "i": 130,
+      "file": "BO_CVn_Light_143.fits",
+      "s": 91.342,
+      "n_fit": 223,
+      "n_ok": 184,
+      "status": "ok"
+    },
+    {
+      "i": 131,
+      "file": "BO_CVn_Light_144.fits",
+      "s": 95.205,
+      "n_fit": 222,
+      "n_ok": 182,
+      "status": "ok"
+    },
+    {
+      "i": 132,
+      "file": "BO_CVn_Light_145.fits",
+      "s": 100.937,
+      "n_fit": 231,
+      "n_ok": 187,
+      "status": "ok"
+    },
+    {
+      "i": 133,
+      "file": "BO_CVn_Light_146.fits",
+      "s": 95.666,
+      "n_fit": 232,
+      "n_ok": 193,
+      "status": "ok"
+    },
+    {
+      "i": 134,
+      "file": "BO_CVn_Light_148.fits",
+      "s": 92.227,
+      "n_fit": 224,
+      "n_ok": 187,
+      "status": "ok"
+    }
+  ],
+  "n_fit_median": 225.0,
+  "n_ok_median": 188.5,
+  "n_ok_min": 0,
+  "n_ok_max": 207,
+  "fit_vs_aperture": 11.233053495007132,
+  "lc_s": 14.463,
+  "lc": {
+    "n_written": 53,
+    "n_skipped": 0
+  },
+  "m3": {
+    "bo": {
+      "missing": false,
+      "catalog_id": "1498613634033133184",
+      "n_finite": 134,
+      "n_rows": 134,
+      "demeaned_rms_mmag": 145.9168982587656,
+      "drop_reason_sample": null
+    },
+    "fw": {
+      "missing": false,
+      "catalog_id": "1497343732462852864",
+      "n_finite": 134,
+      "n_rows": 134,
+      "demeaned_rms_mmag": 14.557351778473945,
+      "drop_reason_sample": null
+    },
+    "ref": {
+      "bo_mmag": 8.495,
+      "fw_mmag": 5.218,
+      "n_full": 134
+    },
+    "epsf_sha_match_live": false,
+    "n_stars_match_live": false
+  },
+  "total_s": 15763.364,
+  "finished_utc": "2026-08-27T20:08:44Z",
+  "cost_stop": true
+}

@@ -1,0 +1,19 @@
+{
+  "part": "A",
+  "baseline_pass2_sigma": 1.9,
+  "baseline_pass2_center_tol_px": 5.0,
+  "baseline_main_pass2_rate": 0.5545454545454546,
+  "baseline_main_seed_rate": 0.013181818181818182,
+  "tightened_pass2_sigma": 5.0,
+  "tightened_pass2_center_tol_px": 2.0,
+  "tightened_seed_snr_min": 4.0,
+  "tightened_main_pass2_rate": 0.0009090909090909091,
+  "tightened_main_seed_rate": 0.0036363636363636364,
+  "n_main": 2200,
+  "n_corner": 200,
+  "E1_baseline": "DEVIATE",
+  "E2_baseline": "DEVIATE",
+  "E1_tightened": "PASS",
+  "E2_tightened": "PASS",
+  "decision": "Tighten production defaults: sigma 1.9->5.0, center_tol 5->2, seed snr 3->4"
+}

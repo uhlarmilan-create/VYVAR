@@ -1,0 +1,12 @@
+{
+  "draft_id": 516,
+  "setup": "NoFilter_60_2",
+  "frame": "BO_CVn_Light_001",
+  "n_proc": 3500,
+  "GAIA_MATCHED": 3500,
+  "FORCED_APERTURE": 0,
+  "DAO_ONLY": 0,
+  "forced_photometry_true": 360,
+  "FORCED_SOURCE_TYPE_in_code": "GAIA_MATCHED",
+  "display_counts_source_type_FORCED_APERTURE": "always 0 if writer uses GAIA_MATCHED"
+}

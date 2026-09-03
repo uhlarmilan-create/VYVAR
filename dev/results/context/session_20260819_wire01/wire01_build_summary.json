@@ -1,0 +1,101 @@
+{
+  "built_utc": "2026-08-19T11:57:43.492390+00:00",
+  "elapsed_s": 34.35997739993036,
+  "n_census": 4131,
+  "state_counts": {
+    "DETECTED_P1": 2157,
+    "SEED_REJECTED": 672,
+    "TOO_FAINT": 511,
+    "DETECTED_P2": 367,
+    "BLENDED": 221,
+    "FORCED_SEED": 123,
+    "EDGE": 80
+  },
+  "n_ambiguous_owner": 1,
+  "n_red_x_le14": 0,
+  "gaia_enrich_meta": {
+    "n_forced_seed": 256,
+    "n_leftover_promotions": 1,
+    "n_seed_rejected": 710,
+    "n_on_chip_gaia": 4131,
+    "census_by_state": {
+      "DETECTED_P1": 2157,
+      "SEED_REJECTED": 672,
+      "TOO_FAINT": 511,
+      "DETECTED_P2": 367,
+      "BLENDED": 221,
+      "FORCED_SEED": 123,
+      "EDGE": 80
+    },
+    "identity_lock_only": false
+  },
+  "pipeline_out_keys": [
+    "masterstar_fits",
+    "masterstars_csv",
+    "frames_used",
+    "masterstar_selection",
+    "n_raw_dao",
+    "detected_stars",
+    "catalog_matched",
+    "catalog_rows",
+    "catalog_match_max_sep_arcsec",
+    "max_catalog_rows",
+    "n_likely_saturated",
+    "saturate_limit_adu",
+    "saturate_limit_source",
+    "solve",
+    "n_comparison_stars_requested",
+    "faintest_mag_limit",
+    "n_dropped_fainter_than_limit",
+    "field_catalog_cone_csv",
+    "dao_threshold_sigma",
+    "masterstar_match_png",
+    "comparison_stars_csv",
+    "variable_targets_csv",
+    "photometry_plan_json",
+    "comparison_selection",
+    "master_sources_written",
+    "master_sources_error",
+    "common_field_error",
+    "stress_frames_sampled",
+    "stress_frames_used",
+    "stress_test_error"
+  ],
+  "iter4_sandbox_ref": {
+    "iter_id": "win_p1_4.5_p2_4.0_i6_i7",
+    "pass1_sigma": 4.5,
+    "pass2_sigma": 4.0,
+    "pass2_provenance": "born_owned_no_rematch",
+    "forced_seed": {
+      "centroid_max_px": 2.0,
+      "snr_min": 4.0
+    },
+    "forced_seed_empty_sky": {
+      "n_empty": 2200,
+      "n_accept": 8,
+      "false_accept_rate": 0.0036363636363636364
+    },
+    "frame": "MASTERSTAR",
+    "g1_strict_le13": 0.9880478087649402,
+    "g1_strict_le145": 0.9247889485801996,
+    "g1_eye_le13": 0.9880478087649402,
+    "g1_eye_le145": 0.930928626247122,
+    "g1_eye_seed_le13": 1.0,
+    "g1_eye_seed_le145": 0.9577897160399079,
+    "g2": 0.0009090909090909091,
+    "g3_g18": 0.014311270125223614,
+    "n_pass1": 2636,
+    "n_pass2": 217,
+    "n_forced_seed": 163,
+    "n_ambiguous_owner": 8,
+    "n_crowded_miss": 0,
+    "g4_ok": true,
+    "state_counts": {
+      "TOO_FAINT": 3135,
+      "DETECTED": 2689,
+      "FORCED_SEED": 163,
+      "EDGE": 146,
+      "BLENDED": 35
+    }
+  }
+}

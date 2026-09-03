@@ -1,0 +1,112 @@
+# VYVAR Infolog - 20260826_204722
+# Draft: C:\ASTRO\python\VYVAR\dev\results\context\session_20260826_c6\a1_infolog
+# timestamps: UTC
+# session: durable append log (full run)
+#============================================================
+
+18:48:00  [COLOR TERM] group pool fit (NoFilter|60|2): clear_unfiltered clear_level k=-0.3730 +- 0.0900 mag/BP-RP (export-only; shape term null)
+18:48:03  GAIA DB: MAX(g_mag) v gaia_dr3 = 17.500 (vyvar_gaia_dr3.db)
+18:48:03  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1496795041799526400
+18:48:04  [AC] DeltaM_corr=-0.0553 scatter=0.0117 n_ref=8
+18:48:04  [AC SIGN] mag_calib0=10.4956 delta_m_corr=-0.0553 mag_calib_ac0=10.4403
+18:48:06  [AC] skipped: scatter_too_high
+18:48:07  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497561779362267392
+18:48:07  [AC] skipped: insufficient_ref_stars
+18:48:09  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1496998382733052928
+18:48:09  [AC] skipped: scatter_too_high
+18:48:11  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1496278752372040832
+18:48:11  [AC] skipped: scatter_too_high
+18:48:13  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497169940906156032
+18:48:13  [AC] skipped: scatter_too_high
+18:48:14  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1496293286541396480
+18:48:15  [AC] skipped: scatter_too_high
+18:48:16  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497236186481686016
+18:48:17  [AC] skipped: scatter_too_high
+18:48:18  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497245497969274240
+18:48:18  [AC] skipped: insufficient_ref_stars
+18:48:20  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497350638770267520
+18:48:20  [AC] DeltaM_corr=-0.0553 scatter=0.0117 n_ref=8
+18:48:22  [PIN] check star 1498812233320666368 kname='1498812233320666368' target=1498617482323461376
+18:48:22  [AC] skipped: scatter_too_high
+18:48:24  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498027456896444928
+18:48:24  [AC] skipped: scatter_too_high
+18:48:26  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497683722074089728
+18:48:26  [AC] skipped: scatter_too_high
+18:48:28  [AC] skipped: scatter_too_high
+18:48:29  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497343732462852864
+18:48:30  [AC] skipped: scatter_too_high
+18:48:31  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498613634033133184
+18:48:31  [AC] skipped: scatter_too_high
+18:48:33  [AC] skipped: scatter_too_high
+18:48:35  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1499021174889970816
+18:48:35  [AC] skipped: scatter_too_high
+18:48:39  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498321301379345408
+18:48:39  [AC] DeltaM_corr=-0.0589 scatter=0.0284 n_ref=7
+18:48:41  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498804639818507904
+18:48:41  [AC] DeltaM_corr=-0.0408 scatter=0.0205 n_ref=8
+18:48:42  [PIN] check star 1498812233320666368 kname='1498812233320666368' target=1500461157165243648
+18:48:43  [AC] DeltaM_corr=-0.0400 scatter=0.0219 n_ref=8
+18:48:45  [AC] skipped: insufficient_ref_stars
+18:48:46  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1500424804562041984
+18:48:46  [AC] skipped: scatter_too_high
+18:48:48  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498000793739050368
+18:48:48  [AC] skipped: scatter_too_high
+18:48:50  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498699086702005376
+18:48:50  [AC] DeltaM_corr=-0.0489 scatter=0.0133 n_ref=8
+18:48:52  [PIN] check star 1498812233320666368 kname='1498812233320666368' target=1497425371201155072
+18:48:52  [AC] DeltaM_corr=-0.0400 scatter=0.0219 n_ref=8
+18:48:54  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497418258735289472
+18:48:54  [AC] DeltaM_corr=-0.0480 scatter=0.0234 n_ref=6
+18:48:56  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498298211635183744
+18:48:56  [AC] skipped: scatter_too_high
+18:48:58  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1500549977088828160
+18:48:58  [AC] skipped: insufficient_ref_stars
+18:48:59  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498842882207281152
+18:49:00  [AC] DeltaM_corr=-0.0589 scatter=0.0284 n_ref=7
+18:49:01  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498425548825498112
+18:49:01  [AC] skipped: insufficient_ref_stars
+18:49:03  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498486880958321024
+18:49:03  [AC] skipped: scatter_too_high
+18:49:05  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497132660589966976
+18:49:05  [AC] DeltaM_corr=-0.0408 scatter=0.0205 n_ref=8
+18:49:07  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1485534187306501376
+18:49:07  [AC] skipped: scatter_too_high
+18:49:08  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1485987254816323328
+18:49:09  [AC] skipped: scatter_too_high
+18:49:10  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497639123133258752
+18:49:11  [AC] skipped: scatter_too_high
+18:49:12  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497871669842349184
+18:49:13  [AC] skipped: scatter_too_high
+18:49:14  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497227287309482624
+18:49:14  [AC] skipped: insufficient_ref_stars
+18:49:16  [AC] skipped: scatter_too_high
+18:49:18  [PIN] check star 1498812233320666368 kname='1498812233320666368' target=1497154753901690624
+18:49:18  [AC] DeltaM_corr=-0.0561 scatter=0.0291 n_ref=7
+18:49:20  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1497603835681942400
+18:49:20  [AC] skipped: scatter_too_high
+18:49:22  [AC] DeltaM_corr=-0.0092 scatter=0.0285 n_ref=7
+18:49:24  [AC] skipped: scatter_too_high
+18:49:26  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1500327978819506944
+18:49:26  [AC] skipped: scatter_too_high
+18:49:28  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498058827337611392
+18:49:28  [AC] skipped: scatter_too_high
+18:49:30  [AC] skipped: scatter_too_high
+18:49:32  [AC] DeltaM_corr=0.0165 scatter=0.0148 n_ref=7
+18:49:33  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498795809366255488
+18:49:34  [AC] skipped: scatter_too_high
+18:49:35  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1500693841313325696
+18:49:35  [AC] DeltaM_corr=-0.0589 scatter=0.0284 n_ref=7
+18:49:37  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498783199341798016
+18:49:37  [AC] skipped: scatter_too_high
+18:49:39  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1499006984318088320
+18:49:39  [AC] DeltaM_corr=-0.0649 scatter=0.0266 n_ref=7
+18:49:41  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1499210016011946496
+18:49:41  [AC] skipped: scatter_too_high
+18:49:43  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1498278351706325248
+18:49:43  [AC] skipped: scatter_too_high
+18:49:45  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1499084499887740160
+18:49:45  [AC] skipped: scatter_too_high
+18:49:47  [PIN] check star 1497613731286514432 kname='1497613731286514432' target=1502012464992313088
+18:49:47  [AC] skipped: scatter_too_high
+18:49:49  [AC] DeltaM_corr=0.0051 scatter=0.0215 n_ref=6
+18:49:50  [AC] run summary: applied=16 skipped=237 ({'scatter_too_high': 34, 'insufficient_ref_stars': 6, 'unknown': 197})

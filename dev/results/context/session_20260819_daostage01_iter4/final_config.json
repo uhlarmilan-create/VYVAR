@@ -1,0 +1,37 @@
+{
+  "iter_id": "win_p1_4.5_p2_4.0_i6_i7",
+  "pass1_sigma": 4.5,
+  "pass2_sigma": 4.0,
+  "pass2_provenance": "born_owned_no_rematch",
+  "forced_seed": {
+    "centroid_max_px": 2.0,
+    "snr_min": 4.0
+  },
+  "forced_seed_empty_sky": {
+    "n_empty": 2200,
+    "n_accept": 8,
+    "false_accept_rate": 0.0036363636363636364
+  },
+  "frame": "MASTERSTAR",
+  "g1_strict_le13": 0.9880478087649402,
+  "g1_strict_le145": 0.9247889485801996,
+  "g1_eye_le13": 0.9880478087649402,
+  "g1_eye_le145": 0.930928626247122,
+  "g1_eye_seed_le13": 1.0,
+  "g1_eye_seed_le145": 0.9577897160399079,
+  "g2": 0.0009090909090909091,
+  "g3_g18": 0.014311270125223614,
+  "n_pass1": 2636,
+  "n_pass2": 217,
+  "n_forced_seed": 163,
+  "n_ambiguous_owner": 8,
+  "n_crowded_miss": 0,
+  "g4_ok": true,
+  "state_counts": {
+    "TOO_FAINT": 3135,
+    "DETECTED": 2689,
+    "FORCED_SEED": 163,
+    "EDGE": 146,
+    "BLENDED": 35
+  }
+}
