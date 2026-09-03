@@ -42,6 +42,17 @@ from photometry import (
     stress_test_relative_rms_from_sidecars,
     vsx_is_known_variable_top3_per_bin,
 )
+from pipeline_constants import (
+    SAT_LIMIT_CONTAINER_CLIP_ADU,
+    SAT_LIMIT_NO_KNEE_FRAC,
+    _MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG,
+    _MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX,
+    _MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX,
+    _MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX,
+    _MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
+    _MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG,
+    _PLATESOLVE_ANISOTROPY_THRESHOLD,
+)
 from utils import (
     iter_fits_paths_recursive as _iter_fits_recursive,
     fits_binning_xy_from_header,
@@ -127,18 +138,7 @@ def generate_masterstar_and_catalog(
     Ak je ``masterstar_skip_build=True``, preskoci sa build z processed - pouzije sa existujuci ``MASTERSTAR.fits`` v ``platesolve/`` a bezi solver + katalog.
     Ak je ``masterstar_platesolve_only=True``, po uspesnom plate-solve a uprave mierky WCS sa skonci (bez DAO CSV, ``masterstars_full_match.csv``, fotometrickeho planu a zapisu MASTER_SOURCES).
     """
-    from pipeline import (  # noqa: PLC0415  # call-time: pipeline-physical constants + giant
-        SAT_LIMIT_CONTAINER_CLIP_ADU,
-        SAT_LIMIT_NO_KNEE_FRAC,
-        _MASTERSTAR_OPTIMIZER_MIRROR_EXTRA_LOG,
-        _MASTERSTAR_PLATESOLVE_NN_REFINE_MAX_RMS_PX,
-        _MASTERSTAR_PLATESOLVE_PREWRITE_RELAXED_RMS_MAX_PX,
-        _MASTERSTAR_PLATESOLVE_PREWRITE_RMS_MAX_PX,
-        _MASTERSTAR_SIP_FORCE_RMS_GUARD_RATIO,
-        _MASTERSTAR_SOLVER_USE_DRAFT_MEDIAN_IF_HINT_SEP_DEG,
-        _PLATESOLVE_ANISOTROPY_THRESHOLD,
-        detect_stars_and_match_catalog,
-    )
+    from pipeline import detect_stars_and_match_catalog  # noqa: PLC0415  # call-time: giant; patch analysis in Phase B
 
     max_catalog_rows = max(int(max_catalog_rows), 100000)
     import numpy as np
