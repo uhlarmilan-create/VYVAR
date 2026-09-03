@@ -138,6 +138,7 @@ first AAVSO/VarAstro uploads BO -> FW (band CV) once a locked ledger exists;
 Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 (APERTURE / SEL-GHOST / ePSF / ERA-04 / audit closure). One line each.
 
+- **CONSOLIDATE-01** -- CLOSED 2026-09-03 E-FINAL: permanent facades, `pipeline_constants` leaf, glue dismantled; G2 era04_aperture `d55fcc9d` n=53 / ext `cc8b532e` n=157; G4 live 516 unchanged. Ready for Milan fast-forward of main (PUSH_AUTH).
 - **A-1-435-RECUT** -- CLOSED 2026-08-18; 435 retired by ROT policy; recut onto 516.
 - **A-6** -- DONE 2026-08-07 DAO detection workstream closed.
 - **APCORR-MIXEDFRAME** -- DONE 2026-07-19 all-or-nothing COG per night.

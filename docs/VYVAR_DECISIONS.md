@@ -6,6 +6,29 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-FACADE-PERMANENT-01 (Milan 2026-09-03)
+
+`pipeline.py` and `photometry_core.py` remain PERMANENT thin re-export
+facades. `dev/` scripts keep importing through them. Facade removal is
+off the table. Call-time facade imports in the ePSF-graph modules
+(`epsf_stage`, `psf_photometry`, `psf_internal_lc`, `epsf_psf_merge`,
+`epsf_zp_ok`, `psf_runner`) are acceptable permanent state.
+
+## D-CONSTANTS-LEAF-01 (Milan 2026-09-03)
+
+ALL pipeline-physical constants live in leaf module
+`pipeline_constants.py` (imports nothing from VYVAR; anything may
+import it at module level). The SAT_LIMIT numeric twin in
+`pipeline_catalog.py` is dismantled. The facade re-exports the leaf
+names so external readers are unchanged.
+
+## D-RUNFULL-HOME-01 (Milan 2026-09-03)
+
+`run_full_photometry_pipeline` stays physically in
+`photometry_core.py` (production entry; C-D made permanent).
+`analyze_calibrated_qc` + `_analyze_calibrated_qc_one` stay physically
+in `pipeline.py` beside `AstroPipeline` (C-C).
+
 ## CONSOLIDATE-01D P2 - FLOW doc sync (2026-09-01)
 
 FLOW builder + `flow_doc_facts.py` + `docs/VYVAR_FLOW_CZ.pdf` drop removed config keys (`err_background_mode` was the G1 `test_flow_doc_config_facts` miss).
