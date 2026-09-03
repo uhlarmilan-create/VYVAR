@@ -116,7 +116,7 @@ def test_exc0317_rescale_coords_failure_counted(
     pd.DataFrame({"x": [4.0], "y": [4.0], "ra_deg": [180.0], "dec_deg": [0.0]}).to_csv(csv, index=False)
 
     monkeypatch.setattr(
-        "pipeline._plate_solve_input_bundle",
+        "pipeline_astrometry._plate_solve_input_bundle",
         lambda *_a, **_k: {"expected_arcsec_per_px": 1.0},
     )
     monkeypatch.setattr(

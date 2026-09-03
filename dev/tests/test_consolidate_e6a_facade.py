@@ -163,9 +163,7 @@ PIPELINE_E6A_CATALOG: tuple[str, ...] = (
     "nearest_sky_nn_kdtree",
 )
 
-_FOLLOW_HOME = {
-    "pipeline_astrometry": frozenset({"_plate_solve_input_bundle"}),
-}
+_FOLLOW_HOME: dict[str, frozenset[str]] = {}
 
 
 def _assert_facade(mod, names: tuple[str, ...]) -> None:

@@ -942,15 +942,6 @@ from pipeline_astrometry import (  # noqa: E402,F401
     select_comparison_stars_spatial_grid,
     write_photometry_plan_files,
 )
-import pipeline_astrometry as _pipeline_astrometry  # noqa: E402
-
-# Call-time follow so monkeypatch.setattr(pipeline, "_plate_solve_input_bundle", ...)
-# still reaches in-module callers after the move.
-_pipeline_astrometry._plate_solve_input_bundle = (
-    lambda *a, **k: _plate_solve_input_bundle(*a, **k)
-)
-
-
 from pipeline_catalog import (  # noqa: E402,F401
     _BATCH_E_N_EQUIV_LOGGED,
     _EXPORT_PER_FRAME_WORKER_STATE,
