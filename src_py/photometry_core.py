@@ -1210,11 +1210,6 @@ from photometry_provenance import (  # noqa: E402,F401
     merge_photometry_pipeline_meta,
 )
 
-import photometry_provenance as _photometry_provenance  # noqa: E402
-_photometry_provenance._resolve_git_provenance = (
-    lambda *a, **k: _resolve_git_provenance(*a, **k)
-)
-
 from photometry_comp import (  # noqa: E402,F401
     _sid_int,
     _enrich_comp_bp_rp,

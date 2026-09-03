@@ -38,10 +38,10 @@ def test_labbe_seed_deterministic_same_content() -> None:
 def test_provenance_includes_dirty_files_when_dirty(tmp_path: Path, monkeypatch) -> None:
     # Force provenance resolver to report dirty via monkeypatch of subprocess? Simpler:
     # stub _resolve_git_provenance
-    import photometry_core as pc
+    import photometry_provenance as pp
 
     monkeypatch.setattr(
-        pc,
+        pp,
         "_resolve_git_provenance",
         lambda: ("deadbeef", True, [{"path": "src_py/foo.py", "content_sha256": "abc"}]),
     )

@@ -35,9 +35,8 @@ def test_e2_merge_in_star_import_not_required() -> None:
 
 
 def test_e2_resolve_git_follow_proxy() -> None:
-    """risk_register: test_f431 patches photometry_core._resolve_git_provenance."""
-    assert photometry_core._resolve_git_provenance is not None
-    assert callable(photometry_provenance._resolve_git_provenance)
+    """Facade re-exports the real def; test_f431 patches photometry_provenance."""
+    assert photometry_core._resolve_git_provenance is photometry_provenance._resolve_git_provenance
 
 
 PHOTOMETRY_E2_SHARED: tuple[str, ...] = (
