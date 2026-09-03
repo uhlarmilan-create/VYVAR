@@ -16,9 +16,10 @@ the E4 `src_py/tmp` shadow were listed, not committed.
 
 Inventoried `git ls-files --others --exclude-standard` (6203 files,
 ~4.24 GB at start). Committed three approved groups (one commit each),
-then this close report. `git pull --rebase origin consolidate-01` was
-up to date (no conflicts). Then push of `consolidate-01:consolidate-01`
-and G1 `--fast --clean` on the final tip.
+an ENCODING-POLICY fold of 7 markdown files, then this close report.
+`git pull --rebase origin consolidate-01` was up to date (no conflicts).
+Then `git push origin consolidate-01:consolidate-01` and G1
+`--fast --clean` on the close-report tip.
 
 ## Commit list
 
@@ -28,7 +29,8 @@ and G1 `--fast --clean` on the final tip.
 | context session evidence | `1674fe933c9d7f3dec152faaa140db94f2658e42` | 154 | Rule 0.2 CSV/JSON/txt/md/py leftovers, ASCII, typically under 256 KiB |
 | leftover gate logs | `a7f6429f32bbb765eaeaacf605efe9603021433a` | 10 | in-session G1/G2/G7 logs already sitting under `dev/results/context/` |
 | ENCODING-POLICY fold | `8400e36d67eb13eeeb5aeacc5a75f8b80c66ba24` | 7 | cp1252 dashes/quotes in group-1 markdown; `ascii_migrate.py` |
-| this close report | (this commit) | 1+ | `session_20260902_close/` |
+| this close report | `3b8f5289309aa9a079755af126d167c424c81485` | 3 | REPORT + first two G1 logs |
+| G1 stamp | (this commit) | 1+ | `g1.txt` + filled FINAL_SHA / gate line |
 
 Honest messages:
 
@@ -37,6 +39,7 @@ Honest messages:
 3. `SYNC-CLOSE: track leftover in-session G1/G2/G7 gate logs under context sessions.`
 4. `SYNC-CLOSE: ASCII-fold leftover CURSOR markdown so ENCODING-POLICY passes.`
 5. `SYNC-CLOSE: session REPORT for 2026-09-02 close.`
+6. `SYNC-CLOSE: stamp G1 --fast --clean PASS and FINAL_SHA on the close report.`
 
 No validation-ledger group: ledger was already stamped at E4 (`039db43`).
 No docs group: no uncommitted tracked docs.
@@ -59,6 +62,7 @@ Gitignored scratch (`tmp/`) was not added.
 | `src_py/tmp/xval_out/xval_results.csv`, `xval_sources.csv` | 2 files, ~21 KB | E4 tmp-shadow lesson: do not track `src_py/tmp/` |
 | `dev/tests/_tmp_batch_e_lc/` | 2 tiny CSVs | test scratch |
 | secrets / PUSH_AUTH / large FITS | none in the would-add set | `*.fits`, `*.sqlite3`, `dev/PUSH_AUTH_main_*.txt` already gitignored |
+| `vyvar.sqlite3-shm`, `vyvar.sqlite3-wal` | 2 | SQLite sidecars from the G1 run; not source |
 
 No stale `photometry_core.py` / `photometry_phase2a.py` copies under `dev/`.
 `delete_funcs.py` in `session_20260831_c01b` is a session AST helper, not a
@@ -76,16 +80,27 @@ pytest 1638 passed, 32 skipped. clean-tree PASS
 (`worktree=b1b_clean_d0b3df0f`; pytest 32 passed; ruff PASS; pyflakes PASS).
 db-quick-check WARN waived (same as E4). Log: `g1_ascii_fold.txt`.
 
-Final-tip G1 after this close-report commit: filled after the push. Log: `g1.txt`.
+Close-report tip G1 at `3b8f528` after the first close push: **PASS**.
+pytest 1638 passed, 32 skipped. clean-tree PASS
+(`worktree=b1b_clean_b91ad443`; pytest 32 passed; ruff PASS; pyflakes PASS).
+db-quick-check WARN waived (same as E4). Log: `g1.txt`.
 
 ## FINAL_SHA
 
-Pending until after `git push origin consolidate-01:consolidate-01`.
+Close-report commit (G1 proven):
+`3b8f5289309aa9a079755af126d167c424c81485`
+
+This stamp records `g1.txt` and the gate line. After the stamp is
+pushed, Milan's hand-off SHA is `git rev-parse origin/consolidate-01`
+(the stamp). Printed in the Cursor close result.
 
 ## Ancestry
 
-`git merge-base --is-ancestor 5b1068d HEAD` at the content-sync tip
-`a7f6429` exited 0. Re-checked on the final tip after push.
+`git merge-base --is-ancestor 5b1068d HEAD` exited 0 at `a7f6429`,
+again at `3b8f528` after the first close push (exit 0). Re-checked
+on the stamp tip after the second push.
+
+`5b1068d` is an ancestor of FINAL_SHA.
 
 `5b1068d` = `5b1068d2b04c63a1b9dc44c2580d0a5b31ace729`
 (`MERGE-MAIN-01` report).
