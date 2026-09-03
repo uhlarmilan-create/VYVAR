@@ -1451,7 +1451,7 @@ def _saturated_core_plateau_vectorized(
     plateau_rel: float = 0.996,
     min_plateau_pixels: int = 5,
 ) -> "np.ndarray":
-    """Same criterion as ``_saturated_core_plateau``, vectorized over ``(x,y)`` centroids (3x3 patch per star)."""
+    """Vectorized saturated-core plateau over ``(x,y)`` centroids (3x3 patch per star)."""
     import numpy as np
 
     arr = np.asarray(data, dtype=np.float64)
@@ -1485,7 +1485,7 @@ def _vectorized_star_saturation_columns(
     peak_dao: "np.ndarray",
     peak_max_adu: "np.ndarray",
 ) -> dict[str, "np.ndarray"]:
-    """Per-star saturation flags as column arrays (replaces ``N`` calls to ``_star_saturation_flags``)."""
+    """Per-star saturation flags as column arrays (vectorized over all centroids)."""
     import numpy as np
 
     n = int(np.asarray(x, dtype=np.float64).size)
