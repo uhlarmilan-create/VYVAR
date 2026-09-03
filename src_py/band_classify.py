@@ -247,7 +247,7 @@ def _classify_canonical_token(token: str) -> PhotometricBand:
         return PhotometricBand.LUMINANCE
     if key in _STANDARD:
         return PhotometricBand.STANDARD_FILTER
-    # Legacy broadband prefix heuristic (matches old ``_is_broadband_photometric_filter``)
+    # Legacy broadband prefix heuristic (B/V/R/I/U/G/Z short tokens).
     for prefix in ("B", "V", "R", "I", "U", "G", "Z"):
         if key.startswith(prefix) and len(key) <= 8:
             return PhotometricBand.STANDARD_FILTER

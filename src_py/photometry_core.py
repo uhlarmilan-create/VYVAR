@@ -349,33 +349,6 @@ LAST_EXCLUDED_TARGETS: pd.DataFrame = pd.DataFrame(
 
 
 
-def _median_bkg_var_adu2_per_px_from_proc_cache(
-    csv_cache: dict[str, pd.DataFrame],
-) -> float | None:
-    """Median per-pixel background variance [ADU^2/px] from empirical ``sigma_bkg_ap`` in proc CSVs."""
-    vals: list[float] = []
-    for _df in csv_cache.values():
-        if _df is None or _df.empty:
-            continue
-        if SIGMA_BKG_AP_COL not in _df.columns or "aperture_r_px" not in _df.columns:
-            continue
-        sig = pd.to_numeric(_df[SIGMA_BKG_AP_COL], errors="coerce")
-        rap = pd.to_numeric(_df["aperture_r_px"], errors="coerce")
-        ok = sig.notna() & rap.notna() & (rap > 0) & (sig >= 0)
-        if not ok.any():
-            continue
-        area = math.pi * np.asarray(rap[ok], dtype=np.float64) ** 2
-        var_ap = np.asarray(sig[ok], dtype=np.float64) ** 2
-        with np.errstate(divide="ignore", invalid="ignore"):
-            var_px = var_ap / np.maximum(area, 1e-12)
-        vals.extend([float(v) for v in var_px if math.isfinite(float(v)) and float(v) >= 0])
-    if not vals:
-        return None
-    med = float(np.nanmedian(np.asarray(vals, dtype=np.float64)))
-    return med if math.isfinite(med) and med >= 0 else None
-
-
-
 
 
 
@@ -414,26 +387,6 @@ _APERTURE_SIZING_MAG_COLS: tuple[str, ...] = (
     "lc_median_mag",
     "phot_g_mean_mag",
 )
-
-
-def _star_mag_for_aperture_sizing(row: Any) -> float | None:
-    """Brightness for SNR aperture table: prefer observed-band ``mag`` over Gaia G."""
-    for mag_col in _APERTURE_SIZING_MAG_COLS:
-        try:
-            if mag_col not in row.index if hasattr(row, "index") else mag_col not in row:
-                continue
-        except Exception:  # noqa: BLE001
-            # EXC-0133: T4 -- Bad mag value on one masterstar row skipped - loop tries next row for aperture sizing (EXCEPT-BULK-2 2026-07-08)
-            if isinstance(row, dict) and mag_col not in row:
-                continue
-        try:
-            mv = float(pd.to_numeric(row.get(mag_col) if hasattr(row, "get") else row[mag_col], errors="coerce"))
-        except Exception:  # noqa: BLE001
-            continue
-        if math.isfinite(mv):
-            return mv
-    return None
-
 
 
 
@@ -476,15 +429,6 @@ def _star_mag_for_aperture_sizing(row: Any) -> float | None:
 
 
 
-
-
-
-def _is_broadband_photometric_filter(obs_group: str) -> bool:
-    """True for Johnson/Cousins/Sloan broadband filters (B/V/Rc/...); false for L/Clear/unknown."""
-    from band_classify import classify_photometric_band, color_term_auto_from_band
-
-    band = classify_photometric_band(obs_group)
-    return bool(color_term_auto_from_band(band))
 
 
 
