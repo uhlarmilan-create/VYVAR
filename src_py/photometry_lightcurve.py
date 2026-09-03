@@ -15,6 +15,7 @@ from config import AppConfig
 from infolog import log_event
 from jd_axis_format import jd_axis_title, jd_series_relative
 from photometry_shared import _normalize_gaia_id
+from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
 
 from photometry_core import (
     LOGGER,
@@ -2041,10 +2042,7 @@ def _resolve_pfs_peak_test(
     sat_limit_adu: float | None,
 ) -> tuple[float | None, str, float, str]:
     """Return (peak_test, peak_test_source, container_clip, container_source)."""
-    from pipeline import (  # noqa: PLC0415
-        SAT_LIMIT_CONTAINER_CLIP_ADU,
-        inv_sat_limit_peak_test_adu,
-    )
+    from pipeline import inv_sat_limit_peak_test_adu  # noqa: PLC0415
 
     container = float(SAT_LIMIT_CONTAINER_CLIP_ADU)
     container_src = "SAT_LIMIT_CONTAINER_CLIP_ADU"
