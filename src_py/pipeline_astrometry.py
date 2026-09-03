@@ -3255,7 +3255,7 @@ def astrometry_align_and_build_masterstar(
     form a single group.
     """
     from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
-    from pipeline import find_qc_metrics_csv  # noqa: PLC0415
+    from pipeline_catalog import find_qc_metrics_csv  # noqa: PLC0415
 
     ap = Path(archive_path)
     _cfg_align_root = app_config or AppConfig()

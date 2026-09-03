@@ -1387,7 +1387,7 @@ def ensure_clean_field_background_png(
     try:
         draft_dir = _draft_dir_from_photometry(pt)
         obs_group = _obs_group_from_photometry(pt)
-        from pipeline import find_qc_metrics_csv
+        from pipeline_catalog import find_qc_metrics_csv
 
         qc_csv = find_qc_metrics_csv(draft_dir, app_config=None)
         if qc_csv is None:

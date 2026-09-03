@@ -2042,7 +2042,7 @@ def _resolve_pfs_peak_test(
     sat_limit_adu: float | None,
 ) -> tuple[float | None, str, float, str]:
     """Return (peak_test, peak_test_source, container_clip, container_source)."""
-    from pipeline import inv_sat_limit_peak_test_adu  # noqa: PLC0415
+    from pipeline_catalog import inv_sat_limit_peak_test_adu  # noqa: PLC0415
 
     container = float(SAT_LIMIT_CONTAINER_CLIP_ADU)
     container_src = "SAT_LIMIT_CONTAINER_CLIP_ADU"

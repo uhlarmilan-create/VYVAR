@@ -449,7 +449,7 @@ def _phase2a_prepare_shared_state(
     _peak_test_adu: float | None = None
     _peak_test_src = ""
     try:
-        from pipeline import inv_sat_limit_peak_test_adu  # noqa: PLC0415
+        from pipeline_catalog import inv_sat_limit_peak_test_adu  # noqa: PLC0415
 
         _peak_test_adu, _peak_test_src = inv_sat_limit_peak_test_adu()
     except Exception as exc:  # noqa: BLE001

@@ -3160,7 +3160,7 @@ class _PhotometryReportBuilder:
         dfo["_qa_source"] = "db"
         return dfo
     def _load_qc_metrics_for_obs(self, ) -> pd.DataFrame:
-        from pipeline import find_qc_metrics_csv
+        from pipeline_catalog import find_qc_metrics_csv
 
         qc_csv = find_qc_metrics_csv(self.draft_dir, app_config=None)
         if qc_csv is None:

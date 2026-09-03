@@ -514,7 +514,7 @@ def _load_luminance_from_fits(
 def _estimate_kernel_sigma_px(platesolve_dir: Path, photometry_dir: Path) -> float:
     try:
         from hrd_analysis import _draft_dir_from_photometry, _obs_group_from_photometry
-        from pipeline import find_qc_metrics_csv
+        from pipeline_catalog import find_qc_metrics_csv
 
         draft_dir = _draft_dir_from_photometry(Path(photometry_dir))
         obs_group = _obs_group_from_photometry(Path(photometry_dir))

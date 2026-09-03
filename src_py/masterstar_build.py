@@ -2093,7 +2093,7 @@ def generate_masterstar_and_catalog(
     try:
         _vt_stamp_path = platesolve_dir / "variable_targets.csv"
         if _vt_stamp_path.is_file():
-            from photometry_core import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
+            from photometry_shared import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
 
             _ms_for_stamp = pd.read_csv(
                 csv_path, low_memory=False, dtype={"catalog_id": str, "name": str}
@@ -2323,7 +2323,7 @@ def generate_masterstar_and_catalog(
                         )
                         import numpy as _np
                         # photometry.py is legacy; use the merged core module.
-                        from photometry_core import bad_columns_for_light_frame
+                        from photometry_shared import bad_columns_for_light_frame
 
                         _thr_nl = float("nan")
                         _peaks_nl: list[float] = []

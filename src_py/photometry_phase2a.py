@@ -2980,7 +2980,7 @@ def _sky_surface_meta_from_qc(draft_dir: Path | None) -> dict[str, Any]:
     if draft_dir is None:
         return {}
     try:
-        from pipeline import find_qc_metrics_csv  # noqa: PLC0415
+        from pipeline_catalog import find_qc_metrics_csv  # noqa: PLC0415
 
         qc_path = find_qc_metrics_csv(Path(draft_dir))
         if qc_path is None or not qc_path.is_file():
@@ -3805,7 +3805,7 @@ def _phase2a_finalize_exports(
         # INV-FLAT-01 from preprocess residual flatness column in qc_metrics (WARN).
         try:
             _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
-            from pipeline import find_qc_metrics_csv  # noqa: PLC0415
+            from pipeline_catalog import find_qc_metrics_csv  # noqa: PLC0415
 
             _qc_p = find_qc_metrics_csv(_dd) if _dd is not None else None
             if _qc_p is not None and _qc_p.is_file():
