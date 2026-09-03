@@ -83,7 +83,7 @@ def test_exc0312_plate_solve_bundle_failure_counted(
     def _boom(*_a, **_k):
         raise RuntimeError("bundle fail")
 
-    monkeypatch.setattr("pipeline.extract_fits_metadata", _boom)
+    monkeypatch.setattr("fits_meta.extract_fits_metadata", _boom)
     reset_except_fix_counters()
     caplog.set_level(logging.ERROR)
     out = _plate_solve_input_bundle(fp, app_config=None, equipment_id=None, draft_id=None)

@@ -28,7 +28,8 @@ from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from utils import fits_binning_xy_from_header, iter_fits_paths_recursive as _iter_fits_recursive, maybe_rescale_linear_wcs_cd_to_target_arcsec_per_pixel, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, plate_solve_fov_deg_diagonal_from_scale, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import itertools
-from fits_meta import _focal_mm_plausible, extract_fits_metadata
+import fits_meta
+from fits_meta import _focal_mm_plausible
 from masterstar_gaia_accounting import _dao_xy_binned_to_full
 from masterstar_gaia_accounting import _dao_full_to_binned_xy
 from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
@@ -876,8 +877,6 @@ def _plate_solve_input_bundle(
     telescope_id: int | None = None,
 ) -> dict[str, Any]:
     """Open DB once: metadata, effective pixel, focal length, expected plate scale [arcsec/pixel]."""
-    from pipeline import extract_fits_metadata  # noqa: PLC0415
-
     cfg_u = app_config or AppConfig()
     db_u = _vyvar_open_database(cfg_u)
     _eq_use, _tel_use = resolve_optics_ids_for_platesolve(
@@ -893,7 +892,7 @@ def _plate_solve_input_bundle(
     try:
         with fits.open(fits_path, memmap=False) as hdul:
             out["header"] = hdul[0].header.copy()
-        out["meta"] = extract_fits_metadata(
+        out["meta"] = fits_meta.extract_fits_metadata(
             fits_path,
             db=db_u,
             app_config=cfg_u,
