@@ -69,7 +69,13 @@ def test_production_db_open_survives_if_present() -> None:
 
 def test_no_master_sources_outside_drop_migration() -> None:
     root = Path(__file__).resolve().parents[2] / "src_py"
-    allowed = {"database.py", "pipeline.py", "psf_photometry.py", "masterstars_enrichment.py"}
+    allowed = {
+        "database.py",
+        "pipeline.py",
+        "psf_photometry.py",
+        "masterstars_enrichment.py",
+        "masterstar_build.py",  # E6b: generate_masterstar_and_catalog moved here
+    }
     hits: list[str] = []
     for path in root.rglob("*.py"):
         if path.name not in allowed and "MASTER_SOURCES" in path.read_text(encoding="utf-8", errors="replace"):
