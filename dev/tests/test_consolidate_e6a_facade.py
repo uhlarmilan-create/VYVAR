@@ -202,10 +202,12 @@ def test_e6a_catalog_facade_getattr() -> None:
 
 
 def test_e6a_giants_stay_in_pipeline() -> None:
-    assert pipeline.generate_masterstar_and_catalog.__module__ == "pipeline"
-    assert pipeline.detect_stars_and_match_catalog.__module__ == "pipeline"
-    assert pipeline.export_per_frame_catalogs.__module__ == "pipeline"
-    assert pipeline._astrometry_align_impl_body.__module__ == "pipeline"
+    # E6b moved the four giants into their own modules; facade still re-exports them.
+    # AstroPipeline (C-C) stays physical in pipeline.py.
+    assert pipeline.generate_masterstar_and_catalog.__module__ == "masterstar_build"
+    assert pipeline.detect_stars_and_match_catalog.__module__ == "catalog_match"
+    assert pipeline.export_per_frame_catalogs.__module__ == "frame_export"
+    assert pipeline._astrometry_align_impl_body.__module__ == "astrometry_align"
     assert pipeline.AstroPipeline.__module__ == "pipeline"
 
 
