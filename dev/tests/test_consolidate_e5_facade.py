@@ -90,12 +90,6 @@ def test_e5_pipeline_facade_getattr() -> None:
     for name in PIPELINE_E5:
         obj = getattr(pipeline, name)
         home = getattr(pipeline_calibrate, name)
-        if name == "_fit_subtract_preprocess_sky_surface":
-            # Call-time follow rebinds the home-module name to a lambda
-            # that looks up the facade (test_osc1_extraction patch path).
-            assert obj.__module__ == "pipeline_calibrate", name
-            assert obj is not home
-            continue
         assert obj is home, name
         if name == "_CALIB_MASTER_NB_UNSET":
             assert obj is pipeline_calibrate._CALIB_MASTER_NB_UNSET
