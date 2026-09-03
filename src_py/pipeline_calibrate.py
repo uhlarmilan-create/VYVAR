@@ -52,6 +52,7 @@ from fits_meta import (
 )
 from fits_suffixes import FITS_SUFFIXES_LOWER
 from infolog import log_event, log_exception
+from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
 from plain_stats import plain_mean_med_std
 from utils import (
     DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
@@ -1266,8 +1267,6 @@ def _effective_saturation_limit(
     container clip (INV-SAT-LIMIT; never None).
     """
     import math
-
-    from pipeline import SAT_LIMIT_CONTAINER_CLIP_ADU  # noqa: PLC0415
 
     lim = _saturate_limit_adu_from_header(hdr)
     if lim is not None:
