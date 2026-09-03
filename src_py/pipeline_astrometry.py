@@ -31,6 +31,7 @@ import itertools
 from fits_meta import _focal_mm_plausible, extract_fits_metadata
 from masterstar_gaia_accounting import _dao_xy_binned_to_full
 from masterstar_gaia_accounting import _dao_full_to_binned_xy
+from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
 from pipeline_calibrate import (
     _archive_preprocess_lights_root,
     _filter_light_paths_maybe,
@@ -1443,8 +1444,6 @@ def _merge_vsx_exoplanet_variable_targets(
     exo_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Merge VSX + exoplanet promotion rows; same Gaia id -> one row with VSX labels + exo_*."""
-    from pipeline import _EXO_HOST_ANNOTATION_COLUMNS  # noqa: PLC0415
-
     from gaia_catalog_id import normalize_gaia_source_id_series
 
     vsx = vsx_df.copy() if vsx_df is not None else pd.DataFrame()
