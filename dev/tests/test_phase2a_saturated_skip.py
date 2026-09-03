@@ -124,7 +124,7 @@ def test_saturated_target_skips_with_zero_frames(tmp_path: Path) -> None:
     fits_stub = tmp_path / "masterstar.fits"
     fits_stub.write_bytes(b"")
 
-    with patch("photometry_core.read_flux_from_csv") as mock_read:
+    with patch("phase2a_target.read_flux_from_csv") as mock_read:
         summary, n_lc = _phase2a_process_one_target(
             row,
             ti=1,
