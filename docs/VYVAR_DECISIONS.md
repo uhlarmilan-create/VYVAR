@@ -31,6 +31,13 @@ direction; DB-RETIRE-01). Measured max delta card vs qc_metrics
 not the SNR-table draft constant (unchanged from APERTURE-01).
 A-1-OVERRIDE (remove VY_FWHM_GAUSS override) remains a separate
 open ROADMAP item with its own measured-delta requirement.
+Carve-out: the safe-bbox precompute (pipeline_astrometry.py,
+Variant A2) keeps MASTERSTAR header VY_FWHM as its FWHM source per
+CONSOLIDATE-01B A2 MEASURE FIRST (era04 byte-identity; 0.015 px
+r_out bookkeeping at the chip edge, no photometric effect). This
+decision does not mandate swapping it to the qc chain. Evidence:
+dev/results/context/session_20260831_c01b/REPORT.md (A2 STOP);
+code comment src_py/pipeline_astrometry.py:1957-1959.
 
 ## D-FACADE-PERMANENT-01 (Milan 2026-09-03)
 
