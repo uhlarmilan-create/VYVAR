@@ -16,3 +16,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "slow: draft_000366 comp_qa integration (minutes per case)",
     )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
+    """Vendor tree is not a pytest package; smoke test lives in dev/tests."""
+    _ = config
+    parts = set(Path(collection_path).parts)
+    return "xval_pythonphot" in parts and "vendor" in parts
