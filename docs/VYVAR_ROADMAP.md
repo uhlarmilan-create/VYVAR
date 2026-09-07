@@ -98,7 +98,6 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **SIGMA-BUDGET-EMPIRICAL** | Empirical sigma budget remaining Newton gate | Cursor | F-BINGAIN-1 |
 | **SIGMA-PROV-FORENSIC** | Sigma provenance forensic leftover | Cursor | LOW |
 | **SIGMA-SEM-CAUSE** | SEM cause leftover | Cursor | LOW |
-| **SKY-SURFACE-BLAST-RADIUS** | Drafts 438-451 inflated catalogues; confirm no AAVSO/VarAstro export from those drafts | Milan | export check |
 | **SPARSE-TRUST** | Sparse-field trust gate follow-up | Cursor | parked |
 | **STALE-LC-SWEEP** | Stale LC sweep | Cursor | LOW |
 | **SYNTH-SKY-GENERATOR** | WCS-true synthetic field generator for known-truth photometry | Claude | sub-pixel debug |
@@ -177,6 +176,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **REG-520-01** -- STOP 2026-08-24 measure; ghost/WCS notes carried in SEL-GHOST-01.
 - **SAT-DIAG** -- DONE saturation and linearity limit gate.
 - **SEL-GHOST-01** -- MERGED 2026-09-01; origin/main `5b1068d` (fast-forward from 7c086e8 via consolidate-01).
+- **SKY-SURFACE-BLAST-RADIUS** -- CLOSED 2026-09-07: R-S1 forensic scan (no export files ever generated for drafts 438-451; all 14 draft dirs absent; Archive-wide token scan 0 hits) + Milan confirmation that nothing has ever been uploaded to AAVSO/VarAstro by any channel (uploads held until validation). Evidence CURSOR_RESULT_SKY_SURFACE_BLAST_01.md.
 - **TODO-COMP-P2P-RESIDUAL** -- DONE already implemented; found stale 2026-07-19.
 - **TODO-DEV-PROCESS** -- DONE 2026-07-08 as DEV-PROCESS-A + DEV-PROCESS-B.
 - **TODO-EPSF-1-FWHM-QC** -- DONE 2026-06-08.
