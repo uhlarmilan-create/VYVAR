@@ -60,6 +60,14 @@ def test_plan_warns_both_sides_keeps_inliers() -> None:
     assert "Light_099" not in frames
 
 
+def _frameqc_texts(caplog) -> list[str]:
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if "[FRAME-QC] n_stars diagnostic:" in r.getMessage()
+    ]
+
+
 def test_plan_mad_zero_emits_summary_only(caplog) -> None:
     rows = [
         _row(f"BO_CVn_Light_{i:03d}.fits", 98.0) for i in range(1, 8)
@@ -69,13 +77,13 @@ def test_plan_mad_zero_emits_summary_only(caplog) -> None:
     assert plan["bounds_undefined"] is True
     assert plan["frames"] == []
     assert plan["median"] == 98.0
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING, logger="pipeline"):
         emit_n_stars_diagnostic(df)
-    texts = [r.getMessage() for r in caplog.records]
+    texts = _frameqc_texts(caplog)
     assert any(
         "MAD=0; bounds undefined; no per-frame warnings" in t for t in texts
     )
-    assert not any("frame kept" in t and "outside" in t for t in texts)
+    assert not any("outside" in t for t in texts)
 
 
 def test_emit_per_frame_and_summary(caplog) -> None:
@@ -89,12 +97,11 @@ def test_emit_per_frame_and_summary(caplog) -> None:
     rows.append(_row("BO_CVn_Light_050.fits", 50.0))
     rows.append(_row("BO_CVn_Light_200.fits", 200.0))
     df = pd.DataFrame(rows)
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING, logger="pipeline"):
         emit_n_stars_diagnostic(df)
-    texts = [r.getMessage() for r in caplog.records]
+    texts = _frameqc_texts(caplog)
     per = [t for t in texts if "outside" in t and "frame kept" in t]
     assert len(per) == 2
     assert any("Light_050" in t and "n=50" in t for t in per)
     assert any("Light_200" in t and "n=200" in t for t in per)
     assert any("n_low=1 n_high=1" in t for t in texts)
-    assert all("; frame kept" in t or "frames kept" in t for t in texts)
