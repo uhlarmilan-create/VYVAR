@@ -22,6 +22,10 @@ _EXO_HOST_ANNOTATION_COLUMNS: tuple[str, ...] = (
     "exo_match_sep_arcsec",
 )
 
+# FRAME-QC-PARITY-02C: two-sided n_stars diagnostic (status=ok); no drop authority.
+N_STARS_DIAG_K = 5.0
+_N_STARS_DIAG_MAD_TO_SIGMA = 1.4826
+
 # SAT-LIMIT-01 / GAIN-DOMAIN-01: 16-bit FITS container clip (pile-up at 65535, not 65532).
 SAT_LIMIT_CONTAINER_CLIP_ADU = 65535.0
 # Peak-test fraction when the linearity knee is unmeasured (D1-2 / SAT-LIMIT-01 B3).

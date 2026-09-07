@@ -153,6 +153,7 @@ pointing_hint_from_header = _pointing_hint_from_header
 LOGGER = logging.getLogger(__name__)
 
 from pipeline_constants import (  # noqa: E402,F401
+    N_STARS_DIAG_K,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
     SAT_LIMIT_NO_KNEE_FRAC,
     SAT_LIMIT_PEAK_TEST_SOURCE,

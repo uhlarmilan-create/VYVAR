@@ -524,6 +524,8 @@ def test_facade_inventory_star_import() -> None:
 
 def test_facade_inventory_constants_leaf() -> None:
     assert pipeline.SAT_LIMIT_PEAK_TEST_SOURCE is pipeline_constants.SAT_LIMIT_PEAK_TEST_SOURCE
+    assert pipeline.N_STARS_DIAG_K is pipeline_constants.N_STARS_DIAG_K
+    assert pipeline.N_STARS_DIAG_K == 5.0
     cat_src = getattr(pipeline_catalog, "SAT_LIMIT_PEAK_TEST_SOURCE", None)
     assert cat_src is None or cat_src is pipeline.SAT_LIMIT_PEAK_TEST_SOURCE
 

@@ -52,7 +52,11 @@ from fits_meta import (
 )
 from fits_suffixes import FITS_SUFFIXES_LOWER
 from infolog import log_event, log_exception
-from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
+from pipeline_constants import (
+    N_STARS_DIAG_K,
+    SAT_LIMIT_CONTAINER_CLIP_ADU,
+    _N_STARS_DIAG_MAD_TO_SIGMA,
+)
 from plain_stats import plain_mean_med_std
 from utils import (
     DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
@@ -3668,6 +3672,7 @@ def _qc_enrich_calibrated_in_place(
         log_event(f"qc_metrics.csv written to {_qc_csv}")
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[PIPELINE] qc_metrics.csv write failed: %s", exc)
+    emit_n_stars_diagnostic(_qc_df)
 
     return {
         "n_processed": len(results),
@@ -3679,6 +3684,136 @@ def _qc_enrich_calibrated_in_place(
         "qc_root": str(calibrated_root),
         "qc_csv": str(_qc_csv),
     }
+
+
+def _n_stars_diag_frame_label(src: Any) -> str:
+    stem = Path(str(src or "")).stem
+    idx = stem.rfind("Light_")
+    if idx >= 0:
+        return stem[idx:]
+    return stem or "unknown"
+
+
+def _n_stars_mad(values: np.ndarray) -> float:
+    arr = np.asarray(values, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return 0.0
+    med = float(np.median(arr))
+    return float(np.median(np.abs(arr - med)))
+
+
+def plan_n_stars_diagnostic(
+    df: pd.DataFrame | None,
+    *,
+    k: float | None = None,
+) -> dict[str, Any]:
+    """Bounds and outlier list for n_stars_detected; no I/O. D-NSTARS-DIAG-01."""
+    kk = float(N_STARS_DIAG_K if k is None else k)
+    empty: dict[str, Any] = {
+        "k": kk,
+        "n_ok": 0,
+        "median": None,
+        "mad": 0.0,
+        "sigma_mad": 0.0,
+        "lo": None,
+        "hi": None,
+        "n_low": 0,
+        "n_high": 0,
+        "frames": [],
+        "bounds_undefined": True,
+        "used_all_rows_mad": False,
+    }
+    if df is None or df.empty or "n_stars_detected" not in df.columns:
+        return empty
+    work = df.copy()
+    work["_n"] = pd.to_numeric(work["n_stars_detected"], errors="coerce")
+    if "status" in work.columns:
+        ok = work[work["status"].astype(str) == "ok"]
+    else:
+        ok = work
+    ok_n = ok["_n"].to_numpy(dtype=np.float64)
+    ok_n = ok_n[np.isfinite(ok_n)]
+    empty["n_ok"] = int(ok_n.size)
+    if ok_n.size == 0:
+        return empty
+    med = float(np.median(ok_n))
+    mad = _n_stars_mad(ok_n)
+    used_all = False
+    if mad == 0.0:
+        mad = _n_stars_mad(work["_n"].to_numpy(dtype=np.float64))
+        used_all = True
+    if mad == 0.0:
+        empty["median"] = med
+        empty["used_all_rows_mad"] = used_all
+        return empty
+    sig = float(mad * _N_STARS_DIAG_MAD_TO_SIGMA)
+    lo = med - kk * sig
+    hi = med + kk * sig
+    frames: list[dict[str, Any]] = []
+    src_col = "src" if "src" in ok.columns else ("dst" if "dst" in ok.columns else None)
+    for _, row in ok.iterrows():
+        nv = row["_n"]
+        if not math.isfinite(float(nv)):
+            continue
+        n_i = float(nv)
+        if n_i < lo or n_i > hi:
+            label = _n_stars_diag_frame_label(row[src_col] if src_col else "")
+            side = "low" if n_i < lo else "high"
+            frames.append({"frame": label, "n": n_i, "side": side})
+    n_low = sum(1 for f in frames if f["side"] == "low")
+    n_high = sum(1 for f in frames if f["side"] == "high")
+    return {
+        "k": kk,
+        "n_ok": int(ok_n.size),
+        "median": med,
+        "mad": float(mad),
+        "sigma_mad": sig,
+        "lo": lo,
+        "hi": hi,
+        "n_low": int(n_low),
+        "n_high": int(n_high),
+        "frames": frames,
+        "bounds_undefined": False,
+        "used_all_rows_mad": used_all,
+    }
+
+
+def emit_n_stars_diagnostic(df: pd.DataFrame | None) -> dict[str, Any]:
+    """Log n_stars outliers; never changes status, headers, or files."""
+    plan = plan_n_stars_diagnostic(df)
+    if plan["bounds_undefined"]:
+        LOGGER.warning(
+            "[FRAME-QC] n_stars diagnostic: MAD=0; bounds undefined; no per-frame warnings"
+        )
+        return plan
+    lo = float(plan["lo"])
+    hi = float(plan["hi"])
+    med = float(plan["median"])
+    sig = float(plan["sigma_mad"])
+    kk = float(plan["k"])
+    for rec in plan["frames"]:
+        LOGGER.warning(
+            "[FRAME-QC] n_stars diagnostic: %s n=%s outside [%.4g, %.4g] "
+            "(median %.4g, sigma_MAD %.4g, k=%.1f); frame kept",
+            rec["frame"],
+            int(rec["n"]) if float(rec["n"]).is_integer() else rec["n"],
+            lo,
+            hi,
+            med,
+            sig,
+            kk,
+        )
+    LOGGER.warning(
+        "[FRAME-QC] n_stars diagnostic: n_low=%d n_high=%d "
+        "(median %.4g, sigma_MAD %.4g, k=%.1f); frames kept",
+        int(plan["n_low"]),
+        int(plan["n_high"]),
+        med,
+        sig,
+        kk,
+    )
+    return plan
 
 
 def scan_calibrated_lights_pointing(
