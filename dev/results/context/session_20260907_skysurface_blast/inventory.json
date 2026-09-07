@@ -1,0 +1,250 @@
+{
+  "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
+  "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+  "ids": [
+    438,
+    439,
+    440,
+    441,
+    442,
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    449,
+    450,
+    451
+  ],
+  "drafts": [
+    {
+      "draft_id": 438,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000438",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-21T15:40:59+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 439,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000439",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-21T16:36:31+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 440,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000440",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 441,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000441",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-21T16:56:44+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 442,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000442",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 443,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000443",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 444,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000444",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-21T17:06:30+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 445,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000445",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 446,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000446",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 447,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000447",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": null,
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 448,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000448",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-21T18:16:55+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 449,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000449",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-22T10:25:56+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 450,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000450",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-24T20:42:09+00:00",
+      "reports_dirs": []
+    },
+    {
+      "draft_id": 451,
+      "standard_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000451",
+      "directory_exists": false,
+      "relocated_paths": [],
+      "object_setup_dirs": [],
+      "db_date": "2026-07-27T07:21:21+00:00",
+      "reports_dirs": []
+    }
+  ],
+  "reports_trees": [],
+  "adhoc": [],
+  "archive_wide_name_hits": [],
+  "db": {
+    "path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+    "exists": true,
+    "mode": "uri_ro",
+    "ok": true,
+    "error": null,
+    "tables": [
+      "CALIBRATION_LIBRARY",
+      "COMP_STAR_LIBRARY",
+      "EQUIPMENTS",
+      "FIELD_REGISTRY",
+      "FITS_HEADER_CACHE",
+      "LOCATION",
+      "LOCATION_OLD",
+      "MASTER_SOURCES",
+      "OBS_QC_PROCESSING_FILE",
+      "OBS_QC_PROCESSING_RUN",
+      "TELESCOPE",
+      "sqlite_sequence"
+    ],
+    "rows": {
+      "MASTER_SOURCES": [
+        {
+          "draft_id": 438,
+          "n": 8843,
+          "date_min": "2026-07-21T15:56:53+00:00",
+          "date_max": "2026-07-21T15:56:53+00:00"
+        },
+        {
+          "draft_id": 439,
+          "n": 8848,
+          "date_min": "2026-07-21T16:48:11+00:00",
+          "date_max": "2026-07-21T16:48:11+00:00"
+        },
+        {
+          "draft_id": 441,
+          "n": 878,
+          "date_min": "2026-07-21T16:57:58+00:00",
+          "date_max": "2026-07-21T16:57:58+00:00"
+        },
+        {
+          "draft_id": 444,
+          "n": 9164,
+          "date_min": "2026-07-21T17:25:38+00:00",
+          "date_max": "2026-07-21T17:25:38+00:00"
+        },
+        {
+          "draft_id": 448,
+          "n": 5733,
+          "date_min": "2026-07-21T18:16:55+00:00",
+          "date_max": "2026-07-21T18:16:55+00:00"
+        },
+        {
+          "draft_id": 449,
+          "n": 5733,
+          "date_min": "2026-07-22T10:25:56+00:00",
+          "date_max": "2026-07-22T10:25:56+00:00"
+        },
+        {
+          "draft_id": 450,
+          "n": 3993,
+          "date_min": "2026-07-24T20:42:09+00:00",
+          "date_max": "2026-07-24T20:42:09+00:00"
+        },
+        {
+          "draft_id": 451,
+          "n": 3993,
+          "date_min": "2026-07-27T07:21:21+00:00",
+          "date_max": "2026-07-27T07:21:21+00:00"
+        }
+      ],
+      "OBS_QC_PROCESSING_RUN": [
+        {
+          "draft_id": 438,
+          "n": 1,
+          "date_min": "2026-07-21T15:40:59+00:00",
+          "date_max": "2026-07-21T15:40:59+00:00"
+        },
+        {
+          "draft_id": 439,
+          "n": 1,
+          "date_min": "2026-07-21T16:36:31+00:00",
+          "date_max": "2026-07-21T16:36:31+00:00"
+        },
+        {
+          "draft_id": 441,
+          "n": 1,
+          "date_min": "2026-07-21T16:56:44+00:00",
+          "date_max": "2026-07-21T16:56:44+00:00"
+        },
+        {
+          "draft_id": 444,
+          "n": 1,
+          "date_min": "2026-07-21T17:06:30+00:00",
+          "date_max": "2026-07-21T17:06:30+00:00"
+        }
+      ]
+    }
+  }
+}
