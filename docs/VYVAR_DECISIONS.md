@@ -6,6 +6,23 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-NSTARS-DIAG-01 (Milan 2026-09-07)
+
+n_stars frame QC is DIAGNOSTIC-ONLY. Per night, on qc_metrics
+status=ok rows, frames outside median +/- 5.0*sigma_MAD of
+n_stars_detected are logged as warnings and KEPT. Measured basis
+(FRAME-QC-PARITY-02B, live 516): the n_stars outlier (Light_029,
+263 vs median 98) is photometrically clean (check |z|=1.865), while
+the only photometric outlier epoch (Light_034, z=4.10) has normal
+n_stars - the metrics decorrelate, so drop authority on n_stars
+would remove a healthy frame and keep the unhealthy one. No
+comparable package wires such a drop by default (AIJ none;
+C-Munipack manual ~50% operator heuristic; VaST matching-failure
+mechanism). k=5.0 chosen against the measured tight distribution
+(ok-set MAD=1) to warn rarely and meaningfully. Promotion to drop
+authority is a new decision with its own measured delta and anchor
+plan.
+
 ## D-FRAME-QC-AUTH-01 (Milan 2026-09-07)
 
 Frame drop authority is Layer B only: the DB DAO-FWHM prefilter ->

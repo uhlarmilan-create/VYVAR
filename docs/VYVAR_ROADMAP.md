@@ -35,6 +35,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **C-2** | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags | Cursor | TODO-C |
 | **CAL-AGE-CLOCK** | Calibration master age clock | Cursor | LOW |
 | **CAL-PASSTHRU-DEAD** | Passthrough calibration honesty; related F-B01-F-B02 | Cursor | F-B01-F-B02 |
+| **CHECK-EPOCH-034** | Verify epoch error honesty on live 516 Light_034 (check resid +0.0287 mag, z=4.10; FRAME-QC-PARITY-02B); no data modification | Cursor | LOW |
 | **COMP-POOL-R** | Comp pool R follow-up | Cursor | parked |
 | **CORR-ERR-01** | ZP common-mode vs diagonal budget; out of v1.0 | Milan | research |
 | **CR-1** | Same as CR-REJECTION (closure Step 9) | Cursor | TODO-A |
@@ -61,7 +62,6 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **F-BJD-1** | BJD time-base follow-up | Cursor | LOW |
 | **F-EXCEPT-TIER1** | Remaining tier-1 except hygiene | Cursor | LOW |
 | **F-HOWELL-3** | Howell citation/path follow-up after F-BINGAIN-1 | Cursor | F-BINGAIN-1 |
-| **FRAME-QC-PARITY** | Layer A log honesty DONE (D-FRAME-QC-AUTH-01); remaining: n_stars outlier gate decision (frame 29, 263 vs ~100) pending Part B measurement. | Cursor | not C8 |
 | **GAIA-ID-FLOAT-GUARD** | Gaia id float guard follow-up if any residual | Cursor | LOW |
 | **GAIA-PM-COLUMNS** | Gaia DB lacks pmra/pmdec; defer to DR4 ~Dec 2026 | Milan | DR4 |
 | **HRD-PLOT-TUPLE** | HRD plot tuple hygiene | Cursor | LOW |
@@ -168,7 +168,8 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **F-428** -- CLOSED 2026-07-15 draft_428 forensics.
 - **F-429** -- CLOSED 2026-07-16 validate + regressions.
 - **F-431-HEADLESS-DIVERGENCE** -- CLOSED 2026-07-16 / T3 (DECISIONS).
-- **FRAME-QC-PARITY-01** -- Phase 1 heading superseded 2026-08-21; phase 2 remains FRAME-QC-PARITY.
+- **FRAME-QC-PARITY** -- CLOSED 2026-09-07: Layer A diagnostic wording (D-FRAME-QC-AUTH-01) + n_stars diagnostic warning k=5.0 (D-NSTARS-DIAG-01); drop authority declined on measured decorrelation (029 clean / 034 dirty). Evidence CURSOR_RESULT_FRAME_QC_PARITY_02.md.
+- **FRAME-QC-PARITY-01** -- Phase 1 heading superseded 2026-08-21; phase 2 closed as FRAME-QC-PARITY 2026-09-07.
 - **FULL-ANCHOR-RECUT** -- CLOSED 2026-08-27 ERA-04 lock.
 - **INV-CAL-01** -- CLOSED 2026-08-13 CAL-DIAG v2.
 - **INV-CAL-02** -- DONE 2026-08-13 calibrated product stage integrity.
