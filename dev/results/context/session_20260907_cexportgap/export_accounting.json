@@ -1,0 +1,21 @@
+{
+  "n_active_targets": 253,
+  "n_lc_aperture_csv": 53,
+  "n_aavso_txt": 50,
+  "n_varastro_all_files": 20,
+  "n_varastro_txt": 10,
+  "n_varastro_png": 10,
+  "summary_line": "[EXPORT] lightcurves_reports: 50 targets exported, 203 skipped (methods=aperture)",
+  "no_lc_csv_skips": 200,
+  "aavso_write_ok": 50,
+  "varastro_write_ok": 10,
+  "varastro_type_skip_nie_zakrytova": 40,
+  "export_failures_empty_points": [
+    "1498842882207281152",
+    "1499842372636900992",
+    "1500410236033012352"
+  ],
+  "identity": "50 AAVSO ok + 3 empty-point failures + 200 no-LC-CSV = 253 active_targets",
+  "h1_holds": false,
+  "rule_applied": "R2"
+}

@@ -33,7 +33,6 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **BPM-SIDECAR-PATH** | No *_dark_bpm.json found; path dead/disabled/outside tree unresolved | Cursor | forensics |
 | **C-1** | Admission gate: predicted per-epoch SNR (g_lim + Labbe sigma_bkg_ap) | Cursor | TODO-C |
 | **C-2** | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags | Cursor | TODO-C |
-| **C-EXPORT-GAP** | Headless night_run omits AAVSO/VarAstro export | Cursor | schedule |
 | **CAL-AGE-CLOCK** | Calibration master age clock | Cursor | LOW |
 | **CAL-PASSTHRU-DEAD** | Passthrough calibration honesty; related F-B01-F-B02 | Cursor | F-B01-F-B02 |
 | **COMP-POOL-R** | Comp pool R follow-up | Cursor | parked |
@@ -90,7 +89,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **PUB-VALIDATION-SECTION** | Paper validation section | Milan+Claude | PUBLICATION |
 | **PUB-VENUE** | Venue choice | Milan | PUBLICATION |
 | **QHY294MM-RN-DOUBLE** | DB RN 7.6 e- may be bin2 then scaled again to 15.2 e- | Cursor | low priority |
-| **R-CVN-EMPTY-COMP** | Empty-comp drop reports no_comps; confirm nothing further | Cursor | POST-453 |
+| **R-CVN-EMPTY-COMP** | Empty-comp drop reports no_comps; 3 LC CSVs with zero exportable points measured on sandbox 516 (loud export failures; ids in CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md); decide whether empty LC CSVs should be written at all | Cursor | POST-453 |
 | **RELEASE-1** | Release-1 checklist | Milan | v1.0 |
 | **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
 | **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |
@@ -147,6 +146,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **APERTURE-01c** -- STOP 2026-08-26; AIJ PASS 2.7833 mmag; era04 not yet locked.
 - **APERTURE-01d** -- LOCK 2026-08-27; annulus 2.7/5.2; AIJ 1.9503 mmag; era04 --full gate.
 - **ARCHIVE-CLEANUP** -- NEXT SESSION 2026-07-15; historical.
+- **C-EXPORT-GAP** -- CLOSED-STALE 2026-09-07: headless shares _phase2a_finalize_exports (night_run Step 13 -> run_night_photometry -> run_full_photometry_pipeline -> run_phase2a); measured on sandbox 516: 50/53 AAVSO (3 empty-point failures -> R-CVN-EMPTY-COMP) + 10/10 eclipsing VarAstro per documented routing. Evidence CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md.
 - **CAL-DIAG** -- CLOSED 2026-08-13; SUPERSEDED heading removed 2026-08-11 then implemented.
 - **CATALOG-PROVENANCE** -- DONE 2026-07-29.
 - **COMP-RMS-DEF-01** -- Wired C3 2026-08-25 (k=5 LOO mag).
