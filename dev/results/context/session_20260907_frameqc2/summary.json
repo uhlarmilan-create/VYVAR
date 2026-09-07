@@ -1,0 +1,542 @@
+{
+  "g4_live_516": {
+    "csv": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+    "fits": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+    "epsf": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+    "verdict": true
+  },
+  "n_stars": {
+    "516": {
+      "draft_id": 516,
+      "n_all": 150,
+      "n_ok": 134,
+      "stats_all": {
+        "n": 150,
+        "median": 98.0,
+        "mad": 2.0,
+        "sigma_mad": 2.9652,
+        "min": 82.0,
+        "max": 263.0
+      },
+      "stats_ok": {
+        "n": 134,
+        "median": 98.0,
+        "mad": 1.0,
+        "sigma_mad": 1.4826,
+        "min": 90.0,
+        "max": 263.0
+      },
+      "frame29": {
+        "n_stars": 263.0,
+        "status": "ok",
+        "residual_flatness_p99": 47.78870434222875
+      },
+      "bounds_all": [
+        {
+          "subset": "all",
+          "k": 1.5,
+          "lo": 93.5522,
+          "hi": 102.4478,
+          "n_low": 11,
+          "n_high": 15,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_056",
+            "Light_058",
+            "Light_059",
+            "Light_075",
+            "Light_080",
+            "Light_122",
+            "Light_142",
+            "Light_149"
+          ],
+          "high_frames": [
+            "Light_002",
+            "Light_007",
+            "Light_009",
+            "Light_011",
+            "Light_012",
+            "Light_028",
+            "Light_029",
+            "Light_032",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_041",
+            "Light_043",
+            "Light_106"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 2.5,
+          "lo": 90.587,
+          "hi": 105.413,
+          "n_low": 5,
+          "n_high": 6,
+          "low_frames": [
+            "Light_010",
+            "Light_056",
+            "Light_058",
+            "Light_122",
+            "Light_142"
+          ],
+          "high_frames": [
+            "Light_002",
+            "Light_007",
+            "Light_009",
+            "Light_012",
+            "Light_029",
+            "Light_037"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 3.5,
+          "lo": 87.62180000000001,
+          "hi": 108.37819999999999,
+          "n_low": 3,
+          "n_high": 2,
+          "low_frames": [
+            "Light_056",
+            "Light_058",
+            "Light_122"
+          ],
+          "high_frames": [
+            "Light_009",
+            "Light_029"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 5.0,
+          "lo": 83.174,
+          "hi": 112.826,
+          "n_low": 1,
+          "n_high": 1,
+          "low_frames": [
+            "Light_058"
+          ],
+          "high_frames": [
+            "Light_029"
+          ]
+        }
+      ],
+      "bounds_ok": [
+        {
+          "subset": "ok",
+          "k": 1.5,
+          "lo": 95.7761,
+          "hi": 100.2239,
+          "n_low": 11,
+          "n_high": 29,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_052",
+            "Light_059",
+            "Light_067",
+            "Light_069",
+            "Light_075",
+            "Light_078",
+            "Light_080",
+            "Light_125"
+          ],
+          "high_frames": [
+            "Light_003",
+            "Light_008",
+            "Light_011",
+            "Light_012",
+            "Light_014",
+            "Light_028",
+            "Light_029",
+            "Light_030",
+            "Light_031",
+            "Light_032",
+            "Light_033",
+            "Light_034",
+            "Light_035",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_040",
+            "Light_041",
+            "Light_043",
+            "Light_045",
+            "Light_086",
+            "Light_089",
+            "Light_090",
+            "Light_097",
+            "Light_106",
+            "Light_107",
+            "Light_113",
+            "Light_128"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 2.5,
+          "lo": 94.2935,
+          "hi": 101.7065,
+          "n_low": 7,
+          "n_high": 20,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_059",
+            "Light_075",
+            "Light_080",
+            "Light_125"
+          ],
+          "high_frames": [
+            "Light_003",
+            "Light_008",
+            "Light_011",
+            "Light_012",
+            "Light_014",
+            "Light_028",
+            "Light_029",
+            "Light_031",
+            "Light_032",
+            "Light_033",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_040",
+            "Light_041",
+            "Light_043",
+            "Light_045",
+            "Light_090",
+            "Light_106"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 3.5,
+          "lo": 92.8109,
+          "hi": 103.1891,
+          "n_low": 3,
+          "n_high": 5,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_080"
+          ],
+          "high_frames": [
+            "Light_012",
+            "Light_029",
+            "Light_036",
+            "Light_037",
+            "Light_043"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 5.0,
+          "lo": 90.587,
+          "hi": 105.413,
+          "n_low": 1,
+          "n_high": 3,
+          "low_frames": [
+            "Light_010"
+          ],
+          "high_frames": [
+            "Light_012",
+            "Light_029",
+            "Light_037"
+          ]
+        }
+      ]
+    },
+    "517": {
+      "draft_id": 517,
+      "n_all": 150,
+      "n_ok": 134,
+      "stats_all": {
+        "n": 150,
+        "median": 98.0,
+        "mad": 2.0,
+        "sigma_mad": 2.9652,
+        "min": 82.0,
+        "max": 263.0
+      },
+      "stats_ok": {
+        "n": 134,
+        "median": 98.0,
+        "mad": 1.0,
+        "sigma_mad": 1.4826,
+        "min": 90.0,
+        "max": 263.0
+      },
+      "frame29": {
+        "n_stars": 263.0,
+        "status": "ok",
+        "residual_flatness_p99": 47.78870434222875
+      },
+      "bounds_all": [
+        {
+          "subset": "all",
+          "k": 1.5,
+          "lo": 93.5522,
+          "hi": 102.4478,
+          "n_low": 11,
+          "n_high": 15,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_056",
+            "Light_058",
+            "Light_059",
+            "Light_075",
+            "Light_080",
+            "Light_122",
+            "Light_142",
+            "Light_149"
+          ],
+          "high_frames": [
+            "Light_002",
+            "Light_007",
+            "Light_009",
+            "Light_011",
+            "Light_012",
+            "Light_028",
+            "Light_029",
+            "Light_032",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_041",
+            "Light_043",
+            "Light_106"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 2.5,
+          "lo": 90.587,
+          "hi": 105.413,
+          "n_low": 5,
+          "n_high": 6,
+          "low_frames": [
+            "Light_010",
+            "Light_056",
+            "Light_058",
+            "Light_122",
+            "Light_142"
+          ],
+          "high_frames": [
+            "Light_002",
+            "Light_007",
+            "Light_009",
+            "Light_012",
+            "Light_029",
+            "Light_037"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 3.5,
+          "lo": 87.62180000000001,
+          "hi": 108.37819999999999,
+          "n_low": 3,
+          "n_high": 2,
+          "low_frames": [
+            "Light_056",
+            "Light_058",
+            "Light_122"
+          ],
+          "high_frames": [
+            "Light_009",
+            "Light_029"
+          ]
+        },
+        {
+          "subset": "all",
+          "k": 5.0,
+          "lo": 83.174,
+          "hi": 112.826,
+          "n_low": 1,
+          "n_high": 1,
+          "low_frames": [
+            "Light_058"
+          ],
+          "high_frames": [
+            "Light_029"
+          ]
+        }
+      ],
+      "bounds_ok": [
+        {
+          "subset": "ok",
+          "k": 1.5,
+          "lo": 95.7761,
+          "hi": 100.2239,
+          "n_low": 11,
+          "n_high": 29,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_052",
+            "Light_059",
+            "Light_067",
+            "Light_069",
+            "Light_075",
+            "Light_078",
+            "Light_080",
+            "Light_125"
+          ],
+          "high_frames": [
+            "Light_003",
+            "Light_008",
+            "Light_011",
+            "Light_012",
+            "Light_014",
+            "Light_028",
+            "Light_029",
+            "Light_030",
+            "Light_031",
+            "Light_032",
+            "Light_033",
+            "Light_034",
+            "Light_035",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_040",
+            "Light_041",
+            "Light_043",
+            "Light_045",
+            "Light_086",
+            "Light_089",
+            "Light_090",
+            "Light_097",
+            "Light_106",
+            "Light_107",
+            "Light_113",
+            "Light_128"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 2.5,
+          "lo": 94.2935,
+          "hi": 101.7065,
+          "n_low": 7,
+          "n_high": 20,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_021",
+            "Light_059",
+            "Light_075",
+            "Light_080",
+            "Light_125"
+          ],
+          "high_frames": [
+            "Light_003",
+            "Light_008",
+            "Light_011",
+            "Light_012",
+            "Light_014",
+            "Light_028",
+            "Light_029",
+            "Light_031",
+            "Light_032",
+            "Light_033",
+            "Light_036",
+            "Light_037",
+            "Light_038",
+            "Light_039",
+            "Light_040",
+            "Light_041",
+            "Light_043",
+            "Light_045",
+            "Light_090",
+            "Light_106"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 3.5,
+          "lo": 92.8109,
+          "hi": 103.1891,
+          "n_low": 3,
+          "n_high": 5,
+          "low_frames": [
+            "Light_010",
+            "Light_017",
+            "Light_080"
+          ],
+          "high_frames": [
+            "Light_012",
+            "Light_029",
+            "Light_036",
+            "Light_037",
+            "Light_043"
+          ]
+        },
+        {
+          "subset": "ok",
+          "k": 5.0,
+          "lo": 90.587,
+          "hi": 105.413,
+          "n_low": 1,
+          "n_high": 3,
+          "low_frames": [
+            "Light_010"
+          ],
+          "high_frames": [
+            "Light_012",
+            "Light_029",
+            "Light_037"
+          ]
+        }
+      ]
+    }
+  },
+  "residuals": {
+    "target": "BO CVn",
+    "target_cid": "1498613634033133184",
+    "check_cid": "1497613731286514432",
+    "n_epochs_used": 134,
+    "kmag_median": 8.596979000000001,
+    "frame29": {
+      "residual": 0.013051999999998287,
+      "robust_z_vs_other_133": 1.8647434483706784,
+      "percentile_rank_signed": 92.53731343283582
+    },
+    "other_frames_abs_z_ge_3": [
+      {
+        "frame_id": "Light_034",
+        "resid": 0.02871699999999855,
+        "z": 4.094776742418331
+      }
+    ],
+    "residual_flatness_p99_ok": {
+      "n": 134,
+      "median": 34.44086308820515,
+      "mad": 2.0924971817679534,
+      "sigma_mad": 3.1023363216891675,
+      "min": 29.470697929727997,
+      "max": 58.55066523626921
+    },
+    "residual_flatness_p99_frame29": 47.78870434222875,
+    "residual_flatness_p99_frame29_z": 4.295409111827754,
+    "sidecar_has_per_comp_epoch_residuals": false,
+    "lc_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498613634033133184.csv",
+    "check_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\check_kmag_1498613634033133184.csv",
+    "reading": "R-B1 (contained)"
+  },
+  "stop": "STOP for Milan: decide (i) diagnostic vs drop, (ii) k, (iii) recut timing. Nothing wired."
+}

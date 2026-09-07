@@ -1,0 +1,17 @@
+draft_id,subset,k,n_low,n_high,low_frames,high_frames
+516,all,1.5,11,15,Light_010|Light_017|Light_021|Light_056|Light_058|Light_059|Light_075|Light_080|Light_122|Light_142|Light_149,Light_002|Light_007|Light_009|Light_011|Light_012|Light_028|Light_029|Light_032|Light_036|Light_037|Light_038|Light_039|Light_041|Light_043|Light_106
+516,all,2.5,5,6,Light_010|Light_056|Light_058|Light_122|Light_142,Light_002|Light_007|Light_009|Light_012|Light_029|Light_037
+516,all,3.5,3,2,Light_056|Light_058|Light_122,Light_009|Light_029
+516,all,5.0,1,1,Light_058,Light_029
+516,ok,1.5,11,29,Light_010|Light_017|Light_021|Light_052|Light_059|Light_067|Light_069|Light_075|Light_078|Light_080|Light_125,Light_003|Light_008|Light_011|Light_012|Light_014|Light_028|Light_029|Light_030|Light_031|Light_032|Light_033|Light_034|Light_035|Light_036|Light_037|Light_038|Light_039|Light_040|Light_041|Light_043|Light_045|Light_086|Light_089|Light_090|Light_097|Light_106|Light_107|Light_113|Light_128
+516,ok,2.5,7,20,Light_010|Light_017|Light_021|Light_059|Light_075|Light_080|Light_125,Light_003|Light_008|Light_011|Light_012|Light_014|Light_028|Light_029|Light_031|Light_032|Light_033|Light_036|Light_037|Light_038|Light_039|Light_040|Light_041|Light_043|Light_045|Light_090|Light_106
+516,ok,3.5,3,5,Light_010|Light_017|Light_080,Light_012|Light_029|Light_036|Light_037|Light_043
+516,ok,5.0,1,3,Light_010,Light_012|Light_029|Light_037
+517,all,1.5,11,15,Light_010|Light_017|Light_021|Light_056|Light_058|Light_059|Light_075|Light_080|Light_122|Light_142|Light_149,Light_002|Light_007|Light_009|Light_011|Light_012|Light_028|Light_029|Light_032|Light_036|Light_037|Light_038|Light_039|Light_041|Light_043|Light_106
+517,all,2.5,5,6,Light_010|Light_056|Light_058|Light_122|Light_142,Light_002|Light_007|Light_009|Light_012|Light_029|Light_037
+517,all,3.5,3,2,Light_056|Light_058|Light_122,Light_009|Light_029
+517,all,5.0,1,1,Light_058,Light_029
+517,ok,1.5,11,29,Light_010|Light_017|Light_021|Light_052|Light_059|Light_067|Light_069|Light_075|Light_078|Light_080|Light_125,Light_003|Light_008|Light_011|Light_012|Light_014|Light_028|Light_029|Light_030|Light_031|Light_032|Light_033|Light_034|Light_035|Light_036|Light_037|Light_038|Light_039|Light_040|Light_041|Light_043|Light_045|Light_086|Light_089|Light_090|Light_097|Light_106|Light_107|Light_113|Light_128
+517,ok,2.5,7,20,Light_010|Light_017|Light_021|Light_059|Light_075|Light_080|Light_125,Light_003|Light_008|Light_011|Light_012|Light_014|Light_028|Light_029|Light_031|Light_032|Light_033|Light_036|Light_037|Light_038|Light_039|Light_040|Light_041|Light_043|Light_045|Light_090|Light_106
+517,ok,3.5,3,5,Light_010|Light_017|Light_080,Light_012|Light_029|Light_036|Light_037|Light_043
+517,ok,5.0,1,3,Light_010,Light_012|Light_029|Light_037
