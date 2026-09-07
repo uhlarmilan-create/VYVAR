@@ -218,8 +218,12 @@ def measure_frame(
     psfrad: float,
     psf_fits: Path,
     recenter: bool,
+    psf_model: tuple[Any, Any, float] | None = None,
 ) -> tuple[dict[str, dict[str, float]], dict[str, Any]]:
-    """getpsf + pkfit. Returns {cid: meas} and a status dict (never silent)."""
+    """getpsf + pkfit. Returns {cid: meas} and a status dict (never silent).
+
+    Optional ``psf_model=(gauss, psf, psfmag)`` skips getpsf (A1B H-A grid).
+    """
     status: dict[str, Any] = {"ok": False, "reason": "", "n_psf_used": 0}
     meas: dict[str, dict[str, float]] = {}
     import contextlib
@@ -235,61 +239,72 @@ def measure_frame(
     px = np.array([p[1] for p in psf_xy], dtype=np.float64)
     py = np.array([p[2] for p in psf_xy], dtype=np.float64)
     _devnull = io.StringIO()
+    gauss: Any = None
+    psf: Any = None
+    psfmag: Any = None
+    if psf_model is not None:
+        gauss, psf, psfmag = psf_model
+        status["n_psf_used"] = -1
+    else:
+        try:
+            with contextlib.redirect_stdout(_devnull):
+                mag, _me, _fl, _fe, skyv, _se, _bf, _out = aper.aper(
+                    image,
+                    px,
+                    py,
+                    phpadu=gain,
+                    apr=float(max(fitrad, 3.0)),
+                    zeropoint=ZEROPOINT,
+                    skyrad=[40.0, 50.0],
+                    badpix=[-12000.0, 60000.0],
+                    exact=True,
+                )
+        except Exception as exc:  # noqa: BLE001
+            status["reason"] = f"aper_psf:{type(exc).__name__}:{exc}"
+            return meas, status
+        npsf = len(psf_xy)
+        mag1 = _aper1d(mag, npsf)
+        sky1 = _aper1d(skyv, npsf)
+        good = np.isfinite(mag1) & np.isfinite(sky1) & np.isfinite(px) & np.isfinite(py)
+        if int(good.sum()) < 5:
+            status["reason"] = f"aper_psf_too_few:{int(good.sum())}"
+            return meas, status
+        idpsf = np.where(good)[0]
+        psf_fits.parent.mkdir(parents=True, exist_ok=True)
+        if psf_fits.exists():
+            psf_fits.unlink()
+        try:
+            with contextlib.redirect_stdout(_devnull):
+                gauss, psf, psfmag = getpsf.getpsf(
+                    image,
+                    px,
+                    py,
+                    mag1,
+                    sky1,
+                    rn,
+                    gain,
+                    idpsf,
+                    float(psfrad),
+                    float(fitrad),
+                    str(psf_fits),
+                    zeropoint=ZEROPOINT,
+                    verbose=False,
+                )
+        except Exception as exc:  # noqa: BLE001
+            status["reason"] = f"getpsf:{type(exc).__name__}:{exc}"
+            return meas, status
+        if gauss is None or psf is None or not np.all(np.isfinite(np.asarray(gauss, dtype=np.float64))):
+            status["reason"] = "getpsf_nonfinite_gauss"
+            return meas, status
+        try:
+            status["n_psf_used"] = int(fits.getheader(psf_fits).get("NSTARS") or 0)
+        except Exception:  # noqa: BLE001
+            status["n_psf_used"] = 0
     try:
-        with contextlib.redirect_stdout(_devnull):
-            mag, _me, _fl, _fe, skyv, _se, _bf, _out = aper.aper(
-            image,
-            px,
-            py,
-            phpadu=gain,
-            apr=float(max(fitrad, 3.0)),
-            zeropoint=ZEROPOINT,
-            skyrad=[40.0, 50.0],
-            badpix=[-12000.0, 60000.0],
-            exact=True,
-        )
-    except Exception as exc:  # noqa: BLE001
-        status["reason"] = f"aper_psf:{type(exc).__name__}:{exc}"
-        return meas, status
-    npsf = len(psf_xy)
-    mag1 = _aper1d(mag, npsf)
-    sky1 = _aper1d(skyv, npsf)
-    good = np.isfinite(mag1) & np.isfinite(sky1) & np.isfinite(px) & np.isfinite(py)
-    if int(good.sum()) < 5:
-        status["reason"] = f"aper_psf_too_few:{int(good.sum())}"
-        return meas, status
-    idpsf = np.where(good)[0]
-    psf_fits.parent.mkdir(parents=True, exist_ok=True)
-    if psf_fits.exists():
-        psf_fits.unlink()
-    try:
-        with contextlib.redirect_stdout(_devnull):
-            gauss, psf, psfmag = getpsf.getpsf(
-                image,
-                px,
-                py,
-                mag1,
-                sky1,
-                rn,
-                gain,
-                idpsf,
-                float(psfrad),
-                float(fitrad),
-                str(psf_fits),
-                zeropoint=ZEROPOINT,
-                verbose=False,
-            )
-    except Exception as exc:  # noqa: BLE001
-        status["reason"] = f"getpsf:{type(exc).__name__}:{exc}"
-        return meas, status
-    if gauss is None or psf is None or not np.all(np.isfinite(np.asarray(gauss, dtype=np.float64))):
-        status["reason"] = "getpsf_nonfinite_gauss"
-        return meas, status
-    status["n_psf_used"] = int(getattr(fits.getheader(psf_fits), "get", lambda *_: 0)("NSTARS") or 0)
-    try:
-        status["n_psf_used"] = int(fits.getheader(psf_fits).get("NSTARS") or 0)
+        _pmag = float(np.asarray(psfmag).reshape(-1)[0])
     except Exception:  # noqa: BLE001
-        pass
+        _pmag = float("nan")
+    status["psf_model"] = (gauss, psf, _pmag)
 
     sx = np.array([p[1] for p in star_xy], dtype=np.float64)
     sy = np.array([p[2] for p in star_xy], dtype=np.float64)
