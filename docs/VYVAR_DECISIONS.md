@@ -6,6 +6,32 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-MP-CALIB-OFF-01 (Milan 2026-09-07)
+
+Parallel calibration (VYVAR_CALIBRATE_MP=1) is permanently OFF and
+unsupported in production. The E5 latent spawn defect
+(_init_calibrate_batch_worker 1-tuple vs 3-tuple initargs) is fixed
+and guarded by test_calibrate_batch_mp_spawn_passthrough_roundtrip;
+the guard test stays. Any future enablement requires BOTH a new Milan
+decision AND a serial-vs-MP byte-parity gate on a small real draft
+(hash equality of all calibrated products). The MP-CALIB-PARITY-01
+proposal is closed by this decision without a parity campaign.
+
+## D-FWHM-AUTH-01-CLOSE (Milan 2026-09-07)
+
+FWHM-AUTH-01 ledger line (PENDING since 2026-08-27) is closed.
+Authority for aperture geometry FWHM is the per-frame QC moment FWHM
+resolved through the file chain only:
+qc_metrics.csv -> frame header card VY_FWHM -> night median
+(aperture_policy.resolve_frame_fwhm_px). The sqlite DB is not a
+source of FWHM authority and will not become one (files-only
+direction; DB-RETIRE-01). Measured max delta card vs qc_metrics
+2.5e-4 px = FITS card rounding, physically negligible
+(sub-microamag at f=1.35). Not VY_FWHM_GAUSS, not DAO_TO_GAUSSIAN,
+not the SNR-table draft constant (unchanged from APERTURE-01).
+A-1-OVERRIDE (remove VY_FWHM_GAUSS override) remains a separate
+open ROADMAP item with its own measured-delta requirement.
+
 ## D-FACADE-PERMANENT-01 (Milan 2026-09-03)
 
 `pipeline.py` and `photometry_core.py` remain PERMANENT thin re-export

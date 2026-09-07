@@ -129,7 +129,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 
 Standing operator items without a hyphenated id (kept as prose, not an id row):
 first AAVSO/VarAstro uploads BO -> FW (band CV) once a locked ledger exists;
-`origin/main` is `5b1068d` (MERGE-MAIN-01; SEL-GHOST-01 MERGED 2026-09-01).
+origin/main == origin/consolidate-01 == 30c37eb (CONSOLIDATE-01 fast-forward, Milan PUSH_AUTH 2026-09-07).
 
 ---
 

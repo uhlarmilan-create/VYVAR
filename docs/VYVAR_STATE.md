@@ -1,6 +1,17 @@
 # VYVAR -- Development State
 
-**Status:** **CLOSE-OUT 2026-08-27 APERTURE-01d LOCK.** Annulus
+**Status:** **LEDGER-SYNC 2026-09-07.** CONSOLIDATE-01 E-program COMPLETE
+2026-09-03; main fast-forwarded by Milan 2026-09-07 to 30c37eb
+(== consolidate-01). pipeline.py 1047 ln / photometry_core.py 1233 ln,
+both PERMANENT facades (D-FACADE-PERMANENT-01); pipeline_constants leaf
+(D-CONSTANTS-LEAF-01); run_full + QC pair homes (D-RUNFULL-HOME-01).
+Anchors unchanged: era04_aperture d55fcc9d n=53 / ext cc8b532e n=157 /
+epsf01 c743b8ba n=53; live 516 csv bfa24039 / fits 13e77cf8 /
+epsf 172f9540.
+D-MP-CALIB-OFF-01: parallel calibration permanently OFF; no parity campaign.
+D-FWHM-AUTH-01-CLOSE: FWHM authority is the file chain only
+(qc_metrics.csv -> VY_FWHM -> night median); DB is not a source.
+**CLOSE-OUT 2026-08-27 APERTURE-01d LOCK.** Annulus
 2.7/5.2 FWHM (AIJ 14/27 px). Independent AIJ gate PASS:
 RMS(diff)=**1.9503 mmag** (n=134, gate <=2.8). Ledger v6: 0
 UNNAMED (60/60 tagged). era04 locked: core **9367f998** n=160,
@@ -107,7 +118,7 @@ for relative photometry under P4 (uncorrected fit flux). Absolute PSF flux scale
 stars is untrusted until EPSF-CORE-01 rebuilds the core. Canonical AC, when wanted, is
 DAOGROW/DOLPHOT growth-curve totals, not chi2-gated DAO ratio.
 
-Last updated: **2026-08-27** (CLOSE-OUT APERTURE-01d LOCK, annulus 2.7/5.2, AIJ 1.9503 mmag PASS, ledger v6 0 UNNAMED, era04 core 9367f998 n=160 / d3cefff3 n=210; CLOSE-OUT APERTURE-01c STOP, f=1.35 AIJ 2.7833 mmag PASS, ledger 6 UNNAMED, era04 not locked; APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
+Last updated: **2026-09-07** (LEDGER-SYNC: CONSOLIDATE-01 at 30c37eb, D-MP-CALIB-OFF-01, D-FWHM-AUTH-01-CLOSE; CLOSE-OUT APERTURE-01d LOCK, annulus 2.7/5.2, AIJ 1.9503 mmag PASS, ledger v6 0 UNNAMED, era04 core 9367f998 n=160 / d3cefff3 n=210; CLOSE-OUT APERTURE-01c STOP, f=1.35 AIJ 2.7833 mmag PASS, ledger 6 UNNAMED, era04 not locked; APERTURE-01b STOP, no f*; APERTURE-01 STOP `a23ee3d` on origin/sel-ghost-01, era04 not locked; C6-3d STOP; C6-3c; C6-3 STOP; C6-0 R1'' informational skip; C6-0 resume STOP, A-only 4-tuple vs 3-tuple; no era04 lock; C8+C4 STOP; C3/C7 STOP; C0-C2 STOP; SEL-GHOST-01 B-STOP-3; B-STOP-2; B-STOP-1b; B-STOP-1; REG-520-01 STOP `92361a3`; CAL-520-01 H-CAL-MISCLASS superseded as cause; DAO-GAIA-XFER-01 CLOSED `e5a6149`/`505fa13`; MULTIFILTER-WCS-01 carry).
 
 ## 2026-08-27 -- CLOSE-OUT APERTURE-01d LOCK (annulus 2.7/5.2; era04 locked)
 
