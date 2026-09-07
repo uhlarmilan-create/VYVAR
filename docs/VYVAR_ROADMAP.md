@@ -61,7 +61,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **F-BJD-1** | BJD time-base follow-up | Cursor | LOW |
 | **F-EXCEPT-TIER1** | Remaining tier-1 except hygiene | Cursor | LOW |
 | **F-HOWELL-3** | Howell citation/path follow-up after F-BINGAIN-1 | Cursor | F-BINGAIN-1 |
-| **FRAME-QC-PARITY** | Remaining: Layer A log honesty + n_stars outlier gate (frame 29, 263 vs ~100). Landed INV-FRAME-QC-01: `_dqf` None raises; provenance stamp | Cursor | not C8 |
+| **FRAME-QC-PARITY** | Layer A log honesty DONE (D-FRAME-QC-AUTH-01); remaining: n_stars outlier gate decision (frame 29, 263 vs ~100) pending Part B measurement. | Cursor | not C8 |
 | **GAIA-ID-FLOAT-GUARD** | Gaia id float guard follow-up if any residual | Cursor | LOW |
 | **GAIA-PM-COLUMNS** | Gaia DB lacks pmra/pmdec; defer to DR4 ~Dec 2026 | Milan | DR4 |
 | **HRD-PLOT-TUPLE** | HRD plot tuple hygiene | Cursor | LOW |

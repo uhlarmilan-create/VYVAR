@@ -1499,7 +1499,9 @@ def _post_calibration_qc_eval(
             "reject_reasons": ["no finite pixels"],
         }
         if light_basename:
-            log_event(f"Frame {light_basename} REJECTED (no finite pixels)")
+            log_event(
+                f"Frame {light_basename} QC FAIL (diagnostic; frame kept): no finite pixels"
+            )
         return out
 
     sky_mean, sky_med, sky_rms = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
@@ -1541,9 +1543,14 @@ def _post_calibration_qc_eval(
 
     if not ok and light_basename:
         if len(reasons) == 1 and reasons[0].startswith("HFR:"):
-            log_event(f"Frame {light_basename} REJECTED ({reasons[0]})")
+            log_event(
+                f"Frame {light_basename} QC FAIL (diagnostic; frame kept): {reasons[0]}"
+            )
         else:
-            log_event(f"Frame {light_basename} REJECTED ({'; '.join(reasons)})")
+            log_event(
+                f"Frame {light_basename} QC FAIL (diagnostic; frame kept): "
+                f"{'; '.join(reasons)}"
+            )
 
     return {
         "qc_passed": ok,

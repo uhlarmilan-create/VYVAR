@@ -6,6 +6,17 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-FRAME-QC-AUTH-01 (Milan 2026-09-07)
+
+Frame drop authority is Layer B only: the DB DAO-FWHM prefilter ->
+qc_metrics.csv status -> allowlist chain. Layer A calibration QC
+(_post_calibration_qc_eval: HFR, star count, background RMS) is
+diagnostic: it stamps VYQCPASS/VY_QCHFR/VY_QCNS headers and logs,
+and must not drop frames. Log wording states this (option 2 of
+FRAME-QC-PARITY-01; "REJECTED" wording retired on annotate-only
+paths). Any future promotion of a Layer A metric to drop authority
+is a new decision with its own measured delta and anchor plan.
+
 ## D-MP-CALIB-OFF-01 (Milan 2026-09-07)
 
 Parallel calibration (VYVAR_CALIBRATE_MP=1) is permanently OFF and
