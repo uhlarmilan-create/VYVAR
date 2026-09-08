@@ -1477,7 +1477,6 @@ def _phase2a_process_one_target(
         selected_tier = ""
         tier4_warning = False
         n_t1 = n_t2 = n_t3 = n_t4 = 0
-        _cq_fallback: dict[str, Any] = {}
         try:
             if "selected_tier" in comp_df.columns:
                 _sub = _comp_index.get(target_cid, pd.DataFrame())
@@ -1492,17 +1491,6 @@ def _phase2a_process_one_target(
                         n_t4 = int(pd.to_numeric(_sub.iloc[0].get("n_tier4", 0), errors="coerce") or 0)
                     except Exception:  # noqa: BLE001
                         n_t1 = n_t2 = n_t3 = n_t4 = 0
-                    _snote = str(_sub.iloc[0].get("selection_note", "") or "")
-                    if "color_rms_t4_fallback" in _snote:
-                        _dlt = pd.to_numeric(_sub.get("delta_bprp_abs"), errors="coerce")
-                        _cq_fallback = {
-                            "color_fallback": True,
-                            "max_delta_bprp_used": (
-                                float(_dlt.max()) if _dlt.notna().any() else float("nan")
-                            ),
-                        }
-                    else:
-                        _cq_fallback = {}
         except Exception:  # noqa: BLE001
             selected_tier = ""
 
@@ -1521,8 +1509,6 @@ def _phase2a_process_one_target(
         _cq_payload["n_tier2"] = int(n_t2)
         _cq_payload["n_tier3"] = int(n_t3)
         _cq_payload["n_tier4"] = int(n_t4)
-        if _cq_fallback:
-            _cq_payload.update(_cq_fallback)
         _cq_payload["aperture_correction"] = {
             "ok": (bool(ac_result.get("ok", False)) if isinstance(ac_result, dict) else False),
             "delta_m_corr": (ac_result.get("delta_m_corr") if isinstance(ac_result, dict) else None),

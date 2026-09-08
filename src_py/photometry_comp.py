@@ -1367,69 +1367,30 @@ def _select_comps_by_rms_then_color(
         selected = pool
         used_lim = float(lim)
         ladder_step = int(step_i)
-
-    # D-RED-TARGET-T4-01 (i-a): last rung (cap) n < n_comp_min and finite
-    # target BP-RP -> T4_FALLBACK on the same post-ceiling / post-isolation
-    # set, ranked by |dBP-RP|. Quality chain is the SNR floor (abs RMS
-    # ceiling 0.080 mag ~ SNR 13.6 / epoch). NaN-BP-RP keeps the legacy
-    # relax-to-full-set path (_delta_bprp_abs=0.0 bypass above).
-    color_fallback = False
-    if math.isfinite(tb) and len(selected) < _n_min:
+    if selected.empty:
+        selected = out
+        used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
+        ladder_step = int(len(ladder)) if ladder else 0
+        logging.warning(
+            "[COMP] color filter relaxed to full under-ceiling single-source set "
+            "(no ladder step reached n_comp_min=%d; lim=%.3f; n=%d)",
+            _n_min,
+            used_lim,
+            int(len(selected)),
+        )
+    elif len(selected) < _n_min and len(out) >= _n_min:
         n_ladder = int(len(selected))
-        if len(out) >= _n_min:
-            selected = out.copy()
-            color_fallback = True
-            used_lim = float("inf")
-            ladder_step = int(len(ladder)) + 1
-            logging.info(
-                "[COMP] T4_FALLBACK: last rung n=%d < n_comp_min=%d; "
-                "quality set n=%d ranked by |dBP-RP| (SNR floor = RMS ceiling)",
-                n_ladder,
-                _n_min,
-                int(len(selected)),
-            )
-        else:
-            logging.warning(
-                "[COMP] T4_FALLBACK still n=%d < n_comp_min=%d -> no_comps",
-                int(len(out)),
-                _n_min,
-            )
-            empty = out.iloc[0:0].copy()
-            empty.attrs["color_fallback"] = True
-            empty.attrs["color_ladder_lim"] = float("nan")
-            empty.attrs["color_ladder_step"] = int(len(ladder)) + 1
-            empty.attrs["max_delta_bprp_used"] = float("nan")
-            empty.attrs["max_comp_rms_ceiling"] = (
-                float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
-            )
-            empty.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
-            return empty.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
-    elif not math.isfinite(tb):
-        if selected.empty:
-            selected = out
-            used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
-            ladder_step = int(len(ladder)) if ladder else 0
-            logging.warning(
-                "[COMP] color filter relaxed to full under-ceiling single-source set "
-                "(no ladder step reached n_comp_min=%d; lim=%.3f; n=%d)",
-                _n_min,
-                used_lim,
-                int(len(selected)),
-            )
-        elif len(selected) < _n_min and len(out) >= _n_min:
-            n_ladder = int(len(selected))
-            selected = out
-            ladder_step = int(len(ladder)) if ladder else ladder_step
-            logging.info(
-                "[COMP] color filter relaxed to full under-ceiling single-source set "
-                "after ladder (n_ladder=%d < n_comp_min=%d; n_full=%d)",
-                n_ladder,
-                _n_min,
-                int(len(out)),
-            )
+        selected = out
+        ladder_step = int(len(ladder)) if ladder else ladder_step
+        logging.info(
+            "[COMP] color filter relaxed to full under-ceiling single-source set "
+            "after ladder (n_ladder=%d < n_comp_min=%d; n_full=%d)",
+            n_ladder,
+            _n_min,
+            int(len(out)),
+        )
 
     # COMP-ASSIGN-03: RMS first, then colour, then distance.
-    # T4_FALLBACK: |dBP-RP| first (D-RED-TARGET-T4-01).
     n_pre_colour = int(len(out))
     n_colour_pool = int(len(selected))
     if n_pre_colour > n_colour_pool and math.isfinite(float(used_lim)):
@@ -1444,13 +1405,8 @@ def _select_comps_by_rms_then_color(
                 f"{_db:.3f}" if math.isfinite(_db) else "nan",
                 float(used_lim),
             )
-    _sort_cols = (
-        ["_delta_bprp_abs", "_rms_sort", "_dist_sort", id_col]
-        if color_fallback
-        else ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col]
-    )
     selected = selected.sort_values(
-        _sort_cols,
+        ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col],
         ascending=[True, True, True, True],
         kind="mergesort",
     )
@@ -1490,13 +1446,8 @@ def _select_comps_by_rms_then_color(
             f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
         )
     selected = selected.head(_n_max).copy()
-    _max_d_used = float(pd.to_numeric(selected.get("_delta_bprp_abs"), errors="coerce").max())
-    if not math.isfinite(_max_d_used):
-        _max_d_used = float(used_lim) if math.isfinite(float(used_lim)) else float("nan")
     selected.attrs["color_ladder_lim"] = used_lim
     selected.attrs["color_ladder_step"] = int(ladder_step)
-    selected.attrs["color_fallback"] = bool(color_fallback)
-    selected.attrs["max_delta_bprp_used"] = float(_max_d_used)
     selected.attrs["max_comp_rms_ceiling"] = (
         float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
     )
