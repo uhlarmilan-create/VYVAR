@@ -3854,6 +3854,19 @@ def _phase2a_finalize_exports(
     except Exception as _w_exc:  # noqa: BLE001
         logging.error("[PRE-IMPL-01] comp_weight rewrite failed: %s", _w_exc)
 
+    try:
+        from skip_manifest import write_skip_manifest  # noqa: PLC0415
+
+        _man = write_skip_manifest(
+            Path(output_dir),
+            lc_dir=Path(lc_dir),
+            summary_rows=list(summary_rows or []),
+            active_df=at_df,
+        )
+        logging.info("[SKIP-MANIFEST] wrote %s", _man.name)
+    except Exception as _sm_exc:  # noqa: BLE001
+        logging.error("[SKIP-MANIFEST] write failed: %s", _sm_exc)
+
     return {
         "n_targets": len(at_df),
         "n_frames": n_frames,
