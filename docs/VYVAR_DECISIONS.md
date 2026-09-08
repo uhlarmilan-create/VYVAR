@@ -43,6 +43,10 @@ compare failed on HAT-188-0002048. A reverted (`8af9a69`).
 Reland is **RED-TARGET-T4-RELAND** (needs era recut / Milan
 GO). Evidence: `CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md`,
 `CURSOR_RESULT_RED_TARGET_T4_01.md`.
+Reland plan (Milan 2026-09-08): tied to the 520 era re-cut;
+scoped G2 exceptions rejected; reland carries the RMS-first vs
+color-first LC-quality micro-measurement for the two affected
+targets.
 
 ## D-LC-SKIP-MANIFEST-01 (Milan 2026-09-08)
 

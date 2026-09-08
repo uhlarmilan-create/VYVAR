@@ -91,7 +91,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **PUB-VALIDATION-SECTION** | Paper validation section | Milan+Claude | PUBLICATION |
 | **PUB-VENUE** | Venue choice | Milan | PUBLICATION |
 | **QHY294MM-RN-DOUBLE** | DB RN 7.6 e- may be bin2 then scaled again to 15.2 e- | Cursor | low priority |
-| **RED-TARGET-T4-RELAND** | D-RED-TARGET-T4-01 rule stands; A3/G2 refuted on 817f1f9 (CV CVn + HAT-188 T4_FALLBACK reordered the quality set; core f6cb0416 vs d55fcc9d). Reverted. Reland needs an anchor plan | Cursor | Milan GO / era recut |
+| **RED-TARGET-T4-RELAND** | Reland 817f1f9 WITH the planned 520 era snapshot re-cut (one re-cut, two reasons; Milan (b) 2026-09-08). Scoped G2 exception rejected. Reland must include a micro-measurement: CV CVn + HAT-188-0002048 LC quality under RMS-first vs color-first ranking (does the change help, not merely change). Blocked-on: 520 era snapshot | Cursor | 520 era snapshot |
 | **RELEASE-1** | Release-1 checklist | Milan | v1.0 |
 | **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
 | **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |
