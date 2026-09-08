@@ -1,0 +1,49 @@
+{
+  "target_cid": "1498613634033133184",
+  "check_cid": "1497613731286514432",
+  "ensemble_ids": [
+    "1497771992240531712",
+    "1499200223486564608",
+    "1497974027502858240",
+    "1497368849430107904"
+  ],
+  "ensemble_source": "pinned",
+  "ensemble_psf_lc_present": [],
+  "ensemble_psf_lc_absent": [
+    "1497771992240531712",
+    "1499200223486564608",
+    "1497974027502858240",
+    "1497368849430107904"
+  ],
+  "note": "ensemble fluxes for A2-COMPARE come from proc_psf_flux.csv (same as A1); sidecar ids/weights stay on the target LC header",
+  "target_lc_header_gain_authority": "g_pt=0.637067 source=g_pt",
+  "g4": {
+    "csv": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\masterstars_full_match.csv",
+      "sha256": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+      "sha256": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\masterstar_epsf.fits",
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    },
+    "pass": true
+  },
+  "extracted_utc": "2026-09-08T13:19:39Z",
+  "ensemble_weights": {
+    "1497771992240531712": 9241.188631814864,
+    "1499200223486564608": 6486.886182273987,
+    "1497974027502858240": 4701.614479402266,
+    "1497368849430107904": 1886.4056430480184
+  },
+  "ensemble_weights_source": "C:/ASTRO/python/VYVAR/dev/validation/pinned_ensembles.csv"
+}

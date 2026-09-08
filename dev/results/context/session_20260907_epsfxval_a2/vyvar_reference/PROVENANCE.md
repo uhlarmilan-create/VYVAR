@@ -1,0 +1,14 @@
+# VYVAR reference freeze for EPSF-XVAL-A2-COMPARE
+
+extracted_utc=2026-09-08T13:19:39Z
+live_ps=C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2
+masterstars_sha256=bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a
+masterstars_prefix=bfa24039
+masterstar_fits_sha256=13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345
+masterstar_fits_prefix=13e77cf8
+epsf_sha256=172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20
+epsf_prefix=172f9540
+qc_source=C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516_snapshot_era04_20260826/calibrated/lights/qc_metrics.csv
+qc_sha256=6fa5bf5b87cef71445c907f840412f1b48e3a21dbd3d6795f4cb430248449207
+read_only=yes
+archive_written=no
