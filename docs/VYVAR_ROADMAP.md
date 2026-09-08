@@ -71,12 +71,14 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **K2-DATA-BLOCKER** | K2 data blocker | Milan | data |
 | **K2-SLOPE-TRACE** | K2 slope trace | Cursor | K2-DATA-BLOCKER |
 | **K2-SLOPE-UG** | K2 slope UG | Cursor | K2-DATA-BLOCKER |
+| **LCRMS-NAN-01** | Why sandbox Phase 2A produced lc_rms=nan with admitted comps while live exports are fine; ids in M1 (149884 / 149984 / 150041). FAILURE wording for this class stays (Milan 2026-09-08 (ii)) | Cursor | LOW |
 | **MASTERSTAR-EPOCH** | MASTERSTAR epoch / PM | Cursor | GAIA-PM-COLUMNS |
 | **MS-POOL-POLICY-01** | MASTERSTAR pool policy | Cursor | FUTURE |
 | **MULTIFILTER-WCS-01** | Sibling-seed VERIFIED WCS for z_90_4; catalog-recovery gate unrelaxed; 520 measurement 2.7%/0% | Cursor | Milan GO |
 | **NET-TEST-01** | Network/test harness item still listed open | Cursor | LOW |
 | **NOQA-TRUNCATED-EXCEPT-BULK** | noqa truncated except bulk leftover | Cursor | LOW |
 | **PHASE0-BORDER-MARGIN-GEOMETRY** | Phase 0 50 px margin is not EDGE r_out; not merged into EDGE-ANNULUS-01 | Cursor | not EDGE |
+| **PIN-RMS-ABORT-01** | Should a failed pin ensemble fall back to the color path instead of aborting? Evidence: trio n_survivors=2<3 after rms_violation on 1500467303261764096 (M1); ids 1497245497969274240 / 1498425548825498112 / 1497227287309482624 | Cursor | Milan decision |
 | **PRECAL-INPUT-CONTRACT-01** | Pre-cal input contract | Cursor | MED |
 | **PROC-MAG-NAMING** | Proc mag naming | Cursor | LOW |
 | **PROD-SIGMA-FLOOR** | Production sigma floor | Cursor | LOW |
@@ -89,7 +91,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **PUB-VALIDATION-SECTION** | Paper validation section | Milan+Claude | PUBLICATION |
 | **PUB-VENUE** | Venue choice | Milan | PUBLICATION |
 | **QHY294MM-RN-DOUBLE** | DB RN 7.6 e- may be bin2 then scaled again to 15.2 e- | Cursor | low priority |
-| **R-CVN-EMPTY-COMP** | Empty-comp drop reports no_comps; 3 LC CSVs with zero exportable points measured on sandbox 516 (loud export failures; ids in CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md); decide whether empty LC CSVs should be written at all | Cursor | POST-453 |
+| **RED-TARGET-T4-RELAND** | D-RED-TARGET-T4-01 rule stands; A3/G2 refuted on 817f1f9 (CV CVn + HAT-188 T4_FALLBACK reordered the quality set; core f6cb0416 vs d55fcc9d). Reverted. Reland needs an anchor plan | Cursor | Milan GO / era recut |
 | **RELEASE-1** | Release-1 checklist | Milan | v1.0 |
 | **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
 | **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |
@@ -145,7 +147,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **APERTURE-01c** -- STOP 2026-08-26; AIJ PASS 2.7833 mmag; era04 not yet locked.
 - **APERTURE-01d** -- LOCK 2026-08-27; annulus 2.7/5.2; AIJ 1.9503 mmag; era04 --full gate.
 - **ARCHIVE-CLEANUP** -- NEXT SESSION 2026-07-15; historical.
-- **C-EXPORT-GAP** -- CLOSED-STALE 2026-09-07: headless shares _phase2a_finalize_exports (night_run Step 13 -> run_night_photometry -> run_full_photometry_pipeline -> run_phase2a); measured on sandbox 516: 50/53 AAVSO (3 empty-point failures -> R-CVN-EMPTY-COMP) + 10/10 eclipsing VarAstro per documented routing. Evidence CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md.
+- **C-EXPORT-GAP** -- CLOSED-STALE 2026-09-07: headless shares _phase2a_finalize_exports. Sandbox 50/53 AAVSO + 10/10 eclipsing VarAstro. The three export FAILURE IDs are NOT the phase2a_empty_comp_drop trio (architect error 18; M1). Split: LCRMS-NAN-01 / PIN-RMS-ABORT-01 / D-LC-SKIP-MANIFEST-01. Evidence CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md, CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md.
 - **CAL-DIAG** -- CLOSED 2026-08-13; SUPERSEDED heading removed 2026-08-11 then implemented.
 - **CATALOG-PROVENANCE** -- DONE 2026-07-29.
 - **COMP-RMS-DEF-01** -- Wired C3 2026-08-25 (k=5 LOO mag).
@@ -173,6 +175,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **INV-CAL-01** -- CLOSED 2026-08-13 CAL-DIAG v2.
 - **INV-CAL-02** -- DONE 2026-08-13 calibrated product stage integrity.
 - **P1-RECUT** -- CLOSED 2026-08-20 ERA-03 golden mini.
+- **R-CVN-EMPTY-COMP** -- CLOSED 2026-09-08 misnomer split (M1 + RED-TARGET-T4-01). Row name, tasked export-FAILURE IDs, and phase2a_empty_comp_drop=3 are three different sets. R CVn is pinned (color cap never ran). Empty-comp trio is pin-RMS abort (PIN-RMS-ABORT-01). Export-empty / lc_rms=nan class keeps FAILURE wording (LCRMS-NAN-01, Milan (ii)). Skip-manifest sidecar now (D-LC-SKIP-MANIFEST-01); T4 fallback decided but not in HEAD (D-RED-TARGET-T4-01 / RED-TARGET-T4-RELAND). Evidence CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md, CURSOR_RESULT_RED_TARGET_T4_01.md.
 - **REG-520-01** -- STOP 2026-08-24 measure; ghost/WCS notes carried in SEL-GHOST-01.
 - **SAT-DIAG** -- DONE saturation and linearity limit gate.
 - **SEL-GHOST-01** -- MERGED 2026-09-01; origin/main `5b1068d` (fast-forward from 7c086e8 via consolidate-01).

@@ -1,6 +1,12 @@
 # VYVAR -- Development State
 
-**Status:** **LEDGER-SYNC 2026-09-07.** CONSOLIDATE-01 E-program COMPLETE
+**Status:** **RED-TARGET-T4-01 2026-09-08.** T4_FALLBACK decided
+(D-RED-TARGET-T4-01) but NOT in HEAD: G2 on `817f1f9` drifted
+(A3 refute; reverted). Skip-manifest sidecar landed
+(D-LC-SKIP-MANIFEST-01). era04_aperture gate unchanged
+`d55fcc9d` n=53 / ext `cc8b532e` n=157. Live 516 G4 prefixes
+unchanged (`bfa24039` / `13e77cf8` / `172f9540`).
+**LEDGER-SYNC 2026-09-07.** CONSOLIDATE-01 E-program COMPLETE
 2026-09-03; main fast-forwarded by Milan 2026-09-07 to 30c37eb
 (== consolidate-01). pipeline.py 1047 ln / photometry_core.py 1233 ln,
 both PERMANENT facades (D-FACADE-PERMANENT-01); pipeline_constants leaf

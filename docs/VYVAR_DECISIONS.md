@@ -6,6 +6,64 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-RED-TARGET-T4-01 (Milan 2026-09-08)
+
+(i-a) automatic tier4 fallback. In
+`_select_comps_by_rms_then_color`'s color ladder
+(`photometry_comp.py` ladder build / rung loop), when the last
+rung (`comp_max_delta_bprp` cap) yields n < n_comp_min AND the
+target has finite BP-RP: append one final rung T4_FALLBACK.
+Candidates are the SAME post-MAD / post-RMS-ceiling /
+post-isolation set the other rungs see. That quality chain IS
+the SNR floor: RMS ceiling 0.080 mag ~ SNR 13.6 per epoch.
+Ranked ascending by |delta BP-RP|, admitted up to the same
+n_comp target count. If still n < n_comp_min, existing
+no_comps path is unchanged. NaN-BP-RP targets keep the
+`_delta_bprp_abs=0.0` bypass; do not "fix" it here. Pinned
+targets: pin overlay early-return stays first; fallback never
+sees them. When the fallback fires: sel_note
+`color_rms_t4_fallback`; `comp_delta_bprp_map` already carries
+per-comp deltas; surface `max_delta_bprp_used` and
+`color_fallback=true` on the per-target selection output /
+Phase 2A QA sidecar only when the rung fires.
+
+Measured basis: M1 (R CVn cap empties; 0/3300 within the live
+ladder last rung 0.79; min achievable |dBP-RP| 2.219; pinned
+comps outperform nearest-color low-SNR stars). Live config
+tiers are 0.15/0.30/0.55/1.10; T4 1.10 is not on the ladder
+(architect error 19). Applies to future runs after an anchor
+plan. **Not in production HEAD:** A3 claimed no unpinned 516
+target has an empty quality-filtered cap and G2 would be
+byte-identical. G2 on `817f1f9` refuted that --
+`color_rms_t4_fallback` fired for CV CVn
+(`1497007144465726080`) and HAT-188-0002048
+(`1497683996951418880`); core SHA `f6cb0416` vs snap
+`d55fcc9d` n=53; ext `8282f3ce` vs `cc8b532e` n=157; science
+compare failed on HAT-188-0002048. A reverted (`8af9a69`).
+Reland is **RED-TARGET-T4-RELAND** (needs era recut / Milan
+GO). Evidence: `CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md`,
+`CURSOR_RESULT_RED_TARGET_T4_01.md`.
+
+## D-LC-SKIP-MANIFEST-01 (Milan 2026-09-08)
+
+(iii) artifact honesty via skip-manifest sidecar now. One file
+per setup: `photometry/lightcurves_skip_manifest.json`, written
+at Phase 2A finalize (`photometry_phase2a._phase2a_finalize_exports`).
+Lists EVERY target whose LC is absent or empty: catalog_id,
+name, class (`no_comps_stub` | `pin_rms_abort` | `export_empty`
+| `other`), `ac_skip_reason` where present, n_rows/n_exportable
+when a CSV exists, timestamp, producing stage. The name is
+outside both `photometry_sha_files` glob sets
+(`dev/tests/photometry_sha.py:100-105`):
+`**/photometry/**/lightcurve_*.csv`,
+`**/photometry/**/comp_quality_*.json`,
+`**/platesolve/**/comparison_stars_per_target.csv`,
+`**/photometry/**/lightcurves/comp_qa_*.json`. LC CSV bytes are
+not touched. Always written; `targets: []` when nothing is
+skipped. Deferred end state: a `skip_reason` column lands in
+the LC CSVs at the next natural era re-cut, not now.
+Evidence: `CURSOR_RESULT_RED_TARGET_T4_01.md`.
+
 ## D-NSTARS-DIAG-01 (Milan 2026-09-07)
 
 n_stars frame QC is DIAGNOSTIC-ONLY. Per night, on qc_metrics

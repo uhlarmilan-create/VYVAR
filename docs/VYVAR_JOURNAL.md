@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-08 -- RED-TARGET-T4-01 STOP on A3 / skip-manifest land
+
+Milan 2026-09-08: (i-a) T4_FALLBACK; (ii) FAILURE stays for
+lc_rms=nan + new LOW row; (iii) skip-manifest sidecar now, CSV
+`skip_reason` deferred. A wired and proven on synthetic a-e;
+G2 `--full` aperture-only FAIL (core `f6cb0416` vs `d55fcc9d`;
+ext `8282f3ce` vs `cc8b532e`; science fail HAT-188-0002048).
+A3 refuted: unpinned CV CVn + HAT-188 already undershot the
+quality-filtered cap and the old RMS-first relax vs new
+|dBP-RP|-first fallback is not byte-identical. A reverted.
+B skip manifest landed (name outside SHA globs; G2 not
+repeated). R-CVN-EMPTY-COMP closed as misnomer split;
+PIN-RMS-ABORT-01 / LCRMS-NAN-01 / RED-TARGET-T4-RELAND opened.
+Architect errors 18-19 recorded. Evidence:
+`CURSOR_RESULT_RED_TARGET_T4_01.md`.
+
 ## 2026-08-27 -- CLOSE-OUT APERTURE-01d LOCK (annulus 2.7/5.2; era04 locked)
 
 Annulus 2.7/5.2. AIJ gate 1.9503 mmag PASS. Ledger v6: 0 UNNAMED.
