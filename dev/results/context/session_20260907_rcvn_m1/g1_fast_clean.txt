@@ -1,0 +1,7 @@
+SESSION BASELINE CHECK (fast)
+git-head PASS 14690ae
+pytest PASS 1624 passed, 34 skipped
+clean-tree PASS worktree=b1b_clean_253bfc6e; pytest 32 passed; ruff PASS; pyflakes PASS
+OVERALL: PASS
+db-quick-check WAIVED (malformed local sqlite)
+Extracted from terminal 956647, 2026-09-08T14:30:08Z.

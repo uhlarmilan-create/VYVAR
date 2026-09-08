@@ -1,0 +1,869 @@
+{
+  "task": "R-CVN-EMPTY-COMP-M1",
+  "extracted_utc": "2026-09-08T14:19:34Z",
+  "g4": {
+    "csv": {
+      "sha256": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "sha256": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "verdict": "PASS"
+    },
+    "pass": true
+  },
+  "refute": {
+    "r_cvn_id": "1496795041799526400",
+    "r_cvn_in_task_ids": false,
+    "task_ids_are_export_failures_not_empty_comp": true,
+    "empty_comp_drop_ids": [
+      "1497245497969274240",
+      "1498425548825498112",
+      "1497227287309482624"
+    ],
+    "empty_comp_kill": "pinned_ensemble n_survivors=2 < n_min=3 after rms_violation on 1500467303261764096 (not color cap)",
+    "tier_limits_config_json": [
+      0.15,
+      0.3,
+      0.55,
+      1.1
+    ],
+    "architect_remembered_tiers": [
+      0.25,
+      0.48,
+      0.79
+    ],
+    "spatial_filter_does_not_apply_cap": "comp_selection_per_target.py:406-426 COMP-ADMIT-03",
+    "base_mask_still_applies_min_dist": "comp_selection_per_target.py:509-510",
+    "ladder_last_rung": "comp_max_delta_bprp 0.79 (photometry_comp.py:1138-1157); T4 1.10 not on ladder",
+    "r_cvn_phase1": "pinned 8-comp overlay; dBP-RP median 4.852 (cexportgap log:70-73)",
+    "architect_cap_cite_1691_1750": "REFUTED as color-cap site; those lines are derived global-pool admission"
+  },
+  "k2": {
+    "value": NaN,
+    "source": "K2Source.NONE",
+    "airmass_span": 0.20601700000000012,
+    "k2_g": -0.016864,
+    "k2_r": -0.004216
+  },
+  "m1": [
+    {
+      "catalog_id": "1498842882207281152",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1498842882207281152",
+      "ra_deg": 209.8745637103557,
+      "dec_deg": 42.25581740846618,
+      "phot_g_mean_mag": 13.813835144042969,
+      "bp_rp": 0.9710474014282228,
+      "x": 931.0164854543888,
+      "y": 294.0580522525304,
+      "vsx_known_variable": true,
+      "cohort": "task_export_fail",
+      "vsx_name": "CSS_J135929.8+421520",
+      "vsx_type": "EW",
+      "vsx_mag_max": 13.85,
+      "vsx_mag_min": 0.18,
+      "vsx_sep_arcsec": 0.06346144012124424,
+      "pinned_n": 8,
+      "live_n_comps": 8,
+      "live_selected_tier": "TIER1"
+    },
+    {
+      "catalog_id": "1499842372636900992",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1499842372636900992",
+      "ra_deg": 206.1625295736569,
+      "dec_deg": 39.64140679983,
+      "phot_g_mean_mag": NaN,
+      "bp_rp": 1.8649349212646484,
+      "x": 1986.968452874186,
+      "y": 1232.0099447497612,
+      "vsx_known_variable": true,
+      "cohort": "task_export_fail",
+      "vsx_name": "HAT-188-0003359",
+      "vsx_type": "VAR",
+      "vsx_mag_max": 14.672,
+      "vsx_mag_min": 0.05,
+      "vsx_sep_arcsec": 1.3302186065282127,
+      "pinned_n": 0,
+      "live_n_comps": 4,
+      "live_selected_tier": "TIER1"
+    },
+    {
+      "catalog_id": "1500410236033012352",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1500410236033012352",
+      "ra_deg": 207.41106208197667,
+      "dec_deg": 41.31336656178159,
+      "phot_g_mean_mag": NaN,
+      "bp_rp": 1.2004642486572266,
+      "x": 1613.3878396898835,
+      "y": 629.2761026818536,
+      "vsx_known_variable": true,
+      "cohort": "task_export_fail",
+      "vsx_name": "Gaia DR3 1500410236033012352",
+      "vsx_type": "RS",
+      "vsx_mag_max": 14.41,
+      "vsx_mag_min": 14.52,
+      "vsx_sep_arcsec": 0.19355011277698708,
+      "pinned_n": 0,
+      "live_n_comps": 8,
+      "live_selected_tier": "TIER1"
+    },
+    {
+      "catalog_id": "1496795041799526400",
+      "in_masterstars": true,
+      "is_r_cvn": true,
+      "name_col": "1496795041799526400",
+      "ra_deg": 207.2376668650992,
+      "dec_deg": 39.54252539737389,
+      "phot_g_mean_mag": 7.120821952819824,
+      "bp_rp": 5.675171375274658,
+      "x": 1682.655155919853,
+      "y": 1279.7555281651034,
+      "vsx_known_variable": true,
+      "cohort": "r_cvn",
+      "vsx_name": "R CVn",
+      "vsx_type": "M",
+      "vsx_mag_max": 6.5,
+      "vsx_mag_min": 12.9,
+      "vsx_sep_arcsec": 0.1271420819121706,
+      "pinned_n": 8,
+      "live_n_comps": 8,
+      "live_selected_tier": "TIER4"
+    },
+    {
+      "catalog_id": "1497245497969274240",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1497245497969274240",
+      "ra_deg": 207.26853703029985,
+      "dec_deg": 40.13851826564786,
+      "phot_g_mean_mag": 11.192492485046388,
+      "bp_rp": 2.248966217041016,
+      "x": 1666.4237841388035,
+      "y": 1060.4618702234784,
+      "vsx_known_variable": true,
+      "cohort": "phase2a_empty_comp_drop",
+      "vsx_name": "HAT-188-0000323",
+      "vsx_type": "VAR",
+      "vsx_mag_max": 12.358,
+      "vsx_mag_min": 0.006,
+      "vsx_sep_arcsec": 1.0708371750154817,
+      "pinned_n": 3,
+      "live_n_comps": 3,
+      "live_selected_tier": "TIER3"
+    },
+    {
+      "catalog_id": "1498425548825498112",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1498425548825498112",
+      "ra_deg": 211.58057754434665,
+      "dec_deg": 42.35262931753129,
+      "phot_g_mean_mag": 12.53656005859375,
+      "bp_rp": 1.7271003723144531,
+      "x": 466.4895537259082,
+      "y": 254.35443225982144,
+      "vsx_known_variable": true,
+      "cohort": "phase2a_empty_comp_drop",
+      "vsx_name": "ASASSN-V J140619.34+422109.5",
+      "vsx_type": "SR",
+      "vsx_mag_max": 13.82,
+      "vsx_mag_min": 0.34,
+      "vsx_sep_arcsec": 0.06075405153562328,
+      "pinned_n": 3,
+      "live_n_comps": 3,
+      "live_selected_tier": "TIER1"
+    },
+    {
+      "catalog_id": "1497227287309482624",
+      "in_masterstars": true,
+      "is_r_cvn": false,
+      "name_col": "1497227287309482624",
+      "ra_deg": 207.76570694868107,
+      "dec_deg": 40.28093939171991,
+      "phot_g_mean_mag": 13.56096363067627,
+      "bp_rp": 1.723978042602539,
+      "x": 1524.672286258124,
+      "y": 1012.34258738139,
+      "vsx_known_variable": true,
+      "cohort": "phase2a_empty_comp_drop",
+      "vsx_name": "Gaia DR3 1497227287309482624",
+      "vsx_type": "VAR",
+      "vsx_mag_max": 13.45,
+      "vsx_mag_min": 13.57,
+      "vsx_sep_arcsec": 2.06388457374002,
+      "pinned_n": 3,
+      "live_n_comps": 3,
+      "live_selected_tier": "TIER1"
+    }
+  ],
+  "m2": [
+    {
+      "catalog_id": "1498842882207281152",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3302,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3302,
+      "n_after_d3": 3302,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3302,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 0.9710474014282228,
+      "target_mag_used": 13.813835144042969,
+      "n_within_t1_0.15": 1504,
+      "n_within_t2_0.30": 2738,
+      "n_within_t3_0.55": 3066,
+      "n_within_cap_0.79": 3160,
+      "n_unbounded_t4": 3302,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 5.054473876942023e-05,
+        "p25": 0.09374618530273426,
+        "p50": 0.1615328788757323,
+        "p75": 0.24267649650573742,
+        "p100": 2.484846115112305,
+        "n_finite_color": 3258,
+        "n_nan_color": 44,
+        "min_d_bprp": 5.054473876942023e-05
+      }
+    },
+    {
+      "catalog_id": "1499842372636900992",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3302,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3302,
+      "n_after_d3": 3302,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3302,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 1.8649349212646484,
+      "target_mag_used": 14.291884422302246,
+      "n_within_t1_0.15": 50,
+      "n_within_t2_0.30": 118,
+      "n_within_t3_0.55": 302,
+      "n_within_cap_0.79": 840,
+      "n_unbounded_t4": 3302,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 0.002941131591796431,
+        "p25": 0.7824559211730959,
+        "p50": 0.9777121543884277,
+        "p75": 1.0725603103637695,
+        "p100": 2.0008554458618164,
+        "n_finite_color": 3258,
+        "n_nan_color": 44,
+        "min_d_bprp": 0.002941131591796431
+      }
+    },
+    {
+      "catalog_id": "1500410236033012352",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3301,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3301,
+      "n_after_d3": 3301,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3301,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 1.2004642486572266,
+      "target_mag_used": 14.457051277160645,
+      "n_within_t1_0.15": 627,
+      "n_within_t2_0.30": 1363,
+      "n_within_t3_0.55": 3060,
+      "n_within_cap_0.79": 3182,
+      "n_unbounded_t4": 3301,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 0.00024318695068359375,
+        "p25": 0.18599605560302734,
+        "p50": 0.3385601043701172,
+        "p75": 0.42233943939208984,
+        "p100": 2.2554292678833012,
+        "n_finite_color": 3257,
+        "n_nan_color": 44,
+        "min_d_bprp": 0.00024318695068359375
+      }
+    },
+    {
+      "catalog_id": "1496795041799526400",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3300,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3300,
+      "n_after_d3": 3300,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3300,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 5.675171375274658,
+      "target_mag_used": 7.120821952819824,
+      "n_within_t1_0.15": 0,
+      "n_within_t2_0.30": 0,
+      "n_within_t3_0.55": 0,
+      "n_within_cap_0.79": 0,
+      "n_unbounded_t4": 3300,
+      "killing_stage_color_path": "color_cap_0.79_empties",
+      "color_dist_pre_cap": {
+        "p0": 2.2192778587341304,
+        "p25": 4.590239763259888,
+        "p50": 4.787015438079834,
+        "p75": 4.882501840591431,
+        "p100": 5.811091899871826,
+        "n_finite_color": 3258,
+        "n_nan_color": 42,
+        "min_d_bprp": 2.2192778587341304
+      }
+    },
+    {
+      "catalog_id": "1497245497969274240",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3301,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3301,
+      "n_after_d3": 3301,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3301,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 2.248966217041016,
+      "target_mag_used": 11.192492485046388,
+      "n_within_t1_0.15": 26,
+      "n_within_t2_0.30": 50,
+      "n_within_t3_0.55": 105,
+      "n_within_cap_0.79": 214,
+      "n_unbounded_t4": 3301,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 0.001167297363280806,
+        "p25": 1.1643743515014653,
+        "p50": 1.3609476089477544,
+        "p75": 1.4563770294189458,
+        "p100": 2.384886741638184,
+        "n_finite_color": 3257,
+        "n_nan_color": 44,
+        "min_d_bprp": 0.001167297363280806
+      }
+    },
+    {
+      "catalog_id": "1498425548825498112",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3302,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3302,
+      "n_after_d3": 3302,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3302,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 1.7271003723144531,
+      "target_mag_used": 12.53656005859375,
+      "n_within_t1_0.15": 77,
+      "n_within_t2_0.30": 167,
+      "n_within_t3_0.55": 510,
+      "n_within_cap_0.79": 1356,
+      "n_unbounded_t4": 3302,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 0.0024633407592773438,
+        "p25": 0.6493153572082521,
+        "p50": 0.8416275978088379,
+        "p75": 0.9356091022491455,
+        "p100": 1.863020896911621,
+        "n_finite_color": 3258,
+        "n_nan_color": 44,
+        "min_d_bprp": 0.0024633407592773438
+      }
+    },
+    {
+      "catalog_id": "1497227287309482624",
+      "n_field": 3610,
+      "n_after_base_sat_var_geom_mindist": 3302,
+      "n_det_extra": 0,
+      "n_after_spatial_base_or_det": 3302,
+      "n_after_d3": 3302,
+      "d3_note": "live_MS_missing_D3_cols; treated as no-op per C-EXPORT-GAP log",
+      "n_after_d3_and_adaptive_mag": 3302,
+      "mag_filter_note": "no-op COMP-ADMIT-03 comp_selection_per_target.py:290-304",
+      "used_mag_tol": 1.5,
+      "target_bprp_eff": 1.723978042602539,
+      "target_mag_used": 13.56096363067627,
+      "n_within_t1_0.15": 81,
+      "n_within_t2_0.30": 170,
+      "n_within_t3_0.55": 513,
+      "n_within_cap_0.79": 1370,
+      "n_unbounded_t4": 3302,
+      "killing_stage_color_path": "cap_does_not_empty",
+      "color_dist_pre_cap": {
+        "p0": 0.005585670471191406,
+        "p25": 0.6464650630950928,
+        "p50": 0.8385052680969238,
+        "p75": 0.9325590133666992,
+        "p100": 1.859898567199707,
+        "n_finite_color": 3258,
+        "n_nan_color": 44,
+        "min_d_bprp": 0.005585670471191406
+      }
+    }
+  ],
+  "m2_pins": [
+    {
+      "catalog_id": "1498842882207281152",
+      "n_pin": 8,
+      "pinned": true,
+      "comps": [
+        {
+          "comp_catalog_id": "1497203132413443328",
+          "comp_tier_pin": 1,
+          "bp_rp": 0.9734697341918944,
+          "phot_g_mean_mag": 9.307086944580078,
+          "d_bprp": 0.002422332763671653
+        },
+        {
+          "comp_catalog_id": "1498020894186918144",
+          "comp_tier_pin": 1,
+          "bp_rp": 0.8539857864379883,
+          "phot_g_mean_mag": 10.285472869873049,
+          "d_bprp": 0.11706161499023449
+        },
+        {
+          "comp_catalog_id": "1497528072458898432",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.0884933471679688,
+          "phot_g_mean_mag": 9.21760368347168,
+          "d_bprp": 0.11744594573974598
+        },
+        {
+          "comp_catalog_id": "1497370563121917952",
+          "comp_tier_pin": 1,
+          "bp_rp": 0.8801746368408203,
+          "phot_g_mean_mag": 9.34685230255127,
+          "d_bprp": 0.09087276458740245
+        },
+        {
+          "comp_catalog_id": "1498326455340079616",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.0970029830932615,
+          "phot_g_mean_mag": 9.40735912322998,
+          "d_bprp": 0.12595558166503873
+        },
+        {
+          "comp_catalog_id": "1497313255374892800",
+          "comp_tier_pin": 1,
+          "bp_rp": 0.9167003631591796,
+          "phot_g_mean_mag": 10.002345085144045,
+          "d_bprp": 0.05434703826904319
+        },
+        {
+          "comp_catalog_id": "1497726465588057344",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.025766372680664,
+          "phot_g_mean_mag": 10.0562744140625,
+          "d_bprp": 0.054718971252441295
+        },
+        {
+          "comp_catalog_id": "1496874408500111104",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.1041231155395508,
+          "phot_g_mean_mag": 11.22511386871338,
+          "d_bprp": 0.13307571411132801
+        }
+      ]
+    },
+    {
+      "catalog_id": "1499842372636900992",
+      "n_pin": 0,
+      "pinned": false,
+      "comps": []
+    },
+    {
+      "catalog_id": "1500410236033012352",
+      "n_pin": 0,
+      "pinned": false,
+      "comps": []
+    },
+    {
+      "catalog_id": "1496795041799526400",
+      "n_pin": 8,
+      "pinned": true,
+      "comps": [
+        {
+          "comp_catalog_id": "1500727513856914944",
+          "comp_tier_pin": 4,
+          "bp_rp": 1.2397727966308594,
+          "phot_g_mean_mag": 9.23672103881836,
+          "d_bprp": 4.435398578643799
+        },
+        {
+          "comp_catalog_id": "1497442379271632384",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.680445671081543,
+          "phot_g_mean_mag": 8.8513822555542,
+          "d_bprp": 4.994725704193115
+        },
+        {
+          "comp_catalog_id": "1499906247391001088",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.7919502258300781,
+          "phot_g_mean_mag": 8.742789268493652,
+          "d_bprp": 4.88322114944458
+        },
+        {
+          "comp_catalog_id": "1500296402219939584",
+          "comp_tier_pin": 4,
+          "bp_rp": 1.5329689979553225,
+          "phot_g_mean_mag": 8.2427396774292,
+          "d_bprp": 4.142202377319336
+        },
+        {
+          "comp_catalog_id": "1497203132413443328",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.9734697341918944,
+          "phot_g_mean_mag": 9.307086944580078,
+          "d_bprp": 4.701701641082764
+        },
+        {
+          "comp_catalog_id": "1497674651102612992",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.6790533065795898,
+          "phot_g_mean_mag": 9.287351608276367,
+          "d_bprp": 4.996118068695068
+        },
+        {
+          "comp_catalog_id": "1497119157212720896",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.0460729598999023,
+          "phot_g_mean_mag": 9.131044387817385,
+          "d_bprp": 5.629098415374756
+        },
+        {
+          "comp_catalog_id": "1498020894186918144",
+          "comp_tier_pin": 4,
+          "bp_rp": 0.8539857864379883,
+          "phot_g_mean_mag": 10.285472869873049,
+          "d_bprp": 4.82118558883667
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497245497969274240",
+      "n_pin": 3,
+      "pinned": true,
+      "comps": [
+        {
+          "comp_catalog_id": "1501956561697995008",
+          "comp_tier_pin": 4,
+          "bp_rp": 1.6238861083984375,
+          "phot_g_mean_mag": 9.621334075927734,
+          "d_bprp": 0.6250801086425786
+        },
+        {
+          "comp_catalog_id": "1496798993170465536",
+          "comp_tier_pin": 4,
+          "bp_rp": 1.6317996978759766,
+          "phot_g_mean_mag": 9.52143669128418,
+          "d_bprp": 0.6171665191650395
+        },
+        {
+          "comp_catalog_id": "1500467303261764096",
+          "comp_tier_pin": 3,
+          "bp_rp": 1.7937488555908203,
+          "phot_g_mean_mag": 12.662065505981444,
+          "d_bprp": 0.45521736145019576
+        }
+      ]
+    },
+    {
+      "catalog_id": "1498425548825498112",
+      "n_pin": 3,
+      "pinned": true,
+      "comps": [
+        {
+          "comp_catalog_id": "1501956561697995008",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.6238861083984375,
+          "phot_g_mean_mag": 9.621334075927734,
+          "d_bprp": 0.10321426391601562
+        },
+        {
+          "comp_catalog_id": "1496798993170465536",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.6317996978759766,
+          "phot_g_mean_mag": 9.52143669128418,
+          "d_bprp": 0.09530067443847656
+        },
+        {
+          "comp_catalog_id": "1500467303261764096",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.7937488555908203,
+          "phot_g_mean_mag": 12.662065505981444,
+          "d_bprp": 0.06664848327636719
+        }
+      ]
+    },
+    {
+      "catalog_id": "1497227287309482624",
+      "n_pin": 3,
+      "pinned": true,
+      "comps": [
+        {
+          "comp_catalog_id": "1501956561697995008",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.6238861083984375,
+          "phot_g_mean_mag": 9.621334075927734,
+          "d_bprp": 0.10009193420410156
+        },
+        {
+          "comp_catalog_id": "1496798993170465536",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.6317996978759766,
+          "phot_g_mean_mag": 9.52143669128418,
+          "d_bprp": 0.0921783447265625
+        },
+        {
+          "comp_catalog_id": "1500467303261764096",
+          "comp_tier_pin": 1,
+          "bp_rp": 1.7937488555908203,
+          "phot_g_mean_mag": 12.662065505981444,
+          "d_bprp": 0.06977081298828125
+        }
+      ]
+    }
+  ],
+  "m4": [
+    {
+      "catalog_id": "1498842882207281152",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498842882207281152.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 132,
+      "n_finite_mag_final": 132,
+      "flag_counts": {
+        "normal": 132,
+        "no_data": 2
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1499842372636900992",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1499842372636900992.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 71,
+      "n_finite_mag_final": 71,
+      "flag_counts": {
+        "normal": 71,
+        "no_data": 63
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "ac_correction",
+        "ac_scatter",
+        "mag_calib_ac",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1500410236033012352",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1500410236033012352.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 0,
+      "n_finite_mag_final": 0,
+      "flag_counts": {
+        "no_data": 134
+      },
+      "all_nan_numeric_cols": [
+        "bjd",
+        "hjd",
+        "jd",
+        "time_base",
+        "catalog_match_mode",
+        "mag_inst",
+        "mag_calib_raw",
+        "mag_calib",
+        "mag_calib_ct",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "mag_calib_ac",
+        "mag_calib_final",
+        "delta_mag",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "err_photon",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1496795041799526400",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1496795041799526400.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 134,
+      "n_finite_mag_final": 134,
+      "flag_counts": {
+        "normal": 134
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_correction",
+        "ct_c1",
+        "ct_c1_stderr",
+        "ct_mode",
+        "ct_bp_rp_target",
+        "ct_bp_rp_comp_med",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "ac_correction",
+        "ac_scatter",
+        "mag_calib_ac",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1497245497969274240",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497245497969274240.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 134,
+      "n_finite_mag_final": 134,
+      "flag_counts": {
+        "normal": 134
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "ac_correction",
+        "ac_scatter",
+        "mag_calib_ac",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1498425548825498112",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1498425548825498112.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 134,
+      "n_finite_mag_final": 134,
+      "flag_counts": {
+        "normal": 134
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "ac_correction",
+        "ac_scatter",
+        "mag_calib_ac",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    },
+    {
+      "catalog_id": "1497227287309482624",
+      "path": "C:/ASTRO/python/VYVAR/Archive/Drafts/draft_000516/platesolve/NoFilter_60_2/photometry/lightcurves/lightcurve_1497227287309482624.csv",
+      "exists": true,
+      "n_rows": 134,
+      "n_exportable": 134,
+      "n_finite_mag_final": 134,
+      "flag_counts": {
+        "normal": 134
+      },
+      "all_nan_numeric_cols": [
+        "time_base",
+        "catalog_match_mode",
+        "ct_mode",
+        "k2_source",
+        "k2_value",
+        "k2_colour_ref",
+        "ac_correction",
+        "ac_scatter",
+        "mag_calib_ac",
+        "flag",
+        "method",
+        "source_file",
+        "lunar_risk",
+        "delta_mag_sysrem"
+      ],
+      "skip_reason_in_file": false,
+      "header_comment": false,
+      "k2_source_mode": "none"
+    }
+  ]
+}
