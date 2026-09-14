@@ -145,7 +145,8 @@ not comparable to calibrated-grid peaks (grid named above).
 
 Live 516 unchanged after the run: csv `bfa24039` / fits
 `13e77cf8` / epsf `172f9540` (all PASS). `--fast --clean`
-recorded below. `a2/` never staged.
+OVERALL PASS (1629 passed, 34 skipped; clean-tree PASS).
+HEAD `a1dc85a`. `a2/` never staged.
 
 ## Files
 
