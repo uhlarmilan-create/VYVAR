@@ -6,6 +6,29 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-EPSF-XVAL-DOD-01 (Milan 2026-09-14)
+
+EPSF-XVAL-01 remains OPEN. It closes on SUCCESS only, defined as:
+after a root-cause fix, an UNCHANGED A2-COMPARE re-run (same
+pinned ensemble 1497771992240531712 / 1499200223486564608 /
+1497974027502858240 / 1497368849430107904, same target
+1498613634033133184, same check 1497613731286514432, same
+construction and thresholds) fires R-A2-1: target AND check
+RMS <= 3.0 mmag. No threshold moves, no metric substitutions.
+
+Until closure, the PSF path stays internal-diagnostic
+(NOT FOR AAVSO/VARASTRO SUBMISSION sidecar wording unchanged).
+The aperture path is unaffected (externally validated,
+1.9503 mmag vs AIJ).
+
+Sequencing: EPSF-CORE-01 (fit machinery) is the next suspect per
+R-SH3; any fix that moves psf_flux belongs to the 520 era re-cut
+(which already carries the T4 reland).
+
+Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
+`CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
+`CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`.
+
 ## D-RED-TARGET-T4-01 (Milan 2026-09-08)
 
 (i-a) automatic tier4 fallback. In
