@@ -1,0 +1,216 @@
+{
+  "layout": {
+    "expected_a2_root": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260907_epsfxval_a2\\a2",
+    "actual_linux_outdir": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260907_epsfxval_a2\\a2\\out",
+    "layout_note": "task expected a2/{run_log,work,deg3}; disk is a2/out/{run_log,work,deg3} plus a2/draft_... snapshot copy",
+    "run_log_last": "done n_frames=134 n_fail=0",
+    "n_work": 134,
+    "n_deg3": 134
+  },
+  "probe_deg2": {
+    "n_probe_frames": 5.0,
+    "n_true_match_dists": 213.0,
+    "nn_median_px": 0.45460304374315497,
+    "nn_p95_px": 0.7933101509505363,
+    "ambiguity_rate": 0.0,
+    "n_ambiguous": 0.0,
+    "n_attempts": 325.0
+  },
+  "deg2": {
+    "census_n_stars": 65,
+    "m1_n": 65,
+    "m1_target_mmag": 17.781843151806093,
+    "m2": {
+      "n_stems": 134,
+      "n_identical": 134,
+      "n_lost": 0,
+      "n_finite_target": 134,
+      "n_finite_check": 134,
+      "rms_target_mmag": 10.477593527268457,
+      "rms_check_mmag": 21.413326001846976,
+      "sidecar_rms_after_median_mmag": 0.00029114691003188556,
+      "sidecar_rms_raw_mmag": 0.0002971814128565575,
+      "sidecar_n": 134,
+      "top_target": [
+        {
+          "stem": "BO_CVn_Light_148",
+          "resid_mmag": 28.89776930460708
+        },
+        {
+          "stem": "BO_CVn_Light_037",
+          "resid_mmag": -23.746345410337266
+        },
+        {
+          "stem": "BO_CVn_Light_076",
+          "resid_mmag": 23.107807348495378
+        },
+        {
+          "stem": "BO_CVn_Light_033",
+          "resid_mmag": 22.77972186550059
+        },
+        {
+          "stem": "BO_CVn_Light_005",
+          "resid_mmag": 22.25193729870756
+        },
+        {
+          "stem": "BO_CVn_Light_032",
+          "resid_mmag": 22.199311096942065
+        },
+        {
+          "stem": "BO_CVn_Light_053",
+          "resid_mmag": -21.817737456877538
+        },
+        {
+          "stem": "BO_CVn_Light_034",
+          "resid_mmag": 21.11526329128366
+        }
+      ],
+      "top_check": [
+        {
+          "stem": "BO_CVn_Light_014",
+          "resid_mmag": 54.795128027725056
+        },
+        {
+          "stem": "BO_CVn_Light_089",
+          "resid_mmag": 48.96334484877818
+        },
+        {
+          "stem": "BO_CVn_Light_013",
+          "resid_mmag": 46.71098066394323
+        },
+        {
+          "stem": "BO_CVn_Light_032",
+          "resid_mmag": 45.30313369135164
+        },
+        {
+          "stem": "BO_CVn_Light_053",
+          "resid_mmag": 42.807720717395334
+        },
+        {
+          "stem": "BO_CVn_Light_076",
+          "resid_mmag": 42.261896364907486
+        },
+        {
+          "stem": "BO_CVn_Light_035",
+          "resid_mmag": 41.81765006728412
+        },
+        {
+          "stem": "BO_CVn_Light_041",
+          "resid_mmag": -41.3507818235892
+        }
+      ]
+    }
+  },
+  "deg3": {
+    "census_n_stars": 65,
+    "m1_n": 65,
+    "m1_target_mmag": 17.834507982430946,
+    "m2": {
+      "n_stems": 134,
+      "n_identical": 134,
+      "n_lost": 0,
+      "n_finite_target": 134,
+      "n_finite_check": 134,
+      "rms_target_mmag": 10.603761249646105,
+      "rms_check_mmag": 21.090405187516108,
+      "sidecar_rms_after_median_mmag": 0.00029114691003188556,
+      "sidecar_rms_raw_mmag": 0.0002971814128565575,
+      "sidecar_n": 134,
+      "top_target": [
+        {
+          "stem": "BO_CVn_Light_148",
+          "resid_mmag": 29.34754197062206
+        },
+        {
+          "stem": "BO_CVn_Light_037",
+          "resid_mmag": -24.552133605681536
+        },
+        {
+          "stem": "BO_CVn_Light_032",
+          "resid_mmag": 22.792598494896012
+        },
+        {
+          "stem": "BO_CVn_Light_033",
+          "resid_mmag": 22.548035201443994
+        },
+        {
+          "stem": "BO_CVn_Light_076",
+          "resid_mmag": 22.46974743939889
+        },
+        {
+          "stem": "BO_CVn_Light_053",
+          "resid_mmag": -22.41829131100492
+        },
+        {
+          "stem": "BO_CVn_Light_034",
+          "resid_mmag": 22.36757342285656
+        },
+        {
+          "stem": "BO_CVn_Light_043",
+          "resid_mmag": 20.500364320305884
+        }
+      ],
+      "top_check": [
+        {
+          "stem": "BO_CVn_Light_014",
+          "resid_mmag": 53.980907297942856
+        },
+        {
+          "stem": "BO_CVn_Light_089",
+          "resid_mmag": 49.150713018269606
+        },
+        {
+          "stem": "BO_CVn_Light_013",
+          "resid_mmag": 47.11976891132057
+        },
+        {
+          "stem": "BO_CVn_Light_032",
+          "resid_mmag": 44.96884267181131
+        },
+        {
+          "stem": "BO_CVn_Light_035",
+          "resid_mmag": 43.32888825251922
+        },
+        {
+          "stem": "BO_CVn_Light_041",
+          "resid_mmag": -41.4411042389235
+        },
+        {
+          "stem": "BO_CVn_Light_053",
+          "resid_mmag": 41.22733858751221
+        },
+        {
+          "stem": "BO_CVn_Light_033",
+          "resid_mmag": 41.19800016677737
+        }
+      ]
+    }
+  },
+  "reading_deg2": "R-A2-3: > 10.0 mmag -> VYVAR-side root cause; first suspect EPSF-SHAPE-01.",
+  "scale": {
+    "aperture_vs_aij_mmag": 1.9503,
+    "a1_target_mmag": 34.34,
+    "a1_check_mmag": 31.79,
+    "g3_internal_bound_mmag": 12.5
+  },
+  "g4": {
+    "csv": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\masterstars_full_match.csv",
+      "sha256": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\MASTERSTAR.fits",
+      "sha256": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\masterstar_epsf.fits",
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}

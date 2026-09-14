@@ -67,6 +67,11 @@ hard_copy_*.bundle
 # Draft-data copies under session context (not Rule 0.2 evidence)
 **/516_pfs_off_snapshot/
 
+# EPSF-XVAL-A2 Linux output (Milan 2026-09-14: LOCAL-ONLY, never commit)
+dev/results/context/session_20260907_epsfxval_a2/a2/
+# Per-row match dumps (not in the small-CSV deliverable set)
+dev/results/context/session_20260907_epsfxval_a2/a2_compare/match_rows_*.csv
+
 # Verify logs and temp extracts
 *.log
 *_verify_console.txt
