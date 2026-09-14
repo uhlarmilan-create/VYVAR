@@ -21,13 +21,15 @@ Until closure, the PSF path stays internal-diagnostic
 The aperture path is unaffected (externally validated,
 1.9503 mmag vs AIJ).
 
-Sequencing: EPSF-CORE-01 (fit machinery) is the next suspect per
-R-SH3; any fix that moves psf_flux belongs to the 520 era re-cut
-(which already carries the T4 reland).
+Sequencing: EPSF-CORE-01 (fit machinery) was the next suspect per
+R-SH3 and is now measured (R-C0, R-C1; B2 void). Any further
+suspect, and any fix that moves psf_flux, belongs to Milan and
+to the 520 era re-cut (which already carries the T4 reland).
 
 Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
 `CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
-`CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`.
+`CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`,
+`CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1).
 
 ## D-RED-TARGET-T4-01 (Milan 2026-09-08)
 

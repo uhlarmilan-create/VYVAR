@@ -1,0 +1,255 @@
+{
+  "f1_f4": {
+    "spatial_order": 0,
+    "oversampling": 2,
+    "cutout_size": 17,
+    "fwhm_px_meta": 3.3014,
+    "fit_shape_meta": [
+      9,
+      9
+    ],
+    "fit_shape_computed": [
+      9,
+      9
+    ],
+    "psf_fix_position_in_pipeline_meta": false,
+    "psf_fix_position_in_config_py": false,
+    "psf_fix_position_used": false,
+    "psf_chi2_threshold_persisted": 50.0,
+    "psf_grouper_enabled_persisted": false,
+    "psf_quality_fallback_persisted": true,
+    "live_proc_has_x_fit": false,
+    "sidecar_zp_membership_effective": "fit_ok_for_zp",
+    "gain_note": "aligned Light_001 GAIN=0.0; _psf_resolve_gain_read_noise uses (value or 1.0) so gain=1.0, rn=10.0 (psf_photometry.py:2268-2270). Not g_pt 0.637067."
+  },
+  "f5": [
+    {
+      "source": "frozen",
+      "catalog_id": "1498613634033133184",
+      "role": "target",
+      "n": 134,
+      "n_ok": 133,
+      "chi2_median": 22.640128818207458,
+      "flux_median": 155873.6018993514,
+      "x_all_integer": true
+    },
+    {
+      "source": "frozen",
+      "catalog_id": "1497613731286514432",
+      "role": "check",
+      "n": 134,
+      "n_ok": 0,
+      "chi2_median": 196.2649275839733,
+      "flux_median": 378473.0835180237,
+      "x_all_integer": true
+    },
+    {
+      "source": "frozen",
+      "catalog_id": "1497771992240531712",
+      "role": "ens1",
+      "n": 134,
+      "n_ok": 118,
+      "chi2_median": 34.695309194210644,
+      "flux_median": 159226.7596793386,
+      "x_all_integer": true
+    },
+    {
+      "source": "frozen",
+      "catalog_id": "1499200223486564608",
+      "role": "ens2",
+      "n": 134,
+      "n_ok": 27,
+      "chi2_median": 58.5768385186215,
+      "flux_median": 147811.53798906697,
+      "x_all_integer": true
+    },
+    {
+      "source": "frozen",
+      "catalog_id": "1497974027502858240",
+      "role": "ens3",
+      "n": 134,
+      "n_ok": 134,
+      "chi2_median": 3.0234556612390016,
+      "flux_median": 37694.4665564322,
+      "x_all_integer": true
+    },
+    {
+      "source": "frozen",
+      "catalog_id": "1497368849430107904",
+      "role": "ens4",
+      "n": 134,
+      "n_ok": 134,
+      "chi2_median": 5.694415770079793,
+      "flux_median": 54572.80111536707,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1498613634033133184",
+      "role": "target",
+      "n": 134,
+      "n_ok": 133,
+      "chi2_median": 22.640128818207458,
+      "flux_median": 155873.6018993514,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1497613731286514432",
+      "role": "check",
+      "n": 134,
+      "n_ok": 0,
+      "chi2_median": 196.2649275839733,
+      "flux_median": 378473.0835180237,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1497771992240531712",
+      "role": "ens1",
+      "n": 134,
+      "n_ok": 118,
+      "chi2_median": 34.695309194210644,
+      "flux_median": 159226.7596793386,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1499200223486564608",
+      "role": "ens2",
+      "n": 134,
+      "n_ok": 27,
+      "chi2_median": 58.5768385186215,
+      "flux_median": 147811.53798906697,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1497974027502858240",
+      "role": "ens3",
+      "n": 134,
+      "n_ok": 134,
+      "chi2_median": 3.0234556612390016,
+      "flux_median": 37694.4665564322,
+      "x_all_integer": true
+    },
+    {
+      "source": "live",
+      "catalog_id": "1497368849430107904",
+      "role": "ens4",
+      "n": 134,
+      "n_ok": 134,
+      "chi2_median": 5.694415770079793,
+      "flux_median": 54572.80111536707,
+      "x_all_integer": true
+    }
+  ],
+  "consumers": {
+    "a2_compare_filters_fit_ok": false,
+    "a2_compare_cite": "a2_compare.py:508 uses psf_flux only",
+    "psf_internal_lc_mode_516": "fit_ok_for_zp",
+    "psf_internal_lc_cite": "psf_internal_lc.py:124-134 psf_fit_ok_for_zp_mask = fit_ok OR (finite flux>0 AND finite chi2); :490-509 applies that mask before ensemble_normalize. 516 sidecar fit_ok_for_zp, rig validated.",
+    "photometry_lightcurve_adaptive_filters": true,
+    "photometry_lightcurve_cite": "photometry_lightcurve.py:2393 psf_usable requires psf_fit_ok; this is the aperture-vs-psf science-method picker, not the internal PSF LC.",
+    "not_ok_consumed_in_psf_lc": true
+  },
+  "part_a": {
+    "n_realizations_noise_on": 50,
+    "n_realizations_noise_off": 1,
+    "phases": [
+      0.0,
+      0.125,
+      0.25,
+      0.375,
+      0.5
+    ],
+    "n_phase_cells": 25,
+    "flux_map": {
+      "check": 378473.0835180237,
+      "target": 155873.6018993514,
+      "ens3": 37694.4665564322
+    },
+    "sky_lo": 1330.087158203125,
+    "sky_hi": 2413.1689453125,
+    "gain": 1.0,
+    "rn": 10.0,
+    "worst_cell_abs_bias_mmag_noise_on_free": 7.060547704079681,
+    "worst_cell": {
+      "flux_name": "ens3",
+      "sky": 2413.1689453125,
+      "noise": true,
+      "fix_pos": false,
+      "dx": 0.375,
+      "dy": 0.0,
+      "n": 50,
+      "bias_median_mmag": 7.060547704079681,
+      "bias_std_mmag": 11.251883443727143
+    },
+    "dither_rms_mmag_by_flux_sky": {
+      "check|1330.087": 0.5742393868378801,
+      "check|2413.169": 0.7554818528026018,
+      "ens3|1330.087": 2.500125447769515,
+      "ens3|2413.169": 2.8728751245490214,
+      "target|1330.087": 0.6900797478639736,
+      "target|2413.169": 0.9158771551985051
+    },
+    "n_cells_noise_on_free": 150,
+    "fixed_pos_note": "IterativePSFPhotometry has no psf_model; production _apply_psf_fixed_position is a no-op (EXC-0454). free-vs-fixed not measured.",
+    "noise_off_max_abs_mmag": 1.2915418571716334e-07
+  },
+  "part_b": {
+    "n_epochs": 134,
+    "lights_source": "live draft_000516 aligned (frozen proc source); snapshot Light_001 hash differs",
+    "live_light001_sha12": "2e085929a8a9",
+    "snap_light001_sha12": "9fab4073c780",
+    "b1_vs_frozen_instmag_rms_mmag": 1.3959091161744295,
+    "b1_reproduced": false,
+    "b2_ran": false,
+    "b_readings_void": true,
+    "b1_vs_frozen_population": "6 M2 stars x 134 live frames; instrumental mag after median",
+    "rms_b1_vs_psfex_target_mmag": 10.460975002221018,
+    "rms_b2_vs_psfex_target_mmag": NaN,
+    "rms_b1_vs_b2_target_mmag": NaN,
+    "rms_b1_vs_psfex_check_mmag": 21.270741074187715,
+    "rms_b2_vs_psfex_check_mmag": NaN,
+    "rms_b1_vs_b2_check_mmag": NaN,
+    "psfex_wrap": "reconstruct at XPSF/YPSF; bilinear to 35x35 dest_scale=0.5 (osamp=2); unit native sum (sum=osamp^2); ImagePSF via temp FITS + meta fwhm_px so fit_shape stays 9x9",
+    "population_lc": "134 identical-ensemble epochs; pinned 4-star AIJ flux-sum; median-removed RMS"
+  },
+  "part_c": {
+    "target": {
+      "n": 134,
+      "spearman_rphase_vs_resid": 0.47013304405291845,
+      "p_rphase": 9.963122558440402e-09,
+      "spearman_chi2_vs_resid": 0.07179391264230227,
+      "p_chi2": 0.40973897444301693
+    },
+    "check": {
+      "n": 134,
+      "spearman_rphase_vs_resid": -0.38591254255040586,
+      "p_rphase": 4.122966877253028e-06,
+      "spearman_chi2_vs_resid": 0.46260676567039494,
+      "p_chi2": 1.8286576677146415e-08
+    }
+  },
+  "readings": [
+    "R-C0: F5 confirmed AND no PSF-LC consumer filters on psf_fit_ok (fit_ok_for_zp admits finite flux+chi2); flag-consumed-silently.",
+    "R-C1: Part A worst-cell |bias|=7.061 mmag (>=3) on 150 noise-on free-position cells -> MACHINERY defect. Axis: weights/sky at faint flux (ens3, high sky); noise-off interpolation bias < 1e-6 mmag. Free-vs-fixed not measured."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  },
+  "n_a_cells": 400,
+  "n_b_epochs": 134
+}

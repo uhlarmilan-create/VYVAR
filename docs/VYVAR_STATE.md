@@ -1,6 +1,12 @@
 # VYVAR -- Development State
 
-**Status:** **RED-TARGET-T4-01 2026-09-08.** T4_FALLBACK decided
+**Status:** **EPSF-CORE-01 2026-09-14.** Measurement complete:
+R-C0 (flag-consumed-silently) and R-C1 (MACHINERY defect,
+worst-cell 7.061 mmag ens3/high-sky). B1 STOP 1.396 mmag; B2
+void. EPSF-XVAL-01 stays OPEN (D-EPSF-XVAL-DOD-01). No
+`psf_flux` fix; 520 era re-cut is Milan's. Live 516 G4 prefixes
+unchanged (`bfa24039` / `13e77cf8` / `172f9540`).
+**RED-TARGET-T4-01 2026-09-08.** T4_FALLBACK decided
 (D-RED-TARGET-T4-01) but NOT in HEAD: G2 on `817f1f9` drifted
 (A3 refute; reverted). Skip-manifest sidecar landed
 (D-LC-SKIP-MANIFEST-01). era04_aperture gate unchanged

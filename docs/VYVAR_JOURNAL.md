@@ -2,6 +2,19 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-14 -- EPSF-CORE-01 measurement (R-C0, R-C1)
+
+Fit-machinery isolation after R-SH3. F1-F5 confirmed on live 516
+(FREE x_0/y_0; sky subtracted before fit; model-based error map
+at integer init; ImagePSF osamp=2 fit_shape 9x9; check 0/134
+psf_fit_ok, chi2 median 196.26). Part A: 25-phase x 3-flux x
+2-sky, n=50 noise-on; worst-cell |bias| 7.061 mmag (ens3, high
+sky). Noise-off interpolation 1.3e-7 mmag. Part B B1 vs frozen
+1.396 mmag STOP (B2 void). Part C n=134 Spearman recorded, not
+a numbered reading. R-C0 and R-C1 fire. No production change,
+no 520 re-cut. XVAL stays OPEN on D-EPSF-XVAL-DOD-01. G4 live
+516 unchanged. Evidence: `CURSOR_RESULT_EPSF_CORE_01.md`.
+
 ## 2026-09-08 -- RED-TARGET-T4-01 STOP on A3 / skip-manifest land
 
 Milan 2026-09-08: (i-a) T4_FALLBACK; (ii) FAILURE stays for

@@ -48,7 +48,6 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **DB-RETIRE-01** | Retire stale DB paths | Cursor | FUTURE |
 | **DEPTH-AUTH-01** | Derive masterstar_gaia_census_target_depth_g from MASTERSTAR completeness vs Gaia; G=15.56 VSX absent | Cursor | not wired |
 | **DRAFT451-CAL-FRAME001** | Draft 451 frame-001 calibrated product differs 659.6 ADU; root cause needs 451 cal logs | Cursor | logs |
-| **EPSF-CORE-01** | OPEN next: fit machinery (R-SH3); task issued separately | Milan+Cursor | next |
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
@@ -161,6 +160,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **EDGE-ANNULUS-01** -- CLOSED-DECIDED Milan 2026-08-31: edge stars not used; full on-chip aperture+annulus.
 - **EPSF-AC-01** -- Closed in ePSF AC measurement arc 2026-08-24.
 - **EPSF-AC-02** -- Closed/wired in ePSF AC arc; Newton ZP-OK still open as EPSF-ZP-OK-XRIG-01.
+- **EPSF-CORE-01** -- CLOSED 2026-09-14 measurement complete. Readings R-C0 (flag-consumed-silently: check 0/134 `psf_fit_ok`, all 134 fluxes enter the PSF LC under `fit_ok_for_zp`) and R-C1 (MACHINERY defect: Part A worst-cell |bias| 7.061 mmag on ens3 / high sky / dx=0.375 dy=0.0, n=50; noise-off interpolation < 1e-6 mmag). B1 STOP 1.396 mmag vs 1.0 (B2 void). No fix; any `psf_flux` move belongs to the 520 era re-cut (D-EPSF-XVAL-DOD-01). Sequencing is Milan's. Evidence `CURSOR_RESULT_EPSF_CORE_01.md`.
 - **EPSF-SHAPE-01** -- CLOSED 2026-09-14 measurement complete (`8fee250`). Reading R-SH3: shape unsupported as LC-level driver (rank R^2 <= 0.023 all four tests). Standalone: spatial FWHM spread (check-target -0.0395 px) exceeds frame-to-frame seeing std (0.0286 px) on the 134-frame set; headline FWHM differences under 5% (-0.59% target / +1.93% check). Next suspect EPSF-CORE-01. Evidence `CURSOR_RESULT_EPSF_SHAPE_01.md`.
 - **EPSF-VALID-02** -- CLOSED 2026-08-22 gated 67-star production ePSF on 516.
 - **ERA-03** -- era03 freeze kept on disk; superseded as --full gate by era04.
