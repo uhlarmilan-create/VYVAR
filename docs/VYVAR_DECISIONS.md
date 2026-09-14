@@ -29,7 +29,8 @@ to the 520 era re-cut (which already carries the T4 reland).
 Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
 `CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
 `CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`,
-`CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1).
+`CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1),
+`CURSOR_RESULT_EPSF_CORE_02.md` (R-P0; H-PEAK unsupported).
 
 ## D-RED-TARGET-T4-01 (Milan 2026-09-08)
 

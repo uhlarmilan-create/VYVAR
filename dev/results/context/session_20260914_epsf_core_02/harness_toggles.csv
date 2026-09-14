@@ -1,0 +1,7 @@
+config,n_rows,rms_vs_frozen_mmag,rms_vs_baseline_mmag,population
+baseline_core01,25,1.3259410031462762,0.0,5 stars x 5 frames; inst-mag after median
+i_no_refine,25,1.37441821445738,0.34624306934631954,5 stars x 5 frames; inst-mag after median
+ii_clipped_sum,25,1.4314250246571176,1.0374597929477893,5 stars x 5 frames; inst-mag after median
+iii_gain_gpt_rn15,25,2.1673185931093433,1.5885167273850271,5 stars x 5 frames; inst-mag after median
+iv_iterative_off,25,1.3259410031462762,0.0,5 stars x 5 frames; inst-mag after median
+iv_maxiters_1,25,1.3259410031462762,0.0,5 stars x 5 frames; inst-mag after median

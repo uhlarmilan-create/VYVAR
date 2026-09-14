@@ -1,6 +1,13 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-CORE-01 2026-09-14.** Measurement complete:
+**Status:** **EPSF-CORE-02 2026-09-14.** Measurement complete:
+R-P0 (H-PEAK unsupported; B2 still void). Check calibrated-grid
+p95 peak 45260 ADU, 0/134 above 60000 or 52428. CORE-01 R-C0
+and R-C1 stand. EPSF-XVAL-01 stays OPEN (D-EPSF-XVAL-DOD-01).
+GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded, not fixed. No
+`psf_flux` fix; 520 era re-cut is Milan's. Live 516 G4 prefixes
+unchanged (`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-CORE-01 2026-09-14.** Measurement complete:
 R-C0 (flag-consumed-silently) and R-C1 (MACHINERY defect,
 worst-cell 7.061 mmag ens3/high-sky). B1 STOP 1.396 mmag; B2
 void. EPSF-XVAL-01 stays OPEN (D-EPSF-XVAL-DOD-01). No

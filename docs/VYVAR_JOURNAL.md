@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-14 -- EPSF-CORE-02 measurement (R-P0)
+
+H-PEAK census on the calibrated grid (astroalign inverse of
+the 516 alignment; 7x7 peak). Check p95 45260 ADU, 0/134 above
+60000 or 52428; A1 rank R^2=0.005. Part B: target r_phase
+R^2=0.221, check psf_chi2 R^2=0.214. Part C toggles i-iv do
+not close the 1.396 mmag B1 gap; B2 not run. Architect error
+23 and GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded. No production
+change. Evidence: `CURSOR_RESULT_EPSF_CORE_02.md`.
+
 ## 2026-09-14 -- EPSF-CORE-01 measurement (R-C0, R-C1)
 
 Fit-machinery isolation after R-SH3. F1-F5 confirmed on live 516
