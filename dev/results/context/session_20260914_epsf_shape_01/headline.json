@@ -1,0 +1,201 @@
+{
+  "p1": {
+    "spatial_order": 0,
+    "n_stars_used": 67,
+    "oversampling": 2,
+    "sha_prefix": "172f9540",
+    "n_grid_files": 0,
+    "plan_grid_nx": 0,
+    "psf_spatial_enabled": false,
+    "psf_spatial_order": 0,
+    "psf_spatial_grid": "3x3"
+  },
+  "fitrad_px": 3.3014,
+  "fitrad_source": "masterstar_epsf_meta.json fwhm_px (A1 fitrad)",
+  "fwhm_vyvar": 2.363851560455492,
+  "fwhm_vyvar_self_check": 2.363851560455492,
+  "fwhm_psfex_target_median": 2.3779955437574545,
+  "fwhm_psfex_check_median": 2.319191138050315,
+  "fwhm_pct_target": -0.5947859464704254,
+  "fwhm_pct_check": 1.9256895937745717,
+  "spatial_fwhm_check_minus_target_median": -0.03951108846272078,
+  "seeing_fwhm_std_px": 0.02863329152079189,
+  "c1_target": {
+    "n": 134.0,
+    "rho": -0.15042332198655844,
+    "p": 0.0827677583743511,
+    "slope": -55.00658702334916,
+    "r2_rank": 0.022627175797471838
+  },
+  "c1_check": {
+    "n": 134.0,
+    "rho": -0.08893128343246175,
+    "p": 0.3068586606388883,
+    "slope": -70.8249946869434,
+    "r2_rank": 0.007908773172944845
+  },
+  "c2_target": {
+    "n": 134.0,
+    "rho": 0.09473684210526316,
+    "p": 0.2762266348508911,
+    "slope": 0.09561054543693723,
+    "r2_rank": 0.008975069252077562
+  },
+  "c2_check": {
+    "n": 134.0,
+    "rho": 0.00509482661878577,
+    "p": 0.9534103208723664,
+    "slope": -0.014186529580188973,
+    "r2_rank": 2.5957258275488045e-05
+  },
+  "c4_common_mode": {
+    "n": 134.0,
+    "rho": 0.09583411264479608,
+    "p": 0.27067722707683267,
+    "slope": 0.229594751271397,
+    "r2_rank": 0.009184177146415463
+  },
+  "c3": {
+    "population": "m1_per_star.csv stars with n_ok>=100 and finite G; n=34; d ~ a+bx+cy on masterstars_full_match.csv x,y (pixel); M1 is the 65-star diagnostic, not the M2 product metric",
+    "n_stars": 34,
+    "a_mmag": -219.7768212816915,
+    "b_mmag_per_px": 0.010888665125901774,
+    "c_mmag_per_px": -0.03760376981543896,
+    "amplitude_mmag": 46.540552297002705,
+    "pred_check_minus_target_mmag": -16.608724462031375,
+    "obs_m1_check_minus_target_mmag": -68.76169898603641,
+    "obs_m1_target_median_d_mmag": -247.8440540614777,
+    "obs_m1_check_median_d_mmag": -316.6057530475141,
+    "sign_match": true,
+    "position_source": "masterstars_full_match.csv x,y (same plane as the fit)"
+  },
+  "c4_top8_target": [
+    "BO_CVn_Light_005",
+    "BO_CVn_Light_032",
+    "BO_CVn_Light_033",
+    "BO_CVn_Light_034",
+    "BO_CVn_Light_037",
+    "BO_CVn_Light_053",
+    "BO_CVn_Light_076",
+    "BO_CVn_Light_148"
+  ],
+  "c4_top8_check": [
+    "BO_CVn_Light_013",
+    "BO_CVn_Light_014",
+    "BO_CVn_Light_032",
+    "BO_CVn_Light_035",
+    "BO_CVn_Light_041",
+    "BO_CVn_Light_053",
+    "BO_CVn_Light_076",
+    "BO_CVn_Light_089"
+  ],
+  "c4_top8_overlap": [
+    "BO_CVn_Light_032",
+    "BO_CVn_Light_053",
+    "BO_CVn_Light_076"
+  ],
+  "reading": "R-SH3: nothing reaches 0.2 on either star -> shape unsupported as the LC-level driver; escalate suspect to EPSF-CORE-01 (fit machinery). M-SEEING target=0.023 check=0.008; M-SPATIAL target=0.009 check=0.000",
+  "standalone": [
+    "spatial FWHM spread -0.0395 px exceeds frame-to-frame seeing std 0.0286 px"
+  ],
+  "reader_validation": [
+    {
+      "stem": "BO_CVn_Light_001",
+      "psf_fwhm_header": 2.95648575,
+      "psf_samp": 0.62903953,
+      "header_over_samp": 4.699999934821267,
+      "fwhm_reconstructed_radial": 2.23958487985789,
+      "rel_err_vs_header": 0.24248412837508526,
+      "psfex_stderr_diag_fwhm": 2.07,
+      "rel_err_vs_stderr_diag": 0.08192506273328022,
+      "corner_delta_max": 0.0463053233572282,
+      "center_vs_corner_max": 0.020502860496053474,
+      "center_eq_c0_maxabs": 0.0,
+      "poldeg": 2,
+      "ncoeff": 6,
+      "stdout_empty": true
+    },
+    {
+      "stem": "BO_CVn_Light_037",
+      "psf_fwhm_header": 3.0006671,
+      "psf_samp": 0.63843983,
+      "header_over_samp": 4.69999984180185,
+      "fwhm_reconstructed_radial": 2.292617256375585,
+      "rel_err_vs_header": 0.2359641439813216,
+      "psfex_stderr_diag_fwhm": 2.07,
+      "rel_err_vs_stderr_diag": 0.1075445682973842,
+      "corner_delta_max": 0.05347456347662957,
+      "center_vs_corner_max": 0.026221176596009185,
+      "center_eq_c0_maxabs": 0.0,
+      "poldeg": 2,
+      "ncoeff": 6,
+      "stdout_empty": true
+    },
+    {
+      "stem": "BO_CVn_Light_076",
+      "psf_fwhm_header": 3.11099029,
+      "psf_samp": 0.6619128,
+      "header_over_samp": 4.700000196400493,
+      "fwhm_reconstructed_radial": 2.398975089165705,
+      "rel_err_vs_header": 0.22887091712340094,
+      "psfex_stderr_diag_fwhm": 2.15,
+      "rel_err_vs_stderr_diag": 0.11580236705381639,
+      "corner_delta_max": 0.04406549662817269,
+      "center_vs_corner_max": 0.024660601842042523,
+      "center_eq_c0_maxabs": 0.0,
+      "poldeg": 2,
+      "ncoeff": 6,
+      "stdout_empty": true
+    },
+    {
+      "stem": "BO_CVn_Light_109",
+      "psf_fwhm_header": 3.02571368,
+      "psf_samp": 0.64376885,
+      "header_over_samp": 4.700000132034969,
+      "fwhm_reconstructed_radial": 2.202842533605838,
+      "rel_err_vs_header": 0.27195935683979255,
+      "psfex_stderr_diag_fwhm": 2.03,
+      "rel_err_vs_stderr_diag": 0.08514410522455092,
+      "corner_delta_max": 0.05392809212207794,
+      "center_vs_corner_max": 0.030184143967344423,
+      "center_eq_c0_maxabs": 0.0,
+      "poldeg": 2,
+      "ncoeff": 6,
+      "stdout_empty": true
+    },
+    {
+      "stem": "BO_CVn_Light_148",
+      "psf_fwhm_header": 3.1462481,
+      "psf_samp": 0.66941446,
+      "header_over_samp": 4.700000206150312,
+      "fwhm_reconstructed_radial": 2.4006773351068937,
+      "rel_err_vs_header": 0.23697138343702343,
+      "psfex_stderr_diag_fwhm": 2.21,
+      "rel_err_vs_stderr_diag": 0.08627933715244063,
+      "corner_delta_max": 0.037435243371874094,
+      "center_vs_corner_max": 0.02285241981153377,
+      "center_eq_c0_maxabs": 0.0,
+      "poldeg": 2,
+      "ncoeff": 6,
+      "stdout_empty": true
+    }
+  ],
+  "reader_note": "architect error 21: task 5% gate vs header PSF_FWHM is a category error (header = 4.7*PSF_SAMP design FWHM; radial half-max of component 0 is ~24% below header and ~8-12% above stderr diagnostic). Reader algebra PASS (center==c0, corners vary, 4.7 identity).",
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  },
+  "position_source": "a2_compare match_rows_deg2/deg3 XPSF_IMAGE/YPSF_IMAGE",
+  "n_shape_deg2": 804,
+  "n_shape_deg3": 804
+}

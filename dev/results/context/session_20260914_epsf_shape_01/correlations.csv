@@ -1,0 +1,6 @@
+test,star,side,population,n,rho,p,slope,r2_rank
+C1,target,M-SEEING,target 1498613634033133184; 134 identical-ensemble epochs with finite resid_after_median and qc fwhm_px; resid vs qc fwhm_px,134.0,-0.15042332198655844,0.0827677583743511,-55.00658702334916,0.022627175797471838
+C1,check,M-SEEING,check 1497613731286514432; 134 identical-ensemble epochs with finite resid_after_median and qc fwhm_px; resid vs qc fwhm_px,134.0,-0.08893128343246175,0.3068586606388883,-70.8249946869434,0.007908773172944845
+C2,target,M-SPATIAL,"target 1498613634033133184; 134 epochs; resid vs MISMATCH(f,target) ee_ratio_mmag",134.0,0.09473684210526316,0.2762266348508911,0.09561054543693723,0.008975069252077562
+C2,check,M-SPATIAL,"check 1497613731286514432; 134 epochs; resid vs MISMATCH(f,check) ee_ratio_mmag",134.0,0.00509482661878577,0.9534103208723664,-0.014186529580188973,2.5957258275488045e-05
+C4,both,common-mode,"target vs check resid_after_median; 134 shared identical-ensemble epochs; top-8 |resid| overlap=['BO_CVn_Light_032', 'BO_CVn_Light_053', 'BO_CVn_Light_076']",134.0,0.09583411264479608,0.27067722707683267,0.229594751271397,0.009184177146415463
