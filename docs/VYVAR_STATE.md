@@ -1,6 +1,13 @@
 # VYVAR -- Development State
 
-**Status:** **LEDGER-EPSF-DOD-02 2026-09-15.** D-EPSF-XVAL-DOD-02
+**Status:** **EPSF-VAL-01 2026-09-15.** Measured D-EPSF-XVAL-DOD-02
+criteria 1-2 on live 516: R-V1 FAIL (median r=1.119, max r=2.330;
+7 offenders >1.50), R-V2 FAIL (|b|=111.4, resid RMS=73.0,
+|c|=176.9 mmag), R-V3 FAIL. Criterion 3 (520 fix list) still
+pending. EPSF-XVAL-01 stays OPEN; sequencing is Milan's. No
+production change. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**LEDGER-EPSF-DOD-02 2026-09-15.** D-EPSF-XVAL-DOD-02
 supersedes DOD-01 (PRECISION/ACCURACY/CODE vs aperture; R-A2-3
 bar historical). EPSF-XVAL-01 stays OPEN (closes via EPSF-VAL-01
 + 520 fix list). EPSF-CORE-01 CLOSED as CORE-01..04 investigation.

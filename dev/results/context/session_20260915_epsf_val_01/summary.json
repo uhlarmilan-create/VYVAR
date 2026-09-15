@@ -1,0 +1,150 @@
+{
+  "thresholds_quoted_from_HEAD": {
+    "decision": "D-EPSF-XVAL-DOD-02",
+    "file": "docs/VYVAR_DECISIONS.md",
+    "commit": "6693537",
+    "precision": "RMS_med(PSF diff LC)/RMS_med(aperture diff LC) median <= 1.25 and no star > 1.50 (lines 27-30)",
+    "accuracy": "d=a+b*(G-10) with |b|<=5.0 mmag/mag and residual RMS<=10 mmag; vs BP-RP with |c|<=10 mmag/mag (lines 31-34)",
+    "T1a_median_ratio": 1.25,
+    "T1b_max_ratio": 1.5,
+    "T2b_slope_G_mmag_per_mag": 5.0,
+    "T2r_residual_rms_mmag": 10.0,
+    "T2c_slope_bprp_mmag_per_mag": 10.0,
+    "note": "Criterion 3 (CODE / fix list) is out of scope for this task."
+  },
+  "selection": {
+    "g_cut": 11.5,
+    "n_selected": 51,
+    "n_table_rows": 51,
+    "historical_check_passes": true,
+    "vsx_product": "masterstars_full_match.csv / proc vsx_known_variable (catalog_match.detect_stars_and_match_catalog vsx_match_max_sep_arcsec=5.0; catalog_match.py:89)",
+    "exclude": [
+      "1497368849430107904",
+      "1497771992240531712",
+      "1497974027502858240",
+      "1498613634033133184",
+      "1499200223486564608"
+    ],
+    "n_epoch_min": 130,
+    "relaxed": false
+  },
+  "g_cut_used": 11.5,
+  "precision": {
+    "population": "51 selected constant stars; pinned 4-star AIJ flux-sum; 134 identical-ensemble epochs; RMS_med mmag",
+    "V-prod": {
+      "median_ratio": 1.1189748187073325,
+      "max_ratio": 2.32971566733583,
+      "n_stars": 51
+    },
+    "V-strict": {
+      "median_ratio": 0.9410845010473585,
+      "max_ratio": 2.3975970735126295,
+      "n_stars_finite_ratio": 37,
+      "n_below_100": 18
+    }
+  },
+  "accuracy": {
+    "population": "stars with n_ok>=100 on both paths and 8.5<=G<=12.5; includes target, check, ensemble",
+    "n_stars": 104,
+    "fits": [
+      {
+        "n": 104,
+        "slope": -111.39358444847497,
+        "intercept": -276.52605531869705,
+        "residual_rms_mmag": 72.98879442566343,
+        "axis": "G-10",
+        "criterion_limit_abs": 5.0,
+        "residual_limit_mmag": 10.0
+      },
+      {
+        "n": 104,
+        "slope": 176.94597655638688,
+        "intercept": -340.9496851980913,
+        "residual_rms_mmag": 139.31741220887142,
+        "axis": "BP-RP-1.0",
+        "criterion_limit_abs": 10.0,
+        "residual_limit_mmag": null
+      }
+    ],
+    "g_bins": [
+      {
+        "G_bin": "[8.5, 9.0)",
+        "n": 3,
+        "G_mid": 8.733055114746094,
+        "d_median_mmag": -236.45964077671346,
+        "d_mean_mmag": -249.59141051305463
+      },
+      {
+        "G_bin": "[9.0, 9.5)",
+        "n": 13,
+        "G_mid": 9.255638342637281,
+        "d_median_mmag": -217.20656445637144,
+        "d_mean_mmag": -225.61062259755823
+      },
+      {
+        "G_bin": "[9.5, 10.0)",
+        "n": 15,
+        "G_mid": 9.685326766967773,
+        "d_median_mmag": -255.49629252301463,
+        "d_mean_mmag": -238.57408486090512
+      },
+      {
+        "G_bin": "[10.0, 10.5)",
+        "n": 12,
+        "G_mid": 10.222272475560507,
+        "d_median_mmag": -279.83506787916883,
+        "d_mean_mmag": -291.8246477711741
+      },
+      {
+        "G_bin": "[10.5, 11.0)",
+        "n": 11,
+        "G_mid": 10.65160829370672,
+        "d_median_mmag": -324.7983398381242,
+        "d_mean_mmag": -301.3373574316081
+      },
+      {
+        "G_bin": "[11.0, 11.5)",
+        "n": 13,
+        "G_mid": 11.217058695279635,
+        "d_median_mmag": -439.64610160030304,
+        "d_mean_mmag": -402.84597755028915
+      },
+      {
+        "G_bin": "[11.5, 12.0)",
+        "n": 8,
+        "G_mid": 11.779163241386414,
+        "d_median_mmag": -494.9529939825554,
+        "d_mean_mmag": -504.4917499764362
+      },
+      {
+        "G_bin": "[12.0, 12.5)",
+        "n": 29,
+        "G_mid": 12.267019008768015,
+        "d_median_mmag": -548.2856508826162,
+        "d_mean_mmag": -550.4056113175858
+      }
+    ],
+    "aperture_convention": "dao_flux; aperture_factor_applied=snr_table; median aperture_r_px=1.999; annulus APERTURE-01d 2.7/5.2 FWHM",
+    "psf_convention": "psf_flux from live ePSF ImagePSF; epsf_sum_native=1.0 (production normalize sum=osamp^2 so native sum=1; psf_photometry.py:649-661). Constant a absorbs aperture vs PSF scale and is not a criterion."
+  },
+  "readings": [
+    "R-V1 FAIL (V-prod): median r=1.119 max r=2.330 (limits 1.25/1.5); offenders>1.5: 1500296402219939584,1497613731286514432,1499906247391001088,1497442379271632384,1497528072458898432,1500727513856914944,1498326455340079616.",
+    "V-strict informational: median r=0.941 max r=2.398 n_stars_with_ratio=37 n_below_100=18.",
+    "R-V2 FAIL: |b|=111.394 (lim 5.0), resid RMS=72.989 (lim 10.0), |c|=176.946 (lim 10.0).",
+    "R-V3: FAIL on criterion 1 (precision), criterion 2 (accuracy); sequencing is Milan's."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}

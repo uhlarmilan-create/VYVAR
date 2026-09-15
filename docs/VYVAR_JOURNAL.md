@@ -2,6 +2,18 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- EPSF-VAL-01 measurement (R-V1, R-V2, R-V3)
+
+PSF-path validation under D-EPSF-XVAL-DOD-02 criteria 1-2 on
+live 516 (criterion 3 deferred to 520 re-cut). 51 constant
+stars at G<=11.5 (VSX radius 5.0 arcsec; historical check
+passes). V-prod median r=1.119 max r=2.330 -> R-V1 FAIL
+(7 offenders). V-strict median r=0.941 max r=2.398
+(informational; does not change verdict). Accuracy n=104:
+Theil-Sen |b|=111.4 mmag/mag, resid RMS=73.0, |c|=176.9 ->
+R-V2 FAIL. R-V3 FAIL; sequencing Milan's. No production
+change. Evidence: `CURSOR_RESULT_EPSF_VAL_01.md`.
+
 ## 2026-09-15 -- LEDGER-EPSF-DOD-02 (docs)
 
 D-EPSF-XVAL-DOD-02 supersedes DOD-01. New DoD:
