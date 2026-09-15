@@ -6,34 +6,86 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## D-EPSF-XVAL-DOD-01 (Milan 2026-09-14)
+## D-EPSF-XVAL-DOD-02 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-01
 
-EPSF-XVAL-01 remains OPEN. It closes on SUCCESS only, defined as:
-after a root-cause fix, an UNCHANGED A2-COMPARE re-run (same
-pinned ensemble 1497771992240531712 / 1499200223486564608 /
-1497974027502858240 / 1497368849430107904, same target
-1498613634033133184, same check 1497613731286514432, same
-construction and thresholds) fires R-A2-1: target AND check
-RMS <= 3.0 mmag. No threshold moves, no metric substitutions.
+Rationale: the DOD-01 bar (<= 3.0 mmag vs PSFEx) was transferred
+from an aperture-vs-aperture precedent (1.9503 mmag vs AIJ: same
+pixels, same weights, photon noise cancels). PSF vs any other
+estimator does not cancel photon noise; on this set the aperture
+check-star LC alone has RMS_med 8.23 mmag (CORE-04 A4), so 3 mmag
+between two different estimators was unreachable even for a
+perfect fit. CORE-04 triangle (RMS_med, target / check, 134
+identical epochs, pinned ensemble): VYVAR PSF vs aperture
+8.50 / 14.07; PSFEx vs aperture 12.44 / 15.69; VYVAR vs PSFEx
+10.48 / 21.41. K3 (uniform weights) moves VYVAR toward PSFEx
+(check 21.3 -> 9.9): most of R-A2-3 is an estimator-weighting
+difference, not a defect.
+
+EPSF-XVAL-01 remains OPEN. The PSF path is VALIDATED when, on an
+identical epoch set and the pinned ensemble, all three hold:
+
+1. PRECISION: on a set of >= 4 bright constant stars (check
+   class; VSX-clean; not ensemble members),
+   RMS_med(PSF diff LC) / RMS_med(aperture diff LC) has median
+   <= 1.25 and no star > 1.50.
+2. ACCURACY: per-star median(PSF_inst - aperture_inst) over the
+   epochs, across stars with n_ok >= 100 and 8.5 <= G <= 12.5,
+   fits d = a + b*(G - 10) with |b| <= 5.0 mmag/mag and residual
+   RMS <= 10 mmag; and vs BP-RP with |c| <= 10 mmag/mag.
+3. CODE: the three recorded defects are fixed and gated
+   (FIT-OK-ADMISSION-01 = CORE-01 R-C0 fit_ok_for_zp admits
+   finite flux+chi2 regardless of psf_fit_ok; GAIN-FALSY-01;
+   FIXPOS-NOOP-01), and the era re-cut passes its gates.
+
+Thresholds are Milan's numbers to adjust before EPSF-VAL-01 is
+read; once EPSF-VAL-01 runs they are frozen. Closure of
+EPSF-XVAL-01 = this DoD via EPSF-VAL-01 (measurement, issued
+separately) + the fix list at the 520 era re-cut. A2 result
+R-A2-3 stays on the record as historical (superseded bar).
 
 Until closure, the PSF path stays internal-diagnostic
 (NOT FOR AAVSO/VARASTRO SUBMISSION sidecar wording unchanged).
-The aperture path is unaffected (externally validated,
-1.9503 mmag vs AIJ).
+The aperture path is unaffected and remains the science product
+for bright targets on this rig (FWHM ~2.4 px, 9.77"/px; Howell
+1989/2006: aperture near-optimal at high SNR). The PSF path's
+justified use is crowded / faint fields; the phase component
+(CORE-03 T1: 72 mmag ptp surface, ~2-5 mmag RMS in the live
+window; undersampling) is deferred to a dithered ePSF build
+(Anderson & King 2000) under TODO-A, only if that use is needed.
 
-Sequencing: EPSF-CORE-01 / 02 / 03 / 04 are measured (R-C0,
-R-C1, R-P0, R-Q3, R-Q4, R-R2, R-P2, R-K0). CORE-04 R-R2 says
-the DoD reference itself may need Milan's re-decision. Any fix
-that moves psf_flux belongs to Milan and to the 520 era re-cut
-(which already carries the T4 reland).
+### Fix list bound to the 520 era re-cut (no other changes ride it)
 
-Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
-`CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
+- FIT-OK-ADMISSION-01 (`psf_internal_lc.py:124-134` mask).
+- GAIN-FALSY-01 (`psf_photometry.py:2268-2270` `value or 1.0`;
+  authority g_pt 0.637067 / RN 15.2 per
+  `gain_photon_transfer.json` and pipeline_meta
+  `resolved_facts`).
+- FIXPOS-NOOP-01 (`psf_photometry.py:2431-2440` on
+  IterativePSFPhotometry; EXC-0454).
+- Already bound: RED-TARGET-T4 reland + micro-measurement;
+  LC-CSV `skip_reason` unification.
+
+Evidence: `CURSOR_RESULT_EPSF_CORE_04.md` (R-R2, R-P2, R-K0),
+`CURSOR_RESULT_EPSF_CORE_03.md` (R-Q3, R-Q4; error 25),
+`CURSOR_RESULT_LEDGER_EPSF_DOD_02.md` (errors 25-26),
+`CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3, historical).
+
+## D-EPSF-XVAL-DOD-01 (Milan 2026-09-14) - SUPERSEDED by D-EPSF-XVAL-DOD-02
+
+Historical. Closed-on SUCCESS was: after a root-cause fix, an
+UNCHANGED A2-COMPARE re-run (same pinned ensemble
+1497771992240531712 / 1499200223486564608 /
+1497974027502858240 / 1497368849430107904, same target
+1498613634033133184, same check 1497613731286514432, same
+construction and thresholds) fires R-A2-1: target AND check
+RMS <= 3.0 mmag. Superseded: that bar was unreachable by
+construction on this set (architect error 26; see DOD-02).
+
+Evidence at the time: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md`
+(R-A2-3), `CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
 `CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`,
-`CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1),
-`CURSOR_RESULT_EPSF_CORE_02.md` (R-P0; H-PEAK unsupported),
-`CURSOR_RESULT_EPSF_CORE_03.md` (R-Q3, R-Q4; D-EPSF-SWAP-DIFF-01),
-`CURSOR_RESULT_EPSF_CORE_04.md` (R-R2, R-P2, R-K0; error 25).
+`CURSOR_RESULT_EPSF_CORE_01.md` through
+`CURSOR_RESULT_EPSF_CORE_04.md`.
 
 ## D-EPSF-SWAP-DIFF-01 (Milan 2026-09-14)
 

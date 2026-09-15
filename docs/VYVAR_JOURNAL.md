@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- LEDGER-EPSF-DOD-02 (docs)
+
+D-EPSF-XVAL-DOD-02 supersedes DOD-01. New DoD:
+PRECISION / ACCURACY / CODE vs aperture; 520 re-cut fix list
+FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01. R-A2-3
+bar historical. Architect errors 25-26 appended. EPSF-VAL-01
+not yet issued. Evidence:
+`CURSOR_RESULT_LEDGER_EPSF_DOD_02.md`.
+
 ## 2026-09-15 -- EPSF-CORE-04 measurement (R-R2, R-P2, R-K0)
 
 Reference arbitration, osamp phase probe, machinery knobs.
