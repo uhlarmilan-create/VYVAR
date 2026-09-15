@@ -21,16 +21,29 @@ Until closure, the PSF path stays internal-diagnostic
 The aperture path is unaffected (externally validated,
 1.9503 mmag vs AIJ).
 
-Sequencing: EPSF-CORE-01 (fit machinery) was the next suspect per
-R-SH3 and is now measured (R-C0, R-C1; B2 void). Any further
-suspect, and any fix that moves psf_flux, belongs to Milan and
-to the 520 era re-cut (which already carries the T4 reland).
+Sequencing: EPSF-CORE-01 / 02 / 03 are measured (R-C0, R-C1,
+R-P0, R-Q3, R-Q4). Any fix that moves psf_flux belongs to Milan
+and to the 520 era re-cut (which already carries the T4 reland).
 
 Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
 `CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
 `CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`,
 `CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1),
-`CURSOR_RESULT_EPSF_CORE_02.md` (R-P0; H-PEAK unsupported).
+`CURSOR_RESULT_EPSF_CORE_02.md` (R-P0; H-PEAK unsupported),
+`CURSOR_RESULT_EPSF_CORE_03.md` (R-Q3, R-Q4; D-EPSF-SWAP-DIFF-01).
+
+## D-EPSF-SWAP-DIFF-01 (Milan 2026-09-14)
+
+The CORE-03 model swap is a DIFFERENTIAL measurement inside the
+harness: B1(harness, live ePSF) vs B2(harness, PSFEx model) vs
+PSFEx catalog, all on the same call path. The
+harness-vs-production floor is the resolution limit (CORE-02 /
+CORE-03 B1: 1.396 mmag on 804 rows). The CORE-01 gate of 1.0
+mmag is NOT relaxed; Part B still tries to pass it. CORE-03
+Part B did not; Part C ran under this decision with the
+achieved B1 as the floor.
+
+Evidence: `CURSOR_RESULT_EPSF_CORE_03.md`.
 
 ## D-RED-TARGET-T4-01 (Milan 2026-09-08)
 

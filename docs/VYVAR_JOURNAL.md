@@ -2,6 +2,22 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- EPSF-CORE-03 measurement (R-Q3, R-Q4)
+
+Model-vs-truth phase bias, call-site replication, model swap.
+T1 (PSFEx deg2 truth rendered at PSF_SAMP then block-summed;
+never ImagePSF) 0.1 px window slope 8.384 mmag/0.1px times
+observed 0.102 px spread = 8.56 mmag of the 10.48 target RMS.
+T2 Moffat control predicts 0.17 mmag in the same window.
+Call-site kwargs (cutout_size None, error omitted, all 225
+psf_flux rows, production-all-together) are bit-identical to
+the CORE-02 baseline on the 5-frame probe. Full 804-row B1 vs
+frozen 1.396 mmag; gate 1.0 FAIL; floor 1.396 under
+D-EPSF-SWAP-DIFF-01. B2 vs PSFEx cat 12.98 / 23.70 mmag; B3
+10.02 / 15.14; R-Q1/Q2 do not fire. B2 residual phase R^2
+0.075, did not vanish. Architect error 24 recorded. No
+production change. Evidence: `CURSOR_RESULT_EPSF_CORE_03.md`.
+
 ## 2026-09-14 -- EPSF-CORE-02 measurement (R-P0)
 
 H-PEAK census on the calibrated grid (astroalign inverse of

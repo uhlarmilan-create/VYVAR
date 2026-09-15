@@ -1,0 +1,8 @@
+config,star_set,n_rows,rms_vs_frozen_mmag,population
+core02_baseline,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+cutout_size_None,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+error_omitted,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+quality_fallback_False,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+grouper_False_explicit,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+fit_all_psf_rows,all,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median
+production_all_together,m2,30,1.4820134450453453,6 M2 stars x 5 frames; inst-mag after median

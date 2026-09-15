@@ -1,0 +1,267 @@
+{
+  "decision_D_EPSF_SWAP_DIFF_01": "model swap is a DIFFERENTIAL measurement inside the harness; harness-vs-production floor is the resolution limit (CORE-02 1.396 mmag / achieved B1). CORE-01 1.0 mmag gate is NOT relaxed.",
+  "architect_error_24": "CORE-02 H-PEAK ~59.8 kADU was a Gaussian idealization presented with too much confidence and grid-inconsistent; measured aligned-grid peak ~34k (calibrated p95 45260). Root class: prediction not calibrated against a measured quantity before use.",
+  "carried": [
+    "architect_error_23",
+    "GAIN-FALSY-01",
+    "FIXPOS-NOOP-01"
+  ],
+  "call_site": {
+    "production_call": "pipeline_catalog.py:355-364 via _fill_psf_catalog_columns; also frame_export.py:792",
+    "cutout_size": "OMITTED -> None -> meta cutout_size=17 (masterstar_epsf_meta.json)",
+    "cutout_size_meta": 17,
+    "error": "full-frame Poisson map float32: sqrt(|data|/gain + (rn/gain)^2) from st.gain/st.read_noise after `value or 1.0` (pipeline_catalog.py:299-306). Then _psf_fit_error_cutout_full_ccd rebuilds a MODEL-BASED map (psf_photometry.py:3117-3127); err_full_cut does not replace it.",
+    "use_iterative": "OMITTED -> default True (psf_photometry.py:2731)",
+    "max_fit_iters": "OMITTED -> default 3 (psf_photometry.py:2732)",
+    "ref_fluxes": "dao_flux from _fit_df, dtype=float, same length as star_positions (pipeline_catalog.py:347-353)",
+    "apply_aperture_correction": false,
+    "psf_ac_policy": "p4_none",
+    "grouper_enabled": "OMITTED -> AppConfig psf_grouper_enabled; 516 pipeline_meta false; neighbor_catalog None so inactive",
+    "neighbor_catalog": null,
+    "nn_dist_fwhm_map": "OMITTED -> {}",
+    "nn_delta_mag_map": "OMITTED -> None",
+    "quality_fallback_enabled": "OMITTED -> AppConfig default True; 516 pipeline_meta true",
+    "star_positions_columns": [
+      "catalog_id",
+      "x",
+      "y",
+      "name"
+    ],
+    "star_positions_note": "Light_001 proc: catalog_id int64, x/y float64; 225 rows with psf_flux>0 (targeted fit via _epsf_fit_catalog_ids, pipeline_catalog.py:3637-3652). M2 x,y are integer-valued floats.",
+    "n_psf_flux_gt0_light001": 225,
+    "frame_data": "np.asarray(data, dtype=np.float32) of the in-memory aligned array",
+    "psf_fit_gain_rn": [
+      1.0,
+      10.0
+    ],
+    "core02_delta": "CORE-02 baseline passed cutout_size=17 explicit and only the 6 M2 stars"
+  },
+  "part_a": {
+    "T1": {
+      "n_phase_cells": 81,
+      "phases": [
+        0.0,
+        0.125,
+        0.25,
+        0.375,
+        0.5,
+        0.625,
+        0.75,
+        0.875,
+        1.0
+      ],
+      "noise_off_ptp_mmag": 72.45203246797729,
+      "noise_on_ptp_mmag": 72.84097536103621,
+      "slope_mmag_per_0p1px_noise_off": 8.384488010776636,
+      "slope_theilsen_fullgrid_mmag_per_0p1px": 0.9496752504251461,
+      "slope_window_dx": [
+        0.5,
+        0.625
+      ],
+      "slope_window_dy": 0.5,
+      "init": "integer peak (x_int), replicating proc peaks; true = x_int + (dx, dy)",
+      "observed_phase_spread_px": 0.1020999999999504,
+      "predicted_target_rms_mmag": 8.560562258998786,
+      "observed_target_rms_mmag": 10.48,
+      "n_realizations_noise_on": 30,
+      "n_realizations_noise_off": 1,
+      "truth": "PSFEx deg2 BO_CVn_Light_076 at target XPSF/YPSF; reconstruct; zoom to 1/8 native px; nd_shift in oversampled domain; 8x8 block-sum; scale stamp sum=flux. PSF_SAMP=0.6619128. Never ImagePSF.",
+      "flux": 155873.6018993514,
+      "sky": 1549.7254028320312
+    },
+    "T2": {
+      "n_phase_cells": 81,
+      "phases": [
+        0.0,
+        0.125,
+        0.25,
+        0.375,
+        0.5,
+        0.625,
+        0.75,
+        0.875,
+        1.0
+      ],
+      "noise_off_ptp_mmag": 48.98702170353113,
+      "noise_on_ptp_mmag": 50.13084898006048,
+      "slope_mmag_per_0p1px_noise_off": -0.166201631668082,
+      "slope_theilsen_fullgrid_mmag_per_0p1px": 0.19078165952488463,
+      "slope_window_dx": [
+        0.5,
+        0.625
+      ],
+      "slope_window_dy": 0.5,
+      "init": "integer peak (x_int), replicating proc peaks; true = x_int + (dx, dy)",
+      "observed_phase_spread_px": 0.1020999999999504,
+      "predicted_target_rms_mmag": 0.16969186593302926,
+      "observed_target_rms_mmag": 10.48,
+      "n_realizations_noise_on": 30,
+      "n_realizations_noise_off": 1,
+      "truth": "analytic Moffat beta=2.5 FWHM=2.364 px on 1/8 native grid, block-sum 8x8; scale stamp sum=flux. Never ImagePSF.",
+      "flux": 155873.6018993514,
+      "sky": 1549.7254028320312
+    },
+    "elapsed_s": 4624.611063700002,
+    "fit_kw": {
+      "cutout_size": 17,
+      "pass_error": true,
+      "use_iterative": true,
+      "max_fit_iters": 3
+    }
+  },
+  "part_b": {
+    "probe_stems": [
+      "BO_CVn_Light_001",
+      "BO_CVn_Light_037",
+      "BO_CVn_Light_076",
+      "BO_CVn_Light_109",
+      "BO_CVn_Light_148"
+    ],
+    "toggles": [
+      {
+        "config": "core02_baseline",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "cutout_size_None",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "error_omitted",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "quality_fallback_False",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "grouper_False_explicit",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "fit_all_psf_rows",
+        "star_set": "all",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      },
+      {
+        "config": "production_all_together",
+        "star_set": "m2",
+        "n_rows": 30,
+        "rms_vs_frozen_mmag": 1.4820134450453453,
+        "population": "6 M2 stars x 5 frames; inst-mag after median"
+      }
+    ],
+    "best_toggle": "core02_baseline",
+    "full_rebuild_config": "core02_baseline",
+    "full_rebuild_kwargs": {
+      "cutout_size": 17,
+      "pass_error": true,
+      "use_iterative": true,
+      "max_fit_iters": 3
+    },
+    "b1_vs_frozen_instmag_rms_mmag": 1.3959091161744295,
+    "b1_n": 804,
+    "b1_gate_mmag": 1.0,
+    "b1_gate_passed": false,
+    "floor_mmag": 1.3959091161744295,
+    "elapsed_s": 1045.7210787999793,
+    "population_full": "6 M2 stars x 134 frames; instrumental mag after median",
+    "largest_remaining": "baseline-class remainder 1.396 mmag after call-site toggles; best probe core02_baseline"
+  },
+  "part_c": {
+    "rms_b1_vs_psfex_target_mmag": 10.460975002221018,
+    "rms_b2_vs_psfex_target_mmag": 12.98195901529461,
+    "rms_b3_vs_psfex_target_mmag": 10.020398905263843,
+    "rms_b1_vs_b2_target_mmag": 10.537096475799924,
+    "rms_b1_vs_b3_target_mmag": 6.362454950306494,
+    "rms_b2_vs_b3_target_mmag": 9.722978666226206,
+    "rms_b1_vs_psfex_check_mmag": 21.270741074187715,
+    "rms_b2_vs_psfex_check_mmag": 23.69495417801859,
+    "rms_b3_vs_psfex_check_mmag": 15.138987021039505,
+    "rms_b1_vs_b2_check_mmag": 23.76066016791763,
+    "rms_b1_vs_b3_check_mmag": 14.936047203285387,
+    "rms_b2_vs_b3_check_mmag": 16.888482969178966,
+    "population_lc": "134 identical-ensemble epochs; pinned 4-star AIJ flux-sum; median-removed RMS",
+    "psfex_wrap": "reconstruct at XPSF/YPSF; bilinear to 35x35 dest_scale=0.5 (osamp=2); normalize sum=osamp^2 (psf_photometry.py:649-661); ImagePSF via temp FITS + meta fwhm_px",
+    "b3_model": "static PSFEx deg2 of BO_CVn_Light_076 evaluated at each star XPSF/YPSF each epoch",
+    "b2_race": [
+      {
+        "catalog_id": "1498613634033133184",
+        "role": "target",
+        "n": 134,
+        "resid_source": "B2_minus_PSFEx_cat",
+        "fwhm_psfex_r2_rank": 0.00045388193515720016,
+        "fwhm_psfex_rho": -0.02130450504370379,
+        "fwhm_psfex_p": 0.8069715822338793,
+        "r_phase_r2_rank": 0.07497814230929044,
+        "r_phase_rho": 0.27382136934375745,
+        "r_phase_p": 0.0013674666542901918,
+        "psf_chi2_r2_rank": 0.010777400999425207,
+        "psf_chi2_rho": 0.10381426202321725,
+        "psf_chi2_p": 0.2325927063846607,
+        "qc_fwhm_px_r2_rank": 0.003989864741250776,
+        "qc_fwhm_px_rho": -0.06316537612688439,
+        "qc_fwhm_px_p": 0.46841135407924966,
+        "best_regressor": "r_phase",
+        "best_r2_rank": 0.07497814230929044
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "role": "check",
+        "n": 134,
+        "resid_source": "B2_minus_PSFEx_cat",
+        "fwhm_psfex_r2_rank": 0.013025338500890887,
+        "fwhm_psfex_rho": -0.11412860509482663,
+        "fwhm_psfex_p": 0.1891655531735205,
+        "r_phase_r2_rank": 0.07102468576821235,
+        "r_phase_rho": -0.2665045698824175,
+        "r_phase_p": 0.00185443971036074,
+        "psf_chi2_r2_rank": 0.0015898812593460425,
+        "psf_chi2_rho": -0.03987331512861757,
+        "psf_chi2_p": 0.6473657972470279,
+        "qc_fwhm_px_r2_rank": 0.004871186760885389,
+        "qc_fwhm_px_rho": 0.06979388770433546,
+        "qc_fwhm_px_p": 0.4229398488615471,
+        "best_regressor": "r_phase",
+        "best_r2_rank": 0.07102468576821235
+      }
+    ],
+    "elapsed_s": 1228.176134099951,
+    "floor_mmag": 1.3959091161744295
+  },
+  "readings": [
+    "R-Q3: MACHINERY/SKY; B2 and B3 stay >= 10 mmag on the check or the target.",
+    "R-Q4: PHASE; Part A slope x observed phase spread = 8.56 mmag (>=5) of the target RMS."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}
