@@ -1,0 +1,5 @@
+id,comparison,target_rms_med_mmag,check_rms_med_mmag,n,a2_compare_target_mmag,a2_compare_check_mmag
+A1,PSFEx cat vs aperture,12.441704487895414,15.690788416095971,134,,
+A2,VYVAR psf_flux vs aperture,8.495215586659414,14.072875012233597,134,,
+A3,VYVAR psf_flux vs PSFEx cat (restate A2-COMPARE),10.477593527268457,21.413326001846976,134,10.48,21.41
+A4,aperture check-star RMS_med (arbiter noise floor),,8.233729815464045,134,,

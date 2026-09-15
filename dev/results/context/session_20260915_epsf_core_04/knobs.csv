@@ -1,0 +1,7 @@
+knob,cite,target_vs_psfex_mmag,check_vs_psfex_mmag,target_vs_aperture_mmag,check_vs_aperture_mmag,floor_mmag,n
+baseline,"CORE-02 kwargs, live ePSF, no patch",10.460975002221018,21.270741074187715,8.794027161093766,13.936137942231522,1.396,134
+K1,"patch _psf_resolve_gain_read_noise -> (0.637067, 15.2); model-based err map uses these (psf_photometry.py:2262, 3117)",10.22483247186535,20.72200687091792,8.865467287502826,13.587407640325022,1.396,134
+K2,"patch _fit_shape_for_cutout -> (13,13); production is ceil(2*fwhm_px+1) odd, meta fwhm 3.3014 -> 9x9 (psf_photometry.py:337-351, 2819)",11.997248407136563,24.008506632393335,11.475982242393462,16.93791737596528,1.396,134
+K3,patch _psf_fit_error_cutout_full_ccd -> ones (uniform weights),4.922682377165309,9.927628885147012,12.651069692393662,13.346618781983842,1.396,134
+K4,"patch _psf_annulus_radii_px inner/outer 4.0/8.0 FWHM (production residual annulus defaults 2.7/5.2 via AppConfig; psf_photometry.py:2065-2083, 2184)",10.491488408772673,21.422534823484614,8.554043716996583,14.080848511253663,1.396,134
+K5,K1+K2 together,11.443971461637792,22.964753357528682,11.146028895661379,15.940324557811799,1.396,134

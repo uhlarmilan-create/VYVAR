@@ -21,16 +21,19 @@ Until closure, the PSF path stays internal-diagnostic
 The aperture path is unaffected (externally validated,
 1.9503 mmag vs AIJ).
 
-Sequencing: EPSF-CORE-01 / 02 / 03 are measured (R-C0, R-C1,
-R-P0, R-Q3, R-Q4). Any fix that moves psf_flux belongs to Milan
-and to the 520 era re-cut (which already carries the T4 reland).
+Sequencing: EPSF-CORE-01 / 02 / 03 / 04 are measured (R-C0,
+R-C1, R-P0, R-Q3, R-Q4, R-R2, R-P2, R-K0). CORE-04 R-R2 says
+the DoD reference itself may need Milan's re-decision. Any fix
+that moves psf_flux belongs to Milan and to the 520 era re-cut
+(which already carries the T4 reland).
 
 Evidence: `CURSOR_RESULT_EPSF_XVAL_A2_COMPARE.md` (R-A2-3),
 `CURSOR_RESULT_EPSF_SHAPE_01.md` (R-SH3),
 `CURSOR_RESULT_LEDGER_EPSF_XVAL_DOD_01.md`,
 `CURSOR_RESULT_EPSF_CORE_01.md` (R-C0, R-C1),
 `CURSOR_RESULT_EPSF_CORE_02.md` (R-P0; H-PEAK unsupported),
-`CURSOR_RESULT_EPSF_CORE_03.md` (R-Q3, R-Q4; D-EPSF-SWAP-DIFF-01).
+`CURSOR_RESULT_EPSF_CORE_03.md` (R-Q3, R-Q4; D-EPSF-SWAP-DIFF-01),
+`CURSOR_RESULT_EPSF_CORE_04.md` (R-R2, R-P2, R-K0; error 25).
 
 ## D-EPSF-SWAP-DIFF-01 (Milan 2026-09-14)
 

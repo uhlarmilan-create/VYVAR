@@ -1,0 +1,4 @@
+ptp_full_mmag,slope_mmag_per_0p1px,phase_rms_live_mmag,ptp_live_mmag,mean_bias_full_mmag,mean_bias_live_mmag,n_live_samples,osamp,source,builder,n_finite_off,note
+72.45203246797732,8.384488010776636,2.6736573454445542,10.648854982697344,-169.16144077567571,-193.42059988772738,441,2,CORE-03 delivered phase_bias_T1.csv,live 516 ePSF osamp=2,,
+1053.9380011434337,-152.33731701407697,42.02952263211507,186.13018698907797,713.2984668481904,570.2092343341282,441,3,phase_bias_osamp3.csv,build_epsf_model sandbox osamp=3,,
+,,,,,,0,4,phase_bias_osamp4.csv,build_epsf_model sandbox osamp=4,0.0,all noise-off cells n=0 (non-finite psf_flux)

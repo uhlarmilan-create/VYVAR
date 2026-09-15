@@ -2,6 +2,20 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- EPSF-CORE-04 measurement (R-R2, R-P2, R-K0)
+
+Reference arbitration, osamp phase probe, machinery knobs.
+Aperture arbiter = live `dao_flux` pinned AIJ flux-sum (not
+production mag_calib). A1 PSFEx vs aperture 12.44 / 15.69 mmag;
+A2 VYVAR vs aperture 8.50 / 14.07; A4 check aperture floor
+8.23. osamp=3/4 sandbox rebuilds via `build_epsf_model`; osamp=4
+pathological (non-finite bias); osamp=3 worse than osamp=2
+phase RMS 2.67. Knobs K1-K5: none lowers B1 vs aperture by
+>= 3 mmag (K3 moves toward PSFEx but not toward aperture).
+Architect error 25 recorded. CORE-03 summary.json regenerate
+already at `0528518`. No production change. Evidence:
+`CURSOR_RESULT_EPSF_CORE_04.md`.
+
 ## 2026-09-15 -- EPSF-CORE-03 measurement (R-Q3, R-Q4)
 
 Model-vs-truth phase bias, call-site replication, model swap.

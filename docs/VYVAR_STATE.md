@@ -1,6 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-CORE-03 2026-09-15.** Measurement complete:
+**Status:** **EPSF-CORE-04 2026-09-15.** Measurement complete:
+R-R2 (PSFEx vs aperture 12.44 / 15.69; DoD reference re-decide
+is Milan's), R-P2 (osamp=4 does not collapse phase; dithered
+build), R-K0 (no listed knob moves B1 vs aperture by >= 3 mmag).
+Architect error 25 recorded (CORE-03 R-Q4 ptp vs RMS).
+EPSF-XVAL-01 stays OPEN (D-EPSF-XVAL-DOD-01). No `psf_flux`
+fix; 520 era re-cut is Milan's. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-CORE-03 2026-09-15.** Measurement complete:
 R-Q3 (MACHINERY/SKY: B2/B3 stay >= 10 mmag on the check) and
 R-Q4 (PHASE: T1 slope x 0.102 px spread = 8.56 mmag of the
 10.48 target RMS). Part B gate 1.0 FAIL; floor 1.396 mmag;

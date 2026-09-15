@@ -1,0 +1,182 @@
+{
+  "architect_error_25": "CORE-03 R-Q4 'slope x observed phase spread' is a peak-to-peak quantity, not RMS. '8.56 of 10.48' over-states the phase share. Correct: ptp over the 0.095 px live window ~8 mmag; RMS (uniform phase) = ptp/sqrt(12) ~2.3 mmag; empirical share from CORE-01 target phase rank R^2 0.221 ~4.9 mmag in quadrature. Phase is a co-driver, not 82% of the target residual. R-Q3 stands unchanged.",
+  "core03_summary_fix": "0528518 regenerated session_20260914_epsf_core_03/summary.json from delivered CSVs.",
+  "rms_definition": "RMS_med(d)=sqrt(mean((d-median(d))^2)) over the 134 identical-ensemble epochs, mmag.",
+  "phase_rms_definition": "bilinear interpolate noise-off bias surface over the live window, sample uniformly, sqrt(var); ptp alongside.",
+  "part_a": {
+    "aperture_product": "live proc CSV column dao_flux (Archive/.../proc_*.csv); aperture_r_px median=5.749 (snr_table); fwhm_px_for_aperture=3.3014 per-draft gaussian override; annulus APERTURE-01d 2.7/5.2 FWHM. Rebuilt pinned 4-star AIJ flux-sum diff LC (same ensemble as A2-COMPARE). Production LC mag_calib uses a larger comp pool and is NOT used here.",
+    "n_epochs": 134,
+    "n_finite_ap_target": 134,
+    "epochs_lost": [],
+    "population": "134 identical-ensemble epochs; RMS_med in mmag",
+    "rows": [
+      {
+        "id": "A1",
+        "comparison": "PSFEx cat vs aperture",
+        "target_rms_med_mmag": 12.441704487895414,
+        "check_rms_med_mmag": 15.690788416095971,
+        "n": 134
+      },
+      {
+        "id": "A2",
+        "comparison": "VYVAR psf_flux vs aperture",
+        "target_rms_med_mmag": 8.495215586659414,
+        "check_rms_med_mmag": 14.072875012233597,
+        "n": 134
+      },
+      {
+        "id": "A3",
+        "comparison": "VYVAR psf_flux vs PSFEx cat (restate A2-COMPARE)",
+        "target_rms_med_mmag": 10.477593527268457,
+        "check_rms_med_mmag": 21.413326001846976,
+        "n": 134,
+        "a2_compare_target_mmag": 10.48,
+        "a2_compare_check_mmag": 21.41
+      },
+      {
+        "id": "A4",
+        "comparison": "aperture check-star RMS_med (arbiter noise floor)",
+        "target_rms_med_mmag": null,
+        "check_rms_med_mmag": 8.233729815464045,
+        "n": 134
+      }
+    ]
+  },
+  "part_b": {
+    "rows": [
+      {
+        "ptp_full_mmag": 72.45203246797732,
+        "slope_mmag_per_0p1px": 8.384488010776636,
+        "phase_rms_live_mmag": 2.6736573454445542,
+        "ptp_live_mmag": 10.648854982697344,
+        "mean_bias_full_mmag": -169.16144077567571,
+        "mean_bias_live_mmag": -193.42059988772738,
+        "n_live_samples": 441,
+        "osamp": 2,
+        "source": "CORE-03 delivered phase_bias_T1.csv",
+        "builder": "live 516 ePSF osamp=2"
+      },
+      {
+        "ptp_full_mmag": 1053.9380011434337,
+        "slope_mmag_per_0p1px": -152.33731701407697,
+        "phase_rms_live_mmag": 42.02952263211507,
+        "ptp_live_mmag": 186.13018698907797,
+        "mean_bias_full_mmag": 713.2984668481904,
+        "mean_bias_live_mmag": 570.2092343341282,
+        "n_live_samples": 441,
+        "osamp": 3,
+        "source": "phase_bias_osamp3.csv",
+        "builder": "build_epsf_model sandbox osamp=3",
+        "note": "fit_ok=False on probe cell; mean_bias +713 mmag (flux-scale collapse); phase surface larger than osamp=2"
+      },
+      {
+        "ptp_full_mmag": null,
+        "slope_mmag_per_0p1px": null,
+        "phase_rms_live_mmag": null,
+        "ptp_live_mmag": null,
+        "mean_bias_full_mmag": null,
+        "mean_bias_live_mmag": null,
+        "n_live_samples": 0,
+        "n_finite_off": 0,
+        "osamp": 4,
+        "source": "phase_bias_osamp4.csv",
+        "builder": "build_epsf_model sandbox osamp=4",
+        "note": "all noise-off cells non-finite bias; single-cell probe: psf_flux=-76, fit_ok=False, chi2=4663; ePSF FWHM QC null, peak/min ~+/-0.5 ringing"
+      }
+    ],
+    "truth": "T1 PSFEx deg2 Light_076; never ImagePSF.",
+    "builder_cite": "psf_photometry.build_epsf_model (psf_photometry.py:1357)"
+  },
+  "part_c": {
+    "rows": [
+      {
+        "knob": "baseline",
+        "cite": "CORE-02 kwargs, live ePSF, no patch",
+        "target_vs_psfex_mmag": 10.460975002221018,
+        "check_vs_psfex_mmag": 21.270741074187715,
+        "target_vs_aperture_mmag": 8.794027161093766,
+        "check_vs_aperture_mmag": 13.936137942231522,
+        "floor_mmag": 1.396,
+        "n": 134
+      },
+      {
+        "knob": "K1",
+        "cite": "patch _psf_resolve_gain_read_noise -> (0.637067, 15.2); model-based err map uses these (psf_photometry.py:2262, 3117)",
+        "target_vs_psfex_mmag": 10.22483247186535,
+        "check_vs_psfex_mmag": 20.72200687091792,
+        "target_vs_aperture_mmag": 8.865467287502826,
+        "check_vs_aperture_mmag": 13.587407640325022,
+        "floor_mmag": 1.396,
+        "n": 134
+      },
+      {
+        "knob": "K2",
+        "cite": "patch _fit_shape_for_cutout -> (13,13); production is ceil(2*fwhm_px+1) odd, meta fwhm 3.3014 -> 9x9 (psf_photometry.py:337-351, 2819)",
+        "target_vs_psfex_mmag": 11.997248407136563,
+        "check_vs_psfex_mmag": 24.008506632393335,
+        "target_vs_aperture_mmag": 11.475982242393462,
+        "check_vs_aperture_mmag": 16.93791737596528,
+        "floor_mmag": 1.396,
+        "n": 134
+      },
+      {
+        "knob": "K3",
+        "cite": "patch _psf_fit_error_cutout_full_ccd -> ones (uniform weights)",
+        "target_vs_psfex_mmag": 4.922682377165309,
+        "check_vs_psfex_mmag": 9.927628885147012,
+        "target_vs_aperture_mmag": 12.651069692393662,
+        "check_vs_aperture_mmag": 13.346618781983842,
+        "floor_mmag": 1.396,
+        "n": 134
+      },
+      {
+        "knob": "K4",
+        "cite": "patch _psf_annulus_radii_px inner/outer 4.0/8.0 FWHM (production residual annulus defaults 2.7/5.2 via AppConfig; psf_photometry.py:2065-2083, 2184)",
+        "target_vs_psfex_mmag": 10.491488408772673,
+        "check_vs_psfex_mmag": 21.422534823484614,
+        "target_vs_aperture_mmag": 8.554043716996583,
+        "check_vs_aperture_mmag": 14.080848511253663,
+        "floor_mmag": 1.396,
+        "n": 134
+      },
+      {
+        "knob": "K5",
+        "cite": "K1+K2 together",
+        "target_vs_psfex_mmag": 11.443971461637792,
+        "check_vs_psfex_mmag": 22.964753357528682,
+        "target_vs_aperture_mmag": 11.146028895661379,
+        "check_vs_aperture_mmag": 15.940324557811799,
+        "floor_mmag": 1.396,
+        "n": 134
+      }
+    ],
+    "elapsed_s": 2437.690007899997,
+    "cites": {
+      "K1": "patch _psf_resolve_gain_read_noise -> (0.637067, 15.2); model-based err map uses these (psf_photometry.py:2262, 3117)",
+      "K2": "patch _fit_shape_for_cutout -> (13,13); production is ceil(2*fwhm_px+1) odd, meta fwhm 3.3014 -> 9x9 (psf_photometry.py:337-351, 2819)",
+      "K3": "patch _psf_fit_error_cutout_full_ccd -> ones (uniform weights)",
+      "K4": "patch _psf_annulus_radii_px inner/outer 4.0/8.0 FWHM (production residual annulus defaults 2.7/5.2 via AppConfig; psf_photometry.py:2065-2083, 2184)",
+      "K5": "K1+K2 together",
+      "baseline": "CORE-02 kwargs, live ePSF, no patch"
+    }
+  },
+  "readings": [
+    "R-R2: A1 >= 10.0 mmag on EITHER star; no PSF method reaches 3 mmag against the arbiter.",
+    "R-P2: osamp=4 does not collapse the phase component; dithered build required.",
+    "R-K0: no knob moves B1 vs aperture by >= 3.0 mmag."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}
