@@ -80,8 +80,8 @@ None.
 
 ## Gates
 
-`--fast --clean` PENDING at commit time; stamped after PASS.
-`a2/` never staged.
+`--fast --clean` OVERALL PASS on `9dfa462` (1629 passed, 34
+skipped; clean-tree PASS). `a2/` never staged.
 
 ## STOP
 
