@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- LEDGER-EPSF-DOD-03 (docs)
+
+D-EPSF-XVAL-DOD-03 supersedes DOD-02. PRECISION G-domain split
+(D: G>=9.5; bright-end admission/picker). ACCURACY rebased on
+Gaia-transformed m_cat (|b|<=5, resid RMS<=25; c recorded).
+D-EPSF-PHASE-ROUTES-01 (osamp>=3 blocked on BUILD-OSAMP-01;
+dithered AK under TODO-A). Literature memo filed. Architect
+errors 27-28. EPSF-VAL-02 is its own task. Evidence:
+`CURSOR_RESULT_LEDGER_EPSF_DOD_03.md`.
+
 ## 2026-09-15 -- EPSF-VAL-01 measurement (R-V1, R-V2, R-V3)
 
 PSF-path validation under D-EPSF-XVAL-DOD-02 criteria 1-2 on

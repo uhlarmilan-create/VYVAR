@@ -6,7 +6,104 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## D-EPSF-XVAL-DOD-02 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-01
+## D-EPSF-XVAL-DOD-03 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-02
+
+Basis: VAL-01 (R-V1/R-V2 FAIL) read against the literature check
+(C1-C7; `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`). Criterion 2
+of DOD-02 measured the aperture path's missing curve-of-growth
+correction (audit D5-1; Howell 1989; Stetson 1990), not PSF
+accuracy - architect error 27. Criterion 1 failed only on the bright
+end, which is the documented behaviour of the method class
+(Sokolovsky et al. 2017: aperture ~2x more accurate than PSFEx on
+the brightest stars; Nardiello 2015; Libralato 2016; Irwin 1997).
+
+EPSF-XVAL-01 remains OPEN. The PSF path is VALIDATED when, on an
+identical epoch set and the pinned ensemble, all three hold:
+
+1. PRECISION (per G bin). On constant stars selected as in VAL-01,
+   r(s) = RMS_med(PSF diff LC) / RMS_med(aperture diff LC), V-prod
+   admission:
+   - Domain D = stars with G >= 9.5 (the PSF path's justified
+     domain): median r <= 1.25 and max r <= 1.50.
+   - Bright end G < 9.5: no ratio criterion. Instead an ADMISSION
+     test: epochs with psf_fit_ok == False must be routed to the
+     aperture method by the science-method picker
+     (photometry_lightcurve.py:2393 region), verified in code and
+     end-to-end on >= 2 bright stars in the 516 products. Any
+     psf_fit_ok == False epoch that reaches a science LC as PSF is a
+     FAIL.
+2. ACCURACY (common-scale reference). For the PSF path, per-star
+   offset d(s) = median_epochs(m_psf_inst - m_cat), where m_cat is
+   the production Gaia-transformed catalogue magnitude for the
+   system's declared band (cite the transform and band mapping,
+   D10-1 open), over stars with n_ok >= 100 and 8.5 <= G <= 12.5.
+   Simultaneous robust fit d = a + b*(G - 10) + c*(BP-RP - 1.0).
+   Criterion on the flux-scale linearity only: |b| <= 5.0 mmag/mag
+   and residual RMS <= 25 mmag. The colour term c is RECORDED (it is
+   the system's colour response; feeds D10-1), not a criterion. The
+   same fit on the aperture path (raw per-star apertures) is RECORDED
+   against D5-1, not a criterion.
+3. CODE: as DOD-02 criterion 3 (FIT-OK-ADMISSION-01, GAIN-FALSY-01,
+   FIXPOS-NOOP-01 fixed and gated at the 520 era re-cut).
+
+Thresholds are Milan's to adjust before EPSF-VAL-02 runs; frozen once
+it runs. Closure of EPSF-XVAL-01 = this DoD via EPSF-VAL-02
+(criteria 1, 2) + the fix list at the 520 era re-cut. VAL-01 under
+DOD-02 stays on the record as historical (superseded bar / wrong
+criterion-2 reference).
+
+Scope statement for the paper: on this rig (FWHM ~2.4 px,
+9.77"/px, undersampled), the aperture path is the science product
+for bright targets; the PSF path is a faint/crowded-field method
+with a literature-expected bright-end precision deficit handled by
+psf_fit_ok admission and picker fallback.
+
+Until closure, the PSF path stays internal-diagnostic
+(NOT FOR AAVSO/VARASTRO SUBMISSION sidecar wording unchanged).
+
+### Fix list bound to the 520 era re-cut (unchanged from DOD-02)
+
+- FIT-OK-ADMISSION-01 (`psf_internal_lc.py:124-134` mask).
+- GAIN-FALSY-01 (`psf_photometry.py:2268-2270` `value or 1.0`;
+  authority g_pt 0.637067 / RN 15.2 per
+  `gain_photon_transfer.json` and pipeline_meta
+  `resolved_facts`).
+- FIXPOS-NOOP-01 (`psf_photometry.py:2431-2440` on
+  IterativePSFPhotometry; EXC-0454).
+- Already bound: RED-TARGET-T4 reland + micro-measurement;
+  LC-CSV `skip_reason` unification.
+
+Evidence: `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`,
+`CURSOR_RESULT_EPSF_VAL_01.md` (R-V1/R-V2/R-V3 under DOD-02),
+`CURSOR_RESULT_LEDGER_EPSF_DOD_03.md` (errors 27-28),
+`CURSOR_RESULT_EPSF_CORE_04.md`, `CURSOR_RESULT_EPSF_CORE_03.md`.
+
+## D-EPSF-PHASE-ROUTES-01 (Milan 2026-09-15)
+
+Two literature-backed routes for the phase component (CORE-03 T1),
+neither required for the aperture science product:
+- Route A: correct osamp >= 3 ePSF build (RASTI 2025: ~0.1% pixel-
+  phase error at osamp 3 for Gaussian-like ePSF) - BLOCKED on
+  EPSF-BUILD-OSAMP-01.
+- Route B: dithered Anderson & King (2000) build - TODO-A sub-item.
+
+Literature: `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md` C2-C3.
+Evidence: `CURSOR_RESULT_EPSF_CORE_03.md` (T1),
+`CURSOR_RESULT_EPSF_CORE_04.md` (R-P2 re-read),
+`CURSOR_RESULT_LEDGER_EPSF_DOD_03.md`.
+
+## D-EPSF-XVAL-DOD-02 (Milan 2026-09-15) - SUPERSEDED by D-EPSF-XVAL-DOD-03
+
+Historical. Closed-on SUCCESS was: PRECISION ratio vs aperture on
+>=4 check-class stars (median <= 1.25, max <= 1.50); ACCURACY
+PSF-minus-aperture slopes vs G and BP-RP; CODE =
+FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 at the 520
+re-cut. Superseded: criterion 2 used raw per-star apertures as
+reference (audit D5-1 / error 27); criterion 1 had no G-domain
+split for the literature-expected bright-end deficit. VAL-01
+R-V1/R-V2/R-V3 FAIL under this bar is historical.
+
+Original DOD-02 text (kept for the record):
 
 Rationale: the DOD-01 bar (<= 3.0 mmag vs PSFEx) was transferred
 from an aperture-vs-aperture precedent (1.9503 mmag vs AIJ: same

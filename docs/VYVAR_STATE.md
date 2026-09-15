@@ -1,6 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-VAL-01 2026-09-15.** Measured D-EPSF-XVAL-DOD-02
+**Status:** **LEDGER-EPSF-DOD-03 2026-09-15.** D-EPSF-XVAL-DOD-03
+supersedes DOD-02 (G-domain precision; Gaia m_cat accuracy;
+admission picker on bright end). D-EPSF-PHASE-ROUTES-01 recorded.
+Architect errors 27-28. Literature memo
+`docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`. EPSF-XVAL-01 stays
+OPEN (closes via EPSF-VAL-02 + 520). VAL-01 under DOD-02 historical.
+No code. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-VAL-01 2026-09-15.** Measured D-EPSF-XVAL-DOD-02
 criteria 1-2 on live 516: R-V1 FAIL (median r=1.119, max r=2.330;
 7 offenders >1.50), R-V2 FAIL (|b|=111.4, resid RMS=73.0,
 |c|=176.9 mmag), R-V3 FAIL. Criterion 3 (520 fix list) still

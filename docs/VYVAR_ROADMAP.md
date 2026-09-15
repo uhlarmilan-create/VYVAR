@@ -31,6 +31,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **BATCH-E-PARAMS-REGISTRY** | Batch-E params registry leftover if any | Cursor | LOW |
 | **BIN-8-9-REGRESSION-01** | Bin 8/9 regression leftover | Cursor | LOW |
 | **BPM-SIDECAR-PATH** | No *_dark_bpm.json found; path dead/disabled/outside tree unresolved | Cursor | forensics |
+| **BRIGHTER-FATTER-01** | Flux-dependent PSF shape at high signal (Guyonnet et al. 2015 / PTC nonlinearity); unmeasured; link to audit D1-2. Literature C7 | Cursor | LOW |
 | **C-1** | Admission gate: predicted per-epoch SNR (g_lim + Labbe sigma_bkg_ap) | Cursor | TODO-C |
 | **C-2** | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags | Cursor | TODO-C |
 | **CAL-AGE-CLOCK** | Calibration master age clock | Cursor | LOW |
@@ -48,11 +49,11 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **DB-RETIRE-01** | Retire stale DB paths | Cursor | FUTURE |
 | **DEPTH-AUTH-01** | Derive masterstar_gaia_census_target_depth_g from MASTERSTAR completeness vs Gaia; G=15.56 VSX absent | Cursor | not wired |
 | **DRAFT451-CAL-FRAME001** | Draft 451 frame-001 calibrated product differs 659.6 ADU; root cause needs 451 cal logs | Cursor | logs |
-| **EPSF-BUILD-OSAMP-01** | `build_epsf_model` sandbox at osamp 3/4 from the same 67-star funnel yields pathological models (osamp=3 flux-scale +713 mmag, fit_ok False; osamp=4 ringing, non-finite). Production uses osamp=2; record only | Cursor | LOW |
+| **EPSF-BUILD-OSAMP-01** | `build_epsf_model` sandbox at osamp 3/4 from the 67-star funnel yields pathological models (osamp=3 flux-scale +713 mmag; osamp=4 ringing, non-finite). Production osamp=2 unaffected. Blocks D-EPSF-PHASE-ROUTES-01 Route A | Cursor | MED |
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | A2 R-A2-3 historical. EPSF-VAL-01 measured criteria 1-2 on 516: R-V1/R-V2/R-V3 FAIL. Closes on D-EPSF-XVAL-DOD-02 after criterion 3 at 520 re-cut (FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01); sequencing Milan's | Milan | D-EPSF-XVAL-DOD-02 |
+| **EPSF-XVAL-01** | VAL-01 under DOD-02 historical (R-V1/R-V2/R-V3 FAIL). Closes on D-EPSF-XVAL-DOD-03 via EPSF-VAL-02 (criteria 1-2) + 520 re-cut (criterion 3: FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01) | Milan | D-EPSF-XVAL-DOD-03 |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
@@ -67,6 +68,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **INPUT-PATH-ARCH-01** | Discussion: non-cal stays; raw-without-masters split | Milan | discussion |
 | **INSTALL-GAIA-DEC-CUTOUT** | INSTALL should lead with declination cutout decision for Gaia builder | Cursor | docs |
 | **INSTALL-MANUAL** | New-user install manual + T460 installer including catalogs | Milan | TODO-LIB |
+| **IPS-01** | Intra-pixel sensitivity of IMX-class CMOS under FWHM ~2.4 px (Lauer 1999); unmeasured; needs dithered data. Literature C7 | Cursor | LOW |
 | **K2-DATA-BLOCKER** | K2 data blocker | Milan | data |
 | **K2-SLOPE-TRACE** | K2 slope trace | Cursor | K2-DATA-BLOCKER |
 | **K2-SLOPE-UG** | K2 slope UG | Cursor | K2-DATA-BLOCKER |
@@ -107,7 +109,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **TIER1-OBSLOC-ZERO** | Observer location zero hygiene | Cursor | LOW |
 | **TIER1-UI-DEBT** | Tier-1 UI debt | Cursor | LOW |
 | **TODO-9** | Superseded/extended by INSTALL-MANUAL | Milan | INSTALL-MANUAL |
-| **TODO-A** | Median/sigma-clip MASTERSTAR stack of best N frames ranked by I_j; provenance; DAO recalibration; optional: dithered ePSF build (Anderson & King 2000) for the phase component if crowded/faint PSF use is needed | Cursor | audit Steps 1-6 |
+| **TODO-A** | Median/sigma-clip MASTERSTAR stack of best N frames ranked by I_j; provenance; DAO recalibration; optional: dithered ePSF build (Anderson & King 2000) = D-EPSF-PHASE-ROUTES-01 Route B for the phase component if crowded/faint PSF use is needed | Cursor | audit Steps 1-6 |
 | **TODO-B** | Zackay & Ofek proper coaddition; blocked on CR, uncorrelated inputs, per-frame PSF | Cursor | CR-REJECTION |
 | **TODO-BROAD-EXCEPT-HYGIENE** | Broad-except tier-1 leftover (~25) | Cursor | LOW |
 | **TODO-C** | Admission gate vs detection threshold; CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE flags | Cursor | audit Steps 7-8 |
@@ -161,11 +163,12 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **EDGE-ANNULUS-01** -- CLOSED-DECIDED Milan 2026-08-31: edge stars not used; full on-chip aperture+annulus.
 - **EPSF-AC-01** -- Closed in ePSF AC measurement arc 2026-08-24.
 - **EPSF-AC-02** -- Closed/wired in ePSF AC arc; Newton ZP-OK still open as EPSF-ZP-OK-XRIG-01.
-- **EPSF-CORE-01** -- CLOSED 2026-09-15 investigation complete (CORE-01..04). Findings: machinery self-consistent ~1 mmag (model==truth); shape not a driver (R-SH3); peak/non-linearity not a driver (R-P0); model swap does not help (R-Q3); phase co-driver (R-Q4 corrected per error 25); reference arbitration R-R2; osamp probe R-P2; knobs R-K0. Defects FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded for the 520 re-cut under D-EPSF-XVAL-DOD-02. Evidence `CURSOR_RESULT_EPSF_CORE_01.md` .. `CURSOR_RESULT_EPSF_CORE_04.md`.
+- **EPSF-CORE-01** -- CLOSED 2026-09-15 investigation complete (CORE-01..04). Findings: machinery self-consistent ~1 mmag (model==truth); shape not a driver (R-SH3); peak/non-linearity not a driver (R-P0); model swap does not help (R-Q3); phase co-driver (R-Q4 corrected per error 25); reference arbitration R-R2; osamp probe R-P2 re-read per literature check C3 / error 28: NOT MEASURED (builder), not excluded; knobs R-K0. Defects FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded for the 520 re-cut under D-EPSF-XVAL-DOD-03. Evidence `CURSOR_RESULT_EPSF_CORE_01.md` .. `CURSOR_RESULT_EPSF_CORE_04.md`; lit `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`.
 - **EPSF-CORE-02** -- CLOSED 2026-09-14 measurement complete. Reading R-P0. H-PEAK unsupported: check calibrated-grid p95 peak 45260 ADU (0/134 above 60000 or 52428); A1 rank R^2=0.005. Part B winners: target r_phase R^2=0.221, check psf_chi2 R^2=0.214 (not fwhm_psfex). Part C B1 still 1.396 mmag (gate 1.0); toggles i-iv do not close it; B2 void. Defects GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded, not fixed. Architect error 23 recorded. Evidence `CURSOR_RESULT_EPSF_CORE_02.md`.
 - **EPSF-CORE-03** -- CLOSED 2026-09-15 measurement complete. Readings R-Q3 and R-Q4. T1 (PSFEx truth, ePSF fit) 0.1 px window slope 8.384 mmag/0.1px x 0.102 px spread = 8.56 mmag of the 10.48 target RMS. Call-site kwargs bit-identical on the 5-frame probe; 804-row B1 vs frozen 1.396 mmag (gate 1.0 FAIL; floor 1.396). Model swap: B2 vs PSFEx cat 12.98 / 23.70 mmag; B3 10.02 / 15.14; R-Q1/Q2 do not fire. B2 residual phase R^2 0.075 (was 0.221), did not vanish. D-EPSF-SWAP-DIFF-01 and architect error 24 recorded. Evidence `CURSOR_RESULT_EPSF_CORE_03.md`.
-- **EPSF-CORE-04** -- CLOSED 2026-09-15 measurement complete. Readings R-R2, R-P2, R-K0. PSFEx vs aperture 12.44 / 15.69 mmag. osamp=4 sandbox ePSF pathological; osamp=3 worse than osamp=2. No listed machinery knob lowers B1 vs aperture by >= 3 mmag. Architect error 25 recorded (R-Q4 ptp vs RMS). Evidence `CURSOR_RESULT_EPSF_CORE_04.md`.
+- **EPSF-CORE-04** -- CLOSED 2026-09-15 measurement complete. Readings R-R2, R-P2, R-K0. PSFEx vs aperture 12.44 / 15.69 mmag. osamp=4 sandbox ePSF pathological; osamp=3 worse than osamp=2. R-P2 re-read (lit C3 / error 28): "sampling alone does not fix the phase component" is NOT MEASURED (builder failure EPSF-BUILD-OSAMP-01), not excluded; Route A remains open under D-EPSF-PHASE-ROUTES-01 after a correct osamp>=3 build. No listed machinery knob lowers B1 vs aperture by >= 3 mmag. Architect error 25 recorded (R-Q4 ptp vs RMS). Evidence `CURSOR_RESULT_EPSF_CORE_04.md`.
 - **EPSF-SHAPE-01** -- CLOSED 2026-09-14 measurement complete (`8fee250`). Reading R-SH3: shape unsupported as LC-level driver (rank R^2 <= 0.023 all four tests). Standalone: spatial FWHM spread (check-target -0.0395 px) exceeds frame-to-frame seeing std (0.0286 px) on the 134-frame set; headline FWHM differences under 5% (-0.59% target / +1.93% check). Next suspect EPSF-CORE-01. Evidence `CURSOR_RESULT_EPSF_SHAPE_01.md`.
+- **EPSF-VAL-01** -- CLOSED-HISTORICAL 2026-09-15 under D-EPSF-XVAL-DOD-02 (R-V1/R-V2/R-V3 FAIL). Superseded bar; criterion 2 reference wrong per error 27 / D5-1. Re-measure under DOD-03 is EPSF-VAL-02. Evidence `CURSOR_RESULT_EPSF_VAL_01.md`.
 - **EPSF-VALID-02** -- CLOSED 2026-08-22 gated 67-star production ePSF on 516.
 - **ERA-03** -- era03 freeze kept on disk; superseded as --full gate by era04.
 - **EXCEPT-BULK** -- CLOSED 2026-07-08 silent broad-except census.
