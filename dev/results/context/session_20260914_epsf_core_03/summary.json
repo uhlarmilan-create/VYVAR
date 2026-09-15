@@ -50,7 +50,7 @@
         0.875,
         1.0
       ],
-      "noise_off_ptp_mmag": 72.45203246797729,
+      "noise_off_ptp_mmag": 72.45203246797732,
       "noise_on_ptp_mmag": 72.84097536103621,
       "slope_mmag_per_0p1px_noise_off": 8.384488010776636,
       "slope_theilsen_fullgrid_mmag_per_0p1px": 0.9496752504251461,
@@ -82,9 +82,9 @@
         0.875,
         1.0
       ],
-      "noise_off_ptp_mmag": 48.98702170353113,
-      "noise_on_ptp_mmag": 50.13084898006048,
-      "slope_mmag_per_0p1px_noise_off": -0.166201631668082,
+      "noise_off_ptp_mmag": 48.9870217035311,
+      "noise_on_ptp_mmag": 50.13084898006045,
+      "slope_mmag_per_0p1px_noise_off": -0.1662016316680365,
       "slope_theilsen_fullgrid_mmag_per_0p1px": 0.19078165952488463,
       "slope_window_dx": [
         0.5,
@@ -93,7 +93,7 @@
       "slope_window_dy": 0.5,
       "init": "integer peak (x_int), replicating proc peaks; true = x_int + (dx, dy)",
       "observed_phase_spread_px": 0.1020999999999504,
-      "predicted_target_rms_mmag": 0.16969186593302926,
+      "predicted_target_rms_mmag": 0.1696918659329828,
       "observed_target_rms_mmag": 10.48,
       "n_realizations_noise_on": 30,
       "n_realizations_noise_off": 1,
@@ -263,5 +263,30 @@
       "prefix": "172f9540",
       "verdict": "PASS"
     }
+  },
+  "part_a_regenerated": {
+    "utc": "2026-09-15T12:53:32Z",
+    "source": "phase_bias_T1.csv + phase_bias_T2.csv (integer-peak-init delivered)",
+    "prior_t1_ptp_on_disk": 72.45203246797729,
+    "prior_t1_slope_on_disk": 8.384488010776636,
+    "t1_from_csv": {
+      "noise_off_ptp_mmag": 72.45203246797732,
+      "noise_on_ptp_mmag": 72.84097536103621,
+      "slope_mmag_per_0p1px_noise_off": 8.384488010776636,
+      "predicted_target_rms_mmag": 8.560562258998786,
+      "observed_phase_spread_px": 0.1020999999999504,
+      "n_off": 81,
+      "n_on_rows": 81
+    },
+    "t2_from_csv": {
+      "noise_off_ptp_mmag": 48.9870217035311,
+      "noise_on_ptp_mmag": 50.13084898006045,
+      "slope_mmag_per_0p1px_noise_off": -0.1662016316680365,
+      "predicted_target_rms_mmag": 0.1696918659329828,
+      "observed_phase_spread_px": 0.1020999999999504,
+      "n_off": 81,
+      "n_on_rows": 81
+    },
+    "note": "CORE-04 housekeeping: regenerate part_a headlines from delivered CSVs."
   }
 }
