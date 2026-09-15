@@ -183,7 +183,8 @@ as previously ledgered (not re-fired here).
 
 G4 live 516 read-only after run: csv `bfa24039` / fits
 `13e77cf8` / epsf `172f9540` (all PASS). `--fast --clean`
-reported below after the gate run. a2/ never staged.
+OVERALL PASS on `5c484e2` (1629 passed, 34 skipped;
+clean-tree PASS). a2/ never staged.
 
 ## STOP
 
