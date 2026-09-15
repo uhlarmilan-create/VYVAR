@@ -142,7 +142,8 @@ None new. Architect errors 27-28 remain as ledgered under DOD-03.
 ## Gates
 
 G4 live 516: csv `bfa24039` / fits `13e77cf8` / epsf `172f9540`
-(all PASS). `--fast --clean` PENDING then stamped. a2/ never staged.
+(all PASS). `--fast --clean` OVERALL PASS on `4d3ff7e` (1629
+passed, 34 skipped; clean-tree PASS). a2/ never staged.
 
 ## STOP
 
