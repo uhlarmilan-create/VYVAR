@@ -1,0 +1,6 @@
+consumer,location,honours_psf_fit_ok,notes
+compute_lc_flux_method (adaptive picker),photometry_lightcurve.py:2355-2398,True,psf_usable requires psf_fit_ok AND finite psf_flux>0 AND psf_quality!='bad' AND psf_ac_applied; else aperture. Only faint+good routes to psf.
+Phase2A primary science LC (mag_calib path),"phase2a_target.py:681-694,1442",True,_lc_export_method hard-coded 'aperture'. Primary published LC is always aperture regardless of adaptive column. psf_adaptive_enabled=false on config.json (516).
+photometry_exports._get_lc_psf_strict,photometry_exports.py:99-117,True,PSF-only inst mag NaN unless psf_fit_ok AND psf_ac_applied.
+psf_internal_lc (diagnostic sidecar),psf_internal_lc.py:124-134 fit_ok_for_zp,False,FIT-OK-ADMISSION-01: admits finite flux+chi2 without psf_fit_ok. Sidecar header NOT FOR AAVSO/VARASTRO SUBMISSION; not a science LC (INV-PSF-SUBMIT-01).
+export_reports AAVSO/VarAstro writers,export_reports.py INV-PSF-SUBMIT-01 ~988,True,Hard-refuse lc_method psf/adaptive; science exports aperture-only.

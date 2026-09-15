@@ -2,6 +2,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-15 -- EPSF-VAL-02 measurement (R-W1..R-W4)
+
+PSF-path validation under D-EPSF-XVAL-DOD-03 criteria 1-2 on
+live 516. Precision from VAL-01 V-prod: domain D (G>=9.5) n=37
+median r=1.049 max r=1.415 -> R-W1 PASS. Admission: science LC
+method column all aperture (0/8040 PSF); picker/primary honour
+fit_ok -> R-W2 PASS. Accuracy vs GDR3 Table 5.9 V: |b|=6.4,
+resid RMS=519 mmag -> R-W3 FAIL; c=+140 recorded. R-W4 FAIL on
+R-W3. No production change. Evidence:
+`CURSOR_RESULT_EPSF_VAL_02.md`.
+
 ## 2026-09-15 -- LEDGER-EPSF-DOD-03 (docs)
 
 D-EPSF-XVAL-DOD-03 supersedes DOD-02. PRECISION G-domain split

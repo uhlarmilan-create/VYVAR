@@ -1,6 +1,13 @@
 # VYVAR -- Development State
 
-**Status:** **LEDGER-EPSF-DOD-03 2026-09-15.** D-EPSF-XVAL-DOD-03
+**Status:** **EPSF-VAL-02 2026-09-15.** Measured D-EPSF-XVAL-DOD-03
+criteria 1-2 on live 516: R-W1 PASS (domain D median r=1.049 max
+1.415), R-W2 PASS (admission; 0 science epochs as PSF), R-W3 FAIL
+(|b|=6.4, resid RMS=519 mmag), R-W4 FAIL on R-W3. Criterion 3 still
+at 520. EPSF-XVAL-01 stays OPEN; sequencing Milan's. No production
+change. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**LEDGER-EPSF-DOD-03 2026-09-15.** D-EPSF-XVAL-DOD-03
 supersedes DOD-02 (G-domain precision; Gaia m_cat accuracy;
 admission picker on bright end). D-EPSF-PHASE-ROUTES-01 recorded.
 Architect errors 27-28. Literature memo

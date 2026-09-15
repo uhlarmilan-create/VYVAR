@@ -1,0 +1,749 @@
+{
+  "thresholds_quoted_from_HEAD": {
+    "decision": "D-EPSF-XVAL-DOD-03",
+    "commit": "23e2680",
+    "file": "docs/VYVAR_DECISIONS.md",
+    "criterion_1_verbatim": "PRECISION (per G bin). On constant stars selected as in VAL-01, r(s) = RMS_med(PSF diff LC) / RMS_med(aperture diff LC), V-prod admission: Domain D = stars with G >= 9.5: median r <= 1.25 and max r <= 1.50. Bright end G < 9.5: no ratio criterion; ADMISSION test on psf_fit_ok routing (photometry_lightcurve.py:2393 region).",
+    "criterion_2_verbatim": "ACCURACY: d(s)=median_epochs(m_psf_inst - m_cat); simultaneous robust fit d=a+b*(G-10)+c*(BP-RP-1.0); |b|<=5.0 mmag/mag and residual RMS<=25 mmag; c RECORDED; aperture fit RECORDED vs D5-1.",
+    "T1a": 1.25,
+    "T1b": 1.5,
+    "T2b": 5.0,
+    "T2r": 25.0
+  },
+  "precision": {
+    "source": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260915_epsf_val_01\\precision_per_star.csv",
+    "candidates_source": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20260915_epsf_val_01\\constant_star_candidates.csv",
+    "domain_D": "G>=9.5",
+    "n_domain": 37,
+    "median_r": 1.048568526855427,
+    "max_r": 1.4146797612003257,
+    "offenders": [],
+    "bright_n": 14,
+    "bright_median_r": 1.4970164846869052,
+    "bright_max_r": 2.32971566733583,
+    "per_star": [
+      {
+        "catalog_id": "1500296402219939584",
+        "G": 8.2427396774292,
+        "ratio": 1.795245766223065,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 12.888988976804574,
+        "rms_med_ap_mmag": 7.179512253590285
+      },
+      {
+        "catalog_id": "1497613731286514432",
+        "G": 8.45042610168457,
+        "ratio": 2.265966335310502,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 18.65735457588388,
+        "rms_med_ap_mmag": 8.233729815464045
+      },
+      {
+        "catalog_id": "1499906247391001088",
+        "G": 8.742789268493652,
+        "ratio": 1.7336613056823365,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 12.27460753182672,
+        "rms_med_ap_mmag": 7.080164673223566
+      },
+      {
+        "catalog_id": "1497442379271632384",
+        "G": 8.8513822555542,
+        "ratio": 1.9515666273029064,
+        "n_fit_ok": 4,
+        "psf_fit_ok_frac": 0.029850746268656716,
+        "rms_med_psf_mmag": 12.69538518143223,
+        "rms_med_ap_mmag": 6.505227648300913
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "G": 9.113396644592283,
+        "ratio": 1.437171046880952,
+        "n_fit_ok": 49,
+        "psf_fit_ok_frac": 0.3656716417910448,
+        "rms_med_psf_mmag": 12.029493957978548,
+        "rms_med_ap_mmag": 8.370259047512672
+      },
+      {
+        "catalog_id": "1497119157212720896",
+        "G": 9.131044387817385,
+        "ratio": 1.4565717142158885,
+        "n_fit_ok": 24,
+        "psf_fit_ok_frac": 0.1791044776119403,
+        "rms_med_psf_mmag": 10.621997488440536,
+        "rms_med_ap_mmag": 7.2924644799646146
+      },
+      {
+        "catalog_id": "1497528072458898432",
+        "G": 9.21760368347168,
+        "ratio": 1.537461255157922,
+        "n_fit_ok": 24,
+        "psf_fit_ok_frac": 0.1791044776119403,
+        "rms_med_psf_mmag": 12.303654222319082,
+        "rms_med_ap_mmag": 8.00257839411719
+      },
+      {
+        "catalog_id": "1500727513856914944",
+        "G": 9.23672103881836,
+        "ratio": 2.32971566733583,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 23.859464618687102,
+        "rms_med_ap_mmag": 10.241363335969597
+      },
+      {
+        "catalog_id": "1497674651102612992",
+        "G": 9.287351608276367,
+        "ratio": 1.1941091786995128,
+        "n_fit_ok": 13,
+        "psf_fit_ok_frac": 0.09701492537313433,
+        "rms_med_psf_mmag": 9.768761588881812,
+        "rms_med_ap_mmag": 8.180794321940336
+      },
+      {
+        "catalog_id": "1497203132413443328",
+        "G": 9.307086944580078,
+        "ratio": 1.4535236891171903,
+        "n_fit_ok": 35,
+        "psf_fit_ok_frac": 0.26119402985074625,
+        "rms_med_psf_mmag": 11.46387280407191,
+        "rms_med_ap_mmag": 7.886952851132813
+      },
+      {
+        "catalog_id": "1497370563121917952",
+        "G": 9.34685230255127,
+        "ratio": 1.2747674015278248,
+        "n_fit_ok": 110,
+        "psf_fit_ok_frac": 0.8208955223880597,
+        "rms_med_psf_mmag": 9.069887607049608,
+        "rms_med_ap_mmag": 7.11493531775227
+      },
+      {
+        "catalog_id": "1498326455340079616",
+        "G": 9.40735912322998,
+        "ratio": 1.7807891593631815,
+        "n_fit_ok": 4,
+        "psf_fit_ok_frac": 0.029850746268656716,
+        "rms_med_psf_mmag": 13.594450235395122,
+        "rms_med_ap_mmag": 7.633947098070026
+      },
+      {
+        "catalog_id": "1498062332030906880",
+        "G": 9.450702667236328,
+        "ratio": 1.236989664005251,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 13.773157602175331,
+        "rms_med_ap_mmag": 11.13441607715557
+      },
+      {
+        "catalog_id": "1497837207025312768",
+        "G": 9.452865600585938,
+        "ratio": 0.888344931808958,
+        "n_fit_ok": 129,
+        "psf_fit_ok_frac": 0.9626865671641791,
+        "rms_med_psf_mmag": 11.194055389567763,
+        "rms_med_ap_mmag": 12.601023531223444
+      },
+      {
+        "catalog_id": "1500460813567859456",
+        "G": 9.510027885437012,
+        "ratio": 1.054374152063413,
+        "n_fit_ok": 63,
+        "psf_fit_ok_frac": 0.4701492537313433,
+        "rms_med_psf_mmag": 9.62290821736344,
+        "rms_med_ap_mmag": 9.12665413746286
+      },
+      {
+        "catalog_id": "1496798993170465536",
+        "G": 9.52143669128418,
+        "ratio": 1.22686191647068,
+        "n_fit_ok": 10,
+        "psf_fit_ok_frac": 0.07462686567164178,
+        "rms_med_psf_mmag": 13.44885035505163,
+        "rms_med_ap_mmag": 10.96199187088634
+      },
+      {
+        "catalog_id": "1496948904709272576",
+        "G": 9.547781944274902,
+        "ratio": 0.9635620657973656,
+        "n_fit_ok": 130,
+        "psf_fit_ok_frac": 0.9701492537313433,
+        "rms_med_psf_mmag": 10.72367231557283,
+        "rms_med_ap_mmag": 11.129197273554755
+      },
+      {
+        "catalog_id": "1497617407778562304",
+        "G": 9.570152282714844,
+        "ratio": 1.215778385139146,
+        "n_fit_ok": 121,
+        "psf_fit_ok_frac": 0.9029850746268657,
+        "rms_med_psf_mmag": 11.216525042071012,
+        "rms_med_ap_mmag": 9.225797381475308
+      },
+      {
+        "catalog_id": "1497719902878053888",
+        "G": 9.597957611083984,
+        "ratio": 1.1225036775102497,
+        "n_fit_ok": 94,
+        "psf_fit_ok_frac": 0.7014925373134329,
+        "rms_med_psf_mmag": 12.398547168414105,
+        "rms_med_ap_mmag": 11.045440132467531
+      },
+      {
+        "catalog_id": "1501956561697995008",
+        "G": 9.621334075927734,
+        "ratio": 1.3275935431992212,
+        "n_fit_ok": 78,
+        "psf_fit_ok_frac": 0.582089552238806,
+        "rms_med_psf_mmag": 12.150008472154637,
+        "rms_med_ap_mmag": 9.151903859727785
+      },
+      {
+        "catalog_id": "1496984467038399744",
+        "G": 9.78660488128662,
+        "ratio": 0.9859393576139958,
+        "n_fit_ok": 133,
+        "psf_fit_ok_frac": 0.9925373134328358,
+        "rms_med_psf_mmag": 10.837334837841135,
+        "rms_med_ap_mmag": 10.991887841933632
+      },
+      {
+        "catalog_id": "1497758935541325824",
+        "G": 9.861004829406738,
+        "ratio": 1.1338182085274902,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 10.736612485179922,
+        "rms_med_ap_mmag": 9.46943028823267
+      },
+      {
+        "catalog_id": "1497145751650265600",
+        "G": 9.86292552947998,
+        "ratio": 1.048568526855427,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 10.696942508134402,
+        "rms_med_ap_mmag": 10.201472039422807
+      },
+      {
+        "catalog_id": "1500664876053883904",
+        "G": 9.86599826812744,
+        "ratio": 1.173718073183048,
+        "n_fit_ok": 27,
+        "psf_fit_ok_frac": 0.20149253731343283,
+        "rms_med_psf_mmag": 17.30315180784216,
+        "rms_med_ap_mmag": 14.74217037564832
+      },
+      {
+        "catalog_id": "1496994156484645632",
+        "G": 9.873327255249023,
+        "ratio": 1.1844935160603038,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 14.766396892053134,
+        "rms_med_ap_mmag": 12.466422729916708
+      },
+      {
+        "catalog_id": "1497313255374892800",
+        "G": 10.002345085144045,
+        "ratio": 1.1692254764040693,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 10.241016330428872,
+        "rms_med_ap_mmag": 8.758803615813198
+      },
+      {
+        "catalog_id": "1497726465588057344",
+        "G": 10.0562744140625,
+        "ratio": 1.1189748187073325,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.247675891472376,
+        "rms_med_ap_mmag": 10.051768550489788
+      },
+      {
+        "catalog_id": "1497196054307837696",
+        "G": 10.095192909240724,
+        "ratio": 0.9480258896636332,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.642165567917289,
+        "rms_med_ap_mmag": 12.280429991261125
+      },
+      {
+        "catalog_id": "1497976089087192832",
+        "G": 10.154465675354004,
+        "ratio": 1.0464701538372951,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.459840128895328,
+        "rms_med_ap_mmag": 10.95094789552603
+      },
+      {
+        "catalog_id": "1500486102335278592",
+        "G": 10.16754913330078,
+        "ratio": 1.0380108116155926,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 10.455349630724976,
+        "rms_med_ap_mmag": 10.07248625325197
+      },
+      {
+        "catalog_id": "1498812233320666368",
+        "G": 10.253812789916992,
+        "ratio": 1.2327918381636018,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.129247892633003,
+        "rms_med_ap_mmag": 9.027678110857236
+      },
+      {
+        "catalog_id": "1498020894186918144",
+        "G": 10.285472869873049,
+        "ratio": 1.174117131845424,
+        "n_fit_ok": 110,
+        "psf_fit_ok_frac": 0.8208955223880597,
+        "rms_med_psf_mmag": 9.231120711960973,
+        "rms_med_ap_mmag": 7.86218040908058
+      },
+      {
+        "catalog_id": "1496315070616056064",
+        "G": 10.428983688354492,
+        "ratio": 1.3610695714376548,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 13.268013458772035,
+        "rms_med_ap_mmag": 9.748225760978148
+      },
+      {
+        "catalog_id": "1497894828305963776",
+        "G": 10.472295761108398,
+        "ratio": 0.7855892917174246,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 12.194696970449678,
+        "rms_med_ap_mmag": 15.522992865381486
+      },
+      {
+        "catalog_id": "1500355466608253184",
+        "G": 10.500747680664062,
+        "ratio": 0.6467383819520313,
+        "n_fit_ok": 133,
+        "psf_fit_ok_frac": 0.9925373134328358,
+        "rms_med_psf_mmag": 22.626628493941272,
+        "rms_med_ap_mmag": 34.98575177438517
+      },
+      {
+        "catalog_id": "1504489595970703872",
+        "G": 10.509350776672363,
+        "ratio": 1.020656991291313,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.142827604199518,
+        "rms_med_ap_mmag": 10.917308850353196
+      },
+      {
+        "catalog_id": "1498994786610872576",
+        "G": 10.551580429077148,
+        "ratio": 0.9487996786499916,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 12.784715955321811,
+        "rms_med_ap_mmag": 13.474620874147703
+      },
+      {
+        "catalog_id": "1498626793812916480",
+        "G": 10.57188892364502,
+        "ratio": 1.0612583632047203,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 12.975425857733612,
+        "rms_med_ap_mmag": 12.226453338422935
+      },
+      {
+        "catalog_id": "1502007585909464064",
+        "G": 10.696311950683594,
+        "ratio": 0.88381592614753,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 15.995103951811537,
+        "rms_med_ap_mmag": 18.09777746541939
+      },
+      {
+        "catalog_id": "1497014390074509312",
+        "G": 10.70652961730957,
+        "ratio": 0.8991985191796382,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 11.64840757616554,
+        "rms_med_ap_mmag": 12.954211253364472
+      },
+      {
+        "catalog_id": "1497953377300128768",
+        "G": 10.718269348144531,
+        "ratio": 0.9097713164698464,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 13.1435538493044,
+        "rms_med_ap_mmag": 14.447096332191332
+      },
+      {
+        "catalog_id": "1500688820495583488",
+        "G": 10.812159538269045,
+        "ratio": 1.0139101960902197,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 14.301908477024291,
+        "rms_med_ap_mmag": 14.105695486813786
+      },
+      {
+        "catalog_id": "1497326621313118976",
+        "G": 10.955617904663086,
+        "ratio": 0.9511639166738288,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 14.097960995638283,
+        "rms_med_ap_mmag": 14.821799637793374
+      },
+      {
+        "catalog_id": "1485483541052276480",
+        "G": 11.02397918701172,
+        "ratio": 1.0520323380864562,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 15.28798706765818,
+        "rms_med_ap_mmag": 14.5318603945821
+      },
+      {
+        "catalog_id": "1499024297329815040",
+        "G": 11.061657905578612,
+        "ratio": 1.0885497996128262,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 17.01609740968854,
+        "rms_med_ap_mmag": 15.63189613901064
+      },
+      {
+        "catalog_id": "1498677611865494016",
+        "G": 11.185938835144045,
+        "ratio": 1.029100717992795,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 17.645465647175282,
+        "rms_med_ap_mmag": 17.14649046362712
+      },
+      {
+        "catalog_id": "1496874408500111104",
+        "G": 11.22511386871338,
+        "ratio": 1.0523686900741271,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 17.503708864968328,
+        "rms_med_ap_mmag": 16.632677340234622
+      },
+      {
+        "catalog_id": "1485609641291887872",
+        "G": 11.241687774658203,
+        "ratio": 0.9800283549444904,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 16.87925623175953,
+        "rms_med_ap_mmag": 17.22323251832401
+      },
+      {
+        "catalog_id": "1497631048594737408",
+        "G": 11.279866218566896,
+        "ratio": 1.0028644576403516,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 16.642954906139337,
+        "rms_med_ap_mmag": 16.59541803415657
+      },
+      {
+        "catalog_id": "1497676850124557312",
+        "G": 11.339733123779297,
+        "ratio": 0.8108688113651663,
+        "n_fit_ok": 134,
+        "psf_fit_ok_frac": 1.0,
+        "rms_med_psf_mmag": 16.532208634336715,
+        "rms_med_ap_mmag": 20.38826552781497
+      },
+      {
+        "catalog_id": "1500576537166572544",
+        "G": 11.355791091918944,
+        "ratio": 1.4146797612003257,
+        "n_fit_ok": 0,
+        "psf_fit_ok_frac": 0.0,
+        "rms_med_psf_mmag": 11.914282415896825,
+        "rms_med_ap_mmag": 8.42189359222034
+      }
+    ],
+    "g_bins": [
+      {
+        "G_bin": "[8.0, 8.5)",
+        "n_stars": 2,
+        "median_r": 2.0306060507667834,
+        "max_r": 2.265966335310502,
+        "median_fit_ok_frac": 0.0
+      },
+      {
+        "G_bin": "[8.5, 9.0)",
+        "n_stars": 2,
+        "median_r": 1.8426139664926215,
+        "max_r": 1.9515666273029064,
+        "median_fit_ok_frac": 0.014925373134328358
+      },
+      {
+        "G_bin": "[9.0, 9.5)",
+        "n_stars": 10,
+        "median_r": 1.4453473679990712,
+        "max_r": 2.32971566733583,
+        "median_fit_ok_frac": 0.1791044776119403
+      },
+      {
+        "G_bin": "[9.5, 10.0)",
+        "n_stars": 11,
+        "median_r": 1.1338182085274902,
+        "max_r": 1.3275935431992212,
+        "median_fit_ok_frac": 0.9029850746268657
+      },
+      {
+        "G_bin": "[10.0, 10.5)",
+        "n_stars": 9,
+        "median_r": 1.1189748187073325,
+        "max_r": 1.3610695714376548,
+        "median_fit_ok_frac": 1.0
+      },
+      {
+        "G_bin": "[10.5, 11.0)",
+        "n_stars": 9,
+        "median_r": 0.9487996786499916,
+        "max_r": 1.0612583632047203,
+        "median_fit_ok_frac": 1.0
+      },
+      {
+        "G_bin": "[11.0, 11.5)",
+        "n_stars": 8,
+        "median_r": 1.0405665280396255,
+        "max_r": 1.4146797612003257,
+        "median_fit_ok_frac": 1.0
+      },
+      {
+        "G_bin": "[11.5, 12.0)",
+        "n_stars": 0,
+        "median_r": null,
+        "max_r": null,
+        "median_fit_ok_frac": null
+      }
+    ]
+  },
+  "admission_code": [
+    {
+      "consumer": "compute_lc_flux_method (adaptive picker)",
+      "location": "photometry_lightcurve.py:2355-2398",
+      "honours_psf_fit_ok": true,
+      "notes": "psf_usable requires psf_fit_ok AND finite psf_flux>0 AND psf_quality!='bad' AND psf_ac_applied; else aperture. Only faint+good routes to psf."
+    },
+    {
+      "consumer": "Phase2A primary science LC (mag_calib path)",
+      "location": "phase2a_target.py:681-694,1442",
+      "honours_psf_fit_ok": true,
+      "notes": "_lc_export_method hard-coded 'aperture'. Primary published LC is always aperture regardless of adaptive column. psf_adaptive_enabled=false on config.json (516)."
+    },
+    {
+      "consumer": "photometry_exports._get_lc_psf_strict",
+      "location": "photometry_exports.py:99-117",
+      "honours_psf_fit_ok": true,
+      "notes": "PSF-only inst mag NaN unless psf_fit_ok AND psf_ac_applied."
+    },
+    {
+      "consumer": "psf_internal_lc (diagnostic sidecar)",
+      "location": "psf_internal_lc.py:124-134 fit_ok_for_zp",
+      "honours_psf_fit_ok": false,
+      "notes": "FIT-OK-ADMISSION-01: admits finite flux+chi2 without psf_fit_ok. Sidecar header NOT FOR AAVSO/VARASTRO SUBMISSION; not a science LC (INV-PSF-SUBMIT-01)."
+    },
+    {
+      "consumer": "export_reports AAVSO/VarAstro writers",
+      "location": "export_reports.py INV-PSF-SUBMIT-01 ~988",
+      "honours_psf_fit_ok": true,
+      "notes": "Hard-refuse lc_method psf/adaptive; science exports aperture-only."
+    }
+  ],
+  "admission_e2e": {
+    "n_science_lc_files": 60,
+    "n_science_epochs_method_psf": 0,
+    "has_per_epoch_method_col": true,
+    "named_stars": [
+      {
+        "catalog_id": "1497613731286514432",
+        "science_lc_exists": false,
+        "n_fit_ok_false_as_psf": null,
+        "note": "no science LC product (not an active_targets export); primary path is aperture-only (phase2a_target.py:694)"
+      },
+      {
+        "catalog_id": "1498735778606786816",
+        "science_lc_exists": false,
+        "n_fit_ok_false_as_psf": null,
+        "note": "no science LC product (not an active_targets export); primary path is aperture-only (phase2a_target.py:694)"
+      }
+    ],
+    "bad_epochs": [],
+    "active_targets_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\active_targets.csv",
+    "config_psf_adaptive_enabled": false,
+    "verdict_note": "Science LC method column present; all exported science epochs are aperture. Named check/bright stars are not active_targets so have no science LC file; code path forces aperture."
+  },
+  "accuracy_psf": {
+    "path": "psf",
+    "n_stars": 104,
+    "bp_rp_min": -0.0388946533203125,
+    "bp_rp_max": 2.248966217041016,
+    "fit": {
+      "n": 104,
+      "a": -22675.167006641703,
+      "b": 6.393841781659848,
+      "c": 140.32338469513212,
+      "residual_rms_mmag": 518.9438816376113,
+      "method": "alternating_theilsen_4"
+    },
+    "g_bins_after_removing_c": [
+      {
+        "G_bin": "[8.5, 9.0)",
+        "n": 3,
+        "G_mid": 8.733055114746094,
+        "d_minus_c_median_mmag": -22657.08792166056
+      },
+      {
+        "G_bin": "[9.0, 9.5)",
+        "n": 13,
+        "G_mid": 9.255638342637281,
+        "d_minus_c_median_mmag": -22694.573123095208
+      },
+      {
+        "G_bin": "[9.5, 10.0)",
+        "n": 15,
+        "G_mid": 9.685326766967773,
+        "d_minus_c_median_mmag": -22689.93652097326
+      },
+      {
+        "G_bin": "[10.0, 10.5)",
+        "n": 12,
+        "G_mid": 10.222272475560507,
+        "d_minus_c_median_mmag": -22684.047189534525
+      },
+      {
+        "G_bin": "[10.5, 11.0)",
+        "n": 11,
+        "G_mid": 10.65160829370672,
+        "d_minus_c_median_mmag": -22640.72842831364
+      },
+      {
+        "G_bin": "[11.0, 11.5)",
+        "n": 13,
+        "G_mid": 11.217058695279635,
+        "d_minus_c_median_mmag": -22708.31483931206
+      },
+      {
+        "G_bin": "[11.5, 12.0)",
+        "n": 8,
+        "G_mid": 11.779163241386414,
+        "d_minus_c_median_mmag": -22664.70046338565
+      },
+      {
+        "G_bin": "[12.0, 12.5)",
+        "n": 29,
+        "G_mid": 12.267019008768015,
+        "d_minus_c_median_mmag": -22660.0680539779
+      }
+    ],
+    "m_cat_convention": "Johnson V from Gaia G + BP-RP via GDR3 Table 5.9 G-V poly (gaia_johnson.GDR3_TABLE59_COEFFS 'V'; coeffs embedded). NoFilter -> AAVSO CV (export_reports.py); D10-1-CLOSE: CV uses Johnson V comparison magnitudes. D10-2 guard: BP-RP in [-0.5,5.1], G in [8,16]."
+  },
+  "accuracy_aperture_D5_1_record": {
+    "path": "aperture",
+    "n_stars": 637,
+    "bp_rp_min": -0.0388946533203125,
+    "bp_rp_max": 2.248966217041016,
+    "fit": {
+      "n": 637,
+      "a": -22431.789273878927,
+      "b": 122.51217328264667,
+      "c": -21.255732672764076,
+      "residual_rms_mmag": 535.8225278915954,
+      "method": "alternating_theilsen_4"
+    },
+    "g_bins_after_removing_c": [
+      {
+        "G_bin": "[8.5, 9.0)",
+        "n": 14,
+        "G_mid": 8.747950553894043,
+        "d_minus_c_median_mmag": -22475.60170069531
+      },
+      {
+        "G_bin": "[9.0, 9.5)",
+        "n": 27,
+        "G_mid": 9.286413404676649,
+        "d_minus_c_median_mmag": -22459.231360104903
+      },
+      {
+        "G_bin": "[9.5, 10.0)",
+        "n": 38,
+        "G_mid": 9.725489239943656,
+        "d_minus_c_median_mmag": -22422.03009283682
+      },
+      {
+        "G_bin": "[10.0, 10.5)",
+        "n": 42,
+        "G_mid": 10.226310866219658,
+        "d_minus_c_median_mmag": -22398.12399919876
+      },
+      {
+        "G_bin": "[10.5, 11.0)",
+        "n": 60,
+        "G_mid": 10.746011368433635,
+        "d_minus_c_median_mmag": -22315.91509247121
+      },
+      {
+        "G_bin": "[11.0, 11.5)",
+        "n": 101,
+        "G_mid": 11.240943106094209,
+        "d_minus_c_median_mmag": -22266.135253227374
+      },
+      {
+        "G_bin": "[11.5, 12.0)",
+        "n": 142,
+        "G_mid": 11.764330508003772,
+        "d_minus_c_median_mmag": -22190.553110905952
+      },
+      {
+        "G_bin": "[12.0, 12.5)",
+        "n": 213,
+        "G_mid": 12.251377665380916,
+        "d_minus_c_median_mmag": -22118.97633165735
+      }
+    ],
+    "m_cat_convention": "Johnson V from Gaia G + BP-RP via GDR3 Table 5.9 G-V poly (gaia_johnson.GDR3_TABLE59_COEFFS 'V'; coeffs embedded). NoFilter -> AAVSO CV (export_reports.py); D10-1-CLOSE: CV uses Johnson V comparison magnitudes. D10-2 guard: BP-RP in [-0.5,5.1], G in [8,16]."
+  },
+  "readings": [
+    "R-W1 PASS (domain D G>=9.5): median r=1.049 <= 1.25 AND max r=1.415 <= 1.5 (n=37).",
+    "R-W2 PASS: science consumers honour psf_fit_ok (adaptive picker / aperture-primary / exports); e2e n_method_psf=0 of science LC epochs; named stars without LC covered by aperture-primary path. Diagnostic psf_internal_lc fit_ok_for_zp is out of science scope.",
+    "R-W3 FAIL: |b|=6.394 (lim 5.0), resid RMS=518.944 (lim 25.0) (c=140.323 recorded; n=104).",
+    "R-W4: FAIL on R-W3; sequencing is Milan's."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}

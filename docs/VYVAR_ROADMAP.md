@@ -53,7 +53,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | VAL-01 under DOD-02 historical (R-V1/R-V2/R-V3 FAIL). Closes on D-EPSF-XVAL-DOD-03 via EPSF-VAL-02 (criteria 1-2) + 520 re-cut (criterion 3: FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01) | Milan | D-EPSF-XVAL-DOD-03 |
+| **EPSF-XVAL-01** | VAL-01 under DOD-02 historical. VAL-02 under DOD-03: R-W1/R-W2 PASS, R-W3 FAIL (resid RMS), R-W4 FAIL. Closes on D-EPSF-XVAL-DOD-03 after criterion 3 at 520 re-cut; sequencing Milan's | Milan | D-EPSF-XVAL-DOD-03 |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
