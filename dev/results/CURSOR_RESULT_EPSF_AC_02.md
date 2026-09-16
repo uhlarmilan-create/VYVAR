@@ -110,9 +110,8 @@ csv bfa24039 PASS / fits 13e77cf8 PASS / epsf 172f9540 PASS.
 
 ## Gates
 
-`--fast --clean` OVERALL PASS on commit of this measurement
-(1629 passed, 34 skipped; clean-tree PASS; pre-commit at dirty
-`36e5934` also OVERALL PASS). `a2/` never staged.
+`--fast --clean` OVERALL PASS on `697501f` (1629 passed, 34
+skipped; clean-tree PASS). `a2/` never staged.
 
 ## STOP
 
