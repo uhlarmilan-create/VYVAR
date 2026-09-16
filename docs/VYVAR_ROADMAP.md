@@ -53,7 +53,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | Criterion 1 PASS (VAL-02). Criterion 2 FAIL on VAL-03 (R-X1 robust scatter 58.6 mmag; |b| ok). Criterion 3 at 520. Closure waits Milan sequencing; CLOSE-TEXT-01 not enacted. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | D-EPSF-XVAL-DOD-04 |
+| **EPSF-XVAL-01** | Criterion 1 PASS (VAL-02). Criterion 2 FAIL on VAL-03 (R-X1 robust scatter 58.6 mmag; abs(b) ok). Criterion 3 at 520. Closure waits Milan sequencing; CLOSE-TEXT-01 not enacted. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | D-EPSF-XVAL-DOD-04 |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |

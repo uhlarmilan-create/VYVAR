@@ -115,7 +115,8 @@ None new. Architect errors 27-29 remain as previously ledgered.
 ## Gates
 
 G4 live 516: csv `bfa24039` / fits `13e77cf8` / epsf `172f9540`
-(all PASS). `--fast --clean` PENDING then stamped. a2/ never staged.
+(all PASS). `--fast --clean` OVERALL PASS on `d484ec1` (1629
+passed, 34 skipped; clean-tree PASS). a2/ never staged.
 
 ## STOP
 
