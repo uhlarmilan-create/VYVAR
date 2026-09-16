@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-16 -- LEDGER-EPSF-DOD-04 (docs)
+
+D-EPSF-XVAL-DOD-04 amends DOD-03 criterion 2: CoG-tied large
+aperture (r_L ~ 4 x FWHM); |b|<=5; robust MAD scatter <=15 mmag;
+c recorded. VAL-02 R-W3 INCONCLUSIVE (method; error 29).
+D-EPSF-XVAL-CLOSE-TEXT-01 recorded for closure. ENS4-BLEND-01
+OPEN. EPSF-VAL-03 is its own task. Evidence:
+`CURSOR_RESULT_LEDGER_EPSF_DOD_04.md`.
+
 ## 2026-09-15 -- EPSF-VAL-02 measurement (R-W1..R-W4)
 
 PSF-path validation under D-EPSF-XVAL-DOD-03 criteria 1-2 on
@@ -9,9 +18,9 @@ live 516. Precision from VAL-01 V-prod: domain D (G>=9.5) n=37
 median r=1.049 max r=1.415 -> R-W1 PASS. Admission: science LC
 method column all aperture (0/8040 PSF); picker/primary honour
 fit_ok -> R-W2 PASS. Accuracy vs GDR3 Table 5.9 V: |b|=6.4,
-resid RMS=519 mmag -> R-W3 FAIL; c=+140 recorded. R-W4 FAIL on
-R-W3. No production change. Evidence:
-`CURSOR_RESULT_EPSF_VAL_02.md`.
+resid RMS=519 mmag -> R-W3 under DOD-03 wording; reclassified
+INCONCLUSIVE (method) by DOD-04 / error 29. No production
+change. Evidence: `CURSOR_RESULT_EPSF_VAL_02.md`.
 
 ## 2026-09-15 -- LEDGER-EPSF-DOD-03 (docs)
 

@@ -43,7 +43,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **CR-REJECTION** | Cosmic-ray rejection (L.A.Cosmic or equivalent); no CR step in src_py today | Cursor | TODO-A |
 | **D1-2-LINEARITY-RAMP** | Exposure ramp at telescope; nothing else substitutes | Milan | telescope night |
 | **D1B-UNITS-01** | Decide preferred-unit defaults for the three px/unit pairs (qc_max_hfr[_fwhm_ratio], hrd_color_bg_box_px[_arcsec], masterstar_centre_rms_max_px[_arcsec]); behaviour change, must be measured per rig before flipping any default | Milan | per-rig measure |
-| **D10-1** | D10-1 leftover from audit register | Cursor | LOW |
+| **D10-1** | D10-1 leftover from audit register. **Annotate 2026-09-16 (DOD-04):** VAL-02 colour term c = +140 mmag/mag vs Johnson V on the PSF path (n=95 core) - input to the CV/CR decision | Cursor | LOW |
 | **DAO-TOL-FLOOR-01** | DAO tolerance floor leftover | Cursor | LOW |
 | **DB-DEFECT-DIAMETER** | DB defect diameter | Cursor | LOW |
 | **DB-RETIRE-01** | Retire stale DB paths | Cursor | FUTURE |
@@ -53,8 +53,9 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | VAL-01 under DOD-02 historical. VAL-02 under DOD-03: R-W1/R-W2 PASS, R-W3 FAIL (resid RMS), R-W4 FAIL. Closes on D-EPSF-XVAL-DOD-03 after criterion 3 at 520 re-cut; sequencing Milan's | Milan | D-EPSF-XVAL-DOD-03 |
+| **EPSF-XVAL-01** | Criterion 1 PASS (VAL-02 R-W1/R-W2). Criterion 2 pending VAL-03 under D-EPSF-XVAL-DOD-04 (CoG-tied large aperture). Criterion 3 at 520. Closure sequence: VAL-03 + 520 -> enact D-EPSF-XVAL-CLOSE-TEXT-01. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | D-EPSF-XVAL-DOD-04 |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
+| **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
 | **F-B01-F-B02** | PASSTHROUGH runs may claim VYVAR calibration; PDF honesty | Cursor | calpath audit s14 |
@@ -169,6 +170,7 @@ Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
 - **EPSF-CORE-04** -- CLOSED 2026-09-15 measurement complete. Readings R-R2, R-P2, R-K0. PSFEx vs aperture 12.44 / 15.69 mmag. osamp=4 sandbox ePSF pathological; osamp=3 worse than osamp=2. R-P2 re-read (lit C3 / error 28): "sampling alone does not fix the phase component" is NOT MEASURED (builder failure EPSF-BUILD-OSAMP-01), not excluded; Route A remains open under D-EPSF-PHASE-ROUTES-01 after a correct osamp>=3 build. No listed machinery knob lowers B1 vs aperture by >= 3 mmag. Architect error 25 recorded (R-Q4 ptp vs RMS). Evidence `CURSOR_RESULT_EPSF_CORE_04.md`.
 - **EPSF-SHAPE-01** -- CLOSED 2026-09-14 measurement complete (`8fee250`). Reading R-SH3: shape unsupported as LC-level driver (rank R^2 <= 0.023 all four tests). Standalone: spatial FWHM spread (check-target -0.0395 px) exceeds frame-to-frame seeing std (0.0286 px) on the 134-frame set; headline FWHM differences under 5% (-0.59% target / +1.93% check). Next suspect EPSF-CORE-01. Evidence `CURSOR_RESULT_EPSF_SHAPE_01.md`.
 - **EPSF-VAL-01** -- CLOSED-HISTORICAL 2026-09-15 under D-EPSF-XVAL-DOD-02 (R-V1/R-V2/R-V3 FAIL). Superseded bar; criterion 2 reference wrong per error 27 / D5-1. Re-measure under DOD-03 is EPSF-VAL-02. Evidence `CURSOR_RESULT_EPSF_VAL_01.md`.
+- **EPSF-VAL-02** -- CLOSED 2026-09-15 under D-EPSF-XVAL-DOD-03 criteria 1 (R-W1/R-W2 PASS). R-W3 annotated INCONCLUSIVE (method) per D-EPSF-XVAL-DOD-04 / error 29 (catalogue transform + unscreened blends in the reference; not a PSF-path finding). Criterion 2 re-measure is EPSF-VAL-03. Evidence `CURSOR_RESULT_EPSF_VAL_02.md`.
 - **EPSF-VALID-02** -- CLOSED 2026-08-22 gated 67-star production ePSF on 516.
 - **ERA-03** -- era03 freeze kept on disk; superseded as --full gate by era04.
 - **EXCEPT-BULK** -- CLOSED 2026-07-08 silent broad-except census.

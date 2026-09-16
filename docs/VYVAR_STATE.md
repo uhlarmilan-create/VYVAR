@@ -1,10 +1,17 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-VAL-02 2026-09-15.** Measured D-EPSF-XVAL-DOD-03
+**Status:** **LEDGER-EPSF-DOD-04 2026-09-16.** D-EPSF-XVAL-DOD-04
+amends DOD-03 criterion 2 (CoG-tied large aperture; VAL-02 R-W3
+INCONCLUSIVE / error 29). D-EPSF-XVAL-CLOSE-TEXT-01 recorded.
+ENS4-BLEND-01 OPEN. EPSF-XVAL-01 stays OPEN (VAL-03 + 520 -> close
+text). No code. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-VAL-02 2026-09-15.** Measured D-EPSF-XVAL-DOD-03
 criteria 1-2 on live 516: R-W1 PASS (domain D median r=1.049 max
-1.415), R-W2 PASS (admission; 0 science epochs as PSF), R-W3 FAIL
-(|b|=6.4, resid RMS=519 mmag), R-W4 FAIL on R-W3. Criterion 3 still
-at 520. EPSF-XVAL-01 stays OPEN; sequencing Milan's. No production
+1.415), R-W2 PASS (admission; 0 science epochs as PSF), R-W3
+INCONCLUSIVE under DOD-04 (was FAIL on resid RMS under historical
+DOD-03 wording), R-W4 deferred. Criterion 3 still at 520.
+EPSF-XVAL-01 stays OPEN; sequencing Milan's. No production
 change. Live 516 G4 prefixes unchanged
 (`bfa24039` / `13e77cf8` / `172f9540`).
 **LEDGER-EPSF-DOD-03 2026-09-15.** D-EPSF-XVAL-DOD-03

@@ -6,7 +6,68 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## D-EPSF-XVAL-DOD-03 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-02
+## D-EPSF-XVAL-DOD-04 (Milan 2026-09-16) - amends DOD-03 criterion 2
+
+Basis: VAL-02 R-W3 (|b|=6.4, resid RMS 519 mmag) is INCONCLUSIVE, not
+a PSF-path finding. Architect re-analysis of
+`accuracy_vs_catalog_psf.csv` / `_ap.csv`: 3-sigma-MAD clipping leaves a
+95-star core with robust scatter 56 mmag, b = 11.8 +/- 5.2 mmag/mag
+(bootstrap), c = +140 mmag/mag; the 9 clipped stars (-180 to -3350
+mmag) are outliers on BOTH paths (blends / catalogue association),
+not PSF failures. The 56 mmag core scatter is the unfiltered-CMOS ->
+Johnson V transformation with a single linear colour term (D10-1),
+not photometric error. Criterion 2 as written carried the colour
+transformation and unscreened blends in the reference - architect
+error 29.
+
+EPSF-XVAL-01 remains OPEN. Criteria 1 and 3 of DOD-03 are unchanged.
+Criterion 2 is REPLACED by the literature-standard flux-scale test
+(Stetson 1990 DAOGROW; Dolphin 2000):
+
+2. ACCURACY (curve-of-growth-tied large aperture). On isolated,
+   unsaturated, constant bright stars, d(s) =
+   median_epochs(m_psf_inst - m_L_inst), where m_L is a
+   large-aperture (r_L ~ 4 x FWHM) instrumental magnitude tied by a
+   measured growth curve. Fit d = a + b*(G - 10): |b| <= 5.0
+   mmag/mag and robust scatter (1.4826 * MAD) <= 15 mmag. The colour
+   slope c of d vs BP-RP is RECORDED (expected ~0; a nonzero value
+   would indicate PSF colour dependence), not judged. No catalogue
+   transformation and no blended star enters the reference.
+
+Thresholds are Milan's to adjust before EPSF-VAL-03 runs; frozen once
+it runs. Status on 516: criterion 1 PASS (VAL-02 R-W1, R-W2);
+criterion 2 pending VAL-03; criterion 3 pending the 520 era re-cut.
+Closure of EPSF-XVAL-01 = DOD-03 criteria 1 and 3 + this criterion 2
+via EPSF-VAL-03 + the 520 fix list; then enact
+D-EPSF-XVAL-CLOSE-TEXT-01.
+
+Evidence: `CURSOR_RESULT_EPSF_VAL_02.md` (R-W1/R-W2 PASS; R-W3
+INCONCLUSIVE under this amendment),
+`CURSOR_RESULT_LEDGER_EPSF_DOD_04.md` (error 29),
+`docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md` C4/C6.
+
+## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - record; enact on closure
+
+When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
+verbatim, in DECISIONS and in the methods paper:
+
+  VYVAR ePSF photometry is implemented correctly (model construction
+  verified against an independent PSFEx reference; fit machinery
+  self-consistent to ~1 mmag), externally cross-validated (closer to
+  the AIJ-validated aperture path than PSFEx), and validated for its
+  intended domain (precision equal to aperture for G >= 9.5; flux
+  scale linear vs curve-of-growth-tied aperture; bright-end fits
+  gated by psf_fit_ok with aperture fallback). Known limitations:
+  undersampling pixel-phase component, unmeasured intra-pixel
+  sensitivity, builder at oversampling >= 3.
+
+Evidence chain to cite: VYVAR_AUDIT_FINAL (verified-correct table),
+EPSF-XVAL-A2-COMPARE, EPSF-SHAPE-01, EPSF-CORE-01..04, EPSF-VAL-01/02,
+EPSF-VAL-03, VYVAR_LITERATURE_CHECK_EPSF_20260915, 520 era gates.
+
+Not enacted until criteria 1-3 hold.
+
+## D-EPSF-XVAL-DOD-03 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-02; criterion 2 amended by D-EPSF-XVAL-DOD-04
 
 Basis: VAL-01 (R-V1/R-V2 FAIL) read against the literature check
 (C1-C7; `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`). Criterion 2
@@ -32,25 +93,18 @@ identical epoch set and the pinned ensemble, all three hold:
      end-to-end on >= 2 bright stars in the 516 products. Any
      psf_fit_ok == False epoch that reaches a science LC as PSF is a
      FAIL.
-2. ACCURACY (common-scale reference). For the PSF path, per-star
-   offset d(s) = median_epochs(m_psf_inst - m_cat), where m_cat is
-   the production Gaia-transformed catalogue magnitude for the
-   system's declared band (cite the transform and band mapping,
-   D10-1 open), over stars with n_ok >= 100 and 8.5 <= G <= 12.5.
-   Simultaneous robust fit d = a + b*(G - 10) + c*(BP-RP - 1.0).
-   Criterion on the flux-scale linearity only: |b| <= 5.0 mmag/mag
-   and residual RMS <= 25 mmag. The colour term c is RECORDED (it is
-   the system's colour response; feeds D10-1), not a criterion. The
-   same fit on the aperture path (raw per-star apertures) is RECORDED
-   against D5-1, not a criterion.
+2. ACCURACY (common-scale reference). **AMENDED by D-EPSF-XVAL-DOD-04
+   (2026-09-16).** Historical DOD-03 text (catalogue m_cat; |b|<=5,
+   resid RMS<=25; c recorded) is superseded for the live bar; see
+   DOD-04 for the CoG-tied large-aperture replacement. VAL-02 R-W3
+   under this historical wording is INCONCLUSIVE (method; error 29).
 3. CODE: as DOD-02 criterion 3 (FIT-OK-ADMISSION-01, GAIN-FALSY-01,
    FIXPOS-NOOP-01 fixed and gated at the 520 era re-cut).
 
-Thresholds are Milan's to adjust before EPSF-VAL-02 runs; frozen once
-it runs. Closure of EPSF-XVAL-01 = this DoD via EPSF-VAL-02
-(criteria 1, 2) + the fix list at the 520 era re-cut. VAL-01 under
-DOD-02 stays on the record as historical (superseded bar / wrong
-criterion-2 reference).
+Thresholds for criterion 1 were frozen at EPSF-VAL-02 (R-W1/R-W2
+PASS). Closure of EPSF-XVAL-01 = criteria 1 (VAL-02) + criterion 2
+(VAL-03 under DOD-04) + criterion 3 (520 re-cut); then enact
+D-EPSF-XVAL-CLOSE-TEXT-01. VAL-01 under DOD-02 stays historical.
 
 Scope statement for the paper: on this rig (FWHM ~2.4 px,
 9.77"/px, undersampled), the aperture path is the science product
