@@ -1,0 +1,2 @@
+population,n,a_mmag,b_mmag_per_mag,c_mmag_per_mag_bp_rp,b_boot_std,c_boot_std,robust_scatter_resid_mmag,method,g_only_a_mmag,g_only_b_mmag_per_mag,g_only_robust_scatter_mmag,abs_b,abs_b_minus_2_boot_std
+VAL-03 isolated n=18,18,-127.31023114121243,2.6782576268102,137.5014980232277,21.547093663944985,48.29194517276451,40.35954902520951,alternating_theilsen_4,-123.10155711106452,-4.934327926786947,58.581496795454086,2.6782576268102,-40.41592970107977

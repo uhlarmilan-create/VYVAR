@@ -2,6 +2,16 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-16 -- EPSF-AC-02 measurement (R-AC1..R-AC4)
+
+DOD-05 criteria 2a/2b on VAL-03 isolated n=18 / 134 epochs.
+Simultaneous fit b=+2.678 +/- 21.5 mmag/mag -> R-AC1 PASS.
+Split-half odd/even 5.594 mmag, chrono 6.604 (noise_exp 4.830)
+-> R-AC2 PASS. Part C RECORD: raw 59.4 / after colour 45.4 /
+after colour+phase 37.4 mmag; c=+137.5+/-48.3; phase rho=0.129.
+R-AC4: criterion 2 met on 516; closure waits 520. No production
+change. Evidence: `CURSOR_RESULT_EPSF_AC_02.md`.
+
 ## 2026-09-16 -- LEDGER-EPSF-DOD-05 (docs)
 
 D-EPSF-XVAL-DOD-05 amends DOD-04 criterion 2 into 2a LINEARITY

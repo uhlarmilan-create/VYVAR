@@ -52,9 +52,9 @@ of DOD-04 is SPLIT:
   systematic, with its decomposition into phase and colour
   (EPSF-AC-02 Part C), and the colour term c as CHROMATIC-PSF-01.
 
-Status on 516: criterion 1 PASS (VAL-02); criteria 2a/2b pending
-EPSF-AC-02; criterion 3 pending the 520 era re-cut. Closure =
-criteria 1 + 2a/2b + 3; then enact the amended
+Status on 516: criterion 1 PASS (VAL-02); criteria 2a/2b PASS
+(EPSF-AC-02 R-AC1/R-AC2); criterion 3 pending the 520 era re-cut.
+Closure = criteria 1 + 2a/2b + 3; then enact the amended
 D-EPSF-XVAL-CLOSE-TEXT-01.
 
 Evidence: `CURSOR_RESULT_EPSF_VAL_03.md` (R-X1 FAIL under DOD-04;
@@ -72,19 +72,19 @@ NOT pursued for EPSF-XVAL-01 closure. See D-EPSF-XVAL-DOD-05.
 
 ## CHROMATIC-PSF-01 (Milan 2026-09-16) - record
 
-PSF minus large-aperture flux depends on colour at c = +130 mmag per
-mag of BP-RP on the same photons (VAL-03; bootstrap to be reported
-by EPSF-AC-02; consistent with VAL-02: PSF c = +140 vs aperture
-c = -21 against Johnson V). Red stars measure fainter by PSF than by
-aperture: expected for an unfiltered wide-band system (seeing
-FWHM ~ lambda^-0.2; optical chromatism) with a single ePSF built at
-the ensemble mean colour. Constant per star; mitigated in
-differential photometry by colour-matched comparison selection
-(`comp_color_tiers`). Literature anchor to add at citation time:
-chromatic PSF / DCR treatments (Meyers & Burchat 2015 and refs
+PSF minus large-aperture flux depends on colour at c = +137.5 +/- 48.3
+mmag per mag of BP-RP on the same photons (EPSF-AC-02 bootstrap on the
+VAL-03 isolated set; architect pre-estimate was +130; consistent with
+VAL-02: PSF c = +140 vs aperture c = -21 against Johnson V). Red stars
+measure fainter by PSF than by aperture: expected for an unfiltered
+wide-band system (seeing FWHM ~ lambda^-0.2; optical chromatism) with
+a single ePSF built at the ensemble mean colour. Constant per star;
+mitigated in differential photometry by colour-matched comparison
+selection (`comp_color_tiers`). Literature anchor to add at citation
+time: chromatic PSF / DCR treatments (Meyers & Burchat 2015 and refs
 therein). Feeds the methods paper and D10-1.
 
-Evidence: `CURSOR_RESULT_EPSF_VAL_03.md`,
+Evidence: `CURSOR_RESULT_EPSF_AC_02.md`, `CURSOR_RESULT_EPSF_VAL_03.md`,
 `CURSOR_RESULT_EPSF_VAL_02.md`, `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md`.
 
 ## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - record; enact on closure; amended by DOD-05

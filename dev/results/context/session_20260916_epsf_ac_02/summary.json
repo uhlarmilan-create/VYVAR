@@ -1,0 +1,99 @@
+{
+  "decision": "D-EPSF-XVAL-DOD-05",
+  "criterion_2a_quoted": "2a LINEARITY (flux scale vs brightness): on the VAL-03 isolated set, Theil-Sen slope of d = m_psf_inst - m_L_inst vs (G - 10), fitted simultaneously with colour: |b| <= 5.0 mmag/mag. Bootstrap std reported; PASS requires |b| <= 5.0 and |b| - 2*std <= 5.0 is NOT required (n is small; report both).",
+  "criterion_2b_quoted": "2b STABILITY of per-star offsets (what differential photometry relies on): split-half test - d_s derived on odd epochs, applied to even epochs (and vice versa); the robust scatter across stars of the residual (d_s,even - d_s,odd) <= 10 mmag. If 2b holds, the per-star scale offsets are constants absorbed by ensemble normalization and cannot enter a differential LC.",
+  "catalog_ids_n18": [
+    "1499906247391001088",
+    "1498735778606786816",
+    "1497528072458898432",
+    "1500727513856914944",
+    "1497674651102612992",
+    "1498062332030906880",
+    "1497837207025312768",
+    "1500460813567859456",
+    "1497617407778562304",
+    "1499200223486564608",
+    "1497758935541325824",
+    "1497145751650265600",
+    "1496994156484645632",
+    "1500486102335278592",
+    "1496315070616056064",
+    "1504489595970703872",
+    "1497953377300128768",
+    "1498677611865494016"
+  ],
+  "n_epochs": 134,
+  "epoch_ordering": "sorted(stem) from VAL-03 large_aperture_lc.csv",
+  "stems_first_last": [
+    "BO_CVn_Light_001",
+    "BO_CVn_Light_148"
+  ],
+  "linearity": {
+    "population": "VAL-03 isolated n=18",
+    "n": 18,
+    "a_mmag": -127.31023114121243,
+    "b_mmag_per_mag": 2.6782576268102,
+    "c_mmag_per_mag_bp_rp": 137.5014980232277,
+    "b_boot_std": 21.547093663944985,
+    "c_boot_std": 48.29194517276451,
+    "robust_scatter_resid_mmag": 40.35954902520951,
+    "method": "alternating_theilsen_4",
+    "g_only_a_mmag": -123.10155711106452,
+    "g_only_b_mmag_per_mag": -4.934327926786947,
+    "g_only_robust_scatter_mmag": 58.581496795454086,
+    "abs_b": 2.6782576268102,
+    "abs_b_minus_2_boot_std": -40.41592970107977
+  },
+  "splithalf": [
+    {
+      "split": "odd_even_by_epoch_idx",
+      "n_stars": 18,
+      "robust_scatter_r_mmag": 5.5942605527387474,
+      "noise_expectation_mmag": 4.830108918733349,
+      "ratio_scatter_over_noise": 1.1582058804184876,
+      "verdict": "PASS",
+      "ordering_source": "sorted unique stem from VAL-03 large_aperture_lc.csv (same 134 as frozen-proc / VAL-03); odd = epoch_idx % 2 == 1"
+    },
+    {
+      "split": "first_vs_second_half_chronological",
+      "n_stars": 18,
+      "robust_scatter_r_mmag": 6.603580453807999,
+      "noise_expectation_mmag": 4.830108918733349,
+      "ratio_scatter_over_noise": 1.3671700917957201,
+      "verdict": "PASS",
+      "ordering_source": "same sorted stem order; first half = epoch_idx < 67, second half = epoch_idx >= 67 (n_ep=134)"
+    }
+  ],
+  "decomposition": {
+    "population": "VAL-03 isolated n=18",
+    "robust_scatter_d_raw_mmag": 59.441570691985184,
+    "robust_scatter_d_after_colour_mmag": 45.40004915040128,
+    "robust_scatter_d_after_colour_plus_phase_mmag": 37.428441346554564,
+    "colour_c_mmag_per_mag": 137.5014980232277,
+    "phase_spearman_rho": 0.12899896800825592,
+    "phase_spearman_p": 0.6099496263278285,
+    "phase_theilsen_slope_d_vs_pred": 0.30220358312653145,
+    "phase_theilsen_intercept": -128.90887275836621,
+    "phase_surface": "CORE-03 phase_bias_T1.csv noise=False; bilinear; mean-subtracted"
+  },
+  "readings": [
+    "R-AC1 (PASS): |b|=2.678 mmag/mag (lim 5.0); b=2.678 boot_std=21.547; |b|-2*std=-40.416 (reported, not required).",
+    "R-AC2 (PASS): odd/even scatter=5.594 mmag (noise_exp=4.830, verdict=PASS); chrono scatter=6.604 mmag (noise_exp=4.830, verdict=PASS).",
+    "R-AC3 RECORD: raw scatter=59.4 mmag; after colour=45.4; after colour+phase=37.4; c=137.5+/-48.3 mmag/mag; phase rho=0.129 p=0.61 slope=0.302.",
+    "R-AC4: criterion 2 of DOD-05 met on 516; closure waits only on criterion 3 at the 520 re-cut"
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}

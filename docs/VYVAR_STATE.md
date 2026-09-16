@@ -1,12 +1,17 @@
 # VYVAR -- Development State
 
-**Status:** **LEDGER-EPSF-DOD-05 2026-09-16.** D-EPSF-XVAL-DOD-05
+**Status:** **EPSF-AC-02 2026-09-16.** Measured D-EPSF-XVAL-DOD-05
+criteria 2a/2b on VAL-03 products: R-AC1 PASS (|b|=2.678), R-AC2 PASS
+(odd/even 5.6 mmag, chrono 6.6), R-AC3 RECORD, R-AC4 criterion 2 met on
+516. Closure of EPSF-XVAL-01 waits criterion 3 at the 520 re-cut.
+No production change. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**LEDGER-EPSF-DOD-05 2026-09-16.** D-EPSF-XVAL-DOD-05
 amends DOD-04 criterion 2 into 2a LINEARITY (|b|<=5 mmag/mag vs G)
 and 2b STABILITY (split-half residual scatter <=10 mmag). AC-DESIGN-01
 and CHROMATIC-PSF-01 recorded. CLOSE-TEXT-01 validated-domain /
 limitations clauses amended. VAL-03 R-X1 FAIL explained (error 30);
-superseded by 2a/2b. EPSF-XVAL-01 OPEN: closure = EPSF-AC-02 + 520
--> amended close text. No code. Live 516 G4 prefixes unchanged
+superseded by 2a/2b. No code. Live 516 G4 prefixes unchanged
 (`bfa24039` / `13e77cf8` / `172f9540`).
 **EPSF-VAL-03 2026-09-16.** Measured D-EPSF-XVAL-DOD-04
 criterion 2 on live 516: R-X1 FAIL (robust scatter 58.6 mmag; |b|=4.93

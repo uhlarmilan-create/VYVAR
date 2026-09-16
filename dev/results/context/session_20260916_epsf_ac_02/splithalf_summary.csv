@@ -1,0 +1,3 @@
+split,n_stars,robust_scatter_r_mmag,noise_expectation_mmag,ratio_scatter_over_noise,verdict,ordering_source
+odd_even_by_epoch_idx,18,5.5942605527387474,4.830108918733349,1.1582058804184876,PASS,sorted unique stem from VAL-03 large_aperture_lc.csv (same 134 as frozen-proc / VAL-03); odd = epoch_idx % 2 == 1
+first_vs_second_half_chronological,18,6.603580453807999,4.830108918733349,1.3671700917957201,PASS,"same sorted stem order; first half = epoch_idx < 67, second half = epoch_idx >= 67 (n_ep=134)"
