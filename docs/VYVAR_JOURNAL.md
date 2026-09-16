@@ -2,6 +2,15 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-16 -- EPSF-VAL-03 measurement (R-X1..R-X3)
+
+Flux-scale accuracy vs CoG-tied large aperture under DOD-04.
+R_iso relaxed 8->6 x FWHM; n=18 isolated. r_L=4.0 x FWHM
+(fallback; plateau resid 7.5 mmag). |b|=4.93 (within 5), robust
+scatter 58.6 mmag -> R-X1 FAIL; c=+134 recorded; b_ap=+74.2
+(D5-1). R-X3 FAIL. No production change. Evidence:
+`CURSOR_RESULT_EPSF_VAL_03.md`.
+
 ## 2026-09-16 -- LEDGER-EPSF-DOD-04 (docs)
 
 D-EPSF-XVAL-DOD-04 amends DOD-03 criterion 2: CoG-tied large

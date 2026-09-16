@@ -1,0 +1,87 @@
+{
+  "criterion_quoted_from_HEAD": {
+    "decision": "D-EPSF-XVAL-DOD-04",
+    "commit": "17cac43",
+    "text": "ACCURACY (curve-of-growth-tied large aperture). On isolated, unsaturated, constant bright stars, d(s) = median_epochs(m_psf_inst - m_L_inst), where m_L is a large-aperture (r_L ~ 4 x FWHM) instrumental magnitude tied by a measured growth curve. Fit d = a + b*(G - 10): |b| <= 5.0 mmag/mag and robust scatter (1.4826 * MAD) <= 15 mmag. The colour slope c of d vs BP-RP is RECORDED (expected ~0; a nonzero value would indicate PSF colour dependence), not judged. No catalogue transformation and no blended star enters the reference.",
+    "T2b": 5.0,
+    "T2s": 15.0
+  },
+  "radius_grid": {
+    "multiples_of_FWHM": [
+      1.0,
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0,
+      4.5,
+      5.0
+    ],
+    "fwhm_authority_isolation_px": 2.364,
+    "fwhm_photometry": "per-frame qc_metrics.csv fwhm_px (live calibrated lights)",
+    "qc_path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\calibrated\\lights\\qc_metrics.csv",
+    "annulus": "[6.0,8.0] x FWHM; sigma-clipped median sky",
+    "production_sky_estimator_name": "sky_median_mask (comparison only; harness uses sigma-clipped median)",
+    "photutils": "CircularAperture/CircularAnnulus method=exact",
+    "plate_scale_arcsec_px": 9.774
+  },
+  "selection": {
+    "r_iso_mult": 6.0,
+    "r_iso_px": 14.184,
+    "r_iso_arcsec": 138.634416,
+    "fwhm_authority_px": 2.364,
+    "plate_scale_arcsec_px": 9.774,
+    "gaia_query": "sqlite gaia_dr3 box then haversine; DB=vyvar_gaia_dr3.db; R_iso=138.634\"; 2*R_iso=277.269\"; cuts: no G_n<=G+5 within R_iso; no G_n<=G+2 within 2*R_iso",
+    "vsx": "masterstars vsx_known_variable (catalog_match vsx_match_max_sep_arcsec=5.0)",
+    "n_pre_peak": 18,
+    "relaxed": true,
+    "n_pass": 18
+  },
+  "r_L": {
+    "r_L_x_FWHM": 4.0,
+    "plateau_residual_mmag": 7.462872611628502,
+    "note": "no radius met 90% criterion; used 4.0 x FWHM; residual slope 4.0->4.5 = 1.810 mmag"
+  },
+  "accuracy_psf": {
+    "n": 18,
+    "a": -123.10155711106452,
+    "b": -4.934327926786947,
+    "b_boot_std": 27.45986465387118,
+    "robust_scatter_mmag": 58.581496795454086
+  },
+  "accuracy_colour_RECORD": {
+    "n": 18,
+    "a": -135.92830323601845,
+    "c": 133.9243412183353,
+    "c_boot_std": 44.70651434908926,
+    "robust_scatter_mmag": 45.745962325367216
+  },
+  "accuracy_aperture_D5_1": {
+    "n": 18,
+    "a": 145.07804785738224,
+    "b_ap": 74.16157330763883,
+    "b_ap_boot_std": 27.918709354725042,
+    "robust_scatter_mmag": 49.505695912484484
+  },
+  "per_epoch_agreement_median_std_mmag": 31.657304159845168,
+  "readings": [
+    "R-X1 FAIL: |b|=4.934 (lim 5.0), robust scatter=58.581 (lim 15.0) (n=18; b_boot_std=27.460). plateau residual=7.463 mmag cannot account for the scatter alone.",
+    "R-X2 RECORD: c=133.924 mmag/mag (boot_std=44.707); per-epoch PSF-vs-m_L median std=31.657 mmag; b_ap=74.162 mmag/mag (D5-1; n=18).",
+    "R-X3: FAIL on R-X1; sequencing is Milan's."
+  ],
+  "g4": {
+    "csv": {
+      "prefix": "bfa24039",
+      "verdict": "PASS"
+    },
+    "fits": {
+      "prefix": "13e77cf8",
+      "verdict": "PASS"
+    },
+    "epsf": {
+      "prefix": "172f9540",
+      "verdict": "PASS"
+    }
+  }
+}
