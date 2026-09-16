@@ -2,6 +2,17 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-16 -- LEDGER-EPSF-DOD-05 (docs)
+
+D-EPSF-XVAL-DOD-05 amends DOD-04 criterion 2 into 2a LINEARITY
+(|b|<=5 mmag/mag; simultaneous colour fit) and 2b STABILITY
+(split-half residual scatter <=10 mmag). AC-DESIGN-01 (no per-star
+AC; p4_none; differential-only) and CHROMATIC-PSF-01 (c=+130
+mmag/mag BP-RP) recorded. CLOSE-TEXT-01 amended (offsets stable /
+absorbed; common-scale ~40-60 mmag not a product). VAL-03 R-X1
+FAIL explained (error 30). EPSF-XVAL-01 closure = EPSF-AC-02 +
+520. Evidence: `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md`.
+
 ## 2026-09-16 -- EPSF-VAL-03 measurement (R-X1..R-X3)
 
 Flux-scale accuracy vs CoG-tied large aperture under DOD-04.

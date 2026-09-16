@@ -6,7 +6,114 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## D-EPSF-XVAL-DOD-04 (Milan 2026-09-16) - amends DOD-03 criterion 2
+## D-EPSF-XVAL-DOD-05 (Milan 2026-09-16) - amends DOD-04 criterion 2
+
+Basis: VAL-03 R-X1 FAIL on robust scatter (58.6 mmag; n=18 isolated
+stars, G 8.7-11.2, BP-RP 0.6-1.4; |b|=4.93 within limit). Architect
+re-analysis of `accuracy_cog_psf.csv`: simultaneous fit in G and colour
+gives c = +130 mmag/mag, b = +2.3, robust scatter 42 mmag. The
+remaining star-to-star scatter is accounted for by mechanisms
+already measured: per-star constant sub-pixel phase on aligned frames
+(CORE-03 T1 surface, 72 mmag ptp -> up to +/-36 mmag per star), the
+bright-end model mismatch (these stars are the fit_ok-poor domain),
+and the colour term. Literature: per-star PSF-vs-aperture systematics
+of 0.05-0.15 mag are reported for imperfect PSFs (Dolphin 2000;
+Stetson 1992). Architect error 30: criterion 2 was evaluated on
+uncorrected PSF magnitudes in the PSF path's weakest domain with a
+threshold (15 mmag) set without predicting the phase-surface
+contribution.
+
+Design fact on the record (AC-DESIGN-01): VYVAR has no per-star
+aperture correction. `_compute_aperture_correction`
+(`psf_photometry.py:366`) is a field-wide median ref/PSF factor, legacy
+fallback only; the sole ePSF AC policy is `p4_none` (chi2_lt5 branch
+deleted, CONSOLIDATE-01D, ZP-OK v2 / P4). The ePSF path is a
+differential-only design by decision: per-star scale offsets are
+absorbed by ensemble normalization, not by AC. Enabling AC is
+therefore not a configuration change; a DAOGROW-style per-star AC
+would be a new feature and is NOT pursued for closure.
+
+EPSF-XVAL-01 remains OPEN. Criteria 1 and 3 unchanged. Criterion 2
+of DOD-04 is SPLIT:
+
+- 2a LINEARITY (flux scale vs brightness): on the VAL-03 isolated
+  set, Theil-Sen slope of d = m_psf_inst - m_L_inst vs (G - 10),
+  fitted simultaneously with colour: |b| <= 5.0 mmag/mag. Bootstrap
+  std reported; PASS requires |b| <= 5.0 and |b| - 2*std <= 5.0 is
+  NOT required (n is small; report both).
+- 2b STABILITY of per-star offsets (what differential photometry
+  relies on): split-half test - d_s derived on odd epochs, applied
+  to even epochs (and vice versa); the robust scatter across stars
+  of the residual (d_s,even - d_s,odd) <= 10 mmag. If 2b holds, the
+  per-star scale offsets are constants absorbed by ensemble
+  normalization and cannot enter a differential LC.
+- RECORD (not judged): the per-star offset scatter itself (VAL-03:
+  42 mmag after colour, 59 raw) as the PSF path's common-scale
+  systematic, with its decomposition into phase and colour
+  (EPSF-AC-02 Part C), and the colour term c as CHROMATIC-PSF-01.
+
+Status on 516: criterion 1 PASS (VAL-02); criteria 2a/2b pending
+EPSF-AC-02; criterion 3 pending the 520 era re-cut. Closure =
+criteria 1 + 2a/2b + 3; then enact the amended
+D-EPSF-XVAL-CLOSE-TEXT-01.
+
+Evidence: `CURSOR_RESULT_EPSF_VAL_03.md` (R-X1 FAIL under DOD-04;
+explained here), `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md` (error 30),
+`CURSOR_RESULT_EPSF_CORE_03.md` (T1 phase surface).
+
+## AC-DESIGN-01 (Milan 2026-09-16) - record; not a defect
+
+VYVAR has no per-star aperture correction on the ePSF path. Field-wide
+`_compute_aperture_correction` (`psf_photometry.py:366`) is legacy
+fallback only; sole policy `psf_ac_policy = p4_none`. Differential-
+only design: per-star scale offsets absorbed by ensemble
+normalization. A DAOGROW-style per-star AC is a new feature and is
+NOT pursued for EPSF-XVAL-01 closure. See D-EPSF-XVAL-DOD-05.
+
+## CHROMATIC-PSF-01 (Milan 2026-09-16) - record
+
+PSF minus large-aperture flux depends on colour at c = +130 mmag per
+mag of BP-RP on the same photons (VAL-03; bootstrap to be reported
+by EPSF-AC-02; consistent with VAL-02: PSF c = +140 vs aperture
+c = -21 against Johnson V). Red stars measure fainter by PSF than by
+aperture: expected for an unfiltered wide-band system (seeing
+FWHM ~ lambda^-0.2; optical chromatism) with a single ePSF built at
+the ensemble mean colour. Constant per star; mitigated in
+differential photometry by colour-matched comparison selection
+(`comp_color_tiers`). Literature anchor to add at citation time:
+chromatic PSF / DCR treatments (Meyers & Burchat 2015 and refs
+therein). Feeds the methods paper and D10-1.
+
+Evidence: `CURSOR_RESULT_EPSF_VAL_03.md`,
+`CURSOR_RESULT_EPSF_VAL_02.md`, `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md`.
+
+## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - record; enact on closure; amended by DOD-05
+
+When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
+verbatim, in DECISIONS and in the methods paper:
+
+  VYVAR ePSF photometry is implemented correctly (model construction
+  verified against an independent PSFEx reference; fit machinery
+  self-consistent to ~1 mmag), externally cross-validated (closer to
+  the AIJ-validated aperture path than PSFEx), and validated for its
+  intended domain (precision equal to aperture for G >= 9.5; flux
+  scale linear vs curve-of-growth-tied aperture; per-star scale
+  offsets stable and absorbed by ensemble normalization; bright-end
+  fits gated by psf_fit_ok with aperture fallback). Known limitations:
+  undersampling pixel-phase component, unmeasured intra-pixel
+  sensitivity, builder at oversampling >= 3; common-scale (absolute)
+  PSF magnitudes carry a ~40-60 mmag per-star systematic (phase,
+  chromatic PSF) and are not a product.
+
+Evidence chain to cite: VYVAR_AUDIT_FINAL (verified-correct table),
+EPSF-XVAL-A2-COMPARE, EPSF-SHAPE-01, EPSF-CORE-01..04, EPSF-VAL-01/02,
+EPSF-VAL-03, EPSF-AC-02, VYVAR_LITERATURE_CHECK_EPSF_20260915, 520
+era gates.
+
+Not enacted until criteria 1-3 hold. Validated-domain and limitations
+clauses amended by D-EPSF-XVAL-DOD-05 (2026-09-16).
+
+## D-EPSF-XVAL-DOD-04 (Milan 2026-09-16) - amends DOD-03 criterion 2; criterion 2 amended by D-EPSF-XVAL-DOD-05
 
 Basis: VAL-02 R-W3 (|b|=6.4, resid RMS 519 mmag) is INCONCLUSIVE, not
 a PSF-path finding. Architect re-analysis of
@@ -24,6 +131,15 @@ EPSF-XVAL-01 remains OPEN. Criteria 1 and 3 of DOD-03 are unchanged.
 Criterion 2 is REPLACED by the literature-standard flux-scale test
 (Stetson 1990 DAOGROW; Dolphin 2000):
 
+2. ACCURACY (curve-of-growth-tied large aperture). **AMENDED by
+   D-EPSF-XVAL-DOD-05 (2026-09-16):** split into 2a LINEARITY and 2b
+   STABILITY; the DOD-04 single-bar form (|b|<=5 and robust scatter
+   <=15 mmag) is historical. VAL-03 R-X1 FAIL under that bar is
+   explained (error 30); superseded by DOD-05 2a/2b via EPSF-AC-02.
+   Historical DOD-04 text retained below for the record.
+
+Historical DOD-04 criterion 2 text:
+
 2. ACCURACY (curve-of-growth-tied large aperture). On isolated,
    unsaturated, constant bright stars, d(s) =
    median_epochs(m_psf_inst - m_L_inst), where m_L is a
@@ -34,38 +150,16 @@ Criterion 2 is REPLACED by the literature-standard flux-scale test
    would indicate PSF colour dependence), not judged. No catalogue
    transformation and no blended star enters the reference.
 
-Thresholds are Milan's to adjust before EPSF-VAL-03 runs; frozen once
-it runs. Status on 516: criterion 1 PASS (VAL-02 R-W1, R-W2);
-criterion 2 pending VAL-03; criterion 3 pending the 520 era re-cut.
-Closure of EPSF-XVAL-01 = DOD-03 criteria 1 and 3 + this criterion 2
-via EPSF-VAL-03 + the 520 fix list; then enact
-D-EPSF-XVAL-CLOSE-TEXT-01.
+Thresholds were Milan's to adjust before EPSF-VAL-03; frozen at
+VAL-03 for the historical bar. Status: criterion 1 PASS (VAL-02);
+historical criterion 2 measured by VAL-03 (R-X1 FAIL; explained by
+DOD-05); live criterion 2 is DOD-05 2a/2b via EPSF-AC-02; criterion 3
+pending the 520 era re-cut.
 
 Evidence: `CURSOR_RESULT_EPSF_VAL_02.md` (R-W1/R-W2 PASS; R-W3
 INCONCLUSIVE under this amendment),
 `CURSOR_RESULT_LEDGER_EPSF_DOD_04.md` (error 29),
 `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md` C4/C6.
-
-## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - record; enact on closure
-
-When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
-verbatim, in DECISIONS and in the methods paper:
-
-  VYVAR ePSF photometry is implemented correctly (model construction
-  verified against an independent PSFEx reference; fit machinery
-  self-consistent to ~1 mmag), externally cross-validated (closer to
-  the AIJ-validated aperture path than PSFEx), and validated for its
-  intended domain (precision equal to aperture for G >= 9.5; flux
-  scale linear vs curve-of-growth-tied aperture; bright-end fits
-  gated by psf_fit_ok with aperture fallback). Known limitations:
-  undersampling pixel-phase component, unmeasured intra-pixel
-  sensitivity, builder at oversampling >= 3.
-
-Evidence chain to cite: VYVAR_AUDIT_FINAL (verified-correct table),
-EPSF-XVAL-A2-COMPARE, EPSF-SHAPE-01, EPSF-CORE-01..04, EPSF-VAL-01/02,
-EPSF-VAL-03, VYVAR_LITERATURE_CHECK_EPSF_20260915, 520 era gates.
-
-Not enacted until criteria 1-3 hold.
 
 ## D-EPSF-XVAL-DOD-03 (Milan 2026-09-15) - supersedes D-EPSF-XVAL-DOD-02; criterion 2 amended by D-EPSF-XVAL-DOD-04
 
@@ -103,8 +197,10 @@ identical epoch set and the pinned ensemble, all three hold:
 
 Thresholds for criterion 1 were frozen at EPSF-VAL-02 (R-W1/R-W2
 PASS). Closure of EPSF-XVAL-01 = criteria 1 (VAL-02) + criterion 2
-(VAL-03 under DOD-04) + criterion 3 (520 re-cut); then enact
-D-EPSF-XVAL-CLOSE-TEXT-01. VAL-01 under DOD-02 stays historical.
+(DOD-05 2a/2b via EPSF-AC-02; historical DOD-04/VAL-03 R-X1 FAIL
+explained by error 30) + criterion 3 (520 re-cut); then enact
+D-EPSF-XVAL-CLOSE-TEXT-01 (amended by DOD-05). VAL-01 under DOD-02
+stays historical.
 
 Scope statement for the paper: on this rig (FWHM ~2.4 px,
 9.77"/px, undersampled), the aperture path is the science product

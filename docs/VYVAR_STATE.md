@@ -1,18 +1,25 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-VAL-03 2026-09-16.** Measured D-EPSF-XVAL-DOD-04
+**Status:** **LEDGER-EPSF-DOD-05 2026-09-16.** D-EPSF-XVAL-DOD-05
+amends DOD-04 criterion 2 into 2a LINEARITY (|b|<=5 mmag/mag vs G)
+and 2b STABILITY (split-half residual scatter <=10 mmag). AC-DESIGN-01
+and CHROMATIC-PSF-01 recorded. CLOSE-TEXT-01 validated-domain /
+limitations clauses amended. VAL-03 R-X1 FAIL explained (error 30);
+superseded by 2a/2b. EPSF-XVAL-01 OPEN: closure = EPSF-AC-02 + 520
+-> amended close text. No code. Live 516 G4 prefixes unchanged
+(`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-VAL-03 2026-09-16.** Measured D-EPSF-XVAL-DOD-04
 criterion 2 on live 516: R-X1 FAIL (robust scatter 58.6 mmag; |b|=4.93
 within 5), R-X3 FAIL. r_L=4.0 x FWHM (fallback); plateau resid 7.5
 mmag. R_iso relaxed to 6xFWHM (n=18). Criterion 1 still PASS; criterion
-3 at 520. EPSF-XVAL-01 stays OPEN; sequencing Milan's. No production
+3 at 520. Superseded for criterion 2 by DOD-05. No production
 change. Live 516 G4 prefixes unchanged
 (`bfa24039` / `13e77cf8` / `172f9540`).
 **LEDGER-EPSF-DOD-04 2026-09-16.** D-EPSF-XVAL-DOD-04
 amends DOD-03 criterion 2 (CoG-tied large aperture; VAL-02 R-W3
-INCONCLUSIVE / error 29). D-EPSF-XVAL-CLOSE-TEXT-01 recorded.
-ENS4-BLEND-01 OPEN. EPSF-XVAL-01 stays OPEN (VAL-03 + 520 -> close
-text). No code. Live 516 G4 prefixes unchanged
-(`bfa24039` / `13e77cf8` / `172f9540`).
+INCONCLUSIVE / error 29). D-EPSF-XVAL-CLOSE-TEXT-01 recorded
+(later amended by DOD-05). ENS4-BLEND-01 OPEN. No code. Live 516
+G4 prefixes unchanged (`bfa24039` / `13e77cf8` / `172f9540`).
 **EPSF-VAL-02 2026-09-15.** Measured D-EPSF-XVAL-DOD-03
 criteria 1-2 on live 516: R-W1 PASS (domain D median r=1.049 max
 1.415), R-W2 PASS (admission; 0 science epochs as PSF), R-W3
