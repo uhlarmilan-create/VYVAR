@@ -75,8 +75,8 @@ None.
 
 ## Gates
 
-`--fast --clean` OVERALL PASS on dirty tree at base `093f615`
-(1629 passed, 34 skipped; clean-tree PASS). `a2/` never staged.
+`--fast --clean` OVERALL PASS on `13beb3d` (1629 passed, 34
+skipped; clean-tree PASS). `a2/` never staged.
 
 ## STOP
 
