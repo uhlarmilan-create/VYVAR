@@ -66,8 +66,8 @@ None.
 
 ## Gates
 
-`--fast --clean` OVERALL PASS on dirty tree at base `672a6a7`
-(1629 passed, 34 skipped; clean-tree PASS). Stamp after commit.
+`--fast --clean` OVERALL PASS on `4d3f1ba` (1629 passed, 34
+skipped; clean-tree PASS). `a2/` never staged.
 
 ## STOP
 
