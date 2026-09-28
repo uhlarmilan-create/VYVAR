@@ -38,7 +38,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **CAL-AGE-CLOCK** | Calibration master age clock | Cursor | LOW |
 | **CAL-PASSTHRU-DEAD** | Passthrough calibration honesty; related F-B01-F-B02 | Cursor | F-B01-F-B02 |
 | **CHECK-EPOCH-034** | Verify epoch error honesty on live 516 Light_034 (check resid +0.0287 mag, z=4.10; FRAME-QC-PARITY-02B); no data modification | Cursor | LOW |
-| **CHROMATIC-PSF-01** | RECORD: PSF-minus-large-aperture colour term c = +137.5 +/- 48.3 mmag/mag BP-RP (EPSF-AC-02 bootstrap; VAL-03 set). Consistent with VAL-02 PSF c=+140 vs ap c=-21 vs Johnson V. Feeds methods paper and D10-1 | Milan | MED |
+| **CHROMATIC-PSF-01** | RECORD: PSF-minus-large-aperture colour term c = +137.5 +/- 48.3 mmag/mag BP-RP (EPSF-AC-02; VAL-03 set). Consistent with VAL-02 PSF c=+140 vs ap c=-21 vs Johnson V. Feeds methods paper and D10-1. **Annotate 2026-09-28 (DOD-06):** value confirmed; CLOSE-TEXT-02 cites +138 +/- 48 | Milan | MED |
 | **COMP-POOL-R** | Comp pool R follow-up | Cursor | parked |
 | **CORR-ERR-01** | ZP common-mode vs diagonal budget; out of v1.0 | Milan | research |
 | **CR-1** | Same as CR-REJECTION (closure Step 9) | Cursor | TODO-A |
@@ -55,10 +55,11 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | OPEN. Criterion 1 PASS (VAL-02). Criterion 2 met on 516 (EPSF-AC-02: R-AC1/R-AC2 PASS under DOD-05 2a/2b). Closure waits criterion 3 at the 520 re-cut -> enact amended CLOSE-TEXT-01. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | 520 re-cut |
+| **EPSF-XVAL-01** | OPEN. Criteria 1+2 met on 516 (VAL-02; EPSF-AC-02 R-AC1/R-AC2). Last step = ERA-520-RECUT-01 (criterion 3) + VAL-02/AC-02 harness re-check on 520 products -> enact CLOSE-TEXT-02. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | ERA-520-RECUT-01 |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
+| **ERA-520-RECUT-01** | Criterion 3 of EPSF-XVAL-01: 520 era re-cut (FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 + bound list). Then re-check VAL-02 (c1) and AC-02 (c2) harnesses on 520 products (re-check, not re-registration) -> CLOSE-TEXT-02 | Milan | HIGH |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
 | **F-B01-F-B02** | PASSTHROUGH runs may claim VYVAR calibration; PDF honesty | Cursor | calpath audit s14 |
 | **F-BINGAIN-1** | Newton bin4 chi2 gate still open; do not flip ensemble to Broeg IVW until it passes | Cursor | Newton gate |
@@ -84,6 +85,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **PHASE0-BORDER-MARGIN-GEOMETRY** | Phase 0 50 px margin is not EDGE r_out; not merged into EDGE-ANNULUS-01 | Cursor | not EDGE |
 | **PIN-RMS-ABORT-01** | Should a failed pin ensemble fall back to the color path instead of aborting? Evidence: trio n_survivors=2<3 after rms_violation on 1500467303261764096 (M1); ids 1497245497969274240 / 1498425548825498112 / 1497227287309482624 | Cursor | Milan decision |
 | **PRECAL-INPUT-CONTRACT-01** | Pre-cal input contract | Cursor | MED |
+| **PSF-COMMON-SCALE-RESIDUAL-01** | RECORD (LOW): ~37 mmag unattributed per-star residual after colour (EPSF-AC-02 Part C); CORE-03 T1 phase surface NOT confirmed as driver (rho=0.13; error 31). Candidate cause: bright-end model mismatch. Not pursued for EPSF-XVAL-01 closure | Milan | LOW |
 | **PROC-MAG-NAMING** | Proc mag naming | Cursor | LOW |
 | **PROD-SIGMA-FLOOR** | Production sigma floor | Cursor | LOW |
 | **PROV-HEADLESS** | Headless provenance | Cursor | LOW |

@@ -1,10 +1,16 @@
 # VYVAR -- Development State
 
-**Status:** **EPSF-AC-02 2026-09-16.** Measured D-EPSF-XVAL-DOD-05
+**Status:** **LEDGER-EPSF-DOD-06 2026-09-28.** D-EPSF-XVAL-DOD-06:
+criterion 2 met on 516 (AC-02); CLOSE-TEXT-02 supersedes CLOSE-TEXT-01;
+closure sequence = ERA-520-RECUT-01 + harness re-check -> CLOSE.
+Error 31 (T1 phase not the per-star driver). PSF-COMMON-SCALE-RESIDUAL-01
+recorded (~37 mmag unattributed). No code. Live 516 G4 prefixes
+unchanged (`bfa24039` / `13e77cf8` / `172f9540`).
+**EPSF-AC-02 2026-09-16.** Measured D-EPSF-XVAL-DOD-05
 criteria 2a/2b on VAL-03 products: R-AC1 PASS (|b|=2.678), R-AC2 PASS
 (odd/even 5.6 mmag, chrono 6.6), R-AC3 RECORD, R-AC4 criterion 2 met on
-516. Closure of EPSF-XVAL-01 waits criterion 3 at the 520 re-cut.
-No production change. Live 516 G4 prefixes unchanged
+516. Closure of EPSF-XVAL-01 waits ERA-520-RECUT-01. No production
+change. Live 516 G4 prefixes unchanged
 (`bfa24039` / `13e77cf8` / `172f9540`).
 **LEDGER-EPSF-DOD-05 2026-09-16.** D-EPSF-XVAL-DOD-05
 amends DOD-04 criterion 2 into 2a LINEARITY (|b|<=5 mmag/mag vs G)

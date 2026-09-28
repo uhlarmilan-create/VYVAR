@@ -6,7 +6,75 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
-## D-EPSF-XVAL-DOD-05 (Milan 2026-09-16) - amends DOD-04 criterion 2
+## D-EPSF-XVAL-DOD-06 (Milan 2026-09-28) - criterion 2 met; closure sequence fixed
+
+EPSF-AC-02 (`672a6a7`): R-AC1 PASS (b = +2.68 +/- 21.5 mmag/mag,
+simultaneous with colour; n=18 isolated stars), R-AC2 PASS
+(split-half per-star offset stability 5.59 odd/even, 6.60
+chronological, noise expectation 4.83 mmag - at the noise floor),
+R-AC4: criterion 2 met on 516. Architect re-verification: values
+bit-match the per-star table.
+
+Caveat on the record: two of 36 split tests exceed 3x their own
+noise (1498735778606786816 chrono -14.5; 1497145751650265600
+odd/even -14.6 mmag). Per-star offsets may wander by ~10-15 mmag
+for a minority of bright stars; not a FAIL; listed as a limitation
+in D-EPSF-XVAL-CLOSE-TEXT-02.
+
+Architect error 31: the CORE-03 T1 phase surface was predicted to
+drive the per-star common-scale offsets (+/-36 mmag); AC-02 Part C
+gives rho = 0.13, p = 0.61 - NOT confirmed. The phase mechanism
+remains established only for the target's per-epoch component
+(CORE-01 phase rank R^2 0.221; ~2-5 mmag RMS). The ~37 mmag
+per-star residual after colour is UNATTRIBUTED (bright-end model
+mismatch is the plausible but unmeasured cause;
+PSF-COMMON-SCALE-RESIDUAL-01).
+
+Status on 516: criterion 1 PASS (VAL-02); criterion 2 PASS
+(EPSF-AC-02); criterion 3 pending ERA-520-RECUT-01. Closure
+sequence: ERA-520-RECUT-01 (criterion 3) -> re-run of the VAL-02
+(criteria 1) and AC-02 (criterion 2) harnesses on the 520 products
+(a re-check, not a re-registration) -> enact
+D-EPSF-XVAL-CLOSE-TEXT-02 (supersedes CLOSE-TEXT-01).
+
+Evidence: `CURSOR_RESULT_EPSF_AC_02.md`,
+`CURSOR_RESULT_LEDGER_EPSF_DOD_06.md` (error 31).
+
+## D-EPSF-XVAL-CLOSE-TEXT-02 (Milan 2026-09-28) - supersedes CLOSE-TEXT-01; enact on closure
+
+When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
+verbatim, in DECISIONS and in the methods paper:
+
+  VYVAR ePSF photometry is implemented correctly (model construction
+  verified against an independent PSFEx reference: FWHM within 2%,
+  shape not a limiting factor; fit machinery self-consistent to
+  ~1 mmag), externally cross-validated (closer to the AIJ-validated
+  aperture path than PSFEx on the same 134 epochs), and validated
+  for its intended, differential use: precision equal to aperture
+  for G >= 9.5 (rms ratio median 1.05, max 1.42), bright-end fits
+  gated by psf_fit_ok with aperture fallback verified end-to-end,
+  per-star scale offsets stable at the noise floor (5.6-6.6 mmag
+  split-half) and therefore absorbed by ensemble normalization,
+  and a flux-scale slope versus brightness consistent with zero
+  within +/-20 mmag/mag (isolated stars) and within ~15 mmag/mag
+  (95-star catalogue-tied core).
+  Known limitations, stated: (i) common-scale (absolute) PSF
+  magnitudes carry a ~40 mmag per-star systematic, of which a
+  chromatic term of +138 +/- 48 mmag per mag of BP-RP is measured
+  and ~37 mmag remains unattributed; absolute PSF magnitudes are not
+  a product; (ii) an undersampling pixel-phase component of
+  ~2-5 mmag RMS on aligned frames; (iii) a minority of bright stars
+  show per-star offset wander of ~10-15 mmag; (iv) intra-pixel
+  sensitivity and brighter-fatter are unmeasured; (v) the ePSF
+  builder at oversampling >= 3 is unusable (EPSF-BUILD-OSAMP-01).
+  Evidence chain: VYVAR_AUDIT_FINAL; EPSF-XVAL-A2-COMPARE;
+  EPSF-SHAPE-01; EPSF-CORE-01..04; EPSF-VAL-01..03; EPSF-AC-02;
+  VYVAR_LITERATURE_CHECK_EPSF_20260915; ERA-520 gates.
+
+Not enacted until criteria 1-3 hold. Supersedes
+D-EPSF-XVAL-CLOSE-TEXT-01.
+
+## D-EPSF-XVAL-DOD-05 (Milan 2026-09-16) - amends DOD-04 criterion 2; closure sequence amended by DOD-06
 
 Basis: VAL-03 R-X1 FAIL on robust scatter (58.6 mmag; n=18 isolated
 stars, G 8.7-11.2, BP-RP 0.6-1.4; |b|=4.93 within limit). Architect
@@ -53,13 +121,18 @@ of DOD-04 is SPLIT:
   (EPSF-AC-02 Part C), and the colour term c as CHROMATIC-PSF-01.
 
 Status on 516: criterion 1 PASS (VAL-02); criteria 2a/2b PASS
-(EPSF-AC-02 R-AC1/R-AC2); criterion 3 pending the 520 era re-cut.
-Closure = criteria 1 + 2a/2b + 3; then enact the amended
-D-EPSF-XVAL-CLOSE-TEXT-01.
+(EPSF-AC-02 R-AC1/R-AC2); criterion 3 pending ERA-520-RECUT-01.
+**Amended by D-EPSF-XVAL-DOD-06 (2026-09-28):** closure sequence =
+ERA-520-RECUT-01 + VAL-02/AC-02 harness re-check on 520 products ->
+enact D-EPSF-XVAL-CLOSE-TEXT-02 (not CLOSE-TEXT-01). Phase-surface
+attribution of the per-star residual RETRACTED (error 31;
+PSF-COMMON-SCALE-RESIDUAL-01).
 
 Evidence: `CURSOR_RESULT_EPSF_VAL_03.md` (R-X1 FAIL under DOD-04;
 explained here), `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md` (error 30),
-`CURSOR_RESULT_EPSF_CORE_03.md` (T1 phase surface).
+`CURSOR_RESULT_EPSF_AC_02.md`, `CURSOR_RESULT_LEDGER_EPSF_DOD_06.md`
+(error 31), `CURSOR_RESULT_EPSF_CORE_03.md` (T1 phase surface;
+per-epoch only).
 
 ## AC-DESIGN-01 (Milan 2026-09-16) - record; not a defect
 
@@ -87,10 +160,10 @@ therein). Feeds the methods paper and D10-1.
 Evidence: `CURSOR_RESULT_EPSF_AC_02.md`, `CURSOR_RESULT_EPSF_VAL_03.md`,
 `CURSOR_RESULT_EPSF_VAL_02.md`, `CURSOR_RESULT_LEDGER_EPSF_DOD_05.md`.
 
-## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - record; enact on closure; amended by DOD-05
+## D-EPSF-XVAL-CLOSE-TEXT-01 (Milan 2026-09-16) - SUPERSEDED by CLOSE-TEXT-02 (DOD-06)
 
-When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
-verbatim, in DECISIONS and in the methods paper:
+Historical close text (amended by DOD-05). **Not to be enacted.**
+Live close text is D-EPSF-XVAL-CLOSE-TEXT-02.
 
   VYVAR ePSF photometry is implemented correctly (model construction
   verified against an independent PSFEx reference; fit machinery
@@ -105,13 +178,9 @@ verbatim, in DECISIONS and in the methods paper:
   PSF magnitudes carry a ~40-60 mmag per-star systematic (phase,
   chromatic PSF) and are not a product.
 
-Evidence chain to cite: VYVAR_AUDIT_FINAL (verified-correct table),
-EPSF-XVAL-A2-COMPARE, EPSF-SHAPE-01, EPSF-CORE-01..04, EPSF-VAL-01/02,
-EPSF-VAL-03, EPSF-AC-02, VYVAR_LITERATURE_CHECK_EPSF_20260915, 520
-era gates.
-
-Not enacted until criteria 1-3 hold. Validated-domain and limitations
-clauses amended by D-EPSF-XVAL-DOD-05 (2026-09-16).
+Superseded 2026-09-28 by D-EPSF-XVAL-CLOSE-TEXT-02 (error 31
+retracts phase attribution of the per-star residual; adds minority
+wander and unattributed ~37 mmag limitation).
 
 ## D-EPSF-XVAL-DOD-04 (Milan 2026-09-16) - amends DOD-03 criterion 2; criterion 2 amended by D-EPSF-XVAL-DOD-05
 

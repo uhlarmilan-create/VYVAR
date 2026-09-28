@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-28 -- LEDGER-EPSF-DOD-06 (docs)
+
+D-EPSF-XVAL-DOD-06: criterion 2 met; closure sequence fixed to
+ERA-520-RECUT-01 + VAL-02/AC-02 re-check -> CLOSE-TEXT-02.
+CLOSE-TEXT-01 superseded. Error 31 (T1 phase not per-star driver;
+~37 mmag unattributed). PSF-COMMON-SCALE-RESIDUAL-01 recorded.
+Evidence: `CURSOR_RESULT_LEDGER_EPSF_DOD_06.md`.
+
 ## 2026-09-16 -- EPSF-AC-02 measurement (R-AC1..R-AC4)
 
 DOD-05 criteria 2a/2b on VAL-03 isolated n=18 / 134 epochs.
