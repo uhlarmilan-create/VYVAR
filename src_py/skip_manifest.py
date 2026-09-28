@@ -12,8 +12,9 @@ Outside ``photometry_sha_files`` globs (``dev/tests/photometry_sha.py:100-105``)
 * ``**/photometry/**/lightcurves/comp_qa_*.json``  (extended)
 
 Always written. ``targets`` is an empty list when nothing is skipped.
-LC CSV bytes are not touched. A ``skip_reason`` column in the LC CSVs
-is deferred to the next natural era re-cut.
+LC CSV files carry a ``skip_reason`` column (ERA-520-RECUT-01 item 5);
+empty string for written science products. Sidecar classification is
+unchanged.
 
 Classes
 -------

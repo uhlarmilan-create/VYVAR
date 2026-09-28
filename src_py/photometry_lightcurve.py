@@ -1390,11 +1390,14 @@ def save_lightcurve_csv(
     err_scint_rel: np.ndarray | None = None,
     err_sigma_sys_rel: np.ndarray | None = None,
     aperture_policy: dict[str, Any] | None = None,
+    skip_reason: str = "",
 ) -> None:
     """Ulozi lightcurve CSV.
 
     LC schema note: ``time_base`` labels the BJD/HJD recompute path (``BJD_TDB`` vs
     ``JD_FALLBACK``); it does not alter ``bjd``/``hjd``/``jd`` values.
+    ``skip_reason`` (D-LC-SKIP-MANIFEST-01): empty for written science LCs; class
+    vocabulary shared with ``lightcurves_skip_manifest.json``.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     n = int(len(bjd))
@@ -1505,6 +1508,7 @@ def save_lightcurve_csv(
             "aperture_r_px": np.round(aperture_r_px, 3),
             "flag": [_flag_cell(f) for f in flags],
             "method": method,
+            "skip_reason": [str(skip_reason or "")] * n,
             "source_file": source_files,
         }
     )
