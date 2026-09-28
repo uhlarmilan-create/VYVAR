@@ -56,3 +56,37 @@ def test_gain_falsy_01_no_or_falsy_trap():
     hdr = fits.Header({"GAIN": 0.0})
     gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=None)
     assert gain > 0 and rn >= 0
+
+
+def test_gain_falsy_01_null_g_pt_falls_to_container_scale(tmp_path: Path):
+    """era04/era05 freeze sidecars store authority.g_pt=null; must not TypeError."""
+    phot = tmp_path / "photometry"
+    phot.mkdir()
+    (phot / "gain_photon_transfer.json").write_text(
+        json.dumps(
+            {
+                "authority": {
+                    "value_e_per_adu_container": 0.7925,
+                    "source": "db_div_container_scale",
+                    "g_pt": None,
+                    "ok": True,
+                },
+                "photon_transfer": {"g_pt": float("nan")},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (phot / "pipeline_meta.json").write_text(
+        json.dumps(
+            {
+                "resolved_facts": {
+                    "read_noise": {"value": 15.2, "source": "test"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    hdr = fits.Header({"GAIN": 0.0})
+    gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=phot)
+    assert abs(gain - 0.7925) < 1e-6, f"gain={gain}"
+    assert abs(rn - 15.2) < 0.1, f"rn={rn}"

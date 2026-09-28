@@ -2292,14 +2292,24 @@ def _psf_load_gain_rn_authority(photometry_dir: Path | None) -> tuple[float, flo
             payload = {}
         auth = payload.get("authority") if isinstance(payload, dict) else None
         if isinstance(auth, dict):
-            g = float(auth.get("g_pt", auth.get("value_e_per_adu_container", float("nan"))))
+            g_raw = auth.get("g_pt")
+            if g_raw is None:
+                g_raw = auth.get("value_e_per_adu_container")
+            try:
+                g = float(g_raw) if g_raw is not None else float("nan")
+            except (TypeError, ValueError):
+                g = float("nan")
             if math.isfinite(g) and g > 0:
                 gain = g
                 g_src = str(auth.get("source") or "g_pt")
         if not (math.isfinite(gain) and gain > 0):
             pt = payload.get("photon_transfer") if isinstance(payload, dict) else None
             if isinstance(pt, dict):
-                g = float(pt.get("g_pt", float("nan")))
+                g_raw = pt.get("g_pt")
+                try:
+                    g = float(g_raw) if g_raw is not None else float("nan")
+                except (TypeError, ValueError):
+                    g = float("nan")
                 if math.isfinite(g) and g > 0:
                     gain = g
                     g_src = "g_pt"
@@ -2313,14 +2323,22 @@ def _psf_load_gain_rn_authority(photometry_dir: Path | None) -> tuple[float, flo
         if isinstance(facts, dict):
             rn_rec = facts.get("read_noise")
             if isinstance(rn_rec, dict):
-                r = float(rn_rec.get("value", float("nan")))
+                r_raw = rn_rec.get("value")
+                try:
+                    r = float(r_raw) if r_raw is not None else float("nan")
+                except (TypeError, ValueError):
+                    r = float("nan")
                 if math.isfinite(r) and r >= 0:
                     rn = r
                     rn_src = str(rn_rec.get("source") or "pipeline_meta")
             if not (math.isfinite(gain) and gain > 0):
                 g_rec = facts.get("gain")
                 if isinstance(g_rec, dict):
-                    g = float(g_rec.get("value", float("nan")))
+                    g_raw = g_rec.get("value")
+                    try:
+                        g = float(g_raw) if g_raw is not None else float("nan")
+                    except (TypeError, ValueError):
+                        g = float("nan")
                     if math.isfinite(g) and g > 0:
                         gain = g
                         g_src = str(g_rec.get("source") or "pipeline_meta")
