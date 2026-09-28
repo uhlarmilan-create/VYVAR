@@ -2259,22 +2259,127 @@ def _annulus_sky_per_px_full_frame(
         )
 
 
-def _psf_resolve_gain_read_noise(frame_hdr: Any) -> tuple[float, float]:
-    """Gain (e-/ADU) and read noise (e-) for PSF fit-weight construction."""
+def _psf_photometry_dir_from_epsf(epsf_model_path: Path | None) -> Path | None:
+    """platesolve/<setup>/masterstar_epsf.fits -> platesolve/<setup>/photometry/."""
+    if epsf_model_path is None:
+        return None
+    try:
+        p = Path(epsf_model_path).resolve()
+    except OSError:
+        return None
+    phot = p.parent / "photometry"
+    return phot if phot.is_dir() else None
+
+
+def _psf_load_gain_rn_authority(photometry_dir: Path | None) -> tuple[float, float, str, str]:
+    """Return (gain, rn, gain_source, rn_source); nan/empty when unresolved."""
+    gain = float("nan")
+    rn = float("nan")
+    g_src = ""
+    rn_src = ""
+    if photometry_dir is None or not Path(photometry_dir).is_dir():
+        return gain, rn, g_src, rn_src
+    phot = Path(photometry_dir)
+    try:
+        from gain_photon_transfer import GAIN_PT_SIDECAR_NAME  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        GAIN_PT_SIDECAR_NAME = "gain_photon_transfer.json"
+    sidecar = phot / GAIN_PT_SIDECAR_NAME
+    if sidecar.is_file():
+        try:
+            payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            payload = {}
+        auth = payload.get("authority") if isinstance(payload, dict) else None
+        if isinstance(auth, dict):
+            g = float(auth.get("g_pt", auth.get("value_e_per_adu_container", float("nan"))))
+            if math.isfinite(g) and g > 0:
+                gain = g
+                g_src = str(auth.get("source") or "g_pt")
+        if not (math.isfinite(gain) and gain > 0):
+            pt = payload.get("photon_transfer") if isinstance(payload, dict) else None
+            if isinstance(pt, dict):
+                g = float(pt.get("g_pt", float("nan")))
+                if math.isfinite(g) and g > 0:
+                    gain = g
+                    g_src = "g_pt"
+    meta_path = phot / "pipeline_meta.json"
+    if meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            meta = {}
+        facts = meta.get("resolved_facts") if isinstance(meta, dict) else None
+        if isinstance(facts, dict):
+            rn_rec = facts.get("read_noise")
+            if isinstance(rn_rec, dict):
+                r = float(rn_rec.get("value", float("nan")))
+                if math.isfinite(r) and r >= 0:
+                    rn = r
+                    rn_src = str(rn_rec.get("source") or "pipeline_meta")
+            if not (math.isfinite(gain) and gain > 0):
+                g_rec = facts.get("gain")
+                if isinstance(g_rec, dict):
+                    g = float(g_rec.get("value", float("nan")))
+                    if math.isfinite(g) and g > 0:
+                        gain = g
+                        g_src = str(g_rec.get("source") or "pipeline_meta")
+    return gain, rn, g_src, rn_src
+
+
+def _psf_resolve_gain_read_noise(
+    frame_hdr: Any,
+    *,
+    photometry_dir: Path | None = None,
+    epsf_model_path: Path | None = None,
+) -> tuple[float, float]:
+    """Gain (e-/ADU) and read noise (e-) for PSF fit-weight construction.
+
+    GAIN-FALSY-01: never use ``value or 1.0`` / ``or 10.0`` (falsy trap when the
+    header carries GAIN=0.0 and resolve falls through). Prefer the photometry-dir
+    equipment authority (g_pt / pipeline_meta RN) over bare AppConfig defaults.
+    """
+    phot = Path(photometry_dir) if photometry_dir is not None else _psf_photometry_dir_from_epsf(
+        epsf_model_path
+    )
+    auth_g, auth_rn, _, _ = _psf_load_gain_rn_authority(phot)
+    gain = float("nan")
+    rn = float("nan")
     try:
         from config import AppConfig
         from param_resolver import resolve_gain, resolve_read_noise
 
         cfg = AppConfig()
-        gain = float(resolve_gain(frame_hdr, cfg=cfg).value or 1.0)
-        rn = float(resolve_read_noise(frame_hdr, cfg=cfg).value or 10.0)
+        g_res = resolve_gain(frame_hdr, cfg=cfg)
+        r_res = resolve_read_noise(frame_hdr, cfg=cfg)
+        # Explicit None/ok checks - never ``value or default`` (GAIN-FALSY-01).
+        if g_res is not None and getattr(g_res, "ok", False):
+            gv = getattr(g_res, "value", None)
+            if gv is not None:
+                gf = float(gv)
+                if math.isfinite(gf) and gf > 0:
+                    gain = gf
+        if r_res is not None and getattr(r_res, "ok", False):
+            rv = getattr(r_res, "value", None)
+            if rv is not None:
+                rf = float(rv)
+                if math.isfinite(rf) and rf >= 0:
+                    rn = rf
     except Exception:  # noqa: BLE001
-        gain, rn = 1.0, 10.0
+        pass
+
+    # Prefer photometry-dir equipment authority (GAIN-FALSY-01). Header/config
+    # path on this rig lands on (1.0, 10.0) when GAIN=0.0 fails sanity.
+    if math.isfinite(auth_g) and auth_g > 0:
+        gain = auth_g
+    if math.isfinite(auth_rn) and auth_rn >= 0:
+        rn = auth_rn
+
     if not math.isfinite(gain) or gain <= 0:
         gain = 1.0
     if not math.isfinite(rn) or rn < 0:
         rn = 10.0
-    return gain, rn
+    return float(gain), float(rn)
 
 
 def _psf_sky_only_sigma_per_px(sky_per_px_adu: float, gain: float, read_noise_e: float) -> float:
@@ -2489,6 +2594,7 @@ def _grouped_psf_fit(
     neighbor_include_fwhm: float,
     chi2_limit: float,
     frame_hdr: Any = None,
+    epsf_model_path: Path | None = None,
 ) -> dict[str, Any] | None:
     """Joint (deblended) PSF fit of a target plus its close neighbours.
 
@@ -2563,7 +2669,9 @@ def _grouped_psf_fit(
         ec = np.asarray(err_full[y_lo : y_hi + 1, x_lo : x_hi + 1], dtype=np.float64)
         if ec.shape == cut.shape and np.any(np.isfinite(ec)) and float(np.nanmax(ec)) > 0:
             err_full_cut = ec
-    _grp_gain, _grp_rn = _psf_resolve_gain_read_noise(frame_hdr)
+    _grp_gain, _grp_rn = _psf_resolve_gain_read_noise(
+        frame_hdr, epsf_model_path=epsf_model_path
+    )
     _flux_init = _psf_flux_init_for_error_map(float("nan"), tflux)
     err_cut = _psf_fit_error_cutout_full_ccd(
         cut.shape,
@@ -2811,7 +2919,9 @@ def psf_photometry_stars(
         raise ValueError(f"cutout_size must be odd and >= 3, got {cutout_size}")
 
     fwhm_px_meta = float(meta.get("fwhm_px", 0.0))
-    _psf_gain, _psf_rn = _psf_resolve_gain_read_noise(frame_hdr)
+    _psf_gain, _psf_rn = _psf_resolve_gain_read_noise(
+        frame_hdr, epsf_model_path=ep
+    )
     _weight_mode = _PSF_WEIGHT_MODE_FULL
     _err_mode = _PSF_ERR_MODE_FULL
 
@@ -3059,6 +3169,7 @@ def psf_photometry_stars(
                 neighbor_include_fwhm=_grp_inc,
                 chi2_limit=_grp_chi2_limit,
                 frame_hdr=frame_hdr,
+                epsf_model_path=ep,
             )
             if _gres is not None:
                 row_out = dict(base)
