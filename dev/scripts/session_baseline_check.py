@@ -58,21 +58,21 @@ ANCHOR_LEDGER_ID = "VL-ANCHOR-WCSINV"
 
 DRAFT_ID = 516
 SETUP = "NoFilter_60_2"
-SNAPSHOT_NAME = "draft_000516_snapshot_era04_20260826"
+SNAPSHOT_NAME = "draft_000516_snapshot_era05_20260928"
 # era04 v1 raw-byte SHA (history; freeze-reproducible only at dffe859).
 EXPECTED_PHOTOMETRY_SHA_CORE_V1 = "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_V1 = "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863"
 # ANCHOR-HASH-01 v2 mixed core (53 aperture + 53 empty PSF + 54 other). History only.
 EXPECTED_PHOTOMETRY_SHA_CORE_V2_MIXED = "af218acd32a4892cc4f0030168829852ced5c5140f83575301c1a39869437e66"
 EXPECTED_PHOTOMETRY_SHA_EXTENDED_V2_MIXED = "ada5caff61692ff0489631e6278efedd8c92cb9bd26d05fcb67f2fb3729b1676"
-# EPSF-CHAIN-01 ANCHOR SPLIT. era04_aperture = 53 aperture LCs (unchanged bytes).
-EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "d55fcc9d8ad9b55213c5c1813415cb54d54b88c3fc917bc81706065e4d824810"
-EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "cc8b532ee668b9b339e4170752b9d1054771b1236ecac8163688693586117167"
+# EPSF-CHAIN-01 ANCHOR SPLIT. era04_aperture history: d55fcc9d / cc8b532e.
+# era05_aperture (ERA-520-RECUT-01): schema skip_reason+lc_flux_method + T4 HAT-188.
+EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "87197716af1671328b152d86e33c3a26b277ea957033704c3977f76a57804c31"
+EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "dd92e99d8e861ce908665cde3087f4b0213b832927d6dc90e7d859fa5c4fecf8"
 EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N = 53
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE_N = 157
-# core_psf (epsf01 candidate). Science bytes locked after --full G3 PASS.
-# 95153825... was the same product with epsf_build_timestamp still hashed (G7 false fail).
-# Milan PUSH_AUTH decides whether this is the first ePSF anchor.
+# core_psf (epsf01). era04 history c743b8ba. era05 pending --full-epsf after FIT-OK/GAIN.
+# Placeholder keeps era04 until first --full-epsf records the new hash beside it.
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF = (
     "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8"
 )
@@ -924,13 +924,13 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
         report.add(
             "full-snapshot-sha-core-aperture",
             "FAIL",
-            f"snapshot {snap_ap[:16]}... n={snap_n_ap} != era04_aperture",
+            f"snapshot {snap_ap[:16]}... n={snap_n_ap} != era05_aperture",
         )
     else:
         report.add(
             "full-snapshot-sha-core-aperture",
             "PASS",
-            f"era04_aperture {snap_ap[:16]}... n={snap_n_ap}",
+            f"era05_aperture {snap_ap[:16]}... n={snap_n_ap}",
         )
     if not catalog_ok:
         report.add(
@@ -942,7 +942,7 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
         report.add(
             "full-photometry-sha-core-aperture",
             "PASS",
-            f"era04_aperture {core_ap[:16]}... n={n_ap}",
+            f"era05_aperture {core_ap[:16]}... n={n_ap}",
         )
     else:
         report.add(
@@ -954,7 +954,7 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
         report.add(
             "full-photometry-sha-ext-aperture",
             "PASS",
-            f"era04_aperture ext {ext_ap[:16]}... n={n_ext_ap}",
+            f"era05_aperture ext {ext_ap[:16]}... n={n_ext_ap}",
         )
     else:
         report.add(
@@ -1418,8 +1418,8 @@ def main(argv: list[str] | None = None) -> int:
         "--full",
         action="store_true",
         help=(
-            "Aperture-only frozen 516 snapshot: era04_aperture d55fcc9d n=53 / "
-            "ext cc8b532e n=157. ePSF OFF (minutes)."
+            "Aperture-only frozen 516 snapshot: era05_aperture 87197716 n=53 / "
+            "ext dd92e99d n=157 (era04 history d55fcc9d / cc8b532e). ePSF OFF (minutes)."
         ),
     )
     parser.add_argument(
@@ -1427,8 +1427,8 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         dest="full_epsf",
         help=(
-            "Lock-time: --full plus ePSF stage; gate epsf01 c743b8ba n=53 and "
-            "G3 residual meter (psf_delta - ap_delta)."
+            "Lock-time: --full plus ePSF stage; gate epsf01 (era04 history "
+            "c743b8ba; era05 pending ERA-520 re-cut) n=53 and G3 residual meter."
         ),
     )
     parser.add_argument(
@@ -1439,7 +1439,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--parity",
         action="store_true",
-        help="W1/W2 aperture hash parity on era04 snapshot; ePSF OFF",
+        help="W1/W2 aperture hash parity on era05 snapshot; ePSF OFF",
     )
     parser.add_argument(
         "--parity-epsf",
