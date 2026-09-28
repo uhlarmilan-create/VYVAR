@@ -2429,14 +2429,32 @@ def _psf_sandwich_flux_err(
 
 
 def _apply_psf_fixed_position(phot: Any, *, fix: bool) -> None:
-    """Fix PSF centroid to init (forced photometry; Guy et al. 2010 / Lacroix et al. 2025)."""
+    """Fix PSF centroid to init (forced photometry; Guy et al. 2010 / Lacroix et al. 2025).
+
+    Plain ``PSFPhotometry`` exposes ``psf_model`` directly. ``IterativePSFPhotometry``
+    (production path when ``use_iterative=True``) stores the fitter as ``_psfphot`` and
+    has no ``psf_model`` attribute - FIXPOS-NOOP-01: the old path raised AttributeError,
+    logged EXC-0454, and silently left centroids free.
+    """
     if not fix:
         return
     try:
-        phot.psf_model.x_0.fixed = True
-        phot.psf_model.y_0.fixed = True
+        model = getattr(phot, "psf_model", None)
+        if model is None:
+            inner = getattr(phot, "_psfphot", None)
+            model = getattr(inner, "psf_model", None) if inner is not None else None
+        if model is None:
+            raise AttributeError(
+                f"{type(phot).__name__} has no psf_model (and no _psfphot.psf_model)"
+            )
+        model.x_0.fixed = True
+        model.y_0.fixed = True
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0454] PSF centroid fixed-position flags not set - forced photometry may drift centroid and ch...: %s', exc)
+        logging.error(
+            "[EXC-0454] PSF centroid fixed-position flags not set - forced photometry "
+            "may drift centroid and chi2: %s",
+            exc,
+        )
         pass
 
 
