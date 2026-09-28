@@ -1784,6 +1784,8 @@ def _assign_comp_tiers_to_pool(
         return "color_rms_wide"
 
     sel_note = _color_rms_sel_note(final_comps)
+    if final_comps is not None and bool(getattr(final_comps, "attrs", {}).get("color_fallback")):
+        sel_note = "color_rms_t4_fallback"
 
     if final_comps is None or getattr(final_comps, "empty", True):
         _warn_zero_compstars_edge(
