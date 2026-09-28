@@ -126,12 +126,17 @@ def psf_fit_ok_for_zp_mask(
     flux: np.ndarray,
     chi2: np.ndarray,
 ) -> np.ndarray:
-    """ZP membership: stored psf_fit_ok OR (finite flux>0 AND finite chi2). No refit."""
+    """ZP membership: honour stored psf_fit_ok (FIT-OK-ADMISSION-01).
+
+    Pre-fix (defect): admitted ``psf_fit_ok`` OR (finite flux>0 AND finite chi2),
+    so epochs with fit_ok=False but finite chi2 entered the PSF LC (CORE-01 R-C0).
+    ``chi2`` is retained in the signature for call-site compatibility; it is not
+    used for admission.
+    """
+    del chi2  # admission no longer OR-gates on finite chi2
     ok = np.asarray(fit_ok, dtype=bool)
     fl = np.asarray(flux, dtype=np.float64)
-    ch = np.asarray(chi2, dtype=np.float64)
-    extra = np.isfinite(fl) & (fl > 0) & np.isfinite(ch)
-    return ok | extra
+    return ok & np.isfinite(fl) & (fl > 0)
 
 
 def zp_membership_usable(

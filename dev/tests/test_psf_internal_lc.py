@@ -345,7 +345,12 @@ def _write_wide_manifest(root: Path, equipment_id: int = 1, telescope_id: int = 
     )
 
 
-def test_chi2_80_strict_drops_for_zp_keeps(tmp_path: Path) -> None:
+def test_fit_ok_admission_01_for_zp_honours_fit_ok_false(tmp_path: Path) -> None:
+    """FIT-OK-ADMISSION-01: fit_ok_for_zp must not admit fit_ok=False + finite chi2.
+
+    Pre-fix: for_zp kept the epoch (OR-gate on finite flux/chi2). Post-fix: both
+    strict and for_zp drop it.
+    """
     ps, frames, target = _synthetic_draft(tmp_path)
     proc = frames / "proc_Light_001.csv"
     df = pd.read_csv(proc)
@@ -380,8 +385,19 @@ def test_chi2_80_strict_drops_for_zp_keeps(tmp_path: Path) -> None:
         cfg=cfg_z,
     )
     d_z = pd.read_csv(Path(out_z["written"][0]), comment="#")
-    assert np.isfinite(float(d_z.loc[0, "psf_delta_mag"]))
+    assert pd.isna(d_z.loc[0, "psf_delta_mag"])
     assert bool(d_z.loc[0, "psf_fit_ok"]) is False
+
+
+def test_psf_fit_ok_for_zp_mask_unit():
+    """Direct unit: fit_ok=False + finite flux/chi2 is excluded."""
+    from psf_internal_lc import psf_fit_ok_for_zp_mask
+
+    fit_ok = np.array([True, False, False])
+    flux = np.array([100.0, 100.0, np.nan])
+    chi2 = np.array([1.0, 80.0, 80.0])
+    mask = psf_fit_ok_for_zp_mask(fit_ok, flux, chi2)
+    assert mask.tolist() == [True, False, False]
 
 
 def test_unvalidated_rig_stays_strict_with_info_line(tmp_path: Path) -> None:
