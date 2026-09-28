@@ -40,3 +40,5 @@ def test_lc_csv_skip_reason_column(tmp_path: Path) -> None:
     assert "skip_reason" in df.columns
     got = df["skip_reason"].fillna("").astype(str).tolist()
     assert got == ["", "", ""]
+    assert "lc_flux_method" in df.columns
+    assert list(df["lc_flux_method"].astype(str)) == ["aperture", "aperture", "aperture"]

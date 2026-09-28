@@ -1391,6 +1391,7 @@ def save_lightcurve_csv(
     err_sigma_sys_rel: np.ndarray | None = None,
     aperture_policy: dict[str, Any] | None = None,
     skip_reason: str = "",
+    lc_flux_method: list[str] | np.ndarray | None = None,
 ) -> None:
     """Ulozi lightcurve CSV.
 
@@ -1398,6 +1399,8 @@ def save_lightcurve_csv(
     ``JD_FALLBACK``); it does not alter ``bjd``/``hjd``/``jd`` values.
     ``skip_reason`` (D-LC-SKIP-MANIFEST-01): empty for written science LCs; class
     vocabulary shared with ``lightcurves_skip_manifest.json``.
+    ``lc_flux_method`` (ERA-520 item 6 / VAL-02 R-W2): per-epoch adaptive picker
+    provenance; ``method`` remains the published science product method.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     n = int(len(bjd))
@@ -1512,6 +1515,15 @@ def save_lightcurve_csv(
             "source_file": source_files,
         }
     )
+    if lc_flux_method is not None:
+        _lm = [str(x) for x in list(lc_flux_method)]
+        if len(_lm) == n:
+            df["lc_flux_method"] = _lm
+        else:
+            df["lc_flux_method"] = [str(method)] * n
+    else:
+        # Provenance column always present (ERA-520 item 6); defaults to published method.
+        df["lc_flux_method"] = [str(method)] * n
     if mag_democratic is not None:
         _md = np.asarray(mag_democratic, dtype=float)
         df["delta_mag_democratic"] = np.round(

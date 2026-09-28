@@ -1440,6 +1440,11 @@ def _phase2a_process_one_target(
         lunar_risk=_lc_lunar_risk,
         dilution_factor=float(_dilution_result.get("dilution_factor", 1.0)),
         method=_lc_export_method,
+        lc_flux_method=(
+            target_frames["lc_flux_method"].astype(str).tolist()
+            if "lc_flux_method" in target_frames.columns
+            else None
+        ),
         alignment_failed=align_fail_arr,
         err_scatter_unmatched=err_scatter_unmatched_arr,
         catalog_match_mode=catalog_match_mode_list,
