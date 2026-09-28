@@ -38,4 +38,5 @@ def test_lc_csv_skip_reason_column(tmp_path: Path) -> None:
     )
     df = pd.read_csv(path)
     assert "skip_reason" in df.columns
-    assert list(df["skip_reason"].astype(str)) == ["", "", ""]
+    got = df["skip_reason"].fillna("").astype(str).tolist()
+    assert got == ["", "", ""]
