@@ -290,7 +290,8 @@ Measuring star brightness: aperture sizing, sky annulus, error model, aperture c
 | `psf_adaptive_enabled` | False | Setting (config.json) | config.json | config assembly & validation (`config.py:1310`) | Adaptive per-star routing between PSF and aperture measurement (PSF program is OFF pending the Newton dense-field gate). |
 | `psf_adaptive_resolve_fwhm` | 2.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1312`) | Separation (FWHM) below which the adaptive router prefers PSF for blended pairs. |
 | `psf_adaptive_snr_lo` | 15.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1318`) | SNR below which the adaptive router prefers PSF measurement. |
-| `psf_chi2_threshold` | 50.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1264`) | Chi-square limit of an acceptable PSF fit. |
+| `psf_chi2_threshold` | 50.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1264`) | LEGACY: absolute chi-square limit; no longer SETs psf_fit_ok (EPSF-CHI2-LOCUS-01). |
+| `psf_chi2_locus_nsigma` | 5.0 | Setting (config.json) | config.json | config assembly & validation | N-sigma cut on residual from the chi2(flux) locus for psf_fit_ok. |
 | `psf_group_sep_fwhm` | 1.5 | Setting (config.json) | config.json | config assembly & validation (`config.py:1270`) | Separation (FWHM) within which stars are fitted together as a PSF group. |
 | `psf_grouper_enabled` | False | Setting (config.json) | config.json | config assembly & validation (`config.py:1268`) | Enables simultaneous group fitting of close stars in PSF photometry. |
 | `psf_neighbor_include_fwhm` | 3.0 | Setting (config.json) | config.json | config assembly & validation (`config.py:1275`) | Radius (FWHM) within which neighbours are included in a PSF fit. |

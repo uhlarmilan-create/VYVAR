@@ -1075,6 +1075,23 @@ def _astrometry_align_impl_body(
 
     _assert_alignment_produced_fits(aligned_root)
 
+    # EPSF-CHI2-LOCUS-01: after all proc CSVs exist, re-SET fit_ok with night locus
+    # on frames too small/uncertain for a per-frame locus (never a fixed chi2 cut).
+    if _run_epsf:
+        try:
+            from psf_chi2_locus import reapply_night_locus_to_proc_dir
+
+            _loc_sum = reapply_night_locus_to_proc_dir(aligned_root)
+            LOGGER.info(
+                "[ePSF] chi2 locus night finalize: rewritten=%s kept_frame=%s night_n=%s",
+                _loc_sum.get("n_rewritten"),
+                _loc_sum.get("n_kept_frame"),
+                (_loc_sum.get("night_locus") or {}).get("n"),
+            )
+            per_cat["psf_chi2_locus_night"] = _loc_sum
+        except Exception as _loc_exc:  # noqa: BLE001
+            LOGGER.warning("[ePSF] chi2 locus night finalize failed: %s", _loc_exc)
+
     print(f"  Per-frame CSV: {time.time() - _t_csv:.1f}s")
     print(f"CELKOM krok 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
 

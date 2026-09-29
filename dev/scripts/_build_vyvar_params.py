@@ -233,6 +233,7 @@ INTENTIONALLY_HIDDEN = {
     "psf_spatial_enabled",
     "psf_spatial_order",
     "psf_chi2_threshold",
+    "psf_chi2_locus_nsigma",
     "psf_quality_fallback_enabled",
     "phase2a_airmass_before_outlier",
     "sysrem_enabled",

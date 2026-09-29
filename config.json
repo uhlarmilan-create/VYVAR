@@ -366,6 +366,7 @@
   "per_frame_saturation_enabled": false,
   // Chi-square limit of an acceptable PSF fit.
   "psf_chi2_threshold": 50.0,
+  "psf_chi2_locus_nsigma": 5.0,
   // When true, RUN VYVAR / night_run automatically runs the ePSF stage after
   // aperture photometry. Default OFF. Distinct from psf_photometry_enabled
   // (Phase 2A psf_* columns). UI ePSF buttons still force the stage.

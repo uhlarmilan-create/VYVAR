@@ -462,12 +462,19 @@ def run_epsf_psf_merge_job(
     ]
     _epsf_job_summary = None
     if _psf_recs:
+        from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01
+
+        _loc_night = finalize_night_locus_for_inv_psf_frame_01(frames, _psf_recs)
+        if pipeline_meta is not None:
+            pipeline_meta["psf_chi2_locus_night"] = _loc_night
         _epsf_job_summary = finalize_epsf_frame_job(
             _psf_recs,
             platesolve_dir=ps,
             science_set_meta=_epsf_science_meta,
             pipeline_meta=pipeline_meta,
         )
+        if _epsf_job_summary is not None:
+            _epsf_job_summary["psf_chi2_locus_night"] = _loc_night
 
     n_ok = sum(1 for r in rows_out if r.get("status") == "ok")
     _policy = "p4_none"

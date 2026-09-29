@@ -692,8 +692,14 @@ class AppConfig:
     #: 2 = quadratic (rarely needed for ground-based amateur setups).
     #: Note: per-set spatial_order planned for TODO-MULTISET.
     psf_spatial_order: int = 0
-    #: Reduced chi^2 cutoff for PSF fit acceptance (``psf_fit_ok``).
+    #: LEGACY (EPSF-CHI2-LOCUS-01): absolute reduced-chi2 cut no longer SETs
+    #: ``psf_fit_ok``. Retained for UI/config parity and assess_psf_quality
+    #: labelling until a separate D-style removal approval. See
+    #: ``psf_chi2_locus_nsigma``.
     psf_chi2_threshold: float = 50.0
+    #: EPSF-CHI2-LOCUS-01: n_sigma cut on residual from the per-frame (or night)
+    #: log10(chi2)=a+k*log10(flux) locus. Statistical convention, not equipment.
+    psf_chi2_locus_nsigma: float = 5.0
     #: Internal PSF LC ZP membership (INV-PSF-LC-PIN-01). Production default
     #: ``fit_ok_for_zp`` on validated rigs only (EPSF-ZP-OK-01-WIRE v2).
     psf_zp_membership: str = "fit_ok_for_zp"
@@ -1665,6 +1671,11 @@ class AppConfig:
             self.psf_chi2_threshold = _pct if math.isfinite(_pct) and _pct > 0 else 50.0
         except (TypeError, ValueError):
             self.psf_chi2_threshold = 50.0
+        try:
+            _pln = float(data.get("psf_chi2_locus_nsigma", self.psf_chi2_locus_nsigma))
+            self.psf_chi2_locus_nsigma = _pln if math.isfinite(_pln) and _pln > 0 else 5.0
+        except (TypeError, ValueError):
+            self.psf_chi2_locus_nsigma = 5.0
         _zpm = str(data.get("psf_zp_membership", self.psf_zp_membership) or "fit_ok_for_zp").strip()
         self.psf_zp_membership = (
             _zpm if _zpm in ("fit_ok_strict", "fit_ok_for_zp") else "fit_ok_for_zp"
@@ -2725,6 +2736,7 @@ class AppConfig:
             "epsf_auto_run": bool(self.epsf_auto_run),
             "psf_spatial_order": int(self.psf_spatial_order),
             "psf_chi2_threshold": float(self.psf_chi2_threshold),
+            "psf_chi2_locus_nsigma": float(self.psf_chi2_locus_nsigma),
             "psf_zp_membership": str(self.psf_zp_membership),
             "psf_zp_for_zp_validated_rigs": list(self.psf_zp_for_zp_validated_rigs),
             "psf_grouper_enabled": bool(self.psf_grouper_enabled),

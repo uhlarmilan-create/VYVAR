@@ -200,6 +200,23 @@ def run_epsf_stage(
             "science_set": merge_out.get("science_set"),
             "epsf_job_summary": merge_out.get("epsf_job_summary"),
         }
+        # EPSF-CHI2-LOCUS-01: night-pooled locus SET after all frames are filled.
+        try:
+            from psf_chi2_locus import reapply_night_locus_to_proc_dir
+
+            _loc = reapply_night_locus_to_proc_dir(frames)
+            out["merge"]["psf_chi2_locus_night"] = {
+                "n_rewritten": _loc.get("n_rewritten"),
+                "n_kept_frame": _loc.get("n_kept_frame"),
+                "night_n": (_loc.get("night_locus") or {}).get("n"),
+            }
+            _p(
+                progress_cb,
+                f"chi2 locus night finalize rewritten={_loc.get('n_rewritten')} "
+                f"kept_frame={_loc.get('n_kept_frame')}",
+            )
+        except Exception as _loc_exc:  # noqa: BLE001
+            LOGGER.warning("[ePSF stage] chi2 locus night finalize failed: %s", _loc_exc)
 
     if do_lc:
         from psf_internal_lc import write_internal_psf_lightcurves

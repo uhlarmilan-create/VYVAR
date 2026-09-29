@@ -124,7 +124,31 @@ def test_perfect_bright_star_reduced_chi2_near_unity(tmp_path: Path) -> None:
     chi2 = float(row["psf_chi2"])
     assert math.isfinite(chi2)
     assert chi2 < 5.0, f"expected honest chi2 for noiseless perfect fit, got {chi2}"
-    assert bool(row["psf_fit_ok"])
+    # Per-frame SET waits for night locus (EPSF-CHI2-LOCUS-01); isolated one-star frame is closed.
+    assert not bool(row["psf_fit_ok"])
+    from psf_chi2_locus import apply_chi2_locus_to_rows, fit_chi2_locus
+
+    flux_val = float(row["psf_flux"])
+    night = fit_chi2_locus(
+        np.full(15, flux_val),
+        np.full(15, chi2),
+        converged=np.ones(15, dtype=bool),
+        source="night",
+    )
+    assert night is not None
+    out, _, _ = apply_chi2_locus_to_rows(
+        [
+            {
+                "catalog_id": "bright",
+                "psf_flux": flux_val,
+                "psf_chi2": chi2,
+                "psf_converged": True,
+            }
+        ],
+        night_locus=night,
+        n_sigma=5.0,
+    )
+    assert out[0]["psf_fit_ok"] is True
 
 
 def test_sandwich_flux_err_uses_full_variance() -> None:

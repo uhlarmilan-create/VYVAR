@@ -1160,11 +1160,16 @@ def export_per_frame_catalogs(
             if isinstance(r.get("psf_frame_record"), dict)
         ]
         if _psf_recs:
+            from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01
+
+            _loc_night = finalize_night_locus_for_inv_psf_frame_01(root, _psf_recs)
             _epsf_job_summary = finalize_epsf_frame_job(
                 _psf_recs,
                 platesolve_dir=ps,
                 science_set_meta=_epsf_science_meta,
             )
+            if _epsf_job_summary is not None:
+                _epsf_job_summary["psf_chi2_locus_night"] = _loc_night
     return {
         "written": int(n_ok),
         "per_frame_dir": str(root),

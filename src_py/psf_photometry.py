@@ -2610,7 +2610,6 @@ def _grouped_psf_fit(
     neighbor_flux: np.ndarray,
     group_sep_fwhm: float,
     neighbor_include_fwhm: float,
-    chi2_limit: float,
     frame_hdr: Any = None,
     epsf_model_path: Path | None = None,
 ) -> dict[str, Any] | None:
@@ -2621,7 +2620,11 @@ def _grouped_psf_fit(
     ``SourceGrouper`` (``min_separation = group_sep_fwhm x fwhm_px``), then returns
     ONLY the target's flux. Returns ``None`` to signal the caller to fall back to the
     single-star path (no neighbours, out of frame, or fit failure/divergence).
+
+    ``psf_fit_ok`` is NOT decided here (EPSF-CHI2-LOCUS-01): the caller applies the
+    shared chi2(flux) locus criterion after all stars on the frame are collected.
     """
+    # chi2_limit removed from SET (EPSF-CHI2-LOCUS-01); keep unused kwargs out.
     if neighbor_xy is None or len(neighbor_xy) == 0 or not math.isfinite(fwhm_px) or fwhm_px <= 0:
         return None
     h, w = frame_data.shape
@@ -2786,12 +2789,14 @@ def _grouped_psf_fit(
     if not math.isfinite(flux_fit) or flux_fit <= 0:
         return None
     converged = (flags & 8) == 0
-    chi2_ok = (not math.isfinite(chi2)) or (chi2 < float(chi2_limit))
+    # EPSF-CHI2-LOCUS-01: fit_ok deferred to shared locus apply; provisional False.
+    # Nonfinite chi2 no longer passes (grouped path unified with iterative).
     return {
         "psf_flux": flux_fit,
         "psf_flux_err": flux_err,
         "psf_chi2": chi2,
-        "psf_fit_ok": bool(converged and chi2_ok),
+        "psf_converged": bool(converged),
+        "psf_fit_ok": False,
         "n_group": int(len(init_f)),
         "x_fit": float(x_lo) + float(xf[k]),
         "y_fit": float(y_lo) + float(yf[k]),
@@ -2885,6 +2890,7 @@ def psf_photometry_stars(
     nn_dist_fwhm_map: dict[str, float] | None = None,
     nn_delta_mag_map: dict[str, float] | None = None,
     quality_fallback_enabled: bool | None = None,
+    night_chi2_locus: Any | None = None,
 ) -> pd.DataFrame:
     """Run iterative (or single-pass) PSF photometry on cutouts per star; never fails per row.
 
@@ -3058,6 +3064,14 @@ def psf_photometry_stars(
         _grp_chi2_limit = 50.0
     if not math.isfinite(_grp_chi2_limit) or _grp_chi2_limit <= 0:
         _grp_chi2_limit = 50.0
+    # LEGACY: psf_chi2_threshold kept for assess_psf_quality labelling only.
+    # SET of psf_fit_ok uses psf_chi2_locus (EPSF-CHI2-LOCUS-01).
+    try:
+        from psf_chi2_locus import resolve_n_sigma as _resolve_locus_nsigma
+
+        _locus_nsigma = float(_resolve_locus_nsigma(_cfg_grp))
+    except Exception:  # noqa: BLE001
+        _locus_nsigma = 5.0
     # Neighbour arrays (positions + init flux) for joint fitting.
     _nb_xy: np.ndarray | None = None
     _nb_flux: np.ndarray | None = None
@@ -3185,7 +3199,6 @@ def psf_photometry_stars(
                 neighbor_flux=_nb_flux if _nb_flux is not None else np.array([]),
                 group_sep_fwhm=_grp_sep,
                 neighbor_include_fwhm=_grp_inc,
-                chi2_limit=_grp_chi2_limit,
                 frame_hdr=frame_hdr,
                 epsf_model_path=ep,
             )
@@ -3359,17 +3372,7 @@ def psf_photometry_stars(
                 if (math.isfinite(flux_fit) and math.isfinite(flux_err) and flux_err > 0)
                 else float("nan")
             )
-            try:
-                from config import AppConfig as _AppConfig
-
-                _chi2_limit = float(getattr(_AppConfig(), "psf_chi2_threshold", 50.0))
-            except Exception:  # noqa: BLE001
-                _chi2_limit = 50.0
-            if not math.isfinite(_chi2_limit) or _chi2_limit <= 0:
-                _chi2_limit = 50.0
-            chi2_ok = math.isfinite(chi2) and chi2 < _chi2_limit
-            fit_ok = bool(converged and chi2_ok)
-
+            # EPSF-CHI2-LOCUS-01: fit_ok deferred to shared locus apply below.
             out_rows.append(
                 {
                     "catalog_id": cid,
@@ -3379,7 +3382,8 @@ def psf_photometry_stars(
                     "psf_flux": flux_fit,
                     "psf_flux_err": flux_err,
                     "psf_chi2": chi2,
-                    "psf_fit_ok": fit_ok,
+                    "psf_converged": bool(converged),
+                    "psf_fit_ok": False,
                     "psf_iterative": _star_iterative,
                     "psf_group_used": False,
                     "psf_group_n": 0,
@@ -3406,7 +3410,31 @@ def psf_photometry_stars(
         r["psf_ac_n_used"] = _ac_n_used
         r["psf_ac_policy"] = _ac_policy
         r["psf_ac_applied"] = False
+
+    # EPSF-CHI2-LOCUS-01: shared SET of psf_fit_ok from chi2(flux) locus.
+    from psf_chi2_locus import apply_chi2_locus_to_rows
+
+    _sat_by_cid: dict[str, bool] = {}
+    for _c in ("likely_saturated", "is_saturated"):
+        if _c in star_positions.columns:
+            for _, _sr in star_positions.iterrows():
+                _cid_s = str(_sr["catalog_id"])
+                try:
+                    _sat_by_cid[_cid_s] = bool(_sat_by_cid.get(_cid_s, False)) or bool(_sr.get(_c))
+                except Exception:  # noqa: BLE001
+                    pass
+    out_rows, _used_locus, _locus_meta = apply_chi2_locus_to_rows(
+        out_rows,
+        night_locus=night_chi2_locus,
+        n_sigma=_locus_nsigma,
+        saturated_by_cid=_sat_by_cid or None,
+    )
+    # Stash meta for callers (frame_export / tests).
+    _locus_meta_box = {"psf_chi2_locus": _locus_meta}
+
+    for r in out_rows:
         # Per-star quality grade (always computed) + auto-fallback (default on).
+        # Absolute chi2_bad disabled (inf): locus owns the chi2 dimension of fit_ok.
         _cid_s = str(r.get("catalog_id", "")).strip()
         _nn = _nn_map.get(_cid_s, float("nan"))
         _nn_dm = _nn_dmag_map.get(_cid_s, None)
@@ -3418,18 +3446,36 @@ def psf_photometry_stars(
             fwhm_px_meta if fwhm_px_meta > 0 else None,
             _nn,
             nn_delta_mag=_nn_dm,
-            chi2_bad=_grp_chi2_limit,
+            chi2_bad=float("inf"),
         )
         r["psf_quality"] = _q
         # A bad PSF fit must never silently become the reported value: drop usability and
         # signal the caller to substitute aperture for this star (the RMS-20.4 lesson).
+        # Chi2-driven bad is owned by the locus SET above; this path covers SNR/shift/blend.
         if _q == "bad" and _quality_fallback_on:
             r["psf_quality_fallback"] = True
             r["psf_fit_ok"] = False
         else:
             r["psf_quality_fallback"] = False
 
-    return pd.DataFrame(out_rows, columns=_cols)
+    _cols_out = list(_cols)
+    for _extra in (
+        "psf_converged",
+        "psf_chi2_locus_resid_sigma",
+        "psf_chi2_locus_a",
+        "psf_chi2_locus_k",
+        "psf_chi2_locus_scatter",
+        "psf_chi2_locus_n",
+        "psf_chi2_locus_source",
+    ):
+        if _extra not in _cols_out:
+            _cols_out.append(_extra)
+    out_df = pd.DataFrame(out_rows)
+    for _c in _cols_out:
+        if _c not in out_df.columns:
+            out_df[_c] = float("nan") if _c != "psf_converged" else False
+    out_df.attrs["psf_chi2_locus"] = _locus_meta_box["psf_chi2_locus"]
+    return out_df[_cols_out]
 
 
 __all__ = [

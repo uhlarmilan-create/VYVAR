@@ -126,7 +126,6 @@ def test_exc0455_grouped_fit_logs_and_returns_none(monkeypatch: pytest.MonkeyPat
         neighbor_flux=np.array([100.0]),
         group_sep_fwhm=1.5,
         neighbor_include_fwhm=3.0,
-        chi2_limit=50.0,
     )
     assert out is None
     assert get_except_fix_counters().psf_grouped_fit_fail >= 1

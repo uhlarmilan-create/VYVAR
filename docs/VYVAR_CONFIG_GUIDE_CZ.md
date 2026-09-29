@@ -292,7 +292,8 @@ Mereni jasnosti hvezd: velikost apertury, oblozne mezikruzi (annulus), model chy
 | `psf_adaptive_enabled` | False | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1310`) | Adaptivni smerovani po hvezdach mezi PSF a aperturnim merenim (program PSF je VYPNUT do brany husteho pole Newtonu). |
 | `psf_adaptive_resolve_fwhm` | 2.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1312`) | Vzdalenost (FWHM), pod kterou adaptivni smerovac preferuje PSF pro slite dvojice. |
 | `psf_adaptive_snr_lo` | 15.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1318`) | SNR, pod kterym adaptivni smerovac preferuje mereni PSF. |
-| `psf_chi2_threshold` | 50.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1264`) | Limit chi-kvadrat prijatelneho PSF fitu. |
+| `psf_chi2_threshold` | 50.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1264`) | LEGACY: absolutni chi2 limit; jiz nenastavuje psf_fit_ok (EPSF-CHI2-LOCUS-01). |
+| `psf_chi2_locus_nsigma` | 5.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace | N-sigma reziduum od chi2(flux) lokusu pro psf_fit_ok. |
 | `psf_group_sep_fwhm` | 1.5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1270`) | Vzdalenost (FWHM), do ktere se hvezdy fituji spolecne jako PSF skupina. |
 | `psf_grouper_enabled` | False | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1268`) | Zapina soucasne skupinove fitovani blizkych hvezd v PSF fotometrii. |
 | `psf_neighbor_include_fwhm` | 3.0 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1275`) | Polomer (FWHM), ve kterem se sousede zahrnuji do PSF fitu. |

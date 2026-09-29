@@ -3830,9 +3830,9 @@
     "scope_group": "n/a"
   },
   "psf_chi2_threshold": {
-    "help": "Chi-square limit of an acceptable PSF fit.",
+    "help": "LEGACY (EPSF-CHI2-LOCUS-01): absolute reduced-chi2 cut no longer SETs psf_fit_ok. Retained for UI/config parity until D-style removal. Use psf_chi2_locus_nsigma.",
     "kind": "static",
-    "label": "PSF Chi2 Threshold",
+    "label": "PSF Chi2 Threshold (LEGACY)",
     "owner": "config_runtime",
     "phase": "photometry",
     "range": null,
@@ -4719,6 +4719,21 @@
       10.0
     ],
     "tier": "expert",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "psf_chi2_locus_nsigma": {
+    "help": "EPSF-CHI2-LOCUS-01: n_sigma cut on residual from the per-frame (or night) log10(chi2)=a+k*log10(flux) locus. Statistical convention, not equipment.",
+    "kind": "static",
+    "label": "PSF Chi2 Locus N-Sigma",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
     "unit": null,
     "widget": "auto",
     "scope": "universal",
