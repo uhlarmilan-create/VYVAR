@@ -71,9 +71,11 @@ EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "87197716af1671328b152d86e33c3a26b277ea9
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "dd92e99d8e861ce908665cde3087f4b0213b832927d6dc90e7d859fa5c4fecf8"
 EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N = 53
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE_N = 157
-# core_psf (epsf01). era04 history c743b8ba. era05 pending --full-epsf after FIT-OK/GAIN.
-# Placeholder keeps era04 until first --full-epsf records the new hash beside it.
+# core_psf (epsf01). era04 history c743b8ba. era05 after FIT-OK+GAIN (ERA-520):
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF = (
+    "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5"
+)
+EXPECTED_PHOTOMETRY_SHA_CORE_PSF_ERA04 = (
     "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8"
 )
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N = 53
@@ -87,8 +89,10 @@ ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
 G3_BO_ID = "1498613634033133184"
 G3_FW_ID = "1497343732462852864"
 G3_N_FULL = 134
-# Residual (psf_delta - ap_delta) on work-copy tmp/epsf_chain_m2_era04. Not raw
-# psf_delta_mag (architect error #11: BO is a variable; raw 145.917 was phase).
+# Residual (psf_delta - ap_delta). era04 refs 12.505/4.629 n_full=134 kept as history.
+# Post FIT-OK-ADMISSION-01: INV-PSF-LC-PIN-01 drops epochs when pinned comps are
+# fit_ok=False (BO n_full=1 / FW n_full=0 on 20260928T183918Z). G3 n_full gate
+# rewrite is Milan's; hash lock is independent.
 G3_BO_REF_MMAG = 12.505
 G3_FW_REF_MMAG = 4.629
 G3_TOL_MMAG = 0.001

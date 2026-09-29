@@ -55,11 +55,11 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
 | **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
 | **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
-| **EPSF-XVAL-01** | OPEN. Criteria 1+2 met on 516 (VAL-02; EPSF-AC-02 R-AC1/R-AC2). Last step = ERA-520-RECUT-01 (criterion 3) + VAL-02/AC-02 harness re-check on 520 products -> enact CLOSE-TEXT-02. VAL-02 R-W3 INCONCLUSIVE (method; error 29) | Milan | ERA-520-RECUT-01 |
+| **EPSF-XVAL-01** | CLOSED 2026-09-29. Criteria 1-3 met; D-EPSF-XVAL-CLOSE-TEXT-02 enacted (ERA-520-RECUT-01). Evidence CURSOR_RESULT_ERA_520_RECUT_01.md | Milan | - |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
-| **ERA-520-RECUT-01** | Criterion 3 of EPSF-XVAL-01: 520 era re-cut (FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 + bound list). Then re-check VAL-02 (c1) and AC-02 (c2) harnesses on 520 products (re-check, not re-registration) -> CLOSE-TEXT-02 | Milan | HIGH |
+| **ERA-520-RECUT-01** | CLOSED 2026-09-29. era05 cut; aperture 87197716/dd92e99d; epsf01 552ace75 (era04 history beside). VAL-02/AC-02 re-check PASS; CLOSE-TEXT-02 enacted. G3 n_full collapse post FIT-OK recorded (Milan sequel) | Cursor | - |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
 | **F-B01-F-B02** | PASSTHROUGH runs may claim VYVAR calibration; PDF honesty | Cursor | calpath audit s14 |
 | **F-BINGAIN-1** | Newton bin4 chi2 gate still open; do not flip ensemble to Broeg IVW until it passes | Cursor | Newton gate |
@@ -97,7 +97,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **PUB-VALIDATION-SECTION** | Paper validation section | Milan+Claude | PUBLICATION |
 | **PUB-VENUE** | Venue choice | Milan | PUBLICATION |
 | **QHY294MM-RN-DOUBLE** | DB RN 7.6 e- may be bin2 then scaled again to 15.2 e- | Cursor | low priority |
-| **RED-TARGET-T4-RELAND** | Reland 817f1f9 WITH the planned 520 era snapshot re-cut (one re-cut, two reasons; Milan (b) 2026-09-08). Scoped G2 exception rejected. Reland must include a micro-measurement: CV CVn + HAT-188-0002048 LC quality under RMS-first vs color-first ranking (does the change help, not merely change). Blocked-on: 520 era snapshot | Cursor | 520 era snapshot |
+| **RED-TARGET-T4-RELAND** | CLOSED 2026-09-29 with ERA-520. Reland d79945f; colour-first HELPS med \|dBP-RP\| (HAT+CV). CV no science LC | Cursor | - |
 | **RELEASE-1** | Release-1 checklist | Milan | v1.0 |
 | **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
 | **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |

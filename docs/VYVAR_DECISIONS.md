@@ -40,10 +40,17 @@ D-EPSF-XVAL-CLOSE-TEXT-02 (supersedes CLOSE-TEXT-01).
 Evidence: `CURSOR_RESULT_EPSF_AC_02.md`,
 `CURSOR_RESULT_LEDGER_EPSF_DOD_06.md` (error 31).
 
-## D-EPSF-XVAL-CLOSE-TEXT-02 (Milan 2026-09-28) - supersedes CLOSE-TEXT-01; enact on closure
+## D-EPSF-XVAL-CLOSE-TEXT-02 (Milan 2026-09-28) - ENACTED 2026-09-29 (ERA-520-RECUT-01)
 
-When criteria 1-3 hold, EPSF-XVAL-01 closes with this statement,
-verbatim, in DECISIONS and in the methods paper:
+Enacted after criteria 1-3 held: criterion 1 (VAL-02 re-check on
+era05: R-W1+R-W2 PASS; lc_flux_method VERIFIABLE), criterion 2
+(AC-02 R-AC1/R-AC2 PASS), criterion 3 (FIXPOS/FIT-OK/GAIN unit
+tests + era05 cut). Evidence: CURSOR_RESULT_ERA_520_RECUT_01.md.
+G3 residual n_full collapse post FIT-OK recorded there (Milan
+sequel); not a criterion 1-3 FAIL.
+
+EPSF-XVAL-01 closes with this statement, verbatim, in DECISIONS and
+in the methods paper:
 
   VYVAR ePSF photometry is implemented correctly (model construction
   verified against an independent PSFEx reference: FWHM within 2%,
@@ -71,8 +78,7 @@ verbatim, in DECISIONS and in the methods paper:
   EPSF-SHAPE-01; EPSF-CORE-01..04; EPSF-VAL-01..03; EPSF-AC-02;
   VYVAR_LITERATURE_CHECK_EPSF_20260915; ERA-520 gates.
 
-Not enacted until criteria 1-3 hold. Supersedes
-D-EPSF-XVAL-CLOSE-TEXT-01.
+Supersedes D-EPSF-XVAL-CLOSE-TEXT-01.
 
 ## D-EPSF-XVAL-DOD-05 (Milan 2026-09-16) - amends DOD-04 criterion 2; closure sequence amended by DOD-06
 
@@ -457,6 +463,9 @@ Reland plan (Milan 2026-09-08): tied to the 520 era re-cut;
 scoped G2 exceptions rejected; reland carries the RMS-first vs
 color-first LC-quality micro-measurement for the two affected
 targets.
+Reland COMPLETE (ERA-520-RECUT-01, d79945f): colour-first HELPS
+med |dBP-RP| (HAT 1.49->1.06; CV 2.03->1.61). CV CVn has no
+science LC. Evidence: CURSOR_RESULT_ERA_520_RECUT_01.md.
 
 ## D-LC-SKIP-MANIFEST-01 (Milan 2026-09-08)
 

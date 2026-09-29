@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-28",
+  "updated": "2026-09-29",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -146,7 +146,7 @@
       "verification": "scripts/session_baseline_check.py --full (era05_aperture 87197716 n=53 / ext dd92e99d n=157). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
       "last_verified": "2026-09-28",
-      "commit": "d79945f",
+      "commit": "dd76070",
       "notes": "ERA-520-RECUT-01. era04 history kept on disk (draft_000516_snapshot_era04_20260826; aperture d55fcc9d / ext cc8b532e). era05 aperture moves: schema skip_reason+lc_flux_method (all 53) + RED-TARGET-T4 HAT-188 values (1/53). Live 516 G4 still bfa24039/13e77cf8/172f9540. Three POOL-STARVE empty_comp_drop allowlisted.",
       "census_fingerprint": {
         "n_raw_dao": 2246,
@@ -209,14 +209,15 @@
     {
       "id": "VL-ANCHOR-EPSF01",
       "area": "photometry",
-      "description": "EPSF-CHAIN-01 core_psf content hash of 53 internal PSF LCs. era04 freeze ACCEPTED 2026-08-28 (c743b8ba). era05 pending ERA-520-RECUT-01 --full-epsf after FIT-OK-ADMISSION-01 + GAIN-FALSY-01 (new hash recorded beside era04).",
-      "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf pending re-cut; era04 history c743b8ba n=53)",
+      "description": "EPSF-CHAIN-01 core_psf of 53 internal PSF LCs. era05 (ERA-520-RECUT-01) 552ace75 n=53 after FIT-OK-ADMISSION-01 + GAIN-FALSY-01. era04 history c743b8ba kept beside.",
+      "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf 552ace75 n=53). G3 residual n_full collapses post FIT-OK (INV-PSF-LC-PIN-01); era04 G3 refs 12.505/4.629 kept as history.",
       "passes": true,
-      "last_verified": "2026-08-28",
-      "commit": "f2941fe",
-      "notes": "Science bytes identical on --full, W1, and W2 after dropping epsf_build_timestamp from the content hash. With-timestamp history 95153825. Live 516 ePSF 172f9540 untouched. era04 sha_core_psf c743b8ba kept as history beside era05 after ERA-520-RECUT-01.",
+      "last_verified": "2026-09-28",
+      "commit": "dd76070",
+      "notes": "era05 work-copy 20260928T183918Z. G3 BO n_full=1 FW n_full=0 (pinned comps fit_ok=False under FIT-OK-ADMISSION-01). Hash lock is content; G3 meter rewrite is Milan.",
       "sha_core_psf_era04": "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8",
-      "core_psf_n": 53
+      "core_psf_n": 53,
+      "sha_core_psf": "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5"
     },
     {
       "id": "F-435-EXPORT-GHOSTS",

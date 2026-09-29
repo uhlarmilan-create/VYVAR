@@ -2,6 +2,14 @@ Historical session log. Current state -> VYVAR_STATE.md; decisions -> VYVAR_DECI
 
 ---
 
+## 2026-09-29 -- ERA-520-RECUT-01 CLOSED (EPSF-XVAL-01 CLOSE)
+
+Items 1-6 landed (order 1,2,3,5,6,4); G2 movement matched EXPECTED.
+era05 cut; anchors 87197716 / dd92e99d / 552ace75 (era04 beside).
+VAL-02/AC-02 re-check PASS; CLOSE-TEXT-02 enacted. T4 colour-first
+HELPS. G3 n_full collapse post FIT-OK recorded (Milan). Evidence:
+`CURSOR_RESULT_ERA_520_RECUT_01.md`.
+
 ## 2026-09-28 -- LEDGER-EPSF-DOD-06 (docs)
 
 D-EPSF-XVAL-DOD-06: criterion 2 met; closure sequence fixed to

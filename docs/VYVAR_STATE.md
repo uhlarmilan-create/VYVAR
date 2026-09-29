@@ -1,6 +1,14 @@
 # VYVAR -- Development State
 
-**Status:** **LEDGER-EPSF-DOD-06 2026-09-28.** D-EPSF-XVAL-DOD-06:
+**Status:** **ERA-520-RECUT-01 CLOSED 2026-09-29.** EPSF-XVAL-01
+CLOSED; D-EPSF-XVAL-CLOSE-TEXT-02 enacted. era05
+`draft_000516_snapshot_era05_20260928`: aperture **87197716** n=53 /
+ext **dd92e99d** n=157 / epsf01 **552ace75** n=53 (era04 history
+d55fcc9d / cc8b532e / c743b8ba beside). VAL-02 re-check c1 PASS;
+AC-02 c2 PASS. G3 residual n_full collapses post FIT-OK (Milan
+sequel). Live 516 G4 unchanged (`bfa24039` / `13e77cf8` /
+`172f9540`). Evidence: `CURSOR_RESULT_ERA_520_RECUT_01.md`.
+**LEDGER-EPSF-DOD-06 2026-09-28.** D-EPSF-XVAL-DOD-06:
 criterion 2 met on 516 (AC-02); CLOSE-TEXT-02 supersedes CLOSE-TEXT-01;
 closure sequence = ERA-520-RECUT-01 + harness re-check -> CLOSE.
 Error 31 (T1 phase not the per-star driver). PSF-COMMON-SCALE-RESIDUAL-01
