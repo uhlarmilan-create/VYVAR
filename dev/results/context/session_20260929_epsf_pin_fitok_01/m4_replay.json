@@ -1,0 +1,346 @@
+{
+  "split_used": {
+    "status": "CANDIDATE",
+    "method": "largest_gap_in_sorted_unique_pinned_fit_ok_frac",
+    "split_threshold": 0.66045,
+    "gap": 0.21650000000000003,
+    "n_below": 17,
+    "n_at_or_above": 36,
+    "fracs_sorted": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.007462686567164179,
+      0.007462686567164179,
+      0.022388059701492536,
+      0.09701492537313433,
+      0.14925373134328357,
+      0.34328358208955223,
+      0.35074626865671643,
+      0.5522388059701493,
+      0.7686567164179104,
+      0.8134328358208955,
+      0.8880597014925373,
+      0.9701492537313433,
+      0.9925373134328358,
+      0.9925373134328358,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "note": "not wired; for M4-B filter only"
+  },
+  "targets": {
+    "1498613634033133184": {
+      "label": "BO",
+      "ensemble_source": "pinned",
+      "variants": {
+        "A_asis": {
+          "n_epochs": 134,
+          "n_full_membership": 1,
+          "n_dropped_pin": 133,
+          "coverage": 0.007462686567164179,
+          "n_finite_pairs": 1,
+          "level_offset_mag": -0.011856830990855993,
+          "level_offset_mmag": -11.856830990855993,
+          "rms_mag": 0.011856830990855993,
+          "rms_mmag": 11.856830990855993,
+          "demeaned_rms_mmag": 0.0,
+          "rms_vs_abs_median": true,
+          "n_comps": 4,
+          "comp_ids": [
+            "1497771992240531712",
+            "1499200223486564608",
+            "1497974027502858240",
+            "1497368849430107904"
+          ],
+          "delta_vs_era04_ref_mmag": NaN,
+          "era04_ref_mmag": 12.505
+        },
+        "B_filtered": {
+          "n_epochs": 134,
+          "n_full_membership": 100,
+          "n_dropped_pin": 34,
+          "coverage": 0.746268656716418,
+          "n_finite_pairs": 100,
+          "level_offset_mag": -0.5032423366343146,
+          "level_offset_mmag": -503.2423366343146,
+          "rms_mag": 0.5029315870207937,
+          "rms_mmag": 502.93158702079364,
+          "demeaned_rms_mmag": 12.784744564229895,
+          "rms_vs_abs_median": true,
+          "n_comps": 3,
+          "comp_ids": [
+            "1497771992240531712",
+            "1497974027502858240",
+            "1497368849430107904"
+          ],
+          "n_removed": 1,
+          "delta_vs_era04_ref_mmag": 0.2797445642298939,
+          "era04_ref_mmag": 12.505
+        },
+        "C_pre_fix_comps": {
+          "skipped": true,
+          "reason": "M3 does not say indistinguishable: fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)"
+        }
+      }
+    },
+    "1497343732462852864": {
+      "label": "FW",
+      "ensemble_source": "pinned",
+      "variants": {
+        "A_asis": {
+          "n_epochs": 134,
+          "n_full_membership": 0,
+          "n_dropped_pin": 134,
+          "coverage": 0.0,
+          "n_finite_pairs": 0,
+          "level_offset_mag": NaN,
+          "level_offset_mmag": NaN,
+          "rms_mag": NaN,
+          "rms_mmag": NaN,
+          "demeaned_rms_mmag": NaN,
+          "rms_vs_abs_median": false,
+          "n_comps": 8,
+          "comp_ids": [
+            "1497442379271632384",
+            "1499906247391001088",
+            "1497674651102612992",
+            "1498020894186918144",
+            "1498812233320666368",
+            "1497370563121917952",
+            "1497313255374892800",
+            "1500486102335278592"
+          ],
+          "delta_vs_era04_ref_mmag": NaN,
+          "era04_ref_mmag": 4.629
+        },
+        "B_filtered": {
+          "n_epochs": 134,
+          "n_full_membership": 110,
+          "n_dropped_pin": 24,
+          "coverage": 0.8208955223880597,
+          "n_finite_pairs": 110,
+          "level_offset_mag": -1.0093371204264197,
+          "level_offset_mmag": -1009.3371204264197,
+          "rms_mag": 1.0098367306589775,
+          "rms_mmag": 1009.8367306589774,
+          "demeaned_rms_mmag": 7.757362440397754,
+          "rms_vs_abs_median": true,
+          "n_comps": 5,
+          "comp_ids": [
+            "1498020894186918144",
+            "1498812233320666368",
+            "1497370563121917952",
+            "1497313255374892800",
+            "1500486102335278592"
+          ],
+          "n_removed": 3,
+          "delta_vs_era04_ref_mmag": 3.128362440397755,
+          "era04_ref_mmag": 4.629
+        },
+        "C_pre_fix_comps": {
+          "skipped": true,
+          "reason": "M3 does not say indistinguishable: fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)"
+        }
+      }
+    },
+    "1485534187306501376": {
+      "label": "worst_cov=0.0000",
+      "ensemble_source": "pinned",
+      "variants": {
+        "A_asis": {
+          "n_epochs": 134,
+          "n_full_membership": 0,
+          "n_dropped_pin": 134,
+          "coverage": 0.0,
+          "n_finite_pairs": 0,
+          "level_offset_mag": NaN,
+          "level_offset_mmag": NaN,
+          "rms_mag": NaN,
+          "rms_mmag": NaN,
+          "demeaned_rms_mmag": NaN,
+          "rms_vs_abs_median": false,
+          "n_comps": 8,
+          "comp_ids": [
+            "1497442379271632384",
+            "1499906247391001088",
+            "1497674651102612992",
+            "1498020894186918144",
+            "1498812233320666368",
+            "1497370563121917952",
+            "1497313255374892800",
+            "1500486102335278592"
+          ]
+        },
+        "B_filtered": {
+          "n_epochs": 134,
+          "n_full_membership": 52,
+          "n_dropped_pin": 82,
+          "coverage": 0.3880597014925373,
+          "n_finite_pairs": 52,
+          "level_offset_mag": -1.181975942835499,
+          "level_offset_mmag": -1181.975942835499,
+          "rms_mag": 1.1866521045326186,
+          "rms_mmag": 1186.6521045326185,
+          "demeaned_rms_mmag": 29.213088166565164,
+          "rms_vs_abs_median": true,
+          "n_comps": 5,
+          "comp_ids": [
+            "1498020894186918144",
+            "1498812233320666368",
+            "1497370563121917952",
+            "1497313255374892800",
+            "1500486102335278592"
+          ],
+          "n_removed": 3
+        },
+        "C_pre_fix_comps": {
+          "skipped": true,
+          "reason": "M3 does not say indistinguishable: fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)"
+        }
+      }
+    },
+    "1485987151737107200": {
+      "label": "worst_cov=0.0000",
+      "ensemble_source": "comparison_stars_per_target",
+      "variants": {
+        "A_asis": {
+          "n_epochs": 134,
+          "n_full_membership": 0,
+          "n_dropped_pin": 134,
+          "coverage": 0.0,
+          "n_finite_pairs": 0,
+          "level_offset_mag": NaN,
+          "level_offset_mmag": NaN,
+          "rms_mag": NaN,
+          "rms_mmag": NaN,
+          "demeaned_rms_mmag": NaN,
+          "rms_vs_abs_median": false,
+          "n_comps": 8,
+          "comp_ids": [
+            "1497997117247042816",
+            "1496984467038399744",
+            "1500576537166572544",
+            "1497674651102612992",
+            "1500460813567859456",
+            "1500261630164760320",
+            "1500261973762651392",
+            "1500486102335278592"
+          ]
+        },
+        "B_filtered": {
+          "n_epochs": 134,
+          "n_full_membership": 62,
+          "n_dropped_pin": 72,
+          "coverage": 0.4626865671641791,
+          "n_finite_pairs": 62,
+          "level_offset_mag": -2.00956080402301,
+          "level_offset_mmag": -2009.56080402301,
+          "rms_mag": 2.0044899371858365,
+          "rms_mmag": 2004.4899371858364,
+          "demeaned_rms_mmag": 56.20329541672271,
+          "rms_vs_abs_median": true,
+          "n_comps": 2,
+          "comp_ids": [
+            "1500460813567859456",
+            "1500486102335278592"
+          ],
+          "n_removed": 6
+        },
+        "C_pre_fix_comps": {
+          "skipped": true,
+          "reason": "M3 does not say indistinguishable: fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)"
+        }
+      }
+    },
+    "1496278752372040832": {
+      "label": "worst_cov=0.0000",
+      "ensemble_source": "pinned",
+      "variants": {
+        "A_asis": {
+          "n_epochs": 134,
+          "n_full_membership": 0,
+          "n_dropped_pin": 134,
+          "coverage": 0.0,
+          "n_finite_pairs": 0,
+          "level_offset_mag": NaN,
+          "level_offset_mmag": NaN,
+          "rms_mag": NaN,
+          "rms_mmag": NaN,
+          "demeaned_rms_mmag": NaN,
+          "rms_vs_abs_median": false,
+          "n_comps": 8,
+          "comp_ids": [
+            "1497442379271632384",
+            "1497674651102612992",
+            "1496315070616056064",
+            "1500460813567859456",
+            "1500576537166572544",
+            "1499200223486564608",
+            "1497429837967596800",
+            "1498244610443240192"
+          ]
+        },
+        "B_filtered": {
+          "n_epochs": 134,
+          "n_full_membership": 134,
+          "n_dropped_pin": 0,
+          "coverage": 1.0,
+          "n_finite_pairs": 134,
+          "level_offset_mag": -1.551502551069344,
+          "level_offset_mmag": -1551.502551069344,
+          "rms_mag": 1.5681662870342843,
+          "rms_mmag": 1568.1662870342843,
+          "demeaned_rms_mmag": 119.08516633948057,
+          "rms_vs_abs_median": true,
+          "n_comps": 4,
+          "comp_ids": [
+            "1496315070616056064",
+            "1500460813567859456",
+            "1497429837967596800",
+            "1498244610443240192"
+          ],
+          "n_removed": 4
+        },
+        "C_pre_fix_comps": {
+          "skipped": true,
+          "reason": "M3 does not say indistinguishable: fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)"
+        }
+      }
+    }
+  }
+}

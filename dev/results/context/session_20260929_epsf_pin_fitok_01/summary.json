@@ -1,0 +1,187 @@
+{
+  "commit": "bb1ef13",
+  "m1_cov_bins_era05": {
+    "ge_0.9": 1,
+    "0.5_to_0.9": 0,
+    "gt0_lt_0.5": 15,
+    "eq_0": 37,
+    "n": 53
+  },
+  "m1_cov_bins_era04": {
+    "ge_0.9": 0,
+    "0.5_to_0.9": 0,
+    "gt0_lt_0.5": 0,
+    "eq_0": 53,
+    "n": 53
+  },
+  "m1_n_targets": 53,
+  "m2": {
+    "psf_fit_ok_SET": {
+      "iterative_path": "src_py/psf_photometry.py:3350-3371",
+      "grouped_path": "src_py/psf_photometry.py:2788-2794",
+      "formula": "fit_ok = converged AND chi2_ok",
+      "converged": "(flags & 8) == 0",
+      "chi2_ok_iterative": "math.isfinite(chi2) and chi2 < psf_chi2_threshold (default 50)",
+      "chi2_ok_grouped": "(not math.isfinite(chi2)) or (chi2 < chi2_limit)  # note: nonfinite chi2 PASSES in grouped"
+    },
+    "saturate_limit_source": "photometry/comparison_stars.csv saturate_limit_adu (fallback saturate_limit_adu_85pct); peak from proc peak_max_adu max over night",
+    "candidate_split": {
+      "status": "CANDIDATE",
+      "method": "largest_gap_in_sorted_unique_pinned_fit_ok_frac",
+      "split_threshold": 0.66045,
+      "gap": 0.21650000000000003,
+      "n_below": 17,
+      "n_at_or_above": 36,
+      "fracs_sorted": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.007462686567164179,
+        0.007462686567164179,
+        0.022388059701492536,
+        0.09701492537313433,
+        0.14925373134328357,
+        0.34328358208955223,
+        0.35074626865671643,
+        0.5522388059701493,
+        0.7686567164179104,
+        0.8134328358208955,
+        0.8880597014925373,
+        0.9701492537313433,
+        0.9925373134328358,
+        0.9925373134328358,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "note": "not wired; for M4-B filter only"
+    },
+    "era04_proc": "ok"
+  },
+  "m3": {
+    "n_mixed_stars": 60,
+    "median_rms_true_mmag": 445.8046611766407,
+    "median_rms_false_mmag": 863.8950532799546,
+    "median_delta_rms_false_minus_true_mmag": 314.0018154763502,
+    "median_delta_med_false_minus_true_mmag": 17.28686275970736,
+    "verdict": "fit_ok=False fits are measurably worse (median delta_rms=314.00 mmag, delta_med=17.29 mmag)",
+    "by_g_bin": [
+      {
+        "G_lo": 8,
+        "G_hi": 9.5,
+        "n": 7,
+        "med_delta_rms_mmag": 3.644388922165259,
+        "med_delta_med_mmag": 1.5034087780730343
+      },
+      {
+        "G_lo": 9.5,
+        "G_hi": 11,
+        "n": 5,
+        "med_delta_rms_mmag": -2.04320197117136,
+        "med_delta_med_mmag": 6.470453338018961
+      },
+      {
+        "G_lo": 11,
+        "G_hi": 13,
+        "n": 0,
+        "med_delta_rms_mmag": NaN,
+        "med_delta_med_mmag": NaN
+      },
+      {
+        "G_lo": 13,
+        "G_hi": 16,
+        "n": 27,
+        "med_delta_rms_mmag": 316.74101507821604,
+        "med_delta_med_mmag": 47.208286761992404
+      }
+    ]
+  },
+  "m4_keys": [
+    "1498613634033133184",
+    "1497343732462852864",
+    "1485534187306501376",
+    "1485987151737107200",
+    "1496278752372040832"
+  ],
+  "g3_bo_A": {
+    "n_epochs": 134,
+    "n_full_membership": 1,
+    "n_dropped_pin": 133,
+    "coverage": 0.007462686567164179,
+    "n_finite_pairs": 1,
+    "level_offset_mag": -0.011856830990855993,
+    "level_offset_mmag": -11.856830990855993,
+    "rms_mag": 0.011856830990855993,
+    "rms_mmag": 11.856830990855993,
+    "demeaned_rms_mmag": 0.0,
+    "rms_vs_abs_median": true,
+    "n_comps": 4,
+    "comp_ids": [
+      "1497771992240531712",
+      "1499200223486564608",
+      "1497974027502858240",
+      "1497368849430107904"
+    ],
+    "delta_vs_era04_ref_mmag": NaN,
+    "era04_ref_mmag": 12.505
+  },
+  "g3_fw_A": {
+    "n_epochs": 134,
+    "n_full_membership": 0,
+    "n_dropped_pin": 134,
+    "coverage": 0.0,
+    "n_finite_pairs": 0,
+    "level_offset_mag": NaN,
+    "level_offset_mmag": NaN,
+    "rms_mag": NaN,
+    "rms_mmag": NaN,
+    "demeaned_rms_mmag": NaN,
+    "rms_vs_abs_median": false,
+    "n_comps": 8,
+    "comp_ids": [
+      "1497442379271632384",
+      "1499906247391001088",
+      "1497674651102612992",
+      "1498020894186918144",
+      "1498812233320666368",
+      "1497370563121917952",
+      "1497313255374892800",
+      "1500486102335278592"
+    ],
+    "delta_vs_era04_ref_mmag": NaN,
+    "era04_ref_mmag": 4.629
+  }
+}
