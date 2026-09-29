@@ -1,0 +1,133 @@
+{
+  "resolver_chain": {
+    "docstring_pointer": "src_py/catalog_match.py:146",
+    "effective_fn": "src_py/pipeline_calibrate.py:1263-1312 _effective_saturation_limit",
+    "header_fn": "src_py/pipeline_calibrate.py:1225-1238 _saturate_limit_adu_from_header",
+    "bitpix_fn": "src_py/pipeline_calibrate.py:1241-1260 _infer_sat_limit_from_bitpix",
+    "peak_test_fn": "src_py/pipeline_catalog.py:1789-1833 _resolve_peak_saturation_limit_adu",
+    "sat_diag_fill_85pct_col": "src_py/sat_diag.py:159-162 saturate_limit_adu_85pct = sat_adu * SATURATE_LIMIT_FRACTION (0.80)",
+    "zone_fill": "src_py/pipeline_catalog.py:1974 out['saturate_limit_adu_85pct'] = peak_sat_lim",
+    "qhy_migration": "src_py/database.py:2679-2700 _migrate_qhy294mm_saturate_adu_null (16384 -> NULL)"
+  },
+  "night_sat_diag": {
+    "schema_version": 2,
+    "updated_utc": "2026-08-26T23:09:57+00:00",
+    "sat_adu": 65535.0,
+    "lin_adu": 52428.0,
+    "sat_source": "DERIVED",
+    "lin_source": "DEFAULT_FRAC",
+    "bitpix_ceiling": 65535.0,
+    "derived_ceiling": 65535.0,
+    "header_value": null,
+    "equipment_value": null,
+    "refuted_source": null,
+    "refuted_value": null,
+    "warnings": [
+      "Linearity level is a default fraction, not a measured knee."
+    ],
+    "pileup": {
+      "pileup_detected": true,
+      "v_ceiling": 65535.0,
+      "n_at_ceiling": 2617,
+      "n_at_shoulder": 1,
+      "max_pixel": 65535.0,
+      "frames_sampled": 30,
+      "bitpix_ceiling": 65535.0,
+      "refused": false,
+      "refuse_reason": null
+    },
+    "xbinning": 2,
+    "ybinning": 2,
+    "raw_peaks_used": false,
+    "sat_peak_source": "PLACED_APERTURE",
+    "lin_adu_native": 26214.0,
+    "sat_adu_native": 32767.5,
+    "last_frame_drift": null,
+    "star_peak_draft": {},
+    "frame_drift_residuals_px": []
+  },
+  "resolved_ceiling_adu": 65535.0,
+  "resolved_source": "DERIVED",
+  "lin_adu": 52428.0,
+  "lin_source": "DEFAULT_FRAC",
+  "header_facts_raw": [
+    {
+      "file": "BO_CVn_Light_001.fits",
+      "BITPIX": 16,
+      "BZERO": 32768.0,
+      "BSCALE": 1.0,
+      "XBINNING": 2,
+      "YBINNING": 2,
+      "GAIN": 0.0,
+      "READMODE": 0.0,
+      "INSTRUME": "QHY CCD QHY294PROM",
+      "SATURATE": null,
+      "DATAMAX": null,
+      "MAXADU": null,
+      "header_sat_fn": null,
+      "bitpix_infer": 65535.0,
+      "effective_limit": 65535.0,
+      "effective_source": "bitpix",
+      "native_adc_implied": "16-bit unsigned container (BZERO=32768); QHY294 often 14-bit x4 into 16-bit",
+      "data_scaled": true
+    },
+    {
+      "file": "BO_CVn_Light_075.fits",
+      "BITPIX": 16,
+      "BZERO": 32768.0,
+      "BSCALE": 1.0,
+      "XBINNING": 2,
+      "YBINNING": 2,
+      "GAIN": 0.0,
+      "READMODE": 0.0,
+      "INSTRUME": "QHY CCD QHY294PROM",
+      "SATURATE": null,
+      "DATAMAX": null,
+      "MAXADU": null,
+      "header_sat_fn": null,
+      "bitpix_infer": 65535.0,
+      "effective_limit": 65535.0,
+      "effective_source": "bitpix",
+      "native_adc_implied": "16-bit unsigned container (BZERO=32768); QHY294 often 14-bit x4 into 16-bit",
+      "data_scaled": true
+    }
+  ],
+  "equipment_id1": {
+    "ID": 1,
+    "CAMERANAME": "QHY294MM",
+    "ALIAS": "Camera1",
+    "SATURATE_ADU": null,
+    "GAIN_ADU": 3.17,
+    "READNOISE_E": 7.6,
+    "note": "SATURATE_ADU NULL after migration; SAT-DIAG derives ceiling"
+  },
+  "fraction_applied": {
+    "column_name": "saturate_limit_adu_85pct",
+    "SATURATE_LIMIT_FRACTION_sat_diag": 0.8,
+    "config_saturate_limit_fraction": 0.8,
+    "config_admission_sat_peak_frac": 0.7,
+    "actual_column_value_on_516": 52428.0,
+    "actual_fraction_of_ceiling": 0.8,
+    "naming_note": "column says 85pct but filled as sat_adu * 0.80",
+    "comp_selection_gate": "src_py/comp_selection_per_target.py:763-807; over if peak > limit * (admission_sat_peak_frac/saturate_limit_fraction) = peak > 0.70*sat_adu",
+    "comp_pool_rms_gate": "src_py/comp_pool_rms.py:152-164; over if peak > limit (i.e. > 0.80*sat_adu) -- stricter column compare, no adm remult",
+    "ADMISSION_SAT_FRAC": 0.7
+  },
+  "prior_m2_nan_reason": {
+    "peak_column": "peak_max_adu in per-frame proc_*.csv under detrended_aligned/lights/NoFilter_60_2/",
+    "also_in": "comparison_stars.csv / masterstars_full_match.csv (catalog-level, not per-frame)",
+    "join_to_comparison_stars_only": "27/53 pins have peak_max_adu in comparison_stars.csv",
+    "why_nan": "EPSF-PIN-FITOK-01 M2 joined pins to comparison_stars peak; 26/53 pins absent from that file left peak empty; saturate_limit join similarly incomplete; did not fall back to proc CSV max"
+  },
+  "era05_aperture": {
+    "expected_core_prefix": "87197716",
+    "expected_ext_prefix": "dd92e99d",
+    "expected_n_core": 53,
+    "expected_n_ext": 157,
+    "snapshot_photometry_dir": "c:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era05_20260928\\platesolve\\NoFilter_60_2\\photometry",
+    "live_photometry_dir": "c:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry",
+    "note": "checked not regenerated; values from session_baseline_check.py constants",
+    "snapshot_n_aperture_lc": 53,
+    "snapshot_n_all_lc_csv": 106
+  }
+}

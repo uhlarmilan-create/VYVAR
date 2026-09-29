@@ -1,0 +1,367 @@
+{
+  "commit_base": "fdc17b5",
+  "g4_start": {
+    "label": "start",
+    "path": "c:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2",
+    "masterstars_full_match.csv": {
+      "sha256": "bfa24039778f437b2bf7ed37056b6b507e068d52d2c7b4a222a73002125b250a",
+      "prefix_ok": true,
+      "want": "bfa24039"
+    },
+    "MASTERSTAR.fits": {
+      "sha256": "13e77cf8a1dcb4e73fae0558437d7234feeb70a5ae4aa85064a8316812b01345",
+      "prefix_ok": true,
+      "want": "13e77cf8"
+    },
+    "masterstar_epsf.fits": {
+      "sha256": "172f95403beae36dc9c7b35e4758f37996bb661e3d96d180d1444ded71369a20",
+      "prefix_ok": true,
+      "want": "172f9540"
+    },
+    "PASS": true
+  },
+  "m0_ceiling": 65535.0,
+  "m0_source": "DERIVED",
+  "m1_n_pins": 53,
+  "m1_n_any_ratio_ge_1": 0,
+  "m1_n_frac_raw_ge_ceiling_gt0": 0,
+  "m2": {
+    "fit_linear_range": "peak_med < 0.30 * ceiling",
+    "colour_term": {
+      "a": -22.750930883092966,
+      "b_G": 1.036853088352463,
+      "c_bp_rp": 0.42721969452909725
+    },
+    "faint_resid_median_mmag": -347.27289451954357,
+    "faint_resid_mad_mmag": 143.62336168693759,
+    "departure_threshold_mmag": 430.87008506081276,
+    "candidate_linearity_limit_peak_adu": null,
+    "candidate_label": "CANDIDATE",
+    "method": "first peak-quantile bin above 0.25*ceiling where |bin_median_resid - faint_zero| > 3*MAD_faint",
+    "bins": [
+      {
+        "peak": 1717.0,
+        "med_resid_mmag": -189.3888947539155,
+        "n": 113
+      },
+      {
+        "peak": 1772.0,
+        "med_resid_mmag": -284.3303246657589,
+        "n": 120
+      },
+      {
+        "peak": 1796.0,
+        "med_resid_mmag": -313.360495574031,
+        "n": 131
+      },
+      {
+        "peak": 1817.0,
+        "med_resid_mmag": -284.3833630937809,
+        "n": 123
+      },
+      {
+        "peak": 1837.75,
+        "med_resid_mmag": -299.35642835147024,
+        "n": 128
+      },
+      {
+        "peak": 1859.4500000000003,
+        "med_resid_mmag": -322.16952683541945,
+        "n": 123
+      },
+      {
+        "peak": 1880.7000000000003,
+        "med_resid_mmag": -351.1165161107712,
+        "n": 109
+      },
+      {
+        "peak": 1906.0,
+        "med_resid_mmag": -362.49604197971587,
+        "n": 129
+      },
+      {
+        "peak": 1937.0,
+        "med_resid_mmag": -415.3760583446449,
+        "n": 126
+      },
+      {
+        "peak": 1977.0,
+        "med_resid_mmag": -350.6070045518808,
+        "n": 125
+      },
+      {
+        "peak": 2036.0,
+        "med_resid_mmag": -401.1890138286489,
+        "n": 124
+      },
+      {
+        "peak": 2144.8000000000006,
+        "med_resid_mmag": -382.4799552915614,
+        "n": 125
+      },
+      {
+        "peak": 2314.8000000000006,
+        "med_resid_mmag": -352.29807641612786,
+        "n": 119
+      },
+      {
+        "peak": 2531.0,
+        "med_resid_mmag": -380.7403931678124,
+        "n": 125
+      },
+      {
+        "peak": 2782.0,
+        "med_resid_mmag": -381.493098388602,
+        "n": 124
+      },
+      {
+        "peak": 3128.2,
+        "med_resid_mmag": -359.6269842870985,
+        "n": 124
+      },
+      {
+        "peak": 3770.9500000000007,
+        "med_resid_mmag": -376.3247538210006,
+        "n": 123
+      },
+      {
+        "peak": 5122.15,
+        "med_resid_mmag": -335.9452615853904,
+        "n": 123
+      },
+      {
+        "peak": 8741.55,
+        "med_resid_mmag": -343.1688288492012,
+        "n": 123
+      },
+      {
+        "peak": 38486.65,
+        "med_resid_mmag": -270.49703267848815,
+        "n": 123
+      }
+    ],
+    "separate_linearity_calibration": "none found in CalibrationLibrary for this night; M2.1 is the only linearity evidence"
+  },
+  "m3": {
+    "k": 1.059533986780703,
+    "k_err": 0.00266809223012274,
+    "a": -3.9035191949053276,
+    "n_points_fit": 30076,
+    "flux_where_locus_chi2_50": 193950.91110521386,
+    "G_nearest_that_flux": 9.006264686584473,
+    "peak_nearest_that_flux": 22212.0,
+    "scatter_log10": 0.33656113169737883
+  },
+  "m4_class_counts": {
+    "MODEL": 49,
+    "OTHER": 4
+  },
+  "m4_boundaries": {
+    "SAT": null,
+    "NONLIN": null,
+    "MODEL": {
+      "n": 49,
+      "G_min": 8.2427396774292,
+      "G_max": 12.558902740478516,
+      "peak_min": 2092.0,
+      "peak_max": 33910.0
+    },
+    "OTHER": {
+      "n": 4,
+      "G_min": 11.355791091918944,
+      "G_max": 13.252224922180176,
+      "peak_min": 1880.0,
+      "peak_max": 26272.0
+    }
+  },
+  "r1": {
+    "n_low_fit_ok": 17,
+    "n_SAT": 0,
+    "n_NONLIN": 0,
+    "n_MODEL": 13,
+    "n_OTHER": 4,
+    "list": [
+      {
+        "comp_id": 1497119157212720896,
+        "G": 9.131044387817385,
+        "fit_ok_frac": 0.0074626865671641,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.7775997558556497,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.1888640781033518
+      },
+      {
+        "comp_id": 1497203132413443328,
+        "G": 9.307086944580078,
+        "fit_ok_frac": 0.3432835820895522,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.4558632791638056,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.518815830240472
+      },
+      {
+        "comp_id": 1497442379271632384,
+        "G": 8.8513822555542,
+        "fit_ok_frac": 0.0223880597014925,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.7370107576104372,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.1186460765115699
+      },
+      {
+        "comp_id": 1497528072458898432,
+        "G": 9.21760368347168,
+        "fit_ok_frac": 0.3507462686567164,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.511329823758297,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.4327649995477888
+      },
+      {
+        "comp_id": 1497613731286514432,
+        "G": 8.45042610168457,
+        "fit_ok_frac": 0.0,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.899824521248188,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.9350685229053264
+      },
+      {
+        "comp_id": 1497674651102612992,
+        "G": 9.287351608276367,
+        "fit_ok_frac": 0.0970149253731343,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.6042572671091783,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.5797160282882019
+      },
+      {
+        "comp_id": 1497719902878053888,
+        "G": 9.597957611083984,
+        "fit_ok_frac": 0.5522388059701493,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.4619668879224842,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.7021077745803759
+      },
+      {
+        "comp_id": 1498062332030906880,
+        "G": 9.450702667236328,
+        "fit_ok_frac": 0.0,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.3800259403372243,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.1709759030543023
+      },
+      {
+        "comp_id": 1498326455340079616,
+        "G": 9.40735912322998,
+        "fit_ok_frac": 0.1492537313432835,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.4119935912108033,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 0.7486249863396388
+      },
+      {
+        "comp_id": 1499200223486564608,
+        "G": 9.678899765014648,
+        "fit_ok_frac": 0.0074626865671641,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.38803692683299,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.1016132950493231
+      },
+      {
+        "comp_id": 1499906247391001088,
+        "G": 8.742789268493652,
+        "fit_ok_frac": 0.0,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.8019378957808805,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.056212445145591
+      },
+      {
+        "comp_id": 1500296402219939584,
+        "G": 8.2427396774292,
+        "fit_ok_frac": 0.0,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.7539482719157702,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.387745445165538
+      },
+      {
+        "comp_id": 1500467303261764096,
+        "G": 12.662065505981444,
+        "fit_ok_frac": 0.0,
+        "class": "OTHER",
+        "max_peak_ratio_vs_limit": 0.0560006103608758,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": NaN
+      },
+      {
+        "comp_id": 1500576537166572544,
+        "G": 11.355791091918944,
+        "fit_ok_frac": 0.0,
+        "class": "OTHER",
+        "max_peak_ratio_vs_limit": 0.662928206301976,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.0912829569062166
+      },
+      {
+        "comp_id": 1500579870061241088,
+        "G": 13.252224922180176,
+        "fit_ok_frac": 0.0,
+        "class": "OTHER",
+        "max_peak_ratio_vs_limit": 0.1036087586785687,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": NaN
+      },
+      {
+        "comp_id": 1500602959805382656,
+        "G": 12.79344081878662,
+        "fit_ok_frac": 0.0,
+        "class": "OTHER",
+        "max_peak_ratio_vs_limit": 0.4597543297474631,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.2484549438070358
+      },
+      {
+        "comp_id": 1500727513856914944,
+        "G": 9.23672103881836,
+        "fit_ok_frac": 0.0,
+        "class": "MODEL",
+        "max_peak_ratio_vs_limit": 0.369039444571603,
+        "frac_raw_ge_ceiling": 0.0,
+        "locus_offset_sigma": 1.0354873980787935
+      }
+    ],
+    "note": "auto-NONLIN with |resid|>1000 mmag reclassed OTHER (not a bright knee)"
+  },
+  "r2": {
+    "n_sat_or_nonlin_pins": 0,
+    "n_sat": 0,
+    "n_nonlin_after_reclass": 0,
+    "bo_cvn_target_id": "1498613634033133184",
+    "fw_cvn_target_id": "1497343732462852864",
+    "gate_cite": "src_py/comp_selection_per_target.py:763-807",
+    "gate_rule": "peak > saturate_limit_adu_85pct * (admission_sat_peak_frac/saturate_limit_fraction) = peak > 0.70*sat_adu",
+    "gate_threshold_adu": 45874.5,
+    "brightest_pin_max_peak": 47176.0,
+    "brightest_pin_n_frames_over_adm": "1497613731286514432: 4/134 (below DRAFT_SAT_EXCLUDE_FRAME_FRAC=0.50)",
+    "why_passed": "calibrated peaks stay below 0.70*65535 on nearly all frames; raw never at ceiling for pins; aperture gate correctly admits them",
+    "bo_cvn_contains_sat_or_nonlin": false
+  },
+  "r3": {
+    "k": 1.059533986780703,
+    "k_err": 0.00266809223012274,
+    "chi2_50_crosses_locus_at_flux": 193950.91110521386,
+    "G_at_crossing_nearest": 9.006264686584473,
+    "peak_at_crossing_nearest": 22212.0,
+    "threshold_is_brightness_cut": true
+  },
+  "low_fit_ok_class_counts": {
+    "MODEL": 13,
+    "OTHER": 4
+  },
+  "reading": "H-MODEL: bright low-fit_ok pins are on the chi2(flux) locus; fixed threshold 50 is a brightness cut near G~9.0. H-SAT does not hold for the 17 low-fit_ok pins."
+}

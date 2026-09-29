@@ -1,0 +1,323 @@
+{
+  "fit_range": "peak < 45874.5 (linearity CANDIDATE or 0.70*ceiling), finite chi2+psf_flux",
+  "n_points_fit": 30076,
+  "k": 1.059533986780703,
+  "k_err": 0.00266809223012274,
+  "a": -3.9035191949053276,
+  "scatter_log10": 0.33656113169737883,
+  "expectation_note": "pure model error bright-end k~2; photon-noise dominated lower k",
+  "flux_where_locus_chi2_50": 193950.91110521386,
+  "G_nearest_that_flux": 9.006264686584473,
+  "peak_nearest_that_flux": 22212.0,
+  "chi2_def_iterative": "src_py/psf_photometry.py:3348-3371 reduced_chi2; chi2_ok=isfinite & chi2<threshold; nonfinite fails",
+  "chi2_def_grouped": "src_py/psf_photometry.py:2788-2794; chi2_ok=(not isfinite(chi2)) OR chi2<limit -- nonfinite PASSES",
+  "path_note": "proc CSVs lack psf_iterative column; psf_group_n>1 indicates grouped used for that star/frame",
+  "grouped_vs_iterative_for_pins": {
+    "1485609641291887872": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.05226691823417564
+    },
+    "1496315070616056064": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.5502069475460851
+    },
+    "1496786967262035712": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.5506389148332066
+    },
+    "1496798993170465536": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.5083317617332932
+    },
+    "1496874408500111104": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.3112066583962786
+    },
+    "1496948904709272576": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.3678029062139391
+    },
+    "1496994156484645632": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.6465030402741212
+    },
+    "1497119157212720896": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.18886407810335185,
+      "median_locus_offset_sigma_fit_ok_true": -0.32577237685709204
+    },
+    "1497145751650265600": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.9425712125816166
+    },
+    "1497196054307837696": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.4246673376898719
+    },
+    "1497203132413443328": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.518815830240472,
+      "median_locus_offset_sigma_fit_ok_true": 0.24217738655466198
+    },
+    "1497313255374892800": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.7379105739359961
+    },
+    "1497326621313118976": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.9970445454979142
+    },
+    "1497368849430107904": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -1.0481594204197497
+    },
+    "1497370563121917952": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.5392742085356718,
+      "median_locus_offset_sigma_fit_ok_true": -0.026810743780810123
+    },
+    "1497429837967596800": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.8687941679711044
+    },
+    "1497442379271632384": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.11864607651156991,
+      "median_locus_offset_sigma_fit_ok_true": -0.3888332577321726
+    },
+    "1497528072458898432": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.4327649995477888,
+      "median_locus_offset_sigma_fit_ok_true": 0.07478070862866797
+    },
+    "1497613731286514432": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.9350685229053264,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1497617407778562304": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.9223992347030189,
+      "median_locus_offset_sigma_fit_ok_true": 0.3910025544773648
+    },
+    "1497674651102612992": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.5797160282882019,
+      "median_locus_offset_sigma_fit_ok_true": 0.07011691147645856
+    },
+    "1497719902878053888": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.7021077745803759,
+      "median_locus_offset_sigma_fit_ok_true": 0.36162098999058595
+    },
+    "1497726465588057344": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.015110934571264417
+    },
+    "1497758935541325824": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.3761532239499342
+    },
+    "1497771992240531712": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.728001499349914,
+      "median_locus_offset_sigma_fit_ok_true": 0.3109524017293126
+    },
+    "1497837207025312768": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.8283569219156092,
+      "median_locus_offset_sigma_fit_ok_true": 0.2084804584681994
+    },
+    "1497894828305963776": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.436875316391961
+    },
+    "1497974027502858240": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.8471638847169622
+    },
+    "1497977291678057472": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -1.0487297100636916
+    },
+    "1498020894186918144": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.4235581452165849,
+      "median_locus_offset_sigma_fit_ok_true": 0.7408253678703619
+    },
+    "1498062332030906880": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.1709759030543025,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1498222615914114816": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.3857635256748748
+    },
+    "1498244610443240192": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.21141095601840232
+    },
+    "1498326455340079616": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.7486249863396388,
+      "median_locus_offset_sigma_fit_ok_true": 0.40983449372651415
+    },
+    "1498645691668588288": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.7468442295893354
+    },
+    "1498735778606786816": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 0.4102170770569865,
+      "median_locus_offset_sigma_fit_ok_true": 0.050830053611434556
+    },
+    "1498812233320666368": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.3697153209093741
+    },
+    "1498994786610872576": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.34191026017852655
+    },
+    "1499200223486564608": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.1016132950493231,
+      "median_locus_offset_sigma_fit_ok_true": 0.704636670513364
+    },
+    "1499867867561302272": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.7810681048423438
+    },
+    "1499906247391001088": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.056212445145591,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1500296402219939584": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.387745445165538,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1500403089207449856": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.9869733290243777
+    },
+    "1500460813567859456": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.0202720570616112
+    },
+    "1500486102335278592": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.02279005382494184
+    },
+    "1500576537166572544": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.0912829569062166,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1500602959805382656": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.2484549438070358,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1500664876053883904": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 1.0457836120002704
+    },
+    "1500727513856914944": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": 1.0354873980787935,
+      "median_locus_offset_sigma_fit_ok_true": NaN
+    },
+    "1501956561697995008": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": 0.5079708883899285
+    },
+    "1502007585909464064": {
+      "frac_group_n_gt1": 0.0,
+      "median_group_n": 0.0,
+      "median_locus_offset_sigma_fit_ok_false": NaN,
+      "median_locus_offset_sigma_fit_ok_true": -0.2162871502475125
+    }
+  }
+}

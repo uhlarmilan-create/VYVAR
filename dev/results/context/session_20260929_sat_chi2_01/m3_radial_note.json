@@ -1,0 +1,3 @@
+{
+  "error": "cannot import name 'EPSFModel' from 'photutils.psf' (C:\\Users\\uhlar\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\photutils\\psf\\__init__.py)"
+}

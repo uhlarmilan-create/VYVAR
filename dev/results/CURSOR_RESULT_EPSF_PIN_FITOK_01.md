@@ -101,7 +101,7 @@ peak_over_sat_frac: NaN for these rows (saturate_limit / peak not
 joined cleanly from comparison_stars for all pins); not used as a
 claim.
 
-fit_ok_frac_era04 from era04 proc: **n/a** ù procs carry stub PSF
+fit_ok_frac_era04 from era04 proc: **n/a** ? procs carry stub PSF
 columns (psf_flux all nonfinite; fit_ok all False). Cannot attribute
 rate change to FIXPOS-NOOP-01 (9e8dc91) or GAIN-FALSY-01
 (1efc08c/0708abe) via era04-vs-era05 proc comparison.
@@ -134,7 +134,7 @@ Explicit reading:
 - Pooled / faint: **fit_ok=False fits are measurably worse**
   (median delta_rms = 314 mmag).
 - Bright G<9.5 (the pin-killer domain): delta_rms = 3.64 mmag,
-  delta_med = 1.50 mmag ù within a 5 mmag indifference band on
+  delta_med = 1.50 mmag ? within a 5 mmag indifference band on
   this proxy; chi2 still fails the SET threshold (>=50; medians
   on False epochs ~70-161). Do **not** reopen the OR-gate: M3
   does not support "indistinguishable" pooled, and even bright-end
@@ -180,7 +180,7 @@ INV-PSF-LC-PIN-01 kept on the reduced set. Not wired.
 ## Errors on the record
 
 None blocking measurement. peak_over_sat_frac incomplete (NaN)
-for pinned comps ù not claimed. era04 proc PSF stubbed ù fit_ok
+for pinned comps ? not claimed. era04 proc PSF stubbed ? fit_ok
 rate vs FIXPOS/GAIN not measurable from snapshot procs.
 
 ## STOP - fix menu for Milan (nothing executed)

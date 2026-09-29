@@ -1,0 +1,117 @@
+{
+  "fit_linear_range": "peak_med < 0.30 * ceiling",
+  "colour_term": {
+    "a": -22.750930883092966,
+    "b_G": 1.036853088352463,
+    "c_bp_rp": 0.42721969452909725
+  },
+  "faint_resid_median_mmag": -347.27289451954357,
+  "faint_resid_mad_mmag": 143.62336168693759,
+  "departure_threshold_mmag": 430.87008506081276,
+  "candidate_linearity_limit_peak_adu": null,
+  "candidate_label": "CANDIDATE",
+  "method": "first peak-quantile bin above 0.25*ceiling where |bin_median_resid - faint_zero| > 3*MAD_faint",
+  "bins": [
+    {
+      "peak": 1717.0,
+      "med_resid_mmag": -189.3888947539155,
+      "n": 113
+    },
+    {
+      "peak": 1772.0,
+      "med_resid_mmag": -284.3303246657589,
+      "n": 120
+    },
+    {
+      "peak": 1796.0,
+      "med_resid_mmag": -313.360495574031,
+      "n": 131
+    },
+    {
+      "peak": 1817.0,
+      "med_resid_mmag": -284.3833630937809,
+      "n": 123
+    },
+    {
+      "peak": 1837.75,
+      "med_resid_mmag": -299.35642835147024,
+      "n": 128
+    },
+    {
+      "peak": 1859.4500000000003,
+      "med_resid_mmag": -322.16952683541945,
+      "n": 123
+    },
+    {
+      "peak": 1880.7000000000003,
+      "med_resid_mmag": -351.1165161107712,
+      "n": 109
+    },
+    {
+      "peak": 1906.0,
+      "med_resid_mmag": -362.49604197971587,
+      "n": 129
+    },
+    {
+      "peak": 1937.0,
+      "med_resid_mmag": -415.3760583446449,
+      "n": 126
+    },
+    {
+      "peak": 1977.0,
+      "med_resid_mmag": -350.6070045518808,
+      "n": 125
+    },
+    {
+      "peak": 2036.0,
+      "med_resid_mmag": -401.1890138286489,
+      "n": 124
+    },
+    {
+      "peak": 2144.8000000000006,
+      "med_resid_mmag": -382.4799552915614,
+      "n": 125
+    },
+    {
+      "peak": 2314.8000000000006,
+      "med_resid_mmag": -352.29807641612786,
+      "n": 119
+    },
+    {
+      "peak": 2531.0,
+      "med_resid_mmag": -380.7403931678124,
+      "n": 125
+    },
+    {
+      "peak": 2782.0,
+      "med_resid_mmag": -381.493098388602,
+      "n": 124
+    },
+    {
+      "peak": 3128.2,
+      "med_resid_mmag": -359.6269842870985,
+      "n": 124
+    },
+    {
+      "peak": 3770.9500000000007,
+      "med_resid_mmag": -376.3247538210006,
+      "n": 123
+    },
+    {
+      "peak": 5122.15,
+      "med_resid_mmag": -335.9452615853904,
+      "n": 123
+    },
+    {
+      "peak": 8741.55,
+      "med_resid_mmag": -343.1688288492012,
+      "n": 123
+    },
+    {
+      "peak": 38486.65,
+      "med_resid_mmag": -270.49703267848815,
+      "n": 123
+    }
+  ],
+  "separate_linearity_calibration": "none found in CalibrationLibrary for this night; M2.1 is the only linearity evidence"
+}
