@@ -213,7 +213,7 @@
       "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf c94cf4fe n=53; G3 era06 refs).",
       "passes": true,
       "last_verified": "2026-09-30",
-      "commit": "ALPHA_READY_01_LOCK",
+      "commit": "91194ea",
       "notes": "EPSF-CHI2-LOCUS-01 Phase 2 LOCK. Evidence CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md (Phase 1b) + CURSOR_RESULT_ALPHA_READY_01.md. EPSF-XVAL-01 and CLOSE-TEXT-02 stay CLOSED/ENACTED; era05 PSF LCs were collapsed; era06 is the verified product.",
       "sha_core_psf_era04": "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8",
       "sha_core_psf_era05_superseded": "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5",
