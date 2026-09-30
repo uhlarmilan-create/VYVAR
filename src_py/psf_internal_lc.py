@@ -318,6 +318,50 @@ def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[st
     return ids, weights, "comparison_stars_per_target"
 
 
+def comps_with_psf_measurement_on_night(stack: pd.DataFrame) -> set[str]:
+    """Catalog IDs with at least one finite psf_flux > 0 across the night stack.
+
+    Structural presence check (EPSF-CHI2-LOCUS-01 Phase 1b Defect 2): a pinned
+    comp that was never fitted (e.g. outside the ePSF science set) cannot be a
+    PSF-LC ensemble member. This is absence, not a quality filter.
+    """
+    if stack is None or stack.empty or "catalog_id" not in stack.columns:
+        return set()
+    if "psf_flux" not in stack.columns:
+        return set()
+    flux = pd.to_numeric(stack["psf_flux"], errors="coerce")
+    ok = np.isfinite(flux.to_numpy(dtype=np.float64)) & (flux.to_numpy(dtype=np.float64) > 0)
+    ids = stack.loc[ok, "catalog_id"].map(_norm_cid_gaia)
+    return {c for c in ids.tolist() if c}
+
+
+def filter_ensemble_to_psf_measured(
+    comp_ids: Sequence[str],
+    weights: dict[str, float],
+    measured: set[str],
+) -> tuple[list[str], dict[str, float], list[str]]:
+    """Drop comps with no PSF measurement on the night; renormalise weights."""
+    kept: list[str] = []
+    dropped: list[str] = []
+    for cid in comp_ids:
+        c = _norm_cid_gaia(cid)
+        if not c:
+            continue
+        if c in measured:
+            kept.append(c)
+        else:
+            dropped.append(c)
+    w_out: dict[str, float] = {}
+    if weights:
+        for c in kept:
+            if c in weights and math.isfinite(float(weights[c])) and float(weights[c]) > 0:
+                w_out[c] = float(weights[c])
+        s = sum(w_out.values())
+        if s > 0 and w_out:
+            w_out = {k: v / s for k, v in w_out.items()}
+    return kept, w_out, dropped
+
+
 def build_provenance_header(
     *,
     epsf_meta: dict[str, Any],
@@ -337,9 +381,11 @@ def build_provenance_header(
     zp_membership_effective: str = ZP_MEMBERSHIP_STRICT,
     zp_membership_rig_validated: bool = False,
     extra_header_lines: Sequence[str] = (),
+    ensemble_dropped_no_psf: Sequence[str] = (),
 ) -> list[str]:
     gtxt = f"{gain_value:.6g}" if math.isfinite(float(gain_value)) else "nan"
     ids = ",".join(str(c) for c in pinned_ids)
+    dropped = ",".join(str(c) for c in ensemble_dropped_no_psf)
     lines = [
         INTERNAL_BANNER,
         f"# epsf_model_file={epsf_meta.get('model_name') or ''}",
@@ -356,6 +402,10 @@ def build_provenance_header(
         f"# ensemble_n_comp={int(n_comp)}",
         f"# ensemble_pinned_ids={ids}",
         f"# ensemble_source={ensemble_source}",
+        f"# ensemble_dropped_no_psf_measurement={dropped}",
+        "# ensemble_drop_reason=structural_absence_no_psf_on_night"
+        if dropped
+        else "# ensemble_drop_reason=",
         f"# git_hash={git_hash}",
         f"# git_dirty={git_dirty}",
         TRUST_NOTE_LINE1,
@@ -491,6 +541,22 @@ def write_one_internal_psf_lc(
     if not comp_ids:
         LOGGER.warning("[PSF-LC] %s has no ensemble membership; skip", tid)
         return None
+    measured = comps_with_psf_measurement_on_night(stack)
+    comp_ids, weight_map, dropped_no_psf = filter_ensemble_to_psf_measured(
+        comp_ids, weight_map, measured
+    )
+    if dropped_no_psf:
+        LOGGER.info(
+            "[PSF-LC] %s dropped %d pinned comp(s) with no PSF measurement on night: %s",
+            tid,
+            len(dropped_no_psf),
+            ",".join(dropped_no_psf),
+        )
+    if not comp_ids:
+        LOGGER.warning(
+            "[PSF-LC] %s has no ensemble members with PSF measurement; skip", tid
+        )
+        return None
 
     psf_ok = tgt["psf_fit_ok"].to_numpy(dtype=bool)
     psf_flux = tgt["psf_flux"].to_numpy(dtype=np.float64)
@@ -615,6 +681,7 @@ def write_one_internal_psf_lc(
         zp_membership_effective=zp_mode,
         zp_membership_rig_validated=bool(zp_membership_rig_validated),
         extra_header_lines=extra_header_lines,
+        ensemble_dropped_no_psf=dropped_no_psf,
     )
 
     def _num(arr: np.ndarray, nd: int) -> list[Any]:

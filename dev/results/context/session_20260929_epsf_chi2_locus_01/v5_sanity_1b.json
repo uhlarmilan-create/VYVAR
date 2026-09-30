@@ -1,0 +1,16 @@
+{
+  "BO": {
+    "catalog_id": "1498613634033133184",
+    "demeaned_residual_rms_mmag": 15.37171312700556,
+    "median_predicted_err_mmag": 13.7749280604624,
+    "ratio_rms_to_median_pred_err": 1.1159196664791553,
+    "n_pin_ok": 134
+  },
+  "FW": {
+    "catalog_id": "1497343732462852864",
+    "demeaned_residual_rms_mmag": 5.360422610525456,
+    "median_predicted_err_mmag": 8.590790701355212,
+    "ratio_rms_to_median_pred_err": 0.6239731355205569,
+    "n_pin_ok": 134
+  }
+}

@@ -1,0 +1,3 @@
+comp_id,G,x,y,in_epsf_science_set,in_epsf_fit_ids,in_measured_psf_night,n_proc_rows,n_finite_psf_flux,nn_id,nn_dist_px,nn_dist_fwhm,fwhm_px_used,cause
+1500467303261764096,12.662065505981444,1514.372002210103,384.981193399083,False,False,False,134,0,1500469094264811008,24.566323212257654,4.631135846672257,5.3046,structural_absence_not_in_epsf_science_set
+1500579870061241088,13.252224922180176,1914.8511991025343,535.5685447001397,False,False,False,134,0,1500556127482027008,13.995042181902782,2.638284165045957,5.3046,structural_absence_not_in_epsf_science_set

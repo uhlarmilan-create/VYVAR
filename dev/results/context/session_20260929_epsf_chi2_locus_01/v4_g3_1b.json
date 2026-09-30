@@ -1,0 +1,43 @@
+{
+  "BO": {
+    "n_epochs": 134,
+    "n_full_membership": 134,
+    "n_dropped_pin": 0,
+    "coverage": 1.0,
+    "n_finite_pairs": 134,
+    "level_offset_mag": -0.014809499999999975,
+    "level_offset_mmag": -14.809499999999975,
+    "rms_mag": 0.019327432496595288,
+    "rms_mmag": 19.32743249659529,
+    "demeaned_rms_mmag": 15.37171312700556,
+    "rms_vs_abs_median": true,
+    "catalog_id": "1498613634033133184",
+    "missing": false,
+    "n_full": 134
+  },
+  "FW": {
+    "n_epochs": 134,
+    "n_full_membership": 134,
+    "n_dropped_pin": 0,
+    "coverage": 1.0,
+    "n_finite_pairs": 134,
+    "level_offset_mag": 0.022360499999999894,
+    "level_offset_mmag": 22.360499999999895,
+    "rms_mag": 0.02237715544591729,
+    "rms_mmag": 22.37715544591729,
+    "demeaned_rms_mmag": 5.360422610525456,
+    "rms_vs_abs_median": true,
+    "catalog_id": "1497343732462852864",
+    "missing": false,
+    "n_full": 134
+  },
+  "era04_ref_mmag": {
+    "BO": 12.505,
+    "FW": 4.629
+  },
+  "sat_chi2_m4b_mmag": {
+    "BO": 12.785,
+    "FW": 7.757
+  },
+  "n_sigma_locus": 5.0
+}

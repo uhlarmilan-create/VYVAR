@@ -4,13 +4,15 @@
 Replaces the fixed ``psf_chi2_threshold`` SET. Shared by iterative and
 grouped PSF paths (no duplicated criterion).
 
-Locus model: log10(chi2) = a + k * log10(flux), fit by iterative
-MAD-clipped ordinary least squares (3 clip rounds at 3*MAD).
+Night slope ``k`` and residual scatter come from a pooled MAD-clipped
+OLS fit over the night: log10(chi2) = a_night + k * log10(flux).
 
-Night k_err reference from SAT-CHI2-01 M3 (5a5b07a): k_err=0.002668
-on n=30076. Frame locus is used only when n is large enough that the
-expected slope uncertainty is <= 3x that night value; otherwise the
-night-pooled locus is required. Never falls back to a fixed chi2 cut.
+Per frame, the intercept is local:
+  a_f = robust median of (log10(chi2) - k * log10(flux))
+over that frame's locus sample. Residuals use the night scatter.
+If the frame has fewer than ``MIN_N_LOCUS_FIT`` locus members, the
+night intercept is used (source=night). Never falls back to a fixed
+chi2 cut. No night-specific numeric constants from a single rig.
 """
 from __future__ import annotations
 
@@ -19,25 +21,14 @@ import logging
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
-# SAT-CHI2-01 M3 night pooled OLS (measure-only; used to derive min_n).
-_SAT_CHI2_NIGHT_K_ERR = 0.00266809223012274
-_SAT_CHI2_NIGHT_SCATTER_LOG10 = 0.33656113169737883
-_SAT_CHI2_NIGHT_N = 30076
-# Same design span as the night fit: s_x^2 = scatter^2 / ((n-1)*k_err^2).
-_SAT_CHI2_NIGHT_S_X = _SAT_CHI2_NIGHT_SCATTER_LOG10 / (
-    math.sqrt(max(1, _SAT_CHI2_NIGHT_N - 1)) * _SAT_CHI2_NIGHT_K_ERR
-)
-# n where expected k_err == 3 * night k_err (same s_x, same scatter).
-# n-1 = scatter^2 / ((3*k_err)^2 * s_x^2) = (n_night-1) / 9
-MIN_N_FRAME_LOCUS = int(1 + math.ceil((_SAT_CHI2_NIGHT_N - 1) / 9.0))
-# Absolute floor to fit 2 params with MAD clip (DOF).
+# Absolute floor to estimate an intercept (statistical DOF, not equipment).
 MIN_N_LOCUS_FIT = 10
 MAD_TO_SIGMA = 1.4826
 DEFAULT_NSIGMA = 5.0
@@ -81,11 +72,12 @@ def fit_chi2_locus(
     *,
     converged: Sequence[bool] | np.ndarray | None = None,
     saturated: Sequence[bool] | np.ndarray | None = None,
-    source: str = "frame",
+    source: str = "night",
 ) -> Chi2Locus | None:
     """Fit log10(chi2) = a + k*log10(flux) by iterative MAD-clipped OLS.
 
-    Returns None if fewer than ``MIN_N_LOCUS_FIT`` locus members remain.
+    Used for the night-pooled slope and scatter. Returns None if fewer
+    than ``MIN_N_LOCUS_FIT`` locus members remain.
     """
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
@@ -128,7 +120,6 @@ def fit_chi2_locus(
     scatter = MAD_TO_SIGMA * mad if mad > 0 else float(np.std(resid_f))
     if not (math.isfinite(scatter) and scatter > 0):
         scatter = 1e-6
-    # OLS slope uncertainty on final inliers
     s2 = float(np.sum((resid_f - med) ** 2) / max(1, len(xx) - 2))
     try:
         xtx_inv = np.linalg.inv(A.T @ A)
@@ -138,15 +129,61 @@ def fit_chi2_locus(
     return Chi2Locus(a=a, k=k, scatter=scatter, n=int(keep.sum()), source=source, k_err=k_err)
 
 
-def prefer_night_locus(frame_locus: Chi2Locus | None) -> bool:
-    """True when the frame sample is too small / too uncertain for SET."""
-    if frame_locus is None:
-        return True
-    if frame_locus.n < MIN_N_FRAME_LOCUS:
-        return True
-    if math.isfinite(frame_locus.k_err) and frame_locus.k_err > 3.0 * _SAT_CHI2_NIGHT_K_ERR:
-        return True
-    return False
+def frame_intercept_with_night_k(
+    flux: Sequence[float] | np.ndarray,
+    chi2: Sequence[float] | np.ndarray,
+    *,
+    night_k: float,
+    night_a: float,
+    night_scatter: float,
+    converged: Sequence[bool] | np.ndarray | None = None,
+    saturated: Sequence[bool] | np.ndarray | None = None,
+) -> Chi2Locus | None:
+    """Build a per-frame locus: night slope k + robust frame intercept a_f.
+
+    Returns None only when the night slope itself is unusable. When the
+    frame sample is below ``MIN_N_LOCUS_FIT``, returns the night intercept
+    with ``source='night'``.
+    """
+    if not (math.isfinite(night_k) and math.isfinite(night_scatter) and night_scatter > 0):
+        return None
+    f = np.asarray(flux, dtype=np.float64)
+    c = np.asarray(chi2, dtype=np.float64)
+    m = _finite_mask(f, c, converged, saturated)
+    n_f = int(m.sum())
+    if n_f < MIN_N_LOCUS_FIT:
+        return Chi2Locus(
+            a=float(night_a),
+            k=float(night_k),
+            scatter=float(night_scatter),
+            n=n_f,
+            source="night",
+        )
+    # a_f = median(log10(chi2) - k*log10(flux)); MAD-clip once around that median.
+    delta = np.log10(c[m]) - float(night_k) * np.log10(f[m])
+    med = float(np.median(delta))
+    mad = float(np.median(np.abs(delta - med)))
+    if mad <= 0:
+        mad = float(np.std(delta)) if n_f > 1 else 1e-6
+    if mad <= 0:
+        mad = 1e-6
+    keep = np.abs(delta - med) <= (_CLIP_K * mad)
+    if int(keep.sum()) < MIN_N_LOCUS_FIT:
+        return Chi2Locus(
+            a=float(night_a),
+            k=float(night_k),
+            scatter=float(night_scatter),
+            n=n_f,
+            source="night",
+        )
+    a_f = float(np.median(delta[keep]))
+    return Chi2Locus(
+        a=a_f,
+        k=float(night_k),
+        scatter=float(night_scatter),
+        n=int(keep.sum()),
+        source="frame",
+    )
 
 
 def locus_residual_sigma(
@@ -157,7 +194,6 @@ def locus_residual_sigma(
     """Residual of log10(chi2) from the locus, in units of locus.scatter."""
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
-    out = np.full(np.shape(f) if np.ndim(f) else (), float("nan"), dtype=np.float64)
     if np.ndim(f) == 0:
         if not (math.isfinite(float(f)) and float(f) > 0 and math.isfinite(float(c)) and float(c) > 0):
             return float("nan")
@@ -216,7 +252,8 @@ def apply_chi2_locus_to_rows(
 ) -> tuple[list[dict[str, Any]], Chi2Locus | None, dict[str, Any]]:
     """Apply locus criterion to per-star result rows (shared SET).
 
-    Mutates and returns ``rows``. Meta describes which locus was used.
+    Requires a night locus for the slope. Per-frame intercept a_f is
+    estimated when the frame sample is large enough; otherwise night a.
     """
     ns = float(n_sigma) if n_sigma is not None else resolve_n_sigma()
     n = len(rows)
@@ -236,13 +273,11 @@ def apply_chi2_locus_to_rows(
         if "psf_converged" in r:
             conv[i] = bool(r.get("psf_converged"))
         else:
-            # Infer: finite flux>0 and finite or flagged fit attempt
             conv[i] = bool(
                 math.isfinite(flux[i])
                 and flux[i] > 0
                 and (math.isfinite(chi2[i]) or r.get("psf_fit_ok") is not None)
             )
-            # Prefer explicit flags bit if stored
             if r.get("_psf_converged") is not None:
                 conv[i] = bool(r.get("_psf_converged"))
         cid = str(r.get("catalog_id", ""))
@@ -251,27 +286,28 @@ def apply_chi2_locus_to_rows(
         else:
             sat[i] = bool(r.get("likely_saturated") or r.get("is_saturated"))
 
-    frame_locus = fit_chi2_locus(flux, chi2, converged=conv, saturated=sat, source="frame")
-    use_night = prefer_night_locus(frame_locus)
     locus: Chi2Locus | None
-    if use_night:
-        if night_locus is None:
-            # Cannot SET without a locus and must not use a fixed chi2 cut:
-            # fall closed (fit_ok False) when night locus is unavailable.
-            locus = None
-            source = "none_need_night"
-        else:
-            locus = night_locus
-            source = "night"
+    if night_locus is None:
+        locus = None
+        source = "none_need_night"
     else:
-        locus = frame_locus
-        source = "frame"
+        locus = frame_intercept_with_night_k(
+            flux,
+            chi2,
+            night_k=night_locus.k,
+            night_a=night_locus.a,
+            night_scatter=night_locus.scatter,
+            converged=conv,
+            saturated=sat,
+        )
+        source = locus.source if locus is not None else "none_need_night"
+        if locus is None:
+            source = "none_need_night"
 
     meta: dict[str, Any] = {
         "n_sigma": ns,
         "source": source,
-        "min_n_frame_locus": MIN_N_FRAME_LOCUS,
-        "frame_locus": frame_locus.to_dict() if frame_locus else None,
+        "min_n_locus_fit": MIN_N_LOCUS_FIT,
         "night_locus": night_locus.to_dict() if night_locus else None,
         "used_locus": locus.to_dict() if locus else None,
     }
@@ -297,7 +333,7 @@ def apply_chi2_locus_to_rows(
             r["psf_chi2_locus_k"] = locus.k
             r["psf_chi2_locus_scatter"] = locus.scatter
             r["psf_chi2_locus_n"] = locus.n
-            r["psf_chi2_locus_source"] = locus.source if source != "night" else "night"
+            r["psf_chi2_locus_source"] = locus.source
     else:
         for r in rows:
             r["psf_chi2_locus_a"] = float("nan")
@@ -313,10 +349,10 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
     files = sorted(Path(proc_dir).glob("proc_*.csv"))
     if not files:
         return None
-    fluxes: list[float] = []
-    chi2s: list[float] = []
-    convs: list[bool] = []
-    sats: list[bool] = []
+    fluxes: list[np.ndarray] = []
+    chi2s: list[np.ndarray] = []
+    convs: list[np.ndarray] = []
+    sats: list[np.ndarray] = []
     usecols = [
         "psf_flux",
         "psf_chi2",
@@ -363,10 +399,7 @@ def reapply_night_locus_to_proc_dir(
     n_sigma: float | None = None,
     night_locus: Chi2Locus | None = None,
 ) -> dict[str, Any]:
-    """Rewrite fit_ok on frames that must use the night locus.
-
-    Frames with a sufficient frame locus are left unchanged.
-    """
+    """Rewrite fit_ok using night k + per-frame intercept a_f."""
     ns = float(n_sigma) if n_sigma is not None else resolve_n_sigma()
     night = night_locus or fit_night_locus_from_proc_dir(proc_dir)
     summary: dict[str, Any] = {
@@ -375,6 +408,7 @@ def reapply_night_locus_to_proc_dir(
         "frames": [],
         "n_rewritten": 0,
         "n_kept_frame": 0,
+        "a_f_values": [],
     }
     if night is None:
         summary["error"] = "night_locus_unavailable"
@@ -395,12 +429,18 @@ def reapply_night_locus_to_proc_dir(
             sat |= df["likely_saturated"].fillna(False).astype(bool).to_numpy()
         if "is_saturated" in df.columns:
             sat |= df["is_saturated"].fillna(False).astype(bool).to_numpy()
-        frame_locus = fit_chi2_locus(flux, chi2, converged=conv, saturated=sat, source="frame")
-        use_night = prefer_night_locus(frame_locus)
-        locus = night if use_night else frame_locus
-        source = "night" if use_night else "frame"
+        locus = frame_intercept_with_night_k(
+            flux,
+            chi2,
+            night_k=night.k,
+            night_a=night.a,
+            night_scatter=night.scatter,
+            converged=conv,
+            saturated=sat,
+        )
         if locus is None:
             continue
+        source = locus.source
         resid = locus_residual_sigma(flux, chi2, locus)
         if not isinstance(resid, np.ndarray):
             resid = np.asarray([resid], dtype=np.float64)
@@ -425,15 +465,35 @@ def reapply_night_locus_to_proc_dir(
             "frame": fp.name,
             "source": source,
             "n_locus": int(locus.n),
+            "a": locus.a,
             "k": locus.k,
             "scatter": locus.scatter,
             "n_ok": int(ok.sum()),
         }
         summary["frames"].append(entry)
-        if use_night:
-            summary["n_rewritten"] += 1
-        else:
+        if source == "frame":
             summary["n_kept_frame"] += 1
+            summary["a_f_values"].append(locus.a)
+        else:
+            summary["n_rewritten"] += 1
+    a_vals = summary["a_f_values"]
+    if a_vals:
+        arr = np.asarray(a_vals, dtype=np.float64)
+        summary["a_f_spread"] = {
+            "n": int(arr.size),
+            "min": float(np.min(arr)),
+            "median": float(np.median(arr)),
+            "max": float(np.max(arr)),
+            "night_a": night.a,
+            "night_scatter": night.scatter,
+            "spread_over_night_scatter": float(
+                (np.max(arr) - np.min(arr)) / night.scatter
+            )
+            if night.scatter > 0
+            else float("nan"),
+        }
+    else:
+        summary["a_f_spread"] = {"n": 0}
     meta_path = Path(proc_dir) / "psf_chi2_locus_night.json"
     meta_path.write_text(json.dumps(summary, indent=2, default=str) + "\n", encoding="ascii")
     return summary
@@ -456,11 +516,10 @@ def finalize_night_locus_for_inv_psf_frame_01(
     *,
     n_sigma: float | None = None,
 ) -> dict[str, Any]:
-    """Night-pooled locus SET on all procs, then refresh ``n_ok`` for INV-PSF-FRAME-01.
+    """Night-k + frame-a_f SET on all procs, then refresh ``n_ok`` for INV-PSF-FRAME-01.
 
     Per-frame PSF merge leaves ``psf_fit_ok`` closed until the night locus exists;
-    this must run before ``finalize_epsf_frame_job`` (``epsf_psf_merge.py`` /
-    ``frame_export.py``).
+    this must run before ``finalize_epsf_frame_job``.
     """
     summary = reapply_night_locus_to_proc_dir(proc_dir, n_sigma=n_sigma)
     recs = [r for r in (frame_records or []) if isinstance(r, dict)]
@@ -483,11 +542,10 @@ def finalize_night_locus_for_inv_psf_frame_01(
 
 __all__ = [
     "Chi2Locus",
-    "MIN_N_FRAME_LOCUS",
     "MIN_N_LOCUS_FIT",
     "DEFAULT_NSIGMA",
     "fit_chi2_locus",
-    "prefer_night_locus",
+    "frame_intercept_with_night_k",
     "locus_residual_sigma",
     "chi2_ok_from_locus",
     "resolve_n_sigma",

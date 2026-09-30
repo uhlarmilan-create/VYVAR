@@ -90,3 +90,50 @@ Not executed. Await Milan "LOCK" for era06 G3 refs, epsf01 re-cut, ledger.
 - ``config.json``, ``dev/validation/params_registry.json``, params docs/guides
 - ``dev/tests/test_epsf_chi2_locus_01.py`` + recurrence fixes
 - ``dev/results/CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md`` + session artifacts
+
+## Phase 1b (2026-09-30)
+
+Base: 8eeb77a. Defects blocking LOCK.
+
+### Defect 1 - night-k + per-frame a_f
+
+Deleted SAT-CHI2 night constants and MIN_N_FRAME_LOCUS. Locus is now
+night slope k (pooled MAD-clipped OLS) + per-frame intercept a_f =
+robust median of (log10(chi2)-k*log10(flux)). Night scatter for
+residuals. Frame n < MIN_N_LOCUS_FIT (10) -> night intercept,
+source=night. Also fixed Phase-1 ruff F821 in epsf_psf_merge.py
+(``frames`` -> ``root``).
+
+### Defect 2 - never-fitted pinned comps (structural)
+
+Comps 1500467303261764096 (G 12.66) and 1500579870061241088 (G 13.25):
+0/134 finite psf_flux; not in ePSF science set / fit IDs. NN 2.6-4.6
+FWHM (not blend). Cause = (b) structural absence from PSF star list.
+Fix: PSF LC ensemble = pinned set minus comps with no PSF measurement
+on the night; recorded in LC header
+``ensemble_dropped_no_psf_measurement`` /
+``ensemble_drop_reason=structural_absence_no_psf_on_night``.
+Evidence: ``d2_never_fitted_comps_1b.csv``.
+
+### B1-B4
+
+| id | verdict |
+|---|---|
+| B1 no night-specific constants; source=frame | PASS (134/134 frame; a_f in use) |
+| B2 four cov=0 targets | PASS (eq0: 4 -> 0; all 53 ge0.9) |
+| B3 V1-V6 | PASS (see below) |
+| B4 tests + ``--fast --clean`` | PASS (stamped after commit) |
+
+### V1-V6 (suffix ``_1b``)
+
+| gate | result |
+|---|---|
+| V1 aperture | PASS 87197716 n=53 / dd92e99d n=157 |
+| V2 bins | ge0.9=53, eq0=0 (was 49 / 4 after Phase 1) |
+| V3 pin drops | 0 |
+| V4 BO | n_full=134 dem=15.372 mmag |
+| V4 FW | n_full=134 dem=5.360 mmag |
+| V5 BO / FW | ratio 1.116 / 0.624 |
+| V6 | k=1.052; a_f min/med/max = -3.993 / -3.920 / -3.753; night_a=-3.905; spread/scatter=0.842; 134 frame / 0 night |
+
+Phase 1b commit + push. STOP for Milan LOCK.

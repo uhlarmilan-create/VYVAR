@@ -464,7 +464,7 @@ def run_epsf_psf_merge_job(
     if _psf_recs:
         from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01
 
-        _loc_night = finalize_night_locus_for_inv_psf_frame_01(frames, _psf_recs)
+        _loc_night = finalize_night_locus_for_inv_psf_frame_01(root, _psf_recs)
         if pipeline_meta is not None:
             pipeline_meta["psf_chi2_locus_night"] = _loc_night
         _epsf_job_summary = finalize_epsf_frame_job(
