@@ -309,11 +309,12 @@ db_path = Path(cfg.database_path)
 was_new = not db_path.exists()
 db = VyvarDatabase(db_path)
 tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-need = {"EQUIPMENTS","TELESCOPE","LOCATION","OBSERVATION","OBS_DRAFT"}
+need = {"EQUIPMENTS","TELESCOPE","LOCATION"}
 missing = need - tables
 assert not missing, f"DB self-init missing tables: {sorted(missing)}"
 # Fresh file => product contract: reference tables EMPTY (user creates their own).
 # Re-run against an already-populated DB is a no-op check (author/production keep their rows).
+# OBSERVATION/OBS_DRAFT were retired from the schema (dropped on migrate); do not require them.
 counts = {
     t: int(db.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0])
     for t in ("EQUIPMENTS", "TELESCOPE", "LOCATION")

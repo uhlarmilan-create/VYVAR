@@ -44,6 +44,7 @@ from photometry_core import (
     parse_comp_quality_json_map,
     pytics_iterative_weights,
 )
+from vyvar_version import VYVAR_SOFTWARE_VERSION
 
 # Gaia ID musi byt str - float64 straca cifry
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
@@ -81,9 +82,6 @@ def format_aavso_notes_ensemble(*, n_comp: int, lc_method: str) -> str:
     meth = str(lc_method or "aperture").strip() or "aperture"
     n = max(0, int(n_comp))
     return f"meth={meth}|n_comp={n} GaiaDR3 ensemble"
-
-# Single source for export headers (AAVSO #SOFTWARE + VarAstro Software line).
-VYVAR_SOFTWARE_VERSION = "VYVAR 1.0"
 
 
 class ExportFailure(TypedDict):

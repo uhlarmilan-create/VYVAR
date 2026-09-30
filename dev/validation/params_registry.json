@@ -1382,9 +1382,9 @@
     "scope_group": "n/a"
   },
   "epsf_auto_run": {
-    "help": "When true, RUN VYVAR / night_run automatically runs the ePSF stage after aperture photometry. Default OFF. Distinct from psf_photometry_enabled (Phase 2A psf_* columns). UI ePSF buttons still force the stage.",
+    "help": "When true, RUN VYVAR / night_run automatically runs the ePSF stage (beta) after aperture photometry. Default OFF. Aperture photometry is validated end-to-end (AstroImageJ 4.86 mmag RMS, 134 epochs, BO CVn). ePSF is internally consistent with aperture on the reference night (era06); independent external and multi-rig validation pending. Distinct from psf_photometry_enabled (Phase 2A psf_* columns). UI ePSF buttons still force the stage.",
     "kind": "static",
-    "label": "EPSF Auto Run",
+    "label": "EPSF Auto Run (beta)",
     "owner": "config_runtime",
     "phase": "photometry",
     "range": null,

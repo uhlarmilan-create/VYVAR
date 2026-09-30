@@ -71,4 +71,4 @@ Exact commands (DO NOT RUN from this agent):
 - NonInteractive first install FAIL before smoke table fix (FIXED).
 
 ## Files changed
-See two commits on consolidate-01: (1) LOCK (2) docs/version/changelog/alpha.
+Commits: (1) LOCK 91194ea; (2) docs/version follows on consolidate-01.

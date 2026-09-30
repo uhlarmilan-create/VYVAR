@@ -16,12 +16,17 @@ lze kazde sv?telne k?ivce v??it, a vytvo?i reporty i soubory pro odeslani do AAV
 Vse b?zi z jedine Streamlit aplikace a kazdy nastavitelny parametr je popsan srozumitelnym
 jazykem, takze pipeline m?zete ?idit z UI nebo p?imou upravou souboru `config.json`.
 
-Cilem je *poctiva* fotometrie. VYVAR nekresli jen hezkou k?ivku - kvantifikuje sum realnym
-modelem chyby CCD, vybira srovnavaci hv?zdy tak, jak zamysli algoritmus Broeg (2005), ov??uje
-kandidaty proti Gaia DR3, VSX a TESS a p?ipojuje verdikt d?v?ry ZELENA / ZLUTA / ?ERVENA,
-takze vite, zda je detekovana zm?na skute?na, nebo jde o artefakt. Jeho extrakce byla k?izov?
-ov??ena proti ?ty?em nezavislym nastroj?m a vystupy fotometrie jsou hlidany byte po bytu proti
-zmrazene referenci, takze refaktoring nem?ze tise posunout v?decka ?isla.
+Cilem je *poctiva* fotometrie. VYVAR nekresli jen hezkou krivku - kvantifikuje sum realnym
+modelem chyby CCD, vybira srovnavaci hvezdy tak, jak zamysli algoritmus Broeg (2005), overuje
+kandidaty proti Gaia DR3, VSX a TESS a pripojuje verdikt duvery ZELENA / ZLUTA / CERVENA,
+takze vite, zda je detekovana zmena skutecna, nebo jde o artefakt. Jeho aperturni extrakce
+byla krizove overena proti ctyrem nezavislym nastrojum a vystupy fotometrie jsou hlidany
+byte po bytu proti zmrazene referenci, takze refaktoring nemuze tise posunout vedecka cisla.
+
+**Stav validace.** Aperturni fotometrie je end-to-end validovana a krizove overena proti
+AstroImageJ (4.86 mmag RMS, 134 epoch, BO CVn). ePSF fotometrie je dostupna jako **beta**
+(vychozi VYPNUTO): interni konzistentni s aperturou na referencni noci (era06); nezavisla
+externi validace a validace na vice montazich jeste cekaji.
 
 ---
 
@@ -237,12 +242,12 @@ Ru?ni uprava `config.json` je pln? podporovana - viz pr?vodci konfiguraci a kont
 
 ## Stav projektu a licence
 
-VYVAR je v aktivnim vyvoji a pouziva se pro realna odeslani prom?nnych hv?zd. Aktualni strom:
-963 test? zelenych, 269 zdokumentovanych parametr?, byte-identicka kotevni disciplina
-fotometrie. Ve?ejny ?lanek se p?ipravuje.
+VYVAR **0.10.0a1** je alpha pro externi testovatele: aperturni cesta je validovany produkt;
+ePSF je **beta** (viz Stav validace vyse). Strom drzi byte-identickou kotevni disciplinu
+apertury. Verejny clanek se pripravuje. Viz `docs/ALPHA_TESTING.md`.
 
 VYVAR je **proprietarni**. Copyright (c) 2026 Milan Uhlar. Vsechna prava vyhrazena. Bez
-p?edchoziho pisemneho souhlasu neni povoleno zadne pouziti, kopirovani, uprava ani distribuce.
+predchoziho pisemneho souhlasu neni povoleno zadne pouziti, kopirovani, uprava ani distribuce.
 Software je poskytovan bez jakekoli zaruky. Viz [LICENSE](LICENSE).
 
 ## Citace

@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.10.0a1] - 2026-09-30
+
+Alpha for invited external testers (since preview-VYVAR.0.9.0).
+
+### Added
+- ePSF photometry path available as **beta** (default OFF): empirical PSF stage after
+  aperture; chi2(flux) locus gate (EPSF-CHI2-LOCUS-01); internal residual vs aperture on
+  the BO CVn reference night (era06).
+- Alpha tester guide: `docs/ALPHA_TESTING.md`.
+- Single version source: `src_py/vyvar_version.py` / `pyproject.toml` `0.10.0a1`.
+
+### Changed
+- Honest capability wording: aperture is the validated product (AstroImageJ 4.86 mmag RMS,
+  134 epochs, BO CVn); ePSF marked beta pending external and multi-rig validation.
+- Anchor era06 ePSF product (`c94cf4fe`); era05 ePSF `552ace75` superseded.
+
+### Known limitations (not fixed in this alpha)
+- Pinned-comp isolation edge cases; saturation column naming; legacy `psf_chi2_threshold`
+  still in config/UI; ePSF performance and external/cross-rig validation pending.
+
+---
+
 ## [Unreleased]
 
 ### Changed

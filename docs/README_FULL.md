@@ -20,9 +20,14 @@ The goal is *honest* photometry. VYVAR does not just draw a pretty curve - it qu
 noise with a real CCD error model, selects comparison stars the way the Broeg (2005)
 algorithm intends, cross-checks candidates against Gaia DR3, VSX and TESS, and attaches a
 GREEN / YELLOW / RED trust verdict so you know whether a detected variation is real or an
-artefact. Its extraction has been cross-validated against four independent tools and its
+artefact. Its aperture extraction has been cross-validated against four independent tools and its
 photometry outputs are guarded byte-for-byte against a frozen reference so refactors cannot
 silently move the science numbers.
+
+**Validation status.** Aperture photometry is validated end-to-end and cross-checked against
+AstroImageJ (4.86 mmag RMS, 134 epochs, BO CVn). ePSF photometry is available as **beta**
+(default OFF): internally consistent with aperture on the reference night (era06);
+independent external validation and multi-rig validation are pending.
 
 ---
 
@@ -239,9 +244,9 @@ Editing `config.json` by hand is fully supported - see the configuration guides 
 
 ## Project status & license
 
-VYVAR is in active development and used for real variable-star submissions. Current tree:
-963 tests green, 269 documented parameters, byte-identical photometry anchor discipline. The
-public paper is in preparation.
+VYVAR **0.10.0a1** is an alpha for external testers: aperture path is the validated product;
+ePSF is **beta** (see Validation status above). Current tree keeps byte-identical aperture
+anchor discipline. The public paper is in preparation. See `docs/ALPHA_TESTING.md`.
 
 VYVAR is **proprietary**. Copyright (c) 2026 Milan Uhlar. All rights reserved. No use, copying,
 modification, or distribution is permitted without prior written permission. The software is

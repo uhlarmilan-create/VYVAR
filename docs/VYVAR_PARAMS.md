@@ -209,7 +209,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `cog_snr_min` | 50.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG SNR Min |
 | `democratic_detrend_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | custom | Democratic Detrend Enabled |
 | `democratic_sg_window_frac` | 0.5 | 0.05 .. 0.95 | expert | static | config_runtime | universal | none | n/a | custom | Democratic SG Window Frac |
-| `epsf_auto_run` | False | - | basic | static | config_runtime | universal | none | n/a | auto | EPSF Auto Run |
+| `epsf_auto_run` | False | - | basic | static | config_runtime | universal | none | n/a | auto | EPSF Auto Run (beta) |
 | `err_empty_apertures_min` | 16 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures Min |
 | `err_empty_apertures_n` | 64 | - | expert | static | config_runtime | universal | none | n/a | auto | Err Empty Apertures N |
 | `forced_photometry_centroid_bound_fwhm` | 2.5 | 0.5 .. 5 | expert | static | config_runtime | universal | none | n/a | auto | Forced Photometry Centroid Bound Fwhm |

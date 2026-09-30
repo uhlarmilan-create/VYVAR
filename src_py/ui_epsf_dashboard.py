@@ -313,7 +313,13 @@ def render_epsf_dashboard(
     draft_id: int | None = None,
 ) -> None:
     """Standalone ePSF dashboard tab."""
-    st.header("[microscope] ePSF Photometry")
+    st.header("[microscope] ePSF Photometry (beta)")
+    st.caption(
+        "Aperture photometry is validated end-to-end (AstroImageJ 4.86 mmag RMS, "
+        "134 epochs, BO CVn). ePSF is available (default OFF) and internally "
+        "consistent with aperture on the reference night (era06); independent "
+        "external validation and multi-rig validation are pending."
+    )
 
     if not bool(getattr(cfg, "psf_photometry_enabled", False)):
         st.warning(

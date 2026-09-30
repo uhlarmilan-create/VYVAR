@@ -48,7 +48,8 @@ def test_resolve_arcsec_none_when_not_derivable(tmp_path: Path) -> None:
 
 def test_aavso_software_header_uses_version_constant() -> None:
     line = _aavso_software_header_line(VYVAR_SOFTWARE_VERSION, "aperture")
-    assert line.startswith("#SOFTWARE=VYVAR/1.0")
+    soft_id = VYVAR_SOFTWARE_VERSION.replace(" ", "/")
+    assert line.startswith(f"#SOFTWARE={soft_id}")
     assert "aperture photometry" in line
 
 
@@ -96,7 +97,7 @@ def test_varastro_omits_aperture_arcsec_when_scale_unknown(tmp_path: Path) -> No
     )
     assert "aavso" in paths
     aavso = paths["aavso"].read_text(encoding="utf-8")
-    assert "#SOFTWARE=VYVAR/1.0" in aavso
+    assert f"#SOFTWARE={VYVAR_SOFTWARE_VERSION.replace(' ', '/')}" in aavso
 
     if "varastro" in paths:
         var = paths["varastro"].read_text(encoding="utf-8")

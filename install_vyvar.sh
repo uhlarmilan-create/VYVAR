@@ -216,8 +216,9 @@ db_path = Path(cfg.database_path)
 was_new = not db_path.exists()
 db = VyvarDatabase(db_path)
 tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-missing = {"EQUIPMENTS","TELESCOPE","LOCATION","OBSERVATION","OBS_DRAFT"} - tables
+missing = {"EQUIPMENTS","TELESCOPE","LOCATION"} - tables
 assert not missing, f"DB self-init missing tables: {sorted(missing)}"
+# OBSERVATION/OBS_DRAFT retired from schema; do not require them.
 counts = {
     t: int(db.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0])
     for t in ("EQUIPMENTS", "TELESCOPE", "LOCATION")

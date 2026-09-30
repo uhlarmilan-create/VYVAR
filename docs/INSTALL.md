@@ -118,9 +118,16 @@ pipeline is not usable for science until catalogs arrive. Re-run the installer
 
 ## 4. First run
 
-Start the app from the repository root:
+Start the app from the repository root (activate `.venv` first if the installer
+created one):
 
 ```
+# Windows
+.\.venv\Scripts\Activate.ps1
+streamlit run app.py
+
+# Linux
+source .venv/bin/activate
 streamlit run app.py
 ```
 
@@ -129,9 +136,17 @@ Telescope / Equipment). Schema is created automatically; you fill the records.
 In the app:
 
 1. Open **Settings** and create your **Location**, **Telescope**, and
-   **Equipment**, then select them. Until you do, the site choice may be
-   empty/unresolved - that is expected.
-2. Import your first night and run the pipeline.
+   **Equipment**, then select them on the VAR-STREM page. Until a camera and
+   telescope are selected, **RUN VYVAR** stays disabled
+   (`src_py/app.py` ~1791-1797). Location should also be set (IS_DEFAULT or
+   selectbox); an empty location list shows "No locations defined" but does not
+   by itself disable RUN - create a site before a science night.
+2. Point Source at a night folder, Scan Source / RUN VYVAR.
+3. Optional alpha check: leave ePSF Auto Run OFF unless you intend to exercise
+   the beta path (`docs/ALPHA_TESTING.md`).
+
+Catalogs (~12 GB recommended set, or full Gaia ~64 GB locally) are required for
+science runs; Option 3 install leaves LIMITED MODE until catalogs are added.
 
 ## Development vs release builds
 
