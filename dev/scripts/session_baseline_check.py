@@ -71,12 +71,16 @@ EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE = "87197716af1671328b152d86e33c3a26b277ea9
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE = "dd92e99d8e861ce908665cde3087f4b0213b832927d6dc90e7d859fa5c4fecf8"
 EXPECTED_PHOTOMETRY_SHA_CORE_APERTURE_N = 53
 EXPECTED_PHOTOMETRY_SHA_EXT_APERTURE_N = 157
-# core_psf (epsf01). era04 history c743b8ba. era05 after FIT-OK+GAIN (ERA-520):
+# core_psf (epsf01). era04 history c743b8ba. era05 552ace75 SUPERSEDED
+# (FIT-OK pin collapse). era06 (EPSF-CHI2-LOCUS-01 Phase 2 LOCK):
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF = (
-    "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5"
+    "c94cf4fedd60b381bcaa59839fa1932642042ff5a847756e9623edcabc86b153"
 )
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF_ERA04 = (
     "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8"
+)
+EXPECTED_PHOTOMETRY_SHA_CORE_PSF_ERA05_SUPERSEDED = (
+    "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5"
 )
 EXPECTED_PHOTOMETRY_SHA_CORE_PSF_N = 53
 EXPECTED_PHOTOMETRY_SHA_CORE = EXPECTED_PHOTOMETRY_SHA_CORE_V2_MIXED
@@ -88,15 +92,17 @@ EXPECTED_PHOTOMETRY_SHA_EXTENDED_N = 210
 ANCHOR_MANIFEST_PATH = REPO_ROOT / "dev" / "validation" / "anchor_manifest.json"
 G3_BO_ID = "1498613634033133184"
 G3_FW_ID = "1497343732462852864"
-G3_N_FULL = 134
-# Residual (psf_delta - ap_delta). era04 refs 12.505/4.629 n_full=134 kept as history.
-# Post FIT-OK-ADMISSION-01: INV-PSF-LC-PIN-01 drops epochs when pinned comps are
-# fit_ok=False (BO n_full=1 / FW n_full=0 on 20260928T183918Z). G3 n_full gate
-# rewrite is Milan's; hash lock is independent.
-G3_BO_REF_MMAG = 12.505
-G3_FW_REF_MMAG = 4.629
+# era06 LOCK (EPSF-CHI2-LOCUS-01 Phase 2): BO and FW each n_full=134.
+G3_BO_N_FULL = 134
+G3_FW_N_FULL = 134
+G3_N_FULL = 134  # shared when BO==FW; gate checks each against its own value
+# Residual (psf_delta - ap_delta). History: era04 12.505/4.629 n_full=134;
+# era05 post-FIT-OK pin collapse (n_full ~0-1). era06 locus SET:
+G3_BO_REF_MMAG = 15.372
+G3_FW_REF_MMAG = 5.360
 G3_TOL_MMAG = 0.001
-# Structural empty-comp drops keyed by draft_id only.
+G3_ERA04_REF_MMAG = (12.505, 4.629)
+G3_ERA05_NOTE = "era05 collapsed under fixed chi2=50; SUPERSEDED by era06"# Structural empty-comp drops keyed by draft_id only.
 # 516 era04: three POOL-STARVE pin n_survivors<3 (phase2a_empty_comp_drop=3).
 EXPECTED_EXCEPT_FIX_COUNTERS_BY_DRAFT: dict[int, dict[str, int]] = {
     516: {"phase2a_empty_comp_drop": 3},
@@ -1018,8 +1024,8 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
             fw_n = int(fw.get("n_full") or 0)
             bo_rms = float(bo.get("demeaned_rms_mmag"))
             fw_rms = float(fw.get("demeaned_rms_mmag"))
-            bo_ok = bo_n == G3_N_FULL and abs(bo_rms - G3_BO_REF_MMAG) <= G3_TOL_MMAG
-            fw_ok = fw_n == G3_N_FULL and abs(fw_rms - G3_FW_REF_MMAG) <= G3_TOL_MMAG
+            bo_ok = bo_n == G3_BO_N_FULL and abs(bo_rms - G3_BO_REF_MMAG) <= G3_TOL_MMAG
+            fw_ok = fw_n == G3_FW_N_FULL and abs(fw_rms - G3_FW_REF_MMAG) <= G3_TOL_MMAG
             detail = (
                 f"BO n_full={bo_n} cov={bo.get('coverage')} "
                 f"off={float(bo.get('level_offset_mmag')):.3f} "
@@ -1030,8 +1036,12 @@ def run_full_baseline(report: SessionReport, *, epsf: bool = False) -> None:
                 f"rms={float(fw.get('rms_mmag')):.3f} "
                 f"dem={fw_rms:.3f} (ref {G3_FW_REF_MMAG})"
             )
-            if bo_n != G3_N_FULL or fw_n != G3_N_FULL:
-                report.add("full-g3-residual", "FAIL", f"n_full must be {G3_N_FULL}; {detail}")
+            if bo_n != G3_BO_N_FULL or fw_n != G3_FW_N_FULL:
+                report.add(
+                    "full-g3-residual",
+                    "FAIL",
+                    f"n_full must be BO={G3_BO_N_FULL}/FW={G3_FW_N_FULL}; {detail}",
+                )
             elif not (bo_ok and fw_ok):
                 report.add("full-g3-residual", "FAIL", detail)
             else:

@@ -58,6 +58,12 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **EPSF-XVAL-01** | CLOSED 2026-09-29. Criteria 1-3 met; D-EPSF-XVAL-CLOSE-TEXT-02 enacted (ERA-520-RECUT-01). Evidence CURSOR_RESULT_ERA_520_RECUT_01.md | Milan | - |
 | **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
 | **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
+| **EPSF-CROSSRIG-01** | Second night / second rig validation of era06 locus SET + G3 residual; not claimed for alpha | Milan | FUTURE |
+| **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
+| **EPSF-XVAL-EXT-01** | Independent external PSF comparison + blend test beyond internal aperture residual | Milan | FUTURE |
+| **PIN-ISOLATION-01** | Pinned comps with NN ~2.6 FWHM vs 3-FWHM isolation rule (EPSF-CHI2-LOCUS-01 D2 evidence); structural presence in science set separate | Cursor | MED |
+| **SAT-COLNAME-01** | `saturate_limit_adu_85pct` column misnomer (value is 0.80); rename needs D-style | Cursor | LOW |
+| **CHI2-THRESH-LEGACY-01** | Remove LEGACY `psf_chi2_threshold` from config/UI after D-style approval | Milan | LOW |
 | **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
 | **ERA-520-RECUT-01** | CLOSED 2026-09-29. era05 cut; aperture 87197716/dd92e99d; epsf01 552ace75 (era04 history beside). VAL-02/AC-02 re-check PASS; CLOSE-TEXT-02 enacted. G3 n_full collapse post FIT-OK recorded (Milan sequel) | Cursor | - |
 | **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |

@@ -1,13 +1,19 @@
 # VYVAR -- Development State
 
-**Status:** **ERA-520-RECUT-01 CLOSED 2026-09-29.** EPSF-XVAL-01
+**Status:** **ALPHA-READY-01 / EPSF-CHI2-LOCUS-01 LOCK 2026-09-30.**
+era06 epsf01 **c94cf4fe** n=53; G3 BO/FW dem **15.372 / 5.360** mmag
+n_full=134 each. era05 epsf01 **552ace75** SUPERSEDED (FIT-OK pin
+collapse). Aperture unchanged era05 **87197716** / **dd92e99d**.
+EPSF-XVAL-01 and CLOSE-TEXT-02 stay CLOSED/ENACTED; era06 is the
+verified internal PSF product. Evidence:
+`CURSOR_RESULT_ALPHA_READY_01.md`, `CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md`.
+**ERA-520-RECUT-01 CLOSED 2026-09-29.** EPSF-XVAL-01
 CLOSED; D-EPSF-XVAL-CLOSE-TEXT-02 enacted. era05
 `draft_000516_snapshot_era05_20260928`: aperture **87197716** n=53 /
-ext **dd92e99d** n=157 / epsf01 **552ace75** n=53 (era04 history
-d55fcc9d / cc8b532e / c743b8ba beside). VAL-02 re-check c1 PASS;
-AC-02 c2 PASS. G3 residual n_full collapses post FIT-OK (Milan
-sequel). Live 516 G4 unchanged (`bfa24039` / `13e77cf8` /
-`172f9540`). Evidence: `CURSOR_RESULT_ERA_520_RECUT_01.md`.
+ext **dd92e99d** n=157 / epsf01 **552ace75** n=53 SUPERSEDED by era06
+(era04 history d55fcc9d / cc8b532e / c743b8ba beside). VAL-02 re-check
+c1 PASS; AC-02 c2 PASS. Live 516 G4 unchanged (`bfa24039` /
+`13e77cf8` / `172f9540`). Evidence: `CURSOR_RESULT_ERA_520_RECUT_01.md`.
 **LEDGER-EPSF-DOD-06 2026-09-28.** D-EPSF-XVAL-DOD-06:
 criterion 2 met on 516 (AC-02); CLOSE-TEXT-02 supersedes CLOSE-TEXT-01;
 closure sequence = ERA-520-RECUT-01 + harness re-check -> CLOSE.

@@ -6,6 +6,24 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ---
 
+## D-EPSF-CHI2-LOCUS-01 (Milan LOCK 2026-09-30) - ENACTED
+
+Fixed ``psf_chi2_threshold=50`` SET replaced by data-derived chi2(flux)
+locus (night slope k + per-frame intercept a_f; ``psf_chi2_locus_nsigma``
+default 5.0). Evidence: SAT-CHI2-01 (bright comps MODEL not SAT),
+EPSF-PIN-FITOK-01 (product-wide pin collapse), Phase 1/1b
+`CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md`.
+
+era06 product: epsf01 **c94cf4fe** n=53; G3 BO/FW demeaned residual
+RMS **15.372 / 5.360** mmag, n_full=134 each. Aperture unchanged
+era05 **87197716** / **dd92e99d**. era05 epsf01 **552ace75**
+SUPERSEDED (collapsed under fixed chi2=50). EPSF-XVAL-01 and
+D-EPSF-XVAL-CLOSE-TEXT-02 stay CLOSED/ENACTED with the note that
+era05 PSF LCs were collapsed and era06 is the verified product.
+
+``psf_chi2_threshold`` remains LEGACY in the params registry (removal
+is CHI2-THRESH-LEGACY-01 debt, D-style).
+
 ## D-EPSF-XVAL-DOD-06 (Milan 2026-09-28) - criterion 2 met; closure sequence fixed
 
 EPSF-AC-02 (`672a6a7`): R-AC1 PASS (b = +2.68 +/- 21.5 mmag/mag,

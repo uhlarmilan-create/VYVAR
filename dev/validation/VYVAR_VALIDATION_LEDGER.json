@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-29",
+  "updated": "2026-09-30",
   "_rules": [
     "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
     "passes flips to true only after careful end-to-end verification on the production path.",
@@ -44,8 +44,8 @@
       "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
       "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
       "passes": true,
-      "last_verified": "2026-09-03",
-      "commit": "587d1a4",
+      "last_verified": "2026-09-30",
+      "commit": "9ade9af",
       "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
     },
     {
@@ -145,8 +145,8 @@
       "description": "Frozen 516 ERA-05 snapshot draft_000516_snapshot_era05_20260928 (canonical --full; ERA-520-RECUT-01; APERTURE-01d f=1.35 annulus 2.7/5.2; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
       "verification": "scripts/session_baseline_check.py --full (era05_aperture 87197716 n=53 / ext dd92e99d n=157). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
       "passes": true,
-      "last_verified": "2026-09-28",
-      "commit": "dd76070",
+      "last_verified": "2026-09-30",
+      "commit": "9ade9af",
       "notes": "ERA-520-RECUT-01. era04 history kept on disk (draft_000516_snapshot_era04_20260826; aperture d55fcc9d / ext cc8b532e). era05 aperture moves: schema skip_reason+lc_flux_method (all 53) + RED-TARGET-T4 HAT-188 values (1/53). Live 516 G4 still bfa24039/13e77cf8/172f9540. Three POOL-STARVE empty_comp_drop allowlisted.",
       "census_fingerprint": {
         "n_raw_dao": 2246,
@@ -209,15 +209,19 @@
     {
       "id": "VL-ANCHOR-EPSF01",
       "area": "photometry",
-      "description": "EPSF-CHAIN-01 core_psf of 53 internal PSF LCs. era05 (ERA-520-RECUT-01) 552ace75 n=53 after FIT-OK-ADMISSION-01 + GAIN-FALSY-01. era04 history c743b8ba kept beside.",
-      "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf 552ace75 n=53). G3 residual n_full collapses post FIT-OK (INV-PSF-LC-PIN-01); era04 G3 refs 12.505/4.629 kept as history.",
+      "description": "EPSF-CHAIN-01 core_psf of 53 internal PSF LCs. era06 (EPSF-CHI2-LOCUS-01) c94cf4fe n=53; G3 BO/FW dem 15.372/5.360 n_full=134. era05 552ace75 SUPERSEDED (FIT-OK pin collapse). era04 history c743b8ba kept beside.",
+      "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf c94cf4fe n=53; G3 era06 refs).",
       "passes": true,
-      "last_verified": "2026-09-28",
-      "commit": "dd76070",
-      "notes": "era05 work-copy 20260928T183918Z. G3 BO n_full=1 FW n_full=0 (pinned comps fit_ok=False under FIT-OK-ADMISSION-01). Hash lock is content; G3 meter rewrite is Milan.",
+      "last_verified": "2026-09-30",
+      "commit": "ALPHA_READY_01_LOCK",
+      "notes": "EPSF-CHI2-LOCUS-01 Phase 2 LOCK. Evidence CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md (Phase 1b) + CURSOR_RESULT_ALPHA_READY_01.md. EPSF-XVAL-01 and CLOSE-TEXT-02 stay CLOSED/ENACTED; era05 PSF LCs were collapsed; era06 is the verified product.",
       "sha_core_psf_era04": "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8",
+      "sha_core_psf_era05_superseded": "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5",
       "core_psf_n": 53,
-      "sha_core_psf": "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5"
+      "sha_core_psf": "c94cf4fedd60b381bcaa59839fa1932642042ff5a847756e9623edcabc86b153",
+      "g3_bo_ref_mmag": 15.372,
+      "g3_fw_ref_mmag": 5.36,
+      "g3_n_full": 134
     },
     {
       "id": "F-435-EXPORT-GHOSTS",
