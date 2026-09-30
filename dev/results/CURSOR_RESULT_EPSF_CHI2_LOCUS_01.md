@@ -122,7 +122,7 @@ Evidence: ``d2_never_fitted_comps_1b.csv``.
 | B1 no night-specific constants; source=frame | PASS (134/134 frame; a_f in use) |
 | B2 four cov=0 targets | PASS (eq0: 4 -> 0; all 53 ge0.9) |
 | B3 V1-V6 | PASS (see below) |
-| B4 tests + ``--fast --clean`` | PASS (stamped after commit) |
+| B4 tests + ``--fast --clean`` | PASS (1651 passed; clean-tree ruff/pyflakes PASS; log ``fast_clean_1b.log``) |
 
 ### V1-V6 (suffix ``_1b``)
 
