@@ -93,10 +93,29 @@ def _bounded_peak_refine(
     *,
     fwhm_px: float,
     bound_fwhm: float,
+    refine_bound_px: float | None = None,
 ) -> tuple[float, float, float]:
-    """Snap to brightest pixel within bound; return (x, y, max_shift_px)."""
+    """Snap to brightest pixel within a sub-pixel bound; return (x, y, max_shift_px).
+
+    IDENT-JUMP-01: do not use ``bound_fwhm x FWHM`` (~14 px) - that steals
+    faint targets onto neighbours. Default refine bound is 1.0 px.
+    """
+    _ = fwhm_px
+    _ = bound_fwhm
     h_img, w_img = int(img.shape[0]), int(img.shape[1])
-    radius = int(max(3, math.ceil(float(max(1.2, fwhm_px)) * float(max(1.0, bound_fwhm)))))
+    if refine_bound_px is None:
+        bound = 1.0
+    else:
+        try:
+            bound = float(refine_bound_px)
+        except (TypeError, ValueError):
+            bound = 1.0
+    if not math.isfinite(bound) or bound < 0:
+        bound = 1.0
+    bound = float(min(1.5, max(0.0, bound)))
+    radius = int(max(0, math.ceil(bound)))
+    if radius <= 0:
+        return float(x_ref), float(y_ref), 0.0
     xi = int(round(x_ref))
     yi = int(round(y_ref))
     x_lo = max(0, xi - radius)
@@ -113,8 +132,7 @@ def _bounded_peak_refine(
     xo = float(x_lo + int(px))
     yo = float(y_lo + int(py))
     shift = float(math.hypot(xo - x_ref, yo - y_ref))
-    # Hard clamp: never leave the bound circle.
-    if shift > float(radius) + 1e-9:
+    if shift > bound + 1e-9:
         return float(x_ref), float(y_ref), 0.0
     return xo, yo, shift
 

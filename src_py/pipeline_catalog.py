@@ -2177,7 +2177,9 @@ def _apply_dao_centroid_wcs_guard(
     ok = m & np.isfinite(x_ref) & np.isfinite(y_ref) & np.isfinite(xo) & np.isfinite(yo)
     if not ok.any():
         return xo, yo, 0
-    max_px = float(max(0.1, max_shift_fwhm)) * float(max(1.2, fwhm_px))
+    max_px = float(min(1.5, float(max(0.1, max_shift_fwhm)) * float(max(1.2, fwhm_px))))
+    # IDENT-JUMP-01 (unaligned): never keep a DAO centroid that landed on a
+    # neighbour. Cap the allowed shift at 1.5 px absolute vs WCS/master ref.
     shift = np.hypot(xo - x_ref, yo - y_ref)
     use_wcs = ok & (shift > max_px)
     xo[use_wcs] = x_ref[use_wcs]
@@ -2195,16 +2197,24 @@ def _lock_matched_centroids_to_master_grid(
     master_df: pd.DataFrame,
     fwhm_px: float,
     search_fwhm: float = 2.5,
+    refine_bound_px: float | None = None,
 ) -> tuple["np.ndarray", "np.ndarray", int]:
-    """Lock matched catalog stars to MASTERSTAR grid with local peak refinement.
+    """Lock matched catalog stars to MASTERSTAR (x, y) on aligned frames.
 
-    Master-reference per-frame catalogs must measure on the shared alignment grid,
-    not on arbitrary DAO detections that can land on faint neighbours after transform
-    smearing.  Each matched row is snapped to the master (x, y) then refined within
-    a small search window for the brightest pixel (sub-pixel centre not required).
+    IDENT-JUMP-01: never reassign a catalog star to a different detection.
+    Prior behaviour (bad8c4b) refined to the brightest pixel within
+    ``~search_fwhm x FWHM`` (~14 px at FWHM~5.4), which jumped faint targets
+    onto brighter neighbours. On registered frames the photometry position is
+    the master-reference coordinate, plus at most a sub-pixel recentroid
+    bounded by ``refine_bound_px`` (default 1.0 px; stated bound when the
+    frame align-residual column is zero/unusable).
+
+    ``search_fwhm`` is retained for call-site compatibility but is ignored for
+    the refine radius (IDENT-JUMP-01).
     """
     import numpy as np
 
+    _ = search_fwhm  # legacy kw; do not use FWHM-scaled neighbour-steal radius
     xo = np.asarray(x, dtype=np.float64).copy()
     yo = np.asarray(y, dtype=np.float64).copy()
     if master_df is None or master_df.empty or "x" not in master_df.columns or "y" not in master_df.columns:
@@ -2219,7 +2229,18 @@ def _lock_matched_centroids_to_master_grid(
     if not m.any():
         return xo, yo, 0
     s = np.clip(np.asarray(safe, dtype=np.int64), 0, max(len(mx) - 1, 0))
-    radius = int(max(3, math.ceil(float(max(1.2, fwhm_px)) * float(max(1.0, search_fwhm)))))
+    # Sub-pixel refine only. Cap at 1.5 px so a neighbour 14 px away cannot win.
+    if refine_bound_px is None:
+        bound = 1.0
+    else:
+        try:
+            bound = float(refine_bound_px)
+        except (TypeError, ValueError):
+            bound = 1.0
+    if not math.isfinite(bound) or bound < 0:
+        bound = 1.0
+    bound = float(min(1.5, max(0.0, bound)))
+    radius = int(max(0, math.ceil(bound)))
     n_locked = 0
     for i in np.nonzero(m)[0]:
         si = int(s[i])
@@ -2228,6 +2249,11 @@ def _lock_matched_centroids_to_master_grid(
         x_ref = float(mx[si])
         y_ref = float(my[si])
         if not (math.isfinite(x_ref) and math.isfinite(y_ref)):
+            continue
+        if radius <= 0 or bound <= 0:
+            xo[i] = x_ref
+            yo[i] = y_ref
+            n_locked += 1
             continue
         xi = int(round(x_ref))
         yi = int(round(y_ref))
@@ -2248,8 +2274,15 @@ def _lock_matched_centroids_to_master_grid(
             continue
         flat_idx = int(np.nanargmax(patch))
         py, px = np.unravel_index(flat_idx, patch.shape)
-        xo[i] = float(x_lo + int(px))
-        yo[i] = float(y_lo + int(py))
+        x_peak = float(x_lo + int(px))
+        y_peak = float(y_lo + int(py))
+        shift = float(math.hypot(x_peak - x_ref, y_peak - y_ref))
+        if shift <= bound + 1e-9:
+            xo[i] = x_peak
+            yo[i] = y_peak
+        else:
+            xo[i] = x_ref
+            yo[i] = y_ref
         n_locked += 1
     return xo, yo, n_locked
 
@@ -2977,6 +3010,30 @@ def detect_stars_match_master_reference(
             **_sat_csv,
         }
     )
+    # IDENT-JUMP-01: per-frame identity vs MASTERSTAR reference (not a copied master stamp).
+    try:
+        _mx = pd.to_numeric(m_valid["x"], errors="coerce").to_numpy(dtype=np.float64)
+        _my = pd.to_numeric(m_valid["y"], errors="coerce").to_numpy(dtype=np.float64)
+        _xref = np.full(n, np.nan, dtype=np.float64)
+        _yref = np.full(n, np.nan, dtype=np.float64)
+        _xref[matched] = _mx[safe[matched]]
+        _yref[matched] = _my[safe[matched]]
+        _resid = np.hypot(np.asarray(x, dtype=np.float64) - _xref, np.asarray(y, dtype=np.float64) - _yref)
+        _gate = np.array([""] * n, dtype=object)
+        for _i in range(n):
+            if not matched[_i] or not np.isfinite(_resid[_i]):
+                continue
+            _r = float(_resid[_i])
+            if _r <= 1.0:
+                _gate[_i] = "ok"
+            elif _r <= 3.0:
+                _gate[_i] = "warn"
+            else:
+                _gate[_i] = "fail"
+        df_out["gaia_dao_resid_px"] = _resid
+        df_out["vy_identity_gate"] = _gate
+    except Exception:  # noqa: BLE001
+        pass
     n_detected_dao = int(n)
     n_matched_before_mag = int(n_matched)
     n_before_mag = len(df_out)
@@ -3562,8 +3619,8 @@ def _export_per_frame_run_catalog_core(
                 "bp_rp",
                 "phot_g_mean_mag",
                 "catalog_mag",
-                "vy_identity_gate",
-                "gaia_dao_resid_px",
+                # IDENT-JUMP-01: do NOT copy vy_identity_gate / gaia_dao_resid_px from
+                # MASTERSTAR - those must be evaluated per frame (see match builder).
                 "edge_safe_10px",
                 "snr50_ok",
                 "noise_floor_adu",

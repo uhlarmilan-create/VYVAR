@@ -1,0 +1,37 @@
+{
+  "v1023_before_flags": {
+    "normal": 127,
+    "artifact": 3,
+    "spike_unconfirmed": 1
+  },
+  "v1023_after_fixed_pos_flags": {
+    "normal": 130,
+    "spike_unconfirmed": 1
+  },
+  "jump_frames": [
+    "V842_Her_Light_036",
+    "V842_Her_Light_110",
+    "V842_Her_Light_137"
+  ],
+  "jump_epoch_flags_before": {
+    "V842_Her_Light_036": "artifact",
+    "V842_Her_Light_110": "artifact",
+    "V842_Her_Light_137": "artifact"
+  },
+  "jump_epoch_flags_after": {
+    "V842_Her_Light_036": "normal",
+    "V842_Her_Light_110": "normal",
+    "V842_Her_Light_137": "normal"
+  },
+  "jump_mag_before": [
+    11.296643,
+    11.374746,
+    11.400211
+  ],
+  "jump_mag_after": [
+    11.688235009075292,
+    11.857793375178929,
+    11.740502484765585
+  ],
+  "note": "Night-wide 521 reflag requires proc CSV re-export with IDENT-JUMP-01 lock; V1023 simulated here."
+}

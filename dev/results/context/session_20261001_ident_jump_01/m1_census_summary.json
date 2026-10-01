@@ -1,0 +1,273 @@
+{
+  "task": "IDENT-JUMP-01-M1",
+  "521": {
+    "label": "521",
+    "ok": true,
+    "draft": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000521",
+    "n_frames": 131,
+    "n_offset_rows": 611754,
+    "median_frac_gt3": 0.3104260329693856,
+    "median_frac_gt8": 0.18664383561643835,
+    "median_frac_x_integer": 0.8876284246575342,
+    "worst_frames_gt8": [
+      {
+        "frame": "V842_Her_Light_036",
+        "n": 4667,
+        "frac_gt1": 0.427040925648168,
+        "frac_gt3": 0.33383329762159847,
+        "frac_gt8": 0.21469895007499465,
+        "n_gt3": 1558,
+        "n_gt8": 1002,
+        "frac_x_integer": 0.8924362545532462
+      },
+      {
+        "frame": "V842_Her_Light_115",
+        "n": 4682,
+        "frac_gt1": 0.4145664246048697,
+        "frac_gt3": 0.31759931653139684,
+        "frac_gt8": 0.20140965399401964,
+        "n_gt3": 1487,
+        "n_gt8": 943,
+        "frac_x_integer": 0.8889363519863306
+      },
+      {
+        "frame": "V842_Her_Light_053",
+        "n": 4671,
+        "frac_gt1": 0.4108327981160351,
+        "frac_gt3": 0.31427959751659174,
+        "frac_gt8": 0.20017126953543138,
+        "n_gt3": 1468,
+        "n_gt8": 935,
+        "frac_x_integer": 0.8906015842432028
+      },
+      {
+        "frame": "V842_Her_Light_051",
+        "n": 4679,
+        "frac_gt1": 0.41098525325924345,
+        "frac_gt3": 0.3214362043171618,
+        "frac_gt8": 0.19897413977345588,
+        "n_gt3": 1504,
+        "n_gt8": 931,
+        "frac_x_integer": 0.8924983970933961
+      },
+      {
+        "frame": "V842_Her_Light_050",
+        "n": 4674,
+        "frac_gt1": 0.4092854086435601,
+        "frac_gt3": 0.3177150192554557,
+        "frac_gt8": 0.19897304236200256,
+        "n_gt3": 1485,
+        "n_gt8": 930,
+        "frac_x_integer": 0.8951647411210955
+      }
+    ],
+    "n_targets_with_gt8": 122,
+    "n_comps_with_gt8": 2,
+    "anchors": {
+      "BO": {
+        "present": false
+      },
+      "FW": {
+        "present": false
+      },
+      "GH": {
+        "present": false
+      }
+    },
+    "bin_summary_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\bin_summary_521.csv",
+    "frame_stats_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\frame_stats_521.csv",
+    "per_target_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\per_target_jumps_521.csv"
+  },
+  "516_era06": {
+    "ok": false,
+    "reason": "missing",
+    "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era06_20260928"
+  },
+  "516_live": {
+    "label": "516_live",
+    "ok": true,
+    "draft": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516",
+    "n_frames": 134,
+    "n_offset_rows": 430389,
+    "median_frac_gt3": 0.3284203780839475,
+    "median_frac_gt8": 0.2551281328231011,
+    "median_frac_x_integer": 0.9934254675111099,
+    "worst_frames_gt8": [
+      {
+        "frame": "BO_CVn_Light_054",
+        "n": 3118,
+        "frac_gt1": 0.43393200769724183,
+        "frac_gt3": 0.37427838357921744,
+        "frac_gt8": 0.3069275176395125,
+        "n_gt3": 1167,
+        "n_gt8": 957,
+        "frac_x_integer": 0.9935856318152662
+      },
+      {
+        "frame": "BO_CVn_Light_052",
+        "n": 3121,
+        "frac_gt1": 0.43543735982057036,
+        "frac_gt3": 0.3838513297020186,
+        "frac_gt8": 0.306312079461711,
+        "n_gt3": 1198,
+        "n_gt8": 956,
+        "frac_x_integer": 0.9932713873758411
+      },
+      {
+        "frame": "BO_CVn_Light_075",
+        "n": 3114,
+        "frac_gt1": 0.430635838150289,
+        "frac_gt3": 0.37636480411046885,
+        "frac_gt8": 0.30539499036608864,
+        "n_gt3": 1172,
+        "n_gt8": 951,
+        "frac_x_integer": 0.9929351316634554
+      },
+      {
+        "frame": "BO_CVn_Light_048",
+        "n": 3118,
+        "frac_gt1": 0.43681847338037205,
+        "frac_gt3": 0.37491982039769084,
+        "frac_gt8": 0.3027581783194355,
+        "n_gt3": 1169,
+        "n_gt8": 944,
+        "frac_x_integer": 0.9945477870429763
+      },
+      {
+        "frame": "BO_CVn_Light_059",
+        "n": 3117,
+        "frac_gt1": 0.4359961501443696,
+        "frac_gt3": 0.37664420917548924,
+        "frac_gt8": 0.30221366698748797,
+        "n_gt3": 1174,
+        "n_gt8": 942,
+        "frac_x_integer": 0.9919794674366378
+      }
+    ],
+    "n_targets_with_gt8": 129,
+    "n_comps_with_gt8": 6,
+    "anchors": {
+      "BO": {
+        "present": true,
+        "catalog_id": "1498613634033133184",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.8661335416647875,
+        "jumped_frames_gt3": []
+      },
+      "FW": {
+        "present": true,
+        "catalog_id": "1497343732462852864",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.21115006981103146,
+        "jumped_frames_gt3": []
+      },
+      "GH": {
+        "present": true,
+        "catalog_id": "1497771992240531712",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.640167980350117,
+        "jumped_frames_gt3": []
+      }
+    },
+    "bin_summary_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\bin_summary_516_live.csv",
+    "frame_stats_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\frame_stats_516_live.csv",
+    "per_target_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\per_target_jumps_516_live.csv"
+  },
+  "516_era05": {
+    "label": "516_era05",
+    "ok": true,
+    "draft": "c:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516_snapshot_era05_20260928",
+    "n_frames": 134,
+    "n_offset_rows": 466013,
+    "median_frac_gt3": 0.2511827192264844,
+    "median_frac_gt8": 0.14752685475615923,
+    "median_frac_x_integer": 0.9269380108574744,
+    "worst_frames_gt8": [
+      {
+        "frame": "BO_CVn_Light_121",
+        "n": 3487,
+        "frac_gt1": 0.3415543447089188,
+        "frac_gt3": 0.2841984513908804,
+        "frac_gt8": 0.1904215658158876,
+        "n_gt3": 991,
+        "n_gt8": 664,
+        "frac_x_integer": 0.928305133352452
+      },
+      {
+        "frame": "BO_CVn_Light_135",
+        "n": 3475,
+        "frac_gt1": 0.35079136690647483,
+        "frac_gt3": 0.28517985611510793,
+        "frac_gt8": 0.1893525179856115,
+        "n_gt3": 991,
+        "n_gt8": 658,
+        "frac_x_integer": 0.9315107913669065
+      },
+      {
+        "frame": "BO_CVn_Light_129",
+        "n": 3487,
+        "frac_gt1": 0.34786349297390307,
+        "frac_gt3": 0.28219099512474904,
+        "frac_gt8": 0.18784055061657584,
+        "n_gt3": 984,
+        "n_gt8": 655,
+        "frac_x_integer": 0.9285919128190422
+      },
+      {
+        "frame": "BO_CVn_Light_134",
+        "n": 3485,
+        "frac_gt1": 0.35179340028694406,
+        "frac_gt3": 0.28637015781922526,
+        "frac_gt8": 0.18593974175035868,
+        "n_gt3": 998,
+        "n_gt8": 648,
+        "frac_x_integer": 0.927116212338594
+      },
+      {
+        "frame": "BO_CVn_Light_125",
+        "n": 3477,
+        "frac_gt1": 0.35806729939603105,
+        "frac_gt3": 0.28213977566867987,
+        "frac_gt8": 0.18492953695714698,
+        "n_gt3": 981,
+        "n_gt8": 643,
+        "frac_x_integer": 0.9226344549899339
+      }
+    ],
+    "n_targets_with_gt8": 117,
+    "n_comps_with_gt8": 7,
+    "anchors": {
+      "BO": {
+        "present": true,
+        "catalog_id": "1498613634033133184",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.8644353578209201,
+        "jumped_frames_gt3": []
+      },
+      "FW": {
+        "present": true,
+        "catalog_id": "1497343732462852864",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.21168369692672134,
+        "jumped_frames_gt3": []
+      },
+      "GH": {
+        "present": true,
+        "catalog_id": "1497771992240531712",
+        "n_gt3": 0,
+        "n_gt8": 0,
+        "max_offset_px": 0.6390947615849076,
+        "jumped_frames_gt3": []
+      }
+    },
+    "bin_summary_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\bin_summary_516_era05.csv",
+    "frame_stats_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\frame_stats_516_era05.csv",
+    "per_target_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_ident_jump_01\\per_target_jumps_516_era05.csv"
+  },
+  "note_era06": "No draft_000516_snapshot_era06_* on disk; era05 snapshot + live 516 used as era06 work-copy stand-in (ALPHA-READY era06 product hashes live on 516)."
+}
