@@ -113,7 +113,7 @@ def main() -> None:
     )
 
     cfg = _load_app_config(args.config)
-    eq, tel, loc, missing = resolve_night_run_cli_ids(
+    eq, tel, loc, missing, _src = resolve_night_run_cli_ids(
         equipment_id=args.eq,
         telescope_id=args.tel,
         location_id=args.site,
@@ -134,12 +134,14 @@ def main() -> None:
     logging.info("Log file:  %s", args.log.resolve())
     logging.info("=" * 60)
 
+    _explicit = int(args.site) if args.site else None
     params = NightRunParams(
         source_dir=Path(args.source),
         equipment_id=int(eq),
         telescope_id=int(tel),
-        location_id=int(loc),
-        location_source_hint="cli_arg",
+        location_id=_explicit,
+        manifest_location_id=int(loc) if _src == "manifest" else None,
+        location_source_hint="cli_arg" if _explicit is not None else None,
         config_path=args.config,
         sysrem_enabled=False if args.no_sysrem else None,
         sysrem_n_iter=int(args.sysrem_iter) if args.no_sysrem is False else None,

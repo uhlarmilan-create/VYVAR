@@ -123,6 +123,7 @@ def _run_vyvar_full_pipeline(
     source_root: str,
     import_equipment_id: int,
     import_telescope_id: int,
+    import_location_id: int,
     dark_validity_days: int,
     flat_validity_days: int,
     plate_fov_ui: float,
@@ -140,6 +141,10 @@ def _run_vyvar_full_pipeline(
 ) -> bool:
     """RUN VYVAR - UI resolution then night_run.run_night_pipeline (INV-ONE-ENTRY-01)."""
     from night_run import NightRunParams, run_night_pipeline
+    from observer_location import (  # noqa: PLC0415
+        apply_resolved_observer_location_to_config,
+        resolve_observer_location_for_run,
+    )
 
     _run_label = "RUN VYVAR (non-cal)" if pre_calibrated_mode else "RUN VYVAR"
     _RUNVYVAR_FW_KEY = "_runvyvar_fwhm_threshold"
@@ -221,11 +226,21 @@ def _run_vyvar_full_pipeline(
             if ks.startswith("vyvar_flatfb_"):
                 choices[ks[len("vyvar_flatfb_") :]] = v
 
-        loc_id: int | None = None
-        try:
-            loc_id = int(cfg.observer_location_id)
-        except (TypeError, ValueError):
-            loc_id = None
+        loc_id = int(import_location_id)
+        if loc_id <= 0:
+            raise ValueError(
+                "observer_location_id is unset; select an observatory site before RUN."
+            )
+        # Persist the RUN site as the next default (not a render side-effect).
+        _resolved_ui = resolve_observer_location_for_run(
+            cfg.database_path,
+            explicit_location_id=loc_id,
+            cfg=cfg,
+            source_hint="ui_selection",
+        )
+        apply_resolved_observer_location_to_config(cfg, _resolved_ui)
+        with ui_config_persist():
+            save_config_json(cfg.data_root, cfg.to_json())
 
         params = NightRunParams(
             source_dir=_root,
@@ -233,7 +248,7 @@ def _run_vyvar_full_pipeline(
             telescope_id=int(_run_optics.telescope_id),
             existing_pipeline=pipeline,
             optics=_run_optics,
-            location_id=loc_id,
+            location_id=int(loc_id),
             location_source_hint="ui_selection",
             masterdark_validity_days=int(dark_validity_days),
             masterflat_validity_days=int(flat_validity_days),
@@ -1631,17 +1646,19 @@ def render_live_view(
         loc_labels = list(location_options.keys())
         loc_placeholder = "No locations defined"
         if loc_labels:
-            # Phase 2: pre-select the IS_DEFAULT location; fall back to the config
-            # location only if no default is marked. Phase 3 may override from headers.
-            _loc_default_id = next(
-                (int(item["id"]) for item in locations if int(item.get("is_default", 0) or 0) == 1),
-                int(cfg.observer_location_id),
+            # SITE-UI-01: config (if active) else IS_DEFAULT else none.
+            # Persist happens on RUN, never as a render side-effect.
+            from observer_location import location_preselect_id  # noqa: PLC0415
+
+            _loc_default_id = location_preselect_id(
+                locations, int(getattr(cfg, "observer_location_id", 0) or 0)
             )
             _loc_default_idx = 0
-            for _loc_i, _loc_lbl in enumerate(loc_labels):
-                if location_options[_loc_lbl] == _loc_default_id:
-                    _loc_default_idx = _loc_i
-                    break
+            if _loc_default_id is not None:
+                for _loc_i, _loc_lbl in enumerate(loc_labels):
+                    if location_options[_loc_lbl] == _loc_default_id:
+                        _loc_default_idx = _loc_i
+                        break
             if "vyvar_varstrem_location" not in st.session_state:
                 st.session_state["vyvar_varstrem_location"] = loc_labels[_loc_default_idx]
         import_location_label = st.selectbox(
@@ -1649,7 +1666,10 @@ def render_live_view(
             options=loc_labels if loc_labels else [loc_placeholder],
             key="vyvar_varstrem_location",
             disabled=not loc_labels,
-            help="Observer site for BJD, airmass, and lunar context (saved to config.json).",
+            help=(
+                "Observer site for BJD, airmass, and lunar context. "
+                "What you see here is what RUN uses; saved to config.json when you press RUN."
+            ),
         )
 
         # Phase 3: show the last auto-detect result (match + confidence + evidence).
@@ -1707,30 +1727,10 @@ def render_live_view(
                         "then applies them per draft."
                     )
 
-        if loc_labels:
-            _sel_loc_id = int(location_options[import_location_label])
-            # CONFIG-WRITE-GUARD: persist ONLY on a genuine user change of the selectbox, never as a
-            # render side-effect. On first render the selectbox defaults to the DB IS_DEFAULT location,
-            # which can differ from config.json (that mismatch used to auto-rewrite config.json on load).
-            # Baseline the tracker to the current selection on first render so a plain render never saves.
-            _loc_tracker = "vyvar_varstrem_location_persisted_id"
-            if _loc_tracker not in st.session_state:
-                st.session_state[_loc_tracker] = _sel_loc_id
-            elif _sel_loc_id != int(st.session_state[_loc_tracker]):
-                _loc_row = get_observer_location_by_id(str(cfg.database_path), _sel_loc_id)
-                if _loc_row is not None:
-                    cfg.observer_location_id = int(_loc_row["id"])
-                    cfg.observer_lat = float(_loc_row["lat"])
-                    cfg.observer_lon = float(_loc_row["lon"])
-                    cfg.observer_alt_m = float(_loc_row["alt_m"])
-                    cfg.observer_location_name = str(_loc_row.get("name") or "")
-                    with ui_config_persist():
-                        save_config_json(cfg.data_root, cfg.to_json())
-                    LOGGER.info(
-                        f"Observer location set: {cfg.observer_location_name} "
-                        f"(lat={cfg.observer_lat}, lon={cfg.observer_lon}, alt={cfg.observer_alt_m}m)"
-                    )
-                st.session_state[_loc_tracker] = _sel_loc_id
+        # SITE-UI-01: selection is the run site; do not rewrite config.json on render.
+        import_location_id = 0
+        if loc_labels and import_location_label in location_options:
+            import_location_id = int(location_options[import_location_label])
         try:
             _ui_optics = parse_ui_optics_from_labels(
                 equipment_label=import_equipment_label,
@@ -1788,12 +1788,26 @@ def render_live_view(
         with col_run:
             _sr_rv = str(source_root).strip()
             _gaia_ok = _gaia_db_ok_for_masterstar(str(getattr(cfg, "gaia_db_path", "") or ""))
+            # SITE-UI-01: caption and gate use the same selectbox value that RUN passes.
+            _run_site_row = None
+            if import_location_id > 0:
+                _run_site_row = get_observer_location_by_id(
+                    str(cfg.database_path), int(import_location_id)
+                )
+            if _run_site_row is not None:
+                st.caption(
+                    f"Site for this run: {_run_site_row.get('name') or import_location_id} "
+                    f"(lat={_run_site_row.get('lat')}, lon={_run_site_row.get('lon')})"
+                )
+            else:
+                st.caption("Site for this run: (none selected - RUN blocked)")
             run_vyvar_disabled = (
                 not _sr_rv
                 or not Path(_sr_rv).is_dir()
                 or not _gaia_ok
                 or import_equipment_id <= 0
                 or import_telescope_id <= 0
+                or import_location_id <= 0
             )
             btn_cal, btn_nc = st.columns(2)
             with btn_cal:
@@ -1837,6 +1851,7 @@ def render_live_view(
                             source_root=_sr_rv,
                             import_equipment_id=int(import_equipment_id),
                             import_telescope_id=int(import_telescope_id),
+                            import_location_id=int(import_location_id),
                             dark_validity_days=int(dark_validity_days),
                             flat_validity_days=int(flat_validity_days),
                             plate_fov_ui=float(cfg.plate_solve_fov_deg),

@@ -67,7 +67,7 @@ def test_a3_cli_refuses_each_missing_input() -> None:
     with pytest.raises(SystemExit):
         parse_night_run_cli([])
     args = parse_night_run_cli(["--source", "D:\\x"])
-    _eq, _tel, _loc, missing = resolve_night_run_cli_ids(
+    _eq, _tel, _loc, missing, _src = resolve_night_run_cli_ids(
         equipment_id=args.equipment_id,
         telescope_id=args.telescope_id,
         location_id=args.location_id,
@@ -82,7 +82,7 @@ def test_a3_cli_accepts_three_explicit() -> None:
     args = parse_night_run_cli(
         ["--source", "D:\\x", "--camera", "1", "--telescope", "2", "--site", "3"]
     )
-    eq, tel, loc, missing = resolve_night_run_cli_ids(
+    eq, tel, loc, missing, src = resolve_night_run_cli_ids(
         equipment_id=args.equipment_id,
         telescope_id=args.telescope_id,
         location_id=args.location_id,
@@ -90,6 +90,7 @@ def test_a3_cli_accepts_three_explicit() -> None:
     )
     assert missing == []
     assert (eq, tel, loc) == (1, 2, 3)
+    assert src == "cli_arg"
 
 
 def test_a3_manifest_fills_camera_telescope(tmp_path: Path) -> None:
@@ -98,12 +99,13 @@ def test_a3_manifest_fills_camera_telescope(tmp_path: Path) -> None:
         '{"rig": {"equipment_id": 4, "telescope_id": 5, "location_id": 6}}',
         encoding="ascii",
     )
-    eq, tel, loc, missing = resolve_night_run_cli_ids(
+    eq, tel, loc, missing, src = resolve_night_run_cli_ids(
         draft_dir=tmp_path,
         cfg=SimpleNamespace(observer_location_id=0),
     )
     assert missing == []
     assert (eq, tel, loc) == (4, 5, 6)
+    assert src == "manifest"
 
 
 def test_residual_stats_matches_census_formula() -> None:

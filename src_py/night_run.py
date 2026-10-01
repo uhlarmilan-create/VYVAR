@@ -44,6 +44,9 @@ class NightRunParams:
     existing_pipeline: Any | None = None
     location_id: int | None = None
     location_source_hint: str | None = None
+    # Draft rig.location_id when resolving without an explicit UI/CLI site
+    # (precedence: explicit location_id > manifest_location_id > config).
+    manifest_location_id: int | None = None
     platesolve_equipment_id: int | None = None
     sysrem_enabled: bool | None = None
     sysrem_n_iter: int | None = None
@@ -155,16 +158,20 @@ def resolve_night_run_cli_ids(
     location_id: int | None = None,
     draft_dir: Path | str | None = None,
     cfg: Any | None = None,
-) -> tuple[int | None, int | None, int | None, list[str]]:
+) -> tuple[int | None, int | None, int | None, list[str], str | None]:
     """Resolve camera / telescope / observing site the way W1 does.
 
-    Explicit CLI ids win. Else draft manifest ``rig`` (equipment_id,
+    Explicit CLI/UI ids win. Else draft manifest ``rig`` (equipment_id,
     telescope_id, location_id). Else ``cfg.observer_location_id`` for site
-    only (W1). Missing names: camera, telescope, observing site.
+    only. Returns ``(eq, tel, loc, missing, loc_source)`` where
+    ``loc_source`` is ``cli_arg`` / ``manifest`` / ``config`` / None.
     """
     eq = _positive_id(equipment_id)
     tel = _positive_id(telescope_id)
-    loc = _positive_id(location_id)
+    loc_explicit = _positive_id(location_id)
+    loc = loc_explicit
+    loc_source: str | None = "cli_arg" if loc_explicit is not None else None
+    m_loc: int | None = None
     if draft_dir is not None:
         from draft_provenance import _manifest_rig_pair, _optional_int, load_draft_manifest
 
@@ -172,15 +179,18 @@ def resolve_night_run_cli_ids(
         if manifest:
             m_eq, m_tel = _manifest_rig_pair(manifest)
             rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
-            m_loc = _optional_int(rig.get("location_id"))
+            m_loc = _positive_id(_optional_int(rig.get("location_id")))
             if eq is None:
                 eq = _positive_id(m_eq)
             if tel is None:
                 tel = _positive_id(m_tel)
-            if loc is None:
-                loc = _positive_id(m_loc)
+            if loc is None and m_loc is not None:
+                loc = m_loc
+                loc_source = "manifest"
     if loc is None and cfg is not None:
         loc = _positive_id(getattr(cfg, "observer_location_id", 0))
+        if loc is not None:
+            loc_source = "config"
     missing: list[str] = []
     if eq is None:
         missing.append(_NIGHT_RUN_INPUT_CAMERA)
@@ -188,7 +198,8 @@ def resolve_night_run_cli_ids(
         missing.append(_NIGHT_RUN_INPUT_TELESCOPE)
     if loc is None:
         missing.append(_NIGHT_RUN_INPUT_SITE)
-    return eq, tel, loc, missing
+        loc_source = None
+    return eq, tel, loc, missing, loc_source
 
 
 def missing_night_run_inputs(
@@ -200,7 +211,7 @@ def missing_night_run_inputs(
     cfg: Any | None = None,
 ) -> list[str]:
     """Names of unresolved required night-run inputs (camera, telescope, observing site)."""
-    _eq, _tel, _loc, missing = resolve_night_run_cli_ids(
+    _eq, _tel, _loc, missing, _src = resolve_night_run_cli_ids(
         equipment_id=equipment_id,
         telescope_id=telescope_id,
         location_id=location_id,
@@ -1427,7 +1438,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             apply_pre_calibrated_import_plan(plan)
             _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
 
-        # Step 2: Import
+        # Step 2: Import - resolve observing site first (product rule SITE-UI-01).
         _p("Step 2: Import session")
         from observer_location import (  # noqa: PLC0415
             apply_resolved_observer_location_to_config,
@@ -1435,15 +1446,17 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         )
 
         _loc_hint = params.location_source_hint
-        if _loc_hint is None:
-            _loc_hint = "cli_arg" if params.location_id is not None else None
+        if _loc_hint is None and params.location_id is not None:
+            _loc_hint = "cli_arg"
         _resolved_site = resolve_observer_location_for_run(
             cfg.database_path,
             explicit_location_id=params.location_id,
+            manifest_location_id=params.manifest_location_id,
             cfg=cfg,
             source_hint=_loc_hint,
         )
         apply_resolved_observer_location_to_config(cfg, _resolved_site)
+        _p(_resolved_site.milestone_line())
         t0 = time.time()
         import_result = smart_import_session(
             plan=plan,
@@ -1907,7 +1920,7 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entry: same three required inputs as UI RUN VYVAR."""
     args = parse_night_run_cli(argv)
     cfg = _load_app_config(args.config)
-    eq, tel, loc, missing = resolve_night_run_cli_ids(
+    eq, tel, loc, missing, loc_source = resolve_night_run_cli_ids(
         equipment_id=args.equipment_id,
         telescope_id=args.telescope_id,
         location_id=args.location_id,
@@ -1917,12 +1930,17 @@ def main(argv: list[str] | None = None) -> int:
     if missing:
         print(night_run_missing_message(missing), file=sys.stderr)
         return 2
+    # Pass only an explicit CLI site as location_id; otherwise pass the
+    # resolved id via manifest_location_id / config through the resolver.
+    _explicit = _positive_id(args.location_id)
+    _manifest = int(loc) if loc_source == "manifest" else None
     params = NightRunParams(
         source_dir=Path(args.source),
         equipment_id=int(eq),
         telescope_id=int(tel),
-        location_id=int(loc),
-        location_source_hint="cli_arg",
+        location_id=_explicit,
+        manifest_location_id=_manifest,
+        location_source_hint="cli_arg" if _explicit is not None else None,
         config_path=args.config,
         dry_run=bool(args.dry_run),
         progress_cb=lambda msg: LOGGER.info("[Progress] %s", msg),

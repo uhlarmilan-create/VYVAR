@@ -79,7 +79,7 @@ def test_provenance_id_matches_coordinates(tmp_path: Path) -> None:
     assert prov["location_id"] == loc_id
     assert prov["lat"] == resolved.lat
     assert prov["lon"] == resolved.lon
-    assert prov["source"] in ("ui_selection", "cli_arg", "config")
+    assert prov["source"] in ("ui_selection", "cli_arg", "config", "manifest")
 
 
 def test_apply_hydrates_config_consistently(tmp_path: Path) -> None:

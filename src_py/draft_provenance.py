@@ -1033,19 +1033,34 @@ def record_observer_location_provenance(
     draft_id: int,
     resolved: Any,
 ) -> Path:
-    """Persist resolved observer site into draft_manifest.json."""
+    """Persist resolved observer site into draft_manifest.json.
+
+    When the resolved site differs from ``rig.location_id``, update the
+    manifest and log ``[SITE] manifest location changed <old> -> <new>``.
+    """
+    from infolog import log_milestone  # noqa: PLC0415
+
     prov = resolved.as_provenance_dict() if hasattr(resolved, "as_provenance_dict") else dict(resolved)
     root = draft_archive_root(archive_path)
     manifest = load_draft_manifest(root)
     mode = str(manifest.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
     extra = {"observer_location": prov}
-    if isinstance(manifest.get("rig"), dict):
+    new_id = _optional_int(prov.get("location_id"))
+    rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else None
+    if isinstance(rig, dict):
+        old_id = _optional_int(rig.get("location_id"))
+        rig_out = dict(rig)
+        if new_id is not None and old_id != new_id:
+            rig_out["location_id"] = int(new_id)
+            log_milestone(
+                f"[SITE] manifest location changed {old_id} -> {new_id}"
+            )
         return write_draft_manifest(
             root,
             draft_id=int(draft_id),
             calibration_mode=mode,
             extra=extra,
-            rig=manifest.get("rig"),
+            rig=rig_out,
             paths=manifest.get("paths"),
             status=manifest.get("status"),
             final_observation_id=manifest.get("final_observation_id"),
@@ -1059,6 +1074,7 @@ def record_observer_location_provenance(
         draft_id=int(draft_id),
         calibration_mode=mode,
         extra=extra,
+        rig={"location_id": int(new_id)} if new_id is not None else None,
     )
 
 
