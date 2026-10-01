@@ -1,5 +1,5 @@
 CURSOR RESULT - 2026-10-01 IDENT-JUMP-01
-Commit: (pending)
+Commit: c834c81
 
 What I did
 Census + root cause + fix for catalog stars jumping onto
