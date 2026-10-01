@@ -61,7 +61,7 @@ T1-T4 in dev/tests/test_site_ui_01.py: PASS (5 tests including preselect).
 
 ## Commits
 - fix+tests: b6ff5e5
-- result: (this commit)
+- result: 6a0f3ed
 
 ## STOP
 Pushed alpha-fixes-01 only. main untouched.
