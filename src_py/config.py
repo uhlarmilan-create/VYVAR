@@ -779,8 +779,14 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.35
-    #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night) or ``f_per_frame``.
+    #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night),
+    #: ``f_per_frame``, or ``per_target`` (APERTURE-PERTARGET-01: f* per target
+    #: from Abbe p2p of differential LC; comps share that f*).
     aperture_policy_mode: str = "f_fixed_night"
+    #: APERTURE-PERTARGET-01: FWHM-factor sampling grid for per_target selection.
+    aperture_f_grid: list[float] = field(
+        default_factory=lambda: [0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5]
+    )
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.
     aperture_snr_sizing: dict[str, float] = field(
@@ -1799,8 +1805,19 @@ class AppConfig:
         self.aperture_fwhm_factor = max(0.25, min(6.0, float(self.aperture_fwhm_factor)))
         _apm = str(data.get("aperture_policy_mode", self.aperture_policy_mode) or "f_fixed_night").strip().lower()
         self.aperture_policy_mode = (
-            _apm if _apm in ("f_fixed_night", "f_per_frame") else "f_fixed_night"
+            _apm if _apm in ("f_fixed_night", "f_per_frame", "per_target") else "f_fixed_night"
         )
+        _afg = data.get("aperture_f_grid", self.aperture_f_grid)
+        if isinstance(_afg, (list, tuple)):
+            _parsed: list[float] = []
+            for _x in _afg:
+                try:
+                    _v = float(_x)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(_v) and _v > 0:
+                    _parsed.append(float(_v))
+            self.aperture_f_grid = sorted(set(_parsed)) if len(_parsed) >= 2 else list(self.aperture_f_grid)
         # aperture_snr_sizing (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large).
         # New structured form wins; legacy scalar keys are accepted for one transition release.
         _asz = data.get("aperture_snr_sizing")
@@ -2801,6 +2818,7 @@ class AppConfig:
             "photometry_mode": str(self.photometry_mode),
             "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
             "aperture_policy_mode": str(self.aperture_policy_mode),
+            "aperture_f_grid": [float(x) for x in (self.aperture_f_grid or [])],
             "aperture_snr_sizing": {
                 "small": float(self.aperture_snr_sizing.get("small", 1.5)),
                 "large": float(self.aperture_snr_sizing.get("large", 4.0)),

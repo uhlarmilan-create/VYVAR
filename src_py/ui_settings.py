@@ -574,8 +574,27 @@ def render_settings_dashboard(
             max_value=6.0,
             value=float(cfg.aperture_fwhm_factor),
             step=0.1,
-            help="Aperture radius = factor x measured FWHM.",
+            help="Aperture radius = factor x measured FWHM (f_fixed_night).",
         )
+        _same_ap = str(getattr(cfg, "aperture_policy_mode", "f_fixed_night")).strip().lower() != "per_target"
+        same_aperture_all = st.toggle(
+            "Same aperture for all targets and comps",
+            value=bool(_same_ap),
+            help=(
+                "ON = f_fixed_night (one r for the draft, current default). "
+                "OFF = per_target: each target picks f* by Abbe p2p of its differential LC; "
+                "its comps share that f* (D5-1)."
+            ),
+            key="aperture_same_for_all_toggle",
+        )
+        if not same_aperture_all:
+            st.caption(
+                "per_target f grid: "
+                + ", ".join(
+                    f"{float(x):.2f}"
+                    for x in (getattr(cfg, "aperture_f_grid", None) or [0.75, 1.0, 1.35, 2.0, 2.5])
+                )
+            )
         _detail_help(
             "aperture_fwhm_factor",
             phase="Phase 2 / per-frame aperture photometry (if enabled).",
@@ -1095,6 +1114,7 @@ def render_settings_dashboard(
         det_sig = float(aln_sig)
         cfg.alignment_detection_sigma = det_sig if det_sig > 0 else 5.0
         cfg.aperture_fwhm_factor = float(max(0.25, min(6.0, ap_fwhm)))
+        cfg.aperture_policy_mode = "f_fixed_night" if bool(same_aperture_all) else "per_target"
         cfg.annulus_inner_fwhm = float(max(1.0, min(10.0, ann_in)))
         cfg.annulus_outer_fwhm = float(max(1.5, min(12.0, ann_out)))
         if cfg.annulus_outer_fwhm <= cfg.annulus_inner_fwhm:

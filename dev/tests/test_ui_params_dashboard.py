@@ -99,8 +99,9 @@ def test_owner_groups_partition_every_key() -> None:
     # CONSOLIDATE-01D P2: -1 phase01_use_bprp_primary (268 -> 267).
     # EPSF-CHI2-LOCUS-01: +1 psf_chi2_locus_nsigma (267 -> 268).
     # LC-OUTLIER-01: +5 lc_outlier_* (268 -> 273).
+    # APERTURE-PERTARGET-01: +1 aperture_f_grid (273 -> 274).
     dist = {o: len(groups[o]) for o in pr.OWNERS}
-    assert dist == {"db_static": 8, "config_runtime": 273, "fits_dynamic": 6, "internal": 12}, dist
+    assert dist == {"db_static": 8, "config_runtime": 274, "fits_dynamic": 6, "internal": 12}, dist
 
 
 def test_editable_keys_are_config_runtime_auto_only() -> None:

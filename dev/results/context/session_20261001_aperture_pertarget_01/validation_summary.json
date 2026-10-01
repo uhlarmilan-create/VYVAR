@@ -1,0 +1,154 @@
+{
+  "task": "APERTURE-PERTARGET-01",
+  "default_mode_unchanged": true,
+  "f_grid": [
+    0.75,
+    1.0,
+    1.25,
+    1.35,
+    1.5,
+    1.75,
+    2.0,
+    2.5
+  ],
+  "draft_516": {
+    "draft_id": 516,
+    "fwhm_night_px": 5.19175,
+    "n_targets": 75,
+    "n_stars_measured": 143,
+    "n_frames": 134,
+    "grid_elapsed_s": 1277.84,
+    "f_fixed": 1.35,
+    "median_f_star": 0.75,
+    "median_p2p_gain_mmag": 63.47652832491077,
+    "median_abs_rho_resid_seeing": 0.08162268598394896,
+    "frac_abs_rho_lt_0_3": 0.8933333333333333,
+    "bin_summary": [
+      {
+        "mag_bin": "G<12",
+        "n": 14,
+        "median_f_star": 1.0,
+        "median_p2p_gain_mmag": 3.719793486479087,
+        "frac_gain_gt_0": 0.9285714285714286
+      },
+      {
+        "mag_bin": "12-14",
+        "n": 33,
+        "median_f_star": 0.75,
+        "median_p2p_gain_mmag": 63.25335517386496,
+        "frac_gain_gt_0": 1.0
+      },
+      {
+        "mag_bin": "14-16",
+        "n": 28,
+        "median_f_star": 0.75,
+        "median_p2p_gain_mmag": 286.2077244363911,
+        "frac_gain_gt_0": 0.9285714285714286
+      }
+    ],
+    "bo_row": {
+      "catalog_id": "1498613634033133184",
+      "g_mag": 9.719649314880373,
+      "mag_bin": "G<12",
+      "f_star": 1.0,
+      "r_ap_px": 5.19175,
+      "p2p_fixed_mag": 0.010620121755560383,
+      "p2p_star_mag": 0.00983779246843615,
+      "p2p_gain_mmag": 0.7823292871242324,
+      "dlevel_vs_f25_mmag": -4.668439824682125,
+      "rho_resid_seeing": 0.05990046452209889,
+      "n_comps": 4,
+      "n_frames": 134,
+      "same_r_target_comps": true
+    },
+    "choices_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_aperture_pertarget_01\\aperture_per_target_draft516.json",
+    "table_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_aperture_pertarget_01\\fstar_table_draft516.csv"
+  },
+  "draft_521": {
+    "draft_id": 521,
+    "fwhm_night_px": 5.492192,
+    "n_targets": 161,
+    "n_stars_measured": 213,
+    "n_frames": 131,
+    "grid_elapsed_s": 1141.73,
+    "f_fixed": 1.35,
+    "median_f_star": 0.75,
+    "median_p2p_gain_mmag": 97.90019352123541,
+    "median_abs_rho_resid_seeing": 0.09821806628051707,
+    "frac_abs_rho_lt_0_3": 0.7080745341614907,
+    "bin_summary": [
+      {
+        "mag_bin": "G<12",
+        "n": 21,
+        "median_f_star": 0.75,
+        "median_p2p_gain_mmag": 8.82746424180769,
+        "frac_gain_gt_0": 0.9047619047619048
+      },
+      {
+        "mag_bin": "12-14",
+        "n": 59,
+        "median_f_star": 0.75,
+        "median_p2p_gain_mmag": 90.58382578342092,
+        "frac_gain_gt_0": 0.864406779661017
+      },
+      {
+        "mag_bin": "14-16",
+        "n": 81,
+        "median_f_star": 1.0,
+        "median_p2p_gain_mmag": 161.66519160193727,
+        "frac_gain_gt_0": 0.7037037037037037
+      }
+    ],
+    "bo_row": null,
+    "choices_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_aperture_pertarget_01\\aperture_per_target_draft521.json",
+    "table_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261001_aperture_pertarget_01\\fstar_table_draft521.csv"
+  },
+  "aij_f_fixed": {
+    "ok": true,
+    "f": 1.35,
+    "fwhm_px": 5.19175,
+    "r_ap_px": 7.0088625,
+    "r_in_px": 14.017725,
+    "r_out_px": 26.9971,
+    "matched": {
+      "T1": "1498613634033133184",
+      "C2": "1500748301498613248",
+      "C3": "1497771992240531712",
+      "C4": "1499200223486564608",
+      "C5": "1497974027502858240",
+      "C6": "1497368849430107904"
+    },
+    "n_join": 134,
+    "rms_diff_mmag": 2.8866,
+    "gate_mmag": 2.8,
+    "pass": false,
+    "elapsed_s": 9.83,
+    "aij_csv_sha256": "4ffa9e8e43b07368",
+    "aij_tbl_sha256": "133c5aacb2fa8bd0"
+  },
+  "aij_per_target": {
+    "ok": true,
+    "f": 1.0,
+    "fwhm_px": 5.19175,
+    "r_ap_px": 5.19175,
+    "r_in_px": 14.017725,
+    "r_out_px": 26.9971,
+    "matched": {
+      "T1": "1498613634033133184",
+      "C2": "1500748301498613248",
+      "C3": "1497771992240531712",
+      "C4": "1499200223486564608",
+      "C5": "1497974027502858240",
+      "C6": "1497368849430107904"
+    },
+    "n_join": 134,
+    "rms_diff_mmag": 5.2551,
+    "gate_mmag": 2.8,
+    "pass": false,
+    "elapsed_s": 9.6,
+    "aij_csv_sha256": "4ffa9e8e43b07368",
+    "aij_tbl_sha256": "133c5aacb2fa8bd0"
+  },
+  "reading": "516 median p2p gain 63.48 mmag overall; faint bin 14-16: median gain 286.21 mmag (median f*=0.75); bright bin G<12: median gain 3.72 mmag (median f*=1.00); AIJ BO RMS(diff) at f*=1.0: 5.255 mmag (gate 2.8, pass=False)",
+  "runtime_note": "per_target grid cost: 516=1277.84s (143 stars x 134 frames x 8 f); 521=1141.73s. f_fixed_night has zero grid overhead."
+}

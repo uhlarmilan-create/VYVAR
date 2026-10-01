@@ -254,7 +254,7 @@
     "scope_group": "n/a"
   },
   "aperture_policy_mode": {
-    "help": "APERTURE-01 production radius: f_fixed_night = f x median FWHM of the night (one r for the draft); f_per_frame = f x QC FWHM of that frame. Same r for target, comps, and pool. The SNR mag-bin table is diagnostic only.",
+    "help": "APERTURE-01 production radius: f_fixed_night = f x median FWHM of the night (one r for the draft); f_per_frame = f x QC FWHM of that frame; per_target = each target picks f* by Abbe p2p of its differential LC (comps share that f*).",
     "kind": "static",
     "label": "Aperture Policy Mode",
     "owner": "config_runtime",
@@ -262,7 +262,22 @@
     "range": null,
     "tier": "advanced",
     "unit": null,
-    "widget": "auto",
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
+  "aperture_f_grid": {
+    "help": "APERTURE-PERTARGET-01: FWHM-factor sampling grid used when aperture_policy_mode=per_target. Selection minimises Abbe p2p of the differential LC; ties prefer larger f.",
+    "kind": "static",
+    "label": "Aperture F Grid",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": null,
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom",
     "scope": "universal",
     "scope_confidence": "high",
     "scope_key": "none",

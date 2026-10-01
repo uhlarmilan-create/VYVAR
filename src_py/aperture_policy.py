@@ -20,7 +20,8 @@ LOGGER = logging.getLogger(__name__)
 
 MODE_FIXED_NIGHT = "f_fixed_night"
 MODE_PER_FRAME = "f_per_frame"
-APERTURE_POLICY_MODES = (MODE_FIXED_NIGHT, MODE_PER_FRAME)
+MODE_PER_TARGET = "per_target"
+APERTURE_POLICY_MODES = (MODE_FIXED_NIGHT, MODE_PER_FRAME, MODE_PER_TARGET)
 
 FWHM_AUTHORITY = "qc_metrics.fwhm_px"
 FWHM_AUTH_NOTE = (
@@ -37,6 +38,8 @@ def normalize_aperture_policy_mode(raw: Any) -> str:
         return MODE_FIXED_NIGHT
     if s in ("b", "per_frame", "per-frame", "frame", MODE_PER_FRAME):
         return MODE_PER_FRAME
+    if s in ("c", "per_target", "per-target", "pertarget", MODE_PER_TARGET):
+        return MODE_PER_TARGET
     return MODE_FIXED_NIGHT
 
 
@@ -63,11 +66,15 @@ def fwhm_for_radius(
     fwhm_frame_px: float | None,
     fwhm_night_median_px: float | None,
 ) -> float | None:
-    """FWHM that enters r_ap = f x FWHM (annulus uses the same value)."""
+    """FWHM that enters r_ap = f x FWHM (annulus uses the same value).
+
+    ``per_target`` uses the night-median FWHM as the scale (same as
+    ``f_fixed_night``); the per-target factor f* is chosen later.
+    """
     m = normalize_aperture_policy_mode(mode)
     frame = clamp_fwhm_px(fwhm_frame_px)
     night = clamp_fwhm_px(fwhm_night_median_px, fallback=frame)
-    if m == MODE_FIXED_NIGHT:
+    if m in (MODE_FIXED_NIGHT, MODE_PER_TARGET):
         return night if night is not None else frame
     return frame if frame is not None else night
 

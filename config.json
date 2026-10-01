@@ -344,9 +344,11 @@
   // of VYVAR.
   "aperture_photometry_enabled": true,
   // APERTURE-01: f_fixed_night = f x median FWHM of the night (one r for
-  // the draft); f_per_frame = f x QC FWHM of that frame. Same r for
-  // target, comps, and pool. The SNR mag-bin table is diagnostic only.
+  // the draft); f_per_frame = f x QC FWHM of that frame. per_target =
+  // APERTURE-PERTARGET-01 (f* per target; comps share that f*). Settings
+  // toggle: "Same aperture for all targets and comps".
   "aperture_policy_mode": "f_fixed_night",
+  "aperture_f_grid": [0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5],
   // Aperture size multiplier applied to the variable (target) star.
   "aperture_variable_factor": 1.0,
   // Optional 'democratic' detrend of the light curve (median trend of the

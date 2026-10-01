@@ -3141,6 +3141,9 @@ class _Phase2AState:
     aperture_policy: dict[str, Any] | None = None
     #: LC-OUTLIER-01: frame_key -> reason (empty = OK) from night MAD-sigma QC.
     frame_qc_reasons: dict[str, str] = field(default_factory=dict)
+    #: APERTURE-PERTARGET-01: night flux grid + per-target f* choices (None when off).
+    aperture_grid_night: Any | None = None
+    per_target_aperture: dict[str, Any] = field(default_factory=dict)
 
 def _build_phase2a_dynamic_params(
     state: _Phase2AState,
@@ -4095,6 +4098,94 @@ def run_phase2a(
                 "k2_value": float(state.k2_bprp) if math.isfinite(float(state.k2_bprp)) else None,
             },
         )
+
+    # APERTURE-PERTARGET-01: measure f-grid for targets+comps and pick f* per target.
+    state.aperture_grid_night = None
+    state.per_target_aperture = {}
+    try:
+        from aperture_policy import normalize_aperture_policy_mode  # noqa: PLC0415
+
+        _ap_mode_pt = normalize_aperture_policy_mode(
+            getattr(_cfg, "aperture_policy_mode", "f_fixed_night")
+        )
+    except Exception:  # noqa: BLE001
+        _ap_mode_pt = "f_fixed_night"
+    if _ap_mode_pt == "per_target":
+        try:
+            from aperture_pertarget import (  # noqa: PLC0415
+                choose_f_for_target,
+                measure_night_grid,
+                normalize_f_grid,
+                write_per_target_choices,
+            )
+
+            _p2("APERTURE-PERTARGET: measuring f-grid...")
+            _ids: set[str] = set()
+            for _, _tr in at_df.iterrows():
+                _cid = str(_tr.get("catalog_id", "") or "").strip()
+                if _cid:
+                    _ids.add(_cid)
+            for _cid_key, _sub in (state._comp_index or {}).items():
+                _ids.add(str(_cid_key))
+                if hasattr(_sub, "iterrows"):
+                    for _, _cr in _sub.iterrows():
+                        _cc = str(_cr.get("catalog_id", "") or "").strip()
+                        if _cc:
+                            _ids.add(_cc)
+            _fwhm_pt = float(
+                (state.aperture_policy or {}).get("fwhm_night_median_px")
+                or (state.aperture_policy or {}).get("fwhm_used_px")
+                or state.fwhm_px
+                or 5.0
+            )
+            _grid = measure_night_grid(
+                frames_dir=Path(state._aligned_dir_2a),
+                catalog_ids=sorted(_ids),
+                f_grid=normalize_f_grid(getattr(_cfg, "aperture_f_grid", None)),
+                fwhm_night_px=_fwhm_pt,
+                annulus_inner_fwhm=float(annulus_inner_fwhm),
+                annulus_outer_fwhm=float(annulus_outer_fwhm),
+            )
+            state.aperture_grid_night = _grid
+            _frame_order = sorted(_grid.frames.keys())
+            _choices = {}
+            for _, _tr in at_df.iterrows():
+                _tcid = str(_tr.get("catalog_id", "") or "").strip()
+                if not _tcid:
+                    continue
+                _comps_sub = state._comp_index.get(_tcid, pd.DataFrame())
+                if _comps_sub is None or getattr(_comps_sub, "empty", True):
+                    _comp_ids_pt: list[str] = []
+                else:
+                    _comp_ids_pt = [
+                        str(x).strip()
+                        for x in _comps_sub.get("catalog_id", pd.Series(dtype=str)).tolist()
+                        if str(x).strip()
+                    ]
+                _ch = choose_f_for_target(
+                    _grid,
+                    target_cid=_tcid,
+                    comp_ids=_comp_ids_pt,
+                    frame_order=_frame_order,
+                )
+                _choices[_tcid] = _ch
+                state.per_target_aperture[_tcid] = _ch
+            write_per_target_choices(
+                Path(output_dir) / "aperture_per_target.json",
+                _choices,
+                f_grid=_grid.f_grid,
+                fwhm_night_px=_fwhm_pt,
+                elapsed_s=_grid.elapsed_s,
+            )
+            logging.info(
+                "[APERTURE-PERTARGET] chose f* for %d targets (grid %.1fs)",
+                len(_choices),
+                float(_grid.elapsed_s),
+            )
+        except Exception as _pt_exc:  # noqa: BLE001
+            logging.error("[APERTURE-PERTARGET] setup failed - falling back to CSV fluxes: %s", _pt_exc)
+            state.aperture_grid_night = None
+            state.per_target_aperture = {}
 
     # Per target loop
     # _phase2a_process_single_target (inline): ZP -> CT -> (outlier -> airmass | airmass -> outlier) -> export.

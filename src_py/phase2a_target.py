@@ -674,6 +674,30 @@ def _phase2a_process_one_target(
 
     all_frames = pd.concat(frame_results, ignore_index=True)
 
+    # APERTURE-PERTARGET-01: rebuild mag_inst at f* for target + its comps (same f).
+    _pt_choice = (getattr(state, "per_target_aperture", None) or {}).get(str(target_cid))
+    _pt_grid = getattr(state, "aperture_grid_night", None)
+    if _pt_choice is not None and _pt_grid is not None:
+        try:
+            from aperture_pertarget import apply_grid_fluxes_to_frames  # noqa: PLC0415
+
+            _apply_ids = [str(target_cid)] + [str(c) for c in comp_ids]
+            all_frames = apply_grid_fluxes_to_frames(
+                all_frames,
+                _pt_grid,
+                catalog_ids=_apply_ids,
+                f_star=float(_pt_choice.f_star),
+            )
+            logging.info(
+                "[APERTURE-PERTARGET] target %s f*=%.3f r_ap=%.3f px (n_comp=%d)",
+                target_cid,
+                float(_pt_choice.f_star),
+                float(_pt_choice.r_ap_px),
+                len(comp_ids),
+            )
+        except Exception as _pt_apply_exc:  # noqa: BLE001
+            logging.warning("[APERTURE-PERTARGET] apply failed for %s: %s", target_cid, _pt_apply_exc)
+
     # Zostav casove rady per hviezda
     target_lc = _get_lc(target_cid, all_frames)
     comp_lc = {cid: _get_lc(cid, all_frames) for cid in comp_ids}
@@ -1030,9 +1054,18 @@ def _phase2a_process_one_target(
     if not target_frames.empty and "source_file" in target_frames.columns:
         target_frames = target_frames.sort_values(["source_file"], kind="mergesort")
     _measured_ap_target = _measured_aperture_from_proc_cache(target_cid, state._phase2a_csv_cache)
-    if math.isfinite(_measured_ap_target) and _measured_ap_target > 0 and not target_frames.empty:
+    _pt_active = bool((getattr(state, "per_target_aperture", None) or {}).get(str(target_cid)))
+    if (
+        (not _pt_active)
+        and math.isfinite(_measured_ap_target)
+        and _measured_ap_target > 0
+        and not target_frames.empty
+    ):
         target_frames = target_frames.copy()
         target_frames["aperture_r_px"] = float(_measured_ap_target)
+    elif _pt_active and _pt_choice is not None and not target_frames.empty:
+        target_frames = target_frames.copy()
+        target_frames["aperture_r_px"] = float(_pt_choice.r_ap_px)
     bjd = target_frames["bjd"].to_numpy(dtype=float)
     hjd = target_frames["hjd"].to_numpy(dtype=float)
     jd = target_frames["jd"].to_numpy(dtype=float)
