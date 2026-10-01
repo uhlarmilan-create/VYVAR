@@ -503,7 +503,12 @@ def _render_target_detail(
         if lc_csv.exists():
             lc_df = _cached_read_csv(str(lc_csv))
             if not show_outliers and "flag" in lc_df.columns:
-                lc_df = lc_df[lc_df["flag"] == "normal"]
+                from lc_outlier import UI_HIDE_WHEN_TOGGLE_OFF  # noqa: PLC0415
+
+                fl = lc_df["flag"].astype(str).str.strip().str.lower()
+                # Hide frame_qc/artifact/saturated when toggle off; always keep
+                # spike_unconfirmed (distinct marker) and normal.
+                lc_df = lc_df.loc[~fl.isin(tuple(UI_HIDE_WHEN_TOGGLE_OFF))].copy()
 
             y_col = "mag_calib" if show_detrended else "mag_calib_raw"
             y_label = (
@@ -527,17 +532,32 @@ def _render_target_detail(
                     # Svetle pozadie + vyrazne farby bodov (citatelne aj v tmavom Streamlit)
                     flag_colors_plotly = {
                         "normal": "#2563eb",
-                        "outlier_hi": "#ea580c",
-                        "outlier_lo": "#9333ea",
+                        "artifact": "#ea580c",
+                        "frame_qc": "#b45309",
+                        "spike_unconfirmed": "#9333ea",
                         "saturated": "#64748b",
                         "no_data": "#94a3b8",
+                        # Legacy (pre LC-OUTLIER-01) CSVs:
+                        "outlier_hi": "#ea580c",
+                        "outlier_lo": "#9333ea",
                     }
 
                     if "flag" not in lc_df.columns:
                         lc_df = lc_df.assign(flag="normal")
 
+                    _flag_counts = (
+                        lc_df["flag"].astype(str).str.strip().str.lower().value_counts().to_dict()
+                    )
+                    _legend_bits = [
+                        f"{k}={int(v)}"
+                        for k, v in sorted(_flag_counts.items())
+                        if int(v) > 0
+                    ]
+                    if _legend_bits:
+                        st.caption("LC flags: " + ", ".join(_legend_bits))
+
                     for flag, color in flag_colors_plotly.items():
-                        sub = lc_df[lc_df["flag"] == flag].dropna(
+                        sub = lc_df[lc_df["flag"].astype(str).str.lower() == flag].dropna(
                             subset=["bjd", y_col]
                         )
                         if sub.empty:
@@ -558,14 +578,31 @@ def _render_target_detail(
                             )
                         x_raw = pd.to_numeric(sub["bjd"], errors="coerce").to_numpy(dtype=float)
                         x_plot = x_raw - float(bjd_x_off) if bjd_x_off is not None else x_raw
+                        _marker: dict = dict(
+                            color=color, size=7, line=dict(width=0.5, color="#ffffff")
+                        )
+                        if flag == "spike_unconfirmed":
+                            _marker = dict(
+                                color=color,
+                                size=10,
+                                symbol="diamond",
+                                line=dict(width=1.0, color="#111827"),
+                            )
+                        elif flag in ("artifact", "frame_qc", "outlier_hi", "outlier_lo"):
+                            _marker = dict(
+                                color=color,
+                                size=9,
+                                symbol="x",
+                                line=dict(width=1.0, color="#111827"),
+                            )
                         fig.add_trace(
                             go.Scatter(
                                 x=x_plot,
                                 y=sub[y_col],
                                 error_y=err_kwargs if err_kwargs else None,
                                 mode="markers",
-                                marker=dict(color=color, size=7, line=dict(width=0.5, color="#ffffff")),
-                                name=flag,
+                                marker=_marker,
+                                name=f"{flag} (n={len(sub)})",
                                 customdata=x_raw,
                                 hovertemplate=(
                                     "<b>%{fullData.name}</b><br>BJD=%{customdata:.6f}<br>"

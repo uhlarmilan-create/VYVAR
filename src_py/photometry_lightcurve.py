@@ -1359,6 +1359,7 @@ def save_lightcurve_csv(
     flags: list[str],
     source_files: list[str],
     *,
+    flag_reasons: list[str] | None = None,
     method: str = "aperture",
     ct_correction: float | None = None,
     ct_c1: float | None = None,
@@ -1510,6 +1511,14 @@ def save_lightcurve_csv(
             "err": np.round(err, 6),
             "aperture_r_px": np.round(aperture_r_px, 3),
             "flag": [_flag_cell(f) for f in flags],
+            "flag_reason": [
+                _flag_cell(r)
+                for r in (
+                    flag_reasons
+                    if flag_reasons is not None and len(flag_reasons) == n
+                    else [""] * n
+                )
+            ],
             "method": method,
             "skip_reason": [str(skip_reason or "")] * n,
             "source_file": source_files,

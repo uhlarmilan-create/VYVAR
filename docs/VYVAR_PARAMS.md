@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-09-29T15:25:01Z at git HEAD 5a5b07a._
+_Generated 2026-10-01T14:29:51Z at git HEAD 7bd4337._
 
 ## Summary
 
-- Entries: 294
-- Tier: basic 13, advanced 72, expert 209
-- Kind: static 276, derived 0, resolved 18
-- Widget: auto 115, custom 155, hidden 24
-- Owner: db_static 8, config_runtime 268, fits_dynamic 6, internal 12
-- Scope: universal 244, rig 33, site 9, session 8
-- Scope key: none 244, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
+- Entries: 299
+- Tier: basic 13, advanced 77, expert 209
+- Kind: static 281, derived 0, resolved 18
+- Widget: auto 115, custom 160, hidden 24
+- Owner: db_static 8, config_runtime 273, fits_dynamic 6, internal 12
+- Scope: universal 249, rig 33, site 9, session 8
+- Scope key: none 249, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -71,6 +71,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `frame_align_residual_gate_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Gate Enabled |
 | `frame_align_residual_max_frac` | 0.25 | 0.05 .. 1 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Max Frac |
 | `frame_align_residual_min_keep_frames` | 10 | 3 .. 100000 | expert | static | config_runtime | universal | none | n/a | auto | Frame Align Residual Min Keep Frames |
+| `lc_outlier_frame_qc_n_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Frame Qc N Sigma |
 | `osc_channel_binning` | 2 | 1 .. 4 | advanced | static | config_runtime | rig | rig | a | auto | OSC Channel Binning |
 | `preprocess_sky_surface_force_reapply` | False | - | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Force Reapply |
 | `preprocess_sky_surface_order` | 2 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Preprocess Sky Surface Order |
@@ -222,6 +223,10 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `gs11_dilution_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Enabled |
 | `gs11_dilution_mag_limit_delta` | 5.0 | 0.5 .. 15 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Mag Limit Delta |
 | `gs11_target_min_dilution` | 0.5 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Target Min Dilution |
+| `lc_outlier_adjacent_sigma` | 3.0 | 1 .. 8 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Adjacent Sigma |
+| `lc_outlier_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Enabled |
+| `lc_outlier_evidence_n_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Evidence N Sigma |
+| `lc_outlier_n_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier N Sigma |
 | `neighbor_sub_centroid_max_fwhm` | 1.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Neighbor Sub Centroid Max FWHM |
 | `neighbor_sub_chi2_max` | 120.0 | - | expert | static | config_runtime | universal | none | n/a | custom | Neighbor Sub Chi2 Max |
 | `neighbor_sub_max_neighbor_overmag` | 0.3 | - | expert | static | config_runtime | universal | none | n/a | custom | Neighbor Sub Max Neighbor Overmag |

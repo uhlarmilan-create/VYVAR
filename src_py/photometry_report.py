@@ -1021,6 +1021,28 @@ class _PhotometryReportBuilder:
             c = int(vc.get(key, 0))
             if c > 0:
                 parts.append(f"{c} {label}")
+        # LC-OUTLIER-01: epoch flag class totals across lightcurve_*.csv
+        try:
+            from collections import Counter
+
+            lc_dir = Path(self.output_dir) / "lightcurves"
+            epoch_flags: Counter[str] = Counter()
+            if lc_dir.is_dir():
+                for p in sorted(lc_dir.glob("lightcurve_*.csv"))[:500]:
+                    try:
+                        df = pd.read_csv(p, usecols=lambda c: c == "flag", low_memory=False)
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if "flag" in df.columns:
+                        epoch_flags.update(
+                            df["flag"].astype(str).str.strip().str.lower().tolist()
+                        )
+            for key in ("artifact", "frame_qc", "spike_unconfirmed", "saturated"):
+                c = int(epoch_flags.get(key, 0))
+                if c > 0:
+                    parts.append(f"{c} {key}")
+        except Exception:  # noqa: BLE001
+            pass
         if parts:
             return f"{n:d} total  ({', '.join(parts)})"
         return f"{n:d}"

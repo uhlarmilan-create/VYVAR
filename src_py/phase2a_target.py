@@ -1221,19 +1221,45 @@ def _phase2a_process_one_target(
         else:
             base_flags.append("no_data")
 
-    # Reporting path (Workstream B): see ``apply_reporting_postprocess``.
-    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags = apply_reporting_postprocess(
-        mag_calib,
-        mag_calib_ct,
-        target_row=target_row,
-        target_name=target_name,
-        sat_flags=sat_flags,
-        target_frames=target_frames,
-        outlier_sigma=outlier_sigma,
-        ct_ok=bool(ct_ok),
-        ac_ok=bool(ac_ok),
-        delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
-        cfg=_cfg,
+    # Reporting path (Workstream B / LC-OUTLIER-01): see ``apply_reporting_postprocess``.
+    from lc_outlier import EvidenceCache  # noqa: PLC0415
+
+    _src_files_pre = target_frames["source_file"].astype(str).tolist()
+    _aligned = getattr(state, "_aligned_dir_2a", None)
+    _ev_cache = EvidenceCache(
+        frames_dir=Path(_aligned) if _aligned else None,
+        catalog_id=str(target_cid),
+        n_sigma=float(getattr(_cfg, "lc_outlier_evidence_n_sigma", 5.0) or 5.0),
+        proc_cache={},
+    )
+    # Normalize proc cache keys to basenames for EvidenceCache lookups.
+    _proc_by_name: dict[str, pd.DataFrame] = {}
+    for _k, _dfc in (getattr(state, "_phase2a_csv_cache", None) or {}).items():
+        _proc_by_name[Path(str(_k)).name] = _dfc
+    _ev_cache.proc_cache = _proc_by_name
+
+    def _evidence_at(_i: int):
+        return _ev_cache.evidence_at(_i, _src_files_pre)
+
+    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags, out_flag_reasons = (
+        apply_reporting_postprocess(
+            mag_calib,
+            mag_calib_ct,
+            target_row=target_row,
+            target_name=target_name,
+            sat_flags=sat_flags,
+            target_frames=target_frames,
+            outlier_sigma=outlier_sigma,
+            ct_ok=bool(ct_ok),
+            ac_ok=bool(ac_ok),
+            delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
+            cfg=_cfg,
+            err=err,
+            bjd=bjd,
+            source_files=_src_files_pre,
+            frame_qc_reasons=getattr(state, "frame_qc_reasons", None),
+            evidence_for_index=_evidence_at,
+        )
     )
 
     # ALG-2: Savitzky-Golay non-linear detrending (Savitzky & Golay 1964)
@@ -1393,6 +1419,8 @@ def _phase2a_process_one_target(
             err_scint_rel_export,
             err_sigma_sys_rel_export,
         )
+        if out_flag_reasons is not None and len(out_flag_reasons) == len(_keep_lc):
+            out_flag_reasons = [out_flag_reasons[i] for i in range(len(_keep_lc)) if _keep_lc[i]]
     # Pinned-era LC metadata: preserve anchor ct_n_comp for byte continuity (477dc8cf).
     if bool(ct_ok):
         try:
@@ -1421,6 +1449,7 @@ def _phase2a_process_one_target(
         ap_arr,
         out_flags,
         src_files,
+        flag_reasons=out_flag_reasons,
         ct_correction=(float(ct_corr) if bool(ct_ok) else float("nan")),
         ct_c1=(float(c1) if bool(ct_ok) else float("nan")),
         ct_c1_stderr=(float(c1_stderr) if bool(ct_ok) else float("nan")),

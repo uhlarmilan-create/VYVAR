@@ -294,19 +294,31 @@ def save_method_variant_lightcurve(ctx: MethodLcWriteContext) -> Path | None:
         else:
             base_flags.append("no_data")
 
-    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags = apply_reporting_postprocess(
-        mag_calib,
-        mag_calib_ct,
-        target_row=ctx.target_row,
-        target_name=str(ctx.target_row.get("vsx_name", ctx.target_cid)),
-        sat_flags=ctx.sat_flags,
-        target_frames=ctx.target_frames,
-        outlier_sigma=ctx.outlier_sigma,
-        ct_ok=bool(ct_ok),
-        ac_ok=bool(ac_ok),
-        delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
-        cfg=_cfg,
+    mag_calib_raw, mag_calib, mag_calib_ct, mag_calib_ac, out_flags, out_flag_reasons = (
+        apply_reporting_postprocess(
+            mag_calib,
+            mag_calib_ct,
+            target_row=ctx.target_row,
+            target_name=str(ctx.target_row.get("vsx_name", ctx.target_cid)),
+            sat_flags=ctx.sat_flags,
+            target_frames=ctx.target_frames,
+            outlier_sigma=ctx.outlier_sigma,
+            ct_ok=bool(ct_ok),
+            ac_ok=bool(ac_ok),
+            delta_m_corr=(float(delta_m_corr) if delta_m_corr is not None else None),
+            cfg=_cfg,
+            err=getattr(ctx, "err", None),
+            bjd=ctx.bjd,
+            source_files=(
+                ctx.target_frames["source_file"].astype(str).tolist()
+                if "source_file" in ctx.target_frames.columns
+                else None
+            ),
+            frame_qc_reasons=getattr(ctx, "frame_qc_reasons", None),
+            evidence_for_index=None,
+        )
     )
+    _ = out_flag_reasons
 
     if bool(_cfg.savgol_detrend_enabled):
         mag_calib = savgol_detrend_lc(

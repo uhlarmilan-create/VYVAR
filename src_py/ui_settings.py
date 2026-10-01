@@ -702,6 +702,44 @@ def render_settings_dashboard(
         )
         st.markdown("---")
         st.markdown("### Data quality & validation")
+        st.caption("LC-OUTLIER-01: flag spikes with image evidence; never delete photometry.")
+        lc_out_en = st.checkbox(
+            "lc_outlier_enabled",
+            value=bool(getattr(cfg, "lc_outlier_enabled", True)),
+            help="Enable isolated-spike + image-evidence + frame_qc flagging on LC CSVs.",
+        )
+        lc_out_ns = st.slider(
+            "lc_outlier_n_sigma",
+            min_value=3.0,
+            max_value=10.0,
+            value=float(getattr(cfg, "lc_outlier_n_sigma", 5.0) or 5.0),
+            step=0.5,
+            help="Isolated-spike residual threshold (|r| > n_sigma). Statistical convention.",
+        )
+        lc_out_adj = st.slider(
+            "lc_outlier_adjacent_sigma",
+            min_value=1.0,
+            max_value=8.0,
+            value=float(getattr(cfg, "lc_outlier_adjacent_sigma", 3.0) or 3.0),
+            step=0.5,
+            help="Adjacent same-sign residual that protects flares/eclipses.",
+        )
+        lc_out_fq = st.slider(
+            "lc_outlier_frame_qc_n_sigma",
+            min_value=3.0,
+            max_value=10.0,
+            value=float(getattr(cfg, "lc_outlier_frame_qc_n_sigma", 5.0) or 5.0),
+            step=0.5,
+            help="Night MAD-sigma for whole-frame QC (FWHM/elong/sky).",
+        )
+        lc_out_ev = st.slider(
+            "lc_outlier_evidence_n_sigma",
+            min_value=3.0,
+            max_value=10.0,
+            value=float(getattr(cfg, "lc_outlier_evidence_n_sigma", 5.0) or 5.0),
+            step=0.5,
+            help="Image-evidence MAD-sigma vs same-frame similar-flux peers.",
+        )
         st.caption("LC-quality classification thresholds (Phase 2A summary `lc_quality_flag`).")
         lc_q_min = st.slider(
             "lc_quality_min_frames",
@@ -1071,6 +1109,12 @@ def render_settings_dashboard(
         cfg.democratic_detrend_enabled = bool(democratic_detrend_enabled)
         cfg.k2_mode = str(k2_mode)
         cfg.comp_slope_significance_k = float(max(0.0, min(10.0, comp_slope_sig_k)))
+        cfg.lc_outlier_enabled = bool(lc_out_en)
+        cfg.lc_outlier_n_sigma = float(max(3.0, min(10.0, lc_out_ns)))
+        cfg.lc_outlier_adjacent_sigma = float(max(1.0, min(8.0, lc_out_adj)))
+        cfg.lc_outlier_frame_qc_n_sigma = float(max(3.0, min(10.0, lc_out_fq)))
+        cfg.lc_outlier_evidence_n_sigma = float(max(3.0, min(10.0, lc_out_ev)))
+        cfg.lc_quality_min_frames = int(max(3, min(500, lc_q_min)))
         cfg.lc_quality_short_min_frames = int(max(2, min(100, lc_q_short)))
         if cfg.lc_quality_short_min_frames > cfg.lc_quality_min_frames:
             cfg.lc_quality_short_min_frames = cfg.lc_quality_min_frames

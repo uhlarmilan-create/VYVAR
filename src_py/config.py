@@ -644,6 +644,16 @@ class AppConfig:
     save_lightcurve_png: bool = False
     #: Diagnostic only: ``True`` = pre-TODO-29 order (airmass fit -> outlier detect). Default ``False`` keeps outlier -> airmass.
     phase2a_airmass_before_outlier: bool = False
+    #: LC-OUTLIER-01: enable isolated-spike + image-evidence + frame_qc flagging.
+    lc_outlier_enabled: bool = True
+    #: Isolated-spike residual threshold (|r| > n_sigma); statistical convention.
+    lc_outlier_n_sigma: float = 5.0
+    #: Adjacent same-sign residual threshold that protects flares/eclipses.
+    lc_outlier_adjacent_sigma: float = 3.0
+    #: Night MAD-sigma threshold for whole-frame QC (FWHM/elong/sky/ZP).
+    lc_outlier_frame_qc_n_sigma: float = 5.0
+    #: Image-evidence MAD-sigma vs same-frame similar-flux peers.
+    lc_outlier_evidence_n_sigma: float = 5.0
     #: TODO-35: SysRem (Tamuz et al. 2005) on exported ``lightcurve_*.csv`` after Phase 2A.
     sysrem_enabled: bool = False
     sysrem_n_iter: int = 3
@@ -1600,6 +1610,27 @@ class AppConfig:
         self.phase2a_airmass_before_outlier = bool(
             data.get("phase2a_airmass_before_outlier", self.phase2a_airmass_before_outlier)
         )
+        self.lc_outlier_enabled = bool(data.get("lc_outlier_enabled", self.lc_outlier_enabled))
+        try:
+            _los = float(data.get("lc_outlier_n_sigma", self.lc_outlier_n_sigma))
+            self.lc_outlier_n_sigma = _los if math.isfinite(_los) and _los > 0 else 5.0
+        except (TypeError, ValueError):
+            self.lc_outlier_n_sigma = 5.0
+        try:
+            _loa = float(data.get("lc_outlier_adjacent_sigma", self.lc_outlier_adjacent_sigma))
+            self.lc_outlier_adjacent_sigma = _loa if math.isfinite(_loa) and _loa > 0 else 3.0
+        except (TypeError, ValueError):
+            self.lc_outlier_adjacent_sigma = 3.0
+        try:
+            _lof = float(data.get("lc_outlier_frame_qc_n_sigma", self.lc_outlier_frame_qc_n_sigma))
+            self.lc_outlier_frame_qc_n_sigma = _lof if math.isfinite(_lof) and _lof > 0 else 5.0
+        except (TypeError, ValueError):
+            self.lc_outlier_frame_qc_n_sigma = 5.0
+        try:
+            _loe = float(data.get("lc_outlier_evidence_n_sigma", self.lc_outlier_evidence_n_sigma))
+            self.lc_outlier_evidence_n_sigma = _loe if math.isfinite(_loe) and _loe > 0 else 5.0
+        except (TypeError, ValueError):
+            self.lc_outlier_evidence_n_sigma = 5.0
         self.sysrem_enabled = bool(data.get("sysrem_enabled", self.sysrem_enabled))
         try:
             self.sysrem_n_iter = max(1, int(data.get("sysrem_n_iter", self.sysrem_n_iter)))
@@ -2714,6 +2745,11 @@ class AppConfig:
             "aperture_photometry_enabled": bool(self.aperture_photometry_enabled),
             "save_lightcurve_png": bool(self.save_lightcurve_png),
             "phase2a_airmass_before_outlier": bool(self.phase2a_airmass_before_outlier),
+            "lc_outlier_enabled": bool(self.lc_outlier_enabled),
+            "lc_outlier_n_sigma": float(self.lc_outlier_n_sigma),
+            "lc_outlier_adjacent_sigma": float(self.lc_outlier_adjacent_sigma),
+            "lc_outlier_frame_qc_n_sigma": float(self.lc_outlier_frame_qc_n_sigma),
+            "lc_outlier_evidence_n_sigma": float(self.lc_outlier_evidence_n_sigma),
             "sysrem_enabled": bool(self.sysrem_enabled),
             "comp_qa_enabled": bool(self.comp_qa_enabled),
             "trust_flag_enabled": bool(self.trust_flag_enabled),

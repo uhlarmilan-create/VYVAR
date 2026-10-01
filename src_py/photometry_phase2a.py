@@ -1788,58 +1788,35 @@ def detect_outliers(
     outlier_sigma: float = 3.0,
     feature_mask: np.ndarray | None = None,
     skip_sigma_clip: bool = False,
+    err: np.ndarray | None = None,
+    bjd: np.ndarray | None = None,
 ) -> list[str]:
-    """Outlier detekcia v svetelnej krivke (reporting path; mask-first for features).
+    """LC-OUTLIER-01 wrapper: isolated-spike flags without image evidence.
 
-    ``feature_mask`` protects eclipse/transit epochs (arXiv:2402.16018) from sigma-clipping.
-    ``skip_sigma_clip`` relaxes clipping for VSX-known variables (catalogued astrophysical signal).
+    Legacy args ``feature_mask`` / ``skip_sigma_clip`` / ``outlier_sigma`` are
+    accepted for call-site compatibility. VSX skip is retired: flare/eclipse
+    protection is the adjacent same-sign rule in ``lc_outlier.isolated_spike_mask``.
+    Global night MAD clip (``outlier_hi``/``outlier_lo``) is retired.
 
     Returns:
-        list flagov: "normal" / "saturated" / "outlier_hi" / "outlier_lo" / "no_data"
+        flags: normal / saturated / spike_unconfirmed / no_data
     """
-    n = len(mag_calib)
-    flags = ["no_data"] * n
-    finite_mask = np.isfinite(mag_calib)
+    _ = (feature_mask, skip_sigma_clip, outlier_sigma)
+    from lc_outlier import assign_lc_flags  # noqa: PLC0415
 
-    _prot = np.zeros(n, dtype=bool)
-    if feature_mask is not None:
-        _fm = np.asarray(feature_mask, dtype=bool)
-        if len(_fm) == n:
-            _prot = _fm
-
-    for i in range(n):
-        if not math.isfinite(mag_calib[i]):
-            flags[i] = "no_data"
-        elif bool(flags_saturated[i]):
-            flags[i] = "saturated"
-        elif bool(_prot[i]) or bool(skip_sigma_clip):
-            flags[i] = "normal"
-        else:
-            flags[i] = "normal"
-
-    if skip_sigma_clip or finite_mask.sum() < 3:
-        return flags
-
-    clip_mask = finite_mask & ~_prot
-    if int(clip_mask.sum()) < 3:
-        clip_mask = finite_mask
-
-    finite_vals = mag_calib[clip_mask]
-    med = float(np.median(finite_vals))
-    sigma = _mad_sigma_or_std_floor(finite_vals)
-    thr = outlier_sigma * sigma
-
-    for i in range(n):
-        if flags[i] != "normal":
-            continue
-        if bool(_prot[i]):
-            continue
-        if mag_calib[i] < med - thr:
-            flags[i] = "outlier_hi"
-        elif mag_calib[i] > med + thr:
-            flags[i] = "outlier_lo"
-
-    return flags
+    m = np.asarray(mag_calib, dtype=float)
+    n = len(m)
+    e = np.asarray(err, dtype=float) if err is not None else np.full(n, float("nan"))
+    t = np.asarray(bjd, dtype=float) if bjd is not None else np.arange(n, dtype=float)
+    result = assign_lc_flags(
+        m,
+        e,
+        t,
+        sat_flags=np.asarray(flags_saturated, dtype=bool),
+        evidence_for_index=None,
+        enabled=True,
+    )
+    return list(result.flags)
 
 def apply_reporting_postprocess(
     mag_calib: np.ndarray,
@@ -1854,32 +1831,68 @@ def apply_reporting_postprocess(
     ac_ok: bool,
     delta_m_corr: float | None,
     cfg: AppConfig | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]]:
-    """Workstream B: ship ensemble-calibrated mag; mask-first outliers; no target airmass LSQ.
+    err: np.ndarray | None = None,
+    bjd: np.ndarray | None = None,
+    source_files: list[str] | None = None,
+    frame_qc_reasons: dict[str, str] | None = None,
+    evidence_for_index: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str], list[str]]:
+    """Workstream B: ship ensemble-calibrated mag; LC-OUTLIER-01 flags; no target airmass LSQ.
 
-    Basis: Plavchan et al. (2007) arXiv:0704.3584; TESS subdwarf mask arXiv:2402.16018.
+    Photometry columns are never altered by flagging. Returns flag_reason list
+    alongside flags (LC-OUTLIER-01).
     """
+    from lc_outlier import assign_lc_flags  # noqa: PLC0415
+
     _cfg = cfg or AppConfig()
     mag_calib_raw = np.asarray(mag_calib, dtype=np.float64).copy()
     mag_for_report = np.asarray(mag_calib_ct, dtype=np.float64)
+    n = len(mag_for_report)
+    e = np.asarray(err, dtype=float) if err is not None else np.full(n, float("nan"))
+    t = np.asarray(bjd, dtype=float) if bjd is not None else np.arange(n, dtype=float)
+    _src = source_files
+    if _src is None and "source_file" in target_frames.columns:
+        _src = target_frames["source_file"].astype(str).tolist()
+    _enabled = bool(getattr(_cfg, "lc_outlier_enabled", True))
+    _n_sigma = float(getattr(_cfg, "lc_outlier_n_sigma", 5.0) or 5.0)
+    _adj = float(getattr(_cfg, "lc_outlier_adjacent_sigma", 3.0) or 3.0)
+    # Keep empirical eclipse mask as soft log only; isolation rule is the hard guard.
     _feature_mask = empirical_feature_mask_mag(mag_for_report)
-    _vsx_known = _target_row_is_vsx_known_variable(target_row)
     if int(_feature_mask.sum()) > 0:
         logging.info(
-            "[OUTLIER] Feature mask: %d/%d frames protected before clip (arXiv:2402.16018)",
+            "[OUTLIER] Feature mask (info): %d/%d frames look like eclipse runs "
+            "(adjacent-sign rule protects them; arXiv:2402.16018)",
             int(_feature_mask.sum()),
             len(_feature_mask),
         )
-    if _vsx_known:
-        logging.debug("[OUTLIER] VSX-known variable %s: sigma clip skipped", target_name)
-    out_flags = detect_outliers(
+    _ = (outlier_sigma, target_name, target_row)
+    result = assign_lc_flags(
         mag_for_report,
-        sat_flags,
-        outlier_sigma=outlier_sigma,
-        feature_mask=_feature_mask,
-        skip_sigma_clip=_vsx_known,
+        e,
+        t,
+        sat_flags=np.asarray(sat_flags, dtype=bool),
+        source_files=_src,
+        frame_qc_reasons=frame_qc_reasons,
+        evidence_for_index=evidence_for_index,
+        n_sigma=_n_sigma,
+        adjacent_sigma=_adj,
+        enabled=_enabled,
     )
+    out_flags = list(result.flags)
+    out_reasons = list(result.reasons)
     _preserve_nondetection_flags_helper(out_flags, target_frames)
+    for i in range(min(len(out_flags), len(out_reasons))):
+        if out_flags[i] == "nondetection" and not out_reasons[i]:
+            out_reasons[i] = "nondetection"
+    if result.n_artifact or result.n_spike_unconfirmed or result.n_frame_qc:
+        logging.info(
+            "[LC-OUTLIER] %s: artifact=%d spike_unconfirmed=%d frame_qc=%d saturated=%d",
+            target_name,
+            result.n_artifact,
+            result.n_spike_unconfirmed,
+            result.n_frame_qc,
+            result.n_saturated,
+        )
     mag_out = mag_calib_raw.copy()
     if ac_ok and delta_m_corr is not None and np.isfinite(float(delta_m_corr)):
         mag_calib_ac = mag_out + float(delta_m_corr)
@@ -1893,7 +1906,7 @@ def apply_reporting_postprocess(
             "[PHASE 2A] phase2a_airmass_before_outlier=True ignored for shipped columns "
             "(Workstream B: no target airmass LSQ on reporting path)"
         )
-    return mag_calib_raw, mag_out, mag_calib_ct_out, mag_calib_ac, out_flags
+    return mag_calib_raw, mag_out, mag_calib_ct_out, mag_calib_ac, out_flags, out_reasons
 
 def democratic_detrend_lc(
     mag_calib: np.ndarray,
@@ -3126,6 +3139,8 @@ class _Phase2AState:
     k2_fit_meta: dict[str, Any] = field(default_factory=dict)
     #: APERTURE-01 policy record (mode, f, night FWHM, r_ap/r_in/r_out).
     aperture_policy: dict[str, Any] | None = None
+    #: LC-OUTLIER-01: frame_key -> reason (empty = OK) from night MAD-sigma QC.
+    frame_qc_reasons: dict[str, str] = field(default_factory=dict)
 
 def _build_phase2a_dynamic_params(
     state: _Phase2AState,
@@ -3981,6 +3996,29 @@ def run_phase2a(
     _ac_sign_logged_ref: list[bool] = [False]
 
     state.lunar_context = _phase2a_compute_lunar_context(state)
+    # LC-OUTLIER-01: night-level frame QC (MAD-sigma vs draft_manifest inspection).
+    try:
+        from lc_outlier import (  # noqa: PLC0415
+            frame_qc_mask_from_night_table,
+            load_frame_metrics_from_manifest,
+        )
+
+        _dd_qc = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+        _man = _dd_qc / "draft_manifest.json"
+        _fq_ns = float(getattr(_cfg, "lc_outlier_frame_qc_n_sigma", 5.0) or 5.0)
+        _fm = load_frame_metrics_from_manifest(_man)
+        state.frame_qc_reasons = frame_qc_mask_from_night_table(_fm, n_sigma=_fq_ns)
+        _n_bad = sum(1 for v in state.frame_qc_reasons.values() if v)
+        if _n_bad:
+            logging.info(
+                "[LC-OUTLIER] frame_qc: %d/%d frames flagged (n_sigma=%.1f)",
+                _n_bad,
+                len(state.frame_qc_reasons),
+                _fq_ns,
+            )
+    except Exception as _fq_exc:  # noqa: BLE001
+        logging.warning("[LC-OUTLIER] frame_qc setup failed (non-fatal): %s", _fq_exc)
+        state.frame_qc_reasons = {}
     _dyn = _build_phase2a_dynamic_params(state, output_dir, aperture_fwhm_factor=_apt_fw)
     if _dyn.get("plate_scale_arcsec_px") is None and _cfg is not None:
         try:

@@ -915,10 +915,20 @@ def _select_export_lc_rows(lc_df: pd.DataFrame) -> pd.DataFrame:
         bjd.to_numpy(dtype=float)
     )
     if "flag" in work.columns:
+        from lc_outlier import EXPORT_EXCLUDE_FLAGS, FLAG_SPIKE_UNCONFIRMED  # noqa: PLC0415
+
         fl = work["flag"].astype(str).str.strip().str.lower()
-        good = fl.isin(("normal", "")) | fl.isna()
-        bad = fl.isin(("no_data", "saturated", "edge_fail", "nondetection"))
-        mask = finite & (good | ~bad)
+        # LC-OUTLIER-01: drop frame_qc + artifact (+ hard bad); keep spike_unconfirmed.
+        bad = fl.isin(tuple(EXPORT_EXCLUDE_FLAGS - {FLAG_SPIKE_UNCONFIRMED}))
+        good = fl.isin(("normal", "", FLAG_SPIKE_UNCONFIRMED)) | fl.isna()
+        mask = finite & (good | ~bad) & ~bad
+        n_excl = int((finite & bad).sum())
+        if n_excl:
+            logging.info(
+                "[EXPORT] LC-OUTLIER excluded %d epochs (flags in %s)",
+                n_excl,
+                sorted(EXPORT_EXCLUDE_FLAGS),
+            )
         out = work.loc[mask].copy()
         if out.empty and finite.any():
             out = work.loc[finite].copy()
