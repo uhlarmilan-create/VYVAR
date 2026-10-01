@@ -1,4 +1,5 @@
 CURSOR RESULT - 2026-10-01 APERTURE-PERTARGET-01
+Commit: 18257e1
 
 What I did
 Optional per_target aperture mode (brightness-dependent f*
