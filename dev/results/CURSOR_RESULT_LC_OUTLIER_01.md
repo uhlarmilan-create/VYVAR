@@ -98,6 +98,6 @@ hashes change; era re-cut is Milan's LOCK.
 - docs/VYVAR_PARAMS.md, VYVAR_CONFIG_GUIDE_EN.md / _CZ.md
 - dev/tests/test_lc_outlier_01.py, test_ui_params_dashboard.py
 - Commit fix+tests: 3129af7
-- RESULT commit: (this commit)
+- RESULT commit: dd85094
 
 STOP for Milan. Branch alpha-fixes-01 only; main untouched.
