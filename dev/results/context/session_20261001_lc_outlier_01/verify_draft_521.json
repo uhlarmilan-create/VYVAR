@@ -1,0 +1,213 @@
+{
+  "frame_qc_n_frames": 2,
+  "class_totals": {
+    "normal": 6492,
+    "no_data": 1961,
+    "artifact": 14,
+    "spike_unconfirmed": 48
+  },
+  "n_targets": 65,
+  "n_targets_flag_changed": 22,
+  "photometry_hash_mismatches": [],
+  "v1023_epochs": [
+    {
+      "frame": "036",
+      "bjd": 2461161.447588307,
+      "mag": 11.296643,
+      "err": 0.044651,
+      "flag": "artifact",
+      "flag_reason": "artifact:annulus_sky_sigma_z=6.85",
+      "resid": -9.543728024008434,
+      "evidence_fired": true,
+      "evidence_reasons": [
+        "annulus_sky_sigma_z=6.85"
+      ],
+      "zscores": {
+        "centroid_offset_px": 2.245263174669665,
+        "fwhm_px": 1.7452098085076018,
+        "elongation": 1.8201537003253545,
+        "peak_to_flux": -2.355544615448179,
+        "annulus_sky_sigma": 6.848421805140289,
+        "annulus_sky_sigma_vs_night": 1.0904716854964347
+      },
+      "metrics": {
+        "centroid_offset_px": 4.023942471798198,
+        "fwhm_px": 11.817889880059447,
+        "elongation": 1.882160205837427,
+        "peak_to_flux": 0.03743413129064503,
+        "annulus_sky_sigma": 308.45401143585076,
+        "annulus_sky_sigma_vs_night": 1015.1012970059192
+      }
+    },
+    {
+      "frame": "110",
+      "bjd": 2461161.551222042,
+      "mag": 11.374746,
+      "err": 0.038256,
+      "flag": "artifact",
+      "flag_reason": "artifact:annulus_sky_sigma_z=11.57",
+      "resid": -12.026557925554181,
+      "evidence_fired": true,
+      "evidence_reasons": [
+        "annulus_sky_sigma_z=11.57"
+      ],
+      "zscores": {
+        "centroid_offset_px": 4.003291803435521,
+        "fwhm_px": 1.9640422519788632,
+        "elongation": 3.6407821701026912,
+        "peak_to_flux": -2.4168800780295947,
+        "annulus_sky_sigma": 11.574101773752433,
+        "annulus_sky_sigma_vs_night": 0.022387780359118554
+      },
+      "metrics": {
+        "centroid_offset_px": 4.777944291771881,
+        "fwhm_px": 11.990945946890825,
+        "elongation": 1.8318822380254909,
+        "peak_to_flux": 0.027550420850149138,
+        "annulus_sky_sigma": 290.31361394511083,
+        "annulus_sky_sigma_vs_night": 797.0185408802265
+      }
+    },
+    {
+      "frame": "137",
+      "bjd": 2461161.589034191,
+      "mag": 11.400211,
+      "err": 0.031532,
+      "flag": "artifact",
+      "flag_reason": "artifact:centroid_offset_px_z=6.07,elongation_z=9.19,annulus_sky_sigma_z=14.80",
+      "resid": -12.66226373208168,
+      "evidence_fired": true,
+      "evidence_reasons": [
+        "centroid_offset_px_z=6.07",
+        "elongation_z=9.19",
+        "annulus_sky_sigma_z=14.80"
+      ],
+      "zscores": {
+        "centroid_offset_px": 6.068638400166597,
+        "fwhm_px": 0.6236144447861007,
+        "elongation": 9.189951949987822,
+        "peak_to_flux": -1.2245217249227414,
+        "annulus_sky_sigma": 14.799575324495224,
+        "annulus_sky_sigma_vs_night": -0.8636421377011063
+      },
+      "metrics": {
+        "centroid_offset_px": 4.735768894000942,
+        "fwhm_px": 11.495289784531124,
+        "elongation": 2.108123728679008,
+        "peak_to_flux": 0.031566614879078074,
+        "annulus_sky_sigma": 299.9891621458328,
+        "annulus_sky_sigma_vs_night": 616.107803801426
+      }
+    }
+  ],
+  "elevated_runs_ge2": [
+    {
+      "catalog_id": "1399187099635410432",
+      "i0": 24,
+      "i1": 25,
+      "n": 2,
+      "sign": 1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1399965828746056704",
+      "i0": 49,
+      "i1": 51,
+      "n": 3,
+      "sign": -1,
+      "flags": [
+        "normal",
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1399965828746056704",
+      "i0": 126,
+      "i1": 127,
+      "n": 2,
+      "sign": -1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1400397902455707776",
+      "i0": 66,
+      "i1": 67,
+      "n": 2,
+      "sign": -1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1423537640058297344",
+      "i0": 34,
+      "i1": 35,
+      "n": 2,
+      "sign": 1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1424482154906384640",
+      "i0": 93,
+      "i1": 94,
+      "n": 2,
+      "sign": -1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1427650328942531584",
+      "i0": 45,
+      "i1": 46,
+      "n": 2,
+      "sign": 1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1427685753832960256",
+      "i0": 0,
+      "i1": 1,
+      "n": 2,
+      "sign": -1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    },
+    {
+      "catalog_id": "1427685753832960256",
+      "i0": 38,
+      "i1": 39,
+      "n": 2,
+      "sign": 1,
+      "flags": [
+        "normal",
+        "normal"
+      ]
+    }
+  ],
+  "elevated_runs_incorrectly_flagged": [],
+  "lc_csv_sha16_sample": {
+    "lightcurve_1399187099635410432.csv": "5a4e14090326266d",
+    "lightcurve_1399392570870712448.csv": "1d0a66814d33268b",
+    "lightcurve_1399760220071430784.csv": "4f9a1997b458eaf7",
+    "lightcurve_1399924455324532480.csv": "47a252799d0e0f02",
+    "lightcurve_1399936726047243392.csv": "7a3a27ff1f274f67"
+  }
+}
