@@ -2,7 +2,8 @@ CURSOR RESULT - 2026-10-02 ALPHA-FIXES-02
 
 Architect: Claude. Implementer: Claude Code.
 Branch: alpha-fixes-01. Base: 630a51b.
-Two commits: A = APERTURE-DYNAMIC-01; B = LC-FLAG-ERR-01.
+Part A commit: dc7461a (APERTURE-DYNAMIC-01)
+Part B commit: 50612c9 (LC-FLAG-ERR-01)
 
 ==============================================================================
 PART A - APERTURE-DYNAMIC-01
