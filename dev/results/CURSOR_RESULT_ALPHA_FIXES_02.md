@@ -154,9 +154,21 @@ None blocking.
 --fast --clean OVERALL PASS (1674 passed, 34 skipped).
 Artifact: session_20261002_alpha_fixes_02/fast_clean.txt
 
---full-epsf: expected to change (Part A default); report below; no LOCK.
-(run in progress / see full_epsf.txt when complete)
+--full-epsf OVERALL FAIL (expected; Part A default moved anchors). NO LOCK.
+Artifact: session_20261002_alpha_fixes_02/full_epsf.txt
+Key hashes for era07 planning (report only):
+  full-pipeline PASS 3403s
+  full-epsf-stage PASS n_stars=64 wrote 53 PSF LCs in 15866s
+  era05_aperture snap (unchanged reference): 87197716af167132... n=53
+  run core aperture: d5f7cf650ce61b99... n=53  (MISMATCH vs snap)
+  run ext_aperture:  d1bd2c59ca5150b9... n=157 (MISMATCH)
+  run core psf:      d8a396dd8b7b5cff... n=53  (MISMATCH vs epsf01)
+  full-sha-v1-identity FAIL non-PSF v1 diffs n=94
+  full-science-compare FAIL science_failures=50
+  full-g3-residual FAIL (BO rms shifted under dynamic aperture)
 
 ## STOP
 Part A + Part B complete for Milan. AIJ DYNAMIC RMS(diff)=5.245 mmag.
-HAT-148 052/103 -> high_err. Anchors will move; do not LOCK.
+HAT-148 052/103 -> high_err. Anchors moved as expected; do not LOCK.
+Era07 re-cut should lock together with IDENT-JUMP re-export using the
+new core/ext aperture hashes above.
