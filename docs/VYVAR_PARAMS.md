@@ -6,7 +6,7 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-10-01T15:24:55Z at git HEAD 2f37bd1._
+_Generated 2026-10-02T06:59:02Z at git HEAD 630a51b._
 
 ## Summary
 
@@ -194,10 +194,10 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `aperture_correction_max_contamination` | 0.15 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Contamination |
 | `aperture_correction_max_scatter_mag` | 0.03 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Scatter Mag |
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Min Ref Stars |
-| `aperture_f_grid` | [0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5] | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture F Grid |
+| `aperture_f_grid` | [0.5, 0.6, 0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5] | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture F Grid |
 | `aperture_fwhm_factor` | 1.35 | 0.25 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Photometry Enabled |
-| `aperture_policy_mode` | f_fixed_night | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture Policy Mode |
+| `aperture_policy_mode` | per_target | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture Policy Mode |
 | `aperture_snr_sizing` | {"large": 4.0, "small": 1.5} | - | expert | resolved | config_runtime | universal | none | n/a | auto | Aperture SNR Sizing |
 | `aperture_variable_factor` | 1.0 | 0.25 .. 3 | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Variable Factor |
 | `cog_ac_factor_max` | 5.0 | - | expert | static | config_runtime | universal | none | n/a | custom | COG Ac Factor Max |

@@ -1,14 +1,15 @@
-"""APERTURE-PERTARGET-01: optional per-target aperture radius (brightness-dependent).
+"""APERTURE-DYNAMIC-01 / APERTURE-PERTARGET-01: per-target aperture (default).
 
 Physics (D5-1): target and its comps share the same enclosed-energy fraction
-(same f = r / FWHM) for one differential measurement. Different radii inside
-one differential LC are not allowed without a curve-of-growth correction.
+(same f = r / FWHM) for one differential measurement.
 
 Selection: f* = argmin of Abbe / von Neumann point-to-point scatter of the
-differential LC (comps at the same f). RMS is not used - it would reward
-suppressing real variability. Flat minimum / ties -> larger f (more flux).
+differential LC (comps at the same f). Ties / flat minimum -> larger f.
+Production radius: r = f* x FWHM_frame (FWHM-AUTH-01); night median only as
+fallback when a frame has no QC FWHM.
 
-Default production mode remains ``f_fixed_night`` (one r for the draft).
+Default production mode is ``per_target`` (APERTURE-DYNAMIC-01). Fixed one-r
+for the draft remains available as ``f_fixed_night``.
 """
 from __future__ import annotations
 
@@ -25,8 +26,10 @@ import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
-# APERTURE-01b sampling grid (task default).
+# APERTURE-DYNAMIC-01: extended below 0.75 so f* is not forced to the edge.
 DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (
+    0.5,
+    0.6,
     0.75,
     1.0,
     1.25,
@@ -80,11 +83,7 @@ def equal_weight_ensemble_delta(
     target_mag: np.ndarray,
     comp_mags: Mapping[str, np.ndarray],
 ) -> np.ndarray:
-    """Differential LC: target - equal-weight flux-sum ensemble of comps.
-
-    Same flux-sum convention as ``ensemble_normalize`` (AIJ-style), but with
-    equal weights for aperture-radius selection (membership fixed by Layer 3).
-    """
+    """Differential LC: target - equal-weight flux-sum ensemble of comps."""
     t = np.asarray(target_mag, dtype=float)
     n = len(t)
     if n == 0:
@@ -121,10 +120,18 @@ def pick_f_star(p2p_by_f: Mapping[float, float]) -> float | None:
             best_p2p = p
             best_f = f
         elif abs(p - best_p2p) <= 1e-12:
-            # Flat minimum: prefer larger f (more enclosed flux).
             if best_f is None or f > best_f:
                 best_f = f
     return best_f
+
+
+def f_star_is_grid_edge(f_star: float, f_grid: Sequence[float], *, tol: float = 1e-9) -> bool:
+    """True if f* equals the minimum or maximum of the sampling grid."""
+    vals = sorted(float(x) for x in f_grid if math.isfinite(float(x)) and float(x) > 0)
+    if len(vals) < 2 or not math.isfinite(float(f_star)):
+        return False
+    fs = float(f_star)
+    return abs(fs - vals[0]) <= tol or abs(fs - vals[-1]) <= tol
 
 
 def _aperture_flux_uniform(
@@ -134,11 +141,7 @@ def _aperture_flux_uniform(
     r_in: float,
     r_out: float,
 ) -> np.ndarray:
-    """Sky-subtracted exact aperture sums at one shared radius (photutils).
-
-    Self-contained to avoid photometry_shared <-> photometry_core circular imports
-    when this module is imported outside a full Phase-2A load.
-    """
+    """Sky-subtracted exact aperture sums at one shared radius (photutils)."""
     from photutils.aperture import CircularAnnulus, CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
     from sky_estimation import sky_median_mask  # noqa: PLC0415
@@ -171,7 +174,7 @@ def _aperture_flux_uniform(
                 sky_pp[i] = float("nan")
         flux_arr = sums - sky_pp * area
     except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[APERTURE-PERTARGET] uniform aperture failed: %s", exc)
+        LOGGER.debug("[APERTURE-DYNAMIC] uniform aperture failed: %s", exc)
     return flux_arr
 
 
@@ -184,11 +187,7 @@ def measure_flux_on_f_grid(
     annulus_inner_fwhm: float,
     annulus_outer_fwhm: float,
 ) -> dict[float, np.ndarray]:
-    """Measure sky-subtracted aperture flux for every star at each f in the grid.
-
-    Shared by UI diagnostics and night_run / Phase 2A. Annulus scales with the
-    same FWHM (2.7 / 5.2 FWHM production defaults stay caller's responsibility).
-    """
+    """Measure sky-subtracted aperture flux for every star at each f in the grid."""
     from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
 
     pos = np.asarray(xy, dtype=float)
@@ -219,6 +218,7 @@ class PerTargetChoice:
     p2p_by_f: dict[str, float] = field(default_factory=dict)
     n_comps: int = 0
     n_frames: int = 0
+    f_edge: bool = False
 
 
 @dataclass
@@ -229,9 +229,12 @@ class ApertureGridNight:
     fwhm_night_px: float
     # frame_stem -> {cid: {f: flux}}
     frames: dict[str, dict[str, dict[float, float]]] = field(default_factory=dict)
+    # frame_stem -> FWHM used for that frame (AUTH-01)
+    fwhm_by_frame: dict[str, float] = field(default_factory=dict)
     elapsed_s: float = 0.0
     n_stars: int = 0
     n_frames_measured: int = 0
+    n_fwhm_fallback_night: int = 0
 
 
 def frame_stem_from_source(source_file: str) -> str:
@@ -241,6 +244,24 @@ def frame_stem_from_source(source_file: str) -> str:
     if name.lower().endswith(".fits"):
         return Path(name).stem
     return Path(name).stem
+
+
+def _fwhm_from_fits_header(hdr: Any, *, night_fallback: float) -> tuple[float, bool]:
+    """Return (fwhm_px, used_night_fallback). Prefer VY_FWHM (FWHM-AUTH-01)."""
+    from aperture_policy import clamp_fwhm_px  # noqa: PLC0415
+
+    raw = None
+    try:
+        raw = hdr.get("VY_FWHM")
+    except Exception:  # noqa: BLE001
+        raw = None
+    frame = clamp_fwhm_px(raw)
+    if frame is not None:
+        return float(frame), False
+    night = clamp_fwhm_px(night_fallback)
+    if night is not None:
+        return float(night), True
+    return 5.0, True
 
 
 def measure_night_grid(
@@ -253,7 +274,7 @@ def measure_night_grid(
     annulus_outer_fwhm: float = 5.2,
     max_frames: int | None = None,
 ) -> ApertureGridNight:
-    """Measure targets+comps on the f-grid for every aligned FITS in ``frames_dir``."""
+    """Measure targets+comps on the f-grid; r = f x FWHM_frame per frame."""
     from astropy.io import fits  # noqa: PLC0415
 
     want = {str(c) for c in catalog_ids if str(c).strip()}
@@ -270,6 +291,8 @@ def measure_night_grid(
         fits_files = fits_files[: int(max_frames)]
     for fp in fits_files:
         stem = fp.stem
+        if stem.upper() == "MASTERSTAR":
+            continue
         proc = Path(frames_dir) / f"proc_{stem}.csv"
         if not proc.is_file():
             continue
@@ -280,7 +303,7 @@ def measure_night_grid(
                 low_memory=False,
             )
         except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[APERTURE-PERTARGET] proc read fail %s: %s", proc.name, exc)
+            LOGGER.debug("[APERTURE-DYNAMIC] proc read fail %s: %s", proc.name, exc)
             continue
         if "catalog_id" not in df.columns:
             continue
@@ -297,14 +320,25 @@ def measure_night_grid(
         try:
             with fits.open(fp, memmap=True) as hdul:
                 img = np.asarray(hdul[0].data, dtype=float)
+                fwhm_frame, used_fb = _fwhm_from_fits_header(
+                    hdul[0].header, night_fallback=float(fwhm_night_px)
+                )
         except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[APERTURE-PERTARGET] FITS open fail %s: %s", fp.name, exc)
+            LOGGER.debug("[APERTURE-DYNAMIC] FITS open fail %s: %s", fp.name, exc)
             continue
+        if used_fb:
+            night.n_fwhm_fallback_night += 1
+            LOGGER.info(
+                "[APERTURE-DYNAMIC] frame %s: no VY_FWHM - using night median %.4f px",
+                stem,
+                float(fwhm_frame),
+            )
+        night.fwhm_by_frame[stem] = float(fwhm_frame)
         fluxes = measure_flux_on_f_grid(
             img,
             xy,
             f_grid=night.f_grid,
-            fwhm_px=float(fwhm_night_px),
+            fwhm_px=float(fwhm_frame),
             annulus_inner_fwhm=float(annulus_inner_fwhm),
             annulus_outer_fwhm=float(annulus_outer_fwhm),
         )
@@ -317,10 +351,12 @@ def measure_night_grid(
         night.n_frames_measured += 1
     night.elapsed_s = float(time.perf_counter() - t0)
     LOGGER.info(
-        "[APERTURE-PERTARGET] grid measured: n_frames=%d n_stars=%d n_f=%d elapsed=%.1fs",
+        "[APERTURE-DYNAMIC] grid measured: n_frames=%d n_stars=%d n_f=%d "
+        "fwhm_fallback=%d elapsed=%.1fs",
         night.n_frames_measured,
         night.n_stars,
         len(night.f_grid),
+        night.n_fwhm_fallback_night,
         night.elapsed_s,
     )
     return night
@@ -342,7 +378,6 @@ def series_from_grid(
             continue
         v = ent.get(ff)
         if v is None:
-            # tolerate float key rounding
             for k, val in ent.items():
                 if abs(float(k) - ff) < 1e-9:
                     v = val
@@ -373,6 +408,8 @@ def choose_f_for_target(
     f_star = pick_f_star(p2p_by_f)
     if f_star is None:
         f_star = float(night.f_grid[len(night.f_grid) // 2]) if night.f_grid else 1.35
+    edge = f_star_is_grid_edge(float(f_star), night.f_grid)
+    # Representative r_ap for audit (night median scale); per-frame r set at apply.
     r_ap = float(f_star) * float(night.fwhm_night_px)
     return PerTargetChoice(
         catalog_id=str(target_cid),
@@ -381,6 +418,7 @@ def choose_f_for_target(
         p2p_by_f={f"{k:.4g}": float(v) for k, v in sorted(p2p_by_f.items())},
         n_comps=len(list(comp_ids)),
         n_frames=len(list(frame_order)),
+        f_edge=bool(edge),
     )
 
 
@@ -391,12 +429,11 @@ def apply_grid_fluxes_to_frames(
     catalog_ids: Sequence[str],
     f_star: float,
 ) -> pd.DataFrame:
-    """Replace mag_inst / aperture_r_px for selected stars with grid values at f*."""
+    """Replace mag_inst / aperture_r_px with grid values at f* (r = f* x FWHM_frame)."""
     if all_frames is None or all_frames.empty or "source_file" not in all_frames.columns:
         return all_frames
     out = all_frames.copy()
     want = {str(c) for c in catalog_ids}
-    r_ap = float(f_star) * float(night.fwhm_night_px)
     for i, row in out.iterrows():
         cid = str(row.get("catalog_id", ""))
         if cid not in want:
@@ -413,6 +450,8 @@ def apply_grid_fluxes_to_frames(
                     break
         if flux is None or not math.isfinite(float(flux)) or float(flux) <= 0:
             continue
+        fwhm = float(night.fwhm_by_frame.get(stem, night.fwhm_night_px))
+        r_ap = float(f_star) * fwhm
         out.at[i, "mag_inst"] = float(-2.5 * math.log10(float(flux)))
         out.at[i, "aperture_r_px"] = float(r_ap)
         out.at[i, "aperture_f"] = float(f_star)
@@ -429,16 +468,20 @@ def write_per_target_choices(
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    n_edge = sum(1 for c in choices.values() if bool(c.f_edge))
     payload = {
-        "policy": "APERTURE-PERTARGET-01",
+        "policy": "APERTURE-DYNAMIC-01",
         "mode": MODE_PER_TARGET,
         "f_grid": [float(f) for f in f_grid],
         "fwhm_night_px": float(fwhm_night_px),
         "elapsed_s": float(elapsed_s),
+        "n_targets": len(choices),
+        "n_f_edge": int(n_edge),
         "targets": {
             cid: {
                 "f_star": c.f_star,
                 "r_ap_px": c.r_ap_px,
+                "aperture_f_edge": bool(c.f_edge),
                 "p2p_by_f": c.p2p_by_f,
                 "n_comps": c.n_comps,
                 "n_frames": c.n_frames,
@@ -458,6 +501,7 @@ __all__ = [
     "apply_grid_fluxes_to_frames",
     "choose_f_for_target",
     "equal_weight_ensemble_delta",
+    "f_star_is_grid_edge",
     "flux_to_mag",
     "frame_stem_from_source",
     "measure_flux_on_f_grid",

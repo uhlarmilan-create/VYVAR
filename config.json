@@ -343,12 +343,11 @@
   // Master switch of aperture photometry - the production measurement method
   // of VYVAR.
   "aperture_photometry_enabled": true,
-  // APERTURE-01: f_fixed_night = f x median FWHM of the night (one r for
-  // the draft); f_per_frame = f x QC FWHM of that frame. per_target =
-  // APERTURE-PERTARGET-01 (f* per target; comps share that f*). Settings
-  // toggle: "Same aperture for all targets and comps".
-  "aperture_policy_mode": "f_fixed_night",
-  "aperture_f_grid": [0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5],
+  // APERTURE-DYNAMIC-01 default: per_target = each target picks f* by Abbe
+  // p2p; comps share that f*; r = f* x FWHM_frame. f_fixed_night / f_per_frame
+  // remain options (UI: "Same aperture for all targets and comps").
+  "aperture_policy_mode": "per_target",
+  "aperture_f_grid": [0.5, 0.6, 0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5],
   // Aperture size multiplier applied to the variable (target) star.
   "aperture_variable_factor": 1.0,
   // Optional 'democratic' detrend of the light curve (median trend of the

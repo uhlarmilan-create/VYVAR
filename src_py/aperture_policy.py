@@ -68,14 +68,16 @@ def fwhm_for_radius(
 ) -> float | None:
     """FWHM that enters r_ap = f x FWHM (annulus uses the same value).
 
-    ``per_target`` uses the night-median FWHM as the scale (same as
-    ``f_fixed_night``); the per-target factor f* is chosen later.
+    ``per_target`` (APERTURE-DYNAMIC-01) uses per-frame QC FWHM like
+    ``f_per_frame``; f* is chosen later and r = f* x FWHM_frame. Night median
+    is the fallback when a frame has no QC FWHM.
     """
     m = normalize_aperture_policy_mode(mode)
     frame = clamp_fwhm_px(fwhm_frame_px)
     night = clamp_fwhm_px(fwhm_night_median_px, fallback=frame)
-    if m in (MODE_FIXED_NIGHT, MODE_PER_TARGET):
+    if m == MODE_FIXED_NIGHT:
         return night if night is not None else frame
+    # f_per_frame and per_target: prefer frame FWHM
     return frame if frame is not None else night
 
 

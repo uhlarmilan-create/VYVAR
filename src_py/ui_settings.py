@@ -576,14 +576,14 @@ def render_settings_dashboard(
             step=0.1,
             help="Aperture radius = factor x measured FWHM (f_fixed_night).",
         )
-        _same_ap = str(getattr(cfg, "aperture_policy_mode", "f_fixed_night")).strip().lower() != "per_target"
+        _same_ap = str(getattr(cfg, "aperture_policy_mode", "per_target")).strip().lower() != "per_target"
         same_aperture_all = st.toggle(
             "Same aperture for all targets and comps",
             value=bool(_same_ap),
             help=(
-                "ON = f_fixed_night (one r for the draft, current default). "
-                "OFF = per_target: each target picks f* by Abbe p2p of its differential LC; "
-                "its comps share that f* (D5-1)."
+                "OFF (default) = per_target: each target picks f* by Abbe p2p of its "
+                "differential LC; comps share that f*; r = f* x FWHM_frame (D5-1). "
+                "ON = f_fixed_night (one r for the draft)."
             ),
             key="aperture_same_for_all_toggle",
         )
@@ -592,7 +592,10 @@ def render_settings_dashboard(
                 "per_target f grid: "
                 + ", ".join(
                     f"{float(x):.2f}"
-                    for x in (getattr(cfg, "aperture_f_grid", None) or [0.75, 1.0, 1.35, 2.0, 2.5])
+                    for x in (
+                        getattr(cfg, "aperture_f_grid", None)
+                        or [0.5, 0.6, 0.75, 1.0, 1.35, 2.0, 2.5]
+                    )
                 )
             )
         _detail_help(

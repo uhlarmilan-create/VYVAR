@@ -254,7 +254,7 @@
     "scope_group": "n/a"
   },
   "aperture_policy_mode": {
-    "help": "APERTURE-01 production radius: f_fixed_night = f x median FWHM of the night (one r for the draft); f_per_frame = f x QC FWHM of that frame; per_target = each target picks f* by Abbe p2p of its differential LC (comps share that f*).",
+    "help": "APERTURE-DYNAMIC-01 default per_target: each target picks f* by Abbe p2p of its differential LC (comps share that f*); r = f* x FWHM_frame. Alternatives: f_fixed_night (one r for the draft), f_per_frame (f x QC FWHM). UI toggle Same aperture for all targets and comps ON = f_fixed_night.",
     "kind": "static",
     "label": "Aperture Policy Mode",
     "owner": "config_runtime",
@@ -269,7 +269,7 @@
     "scope_group": "n/a"
   },
   "aperture_f_grid": {
-    "help": "APERTURE-PERTARGET-01: FWHM-factor sampling grid used when aperture_policy_mode=per_target. Selection minimises Abbe p2p of the differential LC; ties prefer larger f.",
+    "help": "APERTURE-DYNAMIC-01: FWHM-factor sampling grid for per_target (default includes 0.5, 0.6 so f* is not forced to the old 0.75 edge). Selection minimises Abbe p2p; ties prefer larger f. Edge hits set aperture_f_edge.",
     "kind": "static",
     "label": "Aperture F Grid",
     "owner": "config_runtime",
@@ -3724,7 +3724,10 @@
     "label": "Lc Outlier N Sigma",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [3.0, 10.0],
+    "range": [
+      3.0,
+      10.0
+    ],
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
@@ -3739,7 +3742,10 @@
     "label": "Lc Outlier Adjacent Sigma",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [1.0, 8.0],
+    "range": [
+      1.0,
+      8.0
+    ],
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
@@ -3754,7 +3760,10 @@
     "label": "Lc Outlier Frame Qc N Sigma",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": [3.0, 10.0],
+    "range": [
+      3.0,
+      10.0
+    ],
     "tier": "advanced",
     "unit": null,
     "widget": "custom",
@@ -3769,7 +3778,10 @@
     "label": "Lc Outlier Evidence N Sigma",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [3.0, 10.0],
+    "range": [
+      3.0,
+      10.0
+    ],
     "tier": "advanced",
     "unit": null,
     "widget": "custom",

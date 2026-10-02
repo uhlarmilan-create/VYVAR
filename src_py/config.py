@@ -779,13 +779,13 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.35
-    #: APERTURE-01: ``f_fixed_night`` (r = f x median FWHM of the night),
-    #: ``f_per_frame``, or ``per_target`` (APERTURE-PERTARGET-01: f* per target
-    #: from Abbe p2p of differential LC; comps share that f*).
-    aperture_policy_mode: str = "f_fixed_night"
-    #: APERTURE-PERTARGET-01: FWHM-factor sampling grid for per_target selection.
+    #: APERTURE-DYNAMIC-01: default ``per_target`` (f* per target from Abbe p2p;
+    #: comps share that f*; r = f* x FWHM_frame). ``f_fixed_night`` / ``f_per_frame``
+    #: remain available (UI: "Same aperture for all targets and comps").
+    aperture_policy_mode: str = "per_target"
+    #: APERTURE-DYNAMIC-01: FWHM-factor sampling grid for per_target selection.
     aperture_f_grid: list[float] = field(
-        default_factory=lambda: [0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5]
+        default_factory=lambda: [0.5, 0.6, 0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5]
     )
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.
@@ -1803,9 +1803,9 @@ class AppConfig:
         except (TypeError, ValueError):
             self.aperture_fwhm_factor = 2.75
         self.aperture_fwhm_factor = max(0.25, min(6.0, float(self.aperture_fwhm_factor)))
-        _apm = str(data.get("aperture_policy_mode", self.aperture_policy_mode) or "f_fixed_night").strip().lower()
+        _apm = str(data.get("aperture_policy_mode", self.aperture_policy_mode) or "per_target").strip().lower()
         self.aperture_policy_mode = (
-            _apm if _apm in ("f_fixed_night", "f_per_frame", "per_target") else "f_fixed_night"
+            _apm if _apm in ("f_fixed_night", "f_per_frame", "per_target") else "per_target"
         )
         _afg = data.get("aperture_f_grid", self.aperture_f_grid)
         if isinstance(_afg, (list, tuple)):

@@ -689,14 +689,14 @@ def _phase2a_process_one_target(
                 f_star=float(_pt_choice.f_star),
             )
             logging.info(
-                "[APERTURE-PERTARGET] target %s f*=%.3f r_ap=%.3f px (n_comp=%d)",
+                "[APERTURE-DYNAMIC] target %s f*=%.3f r_ap(night_scale)=%.3f px (n_comp=%d)",
                 target_cid,
                 float(_pt_choice.f_star),
                 float(_pt_choice.r_ap_px),
                 len(comp_ids),
             )
         except Exception as _pt_apply_exc:  # noqa: BLE001
-            logging.warning("[APERTURE-PERTARGET] apply failed for %s: %s", target_cid, _pt_apply_exc)
+            logging.warning("[APERTURE-DYNAMIC] apply failed for %s: %s", target_cid, _pt_apply_exc)
 
     # Zostav casove rady per hviezda
     target_lc = _get_lc(target_cid, all_frames)
@@ -1063,9 +1063,8 @@ def _phase2a_process_one_target(
     ):
         target_frames = target_frames.copy()
         target_frames["aperture_r_px"] = float(_measured_ap_target)
-    elif _pt_active and _pt_choice is not None and not target_frames.empty:
-        target_frames = target_frames.copy()
-        target_frames["aperture_r_px"] = float(_pt_choice.r_ap_px)
+    # APERTURE-DYNAMIC-01: when per_target, apply_grid_fluxes_to_frames already
+    # stamped per-frame r = f* x FWHM_frame; do not overwrite with night median.
     bjd = target_frames["bjd"].to_numpy(dtype=float)
     hjd = target_frames["hjd"].to_numpy(dtype=float)
     jd = target_frames["jd"].to_numpy(dtype=float)

@@ -1,0 +1,198 @@
+{
+  "task": "APERTURE-DYNAMIC-01",
+  "default_mode": "per_target",
+  "f_grid": [
+    0.5,
+    0.6,
+    0.75,
+    1.0,
+    1.25,
+    1.35,
+    1.5,
+    1.75,
+    2.0,
+    2.5
+  ],
+  "production_r": "f_star x FWHM_frame",
+  "draft_516": {
+    "draft_id": 516,
+    "fwhm_night_px": 5.19175,
+    "n_targets": 75,
+    "n_stars_measured": 143,
+    "n_frames": 134,
+    "n_fwhm_fallback_night": 0,
+    "grid_elapsed_s": 1085.2,
+    "f_fixed": 1.35,
+    "n_f_edge": 46,
+    "f_star_hist": {
+      "0.5": 42,
+      "0.6": 16,
+      "0.75": 3,
+      "1.0": 3,
+      "1.25": 1,
+      "1.35": 1,
+      "1.5": 1,
+      "1.75": 1,
+      "2.0": 3,
+      "2.5": 4
+    },
+    "median_f_star": 0.5,
+    "median_p2p_gain_mmag": 106.70452690412527,
+    "median_abs_rho_resid_seeing": 0.08713665100300466,
+    "frac_abs_rho_lt_0_3": 0.7866666666666666,
+    "bin_summary": [
+      {
+        "mag_bin": "G<12",
+        "n": 14,
+        "median_f_star": 0.8,
+        "median_p2p_gain_mmag": 4.241527156232258,
+        "frac_gain_gt_0": 0.9285714285714286,
+        "n_f_edge": 6
+      },
+      {
+        "mag_bin": "12-14",
+        "n": 33,
+        "median_f_star": 0.5,
+        "median_p2p_gain_mmag": 80.46837039975246,
+        "frac_gain_gt_0": 1.0,
+        "n_f_edge": 24
+      },
+      {
+        "mag_bin": "14-16",
+        "n": 28,
+        "median_f_star": 0.55,
+        "median_p2p_gain_mmag": 301.1701951756277,
+        "frac_gain_gt_0": 0.9642857142857143,
+        "n_f_edge": 16
+      }
+    ],
+    "bo_row": {
+      "catalog_id": "1498613634033133184",
+      "g_mag": 9.719649314880373,
+      "mag_bin": "G<12",
+      "f_star": 1.0,
+      "aperture_f_edge": false,
+      "r_ap_px_night_scale": 5.19175,
+      "p2p_fixed_mag": 0.010681488017095103,
+      "p2p_star_mag": 0.009878788657220581,
+      "p2p_gain_mmag": 0.8026993598745212,
+      "dlevel_vs_f25_mmag": -4.1382895277770615,
+      "rho_resid_seeing": 0.059901988405290235,
+      "n_comps": 4,
+      "n_frames": 134,
+      "same_r_target_comps": true
+    },
+    "choices_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\aperture_per_target_draft516.json",
+    "table_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\fstar_table_draft516.csv"
+  },
+  "draft_521": {
+    "draft_id": 521,
+    "fwhm_night_px": 5.492192,
+    "n_targets": 161,
+    "n_stars_measured": 214,
+    "n_frames": 131,
+    "n_fwhm_fallback_night": 0,
+    "grid_elapsed_s": 943.15,
+    "f_fixed": 1.35,
+    "n_f_edge": 98,
+    "f_star_hist": {
+      "0.5": 96,
+      "0.6": 11,
+      "0.75": 4,
+      "1.0": 5,
+      "1.25": 1,
+      "1.35": 32,
+      "1.5": 2,
+      "1.75": 2,
+      "2.0": 6,
+      "2.5": 2
+    },
+    "median_f_star": 0.5,
+    "median_p2p_gain_mmag": 232.43233981819915,
+    "median_abs_rho_resid_seeing": 0.11460079363230047,
+    "frac_abs_rho_lt_0_3": 0.6521739130434783,
+    "bin_summary": [
+      {
+        "mag_bin": "G<12",
+        "n": 21,
+        "median_f_star": 0.75,
+        "median_p2p_gain_mmag": 8.686175277859167,
+        "frac_gain_gt_0": 0.9047619047619048,
+        "n_f_edge": 4
+      },
+      {
+        "mag_bin": "12-14",
+        "n": 59,
+        "median_f_star": 0.5,
+        "median_p2p_gain_mmag": 137.5974684014956,
+        "frac_gain_gt_0": 0.847457627118644,
+        "n_f_edge": 42
+      },
+      {
+        "mag_bin": "14-16",
+        "n": 81,
+        "median_f_star": 0.5,
+        "median_p2p_gain_mmag": 560.1678177658946,
+        "frac_gain_gt_0": 0.7160493827160493,
+        "n_f_edge": 52
+      }
+    ],
+    "bo_row": null,
+    "choices_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\aperture_per_target_draft521.json",
+    "table_path": "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\fstar_table_draft521.csv"
+  },
+  "aij_f_fixed_night": {
+    "ok": true,
+    "mode": "f_fixed_night",
+    "f": 1.35,
+    "fwhm_px": 5.19175,
+    "r_ap_px": 7.0088625,
+    "matched": {
+      "T1": "1498613634033133184",
+      "C2": "1500748301498613248",
+      "C3": "1497771992240531712",
+      "C4": "1499200223486564608",
+      "C5": "1497974027502858240",
+      "C6": "1497368849430107904"
+    },
+    "n_join": 134,
+    "rms_diff_mmag": 2.8866,
+    "gate_mmag": 2.8,
+    "pass": false,
+    "elapsed_s": 7.21
+  },
+  "aij_dynamic_default": {
+    "ok": true,
+    "mode": "per_target_dynamic_per_frame_r",
+    "f": 1.0,
+    "fwhm_night_px": 5.19175,
+    "r_ap_median_px": 5.19175,
+    "r_ap_min_px": 5.1383,
+    "r_ap_max_px": 5.3046,
+    "n_fwhm_fallback": 0,
+    "matched": {
+      "T1": "1498613634033133184",
+      "C2": "1500748301498613248",
+      "C3": "1497771992240531712",
+      "C4": "1499200223486564608",
+      "C5": "1497974027502858240",
+      "C6": "1497368849430107904"
+    },
+    "n_join": 134,
+    "rms_diff_mmag": 5.2446,
+    "gate_mmag": 2.8,
+    "pass": false,
+    "elapsed_s": 6.11,
+    "aij_csv_sha256": "4ffa9e8e43b07368",
+    "aij_tbl_sha256": "133c5aacb2fa8bd0"
+  },
+  "draft_516_product_hashes_pre_reexport": {
+    "Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\photometry_summary.csv": "92dc193d84ba520c7d7c7d6a5c7559fa7eb8c7d9cf307bb4fbf88be223d2fc72",
+    "Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\aperture_policy.json": null,
+    "Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\active_targets.csv": "c207f939a47a13f6edb8633b3a6dd7eaf1c8f2c544890da4753f3c584bc56e59",
+    "Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\comparison_stars_per_target.csv": "657edb2f39dd847bcbe16d9ea0b2aa6a49b5928748cea6ba9fc009ea2b24c632",
+    "Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\photometry\\lightcurves\\lightcurve_1498613634033133184.csv": "a5ea3980cc7c978566ed1ad4f97cc6925c4dc80817c86ed4503ad1af7f90cabd"
+  },
+  "reading": "516 median p2p gain 106.70 mmag overall; faint bin 14-16: median gain 301.17 mmag (median f*=0.55); bright bin G<12: median gain 4.24 mmag (median f*=0.80); AIJ BO RMS(diff) DYNAMIC f*=1.0: 5.245 mmag (prev night-FWHM f*=1.0 was 5.255; f_fixed 1.35 was 2.887); n_f_edge 516=46 521=98",
+  "runtime_note": "per_target grid: 516=1085.2s (143 stars x 134 frames x 10 f); 521=943.15s."
+}

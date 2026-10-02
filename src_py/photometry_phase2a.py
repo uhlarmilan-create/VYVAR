@@ -4106,10 +4106,10 @@ def run_phase2a(
         from aperture_policy import normalize_aperture_policy_mode  # noqa: PLC0415
 
         _ap_mode_pt = normalize_aperture_policy_mode(
-            getattr(_cfg, "aperture_policy_mode", "f_fixed_night")
+            getattr(_cfg, "aperture_policy_mode", "per_target")
         )
     except Exception:  # noqa: BLE001
-        _ap_mode_pt = "f_fixed_night"
+        _ap_mode_pt = "per_target"
     if _ap_mode_pt == "per_target":
         try:
             from aperture_pertarget import (  # noqa: PLC0415
@@ -4119,7 +4119,7 @@ def run_phase2a(
                 write_per_target_choices,
             )
 
-            _p2("APERTURE-PERTARGET: measuring f-grid...")
+            _p2("APERTURE-DYNAMIC: measuring f-grid...")
             _ids: set[str] = set()
             for _, _tr in at_df.iterrows():
                 _cid = str(_tr.get("catalog_id", "") or "").strip()
@@ -4177,13 +4177,17 @@ def run_phase2a(
                 fwhm_night_px=_fwhm_pt,
                 elapsed_s=_grid.elapsed_s,
             )
+            _n_edge = sum(1 for _c in _choices.values() if bool(getattr(_c, "f_edge", False)))
             logging.info(
-                "[APERTURE-PERTARGET] chose f* for %d targets (grid %.1fs)",
+                "[APERTURE-DYNAMIC] chose f* for %d targets (grid %.1fs, n_f_edge=%d, "
+                "fwhm_fallback_frames=%d)",
                 len(_choices),
                 float(_grid.elapsed_s),
+                int(_n_edge),
+                int(getattr(_grid, "n_fwhm_fallback_night", 0)),
             )
         except Exception as _pt_exc:  # noqa: BLE001
-            logging.error("[APERTURE-PERTARGET] setup failed - falling back to CSV fluxes: %s", _pt_exc)
+            logging.error("[APERTURE-DYNAMIC] setup failed - falling back to CSV fluxes: %s", _pt_exc)
             state.aperture_grid_night = None
             state.per_target_aperture = {}
 
