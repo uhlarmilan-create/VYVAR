@@ -781,13 +781,15 @@ class AppConfig:
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
     aperture_fwhm_factor: float = 1.35
-    #: APERTURE-DYNAMIC-01: default ``per_target`` (f* per target from Abbe p2p;
+    #: APERTURE-DYNAMIC-02: default ``per_target`` (f* = argmax Howell S/N;
     #: comps share that f*; r = f* x FWHM_frame). ``f_fixed_night`` / ``f_per_frame``
     #: remain available (UI: "Same aperture for all targets and comps").
     aperture_policy_mode: str = "per_target"
-    #: APERTURE-DYNAMIC-01: FWHM-factor sampling grid for per_target selection.
+    #: APERTURE-DYNAMIC-02: fine FWHM-factor sampling grid (step 0.05, 0.4..3.0).
     aperture_f_grid: list[float] = field(
-        default_factory=lambda: [0.5, 0.6, 0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5]
+        default_factory=lambda: [
+            round(0.4 + 0.05 * i, 2) for i in range(int(round((3.0 - 0.4) / 0.05)) + 1)
+        ]
     )
     #: SNR aperture sizing sweep bounds (WAVE-B STEP 4 merge of aperture_fwhm_factor_small/_large):
     #: min ("small") and max ("large") radii as FWHM multiples.

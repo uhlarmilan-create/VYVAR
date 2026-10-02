@@ -1,0 +1,79 @@
+{
+  "draft_id": 521,
+  "n_no_data_epochs": 1885,
+  "n_targets_any_no_data": 30,
+  "n_targets_all_nan": 9,
+  "n_epochs_all_nan": 1179,
+  "n_targets_partial": 21,
+  "n_epochs_partial": 706,
+  "flag_reason_counts": {
+    "no_data": 1885
+  },
+  "n_procs_checked": 131,
+  "all_nan_targets": [
+    {
+      "catalog_id": "1400001661656636800",
+      "vsx_name": "NSVS 5207307",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1400141716247021824",
+      "vsx_name": "Gaia DR3 1400141716247021824",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1400153329838590080",
+      "vsx_name": "V1151 Her",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1400270771423889152",
+      "vsx_name": "ZTF J160834.70+493131.9",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1401441613868818176",
+      "vsx_name": "Gaia DR3 1401441613868818176",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1403051779927725952",
+      "vsx_name": "V1021 Her",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1403664860739876864",
+      "vsx_name": "ASASSN-V J160300.20+511135.7",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1404263338662409728",
+      "vsx_name": "Gaia DR3 1404263338662409728",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    },
+    {
+      "catalog_id": "1423425214994245760",
+      "vsx_name": "CSS_J161519.8+491001",
+      "n_no_data": 131,
+      "n_proc_frames_present": 0,
+      "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+    }
+  ],
+  "expected": "Yes for all-nan set: stars in active_targets/MASTERSTAR but never extracted into proc_*.csv (no mag_inst). flag_reason is uniformly 'no_data' (no finer edge/saturation taxonomy recorded). Partial no_data epochs are intermittent missing photometry with the same flag_reason."
+}

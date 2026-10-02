@@ -1,0 +1,37 @@
+python : WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_PHOTCAT;): 
+database disk image is malformed
+At C:\Users\uhlar\AppData\Local\Temp\ps-script-3558b1aa-387b-4af5-bd8f-f29de003e8c7.ps1:82 char:1
++ python -u dev/scripts/session_baseline_check.py --fast --clean > dev/ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING:root:[D...ge is malformed:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_GAIA;): database disk 
+image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP INDEX IF EXISTS IDX_MASTER_SOURCES_DRAFT;): database disk 
+image is malformed
+WARNING:root:[DB] MASTER_SOURCES retirement deferred (DROP TABLE IF EXISTS MASTER_SOURCES;): database disk image is 
+malformed
+WARNING:root:[DB] MASTER_SOURCES drop incomplete - run dev/tools/db_hygiene_swap.py with the app closed (Phase 3).
+
+SESSION BASELINE CHECK (fast)
+------------------------------------------------------------------------
+Check                        Status Detail
+------------------------------------------------------------------------
+git-branch                   PASS   alpha-fixes-01
+git-head                     PASS   a42959e
+git-staged                   PASS   none
+git-untracked                WARN   dev/results/context/session_20260818_msgaia00/blend_pairs.csv; dev/results/conte
+git-origin-main              WARN   differs from origin/main (5697ba7); consider git pull
+config-paths                 PASS   all present
+pytest                       PASS   1678 passed, 34 skipped
+manifest-db-parity           PASS   draft_id=516
+db-quick-check               WARN   WAIVED (Milan 2026-08-22 files-only direction; MASTER_SO...): *** in database ma
+ledger                       PASS   v1 17 items
+ledger-todo                  WARN   VL-ANCHOR-424, VL-ANCHOR-DQ-430, VL-PFS-8F107CF
+deps-outdated                WARN   numpy 2.4.4->2.5.3 (+111 other) - gated upgrade, see docs/DEPS_POLICY.md
+clean-tree                   PASS   worktree=b1b_clean_d9329516; pytest 32 passed; ruff PASS; pyflakes PASS
+------------------------------------------------------------------------
+OVERALL: PASS
+
+EXIT:0

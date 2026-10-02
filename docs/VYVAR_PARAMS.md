@@ -194,7 +194,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `aperture_correction_max_contamination` | 0.15 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Contamination |
 | `aperture_correction_max_scatter_mag` | 0.03 | 0 .. 2 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Max Scatter Mag |
 | `aperture_correction_min_ref_stars` | 3 | 1 .. 50 | expert | static | config_runtime | universal | none | n/a | auto | Aperture Correction Min Ref Stars |
-| `aperture_f_grid` | [0.5, 0.6, 0.75, 1.0, 1.25, 1.35, 1.5, 1.75, 2.0, 2.5] | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture F Grid |
+| `aperture_f_grid` | [0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6, 1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0, 2.05, 2.1, 2.15, 2.2, 2.25, 2.3, 2.35, 2.4, 2.45, 2.5, 2.55, 2.6, 2.65, 2.7, 2.75, 2.8, 2.85, 2.9, 2.95, 3.0] | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture F Grid |
 | `aperture_fwhm_factor` | 1.35 | 0.25 .. 6 | advanced | resolved | config_runtime | universal | none | n/a | auto | Aperture FWHM Factor |
 | `aperture_photometry_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | auto | Aperture Photometry Enabled |
 | `aperture_policy_mode` | per_target | - | advanced | static | config_runtime | universal | none | n/a | custom | Aperture Policy Mode |

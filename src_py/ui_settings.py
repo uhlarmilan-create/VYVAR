@@ -581,8 +581,9 @@ def render_settings_dashboard(
             "Same aperture for all targets and comps",
             value=bool(_same_ap),
             help=(
-                "OFF (default) = per_target: each target picks f* by Abbe p2p of its "
-                "differential LC; comps share that f*; r = f* x FWHM_frame (D5-1). "
+                "OFF (default) = per_target: each target picks f* by Howell S/N "
+                "argmax on its growth curve; comps share that f*; "
+                "r = f* x FWHM_frame (D5-1). "
                 "ON = f_fixed_night (one r for the draft)."
             ),
             key="aperture_same_for_all_toggle",
@@ -594,7 +595,7 @@ def render_settings_dashboard(
                     f"{float(x):.2f}"
                     for x in (
                         getattr(cfg, "aperture_f_grid", None)
-                        or [0.5, 0.6, 0.75, 1.0, 1.35, 2.0, 2.5]
+                        or [0.4, 0.7, 1.0, 1.35, 2.0, 3.0]
                     )
                 )
             )

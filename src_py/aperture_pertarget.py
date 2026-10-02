@@ -1,15 +1,18 @@
-"""APERTURE-DYNAMIC-01 / APERTURE-PERTARGET-01: per-target aperture (default).
+"""APERTURE-DYNAMIC-02: per-target aperture via Howell S/N (default).
 
 Physics (D5-1): target and its comps share the same enclosed-energy fraction
 (same f = r / FWHM) for one differential measurement.
 
-Selection: f* = argmin of Abbe / von Neumann point-to-point scatter of the
-differential LC (comps at the same f). Ties / flat minimum -> larger f.
+Selection (APERTURE-DYNAMIC-02): f* = argmax of predicted S/N(f) from the
+night-median growth curve F(f) and Howell (1989) variance
+(``photometry_phase2a._howell_variance_adu2``). Flat top (within 1% of max)
+-> largest f. Abbe p2p remains a reported diagnostic only.
+
 Production radius: r = f* x FWHM_frame (FWHM-AUTH-01); night median only as
 fallback when a frame has no QC FWHM.
 
-Default production mode is ``per_target`` (APERTURE-DYNAMIC-01). Fixed one-r
-for the draft remains available as ``f_fixed_night``.
+Default production mode is ``per_target``. Fixed one-r for the draft remains
+available as ``f_fixed_night``.
 """
 from __future__ import annotations
 
@@ -26,19 +29,19 @@ import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
 
-# APERTURE-DYNAMIC-01: extended below 0.75 so f* is not forced to the edge.
-DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (
-    0.5,
-    0.6,
-    0.75,
-    1.0,
-    1.25,
-    1.35,
-    1.5,
-    1.75,
-    2.0,
-    2.5,
+# APERTURE-DYNAMIC-02: fine sampling (step 0.05 FWHM), not a discrete threshold.
+DEFAULT_APERTURE_F_GRID: tuple[float, ...] = tuple(
+    round(0.4 + 0.05 * i, 2) for i in range(int(round((3.0 - 0.4) / 0.05)) + 1)
 )
+
+# Documented fallback when S/N cannot be evaluated (no finite fluxes / sky).
+# Midpoint of the Howell/Naylor sky-limited optimum band ~0.6-0.75 FWHM.
+# Replaces the undocumented midpoint-of-grid fallback (1.35 on the old grid)
+# that produced the 521 spike of 32 stars at exactly 1.35.
+FALLBACK_F_STAR: float = 0.70
+
+# Flat-top tolerance: choose largest f within this fraction of max S/N.
+SNR_FLAT_FRAC: float = 0.01
 
 MODE_PER_TARGET = "per_target"
 
@@ -109,7 +112,10 @@ def equal_weight_ensemble_delta(
 
 
 def pick_f_star(p2p_by_f: Mapping[float, float]) -> float | None:
-    """argmin p2p; ties / flat minimum -> larger f. None if all non-finite."""
+    """argmin p2p; ties / flat minimum -> larger f. None if all non-finite.
+
+    Kept for diagnostics / tests; production selection uses ``pick_f_star_snr``.
+    """
     best_f: float | None = None
     best_p2p = float("inf")
     for f in sorted(float(k) for k in p2p_by_f.keys()):
@@ -125,6 +131,26 @@ def pick_f_star(p2p_by_f: Mapping[float, float]) -> float | None:
     return best_f
 
 
+def pick_f_star_snr(
+    snr_by_f: Mapping[float, float],
+    *,
+    flat_frac: float = SNR_FLAT_FRAC,
+) -> float | None:
+    """argmax S/N; among f within flat_frac of the max, pick the largest f."""
+    finite: list[tuple[float, float]] = []
+    for f, s in snr_by_f.items():
+        ff = float(f)
+        ss = float(s)
+        if math.isfinite(ff) and math.isfinite(ss) and ss > 0:
+            finite.append((ff, ss))
+    if not finite:
+        return None
+    max_snr = max(s for _, s in finite)
+    thresh = float(max_snr) * (1.0 - float(flat_frac))
+    candidates = [f for f, s in finite if s >= thresh - 1e-15]
+    return float(max(candidates))
+
+
 def f_star_is_grid_edge(f_star: float, f_grid: Sequence[float], *, tol: float = 1e-9) -> bool:
     """True if f* equals the minimum or maximum of the sampling grid."""
     vals = sorted(float(x) for x in f_grid if math.isfinite(float(x)) and float(x) > 0)
@@ -134,14 +160,60 @@ def f_star_is_grid_edge(f_star: float, f_grid: Sequence[float], *, tol: float = 
     return abs(fs - vals[0]) <= tol or abs(fs - vals[-1]) <= tol
 
 
+def howell_variance_adu2(
+    flux: float,
+    sky_pp: float,
+    area: float,
+    *,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+) -> float:
+    """Total variance [ADU^2] - mirror of ``photometry_phase2a._howell_variance_adu2``.
+
+    Cite: ``src_py/photometry_phase2a.py`` lines ~378-401 (Howell 1989 eq. 2 form).
+    Terms: source Poisson ``flux/g``, sky Poisson ``sky_pp/g * area``,
+    read noise ``(RN/g)^2 * area``. Kept local to avoid circular import with
+    photometry_phase2a.
+    """
+    if not math.isfinite(flux) or flux <= 0:
+        return float("nan")
+    if not math.isfinite(sky_pp) or sky_pp < 0:
+        sky_pp = 0.0
+    if not math.isfinite(area) or area <= 0:
+        return float("nan")
+    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
+    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
+    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
+
+
+def howell_snr(
+    flux: float,
+    sky_pp: float,
+    area: float,
+    *,
+    gain: float = 1.0,
+    read_noise: float = 10.0,
+) -> float:
+    """Predicted S/N = F / sqrt(var) using VYVAR Howell variance terms."""
+    f = float(flux)
+    if not math.isfinite(f) or f <= 0:
+        return float("nan")
+    var = howell_variance_adu2(
+        f, float(sky_pp), float(area), gain=float(gain), read_noise=float(read_noise)
+    )
+    if not math.isfinite(var) or var <= 0:
+        return float("nan")
+    return float(f / math.sqrt(var))
+
+
 def _aperture_flux_uniform(
     image: np.ndarray,
     pos: np.ndarray,
     r_ap: float,
     r_in: float,
     r_out: float,
-) -> np.ndarray:
-    """Sky-subtracted exact aperture sums at one shared radius (photutils)."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """Sky-subtracted exact aperture sums + annulus sky_pp at one shared radius."""
     from photutils.aperture import CircularAnnulus, CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
     from sky_estimation import sky_median_mask  # noqa: PLC0415
@@ -149,13 +221,14 @@ def _aperture_flux_uniform(
     pos = np.asarray(pos, dtype=np.float64)
     n = int(pos.shape[0])
     flux_arr = np.full(n, np.nan, dtype=np.float64)
+    sky_arr = np.full(n, np.nan, dtype=np.float64)
     if n == 0:
-        return flux_arr
+        return flux_arr, sky_arr
     r0 = float(r_ap)
     rin = float(r_in)
     rout = float(r_out)
     if not (math.isfinite(r0) and r0 > 0 and math.isfinite(rin) and rin > 0 and rout > rin):
-        return flux_arr
+        return flux_arr, sky_arr
     try:
         ap = CircularAperture(pos, r=r0)
         phot = _aphot(image, ap, method="exact")
@@ -165,17 +238,16 @@ def _aperture_flux_uniform(
         masks = an.to_mask(method="center")
         if not isinstance(masks, (list, tuple)):
             masks = [masks]
-        sky_pp = np.full(n, np.nan, dtype=np.float64)
         for i, m in enumerate(masks):
             try:
                 ann_img = m.to_image(image.shape)
-                sky_pp[i] = float(sky_median_mask(image, ann_img))
+                sky_arr[i] = float(sky_median_mask(image, ann_img))
             except Exception:  # noqa: BLE001
-                sky_pp[i] = float("nan")
-        flux_arr = sums - sky_pp * area
+                sky_arr[i] = float("nan")
+        flux_arr = sums - sky_arr * area
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[APERTURE-DYNAMIC] uniform aperture failed: %s", exc)
-    return flux_arr
+    return flux_arr, sky_arr
 
 
 def measure_flux_on_f_grid(
@@ -186,17 +258,19 @@ def measure_flux_on_f_grid(
     fwhm_px: float,
     annulus_inner_fwhm: float,
     annulus_outer_fwhm: float,
-) -> dict[float, np.ndarray]:
-    """Measure sky-subtracted aperture flux for every star at each f in the grid."""
+) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray]]:
+    """Measure sky-subtracted aperture flux and sky_pp for every star at each f."""
     from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
 
     pos = np.asarray(xy, dtype=float)
     n = int(pos.shape[0]) if pos.ndim == 2 else 0
-    out: dict[float, np.ndarray] = {}
+    out_f: dict[float, np.ndarray] = {}
+    out_s: dict[float, np.ndarray] = {}
     if n == 0:
         for f in f_grid:
-            out[float(f)] = np.array([], dtype=float)
-        return out
+            out_f[float(f)] = np.array([], dtype=float)
+            out_s[float(f)] = np.array([], dtype=float)
+        return out_f, out_s
     img = np.asarray(image, dtype=float)
     for f in f_grid:
         ff = float(f)
@@ -206,8 +280,10 @@ def measure_flux_on_f_grid(
             annulus_inner_fwhm=float(annulus_inner_fwhm),
             annulus_outer_fwhm=float(annulus_outer_fwhm),
         )
-        out[ff] = _aperture_flux_uniform(img, pos, r_ap, r_in, r_out)
-    return out
+        flux_arr, sky_arr = _aperture_flux_uniform(img, pos, r_ap, r_in, r_out)
+        out_f[ff] = flux_arr
+        out_s[ff] = sky_arr
+    return out_f, out_s
 
 
 @dataclass
@@ -216,19 +292,26 @@ class PerTargetChoice:
     f_star: float
     r_ap_px: float
     p2p_by_f: dict[str, float] = field(default_factory=dict)
+    snr_by_f: dict[str, float] = field(default_factory=dict)
     n_comps: int = 0
     n_frames: int = 0
     f_edge: bool = False
+    reason: str = ""
+    snr_max: float = float("nan")
+    growth_F_by_f: dict[str, float] = field(default_factory=dict)
+    sky_pp_by_f: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
 class ApertureGridNight:
-    """In-memory night grid: frame_key -> catalog_id -> f -> flux."""
+    """In-memory night grid: frame_key -> catalog_id -> f -> flux / sky_pp."""
 
     f_grid: list[float]
     fwhm_night_px: float
     # frame_stem -> {cid: {f: flux}}
     frames: dict[str, dict[str, dict[float, float]]] = field(default_factory=dict)
+    # frame_stem -> {cid: {f: sky_pp ADU/px}}
+    sky_pp: dict[str, dict[str, dict[float, float]]] = field(default_factory=dict)
     # frame_stem -> FWHM used for that frame (AUTH-01)
     fwhm_by_frame: dict[str, float] = field(default_factory=dict)
     elapsed_s: float = 0.0
@@ -334,7 +417,7 @@ def measure_night_grid(
                 float(fwhm_frame),
             )
         night.fwhm_by_frame[stem] = float(fwhm_frame)
-        fluxes = measure_flux_on_f_grid(
+        fluxes, skies = measure_flux_on_f_grid(
             img,
             xy,
             f_grid=night.f_grid,
@@ -343,11 +426,16 @@ def measure_night_grid(
             annulus_outer_fwhm=float(annulus_outer_fwhm),
         )
         per_cid: dict[str, dict[float, float]] = {cid: {} for cid in ids}
+        per_sky: dict[str, dict[float, float]] = {cid: {} for cid in ids}
         for f, arr in fluxes.items():
+            sky_arr = skies.get(f, np.full(len(ids), np.nan))
             for i, cid in enumerate(ids):
                 v = float(arr[i]) if i < len(arr) else float("nan")
                 per_cid[cid][float(f)] = v
+                s = float(sky_arr[i]) if i < len(sky_arr) else float("nan")
+                per_sky[cid][float(f)] = s
         night.frames[stem] = per_cid
+        night.sky_pp[stem] = per_sky
         night.n_frames_measured += 1
     night.elapsed_s = float(time.perf_counter() - t0)
     LOGGER.info(
@@ -387,38 +475,131 @@ def series_from_grid(
     return out
 
 
+def sky_series_from_grid(
+    night: ApertureGridNight,
+    catalog_id: str,
+    f: float,
+    frame_order: Sequence[str],
+) -> np.ndarray:
+    """Annulus sky_pp (ADU/px) series for ``catalog_id`` at factor ``f``."""
+    out = np.full(len(frame_order), float("nan"), dtype=float)
+    ff = float(f)
+    cid = str(catalog_id)
+    for i, stem in enumerate(frame_order):
+        ent = night.sky_pp.get(str(stem), {}).get(cid)
+        if not ent:
+            continue
+        v = ent.get(ff)
+        if v is None:
+            for k, val in ent.items():
+                if abs(float(k) - ff) < 1e-9:
+                    v = val
+                    break
+        if v is not None and math.isfinite(float(v)):
+            out[i] = float(v)
+    return out
+
+
+def _night_median_positive(arr: np.ndarray) -> float:
+    a = np.asarray(arr, dtype=float)
+    ok = a[np.isfinite(a) & (a > 0)]
+    if ok.size == 0:
+        ok = a[np.isfinite(a) & (a >= 0)]
+    if ok.size == 0:
+        return float("nan")
+    return float(np.median(ok))
+
+
 def choose_f_for_target(
     night: ApertureGridNight,
     *,
     target_cid: str,
     comp_ids: Sequence[str],
     frame_order: Sequence[str],
+    gain: float = 1.0,
+    read_noise: float = 10.0,
 ) -> PerTargetChoice:
-    """Pick f* for one target from Abbe p2p of equal-weight differential LCs."""
+    """Pick f* for one target from Howell S/N of the night-median growth curve.
+
+    Comps still share the chosen f* (D5-1). Abbe p2p of the differential LC at
+    each f is recorded as a diagnostic only.
+    """
+    snr_by_f: dict[float, float] = {}
+    growth: dict[float, float] = {}
+    sky_med: dict[float, float] = {}
     p2p_by_f: dict[float, float] = {}
+    fwhm = float(night.fwhm_night_px) if math.isfinite(float(night.fwhm_night_px)) else 5.0
+    if fwhm <= 0:
+        fwhm = 5.0
+
     for f in night.f_grid:
-        t_flux = series_from_grid(night, target_cid, f, frame_order)
+        ff = float(f)
+        t_flux = series_from_grid(night, target_cid, ff, frame_order)
+        t_sky = sky_series_from_grid(night, target_cid, ff, frame_order)
+        F_med = _night_median_positive(t_flux)
+        sky_pp = _night_median_positive(t_sky)
+        growth[ff] = F_med
+        sky_med[ff] = sky_pp
+        r_ap = max(0.5, ff * fwhm)
+        area = math.pi * r_ap * r_ap
+        snr_by_f[ff] = howell_snr(
+            F_med, sky_pp if math.isfinite(sky_pp) else 0.0, area,
+            gain=float(gain), read_noise=float(read_noise),
+        )
+        # Diagnostic: Abbe p2p of equal-weight differential LC at this f.
         t_mag = flux_to_mag(t_flux)
         comp_mags = {
-            str(c): flux_to_mag(series_from_grid(night, str(c), f, frame_order))
+            str(c): flux_to_mag(series_from_grid(night, str(c), ff, frame_order))
             for c in comp_ids
         }
         delta = equal_weight_ensemble_delta(t_mag, comp_mags)
-        p2p_by_f[float(f)] = abbe_p2p_scatter(delta)
-    f_star = pick_f_star(p2p_by_f)
+        p2p_by_f[ff] = abbe_p2p_scatter(delta)
+
+    f_star = pick_f_star_snr(snr_by_f)
+    reason = "snr_argmax"
     if f_star is None:
-        f_star = float(night.f_grid[len(night.f_grid) // 2]) if night.f_grid else 1.35
+        f_star = float(FALLBACK_F_STAR)
+        reason = (
+            f"fallback_f={FALLBACK_F_STAR:.2f}_howell_sky_limited_midband"
+            "_no_finite_snr"
+        )
+    else:
+        # Note flat-top selection in reason when multiple f within 1%.
+        max_snr = max(
+            (float(s) for s in snr_by_f.values() if math.isfinite(float(s))),
+            default=float("nan"),
+        )
+        if math.isfinite(max_snr) and max_snr > 0:
+            n_flat = sum(
+                1
+                for s in snr_by_f.values()
+                if math.isfinite(float(s))
+                and float(s) >= max_snr * (1.0 - SNR_FLAT_FRAC) - 1e-15
+            )
+            if n_flat > 1:
+                reason = f"snr_argmax_flat_top_largest_f_n={n_flat}"
+
     edge = f_star_is_grid_edge(float(f_star), night.f_grid)
-    # Representative r_ap for audit (night median scale); per-frame r set at apply.
-    r_ap = float(f_star) * float(night.fwhm_night_px)
+    r_ap = float(f_star) * float(fwhm)
+    snr_max = float(snr_by_f.get(float(f_star), float("nan")))
+    if not math.isfinite(snr_max):
+        for k, v in snr_by_f.items():
+            if abs(float(k) - float(f_star)) < 1e-9:
+                snr_max = float(v)
+                break
     return PerTargetChoice(
         catalog_id=str(target_cid),
         f_star=float(f_star),
         r_ap_px=float(r_ap),
         p2p_by_f={f"{k:.4g}": float(v) for k, v in sorted(p2p_by_f.items())},
+        snr_by_f={f"{k:.4g}": float(v) for k, v in sorted(snr_by_f.items())},
         n_comps=len(list(comp_ids)),
         n_frames=len(list(frame_order)),
         f_edge=bool(edge),
+        reason=str(reason),
+        snr_max=float(snr_max) if math.isfinite(snr_max) else float("nan"),
+        growth_F_by_f={f"{k:.4g}": float(v) for k, v in sorted(growth.items())},
+        sky_pp_by_f={f"{k:.4g}": float(v) for k, v in sorted(sky_med.items())},
     )
 
 
@@ -465,24 +646,40 @@ def write_per_target_choices(
     f_grid: Sequence[float],
     fwhm_night_px: float,
     elapsed_s: float,
+    gain: float | None = None,
+    read_noise: float | None = None,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     n_edge = sum(1 for c in choices.values() if bool(c.f_edge))
     payload = {
-        "policy": "APERTURE-DYNAMIC-01",
+        "policy": "APERTURE-DYNAMIC-02",
         "mode": MODE_PER_TARGET,
+        "criterion": "howell_snr_argmax",
+        "fallback_f_star": float(FALLBACK_F_STAR),
+        "snr_flat_frac": float(SNR_FLAT_FRAC),
         "f_grid": [float(f) for f in f_grid],
         "fwhm_night_px": float(fwhm_night_px),
         "elapsed_s": float(elapsed_s),
         "n_targets": len(choices),
         "n_f_edge": int(n_edge),
+        "gain": float(gain) if gain is not None and math.isfinite(float(gain)) else None,
+        "read_noise": (
+            float(read_noise)
+            if read_noise is not None and math.isfinite(float(read_noise))
+            else None
+        ),
         "targets": {
             cid: {
                 "f_star": c.f_star,
                 "r_ap_px": c.r_ap_px,
                 "aperture_f_edge": bool(c.f_edge),
+                "reason": c.reason,
+                "snr_max": c.snr_max if math.isfinite(float(c.snr_max)) else None,
+                "snr_by_f": c.snr_by_f,
                 "p2p_by_f": c.p2p_by_f,
+                "growth_F_by_f": c.growth_F_by_f,
+                "sky_pp_by_f": c.sky_pp_by_f,
                 "n_comps": c.n_comps,
                 "n_frames": c.n_frames,
             }
@@ -494,7 +691,9 @@ def write_per_target_choices(
 
 __all__ = [
     "DEFAULT_APERTURE_F_GRID",
+    "FALLBACK_F_STAR",
     "MODE_PER_TARGET",
+    "SNR_FLAT_FRAC",
     "ApertureGridNight",
     "PerTargetChoice",
     "abbe_p2p_scatter",
@@ -504,10 +703,14 @@ __all__ = [
     "f_star_is_grid_edge",
     "flux_to_mag",
     "frame_stem_from_source",
+    "howell_snr",
+    "howell_variance_adu2",
     "measure_flux_on_f_grid",
     "measure_night_grid",
     "normalize_f_grid",
     "pick_f_star",
+    "pick_f_star_snr",
     "series_from_grid",
+    "sky_series_from_grid",
     "write_per_target_choices",
 ]

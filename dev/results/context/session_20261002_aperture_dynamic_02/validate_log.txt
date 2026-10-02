@@ -1,0 +1,164 @@
+=== no_data census 521 ===
+=== validate draft 516 ===
+[draft 516] measuring grid n_stars=143 n_f=53 gain=0.6371 rn=10.0 ...
+[draft 516] grid done in 5406.3s; choosing f* ...
+=== validate draft 521 ===
+[draft 521] measuring grid n_stars=214 n_f=53 gain=0.7925 rn=10.0 ...
+[draft 521] grid done in 4997.5s; choosing f* ...
+=== AIJ unequal (legacy) DYNAMIC at f* per-frame r ===
+=== AIJ unequal fixed night f=1.35 ===
+=== AIJ EQUAL radius: VYVAR forced to AIJ Source_Radius=7 ===
+=== AIJ settings for Milan (remeasure at VYVAR f*) ===
+{
+  "task": "APERTURE-DYNAMIC-02",
+  "default_mode": "per_target",
+  "criterion": "howell_snr_argmax",
+  "fallback_f_star": 0.7,
+  "f_grid": [
+    0.4,
+    0.45,
+    0.5,
+    0.55,
+    0.6,
+    0.65,
+    0.7,
+    0.75,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    1.0,
+    1.05,
+    1.1,
+    1.15,
+    1.2,
+    1.25,
+    1.3,
+    1.35,
+    1.4,
+    1.45,
+    1.5,
+    1.55,
+    1.6,
+    1.65,
+    1.7,
+    1.75,
+    1.8,
+    1.85,
+    1.9,
+    1.95,
+    2.0,
+    2.05,
+    2.1,
+    2.15,
+    2.2,
+    2.25,
+    2.3,
+    2.35,
+    2.4,
+    2.45,
+    2.5,
+    2.55,
+    2.6,
+    2.65,
+    2.7,
+    2.75,
+    2.8,
+    2.85,
+    2.9,
+    2.95,
+    3.0
+  ],
+  "n_f_grid": 53,
+  "production_r": "f_star x FWHM_frame",
+  "noise_model_cite": "src_py/photometry_phase2a.py:_howell_variance_adu2 (~L378-401); mirrored in aperture_pertarget.howell_variance_adu2",
+  "aij_source_radius_px_used_in_gate": 7.0,
+  "no_data_521": {
+    "draft_id": 521,
+    "n_no_data_epochs": 1885,
+    "n_targets_any_no_data": 30,
+    "n_targets_all_nan": 9,
+    "n_epochs_all_nan": 1179,
+    "n_targets_partial": 21,
+    "n_epochs_partial": 706,
+    "flag_reason_counts": {
+      "no_data": 1885
+    },
+    "n_procs_checked": 131,
+    "all_nan_targets": [
+      {
+        "catalog_id": "1400001661656636800",
+        "vsx_name": "NSVS 5207307",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1400141716247021824",
+        "vsx_name": "Gaia DR3 1400141716247021824",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1400153329838590080",
+        "vsx_name": "V1151 Her",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1400270771423889152",
+        "vsx_name": "ZTF J160834.70+493131.9",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1401441613868818176",
+        "vsx_name": "Gaia DR3 1401441613868818176",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1403051779927725952",
+        "vsx_name": "V1021 Her",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1403664860739876864",
+        "vsx_name": "ASASSN-V J160300.20+511135.7",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1404263338662409728",
+        "vsx_name": "Gaia DR3 1404263338662409728",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      },
+      {
+        "catalog_id": "1423425214994245760",
+        "vsx_name": "CSS_J161519.8+491001",
+        "n_no_data": 131,
+        "n_proc_frames_present": 0,
+        "skip_reason": "absent_from_all_proc_csv_forced_photometry_not_extracted"
+      }
+    ],
+    "expected": "Yes for all-nan set: stars in active_targets/MASTERSTAR but never extracted into proc_*.csv (no mag_inst). flag_reason is uniformly 'no_data' (no finer edge/saturation taxonomy recorded). Partial no_data epochs are intermittent missing photometry with the same flag_reason."
+  },
+  "drafts": {
+    "516": {
+      "draft_id": 516,
+      "criterion": "howell_snr_argmax",
+      "gain": 0.6370667331227862,
+      "read_noise": 10.0,
+      "fwhm_night_px": 5.19175,
+      "n_targets": 75,
+      "n_stars
+Wrote C:\ASTRO\python\VYVAR\dev\results\context\session_20261002_aperture_dynamic_02\validation_summary.json

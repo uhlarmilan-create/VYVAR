@@ -1,0 +1,22 @@
+{
+  "task": "APERTURE-DYNAMIC-02 equal-radius AIJ remeasure (Milan)",
+  "why": "Existing AIJ table used fixed Source_Radius=7 px (~f=1.348 at night FWHM=5.192). Comparing that to VYVAR at f*=0.65 is unequal-radius. Need AIJ remasure at VYVAR's f* OR keep AIJ at 7 and force VYVAR to r=7 (done in validation).",
+  "existing_aij_gate": {
+    "table": "dev\\results\\XVAL_AIJ_01_Table.tbl",
+    "source_radius_px": 7.0,
+    "sky_rad_min_px": 14.0,
+    "sky_rad_max_px": 27.0,
+    "ensemble": "T1=BO, comps C2..C6 pinned",
+    "annulus_vyvar_equiv": "2.7/5.2 x FWHM"
+  },
+  "remeasure_at_vyvar_fstar": {
+    "target": "BO CVn (draft 516)",
+    "aperture_policy": "variable aperture OR fixed radius",
+    "f_star_vyvar": 0.65,
+    "fwhm_night_px": 5.19175,
+    "source_radius_px_fixed_equiv": 3.375,
+    "instruction_fixed": "Set Multi-Aperture Source_Radius = 3.37 px (= f* 0.65 x FWHM 5.192). Sky_Rad(min/max) keep 14.0/27.0 (or 2.7/5.2 x FWHM). Same pinned comps C2..C6. Export rel_flux_T1 table.",
+    "instruction_variable": "If AIJ variable aperture by FWHM is available: set aperture factor = 0.65 FWHM per frame; annulus 2.7/5.2 FWHM; same comps."
+  },
+  "status": "STOP for AIJ remasure - Claude Code cannot run AIJ"
+}

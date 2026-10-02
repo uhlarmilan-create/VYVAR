@@ -4179,6 +4179,8 @@ def run_phase2a(
                     target_cid=_tcid,
                     comp_ids=_comp_ids_pt,
                     frame_order=_frame_order,
+                    gain=float(state._gain_phot) if state._gain_phot is not None else 1.0,
+                    read_noise=float(state._rn_phot) if state._rn_phot is not None else 10.0,
                 )
                 _choices[_tcid] = _ch
                 state.per_target_aperture[_tcid] = _ch
@@ -4188,6 +4190,8 @@ def run_phase2a(
                 f_grid=_grid.f_grid,
                 fwhm_night_px=_fwhm_pt,
                 elapsed_s=_grid.elapsed_s,
+                gain=float(state._gain_phot) if state._gain_phot is not None else None,
+                read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
             )
             _n_edge = sum(1 for _c in _choices.values() if bool(getattr(_c, "f_edge", False)))
             logging.info(
