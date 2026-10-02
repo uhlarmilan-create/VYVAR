@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-10-02T06:59:02Z at git HEAD 630a51b._
+_Generated 2026-10-02T08:03:20Z at git HEAD dc7461a._
 
 ## Summary
 
-- Entries: 300
-- Tier: basic 13, advanced 78, expert 209
-- Kind: static 282, derived 0, resolved 18
-- Widget: auto 114, custom 162, hidden 24
-- Owner: db_static 8, config_runtime 274, fits_dynamic 6, internal 12
-- Scope: universal 250, rig 33, site 9, session 8
-- Scope key: none 250, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
+- Entries: 301
+- Tier: basic 13, advanced 79, expert 209
+- Kind: static 283, derived 0, resolved 18
+- Widget: auto 114, custom 163, hidden 24
+- Owner: db_static 8, config_runtime 275, fits_dynamic 6, internal 12
+- Scope: universal 251, rig 33, site 9, session 8
+- Scope key: none 251, rig 15, rig_band 4, rig_sampling 14, site 9, frame 8
 - Rig triage group: a 20, b 10, c 3
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -224,6 +224,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `gs11_dilution_enabled` | False | - | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Enabled |
 | `gs11_dilution_mag_limit_delta` | 5.0 | 0.5 .. 15 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Dilution Mag Limit Delta |
 | `gs11_target_min_dilution` | 0.5 | 0.01 .. 1 | expert | static | config_runtime | universal | none | n/a | custom | GS11 Target Min Dilution |
+| `lc_high_err_nsigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Lc High Err Nsigma |
 | `lc_outlier_adjacent_sigma` | 3.0 | 1 .. 8 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Adjacent Sigma |
 | `lc_outlier_enabled` | True | - | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Enabled |
 | `lc_outlier_evidence_n_sigma` | 5.0 | 3 .. 10 | advanced | static | config_runtime | universal | none | n/a | custom | Lc Outlier Evidence N Sigma |

@@ -506,8 +506,7 @@ def _render_target_detail(
                 from lc_outlier import UI_HIDE_WHEN_TOGGLE_OFF  # noqa: PLC0415
 
                 fl = lc_df["flag"].astype(str).str.strip().str.lower()
-                # Hide frame_qc/artifact/saturated when toggle off; always keep
-                # spike_unconfirmed (distinct marker) and normal.
+                # LC-FLAG-ERR-01: toggle hides all non-normal (red) points.
                 lc_df = lc_df.loc[~fl.isin(tuple(UI_HIDE_WHEN_TOGGLE_OFF))].copy()
 
             y_col = "mag_calib" if show_detrended else "mag_calib_raw"
@@ -529,21 +528,13 @@ def _render_target_detail(
                     fig = go.Figure()
                     bjd_num = pd.to_numeric(lc_df["bjd"], errors="coerce")
                     _, bjd_x_off = jd_series_relative(bjd_num)
-                    # Svetle pozadie + vyrazne farby bodov (citatelne aj v tmavom Streamlit)
-                    flag_colors_plotly = {
-                        "normal": "#2563eb",
-                        "artifact": "#ea580c",
-                        "frame_qc": "#b45309",
-                        "spike_unconfirmed": "#9333ea",
-                        "saturated": "#64748b",
-                        "no_data": "#94a3b8",
-                        # Legacy (pre LC-OUTLIER-01) CSVs:
-                        "outlier_hi": "#ea580c",
-                        "outlier_lo": "#9333ea",
-                    }
-
+                    # LC-FLAG-ERR-01 (Milan): one red colour for every non-normal class.
+                    _RED = "#dc2626"
+                    _BLUE = "#2563eb"
                     if "flag" not in lc_df.columns:
                         lc_df = lc_df.assign(flag="normal")
+                    if "flag_reason" not in lc_df.columns:
+                        lc_df = lc_df.assign(flag_reason="")
 
                     _flag_counts = (
                         lc_df["flag"].astype(str).str.strip().str.lower().value_counts().to_dict()
@@ -556,15 +547,13 @@ def _render_target_detail(
                     if _legend_bits:
                         st.caption("LC flags: " + ", ".join(_legend_bits))
 
-                    for flag, color in flag_colors_plotly.items():
-                        sub = lc_df[lc_df["flag"].astype(str).str.lower() == flag].dropna(
-                            subset=["bjd", y_col]
-                        )
-                        if sub.empty:
-                            continue
+                    fl_series = lc_df["flag"].astype(str).str.strip().str.lower()
+                    # Draw normal (blue) then each non-normal class (all red).
+                    sub_n = lc_df[fl_series == "normal"].dropna(subset=["bjd", y_col])
+                    if not sub_n.empty:
                         err = (
-                            sub["err"].fillna(0).tolist()
-                            if "err" in sub.columns
+                            sub_n["err"].fillna(0).tolist()
+                            if "err" in sub_n.columns
                             else None
                         )
                         err_kwargs: dict = {}
@@ -572,45 +561,90 @@ def _render_target_detail(
                             err_kwargs = dict(
                                 array=err,
                                 visible=True,
-                                color=color,
+                                color=_BLUE,
                                 thickness=1,
                                 width=2,
                             )
-                        x_raw = pd.to_numeric(sub["bjd"], errors="coerce").to_numpy(dtype=float)
+                        x_raw = pd.to_numeric(sub_n["bjd"], errors="coerce").to_numpy(dtype=float)
                         x_plot = x_raw - float(bjd_x_off) if bjd_x_off is not None else x_raw
-                        _marker: dict = dict(
-                            color=color, size=7, line=dict(width=0.5, color="#ffffff")
-                        )
-                        if flag == "spike_unconfirmed":
-                            _marker = dict(
-                                color=color,
-                                size=10,
-                                symbol="diamond",
-                                line=dict(width=1.0, color="#111827"),
-                            )
-                        elif flag in ("artifact", "frame_qc", "outlier_hi", "outlier_lo"):
-                            _marker = dict(
-                                color=color,
-                                size=9,
-                                symbol="x",
-                                line=dict(width=1.0, color="#111827"),
-                            )
                         fig.add_trace(
                             go.Scatter(
                                 x=x_plot,
-                                y=sub[y_col],
+                                y=sub_n[y_col],
                                 error_y=err_kwargs if err_kwargs else None,
                                 mode="markers",
-                                marker=_marker,
-                                name=f"{flag} (n={len(sub)})",
+                                marker=dict(
+                                    color=_BLUE,
+                                    size=7,
+                                    line=dict(width=0.5, color="#ffffff"),
+                                ),
+                                name=f"normal (n={len(sub_n)})",
                                 customdata=x_raw,
                                 hovertemplate=(
-                                    "<b>%{fullData.name}</b><br>BJD=%{customdata:.6f}<br>"
+                                    "<b>normal</b><br>BJD=%{customdata:.6f}<br>"
                                     + y_label
                                     + "=%{y:.4f}<extra></extra>"
                                 ),
                             )
                         )
+                    sub_f = lc_df[fl_series != "normal"].copy()
+                    if not sub_f.empty:
+                        sub_f["_fl"] = sub_f["flag"].astype(str).str.strip().str.lower()
+                        for flag_cls, sub_cls in sub_f.groupby("_fl", sort=True):
+                            sub_cls = sub_cls.dropna(subset=["bjd", y_col])
+                            if sub_cls.empty:
+                                continue
+                            err = (
+                                sub_cls["err"].fillna(0).tolist()
+                                if "err" in sub_cls.columns
+                                else None
+                            )
+                            err_kwargs = {}
+                            if err is not None:
+                                err_kwargs = dict(
+                                    array=err,
+                                    visible=True,
+                                    color=_RED,
+                                    thickness=1,
+                                    width=2,
+                                )
+                            x_raw = pd.to_numeric(sub_cls["bjd"], errors="coerce").to_numpy(
+                                dtype=float
+                            )
+                            x_plot = (
+                                x_raw - float(bjd_x_off) if bjd_x_off is not None else x_raw
+                            )
+                            reasons = (
+                                sub_cls["flag_reason"].astype(str).tolist()
+                                if "flag_reason" in sub_cls.columns
+                                else [""] * len(sub_cls)
+                            )
+                            custom = np.column_stack(
+                                [x_raw, np.asarray(reasons, dtype=object)]
+                            )
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=x_plot,
+                                    y=sub_cls[y_col],
+                                    error_y=err_kwargs if err_kwargs else None,
+                                    mode="markers",
+                                    marker=dict(
+                                        color=_RED,
+                                        size=9,
+                                        symbol="circle",
+                                        line=dict(width=0.5, color="#111827"),
+                                    ),
+                                    name=f"{flag_cls} (n={len(sub_cls)})",
+                                    customdata=custom,
+                                    hovertemplate=(
+                                        f"<b>{flag_cls}</b><br>"
+                                        "reason=%{customdata[1]}<br>"
+                                        "BJD=%{customdata[0]:.6f}<br>"
+                                        + y_label
+                                        + "=%{y:.4f}<extra></extra>"
+                                    ),
+                                )
+                            )
 
                     # Optional AIRMASS overlay (right axis).
                     am_col = _airmass_column(lc_df)

@@ -1836,11 +1836,15 @@ def apply_reporting_postprocess(
     source_files: list[str] | None = None,
     frame_qc_reasons: dict[str, str] | None = None,
     evidence_for_index: Any | None = None,
+    err_photon: np.ndarray | None = None,
+    err_sem_rel: np.ndarray | None = None,
+    err_scint_rel: np.ndarray | None = None,
+    err_sigma_sys_rel: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str], list[str]]:
-    """Workstream B: ship ensemble-calibrated mag; LC-OUTLIER-01 flags; no target airmass LSQ.
+    """Workstream B: ship ensemble-calibrated mag; LC-OUTLIER / LC-FLAG-ERR flags; no target airmass LSQ.
 
     Photometry columns are never altered by flagging. Returns flag_reason list
-    alongside flags (LC-OUTLIER-01).
+    alongside flags (LC-OUTLIER-01 / LC-FLAG-ERR-01).
     """
     from lc_outlier import assign_lc_flags  # noqa: PLC0415
 
@@ -1856,6 +1860,7 @@ def apply_reporting_postprocess(
     _enabled = bool(getattr(_cfg, "lc_outlier_enabled", True))
     _n_sigma = float(getattr(_cfg, "lc_outlier_n_sigma", 5.0) or 5.0)
     _adj = float(getattr(_cfg, "lc_outlier_adjacent_sigma", 3.0) or 3.0)
+    _he_ns = float(getattr(_cfg, "lc_high_err_nsigma", 5.0) or 5.0)
     # Keep empirical eclipse mask as soft log only; isolation rule is the hard guard.
     _feature_mask = empirical_feature_mask_mag(mag_for_report)
     if int(_feature_mask.sum()) > 0:
@@ -1876,6 +1881,11 @@ def apply_reporting_postprocess(
         evidence_for_index=evidence_for_index,
         n_sigma=_n_sigma,
         adjacent_sigma=_adj,
+        high_err_n_sigma=_he_ns,
+        err_photon=err_photon,
+        err_sem_rel=err_sem_rel,
+        err_scint_rel=err_scint_rel,
+        err_sigma_sys_rel=err_sigma_sys_rel,
         enabled=_enabled,
     )
     out_flags = list(result.flags)
@@ -1884,13 +1894,15 @@ def apply_reporting_postprocess(
     for i in range(min(len(out_flags), len(out_reasons))):
         if out_flags[i] == "nondetection" and not out_reasons[i]:
             out_reasons[i] = "nondetection"
-    if result.n_artifact or result.n_spike_unconfirmed or result.n_frame_qc:
+    if result.n_artifact or result.n_spike_unconfirmed or result.n_frame_qc or result.n_high_err:
         logging.info(
-            "[LC-OUTLIER] %s: artifact=%d spike_unconfirmed=%d frame_qc=%d saturated=%d",
+            "[LC-OUTLIER] %s: artifact=%d spike_unconfirmed=%d frame_qc=%d "
+            "high_err=%d saturated=%d",
             target_name,
             result.n_artifact,
             result.n_spike_unconfirmed,
             result.n_frame_qc,
+            result.n_high_err,
             result.n_saturated,
         )
     mag_out = mag_calib_raw.copy()

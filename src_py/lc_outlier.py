@@ -1,14 +1,21 @@
-"""LC-OUTLIER-01: flag outlier LC epochs with evidence; never delete; protect flares.
+"""LC-OUTLIER-01 / LC-FLAG-ERR-01: flag outlier LC epochs; never delete; protect flares.
 
-Product rules (Milan 2026-10-01):
+Product rules (Milan 2026-10-01 / 2026-10-02):
 - NEVER alter photometry values; only set ``flag`` / ``flag_reason``.
 - Isolated spike alone is not enough for ``artifact``; need image evidence.
 - Runs of >=2 same-sign elevated residuals (flares/eclipses) stay ``normal``.
-- ``spike_unconfirmed`` is shown distinctly and never excluded from exports.
+- ``spike_unconfirmed`` is never excluded from exports.
+- ``high_err``: err_i > median(err) + n_sigma x 1.4826 x MAD(err) on the
+  star's own LC (LC-FLAG-ERR-01). Hides points whose huge error bar would
+  otherwise silence the spike test.
 
 Flag vocabulary::
-  normal | saturated | frame_qc | artifact | spike_unconfirmed | no_data
+  normal | saturated | frame_qc | artifact | high_err | spike_unconfirmed | no_data
   (+ preserved nondetection / edge_fail when already set upstream)
+
+Precedence (LC-FLAG-ERR-01)::
+  artifact > frame_qc > high_err > spike_unconfirmed > normal
+  (preserve saturated/no_data/nondetection/edge_fail untouched)
 
 Thresholds are statistical conventions (MAD-sigma), registered as config keys.
 """
@@ -28,11 +35,14 @@ import pandas as pd
 LOGGER = logging.getLogger(__name__)
 
 _MAD_CONSISTENCY = 0.6745
+# Explicit 1.4826 used in LC-FLAG-ERR-01 product formula (= 1/0.6745).
+_MAD_TO_SIGMA = 1.4826
 
 FLAG_NORMAL = "normal"
 FLAG_SATURATED = "saturated"
 FLAG_FRAME_QC = "frame_qc"
 FLAG_ARTIFACT = "artifact"
+FLAG_HIGH_ERR = "high_err"
 FLAG_SPIKE_UNCONFIRMED = "spike_unconfirmed"
 FLAG_NO_DATA = "no_data"
 
@@ -42,19 +52,49 @@ _PRESERVE_FLAGS = frozenset(
 )
 
 # Export / UI: hide when toggle off; drop from AAVSO/VarAstro/minima.
-EXPORT_EXCLUDE_FLAGS = frozenset({FLAG_FRAME_QC, FLAG_ARTIFACT, "saturated", "no_data", "edge_fail", "nondetection"})
-UI_HIDE_WHEN_TOGGLE_OFF = frozenset({FLAG_FRAME_QC, FLAG_ARTIFACT, "saturated", "outlier_hi", "outlier_lo"})
-# Always drawn (distinct marker); never excluded.
-ALWAYS_SHOW_FLAGS = frozenset({FLAG_SPIKE_UNCONFIRMED})
+EXPORT_EXCLUDE_FLAGS = frozenset(
+    {
+        FLAG_FRAME_QC,
+        FLAG_ARTIFACT,
+        FLAG_HIGH_ERR,
+        "saturated",
+        "no_data",
+        "edge_fail",
+        "nondetection",
+    }
+)
+# LC-FLAG-ERR-01: all non-normal classes drawn red; toggle hides them all.
+UI_HIDE_WHEN_TOGGLE_OFF = frozenset(
+    {
+        FLAG_FRAME_QC,
+        FLAG_ARTIFACT,
+        FLAG_HIGH_ERR,
+        FLAG_SPIKE_UNCONFIRMED,
+        "saturated",
+        "outlier_hi",
+        "outlier_lo",
+        "no_data",
+    }
+)
+# spike_unconfirmed stays in exports; display is red like other non-normal.
+ALWAYS_SHOW_FLAGS = frozenset()
 
 DEFAULT_N_SIGMA = 5.0
 DEFAULT_ADJACENT_SIGMA = 3.0
 DEFAULT_FRAME_QC_N_SIGMA = 5.0
 DEFAULT_EVIDENCE_N_SIGMA = 5.0
+DEFAULT_HIGH_ERR_N_SIGMA = 5.0
 # Cadence window: half-width covers ~30 min of samples, clamped to [3, 12].
 _WINDOW_HALF_DAYS = 0.020833333333333332  # 30 minutes
 _WINDOW_K_MIN = 3
 _WINDOW_K_MAX = 12
+
+_ERR_COMPONENT_NAMES = (
+    "err_photon",
+    "err_sem_rel",
+    "err_scint_rel",
+    "err_sigma_sys_rel",
+)
 
 
 def mad_sigma(values: np.ndarray) -> float:
@@ -66,6 +106,62 @@ def mad_sigma(values: np.ndarray) -> float:
     med = float(np.median(v))
     mad = float(np.median(np.abs(v - med)))
     return max(mad / _MAD_CONSISTENCY, 1e-12)
+
+
+def high_err_mask(
+    err: np.ndarray,
+    *,
+    n_sigma: float = DEFAULT_HIGH_ERR_N_SIGMA,
+) -> tuple[np.ndarray, float, float]:
+    """LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
+
+    Returns (is_high_err, median_err, mad_err) where mad_err is the raw MAD
+    (not yet scaled by 1.4826).
+    """
+    e = np.asarray(err, dtype=float)
+    n = len(e)
+    out = np.zeros(n, dtype=bool)
+    finite = e[np.isfinite(e) & (e > 0)]
+    if finite.size < 3:
+        return out, float("nan"), float("nan")
+    med = float(np.median(finite))
+    mad = float(np.median(np.abs(finite - med)))
+    thr = med + float(n_sigma) * _MAD_TO_SIGMA * mad
+    for i in range(n):
+        ei = float(e[i])
+        if math.isfinite(ei) and ei > thr:
+            out[i] = True
+    return out, med, mad
+
+
+def dominant_err_component(
+    i: int,
+    *,
+    err_photon: np.ndarray | None = None,
+    err_sem_rel: np.ndarray | None = None,
+    err_scint_rel: np.ndarray | None = None,
+    err_sigma_sys_rel: np.ndarray | None = None,
+) -> str:
+    """Name the largest finite err component at index i for flag_reason."""
+    comps: list[tuple[str, float]] = []
+    for name, arr in (
+        ("err_photon", err_photon),
+        ("err_sem_rel", err_sem_rel),
+        ("err_scint_rel", err_scint_rel),
+        ("err_sigma_sys_rel", err_sigma_sys_rel),
+    ):
+        if arr is None:
+            continue
+        a = np.asarray(arr, dtype=float)
+        if i < 0 or i >= len(a):
+            continue
+        v = float(a[i])
+        if math.isfinite(v):
+            comps.append((name, v))
+    if not comps:
+        return "err:unknown"
+    name, val = max(comps, key=lambda t: t[1])
+    return f"{name}={val:.6g}"
 
 
 def cadence_half_window(bjd: np.ndarray) -> int:
@@ -471,6 +567,7 @@ class FlagResult:
     n_spike_unconfirmed: int = 0
     n_frame_qc: int = 0
     n_saturated: int = 0
+    n_high_err: int = 0
 
 
 def assign_lc_flags(
@@ -485,9 +582,18 @@ def assign_lc_flags(
     evidence_for_index: Callable[[int], ImageEvidence | None] | None = None,
     n_sigma: float = DEFAULT_N_SIGMA,
     adjacent_sigma: float = DEFAULT_ADJACENT_SIGMA,
+    high_err_n_sigma: float = DEFAULT_HIGH_ERR_N_SIGMA,
+    err_photon: np.ndarray | None = None,
+    err_sem_rel: np.ndarray | None = None,
+    err_scint_rel: np.ndarray | None = None,
+    err_sigma_sys_rel: np.ndarray | None = None,
     enabled: bool = True,
 ) -> FlagResult:
-    """Assign flag / flag_reason for one light curve (photometry unchanged)."""
+    """Assign flag / flag_reason for one light curve (photometry unchanged).
+
+    Precedence: artifact > frame_qc > high_err > spike_unconfirmed > normal
+    (preserve saturated / no_data / nondetection / edge_fail).
+    """
     m = np.asarray(mag, dtype=float)
     e = np.asarray(err, dtype=float)
     t = np.asarray(bjd, dtype=float)
@@ -524,6 +630,26 @@ def assign_lc_flags(
                 flags[i] = FLAG_FRAME_QC
                 reasons[i] = f"frame_qc:{why}"
 
+    # LC-FLAG-ERR-01: inflated photometric error (before spike so high_err
+    # beats spike_unconfirmed; artifact may still overwrite below).
+    he_mask = np.zeros(n, dtype=bool)
+    if enabled:
+        he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma))
+        for i in range(n):
+            if not bool(he_mask[i]):
+                continue
+            if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
+                continue
+            dom = dominant_err_component(
+                i,
+                err_photon=err_photon,
+                err_sem_rel=err_sem_rel,
+                err_scint_rel=err_scint_rel,
+                err_sigma_sys_rel=err_sigma_sys_rel,
+            )
+            flags[i] = FLAG_HIGH_ERR
+            reasons[i] = f"high_err:{dom}"
+
     if enabled:
         spike, _resid, _smooth = isolated_spike_mask(
             m, e, t, n_sigma=n_sigma, adjacent_sigma=adjacent_sigma
@@ -541,8 +667,12 @@ def assign_lc_flags(
                     LOGGER.debug("[LC-OUTLIER] evidence failed at i=%s: %s", i, exc)
                     ev = None
             if ev is not None and ev.fired:
+                # artifact beats high_err
                 flags[i] = FLAG_ARTIFACT
                 reasons[i] = "artifact:" + ",".join(ev.reasons[:6])
+            elif flags[i] == FLAG_HIGH_ERR:
+                # high_err beats spike_unconfirmed: keep high_err
+                continue
             else:
                 flags[i] = FLAG_SPIKE_UNCONFIRMED
                 reasons[i] = "spike_unconfirmed:isolated_residual"
@@ -551,6 +681,7 @@ def assign_lc_flags(
     n_su = sum(1 for f in flags if f == FLAG_SPIKE_UNCONFIRMED)
     n_fq = sum(1 for f in flags if f == FLAG_FRAME_QC)
     n_sat = sum(1 for f in flags if f == FLAG_SATURATED)
+    n_he = sum(1 for f in flags if f == FLAG_HIGH_ERR)
     return FlagResult(
         flags=flags,
         reasons=reasons,
@@ -558,6 +689,7 @@ def assign_lc_flags(
         n_spike_unconfirmed=n_su,
         n_frame_qc=n_fq,
         n_saturated=n_sat,
+        n_high_err=n_he,
     )
 
 
@@ -687,12 +819,9 @@ def export_keep_mask(flags: Sequence[str]) -> np.ndarray:
     for f in flags:
         s = str(f or "").strip().lower()
         if s in ALWAYS_SHOW_FLAGS or s in ("", FLAG_NORMAL, "outlier_hi", "outlier_lo"):
-            # Legacy outlier_* kept for old CSVs until re-run; new scheme excludes only
-            # frame_qc/artifact (+ hard bad).
-            if s in ("outlier_hi", "outlier_lo"):
-                keep.append(True)
-            else:
-                keep.append(True)
+            # Legacy outlier_* kept for old CSVs until re-run; new scheme excludes
+            # frame_qc / artifact / high_err (+ hard bad); keeps spike_unconfirmed.
+            keep.append(True)
             continue
         keep.append(s not in EXPORT_EXCLUDE_FLAGS)
     return np.asarray(keep, dtype=bool)
@@ -703,11 +832,13 @@ __all__ = [
     "DEFAULT_ADJACENT_SIGMA",
     "DEFAULT_EVIDENCE_N_SIGMA",
     "DEFAULT_FRAME_QC_N_SIGMA",
+    "DEFAULT_HIGH_ERR_N_SIGMA",
     "DEFAULT_N_SIGMA",
     "EvidenceCache",
     "EXPORT_EXCLUDE_FLAGS",
     "FLAG_ARTIFACT",
     "FLAG_FRAME_QC",
+    "FLAG_HIGH_ERR",
     "FLAG_NO_DATA",
     "FLAG_NORMAL",
     "FLAG_SATURATED",
@@ -717,11 +848,13 @@ __all__ = [
     "UI_HIDE_WHEN_TOGGLE_OFF",
     "assign_lc_flags",
     "cadence_half_window",
+    "dominant_err_component",
     "evaluate_image_evidence",
     "export_keep_mask",
     "fits_path_for_proc",
     "frame_key_from_source",
     "frame_qc_mask_from_night_table",
+    "high_err_mask",
     "isolated_spike_mask",
     "load_frame_metrics_from_manifest",
     "mad_sigma",

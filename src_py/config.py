@@ -654,6 +654,8 @@ class AppConfig:
     lc_outlier_frame_qc_n_sigma: float = 5.0
     #: Image-evidence MAD-sigma vs same-frame similar-flux peers.
     lc_outlier_evidence_n_sigma: float = 5.0
+    #: LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
+    lc_high_err_nsigma: float = 5.0
     #: TODO-35: SysRem (Tamuz et al. 2005) on exported ``lightcurve_*.csv`` after Phase 2A.
     sysrem_enabled: bool = False
     sysrem_n_iter: int = 3
@@ -1637,6 +1639,11 @@ class AppConfig:
             self.lc_outlier_evidence_n_sigma = _loe if math.isfinite(_loe) and _loe > 0 else 5.0
         except (TypeError, ValueError):
             self.lc_outlier_evidence_n_sigma = 5.0
+        try:
+            _lhe = float(data.get("lc_high_err_nsigma", self.lc_high_err_nsigma))
+            self.lc_high_err_nsigma = _lhe if math.isfinite(_lhe) and _lhe > 0 else 5.0
+        except (TypeError, ValueError):
+            self.lc_high_err_nsigma = 5.0
         self.sysrem_enabled = bool(data.get("sysrem_enabled", self.sysrem_enabled))
         try:
             self.sysrem_n_iter = max(1, int(data.get("sysrem_n_iter", self.sysrem_n_iter)))
@@ -2767,6 +2774,7 @@ class AppConfig:
             "lc_outlier_adjacent_sigma": float(self.lc_outlier_adjacent_sigma),
             "lc_outlier_frame_qc_n_sigma": float(self.lc_outlier_frame_qc_n_sigma),
             "lc_outlier_evidence_n_sigma": float(self.lc_outlier_evidence_n_sigma),
+            "lc_high_err_nsigma": float(self.lc_high_err_nsigma),
             "sysrem_enabled": bool(self.sysrem_enabled),
             "comp_qa_enabled": bool(self.comp_qa_enabled),
             "trust_flag_enabled": bool(self.trust_flag_enabled),

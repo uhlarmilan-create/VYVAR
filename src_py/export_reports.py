@@ -918,7 +918,8 @@ def _select_export_lc_rows(lc_df: pd.DataFrame) -> pd.DataFrame:
         from lc_outlier import EXPORT_EXCLUDE_FLAGS, FLAG_SPIKE_UNCONFIRMED  # noqa: PLC0415
 
         fl = work["flag"].astype(str).str.strip().str.lower()
-        # LC-OUTLIER-01: drop frame_qc + artifact (+ hard bad); keep spike_unconfirmed.
+        # LC-OUTLIER-01 / LC-FLAG-ERR-01: drop frame_qc + artifact + high_err (+hard bad);
+        # keep spike_unconfirmed.
         bad = fl.isin(tuple(EXPORT_EXCLUDE_FLAGS - {FLAG_SPIKE_UNCONFIRMED}))
         good = fl.isin(("normal", "", FLAG_SPIKE_UNCONFIRMED)) | fl.isna()
         mask = finite & (good | ~bad) & ~bad

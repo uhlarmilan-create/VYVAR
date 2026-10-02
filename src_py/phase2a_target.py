@@ -1291,6 +1291,10 @@ def _phase2a_process_one_target(
             source_files=_src_files_pre,
             frame_qc_reasons=getattr(state, "frame_qc_reasons", None),
             evidence_for_index=_evidence_at,
+            err_photon=err_photon_export,
+            err_sem_rel=err_sem_rel_export,
+            err_scint_rel=err_scint_rel_export,
+            err_sigma_sys_rel=err_sigma_sys_rel_export,
         )
     )
 

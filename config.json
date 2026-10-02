@@ -486,6 +486,8 @@
   "lc_outlier_adjacent_sigma": 3.0,
   "lc_outlier_frame_qc_n_sigma": 5.0,
   "lc_outlier_evidence_n_sigma": 5.0,
+  // LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
+  "lc_high_err_nsigma": 5.0,
   // Accept photon-transfer g_pt as gain authority only when CI hi/lo is at
   // most this factor (~3).
   "photon_transfer_ci_max_width_factor": 3.0,

@@ -762,6 +762,17 @@ def render_settings_dashboard(
             step=0.5,
             help="Image-evidence MAD-sigma vs same-frame similar-flux peers.",
         )
+        lc_high_err_ns = st.slider(
+            "lc_high_err_nsigma",
+            min_value=3.0,
+            max_value=10.0,
+            value=float(getattr(cfg, "lc_high_err_nsigma", 5.0) or 5.0),
+            step=0.5,
+            help=(
+                "LC-FLAG-ERR-01: flag epoch when err_i > median(err) + n_sigma x "
+                "1.4826 x MAD(err) on that star's LC."
+            ),
+        )
         st.caption("LC-quality classification thresholds (Phase 2A summary `lc_quality_flag`).")
         lc_q_min = st.slider(
             "lc_quality_min_frames",
@@ -1137,6 +1148,7 @@ def render_settings_dashboard(
         cfg.lc_outlier_adjacent_sigma = float(max(1.0, min(8.0, lc_out_adj)))
         cfg.lc_outlier_frame_qc_n_sigma = float(max(3.0, min(10.0, lc_out_fq)))
         cfg.lc_outlier_evidence_n_sigma = float(max(3.0, min(10.0, lc_out_ev)))
+        cfg.lc_high_err_nsigma = float(max(3.0, min(10.0, lc_high_err_ns)))
         cfg.lc_quality_min_frames = int(max(3, min(500, lc_q_min)))
         cfg.lc_quality_short_min_frames = int(max(2, min(100, lc_q_short)))
         if cfg.lc_quality_short_min_frames > cfg.lc_quality_min_frames:

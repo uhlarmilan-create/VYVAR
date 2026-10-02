@@ -106,10 +106,56 @@ n_f_edge reported for Milan (516=46, 521=98).
 ==============================================================================
 PART B - LC-FLAG-ERR-01
 ==============================================================================
-(pending after Part A commit)
+
+What I did
+New flag class high_err: err_i > median(err) + n_sigma x 1.4826 x MAD(err)
+on the star's own LC (lc_high_err_nsigma default 5). flag_reason names the
+dominant err component. Precedence: artifact > frame_qc > high_err >
+spike_unconfirmed > normal. UI draws every non-normal point RED; hover shows
+class + flag_reason; toggle hides/shows all red points. Exports exclude
+artifact / frame_qc / high_err; keep spike_unconfirmed. Photometry never
+changed.
+
+## Tests
+dev/tests/test_lc_outlier_01.py: 10/10 PASS
+  (high_err inflated err; flare stays normal; precedence; export filter)
+
+## Verify draft 521
+Artifacts: session_20261002_alpha_fixes_02/
+  verify_high_err_draft521.py / .json
+  lc_red_HAT148.png
+  lc_red_V1023.png
+
+HAT-148-0001021 (1402911282957526912):
+  frame 052: high_err  high_err:err_photon=0.658932  (err=0.659, mag=13.77)
+  frame 103: high_err  high_err:err_photon=0.499036  (err=0.499, mag=12.19)
+
+Class totals (all LC targets, reflag; photometry columns unchanged):
+  before: normal=6603, spike_unconfirmed=25, no_data=1885, artifact=2
+  after:  normal=6363, spike_unconfirmed=23, no_data=1885, artifact=2,
+          high_err=242
+  n_targets_with_high_err=55; n_photo_mismatch_targets=0
+
+## Files changed (Part B)
+- src_py/lc_outlier.py (FLAG_HIGH_ERR, high_err_mask, precedence, export)
+- src_py/photometry_phase2a.py / phase2a_target.py (wire err components)
+- src_py/ui_aperture_photometry.py (all non-normal red)
+- src_py/export_reports.py (exclude high_err)
+- src_py/config.py / ui_settings.py / config.json
+- params_registry + PARAMS + CONFIG guides
+- dev/tests/test_lc_outlier_01.py
+- session verify artifacts
+
+## Errors (if any)
+None blocking.
 
 ## Gate
-(pending --fast --clean / --full-epsf after Part B)
+--fast --clean OVERALL PASS (1674 passed, 34 skipped).
+Artifact: session_20261002_alpha_fixes_02/fast_clean.txt
+
+--full-epsf: expected to change (Part A default); report below; no LOCK.
+(run in progress / see full_epsf.txt when complete)
 
 ## STOP
-Part A numbers above for Milan. Part B follows in next commit.
+Part A + Part B complete for Milan. AIJ DYNAMIC RMS(diff)=5.245 mmag.
+HAT-148 052/103 -> high_err. Anchors will move; do not LOCK.

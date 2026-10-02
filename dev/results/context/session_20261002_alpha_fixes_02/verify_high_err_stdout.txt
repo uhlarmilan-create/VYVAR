@@ -1,0 +1,50 @@
+{
+  "task": "LC-FLAG-ERR-01",
+  "draft": 521,
+  "n_targets": 65,
+  "class_totals_before": {
+    "normal": 6603,
+    "spike_unconfirmed": 25,
+    "no_data": 1885,
+    "artifact": 2
+  },
+  "class_totals_after": {
+    "normal": 6363,
+    "spike_unconfirmed": 23,
+    "no_data": 1885,
+    "high_err": 242,
+    "artifact": 2
+  },
+  "n_targets_with_high_err": 55,
+  "n_photo_mismatch_targets": 0,
+  "hat148": {
+    "catalog_id": "1402911282957526912",
+    "frames_052_103": [
+      {
+        "frame": "052",
+        "flag": "high_err",
+        "flag_reason": "high_err:err_photon=0.658932",
+        "err": 0.659184,
+        "err_photon": 0.658932,
+        "mag_calib": 13.77442
+      },
+      {
+        "frame": "103",
+        "flag": "high_err",
+        "flag_reason": "high_err:err_photon=0.499036",
+        "err": 0.499365,
+        "err_photon": 0.499036,
+        "mag_calib": 12.189843
+      }
+    ],
+    "flag_counts": {
+      "normal": 128,
+      "high_err": 2,
+      "spike_unconfirmed": 1
+    }
+  },
+  "plots": [
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\lc_red_HAT148.png",
+    "C:\\ASTRO\\python\\VYVAR\\dev\\results\\context\\session_20261002_alpha_fixes_02\\lc_red_V1023.png"
+  ]
+}

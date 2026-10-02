@@ -4842,5 +4842,23 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "lc_high_err_nsigma": {
+    "help": "LC-FLAG-ERR-01: flag epoch when err_i > median(err) + n_sigma x 1.4826 x MAD(err) on that star's own LC. Statistical convention (default 5). flag_reason names the dominant err component.",
+    "kind": "static",
+    "label": "Lc High Err Nsigma",
+    "owner": "config_runtime",
+    "phase": "photometry",
+    "range": [
+      3.0,
+      10.0
+    ],
+    "tier": "advanced",
+    "unit": null,
+    "widget": "custom",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }
