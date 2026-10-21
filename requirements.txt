@@ -1,0 +1,23 @@
+streamlit
+pandas
+numpy>=2.4.4,<2.5
+psutil
+scipy
+astropy>=8.0,<9
+photutils>=3.1.1,<4
+matplotlib
+scikit-image
+pillow
+plotly
+lightkurve
+astroquery
+astroalign
+reproject
+pytest
+reportlab   # runtime: SUMMARY MEASURE REPORT PDFs (pdf_report.py, photometry_report.py); also used by dev/tools/docs_pdf/ builders
+
+# Optional extras (guarded imports; not needed for the core pipeline):
+#   pyarrow      - faster parquet CSV fast-path (pipeline.py)
+#   sep-pjw      - Source Extractor python; only the cross-validation harness (xval_run.py)
+#   cupy-cudaXXX - GPU plate-solve path (needs CUDA; choose the wheel matching your CUDA)
+# pyraf is intentionally omitted (IRAF; Linux-only, guarded, LC cross-val only).

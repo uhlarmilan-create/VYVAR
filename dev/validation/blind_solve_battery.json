@@ -1,0 +1,96 @@
+{
+  "version": 2,
+  "hit_threshold_deg": 2.0,
+  "fields": [
+    {
+      "id": "380_B",
+      "draft": "draft_000380",
+      "masterstar": "platesolve/B_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.03,
+      "truth_dec": 57.14,
+      "plate_scale": 1.3,
+      "rig": "newton"
+    },
+    {
+      "id": "380_L",
+      "draft": "draft_000380",
+      "masterstar": "platesolve/L_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.03,
+      "truth_dec": 57.14,
+      "plate_scale": 1.3,
+      "rig": "newton"
+    },
+    {
+      "id": "380_R",
+      "draft": "draft_000380",
+      "masterstar": "platesolve/R_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.03,
+      "truth_dec": 57.14,
+      "plate_scale": 1.3,
+      "rig": "newton"
+    },
+    {
+      "id": "380_V",
+      "draft": "draft_000380",
+      "masterstar": "platesolve/V_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.03,
+      "truth_dec": 57.14,
+      "plate_scale": 1.3,
+      "rig": "newton"
+    },
+    {
+      "id": "375_B",
+      "draft": "draft_000375",
+      "masterstar": "platesolve/B_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.175,
+      "truth_dec": 57.133,
+      "plate_scale": 1.293,
+      "rig": "newton"
+    },
+    {
+      "id": "375_L",
+      "draft": "draft_000375",
+      "masterstar": "platesolve/L_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.175,
+      "truth_dec": 57.133,
+      "plate_scale": 1.293,
+      "rig": "newton"
+    },
+    {
+      "id": "375_R",
+      "draft": "draft_000375",
+      "masterstar": "platesolve/R_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.175,
+      "truth_dec": 57.133,
+      "plate_scale": 1.293,
+      "rig": "newton"
+    },
+    {
+      "id": "375_V",
+      "draft": "draft_000375",
+      "masterstar": "platesolve/V_20_2/MASTERSTAR.fits",
+      "truth_ra": 35.175,
+      "truth_dec": 57.133,
+      "plate_scale": 1.293,
+      "rig": "newton"
+    },
+    {
+      "id": "368_Blue",
+      "draft": "draft_000368",
+      "masterstar": "detrended_aligned/lights/Blue_240_1/MASTERSTAR.fits",
+      "truth_ra": 132.79732102796,
+      "truth_dec": 11.810062943809,
+      "plate_scale": 2.03,
+      "rig": "newton"
+    },
+    {
+      "id": "365_wide",
+      "draft": "draft_000365",
+      "masterstar": "platesolve/NoFilter_60_2/MASTERSTAR.fits",
+      "truth_ra": 241.53869,
+      "truth_dec": 50.29571,
+      "plate_scale": 9.55,
+      "rig": "wide"
+    }
+  ]
+}

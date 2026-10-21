@@ -1,0 +1,345 @@
+// ===========================================================================
+// VYVAR config.json -- pipeline settings, safe to edit in a text editor.
+//
+// This file holds ONLY user-tunable pipeline settings. Two other kinds of
+// values live elsewhere and are NOT in this file:
+//   - Static observatory facts (site coordinates, telescope, camera,
+// catalogs) live in the DATABASE and are managed in the app (Settings ->
+// Observatory).
+//   - Dynamic per-run values (gain, read noise, frame size, plate scale,
+// filter, exposure) are read from the FITS headers at run time and appear in
+// the report's Resolved Facts section.
+//
+// Editing without the UI: '//' line comments are allowed (they are ignored on
+// load). Trailing commas and block comments are NOT allowed. Unknown keys are
+// ignored with a warning that suggests the closest real key. After editing,
+// validate with:
+//     python dev/scripts/validate_config.py
+// Full explanations of every key: docs/VYVAR_CONFIG_GUIDE_EN.md (English) and
+// docs/VYVAR_CONFIG_GUIDE_CZ.md (Czech).
+//
+// NOTE: saving from the UI regenerates this file, its grouping and its
+// comments from the parameter registry -- any custom comments you add here
+// are not preserved.
+// ===========================================================================
+{
+  // === Observer & export identity ===
+  // Your name and AAVSO identity for reports and exports. The observing site
+  // is the default LOCATION row in Database Explorer.
+  // Your official AAVSO observer code, written into every AAVSO export as
+  // #OBSCODE. A warning is shown while it is empty.
+  "observer_code": "UMIA",
+  // Your full name, printed in reports and exports.
+  "observer_name": "Milan Uhlar",
+  // Optional translation of your filter names to AAVSO filter codes for the
+  // exports (for example NoFilter -> CV). Empty = filter names are used as
+  // they are.
+  "aavso_filter_map": {},
+
+  // === Calibration ===
+  // Removing the camera signature from raw frames with master darks and
+  // flats, plus sanity gates that catch a wrong or stale master.
+  // Age after which a master dark counts as old and VYVAR asks for new darks.
+  "masterdark_validity_days": 90,
+  // Age after which a master flat counts as old and VYVAR asks for new flats.
+  "masterflat_validity_days": 200,
+  // Largest difference of sensor temperature between a master dark and the
+  // light frames it may calibrate.
+  "calibration_master_ccd_temp_tolerance_c": 0.5,
+
+  // === Frame quality control (QC) ===
+  // Per-frame quality checks (sharpness, elongation, background, star count)
+  // and the sky-surface preprocess.
+  // Measure per-frame quality (FWHM, elongation, sky, star count) right after
+  // calibration.
+  "qc_after_calibrate_enabled": true,
+  // Set the FWHM limit for bad frames from the seeing of the night itself
+  // instead of a fixed number.
+  "auto_fwhm_enabled": true,
+  // Frames with FWHM above median + k x robust sigma of the night are marked
+  // as bad seeing.
+  "auto_fwhm_k_factor": 3.0,
+  // A frame is flagged when its FWHM, elongation, sky level or ensemble zero
+  // point is this many robust sigmas from the night median.
+  "lc_outlier_frame_qc_n_sigma": 5.0,
+  // Colour (OSC) cameras only: N x N binning of each colour channel after the
+  // Bayer split. The total scale against the raw mosaic is 2 x N.
+  "osc_channel_binning": 2,
+  // Recovery only: subtract the sky surface again even when the frame is
+  // already marked as done. Leave off.
+  "preprocess_sky_surface_force_reapply": false,
+  // Order of the smooth sky surface subtracted before photometry: 0 =
+  // constant, 1 = plane, 2 = gentle 2D gradient.
+  "preprocess_sky_surface_order": 2,
+
+  // === Alignment ===
+  // Registering all frames of a series onto a common pixel grid so each star
+  // keeps the same coordinates throughout the night.
+  // Number of brightest stars the frame alignment matches.
+  "alignment_max_stars": 160,
+  // Most star pairs used to fit one frame onto the reference; more is more
+  // robust but slower.
+  "alignment_max_control_points": 80,
+
+  // === Detection, plate solving & masterstar ===
+  // Finding stars, plate solving and the MASTERSTAR reference catalog matched
+  // to Gaia.
+  // VSX variability types that are not measured automatically (for example
+  // ROT). Exact type match, also with the ':' uncertainty mark; manually
+  // added targets are always measured. These stars stay excluded from the
+  // comparison stars.
+  "vsx_out_of_scope_types": ["ROT"],
+  // Detection limit of every star finder in VYVAR (quality check, alignment,
+  // plate solving, MASTERSTAR, per-frame catalogs), in sky sigmas.
+  "detection_threshold_sigma": 4.5,
+  // Before matching to Gaia, MASTERSTAR keeps detections whose peak is above
+  // the local median + k x sigma. Lower k keeps more faint stars.
+  "masterstar_prematch_peak_sigma_floor": 1.8,
+  // Stars closer than this to the chip edge are not used as comparison stars.
+  "phase01_chip_interior_margin_px": 50,
+  // Star FWHM assumed by the star finder when the frame header carries no
+  // measured FWHM.
+  "sips_dao_fwhm_px": 2.5,
+  // When a detected centroid lies farther than this from the catalogue
+  // position, the catalogue position is used.
+  "dao_centroid_max_shift_fwhm": 1.0,
+  // Largest distance between a detected star and a known exoplanet host to
+  // label it (label only).
+  "exoplanet_match_max_sep_arcsec": 3.0,
+  // How many of the best frames are tried as the MASTERSTAR reference when
+  // the first choice fails.
+  "masterstar_best_of_n": 10,
+
+  // === Photometry ===
+  // Measuring star brightness: aperture and sky annulus, error model, light-
+  // curve outlier flags, neighbour light and the ePSF product.
+  // On: the night run and RUN VYVAR also run the ePSF stage for the ePSF
+  // targets. Off: run it from the ePSF tab. Exports to AAVSO and VarAstro
+  // stay aperture photometry.
+  "epsf_auto_run": false,
+  // Write the ePSF light-curve text files (BJD, delta mag, error) when an
+  // ePSF run finishes. For your own use, not an AAVSO submission.
+  "epsf_export_auto": true,
+  // Which targets ePSF measures: ALL, or VSX types, star names or catalogue
+  // ids separated by commas; * is a wildcard (for example EA, EB, EW or E*).
+  "epsf_targets": "ALL",
+  // Inner radius of the sky ring around each star.
+  "annulus_inner_fwhm": 2.7,
+  // Outer radius of the sky ring around each star; must be larger than the
+  // inner radius.
+  "annulus_outer_fwhm": 5.2,
+  // Base aperture radius in FWHM, the same for every star of a frame.
+  "aperture_fwhm_factor": 1.35,
+  // Flag a point whose error is this many robust sigmas above the typical
+  // error of that light curve.
+  "lc_high_err_nsigma": 5.0,
+  // When the neighbouring point deviates the same way by this much, both stay
+  // normal (flares and eclipses are kept).
+  "lc_outlier_adjacent_sigma": 3.0,
+  // Flag single light-curve points that jump away from their neighbours and
+  // have evidence in the image. Points are flagged, never deleted.
+  "lc_outlier_enabled": true,
+  // How unusual the star must look in that frame (centroid, shape, peak, sky,
+  // ePSF fit) against similar stars before the point is flagged.
+  "lc_outlier_evidence_n_sigma": 5.0,
+  // A single point this far from the running median of its light curve is a
+  // candidate outlier.
+  "lc_outlier_n_sigma": 5.0,
+  // A target is measured only when at least this fraction of its frames is
+  // unsaturated.
+  "per_frame_sat_min_clean_frac": 0.5,
+  // An ePSF fit is marked poor when its chi2 lies this far above the
+  // chi2-flux relation of the frame.
+  "psf_chi2_locus_nsigma": 5.0,
+  // Also write PNG pictures of the light curves and field map during the run
+  // (the app draws its own charts without them).
+  "save_lightcurve_png": false,
+  // Fewest suitable MASTERSTAR stars needed to build the ePSF; below it the
+  // ePSF run stops.
+  "epsf_min_stars": 30,
+  // Fewest valid empty-sky apertures for the background noise measurement of
+  // a frame.
+  "err_empty_apertures_min": 16,
+  // Number of empty-sky apertures placed per frame to measure the background
+  // noise.
+  "err_empty_apertures_n": 64,
+  // Measure MASTERSTAR stars at their known positions also in frames where
+  // the star finder missed them.
+  "forced_photometry_enabled": true,
+  // Extra margin from the frame edge for forced measurements.
+  "forced_photometry_margin_px": 0.0,
+  // Aperture for the neighbour light estimate; 0 = the photometric aperture.
+  "gs11_dilution_aperture_arcsec": 0.0,
+  // Estimate from Gaia how much light of neighbouring stars falls into each
+  // aperture.
+  "gs11_dilution_enabled": false,
+  // Neighbours up to this many magnitudes fainter than the star are counted.
+  "gs11_dilution_mag_limit_delta": 5.0,
+  // Targets whose own light is below this fraction of the aperture light are
+  // flagged as blended.
+  "gs11_target_min_dilution": 0.5,
+  // The gain measured from the frames replaces the camera gain only when its
+  // confidence interval is at most this factor wide.
+  "photon_transfer_ci_max_width_factor": 3.0,
+
+  // === Comparison-star selection ===
+  // Choosing the ensemble of constant stars for differential photometry from
+  // the MASTERSTAR pool: colour class first, then stability (LOO RMS), then
+  // distance; isolation, saturation and frame coverage are gates.
+  // Colour classes 1-3: largest |BP-RP| difference between comparison star
+  // and target. Selection takes the first class with enough comparison stars
+  // and orders them by scatter, colour and distance.
+  "comp_color_tiers": [{"bprp": 0.15}, {"bprp": 0.3}, {"bprp": 0.55}],
+  // Colour limit after classes 1-3. Wider only for very red targets when too
+  // few comparison stars exist.
+  "comp_max_delta_bprp": 0.79,
+  // A comparison star may scatter at most k times its photon noise.
+  "comp_rms_loo_photon_k": 5.0,
+  // A comparison star's trend counts as real drift only above this
+  // significance.
+  "comp_slope_significance_k": 3.0,
+  // Upper limit of a comparison star's leave-one-out scatter; the limit used
+  // is the smaller of this and k x photon noise.
+  "phase01_comparison_max_comp_rms": 0.1,
+  // Comparison stars closer to the target than this are not used.
+  "phase01_comparison_min_dist_arcsec": 60.0,
+  // Fraction of the frames a comparison star must be measured on.
+  "phase01_comparison_min_frames_frac": 0.2,
+  // Largest comparison ensemble; the gain from more stars levels off around
+  // 6-8.
+  "phase01_comparison_n_comp_max": 8,
+  // Comparison stars wanted per target; the colour classes widen until this
+  // many are found.
+  "phase01_comparison_n_comp_min": 3,
+  // Faint limit for targets, comparison and check stars: below this aperture
+  // SNR a star is not measured, and a frame where the target falls below it
+  // is not exported. 10 = 0.11 mag.
+  "snr_min": 10.0,
+  // How strongly contaminated comparison stars lose weight in the ensemble.
+  "comp_contamination_penalty_k": 3.0,
+  // A candidate with a catalogue neighbour closer than this is treated as a
+  // blend and not used.
+  "comp_isolation_fwhm": 3.0,
+  // Comparison stars drifting faster than this are rejected.
+  "comp_max_slope_mmag_hr": 5.0,
+  // On: only known variables (VSX, Gaia) are removed from the comparison
+  // pool; scatter, colour and distance enter as weights.
+  "comp_pool_derived_admission": true,
+  // Smallest scatter used in the ensemble weights (avoids division by near
+  // zero).
+  "comp_select_rms_floor": 1e-06,
+  // Most candidate comparison stars in the pool; 0 = no limit.
+  "comparison_stars_pool_n": 0,
+  // Radius for the contamination index (light of neighbours within it against
+  // the star's own light); used to choose the check star.
+  "phase01_comparison_isolation_radius_px": 25.0,
+  // How far beyond the colour range of the comparison stars the colour term
+  // may be used; 0 = not at all.
+  "phase01_ct_extrapolation_tol": 0.0,
+  // Fewest comparison stars needed to fit a colour term.
+  "phase01_ct_min_comp": 7,
+
+  // === Trust & quality flags ===
+  // How VYVAR grades its own results: green / yellow / red trust from the
+  // comparison ensemble and the check star, and light-curve quality limits.
+  // Fewest points the check star must have for its verdict to count.
+  "check_star_min_epochs": 5,
+  // Fewest comparison stars for green trust; fewer give yellow, never red.
+  "comp_trust_min_comps": 3,
+  // Fewest frames for a full light-curve quality verdict.
+  "lc_quality_min_frames": 20,
+  // Smallest fraction of unflagged points a light curve needs.
+  "lc_quality_min_normal_frac": 0.5,
+  // Fewest frames for the quality verdict of a short series; at most the
+  // light curve minimum.
+  "lc_quality_short_min_frames": 3,
+  // Smallest scatter used when choosing the check star.
+  "check_select_rms_floor": 0.0001,
+  // Check-star test statistic below which a sparse field is green.
+  "sparse_trust_T_green": 1.5,
+  // Check-star test statistic above which a sparse field is red.
+  "sparse_trust_T_red": 4.0,
+  // Excess variance of the check star above which a sparse field is red.
+  "sparse_trust_X2_RED": 0.0004,
+  // Write a trust flag (green, yellow, red) for every point into results and
+  // exports.
+  "trust_flag_enabled": true,
+
+  // === Atmospheric extinction & color ===
+  // Correcting for the atmosphere: second-order extinction (k2) that depends
+  // on star color and airmass, and optional color-term handling.
+  // literature: band-dependent k2 values from the literature (BP-RP units);
+  // off: no second-order extinction.
+  "k2_mode": "literature",
+  // auto: apply the colour term when it is measured well; on: always; off:
+  // keep the instrumental system.
+  "apply_color_term": "auto",
+  // Optional own k2 values per band (BP-RP units); empty = the built-in
+  // literature values.
+  "k2_defaults_bprp": {},
+
+  // === Reports & HRD ===
+  // The PDF report: the HR diagram of the field and its optional online
+  // lookups (Gaia archive, SIMBAD).
+  // Gaia classifier probability needed to confirm a class in the HR diagram.
+  "hrd_dsc_confirm_prob": 0.9,
+  // Most stars looked up online per report.
+  "hrd_enrich_max_candidates": 20,
+  // Time limit of one online query.
+  "hrd_enrich_tap_timeout_s": 20.0,
+  // Most highlighted stars per category in the HR diagram.
+  "hrd_max_per_category": 3,
+  // Fewest highlighted stars kept from each search method.
+  "hrd_min_per_net": 4,
+  // Add Gaia non-single stars (binaries) as a highlight category.
+  "hrd_nss_category_enabled": false,
+  // Look up details of highlighted stars in the Gaia archive (needs
+  // internet).
+  "hrd_online_enrich_enabled": true,
+  // Smallest parallax for placing a star in the absolute-magnitude HR
+  // diagram.
+  "hrd_parallax_min_mas": 0.15,
+  // Smallest parallax SNR for a reliable HR diagram position.
+  "hrd_parallax_snr_min": 5.0,
+  // Look up SIMBAD object types of highlighted stars (needs internet).
+  "hrd_simbad_enrich_enabled": true,
+
+  // === Export ===
+  // TESS check of new variability candidates.
+  // Largest light of neighbours in the TESS aperture (fraction of the star's
+  // own) for a reliable TESS period; TESS pixels are 21 arcsec.
+  "tess_contam_max": 0.1,
+  // On: the night run checks TESS data of every new variability candidate and
+  // the report shows it. Off: TESS stays available by hand in the Variability
+  // tab.
+  "tess_enabled": false,
+
+  // === System & performance ===
+  // Machine-level behaviour: memory kept free when VYVAR sizes its parallel
+  // workers.
+  // Memory left free per parallel worker when VYVAR sizes the number of
+  // workers.
+  "per_frame_mp_reserve_ram_gb": 1.5,
+
+  // === File & catalog paths ===
+  // Where VYVAR keeps its data: the archive, the calibration library, the app
+  // database and the star catalogs. Set once after installing.
+  // Folder of the blind plate-solving index (GAIA_DR3/build_astro_index.py).
+  // Empty = vyvar_astro_index next to the Gaia catalog. Used only when a
+  // frame has no position in its header.
+  "astrometry_index_dir": "",
+  // Folder of the observation archive (raw and processed drafts).
+  "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
+  // Folder of the master darks and flats (by camera, binning and
+  // temperature).
+  "calibration_library_root": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary",
+  // The VYVAR SQLite database (drafts, equipment, telescopes, locations,
+  // results).
+  "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+  // The local Gaia DR3 SQLite catalog: positions, magnitudes and colours for
+  // star identification, comparison stars and plate solving.
+  "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\catalogs\\vyvar_gaia_dr3.db",
+  // The local objects catalog: AAVSO VSX variable stars and NASA Exoplanet
+  // Archive hosts, built by catalogs/objects_make.py.
+  "objects_db_path": "C:\\ASTRO\\python\\VYVAR\\catalogs\\vyvar_objects.db"
+}

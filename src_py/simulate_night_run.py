@@ -1,0 +1,176 @@
+"""E2E pipeline simulation for a post-observation session (e.g. D:\\BO_CVn).
+
+Usage:
+    python simulate_night_run.py --source D:\\BO_CVn --eq 1 --tel 1 --site 1
+    python simulate_night_run.py --dry-run --source D:\\BO_CVn --eq 1 --tel 1 --site 1
+
+Same three required inputs as UI RUN VYVAR (camera, telescope, observing site).
+No silent 1/1 defaults.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+import time
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+
+def _setup_logging(log_path: Path) -> None:
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.setLevel(logging.INFO)
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(fmt)
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setFormatter(fmt)
+    root.addHandler(sh)
+    root.addHandler(fh)
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        # EXC-0468: ? -- intent unclear (sys.stdout.reconfigure(encoding='utf-8') / sys.stderr.reconfigure(encod... (EXCEPT-BULK 2026-07-08)
+        pass
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="VYVAR night run simulation")
+    parser.add_argument(
+        "--source",
+        default=r"D:\BO_CVn",
+        help="Source directory with FITS files",
+    )
+    parser.add_argument(
+        "--eq",
+        "--camera",
+        dest="eq",
+        type=int,
+        default=None,
+        help="Equipment / camera DB ID (required unless draft manifest / this flag)",
+    )
+    parser.add_argument(
+        "--tel",
+        "--telescope",
+        dest="tel",
+        type=int,
+        default=None,
+        help="Telescope DB ID (required unless draft manifest / this flag)",
+    )
+    parser.add_argument(
+        "--site",
+        "--location",
+        dest="site",
+        type=int,
+        default=None,
+        help="Observing site LOCATION id (else the default site, LOCATION.IS_DEFAULT)",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to config.json (default: project config.json)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Scan source only; no import or pipeline execution",
+    )
+    parser.add_argument(
+        "--log",
+        type=Path,
+        default=Path("simulate_night_run.log"),
+        help="Log file path (default: simulate_night_run.log in cwd)",
+    )
+    args = parser.parse_args()
+
+    _setup_logging(args.log.resolve())
+
+    from night_run import (
+        NightRunParams,
+        _load_app_config,
+        night_run_missing_message,
+        resolve_night_run_cli_ids,
+        run_night_pipeline,
+    )
+
+    cfg = _load_app_config(args.config)
+    eq, tel, loc, missing, _src = resolve_night_run_cli_ids(
+        equipment_id=args.eq,
+        telescope_id=args.tel,
+        location_id=args.site,
+        cfg=cfg,
+    )
+    if missing:
+        logging.error("%s", night_run_missing_message(missing))
+        sys.exit(2)
+
+    logging.info("=" * 60)
+    logging.info("VYVAR Night Run Simulation")
+    logging.info("Source:    %s", args.source)
+    logging.info("Equipment: ID=%d", int(eq))
+    logging.info("Telescope: ID=%d", int(tel))
+    logging.info("Site:      ID=%d", int(loc))
+    logging.info("Dry run:   %s", args.dry_run)
+    logging.info("Log file:  %s", args.log.resolve())
+    logging.info("=" * 60)
+
+    _explicit = int(args.site) if args.site else None
+    params = NightRunParams(
+        source_dir=Path(args.source),
+        equipment_id=int(eq),
+        telescope_id=int(tel),
+        location_id=_explicit,
+        manifest_location_id=int(loc) if _src == "manifest" else None,
+        location_source_hint="cli_arg" if _explicit is not None else None,
+        config_path=args.config,
+        dry_run=bool(args.dry_run),
+        progress_cb=lambda msg: logging.info("[Progress] %s", msg),
+    )
+
+    t_start = time.time()
+    result = run_night_pipeline(params)
+    elapsed = time.time() - t_start
+
+    logging.info("=" * 60)
+    if result.success:
+        logging.info("SUCCESS in %.1fs", elapsed)
+        logging.info("Draft:         %s", result.draft_id)
+        logging.info("Draft dir:     %s", result.draft_dir)
+        logging.info("Output dir:    %s", result.output_dir)
+        logging.info("Light curves:  %d", result.n_lightcurves)
+        logging.info("Frames:        %d", result.n_frames)
+        if result.lc_rms_median == result.lc_rms_median:
+            logging.info("LC RMS median: %.4f", result.lc_rms_median)
+    else:
+        logging.error("FAILED in %.1fs", elapsed)
+        for err in result.errors:
+            logging.error("  ERROR: %s", err)
+
+    for warn in result.warnings:
+        logging.warning("  WARN: %s", warn)
+
+    logging.info("--- Phase timings ---")
+    for phase, sec in result.phase_timings.items():
+        logging.info("  %-35s %.1fs", phase, sec)
+    logging.info("=" * 60)
+
+    logging.info("--- PERF verification (grep %s) ---", args.log.name)
+    logging.info("Expected markers when full run completes:")
+    logging.info("  [ProcFrameStore] Built:")
+    logging.info("  [PERF-2] MASTERSTAR.fits loaded once")
+    logging.info("  [PERF-3] Comp Gaia prefetch:")
+    logging.info("  [PERF-4] comp_pool_rms:")
+    logging.info("  [PERF-5] run_phase2a: using ProcFrameStore")
+
+    sys.exit(0 if result.success else 1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,22 @@
+VYVAR - first launch complete
+================================
+
+Your data directory was created. Next steps:
+
+1. Build local catalogs (required for science-grade photometry):
+   Linux:   ./vyvar.sh --tool build_gaia -- --mag-limit 16.5
+            ./vyvar.sh --tool build_blind_index --
+            ./vyvar.sh --tool build_vsx --
+            ./vyvar.sh --tool build_exoplanets --
+   Windows: VYVAR.bat --tool build_gaia -- --mag-limit 16.5
+            (same pattern for build_blind_index, build_vsx, build_exoplanets)
+   See scripts/catalogs/README.md in the install folder.
+   Gaia full-sky G<=16.5 download is ~9-10 GB and may take hours/days.
+
+2. Open VYVAR and use Database Explorer to add Location, Telescope, and
+   Equipment (OSC cameras: set BAYERMASK on the equipment record).
+
+3. Import your first night and run the pipeline.
+
+Data directory: C:\ASTRO\python\VYVAR\tmp\vyvar_cal_test
+Override with env var VYVAR_DATA_DIR before launching VYVAR.

@@ -1,0 +1,5 @@
+id,status_16,status_14,sep_16,sep_14,sep_delta,n_matched_16,n_matched_14,truth_near_n_16,truth_near_n_14,max_false_16,max_false_14,catalog_load_s_16,catalog_load_s_14,verify_s_16,verify_s_14,total_s_16,total_s_14,early_exit_16,early_exit_14,cone_n_cat_16,cone_n_cat_14
+365_wide,HIT,HIT,0.1242,0.1242,0.0,86,95,86,95,24,22,0.0,0.0,266.985,277.765,268.02,278.59,True,True,15000,5287
+368_Blue,HIT,HIT,0.035,0.035,0.0,,,48,48,48,48,0.0,0.0,44.282,44.438,45.15,45.13,False,False,,
+375_B,HIT,HIT,0.1225,0.1225,0.0,,,60,60,60,60,0.0,0.0,119.938,120.891,121.52,121.74,False,False,,
+380_B,HIT,HIT,0.1606,0.1606,0.0,,,59,59,59,59,721.891,248.172,114.5,113.563,837.83,362.96,False,False,,

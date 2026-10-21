@@ -1,0 +1,172 @@
+# Installing VYVAR
+
+This guide mirrors the installer (`install_vyvar.ps1` on Windows,
+`install_vyvar.sh` on Linux) phase by phase. The installer is interactive and
+idempotent - it is safe to re-run (a healthy `.venv` is reused, catalog files are
+verified rather than recopied, and `config.json` is rewritten from its current
+contents).
+
+For a narrated, step-by-step walk-through in Czech, see
+`docs/VYVAR_INSTALL_GUIDE_CZ.pdf`. For what every configuration key means, see
+`docs/VYVAR_CONFIG_GUIDE_EN.md` (English) or `docs/VYVAR_CONFIG_GUIDE_CZ.md`
+(Czech), or the in-depth `docs/VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech). For a
+project overview, see `docs/README_FULL.md` / `docs/README_CZ.md` (or `README.md` at the repo
+root for the thin landing page with links).
+
+## Prerequisites
+
+- Windows 10/11 (primary, PowerShell installer) or Linux (bash twin, best-effort).
+- Python 3.12 (the pinned science stack is validated on 3.12).
+- git (to clone) OR a release ZIP of the repository.
+- Disk budget:
+  - ~2 GB for the code tree plus the Python virtual environment (`.venv`).
+  - ~12.5 GB for the recommended catalog set (see the manifest below).
+  - plus room for your own raw/processed observation data.
+- 16 GB RAM recommended for full-night runs. No compiler or IRAF is needed - the
+  entire production pipeline runs from wheels on Windows/Python 3.12.
+
+## 1. Obtain the tree
+
+Clone with git (use a personal access token for the private repository):
+
+```
+git clone https://github.com/uhlarmilan-create/VYVAR.git
+cd VYVAR
+```
+
+Or download the release ZIP, extract it, and open a terminal in the extracted
+folder. Everything below runs from the repository root.
+
+## 2. Run the installer
+
+Windows (PowerShell):
+
+```
+powershell -ExecutionPolicy Bypass -File .\install_vyvar.ps1
+```
+
+Linux (bash):
+
+```
+./install_vyvar.sh
+```
+
+The installer walks seven phases, each printing `[OK]` or `[FAIL]`:
+
+1. **PYTHON** - detects Python 3.12 (`py -3.12`, then `python`). If it is missing
+   the installer prints the download link and the `winget` command and stops.
+2. **VENV** - creates `.venv`, upgrades `pip`, installs `requirements.txt`, and
+   runs `pip check`. The science wheels (numpy, scipy, astropy, photutils) are
+   large; this phase can take several minutes.
+3. **CATALOGS** - the three options below.
+4. **PATHS** - prompts for the archive root, calibration-library root, and
+   database path (catalog paths are prefilled from phase 3) and writes them into
+   `config.json`. The author's absolute `C:\ASTRO\...` paths are never kept: any
+   path not chosen here is blanked so the project-root-relative default resolves.
+   Location, telescope, and camera facts are NOT asked here - they belong to the
+   app UI.
+5. **VALIDATE** - runs `dev/scripts/validate_config.py`; it must exit clean.
+6. **SMOKE** - imports the app through the `src_py` bootstrap (no server) and
+   confirms the database self-initialises (the sqlite file and its reference
+   tables are created).
+7. **FINISH** - prints the exact first-run steps.
+
+## 3. Catalogs
+
+VYVAR needs a local Gaia catalog (and a few companions) to identify stars, select
+comparison stars, and plate-solve. The installer offers three options.
+
+### Option 1 - Copy from an existing VYVAR installation (recommended)
+
+Point the installer at an existing VYVAR root (an external disk or another
+machine). It copies the recommended "zaloha" set - the reproducible anchor
+catalog (Gaia G<=16 subset), far smaller than the full 50 GB build - and verifies
+each file's size after copying.
+
+| File (destination)                     | Purpose                                   | Size     |
+|----------------------------------------|-------------------------------------------|----------|
+| `catalogs/vyvar_gaia_dr3.db`           | Local Gaia DR3 star catalog (G<=16 subset)| ~9.4 GB  |
+| `catalogs/vyvar_objects.db`            | AAVSO VSX variables + NASA exoplanet hosts| ~0.87 GB |
+| **Total**                              |                                           | **~10.2 GB** |
+
+The installer reports the total size upfront and checks free space on the target
+drive before copying. The set fits on a 16 GB USB stick. (The full 50 GB
+`vyvar_gaia_dr3.db` (G<=17.5, ~38 GB) is only needed for fields fainter than the G<=16 cut.)
+
+The blind plate-solve index (`catalogs/vyvar_astro_index/`, ~7 GB) is not copied by the installer.
+It is only needed for frames without a usable position in the FITS header; copy the folder from
+the source machine or build it from the Gaia DB:
+`python catalogs/build_astro_index.py`.
+
+### Option 2 - Build from sources
+
+Downloads and builds the catalogs from the ESA Gaia archive, AAVSO VSX, and the
+NASA exoplanet archive. Expect large downloads and hours-to-days depending on your
+connection. This is not the quick-setup path. The builders are:
+
+```
+python catalogs/build_gaia_catalog.py     # Gaia DR3 -> sqlite (astroquery TAP)
+python catalogs/build_astro_index.py
+python catalogs/objects_make.py --vsx --exoplanets   # AAVSO VSX + NASA archive -> sqlite
+```
+
+### Option 3 - Skip for now (LIMITED MODE)
+
+The installer completes but the app starts in LIMITED MODE: without the Gaia
+catalog there is no star identification or comparison-star selection, so the
+pipeline is not usable for science until catalogs arrive. Re-run the installer
+(option 1) to add them later.
+
+## 4. First run
+
+Start the app from the repository root (activate `.venv` first if the installer
+created one):
+
+```
+# Windows
+.\.venv\Scripts\Activate.ps1
+streamlit run app.py
+
+# Linux
+source .venv/bin/activate
+streamlit run app.py
+```
+
+A fresh database is **empty** of observatory reference rows (Location /
+Telescope / Equipment). Schema is created automatically; you fill the records.
+In the app:
+
+1. Open **Settings** and create your **Location**, **Telescope**, and
+   **Equipment**, then select them on the VAR-STREM page. Until a camera and
+   telescope are selected, **RUN VYVAR** stays disabled
+   (`src_py/app.py` ~1791-1797). Location should also be set (IS_DEFAULT or
+   selectbox); an empty location list shows "No locations defined" but does not
+   by itself disable RUN - create a site before a science night.
+2. Point Source at a night folder, Scan Source / RUN VYVAR.
+3. Optional alpha check: leave ePSF Auto Run OFF unless you intend to exercise
+   the beta path (`docs/ALPHA_TESTING.md`).
+
+Catalogs (~12 GB recommended set, or full Gaia ~64 GB locally) are required for
+science runs; Option 3 install leaves LIMITED MODE until catalogs are added.
+
+## Development vs release builds
+
+Day-to-day development and CI run **interpreted** Python from `src_py/` (see
+`dev/scripts/session_baseline_check.py --fast`). **Release** packages compile the
+science module set to native extensions (`.pyd` on Windows, `.so` on Linux) using
+`dev/tools/cython_release/`; the Streamlit UI layer (`app.py`, `ui_*.py`) stays
+interpreted. Compiled artifacts are not committed to git. Full installer and
+data-directory layout for release installs are documented in RELEASE-2 (bundling).
+
+## Troubleshooting
+
+| Symptom                                   | Cause / fix                                                                                          |
+|-------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `Python 3.12 not found`                   | Install it: `winget install -e --id Python.Python.3.12` (tick "Add to PATH"), or python.org. Re-run.|
+| `pip install` fails with SSL / proxy      | Behind a corporate proxy: set `HTTPS_PROXY`/`HTTP_PROXY`, or `pip config set global.proxy ...`. Retry.|
+| `not enough free space on ...`            | Choose a target data drive with room for ~12.5 GB of catalogs plus your data (installer prompts).    |
+| Catalogs skipped / LIMITED MODE warning   | You chose option 3. Re-run the installer, option 1, and point it at a VYVAR install with the catalogs.|
+| App starts but finds no stars / no comps  | `gaia_db_path` / `objects_db_path` empty or wrong. Re-run installer option 1, or edit `config.json` and run `python dev/scripts/validate_config.py`. |
+| `Port 8501 is already in use`             | Another Streamlit is running. Close it, or start on another port: `streamlit run app.py --server.port 8502`. |
+| Antivirus locks / slows the sqlite files  | Add an exclusion for the VYVAR data folder (Gaia DB is large; real-time scanning can lock or slow it).|
+| Config error after hand-editing           | Run `python dev/scripts/validate_config.py` - it reports the line/column and the closest valid key.  |

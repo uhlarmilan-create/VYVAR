@@ -1,0 +1,40 @@
+{
+  "f1_config_snapshot_diff_429_vs_431": {
+    "annulus_inner_fwhm": {
+      "429": 4.75,
+      "431": 5.75
+    },
+    "comp_max_delta_bprp": {
+      "429": 0.79,
+      "431": 0.64
+    },
+    "phase01_comparison_max_comp_rms": {
+      "429": 0.1,
+      "431": 0.08
+    },
+    "phase01_comparison_min_dist_arcsec": {
+      "429": 60.0,
+      "431": 90.0
+    },
+    "sysrem_enabled": {
+      "429": false,
+      "431": true
+    }
+  },
+  "f1_config_snapshot_diff_431_vs_432": {},
+  "f1_path_valued_keys_431": {
+    "archive_root": "C:\\ASTRO\\python\\VYVAR\\Archive",
+    "calibration_library_root": "C:\\ASTRO\\python\\VYVAR\\CalibrationLibrary",
+    "database_path": "C:\\ASTRO\\python\\VYVAR\\vyvar.sqlite3",
+    "gaia_db_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\vyvar_gaia_dr3.db",
+    "blind_index_fine_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_fine.pkl",
+    "blind_index_wide_path": "C:\\ASTRO\\python\\VYVAR\\GAIA_DR3\\gaia_triangles_wide.pkl",
+    "vsx_local_db_path": "C:\\ASTRO\\python\\VYVAR\\VSX\\vyvar_vsx_local_v2.db",
+    "exoplanet_local_db_path": "exoplanets/vyvar_exoplanet_local.db"
+  },
+  "f1_notes": {
+    "config_load": "AppConfig.project_root = Path(__file__).parent \u2192 config.json beside config.py (NOT cwd-relative)",
+    "density_4_keys": "map to DENSITY_OVERRIDES[\"dense\"] deltas vs 429 density=normal (consequence of inflated census, not config.json drift)",
+    "sysrem_enabled": "431 True forced by scripts/anchor_pair_run.py NightRunParams.sysrem_enabled=True; config.json and UI-429 are False"
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "git_sha": "b8d5c74c3a2d",
+  "elapsed_s": 5664.116557799978,
+  "phase0_s": 0.3844397000502795,
+  "phase1_s": 4672.220971100032,
+  "phase2a_s": 736.5938528999686,
+  "overlay_s": 3.4593298999825493,
+  "preflight": {
+    "overlay_s": 3.4593298999825493,
+    "n_ms_before": 3621,
+    "n_ms_after": 3621,
+    "n_forced_seed": 184,
+    "identity_ok": true,
+    "identity_detail": "ok n=3546",
+    "census_by_state": {
+      "DETECTED_P1": 3453,
+      "SEED_REJECTED": 370,
+      "FORCED_SEED": 116,
+      "BLENDED": 109,
+      "EDGE": 83
+    },
+    "census_inv": {
+      "ok": true,
+      "detail": "ok n=4131",
+      "path": "C:\\ASTRO\\python\\VYVAR\\Archive\\Drafts\\draft_000516\\platesolve\\NoFilter_60_2\\gaia_source_state_census.csv",
+      "n": 4131,
+      "invariants": [
+        {
+          "id": "INV-MS-CENSUS-01",
+          "ok": true,
+          "policy": "FAIL",
+          "detail": "ok n=4131",
+          "ts": "2026-08-19T08:56:09.781687+00:00"
+        }
+      ]
+    },
+    "annot": {
+      "zone_counts": {
+        "linear": 2884,
+        "noise": 713,
+        "saturated": 24
+      },
+      "bg_sigma": 24.360535636780753,
+      "n": 3621
+    },
+    "pool": {
+      "n_old": 2356,
+      "n_new": 2356,
+      "n_snap": 2356,
+      "id_delta_added": [],
+      "id_delta_removed": [],
+      "n_added": 0,
+      "n_removed": 0,
+      "identical_to_snapshot": true
+    }
+  },
+  "wiped": [
+    "lightcurves/",
+    "lightcurves_reports/",
+    "active_targets.csv",
+    "comparison_stars_per_target.csv",
+    "comp_pool_admission.json",
+    "excluded_targets.csv",
+    "photometry_summary.csv",
+    "suspected_variables.csv",
+    "variability_candidates.csv",
+    "target_depth.json"
+  ],
+  "dag": {
+    "cleared_names": [
+      "masterstar",
+      "phase01",
+      "phase2a",
+      "postprocess"
+    ],
+    "remaining": 0,
+    "mode": "empty_stages_cold_start"
+  },
+  "sha_before": "477dc8cfc292ed63910ecca6ea1dacfda279fee2850422229739a5cf7db90956",
+  "sha_after": "a39f7c6b3cd5c9070824b5f3a894fad0b66027801c10ef89f0b468dab9a3fe06",
+  "sha_after_n": 97,
+  "E3a": {
+    "census_by_state": {
+      "DETECTED_P1": 3453,
+      "SEED_REJECTED": 370,
+      "FORCED_SEED": 116,
+      "BLENDED": 109,
+      "EDGE": 83
+    },
+    "n_census_rows": 4131,
+    "note": "96pct DETECTED+FORCED target retired; report only"
+  },
+  "E4": {
+    "E4": "PASS",
+    "n_lc_targets": 48,
+    "mag_ident": 48,
+    "mag_deltas": [],
+    "baseline": "477dc8cf snapshot"
+  },
+  "E5": {
+    "check_star_expected": "1497613731286514432",
+    "BO_new": {
+      "path": "check_kmag_1498613634033133184.csv",
+      "exists": true,
+      "check_catalog_id": "1497613731286514432",
+      "n": 134,
+      "mad_mmag": 7.150579800000032,
+      "kmag_sha1_8": "a9c1aa55",
+      "kmag_first": 8.587408,
+      "kmag_last": 8.59138
+    },
+    "FW_new": {
+      "path": "check_kmag_1497343732462852864.csv",
+      "exists": true,
+      "check_catalog_id": "1497613731286514432",
+      "n": 134,
+      "mad_mmag": 8.201001900000032,
+      "kmag_sha1_8": "1ba7c89b",
+      "kmag_first": 8.489642,
+      "kmag_last": 8.485139
+    },
+    "BO_snap": {
+      "path": "check_kmag_1498613634033133184.csv",
+      "exists": true,
+      "check_catalog_id": "1497613731286514432",
+      "n": 134,
+      "mad_mmag": 7.150579800000032,
+      "kmag_sha1_8": "a9c1aa55",
+      "kmag_first": 8.587408,
+      "kmag_last": 8.59138
+    },
+    "FW_snap": {
+      "path": "check_kmag_1497343732462852864.csv",
+      "exists": true,
+      "check_catalog_id": "1497613731286514432",
+      "n": 134,
+      "mad_mmag": 8.201001900000032,
+      "kmag_sha1_8": "1ba7c89b",
+      "kmag_first": 8.489642,
+      "kmag_last": 8.485139
+    },
+    "BO_FW_new_kmag_identical": false,
+    "trust_meters": true,
+    "note": "failed-run 6.608 BO==FW was the same kmag series; refuse identical fingerprints"
+  },
+  "pipeline_error": null
+}

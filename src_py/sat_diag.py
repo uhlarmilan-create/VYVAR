@@ -1,0 +1,1207 @@
+"""SAT-DIAG: saturation and linearity limit gate (INV-SAT-01).
+
+Camera-agnostic Check A (pile-up derivation), Check B (limit resolution),
+placed-aperture raw peak measurement, and tier policy helpers.
+See ``dev/results/specs/VYVAR_SAT_DIAG_SPEC.md``.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import math
+from collections import Counter
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Sequence
+
+import numpy as np
+from astropy.io import fits
+from astropy.wcs import WCS
+
+LOGGER = logging.getLogger(__name__)
+
+# Implementation constants (spec section 5.2 / 8 -- not user config).
+N_PILEUP_MIN = 100
+PILEUP_RATIO = 10.0
+# SAT-PRECAL-2026-10 (Milan 2026-10-13): float frames (externally calibrated or written as float
+# by the capture software) have no single clipped pixel value; saturated stars instead share
+# one peak level. A plateau = at least N_PLATEAU_MIN_PEAKS star peaks (local maxima, one per
+# star and frame) within PLATEAU_BAND_FRAC of the highest peak, and PILEUP_RATIO times more
+# than in the band of the same width just below. Draft 532 (QHY294, BITPIX -32): 490 peaks
+# within 0.2 % at ~98 370 ADU, 10 in the band below.
+N_PLATEAU_MIN_PEAKS = 10
+PLATEAU_BAND_FRAC = 0.01
+SAT_DIAG_MAX_FRAMES = 30
+from pipeline_constants import LINEARITY_FRAC  # noqa: E402
+
+# SAT-LIN-2026-10: one limit (0.90 x SAT) for linearity, likely-saturated and comp admission.
+LINEARITY_DEFAULT_FRAC = LINEARITY_FRAC
+SATURATE_LIMIT_FRACTION = LINEARITY_FRAC
+RESCALED_MAX_FRAC = 0.80
+
+# Placed-aperture peak (7x7 footprint, half=3 -- matches pipeline / DAOPHOT).
+PEAK_BOX_HALF = 3
+PEAK_DRIFT_SEARCH_HALF = 22  # mag-guided on drift references only (not targets/comps)
+
+# Drift reference selection (AstroImageJ rule: centroid only bright, reliable stars).
+DRIFT_REF_MIN_PEAK_ADU = 8000.0
+DRIFT_REF_FALLBACK_PEAK_ADU = 4000.0
+DRIFT_REF_MIN_COUNT = 2
+DRIFT_CENTROID_BOX_HALF = 5  # 11 px cutout (photutils default box_size)
+
+SAT_PEAK_SOURCE_PLACED = "PLACED_APERTURE"
+
+# Tier-1 sat sources that may exclude (spec section 9.1).
+TIER1_SAT_SOURCES = frozenset(
+    {"MEASURED", "HEADER", "EQUIPMENT", "DERIVED", "CONFLICT_DERIVED", "BITPIX"}
+)
+# Measured on this draft's own light frames (pixel pile-up or star-peak plateau): the
+# saturation level of exactly these data, in their units - wins over every per-image guess.
+MEASURED_SAT_SOURCES = frozenset({"DERIVED", "CONFLICT_DERIVED"})
+
+
+@dataclass
+class FrameDriftResult:
+    """Per-frame drift diagnostic (spec 8.2)."""
+
+    dx: float
+    dy: float
+    n_refs: int
+    residual_rms_px: float
+    method: str
+
+
+@dataclass
+class StarPeakDraftStats:
+    """Once-per-draft peak aggregate for one catalog star."""
+
+    catalog_id: str
+    n_frames: int = 0
+    peak_max: float = float("nan")
+    peak_median: float = float("nan")
+    n_over_admission: int = 0
+    n_saturated: int = 0
+    admission_reject: bool = False
+
+
+@dataclass
+class PileupResult:
+    pileup_detected: bool
+    v_ceiling: float | None
+    n_at_ceiling: int
+    n_at_shoulder: int
+    max_pixel: float
+    frames_sampled: int
+    bitpix_ceiling: float | None
+    method: str = "pixel_histogram"
+
+
+@dataclass
+class SatDiagContext:
+    """Resolved SAT-DIAG limits and provenance for one obs_group."""
+
+    sat_adu: float | None
+    lin_adu: float | None
+    sat_source: str
+    lin_source: str
+    bitpix_ceiling: float | None = None
+    derived_ceiling: float | None = None
+    header_value: float | None = None
+    equipment_value: float | None = None
+    refuted_source: str | None = None
+    refuted_value: float | None = None
+    warnings: list[str] = field(default_factory=list)
+    pileup: PileupResult | None = None
+    xbinning: int | None = None
+    ybinning: int | None = None
+    raw_peaks_used: bool = False
+    sat_peak_source: str = SAT_PEAK_SOURCE_PLACED
+    lin_adu_native: float | None = None
+    sat_adu_native: float | None = None
+    last_frame_drift: FrameDriftResult | None = None
+    star_peak_draft: dict[str, StarPeakDraftStats] = field(default_factory=dict)
+    frame_drift_residuals_px: list[float] = field(default_factory=list)
+
+    def to_json_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        if self.pileup is not None:
+            d["pileup"] = asdict(self.pileup)
+        if self.last_frame_drift is not None:
+            d["last_frame_drift"] = asdict(self.last_frame_drift)
+        d["star_peak_draft"] = {
+            k: asdict(v) for k, v in self.star_peak_draft.items()
+        }
+        if self.lin_adu is not None and self.lin_adu_native is None:
+            bf = max(int(self.xbinning or 1), 1)
+            d["lin_adu_native"] = float(self.lin_adu) / float(bf)
+        if self.sat_adu is not None and self.sat_adu_native is None:
+            bf = max(int(self.xbinning or 1), 1)
+            d["sat_adu_native"] = float(self.sat_adu) / float(bf)
+        if self.frame_drift_residuals_px:
+            rs = np.asarray(self.frame_drift_residuals_px, dtype=np.float64)
+            rs = rs[np.isfinite(rs)]
+            if rs.size:
+                d["placement_residual_median_px"] = float(np.median(rs))
+                d["placement_residual_p95_px"] = float(np.percentile(rs, 95))
+        return d
+
+    def may_exclude_saturation(self) -> bool:
+        return str(self.sat_source) in TIER1_SAT_SOURCES
+
+    def measured_sat_adu(self) -> float | None:
+        """Saturation level measured on this draft's frames, else None."""
+        if self.sat_adu is None or str(self.sat_source) not in MEASURED_SAT_SOURCES:
+            return None
+        return float(self.sat_adu)
+
+    def may_exclude_linearity(self) -> bool:
+        return str(self.lin_source) == "MEASURED"
+
+    def admission_threshold_adu(self) -> float | None:
+        if self.sat_adu is None:
+            return None
+        return float(self.sat_adu) * LINEARITY_FRAC
+
+    def likely_saturated_threshold_adu(self) -> float | None:
+        if self.sat_adu is None:
+            return None
+        return float(self.sat_adu) * SATURATE_LIMIT_FRACTION
+
+    def saturate_limit_adu_85pct(self) -> float | None:
+        if self.sat_adu is None:
+            return None
+        return float(self.sat_adu) * SATURATE_LIMIT_FRACTION
+
+
+def image_adu_array(hdu: fits.PrimaryHDU | fits.ImageHDU) -> np.ndarray:
+    """Image ADU per spec section 4.1 (stored 0..65535 for unsigned 16-bit)."""
+    hdr = hdu.header
+    d = np.asarray(hdu.data, dtype=np.float64)
+    try:
+        bitpix = int(hdr.get("BITPIX", 0))
+        bzero = float(hdr.get("BZERO", 0.0))
+        bscale = float(hdr.get("BSCALE", 1.0))
+    except (TypeError, ValueError):
+        return d
+    if bitpix < 0:
+        return d
+    if bitpix == 16 and abs(bzero - 32768.0) < 1.0 and abs(bscale - 1.0) < 1e-9:
+        return d
+    return d * bscale + bzero
+
+
+def bitpix_container_ceiling(hdr: fits.Header) -> float | None:
+    from pipeline import _infer_sat_limit_from_bitpix  # noqa: PLC0415
+
+    return _infer_sat_limit_from_bitpix(hdr)
+
+
+def header_sat_value(hdr: fits.Header) -> float | None:
+    from pipeline import _saturate_limit_adu_from_header  # noqa: PLC0415
+
+    v = _saturate_limit_adu_from_header(hdr)
+    if v is not None:
+        return v
+    for dk in ("DATAMAX", "MAXPIX"):
+        if dk not in hdr:
+            continue
+        try:
+            fv = float(hdr[dk])
+            if math.isfinite(fv) and fv > 0:
+                return fv
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def sample_light_paths(
+    archive_root: Path,
+    *,
+    max_frames: int = SAT_DIAG_MAX_FRAMES,
+) -> list[Path]:
+    """Deterministic subsample of the draft's light FITS as they came in.
+
+    ``Raw/lights`` (camera frames calibrated by VYVAR) or ``non_calibrated/lights`` (frames
+    calibrated elsewhere or not at all - SAT-PRECAL-2026-10: draft 532 found none and ran
+    without a saturation level)."""
+    ap = Path(archive_root)
+    for sub in ("Raw/lights", "raw/lights", "non_calibrated/lights"):
+        root = ap / sub
+        if not root.is_dir():
+            continue
+        files = sorted(root.rglob("*.fits"))
+        if not files:
+            continue
+        if len(files) <= max_frames:
+            return files
+        idx = np.linspace(0, len(files) - 1, max_frames, dtype=int)
+        return [files[int(i)] for i in idx]
+    return []
+
+
+def _star_peak_plateau(paths: Sequence[Path]) -> PileupResult:
+    """SAT-PRECAL-2026-10: saturation level of float frames from the star-peak plateau.
+
+    Star peaks = local maxima (box 2*PEAK_BOX_HALF+1) above the half level between the frame
+    median and its maximum. Values are in the units the pipeline measures in
+    (``image_adu_array``)."""
+    from scipy.ndimage import maximum_filter  # noqa: PLC0415
+
+    peaks: list[np.ndarray] = []
+    max_px = -math.inf
+    n_frames = 0
+    for fp in paths:
+        with fits.open(fp, memmap=False) as hdul:
+            arr = image_adu_array(hdul[0])
+        fin = np.isfinite(arr)
+        if not fin.any():
+            continue
+        n_frames += 1
+        a = np.where(fin, arr, -np.inf)
+        vmax = float(np.max(a))
+        med = float(np.median(arr[fin]))
+        max_px = max(max_px, vmax)
+        if not vmax > med:  # flat frame: no stars, no plateau
+            continue
+        loc = (a == maximum_filter(a, size=2 * PEAK_BOX_HALF + 1)) & (a >= med + 0.5 * (vmax - med))
+        peaks.append(a[loc])
+    pk = np.sort(np.concatenate(peaks)) if peaks else np.zeros(0)
+    if pk.size == 0:
+        return PileupResult(False, None, 0, 0, max_px, n_frames, None, method="star_peak_plateau")
+    top = float(pk[-1])
+    w = PLATEAU_BAND_FRAC * abs(top)
+    band = pk[pk >= top - w]
+    below = pk[(pk >= top - 2.0 * w) & (pk < top - w)]
+    n_b, n_s = int(band.size), int(below.size)
+    if n_b >= N_PLATEAU_MIN_PEAKS and n_b >= PILEUP_RATIO * n_s:
+        return PileupResult(True, float(np.percentile(band, 10)), n_b, n_s, max_px, n_frames, None,
+                            method="star_peak_plateau")
+    return PileupResult(False, None, n_b, n_s, max_px, n_frames, None, method="star_peak_plateau")
+
+
+def derive_ceiling_from_paths(paths: Sequence[Path]) -> PileupResult:
+    """Check A: pile-up detection from raw frame histograms."""
+    if not paths:
+        return PileupResult(False, None, 0, 0, float("nan"), 0, None)
+
+    counts: Counter[int] = Counter()
+    max_px = -math.inf
+    bitpix_ceil: float | None = None
+
+    with fits.open(paths[0], memmap=False) as hdul0:
+        if int(hdul0[0].header.get("BITPIX", 0)) < 0:
+            return _star_peak_plateau(paths)
+    for fp in paths:
+        with fits.open(fp, memmap=False) as hdul:
+            hdr = hdul[0].header
+            if bitpix_ceil is None:
+                bitpix_ceil = bitpix_container_ceiling(hdr)
+            arr = image_adu_array(hdul[0])
+            finite = arr[np.isfinite(arr)]
+            if finite.size == 0:
+                continue
+            max_px = max(max_px, float(np.max(finite)))
+            vals, cnts = np.unique(finite.astype(np.int64), return_counts=True)
+            for v, c in zip(vals, cnts, strict=False):
+                counts[int(v)] += int(c)
+
+    if not counts:
+        return PileupResult(False, None, 0, 0, max_px, len(paths), bitpix_ceil)
+
+    v_max = max(counts)
+    n_max = counts[v_max]
+    lower_vals = [v for v in counts if v < v_max]
+    n_shoulder = counts[max(lower_vals)] if lower_vals else 0
+    pileup = False
+    if n_max >= N_PILEUP_MIN and bitpix_ceil is not None and v_max >= int(bitpix_ceil) - 1:
+        if n_shoulder <= 0:
+            pileup = True
+        elif n_max >= PILEUP_RATIO * n_shoulder:
+            pileup = True
+    if pileup:
+        return PileupResult(True, float(v_max), n_max, n_shoulder, max_px, len(paths), bitpix_ceil)
+    return PileupResult(False, None, n_max, n_shoulder, max_px, len(paths), bitpix_ceil)
+
+
+def _compatible_stated(stated: float | None, max_pixel: float) -> bool:
+    if stated is None or not math.isfinite(stated) or stated <= 0:
+        return False
+    return float(stated) >= float(max_pixel)
+
+
+def resolve_sat_limit(
+    *,
+    hdr: fits.Header,
+    pileup: PileupResult,
+    equipment_adu: float | None,
+) -> SatDiagContext:
+    """Check B: header -> equipment -> derived -> BITPIX."""
+    warnings: list[str] = []
+    header_val = header_sat_value(hdr)
+    derived = pileup.v_ceiling if pileup.pileup_detected else None
+    bitpix = pileup.bitpix_ceiling or bitpix_container_ceiling(hdr)
+    max_px = pileup.max_pixel
+
+    refuted_source: str | None = None
+    refuted_value: float | None = None
+    stated_before_refute: float | None = None
+
+    def try_stated(value: float | None, source: str) -> tuple[float | None, str | None]:
+        nonlocal refuted_source, refuted_value, stated_before_refute
+        if value is None:
+            return None, None
+        if _compatible_stated(value, max_px):
+            return float(value), source
+        refuted_source = source
+        refuted_value = float(value)
+        if stated_before_refute is None:
+            stated_before_refute = float(value)
+        return None, None
+
+    win_val: float | None = None
+    prov = "none"
+
+    # SAT-LIN-2026-10: a measured pile-up in the raw frames is the saturation level of
+    # this camera mode (bit depth, gain, binning) - it wins over stated values. Header /
+    # equipment values are only cross-checked against it.
+    if derived is not None:
+        win_val, prov = float(derived), "DERIVED"
+        for _sv, _sn in ((header_val, "HEADER"), (equipment_adu, "EQUIPMENT")):
+            if _sv is not None and math.isfinite(float(_sv)) and abs(float(_sv) - float(derived)) > 1.0:
+                warnings.append(f"{_sn}={float(_sv):.0f} differs from measured pile-up {float(derived):.0f}")
+
+    v, src = (None, None) if win_val is not None else try_stated(header_val, "HEADER")
+    if v is not None:
+        win_val, prov = v, src
+
+    if win_val is None:
+        v, src = try_stated(equipment_adu, "EQUIPMENT")
+        if v is not None:
+            win_val, prov = v, src
+
+    if (
+        bitpix is not None
+        and math.isfinite(max_px)
+        and max_px < float(bitpix) * RESCALED_MAX_FRAC
+        and stated_before_refute is not None
+        and stated_before_refute >= max_px
+        and stated_before_refute < float(bitpix) * 0.95
+        and not pileup.pileup_detected
+    ):
+        warnings.append("POSSIBLE_RESCALED_STACK")
+        win_val = None
+        prov = "none"
+
+    if win_val is None and derived is not None:
+        if refuted_source is not None:
+            win_val, prov = float(derived), "CONFLICT_DERIVED"
+            warnings.append(
+                f"CONFLICT: refuted {refuted_source}={refuted_value}; using derived {derived}"
+            )
+        else:
+            win_val, prov = float(derived), "DERIVED"
+
+    if win_val is None and bitpix is not None:
+        if pileup.pileup_detected and derived is not None:
+            win_val, prov = float(derived), "CONFLICT_DERIVED" if refuted_source else "DERIVED"
+        else:
+            win_val, prov = float(bitpix), "DERIVED_NO_PILEUP"
+            warnings.append("No saturation pile-up detected; ceiling set to BITPIX maximum.")
+
+    # SAT-PRECAL-2026-10: float frames without saturated stars have no container maximum;
+    # the highest observed pixel is a lower bound of the saturation level (unverified).
+    if win_val is None and math.isfinite(max_px) and max_px > 0:
+        win_val, prov = float(max_px), "MAX_OBSERVED"
+        warnings.append("No saturation plateau and no integer container; ceiling = highest observed pixel.")
+
+    lin_adu: float | None = None
+    lin_source = "DEFAULT_FRAC"
+    if win_val is not None:
+        lin_adu = float(win_val) * LINEARITY_DEFAULT_FRAC
+        lin_source = "LINEARITY_FRAC"
+
+
+    try:
+        xbin = int(hdr.get("XBINNING", 1))
+        ybin = int(hdr.get("YBINNING", 1))
+    except (TypeError, ValueError):
+        xbin, ybin = 1, 1
+
+    if refuted_source and prov not in ("CONFLICT_DERIVED",):
+        prov = "CONFLICT_DERIVED"
+
+    return SatDiagContext(
+        sat_adu=win_val,
+        lin_adu=lin_adu,
+        sat_source=prov,
+        lin_source=lin_source,
+        bitpix_ceiling=bitpix,
+        derived_ceiling=derived,
+        header_value=header_val,
+        equipment_value=equipment_adu,
+        refuted_source=refuted_source,
+        refuted_value=refuted_value,
+        warnings=warnings,
+        pileup=pileup,
+        xbinning=xbin,
+        ybinning=ybin,
+    )
+
+
+def _centroid_com_cutout(arr: np.ndarray, x0: float, y0: float, half: int) -> tuple[float, float] | None:
+    """Centre-of-mass centroid in a small cutout (photutils-style, no max search)."""
+    h, w = arr.shape
+    xi = int(round(x0))
+    yi = int(round(y0))
+    x0b, x1b = max(0, xi - half), min(w, xi + half + 1)
+    y0b, y1b = max(0, yi - half), min(h, yi + half + 1)
+    if x0b >= x1b or y0b >= y1b:
+        return None
+    sub = np.asarray(arr[y0b:y1b, x0b:x1b], dtype=np.float64)
+    if sub.size == 0:
+        return None
+    bg = float(np.percentile(sub, 20))
+    wt = sub - bg
+    wt = np.where(wt > 0, wt, 0.0)
+    s = float(wt.sum())
+    if s <= 0:
+        return None
+    yy, xx = np.indices(sub.shape)
+    cx = float(x0b) + float((wt * xx).sum() / s)
+    cy = float(y0b) + float((wt * yy).sum() / s)
+    return cx, cy
+
+
+def _select_drift_ref_indices(aligned_peak: np.ndarray) -> np.ndarray:
+    """Bright stars eligible for drift measurement (AIJ: centroid only when reliable)."""
+    pk = np.asarray(aligned_peak, dtype=np.float64)
+    ok = np.isfinite(pk)
+    primary = ok & (pk >= DRIFT_REF_MIN_PEAK_ADU)
+    if int(primary.sum()) >= DRIFT_REF_MIN_COUNT:
+        return np.nonzero(primary)[0]
+    fallback = ok & (pk >= DRIFT_REF_FALLBACK_PEAK_ADU)
+    return np.nonzero(fallback)[0]
+
+
+def mag_guided_centroid(
+    arr: np.ndarray, x0: float, y0: float, half: int = PEAK_DRIFT_SEARCH_HALF
+) -> tuple[int, int]:
+    """Brightest pixel in search window -- drift reference stars only."""
+    h, w = arr.shape
+    xi = int(round(x0))
+    yi = int(round(y0))
+    x0b, x1b = max(0, xi - half), min(w, xi + half + 1)
+    y0b, y1b = max(0, yi - half), min(h, yi + half + 1)
+    if x0b >= x1b or y0b >= y1b:
+        return xi, yi
+    sub = arr[y0b:y1b, x0b:x1b]
+    flat_idx = int(np.argmax(sub))
+    sy, sx = np.unravel_index(flat_idx, sub.shape)
+    return int(x0b + sx), int(y0b + sy)
+
+
+def _drift_offset_at_wcs(arr: np.ndarray, wx: float, wy: float, *, use_mag_guided: bool) -> tuple[float, float] | None:
+    """Offset of true centroid from WCS prediction for one drift reference."""
+    if not (math.isfinite(wx) and math.isfinite(wy)):
+        return None
+    if use_mag_guided:
+        gx, gy = mag_guided_centroid(arr, wx, wy)
+        return float(gx - wx), float(gy - wy)
+    hit = _centroid_com_cutout(arr, wx, wy, DRIFT_CENTROID_BOX_HALF)
+    if hit is None:
+        return None
+    return float(hit[0] - wx), float(hit[1] - wy)
+
+
+def alignment_inverse_from_header(hdr: fits.Header | None) -> np.ndarray | None:
+    """Inverse of the frame->reference 3x3 transform stored as VY_AM0..VY_AM8, or None."""
+    if hdr is None:
+        return None
+    try:
+        vals = [float(hdr[f"VY_AM{k}"]) for k in range(9)]
+    except (KeyError, TypeError, ValueError):
+        return None
+    m = np.asarray(vals, dtype=np.float64).reshape(3, 3)
+    if not np.all(np.isfinite(m)):
+        return None
+    try:
+        return np.linalg.inv(m)
+    except np.linalg.LinAlgError:
+        return None
+
+
+def box_peak_max(arr: np.ndarray, x: float, y: float, half: int = PEAK_BOX_HALF) -> float:
+    from pipeline import _box_peak_max_adu  # noqa: PLC0415
+
+    return _box_peak_max_adu(arr, x, y, half=half)
+
+
+def measure_raw_peaks_frame(
+    raw_arr: np.ndarray,
+    raw_hdr: fits.Header,
+    *,
+    ra_deg: np.ndarray,
+    dec_deg: np.ndarray,
+    aligned_x: np.ndarray | None = None,
+    aligned_y: np.ndarray | None = None,
+    aligned_hdr: fits.Header | None = None,
+    aligned_peak: np.ndarray | None = None,
+    drift_ref_ra: float | None = None,
+    drift_ref_dec: float | None = None,
+    drift_ref_catalog_id: str | None = None,
+    catalog_ids: Sequence[str] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, FrameDriftResult]:
+    """Place aperture at WCS + collective frame drift; peak = max over footprint.
+
+    AstroImageJ rule: one frame drift from stars centroided reliably; every other
+    star moves with the frame (no per-star search or faint-star centroid).
+
+    Drift references: variable target (``drift_ref_catalog_id`` / sky) measured with mag-guided
+    at WCS for frame-shift diagnostic only.
+
+    Placement: per-frame aligned DAO ``(x, y)`` on the raw grid (master-grid lock); fallback
+    WCS + collective drift when aligned coordinates are missing. Optional 11 px COM centroid
+    refinement (photutils-style); never a brightest-pixel search on targets or comps.
+
+    Returns ``(peak_max_adu_raw, placed_x, placed_y, frame_drift)``.
+    """
+    n = int(ra_deg.size)
+    peaks = np.full(n, np.nan, dtype=np.float64)
+    px = np.full(n, np.nan, dtype=np.float64)
+    py = np.full(n, np.nan, dtype=np.float64)
+
+    if n == 0:
+        return peaks, px, py, FrameDriftResult(0.0, 0.0, 0, float("nan"), "empty")
+
+    arr = np.asarray(raw_arr, dtype=np.float64)
+    ap_arr = aligned_peak if aligned_peak is not None else np.full(n, np.nan)
+    ax_arr = np.asarray(aligned_x, dtype=np.float64) if aligned_x is not None else None
+    ay_arr = np.asarray(aligned_y, dtype=np.float64) if aligned_y is not None else None
+
+    _have_matrix = (
+        alignment_inverse_from_header(aligned_hdr) is not None and ax_arr is not None and ay_arr is not None
+    )
+    try:
+        wcs = WCS(raw_hdr)
+        if not wcs.has_celestial:
+            if not _have_matrix:
+                return peaks, px, py, FrameDriftResult(0.0, 0.0, 0, float("nan"), "wcs_missing")
+            wx = np.full(n, np.nan)
+            wy = np.full(n, np.nan)
+        else:
+            wx, wy = wcs.all_world2pix(ra_deg, dec_deg, 0)
+    except Exception:  # noqa: BLE001
+        if not _have_matrix:
+            return peaks, px, py, FrameDriftResult(0.0, 0.0, 0, float("nan"), "wcs_error")
+        wx = np.full(n, np.nan)
+        wy = np.full(n, np.nan)
+
+    dxs: list[float] = []
+    dys: list[float] = []
+    method = "wcs_only"
+    n_refs = 0
+
+    target_i: int | None = None
+    if drift_ref_catalog_id and catalog_ids is not None:
+        for j, cid in enumerate(catalog_ids):
+            if str(cid) == str(drift_ref_catalog_id):
+                target_i = j
+                break
+    if target_i is None and drift_ref_ra is not None and drift_ref_dec is not None:
+        dra = (np.asarray(ra_deg, dtype=np.float64) - float(drift_ref_ra)) * math.cos(
+            math.radians(float(drift_ref_dec))
+        )
+        dde = np.asarray(dec_deg, dtype=np.float64) - float(drift_ref_dec)
+        d2 = dra * dra + dde * dde
+        if d2.size and np.isfinite(d2).any():
+            j = int(np.nanargmin(d2))
+            if float(d2[j]) < (5.0 / 3600.0) ** 2:
+                target_i = j
+
+    if target_i is not None and math.isfinite(float(wx[target_i])):
+        off = _drift_offset_at_wcs(
+            arr, float(wx[target_i]), float(wy[target_i]), use_mag_guided=True
+        )
+        if off is not None:
+            dxs, dys = [off[0]], [off[1]]
+            method = "mag_guided_target"
+            n_refs = 1
+
+    if not dxs:
+        ref_idx = set(_select_drift_ref_indices(ap_arr).tolist())
+        pk = np.asarray(ap_arr, dtype=np.float64)
+        order = sorted(ref_idx, key=lambda j: float(pk[j]) if math.isfinite(float(pk[j])) else 0.0, reverse=True)
+        for i in order[:10]:
+            if not (math.isfinite(float(wx[i])) and math.isfinite(float(wy[i]))):
+                continue
+            off = _drift_offset_at_wcs(arr, float(wx[i]), float(wy[i]), use_mag_guided=True)
+            if off is None:
+                continue
+            dxs.append(off[0])
+            dys.append(off[1])
+        if len(dxs) >= DRIFT_REF_MIN_COUNT:
+            method = "mag_guided_refs"
+        elif len(dxs) == 1:
+            method = "mag_guided_single_ref"
+
+    if dxs:
+        drift_x = float(np.median(np.asarray(dxs)))
+        drift_y = float(np.median(np.asarray(dys)))
+        n_refs = len(dxs)
+        resid = np.hypot(np.asarray(dxs) - drift_x, np.asarray(dys) - drift_y)
+        rms = float(np.sqrt(np.mean(np.square(resid)))) if resid.size else float("nan")
+    else:
+        drift_x = drift_y = 0.0
+        method = "wcs_only"
+        n_refs = 0
+        rms = float("nan")
+
+    # ALIGN-MATRIX-2026-10: aligned (reference-grid) coordinates are NOT raw-grid coordinates
+    # (the field drifts and may flip). With the alignment transform in the aligned header,
+    # map reference (x, y) back to the raw frame; otherwise fall back as before.
+    inv_m = alignment_inverse_from_header(aligned_hdr)
+    if inv_m is not None and ax_arr is not None and ay_arr is not None:
+        _P = np.vstack([ax_arr, ay_arr, np.ones_like(ax_arr)])
+        _R = inv_m @ _P
+        ax_arr = _R[0] / _R[2]
+        ay_arr = _R[1] / _R[2]
+        method = method + "+align_matrix"
+
+    for i in range(n):
+        if ax_arr is not None and ay_arr is not None:
+            if math.isfinite(float(ax_arr[i])) and math.isfinite(float(ay_arr[i])):
+                placed_x = float(ax_arr[i])
+                placed_y = float(ay_arr[i])
+            elif math.isfinite(float(wx[i])) and math.isfinite(float(wy[i])):
+                placed_x = float(wx[i]) + drift_x
+                placed_y = float(wy[i]) + drift_y
+            else:
+                continue
+        elif math.isfinite(float(wx[i])) and math.isfinite(float(wy[i])):
+            placed_x = float(wx[i]) + drift_x
+            placed_y = float(wy[i]) + drift_y
+        else:
+            continue
+        seed_peak = box_peak_max(arr, placed_x, placed_y)
+        com = _centroid_com_cutout(arr, placed_x, placed_y, DRIFT_CENTROID_BOX_HALF)
+        if com is not None:
+            trial_peak = box_peak_max(arr, com[0], com[1])
+            if trial_peak >= max(seed_peak * 0.75, 2500.0):
+                placed_x, placed_y = float(com[0]), float(com[1])
+        px[i] = placed_x
+        py[i] = placed_y
+        peaks[i] = box_peak_max(arr, placed_x, placed_y)
+
+    frame_drift = FrameDriftResult(drift_x, drift_y, n_refs, rms, method)
+    return peaks, px, py, frame_drift
+
+
+def _update_draft_star_stats(
+    ctx: SatDiagContext,
+    catalog_ids: Sequence[str],
+    peaks: np.ndarray,
+    *,
+    admission_thr: float | None,
+    sat_thr: float | None,
+) -> None:
+    """Accumulate once-per-draft peak stats (INV-COMP-MEMBERSHIP)."""
+    for cid, pk in zip(catalog_ids, peaks, strict=False):
+        if not math.isfinite(float(pk)):
+            continue
+        cid_s = str(cid)
+        st = ctx.star_peak_draft.get(cid_s)
+        if st is None:
+            st = StarPeakDraftStats(catalog_id=cid_s)
+            ctx.star_peak_draft[cid_s] = st
+        st.n_frames += 1
+        fv = float(pk)
+        if not math.isfinite(st.peak_max) or fv > st.peak_max:
+            st.peak_max = fv
+        if admission_thr is not None and fv > float(admission_thr):
+            st.n_over_admission += 1
+        if sat_thr is not None and fv >= float(sat_thr):
+            st.n_saturated += 1
+
+
+def finalize_draft_star_stats(ctx: SatDiagContext) -> None:
+    """Compute medians after all frames processed."""
+    for st in ctx.star_peak_draft.values():
+        if st.n_frames >= 10 and st.n_over_admission / st.n_frames > 0.10:
+            st.admission_reject = True
+
+
+def run_sat_diag(
+    archive_root: Path,
+    *,
+    equipment_adu: float | None = None,
+    hdr: fits.Header | None = None,
+    raw_paths: Sequence[Path] | None = None,
+) -> SatDiagContext:
+    """Run Check A + B for a draft archive root."""
+    paths = list(raw_paths) if raw_paths is not None else sample_light_paths(archive_root)
+    pileup = derive_ceiling_from_paths(paths)
+    ref_hdr = hdr if hdr is not None else fits.Header()
+    if not ref_hdr and paths:
+        with fits.open(paths[0], memmap=False) as hdul:
+            ref_hdr = hdul[0].header
+    ctx = resolve_sat_limit(hdr=ref_hdr, pileup=pileup, equipment_adu=equipment_adu)
+    if not paths:
+        ctx.warnings.append("UNVERIFIED_INPUT: no light frames found (Raw/lights, non_calibrated/lights)")
+    return ctx
+
+
+def write_sat_diag_json(ctx: SatDiagContext, out_path: Path) -> None:
+    finalize_draft_star_stats(ctx)
+    payload = {
+        "schema_version": 2,
+        "updated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        **ctx.to_json_dict(),
+    }
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2), encoding="ascii")
+
+
+def commit_sat_diag_provenance(
+    ctx: SatDiagContext,
+    archive: Path | str,
+    *,
+    placed_aperture_used: bool,
+) -> None:
+    """Persist ``sat_diag.json`` after per-frame catalog (same operation as placed aperture)."""
+    if placed_aperture_used:
+        ctx.raw_peaks_used = True
+        ctx.sat_peak_source = SAT_PEAK_SOURCE_PLACED
+    write_sat_diag_json(ctx, Path(archive) / "sat_diag.json")
+
+
+def load_sat_diag_json(path: Path) -> SatDiagContext | None:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        pileup_raw = data.pop("pileup", None)
+        _pf = set(PileupResult.__dataclass_fields__)
+        pileup = (
+            PileupResult(**{k: v for k, v in pileup_raw.items() if k in _pf})  # old json: refused keys
+            if isinstance(pileup_raw, dict) else None
+        )
+        drift_raw = data.pop("last_frame_drift", None)
+        last_drift = FrameDriftResult(**drift_raw) if isinstance(drift_raw, dict) else None
+        star_raw = data.pop("star_peak_draft", {})
+        star_peak_draft = {
+            str(k): StarPeakDraftStats(**v) if isinstance(v, dict) else v
+            for k, v in (star_raw or {}).items()
+        }
+        data.pop("placement_residual_median_px", None)
+        data.pop("placement_residual_p95_px", None)
+        data.pop("schema_version", None)
+        data.pop("updated_utc", None)
+        ctx = SatDiagContext(
+            sat_adu=data.get("sat_adu"),
+            lin_adu=data.get("lin_adu"),
+            sat_source=str(data.get("sat_source", "none")),
+            lin_source=str(data.get("lin_source", "DEFAULT_FRAC")),
+            bitpix_ceiling=data.get("bitpix_ceiling"),
+            derived_ceiling=data.get("derived_ceiling"),
+            header_value=data.get("header_value"),
+            equipment_value=data.get("equipment_value"),
+            refuted_source=data.get("refuted_source"),
+            refuted_value=data.get("refuted_value"),
+            warnings=list(data.get("warnings") or []),
+            pileup=pileup,
+            xbinning=data.get("xbinning"),
+            ybinning=data.get("ybinning"),
+            raw_peaks_used=bool(data.get("raw_peaks_used")),
+            sat_peak_source=str(data.get("sat_peak_source") or SAT_PEAK_SOURCE_PLACED),
+            lin_adu_native=data.get("lin_adu_native"),
+            sat_adu_native=data.get("sat_adu_native"),
+            last_frame_drift=last_drift,
+            star_peak_draft=star_peak_draft,
+            frame_drift_residuals_px=list(data.get("frame_drift_residuals_px") or []),
+        )
+        return ctx
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("load_sat_diag_json failed: %s", exc)
+        return None
+
+
+def apply_raw_peaks_to_proc_df(
+    df: Any,
+    raw_arr: np.ndarray,
+    raw_hdr: fits.Header,
+    ctx: SatDiagContext,
+    *,
+    ref_ra: float | None = None,
+    ref_dec: float | None = None,
+    drift_ref_catalog_id: str | None = None,
+    aligned_hdr: fits.Header | None = None,
+) -> SatDiagContext:
+    """Merge placed-aperture raw peak columns into a per-frame proc catalog."""
+    import pandas as pd
+
+    if df is None or getattr(df, "empty", True):
+        return ctx
+    if "ra_deg" not in df.columns or "dec_deg" not in df.columns:
+        return ctx
+
+    ra = pd.to_numeric(df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de = pd.to_numeric(df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    ok = np.isfinite(ra) & np.isfinite(de)
+
+    aligned_pk = np.full(len(df), np.nan, dtype=np.float64)
+    if "peak_max_adu_aligned" in df.columns:
+        aligned_pk = pd.to_numeric(df["peak_max_adu_aligned"], errors="coerce").to_numpy(
+            dtype=np.float64
+        )
+    elif "peak_max_adu" in df.columns:
+        aligned_pk = pd.to_numeric(df["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
+
+    ax = ay = None
+    if "x" in df.columns and "y" in df.columns:
+        ax = pd.to_numeric(df["x"], errors="coerce").to_numpy(dtype=np.float64)
+        ay = pd.to_numeric(df["y"], errors="coerce").to_numpy(dtype=np.float64)
+
+    id_col = "catalog_id" if "catalog_id" in df.columns else "name"
+    cids_ok: list[str] | None = None
+    if id_col in df.columns and ok.any():
+        cids_ok = df[id_col].astype(str).to_numpy()[ok].tolist()
+
+    peaks, _placed_x, _placed_y, frame_drift = measure_raw_peaks_frame(
+        raw_arr,
+        raw_hdr,
+        ra_deg=ra[ok],
+        dec_deg=de[ok],
+        aligned_x=ax[ok] if ax is not None else None,
+        aligned_y=ay[ok] if ay is not None else None,
+        aligned_hdr=aligned_hdr,
+        aligned_peak=aligned_pk[ok] if aligned_pk is not None else None,
+        drift_ref_ra=ref_ra,
+        drift_ref_dec=ref_dec,
+        drift_ref_catalog_id=drift_ref_catalog_id,
+        catalog_ids=cids_ok,
+    )
+
+    # OUTPUT-REVIEW-2026-10: one raw-peak column (peak_max_adu); the placed position, the
+    # source / limit labels and the *_raw verdict copies are not written (no reader).
+    pk_col = np.full(len(df), np.nan, dtype=np.float64)
+    if ok.any():
+        pk_col[np.nonzero(ok)[0]] = peaks
+
+    df["peak_max_adu_aligned"] = aligned_pk
+    df["peak_max_adu"] = pk_col
+
+    sat = ctx.sat_adu
+    adm = ctx.admission_threshold_adu()
+    use_pk = pk_col
+    pk_finite = np.isfinite(use_pk)
+    likely_sat = np.zeros(len(df), dtype=bool)
+    if sat is not None:
+        thr85 = ctx.likely_saturated_threshold_adu()
+        if thr85 is not None:
+            likely_sat = pk_finite & (use_pk >= thr85)
+
+    df["likely_saturated_raw"] = likely_sat  # in-memory count for the meta; not written
+    # SAT-LIN-2026-10: saturated = aligned-frame verdict OR raw verdict. The raw peak
+    # (placed box max on the uncalibrated frame) can miss bright stars (placement) and can
+    # catch hot pixels / cosmics on faint ones, so a raw hit counts only when the aligned
+    # peak of the same star is already bright (>= half the limit).
+    if sat is not None and pk_finite.any():
+        if "likely_saturated" in df.columns:
+            prev = df["likely_saturated"].map(
+                lambda v: str(v).strip().lower() in ("true", "1", "1.0", "yes")
+            ).to_numpy(dtype=bool)
+        else:
+            prev = np.zeros(len(df), dtype=bool)
+        _lim_ls = float(sat) * float(LINEARITY_FRAC)
+        _al_ok = np.isfinite(aligned_pk)
+        raw_hit = likely_sat & np.where(_al_ok, aligned_pk >= 0.5 * _lim_ls, True)
+        new_ls = prev | raw_hit
+        df["likely_saturated"] = new_ls
+        ok_new = ~new_ls
+        df["photometry_ok"] = ok_new
+
+    if ctx.saturate_limit_adu_85pct() is not None:
+        df["saturate_limit_adu_85pct"] = float(ctx.saturate_limit_adu_85pct())
+
+    id_col = "catalog_id" if "catalog_id" in df.columns else "name"
+    if id_col in df.columns:
+        cids = df[id_col].astype(str).to_numpy()
+        _update_draft_star_stats(
+            ctx,
+            [cids[i] for i in range(len(df)) if ok[i]],
+            peaks,
+            admission_thr=adm,
+            sat_thr=float(sat) if sat is not None else None,
+        )
+
+    ctx.last_frame_drift = frame_drift
+    if math.isfinite(frame_drift.residual_rms_px):
+        ctx.frame_drift_residuals_px.append(float(frame_drift.residual_rms_px))
+
+    bf = max(int(ctx.xbinning or 1), 1)
+    if ctx.lin_adu is not None:
+        ctx.lin_adu_native = float(ctx.lin_adu) / float(bf)
+    if ctx.sat_adu is not None:
+        ctx.sat_adu_native = float(ctx.sat_adu) / float(bf)
+
+    ctx.sat_peak_source = SAT_PEAK_SOURCE_PLACED
+    ctx.raw_peaks_used = True
+    return ctx
+
+
+def resolve_drift_ref_sky_deg(
+    platesolve_dir: Path,
+    *,
+    frame_name_hint: str | None = None,
+) -> tuple[float | None, float | None, str | None]:
+    """Sky position and catalog id of the variable target for frame drift.
+
+    Prefers ``photometry/active_targets.csv`` matched to the frame name prefix
+    (e.g. ``BO_CVn_Light_001`` -> ``BO CVn``). Returns ``(ra_deg, dec_deg, catalog_id)``.
+    """
+    import pandas as pd
+
+    ps = Path(platesolve_dir)
+    at_path = ps / "photometry" / "active_targets.csv"
+    if at_path.is_file():
+        try:
+            at = pd.read_csv(at_path, dtype={"catalog_id": str})
+            if (
+                not at.empty
+                and "ra_deg" in at.columns
+                and "dec_deg" in at.columns
+            ):
+                work = at.copy()
+                if "skip_photometry" in work.columns:
+                    sk = work["skip_photometry"].astype(str).str.lower().isin(
+                        ("true", "1", "yes")
+                    )
+                    work = work.loc[~sk]
+                if not work.empty and frame_name_hint and "name" in work.columns:
+                    stem = Path(frame_name_hint).stem.replace("proc_", "")
+                    parts = stem.replace("-", " ").replace("_", " ").split()
+                    if len(parts) >= 2 and parts[-1].lower() == "light":
+                        target_hint = " ".join(parts[:-1])
+                    else:
+                        target_hint = stem.replace("_", " ")
+                    names = work["name"].astype(str).str.replace("_", " ", regex=False)
+                    hit = work[
+                        names.str.contains(target_hint, case=False, na=False, regex=False)
+                    ]
+                    if not hit.empty:
+                        row = hit.iloc[0]
+                        ra = float(row["ra_deg"])
+                        de = float(row["dec_deg"])
+                        cid = str(row.get("catalog_id", "")) or None
+                        if math.isfinite(ra) and math.isfinite(de):
+                            return ra, de, cid
+                if len(work) == 1:
+                    row = work.iloc[0]
+                    ra = float(row["ra_deg"])
+                    de = float(row["dec_deg"])
+                    cid = str(row.get("catalog_id", "")) or None
+                    if math.isfinite(ra) and math.isfinite(de):
+                        return ra, de, cid
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("resolve_drift_ref_sky_deg active_targets: %s", exc)
+
+    vt_path = ps / "variable_targets.csv"
+    if vt_path.is_file():
+        try:
+            vt = pd.read_csv(vt_path, dtype={"catalog_id": str}, nrows=5000)
+            if (
+                not vt.empty
+                and "ra_deg" in vt.columns
+                and "dec_deg" in vt.columns
+            ):
+                work = vt.copy()
+                if "exo_host_name" in work.columns:
+                    exo = work["exo_host_name"].astype(str).str.strip()
+                    work = work.loc[exo.ne("") & exo.ne("nan")]
+                if frame_name_hint and "exo_host_name" in vt.columns:
+                    stem = Path(frame_name_hint).stem.replace("proc_", "")
+                    hint = stem.replace("_", " ").replace("-", " ")
+                    exo = vt["exo_host_name"].astype(str)
+                    hit = vt[exo.str.contains(hint.split("_Light")[0].replace("_", " "), case=False, na=False)]
+                    if not hit.empty:
+                        row = hit.iloc[0]
+                        ra = float(row["ra_deg"])
+                        de = float(row["dec_deg"])
+                        cid = str(row.get("catalog_id", "")) or None
+                        if math.isfinite(ra) and math.isfinite(de):
+                            return ra, de, cid
+                if not work.empty and "priority" in work.columns:
+                    pr = pd.to_numeric(work["priority"], errors="coerce")
+                    work = work.loc[pr == pr.min()]
+                if len(work) == 1:
+                    row = work.iloc[0]
+                    ra = float(row["ra_deg"])
+                    de = float(row["dec_deg"])
+                    cid = str(row.get("catalog_id", "")) or None
+                    if math.isfinite(ra) and math.isfinite(de):
+                        return ra, de, cid
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("resolve_drift_ref_sky_deg variable_targets: %s", exc)
+
+    return None, None, None
+
+
+def draft_peak_test_adu(platesolve_dir: Path | str) -> tuple[float, str]:
+    """SAT-PRECAL-2026-10: per-frame target saturation peak test of this draft =
+    LINEARITY_FRAC x the SAT-DIAG level (sat_diag.json) when it may exclude stars; otherwise the
+    INV-SAT-LIMIT default (LINEARITY_FRAC x 65535). Draft 532 (float, +32768 offset, saturation
+    98 278 ADU) used the 65535 default and skipped unsaturated targets."""
+    from pipeline_catalog import inv_sat_limit_peak_test_adu  # noqa: PLC0415
+
+    arch = draft_archive_from_platesolve(Path(platesolve_dir))
+    ctx = load_sat_diag_json(arch / "sat_diag.json") if arch is not None else None
+    if ctx is not None and ctx.sat_adu is not None and ctx.may_exclude_saturation():
+        return float(ctx.sat_adu) * float(LINEARITY_FRAC), f"SAT-DIAG {ctx.sat_source} x {LINEARITY_FRAC:.2f}"
+    return inv_sat_limit_peak_test_adu()
+
+
+def draft_archive_from_platesolve(platesolve_dir: Path) -> Path | None:
+    """Draft archive root from obs_group platesolve folder."""
+    ps = Path(platesolve_dir).resolve()
+    for parent in ps.parents:
+        if parent.name.startswith("draft_") and (parent / "draft_manifest.json").is_file():
+            return parent
+        if parent.name == "Drafts":
+            break
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# SAT-LIN-2026-10: linearity check from the science frames themselves.
+# m_inst - m_cat (after a per-frame zero point + linear BP-RP term fitted on stars
+# well inside the linear range) is binned by raw peak / SAT. A non-linear camera
+# mode shows a drift of this residual towards high peaks. Report only: the limit
+# used by the pipeline stays LINEARITY_FRAC x SAT.
+# --------------------------------------------------------------------------- #
+LINCHECK_REF_MAX_FRAC = 0.60  # reference stars: peak below 0.6 x SAT (brighter half of them)
+LINCHECK_BIN_EDGES = (0.0, 0.02, 0.05, 0.10, 0.15, 0.30, 0.45, 0.60, 0.75, 0.85, 0.90, 0.95, 1.0 + 1e-9)
+LINCHECK_TOL_MAG = 0.02  # IMX455/411 deviation < 2 % up to saturation (Alarcon+ 2023)
+LINCHECK_MIN_N = 20
+LINCHECK_MAX_FRAMES = 40
+
+
+def linearity_check(csv_paths: Sequence[Path], sat_adu: float | None) -> dict[str, Any]:
+    """Binned (m_inst - m_cat) residual vs raw peak / SAT. See module note above."""
+    import pandas as pd
+
+    out: dict[str, Any] = {"ok": False, "bins": [], "warning": None}
+    try:
+        sat = float(sat_adu) if sat_adu is not None else float("nan")
+    except (TypeError, ValueError):
+        sat = float("nan")
+    paths = [Path(p) for p in csv_paths]
+    if not (math.isfinite(sat) and sat > 0) or not paths:
+        out["reason"] = "no_sat_or_frames"
+        return out
+    if len(paths) > LINCHECK_MAX_FRAMES:
+        idx = np.linspace(0, len(paths) - 1, LINCHECK_MAX_FRAMES).round().astype(int)
+        paths = [paths[i] for i in sorted(set(idx.tolist()))]
+    want = ("peak_max_adu_aligned", "peak_max_adu", "dao_flux", "flux", "phot_g_mean_mag", "bp_rp")
+    res_all: list[np.ndarray] = []
+    frac_all: list[np.ndarray] = []
+    ref_lo_all: list[float] = []
+    n_frames = 0
+    for fp in paths:
+        try:
+            hdr = pd.read_csv(fp, nrows=0)
+            cols = [c for c in want if c in hdr.columns]
+            df = pd.read_csv(fp, usecols=cols)
+        except Exception:  # noqa: BLE001
+            continue
+        fcol = "dao_flux" if "dao_flux" in df.columns else ("flux" if "flux" in df.columns else None)
+        if fcol is None or not {"peak_max_adu", "phot_g_mean_mag", "bp_rp"} <= set(df.columns):
+            continue
+        _pkc = "peak_max_adu_aligned" if "peak_max_adu_aligned" in df.columns else "peak_max_adu"
+        pk = pd.to_numeric(df[_pkc], errors="coerce").to_numpy(dtype=np.float64)
+        fl = pd.to_numeric(df[fcol], errors="coerce").to_numpy(dtype=np.float64)
+        g = pd.to_numeric(df["phot_g_mean_mag"], errors="coerce").to_numpy(dtype=np.float64)
+        c = pd.to_numeric(df["bp_rp"], errors="coerce").to_numpy(dtype=np.float64)
+        ok = np.isfinite(pk) & np.isfinite(fl) & (fl > 0) & np.isfinite(g) & np.isfinite(c)
+        if ok.sum() < LINCHECK_MIN_N:
+            continue
+        pk, fl, g, c = pk[ok], fl[ok], g[ok], c[ok]
+        frac = pk / sat
+        d = -2.5 * np.log10(fl) - g
+        # SAT-LIN-2026-10: the reference is the brighter half of the stars below 0.6 x SAT,
+        # so the check works for fields without bright stars too (draft 524: 3 stars > 0.15 SAT).
+        below = frac < LINCHECK_REF_MAX_FRAC
+        if below.sum() < 2 * LINCHECK_MIN_N:
+            continue
+        _ref_lo = float(np.median(frac[below]))
+        ref = below & (frac >= _ref_lo)
+        ref_lo_all.append(_ref_lo)
+        A = np.c_[np.ones(int(ref.sum())), c[ref]]
+        coef, *_ = np.linalg.lstsq(A, d[ref], rcond=None)
+        r = d - (coef[0] + coef[1] * c)
+        r = r - float(np.median(r[ref]))
+        res_all.append(r)
+        frac_all.append(frac)
+        n_frames += 1
+    if not res_all:
+        out["reason"] = "no_usable_frames"
+        return out
+    r = np.concatenate(res_all)
+    f = np.concatenate(frac_all)
+    bins = []
+    warn = None
+    edges = LINCHECK_BIN_EDGES
+    # Non-linearity is a high-signal effect: only bins at or above the reference level are
+    # tested (fainter bins carry noise / selection bias, not detector response).
+    ref_lo = float(np.median(ref_lo_all)) if ref_lo_all else 0.0
+    for lo, hi in zip(edges[:-1], edges[1:], strict=False):
+        m = (f >= lo) & (f < hi)
+        n = int(m.sum())
+        med = float(np.median(r[m])) if n else float("nan")
+        bins.append({"peak_frac_lo": float(lo), "peak_frac_hi": float(min(hi, 1.0)), "n": n,
+                     "median_residual_mag": med})
+        if (
+            warn is None
+            and lo >= ref_lo
+            and hi <= LINEARITY_FRAC + 1e-9
+            and n >= LINCHECK_MIN_N
+            and math.isfinite(med)
+            and abs(med) > LINCHECK_TOL_MAG
+        ):
+            warn = (
+                f"non-linearity below {LINEARITY_FRAC:.2f} x SAT: residual {med:+.3f} mag "
+                f"at peak {lo:.2f}-{min(hi, 1.0):.2f} x SAT (n={n})"
+            )
+    tested = [b["peak_frac_hi"] for b in bins if b["n"] >= LINCHECK_MIN_N]
+    out.update({"ok": True, "n_frames": n_frames, "sat_adu": sat, "bins": bins, "warning": warn,
+                "tested_up_to_frac": float(max(tested)) if tested else None,
+                "linearity_frac": float(LINEARITY_FRAC), "tol_mag": LINCHECK_TOL_MAG})
+    return out
+
+
+def linearity_check_infolog_lines(chk: dict[str, Any]) -> list[str]:
+    if not chk.get("ok"):
+        return [f"[LINEARITY] check not available ({chk.get('reason', 'n/a')})"]
+    lines = [
+        f"[LINEARITY] SAT={float(chk['sat_adu']):.0f} ADU, limit {float(chk['linearity_frac']):.2f} x SAT; "
+        f"m_inst - m_cat vs peak ({int(chk['n_frames'])} frames):"
+    ]
+    for b in chk["bins"]:
+        if b["n"] <= 0:
+            continue
+        lines.append(
+            f"[LINEARITY]   peak {b['peak_frac_lo']:.2f}-{b['peak_frac_hi']:.2f} x SAT: "
+            f"{b['median_residual_mag']:+.3f} mag (n={b['n']})"
+        )
+    if chk.get("warning"):
+        lines.append("[LINEARITY] WARNING " + chk["warning"])
+    else:
+        _t = chk.get("tested_up_to_frac")
+        lines.append(
+            f"[LINEARITY] linear within {float(chk.get('tol_mag', 0.02)):.2f} mag as far as tested "
+            f"(up to {_t:.2f} x SAT; too few brighter stars to test)"
+            if _t is not None and _t < LINEARITY_FRAC
+            else "[LINEARITY] linear up to the limit"
+        )
+    return lines

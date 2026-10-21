@@ -1,0 +1,42 @@
+"""Tests for canonical pre-cal proc-CSV resolution (PROC_CSV_GLOB / list_proc_csvs)."""
+
+from __future__ import annotations
+
+import tempfile
+from pathlib import Path
+
+import pandas as pd
+
+from proc_frame_store import PROC_CSV_GLOB, list_proc_csvs, proc_csv_path_for_aligned_fits
+
+
+def _write_frame_csv(path: Path, *, catalog_id: str, flux: float, frame_name: str) -> None:
+    pd.DataFrame(
+        {
+            "catalog_id": [catalog_id, "999999999999999999"],
+            "dao_flux": [flux, 100.0],
+            "source_file": [frame_name, frame_name],
+            "bjd_tdb_mid": [2459000.0 + flux * 1e-6, 2459000.1],
+        }
+    ).to_csv(path, index=False)
+
+
+def test_proc_csv_path_raw_aligned_unchanged() -> None:
+    """Raw calibrated aligned FITS already proc_* -> same CSV basename as before Fix A."""
+    p = Path("frames/proc_V842_Her_Light_064.fits")
+    assert proc_csv_path_for_aligned_fits(p) == p.with_suffix(".csv")
+
+
+def test_list_proc_csvs_pre_cal_and_light_naming() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _write_frame_csv(root / "proc_Chi_H_001.csv", catalog_id="111", flux=1000.0, frame_name="f1.fits")
+        _write_frame_csv(
+            root / "proc_V842_Her_Light_064.csv",
+            catalog_id="222",
+            flux=2000.0,
+            frame_name="f2.fits",
+        )
+        found = [p.name for p in list_proc_csvs(root)]
+        assert found == ["proc_Chi_H_001.csv", "proc_V842_Her_Light_064.csv"]
+        assert PROC_CSV_GLOB == "proc_*.csv"

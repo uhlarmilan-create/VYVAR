@@ -1,0 +1,348 @@
+"""Guard tests for the machine-readable parameter registry (PARAMS-REGISTRY-UI STEP 1).
+
+Turns Config <-> registry parity into a tested property: every public AppConfig field
+has exactly one registry entry, every registry entry names a real field, and every
+entry validates against the schema (enum fields, range shape, ASCII-only text).
+"""
+from __future__ import annotations
+
+import importlib.util
+import re
+from pathlib import Path
+
+import params_registry as pr
+
+_ROOT = Path(__file__).resolve().parent.parent  # dev/ (holds tools/, validation/)
+_REPO = Path(__file__).resolve().parents[2]  # repo root (holds docs/)
+
+
+def _registry() -> dict:
+    return pr.load_registry()
+
+
+def _load_gen_module():
+    spec = importlib.util.spec_from_file_location(
+        "gen_params_md", _ROOT / "tools" / "gen_params_md.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_registry_covers_every_public_field_exactly_once() -> None:
+    reg = _registry()
+    fields = pr.appconfig_field_names()
+    reg_keys = set(reg.keys())
+
+    missing = sorted(fields - reg_keys)
+    extra = sorted(reg_keys - fields)
+    assert not missing, f"AppConfig fields with no registry entry: {missing}"
+    assert not extra, f"Registry entries naming non-existent AppConfig fields: {extra}"
+    # exactly one entry per field: JSON object keys are unique by construction, so
+    # coverage + no-extras above already implies a bijection with the field set.
+    assert len(reg_keys) == len(fields), (
+        f"Registry entry count {len(reg_keys)} != field count {len(fields)}"
+    )
+
+
+def test_every_entry_has_the_full_schema() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    for key, entry in reg.items():
+        if not isinstance(entry, dict):
+            bad.append(f"{key}: entry is not an object")
+            continue
+        for req in pr.ENTRY_KEYS:
+            if req not in entry:
+                bad.append(f"{key}: missing field '{req}'")
+    assert not bad, "Registry entries with schema violations:\n" + "\n".join(bad)
+
+
+def test_enum_fields_are_valid() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    for key, entry in reg.items():
+        if entry.get("tier") not in pr.TIERS:
+            bad.append(f"{key}: tier={entry.get('tier')!r} not in {pr.TIERS}")
+        if entry.get("phase") not in pr.PHASES:
+            bad.append(f"{key}: phase={entry.get('phase')!r} not in {pr.PHASES}")
+        if entry.get("kind") not in pr.KINDS:
+            bad.append(f"{key}: kind={entry.get('kind')!r} not in {pr.KINDS}")
+        if entry.get("widget") not in pr.WIDGETS:
+            bad.append(f"{key}: widget={entry.get('widget')!r} not in {pr.WIDGETS}")
+    assert not bad, "Registry entries with invalid enum values:\n" + "\n".join(bad)
+
+
+def test_owner_axis_full_coverage_and_valid_enum() -> None:
+    # Ownership axis (PARAM-OWNERSHIP-WAVE-A): every entry declares exactly one owner
+    # from the fixed vocabulary. Failures name the offending keys.
+    reg = _registry()
+    missing = sorted(k for k, e in reg.items() if "owner" not in e)
+    assert not missing, f"registry entries with no owner: {missing}"
+    bad = sorted(
+        f"{k}={e.get('owner')!r}" for k, e in reg.items() if e.get("owner") not in pr.OWNERS
+    )
+    assert not bad, f"registry entries with owner not in {pr.OWNERS}:\n" + "\n".join(bad)
+
+
+def test_scope_axis_full_coverage_and_valid_enum() -> None:
+    reg = _registry()
+    missing = sorted(k for k, e in reg.items() if "scope" not in e)
+    assert not missing, f"registry entries with no scope: {missing}"
+    bad_scope = sorted(
+        f"{k}={e.get('scope')!r}" for k, e in reg.items() if e.get("scope") not in pr.SCOPES
+    )
+    assert not bad_scope, f"registry entries with scope not in {pr.SCOPES}:\n" + "\n".join(bad_scope)
+    bad_conf = sorted(
+        f"{k}={e.get('scope_confidence')!r}"
+        for k, e in reg.items()
+        if e.get("scope_confidence") not in pr.SCOPE_CONFIDENCES
+    )
+    assert not bad_conf, (
+        f"registry entries with scope_confidence not in {pr.SCOPE_CONFIDENCES}:\n"
+        + "\n".join(bad_conf)
+    )
+    missing_key = sorted(k for k, e in reg.items() if "scope_key" not in e)
+    assert not missing_key, f"registry entries with no scope_key: {missing_key}"
+    bad_key = sorted(
+        f"{k}={e.get('scope_key')!r}" for k, e in reg.items() if e.get("scope_key") not in pr.SCOPE_KEYS
+    )
+    assert not bad_key, f"registry entries with scope_key not in {pr.SCOPE_KEYS}:\n" + "\n".join(bad_key)
+    missing_grp = sorted(k for k, e in reg.items() if "scope_group" not in e)
+    assert not missing_grp, f"registry entries with no scope_group: {missing_grp}"
+    bad_grp = sorted(
+        f"{k}={e.get('scope_group')!r}" for k, e in reg.items() if e.get("scope_group") not in pr.SCOPE_GROUPS
+    )
+    assert not bad_grp, f"registry entries with scope_group not in {pr.SCOPE_GROUPS}:\n" + "\n".join(bad_grp)
+
+
+def test_scope_scope_key_invariant() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    rig_keys = {"rig", "rig_band", "rig_sampling"}
+    for key, e in reg.items():
+        scope = e.get("scope")
+        sk = e.get("scope_key")
+        grp = e.get("scope_group")
+        if scope == "universal" and (sk != "none" or grp != "n/a"):
+            bad.append(f"{key}: universal requires scope_key=none, scope_group=n/a")
+        elif scope == "site" and (sk != "site" or grp != "n/a"):
+            bad.append(f"{key}: site requires scope_key=site, scope_group=n/a")
+        elif scope == "session" and (sk != "frame" or grp != "n/a"):
+            bad.append(f"{key}: session requires scope_key=frame, scope_group=n/a")
+        elif scope == "rig":
+            if sk not in rig_keys:
+                bad.append(f"{key}: rig requires scope_key in {rig_keys}, got {sk!r}")
+            if grp not in ("a", "b", "c"):
+                bad.append(f"{key}: rig requires scope_group in a/b/c, got {grp!r}")
+    assert not bad, "scope <-> scope_key invariant violations:\n" + "\n".join(bad)
+
+
+def test_sampling_defining_keys_not_resolved_by_rig_sampling() -> None:
+    _assert_sampling_defining_acyclicity(_registry())
+
+
+def _assert_sampling_defining_acyclicity(reg: dict) -> None:
+    bad = [
+        k for k in pr.SAMPLING_DEFINING_KEYS
+        if reg[k].get("scope_key") == "rig_sampling"
+    ]
+    assert not bad, (
+        "SAMPLING_DEFINING_KEYS must not use scope_key=rig_sampling (circular):\n"
+        + "\n".join(bad)
+    )
+
+
+def test_sampling_defining_keys_acyclicity_injection() -> None:
+    import pytest
+
+    reg = _registry()
+    key = pr.SAMPLING_DEFINING_KEYS[0]
+    saved = reg[key]["scope_key"]
+    try:
+        reg[key]["scope_key"] = "rig_sampling"
+        with pytest.raises(AssertionError, match="rig_sampling"):
+            _assert_sampling_defining_acyclicity(reg)
+    finally:
+        reg[key]["scope_key"] = saved
+
+
+def test_internal_resolved_not_group_a() -> None:
+    reg = _registry()
+    bad = [
+        k for k, e in reg.items()
+        if e.get("owner") == "internal"
+        and e.get("kind") == "resolved"
+        and e.get("scope_group") == "a"
+    ]
+    assert not bad, (
+        "owner=internal + kind=resolved must not be scope_group=a (runtime-measured, not stored per rig):\n"
+        + "\n".join(bad)
+    )
+
+
+def test_classifier_explicit_keys_exist_in_registry() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "classify_params_scope", _ROOT / "tools" / "classify_params_scope.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    reg = _registry()
+    mod.validate_explicit_keys(reg)  # raises KeyError on dead keys
+
+
+def test_classifier_rejects_dead_explicit_key() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "classify_params_scope", _ROOT / "tools" / "classify_params_scope.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    reg = _registry()
+    saved = mod.EXPLICIT.pop("gain", None)
+    mod.EXPLICIT["__nonexistent_test_key__"] = mod.ScopeResult(
+        "rig", "rig", "a", "high", "injected dead key"
+    )
+    try:
+        with __import__("pytest").raises(KeyError, match="__nonexistent_test_key__"):
+            mod.validate_explicit_keys(reg)
+    finally:
+        mod.EXPLICIT.pop("__nonexistent_test_key__", None)
+        if saved is not None:
+            mod.EXPLICIT["gain"] = saved
+
+
+def test_range_is_null_or_ordered_numeric_pair() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    for key, entry in reg.items():
+        rng = entry.get("range")
+        if rng is None:
+            continue
+        if (
+            not isinstance(rng, list)
+            or len(rng) != 2
+            or not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in rng)
+        ):
+            bad.append(f"{key}: range={rng!r} is not [number, number] or null")
+            continue
+        if not rng[0] < rng[1]:
+            bad.append(f"{key}: range={rng!r} requires min < max")
+    assert not bad, "Registry entries with invalid range:\n" + "\n".join(bad)
+
+
+def test_strings_are_ascii_only() -> None:
+    reg = _registry()
+    bad: list[str] = []
+    for key, entry in reg.items():
+        if not key.isascii():
+            bad.append(f"{key}: key is not ASCII")
+        for sfield in ("label", "help", "tier", "phase", "kind", "widget"):
+            val = entry.get(sfield)
+            if isinstance(val, str) and not val.isascii():
+                bad.append(f"{key}: {sfield} contains non-ASCII text")
+        unit = entry.get("unit")
+        if isinstance(unit, str) and not unit.isascii():
+            bad.append(f"{key}: unit contains non-ASCII text")
+    assert not bad, "Registry entries with non-ASCII strings:\n" + "\n".join(bad)
+
+
+def test_project_root_default_repr_is_name_independent() -> None:
+    """S7: rendered default must not be the checkout folder basename."""
+    from pathlib import Path as _P
+
+    defaults = pr.appconfig_defaults()
+    rendered = pr.default_repr(defaults["project_root"])
+    assert rendered == "(git toplevel)"
+    assert rendered != _P(defaults["project_root"]).name
+
+
+def test_generated_params_md_is_fresh(tmp_path) -> None:
+    # Regenerating in a temp dir must reproduce the committed VYVAR_PARAMS.md exactly,
+    # excluding only the volatile timestamp/HEAD header line. Doc freshness is a tested
+    # property, not a discipline.
+    gen = _load_gen_module()
+    committed = (_REPO / "docs" / "VYVAR_PARAMS.md").read_text(encoding="utf-8")
+    regenerated = gen.build_markdown()
+
+    # exercise the write path into a throwaway dir (faithful "regenerate in a temp dir")
+    tmp_out = tmp_path / "VYVAR_PARAMS.md"
+    tmp_out.write_text(regenerated, encoding="utf-8")
+
+    got = gen.strip_volatile(tmp_out.read_text(encoding="utf-8"))
+    want = gen.strip_volatile(committed)
+    if got != want:  # produce a compact, actionable diff head
+        import difflib
+
+        diff = "\n".join(
+            list(difflib.unified_diff(want.splitlines(), got.splitlines(), lineterm=""))[:40]
+        )
+        raise AssertionError(
+            "docs/VYVAR_PARAMS.md is stale; run `python tools/gen_params_md.py`.\n" + diff
+        )
+
+
+def test_help_is_nonempty_ascii_and_not_placeholder() -> None:
+    # CONFIG-HUMAN-EDIT STEP 1: help is the single source of truth for config.json
+    # comments + dashboard tooltips, ported from VYVAR_CONFIG_GUIDE_EN.md. It must be a
+    # real explanation, never the old mechanical placeholder ("<Label> (<phase> parameter).").
+    reg = _registry()
+    placeholder = re.compile(r"\(\w+ parameter\)\.\s*$")
+    empty: list[str] = []
+    non_ascii: list[str] = []
+    stale: list[str] = []
+    for key, entry in reg.items():
+        help_txt = entry.get("help")
+        if not isinstance(help_txt, str) or not help_txt.strip():
+            empty.append(key)
+            continue
+        if not help_txt.isascii():
+            non_ascii.append(key)
+        if placeholder.search(help_txt):
+            stale.append(key)
+    assert not empty, f"registry entries with empty help: {sorted(empty)}"
+    assert not non_ascii, f"registry entries with non-ASCII help: {sorted(non_ascii)}"
+    assert not stale, f"registry entries still using placeholder help: {sorted(stale)}"
+
+
+def test_phase_help_covers_every_phase_ascii() -> None:
+    # CONFIG-HUMAN-EDIT STEP 3: the __meta__.phase_help block backs the config.json section
+    # comments. Every pipeline phase must have a non-empty ASCII one-liner.
+    ph = pr.load_phase_help()
+    missing = [p for p in pr.PHASES if not str(ph.get(p, "")).strip()]
+    assert not missing, f"phases with no phase_help: {missing}"
+    non_ascii = [p for p, v in ph.items() if isinstance(v, str) and not v.isascii()]
+    assert not non_ascii, f"phase_help with non-ASCII text: {non_ascii}"
+
+
+def test_meta_block_excluded_from_registry_view() -> None:
+    # load_registry must strip reserved __-prefixed keys so parity with fields holds.
+    reg = pr.load_registry()
+    assert not any(k.startswith("__") for k in reg), "reserved meta keys leaked into registry view"
+
+
+def test_basic_tier_keys_are_auto_widgets() -> None:
+    # Basic-tier params must be renderable by the generated dashboard.
+    reg = _registry()
+    bad = [
+        key for key, e in reg.items()
+        if e.get("tier") == "basic" and e.get("widget") != "auto"
+    ]
+    assert not bad, f"basic-tier keys must be widget=auto: {sorted(bad)}"
+
+
+def test_hidden_widget_implies_expert_tier() -> None:
+    # Cosmetic rule: tier has no UX meaning for a key that never renders, so every
+    # widget=hidden entry is pinned to tier=expert to avoid confusion at review time.
+    reg = _registry()
+    bad = [
+        key for key, e in reg.items()
+        if e.get("widget") == "hidden" and e.get("tier") != "expert"
+    ]
+    assert not bad, f"widget=hidden keys must be tier=expert: {sorted(bad)}"

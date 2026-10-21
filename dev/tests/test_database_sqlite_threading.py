@@ -1,0 +1,483 @@
+# -*- coding: ascii -*-
+"""Thread-safe vyvar.sqlite3 access for cached Streamlit pipeline (bug #10)."""
+from __future__ import annotations
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import pytest
+
+from config import AppConfig
+from database import VyvarDatabase
+from pipeline import AstroPipeline
+
+
+def test_open_sqlite_connection_allows_cross_thread_use(tmp_path) -> None:
+    from database import open_sqlite_connection
+
+    db = tmp_path / "vyvar.sqlite3"
+    conn = open_sqlite_connection(db)
+
+    def _read() -> int:
+        row = conn.execute("SELECT 1 AS n;").fetchone()
+        return int(row["n"])
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            vals = list(pool.map(lambda _: _read(), range(4)))
+    finally:
+        conn.close()
+    assert vals == [1, 1, 1, 1]
+
+
+def test_cached_pipeline_db_cross_thread_reads_and_writes(tmp_path, monkeypatch) -> None:
+    """Mirror Streamlit: pipeline (DB) created in thread A, UI ops from B and C."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    monkeypatch.setenv("VYVAR_DATA_DIR", str(tmp_path))
+    install = tmp_path / "install"
+    install.mkdir()
+    cfg = AppConfig(project_root=install)
+    cfg.database_path = db_path
+    cfg.ensure_base_dirs()
+
+    pipeline = AstroPipeline(config=cfg)
+    pipeline.db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "seed", "YES"),
+    )
+    pipeline.db.conn.commit()
+
+    errors: list[str] = []
+
+    def _read_equip() -> int:
+        try:
+            rows = pipeline.db.get_equipments()
+            return len(rows)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"read: {type(exc).__name__}: {exc}")
+            raise
+
+    def _write_alias(tag: str) -> None:
+        try:
+            pipeline.db.conn.execute(
+                "UPDATE EQUIPMENTS SET ALIAS = ? WHERE ID = 1;",
+                (tag,),
+            )
+            pipeline.db.conn.commit()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"write: {type(exc).__name__}: {exc}")
+            raise
+
+    read_counts: list[int] = []
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futs = [
+            pool.submit(_read_equip),
+            pool.submit(_write_alias, "from-B"),
+            pool.submit(_read_equip),
+            pool.submit(_write_alias, "from-C"),
+            pool.submit(_read_equip),
+        ]
+        for fut in as_completed(futs):
+            result = fut.result()
+            if isinstance(result, int):
+                read_counts.append(result)
+
+    assert not errors, errors
+    assert len(read_counts) == 3
+    assert all(c >= 1 for c in read_counts)
+    alias = pipeline.db.conn.execute(
+        "SELECT ALIAS FROM EQUIPMENTS WHERE ID = 1;"
+    ).fetchone()["ALIAS"]
+    assert alias in ("from-B", "from-C")
+    pipeline.db.close()
+
+
+def test_vyvar_database_conn_is_thread_safe_wrapper(tmp_path) -> None:
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    from database import ThreadSafeSQLiteConnection
+
+    assert isinstance(db.conn, ThreadSafeSQLiteConnection)
+    db.close()
+
+
+def test_read_df_via_thread_safe_connection(tmp_path) -> None:
+    """Database Explorer _read_df must not call con.cursor() (wrapper has no cursor())."""
+    from ui_database_explorer import _read_df
+
+    db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "alias-a", "YES"),
+    )
+    db.conn.commit()
+    df = _read_df(db.conn, "SELECT ID, CAMERANAME, ALIAS FROM EQUIPMENTS ORDER BY ID;")
+    assert list(df.columns) == ["ID", "CAMERANAME", "ALIAS"]
+    assert len(df) == 1
+    assert df.iloc[0]["CAMERANAME"] == "CamA"
+    df2 = _read_df(
+        db.conn,
+        "SELECT ALIAS FROM EQUIPMENTS WHERE ID = ?;",
+        (1,),
+    )
+    assert df2.iloc[0]["ALIAS"] == "alias-a"
+    db.close()
+
+
+def test_equipments_focal_column_dropped_on_open(tmp_path) -> None:
+    """Legacy EQUIPMENTS.FOCAL is removed; focal is TELESCOPE-only."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "alias-a", "YES"),
+    )
+    db.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
+    db.conn.execute("UPDATE EQUIPMENTS SET FOCAL = 999.0 WHERE ID = 1;")
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    cols = {r["name"] for r in db2.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+    assert "FOCAL" not in cols
+    row = db2.conn.execute("SELECT CAMERANAME FROM EQUIPMENTS WHERE ID = 1;").fetchone()
+    assert row is not None
+    assert row["CAMERANAME"] == "CamA"
+    db2.close()
+
+
+def test_equipments_focal_migration_heals_orphan_old_table(tmp_path) -> None:
+    """Leftover EQUIPMENTS_OLD from a failed rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamOrphan", "alias-o", "YES"),
+    )
+    db.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN FOCAL REAL;")
+    db.conn.execute("UPDATE EQUIPMENTS SET FOCAL = 1480.0 WHERE ID = 1;")
+    db.conn.execute(
+        """
+        CREATE TABLE EQUIPMENTS_OLD (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            CAMERANAME TEXT,
+            FOCAL REAL
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    cols = {r["name"] for r in db2.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+    tables = {
+        r[0] for r in db2.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    }
+    assert "FOCAL" not in cols
+    assert "EQUIPMENTS_OLD" not in tables
+    row = db2.conn.execute("SELECT CAMERANAME FROM EQUIPMENTS WHERE ID = 1;").fetchone()
+    assert row is not None
+    assert row["CAMERANAME"] == "CamOrphan"
+    db2.close()
+
+
+def test_telescope_active_migration_heals_orphan_old_table(tmp_path) -> None:
+    """Leftover TELESCOPE_OLD from a failed ACTIVE rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE TELESCOPE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            TELESCOPENAME TEXT,
+            ALIAS TEXT,
+            DIAMETER REAL,
+            FOCAL REAL,
+            ACTIVE INTEGER DEFAULT 1,
+            IS_DEFAULT INTEGER DEFAULT 0
+        );
+        INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE)
+        VALUES ('TelOrphan', 'to', 200.0, 1480.0, 1);
+        CREATE TABLE TELESCOPE_OLD (
+            ID INTEGER PRIMARY KEY,
+            TELESCOPENAME TEXT
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    active_type = next(
+        str(r["type"]).upper()
+        for r in db.conn.execute("PRAGMA table_info('TELESCOPE');")
+        if r["name"] == "ACTIVE"
+    )
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "TEXT" in active_type
+    assert "TELESCOPE_OLD" not in tables
+    row = db.conn.execute(
+        "SELECT TELESCOPENAME, ACTIVE FROM TELESCOPE WHERE ID = 1;"
+    ).fetchone()
+    assert row is not None
+    assert row["TELESCOPENAME"] == "TelOrphan"
+    assert row["ACTIVE"] == "YES"
+    db.close()
+
+
+def test_photometry_light_curve_table_dropped_on_open(tmp_path) -> None:
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        """
+        CREATE TABLE PHOTOMETRY_LIGHT_CURVE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            DRAFT_ID INTEGER,
+            JD REAL
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    VyvarDatabase(db_path).close()
+    conn = __import__("sqlite3").connect(db_path)
+    names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    conn.close()
+    assert "PHOTOMETRY_LIGHT_CURVE" not in names
+
+
+def test_active_stored_as_yes_no_text(tmp_path) -> None:
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);",
+        ("CamA", "a", "1"),
+    )
+    db.conn.execute(
+        "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("Tel", "t", 200.0, 1000.0, 0),
+    )
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("Site", 50.0, 14.0, 300.0, 1),
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    eq = db2.conn.execute("SELECT ACTIVE FROM EQUIPMENTS WHERE ID = 1;").fetchone()["ACTIVE"]
+    tel = db2.conn.execute("SELECT ACTIVE FROM TELESCOPE WHERE ID = 1;").fetchone()["ACTIVE"]
+    loc = db2.conn.execute("SELECT ACTIVE FROM LOCATION WHERE ID = 1;").fetchone()["ACTIVE"]
+    assert eq == "YES"
+    assert tel == "NO"
+    assert loc == "YES"
+    assert db2.get_equipments(active_only=True)
+    assert db2.get_telescopes(active_only=True) == []
+    assert db2.get_telescopes(active_only=False)
+    assert VyvarDatabase.normalize_active_text(1) == "YES"
+    assert VyvarDatabase.normalize_active_text(0) == "NO"
+    assert VyvarDatabase.normalize_active_text("NO") == "NO"
+    db2.close()
+
+
+def test_get_observer_locations_text_active(tmp_path) -> None:
+    from database import get_observer_locations
+
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("ActiveSite", 50.0, 14.0, 300.0, "YES"),
+    )
+    db.conn.execute(
+        "INSERT INTO LOCATION (PLACENAME, LATITUDE, LONGITUDE, ALTITUDE, ACTIVE) VALUES (?, ?, ?, ?, ?);",
+        ("InactiveSite", 51.0, 15.0, 400.0, "NO"),
+    )
+    db.conn.commit()
+    db.close()
+
+    all_rows = get_observer_locations(db_path)
+    assert len(all_rows) == 2
+    assert all_rows[0]["active"] == 1
+    assert all_rows[1]["active"] == 0
+
+    active_rows = get_observer_locations(db_path, active_only=True)
+    assert len(active_rows) == 1
+    assert active_rows[0]["name"] == "ActiveSite"
+    assert active_rows[0]["active"] == 1
+
+
+def test_qc_run_orphan_old_table_heals_on_open(tmp_path) -> None:
+    """Leftover OBS_QC_PROCESSING_RUN_OLD from a failed rebuild must not block reopen."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    db = VyvarDatabase(db_path)
+    db.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("hash-504", 504, "2026-08-11T12:00:00+00:00"),
+    )
+    db.conn.execute(
+        """
+        CREATE TABLE OBS_QC_PROCESSING_RUN_OLD (
+            ID INTEGER PRIMARY KEY,
+            PROCESSING_HASH TEXT,
+            DRAFT_ID INTEGER,
+            CREATED_AT TEXT
+        );
+        """
+    )
+    db.conn.commit()
+    db.close()
+
+    db2 = VyvarDatabase(db_path)
+    tables = {
+        r[0] for r in db2.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    }
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    row = db2.conn.execute(
+        "SELECT PROCESSING_HASH, DRAFT_ID FROM OBS_QC_PROCESSING_RUN WHERE ID = 1;"
+    ).fetchone()
+    assert row is not None
+    assert row["PROCESSING_HASH"] == "hash-504"
+    assert int(row["DRAFT_ID"]) == 504
+    db2.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("hash-504b", 504, "2026-08-11T13:00:00+00:00"),
+    )
+    db2.conn.commit()
+    db2.close()
+
+
+def test_qc_file_fk_to_run_old_heals_on_open(tmp_path) -> None:
+    """Half-finished QC migration: FILE FK to RUN_OLD must rebuild on open."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE OBS_QC_PROCESSING_RUN (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PROCESSING_HASH TEXT NOT NULL UNIQUE,
+            DRAFT_ID INTEGER NOT NULL,
+            CREATED_AT TEXT NOT NULL
+        );
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES ('fk-old-hash', 513, '2026-08-14T12:00:00+00:00');
+        CREATE TABLE OBS_QC_PROCESSING_FILE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            RUN_ID INTEGER NOT NULL,
+            SOURCE_OBS_FILE_ID INTEGER NOT NULL,
+            FILE_PATH TEXT,
+            FILTER TEXT,
+            EXPTIME REAL,
+            INSPECTION_JD REAL,
+            FWHM REAL,
+            DRIFT REAL,
+            FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN_OLD (ID) ON DELETE CASCADE
+        );
+        INSERT INTO OBS_QC_PROCESSING_FILE (
+            RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
+        ) VALUES (1, 42, 'lights/a.fits', 'Clear', 60.0, 2460000.5, 3.1, 0.0);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    parent = None
+    for row in db.conn.execute("PRAGMA foreign_key_list('OBS_QC_PROCESSING_FILE');"):
+        if str(row[3]).upper() == "RUN_ID":
+            parent = str(row[2])
+    assert parent == "OBS_QC_PROCESSING_RUN"
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "OBS_QC_PROCESSING_FILE_OLD" not in tables
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    n = db.conn.execute("SELECT COUNT(*) AS n FROM OBS_QC_PROCESSING_FILE;").fetchone()["n"]
+    assert int(n) == 1
+    # FK enforceable: insert with missing RUN_ID must fail under foreign_keys=ON
+    db.conn.execute("PRAGMA foreign_keys = ON;")
+    failed = False
+    try:
+        db.conn.execute(
+            """
+            INSERT INTO OBS_QC_PROCESSING_FILE (
+                RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH
+            ) VALUES (999999, 1, 'x');
+            """
+        )
+        db.conn.commit()
+    except Exception:  # noqa: BLE001
+        failed = True
+        db.conn.rollback()
+    assert failed
+    db.close()
+
+
+def test_qc_run_obs_draft_fk_migration_uses_safe_rebuild(tmp_path) -> None:
+    """Legacy OBS_DRAFT FK on QC run table migrates without leaving *_OLD orphans."""
+    db_path = tmp_path / "vyvar.sqlite3"
+    conn = __import__("sqlite3").connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE OBS_DRAFT (ID INTEGER PRIMARY KEY);
+        INSERT INTO OBS_DRAFT (ID) VALUES (504);
+        CREATE TABLE OBS_QC_PROCESSING_RUN (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PROCESSING_HASH TEXT NOT NULL UNIQUE,
+            DRAFT_ID INTEGER NOT NULL,
+            CREATED_AT TEXT NOT NULL,
+            FOREIGN KEY (DRAFT_ID) REFERENCES OBS_DRAFT (ID)
+        );
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES ('legacy-hash', 504, '2026-08-11T10:00:00+00:00');
+        CREATE TABLE OBS_QC_PROCESSING_FILE (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            RUN_ID INTEGER NOT NULL,
+            SOURCE_OBS_FILE_ID INTEGER NOT NULL,
+            FILE_PATH TEXT,
+            FILTER TEXT,
+            EXPTIME REAL,
+            INSPECTION_JD REAL,
+            FWHM REAL,
+            DRIFT REAL,
+            FOREIGN KEY (RUN_ID) REFERENCES OBS_QC_PROCESSING_RUN (ID) ON DELETE CASCADE
+        );
+        INSERT INTO OBS_QC_PROCESSING_FILE (
+            RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH, FILTER, EXPTIME, INSPECTION_JD, FWHM, DRIFT
+        ) VALUES (1, 99, 'lights/frame001.fits', 'Clear', 60.0, 2460000.5, 3.2, 0.1);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = VyvarDatabase(db_path)
+    tables = {r[0] for r in db.conn.execute("SELECT name FROM sqlite_master WHERE type='table';")}
+    assert "OBS_DRAFT" not in tables
+    assert "OBS_QC_PROCESSING_RUN_OLD" not in tables
+    assert "OBS_QC_PROCESSING_FILE_OLD" not in tables
+    run = db.conn.execute(
+        "SELECT PROCESSING_HASH, DRAFT_ID FROM OBS_QC_PROCESSING_RUN WHERE ID = 1;"
+    ).fetchone()
+    assert run is not None
+    assert run["PROCESSING_HASH"] == "legacy-hash"
+    assert int(run["DRAFT_ID"]) == 504
+    frow = db.conn.execute(
+        "SELECT RUN_ID, SOURCE_OBS_FILE_ID, FILE_PATH FROM OBS_QC_PROCESSING_FILE WHERE ID = 1;"
+    ).fetchone()
+    assert frow is not None
+    assert int(frow["RUN_ID"]) == 1
+    assert int(frow["SOURCE_OBS_FILE_ID"]) == 99
+    assert frow["FILE_PATH"] == "lights/frame001.fits"
+    db.conn.execute(
+        """
+        INSERT INTO OBS_QC_PROCESSING_RUN (PROCESSING_HASH, DRAFT_ID, CREATED_AT)
+        VALUES (?, ?, ?);
+        """,
+        ("post-migrate", 504, "2026-08-11T14:00:00+00:00"),
+    )
+    db.conn.commit()
+    db.close()
+

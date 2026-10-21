@@ -1,0 +1,33 @@
+[project]
+name = "vyvar"
+version = "0.10.0a1"
+description = "Automated differential photometry for variable-star observers"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = [
+    "dev/sandbox",
+    "dev/results",
+    "tmp",
+    "Archive",
+    "dev/scripts/archive",
+    ".venv",
+    "venv",
+    ".ruff_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E722",   # bare except (swallows KeyboardInterrupt / SystemExit)
+    "BLE001", # blind except Exception - grandfathered via noqa; new sites must mark intent
+    "F821",   # undefined name (latent NameError in except handlers / compile gate)
+]
+
+[tool.pytest.ini_options]
+testpaths = ["dev/tests"]
+# src_py holds the VYVAR modules (flat imports); dev/ makes the tests/scripts/validation/tools
+# namespace packages importable as before (e.g. `from tests.photometry_sha import ...`); "."
+# keeps the root app.py shim importable. Phase A modules still live at root, hence ".".
+pythonpath = [".", "src_py", "dev"]

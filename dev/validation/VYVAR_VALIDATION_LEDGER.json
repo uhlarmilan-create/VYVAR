@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "updated": "2026-09-30",
+  "_rules": [
+    "Agents may edit ONLY: passes, last_verified, commit, notes of existing items.",
+    "passes flips to true only after careful end-to-end verification on the production path.",
+    "Items are never deleted and their verification is never weakened.",
+    "New items may be added; the guard test's required-ID list must be extended in the same commit (visible diff).",
+    "Rationale: structured JSON pass/fail ledger resists inappropriate rewrites (Anthropic long-running-agent harness guidance)."
+  ],
+  "items": [
+    {
+      "id": "VL-PYTEST-FULL",
+      "area": "tests",
+      "description": "Full pytest suite green on production tree",
+      "verification": "pytest -q",
+      "passes": true,
+      "last_verified": "2026-07-08",
+      "commit": null,
+      "notes": "Seeded at DEV-PROCESS-A closeout; re-verified each session via session_baseline_check --fast."
+    },
+    {
+      "id": "VL-ANCHOR-424",
+      "area": "photometry",
+      "description": "draft_424 coherent content anchor reproduces via session baseline --full",
+      "verification": "scripts/session_baseline_check.py --full (science-meaningful compare + photometry SHA vs Archive/Drafts/draft_000424_snapshot_sigma_floor_20260713; core bf3743a1... n=357; extended dec5c637... n=535). Offline golden reference for c-python port validation.",
+      "status": "superseded_offline",
+      "passes": false,
+      "last_verified": "2026-07-15",
+      "commit": "dcd88bf",
+      "offline_backup": {
+        "path": "C:\\ASTRO\\backups\\vyvar_anchor_424_sigma_floor_20260713_core-bf3743a1.zip",
+        "format": "zip",
+        "sha256": "8706c0d6412ac2dd3e318f7f74eba5baf275d07e9c775fa062985640e2652d48",
+        "size_bytes": 257667235,
+        "core_sha_verified": "bf3743a150d788283eab2ab51db7b31f59e6d1c481159208bbe3f573092ec975",
+        "verified_utc": "2026-07-15T09:00:00Z"
+      },
+      "notes": "Archive cleared 2026-07-15 (Milan). Accepted anchor offline at path above; --full SUSPENDED until new in-Archive anchor cut. Prior in-Archive snapshot draft_000424_snapshot_sigma_floor_20260713 removed after verified backup. Superseded 2026-07-16 by VL-ANCHOR-WCSINV / draft_000435_snapshot_skysurface_20260716 (offline zip remains historical)."
+    },
+    {
+      "id": "VL-COUNTERS-ZERO",
+      "area": "except-hygiene",
+      "description": "except_fix_counters snapshot all-zero after healthy draft_424 production run",
+      "verification": "scripts/session_baseline_check.py --full (except_fix_summary in pipeline_meta.json)",
+      "passes": true,
+      "last_verified": "2026-09-30",
+      "commit": "9ade9af",
+      "notes": "Re-verified 2026-08-18 ANCHOR-516-04 --full on frozen 516 (counters {})."
+    },
+    {
+      "id": "VL-K2-MATRIX",
+      "area": "extinction",
+      "description": "424/425/427 K2 validation matrix PASS",
+      "verification": "tmp/k2_land/validation_report.json",
+      "passes": true,
+      "last_verified": "2026-07-07",
+      "commit": null,
+      "notes": "K2-HOTFIX-BSIGN re-validation; matrix recorded 2026-07-07."
+    },
+    {
+      "id": "VL-CALDIAG-424",
+      "area": "calibration",
+      "description": "CAL-DIAG regression draft_424: 150/150 frames VY_DKRSMP=SUM, 0 WARN/FAIL, byte-identical",
+      "verification": "sandbox/caldiag_d424_regression.py (CAL-DIAG-IMPL gate)",
+      "passes": true,
+      "last_verified": "2026-07-07",
+      "commit": null,
+      "notes": "Gate ON; science byte-identical to baseline."
+    },
+    {
+      "id": "VL-AAVSO-EXPORT",
+      "area": "export",
+      "description": "GS6b AAVSO export validation",
+      "verification": "scripts/validate_aavso_export.py",
+      "passes": true,
+      "last_verified": "2026-05-20",
+      "commit": null,
+      "notes": "Historical PASS; re-run on export-touching changes."
+    },
+    {
+      "id": "VL-XVAL-V0612",
+      "area": "cross-validation",
+      "description": "SIPS cross-val V0612 eclipse shape + shared outlier match",
+      "verification": "SIPS cross-validation harness (V0612)",
+      "passes": true,
+      "last_verified": "2026-06-16",
+      "commit": null,
+      "notes": "Historical PASS."
+    },
+    {
+      "id": "VL-DETERMINISM-425",
+      "area": "reproducibility",
+      "description": "draft_425 two-fresh-runs determinism PASS (QUICKWINS-0708)",
+      "verification": "tmp/quickwins_0708/item0_determinism.json",
+      "passes": true,
+      "last_verified": "2026-07-08",
+      "commit": null,
+      "notes": "363 LCs science byte-identical run-to-run; provenance stamped_at excluded."
+    },
+    {
+      "id": "VL-SHA-CUT1",
+      "area": "anchors",
+      "description": "Rebaseline cut1 SHAs (tests/test_photometry_sha_baseline.py, fixture-present)",
+      "verification": "tests/test_photometry_sha_baseline.py",
+      "passes": true,
+      "last_verified": "2026-06-11",
+      "commit": null,
+      "notes": "2026-06-11 lock; core 3f7c9e7a / full d5b72d08 where fixture present."
+    },
+    {
+      "id": "VL-PROVENANCE",
+      "area": "provenance",
+      "description": "Harness refuses unstamped pipeline_meta; session baseline --full checks anchor provenance",
+      "verification": "tests/test_provenance_guard.py + scripts/session_baseline_check.py --full full-provenance step",
+      "passes": true,
+      "last_verified": "2026-07-13",
+      "commit": null,
+      "notes": "PROVENANCE-GUARD (426-REGEN task): provenance_guard.py wired into chi2_sigma_gate and bingain_fix_validate."
+    },
+    {
+      "id": "VL-TRUST-BASELINE",
+      "area": "trust",
+      "description": "Trust baseline on reference draft",
+      "verification": "Trust gate on reference draft (1382 YELLOW / 106 RED at comp_trust_min_comps=5)",
+      "passes": true,
+      "last_verified": "2026-06-11",
+      "commit": null,
+      "notes": "Historical PASS on draft_387 zaloha anchor. Original draft_387 zaloha NO LONGER EXISTS (Milan 2026-07-08). Re-point verification at draft_424 on next verification."
+    },
+    {
+      "id": "VL-ANCHOR-DQ-430",
+      "area": "anchors",
+      "description": "Disqualified anchor attempt draft_000430 (mixed commits fc177be/a3536a0; dirty tree)",
+      "verification": "CURSOR_RESULT_429_validate_anchor.md Part D restart",
+      "passes": false,
+      "last_verified": "2026-07-16",
+      "commit": "a3536a0",
+      "status": "disqualified_non_anchor",
+      "notes": "In-flight run killed 2026-07-16; draft_000430 retained on disk for reference only. Not part of anchor chain. Superseded by fresh pair on clean a3536a0+."
+    },
+    {
+      "id": "VL-ANCHOR-WCSINV",
+      "area": "photometry",
+      "description": "Frozen 516 ERA-05 snapshot draft_000516_snapshot_era05_20260928 (canonical --full; ERA-520-RECUT-01; APERTURE-01d f=1.35 annulus 2.7/5.2; PFS ON, pinned ensembles + check-star pin, sat 0.80)",
+      "verification": "scripts/session_baseline_check.py --full (era05_aperture 87197716 n=53 / ext dd92e99d n=157). Photometers frozen snapshot inputs copied to tmp, never live 516. Copies calibrated/lights/qc_metrics.csv for night FWHM stamp.",
+      "passes": true,
+      "last_verified": "2026-09-30",
+      "commit": "9ade9af",
+      "notes": "ERA-520-RECUT-01. era04 history kept on disk (draft_000516_snapshot_era04_20260826; aperture d55fcc9d / ext cc8b532e). era05 aperture moves: schema skip_reason+lc_flux_method (all 53) + RED-TARGET-T4 HAT-188 values (1/53). Live 516 G4 still bfa24039/13e77cf8/172f9540. Three POOL-STARVE empty_comp_drop allowlisted.",
+      "census_fingerprint": {
+        "n_raw_dao": 2246,
+        "matched": 3546,
+        "targets": 253
+      },
+      "plan_regen_fingerprint": {
+        "variable_targets_rows": 873,
+        "gaia_match_source_histogram": {
+          "gaia_dr3_direct": 433,
+          "masterstars": 282,
+          "masterstars_exo": 2,
+          "no_match": 156
+        }
+      },
+      "phase0_funnel_fingerprint": {
+        "variable_targets_rows": 873,
+        "gaia_match_source_histogram": {
+          "gaia_dr3_direct": 433,
+          "masterstars": 282,
+          "masterstars_exo": 2,
+          "no_match": 156
+        },
+        "active_targets_rows": 253,
+        "skip_photometry_true": 197,
+        "skip_reason_histogram": {
+          "": 53,
+          "no_comps": 3,
+          "per_frame_saturation": 1,
+          "vsx_type_out_of_scope": 182,
+          "zone_noise": 14
+        },
+        "zone_flag_histogram": {
+          "linear": 157,
+          "noise": 14,
+          "saturated": 1,
+          "unknown": 81
+        }
+      },
+      "identity_p95_baseline_px": 1.7846151827213692,
+      "core_sha": "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7",
+      "extended_sha": "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863",
+      "core_sha_v1": "9367f99848c14b43016321d000ec53651c9b260290bcb37afd2f6bab5035b2d7",
+      "extended_sha_v1": "d3cefff3240b4874d9b0ba3f76f7a303a5e3ea8b83f051149202d5b9c65d6863",
+      "core_sha_v2": "af218acd32a4892cc4f0030168829852ced5c5140f83575301c1a39869437e66",
+      "extended_sha_v2": "ada5caff61692ff0489631e6278efedd8c92cb9bd26d05fcb67f2fb3729b1676",
+      "core_n": 160,
+      "extended_n": 210,
+      "superseded_core_sha": "9902d918e9f48e0f8f7730694ae64194b407c6148d5db812c7838d5d286e159d",
+      "superseded_extended_sha": "472bc9e4446f13a8a457ab8d1d3629e81304fc00fa029695e99eea215ae8fb73",
+      "superseded_snapshot": "draft_000516_snapshot_era04_20260826",
+      "product_sha_lineage": "477dc8cf -> 9902d918 -> 9367f998 -> era05_aperture",
+      "sha_core_aperture": "87197716af1671328b152d86e33c3a26b277ea957033704c3977f76a57804c31",
+      "sha_ext_aperture": "dd92e99d8e861ce908665cde3087f4b0213b832927d6dc90e7d859fa5c4fecf8",
+      "core_aperture_n": 53,
+      "ext_aperture_n": 157,
+      "sha_core_aperture_era04": "d55fcc9d8ad9b55213c5c1813415cb54d54b88c3fc917bc81706065e4d824810",
+      "sha_ext_aperture_era04": "cc8b532ee668b9b339e4170752b9d1054771b1236ecac8163688693586117167"
+    },
+    {
+      "id": "VL-ANCHOR-EPSF01",
+      "area": "photometry",
+      "description": "EPSF-CHAIN-01 core_psf of 53 internal PSF LCs. era06 (EPSF-CHI2-LOCUS-01) c94cf4fe n=53; G3 BO/FW dem 15.372/5.360 n_full=134. era05 552ace75 SUPERSEDED (FIT-OK pin collapse). era04 history c743b8ba kept beside.",
+      "verification": "scripts/session_baseline_check.py --full-epsf (aperture era05 87197716/dd92e99d; core_psf c94cf4fe n=53; G3 era06 refs).",
+      "passes": true,
+      "last_verified": "2026-09-30",
+      "commit": "91194ea",
+      "notes": "EPSF-CHI2-LOCUS-01 Phase 2 LOCK. Evidence CURSOR_RESULT_EPSF_CHI2_LOCUS_01.md (Phase 1b) + CURSOR_RESULT_ALPHA_READY_01.md. EPSF-XVAL-01 and CLOSE-TEXT-02 stay CLOSED/ENACTED; era05 PSF LCs were collapsed; era06 is the verified product.",
+      "sha_core_psf_era04": "c743b8ba89f4ac544e5e94b025b1746da9c28af6c7f2952ec1ae60db717d62a8",
+      "sha_core_psf_era05_superseded": "552ace75355c693c2e339e007b89224a4cee4bdf90a7f518dcaf573f4a73ede5",
+      "core_psf_n": 53,
+      "sha_core_psf": "c94cf4fedd60b381bcaa59839fa1932642042ff5a847756e9623edcabc86b153",
+      "g3_bo_ref_mmag": 15.372,
+      "g3_fw_ref_mmag": 5.36,
+      "g3_n_full": 134
+    },
+    {
+      "id": "F-435-EXPORT-GHOSTS",
+      "area": "export",
+      "description": "active_targets with no LC enqueued as export failures (LC CSV missing)",
+      "verification": "phase2a empty_comp_drop + export INFO skip (no record_export_failure)",
+      "passes": true,
+      "last_verified": "2026-07-16",
+      "commit": "10d610c",
+      "notes": "Root cause: 1496795041799526400/\u20266080/\u20265248 never get LCs (no comps / empty_comp_drop). Fixed: INFO skip instead of export failure."
+    },
+    {
+      "id": "VL-P1-GOLD",
+      "area": "invariants",
+      "description": "INVARIANTS P1 golden mini draft_000516_p1mini (16-frame DATE-OBS stride from frozen 516 snapshot; cal_diag.json included)",
+      "verification": "VYVAR_INVARIANTS_P1=1 pytest dev/tests/test_invariants_p1_golden.py -q (headless SHA + UI-order identity + census bands + physics)",
+      "passes": true,
+      "last_verified": "2026-08-20",
+      "commit": null,
+      "notes": "ERA-03 recut from draft_000516_snapshot_era03_20260820. MUST include cal_diag.json on draft root and platesolve/SETUP (INV-CAL-01). Canonical PFS ON + pinned ensembles. 516-04 p1mini superseded-with-pointer. Headless lock ~455 s (2026-08-20).",
+      "mini_name": "draft_000516_p1mini",
+      "source_draft": "draft_000516_snapshot_era03_20260820",
+      "setup": "NoFilter_60_2",
+      "n_frames": 16,
+      "selection": "even_stride_date_obs_first_included_aligned_only",
+      "inputs_manifest_sha256": "7c3796db8fe84a7481582ea17d41ff15765804658685cbb3212606102746c4b8",
+      "core_sha": "6af4539c6d187ca946cdf5ebeee8b45e2a622558321a82021c0701acea067abb",
+      "core_n": 115,
+      "extended_sha": "e237ea955af423b8223e1ea70803d1f8d468d346214fcee898154aeb304fee0f",
+      "extended_n": 170,
+      "superseded_core_sha": "416043193b633d7e3a98cff2ae6fc635a243722a2d4bcb10410115c70adbc231",
+      "superseded_extended_sha": "65e64210fb1c8c5e1cff3137adb430049276fffcfb92737b823a0ce59d54b5aa",
+      "superseded_mini_name": "draft_000516_p1mini",
+      "superseded_core_n": 97,
+      "superseded_extended_n": 145,
+      "census": {
+        "dao_pass1_vy_ndao": 2246,
+        "n_detected_mean": 3513.625,
+        "n_matched_mean": 3349.625,
+        "identity_n_parent": 3546,
+        "identity_p95_parent": 1.7846151827213692,
+        "n_summary_targets": 60
+      },
+      "lock_timings_s": {
+        "run1": 454.6
+      }
+    },
+    {
+      "id": "VL-PFS-8F107CF",
+      "area": "photometry",
+      "description": "Draft 515 photometry SHA 8f107cf quarantined DEFECT: PFS rescued non-saturation skips",
+      "verification": "dev/results/CURSOR_RESULT_SAT_RERANK_01.md (96 LCs; 45 zone_noise + 2 below_target_depth rescued). No export and no acceptance number may cite 8f107cf. On-disk state overwritten by PFS-SEMANTICS-01 third rebuild.",
+      "passes": false,
+      "last_verified": "2026-08-17",
+      "commit": null,
+      "status": "quarantined_defect",
+      "notes": "Reason: apply_per_frame_saturation_to_active_targets / decide_target_saturation_policy keyed on bare skip_photometry and blanked skip_reason; Phase 2A re-force bypassed the whole {saturated, noise} set when PFS was ON. Pointer: CURSOR_RESULT_SAT_RERANK_01.md. SHA 8f107cfa2f4af63335e51608f6df7658d03ba14fbcd82c12fc07c4dab06933b8 (core n=193)."
+    }
+  ]
+}

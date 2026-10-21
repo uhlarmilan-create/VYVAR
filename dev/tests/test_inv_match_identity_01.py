@@ -1,0 +1,153 @@
+# -*- coding: ascii -*-
+"""INV-MATCH-IDENTITY-01: one identity, one gate, no name rehydration."""
+
+from __future__ import annotations
+
+import math
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+from astropy.wcs import WCS
+
+from gaia_catalog_id import catalog_id_series_for_masterstars_export
+from masterstar_gaia_accounting import lock_existing_and_leftover_assign
+from wcs_invertibility import (
+    accumulate_identity_gate,
+    apply_post_match_identity_gate_df,
+    empty_identity_gate_acc,
+)
+
+
+def _tan_wcs(ra: float = 120.0, dec: float = 30.0, scale: float = 2.6) -> WCS:
+    w = WCS(naxis=2)
+    w.wcs.crpix = [256.0, 256.0]
+    w.wcs.crval = [ra, dec]
+    w.wcs.cd = np.array([[-scale / 3600.0, 0.0], [0.0, scale / 3600.0]])
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    return w
+
+
+def test_export_does_not_copy_name_onto_empty_catalog_id() -> None:
+    cid = "1112112413285008896"
+    df = pd.DataFrame({"catalog_id": [""], "name": [cid]})
+    out = catalog_id_series_for_masterstars_export(df)
+    assert str(out.iloc[0]).strip() == ""
+
+
+def test_gate_and_csv_roundtrip_clears_name_and_catalog_id(tmp_path: Path) -> None:
+    from pipeline import _vyvar_df_to_csv
+
+    w = _tan_wcs()
+    x0, y0 = 256.0, 256.0
+    ra, de = w.all_pix2world(x0, y0, 0)
+    cid = "1112112413285008896"
+    df = pd.DataFrame(
+        {
+            "name": [cid],
+            "catalog_id": [cid],
+            "catalog": ["GAIA_DR3"],
+            "x": [x0 + 60.0],
+            "y": [y0],
+            "mag": [12.0],
+            "b_v": [0.5],
+            "bp_rp": [0.6],
+            "catalog_mag": [12.0],
+            "phot_g_mean_mag": [12.0],
+            "match_sep_arcsec": [80.0],
+            "non_single_star": [0],
+        }
+    )
+    gmap = {cid: (float(ra), float(de))}
+    out, counts = apply_post_match_identity_gate_df(
+        df, w, gaia_ra_dec_by_cid=gmap, fwhm_px=1.25
+    )
+    assert counts["fail"] == 1
+    assert str(out.loc[0, "catalog_id"]).strip() == ""
+    assert str(out.loc[0, "name"]).startswith("DET_")
+    assert str(out.loc[0, "vy_identity_gate"]) == "fail"
+    assert math.isfinite(float(out.loc[0, "gaia_dao_resid_px"]))
+    assert float(out.loc[0, "gaia_dao_resid_px"]) > 3.0 * 1.25
+
+    p = tmp_path / "masterstars_full_match.csv"
+    _vyvar_df_to_csv(out, p)
+    back = pd.read_csv(p, dtype={"catalog_id": str, "name": str})
+    cid_back = str(back.loc[0, "catalog_id"]).strip()
+    assert cid_back in ("", "nan")
+    assert str(back.loc[0, "name"]).startswith("DET_")
+
+
+def test_identity_gate_acc_three_passes() -> None:
+    acc = empty_identity_gate_acc()
+    for n_out in (10, 8, 6):
+        acc = accumulate_identity_gate(acc, {"ok": 2, "warn": 1, "fail": 3}, n_out)
+    assert acc["passes"] == 3
+    assert acc["ok"] == 6
+    assert acc["warn"] == 3
+    assert acc["fail"] == 9
+    assert acc["n_matched_out"] == 6
+
+
+def test_d4_lock_reject_uses_identity_fail_not_lock_tol() -> None:
+    """D4: 2.6 px at FWHM 3.3 stays locked; 12 px is rejected."""
+    cid_keep = "1112112413285008896"
+    cid_rej = "1112115024625070720"
+    fwhm = 3.3
+    identity_fail = 3.0 * fwhm
+    lock_tol = 2.5
+    gaia = pd.DataFrame(
+        {
+            "catalog_id": [cid_keep, cid_rej],
+            "x_gaia": [100.0, 200.0],
+            "y_gaia": [100.0, 200.0],
+        }
+    )
+    det_x = np.array([102.6, 212.0], dtype=np.float64)
+    det_y = np.array([100.0, 200.0], dtype=np.float64)
+    locked = {cid_keep: (102.6, 100.0), cid_rej: (212.0, 200.0)}
+    det_cids = np.array([cid_keep, cid_rej], dtype=object)
+    dtg, _own, modes, rej = lock_existing_and_leftover_assign(
+        det_x,
+        det_y,
+        gaia,
+        locked_pairs=locked,
+        leftover_radius_px=0.0,
+        lock_tol_px=lock_tol,
+        identity_fail_px=identity_fail,
+        det_catalog_ids=det_cids,
+    )
+    assert float(identity_fail) == pytest.approx(9.9)
+    assert str(modes[0]) == "locked"
+    assert int(dtg[0]) == 0
+    assert 0 not in {int(i) for i in rej}
+    assert 1 in {int(i) for i in rej}
+    assert str(modes[1]) == ""
+    assert int(dtg[1]) < 0
+
+
+def test_born_owned_lock_geometry_reject() -> None:
+    det_x = np.array([100.0], dtype=np.float64)
+    det_y = np.array([100.0], dtype=np.float64)
+    gaia = pd.DataFrame(
+        {
+            "catalog_id": ["1112112413285008896"],
+            "x_gaia": [120.0],
+            "y_gaia": [100.0],
+        }
+    )
+    locked = {"1112112413285008896": (100.0, 100.0)}
+    det_cids = np.array(["1112112413285008896"], dtype=object)
+    _dtg, _own, modes, rej = lock_existing_and_leftover_assign(
+        det_x,
+        det_y,
+        gaia,
+        locked_pairs=locked,
+        leftover_radius_px=3.0,
+        lock_tol_px=3.0,
+        det_catalog_ids=det_cids,
+    )
+    assert len(rej) == 1
+    assert int(rej[0]) == 0
+    assert str(modes[0]) == ""
+    assert int(_dtg[0]) < 0

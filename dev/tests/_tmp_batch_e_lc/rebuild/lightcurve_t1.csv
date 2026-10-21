@@ -1,0 +1,3 @@
+source_file,mag_calib_final,err,n_good_comp,trust_flag
+b.csv,11.01,0.021,3,GREEN
+a.csv,10.01,0.011,3,GREEN

@@ -1,0 +1,97 @@
+# -*- coding: ascii -*-
+"""FK preflight for OBS_DRAFT / OBSERVATION on fresh reference tables."""
+from __future__ import annotations
+
+import pytest
+
+from database import VyvarDatabase
+
+
+def _fresh_db(tmp_path, monkeypatch) -> VyvarDatabase:
+    db_path = tmp_path / "vyvar.sqlite3"
+    monkeypatch.chdir(tmp_path)
+    db = VyvarDatabase(db_path)
+    db._archive_root_override = tmp_path
+    return db
+
+
+def _seed_equipment_telescope_location(db: VyvarDatabase) -> tuple[int, int, int]:
+    eq = db.insert_equipment(
+        camera_name="Cam",
+        alias="C",
+        sensor_type="mono",
+        sensor_size="1000",
+        pixel_size=3.76,
+    )
+    tel = int(
+        db.conn.execute(
+            "INSERT INTO TELESCOPE (TELESCOPENAME, ALIAS, DIAMETER, FOCAL, ACTIVE) "
+            "VALUES (?, ?, ?, ?, 'YES');",
+            ("Tel", "T", 200.0, 1000.0),
+        ).lastrowid
+    )
+    loc = db.insert_location(
+        place_name="Site",
+        latitude=50.0,
+        longitude=14.0,
+        altitude=300.0,
+    )
+    return eq, tel, loc
+
+
+def test_create_draft_succeeds_without_scanning_table(tmp_path, monkeypatch) -> None:
+    db = _fresh_db(tmp_path, monkeypatch)
+    eq, tel, loc = _seed_equipment_telescope_location(db)
+    draft_id = db.create_draft(
+        {
+            "id_equipments": eq,
+            "id_telescope": tel,
+            "id_location": loc,
+            "id_scanning": 42,
+            "observation_start_jd": 2450000.0,
+        }
+    )
+    assert draft_id == 1
+
+
+def test_create_draft_stale_config_location_id_raises_clear_error(tmp_path, monkeypatch) -> None:
+    db = _fresh_db(tmp_path, monkeypatch)
+    eq, tel, loc = _seed_equipment_telescope_location(db)
+    with pytest.raises(ValueError, match="observatory location"):
+        db.create_draft(
+            {
+                "id_equipments": eq,
+                "id_telescope": tel,
+                "id_location": 2,
+                "id_scanning": 42,
+                "observation_start_jd": 2450000.0,
+            }
+        )
+
+
+def test_resolve_import_location_fails_on_stale_config_id(tmp_path, monkeypatch) -> None:
+    db = _fresh_db(tmp_path, monkeypatch)
+    _seed_equipment_telescope_location(db)
+    with pytest.raises(ValueError, match="not found in the LOCATION table"):
+        db.resolve_import_location_id(id_location=None, cfg_location_id=2)
+
+
+def test_resolve_import_location_requires_row(tmp_path, monkeypatch) -> None:
+    db = _fresh_db(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="not found in the LOCATION table"):
+        db.resolve_import_location_id(id_location=None, cfg_location_id=2)
+
+
+def test_create_draft_succeeds_with_valid_foreign_keys(tmp_path, monkeypatch) -> None:
+    db = _fresh_db(tmp_path, monkeypatch)
+    eq, tel, loc = _seed_equipment_telescope_location(db)
+    draft_id = db.create_draft(
+        {
+            "id_equipments": eq,
+            "id_telescope": tel,
+            "id_location": loc,
+            "id_scanning": 99,
+            "observation_start_jd": 2450000.0,
+        }
+    )
+    assert draft_id == 1

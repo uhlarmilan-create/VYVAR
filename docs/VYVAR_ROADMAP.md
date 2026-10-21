@@ -1,0 +1,244 @@
+# VYVAR - Roadmap (open work)
+
+Single source of truth for **open** tasks. Closed work lives in `VYVAR_JOURNAL.md`;
+durable rationale in `VYVAR_DECISIONS.md`; current architecture in `VYVAR_STATE.md`.
+
+Rebuilt **2026-08-31 CONSOLIDATE-01D D3**: stacked dated NEXT SESSION sections
+collapsed to one OPEN table, one CLOSED-this-arc list, and RETIRED lines.
+No task id was dropped. Historical prose of the stacked sections is in git:
+`git log -- docs/VYVAR_ROADMAP.md` (parent of the CONSOLIDATE-01D D3 commit).
+
+Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
+(Milan 2026-08-31).
+
+---
+
+## OPEN
+
+| id | one-line state | owner | blocked-on |
+|----|-----------------|-------|------------|
+| **A-1** | Frame selection metric I_j for MASTERSTAR stack ranking | Cursor | TODO-A |
+| **A-1-DECISION-4** | Advanced r90 5.0-5.8 px target 5.31; not implemented | Cursor | schedule |
+| **A-1-OVERRIDE** | Remove VY_FWHM_GAUSS as gaussian_fwhm_px_override; authorized in principle; own measured delta | Cursor | measured delta |
+| **A-2** | Selection rule N_min=10 N_max=20 quality gate 0.5 x max(I_j) | Cursor | TODO-A |
+| **A-3** | Median/sigma-clip stack replacing single-frame copy | Cursor | TODO-A |
+| **A-4** | Stack provenance in header + pipeline_meta.json | Cursor | TODO-A |
+| **A-5** | Recalibrate DAO threshold against stack noise/PSF | Cursor | TODO-A |
+| **AC-DESIGN-01** | RECORD; not a defect. ePSF path differential-only; `p4_none`; no per-star AC. Field-wide `_compute_aperture_correction` is legacy fallback. DAOGROW-style per-star AC is a new feature and NOT pursued for EPSF-XVAL-01 closure | Milan | record |
+| **ANCHOR-CHAIN-ACCEPT** | Anchor chain accept leftover | Cursor | LOW |
+| **ANCHOR-CLEAN-BUILD** | Anchor clean-build leftover | Cursor | LOW |
+| **ANCHOR-ERR-VERIFY** | Anchor err verify leftover | Cursor | LOW |
+| **ANCHOR-GATE-SEED** | Anchor gate seed leftover | Cursor | LOW |
+| **BATCH-E-PARAMS-REGISTRY** | Batch-E params registry leftover if any | Cursor | LOW |
+| **BIN-8-9-REGRESSION-01** | Bin 8/9 regression leftover | Cursor | LOW |
+| ~~BPM-SIDECAR-PATH~~ | CLOSED 2026-10-17: BPM retired (BPM-REMOVE-2026-10, Milan) | - | - |
+| **BRIGHTER-FATTER-01** | Flux-dependent PSF shape at high signal (Guyonnet et al. 2015 / PTC nonlinearity); unmeasured; link to audit D1-2. Literature C7 | Cursor | LOW |
+| **C-1** | Admission gate: predicted per-epoch SNR (g_lim + Labbe sigma_bkg_ap) | Cursor | TODO-C |
+| **C-2** | CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE catalogue flags | Cursor | TODO-C |
+| **CAL-AGE-CLOCK** | Calibration master age clock | Cursor | LOW |
+| **CAL-PASSTHRU-DEAD** | Passthrough calibration honesty; related F-B01-F-B02 | Cursor | F-B01-F-B02 |
+| **CHECK-EPOCH-034** | Verify epoch error honesty on live 516 Light_034 (check resid +0.0287 mag, z=4.10; FRAME-QC-PARITY-02B); no data modification | Cursor | LOW |
+| **CHROMATIC-PSF-01** | RECORD: PSF-minus-large-aperture colour term c = +137.5 +/- 48.3 mmag/mag BP-RP (EPSF-AC-02; VAL-03 set). Consistent with VAL-02 PSF c=+140 vs ap c=-21 vs Johnson V. Feeds methods paper and D10-1. **Annotate 2026-09-28 (DOD-06):** value confirmed; CLOSE-TEXT-02 cites +138 +/- 48 | Milan | MED |
+| **COMP-POOL-R** | Comp pool R follow-up | Cursor | parked |
+| **CORR-ERR-01** | ZP common-mode vs diagonal budget; out of v1.0 | Milan | research |
+| **CR-1** | Same as CR-REJECTION (closure Step 9) | Cursor | TODO-A |
+| **CR-REJECTION** | Cosmic-ray rejection (L.A.Cosmic or equivalent); no CR step in src_py today | Cursor | TODO-A |
+| **D1-2-LINEARITY-RAMP** | Exposure ramp at telescope; nothing else substitutes | Milan | telescope night |
+| **D1B-UNITS-01** | Decide preferred-unit defaults for the px/unit pairs (qc_max_hfr[_fwhm_ratio], masterstar_centre_rms_max_px[_arcsec]); behaviour change, must be measured per rig before flipping any default | Milan | per-rig measure |
+| **D10-1** | D10-1 leftover from audit register. **Annotate 2026-09-16 (DOD-04):** VAL-02 colour term c = +140 mmag/mag vs Johnson V on the PSF path (n=95 core) - input to the CV/CR decision. **Annotate 2026-09-16 (DOD-05):** CHROMATIC-PSF-01 records PSF-vs-aperture colour term c = +130 mmag/mag BP-RP on the same photons (VAL-03); feeds the methods paper | Cursor | LOW |
+| **DAO-TOL-FLOOR-01** | DAO tolerance floor leftover | Cursor | LOW |
+| **DB-DEFECT-DIAMETER** | DB defect diameter | Cursor | LOW |
+| **DB-RETIRE-01** | Retire stale DB paths | Cursor | FUTURE |
+| **DEPTH-AUTH-01** | Derive masterstar_gaia_census_target_depth_g from MASTERSTAR completeness vs Gaia; G=15.56 VSX absent | Cursor | not wired |
+| **DRAFT451-CAL-FRAME001** | Draft 451 frame-001 calibrated product differs 659.6 ADU; root cause needs 451 cal logs | Cursor | logs |
+| **EPSF-BUILD-OSAMP-01** | `build_epsf_model` sandbox at osamp 3/4 from the 67-star funnel yields pathological models (osamp=3 flux-scale +713 mmag; osamp=4 ringing, non-finite). Production osamp=2 unaffected. Blocks D-EPSF-PHASE-ROUTES-01 Route A | Cursor | MED |
+| **EPSF-NEWTON-518-01** | Newton 518 ePSF STOP: gated pool 26 < 30 | Milan | night with pool>=30 |
+| **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
+| **EPSF-PIN-CENSUS-01** | ePSF pin census leftover / Newton 518 | Cursor | EPSF-ZP-OK-XRIG-01 |
+| **EPSF-XVAL-01** | CLOSED 2026-09-29. Criteria 1-3 met; D-EPSF-XVAL-CLOSE-TEXT-02 enacted (ERA-520-RECUT-01). Evidence CURSOR_RESULT_ERA_520_RECUT_01.md | Milan | - |
+| **EPSF-ZP-OK-XRIG-01** | Extend fit_ok_for_zp past wide 1:1; needs master dark+flat + CENSUS-01; Newton 518 pool 26 does not qualify | Milan | CalibrationLibrary + night with gated pool >=30 |
+| **ENS4-BLEND-01** | Pinned ens4 1497368849430107904 measures 0.71 mag (PSF) / 0.24 mag (aperture) brighter than Gaia on 516; also 1496804834326599424 (-0.67 / -0.24). Blend suspect. Verify D11 dilution / neighbour metrics; pin decision Milan's. Touches every XVAL number | Cursor | MED |
+| **EPSF-CROSSRIG-01** | Second night / second rig validation of era06 locus SET + G3 residual; not claimed for alpha | Milan | FUTURE |
+| **EPSF-PERF-01** | Forced linear refit path; deferred by Milan | Milan | FUTURE |
+| **EPSF-XVAL-EXT-01** | Independent external PSF comparison + blend test beyond internal aperture residual | Milan | FUTURE |
+| **PIN-ISOLATION-01** | Pinned comps with NN ~2.6 FWHM vs 3-FWHM isolation rule (EPSF-CHI2-LOCUS-01 D2 evidence); structural presence in science set separate | Cursor | MED |
+| **SAT-COLNAME-01** | `saturate_limit_adu_85pct` column misnomer (value is 0.80); rename needs D-style | Cursor | LOW |
+| ~~**CHI2-THRESH-LEGACY-01**~~ | DONE 2026-10-18: `psf_chi2_threshold` removed (EPSF-CLEAN-2026-10) | Milan | - |
+| **EQUIP-BINNING-ASYM** | Equipment binning asymmetry | Cursor | LOW |
+| **ERA-520-RECUT-01** | CLOSED 2026-09-29. era05 cut; aperture 87197716/dd92e99d; epsf01 552ace75 (era04 history beside). VAL-02/AC-02 re-check PASS; CLOSE-TEXT-02 enacted. G3 n_full collapse post FIT-OK recorded (Milan sequel) | Cursor | - |
+| **F-AIRMASS-CITE** | Airmass citation hygiene | Cursor | LOW |
+| **F-B01-F-B02** | PASSTHROUGH runs may claim VYVAR calibration; PDF honesty | Cursor | calpath audit s14 |
+| **F-BINGAIN-1** | Newton bin4 chi2 gate still open; do not flip ensemble to Broeg IVW until it passes | Cursor | Newton gate |
+| **F-BJD-1** | BJD time-base follow-up | Cursor | LOW |
+| **F-EXCEPT-TIER1** | Remaining tier-1 except hygiene | Cursor | LOW |
+| **F-HOWELL-3** | Howell citation/path follow-up after F-BINGAIN-1 | Cursor | F-BINGAIN-1 |
+| **GAIA-ID-FLOAT-GUARD** | Gaia id float guard follow-up if any residual | Cursor | LOW |
+| **GAIA-PM-COLUMNS** | Gaia DB lacks pmra/pmdec; defer to DR4 ~Dec 2026 | Milan | DR4 |
+| **GSPC-ZP-OPEN** | OPEN QUESTION (Milan 2026-10-11): zero point of red / dust-reddened comps. Polynomial G-g(BP-RP) (Riello 2021) valid <= 2.0 (above: M giants only); on 525 g even 1.0-2.0 is biased -25..-63 mmag vs Gaia GSPC (XP synthetic). Not in the pipeline (no new DB). Experimental `src_py/gspc_zp.py` (online TAP, cache in draft) + test on 525 in `claude/VYVAR_GSPC_STUDY_20261011.md`. Since 2026-10-11 GSPC is the zero point for note-A targets only (GSPC-STD-2026-10); GSPC for all targets (option b) revisited with Gaia DR4 (XP spectra / synthetic photometry) | Milan | DR4 |
+| **COMPACT-PAGES** | PROPOSAL (2026-10-11): targets with insufficient data take 2 per page in the PDF (526: ~45 nearly empty pages); list them in one table instead | Milan | decision |
+| **STALE-OUTPUTS** | OPEN (2026-10-11): a re-run of an existing draft leaves light curves / AAVSO / VarAstro files of targets the new run skipped (526 copy: FG Boo, ZTF J153813.01 exports from the earlier run). Trust now ignores such light curves; exports still on disk | Milan | decision |
+| **PHASE1-PERF** | OPEN (2026-10-11): Phase 1 ~19 s per target in `_accumulate_per_frame_comp_metrics` (groupby over all per-frame rows per target); 526 (113 targets, 122 frames) 36 min on the test machine | Claude | - |
+| **RED-TARGET-TREND** | OPEN (2026-10-11): ASASSN-V J152756.18 (SR, BP-RP 4.2, NoFilter) brightens 0.2 mag in 4.5 h, check star flat, same with the old and the scaled aperture; candidate cause colour-dependent extinction of a very red target against blue comps (no filter) - verify | Claude | - |
+| **HRD-PLOT-TUPLE** | HRD plot tuple hygiene | Cursor | LOW |
+| **INPUT-PATH-ARCH-01** | Discussion: non-cal stays; raw-without-masters split | Milan | discussion |
+| **INSTALL-GAIA-DEC-CUTOUT** | INSTALL should lead with declination cutout decision for Gaia builder | Cursor | docs |
+| **INSTALL-MANUAL** | New-user install manual + T460 installer including catalogs | Milan | TODO-LIB |
+| **IPS-01** | Intra-pixel sensitivity of IMX-class CMOS under FWHM ~2.4 px (Lauer 1999); unmeasured; needs dithered data. Literature C7 | Cursor | LOW |
+| **K2-DATA-BLOCKER** | K2 data blocker | Milan | data |
+| **K2-SLOPE-TRACE** | K2 slope trace | Cursor | K2-DATA-BLOCKER |
+| **K2-SLOPE-UG** | K2 slope UG | Cursor | K2-DATA-BLOCKER |
+| **LCRMS-NAN-01** | Why sandbox Phase 2A produced lc_rms=nan with admitted comps while live exports are fine; ids in M1 (149884 / 149984 / 150041). FAILURE wording for this class stays (Milan 2026-09-08 (ii)) | Cursor | LOW |
+| **MASTERSTAR-EPOCH** | MASTERSTAR epoch / PM | Cursor | GAIA-PM-COLUMNS |
+| **MS-POOL-POLICY-01** | MASTERSTAR pool policy | Cursor | FUTURE |
+| **MULTIFILTER-WCS-01** | Sibling-seed VERIFIED WCS for z_90_4; catalog-recovery gate unrelaxed; 520 measurement 2.7%/0% | Cursor | Milan GO |
+| **NET-TEST-01** | Network/test harness item still listed open | Cursor | LOW |
+| **NOQA-TRUNCATED-EXCEPT-BULK** | noqa truncated except bulk leftover | Cursor | LOW |
+| **PHASE0-BORDER-MARGIN-GEOMETRY** | Phase 0 50 px margin is not EDGE r_out; not merged into EDGE-ANNULUS-01 | Cursor | not EDGE |
+| **PIN-RMS-ABORT-01** | Should a failed pin ensemble fall back to the color path instead of aborting? Evidence: trio n_survivors=2<3 after rms_violation on 1500467303261764096 (M1); ids 1497245497969274240 / 1498425548825498112 / 1497227287309482624 | Cursor | Milan decision |
+| **PRECAL-INPUT-CONTRACT-01** | Pre-cal input contract | Cursor | MED |
+| **PSF-COMMON-SCALE-RESIDUAL-01** | RECORD (LOW): ~37 mmag unattributed per-star residual after colour (EPSF-AC-02 Part C); CORE-03 T1 phase surface NOT confirmed as driver (rho=0.13; error 31). Candidate cause: bright-end model mismatch. Not pursued for EPSF-XVAL-01 closure | Milan | LOW |
+| **PROC-MAG-NAMING** | Proc mag naming | Cursor | LOW |
+| **PROD-SIGMA-FLOOR** | Production sigma floor | Cursor | LOW |
+| **PROV-HEADLESS** | Headless provenance | Cursor | LOW |
+| **PROVENANCE-GUARD** | Provenance guard follow-up | Cursor | LOW |
+| **PUB-FIGS** | Methods paper figures | Milan+Claude | PUBLICATION |
+| **PUB-JOSS-PREREQS** | JOSS prerequisites | Milan+Claude | PUBLICATION |
+| **PUB-OUTLINE** | Paper outline | Milan+Claude | PUBLICATION |
+| **PUB-POLICY** | Publication policy | Milan+Claude | PUBLICATION |
+| **PUB-VALIDATION-SECTION** | Paper validation section | Milan+Claude | PUBLICATION |
+| **PUB-VENUE** | Venue choice | Milan | PUBLICATION |
+| **QHY294MM-RN-DOUBLE** | DB RN 7.6 e- may be bin2 then scaled again to 15.2 e- | Cursor | low priority |
+| **RED-TARGET-T4-RELAND** | CLOSED 2026-09-29 with ERA-520. Reland d79945f; colour-first HELPS med \|dBP-RP\| (HAT+CV). CV no science LC | Cursor | - |
+| **RELEASE-1** | Release-1 checklist | Milan | v1.0 |
+| **RELEASE-2** | Release-2 checklist | Milan | v1.0 |
+| **RN-HEADER-NONE** | Read-noise has no FITS header source | Cursor | LOW |
+| **RUN-WORKER-01** | Run-worker follow-up | Cursor | LOW |
+| **SIGMA-BKG-VAR-01** | Sigma background variance follow-up | Cursor | LOW |
+| **SIGMA-BUDGET-EMPIRICAL** | Empirical sigma budget remaining Newton gate | Cursor | F-BINGAIN-1 |
+| **SIGMA-PROV-FORENSIC** | Sigma provenance forensic leftover | Cursor | LOW |
+| **SIGMA-SEM-CAUSE** | SEM cause leftover | Cursor | LOW |
+| **SPARSE-TRUST** | Sparse-field trust gate follow-up | Cursor | parked |
+| **STALE-LC-SWEEP** | Stale LC sweep | Cursor | LOW |
+| **SYNTH-SKY-GENERATOR** | WCS-true synthetic field generator for known-truth photometry | Claude | sub-pixel debug |
+| **T4-1** | DECISION: detection noise on resampled frames (options A/B/C/D) | Milan | decision |
+| **TASK-A-REGRESSION** | A2 CSV-write test never calls generate_masterstar_and_catalog | Cursor | test rewrite |
+| **TIER1-OBSLOC-ZERO** | Observer location zero hygiene | Cursor | LOW |
+| **TIER1-UI-DEBT** | Tier-1 UI debt | Cursor | LOW |
+| **TODO-9** | Superseded/extended by INSTALL-MANUAL | Milan | INSTALL-MANUAL |
+| **TODO-A** | Median/sigma-clip MASTERSTAR stack of best N frames ranked by I_j; provenance; DAO recalibration; optional: dithered ePSF build (Anderson & King 2000) = D-EPSF-PHASE-ROUTES-01 Route B for the phase component if crowded/faint PSF use is needed | Cursor | audit Steps 1-6 |
+| **TODO-B** | Zackay & Ofek proper coaddition; blocked on CR, uncorrelated inputs, per-frame PSF | Cursor | CR-REJECTION |
+| **TODO-BROAD-EXCEPT-HYGIENE** | Broad-except tier-1 leftover (~25) | Cursor | LOW |
+| **TODO-C** | Admission gate vs detection threshold; CONTEXT-ONLY vs PHOTOMETRY-CANDIDATE flags | Cursor | audit Steps 7-8 |
+| **TODO-GEO** | Backlog geography/site item | Milan | parked |
+| **TODO-GS8** | Multi-night global matching + global ZP; descoped from HIGH; canonical unit is one night | Milan | FUTURE science case |
+| **TODO-LIB** | Cython closed-source bundle; ties to installer | Milan | CYTHON-RELEASE follow-up |
+| **TODO-MULTISET** | Per-telescope-set config architecture (wide vs Newton) | Milan+Cursor | design |
+| **TODO-PSF-ASYMMETRY** | Tracking-smear diagnostics (BO CVn right-tail PSF) | Cursor | FUTURE |
+| **TODO-PSF-MULTIFRAME** | Multi-frame ePSF stacking (isolation part done) | Cursor | FUTURE |
+| **TODO-PSF-NEIGHBOR-SUB** | Neighbour subtract + aperture residual; 2b deferred until blended fine-scale field | Cursor | blended fine-scale draft |
+| **TODO-SCENE-FORWARD-MODEL** | Conditional on crowded-faint science; priority lowered after grouper-negative | Milan | FUTURE |
+| **TODO-SEP-XVAL** | SEP independent witness; aperture xval CLOSED | Cursor | parked |
+| **V1-VALIDATION-PROTOCOL** | Enrich validation packs: ePSF identity, DAOPHOT ref, PDF QA, E2E mini field | Milan+Claude | protocol |
+| **WIDE-ERR-CROSSRIG** | Per-rig when Newton/Boyden drafts exist | Cursor | other-rig drafts |
+| **WIDE-ERR-HONEYCUTT-PDF** | Honeycutt SEM PDF honesty | Cursor | LOW |
+| **WIDE-ERR-POP-DELTA** | Wide-err population delta | Cursor | LOW |
+| **WIDE-SLOPE-NOISE** | Wide slope vs noise | Cursor | LOW |
+
+Standing operator items without a hyphenated id (kept as prose, not an id row):
+first AAVSO/VarAstro uploads BO -> FW (band CV) once a locked ledger exists;
+origin/main == origin/consolidate-01 == 30c37eb (CONSOLIDATE-01 fast-forward, Milan PUSH_AUTH 2026-09-07).
+
+---
+
+## CLOSED this arc
+
+Closed, locked, or superseded during the 2026-06..2026-08 stacked-session era
+(APERTURE / SEL-GHOST / ePSF / ERA-04 / audit closure). One line each.
+
+- **CONSOLIDATE-01** -- CLOSED 2026-09-03 E-FINAL: permanent facades, `pipeline_constants` leaf, glue dismantled; G2 era04_aperture `d55fcc9d` n=53 / ext `cc8b532e` n=157; G4 live 516 unchanged. Ready for Milan fast-forward of main (PUSH_AUTH).
+- **A-1-435-RECUT** -- CLOSED 2026-08-18; 435 retired by ROT policy; recut onto 516.
+- **A-6** -- DONE 2026-08-07 DAO detection workstream closed.
+- **APCORR-MIXEDFRAME** -- DONE 2026-07-19 all-or-nothing COG per night.
+- **APERTURE-01** -- Wired option i; later locked as APERTURE-01d.
+- **APERTURE-01b** -- STOP 2026-08-26; no f* on accuracy grid.
+- **APERTURE-01c** -- STOP 2026-08-26; AIJ PASS 2.7833 mmag; era04 not yet locked.
+- **APERTURE-01d** -- LOCK 2026-08-27; annulus 2.7/5.2; AIJ 1.9503 mmag; era04 --full gate.
+- **ARCHIVE-CLEANUP** -- NEXT SESSION 2026-07-15; historical.
+- **C-EXPORT-GAP** -- CLOSED-STALE 2026-09-07: headless shares _phase2a_finalize_exports. Sandbox 50/53 AAVSO + 10/10 eclipsing VarAstro. The three export FAILURE IDs are NOT the phase2a_empty_comp_drop trio (architect error 18; M1). Split: LCRMS-NAN-01 / PIN-RMS-ABORT-01 / D-LC-SKIP-MANIFEST-01. Evidence CURSOR_RESULT_C_EXPORT_GAP_VERIFY_01.md, CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md.
+- **CAL-DIAG** -- CLOSED 2026-08-13; SUPERSEDED heading removed 2026-08-11 then implemented.
+- **CATALOG-PROVENANCE** -- DONE 2026-07-29.
+- **COMP-RMS-DEF-01** -- Wired C3 2026-08-25 (k=5 LOO mag).
+- **COMP-RMS-DEF-01-B** -- Wired C3 2026-08-25.
+- **CONFIG-MATERIALIZE-CHECK** -- DONE 2026-07-24 BUNDLE-BOOTSTRAP-WIRING.
+- **CONFIG-PREREZ** -- DONE 2026-09-01 CONSOLIDATE-01D P2 except remaining OPEN **D1B-UNITS-01**.
+- **CYTHON-RELEASE** -- DONE closed-source bundle preview 2026-07-23.
+- **DAO-THRESHOLD-PARAMS** -- CLOSED 2026-08-07; reopen only on two-rig empirical sweep.
+- **DEV-PROCESS-A** -- DONE 2026-07-08 validation ledger.
+- **DEV-PROCESS-B** -- DONE 2026-07-08 session_baseline_check.py --full.
+- **DOCS-SYNC-517** -- Superseded NEXT SESSION 2026-08-21.
+- **EDGE-ANNULUS-01** -- CLOSED-DECIDED Milan 2026-08-31: edge stars not used; full on-chip aperture+annulus.
+- **EPSF-AC-01** -- Closed in ePSF AC measurement arc 2026-08-24.
+- **EPSF-AC-02** -- CLOSED 2026-09-16 measurement under D-EPSF-XVAL-DOD-05 (reopened from historical AC wiring). R-AC1 PASS (|b|=2.678); R-AC2 PASS (odd/even 5.594 mmag, chrono 6.604; both <=10; noise_exp 4.830); R-AC3 RECORD (raw 59.4 / after colour 45.4 / after colour+phase 37.4 mmag; c=+137.5+/-48.3; phase rho=0.129, not confirmed); R-AC4 criterion 2 met on 516. Evidence `CURSOR_RESULT_EPSF_AC_02.md`. Not a per-star AC feature (AC-DESIGN-01).
+- **EPSF-CORE-01** -- CLOSED 2026-09-15 investigation complete (CORE-01..04). Findings: machinery self-consistent ~1 mmag (model==truth); shape not a driver (R-SH3); peak/non-linearity not a driver (R-P0); model swap does not help (R-Q3); phase co-driver (R-Q4 corrected per error 25); reference arbitration R-R2; osamp probe R-P2 re-read per literature check C3 / error 28: NOT MEASURED (builder), not excluded; knobs R-K0. Defects FIT-OK-ADMISSION-01 / GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded for the 520 re-cut under D-EPSF-XVAL-DOD-03. Evidence `CURSOR_RESULT_EPSF_CORE_01.md` .. `CURSOR_RESULT_EPSF_CORE_04.md`; lit `docs/VYVAR_LITERATURE_CHECK_EPSF_20260915.md`.
+- **EPSF-CORE-02** -- CLOSED 2026-09-14 measurement complete. Reading R-P0. H-PEAK unsupported: check calibrated-grid p95 peak 45260 ADU (0/134 above 60000 or 52428); A1 rank R^2=0.005. Part B winners: target r_phase R^2=0.221, check psf_chi2 R^2=0.214 (not fwhm_psfex). Part C B1 still 1.396 mmag (gate 1.0); toggles i-iv do not close it; B2 void. Defects GAIN-FALSY-01 / FIXPOS-NOOP-01 recorded, not fixed. Architect error 23 recorded. Evidence `CURSOR_RESULT_EPSF_CORE_02.md`.
+- **EPSF-CORE-03** -- CLOSED 2026-09-15 measurement complete. Readings R-Q3 and R-Q4. T1 (PSFEx truth, ePSF fit) 0.1 px window slope 8.384 mmag/0.1px x 0.102 px spread = 8.56 mmag of the 10.48 target RMS. Call-site kwargs bit-identical on the 5-frame probe; 804-row B1 vs frozen 1.396 mmag (gate 1.0 FAIL; floor 1.396). Model swap: B2 vs PSFEx cat 12.98 / 23.70 mmag; B3 10.02 / 15.14; R-Q1/Q2 do not fire. B2 residual phase R^2 0.075 (was 0.221), did not vanish. D-EPSF-SWAP-DIFF-01 and architect error 24 recorded. Evidence `CURSOR_RESULT_EPSF_CORE_03.md`.
+- **EPSF-CORE-04** -- CLOSED 2026-09-15 measurement complete. Readings R-R2, R-P2, R-K0. PSFEx vs aperture 12.44 / 15.69 mmag. osamp=4 sandbox ePSF pathological; osamp=3 worse than osamp=2. R-P2 re-read (lit C3 / error 28): "sampling alone does not fix the phase component" is NOT MEASURED (builder failure EPSF-BUILD-OSAMP-01), not excluded; Route A remains open under D-EPSF-PHASE-ROUTES-01 after a correct osamp>=3 build. No listed machinery knob lowers B1 vs aperture by >= 3 mmag. Architect error 25 recorded (R-Q4 ptp vs RMS). Evidence `CURSOR_RESULT_EPSF_CORE_04.md`.
+- **EPSF-SHAPE-01** -- CLOSED 2026-09-14 measurement complete (`8fee250`). Reading R-SH3: shape unsupported as LC-level driver (rank R^2 <= 0.023 all four tests). Standalone: spatial FWHM spread (check-target -0.0395 px) exceeds frame-to-frame seeing std (0.0286 px) on the 134-frame set; headline FWHM differences under 5% (-0.59% target / +1.93% check). Next suspect EPSF-CORE-01. Evidence `CURSOR_RESULT_EPSF_SHAPE_01.md`.
+- **EPSF-VAL-01** -- CLOSED-HISTORICAL 2026-09-15 under D-EPSF-XVAL-DOD-02 (R-V1/R-V2/R-V3 FAIL). Superseded bar; criterion 2 reference wrong per error 27 / D5-1. Re-measure under DOD-03 is EPSF-VAL-02. Evidence `CURSOR_RESULT_EPSF_VAL_01.md`.
+- **EPSF-VAL-02** -- CLOSED 2026-09-15 under D-EPSF-XVAL-DOD-03 criteria 1 (R-W1/R-W2 PASS). R-W3 annotated INCONCLUSIVE (method) per D-EPSF-XVAL-DOD-04 / error 29 (catalogue transform + unscreened blends in the reference; not a PSF-path finding). Criterion 2 re-measure is EPSF-VAL-03. Evidence `CURSOR_RESULT_EPSF_VAL_02.md`.
+- **EPSF-VAL-03** -- CLOSED 2026-09-16 measurement under D-EPSF-XVAL-DOD-04 criterion 2. R-X1 FAIL (robust scatter 58.6 mmag; |b|=4.93 within lim); r_L=4.0 x FWHM fallback; R_iso relaxed to 6xFWHM n=18. R-X3 FAIL. **Annotate 2026-09-16 (DOD-05):** R-X1 FAIL explained (error 30; phase surface + colour + bright-end domain); superseded by DOD-05 2a/2b via EPSF-AC-02. Evidence `CURSOR_RESULT_EPSF_VAL_03.md`.
+- **EPSF-VALID-02** -- CLOSED 2026-08-22 gated 67-star production ePSF on 516.
+- **ERA-03** -- era03 freeze kept on disk; superseded as --full gate by era04.
+- **EXCEPT-BULK** -- CLOSED 2026-07-08 silent broad-except census.
+- **EXPORT-PARITY-01** -- CLOSED this arc (v2, d6c84e0: one production entry, G7 --parity permanent).
+- **F-428** -- CLOSED 2026-07-15 draft_428 forensics.
+- **F-429** -- CLOSED 2026-07-16 validate + regressions.
+- **F-431-HEADLESS-DIVERGENCE** -- CLOSED 2026-07-16 / T3 (DECISIONS).
+- **FRAME-QC-PARITY** -- CLOSED 2026-09-07: Layer A diagnostic wording (D-FRAME-QC-AUTH-01) + n_stars diagnostic warning k=5.0 (D-NSTARS-DIAG-01); drop authority declined on measured decorrelation (029 clean / 034 dirty). Evidence CURSOR_RESULT_FRAME_QC_PARITY_02.md.
+- **FRAME-QC-PARITY-01** -- Phase 1 heading superseded 2026-08-21; phase 2 closed as FRAME-QC-PARITY 2026-09-07.
+- **FULL-ANCHOR-RECUT** -- CLOSED 2026-08-27 ERA-04 lock.
+- **INV-CAL-01** -- CLOSED 2026-08-13 CAL-DIAG v2.
+- **INV-CAL-02** -- DONE 2026-08-13 calibrated product stage integrity.
+- **P1-RECUT** -- CLOSED 2026-08-20 ERA-03 golden mini.
+- **R-CVN-EMPTY-COMP** -- CLOSED 2026-09-08 misnomer split (M1 + RED-TARGET-T4-01). Row name, tasked export-FAILURE IDs, and phase2a_empty_comp_drop=3 are three different sets. R CVn is pinned (color cap never ran). Empty-comp trio is pin-RMS abort (PIN-RMS-ABORT-01). Export-empty / lc_rms=nan class keeps FAILURE wording (LCRMS-NAN-01, Milan (ii)). Skip-manifest sidecar now (D-LC-SKIP-MANIFEST-01); T4 fallback decided but not in HEAD (D-RED-TARGET-T4-01 / RED-TARGET-T4-RELAND). Evidence CURSOR_RESULT_R_CVN_EMPTY_COMP_M1.md, CURSOR_RESULT_RED_TARGET_T4_01.md.
+- **REG-520-01** -- STOP 2026-08-24 measure; ghost/WCS notes carried in SEL-GHOST-01.
+- **SAT-DIAG** -- DONE saturation and linearity limit gate.
+- **SEL-GHOST-01** -- MERGED 2026-09-01; origin/main `5b1068d` (fast-forward from 7c086e8 via consolidate-01).
+- **SKY-SURFACE-BLAST-RADIUS** -- CLOSED 2026-09-07: R-S1 forensic scan (no export files ever generated for drafts 438-451; all 14 draft dirs absent; Archive-wide token scan 0 hits) + Milan confirmation that nothing has ever been uploaded to AAVSO/VarAstro by any channel (uploads held until validation). Evidence CURSOR_RESULT_SKY_SURFACE_BLAST_01.md.
+- **TODO-COMP-P2P-RESIDUAL** -- DONE already implemented; found stale 2026-07-19.
+- **TODO-DEV-PROCESS** -- DONE 2026-07-08 as DEV-PROCESS-A + DEV-PROCESS-B.
+- **TODO-EPSF-1-FWHM-QC** -- DONE 2026-06-08.
+- **TODO-FWHM-CONSISTENCY** -- DONE 2026-06-09.
+- **VYVAR-INVARIANTS** -- P1/P2 DONE 2026-07-19; remaining phases in git history.
+- **WIDE-ERR** -- CLOSED WIDE-ERR-04 physical model g_pt + weighted SEM.
+- **XVAL-AIJ-02** -- DONE production 4-comp + two frame states.
+- **ZONE-SAT-01** -- Wired with COMP-RMS-DEF-01-B.
+
+---
+
+## RETIRED
+
+Dropped, retracted, status-token, or explicitly superseded-do-not-reopen.
+
+- **CLOSE-OUT** -- Not a task id; heading token from stacked NEXT SESSION titles.
+- **CLOSED-DECIDED** -- Not a task id; status token from EDGE-ANNULUS-01 row.
+- **MASTERSTAR-EPSF-ALL** -- Dropped 2026-06-02; plate scale is WCS-derived.
+- **SESSION-CLOSE** -- Not a task id; heading token from stacked NEXT SESSION titles.
+- **TODO-RECUT-HARNESS-FIDELITY** -- CLOSED superseded 2026-07-08; draft_387 zaloha gone.
+- **U-XVAL-COMP-RMS** -- RETRACTED (audit register).
+
+---
+
+## Parked (not blocking; ids already in OPEN if they had one)
+
+- CM-detrend differential (~10x lever; opt-in; needs transit injection-recovery).
+- Newton-V colour-term (per-rig c1 from field BP-RP).
+- Meridian-flip handling (Qatar-8 class).
+- Pre-filled camera catalog for new-user onboarding (PARKED; design notes in git history).
+- Magnitude-aware check-star threshold for the trust gate.
+- Reserved check-star (hold-one-out; moves photometry anchor).
+- AAVSO-standard output #4 G->B/V/Rc.
+- Blind index 3rd rig tier (Noctutec 206/560) when a validated draft exists.
+- Comet photometry mode (after variable-star pipeline; analysis only).
+- TODO-GS7 paper draft (see PUBLICATION ids in OPEN).
+

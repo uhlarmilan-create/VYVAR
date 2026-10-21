@@ -1,0 +1,105 @@
+# Python
+_tmp*.py
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+
+# Lokalne data / vystupy (velke alebo citlive)
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+/Archive/
+CalibrationLibrary/
+
+# FITS a podobne (velke binarne subory)
+*.fits
+*.fit
+*.fts
+
+# Velke cache/indexy (necommitovat)
+*.pkl
+
+# IDE / nastroje
+.idea/
+.vscode/
+.cursor/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build
+dist/
+*.egg-info/
+# Cython release build (scripts under build/ are tracked)
+build/temp.*/
+build/lib.*/
+build/_cython_out/
+build/**/*.c
+build/**/*.cpp
+build/**/*.obj
+/*.pyd
+/*.so
+/*.pyd.bak
+src_py/*.pyd
+src_py/*.so
+src_py/*.pyd.bak
+src_py/*.c
+src_py/*.cpp
+
+# Lokalne hard-copy exporty
+hard_copy_*.patch
+hard_copy_*.bundle
+
+# Release bundle artifacts (RELEASE-2)
+/tmp/cython_release/bundle/dist/
+/dev/tools/cython_release/bundle/cache/
+
+# Scratch workspaces (one-off artifacts + helper scripts)
+/dev/sandbox/
+/tmp/
+.worktrees/
+
+# Draft-data copies under session context (not Rule 0.2 evidence)
+**/516_pfs_off_snapshot/
+
+# EPSF-XVAL-A2 Linux output (Milan 2026-09-14: LOCAL-ONLY, never commit)
+dev/results/context/session_20260907_epsfxval_a2/a2/
+# Per-row match dumps (not in the small-CSV deliverable set)
+dev/results/context/session_20260907_epsfxval_a2/a2_compare/match_rows_*.csv
+
+# Verify logs and temp extracts
+*.log
+*_verify_console.txt
+tmpp/
+_p2a_*/
+_comp_sel_*/
+dev/scripts/_alg*_verify_*.py
+dev/scripts/_*_verify_*.py
+_comp_sel_body.txt
+_p2a_body_indented.txt
+_p2a_extract.txt
+
+CURSOR_TASK.md
+*_diag.png
+_comp_refs_output.txt
+_grep_photometry_core_calls.txt
+app_head_test.txt
+diff_cursor.txt
+photometry_dir_*.txt
+*_console.txt
+
+# Secrets (never commit)
+dev/orchestrator/api_key.txt
+**/api_key.txt
+GAIA_DR3/_*
+
+# One-time origin/main push authorization (CLOSE-OUT 2026-08-25)
+dev/PUSH_AUTH_main_*.txt
+
+# Validation harness generated FITS + truth sidecars
+dev/tests/validation/data/

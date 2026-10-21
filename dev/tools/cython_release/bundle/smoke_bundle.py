@@ -1,0 +1,353 @@
+# -*- coding: ascii -*-
+"""Dev-side bundle smoke: unpack, --selftest, assert layout (A3)."""
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+from pathlib import Path
+
+BUNDLE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BUNDLE_DIR))
+
+from bundle_layout import (  # noqa: E402
+    CATALOG_SCRIPT_SOURCES,
+    DIST_DIR,
+    REQUIRED_RUNTIME_FILES,
+    assert_no_compiled_py_sources,
+    compiled_module_stems,
+)
+
+SMOKE_DIST = Path(os.environ.get("VYVAR_BUNDLE_SMOKE_DIST", str(DIST_DIR)))
+
+
+def _unpack(artifact: Path, dest: Path) -> Path:
+    if artifact.suffix == ".zip":
+        with zipfile.ZipFile(artifact) as zf:
+            zf.extractall(dest)
+        children = list(dest.iterdir())
+        return children[0] if len(children) == 1 else dest
+    with tarfile.open(artifact, "r:gz") as tf:
+        tf.extractall(dest)
+    children = list(dest.iterdir())
+    return children[0] if len(children) == 1 else dest
+
+
+def _find_bundle_root(dest: Path) -> Path:
+    for name in ("VYVAR.bat", "vyvar.sh"):
+        hits = list(dest.rglob(name))
+        if hits:
+            return hits[0].parent
+    raise SystemExit(f"bundle root not found under {dest}")
+
+
+def _write_log(text: str) -> Path:
+    log = SMOKE_DIST / "smoke_last.log"
+    SMOKE_DIST.mkdir(parents=True, exist_ok=True)
+    log.write_text(text, encoding="ascii", errors="replace")
+    return log
+
+
+def _run_selftest(bundle_root: Path, *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
+    if sys.platform == "win32":
+        launcher = bundle_root / "VYVAR.bat"
+        cmd = ["cmd", "/c", str(launcher), "--selftest"]
+    else:
+        launcher = bundle_root / "vyvar.sh"
+        launcher.chmod(0o755)
+        cmd = [str(launcher), "--selftest"]
+    return subprocess.run(cmd, cwd=str(bundle_root), capture_output=True, text=True, env=run_env)
+
+
+def _bundle_python_exe(bundle_root: Path) -> Path:
+    if sys.platform == "win32":
+        return bundle_root / "python" / "python.exe"
+    for candidate in (
+        bundle_root / "python" / "python" / "bin" / "python3",
+        bundle_root / "python" / "bin" / "python3",
+    ):
+        if candidate.is_file():
+            return candidate
+    hits = list(bundle_root.glob("python/**/python3"))
+    if not hits:
+        raise SystemExit("bundle python3 not found for contamination test")
+    return hits[0]
+
+
+def _contamination_regression(bundle_root: Path) -> None:
+    poison_root = bundle_root.parent / "poison_site"
+    poison_numpy = poison_root / "numpy"
+    if poison_numpy.is_dir():
+        import shutil
+
+        shutil.rmtree(poison_root)
+    poison_numpy.mkdir(parents=True)
+    (poison_numpy / "__init__.py").write_text('__version__ = "0.0.0"\n', encoding="ascii")
+    poison_env = {"PYTHONPATH": str(poison_root)}
+
+    isolated = _run_selftest(bundle_root, env=poison_env)
+    if isolated.returncode != 0:
+        log = _write_log((isolated.stdout or "") + (isolated.stderr or ""))
+        raise SystemExit(
+            f"contamination regression FAIL: isolated launcher selftest failed log={log}"
+        )
+
+    py = _bundle_python_exe(bundle_root)
+    selftest = bundle_root / "vyvar_selftest.py"
+    inject = (
+        "import sys, runpy\n"
+        f"sys.path.insert(0, {str(poison_root)!r})\n"
+        f"raise SystemExit(runpy.run_path({str(selftest)!r}, run_name='__main__') or 0)\n"
+    )
+    direct = subprocess.run(
+        [str(py), "-c", inject],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+        env=os.environ.copy(),
+    )
+    combined = (direct.stdout or "") + (direct.stderr or "")
+    if direct.returncode == 0:
+        log = _write_log(combined)
+        raise SystemExit(
+            f"contamination regression FAIL: non-isolated selftest should fail log={log}"
+        )
+    if "environment contamination detected" not in combined:
+        log = _write_log(combined)
+        raise SystemExit(
+            f"contamination regression FAIL: missing contamination message log={log}"
+        )
+
+
+def _runtime_loaders_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    rels = list(REQUIRED_RUNTIME_FILES)
+    code = (
+        "import sys\n"
+        "from pathlib import Path\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "import params_registry as pr\n"
+        "import citations\n"
+        "reg = pr.load_registry()\n"
+        "if not reg:\n"
+        "    raise SystemExit('empty params registry')\n"
+        "bib = citations.load_citations_bib()\n"
+        f"for rel in {rels!r}:\n"
+        "    p = INSTALL / rel\n"
+        "    if not p.is_file():\n"
+        "        raise SystemExit(f'missing required runtime file: {rel}')\n"
+        "print(f'runtime_loaders OK keys={len(reg)} citations={len(bib)}')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"runtime loaders smoke FAIL log={log}")
+
+
+def _fresh_config_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    code = (
+        "import json, os, sys, tempfile\n"
+        "from pathlib import Path\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "import config\n"
+        "import params_registry as pr\n"
+        "import settings_model as sm\n"
+        "from database import VyvarDatabase\n"
+        "from vyvar_runtime import bootstrap_release_data_dir\n"
+        "with tempfile.TemporaryDirectory(prefix='vyvar_fresh_cfg_') as tmp:\n"
+        "    os.environ['VYVAR_DATA_DIR'] = tmp\n"
+        "    data_root, report = bootstrap_release_data_dir(INSTALL)\n"
+        "    if any(str(v).startswith('FAILED:') for v in report.values()):\n"
+        "        raise SystemExit(f'bootstrap failed: {report}')\n"
+        "    cfg_path = Path(tmp) / 'config.json'\n"
+        "    if not cfg_path.is_file():\n"
+        "        raise SystemExit('bootstrap did not write config.json')\n"
+        "    payload = json.loads(config.strip_jsonc_comments(cfg_path.read_text(encoding='utf-8')))\n"
+        "    cfg = config.AppConfig(project_root=INSTALL)\n"
+        "    expected = set(cfg.to_json().keys())\n"
+        "    missing = expected - set(payload.keys())\n"
+        "    if missing:\n"
+        "        raise SystemExit(f'config.json missing keys: {sorted(missing)[:8]}')\n"
+        "    db = VyvarDatabase(str(Path(tmp) / 'vyvar.sqlite3'))\n"
+        "    db.close()\n"
+        "    reg = pr.load_registry()\n"
+        "    current = cfg.to_json()\n"
+        "    groups = sm.settings_keys(reg, list(current))\n"
+        "    shown = [k for ks in groups.values() for k in ks]\n"
+        "    if sorted(shown) != sorted(current):\n"
+        "        raise SystemExit('Settings page does not show every config key once')\n"
+        "    for key in shown:\n"
+        "        sm.widget_kind(key, current[key], reg[key])\n"
+        "    auto = len(shown)\n"
+        "    print(f'fresh_config_smoke OK keys={len(payload)} auto={auto}')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"fresh config smoke FAIL log={log}")
+
+
+def _catalog_scripts_smoke(bundle_root: Path) -> None:
+    py = _bundle_python_exe(bundle_root)
+    scripts = [rel for rel in CATALOG_SCRIPT_SOURCES if rel.endswith(".py")]
+    for rel in scripts:
+        name = Path(rel).name
+        script = bundle_root / rel
+        proc = subprocess.run(
+            [str(py), "-I", str(script), "--help"],
+            cwd=str(bundle_root),
+            capture_output=True,
+            text=True,
+        )
+        combined = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode != 0:
+            log = _write_log(combined)
+            raise SystemExit(f"catalog script --help FAIL {name} log={log}")
+
+
+def _bootstrap_selftest_smoke(bundle_root: Path) -> None:
+    """Fresh VYVAR_DATA_DIR: selftest bootstrap lines, on-disk skeleton, DB init."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="vyvar_smoke_bootstrap_") as tmp:
+        env = {"VYVAR_DATA_DIR": tmp}
+        proc = _run_selftest(bundle_root, env=env)
+        combined = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode != 0:
+            log = _write_log(combined)
+            raise SystemExit(f"bootstrap selftest smoke FAIL exit={proc.returncode} log={log}")
+        if "bootstrap Archive: created" not in combined:
+            log = _write_log(combined)
+            raise SystemExit(f"bootstrap selftest smoke missing created lines log={log}")
+        root = Path(tmp)
+        for rel in ("Archive", "config.json", "vyvar.sqlite3"):
+            if not (root / rel).exists():
+                log = _write_log(combined)
+                raise SystemExit(f"bootstrap selftest smoke missing on disk {rel} log={log}")
+        py = _bundle_python_exe(bundle_root)
+        code = (
+            "import sys\n"
+            "from pathlib import Path\n"
+            f"INSTALL = Path({str(bundle_root)!r})\n"
+            "SRC = INSTALL / 'src_py'\n"
+            "sys.path.insert(0, str(SRC))\n"
+            f"from database import VyvarDatabase\n"
+            f"VyvarDatabase({str(root / 'vyvar.sqlite3')!r}).close()\n"
+            "print('bootstrap_db OK')\n"
+        )
+        db_proc = subprocess.run(
+            [str(py), "-I", "-c", code],
+            cwd=str(bundle_root),
+            capture_output=True,
+            text=True,
+            env={**os.environ.copy(), "VYVAR_DATA_DIR": tmp},
+        )
+        if db_proc.returncode != 0:
+            log = _write_log((db_proc.stdout or "") + (db_proc.stderr or ""))
+            raise SystemExit(f"bootstrap DB init smoke FAIL log={log}")
+
+
+def _threading_db_smoke(bundle_root: Path) -> None:
+    """Cross-thread VyvarDatabase access from bundled interpreter (bug #10)."""
+    py = _bundle_python_exe(bundle_root)
+    code = (
+        "import sys\n"
+        "from concurrent.futures import ThreadPoolExecutor, as_completed\n"
+        "from pathlib import Path\n"
+        "import tempfile\n"
+        f"INSTALL = Path({str(bundle_root)!r})\n"
+        "SRC = INSTALL / 'src_py'\n"
+        "sys.path.insert(0, str(SRC))\n"
+        "from config import AppConfig\n"
+        "from pipeline import AstroPipeline\n"
+        "with tempfile.TemporaryDirectory(prefix='vyvar_smoke_thread_') as tmp:\n"
+        "    cfg = AppConfig(project_root=INSTALL)\n"
+        "    cfg.database_path = Path(tmp) / 'vyvar.sqlite3'\n"
+        "    cfg.ensure_base_dirs()\n"
+        "    pipeline = AstroPipeline(config=cfg)\n"
+        "    pipeline.db.conn.execute(\n"
+        "        'INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, ACTIVE) VALUES (?, ?, ?);',\n"
+        "        ('Cam', 'seed', 'YES'),\n"
+        "    )\n"
+        "    pipeline.db.conn.commit()\n"
+        "    def read_n():\n"
+        "        return len(pipeline.db.get_equipments())\n"
+        "    def write_tag(tag):\n"
+        "        pipeline.db.conn.execute('UPDATE EQUIPMENTS SET ALIAS=? WHERE ID=1;', (tag,))\n"
+        "        pipeline.db.conn.commit()\n"
+        "    with ThreadPoolExecutor(max_workers=3) as pool:\n"
+        "        futs = [pool.submit(read_n), pool.submit(write_tag, 'B'), pool.submit(read_n)]\n"
+        "        reads = []\n"
+        "        for f in as_completed(futs):\n"
+        "            r = f.result()\n"
+        "            if isinstance(r, int):\n"
+        "                reads.append(r)\n"
+        "    if len(reads) < 2 or any(r < 1 for r in reads):\n"
+        "        raise SystemExit(f'threading smoke FAIL reads={reads}')\n"
+        "    pipeline.db.close()\n"
+        "    print('threading_db OK')\n"
+    )
+    proc = subprocess.run(
+        [str(py), "-I", "-c", code],
+        cwd=str(bundle_root),
+        capture_output=True,
+        text=True,
+    )
+    combined = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        log = _write_log(combined)
+        raise SystemExit(f"threading DB smoke FAIL log={log}")
+
+
+def smoke(artifact: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="vyvar_bundle_smoke ") as tmp:
+        root = Path(tmp)
+        _unpack(artifact, root)
+        bundle_root = _find_bundle_root(root)
+        assert_no_compiled_py_sources(bundle_root / "src_py", compiled_module_stems())
+        proc = _run_selftest(bundle_root)
+        log = _write_log((proc.stdout or "") + (proc.stderr or ""))
+        if proc.returncode != 0:
+            raise SystemExit(f"bundle smoke FAIL exit={proc.returncode} log={log}")
+        _bootstrap_selftest_smoke(bundle_root)
+        _runtime_loaders_smoke(bundle_root)
+        _fresh_config_smoke(bundle_root)
+        _threading_db_smoke(bundle_root)
+        _catalog_scripts_smoke(bundle_root)
+        _contamination_regression(bundle_root)
+        print(f"bundle smoke PASS log={log}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--artifact", type=Path, required=True)
+    args = parser.parse_args()
+    smoke(args.artifact.resolve())
+
+
+if __name__ == "__main__":
+    main()
