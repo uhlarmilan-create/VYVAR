@@ -18,8 +18,9 @@ from comp_rms_loo import (
     compute_loo_mag_rms_map,
 )
 from config import AppConfig
+from pipeline_constants import COMP_SELECT_RMS_FLOOR
 from catalog_db import connect_ro, query_local_gaia_by_source_ids
-from gaia_catalog_id import normalize_gaia_source_id, read_vyvar_csv
+from gaia_catalog_id import normalize_gaia_source_id, normalize_gaia_source_id_series, read_vyvar_csv
 from infolog import log_event
 from photometry_shared import _normalize_gaia_id, _safe_polyfit, _target_display_name
 from photometry_core import (
@@ -48,7 +49,7 @@ def _enrich_comp_bp_rp(
     *,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
 ) -> pd.DataFrame:
-    """Doplni ``bp_rp`` pre comp hviezdy kde chyba (Gaia DR3 podla ``source_id``)."""
+    """Fill ``bp_rp`` for comp stars where it is missing (Gaia DR3 by ``source_id``)."""
     if candidates is None or getattr(candidates, "empty", True):
         return pd.DataFrame()
 
@@ -110,7 +111,12 @@ def _enrich_comp_bp_rp(
         return gaia_bp_cache[int(sid_i)]
 
     try:
-        for idx, row in df.iterrows():
+        # SPEED-2026-10: visit only the rows whose bp_rp is missing (the column is numeric here);
+        # each row is re-read before use, as iterrows did.
+        _missing = np.flatnonzero(~np.isfinite(df["bp_rp"].to_numpy(dtype=float)))
+        for _pos in _missing.tolist():
+            idx = df.index[_pos]
+            row = df.iloc[_pos]
             try:
                 bp_now = float(pd.to_numeric(row.get("bp_rp"), errors="coerce"))
             except Exception:  # noqa: BLE001
@@ -200,7 +206,6 @@ def ensure_full_variable_targets_if_presel_stub(
             platesolve_dir=ps_dir,
             masterstar_fits=ms_fits,
             masterstars_csv=ms_path,
-            n_comparison_stars=int(getattr(_cfg, "comparison_stars_pool_n", 0) or 0),
             require_non_variable=bool(getattr(_cfg, "phase01_comparison_require_non_variable", True)),
             draft_id=int(draft_id) if draft_id is not None else None,
             database_path=getattr(_cfg, "database_path", None),
@@ -214,26 +219,18 @@ def ensure_full_variable_targets_if_presel_stub(
         logging.warning("[PHOT] variable_targets restore failed: %s", exc)
         return False
 
-def _normalize_id_value(x: Any) -> str:
-    """Normalize Gaia-like IDs loaded as floats; keep non-numeric strings."""
-    if pd.isna(x):
-        return ""
-    s = str(x).strip()
-    if not s or s.lower() == "nan":
-        return ""
-    try:
-        return str(int(float(s)))
-    except Exception:  # noqa: BLE001
-        return s
-
-def _normalize_id_series(s: pd.Series) -> pd.Series:
-    return s.apply(_normalize_id_value)
+# GAIA-ID-2026-10: one exact normaliser. The former local version did str(int(float(id))), which
+# changes about half of all 19-digit Gaia ids (float64 keeps 15-16 digits): the comparison pool then
+# kept corrupted ids and lost every star whose id no longer matched the per-frame catalogs
+# (draft 537: 2154 of 4265 MASTERSTAR ids; derived pool 545 -> 273).
+_normalize_id_value = normalize_gaia_source_id
+_normalize_id_series = normalize_gaia_source_id_series
 
 def _bool_col(series: pd.Series) -> pd.Series:
-    """Normalizuje stlpec na bool bez ohladu na True/False/'true'/'false'/1/0."""
+    """Normalize a column to bool regardless of True/False/'true'/'false'/1/0."""
     return series.astype(str).str.strip().str.lower().isin(("true", "1", "yes", "y"))
 
-def _phase0_effective_frame_hw_px(
+def _target_selection_effective_frame_hw_px(
     vt: pd.DataFrame,
     ms: pd.DataFrame,
     *,
@@ -241,10 +238,10 @@ def _phase0_effective_frame_hw_px(
     frame_h_px: int,
     edge_margin_px: int,
 ) -> tuple[int, int]:
-    """``frame_w_px`` / ``frame_h_px`` z volania alebo vacsie - podla max. x,y v VT a masterstars.
+    """``frame_w_px`` / ``frame_h_px`` from the call or larger - from the max x,y in VT and masterstars.
 
-    Predvolene 2082x1397 casto nezodpovedaju velkemu cipu; inak sa VSX ciele s velkymi pixelmi
-    (napr. DY Peg) vylucia este pred cross-matchom, **bez** ohladu na ``vsx_type`` (ziadny filter na SXPHE).
+    The default 2082x1397 often does not match a large chip; otherwise VSX targets at large pixel
+    coordinates (e.g. DY Peg) are excluded before the cross-match, **regardless** of ``vsx_type`` (no SXPHE filter).
     """
     xs: list[float] = []
     ys: list[float] = []
@@ -266,13 +263,13 @@ def _auto_repair_catalog_ids(
     log_fn: Any = None,
     max_sep_arcsec: float = 10.0,
 ) -> dict[str, Any]:
-    """Auto-repair poskodene Gaia catalog_id v variable_targets.csv podla RA/DEC.
+    """Auto-repair corrupted Gaia catalog_id in variable_targets.csv by RA/DEC.
 
-    Bezpecnostne pravidla:
-    - Ak `gaia_db_path` nie je nastavena alebo DB neexistuje -> nic nerob.
-    - Ak `variable_targets.csv` nema `catalog_id` alebo RA/DEC -> nic nerob.
-    - Opravuj iba vtedy, ked najblizsi Gaia zdroj je dostatocne blizko (`max_sep_arcsec`).
-    - Vytvor `.bak` zalohu iba ak sa nieco realne opravilo.
+    Safety rules:
+    - If `gaia_db_path` is not set or the DB does not exist -> do nothing.
+    - If `variable_targets.csv` has no `catalog_id` or RA/DEC -> do nothing.
+    - Repair only when the nearest Gaia source is close enough (`max_sep_arcsec`).
+    - Create a `.bak` backup only if something was actually repaired.
     """
     try:
         from repair_catalog_ids import repair_catalog_ids_from_gaia_db  # noqa: PLC0415
@@ -307,7 +304,7 @@ def _enrich_active_targets_bp_rp(
     *,
     gaia_db_path: str | Path | None,
 ) -> pd.DataFrame:
-    """Dopln ``bp_rp`` pre active targets z Gaia DR3 podla ``catalog_id``."""
+    """Fill ``bp_rp`` for active targets from Gaia DR3 by ``catalog_id``."""
     if targets_df is None or getattr(targets_df, "empty", True):
         return targets_df
 
@@ -389,7 +386,7 @@ def _resolve_frame_hw_px_from_masterstar(
     db: Any = None,
     draft_id: int | None = None,
 ) -> tuple[int, int, str]:
-    """Authoritative chip width/height for Phase 0+1 spatial culling.
+    """Authoritative chip width/height for target and comparison-star selection spatial culling.
 
     Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) light FITS via draft;
     (3) caller defaults (global cfg knob / hardcoded 2082x1397).
@@ -436,10 +433,10 @@ def _read_field_density_inputs(
     frame_w_px: int,
     frame_h_px: int,
 ) -> tuple[int, int, int, str, int | None]:
-    """Vrati ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` pre hustotu pola.
+    """Return ``(n_stars, chip_w, chip_h, source, n_stars_dao_raw)`` for the field density.
 
-    ``n_stars``: pocet riadkov v ``masterstars_csv`` s neprazdnym ``catalog_id`` (Gaia-matched).
-    ``n_stars_dao_raw``: ``VY_NDAO`` z MASTERSTAR FITS (iba referencia / JSON, nie klasifikacia).
+    ``n_stars``: number of rows in ``masterstars_csv`` with a non-empty ``catalog_id`` (Gaia-matched).
+    ``n_stars_dao_raw``: ``VY_NDAO`` from the MASTERSTAR FITS (reference / JSON only, not classification).
     ``source``: ``masterstars_gaia_matched`` | ``VY_NDAO_fallback`` | ``defaults``.
     """
     cw, ch = int(frame_w_px), int(frame_h_px)
@@ -492,7 +489,7 @@ def _refresh_variable_targets_xy(
     chip_w: int,
     chip_h: int,
 ) -> None:
-    """Prepocita x/y stlpce variable_targets.csv z aktualneho MASTERSTAR WCS."""
+    """Recompute the x/y columns of variable_targets.csv from the current MASTERSTAR WCS."""
     from astropy.wcs import WCS
 
     if wcs is None or not isinstance(wcs, WCS):
@@ -509,14 +506,14 @@ def _refresh_variable_targets_xy(
     elif "ra" in df.columns:
         ra = pd.to_numeric(df["ra"], errors="coerce").to_numpy(dtype=np.float64)
     else:
-        logging.warning("[VT REFRESH] chybaju stlpce ra_deg / ra - x/y neaktualizovane")
+        logging.warning("[VT REFRESH] missing columns ra_deg / ra - x/y not updated")
         return
     if "dec_deg" in df.columns:
         dec = pd.to_numeric(df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
     elif "dec" in df.columns:
         dec = pd.to_numeric(df["dec"], errors="coerce").to_numpy(dtype=np.float64)
     else:
-        logging.warning("[VT REFRESH] chybaju stlpce dec_deg / dec - x/y neaktualizovane")
+        logging.warning("[VT REFRESH] missing columns dec_deg / dec - x/y not updated")
         return
 
     try:
@@ -532,15 +529,15 @@ def _refresh_variable_targets_xy(
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().vt_wcs_refresh_fail += 1
-        logging.error("[VT REFRESH] WCS prepocet zlyhal: %s - x/y ostavaju stale", e)
+        logging.error("[VT REFRESH] WCS recompute failed: %s - x/y stay stale", e)
         return
 
-    logging.info("[VT REFRESH] x/y suradnice variable_targets.csv aktualizovane z MASTERSTAR WCS")
+    logging.info("[VT REFRESH] x/y coordinates of variable_targets.csv updated from MASTERSTAR WCS")
     xv = df["x"].to_numpy(dtype=np.float64, copy=False)
     yv = df["y"].to_numpy(dtype=np.float64, copy=False)
     if np.isfinite(xv).any() and np.isfinite(yv).any():
         logging.info(
-            "[VT REFRESH] %d riadkov, x=[%.0f,%.0f] y=[%.0f,%.0f]",
+            "[VT REFRESH] %d rows, x=[%.0f,%.0f] y=[%.0f,%.0f]",
             len(df),
             float(np.nanmin(xv)),
             float(np.nanmax(xv)),
@@ -548,7 +545,7 @@ def _refresh_variable_targets_xy(
             float(np.nanmax(yv)),
         )
     else:
-        logging.info("[VT REFRESH] %d riadkov (ziadne platne x/y po prepocte)", len(df))
+        logging.info("[VT REFRESH] %d rows (no valid x/y after recompute)", len(df))
 
 def _masterstar_row_is_dao_detection(ms_row: pd.Series) -> bool:
     """TARGET-RULES-2026-10: True for a MASTERSTAR row that is a DAO detection (finite DAO flux).
@@ -572,17 +569,18 @@ def select_active_targets(
     gaia_db_path: str | None = None,
     cfg: Any | None = None,
 ) -> pd.DataFrame:
-    """Faza 0: Filtruj VSX premenne -> active_targets.
+    """Target selection: filter VSX variables -> active_targets.
 
-    Pravidla:
-    - Hviezda musi byt v snimke (``x,y`` aspon ``edge_margin_px`` od okraja efektivneho pola; to iste cislo
-      ako ``chip_interior_margin_px`` vo Faze 0+1 - jednotne s porovnavackami a suspected).
-    - Sirka/vyska sa zvacsi z dat ak treba
+    Rules:
+    - The star must be in the frame (``x,y`` at least ``edge_margin_px`` from the edge of the effective field; the
+      same number as ``chip_interior_margin_px`` in target and comparison-star selection - consistent with the
+      comparison stars and suspected variables).
+    - Width/height are enlarged from the data if needed
     - VSX auto rows: identity join on planner ``catalog_id`` in masterstars (no positional matching).
       Only ``gaia_match_source=masterstars`` rows are promotable; ``gaia_dr3_direct`` / ``no_match`` stay
       in variable_targets for comp veto but are excluded here.
     - Manual / exoplanet targets: identity join on ``catalog_id`` when present (not subject to VSX gate).
-    - ``catalog_id`` z masterstars musi byt neprazdny (inak sa ciel vynecha).
+    - ``catalog_id`` from masterstars must be non-empty (otherwise the target is skipped).
     - TARGET-RULES-2026-10 (Milan 2026-10-13): a target is a star DAO detected on MASTERSTAR.
       Catalogue-membership rows (Gaia position, no DAO detection) are catalogue rows, not image
       data -> excluded (``no_dao_detection``). Then exactly three final cuts, in this order:
@@ -591,40 +589,40 @@ def select_active_targets(
       ``vsx_type_out_of_scope`` (cfg.vsx_out_of_scope_types, VSX auto-selected targets only).
       Masked targets stay in active_targets with ``skip_photometry=True`` (mask-first).
     Returns:
-        DataFrame s active targets - stlpce z variable_targets + pridane zo masterstars:
+        DataFrame of active targets - columns from variable_targets + added from masterstars:
         [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
          x, y, mag, b_v, bp_rp, zone_flag, skip_photometry, skip_reason]
     """
     global LAST_EXCLUDED_TARGETS
-    # Auto-repair poskodenych Gaia ID pred nacitanim (ak je dostupna lokalna Gaia DB).
+    # Auto-repair corrupted Gaia IDs before loading (if a local Gaia DB is available).
     _auto_repair_catalog_ids(vt_path=Path(variable_targets_csv), gaia_db_path=gaia_db_path, log_fn=log_event)
 
-    # variable_targets.csv moze prist zvonka a casto ma catalog_id ako float/scientific - citaj ako string
+    # variable_targets.csv may come from outside and often has catalog_id as float/scientific - read as string
     vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
-    # masterstars_full_match.csv casto nesie presny Gaia source_id v "name" aj ked catalog_id je poskodeny floatom
+    # masterstars_full_match.csv often carries the exact Gaia source_id in "name" even when catalog_id is float-corrupted
     ms = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
     if "catalog_id" in vt.columns:
         vt["catalog_id"] = vt["catalog_id"].apply(_normalize_gaia_id)
-    # Normalizuj Gaia ID na string.
-    # POZOR: "name" v masterstars casto obsahuje presny Gaia source_id; nesmieme ho prehnat cez float().
+    # Normalize Gaia IDs to string.
+    # CAUTION: "name" in masterstars often holds the exact Gaia source_id; it must not go through float().
     if "catalog_id" in ms.columns:
         ms["catalog_id"] = _normalize_id_series(ms["catalog_id"])
     if "name" in ms.columns:
         ms["name"] = ms["name"].fillna("").astype(str).str.strip()
 
-    fw, fh = _phase0_effective_frame_hw_px(
+    fw, fh = _target_selection_effective_frame_hw_px(
         vt, ms, frame_w_px=int(frame_w_px), frame_h_px=int(frame_h_px), edge_margin_px=int(edge_margin_px)
     )
     if fw != int(frame_w_px) or fh != int(frame_h_px):
         logging.info(
-            "[FAZA 0] Rozmer cipu zvacseny z %sx%s na %sx%s px (max x,y z variable_targets/masterstars + okraj)",
+            "[TARGET-SELECT] Chip size enlarged from %sx%s to %sx%s px (max x,y from variable_targets/masterstars + margin)",
             int(frame_w_px),
             int(frame_h_px),
             fw,
             fh,
         )
 
-    # Filter: v snimke (annulus-aware safe bbox, else fixed edge margin)
+    # Filter: in the frame (annulus-aware safe bbox, else fixed edge margin)
     vt["x"] = pd.to_numeric(vt["x"], errors="coerce")
     vt["y"] = pd.to_numeric(vt["y"], errors="coerce")
     if safe_bbox is not None:
@@ -814,7 +812,7 @@ def select_active_targets(
             else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
         )
         _funnel0 = (
-            f"FAZA 0 funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
+            f"[TARGET-SELECT] funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
             f"gaia_id_assigned={n_gaia_id_assigned} -> dao_detected=0 -> active=0 | excluded: "
             f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} no_catalog_id={no_catalog_id} "
             f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame}"
@@ -825,9 +823,9 @@ def select_active_targets(
 
     result = pd.DataFrame(matched_rows) if matched_rows else pd.DataFrame(columns=_empty_cols)
     if "catalog_id" in result.columns:
-        # NEPOUZIVAT float() (precision loss). Pouzi robustnu normalizaciu.
+        # DO NOT use float() (precision loss). Use the robust normalization.
         result["catalog_id"] = result["catalog_id"].apply(_normalize_gaia_id)
-    # Gaia BP-RP + rovnaka B-V hierarchia ako pre comp (nesmie prepisat vsetky b_v z NaN bp_rp v masterstars).
+    # Gaia BP-RP + the same B-V hierarchy as for comps (must not overwrite all b_v from NaN bp_rp in masterstars).
     result = _enrich_active_targets_bp_rp(
         result,
         gaia_db_path=gaia_db_path,
@@ -861,7 +859,7 @@ def select_active_targets(
     n_masked_snr = int((_sr_res == "below_snr_min").sum())
     _n_meas = int((~result["skip_photometry"].astype(bool)).sum()) if "skip_photometry" in result.columns else 0
     _funnel_msg = (
-        f"FAZA 0 funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
+        f"[TARGET-SELECT] funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
         f"gaia_id_assigned={n_gaia_id_assigned} -> dao_detected={len(result)} -> to_measure={_n_meas} | "
         f"excluded: no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} "
         f"no_catalog_id={no_catalog_id} not_target_eligible={not_target_eligible} "
@@ -879,14 +877,14 @@ def select_active_targets(
                 _types.add(_tok.strip().upper())
         if any(str(t).strip().upper() in _types for t in _voos_cfg):
             logging.warning(
-                "[FAZA 0] vsx_out_of_scope_types=%s but zero rows masked - check VSX type tokens",
+                "[TARGET-SELECT] vsx_out_of_scope_types=%s but zero rows masked - check VSX type tokens",
                 _voos_cfg,
             )
     if n_gaia_id_assigned > 0 and len(vt_in) > 0:
         _assign_frac = float(n_gaia_id_assigned) / float(len(vt_in))
         if _assign_frac < 0.50:
             logging.warning(
-                "[FAZA 0] gaia_id_assigned=%d far below in_frame=%d (%.0f%%) - sparse Gaia cross-match",
+                "[TARGET-SELECT] gaia_id_assigned=%d far below in_frame=%d (%.0f%%) - sparse Gaia cross-match",
                 n_gaia_id_assigned,
                 int(len(vt_in)),
                 100.0 * _assign_frac,
@@ -903,7 +901,7 @@ def _batch_enrich_targets_bp_rp_from_gaia_db(
     target_cids: list[str],
     gaia_db_path: str,
 ) -> dict[str, dict[str, Any]]:
-    """Prefetch Gaia ``bp_rp`` / ``teff_gspphot`` for Phase 1 targets (batched SQL)."""
+    """Prefetch Gaia ``bp_rp`` / ``teff_gspphot`` for comparison-star selection targets (batched SQL)."""
     gdb = str(gaia_db_path or "").strip()
     if not target_cids or not gdb:
         return {}
@@ -934,7 +932,7 @@ def _batch_enrich_targets_bp_rp_from_gaia_db(
                 "teff_gspphot": None,
             }
     except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[PHASE 1] Batch Gaia bp_rp lookup failed: %s", exc)
+        LOGGER.warning("[COMP-SELECT] Batch Gaia bp_rp lookup failed: %s", exc)
         return {}
 
     try:
@@ -968,7 +966,7 @@ def _batch_enrich_targets_bp_rp_from_gaia_db(
         finally:
             con.close()
     except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[PHASE 1] Batch Gaia teff lookup failed: %s", exc)
+        LOGGER.warning("[COMP-SELECT] Batch Gaia teff lookup failed: %s", exc)
 
     return out
 
@@ -978,7 +976,7 @@ def _enrich_target_bp_rp_from_gaia_db(
     gaia_db_path: str,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
 ) -> pd.Series:
-    """Dopln ``bp_rp`` pre jeden active target (Faza 1) z Gaia podla ``source_id``."""
+    """Fill ``bp_rp`` for one active target (comparison-star selection) from Gaia by ``source_id``."""
     out = target.copy()
     vsx = str(out.get("vsx_name", "") or "").strip() or str(out.get("name", "") or "").strip() or "?"
 
@@ -1042,7 +1040,7 @@ def _enrich_target_bp_rp_from_gaia_db(
     elif math.isfinite(bpr_ms):
         out["bp_rp"] = float(bpr_ms)
     elif not gid:
-        log_event(f"TARGET bp_rp: {vsx} - bez platneho Gaia catalog_id")
+        log_event(f"TARGET bp_rp: {vsx} - no valid Gaia catalog_id")
     return out
 
 def _bprp_tier_ladder_for_selection(
@@ -1095,14 +1093,10 @@ def _select_comps_by_rms_then_color(
 
     _n_min = max(1, int(n_comp_min))
     _n_max = max(_n_min, int(n_comp_max))
-    _floor = 1e-6
+    _floor = COMP_SELECT_RMS_FLOOR
     _ceil = float("nan")
     _iso_fwhm = 3.0
     if cfg is not None:
-        try:
-            _floor = float(getattr(cfg, "comp_select_rms_floor", 1e-6) or 1e-6)
-        except (TypeError, ValueError):
-            _floor = 1e-6
         try:
             _ceil = float(
                 getattr(cfg, "phase01_comparison_max_comp_rms", float("nan")) or float("nan")
@@ -1132,11 +1126,6 @@ def _select_comps_by_rms_then_color(
     # Authoritative per-target RMS gate (INV-COMP-RMS-01): LOO mag MAD vs
     # k * photon (snr_ap_pixscaled) and an absolute 0.1 mag cap.
     _k_loo = COMP_RMS_LOO_PHOTON_K_DEFAULT
-    if cfg is not None:
-        try:
-            _k_loo = float(getattr(cfg, "comp_rms_loo_photon_k", _k_loo) or _k_loo)
-        except (TypeError, ValueError):
-            _k_loo = COMP_RMS_LOO_PHOTON_K_DEFAULT
     _abs_ceil = _ceil if math.isfinite(_ceil) and _ceil > 0 else 0.1
     if "snr_ap_pixscaled" not in out.columns:
         raise ValueError(
@@ -1464,6 +1453,25 @@ def apply_comp_quality_gates(pool: pd.DataFrame, *, label: str = "COMP") -> pd.D
     return pool
 
 
+def _stamp_comp_pool_admission(photometry_dir: Path | str, rules: list[dict[str, Any]]) -> None:
+    """The per-rule (n_in, n_out) record of the comparison pool in ``pipeline_meta["comp_pool_admission"]``
+    (the only copy; variability_field reads the field aperture k from it)."""
+    from photometry_provenance import merge_photometry_pipeline_meta  # noqa: PLC0415
+
+    def _default(o: Any) -> Any:
+        if isinstance(o, float) and not math.isfinite(o):
+            return None
+        if hasattr(o, "item"):
+            try:
+                return o.item()
+            except (TypeError, ValueError):
+                pass
+        return str(o)
+
+    clean = json.loads(json.dumps({"rules": list(rules)}, ensure_ascii=True, default=_default))
+    merge_photometry_pipeline_meta(Path(photometry_dir), {"comp_pool_admission": clean})
+
+
 def build_global_comp_pool(
     masterstars_df: pd.DataFrame,
     per_frame_csv_paths: list[Path],
@@ -1485,7 +1493,7 @@ def build_global_comp_pool(
     field_catalog_csv: Path | str | None = None,
     sat_may_exclude: bool = True,
 ) -> pd.DataFrame:
-    """Zostav globalny comp pool - staticke filtre + RMS napriec framami (raz pre pole)."""
+    """Build the global comp pool - static filters + RMS across frames (once per field)."""
     pool = masterstars_df.copy()
     for _id_col in ("catalog_id", "name"):
         if _id_col in pool.columns:
@@ -1503,7 +1511,7 @@ def build_global_comp_pool(
 
     margin = int(chip_interior_margin_px)
     if "x" not in pool.columns or "y" not in pool.columns:
-        logging.warning("[GLOBAL COMP POOL] chybaju x/y - prazdny pool")
+        logging.warning("[GLOBAL COMP POOL] missing x/y - empty pool")
         return pd.DataFrame()
     xn = pd.to_numeric(pool["x"], errors="coerce")
     yn = pd.to_numeric(pool["y"], errors="coerce")
@@ -1577,7 +1585,7 @@ def build_global_comp_pool(
     pool = pool.loc[_d3_mask].copy()
 
     if pool.empty:
-        logging.warning("[GLOBAL COMP POOL] po statickych filtroch 0 riadkov")
+        logging.warning("[GLOBAL COMP POOL] 0 rows after static filters")
         return pool.reset_index(drop=True)
 
     id_col = "name" if "name" in pool.columns else "catalog_id"
@@ -1629,7 +1637,7 @@ def build_global_comp_pool(
         # BLEND-2026-10: neighbour light in the comparison aperture <= 1 % of the star's flux.
         # BLEND-K-2026-10: the light is computed for every aperture of the grid
         # (r = k x FWHM, columns blend_k100 ... blend_k200, one measured PSF). The target's
-        # aperture is chosen later (Phase 2A) only among the k at which all its comps stay
+        # aperture is chosen later (aperture photometry) only among the k at which all its comps stay
         # <= 1 % (aperture_pertarget.allowed_f_from_comp_blend); the pool keeps a star that
         # passes at the smallest k, so that k is always available. Contamination is defined
         # for the aperture actually used, as Kepler / TESS CROWDSAP.
@@ -1695,112 +1703,12 @@ def build_global_comp_pool(
         if not cand_ids:
             return pool.reset_index(drop=True)
 
-    use_derived = bool(getattr(cfg, "comp_pool_derived_admission", False))
-    from comp_pool_noise import (  # noqa: PLC0415
-        CompPoolAdmissionError,
-        CompPoolRegime,
-        reject_reason_counts,
-        stamp_comp_pool_admission,
-    )
-    from invariants_runtime import (  # noqa: PLC0415
-        assert_population_nonempty,
-    )
-
-    regime = CompPoolRegime.LEGACY
-    fail_reason: str | None = None
-    admitted_ids: set[str] | None = None
-    derived_meta: dict[str, Any] = {}
-    reason_counts: dict[str, int] = {}
     admission_rules: list[dict[str, Any]] = []
     if admission_rules_sat is not None:
         admission_rules.append(admission_rules_sat)
     for _r_extra in (admission_rules_band, admission_rules_blend):
         if _r_extra is not None:
             admission_rules.append(_r_extra)
-
-    if use_derived:
-        if not per_frame_csv_paths:
-            fail_reason = "no_per_frame_csv_paths"
-            raise CompPoolAdmissionError(fail_reason)
-        try:
-            from comp_pool_noise import analyze_draft_comp_pool  # noqa: PLC0415
-
-            proc_dir = Path(per_frame_csv_paths[0]).parent
-            draft_id = int(getattr(cfg, "active_draft_id", 0) or 0)
-            setup = str(getattr(cfg, "active_setup_name", "") or "")
-            gain = float(getattr(cfg, "gain", 1.0) or 1.0)
-            rn = float(getattr(cfg, "read_noise", 0.0) or 0.0)
-            if not (math.isfinite(gain) and gain > 0):
-                gain = 1.0
-            if not (math.isfinite(rn) and rn >= 0):
-                rn = 0.0
-            plate = float(getattr(cfg, "plate_scale_arcsec_per_px", 0.0) or 0.0)
-            ap_r = float("nan")
-            if "aperture_r_px" in pool.columns:
-                ap_r = float(pd.to_numeric(pool["aperture_r_px"], errors="coerce").median())
-            ap_arcsec = float(ap_r * plate) if math.isfinite(ap_r) and plate > 0 else None
-            gaia_db = str(getattr(cfg, "gaia_db_path", "") or "")
-            analysis = analyze_draft_comp_pool(
-                proc_dir,
-                draft_id=int(draft_id) if draft_id and int(draft_id) > 0 else 0,
-                setup=setup or "unknown",
-                gain=gain,
-                read_noise_e=rn,
-                positions=pool if ap_arcsec else None,
-                gaia_db_path=gaia_db if ap_arcsec and gaia_db else None,
-                aperture_arcsec=ap_arcsec,
-            )
-            if analysis.get("error"):
-                raise CompPoolAdmissionError(str(analysis.get("error")))
-            dec = analysis.get("decisions")
-            if not (isinstance(dec, pd.DataFrame) and not dec.empty and "admit" in dec.columns):
-                raise CompPoolAdmissionError("derived admission returned no decisions table")
-            reason_counts = reject_reason_counts(dec)
-            admitted_ids = {
-                str(x).strip()
-                for x, ok in zip(dec["catalog_id"], dec["admit"])
-                if bool(ok) and str(x).strip()
-            }
-            regime = CompPoolRegime.DERIVED
-            derived_meta = {
-                "n_admitted": int(analysis.get("n_admitted", 0) or 0),
-                "thresholds": analysis.get("thresholds"),
-                "scint_vs_sys": analysis.get("scint_vs_sys"),
-                "fit_sigma_sys": (analysis.get("fit") or {}).get("sigma_sys_mag"),
-            }
-            logging.info(
-                "[GLOBAL COMP POOL] derived admission: %d admitted of %d summarized",
-                int(derived_meta.get("n_admitted", 0)),
-                int(analysis.get("n_stars", 0) or 0),
-            )
-        except CompPoolAdmissionError as _adm_exc:
-            if photometry_dir_for_meta is not None:
-                try:
-                    stamp_comp_pool_admission(
-                        photometry_dir_for_meta,
-                        regime=CompPoolRegime.FAILED,
-                        rules=[],
-                        reject_reason_counts_map={},
-                        fail_reason=str(_adm_exc.reason),
-                    )
-                except Exception:  # noqa: BLE001
-                    pass
-            raise
-        except Exception as exc:  # noqa: BLE001
-            fail_reason = str(exc)
-            logging.warning("[GLOBAL COMP POOL] derived admission failed: %s", exc)
-            if photometry_dir_for_meta is not None:
-                try:
-                    stamp_comp_pool_admission(
-                        photometry_dir_for_meta,
-                        regime=CompPoolRegime.FAILED,
-                        rules=[],
-                        reject_reason_counts_map={},
-                        fail_reason=fail_reason,
-                    )
-                except Exception:  # noqa: BLE001
-                    pass
-            raise CompPoolAdmissionError(fail_reason) from exc
 
     # PHASE1-ONE-PASS-2026-10: one per-frame pass for the field: frames measured per comp and
     # COMP-SAT-80 per frame (peak >= 0.80 x SAT in more than 10 % of its frames -> not a comp).
@@ -1858,71 +1766,25 @@ def build_global_comp_pool(
     else:
         logging.info("[SAT-DIAG] per-frame comp saturation exclusion disabled (saturation level unverified)")
 
-    if regime is CompPoolRegime.DERIVED:
-        assert admitted_ids is not None
-        before = int(len(pool))
-        nid = pool[id_col].map(lambda v: str(v).strip() if pd.notna(v) else "")
-        if "catalog_id" in pool.columns:
-            cid = pool["catalog_id"].map(lambda v: str(v).strip() if pd.notna(v) else "")
-            keep = nid.isin(admitted_ids) | cid.isin(admitted_ids)
-        else:
-            keep = nid.isin(admitted_ids)
-        pool = pool.loc[keep].copy()
-        thr_payload = derived_meta.get("thresholds")
-        admission_rules.append(
-            {
-                "rule_id": "COMP_POOL_DERIVED_ADMIT",
-                "n_in": before,
-                "n_out": int(len(pool)),
-                "threshold_value": thr_payload,
-                "unit": "mixed_derived",
-                "regime": regime.value,
-            }
-        )
-        logging.info(
-            "[GLOBAL COMP POOL] derived filter: %d -> %d (meta=%s)",
-            before,
-            int(len(pool)),
-            {k: derived_meta.get(k) for k in ("n_admitted", "fit_sigma_sys")},
-        )
-        # Persist before raise so a failed draft still carries attributable evidence.
-        if photometry_dir_for_meta is not None:
-            stamp_comp_pool_admission(
-                photometry_dir_for_meta,
-                regime=regime,
-                rules=admission_rules,
-                reject_reason_counts_map=reason_counts,
-                fail_reason=fail_reason,
-                extra={"derived_meta": {k: derived_meta.get(k) for k in ("n_admitted", "fit_sigma_sys")}},
-            )
-        assert_population_nonempty(
-            n_in=before,
-            n_out=int(len(pool)),
-            rule_id="COMP_POOL_DERIVED_ADMIT",
-            threshold=thr_payload,
-            unit="mixed_derived",
-            population="stars in global comp pool after static filters",
-        )
-    elif regime is CompPoolRegime.LEGACY:
-        admission_rules.append(
-            {
-                "rule_id": "COMP_POOL_LEGACY_RMS",
-                "n_in": int(len(pool)),
-                "n_out": int(len(pool)),
-                "threshold_value": float(max_comp_rms),
-                "unit": "mag",
-                "regime": regime.value,
-                "note": "legacy regime: no derived admission (comp_rms is applied per target)",
-            }
-        )
-        if photometry_dir_for_meta is not None:
-            stamp_comp_pool_admission(
-                photometry_dir_for_meta,
-                regime=regime,
-                rules=admission_rules,
-                reject_reason_counts_map={},
-                fail_reason=None,
-            )
+    # COMP-ADMIT-2026-10: known variables are never comparison stars - VSX (coordinate match,
+    # removed above with the static gates) and the Gaia DR3 variability catalogue. This replaces the
+    # derived admission (COMP-POOL-01), whose only decision was this same catalogue test: its noise
+    # curve, thresholds and dilution were diagnostics nobody read, computed with gain 1 / read
+    # noise 0 / plate scale 1.3"/px from the raw config, and cost about 40 s per setup.
+    _before_var = int(len(pool))
+    _var = _bool_col(pool.get("gaia_dr3_variable_catalog", pd.Series(False, index=pool.index)))
+    pool = pool.loc[~_var].copy()
+    admission_rules.append(
+        {
+            "rule_id": "COMP_KNOWN_VARIABLE",
+            "n_in": _before_var,
+            "n_out": int(len(pool)),
+            "threshold_value": "vsx_known_variable or gaia_dr3_variable_catalog",
+            "unit": "catalogue flag",
+        }
+    )
+    if photometry_dir_for_meta is not None:
+        _stamp_comp_pool_admission(photometry_dir_for_meta, admission_rules)
 
     _before_dedupe = int(len(pool))
     pool = _dedupe_comp_pool_by_gaia_key(pool)
@@ -1933,7 +1795,7 @@ def build_global_comp_pool(
             int(len(pool)),
         )
     logging.info(
-        "[GLOBAL COMP POOL] %d kandidatov (z %d masterstars, po filtroch)",
+        "[GLOBAL COMP POOL] %d candidates (of %d masterstars, after filters)",
         len(pool),
         len(masterstars_df),
     )
@@ -1972,7 +1834,7 @@ def _warn_zero_compstars_edge(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> None:
-    """Pri neuspesnom vybere comp (0 riadkov) - ak je ciel blizko vnutorneho okraja cipu, doplni kontext."""
+    """On a failed comp selection (0 rows) - if the target is near the inner chip edge, add context."""
     try:
         tx = float(pd.to_numeric(target.get("x"), errors="coerce"))
         ty = float(pd.to_numeric(target.get("y"), errors="coerce"))
@@ -1997,8 +1859,8 @@ def _warn_zero_compstars_edge(
     dist = min(tx - xmin, xmax - tx, ty - ymin, ymax - ty)
     if math.isfinite(dist) and dist < 100.0:
         logging.warning(
-            "[COMP] %s: 0 comp stars, target je %.0fpx od okraja bbox "
-            "(edge position - geometricky obmedzene pole)",
+            "[COMP] %s: 0 comp stars, target is %.0fpx from the bbox edge "
+            "(edge position - geometrically limited field)",
             target_cid,
             float(dist),
         )
@@ -2050,7 +1912,6 @@ def select_comparison_stars_per_target(
     max_comp_rms: float = 0.1,
     min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
-    isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
     chip_fw: int | None = None,
     chip_fh: int | None = None,
@@ -2065,48 +1926,44 @@ def select_comparison_stars_per_target(
     sat_may_exclude: bool = True,
     n_reserve: int = 0,
 ) -> pd.DataFrame:
-    """Faza 1: Pre jeden target vyber najstabilnejsie porovnavacie hviezdy.
+    """Comparison-star selection: pick the most stable comparison stars for one target.
 
     COMP-SMART-2026-10: ``n_reserve`` > 0 additionally returns the next candidates of a
     separate selection with ``n_comp_max + n_reserve`` (rows with ``comp_role="reserve"`` and
     ``reserve_rank``); the admitted comps are those of the unchanged ``n_comp_max`` selection.
 
-    Postup (Moznost D = B + C):
-    1. Priestorovy + fotometricky filter kandidatov z masterstars
-    2. Nacitaj flux zo vsetkych per-frame CSV (len _PHASE_USECOLS_PERFRAME)
-    3. Normalizuj flux voci ensemble medianu per snimka
-    4. Vypocitaj RMS scatter pre kazdeho kandidata
-    5. Iterativny ensemble filter - vyrad top outlierov kym RMS neklesa
-    6. Vrat top n_comp_max najstabilnejsich (min n_comp_min)
+    Procedure (option D = B + C):
+    1. Spatial + photometric filter of candidates from masterstars
+    2. Load flux from all per-frame CSVs (only _PHASE_USECOLS_PERFRAME)
+    3. Normalize flux to the ensemble median per frame
+    4. Compute the RMS scatter of each candidate
+    5. Iterative ensemble filter - drop the top outliers until RMS stops decreasing
+    6. Return the top n_comp_max most stable (min n_comp_min)
 
     Args:
-        isolation_radius_px: Polomer v pixeloch pre vypocet contamination indexu.
-            Sucet flux susedov / flux kandidata v tomto polomere = contamination.
-            Vysledok vstupuje do combined score (soft penalizacia, nie hard exclusion).
-            Nastavenie na 0.0 vypne crowding penalizaciu uplne.
-        max_comp_rms: Maximalny povoleny p2p RMS scatter comp hviezdy (mag).
-            Hviezdy s RMS > max_comp_rms su odmietnute bez ohladu na ranking.
-            Default 0.05 mag (50 ppt) - standardna fotometricka stabilita.
-        min_dist_arcsec: Minimalna vzdialenost comp hviezdy od targetu v oblukovych
-            sekundach. Zabranuje PSF overlap pri velmi blizkych hviezdach.
-            Default 60 arcsec (ochrana aj proti lokalnym artefaktom okolo targetu).
-        chip_fw / chip_fh / chip_interior_margin_px: spolu orezu kandidatov na comp hviezdy
-            blizko okraja cipu (rovnaka logika ako Faza 0 a suspected). ``chip_interior_margin_px=0`` = vypnute.
-        variable_target_catalog_ids: Gaia ``catalog_id`` zo ``variable_targets.csv`` - tieto hviezdy
-            sa nikdy neponuknu ako porovnavacky (VSX premenne vratane ``catalog_only``).
+        max_comp_rms: Maximum allowed p2p RMS scatter of a comp star (mag).
+            Stars with RMS > max_comp_rms are rejected regardless of ranking.
+            Default 0.05 mag (50 ppt) - standard photometric stability.
+        min_dist_arcsec: Minimum distance of a comp star from the target in arcseconds.
+            Prevents PSF overlap for very close stars.
+            Default 60 arcsec (also protects against local artefacts around the target).
+        chip_fw / chip_fh / chip_interior_margin_px: together they cut comp candidates
+            near the chip edge (same logic as target selection and suspected variables).
+            ``chip_interior_margin_px=0`` = off.
+        variable_target_catalog_ids: Gaia ``catalog_id`` from ``variable_targets.csv`` - these stars
+            are never offered as comparison stars (VSX variables including ``catalog_only``).
 
     Returns:
-        DataFrame s porovnavacimi hviezdami pre tento target, zoradeny podla RMS ASC.
-        Prazdny DataFrame ak sa nenajde dostatok stabilnych hviezd.
+        DataFrame of comparison stars for this target, sorted by RMS ASC.
+        Empty DataFrame if not enough stable stars are found.
     """
     from comp_selection_per_target import (  # noqa: PLC0415
         _accumulate_per_frame_comp_metrics,
         _apply_comp_metric_hard_filters,
         _assemble_comp_selection_result_rows,
         _assign_comp_tiers_to_pool,
-        _bootstrap_phase1_csv_cache,
+        _bootstrap_comp_selection_csv_cache,
         _build_candidates_pre,
-        _compute_comp_contamination_map,
         _detrend_and_compute_comp_rms_map,
         _ensemble_mad_filter_rms,
         _filter_comp_candidates_spatial_static,
@@ -2195,7 +2052,7 @@ def select_comparison_stars_per_target(
         else:
             ms_arr_mag = pd.to_numeric(_field_src.get("mag", pd.Series(dtype=float)), errors="coerce").to_numpy(dtype=float)
     except Exception as _iso_exc:  # noqa: BLE001
-        logging.warning(f"[FAZA 1] Aperture izolacia preskocena (chyba): {_iso_exc!s}")
+        logging.warning(f"[COMP-SELECT] Aperture isolation skipped (error): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
 
     id_col = (
@@ -2214,7 +2071,7 @@ def select_comparison_stars_per_target(
     min_frames = 3
     if not _pool_rms_ready:
         avail_cols = _PHASE_USECOLS_PERFRAME.copy()
-        csv_cache = _bootstrap_phase1_csv_cache(
+        csv_cache = _bootstrap_comp_selection_csv_cache(
             per_frame_csv_paths,
             csv_cache,
             flux_col=flux_col,
@@ -2244,12 +2101,8 @@ def select_comparison_stars_per_target(
     if bool(_cfg_p1.gs11_dilution_enabled) and gaia_db_path:
         from dilution import compute_dilution_factor  # noqa: PLC0415
 
-        _ap_cfg = float(_cfg_p1.gs11_dilution_aperture_arcsec)
-        if math.isfinite(_ap_cfg) and _ap_cfg > 0:
-            _ap_arcsec = _ap_cfg
-        else:
-            _ap_r_px = 2.75 * float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 7.0
-            _ap_arcsec = float(_ap_r_px) * float(plate_scale_arcsec)
+        _ap_r_px = 2.75 * float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 7.0
+        _ap_arcsec = float(_ap_r_px) * float(plate_scale_arcsec)
         _dilution_map = {}
         for _, crow in candidates_pre.iterrows():
             _cid_d = str(crow.get(id_col, crow.get("catalog_id", "")) or "").strip()
@@ -2279,7 +2132,6 @@ def select_comparison_stars_per_target(
                 _ap_arcsec,
                 str(gaia_db_path),
                 catalog_id=_normalize_exclude_source_id(_cid_d),
-                mag_limit_delta=float(_cfg_p1.gs11_dilution_mag_limit_delta),
             )
 
 
@@ -2291,12 +2143,6 @@ def select_comparison_stars_per_target(
         }
     else:
         comp_n_frames_map = {str(k): len(v) for k, v in flux_map.items()}
-    contamination_map = _compute_comp_contamination_map(
-        (flux_map.keys() if not _pool_rms_ready else cand_ids),
-        ms,
-        target_cid=target_cid,
-        isolation_radius_px=isolation_radius_px,
-    )
 
     # COMP-ASSIGN-01 D2: one RMS measurement - prefer pool step-1 ``comp_rms``.
     _id_rms_col = (
@@ -2349,10 +2195,16 @@ def select_comparison_stars_per_target(
             logging.error('[EXC-0205] Aperture isolation filter skipped when ms_arr arrays unavailable - crowded comps not re...: %s', exc)
             return cands
         rej: set[Any] = set()
-        for idx2, crow2 in cands.iterrows():
-            cx2 = float(crow2.get("x", float("nan")))
-            cy2 = float(crow2.get("y", float("nan")))
-            cm2 = float(crow2.get("_mag", float("nan"))) if "_mag" in cands.columns else float("nan")
+        # SPEED-2026-10: column lists instead of iterrows (same values, same order).
+        _nc = len(cands)
+        _nan_l = [float("nan")] * _nc
+        _x_l = cands["x"].tolist() if "x" in cands.columns else _nan_l
+        _y_l = cands["y"].tolist() if "y" in cands.columns else _nan_l
+        _m_l = cands["_mag"].tolist() if "_mag" in cands.columns else _nan_l
+        for idx2, _xv, _yv, _mv in zip(cands.index.tolist(), _x_l, _y_l, _m_l, strict=True):
+            cx2 = float(_xv)
+            cy2 = float(_yv)
+            cm2 = float(_mv)
             if not (math.isfinite(cx2) and math.isfinite(cy2) and math.isfinite(cm2)):
                 continue
             d2 = np.sqrt((ms_arr_x2 - cx2) ** 2 + (ms_arr_y2 - cy2) ** 2)
@@ -2372,7 +2224,7 @@ def select_comparison_stars_per_target(
 
     candidates = ms[_base_mask].copy()
     if candidates.empty:
-        logging.warning(f"[FAZA 1] {target_cid}: ziadni kandidati po hard filtroch")
+        logging.warning(f"[COMP-SELECT] {target_cid}: no candidates after hard filters")
         _warn_zero_compstars_edge(
             target_cid=target_cid,
             target=target,
@@ -2403,7 +2255,6 @@ def select_comparison_stars_per_target(
     score_map, tier_map = _score_comp_candidates_broeg(
         active,
         candidates,
-        contamination_map,
         id_col_cand=id_col_cand,
         target_bprp_eff=target_bprp_eff,
         _individual_tier=_individual_tier,
@@ -2450,7 +2301,6 @@ def select_comparison_stars_per_target(
         id_col_cand=id_col_cand,
         active=active,
         score_map=score_map,
-        contamination_map=contamination_map,
         comp_n_frames_map=comp_n_frames_map,
         target_cid=target_cid,
         target=target,
@@ -2502,7 +2352,6 @@ def select_comparison_stars_per_target(
                 field_x=ms_arr_x,
                 field_y=ms_arr_y,
                 score_map=score_map,
-                contamination_map=contamination_map,
                 comp_n_frames_map=comp_n_frames_map,
                 dilution_map=_dilution_map,
                 per_target_rms_map=rms_map,
@@ -2521,7 +2370,6 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
     )
 
     score_map = kw.pop("score_map")
-    contamination_map = kw.pop("contamination_map")
     comp_n_frames_map = kw.pop("comp_n_frames_map")
     dilution_map = kw.pop("dilution_map")
     rms_map = kw.pop("per_target_rms_map")
@@ -2540,7 +2388,6 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
         id_col_cand=id_col,
         active=active,
         score_map=score_map,
-        contamination_map=contamination_map,
         comp_n_frames_map=comp_n_frames_map,
         target_cid=kw["target_cid"],
         target=kw["target"],
@@ -2582,20 +2429,18 @@ def _write_suspected_variables(
     flux_col: str = "dao_flux",
     min_frames_frac: float = 0.5,
     outlier_sigma: float = 3.0,
-    interior_fw: int | None = None,
-    interior_fh: int | None = None,
-    interior_margin_px: int | None = None,
+    interior_bbox: tuple[float, float, float, float] | None = None,
     csv_cache: dict[str, pd.DataFrame] | None = None,
 ) -> None:
-    """Detekuj hviezdy s vysokym RMS scatter ktore nie su v VSX - suspected new variables.
+    """Detect stars with high RMS scatter that are not in VSX - suspected new variables.
 
-    Zapise suspected_variables.csv s kolumnami:
+    Writes suspected_variables.csv with columns:
     catalog_id, ra_deg, dec_deg, mag, comp_rms, n_frames, zone
 
-    Ak su zadane ``interior_*``, vyhodi sa pool aj per-frame body pri okrajoch cipu
-    (rovnaky okraj ako pri aktivnych cieloch a porovnavackach vo ``run_phase0_and_phase1``).
+    With ``interior_bbox`` (x0, y0, x1, y1) the pool and the per-frame points outside it are dropped
+    (the same box as the comparison stars in ``run_target_and_comp_selection``).
     """
-    # Usable hviezdy ktore nie su VSX ani active targets
+    # Usable stars that are neither VSX nor active targets
     ms = ms_df.copy()
     for col in ("is_usable", "is_saturated", "is_noisy", "vsx_known_variable"):
         if col in ms.columns:
@@ -2612,28 +2457,19 @@ def _write_suspected_variables(
     pool["_nid"] = pool[id_col].map(_normalize_id_value)
     pool = pool[pool["_nid"] != ""].drop_duplicates(subset=["_nid"], keep="first")
 
-    _m = int(interior_margin_px) if interior_margin_px is not None else 0
-    _fw = int(interior_fw) if interior_fw is not None else 0
-    _fh = int(interior_fh) if interior_fh is not None else 0
-    if (
-        _m > 0
-        and _fw > 2 * _m
-        and _fh > 2 * _m
-        and "x" in pool.columns
-        and "y" in pool.columns
-    ):
+    _use_xy = interior_bbox is not None
+    if _use_xy:
+        _bx0, _by0, _bx1, _by1 = (float(v) for v in interior_bbox)
+    if _use_xy and "x" in pool.columns and "y" in pool.columns:
         _xn = pd.to_numeric(pool["x"], errors="coerce")
         _yn = pd.to_numeric(pool["y"], errors="coerce")
-        _ok = _xn.between(_m, _fw - _m) & _yn.between(_m, _fh - _m)
+        _ok = _xn.between(_bx0, _bx1) & _yn.between(_by0, _by1)
         _n_pool0 = int(len(pool))
         pool = pool[_ok].copy()
         logging.info(
-            "[SUSPECTED] Orezanie okrajov (rovnake ako Faza 0/1, MASTERSTAR x,y): %s -> %s hviezd (margin %s px, pole %sx%s)",
-            _n_pool0,
-            len(pool),
-            _m,
-            _fw,
-            _fh,
+            "[SUSPECTED] interior box (as targets and comparison stars): %s -> %s stars "
+            "(x %.0f-%.0f, y %.0f-%.0f px)",
+            _n_pool0, len(pool), _bx0, _bx1, _by0, _by1,
         )
 
     pool_ids = set(pool["_nid"]) - active_target_ids
@@ -2642,7 +2478,7 @@ def _write_suspected_variables(
         pd.DataFrame().to_csv(output_path, index=False)
         return
 
-    # Nacitaj flux pre vsetky hviezdy z poolu
+    # Load flux for all stars of the pool
     flux_map: dict[str, list[float]] = {cid: [] for cid in pool_ids}
     n_frames = 0
     _cache_hits = 0
@@ -2663,7 +2499,6 @@ def _write_suspected_variables(
             use = [name_c, actual_flux]
             if "mag" in header_cols and "mag" not in use:
                 use.append("mag")
-            _use_xy = _m > 0 and _fw > 2 * _m and _fh > 2 * _m
             if _use_xy and "x" in header_cols and "y" in header_cols:
                 use.extend([c for c in ("x", "y") if c not in use])
             if _cached is not None and not _cached.empty:
@@ -2682,11 +2517,11 @@ def _write_suspected_variables(
             if _use_xy and "x" in sub.columns and "y" in sub.columns:
                 _xs = pd.to_numeric(sub["x"], errors="coerce")
                 _ys = pd.to_numeric(sub["y"], errors="coerce")
-                sub = sub[_xs.between(_m, _fw - _m) & _ys.between(_m, _fh - _m)]
+                sub = sub[_xs.between(_bx0, _bx1) & _ys.between(_by0, _by1)]
             if sub.empty:
                 continue
 
-            # Mag-bin normalizacia: median zvlast pre kazdy mag bin (0.5 mag sirka)
+            # Mag-bin normalization: a separate median for each mag bin (0.5 mag wide)
             mag_col_frame = "mag" if "mag" in df.columns else None
             if mag_col_frame and mag_col_frame in sub.columns:
                 sub = sub.copy()
@@ -2702,27 +2537,27 @@ def _write_suspected_variables(
                 if not bin_meds:
                     continue
             else:
-                # Fallback: globalny median
+                # Fallback: global median
                 frame_med = float(sub[actual_flux].median())
                 if not math.isfinite(frame_med) or frame_med <= 0:
                     continue
                 bin_meds = {}
 
             n_frames += 1
-            # Jedna vzorka na hviezdu na snimok (CSV moze mat duplicitne riadky).
+            # One sample per star per frame (the CSV may have duplicate rows).
             _agg: dict[str, dict[str, float]] = {}
-            for _, row in sub.iterrows():
-                cid = str(row[name_c])
+            # SPEED-2026-10 (S4): column lists instead of iterrows (same values, same order).
+            _cids_l = sub[name_c].tolist()
+            _flux_l = sub[actual_flux].tolist()
+            _mag_l = sub["_mag_num"].tolist() if "_mag_num" in sub.columns else [float("nan")] * len(_cids_l)
+            for _cv, _fv, _mv in zip(_cids_l, _flux_l, _mag_l, strict=True):
+                cid = str(_cv)
                 if cid not in pool_ids:
                     continue
-                raw_flux = float(row[actual_flux])
+                raw_flux = float(_fv)
                 if not math.isfinite(raw_flux) or raw_flux <= 0:
                     continue
-                mag_num = (
-                    float(row.get("_mag_num", float("nan")))
-                    if "_mag_num" in row.index
-                    else float("nan")
-                )
+                mag_num = float(_mv)
                 ent = _agg.setdefault(cid, {"fluxes": [], "mags": []})
                 ent["fluxes"].append(raw_flux)
                 if math.isfinite(mag_num):
@@ -2731,11 +2566,15 @@ def _write_suspected_variables(
                 fluxes = ent["fluxes"]
                 if not fluxes:
                     continue
-                raw_flux = float(np.median(np.asarray(fluxes, dtype=np.float64)))
+                # median of one value is the value itself
+                raw_flux = fluxes[0] if len(fluxes) == 1 else float(np.median(np.asarray(fluxes, dtype=np.float64)))
                 if not math.isfinite(raw_flux) or raw_flux <= 0:
                     continue
                 mags = ent["mags"]
-                mag_num = float(np.median(np.asarray(mags, dtype=np.float64))) if mags else float("nan")
+                if not mags:
+                    mag_num = float("nan")
+                else:
+                    mag_num = mags[0] if len(mags) == 1 else float(np.median(np.asarray(mags, dtype=np.float64)))
                 if bin_meds:
                     b = int(mag_num / 0.5) if math.isfinite(mag_num) else -1
                     norm_med = bin_meds.get(b)
@@ -2764,7 +2603,7 @@ def _write_suspected_variables(
             _cache_misses,
         )
 
-    # Airmass detrending pre suspected variables
+    # Airmass detrending for suspected variables
     for cid in list(flux_map.keys()):
         vals = flux_map[cid]
         if len(vals) < 6:
@@ -2850,8 +2689,6 @@ def _write_suspected_variables(
 
     out_df = pd.DataFrame(rows)
     try:
-        from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
-
         if "catalog_id" in out_df.columns:
             out_df["catalog_id"] = normalize_gaia_source_id_series(out_df["catalog_id"])
     except Exception as exc:  # noqa: BLE001
@@ -2859,6 +2696,6 @@ def _write_suspected_variables(
         pass
     out_df.to_csv(output_path, index=False)
     logging.info(
-        f"[SUSPECTED] {len(out_df)} kandidatov na nove premenne -> {output_path.name} "
+        f"[SUSPECTED] {len(out_df)} new-variable candidates -> {output_path.name} "
         f"(threshold RMS > {threshold:.4f})"
     )

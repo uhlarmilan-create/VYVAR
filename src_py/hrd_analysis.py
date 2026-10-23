@@ -46,8 +46,17 @@ HRD_CAPTION = (
     "sequence by their distance modulus."
 )
 
-HRD_PARALLAX_MIN_MAS_DEFAULT = 0.15
-HRD_PARALLAX_SNR_MIN_DEFAULT = 5.0
+# Parallax gate of the HRD (Bailer-Jones et al. 2021: SNR primary; the mas floor only excludes the regime
+# where 1/parallax breaks down). CODE-REVIEW-2026-10 step 7: constants, no longer config keys.
+HRD_PARALLAX_MIN_MAS = 0.15
+HRD_PARALLAX_SNR_MIN = 5.0
+# Gaia DSC probability above which a class counts as "likely".
+HRD_DSC_CONFIRM_PROB = 0.90
+# Stage 1 candidate budget for the online enrichment, rows per category and per reserved net.
+HRD_ENRICH_MAX_CANDIDATES = 20
+HRD_MAX_PER_CATEGORY = 3
+HRD_MIN_PER_NET = 4
+HRD_ENRICH_TAP_TIMEOUT_S = 60.0
 
 
 def hrd_nss_category_enabled(cfg: Any | None) -> bool:
@@ -55,24 +64,6 @@ def hrd_nss_category_enabled(cfg: Any | None) -> bool:
     if cfg is None:
         return False
     return bool(getattr(cfg, "hrd_nss_category_enabled", False))
-
-
-def hrd_parallax_params_from_cfg(cfg: Any | None) -> tuple[float, float]:
-    """Resolve HRD parallax gate from config (defaults: 0.15 mas floor, SNR 5)."""
-    pmin = HRD_PARALLAX_MIN_MAS_DEFAULT
-    snr = HRD_PARALLAX_SNR_MIN_DEFAULT
-    if cfg is not None:
-        try:
-            pmin = float(getattr(cfg, "hrd_parallax_min_mas", pmin))
-        except (TypeError, ValueError):
-            pmin = HRD_PARALLAX_MIN_MAS_DEFAULT
-        try:
-            snr = float(getattr(cfg, "hrd_parallax_snr_min", snr))
-        except (TypeError, ValueError):
-            snr = HRD_PARALLAX_SNR_MIN_DEFAULT
-        pmin = max(0.0, min(10.0, pmin))
-        snr = max(1.0, min(20.0, snr))
-    return pmin, snr
 
 
 _LABEL_VERY_HOT = "Very hot (O/B candidate)"
@@ -94,7 +85,6 @@ _LABEL_PRIORITY: tuple[str, ...] = (
     _LABEL_BINARY,
 )
 
-_SIMBAD_OTYPE_PREFIXES = ("WR", "WD", "C", "S", "LP", "EB", "RG", "AGB", "PN", "HV")
 
 _LUM_CLASS_RE = re.compile(r"(IAB|IB|IA|I|II|III|IV|V)\s*$", re.IGNORECASE)
 _LUM_CLASS_EMBED_RE = re.compile(r"\d(?:\.\d)?(IAB|IB|IA|I|II|III|IV|V)", re.IGNORECASE)
@@ -110,17 +100,6 @@ _CONFIRMED_NAME: dict[str, str] = {
     _LABEL_HOT_LUM: "Hot luminous (WR/OB?)",
     _LABEL_BINARY: "Binary (Gaia NSS)",
 }
-
-
-def hrd_dsc_confirm_prob_from_cfg(cfg: Any | None) -> float:
-    """Resolve HRD DSC 'likely' probability floor (default 0.90, clamp 0.5..1.0)."""
-    prob = 0.90
-    if cfg is not None:
-        try:
-            prob = float(getattr(cfg, "hrd_dsc_confirm_prob", prob))
-        except (TypeError, ValueError):
-            prob = 0.90
-    return max(0.5, min(1.0, float(prob)))
 
 
 def _sp_normalized(sp: str | None) -> str:
@@ -414,43 +393,6 @@ def _fetch_gaia_columns_by_source_id(
         conn.close()
 
 
-def _spectral_class(row: pd.Series) -> str:
-    t = _f(row.get("teff_gspphot"))
-    g = _f(row.get("logg_gspphot"))
-    bprp = _f(row.get("bp_rp"))
-    if t is None and bprp is None:
-        return ""
-    if t is not None:
-        if t >= 30000:
-            return "O-B"
-        if t >= 10000:
-            return "B-A"
-        if t >= 7500:
-            return "A-F"
-        if t >= 6000:
-            return "F-G"
-        if t >= 5200:
-            return "G"
-        if t >= 3700:
-            return "K"
-        if t >= 2400:
-            return "M"
-        return "cool"
-    if bprp is not None:
-        if bprp < 0.0:
-            return "hot (BP-RP)"
-        if bprp < 0.5:
-            return "early"
-        if bprp < 1.2:
-            return "solar-type"
-        if bprp < 2.0:
-            return "late"
-        return "very cool"
-    if g is not None and g < 3.5:
-        return "evolved (log g)"
-    return ""
-
-
 def _is_reliable(row: pd.Series) -> bool:
     return bool(row.get("hrd_reliable"))
 
@@ -460,17 +402,6 @@ def _nss_is_binary(row: pd.Series) -> bool:
         return int(float(row.get("non_single_star", 0))) == 1
     except (TypeError, ValueError):
         return False
-
-
-def _simbad_suffix(otype: Any) -> str:
-    ot = str(otype or "").strip()
-    if not ot:
-        return ""
-    up = ot.upper()
-    for pref in _SIMBAD_OTYPE_PREFIXES:
-        if up.startswith(pref) or pref in up.split("*")[0]:
-            return f" (SIMBAD: {ot})"
-    return ""
 
 
 def _stage2_labels(row: pd.Series, *, nss_enabled: bool = False) -> list[str]:
@@ -533,24 +464,12 @@ def _pick_base_label(labels: list[str]) -> str:
     return chosen
 
 
-def _pick_label(labels: list[str], simbad_otype: Any = None) -> str:
-    chosen = _pick_base_label(labels)
-    if not chosen:
-        return ""
-    suffix = _simbad_suffix(simbad_otype)
-    return f"{chosen}{suffix}" if chosen else ""
-
-
-def _classify_star(row: pd.Series) -> str:
-    return _pick_label(_stage2_labels(row), row.get("simbad_otype"))
-
-
 def build_hrd_dataframe(
     masterstars_csv: Path,
     gaia_db_path: Path,
     *,
-    parallax_min_mas: float = HRD_PARALLAX_MIN_MAS_DEFAULT,
-    parallax_snr_min: float = HRD_PARALLAX_SNR_MIN_DEFAULT,
+    parallax_min_mas: float = HRD_PARALLAX_MIN_MAS,
+    parallax_snr_min: float = HRD_PARALLAX_SNR_MIN,
 ) -> pd.DataFrame:
     """Build HRD dataframe from masterstars CSV + optional Gaia SQLite enrichment."""
     ms = read_vyvar_csv(masterstars_csv, low_memory=False)
@@ -584,8 +503,8 @@ def build_hrd_dataframe(
 
     needed = ["teff_gspphot", "logg_gspphot", "parallax", "parallax_over_error", "non_single_star"]
     missing = [c for c in needed if c not in ms.columns]
-    # CSV casto obsahuje prazdne stlpce z matchu - potom ``missing`` je prazdne a merge by zahodil
-    # stlpce z Gaia (stary dup_cols). Dopln fetch aj pre stlpce bez jedinej platnej hodnoty.
+    # The CSV often contains empty columns from the match - then ``missing`` is empty and the merge would
+    # drop the Gaia columns (old dup_cols). Also fetch columns that have no single valid value.
     for c in ("teff_gspphot", "logg_gspphot", "non_single_star"):
         if c in ms.columns and c not in missing:
             num = pd.to_numeric(ms[c], errors="coerce")
@@ -599,7 +518,7 @@ def build_hrd_dataframe(
         )
         if not gdf.empty and "catalog_id" in gdf.columns:
             gdf = gdf.drop(columns=[c for c in ("source_id",) if c in gdf.columns], errors="ignore")
-            # Povolit prepis hodnot z SQLite namiesto zahodenia duplicitnych stlpcov z gdf.
+            # Allow overwriting SQLite values instead of dropping the duplicate columns from gdf.
             overlap = [c for c in gdf.columns if c != "catalog_id" and c in ms.columns]
             if overlap:
                 ms = ms.drop(columns=overlap, errors="ignore")
@@ -628,8 +547,6 @@ def build_hrd_dataframe(
     abs_mag = np.where(ok, g + 5.0 - 5.0 * np.log10(dist_pc), np.nan)
     ms["abs_mag_g"] = abs_mag
     ms["hrd_reliable"] = np.isfinite(abs_mag)
-    ms["spectral_class"] = ms.apply(_spectral_class, axis=1)
-    ms["interesting_label"] = ms.apply(_classify_star, axis=1)
     return ms
 
 
@@ -1029,30 +946,13 @@ def get_top_interesting_stars(
     if hrd_df is None or hrd_df.empty:
         return pd.DataFrame()
 
-    max_candidates = 20
-    max_per_category = 3
-    min_per_net = 4
-    enrich_enabled = True
-    simbad_enabled = True
-    dsc_threshold = hrd_dsc_confirm_prob_from_cfg(cfg)
-    if cfg is not None:
-        try:
-            max_candidates = int(getattr(cfg, "hrd_enrich_max_candidates", max_candidates))
-        except (TypeError, ValueError):
-            max_candidates = 20
-        max_candidates = max(1, min(100, int(max_candidates)))
-        try:
-            max_per_category = int(getattr(cfg, "hrd_max_per_category", max_per_category))
-        except (TypeError, ValueError):
-            max_per_category = 3
-        max_per_category = max(1, min(20, int(max_per_category)))
-        try:
-            min_per_net = int(getattr(cfg, "hrd_min_per_net", min_per_net))
-        except (TypeError, ValueError):
-            min_per_net = 4
-        min_per_net = max(0, min(20, int(min_per_net)))
-        enrich_enabled = bool(getattr(cfg, "hrd_online_enrich_enabled", True))
-        simbad_enabled = bool(getattr(cfg, "hrd_simbad_enrich_enabled", True))
+    max_candidates = HRD_ENRICH_MAX_CANDIDATES
+    max_per_category = HRD_MAX_PER_CATEGORY
+    min_per_net = HRD_MIN_PER_NET
+    # One switch for the online lookups (Gaia TAP + SIMBAD).
+    enrich_enabled = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg is not None else True
+    simbad_enabled = enrich_enabled
+    dsc_threshold = HRD_DSC_CONFIRM_PROB
 
     nss_enabled = hrd_nss_category_enabled(cfg)
     candidates = _select_stage1_candidates(
@@ -1069,7 +969,7 @@ def get_top_interesting_stars(
             cache_path,
             enabled=enrich_enabled,
             simbad_enabled=simbad_enabled,
-            timeout_s=float(getattr(cfg, "hrd_enrich_tap_timeout_s", 60.0)),
+            timeout_s=HRD_ENRICH_TAP_TIMEOUT_S,
         )
 
     enrichment_active = bool(enrich_enabled or simbad_enabled)

@@ -1,6 +1,6 @@
 """Variability tab (VAR-2026-10, rebuilt VAR-TAB-2026-10 - Milan 2026-10-18).
 
-Interactive view of :func:`variability_field.run_field_variability` (Phase 2A):
+Interactive view of :func:`variability_field.run_field_variability` (aperture photometry):
 
 * hockey-stick of every star (hover = VSX name / type / period, click opens the star);
 * one table of variable stars: new candidates first, then the known VSX variables the

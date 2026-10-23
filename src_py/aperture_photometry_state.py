@@ -15,17 +15,17 @@ from infolog import log_event
 from photometry_shared import _normalize_gaia_id, _resolve_plate_scale_arcsec_per_px
 from proc_frame_store import ProcFrameStore, is_masterstar_proc_name
 
-from photometry_phase2a import (
+from aperture_photometry import (
     _ColorTermGroupFit,
-    _Phase2AState,
+    _AperturePhotometryState,
     _build_csv_lookup,
     _compute_group_color_term_fit,
-    _draft_dir_from_phase2a_paths,
+    _draft_dir_from_aperture_paths,
     _ensure_group_comp_pool_csv,
-    _phase2a_cache_columns,
-    _phase2a_coerce_skip_photometry,
+    _aperture_cache_columns,
+    _aperture_coerce_skip_photometry,
     _require_comparison_stars_per_target_schema,
-    _resolve_phase2a_equipment_id,
+    _resolve_aperture_equipment_id,
     _sat_limit_peak_adu,
     compute_optimal_apertures,
     measure_fwhm_from_masterstar,
@@ -33,7 +33,7 @@ from photometry_phase2a import (
     resolve_apply_color_term,
 )
 from photometry_lightcurve import (
-    _build_phase2a_resolved_facts,
+    _build_aperture_resolved_facts,
     apply_per_frame_saturation_to_active_targets,
 )
 
@@ -43,7 +43,7 @@ from photometry_core import (
 )
 
 
-def _phase2a_prepare_shared_state(
+def _aperture_prepare_shared_state(
     output_dir: Path,
     lc_dir: Path,
     masterstar_fits_path: Path,
@@ -63,7 +63,7 @@ def _phase2a_prepare_shared_state(
     db: Any | None = None,
     draft_id: int | None = None,
     proc_frame_store: ProcFrameStore | None = None,
-) -> _Phase2AState:
+) -> _AperturePhotometryState:
     def _p2(msg: str) -> None:
         if progress_cb is None:
             return
@@ -92,31 +92,31 @@ def _phase2a_prepare_shared_state(
     else:
         _apt_fw = float(_cfg.aperture_fwhm_factor)
 
-    # Nacitaj vstupy (Gaia ID ako string - float64 straca cifry)
+    # Load inputs (Gaia ID as string - float64 loses digits)
     if not Path(active_targets_csv).is_file():
         raise FileNotFoundError(f"active_targets_csv not found: {active_targets_csv}")
     if not Path(comparison_stars_csv).is_file():
         raise FileNotFoundError(f"comparison_stars_csv not found: {comparison_stars_csv}")
     at_df = pd.read_csv(active_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
-    # OUTPUT-REVIEW-2026-10 step 5: Phase 2A starts from the Phase-1 selection of the comparison
-    # table (admitted rows; the reserve below), never from the used sets of an earlier run.
+    # OUTPUT-REVIEW-2026-10 step 5: aperture photometry starts from the comparison-star selection rows of
+    # the comparison table (admitted rows; the reserve below), never from the used sets of an earlier run.
     from comp_table import admitted as _comp_admitted, load_comp_table, reserve as _comp_reserve  # noqa: PLC0415
 
     _comp_table = load_comp_table(Path(comparison_stars_csv))
     comp_df = _comp_admitted(_comp_table)
 
-    # Normalizuj catalog_id
+    # Normalize catalog_id
     for df in (at_df, comp_df):
         for col in ("catalog_id", "name"):
             if col in df.columns:
                 df[col] = df[col].apply(_normalize_gaia_id)
 
-    at_df["skip_photometry"] = _phase2a_coerce_skip_photometry(at_df)
+    at_df["skip_photometry"] = _aperture_coerce_skip_photometry(at_df)
     _require_comparison_stars_per_target_schema(comp_df, Path(comparison_stars_csv))
 
-    # _phase2a_load_star_list (inline): chip dims, comp index, BP-RP map, CSV cache - through target loop below.
+    # _aperture_load_star_list (inline): chip dims, comp index, BP-RP map, CSV cache - through target loop below.
 
-    # Open MASTERSTAR.fits once - reuse header + data throughout Phase 2A.
+    # Open MASTERSTAR.fits once - reuse header + data throughout aperture photometry.
     _ms_header: Any = None
     _ms_data: np.ndarray | None = None
     _ms_path = Path(masterstar_fits_path)
@@ -126,14 +126,14 @@ def _phase2a_prepare_shared_state(
                 _ms_header = _hdul_ms[0].header.copy()
                 if _hdul_ms[0].data is not None:
                     _ms_data = np.asarray(_hdul_ms[0].data, dtype=np.float64)
-            LOGGER.debug("[PHASE 2A] MASTERSTAR.fits opened once (header + data cached)")
+            LOGGER.debug("[APERTURE] MASTERSTAR.fits opened once (header + data cached)")
             logging.info(
                 "[PERF-2] MASTERSTAR.fits loaded once: data shape=%s, header keys=%d",
                 _ms_data.shape if _ms_data is not None else None,
                 len(_ms_header) if _ms_header is not None else 0,
             )
         except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[PHASE 2A] MASTERSTAR.fits open failed: %s", exc)
+            LOGGER.warning("[APERTURE] MASTERSTAR.fits open failed: %s", exc)
 
     # Chip dims for edge checks: prefer MASTERSTAR.fits NAXIS (full detector); CSV max(x,y) underestimates.
     chip_fw: int | None = None
@@ -177,9 +177,9 @@ def _phase2a_prepare_shared_state(
             pass
 
     if "x" not in comp_df.columns or "y" not in comp_df.columns:
-        raise ValueError("comparison_stars_per_target.csv musi obsahovat stlpce x, y pre Fazu 2A")
+        raise ValueError("comparison_stars_per_target.csv must contain columns x, y for aperture photometry")
 
-    # Pre-index comp_df podla target catalog_id - raz pre cely cyklus (O(1) lookup per target).
+    # Pre-index comp_df by target catalog_id - once for the whole loop (O(1) lookup per target).
     _id_col_comp = "target_catalog_id" if "target_catalog_id" in comp_df.columns else "catalog_id"
     _comp_index: dict[str, pd.DataFrame] = {}
     if comp_df is not None and not comp_df.empty and _id_col_comp in comp_df.columns:
@@ -190,7 +190,7 @@ def _phase2a_prepare_shared_state(
     else:
         _comp_index = {}
 
-    # COMP-SMART-2026-10: ranked reserve comparison candidates per target (Phase 1)
+    # COMP-SMART-2026-10: ranked reserve comparison candidates per target (comparison-star selection)
     _reserve_index: dict[str, pd.DataFrame] = {}
     try:
         _res_df = _comp_reserve(_comp_table)
@@ -203,7 +203,7 @@ def _phase2a_prepare_shared_state(
         logging.warning("[COMP-SMART] reserve not read: %s", exc)
         _reserve_index = {}
 
-    # masterstars_full_match.csv - BP-RP map + comp pool pre catalog_only Phase 2A.
+    # masterstars_full_match.csv - BP-RP map + comp pool for catalog_only aperture photometry.
     target_bp_rp_by_cid: dict[str, float] = {}
     masterstars_df = pd.DataFrame()
     try:
@@ -231,7 +231,7 @@ def _phase2a_prepare_shared_state(
         target_bp_rp_by_cid = {}
         masterstars_df = pd.DataFrame()
 
-    # Najdi per-frame CSV (FITS sa nepouziva)
+    # Find per-frame CSVs (FITS is not used)
     if proc_frame_store is not None and len(proc_frame_store) > 0:
         csv_files = sorted(Path(k) for k in proc_frame_store.keys())
     else:
@@ -239,7 +239,7 @@ def _phase2a_prepare_shared_state(
     _ms_epoch_drop = [p for p in csv_files if is_masterstar_proc_name(p)]
     if _ms_epoch_drop:
         logging.warning(
-            "[MASTERSTAR-EPOCH] phase2a filtered %d masterstar proc from epoch set "
+            "[MASTERSTAR-EPOCH] aperture_photometry filtered %d masterstar proc from epoch set "
             "(canonical list_proc_csvs / ProcFrameStore filter was bypassed): %s",
             len(_ms_epoch_drop),
             ", ".join(p.name for p in _ms_epoch_drop[:3]),
@@ -247,25 +247,25 @@ def _phase2a_prepare_shared_state(
         csv_files = [p for p in csv_files if not is_masterstar_proc_name(p)]
     # ALIGN-VERIFY-2026-10: alignment residuals are measured and gated at alignment time
     # (vyvar_alignment_frame); an unverified frame has no proc CSV and is not measured here.
-    # Len CSV - bez FITS (flux sa cita z dao_flux v CSV)
+    # CSV only - no FITS (flux is read from dao_flux in the CSV)
     n_frames = len(csv_files)
     _n_total = int(len(at_df))
-    logging.info("[PHASE 2A] %d targets (DAO+Gaia matched)", _n_total)
-    _p2(f"Phase 2A: {_n_total} targets, {n_frames} frames - loading CSV cache...")
+    logging.info("[APERTURE] %d targets (DAO+Gaia matched)", _n_total)
+    _p2(f"Aperture photometry: {_n_total} targets, {n_frames} frames - loading per-frame catalogs...")
 
-    # Nacitaj CSV cache raz pre celu Fazu 2A (read_flux_from_csv per target inak 82x na target).
+    # Load the CSV cache once for all of aperture photometry (otherwise read_flux_from_csv runs 82x per target).
     if proc_frame_store is not None and len(proc_frame_store) > 0:
-        _phase2a_csv_cache = proc_frame_store
+        _aperture_csv_cache = proc_frame_store
         logging.info(
-            "[PERF-5] run_phase2a: using ProcFrameStore (%d frames, 0 disk reads)",
+            "[PERF-5] run_aperture_photometry: using ProcFrameStore (%d frames, 0 disk reads)",
             len(proc_frame_store),
         )
-        _p2(f"Faza 2A: ProcFrameStore {len(proc_frame_store)} CSV - vypocet FWHM / apertur...")
+        _p2(f"Aperture photometry: {len(proc_frame_store)} per-frame catalogs - FWHM and apertures...")
     else:
-        logging.info("[FAZA 2A] Nacitavam CSV cache...")
+        logging.info("[APERTURE] Loading CSV cache...")
         _t_cache = time.time()
-        _phase2a_csv_cache: dict[str, pd.DataFrame] = {}
-        _needed_cols_2a = _phase2a_cache_columns()
+        _aperture_csv_cache: dict[str, pd.DataFrame] = {}
+        _needed_cols_2a = _aperture_cache_columns()
         for _csv_path in csv_files:
             try:
                 from proc_frame_store import read_proc_csv  # noqa: PLC0415
@@ -274,7 +274,7 @@ def _phase2a_prepare_shared_state(
                 _cols = [c for c in _needed_cols_2a if c in _hdr.columns]
                 if not _cols:
                     continue
-                # Gaia ID musi byt str - float64 straca cifry
+                # Gaia ID must be str - float64 loses digits
                 _dtype_2a: dict[str, type] = {}
                 if "catalog_id" in _cols:
                     _dtype_2a["catalog_id"] = str
@@ -283,35 +283,35 @@ def _phase2a_prepare_shared_state(
                 _kw: dict[str, Any] = {"usecols": _cols, "low_memory": False}
                 if _dtype_2a:
                     _kw["dtype"] = _dtype_2a
-                _phase2a_csv_cache[str(_csv_path)] = read_proc_csv(_csv_path, **_kw)
+                _aperture_csv_cache[str(_csv_path)] = read_proc_csv(_csv_path, **_kw)
             except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
                 from except_fix_counters import get_except_fix_counters
 
-                get_except_fix_counters().phase2a_csv_cache_skip += 1
-                logging.error("[PHASE 2A] proc CSV cache skip %s: %s", _csv_path, exc)
+                get_except_fix_counters().aperture_csv_cache_skip += 1
+                logging.error("[APERTURE] proc CSV cache skip %s: %s", _csv_path, exc)
                 continue
         logging.info(
-            f"[FAZA 2A] CSV cache: {len(_phase2a_csv_cache)} suborov "
+            f"[APERTURE] CSV cache: {len(_aperture_csv_cache)} files "
             f"({time.time() - _t_cache:.1f}s)"
         )
-        _p2(f"Faza 2A: cache {len(_phase2a_csv_cache)} CSV - vypocet FWHM / apertur...")
+        _p2(f"Aperture photometry: {len(_aperture_csv_cache)} cached catalogs - FWHM and apertures...")
 
-    # Lookup (id_map + xy_df) raz na snimku - inak _build_csv_lookup 82x na target.
-    _phase2a_lookup_cache: dict[str, tuple[dict[str, pd.Series], pd.DataFrame]] = {}
+    # Lookup (id_map + xy_df) once per frame - otherwise _build_csv_lookup runs 82x per target.
+    _aperture_lookup_cache: dict[str, tuple[dict[str, pd.Series], pd.DataFrame]] = {}
     for _cp in csv_files:
         _key = str(_cp)
-        _df_lu = _phase2a_csv_cache.get(_key)
+        _df_lu = _aperture_csv_cache.get(_key)
         if _df_lu is None or _df_lu.empty:
             continue
         _id_col_lu = "catalog_id" if "catalog_id" in _df_lu.columns else "name"
-        _phase2a_lookup_cache[_key] = _build_csv_lookup(_df_lu, _id_col_lu)
+        _aperture_lookup_cache[_key] = _build_csv_lookup(_df_lu, _id_col_lu)
 
-    # Cas + airmass (+ flip flag z alignment_report) z prveho platneho riadku kazdeho per-frame CSV
-    # (podla stem FITS).
+    # Time + airmass (+ flip flag from alignment_report) from the first valid row of each per-frame CSV
+    # (by FITS stem).
     frame_time_lookup: dict[str, dict[str, float]] = {}
     for csv_path in csv_files:
         stem = csv_path.stem
-        _csv_tmp = _phase2a_csv_cache.get(str(csv_path))
+        _csv_tmp = _aperture_csv_cache.get(str(csv_path))
         if _csv_tmp is None or _csv_tmp.empty:
             continue
         _cmm_frame = ""
@@ -399,7 +399,7 @@ def _phase2a_prepare_shared_state(
         logging.warning("[ALIGN-VERIFY] skipped-frame count not read: %s", exc)
 
     # SAT-TARGET-2026-10 / TARGET-RULES-2026-10: a target linear on MASTERSTAR that is saturated
-    # in most of its frames is not measured. Phase-0 skips are final (never revived here).
+    # in most of its frames is not measured. Target-selection skips are final (never revived here).
     # Peak test = 0.90 x SAT-DIAG level of the draft (INV-SAT-LIMIT authority).
     _pfs_min = float(getattr(_cfg, "per_frame_sat_min_clean_frac", 0.5))
     _peak_test_adu: float | None = None
@@ -415,7 +415,7 @@ def _phase2a_prepare_shared_state(
     _per_frame_sat_meta = apply_per_frame_saturation_to_active_targets(
         at_df,
         csv_files=csv_files,
-        csv_cache=_phase2a_csv_cache,
+        csv_cache=_aperture_csv_cache,
         min_clean_frac=_pfs_min,
         peak_test_adu=_peak_test_adu,
         peak_test_source=_peak_test_src,
@@ -432,8 +432,8 @@ def _phase2a_prepare_shared_state(
         str(_per_frame_sat_meta.get("per_frame_sat_peak_test_source") or ""),
     )
 
-    # Krok 1: Globalna fixna apertura - vsetky hviezdy (target + comp), faktor x FWHM
-    # Ciele so skip_photometry (saturovane) nepatria do vypoctu apertur / FWHM z targetov.
+    # Step 1: global fixed aperture - all stars (target + comp), factor x FWHM
+    # Targets with skip_photometry (saturated) are excluded from the aperture / FWHM computation.
     _at_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in at_df.columns]
     _comp_cols = [c for c in ("catalog_id", "x", "y", "mag") if c in comp_df.columns]
     _at_use = at_df.loc[~at_df["skip_photometry"], _at_cols].copy() if _at_cols else at_df.iloc[0:0].copy()
@@ -451,7 +451,7 @@ def _phase2a_prepare_shared_state(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    # Priorita: 1. VY_FWHM_GAUSS (2D fit v hlavicke), 2. VY_FWHM (DAO), 3. fit fallback
+    # Priority: 1. VY_FWHM_GAUSS (2D fit in header), 2. VY_FWHM (DAO), 3. fit fallback
     _fwhm_from_header: float | None = None
     try:
         hdr = _ms_header
@@ -475,18 +475,18 @@ def _phase2a_prepare_shared_state(
                 if 0.5 < _fvg < 30.0:
                     _fwhm_from_header = _fvg
                     logging.info(
-                        f"[FAZA 2A] FWHM z VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
+                        f"[APERTURE] FWHM from VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
                     )
             if _fwhm_from_header is None and vy_fwhm_dao is not None:
                 _fvd = float(vy_fwhm_dao)
                 if 0.5 < _fvd < 30.0:
                     _fwhm_from_header = _fvd
                     logging.info(
-                        f"[FAZA 2A] FWHM z VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
+                        f"[APERTURE] FWHM from VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
                     )
     except Exception as _e:  # noqa: BLE001
         logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', _e)
-        logging.warning(f"[FAZA 2A] Nemozem citat FWHM z hlavicky: {_e}")
+        logging.warning(f"[APERTURE] Cannot read FWHM from header: {_e}")
 
     if _fwhm_from_header is not None:
         fwhm_px = _fwhm_from_header
@@ -498,72 +498,31 @@ def _phase2a_prepare_shared_state(
             dao_fwhm_hint=_fallback_hint,
             ms_data=_ms_data,
         )
-        logging.info(f"[FAZA 2A] FWHM z Gaussian fit: {fwhm_px:.3f} px")
+        logging.info(f"[APERTURE] FWHM from Gaussian fit: {fwhm_px:.3f} px")
 
-    _p2(f"Faza 2A: FWHM={float(fwhm_px):.3f} px - mapa pola a svetelne krivky...")
+    _p2(f"Aperture photometry: FWHM={float(fwhm_px):.3f} px - field map and light curves...")
 
-    # Gain / read noise for photometric errors and SNR aperture table.
-    # Gain: header-first (e-/ADU or index-mapped) -> DB -> config. RN: DB-first.
+    # GAIN-ONE-2026-10: one gain / read-noise authority for every stage (rig_photometry)
     from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
+    from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
 
-    _equipment_id = _resolve_phase2a_equipment_id(
+    _equipment_id = _resolve_aperture_equipment_id(
         db,
         draft_id=draft_id,
         output_dir=output_dir,
         masterstar_fits_path=Path(masterstar_fits_path),
     )
-    _gain_res = resolve_gain(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)
+    _pg = photometric_gain_read_noise(_ms_header, _cfg, _equipment_id)
+    _gain_res = resolve_gain(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)  # provenance record
     _rn_res = resolve_read_noise(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)
-    _gain_native = float(_gain_res.value) if _gain_res.ok else 1.0
-    _rn_phot = float(_rn_res.value) if _rn_res.ok else 10.0
-    # WIDE-ERR-03: science gain is container-domain (g_pt or DB/scale), never bare native.
-    from gain_photon_transfer import (  # noqa: PLC0415
-        PHOTON_TRANSFER_APERTURE_R_PX,
-        PHOTON_TRANSFER_APERTURE_SOURCE,
-        apply_photometric_gain_authority,
-    )
-
-    _proc_dir_gain = Path(_aligned_dir_2a) if _aligned_dir_2a is not None else None
-    # GAIN-PT-RADIUS-01: pin sky-dominated r=4.0. Do not read leftover
-    # dynamic_params.aperture_r_px and do not let force_aperture_px override PT
-    # (that flag sizes star photometry, not empty-aperture PT).
-    _ap_r_gain, _ap_r_src = float(PHOTON_TRANSFER_APERTURE_R_PX), str(PHOTON_TRANSFER_APERTURE_SOURCE)
-    from rig_photometry import rig_photometry  # noqa: PLC0415
-
-    # CFG-REVIEW-2026-10: native -> container ADU scale from the camera's ADC resolution (EQUIPMENTS.ADC_BITS)
-    _rig = rig_photometry(_cfg, _equipment_id)
-    _scale = _rig.container_scale()
+    _gain_phot, _rn_phot = float(_pg.gain), float(_pg.read_noise)
     logging.info(
-        "[PHASE 2A] container scale %.0f (EQUIPMENTS.ADC_BITS=%s, equipment_id=%s)",
-        _scale, _rig.adc_bits if _rig.adc_bits is not None else "unset", _equipment_id,
-    )
-    _ci_w = float(getattr(_cfg, "photon_transfer_ci_max_width_factor", 3.0) or 3.0)
-    _sidecar = Path(output_dir) / "gain_photon_transfer.json" if output_dir is not None else None
-    _gain_phot, _gain_auth, _ = apply_photometric_gain_authority(
-        g_db_native=_gain_native,
-        native_source=_gain_res.source if _gain_res.ok else "default",
-        proc_dir=_proc_dir_gain,
-        aperture_r_px=_ap_r_gain,
-        container_scale=_scale,
-        ci_max_width_factor=_ci_w,
-        persist_sidecar=_sidecar,
-        draft_meta={"draft_id": draft_id, "stage": "phase2a"},
-        aperture_r_px_source=_ap_r_src,
-    )
-    if not math.isfinite(_gain_phot) or _gain_phot <= 0:
-        _gain_phot = _gain_native / _scale if _scale > 0 else 1.0
-    logging.info(
-        "[PHASE 2A] Photometric errors: gain=%.3f e-/ADU_container (authority=%s; native=%.3f src=%s), "
+        "[APERTURE] Photometric errors: gain=%.3f e-/ADU_container (native %.3f src=%s / container scale %.0f), "
         "RN=%.1f e- (source: %s)",
-        float(_gain_phot),
-        _gain_auth.source,
-        float(_gain_native),
-        _gain_res.source if _gain_res.ok else "default",
-        float(_rn_phot),
-        _rn_res.source if _rn_res.ok else "default",
+        _gain_phot, _pg.gain_native, _pg.gain_source, _pg.container_scale, _rn_phot, _pg.read_noise_source,
     )
 
-    _draft_dir_ee = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+    _draft_dir_ee = _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))
     _snr_ap_table = None
 
     _variable_target_cids = frozenset(
@@ -575,14 +534,14 @@ def _phase2a_prepare_shared_state(
 
     _ap_pol: dict[str, Any] | None = None
     if force_aperture_px is not None and force_aperture_px > 0:
-        # Fixna apertura pre vsetky hviezdy - debug/kalibracia
+        # Fixed aperture for all stars - debug/calibration
         apertures_px = {
             _normalize_gaia_id(row.get("catalog_id", "")): float(force_aperture_px)
             for _, row in all_stars.iterrows()
             if _normalize_gaia_id(row.get("catalog_id", ""))
         }
         logging.info(
-            f"[FAZA 2A] FORCE apertura: {force_aperture_px:.2f}px pre vsetky hviezdy"
+            f"[APERTURE] FORCE aperture: {force_aperture_px:.2f}px for all stars"
         )
     else:
         # APERTURE-01: one r for every star. SNR mag-bin table is diagnostic only.
@@ -610,7 +569,7 @@ def _phase2a_prepare_shared_state(
         _, _night_p2a = load_qc_fwhm_map(_qc_csv_p2a)
         # NIGHT-FWHM-2026-10: qc_metrics.csv is draft-level and mixes the filters
         # (524: g 5.31, r 4.91, mixed 5.14 px). The night median is taken over THIS
-        # group's per-frame CSVs (same helper as Phase 1); QC value only as fallback.
+        # group's per-frame CSVs (same helper as comparison-star selection); QC value only as fallback.
         from photometry_comp import night_median_fwhm_px  # noqa: PLC0415
 
         _qc_night_p2a = _night_p2a
@@ -620,7 +579,7 @@ def _phase2a_prepare_shared_state(
         if math.isfinite(float(_night_grp)) and float(_night_grp) > 0:
             _night_p2a = float(_night_grp)
         logging.info(
-            "[FAZA 2A] NIGHT-FWHM group median %s px (%s); draft qc_metrics %s px",
+            "[APERTURE] NIGHT-FWHM group median %s px (%s); draft qc_metrics %s px",
             f"{_night_p2a:.3f}" if _night_p2a is not None else "n/a",
             _night_src,
             f"{_qc_night_p2a:.3f}" if _qc_night_p2a is not None else "n/a",
@@ -660,7 +619,7 @@ def _phase2a_prepare_shared_state(
             fwhm_used_px=_fw_p2a,
         )
         logging.info(
-            "[FAZA 2A] APERTURE-01 per_target f=%.3f FWHM_used=%.3f r_ap=%.3f (n_stars=%d)",
+            "[APERTURE] APERTURE-01 per_target f=%.3f FWHM_used=%.3f r_ap=%.3f (n_stars=%d)",
             float(_apt_fw),
             float(_fw_p2a),
             float(_r_ap_p2a),
@@ -688,7 +647,7 @@ def _phase2a_prepare_shared_state(
         _fm_hdr = _ms_header if _ms_header is not None else astrofits.getheader(Path(masterstar_fits_path))
         save_field_map(field_map_path, _fm_data, _fm_hdr, at_df, comp_df)
     except (OSError, ValueError, TypeError) as _fm_exc:
-        logging.warning("[PHASE 2A] field map not drawn: %s", _fm_exc)
+        logging.warning("[APERTURE] field map not drawn: %s", _fm_exc)
 
     # PERF-8: collect all star IDs needed across all targets (union targets + comps).
     _all_lc_ids: set[str] = set()
@@ -720,8 +679,8 @@ def _phase2a_prepare_shared_state(
     _flux_matrix_rows: list[pd.DataFrame] = []
     _t_flux_matrix = time.perf_counter()
     for _csv_path in csv_files:
-        _cached_df = _phase2a_csv_cache.get(str(_csv_path))
-        _lookup_row = _phase2a_lookup_cache.get(str(_csv_path))
+        _cached_df = _aperture_csv_cache.get(str(_csv_path))
+        _lookup_row = _aperture_lookup_cache.get(str(_csv_path))
         if _cached_df is None:
             continue
         _ft = frame_time_lookup.get(_csv_path.stem)
@@ -776,22 +735,28 @@ def _phase2a_prepare_shared_state(
     _gaia_db_path = str(_cfg.gaia_db_path or "").strip() or None
     if _plate_scale_arcsec is not None:
         logging.info(
-            "[PHASE 2A] GS11 context: plate_scale=%.4f arcsec/px gaia_db=%s",
+            "[APERTURE] GS11 context: plate_scale=%.4f arcsec/px gaia_db=%s",
             float(_plate_scale_arcsec),
             "set" if _gaia_db_path else "none",
         )
     else:
         logging.warning(
-            "[PHASE 2A] GS11 context: plate_scale unknown (derive-or-None) gaia_db=%s",
+            "[APERTURE] GS11 context: plate_scale unknown (derive-or-None) gaia_db=%s",
             "set" if _gaia_db_path else "none",
         )
 
     # Observer site resolved ONCE per draft (param_resolver): draft ID_LOCATION ->
     # header SITELAT -> flagged config. Threaded into BJD/HJD recompute + meta so
-    # Phase 2A no longer silently reads cfg.observer_* (config-drift trap).
+    # aperture photometry no longer silently reads cfg.observer_* (config-drift trap).
     from param_resolver import resolve_site as _resolve_site  # noqa: PLC0415
 
     _site = _resolve_site(_ms_header, db=db, draft_id=draft_id, cfg=_cfg)
+    if not _site.ok or _site.lat is None or _site.lon is None:
+        # CODE-REVIEW step 7B: no silent default site (BJD, airmass and extinction need it).
+        raise ValueError(
+            "No observing site for this draft: set the draft's site (import page / --location-id) "
+            "or a default site (IS_DEFAULT) in Database Explorer -> LOCATION."
+        )
     _site_loc_id: int | None = None
     if db is not None and draft_id is not None:
         try:
@@ -800,7 +765,7 @@ def _phase2a_prepare_shared_state(
         except Exception:  # noqa: BLE001
             _site_loc_id = None
     logging.info(
-        "[PHASE 2A] Observer site: source=%s lat=%s lon=%s alt=%s ok=%s",
+        "[APERTURE] Observer site: source=%s lat=%s lon=%s alt=%s ok=%s",
         _site.source,
         f"{_site.lat:.4f}" if _site.lat is not None else "None",
         f"{_site.lon:.4f}" if _site.lon is not None else "None",
@@ -841,7 +806,7 @@ def _phase2a_prepare_shared_state(
         log_event(f"[COLOR TERM] disabled for {obs_group} (apply_color_term toggle / filter type)")
 
     # Run-effective resolved facts for the honest full-config report (metadata only).
-    _resolved_facts = _build_phase2a_resolved_facts(
+    _resolved_facts = _build_aperture_resolved_facts(
         cfg=_cfg,
         gain_res=_gain_res,
         rn_res=_rn_res,
@@ -888,7 +853,7 @@ def _phase2a_prepare_shared_state(
         logging.warning("[GSPC] second zero point not available: %s", _gspc_exc)
     logging.info("[GSPC] %s", _gspc_status)
 
-    return _Phase2AState(
+    return _AperturePhotometryState(
         at_df=at_df,
         comp_df=comp_df,
         _comp_index=_comp_index,
@@ -896,8 +861,8 @@ def _phase2a_prepare_shared_state(
         target_bp_rp_by_cid=target_bp_rp_by_cid,
         csv_files=csv_files,
         n_frames=n_frames,
-        _phase2a_csv_cache=_phase2a_csv_cache,
-        _phase2a_lookup_cache=_phase2a_lookup_cache,
+        _aperture_csv_cache=_aperture_csv_cache,
+        _aperture_lookup_cache=_aperture_lookup_cache,
         frame_time_lookup=frame_time_lookup,
         n_align_skipped=_n_align_skipped,
         fwhm_px=fwhm_px,

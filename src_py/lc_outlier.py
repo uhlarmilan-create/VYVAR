@@ -83,11 +83,11 @@ UI_HIDE_WHEN_TOGGLE_OFF = frozenset(
 # spike_unconfirmed stays in exports; display is red like other non-normal.
 ALWAYS_SHOW_FLAGS = frozenset()
 
-DEFAULT_N_SIGMA = 5.0
-DEFAULT_ADJACENT_SIGMA = 3.0
-DEFAULT_FRAME_QC_N_SIGMA = 5.0
-DEFAULT_EVIDENCE_N_SIGMA = 5.0
-DEFAULT_HIGH_ERR_N_SIGMA = 5.0
+# One flag threshold for every LC outlier test (isolated spike, frame QC, pixel evidence, high error);
+# the former four config keys always held 5 sigma.
+OUTLIER_N_SIGMA = 5.0
+# Neighbour threshold of the adjacent-sign rule (an eclipse run has same-sign neighbours above it).
+ADJACENT_SIGMA = 3.0
 # Cadence window: half-width covers ~30 min of samples, clamped to [3, 12].
 _WINDOW_HALF_DAYS = 0.020833333333333332  # 30 minutes
 _WINDOW_K_MIN = 3
@@ -108,7 +108,7 @@ def mad_sigma(values: np.ndarray) -> float:
 def high_err_mask(
     err: np.ndarray,
     *,
-    n_sigma: float = DEFAULT_HIGH_ERR_N_SIGMA,
+    n_sigma: float = OUTLIER_N_SIGMA,
 ) -> tuple[np.ndarray, float, float]:
     """LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
 
@@ -204,8 +204,8 @@ def isolated_spike_mask(
     err: np.ndarray,
     bjd: np.ndarray,
     *,
-    n_sigma: float = DEFAULT_N_SIGMA,
-    adjacent_sigma: float = DEFAULT_ADJACENT_SIGMA,
+    n_sigma: float = OUTLIER_N_SIGMA,
+    adjacent_sigma: float = ADJACENT_SIGMA,
     half_window: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return (is_isolated_spike, residual_sigma, smooth).
@@ -326,9 +326,18 @@ def _stamp_metrics(img: np.ndarray, x0: float, y0: float, *, half: int = 11) -> 
     fwhm = 2.355 * 0.5 * (sig1 + sig2)
     elong = (sig1 / sig2) if sig2 > 0 else float("nan")
     # Annulus sky sigma on full image (trail crossing annulus).
-    yy2, xx2 = np.ogrid[0:h, 0:w]
-    rr = np.hypot(xx2 - float(x0), yy2 - float(y0))
-    ann = img[(rr >= 8.0) & (rr <= 15.0)]
+    # SPEED-2026-10 (S14): only the window that can hold r <= 15 px (same pixels, same row-major
+    # order as the full-image mask).
+    if math.isfinite(float(x0)) and math.isfinite(float(y0)):
+        wy1 = max(0, int(math.floor(float(y0) - 15.0)) - 1)
+        wy2 = min(h, int(math.ceil(float(y0) + 15.0)) + 2)
+        wx1 = max(0, int(math.floor(float(x0) - 15.0)) - 1)
+        wx2 = min(w, int(math.ceil(float(x0) + 15.0)) + 2)
+        yy2, xx2 = np.ogrid[wy1:wy2, wx1:wx2]
+        rr = np.hypot(xx2 - float(x0), yy2 - float(y0))
+        ann = img[wy1:wy2, wx1:wx2][(rr >= 8.0) & (rr <= 15.0)]
+    else:
+        ann = np.empty(0)
     asigma = float(np.std(ann)) if ann.size > 10 else float("nan")
     return {
         "centroid_offset_px": off,
@@ -357,7 +366,7 @@ def evaluate_image_evidence(
     y: float,
     *,
     peer_xy: Sequence[tuple[float, float]],
-    n_sigma: float = DEFAULT_EVIDENCE_N_SIGMA,
+    n_sigma: float = OUTLIER_N_SIGMA,
     psf_chi2_locus_resid_sigma: float | None = None,
     star_annulus_sky_sigma_night: Sequence[float] | None = None,
     star_annulus_sky_sigma_now: float | None = None,
@@ -411,7 +420,7 @@ def evaluate_image_evidence(
 def frame_qc_mask_from_night_table(
     frame_metrics: pd.DataFrame,
     *,
-    n_sigma: float = DEFAULT_FRAME_QC_N_SIGMA,
+    n_sigma: float = OUTLIER_N_SIGMA,
     metric_cols: Sequence[str] = ("fwhm", "elongation", "sky_level", "ensemble_zp"),
 ) -> dict[str, str]:
     """Robust MAD-sigma frame QC vs the night distribution.
@@ -578,14 +587,13 @@ def assign_lc_flags(
     source_files: Sequence[str] | None = None,
     frame_qc_reasons: Mapping[str, str] | None = None,
     evidence_for_index: Callable[[int], ImageEvidence | None] | None = None,
-    n_sigma: float = DEFAULT_N_SIGMA,
-    adjacent_sigma: float = DEFAULT_ADJACENT_SIGMA,
-    high_err_n_sigma: float = DEFAULT_HIGH_ERR_N_SIGMA,
+    n_sigma: float = OUTLIER_N_SIGMA,
+    adjacent_sigma: float = ADJACENT_SIGMA,
+    high_err_n_sigma: float = OUTLIER_N_SIGMA,
     err_photon: np.ndarray | None = None,
     err_sem_rel: np.ndarray | None = None,
     err_scint_rel: np.ndarray | None = None,
     err_sigma_sys_rel: np.ndarray | None = None,
-    enabled: bool = True,
 ) -> FlagResult:
     """Assign flag / flag_reason for one light curve (photometry unchanged).
 
@@ -630,50 +638,47 @@ def assign_lc_flags(
 
     # LC-FLAG-ERR-01: inflated photometric error (before spike so high_err
     # beats spike_unconfirmed; artifact may still overwrite below).
-    he_mask = np.zeros(n, dtype=bool)
-    if enabled:
-        he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma))
-        for i in range(n):
-            if not bool(he_mask[i]):
-                continue
-            if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
-                continue
-            dom = dominant_err_component(
-                i,
-                err_photon=err_photon,
-                err_sem_rel=err_sem_rel,
-                err_scint_rel=err_scint_rel,
-                err_sigma_sys_rel=err_sigma_sys_rel,
-            )
-            flags[i] = FLAG_HIGH_ERR
-            reasons[i] = f"high_err:{dom}"
-
-    if enabled:
-        spike, _resid, _smooth = isolated_spike_mask(
-            m, e, t, n_sigma=n_sigma, adjacent_sigma=adjacent_sigma
+    he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma))
+    for i in range(n):
+        if not bool(he_mask[i]):
+            continue
+        if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
+            continue
+        dom = dominant_err_component(
+            i,
+            err_photon=err_photon,
+            err_sem_rel=err_sem_rel,
+            err_scint_rel=err_scint_rel,
+            err_sigma_sys_rel=err_sigma_sys_rel,
         )
-        for i in range(n):
-            if not bool(spike[i]):
-                continue
-            if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
-                continue
-            ev: ImageEvidence | None = None
-            if evidence_for_index is not None:
-                try:
-                    ev = evidence_for_index(i)
-                except Exception as exc:  # noqa: BLE001
-                    LOGGER.debug("[LC-OUTLIER] evidence failed at i=%s: %s", i, exc)
-                    ev = None
-            if ev is not None and ev.fired:
-                # artifact beats high_err
-                flags[i] = FLAG_ARTIFACT
-                reasons[i] = "artifact:" + ",".join(ev.reasons[:6])
-            elif flags[i] == FLAG_HIGH_ERR:
-                # high_err beats spike_unconfirmed: keep high_err
-                continue
-            else:
-                flags[i] = FLAG_SPIKE_UNCONFIRMED
-                reasons[i] = "spike_unconfirmed:isolated_residual"
+        flags[i] = FLAG_HIGH_ERR
+        reasons[i] = f"high_err:{dom}"
+
+    spike, _resid, _smooth = isolated_spike_mask(
+        m, e, t, n_sigma=n_sigma, adjacent_sigma=adjacent_sigma
+    )
+    for i in range(n):
+        if not bool(spike[i]):
+            continue
+        if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
+            continue
+        ev: ImageEvidence | None = None
+        if evidence_for_index is not None:
+            try:
+                ev = evidence_for_index(i)
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("[LC-OUTLIER] evidence failed at i=%s: %s", i, exc)
+                ev = None
+        if ev is not None and ev.fired:
+            # artifact beats high_err
+            flags[i] = FLAG_ARTIFACT
+            reasons[i] = "artifact:" + ",".join(ev.reasons[:6])
+        elif flags[i] == FLAG_HIGH_ERR:
+            # high_err beats spike_unconfirmed: keep high_err
+            continue
+        else:
+            flags[i] = FLAG_SPIKE_UNCONFIRMED
+            reasons[i] = "spike_unconfirmed:isolated_residual"
 
     n_art = sum(1 for f in flags if f == FLAG_ARTIFACT)
     n_su = sum(1 for f in flags if f == FLAG_SPIKE_UNCONFIRMED)
@@ -692,14 +697,14 @@ def assign_lc_flags(
 
 
 class EvidenceCache:
-    """Lazy FITS / peer cache for per-target spike evidence during Phase 2A."""
+    """Lazy FITS / peer cache for per-target spike evidence during aperture photometry."""
 
     def __init__(
         self,
         *,
         frames_dir: Path | None,
         catalog_id: str,
-        n_sigma: float = DEFAULT_EVIDENCE_N_SIGMA,
+        n_sigma: float = OUTLIER_N_SIGMA,
         proc_cache: dict[str, pd.DataFrame] | None = None,
     ) -> None:
         self.frames_dir = Path(frames_dir) if frames_dir is not None else None
@@ -815,11 +820,8 @@ class EvidenceCache:
 
 __all__ = [
     "ALWAYS_SHOW_FLAGS",
-    "DEFAULT_ADJACENT_SIGMA",
-    "DEFAULT_EVIDENCE_N_SIGMA",
-    "DEFAULT_FRAME_QC_N_SIGMA",
-    "DEFAULT_HIGH_ERR_N_SIGMA",
-    "DEFAULT_N_SIGMA",
+    "ADJACENT_SIGMA",
+    "OUTLIER_N_SIGMA",
     "EvidenceCache",
     "EXPORT_EXCLUDE_FLAGS",
     "FLAG_ARTIFACT",

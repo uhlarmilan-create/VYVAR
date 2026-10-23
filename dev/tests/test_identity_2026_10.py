@@ -122,7 +122,7 @@ def test_brightest_star_wins_and_flux_consistency(tmp_path: Path) -> None:
     hdr["VY_SOLVR"] = "astrosolve"
     df, meta = detect_stars_and_match_catalog(
         img, hdr, gaia_db_path=db, vsx_df=pd.DataFrame(), dao_threshold_sigma=5.0, dao_fwhm_px=FWHM,
-        dao_fwhm_bypass_header=True, max_catalog_rows=10000,
+        dao_fwhm_bypass_header=True, max_catalog_rows=10000, photometric_gain=1.0,
     )
     x = pd.to_numeric(df["x"], errors="coerce")
     y = pd.to_numeric(df["y"], errors="coerce")
@@ -250,7 +250,6 @@ def test_pool_keeps_binaries_drops_per_frame_saturated(monkeypatch: pytest.Monke
     stats["2003"]["n_over"] = 4   # 10 % -> stays
     monkeypatch.setattr("photometry_comp.comp_frame_stats", lambda *_a, **_k: stats)
     cfg = AppConfig()
-    cfg.comp_pool_derived_admission = False
     pool = build_global_comp_pool(
         masterstars_df=_pool_df(), per_frame_csv_paths=[tmp_path / "proc_001.csv"], csv_cache={},
         variable_target_catalog_ids=frozenset(), safe_bbox=None, chip_fw=1000, chip_fh=1000,

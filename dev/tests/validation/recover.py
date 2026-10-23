@@ -293,7 +293,7 @@ def _run_tier_b(report: ValidationReport) -> None:
     report.add(
         "B2",
         "variable comparison star + CR spikes",
-        "Phase-1 comp selection (stability / RMS admission)",
+        "Comparison-star selection (stability / RMS admission)",
         "variable comp rejected at selection",
         expected="bad comp absent from comparison pool",
         recovered=f"in_pool={in_pool}",

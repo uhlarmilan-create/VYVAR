@@ -125,14 +125,14 @@ def main() -> int:
         nr._post_platesolve_hook(DRAFT_ID, draft_dir, cfg, pipeline)
 
         from photometry_core import run_full_photometry_pipeline  # noqa: E402
-        from ui_aperture_photometry import _find_phase2a_paths  # noqa: E402
+        from ui_aperture_photometry import _find_aperture_paths  # noqa: E402
         import chiandh_ct_target_presel as presel  # noqa: E402
 
         report["presel"] = presel.presel_draft(DRAFT_ID)
         proto = draft_dir / "ct_prototype.csv"
         if proto.is_file():
             proto.unlink()
-        setups = _find_phase2a_paths(cfg, DRAFT_ID) or {}
+        setups = _find_aperture_paths(cfg, DRAFT_ID) or {}
         report["setups"] = sorted(setups.keys())
         phot_results = {}
         for nm in sorted(setups.keys()):
@@ -150,7 +150,7 @@ def main() -> int:
                 db=db,
                 draft_id=DRAFT_ID,
             )
-            p2a = phot_results[nm].get("phase2a") or {}
+            p2a = phot_results[nm].get("aperture_photometry") or {}
             phot_results[nm] = {
                 "n_lightcurves": int(p2a.get("n_lightcurves") or 0),
                 "n_targets": int(p2a.get("n_targets") or 0),

@@ -1,4 +1,4 @@
-"""PFS-SEMANTICS-01 post-rebuild gating + SHA + B2. Run after Phase 2A."""
+"""PFS-SEMANTICS-01 post-rebuild gating + SHA + B2. Run after aperture photometry."""
 from __future__ import annotations
 
 import json
@@ -60,7 +60,7 @@ def main() -> int:
             continue
         lc_aperture.add(_ids(rest))
 
-    n_phase1 = int(len(at))
+    n_comp_selection = int(len(at))
     skip = at["skip_photometry"].astype(str).str.strip().str.lower().isin(["true", "1", "yes"])
     reason = at["skip_reason"].astype(str).str.strip() if "skip_reason" in at.columns else pd.Series([""] * len(at))
     n_noise = int(((reason == "zone_noise") & skip).sum())
@@ -116,7 +116,7 @@ def main() -> int:
 
     stop = bool(unexpected_skip or unexpected_measured)
     out = {
-        "n_phase1_active": n_phase1,
+        "n_comp_selection_active": n_comp_selection,
         "n_lc_aperture": len(lc_aperture),
         "n_skip_zone_noise": n_noise,
         "n_skip_below_target_depth": n_depth,

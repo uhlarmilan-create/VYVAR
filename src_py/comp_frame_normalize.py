@@ -1,4 +1,4 @@
-"""Shared per-frame flux normalization for comp RMS (Phase 1 + global pool).
+"""Shared per-frame flux normalization for comp RMS (comparison-star selection + global pool).
 
 Differential photometry comp scatter is measured on frame-to-frame relative flux,
 normalized by a stable reference per frame.  The reference must come from the

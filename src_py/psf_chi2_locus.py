@@ -226,23 +226,6 @@ def chi2_ok_from_locus(
     return float(resid_sigma) <= float(n_sigma)
 
 
-def resolve_n_sigma(cfg: Any | None = None) -> float:
-    if cfg is None:
-        try:
-            from config import AppConfig
-
-            cfg = AppConfig()
-        except Exception:  # noqa: BLE001
-            return DEFAULT_NSIGMA
-    try:
-        v = float(getattr(cfg, "psf_chi2_locus_nsigma", DEFAULT_NSIGMA))
-    except (TypeError, ValueError):
-        return DEFAULT_NSIGMA
-    if not math.isfinite(v) or v <= 0:
-        return DEFAULT_NSIGMA
-    return v
-
-
 def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
     """Pool locus members from all proc_*.csv under ``proc_dir``."""
     files = sorted(Path(proc_dir).glob("proc_*.csv"))
@@ -299,7 +282,7 @@ def reapply_night_locus_to_proc_dir(
     night_locus: Chi2Locus | None = None,
 ) -> dict[str, Any]:
     """Rewrite fit_ok using night k + per-frame intercept a_f."""
-    ns = float(n_sigma) if n_sigma is not None else resolve_n_sigma()
+    ns = float(n_sigma) if n_sigma is not None else DEFAULT_NSIGMA
     night = night_locus or fit_night_locus_from_proc_dir(proc_dir)
     summary: dict[str, Any] = {
         "n_sigma": ns,
@@ -448,7 +431,6 @@ __all__ = [
     "frame_intercept_with_night_k",
     "locus_residual_sigma",
     "chi2_ok_from_locus",
-    "resolve_n_sigma",
     "fit_night_locus_from_proc_dir",
     "reapply_night_locus_to_proc_dir",
     "finalize_night_locus_for_inv_psf_frame_01",

@@ -41,9 +41,13 @@ def read_vyvar_csv(path: Any, **kwargs: Any) -> pd.DataFrame:
 
 
 def normalize_gaia_source_id(val) -> str:
-    """Vrati desiatkovy retazec ID alebo ``\"\"``; zjednoti int, float, ``4.62e+17``, uvodzovky."""
+    """Return the decimal ID string or ``\"\"``; unifies int, float, ``4.62e+17``, quotes."""
     # Safe: normalize_gaia_source_id handles NaN/empty/scientific notation;
     #        non-numeric strings returned as-is - callers must validate.
+    # Fast path (CODE-REVIEW-2026-10): ids read as text are already in normal form (the
+    # general path below returns them unchanged); this is the case of nearly every call.
+    if type(val) is str and val.isascii() and val.isdigit():
+        return val
     if val is None:
         return ""
     if isinstance(val, dict):
@@ -125,7 +129,7 @@ def normalize_gaia_id_set(
 
 
 def masterstar_row_gaia_key(row: pd.Series) -> str:
-    """Kluc pre join s kuzelom: najprv ``name`` ak vyzera ako Gaia source_id (CSV casto pokazi ``catalog_id`` floatom)."""
+    """Key for the cone join: ``name`` first if it looks like a Gaia source_id (CSV often breaks ``catalog_id`` as float)."""
     name_k = normalize_gaia_source_id(row.get("name"))
     if name_k and re.fullmatch(r"\d{12,22}", name_k):
         return name_k
@@ -136,7 +140,7 @@ def masterstar_row_gaia_key(row: pd.Series) -> str:
 
 
 def _catalog_id_empty_to_blank(s: pd.Series) -> pd.Series:
-    """NaN / ``nan`` -> ``\"\"`` pre zapis do CSV (``na_rep=\"\"``)."""
+    """NaN / ``nan`` -> ``\"\"`` for writing to CSV (``na_rep=\"\"``)."""
     out = s.map(normalize_gaia_source_id).astype(object)
     return out.where(out.map(lambda x: bool(str(x).strip())), "")
 

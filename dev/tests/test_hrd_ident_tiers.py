@@ -20,7 +20,6 @@ from hrd_analysis import (
     _match_literature_confirmed,
     _stage2_labels,
     get_top_interesting_stars,
-    hrd_dsc_confirm_prob_from_cfg,
 )
 from hrd_enrich import CACHE_VERSION, _load_cache, enrich_candidates
 
@@ -205,7 +204,6 @@ def test_get_top_interesting_offline_ident_candidate() -> None:
     )
     cfg = AppConfig()
     cfg.hrd_online_enrich_enabled = False
-    cfg.hrd_simbad_enrich_enabled = False
     top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
     assert top.iloc[0]["ident"] == "candidate"
     assert "White dwarf" in str(top.iloc[0]["category"])
@@ -248,9 +246,3 @@ def test_rs_per_style_finalize_rsg() -> None:
     assert logg_src == "simbad_lumclass"
 
 
-def test_hrd_dsc_confirm_prob_clamp() -> None:
-    cfg = AppConfig()
-    cfg.hrd_dsc_confirm_prob = 0.1
-    assert hrd_dsc_confirm_prob_from_cfg(cfg) == 0.5
-    cfg.hrd_dsc_confirm_prob = 5.0
-    assert hrd_dsc_confirm_prob_from_cfg(cfg) == 1.0

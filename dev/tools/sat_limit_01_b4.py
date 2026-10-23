@@ -134,7 +134,7 @@ def check_mad(ens: list[str], check_id: str, cat_g: dict[str, float], rms: dict[
         ens_ids=list(ens),
         mag_by=mag_by,
         cat_g=cat_g,
-        rms_phase1=rms,
+        rms_comp_selection=rms,
         self_exclude=False,
         focus_id=check_id,
     )
@@ -172,7 +172,7 @@ def reselect_bo(ms: pd.DataFrame, old_ens: list[str]) -> dict:
 
     Remaining members stay in their previous rank order. n_old=5, drop C2 -> 4,
     which is still >= n_comp_min=3, so no fill. A full RMS re-rank of the night
-    is a later Phase 1 rebuild; this is the SAT-LIMIT membership correction.
+    is a later comparison-star selection rebuild; this is the SAT-LIMIT membership correction.
     """
     ms = ms.copy()
     ms["catalog_id"] = _cid(ms["catalog_id"])

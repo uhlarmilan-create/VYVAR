@@ -88,12 +88,12 @@ def howell_variance_adu2(
     gain: float = 1.0,
     read_noise: float = 10.0,
 ) -> float:
-    """Total variance [ADU^2] - mirror of ``photometry_phase2a._howell_variance_adu2``.
+    """Total variance [ADU^2] - mirror of ``aperture_photometry._howell_variance_adu2``.
 
-    Cite: ``src_py/photometry_phase2a.py`` lines ~378-401 (Howell 1989 eq. 2 form).
+    Cite: ``src_py/aperture_photometry.py`` lines ~378-401 (Howell 1989 eq. 2 form).
     Terms: source Poisson ``flux/g``, sky Poisson ``sky_pp/g * area``,
     read noise ``(RN/g)^2 * area``. Kept local to avoid circular import with
-    photometry_phase2a.
+    aperture_photometry.
     """
     if not math.isfinite(flux) or flux <= 0:
         return float("nan")
@@ -126,6 +126,33 @@ def howell_snr(
     return float(f / math.sqrt(var))
 
 
+@dataclass
+class FrameImages:
+    """One frame prepared once for every aperture call (SPEED-2026-10 S2).
+
+    ``filled``: the image with NaN replaced by its NaN-median (the image itself when all pixels are
+    finite - ``nan_to_num`` would return an equal copy); ``sky``: NaN off the aligned footprint;
+    ``off``: pixels without data of the aligned frame (None when the footprint is not checked).
+    """
+
+    img: np.ndarray
+    filled: np.ndarray
+    sky: np.ndarray
+    off: np.ndarray | None
+
+
+def prepare_frame_images(image: np.ndarray, covered: np.ndarray | None = None) -> FrameImages:
+    img = np.asarray(image, dtype=float)
+    if bool(np.isfinite(img).all()):
+        filled = img
+    else:
+        filled = np.nan_to_num(img, nan=float(np.nanmedian(img)))
+    if covered is None:
+        return FrameImages(img=img, filled=filled, sky=img, off=None)
+    off = ~np.asarray(covered, dtype=bool)
+    return FrameImages(img=img, filled=filled, sky=np.where(off, np.nan, img), off=off)
+
+
 def measure_flux_on_f_grid(
     image: np.ndarray,
     xy: np.ndarray,
@@ -135,6 +162,7 @@ def measure_flux_on_f_grid(
     annulus_inner_fwhm: float,
     annulus_outer_fwhm: float,
     covered: np.ndarray | None = None,
+    prepared: FrameImages | None = None,
 ) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray], np.ndarray]:
     """Sky-subtracted exact aperture fluxes for every k in ``f_grid`` (r = k x FWHM).
 
@@ -159,7 +187,7 @@ def measure_flux_on_f_grid(
     edge = np.zeros(n, dtype=bool)
     if n == 0 or not ks:
         return out_f, out_s, edge
-    img = np.asarray(image, dtype=float)
+    fr = prepared if prepared is not None else prepare_frame_images(image, covered)
     _r, r_in, r_out = resolve_aperture_geometry(
         f=max(ks), fwhm_px=float(fwhm_px),
         annulus_inner_fwhm=float(annulus_inner_fwhm), annulus_outer_fwhm=float(annulus_outer_fwhm),
@@ -168,21 +196,18 @@ def measure_flux_on_f_grid(
     if not ok.any():
         return out_f, out_s, edge
     p = pos[ok]
-    sky_img = img
-    if covered is not None:
+    if fr.off is not None:
         from frame_footprint import off_footprint  # noqa: PLC0415
 
-        off = ~np.asarray(covered, dtype=bool)
-        sky_img = np.where(off, np.nan, img)
-        edge[ok] = off_footprint(off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
+        edge[ok] = off_footprint(fr.off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
     sky = np.full(int(ok.sum()), np.nan)
     for i, m in enumerate(CircularAnnulus(p, r_in=r_in, r_out=r_out).to_mask(method="center")):
-        v = np.asarray(m.get_values(sky_img), dtype=float)
+        v = np.asarray(m.get_values(fr.sky), dtype=float)
         v = v[np.isfinite(v)]
         if v.size:
             sky[i] = float(np.median(v))
     aps = [CircularAperture(p, r=max(0.5, k * float(fwhm_px))) for k in ks]
-    tbl = _aphot(np.nan_to_num(img, nan=float(np.nanmedian(img))), aps, method="exact")
+    tbl = _aphot(fr.filled, aps, method="exact")
     for j, (k, ap) in enumerate(zip(ks, aps)):
         sums = np.asarray(tbl[f"aperture_sum_{j}"], dtype=float)
         out_f[k][ok] = sums - sky * float(ap.area)
@@ -289,6 +314,100 @@ def _fwhm_from_fits_header(hdr: Any, *, night_fallback: float) -> tuple[float, b
     return 5.0, True
 
 
+_GRID_CTX: dict[str, Any] = {}
+
+
+def _grid_worker_init(ctx: dict[str, Any]) -> None:
+    _GRID_CTX.clear()
+    _GRID_CTX.update(ctx)
+
+
+def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
+    """Measure one aligned frame on the k grid (SPEED-2026-10 S2: frames are independent).
+
+    Returns ``(stem, fwhm_frame, used_night_fallback, has_transform, per_cid, per_sky, edge_ids)``
+    or None when the frame has no usable proc CSV / FITS.
+    """
+    from astropy.io import fits  # noqa: PLC0415
+
+    from frame_footprint import aligned_footprint, has_alignment_transform  # noqa: PLC0415
+
+    c = _GRID_CTX
+    stem = fp.stem
+    proc = Path(c["frames_dir"]) / f"proc_{stem}.csv"
+    if not proc.is_file():
+        return None
+    try:
+        df = pd.read_csv(
+            proc,
+            usecols=lambda col: col in {"catalog_id", "x", "y"},
+            low_memory=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[APERTURE-DYNAMIC] proc read fail %s: %s", proc.name, exc)
+        return None
+    if "catalog_id" not in df.columns:
+        return None
+    df = df[df["catalog_id"].astype(str).isin(c["want"])]
+    if df.empty:
+        return None
+    ids = df["catalog_id"].astype(str).tolist()
+    xy = np.column_stack(
+        [
+            pd.to_numeric(df["x"], errors="coerce").to_numpy(dtype=float),
+            pd.to_numeric(df["y"], errors="coerce").to_numpy(dtype=float),
+        ]
+    )
+    xy_by_cid = c["xy_by_cid"]
+    if xy_by_cid:
+        for _j, _c in enumerate(ids):
+            _p = xy_by_cid.get(_c)
+            if _p is not None and all(math.isfinite(float(v)) for v in _p):
+                xy[_j] = (float(_p[0]), float(_p[1]))
+    try:
+        with fits.open(fp, memmap=True) as hdul:
+            img = np.asarray(hdul[0].data, dtype=float)
+            fwhm_frame, used_fb = _fwhm_from_fits_header(hdul[0].header, night_fallback=float(c["fwhm_night_px"]))
+            hdr_fp = hdul[0].header.copy()
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.debug("[APERTURE-DYNAMIC] FITS open fail %s: %s", fp.name, exc)
+        return None
+    f_grid = c["f_grid"]
+    scale_by_cid = c["scale_by_cid"]
+    _sc = np.round(np.array([float(scale_by_cid.get(cc, 1.0)) for cc in ids]), 4)
+    fluxes = {float(f): np.full(len(ids), np.nan) for f in f_grid}
+    skies = {float(f): np.full(len(ids), np.nan) for f in f_grid}
+    edges = np.zeros(len(ids), dtype=bool)
+    # AP-FOOTPRINT-2026-10: only pixels the aligned frame covers (no transform: not resampled).
+    has_tr = has_alignment_transform(hdr_fp)
+    covered = aligned_footprint(hdr_fp, img.shape) if has_tr else None
+    prepared = prepare_frame_images(img, covered)
+    for _s in sorted(set(np.round(_sc, 4))):
+        _m = _sc == _s
+        _fl, _sk, _ed = measure_flux_on_f_grid(
+            img,
+            xy[_m],
+            f_grid=f_grid,
+            fwhm_px=float(fwhm_frame) * float(_s),
+            annulus_inner_fwhm=float(c["annulus_inner_fwhm"]),
+            annulus_outer_fwhm=float(c["annulus_outer_fwhm"]),
+            prepared=prepared,
+        )
+        edges[_m] = _ed
+        for f in f_grid:
+            fluxes[float(f)][_m] = _fl[float(f)]
+            skies[float(f)][_m] = _sk[float(f)]
+    per_cid: dict[str, dict[float, float]] = {cid: {} for cid in ids}
+    per_sky: dict[str, dict[float, float]] = {cid: {} for cid in ids}
+    for f, arr in fluxes.items():
+        sky_l = skies[f].tolist()
+        for cid, v, s_ in zip(ids, arr.tolist(), sky_l, strict=True):
+            per_cid[cid][float(f)] = v
+            per_sky[cid][float(f)] = s_
+    edge_ids = {cid for cid, e in zip(ids, edges, strict=False) if bool(e)}
+    return stem, float(fwhm_frame), bool(used_fb), bool(has_tr), per_cid, per_sky, edge_ids
+
+
 def measure_night_grid(
     *,
     frames_dir: Path,
@@ -300,15 +419,17 @@ def measure_night_grid(
     max_frames: int | None = None,
     xy_by_cid: Mapping[str, tuple[float, float]] | None = None,
     scale_by_cid: Mapping[str, float] | None = None,
+    workers: int = 1,
 ) -> ApertureGridNight:
     """Measure targets, comps and check-star candidates on the k grid; r = k x FWHM_frame.
 
     ``xy_by_cid``: sub-pixel MASTERSTAR positions (the frames are registered to the
     MASTERSTAR grid). When given they replace the per-frame CSV positions, which are
     snapped to integer pixels.
-    """
-    from astropy.io import fits  # noqa: PLC0415
 
+    ``workers`` > 1: frames are measured in a process pool (spawn); results are merged in frame
+    order, so the grid is identical to the serial one.
+    """
     want = {str(c) for c in catalog_ids if str(c).strip()}
     night = ApertureGridNight(
         f_grid=[float(f) for f in f_grid],
@@ -322,49 +443,37 @@ def measure_night_grid(
     fits_files = sorted(Path(frames_dir).glob("*.fits"))
     if max_frames is not None:
         fits_files = fits_files[: int(max_frames)]
-    for fp in fits_files:
-        stem = fp.stem
-        if stem.upper() == "MASTERSTAR":
+    fits_files = [fp for fp in fits_files if fp.stem.upper() != "MASTERSTAR"]
+    ctx = {
+        "frames_dir": str(frames_dir),
+        "want": want,
+        "f_grid": night.f_grid,
+        "fwhm_night_px": float(fwhm_night_px),
+        "annulus_inner_fwhm": float(annulus_inner_fwhm),
+        "annulus_outer_fwhm": float(annulus_outer_fwhm),
+        "xy_by_cid": {str(k): (float(v[0]), float(v[1])) for k, v in (xy_by_cid or {}).items()},
+        "scale_by_cid": night.scale_by_cid,
+    }
+    nw = max(1, min(int(workers or 1), len(fits_files)))
+    if nw > 1:
+        import multiprocessing  # noqa: PLC0415
+        from concurrent.futures import ProcessPoolExecutor  # noqa: PLC0415
+
+        with ProcessPoolExecutor(
+            max_workers=nw,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_grid_worker_init,
+            initargs=(ctx,),
+        ) as ex:
+            results = list(ex.map(_grid_measure_frame, fits_files, chunksize=max(1, len(fits_files) // (4 * nw))))
+    else:
+        _grid_worker_init(ctx)
+        results = [_grid_measure_frame(fp) for fp in fits_files]
+        _GRID_CTX.clear()
+    for res in results:
+        if res is None:
             continue
-        proc = Path(frames_dir) / f"proc_{stem}.csv"
-        if not proc.is_file():
-            continue
-        try:
-            df = pd.read_csv(
-                proc,
-                usecols=lambda c: c in {"catalog_id", "x", "y"},
-                low_memory=False,
-            )
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[APERTURE-DYNAMIC] proc read fail %s: %s", proc.name, exc)
-            continue
-        if "catalog_id" not in df.columns:
-            continue
-        df = df[df["catalog_id"].astype(str).isin(want)].copy()
-        if df.empty:
-            continue
-        ids = df["catalog_id"].astype(str).tolist()
-        xy = np.column_stack(
-            [
-                pd.to_numeric(df["x"], errors="coerce").to_numpy(dtype=float),
-                pd.to_numeric(df["y"], errors="coerce").to_numpy(dtype=float),
-            ]
-        )
-        if xy_by_cid:
-            for _j, _c in enumerate(ids):
-                _p = xy_by_cid.get(_c)
-                if _p is not None and all(math.isfinite(float(v)) for v in _p):
-                    xy[_j] = (float(_p[0]), float(_p[1]))
-        try:
-            with fits.open(fp, memmap=True) as hdul:
-                img = np.asarray(hdul[0].data, dtype=float)
-                fwhm_frame, used_fb = _fwhm_from_fits_header(
-                    hdul[0].header, night_fallback=float(fwhm_night_px)
-                )
-                hdr_fp = hdul[0].header.copy()
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("[APERTURE-DYNAMIC] FITS open fail %s: %s", fp.name, exc)
-            continue
+        stem, fwhm_frame, used_fb, has_tr, per_cid, per_sky, edge_ids = res
         if used_fb:
             night.n_fwhm_fallback_night += 1
             LOGGER.info(
@@ -373,55 +482,22 @@ def measure_night_grid(
                 float(fwhm_frame),
             )
         night.fwhm_by_frame[stem] = float(fwhm_frame)
-        _sc = np.round(np.array([float(night.scale_by_cid.get(c, 1.0)) for c in ids]), 4)
-        fluxes = {float(f): np.full(len(ids), np.nan) for f in night.f_grid}
-        skies = {float(f): np.full(len(ids), np.nan) for f in night.f_grid}
-        edges = np.zeros(len(ids), dtype=bool)
-        # AP-FOOTPRINT-2026-10: only pixels the aligned frame covers (no transform: not resampled).
-        from frame_footprint import aligned_footprint, has_alignment_transform  # noqa: PLC0415
-
-        if has_alignment_transform(hdr_fp):
-            covered = aligned_footprint(hdr_fp, img.shape)
-        else:
-            covered = None
+        if not has_tr:
             night.n_frames_no_transform += 1
             LOGGER.warning("[AP-FOOTPRINT] frame %s: no VY_AM transform - aligned footprint not checked", stem)
-        for _s in sorted(set(np.round(_sc, 4))):
-            _m = _sc == _s
-            _fl, _sk, _ed = measure_flux_on_f_grid(
-                img,
-                xy[_m],
-                f_grid=night.f_grid,
-                fwhm_px=float(fwhm_frame) * float(_s),
-                annulus_inner_fwhm=float(annulus_inner_fwhm),
-                annulus_outer_fwhm=float(annulus_outer_fwhm),
-                covered=covered,
-            )
-            edges[_m] = _ed
-            for f in night.f_grid:
-                fluxes[float(f)][_m] = _fl[float(f)]
-                skies[float(f)][_m] = _sk[float(f)]
-        per_cid: dict[str, dict[float, float]] = {cid: {} for cid in ids}
-        per_sky: dict[str, dict[float, float]] = {cid: {} for cid in ids}
-        for f, arr in fluxes.items():
-            sky_arr = skies.get(f, np.full(len(ids), np.nan))
-            for i, cid in enumerate(ids):
-                v = float(arr[i]) if i < len(arr) else float("nan")
-                per_cid[cid][float(f)] = v
-                s = float(sky_arr[i]) if i < len(sky_arr) else float("nan")
-                per_sky[cid][float(f)] = s
         night.frames[stem] = per_cid
         night.sky_pp[stem] = per_sky
-        night.edge_by_frame[stem] = {cid for cid, e in zip(ids, edges, strict=False) if bool(e)}
+        night.edge_by_frame[stem] = edge_ids
         night.n_frames_measured += 1
     night.elapsed_s = float(time.perf_counter() - t0)
     LOGGER.info(
         "[APERTURE-DYNAMIC] grid measured: n_frames=%d n_stars=%d n_f=%d "
-        "fwhm_fallback=%d elapsed=%.1fs",
+        "fwhm_fallback=%d workers=%d elapsed=%.1fs",
         night.n_frames_measured,
         night.n_stars,
         len(night.f_grid),
         night.n_fwhm_fallback_night,
+        nw,
         night.elapsed_s,
     )
     return night
@@ -616,11 +692,15 @@ def apply_grid_fluxes_to_frames(
     k = float(f_star)
     g = float(gain) if gain is not None and math.isfinite(float(gain)) and float(gain) > 0 else None
     rn = float(read_noise) if read_noise is not None and math.isfinite(float(read_noise)) else 0.0
-    for i, row in out.iterrows():
-        cid = str(row.get("catalog_id", ""))
-        if cid not in want:
-            continue
-        stem = frame_stem_from_source(str(row.get("source_file", "")))
+    # SPEED-2026-10: visit only the rows of the wanted stars (column lists, same order as iterrows).
+    _n = len(out)
+    _cid_l = [str(v) for v in out["catalog_id"].tolist()] if "catalog_id" in out.columns else [""] * _n
+    _src_l = [str(v) for v in out["source_file"].tolist()]
+    _labels = out.index.tolist()
+    for _p in [j for j, c in enumerate(_cid_l) if c in want]:
+        i = _labels[_p]
+        cid = _cid_l[_p]
+        stem = frame_stem_from_source(_src_l[_p])
         ent = night.frames.get(stem, {}).get(cid) or {}
         flux = ent.get(k)
         if flux is None:
@@ -653,6 +733,24 @@ def apply_grid_fluxes_to_frames(
                 if var > 0:
                     out.at[i, "err"] = float(math.sqrt(var) / float(flux))
     return out
+
+
+def load_photometric_gain(photometry_dir: Path | str) -> tuple[float, float]:
+    """(gain e-/ADU container, read noise e-) the run's aperture photometry used (GAIN-ONE-2026-10; written to
+    aperture_per_target.json); NaN when the file or a value is missing."""
+    try:
+        d = json.loads((Path(photometry_dir) / "aperture_per_target.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return float("nan"), float("nan")
+
+    def _f(v: Any) -> float:
+        try:
+            x = float(v)
+        except (TypeError, ValueError):
+            return float("nan")
+        return x if math.isfinite(x) else float("nan")
+
+    return _f(d.get("gain")), _f(d.get("read_noise"))
 
 
 def write_per_target_choices(

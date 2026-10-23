@@ -34,7 +34,7 @@ def _pick_gaia_table(con: sqlite3.Connection) -> str:
     for cand in ("gaia_dr3", "gaia_source", "gaia"):
         if cand in names:
             return cand
-    raise RuntimeError(f"Gaia DB: neznama tabulka (najdene: {sorted(names)[:20]})")
+    raise RuntimeError(f"Gaia DB: unknown table (found:{sorted(names)[:20]})")
 
 
 def _sep_arcsec_small_angle(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
@@ -169,7 +169,7 @@ def repair_csv_catalog_ids_from_gaia_db(
                 over_max_sep += 1
                 warnings += 1
                 log(
-                    f"REPAIR WARNING: {old_raw} -> {new_id} ({vsx_name}, sep={sep:.2f}) presahuje max_sep_arcsec={max_sep_arcsec:.1f} -> NEOPRAVUJEM"
+                    f"REPAIR WARNING: {old_raw} -> {new_id} ({vsx_name}, sep={sep:.2f}) exceeds max_sep_arcsec={max_sep_arcsec:.1f} -> NOT REPAIRING"
                 )
                 continue
 
@@ -220,7 +220,7 @@ def repair_catalog_ids_from_gaia_db(
     max_sep_arcsec: float = 10.0,
     log_fn: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
-    """Backward-compatible wrapper (historicky pre variable_targets.csv)."""
+    """Backward-compatible wrapper (historically for variable_targets.csv)."""
     return repair_csv_catalog_ids_from_gaia_db(
         csv_path=Path(variable_targets_csv),
         gaia_db_path=Path(gaia_db_path),

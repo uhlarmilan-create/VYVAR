@@ -1,5 +1,5 @@
 # -*- coding: ascii -*-
-"""OUTPUT-REVIEW-2026-10 step 5: one comparison table with Phase-1 and used roles."""
+"""OUTPUT-REVIEW-2026-10 step 5: one comparison table with comparison-star selection and used roles."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from comp_table import (
     COMP_TABLE_COLUMNS,
     admitted,
     load_comp_table,
-    phase1_table,
+    comp_selection_table,
     reserve,
     used,
     with_used_sets,
@@ -30,7 +30,7 @@ def test_table_roles_order_and_columns(tmp_path: Path) -> None:
     adm = pd.concat([_rows("200", ["21", "22", "23"]), _rows("100", ["11", "12"])], ignore_index=True)
     res = pd.concat([_rows("200", ["25", "24"], reserve_rank=[1, 0]), _rows("100", ["13"], reserve_rank=[0])],
                     ignore_index=True)
-    p = write_comp_table(phase1_table(adm, res), tmp_path / "comparison_stars_per_target.csv")
+    p = write_comp_table(comp_selection_table(adm, res), tmp_path / "comparison_stars_per_target.csv")
     assert list(pd.read_csv(p, nrows=0).columns) == list(COMP_TABLE_COLUMNS)  # no MASTERSTAR copy, no name
     t = load_comp_table(tmp_path)
     a = admitted(t)
@@ -44,7 +44,7 @@ def test_table_roles_order_and_columns(tmp_path: Path) -> None:
     u = used(load_comp_table(p))
     assert list(u["catalog_id"]) == ["22", "24", "21", "11", "12"]
     assert list(u["used_role"]) == ["primary", "replacement", "kept_suspect", "primary", "primary"]
-    assert len(admitted(load_comp_table(p))) == 5  # a re-run starts from the Phase-1 rows
+    assert len(admitted(load_comp_table(p))) == 5  # a re-run starts from the comparison-star selection rows
 
 
 def test_legacy_three_files_give_the_same_view(tmp_path: Path) -> None:

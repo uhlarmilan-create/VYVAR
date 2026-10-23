@@ -26,9 +26,9 @@ STAGE_ORDER = (
     "import",
     "calibration",
     "astrometry-MASTERSTAR",
-    "phase0+1 comp selection",
+    "target_selection+1 comp selection",
     "photometry-shared",
-    "phase2a photometry",
+    "aperture_photometry photometry",
     "ePSF hooks",
     "exports-reports",
     "UI-only",
@@ -39,8 +39,8 @@ SCIENCE_STAGES = (
     "import",
     "calibration",
     "astrometry-MASTERSTAR",
-    "phase0+1 comp selection",
-    "phase2a photometry",
+    "target_selection+1 comp selection",
+    "aperture_photometry photometry",
     "ePSF hooks",
     "exports-reports",
 )
@@ -74,15 +74,15 @@ SEED_STAGES: dict[str, tuple[str, ...]] = {
     "preprocess_calibrated_to_processed": ("astrometry-MASTERSTAR",),
     "quick_preprocess_last_import": ("astrometry-MASTERSTAR",),
     "SkySurfaceOrderConflictError": ("astrometry-MASTERSTAR",),
-    # phase 0+1
-    "run_phase0_and_phase1": ("phase0+1 comp selection",),
-    "select_active_targets": ("phase0+1 comp selection",),
-    "select_comparison_stars_per_target": ("phase0+1 comp selection",),
-    "ensure_full_variable_targets_if_presel_stub": ("phase0+1 comp selection",),
-    # phase 2a
-    "run_phase2a": ("phase2a photometry",),
+    # target and comparison-star selection
+    "run_target_and_comp_selection": ("target_selection+1 comp selection",),
+    "select_active_targets": ("target_selection+1 comp selection",),
+    "select_comparison_stars_per_target": ("target_selection+1 comp selection",),
+    "ensure_full_variable_targets_if_presel_stub": ("target_selection+1 comp selection",),
+    # aperture photometry
+    "run_aperture_photometry": ("aperture_photometry photometry",),
     "run_full_photometry_pipeline": ("photometry-shared",),
-    "_select_comps_by_rms_then_color": ("phase0+1 comp selection",),
+    "_select_comps_by_rms_then_color": ("target_selection+1 comp selection",),
     "calibrate_lights_to_calibrated": ("calibration",),
     "_get_plate_scale_from_cfg": ("photometry-shared",),
     "merge_photometry_pipeline_meta": ("photometry-shared",),
@@ -103,7 +103,7 @@ SEED_STAGES: dict[str, tuple[str, ...]] = {
 NIGHT_FN_STAGE = {
     "_night_run_preprocess": "astrometry-MASTERSTAR",
     "_night_run_platesolve": "astrometry-MASTERSTAR",
-    "run_night_photometry": "phase2a photometry",
+    "run_night_photometry": "aperture_photometry photometry",
 }
 
 UI_NAME_RE = re.compile(r"^ui_.*\.py$")
@@ -303,7 +303,7 @@ def night_stage_for_lineno(lineno: int, fn: str | None) -> str | None:
             return "calibration"
         if lineno < 1841:
             return "astrometry-MASTERSTAR"
-        return "phase2a photometry"
+        return "aperture_photometry photometry"
     return None
 
 
@@ -496,9 +496,9 @@ def propose_modules(
         "import": "pipeline_import.py",
         "calibration": "pipeline_calibrate.py",
         "astrometry-MASTERSTAR": "pipeline_astrometry.py",
-        "phase0+1 comp selection": "photometry_comp.py",
+        "target_selection+1 comp selection": "photometry_comp.py",
         "photometry-shared": "photometry_shared.py",
-        "phase2a photometry": "photometry_phase2a.py",
+        "aperture_photometry photometry": "aperture_photometry.py",
         "ePSF hooks": "pipeline_epsf_hooks.py",
         "exports-reports": "photometry_exports.py",
         "UI-only": "pipeline_ui_helpers.py",
@@ -664,17 +664,17 @@ def write_module_md(path: Path, modules: list[dict[str, Any]], extra: dict[str, 
         for w in m.get("who_imports", [])[:30]:
             lines.append(f"- `{w}`")
         lines.append("")
-    p2 = extra.get("phase2a_vs_comp") or {}
+    p2 = extra.get("aperture_vs_comp") or {}
     lines += [
-        "## photometry_core phase2a vs comp-selection (do not auto-merge)",
+        "## photometry_core aperture_photometry vs comp-selection (do not auto-merge)",
         "",
-        f"- phase0+1 symbols: {p2.get('n_comp')}, lines {p2.get('lines_comp')}",
-        f"- phase2a symbols: {p2.get('n_p2a')}, lines {p2.get('lines_p2a')}",
+        f"- target/comp-selection symbols: {p2.get('n_comp')}, lines {p2.get('lines_comp')}",
+        f"- aperture_photometry symbols: {p2.get('n_p2a')}, lines {p2.get('lines_p2a')}",
         f"- shared (both stages): {p2.get('n_shared')}, lines {p2.get('lines_shared')}",
-        f"- directed call weight comp->phase2a: {p2.get('comp_to_p2a')}",
-        f"- directed call weight phase2a->comp: {p2.get('p2a_to_comp')}",
+        f"- directed call weight comp->aperture_photometry: {p2.get('comp_to_p2a')}",
+        f"- directed call weight aperture_photometry->comp: {p2.get('p2a_to_comp')}",
         f"- directed call weight comp->shared: {p2.get('comp_to_shared')} / shared->comp: {p2.get('shared_to_comp')}",
-        f"- directed call weight phase2a->shared: {p2.get('p2a_to_shared')} / shared->phase2a: {p2.get('shared_to_p2a')}",
+        f"- directed call weight aperture_photometry->shared: {p2.get('p2a_to_shared')} / shared->aperture_photometry: {p2.get('shared_to_p2a')}",
         "",
         "These two stay separate proposed modules even if they call each other.",
         "Shared names go to `photometry_shared.py` in the table if that module exists.",
@@ -818,7 +818,7 @@ def main() -> int:
                     stages[_qid(name_to_file[a.name], a.name)].add(st)
 
     # Independent same-file BFS per science stage so hubs do not paint the other file
-    # or collapse phase2a into phase0+1.
+    # or collapse aperture photometry into target and comparison-star selection.
     same_file_edges: dict[str, list[str]] = defaultdict(list)
     for src, dests in directed.items():
         src_file = src.split(":", 1)[0]
@@ -869,8 +869,8 @@ def main() -> int:
     FILE_STAGE_PREF = {
         "pipeline.py": ("import", "calibration", "astrometry-MASTERSTAR", "ePSF hooks"),
         "photometry_core.py": (
-            "phase0+1 comp selection",
-            "phase2a photometry",
+            "target_selection+1 comp selection",
+            "aperture_photometry photometry",
             "exports-reports",
             "ePSF hooks",
             "calibration",
@@ -880,9 +880,9 @@ def main() -> int:
     for qid, rec in symbols.items():
         sci = [s for s in SCIENCE_STAGES if qid in reach[s]]
         extra = {s for s in stages[qid] if s not in SCIENCE_STAGES}
-        if "phase0+1 comp selection" in sci and "phase2a photometry" in sci:
+        if "target_selection+1 comp selection" in sci and "aperture_photometry photometry" in sci:
             primary = "photometry-shared"
-            st_list = ["photometry-shared"] + [s for s in sci if s not in ("phase0+1 comp selection", "phase2a photometry")]
+            st_list = ["photometry-shared"] + [s for s in sci if s not in ("target_selection+1 comp selection", "aperture_photometry photometry")]
         elif len(sci) == 1:
             primary = sci[0]
             st_list = list(sci)
@@ -906,7 +906,7 @@ def main() -> int:
                 )
                 st_list = sorted(extra, key=lambda s: STAGE_ORDER.index(s) if s in STAGE_ORDER else 99)
             elif any("comp_selection" in f or "pinned_ensembles" in f for f in src_py_files):
-                primary, st_list = "phase0+1 comp selection", ["phase0+1 comp selection"]
+                primary, st_list = "target_selection+1 comp selection", ["target_selection+1 comp selection"]
             elif rec["file"] == "photometry_core.py" and any(f.endswith("pipeline.py") for f in src_py_files):
                 primary, st_list = "photometry-shared", ["photometry-shared"]
             elif any(f.endswith("night_run.py") for f in src_py_files):
@@ -1028,9 +1028,9 @@ def main() -> int:
     cross_edges.sort(key=lambda e: (-e["weight"], e["a"], e["b"]))
     top20 = cross_edges[:20]
 
-    # phase2a vs comp
-    comp_q = {q for q, r in symbols.items() if r["primary_stage"] == "phase0+1 comp selection"}
-    p2a_q = {q for q, r in symbols.items() if r["primary_stage"] == "phase2a photometry"}
+    # aperture_photometry vs comp
+    comp_q = {q for q, r in symbols.items() if r["primary_stage"] == "target_selection+1 comp selection"}
+    p2a_q = {q for q, r in symbols.items() if r["primary_stage"] == "aperture_photometry photometry"}
     shared_q = {q for q, r in symbols.items() if r["primary_stage"] == "photometry-shared"}
     both_names = {symbols[q]["name"] for q in shared_q}
     e_cp = edge_counts_between(comp_q, p2a_q, directed)
@@ -1039,8 +1039,8 @@ def main() -> int:
 
     modules = propose_modules(symbols, {r["name"]: q for q, r in symbols.items()}, labels, undirected)
 
-    # split shared photometry into photometry_shared if they landed in phase2a or comp
-    # (already stage-primary so shared has primary of earlier stage = phase0+1). Flag them.
+    # split shared photometry into photometry_shared if they landed in aperture_photometry or comp
+    # (already stage-primary so shared has primary of earlier stage = target and comparison-star selection). Flag them.
     for m in modules:
         m["imports_needed"] = []
         m["who_imports"] = []
@@ -1179,13 +1179,13 @@ def main() -> int:
     (out_dir / "clusters.json").write_text(json.dumps(clusters_out, indent=2) + "\n", encoding="utf-8")
     (out_dir / "risk_register.json").write_text(json.dumps(risk, indent=2) + "\n", encoding="utf-8")
     (out_dir / "modules_raw.json").write_text(
-        json.dumps({"modules": modules, "phase2a_vs_comp": p2_extra, "summary": summary}, indent=2) + "\n",
+        json.dumps({"modules": modules, "aperture_vs_comp": p2_extra, "summary": summary}, indent=2) + "\n",
         encoding="utf-8",
     )
     write_module_md(
         out_dir / "module_map_proposal.md",
         modules,
-        {"phase2a_vs_comp": p2_extra, "base_sha": "5b1068d"},
+        {"aperture_vs_comp": p2_extra, "base_sha": "5b1068d"},
     )
     print(json.dumps({"out": str(out_dir), "summary": summary, "n_clusters": len(cluster_rows)}, indent=2))
     return 0

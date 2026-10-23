@@ -1,4 +1,4 @@
-"""IMPL-04: Phase 2A for acceptance targets only (BO/FW + quiet set from IMPL-03)."""
+"""IMPL-04: aperture photometry for acceptance targets only (BO/FW + quiet set from IMPL-03)."""
 from __future__ import annotations
 
 import os
@@ -15,7 +15,7 @@ os.environ.setdefault("PYTHONUNBUFFERED", "1")
 import pandas as pd  # noqa: E402
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 
 def main() -> None:
     draft = ROOT / "Archive" / "Drafts" / "draft_000514"
@@ -60,7 +60,7 @@ def main() -> None:
     def _prog(msg: str) -> None:
         print(f"[{time.perf_counter()-t0:7.1f}s] {msg}", flush=True)
 
-    result = run_phase2a(
+    result = run_aperture_photometry(
         masterstar_fits_path=og / "MASTERSTAR.fits",
         active_targets_csv=at_path,
         comparison_stars_csv=phot / "comparison_stars_per_target.csv",

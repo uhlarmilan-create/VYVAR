@@ -39,7 +39,7 @@ def test_strip_preserves_line_count() -> None:
 
 def test_strict_and_commented_files_yield_identical_appconfig(tmp_path) -> None:
     payload = {
-        "sips_dao_fwhm_px": 3.1,
+        "snr_min": 12.0,
         "alignment_max_stars": 120,
         "save_lightcurve_png": True,
         "aperture_fwhm_factor": 2.2,
@@ -53,7 +53,7 @@ def test_strict_and_commented_files_yield_identical_appconfig(tmp_path) -> None:
     commented_text = (
         "{\n"
         "  // detection FWHM used for DAO star finding\n"
-        '  "sips_dao_fwhm_px": 3.1,\n'
+        '  "snr_min": 12.0,\n'
         '  "alignment_max_stars": 120, // stars used for alignment\n'
         '  "save_lightcurve_png": true,\n'
         '  "aperture_fwhm_factor": 2.2 // base aperture radius\n'

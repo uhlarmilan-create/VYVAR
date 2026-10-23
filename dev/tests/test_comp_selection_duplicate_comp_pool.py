@@ -1,4 +1,4 @@
-"""Regression: duplicate Gaia comp IDs must not crash Phase-1 assembly."""
+"""Regression: duplicate Gaia comp IDs must not crash comparison-star selection assembly."""
 
 from __future__ import annotations
 
@@ -53,7 +53,6 @@ def test_assemble_comp_rows_survives_duplicate_selected_ids() -> None:
         id_col_cand="name",
         active={cid: 0.043},
         score_map={cid: 1.0},
-        contamination_map={},
         comp_n_frames_map={cid: 3},
         target_cid="1625467932661420928",
         target=pd.Series({"vsx_name": "Gaia DR3 1625467932661420928", "catalog_id": "1625467932661420928"}),

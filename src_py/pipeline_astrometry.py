@@ -20,11 +20,11 @@ import pandas as pd
 import config
 from config import AppConfig
 from catalog_db import query_local_gaia_by_source_ids, query_local_vsx
-from database import DraftTechnicalMetadataError, VyvarDatabase, _db_header_pixel_native_um_mean
+from database import DraftTechnicalMetadataError, VyvarDatabase
 from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
-from utils import fits_binning_xy_from_header, iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, plate_solve_fov_deg_diagonal_from_scale, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
+from utils import iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import itertools
 import fits_meta
 from fits_meta import _focal_mm_plausible
@@ -45,8 +45,8 @@ from pipeline_preprocess import (
 # Avoids pipeline -> pipeline_astrometry -> pipeline at module load.
 LOGGER = logging.getLogger("pipeline")
 
-# Aperturna fotometria Faz 0-2A (active_targets.csv, zone_flag, skip_photometry) je v ``photometry_core``
-# - ``run_phase0_and_phase1`` / ``run_phase2a``, nie v tomto subore.
+# Target selection through aperture photometry (active_targets.csv, zone_flag, skip_photometry) lives in
+# ``photometry_core`` - ``run_target_and_comp_selection`` / ``run_aperture_photometry``, not in this file.
 
 def _pipeline_ui_info(msg: str) -> None:
     """Log always; during a long job route to the bottom footer instead of ``st.info``."""
@@ -76,8 +76,8 @@ def _assert_alignment_produced_fits(aligned_root: Path) -> None:
     n = len(_iter_fits_recursive(aligned_root))
     if n == 0:
         raise RuntimeError(
-            "Alignment zlyhal - nenasli sa ziadne vystupne subory! "
-            f"(ziadne FITS v {aligned_root.resolve()} vratane podadresarov.)"
+            "Alignment failed - no output files found! "
+            f"(no FITS in {aligned_root.resolve()} including subdirectories.)"
         )
 
 
@@ -178,7 +178,7 @@ def _pick_preferred_masterstar_basename_hit(
     *,
     pre_calibrated: bool = False,
 ) -> Path | None:
-    """Pri viacerych zhodach basename zvol radsej ``proc_*.fits`` (spracovany snimok)."""
+    """With several basename matches prefer ``proc_*.fits`` (processed frame)."""
     if not hits:
         return None
     clean = [
@@ -211,7 +211,7 @@ def _sort_masterstar_paths_by_fwhm(
     *,
     fwhm_by_basename: dict[str, float] | None = None,
 ) -> list[Path]:
-    """Najlepsie prve: najnizsi VY_FWHM (hlavicka alebo DB mapa), nezname na koniec."""
+    """Best first: lowest VY_FWHM (header or DB map), unknown last."""
     _fb = fwhm_by_basename or {}
     scored: list[tuple[float, str, Path]] = []
     for fp in files:
@@ -288,7 +288,7 @@ def build_masterstar_from_detrended(
             if hit is None or not _path_is_under_tree(root, hit):
                 continue
             if _path_segments_forbidden_for_masterstar_physical_source(hit, **_forbid_kw):
-                log_event(f"MASTERSTAR: mapovanie zahodilo RAW cestu -> {hit}")
+                log_event(f"MASTERSTAR: mapping dropped a RAW path -> {hit}")
                 continue
             try:
                 rk = str(hit.resolve()).casefold()
@@ -301,17 +301,17 @@ def build_masterstar_from_detrended(
         if remapped:
             files = remapped
             log_event(
-                f"MASTERSTAR: vyber zluceny cez best-effort mapovanie ({len(files)} FITS; path filter bol prazdny)."
+                f"MASTERSTAR: selection merged via best-effort mapping ({len(files)} FITS; path filter was empty)."
             )
     if files:
         if only_paths is None:
             _pipeline_ui_info(
-                f"Najdenych {len(files)} suborov v {root} (vratane podadresarov)."
+                f"Found {len(files)} files in {root} (including subdirectories)."
             )
         else:
             _pipeline_ui_info(
-                f"Najdenych {len(files)} suborov pre MASTERSTAR v {root} (vyber kandidatov; "
-                f"v strome {len(all_fits)} FITS celkom)."
+                f"Found {len(files)} files for MASTERSTAR in {root} (candidate selection; "
+                f"in the tree {len(all_fits)} FITS in total)."
             )
     if not files:
         if only_paths is not None:
@@ -320,13 +320,13 @@ def build_masterstar_from_detrended(
             except Exception:  # noqa: BLE001
                 _want = str(only_paths)
             msg = (
-                f"MASTERSTAR: explicitny vyber sa nezhoduje so subormi pod {root}: {_want}"
+                f"MASTERSTAR: explicit selection does not match the files under {root}: {_want}"
                 + (" ..." if len(list(only_paths)) > 8 else "")
             )
             log_event(msg)
             raise FileNotFoundError(msg)
-        # Cely strom (bez filtra kandidatov): deterministicky maly batch z disku.
-        log_event("MASTERSTAR: bez filtra kandidatov - beriem prvych N FITS z priecinka.")
+        # Whole tree (no candidate filter): deterministic small batch from disk.
+        log_event("MASTERSTAR: no candidate filter - taking the first N FITS from the folder.")
         batch = sorted(
             (
                 fp
@@ -344,12 +344,12 @@ def build_masterstar_from_detrended(
     if not files:
         if not all_fits:
             msg = (
-                f"Nenasli sa ziadne FITS subory v {root} (prehladavana cesta, vratane podadresarov)."
+                f"No FITS files found in {root} (searched path, including subdirectories)."
             )
         else:
             msg = (
-                f"Ziadne FITS pre MASTERSTAR po vybere kandidatov: {root} obsahuje {len(all_fits)} subor(ov), "
-                "ale ziadna cesta nezodpoveda vyberu z databazy."
+                f"No FITS for MASTERSTAR after candidate selection: {root} contains {len(all_fits)} file(s), "
+                "but no path matches the database selection."
             )
         _pipeline_ui_info(msg)
         raise FileNotFoundError(msg)
@@ -368,7 +368,7 @@ def build_masterstar_from_detrended(
         reference_path, **_forbid_kw
     ) or not _path_is_under_tree(root, reference_path):
         raise FileNotFoundError(
-            f"MASTERSTAR: odmietnuty zdroj mimo lights stromu alebo z RAW: {reference_path}"
+            f"MASTERSTAR: rejected source outside the lights tree or from RAW: {reference_path}"
         )
     if not reference_path.exists():
         log_event(f"[X] MASTERSTAR FAIL: Reference file {reference_path} not found.")
@@ -401,18 +401,18 @@ def build_masterstar_from_detrended(
             _d0 = hdul0[0].data
             _sh = getattr(_d0, "shape", None)
             if _d0 is None or _sh is None or len(_sh) != 2:
-                raise ValueError("MASTERSTAR: referencny FITS nie je platny 2D primary.")
+                raise ValueError("MASTERSTAR: reference FITS is not a valid 2D primary.")
     except ValueError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise ValueError(f"MASTERSTAR: neviem nacitat referencny FITS: {exc}") from exc
+        raise ValueError(f"MASTERSTAR: cannot read reference FITS: {exc}") from exc
 
     shutil.copy2(reference_path, output_fits)
     if len(files) <= 1:
-        _ms_pick_msg = "jediny kandidat"
+        _ms_pick_msg = "single candidate"
     else:
-        _ms_pick_msg = f"kandidatov {len(files)}; najlepsi podla VY_FWHM"
-    log_event(f"MASTERSTAR: cista kopia -> {output_fits} (zdroj {reference_path.name}, {_ms_pick_msg}).")
+        _ms_pick_msg = f"candidates: {len(files)}; best by VY_FWHM"
+    log_event(f"MASTERSTAR: clean copy -> {output_fits} (source {reference_path.name}, {_ms_pick_msg}).")
 
     # FWHM-ONE-2026-10: MASTERSTAR is one frame, so its FWHM is that frame's own VY_FWHM
     # (frame QC elliptical Gaussian fit). Measured here only if the header lacks it.
@@ -436,18 +436,18 @@ def build_masterstar_from_detrended(
             hdr = h[0].header
             vy_fwhm = float(_fwhm_auto)
             hdr["VY_FWHM"] = (round(vy_fwhm, 4), "FWHM [pix] elliptical Gaussian (frame QC)")
-            log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px zapisany do FITS.")
+            log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px written to FITS.")
             hdr["VY_FWHM_GAUSS"] = (round(vy_fwhm, 4), "= VY_FWHM (one FWHM in VYVAR)")
 
             _strip_external_platesolve_header(hdr)
             log_event(
-                "MASTERSTAR: z MASTERSTAR kopie odstraneny externy WCS/plate-solve metadata "
-                "(ASTAP, astrometry.net, ...) - astrometriu nastavi vyhradne VYVAR Gaia solver."
+                "MASTERSTAR: external WCS/plate-solve metadata removed from the MASTERSTAR copy "
+                "(ASTAP, astrometry.net, ...) - astrometry is set only by the VYVAR Gaia solver."
             )
 
             h.flush()
     except Exception as _exc:  # noqa: BLE001
-        log_event(f"MASTERSTAR: VY_FWHM zapis zlyhal: {_exc!s}")
+        log_event(f"MASTERSTAR: VY_FWHM write failed: {_exc!s}")
 
     return {
         "masterstar_path": str(output_fits),
@@ -710,61 +710,6 @@ def _header_focal_length_mm(header: fits.Header) -> float | None:
     return None
 
 
-def resolve_plate_solve_fov_deg_hint(
-    hdr: fits.Header,
-    h: int,
-    w: int,
-    *,
-    database_path: Path | str | None = None,
-    equipment_id: int | None = None,
-    draft_id: int | None = None,
-) -> float | None:
-    """Estimate plate-solve FOV diameter [deg] along chip diagonal (optics from header, else DB scale + NAXIS)."""
-    if h <= 0 or w <= 0:
-        return None
-    f_mm = _header_focal_length_mm(hdr)
-    p_um = _db_header_pixel_native_um_mean(hdr)
-    if f_mm is not None and p_um is not None and f_mm > 0 and p_um > 0:
-        diag_mm = math.hypot(float(w) * float(p_um) * 0.001, float(h) * float(p_um) * 0.001)
-        rad = 2.0 * math.atan2(0.5 * diag_mm, float(f_mm))
-        if math.isfinite(rad) and rad > 0:
-            return float(rad * 180.0 / math.pi)
-
-    dbp = str(database_path or "").strip()
-    if not dbp:
-        return None
-    try:
-        db = VyvarDatabase(Path(dbp))
-    except Exception:  # noqa: BLE001
-        return None
-    try:
-        eq = int(equipment_id) if equipment_id is not None else None
-        tel: int | None = None
-        if draft_id is not None:
-            dr = db.fetch_obs_draft_by_id(int(draft_id))
-            if dr is not None:
-                if eq is None and dr.get("ID_EQUIPMENTS") is not None:
-                    eq = int(dr["ID_EQUIPMENTS"])
-                if dr.get("ID_TELESCOPE") is not None:
-                    tel = int(dr["ID_TELESCOPE"])
-        xb, yb = fits_binning_xy_from_header(hdr)
-        bin_b = max(1, int(xb), int(yb))
-        sc = compute_plate_scale_from_db(eq, tel, db.conn, binning=bin_b)
-        if sc is None or not math.isfinite(float(sc)) or float(sc) <= 0:
-            return None
-        nx = int(hdr.get("NAXIS1", w) or w)
-        ny = int(hdr.get("NAXIS2", h) or h)
-        return plate_solve_fov_deg_diagonal_from_scale(nx, ny, float(sc))
-    except Exception:  # noqa: BLE001
-        # EXC-0309: T4 -- db.conn.close failure in FOV hint finally block is ignored after the hint is computed o... (EXCEPT-BULK 2026-07-08)
-        return None
-    finally:
-        try:
-            db.conn.close()
-        except Exception:  # noqa: BLE001
-            pass
-
-
 def _resolve_focal_mm_for_plate_scale(
     header: fits.Header | None,
     db: VyvarDatabase | None,
@@ -778,7 +723,7 @@ def _resolve_focal_mm_for_plate_scale(
             hdr_n, hfixed = normalize_telescope_focal_mm_for_plate_scale(hdr_mm)
             if hfixed:
                 log_event(
-                    f"FOCAL: v hlavicke FITS ohnisko vyzeralo ako 10x preklep ({hdr_mm:g} mm -> {hdr_n:g} mm)."
+                    f"FOCAL: focal length in the FITS header looked like a 10x typo ({hdr_mm:g} mm -> {hdr_n:g} mm)."
                 )
             hdr_mm = hdr_n
         if hdr_mm is not None and _focal_mm_plausible(hdr_mm):
@@ -792,8 +737,8 @@ def _resolve_focal_mm_for_plate_scale(
             tel_n, tel_fixed = normalize_telescope_focal_mm_for_plate_scale(float(tel_raw))
             if tel_fixed:
                 log_event(
-                    f"FOCAL: TELESCOPE.FOCAL (ID={int(telescope_id)}) vyzeralo ako 10x preklep "
-                    f"({tel_raw:g} mm -> {tel_n:g} mm) - pouzite pre mierku / solver."
+                    f"FOCAL: TELESCOPE.FOCAL (ID={int(telescope_id)}) looked like a 10x typo "
+                    f"({tel_raw:g} mm -> {tel_n:g} mm) - used for plate scale / solver."
                 )
             if _focal_mm_plausible(tel_n):
                 return float(tel_n), "database_telescope"
@@ -803,8 +748,8 @@ def _resolve_focal_mm_for_plate_scale(
             norm, fixed = normalize_telescope_focal_mm_for_plate_scale(float(raw))
             if fixed:
                 log_event(
-                    f"FOCAL: TELESCOPE.FOCAL v DB vyzeralo ako 10x preklep ({raw:g} mm -> {norm:g} mm) - "
-                    "pouzite pre mierku / solver."
+                    f"FOCAL: TELESCOPE.FOCAL in DB looked like a 10x typo ({raw:g} mm -> {norm:g} mm) - "
+                    "used for plate scale / solver."
                 )
             if _focal_mm_plausible(norm):
                 return float(norm), "database_telescope"
@@ -914,7 +859,7 @@ def compute_plate_scale_from_db(
     *,
     binning: int = 1,
 ) -> float | None:
-    """Vypocita plate scale [arcsec/px] z EQUIPMENTS a TELESCOPE tabuliek.
+    """Compute plate scale [arcsec/px] from the EQUIPMENTS and TELESCOPE tables.
 
     Formula: plate_scale = (pixel_um * binning) / focal_mm * 206.265
     """
@@ -980,7 +925,7 @@ def _solve_wcs_external(
     gaia_db = str(cfg_u.gaia_db_path or "").strip()
     if not gaia_db:
         return {"solved": False,
-                "reason": "VYVAR solver: v Settings nastav cestu k lokalnej Gaia DR3 SQLite DB (gaia_db_path)."}
+                "reason": "VYVAR solver: set the path to the local Gaia DR3 SQLite DB in Settings (gaia_db_path)."}
     r = astrosolve.solve_fits(
         Path(fits_path),
         gaia_db=gaia_db,
@@ -1160,8 +1105,8 @@ def _query_vsx_local_frame_bbox(
         return pd.DataFrame()
     try:
         log_event(
-            f"CATALOG SEARCH (VSX local, frame bbox+{int(m)}px): {len(df)} zdrojov "
-            f"(RA=[{ra_min:.4f},{ra_max:.4f}], Dec=[{de_min:.4f},{de_max:.4f}], bez cap)"
+            f"CATALOG SEARCH (VSX local, frame bbox+{int(m)}px): {len(df)} sources "
+            f"(RA=[{ra_min:.4f},{ra_max:.4f}], Dec=[{de_min:.4f},{de_max:.4f}], no cap)"
         )
     except Exception:  # noqa: BLE001
         pass
@@ -1269,20 +1214,14 @@ def select_comparison_stars_spatial_grid(
         work = work[work["is_usable"].fillna(False).astype(bool)]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_usable_filter"}
-    try:
-        from config import AppConfig  # noqa: PLC0415
-
-        _seed_pool = bool(getattr(AppConfig(), "masterstar_forced_seed_comp_pool_enabled", False))
-    except Exception:  # noqa: BLE001
-        _seed_pool = False
-    if not _seed_pool:
-        if "source_state" in work.columns:
-            work = work[work["source_state"].astype(str).str.strip() != "FORCED_SEED"]
-        if "forced_photometry" in work.columns:
-            _fp = work["forced_photometry"].astype(str).str.strip().str.lower()
-            work = work[~_fp.isin(["true", "1", "yes"])]
-        if work.empty:
-            return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_seed_pool_filter"}
+    # Forced seeds (Gaia positions measured without a detection) never enter the comparison pool.
+    if "source_state" in work.columns:
+        work = work[work["source_state"].astype(str).str.strip() != "FORCED_SEED"]
+    if "forced_photometry" in work.columns:
+        _fp = work["forced_photometry"].astype(str).str.strip().str.lower()
+        work = work[~_fp.isin(["true", "1", "yes"])]
+    if work.empty:
+        return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_seed_pool_filter"}
     if require_catalog_match and "catalog" in work.columns:
         work = work[work["catalog"].fillna("").astype(str).str.strip() != ""]
     if require_photometry_ok and "photometry_ok" in work.columns:
@@ -1521,7 +1460,7 @@ def write_photometry_plan_files(
         with fits.open(masterstar_fits, memmap=False) as hdul:
             hdr = hdul[0].header
     except Exception as _ms_open_exc:  # noqa: BLE001
-        log_event(f"write_photometry_plan_files: nepodarilo sa otvorit MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
+        log_event(f"write_photometry_plan_files: could not open MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
         return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "MASTERSTAR open failed"}
     wpx = int(hdr.get("NAXIS1", 0) or 0)
     h = int(hdr.get("NAXIS2", 0) or 0)
@@ -1736,7 +1675,7 @@ def write_photometry_plan_files(
             n_vsx_in_cone = int(len(vsx_df)) if vsx_df is not None else 0
             _vsx_n_cone = n_vsx_in_cone
 
-            # Masterstars catalogue (Phase 0 DAO membership only; not the VSX->Gaia match RHS).
+            # Masterstars catalogue (target-selection DAO membership only; not the VSX->Gaia match RHS).
             ga = df.copy()
             if "catalog_id" in ga.columns and "ra_deg" in ga.columns and "dec_deg" in ga.columns:
                 ga["catalog_id"] = ga["catalog_id"].fillna("").astype(str).str.strip()
@@ -1935,7 +1874,7 @@ def write_photometry_plan_files(
                                     vsx_dec = float(v.iloc[i]["dec_deg"])
                                     log_event(
                                         f"VSX no Gaia match: {vsx_name0} ra={vsx_ra:.4f} dec={vsx_dec:.4f} "
-                                        "- hviezda nebude sledovana"
+                                        "- star will not be tracked"
                                     )
                                 except Exception:  # noqa: BLE001
                                     pass
@@ -1992,7 +1931,7 @@ def write_photometry_plan_files(
                 )
                 n_gaia_ok = int(sum(1 for c in cat_id_out if str(c).strip()))
                 _zone_hist: dict[str, int] = {}
-                n_phase0_hint = int(n_gaia_ok)
+                n_target_selection_hint = int(n_gaia_ok)
                 for i in range(len(zone_out)):
                     if not str(cat_id_out[i]).strip():
                         continue
@@ -2005,20 +1944,20 @@ def write_photometry_plan_files(
                     "vsx_rows_written_csv": int(len(vsx_out)),
                     "gaia_matches_within_10arcsec": int(n_gaia_ok),
                     "masterstars_zone_counts_among_gaia_matched": _zone_hist,
-                    "phase0_active_targets_hint_count": int(n_phase0_hint),
+                    "target_selection_active_targets_hint_count": int(n_target_selection_hint),
                     "vsx_gaia_crossmatch": dict(_cm_diag),
-                    "phase0_note_sk": (
-                        "Faza 0 (`select_active_targets` v photometry_core.py): vsetky zony z masterstars "
-                        "prejdu do active_targets.csv s `zone_flag`; saturovane maju `skip_photometry=True` "
-                        "a Faza 2A ich nefotometruje (pozri `run_phase2a`). Vylucene su len prazdny "
-                        "`catalog_id` a ciele mimo snimky (okrajovy filter)."
+                    "target_selection_note": (
+                        "Target selection (`select_active_targets` in photometry_core.py): all zones from masterstars "
+                        "go to active_targets.csv with `zone_flag`; saturated ones have `skip_photometry=True` "
+                        "and aperture photometry does not measure them (see `run_aperture_photometry`). Only an empty "
+                        "`catalog_id` and targets off the frame (border filter) are excluded."
                     ),
                 }
                 _vsx_n_cone = int(n_vsx_in_cone)
     except VSXCatalogError:
         raise
     except Exception as _vsx_exc:  # noqa: BLE001
-        log_event(f"variable_targets.csv (VSX export) preskoceny: {_vsx_exc!s}")
+        log_event(f"variable_targets.csv (VSX export) skipped: {_vsx_exc!s}")
         vsx_out = pd.DataFrame(columns=var_cols)
 
     exo_promo = _build_exoplanet_promotion_rows_from_masterstars(
@@ -2074,17 +2013,17 @@ def write_photometry_plan_files(
             f"in-frame margin={_vsx_diag.get('vsx_rows_after_in_frame_margin')} -> "
             f"detection-limited (DAO+Gaia match)={_vsx_diag.get('n_with_masterstar_match')} -> "
             f"CSV={int(len(merged_var))}. "
-            f"Odhad VSX s Gaia ID (Faza 0 potom cross-match na masterstars): {_vsx_diag.get('phase0_active_targets_hint_count')}."
+            f"Estimated VSX with Gaia ID (target selection then cross-matches to masterstars): {_vsx_diag.get('target_selection_active_targets_hint_count')}."
         )
     else:
         log_event(
-            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} -> zapisane={int(len(merged_var))} "
+            f"variable_targets.csv (VSX export): cone={_vsx_n_cone} -> written={int(len(merged_var))} "
             f"({var_path.name})"
         )
 
     plan_path = ps / "photometry_plan.json"
-    # OUTPUT-REVIEW-2026-10: the plan keeps only what is read back (Phase 0/1 and 2A: the
-    # border-safe box); the comparison selection and VSX diagnostics are in the log / return value.
+    # OUTPUT-REVIEW-2026-10: the plan keeps only what is read back (target and comparison-star selection
+    # and aperture photometry: the border-safe box); the comparison selection and VSX diagnostics are in the log / return value.
     plan = {
         "safe_bbox_px": list(_safe_bbox) if _safe_bbox is not None else None,
         "safe_bbox_r_out_px": float(_r_out) if _r_out is not None else None,
@@ -2339,10 +2278,10 @@ def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
     *,
     gaia_db_path: str,
 ) -> tuple[pd.DataFrame, int, int]:
-    """Dopln ``bp_rp`` / ``b_v`` z lokalnej Gaia SQLite pre ``GAIA_MATCHED`` bez farby v masterstars CSV.
+    """Fill ``bp_rp`` / ``b_v`` from the local Gaia SQLite for ``GAIA_MATCHED`` rows without colour in masterstars CSV.
 
-    Frame-wide Gaia dotaz (``ORDER BY g_mag LIMIT``) casto vynecha uz omatchovane hviezdy na snimke;
-    tato davka ide priamo podla ``source_id``.
+    The frame-wide Gaia query (``ORDER BY g_mag LIMIT``) often misses stars already matched on the frame;
+    this batch goes directly by ``source_id``.
     """
     if df is None or getattr(df, "empty", True):
         return df, 0, 0
@@ -2566,7 +2505,7 @@ def _pass2_sibling_wcs_recovery(
             )
         except Exception as exc:  # noqa: BLE001
             LOGGER.error("Sibling Pass2 failed for %s: %s", setup, exc)
-            log_event(f"! Sibling Pass2: set {setup} zostava preskoceny - {exc}")
+            log_event(f"! Sibling Pass2: set {setup} remains skipped - {exc}")
             still_skipped.append(sk)
 
     return reports, still_skipped
@@ -2594,7 +2533,7 @@ def _merge_astrometry_group_reports(rows: list[dict[str, Any]]) -> dict[str, Any
         if str(x.get("masterstars_csv") or "").strip()
     )
     log_event(
-        f"Astrometria: dokoncene {len(rows)} pod-skupin - zarovnanych snimok spolu {tot_aligned} / {tot_in}."
+        f"Astrometry: finished {len(rows)} subgroups - aligned frames in total {tot_aligned} / {tot_in}."
     )
     return merged
 
@@ -2751,7 +2690,6 @@ def astrometry_align_and_build_masterstar(
     archive_path: Path,
     min_detected_stars: int = 100,
     max_detected_stars: int = 500,
-    plate_solve_fov_deg: float = 1.0,
     catalog_match_max_sep_arcsec: float = 25.0,
     max_catalog_rows: int = 12000,
     n_comparison_stars: int = 0,
@@ -2840,17 +2778,17 @@ def astrometry_align_and_build_masterstar(
     _n_all = len(files_all)
     if _n_root_only != _n_all:
         log_event(
-            f"FITS celkom: {_n_all} pod {det_top} ({_n_root_only} priamo v koreni; "
-            f"ostatne v podpriecinkoch napr. filter/exp/binning)."
+            f"FITS total: {_n_all} under {det_top} ({_n_root_only} directly in the root; "
+            f"the rest in subfolders, e.g. filter/exp/binning)."
         )
     else:
-        log_event(f"FITS celkom: {_n_all} v {det_top}")
+        log_event(f"FITS total: {_n_all} in {det_top}")
     log_event(f"Alignment input root: {det_top}")
     if not files_all:
         raise FileNotFoundError(
-            f"Chybaju FITS v {det_top}. Plate solve cita len **spracovane** snimky. "
-            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zapis z "
-            f"`{ap / 'calibrated' / 'lights'}` -> `{ap / 'processed' / 'lights'}` alebo starsie `{ap / 'detrended' / 'lights'}`)."
+            f"No FITS in {det_top}. Plate solve reads only **processed** frames. "
+            "Run **MAKE MASTERSTAR** after the **Analyze** step first (writes from "
+            f"`{ap / 'calibrated' / 'lights'}` -> `{ap / 'processed' / 'lights'}` or older `{ap / 'detrended' / 'lights'}`)."
         )
     job_list: list[dict[str, Any]] = []
     # Group strictly by real folder structure under processed/detrended lights.
@@ -2891,8 +2829,8 @@ def astrometry_align_and_build_masterstar(
             )
     if len(job_list) > 1:
         log_event(
-            "Astrometria: viacero pod-pozorovani (podpriecinky v processed|detrended/lights) - "
-            "samostatne zarovnanie, MASTERSTAR a katalogy pre kazdu skupinu."
+            "Astrometry: several sub-observations (subfolders in processed|detrended/lights) - "
+            "separate alignment, MASTERSTAR and catalogs for each group."
         )
     from osc_align import partition_jobs_for_osc_alignment
 
@@ -2917,7 +2855,6 @@ def astrometry_align_and_build_masterstar(
         archive_path=archive_path,
         min_detected_stars=min_detected_stars,
         max_detected_stars=max_detected_stars,
-        plate_solve_fov_deg=plate_solve_fov_deg,
         catalog_match_max_sep_arcsec=catalog_match_max_sep_arcsec,
         max_catalog_rows=max_catalog_rows,
         n_comparison_stars=n_comparison_stars,
@@ -2947,10 +2884,10 @@ def astrometry_align_and_build_masterstar(
         try:
             reports.append(_astrometry_align_impl_body(job=j, **_kw))
         except Exception as exc:  # noqa: BLE001
-            LOGGER.error("Astrometria/MASTERSTAR failed for set %s: %s", _setup, exc)
+            LOGGER.error("Astrometry/MASTERSTAR failed for set %s: %s", _setup, exc)
             log_event(
-                f"! Set {_setup}: plate-solve/MASTERSTAR zlyhal - set sa preskakuje, "
-                f"pokracujem dalsim setom. Dovod: {exc}"
+                f"! Set {_setup}: plate-solve/MASTERSTAR failed - skipping the set, "
+                f"continuing with the next set. Reason: {exc}"
             )
             skipped.append(
                 {"gkey": _gkey, "setup": _setup, "solved": False, "skipped_reason": str(exc)}
@@ -2966,7 +2903,7 @@ def astrometry_align_and_build_masterstar(
 
     if not reports:
         raise RuntimeError(
-            "Astrometria: ziadny set nepresiel plate-solve/MASTERSTAR. "
+            "Astrometry: no set passed plate-solve/MASTERSTAR. "
             + "; ".join(f"{s['setup']}: {s['skipped_reason']}" for s in skipped)
         )
 
@@ -2974,7 +2911,7 @@ def astrometry_align_and_build_masterstar(
     if skipped:
         merged["skipped_subgroups"] = skipped
         log_event(
-            f"Astrometria: {len(reports)} setov OK, {len(skipped)} preskocenych: "
+            f"Astrometry: {len(reports)} sets OK, {len(skipped)} skipped: "
             + ", ".join(s["setup"] for s in skipped)
         )
     return merged
@@ -2992,8 +2929,8 @@ def _safe_proc_name(original_name: str) -> str:
 def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
     """Process workers for plate-solve step 3 per-frame catalog (DAO + match + CSV).
 
-    Rovnaky zaklad ako QC/alignment (see :func:`_vyvar_parallel_worker_count`); dalsi strop podla skutocnej velkosti
-    snimku riesi ``_vyvar_cap_mp_workers_for_catalog``.
+    Same base as QC/alignment (see :func:`_vyvar_parallel_worker_count`); a further cap by the actual frame
+    size is applied by ``_vyvar_cap_mp_workers_for_catalog``.
     """
     return _vyvar_parallel_worker_count(app_config)
 

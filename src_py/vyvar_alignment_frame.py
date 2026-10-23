@@ -37,6 +37,25 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
+
+def _roundtrip_needed(w_in: WCS, w_out: WCS, shape_out: tuple[int, ...], step: int = 16) -> bool:
+    """SPEED-2026-10: does reproject's coordinate round trip (out -> in -> out, > 1 px = NaN) reset
+    any pixel? Checked on a grid every ``step`` px plus the last row / column; when none fails the
+    full-image round trip is skipped (the same output, half the WCS transforms: 4 s of 5 s per
+    frame). A failure anywhere on the grid keeps the full round trip."""
+    from astropy.wcs.utils import pixel_to_pixel  # noqa: PLC0415
+
+    ny, nx = int(shape_out[0]), int(shape_out[1])
+    xs = np.unique(np.r_[np.arange(0, nx, step), nx - 1]).astype(float)
+    ys = np.unique(np.r_[np.arange(0, ny, step), ny - 1]).astype(float)
+    gx, gy = np.meshgrid(xs, ys)
+    gx, gy = gx.ravel(), gy.ravel()
+    ix, iy = pixel_to_pixel(w_out, w_in, gx, gy)
+    bx, by = pixel_to_pixel(w_in, w_out, ix, iy)
+    with np.errstate(invalid="ignore"):  # same test as reproject (NaN never resets)
+        bad = (np.abs(bx - gx) > 1) | (np.abs(by - gy) > 1)
+    return bool(np.any(bad))
+
 def _as_fits_float32_image(data: Any) -> np.ndarray:
     return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
 
@@ -129,7 +148,7 @@ def _alignment_as_alignment_points(
     pts = np.asarray(pts, dtype=np.float32)
     _alignment_emit_log(
         log_sink,
-        f"DEBUG: Alignment vstup ({label}) type: {type(sources).__name__} a shape: {tuple(pts.shape)}",
+        f"DEBUG: Alignment input ({label}) type: {type(sources).__name__} and shape: {tuple(pts.shape)}",
     )
     return pts
 
@@ -173,7 +192,7 @@ def _alignment_detect_xy(
         _nm = label or "frame"
         _alignment_emit_log(
             log_sink,
-            f"DEBUG: Image stats pre {_nm} - Mean: {_mean:.6g}, Std: {_std:.6g}, Max: {_max:.6g}",
+            f"DEBUG: Image stats for {_nm} - Mean: {_mean:.6g}, Std: {_std:.6g}, Max: {_max:.6g}",
         )
     except Exception:  # noqa: BLE001
         pass
@@ -192,8 +211,8 @@ def _alignment_detect_xy(
         _nm = label or "frame"
         _alignment_emit_log(
             log_sink,
-            f"DEBUG: Image stats pre {_nm} - podozrivo nizke Std po BG ({clipped_std:.3e}); "
-            "background subtraction moze byt prilis agresivna.",
+            f"DEBUG: Image stats for {_nm} - suspiciously low Std after BG ({clipped_std:.3e}); "
+            "background subtraction may be too aggressive.",
         )
     data = np.nan_to_num((arr_bg - float(med)).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     sig = max(0.5, min(20.0, float(det_sigma)))
@@ -206,7 +225,7 @@ def _alignment_detect_xy(
         min_val = float(np.min(data_chk))
         max_val = float(np.max(data_chk))
         mean_val = float(np.mean(data_chk))
-        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] Subor: {_nm}")
+        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] File: {_nm}")
         _alignment_emit_log(
             log_sink,
             f"[DEBUG DATA CHECK] Stats -> Min: {min_val:.4f}, Max: {max_val:.4f}, Mean: {mean_val:.4f}",
@@ -220,7 +239,7 @@ def _alignment_detect_xy(
         pass
     _alignment_emit_log(
         log_sink,
-        f"DEBUG: Pouzivam FWHM={float(fwhm_px):.2f} a Sigma={float(sig):.2f} (z alignment det_sigma) pre detekciu.",
+        f"DEBUG: Using FWHM={float(fwhm_px):.2f} and Sigma={float(sig):.2f} (from alignment det_sigma) for detection.",
     )
     _alignment_emit_log(log_sink, f"DEBUG: Threshold set to {threshold:.2f} (using clipped_std={clipped_std:.2f})")
     fw = max(1.2, float(fwhm_px))
@@ -239,7 +258,7 @@ def _alignment_detect_xy(
         _used_sigma = _best_sigma
         for idx_s, s in enumerate(sigma_list):
             if idx_s > 0:
-                _alignment_emit_log(log_sink, f"Skusam znizit threshold na {float(s):.2f} pre {nm}...")
+                _alignment_emit_log(log_sink, f"Trying lower threshold {float(s):.2f} for {nm}...")
             finder = DAOStarFinder(
                 fwhm=fw,
                 threshold=max(float(s) * float(clipped_std), 1e-6),
@@ -265,17 +284,17 @@ def _alignment_detect_xy(
         _floor_r = _med_r - 3.0 * _std_r if np.isfinite(_std_r) and _std_r > 0 else _med_r
         arr_raw2 = np.nan_to_num((arr - _med_r).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
         arr_raw2 = np.clip(arr_raw2, _floor_r - _med_r, None).astype(np.float32, copy=False)
-        _alignment_emit_log(log_sink, f"DEBUG: {_nm} - fallback bez background subtraction (median-only).")
+        _alignment_emit_log(log_sink, f"DEBUG: {_nm} - fallback without background subtraction (median-only).")
         tbl2, used_sigma2, best_n2 = _run_dao_on(arr_raw2, sig_try, nm=_nm)
         if best_n2 > best_n:
             tbl, used_sigma, best_n = tbl2, used_sigma2, best_n2
     if float(used_sigma) < float(sig) - 1e-9:
         _alignment_emit_log(
             log_sink,
-            f"Detekcia hviezd: Pouzite FWHM={fw:.2f}, Sigma={float(used_sigma):.2f} (fallback z {float(sig):.2f})",
+            f"Star detection: used FWHM={fw:.2f}, Sigma={float(used_sigma):.2f} (fallback from {float(sig):.2f})",
         )
     if tbl is None or len(tbl) == 0:
-        _alignment_emit_log(log_sink, f"DEBUG: Snimka {_nm} - pokus o detekciu s extremnou citlivostou (threshold=1.0)")
+        _alignment_emit_log(log_sink, f"DEBUG: Frame {_nm} - attempting detection at extreme sensitivity (threshold=1.0)")
         try:
             finder_ext = DAOStarFinder(
                 fwhm=5.0,
@@ -318,11 +337,11 @@ def _alignment_run_astroalign_points(
         src = np.array(source_pts, dtype="float32")
         tgt = np.array(target_pts, dtype="float32")
         if src.ndim != 2 or src.shape[1] != 2:
-            return None, f"Nespravny format source bodov: shape={tuple(src.shape)}", None
+            return None, f"Invalid source point format: shape={tuple(src.shape)}", None
         if tgt.ndim != 2 or tgt.shape[1] != 2:
-            return None, f"Nespravny format target bodov: shape={tuple(tgt.shape)}", None
+            return None, f"Invalid target point format: shape={tuple(tgt.shape)}", None
         if src.shape == (0, 2) or tgt.shape == (0, 2):
-            return None, "Alignment nemoze zacat, prazdne suradnice!", None
+            return None, "Alignment cannot start, empty coordinates!", None
         if len(src) < 10 or len(tgt) < 10:
             return None, "Insufficient stars", None
         mcp = max(12, min(int(max_control_points), int(min(len(src), len(tgt)))))
@@ -520,7 +539,7 @@ def _alignment_load_masterstar_catalog_points_for_frame(
         mdf = pd.read_csv(
             ms_csv,
             low_memory=False,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID musi byt str - float64 straca cifry
+            dtype={"catalog_id": str, "name": str},  # Gaia ID must be str - float64 loses digits
         )
         if "ra_deg" not in mdf.columns or "dec_deg" not in mdf.columns:
             return np.zeros((0, 2), dtype=np.float32)
@@ -658,21 +677,21 @@ def _alignment_compute_one_frame(
                 xy = np.asarray(xy_ms[:max_st], dtype=np.float32)
                 _alignment_emit_log(
                     log_sink,
-                    f"DEBUG: {fp.name} attempt {i_att} - DAO=0, pouzivam fallback MASTERSTAR katalog ({len(xy)} bodov).",
+                    f"DEBUG: {fp.name} attempt {i_att} - DAO=0, using fallback MASTERSTAR catalog ({len(xy)} points).",
                 )
             else:
                 _alignment_emit_log(
                     log_sink,
-                    f"WARNING: {fp.name} attempt {i_att} zlyhalo (0 stars detected, no MASTERSTAR fallback), "
-                    "skusam s uvolnenymi parametrami",
+                    f"WARNING: {fp.name} attempt {i_att} failed (0 stars detected, no MASTERSTAR fallback), "
+                    "retrying with relaxed parameters",
                 )
                 continue
 
         if len(xy) < int(min_detected_stars):
             _alignment_emit_log(
                 log_sink,
-                f"WARNING: {fp.name} attempt {i_att} zlyhalo ({len(xy)} stars < {int(min_detected_stars)}), "
-                "skusam s uvolnenymi parametrami",
+                f"WARNING: {fp.name} attempt {i_att} failed ({len(xy)} stars < {int(min_detected_stars)}), "
+                "retrying with relaxed parameters",
             )
             continue
         # Track best detection even if transform fails / produces constant frame.
@@ -694,6 +713,9 @@ def _alignment_compute_one_frame(
                             (np.asarray(data, dtype=np.float32), w_i.celestial),
                             ref_wcs_obj.celestial,
                             shape_out=ref_data.shape,
+                            roundtrip_coords=_roundtrip_needed(
+                                w_i.celestial, ref_wcs_obj.celestial, ref_data.shape
+                            ),
                         )
                         aligned_data = _as_fits_float32_image(aligned_data)
                         aligned_method = "wcs_reproject"
@@ -721,12 +743,12 @@ def _alignment_compute_one_frame(
             if aligned_data is None:
                 _alignment_emit_log(
                     log_sink,
-                    f"DEBUG: Alignment detekcia {fp.name} (attempt {i_att}) - DAO hviezd(source)={len(xy)}, "
-                    f"DAO hviezd(target_ref)={len(fixed_target_pts)}",
+                    f"DEBUG: Alignment detection {fp.name} (attempt {i_att}) - DAO stars(source)={len(xy)}, "
+                    f"DAO stars(target_ref)={len(fixed_target_pts)}",
                 )
                 if fixed_target_pts.shape[0] == 0:
                     raise RuntimeError(
-                        "FATALNA CHYBA: Referencne body boli vymazane z pamate pred startom alignmentu!"
+                        "FATAL ERROR: reference points were cleared from memory before alignment started!"
                     )
                 current_target = np.array(reference_list, dtype="float32")
                 n_fit = int(min(len(current_target), len(xy)))
@@ -757,7 +779,7 @@ def _alignment_compute_one_frame(
                 if 0 <= n_unique <= 3:
                     _alignment_emit_log(
                         log_sink,
-                        f"WARNING: {fp.name} aligned frame je konstantny (n_unique={n_unique}), pokus {i_att} zlyhal",
+                        f"WARNING: {fp.name} aligned frame is constant (n_unique={n_unique}), attempt {i_att} failed",
                     )
                     aligned_data = None
                     continue
@@ -769,16 +791,16 @@ def _alignment_compute_one_frame(
             if math.isfinite(m_al) and math.isfinite(s_al) and (m_al < 50.0) and (s_al < 20.0):
                 _alignment_emit_log(
                     log_sink,
-                    f"WARNING: {fp.name} attempt {i_att} zlyhalo (aligned frame black: mean {m_al:.1f}, "
-                    f"std {s_al:.1f}), skusam s uvolnenymi parametrami",
+                    f"WARNING: {fp.name} attempt {i_att} failed (aligned frame black: mean {m_al:.1f}, "
+                    f"std {s_al:.1f}), retrying with relaxed parameters",
                 )
                 aligned_data = None
                 continue
             if float(np.nansum(np.abs(aligned_data))) < 1.0:
                 _alignment_emit_log(
                     log_sink,
-                    f"WARNING: {fp.name} attempt {i_att} zlyhalo (aligned frame empty), "
-                    "skusam s uvolnenymi parametrami",
+                    f"WARNING: {fp.name} attempt {i_att} failed (aligned frame empty), "
+                    "retrying with relaxed parameters",
                 )
                 aligned_data = None
                 continue
@@ -790,8 +812,8 @@ def _alignment_compute_one_frame(
             aligned_data = None
             _alignment_emit_log(
                 log_sink,
-                f"WARNING: {fp.name} attempt {i_att} zlyhalo ({type(_att_exc).__name__}: {_att_exc}), "
-                "skusam s uvolnenymi parametrami",
+                f"WARNING: {fp.name} attempt {i_att} failed ({type(_att_exc).__name__}: {_att_exc}), "
+                "retrying with relaxed parameters",
             )
             continue
 

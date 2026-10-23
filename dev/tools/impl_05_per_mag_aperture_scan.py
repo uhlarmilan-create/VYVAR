@@ -800,8 +800,8 @@ def main() -> int:
         }
     scan["aperture_r_after_remeasure_by_mag"] = after_ap
     scan["comp_rms_note"] = (
-        "comp_rms in comparison_stars_per_target.csv is Phase-1 assignment metric "
-        "from pre-B fluxes; after remasure, acceptance Phase 2A / Item C rebuild "
+        "comp_rms in comparison_stars_per_target.csv is the comparison-star selection assignment metric "
+        "from pre-B fluxes; after remeasure, acceptance aperture photometry / Item C rebuild "
         "must refresh membership. before_* is the r=9.5-era snapshot."
     )
     out_scan.write_text(json.dumps(scan, indent=2), encoding="utf-8")

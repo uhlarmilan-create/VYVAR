@@ -1,4 +1,4 @@
-"""Photometry core - zluceny modul (photometry + photometry_phase2a)."""
+"""Photometry core - merged module (photometry + aperture_photometry)."""
 from __future__ import annotations
 
 import logging
@@ -17,7 +17,7 @@ from gaia_catalog_id import (
 
 LOGGER = logging.getLogger(__name__)
 
-_MAD_CONSISTENCY = 0.6745  # normalizacny faktor MAD -> sigma ekvivalent
+_MAD_CONSISTENCY = 0.6745  # normalisation factor MAD -> sigma equivalent
 
 # Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
@@ -39,7 +39,7 @@ TIME_BASE_BJD_TDB = "BJD_TDB"
 TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
 
 
-# Gaia ID (`catalog_id`, VSX / masterstars `name`) musi byt str - float64 straca cifry
+# Gaia ID (`catalog_id`, VSX / masterstars `name`) must be str - float64 loses digits
 _GAIA_ID_DTYPE: dict[str, type] = dict(GAIA_PROC_CSV_READ_DTYPE)
 
 
@@ -69,32 +69,32 @@ _COMP_QUALITY_JSON_META_KEYS = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Pomocne funkcie
+# Helper functions
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 1: Globalna fixna apertura z PSF FWHM (MASTERSTAR VY_FWHM alebo fit)
+# STEP 1: Global fixed aperture from PSF FWHM (MASTERSTAR VY_FWHM or fit)
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 2: Aperturna fotometria per snimka - medianovy sky
+# STEP 2: Aperture photometry per frame - median sky
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 3: Stability check porovnavaciek (Abbeho p2p scatter + MAD)
+# STEP 3: Comparison-star stability check (Abbe p2p scatter + MAD)
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 4: Ensemble normalizacia
+# STEP 4: Ensemble normalisation
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# Color term (BP-RP) - globalny shift na noc
+# Color term (BP-RP) - global shift per night
 # ---------------------------------------------------------------------------
 
 
@@ -116,28 +116,28 @@ _CT_PROTOTYPE_CSV_FIELDS: tuple[str, ...] = (
 
 
 # ---------------------------------------------------------------------------
-# KROK 5: Outlier detekcia
+# STEP 5: Outlier detection
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 6: Vystup - lightcurve CSV
+# STEP 6: Output - lightcurve CSV
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# KROK 6: Vystup - PNG grafy
+# STEP 6: Output - PNG plots
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# Hlavny wrapper - run_phase2a
+# Main wrapper - run_aperture_photometry
 # ---------------------------------------------------------------------------
 
 
-#: TARGET-RULES-2026-10 (Milan 2026-10-13): target skips decided on MASTERSTAR in Phase 0
-#: (saturated = upper cut, below_snr_min = lower cut, VSX type out of scope) are final:
-#: no comparison selection in Phase 1, never measured, never revived later.
+#: TARGET-RULES-2026-10 (Milan 2026-10-13): target skips decided on MASTERSTAR in target
+#: selection (saturated = upper cut, below_snr_min = lower cut, VSX type out of scope) are final:
+#: no comparison-star selection, never measured, never revived later.
 FINAL_SKIP_REASONS = frozenset({"saturated", "below_snr_min", "vsx_type_out_of_scope"})
 
 
@@ -161,11 +161,11 @@ _PSF_ERR_MAG_SCALE = MAG_ERR_SCALE
 
 
 # ======================================================================
-# photometry.py (zlucene do photometry_core)
+# photometry.py (merged into photometry_core)
 # ======================================================================
 
 
-# Stlpce nacitavane z per-frame CSV pre bootstrap (78 % uspora pamate)
+# Columns loaded from per-frame CSV for bootstrap (78 % memory saving)
 _PHASE_USECOLS_PERFRAME: list[str] = [
     "catalog_id",
     "bjd_tdb_mid",
@@ -199,9 +199,9 @@ def run_full_photometry_pipeline(
     draft_id: int | None = None,
     progress_cb: Any = None,
 ) -> dict[str, Any]:
-    """Jedno-krokovy wrapper: Faza 0+1 + Faza 2A ako jeden celok.
+    """Single-step wrapper: target and comparison-star selection + aperture photometry as one unit.
 
-    UI to pouziva ako jednu akciu 'RUN Aperture Photometry' pre dany obs_group.
+    The UI uses it as a single 'RUN Aperture Photometry' action for the given obs_group.
     """
     _cfg = cfg or AppConfig()
 
@@ -221,8 +221,10 @@ def run_full_photometry_pipeline(
         except UnicodeEncodeError:
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    # FWHM: prefer header (VY_FWHM_GAUSS/VY_FWHM), inak default z configu.
-    fwhm_px = float(_cfg.sips_dao_fwhm_px)
+    # FWHM: prefer header (VY_FWHM_GAUSS/VY_FWHM), otherwise the config default.
+    from pipeline_constants import DAO_FWHM_FALLBACK_PX  # noqa: PLC0415
+
+    fwhm_px = DAO_FWHM_FALLBACK_PX
     _ms_header_shared: Any | None = None
     _ms_path_shared = Path(masterstar_fits_path)
     if _ms_path_shared.is_file():
@@ -237,7 +239,7 @@ def run_full_photometry_pipeline(
     if _ms_header_shared is not None:
         try:
             # Prefer night seeing (VY_FWHM) over Gaussian-core (VY_FWHM_GAUSS) for
-            # Phase-1 isolation / blend geometry. Core FWHM under-states the CoG
+            # comparison-star isolation / blend geometry. Core FWHM under-states the CoG
             # 3-FWHM single-source radius (COMP-ASSIGN-03 / A-1).
             for key in ("VY_FWHM", "VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
                 v = _ms_header_shared.get(key)
@@ -248,11 +250,11 @@ def run_full_photometry_pipeline(
                     fwhm_px = fv
                     break
         except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0221] VY_FWHM/VY_FWHM_GAUSS header parse fails - pipeline uses default/config FWHM for phase0+1: %s', exc)
+            logging.error('[EXC-0221] VY_FWHM/VY_FWHM_GAUSS header parse fails - pipeline uses default/config FWHM for target and comparison-star selection: %s', exc)
             pass
 
-    # -- FAZA 0+1 --
-    _p("Faza 0+1: select targets + comparison stars...")
+    # -- target and comparison-star selection --
+    _p("Target and comparison-star selection...")
     _plate_scale = _get_plate_scale_from_cfg(
         _cfg,
         db=db,
@@ -270,37 +272,18 @@ def run_full_photometry_pipeline(
                 "[FOV] plate_scale from MASTERSTAR.fits header -> %.4f arcsec/px",
                 float(_plate_scale),
             )
-    _fw_pipe, _fh_pipe, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
-        Path(masterstar_fits_path),
-        frame_w_px=int(_cfg.frame_width_px),
-        frame_h_px=int(_cfg.frame_height_px),
-        db=db,
-        draft_id=draft_id,
-    )
-    if _frame_hw_src != "caller_default":
-        logging.info(
-            "[PHASE 0+1] Pipeline frame dimensions %dx%d px from %s",
-            int(_fw_pipe),
-            int(_fh_pipe),
-            _frame_hw_src,
-        )
-    p01 = run_phase0_and_phase1(
+    p01 = run_target_and_comp_selection(
         variable_targets_csv=Path(variable_targets_csv),
         masterstars_csv=Path(masterstars_csv),
         per_frame_csv_dir=Path(per_frame_csv_dir),
         output_dir=Path(output_dir),
         fwhm_px=float(fwhm_px),
-        frame_w_px=int(_fw_pipe),
-        frame_h_px=int(_fh_pipe),
-        chip_interior_margin_px=int(_cfg.phase01_chip_interior_margin_px),
         plate_scale_arcsec_px=_plate_scale,
         comp_max_delta_bprp=float(_cfg.comp_max_delta_bprp),
         n_comp_min=int(_cfg.phase01_comparison_n_comp_min),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
         max_comp_rms=float(_cfg.phase01_comparison_max_comp_rms),
-        min_dist_arcsec=float(_cfg.phase01_comparison_min_dist_arcsec),
         min_frames_frac=float(_cfg.phase01_comparison_min_frames_frac),
-        isolation_radius_px=float(_cfg.phase01_comparison_isolation_radius_px),
         cfg=_cfg,
         progress_cb=progress_cb,
         draft_id=draft_id,
@@ -312,32 +295,32 @@ def run_full_photometry_pipeline(
     n_active = int(p01.get("n_active_targets") or 0)
     if n_active <= 0:
         return {
-            "phase01": p01,
-            "phase2a": None,
+            "target_comp_selection": p01,
+            "aperture_photometry": None,
             "output_dir": str(Path(output_dir)),
             "zero_targets": True,
             "n_active_targets": 0,
         }
     if not active_targets_csv.is_file() or not comparison_stars_csv.is_file():
         return {
-            "phase01": p01,
-            "phase2a": None,
+            "target_comp_selection": p01,
+            "aperture_photometry": None,
             "output_dir": str(Path(output_dir)),
-            "error": "Faza 0+1 nevygenerovala active_targets/comparison_stars CSV.",
+            "error": "Target and comparison-star selection did not produce active_targets/comparison_stars CSV.",
         }
 
-    # INV-DAG-01: phase01 stamp after successful Phase 0+1.
+    # INV-DAG-01: target_comp_selection stamp after successful target and comparison-star selection.
     try:
         from invariants_runtime import stamp_stage_on_disk  # noqa: PLC0415
 
-        stamp_stage_on_disk(Path(output_dir), "phase01", enforce_upstream=True)
+        stamp_stage_on_disk(Path(output_dir), "target_comp_selection", enforce_upstream=True)
     except Exception as _dag_p01_exc:  # noqa: BLE001
-        logging.debug("[INV-DAG-01] phase01 stamp skipped: %s", _dag_p01_exc)
+        logging.debug("[INV-DAG-01] target_comp_selection stamp skipped: %s", _dag_p01_exc)
 
-    # -- FAZA 2A --
-    _p("Faza 2A: aperture photometry + lightcurves...")
+    # -- aperture photometry --
+    _p("Aperture photometry + light curves...")
     _cfg2a = _cfg
-    p2a = run_phase2a(
+    p2a = run_aperture_photometry(
         masterstar_fits_path=Path(masterstar_fits_path),
         active_targets_csv=active_targets_csv,
         comparison_stars_csv=comparison_stars_csv,
@@ -355,8 +338,8 @@ def run_full_photometry_pipeline(
     )
 
     return {
-        "phase01": p01,
-        "phase2a": p2a,
+        "target_comp_selection": p01,
+        "aperture_photometry": p2a,
         "output_dir": str(Path(output_dir)),
         "proc_frame_store": p01.get("proc_store"),
     }
@@ -364,7 +347,6 @@ def run_full_photometry_pipeline(
 
 __all__ = [
     # photometry (legacy)
-    "StressTestResult",
     "apply_reporting_postprocess",
     "check_comparison_stability",
     "common_field_intersection_bbox_px",
@@ -376,20 +358,17 @@ __all__ = [
     "enhance_catalog_dataframe_aperture",
     "ensemble_normalize",
     "ensure_full_variable_targets_if_presel_stub",
-    # photometry_phase2a (legacy)
+    # aperture_photometry (legacy)
     "measure_fwhm_from_masterstar",
     "read_flux_from_csv",
-    "recommended_aperture_by_color",
     "resolve_apply_color_term",
     "run_full_photometry_pipeline",
-    "run_phase0_and_phase1",
-    "run_phase2a",
+    "run_target_and_comp_selection",
+    "run_aperture_photometry",
     "save_lightcurve_csv",
     "save_lightcurve_png",
     "select_active_targets",
     "select_comparison_stars_per_target",
-    "stress_test_relative_rms_from_sidecars",
-    "vsx_is_known_variable_top3_per_bin",
 ]
 
 from photometry_ui_helpers import resolve_lc_time_base  # noqa: E402,F401
@@ -405,21 +384,17 @@ from photometry_shared import (
     _get_plate_scale_from_cfg,
     _resolve_plate_scale_arcsec_per_px,
     _read_plate_scale_from_fits_path,
-    StressTestResult,
-    stress_test_relative_rms_from_sidecars,
-    vsx_is_known_variable_top3_per_bin,
     common_field_intersection_bbox_px_from_arrays,
     common_field_intersection_bbox_px,
-    recommended_aperture_by_color,
     _fwhm_moment_at,
     compute_fwhm_gaussian_for_aperture_catalog,
     enhance_catalog_dataframe_aperture,
 )
 
 import sys as _sys_e4
-_p2a_mod = _sys_e4.modules.get("photometry_phase2a")
-if _p2a_mod is None or getattr(_p2a_mod, "run_phase2a", None) is not None:
-    from photometry_phase2a import (  # noqa: E402,F401
+_p2a_mod = _sys_e4.modules.get("aperture_photometry")
+if _p2a_mod is None or getattr(_p2a_mod, "run_aperture_photometry", None) is not None:
+    from aperture_photometry import (  # noqa: E402,F401
         parse_comp_quality_json_map,
         _mad_sigma_or_std_floor,
         measure_fwhm_from_masterstar,
@@ -427,12 +402,12 @@ if _p2a_mod is None or getattr(_p2a_mod, "run_phase2a", None) is not None:
         _howell_variance_adu2,
         _photometric_error,
         _photometric_error_with_bkg_mode,
-        _phase2a_proc_column_requirements,
-        _phase2a_cache_columns,
-        _phase2a_empirical_sigma_bkg_ap,
+        _aperture_proc_column_requirements,
+        _aperture_cache_columns,
+        _aperture_empirical_sigma_bkg_ap,
         _sky_pp_for_photometric_error,
-        _resolve_phase2a_equipment_id,
-        _draft_dir_from_phase2a_paths,
+        _resolve_aperture_equipment_id,
+        _draft_dir_from_aperture_paths,
         _require_comparison_stars_per_target_schema,
         _resolve_photometric_aperture_px_for_gs11,
         read_flux_from_csv,
@@ -447,13 +422,13 @@ if _p2a_mod is None or getattr(_p2a_mod, "run_phase2a", None) is not None:
         expected_rms_from_model,
         classify_lc_quality,
         build_lc_quality_summary,
-        _Phase2AState,
-        _propagate_phase2a_skip_reason_to_active,
-        run_phase2a,
+        _AperturePhotometryState,
+        _propagate_aperture_skip_reason_to_active,
+        run_aperture_photometry,
     )
 
 from photometry_lightcurve import (
-    _phase2a_skip_empty_comps_target,
+    _aperture_skip_empty_comps_target,
     compute_lc_rms_ooe,
     check_comparison_stability,
     ensemble_normalize,
@@ -468,7 +443,7 @@ from photometry_lightcurve import (
     _per_frame_sat_flags_for_catalog_id,
     apply_per_frame_saturation_to_active_targets,
     decide_per_frame_saturation,
-    _build_phase2a_resolved_facts,
+    _build_aperture_resolved_facts,
     _recompute_bjd_hjd_with_status,
 )
 
@@ -522,6 +497,6 @@ from photometry_comp import (
     select_comparison_stars_per_target,
 )
 
-from phase01_run import run_phase0_and_phase1  # noqa: E402,F401
+from target_comp_selection import run_target_and_comp_selection  # noqa: E402,F401
 
 

@@ -1,4 +1,4 @@
-"""Unified per-parameter provenance resolver (VYVAR Phase 1).
+"""Unified per-parameter provenance resolver (VYVAR).
 
 ONE place that decides, per physical parameter, which source wins:
 
@@ -563,7 +563,10 @@ def is_null_island_coords(
     *,
     threshold_deg: float = NULL_ISLAND_LAT_LON_THRESHOLD_DEG,
 ) -> bool:
-    """True when both coordinates are within ``threshold_deg`` of (0, 0)."""
+    """True when the coordinates are no site: not finite (unset), or both within ``threshold_deg``
+    of (0, 0)."""
+    if not (math.isfinite(float(lat)) and math.isfinite(float(lon))):
+        return True
     return abs(float(lat)) < float(threshold_deg) and abs(float(lon)) < float(threshold_deg)
 
 

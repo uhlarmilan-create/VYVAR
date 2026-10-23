@@ -34,6 +34,9 @@ from gaia_catalog_id import normalize_gaia_source_id
 
 LOGGER = logging.getLogger(__name__)
 
+#: Below this D the contamination is too large to correct: the correction is skipped and flagged.
+GS11_TARGET_MIN_DILUTION = 0.50
+
 
 def _haversine_arcsec(ra1_deg: float, dec1_deg: float, ra2_deg: float, dec2_deg: float) -> float:
     """Great-circle separation in arcseconds (scalar haversine)."""
@@ -309,7 +312,7 @@ def apply_target_dilution_to_mag_calib(
     m_corr(t) = -2.5 log10(10^(-0.4 m(t)) - F_contam). Blend light is a constant flux, so
     the correction is larger at minimum light and restores the true amplitude (a constant
     magnitude offset would only shift the curve and keep the amplitude compressed).
-    Skipped and flagged when D < ``gs11_target_min_dilution`` (contamination too large to
+    Skipped and flagged when D < ``GS11_TARGET_MIN_DILUTION`` (contamination too large to
     trust) or a contaminating neighbour is a known variable; frames where the measured
     flux does not exceed the contamination become NaN.
     """
@@ -324,7 +327,7 @@ def apply_target_dilution_to_mag_calib(
         return out, res
     if not (math.isfinite(d) and math.isfinite(contam)) or d >= 1.0 or contam <= 0:
         return out, res
-    min_d = float(getattr(cfg, "gs11_target_min_dilution", 0.50) or 0.50)
+    min_d = GS11_TARGET_MIN_DILUTION
     if d < min_d:
         res.update({"dilution_skipped": True, "dilution_skip_reason": f"D={d:.3f} < {min_d:.2f}"})
         LOGGER.warning("GS11: %s D=%.4f too low - correction skipped, flagged", target_cid or "?", d)

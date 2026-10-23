@@ -130,7 +130,7 @@ def equipment_detector_warnings(rows: list[dict[str, Any]]) -> list[str]:
 
         g, rn = num(r.get("GAIN_ADU")), num(r.get("READNOISE_E"))
         if g is None or g <= 0 or rn is None or rn <= 0:
-            out.append(f"{name}: gain or read noise not set - Phase 2A uses gain 1.0 e-/ADU and RN 10 e-.")
+            out.append(f"{name}: gain or read noise not set - aperture photometry uses gain 1.0 e-/ADU and RN 10 e-.")
             continue
         if g > 50:
             out.append(f"{name}: gain {g:g} e-/ADU is unusually high - check the units.")
@@ -193,7 +193,7 @@ def render_database_explorer(pipeline: AstroPipeline) -> None:
             extra_caption=(
                 "GAIN_ADU: detector gain in e-/ADU (typically 0.5-5; QHY294MM about 3.17). "
                 "READNOISE_E: read noise in e- per pixel at bin 1 (typically 3-15; QHY294MM about 7.6). "
-                "Both enter the photometric errors and the SNR; without them Phase 2A uses gain 1.0 and RN 10. "
+                "Both enter the photometric errors and the SNR; without them aperture photometry uses gain 1.0 and RN 10. "
                 "SATURATE_ADU: ADU ceiling for catalog saturation. "
                 "E.g. 16383 for 14-bit ADC, or 65535 for full 16-bit range. "
                 "ADC_BITS: ADC resolution (e.g. 14 for IMX492/IMX533, 16 for IMX571/IMX455/IMX411); "

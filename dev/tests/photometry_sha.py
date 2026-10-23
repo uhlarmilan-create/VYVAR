@@ -1,4 +1,4 @@
-"""Numeric photometry SHA helpers (Chi_and_H zaloha anchor; draft-independent).
+"""Numeric photometry SHA helpers (Chi_and_H backup anchor; draft-independent).
 
 Recorded values (2026-06-11 re-baseline, draft_000387 re-cut x2): core 3f7c9e7a... (2806),
 full d5b72d08... (4285). **Note (2026-07-08):** draft_424 coherent anchor is
@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Core photometry only (LC + Phase-2A comp_quality + comparison pool).
+# Core photometry only (LC + aperture photometry comp_quality + comparison pool).
 PHOTOMETRY_SHA_CORE = (
     "3f7c9e7a5d8078317cb27678fde028cacf1986d3778547a0c50b087db5f19487"
 )
@@ -35,7 +35,7 @@ PHOTOMETRY_SHA_BASELINE = (
 )
 PHOTOMETRY_SHA_BASELINE_PREFIX = "d5b72d08"
 
-# Historical (2026-06-11 zaloha cut; current code no longer byte-reproduces).
+# Historical (2026-06-11 backup cut; current code no longer byte-reproduces).
 PHOTOMETRY_SHA_CORE_PRE_SPARSE_FB = (
     "203254fd75ea5874f5986eac3f478260c2e7e5a9c2636bfecf2b31244cfb09ba"
 )

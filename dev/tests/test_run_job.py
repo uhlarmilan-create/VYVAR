@@ -21,8 +21,6 @@ def _params(tmp_path: Path) -> night_run.NightRunParams:
         masterdark_validity_days=30,
         manual_flat_map={"a": "b"},
         flat_fallback_choices={"g": "o"},
-        plate_fov_deg=1.2,
-        dao_fwhm_px=2.5,
         masters_from="library",
         existing_pipeline=object(),
         optics=object(),
@@ -79,7 +77,7 @@ def test_child_runner_writes_status_and_result(tmp_path, monkeypatch):
 
 def test_child_runner_failure_is_reported(tmp_path, monkeypatch):
     def boom(params):
-        raise RuntimeError("Astrometria: ziadny set")
+        raise RuntimeError("Astrometria: no set")
 
     monkeypatch.setattr(night_run, "run_night_pipeline", boom)
     (tmp_path / run_job.JOB_FILE).write_text(json.dumps(run_job.params_to_job(_params(tmp_path))))

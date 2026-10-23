@@ -1,4 +1,4 @@
-"""Phase 2A proc-gap: variable targets = direct catalog_id hits only."""
+"""Aperture photometry proc-gap: variable targets = direct catalog_id hits only."""
 from __future__ import annotations
 
 import math

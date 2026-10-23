@@ -5,11 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from epsf_zp_ok import residual_meters_from_lightcurves, residual_stats
 from night_run import parse_night_run_cli, resolve_epsf_run, resolve_night_run_cli_ids, run_night_photometry
 
 
@@ -74,43 +72,6 @@ def test_a3_manifest_fills_camera_telescope(tmp_path: Path) -> None:
     assert src == "manifest"
 
 
-def test_residual_stats_matches_census_formula() -> None:
-    psf = np.array([0.010, 0.012, 0.011], dtype=float)
-    ap = np.array([0.001, 0.002, 0.003], dtype=float)
-    pin = np.array([True, True, True])
-    out = residual_stats(psf, ap, pin)
-    res = psf - ap
-    med = float(np.median(res))
-    assert out["n_full_membership"] == 3
-    assert out["n_finite_pairs"] == 3
-    assert abs(out["level_offset_mmag"] - med * 1000.0) < 1e-9
-    assert abs(out["demeaned_rms_mmag"] - float(np.sqrt(np.mean((res - med) ** 2))) * 1000.0) < 1e-9
-
-
-def test_residual_meters_from_lightcurves_aligns(tmp_path: Path) -> None:
-    lc = tmp_path / "platesolve" / "NoFilter_60_2" / "photometry" / "lightcurves"
-    lc.mkdir(parents=True)
-    tid = "1498613634033133184"
-    (lc / f"lightcurve_{tid}_psf.csv").write_text(
-        "# psf_lc_n_epochs_full=2\n"
-        "source_file,psf_delta_mag\n"
-        "a.fits,0.010\n"
-        "b.fits,0.012\n",
-        encoding="ascii",
-    )
-    (lc / f"lightcurve_{tid}.csv").write_text(
-        "source_file,delta_mag\n"
-        "a.fits,0.001\n"
-        "b.fits,0.002\n",
-        encoding="ascii",
-    )
-    out = residual_meters_from_lightcurves(tmp_path, tid)
-    assert out["missing"] is False
-    assert out["n_full"] == 2
-    assert out["n_full_membership"] == 2
-    assert out["coverage"] == 1.0
-
-
 def _stub_night_photometry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     setup = "S1"
     draft = tmp_path / "draft"
@@ -153,7 +114,7 @@ def _stub_night_photometry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> d
     )
 
     def _fake_phot(**_kwargs):
-        return {"phase2a": {"n_lightcurves": 1, "n_frames": 1}}
+        return {"aperture_photometry": {"n_lightcurves": 1, "n_frames": 1}}
 
     monkeypatch.setattr("photometry_core.run_full_photometry_pipeline", _fake_phot)
     monkeypatch.setattr("photometry_core.merge_photometry_pipeline_meta", lambda *a, **k: None)

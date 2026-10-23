@@ -85,6 +85,207 @@ RENAMED_KEYS: dict[str, str] = {
 
 # Keys removed from AppConfig; load_config_json logs INFO once per key (no difflib WARN).
 KNOWN_REMOVED_KEYS: dict[str, str] = {
+    "gain": (
+        "gain removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): gain comes from the FITS header or EQUIPMENTS.GAIN_ADU; unknown -> error (no default)"
+    ),
+    "phase01_chip_interior_margin_px": (
+        "phase01_chip_interior_margin_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): the edge margin is the sky-annulus radius (annulus_outer_fwhm x FWHM) or the annulus-aware safe box"
+    ),
+    "phase01_comparison_isolation_radius_px": (
+        "phase01_comparison_isolation_radius_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): the crude neighbour-flux contamination index it sized was removed; neighbour light is the comparison pool's aperture blend model"
+    ),
+    "phase01_suspected_interior_margin_px": (
+        "phase01_suspected_interior_margin_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): the edge margin is the sky-annulus radius (annulus_outer_fwhm x FWHM) or the annulus-aware safe box"
+    ),
+    "read_noise": (
+        "read_noise removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): read noise comes from the FITS header or EQUIPMENTS.READNOISE_E; unknown -> error (no default)"
+    ),
+    "sips_dao_fwhm_px": (
+        "sips_dao_fwhm_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): the DAO FWHM is the measured VY_FWHM of each frame; without one the fixed fallback pipeline_constants.DAO_FWHM_FALLBACK_PX = 3 px is used"
+    ),
+    "alignment_max_control_points": (
+        "alignment_max_control_points removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.ALIGNMENT_MAX_CONTROL_POINTS = 80); alignment_max_stars stays"
+    ),
+    "check_select_rms_floor": (
+        "check_select_rms_floor removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (check_star_kmag.CHECK_SELECT_RMS_FLOOR = 1e-4)"
+    ),
+    "check_star_min_epochs": (
+        "check_star_min_epochs removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (trust_flag_core.CHECK_STAR_MIN_EPOCHS = 5)"
+    ),
+    "comp_contamination_penalty_k": (
+        "comp_contamination_penalty_k removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (comp_selection_per_target.COMP_CONTAMINATION_PENALTY_K = 3)"
+    ),
+    "comp_rms_loo_photon_k": (
+        "comp_rms_loo_photon_k removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (comp_rms_loo.COMP_RMS_LOO_PHOTON_K_DEFAULT = 5)"
+    ),
+    "comp_select_rms_floor": (
+        "comp_select_rms_floor removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.COMP_SELECT_RMS_FLOOR = 1e-6)"
+    ),
+    "comp_slope_significance_k": (
+        "comp_slope_significance_k removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed default of check_comparison_stability now (3 sigma)"
+    ),
+    "comparison_stars_pool_n": (
+        "comparison_stars_pool_n removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the comparison pool is uncapped (was always 0)"
+    ),
+    "dao_centroid_max_shift_fwhm": (
+        "dao_centroid_max_shift_fwhm removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.DAO_CENTROID_MAX_SHIFT_FWHM = 1)"
+    ),
+    "epsf_min_stars": (
+        "epsf_min_stars removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.EPSF_MIN_BUILD_STARS = 30)"
+    ),
+    "err_empty_apertures_min": (
+        "err_empty_apertures_min removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): fixed defaults of the empty-aperture sky error (64 apertures, at least 16)"
+    ),
+    "err_empty_apertures_n": (
+        "err_empty_apertures_n removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): fixed defaults of the empty-aperture sky error (64 apertures, at least 16)"
+    ),
+    "exoplanet_match_max_sep_arcsec": (
+        "exoplanet_match_max_sep_arcsec removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.EXOPLANET_MATCH_MAX_SEP_ARCSEC = 3 arcsec)"
+    ),
+    "forced_photometry_enabled": (
+        "forced_photometry_enabled removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): forced photometry of MASTERSTAR stars is always on, without extra margin"
+    ),
+    "forced_photometry_margin_px": (
+        "forced_photometry_margin_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): forced photometry of MASTERSTAR stars is always on, without extra margin"
+    ),
+    "frame_height_px": (
+        "frame_height_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the frame size always comes from FITS NAXIS1/2"
+    ),
+    "frame_width_px": (
+        "frame_width_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the frame size always comes from FITS NAXIS1/2"
+    ),
+    "gs11_dilution_aperture_arcsec": (
+        "gs11_dilution_aperture_arcsec removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the dilution aperture is always the target's photometric aperture (0 = auto was the only consistent value)"
+    ),
+    "gs11_dilution_mag_limit_delta": (
+        "gs11_dilution_mag_limit_delta removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed default of compute_dilution_factor now (5 mag)"
+    ),
+    "gs11_target_min_dilution": (
+        "gs11_target_min_dilution removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (dilution.GS11_TARGET_MIN_DILUTION = 0.5)"
+    ),
+    "hrd_dsc_confirm_prob": (
+        "hrd_dsc_confirm_prob removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_enrich_max_candidates": (
+        "hrd_enrich_max_candidates removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_enrich_tap_timeout_s": (
+        "hrd_enrich_tap_timeout_s removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_max_per_category": (
+        "hrd_max_per_category removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_min_per_net": (
+        "hrd_min_per_net removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_parallax_min_mas": (
+        "hrd_parallax_min_mas removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_parallax_snr_min": (
+        "hrd_parallax_snr_min removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed HRD constant now (hrd_analysis.HRD_*), same value"
+    ),
+    "hrd_simbad_enrich_enabled": (
+        "hrd_simbad_enrich_enabled removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): merged into hrd_online_enrich_enabled (one switch for Gaia TAP and SIMBAD)"
+    ),
+    "lc_high_err_nsigma": (
+        "lc_high_err_nsigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the four 5-sigma LC flag thresholds are one constant now (lc_outlier.OUTLIER_N_SIGMA = 5)"
+    ),
+    "lc_outlier_adjacent_sigma": (
+        "lc_outlier_adjacent_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (lc_outlier.ADJACENT_SIGMA = 3)"
+    ),
+    "lc_outlier_enabled": (
+        "lc_outlier_enabled removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): LC outlier flagging is always on (flags never change photometry)"
+    ),
+    "lc_outlier_evidence_n_sigma": (
+        "lc_outlier_evidence_n_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the four 5-sigma LC flag thresholds are one constant now (lc_outlier.OUTLIER_N_SIGMA = 5)"
+    ),
+    "lc_outlier_frame_qc_n_sigma": (
+        "lc_outlier_frame_qc_n_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the four 5-sigma LC flag thresholds are one constant now (lc_outlier.OUTLIER_N_SIGMA = 5)"
+    ),
+    "lc_outlier_n_sigma": (
+        "lc_outlier_n_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the four 5-sigma LC flag thresholds are one constant now (lc_outlier.OUTLIER_N_SIGMA = 5)"
+    ),
+    "lc_quality_min_normal_frac": (
+        "lc_quality_min_normal_frac removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed default of classify_lc_quality now (3 frames, 0.5)"
+    ),
+    "lc_quality_short_min_frames": (
+        "lc_quality_short_min_frames removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed default of classify_lc_quality now (3 frames, 0.5)"
+    ),
+    "masterstar_dao_centroid_qa_cap_px": (
+        "masterstar_dao_centroid_qa_cap_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_dao_centroid_qa_floor_px": (
+        "masterstar_dao_centroid_qa_floor_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_dao_empty_sky_false_accept_max": (
+        "masterstar_dao_empty_sky_false_accept_max removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): read by nobody since the empty-sky audit was removed"
+    ),
+    "masterstar_dao_empty_sky_target_n": (
+        "masterstar_dao_empty_sky_target_n removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): read by nobody since the empty-sky audit was removed"
+    ),
+    "masterstar_dao_match_radius_k": (
+        "masterstar_dao_match_radius_k removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_dao_pass1_dedup_px": (
+        "masterstar_dao_pass1_dedup_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_dao_pass2_center_tol_px": (
+        "masterstar_dao_pass2_center_tol_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_dao_pass2_sigma": (
+        "masterstar_dao_pass2_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_forced_seed_centroid_max_px": (
+        "masterstar_forced_seed_centroid_max_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_forced_seed_comp_pool_enabled": (
+        "masterstar_forced_seed_comp_pool_enabled removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): forced seeds never enter the comparison pool (was always off)"
+    ),
+    "masterstar_forced_seed_snr_min": (
+        "masterstar_forced_seed_snr_min removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_gaia_census_edge_margin_px": (
+        "masterstar_gaia_census_edge_margin_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_lock_leftover_radius_px": (
+        "masterstar_lock_leftover_radius_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_lock_pair_tol_px": (
+        "masterstar_lock_pair_tol_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+    ),
+    "masterstar_use_best_frame_fwhm": (
+        "masterstar_use_best_frame_fwhm removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): always on: the MASTERSTAR DAO FWHM is the best frame's FWHM"
+    ),
+    "phase01_comparison_min_dist_arcsec": (
+        "phase01_comparison_min_dist_arcsec removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the target-comparison separation comes from geometry (annulus + aperture x FWHM)"
+    ),
+    "phase01_ct_extrapolation_tol": (
+        "phase01_ct_extrapolation_tol removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the colour term is applied only inside the comparison-star colour range (was always 0)"
+    ),
+    "phase01_ct_min_comp": (
+        "phase01_ct_min_comp removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (pipeline_constants.CT_MIN_COMP = 7)"
+    ),
+    "plate_solve_fov_deg": (
+        "plate_solve_fov_deg removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the value was never used (the field size comes from FOCALLEN + PIXSIZE + NAXIS)"
+    ),
+    "preprocess_sky_surface_force_reapply": (
+        "preprocess_sky_surface_force_reapply removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): sky surface is subtracted once; a new order needs recalibration from raw"
+    ),
+    "psf_chi2_locus_nsigma": (
+        "psf_chi2_locus_nsigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (psf_chi2_locus.DEFAULT_NSIGMA = 5)"
+    ),
+    "sparse_trust_T_green": (
+        "sparse_trust_T_green removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the sparse-trust band limits are the SparseTrustConfig defaults (1.5 / 4.0 / 0.0004)"
+    ),
+    "sparse_trust_T_red": (
+        "sparse_trust_T_red removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the sparse-trust band limits are the SparseTrustConfig defaults (1.5 / 4.0 / 0.0004)"
+    ),
+    "sparse_trust_X2_RED": (
+        "sparse_trust_X2_RED removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): the sparse-trust band limits are the SparseTrustConfig defaults (1.5 / 4.0 / 0.0004)"
+    ),
+    "tess_contam_max": (
+        "tess_contam_max removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed constant now (tess_analysis.TESS_CONTAM_MAX = 0.10)"
+    ),
     "color_level_k_mag_per_bprp": (
         "color_level_k_mag_per_bprp removed 2026-10-19 (CFG-REVIEW-2026-10): the Clear-filter level colour coefficient was never applied since BANDAUTH-2026-10 (Clear is reported untransformed, TRANS=NO); it only kept the trust gate from seeing the colour term as off"
     ),
@@ -277,6 +478,21 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "EXOPLANET_LOCAL_DB_PATH": (
         "EXOPLANET_LOCAL_DB_PATH removed 2026-10-19 (CFG-REVIEW-2026-10): legacy alias - use objects_db_path"
     ),
+    "trust_flag_enabled": (
+        "trust_flag_enabled removed 2026-10-22 (TRUST-ALWAYS-2026-10): trust always runs; with it off RED targets were exported for submission"
+    ),
+    "photon_transfer_ci_max_width_factor": (
+        "photon_transfer_ci_max_width_factor removed 2026-10-22 (GAIN-ONE-2026-10): the photon-transfer gain is gone; gain = header / EQUIPMENTS / ADC_BITS"
+    ),
+    "phase01_plate_scale_arcsec_per_px": (
+        "phase01_plate_scale_arcsec_per_px removed 2026-10-22 (PLATE-SCALE-2026-10): the plate scale comes from the solved MASTERSTAR WCS"
+    ),
+    "plate_scale_arcsec_per_px": (
+        "plate_scale_arcsec_per_px removed 2026-10-22 (PLATE-SCALE-2026-10): the plate scale comes from the solved MASTERSTAR WCS"
+    ),
+    "comp_pool_derived_admission": (
+        "comp_pool_derived_admission removed 2026-10-22 (COMP-ADMIT-2026-10): known variables (VSX, Gaia DR3 variability catalogue) are always excluded; the derived noise-curve admission only recomputed that test"
+    ),
     "masterstar_prematch_peak_sigma_floor": (
         "masterstar_prematch_peak_sigma_floor removed 2026-10-20 (DAO-FALSE-2026-10): the peak filter before the Gaia match had no effect at the detection threshold (530: 1 of 1957 dropped); false detections are measured on every MASTERSTAR instead (pipeline_meta dao_false_detection)"
     ),
@@ -290,7 +506,7 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "aperture_fwhm_factor_medium removed (legacy, never read)"
     ),
     "phase01_flux_col": (
-        "phase01_flux_col removed 2026-10-19 (CFG-REVIEW-2026-10): Phase 1 runs before RUN ePSF, so dao_flux was its only usable value"
+        "phase01_flux_col removed 2026-10-19 (CFG-REVIEW-2026-10): comparison-star selection runs before RUN ePSF, so dao_flux was its only usable value"
     ),
     "comp_iterative_clip_enabled": (
         "comp_iterative_clip_enabled removed (COMP-RULES-2026-10: no iterative comp clip)"
@@ -471,9 +687,9 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
     "phase01_comparison_exclude_gaia_extobj": "COMP-NSS-2026-10: the local Gaia DB has no QSO/galaxy columns - the filter never ran; key removed",
     "phase01_comparison_max_fwhm_factor": "PHASE1-ONE-PASS-2026-10: the FWHM blend filter only fed a diagnostic column; blends are gated by the neighbour-light rule",
     "gs11_comp_max_dilution": "PHASE1-ONE-PASS-2026-10: dilution never rejected a comparison star (the counter could not increment); key removed",
-    "frame_align_residual_gate_enabled": "ALIGN-VERIFY-2026-10: the circular Phase-2A alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
-    "frame_align_residual_max_frac": "ALIGN-VERIFY-2026-10: the circular Phase-2A alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
-    "frame_align_residual_min_keep_frames": "ALIGN-VERIFY-2026-10: the circular Phase-2A alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
+    "frame_align_residual_gate_enabled": "ALIGN-VERIFY-2026-10: the circular aperture-photometry alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
+    "frame_align_residual_max_frac": "ALIGN-VERIFY-2026-10: the circular aperture-photometry alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
+    "frame_align_residual_min_keep_frames": "ALIGN-VERIFY-2026-10: the circular aperture-photometry alignment-residual gate is removed; every registration is verified on star pairs at alignment time and an unverified frame is not measured",
     "comp_qa_enabled": "COMP-QA-2026-10: Sokolovsky LOO comp QA removed; comps are gated at selection (not variable in Gaia/VSX, neighbour light, frame edge)",
     "variability_min_frames": (
         "variability_min_frames removed 2026-10-10 VAR-2026-10: the field search derives its noise model and threshold from the data"
@@ -525,7 +741,7 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "vsx_variable_targets_mag_limit removed 2026-07; VSX scope is detection-limited (DAO+Gaia match)"
     ),
     "phase01_match_radius_arcsec": (
-        "phase01_match_radius_arcsec removed 2026-07; Phase 0 uses catalog_id identity join (PHASE0-IDENTITY-GATE)"
+        "phase01_match_radius_arcsec removed 2026-07; target selection uses catalog_id identity join (PHASE0-IDENTITY-GATE)"
     ),
     "aperture_selection_criterion": (
         "aperture_selection_criterion removed 2026-08-31 CONSOLIDATE-01B; scatter/SNR diagnostic table deleted"
@@ -543,7 +759,7 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "global_comp_pool_enabled removed 2026-09-01 CONSOLIDATE-01D; global pool is always on (COMP-POOL-01)"
     ),
     "export_err_mode": (
-        "export_err_mode removed 2026-09-01 CONSOLIDATE-01D; exported err is always ERR-CALIB calibrated"
+        "export_err_mode removed 2026-09-01 CONSOLIDATE-01D (the ERR-CALIB layer itself was removed in CODE-REVIEW-2026-10 step 6: its sidecar was never written)"
     ),
     "err_background_mode": (
         "err_background_mode removed 2026-09-01 CONSOLIDATE-01D; empirical empty-aperture term is always on (F-BINGAIN-1); Howell math remains as missing-sigma fallback"
@@ -731,7 +947,7 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "phase01_comparison_fov_fraction removed 2026-10-10 (CLEAN-STEP5-2026-10); no distance limit in comparison selection (distance is only a tie-break after RMS and colour)"
     ),
     "phase01_comparison_max_psf_chi2": (
-        "phase01_comparison_max_psf_chi2 removed 2026-10-10 (CLEAN-STEP5-2026-10); Phase-1 comparison selection never applied a PSF chi2 cut (proc CSVs are DAO-era)"
+        "phase01_comparison_max_psf_chi2 removed 2026-10-10 (CLEAN-STEP5-2026-10); comparison-star selection never applied a PSF chi2 cut (proc CSVs are DAO-era)"
     ),
     "field_density_adaptive_enabled": (
         "field_density_adaptive_enabled removed 2026-10-10 (CLEAN-STEP5-2026-10); field density / crowding classifiers no longer change comparison rules (COMP-RULES-2026-10); field_density.json stays a diagnostic"
@@ -1092,10 +1308,10 @@ def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
 
 
 def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
-    """Jednotny pocet workerov pre QC, preprocess, combined, per-frame CSV (zaklad pred RAM stropom), alignment, calibrate MP.
+    """Single worker count for QC, preprocess, combined, per-frame CSV (base before the RAM cap), alignment, calibrate MP.
 
-    Berie minimum z CPU-heuristiky a odhadu podla volnej RAM (rovnaky odhad pamate ako pri per-frame exporte),
-    aby jedna hodnota bola bezpecna v celom workflow.
+    Takes the minimum of the CPU heuristic and the free-RAM estimate (same memory estimate as the per-frame export),
+    so that one value is safe across the whole workflow.
     """
     n = os.cpu_count()
     if n is None or n < 1:
@@ -1120,12 +1336,90 @@ def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
     return max(1, min(32, min(cpu_cap, ram_cap)))
 
 
+#: CODE-REVIEW-2026-10 step 7: the numeric config.json keys with their allowed range [lo, hi] -
+#: the ONE place a range lives. The loader clamps to it (with a warning), the Settings page and
+#: dev/scripts/validate_config.py read it through params_registry. Type = type of the default.
+PARAM_RANGES: dict[str, tuple[float, float]] = {
+    "masterdark_validity_days": (1, 3650),
+    "masterflat_validity_days": (1, 3650),
+    "calibration_master_ccd_temp_tolerance_c": (0.01, 20.0),
+    "lc_quality_min_frames": (3, 500),
+    "comp_trust_min_comps": (3, 20),
+    "preprocess_sky_surface_order": (0, 2),
+    "osc_channel_binning": (1, 4),
+    "aperture_fwhm_factor": (0.25, 6.0),
+    "annulus_inner_fwhm": (1.0, 10.0),
+    "annulus_outer_fwhm": (1.5, 12.0),
+    "detection_threshold_sigma": (DETECTION_THRESHOLD_SIGMA_MIN, DETECTION_THRESHOLD_SIGMA_MAX),
+    "per_frame_mp_reserve_ram_gb": (0.0, 64.0),
+    "alignment_max_stars": (10, 5000),
+    "phase01_comparison_n_comp_min": (2, 12),
+    "phase01_comparison_n_comp_max": (3, 20),
+    "snr_min": (3.0, 1000.0),
+    "phase01_comparison_max_comp_rms": (0.01, 0.5),
+    "phase01_comparison_min_frames_frac": (0.05, 0.95),
+    "comp_max_delta_bprp": (0.0, 5.0),
+    "comp_isolation_fwhm": (1.0, 12.0),
+    "comp_max_slope_mmag_hr": (0.0, 500.0),
+    "comp_catalog_offset_max_mag": (0.0, 2.0),
+    "per_frame_sat_min_clean_frac": (0.1, 1.0),
+    "masterstar_best_of_n": (1, 25),
+    "auto_fwhm_k_factor": (1.0, 4.0),
+}
+
+#: On / off config.json keys.
+BOOL_KEYS: tuple[str, ...] = (
+    "hrd_online_enrich_enabled",
+    "hrd_nss_category_enabled",
+    "save_lightcurve_png",
+    "epsf_auto_run",
+    "epsf_export_auto",
+    "gs11_dilution_enabled",
+    "tess_enabled",
+    "qc_after_calibrate_enabled",
+    "auto_fwhm_enabled",
+)
+
+_TRUE_WORDS = frozenset({"1", "true", "yes", "on"})
+_FALSE_WORDS = frozenset({"0", "false", "no", "off"})
+
+
+def _coerce_number(key: str, raw: Any, kind: type, lo: float, hi: float) -> float | int | None:
+    """``raw`` as ``kind`` clamped to [lo, hi]; None (with a warning) when it is not a number."""
+    try:
+        if isinstance(raw, bool):
+            raise ValueError
+        v = float(raw)
+        if not math.isfinite(v):
+            raise ValueError
+    except (TypeError, ValueError):
+        logging.warning("config.json: %s = %r is not a number; the default is used", key, raw)
+        return None
+    if kind is int:
+        v = float(int(v))
+    c = max(float(lo), min(float(hi), v))
+    if c != v:
+        logging.warning("config.json: %s = %r is outside [%s, %s]; %s is used", key, raw, lo, hi, kind(c))
+    return kind(c)
+
+
+def _coerce_bool(key: str, raw: Any) -> bool | None:
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)) and raw in (0, 1):
+        return bool(raw)
+    word = str(raw).strip().lower()
+    if word in _TRUE_WORDS:
+        return True
+    if word in _FALSE_WORDS:
+        return False
+    logging.warning("config.json: %s = %r is not true / false; the default is used", key, raw)
+    return None
+
+
 @dataclass(slots=True)
 class AppConfig:
-    """Central application config.
-
-    SQLite schema is intentionally not defined yet.
-    """
+    """Central application config: dataclass defaults, overridden by config.json on load."""
 
     # src_py/config.py -> repo root is parent.parent; project_root anchors config.json,
     # Archive/, CalibrationLibrary/, vyvar.sqlite3, catalogs/ discovery (all at repo root).
@@ -1134,10 +1428,6 @@ class AppConfig:
     # Calibration validity defaults (days)
     masterdark_validity_days: int = 90
     masterflat_validity_days: int = 200
-
-    #: Field diameter floor in degrees (not read from config.json); the Gaia cone of a chip comes from
-    #: FOCALLEN + PIXSIZE + NAXIS (``utils.catalog_cone_radius_deg_from_optics``).
-    plate_solve_fov_deg: float = 1.0
 
     #: Max |DeltaT| ( degC) when matching library dark masters to light ``CCD_TEMP`` (``find_best_calibration_library_path``).
     calibration_master_ccd_temp_tolerance_c: float = 0.5
@@ -1148,68 +1438,22 @@ class AppConfig:
     #: PLATESOLVE-2026-10 blind plate-solving index (astro_index build); empty = next to the Gaia DB.
     astrometry_index_dir: str = ""
 
-    #: HRD extreme-object online enrichment (Gaia TAP teff/logg for candidates only).
+    #: HRD extreme objects: online lookups (Gaia TAP teff/logg and SIMBAD otype) for the candidates.
     hrd_online_enrich_enabled: bool = True
-    #: HRD SIMBAD otype refinement for extreme candidates (additive label only).
-    hrd_simbad_enrich_enabled: bool = True
-    #: Max Stage-1 extreme candidates sent to online enrichment (1..100).
-    hrd_enrich_max_candidates: int = 20
-    #: Per-attempt Gaia TAP timeout (seconds) for HRD online enrichment.
-    hrd_enrich_tap_timeout_s: float = 60.0  # HRD-ENRICH-2026-10 (was 20 s: timed out on draft 526)
-    #: HRD parallax floor (mas) for M_G reliability; SNR is the primary quality filter.
-    hrd_parallax_min_mas: float = 0.15
-    #: HRD parallax SNR floor for M_G reliability.
-    hrd_parallax_snr_min: float = 5.0
-    #: Max table rows per Stage-2 category label (1..20).
-    hrd_max_per_category: int = 3
-    #: Min reserved Stage-1 enrich slots per candidate net (0..20); NSS net filled last.
-    hrd_min_per_net: int = 4
     #: Include Gaia NSS binary candidates in HRD Stage-1/2 (default off; reversible flag).
     hrd_nss_category_enabled: bool = False
-    #: Gaia DSC probability floor for HRD "likely" white-dwarf tier (clamp 0.5..1.0).
-    hrd_dsc_confirm_prob: float = 0.90
 
     #: Objects catalog DB (tables ``vsx_data`` and ``exoplanet_data``; built by catalogs/objects_make.py).
     objects_db_path: str = "catalogs/vyvar_objects.db"
     #: VSX types to leave unmeasured (token-match; empty = inactive). See vsx_type_scope.py.
     vsx_out_of_scope_types: list[str] = field(default_factory=list)
 
-    #: Per-detection exoplanet host cross-match tolerance (arcsec); informational label only.
-    exoplanet_match_max_sep_arcsec: float = 3.0
-
-
-    #: Faza 2A: ukladat PNG (lightcurve, cutout, field map). ``False`` = len CSV + summary; UI pouziva Plotly z CSV.
+    #: Aperture photometry: write PNG files (light curve, cutout, field map). ``False`` = CSV + summary only; the UI plots from the CSV.
     save_lightcurve_png: bool = False
-    #: LC-OUTLIER-01: enable isolated-spike + image-evidence + frame_qc flagging.
-    lc_outlier_enabled: bool = True
-    #: Isolated-spike residual threshold (|r| > n_sigma); statistical convention.
-    lc_outlier_n_sigma: float = 5.0
-    #: Adjacent same-sign residual threshold that protects flares/eclipses.
-    lc_outlier_adjacent_sigma: float = 3.0
-    #: Night MAD-sigma threshold for whole-frame QC (FWHM/elong/sky/ZP).
-    lc_outlier_frame_qc_n_sigma: float = 5.0
-    #: Image-evidence MAD-sigma vs same-frame similar-flux peers.
-    lc_outlier_evidence_n_sigma: float = 5.0
-    #: LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
-    lc_high_err_nsigma: float = 5.0
-    #: Post-Phase 2A trust flag (GREEN/YELLOW/RED); metadata + report/export notes only.
-    trust_flag_enabled: bool = True
-    #: LC-quality frame floors for ``classify_lc_quality`` (Phase 2A summary).
+    #: LC-quality frame floor for ``classify_lc_quality`` (aperture-photometry summary).
     lc_quality_min_frames: int = 20
-    lc_quality_short_min_frames: int = 3
-    lc_quality_min_normal_frac: float = 0.5
-    #: Trust-only comp floor (RED below); Phase-1 selection uses ``phase01_comparison_n_comp_min``.
+    #: Trust-only comp floor (RED below); comparison-star selection uses ``phase01_comparison_n_comp_min``.
     comp_trust_min_comps: int = 5
-    #: Minimum check-star epochs before trust scatter thresholds apply.
-    check_star_min_epochs: int = 5
-    #: Sparse-trust CI band thresholds (dev/results/specs/VYVAR_SPARSE_TRUST_SPEC.md).
-    sparse_trust_T_green: float = 1.5
-    sparse_trust_T_red: float = 4.0
-    sparse_trust_X2_RED: float = 0.0004
-    #: Artefact floor for check-star selection metric (comp_rms / p2p_rms).
-    check_select_rms_floor: float = 1e-4
-    #: Phase-1 comp selection: drop candidates with comp_rms below this (isolated_bin artefact).
-    comp_select_rms_floor: float = 1e-6
     # Export reports (AAVSO + VAR.ASTRO.CZ)
     observer_name: str = "Unknown Observer"
     observer_code: str = ""
@@ -1219,9 +1463,10 @@ class AppConfig:
     #: Run-time only (not in config.json): LOCATION.ID of the default site (IS_DEFAULT), or the site
     #: chosen for the current run; 0 = no default site in the DB.
     observer_location_id: int = 0
-    observer_lat: float = 50.1121658  # degrees N
-    observer_lon: float = 14.6982547  # degrees E
-    observer_alt_m: float = 275.0  # metres above sea level
+    #: Mirror of the site's LOCATION row (NaN = no site; CODE-REVIEW step 7B: no built-in default site).
+    observer_lat: float = float("nan")  # degrees N
+    observer_lon: float = float("nan")  # degrees E
+    observer_alt_m: float = float("nan")  # metres above sea level
     observer_location_name: str = ""  # display name; filled from DB on load when id > 0
     #: Night-run automatic ePSF stage after aperture photometry (EPSF-CHAIN-01B).
     #: Default OFF.
@@ -1234,17 +1479,10 @@ class AppConfig:
     #: EPSF-EXPORT-2026-10: write the ePSF light-curve files for the user (lightcurves_reports/epsf: bjd_tdb,
     #: delta_mag, err + header) automatically when RUN ePSF finishes. Off: the ePSF tab's button writes them.
     epsf_export_auto: bool = True
-    #: EPSF-CHI2-LOCUS-01: n_sigma cut on residual from the per-frame (or night)
-    #: log10(chi2)=a+k*log10(flux) locus. Statistical convention, not equipment.
-    psf_chi2_locus_nsigma: float = 5.0
     #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
     preprocess_sky_surface_order: int = 2
-    #: When True, bypass the VY_SKYSF idempotency guard and re-subtract sky surface in-place.
-    preprocess_sky_surface_force_reapply: bool = False
     #: OSC: post-extraction NxN average binning on each channel plane (1-4; default 2). Total scale vs raw = 2 x N.
     osc_channel_binning: int = 2
-    #: Minimum clean stars required to build the ePSF model.
-    epsf_min_stars: int = 30
     # NOTE: These are in units of **Gaussian FWHM** (not moment-FWHM).
     # Aperture/annulus radii are computed as factor x fwhm_gaussian_px.
     #: Legacy single aperture factor - used where multi-aperture (B+C) is not active.
@@ -1256,55 +1494,18 @@ class AppConfig:
     #: detection (QC after calibration, alignment, VYVAR plate solve, MASTERSTAR pass 1, per-frame
     #: catalogs, zone-classifier T1). Replaces sips_dao_threshold_sigma, masterstar_dao_threshold_sigma,
     #: dao_detection_n_equiv, alignment_detection_sigma and qc_dao_detection_sigma. Clamp 2.0-20.0.
-    detection_threshold_sigma: float = 4.5
-    #: E.2: max DAO-vs-WCS centroid shift (x FWHM) before WCS pixel fallback on matched stars.
-    dao_centroid_max_shift_fwhm: float = 1.0
-    #: MASTERSTAR katalog: DAO FWHM z najlepsieho zdrojoveho snimku (``best_frame_fwhm_px``), nie median ``VY_FWHM`` v hlavicke.
-    masterstar_use_best_frame_fwhm: bool = True
-    #: MASTERSTAR DAO pass 2: local annulus sigma at Gaia seed positions (born-owned; INV-DET-FALSEFILL-01).
-    masterstar_dao_pass2_sigma: float = 4.0
-    #: MASTERSTAR DAO pass 2: max centroid offset [px] for targeted cutout acceptance (INV-DET-FALSEFILL-01 audit).
-    masterstar_dao_pass2_center_tol_px: float = 2.0
-    #: Pass1 spatial dedup radius [px] before pass2 (iter4 I6).
-    masterstar_dao_pass1_dedup_px: float = 0.75
-    #: Gaia-complete census + pass2 seed window: maximum G magnitude (default 15.0).
-    #: FORCED_SEED admission (MASTERSTAR-GAIA-01): max COM centroid offset from propagated Gaia [px].
-    masterstar_forced_seed_centroid_max_px: float = 2.0
-    #: FORCED_SEED admission: minimum aperture SNR on local annulus background.
-    masterstar_forced_seed_snr_min: float = 4.0
-    #: FORCED_SEED / leftover promotion: greedy match radius for leftover detections to Gaia [px].
-    masterstar_lock_leftover_radius_px: float = 3.0
-    #: Lock-existing assignment: max shift from locked catalog_id xy to detection [px].
-    masterstar_lock_pair_tol_px: float = 3.0
-    #: Gaia-complete census: edge margin [px] for EDGE state (matches target_depth edge band).
-    masterstar_gaia_census_edge_margin_px: float = 10.0
-    #: Comp/CT pool: admit FORCED_SEED stars (default off; separate future decision).
-    masterstar_forced_seed_comp_pool_enabled: bool = False
-    #: DAO-GAIA-ERA-01 (D-A): match radius = k x astrometric residual p95 [px] (validated ~1.7 -> 3 px @ p95~1.78).
-    masterstar_dao_match_radius_k: float = 1.7
-    #: DAO-GAIA-ERA-01: centroid QA floor/cap when deriving pass2/seed tolerances from residual p95 [px].
-    masterstar_dao_centroid_qa_floor_px: float = 1.0
-    masterstar_dao_centroid_qa_cap_px: float = 3.0
-    #: Empty-sky audit (INV-DET/SEED-FALSEFILL-01): max pure-noise false-accept rate at MS build
-    #: (measured on the image mirrored about its background, 2*B - data).
-    masterstar_dao_empty_sky_false_accept_max: float = 0.01
-    masterstar_dao_empty_sky_target_n: int = 2200
+    detection_threshold_sigma: float = DETECTION_THRESHOLD_SIGMA_DEFAULT
 
-    #: Paralelizmus (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): jedna hodnota
-    #: pocitana v ``__post_init__``; nie v ``config.json``. Runtime override: ``VYVAR_PARALLEL_WORKERS`` alebo legacy env v pipeline.
+    #: Parallelism (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): one value computed
+    #: in ``__post_init__``; not in ``config.json``. Run-time override: ``VYVAR_PARALLEL_WORKERS``.
     qc_preprocess_workers: int = 1
-    #: Reserve this much RAM (GB) when capping paralelneho exportu katalogov cez ``psutil`` (nad ramec jednotneho ``_pw``).
+    #: RAM (GB) kept free when capping the parallel workers (``psutil``).
     per_frame_mp_reserve_ram_gb: float = 1.5
 
     #: Frame alignment (DAO detection ladder): max brightest sources detected per frame (astroalign picks a subset).
     alignment_max_stars: int = 160
-    #: Frame alignment (``astroalign`` triangle matching): brightest N stars used as control points (independent of detection count).
-    alignment_max_control_points: int = 80
 
-    #: DAOStarFinder FWHM (pixels) tuned for SIPS-like centroid search (aperture ~13 -> ~4-5 px FWHM).
-    sips_dao_fwhm_px: float = 2.5
-
-    #: Faza 0+1 - vyber porovnavacich hviezd (``photometry_core.select_comparison_stars_per_target``).
+    #: Comparison-star selection (``photometry_core.select_comparison_stars_per_target``).
     #: No magnitude window and no maximum distance: candidates are ranked RMS -> colour -> distance.
     phase01_comparison_n_comp_min: int = 3
     phase01_comparison_n_comp_max: int = 8
@@ -1313,12 +1514,8 @@ class AppConfig:
     #: falls below it is not exported. Default 10 (sigma ~ 0.11 mag).
     snr_min: float = 10.0
     phase01_comparison_max_comp_rms: float = 0.1
-    #: COMP-RMS-DEF-01-B: LOO mag MAD ceiling is k x photon_sigma(snr_ap_pixscaled).
-    #: C3-0 (516 R2, 70 comps): p90(r)=3.67 -> k=5 (rule: 3<=p90<=5 => 5).
-    comp_rms_loo_photon_k: float = 5.0
-    phase01_comparison_min_dist_arcsec: float = 60.0
     phase01_comparison_min_frames_frac: float = 0.2
-    #: Max |DeltaBP-RP| v efektivnom farebnom priestore (hard filter pri vybere comp).
+    #: Max |DeltaBP-RP| (Gaia) between target and comparison star (hard filter of the selection).
     comp_max_delta_bprp: float = 0.79
     #: Comparison-star colour classes 1-3: rows {"bprp": |dBP-RP| limit (Gaia)}; the next rung is
     #: ``comp_max_delta_bprp`` and above it the red-target T4 fallback (CFG-REVIEW-2026-10: the 4th row
@@ -1326,31 +1523,18 @@ class AppConfig:
     comp_color_tiers: list[dict[str, float]] = field(
         default_factory=lambda: [{"bprp": 0.15}, {"bprp": 0.30}, {"bprp": 0.55}]
     )
-    #: Exponential contamination penalty in comp score: score *= exp(-k * contamination_idx).
-    comp_contamination_penalty_k: float = 3.0
-    phase01_plate_scale_arcsec_per_px: float = 1.3
-    #: Plate scale (arcsec/px) for Phase 2A metadata, GS11, dilution; Set 1 default 1.3.
-    plate_scale_arcsec_per_px: float = 1.3
-    #: Faza 2A: minimum number of comps used in color-term fit before applying CT (``should_apply_color_term``).
-    phase01_ct_min_comp: int = 7
-    #: Faza 2A: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
+    #: Aperture photometry: apply BP-RP colour-term correction (``auto`` = on for B/V/Rc broadband, off for L/Clear).
     apply_color_term: str = "auto"
     #: A comparison candidate whose nearest catalogue neighbour is closer than this x FWHM is a blend and
     #: is not a comparison star (``photometry_comp._select_comps_by_rms_then_color``). Was snr_cog_isolation_fwhm.
     comp_isolation_fwhm: float = 3.0
-    #: Second-order extinction: ``off`` | ``literature`` | ``fit_else_literature`` (fit path v2).
+    #: Second-order extinction: ``off`` | ``literature``.
     k2_mode: str = "literature"
     #: Optional per-band k'' overrides (mag/airmass/BP-RP); empty dict uses ``k2_extinction`` converter.
     k2_defaults_bprp: dict[str, float] = field(default_factory=dict)
-    #: Max CI width factor (hi/lo) to accept photon-transfer g_pt as authority.
-    photon_transfer_ci_max_width_factor: float = 3.0
-    #: Faza 2A: BP-RP tolerance (mag) when testing target vs comp range before applying CT (0 = strict).
-    phase01_ct_extrapolation_tol: float = 0.0
 
-    #: Faza 2A: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
+    #: Aperture photometry: exclude comparison stars with |linear slope| above this (mmag/hr) in stability check.
     comp_max_slope_mmag_hr: float = 5.0
-    #: Minimum |slope|/stderr (sigma) to treat a post-common-mode residual slope as real (stability check).
-    comp_slope_significance_k: float = 3.0
     #: COMP-CATOFF-2026-10: exclude (and replace from the reserve) a comparison candidate whose
     #: catalogue - measured magnitude differs from the median of the candidates by more than this
     #: (mag); 0 = off.
@@ -1358,69 +1542,25 @@ class AppConfig:
 
     # GS11 - Flux dilution correction
     gs11_dilution_enabled: bool = False
-    gs11_dilution_aperture_arcsec: float = 0.0
-    gs11_dilution_mag_limit_delta: float = 5.0
-    gs11_target_min_dilution: float = 0.50
-
 
     #: Minimum fraction of clean (unsaturated) frames required to measure a target
     #: (per-frame saturation is always on, SAT-LIN-2026-10). Clamped to [0.1, 1.0].
     per_frame_sat_min_clean_frac: float = 0.5
 
-    #: CCD gain (e-/ADU) - used in noise model / SNR estimates.
-    gain: float = 1.0
-    #: CCD read noise (e-) - used in noise model.
-    read_noise: float = 10.0
-
-    #: Number of random empty apertures per frame/radius for ``sigma_bkg_ap`` (clamped 16..256).
-    err_empty_apertures_n: int = 64
-    #: Minimum valid empty apertures before Howell fallback for that frame.
-    err_empty_apertures_min: int = 16
-
     #: MASTERSTAR: stack N frames and pick best N for ePSF/catalog build.
     masterstar_best_of_n: int = 10
 
-
-    #: Aperture correction: reject comp stars with scatter above this (mag).
-    #: Phase 1 comp gate: reject comps with FWHM > this factor x field median FWHM.
-    #: Radius (px) for the comparison contamination index (neighbour flux within it / own flux);
-    #: a soft column used by check-star selection, not a comparison gate.
-    phase01_comparison_isolation_radius_px: float = 25.0
-    #: Sensor frame dimensions in pixels (used when FITS NAXIS1/2 unavailable).
-    frame_width_px: int = 2082
-    frame_height_px: int = 1397
-
-    #: Jednotny vnutorny okraj cipu (px) pre **celu Fazu 0+1**: aktivne premenne, porovnavacie hviezdy aj suspected.
-    #: Hviezdy s ``x,y`` blizsie ako tento pocet pixelov od okraja referencneho pola sa neberu (zmiernuje artefakty
-    #: pri zarovnani / posune pola / okrajoch). ``0`` = vypnute (cely cip). Predvolene 50 px.
-    phase01_chip_interior_margin_px: int = 50
-
-
-    #: ``True`` = stahovanie/analyza TESS FFI cez lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
-    #: ``False`` = vypnute - ziadne stahovanie; log ``[TESS] preskocene``. Zapnut: ``"tess_enabled": true`` v ``config.json``.
+    #: ``True`` = download and analyse TESS FFI through lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
+    #: ``False`` = off - nothing is downloaded; log ``[TESS] skipped``.
     tess_enabled: bool = False
-    #: TESS-2026-10: largest neighbour light in the TESS aperture (fraction of the target's)
-    #: for a RELIABLE period verdict. TESS pixels are 21 arcsec.
-    tess_contam_max: float = 0.10
-
-    #: COMP-POOL-01 Stage 2 / COMP-ADMIT-03: derived path now only drops known variables;
-    #: scatter/colour/distance enter continuous weights (``comp_weights``).
-    comp_pool_derived_admission: bool = True
-    #: Plan/spatial comparison pool size. ``0`` = uncapped (COMP-POOL-01); legacy default was 150.
-    comparison_stars_pool_n: int = 0
-    #: FORCED-PHOT-01: inject MASTERSTAR pool-eligible stars missing from DAO each frame.
-    forced_photometry_enabled: bool = True
-    #: Extra pixel margin for in-footprint geometry gate on forced rows.
-    forced_photometry_margin_px: float = 0.0
 
     #: Post-calibration QC metrics (HFR, stars, sky) on each calibrated light; measurements only.
     qc_after_calibrate_enabled: bool = True
 
-    #: FITS QA dashboard: odvodzovat predvoleny FWHM limit z MAD (median + kxsigma_MAD).
+    #: FITS QA dashboard: derive the default FWHM limit from the MAD (median + k x sigma_MAD).
     auto_fwhm_enabled: bool = True
     #: Night FWHM limit = median + k x sigma_MAD; k clamped to 1..4 on load.
     auto_fwhm_k_factor: float = 3.0
-
 
     # Paths derived from config.json (must stay after all init=True fields for dataclass(slots=True)).
     data_root: Path = field(init=False)
@@ -1451,24 +1591,6 @@ class AppConfig:
         self.database_path = _path_or_default(
             "database_path", self.data_root / "vyvar.sqlite3"
         )
-
-        self.masterdark_validity_days = int(data.get("masterdark_validity_days", 90))
-        self.masterflat_validity_days = int(data.get("masterflat_validity_days", 200))
-
-        # ``plate_solve_fov_deg`` is no longer read from JSON - resolved from FITS + DB (see ``resolve_plate_solve_fov_deg_hint``).
-        self.plate_solve_fov_deg = 1.0
-        try:
-            _ctol = float(
-                data.get(
-                    "calibration_master_ccd_temp_tolerance_c",
-                    self.calibration_master_ccd_temp_tolerance_c,
-                )
-            )
-            if math.isfinite(_ctol) and 0.01 <= _ctol <= 20.0:
-                self.calibration_master_ccd_temp_tolerance_c = float(_ctol)
-        except (TypeError, ValueError):
-            pass
-
         self.gaia_db_path = resolve_config_path(
             str(data.get("gaia_db_path", "") or "").strip(),
             self.data_root,
@@ -1477,69 +1599,35 @@ class AppConfig:
             str(data.get("astrometry_index_dir", "") or "").strip(),
             self.data_root,
         )
-
-        self.hrd_online_enrich_enabled = bool(
-            data.get("hrd_online_enrich_enabled", self.hrd_online_enrich_enabled)
-        )
-        self.hrd_simbad_enrich_enabled = bool(
-            data.get("hrd_simbad_enrich_enabled", self.hrd_simbad_enrich_enabled)
-        )
-        try:
-            self.hrd_enrich_max_candidates = int(
-                data.get("hrd_enrich_max_candidates", self.hrd_enrich_max_candidates)
-            )
-        except (TypeError, ValueError):
-            self.hrd_enrich_max_candidates = 20
-        self.hrd_enrich_max_candidates = max(1, min(100, int(self.hrd_enrich_max_candidates)))
-        try:
-            self.hrd_enrich_tap_timeout_s = float(
-                data.get("hrd_enrich_tap_timeout_s", self.hrd_enrich_tap_timeout_s)
-            )
-        except (TypeError, ValueError):
-            self.hrd_enrich_tap_timeout_s = 60.0
-        self.hrd_enrich_tap_timeout_s = max(5.0, min(120.0, float(self.hrd_enrich_tap_timeout_s)))
-        try:
-            self.hrd_parallax_min_mas = float(
-                data.get("hrd_parallax_min_mas", self.hrd_parallax_min_mas)
-            )
-        except (TypeError, ValueError):
-            self.hrd_parallax_min_mas = 0.15
-        self.hrd_parallax_min_mas = max(0.0, min(10.0, float(self.hrd_parallax_min_mas)))
-        try:
-            self.hrd_parallax_snr_min = float(
-                data.get("hrd_parallax_snr_min", self.hrd_parallax_snr_min)
-            )
-        except (TypeError, ValueError):
-            self.hrd_parallax_snr_min = 5.0
-        self.hrd_parallax_snr_min = max(1.0, min(20.0, float(self.hrd_parallax_snr_min)))
-        try:
-            self.hrd_max_per_category = int(
-                data.get("hrd_max_per_category", self.hrd_max_per_category)
-            )
-        except (TypeError, ValueError):
-            self.hrd_max_per_category = 3
-        self.hrd_max_per_category = max(1, min(20, int(self.hrd_max_per_category)))
-        try:
-            self.hrd_min_per_net = int(data.get("hrd_min_per_net", self.hrd_min_per_net))
-        except (TypeError, ValueError):
-            self.hrd_min_per_net = 4
-        self.hrd_min_per_net = max(0, min(20, int(self.hrd_min_per_net)))
-        self.hrd_nss_category_enabled = bool(
-            data.get("hrd_nss_category_enabled", self.hrd_nss_category_enabled)
-        )
-        try:
-            self.hrd_dsc_confirm_prob = float(
-                data.get("hrd_dsc_confirm_prob", self.hrd_dsc_confirm_prob)
-            )
-        except (TypeError, ValueError):
-            self.hrd_dsc_confirm_prob = 0.90
-        self.hrd_dsc_confirm_prob = max(0.5, min(1.0, float(self.hrd_dsc_confirm_prob)))
-
-
         self.objects_db_path = resolve_config_path(
             str(data.get("objects_db_path", self.objects_db_path) or self.objects_db_path or "").strip(),
             self.data_root,
         )
+
+        # Table-driven keys: a value that is not a number / not true-false keeps the default,
+        # a number outside its range is clamped; both with a warning naming the key.
+        for key in BOOL_KEYS:
+            if key in data:
+                b = _coerce_bool(key, data[key])
+                if b is not None:
+                    setattr(self, key, b)
+        for key, (lo, hi) in PARAM_RANGES.items():
+            if key in data:
+                kind = _PARAM_KINDS[key]
+                v = _coerce_number(key, data[key], kind, lo, hi)
+                if v is not None:
+                    setattr(self, key, v)
+
+        # Rules between keys.
+        if self.annulus_outer_fwhm <= self.annulus_inner_fwhm:
+            logging.warning("config.json: annulus_outer_fwhm must exceed annulus_inner_fwhm; inner + 1 is used")
+            self.annulus_outer_fwhm = self.annulus_inner_fwhm + 1.0
+        if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
+            self.phase01_comparison_n_comp_max = int(self.phase01_comparison_n_comp_min)
+        if int(self.comp_trust_min_comps) > int(self.phase01_comparison_n_comp_max):
+            self.comp_trust_min_comps = int(self.phase01_comparison_n_comp_max)
+
+        # Structured and text keys.
         _voos = data.get("vsx_out_of_scope_types", self.vsx_out_of_scope_types)
         if _voos is None:
             self.vsx_out_of_scope_types = []
@@ -1549,100 +1637,6 @@ class AppConfig:
             self.vsx_out_of_scope_types = [str(p).strip() for p in _voos if str(p).strip()]
         else:
             self.vsx_out_of_scope_types = []
-        try:
-            _exo_sep = float(
-                data.get("exoplanet_match_max_sep_arcsec", self.exoplanet_match_max_sep_arcsec)
-            )
-            if math.isfinite(_exo_sep):
-                self.exoplanet_match_max_sep_arcsec = max(0.5, min(30.0, _exo_sep))
-        except (TypeError, ValueError):
-            self.exoplanet_match_max_sep_arcsec = 3.0
-
-        try:
-            self.per_frame_mp_reserve_ram_gb = float(
-                data.get("per_frame_mp_reserve_ram_gb", self.per_frame_mp_reserve_ram_gb)
-            )
-            if not math.isfinite(self.per_frame_mp_reserve_ram_gb) or self.per_frame_mp_reserve_ram_gb < 0:
-                self.per_frame_mp_reserve_ram_gb = 1.5
-        except (TypeError, ValueError):
-            self.per_frame_mp_reserve_ram_gb = 1.5
-
-        _pw = int(
-            recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
-        )
-        self.qc_preprocess_workers = _pw
-
-        try:
-            self.alignment_max_stars = max(
-                10, min(5000, int(data.get("alignment_max_stars", self.alignment_max_stars)))
-            )
-        except (TypeError, ValueError):
-            self.alignment_max_stars = 200
-        try:
-            self.alignment_max_control_points = max(
-                12,
-                min(
-                    500,
-                    int(data.get("alignment_max_control_points", self.alignment_max_control_points)),
-                ),
-            )
-        except (TypeError, ValueError):
-            self.alignment_max_control_points = 80
-        # CFG-CLEAN 2026-10: single detection threshold (N x sky sigma) for every DAO detection.
-        self.detection_threshold_sigma = resolve_detection_threshold_sigma(
-            data.get("detection_threshold_sigma", self.detection_threshold_sigma)
-        )
-        try:
-            self.sips_dao_fwhm_px = float(data.get("sips_dao_fwhm_px", self.sips_dao_fwhm_px))
-            if not math.isfinite(self.sips_dao_fwhm_px) or self.sips_dao_fwhm_px <= 0:
-                self.sips_dao_fwhm_px = 2.5
-        except (TypeError, ValueError):
-            self.sips_dao_fwhm_px = 2.5
-        self.sips_dao_fwhm_px = max(1.0, min(8.0, float(self.sips_dao_fwhm_px)))
-
-        self.qc_after_calibrate_enabled = bool(
-            data.get("qc_after_calibrate_enabled", self.qc_after_calibrate_enabled)
-        )
-
-        self.auto_fwhm_enabled = bool(data.get("auto_fwhm_enabled", self.auto_fwhm_enabled))
-        try:
-            self.auto_fwhm_k_factor = float(data.get("auto_fwhm_k_factor", self.auto_fwhm_k_factor))
-        except (TypeError, ValueError):
-            self.auto_fwhm_k_factor = 3.0
-        if not math.isfinite(float(self.auto_fwhm_k_factor)):
-            self.auto_fwhm_k_factor = 3.0
-        self.auto_fwhm_k_factor = max(1.0, min(4.0, float(self.auto_fwhm_k_factor)))
-
-
-        self.save_lightcurve_png = bool(data.get("save_lightcurve_png", self.save_lightcurve_png))
-        self.lc_outlier_enabled = bool(data.get("lc_outlier_enabled", self.lc_outlier_enabled))
-        try:
-            _los = float(data.get("lc_outlier_n_sigma", self.lc_outlier_n_sigma))
-            self.lc_outlier_n_sigma = _los if math.isfinite(_los) and _los > 0 else 5.0
-        except (TypeError, ValueError):
-            self.lc_outlier_n_sigma = 5.0
-        try:
-            _loa = float(data.get("lc_outlier_adjacent_sigma", self.lc_outlier_adjacent_sigma))
-            self.lc_outlier_adjacent_sigma = _loa if math.isfinite(_loa) and _loa > 0 else 3.0
-        except (TypeError, ValueError):
-            self.lc_outlier_adjacent_sigma = 3.0
-        try:
-            _lof = float(data.get("lc_outlier_frame_qc_n_sigma", self.lc_outlier_frame_qc_n_sigma))
-            self.lc_outlier_frame_qc_n_sigma = _lof if math.isfinite(_lof) and _lof > 0 else 5.0
-        except (TypeError, ValueError):
-            self.lc_outlier_frame_qc_n_sigma = 5.0
-        try:
-            _loe = float(data.get("lc_outlier_evidence_n_sigma", self.lc_outlier_evidence_n_sigma))
-            self.lc_outlier_evidence_n_sigma = _loe if math.isfinite(_loe) and _loe > 0 else 5.0
-        except (TypeError, ValueError):
-            self.lc_outlier_evidence_n_sigma = 5.0
-        try:
-            _lhe = float(data.get("lc_high_err_nsigma", self.lc_high_err_nsigma))
-            self.lc_high_err_nsigma = _lhe if math.isfinite(_lhe) and _lhe > 0 else 5.0
-        except (TypeError, ValueError):
-            self.lc_high_err_nsigma = 5.0
-        self.trust_flag_enabled = bool(data.get("trust_flag_enabled", self.trust_flag_enabled))
-        # Export reports - prefer ``observer_name`` / ``observer_code``; fall back to legacy JSON key for the code.
         _obn = data.get("observer_name")
         if _obn is None or str(_obn).strip() == "":
             _obn = self.observer_name
@@ -1657,6 +1651,47 @@ class AppConfig:
             }
         else:
             self.aavso_filter_map = {}
+        self.epsf_targets = str(data.get("epsf_targets", self.epsf_targets) or "ALL").strip() or "ALL"
+        _act = str(data.get("apply_color_term", self.apply_color_term) or "auto").strip().lower()
+        if _act in _TRUE_WORDS:
+            self.apply_color_term = "on"
+        elif _act in _FALSE_WORDS:
+            self.apply_color_term = "off"
+        else:
+            self.apply_color_term = "auto"
+        _k2m = str(data.get("k2_mode", self.k2_mode) or "literature").strip().lower()
+        self.k2_mode = "off" if _k2m in _FALSE_WORDS or _k2m == "none" else "literature"
+        _k2o = data.get("k2_defaults_bprp", self.k2_defaults_bprp)
+        if isinstance(_k2o, dict):
+            parsed: dict[str, float] = {}
+            for k, v in _k2o.items():
+                try:
+                    fv = float(v)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(fv):
+                    parsed[str(k)] = fv
+            self.k2_defaults_bprp = parsed
+        # comp_color_tiers: colour classes 1-3. Older files carry a 4th row (it only mirrored
+        # comp_max_delta_bprp) and a per-row weight "w" (never used: Broeg weights) - both are dropped.
+        _cct_raw = data.get("comp_color_tiers")
+        if isinstance(_cct_raw, list) and _cct_raw:
+            _rows: list[dict[str, float]] = []
+            for _row in _cct_raw[:3]:
+                try:
+                    _rows.append({"bprp": max(0.02, min(5.0, float(_row["bprp"])))})
+                except (KeyError, TypeError, ValueError):
+                    _rows = []
+                    break
+            if len(_rows) == 3:
+                self.comp_color_tiers = _rows
+            else:
+                logging.warning("config.json: comp_color_tiers needs 3 rows {\"bprp\": limit}; defaults used")
+
+        # Run-time values (not in config.json).
+        self.qc_preprocess_workers = int(
+            recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
+        )
         # SETTINGS-2026-10: the site is not stored in config.json; the default site is the
         # LOCATION row with IS_DEFAULT = 1 (Database Explorer), a run may choose another one.
         from database import get_default_observer_location_id  # noqa: PLC0415
@@ -1665,7 +1700,7 @@ class AppConfig:
         # WAVE-B STEP 5 (DELETE-DB-DUP): observer_lat/lon/alt_m/name are DB-authoritative
         # (draft LOCATION via observer_location_id). They are no longer loaded from or saved to
         # config.json; the fields remain as run-time hydrated mirrors (block below) with the
-        # dataclass site defaults as fallback. Science reads the draft LOCATION row, not cfg.
+        # NaN (no site) when the DB has none. Science reads the draft LOCATION row, not cfg.
         if self.observer_location_id > 0:
             try:
                 from database import get_observer_location_by_id
@@ -1683,405 +1718,45 @@ class AppConfig:
             except (sqlite3.Error, TypeError, ValueError) as exc:
                 logging.getLogger(__name__).warning(
                     "Observer location DB hydrate failed (location_id=%s); "
-                    "using dataclass site-default observer coordinates: %s",
+                    "no observing site until one is chosen: %s",
                     self.observer_location_id,
                     exc,
                 )
-        self.epsf_auto_run = bool(data.get("epsf_auto_run", self.epsf_auto_run))
-        self.epsf_targets = str(data.get("epsf_targets", self.epsf_targets) or "ALL").strip() or "ALL"
-        self.epsf_export_auto = bool(data.get("epsf_export_auto", self.epsf_export_auto))
-        try:
-            _pln = float(data.get("psf_chi2_locus_nsigma", self.psf_chi2_locus_nsigma))
-            self.psf_chi2_locus_nsigma = _pln if math.isfinite(_pln) and _pln > 0 else 5.0
-        except (TypeError, ValueError):
-            self.psf_chi2_locus_nsigma = 5.0
-        try:
-            _sso = int(data.get("preprocess_sky_surface_order", self.preprocess_sky_surface_order))
-            self.preprocess_sky_surface_order = max(0, min(2, _sso))
-        except (TypeError, ValueError):
-            self.preprocess_sky_surface_order = 2
-        self.preprocess_sky_surface_force_reapply = bool(
-            data.get(
-                "preprocess_sky_surface_force_reapply",
-                self.preprocess_sky_surface_force_reapply,
-            )
-        )
-        try:
-            _ocb = int(data.get("osc_channel_binning", self.osc_channel_binning))
-            self.osc_channel_binning = _ocb if _ocb in (1, 2, 3, 4) else 2
-        except (TypeError, ValueError):
-            self.osc_channel_binning = 2
-        try:
-            _ems = int(data.get("epsf_min_stars", self.epsf_min_stars))
-            self.epsf_min_stars = max(10, _ems)
-        except (TypeError, ValueError):
-            self.epsf_min_stars = 30
-        try:
-            self.aperture_fwhm_factor = float(data.get("aperture_fwhm_factor", self.aperture_fwhm_factor))
-            if not math.isfinite(self.aperture_fwhm_factor) or self.aperture_fwhm_factor <= 0:
-                self.aperture_fwhm_factor = 2.75
-        except (TypeError, ValueError):
-            self.aperture_fwhm_factor = 2.75
-        self.aperture_fwhm_factor = max(0.25, min(6.0, float(self.aperture_fwhm_factor)))
-        try:
-            _v = float(data.get("per_frame_sat_min_clean_frac", self.per_frame_sat_min_clean_frac))
-            self.per_frame_sat_min_clean_frac = (
-                _v if math.isfinite(_v) else 0.5
-            )
-        except (TypeError, ValueError):
-            self.per_frame_sat_min_clean_frac = 0.5
-        self.per_frame_sat_min_clean_frac = max(
-            0.1, min(1.0, float(self.per_frame_sat_min_clean_frac))
-        )
-        # WAVE-B STEP 5 (DELETE-DB-DUP): gain (FITS EGAIN then DB EQUIPMENTS.GAIN_ADU) and
-        # read_noise (DB EQUIPMENTS.READNOISE_E then FITS) are resolver-authoritative via
-        # param_resolver at run time; no longer loaded from or saved to config.json. The fields
-        # keep their dataclass defaults as last-resort fallbacks.
-        try:
-            self.err_empty_apertures_n = max(
-                16,
-                min(256, int(data.get("err_empty_apertures_n", self.err_empty_apertures_n))),
-            )
-        except (TypeError, ValueError):
-            self.err_empty_apertures_n = 64
-        try:
-            self.err_empty_apertures_min = max(
-                1,
-                min(256, int(data.get("err_empty_apertures_min", self.err_empty_apertures_min))),
-            )
-        except (TypeError, ValueError):
-            self.err_empty_apertures_min = 16
-        try:
-            self.masterstar_best_of_n = max(
-                1,
-                min(25, int(data.get("masterstar_best_of_n", self.masterstar_best_of_n))),
-            )
-        except (TypeError, ValueError):
-            self.masterstar_best_of_n = 10
-        try:
-            self.phase01_ct_min_comp = max(
-                2,
-                min(30, int(data.get("phase01_ct_min_comp", self.phase01_ct_min_comp))),
-            )
-        except (TypeError, ValueError):
-            self.phase01_ct_min_comp = 7
-        _act = str(data.get("apply_color_term", self.apply_color_term) or "auto").strip().lower()
-        if _act in ("1", "true", "yes", "on"):
-            self.apply_color_term = "on"
-        elif _act in ("0", "false", "no", "off"):
-            self.apply_color_term = "off"
-        else:
-            self.apply_color_term = "auto"
-        try:
-            _iso = float(data.get("comp_isolation_fwhm", self.comp_isolation_fwhm))
-            self.comp_isolation_fwhm = _iso if math.isfinite(_iso) and _iso > 0 else 3.0
-        except (TypeError, ValueError):
-            self.comp_isolation_fwhm = 3.0
-        _k2m = str(data.get("k2_mode", self.k2_mode) or "literature").strip().lower()
-        if _k2m in ("0", "false", "no", "off", "none"):
-            self.k2_mode = "off"
-        else:
-            self.k2_mode = "literature"
-        _k2o = data.get("k2_defaults_bprp", self.k2_defaults_bprp)
-        if isinstance(_k2o, dict):
-            parsed: dict[str, float] = {}
-            for k, v in _k2o.items():
-                try:
-                    fv = float(v)
-                except (TypeError, ValueError):
-                    continue
-                if math.isfinite(fv):
-                    parsed[str(k)] = fv
-            self.k2_defaults_bprp = parsed
-        try:
-            self.photon_transfer_ci_max_width_factor = max(
-                1.0,
-                float(
-                    data.get(
-                        "photon_transfer_ci_max_width_factor",
-                        self.photon_transfer_ci_max_width_factor,
-                    )
-                ),
-            )
-        except (TypeError, ValueError):
-            self.photon_transfer_ci_max_width_factor = 3.0
-        try:
-            self.phase01_ct_extrapolation_tol = max(
-                0.0,
-                float(data.get("phase01_ct_extrapolation_tol", self.phase01_ct_extrapolation_tol)),
-            )
-        except (TypeError, ValueError):
-            self.phase01_ct_extrapolation_tol = 0.0
-        try:
-            self.comp_max_slope_mmag_hr = max(
-                0.0,
-                min(500.0, float(data.get("comp_max_slope_mmag_hr", self.comp_max_slope_mmag_hr))),
-            )
-        except (TypeError, ValueError):
-            self.comp_max_slope_mmag_hr = 5.0
-        try:
-            self.comp_slope_significance_k = max(
-                0.0,
-                min(10.0, float(data.get("comp_slope_significance_k", self.comp_slope_significance_k))),
-            )
-        except (TypeError, ValueError):
-            self.comp_slope_significance_k = 3.0
-        try:
-            self.comp_catalog_offset_max_mag = max(
-                0.0,
-                min(2.0, float(data.get("comp_catalog_offset_max_mag", self.comp_catalog_offset_max_mag))),
-            )
-        except (TypeError, ValueError):
-            self.comp_catalog_offset_max_mag = 0.20
-        try:
-            self.annulus_inner_fwhm = float(data.get("annulus_inner_fwhm", self.annulus_inner_fwhm))
-            self.annulus_outer_fwhm = float(data.get("annulus_outer_fwhm", self.annulus_outer_fwhm))
-        except (TypeError, ValueError):
-            self.annulus_inner_fwhm = 5.5
-            self.annulus_outer_fwhm = 10.5
-        if self.annulus_outer_fwhm <= self.annulus_inner_fwhm:
-            self.annulus_outer_fwhm = self.annulus_inner_fwhm + 1.0
-
-        try:
-            self.dao_centroid_max_shift_fwhm = float(
-                data.get("dao_centroid_max_shift_fwhm", self.dao_centroid_max_shift_fwhm)
-            )
-        except (TypeError, ValueError):
-            self.dao_centroid_max_shift_fwhm = 1.0
-        self.dao_centroid_max_shift_fwhm = max(0.1, min(5.0, float(self.dao_centroid_max_shift_fwhm)))
-
-        def _f01(key: str, default: float, lo: float, hi: float) -> None:
-            try:
-                v = float(data.get(key, getattr(self, key)))
-                if not math.isfinite(v):
-                    raise ValueError
-                setattr(self, key, max(lo, min(hi, v)))
-            except (TypeError, ValueError, AttributeError):
-                setattr(self, key, float(default))
-
-        def _i01(key: str, default: int, lo: int, hi: int) -> None:
-            try:
-                v = int(data.get(key, getattr(self, key)))
-                setattr(self, key, max(lo, min(hi, v)))
-            except (TypeError, ValueError, AttributeError):
-                setattr(self, key, int(default))
-
-        _f01("comp_max_delta_bprp", 0.79, 0.0, 5.0)
-        # comp_color_tiers: colour classes 1-3. Older files carry a 4th row (it only mirrored
-        # comp_max_delta_bprp) and a per-row weight "w" (never used: Broeg weights) - both are dropped.
-        _cct_raw = data.get("comp_color_tiers")
-        if isinstance(_cct_raw, list) and _cct_raw:
-            _rows: list[dict[str, float]] = []
-            for _row in _cct_raw[:3]:
-                try:
-                    _rows.append({"bprp": max(0.02, min(5.0, float(_row["bprp"])))})
-                except (KeyError, TypeError, ValueError):
-                    _rows = []
-                    break
-            if len(_rows) == 3:
-                self.comp_color_tiers = _rows
-            else:
-                logging.warning("config.json: comp_color_tiers needs 3 rows {\"bprp\": limit}; defaults used")
-        _f01("comp_contamination_penalty_k", 3.0, 0.0, 20.0)
-        _f01("calibration_master_ccd_temp_tolerance_c", 0.5, 0.01, 20.0)
-        self.gs11_dilution_enabled = bool(
-            data.get("gs11_dilution_enabled", self.gs11_dilution_enabled)
-        )
-        _f01("gs11_dilution_aperture_arcsec", 0.0, 0.0, 120.0)
-        _f01("gs11_dilution_mag_limit_delta", 5.0, 0.5, 15.0)
-        _f01("gs11_target_min_dilution", 0.50, 0.01, 1.0)
-        _i01("phase01_comparison_n_comp_min", 3, 2, 12)
-        _i01("phase01_comparison_n_comp_max", 8, 3, 20)
-        _f01("snr_min", 10.0, 3.0, 1000.0)
-        if int(self.phase01_comparison_n_comp_max) < int(self.phase01_comparison_n_comp_min):
-            self.phase01_comparison_n_comp_max = int(self.phase01_comparison_n_comp_min)
-        _i01("comp_trust_min_comps", 5, 3, 20)
-        if int(self.comp_trust_min_comps) > int(self.phase01_comparison_n_comp_max):
-            self.comp_trust_min_comps = int(self.phase01_comparison_n_comp_max)
-        _i01("lc_quality_min_frames", 20, 3, 500)
-        _i01("lc_quality_short_min_frames", 3, 2, 100)
-        _f01("lc_quality_min_normal_frac", 0.5, 0.1, 1.0)
-        if int(self.lc_quality_short_min_frames) > int(self.lc_quality_min_frames):
-            self.lc_quality_short_min_frames = int(self.lc_quality_min_frames)
-        _i01("check_star_min_epochs", 5, 3, 50)
-        _f01("sparse_trust_T_green", 1.5, 0.5, 10.0)
-        _f01("sparse_trust_T_red", 4.0, 1.0, 20.0)
-        _f01("sparse_trust_X2_RED", 0.0004, 0.0, 0.01)
-        _f01("check_select_rms_floor", 1e-4, 0.0, 0.01)
-        _f01("comp_select_rms_floor", 1e-6, 0.0, 0.01)
-        _f01("phase01_comparison_max_comp_rms", 0.05, 0.01, 0.5)
-        _f01("comp_rms_loo_photon_k", 5.0, 1.0, 50.0)
-        _f01("phase01_comparison_min_dist_arcsec", 60.0, 0.0, 600.0)
-        _f01("phase01_comparison_min_frames_frac", 0.3, 0.05, 0.95)
-        # Plate-scale ceiling matches the runtime resolver clamp [0.1, 30.0] so that a
-        # wide-field config value (e.g. 9.77"/px) survives load instead of being capped
-        # at 5.0. phase01_* keeps lo=0.0 because 0.0 is the "auto / unset" sentinel
-        # (consumed as ``phase01_plate_scale_arcsec_per_px or 1.3``); clamping it to 0.1
-        # would turn "auto" into a real 0.1"/px scale.
-        # WAVE-B STEP 5 (DELETE-DB-DUP): plate_scale_arcsec_per_px (WCS/CD then DB optics) and
-        # phase01_plate_scale_arcsec_per_px (WCS-superseded) resolve at run time; no longer loaded
-        # from or saved to config.json. Fields keep their dataclass defaults as fallbacks.
-        _f01("exoplanet_match_max_sep_arcsec", 3.0, 0.5, 30.0)
-        _f01("phase01_comparison_isolation_radius_px", 25.0, 1.0, 200.0)
-        # WAVE-B STEP 3: frame_width_px / frame_height_px are INTERNAL. Frame geometry
-        # resolves from FITS NAXIS1/2 at run time; the dataclass default is the only
-        # fallback. They are no longer loaded from or saved to config.json. Warn once if a
-        # legacy config.json still carries them.
-        if "frame_width_px" in data or "frame_height_px" in data:
-            logging.warning(
-                "[DEPRECATED] frame_width_px/frame_height_px in config.json are ignored; "
-                "frame dimensions resolve from FITS NAXIS at run time (WAVE-B STEP 3)."
-            )
-
-        _chip_m = data.get("phase01_chip_interior_margin_px")
-        if _chip_m is None and "phase01_suspected_interior_margin_px" in data:
-            _chip_m = data.get("phase01_suspected_interior_margin_px")
-        if _chip_m is not None and _chip_m != "":
-            try:
-                self.phase01_chip_interior_margin_px = max(0, min(2000, int(_chip_m)))
-            except (TypeError, ValueError):
-                self.phase01_chip_interior_margin_px = 100
-
-
-        self.comp_pool_derived_admission = bool(
-            data.get("comp_pool_derived_admission", self.comp_pool_derived_admission)
-        )
-        try:
-            self.comparison_stars_pool_n = int(
-                data.get("comparison_stars_pool_n", self.comparison_stars_pool_n)
-            )
-        except (TypeError, ValueError):
-            self.comparison_stars_pool_n = 0
-        self.comparison_stars_pool_n = max(0, min(50000, int(self.comparison_stars_pool_n)))
-        self.forced_photometry_enabled = bool(
-            data.get("forced_photometry_enabled", self.forced_photometry_enabled)
-        )
-        try:
-            self.forced_photometry_margin_px = float(
-                data.get("forced_photometry_margin_px", self.forced_photometry_margin_px)
-            )
-        except (TypeError, ValueError):
-            self.forced_photometry_margin_px = 0.0
-        if not math.isfinite(float(self.forced_photometry_margin_px)) or float(self.forced_photometry_margin_px) < 0:
-            self.forced_photometry_margin_px = 0.0
-
-        self.tess_enabled = bool(data.get("tess_enabled", self.tess_enabled))
-        _f01("tess_contam_max", 0.10, 0.0, 1.0)
-
 
     # --- structured-key accessors (WAVE-B STEP 4) ---------------------------------- #
     def comp_tier_bprp_limits(self) -> list[float]:
         """|dBP-RP| colour limit per comp tier, row order, from ``comp_color_tiers``."""
         return [float(t.get("bprp", 0.0)) for t in self.comp_color_tiers]
 
-
-
     def to_json(self) -> dict[str, Any]:
-        return {
+        """The config.json keys (paths, BOOL_KEYS, PARAM_RANGES, structured and text keys)."""
+        out: dict[str, Any] = {
             "archive_root": str(self.archive_root),
             "calibration_library_root": str(self.calibration_library_root),
             "database_path": str(self.database_path),
-            "masterdark_validity_days": int(self.masterdark_validity_days),
-            "masterflat_validity_days": int(self.masterflat_validity_days),
-            "calibration_master_ccd_temp_tolerance_c": float(
-                self.calibration_master_ccd_temp_tolerance_c
-            ),
             "gaia_db_path": str(self.gaia_db_path or ""),
             "astrometry_index_dir": str(self.astrometry_index_dir or ""),
-            "hrd_online_enrich_enabled": bool(self.hrd_online_enrich_enabled),
-            "hrd_simbad_enrich_enabled": bool(self.hrd_simbad_enrich_enabled),
-            "hrd_enrich_max_candidates": int(self.hrd_enrich_max_candidates),
-            "hrd_enrich_tap_timeout_s": float(self.hrd_enrich_tap_timeout_s),
-            "hrd_parallax_min_mas": float(self.hrd_parallax_min_mas),
-            "hrd_parallax_snr_min": float(self.hrd_parallax_snr_min),
-            "hrd_max_per_category": int(self.hrd_max_per_category),
-            "hrd_min_per_net": int(self.hrd_min_per_net),
-            "hrd_nss_category_enabled": bool(self.hrd_nss_category_enabled),
-            "hrd_dsc_confirm_prob": float(self.hrd_dsc_confirm_prob),
             "objects_db_path": str(self.objects_db_path or ""),
-            "vsx_out_of_scope_types": list(self.vsx_out_of_scope_types),
-            "exoplanet_match_max_sep_arcsec": float(self.exoplanet_match_max_sep_arcsec),
-            "per_frame_mp_reserve_ram_gb": float(self.per_frame_mp_reserve_ram_gb),
-            "alignment_max_stars": int(self.alignment_max_stars),
-            "alignment_max_control_points": int(self.alignment_max_control_points),
-            "detection_threshold_sigma": float(self.detection_threshold_sigma),
-            "sips_dao_fwhm_px": float(self.sips_dao_fwhm_px),
-            "qc_after_calibrate_enabled": bool(self.qc_after_calibrate_enabled),
-            "auto_fwhm_enabled": bool(self.auto_fwhm_enabled),
-            "auto_fwhm_k_factor": float(self.auto_fwhm_k_factor),
-            "save_lightcurve_png": bool(self.save_lightcurve_png),
-            "lc_outlier_enabled": bool(self.lc_outlier_enabled),
-            "lc_outlier_n_sigma": float(self.lc_outlier_n_sigma),
-            "lc_outlier_adjacent_sigma": float(self.lc_outlier_adjacent_sigma),
-            "lc_outlier_frame_qc_n_sigma": float(self.lc_outlier_frame_qc_n_sigma),
-            "lc_outlier_evidence_n_sigma": float(self.lc_outlier_evidence_n_sigma),
-            "lc_high_err_nsigma": float(self.lc_high_err_nsigma),
-            "trust_flag_enabled": bool(self.trust_flag_enabled),
-            "lc_quality_min_frames": int(self.lc_quality_min_frames),
-            "lc_quality_short_min_frames": int(self.lc_quality_short_min_frames),
-            "lc_quality_min_normal_frac": float(self.lc_quality_min_normal_frac),
-            "comp_trust_min_comps": int(self.comp_trust_min_comps),
-            "check_star_min_epochs": int(self.check_star_min_epochs),
-            "sparse_trust_T_green": float(self.sparse_trust_T_green),
-            "sparse_trust_T_red": float(self.sparse_trust_T_red),
-            "sparse_trust_X2_RED": float(self.sparse_trust_X2_RED),
-            "check_select_rms_floor": float(self.check_select_rms_floor),
-            "comp_select_rms_floor": float(self.comp_select_rms_floor),
-            "observer_name": str(self.observer_name),
-            "observer_code": str(self.observer_code),
-            "aavso_filter_map": dict(self.aavso_filter_map),
-            "epsf_auto_run": bool(self.epsf_auto_run),
-            "epsf_targets": str(self.epsf_targets),
-            "epsf_export_auto": bool(self.epsf_export_auto),
-            "psf_chi2_locus_nsigma": float(self.psf_chi2_locus_nsigma),
-            "preprocess_sky_surface_order": int(self.preprocess_sky_surface_order),
-            "preprocess_sky_surface_force_reapply": bool(self.preprocess_sky_surface_force_reapply),
-            "osc_channel_binning": int(self.osc_channel_binning),
-            "epsf_min_stars": int(self.epsf_min_stars),
-            "aperture_fwhm_factor": float(self.aperture_fwhm_factor),
-            "per_frame_sat_min_clean_frac": float(self.per_frame_sat_min_clean_frac),
-            "err_empty_apertures_n": int(self.err_empty_apertures_n),
-            "err_empty_apertures_min": int(self.err_empty_apertures_min),
-            "masterstar_best_of_n": int(self.masterstar_best_of_n),
-            "phase01_comparison_isolation_radius_px": float(self.phase01_comparison_isolation_radius_px),
-            "annulus_inner_fwhm": float(self.annulus_inner_fwhm),
-            "annulus_outer_fwhm": float(self.annulus_outer_fwhm),
-            "dao_centroid_max_shift_fwhm": float(self.dao_centroid_max_shift_fwhm),
-            "comp_max_delta_bprp": float(self.comp_max_delta_bprp),
-            "comp_color_tiers": [
-                {"bprp": float(t.get("bprp", 0.0))}
-                for t in self.comp_color_tiers
-            ],
-            "comp_contamination_penalty_k": float(self.comp_contamination_penalty_k),
-            "phase01_comparison_n_comp_min": int(self.phase01_comparison_n_comp_min),
-            "snr_min": float(self.snr_min),
-            "phase01_comparison_n_comp_max": int(self.phase01_comparison_n_comp_max),
-            "phase01_comparison_max_comp_rms": float(self.phase01_comparison_max_comp_rms),
-            "comp_rms_loo_photon_k": float(self.comp_rms_loo_photon_k),
-            "phase01_comparison_min_dist_arcsec": float(self.phase01_comparison_min_dist_arcsec),
-            "phase01_comparison_min_frames_frac": float(self.phase01_comparison_min_frames_frac),
-            "phase01_ct_min_comp": int(self.phase01_ct_min_comp),
-            "apply_color_term": str(self.apply_color_term),
-            "comp_isolation_fwhm": float(self.comp_isolation_fwhm),
-            "k2_mode": str(self.k2_mode),
-            "k2_defaults_bprp": dict(self.k2_defaults_bprp),
-            "photon_transfer_ci_max_width_factor": float(self.photon_transfer_ci_max_width_factor),
-            "phase01_ct_extrapolation_tol": float(self.phase01_ct_extrapolation_tol),
-            "comp_max_slope_mmag_hr": float(self.comp_max_slope_mmag_hr),
-            "comp_slope_significance_k": float(self.comp_slope_significance_k),
-            "comp_catalog_offset_max_mag": float(self.comp_catalog_offset_max_mag),
-            "gs11_dilution_enabled": bool(self.gs11_dilution_enabled),
-            "gs11_dilution_aperture_arcsec": float(self.gs11_dilution_aperture_arcsec),
-            "gs11_dilution_mag_limit_delta": float(self.gs11_dilution_mag_limit_delta),
-            "gs11_target_min_dilution": float(self.gs11_target_min_dilution),
-            "phase01_chip_interior_margin_px": int(self.phase01_chip_interior_margin_px),
-            "tess_enabled": bool(self.tess_enabled),
-            "tess_contam_max": float(self.tess_contam_max),
-            "comp_pool_derived_admission": bool(self.comp_pool_derived_admission),
-            "comparison_stars_pool_n": int(self.comparison_stars_pool_n),
-            "forced_photometry_enabled": bool(self.forced_photometry_enabled),
-            "forced_photometry_margin_px": float(self.forced_photometry_margin_px),
         }
+        for key in BOOL_KEYS:
+            out[key] = bool(getattr(self, key))
+        for key in PARAM_RANGES:
+            v = getattr(self, key)
+            out[key] = int(v) if isinstance(v, int) else float(v)
+        out.update(
+            {
+                "vsx_out_of_scope_types": list(self.vsx_out_of_scope_types),
+                "observer_name": str(self.observer_name),
+                "observer_code": str(self.observer_code),
+                "aavso_filter_map": dict(self.aavso_filter_map),
+                "epsf_targets": str(self.epsf_targets),
+                "apply_color_term": str(self.apply_color_term),
+                "k2_mode": str(self.k2_mode),
+                "k2_defaults_bprp": dict(self.k2_defaults_bprp),
+                "comp_color_tiers": [{"bprp": float(t.get("bprp", 0.0))} for t in self.comp_color_tiers],
+            }
+        )
+        return out
 
     # Backward-compatible alias (some callers expect to_dict()).
     def to_dict(self) -> dict[str, Any]:
@@ -2093,8 +1768,15 @@ class AppConfig:
         self.calibration_library_root.mkdir(parents=True, exist_ok=True)
 
 
+
+#: int / float per PARAM_RANGES key, from the dataclass default (a value is loaded as that type).
+_PARAM_KINDS: dict[str, type] = {
+    f.name: type(f.default) for f in _dc_fields(AppConfig) if f.name in PARAM_RANGES
+}
+assert set(_PARAM_KINDS) == set(PARAM_RANGES), sorted(set(PARAM_RANGES) - set(_PARAM_KINDS))
+
 def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: int) -> float:
-    """Vrati hustotu pola v hviezd/Mpx."""
+    """Return the field density in stars/Mpx."""
     mpx = (float(chip_w_px) * float(chip_h_px)) / 1_000_000.0
     if mpx <= 0 or n_masterstar_stars < 0:
         return 0.0
@@ -2102,7 +1784,7 @@ def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: in
 
 
 def classify_field_density(density: float, sparse_th: float, dense_th: float) -> str:
-    """Vrati ``sparse`` / ``normal`` / ``dense``."""
+    """Return ``sparse`` / ``normal`` / ``dense``."""
     if density < float(sparse_th):
         return "sparse"
     if density <= float(dense_th):

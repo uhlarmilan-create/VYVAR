@@ -354,3 +354,54 @@ def test_master_of_another_camera_next_to_lights_not_used(env, tmp_path):
                              masterflat_validity_days=200, db=db, id_equipments=cam, id_telescope=tel)
     assert scan.calibration_plan["groups"][0]["dark"] is None
     assert any("not the LIGHTs' camera" in w for w in scan.warnings)
+
+
+def test_calibration_workers_give_identical_files(env, tmp_path):
+    """SPEED-2026-10: one per-frame function for any number of workers; 1 and 2 workers write the
+    same calibrated FITS (pixels and headers) and the same per-frame results."""
+    from config import AppConfig
+    from importer import smart_scan_source
+    from pipeline_calibrate import calibrate_lights_to_calibrated
+
+    db, cam, _, tel, lib, src = env
+    rng = np.random.default_rng(7)
+    raw = tmp_path / "raw_cal"
+    darks = _raw_darks(raw / "darks", 60.0, 7, T0 + timedelta(hours=8), rng)
+    dflats = _raw_darks(raw / "darkflats", 0.5, 7, T0 + timedelta(hours=9), rng)
+    flats = _raw_flats(raw / "flats", 7, T0 + timedelta(hours=9), rng, exp=0.5)
+    cp.build_masters_from_source(dark_files=darks + dflats, flat_files=flats, light_exposures=[60.0],
+                                 db=db, camera_id=cam, telescope_id=tel, library_root=lib)
+    lights_dir = src / "lights"
+    _lights(lights_dir, rng, n=4)
+    plan = smart_scan_source(
+        source_root=src, calibration_library_root=lib, masterdark_validity_days=90,
+        masterflat_validity_days=200, db=db, id_equipments=cam, id_telescope=tel,
+        calibration_master_ccd_temp_tolerance_c=0.5,
+    )
+    cfg = AppConfig(project_root=tmp_path)
+    cfg.database_path = str(tmp_path / "t.sqlite3")
+    outs = {}
+    for w in (1, 2):
+        out_dir = tmp_path / f"cal_w{w}"
+        st = calibrate_lights_to_calibrated(
+            lights_root=lights_dir, calibrated_root=out_dir, master_dark_path=None,
+            masterflat_by_filter=plan.masterflat_by_filter, pipeline_config=cfg, equipment_id=cam,
+            masterflat_by_obs_key=plan.masterflat_by_obs_key, master_dark_by_obs_key=plan.dark_master_by_obs_key,
+            max_workers=w,
+        )
+        assert st["calibrate_workers"] == w and st["processed"] == 4 and st["errors"] == 0
+        files = sorted(out_dir.rglob("*.fits"))
+        outs[w] = {f.name: (fits.getdata(f).tobytes(),
+                            [(c.keyword, c.value) for c in fits.getheader(f).cards if c.keyword not in ("HISTORY", "DATE")])
+                   for f in files}
+        outs[w]["perf10"] = sorted((Path(k).name, v.get("fwhm_mean")) for k, v in st["perf10_qc_results"].items())
+    assert outs[1] == outs[2]
+
+
+def test_worker_infolog_lines_are_collected():
+    from infolog import capture_events, log_event
+
+    with capture_events() as ev:
+        log_event("a")
+        log_event("b")
+    assert ev == ["a", "b"]

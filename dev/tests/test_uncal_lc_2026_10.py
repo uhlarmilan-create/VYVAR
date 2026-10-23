@@ -11,7 +11,6 @@ import pandas as pd
 import photometry_core  # noqa: F401  (import order: avoids circular import)
 from check_star_kmag import compute_check_ensemble_mag_calib
 from config import AppConfig
-from photometry_report import UNCAL_LC_LABEL, _plot_lc_mag_column
 
 SRC = Path(__file__).resolve().parents[2] / "src_py"
 
@@ -49,15 +48,6 @@ def test_check_relative_only_when_allowed() -> None:
     assert abs(np.nanmedian(cal.kmag) - 13.0) < 0.05
 
 
-def test_plot_column_follows_target_band() -> None:
-    cal = pd.DataFrame({"mag_calib_final": [13.0, 13.1, 13.2], "delta_mag": [0.0, 0.1, 0.2]})
-    assert _plot_lc_mag_column(cal) == ("mag_calib_final", "mag_calib_final")
-    unc = pd.DataFrame({"mag_calib_final": [np.nan] * 3, "delta_mag": [0.0, 0.1, 0.2]})
-    assert _plot_lc_mag_column(unc, uncalibrated=True) == ("delta_mag", UNCAL_LC_LABEL)
-    # a CALIBRATED target with few finite magnitudes is never relabelled "not calibrated"
-    assert _plot_lc_mag_column(unc, uncalibrated=False) == ("mag_calib_final", "mag_calib_final")
-
-
 def test_lc_uncalibrated_helper(tmp_path) -> None:
     from gaia_bands import lc_uncalibrated
 
@@ -72,7 +62,7 @@ def test_lc_uncalibrated_helper(tmp_path) -> None:
 def test_flags_from_differential_series() -> None:
     """The real flagging path (apply_reporting_postprocess -> assign_lc_flags): the
     differential series gives measured points, the all-NaN calibrated series gives no_data."""
-    from photometry_phase2a import apply_reporting_postprocess
+    from aperture_photometry import apply_reporting_postprocess
 
     rng = np.random.default_rng(5)
     n = 40
@@ -88,8 +78,8 @@ def test_flags_from_differential_series() -> None:
     assert set(fl_nan) == {"no_data"}
 
 
-def test_phase2a_wiring() -> None:
-    s = (SRC / "phase2a_target.py").read_text(encoding="utf-8")
+def test_aperture_wiring() -> None:
+    s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
     assert '_calibrated = _band_system != "NONE"' in s
     i_pp = s.index("apply_reporting_postprocess(")
     assert "mag_calib if _calibrated else _meas" in s[i_pp:i_pp + 200]

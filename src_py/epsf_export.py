@@ -122,6 +122,8 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
         "# time=BJD_TDB, mid-exposure",
         "# delta_mag=differential instrumental magnitude of the target against the weighted ensemble of the "
         "comparison stars below (not transformed to a standard system; aperture and ePSF levels differ by a constant)",
+        "# second_order_extinction=" + ("k'' x (target - comparison colour) x airmass subtracted, the same term as the "
+                                        "aperture light curve" if hdr.get("psf_lc_k2_applied") == "true" else "not applied"),
         "# err=1-sigma magnitude error: PSF fit (Fisher, model variance) + unresolved-neighbour term + ensemble "
         "+ scintillation + night systematic floor",
         f"# method=per-frame ePSF (photutils EPSFBuilder, oversampling {OVERSAMPLING}, {grid} spatial perturbation), "

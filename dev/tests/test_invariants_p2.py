@@ -83,28 +83,28 @@ def test_wcs01_warn() -> None:
 
 def test_dag01_upstream_and_cold_start() -> None:
     meta: dict = {}
-    stamp_pipeline_stage(meta, "phase2a", enforce_upstream=True)  # cold start
+    stamp_pipeline_stage(meta, "aperture_photometry", enforce_upstream=True)  # cold start
     assert meta["stages"][-1]["cold_start"] is True
     meta2: dict = {}
     stamp_pipeline_stage(meta2, "masterstar", enforce_upstream=True)
-    stamp_pipeline_stage(meta2, "phase01", enforce_upstream=True)  # gap OK
+    stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)  # gap OK
     assert meta2["stages"][-1].get("gap") is True
-    stamp_pipeline_stage(meta2, "phase2a", enforce_upstream=True)  # contiguous
+    stamp_pipeline_stage(meta2, "aperture_photometry", enforce_upstream=True)  # contiguous
     with pytest.raises(InvariantViolation):
-        stamp_pipeline_stage(meta2, "phase01", enforce_upstream=True)  # backwards
+        stamp_pipeline_stage(meta2, "target_comp_selection", enforce_upstream=True)  # backwards
 
 
 def test_prov01_round_trip_minimal() -> None:
     meta = {
         "provenance": {
             "git_hash": "deadbeef",
-            "entry_point": "run_phase2a",
+            "entry_point": "run_aperture_photometry",
             "labbe_rng_seed_policy": "content_frame_hash_v1",
             "config_snapshot": {
             },
         },
         "invariants": [],
-        "stages": [{"name": "phase2a", "seq": 6, "head_inputs_present": True}],
+        "stages": [{"name": "aperture_photometry", "seq": 6, "head_inputs_present": True}],
     }
     validate_provenance_schema(meta, photometry_dir=None)
     assert meta.get("prov_schema_version") == 1
@@ -182,7 +182,7 @@ def test_cfg01_per_frame_sat_markers_absent_when_off() -> None:
     meta = {
         "provenance": {
             "git_hash": "abc",
-            "entry_point": "run_phase2a",
+            "entry_point": "run_aperture_photometry",
             "labbe_rng_seed_policy": "content_frame_hash_v1",
             "config_snapshot": {
                 "per_frame_saturation_enabled": False,

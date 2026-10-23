@@ -1,8 +1,8 @@
 """WAVE-B guard tests: parameters that left the config.json persistence surface.
 
-STEP 3 internalized ``frame_width_px`` / ``frame_height_px`` (they remain AppConfig
-fields resolved from FITS NAXIS at run time, but are neither saved to nor loaded from
-config.json). This test pins that the save payload never carries them.
+STEP 3 internalized ``frame_width_px`` / ``frame_height_px``; CODE-REVIEW step 7 removed
+them (the frame size always comes from FITS NAXIS). This test pins that the save payload
+never carries them.
 """
 from __future__ import annotations
 
@@ -20,20 +20,10 @@ def test_internalized_frame_dims_absent_from_save_payload() -> None:
     assert all(k not in cfg.to_dict() for k in _INTERNALIZED_KEYS)
 
 
-def test_internalized_frame_dims_still_appconfig_fields() -> None:
-    # They stay as fields (5 real read sites) with their fallback defaults intact.
-    cfg = AppConfig()
-    assert cfg.frame_width_px == 2082
-    assert cfg.frame_height_px == 1397
-
-
-# WAVE-B STEP 5 (DELETE-DB-DUP): 8 DB/FITS-authoritative keys leave config.json persistence
-# but remain AppConfig fields (run-time hydrated mirrors).
+# WAVE-B STEP 5 (DELETE-DB-DUP): DB-authoritative site keys leave config.json persistence but
+# remain AppConfig fields (run-time hydrated mirrors). gain / read_noise were removed in
+# CODE-REVIEW step 7B (header / EQUIPMENTS only).
 _DB_DUP_KEYS = (
-    "gain",
-    "read_noise",
-    "plate_scale_arcsec_per_px",
-    "phase01_plate_scale_arcsec_per_px",
     "observer_lat",
     "observer_lon",
     "observer_alt_m",
@@ -46,6 +36,16 @@ def test_db_dup_keys_absent_from_save_payload() -> None:
     payload = cfg.to_json()
     for key in _DB_DUP_KEYS:
         assert key not in payload, f"{key} must not be persisted to config.json (WAVE-B STEP 5)"
+
+
+# CODE-REVIEW-2026-10 step 2: the plate scale comes only from the WCS (no AppConfig mirror).
+_REMOVED_PLATE_SCALE_KEYS = ("plate_scale_arcsec_per_px", "phase01_plate_scale_arcsec_per_px")
+
+
+def test_plate_scale_keys_removed() -> None:
+    cfg = AppConfig()
+    for key in _REMOVED_PLATE_SCALE_KEYS:
+        assert not hasattr(cfg, key) and key not in cfg.to_json()
 
 
 def test_db_dup_keys_still_appconfig_fields() -> None:

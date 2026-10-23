@@ -1,6 +1,6 @@
-"""Globalny RMS vypocet pre comp pool (jedna pass napriec framami).
+"""Global RMS computation for the comparison pool (one pass across frames).
 
-Oddelene od ``photometry_core`` kvoli objemu a cyklickym importom.
+Kept separate from ``photometry_core`` because of size and circular imports.
 """
 
 from __future__ import annotations
@@ -8,32 +8,14 @@ from __future__ import annotations
 import logging
 import math
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import normalize_gaia_source_id as _norm_id_val  # GAIA-ID-2026-10: one exact normaliser
 from pipeline_constants import COMP_SAT_LIMIT_SCALE
 
 LOGGER = logging.getLogger(__name__)
-
-
-def _norm_id_val(x: Any) -> str:
-    if pd.isna(x):
-        return ""
-    s = str(x).strip()
-    if not s or s.lower() == "nan":
-        return ""
-    # 19-digit Gaia source ids do not survive float(): normalise integers exactly.
-    if s.isdigit():
-        return str(int(s))
-    if s.endswith(".0") and s[:-2].isdigit():
-        return str(int(s[:-2]))
-    try:
-        return str(int(float(s)))
-    except (TypeError, ValueError):  # noqa: BLE001
-        # EXC-0029: T1 -- science path may skip or use stale defaults (try: / return str(int(float(s))) / except ... (EXCEPT-BULK 2026-07-08)
-        return s
 
 
 def sort_per_frame_csv_paths(

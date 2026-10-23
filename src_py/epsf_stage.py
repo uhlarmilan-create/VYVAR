@@ -1,7 +1,7 @@
 """Night-run ePSF stage: build, per-frame PSF fit+merge, internal PSF LCs.
 
 INV-EPSF-STAGE-01: one function consumed by ``run_night_pipeline``, the ePSF
-dashboard, the RUN ePSF job, and ``psf_runner.main``. No subprocess.
+dashboard and the RUN ePSF job. No subprocess.
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+
+from pipeline_constants import EPSF_MIN_BUILD_STARS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -168,7 +170,7 @@ def run_epsf_stage(
             masterstars_csv_path=ms_csv,
             db=db,
             draft_id=int(did),
-            min_stars=int(getattr(cfg, "epsf_min_stars", 30)),
+            min_stars=EPSF_MIN_BUILD_STARS,
         )
         out["build"] = {"n_build_stars": sel["n_stars"], "fwhm_px": sel["fwhm_px"], "cutout_size": sel["cutout_size"]}
         out["n_stars"] = int(sel["n_stars"])

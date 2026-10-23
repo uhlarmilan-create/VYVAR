@@ -145,10 +145,9 @@ def _json_safe_snapshot_value(v: Any) -> Any:
 def _complete_config_snapshot(cfg: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
     """Backfill the provenance snapshot so it covers EVERY public AppConfig field.
 
-    ``AppConfig.to_json()`` is a hand-maintained serializer that omits a handful of
-    derived/runtime fields (e.g. project_root, qc_preprocess_workers, plate_solve_fov_deg,
-    blind_index_path, and a few knobs), so ``to_dict()`` yielded fewer keys than the 304-entry
-    registry. For an honest, complete provenance snapshot we backfill any missing public field
+    ``AppConfig.to_json()`` carries only the config.json keys; derived/runtime fields
+    (project_root, qc_preprocess_workers, the observer location mirror, gain, read_noise) are
+    not in it. For an honest, complete provenance snapshot we backfill any missing public field
     from ``getattr(cfg, name)`` (JSON-coerced). This does NOT touch ``to_json()`` / config.json
     (save/load semantics unchanged) and is metadata only -- the anchor comparator ignores
     pipeline_meta.json, so fresh snapshots become complete without any numeric behaviour change.
@@ -223,7 +222,7 @@ def merge_photometry_pipeline_meta(
     *,
     entry_point: str | None = None,
 ) -> None:
-    """Merge keys into ``photometry/pipeline_meta.json`` (MASTERSTAR + Phase 2A)."""
+    """Merge keys into ``photometry/pipeline_meta.json`` (MASTERSTAR + aperture photometry)."""
     _meta_path = Path(photometry_dir) / "pipeline_meta.json"
     try:
         _meta_path.parent.mkdir(parents=True, exist_ok=True)

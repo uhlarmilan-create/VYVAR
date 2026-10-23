@@ -119,7 +119,7 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
     assert "Deferred: no aligned proc_*.fits on disk yet" in joined
 
 
-def test_run_full_photometry_zero_targets_skips_phase2a(tmp_path: Path) -> None:
+def test_run_full_photometry_zero_targets_skips_aperture(tmp_path: Path) -> None:
     out = tmp_path / "photometry"
     out.mkdir()
     vt = tmp_path / "variable_targets.csv"
@@ -155,7 +155,7 @@ def test_run_full_photometry_zero_targets_skips_phase2a(tmp_path: Path) -> None:
     )
     assert result.get("zero_targets") is True
     assert int(result.get("n_active_targets") or 0) == 0
-    assert result.get("phase2a") is None
+    assert result.get("aperture_photometry") is None
     assert not (out / "photometry_summary.csv").exists()
 
 

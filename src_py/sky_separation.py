@@ -1,7 +1,7 @@
 # -*- coding: ascii -*-
 """One implementation of on-sky / pixel distances for comparison-star ``_dist_deg``.
 
-Phase-1 selection (``comp_selection_per_target``) persists ``_dist_deg``. A second scalar haversine
+Comparison-star selection (``comp_selection_per_target``) persists ``_dist_deg``. A second scalar haversine
 lived in ``photometry_core`` (``math`` vs numpy). Full-chain vs photometry-only
 then differed at ~1e-14 on a handful of CSV rows (SEL-GHOST-01 B3 T3-P5).
 

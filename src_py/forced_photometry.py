@@ -26,6 +26,14 @@ GEOMETRY_OK_COL = "geometry_ok"
 GEOMETRY_REASON_COL = "geometry_miss_reason"
 # Bounded refine: search radius = ceil(fwhm * bound_fwhm); recorded in meta/result.
 
+#: FORCED-MAG-2026-10: MASTERSTAR columns a forced row carries like a DAO row. ``mag`` (was the
+#: non-existent ``catalog_mag``: forced rows had no magnitude) and the Gaia variability flag; the
+#: former ``edge_safe_10px`` / ``snr50_ok`` exist in no MASTERSTAR table.
+_MASTERSTAR_COPY_COLS: tuple[str, ...] = (
+    "zone", "is_saturated", "is_usable", "bp_rp", "phot_g_mean_mag", "mag",
+    "vsx_known_variable", "gaia_dr3_variable_catalog", "non_single_star",
+)
+
 
 def force_eligible_masterstar_mask(master_tab: pd.DataFrame) -> pd.Series:
     """Stars eligible for forced measurement (three gates only).
@@ -153,7 +161,13 @@ def inject_forced_masterstar_rows(
             h_img = int(math.ceil(float(my.max()) + 1))
 
     new_rows: list[dict[str, Any]] = []
-    for _, row in eligible.iterrows():
+    # SPEED-2026-10: visit only the members not already in the frame table (same rows, same order).
+    if "catalog_id" in eligible.columns:
+        _cids = [str(v).strip() for v in eligible["catalog_id"].tolist()]
+        eligible = eligible.iloc[[i for i, c in enumerate(_cids) if c and c not in present]]
+    # SPEED-2026-10: records instead of iterrows (0.5 s per frame of pandas row objects).
+    _copy_cols = [c for c in _MASTERSTAR_COPY_COLS if c in eligible.columns]
+    for row in eligible.to_dict("records"):
         cid = str(row.get("catalog_id", "")).strip()
         if not cid or cid in present:
             continue
@@ -179,17 +193,8 @@ def inject_forced_masterstar_rows(
                 "flux": float("nan"),
                 "dao_flux": float("nan"),
             }
-            for col in (
-                "zone",
-                "is_saturated",
-                "is_usable",
-                "bp_rp",
-                "phot_g_mean_mag",
-                "catalog_mag",
-                "vsx_known_variable",
-            ):
-                if col in row.index:
-                    stub[col] = row.get(col)
+            for col in _copy_cols:
+                stub[col] = row.get(col)
             new_rows.append(stub)
             continue
 
@@ -208,20 +213,8 @@ def inject_forced_masterstar_rows(
             GEOMETRY_OK_COL: True,
             GEOMETRY_REASON_COL: "",
         }
-        for col in (
-            "zone",
-            "is_saturated",
-            "is_usable",
-            "bp_rp",
-            "phot_g_mean_mag",
-            "catalog_mag",
-            "edge_safe_10px",
-            "snr50_ok",
-            "vsx_known_variable",
-            "non_single_star",
-        ):
-            if col in row.index:
-                nr[col] = row.get(col)
+        for col in _copy_cols:
+            nr[col] = row.get(col)
         new_rows.append(nr)
         meta["n_injected"] = int(meta["n_injected"]) + 1
 

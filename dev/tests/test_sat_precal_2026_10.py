@@ -115,7 +115,7 @@ def test_measured_level_wins_and_no_guessed_clip() -> None:
     assert lim == pytest.approx(98278.0 * LINEARITY_FRAC)
 
 
-def test_phase2a_peak_test_from_sat_diag(tmp_path: Path) -> None:
+def test_aperture_peak_test_from_sat_diag(tmp_path: Path) -> None:
     draft = tmp_path / "Drafts" / "draft_000999"
     ps = draft / "platesolve" / "NoFilter_120_2"
     ps.mkdir(parents=True)

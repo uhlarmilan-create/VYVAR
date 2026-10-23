@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from config import AppConfig
-from hrd_analysis import HRD_EMPTY_FIELD_MSG, _LABEL_BINARY, _pick_label, _select_stage1_candidates, _stage1_candidate_mask, _stage2_labels, get_top_interesting_stars
+from hrd_analysis import HRD_EMPTY_FIELD_MSG, _LABEL_BINARY, _pick_base_label, _select_stage1_candidates, _stage1_candidate_mask, _stage2_labels, get_top_interesting_stars
 from hrd_enrich import enrich_candidates
 
 
@@ -66,7 +66,7 @@ def test_stage2_supergiant_beats_very_cool() -> None:
     )
     assert "Red supergiant" in labels
     assert not any("Very cool" in x for x in labels)
-    picked = _pick_label(labels, "s*r")
+    picked = _pick_base_label(labels)
     assert picked.startswith("Red supergiant")
     assert "Very cool" not in picked
 
@@ -107,7 +107,7 @@ def test_shrink_net_reservations_round_robin() -> None:
     assert out["nss"] <= 4
 
 
-def test_stage2_label_priority_and_simbad_suffix() -> None:
+def test_stage2_label_priority() -> None:
     labels = _stage2_labels(
         _row(
             bp_rp=0.1,
@@ -117,9 +117,8 @@ def test_stage2_label_priority_and_simbad_suffix() -> None:
             non_single_star=1,
         )
     )
-    picked = _pick_label(labels, "WR*")
+    picked = _pick_base_label(labels)
     assert picked.startswith("White dwarf candidate")
-    assert "SIMBAD: WR*" in picked
 
 
 def test_empty_field_returns_explicit_marker() -> None:
@@ -216,16 +215,17 @@ def test_enrichment_disabled_skips_network() -> None:
 
 
 def test_hrd_config_defaults() -> None:
+    import hrd_analysis as ha
+
     cfg = AppConfig()
     assert cfg.hrd_online_enrich_enabled is True
-    assert cfg.hrd_simbad_enrich_enabled is True
-    assert 1 <= cfg.hrd_enrich_max_candidates <= 100
-    assert cfg.hrd_parallax_min_mas == 0.15
-    assert cfg.hrd_parallax_snr_min == 5.0
-    assert cfg.hrd_max_per_category == 3
-    assert cfg.hrd_min_per_net == 4
     assert cfg.hrd_nss_category_enabled is False
-    assert cfg.hrd_dsc_confirm_prob == 0.90
+    assert ha.HRD_ENRICH_MAX_CANDIDATES == 20
+    assert ha.HRD_PARALLAX_MIN_MAS == 0.15
+    assert ha.HRD_PARALLAX_SNR_MIN == 5.0
+    assert ha.HRD_MAX_PER_CATEGORY == 3
+    assert ha.HRD_MIN_PER_NET == 4
+    assert ha.HRD_DSC_CONFIRM_PROB == 0.90
 
 
 def test_nss_default_off_no_binary_rows() -> None:
@@ -246,7 +246,6 @@ def test_nss_default_off_no_binary_rows() -> None:
     df = pd.DataFrame(nss_rows)
     cfg = AppConfig()
     cfg.hrd_online_enrich_enabled = False
-    cfg.hrd_simbad_enrich_enabled = False
     assert cfg.hrd_nss_category_enabled is False
     top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
     assert len(top) == 1
@@ -298,15 +297,12 @@ def test_category_cap_and_nss_deprioritized() -> None:
     df = pd.DataFrame(giants + nss_rows)
     cfg = AppConfig()
     cfg.hrd_online_enrich_enabled = False
-    cfg.hrd_simbad_enrich_enabled = False
-    cfg.hrd_enrich_max_candidates = 6
-    cfg.hrd_max_per_category = 3
     cfg.hrd_nss_category_enabled = True
     top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
     cats = top["category"].tolist()
     assert sum("Red giant" in c for c in cats) == 2
-    assert sum(_LABEL_BINARY in c for c in cats) <= 3
-    assert len(top) <= 6
+    assert sum(_LABEL_BINARY in c for c in cats) <= 3  # HRD_MAX_PER_CATEGORY
+    assert len(top) <= 5
 
 
 def test_get_top_interesting_stars_offline_with_classification() -> None:
@@ -326,7 +322,6 @@ def test_get_top_interesting_stars_offline_with_classification() -> None:
     )
     cfg = AppConfig()
     cfg.hrd_online_enrich_enabled = False
-    cfg.hrd_simbad_enrich_enabled = False
     top = get_top_interesting_stars(df, cfg=cfg, cache_path=None)
     assert not top.empty
     assert "White dwarf" in str(top.iloc[0]["category"])

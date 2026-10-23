@@ -17,7 +17,7 @@ from typing import Any, Mapping
 
 LOGGER = logging.getLogger(__name__)
 
-#: The only aperture policy (CFG-REVIEW-2026-10): per-frame QC FWHM, f* chosen per target in Phase 2A.
+#: The only aperture policy (CFG-REVIEW-2026-10): per-frame QC FWHM, f* chosen per target in aperture photometry.
 MODE_PER_TARGET = "per_target"
 
 FWHM_AUTHORITY = "qc_metrics.fwhm_px"
@@ -52,7 +52,7 @@ def fwhm_for_radius(
     fwhm_night_median_px: float | None,
 ) -> float | None:
     """FWHM that enters r_ap = f x FWHM (annulus uses the same value): the frame QC FWHM, night median
-    when a frame has none (APERTURE-DYNAMIC-01; f* is chosen per target in Phase 2A)."""
+    when a frame has none (APERTURE-DYNAMIC-01; f* is chosen per target in aperture photometry)."""
     frame = clamp_fwhm_px(fwhm_frame_px)
     return frame if frame is not None else clamp_fwhm_px(fwhm_night_median_px)
 

@@ -145,7 +145,6 @@ class RunCitationContext:
     use_period_analysis: bool = False
     use_variability_envelope: bool = False
     use_lightkurve: bool = False
-    use_trust: bool = True
     use_common_mode_stability_detrend: bool = False
     use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
@@ -223,7 +222,6 @@ def build_run_citation_context(
     use_gs11 = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg else False
     use_gs11 = use_gs11 or bool(gs11_meta.get("enabled", False))
     use_tess = bool(tess_used) or bool(getattr(cfg, "tess_enabled", False)) if cfg else bool(tess_used)
-    use_trust = bool(getattr(cfg, "trust_flag_enabled", True)) if cfg else True
     use_cm_detrend = bool(meta.get("common_mode_stability_detrend", False)) if meta else False
     # Sparse fallback / iterative comp clip removed (COMP-RULES-2026-10); older drafts
     # may still carry the pipeline_meta flag.
@@ -286,7 +284,6 @@ def build_run_citation_context(
         use_period_analysis=bool(period_analysis),
         use_variability_envelope=bool(variability_detection),
         use_lightkurve=use_tess,
-        use_trust=use_trust,
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
@@ -448,7 +445,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
             )
         )
 
-    # VAR-2026-10: the field variability search runs in every Phase 2A (GUI and night run).
+    # VAR-2026-10: the field variability search runs in every aperture photometry run (GUI and night run).
     # The trust gate (comp count, check star, lc quality) has no literature method to cite;
     # the Sokolovsky LOO comp QA was removed (COMP-QA-2026-10).
     sections.append(
@@ -531,7 +528,7 @@ def build_methods_matrix_lines(ctx: RunCitationContext) -> list[str]:
         ("faint limit", f"SNR >= {ctx.snr_min:g} (epochs below are not exported)"),
         ("sigma clipping / detrending / binning", "OFF"),
         ("check star", "ON (independent of the ensemble)"),
-        ("trust gate", "ON" if ctx.use_trust else "OFF"),
+        ("trust gate", "ON"),
         ("PSF photometry", "ON" if ctx.use_psf else "OFF"),
     ]
     if ctx.osc_channel_export:

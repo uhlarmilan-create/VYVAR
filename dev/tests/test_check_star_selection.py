@@ -15,7 +15,6 @@ def _good_row(cid: str, *, rms: float, tier: int = 1) -> dict:
         "comp_rms": rms,
         "p2p_rms": rms,
         "comp_tier": tier,
-        "contamination_idx": 0.0,
     }
 
 
@@ -85,17 +84,3 @@ def test_cs2_all_below_floor_returns_none() -> None:
     assert select_check_star(df, ensemble_ids=set(), n_comp_min=3) is None
 
 
-def test_cs4_high_contamination_excluded() -> None:
-    hi = _good_row("crowded", rms=0.001)
-    hi["contamination_idx"] = 0.5
-    df = pd.DataFrame(
-        [
-            hi,
-            _good_row("ok1", rms=0.02),
-            _good_row("ok2", rms=0.03),
-            _good_row("ok3", rms=0.04),
-        ]
-    )
-    row = select_check_star(df, ensemble_ids=set(), n_comp_min=3, cfg=AppConfig())
-    assert row is not None
-    assert str(row["catalog_id"]) != "crowded"

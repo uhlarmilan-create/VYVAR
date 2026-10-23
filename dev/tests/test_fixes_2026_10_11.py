@@ -19,13 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling test helpers
 
 def test_k2_source_is_a_per_target_summary_value() -> None:
     # OUTPUT-REVIEW-2026-10 step 6: k'' provenance moved from every LC row to the summary
-    s = (SRC / "phase2a_target.py").read_text(encoding="utf-8")
+    s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
     assert '"k2_source": k2_source_target' in s
     assert "k2_source=" not in s[s.index("save_lightcurve_csv(\n        lc_csv"):s.index("# EPSF-LC-LOG-01")]
 
 
 def test_low_snr_applied_after_flagging() -> None:
-    s = (SRC / "phase2a_target.py").read_text(encoding="utf-8")
+    s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
     i_pp = s.index("apply_reporting_postprocess(")
     i_fix = s.index("FIX-LOWSNR-2026-10")
     assert i_fix > i_pp
@@ -83,7 +83,7 @@ def test_fitsqa_skips_all_nan_column() -> None:
 
 
 def test_reported_aperture_is_per_target_radius() -> None:
-    s = (Path(__file__).resolve().parents[2] / "src_py" / "phase2a_target.py").read_text(encoding="utf-8")
+    s = (Path(__file__).resolve().parents[2] / "src_py" / "aperture_photometry_target.py").read_text(encoding="utf-8")
     i = s.index("FIX-APREPORT-2026-10")
     assert "if _pt_active:\n        _measured_ap = float(\"nan\")" in s[i:i + 600]
 
@@ -91,7 +91,7 @@ def test_reported_aperture_is_per_target_radius() -> None:
 def test_aperture_tab_is_informational_only() -> None:
     s = (Path(__file__).resolve().parents[2] / "src_py" / "ui_aperture_photometry.py").read_text(encoding="utf-8")
     assert "RUN Aperture Photometry\"" not in s and "run_ui_night_photometry" not in s
-    assert "run_phase2a" not in s and "UI-INFO-2026-10" in s
+    assert "run_aperture_photometry" not in s and "UI-INFO-2026-10" in s
 
 
 def test_export_rows_differential_and_all_flagged() -> None:
@@ -327,7 +327,7 @@ def test_reserve_does_not_change_primary_comps() -> None:
     from test_comp_determinism_synthetic import _TARGET_ID, _build_synthetic_dataset
 
     from photometry_comp import select_comparison_stars_per_target
-    from phase01_run import _split_comp_reserve
+    from target_comp_selection import _split_comp_reserve
 
     target, ms, paths, cache = _build_synthetic_dataset()
     ms = ms.copy()

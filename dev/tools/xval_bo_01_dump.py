@@ -150,7 +150,7 @@ def main() -> None:
         if math.isfinite(w) and w > 0 and math.isfinite(d):
             zp_num += w * d
             zp_den += w
-    kmag_magcalib_phase1 = m_chk + (zp_num / zp_den) if zp_den > 0 else float("nan")
+    kmag_magcalib_comp_selection = m_chk + (zp_num / zp_den) if zp_den > 0 else float("nan")
 
     # Sidecar epoch for same source_file
     side_row = chk_bo[chk_bo["source_file"].astype(str) == FRAME001]
@@ -178,7 +178,7 @@ def main() -> None:
         flux_c = np.nansum(10.0 ** (-0.4 * stack), axis=0)
         m_ens = -2.5 * np.log10(np.where(flux_c > 0, flux_c, np.nan))
         delta = mag[CHECK] - m_ens
-        # mag_calib via ensemble_normalize (Phase-1 rms, no weight map)
+        # mag_calib via ensemble_normalize (comparison-star selection rms, no weight map)
         mc, dm, _ = ensemble_normalize(
             mag[CHECK],
             {c: mag[c] for c in ids},
@@ -186,7 +186,8 @@ def main() -> None:
             qual,
             n_comp_min=2,
         )
-        # ALG-5 PyTICS removed 2026-10: Phase 2A now weights with the Phase-1 rms map as-is.
+        # ALG-5 PyTICS removed 2026-10: aperture photometry now weights with the comparison-star selection
+        # rms map as-is.
         rms2 = dict(rms)
         mc_py, dm_py, _ = ensemble_normalize(
             mag[CHECK],
@@ -213,13 +214,13 @@ def main() -> None:
             "production_check_mad_mmag": mad_mmag(k_prod),
             "delta_mag_fluxsum_mad_mmag": mad_mmag(delta),
             "ensemble_normalize_delta_mag_mad_mmag": mad_mmag(dm),
-            "mag_calib_phase1_rms_mad_mmag": mad_mmag(mc),
+            "mag_calib_comp_selection_rms_mad_mmag": mad_mmag(mc),
             "mag_calib_pytics_rms_mad_mmag": mad_mmag(mc_py),
             "corr_prod_vs_delta_mag": corr(k_prod, delta),
-            "corr_prod_vs_mag_calib_phase1": corr(k_prod, mc),
+            "corr_prod_vs_mag_calib_comp_selection": corr(k_prod, mc),
             "corr_prod_vs_mag_calib_pytics": corr(k_prod, mc_py),
             "medabs_prod_vs_delta_mmag": medabs(k_prod, delta),
-            "medabs_prod_vs_mag_calib_phase1_mmag": medabs(k_prod, mc),
+            "medabs_prod_vs_mag_calib_comp_selection_mmag": medabs(k_prod, mc),
             "medabs_prod_vs_mag_calib_pytics_mmag": medabs(k_prod, mc_py),
             "pytics_rms_before_after": {
                 c: {"before": rms[c], "after": float(rms2.get(c, float("nan")))} for c in ids
@@ -237,9 +238,9 @@ def main() -> None:
         "check_catalog_id": CHECK,
         "quantity_notes": {
             "flux": "proc CSV column 'flux'",
-            "dao_flux": "proc CSV column 'dao_flux' (Phase 2A read_flux_from_csv uses this)",
+            "dao_flux": "proc CSV column 'dao_flux' (aperture photometry read_flux_from_csv uses this)",
             "kmag_fluxsum": "-2.5*log10(F_check / sum F_comp) from dao_flux [mag]",
-            "kmag_magcalib_phase1": (
+            "kmag_magcalib_comp_selection": (
                 "m_check + sum(w*(G_cat - m_comp))/sum(w), w=1/comp_rms^2 [mag]"
             ),
             "production_sidecar_kmag": "check_kmag CSV kmag column for this source_file [mag]",
@@ -247,7 +248,7 @@ def main() -> None:
         "stars": rows_dump,
         "epoch_formulas": {
             "kmag_fluxsum_mag": kmag_fluxsum,
-            "kmag_magcalib_phase1_rms_mag": kmag_magcalib_phase1,
+            "kmag_magcalib_comp_selection_rms_mag": kmag_magcalib_comp_selection,
             "production_sidecar_kmag_mag": kmag_prod_epoch,
             "zp_detail": zp_detail,
             "delta_fluxsum_minus_prod_mmag": (
@@ -256,14 +257,14 @@ def main() -> None:
                 else None
             ),
             "magcalib_minus_prod_mmag": (
-                (kmag_magcalib_phase1 - kmag_prod_epoch) * 1000.0
-                if kmag_prod_epoch is not None and math.isfinite(kmag_magcalib_phase1)
+                (kmag_magcalib_comp_selection - kmag_prod_epoch) * 1000.0
+                if kmag_prod_epoch is not None and math.isfinite(kmag_magcalib_comp_selection)
                 else None
             ),
         },
         "full_series": {"BO_CVn": bo_stats, "FW_CVn": fw_stats},
         "code_path": {
-            "writer": "photometry_core._phase2a_process_one_target -> compute_check_ensemble_mag_calib -> ensemble_normalize -> save_check_kmag_sidecar",
+            "writer": "photometry_core._aperture_process_one_target -> compute_check_ensemble_mag_calib -> ensemble_normalize -> save_check_kmag_sidecar",
             "flux_authority": "read_flux_from_csv: dao_flux (not 'flux' by name; on this night they match for dumped stars)",
             "aperture": "aperture_r_px from proc CSV row (DAO aperture used when dao_flux was measured)",
             "combination": (
@@ -286,7 +287,7 @@ def main() -> None:
         "frame001 fluxsum",
         kmag_fluxsum,
         "magcalib",
-        kmag_magcalib_phase1,
+        kmag_magcalib_comp_selection,
         "prod",
         kmag_prod_epoch,
         flush=True,

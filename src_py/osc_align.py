@@ -334,7 +334,7 @@ def log_channel_match_rate_verification(
         )
         if one_rggb_failed:
             raise RuntimeError(msg.replace("WARN only", "oneRGGB failed - FAIL"))
-        log_event(f"VAROVANIE: {msg}")
+        log_event(f"WARNING: {msg}")
     else:
         log_event(f"OSC-2 channel {ch}: match_rate={mr * 100.0:.1f}% OK (propagated WCS)")
 

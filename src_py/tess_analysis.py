@@ -33,7 +33,7 @@ Pipeline per star (no sigma clipping, no detrending filter):
     residual spectrum (+-1 c/d, red noise included) is < 4 (Breger et al. 1993) - nothing
     to localise; RELIABLE when the target is the most likely source (relative
     likelihood >= 0.5), contamination (neighbours / target in the aperture) <
-    ``tess_contam_max`` and the period of >= 2 sectors (and most) agrees within 3 sigma of
+    ``TESS_CONTAM_MAX`` and the period of >= 2 sectors (and most) agrees within 3 sigma of
     each sector's own error; NEIGHBOUR when another star is the most likely source;
     otherwise AMBIGUOUS with the reasons. A period is printed in the report only
     for RELIABLE.
@@ -54,6 +54,8 @@ import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
+#: RELIABLE needs the contamination (neighbours / target in the aperture) below this fraction.
+TESS_CONTAM_MAX = 0.10
 _SEGMENT_GAP_D = 0.5  # gap separating TESS orbits / downlinks
 _N_HARM = 3  # harmonics of the multi-harmonic AoV
 _OVERSAMPLE = 5
@@ -838,7 +840,7 @@ def run_tess(
             sr = lk.search_tesscut(f"{float(ra)} {float(dec)}")
             if len(sr) == 0:
                 res.error = "no TESS sector covers this position"
-                verdict(res, float(getattr(cfg, "tess_contam_max", 0.10)))
+                verdict(res, TESS_CONTAM_MAX)
                 _write(res, out_dir)
                 return res
             _p(f"Downloading {len(sr)} sector(s)", 0.1)
@@ -873,7 +875,7 @@ def run_tess(
         res.sectors.append(sec)
     if not all_t:
         res.error = res.error or "no usable sector"
-        verdict(res, float(getattr(cfg, "tess_contam_max", 0.10)))
+        verdict(res, TESS_CONTAM_MAX)
         _write(res, out_dir)
         return res
     t = np.concatenate(all_t); m = np.concatenate(all_m); e = np.concatenate(all_e)
@@ -905,7 +907,7 @@ def run_tess(
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("[TESS] S/N failed: %s", exc)
         plots["amp_map"], plots["mask"], plots["xy"] = amp, aux0["mask"], aux0["xy"]
-    verdict(res, float(getattr(cfg, "tess_contam_max", 0.10)))
+    verdict(res, TESS_CONTAM_MAX)
     try:
         _plots(res, plots, out_dir, vyvar_lc)
     except Exception as exc:  # noqa: BLE001

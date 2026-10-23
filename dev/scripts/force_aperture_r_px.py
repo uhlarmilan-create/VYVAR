@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Force fixed circular aperture radius in VYVAR (proc CSV + Phase 2A).
+"""Force fixed circular aperture radius in VYVAR (proc CSV + aperture photometry).
 
 Re-measures flux in every ``proc_*.csv`` from aligned FITS with one radius for all
-stars (e.g. AIJ Multi-Aperture r=7 px), then optionally re-runs Phase 2A.
+stars (e.g. AIJ Multi-Aperture r=7 px), then optionally re-runs aperture photometry.
 
 Usage:
   python scripts/force_aperture_r_px.py --draft draft_000312 --radius 7
@@ -38,7 +38,7 @@ from gaia_catalog_id import GAIA_PROC_CSV_READ_DTYPE, normalize_gaia_source_id
 from photometry_core import (
     compute_fwhm_gaussian_for_aperture_catalog,
     enhance_catalog_dataframe_aperture,
-    run_phase2a,
+    run_aperture_photometry,
 )
 from ui_aperture_photometry import _load_fwhm
 
@@ -97,7 +97,7 @@ def _print_targets(label: str, summary: Path) -> None:
 
 
 def _photometry_catalog_ids(phot_dir: Path) -> set[str]:
-    """Stars that Phase 2A reads from proc CSV (targets + comparison pool)."""
+    """Stars that aperture photometry reads from proc CSV (targets + comparison pool)."""
     cids: set[str] = set()
     at = phot_dir / "active_targets.csv"
     if at.is_file():
@@ -203,7 +203,7 @@ def remeasure_proc_csvs(
     return n_ok
 
 
-def run_phase2a_for_draft(
+def run_aperture_photometry_for_draft(
     draft: Path,
     setup: str,
     *,
@@ -220,7 +220,7 @@ def run_phase2a_for_draft(
         shutil.copy2(summary, backup)
         LOGGER.info("Summary backup: %s", backup)
 
-    run_phase2a(
+    run_aperture_photometry(
         masterstar_fits_path=ps / "MASTERSTAR.fits",
         active_targets_csv=phot / "active_targets.csv",
         comparison_stars_csv=phot / "comparison_stars_per_target.csv",
@@ -240,7 +240,7 @@ def main() -> int:
     ap.add_argument("--setup", default="NoFilter_60_2")
     ap.add_argument("--radius", type=float, default=7.0, help="Circular aperture radius [px]")
     ap.add_argument("--export-only", action="store_true", help="Only re-measure proc_*.csv")
-    ap.add_argument("--phase2a-only", action="store_true", help="Only Phase 2A (CSV unchanged)")
+    ap.add_argument("--phase2a-only", action="store_true", help="Only aperture photometry (CSV unchanged)")
     ap.add_argument("--no-backup", action="store_true", help="Do not backup proc CSV before rewrite")
     args = ap.parse_args()
 
@@ -277,7 +277,7 @@ def main() -> int:
 
     _print_targets("BEFORE", summary)
 
-    do_export = not args.phase2a_only
+    do_export = not args.aperture_only
     do_p2a = not args.export_only
 
     needed_cids = _photometry_catalog_ids(phot)
@@ -297,8 +297,8 @@ def main() -> int:
 
     if do_p2a:
         t0 = time.time()
-        run_phase2a_for_draft(draft, setup, r_px=r_px, cfg=cfg, fwhm_px=fwhm_px)
-        LOGGER.info("Phase 2A done in %.1fs", time.time() - t0)
+        run_aperture_photometry_for_draft(draft, setup, r_px=r_px, cfg=cfg, fwhm_px=fwhm_px)
+        LOGGER.info("Aperture photometry done in %.1fs", time.time() - t0)
 
     _print_targets("AFTER", summary)
     print(f"\nLC files: {phot / 'lightcurves'}")

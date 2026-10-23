@@ -4,18 +4,18 @@ Production trust inputs (no SEP / xval axis):
 - **Comp-set size:** `n_clean` = comparison stars in the target's ensemble (comparison_stars_per_target.csv;
   every one passed the selection gates: not variable in Gaia/VSX, neighbour light, frame edge)
 - **Check-star scatter** (population RMS vs configured soft/hard thresholds)
-- **`lc_quality_flag`** from Phase 2A summary (`good` / `noisy` informational; saturated etc. hard)
+- **`lc_quality_flag`** from the aperture photometry summary (`good` / `noisy` informational; saturated etc. hard)
 
-SEP vs DAO cross-validation is **offline-only** (`xval_run.py` / `xval_harness_core.py`) - a
-one-off validation study tool, not imported by the production pipeline and not a trust axis.
+SEP vs DAO cross-validation is not a trust axis (the offline study tools were removed in
+CODE-REVIEW-2026-10 step 6).
 
 Unevaluated targets default **RED** (fail-closed).
 
 Comp-count thresholds follow ``comp_trust_min_comps`` / ``phase01_comparison_n_comp_max``
-(Phase-1 selection floor ``phase01_comparison_n_comp_min`` unchanged). Read-only w.r.t.
+(comparison-star selection floor ``phase01_comparison_n_comp_min`` unchanged). Read-only w.r.t.
 numeric photometry.
 
-Gate semantics (Phase-1 degradation, green_min=3):
+Gate semantics (comparison-star selection degradation, green_min=3):
 - **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check >= 0.05).
 - **YELLOW:** thin comp set (1-2 clean), T3+ with colour-term off, soft check scatter.
 - **GREEN:** ``n_clean >= green_min`` (T1/T2 count >= green_min) + check OK, no soft warnings.
@@ -123,15 +123,8 @@ def comp_thresholds_from_config(cfg: Any | None) -> CompTrustThresholds:
     return CompTrustThresholds.from_bounds(gm, mx)
 
 
-def check_star_min_epochs_from_config(cfg: Any | None) -> int:
-    """Minimum check-star epochs before scatter thresholds apply."""
-    if cfg is None:
-        return 5
-    try:
-        v = int(getattr(cfg, "check_star_min_epochs", 5) or 5)
-    except (TypeError, ValueError):
-        v = 5
-    return max(3, v)
+#: Minimum check-star epochs before the scatter thresholds apply.
+CHECK_STAR_MIN_EPOCHS = 5
 
 
 def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int]:
@@ -289,7 +282,7 @@ def classify_warnings(
     soft: list[str] = []
     nc = int(n_clean)
     th = thresholds
-    # a target Phase 2A skipped (e.g. per-frame saturation) has no light curve of this run
+    # a target aperture photometry skipped (e.g. per-frame saturation) has no light curve of this run
     if str(skip_reason or "").strip():
         hard.append(f"not measured: {str(skip_reason).strip()}")
     # TRUST-COVERAGE-2026-10 (Milan 2026-10-11): trust follows the epochs that are actually
@@ -481,7 +474,7 @@ def evaluate_target(
     sparse_flags: tuple[str, ...] = ()
     use_sparse = False
     if sparse_trust and bool(sparse_trust.get("check_sparse")):
-        from sparse_trust_core import sparse_trust_config_from_app, trust_band  # noqa: PLC0415
+        from sparse_trust_core import SparseTrustConfig, trust_band  # noqa: PLC0415
 
         use_sparse = True
         sparse_band, sparse_flags = trust_band(
@@ -491,7 +484,7 @@ def evaluate_target(
             x2_pair_mag2=float(sparse_trust.get("x2_pair_mag2", float("nan"))),
             n_comps=int(sparse_trust.get("n_comps", 2) or 2),
             triangulation_clipped=bool(sparse_trust.get("triangulation_clipped")),
-            cfg=sparse_trust_config_from_app(cfg),
+            cfg=SparseTrustConfig(),
         )
     hard, soft = classify_warnings(
         check_chi2_nu=float(check_chi2_nu),
@@ -723,7 +716,7 @@ def run_trust_flag_for_photometry_dir(
 ) -> dict[str, Any]:
     """Pipeline / CLI entry: trust columns in photometry_summary.csv."""
     th = thresholds or comp_thresholds_from_config(cfg)
-    min_chk = check_star_min_epochs_from_config(cfg)
+    min_chk = CHECK_STAR_MIN_EPOCHS
     result = compute_trust_for_photometry_dir(
         photometry_dir, thresholds=th, check_min_epochs=min_chk, cfg=cfg
     )

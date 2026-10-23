@@ -11,7 +11,6 @@ import warnings
 from pathlib import Path
 from typing import Any, Sequence
 
-import time
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
@@ -26,16 +25,11 @@ from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from gaia_catalog_id import read_vyvar_csv
 from masterstar_context import header_core_fwhm_px
-from photometry_core import _fwhm_moment_at, merge_photometry_pipeline_meta
+from photometry_core import merge_photometry_pipeline_meta
 from dao_reconcile import reconcile_to_pipeline_meta
-from photometry import (
-    common_field_intersection_bbox_px,
-    recommended_aperture_by_color,
-    stress_test_relative_rms_from_sidecars,
-    vsx_is_known_variable_top3_per_bin,
-)
 from pipeline_astrometry import _fill_masterstars_gaia_matched_bp_rp_from_local_db
 from pipeline_constants import (
+    DAO_FWHM_FALLBACK_PX,
     LINEARITY_FRAC,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
     SAT_LIMIT_NO_KNEE_FRAC,
@@ -123,9 +117,11 @@ def generate_masterstar_and_catalog(
 ) -> dict[str, Any]:
     """Create MASTERSTAR.fits, plate-solve it, and export masterstars.csv.
 
-    Ak je ``masterstar_fits_only=True``, po zostaveni FITS v ``platesolve/`` sa skonci (ziadny plate-solve ani CSV).
-    Ak je ``masterstar_skip_build=True``, preskoci sa build z processed - pouzije sa existujuci ``MASTERSTAR.fits`` v ``platesolve/`` a bezi solver + katalog.
-    Ak je ``masterstar_platesolve_only=True``, po uspesnom plate-solve a uprave mierky WCS sa skonci (bez DAO CSV, ``masterstars_full_match.csv``, fotometrickeho planu a zapisu MASTER_SOURCES).
+    If ``masterstar_fits_only=True``, stop after building the FITS in ``platesolve/`` (no plate-solve, no CSV).
+    If ``masterstar_skip_build=True``, skip the build from processed - use the existing ``MASTERSTAR.fits`` in
+    ``platesolve/`` and run solver + catalog.
+    If ``masterstar_platesolve_only=True``, stop after a successful plate-solve and WCS scale adjustment (no DAO CSV,
+    ``masterstars_full_match.csv``, photometric plan or MASTER_SOURCES write).
     """
     from pipeline import detect_stars_and_match_catalog  # noqa: PLC0415  # call-time: giant; patch analysis in Phase B
 
@@ -133,7 +129,7 @@ def generate_masterstar_and_catalog(
     import numpy as np
 
     ap = Path(archive_path).expanduser()
-    # Draft UI moze poslat .../draft_x/non_calibrated - MASTERSTAR a platesolve patria pod koren draftu.
+    # Draft UI may pass .../draft_x/non_calibrated - MASTERSTAR and platesolve belong under the draft root.
     if ap.name.casefold() == "non_calibrated":
         ap = ap.parent
     # SAT-PRECAL-2026-10 (Milan 2026-10-13): the saturation level is measured on this draft's
@@ -164,8 +160,8 @@ def generate_masterstar_and_catalog(
         masterstar_fits = Path(platesolve_dir) / _ms_name
         if not masterstar_fits.is_file():
             raise FileNotFoundError(
-                f"MASTERSTAR plate-solve: v {platesolve_dir} chyba subor {_ms_name}. "
-                "Najprv spusti **MAKE MASTERSTAR** na archive alebo vytvor MASTERSTAR inak (FITS QA -> referencny snimok)."
+                f"MASTERSTAR plate-solve: in {platesolve_dir} the file {_ms_name} is missing. "
+                "First run **MAKE MASTERSTAR** on the archive or create MASTERSTAR another way (FITS QA -> reference frame)."
             )
         _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
         if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
@@ -173,8 +169,8 @@ def generate_masterstar_and_catalog(
                 f"MASTERSTAR: catalog match sep eff={_match_sep_eff:.2f} arcsec (min 10 for initial match)."
             )
         log_event(
-            f"MASTERSTAR platesolve-from-disk: {masterstar_fits.resolve()} - VYVAR solver + katalog "
-            "(bez noveho buildu z processed)."
+            f"MASTERSTAR platesolve-from-disk: {masterstar_fits.resolve()} - VYVAR solver + catalog "
+            "(no new build from processed)."
         )
         ms_selection_meta = {
             "source": "platesolve_existing",
@@ -239,7 +235,7 @@ def generate_masterstar_and_catalog(
                         break
 
         log_event(f"[search] MASTERSTAR: Searching for candidates in {Path(detrended_root).resolve()}")
-        log_event(f"Vstupny priecinok pre Masterstar: {Path(detrended_root).resolve()}")
+        log_event(f"Input folder for Masterstar:{Path(detrended_root).resolve()}")
         from draft_provenance import is_pre_calibrated_draft
 
         _pre_cal_ms = is_pre_calibrated_draft(ap, draft_id=draft_id)
@@ -251,8 +247,8 @@ def generate_masterstar_and_catalog(
         _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
         if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
             log_event(
-                f"MASTERSTAR: catalog match sep zvyseny na {_match_sep_eff:.2f}\" "
-                f"(pozadovane minimum pre pociatocny match)."
+                f"MASTERSTAR: catalog match sep raised to {_match_sep_eff:.2f}\" "
+                f"(required minimum for the initial match)."
             )
 
         ps = Path(platesolve_dir) if platesolve_dir is not None else (ap / "platesolve")
@@ -357,10 +353,10 @@ def generate_masterstar_and_catalog(
                 }
             else:
                 raise FileNotFoundError(
-                    "MASTERSTAR: z UI/job prisli explicitne cesty k referencnemu snimku, ale ziadna sa nenasla "
-                    f"ako ``processed/lights/.../proc_*.fits`` (koren vyberu: {Path(detrended_root).resolve()}). "
-                    "Skontroluj preprocess, archiv a vyber vo FITS QA (potvrd znovu po **RUN VYVAR**). "
-                    f"Pozadovane ({len(cand_paths)}): " + "; ".join(cand_paths[:6]) + (" ..." if len(cand_paths) > 6 else "")
+                    "MASTERSTAR: UI/job passed explicit reference-frame paths, but none was found "
+                    f"as ``processed/lights/.../proc_*.fits`` (selection root: {Path(detrended_root).resolve()}). "
+                    "Check preprocess, archive and the FITS QA selection (confirm again after **RUN VYVAR**). "
+                    f"Requested ({len(cand_paths)}): " + "; ".join(cand_paths[:6]) + (" ..." if len(cand_paths) > 6 else "")
                 )
 
         _multi_obs = draft_is_multi_group_obs(ap)
@@ -392,9 +388,9 @@ def generate_masterstar_and_catalog(
             _db_ms = _vyvar_open_database(app_config or AppConfig())
             if _db_ms is not None:
                 try:
-                    # FITS QA 'Potvrdit vyber MASTERSTAR' -> ``get_obs_draft_masterstar_source_path``
-                    # (``draft manifest.MASTERSTAR_PATH`` = zdrojovy frame, nie hotovy ``MASTERSTAR.fits``).
-                    # Musi ist pred automatickym top-% z ``manifest files[]``, inak sa pouzivatelsky vyber prepise.
+                    # FITS QA 'Confirm MASTERSTAR selection' -> ``get_obs_draft_masterstar_source_path``
+                    # (``draft manifest.MASTERSTAR_PATH`` = source frame, not the finished ``MASTERSTAR.fits``).
+                    # Must run before the automatic top-% from ``manifest files[]``, else the user's choice is overwritten.
                     _src = _db_ms.get_obs_draft_masterstar_source_path(int(draft_id))
                     if _src and str(_src).strip():
                         mapped_src = _map_qc_paths_to_disk([str(_src).strip()])
@@ -408,7 +404,7 @@ def generate_masterstar_and_catalog(
                                 "explicit_ui_lock": True,
                             }
                             log_event(
-                                f"MASTERSTAR: FITS QA vyber (DB source, draft {int(draft_id)}) -> {mapped_src[0].name}"
+                                f"MASTERSTAR: FITS QA selection (DB source, draft {int(draft_id)}) -> {mapped_src[0].name}"
                             )
                     if only_ms_paths is None:
                         db_paths = get_masterstar_candidates(int(draft_id), _pct_eff, db=_db_ms)
@@ -422,17 +418,17 @@ def generate_masterstar_and_catalog(
                                 "mapped_found": int(len(mapped_db)),
                             }
                             log_event(
-                                f"MASTERSTAR: vyber z DB (draft {int(draft_id)}, top {_pct_eff:g} %) -> "
-                                f"{len(mapped_db)} kandidatov (najlepsi sa skopiruje do platesolve)."
+                                f"MASTERSTAR: selection from DB (draft {int(draft_id)}, top {_pct_eff:g} %) -> "
+                                f"{len(mapped_db)} candidates (the best is copied to platesolve)."
                             )
                         else:
                             log_event(
-                                f"MASTERSTAR: DB vyber (draft {int(draft_id)}) sa nepodarilo namapovat na FITS pod {detrended_root}."
+                                f"MASTERSTAR: DB selection (draft {int(draft_id)}) could not be mapped to FITS under {detrended_root}."
                             )
                 except Exception as exc:  # noqa: BLE001
                     # EXC-0394: T4 -- `_dbc_fw.conn.close()` cleanup only; no radiometry or frame data touched. (EXCEPT-BULK 2026-07-08)
                     logging.error('[EXC-0393] DB FWHM median fetch `pass` leaves `_ms_fwhm_fb` at config default instead of draft QC ...: %s', exc)
-                    log_event(f"MASTERSTAR: DB vyber kandidatov zlyhal ({exc!s}).")
+                    log_event(f"MASTERSTAR: DB candidate selection failed ({exc!s}).")
                 finally:
                     try:
                         _db_ms.conn.close()
@@ -452,21 +448,16 @@ def generate_masterstar_and_catalog(
                     "mapped_found": int(len(disk_batch)),
                 }
                 log_event(
-                    f"MASTERSTAR disk fallback: {len(disk_batch)} kandidatov z disku (bez platneho QC vyberu)."
+                    f"MASTERSTAR disk fallback: {len(disk_batch)} candidates from disk (no valid QC selection)."
                 )
 
         if only_ms_paths is None:
             raise FileNotFoundError(
-                f"MASTERSTAR: v {detrended_root} nie su ziadne FITS pre vyber ani po UI/DB."
+                f"MASTERSTAR: no FITS to select from in {detrended_root}, even after UI/DB."
             )
 
         _cfg_stack = app_config or AppConfig()
-        try:
-            _ms_fwhm_fb = float(_cfg_stack.sips_dao_fwhm_px)
-        except (TypeError, ValueError):
-            _ms_fwhm_fb = 2.5
-        if not math.isfinite(_ms_fwhm_fb) or _ms_fwhm_fb <= 0:
-            _ms_fwhm_fb = 2.5
+        _ms_fwhm_fb = DAO_FWHM_FALLBACK_PX
         if draft_id is not None:
             _dbc_fw = _vyvar_open_database(_cfg_stack)
             if _dbc_fw is not None:
@@ -504,7 +495,7 @@ def generate_masterstar_and_catalog(
         except Exception:  # noqa: BLE001
             pass
         if not _cand_all:
-            raise FileNotFoundError(f"MASTERSTAR: v {detrended_root} nie su ziadne FITS pre vyber.")
+            raise FileNotFoundError(f"MASTERSTAR: no FITS to select from in {detrended_root}.")
         _cand_singletons = _cand_all[:_best_n]
 
         _db_ms_build: VyvarDatabase | None = None
@@ -574,8 +565,8 @@ def generate_masterstar_and_catalog(
         except OSError:
             _ms_out = str(masterstar_fits)
         log_event(
-            f"MASTERSTAR (len FITS, bez plate-solve): zapisane {_ms_out} | "
-            f"zkombinovanych snimok={info.get('frames_combined', info.get('frames_used', '?'))}"
+            f"MASTERSTAR (FITS only, no plate-solve): written {_ms_out} | "
+            f"frames combined={info.get('frames_combined', info.get('frames_used', '?'))}"
         )
         out_fast: dict[str, Any] = {
             "masterstar_fits": _ms_out,
@@ -601,7 +592,7 @@ def generate_masterstar_and_catalog(
             out_fast["masterstar_path_store_error"] = str(exc)
         return out_fast
 
-    # Solve WCS (MASTERSTAR): vyhradne VYVAR lokalny Gaia solver (ziadny ASTAP / astrometry.net).
+    # Solve WCS (MASTERSTAR): exclusively the VYVAR local Gaia solver (no ASTAP / astrometry.net).
 
     with fits.open(masterstar_fits, memmap=False) as hdul:
         hdr = hdul[0].header.copy()
@@ -612,15 +603,15 @@ def generate_masterstar_and_catalog(
     _dao_sigma_eff = resolve_detection_threshold_sigma(_cfg_ms.detection_threshold_sigma)
     log_event(
         f"MASTERSTAR: DAO threshold sigmaxRMS = {_dao_sigma_eff:.2f} "
-        f"(config detection_threshold_sigma; plate solve + katalog)"
+        f"(config detection_threshold_sigma; plate solve + catalog)"
     )
 
     _full_db = str(_cfg_ms.gaia_db_path or "").strip()
     if not _full_db:
         raise RuntimeError(
-            "MASTERSTAR: v Settings nastavte gaia_db_path (plna lokalna Gaia DR3 SQLite DB)."
+            "MASTERSTAR: set gaia_db_path in Settings (full local Gaia DR3 SQLite DB)."
         )
-    log_event("MASTERSTAR WCS: VYVAR astrosolve + plna Gaia DB (gaia_db_path).")
+    log_event("MASTERSTAR WCS: VYVAR astrosolve + full Gaia DB (gaia_db_path).")
     try:
         _xb_ms, _yb_ms = fits_binning_xy_from_header(hdr)
         _bin_ms = max(1, int(_xb_ms), int(_yb_ms))
@@ -649,11 +640,11 @@ def generate_masterstar_and_catalog(
 
     if _auto_scale_ms is not None:
         log_event(
-            f"INFO: Plate scale z DB (Equipment+Telescope): {_auto_scale_ms:.4f} arcsec/px"
+            f"INFO: Plate scale from DB (Equipment+Telescope): {_auto_scale_ms:.4f} arcsec/px"
         )
     else:
         log_event(
-            "WARNING: Plate scale z DB nedostupna - solver odvodi mierku z FITS alebo None"
+            "WARNING: Plate scale from DB unavailable - solver derives the scale from FITS or None"
         )
 
     _plate_scale_ms = _auto_scale_ms or None
@@ -704,11 +695,11 @@ def generate_masterstar_and_catalog(
         # that does not verify stops the build (it would give wrong catalogue identities).
         import astrosolve as _asol_c  # noqa: PLC0415
 
-        log_event("MASTERSTAR: WCS prevzate z inej MASTERSTAR - overenie a spresnenie (astrosolve confirm).")
+        log_event("MASTERSTAR: WCS taken over from another MASTERSTAR - verification and refinement (astrosolve confirm).")
         solve_meta = _asol_c.confirm_fits(masterstar_fits, gaia_db=str(_full_db), write=True, log=log_event)
         if not bool(solve_meta.get("solved", False)):
             raise RuntimeError(
-                "MASTERSTAR: prevzate WCS nepreslo overenim proti Gaia - " + str(solve_meta.get("message") or solve_meta)
+                "MASTERSTAR: taken-over WCS failed verification against Gaia - " + str(solve_meta.get("message") or solve_meta)
             )
         with fits.open(masterstar_fits, memmap=False) as hdul:
             hdr = hdul[0].header.copy()
@@ -723,8 +714,8 @@ def generate_masterstar_and_catalog(
                 if math.isfinite(_hra_ov) and math.isfinite(_hde_ov):
                     _mra, _mde = _hra_ov, _hde_ov
                     log_event(
-                        "MASTERSTAR: hint_ra_deg / hint_dec_deg z volania prepisuju hint z FITS "
-                        "(druhy MASTERSTAR / detrended aligned)."
+                        "MASTERSTAR: hint_ra_deg / hint_dec_deg from the call override the FITS hint "
+                        "(second MASTERSTAR / detrended aligned)."
                     )
             except (TypeError, ValueError):
                 pass
@@ -743,7 +734,7 @@ def generate_masterstar_and_catalog(
                         if _mra is None or _mde is None:
                             _mra, _mde = med_ra, med_de
                             log_event(
-                                "MASTERSTAR solve: pouzivam median RA/Dec z manifest files[] (hlavicka bez spolahliveho hintu)."
+                                "MASTERSTAR solve: using median RA/Dec from manifest files[] (header has no reliable hint)."
                             )
                         else:
                             sc_h = SkyCoord(ra=float(_mra) * u.deg, dec=float(_mde) * u.deg, frame="icrs")
@@ -752,12 +743,12 @@ def generate_masterstar_and_catalog(
                             if sep > float(_hint_sep_thr):
                                 log_event(
                                     f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg > {_hint_sep_thr} deg "
-                                    "- pouzivam draft median z manifest files[]."
+                                    "- using draft median from manifest files[]."
                                 )
                                 _mra, _mde = med_ra, med_de
                             elif sep > 0.05:
                                 log_event(
-                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg (skontrolujte pointing)."
+                                    f"MASTERSTAR solve: hint vs draft median = {sep:.3f} deg (check pointing)."
                                 )
                 finally:
                     try:
@@ -790,7 +781,7 @@ def generate_masterstar_and_catalog(
             hdr = hdul[0].header.copy()
             data = np.array(hdul[0].data, dtype=np.float32, copy=True)
         if not _has_valid_wcs(hdr):
-            raise RuntimeError("MASTERSTAR: po plate-solve chyba platny WCS.")
+            raise RuntimeError("MASTERSTAR: no valid WCS after plate-solve.")
 
     _exp_scale_apx: float | None = None
     if _plate_scale_ms is not None:
@@ -890,8 +881,8 @@ def generate_masterstar_and_catalog(
         except OSError:
             _ms_out_early = str(masterstar_fits)
         log_event(
-            f"ONLY MASTER (test): plate-solve + uprava mierky WCS hotove -> {_ms_out_early} "
-            "(preskakujem DAO export, masterstars CSV, fotometricky plan, MASTER_SOURCES)."
+            f"ONLY MASTER (test): plate-solve + WCS scale adjustment done -> {_ms_out_early} "
+            "(skipping DAO export, masterstars CSV, photometric plan, MASTER_SOURCES)."
         )
         out_ps: dict[str, Any] = {
             "masterstar_fits": _ms_out_early,
@@ -921,20 +912,16 @@ def generate_masterstar_and_catalog(
             out_ps["masterstar_path_store_error"] = str(exc)
         return out_ps
 
-    # _cfg_ms / _dao_sigma_eff uz vyssie (rovnake DAO sigma pre plate solve aj katalog).
-    _ms_fwhm = float(_cfg_ms.sips_dao_fwhm_px)
-    if not math.isfinite(_ms_fwhm) or _ms_fwhm <= 0:
-        _ms_fwhm = 2.5
+    # _cfg_ms / _dao_sigma_eff set above (same DAO sigma for plate solve and catalog).
+    _ms_fwhm = DAO_FWHM_FALLBACK_PX
     _ms_meta = ms_selection_meta if isinstance(ms_selection_meta, dict) else {}
     _best_fwhm = _ms_meta.get("best_frame_fwhm_px")
     try:
         _best_fwhm_f = float(_best_fwhm) if _best_fwhm is not None else float("nan")
     except (TypeError, ValueError):
         _best_fwhm_f = float("nan")
-    _use_best_frame_fwhm = bool(_cfg_ms.masterstar_use_best_frame_fwhm)
     if (
-        _use_best_frame_fwhm
-        and math.isfinite(_best_fwhm_f)
+        math.isfinite(_best_fwhm_f)
         and 1.2 <= _best_fwhm_f <= 20.0
     ):
         dao_fwhm_px_for_ms = float(_best_fwhm_f)
@@ -947,7 +934,7 @@ def generate_masterstar_and_catalog(
         dao_fwhm_px_for_ms = float(_ms_fwhm)
         _dao_fwhm_bypass_hdr = False
         log_event(
-            f"MASTERSTAR DAO: dao_fwhm_px={dao_fwhm_px_for_ms:.3f} from sips_dao_fwhm_px / header VY_FWHM"
+            f"MASTERSTAR DAO: dao_fwhm_px={dao_fwhm_px_for_ms:.3f} from DAO_FWHM_FALLBACK_PX / header VY_FWHM"
         )
 
     with fits.open(masterstar_fits, memmap=False) as hdul:
@@ -957,8 +944,8 @@ def generate_masterstar_and_catalog(
     data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
     # Global median (BOJ) background subtraction is intentionally OFF (handled downstream).
     _ms_mean = float(np.nanmean(data))
-    log_event("MASTERSTAR: globalne odcitanie medianu (BOJ) vypnute.")
-    log_event(f"MASTERSTAR po nan_to_num: mean={_ms_mean:.6f}")
+    log_event("MASTERSTAR: global median subtraction (BOJ) disabled.")
+    log_event(f"MASTERSTAR after nan_to_num: mean={_ms_mean:.6f}")
     _ms_min = float(np.nanmin(data))
     _ms_max = float(np.nanmax(data))
     log_event(f"MASTERSTAR levels: noise_floor(min)={_ms_min:.2f}, saturation_proxy(max)={_ms_max:.2f}")
@@ -977,7 +964,7 @@ def generate_masterstar_and_catalog(
                 effective_radius_deg=float(_r_cat_need),
             )
     except Exception as exc:  # noqa: BLE001
-        log_event(f"Katalog: kontrola cache field_catalog_cone preskocena - {exc!s}")
+        log_event(f"Catalog: field_catalog_cone cache check skipped - {exc!s}")
 
     # Full-field MASTERSTAR depth: keep deeper Gaia and larger catalog rows for corner recovery.
     _ms_max_catalog_rows_eff = max(int(max_catalog_rows), 100000)
@@ -992,6 +979,10 @@ def generate_masterstar_and_catalog(
         "measured_saturate_adu": _ms_measured_sat,
         "dao_fwhm_bypass_header": bool(_dao_fwhm_bypass_hdr),
     }
+    # GAIN-ONE-2026-10: the SNR of the MASTERSTAR catalogue (snr_min gates) with the run's gain
+    from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+
+    _detect_kw["photometric_gain"] = float(photometric_gain_read_noise(hdr, _cfg_ms, _eq_ms).gain)
     df_out, det_meta = detect_stars_and_match_catalog(data, hdr, **_detect_kw)
     # FRAME-DEPTH-2026-10 step 2: the frame reaches fainter than the main Gaia DB covers this field
     # -> fetch the field (+-1 deg) down to the frame limit into the main DB and match again.
@@ -1294,7 +1285,6 @@ def generate_masterstar_and_catalog(
             df_final,
             data0=_data0_g,
             gaia_on_chip=_chip,
-            cfg=_cfg_ms,
             wpx=_nax1_g,
             h=_nax2_g,
             fwhm_px=_fwhm_g,
@@ -1304,64 +1294,15 @@ def generate_masterstar_and_catalog(
             tolerance_overrides=det_meta.get("dao_gaia_derived_tol"),
         )
         _census_inv = verify_gaia_census(_gaia_census, n_on_chip=len(_chip))
-        try:
-            from dao_gaia_calibration import (  # noqa: PLC0415
-                build_calibration_certificate,
-                finalize_calibration_certificate,
-            )
+        if _membership_expand_meta:
+            from masterstar_gaia_accounting import verify_ms_expand_guard  # noqa: PLC0415
 
-            _setup_nm = str(setup_name or platesolve_dir.name or "MASTERSTAR")
-            _tol_d = det_meta.get("dao_gaia_derived_tol") or {}
-            _dao_x_f = pd.to_numeric(df_final.get("x"), errors="coerce").to_numpy(dtype=np.float64)
-            _dao_y_f = pd.to_numeric(df_final.get("y"), errors="coerce").to_numpy(dtype=np.float64)
-            _cert = build_calibration_certificate(
-                setup=_setup_nm,
-                wcs_obj=_wcs_g,
-                data0=_data0_g,
-                dao_x=_dao_x_f,
-                dao_y=_dao_y_f,
-                gaia_x=pd.to_numeric(_chip.get("x_gaia"), errors="coerce").to_numpy(dtype=np.float64),
-                gaia_y=pd.to_numeric(_chip.get("y_gaia"), errors="coerce").to_numpy(dtype=np.float64),
-                gaia_g=pd.to_numeric(_chip.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64),
-                fwhm_px=float(_fwhm_g),
-                pass1_sigma=float(_tol_d.get("pass1_sigma") or _cfg_ms.detection_threshold_sigma),
-                pass2_sigma=float(_tol_d.get("pass2_sigma") or _cfg_ms.masterstar_dao_pass2_sigma),
-                seed_snr_min=float(_cfg_ms.masterstar_forced_seed_snr_min),
-                shape_q_floor=_tol_d.get("point_source_q_floor"),
-                target_depth_g=float(_census_depth_g),
-                edge_margin_px=float(_cfg_ms.masterstar_gaia_census_edge_margin_px),
-                cfg=_cfg_ms,
-                ms_df=df_final,
-                census_df=_gaia_census,
-                repo_root=Path(__file__).resolve().parent.parent,
-            )
-            finalize_calibration_certificate(_cert, fail_closed=True)
-            if _membership_expand_meta:
-                from masterstar_gaia_accounting import verify_ms_expand_guard  # noqa: PLC0415
+            _ok_exp, _det_exp = verify_ms_expand_guard(_membership_expand_meta)
+            if not _ok_exp:
+                from invariants_runtime import InvariantViolation  # noqa: PLC0415
 
-                _ok_exp, _det_exp = verify_ms_expand_guard(_membership_expand_meta)
-                if not _ok_exp:
-                    from invariants_runtime import InvariantViolation  # noqa: PLC0415
-
-                    raise InvariantViolation("INV-MS-EXPAND-01", _det_exp)
-                log_event(f"INV-MS-EXPAND-01 PASS: {_det_exp}")
-            det_meta["dao_gaia_calibration"] = _cert.to_dict()
-            log_event(
-                f"DAO-Gaia calibration certificate {_cert.status}: "
-                f"match_r={_cert.derived.match_radius_px:.1f}px "
-                f"centroid={_cert.derived.pass2_center_tol_px:.1f}px "
-                f"empty-sky det={_cert.empty_sky.inv_det} seed={_cert.empty_sky.inv_seed}"
-            )
-        except Exception as _cal_exc:  # noqa: BLE001
-            from invariants_runtime import InvariantViolation  # noqa: PLC0415
-
-            if isinstance(_cal_exc, InvariantViolation):
-                raise
-            if _membership_expand_meta:
-                raise RuntimeError(
-                    f"INV-MS-EXPAND-01: certificate failed: {_cal_exc!s}"
-                ) from _cal_exc
-            log_event(f"DAO-Gaia calibration certificate skipped: {_cal_exc!s}")
+                raise InvariantViolation("INV-MS-EXPAND-01", _det_exp)
+            log_event(f"INV-MS-EXPAND-01 PASS: {_det_exp}")
         det_meta["gaia_census_meta"] = _gaia_meta
         det_meta["gaia_census_invariants"] = _census_inv.get("invariants") or []
         log_event(
@@ -1376,7 +1317,7 @@ def generate_masterstar_and_catalog(
             gaia_db_path=_gdb_fill,
         )
         if _n_bp_miss > 0:
-            log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} doplnenych z Gaia DB")
+            log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} filled from Gaia DB")
         if _gdb_fill:
             try:
                 from dao_reconcile import (  # noqa: PLC0415
@@ -1527,19 +1468,6 @@ def generate_masterstar_and_catalog(
             _idg_stamp["n_lock_geometry_reject"] = int(_gmeta.get("n_lock_geometry_reject") or 0)
         if _idg_stamp:
             _meta_patch["identity_gate"] = _idg_stamp
-        try:
-            from dao_gaia_calibration import effective_tol_stamps  # noqa: PLC0415
-
-            _meta_patch["dao_gaia_tol"] = effective_tol_stamps(
-                det_meta.get("dao_gaia_derived_tol")
-                if isinstance(det_meta.get("dao_gaia_derived_tol"), dict)
-                else None,
-                _cfg_ms,
-                fwhm_px=float(det_meta.get("dao_fwhm_px") or _idg_stamp.get("fwhm_px") or 3.5),
-                census_meta=_gmeta if isinstance(_gmeta, dict) else None,
-            )
-        except Exception:  # noqa: BLE001
-            pass
         for _mk in (
             "match_sep_arcsec_requested",
             "match_sep_arcsec_effective",
@@ -1596,8 +1524,8 @@ def generate_masterstar_and_catalog(
         except Exception as _dag_exc:  # noqa: BLE001
             logging.debug("[INV-DAG-01] masterstar stamp skipped: %s", _dag_exc)
     log_event(
-        f"MASTERSTAR katalog: {Path(csv_path).name} - {len(df_final)} riadkov "
-        f"(DAO + katalog na celom poli; ziadne orezanie podla vzdialenosti od stredu snimku)."
+        f"MASTERSTAR catalog: {Path(csv_path).name} - {len(df_final)} rows "
+        f"(DAO + catalog over the full field; no cut by distance from the frame centre)."
     )
     # FWHM-ONE-2026-10: VY_FWHM_GAUSS = VY_FWHM (frame QC elliptical Gaussian fit);
     # no second FWHM measurement on MASTERSTAR.
@@ -1633,8 +1561,6 @@ def generate_masterstar_and_catalog(
                 _hdul_tag.flush()
     except Exception:  # noqa: BLE001
         pass
-    # Small flush pause: UI may read CSV immediately after this returns.
-    time.sleep(0.5)
     # Drop the in-memory dataframe; df_final (re-read from CSV) is used from here on.
     try:
         del df_out
@@ -1715,7 +1641,10 @@ def generate_masterstar_and_catalog(
         "masterstar_match_png": "",
     }
     out.update(photo_plan)
-    # Enrichment columns for masterstars_full_match.csv (formerly MASTER_SOURCES DB).
+    # Comp-selection columns of masterstars_full_match.csv (MS-SOURCES-RETIRE): likely_nonlinear
+    # (SAT-LIN-2026-10: peak >= LINEARITY_FRAC x saturation) and the Gaia quality flags of the star
+    # matched within 2". The photometry plan is rewritten with them (the first pass above runs without).
+    # CODE-REVIEW-2026-10 step 6: the safe-comp / stress-test / phot-category columns had no reader.
     try:
         gaia_db = str(_cfg_ms.gaia_db_path or "").strip()
         if gaia_db and draft_id is not None and "ra_deg" in df_final.columns and "dec_deg" in df_final.columns:
@@ -1724,16 +1653,12 @@ def generate_masterstar_and_catalog(
             det["dec_deg"] = pd.to_numeric(det["dec_deg"], errors="coerce")
             det = det[det["ra_deg"].notna() & det["dec_deg"].notna()].copy()
             if not det.empty:
-                ra_min = float(det["ra_deg"].min()) - 0.01
-                ra_max = float(det["ra_deg"].max()) + 0.01
-                de_min = float(det["dec_deg"].min()) - 0.01
-                de_max = float(det["dec_deg"].max()) + 0.01
                 ga = query_local_gaia(
                     gaia_db,
-                    ra_min=ra_min,
-                    ra_max=ra_max,
-                    dec_min=de_min,
-                    dec_max=de_max,
+                    ra_min=float(det["ra_deg"].min()) - 0.01,
+                    ra_max=float(det["ra_deg"].max()) + 0.01,
+                    dec_min=float(det["dec_deg"].min()) - 0.01,
+                    dec_max=float(det["dec_deg"].max()) + 0.01,
                     mag_limit=None,
                 )
                 if ga:
@@ -1751,45 +1676,6 @@ def generate_masterstar_and_catalog(
                     idx, sep2d, _ = dcoo.match_to_catalog_sky(gcoo)
                     ok = sep2d.to(u.arcsec).value <= 2.0
                     if bool(np.any(ok)):
-                        # Geometry + blending pruning and dynamic photometric binning.
-                        nax1 = int(hdr.get("NAXIS1", 0) or 0) or int(data.shape[1])
-                        nax2 = int(hdr.get("NAXIS2", 0) or 0) or int(data.shape[0])
-                        border_px = 50.0
-
-                        try:
-                            from astropy.coordinates import search_around_sky
-
-                            pairs_i, pairs_j, _, _ = search_around_sky(gcoo, gcoo, 5.0 * u.arcsec)
-                            gmag_all = (
-                                pd.to_numeric(gdf.get("g_mag"), errors="coerce")
-                                .astype(float)
-                                .to_numpy()
-                            )
-                            blended_idx: set[int] = set()
-                            for a, b in zip(pairs_i, pairs_j, strict=False):
-                                ia = int(a)
-                                ib = int(b)
-                                if ia == ib:
-                                    continue
-                                ma = gmag_all[ia] if ia < len(gmag_all) else float("nan")
-                                mb = gmag_all[ib] if ib < len(gmag_all) else float("nan")
-                                if not (math.isfinite(ma) and math.isfinite(mb)):
-                                    continue
-                                if abs(ma - mb) < 3.0:
-                                    blended_idx.add(ia)
-                                    blended_idx.add(ib)
-                        except Exception:  # noqa: BLE001
-                            blended_idx = set()
-
-                        filt = str(det_meta.get("filter") or hdr.get("FILTER") or "Clear").strip() or "Clear"
-                        if filt.lower() in {"nofilter", "none", "null"}:
-                            filt = "Clear"
-
-                        def _bin_step(v: float, step: float) -> float:
-                            if not math.isfinite(v):
-                                return float("nan")
-                            return math.floor((float(v) / float(step)) + 0.5) * float(step)
-
                         # Saturation threshold for MASTERSTAR (FITS + EQUIPMENTS; no global config fallback)
                         sat_limit = det_meta.get("saturate_limit_adu")
                         if sat_limit is None:
@@ -1819,107 +1705,14 @@ def generate_masterstar_and_catalog(
                         rows_ms: list[dict[str, Any]] = []
                         det_ok = det.iloc[np.where(ok)[0]].reset_index(drop=True)
                         g_ok = gdf.iloc[idx[np.where(ok)[0]]].reset_index(drop=True)
-                        g_ok_idx = idx[np.where(ok)[0]]
-                        # Aperture optimization: estimate per-star FWHM on MASTERSTAR, then take medians per color.
-                        try:
-                            import numpy as _np
-
-                            arr_ms = _np.asarray(data, dtype=_np.float32)
-
-                            fwhm_est = [
-                                _fwhm_moment_at(
-                                    arr_ms,
-                                    float(det_ok["x"].iloc[i]) if "x" in det_ok.columns and pd.notna(det_ok["x"].iloc[i]) else float("nan"),
-                                    float(det_ok["y"].iloc[i]) if "y" in det_ok.columns and pd.notna(det_ok["y"].iloc[i]) else float("nan"),
-                                    half=6,
-                                )
-                                for i in range(len(det_ok))
-                            ]
-                            fwhm_med_px = float(_np.nanmedian(_np.asarray(fwhm_est, dtype=_np.float64)))
-                        except Exception:  # noqa: BLE001
-                            fwhm_est = [float("nan")] * len(det_ok)
-                            fwhm_med_px = float("nan")
-
-                        if not (math.isfinite(fwhm_med_px) and fwhm_med_px > 0):
-                            try:
-                                fwhm_med_px = float(det_meta.get("dao_fwhm_px") or _ms_fwhm)
-                            except Exception:  # noqa: BLE001
-                                fwhm_med_px = float(_ms_fwhm)
-                        if not (math.isfinite(fwhm_med_px) and fwhm_med_px > 0):
-                            fwhm_med_px = float(_ms_fwhm)
-
-                        # Median per coarse color category.
-                        def _color_bucket(bp_rp: float) -> str:
-                            if not math.isfinite(bp_rp):
-                                return "neutral"
-                            if bp_rp < 0.5:
-                                return "blue"
-                            if bp_rp <= 1.5:
-                                return "neutral"
-                            return "red"
-
-                        by_col: dict[str, list[float]] = {"blue": [], "neutral": [], "red": []}
                         for i in range(len(det_ok)):
-                            bprp_v0 = (
-                                float(g_ok["bp_rp"].iloc[i])
-                                if "bp_rp" in g_ok.columns and pd.notna(g_ok["bp_rp"].iloc[i])
-                                else float("nan")
-                            )
-                            fe = float(fwhm_est[i]) if i < len(fwhm_est) else float("nan")
-                            if math.isfinite(fe) and fe > 0:
-                                by_col[_color_bucket(bprp_v0)].append(fe)
-                        fwhm_blue = float(_np.median(by_col["blue"])) if by_col["blue"] else fwhm_med_px
-                        fwhm_neu = float(_np.median(by_col["neutral"])) if by_col["neutral"] else fwhm_med_px
-                        fwhm_red = float(_np.median(by_col["red"])) if by_col["red"] else fwhm_med_px
-
-                        # Gaia neighbour veto radius in arcsec: 3x median FWHM (px) x plate scale.
-                        try:
-                            from astropy.wcs.utils import proj_plane_pixel_scales
-
-                            with warnings.catch_warnings():
-                                warnings.simplefilter("ignore", FITSFixedWarning)
-                                _w_ms = WCS(hdr)
-                            sc = proj_plane_pixel_scales(_w_ms.celestial)  # deg/pix
-                            scale_arcsec_per_px = float(_np.nanmedian(_np.asarray(sc, dtype=_np.float64))) * 3600.0
-                        except Exception:  # noqa: BLE001
-                            scale_arcsec_per_px = float("nan")
-                        veto_radius_arcsec = (
-                            float(3.0 * fwhm_med_px * scale_arcsec_per_px)
-                            if math.isfinite(scale_arcsec_per_px) and scale_arcsec_per_px > 0
-                            else float("nan")
-                        )
-                        import numpy as _np
-                        # SAT-LIN-2026-10: non-linear == peak >= LINEARITY_FRAC x SAT (sat_thr).
-                        for i in range(len(det_ok)):
-                            x = float(det_ok["x"].iloc[i]) if "x" in det_ok.columns else None
-                            y = float(det_ok["y"].iloc[i]) if "y" in det_ok.columns else None
                             pmax = float(det_ok["peak_max_adu"].iloc[i]) if "peak_max_adu" in det_ok.columns and pd.notna(det_ok["peak_max_adu"].iloc[i]) else None
-                            is_sat = 1 if (pmax is not None and math.isfinite(pmax) and pmax > sat_thr) else 0
-                            var_flag = str(g_ok.get("var_flag").iloc[i]) if "var_flag" in g_ok.columns else ""
-                            is_var = 1 if var_flag.strip() not in ("", "0", "False", "false", "NO", "No") else 0
-
-                            is_border = (
-                                x is not None
-                                and y is not None
-                                and (
-                                    x < border_px
-                                    or y < border_px
-                                    or x > float(nax1) - border_px
-                                    or y > float(nax2) - border_px
-                                )
-                            )
-                            gi = int(g_ok_idx[i]) if i < len(g_ok_idx) else -1
-                            is_blend = bool(gi in blended_idx) if gi >= 0 else False
-                            excl = "Border" if is_border else ("Blended" if is_blend else None)
-
                             likely_nl = bool(
                                 pmax is not None
                                 and math.isfinite(float(pmax))
                                 and math.isfinite(float(sat_thr))
                                 and float(pmax) >= float(sat_thr)
                             )
-
-                            # New Gaia stability/multiplicity filters.
                             gfer = None
                             if "g_flux_error_rel" in g_ok.columns and pd.notna(g_ok["g_flux_error_rel"].iloc[i]):
                                 try:
@@ -1935,119 +1728,20 @@ def generate_masterstar_and_catalog(
                             pvf = ""
                             if "phot_variable_flag" in g_ok.columns and pd.notna(g_ok["phot_variable_flag"].iloc[i]):
                                 pvf = str(g_ok["phot_variable_flag"].iloc[i]).strip()
-
-                            if excl is None:
-                                if gfer is not None and math.isfinite(gfer) and float(gfer) > 0.02:
-                                    excl = "CatalogNoise"
-                                elif int(nss) > 0:
-                                    excl = "NonSingle"
-                                elif pvf.upper() == "VARIABLE":
-                                    excl = "Variable"
-                                else:
-                                    # Neighbour veto: exclude if Gaia neighbour would change mag by > 0.001.
-                                    if (
-                                        veto_radius_arcsec is not None
-                                        and math.isfinite(float(veto_radius_arcsec))
-                                        and float(veto_radius_arcsec) > 0
-                                        and "g_mag" in g_ok.columns
-                                        and pd.notna(g_ok["g_mag"].iloc[i])
-                                    ):
-                                        try:
-                                            m0 = float(g_ok["g_mag"].iloc[i])
-                                        except (TypeError, ValueError):
-                                            m0 = float("nan")
-                                        if math.isfinite(m0):
-                                            try:
-                                                from astropy.coordinates import search_around_sky as _sas
-
-                                                # Query neighbours in the Gaia window itself (fast; same gcoo).
-                                                # Use the matched Gaia index gi.
-                                                gi2 = int(g_ok_idx[i]) if i < len(g_ok_idx) else -1
-                                                if gi2 >= 0 and gi2 < len(gcoo):
-                                                    c0 = gcoo[gi2]
-                                                    _, jj, _, _ = _sas(
-                                                        c0,
-                                                        gcoo,
-                                                        float(veto_radius_arcsec) * u.arcsec,
-                                                    )
-                                                    ratios: list[float] = []
-                                                    for jx in list(jj):
-                                                        j = int(jx)
-                                                        if j == gi2:
-                                                            continue
-                                                        try:
-                                                            mj = float(gdf["g_mag"].iloc[j])
-                                                        except Exception:  # noqa: BLE001
-                                                            continue
-                                                        if not math.isfinite(mj):
-                                                            continue
-                                                        ratios.append(10.0 ** (-0.4 * (mj - m0)))
-                                                    if ratios:
-                                                        dm = -2.5 * math.log10(1.0 + float(sum(ratios)))
-                                                        if abs(dm) > 0.001:
-                                                            excl = "Gaia neighbor blend"
-                                            except Exception:  # noqa: BLE001
-                                                pass
-                            if likely_nl and excl is None:
-                                excl = "Nonlinear FWHM"
-                            safe = 0 if excl is not None else 1
-
-                            gmag_v = (
-                                float(g_ok["g_mag"].iloc[i])
-                                if "g_mag" in g_ok.columns and pd.notna(g_ok["g_mag"].iloc[i])
-                                else float("nan")
-                            )
-                            bprp_v = (
-                                float(g_ok["bp_rp"].iloc[i])
-                                if "bp_rp" in g_ok.columns and pd.notna(g_ok["bp_rp"].iloc[i])
-                                else float("nan")
-                            )
-                            mb = _bin_step(gmag_v, 0.5)
-                            cb = _bin_step(bprp_v, 0.25)
-                            phot_cat = (
-                                f"{filt}_mag_{mb:.1f}_col_{cb:.2f}"
-                                if math.isfinite(mb) and math.isfinite(cb)
-                                else f"{filt}_mag_nan_col_nan"
-                            )
                             rows_ms.append(
                                 {
-                                    "x_master": x,
-                                    "y_master": y,
-                                    "ra": float(g_ok["ra"].iloc[i]) if pd.notna(g_ok["ra"].iloc[i]) else float(det_ok["ra_deg"].iloc[i]),
-                                    "dec": float(g_ok["dec"].iloc[i]) if pd.notna(g_ok["dec"].iloc[i]) else float(det_ok["dec_deg"].iloc[i]),
-                                    "g_mag": float(g_ok["g_mag"].iloc[i]) if "g_mag" in g_ok.columns and pd.notna(g_ok["g_mag"].iloc[i]) else None,
-                                    "bp_rp": float(g_ok["bp_rp"].iloc[i]) if "bp_rp" in g_ok.columns and pd.notna(g_ok["bp_rp"].iloc[i]) else None,
-                                    "is_var": is_var,
-                                    "is_saturated": is_sat,
                                     "source_id_gaia": str(g_ok["source_id"].iloc[i]) if "source_id" in g_ok.columns else "",
-                                    "g_flux_error_rel": gfer,
+                                    "likely_nonlinear": 1 if likely_nl else 0,
                                     "non_single_star": int(nss),
                                     "phot_variable_flag": pvf,
-                                    "filter_name": filt,
-                                    "phot_category": phot_cat,
-                                    "recommended_aperture": recommended_aperture_by_color(
-                                        bp_rp=bprp_v if math.isfinite(bprp_v) else None,
-                                        median_fwhm_blue=fwhm_blue,
-                                        median_fwhm_neutral=fwhm_neu,
-                                        median_fwhm_red=fwhm_red,
-                                    ),
-                                    "is_safe_comp": safe,
-                                    "exclusion_reason": excl,
-                                    "safe_override": 0,
-                                    "likely_nonlinear": 1 if likely_nl else 0,
+                                    "g_flux_error_rel": gfer,
                                 }
                             )
                         try:
-                            from masterstars_enrichment import (  # noqa: PLC0415
-                                apply_common_field_bbox_exclusion,
-                                apply_stress_rms_to_rows_ms,
-                                apply_vsx_variable_flags,
-                                merge_enrichment_into_masterstars_df,
-                            )
+                            from masterstars_enrichment import merge_enrichment_into_masterstars_df  # noqa: PLC0415
 
                             df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
                             _vyvar_df_to_csv(df_final, csv_path)
-                            out["masterstars_enrichment_written"] = int(len(rows_ms))
                             try:
                                 _wp2 = write_photometry_plan_files(
                                     platesolve_dir=platesolve_dir,
@@ -2065,89 +1759,6 @@ def generate_masterstar_and_catalog(
                                 )
                         except Exception as exc:  # noqa: BLE001
                             out["masterstars_enrichment_error"] = str(exc)
-
-                        # Stress-test: 10% random sample, exclude Border/Blended by default (soft-crop).
-                        try:
-                            from masterstars_enrichment import merge_enrichment_into_masterstars_df  # noqa: PLC0415
-
-                            root_frames = (
-                                Path(source_root)
-                                if source_root is not None
-                                else (Path(detrended_root) if detrended_root is not None else ap)
-                            )
-                            # Common field intersection bbox across MASTERSTAR input frames (finite data overlap).
-                            try:
-                                _ms_inputs: list[Path] = []
-                                if only_ms_paths is not None:
-                                    _ms_inputs = [Path(p) for p in only_ms_paths if Path(p).is_file()]
-                                else:
-                                    # Fallback: approximate using a subset of aligned frames.
-                                    _ms_inputs = sorted(_iter_fits_recursive(root_frames))[
-                                        : max(2, int(info.get("frames_used", 0)))
-                                    ]
-                                bbox = common_field_intersection_bbox_px(frame_paths=_ms_inputs, finite_stride=16)
-                                if bbox is not None:
-                                    x0b, y0b, x1b, y1b = bbox
-                                    apply_common_field_bbox_exclusion(
-                                        rows_ms,
-                                        x0=float(x0b),
-                                        x1=float(x1b),
-                                        y0=float(y0b),
-                                        y1=float(y1b),
-                                    )
-                                    df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
-                                    _vyvar_df_to_csv(df_final, csv_path)
-                                    out["common_field_bbox_px"] = [float(x0b), float(y0b), float(x1b), float(y1b)]
-                            except Exception as exc:  # noqa: BLE001
-                                out["common_field_error"] = str(exc)
-
-                            safe_ids = [
-                                str(r.get("source_id_gaia") or "").strip()
-                                for r in rows_ms
-                                if int(r.get("is_safe_comp") or 0) == 1
-                            ]
-                            st_res = stress_test_relative_rms_from_sidecars(
-                                frames_root=root_frames,
-                                source_ids=safe_ids,
-                                sample_frac=0.10,
-                                seed=42,
-                            )
-                            out["stress_frames_sampled"] = int(st_res.frames_sampled)
-                            out["stress_frames_used"] = int(st_res.frames_used)
-
-                            by_bin: dict[str, list[float]] = {}
-                            for rr in rows_ms:
-                                if int(rr.get("is_safe_comp") or 0) != 1:
-                                    continue
-                                sid = str(rr.get("source_id_gaia") or "").strip()
-                                if not sid or sid not in st_res.per_source_rms:
-                                    continue
-                                b = str(rr.get("phot_category") or "").strip()
-                                if b:
-                                    by_bin.setdefault(b, []).append(float(st_res.per_source_rms[sid]))
-                            med_by_bin = {b: float(pd.Series(v).median()) for b, v in by_bin.items() if v}
-                            apply_stress_rms_to_rows_ms(rows_ms, st_res.per_source_rms, med_by_bin)
-
-                            packed = [
-                                {
-                                    "source_id_gaia": rr.get("source_id_gaia"),
-                                    "phot_category": rr.get("phot_category"),
-                                    "stress_rms": rr.get("stress_rms"),
-                                    "ra": rr.get("ra"),
-                                    "dec": rr.get("dec"),
-                                }
-                                for rr in rows_ms
-                                if rr.get("stress_rms") is not None
-                            ]
-                            var_ids = vsx_is_known_variable_top3_per_bin(rows=packed)
-                            if var_ids:
-                                apply_vsx_variable_flags(rows_ms, set(var_ids))
-                                out["vsx_flagged_variables"] = int(len(var_ids))
-
-                            df_final = merge_enrichment_into_masterstars_df(df_final, rows_ms)
-                            _vyvar_df_to_csv(df_final, csv_path)
-                        except Exception as exc:  # noqa: BLE001
-                            out["stress_test_error"] = str(exc)
     except Exception as exc:  # noqa: BLE001
         out["masterstars_enrichment_error"] = str(exc)
     # Persist MASTERSTAR path on draft for later UI reloads / Step 3 continuity.

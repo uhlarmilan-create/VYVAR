@@ -1,4 +1,4 @@
-"""DRAFT-514-TRIAGE B+C measurements after Phase 2A (no ensemble-size cut)."""
+"""DRAFT-514-TRIAGE B+C measurements after aperture photometry (no ensemble-size cut)."""
 from __future__ import annotations
 
 import json

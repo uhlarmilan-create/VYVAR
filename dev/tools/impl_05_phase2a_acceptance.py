@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""IMPL-05 acceptance Phase 2A: subset targets, per-mag aperture table (no force)."""
+"""IMPL-05 acceptance, aperture photometry: subset targets, per-mag aperture table (no force)."""
 from __future__ import annotations
 
 import json
@@ -17,7 +17,7 @@ os.environ.setdefault("PYTHONUNBUFFERED", "1")
 import pandas as pd  # noqa: E402
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 
 
 def main() -> None:
@@ -65,7 +65,7 @@ def main() -> None:
     def _prog(msg: str) -> None:
         print(f"[{time.perf_counter()-t0:7.1f}s] {msg}", flush=True)
 
-    result = run_phase2a(
+    result = run_aperture_photometry(
         masterstar_fits_path=og / "MASTERSTAR.fits",
         active_targets_csv=at_path,
         comparison_stars_csv=phot / "comparison_stars_per_target.csv",

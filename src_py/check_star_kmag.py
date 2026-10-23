@@ -47,21 +47,12 @@ def _norm_ensemble_id_set(ensemble_ids: set[str] | None) -> set[str]:
     return out
 
 
-def _resolve_check_select_rms_floor(
-    df: pd.DataFrame,
-    cfg: AppConfig | None,
-    floor_override: float | None,
-) -> float:
-    if floor_override is not None and math.isfinite(float(floor_override)):
-        base = float(floor_override)
-    elif cfg is not None:
-        try:
-            base = float(getattr(cfg, "check_select_rms_floor", 1e-4) or 1e-4)
-        except (TypeError, ValueError):
-            base = 1e-4
-    else:
-        base = 1e-4
-    base = max(0.0, base)
+#: Base RMS floor (mag) below which a check-star candidate's RMS is treated as an artefact.
+CHECK_SELECT_RMS_FLOOR = 1e-4
+
+
+def _resolve_check_select_rms_floor(df: pd.DataFrame) -> float:
+    base = CHECK_SELECT_RMS_FLOOR
     metrics: list[float] = []
     for col in ("p2p_rms", "comp_rms"):
         if col not in df.columns:
@@ -75,15 +66,10 @@ def _resolve_check_select_rms_floor(
     return base
 
 
-def _drop_rms_artefacts(
-    df: pd.DataFrame,
-    *,
-    cfg: AppConfig | None,
-    floor_override: float | None,
-) -> pd.DataFrame:
+def _drop_rms_artefacts(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    floor = _resolve_check_select_rms_floor(df, cfg, floor_override)
+    floor = _resolve_check_select_rms_floor(df)
     work = df.copy()
     if "p2p_rms" in work.columns:
         work["p2p_rms"] = pd.to_numeric(work["p2p_rms"], errors="coerce")
@@ -107,23 +93,6 @@ def _drop_rms_artefacts(
 
     mask = work.apply(_metric_ok, axis=1)
     return work.loc[mask].copy()
-
-
-#: CS-4 crowding cut. Formerly read from ``aperture_correction_max_contamination``
-#: (default 0.15); that key was removed with aperture correction Method B (2026-10).
-CHECK_MAX_CONTAMINATION_IDX = 0.15
-
-
-def _apply_crowding_exclusion(df: pd.DataFrame, ) -> pd.DataFrame:
-    """CS-4: drop high-contamination candidates when ``contamination_idx`` is present."""
-    if df.empty or "contamination_idx" not in df.columns:
-        return df
-    thr = CHECK_MAX_CONTAMINATION_IDX
-    work = df.copy()
-    work["contamination_idx"] = pd.to_numeric(work["contamination_idx"], errors="coerce")
-    return work.loc[
-        work["contamination_idx"].isna() | (work["contamination_idx"] <= thr)
-    ].copy()
 
 
 def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.DataFrame:
@@ -151,7 +120,7 @@ def _exclude_ensemble_members(df: pd.DataFrame, ensemble_ids: set[str]) -> pd.Da
 
 def drop_blended_check_candidates(pool: pd.DataFrame, f_star: float) -> pd.DataFrame:
     """BLEND-K-2026-10: drop check candidates with |neighbour light| > 1 % at the target's
-    aperture k (column blend_kNNN from the Phase-1 pool). NaN (unknown) does not block,
+    aperture k (column blend_kNNN from the comparison-star selection pool). NaN (unknown) does not block,
     as for comparison stars; without the column nothing is dropped (older drafts)."""
     from aperture_pertarget import blend_k_column  # noqa: PLC0415
     from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
@@ -200,7 +169,6 @@ def select_check_star(
     ensemble_ids: set[str] | None = None,
     n_comp_min: int = 3,
     cfg: AppConfig | None = None,
-    check_select_rms_floor: float | None = None,
     target_bp_rp: float | None = None,
     target_mag: float | None = None,
 ) -> pd.Series | None:
@@ -233,8 +201,7 @@ def select_check_star(
         df = df[df["status"].astype(str).str.strip().str.lower() == "good"]
 
     df = _exclude_ensemble_members(df, ensemble_ids or set())
-    df = _drop_rms_artefacts(df, cfg=cfg, floor_override=check_select_rms_floor)
-    df = _apply_crowding_exclusion(df)
+    df = _drop_rms_artefacts(df)
 
     # IMPL-04: do not promote a tier-1 star whose RMS exceeds the existing
     # phase01_comparison_max_comp_rms ceiling (draft 514: lone T1 at 0.125 mag
@@ -457,7 +424,7 @@ def compute_check_ensemble_mag_calib(
         if comp_photon_mag is not None:
             from sparse_trust_core import (  # noqa: PLC0415
                 compute_sparse_trust_stats,
-                sparse_trust_config_from_app,
+                SparseTrustConfig,
                 trust_band,
             )
 
@@ -479,7 +446,7 @@ def compute_check_ensemble_mag_calib(
                 x2_pair_mag2=sparse_stats.x2_pair_mag2,
                 n_comps=1,
                 triangulation_clipped=False,
-                cfg=sparse_trust_config_from_app(cfg),
+                cfg=SparseTrustConfig(),
             )
         if sparse_stats is not None:
             return CheckEnsembleResult(
@@ -538,7 +505,7 @@ def compute_check_ensemble_mag_calib(
     if comp_photon_mag is not None and n_other >= 2:
         from sparse_trust_core import (  # noqa: PLC0415
             compute_sparse_trust_stats,
-            sparse_trust_config_from_app,
+            SparseTrustConfig,
             trust_band,
         )
 
@@ -562,7 +529,7 @@ def compute_check_ensemble_mag_calib(
             x2_pair_mag2=sparse_stats.x2_pair_mag2,
             n_comps=n_other,
             triangulation_clipped=sparse_stats.triangulation_clipped,
-            cfg=sparse_trust_config_from_app(cfg),
+            cfg=SparseTrustConfig(),
         )
         if n_other in (3, 4):
             sem_med = float(np.nanmedian(ensemble_scatter[np.isfinite(ensemble_scatter)]))

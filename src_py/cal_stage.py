@@ -76,34 +76,9 @@ def _header_has_vy_skysf(hdr: fits.Header) -> bool:
     return bool(v)
 
 
-def _prior_skypass(hdr: fits.Header) -> int:
-    if "VY_SKYPASS" in hdr:
-        try:
-            return max(1, int(hdr["VY_SKYPASS"]))
-        except (TypeError, ValueError):
-            pass
-    stage = str(hdr.get("VY_CALSTAGE") or "").strip().upper()
-    if stage:
-        _, pass_n = parse_cal_stage_token(stage)
-        return pass_n
-    if _header_has_vy_skysf(hdr):
-        return 1
-    return 0
-
-
-def compute_skysf_apply_stage(
-    hdr: fits.Header,
-    *,
-    sky_order: int,
-    force_reapply: bool,
-) -> tuple[str, int]:
-    """Stage token and pass count when applying (or re-applying) sky surface."""
-    prior_pass = _prior_skypass(hdr)
-    if force_reapply and prior_pass >= 1:
-        pass_n = prior_pass + 1
-    else:
-        pass_n = 1
-    return skysf_stage_token(order=int(sky_order), pass_n=pass_n), pass_n
+def compute_skysf_apply_stage(*, sky_order: int) -> tuple[str, int]:
+    """Stage token and pass count when applying the sky surface (always the first pass)."""
+    return skysf_stage_token(order=int(sky_order), pass_n=1), 1
 
 
 def stamp_cal_stage_headers(

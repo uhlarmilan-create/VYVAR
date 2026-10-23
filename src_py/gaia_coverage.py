@@ -9,7 +9,7 @@ and the limitation is logged and reported.
 ``gaia_coverage`` records which sky box is complete to which G:
 
 * a DB built before this table existed is registered on first use as RA 0-360,
-  Dec MIN..MAX(dec) of the stored stars, G <= MAX(g_mag) (Milan: "b) ano, suhlasim");
+  Dec MIN..MAX(dec) of the stored stars, G <= MAX(g_mag) (Milan: "b) yes, I agree");
 * the builder records the box and G limit it downloaded;
 * every top-up records its field box and G limit.
 
@@ -29,7 +29,7 @@ import pandas as pd
 
 from catalog_db import add_catalog_meta_rows, connect_rw, ra_intervals_deg, resolve_catalog_path
 
-#: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 stupen okolo okraju pola").
+#: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 degree around the field edges").
 TOPUP_MARGIN_DEG = 1.0
 #: Seconds a failed archive call keeps later top-ups in this process from waiting again.
 _UNAVAILABLE_HOLD_S = 600.0

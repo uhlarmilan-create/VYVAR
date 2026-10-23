@@ -298,7 +298,7 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
 
 @pytest.mark.parametrize("channel", ["oneRGGB", "R", "G", "B"])
 def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
-    """Per-channel comp tiers resolve on synthetic dense field (Phase 1 machinery unchanged)."""
+    """Per-channel comp tiers resolve on synthetic dense field (comparison-star selection machinery unchanged)."""
     target, masterstars, paths, cache = _synthetic_dense_comp_fixture()
     obs_group = channel_obs_group_folder("NoFilter_60_2", channel)
     assert obs_group.endswith(f"_{channel}")

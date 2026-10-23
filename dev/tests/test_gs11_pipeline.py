@@ -13,8 +13,6 @@ from dilution import apply_target_dilution_to_mag_calib, compute_dilution_factor
 def _cfg_gs11_on(**overrides: object) -> AppConfig:
     c = AppConfig()
     c.gs11_dilution_enabled = True
-    c.gs11_target_min_dilution = 0.50
-    c.gs11_dilution_mag_limit_delta = 5.0
     for k, v in overrides.items():
         setattr(c, k, v)
     return c

@@ -200,7 +200,7 @@ def _resolve_target_color_for_comp_selection(
         pass
     if not math.isfinite(target_bprp_eff):
         _vnm = str(target.get("vsx_name", "") or target.get("name", "") or "").strip() or (target_cid or "?")
-        log_event(f"TARGET {_vnm} nema BP-RP -> TIER filter len podla mag")
+        log_event(f"TARGET {_vnm} has no BP-RP -> TIER filter by mag only")
 
     _tier_lims = _cfg.comp_tier_bprp_limits()
     TIER_DEFS = [
@@ -211,7 +211,7 @@ def _resolve_target_color_for_comp_selection(
     ]
 
     def _individual_tier(delta_bprp: float) -> int:
-        """Tier podla |DeltaBP-RP|; NaN -> T4 (neznama farba)."""
+        """Tier by |DeltaBP-RP|; NaN -> T4 (unknown colour)."""
         if not np.isfinite(delta_bprp):
             return 4
         for tier, limit in TIER_DEFS:
@@ -327,8 +327,8 @@ def _build_candidates_pre(
         candidates_pre["mag"] = pd.to_numeric(candidates_pre.get("_mag", candidates_pre.get("mag")), errors="coerce")
     if len(candidates_pre) < n_comp_min:
         logging.warning(
-            f"[FAZA 1] Target {target_cid}: len {len(candidates_pre)} kandidatov "
-            f"< n_comp_min={n_comp_min} - preskakujem."
+            f"[COMP-SELECT] Target {target_cid}: only {len(candidates_pre)} candidates "
+            f"< n_comp_min={n_comp_min} - skipping."
         )
         _warn_zero_compstars_edge(
             target_cid=target_cid,
@@ -340,7 +340,7 @@ def _build_candidates_pre(
         return None
     return candidates_pre
 
-def _bootstrap_phase1_csv_cache(
+def _bootstrap_comp_selection_csv_cache(
     per_frame_csv_paths: list[Path],
     csv_cache: dict[str, pd.DataFrame] | None,
     *,
@@ -350,7 +350,7 @@ def _bootstrap_phase1_csv_cache(
     if avail_cols is None:
         avail_cols = list(_PHASE_USECOLS_PERFRAME)
     if csv_cache is None:
-        # Note: csv_cache should be passed from Phase 1 entry to avoid duplicate reads
+        # Note: csv_cache should be passed from the comparison-star selection entry to avoid duplicate reads
         #       when multiple code paths call with csv_cache=None. TODO-CACHE-CENTRAL.
         csv_cache = {}
         for _csv_path in per_frame_csv_paths:
@@ -372,7 +372,7 @@ def _bootstrap_phase1_csv_cache(
                     and "saturate_limit_adu_85pct" not in _use_cols
                 ):
                     _use_cols.append("saturate_limit_adu_85pct")
-                # Gaia ID musi byt str - float64 straca cifry
+                # Gaia ID must be str - float64 loses digits
                 _dtype_pf: dict[str, type] = {}
                 if "catalog_id" in _use_cols:
                     _dtype_pf["catalog_id"] = str
@@ -396,8 +396,8 @@ def _bootstrap_phase1_csv_cache(
             except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
                 from except_fix_counters import get_except_fix_counters
 
-                get_except_fix_counters().phase1_csv_cache_skip += 1
-                logging.error("[COMP] phase1 CSV cache skip %s: %s", _csv_path, exc)
+                get_except_fix_counters().comp_selection_csv_cache_skip += 1
+                logging.error("[COMP] comp_selection CSV cache skip %s: %s", _csv_path, exc)
                 continue
     return csv_cache
 
@@ -513,8 +513,8 @@ def _apply_comp_metric_hard_filters(
                 flux_map.pop(cid, None)
                 _sat_rejected.add(cid)
                 logging.info(
-                    f"[FAZA 1] Saturacia filter: vyluceny {cid} "
-                    f"({over}/{total} framov nad {COMP_LINEARITY_FRAC:.0%} saturacie)"
+                    f"[COMP-SELECT] Saturation filter: excluded {cid} "
+                    f"({over}/{total} frames above {COMP_LINEARITY_FRAC:.0%} of saturation)"
                 )
     else:
         logging.info("[SAT-DIAG] saturation exclusion disabled (Tier 3 / unverified limit)")
@@ -523,9 +523,9 @@ def _apply_comp_metric_hard_filters(
             "[BATCH-E E.5] saturation gate excluded %d comps (peak >= COMP_LINEARITY_FRAC x SAT)",
             len(_sat_rejected),
         )
-        logging.info(f"[FAZA 1] Celkom vylucenych kvoli saturacii: {len(_sat_rejected)}")
+        logging.info(f"[COMP-SELECT] Total excluded for saturation: {len(_sat_rejected)}")
 
-    # Filter EDGE: vyluc kandidatov, ktorych sky annulus casto vycnieva mimo cip
+    # Filter EDGE: exclude candidates whose sky annulus often extends beyond the chip
     _edge_rejected: set[str] = set()
     try:
         bad_thr = float(edge_bad_frame_frac_max)
@@ -543,108 +543,13 @@ def _apply_comp_metric_hard_filters(
                 flux_map.pop(cid, None)
                 _edge_rejected.add(cid)
                 logging.info(
-                    f"[FAZA 1] Edge/annulus filter: vyluceny {cid} "
-                    f"({bad_e}/{total_e} framov mimo cip, frac={bad_frac:.2f} > {bad_thr:.2f})"
+                    f"[COMP-SELECT] Edge/annulus filter: excluded {cid} "
+                    f"({bad_e}/{total_e} frames off chip, frac={bad_frac:.2f} > {bad_thr:.2f})"
                 )
     if _edge_rejected:
-        logging.info(f"[FAZA 1] Celkom vylucenych kvoli edge/annulus: {len(_edge_rejected)}")
+        logging.info(f"[COMP-SELECT] Total excluded for edge/annulus: {len(_edge_rejected)}")
 
     return flux_map
-
-
-def _compute_comp_contamination_map(
-    cand_ids: Any,
-    ms: pd.DataFrame,
-    *,
-    target_cid: str,
-    isolation_radius_px: float,
-) -> dict[str, float]:
-    # Filter C -> Contamination index (soft penalizacia v scoringu)
-    # Namiesto hard-exclusion vypocitaj contamination ratio per kandidat.
-    # Husta oblast neba: hard filter by vylucil vacsinu kandidatov.
-    # Riesenie: crowding sa prejavi ako penalizacia v combined score (Krok 5).
-    contamination_map: dict[str, float] = {}
-    if isolation_radius_px > 0 and "x" in ms.columns and "y" in ms.columns:
-        ms_reset = ms.reset_index(drop=True)
-        _id_col_ms = "catalog_id" if "catalog_id" in ms_reset.columns else "name"
-
-        # Flux proxy: dao_flux > flux > phot_g_mean_mag (mag -> relativny flux)
-        _flux_col_ms = next((fc for fc in ("dao_flux", "flux") if fc in ms_reset.columns), None)
-        _mag_col_ms = next(
-            (mc for mc in ("phot_g_mean_mag", "catalog_mag", "mag") if mc in ms_reset.columns),
-            None,
-        )
-
-        # Zostavime vektory pre rychly vypocet vzdialenosti
-        _ms_x_all = pd.to_numeric(ms_reset["x"], errors="coerce").to_numpy(dtype=np.float64)
-        _ms_y_all = pd.to_numeric(ms_reset["y"], errors="coerce").to_numpy(dtype=np.float64)
-
-        if _flux_col_ms:
-            _ms_flux_all = pd.to_numeric(ms_reset[_flux_col_ms], errors="coerce").to_numpy(dtype=np.float64)
-        elif _mag_col_ms:
-            _mags_all = pd.to_numeric(ms_reset[_mag_col_ms], errors="coerce").to_numpy(dtype=np.float64)
-            _ms_flux_all = np.where(np.isfinite(_mags_all), 10 ** (-0.4 * _mags_all), np.nan)
-        else:
-            _ms_flux_all = np.ones(len(ms_reset))
-
-        _ms_mag_all = (
-            pd.to_numeric(ms_reset[_mag_col_ms], errors="coerce").to_numpy(dtype=np.float64)
-            if _mag_col_ms
-            else np.full(len(ms_reset), np.nan, dtype=np.float64)
-        )
-
-        # Lookup: catalog_id -> riadok index v ms_reset
-        _cid_to_idx: dict[str, int] = {}
-        for _ri, _rrow in ms_reset.iterrows():
-            _rcid = _normalize_id_value(_rrow.get(_id_col_ms, ""))
-            if _rcid:
-                _cid_to_idx[_rcid] = int(_ri)
-
-        for _cid in sorted(str(c) for c in cand_ids):
-            _ci = _cid_to_idx.get(_cid)
-            if _ci is None:
-                continue
-            _cx = _ms_x_all[_ci]
-            _cy = _ms_y_all[_ci]
-            _cflux = _ms_flux_all[_ci]
-            if not (math.isfinite(_cx) and math.isfinite(_cy)):
-                continue
-            if not math.isfinite(_cflux) or _cflux <= 0:
-                continue
-
-            _dx = _ms_x_all - _cx
-            _dy = _ms_y_all - _cy
-            _dists = np.sqrt(_dx * _dx + _dy * _dy)
-            _neighbor_mask = (
-                (_dists > 0.5)
-                & (_dists <= isolation_radius_px)
-                & np.isfinite(_ms_flux_all)
-                & (_ms_flux_all > 0)
-            )
-            # Zahrnut len susedov do 3 mag od kandidata
-            mag_cand = float(_ms_mag_all[_ci]) if _ci < len(_ms_mag_all) else float("nan")
-            if math.isfinite(mag_cand):
-                _neighbor_mask = _neighbor_mask & (
-                    ~np.isfinite(_ms_mag_all) | ((_ms_mag_all - mag_cand) <= 3.0)
-                )
-            if not np.any(_neighbor_mask):
-                contamination_map[_cid] = 0.0
-                continue
-
-            # Contamination = sucet flux susedov / flux kandidata
-            # (sucet, nie maximum - viac slabych susedov = vacsi efekt)
-            _neighbor_flux_sum = float(np.sum(_ms_flux_all[_neighbor_mask]))
-            contamination_map[_cid] = min(_neighbor_flux_sum / _cflux, 2.0)  # cap na 2.0 (200%)
-
-        if contamination_map:
-            _cont_vals = list(contamination_map.values())
-            logging.debug(
-                f"[FAZA 1] Target {target_cid}: contamination index "
-                f"median={float(np.median(_cont_vals)):.3f}, "
-                f"max={max(_cont_vals):.3f} "
-                f"(isolation_radius={isolation_radius_px:.0f}px)"
-            )
-    return contamination_map
 
 
 def _detrend_and_compute_comp_rms_map(
@@ -659,9 +564,9 @@ def _detrend_and_compute_comp_rms_map(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> Any:
-    # -- Krok 2b: Airmass detrending --
-    # Polynomicky fit (stupen 2) na casovy rad relativneho flux odstrani
-    # systematicky airmass trend. Residualy = skutocna fotometricka variabilita.
+    # -- Step 2b: Airmass detrending --
+    # A polynomial fit (degree 2) to the relative-flux time series removes the
+    # systematic airmass trend. Residuals = true photometric variability.
     for cid in sorted(flux_map.keys()):
         vals = flux_map[cid]
         if len(vals) < 6:
@@ -687,7 +592,7 @@ def _detrend_and_compute_comp_rms_map(
                 exc,
             )
 
-    # -- Krok 3: RMS scatter per kandidat --
+    # -- Step 3: RMS scatter per candidate --
     rms_map: dict[str, float] = {}
     for cid, vals in sorted(flux_map.items(), key=lambda kv: str(kv[0])):
         if len(vals) < min_frames:
@@ -697,9 +602,9 @@ def _detrend_and_compute_comp_rms_map(
         if math.isfinite(rms):
             rms_map[cid] = rms
 
-    # Detekuj "isolated bin" artefakty:
-    # ak comp_rms vyjde nerealne nizke (typicky ~0), ale hviezda ma vela merani,
-    # je to casto dosledok normalizacie v prilis riedkom brightness bine (norm_med ~ raw_flux).
+    # Detect "isolated bin" artefacts:
+    # if comp_rms comes out unrealistically low (typically ~0) while the star has many measurements,
+    # it is often a result of normalisation in a too-sparse brightness bin (norm_med ~ raw_flux).
     ISOLATED_BIN_RMS_FLOOR = 1e-4  # 0.1 mmag
     ISOLATED_BIN_MIN_FRAMES = 50
     for cid in sorted(rms_map.keys()):
@@ -711,13 +616,13 @@ def _detrend_and_compute_comp_rms_map(
         if math.isfinite(rms_v) and rms_v < float(ISOLATED_BIN_RMS_FLOOR) and nfr >= int(ISOLATED_BIN_MIN_FRAMES):
             rms_map.pop(cid, None)
             logging.debug(
-                "[COMP SELECT] %s: comp_rms < %.1e pri %d framoch -> isolated bin -> excluded",
+                "[COMP SELECT] %s: comp_rms < %.1e at %d frames -> isolated bin -> excluded",
                 str(cid),
                 float(ISOLATED_BIN_RMS_FLOOR),
                 int(nfr),
             )
 
-    # Zoradene RMS pre fallback kroky
+    # Sorted RMS for the fallback steps
     sorted_rms_map: dict[str, float] = dict(
         sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
     )
@@ -726,7 +631,7 @@ def _detrend_and_compute_comp_rms_map(
     # enters continuous weights (sigma_rms). Keep all stars with a finite RMS.
     if math.isfinite(max_comp_rms) and max_comp_rms > 0:
         logging.info(
-            "[FAZA 1] Target %s: COMP-ADMIT-03 skips hard RMS cut "
+            "[COMP-SELECT] Target %s: COMP-ADMIT-03 skips hard RMS cut "
             "(max_comp_rms=%.3f retained as diagnostic only); n=%d",
             target_cid,
             float(max_comp_rms),
@@ -736,8 +641,8 @@ def _detrend_and_compute_comp_rms_map(
     # Previously: relax-above-gate was forbidden; now there is no RMS gate.
     if len(rms_map) < n_comp_min:
         logging.warning(
-            f"[FAZA 1] Target {target_cid}: len {len(rms_map)} kandidatov "
-            f"s dostatkom snimok < n_comp_min={n_comp_min}."
+            f"[COMP-SELECT] Target {target_cid}: only {len(rms_map)} candidates "
+            f"with enough frames < n_comp_min={n_comp_min}."
         )
         _warn_zero_compstars_edge(
             target_cid=target_cid,
@@ -760,7 +665,7 @@ def _ensemble_mad_filter_rms(
     chip_fh: int | None,
     chip_interior_margin_px: int,
 ) -> dict[str, float] | None:
-    # -- Krok 4: no iterative MAD outlier rejection (zero-clipping policy 2026-08-12) --
+    # -- Step 4: no iterative MAD outlier rejection (zero-clipping policy 2026-08-12) --
     id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
     cand_ids = set(candidates[id_col_cand].astype(str).str.strip())
     active = {
@@ -770,7 +675,7 @@ def _ensemble_mad_filter_rms(
     }
     if len(active) < 2:
         logging.warning(
-            f"[FAZA 1] {target_cid}: len {len(active)} comp po RMS filtre "
+            f"[COMP-SELECT] {target_cid}: only {len(active)} comp after the RMS filter "
             f"< 2 (minimum for QA)."
         )
         _warn_zero_compstars_edge(
@@ -790,44 +695,38 @@ def _ensemble_mad_filter_rms(
 def _score_comp_candidates_broeg(
     active: dict[str, float],
     candidates: pd.DataFrame,
-    contamination_map: dict[str, float],
     *,
     id_col_cand: str,
     target_bprp_eff: float,
     _individual_tier: Callable[[float], int],
     cfg: AppConfig | None = None,
 ) -> Any:
-    # -- Krok 5: Finalny vyber --
-    # Ranking: Broeg (1/comp_rms). Tier je len informativny stlpec.
+    # -- Step 5: Final selection --
+    # Ranking: Broeg (1/comp_rms). Tier is an informative column only.
     #
-    # Literatura pre comp_score:
+    # Literature for comp_score:
     # - Broeg, Fernandez & Neuhauser (2005): Astron. Nachr. 326, 134
     #   DOI: 10.1002/asna.200410350
-    # - Young, A.T. (1967): AJ 72, 747 - scintilacny sum
+    # - Young, A.T. (1967): AJ 72, 747 - scintillation noise
     # - Hardie, R.H. (1962): in Astronomical Techniques (Stars & Stellar Systems vol. II)
-    #   - color term korekcie pri diferencialnej fotometrii
-    # - AAVSO CCD Photometry Guide (2023), kap. 5.5 a 6
+    #   - color-term corrections in differential photometry
+    # - AAVSO CCD Photometry Guide (2023), ch. 5.5 and 6
     #   https://www.aavso.org/ccd-photometry-guide
     score_map: dict[str, float] = {}
     tier_map: dict[str, str] = {}
-    try:
-        _contam_penalty_k = float((cfg or AppConfig()).comp_contamination_penalty_k)
-    except Exception:  # noqa: BLE001
-        _contam_penalty_k = 3.0
-    if not math.isfinite(_contam_penalty_k) or _contam_penalty_k < 0:
-        _contam_penalty_k = 3.0
+    # SPEED-2026-10 (S3): one id -> first-row bp_rp map instead of a full-column scan per comp.
+    _ids = candidates[id_col_cand].astype(str).str.strip().tolist()
+    _bprp_raw = candidates["bp_rp"].tolist() if "bp_rp" in candidates.columns else [None] * len(_ids)
+    _first_bprp: dict[str, Any] = {}
+    for _c, _v in zip(_ids, _bprp_raw, strict=True):
+        _first_bprp.setdefault(_c, _v)
+    _debug = logging.getLogger().isEnabledFor(logging.DEBUG)
     for cid, rms in sorted(active.items(), key=lambda kv: (float(kv[1]), str(kv[0]))):
-        row = candidates[candidates[id_col_cand].astype(str).str.strip() == cid]
-        if row.empty:
+        if cid not in _first_bprp:
             continue
-        r0 = row.iloc[0]
-        contamination = float(contamination_map.get(cid, 0.0)) if contamination_map else 0.0
-        if not math.isfinite(contamination) or contamination < 0.0:
-            contamination = 0.0
-
         comp_rms = float(rms) if math.isfinite(float(rms)) else float("nan")
         try:
-            comp_bprp = float(pd.to_numeric(r0.get("bp_rp"), errors="coerce"))
+            comp_bprp = float(pd.to_numeric(_first_bprp[cid], errors="coerce"))
         except Exception:  # noqa: BLE001
             comp_bprp = float("nan")
         delta_bprp_tier = (
@@ -838,23 +737,19 @@ def _score_comp_candidates_broeg(
         _tier = int(_individual_tier(float(delta_bprp_tier)))
         tier_map[str(cid)] = int(_tier)
 
-        # Broeg base score + tier penalty.
+        # Broeg score 1 / rms^2 (neighbour light is handled by the pool's aperture blend model).
         rms_f = float(comp_rms) if math.isfinite(float(comp_rms)) else float("nan")
         # Safe: rms_f > 1e-6 guard prevents division by zero in weight computation.
-        broeg_score = (1.0 / (rms_f**2)) if (math.isfinite(rms_f) and rms_f > 1e-6) else 0.0
-        cont_penalty = math.exp(-float(_contam_penalty_k) * float(contamination))
-        comp_score = float(broeg_score) * float(cont_penalty)
+        comp_score = (1.0 / (rms_f**2)) if (math.isfinite(rms_f) and rms_f > 1e-6) else 0.0
 
-        logging.debug(
-            "[COMP] %s: tier=%s, rms=%.4f, broeg=%.0f, contamination=%.3f, penalty=%.3f, score=%.0f",
-            str(cid),
-            str(_tier),
-            float(rms_f) if math.isfinite(rms_f) else float("nan"),
-            float(broeg_score),
-            float(contamination),
-            float(cont_penalty),
-            float(comp_score),
-        )
+        if _debug:
+            logging.debug(
+                "[COMP] %s: tier=%s, rms=%.4f, score=%.0f",
+                str(cid),
+                str(_tier),
+                float(rms_f) if math.isfinite(rms_f) else float("nan"),
+                float(comp_score),
+            )
 
         score_map[str(cid)] = float(comp_score)
     return score_map, tier_map
@@ -1167,8 +1062,8 @@ def _assign_comp_tiers_to_pool(
     if len(selected_ids) == 0:
         if n_good == 0:
             logging.warning(
-                "[COMP] %s: ziadne T1/T2 comp, "
-                "len %d TIER3/4 - LC bude vynechana",
+                "[COMP] %s: no T1/T2 comp, "
+                "only %d TIER3/4 - LC will be skipped",
                 target_cid,
                 len(selected_ids),
             )
@@ -1197,7 +1092,7 @@ def _assign_comp_tiers_to_pool(
         }
     if len(selected_ids) < int(n_comp_min):
         logging.warning(
-            f"[FAZA 1] Target {target_cid}: po filtracii len {len(selected_ids)} "
+            f"[COMP-SELECT] Target {target_cid}: only {len(selected_ids)} after filtering "
             f"< n_comp_min={n_comp_min} - keeping thin set (graceful degradation)."
         )
 
@@ -1249,7 +1144,6 @@ def _assemble_comp_selection_result_rows(
     id_col_cand: str,
     active: dict[str, float],
     score_map: dict[str, float],
-    contamination_map: dict[str, float],
     comp_n_frames_map: dict[str, int],
     target_cid: str,
     target: pd.Series,
@@ -1269,7 +1163,7 @@ def _assemble_comp_selection_result_rows(
     dilution_map: dict[str, dict[str, Any]] | None = None,
     per_target_rms_map: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    # Zostav vystupny DataFrame
+    # Build the output DataFrame
     # IMPORTANT: rows must come from final_comps (enriched bp_rp), not from masterstars-derived `candidates`.
     try:
         final_lookup = final_comps.copy()
@@ -1307,16 +1201,6 @@ def _assemble_comp_selection_result_rows(
         r["comp_rms"] = _fw_rms if math.isfinite(_fw_rms) else _pt_rms
         r["comp_rms_fieldwide"] = float("nan")
         r["comp_score"] = score_map.get(cid, float("nan"))
-        # Ranking columns (new selection philosophy)
-        try:
-            _cont_v = contamination_map.get(cid) if contamination_map else None
-            r["contamination_idx"] = (
-                float(_cont_v)
-                if _cont_v is not None and math.isfinite(float(_cont_v))
-                else float("nan")
-            )
-        except (TypeError, ValueError):
-            r["contamination_idx"] = float("nan")
         r["comp_n_frames"] = int(comp_n_frames_map.get(cid_s, comp_n_frames_map.get(str(cid), 0)))
         r["target_catalog_id"] = normalize_gaia_source_id(target_cid) or str(target_cid)
         r["target_vsx_name"] = str(target.get("vsx_name", ""))
@@ -1381,7 +1265,7 @@ def _assemble_comp_selection_result_rows(
             rms_f = float(pd.to_numeric(rms_val, errors="coerce"))
         except Exception:  # noqa: BLE001
             rms_f = float("nan")
-        # COMP-ADMIT-03 / PRE-IMPL-01: persist the same sigma_eff weight Phase 2A uses.
+        # COMP-ADMIT-03 / PRE-IMPL-01: persist the same sigma_eff weight aperture photometry uses.
         # Previous 1/rms^2-only column was identical across targets (no colour term) and
         # did not describe the run. Weights are the selection mechanism after gate removal.
         try:
@@ -1394,7 +1278,7 @@ def _assemble_comp_selection_result_rows(
             bpr = float(pd.to_numeric(r.get("bp_rp"), errors="coerce"))
             tb = float(pd.to_numeric(r.get("target_bp_rp"), errors="coerce"))
             db = abs(bpr - tb) if math.isfinite(bpr) and math.isfinite(tb) else 0.0
-            # Separation optional at Phase-1 write; c_dist=0 on wide refractive.
+            # Separation optional at the comparison-star selection write; c_dist=0 on wide refractive.
             se = sigma_eff_mag(
                 sigma_rms_mag=rms_f if math.isfinite(rms_f) else float("nan"),
                 delta_bprp=db,
@@ -1426,7 +1310,6 @@ def _assemble_comp_selection_result_rows(
                 "comp_rms",
                 "comp_rms_fieldwide",
                 "comp_score",
-                "contamination_idx",
                 "comp_n_frames",
                 "target_catalog_id",
                 "target_vsx_name",
@@ -1471,8 +1354,8 @@ def _assemble_comp_selection_result_rows(
         color_extra = ""
 
     _log_line = (
-        f"[FAZA 1] Target {target_cid} ({target.get('vsx_name','')}): "
-        f"{len(out)} porovnavaciek | RMS min={out['comp_rms'].min():.4f} "
+        f"[COMP-SELECT] Target {target_cid} ({target.get('vsx_name','')}): "
+        f"{len(out)} comparison stars | RMS min={out['comp_rms'].min():.4f} "
         f"max={out['comp_rms'].max():.4f} | {color_info}"
     )
     if color_extra:

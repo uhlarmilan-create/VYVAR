@@ -93,7 +93,7 @@ def parse_ui_optics_from_labels(
         eq_id, _ = _first_db_optics_ids(db)
         if eq_id is None:
             raise ValueError(
-                "Vyberte platnu kameru v Equipment (library) - v DB nie je ziadna kamera s PIXELSIZE."
+                "Select a valid camera in Equipment (library) - the DB has no camera with PIXELSIZE."
             )
         eq_lbl = f"(DB fallback id={eq_id})"
 
@@ -104,7 +104,7 @@ def parse_ui_optics_from_labels(
         _, tel_id = _first_db_optics_ids(db)
         if tel_id is None:
             raise ValueError(
-                "Vyberte platny dalekohlad v Telescope (library) - v DB nie je ziadny s FOCAL."
+                "Select a valid telescope in Telescope (library) - the DB has none with FOCAL."
             )
         tel_lbl = f"(DB fallback id={tel_id})"
 
@@ -180,7 +180,7 @@ def resolve_optics_ids_for_platesolve(
         if eq is not None and eq != d_eq_i:
             log_event(
                 f"OPTICS: equipment_id={eq} -> draft {int(draft_id)} ID_EQUIPMENTS={d_eq_i} "
-                "(draft z importu ma prednost pred session/UI)."
+                "(the import draft takes precedence over session/UI)."
             )
         eq = d_eq_i
     if d_tel is not None:
@@ -206,7 +206,7 @@ def resolve_working_optics(
         eq, tel = _first_db_optics_ids(db)
         if eq is None or tel is None:
             raise ValueError(
-                f"{context}: chyba vyber kamery/dalekohladu - nastavte Equipment a Telescope v UI."
+                f"{context}: camera/telescope selection missing - set Equipment and Telescope in the UI."
             )
         base = VyvarOpticsSelection(equipment_id=int(eq), telescope_id=int(tel))
     eq, tel = resolve_optics_ids_for_platesolve(
@@ -216,7 +216,7 @@ def resolve_working_optics(
         telescope_id=base.telescope_id,
     )
     if eq is None or tel is None:
-        raise ValueError(f"{context}: nepodarilo sa urcit ID kamery alebo dalekohladu.")
+        raise ValueError(f"{context}: could not determine the camera or telescope ID.")
     return VyvarOpticsSelection(
         equipment_id=int(eq),
         telescope_id=int(tel),
@@ -245,8 +245,8 @@ def log_active_optics(
             focal = None
     draft_note = f", draft_id={int(draft_id)}" if draft_id is not None else ""
     log_event(
-        f"{context}: kamera id={selection.equipment_id} ({selection.equipment_label or '?'}) "
+        f"{context}: camera id={selection.equipment_id} ({selection.equipment_label or '?'}) "
         f"PIXELSIZE={pix if pix is not None else '?'} um | "
-        f"dalekohlad id={selection.telescope_id} ({selection.telescope_label or '?'}) "
+        f"telescope id={selection.telescope_id} ({selection.telescope_label or '?'}) "
         f"FOCAL={focal if focal is not None else '?'} mm{draft_note}"
     )

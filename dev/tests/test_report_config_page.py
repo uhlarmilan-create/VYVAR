@@ -21,7 +21,7 @@ def test_deviation_table_from_synthetic_snapshot() -> None:
             "config_snapshot": {
                 # two genuine deviations from dataclass defaults ...
                 "masterdark_validity_days": 999,   # default 90
-                "gain": 3.14,                       # default 1.0
+                "snr_min": 12.0,                    # default 10
                 # ... one key left at its default (must NOT be listed) ...
                 "masterflat_validity_days": 200,    # default 200
                 # ... and one legacy/removed key (unknown) ...
@@ -37,7 +37,7 @@ def test_deviation_table_from_synthetic_snapshot() -> None:
     assert model["source_label"] == "run snapshot"
 
     modified_keys = {r["key"] for r in model["rows"]}
-    assert modified_keys == {"masterdark_validity_days", "gain"}
+    assert modified_keys == {"masterdark_validity_days", "snr_min"}
     assert "masterflat_validity_days" not in modified_keys
 
     assert model["unknown_keys"] == ["aperture_px"]

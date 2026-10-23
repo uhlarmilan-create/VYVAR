@@ -119,12 +119,12 @@ def test_require_comparison_stars_per_target_schema_rejects_pool(tmp_path: Path)
         _require_comparison_stars_per_target_schema(df, pool)
 
 
-def test_phase2a_empty_comp_drop_row_and_counter(caplog: pytest.LogCaptureFixture) -> None:
-    from photometry_core import _phase2a_skip_empty_comps_target
+def test_aperture_empty_comp_drop_row_and_counter(caplog: pytest.LogCaptureFixture) -> None:
+    from photometry_core import _aperture_skip_empty_comps_target
 
     reset_except_fix_counters()
     caplog.set_level(logging.ERROR)
-    rows = _phase2a_skip_empty_comps_target(
+    rows = _aperture_skip_empty_comps_target(
         target_cid="123",
         target_name="T1",
         zone_flag="linear",
@@ -133,5 +133,5 @@ def test_phase2a_empty_comp_drop_row_and_counter(caplog: pytest.LogCaptureFixtur
     assert len(rows) == 1
     assert rows[0]["catalog_id"] == "123"
     assert rows[0]["n_frames"] == 0
-    assert get_except_fix_counters().phase2a_empty_comp_drop == 1
-    assert any("comp hviezdy" in r.message for r in caplog.records)
+    assert get_except_fix_counters().aperture_empty_comp_drop == 1
+    assert any("no comp stars" in r.message for r in caplog.records)

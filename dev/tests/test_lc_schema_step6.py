@@ -57,6 +57,13 @@ def test_lc_columns_with_colour_term_and_gspc(tmp_path: Path) -> None:
     assert _select_export_lc_rows(df)["mag_calib"].tolist() == [13.02] * 3
 
 
+def test_lc_k2_term_column(tmp_path: Path) -> None:
+    """EPSF-K2-2026-10: the applied k'' term per epoch (k'' x colour difference x airmass)."""
+    df = _write(tmp_path, k2_coeff=-0.016 * 1.5)
+    assert list(df.columns) == LC_BASE[:13] + ["k2_delta_mag"] + LC_BASE[13:]
+    assert np.allclose(df["k2_delta_mag"], -0.016 * 1.5 * 1.2)
+
+
 def test_removed_columns_not_written(tmp_path: Path) -> None:
     df = _write(tmp_path, mag_calib_ct=np.full(3, 13.0))
     for col in ("mag_calib_raw", "mag_calib_final", "ct_correction", "ct_ok", "k2_source", "k2_value",
@@ -106,7 +113,7 @@ def test_check_star_block_in_comp_quality(tmp_path: Path) -> None:
 
     tr = read_sparse_trust_sidecar(tmp_path, "7")
     assert tr["trust_R_hi"] == 1.7 and tr["check_sparse"] and tr["sparse_flags"] == ("R_hi_exceeds_T_green",)
-    from photometry_phase2a import parse_comp_quality_json_map
+    from aperture_photometry import parse_comp_quality_json_map
 
     assert set(parse_comp_quality_json_map(json.loads((lc_dir / "comp_quality_7.json").read_text()))) == {"9"}
 
@@ -153,6 +160,6 @@ def test_invariants_read_the_photometry_active_targets(tmp_path: Path) -> None:
     try:
         ir.validate_config_behavior(meta, phot)
     except ir.InvariantViolation as exc:
-        assert "INV-PHASE0-ID" in str(exc)
+        assert "INV-TARGET-ID" in str(exc)
     else:
-        raise AssertionError("INV-PHASE0-ID must fail on a catalog_id mismatch")
+        raise AssertionError("INV-TARGET-ID must fail on a catalog_id mismatch")

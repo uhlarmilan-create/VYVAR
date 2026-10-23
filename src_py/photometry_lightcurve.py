@@ -26,7 +26,7 @@ from photometry_core import (
 )
 
 
-def _phase2a_empty_comp_summary_row(
+def _aperture_empty_comp_summary_row(
     *,
     target_cid: str,
     target_name: str,
@@ -50,7 +50,7 @@ def _phase2a_empty_comp_summary_row(
         "skip_reason": "no_comps",
     }
 
-def _phase2a_skip_empty_comps_target(
+def _aperture_skip_empty_comps_target(
     *,
     target_cid: str,
     target_name: str,
@@ -62,16 +62,16 @@ def _phase2a_skip_empty_comps_target(
     from except_fix_counters import get_except_fix_counters
 
     _ctr = get_except_fix_counters()
-    _ctr.phase2a_empty_comp_drop += 1
+    _ctr.aperture_empty_comp_drop += 1
     logging.error(
-        "[FAZA 2A] Target %s (%s): ziadne comp hviezdy - preskocene "
-        "(phase2a_empty_comp_drop=%d)",
+        "[APERTURE] Target %s (%s): no comp stars - skipped "
+        "(aperture_empty_comp_drop=%d)",
         target_name,
         target_cid,
-        _ctr.phase2a_empty_comp_drop,
+        _ctr.aperture_empty_comp_drop,
     )
     summary_rows.append(
-        _phase2a_empty_comp_summary_row(
+        _aperture_empty_comp_summary_row(
             target_cid=target_cid,
             target_name=target_name,
             zone_flag=zone_flag,
@@ -174,7 +174,7 @@ def _common_mode_detrend_comp_lc(
 def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     """Per-frame ensemble-median subtraction (differential residual per comp).
 
-    Same principle as Phase-1 ``comp_rms`` (flux / bin median): comp intrinsic scatter
+    Same principle as the comparison-star selection ``comp_rms`` (flux / bin median): comp intrinsic scatter
     is only visible after the shared per-frame signal is removed.
 
     Uses sorted cid order and truncates to a common length only after sorting keys so
@@ -241,20 +241,20 @@ def check_comparison_stability(
     common_mode_detrend: bool = True,
     stability_run_flags: dict[str, Any] | None = None,
 ) -> dict[str, dict]:
-    """Krok 3: Stability check porovnavaciek.
+    """Step 3: stability check of the comparison stars.
 
-    Abbeho point-to-point scatter on **common-mode-detrended** comp residuals:
+    Abbe point-to-point scatter on **common-mode-detrended** comp residuals:
         rms_p2p = std(diff(mag_resid)) / sqrt(2)
 
     ``max_comp_p2p`` (config ``phase01_comparison_max_comp_rms``) gates **p2p** scatter.
-    Phase-1 ``comp_rms`` uses the same config key but measures full LC RMS - different
+    Comparison-star selection ``comp_rms`` uses the same config key but measures full LC RMS - different
     metric, shared ceiling knob (see ``select_comparison_stars_per_target``).
 
     Shared atmospheric drift is removed before p2p/MAD (same differential logic as ensemble).
 
     Returns:
         dict {catalog_id: {"rms_p2p": float, "lc_rms": float, "quality": str, "p2p_threshold": float}}
-        quality: "good" / "suspect" / "excluded"; zaznamy su zoradene (good -> suspect -> excluded, v ramci good podla rms_p2p).
+        quality: "good" / "suspect" / "excluded"; entries are sorted (good -> suspect -> excluded, within good by rms_p2p).
     """
     result: dict[str, dict[str, Any]] = {}
 
@@ -276,7 +276,7 @@ def check_comparison_stability(
         if stability_run_flags is not None:
             stability_run_flags["frame_ensemble_residual"] = True
 
-    # Vypocitaj metriky na per-frame differential rezidualnych radach
+    # Compute metrics on the per-frame differential residual series
     for cid, lc in comp_lc.items():
         resid = _detrended_lc.get(cid, lc)
         finite = np.asarray(resid, dtype=np.float64)[np.isfinite(resid)]
@@ -293,14 +293,15 @@ def check_comparison_stability(
         rms_p2p = float(np.std(diff) / math.sqrt(2)) if len(diff) > 1 else float("nan")
         result[cid] = {"rms_p2p": rms_p2p, "lc_rms": lc_rms, "quality": "good"}
 
-    # Ak hviezda ma comp_rms~0 z Phase 1 -> oznac ako suspect (pravdepodobny isolated-bin normalizacny artefakt).
+    # A star with comp_rms~0 from comparison-star selection -> mark as suspect
+    # (likely an isolated-bin normalisation artefact).
     if comp_rms_map:
         for cid in result:
             try:
-                phase1_rms = float(comp_rms_map.get(cid, float("nan")))
+                comp_selection_rms = float(comp_rms_map.get(cid, float("nan")))
             except Exception:  # noqa: BLE001
-                phase1_rms = float("nan")
-            if math.isfinite(phase1_rms) and phase1_rms < 1e-6:
+                comp_selection_rms = float("nan")
+            if math.isfinite(comp_selection_rms) and comp_selection_rms < 1e-6:
                 result[cid]["quality"] = "suspect"
                 result[cid]["note"] = "isolated_bin"
 
@@ -363,11 +364,11 @@ def check_comparison_stability(
     n_good_final = sum(1 for v in result.values() if v["quality"] == "good")
     thr_log = f"{threshold:.5f}" if math.isfinite(threshold) else "N/A"
     logging.info(
-        f"[FAZA 2A] Stability check: {n_good_final}/{len(result)} good comp "
+        f"[APERTURE] Stability check: {n_good_final}/{len(result)} good comp "
         f"(p2p threshold={thr_log})"
     )
 
-    # Zoradenie: good (podla rms_p2p), suspect, excluded - poradie v ensemble / PNG tabulke
+    # Sorting: good (by rms_p2p), suspect, excluded - the order used in the ensemble / PNG table
     sorted_result = dict(
         sorted(
             result.items(),
@@ -449,11 +450,11 @@ def ensemble_normalize(
     weights_out: dict[str, float] | None = None,
     levels_out: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Krok 4: ensemble (artificial comparison star) per frame - Broeg et al. (2005).
+    """Step 4: ensemble (artificial comparison star) per frame - Broeg et al. (2005).
 
     ENSEMBLE-BROEG-2026-10:
 
-    * Membership is exactly the Phase-1 set (``comp_quality`` keys), identical for every
+    * Membership is exactly the comparison-star selection set (``comp_quality`` keys), identical for every
       frame. Each comp is normalised to its own night median, y_jf = m_jf - median_f(m_j),
       so a comp missing on a frame does not shift the level (the weighted mean of the
       present normalised comps is unbiased).
@@ -823,7 +824,7 @@ def _check_color_term_extrapolation(
     in_range = (min_bprp - tol) <= tgt <= (max_bprp + tol)
     if not in_range:
         logging.warning(
-            "[COLOR TERM] Target %s BP-RP=%.3f je mimo rozsahu comp [%.3f, %.3f] - color term extrapolacia moze viest k systematike.",
+            "[COLOR TERM] Target %s BP-RP=%.3f is outside the comp range [%.3f, %.3f] - color-term extrapolation may cause systematics.",
             str(target_name or ""),
             float(tgt),
             float(min_bprp),
@@ -948,8 +949,12 @@ def save_lightcurve_csv(
     err_sem_rel: np.ndarray | None = None,
     err_scint_rel: np.ndarray | None = None,
     err_sigma_sys_rel: np.ndarray | None = None,
+    k2_coeff: float = float("nan"),
 ) -> None:
     """Write ``lightcurve_<id>.csv`` (one row per epoch).
+
+    ``k2_delta_mag`` = ``k2_coeff`` x airmass is the second-order extinction term subtracted from the
+    magnitudes (``k2_coeff`` = k'' x (target - comparison colour)); written only when k'' was applied.
 
     ``mag_calib_ct`` (``mag_calib`` + colour-term correction) is written only when given: the
     setup applies a colour term (photometric filter). ``mag_gspc`` only when the GSPC zero point
@@ -993,6 +998,8 @@ def save_lightcurve_csv(
     ):
         if arr is not None:
             cols[name] = _col(arr, 6)
+    if math.isfinite(float(k2_coeff)):
+        cols["k2_delta_mag"] = _col(float(k2_coeff) * np.asarray(airmass, dtype=np.float64), 6)
     cols["aperture_r_px"] = _col(aperture_r_px, 3)
     cols["flag"] = [_flag_cell(f) for f in flags]
     cols["flag_reason"] = [
@@ -1014,7 +1021,7 @@ def save_lightcurve_png(
     delta_mag_mode: bool = False,
     delta_mag: np.ndarray | None = None,
 ) -> None:
-    """Ulozi PNG graf svetelnej krivky s farebnymi flagmi a comp status tabulkou."""
+    """Save a PNG light-curve plot with colour-coded flags and a comp status table."""
     try:
         import matplotlib
 
@@ -1022,7 +1029,7 @@ def save_lightcurve_png(
         import matplotlib.pyplot as plt
         import matplotlib.patches as mpatches
     except ImportError:
-        logging.warning("[FAZA 2A] matplotlib nie je dostupny, PNG sa nevygeneruje")
+        logging.warning("[APERTURE] matplotlib is not available, no PNG is generated")
         return
 
     y_data = delta_mag if (delta_mag_mode and delta_mag is not None) else mag_calib
@@ -1052,7 +1059,7 @@ def save_lightcurve_png(
 
     bjd_plot_all, bjd_axis_int = jd_series_relative(bjd)
 
-    # Svetelna krivka
+    # Light curve
     for flag, color in flag_colors.items():
         mask = np.array([f == flag for f in flags])
         if not mask.any():
@@ -1085,7 +1092,7 @@ def save_lightcurve_png(
     ]
     ax_lc.legend(handles=legend_patches, fontsize=7, loc="upper right")
 
-    # Comp quality tabulka
+    # Comp quality table
     ax_comp.axis("off")
     comp_lines = []
     for i, (_, info) in enumerate(comp_quality.items(), 1):
@@ -1095,7 +1102,7 @@ def save_lightcurve_png(
         p2p_str = f"{p2p:.4f}" if math.isfinite(float(p2p)) else "N/A"
         comp_lines.append(f"{icon} C{i:02d}  {p2p_str}  {q}")
 
-    comp_text = "\n".join(comp_lines[:15])  # max 15 riadkov
+    comp_text = "\n".join(comp_lines[:15])  # max 15 lines
     ax_comp.text(
         0.05,
         0.95,
@@ -1111,7 +1118,7 @@ def save_lightcurve_png(
     fig.savefig(output_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
 
-#: active_targets.csv written before TARGET-RULES-2026-10 (a Phase-2A-only re-run of an old draft)
+#: active_targets.csv written before TARGET-RULES-2026-10 (an aperture-photometry-only re-run of an old draft)
 _LEGACY_SELECTION_SKIP = {"zone_flag": "saturated", "saturovany ciel": "saturated", "likely_saturated": "saturated",
                           "below_target_depth": "below_snr_min", "zone_noise": "below_snr_min"}
 
@@ -1119,8 +1126,8 @@ _LEGACY_SELECTION_SKIP = {"zone_flag": "saturated", "saturovany ciel": "saturate
 def _target_selection_skip_reason(row: Any) -> str:
     """The target-selection skip of an active_targets row ("" = measurable).
 
-    Phase-0 cuts and per_frame_saturation are kept; a MASTERSTAR-saturated zone is the upper
-    cut even when an old run cleared it; reasons written by Phase 2A for other purposes
+    Target-selection cuts and per_frame_saturation are kept; a MASTERSTAR-saturated zone is the upper
+    cut even when an old run cleared it; reasons written by aperture photometry for other purposes
     (e.g. ``no_comps``) are not selection skips."""
     from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
 
@@ -1141,7 +1148,7 @@ def decide_per_frame_saturation(
 ) -> dict[str, Any]:
     """SAT-TARGET-2026-10 / TARGET-RULES-2026-10: per-frame saturation of a measurable target.
 
-    A target already skipped in Phase 0 (saturated / below_snr_min / out of scope) or by an
+    A target already skipped in target selection (saturated / below_snr_min / out of scope) or by an
     earlier run keeps its skip - nothing revives it. A target linear on MASTERSTAR is not
     measured when it is saturated in more than (1 - min_clean_frac) of its frames
     (``per_frame_saturation``). Without per-frame peak data there is no per-frame verdict.
@@ -1170,8 +1177,12 @@ def _per_frame_sat_flags_for_catalog_id(
     *,
     sat_limit_adu: float | None = None,
     peak_test_adu: float | None = None,
+    id_pos_cache: dict[str, dict[str, int]] | None = None,
 ) -> list[bool] | None:
     """Return per-frame saturation bools for a target, or None if data unavailable.
+
+    ``id_pos_cache`` (SPEED-2026-10 S1): path -> {normalised id -> first row position}, shared by the
+    targets of one run so each frame's ids are normalised once.
 
     Clean test uses ``peak_test_adu`` (INV-SAT-LIMIT catalog peak-test), not the
     raw container clip and not a stale ``is_saturated`` column. ``sat_limit_adu``
@@ -1195,11 +1206,18 @@ def _per_frame_sat_flags_for_catalog_id(
             continue
         if "catalog_id" not in df.columns:
             return None
-        ids = df["catalog_id"].astype(str).map(_normalize_gaia_id)
-        m = ids.eq(cid)
-        if not bool(m.any()):
+        _key = str(path)
+        _pos = id_pos_cache.get(_key) if id_pos_cache is not None else None
+        if _pos is None:
+            _pos = {}
+            for _i, _c in enumerate(df["catalog_id"].astype(str).map(_normalize_gaia_id).tolist()):
+                _pos.setdefault(_c, _i)
+            if id_pos_cache is not None:
+                id_pos_cache[_key] = _pos
+        _ip = _pos.get(cid)
+        if _ip is None:
             continue
-        row = df.loc[m].iloc[0]
+        row = df.iloc[_ip]
         n_matched += 1
         peak = float(pd.to_numeric(row.get("peak_max_adu"), errors="coerce"))
         # SAT-LIN-2026-10: the frame's own verdict (raw peak >= LINEARITY_FRAC x SAT from
@@ -1288,6 +1306,7 @@ def apply_per_frame_saturation_to_active_targets(
     at_df["skip_reason"] = at_df["skip_reason"].fillna("").astype(str).str.strip().astype(object)
     at_df["skip_reason"] = at_df["skip_reason"].where(at_df["skip_reason"].str.lower() != "nan", "")
 
+    _id_pos: dict[str, dict[str, int]] = {}
     for idx, row in at_df.iterrows():
         recorded = _target_selection_skip_reason(row)
         flags = None
@@ -1297,6 +1316,7 @@ def apply_per_frame_saturation_to_active_targets(
                 csv_files,
                 csv_cache,
                 peak_test_adu=pt,
+                id_pos_cache=_id_pos,
             )
         dec = decide_per_frame_saturation(
             skip_reason=recorded, frame_saturated=flags, min_clean_frac=float(min_clean_frac)
@@ -1335,7 +1355,7 @@ def _fits_header_facts(header: Any) -> dict[str, Any]:
         pass
     return out
 
-def _build_phase2a_resolved_facts(
+def _build_aperture_resolved_facts(
     *,
     cfg: Any,
     gain_res: Any,

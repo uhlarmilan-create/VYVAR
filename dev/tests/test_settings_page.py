@@ -95,7 +95,13 @@ def test_owner_distribution(reg) -> None:
     # (db_static 8 -> 5); observer_location_id is run time only (hidden, db_static).
     # DAO-FALSE-2026-10: masterstar_prematch_peak_sigma_floor removed (config_runtime 108 -> 107).
     # COMP-CATOFF-2026-10: comp_catalog_offset_max_mag added (107 -> 108).
-    assert dict(dist) == {"db_static": 5, "config_runtime": 108, "fits_dynamic": 5, "internal": 9}, dist
+    # CODE-REVIEW step 2: comp_pool_derived_admission, photon_transfer_ci_max_width_factor,
+    # trust_flag_enabled removed (108 -> 105); both plate scales removed (fits_dynamic 5 -> 3).
+    # CODE-REVIEW step 7: 58 fixed constants / removed keys (config_runtime 105 -> 47),
+    # plate_solve_fov_deg removed (fits_dynamic 3 -> 2), frame_width/height_px removed (internal 9 -> 7).
+    # CODE-REVIEW step 7B: isolation radius, chip margin, sips_dao_fwhm_px removed (47 -> 44),
+    # gain / read_noise removed (fits_dynamic 2 -> 0).
+    assert dict(dist) == {"db_static": 5, "config_runtime": 44, "internal": 7}, dist
 
 
 def test_site_is_not_stored_in_config(cfg_json) -> None:

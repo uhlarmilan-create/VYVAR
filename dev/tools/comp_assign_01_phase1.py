@@ -1,4 +1,4 @@
-"""COMP-ASSIGN-01: rebuild Phase 1 comparison membership for draft 514."""
+"""COMP-ASSIGN-01: rebuild comparison-star selection membership for draft 514."""
 from __future__ import annotations
 
 import os
@@ -13,7 +13,7 @@ os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase0_and_phase1  # noqa: E402
+from photometry_core import run_target_and_comp_selection  # noqa: E402
 
 
 def main() -> None:
@@ -33,7 +33,7 @@ def main() -> None:
         alt = phot / "masterstars_full_match.csv"
         ms_csv = alt if alt.is_file() else ms_csv
 
-    result = run_phase0_and_phase1(
+    result = run_target_and_comp_selection(
         variable_targets_csv=og / "variable_targets.csv",
         masterstars_csv=ms_csv,
         per_frame_csv_dir=draft / "detrended_aligned" / "lights" / setup,

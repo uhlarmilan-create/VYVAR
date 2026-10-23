@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from config import AppConfig
-from photometry_core import ERR_BKG_SOURCE_COL, ERR_BKG_SOURCE_EMPIRICAL, ERR_BKG_SOURCE_HOWELL_FALLBACK, ERR_BKG_SOURCE_HOWELL_SCALED, SIGMA_BKG_AP_COL, _assert_inv_err_sigma_acct_01, _clamp_bkg_scale_r, _clamp_err_empty_apertures_n, _howell_bkg_variance_adu2, _phase2a_cache_columns, _phase2a_proc_column_requirements, _photometric_error, _phase2a_empirical_sigma_bkg_ap, _photometric_error_with_bkg_mode, _sigma_bkg_r_key, bkg_scale_ratio_empirical_over_howell, compute_setup_bkg_scale_r, enhance_catalog_dataframe_aperture, finalize_hybrid_bkg_fallback_proc_dir, measure_empty_aperture_sigma_bkg, read_flux_from_csv, scaled_sigma_bkg_ap_from_howell
+from photometry_core import ERR_BKG_SOURCE_COL, ERR_BKG_SOURCE_EMPIRICAL, ERR_BKG_SOURCE_HOWELL_FALLBACK, ERR_BKG_SOURCE_HOWELL_SCALED, SIGMA_BKG_AP_COL, _assert_inv_err_sigma_acct_01, _clamp_bkg_scale_r, _clamp_err_empty_apertures_n, _howell_bkg_variance_adu2, _aperture_cache_columns, _aperture_proc_column_requirements, _photometric_error, _aperture_empirical_sigma_bkg_ap, _photometric_error_with_bkg_mode, _sigma_bkg_r_key, bkg_scale_ratio_empirical_over_howell, compute_setup_bkg_scale_r, enhance_catalog_dataframe_aperture, finalize_hybrid_bkg_fallback_proc_dir, measure_empty_aperture_sigma_bkg, read_flux_from_csv, scaled_sigma_bkg_ap_from_howell
 from invariants_runtime import InvariantViolation
 
 
@@ -182,15 +182,15 @@ def test_enhance_catalog_emits_provenance_columns() -> None:
 def test_config_defaults_and_clamps() -> None:
     cfg = AppConfig()
     assert not hasattr(cfg, "err_background_mode")
-    assert cfg.err_empty_apertures_n == 64
-    assert cfg.err_empty_apertures_min == 16
-    cfg.err_empty_apertures_n = 8
-    cfg.err_empty_apertures_min = 300
-    # Re-apply clamp logic mirrors __post_init__ bounds
-    cfg.err_empty_apertures_n = max(16, min(256, int(cfg.err_empty_apertures_n)))
-    cfg.err_empty_apertures_min = max(1, min(256, int(cfg.err_empty_apertures_min)))
-    assert cfg.err_empty_apertures_n == 16
-    assert cfg.err_empty_apertures_min == 256
+    # CODE-REVIEW step 7: 64 / 16 are the defaults of enhance_catalog_dataframe_aperture, not config keys.
+    assert not hasattr(cfg, "err_empty_apertures_n")
+    import inspect
+
+    from photometry_shared import enhance_catalog_dataframe_aperture
+
+    sig = inspect.signature(enhance_catalog_dataframe_aperture).parameters
+    assert sig["err_empty_apertures_n"].default == 64
+    assert sig["err_empty_apertures_min"].default == 16
 
 
 def test_bkg_scale_ratio_and_clamp() -> None:
@@ -273,9 +273,9 @@ def test_finalize_zero_empirical_keeps_raw_fallback(tmp_path: Path) -> None:
     assert out.loc[0, ERR_BKG_SOURCE_COL] == ERR_BKG_SOURCE_HOWELL_FALLBACK
 
 
-def test_phase2a_cache_columns_cover_named_requirements() -> None:
-    req = _phase2a_proc_column_requirements()
-    cols = set(_phase2a_cache_columns())
+def test_aperture_cache_columns_cover_named_requirements() -> None:
+    req = _aperture_proc_column_requirements()
+    cols = set(_aperture_cache_columns())
     for group_cols in req.values():
         for col in group_cols:
             assert col in cols
@@ -284,7 +284,7 @@ def test_phase2a_cache_columns_cover_named_requirements() -> None:
     assert "sky_annulus_r_out_px" in cols
 
 
-def test_phase2a_empirical_requires_sigma_bkg_ap_input() -> None:
+def test_aperture_empirical_requires_sigma_bkg_ap_input() -> None:
     row = pd.Series(
         {
             "catalog_id": "1498613634033133184",
@@ -294,14 +294,14 @@ def test_phase2a_empirical_requires_sigma_bkg_ap_input() -> None:
         }
     )
     with pytest.raises(ValueError, match="INV-ERR-MODE-01"):
-        _phase2a_empirical_sigma_bkg_ap(
+        _aperture_empirical_sigma_bkg_ap(
             row,
             source_file="proc_test.csv",
             catalog_id="1498613634033133184",
         )
 
 
-def test_phase2a_empirical_accepts_projected_sigma_bkg_ap() -> None:
+def test_aperture_empirical_accepts_projected_sigma_bkg_ap() -> None:
     row = pd.Series(
         {
             "catalog_id": "1498613634033133184",
@@ -309,7 +309,7 @@ def test_phase2a_empirical_accepts_projected_sigma_bkg_ap() -> None:
             ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
         }
     )
-    sig = _phase2a_empirical_sigma_bkg_ap(
+    sig = _aperture_empirical_sigma_bkg_ap(
         row,
         source_file="proc_test.csv",
         catalog_id="1498613634033133184",
@@ -317,7 +317,7 @@ def test_phase2a_empirical_accepts_projected_sigma_bkg_ap() -> None:
     assert sig == pytest.approx(1664.0)
 
 
-def test_phase2a_projected_cache_matches_full_row_empirical() -> None:
+def test_aperture_projected_cache_matches_full_row_empirical() -> None:
     row = {
         "catalog_id": "1498613634033133184",
         "name": "1498613634033133184",
@@ -356,7 +356,7 @@ def test_phase2a_projected_cache_matches_full_row_empirical() -> None:
         ERR_BKG_SOURCE_COL: ERR_BKG_SOURCE_EMPIRICAL,
     }
     full_df = pd.DataFrame([row])
-    projected_df = full_df[[c for c in _phase2a_cache_columns() if c in full_df.columns]].copy()
+    projected_df = full_df[[c for c in _aperture_cache_columns() if c in full_df.columns]].copy()
     star_ids = ["1498613634033133184"]
     aps = {"1498613634033133184": 5.0}
     frame = Path("proc_test.csv")

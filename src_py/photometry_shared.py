@@ -1,21 +1,15 @@
 """Moved from photometry_core.py (CONSOLIDATE-01E2). Facade re-exports these names."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 import logging
 import math
-import random
 import numpy as np
 import pandas as pd
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
-from proc_frame_store import proc_csv_path_for_aligned_fits
-from utils import (
-    iter_fits_paths_recursive as _iter_fits_recursive,
-    plate_scale_arcsec_per_pixel,
-)
+from utils import plate_scale_arcsec_per_pixel
 
 from photometry_core import (
     BKG_SCALE_R_CLAMP_HI,
@@ -27,7 +21,7 @@ from photometry_core import (
     LOGGER,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
-    _GAIA_ID_DTYPE,
+    SKY_SURFACE_BG_MEDIAN_ADU_COL,
 )
 
 
@@ -177,6 +171,30 @@ def _normalize_gaia_id(x: Any) -> str:
         return ""
     return out
 
+def _col_values(df: pd.DataFrame, col: str, missing: Any) -> list[Any]:
+    """``row.get(col, missing)`` for every row, as a list."""
+    return df[col].tolist() if col in df.columns else [missing] * len(df)
+
+
+def _col_floats(df: pd.DataFrame, col: str, n: int) -> list[float]:
+    """``float(pd.to_numeric(row.get(col), errors="coerce"))`` for every row (same per-value result)."""
+    if col not in df.columns:
+        return [float(pd.to_numeric(None, errors="coerce"))] * n
+    c = df[col]
+    if pd.api.types.is_float_dtype(c.dtype) or pd.api.types.is_integer_dtype(c.dtype):
+        return [float(v) for v in c.tolist()]
+    return [float(pd.to_numeric(v, errors="coerce")) for v in c.tolist()]
+
+
+def _sky_pp_from_values(pre_sub: float, ann: float) -> float:
+    """``_sky_pp_for_photometric_error`` from the two column values."""
+    if math.isfinite(pre_sub) and pre_sub >= 0:
+        return pre_sub
+    if math.isfinite(ann) and ann >= 0:
+        return ann
+    return 0.0
+
+
 def finalize_hybrid_bkg_fallback_proc_dir(
     proc_dir: Path,
     *,
@@ -195,6 +213,9 @@ def finalize_hybrid_bkg_fallback_proc_dir(
     proc_dir = Path(proc_dir)
     ratios: list[float] = []
     files = sorted(proc_dir.glob("proc_*.csv"))
+    # SPEED-2026-10: column lists instead of iterrows (same per-value conversions); tables that hold
+    # fallback rows are kept for the second pass instead of being read again.
+    _kept: dict[Path, pd.DataFrame] = {}
     for proc_path in files:
         try:
             from proc_frame_store import read_proc_csv  # noqa: PLC0415
@@ -204,17 +225,25 @@ def finalize_hybrid_bkg_fallback_proc_dir(
             continue
         if df.empty:
             continue
-        for _, row in df.iterrows():
-            src = str(row.get(ERR_BKG_SOURCE_COL, "")).strip()
-            if src != ERR_BKG_SOURCE_EMPIRICAL:
-                continue
-            sig = float(pd.to_numeric(row.get(SIGMA_BKG_AP_COL), errors="coerce"))
-            sky = _sky_pp_for_photometric_error(row)
-            area = float(pd.to_numeric(row.get("aperture_area_px"), errors="coerce"))
+        n = len(df)
+        _src = [str(v).strip() for v in _col_values(df, ERR_BKG_SOURCE_COL, "")]
+        if any(v == ERR_BKG_SOURCE_HOWELL_FALLBACK for v in _src):
+            _kept[proc_path] = df
+        _emp = [i for i, v in enumerate(_src) if v == ERR_BKG_SOURCE_EMPIRICAL]
+        if not _emp:
+            continue
+        _sig = _col_floats(df, SIGMA_BKG_AP_COL, n)
+        _pre = _col_floats(df, SKY_SURFACE_BG_MEDIAN_ADU_COL, n)
+        _ann = _col_floats(df, SKY_ADU_PER_PX_ANNULUS_COL, n)
+        _area = _col_floats(df, "aperture_area_px", n)
+        _rap = _col_floats(df, "aperture_r_px", n)
+        for i in _emp:
+            sky = _sky_pp_from_values(_pre[i], _ann[i])
+            area = _area[i]
             if not math.isfinite(area) or area <= 0:
-                r_ap = float(pd.to_numeric(row.get("aperture_r_px"), errors="coerce"))
+                r_ap = _rap[i]
                 area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
-            rv = bkg_scale_ratio_empirical_over_howell(sig, sky, area, gain=gain, read_noise=read_noise)
+            rv = bkg_scale_ratio_empirical_over_howell(_sig[i], sky, area, gain=gain, read_noise=read_noise)
             if math.isfinite(rv) and rv > 0:
                 ratios.append(rv)
 
@@ -242,13 +271,8 @@ def finalize_hybrid_bkg_fallback_proc_dir(
         _logged.add(_key)
 
     for proc_path in files:
-        try:
-            from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-            df = read_proc_csv(proc_path, low_memory=False)
-        except Exception:  # noqa: BLE001
-            continue
-        if df.empty or ERR_BKG_SOURCE_COL not in df.columns:
+        df = _kept.get(proc_path)
+        if df is None or df.empty or ERR_BKG_SOURCE_COL not in df.columns:
             continue
         changed = False
         src_col = df[ERR_BKG_SOURCE_COL].astype(str)
@@ -473,9 +497,8 @@ def build_gs11_summary(
 ) -> dict[str, Any]:
     """Aggregate GS11 dilution stats for ``pipeline_meta.json``."""
     enabled = bool(cfg.gs11_dilution_enabled)
-    min_d = float(cfg.gs11_target_min_dilution)
-    ap_cfg = float(cfg.gs11_dilution_aperture_arcsec)
-    aperture_arcsec = ap_cfg if math.isfinite(ap_cfg) and ap_cfg > 0 else float("nan")
+    from dilution import GS11_TARGET_MIN_DILUTION as min_d  # noqa: PLC0415
+    aperture_arcsec = float("nan")
     corrections_mmag: list[float] = []
     targets_corrected = 0
     targets_skipped_low_d = 0
@@ -532,8 +555,7 @@ def _get_plate_scale_from_cfg(
     Priority:
     1. Solved WCS/CD matrix from the FITS (authoritative)
     2. DB EQUIPMENTS+TELESCOPE+FITS binning (pixel/focal/binning)
-    3. cfg.phase01_plate_scale_arcsec_per_px (last resort)
-    None if unavailable
+    None if unavailable (no config fallback, PLATE-SCALE-2026-10)
     """
     result: float | None = None
 
@@ -590,7 +612,7 @@ def _get_plate_scale_from_cfg(
                                 if 1 <= b0 <= 16:
                                     binning = b0
                 except Exception:  # noqa: BLE001
-                    # EXC-0181: T4 -- DB plate-scale lookup failure falls through to config phase01_plate_scale_arcsec_per_px (EXCEPT-BULK-2 2026-07-08)
+                    # EXC-0181: T4 -- DB plate-scale lookup failure returns None (EXCEPT-BULK-2 2026-07-08)
                     binning = 1
 
                 pix_um = None
@@ -632,19 +654,7 @@ def _get_plate_scale_from_cfg(
                         return result
             except Exception:  # noqa: BLE001
                 pass
-    # 3. Config phase01_plate_scale_arcsec_per_px (last resort).
-    try:
-        val = float(cfg.phase01_plate_scale_arcsec_per_px)
-        if val > 0:
-            result = val
-            logging.warning(
-                "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (config last-resort; no WCS/DB)",
-                float(result),
-            )
-            return result
-    except (TypeError, ValueError):
-        pass
-
+    # PLATE-SCALE-2026-10: no config value - a fixed 1.3"/px was silently wrong on every rig
     logging.info(
         "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (None = fallback na max_dist_deg)",
         -1.0,
@@ -659,8 +669,7 @@ def _resolve_plate_scale_arcsec_per_px(
 ) -> float | None:
     """Plate scale (arcsec/px) for GS11 + aperture arcsec conversion.
 
-    Priority: (1) solved WCS/CD matrix from the FITS; (2) config
-    ``phase01_plate_scale_arcsec_per_px`` (last resort with warning).
+    Solved WCS/CD matrix of the FITS (no config fallback, PLATE-SCALE-2026-10).
     Returns None when nothing derivable (derive-or-None; no magic default).
     Clamp [0.1, 30.0] when a value is returned.
     """
@@ -675,19 +684,8 @@ def _resolve_plate_scale_arcsec_per_px(
             _fits_ps = None
     if _fits_ps is not None and math.isfinite(_fits_ps) and _lo <= float(_fits_ps) <= _hi:
         return float(_fits_ps)
-    # Config - last resort only (no usable WCS/CD in the FITS).
-    try:
-        cfg_ps = float(cfg.phase01_plate_scale_arcsec_per_px)
-    except (TypeError, ValueError):
-        cfg_ps = 0.0
-    if math.isfinite(cfg_ps) and _lo <= cfg_ps <= _hi:
-        logging.warning(
-            "[PLATE SCALE] no usable WCS/CD scale - falling back to config %.3f arcsec/px",
-            float(cfg_ps),
-        )
-        return float(cfg_ps)
     logging.warning(
-        "[PLATE SCALE] plate scale not derivable (WCS/CD + config exhausted) - returning None"
+        "[PLATE SCALE] plate scale not derivable from the WCS - returning None"
     )
     return None
 
@@ -805,163 +803,11 @@ def _read_plate_scale_from_fits_path(
     return None
 
 def _angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
-    """Uhlova vzdialenost v stupnoch (haversine). Same formula as Phase-1 ``_dist_deg``."""
+    """Angular distance in degrees (haversine). Same formula as comparison-star selection ``_dist_deg``."""
     from sky_separation import angular_distance_deg  # noqa: PLC0415
 
     return angular_distance_deg(ra1, dec1, ra2, dec2)
 
-@dataclass(frozen=True)
-class StressTestResult:
-    per_source_rms: dict[str, float]
-    frames_sampled: int
-    frames_used: int
-
-def stress_test_relative_rms_from_sidecars(
-    *,
-    frames_root: Path,
-    source_ids: list[str],
-    sample_frac: float = 0.10,
-    seed: int = 42,
-    flux_col: str = "dao_flux",
-    name_col: str = "catalog_id",
-    min_stars_per_frame: int = 3,
-) -> StressTestResult:
-    """Compute relative RMS for many sources on a random frame sample.
-
-    For each sampled frame with a sidecar CSV, compute per-frame ensemble median among present sources,
-    then record relative flux for each star: f_i / median(f_all). Returns RMS over time for each star.
-    """
-    root = Path(frames_root)
-    files = [
-        fp
-        for fp in _iter_fits_recursive(root)
-        if proc_csv_path_for_aligned_fits(fp).is_file()
-    ]
-    if not files or not source_ids:
-        return StressTestResult(per_source_rms={}, frames_sampled=0, frames_used=0)
-
-    frac = float(sample_frac)
-    frac = 0.10 if not math.isfinite(frac) else max(0.01, min(1.0, frac))
-    k = max(1, int(round(len(files) * frac)))
-    rnd = random.Random(int(seed))
-    sample = rnd.sample(files, k=min(k, len(files)))
-
-    want = [str(x).strip() for x in source_ids if str(x).strip()]
-    want_set = set(want)
-    rel_lists: dict[str, list[float]] = {nm: [] for nm in want}
-
-    frames_used = 0
-    _sidecar_cache: dict[str, pd.DataFrame] = {}
-    for fp in sample:
-        sidecar = proc_csv_path_for_aligned_fits(fp)
-        _sidecar_key = str(sidecar)
-        if _sidecar_key not in _sidecar_cache:
-            if Path(sidecar).is_file():
-                try:
-                    # Sidecar per-frame catalogs often carry Gaia IDs; preserve as strings when present.
-                    from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-                    _sidecar_cache[_sidecar_key] = read_proc_csv(
-                        sidecar, low_memory=False, dtype=_GAIA_ID_DTYPE
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    # EXC-0187: T4 -- astroquery/Vizier import failure returns empty VSX-neighbor set - VSX comp exclusion sk... (EXCEPT-BULK-2 2026-07-08)
-                    LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
-                    _sidecar_cache[_sidecar_key] = pd.DataFrame()
-            else:
-                _sidecar_cache[_sidecar_key] = pd.DataFrame()
-        dff = _sidecar_cache[_sidecar_key]
-        if dff.empty:
-            continue
-        if name_col not in dff.columns or flux_col not in dff.columns:
-            continue
-        names = dff[name_col].astype(str).str.strip()
-        flux = pd.to_numeric(dff[flux_col], errors="coerce")
-        mask = names.isin(want_set) & flux.notna() & (flux.astype(float) > 0)
-        if not bool(mask.any()):
-            continue
-        sub = dff.loc[mask, [name_col, flux_col]].copy()
-        sub[name_col] = sub[name_col].astype(str).str.strip()
-        sub[flux_col] = pd.to_numeric(sub[flux_col], errors="coerce").astype(float)
-        sub = sub.dropna()
-        if len(sub) < int(min_stars_per_frame):
-            continue
-        med = float(sub[flux_col].median())
-        if not math.isfinite(med) or med <= 0:
-            continue
-        frames_used += 1
-        for _, row in sub.iterrows():
-            nm = str(row[name_col]).strip()
-            if nm in rel_lists:
-                rel_lists[nm].append(float(row[flux_col]) / med)
-
-    out: dict[str, float] = {}
-    for nm, arr in rel_lists.items():
-        if len(arr) < 3:
-            continue
-        mu = 1.0
-        rms = math.sqrt(sum((x - mu) ** 2 for x in arr) / float(len(arr)))
-        if math.isfinite(rms):
-            out[nm] = float(rms)
-    return StressTestResult(per_source_rms=out, frames_sampled=int(len(sample)), frames_used=int(frames_used))
-
-def vsx_is_known_variable_top3_per_bin(
-    *,
-    rows: list[dict[str, Any]],
-    phot_category_key: str = "phot_category",
-    rms_key: str = "stress_rms",
-    ra_key: str = "ra",
-    dec_key: str = "dec",
-    max_per_bin: int = 3,
-    radius_arcsec: float = 2.0,
-) -> set[str]:
-    """Return set of Gaia source_id strings that are present in VSX near the best (lowest RMS) stars per bin."""
-    try:
-        from astroquery.vizier import Vizier  # type: ignore
-        import astropy.units as u
-        from astropy.coordinates import SkyCoord
-    except Exception:  # noqa: BLE001
-        # EXC-0188: T4 -- numpy/fits import failure returns None intersection bbox - alignment crop not applied (EXCEPT-BULK-2 2026-07-08)
-        return set()
-
-    by_bin: dict[str, list[dict[str, Any]]] = {}
-    for r in rows:
-        b = str(r.get(phot_category_key) or "").strip()
-        sid = str(r.get("source_id_gaia") or "").strip()
-        if not b or not sid:
-            continue
-        v = r.get(rms_key)
-        try:
-            rms = float(v)
-        except (TypeError, ValueError):
-            continue
-        if not math.isfinite(rms):
-            continue
-        by_bin.setdefault(b, []).append(r)
-
-    viz = Vizier(row_limit=50)
-    flagged: set[str] = set()
-    for _, items in by_bin.items():
-        items_sorted = sorted(items, key=lambda x: float(x.get(rms_key)))
-        for r in items_sorted[: int(max_per_bin)]:
-            sid = str(r.get("source_id_gaia") or "").strip()
-            try:
-                ra = float(r.get(ra_key))
-                de = float(r.get(dec_key))
-            except (TypeError, ValueError):
-                continue
-            if not (math.isfinite(ra) and math.isfinite(de)):
-                continue
-            c = SkyCoord(ra=ra * u.deg, dec=de * u.deg, frame="icrs")
-            try:
-                t = viz.query_region(c, radius=float(radius_arcsec) * u.arcsec, catalog="B/vsx")
-            except Exception as exc:  # noqa: BLE001
-                # EXC-0189: T4 -- One aligned frame skipped in common-field bbox - intersection computed from remaining f... (EXCEPT-BULK-2 2026-07-08)
-                LOGGER.debug("[CSV] Skipping row due to parse error: %s", exc)
-                continue
-            if t and len(t) > 0 and len(t[0]) > 0:
-                flagged.add(sid)
-    return flagged
 
 def common_field_intersection_bbox_px_from_arrays(
     *,
@@ -1009,37 +855,6 @@ def common_field_intersection_bbox_px(
             bboxes.append(bb)
     return _intersection_bbox_from_frame_bboxes(bboxes)
 
-def recommended_aperture_by_color(
-    *,
-    bp_rp: float | None,
-    median_fwhm_blue: float | None,
-    median_fwhm_neutral: float | None,
-    median_fwhm_red: float | None,
-) -> float | None:
-    """Return 2.5x median FWHM for the star's coarse color category."""
-    if bp_rp is None:
-        return None
-    try:
-        c = float(bp_rp)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(c):
-        return None
-    if c < 0.5:
-        f = median_fwhm_blue
-    elif c <= 1.5:
-        f = median_fwhm_neutral
-    else:
-        f = median_fwhm_red
-    if f is None:
-        return None
-    try:
-        fv = float(f)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(fv) or fv <= 0:
-        return None
-    return 2.5 * fv
 
 def _fwhm_moment_at(arr: np.ndarray, xc: float, yc: float, *, half: int = 6) -> float:
     """2D Gaussian moment FWHM estimate (same recipe as pipeline MASTERSTAR block)."""
@@ -1084,10 +899,12 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     gaussian_fwhm_px_override: float | None,
     aperture_fwhm_factor: float,
 ) -> tuple[np.ndarray, float, float]:
-    """Vrati (fwhm_per_row, fwhm_moment_med, fwhm_gaussian) - rovnaky vypocet ako v ``enhance_catalog_dataframe_aperture``.
+    """Return (fwhm_per_row, fwhm_moment_med, fwhm_gaussian).
 
-    Pouziva sa v ``pipeline._apply_aperture_catalog_enhancements_from_st`` pre multi-aperturu (r_small / r_large),
-    aby polomery zodpovedali hlavnej aperture.
+    Same computation as in ``enhance_catalog_dataframe_aperture``.
+
+    Used in ``pipeline._apply_aperture_catalog_enhancements_from_st`` for the multi-aperture (r_small / r_large),
+    so that the radii match the main aperture.
     """
     arr = np.asarray(data, dtype=np.float32)
     x = pd.to_numeric(df.get("x"), errors="coerce").to_numpy(dtype=np.float64)
@@ -1105,7 +922,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 - fyzikalne odvodene, setup-nezavisle
+    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 - physically derived, setup-independent
     fwhm_gaussian: float | None = None
 
     if gaussian_fwhm_px_override is not None:
@@ -1125,8 +942,8 @@ def compute_fwhm_gaussian_for_aperture_catalog(
                     fwhm_gaussian = _vy_f * DAO_TO_GAUSSIAN
                     if not bool(getattr(enhance_catalog_dataframe_aperture, "_did_log_fwhm", False)):
                         logging.info(
-                            f"[PHOT] FWHM z VY_FWHM (DAO): {_vy_f:.3f}px x {DAO_TO_GAUSSIAN:.3f} = "
-                            f"{float(fwhm_gaussian):.3f}px -> apertura = "
+                            f"[PHOT] FWHM from VY_FWHM (DAO): {_vy_f:.3f}px x {DAO_TO_GAUSSIAN:.3f} = "
+                            f"{float(fwhm_gaussian):.3f}px -> aperture = "
                             f"{float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                         )
                         enhance_catalog_dataframe_aperture._did_log_fwhm = True
@@ -1139,7 +956,7 @@ def compute_fwhm_gaussian_for_aperture_catalog(
             if not bool(getattr(enhance_catalog_dataframe_aperture, "_did_log_fwhm", False)):
                 logging.info(
                     f"[PHOT] FWHM fallback momentx0.619: {fwhm_gaussian:.3f}px -> "
-                    f"apertura = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
+                    f"aperture = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
                 )
                 enhance_catalog_dataframe_aperture._did_log_fwhm = True
         else:
@@ -1149,8 +966,8 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     if not math.isfinite(r_ap_test) or r_ap_test < 3.0 or r_ap_test > 20.0:
         fwhm_gaussian = float(fwhm_moment_med)
         logging.warning(
-            f"[PHOT] Gaussian FWHM fallback na moment: {fwhm_gaussian:.2f}px "
-            f"(r_ap={r_ap_test:.2f}px mimo rozsahu)"
+            f"[PHOT] Gaussian FWHM fallback to moment: {fwhm_gaussian:.2f}px "
+            f"(r_ap={r_ap_test:.2f}px out of range)"
         )
 
     return fwhm_per, fwhm_moment_med, float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
@@ -1188,22 +1005,14 @@ def enhance_catalog_dataframe_aperture(
     if n == 0:
         return out
 
-    # Povodny DAO flux z detect_stars_and_match_catalog (historicky v stlpci ``flux``).
-    # ``dao_flux``: sky-subtrahovany flux (po aperturnej fotometrii, ak je zapnuta).
+    # Original DAO flux from detect_stars_and_match_catalog (historically in column ``flux``).
+    # ``dao_flux``: sky-subtracted flux (after aperture photometry, if enabled).
     if "flux" in out.columns:
         flux_dao = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
     else:
         flux_dao = np.full(n, np.nan, dtype=np.float64)
     if "dao_flux" not in out.columns:
         out["dao_flux"] = flux_dao
-
-    fwhm_per, fwhm_moment_med, fwhm_gaussian_f = compute_fwhm_gaussian_for_aperture_catalog(
-        out,
-        arr,
-        hdr,
-        gaussian_fwhm_px_override=gaussian_fwhm_px_override,
-        aperture_fwhm_factor=aperture_fwhm_factor,
-    )
 
     from aperture_policy import (  # noqa: PLC0415
         fwhm_for_radius,
@@ -1244,12 +1053,23 @@ def enhance_catalog_dataframe_aperture(
         and math.isfinite(float(_ap01_fwhm_used))
         and float(_ap01_fwhm_used) > 0
     )
+    # SPEED-2026-10: the per-star moment FWHM (4-5k stars per frame) only feeds the fallback
+    # radius when the frame has no QC / VY_FWHM; with one it was computed and discarded.
+    fwhm_gaussian_f = float("nan")
+    if not _ap01_ok:
+        _fwhm_per, _fwhm_moment_med, fwhm_gaussian_f = compute_fwhm_gaussian_for_aperture_catalog(
+            out,
+            arr,
+            hdr,
+            gaussian_fwhm_px_override=gaussian_fwhm_px_override,
+            aperture_fwhm_factor=aperture_fwhm_factor,
+        )
     if (
         _ap01_ok
         or (math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0)
     ):
         try:
-            # Lokalna implementacia: sky-subtracted flux cez CircularAperture + CircularAnnulus.
+            # Local implementation: sky-subtracted flux via CircularAperture + CircularAnnulus.
             from photutils.aperture import CircularAnnulus, CircularAperture
             from photutils.aperture import aperture_photometry as _aphot
             from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
@@ -1308,7 +1128,7 @@ def enhance_catalog_dataframe_aperture(
                         sky_pp_arr[_ix[j]] = float(np.median(d))
             flux_arr = sum_ap - sky_pp_arr * area_ap_per
             # APERTURE-K-2026-10: the same photometry on the aperture grid r = k x FWHM
-            # (same positions, same annulus sky), so comparison-star RMS in Phase 1 is
+            # (same positions, same annulus sky), so comparison-star RMS in comparison-star selection is
             # measured on the apertures the light curves use.
             try:
                 from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
@@ -1410,7 +1230,7 @@ def enhance_catalog_dataframe_aperture(
 
         except Exception as _ap_exc:  # noqa: BLE001
             logging.warning(
-                "[FAZA 2A] Aperture photometry failed - restoring pre-aperture flux: %s",
+                "[APERTURE] Aperture photometry failed - restoring pre-aperture flux: %s",
                 _ap_exc,
                 exc_info=True,
             )
@@ -1457,4 +1277,4 @@ from photometry_gate_helpers import (  # noqa: E402
     measure_empty_aperture_sigma_bkg,
     scaled_sigma_bkg_ap_from_howell,
 )
-from photometry_phase2a import _sky_pp_for_photometric_error  # noqa: E402
+from aperture_photometry import _sky_pp_for_photometric_error  # noqa: E402

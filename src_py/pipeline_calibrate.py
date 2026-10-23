@@ -24,7 +24,6 @@ from astropy.time import Time
 from config import AppConfig, resolve_detection_threshold_sigma
 from database import VyvarDatabase
 from calibration import (
-    CALIBRATION_LIBRARY_NATIVE_BINNING,
     filter_light_paths_for_calibration_db,
     get_processed_master,
 )
@@ -33,7 +32,6 @@ from cal_diag import (
     CalDiagSession,
     apply_cal_diag_headers,
     convention_to_dark_mode,
-    dark_np_for_cal_diag,
     gate_result_for_frame,
     is_obs_group_aborted,
     passthrough_cal_diag_headers,
@@ -51,7 +49,7 @@ from fits_meta import (
     observation_group_key_from_metadata,
 )
 from fits_suffixes import FITS_SUFFIXES_LOWER
-from infolog import log_event, log_exception
+from infolog import log_event
 from pipeline_constants import (
     N_STARS_DIAG_K,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
@@ -76,12 +74,6 @@ LOGGER = logging.getLogger("pipeline")
 #: DAOStarFinder kernel FWHM hint (px) for the post-calibration QC: a star-scale default.
 #: Not derived from segmentation (that preferred hot pixels / cosmics and pulled it low).
 _DAO_FWHM_GUESS_PX = 4.5
-
-def _vyvar_calibrate_multiprocessing_enabled() -> bool:
-    """Parallel calibration uses ``spawn`` workers (errors are easy to miss). Set ``VYVAR_CALIBRATE_MP=1`` to enable."""
-    v = os.environ.get("VYVAR_CALIBRATE_MP", "").strip().lower()
-    return v in ("1", "true", "yes")
-
 
 def _obs_group_key_from_light_path(src: Path) -> str:
     with fits.open(src, memmap=False) as hdul:
@@ -179,9 +171,9 @@ def _log_calibration_io_preflight(
         probe = calibrated_root / ".vyvar_write_probe"
         probe.write_text("ok", encoding="ascii")
         probe.unlink(missing_ok=True)
-        log_event(f"Kalibracia - zapis OK: {calibrated_root.resolve()}")
+        log_event(f"Calibration - write OK: {calibrated_root.resolve()}")
     except OSError as exc:
-        log_event(f"Kalibracia - CHYBA PRAVO ZAPISU (calibrated): {calibrated_root.resolve()} -> {exc}")
+        log_event(f"Calibration - WRITE PERMISSION ERROR (calibrated): {calibrated_root.resolve()} -> {exc}")
 
     if master_dark_path is not None:
         md = Path(master_dark_path)
@@ -189,18 +181,18 @@ def _log_calibration_io_preflight(
         ok = md_r.is_file()
         log_event(f"MasterDark: {md_r} (exists={ok})")
         if not ok:
-            log_event("MasterDark: subor neexistuje - dark sa neaplikuje (flat-only / copy-only podla nastavenia).")
+            log_event("MasterDark: file does not exist - dark is not applied (flat-only / copy-only per settings).")
 
     for fk, fp in sorted((masterflat_by_filter or {}).items(), key=lambda x: str(x[0])):
         if fp is None:
-            log_event(f"MasterFlat[{fk!r}]: (ziadna cesta)")
+            log_event(f"MasterFlat[{fk!r}]: (no path)")
             continue
         p = Path(fp)
         pr = p.resolve()
         ok = pr.is_file()
         log_event(f"MasterFlat[{fk!r}]: {pr} (exists={ok})")
         if not ok:
-            log_event(f"MasterFlat[{fk!r}]: subor neexistuje - pre tento filter sa flat neaplikuje.")
+            log_event(f"MasterFlat[{fk!r}]: file does not exist - no flat is applied for this filter.")
 
 
 def _pipeline_ui_error(msg: str) -> None:
@@ -423,7 +415,6 @@ def _quality_inspection_dao_metrics_array(
         "star_count": 0,
         "inspection_jd": _inspection_jd_from_header(hdr),
         "exposure_sec": _exposure_sec_from_header(hdr),
-        "roundness_mean": None,
         "elongation_mean": None,
         "noise_sigma": None,
         "qc_stars": [],
@@ -600,18 +591,14 @@ def apply_perf10_dao_qc_to_obs_files(
     draft_id: int,
     archive_path: Path | str,
     perf10_qc_results: dict[str, dict[str, Any]],
-    roundness_reject_above: float | None = 1.25,
 ) -> dict[str, Any]:
     """Write calibration-time DAO QC to ``manifest files[]`` (same columns as RAM QC step 5)."""
     import numpy as np
 
     ap = Path(archive_path).expanduser()
-    _rn = 1.25 if roundness_reject_above is None else float(roundness_reject_above)
-    rlim_active = math.isfinite(_rn) and _rn > 0.0
 
     rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
     fwhm_by_id: dict[int, float] = {}
-    roundness_by_id: dict[int, float] = {}
     n_updated = 0
     errors: list[str] = []
     _qc_star_lists: dict[str, Any] = {}
@@ -622,12 +609,6 @@ def apply_perf10_dao_qc_to_obs_files(
         if qc is None or qc.get("error"):
             continue
         try:
-            _rm = qc.get("roundness_mean")
-            _rm_db = (
-                float(_rm)
-                if _rm is not None and math.isfinite(float(_rm)) and float(_rm) >= 0.0
-                else None
-            )
             _el = qc.get("elongation_mean")
             _el_db = (
                 float(_el)
@@ -643,7 +624,6 @@ def apply_perf10_dao_qc_to_obs_files(
                 ra_deg=qc.get("ra_deg"),
                 de_deg=qc.get("de_deg"),
                 exptime_sec=qc.get("exposure_sec"),
-                roundness_mean=_rm_db,
                 elongation_mean=_el_db,
                 noise_sigma=qc.get("noise_sigma"),
             )
@@ -652,8 +632,6 @@ def apply_perf10_dao_qc_to_obs_files(
             fv = qc.get("fwhm_mean")
             if fv is not None and math.isfinite(float(fv)):
                 fwhm_by_id[rid] = float(fv)
-            if _rm_db is not None:
-                roundness_by_id[rid] = float(_rm_db)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{row.get('FILE_PATH')}: {exc}")
 
@@ -677,10 +655,6 @@ def apply_perf10_dao_qc_to_obs_files(
         if med is not None and thr is not None:
             fv = fwhm_by_id.get(rid)
             if fv is not None and math.isfinite(float(fv)) and float(fv) > thr:
-                rej = 1
-        if rlim_active:
-            rv = roundness_by_id.get(rid)
-            if rv is not None and math.isfinite(float(rv)) and float(rv) > _rn:
                 rej = 1
         if rej:
             auto_n += 1
@@ -715,17 +689,13 @@ def run_draft_ram_calibration_qc_to_obs_files(
     master_dark_by_obs_key: dict[str, str | Path | None] | None = None,
     equipment_id: int | None = None,
     progress_cb: Callable[[int, int, str], None] | None = None,
-    roundness_reject_above: float | None = None,
 ) -> dict[str, Any]:
-    """Calibrate each draft light **in RAM only**, DAO metrics -> ``manifest files[]``; FWHM x1.5 and optional roundness reject.
+    """Calibrate each draft light **in RAM only**, DAO metrics -> ``manifest files[]``; FWHM x1.5 reject.
 
     No calibrated FITS are written. Uses the same master selection rules as :func:`calibrate_lights_to_calibrated`.
     After QC, :func:`sync_obs_files_drift_arcmin_for_draft` writes ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
     """
     import numpy as np
-
-    _rn = 1.25 if roundness_reject_above is None else float(roundness_reject_above)
-    rlim_active = math.isfinite(_rn) and _rn > 0.0
 
     ap = Path(archive_path).expanduser()
     db_cal = _db_for_calibration_tasks(None)
@@ -736,21 +706,18 @@ def run_draft_ram_calibration_qc_to_obs_files(
     for k, v in (masterflat_by_obs_key or {}).items():
         mf_merged[str(k)] = None if v is None or str(v).strip() == "" else Path(v)
 
-    md_pre: Any = None
     md_path_ok: Path | None = None
     if master_dark_path is not None and Path(master_dark_path).exists():
         md_path_ok = Path(master_dark_path)
-        with fits.open(md_path_ok, memmap=False) as hdul:
-            md_pre = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
     _native_b = None  # CAL-2026-10: master binning from each master header
 
     flat_cache: dict[str, Any] = {}
     flat_median_scale: dict[str, float] = {}
+    dark_cache: dict[tuple[Any, ...], Any] = {}
     rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
     n = len(rows)
     fwhm_by_id: dict[int, float] = {}
-    roundness_by_id: dict[int, float] = {}
     errors: list[str] = []
     fov_sample_deg: float | None = None
     _qc_star_lists: dict[str, Any] = {}
@@ -796,7 +763,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
             with fits.open(raw_fp, memmap=False) as hdul:
                 hdr0 = hdul[0].header
                 _ok = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr0))
-                _light_shape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{raw_fp.name}: header {exc}")
             db.update_obs_file_quality_by_id(int(draft_id), rid, rejected_auto=0)
@@ -811,7 +777,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
             continue
 
         md_use = md_path_ok
-        md_np_use = None
         light_bx, _ = fits_binning_xy_from_header(hdr0)
         if master_dark_by_obs_key:
             _alt = master_dark_by_obs_key.get(_ok)
@@ -825,26 +790,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
             dark_path=md_use,
             light_binning=light_bx,
         )
-        if md_use is not None and md_use.is_file():
-            if (
-                md_pre is not None
-                and md_path_ok is not None
-                and md_use.resolve() == md_path_ok.resolve()
-                and _native_b is not None
-                and _native_b == light_bx
-                and (gr is None or convention_to_dark_mode(gr.convention) == "sum")
-            ):
-                md_np_use = md_pre
-            else:
-                md_np_use = dark_np_for_cal_diag(
-                    cal_diag_session,
-                    master_binning=_native_b,
-                    dark_path=md_use,
-                    light_binning=light_bx,
-                    light_shape=_light_shape,
-                    light_filename=raw_fp.name,
-                    gate_result=gr,
-                )
 
         try:
             data, hdr, _ud, _uf = _calibrate_one_light_apply_masters_in_ram(
@@ -853,7 +798,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 masterflat_by_filter=mf_merged,
                 flat_cache=flat_cache,
                 flat_median_scale=flat_median_scale,
-                md_data_preload=md_np_use,
+                dark_cache=dark_cache,
                 db=db_cal,
                 id_equipments=equipment_id,
                 calibration_master_native_binning=_native_b,
@@ -870,8 +815,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
         _take_qc_star_list(_qc_star_lists, str(row.get("FILE_PATH") or ""), m)
         if fov_sample_deg is None:
             fov_sample_deg = _estimate_fov_deg_from_header(hdr)
-        _rm = m.get("roundness_mean")
-        _rm_db = float(_rm) if _rm is not None and math.isfinite(float(_rm)) and float(_rm) >= 0.0 else None
         _el = m.get("elongation_mean")
         _el_db = float(_el) if _el is not None and math.isfinite(float(_el)) and float(_el) > 0.0 else None
         db.update_obs_file_quality_by_id(int(draft_id), rid,
@@ -883,15 +826,12 @@ def run_draft_ram_calibration_qc_to_obs_files(
             ra_deg=m.get("ra_deg"),
             de_deg=m.get("de_deg"),
             exptime_sec=m.get("exposure_sec"),
-            roundness_mean=_rm_db,
             elongation_mean=_el_db,
             noise_sigma=m.get("noise_sigma"),
         )
         fv = m.get("fwhm_mean")
         if fv is not None and math.isfinite(float(fv)):
             fwhm_by_id[rid] = float(fv)
-        if _rm_db is not None:
-            roundness_by_id[rid] = float(_rm_db)
         if progress_cb is not None:
             progress_cb(i, n, f"QC RAM {raw_fp.name}")
 
@@ -914,10 +854,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
         if med is not None and thr is not None:
             fv = fwhm_by_id.get(rid)
             if fv is not None and math.isfinite(float(fv)) and float(fv) > thr:
-                rej = 1
-        if rlim_active:
-            rv = roundness_by_id.get(rid)
-            if rv is not None and math.isfinite(float(rv)) and float(rv) > _rn:
                 rej = 1
         if rej:
             auto_n += 1
@@ -1045,13 +981,13 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
     out: dict[str, Any] = {
         "archive_path": str(ap),
         "available_ram_bytes": avail,
-        "available_ram_human": format_memory_bytes(avail) if avail is not None else "nezname (nainstaluj ``psutil``)",
+        "available_ram_human": format_memory_bytes(avail) if avail is not None else "unknown (install ``psutil``)",
         "available_ram_source": avail_src,
         "qc_analyze": None,
         "platesolve_ram_handoff": None,
-        "notes_sk": (
-            "Odhad z hlaviciek FITS (NAXIS*), predpoklad prace vo float32. Skutocna spotreba zavisi od OS, "
-            "Streamlit a dalsich kniznic. Po preprocess este pribudnu docasne polia pri detrendingu."
+        "notes": (
+            "Estimate from FITS headers (NAXIS*), assuming float32 processing. Actual usage depends on the OS, "
+            "Streamlit and other libraries. After preprocess, temporary arrays are added during detrending."
         ),
     }
 
@@ -1067,16 +1003,16 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
     if cal.is_dir():
         cfiles = _iter_light_fits(cal)
         st = estimate_memory_from_fits_headers(cfiles)
-        # Working set: jeden snimok nacitany + QC (hruby faktor)
+        # Working set: one frame loaded + QC (rough factor)
         qc_factor = 6.0
         peak_qc = int(float(st["bytes_float32_max_frame"]) * qc_factor)
         out["qc_analyze"] = {
             **st,
             "estimated_peak_bytes_sequential": peak_qc,
             "estimated_peak_human": format_memory_bytes(peak_qc),
-            "explanation_sk": (
-                f"Sekvencne spracovanie ~{st['n_files']} snimok; spicka RAM ~ {qc_factor:.0f}x najvacsi snimok "
-                f"({format_memory_bytes(st['bytes_float32_max_frame'])} float32) pri analyze."
+            "explanation": (
+                f"Sequential processing of ~{st['n_files']} frames; RAM peak ~ {qc_factor:.0f}x the largest frame "
+                f"({format_memory_bytes(st['bytes_float32_max_frame'])} float32) during analyze."
             ),
         }
 
@@ -1087,9 +1023,9 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
         n = int(st2["n_files"])
         med_b = int(st2["bytes_float32_median_frame"])
         max_b = int(st2["bytes_float32_max_frame"])
-        # Buffer: jedna kopia zarovnaneho float32 na uspesny snimok (horny odhad = vsetky vstupy zarovnane)
+        # Buffer: one aligned float32 copy per successful frame (upper bound = all inputs aligned)
         buffer_est = med_b * max(0, n)
-        # Pocas astroalign: ref + src + aligned chvilu naraz
+        # During astroalign: ref + src + aligned briefly at once
         align_spike = max_b * 3
         total_conservative = buffer_est + align_spike
         out["platesolve_ram_handoff"] = {
@@ -1100,9 +1036,9 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
             "estimated_align_spike_human": format_memory_bytes(align_spike),
             "estimated_total_conservative_bytes": total_conservative,
             "estimated_total_conservative_human": format_memory_bytes(total_conservative),
-            "explanation_sk": (
-                f"Rezim 'zarovnanie + katalog v RAM': drzi ~{n} snimok x ~{format_memory_bytes(med_b)} "
-                f"(median) + kratkodoba spicka pri zarovnani. Ak je to viac nez volna RAM, vypni RAM handoff."
+            "explanation": (
+                f"Mode 'alignment + catalog in RAM': holds ~{n} frames x ~{format_memory_bytes(med_b)} "
+                f"(median) + a short peak during alignment. If this exceeds free RAM, turn off RAM handoff."
             ),
         }
 
@@ -1119,10 +1055,10 @@ def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
 
 
 def _log_calibration_metadata_diagnostic(filename: str, metadata: dict[str, Any]) -> None:
-    log_event("--- DIAGNOSTIKA METADAT PRE KALIBRACIU ---")
-    log_event(f"Subor: {filename}")
-    log_event(f"FOCAL (z DB/FITS): {metadata.get('focal_length')} mm")
-    log_event(f"PIXEL_SIZE (surovy): {metadata.get('pixel_size_raw')} um")
+    log_event("--- CALIBRATION METADATA DIAGNOSTICS ---")
+    log_event(f"File: {filename}")
+    log_event(f"FOCAL (from DB/FITS): {metadata.get('focal_length')} mm")
+    log_event(f"PIXEL_SIZE (raw): {metadata.get('pixel_size_raw')} um")
     _n1 = metadata.get("naxis1")
     _n2 = metadata.get("naxis2")
     if _n1 or _n2:
@@ -1132,7 +1068,7 @@ def _log_calibration_metadata_diagnostic(filename: str, metadata: dict[str, Any]
     if _rbx is not None or _rby is not None:
         log_event(f"BINNING (FITS raw): XBINNING={_rbx!r} YBINNING={_rby!r}")
     log_event(f"BINNING (X/Y): {metadata.get('binning')}x{metadata.get('binning_y')}")
-    log_event(f"EFEKTIVNY PIXEL (pre vypocet): {metadata.get('pixel_um')} um")
+    log_event(f"EFFECTIVE PIXEL (for computation): {metadata.get('pixel_um')} um")
     log_event("------------------------------------------")
 
 
@@ -1510,17 +1446,21 @@ def _calibrate_one_light_apply_masters_in_ram(
     flat_norm_floor: float = 0.15,
     flat_cache: dict[str, Any] | None = None,
     flat_median_scale: dict[str, float] | None = None,
-    md_data_preload: Any = None,
+    dark_cache: dict[tuple[Any, ...], Any] | None = None,
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
     cal_diag_gate_result: CalDiagGateResult | None = None,
+    flat_offsets: dict[str, float] | None = None,
 ) -> tuple[Any, fits.Header, bool, bool]:
     """Apply dark/flat in RAM; return ``(data_float32, header, used_dark, used_flat)`` (no disk write).
 
     ``calibration_master_native_binning`` defaults to :data:`calibration.CALIBRATION_LIBRARY_NATIVE_BINNING`
     (CalibrationLibrary stores native masters; resample in RAM to match light ``XBINNING``).
     Pass ``None`` to read ``XBINNING`` from each master FITS.
+
+    ``dark_cache`` (SPEED-2026-10): the processed master dark per (path, binning, shape, resample
+    mode) is read and resampled once per run instead of once per frame (same array).
     """
     import numpy as np
 
@@ -1552,31 +1492,30 @@ def _calibrate_one_light_apply_masters_in_ram(
             "VYVAR: assumed native XBINNING of CalibrationLibrary master before resample to light",
         )
 
-    md_data: np.ndarray | None = md_data_preload
-    if _mb_lib is None or (md_data is not None and md_data.shape != data.shape):
-        md_data = None
-    if md_data is not None and master_dark_path is not None and master_dark_path.exists():
-        if _mb_lib != light_bx:
-            md_data = None
-
-    if md_data is None and master_dark_path is not None and master_dark_path.exists():
+    md_data: np.ndarray | None = None
+    if master_dark_path is not None and master_dark_path.exists():
         _drm = "sum"
         if cal_diag_gate_result is not None:
             _drm = convention_to_dark_mode(cal_diag_gate_result.convention)
-        pm = get_processed_master(
-            master_dark_path,
-            light_bx,
-            kind="dark",
-            master_binning=_mb_lib,
-            light_shape=data.shape,
-            light_filename=src.name,
-            dark_resample_mode=_drm,
-        )
-        if pm.resampled:
-            log_event(
-                f"Calibration: library master native {pm.master_binning}x{pm.master_binning} -> "
-                f"resampled (RAM) to {light_bx}x{light_bx} for Light [{src.name}]"
+        _dk = (str(Path(master_dark_path).resolve()), int(light_bx), tuple(data.shape), str(_drm), _mb_lib)
+        pm = dark_cache.get(_dk) if dark_cache is not None else None
+        if pm is None:
+            pm = get_processed_master(
+                master_dark_path,
+                light_bx,
+                kind="dark",
+                master_binning=_mb_lib,
+                light_shape=data.shape,
+                light_filename=src.name,
+                dark_resample_mode=_drm,
             )
+            if dark_cache is not None:
+                dark_cache[_dk] = pm
+            if pm.resampled:
+                log_event(
+                    f"Calibration: library master native {pm.master_binning}x{pm.master_binning} -> "
+                    f"resampled (RAM) to {light_bx}x{light_bx} (first Light [{src.name}])"
+                )
         md_data = pm.data
 
     used_dark = False
@@ -1618,6 +1557,7 @@ def _calibrate_one_light_apply_masters_in_ram(
                 light_filename=src.name,
                 db=db,
                 id_equipments=id_equipments,
+                flat_offset_adu=(flat_offsets or {}).get(str(Path(mf_path).resolve())),
             )
             if pmf.resampled:
                 log_event(
@@ -1764,11 +1704,13 @@ def _calibrate_one_light_disk(
     flat_norm_floor: float = 0.15,
     flat_cache: dict[str, Any] | None = None,
     flat_median_scale: dict[str, float] | None = None,
-    md_data_preload: Any = None,
+    dark_cache: dict[tuple[Any, ...], Any] | None = None,
     db: VyvarDatabase | None = None,
     qc_pack: dict[str, Any] | None = None,
     calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
     cal_diag_gate_result: CalDiagGateResult | None = None,
+    db_updates: list[tuple[str, dict[str, Any]]] | None = None,
+    flat_offsets: dict[str, float] | None = None,
 ) -> tuple[bool, bool, dict[str, Any] | None, str, dict[str, Any] | None]:
     """Apply master dark / flat to one light FITS and write ``dst``.
 
@@ -1778,6 +1720,10 @@ def _calibrate_one_light_disk(
     Returns ``(used_dark, used_flat, qc_summary, vy_cflag, perf10_qc)`` where ``qc_summary`` is set when
     post-calibration QC ran; ``perf10_qc`` holds the DAO inspection metrics (PERF-10);
     ``vy_cflag`` matches ``VY_CFLAG`` written to the FITS (see calibration decision table).
+
+    ``db_updates`` (SPEED-2026-10): when a list is given, the manifest / DB updates of this frame are
+    appended to it (``(kind, kwargs)``, applied by :func:`_apply_cal_frame_db_updates` in the run
+    process) instead of written here - worker processes never write the draft manifest.
     """
     import numpy as np
 
@@ -1797,11 +1743,12 @@ def _calibrate_one_light_disk(
         flat_norm_floor=flat_norm_floor,
         flat_cache=flat_cache,
         flat_median_scale=flat_median_scale,
-        md_data_preload=md_data_preload,
+        dark_cache=dark_cache,
         db=db,
         id_equipments=_id_eq,
         calibration_master_native_binning=calibration_master_native_binning,
         cal_diag_gate_result=cal_diag_gate_result,
+        flat_offsets=flat_offsets,
     )
 
     qc_summary: dict[str, Any] | None = None
@@ -1824,19 +1771,22 @@ def _calibrate_one_light_disk(
         if qc_pack.get("draft_id") is not None or (
             qc_pack.get("observation_id") not in (None, "")
         ):
-            try:
-                db_q = db if db is not None else _db_for_calibration_tasks(qc_pack)
-                if db_q is not None:
-                    db_q.update_obs_file_qc_by_raw_light_path(
-                        src,
-                        draft_id=qc_pack.get("draft_id"),
-                        qc_hfr=qc_summary.get("hfr"),
-                        qc_stars=int(qc_summary["n_stars"]),
-                        qc_background=qc_summary.get("sky_median"),
-                        qc_bg_rms=qc_summary.get("sky_rms"),
-                    )
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.debug("manifest files[] QC update failed: %s", exc)
+            _upd_qc = {
+                "draft_id": qc_pack.get("draft_id"),
+                "qc_hfr": qc_summary.get("hfr"),
+                "qc_stars": int(qc_summary["n_stars"]),
+                "qc_background": qc_summary.get("sky_median"),
+                "qc_bg_rms": qc_summary.get("sky_rms"),
+            }
+            if db_updates is not None:
+                db_updates.append(("qc", _upd_qc))
+            else:
+                try:
+                    db_q = db if db is not None else _db_for_calibration_tasks(qc_pack)
+                    if db_q is not None:
+                        db_q.update_obs_file_qc_by_raw_light_path(src, **_upd_qc)
+                except Exception as exc:  # noqa: BLE001
+                    LOGGER.debug("manifest files[] QC update failed: %s", exc)
 
     perf10_qc: dict[str, Any] | None = None
     if not _osc_mosaic and qc_pack:
@@ -1854,161 +1804,152 @@ def _calibrate_one_light_disk(
     cal_datasum = stamp_cal_stage_headers(hdr, data, stage=cal_stage_token)
     fits.writeto(dst, _as_fits_float32_image(data), header=hdr, overwrite=True)
     if qc_pack is not None and qc_pack.get("draft_id") is not None:
-        try:
-            db_cs = db if db is not None else _db_for_calibration_tasks(qc_pack)
-            if db_cs is not None:
-                db_cs.update_obs_file_cal_stage_by_raw_light_path(
-                    src,
-                    draft_id=int(qc_pack["draft_id"]),
-                    cal_stage=cal_stage_token,
-                    cal_datasum=cal_datasum,
-                )
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.debug("manifest cal_stage sync failed after calibrate: %s", exc)
+        _upd_cs = {"draft_id": int(qc_pack["draft_id"]), "cal_stage": cal_stage_token, "cal_datasum": cal_datasum}
+        if db_updates is not None:
+            db_updates.append(("cal_stage", _upd_cs))
+        else:
+            try:
+                db_cs = db if db is not None else _db_for_calibration_tasks(qc_pack)
+                if db_cs is not None:
+                    db_cs.update_obs_file_cal_stage_by_raw_light_path(src, **_upd_cs)
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("manifest cal_stage sync failed after calibrate: %s", exc)
     return used_dark, used_flat, qc_summary, _hdr_vy_cflag_str(hdr), perf10_qc
 
 
-_cal_batch_flat_cache: dict[str, Any] | None = None
-_cal_batch_flat_median: dict[str, float] | None = None
-_cal_batch_md_preload: Any = None
-_cal_batch_native_binning: int | None = 1
-_cal_batch_cal_diag: CalDiagSession | None = None
-
-
-def _init_calibrate_batch_worker(
-    native_b: int | None,
-    cal_diag_blob: dict[str, Any] | None,
+def _apply_cal_frame_db_updates(
+    db: VyvarDatabase | None,
+    qc_pack: dict[str, Any] | None,
+    src: Path,
+    updates: list[tuple[str, dict[str, Any]]],
 ) -> None:
-    """Per-subprocess caches; ``native_binning`` = CalibrationLibrary master convention (``None`` = read FITS)."""
-    global _cal_batch_flat_cache, _cal_batch_flat_median, _cal_batch_md_preload
-    global _cal_batch_native_binning, _cal_batch_cal_diag
-    _cal_batch_flat_cache = {}
-    _cal_batch_flat_median = {}
-    _cal_batch_md_preload = None
-    _cal_batch_cal_diag = _cal_diag_session_from_export(cal_diag_blob)
-    if native_b is None:
-        _cal_batch_native_binning = None
-    else:
+    """Write one frame's deferred manifest / DB updates (same calls and order as inline)."""
+    for kind, kw in updates:
         try:
-            _cal_batch_native_binning = max(1, int(native_b))
-        except (TypeError, ValueError):
-            _cal_batch_native_binning = int(CALIBRATION_LIBRARY_NATIVE_BINNING)
+            dbx = db if db is not None else _db_for_calibration_tasks(qc_pack)
+            if dbx is None:
+                continue
+            if kind == "qc":
+                dbx.update_obs_file_qc_by_raw_light_path(src, **kw)
+            elif kind == "cal_stage":
+                dbx.update_obs_file_cal_stage_by_raw_light_path(src, **kw)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("manifest files[] %s update failed: %s", kind, exc)
 
 
-def _calibrate_batch_process_one(
-    item: tuple[
-        str,
-        str,
-        str | None,
-        dict[str, str | None],
-        dict[str, Any] | None,
-        dict[str, Any] | None,
-    ]
-    | tuple[str, str, str | None, dict[str, str | None], dict[str, Any] | None]
-    | tuple[str, str, str | None, dict[str, str | None]],
-) -> dict[str, Any]:
-    """Picklable worker: calibrate one light; returns ``dst`` path on success."""
-    qc_opt: dict[str, Any] | None = None
-    if len(item) == 4:
-        src_s, dst_s, md_s, mf_map = item  # type: ignore[misc]
-    else:
-        src_s, dst_s, md_s, mf_map, qc_opt = item  # type: ignore[misc]
-    fc = _cal_batch_flat_cache
-    fm = _cal_batch_flat_median
-    if fc is None or fm is None:
-        fc, fm = {}, {}
-    src_p = Path(src_s)
-    dst_p = Path(dst_s)
-    try:
-        _ok = _obs_group_key_from_light_path(src_p)
-        if _cal_batch_cal_diag is not None and is_obs_group_aborted(_cal_batch_cal_diag, _ok):
-            if dst_p.exists():
-                try:
-                    dst_p.unlink()
-                except OSError:
-                    pass
+_CAL_FRAME_STATE: dict[str, Any] = {}
+
+
+def _init_calibrate_frame_worker(ctx: dict[str, Any]) -> None:
+    """Per-process state for :func:`_calibrate_frame_task` (SPEED-2026-10).
+
+    ``ctx``: ``master_dark_path``, ``master_dark_by_obs_key``, ``masterflat_by_filter`` (str paths),
+    ``qc_pack``, ``native_b`` and either the live ``session`` (run process) or ``cal_diag_blob``
+    (worker process). Flat and dark masters are cached per process.
+    """
+    _CAL_FRAME_STATE.clear()
+    _CAL_FRAME_STATE.update(ctx)
+    if _CAL_FRAME_STATE.get("session") is None:
+        _CAL_FRAME_STATE["session"] = _cal_diag_session_from_export(ctx.get("cal_diag_blob"))
+    _CAL_FRAME_STATE["flat_cache"] = {}
+    _CAL_FRAME_STATE["flat_median"] = {}
+    _CAL_FRAME_STATE["dark_cache"] = {}
+
+
+def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
+    """Calibrate one LIGHT (the one path for any number of workers).
+
+    Returns ``ok``, ``skipped``, ``used_dark``, ``used_flat``, ``qc_summary``, ``vy_cflag``,
+    ``perf10_qc``, ``db_updates`` and the infolog lines (``events``); the run process applies the
+    DB updates and writes the lines in frame order.
+    """
+    from infolog import capture_events  # noqa: PLC0415
+
+    src_s, dst_s = item
+    st = _CAL_FRAME_STATE
+    src = Path(src_s)
+    dst = Path(dst_s)
+    with capture_events() as events:
+        try:
+            with fits.open(src, memmap=False) as hdul:
+                hdr_l = hdul[0].header
+                _ok = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr_l))
+                light_bx, _ = fits_binning_xy_from_header(hdr_l)
+            session = st.get("session")
+            if session is not None and is_obs_group_aborted(session, _ok):
+                if dst.exists():
+                    try:
+                        dst.unlink()
+                    except OSError:
+                        pass
+                return {"ok": True, "skipped": True, "events": list(events)}
+            md_s = st.get("master_dark_path")
+            md_use: Path | None = Path(md_s) if md_s else None
+            _alt = (st.get("master_dark_by_obs_key") or {}).get(_ok)
+            if _alt is not None and str(_alt).strip() != "" and Path(str(_alt)).is_file():
+                md_use = Path(str(_alt))
+            gr = None
+            if session is not None:
+                gr = gate_result_for_frame(session, obs_group_key=_ok, dark_path=md_use, light_binning=light_bx)
+            mf = {str(k): (Path(v) if v else None) for k, v in (st.get("masterflat_by_filter") or {}).items()}
+            updates: list[tuple[str, dict[str, Any]]] = []
+            used_dark, used_flat, qc_sum, flags, perf10_qc = _calibrate_one_light_disk(
+                src=src,
+                dst=dst,
+                master_dark_path=md_use,
+                masterflat_by_filter=mf,
+                flat_cache=st["flat_cache"],
+                flat_median_scale=st["flat_median"],
+                dark_cache=st["dark_cache"],
+                db=st.get("db"),
+                qc_pack=st.get("qc_pack"),
+                calibration_master_native_binning=st.get("native_b"),
+                cal_diag_gate_result=gr,
+                db_updates=updates,
+                flat_offsets=st.get("flat_offsets"),
+            )
             return {
-                "src": src_s,
-                "dst": dst_s,
                 "ok": True,
-                "error": None,
-                "qc_summary": None,
-                "perf10_qc": None,
-                "traceback": None,
-                "vy_cflag": "P",
-                "skipped": True,
+                "skipped": False,
+                "used_dark": bool(used_dark),
+                "used_flat": bool(used_flat),
+                "qc_summary": qc_sum,
+                "vy_cflag": flags,
+                "perf10_qc": perf10_qc,
+                "db_updates": updates,
+                "events": list(events),
             }
-        md_use: Path | None = Path(md_s) if md_s else None
-        _md_obs = (qc_opt or {}).get("master_dark_by_obs_key") or {}
-        if _md_obs:
-            _alt = _md_obs.get(_ok)
-            if _alt is not None and str(_alt).strip() != "":
-                _pa = Path(str(_alt))
-                if _pa.is_file():
-                    md_use = _pa
-        light_bx = _light_binning_from_path(src_p)
-        gr = None
-        if _cal_batch_cal_diag is not None:
-            gr = gate_result_for_frame(
-                _cal_batch_cal_diag,
-                obs_group_key=_ok,
-                dark_path=md_use,
-                light_binning=light_bx,
-            )
-        md_np = _cal_batch_md_preload
-        if md_use is not None and md_use.is_file():
-            with fits.open(src_p, memmap=False) as hdul:
-                lshape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
-            md_np = dark_np_for_cal_diag(
-                _cal_batch_cal_diag or CalDiagSession(),
-                master_binning=_cal_batch_native_binning,
-                dark_path=md_use,
-                light_binning=light_bx,
-                light_shape=lshape,
-                light_filename=src_p.name,
-                gate_result=gr,
-            )
-        mf: dict[str, Path | None] = {str(k): Path(v) if v else None for k, v in mf_map.items()}
-        db_w = _db_for_calibration_tasks(qc_opt)
-        _ud, _uf, qc_sum, _cf, perf10_qc = _calibrate_one_light_disk(
-            src=src_p,
-            dst=dst_p,
-            master_dark_path=md_use,
-            masterflat_by_filter=mf,
-            flat_cache=fc,
-            flat_median_scale=fm,
-            md_data_preload=md_np,
-            db=db_w,
-            qc_pack=qc_opt,
-            calibration_master_native_binning=_cal_batch_native_binning,
-            cal_diag_gate_result=gr,
-        )
-        return {
-            "src": src_s,
-            "dst": dst_s,
-            "ok": True,
-            "error": None,
-            "qc_summary": qc_sum,
-            "perf10_qc": perf10_qc,
-            "traceback": None,
-            "vy_cflag": _cf,
-        }
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0428] [CAL-DIAG] Passthrough reuse path: `update_obs_file_calibration_state_by_raw_light_path...: %s', exc)
-        tb = traceback.format_exc()
-        LOGGER.error("calibrate_batch worker: %s -> %s\n%s", src_s, exc, tb)
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc), "exc_type": type(exc).__name__,
+                    "traceback": traceback.format_exc(), "events": list(events)}
+
+
+def _flat_offsets_for_masters(paths: Any, db: VyvarDatabase | None) -> dict[str, float]:
+    """Offset to remove from each FLAT master (resolved path -> ADU), looked up once in the run
+    process with the run's database (same lookup ``get_processed_master`` makes)."""
+    from calibration import flat_offset_for_master  # noqa: PLC0415
+
+    out: dict[str, float] = {}
+    for p in paths:
+        if not p:
+            continue
+        key = str(Path(p).resolve())
+        if key in out or not Path(key).is_file():
+            continue
         try:
-            log_exception(f"CHYBA WORKERA: {Path(src_s).name}", exc)
-        except Exception:  # noqa: BLE001
-            pass
-        return {
-            "src": src_s,
-            "dst": None,
-            "ok": False,
-            "error": str(exc),
-            "qc_summary": None,
-            "traceback": tb,
-        }
+            out[key] = flat_offset_for_master(key, db)
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("[CAL] flat offset lookup failed for %s: %s", key, exc)
+    return out
+
+
+def _calibration_worker_count(cfg: AppConfig, files: Sequence[Path], max_workers: int | None) -> int:
+    """Process workers for calibration: the pipeline's one count, capped by free RAM.
+
+    A worker holds the light, the processed dark and flat and the QC copies (~6 float32 frames)."""
+    from parallel_frames import ram_capped_workers  # noqa: PLC0415
+
+    return ram_capped_workers(cfg, files, bytes_per_pixel=4 * 6, max_workers=max_workers)
 
 
 def _has_usable_master_dark(path: Path | None) -> bool:
@@ -2147,19 +2088,11 @@ def calibrate_lights_to_calibrated(
     ``F_norm = flat / median(flat)``. Raw linearity keywords (SATURATE, DATAMAX, ...) are dropped when any
     calibration is applied so headers stay consistent with the stored float image.
 
-    Parallelism uses ``max_workers`` or auto ``pipeline_config.qc_preprocess_workers`` only when environment
-    variable ``VYVAR_CALIBRATE_MP`` is set to ``1``/``true`` (default is sequential for clearer tracebacks).
+    Parallelism (SPEED-2026-10): ``max_workers`` or the pipeline's worker count, capped by free RAM; the
+    same per-frame function runs in every worker and the run process alone writes the draft manifest.
     """
-    import numpy as np
-
     cfg = pipeline_config or AppConfig()
     qc_pack = _qc_pack_from_config(cfg, draft_id=draft_id, observation_id=observation_id)
-    nw = max_workers if max_workers is not None else int(cfg.qc_preprocess_workers)
-    nw = max(1, min(32, int(nw)))
-    if not _vyvar_calibrate_multiprocessing_enabled():
-        nw = 1
-    if master_dark_by_obs_key:
-        nw = 1
 
     mf_merged: dict[str, Path | None] = {}
     for k, v in (masterflat_by_filter or {}).items():
@@ -2193,14 +2126,11 @@ def calibrate_lights_to_calibrated(
             draft_id=draft_id,
         )
 
-    md_pre: Any = None
     md_path_ok: Path | None = None
     md_init_str: str | None = None
     if master_dark_path is not None and master_dark_path.exists():
         md_path_ok = master_dark_path
         md_init_str = str(master_dark_path.resolve())
-        with fits.open(master_dark_path, memmap=False) as hdul:
-            md_pre = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
     _native_b = None  # CAL-2026-10: master binning from each master header
 
@@ -2211,8 +2141,6 @@ def calibrate_lights_to_calibrated(
         else:
             mf_serial[str(k)] = str(Path(v).resolve())
 
-    flat_cache: dict[str, Any] = {}
-    flat_median_scale: dict[str, float] = {}
     stats: dict[str, Any] = {
         "processed": 0,
         "used_dark": 0,
@@ -2247,7 +2175,7 @@ def calibrate_lights_to_calibrated(
     total = len(files)
     if total < _n_before_obs_filter:
         log_event(
-            f"Kalibracia - vylucene {_n_before_obs_filter - total} suborov podla manifest files[] (IS_REJECTED=1 alebo mimo DB)"
+            f"Calibration - excluded {_n_before_obs_filter - total} files per manifest files[] (IS_REJECTED=1 or not in DB)"
         )
 
     _suffix_note = ", ".join(sorted(FITS_SUFFIXES_LOWER))
@@ -2270,10 +2198,10 @@ def calibrate_lights_to_calibrated(
                 )
         except Exception as exc:  # noqa: BLE001
             _log_bits.append(f"manifest files[] count failed: {exc}")
-    log_event("Kalibracia - vstupne subory: " + " | ".join(_log_bits))
+    log_event("Calibration - input files: " +" | ".join(_log_bits))
 
     if total > 0:
-        log_lights_binning_from_headers_preflight(files, context="Kalibracia")
+        log_lights_binning_from_headers_preflight(files, context="Calibration")
         _diag_light = _pick_light_for_metadata_diagnostic(files)
         try:
             _db_cal_meta = VyvarDatabase(Path(cfg.database_path))
@@ -2290,7 +2218,7 @@ def calibrate_lights_to_calibrated(
             finally:
                 _db_cal_meta.conn.close()
         except Exception as exc:  # noqa: BLE001
-            log_event(f"DIAGNOSTIKA KALIBRACIE: metadata prveho suboru zlyhali: {exc!s}")
+            log_event(f"CALIBRATION DIAGNOSTICS: metadata of the first file failed: {exc!s}")
 
     db_main = _db_for_calibration_tasks(qc_pack)
 
@@ -2327,243 +2255,84 @@ def calibrate_lights_to_calibrated(
             ui_error=_pipeline_ui_error,
         )
     stats["cal_diag_aborted_groups"] = len(cal_diag_session.aborted_groups)
-    cal_diag_worker_blob = _cal_diag_export_for_workers(cal_diag_session)
 
-
-    def _one_sequential(i: int, src: Path, dst: Path) -> None:
-        if progress_cb is not None:
-            progress_cb(i, total, f"Calibrating {src.name}")
-        md_use = md_path_ok
-        md_np_use = None
-        light_bx = 1
-        with fits.open(src, memmap=False) as hdul:
-            hdr_l = hdul[0].header
-            _ok = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr_l))
-            light_bx, _ = fits_binning_xy_from_header(hdr_l)
-            _light_shape = (int(hdul[0].data.shape[0]), int(hdul[0].data.shape[1]))
-        if is_obs_group_aborted(cal_diag_session, _ok):
-            if dst.exists():
-                try:
-                    dst.unlink()
-                except OSError:
-                    pass
-            return
-        if master_dark_by_obs_key:
-            _alt = master_dark_by_obs_key.get(_ok)
-            if _alt is not None and str(_alt).strip() != "":
-                _pa = Path(_alt)
-                if _pa.is_file():
-                    md_use = _pa
-        gr = gate_result_for_frame(
-            cal_diag_session,
-            obs_group_key=_ok,
-            dark_path=md_use,
-            light_binning=light_bx,
+    # SPEED-2026-10: one per-frame function for any number of workers; the run process writes the
+    # manifest / DB updates and the infolog lines in frame order (workers never touch the manifest).
+    pairs = [(src, calibrated_root / src.relative_to(lights_root)) for src in files]
+    ctx: dict[str, Any] = {
+        "master_dark_path": md_init_str,
+        "master_dark_by_obs_key": {
+            str(k): (str(Path(v).resolve()) if v is not None and str(v).strip() != "" else None)
+            for k, v in (master_dark_by_obs_key or {}).items()
+        },
+        "masterflat_by_filter": mf_serial,
+        "qc_pack": qc_pack,
+        "native_b": _native_b,
+        "flat_offsets": _flat_offsets_for_masters(mf_serial.values(), db_main),
+    }
+    nw = _calibration_worker_count(cfg, files, max_workers)
+    stats["calibrate_workers"] = int(nw)
+    if nw > 1:
+        log_event(f"Calibration: {nw} parallel processes ({total} frames)")
+        _ctx_w = dict(ctx, cal_diag_blob=_cal_diag_export_for_workers(cal_diag_session))
+        _pool = ProcessPoolExecutor(
+            max_workers=nw,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_init_calibrate_frame_worker,
+            initargs=(_ctx_w,),
         )
-        if md_use is not None and md_use.is_file():
-            if (
-                md_pre is not None
-                and md_path_ok is not None
-                and md_use.resolve() == md_path_ok.resolve()
-                and _native_b is not None
-                and _native_b == light_bx
-                and (gr is None or convention_to_dark_mode(gr.convention) == "sum")
-            ):
-                md_np_use = md_pre
-            else:
-                md_np_use = dark_np_for_cal_diag(
-                    cal_diag_session,
-                    master_binning=_native_b,
-                    dark_path=md_use,
-                    light_binning=light_bx,
-                    light_shape=_light_shape,
-                    light_filename=src.name,
-                    gate_result=gr,
-                )
-        used_dark, used_flat, qc_sum, _flags, perf10_qc = _calibrate_one_light_disk(
-            src=src,
-            dst=dst,
-            master_dark_path=md_use,
-            masterflat_by_filter=masterflat_by_filter,
-            flat_cache=flat_cache,
-            flat_median_scale=flat_median_scale,
-            md_data_preload=md_np_use,
-            db=db_main,
-            qc_pack=qc_pack,
-            calibration_master_native_binning=_native_b,
-            cal_diag_gate_result=gr,
-        )
-        if isinstance(perf10_qc, dict) and perf10_qc and not perf10_qc.get("error"):
-            perf10_qc_results[str(src.resolve())] = perf10_qc
-        _sync_obs_calibration_state_with_retry(
-            db_main,
-            raw_light_path=src,
-            draft_id=draft_id,
-            is_calibrated=1 if "D" in _flags else 0,
-            calib_type=_calibration_type_from_flags(_flags),
-            calib_flags=_flags,
-            stats=stats,
-        )
-        stats["processed"] += 1
-        if used_dark:
-            stats["used_dark"] += 1
-        if used_flat:
-            stats["used_flat"] += 1
-        if not used_dark and not used_flat:
-            stats["copied_only"] += 1
-        if qc_sum is not None:
-            stats["qc_evaluated"] += 1
+        _results = _pool.map(_calibrate_frame_task, [(str(a), str(b)) for a, b in pairs], chunksize=1)
+    else:
+        _pool = None
+        _init_calibrate_frame_worker(dict(ctx, session=cal_diag_session, db=db_main))
+        _results = (_calibrate_frame_task((str(a), str(b))) for a, b in pairs)
+    _seq_tb_logged = False
+    try:
+        for i, ((src, _dst), res) in enumerate(zip(pairs, _results, strict=True), start=1):
+            if progress_cb is not None:
+                progress_cb(i, total, f"Calibrating {src.name}")
+            from infolog import replay_events  # noqa: PLC0415
 
-    if _vyvar_calibrate_multiprocessing_enabled() and nw > 1 and total > 1:
-        items: list[
-            tuple[
-                str,
-                str,
-                str | None,
-                dict[str, str | None],
-                dict[str, Any] | None,
-            ]
-        ] = []
-        for src in files:
-            rel = src.relative_to(lights_root)
-            dst = calibrated_root / rel
-            _qc_mp = dict(qc_pack) if qc_pack else {}
-            if master_dark_by_obs_key:
-                _qc_mp["master_dark_by_obs_key"] = {
-                    str(k): str(Path(v).resolve()) if v is not None and str(v).strip() != "" else None
-                    for k, v in master_dark_by_obs_key.items()
-                }
-            items.append(
-                (
-                    str(src.resolve()),
-                    str(dst.resolve()),
-                    md_init_str,
-                    mf_serial,
-                    _qc_mp,
-                )
-            )
-        stats["calibrate_workers"] = min(nw, total)
-        ctx = multiprocessing.get_context("spawn")
-        rows: list[dict[str, Any] | None] = [None] * total
-        try:
-            with ProcessPoolExecutor(
-                max_workers=stats["calibrate_workers"],
-                mp_context=ctx,
-                initializer=_init_calibrate_batch_worker,
-                initargs=(_native_b, cal_diag_worker_blob),
-            ) as ex:
-                future_map = {
-                    ex.submit(_calibrate_batch_process_one, it): idx for idx, it in enumerate(items)
-                }
-                done = 0
-                for fut in as_completed(future_map):
-                    idx = future_map[fut]
-                    rows[idx] = fut.result()
-                    done += 1
-                    if progress_cb is not None:
-                        src_name = Path(items[idx][0]).name
-                        progress_cb(done, total, f"Calibrating batch {done}/{total} ({src_name})")
-        except Exception as exc:  # noqa: BLE001
-            # EXC-0434: T2 -- [CAL-DIAG] MP calibrate batch: same manifest files[] calibration-state update `pass` after wor... (EXCEPT-BULK-2 2026-07-08)
-            _tb_pool = traceback.format_exc()
-            LOGGER.error("Kalibracia (parallel): pool zlyhal, fallback na sekvencny rezim: %s\n%s", exc, _tb_pool)
-            log_exception("CHYBA POOLU KALIBRACIE", exc)
-            stats["errors"] = 0
-            stats["processed"] = 0
-            stats["used_dark"] = 0
-            stats["used_flat"] = 0
-            stats["copied_only"] = 0
-            stats["qc_evaluated"] = 0
-            stats["calibrate_workers"] = 1
-            for i, src in enumerate(files, start=1):
-                rel = src.relative_to(lights_root)
-                dst = calibrated_root / rel
-                try:
-                    _one_sequential(i, src, dst)
-                except Exception as exc2:  # noqa: BLE001
-                    _tb2 = traceback.format_exc()
-                    LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc2, _tb2)
-                    log_exception(f"CHYBA KALIBRACIE: {src.name}", exc2)
-                    stats["errors"] += 1
-            _arch = _archive_root_from_lights_root(lights_root)
-            if _arch is not None:
-                write_cal_diag_json(_arch, cal_diag_session)
-            _refresh_manifest_after_cal_qc()
-            return stats
-
-        for idx, r in enumerate(rows):
-            if r is None or not r.get("ok"):
+            replay_events(res.get("events"))
+            if not res.get("ok"):
+                LOGGER.error("Calibration: file %s: %s\n%s", src, res.get("error"), res.get("traceback", ""))
+                if not _seq_tb_logged:
+                    log_event(f"CALIBRATION ERROR: {src.name}: {res.get('exc_type', '')}: {res.get('error')}")
+                    log_event(str(res.get("traceback", "")))
+                    _seq_tb_logged = True
+                else:
+                    log_event(f"CALIBRATION ERROR: {src.name}: {res.get('error')}")
                 stats["errors"] += 1
-                if stats["errors"] == 1:
-                    _ename = Path(items[idx][0]).name if idx < len(items) else "?"
-                    _emsg = (r or {}).get("error") if isinstance(r, dict) else None
-                    LOGGER.error(
-                        "Kalibracia: worker zlyhal pre %s: %s",
-                        _ename,
-                        _emsg or r,
-                    )
-                    if isinstance(r, dict) and r.get("traceback"):
-                        log_event(f"CHYBA WORKERA: {_ename}: {r.get('error', '')}")
-                        log_event(str(r["traceback"]))
-                    elif isinstance(r, dict) and r.get("error"):
-                        log_event(f"CHYBA WORKERA: {_ename}: {r.get('error')}")
-                    else:
-                        log_event(f"CHYBA WORKERA: {_ename}: {_emsg or 'no traceback in result'}")
                 continue
-            stats["processed"] += 1
-            qcs = r.get("qc_summary")
-            if qcs is not None:
-                stats["qc_evaluated"] += 1
-            try:
-                with fits.open(Path(items[idx][1]), memmap=False) as hh:
-                    h0 = hh[0].header
-                    _flags = _hdr_vy_cflag_str(h0)
-                    ud = bool(h0.get("VY_DARK", False))
-                    uf = bool(h0.get("VY_FLAT", False))
-            except Exception as exc:  # noqa: BLE001
-                logging.error('[EXC-0435] `_estimate_fwhm_from_image` broad `except` returns hardcoded `3.0` px; QC FWHM reject a...: %s', exc)
-                ud = uf = False
-                _flags = "P"
+            if res.get("skipped"):
+                continue
+            _apply_cal_frame_db_updates(db_main, qc_pack, src, res.get("db_updates") or [])
+            perf10_qc = res.get("perf10_qc")
+            if isinstance(perf10_qc, dict) and perf10_qc and not perf10_qc.get("error"):
+                perf10_qc_results[str(src.resolve())] = perf10_qc
+            _flags = str(res.get("vy_cflag") or "P")
             _sync_obs_calibration_state_with_retry(
                 db_main,
-                raw_light_path=Path(items[idx][0]),
+                raw_light_path=src,
                 draft_id=draft_id,
                 is_calibrated=1 if "D" in _flags else 0,
                 calib_type=_calibration_type_from_flags(_flags),
                 calib_flags=_flags,
                 stats=stats,
             )
-            if ud:
+            stats["processed"] += 1
+            if res.get("used_dark"):
                 stats["used_dark"] += 1
-            if uf:
+            if res.get("used_flat"):
                 stats["used_flat"] += 1
-            if not ud and not uf:
+            if not res.get("used_dark") and not res.get("used_flat"):
                 stats["copied_only"] += 1
-            p10 = r.get("perf10_qc") if isinstance(r, dict) else None
-            if isinstance(p10, dict) and p10 and not p10.get("error"):
-                perf10_qc_results[str(Path(items[idx][0]).resolve())] = p10
-        _arch = _archive_root_from_lights_root(lights_root)
-        if _arch is not None:
-            write_cal_diag_json(_arch, cal_diag_session)
-        _refresh_manifest_after_cal_qc()
-        return stats
-
-    _seq_tb_logged = False
-    for i, src in enumerate(files, start=1):
-        rel = src.relative_to(lights_root)
-        dst = calibrated_root / rel
-        try:
-            _one_sequential(i, src, dst)
-        except Exception as exc:  # noqa: BLE001
-            _tb_seq = traceback.format_exc()
-            LOGGER.error("Kalibracia: subor %s: %s\n%s", src, exc, _tb_seq)
-            if not _seq_tb_logged:
-                log_exception(f"CHYBA KALIBRACIE: {src.name}", exc)
-                _seq_tb_logged = True
-            else:
-                log_event(f"CHYBA KALIBRACIE: {src.name}: {exc!s}")
-            stats["errors"] += 1
-            continue
+            if res.get("qc_summary") is not None:
+                stats["qc_evaluated"] += 1
+    finally:
+        if _pool is not None:
+            _pool.shutdown()
+        _CAL_FRAME_STATE.clear()
 
     _arch = _archive_root_from_lights_root(lights_root)
     if _arch is not None:
@@ -2596,10 +2365,11 @@ def _qc_fwhm_elongation(
     }
 
 def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
-    """Jednotny pocet workerov pre QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
+    """One worker count for QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
 
-    Prednost: ``VYVAR_PARALLEL_WORKERS`` -> (ak su obe) minimum z legacy ``VYVAR_QC_PREPROCESS_WORKERS`` a
-    ``VYVAR_PER_FRAME_CSV_WORKERS`` -> ``app_config.qc_preprocess_workers`` (uz zjednotene) -> host auto z ``config``.
+    Precedence: ``VYVAR_PARALLEL_WORKERS`` -> (if both are set) the minimum of legacy ``VYVAR_QC_PREPROCESS_WORKERS``
+    and ``VYVAR_PER_FRAME_CSV_WORKERS`` -> ``app_config.qc_preprocess_workers`` (already unified) -> host auto
+    from ``config``.
     """
     u = os.environ.get("VYVAR_PARALLEL_WORKERS")
     if u is not None and str(u).strip() != "":
@@ -2899,13 +2669,10 @@ def _decide_preprocess_sky_action(
     hdr: fits.Header,
     *,
     sky_order: int,
-    force_reapply: bool,
 ) -> str:
     """Return ``apply`` or ``skip``. Raises :class:`SkySurfaceOrderConflictError` on order mismatch."""
     if sky_order <= 0:
         return "skip"
-    if force_reapply:
-        return "apply"
     if not _header_has_vy_skysf(hdr):
         return "apply"
     existing = _header_vyskyord(hdr)
@@ -2923,7 +2690,6 @@ def _qc_enrich_one_frame(
     fp_str: str,
     *,
     sky_order: int,
-    force_reapply: bool,
     prefilter_status: str | None,
     target_ra: float | None,
     target_dec: float | None,
@@ -2951,24 +2717,10 @@ def _qc_enrich_one_frame(
         skypass: int | None = None
         is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
         if sky_order > 0 and not is_mosaic:
-            action = _decide_preprocess_sky_action(
-                hdr, sky_order=sky_order, force_reapply=force_reapply
-            )
+            action = _decide_preprocess_sky_action(hdr, sky_order=sky_order)
             if action == "apply":
-                _force_flag = bool(force_reapply and _header_has_vy_skysf(hdr))
-                if _force_flag:
-                    LOGGER.warning(
-                        "preprocess_sky_surface_force_reapply: re-subtracting sky surface on %s",
-                        fp.name,
-                    )
                 data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
-                if _force_flag:
-                    sky_stats["sky_surface_force_reapply"] = True
-                cal_stage_token, skypass = compute_skysf_apply_stage(
-                    hdr,
-                    sky_order=sky_order,
-                    force_reapply=_force_flag,
-                )
+                cal_stage_token, skypass = compute_skysf_apply_stage(sky_order=sky_order)
                 cal_pstbg = float(np.nanmedian(data)) if data.size else None
             else:
                 sky_stats = {
@@ -3151,7 +2903,6 @@ def _qc_enrich_calibrated_in_place(
 
     cfg = app_config or AppConfig()
     sky_order = int(cfg.preprocess_sky_surface_order)
-    force_reapply = bool(getattr(cfg, "preprocess_sky_surface_force_reapply", False))
 
     calibrated_root = Path(calibrated_root)
     _prefilter: dict[str, str] = {}
@@ -3181,7 +2932,6 @@ def _qc_enrich_calibrated_in_place(
                     _qc_enrich_one_frame,
                     str(fp),
                     sky_order=sky_order,
-                    force_reapply=force_reapply,
                     prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
                     target_ra=target_ra,
                     target_dec=target_dec,
@@ -3215,7 +2965,6 @@ def _qc_enrich_calibrated_in_place(
             row = _qc_enrich_one_frame(
                 str(fp),
                 sky_order=sky_order,
-                force_reapply=force_reapply,
                 prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
                 target_ra=target_ra,
                 target_dec=target_dec,
@@ -3235,9 +2984,6 @@ def _qc_enrich_calibrated_in_place(
     n_ok = sum(1 for r in results if r.get("status") == "ok")
     n_rejected = sum(1 for r in results if str(r.get("status", "")).startswith("rejected"))
     sky_surface_skip_count = sum(1 for r in results if r.get("sky_surface_skipped"))
-    sky_surface_force_reapply = force_reapply and any(
-        r.get("sky_surface_force_reapply") for r in results
-    )
     log_event(
         f"QC in-place: {n_ok} ok, {n_rejected} rejected, "
         f"{len(results) - n_ok - n_rejected} errors"
@@ -3246,10 +2992,6 @@ def _qc_enrich_calibrated_in_place(
         log_event(
             f"QC in-place: sky-surface subtract skipped on {sky_surface_skip_count} frame(s) "
             "(VY_SKYSF guard)"
-        )
-    if sky_surface_force_reapply:
-        log_event(
-            "QC in-place: preprocess_sky_surface_force_reapply=True (sky-surface guard bypassed)"
         )
 
     try:
@@ -3302,7 +3044,6 @@ def _qc_enrich_calibrated_in_place(
         "n_ok": n_ok,
         "n_rejected": n_rejected,
         "sky_surface_skip_count": sky_surface_skip_count,
-        "sky_surface_force_reapply": sky_surface_force_reapply,
         "results": results,
         "qc_root": str(calibrated_root),
         "qc_csv": str(_qc_csv),

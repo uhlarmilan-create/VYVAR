@@ -64,11 +64,11 @@ def test_get_draft_location_id_reads_manifest_after_create(tmp_path) -> None:
     db.close()
 
 
-def test_resolve_phase2a_equipment_id_uses_manifest(tmp_path) -> None:
+def test_resolve_aperture_equipment_id_uses_manifest(tmp_path) -> None:
     from pathlib import Path
 
     from database import VyvarDatabase
-    from photometry_core import _resolve_phase2a_equipment_id
+    from photometry_core import _resolve_aperture_equipment_id
     from tools.reference_seed import seed_reference_observatory
 
     db = VyvarDatabase(tmp_path / "vyvar.sqlite3")
@@ -100,7 +100,7 @@ def test_resolve_phase2a_equipment_id_uses_manifest(tmp_path) -> None:
         files=[],
     )
 
-    eq_id = _resolve_phase2a_equipment_id(
+    eq_id = _resolve_aperture_equipment_id(
         db,
         draft_id=int(draft_id),
         output_dir=Path("."),

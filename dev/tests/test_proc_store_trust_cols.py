@@ -38,7 +38,7 @@ def _synthetic_proc_frame(path: Path, *, mode: str) -> None:
 
 
 def _frame_catalog_match_mode_from_df(df: pd.DataFrame) -> str:
-    """Mirror run_phase2a frame_time_lookup catalog_match_mode extraction."""
+    """Mirror run_aperture_photometry frame_time_lookup catalog_match_mode extraction."""
     if df is None or df.empty or "catalog_match_mode" not in df.columns:
         return ""
     _cmm_s = df["catalog_match_mode"].dropna()
@@ -48,7 +48,7 @@ def _frame_catalog_match_mode_from_df(df: pd.DataFrame) -> str:
 
 
 def test_proc_store_carries_no_psf_columns() -> None:
-    """EPSF-CLEAN-2026-10: no Phase 1 / 2A consumer reads PSF columns; RUN ePSF reads the sidecars itself."""
+    """EPSF-CLEAN-2026-10: no comparison-star selection / aperture photometry consumer reads PSF columns; RUN ePSF reads the sidecars itself."""
     assert not [c for c in PROC_STORE_COLS if c.startswith("psf_")]
 
 
@@ -72,7 +72,7 @@ def test_store_projection_preserves_catalog_match_mode() -> None:
         assert list(df_proj.columns) == ["catalog_id", "catalog_match_mode"]
 
 
-def test_phase2a_store_path_matches_direct_csv_path() -> None:
+def test_aperture_store_path_matches_direct_csv_path() -> None:
     """Entry-path equivalence: ProcFrameStore vs direct read on same proc CSV."""
     with tempfile.TemporaryDirectory() as tmpdir:
         p = Path(tmpdir)

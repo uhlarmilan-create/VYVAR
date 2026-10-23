@@ -608,7 +608,7 @@ def _aperture_flux_sky_per_star(
             n_fail += 1
     if n_fail > 0:
         logging.warning(
-            "[FAZA 2A] Per-star aperture: %d/%d positions failed or skipped",
+            "[APERTURE] Per-star aperture: %d/%d positions failed or skipped",
             n_fail,
             n,
         )

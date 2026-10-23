@@ -95,7 +95,6 @@ def test_slim_export_has_matrix_not_core_blocks() -> None:
 def test_methods_matrix_reflects_flags() -> None:
     off = AppConfig()
     off.gs11_dilution_enabled = False
-    off.trust_flag_enabled = False
     off.apply_color_term = "off"
     off.k2_mode = "off"
     mat_off = "\n".join(build_methods_matrix_lines(build_run_citation_context(off, obs_group="g_120_4")))
@@ -104,7 +103,7 @@ def test_methods_matrix_reflects_flags() -> None:
     assert "second-order extinction k'': OFF" in mat_off
     assert "colour term: OFF (config)" in mat_off
     assert "PSF photometry: OFF" in mat_off
-    assert "trust gate: OFF" in mat_off
+    assert "trust gate: ON" in mat_off  # TRUST-ALWAYS-2026-10
     assert "zero point: Gaia DR3 -> Sloan g" in mat_off
     assert "sigma clipping / detrending / binning: OFF" in mat_off
 
@@ -186,16 +185,14 @@ def test_citation_lines_psf_conditional_pdf() -> None:
 
 def test_citation_lines_variability_search_always_cited() -> None:
     """VAR-2026-10: the field search always runs; COMP-QA-2026-10: no data-quality gate block."""
-    for trust in (False, True):
-        cfg = AppConfig()
-        cfg.trust_flag_enabled = trust
-        text = "\n".join(
-            t + "\n" + "\n".join(items)
-            for t, items in emit_pdf_methods_sections(build_run_citation_context(cfg))
-        )
-        assert "data-quality" not in text.lower()
-        assert "variability search" in text.lower()
-        assert "Sokolovsky" in text and "von Neumann" in text and "Azzalini" in text
+    cfg = AppConfig()
+    text = "\n".join(
+        t + "\n" + "\n".join(items)
+        for t, items in emit_pdf_methods_sections(build_run_citation_context(cfg))
+    )
+    assert "data-quality" not in text.lower()
+    assert "variability search" in text.lower()
+    assert "Sokolovsky" in text and "von Neumann" in text and "Azzalini" in text
 
 
 def test_citation_lines_iterative_comp_clip_never_cited() -> None:

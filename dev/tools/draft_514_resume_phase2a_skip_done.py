@@ -1,4 +1,4 @@
-"""Resume Phase 2A for draft 514, skipping targets that already have lightcurve_*.csv."""
+"""Resume aperture photometry for draft 514, skipping targets that already have lightcurve_*.csv."""
 from __future__ import annotations
 
 import os
@@ -13,7 +13,7 @@ os.environ.setdefault("VYVAR_PARALLEL_WORKERS", "1")
 import pandas as pd  # noqa: E402
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 
 
 def main() -> None:
@@ -25,7 +25,7 @@ def main() -> None:
     at_path = phot / "active_targets.csv"
     at = pd.read_csv(at_path)
     done = {p.stem.replace("lightcurve_", "") for p in lc_dir.glob("lightcurve_*.csv")}
-    # Mark completed photometry targets as skip so run_phase2a does not redo them.
+    # Mark completed photometry targets as skip so run_aperture_photometry does not redo them.
     # Saturated/linear zone already has skip_photometry=True.
     n_mark = 0
     for i, row in at.iterrows():
@@ -45,7 +45,7 @@ def main() -> None:
     def _prog(msg: str) -> None:
         print(f"[{time.perf_counter()-t0:7.1f}s] {msg}", flush=True)
 
-    result = run_phase2a(
+    result = run_aperture_photometry(
         masterstar_fits_path=og / "MASTERSTAR.fits",
         active_targets_csv=resume_csv,
         comparison_stars_csv=phot / "comparison_stars_per_target.csv",

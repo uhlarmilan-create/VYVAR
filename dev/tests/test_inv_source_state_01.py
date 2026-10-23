@@ -6,7 +6,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from config import AppConfig
 from masterstar_gaia_accounting import (
     SOURCE_CATALOG_MEMBERSHIP,
     SOURCE_DETECTED_P1,
@@ -46,7 +45,6 @@ def test_inject_row_not_labelled_detected_when_vy_dao_pass_column_exists() -> No
         df,
         data0=data0,
         gaia_on_chip=gaia,
-        cfg=AppConfig(),
         wpx=w,
         h=h,
         fwhm_px=3.5,

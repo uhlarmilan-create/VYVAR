@@ -138,7 +138,7 @@ st.append(tab([
  ["vyvar_alignment_frame.py","zarovnani serie (astroalign, kontrolni body, rezidua)"],
  ["astrosolve.py + astro_index.py","WCS: hintovane i slepe reseni (vzory 4 hviezd), overenie log-odds proti Gaia, TAN+SIP (rad podla BIC)"],
  ["photometry_core.py","jadro (~15300 radku): Faze 0/1/2A, chybovy model, ensemble, trust vstupy"],
- ["photometry_phase2a.py","Faze 2A pomocna vrstva (mereni per snimek)"],
+ ["aperture_photometry.py","Faze 2A pomocna vrstva (mereni per snimek)"],
  ["epsf_frame.py + psf_photometry.py + epsf_stage.py","RUN ePSF: ePSF kazdeho snimku + nocni prostorova porucha, fit celeho snimku, interni PSF krivky"],
  ["trust_flag_core.py + sparse_trust_core.py","trust gate; T/X2 statistiky kontrolni hvezdy (Howell 1988)"],
  ["check_star_kmag.py","vyber check star a jeji merena KMAG pro AAVSO"],
@@ -292,7 +292,7 @@ st.append(P("[b]Casove systemy:[/b] JD je 'cas hodinek observatore'; HJD koriguj
 st.append(P("8.3 Uplnost slabeho konce: DAO-RECONCILE", H2))
 
 st.append(P("Uplnost detekce se nehlida sigmou 'od oka', ale reconciliaci vuci Gaia (dao_reconcile.py): referencni populace pole se cte primym dotazem do lokalni Gaia DB pres bounding box MASTERSTAR WCS (bez stropu radku), krivka uplnosti se fituje error-function modelem dle Fleming et al. (1995) a odvozuji se G_lim_50 / G_lim_90 (magnitudy 50% a 90% uplnosti) plus metrika miss@G90 (podil Gaia hvezd jasnejsich nez G_lim_90, ktere DAO nenaslo). Workstream DAO-RECONCILE byl uzavren 2026-07-09: uplnost 89.7-98.3 % napric rigy, G_lim charakterizovano (wide ~15.0, Newton V ~16.7, B/R censored >= 17.5) a completeness_50 + missed_below_g90 bezi dal jako trvale health signaly QA dashboardu.", B))
-st.append(fn("photutils.detection.DAOStarFinder (49 vyskytu napric QC/alignment/masterstar/SIPS presety); pipeline.py: per-frame katalogova cesta, _per_frame_noise_error_map; photometry_phase2a.py: measure_fwhm_from_masterstar; dao_reconcile.py (Fleming 1995, G_lim_50/90, miss@G90); catalog_match_trust.py (per-epoch vlajka); time_utils.py (jd/hjd/bjd)"))
+st.append(fn("photutils.detection.DAOStarFinder (49 vyskytu napric QC/alignment/masterstar/SIPS presety); pipeline.py: per-frame katalogova cesta, _per_frame_noise_error_map; aperture_photometry.py: measure_fwhm_from_masterstar; dao_reconcile.py (Fleming 1995, G_lim_50/90, miss@G90); catalog_match_trust.py (per-epoch vlajka); time_utils.py (jd/hjd/bjd)"))
 st.append(par("sips_dao_fwhm_px=2.5, detection_threshold_sigma=4.5 (jeden prah N x sigma oblohy pro vsechny DAO detekce)"))
 
 # ============================================================ CH 9
@@ -314,7 +314,7 @@ st.append(par("exoplanet_match_max_sep_arcsec=3.0"))
 
 # ============================================================ CH 10
 st.append(P("10. Faze 1 - vyber srovnavacich hvezd", H1))
-st.append(P("Pro kazdy cil se stavi soubor srovnavacich hvezd (kompu). Je to jeden z nejpropracovanejsich kroku pipeline: kaskada TVRDYCH filtru (vyrad/ponechej), nasledovana RMS stabilitou s barevnymi tiery a finalnim vyberem. Klicova funkce: select_comparison_stars_per_target (volana z run_phase0_and_phase1), vystup comparison_stars_per_target.csv.", B))
+st.append(P("Pro kazdy cil se stavi soubor srovnavacich hvezd (kompu). Je to jeden z nejpropracovanejsich kroku pipeline: kaskada TVRDYCH filtru (vyrad/ponechej), nasledovana RMS stabilitou s barevnymi tiery a finalnim vyberem. Klicova funkce: select_comparison_stars_per_target (volana z run_target_and_comp_selection), vystup comparison_stars_per_target.csv.", B))
 st.append(P("10.1 Tvrde filtry kandidatu", H2))
 st.append(tab([
  ["Kriterium","Podminka (vychozi hodnoty)"],
@@ -352,7 +352,7 @@ st.append(box("Priklad: jak kaskadou projde konkretni cil (ilustracni cisla)", [
  "Vyber: 8 kompu (max) - nejprve dle tieru, uvnitr tieru dle RMS. Vahy w ~ tier_w / sigma^2. Check star = nejstabilnejsi z vyberu, vyrazena z ensemble -> finalni ensemble 7 kompu -> n_clean = 7 -> GREEN."]))
 st.append(P("10.6 Iterativni cisteni ensemble", H2))
 st.append(P("Iterativni cisteni ensemble (drive comp_sparse_fallback_enabled, 'Brno fix' 2026-06-14) bylo odstraneno spolu se sparse fallbackem (COMP-RULES-2026-10). Vahy kompu v souboru jsou Broegovy (2005) vahy pocitane v ensemble_normalize (PyTICS-styl iterativni prevazeni bylo po auditu 2026-10 odstraneno).", B))
-st.append(fn("photometry_comp.py: select_comparison_stars_per_target, _select_comps_by_rms_then_color, _bprp_tier_ladder_for_selection, build_global_comp_pool, _count_gate_passing_comps; phase01_run.py: run_phase0_and_phase1; photometry_core.py: check_comparison_stability, _common_mode_detrend_comp_lc; comp_pool_rms.py; comp_selection_per_target.py; pipeline.py: select_comparison_stars_spatial_grid"))
+st.append(fn("photometry_comp.py: select_comparison_stars_per_target, _select_comps_by_rms_then_color, _bprp_tier_ladder_for_selection, build_global_comp_pool, _count_gate_passing_comps; target_comp_selection.py: run_target_and_comp_selection; photometry_core.py: check_comparison_stability, _common_mode_detrend_comp_lc; comp_pool_rms.py; comp_selection_per_target.py; pipeline.py: select_comparison_stars_spatial_grid"))
 st.append(par("comp_max_delta_bprp=0.79, comp_color_tiers=[0.15/1.0, 0.30/0.85, 0.55/0.50, 1.10/0.25], min_dist=60 arcsec, bez max vzdalenosti, chip_margin=50 px, bez magnitudoveho okna, max_comp_rms=0.1, rms_outlier_sigma=3.0, max_slope=5.0 mmag/h (significance k=3.0), isolation=25 px, max_fwhm_factor=1.5, min_frames_frac=0.2, n_comp=3..8, sparse fallback OFF, global pool ON, density adaptive OFF (jen diagnostika), iterative clip OFF, comp_contamination_penalty_k=3.0, comp_select_rms_floor=1e-06"))
 st.append(box("Proc je barva na prvnim miste", [
  "Atmosfericka extinkce zavisi na vlnove delce: modra hvezda slabne s rostouci vzdusnou hmotou rychleji nez cervena. U diferencialni fotometrie se extinkce 1. radu vyrusi v rozdilu cil-komp, ale ROZDIL BAREV ponechava zbytkovy clen 2. radu k'' x Delta(BP-RP) x X (kap. 10.8 v ramci Faze 2A).",
@@ -457,7 +457,7 @@ st.append(tab([
  ["COG aperturni korekce","ODSTRANENA 2026-10 (CFG-REVIEW-2026-10): nikdy nevalidovana; jednotnou skalu toku dava k* apertura na cil (APERTURE-K-2026-10)."],
 ], [42,126]))
 st.append(P("Spolecny jmenovatel: kazda z metod byla implementovana, otestovana injekcnimi ci populacnimi testy a rozhodnuti je zdokumentovano v DECISIONS. Citace se v reportu emituji JEN pro metody, ktere skutecne bezely (citations.py; gating priznak = citacni priznak).", B))
-st.append(fn("photometry_core.py: run_full_photometry_pipeline (PRODUKCNI VSTUP), compute_snr_optimal_aperture_table, precompute_and_save_snr_aperture_table_for_draft; photometry_phase2a.py: run_phase2a, _photometric_error(_with_bkg_mode), apply_reporting_postprocess, detect_outliers; photometry_lightcurve.py: ensemble_normalize, compute_mag_calib_final, save_lightcurve_csv; photometry_gate_helpers.py: measure_empty_aperture_sigma_bkg (re-exported from photometry_core); sigma_floor_core.py: combine_production_err_rel, c4_small_sample, ensemble_sem_mag_from_residuals; k2_extinction.py: resolve_k2_bprp_value, apply_k2_to_comp_mag_inst, computed_k2_bprp_for_token; band_classify.py: classify_photometric_band, effective_band_for_extinction; dilution.py; photutils.aperture: CircularAperture, CircularAnnulus, aperture_photometry"))
+st.append(fn("photometry_core.py: run_full_photometry_pipeline (PRODUKCNI VSTUP), compute_snr_optimal_aperture_table, precompute_and_save_snr_aperture_table_for_draft; aperture_photometry.py: run_aperture_photometry, _photometric_error(_with_bkg_mode), apply_reporting_postprocess, detect_outliers; photometry_lightcurve.py: ensemble_normalize, compute_mag_calib_final, save_lightcurve_csv; photometry_gate_helpers.py: measure_empty_aperture_sigma_bkg (re-exported from photometry_core); sigma_floor_core.py: combine_production_err_rel, c4_small_sample, ensemble_sem_mag_from_residuals; k2_extinction.py: resolve_k2_bprp_value, apply_k2_to_comp_mag_inst, computed_k2_bprp_for_token; band_classify.py: classify_photometric_band, effective_band_for_extinction; dilution.py; photutils.aperture: CircularAperture, CircularAnnulus, aperture_photometry"))
 st.append(par("aperture_fwhm_factor=1.35, aperture_snr_sizing={small:1.5, large:4.0}, annulus 2.7..5.2 FWHM, empirical empty-aperture ERR (n=64, min 16; F-BINGAIN-1), sigma_sys z EQUIPMENTS.SIGMA_SYS_MAG (C5A-150M 0.018; jinak nocni mereni na kompech), k2_mode='literature', apply_color_term='off' (ct_min_comp 7, extrapolation 0.0), gs11 OFF, save_lightcurve_png=false"))
 
 # ============================================================ CH 12 (Phase 2B ePSF)

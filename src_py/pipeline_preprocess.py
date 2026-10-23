@@ -149,7 +149,7 @@ def resolve_preprocess_target_coordinates(
     """Resolve preprocess target coordinates with DB-first priority.
 
     Priority:
-    1) ``draft manifest.CENTEROFFIELDRA/DE`` (finite pair; **0/0** sa povazuje za nevyplnene - pokracuje sa dalej)
+    1) ``draft manifest.CENTEROFFIELDRA/DE`` (finite pair; **0/0** is treated as unset - fall through)
     2) UI values
     3) median RA/DE from draft light rows
     """
@@ -168,7 +168,7 @@ def resolve_preprocess_target_coordinates(
                         )
                         return float(ra_f), float(de_f)
                     log_event(
-                        "DEBUG: draft manifest center is 0/0 - beriem ako nevyplnene; skusam UI, potom median z manifest files[]."
+                        "DEBUG: draft manifest center is 0/0 - treating as unset; trying UI, then median from manifest files[]."
                     )
         except Exception:  # noqa: BLE001
             pass
@@ -453,14 +453,9 @@ def qc_enrich_calibrated_lights_in_place(
     _skip_n = int(_out.get("sky_surface_skip_count") or 0)
     if _skip_n:
         log_milestone(f"[PREPROCESS] sky_surface skipped {_skip_n} frame(s) (VY_SKYSF guard)")
-    if _out.get("sky_surface_force_reapply"):
-        LOGGER.warning(
-            "preprocess_sky_surface_force_reapply=True: sky-surface guard bypassed on this run"
-        )
     df = pd.DataFrame(_out.get("results") or [])
     df.attrs["preprocess_sky_summary"] = {
         "sky_surface_skip_count": _skip_n,
-        "sky_surface_force_reapply": bool(_out.get("sky_surface_force_reapply")),
     }
     return df
 

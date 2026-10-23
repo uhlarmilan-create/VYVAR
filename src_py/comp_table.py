@@ -1,17 +1,17 @@
 """The comparison-star table of a setup: one file, every comparison candidate of every target.
 
 OUTPUT-REVIEW-2026-10 step 5 (Milan 2026-10-21). ``photometry/comparison_stars_per_target.csv``
-holds one row per (target, comparison star) that Phase 1 admitted or ranked as a reserve:
+holds one row per (target, comparison star) that comparison-star selection admitted or ranked as a reserve:
 
-* ``p1_role``   ``admitted`` (the Phase-1 selection) or ``reserve`` (COMP-SMART candidates);
-* ``p1_rank``   order within the target and role (admitted: Phase-1 order, reserve: rank);
-* ``used_role`` set by Phase 2A on the comparison stars of the final ensemble:
+* ``p1_role``   ``admitted`` (the comparison-star selection) or ``reserve`` (COMP-SMART candidates);
+* ``p1_rank``   order within the target and role (admitted: selection order, reserve: rank);
+* ``used_role`` set by aperture photometry on the comparison stars of the final ensemble:
   ``primary`` (admitted and used), ``replacement`` (a reserve star used), ``kept_suspect``
   (flagged by COMP-SMART but kept); empty = not used;
 * ``used_rank`` order of the used stars within the target (the ensemble order).
 
 Earlier drafts have three files (``comparison_stars_per_target.csv`` = used sets,
-``comparison_stars_per_target_phase1.csv`` = Phase-1 sets when COMP-SMART changed one,
+``comparison_stars_per_target_phase1.csv`` = comparison-star selection sets when COMP-SMART changed one,
 ``comparison_reserve_per_target.csv`` = reserve); :func:`load_comp_table` builds the same view
 from them. Readers take :func:`used`, :func:`admitted` or :func:`reserve` of that view.
 """
@@ -24,7 +24,7 @@ from typing import Iterable
 import pandas as pd
 
 COMP_TABLE_CSV = "comparison_stars_per_target.csv"
-LEGACY_PHASE1_CSV = "comparison_stars_per_target_phase1.csv"
+LEGACY_COMP_SELECTION_CSV = "comparison_stars_per_target_phase1.csv"
 LEGACY_RESERVE_CSV = "comparison_reserve_per_target.csv"
 
 ROLE_ADMITTED = "admitted"
@@ -52,7 +52,6 @@ COMP_TABLE_COLUMNS: tuple[str, ...] = (
     "bp_rp",
     "comp_rms",
     "comp_n_frames",
-    "contamination_idx",
     "comp_score",
     "blend_k100",
     "blend_k125",
@@ -95,8 +94,8 @@ def _sorted(df: pd.DataFrame, rank_col: str) -> pd.DataFrame:
     return d.sort_values(["_tord", "_rk"], kind="mergesort").drop(columns=["_tord", "_rk"]).reset_index(drop=True)
 
 
-def phase1_table(admitted_rows: pd.DataFrame, reserve_rows: pd.DataFrame | None) -> pd.DataFrame:
-    """The Phase-1 table: admitted rows (in their order) + reserve rows (by ``reserve_rank``)."""
+def comp_selection_table(admitted_rows: pd.DataFrame, reserve_rows: pd.DataFrame | None) -> pd.DataFrame:
+    """The comparison-star selection table: admitted rows (in their order) + reserve rows (by ``reserve_rank``)."""
     parts = []
     if admitted_rows is not None and not admitted_rows.empty:
         a = admitted_rows.copy()
@@ -162,7 +161,7 @@ def load_comp_table(path_or_dir: Path | str) -> pd.DataFrame:
             )
         raise ValueError(
             "comparison_stars_csv missing target_catalog_id column "
-            f"(required for Phase 2A per-target comp routing): {main}"
+            f"(required for aperture-photometry per-target comp routing): {main}"
         )
     if df.empty and "target_catalog_id" not in df.columns:
         return pd.DataFrame(columns=list(COMP_TABLE_COLUMNS))
@@ -174,11 +173,11 @@ def load_comp_table(path_or_dir: Path | str) -> pd.DataFrame:
 
 
 def _legacy_table(main: pd.DataFrame, phot: Path) -> pd.DataFrame:
-    p1_path = phot / LEGACY_PHASE1_CSV
+    p1_path = phot / LEGACY_COMP_SELECTION_CSV
     res_path = phot / LEGACY_RESERVE_CSV
     admitted_rows = _read(p1_path) if p1_path.is_file() else main.drop(columns=["comp_role"], errors="ignore")
     reserve_rows = _read(res_path) if res_path.is_file() else None
-    table = phase1_table(admitted_rows, reserve_rows)
+    table = comp_selection_table(admitted_rows, reserve_rows)
     used = main.copy()
     role = used["comp_role"] if "comp_role" in used.columns else pd.Series("", index=used.index)
     used["used_role"] = role.fillna("").astype(str).str.strip().replace("", USED_PRIMARY)
@@ -191,7 +190,7 @@ def _legacy_table(main: pd.DataFrame, phot: Path) -> pd.DataFrame:
 
 
 def admitted(df: pd.DataFrame) -> pd.DataFrame:
-    """The Phase-1 selection, per target in Phase-1 order."""
+    """The comparison-star selection, per target in selection order."""
     return _sorted(df[df["p1_role"].astype(str) == ROLE_ADMITTED], "p1_rank")
 
 

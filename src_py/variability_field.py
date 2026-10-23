@@ -223,7 +223,7 @@ def run_field_variability(
         _write_meta(phot, meta)
         return meta
     if not field_k:
-        # the field k of the comparison stars (Phase 1 admission record)
+        # the field k of the comparison stars (comparison-star selection admission record)
         try:
             adm = json.loads((phot / "pipeline_meta.json").read_text(encoding="utf-8")).get("comp_pool_admission") or {}
             for rule in adm.get("rules", []):
@@ -273,20 +273,18 @@ def run_field_variability(
     meta["time_column"] = tcol
 
     # CCD-equation error of every point (Merline & Howell 1995)
-    g = float(getattr(cfg, "gain", 0) or 0)
-    rn = float(getattr(cfg, "read_noise", 0) or 0)
-    try:
-        apj = json.loads((phot / "aperture_per_target.json").read_text(encoding="utf-8"))
-        g = float(apj.get("gain") or g)
-        rn = float(apj.get("read_noise") or rn)
-    except (OSError, ValueError, TypeError):
-        pass
-    if not (math.isfinite(g) and g > 0):
-        g = 1.0
+    # GAIN-ONE-2026-10: the gain / read noise of the run's aperture photometry; the annulus of the config
+    # (both were config defaults / fixed 2.7-5.2 FWHM here before)
+    from aperture_pertarget import load_photometric_gain  # noqa: PLC0415
+
+    g, rn = load_photometric_gain(phot)
+    if not (math.isfinite(g) and g > 0 and math.isfinite(rn) and rn >= 0):
+        raise RuntimeError("variability: gain / read noise of aperture photometry missing (aperture_per_target.json)")
+    a_in, a_out = float(cfg.annulus_inner_fwhm), float(cfg.annulus_outer_fwhm)
     meta.update(gain=g, read_noise=rn, field_k=k)
     r = k * pd.to_numeric(D["fwhm_px_for_aperture"], errors="coerce")
     A = np.pi * r * r
-    n_sky = np.pi * ((5.2 * r / k) ** 2 - (2.7 * r / k) ** 2)
+    n_sky = np.pi * ((a_out * r / k) ** 2 - (a_in * r / k) ** 2)
     sky = pd.to_numeric(D["sky_adu_per_px_annulus"], errors="coerce").clip(lower=0)
     var = D["F"] / g + A * (1 + A / n_sky) * (sky / g + (rn / g) ** 2)
     D["m"] = -2.5 * np.log10(D["F"])
@@ -311,7 +309,7 @@ def run_field_variability(
     info["gate_snr"] = info["snr_med"] >= snr_min
     fw_max = float(frame["fwhm"].max())
     quads = _frame_footprints(per_frame_dir, list(frame["stem"]))
-    r_out_max = 5.2 * fw_max
+    r_out_max = a_out * fw_max
     if quads:
         info["gate_edge"] = _inside_all(info["x"].to_numpy(float), info["y"].to_numpy(float), r_out_max, quads)
     else:
@@ -331,7 +329,7 @@ def run_field_variability(
             pool, field_catalog_csv=ps / "field_catalog_cone.csv", masterstar_fits=ps / "MASTERSTAR.fits",
             zp_band=filter_band_for_obs_group(per_frame_dir.name).blend_band, fwhm_px=fw_med, r_ap_px=k * fw_med,
             sat_adu=float(pd.to_numeric(ms["saturate_limit_adu"], errors="coerce").median()) if ms is not None and "saturate_limit_adu" in ms else None,
-            annulus_px=(2.7 * fw_med, 5.2 * fw_med), profile_df=ms,
+            annulus_px=(a_in * fw_med, a_out * fw_med), profile_df=ms,
         )
         info["blend"] = c.to_numpy()
         # |c|: extra light in the aperture or a sky pushed up by a neighbour (c < 0)

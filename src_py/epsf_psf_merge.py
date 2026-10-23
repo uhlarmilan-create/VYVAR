@@ -210,6 +210,50 @@ def frame_saturation_limit_adu(sidecar_path: Path) -> float:
     return float(vals.median())
 
 
+_FIT_CTX: dict[str, Any] = {}
+
+
+def _fit_worker_init(ctx: dict[str, Any]) -> None:
+    _FIT_CTX.clear()
+    _FIT_CTX.update(ctx)
+
+
+def _fit_frame_task(fp: Path) -> dict[str, Any]:
+    """Frame ePSF + frame PSF fit of the fit set (``_FIT_CTX``); the merge into the sidecar is the
+    parent's (INV-PSF-ADDITIVE-01 guard, serial). A failure is returned, not raised."""
+    from epsf_frame import build_frame_model, fit_frame_psf  # noqa: PLC0415
+    from frame_footprint import aligned_footprint  # noqa: PLC0415
+    from psf_photometry import _psf_resolve_gain_read_noise  # noqa: PLC0415
+
+    c = _FIT_CTX
+    out: dict[str, Any] = {"mrec": None, "fit_df": None, "exception_class": None, "exception_message": None,
+                           "traceback_tail": None}
+    try:
+        model, mrec = build_frame_model(fp, c["build_stars"], cutout_size=c["cutout"], fwhm_px=c["fwhm_ms"],
+                                        delta=c["delta"], grid=c["grid"])
+        out["mrec"] = mrec
+        with fits.open(fp, memmap=True) as hdul:
+            data = np.asarray(hdul[0].data, dtype=np.float32)
+            hdr = hdul[0].header.copy()
+        covered = aligned_footprint(hdr, data.shape)
+        gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=Path(c["platesolve_dir"]) / "photometry", cfg=c["app_config"])
+        sidecar = proc_csv_path_for_aligned_fits(fp)
+        out["fit_df"] = fit_frame_psf(
+            data, model, c["fit_stars"], c["neighbours"], fwhm_px=mrec["fwhm_px"], gain=gain, read_noise_e=rn,
+            sat_limit_adu=frame_saturation_limit_adu(sidecar), covered=covered,
+        )
+    except Exception as exc:  # noqa: BLE001 - recorded per frame, INV-PSF-FRAME-01 decides the job
+        _record_exception(out, exc)
+    return out
+
+
+def _record_exception(rec: dict[str, Any], exc: BaseException) -> None:
+    import traceback  # noqa: PLC0415
+
+    rec.update({"exception_class": type(exc).__name__, "exception_message": str(exc),
+                "traceback_tail": "\n".join(traceback.format_exc().splitlines()[-8:])})
+
+
 def run_epsf_psf_merge_job(
     *,
     frames_root: Path,
@@ -230,8 +274,8 @@ def run_epsf_psf_merge_job(
     3. Night chi^2 locus sets ``psf_fit_ok`` (D-EPSF-CHI2-LOCUS-01); INV-PSF-FRAME-01 accounting.
     """
     from epsf_frame import OVERSAMPLING as EPSF_OVERSAMPLING
-    from epsf_frame import build_frame_model, fit_frame_psf, frame_fit_sources, night_spatial_delta
-    from frame_footprint import aligned_footprint
+    from epsf_frame import frame_fit_sources, night_spatial_delta
+    from parallel_frames import map_frames, ram_capped_workers
     from epsf_frame_accounting import finalize_epsf_frame_job, list_epsf_science_light_fits
     from psf_photometry import (
         EPSF_BUILD_STARS_META_NAME,
@@ -239,7 +283,6 @@ def run_epsf_psf_merge_job(
         EPSF_FRAMES_DIR,
         EPSF_FRAMES_MANIFEST,
         EPSF_SPATIAL_DELTA_NAME,
-        _psf_resolve_gain_read_noise,
     )
     from psf_chi2_locus import finalize_night_locus_for_inv_psf_frame_01
 
@@ -276,37 +319,37 @@ def run_epsf_psf_merge_job(
 
     if progress_cb is not None:
         progress_cb(0, len(files), "night spatial ePSF perturbation")
-    spatial = night_spatial_delta(files, build_stars, cutout_size=cutout, fwhm_px=fwhm_ms, out_path=frames_dir / EPSF_SPATIAL_DELTA_NAME)
+    # A worker holds the frame (float32) and the fit's float64 images (data, two error maps, two model
+    # images, masks): ~6 x 8 bytes per pixel.
+    workers = ram_capped_workers(app_config, files, bytes_per_pixel=8 * 6)
+    spatial = night_spatial_delta(files, build_stars, cutout_size=cutout, fwhm_px=fwhm_ms,
+                                  out_path=frames_dir / EPSF_SPATIAL_DELTA_NAME, workers=workers)
     delta = fits.getdata(frames_dir / EPSF_SPATIAL_DELTA_NAME).astype(np.float64) if spatial["file"] else None
     grid = (int(spatial["grid"][0]), int(spatial["grid"][1]))
 
+    ctx = {"build_stars": build_stars, "cutout": cutout, "fwhm_ms": fwhm_ms, "delta": delta, "grid": grid,
+           "platesolve_dir": str(ps), "app_config": app_config, "fit_stars": fit_stars, "neighbours": neighbours}
     records: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
-    for i, fp in enumerate(files, start=1):
+    done = map_frames(_fit_frame_task, files, workers=workers, initializer=_fit_worker_init, ctx=ctx)
+    for i, (fp, res) in enumerate(zip(files, done, strict=True), start=1):
         if progress_cb is not None:
             progress_cb(i, len(files), f"PSF fit: {fp.name}")
         rec: dict[str, Any] = {"frame_name": fp.name, "frame_index": i - 1, "n_fit": 0, "n_ok": 0,
                                "exception_class": None, "exception_message": None, "traceback_tail": None}
-        try:
-            model, mrec = build_frame_model(fp, build_stars, cutout_size=cutout, fwhm_px=fwhm_ms, delta=delta, grid=grid)
-            models.append(mrec)
-            with fits.open(fp, memmap=True) as hdul:
-                data = np.asarray(hdul[0].data, dtype=np.float32)
-                hdr = hdul[0].header.copy()
-            covered = aligned_footprint(hdr, data.shape)
-            gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=ps / "photometry", cfg=app_config)
-            sidecar = proc_csv_path_for_aligned_fits(fp)
-            fit_df = fit_frame_psf(
-                data, model, fit_stars, neighbours, fwhm_px=mrec["fwhm_px"], gain=gain, read_noise_e=rn,
-                sat_limit_adu=frame_saturation_limit_adu(sidecar), covered=covered,
-            )
-            rec["n_fit"] = merge_psf_frame_result(sidecar, fit_df, frame_name=fp.name, pipeline_meta=pipeline_meta)
-        except Exception as exc:  # noqa: BLE001 - recorded per frame, INV-PSF-FRAME-01 decides the job
-            import traceback
-
-            rec.update({"exception_class": type(exc).__name__, "exception_message": str(exc),
-                        "traceback_tail": "\n".join(traceback.format_exc().splitlines()[-8:])})
-            LOGGER.warning("[ePSF] frame %s failed: %s: %s", fp.name, type(exc).__name__, exc)
+        if res["mrec"] is not None:
+            models.append(res["mrec"])
+        if res["exception_class"] is None:
+            try:
+                rec["n_fit"] = merge_psf_frame_result(
+                    proc_csv_path_for_aligned_fits(fp), res["fit_df"], frame_name=fp.name, pipeline_meta=pipeline_meta
+                )
+            except Exception as exc:  # noqa: BLE001 - recorded per frame, INV-PSF-FRAME-01 decides the job
+                _record_exception(rec, exc)
+        else:
+            rec.update({k: res[k] for k in ("exception_class", "exception_message", "traceback_tail")})
+        if rec["exception_class"] is not None:
+            LOGGER.warning("[ePSF] frame %s failed: %s: %s", fp.name, rec["exception_class"], rec["exception_message"])
         records.append(rec)
 
     created = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")

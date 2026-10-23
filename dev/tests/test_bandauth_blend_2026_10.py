@@ -158,7 +158,7 @@ def test_choose_f_respects_allowed_apertures() -> None:
 # --- ZP-ERR-2026-10: uncertainty of the absolute level ---------------------------------
 def test_zero_point_uncertainty() -> None:
     import photometry_core  # noqa: F401
-    from phase2a_target import zero_point_uncertainty
+    from aperture_photometry_target import zero_point_uncertainty
 
     w = {"a": 1.0, "b": 1.0, "c": 1.0, "d": 1.0, "e": 5.0}
     cat = {"a": 12.0, "b": 12.5, "c": 13.0, "d": 13.3, "e": float("nan")}
@@ -179,7 +179,7 @@ def test_zero_point_data_sigma_unbiased_with_unequal_weights() -> None:
     import numpy as np
 
     import photometry_core  # noqa: F401
-    from phase2a_target import zero_point_uncertainty
+    from aperture_photometry_target import zero_point_uncertainty
 
     rng = np.random.default_rng(7)
     w = {f"c{i}": v for i, v in enumerate([10.0, 5.0, 2.0, 1.0, 1.0, 0.5, 0.5])}
@@ -198,7 +198,7 @@ def test_zero_point_levels_from_ensemble_not_biased_by_missing_frames() -> None:
     import numpy as np
 
     import photometry_core  # noqa: F401
-    from phase2a_target import zero_point_uncertainty
+    from aperture_photometry_target import zero_point_uncertainty
     from photometry_lightcurve import ensemble_normalize
 
     rng = np.random.default_rng(3)

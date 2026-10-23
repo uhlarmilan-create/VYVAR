@@ -11,7 +11,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from astropy.io import fits
 
 from except_fix_counters import get_except_fix_counters, reset_except_fix_counters
 
@@ -29,32 +28,6 @@ from except_fix_counters import get_except_fix_counters, reset_except_fix_counte
 # --------------------------------------------------------------------------- #
 # FIX-3 #8 -- copy_wcs_header_keys (shared helper, EXC-0625 + EXC-0010)
 # --------------------------------------------------------------------------- #
-def test_fix3_8_copy_all_keys_ok_passthrough() -> None:
-    from wcs_header_io import copy_wcs_header_keys
-
-    src = fits.Header()
-    src["CTYPE1"] = "RA---TAN"
-    src["CTYPE2"] = "DEC--TAN"
-    src["CRVAL1"] = 180.0
-    src["CRVAL2"] = 0.0
-    src["CRPIX1"] = 8.0
-    src["CRPIX2"] = 8.0
-    src["CD1_1"] = -0.001
-    src["CD2_2"] = 0.001
-    src["A_ORDER"] = 2
-    src["COMMENT"] = "should be skipped"
-    src["SIMPLE"] = True
-
-    dst = fits.Header()
-    reset_except_fix_counters()
-    failed = copy_wcs_header_keys(dst, src, context="test-ok")
-    assert failed == []
-    assert dst["CRVAL1"] == 180.0
-    assert dst["CD1_1"] == -0.001
-    assert dst["A_ORDER"] == 2
-    assert "SIMPLE" not in dst  # structural key skipped
-    assert "COMMENT" not in dst
-    assert get_except_fix_counters().wcs_header_key_copy_fail == 0
 
 
 class _FakeHeader:
@@ -71,36 +44,6 @@ class _FakeHeader:
         if k in self._bad:
             raise ValueError(f"uncopyable card {k}")
         return 1.0
-
-
-def test_fix3_8_core_key_failure_aborts_and_counts(caplog: pytest.LogCaptureFixture) -> None:
-    from wcs_header_io import copy_wcs_header_keys
-
-    src = _FakeHeader(["CRVAL1", "CD1_1", "CRPIX1"], bad={"CRVAL1"})
-    dst = fits.Header()
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-    failed = copy_wcs_header_keys(dst, src, context="test-core-fail")
-    assert failed == ["CRVAL1"]
-    assert len(dst) == 0  # atomic: dst untouched on core failure
-    assert get_except_fix_counters().wcs_header_key_copy_fail == 1
-    assert any("core WCS keys uncopyable" in r.message for r in caplog.records)
-
-
-def test_fix3_8_noncore_failure_warns_only(caplog: pytest.LogCaptureFixture) -> None:
-    from wcs_header_io import copy_wcs_header_keys
-
-    src = _FakeHeader(["CRVAL1", "CD1_1", "FOOBAR"], bad={"FOOBAR"})
-    dst = fits.Header()
-    reset_except_fix_counters()
-    caplog.set_level(logging.WARNING)
-    failed = copy_wcs_header_keys(dst, src, context="test-noncore")
-    assert failed == []  # non-core failure does not abort
-    assert dst["CRVAL1"] == 1.0
-    assert dst["CD1_1"] == 1.0
-    assert "FOOBAR" not in dst
-    assert get_except_fix_counters().wcs_header_key_copy_fail == 0
-    assert any("non-core header keys skipped" in r.message for r in caplog.records)
 
 
 # --------------------------------------------------------------------------- #

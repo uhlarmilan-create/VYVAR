@@ -23,7 +23,7 @@ from photometry_comp import (
     _enrich_target_bp_rp_from_gaia_db,
     _normalize_id_series,
     _normalize_id_value,
-    _phase0_effective_frame_hw_px,
+    _target_selection_effective_frame_hw_px,
     _read_field_density_inputs,
     _refresh_variable_targets_xy,
     _resolve_frame_hw_px_from_masterstar,
@@ -44,7 +44,7 @@ from photometry_core import (
 
 from comp_smart import N_RESERVE as _N_RESERVE  # noqa: E402
 
-#: COMP-SMART-2026-10: reserve comparison candidates per target (Phase 2A replacements)
+#: COMP-SMART-2026-10: reserve comparison candidates per target (aperture-photometry replacements)
 
 
 def _comp_safe_bbox(
@@ -55,7 +55,7 @@ def _comp_safe_bbox(
 ) -> tuple[float, float, float, float] | None:
     """safe_bbox re-shrunk by the night's largest sky-annulus radius (see COMP-EDGE-2026-10).
     Raw (alignment-intersection) bbox = safe_bbox + safe_bbox_r_out_px of photometry_plan.json;
-    per-frame FWHM = VY_FWHM of the aligned frames (the value Phase 2A sizes the annulus with)."""
+    per-frame FWHM = VY_FWHM of the aligned frames (the value aperture photometry sizes the annulus with)."""
     if safe_bbox is None:
         return None
     try:
@@ -74,7 +74,7 @@ def _comp_safe_bbox(
         for cp in csv_paths:
             fp = Path(cp).with_name(frame_stem_from_source(Path(cp).name) + ".fits")
             if fp.is_file():
-                # same clamp as the Phase-2A grid (measure_night_grid / _fwhm_from_fits_header)
+                # same clamp as the aperture-photometry grid (measure_night_grid / _fwhm_from_fits_header)
                 v = clamp_fwhm_px(_fits.getheader(fp).get("VY_FWHM"))
                 if v is not None:
                     fws.append(float(v))
@@ -110,7 +110,7 @@ def _split_comp_reserve(comps: pd.DataFrame, ) -> tuple[pd.DataFrame, pd.DataFra
     return prim.reset_index(drop=True), resv.reset_index(drop=True)
 
 
-def run_phase0_and_phase1(
+def run_target_and_comp_selection(
     variable_targets_csv: Path,
     masterstars_csv: Path,
     per_frame_csv_dir: Path,
@@ -119,14 +119,12 @@ def run_phase0_and_phase1(
     fwhm_px: float = 3.7,
     frame_w_px: int = 2082,
     frame_h_px: int = 1397,
-    chip_interior_margin_px: int = 100,
     plate_scale_arcsec_px: float | None = None,
     n_comp_min: int = 3,
     n_comp_max: int = 7,
     max_comp_rms: float = 0.1,
     min_dist_arcsec: float = 60.0,
     min_frames_frac: float = 0.3,
-    isolation_radius_px: float = 25.0,
     flux_col: str = "dao_flux",
     comp_max_delta_bprp: float = 0.5,
     cfg: AppConfig | None = None,
@@ -134,22 +132,22 @@ def run_phase0_and_phase1(
     draft_id: int | None = None,
     db: Any = None,
 ) -> dict[str, Any]:
-    """Spusti Fazu 0 + Fazu 1 a ulozi vystupy.
+    """Run target selection + comparison-star selection and save the outputs.
 
-    Vystupy (ulozene do output_dir):
-      active_targets.csv              - VSX ciele + ``zone_flag`` / ``skip_photometry`` (saturovane)
-      comparison_stars_per_target.csv - porovnavacie hviezdy pre kazdy ciel
-      suspected_variables.csv         - kandidati na nove premenne (vysoky RMS, nie VSX)
+    Outputs (saved to output_dir):
+      active_targets.csv              - VSX targets + ``zone_flag`` / ``skip_photometry`` (saturated)
+      comparison_stars_per_target.csv - comparison stars for each target
+      suspected_variables.csv         - candidate new variables (high RMS, not in VSX)
 
     Returns:
-        dict s klucmi:
+        dict with keys:
           n_active_targets, n_comparison_pairs,
           active_targets_csv, comparison_stars_csv, suspected_variables_csv,
           targets_without_comps (list catalog_id)
 
-    Args:
-        chip_interior_margin_px: Min. pocet pixelov od okraja cipu pre **vsetky** kroky Fazy 0+1
-            (aktivne ciele, porovnavacky, suspected). ``0`` = bez priestoroveho orezania.
+    Edge rule: a star is used when its sky annulus fits on the chip - inside the annulus-aware
+    safe box of photometry_plan.json (alignment intersection shrunk by r_out), else at least
+    annulus_outer_fwhm x MASTERSTAR FWHM from the frame edge.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -178,7 +176,7 @@ def run_phase0_and_phase1(
             exc,
         )
     logging.info(
-        "[PHASE 0+1] MASTERSTAR fwhm_px=%.3f (D3 astrometric gate)",
+        "[TARGET-SELECT] MASTERSTAR fwhm_px=%.3f (D3 astrometric gate)",
         float(fwhm_px),
     )
 
@@ -193,6 +191,8 @@ def run_phase0_and_phase1(
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
     _cfg_base = cfg if cfg is not None else AppConfig()
+    # CODE-REVIEW step 7B: the edge margin is the sky-annulus radius (was a fixed 50 px key).
+    chip_interior_margin_px = int(math.ceil(float(_cfg_base.annulus_outer_fwhm) * float(fwhm_px)))
     _ms_density = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
     _fw_in, _fh_in = int(frame_w_px), int(frame_h_px)
     frame_w_px, frame_h_px, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
@@ -204,7 +204,7 @@ def run_phase0_and_phase1(
     )
     if _frame_hw_src != "caller_default":
         logging.info(
-            "[PHASE 0+1] Frame dimensions %dx%d px from %s (caller default %dx%d)",
+            "[TARGET-SELECT] Frame dimensions %dx%d px from %s (caller default %dx%d)",
             int(frame_w_px),
             int(frame_h_px),
             _frame_hw_src,
@@ -220,7 +220,7 @@ def run_phase0_and_phase1(
     _density = compute_field_density(_n_field, _cw_fd, _ch_fd)
     _d_class = classify_field_density(float(_density), 300.0, 1000.0)  # diagnostic label only
     logging.info(
-        "[FIELD DENSITY] %.0f hviezd/Mpx -> trieda: %s (n_stars=%d, chip=%dx%dpx, n_src=%s)",
+        "[FIELD DENSITY] %.0f stars/Mpx -> class: %s (n_stars=%d, chip=%dx%dpx, n_src=%s)",
         float(_density),
         _d_class,
         int(_n_field),
@@ -249,13 +249,13 @@ def run_phase0_and_phase1(
     )
 
     _wcs_scale_ok = True
-    _expected_scale = (
-        float(plate_scale_arcsec_px)
-        if plate_scale_arcsec_px is not None
-        and math.isfinite(float(plate_scale_arcsec_px))
-        and float(plate_scale_arcsec_px) > 0
-        else float(_cfg_base.phase01_plate_scale_arcsec_per_px or 1.3)
-    )
+    # PLATE-SCALE-2026-10: the plate scale of the solved MASTERSTAR (photometry_core); no config
+    # value (a fixed 1.3"/px was silently wrong on every rig)
+    if not (plate_scale_arcsec_px is not None and math.isfinite(float(plate_scale_arcsec_px))
+            and float(plate_scale_arcsec_px) > 0):
+        raise ValueError("Target and comparison-star selection: plate scale not derivable from the MASTERSTAR WCS")
+    _ps_p01 = float(plate_scale_arcsec_px)
+    _expected_scale = _ps_p01
     if _ms_density.is_file():
         try:
             from astropy.wcs import WCS as _WCS_check  # noqa: PLC0415
@@ -284,9 +284,9 @@ def run_phase0_and_phase1(
         f"{'pixel-fallback' if not _wcs_scale_ok else 'radec-haversine'}"
     )
 
-    # -- FAZA 0 --
-    _p("Faza 0: vyber aktivnych cielov z VSX...")
-    logging.info("[FAZA 0] Vyber aktivnych cielov...")
+    # -- target selection --
+    _p("Target selection: active targets from VSX...")
+    logging.info("[TARGET-SELECT] Selecting active targets...")
     _cfg_p01 = _cfg_base
     # Load annulus-aware safe bbox from photometry_plan.json (if available).
     _safe_bbox: tuple[float, float, float, float] | None = None
@@ -315,7 +315,7 @@ def run_phase0_and_phase1(
                 with astrofits.open(_ms_fits_p01, memmap=False) as hdul:
                     _masterstar_wcs = WCS(hdul[0].header)
         except Exception as exc:  # noqa: BLE001
-            logging.warning("[VT REFRESH] MASTERSTAR WCS sa nepodarilo nacitat: %s - x/y v variable_targets.csv bez zmeny", exc)
+            logging.warning("[VT REFRESH] could not load MASTERSTAR WCS: %s - x/y in variable_targets.csv unchanged", exc)
             _masterstar_wcs = None
 
     _vt_p01 = Path(variable_targets_csv)
@@ -349,13 +349,13 @@ def run_phase0_and_phase1(
         logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
         pass
     active.to_csv(active_csv, index=False)
-    logging.info(f"[FAZA 0] Ulozene: {active_csv} ({len(active)} cielov)")
+    logging.info(f"[TARGET-SELECT] Saved: {active_csv} ({len(active)} targets)")
     _excluded = _photometry_comp.LAST_EXCLUDED_TARGETS
     if _excluded is not None and not _excluded.empty:
         excluded_csv = output_dir / "excluded_targets.csv"
         _excluded.to_csv(excluded_csv, index=False)
-        logging.info(f"[FAZA 0] Ulozene: {excluded_csv} ({len(_excluded)} excluded)")
-    _p(f"Faza 0 hotova: {len(active)} aktivnych cielov")
+        logging.info(f"[TARGET-SELECT] Saved: {excluded_csv} ({len(_excluded)} excluded)")
+    _p(f"Target selection done: {len(active)} active targets")
 
     if active.empty:
         return {
@@ -372,12 +372,12 @@ def run_phase0_and_phase1(
 
     # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
     ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
-    # Normalizuj Gaia ID na string
+    # Normalize Gaia ID to string
     for _id_col in ("catalog_id", "name"):
         if _id_col in ms_df.columns:
             ms_df[_id_col] = _normalize_id_series(ms_df[_id_col])
 
-    # -- FAZA 1 - per target --
+    # -- comparison-star selection - per target --
     all_comp_rows: list[pd.DataFrame] = []
     all_reserve_rows: list[pd.DataFrame] = []
     targets_without_comps: list[str] = []
@@ -403,13 +403,13 @@ def run_phase0_and_phase1(
 
     fwhm_night_px, _fwn_src = night_median_fwhm_px(csv_paths, float(fwhm_px))
     logging.info(
-        "[PHASE 0+1] neighbour-geometry FWHM %.3f px (%s); MASTERSTAR %.3f px; iso %.1f px",
+        "[COMP-SELECT] neighbour-geometry FWHM %.3f px (%s); MASTERSTAR %.3f px; iso %.1f px",
         float(fwhm_night_px),
         _fwn_src,
         float(fwhm_px),
         float(fwhm_night_px) * float(getattr(cfg or AppConfig(), "comp_isolation_fwhm", 3.0) or 3.0),
     )
-    _p(f"Faza 1: ProcFrameStore {len(_proc_store)} per-frame CSV - vyber porovnavaciek ({len(active)} cielov)...")
+    _p(f"Comparison-star selection: {len(_proc_store)} per-frame catalogs, {len(active)} targets...")
 
     try:
         import streamlit as st  # noqa: PLC0415
@@ -432,12 +432,12 @@ def run_phase0_and_phase1(
 
             _vx = normalize_gaia_id_set(
                 _vt_chip["catalog_id"].tolist(),
-                log_label="variable_targets.csv (phase1 exclude)",
+                log_label="variable_targets.csv (comp_selection exclude)",
             )
             _vt_cid_exclude = _vx or None
     except Exception:  # noqa: BLE001
         _vt_cid_exclude = None
-    _fw_chip, _fh_chip = _phase0_effective_frame_hw_px(
+    _fw_chip, _fh_chip = _target_selection_effective_frame_hw_px(
         _vt_chip,
         ms_df,
         frame_w_px=int(frame_w_px),
@@ -463,7 +463,7 @@ def run_phase0_and_phase1(
             if _sd_ctx is not None:
                 _sat_may_exclude = bool(_sd_ctx.may_exclude_saturation())
                 logging.info(
-                    "[SAT-DIAG] phase1 sat_may_exclude=%s source=%s sat_adu=%s",
+                    "[SAT-DIAG] comp_selection sat_may_exclude=%s source=%s sat_adu=%s",
                     _sat_may_exclude,
                     _sd_ctx.sat_source,
                     _sd_ctx.sat_adu,
@@ -485,7 +485,7 @@ def run_phase0_and_phase1(
                 except Exception as _lin_exc:  # noqa: BLE001
                     logging.warning("[LINEARITY] check failed: %s", _lin_exc)
     except Exception as _sd_p1_exc:  # noqa: BLE001
-        logging.debug("[SAT-DIAG] phase1 context load skipped: %s", _sd_p1_exc)
+        logging.debug("[SAT-DIAG] comp_selection context load skipped: %s", _sd_p1_exc)
 
     _cfg_gp = _cfg_base
     _global_pool_df: pd.DataFrame | None = None
@@ -514,13 +514,12 @@ def run_phase0_and_phase1(
         if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
             _global_pool_df = None
     except Exception as _gcp_exc:  # noqa: BLE001
-        from comp_pool_noise import CompPoolAdmissionError  # noqa: PLC0415
         from invariants_runtime import PopulationEmptiedError  # noqa: PLC0415
 
-        if isinstance(_gcp_exc, (CompPoolAdmissionError, PopulationEmptiedError)):
+        if isinstance(_gcp_exc, PopulationEmptiedError):
             raise
         logging.warning(
-            "[GLOBAL COMP POOL] zostavenie zlyhalo: %s - fallback na per-target masterstars",
+            "[GLOBAL COMP POOL] build failed: %s - falling back to per-target masterstars",
             _gcp_exc,
         )
         _global_pool_df = None
@@ -538,7 +537,7 @@ def run_phase0_and_phase1(
         ]
         _gaia_batch = _batch_enrich_targets_bp_rp_from_gaia_db(_cids_batch, _gaia_db_targets)
         logging.info(
-            "[PHASE 1] Gaia batch lookup: %d/%d targets enriched",
+            "[COMP-SELECT] Gaia batch lookup: %d/%d targets enriched",
             len(_gaia_batch),
             int(len(active)),
         )
@@ -573,21 +572,21 @@ def run_phase0_and_phase1(
                 len(_comp_gaia_prefetch),
             )
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0213] Comp Gaia bp_rp prefetch batch fails - phase1 comp selection hits DB per-star instead o...: %s', exc)
+        logging.error('[EXC-0213] Comp Gaia bp_rp prefetch batch fails - comp_selection comp selection hits DB per-star instead o...: %s', exc)
         logging.warning("[PERF-3] Comp Gaia prefetch failed (non-fatal): %s", exc)
 
-    _t_phase1 = time.time()
+    _t_comp_selection = time.time()
     _n_active = int(len(active))
     _n_oos_skipped = 0
-    # PHASE1-SKIP / TARGET-RULES-2026-10: no comparison selection for targets whose Phase-0 skip is
+    # PHASE1-SKIP / TARGET-RULES-2026-10: no comparison selection for targets whose target-selection skip is
     # final (saturated, S/N below snr_min, VSX type out of scope) - they are never measured.
     from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
 
-    _n_phase1 = int(
+    _n_comp_selection = int(
         (~active.get("skip_reason", pd.Series("", index=active.index)).fillna("").astype(str).str.strip()
          .isin(list(FINAL_SKIP_REASONS))).sum()
     )
-    _i_phase1 = 0
+    _i_comp_selection = 0
     # COMP-RULES-2026-10: minimum target-comparison separation from geometry, not a fixed
     # 60 arcsec: the comparison aperture must lie outside the target's sky annulus
     # (d >= r_out + r_ap = (annulus_outer_fwhm + k_max) x FWHM).
@@ -617,10 +616,10 @@ def run_phase0_and_phase1(
             if _skip_reason in FINAL_SKIP_REASONS:
                 _n_oos_skipped += 1
                 continue
-            _i_phase1 += 1
+            _i_comp_selection += 1
             if progress_cb is not None:
                 _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
-                _p(f"Phase 1: target {_i_phase1}/{_n_phase1}: {_tid}")
+                _p(f"Comparison-star selection: target {_i_comp_selection}/{_n_comp_selection}: {_tid}")
             tr_enriched = _enrich_target_bp_rp_from_gaia_db(
                 target_row,
                 gaia_db_path=_gaia_db_targets,
@@ -638,13 +637,12 @@ def run_phase0_and_phase1(
                 fwhm_d3_px=float(fwhm_px),
                 n_comp_min=n_comp_min,
                 # COMP-SMART-2026-10: rank N_RESERVE more candidates as the reserve that
-                # Phase 2A uses to replace suspect comps (split below).
+                # aperture photometry uses to replace suspect comps (split below).
                 n_comp_max=int(n_comp_max),
                 n_reserve=_N_RESERVE,
                 max_comp_rms=max_comp_rms,
                 min_dist_arcsec=min_dist_arcsec,
                 min_frames_frac=min_frames_frac,
-                isolation_radius_px=isolation_radius_px,
                 flux_col=flux_col,
                 chip_fw=_fw_chip,
                 chip_fh=_fh_chip,
@@ -653,16 +651,7 @@ def run_phase0_and_phase1(
                 gaia_prefetch=_comp_gaia_prefetch,
                 variable_target_catalog_ids=_vt_cid_exclude,
                 cfg=_cfg_gp,
-                plate_scale_arcsec=float(
-                    plate_scale_arcsec_px
-                    if plate_scale_arcsec_px is not None
-                    and math.isfinite(float(plate_scale_arcsec_px))
-                    and float(plate_scale_arcsec_px) > 0
-                    else (
-                        float(_cfg_gaia_targets.phase01_plate_scale_arcsec_per_px)
-                        or 1.3
-                    )
-                ),
+                plate_scale_arcsec=_ps_p01,
                 use_pixel_dist=not _wcs_scale_ok,
                 sat_may_exclude=_sat_may_exclude,
             )
@@ -677,7 +666,7 @@ def run_phase0_and_phase1(
         except Exception as exc:  # noqa: BLE001
             # EXC-0215: T3 -- Prefetch coverage stats log after comp selection suppressed (EXCEPT-BULK-2 2026-07-08)
             logging.warning(
-                "[PHASE1] %s: neocakavana chyba, preskakujem: %s",
+                "[COMP-SELECT] %s: unexpected error, skipping: %s",
                 str(target_row.get("catalog_id", "?")),
                 exc,
             )
@@ -686,16 +675,16 @@ def run_phase0_and_phase1(
 
     if _n_oos_skipped:
         logging.info(
-            "Faza 1: %d targets with a final skip (VSX type, S/N, depth) - no comp selection",
+            "Comparison-star selection: %d targets with a final skip (VSX type, S/N, depth) - no comp selection",
             _n_oos_skipped,
         )
 
     try:
         active.to_csv(active_csv, index=False)
-        logging.info("[FAZA 0-1] active_targets.csv prepisane po doplneni bp_rp targetov (Gaia DB).")
+        logging.info("[COMP-SELECT] active_targets.csv rewritten after filling target bp_rp (Gaia DB).")
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0214] active_targets.csv rewrite after phase1 bp_rp enrichment fails - disk copy lacks update...: %s', exc)
-        log_event(f"active_targets.csv zapis po Faze 1 zlyhal: {exc!s}")
+        logging.error('[EXC-0214] active_targets.csv rewrite after comp_selection bp_rp enrichment fails - disk copy lacks update...: %s', exc)
+        log_event(f"active_targets.csv write after comparison-star selection failed: {exc!s}")
 
     comp_df = pd.concat(all_comp_rows, ignore_index=True) if all_comp_rows else pd.DataFrame()
     if "target_catalog_id" in comp_df.columns and "catalog_id" in comp_df.columns:
@@ -741,7 +730,6 @@ def run_phase0_and_phase1(
                 "bp_rp",
                 "comp_rms",
                 "comp_score",
-                "contamination_idx",
                 "comp_n_frames",
                 "target_catalog_id",
                 "target_vsx_name",
@@ -760,7 +748,7 @@ def run_phase0_and_phase1(
             ]
         )
 
-    # Fallback: dopln bp_rp pre COMP hviezdy bez Gaia farby pomocou lokalnej Gaia DB (sky-box okolo RA/Dec).
+    # Fallback: fill bp_rp for COMP stars without a Gaia colour from the local Gaia DB (sky box around RA/Dec).
     try:
         if (
             not comp_df.empty
@@ -904,36 +892,30 @@ def run_phase0_and_phase1(
                     n_found += 1
 
             if n_nan > 0:
-                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} hviezd doplnenych z Gaia DB")
+                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} stars filled from Gaia DB")
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0217] Whole comp bp_rp Gaia-DB fallback block fails - comps export with NaN bp_rp and wrong t...: %s', exc)
         pass
 
     comp_csv = output_dir / "comparison_stars_per_target.csv"
     # OUTPUT-REVIEW-2026-10 step 5: one table - the admitted comps and the COMP-SMART reserve
-    # (p1_role / p1_rank); Phase 2A marks the stars of the final ensembles (used_role / used_rank).
-    from comp_table import LEGACY_PHASE1_CSV, LEGACY_RESERVE_CSV, phase1_table, write_comp_table  # noqa: PLC0415
+    # (p1_role / p1_rank); aperture photometry marks the stars of the final ensembles (used_role / used_rank).
+    from comp_table import LEGACY_COMP_SELECTION_CSV, LEGACY_RESERVE_CSV, comp_selection_table, write_comp_table  # noqa: PLC0415
 
     _res_all = pd.concat(all_reserve_rows, ignore_index=True) if all_reserve_rows else None
-    write_comp_table(phase1_table(comp_df, _res_all), comp_csv)
+    write_comp_table(comp_selection_table(comp_df, _res_all), comp_csv)
     logging.info("[COMP-SMART] reserve: %d rows (in %s)", 0 if _res_all is None else len(_res_all), comp_csv.name)
-    for _old in (LEGACY_PHASE1_CSV, LEGACY_RESERVE_CSV):  # files of the earlier 3-table format
+    for _old in (LEGACY_COMP_SELECTION_CSV, LEGACY_RESERVE_CSV):  # files of the earlier 3-table format
         try:
             (output_dir / _old).unlink(missing_ok=True)
         except OSError as _ul_exc:
             logging.warning("[COMP-TABLE] %s not removed: %s", _old, _ul_exc)
     logging.info(
-        f"[FAZA 1] Ulozene: {comp_csv} "
-        f"({len(comp_df)} riadkov, {len(all_comp_rows)} targetov s porovnavackami)"
+        f"[COMP-SELECT] Saved: {comp_csv} "
+        f"({len(comp_df)} rows, {len(all_comp_rows)} targets with comparison stars)"
     )
-    logging.info(f"[FAZA 1] Cas (comp selection): {time.time() - _t_phase1:.1f}s")
-    _ps_p1 = float(
-        plate_scale_arcsec_px
-        if plate_scale_arcsec_px is not None
-        and math.isfinite(float(plate_scale_arcsec_px))
-        and float(plate_scale_arcsec_px) > 0
-        else (float(_cfg_base.phase01_plate_scale_arcsec_per_px) or 1.3)
-    )
+    logging.info(f"[COMP-SELECT] Time (comp selection): {time.time() - _t_comp_selection:.1f}s")
+    _ps_p1 = _ps_p01
     _gs11_p1 = build_gs11_summary(
         [],
         _cfg_base,
@@ -942,8 +924,8 @@ def run_phase0_and_phase1(
     merge_photometry_pipeline_meta(output_dir, {"gs11_summary": _gs11_p1})
 
     # -- Suspected variables --
-    # Hviezdy s vysokym RMS (>3sigma nad medianom) ktore nie su VSX ani active targets
-    _p("Faza 1: suspected variables (nove kandidaty)...")
+    # Stars with high RMS (>3 sigma above the median) that are neither VSX nor active targets
+    _p("Suspected variables (new candidates)...")
     suspected_csv = output_dir / "suspected_variables.csv"
     _active_ids: set[str] = set()
     for _ax in active["catalog_id"].tolist():
@@ -951,7 +933,10 @@ def run_phase0_and_phase1(
         if _nx:
             _active_ids.add(_nx)
 
-    _margin_sus: int | None = None if int(chip_interior_margin_px) <= 0 else int(chip_interior_margin_px)
+    _m_sus = float(chip_interior_margin_px)
+    _box_sus = _comp_bbox if _comp_bbox is not None else (
+        _m_sus, _m_sus, float(_fw_chip) - _m_sus, float(_fh_chip) - _m_sus
+    )
 
     _write_suspected_variables(
         ms_df=ms_df,
@@ -960,9 +945,7 @@ def run_phase0_and_phase1(
         output_path=suspected_csv,
         min_frames_frac=min_frames_frac,
         outlier_sigma=3.0,
-        interior_fw=_fw_chip,
-        interior_fh=_fh_chip,
-        interior_margin_px=_margin_sus,
+        interior_bbox=_box_sus,
         csv_cache=shared_csv_cache,
     )
     # Best-effort: repair Gaia IDs in suspected_variables.csv via RA/DEC + local Gaia DB.
@@ -985,7 +968,7 @@ def run_phase0_and_phase1(
         logging.error('[EXC-0219] suspected_variables.csv catalog_id auto-repair from Gaia DB fails silently: %s', exc)
         pass
 
-    _p(f"Faza 0+1 hotovo: {int(len(active))} cielov, {int(len(comp_df))} parov porovnavaciek")
+    _p(f"Target and comparison-star selection done: {int(len(active))} targets, {int(len(comp_df))} target-comparison pairs")
     return {
         "n_active_targets": int(len(active)),
         "n_comparison_pairs": int(len(comp_df)),

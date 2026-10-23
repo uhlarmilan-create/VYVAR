@@ -57,3 +57,34 @@ SAT_LIMIT_PEAK_TEST_SOURCE = (
     f"INV-SAT-LIMIT peak-test {SAT_LIMIT_NO_KNEE_FRAC:.2f}x "
     f"container_clip_{SAT_LIMIT_CONTAINER_CLIP_ADU:.0f}"
 )
+
+# CODE-REVIEW-2026-10 step 7: former config keys that nobody tunes (values unchanged).
+# Exoplanet host label: Gaia position within this separation of the catalogue host (arcsec).
+EXOPLANET_MATCH_MAX_SEP_ARCSEC = 3.0
+# Comparison-star selection: RMS (mag) below this is an artefact, not a stable star.
+COMP_SELECT_RMS_FLOOR = 1e-6
+# ePSF build: fewest MASTERSTAR build stars for a model.
+EPSF_MIN_BUILD_STARS = 30
+# DAO centroid guard: a matched centroid further than this (x FWHM, capped at 1.5 px) from the
+# MASTERSTAR position falls back to the WCS position.
+DAO_CENTROID_MAX_SHIFT_FWHM = 1.0
+# Colour term: fewest comparison stars for a fitted colour term.
+CT_MIN_COMP = 7
+# MASTERSTAR DAO / Gaia census (all in px of the MASTERSTAR unless named otherwise).
+MS_DAO_PASS1_DEDUP_PX = 0.75  # pass-1 duplicates closer than this are merged
+MS_DAO_PASS2_SIGMA = 4.0  # targeted pass-2 detection threshold (sigma)
+MS_DAO_PASS2_CENTER_TOL_PX = 2.0  # pass-2 centroid within this of the Gaia position
+MS_GAIA_CENSUS_EDGE_MARGIN_PX = 10.0  # Gaia stars nearer the edge are not counted
+MS_DAO_MATCH_RADIUS_K = 1.7  # identity radius = k x residual scatter
+MS_DAO_CENTROID_QA_FLOOR_PX = 1.0  # centroid QA tolerance floor
+MS_DAO_CENTROID_QA_CAP_PX = 3.0  # centroid QA tolerance cap
+MS_LOCK_LEFTOVER_RADIUS_PX = 3.0  # leftover DAO detection promoted to a Gaia star within this
+MS_LOCK_PAIR_TOL_PX = 3.0  # DAO-Gaia lock pair tolerance
+MS_FORCED_SEED_CENTROID_MAX_PX = 2.0  # forced seed accepted when its centroid moves less than this
+MS_FORCED_SEED_SNR_MIN = 4.0  # forced seed accepted from this S/N
+# Alignment: astroalign control-point cap (detection count is alignment_max_stars).
+ALIGNMENT_MAX_CONTROL_POINTS = 80
+# DAO kernel FWHM (px) for a frame without a measured FWHM (QC writes VY_FWHM on every processed
+# light; this is reached only when that measurement failed). Was config sips_dao_fwhm_px (2.5),
+# which dao_detection_fwhm_pixels already raised to 3.0.
+DAO_FWHM_FALLBACK_PX = 3.0

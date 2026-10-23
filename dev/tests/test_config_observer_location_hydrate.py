@@ -7,6 +7,7 @@ failure the fields fall back to the dataclass site defaults and a WARNING is log
 
 from __future__ import annotations
 
+import math
 import json
 import logging
 import sqlite3
@@ -48,9 +49,9 @@ def test_observer_location_hydrate_db_failure_falls_back_to_defaults_and_warns(
         with caplog.at_level(logging.WARNING, logger="config"):
             cfg = AppConfig(project_root=tmp_path)
 
-    assert cfg.observer_lat == DEFAULT_LAT
-    assert cfg.observer_lon == DEFAULT_LON
-    assert cfg.observer_alt_m == DEFAULT_ALT
+    assert math.isnan(cfg.observer_lat) and math.isnan(DEFAULT_LAT)  # no built-in site
+    assert math.isnan(cfg.observer_lon)
+    assert math.isnan(cfg.observer_alt_m)
     assert any(
         "Observer location DB hydrate failed" in rec.message for rec in caplog.records
     )
@@ -93,5 +94,5 @@ def test_observer_coords_absent_from_config_use_defaults(tmp_path: Path) -> None
         json.dumps({"observer_location_id": 0}), encoding="utf-8"
     )
     cfg = AppConfig(project_root=tmp_path)
-    assert cfg.observer_lat == DEFAULT_LAT
-    assert cfg.observer_lon == DEFAULT_LON
+    assert math.isnan(cfg.observer_lat) and math.isnan(DEFAULT_LAT)  # no built-in site
+    assert math.isnan(cfg.observer_lon)

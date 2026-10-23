@@ -1,4 +1,4 @@
-"""Saturated targets still skip Phase 2A photometry (skip_photometry unchanged)."""
+"""Saturated targets still skip aperture photometry (skip_photometry unchanged)."""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ import pandas as pd
 from config import AppConfig
 from photometry_core import (
     _normalize_gaia_id,
-    _phase2a_process_one_target,
-    _Phase2AState,
+    _aperture_process_one_target,
+    _AperturePhotometryState,
 )
 
 
-def _cfg_phase2a_minimal() -> AppConfig:
+def _cfg_aperture_minimal() -> AppConfig:
     cfg = AppConfig()
     cfg.gs11_dilution_enabled = False
     return cfg
@@ -37,8 +37,8 @@ def _comp_table(target_cid: str, comp_cids: list[str]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _build_state(tmp_path: Path, target_cid: str, comp_cids: list[str]) -> _Phase2AState:
-    cfg = _cfg_phase2a_minimal()
+def _build_state(tmp_path: Path, target_cid: str, comp_cids: list[str]) -> _AperturePhotometryState:
+    cfg = _cfg_aperture_minimal()
     comps = _comp_table(target_cid, comp_cids)
     comp_index = {target_cid: comps}
 
@@ -52,17 +52,17 @@ def _build_state(tmp_path: Path, target_cid: str, comp_cids: list[str]) -> _Phas
     for cid in comp_cids:
         apertures[cid] = 5.0
 
-    return _Phase2AState(
+    return _AperturePhotometryState(
         at_df=pd.DataFrame(),
         comp_df=comps,
         _comp_index=comp_index,
         target_bp_rp_by_cid={},
         csv_files=[csv_path],
         n_frames=1,
-        _phase2a_csv_cache={
+        _aperture_csv_cache={
             str(csv_path): pd.DataFrame({"jd_mid": [2459000.5], "bjd_tdb_mid": [2459000.5]}),
         },
-        _phase2a_lookup_cache={},
+        _aperture_lookup_cache={},
         frame_time_lookup={
             "proc_frame1": {"jd": 2459000.5, "bjd": 2459000.5, "airmass": 1.2},
         },
@@ -119,8 +119,8 @@ def test_saturated_target_skips_with_zero_frames(tmp_path: Path) -> None:
     fits_stub = tmp_path / "masterstar.fits"
     fits_stub.write_bytes(b"")
 
-    with patch("phase2a_target.read_flux_from_csv") as mock_read:
-        summary, n_lc = _phase2a_process_one_target(
+    with patch("aperture_photometry_target.read_flux_from_csv") as mock_read:
+        summary, n_lc = _aperture_process_one_target(
             row,
             ti=1,
             state=state,

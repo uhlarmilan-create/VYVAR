@@ -60,18 +60,18 @@ def log_lights_binning_from_headers_preflight(
     counts: dict[tuple[int, int], int] = summary.get("counts") or {}
     if not counts:
         if int(summary.get("errors") or 0) > 0:
-            log_event(f"{context} - binning z hlaviciek: nepodarilo sa precitat ziadny FITS.")
+            log_event(f"{context} - binning from headers: could not read any FITS.")
         return None
-    log_event(f"{context} - binning z hlaviciek FITS ({len(paths)} suborov):")
+    log_event(f"{context} - binning from FITS headers ({len(paths)} files):")
     samples: dict[tuple[int, int], Path] = summary.get("samples") or {}
     for (xb, yb), n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
         sample = samples.get((xb, yb))
         sn = sample.name if sample is not None else "?"
-        log_event(f"  {xb}x{yb}: {n}x (priklad: {sn})")
+        log_event(f"  {xb}x{yb}: {n}x (example: {sn})")
     if len(counts) > 1:
         log_event(
-            f"{context} - POZOR: zmiesane binning rezimy v davke - "
-            "kalibracia / master match pouzivaju binning z hlavicky kazdeho suboru."
+            f"{context} - WARNING: mixed binning modes in the batch - "
+            "calibration / master match use the binning from each file's header."
         )
     best_key = max(counts.items(), key=lambda kv: kv[1])[0]
     return best_key
@@ -169,12 +169,12 @@ def _merge_equipment_pixel_into_metadata(meta: dict[str, Any], db: VyvarDatabase
             same = False
         if not same:
             log_event(
-                f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> efektivny {_eff:g} um "
-                f"(preferovane pred FITS; predtym {prev!r})."
+                f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> effective {_eff:g} um "
+                f"(preferred over FITS; previously {prev!r})."
             )
     else:
         log_event(
-            f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> efektivny {_eff:g} um."
+            f"PIXEL: EQUIPMENTS.PIXELSIZE={nv:g} um x binning {x_bin}x{y_bin} -> effective {_eff:g} um."
         )
 
 def _recompute_effective_pixel_from_physical(meta: dict[str, Any]) -> None:
@@ -239,7 +239,7 @@ def _enrich_calibration_metadata_from_header(
     has_focallen = "FOCALLEN" in header and header["FOCALLEN"] not in (None, "", " ", "0", 0)
     if focal_mm is None and has_focallen:
         raw_fc = header["FOCALLEN"]
-        log_event(f"DIAG: FITS FOCALLEN (SIPS / zapisovatel hlavicky) = {raw_fc!r}")
+        log_event(f"DIAG: FITS FOCALLEN (SIPS / header writer) = {raw_fc!r}")
         try:
             v = float(raw_fc)
             mm0 = (v * 1000.0) if (math.isfinite(v) and v > 0 and v < 25.0) else v
@@ -322,8 +322,8 @@ def _log_effective_pixel_pitch(meta: dict[str, Any], *, filepath: str = "") -> N
         ps_s = f"{float(pixsz_from_header_or_db):.4g}" if pixsz_from_header_or_db is not None else "n/a"
         eff_s = f"{float(effective_pixsz):.4g}" if effective_pixsz is not None else "n/a"
         log_event(
-            f"DEBUG: Fyzicky pixel: {ps_s} um | Binning: {binning_x}x{binning_y} | "
-            f"EFEKTIVNY PIXEL PRE VYPOCET: {eff_s} um{tail}"
+            f"DEBUG: Physical pixel: {ps_s} um | Binning: {binning_x}x{binning_y} | "
+            f"EFFECTIVE PIXEL FOR COMPUTATION: {eff_s} um{tail}"
         )
     except (TypeError, ValueError):
         pass
@@ -493,7 +493,7 @@ def extract_fits_metadata(
     - pixel_size_um_header (**effective** pitch [um] = physical x binning for plate solve / WCS)
     - effective_pixel_um_plate_scale (native mean x XBINNING; solver / plate scale)
     - focal_length [mm]: ``FOCALLEN`` in header when present; else ``TELESCOPE.FOCAL``
-    - focal_length_source, pixel_size_raw (surove cisla z hlavicky), pixel_um (= effective pixel)
+    - focal_length_source, pixel_size_raw (raw numbers from the header), pixel_um (= effective pixel)
     - temp
     - ra
     - dec

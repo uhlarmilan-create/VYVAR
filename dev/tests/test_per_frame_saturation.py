@@ -1,6 +1,6 @@
 """SAT-TARGET-2026-10 / TARGET-RULES-2026-10: per-frame saturation of measurable targets.
 
-Phase-0 skips (saturated on MASTERSTAR, S/N below snr_min, VSX type out of scope) are final;
+Target-selection skips (saturated on MASTERSTAR, S/N below snr_min, VSX type out of scope) are final;
 the per-frame test only removes a target linear on MASTERSTAR that is saturated in most frames.
 """
 
@@ -29,7 +29,7 @@ def _flags(n_sat: int, n_total: int = 20) -> list[bool]:
     return [True] * n_sat + [False] * (n_total - n_sat)
 
 
-def test_recorded_phase0_skip_is_final() -> None:
+def test_recorded_target_selection_skip_is_final() -> None:
     for reason in ("saturated", "below_snr_min", "vsx_type_out_of_scope", "per_frame_saturation"):
         d = decide_per_frame_saturation(skip_reason=reason, frame_saturated=_flags(0))
         assert d["skip_photometry"] and d["skip_reason"] == reason
@@ -45,7 +45,7 @@ def test_linear_target_saturated_in_most_frames_is_skipped() -> None:
 
 
 def _night(tmp_path: Path) -> tuple[pd.DataFrame, list[Path], dict]:
-    """20 frames; 1001 saturated in 6, 1002 in 15, 1003 in none, 1004 skipped in Phase 0."""
+    """20 frames; 1001 saturated in 6, 1002 in 15, 1003 in none, 1004 skipped in target selection."""
     files, cache = [], {}
     for i in range(20):
         rows = [{"catalog_id": cid, "peak_max_adu": 51000.0 if i < k else 15000.0}
@@ -72,7 +72,7 @@ def test_apply_night(tmp_path: Path) -> None:
     assert not by.loc["1001", "skip_photometry"] and "sat_clean_frac" not in at.columns  # OUTPUT-REVIEW step 6
     assert by.loc["1002", "skip_photometry"] and by.loc["1002", "skip_reason"] == "per_frame_saturation"
     assert not by.loc["1003", "skip_photometry"] and by.loc["1003", "skip_reason"] == ""
-    # Phase-0 saturated target is never revived, even with clean frames elsewhere
+    # A target saturated in target selection is never revived, even with clean frames elsewhere
     assert by.loc["1004", "skip_photometry"] and by.loc["1004", "skip_reason"] == "saturated"
     # NaN from CSV is not written as the reason "nan"
     assert "nan" not in set(at["skip_reason"].astype(str))
@@ -102,14 +102,14 @@ def test_per_frame_peak_test_equals_catalog_authority(tmp_path: Path) -> None:
     assert at.loc[0, "skip_reason"] == "per_frame_saturation"
 
 
-def test_phase2a_rerun_of_old_active_targets(tmp_path: Path) -> None:
+def test_aperture_rerun_of_old_active_targets(tmp_path: Path) -> None:
     """Review 2026-10-13: active_targets.csv from the old code (rescued saturated target, legacy
-    reasons) and Phase-2A reasons that are not selection skips (no_comps)."""
+    reasons) and aperture-photometry reasons that are not selection skips (no_comps)."""
     at, files, cache = _night(tmp_path)
     at = pd.DataFrame({
         "catalog_id": ["1001", "1002", "1003", "1004"],
         # 1001: MASTERSTAR saturated, cleared by the old per-frame rescue; 1002 legacy depth skip;
-        # 1003: no_comps written by Phase 2A (measurable); 1004 legacy zone_flag skip
+        # 1003: no_comps written by aperture photometry (measurable); 1004 legacy zone_flag skip
         "zone_flag": ["saturated", "linear", "linear", "saturated"],
         "skip_photometry": [False, True, False, True],
         "skip_reason": ["", "below_target_depth", "no_comps", "zone_flag"],

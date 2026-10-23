@@ -1,5 +1,5 @@
 # -*- coding: ascii -*-
-"""Tests for vsx_out_of_scope_types token match + Phase-0 mask-first skip."""
+"""Tests for vsx_out_of_scope_types token match + target-selection mask-first skip."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -56,7 +56,7 @@ def test_manual_targets_never_auto() -> None:
     assert not is_vsx_auto_selected_target({"catalog": "USER", "vsx_type": "ROT"})
 
 
-def _write_phase0(tmp_path: Path) -> tuple[Path, Path]:
+def _write_target_selection(tmp_path: Path) -> tuple[Path, Path]:
     vt = pd.DataFrame(
         [
             {
@@ -137,7 +137,7 @@ def _write_phase0(tmp_path: Path) -> tuple[Path, Path]:
 
 
 def test_select_active_out_of_scope_mask_and_manual_immune(tmp_path: Path) -> None:
-    vt_p, ms_p = _write_phase0(tmp_path)
+    vt_p, ms_p = _write_target_selection(tmp_path)
     cfg = AppConfig()
     cfg.vsx_out_of_scope_types = ["ROT"]
     out = select_active_targets(
@@ -157,7 +157,7 @@ def test_select_active_out_of_scope_mask_and_manual_immune(tmp_path: Path) -> No
 
 
 def test_empty_list_noop_equivalence(tmp_path: Path) -> None:
-    vt_p, ms_p = _write_phase0(tmp_path)
+    vt_p, ms_p = _write_target_selection(tmp_path)
     cfg_off = AppConfig()
     cfg_off.vsx_out_of_scope_types = []
     cfg_default = AppConfig()
@@ -188,8 +188,8 @@ def test_vsx_out_of_scope_types_persists_in_config_json(tmp_path: Path) -> None:
 
 
 def test_out_of_scope_still_in_comp_exclude_set(tmp_path: Path) -> None:
-    """Out-of-scope ROT stays in active_targets -> still in Phase-2A exclude set."""
-    vt_p, ms_p = _write_phase0(tmp_path)
+    """Out-of-scope ROT stays in active_targets -> still in the aperture-photometry exclude set."""
+    vt_p, ms_p = _write_target_selection(tmp_path)
     cfg = AppConfig()
     cfg.vsx_out_of_scope_types = ["ROT"]
     out = select_active_targets(
@@ -202,6 +202,6 @@ def test_out_of_scope_still_in_comp_exclude_set(tmp_path: Path) -> None:
         if str(c).strip()
     }
     assert "1111111111111111111" in cids  # ROT skipped but still present
-    # Simulate Phase-2A exclude construction (all active_targets ids)
+    # Simulate aperture-photometry exclude construction (all active_targets ids)
     exclude = frozenset(cids)
     assert "1111111111111111111" in exclude

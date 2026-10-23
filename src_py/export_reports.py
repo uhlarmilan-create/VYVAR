@@ -31,7 +31,7 @@ from photometry_core import (
 )
 from vyvar_version import VYVAR_SOFTWARE_VERSION
 
-# Gaia ID musi byt str - float64 straca cifry
+# Gaia ID must be str - float64 loses digits
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 
@@ -137,7 +137,7 @@ def _resolve_export_arcsec_per_px(
 ) -> float | None:
     """Derive plate scale (arcsec/px) for export headers - derive-or-None (no magic 1.3).
 
-    Priority: ``pipeline_meta.json`` ``plate_scale_arcsec_px`` (Phase 2A session);
+    Priority: ``pipeline_meta.json`` ``plate_scale_arcsec_px`` (aperture photometry session);
     then WCS/CD from sibling ``MASTERSTAR.fits`` via ``_resolve_plate_scale_arcsec_per_px``.
     """
     meta = load_pipeline_meta(photometry_dir)
@@ -164,7 +164,7 @@ def _resolve_export_arcsec_per_px(
 def _resolved_site_from_meta(output_dir: Path | str | None) -> dict[str, Any] | None:
     """Read the per-draft resolved observer site from ``pipeline_meta.json``.
 
-    Phase 2A persists ``observer_location`` (param_resolver: draft ID_LOCATION ->
+    Aperture photometry persists ``observer_location`` (param_resolver: draft ID_LOCATION ->
     header SITELAT -> flagged config) with lat/lon/alt/source. Exported coordinates
     must match the site used for BJD/airmass, so we prefer this over ``cfg`` (which
     tracks the *last* session and can drift when reprocessing an old draft).
@@ -256,7 +256,7 @@ def _vyvar_export_citation_lines(
 
 
 def _safe_filename(name: str) -> str:
-    """Sanitizuj VSX meno pre filesystem. 'BO CVn' -> 'BO_CVn'."""
+    """Sanitize a VSX name for the filesystem. 'BO CVn' -> 'BO_CVn'."""
     s = str(name).strip()
     s = re.sub(r"[^\w\s\-\+]", "", s)
     s = re.sub(r"\s+", "_", s)
@@ -349,7 +349,7 @@ def _guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, s
     return base or raw, None, None
 
 
-# Zakrytove typy podla VSX dokumentacie
+# Eclipsing types per the VSX documentation
 _ECLIPSING_TOKENS = frozenset(
     {
         "E",  # Generic eclipsing
@@ -358,16 +358,16 @@ _ECLIPSING_TOKENS = frozenset(
         "EW",  # W Ursae Majoris
         "EP",  # Planetary transits
         "E-DO",  # Disk occultation
-        "ELL",  # Ellipsoidal (no eclipse but VAR.ASTRO ma zaujem)
-        "EC",  # Contact binaries - ASAS survey typ
-        "ED",  # Detached eclipsing - ASAS survey typ
-        "ESD",  # Semi-detached eclipsing - ASAS survey typ
+        "ELL",  # Ellipsoidal (no eclipse but of interest to VAR.ASTRO)
+        "EC",  # Contact binaries - ASAS survey type
+        "ED",  # Detached eclipsing - ASAS survey type
+        "ESD",  # Semi-detached eclipsing - ASAS survey type
     }
 )
 
 
 def _token_is_eclipsing(token: str) -> bool:
-    """Skontroluj ci jeden VSX token (bez specialnych znakov) je zakrytovy."""
+    """Check whether a single VSX token (without special characters) is eclipsing."""
     t = str(token or "").strip().rstrip(":").upper()
     if not t:
         return False
@@ -379,7 +379,7 @@ def _token_is_eclipsing(token: str) -> bool:
 
 
 def _is_eclipsing(vsx_type: str) -> bool:
-    """Vrati True ak VSX typ obsahuje zakrytovu komponentu (VSX konvencie)."""
+    """Return True if the VSX type contains an eclipsing component (VSX conventions)."""
     if not vsx_type or not isinstance(vsx_type, str):
         return False
 
@@ -387,7 +387,7 @@ def _is_eclipsing(vsx_type: str) -> bool:
     if not vsx_type:
         return False
 
-    # Pipe | -> OR/neistota: len ak VSETKY alternativy su zakrytove
+    # Pipe | -> OR/uncertainty: only if ALL alternatives are eclipsing
     if "|" in vsx_type:
         alternatives = [a.strip() for a in vsx_type.split("|") if a.strip()]
         if not alternatives:
@@ -398,7 +398,7 @@ def _is_eclipsing(vsx_type: str) -> bool:
                 return False
         return True
 
-    # Plus + -> AND: ak KTORYKOLVEK komponent je zakrytovy -> True
+    # Plus + -> AND: if ANY component is eclipsing -> True
     plus_parts = vsx_type.split("+")
     for part in plus_parts:
         part = part.strip()
@@ -550,7 +550,7 @@ def _load_comp_quality_json(lc_dir: Path, target_cid: str) -> dict[str, Any]:
 
 
 def _check_sidecar_by_file(lc_dir: Path, target_cid: str) -> tuple[str, dict[str, tuple[float, float]]]:
-    """(check catalog id, source_file -> (kmag, kmag_err)) from the Phase-2A sidecar."""
+    """(check catalog id, source_file -> (kmag, kmag_err)) from the aperture-photometry sidecar."""
     p = check_kmag_sidecar_path(lc_dir, target_cid)
     if not p.is_file():
         return "", {}
@@ -830,6 +830,9 @@ def export_lightcurve_reports(
 
     _gs11 = gs11_dilution_from_summary(summary_row, cfg)
     _trust_reason = str(summary_row.get("trust_reason", "") or "").strip()
+    # TRUST-ALWAYS-2026-10: fail closed - a target without a trust evaluation is not for submission
+    if _trust not in ("GREEN", "YELLOW", "RED"):
+        _trust, _trust_reason = "RED", "trust not evaluated"
 
     jd0 = _lc_first_float(lc_normal, "jd")
     bjd0 = _lc_first_float(lc_normal, "bjd")
@@ -1264,7 +1267,7 @@ def export_group_reports(
 ) -> dict[str, Any]:
     """Write AAVSO / VarAstro files for every light curve of one observation group.
 
-    Callable after Phase 2A and on its own (re-export of an existing draft without
+    Callable after aperture photometry and on its own (re-export of an existing draft without
     re-running photometry). Inputs default to the files in ``photometry_dir``.
     Returns {"n_ok", "n_skip", "failures", "stats"}.
     """

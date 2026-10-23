@@ -73,7 +73,7 @@ GSP-Phot stellar parameters (Andrae et al. 2023) feed colour terms and the HRD.
 Comparison stars are chosen and weighted following **Broeg, Fernandez & Neuhauser (2005)** -
 a variability-weighted artificial comparison star with iterative down-weighting of variable
 references. Selection ranks stars by **BP-RP colour tiers** (Gaia colour transforms; Jordi et
-al. 2010, Riello et al. 2021) then RMS, with a `comp_select_rms_floor` (default `1e-6`) that
+al. 2010, Riello et al. 2021) then RMS, with an RMS floor (`1e-6`) that
 drops isolated-bin artefacts. The path **adapts to field density**: graceful degradation on
 sparse fields keeps an honest result instead of failing, and an order-independent comp-QA
 locus (Sokolovsky indices) makes comparison-star flagging reproducible regardless of target
@@ -149,8 +149,9 @@ or a config change either reproduces the frozen science numbers exactly or is fl
   configuration page.
 - **Human-editable config**: `config.json` is grouped, commented, and tolerant of `//`
   comments; `python dev/scripts/validate_config.py` checks a hand-edited file before a run.
-- **Documented parameter surface**: **269** registered parameters (config.json persists
-  **249**); all documented in `docs/VYVAR_PARAMS.md` and the config guides.
+- **Documented parameter surface**: **56** registered parameters (config.json persists
+  **49**; untuned knobs are fixed constants in the code); all documented in
+  `docs/VYVAR_PARAMS.md` and the config guides.
 
 ---
 

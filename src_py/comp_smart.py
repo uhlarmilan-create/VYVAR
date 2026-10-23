@@ -1,11 +1,11 @@
 """COMP-SMART-2026-10 (Milan 2026-10-11): replace suspect comparison stars by clean ones.
 
-Phase 1 ranks the comparison candidates of a target (RMS -> colour -> distance, single
+Comparison-star selection ranks the comparison candidates of a target (RMS -> colour -> distance, single
 source, photometry_comp._select_comps_by_rms_then_color) and admits the first
 ``n_comp_max``; the next ones are kept as a reserve (``p1_role = reserve`` rows of
 comparison_stars_per_target.csv, see comp_table).
-Phase 2A measures all of them on the aperture grid. Before the ensemble is built the
-stability test of Phase 2A (photometry_lightcurve.check_comparison_stability: Abbe
+Aperture photometry measures all of them on the aperture grid. Before the ensemble is built the
+stability test of aperture photometry (photometry_lightcurve.check_comparison_stability: Abbe
 point-to-point scatter and night-long slope on the common-mode-detrended residuals) is run
 on primary + reserve together, and the ensemble becomes
 
@@ -35,7 +35,7 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-#: reserve candidates kept per target in Phase 1
+#: reserve candidates kept per target in comparison-star selection
 N_RESERVE = 8
 #: fewest candidates with a valid band magnitude for the catalogue-offset test (median reference)
 CATOFF_MIN_COMPS = 3

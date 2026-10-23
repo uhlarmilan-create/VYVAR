@@ -17,6 +17,9 @@ _session_log_path: Path | None = None
 _session_log_file: Any = None
 # milestones logged before the run's draft directory exists; written when the file opens
 _milestones: list[str] = []
+# SPEED-2026-10: a worker process has no infolog file; its messages are collected here and the
+# run process writes them (``capture_events`` / ``replay_events``)
+_captured: list[str] | None = None
 
 VYVAR_LOGGERS = ("pipeline", "importer")
 
@@ -29,14 +32,37 @@ def _handler_already_attached() -> bool:
 
 
 def log_event(message: str) -> None:
-    """Append one line to the run infolog (no-op outside a run)."""
+    """Append one line to the run infolog (no-op outside a run; collected inside ``capture_events``)."""
     try:
+        if _captured is not None:
+            _captured.append(str(message))
+            return
         ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
         line = f"{ts}  {message}"
         with _lock:
             _append_session_line(line)
     except Exception as exc:  # noqa: BLE001 - Infolog must never crash the pipeline
         logging.getLogger(__name__).debug("log_event append failed: %s", exc)
+
+
+class capture_events:
+    """Collect ``log_event`` messages (in a worker process) instead of writing them."""
+
+    def __enter__(self) -> list[str]:
+        global _captured
+        self._prev = _captured
+        _captured = []
+        return _captured
+
+    def __exit__(self, *_exc: Any) -> None:
+        global _captured
+        _captured = self._prev
+
+
+def replay_events(messages: list[str] | None) -> None:
+    """Write messages a worker collected with ``capture_events``."""
+    for m in messages or []:
+        log_event(m)
 
 
 def log_milestone(message: str) -> None:

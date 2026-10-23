@@ -32,6 +32,7 @@ from vyvar_alignment_frame import (
     _as_fits_float32_image,
 )
 from config import AppConfig, resolve_detection_threshold_sigma
+from pipeline_constants import ALIGNMENT_MAX_CONTROL_POINTS, DAO_FWHM_FALLBACK_PX
 from database import VyvarDatabase
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
@@ -58,7 +59,6 @@ from pipeline_astrometry import (
     _vyvar_open_database,
     _wcs_field_center_radec_deg,
     compute_plate_scale_from_db,
-    resolve_plate_solve_fov_deg_hint,
     write_photometry_plan_files,
 )
 from pipeline_catalog import (
@@ -76,7 +76,6 @@ def _astrometry_align_impl_body(
     archive_path: Path,
     min_detected_stars: int = 100,
     max_detected_stars: int = 500,
-    plate_solve_fov_deg: float = 1.0,
     catalog_match_max_sep_arcsec: float = 25.0,
     max_catalog_rows: int = 12000,
     n_comparison_stars: int = 0,
@@ -107,7 +106,7 @@ def _astrometry_align_impl_body(
     aligned_root = Path(job["aligned_root"])
     platesolve_dir = Path(job["platesolve_dir"])
     files = list(job["files"])
-    # Zarovnane FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (vnorene cesty podla vstupu)
+    # Aligned FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (nested paths mirror the input)
     os.makedirs(str(aligned_root), exist_ok=True)
     os.makedirs(str(platesolve_dir), exist_ok=True)
     _cfg_align = app_config or AppConfig()
@@ -126,20 +125,17 @@ def _astrometry_align_impl_body(
         0.8,
         min(20.0, _ui_sig if _ui_sig > 0 else _cfg_align_sig),
     )
-    _fb_align = float(_cfg_align.sips_dao_fwhm_px)
-    if not math.isfinite(_fb_align) or _fb_align <= 0:
-        _fb_align = 2.5
-    _pfov_align: float | None = None
+    _fb_align = DAO_FWHM_FALLBACK_PX
     if build_masterstar_and_catalogs:
-        LOGGER.info("Astrometria + MASTERSTAR + per-frame CSV: archiv %s", ap)
+        LOGGER.info("Astrometry + MASTERSTAR + per-frame CSV: archive %s", ap)
     else:
-        LOGGER.info("Astrometria + zarovnanie + per-frame CSV (bez MASTERSTAR): archiv %s", ap)
+        LOGGER.info("Astrometry + alignment + per-frame CSV (without MASTERSTAR): archive %s", ap)
     # MASTERSTAR initial match: allow a looser sep (min 10") for robust first-pass Gaia join.
     _catalog_match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
     if _catalog_match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
         _pipeline_ui_info(
-            f"Katalogovy match prah zvyseny na {_catalog_match_sep_eff:.2f}\" "
-            "(minimum pre robustny pociatocny cross-match)."
+            f"Catalog match threshold raised to {_catalog_match_sep_eff:.2f}\" "
+            "(minimum for a robust initial cross-match)."
         )
 
     equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment)
@@ -157,9 +153,9 @@ def _astrometry_align_impl_body(
             pass
     if not files:
         raise FileNotFoundError(
-            f"Chybaju FITS v {detrended_root}. Plate solve cita len **spracovane** snimky. "
-            "Najprv spusti **MAKE MASTERSTAR** po kroku **Analyze** (zapis do "
-            f"`{ap / 'processed' / 'lights'}` alebo starsie `{ap / 'detrended' / 'lights'}`)."
+            f"No FITS in {detrended_root}. Plate solve reads only **processed** frames. "
+            "First run **MAKE MASTERSTAR** after the **Analyze** step (writes to "
+            f"`{ap / 'processed' / 'lights'}` or, older, `{ap / 'detrended' / 'lights'}`)."
         )
 
     _t_step3_start = time.time()
@@ -175,25 +171,6 @@ def _astrometry_align_impl_body(
     with fits.open(ref_fp, memmap=False) as hdul:
         ref_hdr = hdul[0].header.copy()
         ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-    _rh, _rw = int(ref_data.shape[0]), int(ref_data.shape[1])
-    try:
-        _pf_try = float(plate_solve_fov_deg)
-        if math.isfinite(_pf_try) and _pf_try > 0:
-            _pfov_align = _pf_try
-    except (TypeError, ValueError):
-        _pfov_align = None
-    if _pfov_align is None:
-        _pfov_align = resolve_plate_solve_fov_deg_hint(
-            ref_hdr,
-            _rh,
-            _rw,
-            database_path=_cfg_align.database_path,
-            equipment_id=int(id_equipment) if id_equipment is not None else None,
-            draft_id=int(draft_id) if draft_id is not None else None,
-        )
-    if _pfov_align is None:
-        _pfov_align = float(_cfg_align.plate_solve_fov_deg)
-
     _scale_pf: float | None = None
     _db_pf = _vyvar_open_database(_cfg_align)
     if _db_pf is not None:
@@ -243,7 +220,7 @@ def _astrometry_align_impl_body(
     _ps_root = platesolve_dir
     _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
-        _prog("platesolve/MASTERSTAR: referencny snimok + plate-solve + katalogy...")
+        _prog("platesolve/MASTERSTAR: reference frame + plate-solve + catalogs...")
         _cat_info_root = generate_masterstar_and_catalog(
             archive_path=ap,
             max_catalog_rows=int(max_catalog_rows),
@@ -289,7 +266,7 @@ def _astrometry_align_impl_body(
             LOGGER.error("Using MASTERSTAR as alignment reference failed: %s", _ms_ref_exc)
 
     _prog(
-        f"detrended_aligned/lights: pripravujem zarovnanie ({n_files} snimok z {detrended_root.name}/...)..."
+        f"detrended_aligned/lights: preparing alignment ({n_files} frames from {detrended_root.name}/...)..."
     )
 
     # If MASTERSTAR was built for this setup and has a valid WCS, prefer it as the canonical
@@ -310,7 +287,7 @@ def _astrometry_align_impl_body(
                             ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
                         has_wcs = True
                         log_event(
-                            f"INFO: Reference WCS prevzate z MASTERSTAR ({_ms_path.name}) - pouzijem MASTERSTAR WCS pre alignment aj per-frame match."
+                            f"INFO: Reference WCS taken from MASTERSTAR ({_ms_path.name}) - using MASTERSTAR WCS for alignment and per-frame match."
                         )
         except Exception as _wcs_copy_exc:  # noqa: BLE001
             try:
@@ -347,12 +324,12 @@ def _astrometry_align_impl_body(
     if not (bool(build_masterstar_and_catalogs) or bool(_cat_info_root)):
         # MASTER-LOCK-2026-10: per-frame identities come only from this setup's MASTERSTAR.
         raise RuntimeError(
-            "Per-frame katalogy potrebuju MASTERSTAR tejto zostavy (MASTER-LOCK): "
-            "build_masterstar_and_catalogs=False a v platesolve/ nie je MASTERSTAR.fits s platnym WCS."
+            "Per-frame catalogs need this setup's MASTERSTAR (MASTER-LOCK): "
+            "build_masterstar_and_catalogs=False and platesolve/ has no MASTERSTAR.fits with a valid WCS."
         )
 
     if not has_wcs:
-        _prog("Plate solve referencie (moze chvilu trvat)...")
+        _prog("Plate solve of the reference (may take a while)...")
 
     if not has_wcs:
         # Solve reference file in-place (no open handle on Windows).
@@ -373,7 +350,7 @@ def _astrometry_align_impl_body(
     print(f"  Plate solve: {time.time() - _t_platesolve:.1f}s")
     _t_align = time.time()
 
-    # Use the same FWHM rule as per-frame alignment (VY_FWHM / header), not only ``sips_dao_fwhm_px``.
+    # Use the same FWHM rule as per-frame alignment (VY_FWHM / header), not a fixed kernel.
     # A fixed ~2.5 px kernel on the reference while sources use ~5 px yields different brightest-N
     # orderings -> bogus point pairs -> astroalign "triangles exhausted" and identity/no_wcs cascades.
     _raw_ref_fw = dao_detection_fwhm_pixels(ref_hdr, configured_fallback=_fb_align)
@@ -396,7 +373,7 @@ def _astrometry_align_impl_body(
         raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
 
     log_event(
-        f"Detekcia hviezd: Pouzite FWHM={_align_fwhm_ref:.2f}, Sigma={_align_det_sigma:.2f}"
+        f"Star detection: used FWHM={_align_fwhm_ref:.2f}, Sigma={_align_det_sigma:.2f}"
     )
 
 
@@ -437,9 +414,9 @@ def _astrometry_align_impl_body(
         )
     ref_xy_fit = ref_xy[: int(min(_align_star_cap, len(ref_xy)))]
     log_event(
-        f"Zarovnanie referencia {ref_fp.name}: DAO hviezd={len(ref_xy)}, "
-        f"cap pre transform={_align_star_cap}, DAO sigma={_align_det_sigma:.2f}, FWHM={_align_fwhm_ref:.2f}px "
-        f"(QC VY_FWHM alebo sips_dao_fwhm_px)"
+        f"Alignment reference {ref_fp.name}: DAO stars={len(ref_xy)}, "
+        f"cap for transform={_align_star_cap}, DAO sigma={_align_det_sigma:.2f}, FWHM={_align_fwhm_ref:.2f}px "
+        f"(QC VY_FWHM or DAO_FWHM_FALLBACK_PX)"
     )
 
     # Auto RAM management: default in-memory, but switch to disk when estimated working set exceeds 70% of available RAM.
@@ -479,7 +456,7 @@ def _astrometry_align_impl_body(
 
     # save reference as aligned baseline, keep WCS
     _prog(
-        f"detrended_aligned/lights: {'RAM - referencia' if use_ram_handoff else 'zapisujem FITS'} "
+        f"detrended_aligned/lights: {'RAM - reference' if use_ram_handoff else 'writing FITS'} "
         f"{ref_fp.name} (1/{n_files})"
     )
     try:
@@ -533,10 +510,10 @@ def _astrometry_align_impl_body(
 
     # Align every other frame to reference (skip duplicate if ref is not files[0]).
     # Astroalign control-point cap from cfg (decoupled from detection ladder max_stars).
-    align_cp = int(max(12, min(500, int(_cfg_align.alignment_max_control_points))))
+    align_cp = ALIGNMENT_MAX_CONTROL_POINTS
     ref_pts = np.asarray(ref_xy_fit, dtype=np.float32)
     if ref_pts is None or len(ref_pts) == 0:
-        raise ValueError("Referencne hviezdy su prazdne pred startom alignmentu!")
+        raise ValueError("Reference stars are empty before the alignment start!")
     # Keep immutable backup of reference points; never overwrite with per-frame source detections.
     fixed_target_pts = np.copy(ref_pts).astype("float32")
     log_event(f"DEBUG: Start alignment, reference stars N = {len(fixed_target_pts)}")
@@ -620,7 +597,7 @@ def _astrometry_align_impl_body(
         n_written_align += 1
         _prog(
             f"detrended_aligned/lights: "
-            f"{'RAM - zarovnanie' if use_ram_handoff else 'zapisujem FITS'} "
+            f"{'RAM - alignment' if use_ram_handoff else 'writing FITS'} "
             f"{fp.name} ({n_written_align}/{n_files})..."
         )
         # ALIGN-MATRIX-2026-10: keep the frame->reference transform (3x3, astroalign params)
@@ -779,13 +756,13 @@ def _astrometry_align_impl_body(
             reasons[rr] = int(reasons.get(rr, 0)) + 1
         reason_txt = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))[:5])
         _pipeline_ui_info(
-            f"Alignment warning: zlyhalo {n_failed_align}/{len(files)} snimok v {aligned_root.resolve()} "
-            f"(dovody: {reason_txt})."
+            f"Alignment warning: {n_failed_align}/{len(files)} frames failed in {aligned_root.resolve()} "
+            f"(reasons: {reason_txt})."
         )
     if n_aligned <= 1:
         msg = (
-            f"Alignment zlyhal: uspesne zarovnana len referencia (1/{len(files)}). "
-            f"Skontroluj DAO prah/FWHM a WCS vstupy. Vystupny priecinok: {aligned_root.resolve()}."
+            f"Alignment failed: only the reference was aligned (1/{len(files)}). "
+            f"Check the DAO threshold/FWHM and WCS inputs. Output folder: {aligned_root.resolve()}."
         )
         _pipeline_ui_error(msg)
         raise RuntimeError(msg)
@@ -800,13 +777,13 @@ def _astrometry_align_impl_body(
             frames=_osc_registration_capture,
         )
 
-    print(f"  Zarovnanie: {time.time() - _t_align:.1f}s")
+    print(f"  Alignment: {time.time() - _t_align:.1f}s")
     _t_csv = time.time()
 
     # If we aligned in RAM, flush aligned FITS to disk before MASTERSTAR (needs files on disk).
     _ram_flushed_before_masterstar = False
     if use_ram_handoff and aligned_ram_buffer and build_masterstar_and_catalogs:
-        _prog("detrended_aligned/lights: zapisujem FITS na disk (RAM -> disk, pred MASTERSTAR)...")
+        _prog("detrended_aligned/lights: writing FITS to disk (RAM -> disk, before MASTERSTAR)...")
         for name, hdr, arr in aligned_ram_buffer:
             _target = aligned_root / Path(name)
             _ensure_parent_dirs_for_aligned_fits(_target)
@@ -920,7 +897,7 @@ def _astrometry_align_impl_body(
             equipment_id=id_equipment,
             full_catalog_export=True,
         )
-        _prog("detrended_aligned/lights: zapisujem FITS + CSV na disk (davka po praci v RAM)...")
+        _prog("detrended_aligned/lights: writing FITS + CSV to disk (batch after RAM processing)...")
         if not _ram_flushed_before_masterstar:
             for name, hdr, arr in aligned_ram_buffer:
                 _target = aligned_root / Path(name)
@@ -954,8 +931,8 @@ def _astrometry_align_impl_body(
             _hybrid_ram = _finalize_hybrid_bkg_fallback_sidecar(
                 aligned_root,
                 write_sidecar=True,
-                gain=float(_catalog_app_cfg.gain),
-                read_noise=float(_catalog_app_cfg.read_noise),
+                gain=float(per_cat["photometric_gain"]),  # GAIN-ONE-2026-10
+                read_noise=float(per_cat["photometric_read_noise"]),
                 setup_label=str(aligned_root.name),
             )
             if _hybrid_ram:
@@ -980,15 +957,15 @@ def _astrometry_align_impl_body(
     _assert_alignment_produced_fits(aligned_root)
 
     print(f"  Per-frame CSV: {time.time() - _t_csv:.1f}s")
-    print(f"CELKOM krok 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
+    print(f"TOTAL step 3 ({obs_group_key or detrended_root.name}): {time.time() - _t_step3_start:.1f}s")
 
     LOGGER.info(
-        "Astrometria dokoncena: zarovnane %s / %s snimok; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
+        "Astrometry done: aligned %s / %s frames; per-frame CSV: %s; MASTERSTAR: %s; RAM handoff: %s",
         n_aligned,
         len(files),
         int(per_cat.get("written", 0)),
-        "ano" if build_masterstar_and_catalogs else "nie",
-        "ano" if use_ram_handoff else "nie",
+        "yes" if build_masterstar_and_catalogs else "no",
+        "yes" if use_ram_handoff else "no",
     )
 
     return {

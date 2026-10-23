@@ -1,4 +1,4 @@
-"""Headless Phase 0+1+2A for draft 515 on existing calibrated/aligned products.
+"""Headless target selection, comparison-star selection and aperture photometry for draft 515 on existing calibrated/aligned products.
 
 PFS-SEMANTICS-01 / SAT-RERANK-01: full 97-target rebuild with INV-SAT-LIMIT
 armed on the catalog and per-frame saturation ON via AppConfig instance
@@ -113,16 +113,16 @@ def _preflight_catalog(ms_csv: Path, sat_ids: list[str]) -> None:
     print("PREFLIGHT PASS: all SAT-LIMIT-01 saturated IDs flagged in catalog", flush=True)
 
 
-def _trim_dag_before_phase01_restamp(phot: Path) -> None:
-    """Drop leftover phase2a/postprocess stamps so INV-DAG-01 can re-stamp.
+def _trim_dag_before_selection_restamp(phot: Path) -> None:
+    """Drop leftover aperture_photometry/postprocess stamps so INV-DAG-01 can re-stamp.
 
     Known friction: a prior run leaves seq=7 postprocess in pipeline_meta.json;
-    this rebuild's phase01/phase2a stamps then fail closed (seq goes backwards).
-    Same trim as wide_err_03b_reexport, cut before phase01 so both stamps land.
+    this rebuild's target_comp_selection/aperture_photometry stamps then fail closed (seq goes backwards).
+    Same trim as wide_err_03b_reexport, cut before target_comp_selection so both stamps land.
     """
     meta = load_pipeline_meta(phot)
     stages = meta.get("stages") if isinstance(meta.get("stages"), list) else []
-    cut = STAGE_ORDER.index("phase01")
+    cut = STAGE_ORDER.index("target_comp_selection")
     kept = [
         s
         for s in stages
@@ -157,7 +157,7 @@ def main() -> int:
 
     sat_ids = _saturated_ids()
     _preflight_catalog(og / "masterstars_full_match.csv", sat_ids)
-    _trim_dag_before_phase01_restamp(phot)
+    _trim_dag_before_selection_restamp(phot)
     lc_dir = phot / "lightcurves"
     if lc_dir.is_dir():
         n_lc = 0
@@ -183,18 +183,18 @@ def main() -> int:
         elapsed = time.perf_counter() - t0
         print(f"[{elapsed:8.1f}s] {msg}", flush=True)
         s = str(msg)
-        if s.startswith("Faza 0:") and "phase0_start" not in marks:
-            marks["phase0_start"] = elapsed
-        if s.startswith("Faza 0 hotova") and "phase0_end" not in marks:
-            marks["phase0_end"] = elapsed
-        if ("Faza 1:" in s or s.startswith("Phase 1:")) and "phase1_start" not in marks:
-            marks["phase1_start"] = elapsed
-        if s.startswith("Faza 0+1 hotovo") and "phase1_end" not in marks:
-            marks["phase1_end"] = elapsed
-        if s.startswith("Faza 2A:") and "phase2a_start" not in marks:
-            marks["phase2a_start"] = elapsed
-        if s.startswith("Faza 2A hotovo") and "phase2a_end" not in marks:
-            marks["phase2a_end"] = elapsed
+        if s.startswith("Faza 0:") and "target_selection_start" not in marks:
+            marks["target_selection_start"] = elapsed
+        if s.startswith("Faza 0 hotova") and "target_selection_end" not in marks:
+            marks["target_selection_end"] = elapsed
+        if ("Faza 1:" in s or s.startswith("Phase 1:")) and "comp_selection_start" not in marks:
+            marks["comp_selection_start"] = elapsed
+        if s.startswith("Faza 0+1 hotovo") and "comp_selection_end" not in marks:
+            marks["comp_selection_end"] = elapsed
+        if s.startswith("Faza 2A:") and "aperture_start" not in marks:
+            marks["aperture_start"] = elapsed
+        if s.startswith("Faza 2A hotovo") and "aperture_end" not in marks:
+            marks["aperture_end"] = elapsed
 
     try:
         result = run_full_photometry_pipeline(
@@ -211,19 +211,19 @@ def main() -> int:
         )
         elapsed = time.perf_counter() - t0
         print(f"ELAPSED_S {elapsed:.1f}", flush=True)
-        p0 = marks.get("phase0_end", 0) - marks.get("phase0_start", 0)
-        p1 = marks.get("phase1_end", 0) - marks.get("phase1_start", 0)
-        p2 = marks.get("phase2a_end", elapsed) - marks.get("phase2a_start", 0)
-        print(f"PHASE0_S {p0:.1f}", flush=True)
-        print(f"PHASE1_S {p1:.1f}", flush=True)
-        print(f"PHASE2A_S {p2:.1f}", flush=True)
+        p0 = marks.get("target_selection_end", 0) - marks.get("target_selection_start", 0)
+        p1 = marks.get("comp_selection_end", 0) - marks.get("comp_selection_start", 0)
+        p2 = marks.get("aperture_end", elapsed) - marks.get("aperture_start", 0)
+        print(f"TARGET_SELECTION_S {p0:.1f}", flush=True)
+        print(f"COMP_SELECTION_S {p1:.1f}", flush=True)
+        print(f"APERTURE_S {p2:.1f}", flush=True)
         if isinstance(result, dict):
             print(f"ERROR {result.get('error')!r}", flush=True)
             print(f"ZERO_TARGETS {result.get('zero_targets')!r}", flush=True)
             for k in ("n_lc", "n_lightcurves", "n_targets", "n_active"):
                 if k in result:
                     print(f"{k.upper()} {result.get(k)!r}", flush=True)
-            p2a = result.get("phase2a") if isinstance(result.get("phase2a"), dict) else {}
+            p2a = result.get("aperture_photometry") if isinstance(result.get("aperture_photometry"), dict) else {}
             if p2a:
                 print(f"P2A_N_LC {p2a.get('n_lc')!r}", flush=True)
             print(f"RESULT_KEYS {sorted(result.keys())}", flush=True)

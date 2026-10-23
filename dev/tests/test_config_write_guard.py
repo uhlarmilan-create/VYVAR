@@ -26,7 +26,6 @@ _HEADLESS_MODULES = [
     "pipeline.py",
     "photometry_core.py",
     "night_run.py",
-    "simulate_night_run.py",
 ]
 
 

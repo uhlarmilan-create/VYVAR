@@ -516,7 +516,7 @@ def smart_scan_source(
         _hdr0 = _hd0[0].header
     _xb0, _yb0 = fits_binning_xy_from_header(_hdr0)
     log_event(
-        f"Scan Source - prvy light v zozname: {first_light.name} | "
+        f"Scan Source - first light in the list: {first_light.name} | "
         f"XBINNING={_hdr0.get('XBINNING')!r} YBINNING={_hdr0.get('YBINNING')!r} BINNING={_hdr0.get('BINNING')!r} "
         f"-> {int(_xb0)}x{int(_yb0)}"
     )

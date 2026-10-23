@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Any
 import json
 import logging
@@ -13,7 +14,8 @@ import numpy as np
 import pandas as pd
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from config import AppConfig
-from gaia_catalog_id import masterstar_row_gaia_key, normalize_gaia_source_id
+from pipeline_constants import CT_MIN_COMP
+from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from proc_frame_store import ProcFrameStore
 from stats_core import _flux_to_mag
@@ -31,6 +33,13 @@ from photometry_core import (
     _MAD_CONSISTENCY,
 )
 
+
+
+def _parallel_workers(cfg: Any) -> int:
+    """Worker processes for frame-parallel aperture-photometry work (one count for the whole pipeline)."""
+    from pipeline_calibrate import _vyvar_parallel_worker_count  # noqa: PLC0415
+
+    return int(_vyvar_parallel_worker_count(cfg))
 
 def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:
     """Return ``catalog_id`` -> ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
@@ -53,36 +62,70 @@ def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]
                 out[ks] = {"quality": q, "note": str(v.get("note", "") or "").strip()}
     return out
 
+class _CsvRowMap(Mapping):
+    """id -> proc CSV row (``csv_df.iloc[pos]``), built lazily and cached."""
+
+    def __init__(self, df: pd.DataFrame, pos: dict[str, int]) -> None:
+        self._df = df
+        self._pos = pos
+        self._rows: dict[int, pd.Series] = {}
+
+    def __getitem__(self, key: str) -> pd.Series:
+        i = self._pos[key]
+        row = self._rows.get(i)
+        if row is None:
+            row = self._rows[i] = self._df.iloc[i]
+        return row
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._pos
+
+    def __iter__(self):  # noqa: ANN204
+        return iter(self._pos)
+
+    def __len__(self) -> int:
+        return len(self._pos)
+
+
 def _build_csv_lookup(
     csv_df: pd.DataFrame,
     id_col: str,
-) -> tuple[dict[str, pd.Series], pd.DataFrame]:
-    """Vytvori dva lookup mechanizmy:
-    1. Primarny: dict {normalized_id -> row}
-    2. Zalozny: riadky s numerickymi x,y pre nearest-neighbor match (plne stlpce CSV).
+) -> tuple[Mapping[str, pd.Series], pd.DataFrame]:
+    """Build two lookup mechanisms:
+    1. Primary: dict {normalized_id -> row}
+    2. Fallback: rows with numeric x,y for nearest-neighbor match (full CSV columns).
 
-    Proc CSV z pipeline ma ``catalog_id`` casto ako float / vedecku notaciu (strata presnosti),
-    zatial co ``name`` obsahuje presny Gaia ``source_id`` - indexujeme oboje (``setdefault``),
-    aby Faza 2A netrafila NN na suseda namiesto spravnej porovnavacky.
+    The pipeline proc CSV often has ``catalog_id`` as float / scientific notation (precision loss),
+    while ``name`` holds the exact Gaia ``source_id`` - we index both (``setdefault``),
+    so that aperture photometry does not hit a neighbour via NN instead of the correct comparison star.
     """
-    id_map: dict[str, pd.Series] = {}
-    _id_series = csv_df[id_col]
-    for i in range(len(csv_df)):
-        row = csv_df.iloc[i]
+    # SPEED-2026-10 (S1): keys computed from column lists; the row Series is built on first lookup
+    # (aperture photometry reads ~25k of ~280k rows on 534 g). Same keys and first-row precedence as before.
+    n = len(csv_df)
+    _has_name = "name" in csv_df.columns
+    _names = csv_df["name"].tolist() if _has_name else [None] * n
+    _cats = csv_df["catalog_id"].tolist() if "catalog_id" in csv_df.columns else [None] * n
+    _ids = csv_df[id_col].tolist()
+    _gaia_re = re.compile(r"\d{12,22}")
+    pos: dict[str, int] = {}
+    for i in range(n):
         keys: set[str] = set()
-        pk = masterstar_row_gaia_key(row)
-        if pk:
-            keys.add(pk)
-        if "name" in csv_df.columns:
-            nk = normalize_gaia_source_id(row.get("name"))
-            if nk and re.fullmatch(r"\d{12,22}", nk):
-                keys.add(nk)
-        cid = _normalize_gaia_id(_id_series.iloc[i])
+        name_k = normalize_gaia_source_id(_names[i])
+        name_ok = bool(name_k and _gaia_re.fullmatch(name_k))
+        if name_ok:
+            keys.add(name_k)  # masterstar_row_gaia_key: name first, also the "name" key
+        else:
+            cat_k = normalize_gaia_source_id(_cats[i])
+            pk = cat_k if cat_k else name_k
+            if pk:
+                keys.add(pk)
+        cid = _normalize_gaia_id(_ids[i])
         if cid:
             keys.add(cid)
         for k in keys:
-            id_map.setdefault(k, row)
-    # Plna kopia: NN fallback musi vratit Series so vsetkymi stlpcami (dao_flux, casy, ...).
+            pos.setdefault(k, i)
+    id_map = _CsvRowMap(csv_df, pos)
+    # Full copy: the NN fallback must return a Series with all columns (dao_flux, times, ...).
     xy_df = csv_df.copy()
     if "name" in xy_df.columns:
         _nk = xy_df["name"].map(normalize_gaia_source_id)
@@ -104,7 +147,7 @@ def _lookup_star_in_csv(
     *,
     xy_tol_px: float = 15.0,
 ) -> pd.Series | None:
-    """Hladaj hviezdu v CSV - primarne cez ID, fallback cez x,y."""
+    """Find a star in the CSV - primarily by ID, fallback by x,y."""
     cid_key = _normalize_gaia_id(cid)
     if cid_key and cid_key in id_map:
         return id_map[cid_key]
@@ -132,7 +175,7 @@ def _lookup_star_in_csv(
     _hit = xy_df.iloc[j]
     _mid = str(_hit.get("_cid_norm", ""))
     logging.debug(
-        "[FAZA 2A] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
+        "[APERTURE] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
         cid,
         _mid,
         float(dists[j]),
@@ -141,7 +184,7 @@ def _lookup_star_in_csv(
     return _hit
 
 def _sat_limit_peak_adu() -> float | None:
-    """Hranica peak_max_adu z configu (volitelne). Bez globalneho fallbacku - saturacia z FITS/DB v pipeline."""
+    """peak_max_adu limit from config (optional). No global fallback - saturation comes from FITS/DB in the pipeline."""
     return None
 
 def _mad_sigma_or_std_floor(arr: np.ndarray) -> float:
@@ -161,22 +204,22 @@ def measure_fwhm_from_masterstar(
     dao_fwhm_hint: float = 3.5,
     ms_data: np.ndarray | None = None,
 ) -> float:
-    """Zmeria skutocne Gaussian FWHM z MASTERSTAR FITS.
+    """Measure the true Gaussian FWHM from the MASTERSTAR FITS.
 
-    Fituje 2D Gaussian na izolovane, nesaturovane hviezdy z ``star_positions``
-    a vracia medianove FWHM v pixeloch. Toto je fyzikalne spravne FWHM
-    (zodpoveda AIJ/IRAF definicii), na rozdiel od DAO odhadu ktory
-    systematicky precenuje FWHM.
+    Fits a 2D Gaussian to isolated, unsaturated stars from ``star_positions``
+    and returns the median FWHM in pixels. This is the physically correct FWHM
+    (matches the AIJ/IRAF definition), unlike the DAO estimate, which
+    systematically overestimates FWHM.
 
     Args:
-        masterstar_fits_path: Cesta k MASTERSTAR.fits
-        star_positions: DataFrame so stlpcami x, y, mag (catalog_id volitelny)
-        n_stars: Pocet hviezd na fit (vyberie izolovane, stredne jasne)
-        fit_box_fwhm: Velkost okna pre fit v jednotkach dao_fwhm_hint
-        dao_fwhm_hint: Hruby DAO odhad pre urcenie velkosti okna
+        masterstar_fits_path: Path to MASTERSTAR.fits
+        star_positions: DataFrame with columns x, y, mag (catalog_id optional)
+        n_stars: Number of stars to fit (picks isolated, medium-bright ones)
+        fit_box_fwhm: Fit window size in units of dao_fwhm_hint
+        dao_fwhm_hint: Rough DAO estimate used to set the window size
 
     Returns:
-        Medianove Gaussian FWHM v pixeloch.
+        Median Gaussian FWHM in pixels.
     """
     from astropy.modeling import fitting, models
 
@@ -192,7 +235,7 @@ def measure_fwhm_from_masterstar(
     df = star_positions.copy()
     if df.empty:
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: prazdne star_positions, fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: empty star_positions, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -201,7 +244,7 @@ def measure_fwhm_from_masterstar(
     df = df.dropna(subset=["x", "y"])
     if len(df) < 3:
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: malo riadkov s x,y, fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: too few rows with x,y, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -210,7 +253,7 @@ def measure_fwhm_from_masterstar(
     margin = box + 5
     if box < 3 or margin * 2 >= min(h, w):
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: prilis maly/obrovsky box=%s, fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: box=%s too small/too large, fallback dao_fwhm_hint=%.2f px",
             box,
             float(dao_fwhm_hint),
         )
@@ -219,7 +262,7 @@ def measure_fwhm_from_masterstar(
     df = df[(df["x"] > margin) & (df["x"] < w - margin) & (df["y"] > margin) & (df["y"] < h - margin)].copy()
     if len(df) < 3:
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: malo hviezd po okrajovom filtri, fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: too few stars after edge filter, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -234,7 +277,7 @@ def measure_fwhm_from_masterstar(
 
     if len(df) < 1:
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: prazdny vyber po mag, fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: empty selection after mag cut, fallback dao_fwhm_hint=%.2f px",
             float(dao_fwhm_hint),
         )
         return float(dao_fwhm_hint)
@@ -306,7 +349,7 @@ def measure_fwhm_from_masterstar(
 
     if len(fwhm_values) < 3:
         logging.warning(
-            "[FAZA 2A] Gaussian FWHM fit: len menej ako 3 hviezd (%s), fallback dao_fwhm_hint=%.2f px",
+            "[APERTURE] Gaussian FWHM fit: fewer than 3 stars (%s), fallback dao_fwhm_hint=%.2f px",
             len(fwhm_values),
             float(dao_fwhm_hint),
         )
@@ -314,7 +357,7 @@ def measure_fwhm_from_masterstar(
 
     result = float(np.median(fwhm_values))
     logging.info(
-        "[FAZA 2A] Gaussian FWHM z MASTERSTAR: %.3f px (z %s hviezd, DAO hint %.3f px)",
+        "[APERTURE] Gaussian FWHM from MASTERSTAR: %.3f px (from %s stars, DAO hint %.3f px)",
         result,
         len(fwhm_values),
         float(dao_fwhm_hint),
@@ -327,30 +370,30 @@ def compute_optimal_apertures(
     *,
     aperture_fwhm_factor: float = 1.75,
 ) -> dict[str, float]:
-    """Globalna fixna apertura = aperture_fwhm_factor x FWHM.
+    """Global fixed aperture = aperture_fwhm_factor x FWHM.
 
-    Fyzikalne zdovodnenie:
-    - PSF FWHM (typicky ``VY_FWHM`` DAO z MASTERSTAR): r ~ 1.75x FWHM zachyti vacsinu fluxu
-    - Konzistentna fixna apertura je robustnejsia ako per-hviezda
-      metody v hustom poli (kontaminacia susedmi)
-    - Zodpoveda AIJ metodike: fixna apertura z FWHM
+    Physical rationale:
+    - PSF FWHM (typically ``VY_FWHM`` DAO from MASTERSTAR): r ~ 1.75x FWHM captures most of the flux
+    - A consistent fixed aperture is more robust than per-star
+      methods in a crowded field (contamination by neighbours)
+    - Matches the AIJ method: fixed aperture from FWHM
 
     Args:
-        masterstar_fits_path: Nepouziva sa - zachovane pre kompatibilitu.
-        star_positions: DataFrame so stlpcami catalog_id (volitelne name).
-        fwhm_px: FWHM v pixeloch (Faza 2A: ``VY_FWHM`` z hlavicky alebo Gaussian fit).
-        aperture_fwhm_factor: Nasobok FWHM. Default 1.75.
-        annulus_inner_fwhm: Zachovane pre kompatibilitu signatury.
-        annulus_outer_fwhm: Zachovane pre kompatibilitu signatury.
+        masterstar_fits_path: Unused - kept for compatibility.
+        star_positions: DataFrame with column catalog_id (name optional).
+        fwhm_px: FWHM in pixels (aperture photometry: ``VY_FWHM`` from the header or a Gaussian fit).
+        aperture_fwhm_factor: FWHM multiplier. Default 1.75.
+        annulus_inner_fwhm: Kept for signature compatibility.
+        annulus_outer_fwhm: Kept for signature compatibility.
 
     Returns:
-        dict {catalog_id: apertura_px} - vsetky hviezdy maju rovnaku hodnotu.
+        dict {catalog_id: aperture_px} - all stars have the same value.
     """
 
     global_ap = float(aperture_fwhm_factor * fwhm_px)
 
     logging.info(
-        f"[FAZA 2A] Globalna apertura: {global_ap:.3f}px "
+        f"[APERTURE] Global aperture: {global_ap:.3f}px "
         f"({aperture_fwhm_factor:.2f}x FWHM={fwhm_px:.3f}px)"
     )
 
@@ -434,12 +477,12 @@ def _photometric_error_with_bkg_mode(
     err = _photometric_error(flux, sky_pp, area, gain=gain, read_noise=read_noise)
     return err, ERR_BKG_SOURCE_HOWELL_FALLBACK
 
-def _phase2a_proc_column_requirements() -> dict[str, list[str]]:
-    """Named proc-CSV column requirements for headless Phase 2A.
+def _aperture_proc_column_requirements() -> dict[str, list[str]]:
+    """Named proc-CSV column requirements for headless aperture photometry.
 
-    This is the contract that the reduced Phase-2A CSV cache must satisfy. The
+    This is the contract that the reduced aperture-photometry CSV cache must satisfy. The
     UI/full-pipeline path reads from ``ProcFrameStore``; the headless path must
-    project every column that any selectable Phase-2A branch can consume.
+    project every column that any selectable aperture-photometry branch can consume.
     """
     return {
         "lookup_identity": [
@@ -486,14 +529,14 @@ def _phase2a_proc_column_requirements() -> dict[str, list[str]]:
         ],
     }
 
-def _phase2a_cache_columns() -> list[str]:
-    """Union of all required proc-CSV columns for headless Phase 2A."""
+def _aperture_cache_columns() -> list[str]:
+    """Union of all required proc-CSV columns for headless aperture photometry."""
     cols: list[str] = []
-    for required in _phase2a_proc_column_requirements().values():
+    for required in _aperture_proc_column_requirements().values():
         cols.extend(required)
     return list(dict.fromkeys(cols))
 
-def _phase2a_empirical_sigma_bkg_ap(
+def _aperture_empirical_sigma_bkg_ap(
     row_csv: pd.Series,
     *,
     source_file: str,
@@ -501,7 +544,7 @@ def _phase2a_empirical_sigma_bkg_ap(
 ) -> float | None:
     """Return per-row empirical ``sigma_bkg_ap`` or raise on missing input.
 
-    INV-ERR-MODE-01: Phase 2A empirical background errors are the only policy
+    INV-ERR-MODE-01: aperture-photometry empirical background errors are the only policy
     (CONSOLIDATE-01D); missing required proc-CSV inputs are a hard failure, not a
     silent Howell fallback caused by a starved cache projection.
     """
@@ -512,7 +555,7 @@ def _phase2a_empirical_sigma_bkg_ap(
     src = str(src_raw).strip().lower() if src_raw is not None else ""
     raise ValueError(
         "[INV-ERR-MODE-01] empirical background error requires "
-        f"'{SIGMA_BKG_AP_COL}' in Phase 2A input; missing/NaN for catalog_id={catalog_id} "
+        f"'{SIGMA_BKG_AP_COL}' in aperture photometry input; missing/NaN for catalog_id={catalog_id} "
         f"in {source_file} (err_bkg_source={src or 'missing'})."
     )
 
@@ -533,7 +576,7 @@ def _sky_pp_for_photometric_error(row: Any) -> float:
         return ann
     return 0.0
 
-def _resolve_phase2a_equipment_id(
+def _resolve_aperture_equipment_id(
     db: Any | None,
     *,
     draft_id: int | None,
@@ -563,7 +606,7 @@ def _resolve_phase2a_equipment_id(
         return None
     return None
 
-def _draft_dir_from_phase2a_paths(output_dir: Path, masterstar_fits_path: Path) -> Path:
+def _draft_dir_from_aperture_paths(output_dir: Path, masterstar_fits_path: Path) -> Path:
     for base in (Path(output_dir), Path(masterstar_fits_path)):
         for parent in [base, *base.parents]:
             if re.match(r"draft_\d+$", parent.name, re.IGNORECASE):
@@ -575,7 +618,7 @@ def _draft_dir_from_phase2a_paths(output_dir: Path, masterstar_fits_path: Path) 
     return Path(output_dir).parent.parent
 
 def _require_comparison_stars_per_target_schema(comp_df: pd.DataFrame, csv_path: Path) -> None:
-    """Phase 2A comp routing requires ``target_catalog_id`` (not the pool CSV)."""
+    """Aperture-photometry comp routing requires ``target_catalog_id`` (not the pool CSV)."""
     if comp_df is None or comp_df.empty:
         return
     if "target_catalog_id" in comp_df.columns:
@@ -588,10 +631,10 @@ def _require_comparison_stars_per_target_schema(comp_df: pd.DataFrame, csv_path:
         )
     raise ValueError(
         "comparison_stars_csv missing target_catalog_id column "
-        f"(required for Phase 2A per-target comp routing): {csv_path}"
+        f"(required for aperture-photometry per-target comp routing): {csv_path}"
     )
 
-def _median_sky_from_phase2a_csv_cache(
+def _median_sky_from_aperture_csv_cache(
     csv_cache: dict[str, pd.DataFrame],
     *,
     fallback: float = 1581.6,
@@ -641,7 +684,7 @@ def _resolve_photometric_aperture_px_for_gs11(
     target_cid: str,
     apertures_px: dict[str, float],
 ) -> tuple[float | None, str]:
-    """Photometric aperture for GS11 dilution: Phase 2A per-star map, else skip.
+    """Photometric aperture for GS11 dilution: aperture-photometry per-star map, else skip.
 
     CONSOLIDATE-01B C2: the SNR mag-bin table is gone. No fixed-pixel fallback.
     """
@@ -667,19 +710,19 @@ def read_flux_from_csv(
     read_noise: float = 10.0,
     variable_target_catalog_ids: frozenset[str] | None = None,
 ) -> pd.DataFrame:
-    """Krok 2: Nacitaj flux z per-frame CSV (dao_flux).
+    """Step 2: read flux from the per-frame CSV (dao_flux).
 
-    Namiesto citania FITS a vlastnej aperturnej fotometrie pouziva
-    dao_flux ktory pipeline vypocitala pocas DAO detekcie.
-    dao_flux je sky-subtrahovany flux zmerany s aperture_r_px z CSV.
+    Instead of reading FITS and doing its own aperture photometry it uses
+    the dao_flux that the pipeline computed during DAO detection.
+    dao_flux is the sky-subtracted flux measured with aperture_r_px from the CSV.
 
     Returns:
         DataFrame: catalog_id, bjd, hjd, jd, airmass, mag_inst, err,
                    aperture_r_px, sky_pp, flag, source_file
 
     Args:
-        lookup: Volitelny vystup z ``_build_csv_lookup`` pre zdielany ``csv_df``
-            (Faza 2A - jedna vystavba lookupu na snimku namiesto 1x na target).
+        lookup: Optional output of ``_build_csv_lookup`` for a shared ``csv_df``
+            (aperture photometry - one lookup build per frame instead of once per target).
     """
     if csv_df is None:
         if not Path(frame_csv_path).is_file():
@@ -690,7 +733,7 @@ def read_flux_from_csv(
 
             csv_df = read_proc_csv(frame_csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
         except (OSError, ValueError) as exc:
-            logging.warning(f"[FAZA 2A] Nemozem citat CSV {frame_csv_path}: {exc}")
+            logging.warning(f"[APERTURE] Cannot read CSV {frame_csv_path}: {exc}")
             return pd.DataFrame()
 
     if csv_df.empty:
@@ -709,7 +752,7 @@ def read_flux_from_csv(
     else:
         id_map, xy_df_lookup = _build_csv_lookup(csv_df, id_col)
 
-    # Airmass z frame_times
+    # Airmass from frame_times
     am_frame = float("nan")
     align_failed_frame: bool = False
     frame_catalog_match_mode = ""
@@ -793,15 +836,15 @@ def read_flux_from_csv(
                 rows.append(base)
                 continue
 
-            # XY fallback (nie priamy ID hit): comp pool keeps legacy guard.
+            # XY fallback (not a direct ID hit): comp pool keeps legacy guard.
             if not cid_key or cid_key not in id_map:
                 fallback_flux = float(row_csv.get("dao_flux", float("nan")))
                 if math.isfinite(fallback_flux) and fallback_flux > 0:
                     fallback_mag = _flux_to_mag(fallback_flux)
                     if math.isfinite(fallback_mag) and fallback_mag > -8.0:
                         logging.warning(
-                            "[FAZA 2A] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
-                            "nastavujem NaN",
+                            "[APERTURE] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
+                            "setting NaN",
                             cid,
                             fallback_mag,
                         )
@@ -814,25 +857,25 @@ def read_flux_from_csv(
             base["catalog_match_mode"] = _row_cmm
             base["wcs_untrusted"] = is_wcs_untrusted_catalog_match_mode(_row_cmm)
 
-        # Casove znacky
+        # Time stamps
         base["bjd"] = float(row_csv.get("bjd_tdb_mid", float("nan")))
         base["hjd"] = float(row_csv.get("hjd_mid", float("nan")))
         base["jd"] = float(row_csv.get("jd_mid", float("nan")))
 
-        # Airmass fallback: ak frame_times nebolo dostupne, citaj priamo z CSV riadku
+        # Airmass fallback: if frame_times was not available, read it directly from the CSV row
         if not math.isfinite(am_frame):
             am_csv = float(row_csv.get("airmass", float("nan")))
             if math.isfinite(am_csv):
                 base["airmass"] = am_csv
 
-        # dao_flux - sky-subtrahovany flux z DAO fotometrie
+        # dao_flux - sky-subtracted flux from DAO photometry
         flux = float(row_csv.get("dao_flux", float("nan")))
         if not math.isfinite(flux):
             rows.append(base)
             continue
         base["flux_raw"] = flux
 
-        # Apertura z CSV (ta co pipeline pouzila pri DAO)
+        # Aperture from the CSV (the one the pipeline used for DAO)
         ap_csv = float(row_csv.get("aperture_r_px", float("nan")))
         if math.isfinite(ap_csv) and ap_csv > 0:
             base["aperture_r_px"] = ap_csv
@@ -842,7 +885,7 @@ def read_flux_from_csv(
         if math.isfinite(sky_pp):
             base["sky_pp"] = sky_pp
 
-        # Saturacia
+        # Saturation
         # SAT-LIN-2026-10: per-frame verdict from the proc CSV (raw peak >= LINEARITY_FRAC x SAT,
         # sat_diag); an explicit sat_limit_adu argument still overrides.
         peak = float(pd.to_numeric(row_csv.get("peak_max_adu", float("nan")), errors="coerce"))
@@ -860,7 +903,7 @@ def read_flux_from_csv(
             rows.append(base)
             continue
 
-        # Instrumentalna magnituda
+        # Instrumental magnitude
         base["mag_inst"] = _flux_to_mag(flux)
 
         # Geometry (for per-frame annulus-aware edge checks)
@@ -875,10 +918,10 @@ def read_flux_from_csv(
         except Exception:  # noqa: BLE001
             base["sky_annulus_r_out_px"] = float("nan")
 
-        # Chyba - fotonovy sum + background (empirical empty-aperture or Howell legacy)
+        # Error - photon noise + background (empirical empty-aperture or Howell legacy)
         r_ap = base["aperture_r_px"]
         area = math.pi * r_ap * r_ap if math.isfinite(r_ap) and r_ap > 0 else float("nan")
-        _sig_bkg = _phase2a_empirical_sigma_bkg_ap(
+        _sig_bkg = _aperture_empirical_sigma_bkg_ap(
             row_csv,
             source_file=source_file,
             catalog_id=str(cid),
@@ -910,16 +953,16 @@ def fit_color_term_c1(
     min_comp: int = 5,
 ) -> tuple[float, float, int]:
     """
-    Fituje color term koeficient c1 z COMP hviezd.
+    Fit the color-term coefficient c1 from the COMP stars.
 
-    Pre kazdu good/suspect COMP hviezdu:
-      x_i = bp_rp_i - median(bp_rp vsetkych pouzitych COMP)
-      y_i = median(cat_mag_i - inst_mag_i)  [cez vsetky framy]
+    For each good/suspect COMP star:
+      x_i = bp_rp_i - median(bp_rp of all used COMP)
+      y_i = median(cat_mag_i - inst_mag_i)  [over all frames]
 
-    Linearny fit: y = c1 * x + ZP_offset
+    Linear fit: y = c1 * x + ZP_offset
 
     Returns: (c1, c1_stderr, n_comp_used)
-    Pri chybe alebo malo COMP: (0.0, nan, 0)
+    On error or too few COMP: (0.0, nan, 0)
     """
     try:
         min_comp_i = int(min_comp)
@@ -992,15 +1035,15 @@ def should_apply_color_term(
     c1_stderr: float,
     n_comp: int,
     *,
-    min_comp_for_ct: int = 7,
+    min_comp_for_ct: int = CT_MIN_COMP,
     max_stderr_ratio: float = 0.5,
     cfg: Any | None = None,
 ) -> tuple[bool, str]:
     """
-    Auto-rozhodnutie ci aplikovat color term korekciu.
+    Automatic decision whether to apply the color-term correction.
 
     Returns: (apply: bool, reason: str)
-    reason = kratky popis preco sa CT aplikuje alebo nie
+    reason = short description of why CT is or is not applied
     """
     from band_classify import classify_photometric_band, color_term_auto_from_band
 
@@ -1008,7 +1051,7 @@ def should_apply_color_term(
     band = classify_photometric_band(obs_group)
 
     if not color_term_auto_from_band(band):
-        return False, f"{band.value} ({filter_raw}) - CT nie je potrebny"
+        return False, f"{band.value} ({filter_raw}) - CT not needed"
 
     try:
         n_comp_i = int(n_comp)
@@ -1018,28 +1061,28 @@ def should_apply_color_term(
         return (
             False,
             (
-                f"Filter {filter_raw} - CT preskoceny: "
-                f"malo COMP ({n_comp_i} < {int(min_comp_for_ct)})"
+                f"Filter {filter_raw} - CT skipped: "
+                f"too few COMP ({n_comp_i} < {int(min_comp_for_ct)})"
             ),
         )
 
     if not (float(c1) != 0.0 and abs(float(c1)) > 1e-6):
-        return False, f"Filter {filter_raw} - CT preskoceny: c1 ~ 0"
+        return False, f"Filter {filter_raw} - CT skipped: c1 ~ 0"
 
     stderr_ratio = abs(float(c1_stderr) / float(c1)) if float(c1) != 0.0 else float("inf")
     if not math.isfinite(stderr_ratio):
-        return False, f"Filter {filter_raw} - CT nespolahlivy: stderr/c1=NaN"
+        return False, f"Filter {filter_raw} - CT unreliable: stderr/c1=NaN"
     if float(stderr_ratio) > float(max_stderr_ratio):
         return (
             False,
             (
-                f"Filter {filter_raw} - CT nespolahlivy: "
+                f"Filter {filter_raw} - CT unreliable: "
                 f"stderr/c1={stderr_ratio:.2f} > {float(max_stderr_ratio):.2f}"
             ),
         )
 
     return True, (
-        f"Filter {filter_raw} - CT aplikovany: "
+        f"Filter {filter_raw} - CT applied: "
         f"c1={float(c1):+.4f} +- {float(c1_stderr):.4f} "
         f"(stderr/c1={stderr_ratio:.2f}, n_comp={n_comp_i})"
     )
@@ -1133,9 +1176,9 @@ def _group_comp_mag_inst_from_proc_csvs(
             continue
         if "catalog_id" not in df.columns:
             continue
-        df = df.copy()
-        df["_nid"] = df["catalog_id"].apply(_normalize_gaia_id)
-        sub = df[df["_nid"].isin(id_set)]
+        _nid = df["catalog_id"].apply(_normalize_gaia_id)
+        _in = _nid.isin(id_set)
+        sub = df[_in]
         mag_col = "mag_inst" if "mag_inst" in sub.columns else None
         flux_col = None
         if mag_col is None:
@@ -1143,16 +1186,19 @@ def _group_comp_mag_inst_from_proc_csvs(
                 if fc in sub.columns:
                     flux_col = fc
                     break
-        for _, row in sub.iterrows():
-            cid = str(row["_nid"])
+        # SPEED-2026-10: column lists instead of iterrows (same rows, same order, last row wins).
+        _vcol = mag_col if mag_col is not None else flux_col
+        if _vcol is None:
+            continue
+        for cid, raw in zip(_nid[_in].astype(str).tolist(), sub[_vcol].tolist(), strict=True):
             if cid not in out:
                 continue
             if mag_col is not None:
-                v = pd.to_numeric(row.get(mag_col), errors="coerce")
+                v = pd.to_numeric(raw, errors="coerce")
                 if math.isfinite(float(v)):
                     out[cid][i] = float(v)
-            elif flux_col is not None:
-                flux = float(pd.to_numeric(row.get(flux_col), errors="coerce"))
+            else:
+                flux = float(pd.to_numeric(raw, errors="coerce"))
                 if math.isfinite(flux) and flux > 0:
                     out[cid][i] = float(-2.5 * math.log10(flux))
     return out
@@ -1270,7 +1316,7 @@ def _compute_group_color_term_fit(
                 _ys.append(cat - float(np.median(inst)))
         _pf = fit_colour_term(np.asarray(_xs), np.asarray(_ys))
         if _pf is not None:
-            _ok = _pf.order >= 1 and _pf.n >= int(getattr(cfg, "phase01_ct_min_comp", 7))
+            _ok = _pf.order >= 1 and _pf.n >= CT_MIN_COMP
             _reason = (
                 f"Filter {_band} - band transform Gaia->{_band} (DR3 5.5.1); colour term order "
                 f"{_pf.order} by BIC, coeffs={[round(c, 4) for c in _pf.coeffs]}, rms={_pf.rms:.4f}, "
@@ -1302,7 +1348,6 @@ def _compute_group_color_term_fit(
         c1=float(c1),
         c1_stderr=float(c1_stderr),
         n_comp=int(n_comp),
-        min_comp_for_ct=int(getattr(cfg, "phase01_ct_min_comp", 7)),
         cfg=cfg,
     )
     return _ColorTermGroupFit(
@@ -1351,7 +1396,6 @@ def _ensure_group_comp_pool_csv(
             platesolve_dir=ps_dir,
             masterstar_fits=ms_fits,
             masterstars_csv=ms_path,
-            n_comparison_stars=int(getattr(cfg, "comparison_stars_pool_n", 0) or 0),
             require_non_variable=bool(getattr(cfg, "phase01_comparison_require_non_variable", True)),
             draft_id=int(draft_id) if draft_id is not None else None,
             database_path=getattr(cfg, "database_path", None),
@@ -1452,7 +1496,6 @@ def apply_reporting_postprocess(
     sat_flags: np.ndarray,
     target_frames: pd.DataFrame,
     ct_ok: bool,
-    cfg: AppConfig | None = None,
     err: np.ndarray | None = None,
     bjd: np.ndarray | None = None,
     source_files: list[str] | None = None,
@@ -1470,7 +1513,6 @@ def apply_reporting_postprocess(
     """
     from lc_outlier import assign_lc_flags  # noqa: PLC0415
 
-    _cfg = cfg or AppConfig()
     mag_out = np.asarray(mag_calib, dtype=np.float64).copy()
     mag_for_report = np.asarray(mag_calib_ct, dtype=np.float64)
     n = len(mag_for_report)
@@ -1479,10 +1521,6 @@ def apply_reporting_postprocess(
     _src = source_files
     if _src is None and "source_file" in target_frames.columns:
         _src = target_frames["source_file"].astype(str).tolist()
-    _enabled = bool(getattr(_cfg, "lc_outlier_enabled", True))
-    _n_sigma = float(getattr(_cfg, "lc_outlier_n_sigma", 5.0) or 5.0)
-    _adj = float(getattr(_cfg, "lc_outlier_adjacent_sigma", 3.0) or 3.0)
-    _he_ns = float(getattr(_cfg, "lc_high_err_nsigma", 5.0) or 5.0)
     # Keep empirical eclipse mask as soft log only; isolation rule is the hard guard.
     _feature_mask = empirical_feature_mask_mag(mag_for_report)
     if int(_feature_mask.sum()) > 0:
@@ -1500,14 +1538,10 @@ def apply_reporting_postprocess(
         source_files=_src,
         frame_qc_reasons=frame_qc_reasons,
         evidence_for_index=evidence_for_index,
-        n_sigma=_n_sigma,
-        adjacent_sigma=_adj,
-        high_err_n_sigma=_he_ns,
         err_photon=err_photon,
         err_sem_rel=err_sem_rel,
         err_scint_rel=err_scint_rel,
         err_sigma_sys_rel=err_sigma_sys_rel,
-        enabled=_enabled,
     )
     out_flags = list(result.flags)
     out_reasons = list(result.reasons)
@@ -1531,7 +1565,7 @@ def apply_reporting_postprocess(
         mag_calib_ct_out = mag_out.copy()
     return mag_out, mag_calib_ct_out, out_flags, out_reasons
 
-def _phase2a_coerce_skip_photometry(df: pd.DataFrame) -> pd.Series:
+def _aperture_coerce_skip_photometry(df: pd.DataFrame) -> pd.Series:
     """Normalize skip_photometry / saturated zone_flag into a boolean Series."""
     if "skip_photometry" in df.columns:
 
@@ -1732,7 +1766,7 @@ def build_lc_quality_summary(
         out["total"] = 0
     return out
 
-def _phase2a_write_summary(
+def _aperture_write_summary(
     summary_rows: list[dict[str, Any]],
     output_dir: Path,
     *,
@@ -1768,8 +1802,6 @@ def _phase2a_write_summary(
             lunar_risk=_lunar_risk,
             rms_model_coeffs=_rms_coeffs,
             min_frames=int(getattr(_cfg_summary, "lc_quality_min_frames", 20) or 20),
-            short_min_frames=int(getattr(_cfg_summary, "lc_quality_short_min_frames", 3) or 3),
-            min_normal_frac=float(getattr(_cfg_summary, "lc_quality_min_normal_frac", 0.5) or 0.5),
         )
 
     summary_csv = Path(output_dir) / "photometry_summary.csv"
@@ -1801,7 +1833,7 @@ def _phase2a_write_summary(
     _sum_df.to_csv(summary_csv, index=False)
     return summary_csv, _sum_df
 
-def _phase2a_observer_location_dict(
+def _aperture_observer_location_dict(
     cfg: object,
     site: tuple[float | None, float | None, float | None] | None = None,
     site_source: str | None = None,
@@ -1882,7 +1914,7 @@ def _sky_surface_meta_from_qc(draft_dir: Path | None) -> dict[str, Any]:
         logging.debug("[SKY-SURFACE] meta from qc_metrics skipped: %s", exc)
         return {}
 
-def _phase2a_resolve_field_center_ra_dec(
+def _aperture_resolve_field_center_ra_dec(
     ms_header: Any,
     at_df: pd.DataFrame,
 ) -> tuple[float, float, str]:
@@ -1913,8 +1945,8 @@ def _phase2a_resolve_field_center_ra_dec(
                     return ra_m, de_m, "active_targets_median"
     return float("nan"), float("nan"), "unavailable"
 
-def _phase2a_collect_session_jd_values(frame_time_lookup: dict[str, dict[str, float]]) -> list[float]:
-    """Per-frame ``jd_mid`` values from Phase 2A ``frame_time_lookup``."""
+def _aperture_collect_session_jd_values(frame_time_lookup: dict[str, dict[str, float]]) -> list[float]:
+    """Per-frame ``jd_mid`` values from the aperture-photometry ``frame_time_lookup``."""
     out: list[float] = []
     for entry in frame_time_lookup.values():
         try:
@@ -1926,15 +1958,15 @@ def _phase2a_collect_session_jd_values(frame_time_lookup: dict[str, dict[str, fl
     return out
 
 @dataclass
-class _Phase2AState:
+class _AperturePhotometryState:
     at_df: pd.DataFrame
     comp_df: pd.DataFrame
     _comp_index: dict
     target_bp_rp_by_cid: dict
     csv_files: list
     n_frames: int
-    _phase2a_csv_cache: dict
-    _phase2a_lookup_cache: dict
+    _aperture_csv_cache: dict
+    _aperture_lookup_cache: dict
     frame_time_lookup: dict
     fwhm_px: float
     apertures_px: dict
@@ -1959,7 +1991,7 @@ class _Phase2AState:
     masterstars_df: pd.DataFrame = field(default_factory=pd.DataFrame)
     #: Observer site resolved once per draft via param_resolver.resolve_site
     #: (draft ID_LOCATION -> header SITELAT -> flagged config). Threaded into
-    #: per-target BJD/HJD recompute and pipeline_meta so Phase 2A no longer
+    #: per-target BJD/HJD recompute and pipeline_meta so aperture photometry no longer
     #: silently uses cfg.observer_* (the config-drift trap).
     site_lat: float | None = None
     site_lon: float | None = None
@@ -2014,14 +2046,14 @@ class _Phase2AState:
     # ALIGN-VERIFY-2026-10: frames of this group whose registration was not verified (not measured)
     n_align_skipped: int = 0
 
-def _build_phase2a_dynamic_params(
-    state: _Phase2AState,
+def _build_aperture_dynamic_params(
+    state: _AperturePhotometryState,
     output_dir: Path,
     *,
     aperture_fwhm_factor: float,
 ) -> dict[str, Any]:
-    """Runtime scalars for ``pipeline_meta.json`` (Phase 2A start)."""
-    _median_sky = _median_sky_from_phase2a_csv_cache(state._phase2a_csv_cache)
+    """Runtime scalars for ``pipeline_meta.json`` (aperture photometry start)."""
+    _median_sky = _median_sky_from_aperture_csv_cache(state._aperture_csv_cache)
     sky_adu_per_px: float | None = (
         float(_median_sky) if math.isfinite(float(_median_sky)) else None
     )
@@ -2111,8 +2143,8 @@ def _build_phase2a_dynamic_params(
         },
     }
 
-def _phase2a_compute_lunar_context(state: _Phase2AState) -> dict[str, Any] | None:
-    """Session-level lunar context (once per ``run_phase2a``)."""
+def _aperture_compute_lunar_context(state: _AperturePhotometryState) -> dict[str, Any] | None:
+    """Session-level lunar context (once per ``run_aperture_photometry``)."""
     from lunar_context import get_jd_midpoint, get_lunar_context  # noqa: PLC0415
 
     _cfg = state._cfg
@@ -2127,21 +2159,23 @@ def _phase2a_compute_lunar_context(state: _Phase2AState) -> dict[str, Any] | Non
         lat = float(_cfg.observer_lat)
         lon = float(_cfg.observer_lon)
         alt_m = float(_cfg.observer_alt_m)
-    if lat == 0.0 and lon == 0.0:
+    from param_resolver import is_null_island_coords  # noqa: PLC0415
+
+    if is_null_island_coords(lat, lon):
         logging.warning("Observer location not set - lunar context skipped")
         return None
-    jd_vals = _phase2a_collect_session_jd_values(state.frame_time_lookup)
+    jd_vals = _aperture_collect_session_jd_values(state.frame_time_lookup)
     if not jd_vals:
-        logging.warning("[PHASE 2A] No frame JD values - lunar context skipped")
+        logging.warning("[APERTURE] No frame JD values - lunar context skipped")
         return None
     try:
         jd_mid = get_jd_midpoint(jd_vals)
     except ValueError:
-        logging.warning("[PHASE 2A] JD midpoint unavailable - lunar context skipped")
+        logging.warning("[APERTURE] JD midpoint unavailable - lunar context skipped")
         return None
-    ra_field, dec_field, src = _phase2a_resolve_field_center_ra_dec(state._ms_header, state.at_df)
+    ra_field, dec_field, src = _aperture_resolve_field_center_ra_dec(state._ms_header, state.at_df)
     if not (math.isfinite(ra_field) and math.isfinite(dec_field)):
-        logging.warning("[PHASE 2A] Field center RA/Dec unavailable - lunar context skipped")
+        logging.warning("[APERTURE] Field center RA/Dec unavailable - lunar context skipped")
         return None
     lunar = get_lunar_context(
         jd_mid=float(jd_mid),
@@ -2173,11 +2207,11 @@ def _preserve_nondetection_flags_helper(
             out_flags_local[i] = "nondetection"
 
 
-def _propagate_phase2a_skip_reason_to_active(
+def _propagate_aperture_skip_reason_to_active(
     active_csv: Path,
     summary_rows: list[dict[str, Any]],
 ) -> None:
-    """Write Phase 2A drop reasons (e.g. no_comps) into active_targets skip_reason."""
+    """Write aperture-photometry drop reasons (e.g. no_comps) into active_targets skip_reason."""
     if not active_csv.is_file() or not summary_rows:
         return
     try:
@@ -2213,7 +2247,7 @@ def _propagate_phase2a_skip_reason_to_active(
     if changed:
         active.to_csv(active_csv, index=False)
 
-def _phase2a_finalize_exports(
+def _aperture_finalize_exports(
     *,
     summary_rows: list,
     lc_dir: Path,
@@ -2240,38 +2274,38 @@ def _phase2a_finalize_exports(
         except UnicodeEncodeError:
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    summary_csv, _sum_df = _phase2a_write_summary(
+    summary_csv, _sum_df = _aperture_write_summary(
         summary_rows,
         output_dir,
         lunar_context=lunar_context,
         cfg=_cfg,
         plate_scale_arcsec=float(plate_scale_arcsec),
     )
-    _propagate_phase2a_skip_reason_to_active(output_dir / "active_targets.csv", summary_rows)
+    _propagate_aperture_skip_reason_to_active(output_dir / "active_targets.csv", summary_rows)
 
     # Draft-level trust flag (read-only w.r.t. photometry; before AAVSO/VarAstro/PDF).
-    if bool(getattr(_cfg, "trust_flag_enabled", True)):
-        try:
-            from trust_flag_core import run_trust_flag_for_photometry_dir  # noqa: PLC0415
+    # TRUST-ALWAYS-2026-10: trust always runs (it also routes RED exports to _dontsubmit)
+    try:
+        from trust_flag_core import run_trust_flag_for_photometry_dir  # noqa: PLC0415
 
-            _p2("Trust flag (GREEN/YELLOW/RED)...")
-            run_trust_flag_for_photometry_dir(
-                photometry_dir=output_dir,
-                update_summary=True,
-                cfg=_cfg,
-            )
-            _sum_df = pd.read_csv(output_dir / "photometry_summary.csv", low_memory=False, dtype={"catalog_id": str})
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0175] Trust-flag stage failure - photometry_summary trust columns not refreshed: %s', exc)
-            logging.warning("[TRUST] Stage failed (non-fatal): %s", exc)
+        _p2("Trust flags (GREEN/YELLOW/RED)...")
+        run_trust_flag_for_photometry_dir(
+            photometry_dir=output_dir,
+            update_summary=True,
+            cfg=_cfg,
+        )
+        _sum_df = pd.read_csv(output_dir / "photometry_summary.csv", low_memory=False, dtype={"catalog_id": str})
+    except Exception as exc:  # noqa: BLE001
+        logging.error('[EXC-0175] Trust-flag stage failure - photometry_summary trust columns not refreshed: %s', exc)
+        logging.warning("[TRUST] Stage failed (non-fatal): %s", exc)
 
-    logging.info(f"[FAZA 2A] Hotovo: {n_lc} svetelnych kriviek -> {output_dir}")
+    logging.info(f"[APERTURE] Done: {n_lc} light curves -> {output_dir}")
     logging.info(
-        f"[FAZA 2A] Targety bez comp hviezd: "
+        f"[APERTURE] Targets without comp stars: "
         f"{len(at_df) - n_lc}/{len(at_df)} "
-        f"(ziadne vhodne comp podla aktualnych filtrov)"
+        f"(no suitable comps under the current filters)"
     )
-    _p2(f"Faza 2A hotovo: {n_lc} kriviek z {n_frames} snimok -> {output_dir.name}")
+    _p2(f"Aperture photometry done: {n_lc} light curves from {n_frames} frames -> {output_dir.name}")
 
     # Export lightcurve reports (AAVSO + VAR.ASTRO.CZ) - best effort, non-fatal.
     try:
@@ -2313,7 +2347,7 @@ def _phase2a_finalize_exports(
     _ef_snap = get_except_fix_counters().snapshot()
     merge_photometry_pipeline_meta(output_dir, {"except_fix_summary": _ef_snap})
     if any(v > 0 for v in _ef_snap.values()):
-        logging.error("[EXCEPT-FIX] Phase 2A terminal-failure counters: %s", _ef_snap)
+        logging.error("[EXCEPT-FIX] Aperture photometry terminal-failure counters: %s", _ef_snap)
 
     # INV-DAG-01 + INV-FLAT-01 + INV-PROV-01 / INV-CFG-01 end-of-run gates.
     try:
@@ -2327,10 +2361,10 @@ def _phase2a_finalize_exports(
         )
 
         _inv_meta = load_pipeline_meta(output_dir)
-        stamp_pipeline_stage(_inv_meta, "phase2a", enforce_upstream=True)
+        stamp_pipeline_stage(_inv_meta, "aperture_photometry", enforce_upstream=True)
         # INV-FLAT-01 from preprocess residual flatness column in qc_metrics (WARN).
         try:
-            _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+            _dd = _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))
             from pipeline_catalog import find_qc_metrics_csv  # noqa: PLC0415
 
             _qc_p = find_qc_metrics_csv(_dd) if _dd is not None else None
@@ -2428,7 +2462,7 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
     res_idx = getattr(state, "reserve_index", None) or {}
     # BJD per frame stem from the per-frame CSV cache
     bjd_by_stem: dict[str, float] = {}
-    for _k, _df in (getattr(state, "_phase2a_csv_cache", None) or {}).items():
+    for _k, _df in (getattr(state, "_aperture_csv_cache", None) or {}).items():
         try:
             _stem = Path(str(_k)).name
             _stem = _stem[5:-4] if _stem.startswith("proc_") and _stem.endswith(".csv") else Path(_stem).stem
@@ -2441,7 +2475,6 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
     stab_kw = dict(
         max_comp_p2p=float(cfg.phase01_comparison_max_comp_rms),
         max_comp_slope_mmag_hr=float(cfg.comp_max_slope_mmag_hr),
-        comp_slope_significance_k=float(getattr(cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,
     )
     n_min = int(getattr(cfg, "phase01_comparison_n_comp_min", 3) or 3)
@@ -2508,7 +2541,7 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
         logging.info("[COMP-SMART] %s: %d clean of %d candidates; dropped %s, added %s, kept suspect %s",
                      tcid, log["n_clean"], len(lc), log["replaced"], log["added"], log["kept_suspect"])
 
-def run_phase2a(
+def run_aperture_photometry(
     masterstar_fits_path: Path,
     active_targets_csv: Path,
     comparison_stars_csv: Path,
@@ -2530,12 +2563,12 @@ def run_phase2a(
     draft_id: int | None = None,
     proc_frame_store: ProcFrameStore | None = None,
 ) -> dict[str, Any]:
-    """Hlavny wrapper pre Fazu 2A.
+    """Main wrapper for aperture photometry.
 
-    Globalny FWHM pre aperturu: ``VY_FWHM_GAUSS`` (2D fit z pipeline), inak ``VY_FWHM``
-    (DAO, pre aperturu porovnatelne s Gaussian FWHM), inak 2D Gaussian fit
-    (``measure_fwhm_from_masterstar``) s napovedou z ``fwhm_px``.
-    Aperturny polomer = ``aperture_fwhm_factor x FWHM`` (predvolene z ``cfg``).
+    Global FWHM for the aperture: ``VY_FWHM_GAUSS`` (2D fit from the pipeline), else ``VY_FWHM``
+    (DAO, comparable to the Gaussian FWHM for the aperture), else a 2D Gaussian fit
+    (``measure_fwhm_from_masterstar``) with a hint from ``fwhm_px``.
+    Aperture radius = ``aperture_fwhm_factor x FWHM`` (default from ``cfg``).
 
     Returns:
         dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map
@@ -2544,9 +2577,9 @@ def run_phase2a(
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
     # OUTPUT-REVIEW-2026-10 step 7: a target skipped now must not keep (and export) its old products
-    from run_outputs import clear_phase2a_products  # noqa: PLC0415
+    from run_outputs import clear_aperture_products  # noqa: PLC0415
 
-    clear_phase2a_products(output_dir)
+    clear_aperture_products(output_dir)
 
     from except_fix_counters import reset_except_fix_counters
 
@@ -2560,8 +2593,8 @@ def run_phase2a(
         except UnicodeEncodeError:
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    _p2("Initializing shared state...")
-    state = _phase2a_prepare_shared_state(
+    _p2("Aperture photometry: preparing shared state...")
+    state = _aperture_prepare_shared_state(
         output_dir=output_dir,
         lc_dir=lc_dir,
         masterstar_fits_path=masterstar_fits_path,
@@ -2608,7 +2641,7 @@ def run_phase2a(
     summary_rows: list[dict[str, Any]] = []
     n_lc = 0
 
-    state.lunar_context = _phase2a_compute_lunar_context(state)
+    state.lunar_context = _aperture_compute_lunar_context(state)
     # LC-OUTLIER-01: night-level frame QC (MAD-sigma vs draft_manifest inspection).
     try:
         from lc_outlier import (  # noqa: PLC0415
@@ -2616,9 +2649,9 @@ def run_phase2a(
             load_frame_metrics_from_manifest,
         )
 
-        _dd_qc = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+        _dd_qc = _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))
         _man = _dd_qc / "draft_manifest.json"
-        _fq_ns = float(getattr(_cfg, "lc_outlier_frame_qc_n_sigma", 5.0) or 5.0)
+        from lc_outlier import OUTLIER_N_SIGMA as _fq_ns  # noqa: PLC0415
         _fm = load_frame_metrics_from_manifest(_man)
         state.frame_qc_reasons = frame_qc_mask_from_night_table(_fm, n_sigma=_fq_ns)
         _n_bad = sum(1 for v in state.frame_qc_reasons.values() if v)
@@ -2632,14 +2665,7 @@ def run_phase2a(
     except Exception as _fq_exc:  # noqa: BLE001
         logging.warning("[LC-OUTLIER] frame_qc setup failed (non-fatal): %s", _fq_exc)
         state.frame_qc_reasons = {}
-    _dyn = _build_phase2a_dynamic_params(state, output_dir, aperture_fwhm_factor=_apt_fw)
-    if _dyn.get("plate_scale_arcsec_px") is None and _cfg is not None:
-        try:
-            _cfg_ps = float(_cfg.plate_scale_arcsec_per_px)
-            if math.isfinite(_cfg_ps) and _cfg_ps > 0:
-                _dyn["plate_scale_arcsec_px"] = _cfg_ps
-        except (TypeError, ValueError):
-            pass
+    _dyn = _build_aperture_dynamic_params(state, output_dir, aperture_fwhm_factor=_apt_fw)
     _cal_meta: dict[str, Any] = {}
     try:
         from draft_provenance import calibration_mode_report_line, resolve_calibration_mode
@@ -2650,13 +2676,13 @@ def run_phase2a(
             "calibration_report_line": calibration_mode_report_line(_cal_mode),
         }
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0179] calibration_mode not merged into pipeline_meta after Phase 2A: %s', exc)
+        logging.error('[EXC-0179] calibration_mode not merged into pipeline_meta after aperture photometry: %s', exc)
         pass
     _cal_diag_meta: dict[str, Any] = {}
     try:
         from cal_diag import load_cal_diag_json_for_meta
 
-        _dd = _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))
+        _dd = _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))
         _cd = load_cal_diag_json_for_meta(_dd)
         if _cd is not None:
             _cal_diag_meta = {"cal_diag": _cd}
@@ -2667,7 +2693,7 @@ def run_phase2a(
         output_dir,
         {
             "lunar_context": state.lunar_context,
-            "observer_location": _phase2a_observer_location_dict(
+            "observer_location": _aperture_observer_location_dict(
                 _cfg,
                 site=(state.site_lat, state.site_lon, state.site_alt) if state.site_ok else None,
                 site_source=state.site_source,
@@ -2682,10 +2708,10 @@ def run_phase2a(
             ),
             **_cal_meta,
             **_cal_diag_meta,
-            **_sky_surface_meta_from_qc(_draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path))),
+            **_sky_surface_meta_from_qc(_draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))),
         },
         _cfg,
-        entry_point="run_phase2a",
+        entry_point="run_aperture_photometry",
     )
     # INV-CFG-01: per-frame sat markers present only when enabled.
     if state.per_frame_sat_meta:
@@ -2701,7 +2727,7 @@ def run_phase2a(
             write_per_target_choices,
         )
 
-        _p2("APERTURE: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
+        _p2("Aperture photometry: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
         _ids: set[str] = set()
         for _, _tr in at_df.iterrows():
             _cid = str(_tr.get("catalog_id", "") or "").strip()
@@ -2816,6 +2842,7 @@ def run_phase2a(
             annulus_outer_fwhm=float(annulus_outer_fwhm),
             xy_by_cid=_xy_ms,
             scale_by_cid=_psf_scale,
+            workers=_parallel_workers(_cfg),
         )
         state.aperture_grid_night = _grid
         _frame_order = sorted(_grid.frames.keys())
@@ -2834,7 +2861,7 @@ def run_phase2a(
                     if str(x).strip()
                 ]
             # BLEND-K-2026-10: only apertures at which all the target's comps keep
-            # <= 1 % neighbour light (per-k values from the Phase-1 pool).
+            # <= 1 % neighbour light (per-k values from the comparison-star selection pool).
             from aperture_pertarget import allowed_f_from_comp_blend  # noqa: PLC0415
             from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
 
@@ -2905,11 +2932,11 @@ def run_phase2a(
             state.target_blend = {}
         # COMP-SMART-2026-10 (Milan 2026-10-11): suspect comps are replaced by clean reserve
         # candidates (rank order RMS -> colour -> distance); 3..8 clean, suspects only when
-        # fewer than 3 are clean. Same stability test as the Phase-2A verdict.
+        # fewer than 3 are clean. Same stability test as the aperture-photometry verdict.
         try:
             _smart_prepass(state, _grid, _choices, _frame_order, _cfg)
         except Exception as _sm_exc:  # noqa: BLE001
-            logging.warning("[COMP-SMART] pre-pass failed - Phase-1 comps used: %s", _sm_exc)
+            logging.warning("[COMP-SMART] pre-pass failed - comparison-star selection comps used: %s", _sm_exc)
         # SIGMA-SYS-NIGHT-2026-10: systematic floor of this night from the final comps
         try:
             _night_sigma_sys(state, _grid, _frame_order, output_dir, annulus_inner_fwhm, annulus_outer_fwhm,
@@ -2939,17 +2966,17 @@ def run_phase2a(
     state.n_to_measure = int(len(at_df)) - state.n_final_skip
     state.i_measured = 0
     # Per target loop
-    # _phase2a_process_single_target (inline): ZP -> CT -> (outlier -> airmass | airmass -> outlier) -> export.
-    from field_map import TargetFieldMap  # noqa: PLC0415
+    # _aperture_process_single_target (inline): ZP -> CT -> (outlier -> airmass | airmass -> outlier) -> export.
+    from field_map import DeferredTargetFieldMaps  # noqa: PLC0415
 
     try:
         _fm_data = _ms_data if _ms_data is not None else astrofits.getdata(Path(masterstar_fits_path))
         _fm_hdr = _ms_header if _ms_header is not None else astrofits.getheader(Path(masterstar_fits_path))
-        state.target_field_map = TargetFieldMap(_fm_data, _fm_hdr)
+        state.target_field_map = DeferredTargetFieldMaps(_fm_data, _fm_hdr, workers=_parallel_workers(_cfg))
     except (OSError, ValueError, TypeError, ImportError) as _fm_exc:
-        LOGGER.warning("[PHASE 2A] target field maps not drawn: %s", _fm_exc)
+        LOGGER.warning("[APERTURE] target field maps not drawn: %s", _fm_exc)
     for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
-        summary_rows, n_lc = _phase2a_process_one_target(
+        summary_rows, n_lc = _aperture_process_one_target(
             target_row=target_row,
             ti=ti,
             state=state,
@@ -2979,7 +3006,8 @@ def run_phase2a(
         )
 
     # OUTPUT-REVIEW-2026-10 step 5: mark the comparison stars of the final ensembles in the one
-    # comparison table (used_role / used_rank, every target); the Phase-1 rows stay as they are.
+    # comparison table (used_role / used_rank, every target); the comparison-star selection rows
+    # stay as they are.
     try:
         from comp_table import USED_PRIMARY, load_comp_table, with_used_sets, write_comp_table  # noqa: PLC0415
 
@@ -2995,7 +3023,7 @@ def run_phase2a(
         logging.info("[COMP-SMART] comparison table: %d used of %d rows", int((_ct["used_role"] != "").sum()), len(_ct))
     except Exception as _cw_exc:  # noqa: BLE001
         logging.warning("[COMP-SMART] used sets not written into the comparison table: %s", _cw_exc)
-    return _phase2a_finalize_exports(
+    return _aperture_finalize_exports(
         summary_rows=summary_rows,
         lc_dir=lc_dir,
         output_dir=output_dir,
@@ -3029,18 +3057,18 @@ from photometry_shared import (  # noqa: E402,F401
 # late from-import. Bind the moved names onto the facade (and shared) here.
 import photometry_core as _photometry_core  # noqa: E402
 
-_E4_PHASE2A_NAMES = (
+_E4_APERTURE_NAMES = (
     "parse_comp_quality_json_map",
     "_mad_sigma_or_std_floor",
     "_howell_variance_adu2",
     "_photometric_error",
     "_photometric_error_with_bkg_mode",
-    "_phase2a_proc_column_requirements",
-    "_phase2a_cache_columns",
-    "_phase2a_empirical_sigma_bkg_ap",
+    "_aperture_proc_column_requirements",
+    "_aperture_cache_columns",
+    "_aperture_empirical_sigma_bkg_ap",
     "_sky_pp_for_photometric_error",
-    "_resolve_phase2a_equipment_id",
-    "_draft_dir_from_phase2a_paths",
+    "_resolve_aperture_equipment_id",
+    "_draft_dir_from_aperture_paths",
     "_require_comparison_stars_per_target_schema",
     "_resolve_photometric_aperture_px_for_gs11",
     "read_flux_from_csv",
@@ -3052,15 +3080,15 @@ _E4_PHASE2A_NAMES = (
     "expected_rms_from_model",
     "classify_lc_quality",
     "build_lc_quality_summary",
-    "_Phase2AState",
-    "_propagate_phase2a_skip_reason_to_active",
-    "run_phase2a",
+    "_AperturePhotometryState",
+    "_propagate_aperture_skip_reason_to_active",
+    "run_aperture_photometry",
 )
-for _n in _E4_PHASE2A_NAMES:
+for _n in _E4_APERTURE_NAMES:
     setattr(_photometry_core, _n, globals()[_n])
 
-from phase2a_state import _phase2a_prepare_shared_state  # noqa: E402
-_photometry_core._phase2a_prepare_shared_state = _phase2a_prepare_shared_state
+from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: E402
+_photometry_core._aperture_prepare_shared_state = _aperture_prepare_shared_state
 
-from phase2a_target import _phase2a_process_one_target  # noqa: E402
-_photometry_core._phase2a_process_one_target = _phase2a_process_one_target
+from aperture_photometry_target import _aperture_process_one_target  # noqa: E402
+_photometry_core._aperture_process_one_target = _aperture_process_one_target

@@ -22,7 +22,6 @@
     "label": "AAVSO filter names",
     "owner": "config_runtime",
     "phase": "observer",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -31,34 +30,12 @@
     "scope_key": "site",
     "scope_group": "n/a"
   },
-  "alignment_max_control_points": {
-    "help": "Most star pairs used to fit one frame onto the reference; more is more robust but slower.",
-    "kind": "static",
-    "label": "Alignment control points",
-    "owner": "config_runtime",
-    "phase": "alignment",
-    "range": [
-      12,
-      500
-    ],
-    "tier": "expert",
-    "unit": "points",
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig_sampling",
-    "scope_group": "c"
-  },
   "alignment_max_stars": {
     "help": "Number of brightest stars the frame alignment matches.",
     "kind": "static",
     "label": "Stars used for alignment",
     "owner": "config_runtime",
     "phase": "alignment",
-    "range": [
-      10,
-      5000
-    ],
     "tier": "advanced",
     "unit": "stars",
     "widget": "auto",
@@ -73,10 +50,6 @@
     "label": "Sky annulus inner radius",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [
-      1.0,
-      10.0
-    ],
     "tier": "advanced",
     "unit": "FWHM",
     "widget": "auto",
@@ -91,10 +64,6 @@
     "label": "Sky annulus outer radius",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [
-      1.5,
-      12.0
-    ],
     "tier": "advanced",
     "unit": "FWHM",
     "widget": "auto",
@@ -109,10 +78,6 @@
     "label": "Aperture radius",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [
-      0.25,
-      6.0
-    ],
     "tier": "advanced",
     "unit": "FWHM",
     "widget": "auto",
@@ -127,7 +92,6 @@
     "label": "Colour term",
     "owner": "config_runtime",
     "phase": "extinction",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -142,7 +106,6 @@
     "label": "Archive",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -157,7 +120,6 @@
     "label": "Night FWHM limit from the data",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": null,
     "tier": "advanced",
     "unit": null,
     "widget": "auto",
@@ -172,10 +134,6 @@
     "label": "Night FWHM limit k",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": [
-      1.0,
-      4.0
-    ],
     "tier": "advanced",
     "unit": "sigma",
     "widget": "auto",
@@ -190,7 +148,6 @@
     "label": "Calibration library",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -205,10 +162,6 @@
     "label": "Dark temperature tolerance",
     "owner": "config_runtime",
     "phase": "calibration",
-    "range": [
-      0.0,
-      10.0
-    ],
     "tier": "expert",
     "unit": "deg C",
     "widget": "auto",
@@ -217,69 +170,14 @@
     "scope_key": "rig",
     "scope_group": "a"
   },
-  "check_select_rms_floor": {
-    "help": "Smallest scatter used when choosing the check star.",
-    "kind": "static",
-    "label": "Check star scatter floor",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      0.0,
-      0.01
-    ],
-    "tier": "expert",
-    "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "check_star_min_epochs": {
-    "help": "Fewest points the check star must have for its verdict to count.",
-    "kind": "static",
-    "label": "Check star minimum points",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      3,
-      50
-    ],
-    "tier": "advanced",
-    "unit": "points",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "comp_color_tiers": {
     "help": "Colour classes 1-3: largest |BP-RP| difference between comparison star and target. Selection takes the first class with enough comparison stars and orders them by scatter, colour and distance.",
     "kind": "static",
     "label": "Colour classes",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": null,
     "tier": "advanced",
     "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_contamination_penalty_k": {
-    "help": "How strongly contaminated comparison stars lose weight in the ensemble.",
-    "kind": "static",
-    "label": "Contamination weight penalty",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      20.0
-    ],
-    "tier": "expert",
-    "unit": null,
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -292,10 +190,6 @@
     "label": "Largest colour difference",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      0.0,
-      5.0
-    ],
     "tier": "advanced",
     "unit": "mag",
     "widget": "auto",
@@ -310,63 +204,8 @@
     "label": "Comparison drift limit",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      0.0,
-      500.0
-    ],
     "tier": "expert",
     "unit": "mmag/h",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_pool_derived_admission": {
-    "help": "On: only known variables (VSX, Gaia) are removed from the comparison pool; scatter, colour and distance enter as weights.",
-    "kind": "static",
-    "label": "Drop only known variables",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_select_rms_floor": {
-    "help": "Smallest scatter used in the ensemble weights (avoids division by near zero).",
-    "kind": "static",
-    "label": "Comparison scatter floor",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      0.01
-    ],
-    "tier": "expert",
-    "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_slope_significance_k": {
-    "help": "A comparison star's trend counts as real drift only above this significance.",
-    "kind": "static",
-    "label": "Comparison drift significance",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -379,10 +218,6 @@
     "label": "Comparison catalogue offset limit",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      0.0,
-      2.0
-    ],
     "tier": "advanced",
     "unit": "mag",
     "widget": "auto",
@@ -397,48 +232,8 @@
     "label": "Comparison stars for green",
     "owner": "config_runtime",
     "phase": "trust",
-    "range": [
-      3,
-      20
-    ],
     "tier": "advanced",
     "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comparison_stars_pool_n": {
-    "help": "Most candidate comparison stars in the pool; 0 = no limit.",
-    "kind": "static",
-    "label": "Comparison pool size",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0,
-      50000
-    ],
-    "tier": "expert",
-    "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "dao_centroid_max_shift_fwhm": {
-    "help": "When a detected centroid lies farther than this from the catalogue position, the catalogue position is used.",
-    "kind": "static",
-    "label": "Centroid shift limit",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.1,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": "FWHM",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -451,7 +246,6 @@
     "label": "App database",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -466,10 +260,6 @@
     "label": "Star detection threshold",
     "owner": "config_runtime",
     "phase": "detection",
-    "range": [
-      2.0,
-      20.0
-    ],
     "tier": "advanced",
     "unit": "sigma",
     "widget": "auto",
@@ -484,7 +274,6 @@
     "label": "Run ePSF in every night run (beta)",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -499,7 +288,6 @@
     "label": "ePSF targets",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -514,7 +302,6 @@
     "label": "Write ePSF light-curve files",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -523,186 +310,17 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "epsf_min_stars": {
-    "help": "Fewest suitable MASTERSTAR stars needed to build the ePSF; below it the ePSF run stops.",
-    "kind": "static",
-    "label": "ePSF minimum stars",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      5,
-      500
-    ],
-    "tier": "expert",
-    "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "err_empty_apertures_min": {
-    "help": "Fewest valid empty-sky apertures for the background noise measurement of a frame.",
-    "kind": "static",
-    "label": "Empty apertures needed",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      4,
-      1000
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "err_empty_apertures_n": {
-    "help": "Number of empty-sky apertures placed per frame to measure the background noise.",
-    "kind": "static",
-    "label": "Empty apertures per frame",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      8,
-      2000
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "exoplanet_match_max_sep_arcsec": {
-    "help": "Largest distance between a detected star and a known exoplanet host to label it (label only).",
-    "kind": "static",
-    "label": "Exoplanet host match radius",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      30.0
-    ],
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "forced_photometry_enabled": {
-    "help": "Measure MASTERSTAR stars at their known positions also in frames where the star finder missed them.",
-    "kind": "static",
-    "label": "Forced photometry",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "forced_photometry_margin_px": {
-    "help": "Extra margin from the frame edge for forced measurements.",
-    "kind": "static",
-    "label": "Forced photometry edge margin",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.0,
-      200.0
-    ],
-    "tier": "expert",
-    "unit": "px",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "frame_height_px": {
-    "help": "Frame height in pixels; measured from FITS NAXIS2 at run time. WAVE-B internalized it (no longer stored in config.json).",
-    "kind": "resolved",
-    "label": "Frame Height PX",
-    "owner": "internal",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "session",
-    "scope_confidence": "high",
-    "scope_key": "frame",
-    "scope_group": "n/a"
-  },
-  "frame_width_px": {
-    "help": "Frame width in pixels; measured from FITS NAXIS1 at run time. WAVE-B internalized it (no longer stored in config.json).",
-    "kind": "resolved",
-    "label": "Frame Width PX",
-    "owner": "internal",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
-    "scope": "session",
-    "scope_confidence": "high",
-    "scope_key": "frame",
-    "scope_group": "n/a"
-  },
   "gaia_db_path": {
     "help": "The local Gaia DR3 SQLite catalog: positions, magnitudes and colours for star identification, comparison stars and plate solving.",
     "kind": "static",
     "label": "Gaia DR3 catalog",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "gain": {
-    "help": "Native-domain detector gain (e-/ADU_native). Science photon/SNR terms use container-domain gain via gain_photon_transfer (g_pt or gain/gain_container_scale); never bare DB gain on container ADU (WIDE-ERR-03).",
-    "kind": "resolved",
-    "label": "Gain",
-    "owner": "fits_dynamic",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": "e-/ADU_native",
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
-  },
-  "gs11_dilution_aperture_arcsec": {
-    "help": "Aperture for the neighbour light estimate; 0 = the photometric aperture.",
-    "kind": "static",
-    "label": "Neighbour light aperture",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.0,
-      120.0
-    ],
-    "tier": "expert",
-    "unit": "arcsec",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "low",
     "scope_key": "none",
     "scope_group": "n/a"
   },
@@ -712,135 +330,8 @@
     "label": "Neighbour light estimate",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": null,
     "tier": "expert",
     "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "gs11_dilution_mag_limit_delta": {
-    "help": "Neighbours up to this many magnitudes fainter than the star are counted.",
-    "kind": "static",
-    "label": "Neighbour light depth",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.5,
-      15.0
-    ],
-    "tier": "expert",
-    "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "gs11_target_min_dilution": {
-    "help": "Targets whose own light is below this fraction of the aperture light are flagged as blended.",
-    "kind": "static",
-    "label": "Blended target limit",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      0.01,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": "fraction",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_dsc_confirm_prob": {
-    "help": "Gaia classifier probability needed to confirm a class in the HR diagram.",
-    "kind": "static",
-    "label": "HRD class probability",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      0.5,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": "probability",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_enrich_max_candidates": {
-    "help": "Most stars looked up online per report.",
-    "kind": "static",
-    "label": "HRD online lookups",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      1,
-      100
-    ],
-    "tier": "expert",
-    "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_enrich_tap_timeout_s": {
-    "help": "Time limit of one online query.",
-    "kind": "static",
-    "label": "HRD lookup timeout",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      5.0,
-      120.0
-    ],
-    "tier": "expert",
-    "unit": "s",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_max_per_category": {
-    "help": "Most highlighted stars per category in the HR diagram.",
-    "kind": "static",
-    "label": "HRD highlights per category",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      1,
-      20
-    ],
-    "tier": "expert",
-    "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_min_per_net": {
-    "help": "Fewest highlighted stars kept from each search method.",
-    "kind": "static",
-    "label": "HRD highlights per search",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      0,
-      20
-    ],
-    "tier": "expert",
-    "unit": "stars",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -853,7 +344,6 @@
     "label": "HRD binaries category",
     "owner": "config_runtime",
     "phase": "reports",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -863,63 +353,11 @@
     "scope_group": "n/a"
   },
   "hrd_online_enrich_enabled": {
-    "help": "Look up details of highlighted stars in the Gaia archive (needs internet).",
+    "help": "Look up details of highlighted stars online: Gaia archive (temperature, gravity) and SIMBAD object type (needs internet).",
     "kind": "static",
     "label": "HRD online details",
     "owner": "config_runtime",
     "phase": "reports",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_parallax_min_mas": {
-    "help": "Smallest parallax for placing a star in the absolute-magnitude HR diagram.",
-    "kind": "static",
-    "label": "HRD minimum parallax",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      0.0,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": "mas",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_parallax_snr_min": {
-    "help": "Smallest parallax SNR for a reliable HR diagram position.",
-    "kind": "static",
-    "label": "HRD parallax SNR",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": [
-      1.0,
-      20.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "hrd_simbad_enrich_enabled": {
-    "help": "Look up SIMBAD object types of highlighted stars (needs internet).",
-    "kind": "static",
-    "label": "HRD SIMBAD types",
-    "owner": "config_runtime",
-    "phase": "reports",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -934,7 +372,6 @@
     "label": "Own k2 per band",
     "owner": "config_runtime",
     "phase": "extinction",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -949,7 +386,6 @@
     "label": "Second-order extinction",
     "owner": "config_runtime",
     "phase": "extinction",
-    "range": null,
     "tier": "advanced",
     "unit": null,
     "widget": "auto",
@@ -964,46 +400,6 @@
     "label": "Light curve minimum frames",
     "owner": "config_runtime",
     "phase": "trust",
-    "range": [
-      3,
-      500
-    ],
-    "tier": "advanced",
-    "unit": "frames",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_quality_min_normal_frac": {
-    "help": "Smallest fraction of unflagged points a light curve needs.",
-    "kind": "static",
-    "label": "Light curve normal points",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      0.1,
-      1.0
-    ],
-    "tier": "advanced",
-    "unit": "fraction",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_quality_short_min_frames": {
-    "help": "Fewest frames for the quality verdict of a short series; at most the light curve minimum.",
-    "kind": "static",
-    "label": "Short series minimum frames",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      2,
-      100
-    ],
     "tier": "advanced",
     "unit": "frames",
     "widget": "auto",
@@ -1018,7 +414,6 @@
     "label": "Blind plate-solve index",
     "owner": "config_runtime",
     "phase": "paths",
-    "range": null,
     "tier": "advanced",
     "unit": null,
     "widget": "auto",
@@ -1033,10 +428,6 @@
     "label": "Master dark valid for",
     "owner": "config_runtime",
     "phase": "calibration",
-    "range": [
-      1,
-      3650
-    ],
     "tier": "basic",
     "unit": "days",
     "widget": "auto",
@@ -1051,10 +442,6 @@
     "label": "Master flat valid for",
     "owner": "config_runtime",
     "phase": "calibration",
-    "range": [
-      1,
-      3650
-    ],
     "tier": "basic",
     "unit": "days",
     "widget": "auto",
@@ -1069,268 +456,9 @@
     "label": "MASTERSTAR candidates",
     "owner": "config_runtime",
     "phase": "detection",
-    "range": [
-      1,
-      25
-    ],
     "tier": "expert",
     "unit": "frames",
     "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_pass2_sigma": {
-    "help": "Detection sigma of the second, deeper DAO pass on the masterstar stack.",
-    "kind": "static",
-    "label": "Masterstar DAO Pass2 Sigma",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_centroid_qa_cap_px": {
-    "help": "Upper cap [px] when deriving pass2/seed centroid tolerances from astrometric residual p95.",
-    "kind": "static",
-    "label": "Masterstar DAO Centroid QA Cap PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_centroid_qa_floor_px": {
-    "help": "Lower floor [px] when deriving pass2/seed centroid tolerances from astrometric residual p95.",
-    "kind": "static",
-    "label": "Masterstar DAO Centroid QA Floor PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_empty_sky_false_accept_max": {
-    "help": "Empty-sky audit (INV-DET/SEED-FALSEFILL-01): maximum pure-noise false-accept rate at MASTERSTAR build, measured on the image mirrored about its background (2*B - data).",
-    "kind": "static",
-    "label": "Masterstar DAO Empty Sky False Accept Max",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.0,
-      0.05
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_empty_sky_target_n": {
-    "help": "Empty-sky audit sample size (main-field positions) for false-fill rate measurement.",
-    "kind": "static",
-    "label": "Masterstar DAO Empty Sky Target N",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      500,
-      5000
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_match_radius_k": {
-    "help": "Gaia match radius multiplier k times astrometric residual p95 [px] (DAO-GAIA-ERA-01).",
-    "kind": "static",
-    "label": "Masterstar DAO Match Radius K",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      3.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_pass1_dedup_px": {
-    "help": "Pass1 spatial deduplication radius [px] before pass2 targeted cutouts.",
-    "kind": "static",
-    "label": "Masterstar DAO Pass1 Dedup PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.1,
-      2.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_dao_pass2_center_tol_px": {
-    "help": "Maximum centroid offset [px] for pass2 cutout acceptance at Gaia seed positions.",
-    "kind": "static",
-    "label": "Masterstar DAO Pass2 Center Tol PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_forced_seed_centroid_max_px": {
-    "help": "FORCED_SEED admission: max COM centroid offset from propagated Gaia [px].",
-    "kind": "static",
-    "label": "Masterstar Forced Seed Centroid Max PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      5.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_forced_seed_comp_pool_enabled": {
-    "help": "Admit FORCED_SEED stars into the comp/CT pool (default off).",
-    "kind": "static",
-    "label": "Masterstar Forced Seed Comp Pool Enabled",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_forced_seed_snr_min": {
-    "help": "FORCED_SEED admission: minimum aperture SNR on local annulus background.",
-    "kind": "static",
-    "label": "Masterstar Forced Seed SNR Min",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1.0,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_gaia_census_edge_margin_px": {
-    "help": "Gaia-complete census: edge margin [px] for EDGE source_state classification.",
-    "kind": "static",
-    "label": "Masterstar Gaia Census Edge Margin PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1.0,
-      30.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_lock_leftover_radius_px": {
-    "help": "FORCED_SEED / leftover promotion: greedy match radius for leftover detections to Gaia [px].",
-    "kind": "static",
-    "label": "Masterstar Lock Leftover Radius PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_lock_pair_tol_px": {
-    "help": "Lock-existing assignment: max shift from locked catalog_id xy to detection [px].",
-    "kind": "static",
-    "label": "Masterstar Lock Pair Tol PX",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0.5,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "masterstar_use_best_frame_fwhm": {
-    "help": "Uses the best frame's FWHM for masterstar detection kernels instead of an average.",
-    "kind": "static",
-    "label": "Masterstar Use Best Frame FWHM",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "custom",
     "scope": "universal",
     "scope_confidence": "high",
     "scope_key": "none",
@@ -1342,7 +470,6 @@
     "label": "Objects catalog (VSX + exoplanets)",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -1357,7 +484,6 @@
     "label": "Observer Alt M",
     "owner": "db_static",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1372,7 +498,6 @@
     "label": "AAVSO observer code",
     "owner": "config_runtime",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1387,7 +512,6 @@
     "label": "Observer Lat",
     "owner": "db_static",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1402,7 +526,6 @@
     "label": "Observing site (run time)",
     "owner": "db_static",
     "phase": "observer",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
@@ -1417,7 +540,6 @@
     "label": "Observer Location Name",
     "owner": "db_static",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1432,7 +554,6 @@
     "label": "Observer Lon",
     "owner": "db_static",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1447,7 +568,6 @@
     "label": "Observer name",
     "owner": "config_runtime",
     "phase": "observer",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1462,10 +582,6 @@
     "label": "OSC channel binning",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": [
-      1,
-      4
-    ],
     "tier": "advanced",
     "unit": null,
     "widget": "auto",
@@ -1480,10 +596,6 @@
     "label": "RAM kept free per worker",
     "owner": "config_runtime",
     "phase": "system",
-    "range": [
-      0.0,
-      64.0
-    ],
     "tier": "expert",
     "unit": "GB",
     "widget": "auto",
@@ -1498,10 +610,6 @@
     "label": "Unsaturated frames needed",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": [
-      0.1,
-      1.0
-    ],
     "tier": "advanced",
     "unit": "fraction",
     "widget": "auto",
@@ -1510,90 +618,14 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "phase01_chip_interior_margin_px": {
-    "help": "Stars closer than this to the chip edge are not used as comparison stars.",
-    "kind": "static",
-    "label": "Chip edge margin",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      0,
-      500
-    ],
-    "tier": "advanced",
-    "unit": "px",
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "low",
-    "scope_key": "rig_sampling",
-    "scope_group": "b"
-  },
-  "phase01_comparison_isolation_radius_px": {
-    "help": "Radius for the contamination index (light of neighbours within it against the star's own light); used to choose the check star.",
-    "kind": "static",
-    "label": "Contamination radius",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      1.0,
-      200.0
-    ],
-    "tier": "expert",
-    "unit": "px",
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "low",
-    "scope_key": "rig_sampling",
-    "scope_group": "b"
-  },
   "phase01_comparison_max_comp_rms": {
     "help": "Upper limit of a comparison star's leave-one-out scatter; the limit used is the smaller of this and k x photon noise.",
     "kind": "static",
     "label": "Comparison scatter limit",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      0.01,
-      0.5
-    ],
     "tier": "advanced",
     "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "comp_rms_loo_photon_k": {
-    "help": "A comparison star may scatter at most k times its photon noise.",
-    "kind": "static",
-    "label": "Comparison scatter vs photon noise",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      1.0,
-      50.0
-    ],
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "phase01_comparison_min_dist_arcsec": {
-    "help": "Comparison stars closer to the target than this are not used.",
-    "kind": "static",
-    "label": "Comparison minimum distance",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      600.0
-    ],
-    "tier": "advanced",
-    "unit": "arcsec",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -1606,10 +638,6 @@
     "label": "Comparison frame coverage",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      0.05,
-      0.95
-    ],
     "tier": "advanced",
     "unit": "fraction",
     "widget": "auto",
@@ -1624,10 +652,6 @@
     "label": "Most comparison stars",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      3,
-      20
-    ],
     "tier": "advanced",
     "unit": "stars",
     "widget": "auto",
@@ -1642,201 +666,8 @@
     "label": "Fewest comparison stars",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      2,
-      12
-    ],
     "tier": "advanced",
     "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "phase01_ct_extrapolation_tol": {
-    "help": "How far beyond the colour range of the comparison stars the colour term may be used; 0 = not at all.",
-    "kind": "static",
-    "label": "Colour term extrapolation",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      0.0,
-      1.0
-    ],
-    "tier": "expert",
-    "unit": "mag",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "phase01_ct_min_comp": {
-    "help": "Fewest comparison stars needed to fit a colour term.",
-    "kind": "static",
-    "label": "Colour term minimum stars",
-    "owner": "config_runtime",
-    "phase": "comp_selection",
-    "range": [
-      2,
-      30
-    ],
-    "tier": "expert",
-    "unit": "stars",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "phase01_plate_scale_arcsec_per_px": {
-    "help": "Phase-1 plate scale; resolved from the WCS solution at run time. WAVE-B removed its config.json fallback - the resolver is authoritative.",
-    "kind": "resolved",
-    "label": "Phase01 Plate Scale Arcsec Per PX",
-    "owner": "fits_dynamic",
-    "phase": "detection",
-    "range": [
-      0.0,
-      30.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "session",
-    "scope_confidence": "high",
-    "scope_key": "frame",
-    "scope_group": "n/a"
-  },
-  "lc_outlier_enabled": {
-    "help": "Flag single light-curve points that jump away from their neighbours and have evidence in the image. Points are flagged, never deleted.",
-    "kind": "static",
-    "label": "Flag isolated outliers",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": null,
-    "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_outlier_n_sigma": {
-    "help": "A single point this far from the running median of its light curve is a candidate outlier.",
-    "kind": "static",
-    "label": "Outlier threshold",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      3.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_outlier_adjacent_sigma": {
-    "help": "When the neighbouring point deviates the same way by this much, both stay normal (flares and eclipses are kept).",
-    "kind": "static",
-    "label": "Outlier neighbour protection",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      1.0,
-      8.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_outlier_frame_qc_n_sigma": {
-    "help": "A frame is flagged when its FWHM, elongation, sky level or ensemble zero point is this many robust sigmas from the night median.",
-    "kind": "static",
-    "label": "Bad-frame threshold",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": [
-      3.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_outlier_evidence_n_sigma": {
-    "help": "How unusual the star must look in that frame (centroid, shape, peak, sky, ePSF fit) against similar stars before the point is flagged.",
-    "kind": "static",
-    "label": "Outlier image evidence",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      3.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "plate_scale_arcsec_per_px": {
-    "help": "Global plate scale (arcsec/px); resolved from the WCS at run time - the number that converts pixels to sky angles. WAVE-B removed its config.json fallback.",
-    "kind": "resolved",
-    "label": "Plate Scale Arcsec Per PX",
-    "owner": "fits_dynamic",
-    "phase": "detection",
-    "range": [
-      0.1,
-      30.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "session",
-    "scope_confidence": "high",
-    "scope_key": "frame",
-    "scope_group": "n/a"
-  },
-  "plate_solve_fov_deg": {
-    "help": "Field-of-view estimate (degrees) fed to the plate solver; computed from frame size and optics.",
-    "kind": "resolved",
-    "label": "Plate Solve FOV Deg",
-    "owner": "fits_dynamic",
-    "phase": "detection",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
-  },
-  "preprocess_sky_surface_force_reapply": {
-    "help": "Recovery only: subtract the sky surface again even when the frame is already marked as done. Leave off.",
-    "kind": "static",
-    "label": "Re-subtract sky surface",
-    "owner": "config_runtime",
-    "phase": "qc",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -1849,10 +680,6 @@
     "label": "Sky background surface order",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": [
-      0,
-      2
-    ],
     "tier": "expert",
     "unit": null,
     "widget": "auto",
@@ -1867,7 +694,6 @@
     "label": "Project Root",
     "owner": "internal",
     "phase": "paths",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
@@ -1882,7 +708,6 @@
     "label": "Quality check after calibration",
     "owner": "config_runtime",
     "phase": "qc",
-    "range": null,
     "tier": "basic",
     "unit": null,
     "widget": "auto",
@@ -1897,7 +722,6 @@
     "label": "QC Preprocess Workers",
     "owner": "internal",
     "phase": "system",
-    "range": null,
     "tier": "expert",
     "unit": null,
     "widget": "hidden",
@@ -1906,28 +730,12 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "read_noise": {
-    "help": "Detector read noise (electrons) in the error model; resolved DB-first (equipment-intrinsic), then FITS. WAVE-B removed its config.json fallback.",
-    "kind": "resolved",
-    "label": "Read Noise",
-    "owner": "fits_dynamic",
-    "phase": "photometry",
-    "range": null,
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "high",
-    "scope_key": "rig",
-    "scope_group": "a"
-  },
   "save_lightcurve_png": {
     "help": "Also write PNG pictures of the light curves and field map during the run (the app draws its own charts without them).",
     "kind": "static",
     "label": "Save light-curve PNG files",
     "owner": "config_runtime",
     "phase": "photometry",
-    "range": null,
     "tier": "advanced",
     "unit": null,
     "widget": "auto",
@@ -1936,34 +744,12 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
-  "sips_dao_fwhm_px": {
-    "help": "Star FWHM assumed by the star finder when the frame header carries no measured FWHM.",
-    "kind": "static",
-    "label": "Fallback FWHM",
-    "owner": "config_runtime",
-    "phase": "detection",
-    "range": [
-      1.0,
-      8.0
-    ],
-    "tier": "advanced",
-    "unit": "px",
-    "widget": "auto",
-    "scope": "rig",
-    "scope_confidence": "low",
-    "scope_key": "rig_sampling",
-    "scope_group": "b"
-  },
   "comp_isolation_fwhm": {
     "help": "A candidate with a catalogue neighbour closer than this is treated as a blend and not used.",
     "kind": "static",
     "label": "Comparison isolation",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      1.0,
-      12.0
-    ],
     "tier": "expert",
     "unit": "FWHM",
     "widget": "auto",
@@ -1978,66 +764,8 @@
     "label": "Minimum SNR",
     "owner": "config_runtime",
     "phase": "comp_selection",
-    "range": [
-      3.0,
-      1000.0
-    ],
     "tier": "advanced",
     "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "sparse_trust_T_green": {
-    "help": "Check-star test statistic below which a sparse field is green.",
-    "kind": "static",
-    "label": "Sparse field green limit",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      0.0,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "sparse_trust_T_red": {
-    "help": "Check-star test statistic above which a sparse field is red.",
-    "kind": "static",
-    "label": "Sparse field red limit",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      0.0,
-      20.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "sparse_trust_X2_RED": {
-    "help": "Excess variance of the check star above which a sparse field is red.",
-    "kind": "static",
-    "label": "Sparse field excess variance limit",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": [
-      0.0,
-      0.01
-    ],
-    "tier": "expert",
-    "unit": "mag^2",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",
@@ -2050,23 +778,7 @@
     "label": "TESS check of new candidates",
     "owner": "config_runtime",
     "phase": "export",
-    "range": null,
     "tier": "advanced",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "trust_flag_enabled": {
-    "help": "Write a trust flag (green, yellow, red) for every point into results and exports.",
-    "kind": "static",
-    "label": "Trust flag",
-    "owner": "config_runtime",
-    "phase": "trust",
-    "range": null,
-    "tier": "expert",
     "unit": null,
     "widget": "auto",
     "scope": "universal",
@@ -2080,81 +792,8 @@
     "label": "VSX types not measured",
     "owner": "config_runtime",
     "phase": "detection",
-    "range": null,
     "tier": "basic",
     "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "photon_transfer_ci_max_width_factor": {
-    "help": "The gain measured from the frames replaces the camera gain only when its confidence interval is at most this factor wide.",
-    "kind": "static",
-    "label": "Measured gain acceptance",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      1.0,
-      10.0
-    ],
-    "tier": "expert",
-    "unit": null,
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "psf_chi2_locus_nsigma": {
-    "help": "An ePSF fit is marked poor when its chi2 lies this far above the chi2-flux relation of the frame.",
-    "kind": "static",
-    "label": "ePSF fit quality limit",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      1.0,
-      20.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "lc_high_err_nsigma": {
-    "help": "Flag a point whose error is this many robust sigmas above the typical error of that light curve.",
-    "kind": "static",
-    "label": "High-error point flag",
-    "owner": "config_runtime",
-    "phase": "photometry",
-    "range": [
-      3.0,
-      10.0
-    ],
-    "tier": "advanced",
-    "unit": "sigma",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "tess_contam_max": {
-    "help": "Largest light of neighbours in the TESS aperture (fraction of the star's own) for a reliable TESS period; TESS pixels are 21 arcsec.",
-    "kind": "static",
-    "label": "TESS contamination limit",
-    "owner": "config_runtime",
-    "phase": "export",
-    "range": [
-      0.0,
-      1.0
-    ],
-    "tier": "advanced",
-    "unit": "fraction",
     "widget": "auto",
     "scope": "universal",
     "scope_confidence": "high",

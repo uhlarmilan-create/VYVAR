@@ -21,6 +21,7 @@ from astropy.io import fits
 import pandas as pd
 
 from config import AppConfig
+from pipeline_constants import DAO_FWHM_FALLBACK_PX
 from infolog import log_event
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
 from pipeline_astrometry import (
@@ -83,7 +84,7 @@ def export_per_frame_catalogs(
     ``<platesolve_dir>/per_frame_catalog_index.csv`` lists every file and CSV path.
 
     **Performance:** each frame still runs DAO + catalog match + disk CSV write (dominant cost for many lights).
-    Parallelism: jednotny pocet z ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` alebo legacy env, pozri
+    Parallelism: one shared count from ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` or legacy env, see
     :func:`_vyvar_parallel_worker_count`). When ``>1``, uses ``ProcessPoolExecutor`` (``spawn``); the
     parent prefetches Gaia cone. Worker count is capped using ``psutil`` and
     ``per_frame_mp_reserve_ram_gb``. RAM handoff ``aligned_ram`` uses the same process pool with serialized
@@ -115,6 +116,17 @@ def export_per_frame_catalogs(
     except Exception as _qc_exc:  # noqa: BLE001
         LOGGER.warning("[APERTURE-01] QC FWHM map not loaded: %s", _qc_exc)
 
+    # GAIN-ONE-2026-10: the run's gain / read noise (MASTERSTAR header, EQUIPMENTS), not the raw
+    # config defaults; used by the background-error ratio of the per-frame catalogs
+    from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+
+    _ms_hdr_fe = None
+    if masterstar_fits is not None and Path(masterstar_fits).is_file():
+        try:
+            _ms_hdr_fe = fits.getheader(str(masterstar_fits), 0)
+        except OSError:
+            _ms_hdr_fe = None
+    _pg_fe = photometric_gain_read_noise(_ms_hdr_fe, _cfg_ap, equipment_id)
     _ap_st: dict[str, Any] = {
         "aperture_fwhm_factor": float(_cfg_ap.aperture_fwhm_factor),
         "annulus_inner_fwhm": float(_cfg_ap.annulus_inner_fwhm),
@@ -125,10 +137,8 @@ def export_per_frame_catalogs(
         "fwhm_night_median_px": _fwhm_night_median_px,
         "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
         "platesolve_dir": str(ps.resolve()) if ps is not None else "",
-        "gain": float(_cfg_ap.gain),
-        "read_noise": float(_cfg_ap.read_noise),
-        "err_empty_apertures_n": int(_cfg_ap.err_empty_apertures_n),
-        "err_empty_apertures_min": int(_cfg_ap.err_empty_apertures_min),
+        "gain": float(_pg_fe.gain),
+        "read_noise": float(_pg_fe.read_noise),
     }
 
     use_ram_inputs = aligned_ram is not None
@@ -259,7 +269,7 @@ def export_per_frame_catalogs(
             if _ms_gauss.is_file():
                 with fits.open(_ms_gauss, memmap=False) as _gfh:
                     _ghdr = _gfh[0].header
-                    # PRIORITA 1: VY_FWHM_GAUSS - 2D Gaussian fit, closest to SExtractor
+                    # PRIORITY 1: VY_FWHM_GAUSS - 2D Gaussian fit, closest to SExtractor
                     for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
                         _vg = _ghdr.get(_gk)
                         if _vg is None:
@@ -277,7 +287,7 @@ def export_per_frame_catalogs(
                         except (TypeError, ValueError):
                             pass
 
-                    # PRIORITA 2: VY_FWHM x 0.667 fallback
+                    # PRIORITY 2: VY_FWHM x 0.667 fallback
                     if _gauss_override is None:
                         _vy = _ghdr.get("VY_FWHM")
                         if _vy is not None:
@@ -297,16 +307,16 @@ def export_per_frame_catalogs(
     if _gauss_override is not None:
         log_event(
             f"[PHOT] gaussian_fwhm_px_override = {float(_gauss_override):.4f}px "
-            "(z VY_FWHM alebo VY_FWHM_GAUSS)"
+            "(from VY_FWHM or VY_FWHM_GAUSS)"
         )
     else:
-        log_event("[PHOT] gaussian_fwhm_px_override = None -> fallback na momentx0.619 per frame")
+        log_event("[PHOT] gaussian_fwhm_px_override = None -> fallback to momentx0.619 per frame")
 
     cfg_for_workers = app_config if app_config is not None else AppConfig()
     _dao_fw_export = (
         float(dao_fwhm_px)
         if dao_fwhm_px is not None
-        else float(cfg_for_workers.sips_dao_fwhm_px)
+        else DAO_FWHM_FALLBACK_PX
     )
     n_workers = _vyvar_per_frame_csv_workers(cfg_for_workers)
     _ny, _nx = _estimate_catalog_frame_hw(work_ram if use_ram_inputs else None, files)
@@ -317,7 +327,7 @@ def export_per_frame_catalogs(
     )
     if n_workers > 1 and total > 1:
         LOGGER.info(
-            "Per-frame catalog: up to %s process worker(s); jednotny parallel count + RAM cap (psutil); "
+            "Per-frame catalog: up to %s process worker(s); shared parallel count + RAM cap (psutil); "
             "env VYVAR_PARALLEL_WORKERS / legacy",
             n_workers,
         )
@@ -333,12 +343,6 @@ def export_per_frame_catalogs(
             "catalog_match_max_sep_arcsec": float(catalog_match_max_sep_arcsec),
             "dao_threshold_sigma": float(dao_threshold_sigma),
             "dao_fwhm_px": float(_dao_fw_export),
-            "forced_photometry_enabled": bool(
-                getattr(cfg_for_workers, "forced_photometry_enabled", True)
-            ),
-            "forced_photometry_margin_px": float(
-                getattr(cfg_for_workers, "forced_photometry_margin_px", 0.0) or 0.0
-            ),
             "equipment_saturate_adu": equipment_saturate_adu,
             "sat_diag_ctx_dict": (
                 _sat_diag_ctx.to_json_dict() if _sat_diag_ctx is not None else None
@@ -365,13 +369,12 @@ def export_per_frame_catalogs(
             "observer_lon": float(_cfg_ap.observer_lon),
             "observer_alt_m": float(_cfg_ap.observer_alt_m),
             "objects_db_path": str(_cfg_ap.objects_db_path or ""),
-            "exoplanet_match_max_sep_arcsec": float(_cfg_ap.exoplanet_match_max_sep_arcsec),
         }
 
     # PER-FRAME-ONE-PATH-2026-10 (Milan 2026-10-13): one per-frame catalog function for any
     # number of workers (``_export_per_frame_run_catalog_core``). The former one-worker copy
     # (_run_one_catalog) lacked the MASTERSTAR join (zone, bp_rp, phot_g_mean_mag, ...), the
-    # forced photometry and the ePSF records -> on a 1-2 core machine Phase 1 failed
+    # forced photometry and the ePSF records -> on a 1-2 core machine comparison-star selection failed
     # ('numpy.float64' object has no attribute 'isna' in the comp pool admission).
     ws = _catalog_worker_state()
     if use_ram_inputs and work_ram is not None:
@@ -453,8 +456,8 @@ def export_per_frame_catalogs(
         _hybrid_stats = _finalize_hybrid_bkg_fallback_sidecar(
             root,
             write_sidecar=bool(write_sidecar_csv_next_to_fits),
-            gain=float(_ap_st.get("gain", _cfg_ap.gain)),
-            read_noise=float(_ap_st.get("read_noise", _cfg_ap.read_noise)),
+            gain=float(_ap_st["gain"]),
+            read_noise=float(_ap_st["read_noise"]),
             setup_label=str(root.name),
         )
     if _sat_diag_ctx is not None and _sat_diag_archive:
@@ -481,4 +484,6 @@ def export_per_frame_catalogs(
         "deferred_csv_writes": list(deferred_csv_writes) if defer_disk_writes else [],
         "frame_rows": frame_rows,
         "hybrid_bkg_fallback": _hybrid_stats,
+        "photometric_gain": float(_ap_st["gain"]),
+        "photometric_read_noise": float(_ap_st["read_noise"]),
     }

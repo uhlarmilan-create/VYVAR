@@ -66,6 +66,7 @@ def _fake_dao_table() -> Table:
 
 def _run_detect(aligned: bool, with_wcs: bool) -> tuple[pd.DataFrame, dict]:
     import pipeline as pl
+    import pipeline_catalog as pc
 
     rng = np.random.default_rng(0)
     data = rng.normal(1000.0, 50.0, (100, 100)).astype(np.float32)
@@ -85,7 +86,7 @@ def _run_detect(aligned: bool, with_wcs: bool) -> tuple[pd.DataFrame, dict]:
 
     with patch("photutils.detection.DAOStarFinder", _FakeFinder):
         with patch.object(pl, "_dao_targeted_pass2_unmatched_gaia", _pass2):
-            return pl.detect_stars_match_master_reference(
+            return pc.detect_stars_match_master_reference(
                 data, hdr, master, match_sep_arcsec=8.0
             )
 

@@ -14,7 +14,7 @@ import params_registry as pr
 def _sample_payload() -> dict:
     # A spread of phases/tiers + a structured (merged) key + a nested dict value.
     return {
-        "sips_dao_fwhm_px": 3.1,
+        "snr_min": 12.0,
         "alignment_max_stars": 120,
         "aperture_fwhm_factor": 1.9,
         "aavso_filter_map": {"L": "CV", "V": "V"},
@@ -59,7 +59,7 @@ def test_output_has_header_section_and_key_comments() -> None:
     assert "// === Comparison-star selection ===" in text
     # a per-key help line (ported from the guide) precedes its key
     lines = text.splitlines()
-    key_line = next(i for i, ln in enumerate(lines) if ln.strip().startswith('"sips_dao_fwhm_px"'))
+    key_line = next(i for i, ln in enumerate(lines) if ln.strip().startswith('"snr_min"'))
     assert lines[key_line - 1].strip().startswith("//"), "key must be preceded by a help comment"
 
 

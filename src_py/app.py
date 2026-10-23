@@ -69,7 +69,7 @@ def _vyvar_format_run_failure_message(*, default: str) -> str:
 
 
 def _vyvar_reset_variability_session_state() -> None:
-    """Pri nacitani noveho draftu zrus variabilitu / TESS / PDF stav v session."""
+    """On loading a new draft, clear the variability / TESS / PDF state in the session."""
     st.session_state.pop("_ap_session_id", None)
     st.session_state.pop("var_analysis_done", None)
     st.session_state.pop("tess_auto_done", None)
@@ -99,8 +99,6 @@ def _run_vyvar_full_pipeline(
     import_location_id: int,
     dark_validity_days: int,
     flat_validity_days: int,
-    plate_fov_ui: float,
-    dao_fwhm_default: float,
     dao_sigma_default: float,
     cat_match_arc: float,
     max_cat_rows: int,
@@ -131,7 +129,7 @@ def _run_vyvar_full_pipeline(
             )
 
     def _fail(name: str, exc: BaseException) -> bool:
-        LOGGER.info(f"[{_run_label}] x Zlyhanie v kroku '{name}': {exc}")
+        LOGGER.info(f"[{_run_label}] x Failure in step '{name}': {exc}")
         try:
             log_path = write_run_preflight_error_log(
                 cfg.data_root,
@@ -170,7 +168,7 @@ def _run_vyvar_full_pipeline(
             context=_run_label,
         )
         sync_optics_session(_run_optics)
-        log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI vyber)")
+        log_active_optics(pipeline.db, _run_optics, context=f"{_run_label} (UI selection)")
 
         manual_flat_map = st.session_state.get("vyvar_manual_flat_map") or {}
         choices: dict[str, str] = {}
@@ -205,8 +203,6 @@ def _run_vyvar_full_pipeline(
             manual_flat_map=dict(manual_flat_map) if manual_flat_map else None,
             flat_fallback_choices=choices or None,
             apply_smart_plan_flat_fallbacks=not bool(pre_calibrated_mode),
-            plate_fov_deg=float(plate_fov_ui),
-            dao_fwhm_px=float(dao_fwhm_default),
             dao_threshold_sigma=float(dao_sigma_default),
             catalog_match_max_sep_arcsec=float(cat_match_arc),
             max_catalog_rows=int(max_cat_rows),
@@ -214,7 +210,6 @@ def _run_vyvar_full_pipeline(
             max_detected_stars=int(max_stars),
             pre_calibrated_mode=bool(pre_calibrated_mode),
             masters_from=str(masters_from or "lights"),
-            roundness_reject_above=float(st.session_state.get("max_roundness_error", 1.25)),
         )
         _update("Night pipeline")
         from run_job import launch_job  # noqa: PLC0415
@@ -304,8 +299,8 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
     _photometry_ran = [s for s in completed if s not in zero_target_setups]
     if zero_target_setups and not _photometry_ran:
         _zero_msg = (
-            "Pipeline dokonceny - 0 aktivnych cielov, fotometria nespustena "
-            "(skontroluj VSX katalog / target selection)"
+            "Pipeline finished - 0 active targets, photometry not run "
+            "(check the VSX catalog / target selection)"
         )
         LOGGER.info(f"[RUN VYVAR] ! {_zero_msg}")
         if footer_placeholder is not None:
@@ -320,14 +315,14 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
         return True
     if zero_target_setups and _photometry_ran:
         LOGGER.info(
-            "! RUN VYVAR dokonceny CIASTOCNE - fotometria OK: ["
+            "! RUN VYVAR finished PARTIALLY - photometry OK: ["
             + ", ".join(_photometry_ran)
-            + "]; 0 cielov (bez fotometrie): ["
+            + "]; 0 targets (no photometry): ["
             + ", ".join(zero_target_setups)
             + "]"
         )
     else:
-        LOGGER.info("[RUN VYVAR] [OK] Pipeline dokonceny uspesne")
+        LOGGER.info("[RUN VYVAR] [OK] Pipeline finished successfully")
     if footer_placeholder is not None:
         _vyvar_footer_set(
             footer_placeholder,
@@ -342,7 +337,7 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
 
 def _vyvar_record_run_failure(cfg: AppConfig, label: str, step: str, detail: str) -> None:
     """Log line + preflight error log file + session keys used by the error banner."""
-    LOGGER.info(f"[{label}] x Zlyhanie v kroku '{step}': {detail}")
+    LOGGER.info(f"[{label}] x Failure in step '{step}': {detail}")
     st.session_state["vyvar_last_preflight_error_message"] = f"{step}: {detail}"
     try:
         from run_preflight_log import write_run_preflight_error_log  # noqa: PLC0415
@@ -641,8 +636,6 @@ def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
             )
     st.session_state["center_ra"] = float(st.session_state.get(_ra_key, 0.0))
     st.session_state["center_de"] = float(st.session_state.get(_de_key, 0.0))
-    if "max_roundness_error" not in st.session_state:
-        st.session_state["max_roundness_error"] = 1.25
     if "vyvar_ui_max_align_stars" not in st.session_state:
         st.session_state["vyvar_ui_max_align_stars"] = 500
 
@@ -853,7 +846,7 @@ def _render_pending_job_dispatcher(
                 "error": _err_msg,
                 "error_type": type(exc).__name__,
             }
-            LOGGER.info(f"Job zlyhal: {_err_msg} [{type(exc).__name__}]")
+            LOGGER.info(f"Job failed: {_err_msg} [{type(exc).__name__}]")
             st.session_state["vyvar_footer_state"] = {
                 "running": False,
                 "process": str(pending.get("label") or pending.get("kind") or "job"),
@@ -873,7 +866,7 @@ def _render_pending_job_dispatcher(
                 "error": _err_msg,
                 "error_type": type(exc).__name__,
             }
-            LOGGER.info(f"Job zlyhal: {_err_msg} [{type(exc).__name__}]")
+            LOGGER.info(f"Job failed: {_err_msg} [{type(exc).__name__}]")
             st.session_state["vyvar_footer_state"] = {
                 "running": False,
                 "process": str(pending.get("label") or pending.get("kind") or "job"),
@@ -1143,7 +1136,7 @@ def render_live_view(
             st.session_state["vyvar_masters_from"] = _masters_from
             if st.button("[search] Scan Source", type="primary", help="Information only - nothing is written."):
                 if import_equipment_id <= 0 or import_telescope_id <= 0:
-                    st.error("Vyberte platnu kameru a dalekohlad pred skenom.")
+                    st.error("Select a valid camera and telescope before scanning.")
                 else:
                     try:
                         plan = smart_scan_source(
@@ -1202,7 +1195,7 @@ def render_live_view(
                     "! RUN VYVAR",
                     type="primary",
                     disabled=run_vyvar_disabled,
-                    help="One click: scan -> import -> calibrate -> analyze -> MASTERSTAR -> Phase 0+1+2A",
+                    help="One click: scan -> import -> calibrate -> analyze -> MASTERSTAR -> target and comparison-star selection -> aperture photometry",
                 )
             with btn_nc:
                 run_vyvar_nc_clicked = st.button(
@@ -1216,11 +1209,7 @@ def render_live_view(
                 )
             if run_vyvar_clicked or run_vyvar_nc_clicked:
                 _pre_cal = bool(run_vyvar_nc_clicked)
-                _dao_fwhm_default = float(
-                    max(1.0, min(8.0, float(getattr(cfg, "sips_dao_fwhm_px", 2.5))))
-                )
                 _dao_sigma_default = resolve_detection_threshold_sigma(cfg.detection_threshold_sigma)
-                st.session_state["dao_fwhm_px"] = _dao_fwhm_default
                 st.session_state["dao_threshold_sigma"] = _dao_sigma_default
                 st.session_state.pop("vyvar_active_job", None)
                 _started = _run_vyvar_full_pipeline(
@@ -1232,8 +1221,6 @@ def render_live_view(
                     import_location_id=int(import_location_id),
                     dark_validity_days=int(dark_validity_days),
                     flat_validity_days=int(flat_validity_days),
-                    plate_fov_ui=float(cfg.plate_solve_fov_deg),
-                    dao_fwhm_default=_dao_fwhm_default,
                     dao_sigma_default=_dao_sigma_default,
                     cat_match_arc=2.0,
                     max_cat_rows=12000,
@@ -1394,40 +1381,42 @@ def main() -> None:
             st.caption(f"Active override: `{ov}`")
 
         _draft_ov = ov
-        tabs = st.tabs(
-            [
-                "VAR-STREM",
-                "FITS QA",
-                "MASTERSTAR QA",
-                "Aperture Photometry",
-                "[microscope] ePSF",
-                "[search] Variability",
-            ]
-        )
-
-        with tabs[0]:
+        # A view switch, not st.tabs: Streamlit runs every tab body on each rerun (MASTERSTAR overlay,
+        # FITS previews, ePSF plans, variability tables), so every click paid for all six views.
+        views = [
+            "VAR-STREM",
+            "FITS QA",
+            "MASTERSTAR QA",
+            "Aperture Photometry",
+            "[microscope] ePSF",
+            "[search] Variability",
+        ]
+        view = st.segmented_control(
+            "View", views, default=views[0], key="vyvar_main_view", label_visibility="collapsed"
+        ) or views[0]
+        if view == views[0]:
             render_live_view(pipeline=pipeline, cfg=cfg, footer_placeholder=vyvar_footer_ph)
-        with tabs[1]:
+        elif view == views[1]:
             ui_quality_dashboard.render_quality_dashboard(
                 db=pipeline.db,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 archive_text="",
                 cfg=cfg,
             )
-        with tabs[2]:
+        elif view == views[2]:
             ui_masterstar_qa.render_masterstar_qa(
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 pipeline=pipeline,
                 draft_dir_override=_draft_ov,
             )
-        with tabs[3]:
+        elif view == views[3]:
             render_aperture_photometry(
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
                 draft_dir_override=_draft_ov,
             )
-        with tabs[4]:
+        elif view == views[4]:
             from ui_epsf_dashboard import render_epsf_dashboard
 
             render_epsf_dashboard(
@@ -1435,7 +1424,7 @@ def main() -> None:
                 cfg=cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),
             )
-        with tabs[5]:
+        else:
             render_variability_dashboard(
                 cfg,
                 draft_id=st.session_state.get("vyvar_last_draft_id"),

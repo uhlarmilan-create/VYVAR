@@ -35,7 +35,9 @@ def aligned_footprint(header: Any, shape: tuple[int, int]) -> np.ndarray:
     corners = np.array([[0, 0, 1], [wr - 1, 0, 1], [wr - 1, hr - 1, 1], [0, hr - 1, 1]], dtype=np.float64).T
     q = mat @ corners
     quad = (q[:2] / q[2]).T
-    yy, xx = np.mgrid[0:h, 0:w]
+    # SPEED-2026-10 (S2): broadcast row / column coordinates (same float operations as a full mgrid).
+    yy = np.arange(h)[:, None]
+    xx = np.arange(w)[None, :]
     area = 0.5 * np.sum(quad[:, 0] * np.roll(quad[:, 1], -1) - np.roll(quad[:, 0], -1) * quad[:, 1])
     sgn = 1.0 if area > 0 else -1.0
     inside = np.ones((h, w), dtype=bool)

@@ -20,7 +20,7 @@ os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 
 RUN_SHA = "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9"
 DRAFT515 = ROOT / "Archive" / "Drafts" / "draft_000515"
@@ -78,7 +78,7 @@ def run_forced_check(
     check_id: str,
     label: str,
 ) -> dict:
-    """Phase 2A one target into a temp dir with is_check_star forced."""
+    """Run aperture photometry for one target into a temp dir with is_check_star forced."""
     og = draft / "platesolve" / SETUP
     phot = og / "photometry"
     proc = draft / "detrended_aligned" / "lights" / SETUP
@@ -208,7 +208,7 @@ def run_forced_check(
         def _prog(msg: str) -> None:
             print(f"[{time.perf_counter()-t0:7.1f}s] {label}: {msg}", flush=True)
 
-        result = run_phase2a(
+        result = run_aperture_photometry(
             masterstar_fits_path=og / "MASTERSTAR.fits",
             active_targets_csv=at_path,
             comparison_stars_csv=comp_path,
@@ -239,7 +239,7 @@ def run_forced_check(
                 "check_was_in_ensemble": in_ensemble,
                 "ensemble_ids_used": ens_for_calc,
                 "n_comp": len(ens_for_calc),
-                "phase2a_result_keys": list(result.keys())[:12] if isinstance(result, dict) else None,
+                "aperture_result_keys": list(result.keys())[:12] if isinstance(result, dict) else None,
                 "elapsed_s": float(time.perf_counter() - t0),
                 "quantity": "check_scatter_mad_mmag = 1.4826 * MAD(kmag) * 1000",
                 "run_sha_of_archive_photometry": RUN_SHA,
@@ -254,7 +254,7 @@ def reverse_new_on_514(comp515: pd.DataFrame) -> dict:
     if not phot514.is_dir():
         return {"skipped": True, "reason": "draft 514 photometry dir missing"}
     # Prefer reading existing sidecars if NEW already selected - it is not.
-    # Force via Phase 2A like above.
+    # Force via aperture photometry like above.
     out = {}
     for tid, name, chk in ((BO, "BO_CVn", NEW), (FW, "FW_CVn", NEW)):
         try:
@@ -291,13 +291,13 @@ def main() -> None:
         flush=True,
     )
 
-    print("Running forced Phase 2A BO with IMPL-05 C check...", flush=True)
+    print("Running forced aperture photometry BO with IMPL-05 C check...", flush=True)
     bo_515 = run_forced_check(
         draft=DRAFT515, draft_id=515, target_id=BO, check_id=CHK_BO, label="515_BO"
     )
     print("BO515", bo_515.get("check_scatter_mad_mmag"), bo_515.get("check_catalog_id"), flush=True)
 
-    print("Running forced Phase 2A FW with IMPL-05 C check...", flush=True)
+    print("Running forced aperture photometry FW with IMPL-05 C check...", flush=True)
     fw_515 = run_forced_check(
         draft=DRAFT515, draft_id=515, target_id=FW, check_id=CHK_FW, label="515_FW"
     )

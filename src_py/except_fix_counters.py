@@ -9,15 +9,15 @@ from dataclasses import dataclass
 class ExceptFixCounters:
     sky_annulus_mask_fail: int = 0
     sky_annulus_invalid: int = 0
-    phase2a_csv_cache_skip: int = 0
+    aperture_csv_cache_skip: int = 0
     comp_pool_csv_skip: int = 0
-    phase1_csv_cache_skip: int = 0
+    comp_selection_csv_cache_skip: int = 0
     comp_frame_accumulation_skip: int = 0
     comp_detrend_skip: int = 0
     vt_wcs_refresh_fail: int = 0
     psf_local_sky_fail: int = 0
     psf_grouped_fit_fail: int = 0
-    phase2a_empty_comp_drop: int = 0
+    aperture_empty_comp_drop: int = 0
     catalog_aperture_enhance_fail: int = 0
     plate_solve_bundle_fail: int = 0
     masterstars_rescale_coords_fail: int = 0
@@ -52,15 +52,15 @@ class ExceptFixCounters:
         return {
             "sky_annulus_mask_fail": self.sky_annulus_mask_fail,
             "sky_annulus_invalid": self.sky_annulus_invalid,
-            "phase2a_csv_cache_skip": self.phase2a_csv_cache_skip,
+            "aperture_csv_cache_skip": self.aperture_csv_cache_skip,
             "comp_pool_csv_skip": self.comp_pool_csv_skip,
-            "phase1_csv_cache_skip": self.phase1_csv_cache_skip,
+            "comp_selection_csv_cache_skip": self.comp_selection_csv_cache_skip,
             "comp_frame_accumulation_skip": self.comp_frame_accumulation_skip,
             "comp_detrend_skip": self.comp_detrend_skip,
             "vt_wcs_refresh_fail": self.vt_wcs_refresh_fail,
             "psf_local_sky_fail": self.psf_local_sky_fail,
             "psf_grouped_fit_fail": self.psf_grouped_fit_fail,
-            "phase2a_empty_comp_drop": self.phase2a_empty_comp_drop,
+            "aperture_empty_comp_drop": self.aperture_empty_comp_drop,
             "catalog_aperture_enhance_fail": self.catalog_aperture_enhance_fail,
             "plate_solve_bundle_fail": self.plate_solve_bundle_fail,
             "masterstars_rescale_coords_fail": self.masterstars_rescale_coords_fail,

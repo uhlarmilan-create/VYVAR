@@ -28,7 +28,6 @@ def test_nightrunparams_new_fields_default_preserve_w2() -> None:
     assert p.masterflat_validity_days is None
     assert p.apply_smart_plan_flat_fallbacks is False
     assert p.flat_fallback_choices is None
-    assert p.roundness_reject_above == 1.25
     assert p.post_platesolve_hook is None
     assert p.existing_pipeline is None
     assert p.epsf is None

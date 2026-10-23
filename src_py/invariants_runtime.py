@@ -26,10 +26,17 @@ STAGE_ORDER: tuple[str, ...] = (
     "align",
     "masterstar",
     "perframe",
-    "phase01",
-    "phase2a",
+    "target_comp_selection",
+    "aperture_photometry",
     "postprocess",
 )
+# Stage names written by drafts processed before the process-naming change (2026-10).
+LEGACY_STAGE_NAMES: dict[str, str] = {"phase01": "target_comp_selection", "phase2a": "aperture_photometry"}
+
+
+def _stage_name(stage: dict[str, Any]) -> str:
+    n = str(stage.get("name"))
+    return LEGACY_STAGE_NAMES.get(n, n)
 
 # Wired invariant IDs (parity-tested against docs/VYVAR_INVARIANTS.md).
 WIRED_INV_IDS: frozenset[str] = frozenset(
@@ -50,7 +57,7 @@ WIRED_INV_IDS: frozenset[str] = frozenset(
         "INV-PROV-01",
         "INV-CFG-01",
         "INV-CFG-01R",
-        "INV-PHASE0-ID",
+        "INV-TARGET-ID",
         "INV-PREP-01",
         "INV-SAT-01",
         "INV-CAL-01",
@@ -510,7 +517,7 @@ def stamp_pipeline_stage(
     if not isinstance(stages, list):
         stages = []
         meta["stages"] = stages
-    stamped = {str(s.get("name")) for s in stages if isinstance(s, dict)}
+    stamped = {_stage_name(s) for s in stages if isinstance(s, dict)}
     idx = STAGE_ORDER.index(name_s)
     cold_start = False
     gap = False
@@ -635,7 +642,7 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
         detail="; ".join(issues) if issues else "config<->behavior markers clean",
     )
 
-    # INV-CFG-01 reverse / INV-PHASE0-ID read photometry/active_targets.csv and
+    # INV-CFG-01 reverse / INV-TARGET-ID read photometry/active_targets.csv and
     # platesolve/<setup>/variable_targets.csv (FIX-INV-PATHS-2026-10: both looked one directory
     # too high and never ran; a FAIL was swallowed by the read guard).
     at_df, vt_df = _active_and_planned_targets(photometry_dir)
@@ -661,7 +668,7 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                     detail="vsx_out_of_scope_types non-empty but zero masked active targets",
                 )
 
-    # INV-PHASE0-ID: active catalog_id must match planner catalog_id for same vsx_name.
+    # INV-TARGET-ID: active catalog_id must match planner catalog_id for same vsx_name.
     if "vsx_name" in at_df.columns and "vsx_name" in vt_df.columns and "catalog_id" in at_df.columns:
         from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
 
@@ -681,7 +688,7 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
                 mism.append(vn)
         inv_check(
             meta,
-            "INV-PHASE0-ID",
+            "INV-TARGET-ID",
             len(mism) == 0,
             policy="FAIL",
             detail=f"catalog_id mismatch vs planner: {mism[:5]}" if mism else "identity join clean",
@@ -704,7 +711,7 @@ def _active_and_planned_targets(photometry_dir: Path | str | None) -> tuple[Any,
             pd.read_csv(vt_path, low_memory=False, dtype={"catalog_id": str}),
         )
     except (OSError, ValueError) as exc:
-        LOGGER.warning("[INV] active/variable targets unreadable for INV-CFG-01R / INV-PHASE0-ID: %s", exc)
+        LOGGER.warning("[INV] active/variable targets unreadable for INV-CFG-01R / INV-TARGET-ID: %s", exc)
         return None, None
 
 
@@ -855,7 +862,7 @@ def validate_provenance_schema(
 
     # Census fingerprint keys (best-effort when masterstar stamped)
     stages = meta.get("stages") if isinstance(meta.get("stages"), list) else []
-    stage_names = {str(s.get("name")) for s in stages if isinstance(s, dict)}
+    stage_names = {_stage_name(s) for s in stages if isinstance(s, dict)}
     if "masterstar" in stage_names:
         if meta.get("n_gaia_matched") is None and meta.get("n_raw_dao") is None:
             if meta.get("catalog_rows") is None and meta.get("n_gaia_detected") is None:

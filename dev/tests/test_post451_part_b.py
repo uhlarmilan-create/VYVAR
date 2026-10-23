@@ -1,4 +1,4 @@
-"""POST-451 Part B: infolog observability + Phase 2A skip_reason propagation."""
+"""POST-451 Part B: infolog observability + aperture-photometry skip_reason propagation."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from photometry_core import (
-    _propagate_phase2a_skip_reason_to_active,
+    _propagate_aperture_skip_reason_to_active,
     select_active_targets,
 )
 from vsx_gaia_crossmatch import match_vsx_to_gaia_density_aware
@@ -55,8 +55,8 @@ def test_faza0_funnel_reaches_infolog(infolog_lines, tmp_path: Path, monkeypatch
     ).to_csv(vt, index=False)
     select_active_targets(vt, ms, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
     lines = infolog_lines()
-    assert any("FAZA 0 funnel:" in ln for ln in lines)
-    funnel = next(ln for ln in lines if "FAZA 0 funnel:" in ln)
+    assert any("[TARGET-SELECT] funnel:" in ln for ln in lines)
+    funnel = next(ln for ln in lines if "[TARGET-SELECT] funnel:" in ln)
     assert "no_dao_detection=" in funnel
     assert "out_of_frame=" in funnel
     assert "not_target_eligible=" in funnel
@@ -104,7 +104,7 @@ def test_vsx_gaia_xm_reaches_infolog(infolog_lines) -> None:
     assert "cand_mult=" in xm
 
 
-def test_phase2a_skip_reason_propagated_to_active_csv(tmp_path: Path) -> None:
+def test_aperture_skip_reason_propagated_to_active_csv(tmp_path: Path) -> None:
     active = tmp_path / "active_targets.csv"
     pd.DataFrame(
         [
@@ -123,7 +123,7 @@ def test_phase2a_skip_reason_propagated_to_active_csv(tmp_path: Path) -> None:
             "skip_reason": "no_comps",
         }
     ]
-    _propagate_phase2a_skip_reason_to_active(active, summary_rows)
+    _propagate_aperture_skip_reason_to_active(active, summary_rows)
     out = pd.read_csv(active, dtype={"catalog_id": str})
     assert str(out.loc[0, "skip_reason"]).strip() == "no_comps"
 

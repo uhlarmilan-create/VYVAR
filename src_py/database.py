@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import math
@@ -282,8 +281,8 @@ class DraftTechnicalMetadataError(RuntimeError):
     def __init__(self, draft_id: int) -> None:
         self.draft_id = int(draft_id)
         super().__init__(
-            f"Kriticka chyba: Chybaju technicke parametre pre Draft {self.draft_id}. "
-            "Skontrolujte tabulky EQUIPMENTS a TELESCOPES."
+            f"Critical error: technical parameters missing for Draft {self.draft_id}. "
+            "Check the EQUIPMENTS and TELESCOPES tables."
         )
 
 
@@ -502,8 +501,6 @@ class VyvarDatabase:
                 continue
         return (data_root / "Archive").resolve()
 
-    def _enable_foreign_keys(self) -> None:
-        self.conn.execute("PRAGMA foreign_keys = ON;")
 
     def _create_tables(self) -> None:
         self.conn.executescript(
@@ -710,15 +707,6 @@ class VyvarDatabase:
             OR UPPER(TRIM(CAST({c} AS TEXT))) NOT IN ('NO', 'N', 'FALSE', '0', '0.0')
         )"""
 
-    def count_final_data_for_equipment_id(self, equipment_id: int) -> int:
-        from draft_provenance import count_manifest_final_data_for_equipment
-
-        return int(count_manifest_final_data_for_equipment(self, int(equipment_id)))
-
-    def count_final_data_for_telescope_id(self, telescope_id: int) -> int:
-        from draft_provenance import count_manifest_final_data_for_telescope
-
-        return int(count_manifest_final_data_for_telescope(self, int(telescope_id)))
 
     def count_references_to_location_id(self, location_id: int) -> int:
         from draft_provenance import count_manifest_references_to_location_id
@@ -973,7 +961,7 @@ class VyvarDatabase:
             for did in sorted(deleted_ids):
                 if table in ("EQUIPMENTS", "TELESCOPE"):
                     if "ACTIVE" not in pragma_cols:
-                        raise ValueError(f"Tabulka {table} nema stlpec ACTIVE - soft-delete nie je mozny.")
+                        raise ValueError(f"Table {table} has no ACTIVE column - soft-delete not possible.")
                     self.conn.execute(
                         f"UPDATE {table} SET ACTIVE = 'NO' WHERE {pk_col} = ?;",
                         (did,),
@@ -984,7 +972,7 @@ class VyvarDatabase:
                     n = self.count_references_to_location_id(did)
                     if n > 0:
                         raise ValueError(
-                            f"Lokalitu ID={did} nie je mozne zmazat: {n} odkazov v draft manifestoch."
+                            f"Location ID={did} cannot be deleted: {n} references in draft manifests."
                         )
                 self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
                 deleted += 1
@@ -1136,26 +1124,11 @@ class VyvarDatabase:
         """Manifest-first ``location_id``; DB fallback when manifest absent."""
         return self._resolve_draft_rig_id(int(draft_id), "location_id", "ID_LOCATION")
 
-    def get_draft_scanning_id(self, draft_id: int) -> int | None:
-        """Manifest-first ``scanning_id``; DB fallback when manifest absent."""
-        return self._resolve_draft_rig_id(int(draft_id), "scanning_id", "ID_SCANNING")
 
     def _try_refresh_draft_manifest(self, draft_id: int) -> None:
         """No-op: manifest is written directly (Phase 2.8)."""
         return
 
-    def update_obs_draft_center(self, draft_id: int, center_ra_deg: float, center_de_deg: float) -> None:
-        """Persist draft field center (ICRS degrees) in manifest."""
-        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
-
-        root = resolve_draft_dir_for_id(self, int(draft_id))
-        if root is None:
-            raise ValueError(f"Draft '{draft_id}' not found for center update.")
-        patch_draft_manifest(
-            root,
-            int(draft_id),
-            center={"ra_deg": float(center_ra_deg), "de_deg": float(center_de_deg)},
-        )
 
     def update_obs_draft_status_panel_values(
         self,
@@ -1179,14 +1152,6 @@ class VyvarDatabase:
             center["de_deg"] = float(center_de_deg)
         patch_draft_manifest(root, int(draft_id), center=center)
 
-    def get_obs_draft_masterstar_path(self, draft_id: int) -> str | None:
-        """Return persisted MASTERSTAR path for a draft (manifest-first)."""
-        row = self.fetch_obs_draft_by_id(int(draft_id))
-        if row is None:
-            return None
-        v = row.get("MASTERSTAR_FITS_PATH") or row.get("MASTERSTAR_PATH")
-        s = str(v).strip() if v is not None else ""
-        return s or None
 
     # ------------------------------------------------------------------
     # MASTERSTAR selection vs MASTERSTAR product (separate persistence)
@@ -1481,7 +1446,7 @@ class VyvarDatabase:
         self._migrate_calibration_library_scope_columns()
 
     def _migrate_calibration_library_scope_columns(self) -> None:
-        """Add optional equipment/telescope scope (set = kamera + dalekohlad). Legacy rows: NULL,NULL = vseobecne."""
+        """Add optional equipment/telescope scope (set = camera + telescope). Legacy rows: NULL,NULL = generic."""
         cur = self.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');")
         cols = {str(r[1]).upper() for r in cur.fetchall()}
         if "ID_EQUIPMENTS" not in cols:
@@ -1517,22 +1482,6 @@ class VyvarDatabase:
         row = cur.fetchone()
         return dict(row) if row is not None else None
 
-    def calibration_library_scope_conflicts(
-        self,
-        file_path: str | Path,
-        id_equipments: int | None,
-        id_telescope: int | None,
-    ) -> bool:
-        """True if ``file_path`` is registered to a different equipment/telescope set."""
-        row = self.get_calibration_library_row_by_path(file_path)
-        if row is None:
-            return False
-        return not self.calibration_scopes_match(
-            row.get("ID_EQUIPMENTS"),
-            row.get("ID_TELESCOPE"),
-            id_equipments,
-            id_telescope,
-        )
 
     def register_calibration_library_entry(
         self,
@@ -1632,34 +1581,6 @@ class VyvarDatabase:
         self.conn.commit()
         return int(cur.rowcount or 0)
 
-    def calibration_library_path_tag_map(self) -> dict[str, dict[str, Any]]:
-        """``Path.resolve().casefold()`` -> ``{id_equipments, id_telescope, camera, telescope, ...}`` for UI."""
-        self._ensure_calibration_library_table()
-        cur = self.conn.execute(
-            """
-            SELECT c.FILE_PATH, c.ID_EQUIPMENTS, c.ID_TELESCOPE,
-                   e.CAMERANAME, e.ALIAS AS EQ_ALIAS,
-                   t.TELESCOPENAME, t.ALIAS AS TEL_ALIAS
-            FROM CALIBRATION_LIBRARY c
-            LEFT JOIN EQUIPMENTS e ON c.ID_EQUIPMENTS = e.ID
-            LEFT JOIN TELESCOPE t ON c.ID_TELESCOPE = t.ID
-            """
-        )
-        out: dict[str, dict[str, Any]] = {}
-        for row in cur.fetchall():
-            try:
-                key = str(Path(str(row["FILE_PATH"])).resolve()).casefold()
-            except OSError:
-                key = str(row["FILE_PATH"]).casefold()
-            out[key] = {
-                "id_equipments": row["ID_EQUIPMENTS"],
-                "id_telescope": row["ID_TELESCOPE"],
-                "camera": row["CAMERANAME"],
-                "eq_alias": row["EQ_ALIAS"],
-                "telescope": row["TELESCOPENAME"],
-                "tel_alias": row["TEL_ALIAS"],
-            }
-        return out
 
     def find_best_calibration_library_path(
         self,
@@ -1851,25 +1772,6 @@ class VyvarDatabase:
             "pixel_um": names["pixel_um"],
         }
 
-    @staticmethod
-    def _normalize_calibration_library_filter_name(flt: str | None) -> str:
-        s = str(flt or "").strip()
-        if not s or s.lower() in {"unknown", "none", "nan"}:
-            return "NoFilter"
-        return s
-
-    def calibration_library_has_flat_for_filter(self, filter_name: str | None) -> bool:
-        """True if CALIBRATION_LIBRARY has at least one flat row for this filter name."""
-        flt = self._normalize_calibration_library_filter_name(filter_name)
-        row = self.conn.execute(
-            """
-            SELECT 1 FROM CALIBRATION_LIBRARY
-            WHERE KIND = 'flat' AND FILTER_NAME = ?
-            LIMIT 1;
-            """,
-            (flt,),
-        ).fetchone()
-        return row is not None
 
     def set_obs_draft_calibration_mode(self, draft_id: int, calibration_mode: str) -> None:
         from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
@@ -2314,24 +2216,6 @@ class VyvarDatabase:
             return datetime.now(timezone.utc).strftime("%Y%m%d")
         return dt_utc.strftime("%Y%m%d")
 
-    @staticmethod
-    def generate_hashtag(
-        id_equipments: int,
-        id_telescope: int,
-        id_location: int,
-        id_scanning: int,
-        center_of_field_ra: float,
-        center_of_field_de: float,
-        observation_start_jd: float,
-    ) -> str:
-        """Create deterministic observation id in format YYYYMMDD_HASH."""
-        payload = (
-            f"{id_equipments}|{id_telescope}|{id_location}|{id_scanning}|"
-            f"{center_of_field_ra:.8f}|{center_of_field_de:.8f}|{observation_start_jd:.8f}"
-        )
-        digest = hashlib.md5(payload.encode("utf-8"), usedforsecurity=False).hexdigest()[:6]
-        date_prefix = VyvarDatabase._jd_to_yyyymmdd(observation_start_jd)
-        return f"{date_prefix}_{digest}"
 
     def insert_equipment(
         self,
@@ -2412,31 +2296,6 @@ class VyvarDatabase:
 
         return _pos(row["GAIN_ADU"]), _pos(row["READNOISE_E"])
 
-    def set_equipment_cosmic_params(
-        self,
-        equipment_id: int,
-        gain: float,
-        read_noise: float,
-    ) -> None:
-        """Persist detector gain [e-/ADU] and read noise [e-] on EQUIPMENTS.
-
-        ``READNOISE_E`` is per-pixel at bin1; param_resolver scales *bin for software-summed binning.
-        """
-        try:
-            g = float(gain)
-        except (TypeError, ValueError):
-            g = float("nan")
-        try:
-            rn = float(read_noise)
-        except (TypeError, ValueError):
-            rn = float("nan")
-        g_store = g if math.isfinite(g) and g > 0 else None
-        rn_store = rn if math.isfinite(rn) and rn > 0 else None
-        self.conn.execute(
-            "UPDATE EQUIPMENTS SET GAIN_ADU = ?, READNOISE_E = ? WHERE ID = ?;",
-            (g_store, rn_store, int(equipment_id)),
-        )
-        self.conn.commit()
 
     def get_telescope_focal_mm(self, telescope_id: int | None = None) -> float | None:
         """Positive ``TELESCOPE.FOCAL`` [mm]. If ``telescope_id`` is None, first active row with FOCAL > 0."""
@@ -2513,8 +2372,8 @@ class VyvarDatabase:
         )
         if inferred:
             log_event(
-                f"BINNING: FITS hlavicka {x_bin}x{y_bin}, NAXIS {naxis1}x{naxis2}, "
-                f"senzor {native_size} -> pouzite {x_inf}x{y_inf} (odvodene z rozmeru)."
+                f"BINNING: FITS header {x_bin}x{y_bin}, NAXIS {naxis1}x{naxis2}, "
+                f"sensor {native_size} -> using {x_inf}x{y_inf} (inferred from dimensions)."
             )
             x_bin, y_bin = x_inf, y_inf
 
@@ -2823,7 +2682,6 @@ class VyvarDatabase:
         clear_drift: bool = False,
         drift_dra_deg: float | None = None,
         drift_dde_deg: float | None = None,
-        roundness_mean: float | None = None,
         elongation_mean: float | None = None,
         noise_sigma: float | None = None,
     ) -> None:
@@ -2858,8 +2716,6 @@ class VyvarDatabase:
             insp["de"] = float(de_deg)
         if exptime_sec is not None and math.isfinite(float(exptime_sec)) and float(exptime_sec) >= 0:
             insp["exptime"] = float(exptime_sec)
-        if roundness_mean is not None and math.isfinite(float(roundness_mean)) and float(roundness_mean) >= 0.0:
-            insp["roundness_mean"] = float(roundness_mean)
         if elongation_mean is not None and math.isfinite(float(elongation_mean)) and float(elongation_mean) > 0.0:
             insp["elongation_mean"] = float(elongation_mean)
         if noise_sigma is not None and math.isfinite(float(noise_sigma)) and float(noise_sigma) > 0.0:
@@ -2968,426 +2824,6 @@ class VyvarDatabase:
             extra=extra,
         )
 
-    def finalize_draft_to_observation(
-        self,
-        draft_id: int,
-        *,
-        approved_by: str | None = None,
-        notes: str | None = None,
-    ) -> str:
-        """Persist UI approval in manifest (``final_observation_id``, ``FINALIZED``)."""
-        from astropy.time import Time
-        from draft_provenance import patch_draft_manifest, resolve_draft_dir_for_id
-
-        draft = self.fetch_obs_draft_by_id(int(draft_id))
-        if draft is None:
-            raise ValueError(f"Draft {draft_id} not found")
-        st = str(draft.get("STATUS") or "").strip().upper()
-        if st == "FINALIZED":
-            existing = draft.get("FINAL_OBSERVATION_ID")
-            if existing:
-                return str(existing)
-            raise ValueError(f"Draft {draft_id} is already finalized")
-
-        approval_jd = float(Time.now().jd)
-        ra_c = float(draft.get("CENTEROFFIELDRA") or 0.0)
-        de_c = float(draft.get("CENTEROFFIELDDE") or 0.0)
-        obs_id = self.generate_hashtag(
-            id_equipments=int(draft.get("ID_EQUIPMENTS") or 0),
-            id_telescope=int(draft.get("ID_TELESCOPE") or 0),
-            id_location=int(draft.get("ID_LOCATION") or 0),
-            id_scanning=int(draft.get("ID_SCANNING") or 0),
-            center_of_field_ra=ra_c,
-            center_of_field_de=de_c,
-            observation_start_jd=float(draft.get("OBSERVATIONSTARTJD") or 0.0),
-        )
-        root = resolve_draft_dir_for_id(self, int(draft_id))
-        if root is None:
-            raise ValueError(f"Draft {draft_id}: manifest archive missing")
-        patch_draft_manifest(
-            root,
-            int(draft_id),
-            status="FINALIZED",
-            final_observation_id=str(obs_id),
-            extra={
-                "approved_by": approved_by,
-                "approval_notes": notes,
-                "approval_jd": approval_jd,
-            },
-        )
-        return str(obs_id)
-
-    def _migrate_comp_library_tables(self) -> None:
-        """Create FIELD_REGISTRY / COMP_STAR_LIBRARY and indexes (idempotent)."""
-        if getattr(self, "_comp_library_tables_ready", False):
-            return
-        self.conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS FIELD_REGISTRY (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                CENTER_RA_DEG REAL NOT NULL,
-                CENTER_DE_DEG REAL NOT NULL,
-                RADIUS_DEG REAL NOT NULL DEFAULT 1.0,
-                OBJECT_NAME TEXT,
-                MASTERSTAR_PATH TEXT,
-                GRID_PATH TEXT,
-                COMPARISON_CSV_PATH TEXT,
-                VARIABLE_TARGETS_CSV_PATH TEXT,
-                FIRST_OBSERVATION_ID TEXT,
-                LAST_OBSERVATION_ID TEXT,
-                N_OBSERVATIONS INTEGER DEFAULT 1,
-                CREATED_JD REAL,
-                LAST_UPDATED_JD REAL
-            );
-
-            CREATE TABLE IF NOT EXISTS COMP_STAR_LIBRARY (
-                ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                FIELD_ID INTEGER REFERENCES FIELD_REGISTRY(ID),
-                CATALOG_ID TEXT NOT NULL,
-                NAME TEXT,
-                RA_DEG REAL,
-                DEC_DEG REAL,
-                G_MAG REAL,
-                BP_RP REAL,
-                APERTURE_MEDIAN_MAG REAL,
-                APERTURE_RMS REAL,
-                PSF_MEDIAN_MAG REAL,
-                PSF_RMS REAL,
-                N_OBSERVATIONS INTEGER DEFAULT 1,
-                N_FRAMES_TOTAL INTEGER DEFAULT 0,
-                VSX_KNOWN_VARIABLE INTEGER DEFAULT 0,
-                CATALOG_KNOWN_VARIABLE INTEGER DEFAULT 0,
-                IS_SAFE_COMP INTEGER DEFAULT 1,
-                VERDICT TEXT DEFAULT 'Approved',
-                FIRST_USED_JD REAL,
-                LAST_USED_JD REAL,
-                LAST_OBSERVATION_ID TEXT,
-                NOTES TEXT
-            );
-
-            CREATE INDEX IF NOT EXISTS IX_COMP_STAR_LIBRARY_CATALOG_ID
-                ON COMP_STAR_LIBRARY(CATALOG_ID);
-
-            CREATE INDEX IF NOT EXISTS IX_COMP_STAR_LIBRARY_FIELD_ID
-                ON COMP_STAR_LIBRARY(FIELD_ID);
-
-            CREATE INDEX IF NOT EXISTS IX_FIELD_REGISTRY_COORDS
-                ON FIELD_REGISTRY(CENTER_RA_DEG, CENTER_DE_DEG);
-            """
-        )
-        self.conn.commit()
-        self._comp_library_tables_ready = True
-
-    @staticmethod
-    def _haversine_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
-        ra1, dec1, ra2, dec2 = map(math.radians, [ra1, dec1, ra2, dec2])
-        dra = ra2 - ra1
-        ddec = dec2 - dec1
-        a = math.sin(ddec / 2) ** 2 + math.cos(dec1) * math.cos(dec2) * math.sin(dra / 2) ** 2
-        return math.degrees(2 * math.asin(min(1.0, math.sqrt(max(0.0, a)))))
-
-    def find_matching_field(
-        self,
-        ra_deg: float,
-        dec_deg: float,
-        *,
-        match_radius_deg: float = 0.5,
-    ) -> dict[str, Any] | None:
-        self._migrate_comp_library_tables()
-        cur = self.conn.execute("SELECT * FROM FIELD_REGISTRY;")
-        rows = cur.fetchall()
-        if not rows:
-            return None
-        best: dict[str, Any] | None = None
-        best_sep = float("inf")
-        for r in rows:
-            d = dict(r)
-            try:
-                cra = float(d["CENTER_RA_DEG"])
-                cde = float(d["CENTER_DE_DEG"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            sep = self._haversine_deg(float(ra_deg), float(dec_deg), cra, cde)
-            if sep < best_sep:
-                best_sep = sep
-                best = d
-        if best is not None and best_sep < float(match_radius_deg):
-            return best
-        return None
-
-    def register_or_update_field(
-        self,
-        *,
-        ra_deg: float,
-        dec_deg: float,
-        object_name: str | None = None,
-        masterstar_path: str | None = None,
-        grid_path: str | None = None,
-        comparison_csv_path: str | None = None,
-        variable_targets_csv_path: str | None = None,
-        observation_id: str | None = None,
-        radius_deg: float = 1.0,
-        match_radius_deg: float = 0.5,
-    ) -> int:
-        from astropy.time import Time
-
-        now_jd = float(Time.now().jd)
-        match = self.find_matching_field(float(ra_deg), float(dec_deg), match_radius_deg=match_radius_deg)
-        if match is not None:
-            fid = int(match["ID"])
-            sets = [
-                "N_OBSERVATIONS = N_OBSERVATIONS + 1",
-                "LAST_OBSERVATION_ID = ?",
-                "LAST_UPDATED_JD = ?",
-            ]
-            params: list[Any] = [observation_id, now_jd]
-            if object_name is not None:
-                sets.append("OBJECT_NAME = ?")
-                params.append(object_name)
-            if masterstar_path is not None:
-                sets.append("MASTERSTAR_PATH = ?")
-                params.append(masterstar_path)
-            if grid_path is not None:
-                sets.append("GRID_PATH = ?")
-                params.append(grid_path)
-            if comparison_csv_path is not None:
-                sets.append("COMPARISON_CSV_PATH = ?")
-                params.append(comparison_csv_path)
-            if variable_targets_csv_path is not None:
-                sets.append("VARIABLE_TARGETS_CSV_PATH = ?")
-                params.append(variable_targets_csv_path)
-            params.append(fid)
-            self.conn.execute(
-                f"UPDATE FIELD_REGISTRY SET {', '.join(sets)} WHERE ID = ?;",
-                tuple(params),
-            )
-            self.conn.commit()
-            return fid
-
-        self.conn.execute(
-            """
-            INSERT INTO FIELD_REGISTRY (
-                CENTER_RA_DEG, CENTER_DE_DEG, RADIUS_DEG, OBJECT_NAME, MASTERSTAR_PATH, GRID_PATH,
-                COMPARISON_CSV_PATH, VARIABLE_TARGETS_CSV_PATH,
-                FIRST_OBSERVATION_ID, LAST_OBSERVATION_ID, N_OBSERVATIONS,
-                CREATED_JD, LAST_UPDATED_JD
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?);
-            """,
-            (
-                float(ra_deg),
-                float(dec_deg),
-                float(radius_deg),
-                object_name,
-                masterstar_path,
-                grid_path,
-                comparison_csv_path,
-                variable_targets_csv_path,
-                observation_id,
-                observation_id,
-                now_jd,
-                now_jd,
-            ),
-        )
-        self.conn.commit()
-        return int(self.conn.execute("SELECT last_insert_rowid();").fetchone()[0])
-
-    def upsert_comp_star_library(
-        self,
-        field_id: int,
-        comp_stars: list[dict[str, Any]],
-        *,
-        observation_id: str | None = None,
-    ) -> int:
-        from astropy.time import Time
-
-        self._migrate_comp_library_tables()
-        now_jd = float(Time.now().jd)
-        n_done = 0
-        for star in comp_stars:
-            cid = str(star.get("catalog_id") or "").strip()
-            if not cid:
-                continue
-            verdict = str(star.get("verdict") or "Approved")
-            is_safe = 1 if verdict == "Approved" else 0
-            vsx = 1 if bool(star.get("vsx_known_variable")) else 0
-            ckv = 1 if bool(star.get("catalog_known_variable")) else 0
-            n_frames = int(star.get("n_frames") or 0)
-
-            row = self.conn.execute(
-                """
-                SELECT ID, N_OBSERVATIONS, N_FRAMES_TOTAL, APERTURE_RMS, PSF_RMS,
-                       APERTURE_MEDIAN_MAG, PSF_MEDIAN_MAG,
-                       VSX_KNOWN_VARIABLE, CATALOG_KNOWN_VARIABLE
-                FROM COMP_STAR_LIBRARY
-                WHERE FIELD_ID = ? AND CATALOG_ID = ?;
-                """,
-                (int(field_id), cid),
-            ).fetchone()
-            if row is None:
-                self.conn.execute(
-                    """
-                    INSERT INTO COMP_STAR_LIBRARY (
-                        FIELD_ID, CATALOG_ID, NAME, RA_DEG, DEC_DEG, G_MAG, BP_RP,
-                        APERTURE_MEDIAN_MAG, APERTURE_RMS, PSF_MEDIAN_MAG, PSF_RMS,
-                        N_OBSERVATIONS, N_FRAMES_TOTAL,
-                        VSX_KNOWN_VARIABLE, CATALOG_KNOWN_VARIABLE, IS_SAFE_COMP, VERDICT,
-                        FIRST_USED_JD, LAST_USED_JD, LAST_OBSERVATION_ID
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """,
-                    (
-                        int(field_id),
-                        cid,
-                        star.get("name"),
-                        star.get("ra_deg"),
-                        star.get("dec_deg"),
-                        star.get("g_mag"),
-                        star.get("bp_rp"),
-                        star.get("aperture_median_mag"),
-                        star.get("aperture_rms"),
-                        star.get("psf_median_mag"),
-                        star.get("psf_rms"),
-                        n_frames,
-                        vsx,
-                        ckv,
-                        is_safe,
-                        verdict,
-                        now_jd,
-                        now_jd,
-                        observation_id,
-                    ),
-                )
-                n_done += 1
-                continue
-
-            sid = int(row["ID"])
-            old_n_obs = int(row["N_OBSERVATIONS"] or 1)
-            old_n_fr = int(row["N_FRAMES_TOTAL"] or 0)
-            old_ar = row["APERTURE_RMS"]
-            old_pr = row["PSF_RMS"]
-            old_am = row["APERTURE_MEDIAN_MAG"]
-            old_pm = row["PSF_MEDIAN_MAG"]
-            vsx_u = max(int(row["VSX_KNOWN_VARIABLE"] or 0), vsx)
-            ckv_u = max(int(row["CATALOG_KNOWN_VARIABLE"] or 0), ckv)
-
-            new_ar = star.get("aperture_rms")
-            new_pr = star.get("psf_rms")
-            w_old = max(1, old_n_fr if old_n_fr > 0 else old_n_obs)
-            w_new = max(1, n_frames if n_frames > 0 else 1)
-
-            def _pool_rms(old_v: Any, new_v: Any, wo: int, wn: int) -> float | None:
-                try:
-                    if new_v is None or (isinstance(new_v, float) and not math.isfinite(new_v)):
-                        return float(old_v) if old_v is not None and math.isfinite(float(old_v)) else None
-                    nv = float(new_v)
-                    if old_v is None or (isinstance(old_v, float) and not math.isfinite(float(old_v))):
-                        return nv
-                    ov = float(old_v)
-                    wt = wo + wn
-                    if wt <= 0:
-                        return nv
-                    return math.sqrt(max(0.0, (wo * ov * ov + wn * nv * nv) / wt))
-                except (TypeError, ValueError):
-                    return None
-
-            comb_ar = _pool_rms(old_ar, new_ar, w_old, w_new)
-            comb_pr = _pool_rms(old_pr, new_pr, w_old, w_new)
-
-            new_am = star.get("aperture_median_mag")
-            comb_am = old_am
-            if new_am is not None:
-                try:
-                    nv = float(new_am)
-                    if old_am is None:
-                        comb_am = nv
-                    else:
-                        comb_am = (float(old_am) * old_n_obs + nv) / float(old_n_obs + 1)
-                except (TypeError, ValueError):
-                    comb_am = old_am
-
-            new_pm = star.get("psf_median_mag")
-            comb_pm = old_pm
-            if new_pm is not None:
-                try:
-                    nv = float(new_pm)
-                    if old_pm is None:
-                        comb_pm = nv
-                    else:
-                        comb_pm = (float(old_pm) * old_n_obs + nv) / float(old_n_obs + 1)
-                except (TypeError, ValueError):
-                    comb_pm = old_pm
-
-            self.conn.execute(
-                """
-                UPDATE COMP_STAR_LIBRARY SET
-                    NAME = COALESCE(?, NAME),
-                    RA_DEG = COALESCE(?, RA_DEG),
-                    DEC_DEG = COALESCE(?, DEC_DEG),
-                    G_MAG = COALESCE(?, G_MAG),
-                    BP_RP = COALESCE(?, BP_RP),
-                    APERTURE_MEDIAN_MAG = ?,
-                    APERTURE_RMS = ?,
-                    PSF_MEDIAN_MAG = ?,
-                    PSF_RMS = ?,
-                    N_OBSERVATIONS = N_OBSERVATIONS + 1,
-                    N_FRAMES_TOTAL = N_FRAMES_TOTAL + ?,
-                    VSX_KNOWN_VARIABLE = ?,
-                    CATALOG_KNOWN_VARIABLE = ?,
-                    IS_SAFE_COMP = ?,
-                    VERDICT = ?,
-                    LAST_USED_JD = ?,
-                    LAST_OBSERVATION_ID = ?
-                WHERE ID = ?;
-                """,
-                (
-                    star.get("name"),
-                    star.get("ra_deg"),
-                    star.get("dec_deg"),
-                    star.get("g_mag"),
-                    star.get("bp_rp"),
-                    comb_am,
-                    comb_ar,
-                    comb_pm,
-                    comb_pr,
-                    n_frames,
-                    vsx_u,
-                    ckv_u,
-                    is_safe,
-                    verdict,
-                    now_jd,
-                    observation_id,
-                    sid,
-                ),
-            )
-            n_done += 1
-        self.conn.commit()
-        return n_done
-
-    def get_comp_stars_for_field(
-        self,
-        ra_deg: float,
-        dec_deg: float,
-        *,
-        match_radius_deg: float = 0.5,
-        only_approved: bool = True,
-    ) -> list[dict[str, Any]]:
-        fld = self.find_matching_field(float(ra_deg), float(dec_deg), match_radius_deg=match_radius_deg)
-        if fld is None:
-            return []
-        fid = int(fld["ID"])
-        flt = 1 if only_approved else 0
-        cur = self.conn.execute(
-            """
-            SELECT * FROM COMP_STAR_LIBRARY
-            WHERE FIELD_ID = ?
-              AND (? = 0 OR IS_SAFE_COMP = 1)
-              AND (? = 0 OR VERDICT = 'Approved')
-            ORDER BY G_MAG ASC;
-            """,
-            (fid, flt, flt),
-        )
-        return [dict(r) for r in cur.fetchall()]
 
     def close(self) -> None:
         try:

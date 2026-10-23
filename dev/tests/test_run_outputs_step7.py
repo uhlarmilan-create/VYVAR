@@ -11,7 +11,7 @@ import pandas as pd
 SRC = Path(__file__).resolve().parents[2] / "src_py"
 sys.path.insert(0, str(SRC))
 
-from run_outputs import clear_export_dirs, clear_phase2a_products, clear_report_cache  # noqa: E402
+from run_outputs import clear_export_dirs, clear_aperture_products, clear_report_cache  # noqa: E402
 
 
 def _touch(p: Path) -> Path:
@@ -20,14 +20,14 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def test_phase2a_start_removes_previous_products(tmp_path: Path) -> None:
+def test_aperture_start_removes_previous_products(tmp_path: Path) -> None:
     lc = tmp_path / "lightcurves"
     old = [_touch(lc / n) for n in ("lightcurve_1.csv", "lightcurve_1_psf.csv", "comp_quality_1.json",
                                      "check_kmag_1.csv", "field_map_1.png", "varcand_1.csv", "trust_1.json",
                                      "cutout_1.png", "lightcurve_1.png")]
     exports = [_touch(tmp_path / "lightcurves_reports" / s / "X_20260101.txt") for s in ("aavso", "varastro", "epsf")]
     keep = [_touch(tmp_path / "photometry_summary.csv"), _touch(tmp_path / "TESS" / "1" / "a.png")]
-    out = clear_phase2a_products(tmp_path)
+    out = clear_aperture_products(tmp_path)
     assert out == {"lightcurves": len(old), "exports": 3}
     assert not any(p.exists() for p in old + exports)
     assert all(p.exists() for p in keep)

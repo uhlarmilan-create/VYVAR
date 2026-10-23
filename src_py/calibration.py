@@ -211,11 +211,11 @@ def resample_master_to_light_binning(
     lb = max(1, int(light_binning))
     if lb < mb:
         raise MasterResamplingError(
-            f"Light binning {lb}x je mensia ako master binning {mb}x - upsampling nie je podporovany."
+            f"Light binning {lb}x is smaller than master binning {mb}x - upsampling is not supported."
         )
     if lb % mb != 0:
         raise MasterResamplingError(
-            f"Light binning {lb} musi byt celociselny nasobok master binningu {mb}."
+            f"Light binning {lb} must be an integer multiple of master binning {mb}."
         )
     bf = lb // mb
     if bf == 1:
@@ -223,14 +223,14 @@ def resample_master_to_light_binning(
 
     a = np.asarray(data, dtype=np.float32)
     if a.ndim != 2:
-        raise MasterResamplingError(f"Ocakavany 2D master, dostal som tvar {a.shape}.")
+        raise MasterResamplingError(f"Expected a 2D master, got shape {a.shape}.")
 
     h, w = int(a.shape[0]), int(a.shape[1])
     h_trim = (h // bf) * bf
     w_trim = (w // bf) * bf
     if h_trim < bf or w_trim < bf:
         raise MasterResamplingError(
-            f"Rozmer masteru {h}x{w} je po prisposobeni bloku {bf}x{bf} prilis maly."
+            f"Master size {h}x{w} is too small after fitting to block {bf}x{bf}."
         )
     if h_trim != h or w_trim != w:
         a = a[:h_trim, :w_trim]
@@ -315,18 +315,18 @@ def normalize_flat_master(
         if np.isfinite(gmed) and abs(gmed) > 0:
             m = (m / gmed).astype(np.float32)
         log_event(
-            f"Master flat: globalny median (normalizacny faktor): {gmed:.6g} ADU "
-            f"(ne-2D data, len globalna normalizacia)."
+            f"Master flat: global median (normalization factor): {gmed:.6g} ADU "
+            f"(non-2D data, global normalization only)."
         )
         header["VYFLTNRM"] = ("GLOBAL", "Master flat normalization mode")
         if np.isfinite(gmed):
             header["VYFLTMD"] = (float(gmed), "Global median ADU before normalization")
         bad = (m <= 0) | ~np.isfinite(m)
         if np.any(bad):
-            log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavenych na 1.0 (<=0 alebo neplatne).")
+            log_event(f"Master flat: {int(np.sum(bad))} pixels set to 1.0 (<=0 or invalid).")
         m = np.where(bad, np.float32(1.0), m).astype(np.float32)
         mean_a = float(np.nanmean(m))
-        log_event(f"Master flat: po normalizacii priemer ~ {mean_a:.4f} (ciel ~1.0).")
+        log_event(f"Master flat: mean after normalization ~ {mean_a:.4f} (target ~1.0).")
         return m
 
     h, w = int(m.shape[0]), int(m.shape[1])
@@ -356,7 +356,7 @@ def normalize_flat_master(
     )
     if hdr_pat and bin_factor > 1:
         log_event(
-            "Master flat: po binovani sa pouziva globalna normalizacia (binovanie zmiesa Bayer vrstvy)."
+            "Master flat: global normalization is used after binning (binning mixes the Bayer planes)."
         )
 
     if use_bayer and pat is not None:
@@ -375,11 +375,11 @@ def normalize_flat_master(
             if np.isfinite(mv) and mv > 0:
                 sl /= mv
             else:
-                log_event(f"Master flat: varovanie - neplatny median pre dlazdicu {lab}, preskocene delenie.")
+                log_event(f"Master flat: warning - invalid median for tile {lab}, division skipped.")
         note = f"Bayer {pat}" + (" (from EQUIPMENTS.BAYERMASK)" if assumed_pat else "")
         log_event(
-            "Master flat: normalizacia po Bayer dlazdiciach "
-            f"({note}); mediany ADU pred norm: "
+            "Master flat: normalization per Bayer tile "
+            f"({note}); ADU medians before norm: "
             f"{labels[0]}={medians[0]:.6g}, {labels[1]}={medians[1]:.6g}, "
             f"{labels[2]}={medians[2]:.6g}, {labels[3]}={medians[3]:.6g}."
         )
@@ -393,23 +393,23 @@ def normalize_flat_master(
         if np.isfinite(gmed) and abs(gmed) > 0:
             m = (m / gmed).astype(np.float32)
         else:
-            log_event("Master flat: varovanie - globalny median neplatny, normalizacia preskocena.")
-        log_event(f"Master flat: globalny median (normalizacny faktor): {gmed:.6g} ADU.")
+            log_event("Master flat: warning - global median invalid, normalization skipped.")
+        log_event(f"Master flat: global median (normalization factor): {gmed:.6g} ADU.")
         header["VYFLTNRM"] = ("GLOBAL", "Global median flat normalization")
         if np.isfinite(gmed):
             header["VYFLTMD"] = (float(gmed), "Global median ADU before normalization")
 
     bad = (m <= 0) | ~np.isfinite(m)
     if np.any(bad):
-        log_event(f"Master flat: {int(np.sum(bad))} pixelov nastavenych na 1.0 (<=0 alebo neplatne).")
+        log_event(f"Master flat: {int(np.sum(bad))} pixels set to 1.0 (<=0 or invalid).")
     m = np.where(bad, np.float32(1.0), m).astype(np.float32)
 
     gfin = float(np.nanmedian(m))
     if np.isfinite(gfin) and abs(gfin - 1.0) > 0.02 and abs(gfin) > 0:
         m = (m / gfin).astype(np.float32)
-        log_event(f"Master flat: dodatocna skala 1/{gfin:.4f} aby globalny median ~ 1.0.")
+        log_event(f"Master flat: extra scale 1/{gfin:.4f} so that the global median ~ 1.0.")
     mean_a = float(np.nanmean(m))
-    log_event(f"Master flat: po normalizacii median={float(np.nanmedian(m)):.4f}, priemer ~ {mean_a:.4f}.")
+    log_event(f"Master flat: after normalization median={float(np.nanmedian(m)):.4f}, mean ~ {mean_a:.4f}.")
     return m
 
 
@@ -442,6 +442,14 @@ def _flat_offset_at_use(path: Path, hdr: fits.Header, db: VyvarDatabase | None) 
         return 0.0
 
 
+def flat_offset_for_master(path: str | Path, db: VyvarDatabase | None) -> float:
+    """The offset ``get_processed_master`` removes from this FLAT at use (SPEED-2026-10: resolved
+    once in the run process, so calibration workers never open the database)."""
+    with fits.open(Path(path), memmap=False) as hdul:
+        hdr = hdul[0].header.copy()
+    return float(_flat_offset_at_use(Path(path), hdr, db))
+
+
 def get_processed_master(
     master_path: str | Path,
     target_binning: int,
@@ -453,6 +461,7 @@ def get_processed_master(
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
     dark_resample_mode: DarkResampleMode = "sum",
+    flat_offset_adu: float | None = None,
 ) -> ProcessedMasterResult:
     """Load a master FITS and optionally bin it to match the light's ``XBINNING``.
 
@@ -469,7 +478,7 @@ def get_processed_master(
     """
     p = Path(master_path)
     if not p.is_file():
-        raise MasterResamplingError(f"Master subor neexistuje: {p}")
+        raise MasterResamplingError(f"Master file does not exist: {p}")
 
     with fits.open(p, memmap=False) as hdul:
         hdr = hdul[0].header
@@ -483,7 +492,9 @@ def get_processed_master(
     if kind == "flat":
         # CAL-2026-10 spec 3: legacy / unknown-offset flats get the measured constant
         # offset removed here (median commutes with a constant), before normalisation.
-        flat_offset_removed_adu = _flat_offset_at_use(p, hdr, db)
+        flat_offset_removed_adu = (
+            float(flat_offset_adu) if flat_offset_adu is not None else _flat_offset_at_use(p, hdr, db)
+        )
         if flat_offset_removed_adu:
             data = (data - np.float32(flat_offset_removed_adu)).astype(np.float32)
             log_event(
@@ -524,8 +535,8 @@ def get_processed_master(
                 out = aligned
             else:
                 raise MasterResamplingError(
-                    f"Po resamplingu ma master ({p.name}) tvar {out.shape[0]}x{out.shape[1]}, "
-                    f"ale light '{light_filename or p.name}' ma {eh}x{ew} - kalibraciu zastavujem."
+                    f"After resampling, master ({p.name}) has shape {out.shape[0]}x{out.shape[1]}, "
+                    f"but light '{light_filename or p.name}' is {eh}x{ew} - stopping calibration."
                 )
 
     flat_median_adu_before_norm: float | None = None

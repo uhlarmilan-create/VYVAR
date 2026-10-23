@@ -1,4 +1,4 @@
-"""Phase 0 identity gate tests (PHASE0-IDENTITY-GATE)."""
+"""Target-selection identity gate tests (PHASE0-IDENTITY-GATE)."""
 
 from __future__ import annotations
 

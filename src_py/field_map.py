@@ -248,6 +248,75 @@ class TargetFieldMap:
         self.canvas.close()
 
 
+_TFM_WORKER: dict[str, Any] = {}
+
+
+def _tfm_worker_init(data: np.ndarray, header: Any) -> None:
+    _TFM_WORKER["map"] = TargetFieldMap(data, header)
+
+
+def _tfm_worker_save(job: tuple[str, pd.Series, pd.DataFrame]) -> str:
+    """Draw one target map in a worker; returns "" or the error text."""
+    try:
+        _TFM_WORKER["map"].save(Path(job[0]), job[1], job[2])
+        return ""
+    except Exception as exc:  # noqa: BLE001
+        return str(exc)
+
+
+class DeferredTargetFieldMaps:
+    """SPEED-2026-10: the per-target maps are queued during the target loop and drawn at ``close``,
+    in a process pool when ``workers`` > 1 (each worker draws on its own copy of the background).
+
+    Same files as :class:`TargetFieldMap`; a map that fails is logged and skipped, as before.
+    """
+
+    def __init__(self, data: np.ndarray, header: Any = None, *, workers: int = 1) -> None:
+        self._data = np.asarray(data)
+        self._header = header
+        self._workers = max(1, int(workers or 1))
+        self._jobs: list[tuple[str, pd.Series, pd.DataFrame]] = []
+        if not np.isfinite(np.asarray(self._data, dtype=np.float64)).any():
+            raise ValueError("MASTERSTAR has no finite pixels")
+        import matplotlib  # noqa: F401, PLC0415  (ImportError here, as for the canvas)
+
+    def save(self, output_path: Path, target_row: pd.Series, comp_rows: pd.DataFrame) -> Path:
+        self._jobs.append((str(output_path), target_row.copy(), comp_rows.copy()))
+        return Path(output_path)
+
+    def close(self) -> None:
+        jobs, self._jobs = self._jobs, []
+        if not jobs:
+            return
+        nw = min(self._workers, len(jobs))
+        if nw > 1:
+            import multiprocessing  # noqa: PLC0415
+            from concurrent.futures import ProcessPoolExecutor  # noqa: PLC0415
+
+            with ProcessPoolExecutor(
+                max_workers=nw,
+                mp_context=multiprocessing.get_context("spawn"),
+                initializer=_tfm_worker_init,
+                initargs=(self._data, self._header),
+            ) as ex:
+                errors = list(ex.map(_tfm_worker_save, jobs, chunksize=max(1, len(jobs) // (4 * nw))))
+        else:
+            fm = TargetFieldMap(self._data, self._header)
+            errors = []
+            try:
+                for job in jobs:
+                    try:
+                        fm.save(Path(job[0]), job[1], job[2])
+                        errors.append("")
+                    except Exception as exc:  # noqa: BLE001
+                        errors.append(str(exc))
+            finally:
+                fm.close()
+        for job, err in zip(jobs, errors, strict=True):
+            if err:
+                LOGGER.warning("[APERTURE] Optional artifact write failed (field map %s): %s", Path(job[0]).name, err)
+
+
 def save_field_map(
     output_path: Path,
     data: np.ndarray,

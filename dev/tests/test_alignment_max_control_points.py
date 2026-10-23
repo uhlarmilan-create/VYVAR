@@ -1,8 +1,6 @@
 """G1-F001/F002: alignment_max_control_points decoupled from detection ladder max_stars."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
 
 import numpy as np
 
@@ -11,35 +9,11 @@ from vyvar_alignment_frame import _alignment_as_alignment_points, _alignment_run
 
 
 def test_default_alignment_max_control_points_is_80():
-    cfg = AppConfig()
-    assert cfg.alignment_max_control_points == 80
+    # CODE-REVIEW step 7: a constant, no longer a config key.
+    from pipeline_constants import ALIGNMENT_MAX_CONTROL_POINTS
 
-
-def test_alignment_max_control_points_clamped_in_post_init(tmp_path: Path):
-    (tmp_path / "config.json").write_text(
-        json.dumps({"alignment_max_control_points": 9999}),
-        encoding="utf-8",
-    )
-    cfg = AppConfig(project_root=tmp_path)
-    assert cfg.alignment_max_control_points == 500
-
-    (tmp_path / "config.json").write_text(
-        json.dumps({"alignment_max_control_points": 3}),
-        encoding="utf-8",
-    )
-    cfg2 = AppConfig(project_root=tmp_path)
-    assert cfg2.alignment_max_control_points == 12
-
-
-def test_alignment_max_control_points_from_config_json(tmp_path: Path):
-    (tmp_path / "config.json").write_text(
-        json.dumps({"alignment_max_control_points": 96}),
-        encoding="utf-8",
-    )
-    cfg = AppConfig(project_root=tmp_path)
-    assert cfg.alignment_max_control_points == 96
-    d = cfg.to_dict()
-    assert d["alignment_max_control_points"] == 96
+    assert ALIGNMENT_MAX_CONTROL_POINTS == 80
+    assert not hasattr(AppConfig(), "alignment_max_control_points")
 
 
 def test_mcp_uses_max_control_points_not_detection_max_st():

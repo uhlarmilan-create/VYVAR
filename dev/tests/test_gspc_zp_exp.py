@@ -156,7 +156,7 @@ def test_colour_term_default_auto() -> None:
 
 
 def test_k2_also_on_uncalibrated_lc() -> None:
-    s = (SRC / "phase2a_target.py").read_text(encoding="utf-8")
+    s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
     i_cal = s.index('_calibrated = _band_system != "NONE"')
     i_k2 = s.index("_k2_in = mag_calib if _calibrated else delta_mag")
     assert i_cal < i_k2
@@ -170,7 +170,7 @@ def test_ids_never_via_float() -> None:
     assert str(int(float(big))) != big
     q = gspc_query([big])
     assert big in q
-    s = (SRC / "phase2a_state.py").read_text(encoding="utf-8")
+    s = (SRC / "aperture_photometry_state.py").read_text(encoding="utf-8")
     assert "str(int(float(x)))" not in s and "normalize_gaia_source_id" in s
 
 
@@ -184,7 +184,7 @@ def test_bad_cache_and_empty_flag(tmp_path) -> None:
 
 def test_c_std_recomputation_equals_ensemble_zero_point() -> None:
     """mag_calib - delta_mag = C + inst_level with C, inst_level rebuilt from the Broeg weights
-    and Honeycutt levels exactly as phase2a_target does (basis of mag_gspc)."""
+    and Honeycutt levels exactly as aperture_photometry_target does (basis of mag_gspc)."""
     from photometry_lightcurve import ensemble_normalize
 
     rng = np.random.default_rng(7)

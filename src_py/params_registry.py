@@ -1,9 +1,10 @@
 """Machine-readable AppConfig parameter registry (shared core).
 
 The registry (``validation/params_registry.json``) carries only *editorial* metadata
-for each public ``AppConfig`` field: tier, phase, label, help, unit, kind, range and
-widget hint. Defaults and types are NEVER stored here -- they come from
-``dataclasses.fields(AppConfig)`` introspection so the registry cannot drift from code.
+for each public ``AppConfig`` field: tier, phase, label, help, unit, kind and widget hint.
+Defaults, types and ranges are NEVER stored here -- they come from
+``dataclasses.fields(AppConfig)`` introspection and ``config.PARAM_RANGES`` (``range`` is
+added on load) so the registry cannot drift from code.
 
 Consumers:
   * ``tests/test_params_registry.py`` -- parity + freshness guard.
@@ -88,7 +89,13 @@ def load_registry(path: Path | None = None) -> dict[str, dict[str, Any]]:
             f"parameter registry missing: {p} (release bundle must ship dev/validation/params_registry.json)"
         )
     raw = json.loads(p.read_text(encoding="utf-8"))
-    return {k: v for k, v in raw.items() if not k.startswith("__")}
+    reg = {k: v for k, v in raw.items() if not k.startswith("__")}
+    # The allowed range lives in code (config.PARAM_RANGES, the loader clamps to it), never in the
+    # JSON, so the Settings page, the validator and the loader cannot disagree.
+    for key, entry in reg.items():
+        rng = config.PARAM_RANGES.get(key)
+        entry["range"] = [rng[0], rng[1]] if rng is not None else None
+    return reg
 
 
 def load_registry_meta(path: Path | None = None) -> dict[str, Any]:

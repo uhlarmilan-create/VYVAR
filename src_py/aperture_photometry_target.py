@@ -12,15 +12,16 @@ from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_c
 from infolog import log_event
 from photometry_shared import _normalize_gaia_id, _target_display_name
 
-from photometry_phase2a import (
-    _Phase2AState,
-    _draft_dir_from_phase2a_paths,
+from aperture_photometry import (
+    _AperturePhotometryState,
+    _draft_dir_from_aperture_paths,
     _measured_aperture_from_proc_cache,
     _resolve_photometric_aperture_px_for_gs11,
     apply_reporting_postprocess,
     fit_color_term_c1,
     read_flux_from_csv,
 )
+from pipeline_constants import CT_MIN_COMP
 from photometry_lightcurve import (
     _append_ct_prototype_row,
     _check_color_term_extrapolation,
@@ -32,7 +33,7 @@ from photometry_lightcurve import (
     _exclude_err_scatter_unmatched_epochs,
     _get_comp_bjd_series,
     _get_lc,
-    _phase2a_skip_empty_comps_target,
+    _aperture_skip_empty_comps_target,
     _recompute_bjd_hjd_with_status,
     apply_color_term,
     check_comparison_stability,
@@ -98,11 +99,11 @@ def zero_point_uncertainty(
         out["sigma_zp_data_mag"] = round(s / math.sqrt(n_eff), 5)
     return out
 
-def _phase2a_process_one_target(
+def _aperture_process_one_target(
     target_row: Any,
     *,
     ti: int,
-    state: _Phase2AState,
+    state: _AperturePhotometryState,
     summary_rows: list,
     n_lc: int,
     lc_dir: Path,
@@ -116,7 +117,7 @@ def _phase2a_process_one_target(
     _apt_fw: float,
     _save_png: bool,
 ) -> tuple[list, int]:
-    """Process one target through the full Phase 2A photometry pipeline.
+    """Process one target through the full aperture photometry pipeline.
 
     Returns updated (summary_rows, n_lc).
     """
@@ -131,8 +132,8 @@ def _phase2a_process_one_target(
     _comp_index = state._comp_index
     target_bp_rp_by_cid = state.target_bp_rp_by_cid
     csv_files = state.csv_files
-    _phase2a_csv_cache = state._phase2a_csv_cache
-    _phase2a_lookup_cache = state._phase2a_lookup_cache
+    _aperture_csv_cache = state._aperture_csv_cache
+    _aperture_lookup_cache = state._aperture_lookup_cache
     frame_time_lookup = state.frame_time_lookup
     fwhm_px = state.fwhm_px
     apertures_px = state.apertures_px
@@ -156,18 +157,18 @@ def _phase2a_process_one_target(
     else:
         skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
     _zf_row = str(target_row.get("zone_flag", "")).strip()
-    # skip_photometry / skip_reason carry the whole decision (Phase 0 cuts + per-frame saturation)
+    # skip_photometry / skip_reason carry the whole decision (target-selection cuts + per-frame saturation)
     if not skip_photo:
         state.i_measured = int(getattr(state, "i_measured", 0)) + 1
         _nm = int(getattr(state, "n_to_measure", 0)) or _nt
         _im = int(state.i_measured)
         if progress_cb is not None and (_im == 1 or _im >= _nm or (_nm > 1 and _im % max(1, _nm // 12) == 0)):
             _ns = int(getattr(state, "n_final_skip", 0))
-            _p2(f"Faza 2A: ciel {_im}/{_nm}: {target_name[:50]}"
-                + (f" ({_ns} preskocenych: saturacia, S/N, typ)" if _ns else ""))
+            _p2(f"Aperture photometry: target {_im}/{_nm}: {target_name[:50]}"
+                + (f" ({_ns} skipped: saturation, S/N, type)" if _ns else ""))
     if skip_photo:
         _skip_reason = str(target_row.get("skip_reason", "") or "").strip()
-        logging.info(f"[FAZA 2A] Preskakujem fotometriu ({_skip_reason}): {target_name}")
+        logging.info(f"[APERTURE] Skipping photometry ({_skip_reason}): {target_name}")
         _skip_sum: dict[str, Any] = {
             "catalog_id": target_cid,
             "vsx_name": target_name,
@@ -186,18 +187,18 @@ def _phase2a_process_one_target(
         summary_rows.append(_skip_sum)
         return summary_rows, n_lc
     logging.info(
-        f"[FAZA 2A] Spustam: target={target_name}, "
+        f"[APERTURE] Starting: target={target_name}, "
         f"frames={len(csv_files)}, "
-        f"apertura={_apt_fw * float(fwhm_px):.2f}px "
+        f"aperture={_apt_fw * float(fwhm_px):.2f}px "
         f"(FWHM={float(fwhm_px):.3f}px x {_apt_fw:.2f})"
     )
 
-    # Comp hviezdy pre tento target
+    # Comp stars for this target
     target_comps = _comp_index.get(target_cid, pd.DataFrame()).copy()
     _star_xy = dict(star_xy)
 
     if target_comps.empty:
-        summary_rows = _phase2a_skip_empty_comps_target(
+        summary_rows = _aperture_skip_empty_comps_target(
             target_cid=target_cid,
             target_name=target_name,
             zone_flag=_zf_row,
@@ -347,7 +348,7 @@ def _phase2a_process_one_target(
                 if math.isfinite(_cx) and math.isfinite(_cy):
                     _star_xy[_chk_cid_pref] = (_cx, _cy)
 
-    # Krok 2: Fotometria per snimka (PERF-8: slice shared flux matrix when built)
+    # Step 2: photometry per frame (PERF-8: slice shared flux matrix when built)
     frame_results: list[pd.DataFrame] = []
     if not _flux_matrix.empty:
         _id_set = set(all_ids)
@@ -359,7 +360,7 @@ def _phase2a_process_one_target(
                 continue
             df_frame = _df_sub.copy()
             _ft = frame_time_lookup.get(csv_path.stem)
-            _cached_df = _phase2a_csv_cache.get(str(csv_path))
+            _cached_df = _aperture_csv_cache.get(str(csv_path))
             if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
                 try:
                     _xm = float(pd.to_numeric(df_frame["x"], errors="coerce").max())
@@ -401,7 +402,7 @@ def _phase2a_process_one_target(
                             if "edge_fail" in df_frame.columns:
                                 df_frame.loc[tmask, "edge_fail"] = True
                             logging.info(
-                                "[TARGET EDGE] %s: frame %s vyradeny - annulus mimo cip (x=%.0f, y=%.0f, r_out=%.1fpx)",
+                                "[TARGET EDGE] %s: frame %s rejected - annulus off chip (x=%.0f, y=%.0f, r_out=%.1fpx)",
                                 str(target_name),
                                 str(csv_path.name),
                                 float(x_t),
@@ -413,8 +414,8 @@ def _phase2a_process_one_target(
         for csv_path in csv_files:
             _ft = frame_time_lookup.get(csv_path.stem)
             _key_csv = str(csv_path)
-            _cached_df = _phase2a_csv_cache.get(_key_csv)
-            _lookup_row = _phase2a_lookup_cache.get(_key_csv)
+            _cached_df = _aperture_csv_cache.get(_key_csv)
+            _lookup_row = _aperture_lookup_cache.get(_key_csv)
 
             df_frame = read_flux_from_csv(
                 csv_path,
@@ -473,7 +474,7 @@ def _phase2a_process_one_target(
                                 if "edge_fail" in df_frame.columns:
                                     df_frame.loc[tmask, "edge_fail"] = True
                                 logging.info(
-                                    "[TARGET EDGE] %s: frame %s vyradeny - annulus mimo cip (x=%.0f, y=%.0f, r_out=%.1fpx)",
+                                    "[TARGET EDGE] %s: frame %s rejected - annulus off chip (x=%.0f, y=%.0f, r_out=%.1fpx)",
                                     str(target_name),
                                     str(csv_path.name),
                                     float(x_t),
@@ -517,15 +518,15 @@ def _phase2a_process_one_target(
         except Exception as _pt_apply_exc:  # noqa: BLE001
             logging.warning("[APERTURE-DYNAMIC] apply failed for %s: %s", target_cid, _pt_apply_exc)
 
-    # Zostav casove rady per hviezda
+    # Build time series per star
     target_lc = _get_lc(target_cid, all_frames)
     comp_lc = {cid: _get_lc(cid, all_frames) for cid in comp_ids}
 
-    # COMP-ASSIGN-01 D4/D5: membership is fixed from Phase 1 (3-8). Stability is a
+    # COMP-ASSIGN-01 D4/D5: membership is fixed by comparison-star selection (3-8). Stability is a
     # post-photometry verdict only - do not let it re-select before ensemble.
     comp_quality = {cid: {"quality": "good"} for cid in comp_ids}
 
-    # Krok 4: Ensemble normalizacia (consumes the delivered set as given)
+    # Step 4: ensemble normalization (consumes the delivered set as given)
     _broeg_w: dict[str, float] = {}
     _comp_levels: dict[str, float] = {}
     mag_calib, delta_mag, ensemble_scatter = ensemble_normalize(
@@ -592,27 +593,23 @@ def _phase2a_process_one_target(
             if math.isfinite(_gv):
                 _target_g_mag = _gv
                 break
-        _ap_cfg = float(_cfg.gs11_dilution_aperture_arcsec)
         _dilution_skipped_ap = False
-        if math.isfinite(_ap_cfg) and _ap_cfg > 0:
-            _ap_arcsec = _ap_cfg
-        else:
-            _ap_px, _ap_src = _resolve_photometric_aperture_px_for_gs11(
-                target_cid,
-                apertures_px,
+        _ap_px, _ap_src = _resolve_photometric_aperture_px_for_gs11(
+            target_cid,
+            apertures_px,
+        )
+        if _ap_px is None:
+            logging.warning(
+                "[GS11] target %s: photometric aperture unavailable - dilution skipped",
+                target_cid or "?",
             )
-            if _ap_px is None:
-                logging.warning(
-                    "[GS11] target %s: photometric aperture unavailable - dilution skipped",
-                    target_cid or "?",
-                )
-                log_event(
-                    f"[GS11] target {target_cid or '?'}: photometric aperture unavailable - dilution skipped"
-                )
-                _dilution_skipped_ap = True
-                _ap_arcsec = float("nan")
-            else:
-                _ap_arcsec = float(_ap_px) * float(state.plate_scale_arcsec)
+            log_event(
+                f"[GS11] target {target_cid or '?'}: photometric aperture unavailable - dilution skipped"
+            )
+            _dilution_skipped_ap = True
+            _ap_arcsec = float("nan")
+        else:
+            _ap_arcsec = float(_ap_px) * float(state.plate_scale_arcsec)
         _cid_int = None
         try:
             from dilution import _normalize_exclude_source_id  # noqa: PLC0415
@@ -641,7 +638,6 @@ def _phase2a_process_one_target(
                 _ap_arcsec,
                 str(state.gaia_db_path),
                 catalog_id=_cid_int,
-                mag_limit_delta=float(_cfg.gs11_dilution_mag_limit_delta),
                 fwhm_arcsec=float(fwhm_px) * float(state.plate_scale_arcsec),
                 band=band_for_obs_group(obs_group),
                 target_bp_rp=float(target_bp_rp_by_cid.get(target_cid, float("nan"))),
@@ -686,6 +682,9 @@ def _phase2a_process_one_target(
 
     k2_value_lc = float("nan")
     k2_colour_ref = float("nan")
+    # EPSF-K2-2026-10: k'' x (target - comp colour) per unit airmass, written with the light curve
+    # (``k2_delta_mag``) so the PSF light curve applies the same per-epoch term.
+    k2_coeff_lc = float("nan")
     k2_source_rows = [K2Source.NONE.value] * len(mag_calib)
     _k2_val = float(getattr(state, "k2_bprp", float("nan")))
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
@@ -710,6 +709,8 @@ def _phase2a_process_one_target(
             delta_mag = _k2_out
         k2_value_lc = _k2_val
         k2_colour_ref = _bp_med_k2
+        if any(str(v) != K2Source.NONE.value for v in k2_source_rows):
+            k2_coeff_lc = float(_k2_val) * (float(target_bp_rp) - float(_bp_med_k2))
     # summary: the k'' source of the target (the tag when any epoch got the correction)
     k2_source_target = next((str(v) for v in k2_source_rows if str(v) != K2Source.NONE.value), K2Source.NONE.value)
 
@@ -759,7 +760,6 @@ def _phase2a_process_one_target(
             target_bp_rp=float(target_bp_rp),
             comp_bp_rp_values=[float(v) for v in _ref_bp.values()],
             target_name=str(target_name),
-            extrapolation_tol=float(_cfg.phase01_ct_extrapolation_tol),
         )
         if _ct_in_range:
             mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
@@ -821,13 +821,13 @@ def _phase2a_process_one_target(
         if float(_proto_c1) != 0.0 and math.isfinite(float(_proto_c1_stderr)):
             _proto_stderr_ratio = abs(float(_proto_c1_stderr) / float(_proto_c1))
         _proto_gate = (
-            int(_proto_n_comp) >= int(_cfg.phase01_ct_min_comp)
+            int(_proto_n_comp) >= CT_MIN_COMP
             and float(_proto_c1) != 0.0
             and math.isfinite(_proto_stderr_ratio)
             and float(_proto_stderr_ratio) <= 0.5
         )
         _append_ct_prototype_row(
-            _draft_dir_from_phase2a_paths(output_dir, Path(masterstar_fits_path)),
+            _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path)),
             {
                 "catalog_id": target_cid,
                 "vsx_name": target_name,
@@ -845,13 +845,17 @@ def _phase2a_process_one_target(
             },
         )
 
-    # Casove hodnoty targetu - sort by source_file so ensemble_scatter index aligns
+    # Target time values - sort by source_file so ensemble_scatter index aligns
     # with ``_get_lc`` / ``_ensemble_scatter_by_source_file`` (LABBE-DET / SEM determinism).
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
     if not target_frames.empty and "source_file" in target_frames.columns:
         target_frames = target_frames.sort_values(["source_file"], kind="mergesort")
-    _measured_ap_target = _measured_aperture_from_proc_cache(target_cid, state._phase2a_csv_cache)
     _pt_active = bool((getattr(state, "per_target_aperture", None) or {}).get(str(target_cid)))
+    # SPEED-2026-10 (S1): the proc-cache (comparison-star selection global) radius is read only when the target has
+    # no per-target aperture; otherwise it is never used.
+    _measured_ap_target = (
+        float("nan") if _pt_active else _measured_aperture_from_proc_cache(target_cid, state._aperture_csv_cache)
+    )
     if (
         (not _pt_active)
         and math.isfinite(_measured_ap_target)
@@ -943,48 +947,6 @@ def _phase2a_process_one_target(
         sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
-    # WIDE-ERR-03: Pont/Gillon calibration layer on combined model err.
-    # CONSOLIDATE-01D: always ERR-CALIB calibrated (export_err_mode=model branch deleted).
-    try:
-        from err_calibration import (  # noqa: PLC0415
-            ERR_CALIB_SIDECAR,
-            apply_calibration_rel,
-            bins_from_sidecar,
-            load_sidecar,
-            smooth_from_sidecar,
-        )
-
-        _cal_path = Path(output_dir) / ERR_CALIB_SIDECAR if output_dir is not None else None
-        _cal = load_sidecar(_cal_path) if _cal_path is not None else None
-        if _cal:
-            _smooth = smooth_from_sidecar(_cal)
-            _bins = bins_from_sidecar(_cal) if not _smooth else []
-            _calib_obj = _smooth if _smooth is not None else _bins
-            _g_tgt = float("nan")
-            try:
-                _g_tgt = float(
-                    pd.to_numeric(
-                        target_row.get("phot_g_mean_mag", target_row.get("mag", float("nan"))),
-                        errors="coerce",
-                    )
-                )
-            except Exception:  # noqa: BLE001
-                _g_tgt = float("nan")
-            if math.isfinite(_g_tgt) and _calib_obj:
-                err = np.asarray(
-                    [
-                        apply_calibration_rel(float(e), _g_tgt, _calib_obj)
-                        for e in np.asarray(err, dtype=np.float64)
-                    ],
-                    dtype=np.float64,
-                )
-                logging.info(
-                    "[ERR-CALIB] applied export_err_mode=calibrated for G=%.3f (%s)",
-                    _g_tgt,
-                    "smooth" if _smooth is not None else f"{len(_bins)} bins",
-                )
-    except Exception as _cal_exc:  # noqa: BLE001
-        logging.warning("[ERR-CALIB] skip apply: %s", _cal_exc)
     # Propagate colour-level coefficient uncertainty into exported err (constant per LC).
     if bool(ct_ok) and math.isfinite(float(c1_stderr)) and math.isfinite(float(ct_corr)):
         # corr = c1 * (target - ref) => sigma_corr = |target-ref| * sigma_c1
@@ -1155,12 +1117,11 @@ def _phase2a_process_one_target(
     _ev_cache = EvidenceCache(
         frames_dir=Path(_aligned) if _aligned else None,
         catalog_id=str(target_cid),
-        n_sigma=float(getattr(_cfg, "lc_outlier_evidence_n_sigma", 5.0) or 5.0),
         proc_cache={},
     )
     # Normalize proc cache keys to basenames for EvidenceCache lookups.
     _proc_by_name: dict[str, pd.DataFrame] = {}
-    for _k, _dfc in (getattr(state, "_phase2a_csv_cache", None) or {}).items():
+    for _k, _dfc in (getattr(state, "_aperture_csv_cache", None) or {}).items():
         _proc_by_name[Path(str(_k)).name] = _dfc
     _ev_cache.proc_cache = _proc_by_name
 
@@ -1175,7 +1136,6 @@ def _phase2a_process_one_target(
             sat_flags=sat_flags,
             target_frames=target_frames,
             ct_ok=bool(ct_ok),
-            cfg=_cfg,
             err=err,
             bjd=bjd,
             source_files=_src_files_pre,
@@ -1289,7 +1249,7 @@ def _phase2a_process_one_target(
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.warning("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
 
-    # Krok 6: Ulozenie vystupov
+    # Step 6: save outputs
     lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"
     # I-04: exclude epochs with unmatched ensemble scatter from LC export.
     if err_scatter_unmatched_arr is not None and np.any(err_scatter_unmatched_arr):
@@ -1365,9 +1325,10 @@ def _phase2a_process_one_target(
         err_sem_rel=err_sem_rel_export,
         err_scint_rel=err_scint_rel_export,
         err_sigma_sys_rel=err_sigma_sys_rel_export,
+        k2_coeff=k2_coeff_lc,
     )
     # EPSF-LC-LOG-01 / INV-PSF-SUBMIT-01: PSF LC files are an internal diagnostic
-    # product written by psf_internal_lc (RUN ePSF path), not Phase 2A.
+    # product written by psf_internal_lc (RUN ePSF path), not aperture photometry.
 
     # COMP-ASSIGN-01 D4: stability AFTER photometry - verdict only (membership unchanged).
     comp_bjd = {cid: _get_comp_bjd_series(cid, all_frames) for cid in comp_ids}
@@ -1377,12 +1338,11 @@ def _phase2a_process_one_target(
         comp_bjd=comp_bjd,
         max_comp_p2p=float(_cfg.phase01_comparison_max_comp_rms),
         max_comp_slope_mmag_hr=float(_cfg.comp_max_slope_mmag_hr),
-        comp_slope_significance_k=float(getattr(_cfg, "comp_slope_significance_k", 3.0)),
         common_mode_detrend=True,
         stability_run_flags=state.stability_run_flags,
     )
 
-    # Kvalita comp pre UI (tabulka 'Porovnavacie hviezdy')
+    # Comp quality for the UI (comparison-stars table)
     _cq_path = lc_dir / f"comp_quality_{target_cid}.json"
     try:
         _cq_payload: dict[str, Any] = {}
@@ -1423,7 +1383,7 @@ def _phase2a_process_one_target(
         _cq_payload["gspc_zero_point"] = _gspc_zp
         _cq_path.write_text(json.dumps(_cq_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[PHASE 2A] Optional artifact write failed (comp_quality.json): %s", exc)
+        LOGGER.warning("[APERTURE] Optional artifact write failed (comp_quality.json): %s", exc)
 
     lc_png = lc_dir / f"lightcurve_{target_cid}.png"
     if _save_png:
@@ -1440,17 +1400,17 @@ def _phase2a_process_one_target(
                 delta_mag=delta_mag,
             )
         except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[PHASE 2A] Optional artifact write failed (lightcurve PNG): %s", exc)
+            LOGGER.warning("[APERTURE] Optional artifact write failed (lightcurve PNG): %s", exc)
 
-    # Per-target field map s cislovanymi comp hviezdami - vzdy (UI)
+    # Per-target field map with numbered comp stars - always (UI)
     try:
         if state.target_field_map is not None:
             state.target_field_map.save(lc_dir / f"field_map_{target_cid}.jpg", target_row,
                                         _comp_index.get(target_cid, pd.DataFrame()))
     except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[PHASE 2A] Optional artifact write failed (field map PNG): %s", exc)
+        LOGGER.warning("[APERTURE] Optional artifact write failed (field map PNG): %s", exc)
 
-    # Summary riadok
+    # Summary row
     finite_calib = mag_calib[np.isfinite(mag_calib)]
     _meas_lc = np.asarray(mag_calib if _calibrated else delta_mag, dtype=np.float64)
     finite_meas = _meas_lc[np.isfinite(_meas_lc)]
@@ -1468,7 +1428,7 @@ def _phase2a_process_one_target(
     )
     # FIX-APREPORT-2026-10: per-target aperture (r = f* x FWHM_frame, stamped per frame by
     # apply_grid_fluxes_to_frames) is the radius the LC was measured with; the proc-cache
-    # radius is the Phase-1 global one (draft 525: PDF said 7.2 px, LC used ~5.0 px).
+    # radius is the global one from comparison-star selection (draft 525: PDF said 7.2 px, LC used ~5.0 px).
     if _pt_active:
         _measured_ap = float("nan")
     if not math.isfinite(_measured_ap) and not target_frames.empty and "aperture_r_px" in target_frames.columns:
@@ -1532,10 +1492,10 @@ def _phase2a_process_one_target(
     lc_rms_ooe = float(summary_rows[-1].get("lc_rms_ooe", float("nan")))
     r_ap = float(summary_rows[-1]["aperture_px"])
     logging.info(
-        f"[FAZA 2A] {target_name}: "
+        f"[APERTURE] {target_name}: "
         f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
-        f"apertura={r_ap:.2f}px (measured)"
+        f"aperture={r_ap:.2f}px (measured)"
     )
 
 

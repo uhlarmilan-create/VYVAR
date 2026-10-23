@@ -92,7 +92,6 @@ def test_promotion_from_synthetic_host(tmp_path: Path, monkeypatch: pytest.Monke
     fits_path = _masterstar_fits(tmp_path, ra=ra, dec=dec)
     cfg = AppConfig()
     monkeypatch.setattr(cfg, "objects_db_path", str(db))
-    monkeypatch.setattr(cfg, "exoplanet_match_max_sep_arcsec", 3.0)
     rows = _build_exoplanet_promotion_rows_from_masterstars(
         ms, fits.getheader(fits_path), cfg, frame_w_px=1024, frame_h_px=1024
     )

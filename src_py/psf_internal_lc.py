@@ -109,26 +109,11 @@ def _flux_to_inst_mag(flux: np.ndarray) -> np.ndarray:
 
 
 def _load_gain_authority(photometry_dir: Path) -> tuple[float, str]:
-    from gain_photon_transfer import GAIN_PT_SIDECAR_NAME  # noqa: PLC0415
+    """The gain aperture photometry used (GAIN-ONE-2026-10, aperture_per_target.json)."""
+    from aperture_pertarget import load_photometric_gain  # noqa: PLC0415
 
-    sidecar = Path(photometry_dir) / GAIN_PT_SIDECAR_NAME
-    if sidecar.is_file():
-        try:
-            payload = json.loads(sidecar.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            payload = {}
-        auth = payload.get("authority") if isinstance(payload, dict) else None
-        if isinstance(auth, dict):
-            src = str(auth.get("source") or "").strip() or "unresolved"
-            g = float(pd.to_numeric(auth.get("g_pt", auth.get("value_e_per_adu_container")), errors="coerce"))
-            if math.isfinite(g) and g > 0:
-                return g, src
-        pt = payload.get("photon_transfer") if isinstance(payload, dict) else None
-        if isinstance(pt, dict):
-            g = float(pd.to_numeric(pt.get("g_pt"), errors="coerce"))
-            if math.isfinite(g) and g > 0:
-                return g, "g_pt"
-    return float("nan"), "unresolved"
+    g, _rn = load_photometric_gain(photometry_dir)
+    return (g, "aperture_photometry") if math.isfinite(g) and g > 0 else (float("nan"), "unresolved")
 
 
 def load_epsf_build_meta(platesolve_dir: Path) -> dict[str, Any]:
@@ -274,7 +259,7 @@ def build_provenance_header(
         f"# epsf_cutout_size={epsf_meta.get('cutout_size')}",
         f"# psf_fit={PSF_FIT_METHOD}",
         f"# psf_err_mode={PSF_ERR_MODE}",
-        f"# gain_authority=g_pt={gtxt} source={gain_source}",
+        f"# gain_authority=gain={gtxt} source={gain_source}",
         f"# ensemble_n_comp={int(n_comp)}",
         f"# ensemble_pinned_ids={ids}",
         f"# ensemble_source={ensemble_source}",
@@ -472,6 +457,14 @@ def write_one_internal_psf_lc(
             psf_delta[i] = float("nan")
             drop_reason[i] = f"comp_psf_fail:{missing[0]}"
 
+    # EPSF-K2-2026-10: the aperture light curve's per-epoch second-order extinction term
+    # (k'' x (target - comparison colour) x airmass) - it belongs to the star's colour and the epoch,
+    # not to the measuring method; without it the PSF light curve keeps a colour x airmass trend.
+    k2_term = pd.to_numeric(ap.get("k2_delta_mag"), errors="coerce").to_numpy(dtype=np.float64) \
+        if "k2_delta_mag" in ap.columns else np.full(n, np.nan)
+    k2_applied = bool(len(k2_term) == n and np.isfinite(k2_term).any())
+    if k2_applied:
+        psf_delta = np.where(np.isfinite(k2_term), psf_delta - k2_term, psf_delta)
     n_dropped_pin = int(sum(1 for r in drop_reason if r.startswith("comp_psf_fail")))
     n_target_sat = int(sum(1 for r in drop_reason if r == "target_saturated"))
     n_target_edge = int(sum(1 for r in drop_reason if r == "target_outside_footprint"))
@@ -537,7 +530,8 @@ def write_one_internal_psf_lc(
         n_epochs_full=n_full,
         n_epochs_dropped_pin=n_dropped_pin,
         psf_ap_level_offset_mag=level_off,
-        extra_header_lines=[f"# psf_lc_n_epochs_target_saturated={n_target_sat}",
+        extra_header_lines=[f"# psf_lc_k2_applied={str(k2_applied).lower()}",
+                             f"# psf_lc_n_epochs_target_saturated={n_target_sat}",
                              f"# psf_lc_n_epochs_target_outside_footprint={n_target_edge}"],
         ensemble_dropped_no_psf=dropped_no_psf,
     )

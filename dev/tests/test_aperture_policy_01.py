@@ -48,14 +48,14 @@ def test_qc_map_beats_header() -> None:
 
 
 def test_draft_dir_resolves_snapshot_and_qc() -> None:
-    from photometry_core import _draft_dir_from_phase2a_paths
+    from photometry_core import _draft_dir_from_aperture_paths
 
     snap = Path(r"C:\ASTRO\python\VYVAR\Archive\Drafts\draft_000516_snapshot_era04_20260826")
     phot = snap / "platesolve" / "NoFilter_60_2" / "photometry"
     ms = snap / "platesolve" / "NoFilter_60_2" / "MASTERSTAR.fits"
     if not snap.is_dir():
         return
-    got = _draft_dir_from_phase2a_paths(phot, ms)
+    got = _draft_dir_from_aperture_paths(phot, ms)
     assert got.resolve() == snap.resolve()
     assert (got / "calibrated" / "lights" / "qc_metrics.csv").is_file()
 

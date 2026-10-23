@@ -85,13 +85,13 @@ def parse_log(path: Path) -> dict:
         if m:
             events.append((float(m.group(1)), m.group(2)))
     p1 = [(t, m) for t, m in events if m.startswith("Phase 1: target")]
-    # Only true per-ciel lines (exclude ProcFrameStore / FWHM / aperture headers).
+    # Only true per-target lines (exclude ProcFrameStore / FWHM / aperture headers).
     p2 = [(t, m) for t, m in events if "Faza 2A: ciel" in m]
     t0 = next((t for t, m in events if "Faza 0:" in m or "Faza 0 " in m), None)
     t0_done = next((t for t, m in events if "Faza 0 hotova" in m), None)
     t1_start = next((t for t, m in events if "Faza 1:" in m and "ProcFrameStore" in m), None)
     t1_end = p1[-1][0] if p1 else None
-    # Phase 2A wall starts at aperture-photometry header (before ciel loop).
+    # Aperture-photometry wall starts at the aperture-photometry header (before the target loop).
     t2_start = None
     for t, m in events:
         if m.startswith("Faza 2A:") and "aperture" in m.lower():
@@ -102,12 +102,12 @@ def parse_log(path: Path) -> dict:
             if "Faza 2A: ciel" in m:
                 t2_start = t
                 break
-    # find after phase1 completion markers
-    t_phase1_done = None
+    # find after comp_selection completion markers
+    t_comp_selection_done = None
     for t, m in events:
         if "comparison_stars" in m.lower() or "Faza 1 hotov" in m or "suspected" in m.lower():
             pass
-    # Use last Phase 1 status as end of selection loop; Comp QA is after 2A photometry
+    # Use the last comparison-star selection status as end of the selection loop; Comp QA is after aperture photometry
     elapsed = None
     for ln in lines:
         if ln.startswith("ELAPSED_S"):
@@ -120,7 +120,7 @@ def parse_log(path: Path) -> dict:
         out = []
         for i, (t, msg) in enumerate(pts):
             name = msg.split(":", 2)[-1].strip() if ":" in msg else msg
-            # Phase 1: "Phase 1: target N/97: NAME"
+            # comparison-star selection: "Phase 1: target N/97: NAME"
             m = re.search(r"target\s+(\d+)/(\d+):\s*(.+)$", msg)
             if m:
                 idx, tot, name = int(m.group(1)), int(m.group(2)), m.group(3).strip()
@@ -166,38 +166,38 @@ def parse_log(path: Path) -> dict:
             ],
         }
 
-    phase0_s = None
+    target_selection_s = None
     if t0 is not None and t0_done is not None:
-        phase0_s = float(t0_done) - float(t0)
+        target_selection_s = float(t0_done) - float(t0)
     elif t0_done is not None and t1_start is not None:
-        phase0_s = float(t0_done)  # from run start approx
-    phase1_s = None
+        target_selection_s = float(t0_done)  # from run start approx
+    comp_selection_s = None
     if t1_start is not None and t2_start is not None:
-        phase1_s = float(t2_start) - float(t1_start)
-    phase2a_s = None
+        comp_selection_s = float(t2_start) - float(t1_start)
+    aperture_s = None
     if t2_start is not None and elapsed is not None:
-        phase2a_s = float(elapsed) - float(t2_start)
+        aperture_s = float(elapsed) - float(t2_start)
 
     return {
         "elapsed_s": elapsed,
-        "phase0_wall_s": phase0_s,
-        "phase1_wall_s": phase1_s,
-        "phase2a_wall_s": phase2a_s,
+        "target_selection_wall_s": target_selection_s,
+        "comp_selection_wall_s": comp_selection_s,
+        "aperture_wall_s": aperture_s,
         "t0_s": t0,
         "t0_done_s": t0_done,
         "t1_start_s": t1_start,
         "t2_start_s": t2_start,
-        "phase1_per_target": summarize(p1_rows),
-        "phase2a_per_target": summarize(p2_rows),
-        "n_phase1_status_lines": len(p1),
-        "n_phase2a_status_lines": len(p2),
+        "comp_select_per_target": summarize(p1_rows),
+        "aperture_per_target": summarize(p2_rows),
+        "n_comp_selection_status_lines": len(p1),
+        "n_aperture_status_lines": len(p2),
         "events_sample": events[:8] + events[-8:],
-        "log_caveat_phase1": (
-            "Phase 1 status was logged sparsely (every ~8 targets after RUN-HARDEN-01); "
-            "B2 Phase 1 stats are inter-checkpoint deltas, not true per-target walls."
+        "log_caveat_comp_selection": (
+            "Comparison-star selection status was logged sparsely (every ~8 targets after RUN-HARDEN-01); "
+            "B2 comparison-star selection stats are inter-checkpoint deltas, not true per-target walls."
         ),
-        "log_caveat_phase2a": (
-            "Phase 2A ciel status is also sparse (~every 18 of 218); photometry of the "
+        "log_caveat_aperture": (
+            "Aperture-photometry target status is also sparse (~every 18 of 218); photometry of the "
             "49 LC targets is short; Comp QA is timed separately."
         ),
     }
@@ -348,18 +348,18 @@ def main() -> None:
     comp = pd.read_csv(PHOT / "comparison_stars_per_target.csv", dtype={"catalog_id": str, "target_catalog_id": str})
     summary = pd.read_csv(PHOT / "photometry_summary.csv", dtype={"catalog_id": str})
 
-    phase1 = at[at["skip_reason"].astype(str) != "vsx_type_out_of_scope"].copy()
+    comp_selection = at[at["skip_reason"].astype(str) != "vsx_type_out_of_scope"].copy()
     skip_hist = (
-        phase1["skip_reason"].fillna("(empty)").astype(str).value_counts().to_dict()
+        comp_selection["skip_reason"].fillna("(empty)").astype(str).value_counts().to_dict()
     )
     # also zone for empty skip
-    zone_hist = phase1["zone_flag"].fillna("(empty)").astype(str).value_counts().to_dict()
+    zone_hist = comp_selection["zone_flag"].fillna("(empty)").astype(str).value_counts().to_dict()
     lc_files = sorted(LC.glob("lightcurve_*.csv")) if LC.is_dir() else []
     lc_ids = {p.stem.replace("lightcurve_", "") for p in lc_files}
 
-    phase1_ids = set(phase1["catalog_id"].astype(str).str.strip())
+    comp_selection_ids = set(comp_selection["catalog_id"].astype(str).str.strip())
     missing_lc = []
-    for _, row in phase1.iterrows():
+    for _, row in comp_selection.iterrows():
         cid = str(row["catalog_id"]).strip()
         if cid in lc_ids:
             continue
@@ -390,16 +390,16 @@ def main() -> None:
     part_a = {
         "run_sha": RUN_SHA,
         "exit_status": 0,
-        "ended_in_phase": "Phase 2A complete (post Comp QA + trust)",
+        "ended_in_phase": "aperture photometry complete (post Comp QA + trust)",
         "frames_aligned_fits": len(list(PROC.glob("*.fits"))),
         "frames_photometered_proc_csv": len(list(PROC.glob("proc_*.csv"))),
-        "phase1_targets_total": int(len(phase1)),
+        "comp_selection_targets_total": int(len(comp_selection)),
         "lc_files_written": int(len(lc_files)),
         "photometry_targets_completed": int(len(lc_ids)),
-        "skip_reason_histogram_phase1": skip_hist,
-        "zone_flag_histogram_phase1": zone_hist,
+        "skip_reason_histogram_comp_selection": skip_hist,
+        "zone_flag_histogram_comp_selection": zone_hist,
         "gap_97_to_49": {
-            "phase1_n": int(len(phase1)),
+            "comp_selection_n": int(len(comp_selection)),
             "lc_n": int(len(lc_ids)),
             "missing_lc_n": int(len(missing_lc)),
             "missing_reason_histogram": dict(reason_hist),
@@ -412,16 +412,16 @@ def main() -> None:
     part_b = parse_log(LOG)
     # dominance sentences from structure
     part_b["dominance"] = {
-        "phase0": "Log shows brief VSX/active-target selection (~seconds); not resolvable further.",
-        "phase1": (
+        "target_selection": "Log shows brief VSX/active-target selection (~seconds); not resolvable further.",
+        "comp_selection": (
             "Dominated by per-target select_comparison_stars_per_target / "
-            "_accumulate_per_frame_comp_metrics (long gaps between Phase 1 status lines)."
-            if part_b.get("phase1_per_target", {}).get("median_s")
+            "_accumulate_per_frame_comp_metrics (long gaps between comparison-star selection status lines)."
+            if part_b.get("comp_select_per_target", {}).get("median_s")
             else "Log does not resolve sub-step; py-spy earlier showed per-frame comp metrics."
         ),
-        "phase2a": (
+        "aperture_photometry": (
             "Per-target photometry is fast in the log; Comp QA block is a large wall chunk "
-            f"(from last Faza 2A status to Trust flag ~{None})."
+            f"(from last aperture-photometry status to Trust flag ~{None})."
         ),
     }
     # refine Comp QA timing from log events
@@ -439,9 +439,9 @@ def main() -> None:
             t_trust = t
     if t_comp_qa is not None and t_trust is not None:
         part_b["comp_qa_wall_s"] = float(t_trust) - float(t_comp_qa)
-        part_b["dominance"]["phase2a"] = (
+        part_b["dominance"]["aperture_photometry"] = (
             f"Aperture photometry over targets is short in the log; Comp QA dominates "
-            f"late Phase 2A wall ({part_b['comp_qa_wall_s']:.1f} s Comp QA -> Trust)."
+            f"late aperture-photometry wall ({part_b['comp_qa_wall_s']:.1f} s Comp QA -> Trust)."
         )
 
     part_c = empty_dao_rate()

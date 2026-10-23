@@ -81,22 +81,7 @@ def test_t3_unit_decide_raises_order_conflict() -> None:
     hdr["VY_SKYSF"] = True
     hdr["VYSKYORD"] = 1
     with pytest.raises(SkySurfaceOrderConflictError, match="recalibration from raw"):
-        _decide_preprocess_sky_action(hdr, sky_order=2, force_reapply=False)
-
-
-def test_t4_force_reapply_second_subtract(tmp_path: Path) -> None:
-    fp = tmp_path / "light.fits"
-    _write_mono_light(fp)
-    cfg = AppConfig()
-    cfg.preprocess_sky_surface_order = 2
-    _qc_enrich_calibrated_in_place(tmp_path, app_config=cfg)
-    after_first = _read_data(fp)
-    cfg.preprocess_sky_surface_force_reapply = True
-    out = _qc_enrich_calibrated_in_place(tmp_path, app_config=cfg)
-    after_force = _read_data(fp)
-    assert not np.array_equal(after_first, after_force)
-    assert out.get("sky_surface_force_reapply") is True
-    assert out["results"][0].get("sky_surface_force_reapply") is True
+        _decide_preprocess_sky_action(hdr, sky_order=2)
 
 
 def test_t5_legacy_copy_tree_calibrated_no_markers_subtracts(tmp_path: Path) -> None:
@@ -127,7 +112,6 @@ def test_guard_reads_marker_from_frame_being_modified_not_sibling(tmp_path: Path
     row = _qc_enrich_one_frame(
         str(bare),
         sky_order=2,
-        force_reapply=False,
         prefilter_status=None,
         target_ra=None,
         target_dec=None,

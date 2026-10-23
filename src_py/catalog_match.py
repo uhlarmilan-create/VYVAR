@@ -27,7 +27,17 @@ from utils import (
 from masterstar_gaia_accounting import _dao_xy_binned_to_full
 from config import AppConfig
 from infolog import log_event
-from pipeline_constants import LINEARITY_FRAC
+from pipeline_constants import (
+    DAO_FWHM_FALLBACK_PX,
+    EXOPLANET_MATCH_MAX_SEP_ARCSEC,
+    LINEARITY_FRAC,
+    MS_DAO_CENTROID_QA_CAP_PX,
+    MS_DAO_CENTROID_QA_FLOOR_PX,
+    MS_DAO_MATCH_RADIUS_K,
+    MS_DAO_PASS1_DEDUP_PX,
+    MS_DAO_PASS2_SIGMA,
+    MS_GAIA_CENSUS_EDGE_MARGIN_PX,
+)
 from photometry_core import stamp_masterstar_snr_columns
 from pipeline_calibrate import _effective_saturation_limit
 from pipeline_astrometry import _vyvar_df_to_csv
@@ -120,6 +130,7 @@ def detect_stars_and_match_catalog(
     frame_name: str = "",
     dao_fwhm_bypass_header: bool = False,
     measured_saturate_adu: float | None = None,
+    photometric_gain: float | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Detect stars (DAOStarFinder), sky coordinates from WCS, match to the **local Gaia** DB.
 
@@ -188,8 +199,8 @@ def detect_stars_and_match_catalog(
         _fcp.parent.mkdir(parents=True, exist_ok=True)
         _vyvar_df_to_csv(cat_df, _fcp)
         log_event(
-            f"Katalog pola: {int(wpx)}x{int(h)} px, {len(cat_df)} Gaia hviezd v kuzeli r~{float(radius_deg):.2f} deg "
-            f"-> field_catalog_cone.csv (bez orezu)."
+            f"Field catalog: {int(wpx)}x{int(h)} px, {len(cat_df)} Gaia stars in cone r~{float(radius_deg):.2f} deg "
+            f"-> field_catalog_cone.csv (no cropping)."
         )
         try:
             _write_field_catalog_cone_meta(
@@ -201,7 +212,7 @@ def detect_stars_and_match_catalog(
             )
         except Exception:  # noqa: BLE001
             pass
-    # ``vsx_df`` prazdny DataFrame z prefetch = 'uz sme skusali'; doplnaj len ak volajuci nepredal tabulku (``None``).
+    # ``vsx_df`` empty DataFrame from prefetch = 'already tried'; fill in only if the caller passed no table (``None``).
     if vsx_df is None:
         _vx: Path | None = None
         try:
@@ -212,14 +223,7 @@ def detect_stars_and_match_catalog(
             _vx = None
         vsx_df = _query_vsx_local(center=center, radius_deg=radius_deg, vsx_db_path=_vx)
     exo_annotation_active = False
-    exo_max = 3.0
-    try:
-        exo_max = float(cfg.exoplanet_match_max_sep_arcsec)
-        if not math.isfinite(exo_max):
-            exo_max = 3.0
-    except Exception:  # noqa: BLE001
-        exo_max = 3.0
-    exo_max = max(0.5, min(30.0, float(exo_max)))
+    exo_max = EXOPLANET_MATCH_MAX_SEP_ARCSEC
     _exo_path: Path | None = None
     try:
         _exs = str(cfg.objects_db_path or "").strip()
@@ -248,7 +252,7 @@ def detect_stars_and_match_catalog(
     _dao_false: dict[str, Any] = {}
     _dao_flux_noise: float | None = None
     _cfg_df = AppConfig()
-    _fb_c = float(dao_fwhm_px) if dao_fwhm_px is not None else float(_cfg_df.sips_dao_fwhm_px)
+    _fb_c = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
     if dao_fwhm_bypass_header and dao_fwhm_px is not None:
         try:
             _dao_arg = float(dao_fwhm_px)
@@ -334,7 +338,7 @@ def detect_stars_and_match_catalog(
                 pass
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            print(f"WARNING: {_nm} std=0 aj po fallback, preskakujem")
+            print(f"WARNING: {_nm} std=0 even after fallback, skipping")
             return pd.DataFrame(), {
                 "n_detected": 0,
                 "n_detected_dao": 0,
@@ -397,20 +401,10 @@ def detect_stars_and_match_catalog(
             tbl = _AstropyTable(tbl, copy=True)
             tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
         n_pass1_dao = int(len(tbl)) if tbl is not None else 0
-        try:
-            _dedup_px = float(_cfg_df.masterstar_dao_pass1_dedup_px)
-        except (TypeError, ValueError):
-            _dedup_px = 0.75
         if tbl is not None and len(tbl) > 0:
-            tbl = dedup_pass1_spatial(tbl, sep_px=max(0.25, min(2.0, _dedup_px)))
-        try:
-            _sigma_p2_cfg = float(_cfg_df.masterstar_dao_pass2_sigma)
-        except (TypeError, ValueError):
-            _sigma_p2_cfg = 4.0
-        try:
-            _edge_p2 = float(_cfg_df.masterstar_gaia_census_edge_margin_px)
-        except (TypeError, ValueError):
-            _edge_p2 = 10.0
+            tbl = dedup_pass1_spatial(tbl, sep_px=MS_DAO_PASS1_DEDUP_PX)
+        _sigma_p2_cfg = MS_DAO_PASS2_SIGMA
+        _edge_p2 = MS_GAIA_CENSUS_EDGE_MARGIN_PX
         _dao_x_p1 = np.asarray([], dtype=np.float64)
         _dao_y_p1 = np.asarray([], dtype=np.float64)
         if tbl is not None and len(tbl) > 0:
@@ -496,9 +490,9 @@ def detect_stars_and_match_catalog(
             plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj),
             pass1_sigma=float(_thr_sigma),
             pass2_sigma=float(_sigma_p2_cfg),
-            match_k=float(getattr(_cfg_df, "masterstar_dao_match_radius_k", 1.7)),
-            centroid_floor_px=float(getattr(_cfg_df, "masterstar_dao_centroid_qa_floor_px", 1.0)),
-            centroid_cap_px=float(getattr(_cfg_df, "masterstar_dao_centroid_qa_cap_px", 3.0)),
+            match_k=MS_DAO_MATCH_RADIUS_K,
+            centroid_floor_px=MS_DAO_CENTROID_QA_FLOOR_PX,
+            centroid_cap_px=MS_DAO_CENTROID_QA_CAP_PX,
         )
         # Pass-2 seeds: Gaia stars with no pass-1 detection closer than the pass-2 centre tolerance
         # plus the identity radius - nearer, pass-2 only finds that pass-1 detection again
@@ -609,8 +603,8 @@ def detect_stars_and_match_catalog(
     tbl = tbl[::-1]
     n_spatial = int(len(tbl))
     log_event(
-        f"DAO na snimku: raw={n_raw_dao} (po brightest-prefilter max {max(int(max_catalog_rows) * 12, 36_000):d}) -> "
-        f"po priestorovom strope max_n={int(max_catalog_rows)}: {n_spatial} bodov (binning DAO={bfac}x)."
+        f"DAO on frame: raw={n_raw_dao} (after brightest-prefilter max {max(int(max_catalog_rows) * 12, 36_000):d}) -> "
+        f"after spatial cap max_n={int(max_catalog_rows)}: {n_spatial} points (DAO binning={bfac}x)."
     )
     n = n_spatial
     xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
@@ -1124,24 +1118,16 @@ def detect_stars_and_match_catalog(
     else:
         LOGGER.debug("[DAO] catalog_rows not available - Gaia->DAO skip")
     df_out = _proc_rename_det_names_to_catalog_id(df_out)
-    try:
-        _gain_ms = float(getattr(_cfg_df, "gain", 1.0) or 1.0)
-    except (TypeError, ValueError):
-        _gain_ms = 1.0
-    if not math.isfinite(_gain_ms) or _gain_ms <= 0:
-        _gain_ms = 1.0
-    try:
-        _ap_fac = float(getattr(_cfg_df, "aperture_fwhm_factor", 1.9) or 1.9)
-    except (TypeError, ValueError):
-        _ap_fac = 1.9
-    try:
-        _ann_in = float(getattr(_cfg_df, "annulus_inner_fwhm", 4.75) or 4.75)
-    except (TypeError, ValueError):
-        _ann_in = 4.75
-    try:
-        _ann_out = float(getattr(_cfg_df, "annulus_outer_fwhm", 9.0) or 9.0)
-    except (TypeError, ValueError):
-        _ann_out = 9.0
+    # GAIN-ONE-2026-10: the run's gain (rig_photometry.photometric_gain_read_noise), not the raw
+    # config default 1.0; config aperture / annulus without divergent fallbacks
+    _gain_ms = float(photometric_gain) if photometric_gain is not None else float("nan")
+    if not (math.isfinite(_gain_ms) and _gain_ms > 0):
+        from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+
+        _gain_ms = float(photometric_gain_read_noise(hdr, _cfg_df, None).gain)
+    _ap_fac = float(_cfg_df.aperture_fwhm_factor)
+    _ann_in = float(_cfg_df.annulus_inner_fwhm)
+    _ann_out = float(_cfg_df.annulus_outer_fwhm)
     df_out = stamp_masterstar_snr_columns(
         df_out,
         image=arr,

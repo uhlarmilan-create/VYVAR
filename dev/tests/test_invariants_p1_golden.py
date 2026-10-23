@@ -158,7 +158,7 @@ def _p1_ui_chain(mini: Path, *, output_dir: Path | None = None) -> Path:
                  SKIPPED -- proc products frozen from parent stride.
       align/MS   app.py:538  _vyvar_execute_platesolve_pending
                  SKIPPED -- MASTERSTAR + per-frame catalogs frozen.
-      phase0/1/2a app.py:549  find_photometry_setups
+      target_selection/1/2a app.py:549  find_photometry_setups
                  app.py:594  run_full_photometry_pipeline
                  EXECUTED below (UI path discovery + photometry call).
 

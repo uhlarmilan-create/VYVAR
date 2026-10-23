@@ -276,7 +276,7 @@ def _select(key: str, cid: str | None, sel_key: str) -> None:
 
 
 def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
-    from hrd_analysis import HRD_EMPTY_FIELD_MSG, _resolve_masterstar_fits_path, hrd_parallax_params_from_cfg  # noqa: PLC0415
+    from hrd_analysis import HRD_EMPTY_FIELD_MSG, HRD_PARALLAX_MIN_MAS, HRD_PARALLAX_SNR_MIN, _resolve_masterstar_fits_path  # noqa: PLC0415
     from platesolve_ui_paths import masterstar_fwhm_px  # noqa: PLC0415
 
     phot = Path(photometry_dir)
@@ -289,7 +289,7 @@ def render_hrd_tab(photometry_dir: Path, cfg: "AppConfig | None") -> None:
     if not gdb.is_file():
         st.warning("Set **Gaia DB path** in Settings (`gaia_db_path`): without it there is no parallax, Teff or log g.")
         return
-    pmin, psnr = hrd_parallax_params_from_cfg(cfg)
+    pmin, psnr = HRD_PARALLAX_MIN_MAS, HRD_PARALLAX_SNR_MIN
     with st.spinner("Loading the HR diagram..."):
         data = _hrd_data(str(phot), str(gdb), float(pmin), float(psnr),
                          _stamp(ms_csv, gdb, ps / "_hrd_cache" / "hrd_enrich.json", ps / "variable_targets.csv", phot / "photometry_summary.csv"), cfg)

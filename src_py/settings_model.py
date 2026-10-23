@@ -177,16 +177,10 @@ def cross_check(values: dict[str, Any]) -> list[str]:
             errs.append("Comparison stars: 'Most comparison stars' must be at least 'Fewest comparison stars'.")
         if g("comp_trust_min_comps") is not None and int(g("comp_trust_min_comps")) > int(g("phase01_comparison_n_comp_max")):
             errs.append("Trust: 'Comparison stars for green' cannot exceed 'Most comparison stars'.")
-    if g("lc_quality_short_min_frames") is not None and g("lc_quality_min_frames") is not None:
-        if int(g("lc_quality_short_min_frames")) > int(g("lc_quality_min_frames")):
-            errs.append("Trust: 'Short series minimum frames' cannot exceed 'Light curve minimum frames'.")
     tiers = g("comp_color_tiers")
     if tiers and g("comp_max_delta_bprp") is not None:
         if float(tiers[-1].get("bprp", 0.0)) > float(g("comp_max_delta_bprp")):
             errs.append("Comparison stars: colour class 3 cannot exceed 'Largest colour difference'.")
-    if g("sparse_trust_T_green") is not None and g("sparse_trust_T_red") is not None:
-        if float(g("sparse_trust_T_green")) >= float(g("sparse_trust_T_red")):
-            errs.append("Trust: the sparse field green limit must be below the red limit.")
     return errs
 
 

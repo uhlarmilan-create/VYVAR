@@ -155,17 +155,8 @@ def _synthetic_draft(tmp_path: Path) -> tuple[Path, Path, str]:
         ),
         encoding="ascii",
     )
-    phot.joinpath("gain_photon_transfer.json").write_text(
-        json.dumps(
-            {
-                "authority": {
-                    "g_pt": 0.63707,
-                    "source": "g_pt",
-                    "value_e_per_adu_container": 0.63707,
-                }
-            }
-        ),
-        encoding="ascii",
+    phot.joinpath("aperture_per_target.json").write_text(
+        json.dumps({"gain": 0.63707, "read_noise": 3.0, "targets": {}}), encoding="ascii"
     )
     target = "1001"
     comps = ["2001", "2002", "2003"]
@@ -435,3 +426,22 @@ def test_target_epoch_off_the_aligned_footprint_is_dropped_with_reason(tmp_path:
     assert pd.isna(lc.loc[0, "psf_delta_mag"])
     assert str(lc.loc[0, "psf_epoch_drop_reason"]) == "target_outside_footprint"
     assert "# psf_lc_n_epochs_target_outside_footprint=1" in path.read_text(encoding="utf-8")
+
+
+def test_psf_lc_applies_the_aperture_k2_term(tmp_path: Path) -> None:
+    """EPSF-K2-2026-10: the second-order extinction term of the aperture light curve (k'' x colour
+    difference x airmass, ``k2_delta_mag``) is subtracted from the PSF light curve epoch by epoch."""
+    ps, frames, target = _synthetic_draft(tmp_path)
+    lc = ps / "photometry" / "lightcurves" / f"lightcurve_{target}.csv"
+    base = write_internal_psf_lightcurves(platesolve_dir=ps, frames_root=frames, target_ids=[target])
+    d0 = pd.read_csv(base["written"][0], comment="#")["psf_delta_mag"].to_numpy()
+    assert "# psf_lc_k2_applied=false" in Path(base["written"][0]).read_text(encoding="utf-8")
+    ap = pd.read_csv(lc)
+    ap["k2_delta_mag"] = [-0.010, -0.020, -0.030]
+    ap.to_csv(lc, index=False)
+    out = write_internal_psf_lightcurves(platesolve_dir=ps, frames_root=frames, target_ids=[target])
+    d1 = pd.read_csv(out["written"][0], comment="#")["psf_delta_mag"].to_numpy()
+    ok = np.isfinite(d0)
+    assert ok.any()
+    assert np.allclose(d1[ok] - d0[ok], np.array([0.010, 0.020, 0.030])[ok], atol=2e-6)
+    assert "# psf_lc_k2_applied=true" in Path(out["written"][0]).read_text(encoding="utf-8")

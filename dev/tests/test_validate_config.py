@@ -50,7 +50,7 @@ def test_out_of_range_value_flagged() -> None:
 
 
 def test_type_mismatch_flagged() -> None:
-    errs = _errors('{"comparison_stars_pool_n": "seven"}')
+    errs = _errors('{"masterstar_best_of_n": "seven"}')
     assert any("expected int" in e for e in errs)
 
 
@@ -66,7 +66,7 @@ def test_main_returns_nonzero_on_broken_fixture(tmp_path, capsys) -> None:
         "{\n"
         '  "alignment_max_star": 5,\n'   # unknown (typo)
         '  "alignment_max_stars": 99999,\n'  # out of range
-        '  "comparison_stars_pool_n": "seven"\n'  # type mismatch
+        '  "masterstar_best_of_n": "seven"\n'  # type mismatch
         "}\n",
         encoding="utf-8",
     )

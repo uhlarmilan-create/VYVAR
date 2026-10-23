@@ -41,21 +41,12 @@ def validate_explicit_keys(registry: dict[str, dict]) -> None:
 # scope_group: a=genuine per-rig physics, b=unit artefact, c=operational tuning, n/a=non-rig
 EXPLICIT: dict[str, ScopeResult] = {
     # --- resolved / fits_dynamic ---
-    "gain": ScopeResult("rig", "rig", "a", "high", "Equipment-intrinsic e-/ADU (param_resolver)."),
-    "read_noise": ScopeResult("rig", "rig", "a", "high", "Equipment-intrinsic e- (param_resolver)."),
-    "plate_scale_arcsec_per_px": ScopeResult("session", "frame", "n/a", "high", "Plate scale from WCS per exposure."),
-    "phase01_plate_scale_arcsec_per_px": ScopeResult("session", "frame", "n/a", "high", "Phase-01 plate scale from WCS."),
-    "plate_solve_fov_deg": ScopeResult("rig", "rig", "a", "high", "Blind-solve FOV seed is telescope+camera property."),
-    "frame_height_px": ScopeResult("session", "frame", "n/a", "high", "WAVE-B: measured from FITS NAXIS2 per frame; not stored per rig."),
-    "frame_width_px": ScopeResult("session", "frame", "n/a", "high", "WAVE-B: measured from FITS NAXIS1 per frame; not stored per rig."),
     "qc_preprocess_workers": ScopeResult("universal", "none", "n/a", "high", "Internal plumbing worker cap."),
     # --- FWHM-normalised universal ---
     "annulus_inner_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM multiple."),
     "annulus_outer_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM multiple."),
     "aperture_fwhm_factor": ScopeResult("universal", "none", "n/a", "high", "FWHM multiple."),
     "auto_fwhm_k_factor": ScopeResult("universal", "none", "n/a", "high", "FWHM scale factor."),
-    "dao_centroid_max_shift_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM fraction."),
-    "masterstar_use_best_frame_fwhm": ScopeResult("universal", "none", "n/a", "high", "Boolean policy."),
     # --- C'-3 reclassifications ---
     "k2_defaults_bprp": ScopeResult(
         "rig", "rig_band", "a", "low",
@@ -65,23 +56,11 @@ EXPLICIT: dict[str, ScopeResult] = {
         "rig", "rig_band", "a", "high",
         "Color-term transform is filter x detector response, not observing location.",
     ),
-    "phase01_comparison_min_dist_arcsec": ScopeResult(
-        "universal", "none", "n/a", "high",
-        "Consumed directly in arcsec (photometry_core.py:14798); arcsec is rig-independent.",
-    ),
-    "gs11_dilution_aperture_arcsec": ScopeResult(
-        "universal", "none", "n/a", "low",
-        "Angular aperture on sky; 0 derives from photometric aperture -- not rig-scoped when expressed in arcsec.",
-    ),
     # --- group (a) rig physics ---
     "calibration_master_ccd_temp_tolerance_c": ScopeResult("rig", "rig", "a", "high", "CCD temp tolerance for master match."),
     "osc_channel_binning": ScopeResult("rig", "rig", "a", "high", "Defines OSC sampling (2 x N superpixel); input to rig_sampling."),
     # --- group (b) pixel parameters (CFG-UNITS-2026-10: one key per meaning, pixels) ---
-    "phase01_chip_interior_margin_px": ScopeResult("rig", "rig_sampling", "b", "low", "PHASE0-BORDER-MARGIN-GEOMETRY: derive from aperture+annulus FWHM."),
-    "phase01_comparison_isolation_radius_px": ScopeResult("rig", "rig_sampling", "b", "low", "Pixel radius of the comparison contamination index."),
-    "sips_dao_fwhm_px": ScopeResult("rig", "rig_sampling", "b", "low", "Initial DAO FWHM guess in pixels (before FWHM is measured)."),
     # --- group (c) operational tuning ---
-    "alignment_max_control_points": ScopeResult("rig", "rig_sampling", "c", "high", "chi/h Persei tuning; performance not science correctness."),
     "masterdark_validity_days": ScopeResult("rig", "rig", "c", "low", "Staleness warning threshold; detector storage habit."),
     "masterflat_validity_days": ScopeResult("rig", "rig", "c", "low", "Staleness warning threshold; optics handling."),
     "detection_threshold_sigma": ScopeResult(
@@ -97,11 +76,6 @@ EXPLICIT: dict[str, ScopeResult] = {
     "phase01_comparison_n_comp_min": ScopeResult("universal", "none", "n/a", "high", "Minimum comp count."),
     # --- keys promoted from mechanical low to explicit ---
     "comp_color_tiers": ScopeResult("universal", "none", "n/a", "high", "Tier table structure."),
-    "comp_contamination_penalty_k": ScopeResult("universal", "none", "n/a", "high", "Dimensionless penalty weight."),
-    "comp_select_rms_floor": ScopeResult("universal", "none", "n/a", "high", "mmag RMS floor."),
-    "comp_slope_significance_k": ScopeResult("universal", "none", "n/a", "high", "Sigma multiplier."),
-    "err_empty_apertures_min": ScopeResult("universal", "none", "n/a", "high", "Integer count."),
-    "err_empty_apertures_n": ScopeResult("universal", "none", "n/a", "high", "Integer count."),
     "masterstar_best_of_n": ScopeResult("universal", "none", "n/a", "high", "Integer frame count."),
     "vsx_out_of_scope_types": ScopeResult("universal", "none", "n/a", "high", "VSX type exclusion list."),
 }
@@ -158,10 +132,6 @@ def _classify_mechanical(key: str, entry: dict) -> ScopeResult:
     if owner == "db_static":
         return ScopeResult("site", "site", "n/a", "high", "DB site fact.")
     if owner == "fits_dynamic":
-        if key in ("gain", "read_noise"):
-            return ScopeResult("rig", "rig", "a", "high", "Equipment-intrinsic despite fits_dynamic owner.")
-        if key == "plate_solve_fov_deg":
-            return ScopeResult("rig", "rig", "a", "high", "FOV seed is rig property.")
         return ScopeResult("session", "frame", "n/a", "low", "fits_dynamic without explicit override.")
     if kind == "resolved" and key not in EXPLICIT:
         return ScopeResult("session", "frame", "n/a", "low", "kind=resolved fallback.")

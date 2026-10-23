@@ -111,8 +111,8 @@ def test_proc_frame_store_excludes_masterstar() -> None:
         assert not any(is_masterstar_proc_name(k) for k in store.keys())
 
 
-def test_phase2a_epoch_set_excludes_masterstar() -> None:
-    """Mirror photometry_core phase2a csv_files assembly on a synthetic proc dir."""
+def test_aperture_epoch_set_excludes_masterstar() -> None:
+    """Mirror photometry_core aperture_photometry csv_files assembly on a synthetic proc dir."""
     with tempfile.TemporaryDirectory() as tmpdir:
         p = Path(tmpdir)
         n_science = 4

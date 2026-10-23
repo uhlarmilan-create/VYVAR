@@ -214,7 +214,7 @@ def _gaia_link(cid: str) -> str:
 
 
 def _tier_text(raw: str) -> str:
-    """Colour class of a comparison star as stored by Phase 1 ('1.0', 'TIER2_...') -> '1', '2'."""
+    """Colour class of a comparison star as stored by comparison-star selection ('1.0', 'TIER2_...') -> '1', '2'."""
     s = str(raw or "").strip()
     if not s:
         return "-"
@@ -252,7 +252,7 @@ def _cutout_png(pages: "TargetPages", pg: dict[str, Any]) -> Path | None:
 
     out = pages.photometry_dir / "_report_cache" / f"m3_cut_{pg['cid']}.png"
     # OUTPUT-REVIEW-2026-10 step 7: reuse only when newer than what it draws (the light curve and the
-    # aperture choice of the last Phase 2A); otherwise draw it again
+    # aperture choice of the last aperture photometry run); otherwise draw it again
     _src = [pages.lc_dir / f"lightcurve_{pg['cid']}.csv", pages.photometry_dir / "aperture_per_target.json"]
     _src_mt = max((p.stat().st_mtime for p in _src if p.is_file()), default=0.0)
     if out.is_file() and out.stat().st_mtime >= _src_mt:
@@ -323,7 +323,7 @@ def render_aperture_photometry(
 
     c_info, c_setup, c_pdf = st.columns([3, 1.4, 0.8], vertical_alignment="bottom")
     with c_setup:
-        setup = st.selectbox("Observation setup", list(setups), format_func=setup_label, key="phase2a_setup_select")
+        setup = st.selectbox("Observation setup", list(setups), format_func=setup_label, key="aperture_setup_select")
     ps_dir = Path(setups[setup]["obs_group_dir"])
     summary_csv = Path(setups[setup]["photometry_dir"]) / "photometry_summary.csv"
     pages = _group_pages(str(ps_dir), summary_csv.stat().st_mtime)
@@ -381,8 +381,8 @@ def render_aperture_photometry(
         with left:
             t1, t2, t3 = st.columns(3)
             show_am = t1.toggle("Show airmass", value=True, key="toggle_show_airmass")
-            show_fl = t2.toggle("Show flagged points", value=True, key="phase2a_show_outliers")
-            all_setups = t3.toggle("All setups in one chart", value=False, key="phase2a_show_all_filters")
+            show_fl = t2.toggle("Show flagged points", value=True, key="aperture_show_outliers")
+            all_setups = t3.toggle("All setups in one chart", value=False, key="aperture_show_all_filters")
             fig = _all_setups_figure(setups, cid) if all_setups else None
             if fig is None:
                 fig = _lc_figure(pages, pg, show_airmass=show_am, show_flagged=show_fl)
@@ -402,7 +402,7 @@ def render_aperture_photometry(
         st.markdown("#### Comparison stars")
         if pg["comp_rows"]:
             st.markdown(_comp_table_html(pg), unsafe_allow_html=True)
-            st.caption((m3.COMP_FOOT + "  tier = colour class of the comparison star (Phase 1).").replace("*", "\\*"))
+            st.caption((m3.COMP_FOOT + "  tier = colour class of the comparison star (comparison-star selection).").replace("*", "\\*"))
         else:
             st.info("Comparison star table not available.")
         if pg["note_text"]:

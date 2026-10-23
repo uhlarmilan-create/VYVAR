@@ -1,4 +1,4 @@
-"""Resume Phase 2A only for draft 514 after A1/A2 fixes (DRAFT-514-TRIAGE)."""
+"""Resume aperture photometry only for draft 514 after A1/A2 fixes (DRAFT-514-TRIAGE)."""
 from __future__ import annotations
 
 import sys
@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "src_py"))
 
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 
 
 def main() -> None:
@@ -25,7 +25,7 @@ def main() -> None:
     def _prog(msg: str) -> None:
         print(f"[{time.perf_counter()-t0:7.1f}s] {msg}", flush=True)
 
-    result = run_phase2a(
+    result = run_aperture_photometry(
         masterstar_fits_path=og / "MASTERSTAR.fits",
         active_targets_csv=phot / "active_targets.csv",
         comparison_stars_csv=phot / "comparison_stars_per_target.csv",

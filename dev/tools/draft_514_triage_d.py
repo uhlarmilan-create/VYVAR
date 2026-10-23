@@ -128,11 +128,11 @@ def main() -> None:
             "r_over_fwhm": r_over_fwhm,
             "gaussian_enclosed_flux_fraction": ee,
             "median_fwhm_estimate_px": med_fwhm,
-            "phase2a_fwhm_px_from_infolog": 3.301,
+            "aperture_fwhm_px_from_infolog": 3.301,
             "auto_fwhm_median_from_task": 5.311,
             "pipeline_meta_fwhm": meta.get("fwhm_px") or meta.get("fwhm") or meta.get("resolved_facts", {}).get("fwhm_px"),
             "note": (
-                "Three FWHM values disagree. Production aperture uses Phase 2A "
+                "Three FWHM values disagree. Production aperture uses the aperture-photometry "
                 "resolved fwhm_px (infolog 3.301) times aperture_fwhm_factor; "
                 "per-star fwhm_estimate_px is a separate moment estimate."
             ),

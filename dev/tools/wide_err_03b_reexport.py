@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WIDE-ERR-03B B3: Phase 2A re-export draft 515; assert mag byte-identity; BO/FW err table."""
+"""WIDE-ERR-03B B3: aperture photometry re-export draft 515; assert mag byte-identity; BO/FW err table."""
 from __future__ import annotations
 
 import json
@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "src_py"))
 from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from invariants_runtime import STAGE_ORDER, load_pipeline_meta, save_pipeline_meta  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 from ui_aperture_photometry import _load_fwhm  # noqa: E402
 
 DRAFT_ID = 515
@@ -120,10 +120,10 @@ def main() -> int:
     if hasattr(cfg, "export_err_mode"):
         cfg.export_err_mode = "calibrated"
     db = VyvarDatabase(Path(cfg.database_path))
-    # Allow phase2a re-stamp after a prior postprocess stamp (INV-DAG-01).
+    # Allow aperture_photometry re-stamp after a prior postprocess stamp (INV-DAG-01).
     meta = load_pipeline_meta(PHOT)
     stages = meta.get("stages") if isinstance(meta.get("stages"), list) else []
-    p2_seq = STAGE_ORDER.index("phase2a")
+    p2_seq = STAGE_ORDER.index("aperture_photometry")
     meta["stages"] = [
         s
         for s in stages
@@ -131,11 +131,11 @@ def main() -> int:
         and STAGE_ORDER.index(str(s.get("name"))) < p2_seq
     ]
     save_pipeline_meta(PHOT, meta)
-    print(f"truncated DAG stages after phase01; remaining={len(meta['stages'])}", flush=True)
+    print(f"truncated DAG stages after target_comp_selection; remaining={len(meta['stages'])}", flush=True)
 
     fw = float(_load_fwhm(PS / "MASTERSTAR.fits"))
     t0 = time.time()
-    run_phase2a(
+    run_aperture_photometry(
         masterstar_fits_path=PS / "MASTERSTAR.fits",
         active_targets_csv=PHOT / "active_targets.csv",
         comparison_stars_csv=PHOT / "comparison_stars_per_target.csv",
@@ -149,7 +149,7 @@ def main() -> int:
         progress_cb=lambda m: print(m, flush=True),
     )
     elapsed = time.time() - t0
-    print(f"phase2a done in {elapsed:.1f}s", flush=True)
+    print(f"aperture_photometry done in {elapsed:.1f}s", flush=True)
 
     after_bo = _median_err(LC / f"lightcurve_{BO}.csv")
     after_fw = _median_err(LC / f"lightcurve_{FW}.csv")

@@ -21,7 +21,7 @@ def apply_comp_w_rel_for_display(
 ) -> pd.DataFrame:
     """Add ``w_rel`` = comp_weight / max(comp_weight) over **non-excluded** comps only.
 
-    Phase-2A ``excluded`` stars remain in the table for transparency but get ``w_rel=0``.
+    Aperture-photometry ``excluded`` stars remain in the table for transparency but get ``w_rel=0``.
     """
     df = comp_df.copy()
     if df.empty or "comp_weight" not in df.columns:

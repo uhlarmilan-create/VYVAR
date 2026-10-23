@@ -19,7 +19,7 @@ from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from err_calibration import ERR_CALIB_SIDECAR, SmoothCalibration, write_sidecar  # noqa: E402
 from invariants_runtime import STAGE_ORDER, load_pipeline_meta, save_pipeline_meta  # noqa: E402
-from photometry_core import run_phase2a  # noqa: E402
+from photometry_core import run_aperture_photometry  # noqa: E402
 from ui_aperture_photometry import _load_fwhm  # noqa: E402
 
 RUN_SHA = "da9cce4a5edd1392b8ba842d3c8488589b9d0ac9"
@@ -148,7 +148,7 @@ def reexport() -> dict:
     db = VyvarDatabase(Path(cfg.database_path))
     meta = load_pipeline_meta(PHOT)
     stages = meta.get("stages") if isinstance(meta.get("stages"), list) else []
-    p2_seq = STAGE_ORDER.index("phase2a")
+    p2_seq = STAGE_ORDER.index("aperture_photometry")
     meta["stages"] = [
         s
         for s in stages
@@ -160,7 +160,7 @@ def reexport() -> dict:
 
     fw = float(_load_fwhm(PS / "MASTERSTAR.fits"))
     t0 = time.time()
-    run_phase2a(
+    run_aperture_photometry(
         masterstar_fits_path=PS / "MASTERSTAR.fits",
         active_targets_csv=PHOT / "active_targets.csv",
         comparison_stars_csv=PHOT / "comparison_stars_per_target.csv",
@@ -371,7 +371,7 @@ def _measure_even_rows(w03c):
             ens_ids=ens,
             mag_by=mag_by,
             cat_g=cat_g,
-            rms_phase1=rms,
+            rms_comp_selection=rms,
             self_exclude=(cid in ens),
             focus_id=cid,
         )

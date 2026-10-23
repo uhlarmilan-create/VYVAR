@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
-from cal_stage import compute_skysf_apply_stage, skysf_stage_token, stamp_cal_stage_headers, verify_fits_datasum
+from cal_stage import stamp_cal_stage_headers, verify_fits_datasum
 from pipeline import _calibrate_one_light_disk, _qc_enrich_one_frame
 
 
@@ -27,18 +27,6 @@ def test_stamp_datasum_verifies(tmp_path: Path) -> None:
     assert verify_fits_datasum(data, ds)
 
 
-def test_force_reapply_stage_token_distinguishable() -> None:
-    hdr = fits.Header()
-    hdr["VY_SKYSF"] = True
-    hdr["VYSKYORD"] = 2
-    hdr["VY_CALSTAGE"] = ("SKYSF_2", "")
-    hdr["VY_SKYPASS"] = (1, "")
-    token, pass_n = compute_skysf_apply_stage(hdr, sky_order=2, force_reapply=True)
-    assert token == "SKYSF_2_R2"
-    assert pass_n == 2
-    assert token != skysf_stage_token(order=2, pass_n=1)
-
-
 def test_qc_enrich_stamps_stage_on_apply(tmp_path: Path) -> None:
     fp = tmp_path / "light.fits"
     yy, xx = np.mgrid[0:32, 0:32]
@@ -47,7 +35,6 @@ def test_qc_enrich_stamps_stage_on_apply(tmp_path: Path) -> None:
     row = _qc_enrich_one_frame(
         str(fp),
         sky_order=2,
-        force_reapply=False,
         prefilter_status=None,
         target_ra=None,
         target_dec=None,
@@ -58,35 +45,6 @@ def test_qc_enrich_stamps_stage_on_apply(tmp_path: Path) -> None:
         hdr = hdul[0].header
         assert hdr["VY_CALSTAGE"] == "SKYSF_2"
         assert verify_fits_datasum(hdul[0].data, hdr["VY_CALDATASUM"])
-
-
-def test_force_reapply_writes_r2_stage(tmp_path: Path) -> None:
-    fp = tmp_path / "light.fits"
-    yy, xx = np.mgrid[0:32, 0:32]
-    data = (1200.0 + 0.1 * xx + 0.05 * yy).astype(np.float32)
-    _write_light(fp, data, VY_QCBG=1200.0, VY_DKRSMP="SUM")
-    _qc_enrich_one_frame(
-        str(fp),
-        sky_order=2,
-        force_reapply=False,
-        prefilter_status=None,
-        target_ra=None,
-        target_dec=None,
-        inject_pointing_only_if_missing=True,
-    )
-    row2 = _qc_enrich_one_frame(
-        str(fp),
-        sky_order=2,
-        force_reapply=True,
-        prefilter_status=None,
-        target_ra=None,
-        target_dec=None,
-        inject_pointing_only_if_missing=True,
-    )
-    assert row2.get("cal_stage") == "SKYSF_2_R2"
-    with fits.open(fp) as hdul:
-        assert hdul[0].header["VY_CALSTAGE"] == "SKYSF_2_R2"
-        assert int(hdul[0].header["VY_SKYPASS"]) == 2
 
 
 def test_calibrate_stamps_pure(tmp_path: Path) -> None:

@@ -14,8 +14,8 @@ EXCLUDE_FILES: set[str] = set()
 SCIENCE_MODULES = {
     "pipeline.py",
     "photometry_core.py",
-    "photometry_phase2a.py",
-    "photometry_phase1.py",
+    "aperture_photometry.py",
+    "photometry_comp_selection.py",
     "photometry.py",
     "comp_selection_per_target.py",
     "comp_qa_core.py",

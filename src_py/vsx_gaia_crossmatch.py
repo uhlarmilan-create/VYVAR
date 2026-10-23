@@ -4,7 +4,7 @@ Density-aware VSX -> Gaia DR3 cross-match (Marrese et al. 2017/2019; Sutherland 
 Design A: VSX is matched against the deep local Gaia DR3 catalogue (not masterstars).
 True-match separations are modelled as a two-component Rayleigh mixture (heterogeneous VSX).
 Acceptance radius r_max follows from the 1% contamination budget; mixture reliability ranks
-multi-candidate cases only. Phase 0 separately tests DAO detection membership.
+multi-candidate cases only. Target selection separately tests DAO detection membership.
 """
 
 from __future__ import annotations

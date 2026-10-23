@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any
 
 import numpy as np
 from scipy import stats
@@ -490,16 +489,6 @@ def compute_sparse_trust_stats(
         trust_R_detrend=ratio_dt.R,
         trust_R_detrend_lo=ratio_dt.R_lo,
         trust_R_detrend_hi=ratio_dt.R_hi,
-    )
-
-
-def sparse_trust_config_from_app(cfg: Any | None) -> SparseTrustConfig:
-    if cfg is None:
-        return SparseTrustConfig()
-    return SparseTrustConfig(
-        T_green=float(getattr(cfg, "sparse_trust_T_green", 1.5) or 1.5),
-        T_red=float(getattr(cfg, "sparse_trust_T_red", 4.0) or 4.0),
-        X2_RED=float(getattr(cfg, "sparse_trust_X2_RED", 0.0004) or 0.0004),
     )
 
 

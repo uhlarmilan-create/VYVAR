@@ -103,7 +103,6 @@ def test_complete_config_snapshot_covers_all_public_fields() -> None:
     # backfilled derived fields are present and JSON-safe (Path -> str)
     assert "project_root" in snap and isinstance(snap["project_root"], str)
     assert "qc_preprocess_workers" in snap
-    assert "plate_solve_fov_deg" in snap
     json.dumps(snap)  # must be JSON-serializable (would raise on a stray Path)
 
 
@@ -165,7 +164,7 @@ def test_resolved_facts_empty_meta_does_not_crash() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# provenance writer: _build_phase2a_resolved_facts (metadata capture)          #
+# provenance writer: _build_aperture_resolved_facts (metadata capture)          #
 # --------------------------------------------------------------------------- #
 class _FakeResolved:
     def __init__(self, value, source, key, ok):  # noqa: ANN001
@@ -188,7 +187,7 @@ class _FakeCfg:
 def test_build_resolved_facts_writer_captures_sources() -> None:
     import photometry_core as pc
 
-    facts = pc._build_phase2a_resolved_facts(
+    facts = pc._build_aperture_resolved_facts(
         cfg=_FakeCfg(),
         gain_res=_FakeResolved(2.0, "header", "EGAIN", True),
         rn_res=_FakeResolved(8.5, "db", None, True),
@@ -216,7 +215,7 @@ def test_build_resolved_facts_writer_captures_sources() -> None:
 def test_build_resolved_facts_writer_fallbacks_when_unresolved() -> None:
     import photometry_core as pc
 
-    facts = pc._build_phase2a_resolved_facts(
+    facts = pc._build_aperture_resolved_facts(
         cfg=_FakeCfg(),
         gain_res=_FakeResolved(None, None, None, False),
         rn_res=_FakeResolved(None, None, None, False),

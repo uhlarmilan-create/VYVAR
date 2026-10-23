@@ -12,6 +12,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from pipeline_constants import (
+    MS_FORCED_SEED_CENTROID_MAX_PX,
+    MS_FORCED_SEED_SNR_MIN,
+    MS_GAIA_CENSUS_EDGE_MARGIN_PX,
+    MS_LOCK_LEFTOVER_RADIUS_PX,
+    MS_LOCK_PAIR_TOL_PX,
+)
 from photutils.aperture import CircularAnnulus, CircularAperture
 from photutils.detection import DAOStarFinder
 from photutils.utils.exceptions import NoDetectionsWarning
@@ -223,6 +231,26 @@ def _dao_pass2_annulus_stats(data0: np.ndarray, cx: float, cy: float) -> tuple[f
     return float(md), float(sd)
 
 
+#: SPEED-2026-10: one DAOStarFinder (kernel) per pass-2 FWHM, reused for every cutout.
+_PASS2_FINDERS: dict[float, DAOStarFinder] = {}
+
+
+def _pass2_catalog(cutout: np.ndarray, fwhm: float, threshold: float) -> Any:
+    """``DAOStarFinder(fwhm, threshold)(cutout)`` without the output table: the same catalogue
+    (photutils ``find_stars`` = raw catalogue -> ``apply_all_filters`` -> ``to_table``; the table
+    only copies the columns). The finder of a FWHM is built once (its kernel) and the per-cutout
+    threshold is set as its __init__ sets it. 67k cutouts per night: the table build and the
+    kernel were 45 % of the pass-2 time."""
+    f = _PASS2_FINDERS.get(fwhm)
+    if f is None:
+        f = DAOStarFinder(fwhm=fwhm, threshold=1.0, n_brightest=None, **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER)
+        _PASS2_FINDERS[fwhm] = f
+    f.threshold = threshold
+    f.threshold_eff = threshold * f.kernel.rel_err if f.scale_threshold else threshold
+    cat = f._get_raw_catalog(cutout)
+    return None if cat is None else cat.apply_all_filters()
+
+
 def dao_pass2_try_at_position(
     data0: np.ndarray,
     x0: float,
@@ -267,21 +295,15 @@ def dao_pass2_try_at_position(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", NoDetectionsWarning)
-            finder2 = DAOStarFinder(
-                fwhm=float(fwhm_cut),
-                threshold=float(thr2),
-                n_brightest=None,
-                **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
-            )
-            tloc = finder2(cutout)
+            cat = _pass2_catalog(cutout, float(fwhm_cut), float(thr2))
     except Exception:  # noqa: BLE001
         out["reason"] = "finder_error"
         return out
-    if tloc is None or len(tloc) == 0:
+    if cat is None or len(cat) == 0:
         out["reason"] = "no_detection"
         return out
-    xc = np.asarray(tloc["x_centroid"], dtype=np.float64)
-    yc = np.asarray(tloc["y_centroid"], dtype=np.float64)
+    xc = np.asarray(cat.x_centroid, dtype=np.float64)
+    yc = np.asarray(cat.y_centroid, dtype=np.float64)
     x_full = xlo + xc
     y_full = ylo + yc
     dctr = np.hypot(x_full - x0, y_full - y0)
@@ -301,10 +323,8 @@ def dao_pass2_try_at_position(
         if not point_source_shape_ok(q, psnr, p.shape_q_floor):
             out["reason"] = "shape_not_point_source"
             return out
-    flux_np = np.asarray(tloc["flux"], dtype=np.float64)
-    peak_np = (
-        np.asarray(tloc["peak"], dtype=np.float64) if "peak" in tloc.colnames else flux_np
-    )
+    flux_np = np.asarray(cat.flux, dtype=np.float64)
+    peak_np = np.asarray(cat.peak, dtype=np.float64)
     out["flux"] = float(flux_np[j])
     out["peak"] = float(peak_np[j])
     out["accepted"] = True
@@ -1135,7 +1155,6 @@ def enrich_masterstar_gaia_complete(
     *,
     data0: np.ndarray,
     gaia_on_chip: pd.DataFrame,
-    cfg: Any,
     wpx: int,
     h: int,
     fwhm_px: float,
@@ -1154,9 +1173,6 @@ def enrich_masterstar_gaia_complete(
     pre-expanded from the catalog; do not rewrite catalog_id via leftover promotion and
     do not append duplicate FORCED_SEED membership rows (census seed probe still runs).
     """
-    from config import AppConfig
-
-    _cfg = cfg if isinstance(cfg, AppConfig) else AppConfig()
     meta: dict[str, Any] = {
         "n_forced_seed": 0,
         "n_leftover_promotions": 0,
@@ -1206,14 +1222,14 @@ def enrich_masterstar_gaia_complete(
         else float(
             (tolerance_overrides or {}).get(
                 "lock_leftover_radius_px",
-                getattr(_cfg, "masterstar_lock_leftover_radius_px", 3.0),
+                MS_LOCK_LEFTOVER_RADIUS_PX,
             )
         )
     )
     lock_tol = float(
         (tolerance_overrides or {}).get(
             "lock_pair_tol_px",
-            getattr(_cfg, "masterstar_lock_pair_tol_px", 3.0),
+            MS_LOCK_PAIR_TOL_PX,
         )
     )
     # D4: reject radius is the identity-gate fail threshold (3 x FWHM_dao), not lock_tol.
@@ -1269,13 +1285,13 @@ def enrich_masterstar_gaia_complete(
         centroid_max_px=float(
             (tolerance_overrides or {}).get(
                 "forced_seed_centroid_max_px",
-                getattr(_cfg, "masterstar_forced_seed_centroid_max_px", 2.0),
+                MS_FORCED_SEED_CENTROID_MAX_PX,
             )
         ),
-        snr_min=float(getattr(_cfg, "masterstar_forced_seed_snr_min", 4.0)),
+        snr_min=MS_FORCED_SEED_SNR_MIN,
         shape_q_floor=(tolerance_overrides or {}).get("point_source_q_floor"),
     )
-    edge_m = float(getattr(_cfg, "masterstar_gaia_census_edge_margin_px", 10.0))
+    edge_m = MS_GAIA_CENSUS_EDGE_MARGIN_PX
     forced_results: dict[int, dict[str, Any]] = {}
     new_rows: list[dict[str, Any]] = []
     _cid_first_idx: dict[str, Any] | None = None
@@ -1359,7 +1375,7 @@ def enrich_masterstar_gaia_complete(
             meta["n_seed_rejected"] = int(meta["n_seed_rejected"]) + 1
 
     # When identity_lock_only=True (overlay path), FORCED_SEED rows must NOT be appended
-    # to the masterstars table because extra rows change Phase-1 per-target comp selection
+    # to the masterstars table because extra rows change per-target comparison-star selection
     # even when excluded by is_usable=False. They are recorded in the census only.
     if new_rows and not identity_lock_only:
         out = pd.concat([out, pd.DataFrame(new_rows)], ignore_index=True)

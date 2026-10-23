@@ -60,10 +60,7 @@ class NightRunParams:
     masterflat_validity_days: int | None = None
     # Resolved optics from W1; None = use equipment_id/telescope_id (current W2).
     optics: Any | None = None
-    roundness_reject_above: float = 1.25
     # Preprocess / platesolve (UI defaults from render_live_view)
-    plate_fov_deg: float | None = None
-    dao_fwhm_px: float | None = None
     dao_threshold_sigma: float | None = None
     # UI RUN VYVAR hardcodes cat_match_arc=2.0; pipeline floors with max(10, sep) for
     # MASTERSTAR initial match - so NightRun default follows UI intent (effective 10").
@@ -121,7 +118,7 @@ class NightRunResult:
     frame_qc: dict[str, Any] = field(default_factory=dict)
 
 
-# Phase 2A must cover at least this fraction of active_targets in photometry_summary.
+# Aperture photometry must cover at least this fraction of active_targets in photometry_summary.
 _PHOTOMETRY_COMPLETENESS_MIN_RATIO = 0.90
 
 _NIGHT_RUN_INPUT_CAMERA = "camera"
@@ -407,7 +404,7 @@ def resolve_photometry_context_triple(
     draft_id: int | None,
     masterstar_fits: Path | None,
 ) -> dict[str, Any]:
-    """Phase 2A plate scale / site / calibration_mode (C3 fire-proof)."""
+    """Aperture-photometry plate scale / site / calibration_mode (C3 fire-proof)."""
     from draft_provenance import resolve_calibration_mode
     from param_resolver import resolve_site
     from photometry_core import _get_plate_scale_from_cfg
@@ -634,12 +631,6 @@ def _night_run_platesolve(
     from pipeline import astrometry_align_and_build_masterstar
 
     cfg_run = pipeline.config
-    try:
-        cfg_run.sips_dao_fwhm_px = float(
-            pending.get("dao_fwhm_px", getattr(cfg_run, "sips_dao_fwhm_px", 2.5))
-        )
-    except (TypeError, ValueError):
-        pass
     cfg_run.detection_threshold_sigma = resolve_detection_threshold_sigma(
         pending.get("dao_threshold_sigma", cfg_run.detection_threshold_sigma)
     )
@@ -658,7 +649,6 @@ def _night_run_platesolve(
         app_config=cfg_run,
         min_detected_stars=int(pending.get("min_detected_stars", 100)),
         max_detected_stars=int(pending.get("max_detected_stars", 500)),
-        plate_solve_fov_deg=float(pending.get("plate_solve_fov_deg", 1.0)),
         catalog_match_max_sep_arcsec=float(pending.get("catalog_match_max_sep_arcsec", 25.0)),
         max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
         n_comparison_stars=int(pending.get("n_comparison_stars", 0)),
@@ -961,6 +951,13 @@ def run_night_photometry(
         if progress_cb is not None:
             progress_cb(msg)
 
+    def _stage(name: str) -> None:
+        """Status line + infolog milestone for one named pipeline process."""
+        from infolog import log_phase_boundary  # noqa: PLC0415
+
+        _p(name)
+        log_phase_boundary(name, status="start")
+
     def _t(label: str, t0: float) -> None:
         elapsed = time.time() - t0
         timings[label] = elapsed
@@ -982,7 +979,7 @@ def run_night_photometry(
     if changed_keys:
         _p(f"INV-CFG-SOURCE-01 changed_keys={changed_keys}")
 
-    _p("Step 13: Discover obs groups")
+    _stage("Discover observation groups")
     t0 = time.time()
     all_setups = find_photometry_setups(
         phot_cfg, draft_id, draft_dir_override=draft_dir_override
@@ -1057,7 +1054,7 @@ def run_night_photometry(
             phot_errors.append(f"{nm}: missing {', '.join(missing)}")
             continue
 
-        _p(f"Step 14: Photometry - {nm}")
+        _stage(f"Photometry - {nm}")
         t0 = time.time()
         try:
             phot_result = run_full_photometry_pipeline(
@@ -1098,7 +1095,7 @@ def run_night_photometry(
             phot_errors.append(f"{nm}: {phot_result.get('error')}")
             continue
 
-        p2a = phot_result.get("phase2a") or {}
+        p2a = phot_result.get("aperture_photometry") or {}
         total_lc += int(p2a.get("n_lightcurves") or 0)
         total_frames += int(p2a.get("n_frames") or 0)
         last_out = out_d
@@ -1114,7 +1111,7 @@ def run_night_photometry(
         if do_epsf:
             from epsf_stage import EpsfStagePaths, run_epsf_stage
 
-            _p(f"Step 14b: ePSF photometry - {nm}")
+            _stage(f"ePSF photometry - {nm}")
             t0 = time.time()
             try:
                 epsf_out = run_epsf_stage(
@@ -1242,12 +1239,13 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         LOGGER.info("[NightRun] %s", msg)
         if params.progress_cb is not None:
             params.progress_cb(msg)
-        if msg.startswith("Step "):
-            from infolog import log_phase_boundary  # noqa: PLC0415
 
-            _phase = msg.split(":", 1)[0].replace("Step ", "").strip()
-            if _phase:
-                log_phase_boundary(_phase, status="start")
+    def _stage(name: str) -> None:
+        """Status line + infolog milestone for one named pipeline process."""
+        from infolog import log_phase_boundary  # noqa: PLC0415
+
+        _p(name)
+        log_phase_boundary(name, status="start")
 
     def _t(label: str, t0: float) -> None:
         elapsed = time.time() - t0
@@ -1320,8 +1318,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             result.phase_timings = timings
             return result
 
-        # Step 1: Scan
-        _p("Step 1: Scan source")
+        _stage("Scan source")
         t0 = time.time()
         plan = smart_scan_source(
             source_root=source,
@@ -1365,8 +1362,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             apply_pre_calibrated_import_plan(plan)
             _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
 
-        # Step 2: Import - resolve observing site first (product rule SITE-UI-01).
-        _p("Step 2: Import session")
+        # Import - resolve observing site first (product rule SITE-UI-01).
+        _stage("Import session")
         from observer_location import (  # noqa: PLC0415
             apply_resolved_observer_location_to_config,
             resolve_observer_location_for_run,
@@ -1449,13 +1446,13 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             mf_obs = {}
             dm_obs = {}
             _p(
-                "Step 3: skipped - pre-calibrated import; downstream reads non_calibrated/lights "
+                "Calibration skipped - pre-calibrated import; downstream reads non_calibrated/lights "
                 "(no calibrated/ directory)"
             )
             _cal_out: dict[str, Any] = {"pre_calibrated_skip_calibration": True}
             timings["calibration"] = 0.0
         else:
-            _p("Step 3: Calibration")
+            _stage("Calibration")
             t0 = time.time()
             _cal_out = pipeline.quick_calibrate_last_import(
                 archive_path=ap,
@@ -1467,7 +1464,6 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 observation_id=getattr(import_result, "observation_id", None),
                 masterflat_by_obs_key=mf_obs or None,
                 master_dark_by_obs_key=dm_obs or None,
-                roundness_reject_above=float(params.roundness_reject_above),
             )
             _t("calibration", t0)
         result.calibration_output = dict(_cal_out or {})
@@ -1487,7 +1483,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
 
-        # Step 4: Memory profile
+        # Memory profile
         from pipeline import (
             estimate_archive_memory_profile,
             generate_observation_hash,
@@ -1500,13 +1496,13 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.memory_profile = estimate_archive_memory_profile(ap_root)
         _t("memory_profile", t0)
 
-        # Step 5: RAM QC (skipped when PERF-10: DAO QC already done in calibration)
+        # RAM QC (skipped when PERF-10: DAO QC already done in calibration)
         _perf10_ok = (
             not params.pre_calibrated_mode
             and int(qsum.get("n_successful_fwhm") or 0) > 0
         )
         if not _perf10_ok:
-            _p("Step 5: RAM QC -> manifest files[]")
+            _stage("Frame quality check (RAM QC)")
             t0 = time.time()
             qsum = run_draft_ram_calibration_qc_to_obs_files(
                 db=pipeline.db,
@@ -1518,15 +1514,14 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
                 master_dark_by_obs_key=dm_obs or None,
                 equipment_id=eq_id,
                 progress_cb=prog_cb,
-                roundness_reject_above=float(params.roundness_reject_above),
             )
             _t("ram_qc", t0)
         else:
-            LOGGER.info("[PERF-10] Step 5 skipped - DAO QC computed during calibration")
+            LOGGER.info("[PERF-10] RAM QC skipped - DAO QC computed during calibration")
             timings["ram_qc"] = 0.0
         result.ram_qc_summary = dict(qsum or {})
 
-        # Step 6: Pointing
+        # Pointing
         t0 = time.time()
         pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
         r_pref = next(
@@ -1556,10 +1551,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.de_ui = de_ui
         _t("pointing_scan", t0)
 
-        # Step 7: Frame QC per channel (frame_qc.py, QC-PER-GROUP-2026-10): per observation
+        # Frame QC per channel (frame_qc.py, QC-PER-GROUP-2026-10): per observation
         # group FWHM / elongation limits (median + k*1.4826*MAD, one pass), rejections written
         # to the manifest (IS_REJECTED + reason) and frame_qc.json, best frame per group.
-        _p("Step 7: Frame QC per channel")
+        _stage("Frame QC per channel")
         t0 = time.time()
         from frame_qc import run_frame_qc
 
@@ -1582,9 +1577,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.fwhm_limit_source = fwhm_limit_source
         result.frame_qc = {gk: g.to_dict() for gk, g in _qc_groups.items()}
 
-        # Step 8: MASTERSTAR source = best frame of each group (frame_qc.json). A single-group
+        # MASTERSTAR source = best frame of each group (frame_qc.json). A single-group
         # draft also stores it as the draft MASTERSTAR source path (read by MASTERSTAR QA).
-        _p("Step 8: MASTERSTAR source per channel")
+        _stage("MASTERSTAR reference frame per channel")
         t0 = time.time()
         from pipeline import draft_is_multi_group_obs
 
@@ -1634,23 +1629,12 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             ph = None
         _t("preprocess_prep", t0)
 
-        dao_fwhm = float(
-            params.dao_fwhm_px
-            if params.dao_fwhm_px is not None
-            else max(1.0, min(8.0, float(getattr(cfg, "sips_dao_fwhm_px", 2.5))))
-        )
         dao_sigma = resolve_detection_threshold_sigma(
             params.dao_threshold_sigma
             if params.dao_threshold_sigma is not None
             else cfg.detection_threshold_sigma
         )
-        plate_fov = float(
-            params.plate_fov_deg
-            if params.plate_fov_deg is not None
-            else float(getattr(cfg, "plate_solve_fov_deg", 1.0))
-        )
 
-        pipeline.config.sips_dao_fwhm_px = dao_fwhm
         pipeline.config.detection_threshold_sigma = dao_sigma
 
         job_ms: dict[str, Any] = {
@@ -1662,12 +1646,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             "quality_filter_draft_id": draft_id,
             "min_detected_stars": int(params.min_detected_stars),
             "max_detected_stars": int(params.max_detected_stars),
-            "plate_solve_fov_deg": plate_fov,
             "catalog_match_max_sep_arcsec": float(params.catalog_match_max_sep_arcsec),
             "max_catalog_rows": int(params.max_catalog_rows),
             "n_comparison_stars": 0,
             "dao_threshold_sigma": dao_sigma,
-            "dao_fwhm_px": dao_fwhm,
             "id_equipment": ps_eq,
             "draft_id": draft_id,
             "build_masterstar_and_catalogs": True,
@@ -1686,14 +1668,12 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             cfg_changed_keys=result.cfg_changed_keys,
         )
 
-        # Step 11: Preprocess
-        _p("Step 11: Preprocess (calibrated -> processed)")
+        _stage("Preprocess (calibrated -> processed)")
         t0 = time.time()
         _night_run_preprocess(pending=job_ms, ap=ap, pipeline=pipeline, progress_cb=prog_cb)
         _t("preprocess", t0)
 
-        # Step 12: Platesolve + MASTERSTAR
-        _p("Step 12: Plate solve + alignment + MASTERSTAR")
+        _stage("Plate solve + alignment + MASTERSTAR")
         t0 = time.time()
         ps_out = _night_run_platesolve(
             pending=job_ms,
@@ -1710,7 +1690,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}").resolve()
         if params.post_platesolve_hook is not None:
-            _p("Step 12b: post-platesolve hook")
+            _stage("Post-plate-solve hook")
             t0 = time.time()
             try:
                 params.post_platesolve_hook(draft_id, draft_dir, cfg, pipeline)
@@ -1721,7 +1701,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             _t("post_platesolve_hook", t0)
 
         # Steps 13-15: Photometry (shared slice)
-        _p("Step 13: Discover obs groups")
+        _stage("Discover observation groups")
         phot = run_night_photometry(
             cfg=cfg,
             pipeline=pipeline,

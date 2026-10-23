@@ -22,7 +22,7 @@ from report_methods import pdf_report_path
 if TYPE_CHECKING:
     from reportlab.pdfgen import canvas
 
-# Gaia ID musi byt str - float64 straca cifry
+# Gaia ID must be str - float64 loses digits
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Time + airmass columns only (PDF cover airmass summary from lightcurve_*.csv).
@@ -190,7 +190,7 @@ def resolved_facts_model(
 
     Reports the values the run ACTUALLY used: site (id/name/lat/lon/alt + source), gain and
     read noise (+source), saturation, plate scale, frame dims, binning, filter, exposure.
-    Sourced from ``pipeline_meta.resolved_facts`` (written by the Phase 2A resolver capture),
+    Sourced from ``pipeline_meta.resolved_facts`` (written by the aperture-photometry resolver capture),
     with graceful fallback to ``observer_location`` / ``dynamic_params`` for legacy drafts and a
     visible warning. Never crashes.
     """
@@ -376,49 +376,12 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
     ]
 
 
-def _pdf_time_axis_label(time_col: str, *, time_base: str | None = None) -> str:
-    """PDF LC axis label from ``time_base`` when present, else infer from column name."""
-    from photometry_core import TIME_BASE_BJD_TDB, TIME_BASE_JD_FALLBACK  # noqa: PLC0415
-
-    tb = str(time_base or "").strip()
-    if tb == TIME_BASE_JD_FALLBACK:
-        return "JD (fallback)"
-    if tb == TIME_BASE_BJD_TDB:
-        return "BJD(TDB)"
-    c = str(time_col or "").strip().lower()
-    if c in ("bjd", "bjd_tdb", "bjd_tdb_mid") or c.startswith("bjd"):
-        return "BJD(TDB)"
-    if c == "hjd":
-        return "HJD"
-    if c in ("jd", "jd_mid"):
-        return "JD"
-    return str(time_col or "time")
-
-
 def _publication_lc_mag_column(columns: Any) -> str | None:
     """Y-axis / export magnitude column for publication-facing LC plots and exports."""
     from photometry_lightcurve import LC_PUBLISHED_MAG_COLUMNS  # noqa: PLC0415
 
     cols = set(columns)
     return next((c for c in LC_PUBLISHED_MAG_COLUMNS if c in cols), None)
-
-
-UNCAL_LC_LABEL = "delta_mag (not calibrated)"
-
-
-def _plot_lc_mag_column(df: pd.DataFrame, uncalibrated: bool = False) -> tuple[str, str] | None:
-    """UNCAL-LC-2026-10: (column, axis label) for LC plots. The calibrated magnitude; for a
-    target without a band zero point (band_system NONE, ``uncalibrated``) the differential
-    delta_mag, labelled as not calibrated. Export never uses this fallback."""
-    ycol = _publication_lc_mag_column(df.columns)
-    if uncalibrated and "delta_mag" in df.columns:
-        return "delta_mag", UNCAL_LC_LABEL
-    return (ycol, ycol) if ycol is not None else None
-
-
-def _cid_from_lc_csv(lc_csv: Any) -> str:
-    m = re.search(r"lightcurve_(\d+)", Path(str(lc_csv)).name)
-    return m.group(1) if m else ""
 
 
 class _PhotometryReportBuilder:
@@ -763,28 +726,21 @@ class _PhotometryReportBuilder:
             c = int(vc.get(key, 0))
             if c > 0:
                 parts.append(f"{c} {label}")
-        # LC-OUTLIER-01: epoch flag class totals across lightcurve_*.csv
-        try:
-            from collections import Counter
+        # LC-OUTLIER-01: epoch flag class totals of this run's light curves (REPORT-FLAGS-2026-10:
+        # read self.output_dir, which does not exist - the error was swallowed, no count was shown)
+        from collections import Counter  # noqa: PLC0415
 
-            lc_dir = Path(self.output_dir) / "lightcurves"
-            epoch_flags: Counter[str] = Counter()
-            if lc_dir.is_dir():
-                for p in sorted(lc_dir.glob("lightcurve_*.csv"))[:500]:
-                    try:
-                        df = pd.read_csv(p, usecols=lambda c: c == "flag", low_memory=False)
-                    except Exception:  # noqa: BLE001
-                        continue
-                    if "flag" in df.columns:
-                        epoch_flags.update(
-                            df["flag"].astype(str).str.strip().str.lower().tolist()
-                        )
-            for key in ("artifact", "frame_qc", "spike_unconfirmed", "saturated"):
-                c = int(epoch_flags.get(key, 0))
-                if c > 0:
-                    parts.append(f"{c} {key}")
-        except Exception:  # noqa: BLE001
-            pass
+        epoch_flags: Counter[str] = Counter()
+        for p in self._lc_files():
+            try:
+                fl = pd.read_csv(p, usecols=["flag"])["flag"]
+            except (OSError, ValueError, KeyError):
+                continue
+            epoch_flags.update(fl.astype(str).str.strip().str.lower().tolist())
+        for key in ("artifact", "frame_qc", "high_err", "spike_unconfirmed", "saturated"):
+            c = int(epoch_flags.get(key, 0))
+            if c > 0:
+                parts.append(f"{c} {key} epochs")
         if parts:
             return f"{n:d} total  ({', '.join(parts)})"
         return f"{n:d}"
@@ -809,7 +765,7 @@ class _PhotometryReportBuilder:
         c.setFont(self.FONT_REG, 9)
         _cfg_o = self._cfg
         # Prefer the per-draft resolved observer site (param_resolver, persisted by
-        # Phase 2A in pipeline_meta) so the report matches the BJD/airmass location.
+        # aperture photometry in pipeline_meta) so the report matches the BJD/airmass location.
         _meta_loc = self._pipeline_meta.get("observer_location") if isinstance(self._pipeline_meta, dict) else None
         if isinstance(_meta_loc, dict) and _meta_loc.get("lat") is not None:
             _loc_name = str(_meta_loc.get("name", "") or "").strip()
@@ -944,7 +900,7 @@ class _PhotometryReportBuilder:
                     f"  Saturated:       {int(vc.get('saturated', 0))}",
                 ]
             else:
-                lines = ["  LC quality: not available (re-run Phase 2A)"]
+                lines = ["  LC quality: not available (re-run aperture photometry)"]
         else:
             total = int(qs.get("total", 0) or 0)
             good = int(qs.get("good", 0) or 0)
@@ -1108,10 +1064,6 @@ class _PhotometryReportBuilder:
             ps2 = pd.to_numeric(self._pipeline_meta.get("plate_scale_arcsec_px"), errors="coerce")
             if np.isfinite(float(ps2)) and float(ps2) > 0:
                 return float(ps2)
-        if self._cfg is not None:
-            ps3 = pd.to_numeric(getattr(self._cfg, "phase01_plate_scale_arcsec_per_px", float("nan")), errors="coerce")
-            if np.isfinite(float(ps3)) and float(ps3) > 0:
-                return float(ps3)
         ms = self.platesolve_dir / "MASTERSTAR.fits"
         if ms.is_file():
             try:
@@ -2505,36 +2457,58 @@ class _PhotometryReportBuilder:
                 pass
         return float("nan")
 
+    def _proc_flux_rows(self) -> list[tuple[float, list[tuple[str, float]]]]:
+        """Per proc CSV (sorted): (median frame time, [(catalog_id, flux) of every comparison-pool row]).
+
+        SPEED-2026-10: read once per report (was once per target: 62 x 97 reads on 534 g). Rows keep the
+        CSV order; only ids of the report's comparison table are kept (bounded memory)."""
+        cached = getattr(self, "_proc_flux_rows_cache", None)
+        if cached is not None:
+            return cached
+        rows_out: list[tuple[float, list[tuple[str, float]]]] = []
+        proc_dir = self._proc_csv_dir()
+        pool: set[str] = set()
+        if not self.comp_df.empty and "catalog_id" in self.comp_df.columns:
+            pool = {c for c in (_norm_cid_decimal(x) for x in self.comp_df["catalog_id"].tolist()) if c}
+        if proc_dir is not None and pool:
+            for fp in sorted(glob.glob(str(proc_dir / "proc_*.csv"))):
+                try:
+                    from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+                    df = read_proc_csv(
+                        fp,
+                        dtype={"catalog_id": str},
+                        usecols=lambda c: c in {"catalog_id", "dao_flux", "flux", "bjd_tdb_mid", "jd_mid", "hjd_mid"},
+                    )
+                except Exception:  # noqa: BLE001
+                    # EXC-0266: T2 -- report/export may omit or misstate (EXCEPT-BULK 2026-07-08)
+                    continue
+                if df.empty or "catalog_id" not in df.columns:
+                    continue
+                tcol = next((c for c in ("bjd_tdb_mid", "jd_mid", "hjd_mid") if c in df.columns), None)
+                tval = float(pd.to_numeric(df[tcol], errors="coerce").median()) if tcol else float("nan")
+                flux_col = "dao_flux" if "dao_flux" in df.columns else "flux"
+                vals = df[flux_col].tolist() if flux_col in df.columns else [None] * len(df)
+                kept: list[tuple[str, float]] = []
+                for raw_id, raw_fx in zip(df["catalog_id"].tolist(), vals, strict=True):
+                    cid = _norm_cid_decimal(raw_id)
+                    if cid not in pool:
+                        continue
+                    kept.append((cid, float(pd.to_numeric(raw_fx, errors="coerce"))))
+                rows_out.append((tval, kept))
+        self._proc_flux_rows_cache = rows_out
+        return rows_out
+
     def _comp_rms_p2p_map_from_proc(self, comp_ids: list[str]) -> dict[str, float]:
-        """Report-only Abbe p2p from per-frame dao_flux (same definition as Phase-2A stability)."""
+        """Report-only Abbe p2p from per-frame dao_flux (same definition as the aperture-photometry stability)."""
         proc_dir = self._proc_csv_dir()
         if proc_dir is None or not comp_ids:
             return {}
         want = {_norm_cid_decimal(x) for x in comp_ids if _norm_cid_decimal(x)}
         flux_by_cid: dict[str, list[tuple[float, float]]] = {c: [] for c in want}
-        for fp in sorted(glob.glob(str(proc_dir / "proc_*.csv"))):
-            try:
-                from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-                df = read_proc_csv(
-                    fp,
-                    dtype={"catalog_id": str},
-                    usecols=lambda c: c in {"catalog_id", "dao_flux", "flux", "bjd_tdb_mid", "jd_mid", "hjd_mid"},
-                )
-            except Exception:  # noqa: BLE001
-                # EXC-0266: T2 -- report/export may omit or misstate (usecols=lambda c: c in {'catalog_id', 'dao_flux', '... (EXCEPT-BULK 2026-07-08)
-                continue
-            if df.empty or "catalog_id" not in df.columns:
-                continue
-            df["catalog_id"] = df["catalog_id"].map(_norm_cid_decimal)
-            tcol = next((c for c in ("bjd_tdb_mid", "jd_mid", "hjd_mid") if c in df.columns), None)
-            tval = float(pd.to_numeric(df[tcol], errors="coerce").median()) if tcol else float("nan")
-            flux_col = "dao_flux" if "dao_flux" in df.columns else "flux"
-            sub = df[df["catalog_id"].isin(want)]
-            for _, row in sub.iterrows():
-                cid = str(row["catalog_id"])
-                fx = float(pd.to_numeric(row.get(flux_col), errors="coerce"))
-                if math.isfinite(fx) and fx > 0 and math.isfinite(tval):
+        for tval, kept in self._proc_flux_rows():
+            for cid, fx in kept:
+                if cid in want and math.isfinite(fx) and fx > 0 and math.isfinite(tval):
                     flux_by_cid.setdefault(cid, []).append((tval, fx))
         out: dict[str, float] = {}
         for cid, pairs in flux_by_cid.items():
@@ -2591,7 +2565,7 @@ class _PhotometryReportBuilder:
         if "_dist_deg" in sub.columns and "dist_deg" not in sub.columns:
             sub["dist_deg"] = sub["_dist_deg"]
 
-        # Optional per-target comp quality from Phase2A (saved as JSON).
+        # Optional per-target comp quality from AperturePhotometry (saved as JSON).
         qmap: dict[str, dict[str, str]] = {}
         try:
             qpath = self.lc_dir / f"comp_quality_{cid}.json"
@@ -2716,70 +2690,6 @@ class _PhotometryReportBuilder:
                 f"{n_ex} comp star(s) excluded from ensemble: {parts}"
             )
         return out, excluded_note
-    def _should_trigger_tess_report(self, bullets: str) -> bool:
-        if not bullets or str(bullets).strip() in ("", "-"):
-            return True
-        VAR_CATS = [
-            "VSX",
-            "ASAS-SN",
-            "ZTF",
-            "Gaia",
-            "ATLAS",
-            "CSS",
-            "KELT",
-            "VSBS",
-            "TESS-EB",
-        ]
-        for line in str(bullets).split("\n"):
-            line0 = str(line).strip()
-            for cat in VAR_CATS:
-                if (
-                    line0.startswith(cat)
-                    and "ziadny zaznam" not in line0
-                    and "no match" not in line0.lower()
-                ):
-                    return False
-        return True
-    def _get_candidate_row_pdf(self, var_results_in: Any, cid: str) -> dict[str, Any]:
-        """Extract RA, Dec, mag from var_results for the PDF."""
-        try:
-            import pandas as pd  # noqa: PLC0415
-
-            if var_results_in is None:
-                return {"ra": 0.0, "dec": 0.0, "mag": None}
-            if isinstance(var_results_in, pd.DataFrame):
-                df0 = var_results_in
-            elif isinstance(var_results_in, dict):
-                df0 = pd.DataFrame(var_results_in)
-            else:
-                return {"ra": 0.0, "dec": 0.0, "mag": None}
-            id_col = next((c for c in df0.columns if "catalog_id" in str(c).lower() or str(c) == "id"), None)
-            if id_col is None:
-                return {"ra": 0.0, "dec": 0.0, "mag": None}
-            sub = df0[df0[id_col].astype(str) == str(cid)]
-            if sub.empty:
-                return {"ra": 0.0, "dec": 0.0, "mag": None}
-            r = sub.iloc[0]
-            ra = dec = None
-            for rc in ("ra", "RAJ2000", "RA", "ra_deg"):
-                if rc in r.index and pd.notna(r[rc]):
-                    ra = float(r[rc])
-                    break
-            for dc in ("dec", "DEJ2000", "DE", "dec_deg"):
-                if dc in r.index and pd.notna(r[dc]):
-                    dec = float(r[dc])
-                    break
-            mag = None
-            for mc in ("mag", "Vmag", "mag_median"):
-                if mc in r.index and pd.notna(r[mc]):
-                    mag = float(r[mc])
-                    break
-            if ra is None or dec is None:
-                return {"ra": 0.0, "dec": 0.0, "mag": mag}
-            return {"ra": float(ra), "dec": float(dec), "mag": mag}
-        except Exception:  # noqa: BLE001
-            # EXC-0267: T2 -- report/export may omit or misstate (return {'ra': 0.0, 'dec': 0.0, 'mag': mag} / return... (EXCEPT-BULK 2026-07-08)
-            return {"ra": 0.0, "dec": 0.0, "mag": None}
     def _report_per_star_page(self, c: "canvas.Canvas", star_data: dict[str, Any]) -> None:
         """STAR-PAGE-M3-2026-10 (layout approved by Milan 2026-10-11): header with the object
         name by source (VSX / exoplanet host / Gaia), trust line; left: light curve with the
@@ -3020,22 +2930,6 @@ class _PhotometryReportBuilder:
         _, ph = para.wrap(self.USE_W - 0.4 * self.cm, 10 * self.PAGE_H)
         para.drawOn(c, self.M_LEFT + 0.2 * self.cm, y0 + (h - 0.15 * self.cm - ph) / 2)
 
-    def _draw_star_page_bottom_note(self, c: "canvas.Canvas") -> None:
-        c.setFont(self.FONT_OBL, 6)
-        note_style = self._get_para_style("star_note", fontName=self.FONT_OBL, fontSize=6, textColor=self.colors.HexColor("#666666"))
-        note_y_top = self._layout_y_floor() + 0.25 * self.cm
-        self._draw_paragraph_block(
-            c,
-            self.M_LEFT,
-            note_y_top,
-            self.USE_W,
-            self._pdf_escape(self.NOTE_TXT),
-            note_style,
-            paginate=False,
-            gap_pt=0.0,
-            check_bounds=False,
-        )
-        c.setFillColor(self.colors.black)
     def _report_summary_table(self, c: "canvas.Canvas") -> None:
         def _cell_txt(val: Any) -> str:
             return str(val if val is not None else "").strip()
@@ -3259,7 +3153,8 @@ class _PhotometryReportBuilder:
                 build_hrd_dataframe,
                 ensure_clean_field_background_png,
                 get_top_interesting_stars,
-                hrd_parallax_params_from_cfg,
+                HRD_PARALLAX_MIN_MAS,
+                HRD_PARALLAX_SNR_MIN,
                 plot_hrd_matplotlib,
             )
         except (ImportError, ModuleNotFoundError) as exc:
@@ -3293,7 +3188,7 @@ class _PhotometryReportBuilder:
             ArithmeticError,
         )
         try:
-            pmin, psnr = hrd_parallax_params_from_cfg(cfg)
+            pmin, psnr = HRD_PARALLAX_MIN_MAS, HRD_PARALLAX_SNR_MIN
             hrd_df = build_hrd_dataframe(ms_csv, gdb, parallax_min_mas=pmin, parallax_snr_min=psnr)
             if hrd_df.empty:
                 self._report_hrd_unavailable_page(c, "no field stars in masterstars catalog")
@@ -3834,11 +3729,11 @@ class _PhotometryReportBuilder:
             ("lc", "Light curve"),
             ("lc_rms", "Light curve RMS scatter (magnitudes)"),
             ("lc_median_mag", "Median calibrated magnitude"),
-            ("n_good_comp", "Phase-2A ensemble pool: comps with stability quality good or suspect (summary column)"),
+            ("n_good_comp", "Aperture-photometry ensemble pool: comps with stability quality good or suspect (summary column)"),
             ("n_clean", "Comparison stars in the target's ensemble (all passed the selection gates; trust gate metric)"),
             ("setup", "Observation group (filter _ exposure _ binning, e.g. NoFilter_60_2)"),
-            ("comp_rms", "Phase-1 detrended relative-flux scatter (comparison star stability)"),
-            ("rms mmag", "Comparison-star stability rms (Phase 1, 1.0857 x relative-flux scatter)"),
+            ("comp_rms", "Comparison-star selection detrended relative-flux scatter (comparison star stability)"),
+            ("rms mmag", "Comparison-star stability rms (comparison-star selection, 1.0857 x relative-flux scatter)"),
             ("period_reliability", "reliable / uncertain / noise - quality flag for TESS period"),
             ("RMS candidate", "Star with RMS significantly above the noise envelope"),
             ("ROT", "Rotational variable"),
@@ -4241,7 +4136,7 @@ class _PhotometryReportBuilder:
                     )
                     continue
 
-                # target field map of Phase 2A (embedded once, at the PDF size)
+                # target field map of aperture photometry (embedded once, at the PDF size)
                 from field_map import field_map_path  # noqa: PLC0415
 
                 field_img = field_map_path(self.lc_dir, cid)

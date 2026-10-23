@@ -60,8 +60,8 @@ def _calls(src: str, func: str) -> list[ast.Call]:
             and getattr(n.func, "id", getattr(n.func, "attr", None)) == func]
 
 
-def test_phase1_wiring_uses_night_fwhm() -> None:
-    s = (SRC / "phase01_run.py").read_text(encoding="utf-8")
+def test_comp_selection_wiring_uses_night_fwhm() -> None:
+    s = (SRC / "target_comp_selection.py").read_text(encoding="utf-8")
     sel = _calls(s, "select_comparison_stars_per_target")
     assert len(sel) == 1
     kw = {k.arg: k.value for k in sel[0].keywords}
@@ -74,8 +74,8 @@ def test_phase1_wiring_uses_night_fwhm() -> None:
     assert len(_calls(s, "night_median_fwhm_px")) == 1
 
 
-def test_phase2a_uses_group_night_fwhm() -> None:
-    s = (SRC / "phase2a_state.py").read_text(encoding="utf-8")
+def test_aperture_uses_group_night_fwhm() -> None:
+    s = (SRC / "aperture_photometry_state.py").read_text(encoding="utf-8")
     c = _calls(s, "night_median_fwhm_px")
     assert len(c) == 1 and ast.unparse(c[0].args[0]) == "csv_files"
     i_qc = s.index("load_qc_fwhm_map(_qc_csv_p2a)")
@@ -92,7 +92,7 @@ def test_median_robust_to_bad_seeing_tail(tmp_path) -> None:
 
 
 def test_d3_gate_stays_on_masterstar_fwhm() -> None:
-    s = (SRC / "phase01_run.py").read_text(encoding="utf-8")
+    s = (SRC / "target_comp_selection.py").read_text(encoding="utf-8")
     kw = {k.arg: k.value for k in _calls(s, "select_comparison_stars_per_target")[0].keywords}
     assert ast.unparse(kw["fwhm_d3_px"]) == "float(fwhm_px)"
     pc = (SRC / "photometry_comp.py").read_text(encoding="utf-8")

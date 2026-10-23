@@ -48,6 +48,11 @@ from pipeline_astrometry import (
     _vyvar_df_to_csv,
 )
 from pipeline_constants import (
+    DAO_FWHM_FALLBACK_PX,
+    DAO_CENTROID_MAX_SHIFT_FWHM,
+    MS_DAO_PASS2_CENTER_TOL_PX,
+    MS_DAO_PASS2_SIGMA,
+    EXOPLANET_MATCH_MAX_SEP_ARCSEC,
     LINEARITY_FRAC,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
     SAT_LIMIT_NO_KNEE_FRAC,
@@ -81,8 +86,6 @@ def _apply_aperture_catalog_enhancements_from_st(
             annulus_inner_fwhm=float(st.get("annulus_inner_fwhm", 4.0)),
             annulus_outer_fwhm=float(st.get("annulus_outer_fwhm", 6.0)),
             gaussian_fwhm_px_override=_go_f,
-            err_empty_apertures_n=int(st.get("err_empty_apertures_n", 64)),
-            err_empty_apertures_min=int(st.get("err_empty_apertures_min", 16)),
             fwhm_night_median_px=st.get("fwhm_night_median_px"),
             qc_fwhm_by_name=st.get("qc_fwhm_by_name"),
             frame_name=st.get("current_frame_name"),
@@ -211,7 +214,7 @@ def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[s
             with fits.open(fp, memmap=False) as hdul:
                 data = np.array(hdul[0].data, dtype=np.float32, copy=True)
             data_b = _bin2d_mean(data, 2)
-            # 2x2 binning: FWHM v px ~ sips_dao_fwhm_px/2 (sirsie okno pre komu v rohoch).
+            # 2x2 binning: FWHM in px ~ DAO FWHM/2 (wider window for coma in the corners).
             scores[str(fp)] = _dao_star_count_from_array(data_b, fwhm_px=2.5)
         except Exception:  # noqa: BLE001
             scores[str(fp)] = 0
@@ -330,7 +333,7 @@ def _query_vsx_local(
     vsx_db_path: Path | None,
     require_db: bool = False,
 ) -> pd.DataFrame:
-    """Query **local VSX SQLite** for the field; same kuzel ako Gaia (najprv obdlznik, potom great-circle orez)."""
+    """Query **local VSX SQLite** for the field; same cone as Gaia (box first, then great-circle cut)."""
     from catalog_db import count_vsx_rows, require_vsx_db
 
     if require_db:
@@ -394,7 +397,7 @@ def _query_vsx_local(
     elif not out.empty:
         try:
             log_event(
-                f"CATALOG SEARCH (VSX local): {len(out)} zdrojov v kuzeli r~{float(radius_deg):.3f} deg "
+                f"CATALOG SEARCH (VSX local): {len(out)} sources in cone r~{float(radius_deg):.3f} deg "
                 f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
             )
         except Exception:  # noqa: BLE001
@@ -441,7 +444,7 @@ def _query_exoplanet_local(
     out = sub.loc[_inner].reset_index(drop=True)
     try:
         log_event(
-            f"CATALOG SEARCH (exoplanet local): {len(out)} hostov v kuzeli r~{float(radius_deg):.3f} deg "
+            f"CATALOG SEARCH (exoplanet local): {len(out)} hosts in cone r~{float(radius_deg):.3f} deg "
             f"(Ra={_ra_l:.4f}, Dec={_de_l:.4f})"
         )
     except Exception:  # noqa: BLE001
@@ -570,14 +573,7 @@ def _build_exoplanet_promotion_rows_from_masterstars(
     if m.empty:
         return pd.DataFrame()
 
-    exo_max = 3.0
-    try:
-        exo_max = float(cfg.exoplanet_match_max_sep_arcsec)
-        if not math.isfinite(exo_max):
-            exo_max = 3.0
-    except (TypeError, ValueError):
-        exo_max = 3.0
-    exo_max = max(0.5, min(30.0, float(exo_max)))
+    exo_max = EXOPLANET_MATCH_MAX_SEP_ARCSEC
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FITSFixedWarning)
@@ -906,7 +902,7 @@ def _proc_sat_block_for_csv(sat_block: dict[str, Any]) -> tuple[dict[str, Any], 
 
 
 def _field_center_and_radius_from_wcs(w: WCS, h: int, wpx: int) -> tuple[SkyCoord, float]:
-    """Footprint for **one** Vizier/Gaia cone query tied to the detector - not 'cela obloha'.
+    """Footprint for **one** Vizier/Gaia cone query tied to the detector - not 'the whole sky'.
 
     Uses the geometric pixel centre, then the **maximum** great-circle separation from that centre to a
     dense sample of the **full rectangle border** (not only corners). With sip / distortion, the farthest
@@ -976,16 +972,16 @@ def _invalidate_field_catalog_cone_cache_if_needed(field_catalog_csv: Path, *, e
         meta = {}
     reasons: list[str] = []
     if str(meta.get("spec") or "") != _FIELD_CATALOG_SPEC:
-        reasons.append("katalog vytvoreny starsim pravidlom (orez najjasnejsich)")
+        reasons.append("catalog built with an older rule (brightest-only cut)")
     r_stored = float(meta.get("cone_radius_deg") or 0.0)
     r_eff = float(effective_radius_deg)
     if abs(r_eff - r_stored) > 0.02 * max(r_eff, 1e-6) + 45.0 / 3600.0:
-        reasons.append(f"kuzel r~{r_eff:.4f} deg != ulozene {r_stored:.4f} deg")
+        reasons.append(f"cone r~{r_eff:.4f} deg != stored {r_stored:.4f} deg")
     if not reasons:
         return
     p_csv.unlink(missing_ok=True)
     meta_p.unlink(missing_ok=True)
-    log_event("Katalog: field_catalog_cone cache vymazana - " + "; ".join(reasons) + " (nacitam nanovo).")
+    log_event("Catalog: field_catalog_cone cache deleted - " + "; ".join(reasons) + " (reloading).")
 
 
 def _field_catalog_cone_meta_path(field_catalog_csv: Path) -> Path:
@@ -1533,7 +1529,7 @@ def _proc_deduplicate_matched_catalog_rows(df: pd.DataFrame) -> pd.DataFrame:
     """Keep one row per non-empty ``catalog_id`` (highest peak / flux wins).
 
     Multiple DAO detections can match the same Gaia source in one frame; duplicates
-    inflate Phase-1 comp RMS and can select faint spurious matches.
+    inflate the comparison-star selection comp RMS and can select faint spurious matches.
     """
     if df is None or len(df) == 0 or "catalog_id" not in df.columns:
         return df
@@ -1784,7 +1780,7 @@ def detect_stars_match_master_reference(
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
     _cfg_dao = AppConfig()
-    _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else float(_cfg_dao.sips_dao_fwhm_px)
+    _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
     _base_fw_m = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_m)
     try:
         from photutils.detection import DAOStarFinder  # type: ignore
@@ -1829,7 +1825,7 @@ def detect_stars_match_master_reference(
                 pass
         if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
             _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            print(f"WARNING: {_nm} std=0 aj po fallback, preskakujem")
+            print(f"WARNING: {_nm} std=0 even after fallback, skipping")
             empty_meta: dict[str, Any] = {"status": "std_zero"}
             return pd.DataFrame(), empty_meta
         _thr, _n_equiv_used = _dao_detection_threshold_adu(
@@ -1861,14 +1857,8 @@ def detect_stars_match_master_reference(
             tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
         n_pass1_dao_m = int(len(tbl)) if tbl is not None else 0
         _h_m, _wpx_m = int(data0.shape[0]), int(data0.shape[1])
-        try:
-            _sigma_p2_m = float(_cfg_dao.masterstar_dao_pass2_sigma)
-        except (TypeError, ValueError):
-            _sigma_p2_m = 1.9
-        try:
-            _ctol_p2_m = float(_cfg_dao.masterstar_dao_pass2_center_tol_px)
-        except (TypeError, ValueError):
-            _ctol_p2_m = 5.0
+        _sigma_p2_m = MS_DAO_PASS2_SIGMA
+        _ctol_p2_m = MS_DAO_PASS2_CENTER_TOL_PX
         tbl, _n_unmatched_master, _n_pass2_raw_m = _dao_targeted_pass2_unmatched_gaia(
             data0,
             tbl,
@@ -2147,7 +2137,7 @@ def detect_stars_match_master_reference(
             safe=safe,
             master_df=m_valid,
             fwhm_px=_fwhm_cent,
-            max_shift_fwhm=float(getattr(_cfg_dao, "dao_centroid_max_shift_fwhm", 1.0)),
+            max_shift_fwhm=DAO_CENTROID_MAX_SHIFT_FWHM,
         )
 
     pmax_arr = _box_peaks_at_centroids(arr, x, y)
@@ -2465,18 +2455,18 @@ def _extract_airmass_from_header(
 
     Returns ``float('nan')`` when no path yields a finite value.
     """
-    # Priamy keyword
+    # Direct keyword
     for kw in ("AIRMASS", "AIRMAS", "SECZ"):
         val = hdr.get(kw)
         if val is not None:
             try:
                 v = float(val)
-                if 0.9 <= v <= 10.0:  # fyzikalny rozsah
+                if 0.9 <= v <= 10.0:  # physical range
                     return v
             except (TypeError, ValueError):
                 pass
 
-    # Fallback: altitude -> airmass cez aproximaciu Kasten & Young (1989)
+    # Fallback: altitude -> airmass via the Kasten & Young (1989) approximation
     for kw in ("ALT_OBJ", "OBJCTALT", "ALTITUDE", "TELALT"):
         val = hdr.get(kw)
         if val is not None:
@@ -2624,7 +2614,7 @@ def _export_per_frame_run_catalog_core(
             max_catalog_rows=int(st["max_catalog_rows"]),
             match_sep_arcsec=float(st["catalog_match_max_sep_arcsec"]),
             dao_threshold_sigma=float(st["dao_threshold_sigma"]),
-            dao_fwhm_px=float(st.get("dao_fwhm_px", 2.5)),
+            dao_fwhm_px=float(st.get("dao_fwhm_px", DAO_FWHM_FALLBACK_PX)),
             equipment_saturate_adu=st.get("equipment_saturate_adu"),
             frame_name=fname,
             sat_diag_ctx=_sat_ctx,
@@ -2683,7 +2673,7 @@ def _export_per_frame_run_catalog_core(
     # DAO path above is unchanged (n_raw_dao / match counts preserved). Forced rows are
     # measured at locked MASTERSTAR (x,y) with bounded peak refine.
     try:
-        if master_tab is not None and bool(st.get("forced_photometry_enabled", True)):
+        if master_tab is not None:
             from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
 
             _force_ids = st.get("forced_photometry_catalog_ids")
@@ -2692,12 +2682,10 @@ def _export_per_frame_run_catalog_core(
                 if _force_ids
                 else None
             )
-            _margin = float(st.get("forced_photometry_margin_px", 0.0) or 0.0)
             df, _fp_meta = inject_forced_masterstar_rows(
                 df,
                 master_tab,
                 image=np.asarray(data) if data is not None else None,
-                margin_px=_margin,
                 force_ids=_force_set,
             )
             try:
@@ -2774,7 +2762,7 @@ def _export_per_frame_run_catalog_core(
         for _i, _nm in enumerate(_tk):
             df.insert(_pos + _i, _nm, _time_cols[_nm])
 
-        # Airmass - rovnaka hodnota pre vsetky hviezdy v snimke (frame-level)
+        # Airmass - same value for all stars in the frame (frame-level)
         _am_val = _extract_airmass_from_header(
             hdr,
             cfg=_geo_cfg,

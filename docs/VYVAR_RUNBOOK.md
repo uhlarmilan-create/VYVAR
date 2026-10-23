@@ -24,7 +24,7 @@ Exit **0** = PASS, **1** = FAIL. Concise summary table printed at end.
 
 | Path | Use |
 |------|-----|
-| `run_full_photometry_pipeline` | **Production path** and **exclusive anchor-cut recipe** from 2026-07-08. Builds `ProcFrameStore`, Phase 0+1 comp selection, Phase 2A LCs - single coherent artifact tree. |
+| `run_full_photometry_pipeline` | **Production path** and **exclusive anchor-cut recipe** from 2026-07-08. Builds `ProcFrameStore`, target and comparison-star selection, aperture-photometry LCs - single coherent artifact tree. |
 | Phase-2A-only rerun | Legacy validation shortcut (QUICKWINS-0708 Item 4). Skips `ProcFrameStore`; must **not** be used for anchor cuts. Produced the retired hybrid snapshot (`draft_000424_snapshot_20260708_hybrid_deprecated`). |
 
 **Two-fresh-runs rule:** before locking any photometry anchor, run the full production path

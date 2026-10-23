@@ -26,12 +26,12 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
 | `pipeline.py` | core | Core processing pipeline for FITS observations. | photometry_report.py; photometry_core.py; night_run.py; importer.py; hrd_analysis.py; ... | yes |
-| `photometry_core.py` | core | Photometry core - zluceny modul (photometry + photometry_phase2a). | method_lc_output.py; export_reports.py; comp_selection_per_target.py; check_star_kmag.py; ... | yes |
+| `photometry_core.py` | core | Photometry core - facade over the photometry modules. | method_lc_output.py; export_reports.py; comp_selection_per_target.py; check_star_kmag.py; ... | yes |
 | `photometry.py` | core | Backward compatibility - povodny modul; implementacia je v ``photometry_core``. | ui_select_stars.py; pipeline.py; importer.py | yes |
-| `photometry_phase2a.py` | core | Backward compatibility - povodny modul; implementacia je v ``photometry_core``. | ui_aperture_photometry.py; pipeline.py | yes |
+| `aperture_photometry.py` | core | Aperture photometry and light curves (with `aperture_photometry_state.py`, `aperture_photometry_target.py`); target and comparison-star selection is `target_comp_selection.py`. | ui_aperture_photometry.py; pipeline.py | yes |
 | `calibration.py` | core | Master calibration resampling (software binning) pre dark/flat/light FITS podla CalibrationLibrary. | `pipeline`; `ui_calibration`; `ui_calibration_library` | yes |
 | `importer.py` | core | Session importer for VYVAR (file-first workflow). | night_run.py; draft_provenance.py; app.py; scripts/_platesolve_test_v842.py; ... | yes |
-| `proc_frame_store.py` | core | ProcFrameStore - unified in-memory store for proc_*.csv frames. Replaces shared_csv_cache (Phase 1) and _phase2a_csv_cache (Phase 2A) | photometry_core.py; comp_qa_core.py; scripts/comp_qa_flagged_lcs.py; scripts/diagnose_epsf_quality_364.py; ... | yes |
+| `proc_frame_store.py` | core | ProcFrameStore - unified in-memory store for proc_*.csv frames. Replaces shared_csv_cache (comparison-star selection) and the aperture-photometry CSV cache | photometry_core.py; comp_qa_core.py; scripts/comp_qa_flagged_lcs.py; scripts/diagnose_epsf_quality_364.py; ... | yes |
 | `draft_provenance.py` | core | Draft run provenance - calibration mode and manifest I/O. | pipeline.py; photometry_report.py; photometry_core.py; night_run.py; app.py; ... | yes |
 | `masterstar_context.py` | core | Read-only summary from ``MASTERSTAR.fits`` for Settings / UI (WCS, scale, VY_* headers). | ui_settings.py; ui_dao_stars.py | yes |
 | `masterstar_qa_plot.py` | core | MASTERSTAR QA: plate-solve facts, DAO <-> Gaia match counts, overlay map (MSQA-2026-10). | ui_photometry_quality.py; ui_masterstar_qa.py | yes |
@@ -45,7 +45,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | `comp_qa_core.py` | core | Comp-star LOO QA (Sokolovsky indices + magnitude locus) - shared core for pipeline and CLI. | tests/test_proc_csv_glob.py; photometry_core.py; comp_qa.py; scripts/diagnose_nclean_trust.py | yes |
 | `trust_flag_core.py` | core | Per-target trust flag (GREEN / YELLOW / RED) - shared by pipeline and CLI. Uses draft ``photometry_summary.csv`` columns from comp QA | trust_flag.py; photometry_core.py; export_reports.py; scripts/diagnose_nclean_trust.py | yes |
 | `dilution.py` | core | dilution.py - Flux dilution factor computation for VYVAR (TODO-GS11). Computes per-star dilution factor D = F_star / (F_star + SigmaF_neighbors) | tests/test_gs11_pipeline.py; tests/test_dilution.py; photometry_core.py; method_lc_output.py | yes |
-| `validate_lc_crossval.py` | core | LC cross-validation: VYVAR photometry_summary lc_rms vs dao_flux differential LC. Reads dao_flux from proc_*.csv (same flux as VYVAR Phase 2A), applies the same | scripts/build_lc_from_fits_aperture.py; scripts/test_aperture_sweep.py | yes |
+| `validate_lc_crossval.py` | core | LC cross-validation: VYVAR photometry_summary lc_rms vs dao_flux differential LC. Reads dao_flux from proc_*.csv (same flux as VYVAR aperture photometry), applies the same | scripts/build_lc_from_fits_aperture.py; scripts/test_aperture_sweep.py | yes |
 | `xval_harness_core.py` | core | Shared helpers for the offline cross-validation harness (``xval_run.py``). Confidence thresholds and LOO differential utilities - not used by the production pipeline. | xval_run.py | yes |
 
 ## CATALOG / CROSSMATCH
@@ -98,7 +98,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
-| `tess_runner.py` | core | TESS for one star (UI button) and for the night's candidates when tess_enabled (night run) into `photometry/TESS/<gaia id>/`; analysis in `tess_analysis.py`. | photometry_phase2a, ui_variability |
+| `tess_runner.py` | core | TESS for one star (UI button) and for the night's candidates when tess_enabled (night run) into `photometry/TESS/<gaia id>/`; analysis in `tess_analysis.py`. | aperture_photometry, ui_variability |
 | `variability_store.py` | core | Files the Variability tab and the PDF share: report include list, observer-adopted periods, TESS result reader, Peranso exports, phase / PDM Theta helpers (VAR-TAB-2026-10). | ui_variability, photometry_report |
 
 ## CONFIG / PARAMS
@@ -106,7 +106,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
 | `config.py` | core | Project configuration for the variable-star processing system. | importer.py; export_reports.py; comp_selection_per_target.py; citations.py; check_star_kmag.py; ... | no |
-| `param_resolver.py` | core | Unified per-parameter provenance resolver (VYVAR Phase 1). ONE place that decides, per physical parameter, which source wins: | psf_photometry.py; pipeline.py; photometry_core.py; ... | no |
+| `param_resolver.py` | core | Unified per-parameter provenance resolver (VYVAR). ONE place that decides, per physical parameter, which source wins: | psf_photometry.py; pipeline.py; photometry_core.py; ... | no |
 
 ## UTIL
 
@@ -132,7 +132,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
-| `ui_aperture_photometry.py` | UI | Aperture Photometry Lightcurves - Faza 2A UI. | photometry_report.py; night_run.py; app.py; scripts/_rerun_phase01_draft365.py; ... | no |
+| `ui_aperture_photometry.py` | UI | Aperture Photometry Lightcurves - aperture photometry UI. | photometry_report.py; night_run.py; app.py; scripts/_rerun_phase01_draft365.py; ... | no |
 | `ui_calibration.py` | UI | Streamlit UI helpers for calibration / smart-import (equipment header, master binning, multi-obs status). | app.py | no |
 | `ui_calibration_library.py` | UI | Streamlit dashboard for CalibrationLibrary validity overview, delete, and master generation. | app.py | no |
 | `ui_components.py` | UI | Reusable Streamlit UI components. | ui_quality_dashboard.py; app.py | no |
@@ -147,7 +147,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | `ui_photometry_quality.py` | UI | Streamlit dashboard: Photometry Quality Diagnostic (MASTERSTAR + per-frame catalogs). | ui_settings.py | no |
 | `ui_photometry_results.py` | UI | Streamlit tabs: aperture / PSF time series, comp validation, variable detection (per-frame sidecars). **Odpojene od `app.py`** (ROADMAP - zamer vs regresia). | - | no |
 | `ui_quality_dashboard.py` | UI | Streamlit Quality Dashboard: OBS_FILES metrics, Plotly, FITS preview, data editor. | app.py | no |
-| `ui_select_stars.py` | UI | Select Stars dashboard - Faza 0+1: vyber aktivnych premennych a porovnavacich hviezd. | ui_suspected_lightcurves.py | no |
+| `ui_select_stars.py` | UI | Select Stars dashboard - target and comparison-star selection. | ui_suspected_lightcurves.py | no |
 | `ui_settings.py` | UI | Unified Settings dashboard: paths, QC, photometry, phase 0+1, alignment, tools + rich help. | app.py | no |
 | `ui_suspected_lightcurves.py` | UI | Light curves for suspected variables - instrumentalna mag z per-frame CSV. **Odpojene od `app.py`** (ROADMAP - zamer vs regresia). | - | no |
 | `ui_variability.py` | UI | Variability tab (VAR-TAB-2026-10): interactive hockey-stick, one table of new candidates + recovered VSX variables, night LC, TESS download and Peranso-like period / phase view (all plotly). | `app.py` | no |
@@ -170,7 +170,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 ## Poznamky
 
 - `ui_photometry_results.py` a `ui_suspected_lightcurves.py` nie su importovane z `app.py` (legacy/alternativne UI; otvorena otazka v ROADMAP).
-- `photometry.py` / `photometry_phase2a.py` su tenke re-exporty; implementacia je v `photometry_core.py`.
+- `photometry.py` is a thin re-export of `photometry_core.py`.
 - Offline harness: `xval_run.py` + `xval_harness_core.py` - mimo produkcneho pipeline.
 - GAIA: `build_gaia_catalog.py` (SQLite), blind plate-solve index `GAIA_DR3/build_astro_index.py` (folder `vyvar_astro_index/`).
 

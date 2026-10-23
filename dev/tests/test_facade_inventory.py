@@ -16,7 +16,7 @@ import photometry_comp
 import photometry_core
 import photometry_gate_helpers
 import photometry_lightcurve
-import photometry_phase2a
+import aperture_photometry
 import photometry_provenance
 import photometry_shared
 import pipeline
@@ -29,9 +29,9 @@ import pipeline_ui_helpers
 import catalog_match
 import frame_export
 import masterstar_build
-import phase01_run
-import phase2a_state
-import phase2a_target
+import target_comp_selection
+import aperture_photometry_state
+import aperture_photometry_target
 
 
 # --- union name lists (from test_consolidate_e1..edead_facade) ---
@@ -78,21 +78,17 @@ PHOTOMETRY_E2_SHARED = (
     "_get_plate_scale_from_cfg",
     "finalize_hybrid_bkg_fallback_proc_dir",
     "stamp_vsx_known_variable_on_masterstars",
-    "stress_test_relative_rms_from_sidecars",
     "stamp_masterstar_snr_columns",
     "compute_fwhm_gaussian_for_aperture_catalog",
     "_read_plate_scale_from_fits_path",
-    "vsx_is_known_variable_top3_per_bin",
     "build_gs11_summary",
     "_resolve_plate_scale_arcsec_per_px",
     "_fwhm_moment_at",
     "common_field_intersection_bbox_px",
-    "recommended_aperture_by_color",
     "_safe_polyfit",
     "_target_display_name",
     "common_field_intersection_bbox_px_from_arrays",
     "_normalize_gaia_id",
-    "StressTestResult",
 )
 
 PHOTOMETRY_E3_COMP = (
@@ -108,16 +104,14 @@ PHOTOMETRY_E3_COMP = (
     "_dedupe_comp_pool_by_gaia_key",
     "_bprp_tier_ladder_for_selection",
     "_variable_targets_looks_like_ct_presel_stub",
-    "_normalize_id_value",
     "_bool_col",
-    "_normalize_id_series",
 )
 
-PHOTOMETRY_E4_PHASE2A = (
-    "run_phase2a",
+PHOTOMETRY_E4_APERTURE = (
+    "run_aperture_photometry",
     "measure_fwhm_from_masterstar",
     "read_flux_from_csv",
-    "_Phase2AState",
+    "_AperturePhotometryState",
     "parse_comp_quality_json_map",
     "detect_outliers",
     "apply_reporting_postprocess",
@@ -147,39 +141,22 @@ PIPELINE_EDEAD_UI = (
 
 PIPELINE_E5 = (
     "SkySurfaceOrderConflictError",
-    "_cal_diag_export_for_workers",
     "_cal_diag_session_from_export",
-    "_calibrate_batch_process_one",
     "_calibrate_one_light_disk",
-    "_db_for_calibration_tasks",
     "_decide_preprocess_sky_action",
     "_effective_saturation_limit",
-    "_filter_light_paths_maybe",
     "_fit_subtract_preprocess_sky_surface",
-    "_has_valid_wcs",
     "_infer_sat_limit_from_bitpix",
-    "_init_calibrate_batch_worker",
     "_iter_light_fits",
-    "_light_binning_from_path",
-    "_log_calibration_io_preflight",
     "_match_and_crop_pair",
-    "_obs_group_key_from_light_path",
-    "_pipeline_ui_error",
     "_qc_enrich_calibrated_in_place",
     "_qc_enrich_one_frame",
     "_qc_fwhm_elongation",
-    "_qc_pack_from_config",
     "_saturate_limit_adu_from_header",
-    "_saturation_adu_for_cal_diag",
     "_sync_obs_calibration_state_with_retry",
-    "_vyvar_calibrate_multiprocessing_enabled",
-    "_vyvar_parallel_pool",
-    "_vyvar_qc_preprocess_workers",
     "apply_perf10_dao_qc_to_obs_files",
     "calibrate_lights_to_calibrated",
     "estimate_archive_memory_profile",
-    "estimate_memory_from_fits_headers",
-    "format_memory_bytes",
     "norm_fits_path_key",
     "run_draft_ram_calibration_qc_to_obs_files",
     "run_osc_channel_extraction_for_archive",
@@ -201,9 +178,7 @@ PIPELINE_E6A_PREPROCESS = (
 
 PIPELINE_E6A_ASTROMETRY = (
     "_dao_targeted_pass2_unmatched_gaia",
-    "_equipment_saturate_adu_from_db",
     "_merge_vsx_exoplanet_variable_targets",
-    "_pass2_sibling_wcs_recovery",
     "_path_segments_forbidden_for_masterstar_physical_source",
     "_plate_solve_input_bundle",
     "_query_vsx_local_frame_bbox",
@@ -227,11 +202,9 @@ PIPELINE_E6A_CATALOG = (
     "_build_exoplanet_promotion_rows_from_masterstars",
     "_cfg_from_export_worker_state",
     "_compute_airmass_from_altaz",
-    "_dao_auto_binning_factor",
     "_dao_convolved_background_rms_adu",
     "_dao_detection_threshold_adu",
     "_dao_noise_sigma_adu",
-    "_detect_empirical_clip_level_adu",
     "_effective_field_catalog_cone_radius_deg",
     "_exo_host_annotation_arrays",
     "_extract_airmass_from_header",
@@ -239,15 +212,10 @@ PIPELINE_E6A_CATALOG = (
     "_init_export_per_frame_worker",
     "_lock_matched_centroids_to_master_grid",
     "_masterstar_zone_linear_threshold",
-    "_mean_bin2d_for_dao",
     "_pixel_noise_sigma_pp_adu",
-    "_prefilter_dao_table_brightest",
     "_proc_deduplicate_matched_catalog_rows",
     "_query_exoplanet_local",
-    "_query_gaia_local",
     "_query_vsx_local",
-    "_resolve_peak_saturation_limit_adu",
-    "detect_stars_match_master_reference",
     "find_qc_metrics_csv",
     "inv_sat_limit_peak_test_adu",
 )
@@ -293,13 +261,13 @@ def test_facade_inventory_photometry_homes() -> None:
     _assert_facade(photometry_core, photometry_provenance, PHOTOMETRY_E2_PROVENANCE)
     _assert_facade(photometry_core, photometry_shared, PHOTOMETRY_E2_SHARED)
     _assert_facade(photometry_core, photometry_comp, PHOTOMETRY_E3_COMP)
-    _assert_facade(photometry_core, photometry_phase2a, PHOTOMETRY_E4_PHASE2A)
+    _assert_facade(photometry_core, aperture_photometry, PHOTOMETRY_E4_APERTURE)
     _assert_facade(photometry_core, photometry_lightcurve, PHOTOMETRY_E4_LC)
     _assert_facade(photometry_core, photometry_shared, PHOTOMETRY_EDEAD_SHARED)
     _assert_facade(photometry_core, photometry_gate_helpers, PHOTOMETRY_EDEAD_GATE)
-    assert photometry_core._phase2a_prepare_shared_state is phase2a_state._phase2a_prepare_shared_state
-    assert photometry_core._phase2a_process_one_target is phase2a_target._phase2a_process_one_target
-    assert photometry_core.run_phase0_and_phase1 is phase01_run.run_phase0_and_phase1
+    assert photometry_core._aperture_prepare_shared_state is aperture_photometry_state._aperture_prepare_shared_state
+    assert photometry_core._aperture_process_one_target is aperture_photometry_target._aperture_process_one_target
+    assert photometry_core.run_target_and_comp_selection is target_comp_selection.run_target_and_comp_selection
     for name in PHOTOMETRY_CALLABLE_E1:
         assert callable(getattr(photometry_core, name)), name
 
@@ -309,8 +277,6 @@ def test_facade_inventory_giants_and_stays() -> None:
     assert pipeline.detect_stars_and_match_catalog is catalog_match.detect_stars_and_match_catalog
     assert pipeline.export_per_frame_catalogs is frame_export.export_per_frame_catalogs
     assert pipeline.AstroPipeline.__module__ == "pipeline"
-    assert pipeline.analyze_calibrated_qc.__module__ == "pipeline"
-    assert pipeline._analyze_calibrated_qc_one.__module__ == "pipeline"
     assert photometry_core.run_full_photometry_pipeline.__module__ == "photometry_core"
     assert photometry_core.select_active_targets is photometry_comp.select_active_targets
 
@@ -318,7 +284,7 @@ def test_facade_inventory_giants_and_stays() -> None:
 def test_facade_inventory_star_import() -> None:
     for name in photometry_core.__all__:
         assert hasattr(photometry, name), name
-    assert photometry.run_phase0_and_phase1 is photometry_core.run_phase0_and_phase1
+    assert photometry.run_target_and_comp_selection is photometry_core.run_target_and_comp_selection
     assert photometry.select_active_targets is photometry_core.select_active_targets
 
 
@@ -330,8 +296,6 @@ def test_facade_inventory_constants_leaf() -> None:
 
 
 def test_facade_inventory_init_arities() -> None:
-    sig = inspect.signature(pipeline._init_calibrate_batch_worker)
-    assert list(sig.parameters) == ["native_b", "cal_diag_blob"]
     sig2 = inspect.signature(pipeline._init_export_per_frame_worker)
     assert list(sig2.parameters) == ["state"]
 

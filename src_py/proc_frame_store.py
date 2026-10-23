@@ -1,6 +1,6 @@
 """ProcFrameStore - unified in-memory store for proc_*.csv frames.
 
-Replaces shared_csv_cache (Phase 1) and _phase2a_csv_cache (Phase 2A)
+Replaces shared_csv_cache (comparison-star selection) and _aperture_csv_cache (aperture photometry)
 with a single object built once per pipeline run.
 
 Design:
@@ -27,7 +27,7 @@ import pandas as pd
 from gaia_catalog_id import normalize_gaia_source_id_series
 
 # Union of all columns needed by any consumer.
-# Superset of Phase 1 _needed_cols + Phase 2A _needed_cols_2a.
+# Superset of comparison-star selection _needed_cols + aperture photometry _needed_cols_2a.
 # Add new columns here if a consumer needs them - no re-read required.
 PROC_STORE_COLS = [
     # Identity
@@ -72,13 +72,13 @@ PROC_STORE_COLS = [
     "mag",
     "bp_rp",
     "gaia_dr3_variable_catalog",
-    # G2-F002b trust (per-frame proc CSV; Phase 2A frame_time_lookup)
+    # G2-F002b trust (per-frame proc CSV; aperture photometry frame_time_lookup)
     "catalog_match_mode",
-    # wcs_untrusted is NOT stored here - derived in Phase 2A LC export from
+    # wcs_untrusted is NOT stored here - derived in the aperture-photometry LC export from
     # catalog_match_mode via catalog_match_trust.is_wcs_untrusted_catalog_match_mode.
 ]
 
-# OUTPUT-REVIEW-2026-10 step 4b (Milan 2026-10-21: "zaokruhlit, ale vedecky prijatelne"): proc values
+# OUTPUT-REVIEW-2026-10 step 4b (Milan 2026-10-21: "round, but scientifically acceptable"): proc values
 # are written with the precision the measurement has, not with the 17 digits of a float64.
 #  - x / y: 1e-4 px (centroids are good to ~1e-2 px);
 #  - ra / dec: 1e-7 deg = 0.36 mas (Gaia DR3 positions, epoch-propagated, ~0.02-1 mas);

@@ -108,6 +108,36 @@ def _covered_stars(stars_df: pd.DataFrame, covered: np.ndarray, cutout_size: int
     return stars_df[np.asarray(keep, dtype=bool)]
 
 
+_DELTA_CTX: dict[str, Any] = {}
+
+
+def _delta_worker_init(ctx: dict[str, Any]) -> None:
+    _DELTA_CTX.clear()
+    _DELTA_CTX.update(ctx)
+
+
+def _frame_cell_deltas(frame_fits: Path) -> tuple[np.ndarray, list[int], float, tuple[int, int]]:
+    """(cell - field) ePSFs of one frame, the build stars per cell, the field ePSF peak, frame shape."""
+    c = _DELTA_CTX
+    nx, ny, cutout_size, fwhm_px = c["nx"], c["ny"], c["cutout_size"], c["fwhm_px"]
+    data, covered = _read(frame_fits)
+    stars_fp = _covered_stars(c["build_stars"], covered, cutout_size)
+    xe, ye, _ = grid_cells(data.shape, nx, ny)
+    field = _build_epsf(data, stars_fp, cutout_size, fwhm_px)["arr"].astype(np.float64)
+    cells = []
+    n_cell = []
+    for j in range(ny):
+        for i in range(nx):
+            m = (
+                (stars_fp["x"] >= xe[i]) & (stars_fp["x"] < xe[i + 1])
+                & (stars_fp["y"] >= ye[j]) & (stars_fp["y"] < ye[j + 1])
+            )
+            cell = _build_epsf(data, stars_fp[m], cutout_size, fwhm_px)
+            cells.append(cell["arr"].astype(np.float64) - field)
+            n_cell.append(cell["n_stars"])
+    return np.array(cells), n_cell, float(np.max(field)), tuple(data.shape)
+
+
 def night_spatial_delta(
     frames: list[Path],
     build_stars: pd.DataFrame,
@@ -115,45 +145,34 @@ def night_spatial_delta(
     cutout_size: int,
     fwhm_px: float,
     out_path: Path,
+    workers: int = 1,
 ) -> dict[str, Any]:
     """Night-averaged perturbation of every grid cell from the frame ePSF; written to ``out_path``.
 
     For a subset of frames (every k-th, at most 30) the cell ePSFs and the whole-field ePSF are built
     from the same frame, from the build stars whose cutout the frame covers (``aligned_footprint``);
-    delta_cell = median over frames of (cell - field). (1, 1) grid -> no file.
+    delta_cell = median over frames of (cell - field). (1, 1) grid -> no file. ``workers`` > 1 builds
+    the frames in a process pool; the result does not depend on it.
     """
+    from parallel_frames import map_frames  # noqa: PLC0415
+
     nx, ny = grid_shape_for(len(build_stars))
     out = {"grid": [nx, ny], "n_build_stars": int(len(build_stars)), "file": None, "n_frames": 0}
     if nx == 1 or not frames:
         return out
     step = max(1, math.ceil(len(frames) / _DELTA_MAX_FRAMES))
     subset = frames[::step]
-    deltas = []
-    n_cell: list[int] = []
-    for fp in subset:
-        data, covered = _read(fp)
-        stars_fp = _covered_stars(build_stars, covered, cutout_size)
-        xe, ye, centres = grid_cells(data.shape, nx, ny)
-        field = _build_epsf(data, stars_fp, cutout_size, fwhm_px)["arr"].astype(np.float64)
-        cells = []
-        n_cell = []
-        for j in range(ny):
-            for i in range(nx):
-                m = (
-                    (stars_fp["x"] >= xe[i]) & (stars_fp["x"] < xe[i + 1])
-                    & (stars_fp["y"] >= ye[j]) & (stars_fp["y"] < ye[j + 1])
-                )
-                cell = _build_epsf(data, stars_fp[m], cutout_size, fwhm_px)
-                cells.append(cell["arr"].astype(np.float64) - field)
-                n_cell.append(cell["n_stars"])
-        deltas.append(np.array(cells))
+    ctx = {"nx": nx, "ny": ny, "cutout_size": int(cutout_size), "fwhm_px": float(fwhm_px), "build_stars": build_stars}
+    res = list(map_frames(_frame_cell_deltas, subset, workers=workers, initializer=_delta_worker_init, ctx=ctx))
+    deltas = [r[0] for r in res]
+    n_cell, peak = res[-1][1], res[-1][2]
+    _, _, centres = grid_cells(res[-1][3], nx, ny)
     delta = np.median(np.array(deltas), axis=0)
     hdr = fits.Header()
     hdr["GRID_NX"], hdr["GRID_NY"], hdr["NFRAMES"], hdr["OVERSAMP"] = nx, ny, len(subset), OVERSAMPLING
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fits.PrimaryHDU(delta.astype(np.float32), header=hdr).writeto(out_path, overwrite=True)
-    peak = float(np.max(field))
     out.update(
         {
             "file": out_path.name,

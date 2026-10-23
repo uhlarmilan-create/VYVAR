@@ -1,6 +1,6 @@
 """GSPC zero point (GSPC-EXP-2026-10 -> GSPC-ZP-2026-10 -> GSPC-STD-2026-10).
 
-Used by Phase 2A: second scale / note B for calibrated targets; the zero point (standard
+Used by aperture photometry: second scale / note B for calibrated targets; the zero point (standard
 export, ZP=GaiaDR3-GSPC) for note-A targets whose comps are outside the polynomial range.
 
 Zero-point magnitudes of comparison stars from the Gaia DR3 Synthetic Photometry

@@ -1,9 +1,9 @@
-"""TARGET-RULES-2026-10 (Milan 2026-10-13): Phase-0 target selection follows exactly the rules.
+"""TARGET-RULES-2026-10 (Milan 2026-10-13): target selection follows exactly the rules.
 
 A target is a VSX star DAO detected on MASTERSTAR (a catalogue-membership row is a catalogue
 row, not image data). Then three final cuts: saturated (upper), S/N below snr_min (lower,
 drowned in noise), VSX type out of scope (ROT). Draft 532: 32 catalogue rows (CS Cam G 4.1
-saturated on MASTERSTAR among them) and 11 saturated targets went into Phase 1.
+saturated on MASTERSTAR among them) and 11 saturated targets went into comparison-star selection.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def test_rules(tmp_path: Path) -> None:
     assert not at.loc[ids[6], "skip_photometry"]
     assert ids[5] not in at.index and ids[7] not in at.index
     assert set(exc.loc[exc["reason"] == "no_dao_detection", "name"].astype(str)) == {ids[5], ids[7]}
-    # every Phase-0 cut is final: no comparison selection, never revived in Phase 2A
+    # every target-selection cut is final: no comparison selection, never revived in aperture photometry
     assert {"saturated", "below_snr_min", "vsx_type_out_of_scope"} <= set(FINAL_SKIP_REASONS)
     measured = at[~at["skip_reason"].astype(str).isin(FINAL_SKIP_REASONS)]
     assert set(measured.index) == {ids[0], ids[6]}
@@ -76,5 +76,5 @@ def test_removed_paths_stay_removed() -> None:
     assert "_fill_missing_master_snr" not in pc and "target_depth_g" not in pc and "snr50_ok_for_skip" not in pc
     lc = (src / "photometry_lightcurve.py").read_text(encoding="utf-8")
     assert "pfs_rescue_eligible" not in lc and "decide_target_saturation_policy" not in lc
-    p01 = (src / "phase01_run.py").read_text(encoding="utf-8")
+    p01 = (src / "target_comp_selection.py").read_text(encoding="utf-8")
     assert "target_depth.json" not in p01

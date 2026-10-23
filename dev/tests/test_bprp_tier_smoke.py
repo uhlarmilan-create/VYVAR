@@ -69,23 +69,23 @@ def main() -> None:
 
     bo_comp = comp[comp["target_catalog_id"] == TARGET_CID]
     if len(bo_comp) < 3:
-        print(f"[FAIL] Malo comp riadkov: {len(bo_comp)}")
+        print(f"[FAIL] Too few comp rows: {len(bo_comp)}")
         return
     if "bp_rp" not in bo_comp.columns or not bo_comp["bp_rp"].apply(_is_finite).any():
-        print("[FAIL] Ziadna comp nema finite bp_rp")
+        print("[FAIL] No comp has a finite bp_rp")
         return
 
     tier_col = "tier" if "tier" in bo_comp.columns else ("comp_tier" if "comp_tier" in bo_comp.columns else None)
     if tier_col is None:
-        print("[FAIL] Chyba tier/comp_tier stlpec")
+        print("[FAIL] Missing tier/comp_tier column")
         return
     tiers = bo_comp[tier_col].dropna().astype(int)
     if not tiers.between(1, 4).all():
-        print(f"[FAIL] Tier mimo rozsahu 1-4: {tiers.unique()}")
+        print(f"[FAIL] Tier outside range 1-4: {tiers.unique()}")
 
     dbprp_finite = bo_comp["delta_bprp_abs"].apply(_is_finite) if "delta_bprp_abs" in bo_comp.columns else pd.Series(False)
     if not dbprp_finite.any():
-        print("[FAIL] Ziadna comp nema finite delta_bprp_abs")
+        print("[FAIL] No comp has a finite delta_bprp_abs")
     print(
         f"[OK] comparison_stars BO CVn: {len(bo_comp)} comp, "
         f"tiers={sorted(tiers.unique())}, "
@@ -100,9 +100,9 @@ def main() -> None:
         if len(nan_comp) > 0:
             tiers_nan = nan_comp[tier_col].dropna().astype(int)
             if (tiers_nan == 4).all():
-                print(f"[OK] NaN target bp_rp -> tier=4 pre {test_cid}")
+                print(f"[OK] NaN target bp_rp -> tier=4 for {test_cid}")
             else:
-                print(f"[FAIL] Pre target s NaN bp_rp ocakavam tier=4, dostal: {tiers_nan.unique()}")
+                print(f"[FAIL] For a target with NaN bp_rp expected tier=4, got: {tiers_nan.unique()}")
         else:
             print(f"[SKIP] No comps for NaN target {test_cid}")
     else:

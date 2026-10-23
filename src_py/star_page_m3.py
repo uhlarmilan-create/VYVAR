@@ -281,7 +281,7 @@ def load_comp_quality(lc_dir: Path, cid: str) -> dict[str, Any]:
 
 
 def short_status(entry: Any) -> str:
-    """'suspect* 5.1 mmag/h' instead of the multi-line Phase-2A note (footnote explains *)."""
+    """'suspect* 5.1 mmag/h' instead of the multi-line aperture-photometry note (footnote explains *)."""
     if not isinstance(entry, dict):
         return str(entry or "")
     q = _s(entry.get("quality")) or "good"
@@ -349,10 +349,10 @@ def comp_rows(
 
 
 COMP_HEADERS = ["#", "Gaia DR3", "G", "BP-RP", "dBP-RP", "dist '", "rms mmag", "w", "{band} GSPC", "status"]
-COMP_FOOT = ("* suspect = Phase-2A stability slope; kept only when fewer than 3 clean comps exist (COMP-SMART); "
+COMP_FOOT = ("* suspect = aperture-photometry stability slope; kept only when fewer than 3 clean comps exist (COMP-SMART); "
              "(reserve) = replaced a suspect comp.  GSPC: accepted value; "
              "(m) f0 = flag 0 (extrapolation), bl = XP spectrum blended, S/N = below 30 - not used.  "
-             "w = Broeg weight (relative).  rms = Phase-1 comparison-star scatter.")
+             "w = Broeg weight (relative).  rms = comparison-star scatter.")
 
 
 def n_eff(weights: Mapping[str, float]) -> float:
