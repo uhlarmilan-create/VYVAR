@@ -288,20 +288,18 @@ def run_target_and_comp_selection(
     _p("Target selection: active targets from VSX...")
     logging.info("[TARGET-SELECT] Selecting active targets...")
     _cfg_p01 = _cfg_base
-    # Load annulus-aware safe bbox from photometry_plan.json (if available).
-    _safe_bbox: tuple[float, float, float, float] | None = None
-    try:
-        plan_path = Path(variable_targets_csv).parent / "photometry_plan.json"
-        if plan_path.is_file():
-            import json as _json  # noqa: PLC0415
+    # BORDER-FOOTPRINT-2026-10 (Milan 2026-10-24): the border filter is mandatory - the overlap of
+    # all aligned frames (shrunk by the sky annulus) from photometry_plan.json. No photometry of
+    # stars outside it, and no silent run without it.
+    import json as _json  # noqa: PLC0415
 
-            _plan = _json.loads(plan_path.read_text(encoding="utf-8"))
-            sb = _plan.get("safe_bbox_px")
-            if isinstance(sb, (list, tuple)) and len(sb) == 4:
-                x0b, y0b, x1b, y1b = sb
-                _safe_bbox = (float(x0b), float(y0b), float(x1b), float(y1b))
-    except Exception:  # noqa: BLE001
-        _safe_bbox = None
+    plan_path = Path(variable_targets_csv).parent / "photometry_plan.json"
+    sb = _json.loads(plan_path.read_text(encoding="utf-8")).get("safe_bbox_px") if plan_path.is_file() else None
+    if not (isinstance(sb, (list, tuple)) and len(sb) == 4):
+        raise RuntimeError(
+            f"[BORDER] {plan_path} has no safe_bbox_px (overlap of the aligned frames) - re-run the alignment"
+        )
+    _safe_bbox: tuple[float, float, float, float] = (float(sb[0]), float(sb[1]), float(sb[2]), float(sb[3]))
     _ms_fits_p01 = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
     _masterstar_wcs: Any = None
     if _ms_fits_p01.is_file():

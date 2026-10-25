@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-10-22T16:34:43Z at git HEAD 179dd98._
+_Generated 2026-10-25T08:49:52Z at git HEAD 6259312._
 
 ## Summary
 
-- Entries: 56
-- Tier: basic 13, advanced 23, expert 20
-- Kind: static 55, derived 0, resolved 1
-- Widget: auto 53, custom 0, hidden 3
-- Owner: db_static 5, config_runtime 44, fits_dynamic 0, internal 7
-- Scope: universal 40, rig 7, site 9, session 0
-- Scope key: none 40, rig 4, rig_band 2, rig_sampling 1, site 9, frame 0
+- Entries: 57
+- Tier: basic 13, advanced 24, expert 20
+- Kind: static 56, derived 0, resolved 1
+- Widget: auto 54, custom 0, hidden 3
+- Owner: db_static 5, config_runtime 45, fits_dynamic 0, internal 7
+- Scope: universal 41, rig 7, site 9, session 0
+- Scope key: none 41, rig 4, rig_band 2, rig_sampling 1, site 9, frame 0
 - Rig triage group: a 5, c 2
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -134,6 +134,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `tess_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | TESS check of new candidates |
+| `transient_search_enabled` | False | - | advanced | static | config_runtime | universal | none | n/a | auto | Search for transients and minor bodies |
 
 ## system
 

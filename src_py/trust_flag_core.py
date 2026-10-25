@@ -186,6 +186,38 @@ def check_star_chi2(photometry_dir: Path, target_id: str) -> tuple[float, float]
     return ratio, float(_chi2.sf(chi2, n - 1))
 
 
+#: Field error-model check (CAMERA-PROFILE-2026-10): median check-star scatter / reported error.
+ERROR_MODEL_RATIO_LOW = 0.7
+ERROR_MODEL_RATIO_HIGH = 1.5
+ERROR_MODEL_MIN_STARS = 5
+
+
+def error_model_check(photometry_dir: Path) -> dict[str, Any]:
+    """Median over the night's check stars of the robust scatter in units of their reported errors
+    (``check_star_chi2``; 1 = errors consistent with the scatter). A field well below 1 means the
+    errors are too large (gain too small or read noise too large); well above 1 means the errors are
+    too small - a wrong gain or read noise, or noise the model does not contain (scintillation, flat
+    or variable check stars). Diagnostic only: VYVAR never changes the gain from it."""
+    lc = Path(photometry_dir) / "lightcurves"
+    seen: dict[str, float] = {}
+    for f in sorted(lc.glob("check_kmag_*.csv")) if lc.is_dir() else []:
+        tid = f.stem[len("check_kmag_"):]
+        r, _ = check_star_chi2(Path(photometry_dir), tid)
+        if not np.isfinite(r):
+            continue
+        from check_star_kmag import load_check_star  # noqa: PLC0415
+
+        kc = str(load_check_star(lc, tid).get("catalog_id", "") or tid)
+        seen.setdefault(kc, float(r))  # one value per check star (shared check stars count once)
+    vals = np.array(list(seen.values()), dtype=np.float64)
+    n = int(vals.size)
+    if n < ERROR_MODEL_MIN_STARS:
+        return {"n": n, "ratio": float("nan"), "status": "too_few"}
+    med = float(np.median(vals))
+    status = "low" if med < ERROR_MODEL_RATIO_LOW else "high" if med > ERROR_MODEL_RATIO_HIGH else "ok"
+    return {"n": n, "ratio": med, "status": status}
+
+
 def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str) -> tuple[float, float]:
     """TRUST-LEVEL-2026-10: (median measured check-star magnitude minus its catalogue magnitude in the
     zero-point band, zero-point uncertainty from the comparison-star scatter - model value when the

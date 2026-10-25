@@ -13,7 +13,7 @@ import logging
 import math
 import multiprocessing
 import pickle
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -377,20 +377,27 @@ def export_per_frame_catalogs(
     # forced photometry and the ePSF records -> on a 1-2 core machine comparison-star selection failed
     # ('numpy.float64' object has no attribute 'isna' in the comp pool admission).
     ws = _catalog_worker_state()
+    # EXPORT-RAM-PEAK-2026-10: a RAM-handoff frame is serialised only when its task is submitted.
+    # Packing every frame up front held a second copy of all aligned frames next to the RAM
+    # buffer (2 x the night in memory): Brno 534, 97 frames 3552x2664, was killed out of memory
+    # on a 7 GB machine even with one worker.
     if use_ram_inputs and work_ram is not None:
         keys = [str(it[0]) for it in work_ram]
-        packs: list[Any] = []
-        for _name, _hdr, _arr in work_ram:
-            d = np.asarray(_arr, dtype=np.float32)
-            if not d.flags.c_contiguous:
-                d = np.ascontiguousarray(d, dtype=np.float32)
-            packs.append(
-                (str((root / _name).resolve()), pickle.dumps(_hdr.copy()), d.tobytes(), int(d.shape[0]), int(d.shape[1]))
-            )
+        _ram_items = work_ram
+
+        def _pack(i: int) -> Any:
+            _name, _hdr, _arr = _ram_items[i]
+            d = np.ascontiguousarray(_arr, dtype=np.float32)
+            return (str((root / _name).resolve()), pickle.dumps(_hdr.copy()), d.tobytes(), int(d.shape[0]), int(d.shape[1]))
+
         task_fn: Any = _export_per_frame_ram_worker_task
     else:
         keys = [fp.name for fp in files]
-        packs = [str(fp.resolve()) for fp in files]
+        _disk_packs = [str(fp.resolve()) for fp in files]
+
+        def _pack(i: int) -> Any:
+            return _disk_packs[i]
+
         task_fn = _export_per_frame_disk_worker_task
 
     by_key: dict[str, dict[str, Any]] = {}
@@ -425,13 +432,20 @@ def export_per_frame_catalogs(
             initializer=_init_export_per_frame_worker,
             initargs=(ws,),
         ) as ex:
-            futs = {ex.submit(task_fn, pack): key for key, pack in zip(keys, packs)}
-            for fut in as_completed(futs):
-                _collect(futs[fut], fut.result())
+            # at most 2 tasks per worker in flight: the packed frames are not all alive at once
+            pending: dict[Any, str] = {}
+            nxt = 0
+            while nxt < len(keys) or pending:
+                while nxt < len(keys) and len(pending) < 2 * n_workers:
+                    pending[ex.submit(task_fn, _pack(nxt))] = keys[nxt]
+                    nxt += 1
+                finished, _ = wait(list(pending), return_when=FIRST_COMPLETED)
+                for fut in finished:
+                    _collect(pending.pop(fut), fut.result())
     else:
         _init_export_per_frame_worker(ws)
-        for key, pack in zip(keys, packs):
-            _collect(key, task_fn(pack))
+        for i, key in enumerate(keys):
+            _collect(key, task_fn(_pack(i)))
     rows_out = []
     frame_rows: dict[str, dict[str, Any]] = {}
     for key in keys:

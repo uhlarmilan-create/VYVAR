@@ -57,7 +57,7 @@ def _measured_cids(pages: "TargetPages") -> list[str]:
     return out
 
 
-@st.cache_resource(show_spinner="Loading the draft into memory...", max_entries=4)
+@st.cache_resource(show_spinner="Loading the processed field into memory...", max_entries=4)
 def _group_pages(platesolve_setup_dir: str, _stamp: float) -> "TargetPages":
     """All page data of one observation group, read once (``_stamp`` = summary mtime, part of the key)."""
     from target_page import load_target_pages  # noqa: PLC0415
@@ -312,13 +312,13 @@ def render_aperture_photometry(
 
     st.header("Aperture Photometry")
     if draft_id is None and draft_dir_override is None:
-        st.info("No active draft. Load a draft above or run VAR-STREM.")
+        st.info("No processed field loaded. Load one above (Load processed field) or run VAR-STREM.")
         return
     draft_dir = resolve_draft_dir_path(draft_dir_override, draft_id, cfg.archive_root)
     setups = find_photometry_setups(cfg, draft_id, draft_dir_override=draft_dir) if draft_dir else {}
     setups = {k: v for k, v in setups.items() if (Path(v["photometry_dir"]) / "photometry_summary.csv").is_file()}
     if not setups:
-        st.warning("Photometry has not been run for this draft (runs are started by VAR-STREM / the night runner).")
+        st.warning("Photometry has not been run for this processed field (runs are started by VAR-STREM / the night runner).")
         return
 
     c_info, c_setup, c_pdf = st.columns([3, 1.4, 0.8], vertical_alignment="bottom")

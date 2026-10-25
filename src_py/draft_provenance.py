@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 import hashlib
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -433,23 +434,6 @@ def count_manifest_final_data_for_telescope(db: Any, telescope_id: int) -> int:
     return sum(1 for _eq, tel in iter_manifest_final_data_pairs(archive_root, db) if tel == want)
 
 
-def count_manifest_references_to_location_id(db: Any, location_id: int) -> int:
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    want = int(location_id)
-    n = 0
-    for _did, apath in iter_draft_archive_dirs(archive_root):
-        manifest = load_draft_manifest(apath)
-        if not manifest:
-            continue
-        rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
-        loc = _optional_int(rig.get("location_id"))
-        if loc == want:
-            n += 1
-    return int(n)
-
-
 def is_pre_calibrated_draft(
     archive_path: Path | str,
     *,
@@ -611,24 +595,9 @@ def resolve_draft_dir_for_id(db: Any, draft_id: int) -> Path | None:
     except Exception:  # noqa: BLE001
         return None
     did = int(draft_id)
-    standard = archive_root / "Drafts" / f"draft_{did:06d}"
-    if standard.is_dir() or (standard / _MANIFEST_NAME).is_file():
-        return standard.resolve()
-    for found_id, path in iter_draft_archive_dirs(archive_root):
-        if found_id == did:
-            return path
-    drafts_dir = archive_root / "Drafts"
-    if drafts_dir.is_dir():
-        for child in drafts_dir.iterdir():
-            mf = child / _MANIFEST_NAME
-            if not mf.is_file():
-                continue
-            try:
-                raw = json.loads(mf.read_text(encoding="utf-8"))
-                if int(raw.get("draft_id", -1)) == did:
-                    return child.resolve()
-            except Exception:  # noqa: BLE001
-                continue
+    found = draft_dir_for_id(archive_root, did)
+    if found.is_dir():
+        return found.resolve()
     for mf in archive_root.rglob(_MANIFEST_NAME):
         try:
             raw = json.loads(mf.read_text(encoding="utf-8"))
@@ -639,12 +608,54 @@ def resolve_draft_dir_for_id(db: Any, draft_id: int) -> Path | None:
     return None
 
 
-def allocate_next_draft_id(archive_root: Path | str, ) -> int:
-    """Next draft id from filesystem scan of ``Archive/Drafts/draft_*``."""
-    max_id = 0
+def allocate_next_draft_id(archive_root: Path | str, *, floor: int = 0) -> int:
+    """Next processed-field id: above every id under ``Archive/Drafts`` and above ``floor`` (the
+    largest id the database has seen), so ids are never reused when old folders are deleted."""
+    max_id = int(floor or 0)
     for did, _ in iter_draft_archive_dirs(archive_root):
         max_id = max(max_id, int(did))
     return int(max_id) + 1
+
+
+# PROCESSED-FIELD-NAME-2026-10 (Milan 2026-10-24): a processed field is stored as
+# Archive/Drafts/<TARGET>_<YYYYMMDD>_<NNN> - the observed star, the date of the evening the night
+# began, a counter for repeated runs of the same star and night.
+_GENERIC_TARGET_NAMES = {"", "field", "object", "light", "lights", "target", "unknown", "none", "nan"}
+
+
+def processed_field_target_name(object_name: Any, source_folder_name: Any) -> str:
+    """Folder-safe target: the FITS OBJECT, else the selected source folder's name, else 'field'.
+    Spaces become '_', characters outside [A-Za-z0-9+-_] are dropped ('MN Boo' -> 'MN_Boo')."""
+    for raw in (object_name, source_folder_name):
+        txt = re.sub(r"\s+", "_", str(raw or "").strip())
+        txt = re.sub(r"[^A-Za-z0-9+\-_]", "", txt).strip("_")
+        txt = re.sub(r"_+", "_", txt)
+        if txt and txt.lower() not in _GENERIC_TARGET_NAMES:
+            return txt[:60]
+    return "field"
+
+
+def processed_field_night_date(jd_utc: float | None, lon_deg: float | None) -> str:
+    """YYYYMMDD of the evening the night began: local mean solar time (site longitude) minus 12 h,
+    so frames after midnight keep the previous evening's date. Today (UTC) without a valid JD."""
+    try:
+        jd = float(jd_utc)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        jd = float("nan")
+    if not (jd == jd and jd > 2400000.0):
+        return datetime.now(timezone.utc).strftime("%Y%m%d")
+    lon = float(lon_deg) if lon_deg is not None and float(lon_deg) == float(lon_deg) else 0.0
+    t = datetime(1858, 11, 17, tzinfo=timezone.utc) + timedelta(days=jd - 2400000.5)
+    return (t + timedelta(hours=lon / 15.0 - 12.0)).strftime("%Y%m%d")
+
+
+def processed_field_folder_name(archive_root: Path | str, target: str, night: str) -> str:
+    """``<target>_<night>_<NNN>`` with the first free counter under ``Archive/Drafts``."""
+    drafts = Path(archive_root).expanduser().resolve() / "Drafts"
+    n = 1
+    while (drafts / f"{target}_{night}_{n:03d}").exists():
+        n += 1
+    return f"{target}_{night}_{n:03d}"
 
 
 def _ingest_item_to_manifest_entry(item: dict[str, Any], *, obs_file_id: int) -> dict[str, Any]:
@@ -749,11 +760,15 @@ def create_draft_manifest(
     data: dict[str, Any],
 ) -> int:
     """Allocate draft id and write initial manifest (no draft manifest SQL)."""
-    did = allocate_next_draft_id(archive_root)
-    draft_dir = Path(archive_root).expanduser().resolve() / "Drafts" / f"draft_{did:06d}"
-    draft_dir.mkdir(parents=True, exist_ok=True)
+    did = allocate_next_draft_id(archive_root, floor=int(data.get("min_id_floor") or 0))
     mode = str(data.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
     jd = _optional_float(data.get("observation_start_jd"))
+    target = processed_field_target_name(data.get("object_name"), data.get("source_folder_name"))
+    name = processed_field_folder_name(
+        archive_root, target, processed_field_night_date(jd, _optional_float(data.get("site_lon_deg")))
+    )
+    draft_dir = Path(archive_root).expanduser().resolve() / "Drafts" / name
+    draft_dir.mkdir(parents=True, exist_ok=False)
     is_cal = 1 if bool(data.get("is_calibrated", False)) else 0
     patch_draft_manifest(
         draft_dir,
@@ -770,6 +785,7 @@ def create_draft_manifest(
         is_calibrated=is_cal,
         calibration_mode=mode,
         files=[],
+        extra={"name": name, "target": target},
     )
     return int(did)
 
@@ -953,7 +969,6 @@ def record_observer_location_provenance(
     prov = resolved.as_provenance_dict() if hasattr(resolved, "as_provenance_dict") else dict(resolved)
     root = draft_archive_root(archive_path)
     manifest = load_draft_manifest(root)
-    mode = str(manifest.get("calibration_mode") or CALIBRATION_MODE_VYVAR)
     extra = {"observer_location": prov}
     new_id = _optional_int(prov.get("location_id"))
     rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else None
@@ -965,26 +980,13 @@ def record_observer_location_provenance(
             log_milestone(
                 f"[SITE] manifest location changed {old_id} -> {new_id}"
             )
-        return write_draft_manifest(
-            root,
-            draft_id=int(draft_id),
-            calibration_mode=mode,
-            extra=extra,
-            rig=rig_out,
-            paths=manifest.get("paths"),
-            status=manifest.get("status"),
-            final_observation_id=manifest.get("final_observation_id"),
-            is_calibrated=manifest.get("is_calibrated"),
-            center=manifest.get("center"),
-            observation_start_jd=manifest.get("observation_start_jd"),
-            files=manifest.get("files") if isinstance(manifest.get("files"), list) else None,
-        )
-    return write_draft_manifest(
+        # merge into the manifest: a full rewrite dropped every key it did not know (name, target)
+        return patch_draft_manifest(root, int(draft_id), rig=rig_out, extra=extra)
+    return patch_draft_manifest(
         root,
-        draft_id=int(draft_id),
-        calibration_mode=mode,
-        extra=extra,
+        int(draft_id),
         rig={"location_id": int(new_id)} if new_id is not None else None,
+        extra=extra,
     )
 
 
@@ -1022,7 +1024,11 @@ def manifest_db_parity_errors(db: Any, draft_id: int) -> list[str]:
 
 
 def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:
-    """List ``(draft_id, archive_dir)`` under ``Archive/Drafts/draft_*`` (sorted by id desc)."""
+    """List ``(id, folder)`` of the processed fields under ``Archive/Drafts`` (sorted by id desc).
+
+    PROCESSED-FIELD-NAME-2026-10: a folder is ``<TARGET>_<YYYYMMDD>_<NNN>`` (or the legacy
+    ``draft_NNNNNN``); its id is the ``draft_id`` of its ``draft_manifest.json`` - the folder name
+    carries no id. A legacy folder without a manifest still counts by its name."""
     drafts_dir = Path(archive_root).expanduser().resolve() / "Drafts"
     if not drafts_dir.is_dir():
         return []
@@ -1030,17 +1036,36 @@ def iter_draft_archive_dirs(archive_root: Path | str) -> list[tuple[int, Path]]:
     for child in drafts_dir.iterdir():
         if not child.is_dir():
             continue
-        name = child.name.lower()
-        if not name.startswith("draft_"):
-            continue
-        suffix = name.split("_", 1)[-1]
-        try:
-            did = int(suffix)
-        except ValueError:
-            continue
-        out.append((int(did), child.resolve()))
+        did: int | None = None
+        mf = child / _MANIFEST_NAME
+        if mf.is_file():
+            try:
+                raw = json.loads(mf.read_text(encoding="utf-8"))
+                did = int(raw.get("draft_id"))
+            except Exception:  # noqa: BLE001
+                did = None
+        if did is None and child.name.lower().startswith("draft_"):
+            try:
+                did = int(child.name.split("_", 1)[-1])
+            except ValueError:
+                did = None
+        if did is not None:
+            out.append((int(did), child.resolve()))
     out.sort(key=lambda t: t[0], reverse=True)
     return out
+
+
+def draft_dir_for_id(archive_root: Path | str, draft_id: int) -> Path:
+    """Folder of processed field ``draft_id`` under ``Archive/Drafts`` (any name, by its manifest);
+    the legacy ``draft_NNNNNN`` path when none exists yet."""
+    root = Path(archive_root).expanduser().resolve()
+    legacy = root / "Drafts" / f"draft_{int(draft_id):06d}"
+    if legacy.is_dir():
+        return legacy
+    for found_id, path in iter_draft_archive_dirs(root):
+        if found_id == int(draft_id):
+            return path
+    return legacy
 
 
 def obs_draft_row_from_manifest(manifest: dict[str, Any], draft_id: int) -> dict[str, Any]:

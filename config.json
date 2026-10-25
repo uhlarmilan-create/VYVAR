@@ -190,6 +190,14 @@
   // tab.
   "tess_enabled": false,
 
+  // On: the field variability search also looks for new sources on every
+  // frame (novae, supernovae, outbursts), lists stars brighter than Gaia
+  // predicts, and names the minor planets and comets in the field (MPC orbit
+  // files MPCORB.DAT.gz / CometEls.txt and the OpenNGC galaxy list NGC.csv in
+  // the catalogue folder, when present). Takes about 1 s per frame more. Off:
+  // none of this runs.
+  "transient_search_enabled": false,
+
   // === System & performance ===
   // Machine-level behaviour: memory kept free when VYVAR sizes its parallel
   // workers.

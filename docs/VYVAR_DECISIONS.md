@@ -6055,3 +6055,182 @@ tabulky - hlavne camera". 23 config keys removed (config_runtime 133 -> 110; KNO
   The night-measured floor still takes precedence (SIGMA-SYS-NIGHT-2026-10).
 New `rig_photometry.py` reads the two columns read-only from `database_path`; `VyvarDatabase` migration
 `_ensure_equipments_rig_photometry_columns`; both columns are editable in Database -> EQUIPMENTS.
+
+## CT-STUB-REMOVED-2026-10 (Milan 2026-10-24) - the CT preselection test machinery is removed
+
+The M67 / chi & h Per colour-term validation runs (2026-09) left a test machinery in the production path:
+`photometry_comp._variable_targets_looks_like_ct_presel_stub` + `ensure_full_variable_targets_if_presel_stub`
+ran before every photometry (night run and re-run). Besides the explicit markers (notes "CT presel", names
+"M67 in-range / red-giant") it took ANY `variable_targets.csv` with < 50 rows and MASTERSTAR > 200 stars for a
+stub and regenerated it from the VSX cone: hand-added targets (MANUAL / USER) were lost and
+`comparison_stars.csv` / `photometry_plan.json` were rewritten (injection 534: all 45 synthetic targets gone).
+Removed: both functions and their call, the `VYVAR_CT_PROTOTYPE` diagnostics (`ct_prototype.csv`,
+`_append_ct_prototype_row`, `_color_term_cat_inst_scatter_pair`, `_CT_PROTOTYPE_CSV_FIELDS`), the scripts
+`dev/scripts/chiandh_*` (they imported a module that no longer exists), the tests. The colour-term correction
+itself (`fit_color_term_c1`, `apply_color_term`) is production and stays.
+
+## BORDER-FOOTPRINT-2026-10 (Milan 2026-10-24) - border filter = overlap of all aligned frames, always
+
+Milan: "vzdy musi urobit tento aligment aby sme nerobili fotometriu hviezd co su na okraji"; AstroImageJ crops
+the common area of all frames.
+Before: the safe bbox was the intersection of the "finite pixels" of the aligned frames. The aligner fills the
+uncovered reference pixels with a constant (the frame median), not NaN, so the bbox was the whole chip on every
+night (MN Boo 538: frame 116 shifted -80 px, bbox x=[11,2070] y=[11,1385] = chip - r_out). Stars at the edge were
+measured on the frames that cover them and dropped per epoch by the footprint (AP-FOOTPRINT) - light curves
+with holes instead of no light curve. In addition the aligned frames were looked up as `proc_*.fits` (three
+places) although they keep the raw names: 0 found, so outside the RAM handoff (disk mode, the comparison-pool
+refill) the post-alignment filter was silently skipped. With a field jump the bbox used only the "dominant
+group" of frames (`detect_field_jumps`).
+Now: each aligned frame's data footprint comes from its frame->reference transform `VY_AM0..8`
+(`frame_footprint.footprint_bbox`: the corners mapped, the second smallest / largest x and y, 1 px inside); the
+filter is the overlap of ALL aligned frames (`common_field_intersection_bbox_px[_from_headers]`, headers only),
+shrunk by the sky annulus r_out as before. The aligned frames are taken by their real names. Target and
+comparison selection refuse to run without `safe_bbox_px` in `photometry_plan.json` (RuntimeError, no silent
+fallback). Removed: the finite-pixel bbox, the dominant-group exception, `detect_field_jumps` (no other user),
+`night_run.run_ui_night_photometry` (no caller since the GUI photometry page was removed; GUI RUN VYVAR = `python
+-m night_run --job`, one code path).
+A/B night 537 (old = s37 code): aligned FITS identical (81/81); overlap x=[8,2076] y=[7,1387] -> safe bbox
+x=[20,2064] y=[19,1375] (was [12,2069] x [12,1384]); one target fewer (ASASSN-V J154735.86+510549.5 at x=2067:
+its annulus leaves the data on some frames); 7 of 30 light curves identical, the others changed through the
+comparison stars dropped at the edge (zero point, scatter of the difference 2-4 mmag) and, where that moved the
+per-target aperture choice, by more (AP-CHOICE-STABILITY-01).
+
+## ALIGN-POLY-2026-10 (Milan 2026-10-24) - polynomial registration when the similarity does not verify
+
+MN Boo 538 (QHY294 + Zeiss 200 mm, OpenAstroTracker): the mount jumped at frame 102 (+60..90 px) and drifted
+130 px in x; the field rotated 1.46 deg over the night (polar alignment). Against the reference frame 143 the
+similarity transform (astroalign / star_similarity) left p90 0.59-0.62 px on frames 1-101 (edge of the field
+~1 px) and ALIGN-VERIFY refused them (gate max(0.25 FWHM, 0.5 px)): 101 of 139 frames not measured, only the
+rising branch of the MN Boo minimum. Measured on 250 star pairs per frame: affine the same as similarity,
+2nd-order polynomial p90 0.12-0.16 px (cubic no better) - the lens distortion of a wide field after the image
+moved 100+ px on the chip. The IRAF geomap / geotran "general" geometry (linear part + polynomial distortion)
+is the standard registration for this case.
+Now: when the similarity does not verify, `fit_polynomial_from_stars` fits a polynomial of order
+`ALIGN_POLY_ORDER` = 2 frame -> reference on the mutual star pairs (seeded by the best similarity, refined three
+times, at least 3 pairs per coefficient) and its inverse; the SAME gate verifies it (unchanged). The frame is
+resampled by `warp_to_reference` exactly as astroalign does (cubic, constant fill = frame median). Method
+`star_polynomial`; `VY_AM0..8` = projective matrix closest to the polynomial on a 9x9 grid (`VY_AMERR` = largest
+grid difference, MN Boo <= 0.38 px, inside the 1 px footprint margin) for the steps that need a matrix
+(footprint, saturation back-mapping, field corners); OSC channel frames reuse the polynomial (`poly_inv`).
+Frames that verify with astroalign / similarity are unchanged (537: aligned FITS byte-identical).
+A/B MN Boo 538: aligned 39 -> 140 frames (102 star_polynomial, median p90 0.15 px); overlap x=[7,1939]
+y=[4,1280]; MN Boo light curve 38 -> 140 points, the whole minimum (9.09 -> 9.36 mag) without a step at the mount
+jump; target light curves 36 -> 29 (7 targets outside the common area).
+
+## PROCESSED-FIELD-NAME-2026-10 (Milan 2026-10-24) - a run is a "processed field" in <TARGET>_<YYYYMMDD>_<NNN>
+
+A night run was stored in `Archive/Drafts/draft_NNNNNN` and called a "draft" in the GUI. Now:
+- **Folder name** `<TARGET>_<YYYYMMDD>_<NNN>` (e.g. `MN_Boo_20260422_001`): TARGET = the FITS OBJECT of the light
+  frames (OBJECT / OBJNAME), else the name of the selected source folder (observers name it after the star),
+  else `field`; spaces -> `_`, only [A-Za-z0-9+-_]. YYYYMMDD = the evening the night began: first frame in local
+  mean solar time (site longitude) minus 12 h, so frames after midnight keep the evening's date (Milan: numeric
+  YYYYMMDD, sorts chronologically). NNN = first free counter for the same target and night (two runs of the
+  same data -> `_001`, `_002`).
+- **The numeric run id stays the internal key** (database, manifest, job specs): `draft_manifest.json` keeps
+  `draft_id` and gains `name` / `target`. The folder name carries no id; every place that composed
+  `draft_{id:06d}` resolves the folder by the manifest (`draft_provenance.draft_dir_for_id`), every place that
+  parsed `draft_<digits>` out of a path reads the manifest (`processed_field.processed_field_root / _id`).
+  Ids are 64-bit integers in SQLite (Milan: a large observatory with many fields every night) and are never
+  reused: a new id is above every id under `Archive/Drafts` and above the largest id in the database
+  (`OBS_QC_PROCESSING_RUN.DRAFT_ID`), so deleting old folders cannot bring an id back.
+- **Legacy folders** `draft_NNNNNN` keep working (resolved by name or manifest); Milan reprocesses and deletes
+  them himself.
+- **GUI**: "draft" is no longer used - "Load processed field" (name, full path or number), all messages say
+  "processed field". The on-disk folder `Archive/Drafts` keeps its name.
+- Removed with it: the GUI "Active session" id (`utils.generate_session_id`, `vyvar_varstrem_session_id`) and
+  the unused `_current_session_id` / `_ap_session_id` session keys - shown only, never written anywhere.
+- Found with it: `record_observer_location_provenance` rewrote `draft_manifest.json` from a fixed key list and
+  dropped every other key (`name`, `target`, also `imported_at` written at import). It now merges
+  (`patch_draft_manifest`). A/B 537 / MN Boo 538 (s38 vs this): every light curve, per-frame CSV and aligned FITS
+  identical; only the folder name, the run id (537 / 538 = above the database's largest id) and the manifest
+  keys differ. Two runs of the same MN Boo data: `MN_Boo_20260422_001`, `MN_Boo_20260422_002`.
+
+## ALIGN-MODEL-2026-10 (Milan 2026-10-24) - every frame chooses its registration model on its own stars
+
+Milan: VYVAR should switch between the similarity and the polynomial by itself. "Smaller residual wins"
+cannot decide: the polynomial (12 coefficients) always fits a little better than the similarity (4).
+Now a VERIFIED similarity (astroalign / star_similarity) is compared with the 2nd-order polynomial on the
+SAME star pairs by the Bayesian information criterion, BIC = n ln(RSS/n) + k ln n (n = 2 x pairs); the
+polynomial replaces it when BIC_similarity - BIC_polynomial > `ALIGN_MODEL_DBIC` = 10 ("very strong
+evidence", Kass & Raftery 1995). An unverified similarity falls back to the polynomial as before (ALIGN-POLY).
+A frame identical to the reference (residual ~1e-13 px) is not compared. `alignment_report.csv` records
+`align_model_dbic`. WCS-reprojected frames are not compared (the reprojection is not a similarity).
+MN Boo 538 frames: near the reference (shift < 25 px) dBIC -57..+8 -> similarity; 135 (13 px) 99, 001-120
+(60-160 px) 400-1600 -> polynomial.
+A/B (s39 vs this): 537 - every frame keeps the similarity (dBIC <= 3), aligned FITS and light curves
+byte-identical (111/111). MN Boo - 129 polynomial + 11 similarity (was 102 + 38), worst p90 0.61 -> 0.23 px,
+MN Boo point-to-point scatter 5.67 -> 5.23 mmag; zero point -15 mmag (different comparison choice).
+
+## AP-NIGHT-K-2026-10 (Milan 2026-10-24, option A) - one aperture k per night and group
+
+Closes AP-CHOICE-STABILITY-01. The aperture factor k (r = k x FWHM of each frame) is now ONE value for all
+targets of an observation group in a night: for every target the comp leave-one-out scatter curve over the grid
+1.0-2.0 is normalised to its minimum; the night curve is the median over targets (a k enters when >= 75 % of the
+targets may use it under the BLEND-K limit); k_night = the largest k within 3 % of the curve minimum
+(`NIGHT_K_TIE_FRAC`, = the bootstrap standard error of the median curve on 537 / MN Boo 538, 0.02-0.03). Each
+target gets the largest allowed k <= k_night, targets without comp scatter included, so target, comps and check
+star keep one enclosed-light fraction. The target's own curve minimum stays as `f_own_curve_min` in
+`aperture_per_target.json`, with `night_k` (k, curve, number of targets).
+
+**Why.** The per-target minimum was decided by noise: one comp more or less changed k for 45-48 % of the targets
+(537, MN Boo 538), which is why two runs of the same night gave 3.0 vs 3.6 px. The night median does not move
+(0 % when one comp of one target is dropped, 0 % for one frame).
+**Rejected: per-target CCD-equation S/N (Howell 1989).** It drives faint targets to k ~1.0 or below (optimum
+~0.67 FWHM, Naylor 1998, Mighell 1999). Full-night A/B: target rms OOE -2..-7 % median but 20-24 % of the targets
+worse, check stars +3..+7 %. With k = 0.75 added to the grid: point-to-point noise of faint targets -10 %, but the
+comps' slow noise (10-frame bins = drifts) +18-19 % vs k = 1.0, lowest at 1.25-1.75 - small apertures on
+undersampled images (FWHM 2.2-2.4 px) lose a seeing / centring / pixel-phase dependent fraction of the light
+(Howell: "assure the source is not undersampled"; Mighell; Lauer 1999; Stetson 1990). The comp scatter over the
+whole night contains these drifts, the photon model does not. COMP-SELECT-2026-10 had reached the same verdict.
+Practice elsewhere: one factor x FWHM for every star (AAVSO VPhot 1.5, AstroImageJ 1.7, HiPERCAM 1.5-2.5,
+AutoPhOT 1.6, Siril 2; AAVSO guide: diameter 3-4 FWHM); per-star selection reported as a small gain (VaST,
+VAPHOT). k < 1 stays open for well-sampled setups (AP-SMALL-K-01).
+**A/B (s40 vs this, full nights).** 537: k_night 1.25 (curve 1.0: 1.098, 1.25: 1.000, 1.5: 1.105, 1.75: 1.186),
+30 light curves as before, rms OOE median 1.000 / mean 0.979 (better > 2 % for 20 %, worse for 7 %), check star
+median 1.000. MN Boo 538: k_night 1.25 (1.0: 1.104, 1.25: 1.007, 1.5: 1.061), 29 light curves, rms OOE median
+1.000 / mean 0.900 (better 34 %, worse 7 %), check star median 1.000 / mean 0.947.
+
+## TRANSIENT-2026-10 (Milan 2026-10-25) - transient search of one night, minor bodies, opt-in
+
+`transient_search_enabled` (default off). When on, the field variability search (same place, GUI and night
+run) also:
+1. **New sources** (`transient_field.py`; method of Gaia Science Alerts, Hodgkin et al. 2021, and NMW / VaST,
+   Sokolovsky et al.): DAOStarFinder on every aligned frame; detections farther than max(1 FWHM, 2 px) from
+   every MASTERSTAR source are linked across frames (friends-of-friends, 1 FWHM); a group on >= 3 frames that
+   stays put is a source, one that runs with time is a moving object; MASTERSTAR `unmatched_in_range` detections
+   are sources too. Every source is measured on every frame at its position (field k, annulus sky, frame zero
+   point of the variability search; noise from 300 empty-sky apertures per frame - the aligned frames are
+   interpolated). A candidate (T1, T2, ...): S/N >= 5 on >= 3 consecutive frames (ATLAS: >= 3 detections),
+   centroid within 0.75 FWHM, not the same detector pixel elsewhere on the sky (hot / warm pixel, reflection:
+   the pixel is followed through the inverse alignment; flickering warm pixels too), no Gaia star within
+   max(2", 2.5 FWHM) less than 1 mag fainter, not in the halo of a G < 8 star >= 3 mag brighter than the source
+   (radius max(10", 4 FWHM x 10^(0.2 (8 - G)))), not on a hot pixel of the master dark of the night (> 50 sigma;
+   the only test for a field that does not drift on the detector), aperture and sky annulus inside the frame on
+   >= 80 % of the frames (the onset is judged on those frames only), brighter than the catalogue depth - 1 mag, not on an OpenNGC galaxy core (`catalogs/NGC.csv`; off the core
+   but inside the galaxy it is kept as a possible supernova). Kind: appeared / faded / present. Online catalogue
+   check as for the variability candidates.
+2. **Brighter than Gaia**: night magnitude vs Gaia G through the field relation (robust, colour terms) plus the
+   Gaia neighbours' light in the aperture; <= -1 mag and <= -3 sigma -> listed (a nova on a faint catalogued star,
+   a dwarf nova all night).
+3. **Minor planets and comets** (`minor_bodies.py`): MPCORB.DAT.gz and CometEls.txt in `catalogs/` (the user
+   downloads them from the MPC), two-body orbits (checked against the astropy ephemeris: 0.2 / 1.2 / 12" for Mars
+   2 / 10 / 60 days from the epoch), light time, topocentric, V <= 20 (Milan). Listed with predicted V, motion and
+   on how many frames they were detected; moving objects are matched to them.
+Outputs: `transient_candidates.csv`, `moving_objects.csv`, `minor_bodies_in_field.csv`, `transient_meta.json`,
+`lightcurves/transient_T<n>.csv`; Variability tab section; Summary Measure Report pages after the variability
+pages; citations section TRANSIENT SEARCH. Off: no file, no page, outputs byte-identical (MN Boo checked).
+**Tests.** MN Boo 538 (140 frames, 9.8"/px, mount drift): 84 sources examined, 6 candidates - compact
+G 13.9-14.5 sources all night without a Gaia star (5 after the halo / dark / edge rules; 5 more matched NGC/IC galaxies within 2" and were removed;
+the rest are likely fainter galaxies - the online SIMBAD check names them). Hot / warm pixels: 15 of 18 "moving
+objects" and 7 stationary candidates were detector pixels. Injection on the same night (20 uncatalogued
+sources G 10-14: present, switching on, nova-like rise of 3 mag in 1.5 h, flare with 20 min decay; 2 moving
+objects 34 and 68 "/h): 20 / 20 candidates, 2 / 2 moving objects; a switching-on or flaring source is reported
+5.5-6.7 min after the onset (3 frames at the 2-min cadence), the rise when it crosses the detection limit;
+no false candidate beyond the control night. Dense field V842 Her 537 (Hercules, 40 frames, no mount drift,
+so the detector-pixel test cannot run; draft 528 holds the same raw lights): 11 control candidates before the
+halo / dark / edge rules (halo of a G 4.6 star, a master-dark hot pixel, a frame-edge artefact, two warm pixels
+not hot in the dark, compact faint sources), 4 after. Injection 13 / 20, 2 / 2 moving objects: misses are G 14
+(too faint for 3 consecutive S/N 5 frames), the G 12-13 rises that do not reach the limit within the night,
+and one G 13 source that the plan put on a master-dark hot pixel. Without drift a warm pixel that is not hot in
+the dark cannot be told from a star - such candidates need the cutout check. Not planned (Milan 2026-10-25): a supernova on a galaxy core (image
+subtraction) and comparison with earlier nights of the field - VYVAR is for variable-star photometry.

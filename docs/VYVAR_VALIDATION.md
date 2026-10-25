@@ -4,6 +4,12 @@ Inject-and-recover validation under `dev/tests/validation/` verifies cited VYVAR
 against **known synthetic ground truth**. This module is **not production**; it generates
 its own FITS and sidecars and must not alter draft photometry byte-identity.
 
+## Injection-recovery suite
+
+Known light-curve signals injected into real raw frames and recovered through the normal night
+pipeline: protocol and results in `docs/VYVAR_INJECTION_RECOVERY.md`, tool
+`dev/tools/injection_recovery.py`, data in `dev/validation/injection_recovery/`.
+
 ## Honesty caveat
 
 Synthetic frames test what the generator injects (Moffat PSF + Poisson/read noise +

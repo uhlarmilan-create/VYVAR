@@ -87,7 +87,7 @@ PHOTOMETRY_E2_SHARED = (
     "common_field_intersection_bbox_px",
     "_safe_polyfit",
     "_target_display_name",
-    "common_field_intersection_bbox_px_from_arrays",
+    "common_field_intersection_bbox_px_from_headers",
     "_normalize_gaia_id",
 )
 
@@ -98,12 +98,10 @@ PHOTOMETRY_E3_COMP = (
     "_select_comps_by_rms_then_color",
     "_enrich_comp_bp_rp",
     "_resolve_frame_hw_px_from_masterstar",
-    "ensure_full_variable_targets_if_presel_stub",
     "_warn_zero_compstars_edge",
     "_count_gate_passing_comps",
     "_dedupe_comp_pool_by_gaia_key",
     "_bprp_tier_ladder_for_selection",
-    "_variable_targets_looks_like_ct_presel_stub",
     "_bool_col",
 )
 
@@ -113,7 +111,6 @@ PHOTOMETRY_E4_APERTURE = (
     "read_flux_from_csv",
     "_AperturePhotometryState",
     "parse_comp_quality_json_map",
-    "detect_outliers",
     "apply_reporting_postprocess",
     "fit_color_term_c1",
     "should_apply_color_term",

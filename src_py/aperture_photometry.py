@@ -583,19 +583,16 @@ def _resolve_aperture_equipment_id(
     output_dir: Path,
     masterstar_fits_path: Path,
 ) -> int | None:
-    """``draft manifest.ID_EQUIPMENTS`` from ``draft_id`` or path segment ``draft_NNN``."""
+    """``draft manifest.ID_EQUIPMENTS`` from ``draft_id`` or the run folder of the paths."""
     if db is None:
         return None
     did = draft_id
     if did is None:
-        for base in (Path(output_dir), Path(masterstar_fits_path)):
-            for part in base.parts:
-                m = re.match(r"draft_(\d+)$", str(part), re.IGNORECASE)
-                if m:
-                    did = int(m.group(1))
-                    break
-            if did is not None:
-                break
+        from processed_field import processed_field_id  # noqa: PLC0415
+
+        did = processed_field_id(output_dir)
+        if did is None:
+            did = processed_field_id(masterstar_fits_path)
     if did is None:
         return None
     try:
@@ -607,6 +604,12 @@ def _resolve_aperture_equipment_id(
     return None
 
 def _draft_dir_from_aperture_paths(output_dir: Path, masterstar_fits_path: Path) -> Path:
+    from processed_field import processed_field_root  # noqa: PLC0415
+
+    for base in (Path(output_dir), Path(masterstar_fits_path)):
+        root = processed_field_root(base)
+        if root is not None:
+            return root
     for base in (Path(output_dir), Path(masterstar_fits_path)):
         for parent in [base, *base.parents]:
             if re.match(r"draft_\d+$", parent.name, re.IGNORECASE):
@@ -1454,39 +1457,6 @@ def empirical_feature_mask_mag(
             protected[lo:hi] = True
         i = j
     return protected
-
-def detect_outliers(
-    mag_calib: np.ndarray,
-    flags_saturated: np.ndarray,
-    *,
-    err: np.ndarray | None = None,
-    bjd: np.ndarray | None = None,
-) -> list[str]:
-    """LC-OUTLIER-01 wrapper: isolated-spike flags without image evidence.
-
-    Legacy args ``feature_mask`` / ``skip_sigma_clip`` / ``outlier_sigma`` are
-    accepted for call-site compatibility. VSX skip is retired: flare/eclipse
-    protection is the adjacent same-sign rule in ``lc_outlier.isolated_spike_mask``.
-    Global night MAD clip (``outlier_hi``/``outlier_lo``) is retired.
-
-    Returns:
-        flags: normal / saturated / spike_unconfirmed / no_data
-    """
-    from lc_outlier import assign_lc_flags  # noqa: PLC0415
-
-    m = np.asarray(mag_calib, dtype=float)
-    n = len(m)
-    e = np.asarray(err, dtype=float) if err is not None else np.full(n, float("nan"))
-    t = np.asarray(bjd, dtype=float) if bjd is not None else np.arange(n, dtype=float)
-    result = assign_lc_flags(
-        m,
-        e,
-        t,
-        sat_flags=np.asarray(flags_saturated, dtype=bool),
-        evidence_for_index=None,
-        enabled=True,
-    )
-    return list(result.flags)
 
 def apply_reporting_postprocess(
     mag_calib: np.ndarray,
@@ -2721,6 +2691,7 @@ def run_aperture_photometry(
     state.per_target_aperture = {}
     try:
         from aperture_pertarget import (  # noqa: PLC0415
+            apply_night_k,
             choose_f_for_target,
             measure_night_grid,
             DEFAULT_APERTURE_F_GRID,
@@ -2884,6 +2855,11 @@ def run_aperture_photometry(
                 _ch.reason += "; no k keeps all comps <= 1 % neighbour light - whole grid used"
             _choices[_tcid] = _ch
             state.per_target_aperture[_tcid] = _ch
+        # AP-NIGHT-K-2026-10: one k for the whole group (night median of the comp-scatter curves)
+        _nk = apply_night_k(_choices, _grid.f_grid)
+        logging.info("[APERTURE-DYNAMIC] night k = %s (curve %s, %d targets with comp scatter)",
+                     _nk.get("k_night"), {k: round(v, 3) for k, v in _nk.get("curve", {}).items()},
+                     int(_nk.get("n_targets_curve", 0)))
         write_per_target_choices(
             Path(output_dir) / "aperture_per_target.json",
             _choices,
@@ -2892,6 +2868,7 @@ def run_aperture_photometry(
             elapsed_s=_grid.elapsed_s,
             gain=float(state._gain_phot) if state._gain_phot is not None else None,
             read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
+            night_k=_nk,
         )
         # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
         # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526

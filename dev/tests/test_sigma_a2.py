@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -51,14 +49,3 @@ def test_altitude_zero_pipeline_meta_falls_back_to_location(monkeypatch):
     assert any("ignored (<=0)" in n for n in rig.source_notes)
     assert any("LOCATION" in n for n in rig.source_notes)
 
-
-def test_fix_telescope_diameter_dry_run():
-    proc = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "fix_telescope_diameter.py")],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert proc.returncode == 0
-    assert "DIAMETER before=" in proc.stdout or "No matching" in proc.stdout

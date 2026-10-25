@@ -277,3 +277,30 @@ def test_pre_vsx_skip_no_longer_blanks_known_variables() -> None:
     mag[10] = 11.4
     res = assign_lc_flags(mag, err, bjd)
     assert res.flags[10] in (FLAG_SPIKE_UNCONFIRMED, FLAG_ARTIFACT)
+
+
+def _eclipse_lc(depth: float, err_med: float, source_dominated: bool):
+    """40 points, a Gaussian eclipse; the error grows as the star fades (source or sky limited)."""
+    n = 40
+    t = np.linspace(0.0, 0.055, n)
+    dm = depth * np.exp(-0.5 * ((t - 0.0275) / 0.0046) ** 2)
+    r = 10 ** (-0.4 * dm)
+    rng = np.random.default_rng(5)
+    err = err_med * (r ** -0.5 if source_dominated else 1.0 / r) * (1 + 0.01 * rng.standard_normal(n))
+    return 12.0 + dm, err, 2461161.4 + t
+
+
+def test_eclipse_bottom_is_not_high_err():
+    """INJECTION-2026-10 (night 537): a 0.3 mag eclipse put 3-6 bottom points into high_err."""
+    for src in (True, False):
+        mag, err, t = _eclipse_lc(0.3, 0.009, src)
+        assert not high_err_mask(err, n_sigma=5.0, mag=mag)[0].any()
+        res = assign_lc_flags(mag, err, t, err_photon=err)
+        assert all(f == FLAG_NORMAL for f in res.flags), res.flags
+
+
+def test_inflated_error_at_normal_brightness_is_still_high_err():
+    mag, err, t = _eclipse_lc(0.0, 0.009, True)
+    err[17] *= 3.0  # bad frame: same brightness, three times the error
+    assert high_err_mask(err, n_sigma=5.0, mag=mag)[0][17]
+    assert assign_lc_flags(mag, err, t, err_photon=err).flags[17] == FLAG_HIGH_ERR

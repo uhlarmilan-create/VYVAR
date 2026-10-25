@@ -123,7 +123,7 @@ def resolve_observer_location_for_run(
     else:
         raise ValueError(
             "No observing site: choose one on the import page (or --location-id), or mark a "
-            "default site (IS_DEFAULT) in Database Explorer -> LOCATION."
+            "default site in Database Explorer > Sites."
         )
 
     row = get_observer_location_by_id(db_path_str, loc_id)

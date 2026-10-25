@@ -755,7 +755,7 @@ def _aperture_prepare_shared_state(
         # CODE-REVIEW step 7B: no silent default site (BJD, airmass and extinction need it).
         raise ValueError(
             "No observing site for this draft: set the draft's site (import page / --location-id) "
-            "or a default site (IS_DEFAULT) in Database Explorer -> LOCATION."
+            "or a default site in Database Explorer > Sites."
         )
     _site_loc_id: int | None = None
     if db is not None and draft_id is not None:

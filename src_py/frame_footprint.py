@@ -47,6 +47,30 @@ def aligned_footprint(header: Any, shape: tuple[int, int]) -> np.ndarray:
     return inside
 
 
+def footprint_bbox(header: Any, shape: tuple[int, int]) -> tuple[float, float, float, float]:
+    """Axis-aligned rectangle (x0, y0, x1, y1) inside the frame's data footprint on the aligned grid
+    (BORDER-FOOTPRINT-2026-10). The frame's corners are mapped through ``VY_AM0..8``; the second
+    smallest / second largest mapped x and y bound the rectangle, so it stays inside a slightly
+    rotated (or 180 deg flipped) quadrilateral; 1 px inside its edges like :func:`aligned_footprint`.
+    Raises when the transform is missing."""
+    try:
+        mat = np.array([float(header[f"VY_AM{k}"]) for k in range(9)], dtype=np.float64).reshape(3, 3)
+    except KeyError as exc:
+        raise ValueError(f"aligned frame has no frame->reference transform ({exc.args[0]}) - re-run the alignment") from exc
+    h, w = int(shape[0]), int(shape[1])
+    wr, hr = int(header.get("NAXIS1", w)), int(header.get("NAXIS2", h))
+    corners = np.array([[0, 0, 1], [wr - 1, 0, 1], [wr - 1, hr - 1, 1], [0, hr - 1, 1]], dtype=np.float64).T
+    q = mat @ corners
+    xs = np.sort(q[0] / q[2])
+    ys = np.sort(q[1] / q[2])
+    return (
+        max(0.0, float(xs[1]) + 1.0),
+        max(0.0, float(ys[1]) + 1.0),
+        min(float(w - 1), float(xs[2]) - 1.0),
+        min(float(h - 1), float(ys[2]) - 1.0),
+    )
+
+
 def off_footprint(
     off: np.ndarray, xs: np.ndarray, ys: np.ndarray, r_core: float, r_in: float, r_out: float, *, square_core: bool = False
 ) -> np.ndarray:

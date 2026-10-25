@@ -1376,6 +1376,7 @@ BOOL_KEYS: tuple[str, ...] = (
     "epsf_export_auto",
     "gs11_dilution_enabled",
     "tess_enabled",
+    "transient_search_enabled",
     "qc_after_calibrate_enabled",
     "auto_fwhm_enabled",
 )
@@ -1553,6 +1554,11 @@ class AppConfig:
     #: ``True`` = download and analyse TESS FFI through lightkurve (TessCut), UI + ``tess_runner`` + pipeline hook.
     #: ``False`` = off - nothing is downloaded; log ``[TESS] skipped``.
     tess_enabled: bool = False
+
+    #: TRANSIENT-2026-10 (Milan 2026-10-25): with the field variability search, also search the night's
+    #: frames for new sources (novae, supernovae, outbursts; transient_field.py), compare every star with
+    #: Gaia (brightened) and name the minor planets / comets in the field (MPC files in catalogs/).
+    transient_search_enabled: bool = False
 
     #: Post-calibration QC metrics (HFR, stars, sky) on each calibrated light; measurements only.
     qc_after_calibrate_enabled: bool = True

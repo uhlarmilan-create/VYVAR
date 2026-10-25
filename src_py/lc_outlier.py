@@ -6,8 +6,9 @@ Product rules (Milan 2026-10-01 / 2026-10-02):
 - Runs of >=2 same-sign elevated residuals (flares/eclipses) stay ``normal``.
 - ``spike_unconfirmed`` is never excluded from exports.
 - ``high_err``: err_i > median(err) + n_sigma x 1.4826 x MAD(err) on the
-  star's own LC (LC-FLAG-ERR-01). Hides points whose huge error bar would
-  otherwise silence the spike test.
+  star's own LC (LC-FLAG-ERR-01), errors taken at the median brightness (a
+  fainter point's larger error is expected, not inflated). Hides points whose
+  huge error bar would otherwise silence the spike test.
 
 Flag vocabulary::
   normal | saturated | frame_qc | artifact | high_err | spike_unconfirmed | no_data
@@ -109,8 +110,17 @@ def high_err_mask(
     err: np.ndarray,
     *,
     n_sigma: float = OUTLIER_N_SIGMA,
+    mag: np.ndarray | None = None,
 ) -> tuple[np.ndarray, float, float]:
     """LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
+
+    INJECTION-2026-10: with ``mag`` a point fainter than the star's median brightness is tested
+    with the error it would have at the median. A fainter star has a larger relative error by
+    itself (by sqrt(F_med/F) when its own light dominates the noise, by F_med/F when the sky
+    does), so the bottom of a 0.3 mag eclipse was flagged high_err (injection-recovery, night
+    537). Such errors are scaled by r = F_i/F_med = 10**(-0.4 (mag_i - median mag)) < 1, the
+    lenient (sky-limited) case; brighter points keep their error (it only shrinks with
+    brightness). An error inflated by a bad frame at normal brightness is still flagged.
 
     Returns (is_high_err, median_err, mad_err) where mad_err is the raw MAD
     (not yet scaled by 1.4826).
@@ -118,6 +128,13 @@ def high_err_mask(
     e = np.asarray(err, dtype=float)
     n = len(e)
     out = np.zeros(n, dtype=bool)
+    if mag is not None and len(mag) == n:
+        mm = np.asarray(mag, dtype=float)
+        fin = mm[np.isfinite(mm)]
+        if fin.size >= 3:
+            r = np.power(10.0, -0.4 * (mm - float(np.median(fin))))
+            scale = np.where(np.isfinite(r), np.minimum(r, 1.0), 1.0)
+            e = e * scale
     finite = e[np.isfinite(e) & (e > 0)]
     if finite.size < 3:
         return out, float("nan"), float("nan")
@@ -638,7 +655,7 @@ def assign_lc_flags(
 
     # LC-FLAG-ERR-01: inflated photometric error (before spike so high_err
     # beats spike_unconfirmed; artifact may still overwrite below).
-    he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma))
+    he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma), mag=m)
     for i in range(n):
         if not bool(he_mask[i]):
             continue

@@ -1,0 +1,3292 @@
+{
+ "vendor_group": "QHYCCD",
+ "models": [
+  {
+   "key": "qhy_qhy600m_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY600M PH",
+   "sensor": "Sony IMX455",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY600M",
+    "QHY600PH-M",
+    "QHY600M-PH",
+    "QHY600PH M",
+    "QHY600MPH",
+    "QHY600M SBFL",
+    "QHY600M Lite"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy600/",
+    "https://www.qhyccd.com/whats-multiple-readout-modes-and-2cms-mode/",
+    "https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      },
+      {
+       "setting": 26,
+       "read_noise_e": 2.7,
+       "source": "QHY600 spec sheet, readout mode #0: 'At gain=26, the full well is 27ke- and read noise is 2.7e-.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)"
+      }
+     ],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 56,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 56 (High Gain Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "full_well_e": 80000
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 80000
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy600c_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY600C PH",
+   "sensor": "Sony IMX455",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY600C",
+    "QHY600PH-C",
+    "QHY600C-PH",
+    "QHY600PH C",
+    "QHY600CPH",
+    "QHY600C SBFL",
+    "QHY600C Lite"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy600/",
+    "https://www.qhyccd.com/whats-multiple-readout-modes-and-2cms-mode/",
+    "https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      },
+      {
+       "setting": 26,
+       "read_noise_e": 2.7,
+       "source": "QHY600 spec sheet, readout mode #0: 'At gain=26, the full well is 27ke- and read noise is 2.7e-.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)"
+      }
+     ],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 56,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 56 (High Gain Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "full_well_e": 80000
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 80000
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy600m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY600M Pro (Pro I / Pro II)",
+   "sensor": "Sony IMX455",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY600M Pro",
+    "QHY600M-Pro",
+    "QHY600MPRO",
+    "QHY600M Pro I",
+    "QHY600M Pro II",
+    "QHY600M-LQ"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy600pro-imx455/",
+    "https://www.qhyccd.com/astronomical-camera-qhy600/",
+    "https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      },
+      {
+       "setting": 26,
+       "read_noise_e": 2.7,
+       "source": "QHY600 spec sheet, readout mode #0: 'At gain=26, the full well is 27ke- and read noise is 2.7e-.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)"
+      }
+     ],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      1.9,
+      7.8
+     ]
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 56,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 56 (High Gain Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "read_noise_range_e": [
+      1.1,
+      3.6
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "full_well_e": 80000,
+     "read_noise_range_e": [
+      5.4,
+      7.9
+     ]
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 80000,
+     "read_noise_range_e": [
+      4.9,
+      5.9
+     ]
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy600c_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY600C Pro (Pro I / Pro II)",
+   "sensor": "Sony IMX455",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY600C Pro",
+    "QHY600C-Pro",
+    "QHY600CPRO",
+    "QHY600C Pro I",
+    "QHY600C Pro II",
+    "QHY600C-LQ"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy600pro-imx455/",
+    "https://www.qhyccd.com/astronomical-camera-qhy600/",
+    "https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      },
+      {
+       "setting": 26,
+       "read_noise_e": 2.7,
+       "source": "QHY600 spec sheet, readout mode #0: 'At gain=26, the full well is 27ke- and read noise is 2.7e-.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)"
+      }
+     ],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      1.9,
+      7.8
+     ]
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 56,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 56 (High Gain Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "read_noise_range_e": [
+      1.1,
+      3.6
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [
+      {
+       "setting": 25,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH spec table 'Unity Gain*: 25 (PH Mode, or Extended Full Well Mode)' (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "full_well_e": 80000,
+     "read_noise_range_e": [
+      5.4,
+      7.9
+     ]
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 80000,
+     "read_noise_range_e": [
+      4.9,
+      5.9
+     ]
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": [],
+     "full_well_e": 51000
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": "sum",
+     "binning_source": "QHYCCD QHY600 spec sheet: 'The QHY600 uses software digital binning.' 'With digital summing, 2x2 binning will be four 16-bit summed = 18-bits.' (https://www.ing.iac.es/Astronomy/instruments/pf-qhy/qhy600_scientific_cmos.pdf)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy268m_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY268M PH",
+   "sensor": "Sony IMX571",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY268M",
+    "QHY268M-PH",
+    "QHY268PH-M",
+    "QHY268M PH",
+    "QHY268MPH"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy268/",
+    "https://www.qhyccd.com/whats-multiple-readout-modes-and-2cms-mode/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 30,
+       "e_per_adu": 1.0,
+       "source": "QHY268 page table 'Unity Gain of Some 16bit Models': 'QHY268M/C | 30' (page text elsewhere says gain 26; conflict) (https://www.qhyccd.com/astronomical-camera-qhy268/)"
+      }
+     ],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      1.1,
+      3.5
+     ]
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      5.3,
+      7.4
+     ]
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy268c_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY268C PH",
+   "sensor": "Sony IMX571",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY268C",
+    "QHY268C-PH",
+    "QHY268PH-C",
+    "QHY268C PH",
+    "QHY268CPH"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy268/",
+    "https://www.qhyccd.com/whats-multiple-readout-modes-and-2cms-mode/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 30,
+       "e_per_adu": 1.0,
+       "source": "QHY268 page table 'Unity Gain of Some 16bit Models': 'QHY268M/C | 30' (page text elsewhere says gain 26; conflict) (https://www.qhyccd.com/astronomical-camera-qhy268/)"
+      }
+     ],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      1.1,
+      3.5
+     ]
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      5.3,
+      7.4
+     ]
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy268m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY268M Pro I",
+   "sensor": "Sony IMX571",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY268M Pro",
+    "QHY268M Pro I",
+    "QHY268M-Pro",
+    "QHY268MPRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy268m-pro/",
+    "https://www.qhyccd.com/whats-multiple-readout-modes-and-2cms-mode/"
+   ],
+   "modes": [
+    {
+     "key": "photographic_dso",
+     "name": "Mode #0 Photographic DSO (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 26,
+       "e_per_adu": 1.0,
+       "source": "QHY268M Pro I page: noise drops between Gain 25 and Gain 26, 'gain 26 (unity gain)' (https://www.qhyccd.com/scientific-camera-qhy268m-pro/)"
+      }
+     ],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      1.1,
+      3.5
+     ]
+    },
+    {
+     "key": "high_gain",
+     "name": "Mode #1 High Gain (16-bit, HGC switch at gain 56)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Mode #2 Extended Fullwell (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      5.3,
+      7.4
+     ]
+    },
+    {
+     "key": "extended_full_well_2cms",
+     "name": "Mode #3 Extended Fullwell 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "photographic_dso_2cms",
+     "name": "Mode #4 Photographic DSO 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    },
+    {
+     "key": "high_gain_2cms",
+     "name": "Mode #5 High Gain 2CMS",
+     "pixel_um": 3.76,
+     "width": 6252,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy461m_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY461M PH",
+   "sensor": "Sony IMX461",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY461PH",
+    "QHY461M-PH",
+    "QHY461PH-M",
+    "QHY461M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy461ph-qhy411ph/",
+    "https://www.qhyccd.com/astronomical-camera-qhy600/"
+   ],
+   "modes": [
+    {
+     "key": "photographic",
+     "name": "PH / standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 26,
+       "e_per_adu": 1.0,
+       "source": "QHY600PH page table 'Unity Gain of Some 16bit Models': QHY461PH = 26 (https://www.qhyccd.com/astronomical-camera-qhy600/)"
+      }
+     ],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.7
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy411m_ph",
+   "vendor": "QHYCCD",
+   "model": "QHY411M PH",
+   "sensor": "Sony IMX411",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY411PH",
+    "QHY411M-PH",
+    "QHY411PH-M",
+    "QHY411M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy461ph-qhy411ph/"
+   ],
+   "modes": [
+    {
+     "key": "photographic",
+     "name": "PH / standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy461m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY461M Pro",
+   "sensor": "Sony IMX461",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY461M Pro",
+    "QHY461M-Pro",
+    "QHY461MPRO",
+    "QHY461M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy411-qhy461/"
+   ],
+   "modes": [
+    {
+     "key": "standard",
+     "name": "Standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.0
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy461c_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY461C Pro",
+   "sensor": "Sony IMX461",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "QHY461C Pro",
+    "QHY461C-Pro",
+    "QHY461CPRO",
+    "QHY461C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy411-qhy461/"
+   ],
+   "modes": [
+    {
+     "key": "standard",
+     "name": "Standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.0
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11664,
+     "height": 8748,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy411m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY411M Pro",
+   "sensor": "Sony IMX411",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY411M Pro",
+    "QHY411M-Pro",
+    "QHY411MPRO",
+    "QHY411M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy411-qhy461/"
+   ],
+   "modes": [
+    {
+     "key": "standard",
+     "name": "Standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.0
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy411c_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY411C Pro",
+   "sensor": "Sony IMX411",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "QHY411C Pro",
+    "QHY411C-Pro",
+    "QHY411CPRO",
+    "QHY411C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy411-qhy461/"
+   ],
+   "modes": [
+    {
+     "key": "standard",
+     "name": "Standard mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.0
+     ]
+    },
+    {
+     "key": "extended_full_well",
+     "name": "Extended full well mode (16-bit)",
+     "pixel_um": 3.76,
+     "width": 14208,
+     "height": 10656,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 80000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy533m",
+   "vendor": "QHYCCD",
+   "model": "QHY533M",
+   "sensor": "Sony IMX533",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY533M",
+    "QHY533M-PH"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy533/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 3.76,
+     "width": null,
+     "height": null,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 58000,
+     "read_noise_range_e": [
+      1.3,
+      3.4
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy533c",
+   "vendor": "QHYCCD",
+   "model": "QHY533C",
+   "sensor": "Sony IMX533",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY533C",
+    "QHY533C-PH"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy533/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 3.76,
+     "width": null,
+     "height": null,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 58000,
+     "read_noise_range_e": [
+      1.3,
+      3.4
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy294m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY294M Pro",
+   "sensor": "Sony IMX492",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY294M Pro",
+    "QHY294M-Pro",
+    "QHY294MPRO",
+    "QHY294M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy294/"
+   ],
+   "modes": [
+    {
+     "key": "11mp",
+     "name": "11MP locked-binning mode (14-bit)",
+     "pixel_um": 4.63,
+     "width": 4164,
+     "height": 2796,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 1600,
+       "e_per_adu": 1.0,
+       "source": "QHY294M Pro page: unity gain 1600 (11 MP mode) (https://www.qhyccd.com/astronomical-camera-qhy294/)"
+      }
+     ],
+     "full_well_e": 65000,
+     "read_noise_range_e": [
+      1.2,
+      6.9
+     ]
+    },
+    {
+     "key": "47mp",
+     "name": "47MP unlocked mode",
+     "pixel_um": 2.315,
+     "width": 8340,
+     "height": 5644,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 2600,
+       "e_per_adu": 1.0,
+       "source": "QHY294M Pro page: unity gain 2600 (47 MP mode) (https://www.qhyccd.com/astronomical-camera-qhy294/)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy294c",
+   "vendor": "QHYCCD",
+   "model": "QHY294C (Pro)",
+   "sensor": "Sony IMX294",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY294C",
+    "QHY294C Pro",
+    "QHY294C-Pro",
+    "QHY294CPRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/uploadfile/2019/0122/20190122041107961.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.63,
+     "width": 4164,
+     "height": 2796,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 65000,
+     "read_noise_range_e": [
+      1.0,
+      6.8
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy183m",
+   "vendor": "QHYCCD",
+   "model": "QHY183M",
+   "sensor": "Sony IMX183",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY183M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy183/",
+    "https://www.qhyccd.com/uploadfile/2018/0328/20180328101650197.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5544,
+     "height": 3684,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 10,
+       "e_per_adu": 1.0,
+       "source": "QHY183 page: unity gain 10, 'Unit-gain is the gain when system gain is 1 (1e/ADU)' (QHY183M manual FAQ gives 11) (https://www.qhyccd.com/astronomical-camera-qhy183/)"
+      },
+      {
+       "setting": 0,
+       "read_noise_e": 2.7,
+       "source": "QHY183 manuals spec table: read noise '2.7e @gain 0' (https://www.qhyccd.com/uploadfile/2018/0328/20180328101650197.pdf)"
+      }
+     ],
+     "full_well_e": 15500,
+     "read_noise_range_e": [
+      1.0,
+      2.7
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy183c",
+   "vendor": "QHYCCD",
+   "model": "QHY183C",
+   "sensor": "Sony IMX183",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY183C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy183/",
+    "https://www.qhyccd.com/uploadfile/2018/0507/20180507103609228.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5544,
+     "height": 3684,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 10,
+       "e_per_adu": 1.0,
+       "source": "QHY183 page: unity gain 10 (QHY183C manual FAQ gives 11) (https://www.qhyccd.com/astronomical-camera-qhy183/)"
+      },
+      {
+       "setting": 0,
+       "read_noise_e": 2.7,
+       "source": "QHY183C manual spec table: 2.7e at gain 0 (https://www.qhyccd.com/uploadfile/2018/0507/20180507103609228.pdf)"
+      }
+     ],
+     "full_well_e": 15500,
+     "read_noise_range_e": [
+      1.0,
+      2.7
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy367c_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY367C Pro",
+   "sensor": "Sony IMX094",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY367C",
+    "QHY367C Pro",
+    "QHY367C-Pro",
+    "QHY367PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/astronomical-camera-qhy367/",
+    "https://www.qhyccd.com/file/repository/PDF/Setting%20GAIN%20and%20OFFSET%20on%20cold%20CMOS%20camera%20for%20deep%20sky%20astrophotography.pdf",
+    "https://www.qhyccd.com/discontinued-products/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.88,
+     "width": 7376,
+     "height": 4938,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 2800,
+       "e_per_adu": 1.0,
+       "source": "QHY367C page: unity gain 2800; QHY gain/offset note: 'QHY367C is 2800' (https://www.qhyccd.com/astronomical-camera-qhy367/)"
+      }
+     ],
+     "full_well_e": 56000,
+     "read_noise_range_e": [
+      2.4,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy585m",
+   "vendor": "QHYCCD",
+   "model": "QHY585M",
+   "sensor": "Sony IMX585",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY585M",
+    "QHY585"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy585-imx585/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (dual 12-bit, 16-bit output)",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 54000,
+     "read_noise_range_e": [
+      0.76,
+      7.8
+     ]
+    },
+    {
+     "key": "linearity_hdr",
+     "name": "Linearity HDR mode",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 46000,
+     "read_noise_range_e": [
+      1.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_minicam8m",
+   "vendor": "QHYCCD",
+   "model": "miniCAM8M",
+   "sensor": "Sony IMX585",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "miniCAM8M",
+    "MINICAM8M",
+    "QHYminiCAM8M",
+    "miniCAM8"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/minicam8-imx585/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (dual 12-bit, 16-bit output)",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 54000,
+     "read_noise_range_e": [
+      0.76,
+      7.8
+     ]
+    },
+    {
+     "key": "linearity_hdr",
+     "name": "Linearity HDR mode",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 46000,
+     "read_noise_range_e": [
+      1.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_minicam8c",
+   "vendor": "QHYCCD",
+   "model": "miniCAM8C",
+   "sensor": "Sony IMX585",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "miniCAM8C",
+    "MINICAM8C",
+    "QHYminiCAM8C",
+    "miniCAM8"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/minicam8-imx585/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (dual 12-bit, 16-bit output)",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 54000,
+     "read_noise_range_e": [
+      0.76,
+      7.8
+     ]
+    },
+    {
+     "key": "linearity_hdr",
+     "name": "Linearity HDR mode",
+     "pixel_um": 2.9,
+     "width": null,
+     "height": null,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 46000,
+     "read_noise_range_e": [
+      1.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy174gps",
+   "vendor": "QHYCCD",
+   "model": "QHY174GPS",
+   "sensor": "Sony IMX174",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY174GPS",
+    "QHY174M-GPS",
+    "QHY174M GPS"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy174gps-imx174-scientific-cooled-camera/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 0,
+       "read_noise_e": 5.3,
+       "source": "QHY174GPS spec table: read noise '5.3e-@Gain0' (https://www.qhyccd.com/qhy174gps-imx174-scientific-cooled-camera/)"
+      }
+     ],
+     "full_well_e": 32000,
+     "read_noise_range_e": [
+      1.6,
+      5.3
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy6060_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY6060 Pro",
+   "sensor": "Gpixel GSENSE6060 (FSI; BSI variant specs TBD)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY6060",
+    "QHY6060 Pro",
+    "QHY6060PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy6060/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 10.0,
+     "width": 6134,
+     "height": 6134,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 70000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy4040_pro_fsi",
+   "vendor": "QHYCCD",
+   "model": "QHY4040 Pro (FSI)",
+   "sensor": "Gpixel GSENSE4040 FSI",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY4040",
+    "QHY4040 Pro",
+    "QHY4040PRO",
+    "QHY4040 Pro I",
+    "QHY4040 Pro II"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy4040-pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Single channel 12-bit / combined 16-bit HDR",
+     "pixel_um": 9.0,
+     "width": 4096,
+     "height": 4096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 31,
+       "read_noise_e": 4.0,
+       "source": "QHY4040 Pro spec table (FSI): read noise typical 4e- at Gain 31 (16.5x) (https://www.qhyccd.com/scientific-camera-qhy4040-pro/)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy4040_pro_bsi",
+   "vendor": "QHYCCD",
+   "model": "QHY4040 Pro (BSI)",
+   "sensor": "Gpixel GSENSE4040 BSI",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY4040BSI",
+    "QHY4040 Pro BSI",
+    "QHY4040PRO-BSI"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy4040-pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Single channel 12-bit / combined 16-bit HDR",
+     "pixel_um": 9.0,
+     "width": 4096,
+     "height": 4096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 50,
+       "read_noise_e": 2.3,
+       "source": "QHY4040 Pro spec table (BSI): read noise typical 2.3e- at Gain 50 (16.5x) (https://www.qhyccd.com/scientific-camera-qhy4040-pro/)"
+      }
+     ],
+     "full_well_e": 36000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy2020",
+   "vendor": "QHYCCD",
+   "model": "QHY2020 (BSI)",
+   "sensor": "Gpixel GSENSE2020 BSI",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY2020",
+    "QHY2020BSI"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy2020-scientific-camera-gsense2020/"
+   ],
+   "modes": [
+    {
+     "key": "high_gain",
+     "name": "High gain channel (12-bit)",
+     "pixel_um": 6.5,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      1.7,
+      7.5
+     ]
+    },
+    {
+     "key": "low_gain",
+     "name": "Low gain channel (12-bit)",
+     "pixel_um": 6.5,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      2.1,
+      27.6
+     ]
+    },
+    {
+     "key": "hdr",
+     "name": "HDR dual-channel (2x12-bit)",
+     "pixel_um": 6.5,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 56000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy42_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY42 Pro",
+   "sensor": "Gpixel GSENSE400 (FSI/BSI)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY42",
+    "QHY42 Pro",
+    "QHY42PRO",
+    "QHY42BSI"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy42pro/"
+   ],
+   "modes": [
+    {
+     "key": "high_gain",
+     "name": "Single 12-bit high gain channel (STD)",
+     "pixel_um": 11.0,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      1.7,
+      4.2
+     ]
+    },
+    {
+     "key": "low_gain",
+     "name": "Single 12-bit low gain channel (STD)",
+     "pixel_um": 11.0,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      10.0,
+      44.0
+     ]
+    },
+    {
+     "key": "hdr",
+     "name": "Dual 12-bit high+low gain (HDR)",
+     "pixel_um": 11.0,
+     "width": 2048,
+     "height": 2048,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 53000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy9701",
+   "vendor": "QHYCCD",
+   "model": "QHY9701",
+   "sensor": "Gpixel GSENSE9701 BSI",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY9701"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy9701/"
+   ],
+   "modes": [
+    {
+     "key": "hdr",
+     "name": "HDR mode",
+     "pixel_um": 9.76,
+     "width": 1280,
+     "height": 1024,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 48000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    },
+    {
+     "key": "low_noise",
+     "name": "Low Noise mode",
+     "pixel_um": 9.76,
+     "width": 1280,
+     "height": 1024,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      0.85,
+      0.85
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy1920m",
+   "vendor": "QHYCCD",
+   "model": "QHY1920M",
+   "sensor": "12um-pixel BSI scientific CMOS (sensor not named by QHY)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY1920M",
+    "QHY1920"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy1920/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 12.0,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      0.74,
+      8.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy1920c",
+   "vendor": "QHYCCD",
+   "model": "QHY1920C",
+   "sensor": "12um-pixel BSI scientific CMOS (sensor not named by QHY)",
+   "color": "osc",
+   "bayer": "BGGR",
+   "aliases": [
+    "QHY1920C",
+    "QHY1920"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy1920/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 12.0,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51000,
+     "read_noise_range_e": [
+      0.74,
+      8.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy530m_pro_ii",
+   "vendor": "QHYCCD",
+   "model": "QHY530 Pro II",
+   "sensor": "Sony IMX530",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY530",
+    "QHY530 Pro II",
+    "QHY530PRO",
+    "QHY530M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy530pro-ii/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Normal mode (12-bit)",
+     "pixel_um": 2.74,
+     "width": 5328,
+     "height": 4608,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 9700,
+     "read_noise_range_e": [
+      1.1,
+      2.1
+     ]
+    },
+    {
+     "key": "fd_binning_2x2",
+     "name": "2x2 FD (charge-domain) binning",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": "charge",
+     "binning_source": "QHY page: 'charge-domain binning (FD Binning), which is the true hardware pixel binning similar to CCD cameras.' (https://www.qhyccd.com/qhy530pro-ii/)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy487_pro_i",
+   "vendor": "QHYCCD",
+   "model": "QHY487 Pro I",
+   "sensor": "Sony IMX487 (UV)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY487",
+    "QHY487 Pro I",
+    "QHY487PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy487-pro-i/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Full resolution (12-bit)",
+     "pixel_um": 2.74,
+     "width": 2856,
+     "height": 2848,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 10000,
+     "read_noise_range_e": [
+      1.3,
+      2.5
+     ]
+    },
+    {
+     "key": "fd_binning_2x2",
+     "name": "2x2 FD binning",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      1.7,
+      2.7
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy811m_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY811M Pro",
+   "sensor": "Sony IMX811",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY811M Pro",
+    "QHY811M",
+    "QHY811 Pro",
+    "QHY811PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy811pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Normal mode (16-bit)",
+     "pixel_um": 2.81,
+     "width": 19240,
+     "height": 12840,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 28000,
+     "read_noise_range_e": [
+      1.2,
+      3.2
+     ]
+    },
+    {
+     "key": "fd_binning_2x2",
+     "name": "2x2 FD (charge-domain) binning",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": 16,
+     "binning": "charge",
+     "binning_source": "QHY811 Pro page: FD binning is charge-domain binning, 'the true hardware pixel binning similar to CCD cameras' (https://www.qhyccd.com/scientific-camera-qhy811pro/)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy811c_pro",
+   "vendor": "QHYCCD",
+   "model": "QHY811C Pro",
+   "sensor": "Sony IMX811",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "QHY811C Pro",
+    "QHY811C",
+    "QHY811 Pro",
+    "QHY811PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy811pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Normal mode (16-bit)",
+     "pixel_um": 2.81,
+     "width": 19240,
+     "height": 12840,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 28000,
+     "read_noise_range_e": [
+      1.2,
+      3.2
+     ]
+    },
+    {
+     "key": "fd_binning_2x2",
+     "name": "2x2 FD (charge-domain) binning",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": 16,
+     "binning": "charge",
+     "binning_source": "QHY811 Pro page: FD binning is charge-domain binning, 'the true hardware pixel binning similar to CCD cameras' (https://www.qhyccd.com/scientific-camera-qhy811pro/)",
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy550m",
+   "vendor": "QHYCCD",
+   "model": "QHY550M",
+   "sensor": "Sony IMX250",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY550M",
+    "QHY550"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy550p-polarized-camera/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.45,
+     "width": 2460,
+     "height": 2070,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 11000,
+     "read_noise_range_e": [
+      2.0,
+      2.5
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy1253m",
+   "vendor": "QHYCCD",
+   "model": "QHY1253M",
+   "sensor": "Sony IMX253",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY1253M",
+    "QHY1253"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/scientific-camera-qhy1253-polarized-imx253/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.45,
+     "width": 4032,
+     "height": 2998,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 9800,
+     "read_noise_range_e": [
+      1.17,
+      1.8
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy163m",
+   "vendor": "QHYCCD",
+   "model": "QHY163M",
+   "sensor": "Panasonic 4/3in 16MP FSI CMOS",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY163M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY163M_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/qhyccd-discontinued-product-notice-2022/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3522,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      1.0,
+      2.4
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy163c",
+   "vendor": "QHYCCD",
+   "model": "QHY163C",
+   "sensor": "Panasonic 4/3in 16MP FSI CMOS",
+   "color": "osc",
+   "bayer": "GRBG",
+   "aliases": [
+    "QHY163C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3522,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      1.0,
+      2.4
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy168c",
+   "vendor": "QHYCCD",
+   "model": "QHY168C",
+   "sensor": "Sony IMX071",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY168C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/file/repository/PDF/Setting%20GAIN%20and%20OFFSET%20on%20cold%20CMOS%20camera%20for%20deep%20sky%20astrophotography.pdf",
+    "https://agenaastro.com/qhy-168c-cooled-color-astronomy-camera-qhy168c.html",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.8,
+     "width": 4952,
+     "height": 3288,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 10,
+       "e_per_adu": 1.0,
+       "source": "QHY 'Setting GAIN and OFFSET' note: 'QHY168C the unit-gain is 10' (https://www.qhyccd.com/file/repository/PDF/Setting%20GAIN%20and%20OFFSET%20on%20cold%20CMOS%20camera%20for%20deep%20sky%20astrophotography.pdf)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy165c",
+   "vendor": "QHYCCD",
+   "model": "QHY165C",
+   "sensor": "Sony IMX071",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY165C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://agenaastro.com/qhy-165c-cooled-color-astronomy-camera-qhy165c.html",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 4.8,
+     "width": 4952,
+     "height": 3288,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy128c",
+   "vendor": "QHYCCD",
+   "model": "QHY128C (Pro)",
+   "sensor": "Sony IMX128",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY128C",
+    "QHY128C Pro",
+    "QHY128PRO"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/qhyccd-discontinued-product-notice-2022/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": 5.97,
+     "width": 6036,
+     "height": 4028,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy247c",
+   "vendor": "QHYCCD",
+   "model": "QHY247C",
+   "sensor": "Sony IMX193",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY247C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/qhyccd-discontinued-product-notice-2022/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": 3.91,
+     "width": 6024,
+     "height": 4024,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy410c",
+   "vendor": "QHYCCD",
+   "model": "QHY410C",
+   "sensor": "Sony IMX410",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY410C",
+    "QHY410C-PH"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://telescopescanada.ca/products/qhyccd-qhy410c-24mp-cooled-color-cmos-telescope-astrophotography-camera-qhy410c",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 5.94,
+     "width": 6072,
+     "height": 4044,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 120000,
+     "read_noise_range_e": [
+      1.1,
+      3.75
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy174m",
+   "vendor": "QHYCCD",
+   "model": "QHY174M (cooled)",
+   "sensor": "Sony IMX174",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY174M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 32000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy174c",
+   "vendor": "QHYCCD",
+   "model": "QHY174C (cooled)",
+   "sensor": "Sony IMX174",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY174C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 32000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy178m",
+   "vendor": "QHYCCD",
+   "model": "QHY178M (cooled)",
+   "sensor": "Sony IMX178",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY178M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3072,
+     "height": 2048,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy178c",
+   "vendor": "QHYCCD",
+   "model": "QHY178C (cooled)",
+   "sensor": "Sony IMX178",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY178C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3072,
+     "height": 2048,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy290m",
+   "vendor": "QHYCCD",
+   "model": "QHY290M (cooled)",
+   "sensor": "Sony IMX290",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY290M"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy290c",
+   "vendor": "QHYCCD",
+   "model": "QHY290C (cooled)",
+   "sensor": "Sony IMX290",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY290C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy224c",
+   "vendor": "QHYCCD",
+   "model": "QHY224C (cooled)",
+   "sensor": "Sony IMX224",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY224C"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/file/repository/PDF/CameraManual/QHY174178224290_Manual_EN.pdf",
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/astronomical-camera-qhy268/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 19000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii174m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III174M",
+   "sensor": "Sony IMX174",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III174M",
+    "QHY5III174"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/planetary-camera-qhy5iii174/",
+    "https://www.qhyccd.com/specifications-comparison/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1920,
+     "height": 1200,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 32000,
+     "read_noise_range_e": [
+      2.2,
+      5.5
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii585m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III585M",
+   "sensor": "Sony IMX585",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III585M",
+    "QHY5III585"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy5iii585/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3856,
+     "height": 2180,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 52000,
+     "read_noise_range_e": [
+      0.77,
+      8.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii585c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III585C",
+   "sensor": "Sony IMX585",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY5III585C",
+    "QHY5III585"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy5iii585/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3856,
+     "height": 2180,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 52000,
+     "read_noise_range_e": [
+      0.77,
+      8.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii462m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III462M",
+   "sensor": "Sony IMX462",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III462M",
+    "QHY5III462"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/planetary-camera-qhy5iii462c/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 12000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii462c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III462C",
+   "sensor": "Sony IMX462",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY5III462C",
+    "QHY5III462"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/planetary-camera-qhy5iii462c/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 12000
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii678m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III678M",
+   "sensor": "Sony IMX678",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III678M",
+    "QHY5III678"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy5iii678/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3856,
+     "height": 2180,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 9000,
+     "read_noise_range_e": [
+      0.57,
+      3.3
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii678c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III678C",
+   "sensor": "Sony IMX678",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY5III678C",
+    "QHY5III678"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy5iii678/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3856,
+     "height": 2180,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 9000,
+     "read_noise_range_e": [
+      0.57,
+      3.3
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii485c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III485C",
+   "sensor": "Sony IMX485",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY5III485C",
+    "QHY5III485"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/planetary-camera-qhy5iii485c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3864,
+     "height": 2180,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 12000,
+     "read_noise_range_e": [
+      0.77,
+      2.4
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii715c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III715C",
+   "sensor": "Sony IMX715",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY5III715C",
+    "QHY5III715"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 1.45,
+     "width": 3840,
+     "height": 2192,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 5700,
+     "read_noise_range_e": [
+      0.87,
+      2.17
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii200m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III200M",
+   "sensor": "SmartSens SC2210",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III200M",
+    "QHY5III200"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/specifications-comparison/",
+    "https://www.qhyccd.com/qhy5iii200m/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 4.0,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 8000,
+     "read_noise_range_e": [
+      0.75,
+      3.0
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii568m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III568M",
+   "sensor": "Sony IMX568",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III568M",
+    "QHY5III568"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/specifications-comparison/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.74,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 8800,
+     "read_noise_range_e": [
+      1.5,
+      2.3
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii568c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III568C",
+   "sensor": "Sony IMX568",
+   "color": "osc",
+   "bayer": "RGGB",
+   "aliases": [
+    "QHY5III568C",
+    "QHY5III568"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.qhyccd.com/specifications-comparison/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.74,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 8800,
+     "read_noise_range_e": [
+      1.5,
+      2.3
+     ]
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii178m",
+   "vendor": "QHYCCD",
+   "model": "QHY5III178M",
+   "sensor": "Sony IMX178",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5III178M",
+    "QHY5III178"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": 2.4,
+     "width": 3072,
+     "height": 2048,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5iii178c",
+   "vendor": "QHYCCD",
+   "model": "QHY5III178C",
+   "sensor": "Sony IMX178",
+   "color": "osc",
+   "bayer": "GBRG",
+   "aliases": [
+    "QHY5III178C",
+    "QHY5III178"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/",
+    "https://www.qhyccd.com/qhy5iii715c/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": 2.4,
+     "width": 3072,
+     "height": 2048,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  },
+  {
+   "key": "qhy_qhy5lii_m",
+   "vendor": "QHYCCD",
+   "model": "QHY5L-II-M",
+   "sensor": "onsemi MT9M034",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "QHY5L-II-M",
+    "QHY5LII-M",
+    "QHY5LIIM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://www.qhyccd.com/discontinued-products/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ]
+  }
+ ]
+}

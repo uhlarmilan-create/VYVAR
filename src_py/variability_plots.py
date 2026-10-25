@@ -154,7 +154,7 @@ def field_png(masterstar: Path, cand: pd.DataFrame, out: Path) -> Path | None:
     return out
 
 
-def candidate_lc_png(lc_csv: Path, out: Path, title: str, time_label: str = "JD") -> Path | None:
+def candidate_lc_png(lc_csv: Path, out: Path, title: str, time_label: str = "JD", ylabel: str = "dmag") -> Path | None:
     """Night light curve of one star with FWHM and airmass under it. Error bars: the
     field noise model ((a e)^2 + floor^2), the scatter a constant star of this brightness has."""
     plt = _mpl()
@@ -167,7 +167,7 @@ def candidate_lc_png(lc_csv: Path, out: Path, title: str, time_label: str = "JD"
     t0 = math.floor(float(t.min())) if t.notna().any() else 0.0
     axs[0].errorbar(t - t0, d["dmag"], yerr=d["err"], fmt="o", ms=3, c="#1B1F24", ecolor="#9AA3AE", lw=0.8)
     axs[0].invert_yaxis()
-    axs[0].set_ylabel("dmag")
+    axs[0].set_ylabel(ylabel)
     axs[0].set_title(title, fontsize=10)
     axs[1].plot(t - t0, d["fwhm"], c="#5A6370", lw=1, label="FWHM [px]")
     if "airmass" in d and pd.to_numeric(d["airmass"], errors="coerce").notna().any():

@@ -36,14 +36,13 @@ def _validity_days(kind: str, dark_days: int, flat_days: int) -> int:
     return int(flat_days if kind == cl.KIND_FLAT else dark_days)
 
 
-def _status_today(m: cl.LibraryMaster, days: int) -> str:
+def _validity(m: cl.LibraryMaster, days: int) -> tuple[str, int | None]:
+    """("valid" / "expired" / "no date", days still valid - negative = days since it expired)."""
     vu = m.valid_until(days)
     if vu is None:
-        return "no date"
+        return "no date", None
     left = (vu - datetime.now(timezone.utc)).days
-    if left < 0:
-        return f"expired ({-left} d ago)"
-    return f"valid {left} d more"
+    return ("expired" if left < 0 else "valid"), left
 
 
 def _rows(masters: list[cl.LibraryMaster], dark_days: int, flat_days: int) -> pd.DataFrame:
@@ -51,6 +50,7 @@ def _rows(masters: list[cl.LibraryMaster], dark_days: int, flat_days: int) -> pd
     for m in masters:
         days = _validity_days(m.kind, dark_days, flat_days)
         vu = m.valid_until(days)
+        status, left = _validity(m, days)
         recs.append(
             {
                 "Camera": m.camera_name or (f"#{m.camera_id}" if m.camera_id else "-"),
@@ -65,7 +65,8 @@ def _rows(masters: list[cl.LibraryMaster], dark_days: int, flat_days: int) -> pd
                 "Temp (C)": m.temp,
                 "Captured": m.capture_utc.strftime("%Y-%m-%d") if m.capture_utc else "-",
                 "Valid until": vu.strftime("%Y-%m-%d") if vu else "-",
-                "Today": _status_today(m, days),
+                "Status": status,
+                "Days left": left,
                 "Made by": (m.origin_software or "VYVAR") if m.origin == cl.ORIGIN_IMPORTED else "VYVAR",
                 "Origin": "imported" if m.origin == cl.ORIGIN_IMPORTED else "built",
                 "Method": m.combine_method or "?",
@@ -75,7 +76,10 @@ def _rows(masters: list[cl.LibraryMaster], dark_days: int, flat_days: int) -> pd
                 "_path": m.path,
             }
         )
-    return pd.DataFrame(recs)
+    df = pd.DataFrame(recs)
+    if "Days left" in df.columns:
+        df["Days left"] = df["Days left"].astype("Int64")
+    return df
 
 
 def _camera_options(db: VyvarDatabase) -> dict[str, int]:
@@ -107,7 +111,17 @@ def _render_table(db: VyvarDatabase, root: Path, dark_days: int, flat_days: int)
         st.info("No master registered for this selection.")
     else:
         df = _rows(masters, dark_days, flat_days)
-        st.dataframe(df.drop(columns=["_path"]), hide_index=True, width="stretch")
+        _color = {"valid": "color: #3dd68c", "expired": "color: #ff6b6b"}
+        st.dataframe(
+            df.drop(columns=["_path"]).style.map(lambda v: _color.get(v, ""), subset=["Status"]),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "Days left": st.column_config.NumberColumn(
+                    "Days left", format="%d", help="Days the master is still valid; negative = days since it expired."
+                ),
+            },
+        )
         files = list(df["File"])
         c1, c2 = st.columns([3, 1])
         with c1:
@@ -266,6 +280,78 @@ def _render_import(db: VyvarDatabase, root: Path) -> None:
             st.success(f"{n_ok} master(s) in the library")
 
 
+def _render_measure_gain(db: VyvarDatabase) -> None:
+    """CAMERA-PROFILE-2026-10: gain and read noise of a camera from raw flat and dark pairs."""
+    import datetime as _dt  # noqa: PLC0415
+
+    from camera_profile import profile_from_connection  # noqa: PLC0415
+    from gain_ptc import measure_from_files, native_gain  # noqa: PLC0415
+
+    st.markdown("**Measure gain and read noise from raw flats (photon transfer)**")
+    st.caption(
+        "Folder with RAW (not mastered) frames of one gain setting and binning: flats in pairs - two "
+        "consecutive flats of the same exposure, best at 3-5 exposures from about 10 % to 60 % of "
+        "saturation - and two darks of each flat exposure (the shortest pair also gives the read noise). "
+        "Masters cannot be used: averaging removes the noise this method measures."
+    )
+    cams = _camera_options(db)
+    if not cams:
+        return
+    c1, c2 = st.columns([2, 3])
+    cam = cams[c1.selectbox("Camera", list(cams), key="clib_g_cam")]
+    src = c2.text_input("Folder with raw flats and darks", key="clib_g_src")
+    if st.button("Measure", key="clib_g_go", disabled=not src.strip()):
+        p = Path(src.strip())
+        if not p.is_dir():
+            st.error(f"Folder not found: {p}")
+            return
+        by = _collect_fits_by_type(p, db=db)
+        flats = [f for f in by.get("flat", []) if not _looks_like_master(f) and not _is_dark_typed(f)]
+        darks = [f for f in by.get("dark", []) if not _looks_like_master(f)]
+        prof = profile_from_connection(db.conn, int(cam))
+        sat = db.conn.execute("SELECT SATURATE_ADU FROM EQUIPMENTS WHERE ID = ?;", (int(cam),)).fetchone()
+        sat_adu = float(sat[0]) if sat and sat[0] else 65535.0
+        with st.spinner(f"Measuring {len(flats)} flats and {len(darks)} darks..."):
+            res = measure_from_files(flats, darks, saturation_adu=sat_adu)
+        st.session_state["clib_g_res"] = {"cam": int(cam), "res": res, "adc": prof.adc_bits, "mode": prof.mode_key}
+    out = st.session_state.get("clib_g_res")
+    if not out or out.get("cam") != int(cam):
+        return
+    res = out["res"]
+    for m in res.messages:
+        st.warning(m)
+    if res.points:
+        pts = pd.DataFrame([
+            {"Flats": " + ".join(pt.files), "Exposure s": pt.exptime, "Level ADU": round(pt.level_adu, 1),
+             "var/2 ADU^2": round(pt.var_half, 2), "Used": pt.used, "Note": pt.note} for pt in res.points
+        ])
+        st.dataframe(pts, hide_index=True, width="stretch")
+        st.scatter_chart(pts[pts["Used"]], x="Level ADU", y="var/2 ADU^2")
+    if not res.ok:
+        return
+    g_nat = native_gain(float(res.gain), out["adc"])
+    err = f" +- {native_gain(float(res.gain_err), out['adc']):.3f}" if res.gain_err else ""
+    rn_txt = f"{res.read_noise_e:.2f} e-" if res.read_noise_e else "not measured (no dark pair)"
+    st.success(
+        f"Gain {g_nat:.3f}{err} e-/ADU native ({res.gain:.4f} on the file values), read noise {rn_txt}, "
+        f"{res.n_levels} level(s), R^2 = {res.r2 if res.r2 is not None else float('nan'):.5f}; "
+        f"gain setting {res.gain_setting if res.gain_setting is not None else '-'}, bin {res.binning}."
+    )
+    if st.button("Save to camera", type="primary", key="clib_g_save"):
+        db.conn.execute(
+            "INSERT INTO EQUIPMENT_CURVE (EQUIPMENT_ID, READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, "
+            "READNOISE_E, SOURCE, MEASURED_AT, NOTE) VALUES (?, ?, ?, ?, ?, ?, 'measured', ?, ?);",
+            (
+                int(out["cam"]), out["mode"], res.gain_setting, int(res.binning), g_nat, res.read_noise_e,
+                _dt.date.today().isoformat(),
+                f"photon transfer, {res.n_levels} levels, R2 {res.r2 if res.r2 is not None else float('nan'):.4f}",
+            ),
+        )
+        db.conn.commit()
+        st.session_state.pop("clib_g_res", None)
+        st.success("Saved. It now wins over the catalog and the camera default for this setting and binning.")
+
+
 def render_calibration_library_dashboard(
     *,
     calibration_library_root: Path,
@@ -290,3 +376,5 @@ def render_calibration_library_dashboard(
     _render_build(db, root)
     st.markdown("---")
     _render_import(db, root)
+    st.markdown("---")
+    _render_measure_gain(db)

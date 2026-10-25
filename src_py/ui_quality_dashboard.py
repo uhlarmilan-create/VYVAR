@@ -255,7 +255,7 @@ def render_quality_dashboard(
     cfg: AppConfig,
 ) -> None:
     if draft_id is None or int(draft_id) <= 0:
-        st.info("No draft loaded - run RUN VYVAR or load a draft above.")
+        st.info("No processed field loaded - run RUN VYVAR or load one above (Load processed field).")
         return
     did = int(draft_id)
     default_ap = resolve_draft_dir(draft_id=did, archive_root=cfg.archive_root) or ""
@@ -264,7 +264,7 @@ def render_quality_dashboard(
 
     rows = db.fetch_draft_light_rows_for_quality(did)
     if not rows:
-        st.warning("No light frames in manifest files[] for this draft.")
+        st.warning("No light frames in manifest files[] for this processed field.")
         return
     raw_df = pd.DataFrame(rows)
     _seed_draft_center(raw_df)
@@ -281,7 +281,7 @@ def render_quality_dashboard(
             ).items()
         }
         st.caption(
-            "This draft was processed before per-channel frame QC - limits and best frames are "
+            "This field was processed before per-channel frame QC - limits and best frames are "
             "computed here for display only."
         )
 

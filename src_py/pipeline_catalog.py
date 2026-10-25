@@ -249,6 +249,37 @@ def cone_sky_box(center: SkyCoord, radius_deg: float) -> tuple[float, float, flo
     return ra0 - half, ra0 + half, de_min, de_max
 
 
+#: INJECTION-2026-10: CSV of synthetic catalogue stars (injection-recovery tests only). Unset in
+#: normal use; when set, its rows join the Gaia cone like real stars and every run logs it.
+INJECT_CATALOG_ENV = "VYVAR_INJECT_CATALOG"
+
+
+def _append_injected_catalogue(df: pd.DataFrame, center: SkyCoord, radius_deg: float) -> pd.DataFrame:
+    """Add the synthetic stars of ``$VYVAR_INJECT_CATALOG`` inside the cone (test hook).
+
+    The injection-recovery tool (dev/tools/injection_recovery.py) injects stars into raw frames
+    where Gaia has none; VYVAR measures only catalogue stars (identity join on source_id), so the
+    test lists them here with ids above the Gaia range. Without the variable: no change."""
+    import os  # noqa: PLC0415
+
+    path = os.environ.get(INJECT_CATALOG_ENV, "").strip()
+    if not path:
+        return df
+    extra = pd.read_csv(path, dtype={"catalog_id": str})
+    if extra.empty:
+        return df
+    coo = SkyCoord(ra=extra["ra_deg"].astype(float).to_numpy() * u.deg,
+                   dec=extra["dec_deg"].astype(float).to_numpy() * u.deg, frame="icrs")
+    extra = extra.loc[center.separation(coo).deg <= radius_deg + 1e-9].copy()
+    extra["catalog"] = "GAIA_DR3"
+    LOGGER.warning("[INJECT] %d synthetic catalogue stars added to the Gaia cone from %s (test run)",
+                   len(extra), path)
+    log_event(f"[INJECT] {len(extra)} synthetic catalogue stars added from {path} (injection-recovery test run)")
+    if df.empty:
+        return extra.reset_index(drop=True)
+    return pd.concat([df, extra[[c for c in extra.columns if c in df.columns]]], ignore_index=True)
+
+
 def _query_gaia_local(
     *,
     center: SkyCoord,
@@ -308,6 +339,7 @@ def _query_gaia_local(
         )
         _inner = center.separation(_coo_q).deg <= float(radius_deg) + 1e-9
         df = sub.loc[_inner].reset_index(drop=True)
+    df = _append_injected_catalogue(df, center, float(radius_deg))
     if max_mag is not None and "mag" in df.columns:
         m = pd.to_numeric(df["mag"], errors="coerce")
         df = df[(m.notna()) & (m <= float(max_mag))].copy()

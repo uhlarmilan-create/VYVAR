@@ -282,7 +282,7 @@ def _render_observer_site(cfg: AppConfig) -> None:
                         f"alt {row.get('alt_m', 0):.0f} m")
         else:
             st.markdown("No default site.")
-        st.caption("The default site is the LOCATION row marked IS_DEFAULT in Database Explorer; "
+        st.caption("The default site is the one marked default in Database Explorer > Sites; "
                    "a run may choose another site on the import page. Telescopes and cameras are in Database Explorer too.")
 
 
@@ -296,7 +296,7 @@ def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path |
                                           draft_id=st.session_state.get("vyvar_last_draft_id"),
                                           draft_dir_override=draft_dir_override)
         if ms is None or not Path(ms).is_file():
-            st.caption("No MASTERSTAR for the active draft (Pipeline -> Load draft).")
+            st.caption("No MASTERSTAR for the loaded processed field (Pipeline -> Load processed field).")
             return
         ctx = load_masterstar_context(ms)
         fwhm = ctx.vy_fwhm_gauss_px or ctx.vy_fwhm_px
@@ -359,8 +359,8 @@ def _render_header(cfg: AppConfig, groups: dict[str, list[str]], registry: dict[
     h1, h2, h3 = st.columns([5, 1.2, 1.6], vertical_alignment="center")
     with h1:
         st.subheader("Settings")
-        st.caption(f"config.json · {n_keys} settings in {len([g for g in groups if groups[g]])} groups · "
-                   f"{n_default} differ from the default" + (f" · **{len(edited)} not saved**" if edited else ""))
+        st.caption(f"config.json | {n_keys} settings in {len([g for g in groups if groups[g]])} groups | "
+                   f"{n_default} differ from the default" + (f" | **{len(edited)} not saved**" if edited else ""))
     cross = sm.cross_check(draft)
     blocking = bool(cross) or bool(errors)
     with h2:
@@ -406,7 +406,7 @@ def render_settings_dashboard(
     order = [g for g in sm.group_order() if groups.get(g)]
     def _nav_label(g: str) -> str:
         n_ed = sum(1 for k in groups[g] if k in edited)
-        return f"{sm.GROUP_TITLES.get(g, g)}  ({len(groups[g])})" + (f"  · {n_ed} not saved" if n_ed else "")
+        return f"{sm.GROUP_TITLES.get(g, g)}  ({len(groups[g])})" + (f"  | {n_ed} not saved" if n_ed else "")
 
     nav, main = st.columns([1.15, 4], gap="large")
     with nav:

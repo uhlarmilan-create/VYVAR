@@ -610,6 +610,9 @@ def _astrometry_align_impl_body(
                 for _k, _v in enumerate(_mat):
                     hdr_out[f"VY_AM{_k}"] = (float(_v), "frame->reference transform (row-major 3x3)")
                 hdr_out["VY_AMSRC"] = (str(_rh.get("method") or "astroalign"), "transform source")
+                if _rh.get("matrix_max_err_px") is not None:
+                    # ALIGN-POLY-2026-10: VY_AM is the projective approximation of the polynomial
+                    hdr_out["VY_AMERR"] = (float(_rh["matrix_max_err_px"]), "max px error of VY_AM vs the polynomial")
         except Exception as _am_exc:  # noqa: BLE001
             logging.debug("[ALIGN] transform header not written for %s: %s", fp.name, _am_exc)
         if use_ram_handoff:
@@ -794,7 +797,8 @@ def _astrometry_align_impl_body(
                 overwrite=True,
             )
         _ram_flushed_before_masterstar = True
-        _aligned_file_list = sorted(aligned_root.glob("proc_*.fits"))
+        # the aligned FITS keep the raw names (ALIGNED-GLOB-01: the former proc_*.fits glob found none)
+        _aligned_file_list = sorted(aligned_root / Path(name) for name, _h, _a in aligned_ram_buffer)
         LOGGER.info(f"[BORDER] RAM flush done - {len(_aligned_file_list)} aligned frames on disk")
 
     cat_info: dict[str, Any] = {}
@@ -836,10 +840,7 @@ def _astrometry_align_impl_body(
             if use_ram_handoff and aligned_ram_buffer and _ram_flushed_before_masterstar:
                 _aligned_disk = list(_aligned_file_list)
             else:
-                try:
-                    _aligned_disk = sorted(aligned_root.glob("proc_*.fits"))
-                except Exception:  # noqa: BLE001
-                    _aligned_disk = []
+                _aligned_disk = [Path(p) for p in aligned_files if Path(p).is_file()]
             _has_aligned = bool(_aligned_disk) or bool(use_ram_handoff and aligned_ram_buffer)
             if build_masterstar_and_catalogs and _has_aligned:
                 _wp_aligned = write_photometry_plan_files(

@@ -90,6 +90,20 @@ Young (1989) optical air-mass formula. SysRem, Savitzky-Golay and Democratic Det
 detrending, PyTICS comparison re-weighting and the "Method B" aperture correction were
 evaluated and removed from the code after the 2026-10 physics audit.
 
+### Camera gain and read noise
+The gain (e-/ADU) and read noise of every frame come from one resolver, in this order: the FITS
+header when it states e-/ADU (`EGAIN`, or `GAIN` with an e-/ADU comment, e.g. Moravian SIPS);
+otherwise the camera's gain curve at the gain setting written in the header (QHY / ZWO through
+NINA or ASCOM write the setting, not e-/ADU) - a point measured from raw flats wins over a manually
+entered one, the camera's default point and the typical values of the shipped camera catalog
+(`src_py/camera_catalog.json`). Binning is applied by the camera's convention (digital average:
+gain x N^2; digital sum: gain x 1; charge binning: both x 1). When nothing is known the run stops
+with a message instead of using a default. Cameras are added from the catalog in Database Explorer
+> EQUIPMENTS; Calibration Library > Measure gain derives gain and read noise from raw flat and dark
+pairs (photon transfer, Janesick 2007). The report shows where the gain came from and an
+error-model check (check-star scatter / reported errors). Lights of one observation group must
+share the gain setting.
+
 ### Trust model
 Each light curve receives a **GREEN / YELLOW / RED** trust band from check-star witnesses,
 comparison-star count (`comp_trust_min_comps`), and scatter diagnostics. Sparse fields fall

@@ -321,25 +321,3 @@ def test_target_display_name_prefers_vsx_over_nan():
     row_nan = {"vsx_name": float("nan"), "catalog_id": "1400549806859236864"}
     assert _target_display_name(row_nan) == "1400549806859236864"
 
-
-def test_variable_targets_presel_stub_detection(tmp_path):
-    import pandas as pd
-
-    from photometry_core import _variable_targets_looks_like_ct_presel_stub
-
-    ps = tmp_path / "B_20_2"
-    ps.mkdir()
-    vt = ps / "variable_targets.csv"
-    ms = ps / "masterstars.csv"
-    pd.DataFrame(
-        {
-            "name": ["M67 in-range 123"],
-            "catalog_id": ["123"],
-            "notes": ["CT presel in-range BP-RP [0.5,1.5]"],
-        }
-    ).to_csv(vt, index=False)
-    pd.DataFrame({"catalog_id": [str(i) for i in range(300)]}).to_csv(ms, index=False)
-    assert _variable_targets_looks_like_ct_presel_stub(vt, masterstars_csv=ms) is True
-
-    pd.DataFrame({"name": ["V0842 Her"] * 100, "catalog_id": [str(i) for i in range(100)], "notes": [""] * 100}).to_csv(vt, index=False)
-    assert _variable_targets_looks_like_ct_presel_stub(vt, masterstars_csv=ms) is False

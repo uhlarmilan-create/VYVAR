@@ -24,8 +24,9 @@ if TYPE_CHECKING:
     from config import AppConfig
 
 _TARGETS_HELP = (
-    "ALL = every VSX target that has aperture photometry (types excluded in config.json "
-    "vsx_out_of_scope_types have none). Or a comma-separated list of VSX types (EA, EB, EW), star names "
+    "ALL = every target that has aperture photometry - VSX variables, exoplanet hosts (type EXOPLANET), "
+    "manual targets (types excluded in config.json vsx_out_of_scope_types have none). Or a comma-separated "
+    "list of types (EA, EB, EW, EXOPLANET), star names "
     "(V0393 Cyg) or catalog ids; * is a wildcard (E* = every type starting with E, ZTF* = every ZTF name). "
     "The comparison stars of the chosen targets are measured with them."
 )
@@ -207,7 +208,7 @@ def _render_export_button(cfg: "AppConfig", all_setups: dict[str, dict[str, Any]
         if done:
             st.success("ePSF light-curve files written: " + ", ".join(f"{k} {v}" for k, v in done.items()))
         else:
-            st.warning("No ePSF light curves in this draft - run ePSF photometry first.")
+            st.warning("No ePSF light curves in this processed field - run ePSF photometry first.")
 
 
 def _render_light_curves(ps_dir: Path, setup: str) -> None:
@@ -312,7 +313,7 @@ def render_epsf_dashboard(
     st.header("ePSF Photometry")
     resolved = resolve_draft_dir_path(draft_dir, draft_id, cfg.archive_root, drafts_before_session=True)
     if resolved is None:
-        st.info("No active draft. Load a draft above or run VAR-STREM.")
+        st.info("No processed field loaded. Load one above (Load processed field) or run VAR-STREM.")
         return
     draft_path = Path(resolved)
 
@@ -320,7 +321,7 @@ def render_epsf_dashboard(
 
     all_setups = find_photometry_setups(cfg, draft_id, draft_dir_override=draft_path)
     if not all_setups:
-        st.warning("No platesolve setups with per-frame catalogs found for this draft.")
+        st.warning("No platesolve setups with per-frame catalogs found for this processed field.")
         return
     if bool(getattr(cfg, "epsf_auto_run", False)):
         st.caption(f"ePSF is ON in config.json (epsf_auto_run): it runs after the aperture photometry for "

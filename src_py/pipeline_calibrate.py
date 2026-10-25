@@ -1155,7 +1155,7 @@ def _effective_saturation_limit(
             return fa, "config_fallback"
 
     # INV-SAT-LIMIT: never return None. MASTERSTAR stacks are float (BITPIX -32),
-    # EQUIPMENTS.SATURATE_ADU may be NULL (QHY294MM migration), headers often omit
+    # EQUIPMENTS.SATURATE_ADU may be NULL, headers often omit
     # SATURATE/MAXLIN. Silent None made peak>limit comparisons False for the whole catalog.
     logging.warning(
         "[INV-SAT-LIMIT] saturation clip unresolved (header/equipment/BITPIX none); "
@@ -2564,16 +2564,31 @@ def run_osc_channel_extraction_for_archive(
     if not is_osc_bayermask(bayermask):
         return {"skipped": True, "reason": "mono equipment"}
 
-    gain_raw, rn_raw = db.get_equipment_cosmic_params(int(equipment_id))
-    # CAL-2026-10 K8: never guess gain / read noise. Unknown -> keywords not written,
-    # downstream resolves them from the header / DB (param_resolver) or reports them missing.
-    gain_e = float(gain_raw) if gain_raw is not None and gain_raw > 0 else float("nan")
-    rn_e = float(rn_raw) if rn_raw is not None and rn_raw >= 0 else float("nan")
-    if not (math.isfinite(gain_e) and math.isfinite(rn_e)):
-        log_event(
-            f"OSC extract: camera {equipment_id} has no gain/read noise in the DB - "
-            "EGAIN/VY_RDNOIS not written to channel frames."
-        )
+    # CAL-2026-10 K8: never guess gain / read noise. CAMERA-PROFILE-2026-10: resolved per mosaic frame
+    # (header e-/ADU, else the camera profile at its gain setting and binning). Unknown -> keywords
+    # not written; downstream resolves them or reports them missing.
+    from astropy.io import fits as _fits_osc  # noqa: PLC0415
+
+    from camera_profile import profile_from_connection  # noqa: PLC0415
+    from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
+
+    _osc_profile = profile_from_connection(db.conn, int(equipment_id))
+
+    def _osc_gain_rn(fp: Path) -> tuple[float, float]:
+        try:
+            _h = _fits_osc.getheader(str(fp), 0)
+        except OSError:
+            _h = None
+        g = resolve_gain(_h, equipment_id=int(equipment_id), profile=_osc_profile)
+        r = resolve_read_noise(_h, equipment_id=int(equipment_id), profile=_osc_profile)
+        ge = float(g.value) if g.ok and g.value is not None else float("nan")
+        re_ = float(r.value) if r.ok and r.value is not None else float("nan")
+        if not (math.isfinite(ge) and math.isfinite(re_)):
+            log_event(
+                f"OSC extract: camera {equipment_id} gain/read noise unknown for {fp.name} - "
+                "EGAIN/VY_RDNOIS not written to channel frames."
+            )
+        return ge, re_
     osc_bin = int(cfg.osc_channel_binning)
     root = Path(calibrated_lights_root)
     out: dict[str, Any] = {
@@ -2604,6 +2619,7 @@ def run_osc_channel_extraction_for_archive(
             done += 1
             if progress_cb is not None:
                 progress_cb(done, max(total_files, 1), f"OSC extract {fp.name}")
+            gain_e, rn_e = _osc_gain_rn(fp)
             extract_one_light_to_channels(
                 fp,
                 out_dirs=out_dirs,

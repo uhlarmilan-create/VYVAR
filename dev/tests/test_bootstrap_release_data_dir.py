@@ -98,6 +98,7 @@ def test_open_sqlite_connection_creates_parent_dir(tmp_path) -> None:
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="readonly dir bootstrap not emulated on Windows")
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root writes into a read-only directory")
 def test_bootstrap_unwritable_data_dir_reports_failed(tmp_path, monkeypatch) -> None:
     install = _fake_install(tmp_path)
     ro = tmp_path / "readonly_parent"

@@ -114,26 +114,28 @@ _TARGETS = [
     ("3", "RS|BY", "noise", "VSX", False, True, "ZTF J1"),
     ("4", "ROT", "linear", "VSX", True, False, "V4 Cyg"),          # out of scope: skipped, no aperture LC
     ("5", "EB", "catalog_only", "VSX", False, True, "V5 Cyg"),     # catalog_only zone
-    ("6", "", "linear", "EXOPLANET", False, True, "HAT-P-1"),     # not a catalogue variable
+    ("6", "", "linear", "EXOPLANET", False, True, "HAT-P-1"),     # exoplanet host: fitted too
     ("7", "EW", "linear", "VSX", False, False, "V7 Cyg"),          # no aperture light curve
 ]
 _COMPS = [("10", "1"), ("11", "1"), ("12", "2"), ("13", "3"), ("14", "5"), ("15", "6")]
 
 
-def test_fit_set_all_takes_vsx_targets_with_aperture_photometry(tmp_path: Path) -> None:
-    """EPSF-TARGETS-2026-10: ALL = VSX targets with an aperture light curve, not skipped, not catalog_only."""
+def test_fit_set_all_takes_every_target_with_aperture_photometry(tmp_path: Path) -> None:
+    """EPSF-ALL-TARGETS-2026-10: ALL = every target with an aperture light curve (VSX, exoplanet host,
+    manual), not skipped, not catalog_only."""
     _write(tmp_path, _TARGETS, _COMPS)
     fs = build_epsf_fit_set(tmp_path, "ALL")
-    assert fs.target_ids == {"1", "2", "3"} and fs.n_candidates == 3
-    assert fs.comp_ids == {"10", "11", "12", "13"}
-    assert fs.target_types == {"1": "EW", "2": "EA:", "3": "RS|BY"}
+    assert fs.target_ids == {"1", "2", "3", "6"} and fs.n_candidates == 4
+    assert fs.comp_ids == {"10", "11", "12", "13", "15"}
+    assert fs.target_types == {"1": "EW", "2": "EA:", "3": "RS|BY", "6": "EXOPLANET"}
+    assert build_epsf_fit_set(tmp_path, "EXOPLANET").target_ids == {"6"}
     assert build_epsf_fit_set(tmp_path, "").target_ids == fs.target_ids  # empty = ALL
 
 
 def test_fit_set_selection_by_type_name_wildcard(tmp_path: Path) -> None:
     _write(tmp_path, _TARGETS, _COMPS)
     assert build_epsf_fit_set(tmp_path, "EA").target_ids == {"2"}  # 'EA:' matches EA
-    assert build_epsf_fit_set(tmp_path, "e*").target_ids == {"1", "2"}
+    assert build_epsf_fit_set(tmp_path, "e*").target_ids == {"1", "2", "6"}  # EW, EA:, EXOPLANET
     assert build_epsf_fit_set(tmp_path, "BY").target_ids == {"3"}  # token of 'RS|BY'
     assert build_epsf_fit_set(tmp_path, "V1 Cyg; ztf*").target_ids == {"1", "3"}
     fs = build_epsf_fit_set(tmp_path, "EW, V9 Cyg")

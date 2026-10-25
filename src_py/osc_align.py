@@ -295,8 +295,18 @@ def apply_registration_handoff_to_frame(
 
     from vyvar_alignment_frame import _as_fits_float32_image
 
-    t = ProjectiveTransform(matrix=mat.reshape(3, 3))
-    aligned, _ = astroalign.apply_transform(t, data, ref_data)
+    poly_inv = handoff_entry.get("poly_inv")
+    if poly_inv is not None:
+        # ALIGN-POLY-2026-10: the donor was registered with the polynomial; apply the same one
+        from skimage.transform import PolynomialTransform
+
+        from vyvar_alignment_frame import warp_to_reference
+
+        p_inv = np.asarray(poly_inv, dtype=np.float64).reshape(2, -1)
+        aligned = warp_to_reference(data, ref_data.shape, PolynomialTransform(p_inv))
+    else:
+        t = ProjectiveTransform(matrix=mat.reshape(3, 3))
+        aligned, _ = astroalign.apply_transform(t, data, ref_data)
     aligned = _as_fits_float32_image(aligned)
     method = f"osc_handoff_{method}"
 

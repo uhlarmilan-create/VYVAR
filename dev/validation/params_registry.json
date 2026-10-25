@@ -786,6 +786,20 @@
     "scope_key": "none",
     "scope_group": "n/a"
   },
+  "transient_search_enabled": {
+    "help": "On: the field variability search also looks for new sources on every frame (novae, supernovae, outbursts), lists stars brighter than Gaia predicts, and names the minor planets and comets in the field (MPC orbit files MPCORB.DAT.gz / CometEls.txt and the OpenNGC galaxy list NGC.csv in the catalogue folder, when present). Takes about 1 s per frame more. Off: none of this runs.",
+    "kind": "static",
+    "label": "Search for transients and minor bodies",
+    "owner": "config_runtime",
+    "phase": "export",
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
+  },
   "vsx_out_of_scope_types": {
     "help": "VSX variability types that are not measured automatically (for example ROT). Exact type match, also with the ':' uncertainty mark; manually added targets are always measured. These stars stay excluded from the comparison stars.",
     "kind": "static",

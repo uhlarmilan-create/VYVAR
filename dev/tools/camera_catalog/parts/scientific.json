@@ -1,0 +1,3337 @@
+{
+  "vendor_group": "scientific_scmos",
+  "models": [
+    {
+      "key": "andor_marana_4_2b_11",
+      "vendor": "Andor",
+      "model": "Marana 4.2B-11",
+      "sensor": "Gpixel GSENSE400BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Marana 4.2B-11",
+        "Andor Marana 4.2B-11",
+        "MARANA-4BV11",
+        "Marana"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf",
+        "https://www.oxinst.com/learning/view/article/performance-testing-andors-marana-4.2b-11-scmos-camera"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit High Dynamic Range (100 MHz)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 85000,
+          "e_per_adu": 1.131,
+          "read_noise_e": 1.6,
+          "source": "Andor spec: HDR 16-bit, well 85,000 e-, median read noise 1.6 e- (https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf); Andor/Oxford Instruments application note measured gain 1.131 +/- 0.008 e-/ADU, read noise median 1.571 e- in HDR (https://www.oxinst.com/learning/view/article/performance-testing-andors-marana-4.2b-11-scmos-camera)"
+        },
+        {
+          "key": "fast_12bit",
+          "name": "12-bit Fast Speed / FFR (200 MHz)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 2600,
+          "e_per_adu": 0.632,
+          "source": "Andor spec: 12-bit Fast Speed well 2,600 e- (bit-depth limited) (https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf); Andor/Oxford Instruments application note measured FFR gain 0.632 +/- 0.009 e-/ADU, median read noise 1.577 e- (https://www.oxinst.com/learning/view/article/performance-testing-andors-marana-4.2b-11-scmos-camera)"
+        }
+      ]
+    },
+    {
+      "key": "andor_marana_4_2b_6",
+      "vendor": "Andor",
+      "model": "Marana 4.2B-6",
+      "sensor": "back-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Marana 4.2B-6",
+        "Andor Marana 4.2B-6"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit High Dynamic Range (310 MHz)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 42000,
+          "read_noise_e": 1.6,
+          "source": "Andor Marana spec sheet (https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf)"
+        },
+        {
+          "key": "low_noise_12bit",
+          "name": "12-bit Low Noise (180 MHz)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1250,
+          "read_noise_e": 1.0,
+          "source": "Andor Marana spec sheet (https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf)"
+        },
+        {
+          "key": "high_speed_11bit",
+          "name": "11-bit High Speed",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 11,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 2100,
+          "read_noise_e": 1.9,
+          "source": "Andor Marana spec sheet (https://andor.oxinst.com/downloads/uploads/Andor_Marana_Specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "andor_sona_4_2b_11",
+      "vendor": "Andor",
+      "model": "Sona 4.2B-11",
+      "sensor": "back-illuminated sCMOS (11 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Sona 4.2B-11",
+        "Andor Sona 4.2B-11",
+        "SONA-4BV11"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit High Dynamic Range (100 MHz)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 85000,
+          "read_noise_e": 1.6,
+          "source": "Andor Sona spec sheet: median 1.6 e- [1.8 rms], well 85,000 e- (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        },
+        {
+          "key": "fast_12bit",
+          "name": "12-bit Fast Speed (200 MHz)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 2600,
+          "read_noise_e": 1.6,
+          "source": "Andor Sona spec sheet: 1.6 e- median at any readout rate, well 2,600 e- (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "andor_sona_2_0b_11",
+      "vendor": "Andor",
+      "model": "Sona 2.0B-11",
+      "sensor": "back-illuminated sCMOS (11 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Sona 2.0B-11",
+        "Andor Sona 2.0B-11",
+        "SONA-2BV11"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit High Dynamic Range",
+          "pixel_um": 11.0,
+          "width": 1400,
+          "height": 1400,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Andor Sona spec sheet (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf); noise/well not separated for 22 mm model"
+        },
+        {
+          "key": "fast_12bit",
+          "name": "12-bit Fast Speed",
+          "pixel_um": 11.0,
+          "width": 1400,
+          "height": 1400,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Andor Sona spec sheet (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "andor_sona_4_2b_6",
+      "vendor": "Andor",
+      "model": "Sona 4.2B-6 (Sona-6 Extreme)",
+      "sensor": "back-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Sona 4.2B-6",
+        "Andor Sona 4.2B-6",
+        "Sona-6 Extreme",
+        "SONA-4BV6U",
+        "SONA-4BV6X"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit High Dynamic Range (310 MHz)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 42000,
+          "read_noise_e": 1.6,
+          "source": "Andor Sona spec sheet (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        },
+        {
+          "key": "low_noise_12bit",
+          "name": "12-bit Low Noise (180 MHz)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1100,
+          "read_noise_e": 1.0,
+          "source": "Andor Sona spec sheet (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        },
+        {
+          "key": "high_speed_11bit",
+          "name": "11-bit High Speed (570 MHz)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2046,
+          "adc_bits": 11,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1900,
+          "read_noise_e": 1.9,
+          "source": "Andor Sona spec sheet (https://andor.oxinst.com/assets/uploads/products/andor/documents/andor-sona-scmos-specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "andor_zyla_4_2_plus",
+      "vendor": "Andor",
+      "model": "Zyla 4.2 PLUS",
+      "sensor": "front-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Zyla 4.2 PLUS",
+        "Andor Zyla 4.2 PLUS",
+        "Zyla 4.2",
+        "ZYLA-4.2P"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_Zyla_5.5_and_4.2_PLUS_Specifications.pdf",
+        "https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm"
+      ],
+      "modes": [
+        {
+          "key": "16bit",
+          "name": "16-bit (low noise & high well capacity)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_range_e": [
+            0.9,
+            1.1
+          ],
+          "e_per_adu": 0.45,
+          "source": "0.45 e-/ADU: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm) (Zyla 4.2 table, RS); well 30,000 e-, read noise median 0.90 e- @216 MHz / 1.10 e- @540 MHz (https://andor.oxinst.com/downloads/uploads/Andor_Zyla_5.5_and_4.2_PLUS_Specifications.pdf)"
+        },
+        {
+          "key": "12bit_low_noise",
+          "name": "12-bit (low noise)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.28,
+          "source": "0.28 e-/ADU: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm) (Zyla 4.2 table, RS)"
+        },
+        {
+          "key": "12bit_high_well",
+          "name": "12-bit (high well capacity)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 7.5,
+          "source": "7.5 e-/ADU: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm) (Zyla 4.2 table, RS)"
+        }
+      ]
+    },
+    {
+      "key": "andor_zyla_5_5",
+      "vendor": "Andor",
+      "model": "Zyla 5.5",
+      "sensor": "front-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Zyla 5.5",
+        "Andor Zyla 5.5",
+        "ZYLA-5.5"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_Zyla_5.5_and_4.2_PLUS_Specifications.pdf",
+        "https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm"
+      ],
+      "modes": [
+        {
+          "key": "16bit",
+          "name": "16-bit (low noise & high well capacity)",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_range_e": [
+            0.9,
+            1.2
+          ],
+          "e_per_adu": 0.45,
+          "source": "0.45 e-/ADU (RS and GS): Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm); well 30,000 e-, RS read noise median 0.9 e- @200 MHz / 1.2 e- @560 MHz, GS 2.3/2.4 e- (https://andor.oxinst.com/downloads/uploads/Andor_Zyla_5.5_and_4.2_PLUS_Specifications.pdf)"
+        },
+        {
+          "key": "12bit_low_noise_rs",
+          "name": "12-bit (low noise), rolling shutter",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.28,
+          "source": "0.28 e-/ADU RS: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm)"
+        },
+        {
+          "key": "12bit_low_noise_gs",
+          "name": "12-bit (low noise), global shutter",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.42,
+          "source": "0.42 e-/ADU GS: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm)"
+        },
+        {
+          "key": "12bit_high_well",
+          "name": "12-bit (high well capacity)",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 7.5,
+          "source": "7.5 e-/ADU GS/RS: Andor Zyla manual, Dual Amplifier Dynamic Range, typical sensitivity table (https://andor.oxinst.com/manuals/cameras/zyla/features/dual_amplifier_dynamic_range.htm)"
+        }
+      ]
+    },
+    {
+      "key": "andor_neo_5_5",
+      "vendor": "Andor",
+      "model": "Neo 5.5",
+      "sensor": "front-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Neo 5.5",
+        "Andor Neo 5.5",
+        "Neo"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_Neo_sCMOS_Specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "16bit",
+          "name": "16-bit",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_range_e": [
+            1.0,
+            1.3
+          ],
+          "source": "Andor Neo spec: well 30,000 e-, RS median read noise 1.0 e- @200 MHz, 1.3 e- @560 MHz (https://andor.oxinst.com/downloads/uploads/Andor_Neo_sCMOS_Specifications.pdf)"
+        },
+        {
+          "key": "12bit",
+          "name": "12-bit",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Andor Neo spec (https://andor.oxinst.com/downloads/uploads/Andor_Neo_sCMOS_Specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "andor_balor_17f_12",
+      "vendor": "Andor",
+      "model": "Balor 17F-12",
+      "sensor": "front-illuminated sCMOS (12 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Balor",
+        "Andor Balor",
+        "Balor 17F-12"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/products/scmos-camera-series/balor-scmos"
+      ],
+      "modes": [
+        {
+          "key": "16bit",
+          "name": "16-bit, rolling shutter",
+          "pixel_um": 12.0,
+          "width": 4128,
+          "height": 4104,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 80000,
+          "read_noise_e": 2.9,
+          "source": "Andor Balor product page: median read noise 2.9 e-, well 80,000 e-, 16-bit (https://andor.oxinst.com/products/scmos-camera-series/balor-scmos)"
+        }
+      ]
+    },
+    {
+      "key": "andor_istar_scmos",
+      "vendor": "Andor",
+      "model": "iStar sCMOS",
+      "sensor": "front-illuminated sCMOS behind image intensifier",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "iStar sCMOS",
+        "Andor iStar sCMOS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://andor.oxinst.com/downloads/uploads/Andor_iStar_sCMOS_specifications.pdf"
+      ],
+      "modes": [
+        {
+          "key": "16bit",
+          "name": "16-bit",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_range_e": [
+            2.3,
+            2.4
+          ],
+          "source": "Andor iStar sCMOS spec; sensitivity stated per individual system, not fixed (https://andor.oxinst.com/downloads/uploads/Andor_iStar_sCMOS_specifications.pdf)"
+        },
+        {
+          "key": "12bit",
+          "name": "12-bit",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Andor iStar sCMOS spec (https://andor.oxinst.com/downloads/uploads/Andor_iStar_sCMOS_specifications.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_prime_bsi",
+      "vendor": "Teledyne Photometrics",
+      "model": "Prime BSI",
+      "sensor": "Gpixel GSENSE2020BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Prime BSI",
+        "Photometrics Prime BSI",
+        "PrimeBSI"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://bioscience.fi/wp-content/uploads/2020/03/Photometrics-Prime-BSI-sCMOS.pdf",
+        "https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr",
+          "name": "High Dynamic Range / Combined Gain (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 45000,
+          "e_per_adu": 0.6,
+          "read_noise_e": 1.7,
+          "source": "0.60 e-/grey level, 1.7 e- rms: Photometrics 'Know Your Gain' tech note, Prime BSI table (https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf); 16-bit, full well 45,000 e- (https://bioscience.fi/wp-content/uploads/2020/03/Photometrics-Prime-BSI-sCMOS.pdf)"
+        },
+        {
+          "key": "cms",
+          "name": "Correlated Multi-Sampling (12-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "e_per_adu": 0.25,
+          "read_noise_e": 1.0,
+          "source": "0.25 e-/grey level, 1.0 e- rms: Photometrics 'Know Your Gain' tech note, Prime BSI table (https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf); 12-bit, full well 1,000 e- (https://bioscience.fi/wp-content/uploads/2020/03/Photometrics-Prime-BSI-sCMOS.pdf)"
+        },
+        {
+          "key": "sensitivity",
+          "name": "Sensitivity",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 1.0,
+          "read_noise_e": 2.0,
+          "source": "1 e-/grey level, 2.0 e- rms: Photometrics 'Know Your Gain' tech note, Prime BSI table (https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf)"
+        },
+        {
+          "key": "balanced",
+          "name": "Balanced",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 2.5,
+          "read_noise_e": 3.2,
+          "source": "2.5 e-/grey level, 3.2 e- rms: Photometrics 'Know Your Gain' tech note, Prime BSI table (https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf)"
+        },
+        {
+          "key": "full_well",
+          "name": "Full Well",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 3.5,
+          "read_noise_e": 3.5,
+          "source": "3.5 e-/grey level, 3.5 e- rms: Photometrics 'Know Your Gain' tech note, Prime BSI table (https://ueb-api.ssc.avcr.cz/uploads/gain_bsi_eb60d28aa8.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_prime_bsi_express",
+      "vendor": "Teledyne Photometrics",
+      "model": "Prime BSI Express",
+      "sensor": "Gpixel GSENSE2020BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Prime BSI Express",
+        "Photometrics Prime BSI Express"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://bcf.technion.ac.il/wp-content/uploads/2023/07/Prime-BSI-Express-Datasheet-Rev-A6-07032023.pdf"
+      ],
+      "modes": [
+        {
+          "key": "combined_gain",
+          "name": "Combined Gain (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 45000,
+          "read_noise_e": 1.6,
+          "source": "Prime BSI Express datasheet Rev A6: median 1.6 e-, full well 45,000 e- (https://bcf.technion.ac.il/wp-content/uploads/2023/07/Prime-BSI-Express-Datasheet-Rev-A6-07032023.pdf)"
+        },
+        {
+          "key": "high_gain",
+          "name": "High Gain (11-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 11,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 10000,
+          "source": "Prime BSI Express datasheet (https://bcf.technion.ac.il/wp-content/uploads/2023/07/Prime-BSI-Express-Datasheet-Rev-A6-07032023.pdf)"
+        },
+        {
+          "key": "cms",
+          "name": "CMS (12-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "read_noise_e": 1.0,
+          "source": "Prime BSI Express datasheet: median 1.0 e- (https://bcf.technion.ac.il/wp-content/uploads/2023/07/Prime-BSI-Express-Datasheet-Rev-A6-07032023.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_prime_95b",
+      "vendor": "Teledyne Photometrics",
+      "model": "Prime 95B",
+      "sensor": "Gpixel GSENSE144BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Prime 95B",
+        "Photometrics Prime 95B",
+        "Prime95B"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://ips.ucsd.edu/ftp/pub/Photometrics_camera_documentation/Prime95B-Datasheet.pdf",
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Prime%2095B%20Datasheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr",
+          "name": "Combined Gain / HDR (16-bit)",
+          "pixel_um": 11.0,
+          "width": 1200,
+          "height": 1200,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 80000,
+          "read_noise_e": 1.6,
+          "source": "Prime 95B datasheet: median 1.6 e-, full well 80,000 e- (https://ips.ucsd.edu/ftp/pub/Photometrics_camera_documentation/Prime95B-Datasheet.pdf)"
+        },
+        {
+          "key": "high_gain",
+          "name": "High Gain / Sensitivity (12-bit)",
+          "pixel_um": 11.0,
+          "width": 1200,
+          "height": 1200,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "read_noise_e": 1.6,
+          "source": "Prime 95B datasheets: 12-bit; full well 4,500 e- (https://ips.ucsd.edu/ftp/pub/Photometrics_camera_documentation/Prime95B-Datasheet.pdf) vs 10,000 e- (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Prime%2095B%20Datasheet.pdf) - conflicting, omitted"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_kinetix",
+      "vendor": "Teledyne Photometrics",
+      "model": "Kinetix",
+      "sensor": "Gpixel GSENSE6510 (Kinetix sensor)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kinetix",
+        "Photometrics Kinetix"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://epfl.ch/research/facilities/ptbiop/wp-content/uploads/2024/12/Kinetix-Camera.pdf"
+      ],
+      "modes": [
+        {
+          "key": "dynamic_range",
+          "name": "Dynamic Range (16-bit)",
+          "pixel_um": 6.5,
+          "width": 3200,
+          "height": 3200,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.23,
+          "read_noise_e": 1.6,
+          "source": "0.23 e-/count: Kinetix datasheet (https://epfl.ch/research/facilities/ptbiop/wp-content/uploads/2024/12/Kinetix-Camera.pdf)"
+        },
+        {
+          "key": "sensitivity",
+          "name": "Sensitivity / CMS (12-bit)",
+          "pixel_um": 6.5,
+          "width": 3200,
+          "height": 3200,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "e_per_adu": 0.25,
+          "read_noise_e": 1.2,
+          "source": "0.25 e-/count: Kinetix datasheet (https://epfl.ch/research/facilities/ptbiop/wp-content/uploads/2024/12/Kinetix-Camera.pdf)"
+        },
+        {
+          "key": "speed",
+          "name": "Speed (8-bit)",
+          "pixel_um": 6.5,
+          "width": 3200,
+          "height": 3200,
+          "adc_bits": 8,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 200,
+          "e_per_adu": 0.85,
+          "read_noise_e": 2.0,
+          "source": "0.85 e-/count: Kinetix datasheet (https://epfl.ch/research/facilities/ptbiop/wp-content/uploads/2024/12/Kinetix-Camera.pdf)"
+        },
+        {
+          "key": "sub_electron",
+          "name": "Sub-Electron / 8x CMS (16-bit)",
+          "pixel_um": 6.5,
+          "width": 3200,
+          "height": 3200,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "e_per_adu": 0.015,
+          "read_noise_e": 0.7,
+          "source": "0.015 e-/count: Kinetix datasheet (https://epfl.ch/research/facilities/ptbiop/wp-content/uploads/2024/12/Kinetix-Camera.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_kinetix22",
+      "vendor": "Teledyne Photometrics",
+      "model": "Kinetix22",
+      "sensor": "Teledyne Photometrics Kinetix sensor (BSI)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kinetix22",
+        "Photometrics Kinetix22"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://photometrics.com/wp-content/uploads/2024/05/Kinetix22-Datasheet_2024_rev2.pdf"
+      ],
+      "modes": [
+        {
+          "key": "dynamic_range",
+          "name": "Dynamic Range (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2400,
+          "height": 2400,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.23,
+          "read_noise_e": 1.6,
+          "source": "0.23 e-/count: Kinetix22 datasheet (https://photometrics.com/wp-content/uploads/2024/05/Kinetix22-Datasheet_2024_rev2.pdf)"
+        },
+        {
+          "key": "sensitivity",
+          "name": "Sensitivity / CMS (12-bit)",
+          "pixel_um": 6.5,
+          "width": 2400,
+          "height": 2400,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "e_per_adu": 0.25,
+          "read_noise_e": 1.2,
+          "source": "0.25 e-/count: Kinetix22 datasheet (https://photometrics.com/wp-content/uploads/2024/05/Kinetix22-Datasheet_2024_rev2.pdf)"
+        },
+        {
+          "key": "speed",
+          "name": "Speed (8-bit)",
+          "pixel_um": 6.5,
+          "width": 2400,
+          "height": 2400,
+          "adc_bits": 8,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 200,
+          "e_per_adu": 0.85,
+          "read_noise_e": 2.0,
+          "source": "0.85 e-/count: Kinetix22 datasheet (https://photometrics.com/wp-content/uploads/2024/05/Kinetix22-Datasheet_2024_rev2.pdf)"
+        },
+        {
+          "key": "sub_electron",
+          "name": "Sub-Electron / 8x CMS (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2400,
+          "height": 2400,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1000,
+          "e_per_adu": 0.015,
+          "read_noise_e": 0.7,
+          "source": "0.015 e-/count: Kinetix22 datasheet (https://photometrics.com/wp-content/uploads/2024/05/Kinetix22-Datasheet_2024_rev2.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_iris_15",
+      "vendor": "Teledyne Photometrics",
+      "model": "Iris 15",
+      "sensor": "Gpixel GSENSE5130",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Iris 15",
+        "Photometrics Iris 15"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Iris%2015%20Datasheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit",
+          "pixel_um": 4.25,
+          "width": 5056,
+          "height": 2960,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 13000,
+          "read_noise_e": 1.5,
+          "source": "Iris 15 datasheet (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Iris%2015%20Datasheet.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_iris_9",
+      "vendor": "Teledyne Photometrics",
+      "model": "Iris 9",
+      "sensor": "Gpixel GSENSE5130",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Iris 9",
+        "Photometrics Iris 9"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Iris%209%20Datasheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit",
+          "pixel_um": 4.25,
+          "width": 2960,
+          "height": 2960,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 10000,
+          "read_noise_e": 1.5,
+          "source": "Iris 9 datasheet (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Iris%209%20Datasheet.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "photometrics_moment",
+      "vendor": "Teledyne Photometrics",
+      "model": "Moment",
+      "sensor": "Sony IMX420",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Moment",
+        "Photometrics Moment"
+      ],
+      "header_gain": "setting",
+      "cooled": null,
+      "discontinued": null,
+      "sources": [
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Moment%20Datasheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard",
+          "name": "Standard (12-bit)",
+          "pixel_um": 4.5,
+          "width": 3200,
+          "height": 2200,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 8200,
+          "read_noise_e": 2.1,
+          "source": "Moment datasheet; binning '2 x 1 charge domain (on chip)' + digital up to 4x4 (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20Moment%20Datasheet.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_quest",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Quest C15550-20UP",
+      "sensor": "Hamamatsu qCMOS (back-illuminated)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Quest",
+        "C15550-20UP",
+        "Hamamatsu ORCA-Quest"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard_scan",
+          "name": "Standard scan",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'adds the signal of adjacent pixels together' (https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf)",
+          "curve": [],
+          "full_well_e": 7000,
+          "read_noise_e": 0.43,
+          "source": "ORCA-Quest technical note (https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf)"
+        },
+        {
+          "key": "ultra_quiet_scan",
+          "name": "Ultra quiet scan",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'adds the signal of adjacent pixels together' (https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf)",
+          "curve": [],
+          "full_well_e": 7000,
+          "read_noise_e": 0.27,
+          "source": "ORCA-Quest technical note (https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf)"
+        },
+        {
+          "key": "photon_number_resolving",
+          "name": "Photon number resolving output",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 1.0,
+          "source": "'one count of output data becomes one electron' in PNR mode (https://www.hamamatsu.com/resources/pdf/sys/SCAS0154E_C15550-20UP_tec.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_quest_2",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Quest 2 C15550-22UP",
+      "sensor": "Hamamatsu qCMOS (back-illuminated)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Quest 2",
+        "ORCA-Quest2",
+        "C15550-22UP"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.hamamatsu.com/content/dam/hamamatsu-photonics/sites/documents/99_SALES_LIBRARY/sys/SCAS0166J_C15550-22UP.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard_scan",
+          "name": "Standard scan",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 7000,
+          "read_noise_e": 0.43,
+          "source": "ORCA-Quest 2 catalog: 0.43 e- rms / 0.39 median (https://www.hamamatsu.com/content/dam/hamamatsu-photonics/sites/documents/99_SALES_LIBRARY/sys/SCAS0166J_C15550-22UP.pdf)"
+        },
+        {
+          "key": "ultra_quiet_scan",
+          "name": "Ultra quiet scan",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 7000,
+          "read_noise_e": 0.3,
+          "source": "ORCA-Quest 2 catalog: 0.30 e- rms / 0.25 median (https://www.hamamatsu.com/content/dam/hamamatsu-photonics/sites/documents/99_SALES_LIBRARY/sys/SCAS0166J_C15550-22UP.pdf)"
+        },
+        {
+          "key": "photon_number_resolving",
+          "name": "Photon number resolving output",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2304,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "PNR output listed; conversion not stated (https://www.hamamatsu.com/content/dam/hamamatsu-photonics/sites/documents/99_SALES_LIBRARY/sys/SCAS0166J_C15550-22UP.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_flash4_0_v3",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Flash4.0 V3 C13440-20CU",
+      "sensor": "sCMOS (6.5 um, front-illuminated)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Flash4.0 V3",
+        "C13440-20CU",
+        "ORCA-Flash4.0"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://hep.hamamatsu.com/resources/pdf/sys/SCAS0134E_C13440-20CU_tec.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard_scan",
+          "name": "Standard scan",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'a method of adding the signal of adjacent pixels together' (https://hep.hamamatsu.com/resources/pdf/sys/SCAS0134E_C13440-20CU_tec.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_e": 1.0,
+          "source": "Tech note: 1.0 e- median / 1.6 rms; conversion factor per-camera certificate only (https://hep.hamamatsu.com/resources/pdf/sys/SCAS0134E_C13440-20CU_tec.pdf)"
+        },
+        {
+          "key": "slow_scan",
+          "name": "Slow scan",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'a method of adding the signal of adjacent pixels together' (https://hep.hamamatsu.com/resources/pdf/sys/SCAS0134E_C13440-20CU_tec.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_e": 0.8,
+          "source": "Tech note: 0.8 e- median / 1.4 rms (https://hep.hamamatsu.com/resources/pdf/sys/SCAS0134E_C13440-20CU_tec.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_flash4_0_lt_plus",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Flash4.0 LT+ C11440-42U30",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Flash4.0 LT+",
+        "C11440-42U30",
+        "ORCA-Flash4.0 LT"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://photonics.laser2000.co.uk/products/light-detection-and-imaging/cameras/cmos-cameras/orca-flash4-0-lt-digital-cmos-camera/"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 30000,
+          "read_noise_e": 0.9,
+          "source": "Laser 2000 (Hamamatsu distributor) spec: 0.9 e- median / 1.5 rms (https://photonics.laser2000.co.uk/products/light-detection-and-imaging/cameras/cmos-cameras/orca-flash4-0-lt-digital-cmos-camera/)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_fusion",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Fusion C14440-20UP",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Fusion",
+        "C14440-20UP"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.findlight.net/uploads/products/datasheet/C14440-20UP-ORCA-Fusion-Digital-CMOS-Camera.pdf"
+      ],
+      "modes": [
+        {
+          "key": "ultra_quiet_scan",
+          "name": "Ultra quiet scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 0.7,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.findlight.net/uploads/products/datasheet/C14440-20UP-ORCA-Fusion-Digital-CMOS-Camera.pdf)"
+        },
+        {
+          "key": "standard_scan",
+          "name": "Standard scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 1.0,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.findlight.net/uploads/products/datasheet/C14440-20UP-ORCA-Fusion-Digital-CMOS-Camera.pdf)"
+        },
+        {
+          "key": "fast_scan",
+          "name": "Fast scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 1.4,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.findlight.net/uploads/products/datasheet/C14440-20UP-ORCA-Fusion-Digital-CMOS-Camera.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_fusion_bt",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Fusion BT C15440-20UP",
+      "sensor": "Gen III back-illuminated sCMOS",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Fusion BT",
+        "C15440-20UP"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.hamamatsu.com/resources/pdf/sys/SCAS0143E_C15440-20UP.pdf"
+      ],
+      "modes": [
+        {
+          "key": "ultra_quiet_scan",
+          "name": "Ultra quiet scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 0.7,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.hamamatsu.com/resources/pdf/sys/SCAS0143E_C15440-20UP.pdf); 0.7 rms / 0.6 median"
+        },
+        {
+          "key": "standard_scan",
+          "name": "Standard scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 1.0,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.hamamatsu.com/resources/pdf/sys/SCAS0143E_C15440-20UP.pdf); 1.0 rms / 0.9 median"
+        },
+        {
+          "key": "fast_scan",
+          "name": "Fast scan",
+          "pixel_um": 6.5,
+          "width": 2304,
+          "height": 2304,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 15000,
+          "e_per_adu": 0.24,
+          "read_noise_e": 1.6,
+          "source": "single conversion factor 0.24 electrons/count stated for the camera, not per scan mode (https://www.hamamatsu.com/resources/pdf/sys/SCAS0143E_C15440-20UP.pdf); 1.6 rms / 1.5 median"
+        }
+      ]
+    },
+    {
+      "key": "hamamatsu_orca_lightning",
+      "vendor": "Hamamatsu",
+      "model": "ORCA-Lightning C14120-20P",
+      "sensor": null,
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "ORCA-Lightning",
+        "C14120-20P"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default",
+          "pixel_um": null,
+          "width": null,
+          "height": null,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "no manufacturer spec page reachable in this research pass"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_4_2",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 4.2",
+      "sensor": "sCMOS (front-illuminated, 6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 4.2",
+        "pco.edge 4.2 USB",
+        "pco.edge 4.2 CLHS",
+        "pco.edge"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26830.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit (merged dual 11-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/26830.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 0.8,
+          "source": "0.46 e-/DN (single value, 'can be operational mode dependent'); 0.8 e- median / 1.5 rms (https://www.excelitas.com/sites/default/files/assets/product/document/26830.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_4_2_lt",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 4.2 LT",
+      "sensor": "sCMOS (front-illuminated, 6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 4.2 LT",
+        "pco.edge 4.2 LT USB"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26852.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit (merged dual 11-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/26852.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 0.8,
+          "source": "0.46 e-/DN; 0.8 e- median / 1.5 rms; sensor stabilised +10 C (https://www.excelitas.com/sites/default/files/assets/product/document/26852.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_4_2_bi",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 4.2 bi",
+      "sensor": "back-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 4.2 bi",
+        "pco.edge 4.2 bi UV",
+        "pco.edge 4.2 bi USB",
+        "pco.edge 4.2 bi CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26873.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard",
+          "name": "Standard (16-bit HDR)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'2x and 4x, sum mode' (https://www.excelitas.com/sites/default/files/assets/product/document/26873.pdf)",
+          "curve": [],
+          "full_well_e": 48000,
+          "e_per_adu": 0.7,
+          "read_noise_e": 1.8,
+          "source": "0.7 e-/DN, 1.8 e- median / 1.9 rms (https://www.excelitas.com/sites/default/files/assets/product/document/26873.pdf); an older sheet lists 0.8 e-/DN"
+        },
+        {
+          "key": "low_light",
+          "name": "Low light mode",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'2x and 4x, sum mode' (https://www.excelitas.com/sites/default/files/assets/product/document/26873.pdf)",
+          "curve": [],
+          "full_well_e": 1800,
+          "e_per_adu": 0.03,
+          "read_noise_e": 1.0,
+          "source": "0.03 e-/DN, 1.0 e- median / 1.1 rms (https://www.excelitas.com/sites/default/files/assets/product/document/26873.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_5_5",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 5.5",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 5.5",
+        "pco.edge 5.5 CLHS",
+        "pco.edge 5.5 DS CLHS",
+        "pco.edge 5.5 USB"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf"
+      ],
+      "modes": [
+        {
+          "key": "rolling_shutter",
+          "name": "Rolling shutter / global reset (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 1.0,
+          "source": "0.46 e-/DN; 1.0 e- median RS/GR (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)"
+        },
+        {
+          "key": "global_shutter",
+          "name": "Global shutter",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 2.2,
+          "source": "0.46 e-/DN (single value); 2.2 e- median GS (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_5_5_c",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 5.5 C",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "osc",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 5.5 C",
+        "pco.edge 5.5 C CLHS",
+        "pco.edge 5.5 C DS CLHS",
+        "pco.edge 5.5 C USB"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf"
+      ],
+      "modes": [
+        {
+          "key": "rolling_shutter",
+          "name": "Rolling shutter / global reset (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 1.0,
+          "source": "0.46 e-/DN; 1.0 e- median RS/GR (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)"
+        },
+        {
+          "key": "global_shutter",
+          "name": "Global shutter",
+          "pixel_um": 6.5,
+          "width": 2560,
+          "height": 2160,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)",
+          "curve": [],
+          "full_well_e": 30000,
+          "e_per_adu": 0.46,
+          "read_noise_e": 2.2,
+          "source": "0.46 e-/DN (single value); 2.2 e- median GS (https://www.excelitas.com/sites/default/files/assets/product/document/27662.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_10_bi",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 10 bi",
+      "sensor": "back-illuminated sCMOS (4.6 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 10 bi",
+        "pco.edge 10 bi CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://shop.amstechnologies.com/media/ff/1c/49/1747934450/pco-edge-10-bi-CLHS-sCMOS-Camera-Excelitas-Datasheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "slow_scan",
+          "name": "Slow scan (11-bit)",
+          "pixel_um": 4.6,
+          "width": 4416,
+          "height": 2368,
+          "adc_bits": 11,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 625,
+          "e_per_adu": 0.305,
+          "read_noise_e": 0.7,
+          "source": "0.305 e-/DN, 0.7 median / 0.8 rms; binning selectable average or sum (https://shop.amstechnologies.com/media/ff/1c/49/1747934450/pco-edge-10-bi-CLHS-sCMOS-Camera-Excelitas-Datasheet.pdf)"
+        },
+        {
+          "key": "medium_scan",
+          "name": "Medium scan",
+          "pixel_um": 4.6,
+          "width": 4416,
+          "height": 2368,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "e_per_adu": 0.214,
+          "read_noise_e": 1.2,
+          "source": "0.214 e-/DN, 1.2 e- (https://shop.amstechnologies.com/media/ff/1c/49/1747934450/pco-edge-10-bi-CLHS-sCMOS-Camera-Excelitas-Datasheet.pdf); A/D bits for this mode ambiguous in sheet"
+        },
+        {
+          "key": "fast_scan",
+          "name": "Fast scan",
+          "pixel_um": 4.6,
+          "width": 4416,
+          "height": 2368,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 18000,
+          "e_per_adu": 0.275,
+          "read_noise_e": 1.3,
+          "source": "0.275 e-/DN, 1.3 e- (https://shop.amstechnologies.com/media/ff/1c/49/1747934450/pco-edge-10-bi-CLHS-sCMOS-Camera-Excelitas-Datasheet.pdf); A/D bits for this mode ambiguous in sheet"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_10_bi_lt",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 10 bi LT",
+      "sensor": "back-illuminated sCMOS (4.6 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 10 bi LT",
+        "pco.edge 10 bi LT CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/27157.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit (merged dual 11-bit)",
+          "pixel_um": 4.6,
+          "width": 4416,
+          "height": 2368,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 18000,
+          "e_per_adu": 0.275,
+          "read_noise_e": 1.3,
+          "source": "0.275 e-/DN (single value); 1.3 e- median; binning selectable average or sum (https://www.excelitas.com/sites/default/files/assets/product/document/27157.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_9_4_bi",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 9.4 bi",
+      "sensor": "back-illuminated sCMOS (4.6 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 9.4 bi",
+        "pco.edge 9.4 bi CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": null,
+      "discontinued": false,
+      "sources": [
+        "https://www.vision-systems.com/cameras-accessories/article/55263099/excelitas-launches-new-scmos-camera"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default",
+          "pixel_um": 4.6,
+          "width": 4096,
+          "height": 2300,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "read_noise_e": 0.3,
+          "source": "launch article: 'readout noise level of .3e' (https://www.vision-systems.com/cameras-accessories/article/55263099/excelitas-launches-new-scmos-camera)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_3_1",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 3.1",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 3.1"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/productcategory/document/194609.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 1536,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "read_noise_e": 1.1,
+          "source": "pco.edge family overview, typ. median read noise (https://www.excelitas.com/sites/default/files/assets/productcategory/document/194609.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_26",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 26",
+      "sensor": "global-shutter sCMOS (2.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 26",
+        "pco.edge 26 CLHS",
+        "pco.edge 26 USB"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26958.pdf"
+      ],
+      "modes": [
+        {
+          "key": "clhs_10bit",
+          "name": "CLHS, global shutter (10-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 10,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4000,
+          "e_per_adu": 4.2,
+          "read_noise_e": 3.0,
+          "source": "4.2 e-/DN, 3.0 e- median / 3.4 rms, full well 4000 e-; binning average or sum (https://www.excelitas.com/sites/default/files/assets/product/document/26958.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_26_nir",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 26 NIR",
+      "sensor": "global-shutter sCMOS (2.5 um, NIR-enhanced)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 26 NIR",
+        "pco.edge 26 (NIR) USB",
+        "pco.edge 26 NIR CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26769.pdf",
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26958.pdf"
+      ],
+      "modes": [
+        {
+          "key": "usb_12bit",
+          "name": "USB (12-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4500,
+          "e_per_adu": 1.1,
+          "read_noise_e": 2.3,
+          "source": "pco.edge 26 (NIR) USB: 1.1 e-/DN, 2.3 e- median / 2.5 rms (https://www.excelitas.com/sites/default/files/assets/product/document/26769.pdf)"
+        },
+        {
+          "key": "clhs_10bit",
+          "name": "CLHS (10-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 10,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4000,
+          "e_per_adu": 4.2,
+          "read_noise_e": 3.0,
+          "source": "pco.edge 26 NIR CLHS: 4.2 e-/DN (https://www.excelitas.com/sites/default/files/assets/product/document/26958.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_edge_26_ds",
+      "vendor": "Excelitas PCO",
+      "model": "pco.edge 26 DS",
+      "sensor": "global-shutter sCMOS (2.5 um), double shutter",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.edge 26 DS",
+        "pco.edge 26 DS CLHS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/27652.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Global / double shutter (10-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 10,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4000,
+          "e_per_adu": 4.2,
+          "read_noise_e": 3.4,
+          "source": "4.2 e-/DN, 3.4 e- median (https://www.excelitas.com/sites/default/files/assets/product/document/27652.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_4_2",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 4.2",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 4.2",
+        "pco.panda 4.2 USB"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit (merged dual 12-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf)",
+          "curve": [],
+          "full_well_e": 45000,
+          "e_per_adu": 0.65,
+          "read_noise_e": 2.1,
+          "source": "0.65 e-/DN (single value), 2.1 e- median / 2.3 rms (https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_4_2_c",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 4.2 C",
+      "sensor": "sCMOS (6.5 um)",
+      "color": "osc",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 4.2 C",
+        "pco.panda 4.2 C USB"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": null,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "16-bit (merged dual 12-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'binning horizontal/vertical x2, x4 (sum)' (https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf)",
+          "curve": [],
+          "full_well_e": 45000,
+          "read_noise_e": 2.1,
+          "source": "colour variant listed in ordering info; values given for mono (https://www.excelitas.com/sites/default/files/assets/product/document/26661.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_4_2_bi",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 4.2 bi",
+      "sensor": "back-illuminated sCMOS (6.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 4.2 bi",
+        "pco.panda 4.2 bi UV",
+        "pco.panda 4.2 bi USB"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/product/document/247147.pdf"
+      ],
+      "modes": [
+        {
+          "key": "standard",
+          "name": "Standard (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'summed (not averaged)' 2x/4x (https://www.excelitas.com/sites/default/files/assets/product/document/247147.pdf)",
+          "curve": [],
+          "full_well_e": 48000,
+          "e_per_adu": 0.7,
+          "read_noise_e": 1.8,
+          "source": "0.7 e-/DN, 1.8 median / 1.9 rms (datasheet v2.1.0, https://www.excelitas.com/sites/default/files/assets/product/document/247147.pdf); older sheet lists 0.8 e-/DN"
+        },
+        {
+          "key": "low_light",
+          "name": "Low light mode",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": "sum",
+          "binning_source": "'summed (not averaged)' 2x/4x (https://www.excelitas.com/sites/default/files/assets/product/document/247147.pdf)",
+          "curve": [],
+          "full_well_e": 1800,
+          "e_per_adu": 0.03,
+          "read_noise_e": 1.1,
+          "source": "0.03 e-/DN, 1.1 median / 1.2 rms (https://www.excelitas.com/sites/default/files/assets/product/document/247147.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_26",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 26",
+      "sensor": "global-shutter sCMOS (2.5 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 26",
+        "pco.panda 26 USB"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": false,
+      "sources": [
+        "https://www.microscopeworld.com/images/Brochures/pcopanda_26_data_sheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Global shutter (12-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4500,
+          "e_per_adu": 1.1,
+          "read_noise_e": 2.3,
+          "source": "1.1 e-/DN, 2.3 median / 2.5 rms (https://www.microscopeworld.com/images/Brochures/pcopanda_26_data_sheet.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_26_c",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 26 C",
+      "sensor": "global-shutter sCMOS (2.5 um)",
+      "color": "osc",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 26 C",
+        "pco.panda 26 C USB"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": false,
+      "sources": [
+        "https://www.microscopeworld.com/images/Brochures/pcopanda_26_data_sheet.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Global shutter (12-bit)",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 4500,
+          "read_noise_e": 2.3,
+          "source": "'available in mono and color'; values given for mono only (https://www.microscopeworld.com/images/Brochures/pcopanda_26_data_sheet.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pco_panda_26_ds",
+      "vendor": "Excelitas PCO",
+      "model": "pco.panda 26 DS",
+      "sensor": "global-shutter sCMOS (2.5 um), double shutter",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "pco.panda 26 DS"
+      ],
+      "header_gain": "setting",
+      "cooled": false,
+      "discontinued": false,
+      "sources": [
+        "https://www.excelitas.com/sites/default/files/assets/productcategory/document/194624.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default",
+          "pixel_um": 2.5,
+          "width": 5120,
+          "height": 5120,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "read_noise_e": 2.3,
+          "source": "pco.panda overview (https://www.excelitas.com/sites/default/files/assets/productcategory/document/194624.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pi_cosmos_3k",
+      "vendor": "Teledyne Princeton Instruments",
+      "model": "COSMOS-3k",
+      "sensor": "back-illuminated CMOS (10 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "COSMOS-3k",
+        "COSMOS 3k",
+        "COSMOS-10",
+        "COSMOS"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://princetoninstruments.com/teledyne-3k-cosmos-camera",
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_18bit",
+          "name": "HDR (18-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 18,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.3,
+          "read_noise_e": 1.5,
+          "source": "COSMOS brochure: '~0.3 e-/ADU' for 18-bit HDR output (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf); read noise COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera)"
+        },
+        {
+          "key": "high_gain_cms_16bit",
+          "name": "High gain CMS (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "source": "read noise '<1 e-' (COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera))"
+        },
+        {
+          "key": "high_gain_14bit_rs",
+          "name": "High gain (14-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "source": "COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera)"
+        },
+        {
+          "key": "high_gain_14bit_gs",
+          "name": "High gain (14-bit, global)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 3.0,
+          "source": "COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera)"
+        },
+        {
+          "key": "low_gain_16bit_rs",
+          "name": "Low gain (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 6.0,
+          "source": "COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera)"
+        },
+        {
+          "key": "low_gain_16bit_gs",
+          "name": "Low gain (16-bit, global)",
+          "pixel_um": 10.0,
+          "width": 3260,
+          "height": 3260,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 15.0,
+          "source": "COSMOS-3k datasheet (https://princetoninstruments.com/teledyne-3k-cosmos-camera)"
+        }
+      ]
+    },
+    {
+      "key": "pi_cosmos_4k",
+      "vendor": "Teledyne Princeton Instruments",
+      "model": "COSMOS-4k",
+      "sensor": "back-illuminated CMOS (10 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "COSMOS-4k",
+        "COSMOS 4k"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_18bit",
+          "name": "HDR (18-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 18,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.3,
+          "read_noise_e": 1.2,
+          "source": "COSMOS brochure: '~0.3 e-/ADU' for 18-bit HDR output (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf); read noise COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "high_gain_cms_16bit",
+          "name": "High gain CMS (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "source": "read noise '<1 e-' (COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf))"
+        },
+        {
+          "key": "high_gain_14bit_rs",
+          "name": "High gain (14-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 1.4,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "high_gain_14bit_gs",
+          "name": "High gain (14-bit, global)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 2.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_rs",
+          "name": "Low gain (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 6.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_gs",
+          "name": "Low gain (16-bit, global)",
+          "pixel_um": 10.0,
+          "width": 4800,
+          "height": 4800,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 11.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pi_cosmos_6k",
+      "vendor": "Teledyne Princeton Instruments",
+      "model": "COSMOS-6k",
+      "sensor": "back-illuminated CMOS (10 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "COSMOS-6k",
+        "COSMOS 6k"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf",
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_18bit",
+          "name": "HDR (18-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 18,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.3,
+          "read_noise_e": 1.5,
+          "source": "COSMOS brochure: '~0.3 e-/ADU' for 18-bit HDR output (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf); read noise COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf)"
+        },
+        {
+          "key": "high_gain_cms_16bit",
+          "name": "High gain CMS (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "source": "read noise '<1 e-' (COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf))"
+        },
+        {
+          "key": "high_gain_14bit_rs",
+          "name": "High gain (14-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 1.4,
+          "source": "COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf)"
+        },
+        {
+          "key": "high_gain_14bit_gs",
+          "name": "High gain (14-bit, global)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 2.0,
+          "source": "COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_rs",
+          "name": "Low gain (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 6.0,
+          "source": "COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_gs",
+          "name": "Low gain (16-bit, global)",
+          "pixel_um": 10.0,
+          "width": 6500,
+          "height": 6500,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 15.0,
+          "source": "COSMOS-6k datasheet (https://princetoninstruments.com/wp-content/uploads/2024/07/Teledyne-6k-Cosmos-Camera.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "pi_cosmos_8k",
+      "vendor": "Teledyne Princeton Instruments",
+      "model": "COSMOS-8k (COSMOS-66)",
+      "sensor": "back-illuminated CMOS (10 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "COSMOS-8k",
+        "COSMOS-66",
+        "COSMOS 66",
+        "COSMOS 8k"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf",
+        "https://gophotonics.com/products/scientific-industrial-cameras/princeton-instruments/45-564-cosmos-66",
+        "https://princetoninstruments.com/products/cosmos-family/cosmos"
+      ],
+      "modes": [
+        {
+          "key": "hdr_18bit",
+          "name": "HDR (18-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 18,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "e_per_adu": 0.3,
+          "read_noise_e": 1.2,
+          "source": "COSMOS brochure: '~0.3 e-/ADU' for 18-bit HDR output (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf); read noise COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "high_gain_cms_16bit",
+          "name": "High gain CMS (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "source": "read noise '<1 e-' (COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf))"
+        },
+        {
+          "key": "high_gain_14bit_rs",
+          "name": "High gain (14-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 1.4,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "high_gain_14bit_gs",
+          "name": "High gain (14-bit, global)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 14000,
+          "read_noise_e": 2.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_rs",
+          "name": "Low gain (16-bit, rolling)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 6.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        },
+        {
+          "key": "low_gain_16bit_gs",
+          "name": "Low gain (16-bit, global)",
+          "pixel_um": 10.0,
+          "width": 8120,
+          "height": 8120,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 11.0,
+          "source": "COSMOS brochure (https://psirep.com/system/files/2025-02/Teledyne%20DALSA%20COSMOS%20Brochure.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_4040",
+      "vendor": "Tucsen",
+      "model": "Dhyana 4040 V2",
+      "sensor": "Gpixel GSENSE4040 (FSI)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 4040",
+        "Dhyana 4040 V2",
+        "Tucsen Dhyana 4040"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 70000,
+          "read_noise_e": 3.6,
+          "source": "Tucsen spec 2026-05-26 (https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf)"
+        },
+        {
+          "key": "std_12bit",
+          "name": "12-bit",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_4040bsi",
+      "vendor": "Tucsen",
+      "model": "Dhyana 4040BSI",
+      "sensor": "Gpixel GSENSE4040BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 4040BSI",
+        "Tucsen Dhyana 4040BSI"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 39000,
+          "read_noise_e": 2.3,
+          "source": "Tucsen spec 2026-05-26 (https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf)"
+        },
+        {
+          "key": "std_12bit",
+          "name": "12-bit",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-4040-V2-Dhyana-4040BSI-Specifications-20260526.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_6060",
+      "vendor": "Tucsen",
+      "model": "Dhyana 6060",
+      "sensor": "Gpixel GSENSE6060 (FSI)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 6060",
+        "Tucsen Dhyana 6060"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 123000,
+          "read_noise_e": 3.0,
+          "source": "Tucsen spec: 3 e- median, full well 123 ke- (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        },
+        {
+          "key": "std_14bit",
+          "name": "14-bit STD",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        },
+        {
+          "key": "std_12bit",
+          "name": "12-bit STD",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_6060bsi",
+      "vendor": "Tucsen",
+      "model": "Dhyana 6060BSI",
+      "sensor": "Gpixel GSENSE6060BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 6060BSI",
+        "Tucsen Dhyana 6060BSI"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR",
+          "pixel_um": 10.0,
+          "width": null,
+          "height": null,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 102000,
+          "source": "Tucsen spec: full well 102 ke-; resolution not stated for BSI (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        },
+        {
+          "key": "std_14bit",
+          "name": "14-bit STD",
+          "pixel_um": 10.0,
+          "width": null,
+          "height": null,
+          "adc_bits": 14,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        },
+        {
+          "key": "std_12bit",
+          "name": "12-bit STD",
+          "pixel_um": 10.0,
+          "width": null,
+          "height": null,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "Tucsen spec (https://www.tucsen.com/uploads/Dhyana-6060-Dhyana-6060BSI-Specifications-20251107.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_95_v2",
+      "vendor": "Tucsen",
+      "model": "Dhyana 95 V2",
+      "sensor": "Gpixel GSENSE400BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 95 V2",
+        "Dhyana 95",
+        "Tucsen Dhyana 95 V2"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-95-V2-Specifications-20260526.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 80000,
+          "read_noise_e": 1.6,
+          "source": "Tucsen spec: 1.6 median / 1.7 rms, HDR full well 80 ke- (https://www.tucsen.com/uploads/Dhyana-95-V2-Specifications-20260526.pdf)"
+        },
+        {
+          "key": "std_12bit",
+          "name": "12-bit STD",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "source": "Tucsen spec: STD full well 100 ke- (https://www.tucsen.com/uploads/Dhyana-95-V2-Specifications-20260526.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_dhyana_400bsi_v3",
+      "vendor": "Tucsen",
+      "model": "Dhyana 400BSI V3",
+      "sensor": "Gpixel GSENSE2020BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Dhyana 400BSI V3",
+        "Dhyana 400BSI",
+        "Tucsen Dhyana 400BSI V3"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Dhyana-400BSI-V3-Specifications-20251107.pdf",
+        "https://tucsen.com/uploads/Dhyana-400BSI-V3-User-Manual_20240617_V1.0.1.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr",
+          "name": "HDR (16-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 45000,
+          "e_per_adu": 0.714,
+          "read_noise_e": 1.6,
+          "source": "Tucsen Dhyana 400BSI V3 user manual Table 3-1: system gain 1.4 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Dhyana-400BSI-V3-User-Manual_20240617_V1.0.1.pdf); read noise 1.6 median / 1.7 rms"
+        },
+        {
+          "key": "high_sensitivity",
+          "name": "High Sensitivity / CMS (12-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 1500,
+          "e_per_adu": 0.435,
+          "read_noise_e": 1.1,
+          "source": "Tucsen Dhyana 400BSI V3 user manual Table 3-1: system gain 2.3 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Dhyana-400BSI-V3-User-Manual_20240617_V1.0.1.pdf); read noise 1.1 median / 1.2 rms"
+        },
+        {
+          "key": "high_speed",
+          "name": "High Speed (11-bit)",
+          "pixel_um": 6.5,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 11,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 2000,
+          "e_per_adu": 1.111,
+          "read_noise_e": 1.9,
+          "source": "Tucsen Dhyana 400BSI V3 user manual Table 3-1: system gain 0.9 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Dhyana-400BSI-V3-User-Manual_20240617_V1.0.1.pdf); read noise 1.9 median / 2.0 rms"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_aries_16",
+      "vendor": "Tucsen",
+      "model": "Aries 16",
+      "sensor": "BSI sCMOS (16 um)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Aries 16",
+        "Tucsen Aries 16"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/Aries-16-Specifications-20260526.pdf",
+        "https://tucsen.com/uploads/Aries-16-User-Manual_20240621_V1.0.0.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr",
+          "name": "HDR",
+          "pixel_um": 16.0,
+          "width": 800,
+          "height": 600,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 70000,
+          "e_per_adu": 1.176,
+          "read_noise_e": 1.3,
+          "source": "Tucsen Aries 16 user manual Table 3-1: system gain 0.85 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Aries-16-User-Manual_20240621_V1.0.0.pdf); read noise 1.3 median / 1.4 rms"
+        },
+        {
+          "key": "high_gain",
+          "name": "High Gain",
+          "pixel_um": 16.0,
+          "width": 800,
+          "height": 600,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 900,
+          "e_per_adu": 0.272,
+          "read_noise_e": 1.6,
+          "source": "Tucsen Aries 16 user manual Table 3-1: system gain 3.67 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Aries-16-User-Manual_20240621_V1.0.0.pdf)"
+        },
+        {
+          "key": "low_gain",
+          "name": "Low Gain",
+          "pixel_um": 16.0,
+          "width": 800,
+          "height": 600,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 73400,
+          "e_per_adu": 20.0,
+          "read_noise_e": 32.0,
+          "source": "Tucsen Aries 16 user manual Table 3-1: system gain 0.05 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Aries-16-User-Manual_20240621_V1.0.0.pdf)"
+        },
+        {
+          "key": "low_noise",
+          "name": "Low Noise",
+          "pixel_um": 16.0,
+          "width": 800,
+          "height": 600,
+          "adc_bits": null,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 900,
+          "e_per_adu": 0.233,
+          "read_noise_e": 0.8,
+          "source": "Tucsen Aries 16 user manual Table 3-1: system gain 4.3 DN/e- (e-/ADU = 1/value) (https://tucsen.com/uploads/Aries-16-User-Manual_20240621_V1.0.0.pdf); spec sheet gives 0.9 e-"
+        }
+      ]
+    },
+    {
+      "key": "tucsen_fl_26bw",
+      "vendor": "Tucsen",
+      "model": "FL 26BW",
+      "sensor": "Sony IMX571 (BSI)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "FL 26BW",
+        "FL-26BW",
+        "Tucsen FL 26BW"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": false,
+      "sources": [
+        "https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "Default (16-bit)",
+          "pixel_um": 3.76,
+          "width": 6240,
+          "height": 4168,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [
+            {
+              "setting": 0,
+              "e_per_adu": 0.781,
+              "source": "Tucsen FL 26BW user manual Table 3-1: Gain0 = 1.28 DN/e- (inverted) (https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf)",
+              "read_noise_e": 2.7
+            },
+            {
+              "setting": 1,
+              "e_per_adu": 0.251,
+              "source": "Tucsen FL 26BW user manual Table 3-1: Gain1 = 3.98 DN/e- (inverted) (https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf)",
+              "read_noise_e": 1.0
+            },
+            {
+              "setting": 2,
+              "e_per_adu": 0.125,
+              "source": "Tucsen FL 26BW user manual Table 3-1: Gain2 = 8.0 DN/e- (inverted) (https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf)",
+              "read_noise_e": 0.95
+            },
+            {
+              "setting": 3,
+              "e_per_adu": 0.05,
+              "source": "Tucsen FL 26BW user manual Table 3-1: Gain3 = 20 DN/e- (inverted) (https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf)",
+              "read_noise_e": 0.85
+            }
+          ],
+          "full_well_e": 49000,
+          "read_noise_range_e": [
+            0.85,
+            2.7
+          ],
+          "source": "Tucsen FL 26BW user manual: Gain0..Gain3, median read noise, full well at Gain0 (https://www.tucsen.com/uploads/FL-26BW-User-Manual_20240621_V1.0.0.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl400_fi",
+      "vendor": "FLI",
+      "model": "Kepler KL400 FI",
+      "sensor": "Gpixel GSENSE400",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL400 FI",
+        "Kepler KL400",
+        "KL400",
+        "FLI Kepler KL400"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 120000,
+          "read_noise_e": 1.5,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl400_bi",
+      "vendor": "FLI",
+      "model": "Kepler KL400 BI",
+      "sensor": "Gpixel GSENSE400BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL400 BI",
+        "Kepler KL400",
+        "KL400",
+        "FLI Kepler KL400"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 90000,
+          "read_noise_e": 1.6,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 11.0,
+          "width": 2048,
+          "height": 2048,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl4040_fi",
+      "vendor": "FLI",
+      "model": "Kepler KL4040 FI",
+      "sensor": "Gpixel GSENSE4040",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL4040 FI",
+        "Kepler KL4040",
+        "KL4040",
+        "FLI Kepler KL4040"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 70000,
+          "read_noise_e": 3.7,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl4040_bi",
+      "vendor": "FLI",
+      "model": "Kepler KL4040 BI",
+      "sensor": "Gpixel GSENSE4040BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL4040 BI",
+        "Kepler KL4040",
+        "KL4040",
+        "FLI Kepler KL4040"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 39000,
+          "read_noise_e": 2.3,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 9.0,
+          "width": 4096,
+          "height": 4096,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl6060_fi",
+      "vendor": "FLI",
+      "model": "Kepler KL6060 FI",
+      "sensor": "Gpixel GSENSE6060",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL6060 FI",
+        "Kepler KL6060",
+        "KL6060",
+        "FLI Kepler KL6060"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf",
+        "https://www.flicamera.com/pdf/Kepler6060A.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 130000,
+          "read_noise_e": 4.2,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "fli_kepler_kl6060_bi",
+      "vendor": "FLI",
+      "model": "Kepler KL6060 BI",
+      "sensor": "Gpixel GSENSE6060BSI",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Kepler KL6060 BI",
+        "Kepler KL6060",
+        "KL6060",
+        "FLI Kepler KL6060"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.flicamera.com/pdf/KeplerOVA.pdf",
+        "https://www.flicamera.com/pdf/Kepler6060A.pdf"
+      ],
+      "modes": [
+        {
+          "key": "hdr_16bit",
+          "name": "16-bit HDR (two reads merged)",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 16,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "full_well_e": 100000,
+          "read_noise_e": 3.0,
+          "source": "FLI Kepler overview: read noise (high gain) and full well (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        },
+        {
+          "key": "single_12bit",
+          "name": "12-bit single read",
+          "pixel_um": 10.0,
+          "width": 6144,
+          "height": 6144,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "FLI Kepler overview (https://www.flicamera.com/pdf/KeplerOVA.pdf)"
+        }
+      ]
+    },
+    {
+      "key": "raptor_osprey_os4mpc",
+      "vendor": "Raptor Photonics",
+      "model": "Osprey OS4MPc-CL",
+      "sensor": "sCMOS (global shutter, 4.2 MP)",
+      "color": "mono",
+      "bayer": null,
+      "aliases": [
+        "Osprey",
+        "OS4MPc-CL",
+        "Raptor Osprey"
+      ],
+      "header_gain": "setting",
+      "cooled": true,
+      "discontinued": null,
+      "sources": [
+        "https://www.laserfocusworld.com/biooptics/bioimaging/fluorescence/article/14193670/42-megapixel-cooled-s-cmos-camera-by-raptor-photonics"
+      ],
+      "modes": [
+        {
+          "key": "default",
+          "name": "12-bit",
+          "pixel_um": null,
+          "width": null,
+          "height": null,
+          "adc_bits": 12,
+          "binning": null,
+          "binning_source": null,
+          "curve": [],
+          "source": "press article: 2k x 2k, 12-bit A/D (https://www.laserfocusworld.com/biooptics/bioimaging/fluorescence/article/14193670/42-megapixel-cooled-s-cmos-camera-by-raptor-photonics)"
+        }
+      ]
+    }
+  ]
+}

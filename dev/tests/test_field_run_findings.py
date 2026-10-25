@@ -116,7 +116,7 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
     )
 
     joined = " ".join(infolog_lines())
-    assert "Deferred: no aligned proc_*.fits on disk yet" in joined
+    assert "No aligned frames yet (before the alignment)" in joined
 
 
 def test_run_full_photometry_zero_targets_skips_aperture(tmp_path: Path) -> None:
@@ -134,6 +134,7 @@ def test_run_full_photometry_zero_targets_skips_aperture(tmp_path: Path) -> None
     hdr["NAXIS1"] = 32
     hdr["NAXIS2"] = 32
     w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]  # celestial: the plate scale comes from it
     w.wcs.crpix = [16.0, 16.0]
     w.wcs.crval = [180.0, 45.0]
     w.wcs.cd = [[0.0001, 0.0], [0.0, 0.0001]]
@@ -144,6 +145,10 @@ def test_run_full_photometry_zero_targets_skips_aperture(tmp_path: Path) -> None
     pf.mkdir()
     dt = tmp_path / "aligned"
     dt.mkdir()
+    # the border filter is mandatory (BORDER-FOOTPRINT-2026-10): the plan of the alignment
+    (tmp_path / "photometry_plan.json").write_text(
+        '{"safe_bbox_px": [2.0, 2.0, 29.0, 29.0], "safe_bbox_r_out_px": 2.0}', encoding="ascii"
+    )
 
     result = run_full_photometry_pipeline(
         masterstar_fits_path=ms_fits,
@@ -174,3 +179,33 @@ def test_resolve_import_location_id_fresh_bootstrap_no_warning(tmp_path: Path) -
         assert warn is None
     finally:
         db.conn.close()
+
+
+def test_photometry_refuses_without_border_filter(tmp_path: Path) -> None:
+    """BORDER-FOOTPRINT-2026-10: no photometry without the overlap of the aligned frames."""
+    vt = tmp_path / "variable_targets.csv"
+    vt.write_text("name,catalog_id,catalog,ra_deg,dec_deg\n", encoding="ascii")
+    ms = tmp_path / "masterstars.csv"
+    ms.write_text("catalog_id,ra_deg,dec_deg,mag,name,x,y,zone\n", encoding="ascii")
+    hdr = fits.Header()
+    hdr["NAXIS"], hdr["NAXIS1"], hdr["NAXIS2"] = 2, 32, 32
+    w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    w.wcs.crpix = [16.0, 16.0]
+    w.wcs.crval = [180.0, 45.0]
+    w.wcs.cd = [[0.0001, 0.0], [0.0, 0.0001]]
+    hdr.update(w.to_header())
+    ms_fits = tmp_path / "MASTERSTAR.fits"
+    fits.writeto(ms_fits, np.zeros((32, 32), dtype=np.float32), header=hdr, overwrite=True)
+    (tmp_path / "per_frame").mkdir()
+    (tmp_path / "aligned").mkdir()
+    (tmp_path / "photometry").mkdir()
+    with pytest.raises(RuntimeError, match="safe_bbox_px"):
+        run_full_photometry_pipeline(
+            masterstar_fits_path=ms_fits,
+            variable_targets_csv=vt,
+            masterstars_csv=ms,
+            per_frame_csv_dir=tmp_path / "per_frame",
+            detrended_aligned_dir=tmp_path / "aligned",
+            output_dir=tmp_path / "photometry",
+        )

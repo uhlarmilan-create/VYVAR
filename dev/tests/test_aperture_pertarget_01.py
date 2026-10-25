@@ -19,6 +19,8 @@ from aperture_pertarget import (  # noqa: E402
     FALLBACK_F_STAR,
     ApertureGridNight,
     apply_grid_fluxes_to_frames,
+    apply_night_k,
+    PerTargetChoice,
     choose_f_for_target,
     f_star_is_grid_edge,
     howell_snr,
@@ -229,3 +231,50 @@ def test_howell_snr_monotone_in_flux() -> None:
     s1 = howell_snr(1000.0, 100.0, 50.0, gain=1.0, read_noise=10.0)
     s2 = howell_snr(2000.0, 100.0, 50.0, gain=1.0, read_noise=10.0)
     assert s2 > s1 > 0
+
+
+def _ch(cid: str, curve: dict[float, float], allowed=None) -> "PerTargetChoice":
+    best = min(curve.values())
+    return PerTargetChoice(catalog_id=cid, f_star=max(k for k, v in curve.items() if v <= best * 1.01),
+                           r_ap_px=0.0, p2p_by_f={f"{k:.4g}": v for k, v in curve.items()}, f_allowed=allowed)
+
+
+def test_night_k_median_curve_and_tie() -> None:
+    """AP-NIGHT-K-2026-10: one k for the group from the median normalised curve; within 3 % -> larger k."""
+    g = list(DEFAULT_APERTURE_F_GRID)
+    noisy = [{1.0: 1.10, 1.25: 1.00, 1.5: 1.02, 1.75: 1.20, 2.0: 1.30},
+             {1.0: 1.00, 1.25: 1.05, 1.5: 1.04, 1.75: 1.10, 2.0: 1.40},
+             {1.0: 1.20, 1.25: 1.01, 1.5: 1.00, 1.75: 1.05, 2.0: 1.10}]
+    ch = {f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(noisy)}
+    info = apply_night_k(ch, g)
+    assert info["k_night"] == 1.5  # 1.25 and 1.5 are within 3 % on the median curve
+    assert {c.f_star for c in ch.values()} == {1.5}
+    assert [c.f_own for c in ch.values()] == [1.25, 1.0, 1.5]
+    assert all(c.reason == "night_k_comp_scatter" for c in ch.values())
+
+
+def test_night_k_blend_limit_and_no_comp_targets() -> None:
+    g = list(DEFAULT_APERTURE_F_GRID)
+    c = {1.0: 1.2, 1.25: 1.1, 1.5: 1.0, 1.75: 1.0, 2.0: 1.1}
+    ch = {f"T{i}": _ch(f"T{i}", c) for i in range(4)}
+    ch["B"] = _ch("B", {1.0: 1.0, 1.25: 1.1}, allowed=[1.0, 1.25])
+    ch["N"] = PerTargetChoice(catalog_id="N", f_star=1.0, r_ap_px=5.0, p2p_by_f={f"{k:.4g}": float("nan") for k in g})
+    info = apply_night_k(ch, g)
+    assert info["k_night"] == 1.75 and info["n_targets_curve"] == 5
+    assert ch["B"].f_star == 1.25 and "blend limit" in ch["B"].reason
+    assert ch["N"].f_star == 1.75 and abs(ch["N"].r_ap_px - 1.75 * 5.0) < 1e-9
+
+
+def test_night_k_stable_when_a_comp_changes_one_target() -> None:
+    """A different curve for one target does not move the night k."""
+    g = list(DEFAULT_APERTURE_F_GRID)
+    base = [{1.0: 1.1, 1.25: 1.0, 1.5: 1.05, 1.75: 1.1, 2.0: 1.2} for _ in range(9)]
+    k0 = apply_night_k({f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(base)}, g)["k_night"]
+    alt = list(base); alt[3] = {1.0: 1.3, 1.25: 1.2, 1.5: 1.1, 1.75: 1.0, 2.0: 1.05}
+    assert apply_night_k({f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(alt)}, g)["k_night"] == k0 == 1.25
+
+
+def test_night_k_without_curves_keeps_choices() -> None:
+    ch = {"N": PerTargetChoice(catalog_id="N", f_star=0.7, r_ap_px=3.5, reason="fallback_no_finite_scatter_or_snr")}
+    assert apply_night_k(ch, DEFAULT_APERTURE_F_GRID)["k_night"] is None
+    assert ch["N"].f_star == 0.7

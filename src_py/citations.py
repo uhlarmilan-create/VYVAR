@@ -145,6 +145,7 @@ class RunCitationContext:
     use_period_analysis: bool = False
     use_variability_envelope: bool = False
     use_lightkurve: bool = False
+    use_transients: bool = False
     use_common_mode_stability_detrend: bool = False
     use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
@@ -284,6 +285,7 @@ def build_run_citation_context(
         use_period_analysis=bool(period_analysis),
         use_variability_envelope=bool(variability_detection),
         use_lightkurve=use_tess,
+        use_transients=bool(getattr(cfg, "transient_search_enabled", False)) if cfg else False,
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
@@ -458,6 +460,22 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
             ],
         )
     )
+
+    # TRANSIENT-2026-10: new sources, minor bodies (only with transient_search_enabled)
+    if ctx.use_transients:
+        sections.append(
+            (
+                "TRANSIENT SEARCH",
+                [
+                    citation_line("hodgkin2021", bib=bib),
+                    citation_line("sokolovsky2014", bib=bib),
+                    citation_line("smith2020atlas", bib=bib),
+                    citation_line("bowell1989", bib=bib),
+                    citation_line("mpcorb", bib=bib),
+                    citation_line("openngc", bib=bib),
+                ],
+            )
+        )
 
     if ctx.use_catalog_recovery_verify:
         sections.append(

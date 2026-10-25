@@ -1,7 +1,7 @@
 # Pruvodce konfiguraci VYVAR (config.json) - CZ
 
 _Sesterky dokument: `VYVAR_CONFIG_GUIDE_EN.md` (anglicky). Vychazi z registru
-parametru (`dev/validation/params_registry.json`, 56 polozek) a z auditu
+parametru (`dev/validation/params_registry.json`, 57 polozek) a z auditu
 zdroju parametru (`dev/results/PARAM_SOURCE_AUDIT.md`), stav k 22. 10. 2026
 (CODE-REVIEW-2026-10 krok 7: 58 klicu se stalo pevnymi konstantami). Pri zmene parametru aktualizujte tohoto
 pruvodce spolu s registrem._
@@ -38,8 +38,8 @@ jsou tri druhu a tento pruvodce kazdy z nich oznacuje:
   FITS souboru nebo je odvodi (napr. z astrometrickeho reseni). Po WAVE-B
   uz nemaji zalohu v config.json.
 - **Nastaveni (config.json)** - skutecne uzivatelske ladeni chovani
-  pipeline. To je vetsina z 56 registrovanych parametru (config.json jich
-  uklada 49; zbytek jsou fakta z databaze, hodnoty z FITS/za behu nebo
+  pipeline. To je vetsina z 57 registrovanych parametru (config.json jich
+  uklada 50; zbytek jsou fakta z databaze, hodnoty z FITS/za behu nebo
   interni zazemi).
   WAVE-B take zafixovala 20 internich parametru slepeho/astrometrickeho
   resice, ktere se v praxi nikdy neladily, a slucila 14 skalaru urovni a
@@ -262,6 +262,7 @@ Vystupy pro okolni svet: odesilani do AAVSO/VarAstro a krizova analyza s TESS.
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
 | `tess_enabled` | False | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:2100`) | Zapina blok krizove analyzy s TESS (porovnani vasi svetelne krivky s daty TESS). |
+| `transient_search_enabled` | False | Nastaveni (config.json) | config.json | hledani promennych v poli (`variability_field.py`, `transient_field.py`) | Navic prohleda kazdy snimek na nove zdroje (novy, supernovy, vzplanuti), vypise hvezdy jasnejsi nez Gaia a pojmenuje planetky / komety v poli (soubory MPC a OpenNGC ve slozce katalogu). Vychozi vypnuto. |
 
 ## System a vykon
 

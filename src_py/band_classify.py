@@ -73,7 +73,7 @@ FILTER_SYNONYM_TO_CANONICAL: Final[dict[str, str]] = {
     # Luminance
     "LUMINANCE": "LUMINANCE",
     "LUM": "LUM",
-    # OSC tri-colour labels (M67 scripts)
+    # OSC tri-colour labels
     "BLUE": "BLUE",
     "GREEN": "GREEN",
     "RED": "RED",

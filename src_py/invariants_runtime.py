@@ -721,7 +721,9 @@ def _draft_root_from_photometry_dir(photometry_dir: Path | str | None) -> Path |
         return None
     p = Path(photometry_dir).resolve()
     for cand in (p, *p.parents):
-        if cand.name.startswith("draft_") and (cand / "calibrated").is_dir():
+        # a processed field: its manifest (any folder name) or a legacy draft_NNNNNN folder
+        is_field = (cand / "draft_manifest.json").is_file() or cand.name.startswith("draft_")
+        if is_field and (cand / "calibrated").is_dir():
             return cand
         if (cand / "sat_diag.json").is_file():
             return cand

@@ -7,7 +7,6 @@ import html
 import logging
 import math
 import re
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +37,6 @@ import ui_components as ui_components
 from platesolve_ui_paths import resolve_draft_directory
 from ui_aperture_photometry import render_aperture_photometry
 from ui_variability import render_variability_dashboard
-from utils import generate_session_id
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,14 +61,13 @@ def _vyvar_format_run_failure_message(*, default: str) -> str:
     log_path = st.session_state.get("vyvar_last_preflight_error_log")
     detail = st.session_state.get("vyvar_last_preflight_error_message")
     if log_path:
-        msg = str(detail or "Pipeline preflight failed before the draft infolog was opened.")
+        msg = str(detail or "Pipeline preflight failed before the infolog of the processed field was opened.")
         return f"{msg} Preflight log: {log_path}"
     return default
 
 
 def _vyvar_reset_variability_session_state() -> None:
     """On loading a new draft, clear the variability / TESS / PDF state in the session."""
-    st.session_state.pop("_ap_session_id", None)
     st.session_state.pop("var_analysis_done", None)
     st.session_state.pop("tess_auto_done", None)
     st.session_state.pop("crossmatch_auto_done", None)
@@ -402,7 +399,7 @@ def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None
                 errs = [f"process ended without a result - see {jd}/run_stdout.log"]
             _vyvar_record_run_failure(cfg, label, "Night pipeline", "; ".join(map(str, errs))[:800])
             _vyvar_footer_set(
-                None, running=False, process=label, status_detail="Error - see the draft infolog", pct=None
+                None, running=False, process=label, status_detail="Error - see the infolog of the processed field", pct=None
             )
         job.update({"applied": True, "ok": bool(ok)})
         st.session_state["vyvar_active_job"] = job
@@ -416,7 +413,7 @@ def _vyvar_render_run_job_monitor(cfg: AppConfig, footer_placeholder: Any | None
         else:
             st.error(
                 _vyvar_format_run_failure_message(
-                    default="Pipeline stopped. See the infolog_*.txt file in the draft folder."
+                    default="Pipeline stopped. See the infolog_*.txt file in the processed field folder."
                 )
             )
 
@@ -682,7 +679,7 @@ def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
                 st.session_state["vyvar_last_saved_draft_center_sig"] = _sig_now
         except Exception as _exc_center:  # noqa: BLE001
             # EXC-0003: T3 -- UI diagnostic/plot only () / st.session_state['vyvar_last_saved_draft_center_sig'] = _s... (EXCEPT-BULK 2026-07-08)
-            LOGGER.info(f"Draft center save skipped: {_exc_center!s}")
+            LOGGER.info(f"Field center save skipped: {_exc_center!s}")
 
 
 def _render_pending_job_dispatcher(
@@ -755,7 +752,7 @@ def _render_pending_job_dispatcher(
                 if _draft_epsf is None:
                     _draft_epsf = st.session_state.get("vyvar_last_draft_id")
                 if _draft_epsf is None:
-                    raise FileNotFoundError("Missing draft_id for RUN ePSF job.")
+                    raise FileNotFoundError("Missing processed field id for the RUN ePSF job.")
                 _draft_epsf = int(_draft_epsf)
                 _targets_epsf = str(pending.get("epsf_targets") or "ALL")
                 _setups_epsf = list(pending.get("setups") or [])
@@ -890,15 +887,8 @@ def render_live_view(
     *,
     footer_placeholder: Any | None = None,
 ) -> None:
-    _sess_key = "vyvar_varstrem_session_id"
-    if _sess_key not in st.session_state:
-        st.session_state[_sess_key] = generate_session_id()
-
     st.subheader("VARSTREM")
     # TODO: extract _render_fits_qa_tab - heavy st.session_state / pending-job wiring; defer Phase 2.
-    st.write(f"Active session: `{st.session_state[_sess_key]}`")
-
-    st.markdown("---")
     st.subheader("Session Upload Automation")
 
     dark_validity_days = int(cfg.masterdark_validity_days)
@@ -956,7 +946,7 @@ def render_live_view(
             _eq_rows = [
                 dict(r)
                 for r in pipeline.db.conn.execute(
-                    f"SELECT ID,CAMERANAME,ALIAS,SENSORTYPE,SENSORSIZE,PIXELSIZE,GAIN_ADU "
+                    f"SELECT ID,CAMERANAME,ALIAS,SENSORTYPE,SENSORSIZE,PIXELSIZE,GAIN_ADU,MODEL_KEY "
                     f"FROM EQUIPMENTS WHERE {_act};"
                 )
             ]
@@ -1032,7 +1022,7 @@ def render_live_view(
             help=(
                 "Observer site for BJD, airmass, and lunar context. "
                 "What you see here is what RUN uses. The preselected site is the default site "
-                "(IS_DEFAULT in Database Explorer -> LOCATION)."
+                "(the default site in Database Explorer > Sites)."
             ),
         )
 
@@ -1070,7 +1060,7 @@ def render_live_view(
                     "Equipment (camera)": import_equipment_label,
                     "Telescope": import_telescope_label,
                     "Observer site": import_location_label,
-                    "Pointing (RA/Dec)": "blind plate-solve / set draft center after import",
+                    "Pointing (RA/Dec)": "blind plate-solve / set the field center after import",
                 }
                 with st.container(border=True):
                     st.warning(
@@ -1087,7 +1077,7 @@ def render_live_view(
                         )
                     st.caption(
                         "These pre-fills feed the import; the unified resolver "
-                        "(header/solve -> DB -> config, site = draft -> header -> flagged config) "
+                        "(header/solve -> DB -> config, site = processed field -> header -> flagged config) "
                         "then applies them per draft."
                     )
 
@@ -1233,7 +1223,7 @@ def render_live_view(
                 if not _started:
                     st.error(
                         _vyvar_format_run_failure_message(
-                            default="RUN VYVAR could not start. See the infolog_*.txt file in the draft folder."
+                            default="RUN VYVAR could not start. See the infolog_*.txt file in the processed field folder."
                         )
                     )
             _vyvar_render_run_job_monitor(cfg, footer_placeholder)
@@ -1309,10 +1299,6 @@ def main() -> None:
         _config_cache_fingerprint(cfg),
     )
 
-    # Session guard for long-running pipelines (prevents auto blocks after reload).
-    if "_current_session_id" not in st.session_state:
-        st.session_state["_current_session_id"] = str(uuid.uuid4())[:8]
-
     st.set_page_config(
         page_title="VYVAR - Variable Star Processing",
         page_icon="*",
@@ -1338,21 +1324,22 @@ def main() -> None:
     )
 
     if page == "Pipeline":
-        st.subheader("Draft")
+        st.subheader("Load processed field")
         st.caption(
-            "Enter the absolute path to folder ``draft_XXXXXX`` (must contain ``platesolve/``) "
-            "or draft number from the archive. Used in FITS QA, MASTERSTAR QA "
-            "and Aperture Photometry tabs. Empty field + Load draft clears override."
+            "A field VYVAR has processed: its folder name under ``Archive/Drafts`` "
+            "(``MN_Boo_20260422_001``), the full path of the folder (must contain ``platesolve/``) or its "
+            "number. Used in FITS QA, MASTERSTAR QA, Aperture Photometry, ePSF and Variability. "
+            "Empty field + Load clears it."
         )
         dcol1, dcol2, dcol3 = st.columns([4, 1, 1])
         with dcol1:
             draft_path_inp = st.text_input(
-                "Path or draft number",
+                "Processed field (name, path or number)",
                 key="vyvar_draft_path_field",
-                placeholder=r"e.g. C:\...\Archive\Drafts\draft_000229 or 229",
+                placeholder=r"e.g. MN_Boo_20260422_001 or C:\...\Archive\Drafts\MN_Boo_20260422_001",
             )
         with dcol2:
-            apply_draft = st.button("Load draft", key="vyvar_draft_path_apply", type="primary")
+            apply_draft = st.button("Load", key="vyvar_draft_path_apply", type="primary")
         with dcol3:
             _cur = st.session_state.get("vyvar_last_draft_id")
             st.caption(f"ID: **{_cur}**" if _cur is not None else "ID: -")
@@ -1361,7 +1348,7 @@ def main() -> None:
             if not s:
                 st.session_state.pop("vyvar_draft_dir_override", None)
                 _vyvar_reset_variability_session_state()
-                st.info("Draft override cleared - using archive path from configuration.")
+                st.info("Processed field cleared - using the archive path from the configuration.")
                 st.rerun()
             else:
                 ddir, parsed_id, err = resolve_draft_directory(
@@ -1374,7 +1361,7 @@ def main() -> None:
                     if parsed_id is not None:
                         st.session_state["vyvar_last_draft_id"] = int(parsed_id)
                     _vyvar_reset_variability_session_state()
-                    st.success(f"Draft loaded: {ddir}")
+                    st.success(f"Processed field loaded: {ddir}")
                     st.rerun()
         ov = _vyvar_effective_draft_dir_override()
         if ov is not None:

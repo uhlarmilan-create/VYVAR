@@ -1,7 +1,7 @@
 # VYVAR Configuration Guide (config.json) - EN
 
 _Companion document: `VYVAR_CONFIG_GUIDE_CZ.md` (Czech). Generated from the
-parameter registry (`dev/validation/params_registry.json`, 56 entries) and
+parameter registry (`dev/validation/params_registry.json`, 57 entries) and
 the parameter source audit (`dev/results/PARAM_SOURCE_AUDIT.md`), state as of
 2026-10-22 (CODE-REVIEW-2026-10 step 7: 58 keys became fixed constants). When parameters change, update
 this guide together with the registry._
@@ -38,8 +38,8 @@ parameters, and this guide labels every one of them:
   them (e.g. from the astrometric solution). These no longer carry
   config.json fallbacks after WAVE-B.
 - **Setting (config.json)** - the genuine user-tunable behavior of the
-  pipeline. This is the majority of the 56 registered parameters (config.json
-  persists 49 of them; the rest are database facts, FITS/runtime values, or
+  pipeline. This is the majority of the 57 registered parameters (config.json
+  persists 50 of them; the rest are database facts, FITS/runtime values, or
   internal plumbing).
   WAVE-B also hardcoded 20 blind/plate-solve solver internals that were never
   tuned in practice, and merged 14 tier/aperture scalars into 3 structured
@@ -260,6 +260,7 @@ Output for the outside world: AAVSO/VarAstro submission and TESS cross-analysis.
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
 | `tess_enabled` | False | Setting (config.json) | config.json | config assembly & validation (`config.py:2100`) | Enables the TESS cross-analysis block (comparing your light curve against TESS data). |
+| `transient_search_enabled` | False | Setting (config.json) | config.json | field variability search (`variability_field.py`, `transient_field.py`) | Also searches every frame for new sources (novae, supernovae, outbursts), lists stars brighter than Gaia predicts and names the minor planets / comets in the field (MPC files and OpenNGC in the catalogue folder). Off by default. |
 
 ## System & performance
 

@@ -32,7 +32,6 @@ from config import AppConfig  # noqa: E402
 from database import VyvarDatabase  # noqa: E402
 from param_resolver import (  # noqa: E402
     _binning_from_header,
-    _scale_bin1_db_for_header,
     resolve_gain,
     resolve_read_noise,
 )
@@ -225,8 +224,11 @@ def _gain_rn_convention(hdr: fits.Header, db: VyvarDatabase, equipment_id: int |
     binning = _binning_from_header(hdr)
     g_res = resolve_gain(hdr, db=db, equipment_id=equipment_id)
     rn_res = resolve_read_noise(hdr, db=db, equipment_id=equipment_id)
-    g_scaled = _scale_bin1_db_for_header(float(db_g), hdr, exponent=2, param_label="gain") if db_g else None
-    rn_scaled = _scale_bin1_db_for_header(float(db_rn), hdr, exponent=1, param_label="read_noise") if db_rn else None
+    from camera_profile import scale_for_binning  # noqa: PLC0415
+
+    _b = int(binning or 1)
+    g_scaled = scale_for_binning(float(db_g), _b, "average", "gain") if db_g else None
+    rn_scaled = scale_for_binning(float(db_rn), _b, "average", "read_noise") if db_rn else None
     note = (
         "DB values documented as bin1 per param_resolver; header XBINNING scales DB fallbacks. "
         "Header-mapped gain bypasses DB scaling."

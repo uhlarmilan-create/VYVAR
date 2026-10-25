@@ -40,7 +40,7 @@ def test_photometric_gain_uses_equipment_and_container_scale(tmp_path: Path) -> 
     # header e-/ADU card wins (session truth)
     h = fits.Header()
     h["EGAIN"] = (2.0, "electrons per ADU")
-    assert photometric_gain_read_noise(h, cfg, 7).gain_native in (pytest.approx(2.0), pytest.approx(3.2))
+    assert photometric_gain_read_noise(h, cfg, 7).gain_native == pytest.approx(2.0)
 
 
 def test_load_photometric_gain(tmp_path: Path) -> None:

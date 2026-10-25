@@ -167,29 +167,13 @@ def resolve_rig_scintillation_params(
         except Exception as exc:  # noqa: BLE001
             notes.append(f"DB rig lookup failed: {exc!s}")
 
-    # Documented rig fallbacks when DB row missing (reported, not silent)
-    # COMP-POOL-02 item 1: Carl-Zeiss "200mm" is FOCAL; aperture DIAMETER=70 mm (f/2.86).
+    # Generic fallbacks when the draft has no telescope / site row (reported, not silent).
     if diam_m is None:
-        if draft_id in (424,):
-            diam_m = 0.07
-            notes.append("D=0.07 m fallback: wide Carl-Zeiss Jirny aperture (draft_424; 200mm=focal)")
-        elif draft_id in (425, 426, 427):
-            diam_m = 0.3
-            notes.append("D=0.3 m fallback: Newton Brno/Dablice/Zdanice family")
-        else:
-            diam_m = 0.07
-            notes.append("D=0.07 m generic fallback (unknown draft; was wrongly 0.2=focal)")
-
+        diam_m = 0.07
+        notes.append("D=0.07 m generic fallback (no TELESCOPE.DIAMETER for this draft)")
     if alt_m is None:
-        if draft_id in (424,):
-            alt_m = 250.0
-            notes.append("altitude_m=250 fallback: Jirny ~250 m")
-        elif draft_id in (425, 426, 427):
-            alt_m = 275.0
-            notes.append("altitude_m=275 fallback: Dablice/Zdanice ~250-300 m mean")
-        else:
-            alt_m = 300.0
-            notes.append("altitude_m=300 generic fallback")
+        alt_m = 300.0
+        notes.append("altitude_m=300 generic fallback (no site altitude for this draft)")
 
     if exp_s is None or not math.isfinite(exp_s):
         exp_s = 60.0

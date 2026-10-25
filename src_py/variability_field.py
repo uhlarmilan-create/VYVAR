@@ -32,6 +32,13 @@ Method (Sokolovsky et al. 2017, A&A 598, A108; VaST, Sokolovsky & Lebedev 2018):
   FWHM and airmass (both indices below threshold), the star is flagged
   ``systematic`` and not listed as a candidate.
 
+TRANSIENT-2026-10 (``transient_search_enabled``, off by default): the same run also compares every
+star's night magnitude with Gaia - expected = Gaia G through the field relation (robust fit,
+colour terms) plus the light of the Gaia neighbours in the aperture (``blend``); ``dmag_vs_gaia``
+<= -1 mag and <= -3 sigma of stars of the same brightness -> ``brightened`` (a nova on a faint
+catalogued star, a dwarf nova in outburst all night) - and runs the search for new sources
+(:mod:`transient_field`).
+
 No sigma clipping and no detrending of the light curves themselves.
 """
 from __future__ import annotations
@@ -270,6 +277,8 @@ def run_field_variability(
     frame["airmass"] = am.reindex(frame.index)
     tcol = "bjd_tdb_mid" if "bjd_tdb_mid" in D and np.isfinite(pd.to_numeric(D["bjd_tdb_mid"], errors="coerce")).any() else "jd_mid"
     frame["time"] = pd.to_numeric(D[tcol], errors="coerce").groupby(D["t"]).median()
+    if "jd_mid" in D:
+        frame["jd_utc"] = pd.to_numeric(D["jd_mid"], errors="coerce").groupby(D["t"]).median()
     meta["time_column"] = tcol
 
     # CCD-equation error of every point (Merline & Howell 1995)
@@ -439,6 +448,11 @@ def run_field_variability(
             info.at[cid, "systematic"] = True
 
     info["candidate"] = info["signal"] & info["gates_ok"] & ~info["known_variable"] & ~info["systematic"]
+    transients = bool(getattr(cfg, "transient_search_enabled", False))
+    zp_g = float("nan")
+    if transients:
+        zp_g = _brightened_vs_gaia(info, M.sub(E, axis=1).median(axis=1), use, ref)
+        meta["brightened"] = {"n": int(info["brightened"].sum()), "zp_g_solar": zp_g}
     info["known_detected"] = info["signal"] & info["gates_ok"] & info["known_variable"]
     info["index"] = np.where(
         (info["z_s"] > zthr) & (info["z_eta"] > zthr), "scatter+1/eta",
@@ -468,6 +482,17 @@ def run_field_variability(
     if check_catalogs and not cand.empty:
         out.loc[order_c, "catalogs"] = [_catalog_check(row, cfg) for _, row in cand.iterrows()]
     out.to_csv(phot / FIELD_CSV, index=False)
+    if transients:
+        try:
+            from transient_field import run_field_transients  # noqa: PLC0415
+
+            tm = run_field_transients(per_frame_dir=per_frame_dir, photometry_dir=phot, platesolve_dir=ps, cfg=cfg,
+                                      frame=frame, E=E, zp_g=zp_g, k=k, gain=g, read_noise=rn,
+                                      check_catalogs=check_catalogs)
+            meta["transients"] = {kk: tm.get(kk) for kk in ("status", "n_sources", "n_candidates", "n_minor_bodies")}
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.error("[TRANSIENT] search failed: %s", exc)
+            meta["transients"] = {"status": f"failed: {exc}"}
     meta.update(n_candidates=int(len(cand)), n_known_detected=int(out["known_detected"].sum()),
                 n_systematic=int((out["systematic"] & out["gates_ok"]).sum()),
                 n_rejected_gates=int((~out["gates_ok"]).sum()), status="ok")
@@ -475,6 +500,37 @@ def run_field_variability(
     LOGGER.info("[VARIABILITY] %d stars, %d pass gates, noise a=%.2f floor=%.4f, z>%.2f: %d candidates, %d known detected, %d systematic",
                 len(out), n_test, a, fl, zthr, len(cand), meta["n_known_detected"], meta["n_systematic"])
     return meta
+
+
+def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref: Any) -> float:
+    """TRANSIENT-2026-10: ``dmag_vs_gaia`` (night magnitude - expected from Gaia incl. the neighbours'
+    light in the aperture; negative = brighter) and ``brightened``; returns the field zero point for a
+    star of solar colour (BP-RP 0.82): G = m_inst - E - zp."""
+    from scipy import optimize  # noqa: PLC0415
+
+    mi = Mi.reindex(info.index).to_numpy(float)
+    G = pd.to_numeric(info["mag"], errors="coerce").to_numpy(float)
+    c = pd.to_numeric(info["bp_rp"], errors="coerce").to_numpy(float)
+    bl = pd.to_numeric(info["blend"], errors="coerce").to_numpy(float)
+    fit = info.index.isin(ref) & np.isfinite(mi) & np.isfinite(G) & np.isfinite(c)
+    if fit.sum() < 10:
+        info["dmag_vs_gaia"] = np.nan
+        info["brightened"] = False
+        return float("nan")
+
+    def _r(p: np.ndarray) -> np.ndarray:
+        return mi[fit] - G[fit] - (p[0] + p[1] * c[fit] + p[2] * c[fit] ** 2)
+
+    p = optimize.least_squares(_r, [float(np.median(mi[fit] - G[fit])), 0.0, 0.0], loss="soft_l1", f_scale=0.05).x
+    cc = np.where(np.isfinite(c), c, 0.82)
+    expect = G + p[0] + p[1] * cc + p[2] * cc**2 - 2.5 * np.log10(np.clip(1.0 + np.nan_to_num(bl, nan=0.0), 1e-3, None))
+    dm = mi - expect
+    info["dmag_vs_gaia"] = dm
+    ok = use & np.isfinite(dm)
+    sig = np.array([_window_stats(dm, G, ok, float(G[i]))[1] for i in range(len(dm))])
+    gate = (info["gate_snr"] & info["gate_edge"]).to_numpy(bool)
+    info["brightened"] = gate & np.isfinite(dm) & (dm <= -1.0) & (dm <= -3.0 * sig)
+    return float(p[0] + p[1] * 0.82 + p[2] * 0.82**2)
 
 
 def _catalog_check(row: pd.Series, cfg: Any) -> str:

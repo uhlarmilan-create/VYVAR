@@ -1,0 +1,3052 @@
+{
+ "vendor_group": "ZWO",
+ "models": [
+  {
+   "key": "zwo_asi2600mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI2600MM Pro",
+   "sensor": "Sony IMX571",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MM Pro",
+    "ASI2600MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI2600_Manual_EN.pdf",
+    "https://i.zwoastro.com/wp-content/uploads/2024/07/3d6d8c03e5a8f79c22098e78edcfe5a3.pdf",
+    "https://www.zwoastro.com/product/asi2600/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.3
+     ]
+    }
+   ],
+   "notes": "ZWO: HCG turns on at gain 100; gain 0 or 100 recommended for DSO (https://www.zwoastro.com/product/asi2600/). Hardware bin uses 12-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI2600_Manual_EN.pdf). Binning sum/average not documented. Peak QE 91%. Original (pre-2025) version; ZWO product page now shows the P25 revision."
+  },
+  {
+   "key": "zwo_asi2600mm_p25",
+   "vendor": "ZWO",
+   "model": "ASI2600MM P25",
+   "sensor": "Sony IMX571",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MM P25",
+    "ASI2600MM P25",
+    "New ASI2600MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/new-asi2600mm-mc-pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      1.0,
+      3.3
+     ]
+    }
+   ],
+   "notes": "2025 revision ('New ASI2600MM/MC Pro', table columns 'ASI2600MM P25') (https://www.zwoastro.com/product/new-asi2600mm-mc-pro/). Full well 73ke listed; Air/Duo manuals state 73ke is reached at gain -25 (negative gain range). HCG at gain 100. UNSURE: the INSTRUME string the driver writes for P25 units is not documented; it may be identical to the original Pro ('ZWO ASI2600MM Pro')."
+  },
+  {
+   "key": "zwo_asi2600mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI2600MC Pro",
+   "sensor": "Sony IMX571",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MC Pro",
+    "ASI2600MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI2600_Manual_EN.pdf",
+    "https://i.zwoastro.com/wp-content/uploads/2024/07/3d6d8c03e5a8f79c22098e78edcfe5a3.pdf",
+    "https://www.zwoastro.com/product/asi2600/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.3
+     ]
+    }
+   ],
+   "notes": "ZWO: HCG turns on at gain 100; gain 0 or 100 recommended for DSO (https://www.zwoastro.com/product/asi2600/). Hardware bin uses 12-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI2600_Manual_EN.pdf). Binning sum/average not documented. Peak QE 80%. Original (pre-2025) version; ZWO product page now shows the P25 revision."
+  },
+  {
+   "key": "zwo_asi2600mc_p25",
+   "vendor": "ZWO",
+   "model": "ASI2600MC P25",
+   "sensor": "Sony IMX571",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MC P25",
+    "ASI2600MC P25",
+    "New ASI2600MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/new-asi2600mm-mc-pro/",
+    "https://i.zwoastro.com/wp-content/uploads/2026/06/1061bcc2ab448b14d1b20540d03f9c5d.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      1.0,
+      3.3
+     ]
+    }
+   ],
+   "notes": "2025 revision ('New ASI2600MM/MC Pro', table columns 'ASI2600MC P25') (https://www.zwoastro.com/product/new-asi2600mm-mc-pro/). Full well 73ke listed; Air/Duo manuals state 73ke is reached at gain -25 (negative gain range). HCG at gain 100. UNSURE: the INSTRUME string the driver writes for P25 units is not documented; it may be identical to the original Pro ('ZWO ASI2600MC Pro')."
+  },
+  {
+   "key": "zwo_asi2600mc_duo",
+   "vendor": "ZWO",
+   "model": "ASI2600MC Duo",
+   "sensor": "Sony IMX571 (+ SC2210 guide sensor)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MC Duo",
+    "ASI2600MC Duo"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/04/ddaed4aed655c9ce7700a9193f536d1e.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      0.9,
+      4.2
+     ]
+    }
+   ],
+   "notes": "Main sensor values. Manual: read noise 0.9-4.2e (1.3e@10db gain); full well 73ke 'at the gain value of -25' (https://i.zwoastro.com/wp-content/uploads/2024/04/ddaed4aed655c9ce7700a9193f536d1e.pdf). dB values not converted to gain settings. Hardware Bin2/Bin3 12-bit ADC."
+  },
+  {
+   "key": "zwo_asi2600mc_air",
+   "vendor": "ZWO",
+   "model": "ASI2600MC Air",
+   "sensor": "Sony IMX571 (+ SC2210 guide sensor)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MC Air",
+    "ASI2600MC Air"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/07/fc9b30ae6ea0aa4b331322439dee063c.pdf",
+    "https://i.zwoastro.com/wp-content/uploads/2024/08/b7c51bc3ea7be6e26681c44382580e22.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      0.84,
+      4.2
+     ]
+    }
+   ],
+   "notes": "Wireless smart camera. Manual table: HCGGain 100 (main), UnityGain listed as '\\' (not given) for main sensor; full well 73ke at gain -25, default 50ke; analog gain range -25..460 (https://i.zwoastro.com/wp-content/uploads/2025/07/fc9b30ae6ea0aa4b331322439dee063c.pdf). Read noise 1.4e@10db gain (not converted)."
+  },
+  {
+   "key": "zwo_asi2600mm_duo",
+   "vendor": "ZWO",
+   "model": "ASI2600MM Duo",
+   "sensor": "Sony IMX571 (+ SC2210 guide sensor)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MM Duo",
+    "ASI2600MM Duo"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/04/ddaed4aed655c9ce7700a9193f536d1e.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      0.9,
+      4.2
+     ]
+    }
+   ],
+   "notes": "Main sensor values. Manual: read noise 0.9-4.2e (1.3e@10db gain); full well 73ke 'at the gain value of -25' (https://i.zwoastro.com/wp-content/uploads/2024/04/ddaed4aed655c9ce7700a9193f536d1e.pdf). dB values not converted to gain settings. Hardware Bin2/Bin3 12-bit ADC."
+  },
+  {
+   "key": "zwo_asi2600mm_air",
+   "vendor": "ZWO",
+   "model": "ASI2600MM Air",
+   "sensor": "Sony IMX571 (+ SC2210 guide sensor)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2600MM Air",
+    "ASI2600MM Air"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/07/fc9b30ae6ea0aa4b331322439dee063c.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 6248,
+     "height": 4176,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 73000,
+     "read_noise_range_e": [
+      0.84,
+      4.2
+     ]
+    }
+   ],
+   "notes": "Wireless smart camera. Manual table: HCGGain 100 (main), UnityGain listed as '\\' (not given) for main sensor; full well 73ke at gain -25, default 50ke; analog gain range -25..460 (https://i.zwoastro.com/wp-content/uploads/2025/07/fc9b30ae6ea0aa4b331322439dee063c.pdf). Read noise 1.4e@10db gain (not converted)."
+  },
+  {
+   "key": "zwo_asi6200mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI6200MM Pro",
+   "sensor": "Sony IMX455",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI6200MM Pro",
+    "ASI6200MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI6200_Manual_EN_v1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51400,
+     "read_noise_range_e": [
+      1.5,
+      3.5
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 100 (https://i.zwoastro.com/zwo-website/manuals/ASI6200_Manual_EN_v1.4.pdf). Hardware bin2/bin3 use 12-bit ADC; sum/average not documented. Original version; product page now lists P25."
+  },
+  {
+   "key": "zwo_asi6200mm_p25",
+   "vendor": "ZWO",
+   "model": "ASI6200MM P25",
+   "sensor": "Sony IMX455",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI6200MM P25",
+    "ASI6200MM P25"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi6200/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51400,
+     "read_noise_range_e": [
+      0.86,
+      0.86
+     ]
+    }
+   ],
+   "notes": "Product page columns 'ASI6200MM P25': read noise 0.86e (single value), QE 91%, HCG at gain 100 (https://www.zwoastro.com/product/asi6200/). UNSURE: driver INSTRUME string may equal the original Pro."
+  },
+  {
+   "key": "zwo_asi6200mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI6200MC Pro",
+   "sensor": "Sony IMX455",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI6200MC Pro",
+    "ASI6200MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI6200_Manual_EN_v1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51400,
+     "read_noise_range_e": [
+      1.5,
+      3.5
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 100 (https://i.zwoastro.com/zwo-website/manuals/ASI6200_Manual_EN_v1.4.pdf). Hardware bin2/bin3 use 12-bit ADC; sum/average not documented. Original version; product page now lists P25."
+  },
+  {
+   "key": "zwo_asi6200mc_p25",
+   "vendor": "ZWO",
+   "model": "ASI6200MC P25",
+   "sensor": "Sony IMX455",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI6200MC P25",
+    "ASI6200MC P25"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi6200/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 9576,
+     "height": 6388,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51400,
+     "read_noise_range_e": [
+      0.86,
+      0.86
+     ]
+    }
+   ],
+   "notes": "Product page columns 'ASI6200MC P25': read noise 0.86e (single value), QE 80%, HCG at gain 100 (https://www.zwoastro.com/product/asi6200/). UNSURE: driver INSTRUME string may equal the original Pro."
+  },
+  {
+   "key": "zwo_asi2400mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI2400MC Pro",
+   "sensor": "Sony IMX410",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI2400MC Pro",
+    "ASI2400MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI2400_Manual_EN_V1.2.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 5.94,
+     "width": 6072,
+     "height": 4042,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 158,
+       "e_per_adu": 1.0,
+       "source": "ZWO ASI2400 manual v1.2 spec table: 'Unity Gain 158' (https://i.zwoastro.com/zwo-website/manuals/ASI2400_Manual_EN_V1.2.pdf)"
+      }
+     ],
+     "full_well_e": 100000,
+     "read_noise_range_e": [
+      1.1,
+      6.4
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 140 (https://i.zwoastro.com/zwo-website/manuals/ASI2400_Manual_EN_V1.2.pdf). Listed out of stock on zwoastro.com."
+  },
+  {
+   "key": "zwo_asi4400mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI4400MC Pro",
+   "sensor": "Sony IMX366",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI4400MC Pro",
+    "ASI4400MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi4400mc-pro/",
+    "https://telescopescanada.ca/products/zwo-asi4400mc-pro-cooled-colour-cmos-astrophotography-camera-asi4400mc-p"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.4,
+     "width": 8192,
+     "height": 5460,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 74600,
+     "read_noise_range_e": [
+      1.1,
+      1.1
+     ]
+    }
+   ],
+   "notes": "ZWO page: 44MP, 4.4um, 14-bit ADC, full well 74,600e, HCG at gain 136 (https://www.zwoastro.com/product/asi4400mc-pro/). Sensor name IMX366, 8192x5460 and read noise 1.1e come from a retailer copy of the ZWO spec table (https://telescopescanada.ca/products/zwo-asi4400mc-pro-cooled-colour-cmos-astrophotography-camera-asi4400mc-p), not verified on a ZWO page."
+  },
+  {
+   "key": "zwo_asi461mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI461MM Pro",
+   "sensor": "Sony IMX461",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI461MM Pro",
+    "ASI461MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2026/03/9c73a6c478517fda5a90ef9985e661f1.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (16-bit)",
+     "pixel_um": 3.76,
+     "width": 11656,
+     "height": 8750,
+     "adc_bits": 16,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50300,
+     "read_noise_range_e": [
+      1.0,
+      3.3
+     ]
+    }
+   ],
+   "notes": "Manual: read noise 1.0-3.3e (0.9e@46db gain), HCG at gain 100, gain 0 or 100 recommended; Bin2 full well 198ke at 7.5um (https://i.zwoastro.com/wp-content/uploads/2026/03/9c73a6c478517fda5a90ef9985e661f1.pdf)."
+  },
+  {
+   "key": "zwo_asi533mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI533MM Pro",
+   "sensor": "Sony IMX533 (IMX533CLK-D)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI533MM Pro",
+    "ASI533MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/07/9f26af0bec5c60ea84107dfec8314859.pdf",
+    "https://www.zwoastro.com/product/asi533-pro-series/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 3.76,
+     "width": 3008,
+     "height": 3008,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.8
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 100 (https://i.zwoastro.com/wp-content/uploads/2026/06/da81221f0f010be36de536929550f734.pdf). Hardware bin uses 12-bit ADC."
+  },
+  {
+   "key": "zwo_asi533mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI533MC Pro",
+   "sensor": "Sony IMX533 (IMX533CQK-C)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI533MC Pro",
+    "ASI533MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/07/9f26af0bec5c60ea84107dfec8314859.pdf",
+    "https://www.zwoastro.com/product/asi533-pro-series/",
+    "https://i.zwoastro.com/zwo-website/manuals/ASI533_Manual_EN_V1.2.pdf",
+    "https://i.zwoastro.com/wp-content/uploads/2026/06/da81221f0f010be36de536929550f734.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 3.76,
+     "width": 3008,
+     "height": 3008,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 50000,
+     "read_noise_range_e": [
+      1.0,
+      3.8
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 100 (https://i.zwoastro.com/wp-content/uploads/2026/06/da81221f0f010be36de536929550f734.pdf). Hardware bin uses 12-bit ADC."
+  },
+  {
+   "key": "zwo_asi294mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI294MC Pro",
+   "sensor": "Sony IMX294",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI294MC Pro",
+    "ASI294MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI294_Manual_EN_V2.2.pdf",
+    "https://www.zwoastro.com/product/asi294/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.63,
+     "width": 4144,
+     "height": 2822,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 63700,
+     "read_noise_range_e": [
+      1.2,
+      7.3
+     ]
+    }
+   ],
+   "notes": "HCG turns on at gain 120 (https://i.zwoastro.com/zwo-website/manuals/ASI294_Manual_EN_V2.2.pdf); ZWO blog: 'HCG mode will be on when gain is higher than 120(12db)' (https://www.zwoastro.com/product/asi294mm-mc/)."
+  },
+  {
+   "key": "zwo_asi294mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI294MM Pro",
+   "sensor": "Sony IMX492",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI294MM Pro",
+    "ASI294MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI294_Manual_EN_V2.2.pdf",
+    "https://www.zwoastro.com/product/asi294/"
+   ],
+   "modes": [
+    {
+     "key": "11mp",
+     "name": "Bin2 / 11.7MP (14-bit, default)",
+     "pixel_um": 4.63,
+     "width": 4144,
+     "height": 2822,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 66400,
+     "read_noise_range_e": [
+      1.2,
+      8.0
+     ]
+    },
+    {
+     "key": "47mp",
+     "name": "Unlocked Bin1 / 47MP (12-bit)",
+     "pixel_um": 2.3,
+     "width": 8288,
+     "height": 5644,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14400
+    }
+   ],
+   "notes": "Product page: 'Unlocked Bin1: 12bit ADC, 2.3um, 47MP, 8288*5644, 14k full well'; 'Bin2: 14bit ADC, 4.6um, 11.7MP, 4144*2822, 66k full well' (https://www.zwoastro.com/product/asi294/). Product page read noise 1.3-2.6e vs manual 1.2-8e (mono). HCG at gain 120. Note the 11MP mode is the sensor's internal 2x2 combination; its sum/average nature is not documented."
+  },
+  {
+   "key": "zwo_asi294mc",
+   "vendor": "ZWO",
+   "model": "ASI294MC",
+   "sensor": "Sony IMX294",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI294MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi294mm-mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.63,
+     "width": 4144,
+     "height": 2822,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 63700
+    }
+   ],
+   "notes": "Uncooled. Read noise listed as 1.2e; HCG above gain 120 (12db) (https://www.zwoastro.com/product/asi294mm-mc/)."
+  },
+  {
+   "key": "zwo_asi294mm",
+   "vendor": "ZWO",
+   "model": "ASI294MM",
+   "sensor": "Sony IMX492",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI294MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi294mm-mc/"
+   ],
+   "modes": [
+    {
+     "key": "47mp",
+     "name": "Unlocked Bin1 / 47MP (12-bit)",
+     "pixel_um": 2.3,
+     "width": 8288,
+     "height": 5644,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14400,
+     "read_noise_range_e": [
+      1.2,
+      8.0
+     ]
+    },
+    {
+     "key": "11mp",
+     "name": "Bin2 / 11.7MP (14-bit)",
+     "pixel_um": 4.63,
+     "width": 4144,
+     "height": 2822,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 66000
+    }
+   ],
+   "notes": "Uncooled. Table lists 8288x5644, 12bit, 2.3um, 14.4Ke; Bin2 text: 14bit, 4.6um, 4144*2822, 66k full well; HCG at gain 120 (https://www.zwoastro.com/product/asi294mm-mc/). Bin2 pixel quoted as 4.6um in text, 4.63um used from the Pro manual."
+  },
+  {
+   "key": "zwo_asi183mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI183MM Pro",
+   "sensor": "Sony IMX183 (IMX183CLK-J)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI183MM Pro",
+    "ASI183MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf",
+    "https://www.zwoastro.com/product/asi183/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5496,
+     "height": 3672,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    }
+   ],
+   "notes": "Read noise '1.6e @30db gain' (gain setting not stated). Hardware bin2 is done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf)."
+  },
+  {
+   "key": "zwo_asi183mm",
+   "vendor": "ZWO",
+   "model": "ASI183MM",
+   "sensor": "Sony IMX183 (IMX183CLK-J)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI183MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf",
+    "https://www.zwoastro.com/product/asi183mm-mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5496,
+     "height": 3672,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    }
+   ],
+   "notes": "Uncooled. 10-bit high-speed mode also available."
+  },
+  {
+   "key": "zwo_asi183mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI183MC Pro",
+   "sensor": "Sony IMX183 (IMX183CQJ-J)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI183MC Pro",
+    "ASI183MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf",
+    "https://www.zwoastro.com/product/asi183/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5496,
+     "height": 3672,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    }
+   ],
+   "notes": "Read noise '1.6e @30db gain' (gain setting not stated). Hardware bin2 is done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf)."
+  },
+  {
+   "key": "zwo_asi183mc",
+   "vendor": "ZWO",
+   "model": "ASI183MC",
+   "sensor": "Sony IMX183 (IMX183CQJ-J)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI183MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf",
+    "https://www.zwoastro.com/product/asi183mm-mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5496,
+     "height": 3672,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    }
+   ],
+   "notes": "Uncooled. 10-bit high-speed mode also available."
+  },
+  {
+   "key": "zwo_asi183gt",
+   "vendor": "ZWO",
+   "model": "ASI183GT",
+   "sensor": "Sony IMX183 (IMX183CLK-J)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI183GT",
+    "ASI183GT"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": null,
+   "sources": [
+    "https://www.zwoastro.com/product/asi-gt-camera/",
+    "https://i.zwoastro.com/zwo-website/manuals/ASI183_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.4,
+     "width": 5496,
+     "height": 3672,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.6,
+      1.6
+     ]
+    }
+   ],
+   "notes": "ASI183MM Pro with integrated filter wheel (GT). Sensor data taken from the ASI183 manual; GT page not fetched."
+  },
+  {
+   "key": "zwo_asi1600mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI1600MM Pro",
+   "sensor": "Panasonic MN34230ALJ",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI1600MM Pro",
+    "ASI1600MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 20000,
+     "read_noise_range_e": [
+      1.2,
+      1.2
+     ]
+    }
+   ],
+   "notes": "Read noise '1.2e @30db gain'. Hardware binning done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf). UNSURE: unity gain 139 is documented by ZWO only for the ASI1600MM-Cool (see that entry); not copied here."
+  },
+  {
+   "key": "zwo_asi1600mm_cool",
+   "vendor": "ZWO",
+   "model": "ASI1600MM-Cool",
+   "sensor": "Panasonic MN34230ALJ",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI1600MM-Cool",
+    "ASI1600MM-Cool",
+    "ASI1600MM Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf",
+    "https://www.zwoastro.com/2017/02/27/cooled-asi-camera-setting-in-ascom-driver/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 139,
+       "e_per_adu": 1.0,
+       "source": "ZWO blog 'Cooled ASI camera setting in ASCOM driver': ASI1600MM-Cool 'unit gain (G: 139 O: 21)' (https://www.zwoastro.com/2017/02/27/cooled-asi-camera-setting-in-ascom-driver/)"
+      }
+     ],
+     "full_well_e": 20000,
+     "read_noise_range_e": [
+      1.2,
+      1.2
+     ]
+    }
+   ],
+   "notes": "Read noise '1.2e @30db gain'. Hardware binning done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf). ZWO blog: full well 20K at gain 0, below 1K at gain 300 (https://www.zwoastro.com/2017/02/27/cooled-asi-camera-setting-in-ascom-driver/)."
+  },
+  {
+   "key": "zwo_asi1600mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI1600MC Pro",
+   "sensor": "Panasonic MN34230PLJ",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI1600MC Pro",
+    "ASI1600MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 20000,
+     "read_noise_range_e": [
+      1.2,
+      1.2
+     ]
+    }
+   ],
+   "notes": "Read noise '1.2e @30db gain'. Hardware binning done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf). UNSURE: unity gain 139 is documented by ZWO only for the ASI1600MM-Cool (see that entry); not copied here."
+  },
+  {
+   "key": "zwo_asi1600mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI1600MC-Cool",
+   "sensor": "Panasonic MN34230PLJ",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI1600MC-Cool",
+    "ASI1600MC-Cool",
+    "ASI1600MC Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 20000,
+     "read_noise_range_e": [
+      1.2,
+      1.2
+     ]
+    }
+   ],
+   "notes": "Read noise '1.2e @30db gain'. Hardware binning done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf)."
+  },
+  {
+   "key": "zwo_asi1600gt",
+   "vendor": "ZWO",
+   "model": "ASI1600GT",
+   "sensor": "Panasonic MN34230ALJ",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI1600GT",
+    "ASI1600GT"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.zwoastro.com/product/asi-gt-camera/",
+    "https://i.zwoastro.com/zwo-website/manuals/ASI1600_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.8,
+     "width": 4656,
+     "height": 3520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 20000,
+     "read_noise_range_e": [
+      1.2,
+      1.2
+     ]
+    }
+   ],
+   "notes": "ASI1600MM Pro with integrated filter wheel. Sensor data from ASI1600 manual. Discontinued status assumed with the ASI1600 line (unsure)."
+  },
+  {
+   "key": "zwo_asi071mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI071MC Pro",
+   "sensor": "Sony IMX071",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI071MC Pro",
+    "ASI071MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI071MC_Pro_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.78,
+     "width": 4944,
+     "height": 3284,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 46000,
+     "read_noise_range_e": [
+      2.3,
+      2.3
+     ]
+    }
+   ],
+   "notes": "Read noise '2.3e @24db gain' (setting not stated). Hardware bin3 digital, 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI071MC_Pro_Manual_EN_V1.5.pdf). Discontinued status from general knowledge (not on current ZWO catalog pages seen)."
+  },
+  {
+   "key": "zwo_asi071mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI071MC-Cool",
+   "sensor": "Sony IMX071",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI071MC-Cool",
+    "ASI071MC-Cool",
+    "ASI071MC Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI071MC_Pro_Manual_EN_V1.5.pdf",
+    "https://www.zwoastro.com/2017/02/27/cooled-asi-camera-setting-in-ascom-driver/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.78,
+     "width": 4944,
+     "height": 3284,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 46000
+    }
+   ],
+   "notes": "Predecessor of ASI071MC Pro; specs assumed equal to ASI071 manual. ZWO blog lists full well 46K at gain 0 (https://www.zwoastro.com/2017/02/27/cooled-asi-camera-setting-in-ascom-driver/)."
+  },
+  {
+   "key": "zwo_asi094mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI094MC Pro",
+   "sensor": "Sony IMX094",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI094MC Pro",
+    "ASI094MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://www.zwoastro.com/2017/09/11/zwo-new-full-frame-cameras-asi094-pro-and-asi128-pro-released/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 4.88,
+     "width": 7376,
+     "height": 4928,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 52000
+    }
+   ],
+   "notes": "Specs from ZWO release article (https://www.zwoastro.com/2017/09/11/zwo-new-full-frame-cameras-asi094-pro-and-asi128-pro-released/). Read noise not given in text."
+  },
+  {
+   "key": "zwo_asi128mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI128MC Pro",
+   "sensor": "Sony IMX128",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI128MC Pro",
+    "ASI128MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI128_Manual_EN.pdf",
+    "https://www.zwoastro.com/2017/09/11/zwo-new-full-frame-cameras-asi094-pro-and-asi128-pro-released/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 5.97,
+     "width": 6032,
+     "height": 4032,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 76000,
+     "read_noise_range_e": [
+      2.6,
+      2.6
+     ]
+    }
+   ],
+   "notes": "Read noise '2.6e @24db gain'. Hardware bin3 digital, 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ZWO_ASI128_Manual_EN.pdf)."
+  },
+  {
+   "key": "zwo_asi585mc_pro",
+   "vendor": "ZWO",
+   "model": "ASI585MC Pro",
+   "sensor": "Sony IMX585",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MC Pro",
+    "ASI585MC Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/03/04a912015d682f11887ca758deedb947.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 40000,
+     "read_noise_range_e": [
+      0.7,
+      6.67
+     ]
+    }
+   ],
+   "notes": "HCG automatically on at gain 252 (https://i.zwoastro.com/wp-content/uploads/2025/03/04a912015d682f11887ca758deedb947.pdf). Read noise at 19.5-19.8db gain 3.8e (not converted)."
+  },
+  {
+   "key": "zwo_asi585mc",
+   "vendor": "ZWO",
+   "model": "ASI585MC",
+   "sensor": "Sony IMX585",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi585mc-mm/",
+    "https://i.zwoastro.com/zwo-website/manuals/ASI585_Manual_EN_V1.0.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 40000,
+     "read_noise_range_e": [
+      0.7,
+      12.0
+     ]
+    }
+   ],
+   "notes": "Uncooled. Product page full well MC 40Ke / MM 38.7Ke; ASI585 manual (MC) lists 47ke, read noise 0.8-12e, HCG at gain 252 (https://i.zwoastro.com/zwo-website/manuals/ASI585_Manual_EN_V1.0.pdf). Conflicting full-well values; product page used."
+  },
+  {
+   "key": "zwo_asi585mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI585MM Pro",
+   "sensor": "Sony IMX585",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MM Pro",
+    "ASI585MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/03/04a912015d682f11887ca758deedb947.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 38700,
+     "read_noise_range_e": [
+      0.7,
+      6.4
+     ]
+    }
+   ],
+   "notes": "HCG automatically on at gain 252 (https://i.zwoastro.com/wp-content/uploads/2025/03/04a912015d682f11887ca758deedb947.pdf). Read noise at 19.5-19.8db gain 3.8e (not converted)."
+  },
+  {
+   "key": "zwo_asi585mm",
+   "vendor": "ZWO",
+   "model": "ASI585MM",
+   "sensor": "Sony IMX585",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi585mc-mm/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 38700
+    }
+   ],
+   "notes": "Uncooled. Product page full well MC 40Ke / MM 38.7Ke; ASI585 manual (MC) lists 47ke, read noise 0.8-12e, HCG at gain 252 (https://i.zwoastro.com/zwo-website/manuals/ASI585_Manual_EN_V1.0.pdf). Conflicting full-well values; product page used."
+  },
+  {
+   "key": "zwo_asi585mc_air",
+   "vendor": "ZWO",
+   "model": "ASI585MC Air",
+   "sensor": "Sony IMX585 (+ SC2210 guide sensor)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MC Air",
+    "ASI585MC Air"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/05/4823be3cbf3d4074558bda927ebbd258.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 198,
+       "e_per_adu": 1.0,
+       "source": "ZWO ASI585MC Air manual spec table: 'UnityGain 198' (main sensor) (https://i.zwoastro.com/wp-content/uploads/2025/05/4823be3cbf3d4074558bda927ebbd258.pdf)"
+      }
+     ],
+     "full_well_e": 40000,
+     "read_noise_range_e": [
+      0.7,
+      6.67
+     ]
+    }
+   ],
+   "notes": "HCGGain 252; BinADC 10bit (https://i.zwoastro.com/wp-content/uploads/2025/05/4823be3cbf3d4074558bda927ebbd258.pdf)."
+  },
+  {
+   "key": "zwo_asi585mm_air",
+   "vendor": "ZWO",
+   "model": "ASI585MM Air",
+   "sensor": "Sony IMX585 (+ SC2210 guide sensor)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI585MM Air",
+    "ASI585MM Air"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/12/23861223b85bc6cfb1d8df8aeac1a02e.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 195,
+       "e_per_adu": 1.0,
+       "source": "ZWO ASI585MM Air manual spec table: 'Unity Gain 195' (main camera) (https://i.zwoastro.com/wp-content/uploads/2025/12/23861223b85bc6cfb1d8df8aeac1a02e.pdf)"
+      }
+     ],
+     "full_well_e": 38700,
+     "read_noise_range_e": [
+      0.7,
+      6.4
+     ]
+    }
+   ],
+   "notes": "HCG Gain 200; BinADC 10bit (https://i.zwoastro.com/wp-content/uploads/2025/12/23861223b85bc6cfb1d8df8aeac1a02e.pdf)."
+  },
+  {
+   "key": "zwo_asi174mm",
+   "vendor": "ZWO",
+   "model": "ASI174MM",
+   "sensor": "Sony IMX174 (IMX174LLJ)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI174MM",
+    "ASI174MM",
+    "ASI174MM-C"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI174_Manual_EN_V1.5.pdf",
+    "https://www.zwoastro.com/product/asi174mm-mono/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1936,
+     "height": 1216,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 32000,
+     "read_noise_range_e": [
+      3.5,
+      3.5
+     ]
+    }
+   ],
+   "notes": "Read noise '3.5e @ 30db gain'. Global shutter; occultation/fast photometry use. Software bin2 only."
+  },
+  {
+   "key": "zwo_asi174mc",
+   "vendor": "ZWO",
+   "model": "ASI174MC",
+   "sensor": "Sony IMX174 (IMX174LQJ)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI174MC",
+    "ASI174MC",
+    "ASI174MC-C"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI174_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1936,
+     "height": 1216,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      3.5,
+      3.5
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi174mm_cool",
+   "vendor": "ZWO",
+   "model": "ASI174MM-Cool",
+   "sensor": "Sony IMX174",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI174MM-Cool",
+    "ASI174MM-Cool",
+    "ASI174MM Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI174_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1936,
+     "height": 1216,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      3.5,
+      3.5
+     ]
+    }
+   ],
+   "notes": "Cooled variant mentioned in ASI174 manual. Discontinued status not stated by ZWO (assumed; unsure)."
+  },
+  {
+   "key": "zwo_asi174mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI174MC-Cool",
+   "sensor": "Sony IMX174",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI174MC-Cool",
+    "ASI174MC-Cool",
+    "ASI174MC Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI174_Manual_EN_V1.5.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1936,
+     "height": 1216,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      3.5,
+      3.5
+     ]
+    }
+   ],
+   "notes": "Cooled variant mentioned in ASI174 manual. Discontinued status not stated by ZWO (assumed; unsure)."
+  },
+  {
+   "key": "zwo_asi174mm_mini",
+   "vendor": "ZWO",
+   "model": "ASI174MM Mini",
+   "sensor": "Sony IMX174",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI174MM Mini",
+    "ASI174MM Mini"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASIMini_Manual_EN.pdf",
+    "https://www.zwoastro.com/product/mini-cameras/",
+    "https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.86,
+     "width": 1936,
+     "height": 1216,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 32000,
+     "read_noise_range_e": [
+      3.5,
+      6.0
+     ]
+    }
+   ],
+   "notes": "2026 guide-camera manual table names the sensor IMX249 while its section 1 says IMX174 (https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf); IMX174 used."
+  },
+  {
+   "key": "zwo_asi120mm_mini",
+   "vendor": "ZWO",
+   "model": "ASI120MM Mini",
+   "sensor": "onsemi AR0130CS",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI120MM Mini",
+    "ASI120MM Mini"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASIMini_Manual_EN.pdf",
+    "https://www.zwoastro.com/product/mini-cameras/",
+    "https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14500,
+     "read_noise_range_e": [
+      4.0,
+      6.6
+     ]
+    }
+   ],
+   "notes": "Full well 13ke in 2018 mini manual, 14.5ke in 2026 guide manual (https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf); newer used."
+  },
+  {
+   "key": "zwo_asi290mm_mini",
+   "vendor": "ZWO",
+   "model": "ASI290MM Mini",
+   "sensor": "Sony IMX290",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI290MM Mini",
+    "ASI290MM Mini"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ZWO_ASIMini_Manual_EN.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14600,
+     "read_noise_range_e": [
+      1.0,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi220mm_mini",
+   "vendor": "ZWO",
+   "model": "ASI220MM Mini",
+   "sensor": "SmartSens SC2210",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI220MM Mini",
+    "ASI220MM Mini"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf",
+    "https://www.zwoastro.com/product/zwo-asi220mm-minimono/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 4.0,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 8780,
+     "read_noise_range_e": [
+      0.6,
+      3.2
+     ]
+    }
+   ],
+   "notes": "Read noise 0.6-3.2e (1.97e@10.6db gain) (https://i.zwoastro.com/wp-content/uploads/2026/06/9e36d9764abc28224eb8fa5a948c9b9d.pdf). ADC: the table gives one '12bit' value for all models. UNSURE: Air manuals give UnityGain 68 for the SC2210 guide sensor, but that is a different camera, so not copied."
+  },
+  {
+   "key": "zwo_asi120mm",
+   "vendor": "ZWO",
+   "model": "ASI120MM",
+   "sensor": "onsemi AR0130CS",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI120MM",
+    "ASI120MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI120_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      4.0,
+      6.6
+     ]
+    }
+   ],
+   "notes": "USB2 original; marked Discontinued in manual."
+  },
+  {
+   "key": "zwo_asi120mm_s",
+   "vendor": "ZWO",
+   "model": "ASI120MM-S",
+   "sensor": "onsemi AR0130CS",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI120MM-S",
+    "ASI120MM-S"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI120_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      4.0,
+      6.6
+     ]
+    }
+   ],
+   "notes": "USB3 version."
+  },
+  {
+   "key": "zwo_asi120mc",
+   "vendor": "ZWO",
+   "model": "ASI120MC",
+   "sensor": "onsemi AR0130CS",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI120MC",
+    "ASI120MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI120_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      4.0,
+      6.6
+     ]
+    }
+   ],
+   "notes": "USB2 original; marked Discontinued in manual."
+  },
+  {
+   "key": "zwo_asi120mc_s",
+   "vendor": "ZWO",
+   "model": "ASI120MC-S",
+   "sensor": "onsemi AR0130CS",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI120MC-S",
+    "ASI120MC-S"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI120_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1280,
+     "height": 960,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      4.0,
+      6.6
+     ]
+    }
+   ],
+   "notes": "USB3 version."
+  },
+  {
+   "key": "zwo_asi290mm",
+   "vendor": "ZWO",
+   "model": "ASI290MM",
+   "sensor": "Sony IMX290 (IMX290LQR)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI290MM",
+    "ASI290MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI290_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14600,
+     "read_noise_range_e": [
+      1.0,
+      3.2
+     ]
+    }
+   ],
+   "notes": "Occultation use. Software bin2 (10-bit) only."
+  },
+  {
+   "key": "zwo_asi290mc",
+   "vendor": "ZWO",
+   "model": "ASI290MC",
+   "sensor": "Sony IMX291 (IMX291LQR)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI290MC",
+    "ASI290MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI290_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14600,
+     "read_noise_range_e": [
+      1.0,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi290mm_cool",
+   "vendor": "ZWO",
+   "model": "ASI290MM-Cool",
+   "sensor": "Sony IMX290 (IMX290LQR)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI290MM-Cool",
+    "ASI290MM-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI290_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14600,
+     "read_noise_range_e": [
+      1.0,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi290mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI290MC-Cool",
+   "sensor": "Sony IMX291 (IMX291LQR)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI290MC-Cool",
+    "ASI290MC-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI290_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 14600,
+     "read_noise_range_e": [
+      1.0,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi432mm",
+   "vendor": "ZWO",
+   "model": "ASI432MM",
+   "sensor": "Sony IMX432 (IMX432LLJ-C)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI432MM",
+    "ASI432MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI432_Manual_EN_V1.0.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 9.0,
+     "width": 1608,
+     "height": 1104,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [
+      {
+       "setting": 400,
+       "read_noise_e": 2.4,
+       "source": "ZWO ASI432 manual: 'When the gain is 400, the readout noise is 2.4e.' (https://i.zwoastro.com/zwo-website/manuals/ASI432_Manual_EN_V1.0.pdf)"
+      }
+     ],
+     "full_well_e": 97000,
+     "read_noise_range_e": [
+      2.4,
+      20.8
+     ]
+    }
+   ],
+   "notes": "Global shutter. HCG on at gain 140; read noise 4.3e@14db gain (not converted) (https://i.zwoastro.com/zwo-website/manuals/ASI432_Manual_EN_V1.0.pdf). Manual model table mislabels it 'Color'."
+  },
+  {
+   "key": "zwo_asi462mc",
+   "vendor": "ZWO",
+   "model": "ASI462MC",
+   "sensor": "Sony IMX462",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI462MC",
+    "ASI462MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI462_Manual_EN_V1.1.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 11200,
+     "read_noise_range_e": [
+      0.47,
+      2.65
+     ]
+    }
+   ],
+   "notes": "HCG on at gain 80 (https://i.zwoastro.com/zwo-website/manuals/ASI462_Manual_EN_V1.1.pdf)."
+  },
+  {
+   "key": "zwo_asi462mm",
+   "vendor": "ZWO",
+   "model": "ASI462MM",
+   "sensor": "Sony IMX462",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI462MM",
+    "ASI462MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi462mm/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "read_noise_range_e": [
+      0.47,
+      0.47
+     ]
+    }
+   ],
+   "notes": "Product page gives only '2Mega', 10/12-bit modes, read noise as low as 0.47e, HCG at gain 80, QE ~89% (https://www.zwoastro.com/product/asi462mm/); pixel size/resolution not stated (likely same as ASI462MC, not copied). Out of stock."
+  },
+  {
+   "key": "zwo_asi485mc",
+   "vendor": "ZWO",
+   "model": "ASI485MC",
+   "sensor": "Sony IMX485",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI485MC",
+    "ASI485MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI485_Manual_EN_V1.0.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 13000,
+     "read_noise_range_e": [
+      0.7,
+      6.4
+     ]
+    }
+   ],
+   "notes": "HCG on at gain 80 (https://i.zwoastro.com/zwo-website/manuals/ASI485_Manual_EN_V1.0.pdf)."
+  },
+  {
+   "key": "zwo_asi482mc",
+   "vendor": "ZWO",
+   "model": "ASI482MC",
+   "sensor": "Sony IMX482",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI482MC",
+    "ASI482MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI482_Manual_EN_V1.0.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.8,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 51500,
+     "read_noise_range_e": [
+      1.5,
+      12.9
+     ]
+    }
+   ],
+   "notes": "HCG on at gain 80 (https://i.zwoastro.com/zwo-website/manuals/ASI482_Manual_EN_V1.0.pdf). Out of stock."
+  },
+  {
+   "key": "zwo_asi662mc",
+   "vendor": "ZWO",
+   "model": "ASI662MC",
+   "sensor": "Sony IMX662 (IMX662AAQR-C)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI662MC",
+    "ASI662MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI662_Manual_EN_V1.0.pdf",
+    "https://www.zwoastro.com/product/asi662mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 38200,
+     "read_noise_range_e": [
+      0.8,
+      6.9
+     ]
+    }
+   ],
+   "notes": "Manual: HCG at gain 252, 1.22e@19db (https://i.zwoastro.com/zwo-website/manuals/ASI662_Manual_EN_V1.0.pdf); product page says HCG at gain 200 (https://www.zwoastro.com/product/asi662mc/) - conflict."
+  },
+  {
+   "key": "zwo_asi662mm",
+   "vendor": "ZWO",
+   "model": "ASI662MM",
+   "sensor": "Sony IMX662",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI662MM",
+    "ASI662MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi662mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 1920,
+     "height": 1080,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 38200,
+     "read_noise_range_e": [
+      0.8,
+      0.8
+     ]
+    }
+   ],
+   "notes": "Shared MC/MM product table (https://www.zwoastro.com/product/asi662mc/)."
+  },
+  {
+   "key": "zwo_asi664mc",
+   "vendor": "ZWO",
+   "model": "ASI664MC",
+   "sensor": "Sony IMX664 (IMX664AAQR1-C)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI664MC",
+    "ASI664MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/01/8c3516e9c63686f7ea9b2bcf48c9bd77.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.9,
+     "width": 2704,
+     "height": 1536,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 36500,
+     "read_noise_range_e": [
+      0.46,
+      5.8
+     ]
+    }
+   ],
+   "notes": "HCG at gain 252 and above (https://i.zwoastro.com/wp-content/uploads/2024/01/8c3516e9c63686f7ea9b2bcf48c9bd77.pdf)."
+  },
+  {
+   "key": "zwo_asi676mc",
+   "vendor": "ZWO",
+   "model": "ASI676MC",
+   "sensor": "Sony IMX676",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI676MC",
+    "ASI676MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2024/11/1d47cc7b0f8d72e0991b6bbcc942e7de.pdf",
+    "https://www.zwoastro.com/product/asi676/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3552,
+     "height": 3552,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 10550,
+     "read_noise_range_e": [
+      0.56,
+      2.9
+     ]
+    }
+   ],
+   "notes": "HCG at gain 180 (https://i.zwoastro.com/wp-content/uploads/2024/11/1d47cc7b0f8d72e0991b6bbcc942e7de.pdf)."
+  },
+  {
+   "key": "zwo_asi676mm",
+   "vendor": "ZWO",
+   "model": "ASI676MM",
+   "sensor": "Sony IMX676",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI676MM",
+    "ASI676MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2026/01/affdd8c7a12957f65432cb7e3c00ee58.pdf",
+    "https://www.zwoastro.com/product/asi676/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3552,
+     "height": 3552,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 10550,
+     "read_noise_range_e": [
+      0.56,
+      2.9
+     ]
+    }
+   ],
+   "notes": "HCG at gain 180 (https://i.zwoastro.com/wp-content/uploads/2026/01/affdd8c7a12957f65432cb7e3c00ee58.pdf)."
+  },
+  {
+   "key": "zwo_asi678mc",
+   "vendor": "ZWO",
+   "model": "ASI678MC",
+   "sensor": "Sony IMX678 (IMX678AAQR1-C)",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI678MC",
+    "ASI678MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI678_Manual_EN_V1.0.pdf",
+    "https://www.zwoastro.com/product/zwo-asi678mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 11270,
+     "read_noise_range_e": [
+      0.6,
+      2.7
+     ]
+    }
+   ],
+   "notes": "HCG at gain 182 (https://i.zwoastro.com/zwo-website/manuals/ASI678_Manual_EN_V1.0.pdf)."
+  },
+  {
+   "key": "zwo_asi678mm",
+   "vendor": "ZWO",
+   "model": "ASI678MM",
+   "sensor": "Sony IMX678",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI678MM",
+    "ASI678MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/zwo-asi678mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 2.0,
+     "width": 3840,
+     "height": 2160,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 11270,
+     "read_noise_range_e": [
+      0.6,
+      0.6
+     ]
+    }
+   ],
+   "notes": "Shared MC/MM product table (https://www.zwoastro.com/product/zwo-asi678mc/)."
+  },
+  {
+   "key": "zwo_asi715mc",
+   "vendor": "ZWO",
+   "model": "ASI715MC",
+   "sensor": "Sony IMX715",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI715MC",
+    "ASI715MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi715mc/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 1.45,
+     "width": 3864,
+     "height": 2192,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 6030,
+     "read_noise_range_e": [
+      0.72,
+      0.72
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi178mm",
+   "vendor": "ZWO",
+   "model": "ASI178MM",
+   "sensor": "Sony IMX178",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI178MM",
+    "ASI178MM"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3096,
+     "height": 2080,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.4,
+      2.2
+     ]
+    }
+   ],
+   "notes": "Hardware bin2/bin4 done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf)."
+  },
+  {
+   "key": "zwo_asi178mm_cool",
+   "vendor": "ZWO",
+   "model": "ASI178MM-Cool",
+   "sensor": "Sony IMX178",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI178MM-Cool",
+    "ASI178MM-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3096,
+     "height": 2080,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.4,
+      2.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi178mc",
+   "vendor": "ZWO",
+   "model": "ASI178MC",
+   "sensor": "Sony IMX178",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI178MC",
+    "ASI178MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3096,
+     "height": 2080,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.4,
+      2.2
+     ]
+    }
+   ],
+   "notes": "Hardware bin2/bin4 done digitally with 10-bit ADC (https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf)."
+  },
+  {
+   "key": "zwo_asi178mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI178MC-Cool",
+   "sensor": "Sony IMX178",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI178MC-Cool",
+    "ASI178MC-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI178_Manual_EN_V1.3.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (14-bit)",
+     "pixel_um": 2.4,
+     "width": 3096,
+     "height": 2080,
+     "adc_bits": 14,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 15000,
+     "read_noise_range_e": [
+      1.4,
+      2.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi224mc",
+   "vendor": "ZWO",
+   "model": "ASI224MC",
+   "sensor": "Sony IMX224",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI224MC",
+    "ASI224MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI224_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1304,
+     "height": 976,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 19200,
+     "read_noise_range_e": [
+      0.8,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi224mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI224MC-Cool",
+   "sensor": "Sony IMX224",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI224MC-Cool",
+    "ASI224MC-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI224_Manual_EN_V1.4.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1304,
+     "height": 976,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 19200,
+     "read_noise_range_e": [
+      0.8,
+      3.2
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi385mc",
+   "vendor": "ZWO",
+   "model": "ASI385MC",
+   "sensor": "Sony IMX385",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI385MC",
+    "ASI385MC"
+   ],
+   "header_gain": "setting",
+   "cooled": false,
+   "discontinued": null,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI385_Manual_EN_V1.2.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 18700,
+     "read_noise_range_e": [
+      0.75,
+      0.75
+     ]
+    }
+   ],
+   "notes": "Read noise '0.75e @30db gain'."
+  },
+  {
+   "key": "zwo_asi385mc_cool",
+   "vendor": "ZWO",
+   "model": "ASI385MC-Cool",
+   "sensor": "Sony IMX385",
+   "color": "osc",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI385MC-Cool",
+    "ASI385MC-Cool"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": true,
+   "sources": [
+    "https://i.zwoastro.com/zwo-website/manuals/ASI385_Manual_EN_V1.2.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 3.75,
+     "width": 1936,
+     "height": 1096,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 18700,
+     "read_noise_range_e": [
+      0.75,
+      0.75
+     ]
+    }
+   ]
+  },
+  {
+   "key": "zwo_asi990mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI990MM Pro",
+   "sensor": "Sony IMX990 (InGaAs SWIR)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI990MM Pro",
+    "ASI990MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/07/7f044b0eb7677b1deb47b15446cb049f.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.0,
+     "width": 1280,
+     "height": 1024,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 127000,
+     "read_noise_range_e": [
+      21.0,
+      150.0
+     ]
+    }
+   ],
+   "notes": "InGaAs SWIR (0.4-1.7um), not a silicon CMOS sensor; included for completeness (https://i.zwoastro.com/wp-content/uploads/2025/07/7f044b0eb7677b1deb47b15446cb049f.pdf)."
+  },
+  {
+   "key": "zwo_asi991mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI991MM Pro",
+   "sensor": "Sony IMX991 (InGaAs SWIR)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI991MM Pro",
+    "ASI991MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://i.zwoastro.com/wp-content/uploads/2025/07/7f044b0eb7677b1deb47b15446cb049f.pdf"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default (12-bit)",
+     "pixel_um": 5.0,
+     "width": 656,
+     "height": 520,
+     "adc_bits": 12,
+     "binning": null,
+     "binning_source": null,
+     "curve": [],
+     "full_well_e": 127000,
+     "read_noise_range_e": [
+      21.0,
+      150.0
+     ]
+    }
+   ],
+   "notes": "InGaAs SWIR (0.4-1.7um), not a silicon CMOS sensor; included for completeness (https://i.zwoastro.com/wp-content/uploads/2025/07/7f044b0eb7677b1deb47b15446cb049f.pdf)."
+  },
+  {
+   "key": "zwo_asi992mm_pro",
+   "vendor": "ZWO",
+   "model": "ASI992MM Pro",
+   "sensor": "Sony IMX992 (InGaAs SWIR)",
+   "color": "mono",
+   "bayer": null,
+   "aliases": [
+    "ZWO ASI992MM Pro",
+    "ASI992MM Pro"
+   ],
+   "header_gain": "setting",
+   "cooled": true,
+   "discontinued": false,
+   "sources": [
+    "https://www.zwoastro.com/product/asi990mm-pro-asi992mm-pro/"
+   ],
+   "modes": [
+    {
+     "key": "default",
+     "name": "Default",
+     "pixel_um": null,
+     "width": null,
+     "height": null,
+     "adc_bits": null,
+     "binning": null,
+     "binning_source": null,
+     "curve": []
+    }
+   ],
+   "notes": "Listed on ZWO product page (https://www.zwoastro.com/product/asi990mm-pro-asi992mm-pro/); no specification text retrievable. Sensor name inferred from model number (unsure)."
+  }
+ ]
+}

@@ -520,6 +520,136 @@ def fit_similarity_from_stars(
     return best
 
 
+def _estimate(cls: Any, src: np.ndarray, dst: np.ndarray, **kw: Any) -> Any:
+    """skimage transform ``cls`` estimated src -> dst (API of scikit-image < and >= 0.26); None on failure."""
+    if hasattr(cls, "from_estimate"):
+        tt = cls.from_estimate(src, dst, **kw)
+        ok = bool(tt)
+    else:
+        tt = cls()
+        ok = bool(tt.estimate(src, dst, **kw))
+    if not ok or not np.all(np.isfinite(np.asarray(tt.params, dtype=np.float64))):
+        return None
+    return tt
+
+
+def fit_polynomial_from_stars(
+    src_xy: Any, ref_xy: Any, seed_matrix: Any, *, fwhm_px: float
+) -> tuple[Any, Any, RegistrationCheck] | None:
+    """ALIGN-POLY-2026-10: polynomial frame -> reference transform (order ALIGN_POLY_ORDER) fitted on
+    the star pairs, seeded by a 3x3 matrix (the best similarity). Pairs are mutual nearest
+    neighbours within ALIGN_MATCH_FWHM x FWHM, refined three times. Returns (forward, inverse,
+    RegistrationCheck) or None (too few pairs: at least 3 per coefficient)."""
+    from skimage.transform import PolynomialTransform  # noqa: PLC0415
+
+    from pipeline_constants import ALIGN_MATCH_FWHM, ALIGN_POLY_ORDER  # noqa: PLC0415
+
+    src, ref = _finite_xy(src_xy), _finite_xy(ref_xy)
+    if seed_matrix is None or len(src) == 0 or len(ref) == 0:
+        return None
+    m = np.asarray(seed_matrix, dtype=np.float64).reshape(3, 3)
+    if not np.all(np.isfinite(m)):
+        return None
+    order = int(ALIGN_POLY_ORDER)
+    n_min = 3 * (order + 1) * (order + 2) // 2
+    r = ALIGN_MATCH_FWHM * float(fwhm_px)
+    mapped = _apply_matrix_3x3(m, src)
+    si = ri = np.zeros(0, dtype=int)
+    for _ in range(3):
+        si, ri, _d = _mutual_pairs(mapped, ref, r)
+        if len(si) < n_min:
+            return None
+        fwd = _estimate(PolynomialTransform, src[si], ref[ri], order=order)
+        if fwd is None:
+            return None
+        mapped = np.asarray(fwd(src), dtype=np.float64)
+    si, ri, d = _mutual_pairs(mapped, ref, r)
+    if len(si) < n_min:
+        return None
+    fwd = _estimate(PolynomialTransform, src[si], ref[ri], order=order)
+    inv = _estimate(PolynomialTransform, ref[ri], src[si], order=order)
+    if fwd is None or inv is None:
+        return None
+    mapped = np.asarray(fwd(src), dtype=np.float64)
+    _si, _ri, d = _mutual_pairs(mapped, ref, r)
+    possible = int(min(len(src), len(ref)))
+    if len(d) == 0:
+        return None
+    return fwd, inv, RegistrationCheck(float(np.median(d)), float(np.percentile(d, 90)), int(len(d)), possible)
+
+
+def registration_model_dbic(src_xy: Any, ref_xy: Any, seed_matrix: Any, *, fwhm_px: float) -> float | None:
+    """ALIGN-MODEL-2026-10: BIC(similarity) - BIC(polynomial) of the frame -> reference mapping, both
+    least-squares fits on the SAME star pairs (mutual nearest neighbours of the seed registration within
+    ALIGN_MATCH_FWHM x FWHM). BIC = n ln(RSS / n) + k ln n, n = 2 x pairs (x and y residuals), k = 4 for
+    the similarity, 6 per axis for the 2nd-order polynomial. Positive = the polynomial is preferred.
+    None when the pairs are too few for the polynomial."""
+    from skimage.transform import PolynomialTransform  # noqa: PLC0415
+
+    from pipeline_constants import ALIGN_MATCH_FWHM, ALIGN_POLY_ORDER  # noqa: PLC0415
+
+    src, ref = _finite_xy(src_xy), _finite_xy(ref_xy)
+    if seed_matrix is None or len(src) == 0 or len(ref) == 0:
+        return None
+    m = np.asarray(seed_matrix, dtype=np.float64).reshape(3, 3)
+    if not np.all(np.isfinite(m)):
+        return None
+    order = int(ALIGN_POLY_ORDER)
+    k_poly = (order + 1) * (order + 2)  # coefficients of x and y together
+    si, ri, _d = _mutual_pairs(_apply_matrix_3x3(m, src), ref, ALIGN_MATCH_FWHM * float(fwhm_px))
+    if len(si) < 3 * k_poly // 2:
+        return None
+    a, b = src[si], ref[ri]
+    sim = _similarity_estimate(a, b)
+    poly = _estimate(PolynomialTransform, a, b, order=order)
+    if sim is None or poly is None:
+        return None
+    n = 2 * len(a)
+    rss_s = float(np.sum((np.asarray(sim(a)) - b) ** 2))
+    rss_p = float(np.sum((np.asarray(poly(a)) - b) ** 2))
+    # a frame identical to the reference (residual ~1e-13 px) has nothing to gain: ln(0) is no evidence
+    if not (rss_s > 0 and rss_p > 0) or rss_s / n < 1e-4:
+        return None
+    bic_s = n * math.log(rss_s / n) + 4 * math.log(n)
+    bic_p = n * math.log(rss_p / n) + k_poly * math.log(n)
+    return float(bic_s - bic_p)
+
+
+def projective_approximation(fwd: Any, shape_hw: tuple[int, int]) -> tuple[list[float], float]:
+    """3x3 projective matrix closest to the polynomial ``fwd`` on a 9x9 grid over the frame, and the
+    largest grid difference (px). Stored as VY_AM0..8 for the steps that use a matrix (data
+    footprint, saturation back-mapping, field corners)."""
+    from skimage.transform import ProjectiveTransform  # noqa: PLC0415
+
+    h, w = int(shape_hw[0]), int(shape_hw[1])
+    gx, gy = np.meshgrid(np.linspace(0, w - 1, 9), np.linspace(0, h - 1, 9))
+    pts = np.c_[gx.ravel(), gy.ravel()]
+    dst = np.asarray(fwd(pts), dtype=np.float64)
+    pt = _estimate(ProjectiveTransform, pts, dst)
+    if pt is None:
+        raise ValueError("projective approximation of the polynomial registration failed")
+    err = float(np.max(np.hypot(*(np.asarray(pt(pts)) - dst).T)))
+    return [float(x) for x in np.asarray(pt.params, dtype=np.float64).reshape(-1)], err
+
+
+def warp_to_reference(data: Any, ref_shape: tuple[int, int], inverse_map: Any) -> np.ndarray:
+    """Resample a frame onto the reference grid exactly as astroalign.apply_transform does (cubic,
+    constant fill with the frame median) - for transforms astroalign cannot apply (polynomial)."""
+    from skimage.transform import warp  # noqa: PLC0415
+
+    src = np.asarray(data)
+    return warp(
+        src,
+        inverse_map=inverse_map,
+        output_shape=tuple(ref_shape),
+        order=3,
+        mode="constant",
+        cval=float(np.median(src)),
+        clip=True,
+        preserve_range=True,
+    )
+
+
 def _alignment_load_masterstar_catalog_points_for_frame(
     hdr_frame: fits.Header,
     *,
@@ -639,6 +769,7 @@ def _alignment_compute_one_frame(
     # (phase correlation / WCS shift) still report a meaningful detected star count.
     xy_best = np.zeros((0, 2), dtype=np.float32)
     _attempt_ok = False
+    _chk_wcs: RegistrationCheck | None = None  # set when the frame WCS failed the star check
 
     def _n_unique_spread_sample(arr_in: np.ndarray, *, max_samples: int = 10_000) -> int:
         # Thin closure over the module-level helper so the constant-frame gate can log via the
@@ -709,6 +840,44 @@ def _alignment_compute_one_frame(
                         warnings.simplefilter("ignore", FITSFixedWarning)
                         w_i = WCS(hdr)
                     if getattr(w_i, "has_celestial", False):
+                        # ALIGN-MATRIX-2026-10: affine frame->reference fit through both WCS
+                        _wcs_matrix = None
+                        try:
+                            _hh, _ww = np.asarray(data).shape[:2]
+                            _gx, _gy = np.meshgrid(np.linspace(0, _ww - 1, 7), np.linspace(0, _hh - 1, 7))
+                            _fx, _fy = _gx.ravel(), _gy.ravel()
+                            _ra, _de = w_i.celestial.all_pix2world(_fx, _fy, 0)
+                            _rx, _ry = ref_wcs_obj.celestial.all_world2pix(_ra, _de, 0)
+                            _A = np.c_[_fx, _fy, np.ones_like(_fx)]
+                            _cx, *_ = np.linalg.lstsq(_A, _rx, rcond=None)
+                            _cy, *_ = np.linalg.lstsq(_A, _ry, rcond=None)
+                            _wcs_matrix = [
+                                float(_cx[0]), float(_cx[1]), float(_cx[2]),
+                                float(_cy[0]), float(_cy[1]), float(_cy[2]),
+                                0.0, 0.0, 1.0,
+                            ]
+                        except Exception:  # noqa: BLE001
+                            _wcs_matrix = None
+                        # ALIGN-WCS-2026-10: check the frame's WCS on its stars BEFORE reprojecting.
+                        # A capture-program WCS (NINA: mount pointing + rotation, no distortion) is
+                        # typically 2 px off - every frame of a night was reprojected, failed the star
+                        # check and was warped again by the star-matched fit. Same outcome, no wasted
+                        # reprojection: go straight to the star-matched fit with the WCS as first guess.
+                        if _wcs_matrix is not None:
+                            _chk_w = registration_check(xy, fixed_target_pts, _wcs_matrix, fwhm_px=fw_i)
+                            if not registration_ok(_chk_w, fwhm_px=fw_i):
+                                _alignment_emit_log(
+                                    log_sink,
+                                    f"WARNING: {fp.name} wcs_reproject not verified on stars (residual "
+                                    f"{_chk_w.resid_px:.2f} px, p90 {_chk_w.p90_px:.2f} px, "
+                                    f"{_chk_w.pairs}/{_chk_w.possible} pairs, FWHM {fw_i:.2f}) "
+                                    "- trying the star-matched fit",
+                                )
+                                aligned_method = "wcs_reproject"
+                                registration_handoff = {"method": "wcs_reproject", "matrix": _wcs_matrix}
+                                xy_used = np.asarray(xy, dtype=np.float32)
+                                _chk_wcs = _chk_w
+                                break
                         aligned_data, _foot = reproject_interp(
                             (np.asarray(data, dtype=np.float32), w_i.celestial),
                             ref_wcs_obj.celestial,
@@ -720,23 +889,8 @@ def _alignment_compute_one_frame(
                         aligned_data = _as_fits_float32_image(aligned_data)
                         aligned_method = "wcs_reproject"
                         registration_handoff = {"method": "wcs_reproject"}
-                        # ALIGN-MATRIX-2026-10: affine frame->reference fit through both WCS
-                        try:
-                            _hh, _ww = np.asarray(data).shape[:2]
-                            _gx, _gy = np.meshgrid(np.linspace(0, _ww - 1, 7), np.linspace(0, _hh - 1, 7))
-                            _fx, _fy = _gx.ravel(), _gy.ravel()
-                            _ra, _de = w_i.celestial.all_pix2world(_fx, _fy, 0)
-                            _rx, _ry = ref_wcs_obj.celestial.all_world2pix(_ra, _de, 0)
-                            _A = np.c_[_fx, _fy, np.ones_like(_fx)]
-                            _cx, *_ = np.linalg.lstsq(_A, _rx, rcond=None)
-                            _cy, *_ = np.linalg.lstsq(_A, _ry, rcond=None)
-                            registration_handoff["matrix"] = [
-                                float(_cx[0]), float(_cx[1]), float(_cx[2]),
-                                float(_cy[0]), float(_cy[1]), float(_cy[2]),
-                                0.0, 0.0, 1.0,
-                            ]
-                        except Exception:  # noqa: BLE001
-                            pass
+                        if _wcs_matrix is not None:
+                            registration_handoff["matrix"] = _wcs_matrix
                 except Exception:  # noqa: BLE001
                     aligned_data = None
 
@@ -826,7 +980,7 @@ def _alignment_compute_one_frame(
     # and a frame that cannot be verified is not aligned and not measured.
     src_v = np.asarray(xy_used if len(xy_used) else xy_best, dtype=np.float64).reshape(-1, 2)
     ref_v = np.asarray(fixed_target_pts, dtype=np.float64).reshape(-1, 2)
-    chk = _NO_CHECK
+    chk = _NO_CHECK if _chk_wcs is None else _chk_wcs
     if _attempt_ok and aligned_data is not None:
         _mat = (registration_handoff or {}).get("matrix") if isinstance(registration_handoff, dict) else None
         chk = registration_check(src_v, ref_v, _mat, fwhm_px=fw_i)
@@ -839,6 +993,7 @@ def _alignment_compute_one_frame(
             )
             _attempt_ok, aligned_data = False, None
 
+    _t = None
     if not _attempt_ok or aligned_data is None:
         _guesses: list[Any] = [
             phase_correlation_shift(data, ref_data), np.eye(3), rotation_180_guess(np.asarray(data).shape[:2]),
@@ -873,6 +1028,69 @@ def _alignment_compute_one_frame(
             except Exception as _sim_exc:  # noqa: BLE001
                 _alignment_emit_log(log_sink, f"WARNING: {fp.name} star-matched warp failed: {_sim_exc}")
                 _attempt_ok, aligned_data = False, None
+
+    # ALIGN-POLY-2026-10 (Milan 2026-10-24): a wide field shifted on the chip carries the lens
+    # distortion the similarity cannot follow (MN Boo 538: p90 0.59-0.62 px, 101 of 139 frames
+    # refused). Fit the polynomial on the star pairs of the best similarity and verify it with the
+    # same gate (IRAF geomap "general" geometry: linear part + distortion).
+    # ALIGN-MODEL-2026-10 (Milan 2026-10-24): a VERIFIED similarity (astroalign / star_similarity) is
+    # also replaced when the frame's own stars prefer the polynomial by BIC (ALIGN_MODEL_DBIC).
+    from pipeline_constants import ALIGN_MODEL_DBIC  # noqa: PLC0415
+
+    _seed = None
+    _model_dbic: float | None = None
+    _verified_sim = bool(_attempt_ok and aligned_data is not None and aligned_method in ("astroalign", "star_similarity"))
+    if _verified_sim and isinstance(registration_handoff, dict) and registration_handoff.get("matrix") is not None:
+        _seed = np.asarray(registration_handoff["matrix"], dtype=np.float64)
+        try:
+            _model_dbic = registration_model_dbic(src_v, ref_v, _seed, fwhm_px=fw_i)
+        except Exception as _bic_exc:  # noqa: BLE001
+            _alignment_emit_log(log_sink, f"WARNING: {fp.name} model selection failed: {_bic_exc}")
+            _model_dbic = None
+        if _model_dbic is None or _model_dbic <= ALIGN_MODEL_DBIC:
+            _seed = None  # the similarity stays
+        else:
+            _alignment_emit_log(
+                log_sink,
+                f"INFO: {fp.name} {aligned_method} verified, but the stars prefer the polynomial "
+                f"(dBIC {_model_dbic:.1f} > {ALIGN_MODEL_DBIC:g})",
+            )
+    elif (not _attempt_ok or aligned_data is None) and _t is not None:
+        _seed = np.asarray(_t.params, dtype=np.float64)
+    if _seed is not None:
+        try:
+            _poly = fit_polynomial_from_stars(src_v, ref_v, _seed, fwhm_px=fw_i)
+        except Exception as _poly_exc:  # noqa: BLE001
+            _alignment_emit_log(log_sink, f"WARNING: {fp.name} polynomial fit failed: {_poly_exc}")
+            _poly = None
+        if _poly is not None and registration_ok(_poly[2], fwhm_px=fw_i):
+            _fwd, _inv, chk = _poly
+            from pipeline_constants import ALIGN_POLY_ORDER  # noqa: PLC0415
+
+            try:
+                _am, _am_err = projective_approximation(_fwd, np.asarray(data).shape[:2])
+                aligned_data = _as_fits_float32_image(warp_to_reference(data, ref_data.shape, _inv))
+                aligned_method = "star_polynomial"
+                registration_handoff = {
+                    "method": "star_polynomial",
+                    "matrix": _am,
+                    "matrix_max_err_px": _am_err,
+                    "poly_order": int(ALIGN_POLY_ORDER),
+                    "poly_fwd": [float(x) for x in np.asarray(_fwd.params, dtype=np.float64).reshape(-1)],
+                    "poly_inv": [float(x) for x in np.asarray(_inv.params, dtype=np.float64).reshape(-1)],
+                }
+                _attempt_ok = True
+                if len(xy_used) == 0:
+                    xy_used = np.asarray(src_v, dtype=np.float32)
+                _alignment_emit_log(
+                    log_sink,
+                    f"INFO: {fp.name} star-matched polynomial fit: residual {chk.resid_px:.2f} px "
+                    f"(p90 {chk.p90_px:.2f}) on {chk.pairs} pairs; matrix approximation <= {_am_err:.2f} px",
+                )
+            except Exception as _pw_exc:  # noqa: BLE001
+                _alignment_emit_log(log_sink, f"WARNING: {fp.name} polynomial warp failed: {_pw_exc}")
+                if not _verified_sim:
+                    _attempt_ok, aligned_data = False, None
 
     if not _attempt_ok or aligned_data is None:
         _alignment_emit_log(
@@ -927,6 +1145,8 @@ def _alignment_compute_one_frame(
             "align_residual_px": float(chk.resid_px),
             "align_p90_px": float(chk.p90_px),
             "align_pairs": int(chk.pairs),
+            # ALIGN-MODEL-2026-10: BIC(similarity) - BIC(polynomial) of a verified similarity (> 10 -> polynomial)
+            "align_model_dbic": float(_model_dbic) if _model_dbic is not None else float("nan"),
         },
     }
 

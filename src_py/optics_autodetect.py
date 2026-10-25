@@ -155,6 +155,16 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
         if instr_n and name and (name in instr_n or (core and core in instr_n)):
             score += 0.50
             reasons.append(f"name INSTRUME~{row.get('CAMERANAME')}")
+        elif instr_n and row.get("MODEL_KEY"):
+            # CAMERA-PROFILE-2026-10: INSTRUME equals a header alias of the camera's catalog model
+            # (an ambiguous name - mono and colour version alike - still fits each of them)
+            from camera_profile import catalog_model, match_catalog_models  # noqa: PLC0415
+
+            _own = catalog_model(row.get("MODEL_KEY"))
+            _hits = match_catalog_models(_hdr_str(header, "INSTRUME", "CAMERA", "INSTRUMENT", "DETNAM"))
+            if _own is not None and any(str(m.get("key")) == str(_own.get("key")) for m in _hits):
+                score += 0.50
+                reasons.append(f"INSTRUME = catalog model {_own.get('model')}")
         ss = _parse_sensorsize(row.get("SENSORSIZE"))
         if ss and full_w and full_h and _dims_close(full_w, ss[0]) and _dims_close(full_h, ss[1]):
             score += 0.40

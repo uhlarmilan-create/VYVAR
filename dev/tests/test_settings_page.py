@@ -101,7 +101,8 @@ def test_owner_distribution(reg) -> None:
     # plate_solve_fov_deg removed (fits_dynamic 3 -> 2), frame_width/height_px removed (internal 9 -> 7).
     # CODE-REVIEW step 7B: isolation radius, chip margin, sips_dao_fwhm_px removed (47 -> 44),
     # gain / read_noise removed (fits_dynamic 2 -> 0).
-    assert dict(dist) == {"db_static": 5, "config_runtime": 44, "internal": 7}, dist
+    # TRANSIENT-2026-10: transient_search_enabled added (44 -> 45).
+    assert dict(dist) == {"db_static": 5, "config_runtime": 45, "internal": 7}, dist
 
 
 def test_site_is_not_stored_in_config(cfg_json) -> None:

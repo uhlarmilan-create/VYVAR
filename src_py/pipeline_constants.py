@@ -52,6 +52,18 @@ ALIGN_P90_MAX_FWHM = 0.25
 ALIGN_P90_FLOOR_PX = 0.5
 ALIGN_MIN_PAIRS = 10
 ALIGN_MIN_PAIR_FRAC = 0.3
+# ALIGN-POLY-2026-10 (Milan 2026-10-24): when the similarity transform does not verify, a
+# polynomial of this order is fitted on the star pairs (the "general" geometry of IRAF
+# geomap/geotran: linear part + distortion). Wide field after a shift on the chip (MN Boo 538,
+# 200 mm lens, field moved 110-160 px against the reference): similarity p90 0.59-0.62 px
+# (edge ~1 px, refused at 0.5), affine the same, 2nd order 0.12-0.16 px on 250 pairs.
+ALIGN_POLY_ORDER = 2
+# ALIGN-MODEL-2026-10 (Milan 2026-10-24): every frame chooses its registration model on its own stars.
+# A verified similarity is replaced by the polynomial only when the Bayesian information criterion
+# on the same star pairs prefers it by more than this (BIC_similarity - BIC_polynomial; Kass & Raftery
+# 1995: > 10 = very strong evidence). The polynomial always fits a little better (12 vs 4 parameters);
+# BIC charges the extra parameters, so a frame without distortion keeps the similarity.
+ALIGN_MODEL_DBIC = 10.0
 # Provenance string for the INV-SAT-LIMIT peak-test (catalog zone + per-frame clean).
 SAT_LIMIT_PEAK_TEST_SOURCE = (
     f"INV-SAT-LIMIT peak-test {SAT_LIMIT_NO_KNEE_FRAC:.2f}x "

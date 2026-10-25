@@ -99,6 +99,8 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
 | `tess_runner.py` | core | TESS for one star (UI button) and for the night's candidates when tess_enabled (night run) into `photometry/TESS/<gaia id>/`; analysis in `tess_analysis.py`. | aperture_photometry, ui_variability |
+| `transient_field.py` | core | TRANSIENT-2026-10: new sources on the night's frames (per-frame DAO vs MASTERSTAR, linking, forced photometry, empty-sky noise, detector-pixel test, Gaia / OpenNGC checks), moving objects, minor bodies; run by the variability search when transient_search_enabled. | variability_field, ui_variability, photometry_report |
+| `minor_bodies.py` | core | Minor planets / comets in the field from MPCORB.DAT(.gz) / CometEls.txt in the catalogue folder: two-body positions, H-G / comet magnitudes, light time, topocentric. | transient_field |
 | `variability_store.py` | core | Files the Variability tab and the PDF share: report include list, observer-adopted periods, TESS result reader, Peranso exports, phase / PDM Theta helpers (VAR-TAB-2026-10). | ui_variability, photometry_report |
 
 ## CONFIG / PARAMS

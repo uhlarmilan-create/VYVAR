@@ -1066,7 +1066,7 @@ def draft_archive_from_platesolve(platesolve_dir: Path) -> Path | None:
     """Draft archive root from obs_group platesolve folder."""
     ps = Path(platesolve_dir).resolve()
     for parent in ps.parents:
-        if parent.name.startswith("draft_") and (parent / "draft_manifest.json").is_file():
+        if (parent / "draft_manifest.json").is_file():
             return parent
         if parent.name == "Drafts":
             break

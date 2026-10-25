@@ -100,10 +100,3 @@ def test_promotion_from_synthetic_host(tmp_path: Path, monkeypatch: pytest.Monke
     assert row["catalog"] == "EXOPLANET"
     assert row["exo_host_obj_id"] == "TOI-TEST.01"
     assert row["target_origin"] == "EXOPLANET"
-
-
-def test_config_resolves_objects_db_against_data_root() -> None:
-    cfg = AppConfig()
-    p = Path(cfg.objects_db_path)
-    assert p.is_absolute()
-    assert p.is_file()

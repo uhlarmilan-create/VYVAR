@@ -180,3 +180,125 @@ def test_osc_handoff_without_matrix_is_not_aligned():
             ref_hdr=fits.Header(), handoff_entry=entry,
         )
         assert out is None and m == "osc_handoff_none"
+
+
+# ALIGN-WCS-2026-10: a frame WCS is checked on the frame's stars before any reprojection.
+def _wcs_hdr(cd: np.ndarray, crpix: tuple[float, float]) -> fits.Header:
+    from astropy.wcs import WCS
+
+    w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    w.wcs.crval = [241.3, 50.26]
+    w.wcs.crpix = [crpix[0] + 1.0, crpix[1] + 1.0]  # FITS 1-based
+    w.wcs.cd = cd
+    return w.to_header()
+
+
+_CD_REF = np.array([[-2.6e-4, 0.0], [0.0, 2.6e-4]])
+
+
+def _ctx_wcs(ref: np.ndarray, tmp: Path) -> dict:
+    c = _ctx(ref, tmp)
+    c.update(ref_hdr=_wcs_hdr(_CD_REF, (W / 2, H / 2)), has_ref_wcs=True)
+    return c
+
+
+def _write_wcs(tmp: Path, name: str, img: np.ndarray, hdr: fits.Header) -> Path:
+    hdr["VY_FWHM"] = FWHM
+    p = tmp / name
+    fits.writeto(p, img, hdr, overwrite=True)
+    return p
+
+
+def test_capture_wcs_failing_the_star_check_is_not_reprojected(field, monkeypatch):
+    tmp, xy, flux, ref, fxy, m_true, fp = field
+    import reproject
+
+    # A capture-program WCS that ignores the 0.4 deg rotation and the shift of the frame.
+    p = _write_wcs(tmp, "capwcs.fits", fits.getdata(fp), _wcs_hdr(_CD_REF, (W / 2, H / 2)))
+    monkeypatch.setattr(reproject, "reproject_interp", lambda *a, **k: (_ for _ in ()).throw(AssertionError("reprojected")))
+    log: list[str] = []
+    r = V._alignment_compute_one_frame(p, 1, _ctx_wcs(ref, tmp), log)
+    assert r["kind"] == "aligned" and r["aligned_method"] == "star_similarity"
+    assert any("wcs_reproject not verified on stars" in s for s in log)
+    assert r["star_count"]["align_residual_px"] <= max(ALIGN_P90_MAX_FWHM * FWHM, ALIGN_P90_FLOOR_PX)
+
+
+def test_accurate_frame_wcs_is_reprojected(field):
+    tmp, xy, flux, ref, fxy, m_true, fp = field
+    # The frame WCS that maps the frame stars exactly onto the reference: CD_f = CD_ref M,
+    # CRPIX_f = M^-1 (CRPIX_ref - t) for frame->reference M x + t.
+    a, t = m_true[:2, :2], m_true[:2, 2]
+    crpix_f = np.linalg.solve(a, np.array([W / 2, H / 2]) - t)
+    p = _write_wcs(tmp, "goodwcs.fits", fits.getdata(fp), _wcs_hdr(_CD_REF @ a, (crpix_f[0], crpix_f[1])))
+    r = V._alignment_compute_one_frame(p, 1, _ctx_wcs(ref, tmp), [])
+    assert r["kind"] == "aligned" and r["aligned_method"] == "wcs_reproject"
+
+
+def _distort(xy: np.ndarray, k: float) -> np.ndarray:
+    """Quadratic field distortion about the chip centre (a wide-field lens after a shift)."""
+    c = np.array([W / 2, H / 2])
+    u = xy - c
+    return xy + k * np.c_[u[:, 0] ** 2 - u[:, 1] ** 2, 2.0 * u[:, 0] * u[:, 1]]
+
+
+def test_distorted_wide_field_is_registered_with_the_polynomial(tmp_path, monkeypatch):
+    """ALIGN-POLY-2026-10 (MN Boo 538): the similarity leaves the distortion (p90 over the gate);
+    the 2nd-order polynomial verifies, the warp puts the stars on the reference positions and
+    VY_AM carries a close projective approximation for the footprint."""
+    xy, flux = _stars(seed=7)
+    ref = _image(xy, flux, seed=11)
+    fxy0, _m = _rot(xy, 0.3, 30.0, -20.0)
+    fxy = _distort(fxy0, 6e-6)
+    p = _write(tmp_path, "wide.fits", _image(fxy, flux, seed=12))
+    rxy = V._alignment_detect_xy(ref, 300, det_sigma=4.5, fwhm_px=FWHM)[:160]
+    sxy = V._alignment_detect_xy(_image(fxy, flux, seed=12), 300, det_sigma=4.5, fwhm_px=FWHM)
+    t, chk_sim = V.fit_similarity_from_stars(sxy, rxy, [np.asarray(_m)], fwhm_px=FWHM)
+    assert not V.registration_ok(chk_sim, fwhm_px=FWHM)  # the case of MN Boo frames 1-101
+
+    monkeypatch.setattr(V, "_alignment_run_astroalign_points", lambda **k: (None, "forced failure", None))
+    r = V._alignment_compute_one_frame(p, 1, _ctx(ref, tmp_path), [])
+    assert r["kind"] == "aligned" and r["aligned_method"] == "star_polynomial"
+    assert r["star_count"]["align_p90_px"] < 0.25
+    rh = r["registration_handoff"]
+    assert rh["poly_order"] == 2 and len(rh["poly_inv"]) == 12 and rh["matrix_max_err_px"] < 1.0
+    # bright stars of the warped frame sit on the reference positions
+    al = np.asarray(r["aligned_data"], dtype=np.float64)
+    bright = np.argsort(-flux)[:20]
+    errs = []
+    for i in bright:
+        x, y = xy[i]
+        if not (12 < x < W - 12 and 12 < y < H - 12):
+            continue
+        yy, xx = np.mgrid[int(y) - 4 : int(y) + 5, int(x) - 4 : int(x) + 5]
+        w = np.clip(al[yy, xx] - np.median(al), 0, None)
+        errs.append(np.hypot((w * xx).sum() / w.sum() - x, (w * yy).sum() / w.sum() - y))
+    assert np.median(errs) < 0.15
+
+
+def test_model_selection_keeps_similarity_without_distortion(field):
+    """ALIGN-MODEL-2026-10: a field without distortion keeps the verified similarity (BIC charges
+    the polynomial's extra parameters)."""
+    tmp, xy, flux, ref, fxy, m_true, fp = field
+    r = V._alignment_compute_one_frame(fp, 1, _ctx(ref, tmp), [])
+    assert r["aligned_method"] == "astroalign"
+    assert r["star_count"]["align_model_dbic"] <= 10.0
+
+
+def test_model_selection_takes_polynomial_when_the_stars_show_distortion(tmp_path):
+    """A mild distortion that the similarity still verifies, but the stars clearly prefer the
+    polynomial (MN Boo frames 105-135): the frame is registered with the polynomial."""
+    xy, flux = _stars(seed=21)
+    ref = _image(xy, flux, seed=22)
+    fxy0, _m = _rot(xy, 0.2, 12.0, -9.0)
+    fxy = _distort(fxy0, 1.5e-6)
+    img = _image(fxy, flux, seed=23)
+    sxy = V._alignment_detect_xy(img, 300, det_sigma=4.5, fwhm_px=FWHM)
+    rxy = V._alignment_detect_xy(ref, 300, det_sigma=4.5, fwhm_px=FWHM)[:160]
+    t, chk = V.fit_similarity_from_stars(sxy, rxy, [np.asarray(_m)], fwhm_px=FWHM)
+    assert V.registration_ok(chk, fwhm_px=FWHM)  # the similarity alone would pass
+    p = _write(tmp_path, "mild.fits", img)
+    r = V._alignment_compute_one_frame(p, 1, _ctx(ref, tmp_path), [])
+    assert r["aligned_method"] == "star_polynomial"
+    assert r["star_count"]["align_model_dbic"] > 10.0
+    assert r["star_count"]["align_p90_px"] < chk.p90_px

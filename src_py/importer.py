@@ -415,6 +415,29 @@ def _reset_master_age_mtime_warnings() -> None:
     reset_master_age_mtime_warnings()
 
 
+def mixed_camera_settings_message(group_key: str, settings: dict[tuple[Any, Any, Any], int]) -> str | None:
+    """CAMERA-PROFILE-2026-10: the lights of one observation group must share gain setting, offset and
+    readout mode - darks, flats and the gain are matched per setting. None when they do."""
+    if len(settings) <= 1:
+        return None
+
+    def _t(k: tuple[Any, Any, Any]) -> str:
+        g, o, m = k
+        parts = [f"gain {g:g}" if isinstance(g, (int, float)) else f"gain {g}"]
+        if o is not None:
+            parts.append(f"offset {o:g}" if isinstance(o, (int, float)) else f"offset {o}")
+        if m not in (None, ""):
+            parts.append(f"mode {m}")
+        return " / ".join(parts)
+
+    desc = ", ".join(f"{_t(k)}: {n} frames" for k, n in sorted(settings.items(), key=lambda kv: -kv[1]))
+    return (
+        f"Lights {group_key.replace('|', ' / ')} were taken with different camera settings ({desc}). "
+        "Calibration masters and the gain are matched per setting: put each setting in its own folder "
+        "and import them separately."
+    )
+
+
 def smart_scan_source(
     *,
     source_root: str | Path,
@@ -573,6 +596,16 @@ def smart_scan_source(
                 "plate_scale_arcsec_per_px": scale,
             }
         observation_groups[gk]["light_paths"].append(str(fp))
+        # CAMERA-PROFILE-2026-10: gain setting / offset / readout mode of every light of the group
+        _gs = observation_groups[gk].setdefault("camera_settings", {})
+        _key = (meta_i.get("gain"), meta_i.get("offset"), meta_i.get("readout_mode"))
+        _gs[_key] = _gs.get(_key, 0) + 1
+
+    for gk, grp in observation_groups.items():
+        _mixed = mixed_camera_settings_message(gk, grp.get("camera_settings") or {})
+        if _mixed:
+            grp["mixed_camera_settings"] = True
+            warnings.append(_mixed)
 
     # CAL-2026-10 (dev/results/specs/VYVAR_CALIBRATION_SPEC.md): one plan for GUI and night runner.
     import calib_plan as _cp  # noqa: PLC0415
@@ -681,6 +714,20 @@ def smart_scan_source(
     )
 
 
+def _first_object_name(lights_files: list[Path]) -> str:
+    """The first non-empty OBJECT (or OBJNAME) of the light frames - the observed star."""
+    for fp in lights_files[:20]:
+        try:
+            hdr = fits.getheader(fp)
+        except Exception:  # noqa: BLE001
+            continue
+        for key in ("OBJECT", "OBJNAME"):
+            val = str(hdr.get(key) or "").strip()
+            if val:
+                return val
+    return ""
+
+
 def smart_import_session(
     *,
     plan: SmartImportPlan,
@@ -713,11 +760,16 @@ def smart_import_session(
     from osc_extract import validate_bayer_crosscheck
 
     _import_warnings: list[str] = []
+    _jd_starts: list[float] = []
     for fp in lights_files[:500]:
         try:
             meta_x = extract_fits_metadata(fp, db=pipeline.db)
         except Exception:  # noqa: BLE001
             continue
+        try:
+            _jd_starts.append(float(meta_x.get("jd_start")))
+        except (TypeError, ValueError):
+            pass
         verdict, msg = validate_bayer_crosscheck(
             fits_bayerpat=meta_x.get("bayerpat"),
             equipment_bayermask=pipeline.db.get_equipment_bayermask(int(id_equipment)),
@@ -728,19 +780,29 @@ def smart_import_session(
             _import_warnings.append(msg)
     if _import_warnings:
         plan.warnings.extend(_import_warnings)
+    for gk, grp in (plan.observation_groups or {}).items():
+        _mixed = mixed_camera_settings_message(gk, grp.get("camera_settings") or {})
+        if _mixed:
+            raise ValueError(_mixed)
     scanning_id = pipeline.db.derive_scanning_id(metadata)
 
     # Ingestion creates DRAFT only (Session ID created after astrometry).
     missing_obs_keys_set: set[str] = set(getattr(plan, "missing_obs_keys", []) or [])
     draft_filters: set[str] = set(getattr(plan, "missing_flat_filters", []) or [])
+    # PROCESSED-FIELD-NAME-2026-10: the folder is <TARGET>_<YYYYMMDD>_<NNN> - the target from the
+    # FITS OBJECT (else the selected source folder), the evening the night began (first frame).
+    _jd_ok = [j for j in _jd_starts if j > 2400000.0]
     draft_id = pipeline.db.create_draft(
         {
             "id_equipments": int(id_equipment),
             "id_telescope": int(id_telescope),
             "id_location": int(_id_loc),
             "id_scanning": int(scanning_id),
-            "observation_start_jd": float(metadata["jd_start"]),
+            "observation_start_jd": float(min(_jd_ok)) if _jd_ok else float(metadata["jd_start"]),
             "is_calibrated": (len(draft_filters) == 0 and not plan.quick_look),
+            "object_name": _first_object_name(lights_files),
+            "source_folder_name": Path(str(plan.source_root)).name if plan.source_root else "",
+            "site_lon_deg": float(_resolved.lon),
         }
     )
 
@@ -752,7 +814,9 @@ def smart_import_session(
         # EXC-0103: T3 -- guard suppresses appending a non-fatal DraftTechnicalMetadataError warning (EXCEPT-BULK-2 2026-07-08)
         pass
 
-    archive_session = Path(pipeline.config.archive_root) / "Drafts" / f"draft_{draft_id:06d}"
+    from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+
+    archive_session = draft_dir_for_id(pipeline.config.archive_root, int(draft_id))
     # Partial draft if some filters missing masterflat
     if plan.quick_look:
         target = archive_session / "non_calibrated"

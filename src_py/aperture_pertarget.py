@@ -1,17 +1,25 @@
-"""APERTURE-K-2026-10: one aperture r = k x FWHM_frame per target and its comps.
+"""APERTURE-K-2026-10: one aperture r = k x FWHM_frame for the targets and their comps.
 
 Physics: target, comparison stars and check star share the same enclosed-light
 fraction (same k = r / FWHM in each frame), so the fraction cancels in the
 differential light curve even when seeing changes.
 
-Selection (C-Munipack "Find best aperture", AIJ / EXOTIC practice): every star of the
-comparison pool is measured on a small grid k in {1.0, 1.25, 1.5, 1.75, 2.0} x FWHM of
-each frame (exact apertures, one sky per star and frame). For each target the chosen k
-minimises the scatter of its comparison stars - each comp against the flux sum of the
-other comps (leave-one-out), 1.4826 x MAD over the night, median over comps. The target
-itself never takes part in the choice (its variability must not steer the aperture) and
-the check star stays an independent test. The Howell (1989) predicted S/N is kept as a
-diagnostic.
+Grid (C-Munipack "Find best aperture", AIJ / EXOTIC practice): every star of the
+comparison pool is measured on k in {1.0, 1.25, 1.5, 1.75, 2.0} x FWHM of each frame
+(exact apertures, one sky per star and frame). For each target the curve "comp scatter
+vs k" is computed - each comp against the flux sum of the other comps (leave-one-out),
+1.4826 x MAD over the night, median over comps. The target itself never takes part (its
+variability must not steer the aperture); the check star stays an independent test.
+
+AP-NIGHT-K-2026-10 (Milan 2026-10-24): ONE k per night and observation group, from the
+median over targets of the normalised curves (``apply_night_k``). A single target's curve
+is decided by noise (one comp more or less changed its k for ~half the targets on 537 /
+MN Boo), the night median is not. The comp scatter over the whole night includes the slow
+drifts (seeing, centring, pixel phase) that grow at small apertures on undersampled
+images - the CCD-equation S/N optimum (~0.67 FWHM, Howell 1989, Naylor 1998) ignores them
+and was rejected (COMP-SELECT-2026-10, AP-NIGHT-K). One factor x FWHM for every star is the
+common practice (AAVSO VPhot 1.5, AstroImageJ 1.7, HiPERCAM 1.5-2.5). The Howell (1989)
+predicted S/N is kept as a diagnostic.
 """
 from __future__ import annotations
 
@@ -39,6 +47,13 @@ FALLBACK_F_STAR: float = 0.70
 
 # Flat-top tolerance: choose largest f within this fraction of max S/N.
 SNR_FLAT_FRAC: float = 0.01
+
+# AP-NIGHT-K-2026-10: k within this fraction of the night curve's minimum count as equal and
+# the larger k is taken (less sensitive to seeing / centring). 0.03 = the bootstrap standard
+# error (over targets) of the night median curve measured on 537 and MN Boo 538 (0.02-0.03).
+NIGHT_K_TIE_FRAC: float = 0.03
+# a k enters the night curve only when this fraction of the targets may use it (blend limit)
+NIGHT_K_MIN_TARGET_FRAC: float = 0.75
 
 MODE_PER_TARGET = "per_target"
 
@@ -262,6 +277,7 @@ class PerTargetChoice:
     growth_F_by_f: dict[str, float] = field(default_factory=dict)
     sky_pp_by_f: dict[str, float] = field(default_factory=dict)
     f_allowed: list[float] | None = None  # BLEND-K-2026-10: k where all comps <= 1 % neighbour light
+    f_own: float = float("nan")  # AP-NIGHT-K-2026-10: this target's own curve minimum (diagnostic)
 
 
 @dataclass
@@ -665,6 +681,56 @@ def choose_f_for_target(
     )
 
 
+def apply_night_k(
+    choices: Mapping[str, PerTargetChoice],
+    f_grid: Sequence[float],
+    *,
+    tie_frac: float = NIGHT_K_TIE_FRAC,
+    min_target_frac: float = NIGHT_K_MIN_TARGET_FRAC,
+) -> dict[str, Any]:
+    """AP-NIGHT-K-2026-10: one k for every target of the group (changes ``choices`` in place).
+
+    Night curve: for each k the median over targets of scatter(k) / min_k scatter, using the
+    targets with a finite comp scatter at k inside their blend limit; a k enters only when at
+    least ``min_target_frac`` of those targets may use it. k_night = the largest k within
+    ``tie_frac`` of the curve's minimum. Each target then gets the largest k it may use that
+    is <= k_night (else its smallest allowed k), targets without comp scatter included, so
+    target, comps and check star keep one enclosed-light fraction across the group.
+    No target with a curve -> nothing changes (the per-target fallbacks stay).
+    """
+    grid = sorted(float(k) for k in f_grid)
+    rows: list[dict[float, float]] = []
+    for c in choices.values():
+        al = None if c.f_allowed is None else {round(float(k), 6) for k in c.f_allowed}
+        sc = {float(k): float(v) for k, v in c.p2p_by_f.items()
+              if math.isfinite(float(v)) and float(v) > 0 and (al is None or round(float(k), 6) in al)}
+        if sc:
+            mn = min(sc.values())
+            rows.append({k: v / mn for k, v in sc.items()})
+    info: dict[str, Any] = {"k_night": None, "curve": {}, "n_targets_curve": len(rows), "tie_frac": float(tie_frac)}
+    if not rows:
+        return info
+    need = max(1.0, float(min_target_frac) * len(rows))
+    curve = {k: float(np.median([r[k] for r in rows if k in r])) for k in grid if sum(k in r for r in rows) >= need}
+    if not curve:
+        return info
+    best = min(curve.values())
+    k_night = max(k for k, v in curve.items() if v <= best * (1.0 + float(tie_frac)))
+    info.update(k_night=float(k_night), curve={f"{k:.4g}": v for k, v in curve.items()})
+    for c in choices.values():
+        al = sorted(float(k) for k in (c.f_allowed if c.f_allowed else grid))
+        below = [k for k in al if k <= k_night + 1e-9]
+        k_t = max(below) if below else min(al)
+        c.f_own = float(c.f_star)
+        scale = c.r_ap_px / c.f_star if c.f_star > 0 else float("nan")  # FWHM x PSF-LOCAL scale
+        c.f_star = float(k_t)
+        c.r_ap_px = float(k_t) * scale
+        c.f_edge = f_star_is_grid_edge(float(k_t), al)
+        c.snr_max = float(c.snr_by_f.get(f"{k_t:.4g}", float("nan")))
+        c.reason = "night_k_comp_scatter" + ("" if k_t == k_night else "; blend limit below the night k")
+    return info
+
+
 def apply_grid_fluxes_to_frames(
     all_frames: pd.DataFrame,
     night: ApertureGridNight,
@@ -762,6 +828,7 @@ def write_per_target_choices(
     elapsed_s: float,
     gain: float | None = None,
     read_noise: float | None = None,
+    night_k: Mapping[str, Any] | None = None,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -769,7 +836,8 @@ def write_per_target_choices(
     payload = {
         "policy": "APERTURE-K-2026-10",
         "mode": MODE_PER_TARGET,
-        "criterion": "comp_loo_scatter_min",
+        "criterion": "night_k_comp_scatter",
+        "night_k": dict(night_k) if night_k else None,
         "fallback_f_star": float(FALLBACK_F_STAR),
         "snr_flat_frac": float(SNR_FLAT_FRAC),
         "f_grid": [float(f) for f in f_grid],
@@ -797,6 +865,7 @@ def write_per_target_choices(
                 "n_comps": c.n_comps,
                 "n_frames": c.n_frames,
                 "f_allowed_neighbour_light": c.f_allowed,
+                "f_own_curve_min": c.f_own if math.isfinite(float(c.f_own)) else None,
             }
             for cid, c in choices.items()
         },
@@ -808,12 +877,15 @@ __all__ = [
     "DEFAULT_APERTURE_F_GRID",
     "FALLBACK_F_STAR",
     "MODE_PER_TARGET",
+    "NIGHT_K_MIN_TARGET_FRAC",
+    "NIGHT_K_TIE_FRAC",
     "SNR_FLAT_FRAC",
     "ApertureGridNight",
     "PerTargetChoice",
     "apply_grid_fluxes_to_frames",
     "choose_f_for_target",
     "allowed_f_from_comp_blend",
+    "apply_night_k",
     "blend_k_column",
     "f_star_is_grid_edge",
     "flux_to_mag",

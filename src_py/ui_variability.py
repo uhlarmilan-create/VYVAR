@@ -358,11 +358,11 @@ def render_variability_dashboard(
 ) -> None:
     st.header("Variability")
     if draft_id is None and draft_dir_override is None:
-        st.info("Load a draft first.")
+        st.info("Load a processed field first.")
         return
     draft_dir = resolve_draft_dir_path(draft_dir_override, draft_id, cfg.archive_root)
     if draft_dir is None:
-        st.info("Load a draft first.")
+        st.info("Load a processed field first.")
         return
     groups = _detect_obs_groups(Path(draft_dir))
     if not groups:
@@ -401,8 +401,152 @@ def render_variability_dashboard(
     sel = st.session_state.get(sel_key)
     if rows.empty or sel not in set(rows["catalog_id"]):
         st.info("No variable star to analyse in this setup.")
+    else:
+        _star_section(rows, sel, og, sel_key, phot, ps, meta, cfg)
+    _transient_section(phot, ps, Path(draft_dir) / "detrended_aligned" / "lights" / og, og, cfg)
+
+
+# ---------------------------------------------------------------- TRANSIENT-2026-10
+KIND_TEXT = {"appeared": "appeared during the night", "faded": "faded during the night", "present": "present all night"}
+
+
+def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str, cfg: AppConfig) -> None:
+    """New sources, stars brighter than Gaia, minor planets and comets (transient search; off by default)."""
+    tm = _read_json(phot / "transient_meta.json")
+    if not tm:  # the search is off (transient_search_enabled): the tab stays as it is
         return
-    _star_section(rows, sel, og, sel_key, phot, ps, meta, cfg)
+    st.divider()
+    st.subheader("New sources (transients) and minor bodies")
+    if tm.get("status") != "ok":
+        st.warning(f"Transient search: {tm.get('status')}")
+        return
+    T = _csv(phot / "transient_candidates.csv")
+    cand = T[T["candidate"].astype(str).str.lower() == "true"].copy() if not T.empty else T
+    F = pd.read_csv(phot / "variability_field.csv", dtype={"catalog_id": str}, low_memory=False)
+    br = F[F.get("brightened", pd.Series(False, index=F.index)).astype(str).str.lower() == "true"] if "brightened" in F else F.iloc[0:0]
+    B = _csv(phot / "minor_bodies_in_field.csv")
+    M = _csv(phot / "moving_objects.csv")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("New sources", f"{len(cand)}", f"{len(T) - len(cand)} rejected", delta_color="off")
+    c2.metric("Brighter than Gaia", f"{len(br)}", "\u2265 1 mag and \u2265 3\u03c3", delta_color="off")
+    c3.metric("Minor bodies V \u2264 20", f"{len(B)}", f"{int((B.get('detected_frames', pd.Series(dtype=int)) >= 3).sum()) if not B.empty else 0} detected",
+              delta_color="off")
+    c4.metric("Moving objects", f"{len(M)}", f"{int((M.get('minor_body', pd.Series(dtype=str)).fillna('') != '').sum()) if not M.empty else 0} identified",
+              delta_color="off")
+    if cand.empty:
+        st.success("No new source passes the checks in this setup.")
+    else:
+        cand["n"] = cand["label"].str[1:].astype(int)
+        cand = cand.sort_values("n").reset_index(drop=True)
+        show = pd.DataFrame({
+            "Id": cand["label"], "Kind": cand["kind"].map(KIND_TEXT).fillna(cand["kind"]),
+            "First seen (JD)": cand["first_time"], "G (est.)": cand["mag_g_est"], "S/N max": cand["snr_max"],
+            "Frames S/N\u22655": cand["n_frames_snr5"], "RA": cand["ra_deg"], "Dec": cand["dec_deg"],
+            "In galaxy": cand.get("galaxy", pd.Series("", index=cand.index)).fillna("").where(cand.get("in_galaxy", False).astype(bool), ""),
+            "Catalogues": cand.get("catalogs", pd.Series("", index=cand.index)).fillna(""),
+        })
+        ev = st.dataframe(show, hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
+                          key=f"tr_table_{og}", column_config={
+                              "First seen (JD)": st.column_config.NumberColumn(format="%.5f"),
+                              "G (est.)": st.column_config.NumberColumn(format="%.2f"),
+                              "S/N max": st.column_config.NumberColumn(format="%.1f"),
+                              "RA": st.column_config.NumberColumn(format="%.5f"), "Dec": st.column_config.NumberColumn(format="%.5f")})
+        st.caption("A new source is seen on \u2265 3 consecutive frames at S/N \u2265 5 where Gaia has no star of similar brightness, "
+                   "stays on one sky position, is not a detector pixel and is brighter than the catalogue depth - 1 mag. "
+                   "G (est.) is on the Gaia G scale of the field for a solar-colour source. Check every candidate on the images "
+                   "before reporting (TNS for extragalactic transients, CBAT for novae).")
+        try:
+            pick = list(ev.selection.rows)
+        except AttributeError:
+            pick = []
+        r = cand.iloc[pick[0] if pick else 0]
+        _transient_detail(r, phot, ps, frames_dir, og)
+    if not br.empty:
+        st.markdown("#### Stars brighter than Gaia predicts")
+        st.dataframe(pd.DataFrame({
+            "Gaia DR3": [gaia_url(c) for c in br["catalog_id"]], "G (Gaia)": br["mag"],
+            "brighter by [mag]": -pd.to_numeric(br["dmag_vs_gaia"], errors="coerce"), "BP-RP": br["bp_rp"],
+            "neighbour light": br["blend"], "known variable": br["known_variable"]}),
+            hide_index=True, width="stretch", column_config={
+                "Gaia DR3": st.column_config.LinkColumn("Gaia DR3", display_text=r"Source=(\d+)"),
+                "G (Gaia)": st.column_config.NumberColumn(format="%.2f"),
+                "brighter by [mag]": st.column_config.NumberColumn(format="%.2f"),
+                "BP-RP": st.column_config.NumberColumn(format="%.2f"), "neighbour light": st.column_config.NumberColumn(format="%.2f")})
+        st.caption("Night magnitude vs Gaia G through the field relation, with the Gaia neighbours' light in the aperture: "
+                   "a nova on a faint catalogued star, a dwarf nova or a Mira in a bright state.")
+    st.markdown("#### Minor planets and comets in the field (V \u2264 20)")
+    info = tm.get("minor_bodies") or {}
+    if B.empty:
+        st.caption(f"None brighter than V 20 in this field during the night. ({info.get('status', '')})")
+    else:
+        st.dataframe(pd.DataFrame({
+            "Name": B["name"], "Type": B["kind"].str.replace("_", " "), "V (pred.)": B["mag_v"],
+            "Motion [\"/h]": B["rate_arcsec_h"], "\u0394 [au]": B["delta_au"], "Frames in field": B["frames_in_field"],
+            "Detected on frames": B["detected_frames"]}), hide_index=True, width="stretch", column_config={
+                "V (pred.)": st.column_config.NumberColumn(format="%.1f"),
+                "Motion [\"/h]": st.column_config.NumberColumn(format="%.1f"),
+                "\u0394 [au]": st.column_config.NumberColumn(format="%.3f")})
+        st.caption("Positions from the MPC orbit files in the catalogue folder (two-body, accurate to tens of arcseconds) - "
+                   "to name a body in the field, not for astrometry.")
+    if not M.empty:
+        st.caption(f"Moving objects detected on the frames: {len(M)} "
+                   f"({', '.join(x for x in M.get('minor_body', pd.Series(dtype=str)).fillna('') if x) or 'none identified'}).")
+
+
+def _csv(p: Path) -> pd.DataFrame:
+    try:
+        return pd.read_csv(p) if p.is_file() and p.stat().st_size > 2 else pd.DataFrame()
+    except (OSError, ValueError, pd.errors.EmptyDataError):
+        return pd.DataFrame()
+
+
+def _transient_detail(r: pd.Series, phot: Path, ps: Path, frames_dir: Path, og: str) -> None:
+    lab = str(r["label"])
+    lc_p = phot / "lightcurves" / f"transient_{lab}.csv"
+    lc = pd.read_csv(lc_p) if lc_p.is_file() else None
+    st.markdown(f"##### {lab} \u00b7 {KIND_TEXT.get(str(r['kind']), r['kind'])} \u00b7 G {_fmt(r['mag_g_est'], 2)} \u00b7 "
+                f"RA {r['ra_deg']:.5f} Dec {r['dec_deg']:+.5f}")
+    c1, c2 = st.columns([3, 2])
+    if lc is not None and not lc.empty:
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3], vertical_spacing=0.05)
+        det = lc["snr"] >= 5
+        fig.add_trace(go.Scatter(x=lc["time"][det], y=lc["mag"][det], mode="markers", marker=dict(size=6, color=C_CAND),
+                                 error_y=dict(type="data", array=lc["err"][det], width=0), hovertemplate="G %{y:.3f}<extra></extra>"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=lc["time"], y=lc["snr"], mode="lines", line=dict(color=C_FIELD, width=1.4),
+                                 hovertemplate="S/N %{y:.1f}<extra></extra>"), row=2, col=1)
+        fig.add_hline(y=5, line=dict(color=C_CAND, dash="dash", width=1), row=2, col=1)
+        fig.update_yaxes(autorange="reversed", title_text="G (est.)", row=1, col=1)
+        fig.update_yaxes(title_text="S/N", row=2, col=1)
+        fig.update_xaxes(title_text="JD", tickformat=".3f", row=2, col=1)
+        fig.update_layout(height=360, margin=dict(l=60, r=16, t=10, b=40), showlegend=False, hovermode="x unified")
+        c1.plotly_chart(fig, width="stretch", config=_PLOT_CFG, key=f"tr_lc_{og}_{lab}")
+    c2.plotly_chart(_cutout_figure(r, lc, ps, frames_dir), width="stretch", config=_PLOT_CFG, key=f"tr_cut_{og}_{lab}")
+
+
+def _cutout_figure(r: pd.Series, lc: pd.DataFrame | None, ps: Path, frames_dir: Path) -> go.Figure:
+    """MASTERSTAR, the first frame with the source and a frame before it (2 x 2 FWHM boxes)."""
+    from astropy.io import fits  # noqa: PLC0415
+
+    fr = pd.read_csv(frames_dir / "frames.csv").sort_values("jd_mid").reset_index(drop=True)
+    stems = [str(s)[5:-4] for s in fr["proc_csv"]]
+    first = int(r.get("first_frame", 0)) if math.isfinite(_num(r.get("first_frame"))) else 0
+    before = max(0, first - 5) if str(r["kind"]) == "appeared" else min(len(stems) - 1, first + 5)
+    panels = [("MASTERSTAR", ps / "MASTERSTAR.fits"), (f"frame {first + 1}", frames_dir / f"{stems[first]}.fits"),
+              (f"frame {before + 1}", frames_dir / f"{stems[before]}.fits")]
+    fig = make_subplots(rows=1, cols=3, subplot_titles=[p[0] for p in panels], horizontal_spacing=0.02)
+    h = 15
+    x, y = int(round(float(r["x"]))), int(round(float(r["y"])))
+    for j, (_t, p) in enumerate(panels, start=1):
+        try:
+            d = fits.getdata(p).astype(float)[max(0, y - h): y + h + 1, max(0, x - h): x + h + 1]
+            lo, hi = np.nanpercentile(d, [5, 99.5])
+            fig.add_trace(go.Heatmap(z=d, zmin=lo, zmax=hi, colorscale="gray", showscale=False, hoverinfo="skip"), row=1, col=j)
+        except (OSError, ValueError, IndexError):
+            continue
+        fig.update_xaxes(visible=False, row=1, col=j)
+        fig.update_yaxes(visible=False, scaleanchor=f"x{j if j > 1 else ''}", row=1, col=j)
+    fig.update_layout(height=230, margin=dict(l=4, r=4, t=26, b=4))
+    return fig
 
 
 def _hockey_section(data: dict[str, Any], og: str, sel_key: str) -> None:
@@ -525,7 +669,7 @@ def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Pat
     lc_csv = phot / "lightcurves" / f"varcand_{cid}.csv"
     night = pd.read_csv(lc_csv) if lc_csv.is_file() else None
     t1, t2 = st.columns([4, 1])
-    t1.markdown("#### Night light curve (this draft, field zero point)")
+    t1.markdown("#### Night light curve (this processed field, field zero point)")
     if night is not None and not night.empty:
         t2.download_button("Export for Peranso (.txt)", peranso_text(lc_csv), file_name=f"vyvar_{cid}.txt", key=f"var_per_{cid}", width="stretch")
         st.plotly_chart(night_figure(night, "BJD_TDB" if "bjd" in str(meta.get("time_column", "")).lower() else "JD"), width="stretch", config=_PLOT_CFG, key=f"var_night_{cid}")

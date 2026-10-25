@@ -183,6 +183,8 @@ D['hrd_parallax_snr_min'] = dict(
  proc="Paralaxa s SNR<5 dava pri prevodu na vzdalenost silne vychylene absolutni magnitudy (Lutz-Kelkerova trida efektu) - takove hvezdy do HRD nepatri.")
 D['hrd_online_enrich_enabled'] = dict(
  proc="Online obohaceni (Gaia/SIMBAD) bezi jen pro report a je omezene caps/timeouty - vypadek site nikdy neblokuje fotometrii.")
+D['transient_search_enabled'] = dict(
+ proc="Hledani novych zdroju (novy, supernovy) srovnanim detekci s Gaia na kazdem snimku noci (Gaia Science Alerts / NMW); planetky a komety z drah MPC (dvoutelesovy vypocet). Bez odecitani snimku: supernova na jadru galaxie se nenajde.")
 D['tess_enabled'] = dict(
  proc="Krizova kontrola kandidatu promennosti proti TESS (Lightkurve): perioda/amplituda z vesmiru je nejsilnejsi nezavisle potvrzeni; pozor na blending 21'' pixelu TESS.")
 

@@ -25,30 +25,6 @@ from photometry_core import (
 )
 
 
-def _finite_pixel_bbox_from_array(
-    data: "np.ndarray",
-    *,
-    finite_stride: int,
-) -> tuple[float, float, float, float] | None:
-    """Per-frame finite-pixel bbox from a 2-D array (strided sampling)."""
-    import numpy as np
-
-    arr = np.asarray(data, dtype=np.float32)
-    if arr.ndim != 2:
-        return None
-    stride = max(1, int(finite_stride))
-    samp = arr[::stride, ::stride]
-    fin = np.isfinite(samp)
-    if not bool(fin.any()):
-        return None
-    ys, xs = np.where(fin)
-    x0 = float(xs.min() * stride)
-    y0 = float(ys.min() * stride)
-    x1 = float(min(arr.shape[1] - 1, xs.max() * stride + (stride - 1)))
-    y1 = float(min(arr.shape[0] - 1, ys.max() * stride + (stride - 1)))
-    return (x0, y0, x1, y1)
-
-
 def _intersection_bbox_from_frame_bboxes(
     bboxes: list[tuple[float, float, float, float]],
 ) -> tuple[float, float, float, float] | None:
@@ -809,51 +785,34 @@ def _angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> f
     return angular_distance_deg(ra1, dec1, ra2, dec2)
 
 
-def common_field_intersection_bbox_px_from_arrays(
+def common_field_intersection_bbox_px_from_headers(
     *,
-    frame_arrays: list["np.ndarray"],
-    finite_stride: int = 16,
+    headers: list[tuple[Any, tuple[int, int]]],
 ) -> tuple[float, float, float, float] | None:
-    """Compute intersection bbox of finite pixels across in-memory frames (x0,y0,x1,y1)."""
+    """Overlap (x0, y0, x1, y1) of the data footprints of aligned frames given as
+    ``(header, (ny, nx))`` - the RAM-handoff form (BORDER-FOOTPRINT-2026-10)."""
+    from frame_footprint import footprint_bbox  # noqa: PLC0415
 
-    bboxes: list[tuple[float, float, float, float]] = []
-    for arr in frame_arrays:
-        bb = _finite_pixel_bbox_from_array(arr, finite_stride=finite_stride)
-        if bb is not None:
-            bboxes.append(bb)
-    return _intersection_bbox_from_frame_bboxes(bboxes)
+    return _intersection_bbox_from_frame_bboxes([footprint_bbox(h, shp) for h, shp in headers])
+
 
 def common_field_intersection_bbox_px(
     *,
     frame_paths: list[Path],
-    finite_stride: int = 16,
 ) -> tuple[float, float, float, float] | None:
-    """Compute intersection bbox of finite pixels across frames (x0,y0,x1,y1).
+    """Overlap (x0, y0, x1, y1) of the data footprints of the aligned frames on disk
+    (BORDER-FOOTPRINT-2026-10): each frame's footprint from its frame->reference transform
+    ``VY_AM0..8`` (headers only). The aligner fills uncovered pixels with a constant, so the pixel
+    values cannot show the footprint. Raises on a frame without the transform."""
+    from astropy.io import fits  # noqa: PLC0415
 
-    Intended for WCS-reprojected aligned frames where uncovered regions are NaN.
-    Uses strided sampling for speed.
-    """
-    try:
-        import numpy as np
-        from astropy.io import fits
-    except Exception:  # noqa: BLE001
-        return None
-
-    fps = [Path(p) for p in frame_paths if Path(p).is_file()]
-    if len(fps) < 2:
-        return None
-
-    bboxes: list[tuple[float, float, float, float]] = []
-    for fp in fps:
-        try:
-            with fits.open(fp, memmap=False) as hdul:
-                data = np.asarray(hdul[0].data, dtype=np.float32)
-        except Exception:  # noqa: BLE001
+    headers = []
+    for fp in (Path(p) for p in frame_paths):
+        if not fp.is_file():
             continue
-        bb = _finite_pixel_bbox_from_array(data, finite_stride=finite_stride)
-        if bb is not None:
-            bboxes.append(bb)
-    return _intersection_bbox_from_frame_bboxes(bboxes)
+        hdr = fits.getheader(fp)
+        headers.append((hdr, (int(hdr.get("NAXIS2", 0)), int(hdr.get("NAXIS1", 0)))))
+    return common_field_intersection_bbox_px_from_headers(headers=headers)
 
 
 def _fwhm_moment_at(arr: np.ndarray, xc: float, yc: float, *, half: int = 6) -> float:

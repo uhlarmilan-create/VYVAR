@@ -76,7 +76,7 @@ class EpsfFitSet:
 
     def to_meta_dict(self) -> dict[str, Any]:
         return {
-            "rule": "VSX targets with aperture photometry (not out of scope, not skipped) matching the selection "
+            "rule": "targets with aperture photometry (VSX, exoplanet hosts, manual; not out of scope, not skipped) matching the selection "
             "+ their comparison stars",
             "selection": self.selection,
             "unmatched_tokens": list(self.unmatched_tokens),
@@ -91,10 +91,13 @@ class EpsfFitSet:
 
 
 def epsf_target_candidates(platesolve_dir: Path | str) -> pd.DataFrame:
-    """Targets RUN ePSF can measure: catalogue variables (``catalog`` VSX - not exoplanet hosts, not the
-    variability-search candidates) whose aperture light curve exists. Targets out of the configured VSX type
-    scope (``vsx_out_of_scope_types``) or skipped for S/N or saturation have no aperture light curve and
-    are not candidates; nor is the ``catalog_only`` zone. Columns: catalog_id, name, vsx_type, mag."""
+    """Targets RUN ePSF can measure: every target with an aperture light curve - VSX variables, exoplanet
+    hosts, manual targets (EPSF-ALL-TARGETS-2026-10, Milan 2026-10-23: the photometry completeness gate
+    wants a PSF light curve for every aperture light curve, and the ePSF joint fit matters most for a
+    target next to a brighter star). Targets out of the configured VSX type scope
+    (``vsx_out_of_scope_types``) or skipped for S/N or saturation have no aperture light curve and are not
+    candidates; nor is the ``catalog_only`` zone. An exoplanet host without a VSX type is typed
+    ``EXOPLANET`` for the type selection. Columns: catalog_id, name, vsx_type, mag."""
     from report_methods import lc_csv_path  # noqa: PLC0415
 
     phot = Path(platesolve_dir) / "photometry"
@@ -105,8 +108,6 @@ def epsf_target_candidates(platesolve_dir: Path | str) -> pd.DataFrame:
     at = read_vyvar_csv(at_p, low_memory=False)
     rows = []
     for _, row in at.iterrows():
-        if str(row.get("catalog") or "").strip().upper() != "VSX":
-            continue
         if _coerce_bool(row.get("skip_photometry")):
             continue
         if str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower() == "catalog_only":
@@ -115,6 +116,8 @@ def epsf_target_candidates(platesolve_dir: Path | str) -> pd.DataFrame:
         if not cid or not lc_csv_path(phot / "lightcurves", cid, "aperture").is_file():
             continue
         vt = str(row.get("vsx_type") or "").strip()
+        if vt.lower() in ("", "nan") and str(row.get("catalog") or "").strip().upper() == "EXOPLANET":
+            vt = "EXOPLANET"
         name = str(row.get("vsx_name") or row.get("name") or "").strip()
         rows.append({"catalog_id": cid, "name": name if name.lower() != "nan" else cid,
                      "vsx_type": "" if vt.lower() == "nan" else vt, "mag": pd.to_numeric(row.get("mag"), errors="coerce")})
@@ -155,7 +158,7 @@ def build_epsf_fit_set(platesolve_dir: Path | str, selection: str | None = EPSF_
     if types:
         empty = None
     elif cand.empty:
-        empty = "no VSX target with an aperture light curve"
+        empty = "no target with an aperture light curve"
     else:
         empty = f"no target matches the selection '{sel}'"
     return EpsfFitSet(

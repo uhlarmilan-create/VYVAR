@@ -143,6 +143,16 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 | **WIDE-ERR-HONEYCUTT-PDF** | Honeycutt SEM PDF honesty | Cursor | LOW |
 | **WIDE-ERR-POP-DELTA** | Wide-err population delta | Cursor | LOW |
 | **WIDE-SLOPE-NOISE** | Wide slope vs noise | Cursor | LOW |
+| ~~AP-CHOICE-STABILITY-01~~ | CLOSED 2026-10-24: one k per night and group from the median comp-scatter curve (AP-NIGHT-K-2026-10, Milan option A); the per-target choice flipped for ~half the targets when one comp was dropped | - | - |
+| **AP-SMALL-K-01** | k < 1.0 (e.g. 0.75) only for well-sampled setups (FWHM 4-6 px, e.g. 534): on 537 / MN Boo (FWHM 2.2-2.4 px) k 0.75 lowered the point-to-point noise of faint targets ~10 % but raised the comps' slow drifts 18-19 % (pixel phase, centring). Test on a well-sampled night before any grid change | Claude | later |
+| **GAIA-DR4-PM** | Gaia DR4 (archive opens 2026-12-02): build the local catalogue with pmra/pmdec and propagate positions to the observation epoch (gaia_pm.apply_pm_to_gaia_rows already exists, a no-op on DR3-lite). DR3 is not topped up (Milan 2026-10-23) | Claude | DR4 release |
+| ~~LC-SPIKE-EDGE-01~~ | CLOSED 2026-10-24 (Milan): kept as a flag only. At the first / last epoch of a steep trend the isolated-spike test may be a false alarm; a real single-point jump can come from an aircraft, satellite or cosmic ray on the target or a comp. The flag is a note on that point, the export is unaffected | - | - |
+| ~~EPSF-FAINT-AMP-01~~ | CLOSED 2026-10-24: not reproduced. Step D on 534 (36 sine stars G 14-17): ePSF amplitude 0.96 +- 0.09 at G 16, 0.99 +- 0.07 at G 16.5; the 0.82 was one star per magnitude (docs/VYVAR_INJECTION_RECOVERY.md ch. 7) | - | - |
+| ~~FAINT-RED-NOISE-01~~ | CLOSED 2026-10-24 (Milan): nothing changes. Tests: beta (Winn 2008) from the star's own model residuals predicts the amplitude scatter (0.9-1.3 x), but VYVAR has no model of a target; beta of a raw light curve counts the variability (MN Boo, AC Boo, EA stars 3.2-3.8), beta of constant / check stars is not the star's own (0.7-1.7 x); FWHM detrending before the fit removes 16 % of a sine. A user fitting a model computes beta from its residuals (docs/VYVAR_INJECTION_RECOVERY.md ch. 7) | - | - |
+| ~~TRANSIENT-01~~ | CLOSED 2026-10-25 (stage 1, Milan): transient search of one night, opt-in `transient_search_enabled` (TRANSIENT-2026-10); open parts below | - | - |
+| ~~TRANSIENT-SUBTRACT-01~~ | CLOSED 2026-10-25 (Milan): not planned - VYVAR is for variable-star photometry, not a supernova search. A source on an OpenNGC galaxy core is reported as the galaxy | - | - |
+| ~~TRANSIENT-HISTORY-01~~ | CLOSED 2026-10-25 (Milan): not planned - the transient search works on one night | - | - |
+| **COMET-PHOT-2.0** | Autonomous comet photometry for release 2.0 (claude/VYVAR_TRANSIENTS_COMETS_ANALYSIS_20261024.md): moving target type, apertures in arcsec and km, m1 for COBS / ICQ, Afrho, star contamination / subtraction by the frame ePSF | Claude | release 2.0 |
 
 Standing operator items without a hyphenated id (kept as prose, not an id row):
 first AAVSO/VarAstro uploads BO -> FW (band CV) once a locked ledger exists;

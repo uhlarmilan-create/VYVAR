@@ -4,9 +4,10 @@ ONE place that decides, per physical parameter, which source wins:
 
     * OBSERVATION-SPECIFIC (pointing, time, exptime, binning, filter, ccd-temp,
       plate-scale): HEADER / solved-WCS (valid) -> DB -> config.
-    * EQUIPMENT-INTRINSIC gain: HEADER (e-/ADU or setting-index mapped) ->
-      DB -> config.  Read-noise and other equipment-intrinsic params remain
-      DB-SET (valid) -> HEADER (fallback + cross-check) -> config.
+    * GAIN / READ NOISE (CAMERA-PROFILE-2026-10): header e-/ADU -> the camera
+      profile (``camera_profile``: measured / manual points, the camera's default
+      point, the catalog curve) at the header gain setting and the frame binning.
+      Read noise: camera profile -> header card (fallback + cross-check).
       (DB authority is required because plausible-but-wrong headers exist:
       draft 363 carries XPIXSIZE=10.0 um while the real IMX457 pitch is 3.76 um -
       a pure sanity range would accept 10.0; only the DB cross-check rejects it.)
@@ -81,12 +82,6 @@ HEADER_KEYS: dict[str, tuple[str, ...]] = {
 # Relative tolerance for header<->DB cross-check warnings (equipment-intrinsic).
 CROSS_CHECK_RTOL = 0.05
 
-# QHY driver GAIN header is a setting index, not e-/ADU.  Map (equipment_id, setting) -> e-/ADU.
-# QHY294PROM read mode 0, gain setting 0 -> 3.17 e-/ADU (matches EQUIPMENTS.GAIN_ADU eq 1).
-GAIN_SETTING_INDEX_MAP: dict[int, dict[int, float]] = {
-    1: {0: 3.17},  # QHY294MM
-}
-
 _E_PER_ADU_COMMENT_MARKERS = ("e-/adu", "e/adu", "electron")
 _GAIN_INDEX_COMMENTS = frozenset({"gain", "index", ""})
 
@@ -96,7 +91,7 @@ class Resolved:
     """Result of resolving one parameter."""
 
     value: Any = None
-    source: str = "unresolved"      # header | header_index_mapped | db | config | default | unresolved
+    source: str = "unresolved"      # header | measured | manual | equipment | catalog | db | config | unresolved
     key: str | None = None          # winning header keyword (if source == header)
     ok: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -157,17 +152,6 @@ def _clamp_param_sanity(param: str, v: float) -> float:
     return max(lo, min(hi, float(v)))
 
 
-def _scale_bin1_to_binning(value: float, binning: int, exponent: int) -> float:
-    """Scale a bin1 per-pixel DB intrinsic by summed binning (gain: bin^2, RN: bin).
-
-    ``READNOISE_E`` in EQUIPMENTS is per-pixel at bin1; scaled *bin for software-summed binning.
-    """
-    b = int(binning)
-    if b <= 1:
-        return float(value)
-    return float(value) * float(b ** int(exponent))
-
-
 def _binning_from_header(header: Any) -> int | None:
     """Integer binning from FITS ``XBINNING`` / ``BINNING`` when trustworthy.
 
@@ -193,96 +177,6 @@ def _binning_from_header(header: Any) -> int | None:
         if y_bin < 1 or y_bin != x_bin:
             return None
     return x_bin
-
-
-def _scale_bin1_db_for_header(
-    value: float | None,
-    header: Any,
-    *,
-    exponent: int,
-    param_label: str,
-) -> float | None:
-    """Scale bin1 DB fallback using FITS binning; log INFO/WARNING per policy."""
-    if value is None:
-        return None
-    try:
-        raw = float(value)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(raw):
-        return None
-    binning = _binning_from_header(header)
-    if binning is None:
-        _warn_once_logger(
-            f"bin1_scale_skip_{param_label}",
-            (
-                f"[RESOLVE {param_label}] binning unresolved - using raw DB bin1 value "
-                f"{raw:g} (no scaling)"
-            ),
-        )
-        return raw
-    if binning == 1:
-        return raw
-    eff = _scale_bin1_to_binning(raw, binning, exponent)
-    logger.info(
-        "[RESOLVE %s] scaled DB bin1 %g -> %g (binning=%d, exp=%d)",
-        param_label,
-        raw,
-        eff,
-        binning,
-        int(exponent),
-    )
-    return eff
-
-
-# --------------------------------------------------------------------------- #
-# EQUIPMENT-INTRINSIC: DB-set (valid) -> header (fallback + cross-check) -> config
-# --------------------------------------------------------------------------- #
-def _resolve_equipment_intrinsic(
-    param: str,
-    *,
-    header: Any,
-    db_value: float | None,
-    cfg_value: float | None,
-    log_label: str,
-) -> Resolved:
-    hdr_v, hdr_key = _header_value(header, param)
-    db_ok = _is_valid(param, db_value)
-    res = Resolved()
-
-    if db_ok:
-        res.value = float(db_value)  # type: ignore[arg-type]
-        res.source = "db"
-        res.ok = True
-        # Cross-check against a valid header value (DB still wins, but warn).
-        if hdr_v is not None and not math.isclose(
-            float(hdr_v), float(db_value), rel_tol=CROSS_CHECK_RTOL  # type: ignore[arg-type]
-        ):
-            msg = (
-                f"[RESOLVE {log_label}] header {hdr_key}={hdr_v:g} disagrees with "
-                f"DB={float(db_value):g} (>{CROSS_CHECK_RTOL:.0%}); using DB (equipment-intrinsic authority)"
-            )
-            res.warnings.append(msg)
-            _warn_once_logger(f"xcheck_{param}", msg)
-    elif hdr_v is not None:
-        res.value = float(hdr_v)
-        res.source = "header"
-        res.key = hdr_key
-        res.ok = True
-        _warn_once_logger(
-            f"hdrfallback_{param}",
-            f"[RESOLVE {log_label}] DB value missing/invalid; falling back to header {hdr_key}={hdr_v:g}",
-        )
-    elif _is_valid(param, cfg_value):
-        res.value = float(cfg_value)  # type: ignore[arg-type]
-        res.source = "config"
-        res.ok = True
-    else:
-        res.source = "unresolved"
-        res.ok = False
-
-    logger.debug("[RESOLVE %s] -> %s (source=%s, key=%s)", log_label, res.value, res.source, res.key)
-    return res
 
 
 def _header_card_comment(header: Any, key: str) -> str:
@@ -323,36 +217,19 @@ def _comment_indicates_gain_index(comment: str) -> bool:
     return str(comment or "").strip().lower() in _GAIN_INDEX_COMMENTS
 
 
-def _equipment_gain_header_units_e_per_adu(equipment_id: int | None, cfg: Any) -> bool:
-    """Optional per-camera override: header GAIN is always e-/ADU (not a setting index)."""
-    if cfg is None or equipment_id is None:
-        return False
-    flag = getattr(cfg, "gain_header_units_e_per_adu", None)
-    if isinstance(flag, dict):
-        try:
-            return bool(flag.get(int(equipment_id), False))
-        except (TypeError, ValueError):
-            return False
-    return bool(flag)
-
-
 def _is_gain_setting_index(
     header: Any,
     raw: float,
     comment: str,
-    db_value: float | None,
-    *,
-    is_e_per_adu: bool,
+    reference_gain: float | None,
 ) -> bool:
-    """True when the header GAIN/EGAIN card is a driver setting index, not e-/ADU."""
-    if is_e_per_adu:
-        return False
+    """Header GAIN card without an explicit unit: True when it reads as a driver setting, not e-/ADU."""
     if _comment_indicates_gain_index(comment):
         return True
-    if header is not None and "READMODE" in header:
+    if header is not None and ("READMODE" in header or "READOUTM" in header):
         return True
-    if _is_valid("gain", db_value) and not math.isclose(
-        float(raw), float(db_value), rel_tol=CROSS_CHECK_RTOL
+    if _is_valid("gain", reference_gain) and not math.isclose(
+        float(raw), float(reference_gain), rel_tol=CROSS_CHECK_RTOL
     ):
         # Integer 0..100 without e-/ADU semantics is implausible as e-/ADU for this camera.
         ri = int(round(float(raw)))
@@ -361,110 +238,66 @@ def _is_gain_setting_index(
     return False
 
 
-def _map_gain_setting_index(
-    setting_index: int,
-    equipment_id: int | None,
-) -> float | None:
-    if equipment_id is not None:
-        per_eq = GAIN_SETTING_INDEX_MAP.get(int(equipment_id), {})
-        if setting_index in per_eq:
-            return float(per_eq[setting_index])
-    return None
-
-
-def _resolve_gain_header_first(
+def _profile_for(
     *,
-    header: Any,
-    db_value: float | None,
-    cfg_value: float | None,
+    profile: Any,
+    db: Any,
     equipment_id: int | None,
     cfg: Any,
-) -> Resolved:
-    """Header-first gain: e-/ADU card -> setting-index map -> DB -> config."""
-    res = Resolved()
-    db_ok = _is_valid("gain", db_value)
-    raw, hdr_key, comment = _header_gain_raw(header)
+    db_value: float | None,
+    param: str,
+) -> Any:
+    """Camera profile: given, else from ``db.conn`` / ``cfg.database_path``, else a bare profile
+    holding only ``db_value`` (the camera's default point, any setting)."""
+    from camera_profile import CameraProfile, CurvePoint, load_profile, profile_from_connection  # noqa: PLC0415
 
-    if raw is not None:
-        force_e_per_adu = _equipment_gain_header_units_e_per_adu(equipment_id, cfg)
-        is_e_per_adu = force_e_per_adu or _comment_indicates_e_per_adu(comment)
-        is_index = _is_gain_setting_index(
-            header, raw, comment, db_value, is_e_per_adu=is_e_per_adu
-        )
-
-        if is_e_per_adu and not is_index and _is_valid("gain", raw):
-            res.value = float(raw)
-            res.source = "header"
-            res.key = hdr_key
-            res.ok = True
-            if db_ok and not math.isclose(float(raw), float(db_value), rel_tol=CROSS_CHECK_RTOL):
-                msg = (
-                    f"[RESOLVE gain] header {hdr_key}={raw:g} disagrees with "
-                    f"DB={float(db_value):g} (>{CROSS_CHECK_RTOL:.0%}); using header (session truth)"
-                )
-                res.warnings.append(msg)
-                _warn_once_logger("xcheck_gain_header_wins", msg)
-            logger.debug("[RESOLVE gain] -> %s (source=%s, key=%s)", res.value, res.source, res.key)
-            return res
-
-        if is_index or (not is_e_per_adu and _comment_indicates_gain_index(comment)):
-            setting = int(round(float(raw)))
-            mapped = _map_gain_setting_index(setting, equipment_id)
-            if mapped is not None and _is_valid("gain", mapped):
-                res.value = float(mapped)
-                res.source = "header_index_mapped"
-                res.key = hdr_key
-                res.ok = True
-                logger.debug("[RESOLVE gain] -> %s (source=%s, key=%s, index=%d)", res.value, res.source, res.key, setting)
-                return res
-            if db_ok:
-                msg = (
-                    f"[RESOLVE gain] header GAIN index {setting} not in gain map; using DB base "
-                    f"{float(db_value):g} e-/ADU"
-                )
-                res.warnings.append(msg)
-                _warn_once_logger(f"gain_index_unmapped_{equipment_id}_{setting}", msg)
-                eff_db = _scale_bin1_db_for_header(
-                    float(db_value), header, exponent=2, param_label="gain"
-                )
-                res.value = float(eff_db if eff_db is not None else db_value)  # type: ignore[arg-type]
-                res.source = "db"
-                res.ok = True
-                logger.debug("[RESOLVE gain] -> %s (source=%s, unmapped index)", res.value, res.source)
-                return res
-
-    if db_ok:
-        eff_db = _scale_bin1_db_for_header(
-            float(db_value), header, exponent=2, param_label="gain"
-        )
-        res.value = float(eff_db if eff_db is not None else db_value)  # type: ignore[arg-type]
-        res.source = "db"
-        res.ok = True
-        logger.debug("[RESOLVE gain] -> %s (source=%s)", res.value, res.source)
-        return res
-
-    if _is_valid("gain", cfg_value):
-        res.value = float(cfg_value)  # type: ignore[arg-type]
-        res.source = "config"
-        res.ok = True
-        logger.debug("[RESOLVE gain] -> %s (source=%s)", res.value, res.source)
-        return res
-
-    res.source = "unresolved"
-    res.ok = False
-    logger.debug("[RESOLVE gain] -> unresolved")
-    return res
+    if profile is not None:
+        return profile
+    if equipment_id is not None and db_value is None:
+        conn = getattr(db, "conn", None)
+        if conn is not None:
+            try:
+                return profile_from_connection(conn, int(equipment_id))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[RESOLVE %s] camera profile from DB failed (equipment %s): %s", param, equipment_id, exc)
+        db_path = getattr(cfg, "database_path", None) if cfg is not None else None
+        if db_path:
+            return load_profile(db_path, int(equipment_id))
+    pts = ()
+    if _is_valid(param, db_value):
+        g = float(db_value) if param == "gain" else None
+        rn = float(db_value) if param == "read_noise" else None
+        pts = (CurvePoint(None, 1, g, rn, "equipment"),)
+    return CameraProfile(equipment_id=int(equipment_id) if equipment_id is not None else None, points=pts)
 
 
-def _db_cosmic(db: Any, equipment_id: int | None) -> tuple[float | None, float | None]:
-    if db is None or equipment_id is None:
-        return None, None
-    try:
-        g, rn = db.get_equipment_cosmic_params(int(equipment_id))
-        return g, rn
-    except Exception as exc:  # noqa: BLE001
-        logging.warning('[EXC-0116] science path may skip or use stale defaults (g, rn = db.get_equipment_cosmic_params(int...: %s', exc)
-        return None, None
+def _header_setting(header: Any, profile: Any) -> tuple[float | None, str | None, bool]:
+    """(gain setting from the header or None, header key, header states e-/ADU)."""
+    raw, key, comment = _header_gain_raw(header)
+    if raw is None:
+        return None, None, False
+    kind = getattr(profile, "header_gain", None)
+    if kind == "e_per_adu":
+        return None, key, True
+    if kind == "setting":
+        return float(raw), key, False
+    if _comment_indicates_e_per_adu(comment):
+        return None, key, True
+    from camera_profile import lookup  # noqa: PLC0415
+
+    ref = lookup(profile, "gain", None, 1).value
+    if _is_gain_setting_index(header, raw, comment, ref):
+        return float(raw), key, False
+    return None, key, True
+
+
+def _frame_binning(header: Any, label: str) -> int:
+    b = _binning_from_header(header)
+    if b is None:
+        if header is not None and len(header):
+            _warn_once_logger(f"bin_unresolved_{label}", f"[RESOLVE {label}] binning unresolved - bin 1 assumed")
+        return 1
+    return int(b)
 
 
 def resolve_gain(
@@ -474,17 +307,51 @@ def resolve_gain(
     equipment_id: int | None = None,
     cfg: Any = None,
     db_value: float | None = None,
+    profile: Any = None,
 ) -> Resolved:
-    if db_value is None:
-        db_value, _ = _db_cosmic(db, equipment_id)
-    cfg_v = getattr(cfg, "gain", None) if cfg is not None else None
-    return _resolve_gain_header_first(
-        header=header,
-        db_value=db_value,
-        cfg_value=cfg_v,
-        equipment_id=equipment_id,
-        cfg=cfg,
-    )
+    """Gain in e-/ADU (native ADC units) of the frame (CAMERA-PROFILE-2026-10):
+
+    1. the header states e-/ADU (``EGAIN``, or ``GAIN`` with an e-/ADU comment, or a camera whose
+       header GAIN is e-/ADU) -> used as is;
+    2. the header states the driver gain setting -> the camera's curve at that setting and the frame's
+       binning (measured > manual > the camera's default point > catalog);
+    3. no setting in the header -> the camera's default setting;
+    4. otherwise unresolved (callers stop with a message).
+    """
+    from camera_profile import lookup  # noqa: PLC0415
+
+    prof = _profile_for(profile=profile, db=db, equipment_id=equipment_id, cfg=cfg, db_value=db_value, param="gain")
+    res = Resolved()
+    binning = _frame_binning(header, "gain")
+    setting, hdr_key, is_e_per_adu = _header_setting(header, prof)
+    raw, _, _ = _header_gain_raw(header)
+    if is_e_per_adu and raw is not None and _is_valid("gain", raw):
+        res.value, res.source, res.key, res.ok = float(raw), "header", hdr_key, True
+        ref = lookup(prof, "gain", None, binning)
+        if ref.value is not None and not math.isclose(float(raw), float(ref.value), rel_tol=CROSS_CHECK_RTOL):
+            msg = (
+                f"[RESOLVE gain] header {hdr_key}={raw:g} disagrees with the camera profile "
+                f"{float(ref.value):g} ({ref.detail}, >{CROSS_CHECK_RTOL:.0%}); using header (session truth)"
+            )
+            res.warnings.append(msg)
+            _warn_once_logger(f"xcheck_gain_header_wins_{prof.equipment_id}", msg)
+        return res
+    lk = lookup(prof, "gain", setting, binning)
+    if lk.value is not None and _is_valid("gain", lk.value):
+        res.value, res.source, res.ok = float(lk.value), lk.source, True
+        res.key = f"{hdr_key}={setting:g}" if setting is not None and hdr_key else None
+        if setting is not None and prof.default_setting is None and lk.source == "equipment":
+            msg = (
+                f"[RESOLVE gain] camera {prof.name or prof.equipment_id}: header gain setting {setting:g}, "
+                f"no default setting stored - GAIN_ADU {lk.value:g} assumed to belong to it"
+            )
+            res.warnings.append(msg)
+            _warn_once_logger(f"gain_default_setting_unknown_{prof.equipment_id}_{setting:g}", msg)
+        logger.debug("[RESOLVE gain] -> %s (%s)", res.value, lk.detail)
+        return res
+    res.source, res.ok = "unresolved", False
+    res.warnings.append(f"[RESOLVE gain] {lk.detail} (camera {prof.name or prof.equipment_id}, bin {binning})")
+    return res
 
 
 def resolve_read_noise(
@@ -494,24 +361,42 @@ def resolve_read_noise(
     equipment_id: int | None = None,
     cfg: Any = None,
     db_value: float | None = None,
+    profile: Any = None,
 ) -> Resolved:
-    if db_value is None:
-        _, db_value = _db_cosmic(db, equipment_id)
-    db_for_resolve = db_value
-    if db_value is not None and _is_valid("read_noise", db_value):
-        scaled = _scale_bin1_db_for_header(
-            float(db_value), header, exponent=1, param_label="read_noise"
-        )
-        if scaled is not None:
-            db_for_resolve = scaled
-    cfg_v = getattr(cfg, "read_noise", None) if cfg is not None else None
-    return _resolve_equipment_intrinsic(
-        "read_noise",
-        header=header,
-        db_value=db_for_resolve,
-        cfg_value=cfg_v,
-        log_label="read_noise",
+    """Read noise in e- of the frame: the camera's curve at the header gain setting and binning (same
+    order as the gain); a header read-noise card only when the camera has none (it cross-checks
+    otherwise)."""
+    from camera_profile import lookup  # noqa: PLC0415
+
+    prof = _profile_for(
+        profile=profile, db=db, equipment_id=equipment_id, cfg=cfg, db_value=db_value, param="read_noise"
     )
+    res = Resolved()
+    # VYVAR's own effective stamp (OSC channel frames) is the session truth, like VY_EGAIN for the gain.
+    vy = _header_value(header, "read_noise")
+    if vy[1] == "VY_RDNOIS" and vy[0] is not None:
+        res.value, res.source, res.key, res.ok = float(vy[0]), "header", "VY_RDNOIS", True
+        return res
+    binning = _frame_binning(header, "read_noise")
+    setting, _, _ = _header_setting(header, prof)
+    lk = lookup(prof, "read_noise", setting, binning)
+    hdr_v, hdr_key = _header_value(header, "read_noise")
+    if lk.value is not None and _is_valid("read_noise", lk.value):
+        res.value, res.source, res.ok = float(lk.value), lk.source, True
+        if hdr_v is not None and not math.isclose(float(hdr_v), float(lk.value), rel_tol=CROSS_CHECK_RTOL):
+            msg = (
+                f"[RESOLVE read_noise] header {hdr_key}={hdr_v:g} disagrees with the camera profile "
+                f"{float(lk.value):g} ({lk.detail}); using the camera profile"
+            )
+            res.warnings.append(msg)
+            _warn_once_logger(f"xcheck_read_noise_{prof.equipment_id}", msg)
+        return res
+    if hdr_v is not None:
+        res.value, res.source, res.key, res.ok = float(hdr_v), "header", hdr_key, True
+        return res
+    res.source, res.ok = "unresolved", False
+    res.warnings.append(f"[RESOLVE read_noise] {lk.detail} (camera {prof.name or prof.equipment_id}, bin {binning})")
+    return res
 
 
 # --------------------------------------------------------------------------- #

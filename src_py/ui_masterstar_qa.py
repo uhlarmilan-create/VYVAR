@@ -26,7 +26,7 @@ def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:
 
 
 def _resolve_draft_path(cfg: AppConfig, draft_id: int | None, draft_dir_override: Path | None) -> Path | None:
-    """Draft root: override -> Drafts/draft_{id} -> last import result; else a manual path."""
+    """Processed-field root: override -> its folder under Drafts -> last import result; else a manual path."""
     _session_draft_id = st.session_state.get("vyvar_last_draft_id")
     _did = _session_draft_id if _session_draft_id is not None else draft_id
     if draft_dir_override is not None and Path(draft_dir_override).is_dir():
@@ -40,14 +40,15 @@ def _resolve_draft_path(cfg: AppConfig, draft_id: int | None, draft_dir_override
     default_ap = ""
     if _did is not None:
         try:
-            default_ap = str((Path(cfg.archive_root) / "Drafts" / f"draft_{int(_did):06d}").resolve())
+            from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+            default_ap = str(draft_dir_for_id(cfg.archive_root, int(_did)).resolve())
         except (TypeError, ValueError):
             default_ap = ""
-    ap_manual = st.text_input("Archive path (draft)", value=default_ap, key="vyvar_masterstar_ap")
+    ap_manual = st.text_input("Archive path (processed field)", value=default_ap, key="vyvar_masterstar_ap")
     if not ap_manual.strip():
         st.info(
-            "No active draft. Load a draft above (**Load draft**), run **RUN VYVAR**, "
-            "or enter a path to `.../Archive/Drafts/draft_XXXXXX`."
+            "No processed field loaded. Load one above (**Load processed field**), run **RUN VYVAR**, "
+            "or enter the path of its folder (`.../Archive/Drafts/<star>_<YYYYMMDD>_<NNN>`)."
         )
         return None
     return Path(ap_manual.strip())

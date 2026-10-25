@@ -183,8 +183,36 @@ def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str
     }
 
 
+def _error_model_rows(photometry_dir: Path | None, gain: dict[str, Any], warnings: list[str]) -> list[dict[str, str]]:
+    """CAMERA-PROFILE-2026-10: field check of the error model (check-star scatter / reported errors)."""
+    if photometry_dir is None:
+        return []
+    from trust_flag_core import ERROR_MODEL_RATIO_HIGH, ERROR_MODEL_RATIO_LOW, error_model_check  # noqa: PLC0415
+
+    chk = error_model_check(Path(photometry_dir))
+    if chk["status"] == "too_few":
+        return [{"label": "Error-model check", "value": f"{chk['n']} check star(s) - too few to judge", "source": "-"}]
+    val = f"check-star scatter / reported error = {chk['ratio']:.2f} (median of {chk['n']})"
+    src = str((gain or {}).get("source") or "-")
+    if chk["status"] == "low":
+        warnings.append(
+            f"Error-model check: the check stars scatter {chk['ratio']:.2f}x their errors (< {ERROR_MODEL_RATIO_LOW}) - "
+            f"the errors look too large; gain may be too small or read noise too large (gain source: {src}). "
+            "Measure the gain from raw flats (Calibration Library)."
+        )
+    elif chk["status"] == "high":
+        warnings.append(
+            f"Error-model check: the check stars scatter {chk['ratio']:.2f}x their errors (> {ERROR_MODEL_RATIO_HIGH}) - "
+            f"the errors look too small: a wrong gain or read noise (gain source: {src}), or noise outside the model "
+            "(scintillation, flat field, variable check stars)."
+        )
+    return [{"label": "Error-model check", "value": val, "source": {"ok": "consistent", "low": "errors too large",
+                                                                       "high": "errors too small"}[chk["status"]]}]
+
+
 def resolved_facts_model(
     pipeline_meta: dict[str, Any] | None,
+    photometry_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Run-effective resolved facts block for the report.
 
@@ -214,8 +242,12 @@ def resolved_facts_model(
             return f"{v:g}"
         return str(v)
 
+    _src_text = {"equipment": "camera default point", "measured": "measured (photon transfer)",
+                 "manual": "manual point", "catalog": "camera catalog (typical)", "db": "camera (DB)"}
+
     def _src(res: dict[str, Any], extra: str | None = None) -> str:
         s = res.get("source") if isinstance(res, dict) else None
+        s = _src_text.get(str(s), s) if s else s
         key = res.get("key") if isinstance(res, dict) else None
         parts = [str(s)] if s else []
         if key:
@@ -247,6 +279,7 @@ def resolved_facts_model(
         },
         {"label": "Gain (e-/ADU)", "value": _fmt(gain_val), "source": _src(gain) if gain else "-"},
         {"label": "Read noise (e-)", "value": _fmt(rn_val), "source": _src(rn) if rn else "-"},
+        *_error_model_rows(photometry_dir, gain, warnings),
         {"label": "Saturation (ADU)", "value": _fmt(rf.get("saturation_adu")), "source": "-"},
         {"label": "Plate scale (arcsec/px)", "value": _fmt(plate), "source": "-"},
         {
@@ -1966,17 +1999,10 @@ class _PhotometryReportBuilder:
 
 
     def _draft_id_from_dirname(self, ) -> int | None:
-        """Best-effort draft_id parse from ``draft_000123`` directory name."""
-        nm = str(getattr(self.draft_dir, "name", "") or "")
-        if "draft_" not in nm:
-            return None
-        try:
-            tail = nm.split("draft_", 1)[1]
-            digits = "".join(ch for ch in tail if ch.isdigit())
-            return int(digits) if digits else None
-        except Exception:  # noqa: BLE001
-            # EXC-0257: T2 -- report/export may omit or misstate (digits = ''.join(ch for ch in tail if ch.isdigit())... (EXCEPT-BULK 2026-07-08)
-            return None
+        """Run id of the processed-field folder (its manifest; legacy ``draft_NNNNNN`` by name)."""
+        from processed_field import processed_field_id  # noqa: PLC0415
+
+        return processed_field_id(getattr(self, "draft_dir", None))
     def _load_obs_files_for_obs(self, ) -> pd.DataFrame:
         """Load QA metrics from DB (manifest files[]) for this draft + setup."""
         draft_id = self._draft_id_from_dirname()
@@ -3671,6 +3697,139 @@ class _PhotometryReportBuilder:
             self._page_footer(c)
             c.showPage()
 
+    def _report_transients(self, c: "canvas.Canvas") -> None:
+        """TRANSIENT-2026-10: one table page (new sources, stars brighter than Gaia, minor bodies) and
+        the light curves of the new sources; nothing when the transient search did not run."""
+        import json as _json  # noqa: PLC0415
+
+        from variability_plots import candidate_lc_png  # noqa: PLC0415
+
+        phot = self.photometry_dir
+        try:
+            tm = _json.loads((phot / "transient_meta.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+
+        def _csv(name: str) -> pd.DataFrame:
+            p = phot / name
+            try:
+                return pd.read_csv(p, low_memory=False) if p.is_file() and p.stat().st_size > 2 else pd.DataFrame()
+            except (OSError, ValueError, pd.errors.EmptyDataError):
+                return pd.DataFrame()
+
+        T, B, M = _csv("transient_candidates.csv"), _csv("minor_bodies_in_field.csv"), _csv("moving_objects.csv")
+        cand = T[T["candidate"].astype(str).str.lower() == "true"].copy() if not T.empty else T
+        if not cand.empty:
+            cand["n"] = cand["label"].str[1:].astype(int)
+            cand = cand.sort_values("n")
+        F = _csv("variability_field.csv")
+        br = F[F["brightened"].astype(str).str.lower() == "true"] if "brightened" in F else F.iloc[0:0]
+        c.setPageSize(self.landscape(self.A4))
+        y = self.PAGE_H - self.M_TOP
+        c.setFont(self.FONT_BOLD, 14)
+        c.setFillColor(self.C_TITLE)
+        c.drawString(self.M_LEFT, y - 0.45 * self.cm, "Transients - new sources and minor bodies")
+        c.setFillColor(self.colors.black)
+        y -= 1.0 * self.cm
+        sty = self._get_para_style("tr_body", fontName=self.FONT_REG, fontSize=8.5, leading=11)
+        txt = (f"Every aligned frame ({tm.get('n_frames')}) was searched for sources (DAOStarFinder, 5 sigma) that are not on "
+               "MASTERSTAR. A new source is seen on >= 3 consecutive frames at S/N >= 5 (noise measured on empty sky), stays on one "
+               "sky position, is not a detector pixel, has no Gaia star of similar brightness within 2.5 FWHM, is not in the halo of a much brighter G < 8 star nor on a hot pixel of the master dark, "
+               "and is brighter than the catalogue depth - 1 mag (Gaia Science Alerts / NMW method, no image subtraction: a "
+               "supernova on top of a galaxy core is not found). Stars brighter than Gaia: night magnitude >= 1 mag and >= 3 sigma "
+               "above Gaia G with the neighbours' light. Candidates must be checked on the images before any report "
+               f"(TNS for extragalactic transients, CBAT for novae). Status: {tm.get('n_candidates', 0)} new source(s) of "
+               f"{tm.get('n_sources', 0)} examined.")
+        y = self._draw_paragraph_block(c, self.M_LEFT, y, self.USE_W, self._pdf_escape(txt), sty, paginate=False)
+        y -= 0.3 * self.cm
+
+        def _table(title: str, hdr: list[str], xs: list[float], rows: list[list[str]], yy: float) -> float:
+            c.setFont(self.FONT_BOLD, 10)
+            c.drawString(self.M_LEFT, yy, title)
+            yy -= 0.5 * self.cm
+            if not rows:
+                c.setFont(self.FONT_REG, 8.5)
+                c.drawString(self.M_LEFT, yy, "none")
+                return yy - 0.6 * self.cm
+            c.setFont(self.FONT_BOLD, 8)
+            for h, x in zip(hdr, xs):
+                c.drawString(self.M_LEFT + x * self.cm, yy, h)
+            yy -= 0.42 * self.cm
+            c.setFont(self.FONT_REG, 7.5)
+            for r in rows:
+                if yy < self.M_BOTTOM + 0.6 * self.cm:
+                    self._page_footer(c)
+                    c.showPage()
+                    c.setPageSize(self.landscape(self.A4))
+                    yy = self.PAGE_H - self.M_TOP
+                    c.setFont(self.FONT_REG, 7.5)
+                for v, x in zip(r, xs):
+                    c.drawString(self.M_LEFT + x * self.cm, yy, self._pdf_escape(str(v))[:70])
+                yy -= 0.4 * self.cm
+            return yy - 0.4 * self.cm
+
+        kind_txt = {"appeared": "appeared", "faded": "faded", "present": "all night"}
+        y = _table("New sources", ["Id", "kind", "first seen JD", "G est.", "S/N max", "frames", "RA", "Dec", "in galaxy", "catalogues"],
+                   [0.0, 1.0, 3.0, 5.6, 7.0, 8.4, 9.8, 12.0, 14.2, 16.6],
+                   [[r["label"], kind_txt.get(str(r["kind"]), r["kind"]), f"{float(r['first_time']):.5f}", f"{float(r['mag_g_est']):.2f}",
+                     f"{float(r['snr_max']):.1f}", int(r["n_frames_snr5"]), f"{float(r['ra_deg']):.5f}", f"{float(r['dec_deg']):+.5f}",
+                     (str(r.get("galaxy") or "") if str(r.get("in_galaxy")).lower() == "true" else "-"),
+                     str(r.get("catalogs") or "not checked")] for _, r in cand.iterrows()], y)
+        y = _table("Stars brighter than Gaia predicts", ["Gaia DR3", "G (Gaia)", "brighter by", "BP-RP", "neighbour light", "VSX / target"],
+                   [0.0, 4.2, 6.0, 8.0, 9.6, 12.0],
+                   [[r["catalog_id"], f"{float(r['mag']):.2f}", f"{-float(r['dmag_vs_gaia']):.2f}", f"{float(r['bp_rp']):.2f}",
+                     f"{float(r['blend']):.2f}", str(r.get("known_variable"))] for _, r in br.iterrows()], y)
+        info = tm.get("minor_bodies") or {}
+        y = _table("Minor planets and comets in the field (V <= 20, MPC orbits, two-body)",
+                   ["name", "type", "V pred.", "motion \"/h", "delta au", "frames in field", "detected on"],
+                   [0.0, 5.0, 7.4, 8.8, 10.6, 12.2, 14.6],
+                   [[r["name"], str(r["kind"]).replace("_", " "), f"{float(r['mag_v']):.1f}", f"{float(r['rate_arcsec_h']):.1f}",
+                     f"{float(r['delta_au']):.3f}", int(r["frames_in_field"]), int(r.get("detected_frames", 0))] for _, r in B.iterrows()]
+                   if not B.empty else [], y)
+        if B.empty:
+            c.setFont(self.FONT_REG, 7.5)
+            msg = ("no minor planet or comet brighter than V 20 in the field during the night" if info.get("status") == "ok"
+                   else f"not computed: {info.get('status', 'orbit files not available')}")
+            c.drawString(self.M_LEFT, y + 0.2 * self.cm, self._pdf_escape(msg)[:140])
+        if not M.empty:
+            c.setFont(self.FONT_REG, 8)
+            ids = ", ".join(x for x in M.get("minor_body", pd.Series(dtype=str)).fillna("") if x) or "none identified"
+            c.drawString(self.M_LEFT, y - 0.1 * self.cm, self._pdf_escape(f"Moving objects detected on the frames: {len(M)} ({ids})."))
+        self._page_footer(c)
+        c.showPage()
+        if cand.empty:
+            return
+        # light curves of the new sources, four per page
+        half = (self.USE_W - 0.5 * self.cm) / 2.0
+        for k, (_, r) in enumerate(cand.iterrows()):
+            if k % 4 == 0:
+                if k:
+                    self._page_footer(c)
+                    c.showPage()
+                c.setPageSize(self.landscape(self.A4))
+                y0 = self.PAGE_H - self.M_TOP
+                c.setFont(self.FONT_BOLD, 12)
+                c.setFillColor(self.C_TITLE)
+                c.drawString(self.M_LEFT, y0 - 0.45 * self.cm, "New sources - light curves (G scale of the field)")
+                c.setFillColor(self.colors.black)
+                y0 -= 0.9 * self.cm
+                hh = (y0 - self.M_BOTTOM - 0.6 * self.cm) / 2.0
+            lc = phot / "lightcurves" / f"transient_{r['label']}.csv"
+            if not lc.is_file():
+                continue
+            d = pd.read_csv(lc)
+            d = d.assign(dmag=d["mag"].where(d["snr"] >= 5))
+            tmp = self.cache_dir / f"transient_{r['label']}_lc.csv"
+            d.to_csv(tmp, index=False)
+            png = self.cache_dir / f"transient_{r['label']}.png"
+            if candidate_lc_png(tmp, png, f"{r['label']} ({kind_txt.get(str(r['kind']), r['kind'])}), RA {float(r['ra_deg']):.5f} "
+                                          f"Dec {float(r['dec_deg']):+.5f}", time_label="JD", ylabel="G (est.)") is not None:
+                col, row = k % 2, (k % 4) // 2
+                self._draw_image_fit(c, png, self.M_LEFT + col * (half + 0.5 * self.cm), y0 - row * hh, half, hh - 0.2 * self.cm,
+                                     image_type="tess_phased")
+        self._page_footer(c)
+        c.showPage()
+
     def _report_osc_multiband_summary(self, c: "canvas.Canvas") -> None:
         from osc_align import obs_group_band_token, osc_multiband_summary_rows
 
@@ -3917,6 +4076,7 @@ class _PhotometryReportBuilder:
         """Resolved-facts block: values the run actually used (site/gain/RN/plate/frame/etc.)."""
         model = resolved_facts_model(
             self._pipeline_meta,
+            self.photometry_dir,
         )
 
         c.setPageSize(self.landscape(self.A4))
@@ -3935,7 +4095,7 @@ class _PhotometryReportBuilder:
         )
         y -= 0.6 * self.cm
 
-        if model["fallback"]:
+        if model["warnings"]:
             c.setFont(self.FONT_BOLD, 9)
             c.setFillColor(self.colors.HexColor("#b00000"))
             for w in model["warnings"]:
@@ -4168,6 +4328,11 @@ class _PhotometryReportBuilder:
             self._report_variability_v2(c)
         except Exception as exc:  # noqa: BLE001
             logging.warning("PDF variability section skipped (non-fatal): %s", exc)
+        # TRANSIENT-2026-10: new sources, stars brighter than Gaia, minor bodies (only when the search ran)
+        try:
+            self._report_transients(c)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("PDF transient section skipped (non-fatal): %s", exc)
         try:
             self._report_osc_multiband_summary(c)
         except Exception as exc:  # noqa: BLE001

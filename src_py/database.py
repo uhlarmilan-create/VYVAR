@@ -9,7 +9,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, ClassVar, Iterable
+from typing import Any, Iterable
 
 from astropy.io import fits
 
@@ -166,8 +166,6 @@ class ThreadSafeSQLiteConnection:
         with self._lock:
             self._conn.close()
 
-_EDITABLE_EDITOR_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION", "DRAFT_MANIFEST"})
-_EDITABLE_DEFAULT_TABLES = frozenset({"EQUIPMENTS", "TELESCOPE", "LOCATION"})
 _REBUILD_MIGRATION_TABLES = frozenset({
     "EQUIPMENTS",
     "TELESCOPE",
@@ -538,10 +536,10 @@ class VyvarDatabase:
         self._ensure_active_columns()
         self._ensure_is_default_columns()
         self._ensure_equipments_saturate_adu_column()
-        self._migrate_qhy294mm_saturate_adu_null()
         self._ensure_equipments_cosmic_columns()
         self._ensure_equipments_bayermask_column()
         self._ensure_equipments_rig_photometry_columns()
+        self._ensure_camera_profile_schema()
         self._ensure_calibration_library_table()
         self._ensure_fits_header_cache_table()
         self._ensure_qc_processing_tables()
@@ -708,11 +706,6 @@ class VyvarDatabase:
         )"""
 
 
-    def count_references_to_location_id(self, location_id: int) -> int:
-        from draft_provenance import count_manifest_references_to_location_id
-
-        return int(count_manifest_references_to_location_id(self, int(location_id)))
-
     @staticmethod
     def normalize_active_db_value(raw: Any) -> int:
         """Normalize UI / DB values to **1** = active, **0** = inactive (soft-delete). Legacy ``YES``/``NO`` supported."""
@@ -747,8 +740,23 @@ class VyvarDatabase:
     def _coerce_sql_param(self, table: str, col: str, raw: Any) -> Any:
         if col == "ACTIVE":
             return self.normalize_active_text(raw)
-        if col == "IS_DEFAULT":
-            return 0 if int(self.normalize_active_db_value(raw)) == 0 else 1
+        if table == "EQUIPMENTS" and col in ("BIN_MODE", "HEADER_GAIN", "MODEL_KEY", "READOUT_MODE"):
+            # CAMERA-PROFILE-2026-10: only catalog keys / known conventions; empty -> NULL
+            s = "" if raw is None else str(raw).strip()
+            if not s or s.lower() in ("nan", "none"):
+                return None
+            from camera_profile import BIN_MODES, HEADER_GAIN_KINDS, catalog_model  # noqa: PLC0415
+
+            if col == "BIN_MODE" and s.lower() not in BIN_MODES:
+                raise ValueError(f"BIN_MODE must be one of {', '.join(BIN_MODES)} (got {s!r}).")
+            if col == "HEADER_GAIN" and s.lower() not in HEADER_GAIN_KINDS:
+                raise ValueError(f"HEADER_GAIN must be one of {', '.join(HEADER_GAIN_KINDS)} (got {s!r}).")
+            if col == "MODEL_KEY" and catalog_model(s) is None:
+                raise ValueError(f"MODEL_KEY {s!r} is not in the camera catalog.")
+            return s.lower() if col in ("BIN_MODE", "HEADER_GAIN") else s
+        if table == "EQUIPMENT_CURVE" and col == "SOURCE":
+            s = "" if raw is None else str(raw).strip().lower()
+            return s if s in ("measured", "manual") else "manual"
         if table == "EQUIPMENTS" and col == "BAYERMASK":
             if raw is None:
                 return None
@@ -782,260 +790,37 @@ class VyvarDatabase:
             LOGGER.debug("[DATABASE] Editor numpy coerce failed (non-critical): %s", exc)
         return raw
 
-    def apply_main_table_editor_save(
-        self,
-        table: str,
-        pk_col: str,
-        original_df: Any,
-        edited_df: Any,
-        *,
-        editable_cols: list[str],
-    ) -> dict[str, int]:
-        """Apply INSERT/UPDATE/DELETE from a Streamlit ``data_editor`` diff.
+    #: Columns of a gain / read-noise point the user edits (``EQUIPMENT_CURVE``).
+    CURVE_POINT_COLUMNS: tuple[str, ...] = (
+        "READOUT_MODE", "GAIN_SETTING", "BINNING", "E_PER_ADU", "READNOISE_E", "SOURCE", "MEASURED_AT", "NOTE",
+    )
 
-        Only ``EQUIPMENTS``, ``TELESCOPE``, ``LOCATION``, ``DRAFT_MANIFEST`` are allowed.
-
-        **EQUIPMENTS / TELESCOPE:** a row removed from the editor is **not** ``DELETE``-d; ``ACTIVE`` is set
-        to **0** (soft-delete). Physical ``DELETE`` for those tables is never performed from this API.
-        **DRAFT_MANIFEST:** manifest-direct save (no SQL staging table).
-        **LOCATION:** physical delete with reference checks (manifest rig ``location_id`` usage).
-        """
-        import pandas as pd_local
-
-        if table not in _EDITABLE_EDITOR_TABLES:
-            raise ValueError(f"Refusing to edit non-allowlisted table: {table!r}")
-        if pk_col != "ID":
-            raise ValueError("Expected primary key column ID.")
-
-        def _parse_pk(val: Any) -> int | None:
-            if val is None:
-                return None
-            try:
-                if isinstance(val, float) and math.isnan(val):
-                    return None
-            except TypeError:
-                pass
-            if pd_local.isna(val):
-                return None
-            s = str(val).strip()
-            if not s:
-                return None
-            try:
-                return int(float(s))
-            except (TypeError, ValueError):
-                return None
-
-        orig = original_df.copy()
-        edit = edited_df.copy()
-        if pk_col not in orig.columns or pk_col not in edit.columns:
-            raise ValueError(f"Missing primary key column {pk_col!r}.")
-
-        # Track an explicit IS_DEFAULT=1 toggle so we can enforce exactly-one after save.
-        _new_default_pid: int | None = None
-        if "IS_DEFAULT" in editable_cols and "IS_DEFAULT" in orig.columns and "IS_DEFAULT" in edit.columns:
-            for _, _r in edit.iterrows():
-                _pid = _parse_pk(_r.get(pk_col))
-                if _pid is None:
-                    continue
-                if int(self.normalize_active_db_value(_r.get("IS_DEFAULT"))) == 1:
-                    _hits = orig.loc[orig[pk_col].apply(_parse_pk) == _pid]
-                    _was = (
-                        int(self.normalize_active_db_value(_hits.iloc[0].get("IS_DEFAULT")))
-                        if not _hits.empty
-                        else 0
-                    )
-                    if _was != 1:
-                        _new_default_pid = _pid  # last explicit check wins
-
-        orig_ids: set[int] = set()
-        for v in orig[pk_col].tolist():
-            pid = _parse_pk(v)
-            if pid is not None:
-                orig_ids.add(pid)
-
-        edited_by_id: dict[int, Any] = {}
-        new_rows: list[Any] = []
-        for _, row in edit.iterrows():
-            pid = _parse_pk(row.get(pk_col))
-            if pid is None:
-                new_rows.append(row)
-            else:
-                edited_by_id[pid] = row
-
-        deleted_ids = orig_ids - set(edited_by_id.keys())
-        inserted = 0
-        updated = 0
-        deleted = 0
-        soft_deactivated = 0
-
-        if table == "DRAFT_MANIFEST":
-            from draft_provenance import (
-                _optional_float,
-                _optional_int,
-                clear_manifest_shadow_load_cache,
-                load_or_init_manifest,
-                patch_draft_manifest,
-                resolve_draft_dir_for_id,
-            )
-
-            inserted = 0
-            updated = 0
-            deleted = 0
-            for pid, row in edited_by_id.items():
-                root = resolve_draft_dir_for_id(self, int(pid))
-                if root is None:
-                    continue
-                manifest = load_or_init_manifest(root, int(pid))
-                rig = dict(manifest.get("rig") or {})
-                paths = dict(manifest.get("paths") or {})
-                center = dict(manifest.get("center") or {"ra_deg": None, "de_deg": None})
-                scalar_map = {
-                    "ID_EQUIPMENTS": ("rig", "equipment_id"),
-                    "ID_TELESCOPE": ("rig", "telescope_id"),
-                    "ID_LOCATION": ("rig", "location_id"),
-                    "ID_SCANNING": ("rig", "scanning_id"),
-                    "LIGHTS_PATH": ("paths", "lights"),
-                    "CALIB_PATH": ("paths", "calib"),
-                    "ARCHIVE_PATH": ("paths", "archive"),
-                    "MASTERSTAR_PATH": ("paths", "masterstar"),
-                    "MASTERSTAR_FITS_PATH": ("paths", "masterstar_fits"),
-                    "STATUS": ("status", None),
-                    "CENTEROFFIELDRA": ("center", "ra_deg"),
-                    "CENTEROFFIELDDE": ("center", "de_deg"),
-                    "OBSERVATIONSTARTJD": ("observation_start_jd", None),
-                    "IS_CALIBRATED": ("is_calibrated", None),
-                }
-                changed = False
-                for col in editable_cols:
-                    if col not in row.index:
-                        continue
-                    val = self._coerce_sql_param(table, col, row[col])
-                    spec = scalar_map.get(col)
-                    if spec is None:
-                        continue
-                    bucket, key = spec
-                    if bucket == "rig" and key:
-                        rig[key] = _optional_int(val) if val is not None else None
-                        changed = True
-                    elif bucket == "paths" and key:
-                        paths[key] = str(val).strip() if val is not None else None
-                        changed = True
-                    elif bucket == "center" and key:
-                        center[key] = float(val) if val is not None else None
-                        changed = True
-                    elif bucket == "status":
-                        patch_draft_manifest(root, int(pid), status=str(val) if val is not None else None)
-                        changed = True
-                    elif bucket == "observation_start_jd":
-                        patch_draft_manifest(root, int(pid), observation_start_jd=_optional_float(val))
-                        changed = True
-                    elif bucket == "is_calibrated":
-                        patch_draft_manifest(
-                            root,
-                            int(pid),
-                            is_calibrated=1 if int(val) != 0 else 0 if val is not None else None,
-                        )
-                        changed = True
-                if changed:
-                    patch_draft_manifest(
-                        root,
-                        int(pid),
-                        rig=rig,
-                        paths=paths,
-                        center=center,
-                    )
-                    updated += 1
-            clear_manifest_shadow_load_cache()
-            return {
-                "inserted": inserted,
-                "updated": updated,
-                "deleted": deleted,
-                "soft_deactivated": 0,
-            }
-
-        pragma_cols = [r[1] for r in self.conn.execute(f"PRAGMA table_info({table});").fetchall()]
-        insert_colnames = [c for c in pragma_cols if c != pk_col]
-
+    def save_equipment_curve(self, equipment_id: int, rows: Any) -> int:
+        """Replace the measured / manual gain and read-noise points of one camera with ``rows`` (a
+        DataFrame with ``CURVE_POINT_COLUMNS``; empty rows are skipped). One transaction; returns the
+        number of points saved."""
+        eid = int(equipment_id)
+        if self.conn.execute("SELECT 1 FROM EQUIPMENTS WHERE ID = ?;", (eid,)).fetchone() is None:
+            raise ValueError(f"EQUIPMENTS ID={eid} does not exist.")
+        points: list[list[Any]] = []
+        for _, row in rows.iterrows():
+            vals = {c: self._coerce_sql_param("EQUIPMENT_CURVE", c, row.get(c)) for c in self.CURVE_POINT_COLUMNS}
+            if vals["E_PER_ADU"] is None and vals["READNOISE_E"] is None:
+                continue  # an empty editor row
+            vals["BINNING"] = int(vals["BINNING"] or 1)
+            points.append([eid, *vals.values()])
+        cols = ", ".join(("EQUIPMENT_ID", *self.CURVE_POINT_COLUMNS))
         try:
-            self.conn.execute("BEGIN;")
-            for did in sorted(deleted_ids):
-                if table in ("EQUIPMENTS", "TELESCOPE"):
-                    if "ACTIVE" not in pragma_cols:
-                        raise ValueError(f"Table {table} has no ACTIVE column - soft-delete not possible.")
-                    self.conn.execute(
-                        f"UPDATE {table} SET ACTIVE = 'NO' WHERE {pk_col} = ?;",
-                        (did,),
-                    )
-                    soft_deactivated += 1
-                    continue
-                if table == "LOCATION":
-                    n = self.count_references_to_location_id(did)
-                    if n > 0:
-                        raise ValueError(
-                            f"Location ID={did} cannot be deleted: {n} references in draft manifests."
-                        )
-                self.conn.execute(f"DELETE FROM {table} WHERE {pk_col} = ?;", (did,))
-                deleted += 1
-
-            for pid, row in edited_by_id.items():
-                if pid not in orig_ids:
-                    continue
-                hits = orig.loc[orig[pk_col].apply(_parse_pk) == pid]
-                if hits.empty:
-                    continue
-                orig_row = hits.iloc[0]
-                changes: dict[str, Any] = {}
-                for col in editable_cols:
-                    if col == pk_col or col not in pragma_cols:
-                        continue
-                    if col not in row.index or col not in orig_row.index:
-                        continue
-                    nv = self._coerce_sql_param(table, col, row[col])
-                    ov = self._coerce_sql_param(table, col, orig_row[col])
-                    if nv != ov:
-                        changes[col] = nv
-                if not changes:
-                    continue
-                set_sql = ", ".join(f"{k} = ?" for k in changes)
-                params = list(changes.values()) + [pid]
-                self.conn.execute(f"UPDATE {table} SET {set_sql} WHERE {pk_col} = ?;", params)
-                updated += 1
-
-            for row in new_rows:
-                vals: list[Any] = []
-                for c in insert_colnames:
-                    raw = row[c] if c in row.index else None
-                    vals.append(self._coerce_sql_param(table, c, raw))
-                placeholders = ", ".join("?" * len(insert_colnames))
-                cols_sql = ", ".join(insert_colnames)
-                self.conn.execute(
-                    f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders});",
-                    vals,
-                )
-                inserted += 1
-
-            # Enforce exactly-one IS_DEFAULT when the user explicitly checked a new row.
-            if (
-                _new_default_pid is not None
-                and table in ("EQUIPMENTS", "TELESCOPE", "LOCATION")
-                and "IS_DEFAULT" in pragma_cols
-            ):
-                self.conn.execute(
-                    f"UPDATE {table} SET IS_DEFAULT = CASE WHEN {pk_col} = ? THEN 1 ELSE 0 END;",
-                    (int(_new_default_pid),),
-                )
-
+            self.conn.execute("DELETE FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ?;", (eid,))
+            self.conn.executemany(
+                f"INSERT INTO EQUIPMENT_CURVE ({cols}) VALUES ({', '.join('?' * (1 + len(self.CURVE_POINT_COLUMNS)))});",
+                points,
+            )
             self.conn.commit()
         except Exception:
             self.conn.rollback()
             raise
-
-        return {
-            "inserted": inserted,
-            "updated": updated,
-            "deleted": deleted,
-            "soft_deactivated": soft_deactivated,
-        }
+        return len(points)
 
     def _ensure_qc_processing_tables(self) -> None:
         """Append-only QC Apply snapshots: hashtag + accepted manifest light rows (IS_REJECTED=0)."""
@@ -1799,15 +1584,6 @@ class VyvarDatabase:
 
         self.conn.commit()
 
-    #: Designated default rows for the reference tables (Phase 2). These are the
-    #: EXPLICIT user markers seeded once; they are NOT a silent ``id=1`` fallback.
-    #: Equipment=QHY294MM(1), Telescope=Carl-Zeiss 200mm(1), Location=Jirny(2).
-    _DEFAULT_SEED_IDS: ClassVar[dict[str, int]] = {
-        "EQUIPMENTS": 1,
-        "TELESCOPE": 1,
-        "LOCATION": 2,
-    }
-
     def _ensure_is_default_columns(self) -> None:
         """Schema migration (Phase 2): ``IS_DEFAULT`` on EQUIPMENTS/TELESCOPE/LOCATION
         (exactly one TRUE each) and an ``ACTIVE`` column on LOCATION.
@@ -1830,51 +1606,22 @@ class VyvarDatabase:
         self._seed_table_defaults()
 
     def _seed_table_defaults(self) -> None:
-        """Seed exactly one ``IS_DEFAULT = 1`` row per reference table (only if none set)."""
-        for table, seed_id in self._DEFAULT_SEED_IDS.items():
-            n_default = int(
-                self.conn.execute(f"SELECT COUNT(*) FROM {table} WHERE IS_DEFAULT = 1;").fetchone()[0]
-            )
-            if n_default == 1:
+        """Keep exactly one ``IS_DEFAULT = 1`` row per reference table. When none is marked, the
+        lowest-ID active row becomes the default (no designated row IDs). Runs before ACTIVE is
+        normalised to YES/NO, so 0 / '0' / 'N' / 'FALSE' count as hidden too."""
+        hidden = "UPPER(TRIM(CAST(COALESCE(ACTIVE, 'YES') AS TEXT))) IN ('NO', 'N', 'FALSE', '0', '0.0')"
+        for table in ("EQUIPMENTS", "TELESCOPE", "LOCATION"):
+            marked = [int(r[0]) for r in self.conn.execute(f"SELECT ID FROM {table} WHERE IS_DEFAULT = 1 ORDER BY ID;")]
+            if len(marked) == 1:
                 continue
-            if n_default > 1:
-                # Collapse to a single default (keep the lowest ID that is already marked).
-                keep = self.conn.execute(
-                    f"SELECT MIN(ID) FROM {table} WHERE IS_DEFAULT = 1;"
-                ).fetchone()[0]
-                self.set_table_default(table, int(keep))
-                continue
-            # No default yet: prefer the explicitly designated seed row, else lowest ID.
-            row = self.conn.execute(
-                f"SELECT ID FROM {table} WHERE ID = ?;", (int(seed_id),)
-            ).fetchone()
-            if row is None:
-                row = self.conn.execute(f"SELECT MIN(ID) AS ID FROM {table};").fetchone()
-                if row is None or row["ID"] is None:
-                    LOGGER.warning("[DATABASE] %s empty - cannot seed IS_DEFAULT.", table)
-                    continue
-                LOGGER.warning(
-                    "[DATABASE] %s has no row id=%s for IS_DEFAULT seed; using id=%s instead.",
-                    table,
-                    seed_id,
-                    int(row["ID"]),
-                )
-            self.set_table_default(table, int(row["ID"]))
-
-    def set_table_default(self, table: str, row_id: int) -> None:
-        """Mark ``row_id`` as the single ``IS_DEFAULT = 1`` row in ``table`` (exclusive)."""
-        if table not in _EDITABLE_DEFAULT_TABLES:
-            raise ValueError(f"Refusing to edit non-allowlisted table: {table!r}")
-        try:
-            self.conn.execute("BEGIN;")
-            self.conn.execute(
-                f"UPDATE {table} SET IS_DEFAULT = CASE WHEN ID = ? THEN 1 ELSE 0 END;",
-                (int(row_id),),
-            )
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
+            if marked:  # more than one: keep the lowest marked ID
+                keep: int | None = marked[0]
+            else:
+                row = self.conn.execute(f"SELECT MIN(ID) FROM {table} WHERE NOT ({hidden});").fetchone()
+                keep = int(row[0]) if row is not None and row[0] is not None else None
+            if keep is not None:
+                self.conn.execute(f"UPDATE {table} SET IS_DEFAULT = CASE WHEN ID = ? THEN 1 ELSE 0 END;", (keep,))
+                self.conn.commit()
 
     def get_default_id(self, table: str) -> int | None:
         """Return the ``IS_DEFAULT = 1`` row id for ``table``, or ``None`` if unset."""
@@ -1898,30 +1645,6 @@ class VyvarDatabase:
         self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN SATURATE_ADU REAL;")
         self.conn.commit()
 
-    def _migrate_qhy294mm_saturate_adu_null(self) -> None:
-        """Idempotent: QHY294MM (id=1) wrong binned SATURATE_ADU=16384 -> NULL (SAT-DIAG derives)."""
-        try:
-            row = self.conn.execute(
-                "SELECT SATURATE_ADU FROM EQUIPMENTS WHERE ID = 1;"
-            ).fetchone()
-        except sqlite3.Error:
-            return
-        if row is None:
-            return
-        v = row["SATURATE_ADU"]
-        if v is None:
-            return
-        try:
-            fv = float(v)
-        except (TypeError, ValueError):
-            return
-        if abs(fv - 16384.0) < 0.5:
-            self.conn.execute(
-                "UPDATE EQUIPMENTS SET SATURATE_ADU = NULL WHERE ID = 1 AND SATURATE_ADU = ?;",
-                (fv,),
-            )
-            self.conn.commit()
-
     def _ensure_equipments_cosmic_columns(self) -> None:
         """Detector gain and read noise (e-/ADU, read noise e-) for photometric error / SNR."""
         cursor = self.conn.execute("PRAGMA table_info('EQUIPMENTS');")
@@ -1939,48 +1662,217 @@ class VyvarDatabase:
         if "BAYERMASK" not in cols:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN BAYERMASK TEXT;")
             self.conn.commit()
-        try:
-            row = self.conn.execute(
-                "SELECT ID, BAYERMASK FROM EQUIPMENTS WHERE ID = 5;"
-            ).fetchone()
-            if row is not None and (row["BAYERMASK"] is None or str(row["BAYERMASK"]).strip() == ""):
-                self.conn.execute(
-                    "UPDATE EQUIPMENTS SET BAYERMASK = 'RGGB' WHERE ID = 5;"
-                )
-                self.conn.commit()
-        except sqlite3.Error:
-            pass
-
-    #: ADC resolution of the known sensors (one-time seed of EQUIPMENTS.ADC_BITS).
-    _ADC_BITS_BY_SENSOR = {
-        "IMX492": 14, "IMX294": 14, "IMX533": 14, "IMX571": 16, "IMX455": 16, "IMX411": 16,
-    }
-    _ADC_BITS_BY_CAMERA = {"QHY600": 16, "QHY 600": 16}
 
     def _ensure_equipments_rig_photometry_columns(self) -> None:
-        """CFG-REVIEW-2026-10: per-camera ADC_BITS and SIGMA_SYS_MAG (were the global config values
-        ``gain_container_scale`` 4 = 14-bit and ``sigma_sys_mag`` {"4": 0.018}). Read by ``rig_photometry``.
-
-        One-time seed when a column is created: ADC_BITS from the sensor / camera name, SIGMA_SYS_MAG
-        0.018 mag for equipment 4 (C5A-150M) as the old config map had it.
-        """
+        """Per-camera ADC_BITS and SIGMA_SYS_MAG (read by ``rig_photometry`` / ``camera_profile``).
+        Columns stay NULL until the user sets them; ADC_BITS then comes from the camera catalog."""
         cols = {row["name"] for row in self.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
         if "ADC_BITS" not in cols:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN ADC_BITS INTEGER;")
-            for row in self.conn.execute("SELECT ID, CAMERANAME, SENSORTYPE FROM EQUIPMENTS;").fetchall():
-                sensor = str(row["SENSORTYPE"] or "").upper()
-                camera = str(row["CAMERANAME"] or "").upper()
-                bits = next((b for k, b in self._ADC_BITS_BY_SENSOR.items() if k in sensor), None)
-                if bits is None:
-                    bits = next((b for k, b in self._ADC_BITS_BY_CAMERA.items() if k in camera), None)
-                if bits is not None:
-                    self.conn.execute("UPDATE EQUIPMENTS SET ADC_BITS = ? WHERE ID = ?;", (int(bits), int(row["ID"])))
         if "SIGMA_SYS_MAG" not in cols:
             self.conn.execute("ALTER TABLE EQUIPMENTS ADD COLUMN SIGMA_SYS_MAG REAL;")
-            self.conn.execute(
-                "UPDATE EQUIPMENTS SET SIGMA_SYS_MAG = 0.018 WHERE ID = 4 AND UPPER(CAMERANAME) LIKE '%C5A%';"
-            )
         self.conn.commit()
+
+    def _ensure_camera_profile_schema(self) -> None:
+        """CAMERA-PROFILE-2026-10: camera model / readout mode from the shipped catalog, binning
+        convention, meaning of the header GAIN card, default gain setting, and the table of measured or
+        manually entered gain / read-noise points (``camera_profile``). Columns stay NULL until the
+        user sets them; NULL keeps the earlier behaviour."""
+        cols = {row["name"] for row in self.conn.execute("PRAGMA table_info('EQUIPMENTS');").fetchall()}
+        for name, decl in (
+            ("MODEL_KEY", "TEXT"),
+            ("READOUT_MODE", "TEXT"),
+            ("BIN_MODE", "TEXT"),
+            ("HEADER_GAIN", "TEXT"),
+            ("DEFAULT_GAIN_SETTING", "REAL"),
+        ):
+            if name not in cols:
+                self.conn.execute(f"ALTER TABLE EQUIPMENTS ADD COLUMN {name} {decl};")
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS EQUIPMENT_CURVE (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                EQUIPMENT_ID INTEGER NOT NULL REFERENCES EQUIPMENTS(ID),
+                READOUT_MODE TEXT,
+                GAIN_SETTING REAL,
+                BINNING INTEGER NOT NULL DEFAULT 1,
+                E_PER_ADU REAL,
+                READNOISE_E REAL,
+                SOURCE TEXT NOT NULL DEFAULT 'manual',
+                MEASURED_AT TEXT,
+                NOTE TEXT
+            );
+            """
+        )
+        self.conn.commit()
+
+    # ------------------------------------------------------------------ #
+    # Reference objects: cameras, telescopes, sites (REF-OBJECTS-2026-10)
+    # ------------------------------------------------------------------ #
+    #: table -> (name column, manifest rig key, CALIBRATION_LIBRARY column)
+    _REF_OBJECTS: dict[str, tuple[str, str, str | None]] = {
+        "EQUIPMENTS": ("CAMERANAME", "equipment_id", "ID_EQUIPMENTS"),
+        "TELESCOPE": ("TELESCOPENAME", "telescope_id", "ID_TELESCOPE"),
+        "LOCATION": ("PLACENAME", "location_id", None),
+    }
+
+    def reference_object_usage(self, table: str, obj_id: int) -> list[str]:
+        """Where a camera / telescope / site is used: draft manifests (rig) and calibration masters.
+        Its own gain-curve points are not usage (they go with the camera)."""
+        if table not in self._REF_OBJECTS:
+            raise ValueError(f"Not a reference table: {table!r}")
+        _, rig_key, lib_col = self._REF_OBJECTS[table]
+        out: list[str] = []
+        try:
+            from draft_provenance import _MANIFEST_NAME, _optional_int, load_draft_manifest  # noqa: PLC0415
+
+            drafts = []
+            ddir = Path(self.resolve_archive_root()) / "Drafts"
+            # every folder with a manifest, renamed copies (draft_000527_BO_CVn) included
+            for apath in sorted(d for d in ddir.iterdir() if d.is_dir()) if ddir.is_dir() else []:
+                if not (apath / _MANIFEST_NAME).is_file():
+                    continue
+                man = load_draft_manifest(apath) or {}
+                rig = man.get("rig") if isinstance(man.get("rig"), dict) else {}
+                if _optional_int(rig.get(rig_key)) == int(obj_id):
+                    drafts.append(apath.name)
+            if drafts:
+                out.append(f"{len(drafts)} draft(s) in the Archive: " + ", ".join(drafts[:12]) + (" ..." if len(drafts) > 12 else ""))
+        except Exception as exc:  # noqa: BLE001
+            out.append(f"draft manifests could not be checked ({exc}) - not deleted to be safe")
+        if lib_col:
+            tabs = {r[0] for r in self.conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()}
+            if "CALIBRATION_LIBRARY" in tabs:
+                cols = {r[1] for r in self.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');").fetchall()}
+                if lib_col in cols:
+                    n = int(self.conn.execute(
+                        f"SELECT COUNT(*) FROM CALIBRATION_LIBRARY WHERE {lib_col} = ?;", (int(obj_id),)
+                    ).fetchone()[0])
+                    if n:
+                        out.append(f"{n} master(s) in the Calibration Library")
+        return out
+
+    def save_reference_object(self, table: str, obj_id: int | None, values: dict[str, Any]) -> int:
+        """Insert (``obj_id`` None) or update one camera / telescope / site row; returns its ID.
+        Only existing columns are written; the name is required."""
+        if table not in self._REF_OBJECTS:
+            raise ValueError(f"Not a reference table: {table!r}")
+        name_col = self._REF_OBJECTS[table][0]
+        cols = {r[1] for r in self.conn.execute(f"PRAGMA table_info('{table}');").fetchall()}
+        vals = {k: self._coerce_sql_param(table, k, v) for k, v in values.items() if k in cols and k not in ("ID", "IS_DEFAULT")}
+        if obj_id is None and not str(vals.get(name_col) or "").strip():
+            raise ValueError("The name is required.")
+        if name_col in vals and not str(vals[name_col] or "").strip():
+            raise ValueError("The name is required.")
+        if obj_id is None:
+            vals.setdefault("ACTIVE", "YES")
+            keys = list(vals)
+            cur = self.conn.execute(
+                f"INSERT INTO {table} ({', '.join(keys)}) VALUES ({', '.join('?' * len(keys))});",
+                [vals[k] for k in keys],
+            )
+            self.conn.commit()
+            self._seed_table_defaults()  # the first object of a table becomes its default
+            return int(cur.lastrowid)
+        if vals:
+            self.conn.execute(
+                f"UPDATE {table} SET {', '.join(f'{k} = ?' for k in vals)} WHERE ID = ?;",
+                [*vals.values(), int(obj_id)],
+            )
+            self.conn.commit()
+        return int(obj_id)
+
+    def set_reference_default(self, table: str, obj_id: int) -> None:
+        if table not in self._REF_OBJECTS:
+            raise ValueError(f"Not a reference table: {table!r}")
+        self.conn.execute(
+            f"UPDATE {table} SET IS_DEFAULT = CASE WHEN ID = ? THEN 1 ELSE 0 END, "
+            f"ACTIVE = CASE WHEN ID = ? THEN 'YES' ELSE ACTIVE END;",
+            (int(obj_id), int(obj_id)),
+        )
+        self.conn.commit()
+
+    def set_reference_active(self, table: str, obj_id: int, active: bool) -> None:
+        if table not in self._REF_OBJECTS:
+            raise ValueError(f"Not a reference table: {table!r}")
+        row = self.conn.execute(f"SELECT IS_DEFAULT FROM {table} WHERE ID = ?;", (int(obj_id),)).fetchone()
+        if not active and row is not None and int(row[0] or 0) == 1:
+            raise ValueError("This is the default - choose another default first.")
+        self.conn.execute(f"UPDATE {table} SET ACTIVE = ? WHERE ID = ?;", ("YES" if active else "NO", int(obj_id)))
+        self.conn.commit()
+
+    def delete_reference_object(self, table: str, obj_id: int, *, force: bool = False) -> dict[str, int]:
+        """Delete a camera / telescope / site (with a camera, its gain-curve points).
+
+        Without ``force``: refused when it is the default or still used by drafts / calibration
+        masters. With ``force`` (the user's explicit choice): deleted anyway - calibration masters
+        that pointed to it lose the link (their camera / telescope becomes empty, so they are no
+        longer matched); draft manifests keep the old ID (a new run of such a draft has to choose
+        the camera / telescope / site again)."""
+        if table not in self._REF_OBJECTS:
+            raise ValueError(f"Not a reference table: {table!r}")
+        row = self.conn.execute(f"SELECT IS_DEFAULT FROM {table} WHERE ID = ?;", (int(obj_id),)).fetchone()
+        if row is None:
+            raise ValueError(f"{table} ID={obj_id} does not exist.")
+        if not force:
+            if int(row[0] or 0) == 1:
+                raise ValueError("This is the default - choose another default first.")
+            used = self.reference_object_usage(table, int(obj_id))
+            if used:
+                raise ValueError("Still used: " + "; ".join(used) + ". Hide it instead, or remove those first.")
+        out = {"curve_points": 0, "masters_unlinked": 0}
+        lib_col = self._REF_OBJECTS[table][2]
+        try:
+            if table == "EQUIPMENTS":
+                out["curve_points"] = int(self.conn.execute(
+                    "DELETE FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ?;", (int(obj_id),)
+                ).rowcount or 0)
+            if lib_col:
+                tabs = {r[0] for r in self.conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()}
+                if "CALIBRATION_LIBRARY" in tabs and lib_col in {
+                    r[1] for r in self.conn.execute("PRAGMA table_info('CALIBRATION_LIBRARY');").fetchall()
+                }:
+                    out["masters_unlinked"] = int(self.conn.execute(
+                        f"UPDATE CALIBRATION_LIBRARY SET {lib_col} = NULL WHERE {lib_col} = ?;", (int(obj_id),)
+                    ).rowcount or 0)
+            self.conn.execute(f"DELETE FROM {table} WHERE ID = ?;", (int(obj_id),))
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        self._seed_table_defaults()  # a deleted default passes to the lowest active row
+        return out
+
+    def add_equipment_from_catalog(self, model_key: str, mode_key: str | None, name: str) -> int:
+        """CAMERA-PROFILE-2026-10: new EQUIPMENTS row pre-filled from the camera catalog (sensor,
+        size, pixel, ADC bits, Bayer mask, model + mode). Gain / read noise come from the catalog
+        curve or are entered later at the gain setting the camera is used with."""
+        from camera_profile import catalog_mode, catalog_model  # noqa: PLC0415
+
+        model = catalog_model(model_key)
+        if model is None:
+            raise ValueError(f"Camera model {model_key!r} is not in the catalog.")
+        mode = catalog_mode(model, mode_key) or {}
+        w, h = mode.get("width"), mode.get("height")
+        bayer = model.get("bayer") if str(model.get("color") or "") == "osc" else None
+        cur = self.conn.execute(
+            "INSERT INTO EQUIPMENTS (CAMERANAME, ALIAS, SENSORTYPE, SENSORSIZE, PIXELSIZE, ACTIVE, ADC_BITS, "
+            "BAYERMASK, MODEL_KEY, READOUT_MODE) VALUES (?, ?, ?, ?, ?, 'YES', ?, ?, ?, ?);",
+            (
+                str(name).strip() or str(model.get("model")),
+                str(model.get("model") or ""),
+                str(model.get("sensor") or ""),
+                f"{int(w)}*{int(h)}" if w and h else None,
+                mode.get("pixel_um"),
+                mode.get("adc_bits"),
+                bayer,
+                str(model["key"]),
+                mode.get("key"),
+            ),
+        )
+        self.conn.commit()
+        self._seed_table_defaults()
+        return int(cur.lastrowid)
 
     def get_equipment_bayermask(self, equipment_id: int | None) -> str | None:
         """Return canonical Bayer mask or None (mono/empty)."""
@@ -2787,7 +2679,13 @@ class VyvarDatabase:
         from draft_provenance import create_draft_manifest
 
         archive_root = self.resolve_archive_root()
-        return int(create_draft_manifest(archive_root, data))
+        # ids are never reused: above every id the database has recorded (old folders may be deleted)
+        try:
+            row = self.conn.execute("SELECT MAX(DRAFT_ID) FROM OBS_QC_PROCESSING_RUN;").fetchone()
+            floor = int(row[0] or 0) if row else 0
+        except Exception:  # noqa: BLE001
+            floor = 0
+        return int(create_draft_manifest(archive_root, {**data, "min_id_floor": floor}))
 
     def update_draft_import_log(
         self,

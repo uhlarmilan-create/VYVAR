@@ -155,70 +155,6 @@ def _ensure_active_target_display_names(df: pd.DataFrame) -> pd.DataFrame:
         out.loc[blank_name, "name"] = out.loc[blank_name, "catalog_id"]
     return out
 
-def _variable_targets_looks_like_ct_presel_stub(vt_path: Path, *, masterstars_csv: Path) -> bool:
-    if not vt_path.is_file() or not masterstars_csv.is_file():
-        return False
-    try:
-        vt = pd.read_csv(vt_path, low_memory=False, nrows=500)
-        ms = pd.read_csv(masterstars_csv, low_memory=False, usecols=["catalog_id"])
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0138] variable_targets stub detection CSV read fails - returns False (stub may go undetected): %s', exc)
-        return False
-    if len(vt) >= max(80, int(len(ms) * 0.05)):
-        return False
-    if "notes" in vt.columns:
-        notes = vt["notes"].astype(str).str.contains("CT presel", case=False, na=False)
-        if bool(notes.any()):
-            return True
-    if "name" in vt.columns:
-        names = vt["name"].astype(str)
-        if bool(names.str.contains("M67 in-range|M67 red-giant", case=False, regex=True).any()):
-            return True
-    return len(vt) < 50 and len(ms) > 200
-
-def ensure_full_variable_targets_if_presel_stub(
-    *,
-    variable_targets_csv: Path,
-    masterstars_csv: Path,
-    masterstar_fits: Path,
-    cfg: Any | None = None,
-    draft_id: int | None = None,
-) -> bool:
-    """Restore full-field ``variable_targets.csv`` when CT presel stub replaced production list."""
-    vt_path = Path(variable_targets_csv)
-    ms_path = Path(masterstars_csv)
-    if not _variable_targets_looks_like_ct_presel_stub(vt_path, masterstars_csv=ms_path):
-        return False
-    ps_dir = vt_path.parent
-    ms_fits = Path(masterstar_fits)
-    if not ms_fits.is_file():
-        ms_fits = ps_dir / "MASTERSTAR.fits"
-    if not ms_fits.is_file() or not ms_path.is_file():
-        logging.warning(
-            "[PHOT] CT presel stub detected but cannot restore variable_targets (missing MASTERSTAR/masterstars)"
-        )
-        return False
-    try:
-        from pipeline import write_photometry_plan_files  # noqa: PLC0415
-
-        _cfg = cfg or AppConfig()
-        write_photometry_plan_files(
-            platesolve_dir=ps_dir,
-            masterstar_fits=ms_fits,
-            masterstars_csv=ms_path,
-            require_non_variable=bool(getattr(_cfg, "phase01_comparison_require_non_variable", True)),
-            draft_id=int(draft_id) if draft_id is not None else None,
-            database_path=getattr(_cfg, "database_path", None),
-        )
-        log_event(
-            f"[PHOT] Restored full variable_targets.csv from field cone (replaced CT presel stub in {ps_dir.name})"
-        )
-        return True
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0139] Full variable_targets restore from field cone fails - CT presel stub may remain as targ...: %s', exc)
-        logging.warning("[PHOT] variable_targets restore failed: %s", exc)
-        return False
-
 # GAIA-ID-2026-10: one exact normaliser. The former local version did str(int(float(id))), which
 # changes about half of all 19-digit Gaia ids (float64 keeps 15-16 digits): the comparison pool then
 # kept corrupted ids and lost every star whose id no longer matched the per-frame catalogs
@@ -804,7 +740,8 @@ def select_active_targets(
         "skip_photometry",
         "skip_reason",
     ]
-    n_gaia_id_assigned = int(vt_in["catalog_id"].apply(lambda x: bool(_normalize_gaia_id(x))).sum()) if "catalog_id" in vt_in.columns else 0
+    # (a plain sum: on an empty string column pandas 3 sums to '' and int('') raises)
+    n_gaia_id_assigned = sum(bool(_normalize_gaia_id(x)) for x in vt_in["catalog_id"]) if "catalog_id" in vt_in.columns else 0
     if not matched_rows:
         LAST_EXCLUDED_TARGETS = (
             pd.DataFrame(excluded_rows)
@@ -872,7 +809,8 @@ def select_active_targets(
     if _voos_cfg and n_masked_vsx_type == 0 and "catalog" in vt.columns:
         _vt_vsx = vt[vt["catalog"].astype(str).str.upper() == "VSX"]
         _types = set()
-        for _t in _vt_vsx.get("vsx_type", pd.Series(dtype=str)).astype(str):
+        # fillna first: under pandas 3 astype(str) keeps a missing type as float NaN
+        for _t in _vt_vsx.get("vsx_type", pd.Series(dtype=str)).fillna("").astype(str):
             for _tok in _t.replace(":", " ").replace("/", " ").split():
                 _types.add(_tok.strip().upper())
         if any(str(t).strip().upper() in _types for t in _voos_cfg):

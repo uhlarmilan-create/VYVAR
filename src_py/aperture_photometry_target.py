@@ -14,20 +14,14 @@ from photometry_shared import _normalize_gaia_id, _target_display_name
 
 from aperture_photometry import (
     _AperturePhotometryState,
-    _draft_dir_from_aperture_paths,
     _measured_aperture_from_proc_cache,
     _resolve_photometric_aperture_px_for_gs11,
     apply_reporting_postprocess,
-    fit_color_term_c1,
     read_flux_from_csv,
 )
-from pipeline_constants import CT_MIN_COMP
 from photometry_lightcurve import (
-    _append_ct_prototype_row,
     _check_color_term_extrapolation,
-    _color_term_cat_inst_scatter_pair,
     _combine_err_with_ensemble_scatter_keyed,
-    _ct_prototype_enabled,
     _ensemble_scatter_by_source_file,
     _err_budget_components_keyed,
     _exclude_err_scatter_unmatched_epochs,
@@ -783,68 +777,6 @@ def _aperture_process_one_target(
             bp_rp_comp_med = float("nan")
             ct_ok = False
 
-    if _ct_prototype_enabled():
-        _proto_c1 = 0.0
-        _proto_c1_stderr = float("nan")
-        _proto_n_comp = 0
-        if comp_bp_rp:
-            _proto_c1, _proto_c1_stderr, _proto_n_comp = fit_color_term_c1(
-                comp_lc,
-                comp_catalog_mag,
-                comp_bp_rp,
-                comp_quality,
-                min_comp=5,
-            )
-        _proto_corr = 0.0
-        _proto_comp_med = float("nan")
-        if comp_bp_rp and float(_proto_c1) != 0.0:
-            _, _proto_corr, _proto_comp_med = apply_color_term(
-                mag_calib,
-                float(target_bp_rp),
-                comp_bp_rp,
-                comp_quality,
-                float(_proto_c1),
-            )
-        _proto_scatter, _proto_scatter_resid = (
-            _color_term_cat_inst_scatter_pair(
-                comp_lc,
-                comp_catalog_mag,
-                comp_bp_rp,
-                comp_quality,
-                float(_proto_c1),
-                min_comp=5,
-            )
-            if comp_bp_rp
-            else (float("nan"), float("nan"))
-        )
-        _proto_stderr_ratio = float("nan")
-        if float(_proto_c1) != 0.0 and math.isfinite(float(_proto_c1_stderr)):
-            _proto_stderr_ratio = abs(float(_proto_c1_stderr) / float(_proto_c1))
-        _proto_gate = (
-            int(_proto_n_comp) >= CT_MIN_COMP
-            and float(_proto_c1) != 0.0
-            and math.isfinite(_proto_stderr_ratio)
-            and float(_proto_stderr_ratio) <= 0.5
-        )
-        _append_ct_prototype_row(
-            _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path)),
-            {
-                "catalog_id": target_cid,
-                "vsx_name": target_name,
-                "obs_group": str(obs_group),
-                "n_comp_used": int(_proto_n_comp),
-                "c1": float(_proto_c1),
-                "c1_stderr": float(_proto_c1_stderr),
-                "stderr_ratio": _proto_stderr_ratio,
-                "target_bp_rp": float(target_bp_rp),
-                "comp_med_bp_rp": float(_proto_comp_med),
-                "ct_corr": float(_proto_corr),
-                "cat_inst_scatter": _proto_scatter,
-                "cat_inst_scatter_resid": _proto_scatter_resid,
-                "gate_would_pass": bool(_proto_gate),
-            },
-        )
-
     # Target time values - sort by source_file so ensemble_scatter index aligns
     # with ``_get_lc`` / ``_ensemble_scatter_by_source_file`` (LABBE-DET / SEM determinism).
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
@@ -909,9 +841,9 @@ def _aperture_process_one_target(
         _sigma_sys_mag = float(_ssn)
     _draft_id_lc: int | None = None
     try:
-        from platesolve_ui_paths import parse_draft_id_from_text  # noqa: PLC0415
+        from processed_field import processed_field_id  # noqa: PLC0415
 
-        _draft_id_lc = parse_draft_id_from_text(str(output_dir))
+        _draft_id_lc = processed_field_id(output_dir)
     except Exception:  # noqa: BLE001
         _draft_id_lc = None
     _rig_scint = resolve_rig_scintillation_params(

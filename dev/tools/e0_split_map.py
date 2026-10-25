@@ -78,7 +78,6 @@ SEED_STAGES: dict[str, tuple[str, ...]] = {
     "run_target_and_comp_selection": ("target_selection+1 comp selection",),
     "select_active_targets": ("target_selection+1 comp selection",),
     "select_comparison_stars_per_target": ("target_selection+1 comp selection",),
-    "ensure_full_variable_targets_if_presel_stub": ("target_selection+1 comp selection",),
     # aperture photometry
     "run_aperture_photometry": ("aperture_photometry photometry",),
     "run_full_photometry_pipeline": ("photometry-shared",),

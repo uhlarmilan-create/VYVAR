@@ -8,9 +8,7 @@ import math
 import os
 import re
 import warnings
-from datetime import datetime, timezone
 from pathlib import Path
-from secrets import token_hex
 from typing import Any
 
 import numpy as np
@@ -484,14 +482,6 @@ def estimate_field_diameter_deg_diagonal(
     return float(diag_arcsec / 3600.0)
 
 
-def generate_session_id(ts: datetime | None = None, random_bytes: int = 3) -> str:
-    """Generate a unique session id in form YYYYMMDD_#a1b2c3."""
-    timestamp = ts or datetime.now(timezone.utc)
-    day_str = timestamp.strftime("%Y%m%d")
-    suffix = token_hex(random_bytes)
-    return f"{day_str}_#{suffix}"
-
-
 def resolve_draft_dir(
     draft_dir_override: str | Path | None = None,
     draft_id: int | None = None,
@@ -506,7 +496,7 @@ def resolve_draft_dir(
     1. explicit ``draft_dir_override`` (only if existing directory)
     2. ``vyvar_last_job_output["archive_path"]`` from session state
     3. ``vyvar_post_cal_archive_path`` from session state
-    4. ``archive_root/Drafts/draft_{id:06d}`` if ``draft_id`` provided
+    4. the folder of processed field ``draft_id`` under ``archive_root/Drafts`` (any name, by manifest)
     5. None
 
     When ``drafts_before_session=True`` (MASTERSTAR QA): steps 2-3 move after step 4
@@ -523,7 +513,8 @@ def resolve_draft_dir(
         if draft_id is None or not archive_root:
             return None
         try:
-            return str((Path(archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve())
+            from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+            return str(draft_dir_for_id(archive_root, int(draft_id)).resolve())
         except (TypeError, ValueError):
             return None
 

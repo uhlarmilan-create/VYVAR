@@ -94,28 +94,6 @@ _COMP_QUALITY_JSON_META_KEYS = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Color term (BP-RP) - global shift per night
-# ---------------------------------------------------------------------------
-
-
-_CT_PROTOTYPE_CSV_FIELDS: tuple[str, ...] = (
-    "catalog_id",
-    "vsx_name",
-    "obs_group",
-    "n_comp_used",
-    "c1",
-    "c1_stderr",
-    "stderr_ratio",
-    "target_bp_rp",
-    "comp_med_bp_rp",
-    "ct_corr",
-    "cat_inst_scatter",
-    "cat_inst_scatter_resid",
-    "gate_would_pass",
-)
-
-
-# ---------------------------------------------------------------------------
 # STEP 5: Outlier detection
 # ---------------------------------------------------------------------------
 
@@ -205,13 +183,6 @@ def run_full_photometry_pipeline(
     """
     _cfg = cfg or AppConfig()
 
-    ensure_full_variable_targets_if_presel_stub(
-        variable_targets_csv=Path(variable_targets_csv),
-        masterstars_csv=Path(masterstars_csv),
-        masterstar_fits=Path(masterstar_fits_path),
-        cfg=_cfg,
-        draft_id=draft_id,
-    )
 
     def _p(msg: str) -> None:
         if progress_cb is None:
@@ -353,11 +324,9 @@ __all__ = [
     "compute_fwhm_gaussian_for_aperture_catalog",
     "compute_lc_rms_ooe",
     "compute_optimal_apertures",
-    "detect_outliers",
     "empirical_feature_mask_mag",
     "enhance_catalog_dataframe_aperture",
     "ensemble_normalize",
-    "ensure_full_variable_targets_if_presel_stub",
     # aperture_photometry (legacy)
     "measure_fwhm_from_masterstar",
     "read_flux_from_csv",
@@ -384,7 +353,7 @@ from photometry_shared import (
     _get_plate_scale_from_cfg,
     _resolve_plate_scale_arcsec_per_px,
     _read_plate_scale_from_fits_path,
-    common_field_intersection_bbox_px_from_arrays,
+    common_field_intersection_bbox_px_from_headers,
     common_field_intersection_bbox_px,
     _fwhm_moment_at,
     compute_fwhm_gaussian_for_aperture_catalog,
@@ -416,7 +385,6 @@ if _p2a_mod is None or getattr(_p2a_mod, "run_aperture_photometry", None) is not
         resolve_apply_color_term,
         _group_comp_mag_inst_from_proc_csvs,
         empirical_feature_mask_mag,
-        detect_outliers,
         apply_reporting_postprocess,
         build_rms_mag_model,
         expected_rms_from_model,
@@ -437,7 +405,6 @@ from photometry_lightcurve import (
     ct_ensemble_reference_maps,
     apply_color_term,
     _check_color_term_extrapolation,
-    _color_term_cat_inst_scatter_pair,
     save_lightcurve_csv,
     save_lightcurve_png,
     _per_frame_sat_flags_for_catalog_id,
@@ -481,8 +448,6 @@ from photometry_provenance import (
 
 from photometry_comp import (
     _enrich_comp_bp_rp,
-    _variable_targets_looks_like_ct_presel_stub,
-    ensure_full_variable_targets_if_presel_stub,
     _normalize_id_value,
     _normalize_id_series,
     _bool_col,

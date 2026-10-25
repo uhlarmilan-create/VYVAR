@@ -11,46 +11,9 @@ ROOT = Path(__file__).resolve().parents[2]
 import sys
 
 sys.path.insert(0, str(ROOT / "src_py"))
-sys.path.insert(0, str(ROOT / "dev" / "scripts"))
 
 from config import AppConfig
 from pipeline import _dao_detection_threshold_adu, _apply_dao_centroid_wcs_guard
-
-
-def test_part0c_pairs_on_source_file_not_position() -> None:
-    from audit_stage3_part0c_cohort_delta import _delta_table
-
-    adf = pd.DataFrame(
-        {
-            "source_file": ["a.csv", "b.csv"],
-            "mag_calib_final": [10.0, 11.0],
-            "err": [0.01, 0.02],
-            "n_good_comp": [3, 3],
-            "trust_flag": ["GREEN", "GREEN"],
-        }
-    )
-    rdf = pd.DataFrame(
-        {
-            "source_file": ["b.csv", "a.csv"],
-            "mag_calib_final": [11.01, 10.01],
-            "err": [0.021, 0.011],
-            "n_good_comp": [3, 3],
-            "trust_flag": ["GREEN", "GREEN"],
-        }
-    )
-    tmp = Path(__file__).parent / "_tmp_batch_e_lc"
-    an = tmp / "anchor"
-    rb = tmp / "rebuild"
-    an.mkdir(parents=True, exist_ok=True)
-    rb.mkdir(parents=True, exist_ok=True)
-    adf.to_csv(an / "lightcurve_t1.csv", index=False)
-    rdf.to_csv(rb / "lightcurve_t1.csv", index=False)
-    out = _delta_table(rb, an, "t1")
-    assert out is not None
-    assert len(out) == 2
-    by_sf = out.set_index("source_file")
-    assert abs(float(by_sf.loc["a.csv", "delta_mag"]) - 0.01) < 1e-9
-    assert abs(float(by_sf.loc["b.csv", "delta_mag"]) - 0.01) < 1e-9
 
 
 def test_dao_n_equiv_threshold_uses_measured_n() -> None:

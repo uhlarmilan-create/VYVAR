@@ -19,6 +19,7 @@ REQUIRED_RUNTIME_FILES: tuple[str, ...] = (
     "CITATIONS.bib",
     "img/VYVAR_logo.png",
     "config.template.json",
+    "src_py/camera_catalog.json",
 )
 
 # Repo sources for runtime files (install-relative path -> source file).
@@ -26,6 +27,8 @@ RUNTIME_FILE_SOURCES: dict[str, Path] = {
     "dev/validation/params_registry.json": REPO_ROOT / "dev" / "validation" / "params_registry.json",
     "CITATIONS.bib": REPO_ROOT / "CITATIONS.bib",
     "img/VYVAR_logo.png": REPO_ROOT / "img" / "VYVAR_logo.png",
+    # CAMERA-PROFILE-2026-10: read next to camera_profile (compiled) via Path(__file__).with_name
+    "src_py/camera_catalog.json": SRC_PY / "camera_catalog.json",
 }
 
 # CATALOG-DB-2026-10: the install keeps the catalog tools in catalogs/ as the checkout does.

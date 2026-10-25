@@ -25,7 +25,6 @@ from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from utils import iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
-import itertools
 import fits_meta
 from fits_meta import _focal_mm_plausible
 from masterstar_gaia_accounting import _dao_xy_binned_to_full
@@ -980,8 +979,9 @@ def _merge_vsx_exoplanet_variable_targets(
 
     exo_extra = list(_EXO_HOST_ANNOTATION_COLUMNS) + ["target_origin"]
     for col in exo_extra:
-        if col not in vsx.columns:
-            vsx[col] = ""
+        # object columns: they take the exoplanet values below, numbers too (pandas 3 refuses a
+        # float in a str column)
+        vsx[col] = vsx[col].astype(object) if col in vsx.columns else pd.Series("", index=vsx.index, dtype=object)
     if exo.empty:
         return vsx
 
@@ -1494,32 +1494,28 @@ def write_photometry_plan_files(
 
         draft_root = ps.parent.parent
         aligned_dir = draft_root / "detrended_aligned" / "lights" / ps.name
+        # BORDER-FOOTPRINT-2026-10 (Milan 2026-10-24): the border filter is the overlap of the data
+        # footprints of ALL aligned frames (as AstroImageJ crops the common area), from each frame's
+        # frame->reference transform VY_AM0..8. The former bbox of "finite pixels" never cut anything:
+        # the aligner fills uncovered pixels with a constant, not NaN (MN Boo 538: frame 116 shifted
+        # -80 px, bbox = whole chip). The aligned FITS keep the raw names (no proc_ prefix; the old
+        # proc_*.fits glob found nothing - ALIGNED-GLOB-01). No dominant-group exception on a field jump.
         if aligned_files is not None:
-            all_aligned = [Path(p) for p in aligned_files if Path(p).exists()]
-            LOGGER.info(f"[BORDER] Using {len(all_aligned)} pre-supplied aligned frame paths")
+            all_aligned = [Path(p) for p in aligned_files if Path(p).is_file()]
         else:
-            all_aligned = sorted(aligned_dir.glob("proc_*.fits"))
-            LOGGER.info(f"[BORDER] Glob found {len(all_aligned)} aligned frames in {aligned_dir}")
-
-        ram_arrays: list[Any] = []
-        if aligned_ram_frames:
-            for _name, _hdr, _arr in aligned_ram_frames:
-                if _arr is not None:
-                    ram_arrays.append(_arr)
-            if ram_arrays:
-                LOGGER.info(f"[BORDER] Using {len(ram_arrays)} aligned RAM frames for intersection bbox")
-
-        n_frame_sources = len(all_aligned) + (len(ram_arrays) if not all_aligned else 0)
+            all_aligned = sorted(aligned_dir.glob("*.fits"))
+        ram_headers = [
+            (_hdr, tuple(np.asarray(_arr).shape[:2]))
+            for _name, _hdr, _arr in (aligned_ram_frames or [])
+            if _hdr is not None and _arr is not None
+        ]
+        n_frame_sources = len(all_aligned) or len(ram_headers)
         if n_frame_sources == 0:
             if require_safe_bbox:
                 raise RuntimeError(
-                    "[BORDER] Post-alignment border filter requires aligned frames but none "
-                    "were found on disk or in RAM handoff"
+                    f"[BORDER] Post-alignment border filter requires aligned frames but none were found in {aligned_dir}"
                 )
-            log_event(
-                "[BORDER] Deferred: no aligned proc_*.fits on disk yet "
-                "(pre-alignment or RAM-handoff); border filter skipped"
-            )
+            log_event("[BORDER] No aligned frames yet (before the alignment) - border filter computed after it")
         elif n_frame_sources < 2:
             if require_safe_bbox:
                 raise RuntimeError(
@@ -1527,65 +1523,26 @@ def write_photometry_plan_files(
                 )
             log_event(f"[BORDER] Not enough aligned frames for intersection bbox: {n_frame_sources}")
         else:
-            frames_for_bbox = all_aligned if all_aligned else []
-            ram_for_bbox = [] if all_aligned else ram_arrays
-            try:
-                if draft_id is not None and database_path:
-                    dbp2 = Path(str(database_path))
-                    if dbp2.is_file():
-                        jr = detect_field_jumps(
-                            db=VyvarDatabase(dbp2), draft_id=int(draft_id)
-                        )
-                        if bool(jr.get("has_jump")) and int(jr.get("n_groups") or 0) > 0:
-                            dom = None
-                            for g in (jr.get("groups") or []):
-                                if bool(g.get("is_dominant")):
-                                    dom = g
-                                    break
-                            if dom is not None:
-                                fs = int(dom.get("frame_start") or 0)
-                                fe = int(dom.get("frame_end") or 0)
-                                if all_aligned:
-                                    frames_for_bbox = all_aligned[fs : fe + 1]
-                                elif aligned_ram_frames:
-                                    ram_for_bbox = [
-                                        arr for _n, _h, arr in aligned_ram_frames[fs : fe + 1] if arr is not None
-                                    ]
-                                log_event(
-                                    f"[BORDER] Field jump detected - using dominant group frames {fs}-{fe} "
-                                    f"({len(frames_for_bbox) or len(ram_for_bbox)} frames) for intersection bbox"
-                                )
-                            else:
-                                log_event(
-                                    f"[BORDER] Field jump detected - no dominant group found; using all "
-                                    f"{len(frames_for_bbox) or len(ram_for_bbox)} frames"
-                                )
-                        else:
-                            log_event(
-                                f"[BORDER] Field stable - using all "
-                                f"{len(frames_for_bbox) or len(ram_for_bbox)} aligned frames for intersection bbox"
-                            )
-            except Exception as _jr_exc:  # noqa: BLE001
-                log_event(f"[BORDER] detect_field_jumps failed: {_jr_exc!s} - using all aligned frames")
-
             from photometry_core import (  # noqa: PLC0415
                 common_field_intersection_bbox_px,
-                common_field_intersection_bbox_px_from_arrays,
+                common_field_intersection_bbox_px_from_headers,
             )
 
-            raw_bbox = None
-            if len(frames_for_bbox) >= 2:
-                raw_bbox = common_field_intersection_bbox_px(frame_paths=frames_for_bbox, finite_stride=16)
-            elif len(ram_for_bbox) >= 2:
-                raw_bbox = common_field_intersection_bbox_px_from_arrays(
-                    frame_arrays=ram_for_bbox, finite_stride=16
+            if all_aligned:
+                raw_bbox = common_field_intersection_bbox_px(frame_paths=all_aligned)
+            else:
+                raw_bbox = common_field_intersection_bbox_px_from_headers(headers=ram_headers)
+            if raw_bbox is not None:
+                log_event(
+                    f"[BORDER] Overlap of the data footprints of all {n_frame_sources} aligned frames: "
+                    f"x=[{raw_bbox[0]:.0f},{raw_bbox[2]:.0f}] y=[{raw_bbox[1]:.0f},{raw_bbox[3]:.0f}]"
                 )
 
             if raw_bbox is None:
                 if require_safe_bbox:
                     raise RuntimeError(
-                        "[BORDER] Post-alignment border filter failed: intersection bbox returned None "
-                        f"(disk={len(frames_for_bbox)}, ram={len(ram_for_bbox)})"
+                        "[BORDER] Post-alignment border filter failed: the aligned frames have no common area "
+                        f"({n_frame_sources} frames)"
                     )
                 log_event("[BORDER] intersection bbox returned None - no border filter applied")
             else:
@@ -2933,171 +2890,4 @@ def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
     size is applied by ``_vyvar_cap_mp_workers_for_catalog``.
     """
     return _vyvar_parallel_worker_count(app_config)
-
-
-def _field_jump_empty_result() -> dict[str, Any]:
-    """Return empty/unknown result when data is insufficient."""
-    return {
-        "has_jump": False,
-        "n_groups": 0,
-        "jump_frames": [],
-        "groups": [],
-        "dominant_group_frac": 1.0,
-        "recommended_min_frames_frac": 0.3,
-        "warning_text": None,
-        "total_frames": 0,
-    }
-
-
-def detect_field_jumps(
-    db: "VyvarDatabase",
-    draft_id: int,
-    jump_threshold_arcmin: float = 3.0,
-) -> dict[str, Any]:
-    """
-    Detect sudden field position jumps from per-frame DRIFT values.
-
-    Uses DRIFT_DRA / DRIFT_DDE from manifest files[] (already computed by
-    sync_obs_files_drift_arcmin_for_draft).
-
-    Returns dict with keys:
-      has_jump: bool
-      n_groups: int
-      jump_frames: list of {frame_index, delta_arcmin, file}
-      groups: list of {group_id, frame_start, frame_end,
-                       n_frames, frac, is_dominant}
-      dominant_group_frac: float
-      recommended_min_frames_frac: float
-      warning_text: str | None
-      total_frames: int
-    """
-    import math
-
-    import pandas as pd
-
-
-    try:
-        rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
-    except Exception as exc:  # noqa: BLE001
-        logging.warning(f"[FIELD JUMP] DB fetch failed: {exc}")
-        return _field_jump_empty_result()
-
-    if not isinstance(rows, pd.DataFrame):
-        rows = pd.DataFrame(rows)
-    if rows.empty:
-        return _field_jump_empty_result()
-
-    if "FILE_PATH" not in rows.columns:
-        return _field_jump_empty_result()
-
-    # Filter: light frames if IMAGETYP is present (defensive; fetch_* already does this).
-    if "IMAGETYP" in rows.columns:
-        rows = rows[rows["IMAGETYP"].astype(str).str.contains("light", case=False, na=False)]
-
-    # Sort by FILE_PATH (typically chronological on acquisition naming).
-    rows = rows.sort_values("FILE_PATH").reset_index(drop=True)
-
-    # Require DRIFT plane offsets.
-    for col in ("DRIFT_DRA", "DRIFT_DDE", "DRIFT"):
-        if col not in rows.columns:
-            return _field_jump_empty_result()
-        rows[col] = pd.to_numeric(rows[col], errors="coerce")
-
-    # Keep only frames with finite DRIFT_DRA/DRIFT_DDE.
-    valid = rows.dropna(subset=["DRIFT_DRA", "DRIFT_DDE"]).copy().reset_index(drop=True)
-    if len(valid) < 3:
-        return _field_jump_empty_result()
-
-    total = int(len(valid))
-
-    # Frame-to-frame delta (arcmin) in the DRIFT plane (degrees).
-    dra = valid["DRIFT_DRA"].to_numpy(dtype=float)
-    dde = valid["DRIFT_DDE"].to_numpy(dtype=float)
-
-    deltas: list[float] = []
-    for i in range(1, total):
-        d = math.sqrt((dra[i] - dra[i - 1]) ** 2 + (dde[i] - dde[i - 1]) ** 2) * 60.0
-        deltas.append(float(d))
-
-    # Identify jumps.
-    jump_indices: list[dict[str, Any]] = []
-    thr = float(jump_threshold_arcmin)
-    if not (math.isfinite(thr) and thr > 0):
-        thr = 3.0
-    for i, d in enumerate(deltas):
-        if math.isfinite(float(d)) and float(d) > thr:
-            jump_indices.append(
-                {
-                    "frame_index": int(i + 1),  # boundary at i+1 (0-based index in `valid`)
-                    "delta_arcmin": round(float(d), 2),
-                    "file": str(valid.iloc[i + 1].get("FILE_PATH", "")),
-                }
-            )
-
-    if not jump_indices:
-        return {
-            "has_jump": False,
-            "n_groups": 1,
-            "jump_frames": [],
-            "groups": [
-                {
-                    "group_id": 1,
-                    "frame_start": 0,
-                    "frame_end": total - 1,
-                    "n_frames": total,
-                    "frac": 1.0,
-                    "is_dominant": True,
-                }
-            ],
-            "dominant_group_frac": 1.0,
-            "recommended_min_frames_frac": 0.3,
-            "warning_text": None,
-            "total_frames": total,
-        }
-
-    # Split into groups using jump boundaries.
-    boundaries = [0] + [int(j["frame_index"]) for j in jump_indices] + [total]
-    groups: list[dict[str, Any]] = []
-    for gid, (start, end) in enumerate(itertools.pairwise(boundaries), 1):
-        n = int(end - start)
-        groups.append(
-            {
-                "group_id": int(gid),
-                "frame_start": int(start),
-                "frame_end": int(end - 1),
-                "n_frames": n,
-                "frac": round(float(n) / float(total), 3),
-                "is_dominant": False,
-            }
-        )
-
-    dominant = max(groups, key=lambda g: int(g.get("n_frames", 0) or 0))
-    dominant["is_dominant"] = True
-    dom_frac = float(dominant.get("frac", 0.0) or 0.0)
-
-    recommended = round(dom_frac * 0.95, 2)
-    recommended = max(0.3, min(0.95, float(recommended)))
-
-    jump_frame_nos = [int(j["frame_index"]) for j in jump_indices]
-    warning = (
-        "Field jump detected at frame(s) "
-        f"{', '.join(str(f) for f in jump_frame_nos)} "
-        f"(threshold {thr:.1f}'). "
-        f"{len(groups)} position groups found. "
-        f"Dominant group: {int(dominant['n_frames'])}/{total} frames "
-        f"({dom_frac * 100:.0f}%). "
-        f"Recommended min_frames_frac >= {recommended:.2f}."
-    )
-
-    return {
-        "has_jump": True,
-        "n_groups": int(len(groups)),
-        "jump_frames": jump_indices,
-        "groups": groups,
-        "dominant_group_frac": float(dom_frac),
-        "recommended_min_frames_frac": float(recommended),
-        "warning_text": warning,
-        "total_frames": total,
-    }
-
 

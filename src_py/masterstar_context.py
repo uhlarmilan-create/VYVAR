@@ -70,7 +70,8 @@ def resolve_masterstar_fits_path(
                 return p.resolve()
     draft_root: Path | None = draft_dir_override
     if draft_root is None and draft_id is not None:
-        cand = (Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
+        from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+        cand = draft_dir_for_id(cfg.archive_root, int(draft_id)).resolve()
         if cand.is_dir():
             draft_root = cand
     if draft_root is None:

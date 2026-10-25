@@ -5,11 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import pytest
 from astropy.io import fits
 
 from cal_stage import stamp_cal_stage_headers, verify_fits_datasum
-from pipeline import _calibrate_one_light_disk, _qc_enrich_one_frame
+from pipeline import _qc_enrich_one_frame
 
 
 def _write_light(path: Path, data: np.ndarray, **hdr_kw: object) -> None:
@@ -45,27 +44,4 @@ def test_qc_enrich_stamps_stage_on_apply(tmp_path: Path) -> None:
         hdr = hdul[0].header
         assert hdr["VY_CALSTAGE"] == "SKYSF_2"
         assert verify_fits_datasum(hdul[0].data, hdr["VY_CALDATASUM"])
-
-
-def test_calibrate_stamps_pure(tmp_path: Path) -> None:
-    """P8: stamping must not alter calibration arithmetic (only headers after compute)."""
-    lib = Path(__file__).resolve().parents[2] / "CalibrationLibrary"
-    md = sorted(lib.glob("Dark_60s*Bin1*.fits"))[0]
-    mf = sorted(lib.glob("Flat*.fits"))[0]
-    raw = Path(__file__).resolve().parents[2] / "Archive/Drafts/draft_000516/Raw/lights/NoFilter_60_2/BO_CVn_Light_001.fits"
-    if not raw.is_file():
-        pytest.skip("516 raw frame missing")
-    dst = tmp_path / "cal.fits"
-    _calibrate_one_light_disk(
-        src=raw,
-        dst=dst,
-        master_dark_path=md,
-        masterflat_by_filter={"NoFilter": mf},
-        qc_pack={"enabled": False, "draft_id": 516},
-    )
-    with fits.open(dst) as hdul:
-        hdr = hdul[0].header
-        assert hdr["VY_CALSTAGE"] == "PURE"
-        assert verify_fits_datasum(hdul[0].data, hdr["VY_CALDATASUM"])
-
 

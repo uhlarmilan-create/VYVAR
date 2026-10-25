@@ -9,7 +9,6 @@ import logging
 
 from mag_constants import MAG_ERR_SCALE
 import math
-import os
 import numpy as np
 import pandas as pd
 from config import AppConfig
@@ -22,7 +21,6 @@ from photometry_core import (
     LOGGER,
     TIME_BASE_BJD_TDB,
     TIME_BASE_JD_FALLBACK,
-    _CT_PROTOTYPE_CSV_FIELDS,
 )
 
 
@@ -831,85 +829,6 @@ def _check_color_term_extrapolation(
             float(max_bprp),
         )
     return in_range
-
-def _ct_prototype_enabled() -> bool:
-    return os.environ.get("VYVAR_CT_PROTOTYPE", "").strip() == "1"
-
-def _color_term_cat_inst_scatter_pair(
-    comp_mag_inst: dict[str, np.ndarray],
-    comp_catalog_mag: dict[str, float],
-    comp_bp_rp: dict[str, float],
-    comp_quality: dict[str, dict],
-    c1: float,
-    *,
-    min_comp: int = 5,
-) -> tuple[float, float]:
-    """Per-comp cat-inst scatter before/after removing the fitted c1.Delta(bp_rp) trend."""
-    try:
-        min_comp_i = int(min_comp)
-    except Exception:  # noqa: BLE001
-        min_comp_i = 5
-    min_comp_i = max(2, min_comp_i)
-
-    usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
-    ys: list[float] = []
-    bp_vals: list[float] = []
-
-    for cid in usable:
-        bp = float(comp_bp_rp.get(cid, float("nan")))
-        if not math.isfinite(bp):
-            continue
-        if cid not in comp_mag_inst:
-            continue
-        inst = np.asarray(comp_mag_inst[cid], dtype=np.float64)
-        finite = inst[np.isfinite(inst)]
-        if finite.size < min_comp_i:
-            continue
-        cat = float(comp_catalog_mag.get(cid, float("nan")))
-        if not math.isfinite(cat):
-            continue
-        y = float(np.nanmedian(cat - finite))
-        if not math.isfinite(y):
-            continue
-        bp_vals.append(bp)
-        ys.append(y)
-
-    if len(ys) < min_comp_i:
-        return float("nan"), float("nan")
-
-    bp_med = float(np.median(np.asarray(bp_vals, dtype=np.float64)))
-    xs = [float(bp) - bp_med for bp in bp_vals]
-    x = np.asarray(xs, dtype=np.float64)
-    y = np.asarray(ys, dtype=np.float64)
-
-    if x.size < 2:
-        return float("nan"), float("nan")
-
-    scatter = float(np.std(y))
-    if not (math.isfinite(float(c1)) and float(c1) != 0.0):
-        return scatter, float("nan")
-    resid_ct = y - float(c1) * x
-    scatter_resid = float(np.std(resid_ct)) if resid_ct.size >= 2 else float("nan")
-    return scatter, scatter_resid
-
-def _append_ct_prototype_row(draft_dir: Path, row: dict[str, Any]) -> None:
-    import csv  # noqa: PLC0415
-
-    draft_dir = Path(draft_dir)
-    path = draft_dir / "ct_prototype.csv"
-    write_header = not path.is_file() or path.stat().st_size == 0
-    with path.open("a", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(_CT_PROTOTYPE_CSV_FIELDS))
-        if write_header:
-            writer.writeheader()
-        out_row: dict[str, Any] = {}
-        for key in _CT_PROTOTYPE_CSV_FIELDS:
-            val = row.get(key, "")
-            if key == "gate_would_pass" or isinstance(val, (bool, np.bool_)):
-                out_row[key] = "True" if bool(val) else "False"
-            else:
-                out_row[key] = val
-        writer.writerow(out_row)
 
 # OUTPUT-REVIEW-2026-10 step 6 (Milan 2026-10-21): the light curve holds the per-epoch values only.
 # Per-target constants (colour term, k'') are in photometry_summary.csv, per-night ones in

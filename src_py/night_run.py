@@ -1,9 +1,9 @@
 """Headless VYVAR night pipeline runner.
 
 Production entry: ``run_night_pipeline``. UI RUN VYVAR
-(``app._run_vyvar_full_pipeline``) is a wrapper that resolves optics /
-location / flats into ``NightRunParams`` and writes Streamlit state from
-the result. C3 (Aperture Photometry page) calls ``run_night_photometry``.
+(``app._run_vyvar_full_pipeline``) resolves optics / location / flats into
+``NightRunParams`` and starts ``python -m night_run --job`` (run_job), so the
+GUI and the night runner run the same code (INV-ONE-ENTRY-01).
 
 No Streamlit dependencies. Progress via ``logging`` and optional callback.
 """
@@ -207,7 +207,7 @@ def night_run_missing_message(missing: list[str]) -> str:
         f"Night run refused: missing {named}. "
         "Provide --camera/--eq, --telescope/--tel, and --site/--location "
         "(or a draft manifest that resolves them; the site may also be the default "
-        "site, LOCATION.IS_DEFAULT in Database Explorer)."
+        "site, the default in Database Explorer > Sites)."
     )
 
 
@@ -967,7 +967,8 @@ def run_night_photometry(
     if draft_dir_override is not None:
         draft_dir = Path(draft_dir_override).resolve()
     elif draft_id is not None:
-        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{int(draft_id):06d}").resolve()
+        from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+        draft_dir = draft_dir_for_id(cfg.archive_root, int(draft_id)).resolve()
 
     phot_cfg, cfg_source, changed_keys = resolve_cfg_for_photometry(
         cfg,
@@ -1197,32 +1198,6 @@ def run_night_photometry(
         return out
 
     return out
-
-
-def run_ui_night_photometry(
-    *,
-    cfg: AppConfig,
-    pipeline: AstroPipeline,
-    draft_id: int | None,
-    draft_dir_override: Path | None = None,
-    progress_cb: Callable[[str], None] | None = None,
-    timings: dict[str, float] | None = None,
-    write_pdfs: bool = False,
-    existing_draft: bool = True,
-    epsf: bool | None = None,
-) -> dict[str, Any]:
-    """W1/C3 photometry entry (INV-ONE-ENTRY-01). Defaults match a draft re-run."""
-    return run_night_photometry(
-        cfg=cfg,
-        pipeline=pipeline,
-        draft_id=draft_id,
-        draft_dir_override=draft_dir_override,
-        progress_cb=progress_cb,
-        timings=timings,
-        write_pdfs=write_pdfs,
-        existing_draft=existing_draft,
-        epsf=epsf,
-    )
 
 
 def run_night_pipeline(params: NightRunParams) -> NightRunResult:
@@ -1688,7 +1663,8 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             return result
         result.platesolve_job_output = ps_out
 
-        draft_dir = (Path(cfg.archive_root) / "Drafts" / f"draft_{draft_id:06d}").resolve()
+        from draft_provenance import draft_dir_for_id  # noqa: PLC0415
+        draft_dir = draft_dir_for_id(cfg.archive_root, int(draft_id)).resolve()
         if params.post_platesolve_hook is not None:
             _stage("Post-plate-solve hook")
             t0 = time.time()

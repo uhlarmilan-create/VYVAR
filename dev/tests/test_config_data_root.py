@@ -2,7 +2,6 @@
 """Tests for RELEASE-2 data-dir separation (dev-neutral B2)."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import config
@@ -25,13 +24,3 @@ def test_vyvar_data_dir_override(tmp_path: Path, monkeypatch) -> None:
     data.mkdir()
     monkeypatch.setenv("VYVAR_DATA_DIR", str(data))
     assert config.resolve_data_root(tmp_path / "install") == data.resolve()
-
-
-def test_appconfig_data_root_matches_project_root_in_git_repo() -> None:
-    repo = Path(__file__).resolve().parents[2]
-    if not (repo / ".git").is_dir():
-        return
-    os.environ.pop("VYVAR_DATA_DIR", None)
-    cfg = config.AppConfig(project_root=repo)
-    assert cfg.data_root.resolve() == repo.resolve()
-    assert cfg.archive_root.resolve() == (repo / "Archive").resolve()

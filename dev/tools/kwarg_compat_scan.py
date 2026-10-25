@@ -13,6 +13,8 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "src_py"
+#: Top-level names of the VYVAR modules (``pipeline``, ``photometry_core``, ...).
+_SRC_MODULES = frozenset(p.relative_to(SRC).parts[0].removesuffix(".py") for p in SRC.rglob("*.py"))
 
 
 @dataclass(frozen=True)
@@ -127,8 +129,11 @@ class _FunctionScanner(ast.NodeVisitor):
         if callee in self.sigs:
             return self.sigs[callee]
         if "." in callee:
+            # Bare-name fallback only for VYVAR modules: ``st.progress`` / ``bar.progress`` must
+            # not be checked against an unrelated ``catalog_jobs.progress``.
+            root = callee.split(".", 1)[0]
             tail = callee.rsplit(".", 1)[-1]
-            if tail in self.sigs:
+            if root in _SRC_MODULES and tail in self.sigs:
                 return self.sigs[tail]
         return None
 
