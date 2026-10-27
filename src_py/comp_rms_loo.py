@@ -1,7 +1,7 @@
 """Leave-one-out differential-mag RMS for comparison candidacy (COMP-RMS-DEF-01-B).
 
-Gated statistic is MAD*1.4826 of mag(star) - mag(median of other pool stars)
-on loadable proc frames. No clipping. The old mag-bin relative-flux MAD is
+Gated statistic is MAD*1.4826 of (mag(star) - its night median) - median over the other pool
+stars of (mag - their night median), on loadable proc frames (COMP-RMS-NORM-2026-10). No clipping. The old mag-bin relative-flux MAD is
 ``comp_relflux_mad`` (diagnostic only).
 """
 
@@ -76,8 +76,13 @@ def compute_loo_mag_rms_map(
     if len(norm_ids) < 2:
         return {}, COMP_RMS_FRAMES_BASIS
     id_set = set(norm_ids)
-    dmag_map: dict[str, list[float]] = {cid: [] for cid in norm_ids}
-    n_frames = 0
+    # COMP-RMS-NORM-2026-10 (Milan 2026-10-26, D2): every pool star is first put on its own night
+    # level (its median magnitude over the night), then each star is compared with the median of
+    # the OTHER stars' offsets in the same frame. Without the normalisation the median of raw
+    # magnitudes of stars of different brightness jumps whenever a star is missing in a frame
+    # (edge, dropout) and gives spurious scatter (5-62 mmag in simulation). Honeycutt 1992;
+    # Burdanov et al. 2014 (Astrokit).
+    per_frame: list[tuple[list[str], np.ndarray]] = []
     for csv_path in sort_per_frame_csv_paths(per_frame_csv_paths, csv_cache):
         df = csv_cache.get(str(csv_path))
         if df is None or df.empty:
@@ -99,18 +104,24 @@ def compute_loo_mag_rms_map(
         flux_by = work.groupby("_nid", sort=True)["_flux"].median()
         if len(flux_by) < 2:
             continue
-        n_frames += 1
-        cids_f = list(flux_by.index)
         mags = np.asarray([_flux_to_mag(float(f)) for f in flux_by.to_numpy()], dtype=np.float64)
         okm = np.isfinite(mags)
         if int(okm.sum()) < 2:
             continue
-        cids_f = [c for c, o in zip(cids_f, okm, strict=False) if o]
-        mags = mags[okm]
-        loo = _loo_median(mags)
-        for cid, mag_s, mag_c in zip(cids_f, mags, loo, strict=False):
-            if math.isfinite(mag_c):
-                dmag_map[cid].append(float(mag_s - mag_c))
+        per_frame.append(([c for c, o in zip(flux_by.index, okm, strict=False) if o], mags[okm]))
+    n_frames = len(per_frame)
+    series: dict[str, list[float]] = {cid: [] for cid in norm_ids}
+    for cids_f, mags in per_frame:
+        for cid, m in zip(cids_f, mags, strict=False):
+            series[cid].append(float(m))
+    night_level = {cid: float(np.median(v)) for cid, v in series.items() if v}
+    dmag_map: dict[str, list[float]] = {cid: [] for cid in norm_ids}
+    for cids_f, mags in per_frame:
+        offs = mags - np.asarray([night_level[c] for c in cids_f], dtype=np.float64)
+        loo = _loo_median(offs)
+        for cid, off_s, off_c in zip(cids_f, offs, loo, strict=False):
+            if math.isfinite(off_c):
+                dmag_map[cid].append(float(off_s - off_c))
 
     min_frames = max(3, int(n_frames * float(min_frames_frac)))
     out: dict[str, float] = {}

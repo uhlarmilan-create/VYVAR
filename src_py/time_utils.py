@@ -223,11 +223,7 @@ def resolve_target_coordinates(
     draft_id: int | None = None,
 ) -> tuple[float | None, float | None]:
     ra = _header_float(header, "VYTARGRA")
-    if ra is None:
-        ra = _header_float(header, "VY_TARGRA")
     de = _header_float(header, "VYTARGDE")
-    if de is None:
-        de = _header_float(header, "VY_TARGDEC")
     if ra is not None and de is not None:
         return ra, de
 

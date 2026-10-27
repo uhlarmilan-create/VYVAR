@@ -173,7 +173,7 @@ def test_sky_surface_not_on_mosaic_regression(monkeypatch: pytest.MonkeyPatch, t
     ch_dir.mkdir()
     ch = ch_dir / "ch.fits"
     ch_hdr = fits.Header()
-    ch_hdr["VY_CHANNEL"] = "R"
+    ch_hdr["VYCHANNL"] = "R"
     fits.writeto(ch, np.ones((8, 8), dtype=np.float32), ch_hdr, overwrite=True)
     pl._qc_enrich_calibrated_in_place(ch_dir, app_config=pl.AppConfig())
     assert len(calls) == 2

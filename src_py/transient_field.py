@@ -34,12 +34,15 @@ from __future__ import annotations
 import json
 import logging
 import math
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
+
+from parallel_frames import map_frames
 
 LOGGER = logging.getLogger(__name__)
 
@@ -108,11 +111,7 @@ def _detect_one(args: tuple) -> pd.DataFrame:
 
 def detect_all_frames(frame_paths: list[Path], fwhm: list[float], workers: int) -> pd.DataFrame:
     jobs = [(str(p), t, f) for t, (p, f) in enumerate(zip(frame_paths, fwhm, strict=True))]
-    if workers > 1:
-        with ProcessPoolExecutor(max_workers=workers) as ex:
-            parts = list(ex.map(_detect_one, jobs))
-    else:
-        parts = [_detect_one(j) for j in jobs]
+    parts = list(map_frames(_detect_one, jobs, workers=workers, stage="transient detection"))
     parts = [p for p in parts if not p.empty]
     return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["t", "x", "y", "flux", "sharp"])
 
@@ -219,11 +218,7 @@ def forced_photometry_tracks(frame_paths: list[Path], fwhm: np.ndarray, xy_t: np
                              a_out: float, gain: float, rn: float, workers: int) -> np.ndarray:
     """As :func:`forced_photometry` but with positions per frame: ``xy_t`` (n_frames, n_sources, 2)."""
     jobs = [(str(p), xy_t[t], float(f), k, a_in, a_out, gain, rn) for t, (p, f) in enumerate(zip(frame_paths, fwhm, strict=True))]
-    if workers > 1:
-        with ProcessPoolExecutor(max_workers=workers) as ex:
-            res = list(ex.map(_measure_one, jobs))
-    else:
-        res = [_measure_one(j) for j in jobs]
+    res = list(map_frames(_measure_one, jobs, workers=workers, stage="transient photometry"))
     return np.stack(res)
 
 
@@ -231,11 +226,7 @@ def forced_photometry(frame_paths: list[Path], fwhm: np.ndarray, xy: np.ndarray,
                       gain: float, rn: float, workers: int) -> np.ndarray:
     """(n_frames, n_sources, 4): flux, error, centroid offset (px), inside footprint."""
     jobs = [(str(p), xy, float(f), k, a_in, a_out, gain, rn) for p, f in zip(frame_paths, fwhm, strict=True)]
-    if workers > 1:
-        with ProcessPoolExecutor(max_workers=workers) as ex:
-            res = list(ex.map(_measure_one, jobs))
-    else:
-        res = [_measure_one(j) for j in jobs]
+    res = list(map_frames(_measure_one, jobs, workers=workers, stage="transient photometry"))
     return np.stack(res)
 
 
@@ -312,9 +303,9 @@ def run_field_transients(
     fwhm = frame["fwhm"].to_numpy(float)
     fwhm_med = float(np.nanmedian(fwhm))
     times = frame["time"].to_numpy(float)
-    from aperture_photometry import _parallel_workers  # noqa: PLC0415
+    from parallel_frames import frame_bytes_of_fits, stage_workers  # noqa: PLC0415
 
-    workers = _parallel_workers(cfg)
+    workers = stage_workers(len(paths), frame_bytes_of_fits(paths[0]), stage="transient search")
     a_in, a_out = float(cfg.annulus_inner_fwhm), float(cfg.annulus_outer_fwhm)
 
     msh = fits.getheader(ps / "MASTERSTAR.fits")
@@ -322,10 +313,10 @@ def run_field_transients(
     from astropy.wcs.utils import proj_plane_pixel_scales  # noqa: PLC0415
 
     scale = float(np.mean(np.abs(proj_plane_pixel_scales(wcs)))) * 3600.0  # arcsec / px
-    ms = pd.read_csv(ps / "masterstars_full_match.csv", low_memory=False)
+    ms = read_vyvar_csv(ps / "masterstars_full_match.csv", low_memory=False)
     ms = ms[np.isfinite(pd.to_numeric(ms["x"], errors="coerce")) & np.isfinite(pd.to_numeric(ms["y"], errors="coerce"))]
     known_xy = ms[["x", "y"]].to_numpy(float)
-    cat = pd.read_csv(ps / "field_catalog_cone.csv", low_memory=False)
+    cat = read_vyvar_csv(ps / "field_catalog_cone.csv", low_memory=False)
     gx, gy = wcs.all_world2pix(pd.to_numeric(cat["ra_deg"]), pd.to_numeric(cat["dec_deg"]), 0)
     gmag = pd.to_numeric(cat["mag"], errors="coerce").to_numpy(float)
     gtree = cKDTree(np.c_[gx, gy])

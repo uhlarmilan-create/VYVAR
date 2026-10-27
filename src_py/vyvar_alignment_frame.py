@@ -15,6 +15,8 @@ from typing import Any, NamedTuple
 import astropy.units as u
 import numpy as np
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -203,20 +205,20 @@ def _alignment_detect_xy(
     _std_bg = float(np.nanstd(arr_bg))
     _floor_bg = _med_bg - 3.0 * _std_bg if np.isfinite(_std_bg) and _std_bg > 0 else _med_bg
     arr_bg = np.clip(arr_bg, _floor_bg, None).astype(np.float32, copy=False)
-    _, med, clipped_std = plain_mean_med_std(arr_bg[np.isfinite(arr_bg)], sigma=3.0, maxiters=5)
-    clipped_std = float(clipped_std) if np.isfinite(clipped_std) else 0.0
-    if clipped_std <= 0:
-        clipped_std = 1.0
-    if clipped_std < 1e-6:
+    _, med, bg_std = plain_mean_med_std(arr_bg[np.isfinite(arr_bg)])
+    bg_std = float(bg_std) if np.isfinite(bg_std) else 0.0
+    if bg_std <= 0:
+        bg_std = 1.0
+    if bg_std < 1e-6:
         _nm = label or "frame"
         _alignment_emit_log(
             log_sink,
-            f"DEBUG: Image stats for {_nm} - suspiciously low Std after BG ({clipped_std:.3e}); "
+            f"DEBUG: Image stats for {_nm} - suspiciously low Std after BG ({bg_std:.3e}); "
             "background subtraction may be too aggressive.",
         )
     data = np.nan_to_num((arr_bg - float(med)).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     sig = max(0.5, min(20.0, float(det_sigma)))
-    threshold = float(sig) * float(clipped_std)
+    threshold = float(sig) * float(bg_std)
     _nm = label or "frame"
     try:
         data_chk = np.asarray(data, dtype=np.float32)
@@ -241,7 +243,7 @@ def _alignment_detect_xy(
         log_sink,
         f"DEBUG: Using FWHM={float(fwhm_px):.2f} and Sigma={float(sig):.2f} (from alignment det_sigma) for detection.",
     )
-    _alignment_emit_log(log_sink, f"DEBUG: Threshold set to {threshold:.2f} (using clipped_std={clipped_std:.2f})")
+    _alignment_emit_log(log_sink, f"DEBUG: Threshold set to {threshold:.2f} (using bg_std={bg_std:.2f})")
     fw = max(1.2, float(fwhm_px))
     sig_try: list[float] = []
     s_cur = float(sig)
@@ -261,7 +263,7 @@ def _alignment_detect_xy(
                 _alignment_emit_log(log_sink, f"Trying lower threshold {float(s):.2f} for {nm}...")
             finder = DAOStarFinder(
                 fwhm=fw,
-                threshold=max(float(s) * float(clipped_std), 1e-6),
+                threshold=max(float(s) * float(bg_std), 1e-6),
                 n_brightest=None,
                 **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
             )
@@ -298,7 +300,7 @@ def _alignment_detect_xy(
         try:
             finder_ext = DAOStarFinder(
                 fwhm=5.0,
-                threshold=max(1.0 * float(clipped_std), 1e-6),
+                threshold=max(1.0 * float(bg_std), 1e-6),
                 n_brightest=None,
                 **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
             )
@@ -666,7 +668,7 @@ def _alignment_load_masterstar_catalog_points_for_frame(
             w = WCS(hdr_frame)
         if not getattr(w, "has_celestial", False):
             return np.zeros((0, 2), dtype=np.float32)
-        mdf = pd.read_csv(
+        mdf = read_vyvar_csv(
             ms_csv,
             low_memory=False,
             dtype={"catalog_id": str, "name": str},  # Gaia ID must be str - float64 loses digits
@@ -1123,7 +1125,7 @@ def _alignment_compute_one_frame(
     hdr["VYALGOK"] = (True, "Aligned to reference (passed black frame guard)")
     hdr["VY_ALGN"] = (True, "Aligned to reference")
     hdr["VY_REF"] = (ref_fp_name[:60], "Reference frame for alignment")
-    hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reprojection)")
+    hdr["VYALGM"] = (aligned_method[:30], "Alignment method (astroalign or WCS reproj.)")
     return {
         "kind": "aligned",
         "fp": str(fp.resolve()),

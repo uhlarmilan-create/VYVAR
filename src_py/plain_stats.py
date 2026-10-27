@@ -16,12 +16,10 @@ def plain_mean_med_std(
     data: Any,
     *,
     mask: Any | None = None,
-    **_ignored: Any,
 ) -> tuple[float, float, float]:
     """Return (mean, median, sample_std) over finite unmasked samples.
 
     ``mask`` follows numpy/astropy convention: True = invalid / excluded.
-    Extra kwargs (e.g. legacy ``sigma`` / ``maxiters``) are ignored.
 
     Warning: on a star field the sample ``std`` is dominated by sources and large-scale
     structure (scene variance), not sky noise. For a noise scale use

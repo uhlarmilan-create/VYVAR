@@ -34,7 +34,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from config import AppConfig
-from gaia_catalog_id import GAIA_PROC_CSV_READ_DTYPE, normalize_gaia_source_id
+from gaia_catalog_id import VYVAR_CSV_DTYPE, normalize_gaia_source_id
 from photometry_core import (
     compute_fwhm_gaussian_for_aperture_catalog,
     enhance_catalog_dataframe_aperture,
@@ -153,7 +153,7 @@ def remeasure_proc_csvs(
         if not fits_path.is_file():
             LOGGER.warning("Skip %s - missing %s", csv_path.name, fits_path.name)
             continue
-        df = pd.read_csv(csv_path, low_memory=False, dtype=GAIA_PROC_CSV_READ_DTYPE)
+        df = pd.read_csv(csv_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
         with fits.open(fits_path, memmap=True) as hdul:
             data = hdul[0].data
             hdr = hdul[0].header

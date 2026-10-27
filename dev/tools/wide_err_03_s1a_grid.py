@@ -52,7 +52,7 @@ def load_frame(path: Path) -> tuple[np.ndarray, dict]:
         "GAIN": hdr.get("GAIN"),
         "BZERO": hdr.get("BZERO"),
         "BSCALE": hdr.get("BSCALE"),
-        "VY_CALSTAGE": hdr.get("VY_CALSTAGE"),
+        "VYCALSTG": hdr.get("VYCALSTG"),
     }
     return data, meta
 

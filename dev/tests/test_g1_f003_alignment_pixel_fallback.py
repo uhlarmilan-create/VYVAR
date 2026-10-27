@@ -123,7 +123,7 @@ def test_read_flux_propagates_alignment_failed(tmp_path: Path) -> None:
     csv_path = tmp_path / "frame.csv"
     pd.DataFrame(
         {
-            "catalog_id": ["STAR1"],
+            "catalog_id": ["1497343732462852864"],
             "x": [10.0],
             "y": [10.0],
             "dao_flux": [1000.0],
@@ -135,14 +135,14 @@ def test_read_flux_propagates_alignment_failed(tmp_path: Path) -> None:
     ft = {"alignment_failed": True, "aligned": False, "airmass": 1.1}
     out = read_flux_from_csv(
         csv_path,
-        ["STAR1"],
-        {"STAR1": 3.0},
+        ["1497343732462852864"],
+        {"1497343732462852864": 3.0},
         frame_times=ft,
     )
     assert bool(out.iloc[0]["alignment_failed"])
     mag_with = float(out.iloc[0]["mag_inst"])
     ft_ok = {"alignment_failed": False, "aligned": True, "airmass": 1.1}
-    out_ok = read_flux_from_csv(csv_path, ["STAR1"], {"STAR1": 3.0}, frame_times=ft_ok)
+    out_ok = read_flux_from_csv(csv_path, ["1497343732462852864"], {"1497343732462852864": 3.0}, frame_times=ft_ok)
     assert not bool(out_ok.iloc[0]["alignment_failed"])
     assert mag_with == float(out_ok.iloc[0]["mag_inst"])
 

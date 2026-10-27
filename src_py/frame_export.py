@@ -11,9 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
-import multiprocessing
 import pickle
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -27,7 +25,6 @@ from utils import iter_fits_paths_recursive as _iter_fits_recursive
 from pipeline_astrometry import (
     _equipment_saturate_adu_from_db,
     _vyvar_df_to_csv,
-    _vyvar_per_frame_csv_workers,
 )
 from pipeline_catalog import (
     _estimate_catalog_frame_hw,
@@ -35,7 +32,6 @@ from pipeline_catalog import (
     _export_per_frame_ram_worker_task,
     _finalize_hybrid_bkg_fallback_sidecar,
     _init_export_per_frame_worker,
-    _vyvar_cap_mp_workers_for_catalog,
     find_qc_metrics_csv,
 )
 
@@ -84,11 +80,9 @@ def export_per_frame_catalogs(
     ``<platesolve_dir>/per_frame_catalog_index.csv`` lists every file and CSV path.
 
     **Performance:** each frame still runs DAO + catalog match + disk CSV write (dominant cost for many lights).
-    Parallelism: one shared count from ``app_config`` / env (``VYVAR_PARALLEL_WORKERS`` or legacy env, see
-    :func:`_vyvar_parallel_worker_count`). When ``>1``, uses ``ProcessPoolExecutor`` (``spawn``); the
-    parent prefetches Gaia cone. Worker count is capped using ``psutil`` and
-    ``per_frame_mp_reserve_ram_gb``. RAM handoff ``aligned_ram`` uses the same process pool with serialized
-    headers + float32 pixels. Lower ``max_catalog_rows`` in the UI to reduce DAO work per file.
+    Parallelism: :func:`parallel_frames.stage_workers` / :func:`parallel_frames.map_frames` (the run's
+    RAM and CPU budget, frames in order). RAM handoff ``aligned_ram`` sends serialized headers + float32
+    pixels to the workers.
 
     **RAM handoff:** pass ``aligned_ram`` as ``(filename, header, ndarray)`` tuples plus ``aligned_target_dir`` to
     run catalog matching **without** re-reading aligned FITS from disk. With ``defer_disk_writes=True``, sidecar
@@ -269,70 +263,34 @@ def export_per_frame_catalogs(
             if _ms_gauss.is_file():
                 with fits.open(_ms_gauss, memmap=False) as _gfh:
                     _ghdr = _gfh[0].header
-                    # PRIORITY 1: VY_FWHM_GAUSS - 2D Gaussian fit, closest to SExtractor
-                    for _gk in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
-                        _vg = _ghdr.get(_gk)
-                        if _vg is None:
-                            continue
-                        try:
-                            _vgf = float(_vg)
-                            if 1.0 <= _vgf <= 15.0:
-                                _gauss_override = _vgf
-                                LOGGER.debug(
-                                    "[FWHM] gaussian_override from %s: %.3f px",
-                                    _gk,
-                                    _gauss_override,
-                                )
-                                break
-                        except (TypeError, ValueError):
-                            pass
-
-                    # PRIORITY 2: VY_FWHM x 0.667 fallback
-                    if _gauss_override is None:
-                        _vy = _ghdr.get("VY_FWHM")
-                        if _vy is not None:
-                            try:
-                                _vyf = float(_vy)
-                                if 1.0 <= _vyf <= 15.0:
-                                    _gauss_override = _vyf * (1.0 / 1.5)
-                                    LOGGER.debug(
-                                        "[FWHM] gaussian_override from VY_FWHMx0.667: %.3f px",
-                                        _gauss_override,
-                                    )
-                            except (TypeError, ValueError):
-                                pass
+                    # FWHM-ONE-2026-10: VY_FWHM is the elliptical Gaussian FWHM of frame QC
+                    # (MASTERSTAR also carried a copy under an over-long name until 2026-10).
+                    try:
+                        _vyf = float(_ghdr.get("VY_FWHM"))
+                        if 1.0 <= _vyf <= 15.0:
+                            _gauss_override = _vyf
+                    except (TypeError, ValueError):
+                        pass
     except Exception:  # noqa: BLE001
         _gauss_override = None
     _ap_st["gaussian_fwhm_px_override"] = _gauss_override
     if _gauss_override is not None:
         log_event(
             f"[PHOT] gaussian_fwhm_px_override = {float(_gauss_override):.4f}px "
-            "(from VY_FWHM or VY_FWHM_GAUSS)"
+            "(MASTERSTAR VY_FWHM)"
         )
     else:
         log_event("[PHOT] gaussian_fwhm_px_override = None -> fallback to momentx0.619 per frame")
 
-    cfg_for_workers = app_config if app_config is not None else AppConfig()
     _dao_fw_export = (
         float(dao_fwhm_px)
         if dao_fwhm_px is not None
         else DAO_FWHM_FALLBACK_PX
     )
-    n_workers = _vyvar_per_frame_csv_workers(cfg_for_workers)
-    _ny, _nx = _estimate_catalog_frame_hw(work_ram if use_ram_inputs else None, files)
-    n_workers = _vyvar_cap_mp_workers_for_catalog(
-        n_workers,
-        (_ny, _nx),
-        reserve_gb=float(cfg_for_workers.per_frame_mp_reserve_ram_gb),
-    )
-    if n_workers > 1 and total > 1:
-        LOGGER.info(
-            "Per-frame catalog: up to %s process worker(s); shared parallel count + RAM cap (psutil); "
-            "env VYVAR_PARALLEL_WORKERS / legacy",
-            n_workers,
-        )
+    from parallel_frames import frame_bytes, map_frames, stage_workers  # noqa: PLC0415
 
-    use_parallel_mp = n_workers > 1 and total > 1
+    _ny, _nx = _estimate_catalog_frame_hw(work_ram if use_ram_inputs else None, files)
+    n_workers = stage_workers(total, frame_bytes(_ny, _nx), stage="per-frame catalogs")
 
     deferred_csv_writes: list[tuple[Path, pd.DataFrame]] = []
 
@@ -424,28 +382,15 @@ def export_per_frame_catalogs(
         if progress_cb is not None:
             progress_cb(done, total, f"Catalog: {key}")
 
-    if use_parallel_mp:
-        ctx = multiprocessing.get_context("spawn")
-        with ProcessPoolExecutor(
-            max_workers=n_workers,
-            mp_context=ctx,
-            initializer=_init_export_per_frame_worker,
-            initargs=(ws,),
-        ) as ex:
-            # at most 2 tasks per worker in flight: the packed frames are not all alive at once
-            pending: dict[Any, str] = {}
-            nxt = 0
-            while nxt < len(keys) or pending:
-                while nxt < len(keys) and len(pending) < 2 * n_workers:
-                    pending[ex.submit(task_fn, _pack(nxt))] = keys[nxt]
-                    nxt += 1
-                finished, _ = wait(list(pending), return_when=FIRST_COMPLETED)
-                for fut in finished:
-                    _collect(pending.pop(fut), fut.result())
-    else:
-        _init_export_per_frame_worker(ws)
-        for i, key in enumerate(keys):
-            _collect(key, task_fn(_pack(i)))
+    # The pool keeps at most two frames per worker in flight, so the packed RAM frames are not
+    # all alive at once; results come back in frame order.
+    for key, res in zip(
+        keys,
+        map_frames(task_fn, range(len(keys)), workers=n_workers, initializer=_init_export_per_frame_worker,
+                   ctx=ws, pack=_pack, stage="per-frame catalogs"),
+        strict=True,
+    ):
+        _collect(key, res)
     rows_out = []
     frame_rows: dict[str, dict[str, Any]] = {}
     for key in keys:

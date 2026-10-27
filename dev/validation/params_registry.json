@@ -12,7 +12,6 @@
       "photometry": "Measuring star brightness: aperture and sky annulus, error model, light-curve outlier flags, neighbour light and the ePSF product.",
       "qc": "Per-frame quality checks (sharpness, elongation, background, star count) and the sky-surface preprocess.",
       "reports": "The PDF report: the HR diagram of the field and its optional online lookups (Gaia archive, SIMBAD).",
-      "system": "Machine-level behaviour: memory kept free when VYVAR sizes its parallel workers.",
       "trust": "How VYVAR grades its own results: green / yellow / red trust from the comparison ensemble and the check star, and light-curve quality limits."
     }
   },
@@ -590,20 +589,6 @@
     "scope_key": "rig",
     "scope_group": "a"
   },
-  "per_frame_mp_reserve_ram_gb": {
-    "help": "Memory left free per parallel worker when VYVAR sizes the number of workers.",
-    "kind": "static",
-    "label": "RAM kept free per worker",
-    "owner": "config_runtime",
-    "phase": "system",
-    "tier": "expert",
-    "unit": "GB",
-    "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
   "per_frame_sat_min_clean_frac": {
     "help": "A target is measured only when at least this fraction of its frames is unsaturated.",
     "kind": "static",
@@ -711,20 +696,6 @@
     "tier": "basic",
     "unit": null,
     "widget": "auto",
-    "scope": "universal",
-    "scope_confidence": "high",
-    "scope_key": "none",
-    "scope_group": "n/a"
-  },
-  "qc_preprocess_workers": {
-    "help": "Number of parallel preprocessing workers; computed from CPU/RAM at startup, overridable by the VYVAR_PARALLEL_WORKERS environment variable.",
-    "kind": "resolved",
-    "label": "QC Preprocess Workers",
-    "owner": "internal",
-    "phase": "system",
-    "tier": "expert",
-    "unit": null,
-    "widget": "hidden",
     "scope": "universal",
     "scope_confidence": "high",
     "scope_key": "none",

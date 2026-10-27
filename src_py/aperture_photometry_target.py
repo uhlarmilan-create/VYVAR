@@ -231,10 +231,9 @@ def _aperture_process_one_target(
     _n_band_ok = sum(1 for v in comp_catalog_mag.values() if math.isfinite(v))
     _band_system = _fb.zp_band if _n_band_ok >= 1 else "NONE"
     if _band_system == "NONE":
-        logging.warning(
-            "[BAND] %s: no comp with a valid %s magnitude - LC not calibrated, not exportable",
-            target_cid, _fb.label,
-        )
+        # LOG-NOISE-2026-10: per target INFO, one summary WARNING after the target loop
+        logging.info("[BAND] %s: no comp with a valid %s magnitude - differential LC (no zero point)",
+                     target_cid, _fb.label)
     else:
         logging.info("[BAND] %s: zero point from %d of %d comps with a valid %s magnitude",
                      target_cid, _n_band_ok, len(comp_catalog_mag), _fb.label)
@@ -486,32 +485,28 @@ def _aperture_process_one_target(
     _pt_choice = (getattr(state, "per_target_aperture", None) or {}).get(str(target_cid))
     _pt_grid = getattr(state, "aperture_grid_night", None)
     if _pt_choice is not None and _pt_grid is not None:
-        try:
-            from aperture_pertarget import apply_grid_fluxes_to_frames  # noqa: PLC0415
+        from aperture_pertarget import apply_grid_fluxes_to_frames  # noqa: PLC0415
 
-            _apply_ids = [str(target_cid)] + [str(c) for c in comp_ids]
-            if _chk_cid_pref and str(_chk_cid_pref) not in _apply_ids:
-                _apply_ids.append(str(_chk_cid_pref))  # check star in the same aperture
-            all_frames = apply_grid_fluxes_to_frames(
-                all_frames,
-                _pt_grid,
-                catalog_ids=_apply_ids,
-                f_star=float(_pt_choice.f_star),
-                gain=float(state._gain_phot) if state._gain_phot is not None else None,
-                read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
-                annulus_inner_fwhm=float(annulus_inner_fwhm),
-                annulus_outer_fwhm=float(annulus_outer_fwhm),
-            )
-            logging.info(
-                "[APERTURE-DYNAMIC] target %s f*=%.3f r_ap(night_scale)=%.3f px (n_comp=%d)",
-                target_cid,
-                float(_pt_choice.f_star),
-                float(_pt_choice.r_ap_px),
-                len(comp_ids),
-            )
-        except Exception as _pt_apply_exc:  # noqa: BLE001
-            logging.warning("[APERTURE-DYNAMIC] apply failed for %s: %s", target_cid, _pt_apply_exc)
-
+        _apply_ids = [str(target_cid)] + [str(c) for c in comp_ids]
+        if _chk_cid_pref and str(_chk_cid_pref) not in _apply_ids:
+            _apply_ids.append(str(_chk_cid_pref))  # check star in the same aperture
+        all_frames = apply_grid_fluxes_to_frames(
+            all_frames,
+            _pt_grid,
+            catalog_ids=_apply_ids,
+            f_star=float(_pt_choice.f_star),
+            gain=float(state._gain_phot) if state._gain_phot is not None else None,
+            read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
+            annulus_inner_fwhm=float(annulus_inner_fwhm),
+            annulus_outer_fwhm=float(annulus_outer_fwhm),
+        )
+        logging.info(
+            "[APERTURE-DYNAMIC] target %s f*=%.3f r_ap(night_scale)=%.3f px (n_comp=%d)",
+            target_cid,
+            float(_pt_choice.f_star),
+            float(_pt_choice.r_ap_px),
+            len(comp_ids),
+        )
     # Build time series per star
     target_lc = _get_lc(target_cid, all_frames)
     comp_lc = {cid: _get_lc(cid, all_frames) for cid in comp_ids}
@@ -537,8 +532,8 @@ def _aperture_process_one_target(
     if _band_system != "NONE" and not any(
         math.isfinite(float(comp_catalog_mag.get(_c, float("nan")))) for _c in (_broeg_w or {})
     ):
-        logging.warning("[BAND] %s: no measured comp with a valid %s magnitude - LC not calibrated",
-                        target_cid, _fb.label)
+        logging.info("[BAND] %s: no measured comp with a valid %s magnitude - differential LC (no zero point)",
+                     target_cid, _fb.label)
         _band_system = "NONE"
     _zp_info = zero_point_uncertainty(
         _broeg_w, comp_catalog_mag, _comp_levels, _fb.zp_band if _band_system != "NONE" else "NONE"
@@ -672,7 +667,7 @@ def _aperture_process_one_target(
         fallback=(_tf_am["airmass"].to_numpy(dtype=float) if "airmass" in _tf_am.columns else None),
     )
 
-    from k2_extinction import K2Source, apply_k2_per_frame, bp_rp_comp_median  # noqa: PLC0415
+    from k2_extinction import K2Source, apply_k2_per_frame, bp_rp_comp_median, ensemble_bp_rp  # noqa: PLC0415
 
     k2_value_lc = float("nan")
     k2_colour_ref = float("nan")
@@ -684,13 +679,16 @@ def _aperture_process_one_target(
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
     if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
         _airmass_k2 = _target_airmass_arr
-        _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
+        # K2-ONE-2026-10 (Milan 2026-10-26, D4): the colour of the comparison is the colour of
+        # the ensemble the light curve uses - the Broeg-weighted mean colour of its comps.
+        _bp_med_k2 = ensemble_bp_rp(comp_bp_rp, comp_weight_map)
+        if not math.isfinite(_bp_med_k2):
+            _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
         _k2_src_enum = K2Source.LITERATURE_DEFAULT
-        # UNCAL-LC-2026-10: k'' x airmass x (target - comp colour) shapes the light curve; it
-        # does not need a zero point, so an uncalibrated light curve (delta_mag) gets it too.
-        _k2_in = mag_calib if _calibrated else delta_mag
-        _k2_out, _k2_delta, k2_source_rows = apply_k2_per_frame(
-            _k2_in,
+        # k'' x airmass x (target - ensemble colour) is a differential effect: one convention,
+        # applied to delta_mag and to mag_calib alike (Henden: dm0 = dm - k'' X dC).
+        delta_mag, _, k2_source_rows = apply_k2_per_frame(
+            delta_mag,
             _airmass_k2,
             object_bp_rp=float(target_bp_rp),
             bp_rp_comp_med=_bp_med_k2,
@@ -698,9 +696,10 @@ def _aperture_process_one_target(
             k2_source=_k2_src_enum,
         )
         if _calibrated:
-            mag_calib = _k2_out
-        else:
-            delta_mag = _k2_out
+            mag_calib, _, _ = apply_k2_per_frame(
+                mag_calib, _airmass_k2, object_bp_rp=float(target_bp_rp), bp_rp_comp_med=_bp_med_k2,
+                k2_value=_k2_val, k2_source=_k2_src_enum,
+            )
         k2_value_lc = _k2_val
         k2_colour_ref = _bp_med_k2
         if any(str(v) != K2Source.NONE.value for v in k2_source_rows):

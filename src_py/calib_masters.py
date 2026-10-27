@@ -124,7 +124,7 @@ def combine_frames(
     if bad.any():
         good = master[~bad]
         master[bad] = float(np.median(good)) if good.size else 0.0
-    hdr0["VYSTKMOD"] = (method.upper(), "Per-pixel combine along stack axis (no clipping)")
+    hdr0["VYSTKMOD"] = (method.upper(), "Per-pixel combine of the stack (no clipping)")
     hdr0["NCOMBINE"] = (n, "Number of frames combined")
     return master, hdr0
 
@@ -242,11 +242,11 @@ def build_flat(
     master[bad] = 1.0
     cap = _earliest_capture(files)
     hdr["IMAGETYP"] = ("Flat Field", "VYVAR master")
-    hdr["VYOFFSUB"] = (handling, "Offset removed from flats: darkflat|constant|none")
+    hdr["VYOFFSUB"] = (handling, "Flat offset removed: darkflat|constant|none")
     if off_adu is not None:
         hdr["VYOFFADU"] = (round(off_adu, 3), "Offset level removed [ADU]")
     hdr["VYFLTNRM"] = ("CFA4" if pattern else "GLOBAL", "Per-frame and master normalisation")
-    hdr["VYFLNRD"] = (1, "Normalised again after resample at calibrate (no-op ~1)")
+    hdr["VYFLNRD"] = (1, "Renormalised after resample (no-op, ~1)")
     hdr["HISTORY"] = f"VYVAR master FLAT ({method}, {len(files)} frames, offset {handling}, no clipping)"
     if cap is not None:
         hdr["VY_CDATE"] = (cap.strftime("%Y-%m-%dT%H:%M:%S"), "Earliest source capture (UTC)")

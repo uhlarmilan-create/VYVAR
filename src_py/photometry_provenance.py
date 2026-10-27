@@ -146,7 +146,7 @@ def _complete_config_snapshot(cfg: Any, snapshot: dict[str, Any]) -> dict[str, A
     """Backfill the provenance snapshot so it covers EVERY public AppConfig field.
 
     ``AppConfig.to_json()`` carries only the config.json keys; derived/runtime fields
-    (project_root, qc_preprocess_workers, the observer location mirror, gain, read_noise) are
+    (project_root, the observer location mirror, gain, read_noise) are
     not in it. For an honest, complete provenance snapshot we backfill any missing public field
     from ``getattr(cfg, name)`` (JSON-coerced). This does NOT touch ``to_json()`` / config.json
     (save/load semantics unchanged) and is metadata only -- the anchor comparator ignores
@@ -215,6 +215,23 @@ def _build_pipeline_provenance_block(cfg: Any, *, entry_point: str) -> dict[str,
         block["git_dirty_code"] = None
     return block
 
+def _json_default(o: Any) -> Any:
+    """numpy scalars / arrays and paths in pipeline_meta values."""
+    import numpy as np  # noqa: PLC0415
+
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    if isinstance(o, Path):
+        return str(o)
+    raise TypeError(f"pipeline_meta: value of type {type(o).__name__} is not JSON serialisable")
+
+
 def merge_photometry_pipeline_meta(
     photometry_dir: Path | str,
     updates: dict[str, Any],
@@ -222,22 +239,28 @@ def merge_photometry_pipeline_meta(
     *,
     entry_point: str | None = None,
 ) -> None:
-    """Merge keys into ``photometry/pipeline_meta.json`` (MASTERSTAR + aperture photometry)."""
+    """Merge keys into ``photometry/pipeline_meta.json`` (MASTERSTAR + aperture photometry).
+
+    FAIL-LOUD-2026-10 (code review 2 G11-07): an unreadable existing file is kept as ``.corrupt`` and the error
+    raised (it used to be replaced by the new keys only, losing provenance, site and sigma_sys); numpy values are
+    serialised; the write is atomic (tmp + os.replace); a write error is raised, not logged at DEBUG.
+    """
+    import os  # noqa: PLC0415
+
     _meta_path = Path(photometry_dir) / "pipeline_meta.json"
-    try:
-        _meta_path.parent.mkdir(parents=True, exist_ok=True)
-        _existing: dict[str, Any] = {}
-        if _meta_path.is_file():
-            try:
-                _existing = json.loads(_meta_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001
-                logging.error('[EXC-0158] Existing pipeline_meta.json parse failure replaced with empty dict - prior meta keys si...: %s', exc)
-                pass
-        _merged = dict(updates)
-        if cfg is not None and entry_point:
-            _merged["provenance"] = _build_pipeline_provenance_block(cfg, entry_point=entry_point)
-        _existing.update(_merged)
-        _meta_path.write_text(json.dumps(_existing, indent=2), encoding="utf-8")
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[PHOT] pipeline_meta write failed: %s", exc)
-        pass
+    _meta_path.parent.mkdir(parents=True, exist_ok=True)
+    _existing: dict[str, Any] = {}
+    if _meta_path.is_file():
+        try:
+            _existing = json.loads(_meta_path.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            _bad = _meta_path.with_suffix(".json.corrupt")
+            os.replace(_meta_path, _bad)
+            raise RuntimeError(f"pipeline_meta.json unreadable (kept as {_bad.name}): {exc}") from exc
+    _merged = dict(updates)
+    if cfg is not None and entry_point:
+        _merged["provenance"] = _build_pipeline_provenance_block(cfg, entry_point=entry_point)
+    _existing.update(_merged)
+    _tmp = _meta_path.with_suffix(".json.tmp")
+    _tmp.write_text(json.dumps(_existing, indent=2, default=_json_default), encoding="utf-8")
+    os.replace(_tmp, _meta_path)

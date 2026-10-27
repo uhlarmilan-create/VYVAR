@@ -306,7 +306,6 @@ def cal_diag_gate_for_obs_group(
     pedestal_dark_paths: list[Path] | None,
     match_and_crop_pair: MatchCropFn,
     saturation_adu: float | None,
-    ui_error: Callable[[str], None] | None = None,
 ) -> CalDiagGateResult:
     """Run Check P, Check C, Check B on representative frame."""
     eps = CAL_PED_CONSISTENCY_REL
@@ -377,8 +376,6 @@ def cal_diag_gate_for_obs_group(
             f"R={ratio_r:.4g} s_SUM={s_sum:.4g} s_MEAN={s_mean:.4g}"
         )
         log_event(full)
-        if ui_error is not None:
-            ui_error(full)
         return CalDiagGateResult(
             obs_group_key=obs_group_key,
             dark_path=str(Path(dark_path).resolve()),
@@ -496,8 +493,6 @@ def cal_diag_gate_for_obs_group(
             f"(method={ped.method}, check_p_ok={check_p_ok}); applying SUM with caution"
         )
         log_event(wmsg)
-        if ui_error is not None:
-            ui_error(wmsg)
         messages.append(wmsg)
         status = "WARN"
     elif sum_supported and not mean_supported:
@@ -609,7 +604,6 @@ def ensure_cal_diag_gate(
     pedestal_dark_paths: list[Path] | None,
     match_and_crop_pair: MatchCropFn,
     saturation_adu: float | None,
-    ui_error: Callable[[str], None] | None = None,
 ) -> CalDiagGateResult | None:
     if dark_path is None or not Path(dark_path).is_file():
         return None
@@ -626,7 +620,6 @@ def ensure_cal_diag_gate(
         pedestal_dark_paths=pedestal_dark_paths,
         match_and_crop_pair=match_and_crop_pair,
         saturation_adu=saturation_adu,
-        ui_error=ui_error,
     )
     session.gate_results[gkey] = result
     if result.aborted:
@@ -670,27 +663,27 @@ def apply_cal_diag_headers(hdr: fits.Header, gate_result: CalDiagGateResult | No
         return
     conv = gate_result.convention
     if conv == "NONE":
-        hdr["VY_DKRSMP"] = ("SUM", "CAL-DIAG: no resample; dark applied at matched binning")
+        hdr["VYDKRSMP"] = ("SUM", "CAL-DIAG: no resample, dark at light binning")
     else:
-        hdr["VY_DKRSMP"] = (conv, "CAL-DIAG dark resample convention applied")
-    hdr["VY_DKRSMP_SRC"] = (
+        hdr["VYDKRSMP"] = (conv, "CAL-DIAG dark resample convention applied")
+    hdr["VYDKRSRC"] = (
         gate_result.convention_src,
-        "CAL-DIAG how resample convention was established",
+        "CAL-DIAG: how the convention was established",
     )
     if gate_result.sky_median is not None and math.isfinite(float(gate_result.sky_median)):
         hdr["VY_CDSKY"] = (
             float(gate_result.sky_median),
             "CAL-DIAG post-dark sky median ADU (repr frame)",
         )
-    hdr["VY_CDSTAT"] = (gate_result.status, "CAL-DIAG gate outcome for obs_group")
+    hdr["VYCDSTAT"] = (gate_result.status, "CAL-DIAG gate outcome for obs_group")
     if gate_result.pedestal_p is not None and math.isfinite(float(gate_result.pedestal_p)):
         hdr["VY_CPED"] = (float(gate_result.pedestal_p), "CAL-DIAG derived bin1 pedestal ADU")
 
 
 def passthrough_cal_diag_headers(hdr: fits.Header) -> None:
-    hdr["VY_DKRSMP"] = ("PASSTHROUGH", "CAL-DIAG: no dark applied")
-    hdr["VY_DKRSMP_SRC"] = ("PASSTHROUGH", "CAL-DIAG how resample convention was established")
-    hdr["VY_CDSTAT"] = ("PASS", "CAL-DIAG gate outcome for obs_group")
+    hdr["VYDKRSMP"] = ("PASSTHROUGH", "CAL-DIAG: no dark applied")
+    hdr["VYDKRSRC"] = ("PASSTHROUGH", "CAL-DIAG: how the convention was established")
+    hdr["VYCDSTAT"] = ("PASS", "CAL-DIAG gate outcome for obs_group")
 
 
 def group_lights_by_obs_key(
@@ -730,7 +723,6 @@ def run_cal_diag_pregate(
     match_and_crop_pair: MatchCropFn,
     saturation_for_light: Callable[[Path], float | None],
     pedestal_paths_for_dark: Callable[[Path], list[Path]] | None = None,
-    ui_error: Callable[[str], None] | None = None,
 ) -> CalDiagSession:
     session = CalDiagSession()
     groups = group_lights_by_obs_key(files, obs_group_key_from_path=obs_group_key_from_path)
@@ -753,8 +745,7 @@ def run_cal_diag_pregate(
             pedestal_dark_paths=ped_fn(dark_p),
             match_and_crop_pair=match_and_crop_pair,
             saturation_adu=saturation_for_light(repr_path),
-            ui_error=ui_error,
-        )
+            )
     return session
 
 

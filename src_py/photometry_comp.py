@@ -192,49 +192,6 @@ def _target_selection_effective_frame_hw_px(
     need_h = int(math.ceil(float(max(ys)))) + em + 2
     return max(int(frame_w_px), need_w), max(int(frame_h_px), need_h)
 
-def _auto_repair_catalog_ids(
-    *,
-    vt_path: Path,
-    gaia_db_path: str | None,
-    log_fn: Any = None,
-    max_sep_arcsec: float = 10.0,
-) -> dict[str, Any]:
-    """Auto-repair corrupted Gaia catalog_id in variable_targets.csv by RA/DEC.
-
-    Safety rules:
-    - If `gaia_db_path` is not set or the DB does not exist -> do nothing.
-    - If `variable_targets.csv` has no `catalog_id` or RA/DEC -> do nothing.
-    - Repair only when the nearest Gaia source is close enough (`max_sep_arcsec`).
-    - Create a `.bak` backup only if something was actually repaired.
-    """
-    try:
-        from repair_catalog_ids import repair_catalog_ids_from_gaia_db  # noqa: PLC0415
-
-        _log = log_fn or log_event
-        if not gaia_db_path:
-            return {"ok": False, "reason": "no_gaia_db_path"}
-        dbp = Path(str(gaia_db_path))
-        if not dbp.is_file():
-            return {"ok": False, "reason": "gaia_db_missing", "gaia_db_path": str(dbp)}
-        if not Path(vt_path).is_file():
-            return {"ok": False, "reason": "vt_missing", "vt_path": str(vt_path)}
-        res = repair_catalog_ids_from_gaia_db(
-            variable_targets_csv=Path(vt_path),
-            gaia_db_path=dbp,
-            backup=True,
-            max_sep_arcsec=float(max_sep_arcsec),
-            log_fn=_log,
-        )
-        if int(res.get("repaired") or 0) > 0:
-            _log(f"[COMP] auto-repair variable_targets.csv: repaired={res.get('repaired')} warnings={res.get('warnings')}")
-        return res
-    except Exception as exc:  # noqa: BLE001
-        try:
-            (log_fn or log_event)(f"[COMP] auto-repair variable_targets.csv FAILED: {exc!s}")
-        except Exception:  # noqa: BLE001
-            pass
-        return {"ok": False, "reason": "exception", "error": str(exc)}
-
 def _enrich_active_targets_bp_rp(
     targets_df: pd.DataFrame,
     *,
@@ -400,7 +357,7 @@ def _read_field_density_inputs(
     msc_path = Path(masterstars_csv)
     if msc_path.is_file():
         try:
-            _msc_df = pd.read_csv(
+            _msc_df = read_vyvar_csv(
                 msc_path,
                 usecols=["catalog_id"],
                 low_memory=False,
@@ -531,7 +488,6 @@ def select_active_targets(
     """
     global LAST_EXCLUDED_TARGETS
     # Auto-repair corrupted Gaia IDs before loading (if a local Gaia DB is available).
-    _auto_repair_catalog_ids(vt_path=Path(variable_targets_csv), gaia_db_path=gaia_db_path, log_fn=log_event)
 
     # variable_targets.csv may come from outside and often has catalog_id as float/scientific - read as string
     vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
@@ -599,9 +555,7 @@ def select_active_targets(
     # Identity join index: normalized Gaia source_id -> masterstar row.
     ms_by_cid: dict[str, pd.Series] = {}
     for _, ms_row in ms.iterrows():
-        cid_ms = normalize_gaia_source_id(ms_row.get("name", ""))
-        if not cid_ms:
-            cid_ms = _normalize_gaia_id(ms_row.get("catalog_id", ""))
+        cid_ms = _normalize_gaia_id(ms_row.get("catalog_id", ""))  # identity = catalog_id only (G04-17)
         if cid_ms and cid_ms not in ms_by_cid:
             ms_by_cid[str(cid_ms)] = ms_row
 
@@ -1433,9 +1387,8 @@ def build_global_comp_pool(
 ) -> pd.DataFrame:
     """Build the global comp pool - static filters + RMS across frames (once per field)."""
     pool = masterstars_df.copy()
-    for _id_col in ("catalog_id", "name"):
-        if _id_col in pool.columns:
-            pool[_id_col] = _normalize_id_series(pool[_id_col])
+    if "catalog_id" in pool.columns:
+        pool["catalog_id"] = _normalize_id_series(pool["catalog_id"])
     for col in (
         "is_usable",
         "is_saturated",
@@ -1482,7 +1435,7 @@ def build_global_comp_pool(
             log_label="variable_target_catalog_ids (global comp pool)",
         ) or None
     if _vt_gaia_ids:
-        nid = pool.get("catalog_id", pool.get("name", pd.Series("", index=pool.index))).map(_normalize_gaia_id)
+        nid = pool["catalog_id"].map(_normalize_gaia_id)
         pool = pool.loc[~nid.isin(_vt_gaia_ids)].copy()
 
     if "zone" in pool.columns:
@@ -1526,7 +1479,7 @@ def build_global_comp_pool(
         logging.warning("[GLOBAL COMP POOL] 0 rows after static filters")
         return pool.reset_index(drop=True)
 
-    id_col = "name" if "name" in pool.columns else "catalog_id"
+    id_col = "catalog_id" if "catalog_id" in pool.columns else "name"  # identity = catalog_id (G07-05)
     cand_ids = {str(x).strip() for x in pool[id_col].tolist() if str(x).strip()}
     if not cand_ids:
         return pool.reset_index(drop=True)
@@ -1579,64 +1532,62 @@ def build_global_comp_pool(
         # <= 1 % (aperture_pertarget.allowed_f_from_comp_blend); the pool keeps a star that
         # passes at the smallest k, so that k is always available. Contamination is defined
         # for the aperture actually used, as Kepler / TESS CROWDSAP.
-        try:
-            from aperture_pertarget import DEFAULT_APERTURE_F_GRID, blend_k_column  # noqa: PLC0415
-            from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool  # noqa: PLC0415
+        from aperture_pertarget import DEFAULT_APERTURE_F_GRID, blend_k_column  # noqa: PLC0415
+        from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool  # noqa: PLC0415
 
-            # BLEND-FWHM-2026-10: the apertures are r = k x FWHM(frame); the light is
-            # evaluated at the night median FWHM of this group (the typical frame).
-            _fw, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px))
-            _ks = sorted(float(k) for k in DEFAULT_APERTURE_F_GRID)
-            _ann = (
-                float(getattr(cfg, "annulus_inner_fwhm", 2.7)) * _fw,
-                float(getattr(cfg, "annulus_outer_fwhm", 5.2)) * _fw,
+        # BLEND-FWHM-2026-10: the apertures are r = k x FWHM(frame); the light is
+        # evaluated at the night median FWHM of this group (the typical frame).
+        _fw, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px))
+        _ks = sorted(float(k) for k in DEFAULT_APERTURE_F_GRID)
+        _ann = (
+            float(getattr(cfg, "annulus_inner_fwhm", 2.7)) * _fw,
+            float(getattr(cfg, "annulus_outer_fwhm", 5.2)) * _fw,
+        )
+        _sat_b = float("nan")
+        if "saturate_limit_adu" in masterstars_df.columns:
+            _sat_b = float(pd.to_numeric(masterstars_df["saturate_limit_adu"], errors="coerce").median())
+        _bmeta: dict = {}
+        _psf = None
+        for _k in _ks:
+            _cont, _bmeta = blend_contamination_for_pool(
+                pool,
+                field_catalog_csv=Path(field_catalog_csv) if field_catalog_csv else None,
+                masterstar_fits=Path(masterstar_fits) if masterstar_fits else None,
+                zp_band=_fb.blend_band,
+                fwhm_px=_fw,
+                r_ap_px=_k * _fw,
+                sat_adu=_sat_b,
+                annulus_px=_ann,
+                profile_df=masterstars_df,
+                psf=_psf,
             )
-            _sat_b = float("nan")
-            if "saturate_limit_adu" in masterstars_df.columns:
-                _sat_b = float(pd.to_numeric(masterstars_df["saturate_limit_adu"], errors="coerce").median())
-            _bmeta: dict = {}
-            _psf = None
-            for _k in _ks:
-                _cont, _bmeta = blend_contamination_for_pool(
-                    pool,
-                    field_catalog_csv=Path(field_catalog_csv) if field_catalog_csv else None,
-                    masterstar_fits=Path(masterstar_fits) if masterstar_fits else None,
-                    zp_band=_fb.blend_band,
-                    fwhm_px=_fw,
-                    r_ap_px=_k * _fw,
-                    sat_adu=_sat_b,
-                    annulus_px=_ann,
-                    profile_df=masterstars_df,
-                    psf=_psf,
-                )
-                if _bmeta.get("status") != "ok":
-                    break
-                _psf = _bmeta.get("psf")
-                pool[blend_k_column(_k)] = _cont.to_numpy()
-            if _bmeta.get("status") == "ok":
-                _k_gate = _ks[0]
-                _cg = pool[blend_k_column(_k_gate)].to_numpy()
-                pool["blend_contamination"] = _cg
-                _drop_b = np.abs(_cg) > BLEND_FLUX_FRAC_MAX
-                _bmeta.update(
-                    n_in=int(len(pool)), n_out=int(len(pool) - int(_drop_b.sum())),
-                    k_grid=_ks, gate_k=_k_gate, r_ap_px=_k_gate * _fw,
-                    fwhm_px=_fw, fwhm_source=_fw_src,
-                )
-                logging.info(
-                    "[GLOBAL COMP POOL] |neighbour light| > %.0f%% at the smallest aperture k=%.2f "
-                    "(r=%.1f px, Moffat beta=%.2f, %s): %d stars removed; per-k values kept for the "
-                    "target aperture choice",
-                    100.0 * BLEND_FLUX_FRAC_MAX, _k_gate, _k_gate * _fw, float(_bmeta["psf"]["beta"]),
-                    _bmeta["psf"]["source"], int(_drop_b.sum()),
-                )
-                pool = pool.loc[~_drop_b].copy()
-            else:
-                logging.warning("[GLOBAL COMP POOL] blend check %s", _bmeta.get("status"))
-            admission_rules_blend = _bmeta
-        except Exception as _bexc:  # noqa: BLE001
-            logging.error("[GLOBAL COMP POOL] blend check failed: %s", _bexc)
-            admission_rules_blend = {"rule_id": "COMP_BLEND_NEIGHBOUR_LIGHT", "status": f"failed: {_bexc}"}
+            if _bmeta.get("status") != "ok":
+                break
+            _psf = _bmeta.get("psf")
+            pool[blend_k_column(_k)] = _cont.to_numpy()
+        if _bmeta.get("status") == "ok":
+            _k_gate = _ks[0]
+            _cg = pool[blend_k_column(_k_gate)].to_numpy()
+            pool["blend_contamination"] = _cg
+            _drop_b = np.abs(_cg) > BLEND_FLUX_FRAC_MAX
+            _bmeta.update(
+                n_in=int(len(pool)), n_out=int(len(pool) - int(_drop_b.sum())),
+                k_grid=_ks, gate_k=_k_gate, r_ap_px=_k_gate * _fw,
+                fwhm_px=_fw, fwhm_source=_fw_src,
+            )
+            logging.info(
+                "[GLOBAL COMP POOL] |neighbour light| > %.0f%% at the smallest aperture k=%.2f "
+                "(r=%.1f px, Moffat beta=%.2f, %s): %d stars removed; per-k values kept for the "
+                "target aperture choice",
+                100.0 * BLEND_FLUX_FRAC_MAX, _k_gate, _k_gate * _fw, float(_bmeta["psf"]["beta"]),
+                _bmeta["psf"]["source"], int(_drop_b.sum()),
+            )
+            pool = pool.loc[~_drop_b].copy()
+        else:
+            # FAIL-LOUD-2026-10 (code review 2 G07-14): the 1 % neighbour-light gate is a comp rule; a pool
+            # without it can admit blends, so the selection stops instead of continuing ungated
+            raise RuntimeError(f"comparison pool: blend gate not applied ({_bmeta.get('status')})")
+        admission_rules_blend = _bmeta
         cand_ids = {str(x).strip() for x in pool[id_col].tolist() if str(x).strip()}
         if not cand_ids:
             return pool.reset_index(drop=True)
@@ -1743,11 +1694,11 @@ def build_global_comp_pool(
     return pool
 
 def _dedupe_comp_pool_by_gaia_key(pool: pd.DataFrame) -> pd.DataFrame:
-    """One row per Gaia ``catalog_id`` (fallback ``name``); keep lowest ``comp_rms`` when duplicated."""
+    """One row per Gaia ``catalog_id``; keep lowest ``comp_rms`` when duplicated."""
     if pool is None or getattr(pool, "empty", True):
         return pool if pool is not None else pd.DataFrame()
     out = pool.copy()
-    id_src = out.get("catalog_id", out.get("name", pd.Series("", index=out.index)))
+    id_src = out["catalog_id"]
     out["_gaia_key"] = id_src.map(_normalize_gaia_id)
     out = out[out["_gaia_key"].astype(str).str.strip() != ""]
     if out.empty:
@@ -1911,16 +1862,16 @@ def select_comparison_stars_per_target(
 
     _cfg_p1 = cfg if cfg is not None else AppConfig()
 
-    if global_comp_pool_df is not None and not getattr(global_comp_pool_df, "empty", True):
-        # COMP-ASSIGN-01 D2: keep step-1 pool ``comp_rms`` (do not drop / re-derive).
-        ms = global_comp_pool_df.copy()
-    else:
-        # no global pool (empty after its gates or not built): the same comp gates apply here
-        logging.warning("[COMP] %s: global comp pool empty - masterstars fallback with the comp gates", target.get("catalog_id", ""))
-        ms = apply_comp_quality_gates(masterstars_df.copy(), label="COMP FALLBACK")
-    for _id_col in ("catalog_id", "name"):
-        if _id_col in ms.columns:
-            ms[_id_col] = _normalize_id_series(ms[_id_col])
+    if global_comp_pool_df is None or getattr(global_comp_pool_df, "empty", True):
+        # COMP-POOL-ONLY-2026-10 (Milan 2026-10-26, D5): comparison stars come only from the pool
+        # that passed every rule (Gaia/VSX variables, blend, saturation, D3, frames); an empty pool
+        # means no comparison star for any target - never ungated MASTERSTAR stars.
+        logging.warning("[COMP] %s: no comparison star passed the pool rules - no comps", target.get("catalog_id", ""))
+        return pd.DataFrame()
+    # COMP-ASSIGN-01 D2: keep step-1 pool ``comp_rms`` (do not drop / re-derive).
+    ms = global_comp_pool_df.copy()
+    if "catalog_id" in ms.columns:
+        ms["catalog_id"] = _normalize_id_series(ms["catalog_id"])
     for col in ("is_saturated", "vsx_known_variable", "likely_saturated"):
         if col in ms.columns:
             ms[col] = _bool_col(ms[col])
@@ -1993,11 +1944,7 @@ def select_comparison_stars_per_target(
         logging.warning(f"[COMP-SELECT] Aperture isolation skipped (error): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
 
-    id_col = (
-        "name"
-        if "name" in candidates_pre.columns
-        else ("catalog_id" if "catalog_id" in candidates_pre.columns else "name")
-    )
+    id_col = "catalog_id" if "catalog_id" in candidates_pre.columns else "name"  # identity = catalog_id (G07-05)
     cand_ids = set(candidates_pre[id_col].astype(str).str.strip())
 
     # PHASE1-ONE-PASS-2026-10: the global pool already carries comp_rms, frames per comp and the
@@ -2074,7 +2021,7 @@ def select_comparison_stars_per_target(
 
 
     if _pool_rms_ready and "comp_n_frames" in ms.columns:
-        _idc_nf = "name" if "name" in ms.columns else "catalog_id"
+        _idc_nf = "catalog_id" if "catalog_id" in ms.columns else "name"
         comp_n_frames_map = {
             str(k).strip(): int(v)
             for k, v in zip(ms[_idc_nf].tolist(), pd.to_numeric(ms["comp_n_frames"], errors="coerce").fillna(0).tolist())
@@ -2185,11 +2132,7 @@ def select_comparison_stars_per_target(
     if active is None:
         return pd.DataFrame()
 
-    id_col_cand = (
-        "name"
-        if "name" in candidates.columns
-        else ("catalog_id" if "catalog_id" in candidates.columns else "name")
-    )
+    id_col_cand = "catalog_id" if "catalog_id" in candidates.columns else "name"  # identity = catalog_id (G07-05)
     score_map, tier_map = _score_comp_candidates_broeg(
         active,
         candidates,

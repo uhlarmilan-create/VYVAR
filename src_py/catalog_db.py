@@ -84,6 +84,17 @@ def _table_columns(con: sqlite3.Connection, table: str) -> set[str]:
     return {str(r[1]).strip().lower() for r in con.execute(f"PRAGMA table_info('{table}');").fetchall()}
 
 
+GAIA_TABLE = "gaia_dr3"
+
+
+def gaia_table(con: sqlite3.Connection) -> str:
+    """The Gaia source table of a VYVAR Gaia DB (``gaia_dr3``); RuntimeError naming the tables found otherwise."""
+    if _has_table(con, GAIA_TABLE):
+        return GAIA_TABLE
+    names = sorted(str(r[0]) for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall())
+    raise RuntimeError(f"Gaia DB: no table {GAIA_TABLE!r} (found: {names[:20]})")
+
+
 def _has_table(con: sqlite3.Connection, table: str) -> bool:
     return con.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1;", (table,)

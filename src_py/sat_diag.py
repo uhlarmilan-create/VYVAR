@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
+
+from gaia_catalog_id import read_vyvar_csv
 from astropy.io import fits
 from astropy.wcs import WCS
 
@@ -1112,7 +1114,7 @@ def linearity_check(csv_paths: Sequence[Path], sat_adu: float | None) -> dict[st
         try:
             hdr = pd.read_csv(fp, nrows=0)
             cols = [c for c in want if c in hdr.columns]
-            df = pd.read_csv(fp, usecols=cols)
+            df = read_vyvar_csv(fp, usecols=cols)
         except Exception:  # noqa: BLE001
             continue
         fcol = "dao_flux" if "dao_flux" in df.columns else ("flux" if "flux" in df.columns else None)

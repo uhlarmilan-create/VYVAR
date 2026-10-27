@@ -37,6 +37,21 @@ EPSF_BUILD_STARS_META_NAME = "epsf_build_stars_meta.json"
 EPSF_SPATIAL_DELTA_NAME = "epsf_spatial_delta.fits"
 EPSF_FRAMES_DIR = "epsf_frames"
 EPSF_FRAMES_MANIFEST = "epsf_frames_manifest.json"
+#: Manifest keys that describe the build, not the models (left out of the model hash).
+_MANIFEST_VOLATILE_KEYS = frozenset({"created_utc"})
+
+
+def epsf_models_sha256(manifest: dict[str, Any]) -> str:
+    """Hash of the ePSF model set of a night (EPSF-HASH-2026-10).
+
+    The manifest without its build time, as canonical JSON: every per-frame model sha256, the
+    night spatial perturbation sha256 and the build parameters. The same models give the same
+    hash in every run (the file hash changed with ``created_utc``)."""
+    import hashlib  # noqa: PLC0415
+
+    content = {k: v for k, v in manifest.items() if k not in _MANIFEST_VOLATILE_KEYS}
+    blob = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(blob.encode("ascii")).hexdigest()
 
 
 # Brightest isolated build stars kept (photutils 3.1: "a few hundred"; 600 fill a 3x3 grid with
@@ -123,7 +138,7 @@ def get_epsf_fwhm_from_context(
     db: VyvarDatabase,
     draft_id: int,
 ) -> float:
-    """Return FWHM in pixels for EPSFBuilder (VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM header
+    """Return FWHM in pixels for EPSFBuilder (MASTERSTAR VY_FWHM
     -> manifest files[] median -> 4.5), clamped to [2, 12]."""
     fwhm: float | None = None
     p = Path(masterstar_fits_path)
@@ -281,7 +296,7 @@ def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
 
             return None
     except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0447] Plate scale from FITS header fails - PSF cutout/fit sizing uses defaults: %s', exc)
+        logging.error('[EXC-0447] Plate scale from the MASTERSTAR header unreadable: %s', exc)
         return None
 
 
@@ -355,7 +370,12 @@ def _epsf_build_imagepsf_from_stars(
     (photutils #2386), which made the MASTERSTAR ePSF diverge after ~5 iterations.
     """
     osamp = max(1, int(osamp))
-    result = EPSFBuilder(oversampling=osamp, maxiters=_EPSF_BUILD_MAXITERS, progress_bar=False)(stars)
+    # EPSF-NOCLIP-2026-10 (Milan 2026-10-26, D1): no sigma clipping (INV-NOCLIP-01) - photutils
+    # combines the residuals of every grid point with a plain median when ``sigma_clip=None``.
+    # BO CVn, 12 frames, build/test split: same fit residual on held-out stars (1.574 vs 1.573 %),
+    # PSF flux 1.4 % closer to the cutout sum, ePSF peak 1.5 % lower.
+    result = EPSFBuilder(oversampling=osamp, maxiters=_EPSF_BUILD_MAXITERS, progress_bar=False,
+                         sigma_clip=None)(stars)
     epsf_model = result.epsf
     info = result.iteration_info
     build_iterations = (
@@ -471,18 +491,12 @@ def _load_cone_catalog(epsf_dir: Path) -> tuple[np.ndarray, np.ndarray, np.ndarr
     p = Path(epsf_dir) / _CONE_CATALOG_NAME
     if not p.is_file():
         return None
-    try:
-        c = pd.read_csv(
-            p, low_memory=False, usecols=lambda col: col in ("ra_deg", "dec_deg", "mag")
-        )
-        ra = pd.to_numeric(c["ra_deg"], errors="coerce").to_numpy(dtype=float)
-        dec = pd.to_numeric(c["dec_deg"], errors="coerce").to_numpy(dtype=float)
-        mag = pd.to_numeric(c.get("mag"), errors="coerce").to_numpy(dtype=float)
-        ok = np.isfinite(ra) & np.isfinite(dec)
-        return ra[ok], dec[ok], mag[ok]
-    except Exception as e:  # noqa: BLE001
-        LOGGER.warning("[ePSF] cone catalogue load failed (%s) - isolation uses candidate set", e)
-        return None
+    c = pd.read_csv(p, low_memory=False, usecols=lambda col: col in ("ra_deg", "dec_deg", "mag"))  # unreadable: error
+    ra = pd.to_numeric(c["ra_deg"], errors="coerce").to_numpy(dtype=float)
+    dec = pd.to_numeric(c["dec_deg"], errors="coerce").to_numpy(dtype=float)
+    mag = pd.to_numeric(c.get("mag"), errors="coerce").to_numpy(dtype=float)
+    ok = np.isfinite(ra) & np.isfinite(dec)
+    return ra[ok], dec[ok], mag[ok]
 
 
 def _epsf_sky_subtracted_stars(data: np.ndarray, cat: Table, cutout_size: int) -> EPSFStars:
@@ -718,14 +732,10 @@ def _epsf_prepare_stars(
     n_before_iso = int(len(psf_stars_df))
     funnel["n_before_isolation"] = n_before_iso
     if plate_scale_arcsec_px is None or not math.isfinite(plate_scale_arcsec_px) or plate_scale_arcsec_px <= 0:
-        LOGGER.warning(
-            "[ePSF] plate scale unavailable - skipping isolation filter (%.1fxFWHM=%.1fpx)",
-            _isolation_fwhm_mult,
-            _isolation_radius_px,
-        )
-        funnel["n_after_isolation"] = n_before_iso
-        funnel["n_after_isolation_reason"] = "skipped (no plate scale)"
-    elif n_join > 0 and "ra_deg" in psf_stars_df.columns and "dec_deg" in psf_stars_df.columns:
+        # FAIL-LOUD-2026-10 (code review 2 G09-10): build stars without the isolation filter would put bright
+        # neighbours into every frame ePSF; the solved MASTERSTAR always has a plate scale
+        raise RuntimeError(f"ePSF build stars: MASTERSTAR plate scale unavailable ({mpath})")
+    if n_join > 0 and "ra_deg" in psf_stars_df.columns and "dec_deg" in psf_stars_df.columns:
         from sky_separation import angular_distance_deg_vectorized as _angular_distance_deg_vectorized
 
         radius_deg = _isolation_radius_px * float(plate_scale_arcsec_px) / 3600.0

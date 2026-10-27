@@ -33,11 +33,11 @@ def test_measured_pileup_wins_over_stated_values():
 def test_saturated_any_frame_ids(tmp_path):
     p1, p2 = tmp_path / "proc_1.csv", tmp_path / "proc_2.csv"
     cache = {
-        str(p1): pd.DataFrame({"catalog_id": ["a", "b"], "likely_saturated": [False, False]}),
-        str(p2): pd.DataFrame({"catalog_id": ["a", "b"], "likely_saturated": [True, False]}),
+        str(p1): pd.DataFrame({"catalog_id": ["111", "222"], "likely_saturated": [False, False]}),
+        str(p2): pd.DataFrame({"catalog_id": ["111", "222"], "likely_saturated": [True, False]}),
     }
-    out = saturated_any_frame_ids({"a", "b"}, [p1, p2], cache)
-    assert out == {"a": 1}
+    out = saturated_any_frame_ids({"111", "222"}, [p1, p2], cache)
+    assert out == {"111": 1}
 
 
 def test_d3_uses_snr_min():
@@ -122,7 +122,7 @@ def test_choose_field_aperture_k(tmp_path):
     from comp_rms_loo import choose_field_aperture_k
 
     rng = np.random.default_rng(5)
-    ids = [f"s{i}" for i in range(12)]
+    ids = [f"{5000000000000000000 + i}" for i in range(12)]
     cache = {}
     paths = []
     noise = {1.0: 0.004, 1.25: 0.003, 1.5: 0.005, 1.75: 0.007, 2.0: 0.009}

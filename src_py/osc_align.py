@@ -10,6 +10,8 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
 from astropy.io import fits
 
 from osc_extract import OSC_CHANNELS, channel_obs_group_folder
@@ -110,7 +112,7 @@ def replicate_qc_verdict_from_one_rggb(*, lights_root: Path, base_name: str) -> 
     src_csv = src_dir / "qc_metrics.csv"
     if not src_csv.is_file():
         raise FileNotFoundError(f"oneRGGB qc_metrics.csv missing: {src_csv}")
-    src_df = pd.read_csv(src_csv)
+    src_df = read_vyvar_csv(src_csv)
     if src_df.empty or "status" not in src_df.columns:
         raise ValueError(f"Invalid oneRGGB qc_metrics.csv: {src_csv}")
     src_col = "src" if "src" in src_df.columns else "dst"
@@ -125,7 +127,7 @@ def replicate_qc_verdict_from_one_rggb(*, lights_root: Path, base_name: str) -> 
         ch_csv = ch_dir / "qc_metrics.csv"
         if not ch_csv.is_file():
             raise FileNotFoundError(f"Channel qc_metrics.csv missing for {ch}: {ch_csv}")
-        df = pd.read_csv(ch_csv)
+        df = read_vyvar_csv(ch_csv)
         if df.empty:
             continue
         col = "src" if "src" in df.columns else "dst"
@@ -248,7 +250,7 @@ def propagate_wcs_between_fits(donor_fits: Path, recipient_fits: Path) -> None:
 
             if header_key_is_celestial_wcs(k):
                 hdr[k] = v
-        hdr["VY_OSCWCS"] = (True, "WCS propagated from oneRGGB MASTERSTAR (OSC-2)")
+        hdr["VYOSCWCS"] = (True, "WCS propagated from oneRGGB MASTERSTAR (OSC-2)")
         hd_r.flush()
 
 
@@ -321,7 +323,7 @@ def apply_registration_handoff_to_frame(
     hdr["VYALGOK"] = (True, "OSC-2 handoff registration from oneRGGB")
     hdr["VY_ALGN"] = (True, "Aligned via oneRGGB registration handoff")
     hdr["VYALGM"] = (method[:30], "Alignment method (OSC-2 handoff)")
-    hdr["VY_OSCREG"] = (True, "Registration reused from oneRGGB")
+    hdr["VYOSCREG"] = (True, "Registration reused from oneRGGB")
     return np.asarray(aligned, dtype=np.float32), hdr, method
 
 

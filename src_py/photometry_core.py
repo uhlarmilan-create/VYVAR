@@ -11,7 +11,7 @@ from config import (
     AppConfig,
 )
 from gaia_catalog_id import (
-    GAIA_PROC_CSV_READ_DTYPE,
+    VYVAR_CSV_DTYPE,
 )
 
 
@@ -40,7 +40,7 @@ TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
 
 
 # Gaia ID (`catalog_id`, VSX / masterstars `name`) must be str - float64 loses digits
-_GAIA_ID_DTYPE: dict[str, type] = dict(GAIA_PROC_CSV_READ_DTYPE)
+_GAIA_ID_DTYPE: dict[str, type] = dict(VYVAR_CSV_DTYPE)
 
 
 _COMP_QUALITY_JSON_META_KEYS = frozenset(
@@ -192,7 +192,7 @@ def run_full_photometry_pipeline(
         except UnicodeEncodeError:
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    # FWHM: prefer header (VY_FWHM_GAUSS/VY_FWHM), otherwise the config default.
+    # FWHM: MASTERSTAR header VY_FWHM, otherwise the config default.
     from pipeline_constants import DAO_FWHM_FALLBACK_PX  # noqa: PLC0415
 
     fwhm_px = DAO_FWHM_FALLBACK_PX
@@ -209,10 +209,7 @@ def run_full_photometry_pipeline(
             logging.warning("[PERF-2] Cannot open MASTERSTAR.fits for header: %s", exc)
     if _ms_header_shared is not None:
         try:
-            # Prefer night seeing (VY_FWHM) over Gaussian-core (VY_FWHM_GAUSS) for
-            # comparison-star isolation / blend geometry. Core FWHM under-states the CoG
-            # 3-FWHM single-source radius (COMP-ASSIGN-03 / A-1).
-            for key in ("VY_FWHM", "VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+            for key in ("VY_FWHM",):
                 v = _ms_header_shared.get(key)
                 if v is None:
                     continue
@@ -221,7 +218,7 @@ def run_full_photometry_pipeline(
                     fwhm_px = fv
                     break
         except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0221] VY_FWHM/VY_FWHM_GAUSS header parse fails - pipeline uses default/config FWHM for target and comparison-star selection: %s', exc)
+            logging.error('[EXC-0221] VY_FWHM header parse fails - pipeline uses default/config FWHM for target and comparison-star selection: %s', exc)
             pass
 
     # -- target and comparison-star selection --

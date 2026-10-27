@@ -245,7 +245,7 @@ def detect_stars_and_match_catalog(
     if gaia_variable_df is None:
         gaia_variable_df = pd.DataFrame()
 
-    mean, med, std = plain_mean_med_std(arr, sigma=3.0, maxiters=3)
+    mean, med, std = plain_mean_med_std(arr)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
     n_raw_dao = 0
@@ -269,282 +269,276 @@ def detect_stars_and_match_catalog(
     _frame_depth: dict[str, Any] = {}
     # Matching depth of this frame (FRAME-DEPTH-2026-10); identities only to it (set after pass-1).
     _match_depth_g = float("inf")
-    try:
-        from photutils.detection import DAOStarFinder  # type: ignore
+    from photutils.detection import DAOStarFinder  # type: ignore
 
-        _ds = float(dao_threshold_sigma)
-        _ds = max(0.5, min(20.0, _ds))
-        dao_scale = _dao_auto_binning_factor(*data0.shape)
-        data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        fwhm_eff = max(1.2, _base_fw / float(bfac))
-        from masterstar_gaia_accounting import (  # noqa: PLC0415
-            Pass2AcceptParams,
-            dao_pass2_born_owned_rows,
-            dedup_pass1_spatial,
-            estimate_star_masked_sky_sigma,
-            merge_dao_pass1_pass2_born_owned,
-            star_mask_from_gaia_xy,
-        )
+    _ds = float(dao_threshold_sigma)
+    _ds = max(0.5, min(20.0, _ds))
+    dao_scale = _dao_auto_binning_factor(*data0.shape)
+    data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
+    fwhm_eff = max(1.2, _base_fw / float(bfac))
+    from masterstar_gaia_accounting import (  # noqa: PLC0415
+        Pass2AcceptParams,
+        dao_pass2_born_owned_rows,
+        dedup_pass1_spatial,
+        estimate_star_masked_sky_sigma,
+        merge_dao_pass1_pass2_born_owned,
+        star_mask_from_gaia_xy,
+    )
 
-        _gaia_chip_det = _gaia_chip_xy_from_catalog(cat_df, wcs_obj, wpx=int(wpx), h=int(h))
-        _gx_sm = (
-            pd.to_numeric(_gaia_chip_det["x_gaia"], errors="coerce").to_numpy(dtype=np.float64)
-            if len(_gaia_chip_det)
-            else np.asarray([], dtype=np.float64)
-        )
-        _gy_sm = (
-            pd.to_numeric(_gaia_chip_det["y_gaia"], errors="coerce").to_numpy(dtype=np.float64)
-            if len(_gaia_chip_det)
-            else np.asarray([], dtype=np.float64)
-        )
-        _smask = star_mask_from_gaia_xy(_gx_sm, _gy_sm, wpx=int(wpx), h=int(h), fwhm_px=float(_base_fw))
-        sky_sig, _sky_med_det = estimate_star_masked_sky_sigma(data0, star_mask=_smask)
-        rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
-        sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
-        # DAO-NOISE-2026-10: threshold basis = noise of the convolved (binned) detection
-        # image, the same as the per-frame detection; the unbinned star-masked sigma
-        # was on a different scale (effective ~6.8 sigma instead of the nominal N).
-        std_dao = rms_conv
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            std_dao = sky_sig
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            try:
-                std_dao = float(np.nanstd(arr))
-            except Exception:  # noqa: BLE001
-                std_dao = float("nan")
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            try:
-                finite = np.isfinite(arr)
-                n_finite = int(np.count_nonzero(finite))
-                if n_finite > 0:
-                    vals = arr[finite]
-                    n_unique = int(len(np.unique(vals)))
-                    mn = float(np.nanmin(vals))
-                    mx = float(np.nanmax(vals))
-                else:
-                    n_unique, mn, mx = 0, float("nan"), float("nan")
-                print(
-                    f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
-                    f"min={mn:.1f} max={mx:.1f}"
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            try:
-                nonzero_mask = (arr != 0) & np.isfinite(arr)
-                if int(np.count_nonzero(nonzero_mask)) > 100:
-                    std_dao = float(np.std(arr[nonzero_mask]))
-            except Exception:  # noqa: BLE001
-                pass
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            print(f"WARNING: {_nm} std=0 even after fallback, skipping")
-            return pd.DataFrame(), {
-                "n_detected": 0,
-                "n_detected_dao": 0,
-                "n_matched": 0,
-                "catalog_rows": int(len(cat_df)) if cat_df is not None else 0,
-                "catalog_match_mode": "full_cone",
-                "reason": "std_dao_zero",
-            }
-        _thr_sigma = float(getattr(_cfg_df, "detection_threshold_sigma", _ds))
-        if not math.isfinite(_thr_sigma) or _thr_sigma <= 0:
-            _thr_sigma = float(_ds)
-        _thr = max(_thr_sigma * float(std_dao), 1e-6)
-        _dao_n_equiv_used = float(_thr_sigma)
-        # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
+    _gaia_chip_det = _gaia_chip_xy_from_catalog(cat_df, wcs_obj, wpx=int(wpx), h=int(h))
+    _gx_sm = (
+        pd.to_numeric(_gaia_chip_det["x_gaia"], errors="coerce").to_numpy(dtype=np.float64)
+        if len(_gaia_chip_det)
+        else np.asarray([], dtype=np.float64)
+    )
+    _gy_sm = (
+        pd.to_numeric(_gaia_chip_det["y_gaia"], errors="coerce").to_numpy(dtype=np.float64)
+        if len(_gaia_chip_det)
+        else np.asarray([], dtype=np.float64)
+    )
+    _smask = star_mask_from_gaia_xy(_gx_sm, _gy_sm, wpx=int(wpx), h=int(h), fwhm_px=float(_base_fw))
+    sky_sig, _sky_med_det = estimate_star_masked_sky_sigma(data0, star_mask=_smask)
+    rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
+    sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+    # DAO-NOISE-2026-10: threshold basis = noise of the convolved (binned) detection
+    # image, the same as the per-frame detection; the unbinned star-masked sigma
+    # was on a different scale (effective ~6.8 sigma instead of the nominal N).
+    std_dao = rms_conv
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        std_dao = sky_sig
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
         try:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            logging.getLogger(__name__).debug(
-                f"DAO input: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} sky_sigma={float(std_dao):.2f} n_sigma={float(_thr_sigma):.2f} "
-                f"rms_conv_diag={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
-                f"fwhm={float(fwhm_eff):.2f}"
+            std_dao = float(np.nanstd(arr))
+        except Exception:  # noqa: BLE001
+            std_dao = float("nan")
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        try:
+            finite = np.isfinite(arr)
+            n_finite = int(np.count_nonzero(finite))
+            if n_finite > 0:
+                vals = arr[finite]
+                n_unique = int(len(np.unique(vals)))
+                mn = float(np.nanmin(vals))
+                mx = float(np.nanmax(vals))
+            else:
+                n_unique, mn, mx = 0, float("nan"), float("nan")
+            print(
+                f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
+                f"min={mn:.1f} max={mx:.1f}"
             )
         except Exception:  # noqa: BLE001
             pass
-        finder = DAOStarFinder(
-            fwhm=float(fwhm_eff),
-            threshold=float(_thr),
-            scale_threshold=False,
-            n_brightest=None,
-            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+        try:
+            nonzero_mask = (arr != 0) & np.isfinite(arr)
+            if int(np.count_nonzero(nonzero_mask)) > 100:
+                std_dao = float(np.std(arr[nonzero_mask]))
+        except Exception:  # noqa: BLE001
+            pass
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        print(f"WARNING: {_nm} std=0 even after fallback, skipping")
+        return pd.DataFrame(), {
+            "n_detected": 0,
+            "n_detected_dao": 0,
+            "n_matched": 0,
+            "catalog_rows": int(len(cat_df)) if cat_df is not None else 0,
+            "catalog_match_mode": "full_cone",
+            "reason": "std_dao_zero",
+        }
+    _thr_sigma = float(getattr(_cfg_df, "detection_threshold_sigma", _ds))
+    if not math.isfinite(_thr_sigma) or _thr_sigma <= 0:
+        _thr_sigma = float(_ds)
+    _thr = max(_thr_sigma * float(std_dao), 1e-6)
+    _dao_n_equiv_used = float(_thr_sigma)
+    # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
+    try:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        logging.getLogger(__name__).debug(
+            f"DAO input: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
+            f"threshold={float(_thr):.1f} sky_sigma={float(std_dao):.2f} n_sigma={float(_thr_sigma):.2f} "
+            f"rms_conv_diag={float(rms_conv):.2f} sigma_pp_diag={float(sigma_pp_diag):.2f} "
+            f"fwhm={float(fwhm_eff):.2f}"
         )
-        tbl = finder(data_dao)
-        n_raw_dao = int(len(tbl)) if tbl is not None else 0
-        # DAO-FALSE-2026-10: false fraction of this detection run (negated-image test).
-        from pipeline_catalog import DAO_FALSE_FRACTION_WARN, dao_false_detection_fraction  # noqa: PLC0415
-
-        _dao_false = dao_false_detection_fraction(
-            data_dao, fwhm_px=float(fwhm_eff), threshold_adu=float(_thr),
-            star_xy=(np.c_[np.asarray(tbl["x_centroid"]), np.asarray(tbl["y_centroid"])] if n_raw_dao else []),
-        )
-        _ff = float(_dao_false["false_fraction"])
-        # Sky noise of a DAO flux = sum of the detection image over the kernel footprint
-        # (photutils DAOStarFinder: flux = sum(cutout x kernel.mask)).
-        from photutils.detection.core import _StarFinderKernel  # noqa: PLC0415
-
-        _kmask_n = int(_StarFinderKernel(fwhm=float(fwhm_eff), sigma_radius=1.5).mask.sum())
-        _sig_det = sky_mad_sigma_adu(data_dao)[1]
-        if math.isfinite(_sig_det) and _sig_det > 0 and _kmask_n > 0:
-            _dao_flux_noise = float(_sig_det * math.sqrt(_kmask_n))
-        log_event(
-            f"DAO false detections (negated image): ~{_dao_false['n_false_estimate']} / {n_raw_dao} = "
-            f"{100.0 * _ff:.1f} % at {float(_thr_sigma):.2f} sigma"
-            + (f" - above {100.0 * DAO_FALSE_FRACTION_WARN:.0f} %: the frame has non-Gaussian noise "
-               "(hot / cold pixels, gradients) or the threshold is too low" if _ff > DAO_FALSE_FRACTION_WARN else "")
-        )
-        if tbl is not None and len(tbl) > 0:
-            tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
-            from astropy.table import Table as _AstropyTable
-
-            tbl = _AstropyTable(tbl, copy=True)
-            tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
-        n_pass1_dao = int(len(tbl)) if tbl is not None else 0
-        if tbl is not None and len(tbl) > 0:
-            tbl = dedup_pass1_spatial(tbl, sep_px=MS_DAO_PASS1_DEDUP_PX)
-        _sigma_p2_cfg = MS_DAO_PASS2_SIGMA
-        _edge_p2 = MS_GAIA_CENSUS_EDGE_MARGIN_PX
-        _dao_x_p1 = np.asarray([], dtype=np.float64)
-        _dao_y_p1 = np.asarray([], dtype=np.float64)
-        if tbl is not None and len(tbl) > 0:
-            xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
-            yb = np.asarray(tbl["y_centroid"], dtype=np.float64)
-            _dao_x_p1, _dao_y_p1 = _dao_xy_binned_to_full(xb, yb, int(bfac))
-        # FRAME-DEPTH-2026-10: faint limit of this frame from its own pass-1 detections; it sets
-        # the depth of pass-2, the census and the forced seeds (no static magnitude parameter).
-        from frame_depth import measure_frame_depth  # noqa: PLC0415
-
-        _g_cat = (
-            pd.to_numeric(_gaia_chip_det.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)
-            if _gaia_chip_det is not None and not _gaia_chip_det.empty
-            else np.asarray([], dtype=np.float64)
-        )
-        _cat_depth = (
-            float(_cov_depth)
-            if _cov_depth is not None
-            else (
-                float(np.nanmax(pd.to_numeric(cat_df["mag"], errors="coerce")))
-                if cat_df is not None and len(cat_df) and "mag" in cat_df.columns
-                else float("nan")
-            )
-        )
-        _frame_depth = measure_frame_depth(
-            det_x=_dao_x_p1,
-            det_y=_dao_y_p1,
-            det_peak=(np.asarray(tbl["peak"], dtype=np.float64) if tbl is not None and len(tbl) else []),
-            gaia_x=_gx_sm,
-            gaia_y=_gy_sm,
-            gaia_g=_g_cat,
-            match_r_px=float(max(1.2, _base_fw)),
-            threshold_adu=float(_thr),
-            wpx=int(wpx),
-            h=int(h),
-            db_depth_g=_cat_depth if math.isfinite(_cat_depth) else None,
-        )
-        _depth_p2 = (
-            float(_frame_depth["g_lim"])
-            if _frame_depth.get("g_lim") is not None
-            else (_cat_depth if math.isfinite(_cat_depth) else float("inf"))
-        )
-        _match_depth_g = float(_depth_p2)
-        # The matching phase sees the catalogue to the matching depth only, so its tolerances,
-        # pass-2 seeds and identities do not depend on how deep the DB is beyond the frame limit
-        # (532: DB to 17.5 vs DB to 13 + top-up gave 267 vs 177 pass-2 recoveries before).
-        _in_md = np.isfinite(_g_cat) & (_g_cat <= _match_depth_g + 1e-6)
-        _gaia_chip_m = (
-            _gaia_chip_det.loc[_in_md].reset_index(drop=True)
-            if _gaia_chip_det is not None and len(_gaia_chip_det) == len(_in_md)
-            else _gaia_chip_det
-        )
-        _gx_m = _gx_sm[_in_md] if len(_gx_sm) == len(_in_md) else _gx_sm
-        _gy_m = _gy_sm[_in_md] if len(_gy_sm) == len(_in_md) else _gy_sm
-        log_event(
-            f"FRAME-DEPTH: G50={_frame_depth.get('g50')} sigma={_frame_depth.get('sigma_mag')} "
-            f"({_frame_depth.get('method')}) -> frame limit G={_frame_depth.get('g_lim_frame')}, "
-            f"catalogue depth G={_frame_depth.get('db_depth_g')}, matching depth G={_depth_p2:.2f}"
-            + (" (limited by the catalogue)" if _frame_depth.get("limited_by_catalogue") else "")
-        )
-        from dao_gaia_calibration import (  # noqa: PLC0415
-            compute_pass1_astrometric_residuals_px,
-            derive_tolerances_from_residuals,
-            plate_scale_arcsec_per_px_from_wcs_nan,
-        )
-
-        # Residuals of the identities (detection <-> Gaia within the identity radius, catalogue to
-        # the matching depth). A wider "coarse" radius let chance neighbours into the p95: 532 gave
-        # p95 3.4 px with the DB to 17.5 and 6.3 px to the frame limit (match radius 5.5 / 10.5 px
-        # for FWHM 1.5 px), and the pass-2 / census tolerances followed the DB depth.
-        _r_ident_px = float(max(1.0, _base_fw))
-        _res_dr = compute_pass1_astrometric_residuals_px(
-            _dao_x_p1,
-            _dao_y_p1,
-            _gx_m,
-            _gy_m,
-            coarse_match_px=_r_ident_px,
-        )
-        _derived_tol = derive_tolerances_from_residuals(
-            _res_dr,
-            np.asarray([], dtype=np.float64),
-            fwhm_px=float(max(1.2, _base_fw)),
-            plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj),
-            pass1_sigma=float(_thr_sigma),
-            pass2_sigma=float(_sigma_p2_cfg),
-            match_k=MS_DAO_MATCH_RADIUS_K,
-            centroid_floor_px=MS_DAO_CENTROID_QA_FLOOR_PX,
-            centroid_cap_px=MS_DAO_CENTROID_QA_CAP_PX,
-        )
-        # Pass-2 seeds: Gaia stars with no pass-1 detection closer than the pass-2 centre tolerance
-        # plus the identity radius - nearer, pass-2 only finds that pass-1 detection again
-        # (identity radius alone: 419 of 789 pass-2 rows on 532 were pass-1 detections).
-        _match_r_px_p2 = float(_derived_tol.pass2_center_tol_px) + _r_ident_px
-        from masterstar_gaia_accounting import derive_point_source_q_floor  # noqa: PLC0415
-
-        _shape_meta = derive_point_source_q_floor(
-            data0, _dao_x_p1, _dao_y_p1, _gx_m, _gy_m, match_r_px=_r_ident_px
-        )
-        log_event(
-            f"POINT-SOURCE-SHAPE-01: q_floor={_shape_meta.get('q_floor')} "
-            f"q_p50={_shape_meta.get('q_p50')} n_ref={_shape_meta.get('n_ref')}"
-        )
-        p2_params = Pass2AcceptParams(
-            sigma=max(1.5, min(20.0, float(_sigma_p2_cfg))),
-            center_tol_px=max(0.5, min(10.0, float(_derived_tol.pass2_center_tol_px))),
-            fwhm_px=float(max(1.2, _base_fw)),
-            shape_q_floor=_shape_meta.get("q_floor"),
-        )
-        _pass2_rows, _n_unmatched_gaia, _n_pass2_raw, _amb_p2 = dao_pass2_born_owned_rows(
-            data0,
-            tbl,
-            gaia_chip=_gaia_chip_m,
-            bfac=int(bfac),
-            pass2_params=p2_params,
-            target_depth_g=float(_depth_p2),
-            edge_margin_px=float(_edge_p2),
-            match_r_px=float(_match_r_px_p2),
-            wpx=int(wpx),
-            h=int(h),
-        )
-        tbl = merge_dao_pass1_pass2_born_owned(
-            tbl, _pass2_rows, gaia_chip=_gaia_chip_m
-        )
-        n_merged_dao = int(len(tbl)) if tbl is not None else 0
-        LOGGER.info(
-            "[DAO pass 1] %d detections, %d Gaia unmatched",
-            int(n_pass1_dao),
-            int(_n_unmatched_gaia),
-        )
-        LOGGER.info(
-            "[DAO pass 2] %d additional detections from %d targeted positions",
-            int(_n_pass2_raw),
-            int(_n_unmatched_gaia),
-        )
-        LOGGER.info("[DAO total] %d detections after merge", int(n_merged_dao))
     except Exception:  # noqa: BLE001
-        tbl = None
-        bfac = 1
-        n_raw_dao = 0
+        pass
+    finder = DAOStarFinder(
+        fwhm=float(fwhm_eff),
+        threshold=float(_thr),
+        scale_threshold=False,
+        n_brightest=None,
+        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+    )
+    tbl = finder(data_dao)
+    n_raw_dao = int(len(tbl)) if tbl is not None else 0
+    # DAO-FALSE-2026-10: false fraction of this detection run (negated-image test).
+    from pipeline_catalog import DAO_FALSE_FRACTION_WARN, dao_false_detection_fraction  # noqa: PLC0415
 
+    _dao_false = dao_false_detection_fraction(
+        data_dao, fwhm_px=float(fwhm_eff), threshold_adu=float(_thr),
+        star_xy=(np.c_[np.asarray(tbl["x_centroid"]), np.asarray(tbl["y_centroid"])] if n_raw_dao else []),
+    )
+    _ff = float(_dao_false["false_fraction"])
+    # Sky noise of a DAO flux = sum of the detection image over the kernel footprint
+    # (photutils DAOStarFinder: flux = sum(cutout x kernel.mask)).
+    from photutils.detection.core import _StarFinderKernel  # noqa: PLC0415
+
+    _kmask_n = int(_StarFinderKernel(fwhm=float(fwhm_eff), sigma_radius=1.5).mask.sum())
+    _sig_det = sky_mad_sigma_adu(data_dao)[1]
+    if math.isfinite(_sig_det) and _sig_det > 0 and _kmask_n > 0:
+        _dao_flux_noise = float(_sig_det * math.sqrt(_kmask_n))
+    log_event(
+        f"DAO false detections (negated image): ~{_dao_false['n_false_estimate']} / {n_raw_dao} = "
+        f"{100.0 * _ff:.1f} % at {float(_thr_sigma):.2f} sigma"
+        + (f" - above {100.0 * DAO_FALSE_FRACTION_WARN:.0f} %: the frame has non-Gaussian noise "
+           "(hot / cold pixels, gradients) or the threshold is too low" if _ff > DAO_FALSE_FRACTION_WARN else "")
+    )
+    if tbl is not None and len(tbl) > 0:
+        tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+        from astropy.table import Table as _AstropyTable
+
+        tbl = _AstropyTable(tbl, copy=True)
+        tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
+    n_pass1_dao = int(len(tbl)) if tbl is not None else 0
+    if tbl is not None and len(tbl) > 0:
+        tbl = dedup_pass1_spatial(tbl, sep_px=MS_DAO_PASS1_DEDUP_PX)
+    _sigma_p2_cfg = MS_DAO_PASS2_SIGMA
+    _edge_p2 = MS_GAIA_CENSUS_EDGE_MARGIN_PX
+    _dao_x_p1 = np.asarray([], dtype=np.float64)
+    _dao_y_p1 = np.asarray([], dtype=np.float64)
+    if tbl is not None and len(tbl) > 0:
+        xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
+        yb = np.asarray(tbl["y_centroid"], dtype=np.float64)
+        _dao_x_p1, _dao_y_p1 = _dao_xy_binned_to_full(xb, yb, int(bfac))
+    # FRAME-DEPTH-2026-10: faint limit of this frame from its own pass-1 detections; it sets
+    # the depth of pass-2, the census and the forced seeds (no static magnitude parameter).
+    from frame_depth import measure_frame_depth  # noqa: PLC0415
+
+    _g_cat = (
+        pd.to_numeric(_gaia_chip_det.get("g_mag"), errors="coerce").to_numpy(dtype=np.float64)
+        if _gaia_chip_det is not None and not _gaia_chip_det.empty
+        else np.asarray([], dtype=np.float64)
+    )
+    _cat_depth = (
+        float(_cov_depth)
+        if _cov_depth is not None
+        else (
+            float(np.nanmax(pd.to_numeric(cat_df["mag"], errors="coerce")))
+            if cat_df is not None and len(cat_df) and "mag" in cat_df.columns
+            else float("nan")
+        )
+    )
+    _frame_depth = measure_frame_depth(
+        det_x=_dao_x_p1,
+        det_y=_dao_y_p1,
+        det_peak=(np.asarray(tbl["peak"], dtype=np.float64) if tbl is not None and len(tbl) else []),
+        gaia_x=_gx_sm,
+        gaia_y=_gy_sm,
+        gaia_g=_g_cat,
+        match_r_px=float(max(1.2, _base_fw)),
+        threshold_adu=float(_thr),
+        wpx=int(wpx),
+        h=int(h),
+        db_depth_g=_cat_depth if math.isfinite(_cat_depth) else None,
+    )
+    _depth_p2 = (
+        float(_frame_depth["g_lim"])
+        if _frame_depth.get("g_lim") is not None
+        else (_cat_depth if math.isfinite(_cat_depth) else float("inf"))
+    )
+    _match_depth_g = float(_depth_p2)
+    # The matching phase sees the catalogue to the matching depth only, so its tolerances,
+    # pass-2 seeds and identities do not depend on how deep the DB is beyond the frame limit
+    # (532: DB to 17.5 vs DB to 13 + top-up gave 267 vs 177 pass-2 recoveries before).
+    _in_md = np.isfinite(_g_cat) & (_g_cat <= _match_depth_g + 1e-6)
+    _gaia_chip_m = (
+        _gaia_chip_det.loc[_in_md].reset_index(drop=True)
+        if _gaia_chip_det is not None and len(_gaia_chip_det) == len(_in_md)
+        else _gaia_chip_det
+    )
+    _gx_m = _gx_sm[_in_md] if len(_gx_sm) == len(_in_md) else _gx_sm
+    _gy_m = _gy_sm[_in_md] if len(_gy_sm) == len(_in_md) else _gy_sm
+    log_event(
+        f"FRAME-DEPTH: G50={_frame_depth.get('g50')} sigma={_frame_depth.get('sigma_mag')} "
+        f"({_frame_depth.get('method')}) -> frame limit G={_frame_depth.get('g_lim_frame')}, "
+        f"catalogue depth G={_frame_depth.get('db_depth_g')}, matching depth G={_depth_p2:.2f}"
+        + (" (limited by the catalogue)" if _frame_depth.get("limited_by_catalogue") else "")
+    )
+    from dao_gaia_calibration import (  # noqa: PLC0415
+        compute_pass1_astrometric_residuals_px,
+        derive_tolerances_from_residuals,
+        plate_scale_arcsec_per_px_from_wcs_nan,
+    )
+
+    # Residuals of the identities (detection <-> Gaia within the identity radius, catalogue to
+    # the matching depth). A wider "coarse" radius let chance neighbours into the p95: 532 gave
+    # p95 3.4 px with the DB to 17.5 and 6.3 px to the frame limit (match radius 5.5 / 10.5 px
+    # for FWHM 1.5 px), and the pass-2 / census tolerances followed the DB depth.
+    _r_ident_px = float(max(1.0, _base_fw))
+    _res_dr = compute_pass1_astrometric_residuals_px(
+        _dao_x_p1,
+        _dao_y_p1,
+        _gx_m,
+        _gy_m,
+        coarse_match_px=_r_ident_px,
+    )
+    _derived_tol = derive_tolerances_from_residuals(
+        _res_dr,
+        np.asarray([], dtype=np.float64),
+        fwhm_px=float(max(1.2, _base_fw)),
+        plate_scale_arcsec_per_px=plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj),
+        pass1_sigma=float(_thr_sigma),
+        pass2_sigma=float(_sigma_p2_cfg),
+        match_k=MS_DAO_MATCH_RADIUS_K,
+        centroid_floor_px=MS_DAO_CENTROID_QA_FLOOR_PX,
+        centroid_cap_px=MS_DAO_CENTROID_QA_CAP_PX,
+    )
+    # Pass-2 seeds: Gaia stars with no pass-1 detection closer than the pass-2 centre tolerance
+    # plus the identity radius - nearer, pass-2 only finds that pass-1 detection again
+    # (identity radius alone: 419 of 789 pass-2 rows on 532 were pass-1 detections).
+    _match_r_px_p2 = float(_derived_tol.pass2_center_tol_px) + _r_ident_px
+    from masterstar_gaia_accounting import derive_point_source_q_floor  # noqa: PLC0415
+
+    _shape_meta = derive_point_source_q_floor(
+        data0, _dao_x_p1, _dao_y_p1, _gx_m, _gy_m, match_r_px=_r_ident_px
+    )
+    log_event(
+        f"POINT-SOURCE-SHAPE-01: q_floor={_shape_meta.get('q_floor')} "
+        f"q_p50={_shape_meta.get('q_p50')} n_ref={_shape_meta.get('n_ref')}"
+    )
+    p2_params = Pass2AcceptParams(
+        sigma=max(1.5, min(20.0, float(_sigma_p2_cfg))),
+        center_tol_px=max(0.5, min(10.0, float(_derived_tol.pass2_center_tol_px))),
+        fwhm_px=float(max(1.2, _base_fw)),
+        shape_q_floor=_shape_meta.get("q_floor"),
+    )
+    _pass2_rows, _n_unmatched_gaia, _n_pass2_raw, _amb_p2 = dao_pass2_born_owned_rows(
+        data0,
+        tbl,
+        gaia_chip=_gaia_chip_m,
+        bfac=int(bfac),
+        pass2_params=p2_params,
+        target_depth_g=float(_depth_p2),
+        edge_margin_px=float(_edge_p2),
+        match_r_px=float(_match_r_px_p2),
+        wpx=int(wpx),
+        h=int(h),
+    )
+    tbl = merge_dao_pass1_pass2_born_owned(
+        tbl, _pass2_rows, gaia_chip=_gaia_chip_m
+    )
+    n_merged_dao = int(len(tbl)) if tbl is not None else 0
+    LOGGER.info(
+        "[DAO pass 1] %d detections, %d Gaia unmatched",
+        int(n_pass1_dao),
+        int(_n_unmatched_gaia),
+    )
+    LOGGER.info(
+        "[DAO pass 2] %d additional detections from %d targeted positions",
+        int(_n_pass2_raw),
+        int(_n_unmatched_gaia),
+    )
+    LOGGER.info("[DAO total] %d detections after merge", int(n_merged_dao))
     sat_limit, sat_limit_src = _effective_saturation_limit(
         hdr, fallback_adu=_fb_sat, equipment_saturate_adu=equipment_saturate_adu
     )
@@ -919,43 +913,39 @@ def detect_stars_and_match_catalog(
 
         def _apply_post_match_identity_gate() -> None:
             nonlocal df_out, n_matched, _identity_gate_acc
-            try:
-                from wcs_invertibility import (
-                    accumulate_identity_gate,
-                    apply_post_match_identity_gate_df,
-                    gaia_radec_map_from_table,
-                )
+            from wcs_invertibility import (
+                accumulate_identity_gate,
+                apply_post_match_identity_gate_df,
+                gaia_radec_map_from_table,
+            )
 
-                # x/y are full-resolution pixels -> the full-resolution FWHM (DAO may run 2x binned)
-                _fwhm_gate = float(max(1.2, _base_fw))
-                if not math.isfinite(_fwhm_gate) or _fwhm_gate <= 0:
-                    _fwhm_gate = 3.5
-                _gmap = gaia_radec_map_from_table(cat_df)
-                _det_fb = None
-                if len(df_out) == int(len(det_str)):
-                    import pandas as _pd
+            # x/y are full-resolution pixels -> the full-resolution FWHM (DAO may run 2x binned)
+            _fwhm_gate = float(max(1.2, _base_fw))
+            if not math.isfinite(_fwhm_gate) or _fwhm_gate <= 0:
+                _fwhm_gate = 3.5
+            _gmap = gaia_radec_map_from_table(cat_df)
+            _det_fb = None
+            if len(df_out) == int(len(det_str)):
+                import pandas as _pd
 
-                    _det_fb = _pd.Series(det_str, index=df_out.index)
-                df_out, _idc = apply_post_match_identity_gate_df(
-                    df_out,
-                    wcs_obj,
-                    gaia_ra_dec_by_cid=_gmap,
-                    fwhm_px=_fwhm_gate,
-                    log_fn=log_event,
-                    det_fallback_names=_det_fb,
-                )
-                n_matched = int(
-                    df_out.get("catalog_id", pd.Series([""] * len(df_out)))
-                    .fillna("")
-                    .astype(str)
-                    .str.strip()
-                    .ne("")
-                    .sum()
-                )
-                _identity_gate_acc = accumulate_identity_gate(_identity_gate_acc, _idc, n_matched)
-            except Exception as _idg_exc:  # noqa: BLE001
-                log_event(f"post_match_identity_gate skipped: {_idg_exc!s}")
-
+                _det_fb = _pd.Series(det_str, index=df_out.index)
+            df_out, _idc = apply_post_match_identity_gate_df(
+                df_out,
+                wcs_obj,
+                gaia_ra_dec_by_cid=_gmap,
+                fwhm_px=_fwhm_gate,
+                log_fn=log_event,
+                det_fallback_names=_det_fb,
+            )
+            n_matched = int(
+                df_out.get("catalog_id", pd.Series([""] * len(df_out)))
+                .fillna("")
+                .astype(str)
+                .str.strip()
+                .ne("")
+                .sum()
+            )
+            _identity_gate_acc = accumulate_identity_gate(_identity_gate_acc, _idc, n_matched)
         def _run_full_match_pass() -> None:
             nonlocal df_out, n_matched, match_sep_used, _match_sep_formula_inputs
             from dao_gaia_calibration import (

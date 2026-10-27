@@ -19,6 +19,8 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 from mag_constants import MAG_ERR_SCALE
 
 _GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
@@ -341,7 +343,7 @@ class TargetPages:
         if self._ms_g_bprp_map is None:
             mp: dict[str, tuple[float, float]] = {}
             try:
-                _d = pd.read_csv(self.platesolve_dir / "masterstars_full_match.csv",
+                _d = read_vyvar_csv(self.platesolve_dir / "masterstars_full_match.csv",
                                  usecols=lambda c: c in ("catalog_id", "mag", "phot_g_mean_mag", "bp_rp"),
                                  dtype={"catalog_id": str}, low_memory=False)
                 # G: phot_g_mean_mag when filled, else the catalogue mag (Gaia G in masterstars)
@@ -370,7 +372,7 @@ class TargetPages:
                 from astropy.io import fits  # noqa: PLC0415
                 from astropy.wcs import WCS  # noqa: PLC0415
 
-                cat = pd.read_csv(self.platesolve_dir / "field_catalog_cone.csv", low_memory=False,
+                cat = read_vyvar_csv(self.platesolve_dir / "field_catalog_cone.csv", low_memory=False,
                                   dtype={"catalog_id": str})
                 hdr = fits.getheader(self.platesolve_dir / "MASTERSTAR.fits")
                 cx, cy = WCS(hdr).all_world2pix(pd.to_numeric(cat["ra_deg"], errors="coerce").to_numpy(),

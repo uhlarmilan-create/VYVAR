@@ -41,7 +41,6 @@ def validate_explicit_keys(registry: dict[str, dict]) -> None:
 # scope_group: a=genuine per-rig physics, b=unit artefact, c=operational tuning, n/a=non-rig
 EXPLICIT: dict[str, ScopeResult] = {
     # --- resolved / fits_dynamic ---
-    "qc_preprocess_workers": ScopeResult("universal", "none", "n/a", "high", "Internal plumbing worker cap."),
     # --- FWHM-normalised universal ---
     "annulus_inner_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM multiple."),
     "annulus_outer_fwhm": ScopeResult("universal", "none", "n/a", "high", "FWHM multiple."),

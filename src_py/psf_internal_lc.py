@@ -8,7 +8,6 @@ export bytes are not rewritten by this module.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import logging
 import math
@@ -79,27 +78,6 @@ def psf_usable_mask(fit_ok: np.ndarray, flux: np.ndarray) -> np.ndarray:
     return np.asarray(fit_ok, dtype=bool) & np.isfinite(fl) & (fl > 0)
 
 
-def _norm_cid_gaia(raw: Any) -> str:
-    """Gaia canonical id via ``normalize_gaia_source_id``; on exception return stripped raw."""
-    if raw is None:
-        return ""
-    s = str(raw).strip()
-    if not s or s.lower() in ("nan", "none"):
-        return ""
-    try:
-        return str(normalize_gaia_source_id(s)).strip()
-    except Exception:  # noqa: BLE001
-        return s
-
-
-def sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with Path(path).open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 16), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _flux_to_inst_mag(flux: np.ndarray) -> np.ndarray:
     f = np.asarray(flux, dtype=np.float64)
     out = np.full(f.shape, np.nan, dtype=np.float64)
@@ -120,11 +98,11 @@ def load_epsf_build_meta(platesolve_dir: Path) -> dict[str, Any]:
     """Provenance of the ePSF models behind the PSF columns.
 
     EPSF-FRAME-2026-10: RUN ePSF fits every frame with its own ePSF; the manifest
-    ``epsf_frames/epsf_frames_manifest.json`` lists them (sha256, FWHM, build stars). Its sha256
-    identifies the model set. The models themselves are not written (OUTPUT-REVIEW-2026-10).
-    Without a manifest every field is empty.
+    ``epsf_frames/epsf_frames_manifest.json`` lists them (sha256, FWHM, build stars).
+    :func:`psf_photometry.epsf_models_sha256` of its content identifies the model set. The models
+    themselves are not written (OUTPUT-REVIEW-2026-10). Without a manifest every field is empty.
     """
-    from psf_photometry import EPSF_FRAMES_DIR, EPSF_FRAMES_MANIFEST  # noqa: PLC0415
+    from psf_photometry import EPSF_FRAMES_DIR, EPSF_FRAMES_MANIFEST, epsf_models_sha256  # noqa: PLC0415
 
     manifest_path = Path(platesolve_dir) / EPSF_FRAMES_DIR / EPSF_FRAMES_MANIFEST
     if not manifest_path.is_file():
@@ -136,7 +114,7 @@ def load_epsf_build_meta(platesolve_dir: Path) -> dict[str, Any]:
     return {
         "model_path": manifest_path,
         "model_name": f"{EPSF_FRAMES_DIR}/{EPSF_FRAMES_MANIFEST} (per-frame ePSF, {len(frames)} frames)",
-        "model_sha256": sha256_file(manifest_path),
+        "model_sha256": epsf_models_sha256(man),
         "n_stars": int(man.get("n_build_stars", -1)),
         "build_timestamp": str(man.get("created_utc") or ""),
         "oversampling": man.get("oversampling", ""),
@@ -162,7 +140,7 @@ def _git_provenance() -> tuple[str, str]:
 
 def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[str], dict[str, float], str]:
     """Aperture ``comparison_stars_per_target`` membership for ``target_cid``."""
-    tid = _norm_cid_gaia(target_cid)
+    tid = normalize_gaia_source_id(target_cid)
     comp_pt = Path(photometry_dir) / "comparison_stars_per_target.csv"
     if not comp_pt.is_file():
         return [], {}, "none"
@@ -171,14 +149,14 @@ def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[st
     df = used(load_comp_table(comp_pt))
     if "target_catalog_id" not in df.columns or "catalog_id" not in df.columns:
         return [], {}, "none"
-    tcol = df["target_catalog_id"].map(_norm_cid_gaia)
+    tcol = df["target_catalog_id"].map(normalize_gaia_source_id)
     sub = df.loc[tcol == tid]
-    ids = [_norm_cid_gaia(v) for v in sub["catalog_id"].tolist()]
+    ids = [normalize_gaia_source_id(v) for v in sub["catalog_id"].tolist()]
     ids = [c for c in ids if c]
     weights: dict[str, float] = {}
     if "comp_weight" in sub.columns:
         for _, row in sub.iterrows():
-            cid = _norm_cid_gaia(row.get("catalog_id"))
+            cid = normalize_gaia_source_id(row.get("catalog_id"))
             w = float(pd.to_numeric(row.get("comp_weight"), errors="coerce"))
             if cid and math.isfinite(w) and w > 0:
                 weights[cid] = w
@@ -198,7 +176,7 @@ def comps_with_psf_measurement_on_night(stack: pd.DataFrame) -> set[str]:
         return set()
     flux = pd.to_numeric(stack["psf_flux"], errors="coerce")
     ok = np.isfinite(flux.to_numpy(dtype=np.float64)) & (flux.to_numpy(dtype=np.float64) > 0)
-    ids = stack.loc[ok, "catalog_id"].map(_norm_cid_gaia)
+    ids = stack.loc[ok, "catalog_id"].map(normalize_gaia_source_id)
     return {c for c in ids.tolist() if c}
 
 
@@ -211,7 +189,7 @@ def filter_ensemble_to_psf_measured(
     kept: list[str] = []
     dropped: list[str] = []
     for cid in comp_ids:
-        c = _norm_cid_gaia(cid)
+        c = normalize_gaia_source_id(cid)
         if not c:
             continue
         if c in measured:
@@ -303,7 +281,7 @@ def _read_proc_stack(frames_root: Path) -> pd.DataFrame:
         if "catalog_id" not in keep:
             continue
         df = df[keep].copy()
-        df["catalog_id"] = df["catalog_id"].map(_norm_cid_gaia)
+        df["catalog_id"] = df["catalog_id"].map(normalize_gaia_source_id)
         df["proc_csv"] = p.name
         df["epoch_key"] = p.name  # = aperture LC source_file (proc_*.csv name)
         chunks.append(df)
@@ -381,7 +359,7 @@ def write_one_internal_psf_lc(
     from photometry_core import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag, rel_sigma_to_mag  # noqa: PLC0415
 
-    tid = _norm_cid_gaia(target_cid)
+    tid = normalize_gaia_source_id(target_cid)
     if not tid or aperture_lc is None or aperture_lc.empty:
         return None
     ap = aperture_lc.copy()
@@ -601,10 +579,10 @@ def write_internal_psf_lightcurves(
                 continue
             cid = stem.replace("lightcurve_", "", 1)
             if cid:
-                wanted.append(_norm_cid_gaia(cid))
+                wanted.append(normalize_gaia_source_id(cid))
         target_ids = [c for c in wanted if c]
     else:
-        target_ids = [_norm_cid_gaia(t) for t in target_ids if _norm_cid_gaia(t)]
+        target_ids = [normalize_gaia_source_id(t) for t in target_ids if normalize_gaia_source_id(t)]
 
     written: list[str] = []
     skipped: list[str] = []

@@ -268,5 +268,3 @@ Machine-level behavior: parallel workers and RAM reserves. Computed from your ha
 
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
-| `per_frame_mp_reserve_ram_gb` | 1.5 | Setting (config.json) | config.json | config assembly & validation (`config.py:1028`) | RAM (GB) kept free per worker when sizing per-frame parallelism. |
-| `qc_preprocess_workers` | 1 | Internal | environment / machine | calibration & frame processing (`pipeline.py:15384`) | Number of parallel preprocessing workers; computed from CPU/RAM at startup, overridable by the VYVAR_PARALLEL_WORKERS environment variable. |

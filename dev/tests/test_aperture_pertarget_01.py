@@ -19,7 +19,9 @@ from aperture_pertarget import (  # noqa: E402
     FALLBACK_F_STAR,
     ApertureGridNight,
     apply_grid_fluxes_to_frames,
-    apply_night_k,
+    BrightnessK,
+    apply_brightness_k,
+    field_k_by_brightness,
     PerTargetChoice,
     choose_f_for_target,
     f_star_is_grid_edge,
@@ -239,42 +241,72 @@ def _ch(cid: str, curve: dict[float, float], allowed=None) -> "PerTargetChoice":
                            r_ap_px=0.0, p2p_by_f={f"{k:.4g}": v for k, v in curve.items()}, f_allowed=allowed)
 
 
-def test_night_k_median_curve_and_tie() -> None:
-    """AP-NIGHT-K-2026-10: one k for the group from the median normalised curve; within 3 % -> larger k."""
+def _synthetic_procs(tmp: Path, *, n_frames: int = 40, seed: int = 0) -> Path:
+    """Proc CSVs: bright stars whose scatter falls with k (seeing / centring drifts), faint stars whose
+    scatter grows with k (sky noise), plus a variable and a saturated star that must be ignored."""
+    rng = np.random.default_rng(seed)
     g = list(DEFAULT_APERTURE_F_GRID)
-    noisy = [{1.0: 1.10, 1.25: 1.00, 1.5: 1.02, 1.75: 1.20, 2.0: 1.30},
-             {1.0: 1.00, 1.25: 1.05, 1.5: 1.04, 1.75: 1.10, 2.0: 1.40},
-             {1.0: 1.20, 1.25: 1.01, 1.5: 1.00, 1.75: 1.05, 2.0: 1.10}]
-    ch = {f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(noisy)}
-    info = apply_night_k(ch, g)
-    assert info["k_night"] == 1.5  # 1.25 and 1.5 are within 3 % on the median curve
-    assert {c.f_star for c in ch.values()} == {1.5}
-    assert [c.f_own for c in ch.values()] == [1.25, 1.0, 1.5]
-    assert all(c.reason == "night_k_comp_scatter" for c in ch.values())
+    stars = [(f"{1000000000000000000 + i}", 2.0e5, "bright") for i in range(80)]
+    stars += [(f"{2000000000000000000 + i}", 2.0e2, "faint") for i in range(120)]
+    stars += [("3000000000000000001", 2.0e3, "var"), ("3000000000000000002", 5.0e5, "sat")]  # Gaia-like ids
+    d = tmp / "frames"
+    d.mkdir()
+    for f in range(n_frames):
+        rows = []
+        for cid, flux, kind in stars:
+            r = {"catalog_id": cid, "vsx_known_variable": kind == "var", "is_saturated": kind == "sat" and f == 3}
+            for k in g:
+                sig = 0.004 / k if kind in ("bright", "sat") else 0.02 * k  # magnitude scatter at this k
+                m = -2.5 * np.log10(flux) + rng.normal(0, sig) + (0.3 * math.sin(f) if kind == "var" else 0.0)
+                r[f"flux_k{int(round(k * 100)):03d}"] = 10 ** (-0.4 * m)
+            rows.append(r)
+        pd.DataFrame(rows).to_csv(d / f"proc_f{f:03d}.csv", index=False)
+    return d
 
 
-def test_night_k_blend_limit_and_no_comp_targets() -> None:
+def test_brightness_k_from_constant_field_stars(tmp_path: Path) -> None:
+    """AP-BRIGHT-K-2026-10: bright stars take a large k, faint stars the smallest; variables and stars
+    saturated on any frame are not used."""
+    d = _synthetic_procs(tmp_path)
+    bk = field_k_by_brightness(sorted(d.glob("proc_*.csv")), DEFAULT_APERTURE_F_GRID)
+    assert bk is not None and bk.k[0] == 2.0 and set(bk.k) == {1.0, 2.0}
+    assert bk.k_for(-2.5 * math.log10(2.0e5)) == 2.0
+    assert bk.k_for(-2.5 * math.log10(2.0e2)) == 1.0
+    assert sum(bk.n_stars) == 200  # VAR and SAT excluded
+    assert bk.k_for(-30.0) == 2.0 and bk.k_for(0.0) == 1.0  # outside the range: end groups
+    assert bk.k_for(float("nan")) is None
+
+
+def test_brightness_k_assignment_blend_limit_and_no_magnitude() -> None:
     g = list(DEFAULT_APERTURE_F_GRID)
-    c = {1.0: 1.2, 1.25: 1.1, 1.5: 1.0, 1.75: 1.0, 2.0: 1.1}
-    ch = {f"T{i}": _ch(f"T{i}", c) for i in range(4)}
-    ch["B"] = _ch("B", {1.0: 1.0, 1.25: 1.1}, allowed=[1.0, 1.25])
-    ch["N"] = PerTargetChoice(catalog_id="N", f_star=1.0, r_ap_px=5.0, p2p_by_f={f"{k:.4g}": float("nan") for k in g})
-    info = apply_night_k(ch, g)
-    assert info["k_night"] == 1.75 and info["n_targets_curve"] == 5
-    assert ch["B"].f_star == 1.25 and "blend limit" in ch["B"].reason
-    assert ch["N"].f_star == 1.75 and abs(ch["N"].r_ap_px - 1.75 * 5.0) < 1e-9
+    bk = BrightnessK(mag_lo=[float("-inf"), -10.0], mag_hi=[-10.0, float("inf")], k=[1.5, 1.0], n_stars=[50, 50],
+                     curves=[{}, {}], se=[0.0, 0.0])
+    ch = {
+        "BR": PerTargetChoice(catalog_id="BR", f_star=1.0, r_ap_px=5.0),
+        "FA": PerTargetChoice(catalog_id="FA", f_star=1.0, r_ap_px=5.0),
+        "BL": PerTargetChoice(catalog_id="BL", f_star=1.0, r_ap_px=5.0, f_allowed=[1.0, 1.25]),
+        "NM": PerTargetChoice(catalog_id="NM", f_star=1.25, r_ap_px=6.25),
+    }
+    info = apply_brightness_k(ch, g, {"BR": -12.0, "FA": -7.0, "BL": -12.0, "NM": float("nan")}, bk)
+    assert ch["BR"].f_star == 1.5 and abs(ch["BR"].r_ap_px - 7.5) < 1e-9 and ch["BR"].reason == "brightness_k"
+    assert ch["FA"].f_star == 1.0
+    assert ch["BL"].f_star == 1.25 and "blend limit" in ch["BL"].reason
+    assert ch["NM"].f_star == 1.0 and "smallest k" in ch["NM"].reason
+    assert info["k_by_target"]["BR"] == {"inst_mag": -12.0, "k": 1.5}
 
 
-def test_night_k_stable_when_a_comp_changes_one_target() -> None:
-    """A different curve for one target does not move the night k."""
+def test_brightness_k_does_not_depend_on_the_target_comps() -> None:
+    """The k comes from the field, not from the target's own comp curve (stable when a comp changes)."""
     g = list(DEFAULT_APERTURE_F_GRID)
-    base = [{1.0: 1.1, 1.25: 1.0, 1.5: 1.05, 1.75: 1.1, 2.0: 1.2} for _ in range(9)]
-    k0 = apply_night_k({f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(base)}, g)["k_night"]
-    alt = list(base); alt[3] = {1.0: 1.3, 1.25: 1.2, 1.5: 1.1, 1.75: 1.0, 2.0: 1.05}
-    assert apply_night_k({f"T{i}": _ch(f"T{i}", c) for i, c in enumerate(alt)}, g)["k_night"] == k0 == 1.25
+    bk = BrightnessK(mag_lo=[float("-inf")], mag_hi=[float("inf")], k=[1.25], n_stars=[50], curves=[{}], se=[0.0])
+    a = {"T": PerTargetChoice(catalog_id="T", f_star=1.0, r_ap_px=5.0, p2p_by_f={"1": 1.0, "1.25": 2.0})}
+    b = {"T": PerTargetChoice(catalog_id="T", f_star=2.0, r_ap_px=10.0, p2p_by_f={"1": 2.0, "2": 1.0})}
+    apply_brightness_k(a, g, {"T": -9.0}, bk)
+    apply_brightness_k(b, g, {"T": -9.0}, bk)
+    assert a["T"].f_star == b["T"].f_star == 1.25
 
 
-def test_night_k_without_curves_keeps_choices() -> None:
-    ch = {"N": PerTargetChoice(catalog_id="N", f_star=0.7, r_ap_px=3.5, reason="fallback_no_finite_scatter_or_snr")}
-    assert apply_night_k(ch, DEFAULT_APERTURE_F_GRID)["k_night"] is None
-    assert ch["N"].f_star == 0.7
+def test_brightness_k_without_field_curve_gives_smallest_k() -> None:
+    ch = {"N": PerTargetChoice(catalog_id="N", f_star=1.5, r_ap_px=7.5)}
+    info = apply_brightness_k(ch, DEFAULT_APERTURE_F_GRID, {"N": -9.0}, None)
+    assert info["brightness_k"] is None and ch["N"].f_star == 1.0

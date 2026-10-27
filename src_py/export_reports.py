@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
 import numpy as np
 from astropy.time import Time
 
@@ -42,6 +44,19 @@ class ExportFailure(TypedDict):
     target_id: str
     method: str
     reason: str
+    level: str
+
+
+# EXPORT-LOG-2026-10 (Milan 2026-10-26): three kinds of "no file", three log levels.
+# * a rule decides that the data are not submitted (too few usable epochs, magnitudes not on the
+#   band's scale, oneRGGB) -> INFO, counted in ``export_stats["not_exported_by_rule"]``;
+# * the data or the setup need the observer's attention (time base not BJD_TDB, filter without an
+#   AAVSO code, no field map) -> WARNING, collected;
+# * the export itself failed (read / write error, exception) -> ERROR, collected.
+def record_export_skip(export_stats: dict[str, int] | None, target_id: str, method: str, reason: str) -> None:
+    """A rule says these data are not submitted: INFO and a count, not a failure."""
+    _accumulate_export_stat(export_stats, "not_exported_by_rule")
+    logging.info("[EXPORT] not exported by rule %s method=%s: %s", target_id or "?", method or "-", reason)
 
 
 def _accumulate_export_stat(export_stats: dict[str, int] | None, key: str, n: int = 1) -> None:
@@ -63,65 +78,39 @@ def record_export_failure(
     target_id: str,
     method: str,
     reason: str,
+    *,
+    level: int = logging.ERROR,
 ) -> None:
-    """Append one export failure and log at ERROR (batch callers collect + summarize)."""
-    if failures is None:
-        logging.error(
-            "[EXPORT] failed %s method=%s: %s",
-            target_id or "?",
-            method or "-",
-            reason,
-        )
-        return
-    failures.append(
-        {
-            "target_id": str(target_id or "").strip() or "?",
-            "method": str(method or "").strip(),
-            "reason": str(reason),
-        }
-    )
-    logging.error(
-        "[EXPORT] failed %s method=%s: %s",
-        failures[-1]["target_id"],
-        failures[-1]["method"] or "-",
-        failures[-1]["reason"],
-    )
+    """Collect one export problem and log it (ERROR: the export failed; WARNING: the data or the
+    setup need attention). Batch callers summarise with :func:`log_export_batch_summary`."""
+    rec: ExportFailure = {
+        "target_id": str(target_id or "").strip() or "?",
+        "method": str(method or "").strip(),
+        "reason": str(reason),
+        "level": logging.getLevelName(level),
+    }
+    if failures is not None:
+        failures.append(rec)
+    logging.log(level, "[EXPORT] failed %s method=%s: %s", rec["target_id"], rec["method"] or "-", rec["reason"])
 
 
 def log_export_batch_summary(
     failures: list[ExportFailure],
     export_stats: dict[str, int] | None = None,
 ) -> None:
-    """Emit operator-visible batch summary when any per-target exports failed or were empty."""
-    if export_stats:
-        _tb_ref = int(export_stats.get("time_base_refused") or 0)
-        if _tb_ref:
-            logging.error(
-                "[EXPORT] time_base refused (non-BJD_TDB or unknown/mixed): %d target-method(s)",
-                _tb_ref,
-            )
+    """Batch summary: targets not exported by rule (INFO) and the collected problems, at the
+    highest level among them."""
+    n_rule = int((export_stats or {}).get("not_exported_by_rule") or 0)
+    if n_rule:
+        logging.info("[EXPORT] %d target-method(s) not exported by rule (see the lines above)", n_rule)
     if not failures:
         return
+    level = max(logging.getLevelName(f.get("level") or "ERROR") for f in failures)
     ids = sorted({f["target_id"] for f in failures})
-    logging.error(
-        "[EXPORT] batch finished with %d export failure(s) across %d target(s)",
-        len(failures),
-        len(ids),
-    )
-    if len(ids) <= 25:
-        logging.error("[EXPORT] failed target ids: %s", ",".join(ids))
-    else:
-        logging.error(
-            "[EXPORT] failed target ids (first 25): %s ...",
-            ",".join(ids[:25]),
-        )
+    logging.log(level, "[EXPORT] batch finished with %d export problem(s) across %d target(s)", len(failures), len(ids))
     for f in failures:
-        logging.error(
-            "[EXPORT]   %s | method=%s | %s",
-            f["target_id"],
-            f.get("method") or "-",
-            f["reason"],
-        )
+        logging.log(logging.getLevelName(f.get("level") or "ERROR"), "[EXPORT]   %s | method=%s | %s",
+                    f["target_id"], f.get("method") or "-", f["reason"])
 
 
 def _aavso_software_header_line(software_version: str) -> str:
@@ -440,6 +429,22 @@ def _copy_field_image(
     return None
 
 
+def _lc_missing_export_columns(lc_df: pd.DataFrame, *, differential: bool, mag_column: str | None) -> list[str]:
+    """Columns the export needs that the LC table lacks (a broken file, not a rule)."""
+    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
+
+    if mag_column:
+        mag_col = str(mag_column)
+    elif differential:
+        mag_col = "delta_mag"
+    else:
+        mag_col = published_mag_column(lc_df) or "mag_calib"
+    missing = [] if mag_col in lc_df.columns else [mag_col]
+    if not ({"jd", "bjd"} & set(lc_df.columns)):
+        missing.append("jd/bjd")
+    return missing
+
+
 def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
     """Rows suitable for AAVSO/VAR.ASTRO export; the exported magnitude is put in ``mag_calib``
     for the writers.
@@ -555,7 +560,7 @@ def _check_sidecar_by_file(lc_dir: Path, target_cid: str) -> tuple[str, dict[str
     if not p.is_file():
         return "", {}
     try:
-        df = pd.read_csv(p, low_memory=False)
+        df = read_vyvar_csv(p, low_memory=False)
     except Exception:  # noqa: BLE001
         return "", {}
     if df.empty:
@@ -675,18 +680,25 @@ def export_lightcurve_reports(
         and gspc_standard_available(_gz0, pd.to_numeric(lc_df["mag_gspc"], errors="coerce").to_numpy(dtype=float))
     )
     differential = _bs0.upper() == "NONE" and not gspc_std
+    _mag_override = "mag_gspc" if gspc_std else None
     lc_normal = _select_export_lc_rows(lc_df.copy() if lc_df is not None else pd.DataFrame(),
-                                       differential=differential, mag_column="mag_gspc" if gspc_std else None)
+                                       differential=differential, mag_column=_mag_override)
     if lc_normal.empty:
-        record_export_failure(export_failures, _target_id, _export_method, "no exportable LC points")
+        _missing = ([] if lc_df is None or lc_df.empty
+                    else _lc_missing_export_columns(lc_df, differential=differential, mag_column=_mag_override))
+        if _missing:
+            record_export_failure(export_failures, _target_id, _export_method,
+                                  f"LC file lacks column(s) {', '.join(_missing)}")
+        else:
+            record_export_skip(export_stats, _target_id, _export_method, "no exportable LC points")
         return {}
     # TRUST-COVERAGE-2026-10: too few usable epochs -> not exported (same rule as trust RED)
     from trust_flag_core import coverage_insufficient  # noqa: PLC0415
 
     _n_lc_all = int(len(lc_df)) if lc_df is not None else 0
     if coverage_insufficient(len(lc_normal), _n_lc_all):
-        record_export_failure(export_failures, _target_id, _export_method,
-                              f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
+        record_export_skip(export_stats, _target_id, _export_method,
+                           f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
         return {}
     _maybe_set_airmass_citation(run_citation_ctx, lc_normal)
 
@@ -703,7 +715,7 @@ def export_lightcurve_reports(
     from osc_align import is_onerggb_internal_obs_group  # noqa: PLC0415
 
     if is_onerggb_internal_obs_group(obs_group_resolved):
-        record_export_failure(export_failures, _target_id, _export_method, "oneRGGB internal-only (not exported)")
+        record_export_skip(export_stats, _target_id, _export_method, "oneRGGB internal-only")
         return {}
     fb = filter_band_for_obs_group(obs_group_resolved)
     aavso_filter = fb.aavso_code
@@ -737,7 +749,8 @@ def export_lightcurve_reports(
         _accumulate_export_stat(export_stats, "aavso_skipped_differential")
     if (on_band or gspc_std) and not aavso_filter:
         record_export_failure(
-            export_failures, _target_id, _export_method, f"filter '{fb.filter_token}' has no AAVSO code - AAVSO file not written"
+            export_failures, _target_id, _export_method,
+            f"filter '{fb.filter_token}' has no AAVSO code - AAVSO file not written", level=logging.WARNING,
         )
     if gspc_std:
         _zp_note_txt = zero_point_note_text("A", fb.zp_band, _gz_exp)
@@ -750,11 +763,9 @@ def export_lightcurve_reports(
         _zp_note_short = zero_point_note_text("A", fb.zp_band, _gz_dif, short=True)
         _accumulate_export_stat(export_stats, "differential")
     elif not on_band:
-        record_export_failure(
-            export_failures,
-            _target_id,
-            _export_method,
-            f"magnitudes not on the {fb.label} scale (band_system={band_system or 'unknown'}) - not exported",
+        record_export_skip(
+            export_stats, _target_id, _export_method,
+            f"magnitudes not on the {fb.label} scale (band_system={band_system or 'unknown'})",
         )
         _accumulate_export_stat(export_stats, "band_refused")
         if not (fb.zp_band == "G" and band_system == "G"):
@@ -1101,7 +1112,8 @@ def export_lightcurve_reports(
             )
             _n_rows += 1
         if _n_rows == 0:
-            record_export_failure(export_failures, _target_id, _export_method, "AAVSO: no rows with JD/mag/err")
+            record_export_failure(export_failures, _target_id, _export_method, "AAVSO: no rows with JD/mag/err",
+                                  level=logging.WARNING)
         else:
             try:
                 aavso_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1124,7 +1136,8 @@ def export_lightcurve_reports(
         _tb = None
     if _tb != TIME_BASE_BJD_TDB:
         record_export_failure(
-            export_failures, _target_id, _export_method, f"VarAstro: time_base={_tb} (BJD_TDB required)"
+            export_failures, _target_id, _export_method, f"VarAstro: time_base={_tb} (BJD_TDB required)",
+            level=logging.WARNING,
         )
         _accumulate_export_stat(export_stats, "time_base_refused")
         return paths
@@ -1151,7 +1164,8 @@ def export_lightcurve_reports(
     except Exception:  # noqa: BLE001
         field_img = None
     if field_img is None:
-        record_export_failure(export_failures, _target_id, _export_method, "VarAstro: field map not found")
+        record_export_failure(export_failures, _target_id, _export_method, "VarAstro: field map not found",
+                              level=logging.WARNING)
     v_lines.append(f"# FIELD IMAGE: {field_img or 'not available'}\n")
     v_lines.append("# BJD_TDB          dif_mag  err\n" if differential
                    else "# BJD_TDB          mag      err\n")

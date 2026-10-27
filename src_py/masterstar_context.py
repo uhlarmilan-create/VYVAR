@@ -14,11 +14,8 @@ from platesolve_ui_paths import default_bundle_dir
 
 
 def header_core_fwhm_px(hdr) -> float | None:
-    """Measured PSF core FWHM [px] from a MASTERSTAR header, preferring the Gaussian fit.
-
-    Order: VY_FWHM_GAUSS -> VY_FWHM_GAUSSIAN -> VY_FWHM. Returns None if none valid (>0, finite).
-    """
-    for k in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+    """FWHM [px] of a MASTERSTAR header (``VY_FWHM``, the one FWHM of VYVAR); None if not valid."""
+    for k in ("VY_FWHM",):
         v = hdr.get(k)
         if v is None:
             continue
@@ -40,7 +37,6 @@ class MasterstarContext:
     chip_width: int | None = None
     chip_height: int | None = None
     vy_fwhm_px: float | None = None
-    vy_fwhm_gauss_px: float | None = None
     pixel_scale_arcsec: float | None = None
     ra_deg: float | None = None
     dec_deg: float | None = None
@@ -126,7 +122,6 @@ def load_masterstar_context(fits_path: Path | None) -> MasterstarContext:
                     return None
 
             ctx.vy_fwhm_px = _fhdr("VY_FWHM")
-            ctx.vy_fwhm_gauss_px = _fhdr("VY_FWHM_GAUSS") or _fhdr("VY_FWHM_GAUSSIAN")
             if "VY_PSOLV" in hdr:
                 ctx.vy_psolv = bool(hdr["VY_PSOLV"])
             for k in ("VY_SIPRF",):
@@ -170,9 +165,7 @@ def masterstar_context_markdown(ctx: MasterstarContext) -> str:
     if ctx.chip_width and ctx.chip_height:
         lines.append(f"- Chip: **{ctx.chip_width}x{ctx.chip_height}** px")
     if ctx.vy_fwhm_px is not None:
-        lines.append(f"- `VY_FWHM` (DAO estimate): **{ctx.vy_fwhm_px:.3f}** px")
-    if ctx.vy_fwhm_gauss_px is not None:
-        lines.append(f"- `VY_FWHM_GAUSS`: **{ctx.vy_fwhm_gauss_px:.3f}** px")
+        lines.append(f"- `VY_FWHM` (frame QC elliptical Gaussian): **{ctx.vy_fwhm_px:.3f}** px")
     if ctx.pixel_scale_arcsec is not None:
         lines.append(f"- Scale (WCS mean of axes): **{ctx.pixel_scale_arcsec:.4f}** arcsec/px")
     if ctx.ra_deg is not None and ctx.dec_deg is not None:

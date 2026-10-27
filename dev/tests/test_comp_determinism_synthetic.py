@@ -2,8 +2,7 @@
 Synthetic regression test for comparison-star selection determinism (P0-P4).
 
 Exercises ``photometry_core.select_comparison_stars_per_target`` without archive
-draft data. Uses short ``catalog_id`` strings (G001...) so Gaia ID normalization in
-the pipeline matches per-frame CSV rows.
+draft data. Uses 19-digit Gaia-like ``catalog_id`` strings (ids are text everywhere; names are not ids).
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from photometry_core import select_comparison_stars_per_target
 
 _N_STARS = 30
 _N_FRAMES = 20
-_TARGET_ID = "G001"
+_TARGET_ID = "4000000000000000001"
 _RNG_SEED = 42
 
 
@@ -28,7 +27,7 @@ def _build_synthetic_dataset(
     shuffle_masterstars: bool = False,
 ) -> tuple[pd.Series, pd.DataFrame, list[Path], dict[str, pd.DataFrame]]:
     rng = np.random.default_rng(_RNG_SEED)
-    ids = [f"G{i:03d}" for i in range(1, _N_STARS + 1)]
+    ids = [f"{4000000000000000000 + i}" for i in range(1, _N_STARS + 1)]
 
     rows: list[dict[str, object]] = []
     for i, sid in enumerate(ids):
@@ -114,12 +113,19 @@ def _run_comp_selection(
 ) -> pd.DataFrame:
     cfg = AppConfig()
     cfg.gs11_dilution_enabled = False
+    # COMP-POOL-ONLY-2026-10: comparison stars come only from the rule pool
+    from photometry_comp import build_global_comp_pool  # noqa: PLC0415
+
+    pool = build_global_comp_pool(
+        masterstars, per_frame_paths, csv_cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg,
+    )
     out = select_comparison_stars_per_target(
         target,
         masterstars,
         per_frame_paths,
         csv_cache=csv_cache,
         cfg=cfg,
+        global_comp_pool_df=pool,
         chip_fw=800,
         chip_fh=600,
         chip_interior_margin_px=0,

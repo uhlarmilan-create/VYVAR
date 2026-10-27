@@ -251,8 +251,13 @@ class TargetFieldMap:
 _TFM_WORKER: dict[str, Any] = {}
 
 
-def _tfm_worker_init(data: np.ndarray, header: Any) -> None:
-    _TFM_WORKER["map"] = TargetFieldMap(data, header)
+def _tfm_worker_init(ctx: dict[str, Any]) -> None:
+    """Pool initializer: the worker's map on its own copy of the background; ``{}`` closes it."""
+    old = _TFM_WORKER.pop("map", None)
+    if old is not None:
+        old.close()
+    if ctx:
+        _TFM_WORKER["map"] = TargetFieldMap(ctx["data"], ctx["header"])
 
 
 def _tfm_worker_save(job: tuple[str, pd.Series, pd.DataFrame]) -> str:
@@ -271,10 +276,10 @@ class DeferredTargetFieldMaps:
     Same files as :class:`TargetFieldMap`; a map that fails is logged and skipped, as before.
     """
 
-    def __init__(self, data: np.ndarray, header: Any = None, *, workers: int = 1) -> None:
+    def __init__(self, data: np.ndarray, header: Any = None, *, workers: int | None = None) -> None:
         self._data = np.asarray(data)
         self._header = header
-        self._workers = max(1, int(workers or 1))
+        self._workers = workers  # None: the run's resource budget decides at close()
         self._jobs: list[tuple[str, pd.Series, pd.DataFrame]] = []
         if not np.isfinite(np.asarray(self._data, dtype=np.float64)).any():
             raise ValueError("MASTERSTAR has no finite pixels")
@@ -288,30 +293,14 @@ class DeferredTargetFieldMaps:
         jobs, self._jobs = self._jobs, []
         if not jobs:
             return
-        nw = min(self._workers, len(jobs))
-        if nw > 1:
-            import multiprocessing  # noqa: PLC0415
-            from concurrent.futures import ProcessPoolExecutor  # noqa: PLC0415
+        from parallel_frames import frame_bytes, map_frames, stage_workers  # noqa: PLC0415
 
-            with ProcessPoolExecutor(
-                max_workers=nw,
-                mp_context=multiprocessing.get_context("spawn"),
-                initializer=_tfm_worker_init,
-                initargs=(self._data, self._header),
-            ) as ex:
-                errors = list(ex.map(_tfm_worker_save, jobs, chunksize=max(1, len(jobs) // (4 * nw))))
+        if self._workers is None:
+            nw = stage_workers(len(jobs), frame_bytes(*self._data.shape[:2]), stage="target field maps")
         else:
-            fm = TargetFieldMap(self._data, self._header)
-            errors = []
-            try:
-                for job in jobs:
-                    try:
-                        fm.save(Path(job[0]), job[1], job[2])
-                        errors.append("")
-                    except Exception as exc:  # noqa: BLE001
-                        errors.append(str(exc))
-            finally:
-                fm.close()
+            nw = max(1, min(int(self._workers), len(jobs)))
+        errors = list(map_frames(_tfm_worker_save, jobs, workers=nw, initializer=_tfm_worker_init,
+                                 ctx={"data": self._data, "header": self._header}, stage="target field maps"))
         for job, err in zip(jobs, errors, strict=True):
             if err:
                 LOGGER.warning("[APERTURE] Optional artifact write failed (field map %s): %s", Path(job[0]).name, err)

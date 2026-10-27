@@ -299,7 +299,7 @@ def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path |
             st.caption("No MASTERSTAR for the loaded processed field (Pipeline -> Load processed field).")
             return
         ctx = load_masterstar_context(ms)
-        fwhm = ctx.vy_fwhm_gauss_px or ctx.vy_fwhm_px
+        fwhm = ctx.vy_fwhm_px
         n = sm.masterstar_detection_count(Path(ms))
         if fwhm is None or not math.isfinite(float(fwhm)):
             st.caption("The MASTERSTAR header has no FWHM.")

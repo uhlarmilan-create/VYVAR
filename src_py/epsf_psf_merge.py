@@ -275,7 +275,7 @@ def run_epsf_psf_merge_job(
     """
     from epsf_frame import OVERSAMPLING as EPSF_OVERSAMPLING
     from epsf_frame import frame_fit_sources, night_spatial_delta
-    from parallel_frames import map_frames, ram_capped_workers
+    from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers
     from epsf_frame_accounting import finalize_epsf_frame_job, list_epsf_science_light_fits
     from psf_photometry import (
         EPSF_BUILD_STARS_META_NAME,
@@ -319,9 +319,7 @@ def run_epsf_psf_merge_job(
 
     if progress_cb is not None:
         progress_cb(0, len(files), "night spatial ePSF perturbation")
-    # A worker holds the frame (float32) and the fit's float64 images (data, two error maps, two model
-    # images, masks): ~6 x 8 bytes per pixel.
-    workers = ram_capped_workers(app_config, files, bytes_per_pixel=8 * 6)
+    workers = stage_workers(len(files), frame_bytes_of_fits(files[0]), stage="ePSF")
     spatial = night_spatial_delta(files, build_stars, cutout_size=cutout, fwhm_px=fwhm_ms,
                                   out_path=frames_dir / EPSF_SPATIAL_DELTA_NAME, workers=workers)
     delta = fits.getdata(frames_dir / EPSF_SPATIAL_DELTA_NAME).astype(np.float64) if spatial["file"] else None
@@ -331,7 +329,7 @@ def run_epsf_psf_merge_job(
            "platesolve_dir": str(ps), "app_config": app_config, "fit_stars": fit_stars, "neighbours": neighbours}
     records: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
-    done = map_frames(_fit_frame_task, files, workers=workers, initializer=_fit_worker_init, ctx=ctx)
+    done = map_frames(_fit_frame_task, files, workers=workers, initializer=_fit_worker_init, ctx=ctx, stage="ePSF fit")
     for i, (fp, res) in enumerate(zip(files, done, strict=True), start=1):
         if progress_cb is not None:
             progress_cb(i, len(files), f"PSF fit: {fp.name}")

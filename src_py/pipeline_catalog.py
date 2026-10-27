@@ -182,7 +182,7 @@ def _dao_star_count_from_array(arr: "np.ndarray", *, fwhm_px: float = 3.0) -> in
     finite = np.isfinite(arr)
     if not np.any(finite):
         return 0
-    _, med, std = plain_mean_med_std(arr[finite], sigma=3.0, maxiters=5)
+    _, med, std = plain_mean_med_std(arr[finite])
     std = float(std) if np.isfinite(std) else 0.0
     if std <= 0:
         return 0
@@ -1345,7 +1345,7 @@ def _dao_noise_sigma_adu(
     if math.isfinite(float(sigma_pp)) and float(sigma_pp) > 0:
         return float(sigma_pp) / math.sqrt(float(max(1, bfac)))
     if int(bfac) > 1 and data_dao is not None:
-        _, _, std_dao = plain_mean_med_std(data_dao, sigma=3.0, maxiters=3)
+        _, _, std_dao = plain_mean_med_std(data_dao)
         logging.warning("[DAO] sigma_pp unavailable; falling back to plain_mean_med_std on binned frame")
         return float(std_dao)
     logging.warning("[DAO] sigma_pp unavailable; falling back to global plain_mean_med_std")
@@ -1808,118 +1808,113 @@ def detect_stars_match_master_reference(
     plate_scale_arcsec_per_px = None
 
     arr = np.asarray(data, dtype=np.float32)
-    mean, med, std = plain_mean_med_std(arr, sigma=3.0, maxiters=3)
+    mean, med, std = plain_mean_med_std(arr)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
     _cfg_dao = AppConfig()
     _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
     _base_fw_m = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_m)
-    try:
-        from photutils.detection import DAOStarFinder  # type: ignore
+    from photutils.detection import DAOStarFinder  # type: ignore
 
-        thr_s = float(dao_threshold_sigma)
-        thr_s = max(0.5, min(20.0, thr_s))
-        dao_scale = _dao_auto_binning_factor(*data0.shape)
-        data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-        fwhm_eff = max(1.2, _base_fw_m / float(bfac))
-        rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
-        sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
-        std_dao = rms_conv
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            try:
-                std_dao = float(np.nanstd(arr))
-            except Exception:  # noqa: BLE001
-                std_dao = float("nan")
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            try:
-                finite = np.isfinite(arr)
-                n_finite = int(np.count_nonzero(finite))
-                if n_finite > 0:
-                    vals = arr[finite]
-                    n_unique = int(len(np.unique(vals)))
-                    mn = float(np.nanmin(vals))
-                    mx = float(np.nanmax(vals))
-                else:
-                    n_unique, mn, mx = 0, float("nan"), float("nan")
-                print(
-                    f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
-                    f"min={mn:.1f} max={mx:.1f}"
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            # If the frame isn't constant (min != max), try std from non-zero finite pixels.
-            try:
-                nonzero_mask = (arr != 0) & np.isfinite(arr)
-                if int(np.count_nonzero(nonzero_mask)) > 100:
-                    std_dao = float(np.std(arr[nonzero_mask]))
-            except Exception:  # noqa: BLE001
-                pass
-        if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            print(f"WARNING: {_nm} std=0 even after fallback, skipping")
-            empty_meta: dict[str, Any] = {"status": "std_zero"}
-            return pd.DataFrame(), empty_meta
-        _thr, _n_equiv_used = _dao_detection_threshold_adu(
-            float(std_dao), cfg=_cfg_dao, dao_threshold_sigma=float(thr_s),
-        )
+    thr_s = float(dao_threshold_sigma)
+    thr_s = max(0.5, min(20.0, thr_s))
+    dao_scale = _dao_auto_binning_factor(*data0.shape)
+    data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
+    fwhm_eff = max(1.2, _base_fw_m / float(bfac))
+    rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
+    sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+    std_dao = rms_conv
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
         try:
-            _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-            logging.getLogger(__name__).debug(
-                f"DAO input: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
-                f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} n_equiv={float(_n_equiv_used):.2f} "
-                f"sigma_pp_diag={float(sigma_pp_diag):.2f} "
-                f"fwhm={float(fwhm_eff):.2f}"
+            std_dao = float(np.nanstd(arr))
+        except Exception:  # noqa: BLE001
+            std_dao = float("nan")
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        try:
+            finite = np.isfinite(arr)
+            n_finite = int(np.count_nonzero(finite))
+            if n_finite > 0:
+                vals = arr[finite]
+                n_unique = int(len(np.unique(vals)))
+                mn = float(np.nanmin(vals))
+                mx = float(np.nanmax(vals))
+            else:
+                n_unique, mn, mx = 0, float("nan"), float("nan")
+            print(
+                f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
+                f"min={mn:.1f} max={mx:.1f}"
             )
         except Exception:  # noqa: BLE001
             pass
-        finder = DAOStarFinder(
-            fwhm=float(fwhm_eff),
-            threshold=float(_thr),
-            scale_threshold=False,
-            n_brightest=None,
-            **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+        # If the frame isn't constant (min != max), try std from non-zero finite pixels.
+        try:
+            nonzero_mask = (arr != 0) & np.isfinite(arr)
+            if int(np.count_nonzero(nonzero_mask)) > 100:
+                std_dao = float(np.std(arr[nonzero_mask]))
+        except Exception:  # noqa: BLE001
+            pass
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        print(f"WARNING: {_nm} std=0 even after fallback, skipping")
+        empty_meta: dict[str, Any] = {"status": "std_zero"}
+        return pd.DataFrame(), empty_meta
+    _thr, _n_equiv_used = _dao_detection_threshold_adu(
+        float(std_dao), cfg=_cfg_dao, dao_threshold_sigma=float(thr_s),
+    )
+    try:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        logging.getLogger(__name__).debug(
+            f"DAO input: {_nm} mean={float(np.nanmean(arr)):.1f} std={float(np.nanstd(arr)):.1f} "
+            f"threshold={float(_thr):.1f} rms_conv={float(rms_conv):.2f} n_equiv={float(_n_equiv_used):.2f} "
+            f"sigma_pp_diag={float(sigma_pp_diag):.2f} "
+            f"fwhm={float(fwhm_eff):.2f}"
         )
-        tbl = finder(data_dao)
-        if tbl is not None and len(tbl) > 0:
-            tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
-            from astropy.table import Table as _AstropyTable
-
-            tbl = _AstropyTable(tbl, copy=True)
-            tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
-        n_pass1_dao_m = int(len(tbl)) if tbl is not None else 0
-        _h_m, _wpx_m = int(data0.shape[0]), int(data0.shape[1])
-        _sigma_p2_m = MS_DAO_PASS2_SIGMA
-        _ctol_p2_m = MS_DAO_PASS2_CENTER_TOL_PX
-        tbl, _n_unmatched_master, _n_pass2_raw_m = _dao_targeted_pass2_unmatched_gaia(
-            data0,
-            tbl,
-            cat_df=m_valid,
-            wcs_obj=wcs_obj,
-            bfac=int(bfac),
-            fwhm_px=float(max(1.2, _base_fw_m)),
-            pass2_sigma=float(_sigma_p2_m),
-            pass2_center_tol_px=float(_ctol_p2_m),
-            match_sep_arcsec=float(match_sep_arcsec),
-            wpx=int(_wpx_m),
-            h=int(_h_m),
-        )
-        n_merged_dao_m = int(len(tbl)) if tbl is not None else 0
-        LOGGER.info(
-            "[DAO pass 1 master] %d detections, %d MASTERSTAR unmatched",
-            int(n_pass1_dao_m),
-            int(_n_unmatched_master),
-        )
-        LOGGER.info(
-            "[DAO pass 2 master] %d additional detections from %d targeted positions",
-            int(_n_pass2_raw_m),
-            int(_n_unmatched_master),
-        )
-        LOGGER.info("[DAO total master] %d detections after merge", int(n_merged_dao_m))
     except Exception:  # noqa: BLE001
-        tbl = None
-        bfac = 1
+        pass
+    finder = DAOStarFinder(
+        fwhm=float(fwhm_eff),
+        threshold=float(_thr),
+        scale_threshold=False,
+        n_brightest=None,
+        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
+    )
+    tbl = finder(data_dao)
+    if tbl is not None and len(tbl) > 0:
+        tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+        from astropy.table import Table as _AstropyTable
 
+        tbl = _AstropyTable(tbl, copy=True)
+        tbl["vy_dao_pass"] = np.ones(len(tbl), dtype=np.int16)
+    n_pass1_dao_m = int(len(tbl)) if tbl is not None else 0
+    _h_m, _wpx_m = int(data0.shape[0]), int(data0.shape[1])
+    _sigma_p2_m = MS_DAO_PASS2_SIGMA
+    _ctol_p2_m = MS_DAO_PASS2_CENTER_TOL_PX
+    tbl, _n_unmatched_master, _n_pass2_raw_m = _dao_targeted_pass2_unmatched_gaia(
+        data0,
+        tbl,
+        cat_df=m_valid,
+        wcs_obj=wcs_obj,
+        bfac=int(bfac),
+        fwhm_px=float(max(1.2, _base_fw_m)),
+        pass2_sigma=float(_sigma_p2_m),
+        pass2_center_tol_px=float(_ctol_p2_m),
+        match_sep_arcsec=float(match_sep_arcsec),
+        wpx=int(_wpx_m),
+        h=int(_h_m),
+    )
+    n_merged_dao_m = int(len(tbl)) if tbl is not None else 0
+    LOGGER.info(
+        "[DAO pass 1 master] %d detections, %d MASTERSTAR unmatched",
+        int(n_pass1_dao_m),
+        int(_n_unmatched_master),
+    )
+    LOGGER.info(
+        "[DAO pass 2 master] %d additional detections from %d targeted positions",
+        int(_n_pass2_raw_m),
+        int(_n_unmatched_master),
+    )
+    LOGGER.info("[DAO total master] %d detections after merge", int(n_merged_dao_m))
     _fb_sat = fallback_saturate_adu
 
     if sat_diag_ctx is not None and getattr(sat_diag_ctx, "sat_adu", None) is not None:
@@ -2674,93 +2669,73 @@ def _export_per_frame_run_catalog_core(
 
     # --- Join MASTERSTAR annotations into per-frame catalog (via catalog_id) ---
     # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns (bp_rp, G, saturation).
-    try:
-        if master_tab is not None and "catalog_id" in df.columns and "catalog_id" in master_tab.columns:
-            _JOIN_COLS = [
-                "is_saturated",
-                "bp_rp",
-                "phot_g_mean_mag",
-                "saturate_limit_adu_85pct",
-                "source_type",
-            ]
-            join_cols = [c for c in _JOIN_COLS if c in master_tab.columns]
-            if join_cols:
-                master_lookup = master_tab[["catalog_id"] + join_cols].copy()
-                master_lookup["catalog_id"] = (
-                    master_lookup["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
-                )
-                master_lookup = master_lookup.dropna(subset=["catalog_id"])
-                master_lookup = master_lookup.drop_duplicates(subset=["catalog_id"], keep="first")
+    if master_tab is not None and "catalog_id" in df.columns and "catalog_id" in master_tab.columns:
+        _JOIN_COLS = [
+            "is_saturated",
+            "bp_rp",
+            "phot_g_mean_mag",
+            "saturate_limit_adu_85pct",
+            "source_type",
+        ]
+        join_cols = [c for c in _JOIN_COLS if c in master_tab.columns]
+        if join_cols:
+            master_lookup = master_tab[["catalog_id"] + join_cols].copy()
+            master_lookup["catalog_id"] = (
+                master_lookup["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+            )
+            master_lookup = master_lookup.dropna(subset=["catalog_id"])
+            master_lookup = master_lookup.drop_duplicates(subset=["catalog_id"], keep="first")
 
-                df = df.copy()
-                df["catalog_id"] = df["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+            df = df.copy()
+            df["catalog_id"] = df["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
 
-                # Avoid column collisions; MASTERSTAR values should win for these columns.
-                df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore")
-                df = df.merge(master_lookup, on="catalog_id", how="left")
-    except Exception:  # noqa: BLE001
-        pass
-
+            # Avoid column collisions; MASTERSTAR values should win for these columns.
+            df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore")
+            df = df.merge(master_lookup, on="catalog_id", how="left")
     # FORCED-PHOT-01: inject force-eligible MASTERSTAR members missing from DAO match.
     # DAO path above is unchanged (n_raw_dao / match counts preserved). Forced rows are
     # measured at locked MASTERSTAR (x,y) with bounded peak refine.
-    try:
-        if master_tab is not None:
-            from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
+    if master_tab is not None:
+        from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
 
-            _force_ids = st.get("forced_photometry_catalog_ids")
-            _force_set = (
-                {str(x).strip() for x in _force_ids if str(x).strip()}
-                if _force_ids
-                else None
-            )
-            df, _fp_meta = inject_forced_masterstar_rows(
-                df,
-                master_tab,
-                image=np.asarray(data) if data is not None else None,
-                force_ids=_force_set,
-            )
-            try:
-                meta["forced_photometry"] = dict(_fp_meta)
-                debug_pixel_match["forced_photometry"] = dict(_fp_meta)
-            except Exception:  # noqa: BLE001
-                pass
-            LOGGER.debug(
-                "[FORCED-PHOT] %s injected=%s geometry_miss=%s",
-                fname,
-                _fp_meta.get("n_injected"),
-                _fp_meta.get("n_geometry_miss"),
-            )
-    except Exception as _fp_exc:  # noqa: BLE001
-        LOGGER.error("[FORCED-PHOT] inject failed (DAO path kept): %s", _fp_exc)
-
+        _force_ids = st.get("forced_photometry_catalog_ids")
+        _force_set = (
+            {str(x).strip() for x in _force_ids if str(x).strip()}
+            if _force_ids
+            else None
+        )
+        df, _fp_meta = inject_forced_masterstar_rows(
+            df,
+            master_tab,
+            image=np.asarray(data) if data is not None else None,
+            force_ids=_force_set,
+        )
+        meta["forced_photometry"] = dict(_fp_meta)
+        debug_pixel_match["forced_photometry"] = dict(_fp_meta)
+        LOGGER.debug(
+            "[FORCED-PHOT] %s injected=%s geometry_miss=%s",
+            fname,
+            _fp_meta.get("n_injected"),
+            _fp_meta.get("n_geometry_miss"),
+        )
     # FORCED-SAT-2026-10: forced rows get the per-frame saturation test of the DAO rows
     # (aligned-frame peak + core plateau, then the raw-frame placed-aperture peak).
-    try:
-        df, _fs_meta = stamp_forced_rows_saturation(
-            df,
-            data,
-            hdr,
-            peak_sat_limit_adu=meta.get("peak_sat_limit_adu"),
-            sat_diag_ctx=_sat_ctx,
-            raw_data=_raw_arr,
-            raw_hdr=_raw_hdr,
-            ref_ra_deg=st.get("sat_diag_ref_ra"),
-            ref_dec_deg=st.get("sat_diag_ref_dec"),
-            drift_ref_catalog_id=st.get("sat_diag_ref_catalog_id"),
-        )
-        meta["forced_saturation"] = _fs_meta
-    except Exception as _fs_exc:  # noqa: BLE001
-        LOGGER.error("[FORCED-SAT] %s: saturation test of forced rows failed: %s", fname, _fs_exc)
-        meta["forced_saturation"] = {"status": f"failed: {_fs_exc}"}
-
-    try:
-        debug_pixel_match["match_mode"] = meta.get("catalog_match_mode")
-        debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px")
-        debug_pixel_match["n_matched"] = meta.get("n_matched")
-    except Exception:  # noqa: BLE001
-        pass
-
+    df, _fs_meta = stamp_forced_rows_saturation(
+        df,
+        data,
+        hdr,
+        peak_sat_limit_adu=meta.get("peak_sat_limit_adu"),
+        sat_diag_ctx=_sat_ctx,
+        raw_data=_raw_arr,
+        raw_hdr=_raw_hdr,
+        ref_ra_deg=st.get("sat_diag_ref_ra"),
+        ref_dec_deg=st.get("sat_diag_ref_dec"),
+        drift_ref_catalog_id=st.get("sat_diag_ref_catalog_id"),
+    )
+    meta["forced_saturation"] = _fs_meta
+    debug_pixel_match["match_mode"] = meta.get("catalog_match_mode")
+    debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px")
+    debug_pixel_match["n_matched"] = meta.get("n_matched")
     st["current_frame_name"] = fname
     df = _apply_aperture_catalog_enhancements_from_st(df, data, hdr, st)
 
@@ -2772,10 +2747,7 @@ def _export_per_frame_run_catalog_core(
         _dbp = str(st.get("database_path") or "").strip()
         _did_tc = st.get("draft_id")
         if _dbp and _did_tc is not None:
-            try:
-                _db_tc = VyvarDatabase(Path(_dbp))
-            except Exception:  # noqa: BLE001
-                _db_tc = None
+            _db_tc = VyvarDatabase(Path(_dbp))
         _geo_cfg = _cfg_from_export_worker_state(st)
         _time_cols = compute_time_columns(
             hdr,
@@ -2804,13 +2776,6 @@ def _export_per_frame_run_catalog_core(
         if "airmass" not in df.columns:
             _am_insert_pos = _pos + len(_tk)
             df.insert(_am_insert_pos, "airmass", _am_val)
-    except Exception as _tc_exc:  # noqa: BLE001
-        log_event(f"Time columns skipped: {_tc_exc}")
-        for _tc in ("jd_mid", "hjd_mid", "bjd_tdb_mid"):
-            if _tc not in df.columns:
-                df[_tc] = None
-        if "airmass" not in df.columns:
-            df["airmass"] = float("nan")
     finally:
         if _db_tc is not None:
             try:
@@ -2986,28 +2951,3 @@ def _estimate_catalog_frame_hw(
         except Exception:  # noqa: BLE001
             continue
     return 2048, 2048
-
-
-def _vyvar_cap_mp_workers_for_catalog(
-    n_workers: int,
-    frame_hw: tuple[int, int],
-    *,
-    reserve_gb: float,
-) -> int:
-    """Cap process pool size using available RAM (rough float32 frame footprint per worker)."""
-    h, w = frame_hw
-    if h <= 0 or w <= 0:
-        h, w = 2048, 2048
-    per_worker = max(int(h * w * 4 * 3), 1)
-    try:
-        import psutil
-    except ImportError:
-        return max(1, n_workers)
-    reserve = int(max(0.0, float(reserve_gb)) * (1024**3))
-    avail = int(psutil.virtual_memory().available) - reserve
-    if avail <= 0:
-        return 1
-    mx = max(1, avail // per_worker)
-    return max(1, min(int(n_workers), mx))
-
-

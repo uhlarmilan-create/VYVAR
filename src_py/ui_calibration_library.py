@@ -199,10 +199,8 @@ def _render_build(db: VyvarDatabase, root: Path) -> None:
                      "frames found (IMAGETYP must say dark / flat).")
             return
         with st.spinner(f"Building masters from {len(darks)} dark and {len(flats)} flat frames..."):
-            try:
-                bayer = db.get_equipment_bayermask(int(cam))
-            except Exception:  # noqa: BLE001
-                bayer = None
+            # G14-16: a DB error must not silently build an OSC flat as mono (no Bayer mask) - it surfaces
+            bayer = db.get_equipment_bayermask(int(cam))
             built, msgs = cp.build_masters_from_source(
                 dark_files=darks, flat_files=flats, light_exposures=[], db=db, camera_id=cam,
                 telescope_id=tel, library_root=root, method=method, equipment_bayer_mask=bayer,

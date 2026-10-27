@@ -40,6 +40,8 @@ from typing import Any, Final
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 LOGGER = logging.getLogger(__name__)
 
 #: Maximum neighbour light in a comparison / check aperture, fraction of the star's own flux.
@@ -310,7 +312,7 @@ def blend_contamination_for_pool(
     if not (math.isfinite(fwhm_px) and fwhm_px > 0 and math.isfinite(r_ap_px) and r_ap_px > 0):
         meta["status"] = "skipped: FWHM / aperture unknown"
         return nan, meta
-    cat = pd.read_csv(field_catalog_csv, low_memory=False)
+    cat = read_vyvar_csv(field_catalog_csv, low_memory=False)  # ids as text (G07-13)
     with fits.open(masterstar_fits, memmap=False) as hdul:
         hdr = hdul[0].header
         img = np.asarray(hdul[0].data, dtype=np.float32)

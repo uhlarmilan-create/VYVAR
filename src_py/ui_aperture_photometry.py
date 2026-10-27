@@ -22,7 +22,7 @@ import streamlit as st
 
 from mag_constants import MAG_ERR_SCALE
 from platesolve_ui_paths import find_photometry_setups, setup_label
-from utils import resolve_draft_dir_path
+from ui_session import resolve_draft_dir_path
 
 if TYPE_CHECKING:
     from config import AppConfig

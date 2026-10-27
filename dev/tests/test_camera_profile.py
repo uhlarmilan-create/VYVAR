@@ -124,7 +124,7 @@ def test_read_noise_header_card_only_as_fallback() -> None:
     prof = CameraProfile(equipment_id=3, points=())
     res = resolve_read_noise(_hdr(RDNOISE=(5.0, "e-")), profile=prof)
     assert res.ok and res.source == "header" and res.value == pytest.approx(5.0)
-    res = resolve_read_noise(_hdr(VY_RDNOIS=(2.2, "effective")), profile=_qhy294())
+    res = resolve_read_noise(_hdr(VYRDNOIS=(2.2, "effective")), profile=_qhy294())
     assert res.source == "header" and res.value == pytest.approx(2.2)
 
 

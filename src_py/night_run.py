@@ -26,6 +26,8 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 from config import AppConfig, resolve_detection_threshold_sigma
 from importer import smart_import_session, smart_scan_source
 from pipeline import AstroPipeline
@@ -106,7 +108,6 @@ class NightRunResult:
     platesolve_job_output: Any = None
     ra_ui: float | None = None
     de_ui: float | None = None
-    memory_profile: Any = None
     cfg_source: str = "live"
     cfg_changed_keys: list[str] = field(default_factory=list)
     zero_target_setups: list[str] = field(default_factory=list)
@@ -894,7 +895,7 @@ def _collect_photometry_metrics(output_dir: Path) -> tuple[int, float]:
     if not summary.is_file():
         return 0, float("nan")
     try:
-        df = pd.read_csv(summary, low_memory=False)
+        df = read_vyvar_csv(summary, low_memory=False)
     except Exception as exc:  # noqa: BLE001
         logging.warning('[EXC-0113] intent unclear (try: / df = pd.read_csv(summary, low_memory=False) / except Exception: ...: %s', exc)
         return 0, float("nan")
@@ -982,9 +983,7 @@ def run_night_photometry(
 
     _stage("Discover observation groups")
     t0 = time.time()
-    all_setups = find_photometry_setups(
-        phot_cfg, draft_id, draft_dir_override=draft_dir_override
-    )
+    all_setups = find_photometry_setups(phot_cfg, draft_id, draft_dir_override=draft_dir)
     _t("discover_obs_groups", t0)
 
     if not all_setups:
@@ -1206,9 +1205,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
     timings: dict[str, float] = {}
     t_run = time.time()
 
-    from infolog import ensure_infolog_logging  # noqa: PLC0415
+    from infolog import ensure_infolog_logging, quiet_repeated_library_warnings  # noqa: PLC0415
 
     ensure_infolog_logging()
+    quiet_repeated_library_warnings()
 
     def _p(msg: str) -> None:
         LOGGER.info("[NightRun] %s", msg)
@@ -1317,6 +1317,10 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             result.errors.append("Scan plan is missing or has empty light frames")
             result.phase_timings = timings
             return result
+        from parallel_frames import check_disk_for_run  # noqa: PLC0415
+
+        # DISK-PREFLIGHT-2026-10: fail before the import, not in the middle of the night
+        _p(check_disk_for_run(cfg.archive_root, list(plan.lights_files)))
 
         # CAL-2026-10: the calibration plan alone decides masters (same for GUI and CLI).
         # Manual flat paths and flats borrowed from another filter bypass the library
@@ -1386,6 +1390,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         start_infolog_session(result.draft_dir)
         log_milestone(_resolved_site.milestone_line())
+        from parallel_frames import resource_budget  # noqa: PLC0415
+
+        log_milestone(f"[RESOURCES] {resource_budget().describe()}")
 
         from draft_provenance import (
             CALIBRATION_MODE_PRE,
@@ -1458,18 +1465,13 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
 
-        # Memory profile
         from pipeline import (
-            estimate_archive_memory_profile,
             generate_observation_hash,
             resolve_preprocess_target_coordinates,
             run_draft_ram_calibration_qc_to_obs_files,
             scan_calibrated_lights_pointing,
         )
 
-        t0 = time.time()
-        result.memory_profile = estimate_archive_memory_profile(ap_root)
-        _t("memory_profile", t0)
 
         # RAM QC (skipped when PERF-10: DAO QC already done in calibration)
         _perf10_ok = (
@@ -1742,8 +1744,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         result.phase_timings = timings
         return result
     finally:
-        from infolog import end_infolog_session  # noqa: PLC0415
+        from infolog import end_infolog_session, log_repeated_warnings_summary  # noqa: PLC0415
 
+        log_repeated_warnings_summary()
         # INFOLOG-ONE-2026-10: the run's single infolog closes after its last line
         end_infolog_session()
 

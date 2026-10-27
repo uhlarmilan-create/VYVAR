@@ -23,6 +23,17 @@ from photometry_core import (  # noqa: E402
 )
 
 
+def _make_vsx_db(path: Path, rows: list[tuple[int, float, float]]) -> None:
+    import sqlite3
+
+    con = sqlite3.connect(str(path))
+    con.execute("CREATE TABLE vsx_data (oid INTEGER PRIMARY KEY, ra_deg REAL, dec_deg REAL)")
+    con.execute("CREATE TABLE exoplanet_data (obj_id TEXT PRIMARY KEY, ra_deg REAL, dec_deg REAL)")
+    con.executemany("INSERT INTO vsx_data (oid, ra_deg, dec_deg) VALUES (?, ?, ?)", rows)
+    con.commit()
+    con.close()
+
+
 def _make_masterstar(ps: Path, *, size: int = 512) -> tuple[Path, Path]:
     ps.mkdir(parents=True, exist_ok=True)
     ms_csv = ps / "masterstars_full_match.csv"
@@ -37,6 +48,7 @@ def _make_masterstar(ps: Path, *, size: int = 512) -> tuple[Path, Path]:
     hdr["NAXIS2"] = size
     hdr["VY_FWHM"] = 3.5
     w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]  # a real MASTERSTAR WCS is celestial
     w.wcs.crpix = [float(size // 2), float(size // 2)]
     w.wcs.crval = [180.0, 45.0]
     w.wcs.cd = [[0.0001, 0.0], [0.0, 0.0001]]
@@ -97,9 +109,12 @@ def test_missing_transform_raises() -> None:
 def test_require_safe_bbox_from_ram_frames(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ps = tmp_path / "Drafts" / "draft_000503" / "platesolve" / "NoFilter_60_2"
     ms_fits, ms_csv = _make_masterstar(ps)
+    # Fail-loud VSX export (FAIL-LOUD-2026-10) needs a real objects DB; one star outside the field.
+    vsx = tmp_path / "vsx.db"
+    _make_vsx_db(vsx, [(1, 0.0, 0.0)])
 
     class _Cfg:
-        objects_db_path = ""
+        objects_db_path = str(vsx)
         aperture_fwhm_factor = 1.35
         annulus_inner_fwhm = 2.7
         annulus_outer_fwhm = 5.2

@@ -26,7 +26,6 @@ from photutils.utils.exceptions import NoDetectionsWarning
 from scipy.spatial import cKDTree
 
 from plain_stats import plain_mean_med_std
-from sky_estimation import sky_clipped_mean_med_std
 from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER
 
 # Seed-specific sky annulus pads (px), not APERTURE-01 geometry. Forced-seed
@@ -227,7 +226,7 @@ def _dao_pass2_annulus_stats(data0: np.ndarray, cx: float, cy: float) -> tuple[f
     ann = data0[y0:y1, x0:x1][(rr >= 8.0) & (rr <= 12.0)]
     if ann.size < 10:
         return float("nan"), float("nan")
-    _, md, sd = plain_mean_med_std(ann, sigma=3.0, maxiters=2)
+    _, md, sd = plain_mean_med_std(ann)
     return float(md), float(sd)
 
 
@@ -651,7 +650,7 @@ def forced_seed_measure_at_position(
         vals = vals[ann_mask.data > 0]
         vals = vals[np.isfinite(vals)]
         _, md, sd = (
-            sky_clipped_mean_med_std(vals, sigma=3.0, maxiters=2)
+            plain_mean_med_std(vals)
             if vals.size >= 10
             else (float("nan"), float("nan"), float("nan"))
         )

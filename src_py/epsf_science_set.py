@@ -13,19 +13,6 @@ from gaia_catalog_id import normalize_gaia_source_id, read_vyvar_csv
 from stats_core import _coerce_bool
 
 
-def _norm_id_gaia_or_raw(raw: Any) -> str:
-    """Gaia canonical id; on exception return stripped raw. Differs from astrometry's direct normalize."""
-    if raw is None:
-        return ""
-    s = str(raw).strip()
-    if not s or s.lower() in ("nan", "none"):
-        return ""
-    try:
-        return str(normalize_gaia_source_id(s)).strip()
-    except Exception:  # noqa: BLE001
-        return s
-
-
 EPSF_SELECT_ALL = "ALL"
 
 
@@ -112,7 +99,7 @@ def epsf_target_candidates(platesolve_dir: Path | str) -> pd.DataFrame:
             continue
         if str(row.get("zone_flag", row.get("zone", "")) or "").strip().lower() == "catalog_only":
             continue
-        cid = _norm_id_gaia_or_raw(row.get("catalog_id"))
+        cid = normalize_gaia_source_id(row.get("catalog_id"))
         if not cid or not lc_csv_path(phot / "lightcurves", cid, "aperture").is_file():
             continue
         vt = str(row.get("vsx_type") or "").strip()
@@ -150,9 +137,9 @@ def build_epsf_fit_set(platesolve_dir: Path | str, selection: str | None = EPSF_
     cdf = used(load_comp_table(cpt))
     comps: set[str] = set()
     if {"catalog_id", "target_catalog_id"}.issubset(cdf.columns):
-        tcol = cdf["target_catalog_id"].map(_norm_id_gaia_or_raw)
+        tcol = cdf["target_catalog_id"].map(normalize_gaia_source_id)
         for raw in cdf.loc[tcol.isin(types), "catalog_id"]:
-            cid = _norm_id_gaia_or_raw(raw)
+            cid = normalize_gaia_source_id(raw)
             if cid:
                 comps.add(cid)
     if types:

@@ -34,10 +34,10 @@ import pandas as pd
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
-from photutils.background import LocalBackground, MedianBackground
 from photutils.psf import GriddedPSFModel, ImagePSF, PSFPhotometry, SourceGrouper
 
 from frame_footprint import aligned_footprint, off_footprint
+from sky_estimation import annulus_sky_medians, sky_image
 from psf_photometry import _epsf_build_imagepsf_from_stars, _epsf_sky_subtracted_stars
 
 OVERSAMPLING = 2
@@ -163,7 +163,8 @@ def night_spatial_delta(
     step = max(1, math.ceil(len(frames) / _DELTA_MAX_FRAMES))
     subset = frames[::step]
     ctx = {"nx": nx, "ny": ny, "cutout_size": int(cutout_size), "fwhm_px": float(fwhm_px), "build_stars": build_stars}
-    res = list(map_frames(_frame_cell_deltas, subset, workers=workers, initializer=_delta_worker_init, ctx=ctx))
+    res = list(map_frames(_frame_cell_deltas, subset, workers=workers, initializer=_delta_worker_init, ctx=ctx,
+                          stage="ePSF spatial delta"))
     deltas = [r[0] for r in res]
     n_cell, peak = res[-1][1], res[-1][2]
     _, _, centres = grid_cells(res[-1][3], nx, ny)
@@ -330,7 +331,7 @@ def fit_frame_psf(
     fluxes are fitted. Stars closer than two fit boxes form one group and are fitted jointly
     (photutils ``SourceGrouper``), so a faint star next to a bright one keeps its own light - fitted
     alone with a free position it slid onto the bright neighbour (draft 535: up to 3 px, 2-4 mag
-    too bright). Sky: median in an annulus 4-6 FWHM. Pass 1 uses per-pixel errors from the data,
+    too bright). Sky: plain median of an annulus 4-6 FWHM without detected sources (SKY-SRC-MASK-2026-10). Pass 1 uses per-pixel errors from the data,
     pass 2 from the pass-1 model image ((sky + model) / gain + (RN / gain)^2, ADU): weights from
     the data bias faint stars low (Stetson 1987; ALLSTAR uses the model). The flux error is the
     photutils covariance error; chi^2 is kept as ``psf_chi2`` for the night locus.
@@ -358,23 +359,26 @@ def fit_frame_psf(
     psf = model.copy()
     psf.x_0.fixed = True
     psf.y_0.fixed = True
-    lb = LocalBackground(4.0 * fw, 6.0 * fw, bkg_estimator=MedianBackground())
     phot = PSFPhotometry(
-        psf, (fsz, fsz), aperture_radius=1.5 * fw, local_bkg_estimator=lb,
-        grouper=SourceGrouper(min_separation=2.0 * fsz),
+        psf, (fsz, fsz), aperture_radius=1.5 * fw, grouper=SourceGrouper(min_separation=2.0 * fsz),
     )
     n_st = len(stars)
     nb = neighbours if neighbours is not None else pd.DataFrame({"x": [], "y": []})
     xs = np.r_[stars["x"].to_numpy(float), nb["x"].to_numpy(float)]
     ys = np.r_[stars["y"].to_numpy(float), nb["y"].to_numpy(float)]
+    # Local sky (SKY-SRC-MASK-2026-10): plain median of the 4-6 FWHM annulus pixels that are on the footprint,
+    # unsaturated and not on a detected source - the aperture photometry's estimator; replaces photutils
+    # MedianBackground, whose default is a 3-sigma clip with 10 iterations (zero-clipping policy).
+    lbkg = annulus_sky_medians(sky_image(np.where(mask, np.nan, d), fw), np.c_[xs, ys], 4.0 * fw, 6.0 * fw)
     rn_adu2 = (float(read_noise_e) / float(gain)) ** 2
     err1 = np.sqrt(np.clip(np.nan_to_num(d, nan=sky0), sky0, None) / float(gain) + rn_adu2)
-    init = Table({"id": np.arange(1, len(xs) + 1), "x": xs, "y": ys})
+    init = Table({"id": np.arange(1, len(xs) + 1), "x": xs, "y": ys, "local_bkg": lbkg})
     r1 = phot(d, mask=mask, init_params=init, error=err1)
     model_img = phot.make_model_image(d.shape, include_local_bkg=False)
     err2 = np.sqrt(np.clip(sky0 + model_img, 0.0, None) / float(gain) + rn_adu2)
     r1 = r1[np.argsort(np.asarray(r1["id"]))]
-    init2 = Table({"id": np.asarray(r1["id"]), "x": xs, "y": ys, "flux": np.asarray(r1["flux_fit"], float)})
+    init2 = Table({"id": np.asarray(r1["id"]), "x": xs, "y": ys, "flux": np.asarray(r1["flux_fit"], float),
+                   "local_bkg": lbkg})
     r2 = phot(d, mask=mask, init_params=init2, error=err2)
     all_img = phot.make_model_image(d.shape, include_local_bkg=False)
     r2 = r2[np.argsort(np.asarray(r2["id"]))][:n_st]

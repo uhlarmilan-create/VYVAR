@@ -155,13 +155,22 @@ def test_colour_term_default_auto() -> None:
     assert AppConfig().apply_color_term == "auto"
 
 
-def test_k2_also_on_uncalibrated_lc() -> None:
+def test_k2_on_delta_mag_and_mag_calib() -> None:
+    """K2-ONE-2026-10 (D4): k'' goes into delta_mag always and into mag_calib when calibrated, so
+    mag_calib - delta_mag stays the zero point (and the PSF strip, which subtracts k2_delta_mag)."""
     s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
     i_cal = s.index('_calibrated = _band_system != "NONE"')
-    i_k2 = s.index("_k2_in = mag_calib if _calibrated else delta_mag")
+    i_k2 = s.index("delta_mag, _, k2_source_rows = apply_k2_per_frame(")
     assert i_cal < i_k2
-    assert "delta_mag = _k2_out" in s
+    assert "mag_calib, _, _ = apply_k2_per_frame(" in s
+    assert "ensemble_bp_rp(comp_bp_rp, comp_weight_map)" in s
     assert s.count('_calibrated = _band_system != "NONE"') == 1
+
+
+def test_ensemble_colour_is_weighted() -> None:
+    from k2_extinction import ensemble_bp_rp
+
+    assert ensemble_bp_rp({"a": 0.5, "b": 1.5, "c": float("nan")}, {"a": 3.0, "b": 1.0, "c": 5.0}) == 0.75
 
 
 def test_ids_never_via_float() -> None:

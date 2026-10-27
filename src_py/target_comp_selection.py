@@ -161,7 +161,7 @@ def run_target_and_comp_selection(
 
             with _astrofits_fwhm.open(_ms_fits_fwhm, memmap=False) as _hdul_fw:
                 _hdr_fw = _hdul_fw[0].header
-            for _k_fw in ("VY_FWHM", "VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN"):
+            for _k_fw in ("VY_FWHM",):
                 _v_fw = _hdr_fw.get(_k_fw)
                 if _v_fw is None:
                     continue
@@ -336,16 +336,11 @@ def run_target_and_comp_selection(
         cfg=_cfg_p01,
     )
     active_csv = output_dir / "active_targets.csv"
-    try:
-        from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
+    from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
 
-        if "catalog_id" in active.columns:
-            active = active.copy()
-            active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
-    except Exception as exc:  # noqa: BLE001
-        # EXC-0212: T3 -- ProcFrameStore not stored in Streamlit session_state - UI perf cache miss only (EXCEPT-BULK-2 2026-07-08)
-        logging.error('[EXC-0211] active_targets.csv catalog_id normalization fails - float-truncated IDs written to disk: %s', exc)
-        pass
+    if "catalog_id" in active.columns:
+        active = active.copy()
+        active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
     active.to_csv(active_csv, index=False)
     logging.info(f"[TARGET-SELECT] Saved: {active_csv} ({len(active)} targets)")
     _excluded = _photometry_comp.LAST_EXCLUDED_TARGETS
@@ -371,9 +366,8 @@ def run_target_and_comp_selection(
     # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
     ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
     # Normalize Gaia ID to string
-    for _id_col in ("catalog_id", "name"):
-        if _id_col in ms_df.columns:
-            ms_df[_id_col] = _normalize_id_series(ms_df[_id_col])
+    if "catalog_id" in ms_df.columns:
+        ms_df["catalog_id"] = _normalize_id_series(ms_df["catalog_id"])
 
     # -- comparison-star selection - per target --
     all_comp_rows: list[pd.DataFrame] = []
@@ -408,15 +402,6 @@ def run_target_and_comp_selection(
         float(fwhm_night_px) * float(getattr(cfg or AppConfig(), "comp_isolation_fwhm", 3.0) or 3.0),
     )
     _p(f"Comparison-star selection: {len(_proc_store)} per-frame catalogs, {len(active)} targets...")
-
-    try:
-        import streamlit as st  # noqa: PLC0415
-
-        if hasattr(st, "session_state"):
-            st.session_state["proc_frame_store"] = _proc_store
-            logging.debug("[PERF-6] ProcFrameStore stored in st.session_state")
-    except Exception:  # noqa: BLE001
-        pass
 
     _cfg_gaia_targets = _cfg_base
     _gaia_db_targets = str(_cfg_gaia_targets.gaia_db_path or "").strip()
@@ -488,38 +473,28 @@ def run_target_and_comp_selection(
     _cfg_gp = _cfg_base
     _global_pool_df: pd.DataFrame | None = None
     # CONSOLIDATE-01D: global pool is always on (COMP-POOL-01); False branch deleted.
-    try:
-        _global_pool_df = build_global_comp_pool(
-            masterstars_df=ms_df,
-            per_frame_csv_paths=csv_paths,
-            csv_cache=shared_csv_cache,
-            variable_target_catalog_ids=_vt_cid_exclude or frozenset(),
-            safe_bbox=_comp_bbox,
-            chip_fw=int(_fw_chip),
-            chip_fh=int(_fh_chip),
-            chip_interior_margin_px=int(chip_interior_margin_px),
-            max_comp_rms=float(max_comp_rms),
-            cfg=_cfg_gp,
-            flux_col=flux_col,
-            min_frames_frac=float(min_frames_frac),
-            fwhm_px=float(fwhm_px),
-            photometry_dir_for_meta=Path(output_dir),
-            obs_group=Path(variable_targets_csv).resolve().parent.name,
-            masterstar_fits=Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits",
-            field_catalog_csv=Path(variable_targets_csv).resolve().parent / "field_catalog_cone.csv",
-            sat_may_exclude=bool(_sat_may_exclude),
-        )
-        if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
-            _global_pool_df = None
-    except Exception as _gcp_exc:  # noqa: BLE001
-        from invariants_runtime import PopulationEmptiedError  # noqa: PLC0415
-
-        if isinstance(_gcp_exc, PopulationEmptiedError):
-            raise
-        logging.warning(
-            "[GLOBAL COMP POOL] build failed: %s - falling back to per-target masterstars",
-            _gcp_exc,
-        )
+    # COMP-POOL-ONLY-2026-10: no try - a failed pool build stops the run (no ungated fallback).
+    _global_pool_df = build_global_comp_pool(
+        masterstars_df=ms_df,
+        per_frame_csv_paths=csv_paths,
+        csv_cache=shared_csv_cache,
+        variable_target_catalog_ids=_vt_cid_exclude or frozenset(),
+        safe_bbox=_comp_bbox,
+        chip_fw=int(_fw_chip),
+        chip_fh=int(_fh_chip),
+        chip_interior_margin_px=int(chip_interior_margin_px),
+        max_comp_rms=float(max_comp_rms),
+        cfg=_cfg_gp,
+        flux_col=flux_col,
+        min_frames_frac=float(min_frames_frac),
+        fwhm_px=float(fwhm_px),
+        photometry_dir_for_meta=Path(output_dir),
+        obs_group=Path(variable_targets_csv).resolve().parent.name,
+        masterstar_fits=Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits",
+        field_catalog_csv=Path(variable_targets_csv).resolve().parent / "field_catalog_cone.csv",
+        sat_may_exclude=bool(_sat_may_exclude),
+    )
+    if _global_pool_df is None or getattr(_global_pool_df, "empty", True):
         _global_pool_df = None
 
     if _global_pool_df is not None and "catalog_id" in _global_pool_df.columns:
@@ -547,17 +522,14 @@ def run_target_and_comp_selection(
         _comp_id_seen: set[str] = set()
         _comp_source_ids: list[str] = []
         for _pool_df in (ms_df, _global_pool_df):
-            if _pool_df is None or getattr(_pool_df, "empty", True):
+            if _pool_df is None or getattr(_pool_df, "empty", True) or "catalog_id" not in _pool_df.columns:
                 continue
-            for _id_col in ("catalog_id", "name"):
-                if _id_col not in _pool_df.columns:
+            for raw in _pool_df["catalog_id"].dropna().unique():
+                g = normalize_gaia_source_id(raw)
+                if not g or g in _comp_id_seen:
                     continue
-                for raw in _pool_df[_id_col].dropna().unique():
-                    g = normalize_gaia_source_id(raw)
-                    if not g or not g.isdigit() or g in _comp_id_seen:
-                        continue
-                    _comp_id_seen.add(g)
-                    _comp_source_ids.append(g)
+                _comp_id_seen.add(g)
+                _comp_source_ids.append(g)
         _comp_source_ids_n = len(_comp_source_ids)
         if _comp_source_ids and _gaia_db_targets:
             _comp_gaia_prefetch = _batch_enrich_targets_bp_rp_from_gaia_db(
@@ -609,68 +581,57 @@ def run_target_and_comp_selection(
         logging.warning("[COMP-RULES] physical min separation not resolved (%s); using %.1f arcsec",
                         _md_exc, float(min_dist_arcsec))
     for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
-        try:
-            _skip_reason = str(target_row.get("skip_reason") or "").strip()
-            if _skip_reason in FINAL_SKIP_REASONS:
-                _n_oos_skipped += 1
-                continue
-            _i_comp_selection += 1
-            if progress_cb is not None:
-                _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
-                _p(f"Comparison-star selection: target {_i_comp_selection}/{_n_comp_selection}: {_tid}")
-            tr_enriched = _enrich_target_bp_rp_from_gaia_db(
-                target_row,
-                gaia_db_path=_gaia_db_targets,
-                gaia_prefetch=_gaia_batch,
-            )
-            if "bp_rp" in active.columns:
-                active.loc[active_idx, "bp_rp"] = tr_enriched.get("bp_rp", active.loc[active_idx, "bp_rp"])
-            comps = select_comparison_stars_per_target(
-                tr_enriched,
-                ms_df,
-                csv_paths,
-                csv_cache=shared_csv_cache,
-                global_comp_pool_df=_global_pool_df,
-                fwhm_px=fwhm_night_px,
-                fwhm_d3_px=float(fwhm_px),
-                n_comp_min=n_comp_min,
-                # COMP-SMART-2026-10: rank N_RESERVE more candidates as the reserve that
-                # aperture photometry uses to replace suspect comps (split below).
-                n_comp_max=int(n_comp_max),
-                n_reserve=_N_RESERVE,
-                max_comp_rms=max_comp_rms,
-                min_dist_arcsec=min_dist_arcsec,
-                min_frames_frac=min_frames_frac,
-                flux_col=flux_col,
-                chip_fw=_fw_chip,
-                chip_fh=_fh_chip,
-                chip_interior_margin_px=int(chip_interior_margin_px),
-                gaia_db_path=str(_cfg_gaia_targets.gaia_db_path or "").strip() or None,
-                gaia_prefetch=_comp_gaia_prefetch,
-                variable_target_catalog_ids=_vt_cid_exclude,
-                cfg=_cfg_gp,
-                plate_scale_arcsec=_ps_p01,
-                use_pixel_dist=not _wcs_scale_ok,
-                sat_may_exclude=_sat_may_exclude,
-            )
-            if comps is not None and not comps.empty:
-                comps, _resv = _split_comp_reserve(comps)
-                if _resv is not None and not _resv.empty:
-                    all_reserve_rows.append(_resv)
-            if comps is None or comps.empty:
-                targets_without_comps.append(str(tr_enriched.get("catalog_id", "")))
-            else:
-                all_comp_rows.append(comps)
-        except Exception as exc:  # noqa: BLE001
-            # EXC-0215: T3 -- Prefetch coverage stats log after comp selection suppressed (EXCEPT-BULK-2 2026-07-08)
-            logging.warning(
-                "[COMP-SELECT] %s: unexpected error, skipping: %s",
-                str(target_row.get("catalog_id", "?")),
-                exc,
-            )
-            targets_without_comps.append(str(target_row.get("catalog_id", "") or ""))
+        _skip_reason = str(target_row.get("skip_reason") or "").strip()
+        if _skip_reason in FINAL_SKIP_REASONS:
+            _n_oos_skipped += 1
             continue
-
+        _i_comp_selection += 1
+        if progress_cb is not None:
+            _tid = str(target_row.get("vsx_name") or target_row.get("catalog_id", ""))[:48]
+            _p(f"Comparison-star selection: target {_i_comp_selection}/{_n_comp_selection}: {_tid}")
+        tr_enriched = _enrich_target_bp_rp_from_gaia_db(
+            target_row,
+            gaia_db_path=_gaia_db_targets,
+            gaia_prefetch=_gaia_batch,
+        )
+        if "bp_rp" in active.columns:
+            active.loc[active_idx, "bp_rp"] = tr_enriched.get("bp_rp", active.loc[active_idx, "bp_rp"])
+        comps = select_comparison_stars_per_target(
+            tr_enriched,
+            ms_df,
+            csv_paths,
+            csv_cache=shared_csv_cache,
+            global_comp_pool_df=_global_pool_df,
+            fwhm_px=fwhm_night_px,
+            fwhm_d3_px=float(fwhm_px),
+            n_comp_min=n_comp_min,
+            # COMP-SMART-2026-10: rank N_RESERVE more candidates as the reserve that
+            # aperture photometry uses to replace suspect comps (split below).
+            n_comp_max=int(n_comp_max),
+            n_reserve=_N_RESERVE,
+            max_comp_rms=max_comp_rms,
+            min_dist_arcsec=min_dist_arcsec,
+            min_frames_frac=min_frames_frac,
+            flux_col=flux_col,
+            chip_fw=_fw_chip,
+            chip_fh=_fh_chip,
+            chip_interior_margin_px=int(chip_interior_margin_px),
+            gaia_db_path=str(_cfg_gaia_targets.gaia_db_path or "").strip() or None,
+            gaia_prefetch=_comp_gaia_prefetch,
+            variable_target_catalog_ids=_vt_cid_exclude,
+            cfg=_cfg_gp,
+            plate_scale_arcsec=_ps_p01,
+            use_pixel_dist=not _wcs_scale_ok,
+            sat_may_exclude=_sat_may_exclude,
+        )
+        if comps is not None and not comps.empty:
+            comps, _resv = _split_comp_reserve(comps)
+            if _resv is not None and not _resv.empty:
+                all_reserve_rows.append(_resv)
+        if comps is None or comps.empty:
+            targets_without_comps.append(str(tr_enriched.get("catalog_id", "")))
+        else:
+            all_comp_rows.append(comps)
     if _n_oos_skipped:
         logging.info(
             "Comparison-star selection: %d targets with a final skip (VSX type, S/N, depth) - no comp selection",
@@ -946,25 +907,6 @@ def run_target_and_comp_selection(
         interior_bbox=_box_sus,
         csv_cache=shared_csv_cache,
     )
-    # Best-effort: repair Gaia IDs in suspected_variables.csv via RA/DEC + local Gaia DB.
-    try:
-        from repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db  # noqa: PLC0415
-
-        _gdb = str(_cfg_base.gaia_db_path or "").strip()
-        if _gdb:
-            gdbp = Path(_gdb)
-            if gdbp.is_file() and suspected_csv.is_file():
-                _ = repair_csv_catalog_ids_from_gaia_db(
-                    csv_path=suspected_csv,
-                    gaia_db_path=gdbp,
-                    id_col="catalog_id",
-                    backup=False,
-                    max_sep_arcsec=10.0,
-                    log_fn=lambda _m: None,
-                )
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0219] suspected_variables.csv catalog_id auto-repair from Gaia DB fails silently: %s', exc)
-        pass
 
     _p(f"Target and comparison-star selection done: {int(len(active))} targets, {int(len(comp_df))} target-comparison pairs")
     return {

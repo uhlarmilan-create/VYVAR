@@ -143,6 +143,7 @@ def night_sigma_sys_from_comps(
     annulus_outer_fwhm: float,
     max_photon_mag: float = 0.01,
     min_comps: int = 5,
+    scint_mag_by_frame: Any = None,
 ) -> dict[str, Any]:
     """SIGMA-SYS-NIGHT-2026-10 (Milan 2026-10-12): the night's systematic floor measured on the
     comparison stars instead of a fixed config constant.
@@ -155,11 +156,19 @@ def night_sigma_sys_from_comps(
     (bright comps, where a systematic term is measurable), never negative.
     Everett & Howell (2001): 2-5 mmag typical. Returns {"sigma_sys_mag", "n_comps", ...};
     sigma_sys_mag is NaN when fewer than ``min_comps`` comps qualify.
+
+    SIGMA-SYS-MODEL-2026-10 (Milan 2026-10-26, D3): the predicted variance e^2 holds every known
+    term once - the comp's photon + sky + read noise, its scintillation (``scint_mag_by_frame``,
+    the same per-epoch value the LC error adds) and the noise of its reference, the mean of the
+    other n comps: (sum over the others of photon^2 + scintillation^2) / n^2. The floor is what
+    is left above that model, so the LC error, which adds scintillation and the ensemble error
+    itself, does not count them twice (Burdanov et al. 2014; Everett & Howell 2001).
     """
     import numpy as np
 
     ids = [c for c in flux_by_cid if np.isfinite(np.asarray(flux_by_cid[c], float)).sum() >= 10]
-    out: dict[str, Any] = {"sigma_sys_mag": float("nan"), "n_comps": 0, "method": "comps LOO p2p - photon"}
+    out: dict[str, Any] = {"sigma_sys_mag": float("nan"), "n_comps": 0,
+                           "method": "comps LOO p2p - (photon + scintillation + reference)"}
     if len(ids) < int(min_comps):
         out["reason"] = f"only {len(ids)} comps with >= 10 frames"
         return out
@@ -177,21 +186,30 @@ def night_sigma_sys_from_comps(
         area = math.pi * r_ap**2
         r_in = np.maximum(float(annulus_inner_fwhm) * fw, r_ap)
         n_sky = np.maximum(math.pi * ((float(annulus_outer_fwhm) * fw) ** 2 - r_in**2), 1.0)
+        var = F / g + area * (1.0 + area / n_sky) * (np.clip(S, 0, None) / g + (rn / g) ** 2)
+        E2 = (1.0857362 * np.sqrt(var) / F) ** 2  # photon + sky + read noise per comp and frame [mag^2]
+        E2 = np.where(np.isfinite(M) & (F > 0), E2, np.nan)
+    sc = np.zeros(F.shape[1]) if scint_mag_by_frame is None else np.nan_to_num(np.asarray(scint_mag_by_frame, float))
+    sc2 = sc * sc
+    tot_var = np.nansum(E2 + sc2, axis=0)  # every comp of the frame: photon + scintillation
     excess, ph = [], []
     for i in range(len(ids)):
         m = M[i]
-        others = (tot - np.nan_to_num(m)) / np.maximum(cnt - np.isfinite(m), 1)
+        n_oth = np.maximum(cnt - np.isfinite(m), 1)
+        others = (tot - np.nan_to_num(m)) / n_oth
         r = m - others
-        r = r[np.isfinite(r)]
-        if r.size < 10:
+        ok = np.isfinite(r)
+        if int(ok.sum()) < 10:
             continue
-        d = np.diff(r)
+        d = np.diff(r[ok])
         s = 1.4826 * float(np.median(np.abs(d - np.median(d)))) / math.sqrt(2.0)
-        var = F[i] / g + area * (1.0 + area / n_sky) * (np.clip(S[i], 0, None) / g + (rn / g) ** 2)
-        e = 1.0857362 * np.sqrt(var) / F[i]
-        e_med = float(np.nanmedian(e[np.isfinite(e) & (F[i] > 0)])) if np.isfinite(e).any() else float("nan")
-        if math.isfinite(s) and math.isfinite(e_med):
-            excess.append(s * s - e_med * e_med)
+        own = np.nan_to_num(E2[i])
+        ref_var = (tot_var - own - sc2) / (n_oth * n_oth)
+        pred = E2[i] + sc2 + ref_var
+        e_med = float(np.sqrt(np.nanmedian(E2[i][ok]))) if np.isfinite(E2[i][ok]).any() else float("nan")
+        pred_med = float(np.nanmedian(pred[ok])) if np.isfinite(pred[ok]).any() else float("nan")
+        if math.isfinite(s) and math.isfinite(e_med) and math.isfinite(pred_med):
+            excess.append(s * s - pred_med)
             ph.append(e_med)
     ph_a, ex_a = np.asarray(ph), np.asarray(excess)
     sel = ph_a < float(max_photon_mag)

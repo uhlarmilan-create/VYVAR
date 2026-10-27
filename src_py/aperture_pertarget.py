@@ -11,14 +11,16 @@ vs k" is computed - each comp against the flux sum of the other comps (leave-one
 1.4826 x MAD over the night, median over comps. The target itself never takes part (its
 variability must not steer the aperture); the check star stays an independent test.
 
-AP-NIGHT-K-2026-10 (Milan 2026-10-24): ONE k per night and observation group, from the
-median over targets of the normalised curves (``apply_night_k``). A single target's curve
-is decided by noise (one comp more or less changed its k for ~half the targets on 537 /
-MN Boo), the night median is not. The comp scatter over the whole night includes the slow
-drifts (seeing, centring, pixel phase) that grow at small apertures on undersampled
-images - the CCD-equation S/N optimum (~0.67 FWHM, Howell 1989, Naylor 1998) ignores them
-and was rejected (COMP-SELECT-2026-10, AP-NIGHT-K). One factor x FWHM for every star is the
-common practice (AAVSO VPhot 1.5, AstroImageJ 1.7, HiPERCAM 1.5-2.5). The Howell (1989)
+AP-BRIGHT-K-2026-10 (Milan 2026-10-27, replaces the one-k-per-night rule AP-NIGHT-K of 2026-10-24):
+k follows the target's brightness. A single target's own comp curve is decided by noise (one comp
+more or less changed its k for ~half the targets on 537 / MN Boo), so k is not taken from it but
+from the constant field stars of the target's brightness (``field_k_by_brightness``: LOO scatter at
+each k, hundreds of stars per magnitude group). One k per night chose 1.5 FWHM on Brno 534 r from
+the scatter of the bright comps and made the faint targets 20-60 % noisier. The scatter over the
+whole night includes the slow drifts (seeing, centring, pixel phase) that grow at small apertures on
+undersampled images - the CCD-equation S/N optimum (~0.67 FWHM, Howell 1989, Naylor 1998) ignores
+them; bright stars therefore keep a larger k, faint stars a smaller one (Irwin / MEarth, HATNet: apertures
+by magnitude). The Howell (1989)
 predicted S/N is kept as a diagnostic.
 """
 from __future__ import annotations
@@ -48,12 +50,14 @@ FALLBACK_F_STAR: float = 0.70
 # Flat-top tolerance: choose largest f within this fraction of max S/N.
 SNR_FLAT_FRAC: float = 0.01
 
-# AP-NIGHT-K-2026-10: k within this fraction of the night curve's minimum count as equal and
-# the larger k is taken (less sensitive to seeing / centring). 0.03 = the bootstrap standard
-# error (over targets) of the night median curve measured on 537 and MN Boo 538 (0.02-0.03).
-NIGHT_K_TIE_FRAC: float = 0.03
-# a k enters the night curve only when this fraction of the targets may use it (blend limit)
-NIGHT_K_MIN_TARGET_FRAC: float = 0.75
+# AP-BRIGHT-K-2026-10 (Milan 2026-10-27): the aperture factor k follows the target's brightness.
+# For constant field stars the comparison-free LOO scatter is measured at every k; stars are grouped
+# by instrumental magnitude (BRIGHT_K_BIN_MAG bins merged until BRIGHT_K_MIN_STARS stars), and each
+# group takes the largest k whose median scatter ratio is within one bootstrap standard error of the
+# group minimum (larger k: less sensitive to seeing, centring and pixel phase - AP-NIGHT-K study).
+BRIGHT_K_BIN_MAG: float = 0.5
+BRIGHT_K_MIN_STARS: int = 30
+BRIGHT_K_BOOT: int = 200
 
 MODE_PER_TARGET = "per_target"
 
@@ -156,16 +160,17 @@ class FrameImages:
     off: np.ndarray | None
 
 
-def prepare_frame_images(image: np.ndarray, covered: np.ndarray | None = None) -> FrameImages:
+def prepare_frame_images(image: np.ndarray, fwhm_px: float, covered: np.ndarray | None = None) -> FrameImages:
+    """``sky``: the frame for annulus medians - NaN off the footprint and on detected sources (SKY-SRC-MASK-2026-10)."""
+    from sky_estimation import sky_image  # noqa: PLC0415
+
     img = np.asarray(image, dtype=float)
     if bool(np.isfinite(img).all()):
         filled = img
     else:
         filled = np.nan_to_num(img, nan=float(np.nanmedian(img)))
-    if covered is None:
-        return FrameImages(img=img, filled=filled, sky=img, off=None)
-    off = ~np.asarray(covered, dtype=bool)
-    return FrameImages(img=img, filled=filled, sky=np.where(off, np.nan, img), off=off)
+    off = None if covered is None else ~np.asarray(covered, dtype=bool)
+    return FrameImages(img=img, filled=filled, sky=sky_image(img, fwhm_px, covered=covered), off=off)
 
 
 def measure_flux_on_f_grid(
@@ -181,15 +186,15 @@ def measure_flux_on_f_grid(
 ) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray], np.ndarray]:
     """Sky-subtracted exact aperture fluxes for every k in ``f_grid`` (r = k x FWHM).
 
-    One annulus per star (plain median of its pixels, no clipping) placed outside the
-    largest aperture; all radii in a single ``aperture_photometry`` call.
+    One annulus per star (``sky_estimation.annulus_sky_medians``: plain median of its sky pixels, no
+    clipping) placed outside the largest aperture; all radii in a single ``aperture_photometry`` call.
 
     AP-FOOTPRINT-2026-10: ``covered`` (``frame_footprint.aligned_footprint``) - the sky median uses
     only annulus pixels with data of the aligned frame (not the aligner's constant fill); the third
     return value marks stars whose largest aperture reaches the fill or whose annulus keeps less than
     half of its pixels (the light curve drops them as ``edge_fail``).
     """
-    from photutils.aperture import CircularAnnulus, CircularAperture  # noqa: PLC0415
+    from photutils.aperture import CircularAperture  # noqa: PLC0415
     from photutils.aperture import aperture_photometry as _aphot  # noqa: PLC0415
 
     from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
@@ -202,7 +207,7 @@ def measure_flux_on_f_grid(
     edge = np.zeros(n, dtype=bool)
     if n == 0 or not ks:
         return out_f, out_s, edge
-    fr = prepared if prepared is not None else prepare_frame_images(image, covered)
+    fr = prepared if prepared is not None else prepare_frame_images(image, float(fwhm_px), covered)
     _r, r_in, r_out = resolve_aperture_geometry(
         f=max(ks), fwhm_px=float(fwhm_px),
         annulus_inner_fwhm=float(annulus_inner_fwhm), annulus_outer_fwhm=float(annulus_outer_fwhm),
@@ -215,12 +220,9 @@ def measure_flux_on_f_grid(
         from frame_footprint import off_footprint  # noqa: PLC0415
 
         edge[ok] = off_footprint(fr.off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
-    sky = np.full(int(ok.sum()), np.nan)
-    for i, m in enumerate(CircularAnnulus(p, r_in=r_in, r_out=r_out).to_mask(method="center")):
-        v = np.asarray(m.get_values(fr.sky), dtype=float)
-        v = v[np.isfinite(v)]
-        if v.size:
-            sky[i] = float(np.median(v))
+    from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+
+    sky = annulus_sky_medians(fr.sky, p, r_in, r_out)
     aps = [CircularAperture(p, r=max(0.5, k * float(fwhm_px))) for k in ks]
     tbl = _aphot(fr.filled, aps, method="exact")
     for j, (k, ap) in enumerate(zip(ks, aps)):
@@ -228,6 +230,11 @@ def measure_flux_on_f_grid(
         out_f[k][ok] = sums - sky * float(ap.area)
         out_s[k][ok] = sky
     return out_f, out_s, edge
+
+
+def flux_k_column(k: float) -> str:
+    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``)."""
+    return f"flux_k{int(round(float(k) * 100))}"
 
 
 def blend_k_column(k: float) -> str:
@@ -277,7 +284,7 @@ class PerTargetChoice:
     growth_F_by_f: dict[str, float] = field(default_factory=dict)
     sky_pp_by_f: dict[str, float] = field(default_factory=dict)
     f_allowed: list[float] | None = None  # BLEND-K-2026-10: k where all comps <= 1 % neighbour light
-    f_own: float = float("nan")  # AP-NIGHT-K-2026-10: this target's own curve minimum (diagnostic)
+    f_own: float = float("nan")  # this target's own comp-curve choice before AP-BRIGHT-K (diagnostic)
 
 
 @dataclass
@@ -353,15 +360,11 @@ def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
     proc = Path(c["frames_dir"]) / f"proc_{stem}.csv"
     if not proc.is_file():
         return None
-    try:
-        df = pd.read_csv(
-            proc,
-            usecols=lambda col: col in {"catalog_id", "x", "y"},
-            low_memory=False,
-        )
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[APERTURE-DYNAMIC] proc read fail %s: %s", proc.name, exc)
-        return None
+    from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+    # ids as text (one blank id must not turn the column into float64 and drop the frame, G06-04);
+    # an unreadable proc file is an error, not a silently missing frame
+    df = read_proc_csv(proc, usecols=lambda col: col in {"catalog_id", "x", "y"}, low_memory=False)
     if "catalog_id" not in df.columns:
         return None
     df = df[df["catalog_id"].astype(str).isin(c["want"])]
@@ -397,7 +400,7 @@ def _grid_measure_frame(fp: Path) -> tuple[Any, ...] | None:
     # AP-FOOTPRINT-2026-10: only pixels the aligned frame covers (no transform: not resampled).
     has_tr = has_alignment_transform(hdr_fp)
     covered = aligned_footprint(hdr_fp, img.shape) if has_tr else None
-    prepared = prepare_frame_images(img, covered)
+    prepared = prepare_frame_images(img, float(fwhm_frame), covered)
     for _s in sorted(set(np.round(_sc, 4))):
         _m = _sc == _s
         _fl, _sk, _ed = measure_flux_on_f_grid(
@@ -435,7 +438,7 @@ def measure_night_grid(
     max_frames: int | None = None,
     xy_by_cid: Mapping[str, tuple[float, float]] | None = None,
     scale_by_cid: Mapping[str, float] | None = None,
-    workers: int = 1,
+    workers: int | None = None,
 ) -> ApertureGridNight:
     """Measure targets, comps and check-star candidates on the k grid; r = k x FWHM_frame.
 
@@ -470,22 +473,14 @@ def measure_night_grid(
         "xy_by_cid": {str(k): (float(v[0]), float(v[1])) for k, v in (xy_by_cid or {}).items()},
         "scale_by_cid": night.scale_by_cid,
     }
-    nw = max(1, min(int(workers or 1), len(fits_files)))
-    if nw > 1:
-        import multiprocessing  # noqa: PLC0415
-        from concurrent.futures import ProcessPoolExecutor  # noqa: PLC0415
+    from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers  # noqa: PLC0415
 
-        with ProcessPoolExecutor(
-            max_workers=nw,
-            mp_context=multiprocessing.get_context("spawn"),
-            initializer=_grid_worker_init,
-            initargs=(ctx,),
-        ) as ex:
-            results = list(ex.map(_grid_measure_frame, fits_files, chunksize=max(1, len(fits_files) // (4 * nw))))
+    if workers is None:
+        nw = stage_workers(len(fits_files), frame_bytes_of_fits(fits_files[0]), stage="aperture grid") if fits_files else 1
     else:
-        _grid_worker_init(ctx)
-        results = [_grid_measure_frame(fp) for fp in fits_files]
-        _GRID_CTX.clear()
+        nw = max(1, min(int(workers), len(fits_files)))
+    results = list(map_frames(_grid_measure_frame, fits_files, workers=nw, initializer=_grid_worker_init, ctx=ctx,
+                              stage="aperture grid"))
     for res in results:
         if res is None:
             continue
@@ -681,53 +676,173 @@ def choose_f_for_target(
     )
 
 
-def apply_night_k(
+@dataclass
+class BrightnessK:
+    """Aperture factor by instrumental magnitude (AP-BRIGHT-K-2026-10)."""
+
+    mag_lo: list[float]
+    mag_hi: list[float]
+    k: list[float]
+    n_stars: list[int]
+    curves: list[dict[str, float]]
+    se: list[float]
+
+    def k_for(self, mag: float) -> float | None:
+        """k of the group whose magnitude range holds ``mag`` (outside the range: the end group)."""
+        if not self.k or not math.isfinite(float(mag)):
+            return None
+        for lo, hi, k in zip(self.mag_lo, self.mag_hi, self.k, strict=False):
+            if lo <= float(mag) < hi:
+                return float(k)
+        return float(self.k[0]) if float(mag) < self.mag_lo[0] else float(self.k[-1])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "groups": [
+                {"mag_lo": round(lo, 3), "mag_hi": round(hi, 3), "k": k, "n_stars": n, "se": round(se, 4),
+                 "curve": {kk: round(v, 4) for kk, v in c.items()}}
+                for lo, hi, k, n, c, se in zip(self.mag_lo, self.mag_hi, self.k, self.n_stars, self.curves, self.se,
+                                              strict=False)
+            ]
+        }
+
+
+def _truthy(series: pd.Series) -> np.ndarray:
+    return series.astype(str).str.strip().str.lower().isin(["true", "1", "1.0", "yes"]).to_numpy()
+
+
+def field_k_by_brightness(proc_csv_paths: Sequence[Path], f_grid: Sequence[float]) -> BrightnessK | None:
+    """AP-BRIGHT-K-2026-10: k per instrumental-magnitude group from constant field stars.
+
+    Constant field stars: never a known variable (VSX / Gaia DR3 variability) or saturated on any frame.
+    Scatter at each k: the LOO magnitude RMS of ``comp_rms_loo`` (each star on its night level against the
+    median of all other stars in the frame; MAD sigma, no clipping) on the proc columns ``flux_kNNN``.
+    Magnitude: -2.5 log10 of the star's night median flux at the smallest k. None without enough stars.
+    """
+    from comp_rms_loo import compute_loo_mag_rms_map  # noqa: PLC0415
+    from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+    ks = sorted(float(k) for k in f_grid)
+    cols = [flux_k_column(k) for k in ks]
+    cache: dict[str, pd.DataFrame] = {}
+    bad: set[str] = set()
+    seen: set[str] = set()
+    for p in proc_csv_paths:
+        try:
+            df = read_proc_csv(p, low_memory=False, dtype={"catalog_id": str})
+        except (OSError, ValueError) as exc:
+            LOGGER.warning("[APERTURE-BRIGHT-K] skip unreadable %s: %s", Path(p).name, exc)
+            continue
+        if "catalog_id" not in df.columns or not all(c in df.columns for c in cols):
+            continue
+        cid = df["catalog_id"].astype(str).str.strip()
+        flag = np.zeros(len(df), dtype=bool)
+        for f in ("vsx_known_variable", "gaia_dr3_variable_catalog", "likely_saturated", "is_saturated"):
+            if f in df.columns:
+                flag |= _truthy(df[f])
+        bad.update(cid[flag].tolist())
+        seen.update(cid.tolist())
+        cache[str(p)] = pd.DataFrame({"catalog_id": cid, **{c: pd.to_numeric(df[c], errors="coerce") for c in cols}})
+    paths = [Path(p) for p in cache]
+    ids = {c for c in seen - bad if c}
+    if len(ids) < BRIGHT_K_MIN_STARS or not paths:
+        return None
+    rms = {k: compute_loo_mag_rms_map(ids, paths, cache, flux_col=flux_k_column(k), strict_flux_col=True)[0] for k in ks}
+    common = sorted(set.intersection(*(set(m) for m in rms.values())))
+    if len(common) < BRIGHT_K_MIN_STARS:
+        return None
+    allf = pd.concat([d[["catalog_id", cols[0]]] for d in cache.values()], ignore_index=True)
+    med_f = allf[allf[cols[0]] > 0].groupby("catalog_id")[cols[0]].median()
+    mag = {c: float(-2.5 * np.log10(med_f[c])) for c in common if c in med_f.index}
+    stars = sorted((m, c) for c, m in mag.items() if math.isfinite(m))
+    ratios = []
+    for _m, c in stars:
+        v = np.array([rms[k][c] for k in ks], dtype=float)
+        mn = float(np.min(v))
+        ratios.append(v / mn if mn > 0 else np.full(len(ks), np.nan))
+    R = np.array(ratios)
+    M = np.array([m for m, _c in stars])
+    # groups: BRIGHT_K_BIN_MAG bins from bright to faint, merged until BRIGHT_K_MIN_STARS stars
+    b = np.floor((M - M.min()) / BRIGHT_K_BIN_MAG).astype(int)
+    groups: list[np.ndarray] = []
+    cur: list[np.ndarray] = []
+    for v in np.unique(b):
+        cur.append(np.flatnonzero(b == v))
+        if sum(len(x) for x in cur) >= BRIGHT_K_MIN_STARS:
+            groups.append(np.concatenate(cur))
+            cur = []
+    if cur:
+        if not groups:
+            return None
+        groups[-1] = np.concatenate([groups[-1]] + cur)
+    rng = np.random.default_rng(0)
+    out = BrightnessK([], [], [], [], [], [])
+    for g in groups:
+        r = R[g]
+        r = r[np.all(np.isfinite(r), axis=1)]
+        if len(r) < BRIGHT_K_MIN_STARS:
+            continue
+        curve = np.median(r, axis=0)
+        j = int(np.argmin(curve))
+        boot = [np.median(r[rng.integers(0, len(r), len(r)), j]) for _ in range(BRIGHT_K_BOOT)]
+        se = float(np.std(boot))
+        k_g = max(k for k, v in zip(ks, curve, strict=False) if v <= curve[j] + se)
+        out.mag_lo.append(float(M[g].min()))
+        out.mag_hi.append(float(M[g].max()))
+        out.k.append(float(k_g))
+        out.n_stars.append(int(len(r)))
+        out.curves.append({f"{k:.4g}": float(v) for k, v in zip(ks, curve, strict=False)})
+        out.se.append(se)
+    if not out.k:
+        return None
+    # contiguous ranges: each group runs up to the next group's first magnitude
+    for i in range(len(out.k) - 1):
+        out.mag_hi[i] = out.mag_lo[i + 1]
+    out.mag_hi[-1] = float("inf")
+    out.mag_lo[0] = float("-inf")
+    return out
+
+
+def target_inst_mag(night: "ApertureGridNight", cid: str) -> float:
+    """-2.5 log10 of the target's night median flux at the smallest k of the grid (NaN if none)."""
+    k0 = min(float(k) for k in night.f_grid)
+    v = [fr[cid][k0] for fr in night.frames.values() if cid in fr and k0 in fr[cid]]
+    v = [x for x in v if math.isfinite(float(x)) and float(x) > 0]
+    return float(-2.5 * np.log10(np.median(v))) if v else float("nan")
+
+
+def apply_brightness_k(
     choices: Mapping[str, PerTargetChoice],
     f_grid: Sequence[float],
-    *,
-    tie_frac: float = NIGHT_K_TIE_FRAC,
-    min_target_frac: float = NIGHT_K_MIN_TARGET_FRAC,
+    target_mag: Mapping[str, float],
+    bk: BrightnessK | None,
 ) -> dict[str, Any]:
-    """AP-NIGHT-K-2026-10: one k for every target of the group (changes ``choices`` in place).
+    """AP-BRIGHT-K-2026-10: each target gets the k of its brightness group (changes ``choices`` in place).
 
-    Night curve: for each k the median over targets of scatter(k) / min_k scatter, using the
-    targets with a finite comp scatter at k inside their blend limit; a k enters only when at
-    least ``min_target_frac`` of those targets may use it. k_night = the largest k within
-    ``tie_frac`` of the curve's minimum. Each target then gets the largest k it may use that
-    is <= k_night (else its smallest allowed k), targets without comp scatter included, so
-    target, comps and check star keep one enclosed-light fraction across the group.
-    No target with a curve -> nothing changes (the per-target fallbacks stay).
+    Blend limit: the largest k the target may use that is <= its group k, else its smallest allowed k.
+    A target without a magnitude gets the smallest allowed k (the faint-star choice). Target, its comps and
+    its check star are measured with that k (one enclosed-light fraction per light curve).
     """
     grid = sorted(float(k) for k in f_grid)
-    rows: list[dict[float, float]] = []
-    for c in choices.values():
-        al = None if c.f_allowed is None else {round(float(k), 6) for k in c.f_allowed}
-        sc = {float(k): float(v) for k, v in c.p2p_by_f.items()
-              if math.isfinite(float(v)) and float(v) > 0 and (al is None or round(float(k), 6) in al)}
-        if sc:
-            mn = min(sc.values())
-            rows.append({k: v / mn for k, v in sc.items()})
-    info: dict[str, Any] = {"k_night": None, "curve": {}, "n_targets_curve": len(rows), "tie_frac": float(tie_frac)}
-    if not rows:
-        return info
-    need = max(1.0, float(min_target_frac) * len(rows))
-    curve = {k: float(np.median([r[k] for r in rows if k in r])) for k in grid if sum(k in r for r in rows) >= need}
-    if not curve:
-        return info
-    best = min(curve.values())
-    k_night = max(k for k, v in curve.items() if v <= best * (1.0 + float(tie_frac)))
-    info.update(k_night=float(k_night), curve={f"{k:.4g}": v for k, v in curve.items()})
-    for c in choices.values():
+    info: dict[str, Any] = {"brightness_k": bk.to_dict() if bk else None, "k_by_target": {}}
+    for cid, c in choices.items():
         al = sorted(float(k) for k in (c.f_allowed if c.f_allowed else grid))
-        below = [k for k in al if k <= k_night + 1e-9]
-        k_t = max(below) if below else min(al)
+        m = float(target_mag.get(cid, float("nan")))
+        k_want = bk.k_for(m) if bk else None
+        if k_want is None:
+            k_t, why = min(al), "no brightness group - smallest k"
+        else:
+            below = [k for k in al if k <= k_want + 1e-9]
+            k_t = max(below) if below else min(al)
+            why = "brightness_k" + ("" if k_t == k_want else "; blend limit below the group k")
         c.f_own = float(c.f_star)
         scale = c.r_ap_px / c.f_star if c.f_star > 0 else float("nan")  # FWHM x PSF-LOCAL scale
         c.f_star = float(k_t)
         c.r_ap_px = float(k_t) * scale
         c.f_edge = f_star_is_grid_edge(float(k_t), al)
         c.snr_max = float(c.snr_by_f.get(f"{k_t:.4g}", float("nan")))
-        c.reason = "night_k_comp_scatter" + ("" if k_t == k_night else "; blend limit below the night k")
+        c.reason = why
+        info["k_by_target"][cid] = {"inst_mag": round(m, 3) if math.isfinite(m) else None, "k": float(k_t)}
     return info
 
 
@@ -828,7 +943,7 @@ def write_per_target_choices(
     elapsed_s: float,
     gain: float | None = None,
     read_noise: float | None = None,
-    night_k: Mapping[str, Any] | None = None,
+    brightness_k: Mapping[str, Any] | None = None,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -836,8 +951,8 @@ def write_per_target_choices(
     payload = {
         "policy": "APERTURE-K-2026-10",
         "mode": MODE_PER_TARGET,
-        "criterion": "night_k_comp_scatter",
-        "night_k": dict(night_k) if night_k else None,
+        "criterion": "brightness_k_field_scatter",
+        "brightness_k": dict(brightness_k) if brightness_k else None,
         "fallback_f_star": float(FALLBACK_F_STAR),
         "snr_flat_frac": float(SNR_FLAT_FRAC),
         "f_grid": [float(f) for f in f_grid],
@@ -877,16 +992,21 @@ __all__ = [
     "DEFAULT_APERTURE_F_GRID",
     "FALLBACK_F_STAR",
     "MODE_PER_TARGET",
-    "NIGHT_K_MIN_TARGET_FRAC",
-    "NIGHT_K_TIE_FRAC",
+    "BRIGHT_K_BIN_MAG",
+    "BRIGHT_K_BOOT",
+    "BRIGHT_K_MIN_STARS",
+    "BrightnessK",
     "SNR_FLAT_FRAC",
     "ApertureGridNight",
     "PerTargetChoice",
     "apply_grid_fluxes_to_frames",
     "choose_f_for_target",
     "allowed_f_from_comp_blend",
-    "apply_night_k",
+    "apply_brightness_k",
+    "field_k_by_brightness",
+    "target_inst_mag",
     "blend_k_column",
+    "flux_k_column",
     "f_star_is_grid_edge",
     "flux_to_mag",
     "frame_stem_from_source",

@@ -206,7 +206,6 @@ from pipeline_calibrate import (
     _sync_obs_calibration_state_with_retry,
     apply_perf10_dao_qc_to_obs_files,
     calibrate_lights_to_calibrated,
-    estimate_archive_memory_profile,
     norm_fits_path_key,
     run_draft_ram_calibration_qc_to_obs_files,
     run_osc_channel_extraction_for_archive,

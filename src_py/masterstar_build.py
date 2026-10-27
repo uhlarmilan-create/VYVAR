@@ -1064,7 +1064,7 @@ def generate_masterstar_and_catalog(
     _vyvar_df_to_csv(df_out, csv_path)
     try:
         # Critical: keep Gaia IDs as strings (avoid float/scientific precision loss).
-        df_final = pd.read_csv(csv_path, low_memory=False, dtype={"catalog_id": str, "name": str})
+        df_final = read_vyvar_csv(csv_path, low_memory=False)
         # Preserve DAO pass provenance through the CSV round-trip.
         for _prov_col in ("vy_dao_pass", "ambiguous_owner"):
             if _prov_col not in df_out.columns:
@@ -1181,7 +1181,7 @@ def generate_masterstar_and_catalog(
             True,
             int(len(df_final)),
         )
-        _cone_df_pre = read_vyvar_csv(_cone_gaia_pre, low_memory=False, dtype={"catalog_id": str})
+        _cone_df_pre = read_vyvar_csv(_cone_gaia_pre, low_memory=False)
         _nax1_pre = int(hdr.get("NAXIS1") or 0)
         _nax2_pre = int(hdr.get("NAXIS2") or 0)
         with warnings.catch_warnings():
@@ -1254,7 +1254,7 @@ def generate_masterstar_and_catalog(
             raise RuntimeError("MASTERSTAR Gaia-complete enrich: missing field_catalog_cone.csv")
         if not _has_valid_wcs(hdr):
             raise RuntimeError("MASTERSTAR Gaia-complete enrich: MASTERSTAR WCS missing/invalid")
-        _cone_df = read_vyvar_csv(_cone_gaia, low_memory=False, dtype={"catalog_id": str})
+        _cone_df = read_vyvar_csv(_cone_gaia, low_memory=False)
         _nax1_g = int(hdr.get("NAXIS1") or 0)
         _nax2_g = int(hdr.get("NAXIS2") or 0)
         with warnings.catch_warnings():
@@ -1273,7 +1273,7 @@ def generate_masterstar_and_catalog(
         )
         with fits.open(masterstar_fits, memmap=False) as _hg:
             _raw_g = np.asarray(_hg[0].data, dtype=np.float32)
-        _, _med_g, _ = plain_mean_med_std(_raw_g, sigma=3.0, maxiters=3)
+        _, _med_g, _ = plain_mean_med_std(_raw_g)
         _data0_g = np.nan_to_num(
             (_raw_g - _med_g).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0
         )
@@ -1319,78 +1319,59 @@ def generate_masterstar_and_catalog(
         if _n_bp_miss > 0:
             log_event(f"masterstars bp_rp fallback: {_n_bp_fill}/{_n_bp_miss} filled from Gaia DB")
         if _gdb_fill:
-            try:
-                from dao_reconcile import (  # noqa: PLC0415
-                    annotate_dao_only_magnitude_classes,
-                    compute_gaia_dao_reconcile,
-                    format_dao_only_census_log,
-                )
+            from dao_reconcile import (  # noqa: PLC0415
+                annotate_dao_only_magnitude_classes,
+                compute_gaia_dao_reconcile,
+                format_dao_only_census_log,
+            )
 
-                _cone_df_cls = None
-                _cone_csv_cls = Path(platesolve_dir) / "field_catalog_cone.csv"
-                if _cone_csv_cls.is_file():
-                    _cone_df_cls = read_vyvar_csv(_cone_csv_cls, low_memory=False, dtype={"catalog_id": str})
-                _fwhm_cls = float(det_meta.get("dao_fwhm_px") or 0.0)
-                if not (_fwhm_cls > 0.0):
-                    _fwhm_cls = float(header_core_fwhm_px(hdr) or 3.5)
-                _noise_cls = det_meta.get("dao_flux_noise_adu")
-                _nax1_cls = int(hdr.get("NAXIS1") or 0)
-                _nax2_cls = int(hdr.get("NAXIS2") or 0)
-                _wcs_cls = None
-                _plate_cls = None
-                if _has_valid_wcs(hdr) and _nax1_cls > 0 and _nax2_cls > 0:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", FITSFixedWarning)
-                        _wcs_cls = WCS(hdr)
-                    try:
-                        from astropy.wcs.utils import proj_plane_pixel_scales
+            _cone_df_cls = None
+            _cone_csv_cls = Path(platesolve_dir) / "field_catalog_cone.csv"
+            if _cone_csv_cls.is_file():
+                _cone_df_cls = read_vyvar_csv(_cone_csv_cls, low_memory=False)
+            _fwhm_cls = float(det_meta.get("dao_fwhm_px") or 0.0)
+            if not (_fwhm_cls > 0.0):
+                _fwhm_cls = float(header_core_fwhm_px(hdr) or 3.5)
+            _noise_cls = det_meta.get("dao_flux_noise_adu")
+            _nax1_cls = int(hdr.get("NAXIS1") or 0)
+            _nax2_cls = int(hdr.get("NAXIS2") or 0)
+            _wcs_cls = None
+            _plate_cls = None
+            if _has_valid_wcs(hdr) and _nax1_cls > 0 and _nax2_cls > 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", FITSFixedWarning)
+                    _wcs_cls = WCS(hdr)
+                from astropy.wcs.utils import proj_plane_pixel_scales
 
-                        _plate_cls = float(np.mean(proj_plane_pixel_scales(_wcs_cls) * 3600.0))
-                    except Exception:  # noqa: BLE001
-                        pass
-                if _wcs_cls is not None:
-                    _recon_ms = compute_gaia_dao_reconcile(
-                        df_final,
-                        frame_depth=det_meta.get("frame_depth"),
-                        gaia_db_path=_gdb_fill,
-                        wcs=_wcs_cls,
-                        naxis1=_nax1_cls,
-                        naxis2=_nax2_cls,
-                        fwhm_px=_fwhm_cls,
-                        plate_scale_arcsec=_plate_cls,
-                        match_sep_arcsec=float(
-                            det_meta.get("match_sep_arcsec_effective")
-                            or det_meta.get("match_sep_arcsec_requested")
-                            or 8.0
-                        ),
-                        cone_df=_cone_df_cls,
-                    )
-                df_final, _dao_class_meta = annotate_dao_only_magnitude_classes(
+                _plate_cls = float(np.mean(proj_plane_pixel_scales(_wcs_cls) * 3600.0))
+            if _wcs_cls is not None:
+                _recon_ms = compute_gaia_dao_reconcile(
                     df_final,
-                    gaia_db_path=_gdb_fill,
                     frame_depth=det_meta.get("frame_depth"),
-                    frame_noise_adu=_noise_cls,
+                    gaia_db_path=_gdb_fill,
+                    wcs=_wcs_cls,
+                    naxis1=_nax1_cls,
+                    naxis2=_nax2_cls,
+                    fwhm_px=_fwhm_cls,
+                    plate_scale_arcsec=_plate_cls,
+                    match_sep_arcsec=float(
+                        det_meta.get("match_sep_arcsec_effective")
+                        or det_meta.get("match_sep_arcsec_requested")
+                        or 8.0
+                    ),
+                    cone_df=_cone_df_cls,
                 )
-                if _recon_ms is not None:
-                    _recon_ms["dao_only_class_meta"] = _dao_class_meta
-                _ms_info_msg = format_dao_only_census_log(_dao_class_meta, n_total=len(df_final))
-                LOGGER.info(_ms_info_msg)
-                log_event(_ms_info_msg)
-            except Exception as _ms_census_exc:  # noqa: BLE001
-                LOGGER.debug("[MASTERSTAR-DAO-CENSUS] skipped: %s", _ms_census_exc)
-                try:
-                    from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
-
-                    _frac_ms = float(dao_only_fraction_from_masterstars(df_final))
-                    _n_dao_ms = int(round(_frac_ms * float(len(df_final))))
-                    _ms_info_msg = (
-                        f"MASTERSTAR DAO_ONLY census: {_n_dao_ms}/{len(df_final)} "
-                        f"(fraction={_frac_ms:.3f}) -- informational, not a gate"
-                    )
-                    LOGGER.info(_ms_info_msg)
-                    log_event(_ms_info_msg)
-                except Exception:  # noqa: BLE001
-                    pass
+            df_final, _dao_class_meta = annotate_dao_only_magnitude_classes(
+                df_final,
+                gaia_db_path=_gdb_fill,
+                frame_depth=det_meta.get("frame_depth"),
+                frame_noise_adu=_noise_cls,
+            )
+            if _recon_ms is not None:
+                _recon_ms["dao_only_class_meta"] = _dao_class_meta
+            _ms_info_msg = format_dao_only_census_log(_dao_class_meta, n_total=len(df_final))
+            LOGGER.info(_ms_info_msg)
+            log_event(_ms_info_msg)
         else:
             try:
                 from invariants_runtime import dao_only_fraction_from_masterstars  # noqa: PLC0415
@@ -1527,28 +1508,19 @@ def generate_masterstar_and_catalog(
         f"MASTERSTAR catalog: {Path(csv_path).name} - {len(df_final)} rows "
         f"(DAO + catalog over the full field; no cut by distance from the frame centre)."
     )
-    # FWHM-ONE-2026-10: VY_FWHM_GAUSS = VY_FWHM (frame QC elliptical Gaussian fit);
-    # no second FWHM measurement on MASTERSTAR.
+    # FWHM-ONE-2026-10: VY_FWHM is the one FWHM (frame QC elliptical Gaussian fit); no second
+    # FWHM measurement or copy on MASTERSTAR.
     try:
         _ms_path = Path(masterstar_fits)
-        with fits.open(_ms_path, memmap=False) as _hint_hdul:
-            _gaussian_fwhm = float(_hint_hdul[0].header.get("VY_FWHM"))
         with fits.open(_ms_path, mode="update", memmap=False) as _hdul:
-            _hdul[0].header["VY_FWHM_GAUSS"] = (
-                round(float(_gaussian_fwhm), 4),
-                "= VY_FWHM (one FWHM in VYVAR)",
-            )
             _n_raw_dao_hdr = int(det_meta.get("n_detected_dao_raw", 0) or 0)
             _hdul[0].header["VY_NDAO"] = (
                 _n_raw_dao_hdr,
-                "VYVAR: raw DAO detections on MASTERSTAR (stars/Mpx density)",
+                "Raw DAO detections on MASTERSTAR",
             )
             _hdul.flush()
-        logging.info(
-            f"[MASTERSTAR] VY_FWHM_GAUSS={float(_gaussian_fwhm):.3f}px (= VY_FWHM)"
-        )
     except Exception as e:  # noqa: BLE001
-        log_event(f"[ERROR] VY_FWHM_GAUSS stamp failed: {e}")
+        log_event(f"[ERROR] VY_NDAO stamp failed: {e}")
     try:
         _ms_path_tag = Path(masterstar_fits)
         _n_raw_dao_hdr = int(det_meta.get("n_detected_dao_raw", 0) or 0)
@@ -1556,7 +1528,7 @@ def generate_masterstar_and_catalog(
             if "VY_NDAO" not in _hdul_tag[0].header:
                 _hdul_tag[0].header["VY_NDAO"] = (
                     _n_raw_dao_hdr,
-                    "VYVAR: raw DAO detections on MASTERSTAR (stars/Mpx density)",
+                    "Raw DAO detections on MASTERSTAR",
                 )
                 _hdul_tag.flush()
     except Exception:  # noqa: BLE001
@@ -1590,10 +1562,8 @@ def generate_masterstar_and_catalog(
         if _vt_stamp_path.is_file():
             from photometry_shared import stamp_vsx_known_variable_on_masterstars  # noqa: PLC0415
 
-            _ms_for_stamp = pd.read_csv(
-                csv_path, low_memory=False, dtype={"catalog_id": str, "name": str}
-            )
-            _vt_stamp_df = pd.read_csv(_vt_stamp_path, low_memory=False, dtype={"catalog_id": str})
+            _ms_for_stamp = read_vyvar_csv(csv_path, low_memory=False)
+            _vt_stamp_df = read_vyvar_csv(_vt_stamp_path, low_memory=False)
             _ms_for_stamp, _vsx_stamp_final = stamp_vsx_known_variable_on_masterstars(
                 _ms_for_stamp,
                 _vt_stamp_df,

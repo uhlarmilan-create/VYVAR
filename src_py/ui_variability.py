@@ -26,7 +26,7 @@ from plotly.subplots import make_subplots
 from config import AppConfig
 from platesolve_ui_paths import setup_label
 from tess_runner import tess_dir_for
-from utils import resolve_draft_dir_path
+from ui_session import resolve_draft_dir_path
 from variability_plots import noise_curves
 from variability_store import (
     epoch_of_minimum,
@@ -527,13 +527,18 @@ def _cutout_figure(r: pd.Series, lc: pd.DataFrame | None, ps: Path, frames_dir: 
     """MASTERSTAR, the first frame with the source and a frame before it (2 x 2 FWHM boxes)."""
     from astropy.io import fits  # noqa: PLC0415
 
-    fr = pd.read_csv(frames_dir / "frames.csv").sort_values("jd_mid").reset_index(drop=True)
-    stems = [str(s)[5:-4] for s in fr["proc_csv"]]
-    first = int(r.get("first_frame", 0)) if math.isfinite(_num(r.get("first_frame"))) else 0
-    before = max(0, first - 5) if str(r["kind"]) == "appeared" else min(len(stems) - 1, first + 5)
-    panels = [("MASTERSTAR", ps / "MASTERSTAR.fits"), (f"frame {first + 1}", frames_dir / f"{stems[first]}.fits"),
-              (f"frame {before + 1}", frames_dir / f"{stems[before]}.fits")]
-    fig = make_subplots(rows=1, cols=3, subplot_titles=[p[0] for p in panels], horizontal_spacing=0.02)
+    # G14-30: without the aligned frames (folder deleted / never written) only the MASTERSTAR panel is shown
+    panels = [("MASTERSTAR", ps / "MASTERSTAR.fits")]
+    frames_csv = frames_dir / "frames.csv"
+    if frames_csv.is_file():
+        fr = pd.read_csv(frames_csv).sort_values("jd_mid").reset_index(drop=True)
+        stems = [Path(str(s)).stem.removeprefix("proc_") for s in fr["proc_csv"]]
+        first = int(r.get("first_frame", 0)) if math.isfinite(_num(r.get("first_frame"))) else 0
+        if 0 <= first < len(stems):
+            before = max(0, first - 5) if str(r["kind"]) == "appeared" else min(len(stems) - 1, first + 5)
+            panels += [(f"frame {first + 1}", frames_dir / f"{stems[first]}.fits"),
+                       (f"frame {before + 1}", frames_dir / f"{stems[before]}.fits")]
+    fig = make_subplots(rows=1, cols=len(panels), subplot_titles=[p[0] for p in panels], horizontal_spacing=0.02)
     h = 15
     x, y = int(round(float(r["x"]))), int(round(float(r["y"])))
     for j, (_t, p) in enumerate(panels, start=1):

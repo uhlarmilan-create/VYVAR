@@ -7,6 +7,7 @@ import logging
 import math
 import numpy as np
 import pandas as pd
+from aperture_pertarget import flux_k_column  # noqa: F401  (re-exported: one definition)
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from utils import plate_scale_arcsec_per_pixel
@@ -50,18 +51,21 @@ def _aperture_flux_sky_batch(
     r_ap: float | np.ndarray,
     r_in: float | np.ndarray,
     r_out: float | np.ndarray,
+    *,
+    sky: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Sky-subtracted circular aperture sums (photutils ``method='exact'``).
 
     Shared by production per-star photometry and the scatter/CoG radius ladder
     (IMPL-04). When all stars share one radius, uses one batch aperture call.
+    ``sky``: the image for the annulus medians (``sky_estimation.sky_image``: NaN on detected
+    sources, SKY-SRC-MASK-2026-10); default ``d``.
     """
-    from photutils.aperture import CircularAnnulus, CircularAperture
+    from photutils.aperture import CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
-    from photometry_gate_helpers import (  # noqa: PLC0415
-        _aperture_flux_sky_per_star,
-        _sky_pp_from_annulus_mask,
-    )
+    from photometry_gate_helpers import _aperture_flux_sky_per_star  # noqa: PLC0415
+
+    d_sky = d if sky is None else sky
 
     pos = np.asarray(pos, dtype=np.float64)
     n = int(pos.shape[0])
@@ -93,22 +97,16 @@ def _aperture_flux_sky_batch(
             phot = _aphot(d, ap, method="exact")
             sums = np.asarray(phot["aperture_sum"], dtype=np.float64)
             area = float(ap.area)
-            an = CircularAnnulus(pos, r_in=rin, r_out=rout)
-            masks = an.to_mask(method="center")
-            if not isinstance(masks, (list, tuple)):
-                masks = [masks]
-            for i, m in enumerate(masks):
-                try:
-                    sky_pp_arr[i] = _sky_pp_from_annulus_mask(d, m)
-                except Exception:  # noqa: BLE001
-                    sky_pp_arr[i] = float("nan")
+            from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+
+            sky_pp_arr = annulus_sky_medians(d_sky, pos, rin, rout)
             flux_arr = sums - sky_pp_arr * area
             return flux_arr, sky_pp_arr
         except Exception as exc:  # noqa: BLE001
             logging.debug("[PHOT] batch exact aperture failed, falling back per-star: %s", exc)
 
     # Heterogeneous radii: per-star exact (photutils 2.3 scalar-r constraint).
-    return _aperture_flux_sky_per_star(d, pos, r_ap_arr, r_in_arr, r_out_arr)
+    return _aperture_flux_sky_per_star(d, pos, r_ap_arr, r_in_arr, r_out_arr, sky=d_sky)
 
 
 def _safe_polyfit(
@@ -337,7 +335,9 @@ def stamp_masterstar_snr_columns(
             if int(np.count_nonzero(ok)) > 0:
                 d = np.asarray(image, dtype=np.float64)
                 pos = np.column_stack([xx[ok], yy[ok]])
-                flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out)
+                from sky_estimation import sky_image  # noqa: PLC0415
+
+                flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out, sky=sky_image(d, fw))
                 flux_ap[ok] = flux_m
         except Exception:  # noqa: BLE001
             if "flux" in out.columns:
@@ -745,8 +745,6 @@ def _read_plate_scale_from_fits_path(
     if cd_scale is not None and _MIN <= cd_scale <= _MAX:
         # (2) Cross-check VY_PLTS: warn and ignore if it disagrees > 5%.
         vy = hdr.get("VY_PLTS")
-        if vy is None:
-            vy = hdr.get("VY_PLATESCALE")
         try:
             vyf = float(vy) if vy is not None else None
         except (TypeError, ValueError):
@@ -761,7 +759,7 @@ def _read_plate_scale_from_fits_path(
 
     # (3) No usable WCS/CD - fall back to header keywords (still header, above config).
     try:
-        for key in ("VY_PLTS", "VY_PLATESCALE", "PIXSCALE", "SECPIX", "SECPIX1", "SCALE", "CDELT1"):
+        for key in ("VY_PLTS", "PIXSCALE", "SECPIX", "SECPIX1", "SCALE", "CDELT1"):
             v = hdr.get(key)
             if v is None:
                 continue
@@ -931,9 +929,6 @@ def compute_fwhm_gaussian_for_aperture_catalog(
 
     return fwhm_per, fwhm_moment_med, float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
 
-def flux_k_column(k: float) -> str:
-    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``)."""
-    return f"flux_k{int(round(float(k) * 100))}"
 
 
 def enhance_catalog_dataframe_aperture(
@@ -1028,8 +1023,8 @@ def enhance_catalog_dataframe_aperture(
         or (math.isfinite(float(fwhm_gaussian_f)) and float(fwhm_gaussian_f) > 0)
     ):
         try:
-            # Local implementation: sky-subtracted flux via CircularAperture + CircularAnnulus.
-            from photutils.aperture import CircularAnnulus, CircularAperture
+            # Local implementation: sky-subtracted flux via CircularAperture + annulus sky.
+            from photutils.aperture import CircularAperture
             from photutils.aperture import aperture_photometry as _aphot
             from aperture_policy import resolve_aperture_geometry  # noqa: PLC0415
 
@@ -1063,7 +1058,10 @@ def enhance_catalog_dataframe_aperture(
             # frame->reference transform was not resampled.
             from frame_footprint import aligned_footprint, has_alignment_transform  # noqa: PLC0415
 
-            d_sky = np.where(aligned_footprint(hdr, d.shape), d, np.nan) if has_alignment_transform(hdr) else d
+            # SKY-SRC-MASK-2026-10: and without the pixels of detected sources (crowded-field sky bias).
+            from sky_estimation import sky_image  # noqa: PLC0415
+
+            d_sky = sky_image(d, fw, covered=aligned_footprint(hdr, d.shape) if has_alignment_transform(hdr) else None)
 
             # A row without a finite position is not measured (NaN), it does not abort the frame:
             # one such row used to throw away the aperture photometry of every star in the frame.
@@ -1074,17 +1072,11 @@ def enhance_catalog_dataframe_aperture(
             area_ap_per = float(math.pi * float(r_ap) ** 2)
             if _ix.size:
                 ap = CircularAperture(pos[_ix], r=r_ap)
-                an = CircularAnnulus(pos[_ix], r_in=r_in, r_out=r_out)
                 phot_ap = _aphot(d, ap, method="exact")
                 sum_ap[_ix] = np.asarray(phot_ap["aperture_sum"], dtype=np.float64)
-                ann_masks = an.to_mask(method="center")
-                if not isinstance(ann_masks, (list, tuple)):
-                    ann_masks = [ann_masks]
-                for j, amask in enumerate(ann_masks):
-                    try:
-                        sky_pp_arr[_ix[j]] = _sky_pp_from_annulus_mask(d_sky, amask)
-                    except Exception:  # noqa: BLE001
-                        sky_pp_arr[_ix[j]] = float(np.median(d))
+                from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+
+                sky_pp_arr[_ix] = annulus_sky_medians(d_sky, pos[_ix], r_in, r_out)
             flux_arr = sum_ap - sky_pp_arr * area_ap_per
             # APERTURE-K-2026-10: the same photometry on the aperture grid r = k x FWHM
             # (same positions, same annulus sky), so comparison-star RMS in comparison-star selection is

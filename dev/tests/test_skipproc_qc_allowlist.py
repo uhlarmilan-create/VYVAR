@@ -20,6 +20,8 @@ from pipeline import (
     qc_enrich_calibrated_lights_in_place,
 )
 
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
+
 
 def _write_light_fits(path: Path, *, seed: float = 1.0) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -271,10 +271,14 @@ def read_proc_csv(path: Path | str, *, usecols=None, reader=None, **kwargs) -> p
     """The one reader of proc CSVs: the file plus its frame values from ``frames.csv``.
 
     ``usecols`` works as in pandas (a list raises ValueError for a column neither the file nor the
-    frame table has; a callable selects). ``reader`` defaults to ``pandas.read_csv``.
+    frame table has; a callable selects). ``reader`` defaults to ``pandas.read_csv``. Id columns are always
+    read as text (``VYVAR_CSV_DTYPE``).
     """
+    from gaia_catalog_id import VYVAR_CSV_DTYPE  # noqa: PLC0415
+
     rd = reader or pd.read_csv
     p = Path(path)
+    kwargs["dtype"] = {**VYVAR_CSV_DTYPE, **(kwargs.get("dtype") or {})}  # ids always as text (D06)
     if usecols is None:
         df = rd(p, **kwargs)
         return attach_frame_columns(df, p)
@@ -439,9 +443,8 @@ class ProcFrameStore:
                 )
                 store._columns_on_disk[key] = list(df.columns)
 
-                for id_col in ("catalog_id", "name"):
-                    if id_col in df.columns:
-                        df[id_col] = normalize_gaia_source_id_series(df[id_col])
+                if "catalog_id" in df.columns:
+                    df["catalog_id"] = normalize_gaia_source_id_series(df["catalog_id"])
 
                 for num_col in _NUMERIC_COLS:
                     if num_col in df.columns:

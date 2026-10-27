@@ -14,12 +14,10 @@ import logging
 import math
 import os
 import warnings
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
 import time
-import pickle
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
@@ -27,7 +25,6 @@ import pandas as pd
 
 import vyvar_alignment_frame  # A-durable: fresh-attr MP func lookup at dispatch
 from vyvar_alignment_frame import (
-    _alignment_compute_one_frame,
     _alignment_detect_xy,
     _as_fits_float32_image,
 )
@@ -43,18 +40,12 @@ from utils import (
 )
 from utils import dao_detection_fwhm_pixels
 from fits_meta import pointing_hint_from_header as _pointing_hint_from_header
-from pipeline_calibrate import (
-    _has_valid_wcs,
-    _pipeline_ui_error,
-    _vyvar_parallel_worker_count,
-    estimate_archive_memory_profile,
-)
+from pipeline_calibrate import _has_valid_wcs
 from pipeline_astrometry import (
     _apply_wcs_header_to_fits,
     _assert_alignment_produced_fits,
     _ensure_parent_dirs_for_aligned_fits,
     _equipment_saturate_adu_from_db,
-    _pipeline_ui_info,
     _solve_wcs_external,
     _vyvar_open_database,
     _wcs_field_center_radec_deg,
@@ -133,7 +124,7 @@ def _astrometry_align_impl_body(
     # MASTERSTAR initial match: allow a looser sep (min 10") for robust first-pass Gaia join.
     _catalog_match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
     if _catalog_match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
-        _pipeline_ui_info(
+        log_event(
             f"Catalog match threshold raised to {_catalog_match_sep_eff:.2f}\" "
             "(minimum for a robust initial cross-match)."
         )
@@ -366,12 +357,6 @@ def _astrometry_align_impl_body(
 
     extra_platesolve_results: list[dict[str, Any]] = []
 
-    try:
-        pass  # type: ignore
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0419] `estimate_archive_memory_profile` failure leaves `use_ram_handoff=True`; may exhaust RA...: %s', exc)
-        raise RuntimeError(f"astroalign required for frame registration: {exc}") from exc
-
     log_event(
         f"Star detection: used FWHM={_align_fwhm_ref:.2f}, Sigma={_align_det_sigma:.2f}"
     )
@@ -419,19 +404,22 @@ def _astrometry_align_impl_body(
         f"(QC VY_FWHM or DAO_FWHM_FALLBACK_PX)"
     )
 
-    # Auto RAM management: default in-memory, but switch to disk when estimated working set exceeds 70% of available RAM.
+    # RESOURCES-2026-10: the aligned frames of the setup stay in memory (RAM handoff) only when they
+    # take at most half of the run's RAM budget; the other half is for the main process and the
+    # workers. Otherwise they are written to disk as they are aligned.
     use_ram_handoff = bool(ram_align_and_catalog)
-    try:
-        mp = estimate_archive_memory_profile(ap)
-        avail = mp.get("available_ram_bytes")
-        prh = mp.get("platesolve_ram_handoff") or {}
-        tot = prh.get("estimated_total_conservative_bytes")
-        if isinstance(avail, int) and isinstance(tot, int) and avail > 0 and tot > 0:
-            if tot > int(0.70 * avail):
-                use_ram_handoff = False
-    except Exception:  # noqa: BLE001
-        # EXC-0420: T1 -- `_vy_fwhm_header_value` returns `None` on read error; MASTERSTAR match heuristic falls ... (EXCEPT-BULK-2 2026-07-08)
-        pass
+    if use_ram_handoff:
+        from parallel_frames import frame_bytes as _fb, resource_budget  # noqa: PLC0415
+
+        _buffer = len(files) * _fb(*np.shape(ref_data)[:2])
+        _budget = resource_budget().ram_budget_bytes
+        if _buffer > _budget // 2:
+            use_ram_handoff = False
+        log_event(
+            f"[RESOURCES] aligned frames {'in memory' if use_ram_handoff else 'on disk'}: "
+            f"{len(files)} x {_fb(*np.shape(ref_data)[:2]) / 1024**2:.0f} MB = {_buffer / 1024**3:.2f} GB, "
+            f"half of the RAM budget {_budget / 2 / 1024**3:.2f} GB"
+        )
 
     aligned_ram_buffer: list[tuple[str, fits.Header, np.ndarray]] = []
     aligned_files: list[Path] = []
@@ -526,7 +514,9 @@ def _astrometry_align_impl_body(
     )
 
     n_written_align = 1
-    n_align_workers = _vyvar_parallel_worker_count(_cfg_align)
+    from parallel_frames import frame_bytes, map_frames, stage_workers  # noqa: PLC0415
+
+    _frame_nbytes = frame_bytes(*np.shape(ref_data)[:2])
     align_tasks: list[tuple[str, int]] = []
     for frame_index_1based, fp in enumerate(files, start=1):
         if fp == ref_fp:
@@ -693,60 +683,26 @@ def _astrometry_align_impl_body(
                     },
                 }
             )
-    elif n_align_workers > 1 and len(align_tasks) > 1:
-        _mp_ctx: dict[str, Any] = {
-            "ref_data": np.ascontiguousarray(np.copy(_align_ctx["ref_data"])),
-            "ref_hdr": _align_ctx["ref_hdr"].copy(),
-            "ref_fp_name": _align_ctx["ref_fp_name"],
-            "fixed_target_pts": np.copy(_align_ctx["fixed_target_pts"]).astype(np.float32, copy=False),
-            "reference_list": list(_align_ctx["reference_list"]),
-            "has_ref_wcs": bool(_align_ctx["has_ref_wcs"]),
-            "platesolve_dir": str(_align_ctx["platesolve_dir"]),
-            "align_star_cap": int(_align_ctx["align_star_cap"]),
-            "max_control_points": int(_align_ctx["max_control_points"]),
-            "min_detected_stars": int(_align_ctx["min_detected_stars"]),
-            "max_detected_stars": int(_align_ctx["max_detected_stars"]),
-            "fb_align": float(_align_ctx["fb_align"]),
-            "rotation_ref_angle_deg": _align_ctx["rotation_ref_angle_deg"],
-        }
-        def _run_alignment_single_process() -> None:
-            for fp_s, idx in align_tasks:
-                res = _alignment_compute_one_frame(Path(fp_s), int(idx), _align_ctx, None)
-                _flush_one_alignment(res)
-
-        # A-durable: resolve the MP init/task by FRESH module attribute at call time, so the
-        # objects handed to the spawn pool are exactly what sys.modules resolves - even if the
-        # Streamlit file-watcher reloaded vyvar_alignment_frame after pipeline.py was imported
-        # (the import-time `from ... import` binding would otherwise go stale -> PicklingError).
-        _mp_init = vyvar_alignment_frame._astrometry_align_mp_init
-        _mp_task = vyvar_alignment_frame._astrometry_align_mp_task
-        try:
-            with ProcessPoolExecutor(
-                max_workers=n_align_workers,
-                initializer=_mp_init,
-                initargs=(_mp_ctx,),
-            ) as pool:
-                raw_list = list(pool.map(_mp_task, align_tasks, chunksize=1))
-            for res in raw_list:
-                for ln in res.get("log_events", ()):
-                    log_event(ln)
-                res_flush = {k: v for k, v in res.items() if k != "log_events"}
-                _flush_one_alignment(res_flush)
-        except pickle.PicklingError as _pkl_err:
-            # Robust fallback: if the spawn pool cannot pickle the MP funcs (e.g. mid-run module
-            # reload defeats the fresh-attr lookup), run alignment single-process instead of
-            # aborting. Photometry is byte-identical to the MP path (same per-frame compute).
-            # PicklingError is raised at task-submission (pickling the worker funcs) before any
-            # result is flushed, so no partial per-frame state exists here - run single-process.
-            _pipeline_ui_info(
-                f"Alignment: multiprocessing dispatch failed to pickle worker functions "
-                f"({_pkl_err}); falling back to single-process alignment."
-            )
-            _run_alignment_single_process()
     else:
-        for fp_s, idx in align_tasks:
-            res = _alignment_compute_one_frame(Path(fp_s), int(idx), _align_ctx, None)
-            _flush_one_alignment(res)
+        # RESOURCES-2026-10: one ordered pool; each frame is flushed (written or kept in the RAM
+        # handoff) as soon as it is ready - collecting every result first held all aligned frames
+        # of the setup in the main process (Brno 534: 97 x 38 MB, killed out of memory).
+        _n_align_workers = stage_workers(len(align_tasks), _frame_nbytes, stage="alignment")
+        _mp_ctx: dict[str, Any] = dict(_align_ctx)
+        _mp_ctx["ref_data"] = np.ascontiguousarray(np.copy(_align_ctx["ref_data"]))
+        # A-durable: the pool functions are looked up on the module at call time (a Streamlit
+        # file-watcher reload of vyvar_alignment_frame would make an import-time binding stale).
+        for res in map_frames(
+            vyvar_alignment_frame._astrometry_align_mp_task,
+            align_tasks,
+            workers=_n_align_workers,
+            initializer=vyvar_alignment_frame._astrometry_align_mp_init,
+            ctx=_mp_ctx,
+            stage="alignment",
+        ):
+            for ln in res.get("log_events", ()):
+                log_event(ln)
+            _flush_one_alignment({k: v for k, v in res.items() if k != "log_events"})
 
     n_aligned = int(sum(1 for r in star_counts if r.get("aligned")))
     n_failed_align = int(sum(1 for r in star_counts if not bool(r.get("aligned"))))
@@ -758,7 +714,7 @@ def _astrometry_align_impl_body(
             rr = str(r.get("reason") or "unknown")
             reasons[rr] = int(reasons.get(rr, 0)) + 1
         reason_txt = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))[:5])
-        _pipeline_ui_info(
+        log_event(
             f"Alignment warning: {n_failed_align}/{len(files)} frames failed in {aligned_root.resolve()} "
             f"(reasons: {reason_txt})."
         )
@@ -767,7 +723,7 @@ def _astrometry_align_impl_body(
             f"Alignment failed: only the reference was aligned (1/{len(files)}). "
             f"Check the DAO threshold/FWHM and WCS inputs. Output folder: {aligned_root.resolve()}."
         )
-        _pipeline_ui_error(msg)
+        log_event(msg)
         raise RuntimeError(msg)
     rep_path = platesolve_dir / "alignment_report.csv"
     pd.DataFrame(star_counts).to_csv(rep_path, index=False)

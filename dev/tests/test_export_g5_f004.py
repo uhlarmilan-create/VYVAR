@@ -54,12 +54,14 @@ def _minimal_summary() -> pd.Series:
     )
 
 
-def test_empty_lc_records_failure_and_returns_empty(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_empty_lc_is_not_exported_by_rule_at_info(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """EXPORT-LOG-2026-10: no usable LC points is a rule, not a failure (was logged as ERROR)."""
     reports = tmp_path / "lightcurves_reports"
     reports.mkdir(parents=True)
     failures: list[dict[str, str]] = []
+    stats: dict[str, int] = {}
 
-    with caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.INFO):
         paths = export_lightcurve_reports(
             reports,
             _minimal_target("111"),
@@ -70,13 +72,32 @@ def test_empty_lc_records_failure_and_returns_empty(tmp_path: Path, caplog: pyte
             cfg=AppConfig(),
             obs_group="B_20_2",  # production passes the setup (OUTPUT-REVIEW step 6)
             export_failures=failures,
+            export_stats=stats,
         )
+        log_export_batch_summary(failures, stats)
 
     assert paths == {}
-    assert len(failures) == 1
-    assert failures[0]["target_id"] == "111"
-    assert "no exportable LC" in failures[0]["reason"]
-    assert any("[EXPORT] failed" in r.message for r in caplog.records)
+    assert failures == []
+    assert stats["not_exported_by_rule"] == 1
+    rule = [r for r in caplog.records if "not exported by rule 111" in r.getMessage()]
+    assert rule and all(r.levelno == logging.INFO for r in rule)
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING and "[EXPORT]" in r.getMessage()]
+
+
+def test_export_problem_levels(caplog: pytest.LogCaptureFixture) -> None:
+    """Attention items are WARNING, real failures ERROR; the summary takes the highest level."""
+    failures: list[dict[str, str]] = []
+    with caplog.at_level(logging.INFO):
+        record_export_failure(failures, "1", "aperture", "VarAstro: time_base=None (BJD_TDB required)",
+                              level=logging.WARNING)
+        log_export_batch_summary(failures)
+    assert [r.levelno for r in caplog.records] == [logging.WARNING] * 3
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        record_export_failure(failures, "2", "aperture", "AAVSO write error: disk full")
+        log_export_batch_summary(failures)
+    assert caplog.records[-3].levelno == logging.ERROR and "batch finished" in caplog.records[-3].getMessage()
+    assert [f["level"] for f in failures] == ["WARNING", "ERROR"]
 
 
 def test_read_error_and_success_in_same_batch(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:

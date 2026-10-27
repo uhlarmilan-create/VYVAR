@@ -7,12 +7,15 @@ through params_registry.
 """
 from __future__ import annotations
 
+import pytest
 import dataclasses
 import json
 import logging
 
 import config
 import params_registry as pr
+
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
 
 
 def _load(tmp_path, payload: dict) -> config.AppConfig:

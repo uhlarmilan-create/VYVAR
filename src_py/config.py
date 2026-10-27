@@ -85,6 +85,10 @@ RENAMED_KEYS: dict[str, str] = {
 
 # Keys removed from AppConfig; load_config_json logs INFO once per key (no difflib WARN).
 KNOWN_REMOVED_KEYS: dict[str, str] = {
+    "per_frame_mp_reserve_ram_gb": (
+        "per_frame_mp_reserve_ram_gb removed 2026-10-26 (RESOURCES-2026-10): a run uses half of the RAM and "
+        "half of the CPUs and sizes every stage by its frame size by itself"
+    ),
     "gain": (
         "gain removed 2026-10-22 (CODE-REVIEW-2026-10 step 7B): gain comes from the FITS header or EQUIPMENTS.GAIN_ADU; unknown -> error (no default)"
     ),
@@ -1143,7 +1147,7 @@ def ui_config_persist() -> Iterator[None]:
 # order; within a section keys are ordered basic -> advanced -> expert then alphabetically.
 _CONFIG_SECTION_ORDER = (
     "observer", "calibration", "qc", "alignment", "detection", "photometry",
-    "comp_selection", "trust", "extinction", "reports", "export", "system", "paths",
+    "comp_selection", "trust", "extinction", "reports", "export", "paths",
 )
 _CONFIG_SECTION_TITLES = {
     "observer": "Observer & export identity",
@@ -1157,7 +1161,6 @@ _CONFIG_SECTION_TITLES = {
     "extinction": "Atmospheric extinction & color",
     "reports": "Reports & HRD",
     "export": "Export",
-    "system": "System & performance",
     "paths": "File & catalog paths",
 }
 _CONFIG_TIER_ORDER = {"basic": 0, "advanced": 1, "expert": 2}
@@ -1307,35 +1310,6 @@ def save_config_json(project_root: Path, data: dict[str, Any]) -> None:
     write_bootstrap_config_json(project_root, data)
 
 
-def recommended_vyvar_parallel_workers(*, reserve_ram_gb: float = 1.5) -> int:
-    """Single worker count for QC, preprocess, combined, per-frame CSV (base before the RAM cap), alignment, calibrate MP.
-
-    Takes the minimum of the CPU heuristic and the free-RAM estimate (same memory estimate as the per-frame export),
-    so that one value is safe across the whole workflow.
-    """
-    n = os.cpu_count()
-    if n is None or n < 1:
-        n = 4
-    if n <= 1:
-        cpu_cap = 1
-    else:
-        cpu_cap = max(1, min(32, min(n - 1, 16, max(1, n // 2))))
-    h, wpx = 2048, 2048
-    per_worker = max(int(h * wpx * 4 * 3), 1)
-    try:
-        import psutil
-
-        reserve = int(max(0.0, float(reserve_ram_gb)) * (1024**3))
-        avail = int(psutil.virtual_memory().available) - reserve
-        if avail <= 0:
-            ram_cap = 1
-        else:
-            ram_cap = max(1, min(32, avail // per_worker))
-    except Exception:  # noqa: BLE001
-        ram_cap = 32
-    return max(1, min(32, min(cpu_cap, ram_cap)))
-
-
 #: CODE-REVIEW-2026-10 step 7: the numeric config.json keys with their allowed range [lo, hi] -
 #: the ONE place a range lives. The loader clamps to it (with a warning), the Settings page and
 #: dev/scripts/validate_config.py read it through params_registry. Type = type of the default.
@@ -1351,7 +1325,6 @@ PARAM_RANGES: dict[str, tuple[float, float]] = {
     "annulus_inner_fwhm": (1.0, 10.0),
     "annulus_outer_fwhm": (1.5, 12.0),
     "detection_threshold_sigma": (DETECTION_THRESHOLD_SIGMA_MIN, DETECTION_THRESHOLD_SIGMA_MAX),
-    "per_frame_mp_reserve_ram_gb": (0.0, 64.0),
     "alignment_max_stars": (10, 5000),
     "phase01_comparison_n_comp_min": (2, 12),
     "phase01_comparison_n_comp_max": (3, 20),
@@ -1480,7 +1453,7 @@ class AppConfig:
     #: EPSF-EXPORT-2026-10: write the ePSF light-curve files for the user (lightcurves_reports/epsf: bjd_tdb,
     #: delta_mag, err + header) automatically when RUN ePSF finishes. Off: the ePSF tab's button writes them.
     epsf_export_auto: bool = True
-    #: Per calibrated light: subtract source-masked sigma-clipped polynomial sky surface in preprocess (0=off, default 2).
+    #: Per calibrated light: subtract a source-masked polynomial sky surface (no clipping) in preprocess (0=off, default 2).
     preprocess_sky_surface_order: int = 2
     #: OSC: post-extraction NxN average binning on each channel plane (1-4; default 2). Total scale vs raw = 2 x N.
     osc_channel_binning: int = 2
@@ -1496,12 +1469,6 @@ class AppConfig:
     #: catalogs, zone-classifier T1). Replaces sips_dao_threshold_sigma, masterstar_dao_threshold_sigma,
     #: dao_detection_n_equiv, alignment_detection_sigma and qc_dao_detection_sigma. Clamp 2.0-20.0.
     detection_threshold_sigma: float = DETECTION_THRESHOLD_SIGMA_DEFAULT
-
-    #: Parallelism (QC, preprocess, combined, per-frame CSV, alignment, calibrate MP): one value computed
-    #: in ``__post_init__``; not in ``config.json``. Run-time override: ``VYVAR_PARALLEL_WORKERS``.
-    qc_preprocess_workers: int = 1
-    #: RAM (GB) kept free when capping the parallel workers (``psutil``).
-    per_frame_mp_reserve_ram_gb: float = 1.5
 
     #: Frame alignment (DAO detection ladder): max brightest sources detected per frame (astroalign picks a subset).
     alignment_max_stars: int = 160
@@ -1695,9 +1662,6 @@ class AppConfig:
                 logging.warning("config.json: comp_color_tiers needs 3 rows {\"bprp\": limit}; defaults used")
 
         # Run-time values (not in config.json).
-        self.qc_preprocess_workers = int(
-            recommended_vyvar_parallel_workers(reserve_ram_gb=float(self.per_frame_mp_reserve_ram_gb))
-        )
         # SETTINGS-2026-10: the site is not stored in config.json; the default site is the
         # LOCATION row with IS_DEFAULT = 1 (Database Explorer), a run may choose another one.
         from database import get_default_observer_location_id  # noqa: PLC0415

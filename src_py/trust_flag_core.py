@@ -33,6 +33,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 from gaia_catalog_id import norm_id_or_empty as norm_id
 
 LOGGER = logging.getLogger(__name__)
@@ -95,7 +97,7 @@ def lc_epoch_counts(photometry_dir: Path, target_id: str) -> tuple[int | None, i
     if not p.is_file():
         return None, None
     try:
-        df = pd.read_csv(p, low_memory=False)
+        df = read_vyvar_csv(p, low_memory=False)
     except (OSError, ValueError):
         return None, None
     # same row selection as the exporters (single source: export_reports._select_export_lc_rows)
@@ -133,7 +135,7 @@ def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int
     if not p.is_file():
         return float("nan"), 0
     try:
-        sdf = pd.read_csv(p, low_memory=False)
+        sdf = read_vyvar_csv(p, low_memory=False)
         if sdf.empty or "kmag" not in sdf.columns:
             return float("nan"), 0
         km = pd.to_numeric(sdf["kmag"], errors="coerce")
@@ -164,7 +166,7 @@ def check_star_chi2(photometry_dir: Path, target_id: str) -> tuple[float, float]
     if not p.is_file():
         return float("nan"), float("nan")
     try:
-        sdf = pd.read_csv(p, low_memory=False)
+        sdf = read_vyvar_csv(p, low_memory=False)
     except Exception:  # noqa: BLE001
         return float("nan"), float("nan")
     if sdf.empty or "kmag" not in sdf.columns or "kmag_err" not in sdf.columns:
@@ -303,6 +305,8 @@ def classify_warnings(
     skip_reason: str = "",
     check_delta_mag: float = float("nan"),
     zp_sigma_mag: float = float("nan"),
+    comp_delta_bprp_max: float = float("nan"),
+    comp_delta_bprp_cap: float = float("nan"),
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target.
 
@@ -336,6 +340,12 @@ def classify_warnings(
 
     if nc <= 0:
         hard.append("no clean comps")
+    # COMP-POOL-ONLY-2026-10 (Milan 2026-10-26, D5): a red target whose comparison stars all lie
+    # beyond the colour cap gets its light curve (comps from the rule pool), but trust RED.
+    if math.isfinite(float(comp_delta_bprp_max)) and math.isfinite(float(comp_delta_bprp_cap)) \
+            and float(comp_delta_bprp_max) > float(comp_delta_bprp_cap):
+        hard.append(f"colour mismatch: comparison stars up to |dBP-RP| {float(comp_delta_bprp_max):.2f} "
+                    f"(cap {float(comp_delta_bprp_cap):.2f})")
 
     if 0 < nc < th.strong:
         soft.append(
@@ -499,6 +509,8 @@ def evaluate_target(
     skip_reason: str = "",
     check_delta_mag: float = float("nan"),
     zp_sigma_mag: float = float("nan"),
+    comp_delta_bprp_max: float = float("nan"),
+    comp_delta_bprp_cap: float = float("nan"),
 ) -> dict[str, Any]:
     th = thresholds or CompTrustThresholds.from_bounds(3, 8)
     lq = str(lc_quality or "").strip().lower() or "-"
@@ -540,6 +552,8 @@ def evaluate_target(
         skip_reason=str(skip_reason or ""),
         check_delta_mag=float(check_delta_mag),
         zp_sigma_mag=float(zp_sigma_mag),
+        comp_delta_bprp_max=float(comp_delta_bprp_max),
+        comp_delta_bprp_cap=float(comp_delta_bprp_cap),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -597,7 +611,12 @@ def compute_trust_for_photometry_dir(
                 _color_term_off = not resolve_apply_color_term(cfg, _obs_group)
             except Exception:  # noqa: BLE001
                 _color_term_off = True
-    comp_meta: dict[str, dict[str, int]] = {}
+    _dbprp_cap = float(getattr(cfg, "comp_max_delta_bprp", float("nan"))) if cfg is not None else float("nan")
+    if not math.isfinite(_dbprp_cap):
+        from config import AppConfig  # noqa: PLC0415
+
+        _dbprp_cap = float(AppConfig.__dataclass_fields__["comp_max_delta_bprp"].default)
+    comp_meta: dict[str, dict[str, float]] = {}
     comp_path = phot / "comparison_stars_per_target.csv"
     if comp_path.is_file():
         try:
@@ -608,8 +627,11 @@ def compute_trust_for_photometry_dir(
                 for tid, grp in comp_df.groupby(comp_df["target_catalog_id"].astype(str).str.strip()):
                     if not tid:
                         continue
+                    _dc = (pd.to_numeric(grp["delta_bprp_abs"], errors="coerce")
+                           if "delta_bprp_abs" in grp.columns else pd.Series(dtype=float))
                     comp_meta[norm_id(tid) or tid] = {
                         "n_comps": int(grp["catalog_id"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+                        "max_dbprp": float(_dc.max()) if _dc.notna().any() else float("nan"),
                     }
         except Exception:  # noqa: BLE001
             comp_meta = {}
@@ -678,6 +700,8 @@ def compute_trust_for_photometry_dir(
             check_chi2_nu=_chi2_nu,
             check_delta_mag=_chk_delta,
             zp_sigma_mag=_zp_sigma,
+            comp_delta_bprp_max=float(_cm0.get("max_dbprp", float("nan"))),
+            comp_delta_bprp_cap=_dbprp_cap,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

@@ -155,7 +155,7 @@ def effective_gain_rn(
     channel: str,
     osc_bin: int,
 ) -> tuple[float, float]:
-    """Effective (gain [e-/ADU], read_noise [e-]) for extracted+binned channel pixels."""
+    """Effective (gain [e-/ADU], read_noise [e-]) for extracted+binned channel pixels; NaN stays NaN (unknown)."""
     ch = str(channel)
     if ch not in PLANE_AVG_COUNT:
         raise ValueError(f"Unknown channel {channel!r}")
@@ -164,12 +164,14 @@ def effective_gain_rn(
     n_avg = float(plane_n * bin_n * bin_n)
     g = float(gain_e_per_adu)
     rn = float(read_noise_e)
-    if not math.isfinite(g) or g <= 0:
+    # Unknown (NaN) gain / read noise: NaN, the channel header then carries none and the run resolves them
+    # downstream (G01-40: a ValueError here stopped the whole calibration); a known but invalid value is an error.
+    if math.isfinite(g) and g <= 0:
         raise ValueError(f"Invalid gain_e_per_adu={gain_e_per_adu}")
-    if not math.isfinite(rn) or rn < 0:
+    if math.isfinite(rn) and rn < 0:
         raise ValueError(f"Invalid read_noise_e={read_noise_e}")
-    gain_eff = g * n_avg
-    rn_eff = rn * math.sqrt(n_avg)
+    gain_eff = g * n_avg if math.isfinite(g) else float("nan")
+    rn_eff = rn * math.sqrt(n_avg) if math.isfinite(rn) else float("nan")
     return gain_eff, rn_eff
 
 
@@ -218,25 +220,25 @@ def build_channel_header(
     hdr["XBINNING"] = int(bin_out)
     hdr["YBINNING"] = int(bin_out)
     hdr["BINNING"] = int(bin_out)
-    hdr["VY_CHANNEL"] = (channel, "OSC extracted channel token")
-    hdr["VY_BAYERMASK"] = (bayermask, "Equipment Bayer mask used for extraction")
-    hdr["VY_OSC_BIN"] = (int(osc_bin), "Post-extraction average binning factor N")
+    hdr["VYCHANNL"] = (channel, "OSC extracted channel token")
+    hdr["VYBAYMSK"] = (bayermask, "Equipment Bayer mask used for extraction")
+    hdr["VYOSCBIN"] = (int(osc_bin), "Post-extraction average binning factor N")
     if math.isfinite(float(gain_eff)):
         hdr["EGAIN"] = (float(gain_eff), "Effective gain e-/ADU after OSC extract+bin")
         hdr["VY_EGAIN"] = (float(gain_eff), "Effective gain e-/ADU (VYVAR OSC)")
     if math.isfinite(float(rn_eff)):
-        hdr["VY_RDNOIS"] = (float(rn_eff), "Effective read noise e- after OSC extract+bin")
+        hdr["VYRDNOIS"] = (float(rn_eff), "Effective read noise e- after OSC extract+bin")
     # CAL-2026-10 K8: channel frames keep the calibration stamps of their CFA source.
     for key in src_hdr:
         k = str(key)
-        if k in hdr or k in ("VY_EGAIN", "VY_RDNOIS", "BAYERPAT") or not k:
+        if k in hdr or k in ("VY_EGAIN", "VYRDNOIS", "BAYERPAT") or not k:
             continue
         if k.startswith("VY") or k in ("SET-TEMP", "OFFSET", "ROWORDER", "SWCREATE"):
             try:
                 hdr[k] = (src_hdr[k], src_hdr.comments[k])
             except (ValueError, KeyError):
                 continue
-    hdr["VY_OSCSRC"] = (str(src_name), "Source CFA mosaic FITS")
+    hdr["VYOSCSRC"] = (str(src_name), "Source CFA mosaic FITS")
     if "BAYERPAT" in hdr:
         del hdr["BAYERPAT"]
     return hdr
@@ -310,7 +312,7 @@ def iter_mosaic_light_fits(group_dir: Path) -> list[Path]:
             continue
         try:
             with fits.open(fp, memmap=False) as hdul:
-                if hdul[0].header.get("VY_CHANNEL"):
+                if hdul[0].header.get("VYCHANNL"):
                     continue
                 if valid_bayer_pattern_4(str(hdul[0].header.get("BAYERPAT") or "")):
                     out.append(fp)

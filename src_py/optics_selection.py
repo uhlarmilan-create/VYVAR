@@ -2,8 +2,8 @@
 
 Priority when resolving optics for platesolve / calibration / masters:
 1. ``draft manifest`` row (frozen at import) when ``draft_id`` is set
-2. Explicit UI combobox ids passed by the caller
-3. Streamlit session keys (synced on every Varstream page render)
+2. Explicit ids passed by the caller (the GUI passes its combobox / session selection,
+   ``ui_session.optics_from_session``)
 
 Never silently fall back to hardcoded equipment id=1 (QHY294MM).
 """
@@ -19,11 +19,6 @@ from infolog import log_event
 
 _log = logging.getLogger(__name__)
 
-SESSION_EQUIPMENT_KEY = "vyvar_active_equipment_id"
-SESSION_TELESCOPE_KEY = "vyvar_active_telescope_id"
-# Legacy aliases (same values, kept for older session_state readers)
-LEGACY_IMPORT_EQUIPMENT_KEY = "vyvar_last_import_equipment_id"
-LEGACY_IMPORT_TELESCOPE_KEY = "vyvar_last_import_telescope_id"
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,37 +111,6 @@ def parse_ui_optics_from_labels(
     )
 
 
-def sync_optics_session(selection: VyvarOpticsSelection) -> None:
-    """Persist UI optics to Streamlit session (import + platesolve + MASTERSTAR)."""
-    try:
-        import streamlit as st
-    except ImportError:
-        return
-    st.session_state[SESSION_EQUIPMENT_KEY] = int(selection.equipment_id)
-    st.session_state[SESSION_TELESCOPE_KEY] = int(selection.telescope_id)
-    st.session_state[LEGACY_IMPORT_EQUIPMENT_KEY] = int(selection.equipment_id)
-    st.session_state[LEGACY_IMPORT_TELESCOPE_KEY] = int(selection.telescope_id)
-
-
-def optics_from_session() -> VyvarOpticsSelection | None:
-    try:
-        import streamlit as st
-    except ImportError:
-        return None
-    eq = st.session_state.get(SESSION_EQUIPMENT_KEY)
-    if eq is None:
-        eq = st.session_state.get(LEGACY_IMPORT_EQUIPMENT_KEY)
-    tel = st.session_state.get(SESSION_TELESCOPE_KEY)
-    if tel is None:
-        tel = st.session_state.get(LEGACY_IMPORT_TELESCOPE_KEY)
-    if eq is None or tel is None:
-        return None
-    try:
-        return VyvarOpticsSelection(int(eq), int(tel))
-    except (TypeError, ValueError):
-        return None
-
-
 def resolve_optics_ids_for_platesolve(
     db: Any,
     draft_id: int | None,
@@ -200,8 +164,9 @@ def resolve_working_optics(
     ui: VyvarOpticsSelection | None = None,
     context: str = "VYVAR",
 ) -> VyvarOpticsSelection:
-    """Resolve ids for pipeline work: UI/session base, draft overlay when present."""
-    base = ui or optics_from_session()
+    """Resolve ids for pipeline work: the caller's selection (GUI: combobox / session), the draft
+    manifest overrides it when ``draft_id`` is set; without a selection the first DB optics."""
+    base = ui
     if base is None:
         eq, tel = _first_db_optics_ids(db)
         if eq is None or tel is None:

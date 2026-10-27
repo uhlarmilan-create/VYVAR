@@ -102,7 +102,9 @@ def test_owner_distribution(reg) -> None:
     # CODE-REVIEW step 7B: isolation radius, chip margin, sips_dao_fwhm_px removed (47 -> 44),
     # gain / read_noise removed (fits_dynamic 2 -> 0).
     # TRANSIENT-2026-10: transient_search_enabled added (44 -> 45).
-    assert dict(dist) == {"db_static": 5, "config_runtime": 45, "internal": 7}, dist
+    # RESOURCES-2026-10: per_frame_mp_reserve_ram_gb removed (config_runtime 45 -> 44) and
+    # qc_preprocess_workers removed (internal 7 -> 6).
+    assert dict(dist) == {"db_static": 5, "config_runtime": 44, "internal": 6}, dist
 
 
 def test_site_is_not_stored_in_config(cfg_json) -> None:

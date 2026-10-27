@@ -19,7 +19,7 @@ Cross-check: **EDGE-ANNULUS-01** is CLOSED-DECIDED in `VYVAR_DECISIONS.md`
 |----|-----------------|-------|------------|
 | **A-1** | Frame selection metric I_j for MASTERSTAR stack ranking | Cursor | TODO-A |
 | **A-1-DECISION-4** | Advanced r90 5.0-5.8 px target 5.31; not implemented | Cursor | schedule |
-| **A-1-OVERRIDE** | Remove VY_FWHM_GAUSS as gaussian_fwhm_px_override; authorized in principle; own measured delta | Cursor | measured delta |
+| **A-1-OVERRIDE** | Remove the MASTERSTAR VY_FWHM (formerly read as VY_FWHM_GAUSS) as gaussian_fwhm_px_override; authorized in principle; own measured delta | Cursor | measured delta |
 | **A-2** | Selection rule N_min=10 N_max=20 quality gate 0.5 x max(I_j) | Cursor | TODO-A |
 | **A-3** | Median/sigma-clip stack replacing single-frame copy | Cursor | TODO-A |
 | **A-4** | Stack provenance in header + pipeline_meta.json | Cursor | TODO-A |

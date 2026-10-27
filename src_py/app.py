@@ -23,11 +23,10 @@ from importer import smart_scan_source
 from optics_selection import (
     VyvarOpticsSelection,
     log_active_optics,
-    optics_from_session,
     parse_ui_optics_from_labels,
     resolve_working_optics,
-    sync_optics_session,
 )
+from ui_session import optics_from_session, sync_optics_session
 from pipeline import AstroPipeline
 import ui_calibration as ui_calibration
 import ui_database_explorer as ui_database_explorer
@@ -47,7 +46,7 @@ _DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
 def _vyvar_effective_draft_dir_override() -> Path | None:
     """Explicit user-loaded draft path (``vyvar_draft_dir_override``); not the full session chain.
 
-    Tab modules also call ``utils.resolve_draft_dir`` for job/post-cal/Drafts fallbacks.
+    Tab modules also call ``ui_session.resolve_draft_dir`` for job/post-cal/Drafts fallbacks.
     """
     raw = st.session_state.get("vyvar_draft_dir_override")
     if not raw:
@@ -257,8 +256,6 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
                 getattr(nr.plan, "source_root", "") or ""
             )
         st.session_state["vyvar_status_calibrated"] = True
-    if nr.memory_profile is not None:
-        st.session_state["vyvar_memory_profile"] = nr.memory_profile
     if nr.ra_ui is not None:
         st.session_state["vyvar_pending_center_ra"] = float(nr.ra_ui)
     if nr.de_ui is not None:
@@ -279,7 +276,6 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
         "prefill_dec_text": "",
         "suggested_reject_fwhm_px": None,
         "suggest_max_detected_stars": None,
-        "memory_profile": nr.memory_profile,
     }
     if nr.platesolve_job_output is not None:
         st.session_state["vyvar_last_job_output"] = nr.platesolve_job_output

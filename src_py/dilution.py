@@ -50,16 +50,8 @@ def _haversine_arcsec(ra1_deg: float, dec1_deg: float, ra2_deg: float, dec2_deg:
 def _normalize_exclude_source_id(catalog_id: int | str | None) -> int | None:
     if catalog_id is None:
         return None
-    s = normalize_gaia_source_id(catalog_id)
-    if not s or not s.isdigit():
-        try:
-            return int(catalog_id)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
-            return None
-    try:
-        return int(s)
-    except (TypeError, ValueError, OverflowError):
-        return None
+    s = normalize_gaia_source_id(catalog_id)  # never int() of a float id (G07-34)
+    return int(s) if s else None
 
 
 def query_gaia_neighbors(

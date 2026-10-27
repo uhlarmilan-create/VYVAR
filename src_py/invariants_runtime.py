@@ -15,6 +15,8 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from gaia_catalog_id import read_vyvar_csv
+
 LOGGER = logging.getLogger(__name__)
 
 PROV_SCHEMA_VERSION = 1
@@ -240,7 +242,7 @@ def read_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
     p = Path(qc_csv)
     if not p.is_file():
         raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
-    df = pd.read_csv(p)
+    df = read_vyvar_csv(p)
     if "status" not in df.columns:
         raise ValueError(f"qc_metrics.csv missing status column: {p}")
     src_col = "src" if "src" in df.columns else "dst"
@@ -285,7 +287,7 @@ def check_osc01_channel_extraction_required(
     equipment_bayermask: str | None,
     meta: dict[str, Any] | None = None,
 ) -> None:
-    """OSC-01: OSC equipment frames must carry VY_CHANNEL (no raw mosaic in alignment)."""
+    """OSC-01: OSC equipment frames must carry VYCHANNL (no raw mosaic in alignment)."""
     from astropy.io import fits
 
     from osc_extract import is_osc_bayermask, valid_bayer_pattern_4
@@ -306,7 +308,7 @@ def check_osc01_channel_extraction_required(
         try:
             with fits.open(fp, memmap=False) as hdul:
                 hdr = hdul[0].header
-                if hdr.get("VY_CHANNEL"):
+                if hdr.get("VYCHANNL"):
                     continue
                 if valid_bayer_pattern_4(str(hdr.get("BAYERPAT") or "")):
                     bad.append(fp.name)
@@ -621,7 +623,7 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
             if not rel.is_file():
                 continue
             try:
-                df = pd.read_csv(rel, low_memory=False)
+                df = read_vyvar_csv(rel, low_memory=False)
             except Exception:  # noqa: BLE001
                 continue
             if "skip_reason" not in df.columns:
@@ -773,10 +775,10 @@ def _sample_cal_stage_from_disk(photometry_dir: Path | str | None) -> dict[str, 
             with fits.open(fp, memmap=True) as hdul:
                 hdr = hdul[0].header
                 data = hdul[0].data
-            stage = hdr.get("VY_CALSTAGE")
+            stage = hdr.get("VYCALSTG")
             if stage is None:
                 continue
-            ds = hdr.get("VY_CALDATASUM")
+            ds = hdr.get("VYCALSUM")
             ok_ds = verify_fits_datasum(np.asarray(data), str(ds) if ds is not None else None)
             return {
                 "source": "calibrated_header",
@@ -952,7 +954,7 @@ def check_cal_stage(meta: dict[str, Any], *, photometry_dir: Path | str | None =
                 ok,
                 policy="FAIL",
                 detail=(
-                    f"cal_stage meta missing; disk VY_CALSTAGE={disk.get('vy_calstage')!r} "
+                    f"cal_stage meta missing; disk VYCALSTG={disk.get('vy_calstage')!r} "
                     f"datasum_ok={disk.get('vy_caldatasum_ok')} sample={disk.get('sample')!r}"
                 ),
             )

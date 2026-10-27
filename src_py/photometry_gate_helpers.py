@@ -27,7 +27,7 @@ def _clamp_err_empty_apertures_min(n: int) -> int:
 
 
 def _robust_scatter_mad(values: np.ndarray) -> float:
-    """Sigma-clipped MAD scatter (Labbe et al. 2003 empty-aperture convention)."""
+    """Plain MAD scatter, 1.4826 x MAD, no clipping (Labbe et al. 2003 empty apertures)."""
     arr = np.asarray(values, dtype=np.float64)
     arr = arr[np.isfinite(arr)]
     if arr.size < 3:
@@ -564,15 +564,21 @@ def _aperture_flux_sky_per_star(
     r_ap_arr: np.ndarray,
     r_in_arr: np.ndarray,
     r_out_arr: np.ndarray,
+    *,
+    sky: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Per-star circular aperture + annulus sky (photutils 2.3 requires scalar ``r`` per aperture).
+
+    ``sky``: image for the annulus medians (NaN = not sky, SKY-SRC-MASK-2026-10); default ``d``.
 
     Aperture sum uses photutils ``method='exact'`` (fractional pixel overlap). Binary
     ``center`` masking produces radius-parity sawtooth in growth/scatter ladders
     (IMPL-04). Annulus sky still uses ``center`` masks for median sampling only.
     """
-    from photutils.aperture import CircularAnnulus, CircularAperture
+    from photutils.aperture import CircularAperture
     from photutils.aperture import aperture_photometry as _aphot
+
+    from sky_estimation import annulus_sky_medians  # noqa: PLC0415
 
     n = int(len(pos))
     flux_arr = np.full(n, np.nan, dtype=np.float64)
@@ -595,12 +601,8 @@ def _aperture_flux_sky_per_star(
                 continue
             xy = (float(pos[idx, 0]), float(pos[idx, 1]))
             ap_i = CircularAperture([xy], r=r_ap)
-            an_i = CircularAnnulus([xy], r_in=r_in, r_out=r_out)
             phot_i = _aphot(d, ap_i, method="exact")
-            ann_masks = an_i.to_mask(method="center")
-            if not isinstance(ann_masks, (list, tuple)):
-                ann_masks = [ann_masks]
-            sky_pp = _sky_pp_from_annulus_mask(d, ann_masks[0])
+            sky_pp = float(annulus_sky_medians(d if sky is None else sky, np.array([xy]), r_in, r_out)[0])
             area = float(ap_i.area)
             flux_arr[idx] = float(phot_i["aperture_sum"][0]) - sky_pp * area
             sky_pp_arr[idx] = sky_pp

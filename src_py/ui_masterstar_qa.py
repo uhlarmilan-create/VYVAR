@@ -10,7 +10,7 @@ import streamlit as st
 from config import AppConfig
 from pipeline import AstroPipeline
 from platesolve_ui_paths import default_bundle_dir, platesolve_bundle_dirs, setup_label
-from utils import resolve_draft_dir
+from ui_session import resolve_draft_dir
 
 
 def _infer_setup_name_from_masterstar_candidate_path(p: Path) -> str | None:

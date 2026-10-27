@@ -68,7 +68,7 @@ SANITY: dict[str, tuple[float, float]] = {
 # Header keyword variant families (first finite + in-range wins).
 HEADER_KEYS: dict[str, tuple[str, ...]] = {
     "gain": ("VY_EGAIN", "EGAIN", "GAIN"),
-    "read_noise": ("VY_RDNOIS", "RDNOISE", "READNOISE", "RDNOISEE", "RN"),
+    "read_noise": ("VYRDNOIS", "RDNOISE", "READNOISE", "RDNOISEE", "RN"),
     "pixel_um": ("XPIXSZ", "PIXSIZE1", "XPIXSIZE", "PIXSIZE", "PIXSZLX"),
     "focal_mm": ("FOCALLEN", "FOCLEN", "TELFOCA"),
     "saturation": ("SATURATE", "MAXLIN", "ESATUR", "LINLIMIT", "MAXADU", "DATAMAX"),
@@ -374,8 +374,8 @@ def resolve_read_noise(
     res = Resolved()
     # VYVAR's own effective stamp (OSC channel frames) is the session truth, like VY_EGAIN for the gain.
     vy = _header_value(header, "read_noise")
-    if vy[1] == "VY_RDNOIS" and vy[0] is not None:
-        res.value, res.source, res.key, res.ok = float(vy[0]), "header", "VY_RDNOIS", True
+    if vy[1] == "VYRDNOIS" and vy[0] is not None:
+        res.value, res.source, res.key, res.ok = float(vy[0]), "header", "VYRDNOIS", True
         return res
     binning = _frame_binning(header, "read_noise")
     setting, _, _ = _header_setting(header, prof)

@@ -209,6 +209,18 @@ def bp_rp_comp_median(
     return float(np.median(np.asarray(vals, dtype=np.float64)))
 
 
+def ensemble_bp_rp(comp_bp_rp: dict[str, float], weights: dict[str, float]) -> float:
+    """Weighted mean BP-RP of the ensemble comps (weights = the ensemble's Broeg weights)."""
+    num = den = 0.0
+    for cid, w in (weights or {}).items():
+        c = float(comp_bp_rp.get(cid, float("nan")))
+        w = float(w)
+        if math.isfinite(c) and math.isfinite(w) and w > 0:
+            num += w * c
+            den += w
+    return num / den if den > 0 else float("nan")
+
+
 def apply_k2_per_frame(
     mag: np.ndarray,
     airmass: np.ndarray,

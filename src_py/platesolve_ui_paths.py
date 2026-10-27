@@ -108,12 +108,15 @@ def setup_label(name: str) -> str:
 def find_photometry_setups(cfg, draft_id: int | None, *, draft_dir_override: Path | None = None) -> dict[str, dict]:
     """All observation setups of a draft (``platesolve/<setup>`` with a per-frame catalog index),
     keyed by setup name, each with its standard paths."""
-    from utils import resolve_draft_dir_path  # noqa: PLC0415
+    from draft_provenance import draft_dir_for_id  # noqa: PLC0415
 
-    if draft_id is None and draft_dir_override is None:
-        return {}
-    draft_dir = resolve_draft_dir_path(draft_dir_override, draft_id, cfg.archive_root)
-    if draft_dir is None:
+    # CORE-NO-UI-2026-10: the given folder or the folder of draft_id - never GUI session state
+    # (with session state the night run could take the setups of the GUI's last job).
+    if draft_dir_override is not None:
+        draft_dir = Path(draft_dir_override).expanduser().resolve()
+    elif draft_id is not None:
+        draft_dir = draft_dir_for_id(cfg.archive_root, int(draft_id)).resolve()
+    else:
         return {}
     ps_dir = draft_dir / "platesolve"
     aligned_root = draft_dir / "detrended_aligned" / "lights"
@@ -141,14 +144,14 @@ def find_photometry_setups(cfg, draft_id: int | None, *, draft_dir_override: Pat
 
 
 def masterstar_fwhm_px(masterstar_fits: Path | None) -> float:
-    """FWHM (px) stamped on MASTERSTAR.fits (VY_FWHM_GAUSS / VY_FWHM); 3.7 when absent."""
+    """FWHM (px) stamped on MASTERSTAR.fits (VY_FWHM); 3.7 when absent."""
     if masterstar_fits is None or not Path(masterstar_fits).is_file():
         return 3.7
     from astropy.io import fits as astrofits  # noqa: PLC0415
 
     try:
         with astrofits.open(masterstar_fits, memmap=False) as hdul:
-            for key in ("VY_FWHM_GAUSS", "VY_FWHM_GAUSSIAN", "VY_FWHM"):
+            for key in ("VY_FWHM",):
                 v = hdul[0].header.get(key)
                 if v is not None:
                     fv = float(v)

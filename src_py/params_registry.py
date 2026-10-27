@@ -29,7 +29,7 @@ TIERS = ("basic", "advanced", "expert")
 PHASES = (
     "observer", "paths", "calibration", "qc", "alignment", "detection",
     "photometry", "comp_selection", "trust", "extinction", "reports",
-    "export", "system",
+    "export",
 )
 KINDS = ("static", "derived", "resolved")
 WIDGETS = ("auto", "custom", "hidden")

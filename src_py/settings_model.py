@@ -31,7 +31,6 @@ GROUP_TITLES: dict[str, str] = {
     "extinction": "Extinction",
     "reports": "Reports",
     "export": "Export",
-    "system": "System",
 }
 TIER_ORDER = {"basic": 0, "advanced": 1, "expert": 2}
 
@@ -55,7 +54,7 @@ def settings_keys(registry: dict[str, Any], config_keys: list[str] | set[str]) -
         entry = registry.get(key)
         if not entry or entry.get("widget") == "hidden":
             continue
-        out.setdefault(entry.get("phase", "system"), []).append(key)
+        out.setdefault(entry["phase"], []).append(key)
     for g, keys in out.items():
         keys.sort(key=lambda k: (TIER_ORDER.get(registry[k].get("tier"), 1), k))
     return out
@@ -415,7 +414,7 @@ def masterstar_detection_count(fits_path: Path) -> int | None:
         hdr = fits.getheader(str(fits_path))
     except OSError:
         return None
-    for key in ("VY_NSTAR", "VY_NSTARS", "VY_NDET", "VY_NDETECT"):
+    for key in ("VY_NSTAR", "VY_NDET"):
         try:
             v = int(float(hdr[key]))
         except (KeyError, TypeError, ValueError):

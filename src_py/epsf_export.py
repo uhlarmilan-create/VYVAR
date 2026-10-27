@@ -62,7 +62,7 @@ def _epsf_rows(psf_csv: Path) -> pd.DataFrame:
 
 
 def _target_info(photometry_dir: Path) -> dict[str, dict[str, Any]]:
-    from epsf_science_set import _norm_id_gaia_or_raw  # noqa: PLC0415
+    from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
 
     at_p = photometry_dir / "active_targets.csv"
     if not at_p.is_file():
@@ -70,7 +70,7 @@ def _target_info(photometry_dir: Path) -> dict[str, dict[str, Any]]:
     at = read_vyvar_csv(at_p, low_memory=False)
     out: dict[str, dict[str, Any]] = {}
     for _, r in at.iterrows():
-        cid = _norm_id_gaia_or_raw(r.get("catalog_id"))
+        cid = normalize_gaia_source_id(r.get("catalog_id"))
         if cid and cid not in out:
             out[cid] = r.to_dict()
     return out

@@ -66,7 +66,7 @@ def test_cal_stage_reads_vy_calstage_header(tmp_path: Path) -> None:
     check_cal_stage(meta, photometry_dir=photo)
     rec = [x for x in meta["invariants"] if x["id"] == "INV-CAL-02"][-1]
     assert rec["ok"] is True
-    assert "VY_CALSTAGE='SKYSF_2'" in rec["detail"] or "VY_CALSTAGE='SKYSF_2'" in rec["detail"].replace('"', "'")
+    assert "VYCALSTG='SKYSF_2'" in rec["detail"] or "VYCALSTG='SKYSF_2'" in rec["detail"].replace('"', "'")
 
 
 @pytest.mark.skipif(

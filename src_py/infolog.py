@@ -179,3 +179,79 @@ def ensure_infolog_logging() -> None:
         # attach a StreamHandler to stdout that is later closed; LOGGER.info would then
         # raise ValueError("I/O operation on closed file.").
         lg.propagate = False
+
+
+# LOG-NOISE-2026-10: library warnings that repeat for every frame or star (astropy FITSFixedWarning
+# for the camera's RADECSYS / MJD-OBS, photutils "star excluded from ePSF fitting", ...) are written
+# once per process with the first example; the run reports how many repeats were left out.
+_NUMBER = None
+
+
+def _warning_template(message: str) -> str:
+    import re  # noqa: PLC0415
+
+    global _NUMBER
+    if _NUMBER is None:
+        _NUMBER = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+    return _NUMBER.sub("#", message)
+
+
+class RepeatedWarningFilter(logging.Filter):
+    """Pass the first record of every message template, count the rest."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.repeats: dict[str, int] = {}
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno < logging.WARNING:
+            return True
+        key = f"{record.name}: {_warning_template(record.getMessage())}"
+        if key in self.repeats:
+            self.repeats[key] += 1
+            return False
+        self.repeats[key] = 0
+        return True
+
+
+_repeat_filter: RepeatedWarningFilter | None = None
+
+
+def _library_loggers() -> list[logging.Logger]:
+    """The libraries' own logger objects. ``logging.getLogger("astroquery")`` before astroquery
+    is imported would create a plain Logger under that name and break astroquery's logger setup
+    (it calls ``log._set_defaults``), so each logger is taken from its library."""
+    out: list[logging.Logger] = [logging.getLogger("py.warnings")]
+    try:
+        from astropy import log as _astropy_log  # noqa: PLC0415
+
+        out.append(_astropy_log)
+    except ImportError:
+        pass
+    try:
+        from astroquery import log as _astroquery_log  # noqa: PLC0415
+
+        out.append(_astroquery_log)
+    except ImportError:
+        pass
+    return out
+
+
+def quiet_repeated_library_warnings() -> RepeatedWarningFilter:
+    """Install the repeat filter on the library loggers once per process."""
+    global _repeat_filter
+    if _repeat_filter is None:
+        _repeat_filter = RepeatedWarningFilter()
+        for lg in _library_loggers():
+            lg.addFilter(_repeat_filter)
+    return _repeat_filter
+
+
+def log_repeated_warnings_summary() -> None:
+    """One INFO line per warning that repeated in this process (how many repeats were left out)."""
+    if _repeat_filter is None:
+        return
+    for key, n in sorted(_repeat_filter.repeats.items()):
+        if n:
+            logging.getLogger("pipeline").info("[LOG] warning repeated %d more time(s), shown once: %s", n, key[:200])
+    _repeat_filter.repeats.clear()

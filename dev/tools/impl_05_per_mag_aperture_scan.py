@@ -32,7 +32,7 @@ from aperture_scatter_select import (  # noqa: E402
     split_selection_holdout,
 )
 from config import AppConfig  # noqa: E402
-from gaia_catalog_id import GAIA_PROC_CSV_READ_DTYPE, normalize_gaia_source_id  # noqa: E402
+from gaia_catalog_id import VYVAR_CSV_DTYPE, normalize_gaia_source_id  # noqa: E402
 from photometry_core import (  # noqa: E402
     compute_fwhm_gaussian_for_aperture_catalog,
     enhance_catalog_dataframe_aperture,
@@ -455,7 +455,7 @@ def remeasure_procs_with_table(
         fits_path = _fits_for_proc(csv_path)
         if not fits_path.is_file():
             continue
-        df = pd.read_csv(csv_path, low_memory=False, dtype=GAIA_PROC_CSV_READ_DTYPE)
+        df = pd.read_csv(csv_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
         with fits.open(fits_path, memmap=True) as hdul:
             data = hdul[0].data
             hdr = hdul[0].header

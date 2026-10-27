@@ -9,95 +9,89 @@ from __future__ import annotations
 import logging
 import math
 import re
-from decimal import Decimal, InvalidOperation
 from typing import AbstractSet, Any
 
 import numpy as np
 import pandas as pd
 
-# Float64 precision loss prevention: Gaia source_id has 19 digits.
-# Reading as str prevents silent truncation to ~15 significant digits.
-# See: TODO-fix (float64 catalog_id precision loss) resolved 17.5.2026
+# Gaia source_id has 19 digits: every id column of a VYVAR CSV is read as text (float64 keeps ~15-16 digits
+# and one blank cell turns a whole int64 column into float64). One map for every reader (code review 2 D06).
 VYVAR_CSV_DTYPE: dict[str, type] = {
     "catalog_id": str,
     "name": str,
     "target_catalog_id": str,
     "comp_catalog_id": str,
+    "check_catalog_id": str,
+    "source_id": str,
+    "source_id_gaia": str,
+    "vy_seed_catalog_id": str,
 }
-
-# Per-frame ``proc_*.csv``: always read Gaia IDs as str (never float64 inference).
-GAIA_PROC_CSV_READ_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
-
 
 def read_vyvar_csv(path: Any, **kwargs: Any) -> pd.DataFrame:
     """
-    Canonical CSV reader for all VYVAR proc/catalog CSV files.
-    Always reads catalog_id and name as str to prevent float64 precision loss.
-    Pass additional kwargs to pd.read_csv (e.g. usecols, nrows).
+    Canonical CSV reader for all VYVAR proc/catalog CSV files: every id column (``VYVAR_CSV_DTYPE``) as text.
+    Other kwargs go to ``pd.read_csv``; a scalar ``dtype`` (e.g. ``str``) is kept as given, a dict is merged,
+    and a column with a converter keeps its converter.
     """
-    extra_dtype = kwargs.pop("dtype", {}) or {}
-    dtype = {**VYVAR_CSV_DTYPE, **extra_dtype}
+    extra = kwargs.pop("dtype", None)
+    if extra is not None and not isinstance(extra, dict):
+        return pd.read_csv(path, dtype=extra, **kwargs)
+    dtype = {**VYVAR_CSV_DTYPE, **(extra or {})}
+    for col in kwargs.get("converters") or {}:
+        dtype.pop(col, None)
     return pd.read_csv(path, dtype=dtype, **kwargs)
 
 
-def normalize_gaia_source_id(val) -> str:
-    """Return the decimal ID string or ``\"\"``; unifies int, float, ``4.62e+17``, quotes."""
-    # Safe: normalize_gaia_source_id handles NaN/empty/scientific notation;
-    #        non-numeric strings returned as-is - callers must validate.
-    # Fast path (CODE-REVIEW-2026-10): ids read as text are already in normal form (the
-    # general path below returns them unchanged); this is the case of nearly every call.
-    if type(val) is str and val.isascii() and val.isdigit():
+_ID_WARNED: set[str] = set()
+
+
+def _refuse_id(val: Any, why: str) -> str:
+    key = f"{type(val).__name__}:{why}"
+    if key not in _ID_WARNED:
+        _ID_WARNED.add(key)
+        logging.warning("[GAIA ID] refused %r (%s) - Gaia ids are read and written as text", val, why)
+    return ""
+
+
+def normalize_gaia_source_id(val: Any) -> str:
+    """Gaia source_id as its decimal text, or ``""`` (GAIA-ID-STRICT-2026-10, code review 2 G04-16).
+
+    Accepted: ``int`` / numpy integer >= 0, ASCII digit strings (quotes and blanks stripped), and floats or
+    float strings that hold an exact integer below 2**53. Everything else gives ``""``: floats of 19-digit ids
+    (they lost their last digits), ``"4.6e+18"``, bools, bytes, non-ASCII digits (one WARNING per kind - a
+    wrong id must never be fabricated) and names such as VSX names or DET_ labels (silently).
+    """
+    if type(val) is str and val.isascii() and val.isdigit():  # fast path: ids read as text
         return val
-    if val is None:
-        return ""
-    if isinstance(val, dict):
-        for key in ("source_id", "catalog_id", "id", "SOURCE_ID", "SOURCE_ID_GAIA"):
-            if key in val and val[key] is not None:
-                nested = normalize_gaia_source_id(val[key])
-                if nested:
-                    return nested
-        return ""
-    if isinstance(val, (list, tuple)):
-        for item in val:
-            nested = normalize_gaia_source_id(item)
-            if nested:
-                return nested
-        return ""
-    if isinstance(val, float) and not math.isfinite(val):
-        return ""
-    try:
-        if pd.isna(val):
-            return ""
-    except (TypeError, ValueError):
-        pass
+    if val is None or isinstance(val, (bool, np.bool_, bytes)):
+        return "" if val is None else _refuse_id(val, "not an id type")
     if isinstance(val, (int, np.integer)):
-        return str(int(val))
-    if isinstance(val, float) and math.isfinite(val):
-        if val.is_integer() and abs(val) < 2**53:
-            return str(int(val))
+        return str(int(val)) if int(val) >= 0 else _refuse_id(val, "negative")
+    if isinstance(val, (float, np.floating)):
+        f = float(val)
+        if not math.isfinite(f):
+            return ""
+        if f.is_integer() and 0 <= f < 2**53:
+            return str(int(f))
+        return _refuse_id(val, "float without the exact digits")
+    if not isinstance(val, str):
         try:
-            return str(int(Decimal(str(val))))
-        except (InvalidOperation, ValueError, OverflowError):
+            if pd.isna(val):
+                return ""
+        except (TypeError, ValueError):
             pass
-    s = str(val).strip().strip('"').strip("'")
-    if not s or s.lower() == "nan":
+        return _refuse_id(val, "not an id type")
+    s = val.strip().strip('"').strip("'").strip()
+    if not s or s.lower() in ("nan", "none", "null"):
         return ""
-    if re.fullmatch(r"-?\d+", s):
+    if s.isascii() and s.isdigit():
         return s
-    if "e" in s.lower():
-        try:
-            return str(int(Decimal(s)))
-        except (InvalidOperation, ValueError, OverflowError):
-            pass
-    try:
-        fv = float(s)
-        if math.isfinite(fv):
-            if fv.is_integer() and abs(fv) < 2**53:
-                return str(int(fv))
-            return str(int(Decimal(s)))
-    except (TypeError, ValueError, OverflowError, InvalidOperation):
-        pass
-    return s
+    m = re.fullmatch(r"([0-9]+)\.0*", s)
+    if m and s.isascii() and int(m.group(1)) < 2**53:
+        return str(int(m.group(1)))
+    if re.fullmatch(r"[+-]?[0-9.]+([eE][+-]?[0-9]+)?", s):
+        return _refuse_id(val, "number without the exact digits")
+    return ""  # a name (VSX name, DET_ label), not an id
 
 
 def normalize_gaia_source_id_series(s: pd.Series) -> pd.Series:
@@ -129,15 +123,8 @@ def normalize_gaia_id_set(
 
 
 def masterstar_row_gaia_key(row: pd.Series) -> str:
-    """Key for the cone join: ``name`` first if it looks like a Gaia source_id (CSV often breaks ``catalog_id`` as float)."""
-    name_k = normalize_gaia_source_id(row.get("name"))
-    if name_k and re.fullmatch(r"\d{12,22}", name_k):
-        return name_k
-    cat_k = normalize_gaia_source_id(row.get("catalog_id"))
-    if cat_k:
-        return cat_k
-    return name_k
-
+    """Identity key of a MASTERSTAR row: its ``catalog_id`` only (INV-MATCH-IDENTITY-01; ``name`` is a label)."""
+    return normalize_gaia_source_id(row.get("catalog_id"))
 
 def _catalog_id_empty_to_blank(s: pd.Series) -> pd.Series:
     """NaN / ``nan`` -> ``\"\"`` for writing to CSV (``na_rep=\"\"``)."""
@@ -157,14 +144,5 @@ def catalog_id_series_for_masterstars_export(df: pd.DataFrame) -> pd.Series:
 
 
 def norm_id_or_empty(x: Any) -> str:
-    """Normalize a catalog_id-like value to Gaia decimal string, or \"\" if empty/nan/none."""
-    s = str(x or "").strip()
-    if not s or s.lower() in ("nan", "none"):
-        return ""
-    try:
-        return normalize_gaia_source_id(s)
-    except Exception:  # noqa: BLE001
-        try:
-            return str(int(float(s)))
-        except (ValueError, TypeError):
-            return s
+    """Normalised Gaia id or ``""`` (same rule as ``normalize_gaia_source_id``)."""
+    return normalize_gaia_source_id(x)

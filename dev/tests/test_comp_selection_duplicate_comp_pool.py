@@ -9,9 +9,10 @@ from gaia_catalog_id import normalize_gaia_id_set, normalize_gaia_source_id
 from photometry_core import _dedupe_comp_pool_by_gaia_key
 
 
-def test_normalize_gaia_source_id_from_dict() -> None:
-    assert normalize_gaia_source_id({"source_id": 1625467932661420928}) == "1625467932661420928"
-    assert normalize_gaia_source_id({"catalog_id": "1625467932661420928"}) == "1625467932661420928"
+def test_normalize_gaia_source_id_refuses_containers() -> None:
+    """GAIA-ID-STRICT-2026-10: a dict / list is not an id (no guessing which key holds it)."""
+    assert normalize_gaia_source_id({"source_id": 1625467932661420928}) == ""
+    assert normalize_gaia_source_id(["1625467932661420928"]) == ""
 
 
 def test_normalize_gaia_id_set_drops_dict_entries() -> None:

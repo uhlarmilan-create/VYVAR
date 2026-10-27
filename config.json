@@ -198,13 +198,6 @@
   // none of this runs.
   "transient_search_enabled": false,
 
-  // === System & performance ===
-  // Machine-level behaviour: memory kept free when VYVAR sizes its parallel
-  // workers.
-  // Memory left free per parallel worker when VYVAR sizes the number of
-  // workers.
-  "per_frame_mp_reserve_ram_gb": 1.5,
-
   // === File & catalog paths ===
   // Where VYVAR keeps its data: the archive, the calibration library, the app
   // database and the star catalogs. Set once after installing.

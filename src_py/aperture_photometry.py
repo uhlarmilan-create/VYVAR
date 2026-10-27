@@ -12,6 +12,8 @@ import re
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from config import AppConfig
 from pipeline_constants import CT_MIN_COMP
@@ -35,11 +37,6 @@ from photometry_core import (
 
 
 
-def _parallel_workers(cfg: Any) -> int:
-    """Worker processes for frame-parallel aperture-photometry work (one count for the whole pipeline)."""
-    from pipeline_calibrate import _vyvar_parallel_worker_count  # noqa: PLC0415
-
-    return int(_vyvar_parallel_worker_count(cfg))
 
 def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:
     """Return ``catalog_id`` -> ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
@@ -95,45 +92,18 @@ def _build_csv_lookup(
     1. Primary: dict {normalized_id -> row}
     2. Fallback: rows with numeric x,y for nearest-neighbor match (full CSV columns).
 
-    The pipeline proc CSV often has ``catalog_id`` as float / scientific notation (precision loss),
-    while ``name`` holds the exact Gaia ``source_id`` - we index both (``setdefault``),
-    so that aperture photometry does not hit a neighbour via NN instead of the correct comparison star.
+    Key: the normalised ``id_col`` (catalog_id) only - ids are read as text everywhere (GAIA-ID-STRICT-2026-10),
+    ``name`` is a label and never an identity (INV-MATCH-IDENTITY-01, code review 2 G04-17).
     """
-    # SPEED-2026-10 (S1): keys computed from column lists; the row Series is built on first lookup
-    # (aperture photometry reads ~25k of ~280k rows on 534 g). Same keys and first-row precedence as before.
-    n = len(csv_df)
-    _has_name = "name" in csv_df.columns
-    _names = csv_df["name"].tolist() if _has_name else [None] * n
-    _cats = csv_df["catalog_id"].tolist() if "catalog_id" in csv_df.columns else [None] * n
-    _ids = csv_df[id_col].tolist()
-    _gaia_re = re.compile(r"\d{12,22}")
     pos: dict[str, int] = {}
-    for i in range(n):
-        keys: set[str] = set()
-        name_k = normalize_gaia_source_id(_names[i])
-        name_ok = bool(name_k and _gaia_re.fullmatch(name_k))
-        if name_ok:
-            keys.add(name_k)  # masterstar_row_gaia_key: name first, also the "name" key
-        else:
-            cat_k = normalize_gaia_source_id(_cats[i])
-            pk = cat_k if cat_k else name_k
-            if pk:
-                keys.add(pk)
-        cid = _normalize_gaia_id(_ids[i])
+    for i, v in enumerate(csv_df[id_col].tolist()):
+        cid = _normalize_gaia_id(v)
         if cid:
-            keys.add(cid)
-        for k in keys:
-            pos.setdefault(k, i)
+            pos.setdefault(cid, i)
     id_map = _CsvRowMap(csv_df, pos)
     # Full copy: the NN fallback must return a Series with all columns (dao_flux, times, ...).
     xy_df = csv_df.copy()
-    if "name" in xy_df.columns:
-        _nk = xy_df["name"].map(normalize_gaia_source_id)
-        _is_gaia_name = _nk.map(lambda s: bool(s and re.fullmatch(r"\d{12,22}", s)))
-        _cid_from_col = xy_df[id_col].map(_normalize_gaia_id)
-        xy_df["_cid_norm"] = _nk.where(_is_gaia_name, _cid_from_col)
-    else:
-        xy_df["_cid_norm"] = xy_df[id_col].apply(_normalize_gaia_id)
+    xy_df["_cid_norm"] = xy_df[id_col].map(_normalize_gaia_id)  # identity = catalog_id only (G04-17)
     xy_df["x"] = pd.to_numeric(xy_df["x"], errors="coerce")
     xy_df["y"] = pd.to_numeric(xy_df["y"], errors="coerce")
     return id_map, xy_df.dropna(subset=["x", "y"])
@@ -399,7 +369,7 @@ def compute_optimal_apertures(
 
     result: dict[str, float] = {}
     for _, row in star_positions.iterrows():
-        cid = _normalize_gaia_id(row.get("catalog_id", row.get("name", "")))
+        cid = _normalize_gaia_id(row.get("catalog_id", ""))
         if cid:
             result[cid] = global_ap
 
@@ -1221,7 +1191,7 @@ def _comp_maps_from_comparison_stars_csv(
     comp_catalog_mag: dict[str, float] = {}
     comp_quality: dict[str, dict] = {}
     for _, row in comp_df.iterrows():
-        cid = _normalize_gaia_id(row.get("catalog_id", row.get("name")))
+        cid = _normalize_gaia_id(row.get("catalog_id"))
         if not cid:
             continue
         bp = pd.to_numeric(row.get("bp_rp"), errors="coerce")
@@ -1380,10 +1350,10 @@ def _ensure_group_comp_pool_csv(
     n_pool = 0
     if comp_csv.is_file():
         try:
-            n_pool = int(len(pd.read_csv(comp_csv, usecols=["catalog_id"])))
+            n_pool = int(len(read_vyvar_csv(comp_csv, usecols=["catalog_id"])))
         except Exception:  # noqa: BLE001
             try:
-                n_pool = int(len(pd.read_csv(comp_csv)))
+                n_pool = int(len(read_vyvar_csv(comp_csv)))
             except Exception:  # noqa: BLE001
                 n_pool = 0
     if n_pool >= int(min_pool):
@@ -2316,6 +2286,14 @@ def _aperture_finalize_exports(
 
     _ef_snap = get_except_fix_counters().snapshot()
     merge_photometry_pipeline_meta(output_dir, {"except_fix_summary": _ef_snap})
+    from parallel_frames import resource_budget  # noqa: PLC0415
+
+    _rb = resource_budget()
+    merge_photometry_pipeline_meta(output_dir, {"resources": {
+        "logical_cpus": _rb.logical_cpus, "cpu_workers": _rb.cpu_workers, "cpu_source": _rb.cpu_source,
+        "total_ram_gb": round(_rb.total_ram_bytes / 1024**3, 2), "ram_budget_gb": round(_rb.ram_budget_bytes / 1024**3, 2),
+        "ram_source": _rb.ram_source,
+    }})
     if any(v > 0 for v in _ef_snap.values()):
         logging.error("[EXCEPT-FIX] Aperture photometry terminal-failure counters: %s", _ef_snap)
 
@@ -2381,6 +2359,38 @@ def _aperture_finalize_exports(
     }
 
 
+def _frame_scintillation_mag(state: Any, frame_order: list, output_dir: Path) -> np.ndarray:
+    """Per-frame scintillation [mag] at the frame airmass with the rig parameters the light-curve
+    error uses (SIGMA-SYS-MODEL-2026-10); 0 where the airmass is unknown."""
+    from aperture_pertarget import frame_stem_from_source  # noqa: PLC0415
+    from processed_field import processed_field_id  # noqa: PLC0415
+    from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
+    from sigma_floor_core import scintillation_mag_per_epoch  # noqa: PLC0415
+
+    am_by_stem: dict[str, float] = {}
+    for key, df in (getattr(state, "_aperture_csv_cache", None) or {}).items():
+        if df is not None and "airmass" in getattr(df, "columns", []):
+            v = pd.to_numeric(df["airmass"], errors="coerce")
+            if v.notna().any():
+                am_by_stem[frame_stem_from_source(str(key))] = float(v.median())
+    rig = resolve_rig_scintillation_params(
+        draft_id=processed_field_id(output_dir),
+        setup=str(state.obs_group or ""),
+        cfg=state._cfg,
+        pipeline_meta=({"observer_location": {"alt_m": float(state.site_alt)}}
+                       if state.site_ok and state.site_alt is not None else None),
+    )
+    out = np.zeros(len(frame_order), dtype=float)
+    for i, stem in enumerate(frame_order):
+        am = am_by_stem.get(str(stem), float("nan"))
+        if math.isfinite(am) and am >= 1.0:
+            out[i] = scintillation_mag_per_epoch(
+                telescope_diameter_m=rig.telescope_diameter_m, airmass=am, exposure_s=rig.exposure_s,
+                altitude_m=rig.altitude_m, c_y=rig.c_y,
+            )
+    return out
+
+
 def _night_sigma_sys(state: Any, grid: Any, frame_order: list, output_dir: Path,
                      annulus_inner_fwhm: float, annulus_outer_fwhm: float, *, choices: dict | None = None) -> None:
     """SIGMA-SYS-NIGHT-2026-10 (Milan 2026-10-12): measure the night's systematic floor on the
@@ -2405,6 +2415,7 @@ def _night_sigma_sys(state: Any, grid: Any, frame_order: list, output_dir: Path,
     r = night_sigma_sys_from_comps(
         flux, sky, fw, k=k, gain=_g, read_noise=_rn,
         annulus_inner_fwhm=float(annulus_inner_fwhm), annulus_outer_fwhm=float(annulus_outer_fwhm),
+        scint_mag_by_frame=_frame_scintillation_mag(state, frame_order, output_dir),
     )
     r["k"] = float(k)
     v = float(r.get("sigma_sys_mag", float("nan")))
@@ -2535,8 +2546,7 @@ def run_aperture_photometry(
 ) -> dict[str, Any]:
     """Main wrapper for aperture photometry.
 
-    Global FWHM for the aperture: ``VY_FWHM_GAUSS`` (2D fit from the pipeline), else ``VY_FWHM``
-    (DAO, comparable to the Gaussian FWHM for the aperture), else a 2D Gaussian fit
+    Global FWHM for the aperture: ``VY_FWHM`` (frame QC elliptical Gaussian), else a 2D Gaussian fit
     (``measure_fwhm_from_masterstar``) with a hint from ``fwhm_px``.
     Aperture radius = ``aperture_fwhm_factor x FWHM`` (default from ``cfg``).
 
@@ -2689,251 +2699,251 @@ def run_aperture_photometry(
     # APERTURE-PERTARGET-01: measure f-grid for targets+comps and pick f* per target.
     state.aperture_grid_night = None
     state.per_target_aperture = {}
-    try:
-        from aperture_pertarget import (  # noqa: PLC0415
-            apply_night_k,
-            choose_f_for_target,
-            measure_night_grid,
-            DEFAULT_APERTURE_F_GRID,
-            write_per_target_choices,
-        )
+    from aperture_pertarget import (  # noqa: PLC0415
+        apply_brightness_k,
+        choose_f_for_target,
+        field_k_by_brightness,
+        target_inst_mag,
+        measure_night_grid,
+        DEFAULT_APERTURE_F_GRID,
+        write_per_target_choices,
+    )
 
-        _p2("Aperture photometry: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
-        _ids: set[str] = set()
-        for _, _tr in at_df.iterrows():
-            _cid = str(_tr.get("catalog_id", "") or "").strip()
-            if _cid:
-                _ids.add(_cid)
-        for _cid_key, _sub in (state._comp_index or {}).items():
-            _ids.add(str(_cid_key))
-            if hasattr(_sub, "iterrows"):
-                for _, _cr in _sub.iterrows():
-                    _cc = str(_cr.get("catalog_id", "") or "").strip()
-                    if _cc:
-                        _ids.add(_cc)
-        # COMP-SMART-2026-10: the reserve candidates are measured too (replacements)
-        for _rsub in (getattr(state, "reserve_index", None) or {}).values():
-            if hasattr(_rsub, "iterrows"):
-                for _cc in _rsub.get("catalog_id", pd.Series(dtype=str)).astype(str).str.strip():
-                    if _cc:
-                        _ids.add(_cc)
-        # APERTURE-K-2026-10: the whole comparison pool (check-star candidates
-        # included) is measured so the check star uses the same aperture as its comps.
-        if getattr(state, "comp_df", None) is not None and "catalog_id" in state.comp_df.columns:
-            for _cc in state.comp_df["catalog_id"].astype(str).str.strip():
+    _p2("Aperture photometry: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
+    _ids: set[str] = set()
+    for _, _tr in at_df.iterrows():
+        _cid = str(_tr.get("catalog_id", "") or "").strip()
+        if _cid:
+            _ids.add(_cid)
+    for _cid_key, _sub in (state._comp_index or {}).items():
+        _ids.add(str(_cid_key))
+        if hasattr(_sub, "iterrows"):
+            for _, _cr in _sub.iterrows():
+                _cc = str(_cr.get("catalog_id", "") or "").strip()
                 if _cc:
                     _ids.add(_cc)
-        _xy_ms: dict[str, tuple[float, float]] = {}
-        _msdf = getattr(state, "masterstars_df", None)
-        if _msdf is not None and {"catalog_id", "x", "y"}.issubset(_msdf.columns):
-            for _c, _x, _y in zip(
-                _msdf["catalog_id"].astype(str).str.strip(),
-                pd.to_numeric(_msdf["x"], errors="coerce"),
-                pd.to_numeric(_msdf["y"], errors="coerce"),
-            ):
-                if _c in _ids:
-                    _xy_ms[_c] = (float(_x), float(_y))
-        _fwhm_pt = float(
-            (state.aperture_policy or {}).get("fwhm_night_median_px")
-            or (state.aperture_policy or {}).get("fwhm_used_px")
-            or state.fwhm_px
-            or 5.0
-        )
-        # PSF-LOCAL-2026-10 (Milan 2026-10-11, draft 526 ASASSN-V J152756.18: own PSF 1.35 x
-        # the field, aperture 3.4 px): targets with a broader own profile get r scaled.
-        _psf_scale: dict[str, float] = {}
-        state.psf_ratio = {}
-        try:
-            from aperture_pertarget import psf_scale_for_targets  # noqa: PLC0415
+    # COMP-SMART-2026-10: the reserve candidates are measured too (replacements)
+    for _rsub in (getattr(state, "reserve_index", None) or {}).values():
+        if hasattr(_rsub, "iterrows"):
+            for _cc in _rsub.get("catalog_id", pd.Series(dtype=str)).astype(str).str.strip():
+                if _cc:
+                    _ids.add(_cc)
+    # APERTURE-K-2026-10: the whole comparison pool (check-star candidates
+    # included) is measured so the check star uses the same aperture as its comps.
+    if getattr(state, "comp_df", None) is not None and "catalog_id" in state.comp_df.columns:
+        for _cc in state.comp_df["catalog_id"].astype(str).str.strip():
+            if _cc:
+                _ids.add(_cc)
+    _xy_ms: dict[str, tuple[float, float]] = {}
+    _msdf = getattr(state, "masterstars_df", None)
+    if _msdf is not None and {"catalog_id", "x", "y"}.issubset(_msdf.columns):
+        for _c, _x, _y in zip(
+            _msdf["catalog_id"].astype(str).str.strip(),
+            pd.to_numeric(_msdf["x"], errors="coerce"),
+            pd.to_numeric(_msdf["y"], errors="coerce"),
+        ):
+            if _c in _ids:
+                _xy_ms[_c] = (float(_x), float(_y))
+    _fwhm_pt = float(
+        (state.aperture_policy or {}).get("fwhm_night_median_px")
+        or (state.aperture_policy or {}).get("fwhm_used_px")
+        or state.fwhm_px
+        or 5.0
+    )
+    # PSF-LOCAL-2026-10 (Milan 2026-10-11, draft 526 ASASSN-V J152756.18: own PSF 1.35 x
+    # the field, aperture 3.4 px): targets with a broader own profile get r scaled.
+    _psf_scale: dict[str, float] = {}
+    state.psf_ratio = {}
+    try:
+        from aperture_pertarget import psf_scale_for_targets  # noqa: PLC0415
 
-            _tgt_ids = {str(c).strip() for c in at_df.get("catalog_id", pd.Series(dtype=str)).tolist()}
-            _txy = {c: v for c, v in _xy_ms.items() if c in _tgt_ids}
-            _ref_xym: list[tuple[float, float, float]] = []
-            _tmag_by: dict[str, float] = {}
-            _excl: set[str] = set()
-            if _msdf is not None and {"x", "y", "mag"}.issubset(_msdf.columns):
-                _mx = pd.to_numeric(_msdf["x"], errors="coerce").to_numpy(float)
-                _my = pd.to_numeric(_msdf["y"], errors="coerce").to_numpy(float)
-                _mm = pd.to_numeric(_msdf["mag"], errors="coerce").to_numpy(float)
-                _W, _H = np.nanmax(_mx), np.nanmax(_my)
-                _okm = np.isfinite(_mx) & np.isfinite(_my) & np.isfinite(_mm)
-                # references: interior, unsaturated, not a known variable, isolated (no
-                # catalogue neighbour within 4 FWHM brighter than mag + 2.5)
-                _sel = _okm & (_mx > 100) & (_my > 100) & (_mx < _W - 100) & (_my < _H - 100)
-                for _flag in ("vsx_known_variable", "likely_saturated", "is_saturated"):
-                    if _flag in _msdf.columns:
-                        _sel &= ~_msdf[_flag].astype(str).str.strip().str.lower().isin(["true", "1", "1.0"]).to_numpy()
-                if "peak_max_adu" in _msdf.columns:
-                    _pk = pd.to_numeric(_msdf["peak_max_adu"], errors="coerce").to_numpy(float)
-                    _sel &= ~(_pk >= 50000.0)
-                from scipy.spatial import cKDTree  # noqa: PLC0415
+        _tgt_ids = {str(c).strip() for c in at_df.get("catalog_id", pd.Series(dtype=str)).tolist()}
+        _txy = {c: v for c, v in _xy_ms.items() if c in _tgt_ids}
+        _ref_xym: list[tuple[float, float, float]] = []
+        _tmag_by: dict[str, float] = {}
+        _excl: set[str] = set()
+        if _msdf is not None and {"x", "y", "mag"}.issubset(_msdf.columns):
+            _mx = pd.to_numeric(_msdf["x"], errors="coerce").to_numpy(float)
+            _my = pd.to_numeric(_msdf["y"], errors="coerce").to_numpy(float)
+            _mm = pd.to_numeric(_msdf["mag"], errors="coerce").to_numpy(float)
+            _W, _H = np.nanmax(_mx), np.nanmax(_my)
+            _okm = np.isfinite(_mx) & np.isfinite(_my) & np.isfinite(_mm)
+            # references: interior, unsaturated, not a known variable, isolated (no
+            # catalogue neighbour within 4 FWHM brighter than mag + 2.5)
+            _sel = _okm & (_mx > 100) & (_my > 100) & (_mx < _W - 100) & (_my < _H - 100)
+            for _flag in ("vsx_known_variable", "likely_saturated", "is_saturated"):
+                if _flag in _msdf.columns:
+                    _sel &= ~_msdf[_flag].astype(str).str.strip().str.lower().isin(["true", "1", "1.0"]).to_numpy()
+            if "peak_max_adu" in _msdf.columns:
+                _pk = pd.to_numeric(_msdf["peak_max_adu"], errors="coerce").to_numpy(float)
+                _sel &= ~(_pk >= 50000.0)
+            from scipy.spatial import cKDTree  # noqa: PLC0415
 
-                _ii = np.where(_okm)[0]
-                _tree = cKDTree(np.c_[_mx[_ii], _my[_ii]])
-                for _k in np.where(_sel)[0]:
-                    for _j in _tree.query_ball_point([_mx[_k], _my[_k]], 4.0 * _fwhm_pt):
-                        _jj = _ii[_j]
-                        if _jj != _k and _mm[_jj] < _mm[_k] + 2.5:
-                            _sel[_k] = False
-                            break
-                _ref_xym = [(float(_mx[i]), float(_my[i]), float(_mm[i])) for i in np.where(_sel)[0]]
-                # a catalogue neighbour within 3 FWHM not fainter than target + 1 mag: the
-                # profile includes the neighbour -> no scaling (TARGET-BLEND judges it)
-                for _c, (_x, _y) in _txy.items():
-                    _tm = _msdf.loc[_msdf["catalog_id"].astype(str).str.strip() == _c, "mag"]
-                    _tmag = float(pd.to_numeric(_tm, errors="coerce").iloc[0]) if len(_tm) else float("nan")
-                    _tmag_by[_c] = _tmag
-                    # a flat-topped (saturated / nonlinear) core looks broad -> never scaled
-                    _trow = _msdf.loc[_msdf["catalog_id"].astype(str).str.strip() == _c]
-                    if len(_trow):
-                        _tr0 = _trow.iloc[0]
-                        if any(str(_tr0.get(_f, "")).strip().lower() in ("true", "1", "1.0")
-                               for _f in ("is_saturated", "likely_saturated", "likely_nonlinear")) \
-                                or float(pd.to_numeric(_tr0.get("peak_max_adu"), errors="coerce")) >= 50000.0:
-                            _excl.add(_c)
-                    _d = np.hypot(_mx - _x, _my - _y)
-                    _nb = (_d > 0.5) & (_d < 3.0 * _fwhm_pt) & (_mm < (_tmag + 1.0 if math.isfinite(_tmag) else 99))
-                    if bool(_nb.any()):
+            _ii = np.where(_okm)[0]
+            _tree = cKDTree(np.c_[_mx[_ii], _my[_ii]])
+            for _k in np.where(_sel)[0]:
+                for _j in _tree.query_ball_point([_mx[_k], _my[_k]], 4.0 * _fwhm_pt):
+                    _jj = _ii[_j]
+                    if _jj != _k and _mm[_jj] < _mm[_k] + 2.5:
+                        _sel[_k] = False
+                        break
+            _ref_xym = [(float(_mx[i]), float(_my[i]), float(_mm[i])) for i in np.where(_sel)[0]]
+            # a catalogue neighbour within 3 FWHM not fainter than target + 1 mag: the
+            # profile includes the neighbour -> no scaling (TARGET-BLEND judges it)
+            for _c, (_x, _y) in _txy.items():
+                _tm = _msdf.loc[_msdf["catalog_id"].astype(str).str.strip() == _c, "mag"]
+                _tmag = float(pd.to_numeric(_tm, errors="coerce").iloc[0]) if len(_tm) else float("nan")
+                _tmag_by[_c] = _tmag
+                # a flat-topped (saturated / nonlinear) core looks broad -> never scaled
+                _trow = _msdf.loc[_msdf["catalog_id"].astype(str).str.strip() == _c]
+                if len(_trow):
+                    _tr0 = _trow.iloc[0]
+                    if any(str(_tr0.get(_f, "")).strip().lower() in ("true", "1", "1.0")
+                           for _f in ("is_saturated", "likely_saturated", "likely_nonlinear")) \
+                            or float(pd.to_numeric(_tr0.get("peak_max_adu"), errors="coerce")) >= 50000.0:
                         _excl.add(_c)
-            _psf_scale, state.psf_ratio = psf_scale_for_targets(
-                Path(masterstar_fits_path), _txy, _ref_xym, _fwhm_pt, target_mag=_tmag_by, exclude=_excl)
-            state.psf_scale = dict(_psf_scale)
-            if _psf_scale:
-                logging.info("[PSF-LOCAL] broader own PSF -> scaled aperture: %s",
-                             {k: round(v, 2) for k, v in _psf_scale.items()})
-        except Exception as _ps_exc:  # noqa: BLE001
-            logging.warning("[PSF-LOCAL] not computed: %s", _ps_exc)
-            _psf_scale = {}
-        _grid = measure_night_grid(
-            frames_dir=Path(state._aligned_dir_2a),
-            catalog_ids=sorted(_ids),
-            f_grid=list(DEFAULT_APERTURE_F_GRID),
-            fwhm_night_px=_fwhm_pt,
-            annulus_inner_fwhm=float(annulus_inner_fwhm),
-            annulus_outer_fwhm=float(annulus_outer_fwhm),
-            xy_by_cid=_xy_ms,
-            scale_by_cid=_psf_scale,
-            workers=_parallel_workers(_cfg),
-        )
-        state.aperture_grid_night = _grid
-        _frame_order = sorted(_grid.frames.keys())
-        _choices = {}
-        for _, _tr in at_df.iterrows():
-            _tcid = str(_tr.get("catalog_id", "") or "").strip()
-            if not _tcid:
-                continue
-            _comps_sub = state._comp_index.get(_tcid, pd.DataFrame())
-            if _comps_sub is None or getattr(_comps_sub, "empty", True):
-                _comp_ids_pt: list[str] = []
-            else:
-                _comp_ids_pt = [
-                    str(x).strip()
-                    for x in _comps_sub.get("catalog_id", pd.Series(dtype=str)).tolist()
-                    if str(x).strip()
-                ]
-            # BLEND-K-2026-10: only apertures at which all the target's comps keep
-            # <= 1 % neighbour light (per-k values from the comparison-star selection pool).
-            from aperture_pertarget import allowed_f_from_comp_blend  # noqa: PLC0415
-            from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
+                _d = np.hypot(_mx - _x, _my - _y)
+                _nb = (_d > 0.5) & (_d < 3.0 * _fwhm_pt) & (_mm < (_tmag + 1.0 if math.isfinite(_tmag) else 99))
+                if bool(_nb.any()):
+                    _excl.add(_c)
+        _psf_scale, state.psf_ratio = psf_scale_for_targets(
+            Path(masterstar_fits_path), _txy, _ref_xym, _fwhm_pt, target_mag=_tmag_by, exclude=_excl)
+        state.psf_scale = dict(_psf_scale)
+        if _psf_scale:
+            logging.info("[PSF-LOCAL] broader own PSF -> scaled aperture: %s",
+                         {k: round(v, 2) for k, v in _psf_scale.items()})
+    except Exception as _ps_exc:  # noqa: BLE001
+        logging.warning("[PSF-LOCAL] not computed: %s", _ps_exc)
+        _psf_scale = {}
+    _grid = measure_night_grid(
+        frames_dir=Path(state._aligned_dir_2a),
+        catalog_ids=sorted(_ids),
+        f_grid=list(DEFAULT_APERTURE_F_GRID),
+        fwhm_night_px=_fwhm_pt,
+        annulus_inner_fwhm=float(annulus_inner_fwhm),
+        annulus_outer_fwhm=float(annulus_outer_fwhm),
+        xy_by_cid=_xy_ms,
+        scale_by_cid=_psf_scale,
+    )
+    state.aperture_grid_night = _grid
+    _frame_order = sorted(_grid.frames.keys())
+    _choices = {}
+    for _, _tr in at_df.iterrows():
+        _tcid = str(_tr.get("catalog_id", "") or "").strip()
+        if not _tcid:
+            continue
+        _comps_sub = state._comp_index.get(_tcid, pd.DataFrame())
+        if _comps_sub is None or getattr(_comps_sub, "empty", True):
+            _comp_ids_pt: list[str] = []
+        else:
+            _comp_ids_pt = [
+                str(x).strip()
+                for x in _comps_sub.get("catalog_id", pd.Series(dtype=str)).tolist()
+                if str(x).strip()
+            ]
+        # BLEND-K-2026-10: only apertures at which all the target's comps keep
+        # <= 1 % neighbour light (per-k values from the comparison-star selection pool).
+        from aperture_pertarget import allowed_f_from_comp_blend  # noqa: PLC0415
+        from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
 
-            _allowed_f = allowed_f_from_comp_blend(_comps_sub, _grid.f_grid, BLEND_FLUX_FRAC_MAX)
-            _none_allowed = _allowed_f is not None and not _allowed_f
-            if _none_allowed:
-                logging.warning("[APERTURE-DYNAMIC] %s: no aperture keeps every comp <= %.0f%% "
-                                "neighbour light - whole grid used", _tcid, 100 * BLEND_FLUX_FRAC_MAX)
-                _allowed_f = None
-            _ch = choose_f_for_target(
-                _grid,
-                target_cid=_tcid,
-                comp_ids=_comp_ids_pt,
-                frame_order=_frame_order,
-                gain=float(state._gain_phot) if state._gain_phot is not None else 1.0,
-                read_noise=float(state._rn_phot) if state._rn_phot is not None else 10.0,
-                allowed_f=_allowed_f,
+        _allowed_f = allowed_f_from_comp_blend(_comps_sub, _grid.f_grid, BLEND_FLUX_FRAC_MAX)
+        _none_allowed = _allowed_f is not None and not _allowed_f
+        if _none_allowed:
+            logging.warning("[APERTURE-DYNAMIC] %s: no aperture keeps every comp <= %.0f%% "
+                            "neighbour light - whole grid used", _tcid, 100 * BLEND_FLUX_FRAC_MAX)
+            _allowed_f = None
+        _ch = choose_f_for_target(
+            _grid,
+            target_cid=_tcid,
+            comp_ids=_comp_ids_pt,
+            frame_order=_frame_order,
+            gain=float(state._gain_phot) if state._gain_phot is not None else 1.0,
+            read_noise=float(state._rn_phot) if state._rn_phot is not None else 10.0,
+            allowed_f=_allowed_f,
+        )
+        if _none_allowed:
+            _ch.reason += "; no k keeps all comps <= 1 % neighbour light - whole grid used"
+        _choices[_tcid] = _ch
+        state.per_target_aperture[_tcid] = _ch
+    # AP-BRIGHT-K-2026-10 (Milan 2026-10-27): k by the target's brightness, from the constant field stars
+    _bk = field_k_by_brightness(sorted(Path(state._aligned_dir_2a).glob("proc_*.csv")), _grid.f_grid)
+    _tmag = {c: target_inst_mag(_grid, c) for c in _choices}
+    _nk = apply_brightness_k(_choices, _grid.f_grid, _tmag, _bk)
+    if _bk is None:
+        logging.warning("[APERTURE-BRIGHT-K] too few constant field stars - every target gets its smallest k")
+    else:
+        logging.info("[APERTURE-BRIGHT-K] k by instrumental magnitude: %s; targets by k: %s",
+                     ", ".join(f"<{hi:.2f}: {k:g}" for hi, k in zip(_bk.mag_hi, _bk.k, strict=False)),
+                     dict(pd.Series([v["k"] for v in _nk["k_by_target"].values()]).value_counts().sort_index()))
+    write_per_target_choices(
+        Path(output_dir) / "aperture_per_target.json",
+        _choices,
+        f_grid=_grid.f_grid,
+        fwhm_night_px=_fwhm_pt,
+        elapsed_s=_grid.elapsed_s,
+        gain=float(state._gain_phot) if state._gain_phot is not None else None,
+        read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
+        brightness_k=_nk,
+    )
+    # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
+    # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526
+    # CSS J153101.6 with G 10.2 at 5 px. Used by trust (soft > 1 %, hard > 5 %).
+    try:
+        from comp_blend import blend_contamination_for_pool  # noqa: PLC0415
+        from gaia_bands import filter_band_for_obs_group  # noqa: PLC0415
+
+        _msp = Path(masterstar_fits_path)
+        _fb_tb = filter_band_for_obs_group(_msp.parent.name)
+        _tpool = at_df.copy()
+        _tpool["catalog_id"] = _tpool["catalog_id"].astype(str).str.strip()
+        _psf_tb = None
+        # one evaluation per (k, PSF-LOCAL scale): the aperture actually measured
+        _sc_tb = {str(c): round(float(v), 4) for c, v in (_psf_scale or {}).items()}
+        _tb_by_ks: dict[tuple[float, float], pd.Series] = {}
+        _pairs = sorted({(float(_c.f_star), _sc_tb.get(str(_cid_c), 1.0)) for _cid_c, _c in _choices.items()})
+        for _k, _s in _pairs:
+            _cont, _bm = blend_contamination_for_pool(
+                _tpool, field_catalog_csv=_msp.parent / "field_catalog_cone.csv", masterstar_fits=_msp,
+                zp_band=_fb_tb.blend_band, fwhm_px=_fwhm_pt, r_ap_px=_k * _fwhm_pt * _s, sat_adu=None,
+                annulus_px=(float(annulus_inner_fwhm) * _fwhm_pt * _s, float(annulus_outer_fwhm) * _fwhm_pt * _s),
+                profile_df=getattr(state, "masterstars_df", None), psf=_psf_tb,
             )
-            if _none_allowed:
-                _ch.reason += "; no k keeps all comps <= 1 % neighbour light - whole grid used"
-            _choices[_tcid] = _ch
-            state.per_target_aperture[_tcid] = _ch
-        # AP-NIGHT-K-2026-10: one k for the whole group (night median of the comp-scatter curves)
-        _nk = apply_night_k(_choices, _grid.f_grid)
-        logging.info("[APERTURE-DYNAMIC] night k = %s (curve %s, %d targets with comp scatter)",
-                     _nk.get("k_night"), {k: round(v, 3) for k, v in _nk.get("curve", {}).items()},
-                     int(_nk.get("n_targets_curve", 0)))
-        write_per_target_choices(
-            Path(output_dir) / "aperture_per_target.json",
-            _choices,
-            f_grid=_grid.f_grid,
-            fwhm_night_px=_fwhm_pt,
-            elapsed_s=_grid.elapsed_s,
-            gain=float(state._gain_phot) if state._gain_phot is not None else None,
-            read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
-            night_k=_nk,
-        )
-        # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
-        # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526
-        # CSS J153101.6 with G 10.2 at 5 px. Used by trust (soft > 1 %, hard > 5 %).
-        try:
-            from comp_blend import blend_contamination_for_pool  # noqa: PLC0415
-            from gaia_bands import filter_band_for_obs_group  # noqa: PLC0415
-
-            _msp = Path(masterstar_fits_path)
-            _fb_tb = filter_band_for_obs_group(_msp.parent.name)
-            _tpool = at_df.copy()
-            _tpool["catalog_id"] = _tpool["catalog_id"].astype(str).str.strip()
-            _psf_tb = None
-            # one evaluation per (k, PSF-LOCAL scale): the aperture actually measured
-            _sc_tb = {str(c): round(float(v), 4) for c, v in (_psf_scale or {}).items()}
-            _tb_by_ks: dict[tuple[float, float], pd.Series] = {}
-            _pairs = sorted({(float(_c.f_star), _sc_tb.get(str(_cid_c), 1.0)) for _cid_c, _c in _choices.items()})
-            for _k, _s in _pairs:
-                _cont, _bm = blend_contamination_for_pool(
-                    _tpool, field_catalog_csv=_msp.parent / "field_catalog_cone.csv", masterstar_fits=_msp,
-                    zp_band=_fb_tb.blend_band, fwhm_px=_fwhm_pt, r_ap_px=_k * _fwhm_pt * _s, sat_adu=None,
-                    annulus_px=(float(annulus_inner_fwhm) * _fwhm_pt * _s, float(annulus_outer_fwhm) * _fwhm_pt * _s),
-                    profile_df=getattr(state, "masterstars_df", None), psf=_psf_tb,
-                )
-                if _bm.get("status") != "ok":
-                    logging.info("[TARGET-BLEND] skipped: %s", _bm.get("status"))
-                    break
-                _psf_tb = _bm.get("psf")
-                _tb_by_ks[(_k, _s)] = _cont
-            state.target_blend = {}
-            for _i, _tr in _tpool.iterrows():
-                _ch_t = _choices.get(_tr["catalog_id"])
-                _key = (float(_ch_t.f_star), _sc_tb.get(str(_tr["catalog_id"]), 1.0)) if _ch_t is not None else None
-                if _key is not None and _key in _tb_by_ks:
-                    state.target_blend[_tr["catalog_id"]] = float(_tb_by_ks[_key].loc[_i])
-        except Exception as _tb_exc:  # noqa: BLE001
-            logging.warning("[TARGET-BLEND] not computed: %s", _tb_exc)
-            state.target_blend = {}
-        # COMP-SMART-2026-10 (Milan 2026-10-11): suspect comps are replaced by clean reserve
-        # candidates (rank order RMS -> colour -> distance); 3..8 clean, suspects only when
-        # fewer than 3 are clean. Same stability test as the aperture-photometry verdict.
-        try:
-            _smart_prepass(state, _grid, _choices, _frame_order, _cfg)
-        except Exception as _sm_exc:  # noqa: BLE001
-            logging.warning("[COMP-SMART] pre-pass failed - comparison-star selection comps used: %s", _sm_exc)
-        # SIGMA-SYS-NIGHT-2026-10: systematic floor of this night from the final comps
-        try:
-            _night_sigma_sys(state, _grid, _frame_order, output_dir, annulus_inner_fwhm, annulus_outer_fwhm,
-                             choices=_choices)
-        except Exception as _ss_exc:  # noqa: BLE001
-            logging.warning("[SIGMA-SYS] night floor not measured - config value used: %s", _ss_exc)
-        _n_edge = sum(1 for _c in _choices.values() if bool(getattr(_c, "f_edge", False)))
-        logging.info(
-            "[APERTURE-DYNAMIC] chose f* for %d targets (grid %.1fs, n_f_edge=%d, "
-            "fwhm_fallback_frames=%d)",
-            len(_choices),
-            float(_grid.elapsed_s),
-            int(_n_edge),
-            int(getattr(_grid, "n_fwhm_fallback_night", 0)),
-        )
-    except Exception as _pt_exc:  # noqa: BLE001
-        logging.error("[APERTURE-DYNAMIC] setup failed - falling back to CSV fluxes: %s", _pt_exc)
-        state.aperture_grid_night = None
-        state.per_target_aperture = {}
-
+            if _bm.get("status") != "ok":
+                logging.info("[TARGET-BLEND] skipped: %s", _bm.get("status"))
+                break
+            _psf_tb = _bm.get("psf")
+            _tb_by_ks[(_k, _s)] = _cont
+        state.target_blend = {}
+        for _i, _tr in _tpool.iterrows():
+            _ch_t = _choices.get(_tr["catalog_id"])
+            _key = (float(_ch_t.f_star), _sc_tb.get(str(_tr["catalog_id"]), 1.0)) if _ch_t is not None else None
+            if _key is not None and _key in _tb_by_ks:
+                state.target_blend[_tr["catalog_id"]] = float(_tb_by_ks[_key].loc[_i])
+    except Exception as _tb_exc:  # noqa: BLE001
+        logging.warning("[TARGET-BLEND] not computed: %s", _tb_exc)
+        state.target_blend = {}
+    # COMP-SMART-2026-10 (Milan 2026-10-11): suspect comps are replaced by clean reserve
+    # candidates (rank order RMS -> colour -> distance); 3..8 clean, suspects only when
+    # fewer than 3 are clean. Same stability test as the aperture-photometry verdict.
+    try:
+        _smart_prepass(state, _grid, _choices, _frame_order, _cfg)
+    except Exception as _sm_exc:  # noqa: BLE001
+        logging.warning("[COMP-SMART] pre-pass failed - comparison-star selection comps used: %s", _sm_exc)
+    # SIGMA-SYS-NIGHT-2026-10: systematic floor of this night from the final comps
+    try:
+        _night_sigma_sys(state, _grid, _frame_order, output_dir, annulus_inner_fwhm, annulus_outer_fwhm,
+                         choices=_choices)
+    except Exception as _ss_exc:  # noqa: BLE001
+        logging.warning("[SIGMA-SYS] night floor not measured - config value used: %s", _ss_exc)
+    _n_edge = sum(1 for _c in _choices.values() if bool(getattr(_c, "f_edge", False)))
+    logging.info(
+        "[APERTURE-DYNAMIC] chose f* for %d targets (grid %.1fs, n_f_edge=%d, "
+        "fwhm_fallback_frames=%d)",
+        len(_choices),
+        float(_grid.elapsed_s),
+        int(_n_edge),
+        int(getattr(_grid, "n_fwhm_fallback_night", 0)),
+    )
     # PROGRESS-MEASURED-2026-10 (Milan 2026-10-12): the status line counts only the targets
     # that are measured; final skips (S/N, VSX type, depth/noise) are counted separately.
     from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
@@ -2949,7 +2959,7 @@ def run_aperture_photometry(
     try:
         _fm_data = _ms_data if _ms_data is not None else astrofits.getdata(Path(masterstar_fits_path))
         _fm_hdr = _ms_header if _ms_header is not None else astrofits.getheader(Path(masterstar_fits_path))
-        state.target_field_map = DeferredTargetFieldMaps(_fm_data, _fm_hdr, workers=_parallel_workers(_cfg))
+        state.target_field_map = DeferredTargetFieldMaps(_fm_data, _fm_hdr)
     except (OSError, ValueError, TypeError, ImportError) as _fm_exc:
         LOGGER.warning("[APERTURE] target field maps not drawn: %s", _fm_exc)
     for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
@@ -2973,6 +2983,10 @@ def run_aperture_photometry(
     if state.target_field_map is not None:
         state.target_field_map.close()
         state.target_field_map = None
+    _n_uncal = sum(1 for r in summary_rows if str(r.get("band_system", "")) == "NONE")
+    if _n_uncal:
+        LOGGER.warning("[BAND] %d of %d target(s) without a comparison star with a valid catalogue magnitude in "
+                       "this band: differential light curves without a zero point", _n_uncal, len(summary_rows))
 
     if not _flux_matrix.empty:
         logging.info(

@@ -335,8 +335,11 @@ def test_reserve_does_not_change_primary_comps() -> None:
     target = ms.loc[ms["catalog_id"] == _TARGET_ID].iloc[0]
     cfg = AppConfig()
     cfg.gs11_dilution_enabled = False
+    from photometry_comp import build_global_comp_pool  # noqa: PLC0415
+
+    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg)
     kw = dict(csv_cache=cache, cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
-              min_dist_arcsec=30.0, n_comp_max=5,
+              min_dist_arcsec=30.0, n_comp_max=5, global_comp_pool_df=pool,
               variable_target_catalog_ids=frozenset({_TARGET_ID}))
     base = select_comparison_stars_per_target(target, ms, paths, **kw)
     both = select_comparison_stars_per_target(target, ms, paths, n_reserve=8, **kw)

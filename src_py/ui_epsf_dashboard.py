@@ -18,7 +18,7 @@ import pandas as pd
 import streamlit as st
 
 from epsf_science_set import parse_epsf_selection
-from utils import resolve_draft_dir_path
+from ui_session import resolve_draft_dir_path
 
 if TYPE_CHECKING:
     from config import AppConfig

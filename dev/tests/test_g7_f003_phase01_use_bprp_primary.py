@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import pytest
 import json
 import logging
 from pathlib import Path
 
 from config import AppConfig
+
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
 
 
 def test_phase01_use_bprp_primary_removed_loads_silently(tmp_path: Path, caplog) -> None:

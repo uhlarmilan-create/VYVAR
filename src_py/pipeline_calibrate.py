@@ -5,14 +5,11 @@ and `_calibrate_batch_process_one` live here so `global` binds one namespace.
 """
 from __future__ import annotations
 
-import contextlib
 import itertools
 import logging
 import math
-import multiprocessing
 import os
 import traceback
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -193,23 +190,6 @@ def _log_calibration_io_preflight(
         log_event(f"MasterFlat[{fk!r}]: {pr} (exists={ok})")
         if not ok:
             log_event(f"MasterFlat[{fk!r}]: file does not exist - no flat is applied for this filter.")
-
-
-def _pipeline_ui_error(msg: str) -> None:
-    """Log always; mirror text to footer during a running job, then ``st.error``."""
-    log_event(msg)
-    try:
-        import streamlit as st
-
-        fs = st.session_state.get("vyvar_footer_state")
-        if isinstance(fs, dict) and fs.get("running"):
-            st.session_state["vyvar_footer_state"] = {**fs, "status_detail": str(msg)[:800]}
-            _fn = st.session_state.get("vyvar_ui_rerender_footer")
-            if callable(_fn):
-                _fn()
-        st.error(msg)
-    except Exception:  # noqa: BLE001
-        pass
 
 
 def _match_and_crop_pair(a: "np.ndarray", b: "np.ndarray") -> tuple["np.ndarray", "np.ndarray"]:
@@ -745,7 +725,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 db=db_cal,
                 equipment_id=equipment_id,
             ),
-            ui_error=_pipeline_ui_error,
         )
     write_cal_diag_json(ap, cal_diag_session)
 
@@ -875,19 +854,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
         "errors": errors,
         "suggested_drift_limit_arcmin": float(_dl_suggest_ram),
     }
-    try:
-        import streamlit as st
-
-        _upd2: dict[str, Any] = {}
-        if med_ra is not None and math.isfinite(float(med_ra)):
-            _upd2["center_ra"] = float(med_ra)
-            _upd2["cur_draft_ra"] = float(med_ra)
-        if med_de is not None and math.isfinite(float(med_de)):
-            _upd2["center_de"] = float(med_de)
-            _upd2["cur_draft_de"] = float(med_de)
-        st.session_state.update(_upd2)
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
     db._try_refresh_draft_manifest(int(draft_id))
     return result
 
@@ -905,153 +871,6 @@ def format_memory_bytes(n: float | int) -> str:
             return f"{x:.2f} {unit}"
         x /= 1024.0
     return f"{n} B"
-
-
-def _fits_primary_pixel_count(header: fits.Header) -> int:
-    """Pixel count of primary image HDU (product of NAXIS*)."""
-    try:
-        naxis = int(header.get("NAXIS", 0) or 0)
-    except (TypeError, ValueError):
-        return 0
-    if naxis < 1:
-        return 0
-    prod = 1
-    for i in range(1, naxis + 1):
-        try:
-            prod *= int(header.get(f"NAXIS{i}", 0) or 0)
-        except (TypeError, ValueError):
-            return 0
-    return int(prod)
-
-
-def _available_system_ram_bytes() -> tuple[int | None, str]:
-    """Best-effort free/available RAM (``psutil`` if installed)."""
-    try:
-        import psutil  # type: ignore
-
-        return int(psutil.virtual_memory().available), "psutil"
-    except Exception:  # noqa: BLE001
-        return None, "unknown"
-
-
-def estimate_memory_from_fits_headers(
-    paths: list[Path],
-    *,
-    sample_headers: int = 48,
-) -> dict[str, Any]:
-    """Read only FITS primary headers; estimate float32 array size (no decompression of data)."""
-    n = len(paths)
-    pixels: list[int] = []
-    step = max(1, n // max(1, min(sample_headers, n))) if n else 1
-    for i in range(0, n, step):
-        if len(pixels) >= sample_headers:
-            break
-        fp = paths[i]
-        try:
-            hdr = fits.getheader(fp, ext=0, ignore_missing_end=True, memmap=False)
-            pixels.append(_fits_primary_pixel_count(hdr))
-        except Exception:  # noqa: BLE001
-            pixels.append(0)
-    pixels = [p for p in pixels if p > 0]
-    import numpy as np
-
-    med = int(np.median(pixels)) if pixels else 0
-    mx = int(np.max(pixels)) if pixels else 0
-    bytes_med = med * 4
-    bytes_max = mx * 4
-    return {
-        "n_files": n,
-        "primary_pixels_median": med,
-        "primary_pixels_max": mx,
-        "bytes_float32_median_frame": bytes_med,
-        "bytes_float32_max_frame": bytes_max,
-    }
-
-
-def estimate_archive_memory_profile(archive_path: str | Path) -> dict[str, Any]:
-    """Rough RAM hints for QC analyze and optional platesolve ``ram_align_and_catalog`` (header-only scan).
-
-    **QC analyze** is sequential: peak is a fewx the largest single frame (QC temps).
-
-    **RAM handoff** (after detrending) holds ~one float32 copy per successfully aligned frame in memory
-    before flush; add a margin for align-time temporaries (reference + source + aligned).
-    """
-    ap = Path(archive_path)
-    avail, avail_src = _available_system_ram_bytes()
-    out: dict[str, Any] = {
-        "archive_path": str(ap),
-        "available_ram_bytes": avail,
-        "available_ram_human": format_memory_bytes(avail) if avail is not None else "unknown (install ``psutil``)",
-        "available_ram_source": avail_src,
-        "qc_analyze": None,
-        "platesolve_ram_handoff": None,
-        "notes": (
-            "Estimate from FITS headers (NAXIS*), assuming float32 processing. Actual usage depends on the OS, "
-            "Streamlit and other libraries. After preprocess, temporary arrays are added during detrending."
-        ),
-    }
-
-    cal = ap / "calibrated" / "lights"
-    try:
-        from draft_provenance import resolve_draft_lights_root
-
-        _lights_mem = resolve_draft_lights_root(ap)
-        if _lights_mem.is_dir():
-            cal = _lights_mem
-    except Exception:  # noqa: BLE001
-        pass
-    if cal.is_dir():
-        cfiles = _iter_light_fits(cal)
-        st = estimate_memory_from_fits_headers(cfiles)
-        # Working set: one frame loaded + QC (rough factor)
-        qc_factor = 6.0
-        peak_qc = int(float(st["bytes_float32_max_frame"]) * qc_factor)
-        out["qc_analyze"] = {
-            **st,
-            "estimated_peak_bytes_sequential": peak_qc,
-            "estimated_peak_human": format_memory_bytes(peak_qc),
-            "explanation": (
-                f"Sequential processing of ~{st['n_files']} frames; RAM peak ~ {qc_factor:.0f}x the largest frame "
-                f"({format_memory_bytes(st['bytes_float32_max_frame'])} float32) during analyze."
-            ),
-        }
-
-    det = _archive_preprocess_lights_root(ap)
-    if det.is_dir():
-        dfiles = _iter_fits_recursive(det)
-        st2 = estimate_memory_from_fits_headers(dfiles)
-        n = int(st2["n_files"])
-        med_b = int(st2["bytes_float32_median_frame"])
-        max_b = int(st2["bytes_float32_max_frame"])
-        # Buffer: one aligned float32 copy per successful frame (upper bound = all inputs aligned)
-        buffer_est = med_b * max(0, n)
-        # During astroalign: ref + src + aligned briefly at once
-        align_spike = max_b * 3
-        total_conservative = buffer_est + align_spike
-        out["platesolve_ram_handoff"] = {
-            **st2,
-            "estimated_aligned_buffer_bytes": buffer_est,
-            "estimated_aligned_buffer_human": format_memory_bytes(buffer_est),
-            "estimated_align_spike_bytes": align_spike,
-            "estimated_align_spike_human": format_memory_bytes(align_spike),
-            "estimated_total_conservative_bytes": total_conservative,
-            "estimated_total_conservative_human": format_memory_bytes(total_conservative),
-            "explanation": (
-                f"Mode 'alignment + catalog in RAM': holds ~{n} frames x ~{format_memory_bytes(med_b)} "
-                f"(median) + a short peak during alignment. If this exceeds free RAM, turn off RAM handoff."
-            ),
-        }
-
-    if avail is not None and out.get("platesolve_ram_handoff"):
-        tot = int(out["platesolve_ram_handoff"]["estimated_total_conservative_bytes"])
-        out["platesolve_ram_handoff"]["estimate_below_available_ram"] = bool(tot <= avail)
-        out["platesolve_ram_handoff"]["available_vs_estimated_ratio"] = float(avail) / float(tot) if tot > 0 else None
-
-    if avail is not None and out.get("qc_analyze"):
-        pq = int(out["qc_analyze"]["estimated_peak_bytes_sequential"])
-        out["qc_analyze"]["estimate_below_available_ram"] = bool(pq <= avail)
-
-    return out
 
 
 def _log_calibration_metadata_diagnostic(filename: str, metadata: dict[str, Any]) -> None:
@@ -1165,23 +984,6 @@ def _effective_saturation_limit(
     return float(SAT_LIMIT_CONTAINER_CLIP_ADU), "conservative_default_container_clip_65535"
 
 
-def _vyvar_parallel_use_processes() -> bool:
-    """CPU-heavy parallel steps default to subprocesses. Set ``VYVAR_PARALLEL_BACKEND=thread`` for threads."""
-    v = (os.environ.get("VYVAR_PARALLEL_BACKEND") or "process").strip().lower()
-    return v not in ("thread", "threads")
-
-
-@contextlib.contextmanager
-def _vyvar_parallel_pool(max_workers: int):
-    if _vyvar_parallel_use_processes():
-        ctx = multiprocessing.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx) as ex:
-            yield ex
-    else:
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            yield ex
-
-
 def _db_for_calibration_tasks(
     qc_opt: dict[str, Any] | None,
 ) -> VyvarDatabase | None:
@@ -1280,7 +1082,7 @@ def _mean_hfr_bright_stars_dao(
     finite = np.isfinite(img)
     if not np.any(finite):
         return None, 0, None
-    _, med, std = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
+    _, med, std = plain_mean_med_std(img[finite])
     std = float(std)
     if not math.isfinite(std) or std <= 0:
         return None, 0, None
@@ -1342,7 +1144,7 @@ def _post_calibration_qc_eval(
     if not np.any(finite):
         return {"hfr": None, "n_stars": 0, "sky_mean": None, "sky_median": None, "sky_rms": None}
 
-    sky_mean, sky_med, sky_rms = plain_mean_med_std(img[finite], sigma=3.0, maxiters=5)
+    sky_mean, sky_med, sky_rms = plain_mean_med_std(img[finite])
     sky_mean = float(sky_mean)
     sky_med = float(sky_med)
     sky_rms = float(sky_rms)
@@ -1479,17 +1281,17 @@ def _calibrate_one_light_apply_masters_in_ram(
         data = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
     light_bx, light_by = fits_binning_xy_from_header(hdr)
-    hdr["VY_CLBX"] = (int(light_bx), "Light XBINNING used for master matching / resampling")
+    hdr["VY_CLBX"] = (int(light_bx), "Light XBINNING for master matching/resample")
     hdr["VY_CLBY"] = (int(light_by), "Light YBINNING (diagnostic)")
     if _mb_lib is None:
         hdr["VY_MBNC"] = (
             -1,
-            "VYVAR: native XBINNING read from each CalibrationLibrary master FITS (XBINNING)",
+            "Native XBINNING of the library masters",
         )
     else:
         hdr["VY_MBNC"] = (
             int(_mb_lib),
-            "VYVAR: assumed native XBINNING of CalibrationLibrary master before resample to light",
+            "Assumed native XBINNING of library masters",
         )
 
     md_data: np.ndarray | None = None
@@ -1528,7 +1330,7 @@ def _calibrate_one_light_apply_masters_in_ram(
 
     flt = _safe_filter_token(str(hdr.get("FILTER") or hdr.get("FILT") or "NoFilter"))
     _obs_k = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr))
-    hdr["VY_OBSG"] = (_obs_k, "VYVAR observation group: FILTER|EXPTIME|XBINNING")
+    hdr["VY_OBSG"] = (_obs_k, "Observation group FILTER|EXPTIME|XBINNING")
     mf_path = None
     if masterflat_by_filter:
         c_obs = masterflat_by_filter.get(_obs_k)
@@ -1603,32 +1405,33 @@ def _calibrate_one_light_apply_masters_in_ram(
     )
     hdr["VY_CFLAG"] = (
         _flags,
-        "VYVAR flags: DF=full, D=partial, FS=flat skipped (no dark), P=passthrough/raw",
+        "DF full, D dark only, FS no flat, P raw",
     )
     hdr["VY_CALIB"] = (_calibration_type_from_flags(_flags), "Calibration mode")
     hdr["VY_CALST"] = (
         int(_vy_calib_status_numeric(_flags)),
-        "VYVAR CALIB_STATUS: 2=full DF, 1=partial D, 0=raw (incl. FS passthrough)",
+        "Calib status: 2 DF, 1 dark only, 0 raw",
     )
     if _flags == "FS":
         hdr["VY_WARN"] = (
             True,
-            "Flat available but not applied: subtract MasterDark first (over-correction risk).",
+            "Flat not applied: no dark (over-correction)",
         )
     if master_dark_path is not None:
-        hdr["VY_MDP"] = (str(master_dark_path.name)[:68], "MasterDark filename")
+        # LOG-NOISE-2026-10: a long file name leaves no room for a comment on the 80-character card
+        hdr["VY_MDP"] = str(master_dark_path.name)[:68]
     if mf_path is not None:
-        hdr["VY_MFP"] = (str(Path(mf_path).name)[:68], "MasterFlat filename")
+        hdr["VY_MFP"] = str(Path(mf_path).name)[:68]
     if used_flat:
         try:
             key_m = f"{flt}|{mf_path!s}|lb{light_bx}"
             hdr["VY_FLATM"] = (
                 float(fms[key_m]),
-                "Median ADU of master flat at target resample before normalize-to-1 (legacy: before pipeline division)",
+                "Median ADU of master flat before normalising",
             )
             hdr["VY_FLFL"] = (
                 float(flat_norm_floor),
-                "Min normalized flat before division (limits local gain from flat only)",
+                "Min normalised flat value before division",
             )
         except KeyError:
             pass
@@ -1943,15 +1746,6 @@ def _flat_offsets_for_masters(paths: Any, db: VyvarDatabase | None) -> dict[str,
     return out
 
 
-def _calibration_worker_count(cfg: AppConfig, files: Sequence[Path], max_workers: int | None) -> int:
-    """Process workers for calibration: the pipeline's one count, capped by free RAM.
-
-    A worker holds the light, the processed dark and flat and the QC copies (~6 float32 frames)."""
-    from parallel_frames import ram_capped_workers  # noqa: PLC0415
-
-    return ram_capped_workers(cfg, files, bytes_per_pixel=4 * 6, max_workers=max_workers)
-
-
 def _has_usable_master_dark(path: Path | None) -> bool:
     return bool(path is not None and Path(path).is_file())
 
@@ -2015,9 +1809,9 @@ def _passthrough_lights_to_calibrated(
             hdr["VYVARCAL"] = (True, "VYVAR calibrated output")
             hdr["VY_DARK"] = (False, "MasterDark applied")
             hdr["VY_FLAT"] = (False, "MasterFlat applied")
-            hdr["VY_CFLAG"] = ("P", "VYVAR flags: DF=full, D=partial, FS=flat skipped, P=passthrough/raw")
+            hdr["VY_CFLAG"] = ("P", "DF full, D dark only, FS no flat, P raw")
             hdr["VY_CALIB"] = ("PASSTHROUGH", "Calibration mode")
-            hdr["VY_CALST"] = (0, "VYVAR CALIB_STATUS: 2=full DF, 1=partial D, 0=raw (passthrough)")
+            hdr["VY_CALST"] = (0, "Calib status: 2 DF, 1 dark only, 0 raw")
             hdr.add_history("No calibration frames applied.")
             passthrough_cal_diag_headers(hdr)
             from cal_stage import stamp_cal_stage_headers  # noqa: PLC0415
@@ -2252,7 +2046,6 @@ def calibrate_lights_to_calibrated(
             master_binning=_native_b,
             match_and_crop_pair=_match_and_crop_pair,
             saturation_for_light=_sat_for_pregate,
-            ui_error=_pipeline_ui_error,
         )
     stats["cal_diag_aborted_groups"] = len(cal_diag_session.aborted_groups)
 
@@ -2270,22 +2063,22 @@ def calibrate_lights_to_calibrated(
         "native_b": _native_b,
         "flat_offsets": _flat_offsets_for_masters(mf_serial.values(), db_main),
     }
-    nw = _calibration_worker_count(cfg, files, max_workers)
+    from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers  # noqa: PLC0415
+
+    nw = stage_workers(total, frame_bytes_of_fits(files[0]), stage="calibration", cpu_workers=max_workers) if files else 1
     stats["calibrate_workers"] = int(nw)
     if nw > 1:
         log_event(f"Calibration: {nw} parallel processes ({total} frames)")
-        _ctx_w = dict(ctx, cal_diag_blob=_cal_diag_export_for_workers(cal_diag_session))
-        _pool = ProcessPoolExecutor(
-            max_workers=nw,
-            mp_context=multiprocessing.get_context("spawn"),
-            initializer=_init_calibrate_frame_worker,
-            initargs=(_ctx_w,),
-        )
-        _results = _pool.map(_calibrate_frame_task, [(str(a), str(b)) for a, b in pairs], chunksize=1)
-    else:
-        _pool = None
-        _init_calibrate_frame_worker(dict(ctx, session=cal_diag_session, db=db_main))
-        _results = (_calibrate_frame_task((str(a), str(b))) for a, b in pairs)
+    _ctx_w = dict(ctx, cal_diag_blob=_cal_diag_export_for_workers(cal_diag_session)) if nw > 1 else None
+    _results = map_frames(
+        _calibrate_frame_task,
+        [(str(a), str(b)) for a, b in pairs],
+        workers=nw,
+        initializer=_init_calibrate_frame_worker,
+        ctx=_ctx_w,
+        serial_ctx=dict(ctx, session=cal_diag_session, db=db_main),
+        stage="calibration",
+    )
     _seq_tb_logged = False
     try:
         for i, ((src, _dst), res) in enumerate(zip(pairs, _results, strict=True), start=1):
@@ -2330,8 +2123,7 @@ def calibrate_lights_to_calibrated(
             if res.get("qc_summary") is not None:
                 stats["qc_evaluated"] += 1
     finally:
-        if _pool is not None:
-            _pool.shutdown()
+        _results.close()
         _CAL_FRAME_STATE.clear()
 
     _arch = _archive_root_from_lights_root(lights_root)
@@ -2364,50 +2156,32 @@ def _qc_fwhm_elongation(
         "n_stars_detected": int(m.get("star_count") or 0),
     }
 
-def _vyvar_parallel_worker_count(app_config: AppConfig | None = None) -> int:
-    """One worker count for QC, preprocess, combined, alignment seed, per-frame CSV seed, calibrate MP.
+def _poly_surface_fit(work: Any, fit_mask: Any, order: int, step: int, bg: float) -> Any | None:
+    """Least-squares 2D polynomial (order 1-2) to ``work - bg`` on ``fit_mask`` (subsampled by ``step``);
+    the full-frame surface, or None with too few samples. Plain least squares, no rejection."""
+    import numpy as np
 
-    Precedence: ``VYVAR_PARALLEL_WORKERS`` -> (if both are set) the minimum of legacy ``VYVAR_QC_PREPROCESS_WORKERS``
-    and ``VYVAR_PER_FRAME_CSV_WORKERS`` -> ``app_config.qc_preprocess_workers`` (already unified) -> host auto
-    from ``config``.
-    """
-    u = os.environ.get("VYVAR_PARALLEL_WORKERS")
-    if u is not None and str(u).strip() != "":
-        try:
-            return max(1, min(32, int(str(u).strip())))
-        except ValueError:
-            pass
-    legacy: list[int] = []
-    for key in ("VYVAR_QC_PREPROCESS_WORKERS", "VYVAR_PER_FRAME_CSV_WORKERS"):
-        raw = os.environ.get(key)
-        if raw is not None and str(raw).strip() != "":
-            try:
-                legacy.append(max(1, min(32, int(str(raw).strip()))))
-            except ValueError:
-                pass
-    if legacy:
-        return int(min(legacy))
-    if app_config is not None:
-        try:
-            return max(1, min(32, int(app_config.qc_preprocess_workers)))
-        except (TypeError, ValueError):
-            pass
-    from config import load_config_json, recommended_vyvar_parallel_workers, resolve_data_root
-
-    _install = Path(__file__).resolve().parent.parent
-    data = load_config_json(resolve_data_root(_install))
-    try:
-        res_gb = float(data.get("per_frame_mp_reserve_ram_gb", 1.5))
-        if not math.isfinite(res_gb) or res_gb < 0:
-            res_gb = 1.5
-    except (TypeError, ValueError):
-        res_gb = 1.5
-    return int(recommended_vyvar_parallel_workers(reserve_ram_gb=res_gb))
+    h, w = work.shape
+    yy_s, xx_s = np.mgrid[0:h:step, 0:w:step]
+    z_s = (work[::step, ::step] - float(bg)).astype(np.float64)
+    use = fit_mask[::step, ::step] & np.isfinite(z_s)
+    min_coef = (order + 1) * (order + 2) // 2
+    if int(np.count_nonzero(use)) < min_coef + 10:
+        return None
+    x_fit, y_fit, z_fit = xx_s[use].astype(np.float64), yy_s[use].astype(np.float64), z_s[use]
+    terms = [(i, j) for i in range(order + 1) for j in range(order + 1 - i)]
+    coef, *_ = np.linalg.lstsq(np.column_stack([(x_fit**i) * (y_fit**j) for i, j in terms]), z_fit, rcond=None)
+    yy_f, xx_f = np.mgrid[0:h, 0:w]
+    x_flat, y_flat = xx_f.ravel().astype(np.float64), yy_f.ravel().astype(np.float64)
+    surf = sum(c * (x_flat**i) * (y_flat**j) for c, (i, j) in zip(coef, terms, strict=True))
+    return np.asarray(surf).reshape(h, w).astype(np.float32), int(z_fit.size)
 
 
-def _vyvar_qc_preprocess_workers() -> int:
-    """Parallel workers for analyze / preprocess / combined (see :func:`_vyvar_parallel_worker_count`)."""
-    return _vyvar_parallel_worker_count(None)
+#: SKY-MASK-2026-10 source mask (photutils background guide, ``make_source_mask``): pixels of the
+#: first-pass residual above SKY_MASK_NSIGMA x the sky MAD sigma in groups of >= SKY_MASK_NPIXELS
+#: connected pixels are sources; the mask is dilated by one FWHM so their wings are excluded too.
+SKY_MASK_NSIGMA = 2.0
+SKY_MASK_NPIXELS = 5
 
 
 def _fit_subtract_preprocess_sky_surface(
@@ -2416,17 +2190,22 @@ def _fit_subtract_preprocess_sky_surface(
     order: int,
     fwhm_px: float | None = None,
     subsample_step: int = 4,
-    calm_adu: float = 100.0,
 ) -> tuple[Any, dict[str, Any]]:
     """Fit and subtract a 2D polynomial sky correction (shared calibrated->processed preprocess).
 
-  Star-masked fit on calm background pixels (|cal-median| < ``calm_adu``).
-  Fits order-N to ``work - bg_median`` on the fit set, then subtracts the fitted surface from
-  the frame (429-class gradient removal; full surface including constant term).
-  No sigma-clip on fit samples (zero-clipping policy 2026-08-12).
+    SKY-MASK-2026-10 (Milan 2026-10-26, D6): background pixels are found by masking sources, not by
+    a cut in ADU around the median (the former +-100 ADU "calm" cut removed the strong part of a real
+    gradient from the fit: 19-37 % of it stayed in the frame, and the cut depended on the rig).
+    Pass 1: polynomial on pixels outside the DAO star stamps. Pass 2: sources of the pass-1 residual
+    (segmentation, ``SKY_MASK_NSIGMA`` x MAD sigma, >= ``SKY_MASK_NPIXELS`` pixels, dilated by one
+    FWHM) are added to the mask and the polynomial is fitted again; that surface is subtracted.
+    No sigma-clip on the fit samples (zero-clipping policy 2026-08-12); the photutils guide calls
+    masking the better way to exclude sources from a background estimate.
     """
     import numpy as np
     from photutils.detection import DAOStarFinder
+    from photutils.segmentation import detect_sources
+    from scipy.ndimage import binary_dilation
 
     arr = np.asarray(data, dtype=np.float32)
     order_i = int(order)
@@ -2446,6 +2225,7 @@ def _fit_subtract_preprocess_sky_surface(
         mask[-margin:, :] = False
         mask[:, :margin] = False
         mask[:, -margin:] = False
+    mask &= finite
 
     fwhm_eff = max(
         1.2,
@@ -2476,47 +2256,30 @@ def _fit_subtract_preprocess_sky_surface(
             mask[y0:y1, x0:x1] &= ~local_excl
 
     bg_median, _, _ = plain_mean_med_std(work, mask=~mask)
-    calm_thr = max(5.0, float(calm_adu))
-    fit_mask = mask & (np.abs(work - float(bg_median)) < calm_thr)
-
     step = max(1, int(subsample_step))
-    yy_s, xx_s = np.mgrid[0:h:step, 0:w:step]
-    z_s = (work[::step, ::step] - float(bg_median)).astype(np.float64)
-    m_s = fit_mask[::step, ::step]
-    use_mask = m_s & np.isfinite(z_s)
-    min_coef = (order_i + 1) * (order_i + 2) // 2
-    if int(np.count_nonzero(use_mask)) < min_coef + 10:
-        return arr.copy(), {
-            "sky_surface_order": order_i,
-            "sky_surface_applied": False,
-            "sky_surface_skip_reason": "insufficient_fit_pixels",
-        }
-
-    z_samples = z_s[use_mask]
-    x_fit = xx_s[use_mask].astype(np.float64)
-    y_fit = yy_s[use_mask].astype(np.float64)
-    z_fit = z_samples
-    if z_fit.size < min_coef + 5:
-        return arr.copy(), {
-            "sky_surface_order": order_i,
-            "sky_surface_applied": False,
-            "sky_surface_skip_reason": "insufficient_fit_pixels",
-        }
-
-    cols: list[np.ndarray] = []
-    for i in range(order_i + 1):
-        for j in range(order_i + 1 - i):
-            cols.append((x_fit**i) * (y_fit**j))
-    coef, *_ = np.linalg.lstsq(np.column_stack(cols), z_fit, rcond=None)
-
-    yy_f, xx_f = np.mgrid[0:h, 0:w]
-    cols_f: list[np.ndarray] = []
-    x_flat = xx_f.ravel().astype(np.float64)
-    y_flat = yy_f.ravel().astype(np.float64)
-    for i in range(order_i + 1):
-        for j in range(order_i + 1 - i):
-            cols_f.append((x_flat**i) * (y_flat**j))
-    surf = (np.column_stack(cols_f) @ coef).reshape(h, w).astype(np.float32)
+    skip = {"sky_surface_order": order_i, "sky_surface_applied": False,
+            "sky_surface_skip_reason": "insufficient_fit_pixels"}
+    pass1 = _poly_surface_fit(work, mask, order_i, step, float(bg_median))
+    if pass1 is None:
+        return arr.copy(), skip
+    resid = work - float(bg_median) - pass1[0]
+    sky_res = resid[mask]
+    sig = 1.4826 * float(np.median(np.abs(sky_res - np.median(sky_res)))) if sky_res.size else 0.0
+    n_src_px = 0
+    if sig > 0 and math.isfinite(sig):
+        seg = detect_sources(np.where(finite, resid, 0.0), SKY_MASK_NSIGMA * sig, npixels=SKY_MASK_NPIXELS)
+        if seg is not None:
+            r_d = max(1, int(round(fwhm_eff)))
+            yy_d, xx_d = np.ogrid[-r_d:r_d + 1, -r_d:r_d + 1]
+            src = binary_dilation(seg.data > 0, structure=(yy_d**2 + xx_d**2) <= r_d * r_d)
+            n_src_px = int(np.count_nonzero(src & mask))
+            mask &= ~src
+    pass2 = _poly_surface_fit(work, mask, order_i, step, float(bg_median))
+    if pass2 is None:
+        return arr.copy(), skip
+    # the surface is fitted to work - bg_median: subtracting it flattens the sky and keeps its level
+    # (the sky photons stay in the frame for the CCD-equation error), as before
+    surf = pass2[0]
 
     out = (work - surf).astype(np.float32)
     out = np.where(finite, out, np.nan).astype(np.float32)
@@ -2533,10 +2296,10 @@ def _fit_subtract_preprocess_sky_surface(
         "sky_surface_applied": True,
         "sky_surface_p2p_adu": float(np.nanmax(surf) - np.nanmin(surf)),
         "sky_surface_median_adu": float(np.nanmedian(surf)),
-        "sky_surface_n_fit_pixels": int(z_fit.size),
+        "sky_surface_n_fit_pixels": int(pass2[1]),
         "sky_surface_fwhm_px": float(fwhm_eff),
         "sky_surface_bg_median_adu": float(bg_median),
-        "sky_surface_calm_adu": float(calm_thr),
+        "sky_surface_source_mask_px": n_src_px,
         "residual_flatness_p99_adu": _flat_p99,
     }
 
@@ -2586,7 +2349,7 @@ def run_osc_channel_extraction_for_archive(
         if not (math.isfinite(ge) and math.isfinite(re_)):
             log_event(
                 f"OSC extract: camera {equipment_id} gain/read noise unknown for {fp.name} - "
-                "EGAIN/VY_RDNOIS not written to channel frames."
+                "EGAIN/VYRDNOIS not written to channel frames."
             )
         return ge, re_
     osc_bin = int(cfg.osc_channel_binning)
@@ -2641,12 +2404,9 @@ def run_osc_channel_extraction_for_archive(
                 app_config=cfg,
                 progress_cb=progress_cb,
             )
-        try:
-            from osc_align import replicate_qc_verdict_from_one_rggb
+        from osc_align import replicate_qc_verdict_from_one_rggb
 
-            replicate_qc_verdict_from_one_rggb(lights_root=root, base_name=base_name)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.warning("[OSC] QC verdict replication failed for %s: %s", base_name, exc)
+        replicate_qc_verdict_from_one_rggb(lights_root=root, base_name=base_name)
         try:
             if not any(group_dir.iterdir()):
                 group_dir.rmdir()
@@ -2702,6 +2462,23 @@ def _decide_preprocess_sky_action(
     )
 
 
+def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None, bool]) -> Any:
+    """Pool task of the in-place QC: one frame; a sky-surface order conflict is returned, not
+    raised, so the main process stops with the frame's name."""
+    fp_str, status, sky_order, ra, dec, only_if_missing = item
+    try:
+        return _qc_enrich_one_frame(
+            fp_str,
+            sky_order=sky_order,
+            prefilter_status=status,
+            target_ra=ra,
+            target_dec=dec,
+            inject_pointing_only_if_missing=only_if_missing,
+        )
+    except SkySurfaceOrderConflictError as exc:
+        return exc
+
+
 def _qc_enrich_one_frame(
     fp_str: str,
     *,
@@ -2731,7 +2508,7 @@ def _qc_enrich_one_frame(
         cal_datasum: str | None = None
         cal_pstbg: float | None = None
         skypass: int | None = None
-        is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VY_CHANNEL")
+        is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VYCHANNL")
         if sky_order > 0 and not is_mosaic:
             action = _decide_preprocess_sky_action(hdr, sky_order=sky_order)
             if action == "apply":
@@ -2782,7 +2559,7 @@ def _qc_enrich_one_frame(
                     )
                     if not verify_fits_datasum(data, cal_datasum):
                         raise RuntimeError(
-                            f"INV-CAL-02: VY_CALDATASUM self-check failed on {fp.name}"
+                            f"INV-CAL-02: VYCALSUM self-check failed on {fp.name}"
                         )
             if math.isfinite(fwhm):
                 hdr["VY_FWHM"] = (round(fwhm, 4), "Estimated FWHM [pix]")
@@ -2790,11 +2567,6 @@ def _qc_enrich_one_frame(
                 hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
             hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
             hdr["VY_QC"] = (status, "QC status")
-            # Drop legacy CR provenance if present (L.A.Cosmic removed 2026-08-12).
-            if "VY_COSM" in hdr:
-                del hdr["VY_COSM"]
-            if "VY_COSMNPX" in hdr:
-                del hdr["VY_COSMNPX"]
             hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
             if target_ra is not None and target_dec is not None:
                 ira = float(target_ra)
@@ -2845,7 +2617,7 @@ def _qc_enrich_one_frame(
 #: qc_metrics.csv columns kept in memory only: n_sources (n_stars_detected is the count read),
 #: cal_pstbg (= bg_median; synced to the DB from the row), the sky-surface FWHM / calm threshold
 #: (configuration constants).
-QC_METRICS_NOT_WRITTEN: tuple[str, ...] = ("n_sources", "cal_pstbg", "sky_surface_fwhm_px", "sky_surface_calm_adu")
+QC_METRICS_NOT_WRITTEN: tuple[str, ...] = ("n_sources", "cal_pstbg", "sky_surface_fwhm_px", "sky_surface_source_mask_px")
 
 
 def _infer_raw_light_path_for_calibrated(cal_fp: Path) -> Path | None:
@@ -2932,70 +2704,32 @@ def _qc_enrich_calibrated_in_place(
         fits_paths = _filter_light_paths_maybe(_iter_light_fits(calibrated_root), only_paths)
     results: list[dict[str, Any]] = []
     total = len(fits_paths)
-    n_workers = _vyvar_qc_preprocess_workers() if total > 1 else 1
-    if n_workers > 1:
-        LOGGER.info(
-            "QC in-place: parallel_workers=%s (%s frames; qc_preprocess_workers)",
-            n_workers,
-            total,
-        )
+    from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers  # noqa: PLC0415
 
-    if n_workers > 1 and total > 1:
-        with _vyvar_parallel_pool(n_workers) as ex:
-            futs = {}
-            for fp in fits_paths:
-                futs[ex.submit(
-                    _qc_enrich_one_frame,
-                    str(fp),
-                    sky_order=sky_order,
-                    prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
-                    target_ra=target_ra,
-                    target_dec=target_dec,
-                    inject_pointing_only_if_missing=inject_pointing_only_if_missing,
-                )] = fp
-            done = 0
-            for fut in as_completed(futs):
-                fp = futs[fut]
-                done += 1
-                if progress_cb is not None:
-                    progress_cb(done, total, f"QC in-place {fp.name}")
-                try:
-                    row = fut.result()
-                except SkySurfaceOrderConflictError as exc:
-                    raise RuntimeError(f"QC in-place failed for {fp.name}: {exc}") from exc
-                results.append(row)
-                _sync_manifest_cal_stage_from_qc_row(row, db=db, draft_id=draft_id)
-                if str(row.get("status", "")).startswith("error"):
-                    log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
-                else:
-                    log_event(
-                        f"QC in-place {fp.name}: {row.get('status')} "
-                        f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
-                        f"elong={float(row.get('elongation', float('nan'))):.2f}"
-                    )
-        results.sort(key=lambda r: str(r.get("src", "")))
-    else:
-        for i, fp in enumerate(fits_paths, start=1):
-            if progress_cb is not None:
-                progress_cb(i, total, f"QC in-place {fp.name}")
-            row = _qc_enrich_one_frame(
-                str(fp),
-                sky_order=sky_order,
-                prefilter_status=_prefilter.get(norm_fits_path_key(fp)),
-                target_ra=target_ra,
-                target_dec=target_dec,
-                inject_pointing_only_if_missing=inject_pointing_only_if_missing,
+    n_workers = stage_workers(total, frame_bytes_of_fits(fits_paths[0]), stage="QC in-place") if total > 1 else 1
+    tasks = [
+        (str(fp), _prefilter.get(norm_fits_path_key(fp)), sky_order, target_ra, target_dec,
+         bool(inject_pointing_only_if_missing))
+        for fp in fits_paths
+    ]
+    rows = map_frames(_qc_enrich_task, tasks, workers=n_workers, stage="QC in-place")
+    for i, (fp, row) in enumerate(zip(fits_paths, rows, strict=True), start=1):
+        if progress_cb is not None:
+            progress_cb(i, total, f"QC in-place {fp.name}")
+        if isinstance(row, SkySurfaceOrderConflictError):
+            row.add_note(f"QC in-place: frame {fp.name}")
+            raise row
+        results.append(row)
+        _sync_manifest_cal_stage_from_qc_row(row, db=db, draft_id=draft_id)
+        if str(row.get("status", "")).startswith("error"):
+            log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
+        else:
+            log_event(
+                f"QC in-place {fp.name}: {row.get('status')} "
+                f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
+                f"elong={float(row.get('elongation', float('nan'))):.2f}"
             )
-            results.append(row)
-            _sync_manifest_cal_stage_from_qc_row(row, db=db, draft_id=draft_id)
-            if str(row.get("status", "")).startswith("error"):
-                log_event(f"QC in-place failed for {fp.name}: {row.get('status')}")
-            else:
-                log_event(
-                    f"QC in-place {fp.name}: {row.get('status')} "
-                    f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
-                    f"elong={float(row.get('elongation', float('nan'))):.2f}"
-                )
+    results.sort(key=lambda r: str(r.get("src", "")))
 
     n_ok = sum(1 for r in results if r.get("status") == "ok")
     n_rejected = sum(1 for r in results if str(r.get("status", "")).startswith("rejected"))

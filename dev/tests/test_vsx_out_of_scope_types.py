@@ -15,6 +15,8 @@ from vsx_type_scope import (
     vsx_type_is_out_of_scope,
 )
 
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
+
 
 @pytest.mark.parametrize(
     "raw,expected",

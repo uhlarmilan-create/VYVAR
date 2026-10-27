@@ -178,7 +178,7 @@ def test_band_tokens(obs_group: str, token: str) -> None:
 def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path], dict[str, pd.DataFrame]]:
     """Dense synthetic field (30 stars, 20 frames) for comp-tier smoke."""
     rng = np.random.default_rng(7)
-    ids = [f"G{i:03d}" for i in range(1, 31)]
+    ids = [f"{6000000000000000000 + i}" for i in range(1, 31)]
     rows: list[dict[str, object]] = []
     for i, sid in enumerate(ids):
         ang = (i + 1) * 0.035
@@ -212,7 +212,7 @@ def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path]
             }
         )
     masterstars = pd.DataFrame(rows)
-    target = masterstars.loc[masterstars["catalog_id"] == "G005"].iloc[0]
+    target = masterstars.loc[masterstars["catalog_id"] == "6000000000000000005"].iloc[0]
     flux_by_id = masterstars.set_index("catalog_id", drop=False)
     per_frame_paths: list[Path] = []
     csv_cache: dict[str, pd.DataFrame] = {}
@@ -247,15 +247,15 @@ def _synthetic_dense_comp_fixture() -> tuple[pd.Series, pd.DataFrame, list[Path]
 
 
 def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) -> None:
-    """Howell fallback (missing sigma_bkg_ap) uses resolved VY_EGAIN / VY_RDNOIS."""
+    """Howell fallback (missing sigma_bkg_ap) uses resolved VY_EGAIN / VYRDNOIS."""
     assert callable(run_full_photometry_pipeline)
     g_raw, rn_raw = 1.5, 3.0
     g_eff, rn_eff = effective_gain_rn(g_raw, rn_raw, "G", 2)
     ch_ms = tmp_path / "MASTERSTAR_G.fits"
     ch_hdr = fits.Header()
     ch_hdr["VY_EGAIN"] = (float(g_eff), "Effective gain e-/ADU (VYVAR OSC)")
-    ch_hdr["VY_RDNOIS"] = (float(rn_eff), "Effective read noise e- (VYVAR OSC)")
-    ch_hdr["VY_CHANNEL"] = ("G", "OSC channel")
+    ch_hdr["VYRDNOIS"] = (float(rn_eff), "Effective read noise e- (VYVAR OSC)")
+    ch_hdr["VYCHANNL"] = ("G", "OSC channel")
     ch_hdr["EGAIN"] = (g_raw, "Raw gain e-/ADU")
     ch_hdr["RDNOISE"] = (rn_raw, "Raw read noise e-")
     ch_hdr["VY_FWHM"] = (3.2, "FWHM px")
@@ -275,7 +275,7 @@ def test_production_path_howell_variance_uses_vy_egain_rdnois(tmp_path: Path) ->
     rn_hdr = resolve_read_noise(hdr)
     assert rn_hdr.ok
     assert float(rn_hdr.value) == pytest.approx(rn_eff)
-    assert rn_hdr.key == "VY_RDNOIS"
+    assert rn_hdr.key == "VYRDNOIS"
 
     flux = 12_000.0
     sky_pp = 40.0
@@ -305,17 +305,21 @@ def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
     assert obs_group_band_token(obs_group) in {"TR", "TG", "TB", "CLEAR"}
     cfg = AppConfig()
     cfg.gs11_dilution_enabled = False
+    from photometry_comp import build_global_comp_pool  # noqa: PLC0415
+
+    pool = build_global_comp_pool(masterstars, paths, cache, frozenset({"6000000000000000005"}), None, 800, 600, 0, 0.05, cfg)
     out = select_comparison_stars_per_target(
         target,
         masterstars,
         paths,
         csv_cache=cache,
         cfg=cfg,
+        global_comp_pool_df=pool,
         chip_fw=800,
         chip_fh=600,
         chip_interior_margin_px=0,
         min_dist_arcsec=30.0,
-        variable_target_catalog_ids=frozenset({"G005"}),
+        variable_target_catalog_ids=frozenset({"6000000000000000005"}),
     )
     assert not out.empty
     assert "catalog_id" in out.columns

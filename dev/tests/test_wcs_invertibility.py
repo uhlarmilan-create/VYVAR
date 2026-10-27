@@ -68,12 +68,12 @@ def test_post_match_identity_gate_drops_bad_assignment():
         {
             "x": [x0, x0 + 50.0],
             "y": [y0, y0 + 50.0],
-            "catalog_id": ["CID1", "CID2"],
+            "catalog_id": ["1110000000000000001", "1110000000000000002"],
             "catalog": ["GAIA_DR3", "GAIA_DR3"],
             "match_sep_arcsec": [0.1, 0.1],
         }
     )
-    gmap = {"CID1": (float(ra), float(de)), "CID2": (float(ra), float(de))}
+    gmap = {"1110000000000000001": (float(ra), float(de)), "1110000000000000002": (float(ra), float(de))}
     out, counts = apply_post_match_identity_gate_df(df, w, gaia_ra_dec_by_cid=gmap, fwhm_px=3.0)
     assert counts["ok"] >= 1
     assert counts["fail"] >= 1
@@ -88,11 +88,11 @@ def test_evaluate_matched_world2pix_identity_px_near_zero():
     w = _tan_wcs()
     x0, y0 = 256.0, 256.0
     ra, de = w.all_pix2world(x0, y0, 0)
-    df = pd.DataFrame({"x": [x0], "y": [y0], "catalog_id": ["CID1"]})
+    df = pd.DataFrame({"x": [x0], "y": [y0], "catalog_id": ["1110000000000000001"]})
     stats = evaluate_matched_world2pix_identity_px(
         df,
         w,
-        gaia_ra_dec_by_cid={"CID1": (float(ra), float(de))},
+        gaia_ra_dec_by_cid={"1110000000000000001": (float(ra), float(de))},
     )
     assert stats["matched_world2pix_identity_n"] == 1
     assert stats["matched_world2pix_identity_p99_px"] < 0.01

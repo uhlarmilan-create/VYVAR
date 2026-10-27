@@ -246,10 +246,10 @@ def finalize_masterstar_sky_coords(
     gdb = str(gaia_db_path or "").strip()
     if gdb and ids:
         try:
-            from repair_catalog_ids import _pick_gaia_table
+            from catalog_db import gaia_table  # noqa: PLC0415
 
             con = connect_ro(gdb)
-            table = _pick_gaia_table(con)
+            table = gaia_table(con)
             for i0 in range(0, len(ids), 400):
                 part = ids[i0 : i0 + 400]
                 ph = ",".join("?" * len(part))
@@ -370,10 +370,10 @@ def evaluate_matched_world2pix_identity_px(
         missing = [i for i in ids if i not in coords]
         if missing:
             try:
-                from repair_catalog_ids import _pick_gaia_table
+                from catalog_db import gaia_table  # noqa: PLC0415
 
                 con = connect_ro(gdb)
-                table = _pick_gaia_table(con)
+                table = gaia_table(con)
                 for i0 in range(0, len(missing), 400):
                     part = missing[i0 : i0 + 400]
                     ph = ",".join("?" * len(part))

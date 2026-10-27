@@ -93,36 +93,19 @@ def test_night_grid_pool_equals_serial_and_old_measure(tmp_path: Path) -> None:
             assert (a == b) or (math.isnan(a) and math.isnan(b))
 
 
-def test_csv_lookup_keys_match_row_by_row_rule() -> None:
-    from gaia_catalog_id import masterstar_row_gaia_key, normalize_gaia_source_id
+def test_csv_lookup_keys_are_catalog_id_only() -> None:
+    """GAIA-ID-STRICT-2026-10 (G04-17): the row index keys on catalog_id; ``name`` never gives an identity."""
     from aperture_photometry import _build_csv_lookup
-    from photometry_shared import _normalize_gaia_id
-    import re
 
     df = pd.DataFrame({
         "catalog_id": ["4000000000000000001", "4000000000000000002", "", "4000000000000000001", "DET_5"],
         "name": ["4000000000000000001", "DET_2", "4000000000000000003", "4000000000000000009", ""],
         "x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [1.0, 2.0, 3.0, 4.0, 5.0],
     })
-    old: dict[str, int] = {}
-    for i in range(len(df)):
-        row = df.iloc[i]
-        keys = set()
-        pk = masterstar_row_gaia_key(row)
-        if pk:
-            keys.add(pk)
-        nk = normalize_gaia_source_id(row.get("name"))
-        if nk and re.fullmatch(r"\d{12,22}", nk):
-            keys.add(nk)
-        cid = _normalize_gaia_id(df["catalog_id"].iloc[i])
-        if cid:
-            keys.add(cid)
-        for k in keys:
-            old.setdefault(k, i)
     id_map, _xy = _build_csv_lookup(df, "catalog_id")
-    assert set(id_map) == set(old)
-    for k, i in old.items():
-        assert id_map[k].equals(df.iloc[i])
+    assert set(id_map) == {"4000000000000000001", "4000000000000000002"}
+    assert id_map["4000000000000000001"].equals(df.iloc[0])  # first row wins
+    assert "4000000000000000003" not in id_map and "4000000000000000009" not in id_map
 
 
 def test_stamp_metrics_window_equals_full_image() -> None:

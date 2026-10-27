@@ -90,6 +90,7 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
     hdr["NAXIS2"] = 64
     hdr["VY_FWHM"] = 3.5
     w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]  # a real MASTERSTAR WCS is celestial
     w.wcs.crpix = [32.0, 32.0]
     w.wcs.crval = [180.0, 45.0]
     w.wcs.cd = [[0.0001, 0.0], [0.0, 0.0001]]
@@ -98,7 +99,7 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
     fits.writeto(ms_fits, np.zeros((64, 64), dtype=np.float32), header=hdr, overwrite=True)
 
     vsx = tmp_path / "vsx.db"
-    _make_vsx_db(vsx, [(1, 180.0, 45.0)])
+    _make_vsx_db(vsx, [(1, 0.0, 0.0)])  # outside the field: no VSX->Gaia cross-match needed
 
     class _Cfg:
         objects_db_path = str(vsx)

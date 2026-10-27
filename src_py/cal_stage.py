@@ -89,14 +89,14 @@ def stamp_cal_stage_headers(
     pstbg: float | None = None,
     skypass: int | None = None,
 ) -> str:
-    """Write ``VY_CALSTAGE`` + ``VY_CALDATASUM`` (+ optional post-sky QC). Returns datasum."""
+    """Write ``VYCALSTG`` + ``VYCALSUM`` (+ optional post-sky QC). Returns datasum."""
     datasum = compute_fits_datasum(data)
-    hdr["VY_CALSTAGE"] = (str(stage), "INV-CAL-02 calibrated product stage")
-    hdr["VY_CALDATASUM"] = (datasum, "FITS DATASUM of primary data array")
+    hdr["VYCALSTG"] = (str(stage), "INV-CAL-02 calibrated product stage")
+    hdr["VYCALSUM"] = (datasum, "FITS DATASUM of primary data array")
     if pstbg is not None and math.isfinite(float(pstbg)):
-        hdr["VY_PSTBG"] = (float(pstbg), "Post-stage sigma-clipped sky median [ADU]")
+        hdr["VY_PSTBG"] = (float(pstbg), "Post-stage plain sky median [ADU]")
     if skypass is not None and int(skypass) > 0:
-        hdr["VY_SKYPASS"] = (int(skypass), "Sky-surface subtract pass count on these pixels")
+        hdr["VYSKYPAS"] = (int(skypass), "Sky-surface subtract pass count on these pixels")
     return datasum
 
 

@@ -7,10 +7,13 @@ weight ``w`` never reached the ensemble (Broeg weights). The legacy scalar keys
 """
 from __future__ import annotations
 
+import pytest
 import json
 from pathlib import Path
 
 from config import KNOWN_REMOVED_KEYS, AppConfig
+
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
 
 _OLD_SCALARS = (
     "comp_tier1_bprp_limit", "comp_tier2_bprp_limit", "comp_tier3_bprp_limit", "comp_tier4_bprp_limit",

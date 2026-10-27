@@ -9,6 +9,8 @@ import time
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
+
+from gaia_catalog_id import read_vyvar_csv
 from catalog_match_trust import normalize_catalog_match_mode
 from config import AppConfig
 from infolog import log_event
@@ -105,11 +107,10 @@ def _aperture_prepare_shared_state(
     _comp_table = load_comp_table(Path(comparison_stars_csv))
     comp_df = _comp_admitted(_comp_table)
 
-    # Normalize catalog_id
+    # Normalize catalog_id (identity); ``name`` is a label (VSX name) and is kept as written (GAIA-ID-STRICT-2026-10)
     for df in (at_df, comp_df):
-        for col in ("catalog_id", "name"):
-            if col in df.columns:
-                df[col] = df[col].apply(_normalize_gaia_id)
+        if "catalog_id" in df.columns:
+            df["catalog_id"] = df["catalog_id"].apply(_normalize_gaia_id)
 
     at_df["skip_photometry"] = _aperture_coerce_skip_photometry(at_df)
     _require_comparison_stars_per_target_schema(comp_df, Path(comparison_stars_csv))
@@ -203,33 +204,18 @@ def _aperture_prepare_shared_state(
         logging.warning("[COMP-SMART] reserve not read: %s", exc)
         _reserve_index = {}
 
-    # masterstars_full_match.csv - BP-RP map + comp pool for catalog_only aperture photometry.
+    # masterstars_full_match.csv - BP-RP map + comp pool for catalog_only aperture photometry. Required: without it
+    # the grid loses the sub-pixel positions, PSF-LOCAL, the target colours (colour term, k'') and the check-star row
+    # (FAIL-LOUD-2026-10, code review 2 G06-05: a failed load used to leave all of that silently empty).
     target_bp_rp_by_cid: dict[str, float] = {}
-    masterstars_df = pd.DataFrame()
-    try:
-        ms_full = Path(masterstar_fits_path).resolve().parent / "masterstars_full_match.csv"
-        if ms_full.is_file():
-            masterstars_df = pd.read_csv(ms_full, low_memory=False, dtype=_GAIA_ID_DTYPE)
-            masterstars_df = masterstars_df.copy()
-            for _id_col in ("catalog_id", "name"):
-                if _id_col in masterstars_df.columns:
-                    masterstars_df[_id_col] = masterstars_df[_id_col].apply(_normalize_gaia_id)
-            if "bp_rp" in masterstars_df.columns:
-                masterstars_df["bp_rp"] = pd.to_numeric(masterstars_df["bp_rp"], errors="coerce")
-                for _, r in masterstars_df.iterrows():
-                    cid0 = str(r.get("catalog_id") or "").strip()
-                    if not cid0:
-                        continue
-                    v0 = r.get("bp_rp")
-                    try:
-                        vv = float(v0)
-                    except Exception:  # noqa: BLE001
-                        continue
-                    if math.isfinite(vv):
-                        target_bp_rp_by_cid[cid0] = float(vv)
-    except Exception:  # noqa: BLE001
-        target_bp_rp_by_cid = {}
-        masterstars_df = pd.DataFrame()
+    ms_full = Path(masterstar_fits_path).resolve().parent / "masterstars_full_match.csv"
+    masterstars_df = read_vyvar_csv(ms_full, low_memory=False)
+    masterstars_df["catalog_id"] = masterstars_df["catalog_id"].map(_normalize_gaia_id)  # identity; name is a label
+    if "bp_rp" in masterstars_df.columns:
+        masterstars_df["bp_rp"] = pd.to_numeric(masterstars_df["bp_rp"], errors="coerce")
+        for cid0, vv in zip(masterstars_df["catalog_id"].tolist(), masterstars_df["bp_rp"].tolist(), strict=False):
+            if cid0 and math.isfinite(float(vv)):
+                target_bp_rp_by_cid[str(cid0)] = float(vv)
 
     # Find per-frame CSVs (FITS is not used)
     if proc_frame_store is not None and len(proc_frame_store) > 0:
@@ -451,7 +437,7 @@ def _aperture_prepare_shared_state(
         ignore_index=True,
     ).drop_duplicates("catalog_id")
 
-    # Priority: 1. VY_FWHM_GAUSS (2D fit in header), 2. VY_FWHM (DAO), 3. fit fallback
+    # Priority: 1. VY_FWHM (frame QC elliptical Gaussian, FWHM-ONE), 2. fit on MASTERSTAR
     _fwhm_from_header: float | None = None
     try:
         hdr = _ms_header
@@ -468,22 +454,10 @@ def _aperture_prepare_shared_state(
             except Exception as exc:  # noqa: BLE001
                 logging.error('[EXC-0169] VY_OBSG/OBSG/FILTER header tag not parsed - obs_group label missing from frame metadata: %s', exc)
                 pass
-            vy_fwhm_gauss = hdr.get("VY_FWHM_GAUSS", None)
-            vy_fwhm_dao = hdr.get("VY_FWHM", None)
-            if vy_fwhm_gauss is not None:
-                _fvg = float(vy_fwhm_gauss)
-                if 0.5 < _fvg < 30.0:
-                    _fwhm_from_header = _fvg
-                    logging.info(
-                        f"[APERTURE] FWHM from VY_FWHM_GAUSS (2D fit): {_fwhm_from_header:.3f} px"
-                    )
-            if _fwhm_from_header is None and vy_fwhm_dao is not None:
-                _fvd = float(vy_fwhm_dao)
-                if 0.5 < _fvd < 30.0:
-                    _fwhm_from_header = _fvd
-                    logging.info(
-                        f"[APERTURE] FWHM from VY_FWHM (DAO): {_fwhm_from_header:.3f} px"
-                    )
+            vy_fwhm = hdr.get("VY_FWHM", None)
+            if vy_fwhm is not None and 0.5 < float(vy_fwhm) < 30.0:
+                _fwhm_from_header = float(vy_fwhm)
+                logging.info(f"[APERTURE] FWHM from VY_FWHM: {_fwhm_from_header:.3f} px")
     except Exception as _e:  # noqa: BLE001
         logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', _e)
         logging.warning(f"[APERTURE] Cannot read FWHM from header: {_e}")
@@ -594,7 +568,7 @@ def _aperture_prepare_shared_state(
             _fw_p2a = fwhm_from_header_vy_fwhm(_ms_header)
         if _fw_p2a is None:
             logging.warning(
-                "[APERTURE-01] QC fwhm_px missing (csv=%s); refusing VY_FWHM_GAUSS fallback",
+                "[APERTURE-01] QC fwhm_px missing (csv=%s); refusing the MASTERSTAR VY_FWHM fallback",
                 _qc_csv_p2a,
             )
             _fw_p2a = 5.0

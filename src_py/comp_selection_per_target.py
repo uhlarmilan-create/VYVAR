@@ -97,7 +97,7 @@ def _resolve_target_color_for_comp_selection(
     t_bp_tgt = float(pd.to_numeric(target.get("bp_rp"), errors="coerce"))
 
     _gdb = str(gaia_db_path or "").strip() or str(_cfg.gaia_db_path or "").strip()
-    _sid = normalize_gaia_source_id(target.get("catalog_id", target.get("name")))
+    _sid = normalize_gaia_source_id(target.get("catalog_id"))
 
     # If bp_rp is missing in the row, try to fetch it (and teff) from Gaia SQLite by source_id.
     g_bp_rp = float("nan")
@@ -262,7 +262,7 @@ def _filter_comp_candidates_spatial_static(
         ms["_dist_deg"] = quantize_dist_deg(
             _angular_distance_deg_vectorized(ra_t, dec_t, ra_arr, dec_arr)
         )
-    ms["_norm_cid_vt"] = ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).map(_normalize_gaia_id)
+    ms["_norm_cid_vt"] = ms["catalog_id"].map(_normalize_gaia_id)
     _vt_gaia_ids: frozenset[str] | None = None
     if variable_target_catalog_ids:
         _vt_gaia_ids = normalize_gaia_id_set(
@@ -279,7 +279,7 @@ def _filter_comp_candidates_spatial_static(
         _base_mask &= ~ms["zone"].astype(str).str.strip().str.lower().eq("saturated")
     if target_cid:
         _base_mask &= (
-            ms.get("catalog_id", ms.get("name", pd.Series("", index=ms.index))).astype(str) != target_cid
+            ms["catalog_id"].astype(str) != target_cid
         )
     if math.isfinite(min_dist_arcsec) and min_dist_arcsec > 0:
         _base_mask &= ms["_dist_deg"].ge(float(min_dist_arcsec) / 3600.0)
@@ -666,7 +666,7 @@ def _ensemble_mad_filter_rms(
     chip_interior_margin_px: int,
 ) -> dict[str, float] | None:
     # -- Step 4: no iterative MAD outlier rejection (zero-clipping policy 2026-08-12) --
-    id_col_cand = "name" if "name" in candidates.columns else ("catalog_id" if "catalog_id" in candidates.columns else "name")
+    id_col_cand = "catalog_id" if "catalog_id" in candidates.columns else "name"  # identity = catalog_id (G07-05)
     cand_ids = set(candidates[id_col_cand].astype(str).str.strip())
     active = {
         cid: rms
@@ -1192,8 +1192,6 @@ def _assemble_comp_selection_result_rows(
             continue
         if "catalog_id" in r:
             r["catalog_id"] = normalize_gaia_source_id(r.get("catalog_id"))
-        if "name" in r:
-            r["name"] = normalize_gaia_source_id(r.get("name")) or str(r.get("name", "") or "")
         _cid_key = cid_s
         _pt_map = per_target_rms_map or {}
         _pt_rms = float(_pt_map.get(_cid_key, _pt_map.get(cid, float("nan"))))

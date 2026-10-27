@@ -653,8 +653,8 @@ def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float 
     Returns ``(ra_deg, dec_deg, source)``; source is ``VY_TARG``, ``RA_DEC``, ``OBJCTRA_DEC_hms``,
     ``CRVAL`` (a WCS already in the header, weak hint) or ``none``.
     """
-    vy1 = _header_pick(header, "VYTARGRA", "VY_TARGRA")
-    vy2 = _header_pick(header, "VYTARGDE", "VY_TARGDEC")
+    vy1 = header.get("VYTARGRA")
+    vy2 = header.get("VYTARGDE")
     if vy1 is not None and vy2 is not None:
         try:
             r = float(vy1)

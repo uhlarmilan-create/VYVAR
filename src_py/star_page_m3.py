@@ -16,6 +16,8 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 from mag_constants import MAG_ERR_SCALE
 
 
@@ -134,7 +136,7 @@ def plot_lc_check(
     kx = ky = None
     if check_csv is not None and Path(check_csv).is_file():
         try:
-            kd = pd.read_csv(check_csv, low_memory=False)
+            kd = read_vyvar_csv(check_csv, low_memory=False)
             kx = pd.to_numeric(kd["bjd"], errors="coerce").to_numpy(float)
             ky = pd.to_numeric(kd["kmag"], errors="coerce").to_numpy(float)
             kok = np.isfinite(kx) & np.isfinite(ky)

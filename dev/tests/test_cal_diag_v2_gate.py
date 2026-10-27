@@ -221,8 +221,8 @@ def test_gate_indeterminate_unmeasured(tmp_path: Path):
 def test_passthrough_headers():
     hdr = fits.Header()
     passthrough_cal_diag_headers(hdr)
-    assert hdr["VY_DKRSMP"] == "PASSTHROUGH"
-    assert hdr["VY_DKRSMP_SRC"] == "PASSTHROUGH"
+    assert hdr["VYDKRSMP"] == "PASSTHROUGH"
+    assert hdr["VYDKRSRC"] == "PASSTHROUGH"
 
 
 def test_apply_headers_includes_src():
@@ -238,8 +238,8 @@ def test_apply_headers_includes_src():
         pedestal_p=24.5,
     )
     apply_cal_diag_headers(hdr, gr)
-    assert hdr["VY_DKRSMP"] == "SUM"
-    assert hdr["VY_DKRSMP_SRC"] == "DERIVED"
+    assert hdr["VYDKRSMP"] == "SUM"
+    assert hdr["VYDKRSRC"] == "DERIVED"
     assert float(hdr["VY_CPED"]) == pytest.approx(24.5)
 
 

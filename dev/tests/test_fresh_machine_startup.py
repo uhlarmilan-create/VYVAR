@@ -14,6 +14,7 @@ author's absolute ``C:\\ASTRO`` paths:
 """
 from __future__ import annotations
 
+import pytest
 from pathlib import Path
 
 from config import AppConfig
@@ -22,6 +23,8 @@ from database import (
     get_observer_location_by_id,
     get_observer_locations,
 )
+
+pytestmark = pytest.mark.usefixtures("tmp_path_is_data_root")  # TEST-ISOLATION-2026-10
 
 _FRESH_CONFIG = """// fresh-machine config.json (paths blanked by the installer)
 {

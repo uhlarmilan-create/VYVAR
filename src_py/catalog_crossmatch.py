@@ -17,8 +17,6 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.utils.exceptions import AstropyWarning
 
-warnings.simplefilter("ignore", AstropyWarning)
-warnings.simplefilter("ignore", category=UserWarning, append=True)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -624,13 +622,19 @@ def check_candidate_in_catalogs(
     ]
 
     def _job(label: str, fn: Callable[[SkyCoord, float], list[CatalogMatch]]) -> tuple[str, list[CatalogMatch] | None, str | None]:
+        # a failed web query is recorded per catalogue (``errors``), the candidate keeps the others; library
+        # warnings of the queries are muted here only (G10-10: no process-wide filter at import)
         try:
-            return label, fn(coord, float(radius_arcsec)), None
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", AstropyWarning)
+                warnings.simplefilter("ignore", UserWarning)
+                return label, fn(coord, float(radius_arcsec)), None
         except Exception as exc:  # noqa: BLE001
-            # EXC-0021: ? -- intent unclear (try: / return label, fn(coord, float(radius_arcsec)), None / except Exc... (EXCEPT-BULK 2026-07-08)
             return label, None, str(exc)
 
-    with ThreadPoolExecutor(max_workers=6) as ex:
+    # G10-09: the 30 s bound must hold - a hung query is abandoned (shutdown without waiting), not joined
+    ex = ThreadPoolExecutor(max_workers=6)
+    try:
         futs = {ex.submit(_job, lab, fn): lab for lab, fn in workers}
         try:
             for fut in as_completed(futs, timeout=30.0):
@@ -658,6 +662,8 @@ def check_candidate_in_catalogs(
                 else:
                     fut.cancel()
                     errors[lab] = "timeout (30s)"
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
 
     return CrossmatchResult(
         ra=float(ra),

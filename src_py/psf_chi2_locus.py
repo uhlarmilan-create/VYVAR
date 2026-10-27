@@ -1,23 +1,27 @@
 # -*- coding: ascii -*-
-"""EPSF-CHI2-LOCUS-01: data-derived chi2(flux) locus for psf_fit_ok.
+"""EPSF-CHI2-LOCUS-01: data-derived chi2(flux) reference for psf_fit_ok (CHI2-FLUX-REF-2026-10).
 
 Sets ``psf_fit_ok`` of the frame-level PSF fit (RUN ePSF); no fixed chi2 threshold.
 
-Night slope ``k`` and residual scatter come from a pooled MAD-clipped
-OLS fit over the night: log10(chi2) = a_night + k * log10(flux).
+chi2 of a PSF fit is a noise term (about constant for faint stars) plus a PSF-model-mismatch term that grows
+roughly with flux^2, so log10(chi2) against log10(flux) is curved, not a straight line (DAOPHOT handles the same
+effect with a profile-error term, Stetson 1987). A single straight line, set by the many faint stars, put the
+bright, well-measured stars 4-8 sigma above it and rejected them (Brno 534 g: 35-56 % of stars brighter than
+log10 flux 4.5 rejected while their PSF/aperture ratio was as stable as that of the accepted ones).
 
-Per frame, the intercept is local:
-  a_f = robust median of (log10(chi2) - k * log10(flux))
-over that frame's locus sample. Residuals use the night scatter.
-If the frame has fewer than ``MIN_N_LOCUS_FIT`` locus members, the
-night intercept is used (source=night). Never falls back to a fixed
-chi2 cut. No night-specific numeric constants from a single rig.
+Night reference: the night's stars are pooled and binned in log10(flux) (``LOCUS_BIN_DEX``; consecutive bins are
+merged until a group holds ``MIN_N_BIN`` stars); per group the plain median of log10(chi2) at the group's median log10(flux), and
+the MAD sigma of the residuals from that curve; between group centres the curve is linear, outside it is extended linearly from the two
+end groups (scatter held). A star is compared only with stars of similar flux.
+Per frame, a plain median offset of log10(chi2) from the night curve (seeing changes chi2 for every star).
+No clipping and no fitted functional form. Frames with fewer than ``MIN_N_LOCUS_FIT`` stars use the night curve
+(source=night).
 """
 from __future__ import annotations
 
 import logging
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -28,25 +32,53 @@ from gaia_catalog_id import read_vyvar_csv
 
 LOGGER = logging.getLogger(__name__)
 
-# Absolute floor to estimate an intercept (statistical DOF, not equipment).
+# Statistical sample sizes (not equipment): a frame offset needs MIN_N_LOCUS_FIT stars, a bin statistic MIN_N_BIN.
 MIN_N_LOCUS_FIT = 10
+MIN_N_BIN = 30
+# Flux resolution of the reference: 0.25 dex = 0.625 mag.
+LOCUS_BIN_DEX = 0.25
 MAD_TO_SIGMA = 1.4826
 DEFAULT_NSIGMA = 5.0
-_CLIP_ROUNDS = 3
-_CLIP_K = 3.0
 
 
 @dataclass(frozen=True)
 class Chi2Locus:
-    a: float
-    k: float
-    scatter: float  # robust sigma of log10 residuals (1.4826*MAD)
+    """Night chi2 reference curve (log10 flux bin centres, median log10 chi2, sigma) plus a frame offset."""
+
+    centres: tuple[float, ...]
+    med: tuple[float, ...]
+    scatter: tuple[float, ...]
     n: int
-    source: str  # "frame" | "night"
-    k_err: float = float("nan")
+    source: str  # "night" | "frame"
+    offset: float = 0.0
+    n_bin: tuple[int, ...] = field(default=())
+
+    def predict(self, logf: np.ndarray) -> np.ndarray:
+        """Linear between group centres, linear extrapolation from the two end groups outside."""
+        x = np.asarray(logf, dtype=np.float64)
+        c = np.asarray(self.centres, dtype=np.float64)
+        m = np.asarray(self.med, dtype=np.float64)
+        out = np.interp(x, c, m)
+        if c.size >= 2:
+            lo_s = (m[1] - m[0]) / (c[1] - c[0])
+            hi_s = (m[-1] - m[-2]) / (c[-1] - c[-2])
+            out = np.where(x < c[0], m[0] + lo_s * (x - c[0]), out)
+            out = np.where(x > c[-1], m[-1] + hi_s * (x - c[-1]), out)
+        return out + float(self.offset)
+
+    def sigma(self, logf: np.ndarray) -> np.ndarray:
+        return np.interp(logf, self.centres, self.scatter)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "centres": [float(v) for v in self.centres],
+            "med": [float(v) for v in self.med],
+            "scatter": [float(v) for v in self.scatter],
+            "n_bin": [int(v) for v in self.n_bin],
+            "n": int(self.n),
+            "source": self.source,
+            "offset": float(self.offset),
+        }
 
 
 def _finite_mask(
@@ -74,115 +106,80 @@ def fit_chi2_locus(
     saturated: Sequence[bool] | np.ndarray | None = None,
     source: str = "night",
 ) -> Chi2Locus | None:
-    """Fit log10(chi2) = a + k*log10(flux) by iterative MAD-clipped OLS.
+    """Binned reference curve: plain median and MAD sigma of log10(chi2) per log10(flux) bin.
 
-    Used for the night-pooled slope and scatter. Returns None if fewer
-    than ``MIN_N_LOCUS_FIT`` locus members remain.
+    Returns None if the night has fewer than ``MIN_N_BIN`` stars.
     """
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
     m = _finite_mask(f, c, converged, saturated)
-    if int(m.sum()) < MIN_N_LOCUS_FIT:
+    if int(m.sum()) < MIN_N_BIN:
         return None
     x = np.log10(f[m])
     y = np.log10(c[m])
-    keep = np.ones(x.shape[0], dtype=bool)
-    a = k = float("nan")
-    resid = np.zeros_like(x)
-    for _ in range(_CLIP_ROUNDS):
-        if int(keep.sum()) < MIN_N_LOCUS_FIT:
+    lo = math.floor(float(x.min()) / LOCUS_BIN_DEX) * LOCUS_BIN_DEX
+    idx = np.floor((x - lo) / LOCUS_BIN_DEX).astype(int)
+    # consecutive LOCUS_BIN_DEX bins are merged until a group holds MIN_N_BIN stars (sparse bright end);
+    # a sparse remainder joins the previous group
+    groups: list[np.ndarray] = []
+    cur: list[np.ndarray] = []
+    for b in np.unique(idx):
+        cur.append(np.flatnonzero(idx == b))
+        if sum(len(v) for v in cur) >= MIN_N_BIN:
+            groups.append(np.concatenate(cur))
+            cur = []
+    if cur:
+        if groups:
+            groups[-1] = np.concatenate([groups[-1]] + cur)
+        else:
             return None
-        xx = x[keep]
-        yy = y[keep]
-        A = np.column_stack([np.ones(len(xx)), xx])
-        coef, *_ = np.linalg.lstsq(A, yy, rcond=None)
-        a = float(coef[0])
-        k = float(coef[1])
-        resid = y - (a + k * x)
-        med = float(np.median(resid[keep]))
-        mad = float(np.median(np.abs(resid[keep] - med)))
-        if mad <= 0:
-            mad = float(np.std(resid[keep])) if keep.sum() > 1 else 1e-6
-        if mad <= 0:
-            mad = 1e-6
-        keep = np.abs(resid - med) <= (_CLIP_K * mad)
-    if int(keep.sum()) < MIN_N_LOCUS_FIT:
+    # pass 1: plain median of log10(chi2) per group -> curve; pass 2: MAD sigma of the residuals from that curve
+    # (the curve's own rise inside a wide bright group must not count as scatter)
+    centres = [float(np.median(x[g])) for g in groups]
+    med = [float(np.median(y[g])) for g in groups]
+    nb = [int(len(g)) for g in groups]
+    curve = Chi2Locus(centres=tuple(centres), med=tuple(med), scatter=tuple([1.0] * len(centres)), n=int(m.sum()),
+                      source=source)
+    resid = y - curve.predict(x)
+    scat: list[float] = []
+    for g in groups:
+        r = resid[g]
+        sb = MAD_TO_SIGMA * float(np.median(np.abs(r - np.median(r))))
+        scat.append(sb if (math.isfinite(sb) and sb > 0) else float("nan"))
+    good = [i for i, v in enumerate(scat) if math.isfinite(v)]
+    centres = [centres[i] for i in good]
+    med = [med[i] for i in good]
+    scat = [scat[i] for i in good]
+    nb = [nb[i] for i in good]
+    if not centres:
         return None
-    xx = x[keep]
-    yy = y[keep]
-    A = np.column_stack([np.ones(len(xx)), xx])
-    coef, *_ = np.linalg.lstsq(A, yy, rcond=None)
-    a = float(coef[0])
-    k = float(coef[1])
-    resid_f = yy - (a + k * xx)
-    med = float(np.median(resid_f))
-    mad = float(np.median(np.abs(resid_f - med)))
-    scatter = MAD_TO_SIGMA * mad if mad > 0 else float(np.std(resid_f))
-    if not (math.isfinite(scatter) and scatter > 0):
-        scatter = 1e-6
-    s2 = float(np.sum((resid_f - med) ** 2) / max(1, len(xx) - 2))
-    try:
-        xtx_inv = np.linalg.inv(A.T @ A)
-        k_err = float(math.sqrt(max(0.0, s2 * float(xtx_inv[1, 1]))))
-    except np.linalg.LinAlgError:
-        k_err = float("nan")
-    return Chi2Locus(a=a, k=k, scatter=scatter, n=int(keep.sum()), source=source, k_err=k_err)
+    return Chi2Locus(
+        centres=tuple(centres), med=tuple(med), scatter=tuple(scat), n=int(m.sum()), source=source, n_bin=tuple(nb)
+    )
 
 
-def frame_intercept_with_night_k(
+def frame_offset_locus(
     flux: Sequence[float] | np.ndarray,
     chi2: Sequence[float] | np.ndarray,
     *,
-    night_k: float,
-    night_a: float,
-    night_scatter: float,
+    night: Chi2Locus,
     converged: Sequence[bool] | np.ndarray | None = None,
     saturated: Sequence[bool] | np.ndarray | None = None,
-) -> Chi2Locus | None:
-    """Build a per-frame locus: night slope k + robust frame intercept a_f.
-
-    Returns None only when the night slope itself is unusable. When the
-    frame sample is below ``MIN_N_LOCUS_FIT``, returns the night intercept
-    with ``source='night'``.
-    """
-    if not (math.isfinite(night_k) and math.isfinite(night_scatter) and night_scatter > 0):
-        return None
+) -> Chi2Locus:
+    """Night curve shifted by the frame's plain median offset of log10(chi2); night curve if the frame is too small."""
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
     m = _finite_mask(f, c, converged, saturated)
     n_f = int(m.sum())
+    base = Chi2Locus(
+        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="night", n_bin=night.n_bin
+    )
     if n_f < MIN_N_LOCUS_FIT:
-        return Chi2Locus(
-            a=float(night_a),
-            k=float(night_k),
-            scatter=float(night_scatter),
-            n=n_f,
-            source="night",
-        )
-    # a_f = median(log10(chi2) - k*log10(flux)); MAD-clip once around that median.
-    delta = np.log10(c[m]) - float(night_k) * np.log10(f[m])
-    med = float(np.median(delta))
-    mad = float(np.median(np.abs(delta - med)))
-    if mad <= 0:
-        mad = float(np.std(delta)) if n_f > 1 else 1e-6
-    if mad <= 0:
-        mad = 1e-6
-    keep = np.abs(delta - med) <= (_CLIP_K * mad)
-    if int(keep.sum()) < MIN_N_LOCUS_FIT:
-        return Chi2Locus(
-            a=float(night_a),
-            k=float(night_k),
-            scatter=float(night_scatter),
-            n=n_f,
-            source="night",
-        )
-    a_f = float(np.median(delta[keep]))
+        return base
+    lf = np.log10(f[m])
+    off = float(np.median(np.log10(c[m]) - base.predict(lf)))
     return Chi2Locus(
-        a=a_f,
-        k=float(night_k),
-        scatter=float(night_scatter),
-        n=int(keep.sum()),
-        source="frame",
+        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="frame", offset=off, n_bin=night.n_bin
     )
 
 
@@ -191,19 +188,17 @@ def locus_residual_sigma(
     chi2: float | np.ndarray,
     locus: Chi2Locus,
 ) -> float | np.ndarray:
-    """Residual of log10(chi2) from the locus, in units of locus.scatter."""
+    """Residual of log10(chi2) from the reference at the star's flux, in units of that flux bin's sigma."""
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
-    if np.ndim(f) == 0:
-        if not (math.isfinite(float(f)) and float(f) > 0 and math.isfinite(float(c)) and float(c) > 0):
-            return float("nan")
-        pred = locus.a + locus.k * math.log10(float(f))
-        return float((math.log10(float(c)) - pred) / locus.scatter)
+    scalar = np.ndim(f) == 0
+    f = np.atleast_1d(f)
+    c = np.atleast_1d(c)
     m = np.isfinite(f) & (f > 0) & np.isfinite(c) & (c > 0)
-    pred = locus.a + locus.k * np.log10(f[m])
     out = np.full(f.shape, float("nan"), dtype=np.float64)
-    out[m] = (np.log10(c[m]) - pred) / locus.scatter
-    return out
+    lf = np.log10(f[m])
+    out[m] = (np.log10(c[m]) - locus.predict(lf)) / locus.sigma(lf)
+    return float(out[0]) if scalar else out
 
 
 def chi2_ok_from_locus(
@@ -219,9 +214,9 @@ def chi2_ok_from_locus(
     """
     if not converged:
         return False
-    if not math.isfinite(chi2):
+    if not math.isfinite(float(chi2)):
         return False
-    if not math.isfinite(resid_sigma):
+    if not math.isfinite(float(resid_sigma)):
         return False
     return float(resid_sigma) <= float(n_sigma)
 
@@ -248,7 +243,7 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
         cols = [c for c in usecols if c in hdr]
         if "psf_flux" not in cols or "psf_chi2" not in cols:
             continue
-        df = pd.read_csv(fp, usecols=cols, low_memory=False)
+        df = read_vyvar_csv(fp, usecols=cols, low_memory=False)
         f = pd.to_numeric(df["psf_flux"], errors="coerce").to_numpy(dtype=np.float64)
         c = pd.to_numeric(df["psf_chi2"], errors="coerce").to_numpy(dtype=np.float64)
         if "psf_converged" in df.columns:
@@ -281,7 +276,7 @@ def reapply_night_locus_to_proc_dir(
     n_sigma: float | None = None,
     night_locus: Chi2Locus | None = None,
 ) -> dict[str, Any]:
-    """Rewrite fit_ok using night k + per-frame intercept a_f."""
+    """Rewrite fit_ok against the night chi2 reference curve shifted by each frame's offset."""
     ns = float(n_sigma) if n_sigma is not None else DEFAULT_NSIGMA
     night = night_locus or fit_night_locus_from_proc_dir(proc_dir)
     summary: dict[str, Any] = {
@@ -290,7 +285,7 @@ def reapply_night_locus_to_proc_dir(
         "frames": [],
         "n_rewritten": 0,
         "n_kept_frame": 0,
-        "a_f_values": [],
+        "offsets": [],
     }
     if night is None:
         summary["error"] = "night_locus_unavailable"
@@ -312,17 +307,7 @@ def reapply_night_locus_to_proc_dir(
             sat |= df["likely_saturated"].fillna(False).astype(bool).to_numpy()
         if "is_saturated" in df.columns:
             sat |= df["is_saturated"].fillna(False).astype(bool).to_numpy()
-        locus = frame_intercept_with_night_k(
-            flux,
-            chi2,
-            night_k=night.k,
-            night_a=night.a,
-            night_scatter=night.scatter,
-            converged=conv,
-            saturated=sat,
-        )
-        if locus is None:
-            continue
+        locus = frame_offset_locus(flux, chi2, night=night, converged=conv, saturated=sat)
         source = locus.source
         resid = locus_residual_sigma(flux, chi2, locus)
         if not isinstance(resid, np.ndarray):
@@ -350,35 +335,29 @@ def reapply_night_locus_to_proc_dir(
             "frame": fp.name,
             "source": source,
             "n_locus": int(locus.n),
-            "a": locus.a,
-            "k": locus.k,
-            "scatter": locus.scatter,
+            "offset": locus.offset,
             "n_ok": int(ok.sum()),
         }
         summary["frames"].append(entry)
         if source == "frame":
             summary["n_kept_frame"] += 1
-            summary["a_f_values"].append(locus.a)
+            summary["offsets"].append(locus.offset)
         else:
             summary["n_rewritten"] += 1
-    a_vals = summary["a_f_values"]
-    if a_vals:
-        arr = np.asarray(a_vals, dtype=np.float64)
-        summary["a_f_spread"] = {
+    offs = summary["offsets"]
+    if offs:
+        arr = np.asarray(offs, dtype=np.float64)
+        med_sig = float(np.median(night.scatter))
+        summary["offset_spread"] = {
             "n": int(arr.size),
             "min": float(np.min(arr)),
             "median": float(np.median(arr)),
             "max": float(np.max(arr)),
-            "night_a": night.a,
-            "night_scatter": night.scatter,
-            "spread_over_night_scatter": float(
-                (np.max(arr) - np.min(arr)) / night.scatter
-            )
-            if night.scatter > 0
-            else float("nan"),
+            "night_scatter_median": med_sig,
+            "spread_over_night_scatter": float((np.max(arr) - np.min(arr)) / med_sig) if med_sig > 0 else float("nan"),
         }
     else:
-        summary["a_f_spread"] = {"n": 0}
+        summary["offset_spread"] = {"n": 0}
     return summary
 
 
@@ -428,7 +407,9 @@ __all__ = [
     "MIN_N_LOCUS_FIT",
     "DEFAULT_NSIGMA",
     "fit_chi2_locus",
-    "frame_intercept_with_night_k",
+    "frame_offset_locus",
+    "MIN_N_BIN",
+    "LOCUS_BIN_DEX",
     "locus_residual_sigma",
     "chi2_ok_from_locus",
     "fit_night_locus_from_proc_dir",

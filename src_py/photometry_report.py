@@ -15,6 +15,8 @@ from xml.sax.saxutils import escape
 import numpy as np
 import pandas as pd
 
+from gaia_catalog_id import read_vyvar_csv
+
 from citations import build_run_citation_context, emit_pdf_methods_sections
 from target_page import TargetPages, _norm_cid_decimal, load_frames, star_fields
 from report_methods import pdf_report_path
@@ -2183,7 +2185,7 @@ class _PhotometryReportBuilder:
         if not csvp.is_file() or qc_df.empty:
             return None
         try:
-            cdf = pd.read_csv(csvp, low_memory=False)
+            cdf = read_vyvar_csv(csvp, low_memory=False)
         except Exception:  # noqa: BLE001
             # EXC-0262: T2 -- report/export may omit or misstate (try: / cdf = pd.read_csv(csvp, low_memory=False) / ... (EXCEPT-BULK 2026-07-08)
             return None
@@ -2271,7 +2273,7 @@ class _PhotometryReportBuilder:
             except Exception:  # noqa: BLE001
                 hdr = None
         if hdr is not None:
-            for key in ("MSFRAME", "MASTERFRM", "MASTERFRAME", "VY_MSFRAME", "VY_SRCFRAME", "SRCFRAME", "VY_FRAME"):
+            for key in ("MSFRAME", "MASTERFRM", "MASTERFRAME", "SRCFRAME", "VY_FRAME"):
                 raw = hdr.get(key)
                 if raw is None:
                     continue
@@ -2287,7 +2289,7 @@ class _PhotometryReportBuilder:
                 except Exception:  # noqa: BLE001
                     # EXC-0264: T2 -- report/export may omit or misstate (hit['_ms_resolve'] = f'header:{key}' / return hit /... (EXCEPT-BULK 2026-07-08)
                     continue
-            for key in ("VY_REFFILE", "VY_SRCPATH", "VY_SRCFILE", "VY_REF", "ORIGNAME", "ORIGFILE"):
+            for key in ("VY_REF", "ORIGNAME", "ORIGFILE"):
                 raw = hdr.get(key)
                 if raw is None:
                     continue
@@ -3713,7 +3715,7 @@ class _PhotometryReportBuilder:
         def _csv(name: str) -> pd.DataFrame:
             p = phot / name
             try:
-                return pd.read_csv(p, low_memory=False) if p.is_file() and p.stat().st_size > 2 else pd.DataFrame()
+                return read_vyvar_csv(p, low_memory=False) if p.is_file() and p.stat().st_size > 2 else pd.DataFrame()
             except (OSError, ValueError, pd.errors.EmptyDataError):
                 return pd.DataFrame()
 

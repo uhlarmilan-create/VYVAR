@@ -102,7 +102,6 @@ def test_complete_config_snapshot_covers_all_public_fields() -> None:
     assert set(pr.load_registry()) <= set(snap), "snapshot must cover every registry key"
     # backfilled derived fields are present and JSON-safe (Path -> str)
     assert "project_root" in snap and isinstance(snap["project_root"], str)
-    assert "qc_preprocess_workers" in snap
     json.dumps(snap)  # must be JSON-serializable (would raise on a stray Path)
 
 

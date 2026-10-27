@@ -6,7 +6,7 @@ The Howell SNR mag-bin table remains a diagnostic artifact only.
 FWHM-AUTH-01: FWHM(frame) is qc_metrics.fwhm_px (preprocess median moment-FWHM,
 stamped on the frame as VY_FWHM). That quantity is already a moment FWHM.
 Do not convert it by DAO_TO_GAUSSIAN (1/1.5), and do not substitute
-MASTERSTAR VY_FWHM_GAUSS or the SNR-table draft-constant FWHM.
+the MASTERSTAR FWHM or the SNR-table draft-constant FWHM.
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ MODE_PER_TARGET = "per_target"
 FWHM_AUTHORITY = "qc_metrics.fwhm_px"
 FWHM_AUTH_NOTE = (
     "FWHM-AUTH-01: per-frame QC moment FWHM (qc_metrics.fwhm_px / header VY_FWHM). "
-    "Not VY_FWHM_GAUSS, not DAO_TO_GAUSSIAN 0.667, not the SNR-table draft-constant FWHM."
+    "Not the MASTERSTAR FWHM, not DAO_TO_GAUSSIAN 0.667, not the SNR-table draft-constant FWHM."
 )
 
 POLICY_ID = "APERTURE-01"

@@ -140,7 +140,7 @@ def test_per_frame_index_columns(tmp_path: Path) -> None:
 def test_qc_metrics_not_written_columns() -> None:
     from pipeline_calibrate import QC_METRICS_NOT_WRITTEN
 
-    assert set(QC_METRICS_NOT_WRITTEN) == {"n_sources", "cal_pstbg", "sky_surface_fwhm_px", "sky_surface_calm_adu"}
+    assert set(QC_METRICS_NOT_WRITTEN) == {"n_sources", "cal_pstbg", "sky_surface_fwhm_px", "sky_surface_source_mask_px"}
 
 
 def test_report_fwhm_reads_fwhm_px() -> None:

@@ -33,7 +33,6 @@ from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
 from pipeline_calibrate import (
     _archive_preprocess_lights_root,
     _filter_light_paths_maybe,
-    _vyvar_parallel_worker_count,
 )
 from pipeline_preprocess import (
     _partition_detrended_by_subfolder,
@@ -46,24 +45,6 @@ LOGGER = logging.getLogger("pipeline")
 
 # Target selection through aperture photometry (active_targets.csv, zone_flag, skip_photometry) lives in
 # ``photometry_core`` - ``run_target_and_comp_selection`` / ``run_aperture_photometry``, not in this file.
-
-def _pipeline_ui_info(msg: str) -> None:
-    """Log always; during a long job route to the bottom footer instead of ``st.info``."""
-    log_event(msg)
-    try:
-        import streamlit as st
-
-        fs = st.session_state.get("vyvar_footer_state")
-        if isinstance(fs, dict) and fs.get("running"):
-            st.session_state["vyvar_footer_state"] = {**fs, "status_detail": str(msg)[:800]}
-            _fn = st.session_state.get("vyvar_ui_rerender_footer")
-            if callable(_fn):
-                _fn()
-                return
-        st.info(msg)
-    except Exception:  # noqa: BLE001
-        pass
-
 
 def _ensure_parent_dirs_for_aligned_fits(out_path: Path) -> None:
     """Ensure parent folders exist for nested outputs under ``detrended_aligned/lights/...``."""
@@ -304,11 +285,11 @@ def build_masterstar_from_detrended(
             )
     if files:
         if only_paths is None:
-            _pipeline_ui_info(
+            log_event(
                 f"Found {len(files)} files in {root} (including subdirectories)."
             )
         else:
-            _pipeline_ui_info(
+            log_event(
                 f"Found {len(files)} files for MASTERSTAR in {root} (candidate selection; "
                 f"in the tree {len(all_fits)} FITS in total)."
             )
@@ -350,7 +331,7 @@ def build_masterstar_from_detrended(
                 f"No FITS for MASTERSTAR after candidate selection: {root} contains {len(all_fits)} file(s), "
                 "but no path matches the database selection."
             )
-        _pipeline_ui_info(msg)
+        log_event(msg)
         raise FileNotFoundError(msg)
     try:
         _comp_names = [Path(p).name for p in files]
@@ -436,7 +417,6 @@ def build_masterstar_from_detrended(
             vy_fwhm = float(_fwhm_auto)
             hdr["VY_FWHM"] = (round(vy_fwhm, 4), "FWHM [pix] elliptical Gaussian (frame QC)")
             log_event(f"MASTERSTAR: VY_FWHM = {vy_fwhm:.3f} px written to FITS.")
-            hdr["VY_FWHM_GAUSS"] = (round(vy_fwhm, 4), "= VY_FWHM (one FWHM in VYVAR)")
 
             _strip_external_platesolve_header(hdr)
             log_event(
@@ -835,8 +815,9 @@ def _plate_solve_input_bundle(
             calculated_scale = out["expected_arcsec_per_px"]
             if calculated_scale is not None:
                 log_event(f"MATH CHECK: ({eff_um} / {foc}) * 206.265 = {calculated_scale}")
+    except DraftTechnicalMetadataError:
+        raise  # FAIL-LOUD-2026-10 (code review 2 G03-18): the caller (app) handles missing optics metadata
     except Exception as exc:  # noqa: BLE001
-        # EXC-0313: T4 -- db_u.conn.close failure in plate-solve bundle finally is ignored after bundle assembly. (EXCEPT-BULK 2026-07-08)
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().plate_solve_bundle_fail += 1
@@ -1239,60 +1220,54 @@ def select_comparison_stars_spatial_grid(
         and "ra_deg" in variable_targets_df.columns
         and "dec_deg" in variable_targets_df.columns
     ):
-        try:
-            from astropy.coordinates import SkyCoord  # noqa: PLC0415
-            import astropy.units as u  # noqa: PLC0415
+        from astropy.coordinates import SkyCoord  # noqa: PLC0415
+        import astropy.units as u  # noqa: PLC0415
 
-            w_ra = pd.to_numeric(work["ra_deg"], errors="coerce")
-            w_de = pd.to_numeric(work["dec_deg"], errors="coerce")
-            ok_w = w_ra.notna() & w_de.notna()
-            v_ra = pd.to_numeric(variable_targets_df["ra_deg"], errors="coerce")
-            v_de = pd.to_numeric(variable_targets_df["dec_deg"], errors="coerce")
-            ok_v = v_ra.notna() & v_de.notna()
-            if bool(ok_w.any()) and bool(ok_v.any()):
-                comp_coo = SkyCoord(
-                    ra=w_ra.loc[ok_w].astype(float).to_numpy() * u.deg,
-                    dec=w_de.loc[ok_w].astype(float).to_numpy() * u.deg,
-                    frame="icrs",
-                )
-                vsx_coo = SkyCoord(
-                    ra=v_ra.loc[ok_v].astype(float).to_numpy() * u.deg,
-                    dec=v_de.loc[ok_v].astype(float).to_numpy() * u.deg,
-                    frame="icrs",
-                )
-                _idx, sep2d, _ = comp_coo.match_to_catalog_sky(vsx_coo)
-                veto_arcsec = 10.0
-                near = sep2d <= (float(veto_arcsec) * u.arcsec)
-                n_removed = int(getattr(near, "sum", lambda: 0)())
-                if n_removed > 0:
-                    drop_idx = w_ra.loc[ok_w].index[np.asarray(near, dtype=bool)]
-                    work = work.drop(index=drop_idx)
-                log_event(
-                    f"[COMP SELECT] Proximity veto: removed {n_removed} comp candidates within {float(veto_arcsec):.0f} arcsec of VSX targets"
-                )
-        except Exception:  # noqa: BLE001
-            pass
+        w_ra = pd.to_numeric(work["ra_deg"], errors="coerce")
+        w_de = pd.to_numeric(work["dec_deg"], errors="coerce")
+        ok_w = w_ra.notna() & w_de.notna()
+        v_ra = pd.to_numeric(variable_targets_df["ra_deg"], errors="coerce")
+        v_de = pd.to_numeric(variable_targets_df["dec_deg"], errors="coerce")
+        ok_v = v_ra.notna() & v_de.notna()
+        if bool(ok_w.any()) and bool(ok_v.any()):
+            comp_coo = SkyCoord(
+                ra=w_ra.loc[ok_w].astype(float).to_numpy() * u.deg,
+                dec=w_de.loc[ok_w].astype(float).to_numpy() * u.deg,
+                frame="icrs",
+            )
+            vsx_coo = SkyCoord(
+                ra=v_ra.loc[ok_v].astype(float).to_numpy() * u.deg,
+                dec=v_de.loc[ok_v].astype(float).to_numpy() * u.deg,
+                frame="icrs",
+            )
+            _idx, sep2d, _ = comp_coo.match_to_catalog_sky(vsx_coo)
+            veto_arcsec = 10.0
+            near = sep2d <= (float(veto_arcsec) * u.arcsec)
+            n_removed = int(getattr(near, "sum", lambda: 0)())
+            if n_removed > 0:
+                drop_idx = w_ra.loc[ok_w].index[np.asarray(near, dtype=bool)]
+                work = work.drop(index=drop_idx)
+            log_event(
+                f"[COMP SELECT] Proximity veto: removed {n_removed} comp candidates within {float(veto_arcsec):.0f} arcsec of VSX targets"
+            )
     # Annulus-aware border filter: keep only stars whose centroid is within the safe bbox
     # (intersection of aligned frames shrunk by sky-annulus outer radius).
     if safe_bbox is not None and "x" in work.columns and "y" in work.columns:
-        try:
-            from aperture_policy import stars_fit_on_chip  # noqa: PLC0415
+        from aperture_policy import stars_fit_on_chip  # noqa: PLC0415
 
-            x0b, y0b, x1b, y1b = safe_bbox
-            before = int(len(work))
-            # 4-tuple naxis = precomputed safe bbox (already shrunk by resolver r_out).
-            _on = stars_fit_on_chip(
-                work["x"], work["y"], (0.0, 0.0, 0.0), (float(x0b), float(y0b), float(x1b), float(y1b))
+        x0b, y0b, x1b, y1b = safe_bbox
+        before = int(len(work))
+        # 4-tuple naxis = precomputed safe bbox (already shrunk by resolver r_out).
+        _on = stars_fit_on_chip(
+            work["x"], work["y"], (0.0, 0.0, 0.0), (float(x0b), float(y0b), float(x1b), float(y1b))
+        )
+        work = work[np.asarray(_on, dtype=bool)]
+        removed = before - int(len(work))
+        if removed > 0:
+            logging.info(
+                f"[BORDER] Comp selection: removed {removed} candidates outside safe bbox "
+                f"(annulus-aware intersection)"
             )
-            work = work[np.asarray(_on, dtype=bool)]
-            removed = before - int(len(work))
-            if removed > 0:
-                logging.info(
-                    f"[BORDER] Comp selection: removed {removed} candidates outside safe bbox "
-                    f"(annulus-aware intersection)"
-                )
-        except Exception:  # noqa: BLE001
-            pass
     if exclude_nonlinear_badcolumn and "likely_nonlinear" in work.columns:
         _ln = pd.to_numeric(work["likely_nonlinear"], errors="coerce").fillna(0).astype(int)
         work = work[_ln == 0]
@@ -1913,9 +1888,10 @@ def write_photometry_plan_files(
                 _vsx_n_cone = int(n_vsx_in_cone)
     except VSXCatalogError:
         raise
-    except Exception as _vsx_exc:  # noqa: BLE001
-        log_event(f"variable_targets.csv (VSX export) skipped: {_vsx_exc!s}")
-        vsx_out = pd.DataFrame(columns=var_cols)
+    except Exception as _vsx_exc:
+        # FAIL-LOUD-2026-10 (code review 2 G03-06): no VSX targets means known variables can become comparison
+        # stars - a failed VSX block stops the run with its cause instead of writing an empty variable_targets.csv
+        raise RuntimeError(f"variable_targets.csv (VSX export) failed: {_vsx_exc!s}") from _vsx_exc
 
     exo_promo = _build_exoplanet_promotion_rows_from_masterstars(
         df,
@@ -2679,18 +2655,9 @@ def astrometry_align_and_build_masterstar(
         db=None,
     )
     if not input_root.exists():
-        log_event(f"[X] ERROR: Input path {input_root} does not exist! Trying fallback...")
-        processed_lights = ap / "processed" / "lights"
-        subdirs: list[Path] = []
-        try:
-            if processed_lights.is_dir():
-                subdirs = [d for d in processed_lights.iterdir() if d.is_dir()]
-        except Exception:  # noqa: BLE001
-            subdirs = []
-        if subdirs:
-            subdirs = sorted(subdirs, key=lambda p: p.name.casefold())
-            input_root = subdirs[0]
-            log_event(f"[OK] Fallback found: {input_root}")
+        # FAIL-LOUD-2026-10 (code review 2 G03-37): the former fallback took the first subfolder of
+        # processed/lights and silently dropped every other setup of the night
+        raise FileNotFoundError(f"preprocessed lights folder missing: {input_root}")
     det_top = input_root
     ali_top = ap / "detrended_aligned" / "lights"
     os.makedirs(str(ali_top), exist_ok=True)
@@ -2881,13 +2848,3 @@ def _safe_proc_name(original_name: str) -> str:
     if name.lower().startswith("proc_"):
         return name
     return "proc_" + name
-
-
-def _vyvar_per_frame_csv_workers(app_config: AppConfig | None = None) -> int:
-    """Process workers for plate-solve step 3 per-frame catalog (DAO + match + CSV).
-
-    Same base as QC/alignment (see :func:`_vyvar_parallel_worker_count`); a further cap by the actual frame
-    size is applied by ``_vyvar_cap_mp_workers_for_catalog``.
-    """
-    return _vyvar_parallel_worker_count(app_config)
-

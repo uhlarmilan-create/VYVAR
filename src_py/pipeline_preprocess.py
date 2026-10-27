@@ -413,12 +413,11 @@ def qc_enrich_calibrated_lights_in_place(
     Mutates calibrated FITS in place:
     - optional order-N polynomial sky-surface subtract (``preprocess_sky_surface_order``)
     - FWHM / elongation QC headers (``VY_FWHM``, ``VY_ELONG``, ``VYVARPR``, ...)
-    - INV-CAL-02 stage stamp when pixels change (``VY_CALSTAGE``, ``VY_CALDATASUM``)
+    - INV-CAL-02 stage stamp when pixels change (``VYCALSTG``, ``VYCALSUM``)
 
     Optional ``inject_pointing_*``: write ``VYTARGRA`` / ``VYTARGDE`` (deg ICRS) for plate-solve hints.
 
-    Parallelism: auto worker count from host CPU (capped) or env
-    ``VYVAR_PARALLEL_WORKERS`` / legacy env (see :func:`_vyvar_parallel_worker_count`).
+    Parallelism: :func:`parallel_frames.stage_workers` (the run's RAM and CPU budget).
     """
     cfg = app_config or AppConfig()
     calibrated_root = Path(calibrated_root)

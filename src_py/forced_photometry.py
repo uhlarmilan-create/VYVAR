@@ -68,7 +68,7 @@ def force_eligible_masterstar_mask(master_tab: pd.DataFrame) -> pd.Series:
     # no_data). Comparison selection excludes variables on its own (comp_selection_per_target).
     # is_noisy intentionally omitted (COMP-ADMIT-03 review correction).
     ok = ~sat
-    cid = master_tab.get("catalog_id", master_tab.get("name", pd.Series([""] * n, index=idx)))
+    cid = master_tab["catalog_id"]
     cid_s = cid.astype(str).str.strip()
     ok &= cid_s.ne("") & ~cid_s.str.lower().isin({"nan", "none"})
     if "x" in master_tab.columns and "y" in master_tab.columns:

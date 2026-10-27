@@ -270,5 +270,3 @@ Chovani na urovni stroje: pocet paralelnich pracovniku a rezerva RAM. Odvozuje s
 
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
-| `per_frame_mp_reserve_ram_gb` | 1.5 | Nastaveni (config.json) | config.json | sestaveni a validace konfigurace (`config.py:1028`) | RAM (GB) drzena volna na pracovnika pri dimenzovani paralelniho zpracovani snimku. |
-| `qc_preprocess_workers` | 1 | Interni | prostredi / stroj | kalibrace a zpracovani snimku (`pipeline.py:15384`) | Pocet paralelnich pracovniku predzpracovani; pocita se z CPU/RAM pri startu, lze prepsat promennou prostredi VYVAR_PARALLEL_WORKERS. |

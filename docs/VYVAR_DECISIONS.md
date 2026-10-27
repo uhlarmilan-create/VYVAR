@@ -6161,7 +6161,7 @@ A/B (s39 vs this): 537 - every frame keeps the similarity (dBIC <= 3), aligned F
 byte-identical (111/111). MN Boo - 129 polynomial + 11 similarity (was 102 + 38), worst p90 0.61 -> 0.23 px,
 MN Boo point-to-point scatter 5.67 -> 5.23 mmag; zero point -15 mmag (different comparison choice).
 
-## AP-NIGHT-K-2026-10 (Milan 2026-10-24, option A) - one aperture k per night and group
+## AP-NIGHT-K-2026-10 (Milan 2026-10-24, option A) - one aperture k per night and group (superseded 2026-10-27 by AP-BRIGHT-K-2026-10)
 
 Closes AP-CHOICE-STABILITY-01. The aperture factor k (r = k x FWHM of each frame) is now ONE value for all
 targets of an observation group in a night: for every target the comp leave-one-out scatter curve over the grid
@@ -6234,3 +6234,230 @@ not hot in the dark, compact faint sources), 4 after. Injection 13 / 20, 2 / 2 m
 and one G 13 source that the plan put on a master-dark hot pixel. Without drift a warm pixel that is not hot in
 the dark cannot be told from a star - such candidates need the cutout check. Not planned (Milan 2026-10-25): a supernova on a galaxy core (image
 subtraction) and comparison with earlier nights of the field - VYVAR is for variable-star photometry.
+
+## RESOURCES-2026-10 (Milan 2026-10-26) - VYVAR sizes its parallel work itself: half the RAM, half the CPUs
+
+A run uses at most half of the computer's RAM (on Linux also the container limit) and half of its logical CPUs
+(Milan: "50% RAM a polovica CPU - toto je fer"). Every per-frame stage (calibration, QC in-place, alignment,
+per-frame catalogs, aperture grid, target field maps, ePSF, transient search) takes
+min(CPU budget, items, (RAM budget - main process) / worker cost) workers, worker cost = 30 x one frame as
+float32 + 300 MB (measured on Brno 534, 9.5 Mpx frames, one worker: QC 29x, catalogs 27x, alignment 24x,
+ePSF 19x, calibration 11x of the frame; the largest is used). Nothing to set: `per_frame_mp_reserve_ram_gb`
+and the computed `qc_preprocess_workers` are removed, so are the legacy environment variables and the thread
+backend; `VYVAR_PARALLEL_WORKERS` stays only as a test / benchmark override of the CPU budget.
+One pool (`parallel_frames.map_frames`) for every stage: results in frame order; at most two frames per worker
+in flight; every worker exits by itself when the main process is gone (orphans of a killed run held 2.2 GB);
+a pool that breaks (worker killed, MemoryError) continues with half the workers down to one.
+**Why.** The old sizing assumed 48 MB per worker whatever the frame size (real: 0.7-1.1 GB for 9.5 Mpx), and
+the alignment collected every aligned frame of a setup before writing it (Brno 534: 97 x 38 MB in the main
+process) - two runs of 534 were killed out of memory on a 7 GB machine. The aligned frames now stay in memory
+(RAM handoff) only when they take at most half of the RAM budget, and the alignment writes each frame as it
+arrives. The budget is logged in the infolog ([RESOURCES]) and stored in pipeline_meta (`resources`).
+
+## EPSF-HASH-2026-10 (Milan 2026-10-26) - the ePSF model hash identifies the models, not the build time
+
+`epsf_model_sha256` (ePSF light-curve headers, pipeline_meta) was the sha256 of the manifest file, which carries
+`created_utc`: two runs with byte-identical models got different hashes (phase 0 baseline). It is now
+`psf_photometry.epsf_models_sha256`: sha256 of the manifest content without `created_utc` (canonical JSON) -
+every per-frame model sha256, the night spatial perturbation sha256 and the build parameters. Golden runs A and
+B of BO CVn 527 and Brno 534 (g, r) give the same hash.
+
+## EXPORT-LOG-2026-10 (Milan 2026-10-26) - ERROR only when an export failed
+
+Three kinds of "no file", three levels. A rule decides the data are not submitted (too few usable epochs, no
+exportable points, magnitudes not on the band's scale, oneRGGB) -> INFO "not exported by rule", counted in
+`export_stats["not_exported_by_rule"]`, not an export failure. The data or the setup need the observer's
+attention (time base not BJD_TDB, filter without an AAVSO code, no VarAstro field map, no AAVSO row) ->
+WARNING, collected. The export itself failed (read / write error, exception, LC file without the needed
+columns) -> ERROR, collected. The batch summary takes the highest level of what it collected. Phase 0: three
+BO CVn targets with 3-25 of 146 usable epochs were logged as ERROR although the rule was right.
+
+## FITS-KEYS-2026-10 (Milan 2026-10-26: "premenovat, je dolezite dodrziavat standarts")
+
+Every FITS keyword VYVAR writes has at most 8 characters (FITS 4.0); 13 longer keywords (HIERARCH cards with a
+warning on every frame) are renamed, `VY_FWHM_GAUSS` (a copy of `VY_FWHM` since FWHM-ONE) is no longer written
+and every reader takes `VY_FWHM`. No aliases: old names are not read, old drafts are processed again.
+Table: docs/VYVAR_FITS_KEYWORDS.md. Contract: dev/tests/test_fits_keywords.py.
+
+## CORE-NO-UI-2026-10 (Milan 2026-10-26) - the pipeline never touches GUI state
+
+No pipeline module imports Streamlit (the night run logged "missing ScriptRunContext"). Core modules log and
+report through `progress_cb`; GUI state (selected camera and telescope, the processed field of the last job)
+lives in `ui_session.py` and the ui_* / app modules. Found on the way: `find_photometry_setups` resolved the
+draft folder through the GUI session first ("last job output"), so a night run started from the GUI could take
+the setups of another processed field than its own; it now uses the given folder or the folder of `draft_id`,
+and the night run passes its own. Removed: Streamlit popups of calibration-diagnostic and alignment messages
+(the lines stay in the infolog), the session copy of the per-frame store (never read) and the session write of
+the field centre (the GUI sets it from the night-run result). Contract: dev/tests/test_core_no_ui.py.
+
+## TEST-ISOLATION-2026-10 (Milan 2026-10-26) - tests never see the user's data
+
+In a git checkout the data root is the code tree, so a test calling `AppConfig()` read the user's config.json and
+opened the user's vyvar.sqlite3 (and on Linux created files named after the Windows paths). Every test now runs
+with `VYVAR_DATA_DIR` on a fresh data root of the session (code defaults, an empty database); tests that write
+their own config.json use `tmp_path_is_data_root`. Opening a database in the code tree outside dev/ fails the
+test (dev/tests/conftest.py, contract dev/tests/test_test_isolation.py).
+
+## LOG-NOISE-2026-10 (Milan 2026-10-26) - one line per repeated warning
+A target without a comparison star with a valid catalogue magnitude in the band is logged per target at INFO and
+once per setup as a WARNING with the count (Brno 534: 49 WARNING lines before). Library warnings that repeat for
+every frame or star (astropy FITSFixedWarning for the camera's RADECSYS / MJD-OBS, photutils "star excluded from
+ePSF fitting") are shown once per process with the first example (`infolog.quiet_repeated_library_warnings`,
+numbers in the text ignored); at the end of the run one INFO line per such warning gives the number of repeats.
+Header card comments are at most 47 characters, so value and comment fit one 80-character card (astropy cut
+18 comments and warned 296 times per BO CVn night); contract in dev/tests/test_log_noise_disk_2026_10.py.
+
+## DISK-PREFLIGHT-2026-10 (Milan 2026-10-26) - a run that does not fit on the disk stops before the import
+After the scan the night run estimates what it will write: the imported copy of every light plus a calibrated and
+an aligned float32 frame per light, times 1.10 (`parallel_frames.run_disk_need`), and stops with an OSError naming
+the shortfall when the archive's disk has less free space. Found when a run failed in the middle on a full disk.
+
+## MP-CALIB-ON-2026-10 (Milan 2026-10-26) - parallel calibration stays on; supersedes D-MP-CALIB-OFF-01
+D-MP-CALIB-OFF-01 kept the calibration serial until a real draft showed parity. Parity is shown: Brno 534 with
+2 workers gives the same light curves, tables and exports as with 1 worker, and BO CVn with 2 workers has
+pixel-identical calibrated and aligned frames to the phase 0 golden run (2026-10-26). Worker count follows
+RESOURCES-2026-10.
+
+## COMP-RMS-NORM-2026-10 (Milan 2026-10-26, D2) - comparison RMS against a normalised reference
+The leave-one-out RMS that ranks comparison candidates (COMP-RMS-DEF-01-B) compared each star with the median of
+the raw magnitudes of the other pool stars. The pool stays as the rules define it (quality, D3, saturation,
+blend); each pool star is now first put on its own night level (median magnitude over the night) and compared
+with the median of the other stars' offsets in the same frame. Stars of different brightness that are missing
+on some frames (edge, dropout) no longer move the reference: constant stars with 40 % random dropouts gave
+0.74-1.11 mag of spurious scatter before and 0 after (dev/tests/test_comp_rms_norm_2026_10.py). Honeycutt (1992,
+star levels and frame zero points solved together); Burdanov et al. (2014, Astrokit, ensemble offset against its
+own mean).
+
+## SIGMA-SYS-MODEL-2026-10 (Milan 2026-10-26, D3) - the night floor is what the noise model does not explain
+SIGMA-SYS-NIGHT-2026-10 took the comps' point-to-point scatter minus their photon noise as the floor. That
+remainder also held each comp's scintillation and the noise of its reference (the mean of the other comps), and
+the light-curve error then added scintillation and the ensemble error again. The predicted variance now holds
+every known term once - photon + sky + read noise of the comp, its scintillation at the frame airmass (same rig
+parameters as the LC error) and the reference noise (sum over the other n comps of photon^2 + scintillation^2) /
+n^2 - and the floor is the median excess above it, never negative. Simulation (12 comps, 300 frames, 4 mmag
+scintillation): no true floor gave 4.2 mmag before, < 1.5 mmag now; 3 and 6 mmag floors are recovered within
+1.5 mmag (dev/tests/test_sigma_sys_model_2026_10.py). Burdanov et al. (2014); Everett & Howell (2001).
+
+## K2-ONE-2026-10 (Milan 2026-10-26, D4) - one k'' convention, ensemble colour
+Second-order extinction is a differential effect, dm0 = dm - k'' X (C_target - C_comparison) (Henden, AAVSO
+forum "Secondary extinction and blue-red pairs"). It was applied to mag_calib only on calibrated light curves,
+while delta_mag stayed uncorrected and the PSF light curve subtracted k2_delta_mag - the PSF-aperture strip
+of a calibrated g night showed a ~17 mmag airmass trend. Now the same per-epoch term goes into delta_mag always and
+into mag_calib when the curve is calibrated (mag_calib - delta_mag stays the zero point). The comparison colour is
+the Broeg-weighted mean BP-RP of the ensemble comps the light curve uses (`k2_extinction.ensemble_bp_rp`), the
+same weights as the zero point; the plain median of usable comps only when no weights exist.
+
+## COMP-POOL-ONLY-2026-10 (Milan 2026-10-26, D5) - comparison stars only from the rule pool
+When the global comparison pool was empty or its build failed, every target took MASTERSTAR stars with a
+reduced gate set (no Gaia/VSX variable check of the pool, no blend, saturation-any-frame or D3 gate) - the
+"masterstars fallback" (kept in DECISIONS 5013-5015, review G07-01). Milan: VYVAR selects the comparison stars
+correctly by its rules; the only real gap is a very red target whose good comps differ too much in colour.
+Now: comps come only from the pool that passed the rules; an empty pool gives no comps (the target is not
+measured), a failed pool build stops the run. A red target whose comps all lie beyond the colour cap
+(`comp_max_delta_bprp`, the T4 fallback inside the pool) keeps its light curve, and trust is RED with "colour
+mismatch: comparison stars up to |dBP-RP| x (cap y)" (`classify_warnings`). The per-frame pass that served only
+the fallback stays until the dead-code step (T10) removes it.
+
+## SKY-MASK-2026-10 (Milan 2026-10-26, D6) - sky surface from a source mask, not an ADU cut
+The preprocess sky surface (T3-PREPROCESS-SKY-SURFACE) was fitted only to pixels within +-100 ADU of the frame's
+background median outside the DAO star stamps. On a strong gradient the cut removed the steep part from the fit
+(19-37 % of a real gradient stayed in the frame) and the 100 ADU depended on the rig. Now, as the photutils
+background guide recommends (mask the sources, `make_source_mask`): pass 1 fits the polynomial outside the DAO
+stamps; the sources of its residual (segmentation at 2 x MAD sigma, >= 5 connected pixels, dilated by one FWHM) are
+added to the mask and the polynomial is fitted again. No ADU constant, no clipping of fit samples. Synthetic
+600 ADU gradient with 400 stars and noise: 39.7 ADU (p1-p99) left before, 0.44 ADU now
+(dev/tests/test_preprocess_sky_surface.py). QC key `sky_surface_calm_adu` -> `sky_surface_source_mask_px`.
+
+## EPSF-NOCLIP-2026-10 (Milan 2026-10-26, D1) - the ePSF builder without sigma clipping
+photutils EPSFBuilder combined the residuals of every ePSF grid point with a sigma-clipped median (default
+SigmaClip 3 sigma, 10 iterations) - the last clipping left in VYVAR (INV-NOCLIP-01). It now runs with
+`sigma_clip=None`, a plain median (photutils 3.1.1 source). Comparison on BO CVn (12 frames, FWHM 2.0 px; ePSF built
+on 300 build stars, tested by PSF fits on the other 300): fit residual identical (median 1.574 % vs 1.573 % of the
+model power), PSF flux / cutout sum 0.961 vs 0.947 (1.4 % closer in every frame), ePSF peak 1.5 % lower, wings
++0.02 % of the peak. Anderson & King (2000) used a mean with 2.5 sigma rejection; Godden & Blundell (2025) show that a
+clipped median biases the peak. Plot: dev/results/plots/D1_epsf_noclip_20261026.png.
+
+## CHI2-FLUX-REF-2026-10 (Milan 2026-10-27, A) - psf_fit_ok against stars of similar flux
+The chi2 test of the frame PSF fit (EPSF-CHI2-LOCUS-01) compared each star with one straight line
+log10 chi2 = a + k log10 flux, fitted with 3 rounds of 3-sigma MAD clipping. chi2 = noise term + PSF-model mismatch
+growing ~ flux^2 (DAOPHOT profile-error term, Stetson 1987) is curved; the line, set by the many faint stars, put the
+bright stars 4-8 sigma above it. Brno 534 g: OK 99 % below log flux 4, 65 % at 4.5-5.0, 35 % at 5.0-5.5, while the
+rejected bright epochs had the same PSF/aperture stability (2.07 vs 2.10 mmag) - and an epoch of a PSF light curve
+needs every comp (INV-PSF-LC-PIN-01), so PSF light curves lost up to 80 % of their epochs. Now: night reference = plain
+median of log10 chi2 in 0.25 dex flux bins (merged to >= 30 stars), scatter = MAD sigma of the residuals from that
+curve per bin, frame offset = plain median, 5 sigma; linear between bins, linear extension outside. No clipping.
+Brno 534: PSF epochs g 4079 -> 5494, r 4451 -> 5642; light curves with < 50 % epochs 19 -> 1 (g); precision on common
+epochs unchanged (0.999 / 1.000). BO CVn: one light curve regained all 146 epochs, the rest identical. Faint end
+stricter: blended stars rejected (r: rejected fits deviate 20 mmag, accepted 2.6 mmag).
+
+## SKY-SRC-MASK-2026-10 (Milan 2026-10-27, B) - local sky without detected sources
+The annulus sky was the plain median of all annulus pixels. In a crowded field it holds the wings of neighbours and
+of the star itself; with seeing the annulus grows (2.7-5.2 FWHM) and the sky comes out too high by a fixed ADU per
+pixel, times the aperture area: faint stars get a magnitude-dependent airmass trend (Brno 534 constant stars r,
+aperture 1.0 FWHM: +17 / +39 / +96 mmag per airmass at G 15-16 / 16-17 / 17-18). Now (`sky_estimation.sky_image`):
+plain median of the annulus pixels outside the sources of photutils `detect_sources` at 5 x MAD sigma (>= 5 pixels,
+grown by one FWHM) - the photutils guide's masking instead of clipping. 5 sigma is the detection limit: resolved stars
+leave the sky, the unresolved population stays in sky and aperture alike. Deeper masks (2-3 sigma, catalogue mask)
+zero the sky of empty apertures but leave the light of resolved neighbours inside a crowded star's growing aperture
+uncompensated (-24 to -114 mmag/airmass); for isolated stars all masks agree. Used by the frame photometry (proc),
+the per-target aperture grid, MASTERSTAR S/N and the PSF local sky (photutils MedianBackground removed: its default
+is a 3-sigma clip with 10 iterations). Brno 534: trends +4 / +2 / +29 mmag/airmass, check stars g std 17.4 -> 8.1 mmag,
+r 12.9 -> 9.8, sigma_sys 2.8 -> 2.0-2.2 mmag. BO CVn: neutral; R CVn (G 7.1) had its own halo in the annulus
+(+477 ADU/px): flux +32 %, p2p 85 -> 48 mmag. One function for every annulus (`annulus_sky_medians`): fewer than
+30 sky pixels (annulus covered by a saturated star's own halo, CV CVn G 5.9) -> the sky pixels of a box of
+half-size 2 x r_out. The mask costs ~0.8 s per frame (statistics on every 4th pixel, exact disk dilation by rows);
+BO CVn run 41.4 -> 47.9 min on the same machine. The misnamed `sky_clipped_mean_med_std` (plain statistics) is removed.
+
+## AP-BRIGHT-K-2026-10 (Milan 2026-10-27, option c) - aperture k by the target's brightness
+Replaces AP-NIGHT-K-2026-10. With the unbiased sky (B) the night comp-scatter curve was flat and its tie rule chose
+k = 1.5 on Brno 534 r from the scatter of the bright comps: faint targets 20-60 % noisier. Now each target takes the k
+of its brightness group: constant field stars (no VSX / Gaia variable, never saturated) get the LOO scatter at every k
+(`comp_rms_loo`, MAD sigma), are grouped by instrumental magnitude (0.5 mag bins merged to >= 30 stars), and a group
+takes the largest k whose median normalised scatter is within one bootstrap standard error of its minimum (larger k:
+less sensitive to seeing, centring, pixel phase). The k does not come from the target's own comps, so it is stable
+when a comp changes (the reason for AP-NIGHT-K). The target, its comps and check star use the target's k; the blend
+limit (BLEND-K) still caps it. Brno 534: bright stars 1.25, fainter 1.0; BO CVn: brightest 1.25-1.5, rest 1.0.
+`aperture_per_target.json`: `criterion` brightness_k_field_scatter, `brightness_k` (groups, curves, k per target).
+
+## GAIA-ID-STRICT-2026-10 (code review 2 T07, phase 2) - Gaia ids are text; identity is catalog_id
+- `repair_catalog_ids.py` deleted (G04-02/03/04): it gave VSX targets that the cross-match left without a Gaia id
+  the nearest Gaia star (no cos dec, no magnitude check) and rewrote variable_targets.csv on every selection; on
+  suspected_variables.csv it reported repairs and wrote nothing. Every writer writes ids as text, so the module had no
+  legitimate input. The Gaia table name comes from `catalog_db.gaia_table`.
+- `normalize_gaia_source_id` is strict (G04-16): int >= 0, ASCII digit strings, exact integer floats < 2**53; a float
+  of a 19-digit id, "4.6e+18", bool, bytes, non-ASCII digits, dict / list give "" (one WARNING per kind), names (VSX
+  names, DET_ labels) give "" silently. It used to fabricate ids (4.611686018427388e+18 -> ...388000).
+- One id dtype map `VYVAR_CSV_DTYPE` (catalog_id, name, target_ / comp_ / check_catalog_id, source_id,
+  source_id_gaia, vy_seed_catalog_id); `read_proc_csv` and `read_vyvar_csv` always apply it; the aperture-grid worker,
+  comp_blend, masterstar_build and the summary / masterstars / cone readers use them (G05-12, G06-04, G07-13, G04-48).
+  An unreadable proc file in the grid is now an error, not a silently missing frame.
+- Identity = `catalog_id` only (G04-17, G07-05): MASTERSTAR join key, proc row index and comparison-pool keys no longer
+  prefer `name`. Duplicate id helpers in psf_internal_lc / epsf_science_set / dilution removed (G09-23, G07-34).
+- Not in this step: one CSV writer (G03-39, T11) and Gaia epoch metadata (G03-25).
+- Follow-up (A/B on BO CVn): `name` is a label (VSX name), never run through the id normaliser. Six loops still
+  normalised ("catalog_id", "name") together and blanked every VSX name in active_targets.csv ("FY CVn" -> "");
+  they and the `catalog_id`-else-`name` fallbacks now read catalog_id only (a missing catalog_id column raises).
+  Source-scan test in test_gaia_id_strict_2026_10.py.
+
+## FAIL-LOUD-2026-10 (code review 2 T05, phase 2) - required steps raise; optional diagnostics warn
+- Rule: a step whose output the night needs has no try around it; its error stops the stage (or marks the frame
+  "error:" through the existing per-frame handler). An optional diagnostic keeps a try, logs WARNING (never DEBUG)
+  and says what is missing. Before, about 40 places logged and continued, so a run ended "ok" with a missing result.
+- Required now (try removed or error re-raised): VSX export / variable_targets.csv (G03-06), proximity veto and
+  safe-bbox border filter (G03-07), plate-solve input bundle metadata (G03-18), missing preprocessed lights folder
+  (G03-37), DAO census / plate scale in MASTERSTAR (G04-15), DAO block and identity gate in catalog match (G04-13/14),
+  DAO master block, MASTERSTAR join, forced inject / meta / saturation and time columns in pipeline_catalog (G05-08/09),
+  aperture grid + AP-BRIGHT-K (G06-01), per-target grid flux application (G06-02), masterstars load in the aperture
+  state (G06-05), comparison blend gate (status != ok raises, G07-14), per-target comparison selection (G07-28), PSF
+  plate scale and cone load (G09-10), OSC QC verdict replication, Bayer lookup in the calibration library (G14-16).
+- pipeline_meta.json (G11-07): an unreadable file is kept as `.json.corrupt` and raised (it was overwritten, losing
+  provenance and sigma_sys); numpy values are serialised; tmp + os.replace write.
+- catalog_crossmatch (G10-09/10): no process-wide warnings filter at import; the executor is shut down with
+  cancel_futures on a timeout.
+- HRD SIMBAD (G10-16): a failed query for one star is not cached as "no SIMBAD entry"; it is asked again next run.
+- OSC effective gain / read noise (G01-40): unknown (NaN) in gives NaN out instead of stopping the calibration; a known
+  invalid value still raises.
+- Variability cutouts (G14-30): missing frames.csv / index handled, frame stem without the "proc_" prefix.
+- Test fixtures that used a non-celestial MASTERSTAR WCS or no objects DB were relying on the silent VSX skip; they
+  now use a celestial WCS and a real objects DB. Tests: dev/tests/test_fail_loud_2026_10.py (6 of 7 fail on the old
+  code).

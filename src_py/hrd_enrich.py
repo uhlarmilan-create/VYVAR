@@ -293,15 +293,8 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
             ident = f"Gaia DR3 {sid}"
             try:
                 res = s.query_object(ident)
-            except Exception as exc:  # noqa: BLE001 - per-star fail-open
-                logger.debug("SIMBAD query failed for %s: %s", ident, exc)
-                out[sid] = {
-                    "simbad_main_id": None,
-                    "simbad_otype": None,
-                    "simbad_sp_type": None,
-                    "fetched_at_utc": _utc_now_iso(),
-                    "enrich_source": "n/a",
-                }
+            except Exception as exc:  # noqa: BLE001 - per-star fail-open, NOT cached (G10-16): asked again next run
+                logger.warning("SIMBAD query failed for %s (not cached, retried next time): %s", ident, exc)
                 continue
             if res is None or len(res) == 0:
                 out[sid] = {
@@ -386,16 +379,9 @@ def enrich_candidates(
                 prev = cache.get(sid, {})
                 prev.update(payload)
                 cache[sid] = prev
-            for sid in need_simbad:
-                if sid not in sim_hits:
-                    prev = cache.get(sid, {})
-                    for k in _SIMBAD_CACHE_KEYS:
-                        prev.setdefault(k, None)
-                    prev["fetched_at_utc"] = _utc_now_iso()
-                    cache[sid] = prev
         except Exception as exc:  # noqa: BLE001 - SIMBAD fail-open; Gaia rows still usable
             skip_reason = f"{skip_reason}; SIMBAD: {exc}" if skip_reason else f"SIMBAD: {exc}"
-            logger.debug("HRD SIMBAD enrich failed: %s", exc)
+            logger.warning("HRD SIMBAD enrich failed (optional, rows kept without SIMBAD): %s", exc)
 
     if skip_reason:
         log_event(f"HRD enrichment skipped: {skip_reason}")

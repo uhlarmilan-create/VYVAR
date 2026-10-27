@@ -2,43 +2,10 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
-
-
-def test_repair_skips_det_placeholders_and_summarizes(tmp_path: Path) -> None:
-    from repair_catalog_ids import repair_csv_catalog_ids_from_gaia_db
-
-    csv_path = tmp_path / "masterstars_full_match.csv"
-    csv_path.write_text(
-        "catalog_id,ra_deg,dec_deg,name\n"
-        "DET_0001,180.0,45.0,det1\n"
-        "DET_0042,180.001,45.001,det2\n"
-        ",180.0,45.0,empty\n"
-        "1234567890123456789,180.0,45.0,real\n",
-        encoding="utf-8",
-    )
-    db_path = tmp_path / "gaia.db"
-    con = sqlite3.connect(str(db_path))
-    con.execute("CREATE TABLE gaia_dr3 (source_id INTEGER PRIMARY KEY, ra REAL, dec REAL)")
-    con.commit()
-    con.close()
-
-    logs: list[str] = []
-
-    res = repair_csv_catalog_ids_from_gaia_db(
-        csv_path=csv_path,
-        gaia_db_path=db_path,
-        skip_unmatched_placeholders=True,
-        log_fn=logs.append,
-    )
-    assert res["kept_placeholder"] == 3
-    assert res["checked"] == 1
-    assert any("REPAIR summary:" in line for line in logs)
-    assert not any("boxe +/-0.001" in line for line in logs)
 
 
 def test_hrd_enrich_tap_retry_then_success(tmp_path: Path) -> None:

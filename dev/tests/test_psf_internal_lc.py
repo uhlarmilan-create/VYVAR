@@ -445,3 +445,22 @@ def test_psf_lc_applies_the_aperture_k2_term(tmp_path: Path) -> None:
     assert ok.any()
     assert np.allclose(d1[ok] - d0[ok], np.array([0.010, 0.020, 0.030])[ok], atol=2e-6)
     assert "# psf_lc_k2_applied=true" in Path(out["written"][0]).read_text(encoding="utf-8")
+
+
+def test_epsf_model_hash_ignores_the_build_time_and_follows_the_models(tmp_path: Path) -> None:
+    """EPSF-HASH-2026-10: two runs with the same models got different epsf_model_sha256 (the file
+    hash included created_utc); a changed per-frame model must change it."""
+    from psf_internal_lc import load_epsf_build_meta  # noqa: PLC0415
+
+    def meta(created: str, frame_sha: str) -> str:
+        ps = tmp_path / f"{created}_{frame_sha[:1]}"
+        (ps / "epsf_frames").mkdir(parents=True)
+        man = {"oversampling": 2, "cutout_size": 25, "n_build_stars": 600, "created_utc": created,
+               "spatial": {"sha256": "a" * 64}, "frames": [{"frame": "f001.fits", "sha256": frame_sha}]}
+        (ps / "epsf_frames" / "epsf_frames_manifest.json").write_text(json.dumps(man, indent=2), encoding="ascii")
+        return load_epsf_build_meta(ps)["model_sha256"]
+
+    a = meta("2026-10-25T21:22:55Z", "0" * 64)
+    assert len(a) == 64
+    assert meta("2026-10-26T08:00:00Z", "0" * 64) == a
+    assert meta("2026-10-25T21:22:56Z", "1" * 64) != a
