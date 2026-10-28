@@ -1,4 +1,7 @@
-"""Photometry core - merged module (photometry + aperture_photometry)."""
+"""Photometry facade: ``run_full_photometry_pipeline`` plus re-exports for dev/ scripts (D-FACADE-PERMANENT-01).
+
+Pipeline modules import from the defining modules, never from here (LAYER-2026-10).
+"""
 from __future__ import annotations
 
 import logging
@@ -10,158 +13,31 @@ from typing import Any
 from config import (
     AppConfig,
 )
-from gaia_catalog_id import (
-    VYVAR_CSV_DTYPE,
+
+
+# LAYER-2026-10: names, labels and the logger live in the leaf ``photometry_defs``, physical constants
+# in ``pipeline_constants``; this facade re-exports them for dev/ scripts (D-FACADE-PERMANENT-01).
+from photometry_defs import (  # noqa: F401
+    COMP_QUALITY_JSON_META_KEYS,
+    ERR_BKG_SOURCE_COL,
+    ERR_BKG_SOURCE_EMPIRICAL,
+    ERR_BKG_SOURCE_HOWELL_FALLBACK,
+    ERR_BKG_SOURCE_HOWELL_SCALED,
+    FINAL_SKIP_REASONS,
+    LC_QUALITY_FLAGS,
+    LOGGER,
+    PHASE_USECOLS_PERFRAME,
+    SIGMA_BKG_AP_COL,
+    SKY_ADU_PER_PX_ANNULUS_COL,
+    SKY_SURFACE_BG_MEDIAN_ADU_COL,
+    TIME_BASE_BJD_TDB,
+    TIME_BASE_COL,
+    TIME_BASE_JD_FALLBACK,
 )
-
-
-LOGGER = logging.getLogger(__name__)
-
-_MAD_CONSISTENCY = 0.6745  # normalisation factor MAD -> sigma equivalent
-
-# Explicit annulus sky (ADU/px) for Howell err; ``noise_floor_adu`` remains detection-floor legacy.
-SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
-SKY_SURFACE_BG_MEDIAN_ADU_COL = "sky_surface_bg_median_adu"
-
-# F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
-SIGMA_BKG_AP_COL = "sigma_bkg_ap"
-ERR_BKG_SOURCE_COL = "err_bkg_source"
-ERR_BKG_SOURCE_EMPIRICAL = "empirical"
-ERR_BKG_SOURCE_HOWELL_FALLBACK = "howell_fallback"
-ERR_BKG_SOURCE_HOWELL_SCALED = "howell_scaled"
-BKG_SCALE_R_CLAMP_LO = 0.05
-BKG_SCALE_R_CLAMP_HI = 2.0
-
-
-# Per-target LC time provenance (F-BJD-1): labels BJD recompute path, does not alter time values.
-TIME_BASE_COL = "time_base"
-TIME_BASE_BJD_TDB = "BJD_TDB"
-TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
-
-
-# Gaia ID (`catalog_id`, VSX / masterstars `name`) must be str - float64 loses digits
-_GAIA_ID_DTYPE: dict[str, type] = dict(VYVAR_CSV_DTYPE)
-
-
-_COMP_QUALITY_JSON_META_KEYS = frozenset(
-    {
-        "selected_tier",
-        "tier4_warning",
-        "n_tier1",
-        "n_tier2",
-        "n_tier3",
-        "n_tier4",
-        "aperture_correction",  # legacy key in pre-2026-10 comp_quality JSON (AC removed)
-        "qa_degraded",
-        "qa_degraded_reason",
-        "broeg_weights",  # EXPORT-2026-10: normalised Broeg (2005) ensemble weights
-        "comp_band_mag",  # catalogue magnitudes in the zero-point band
-        "band_system",
-        "zp_band_label",
-        "zero_point",  # ZP-ERR-2026-10: comps setting the absolute level + its uncertainty
-        "gspc_zero_point",
-        "comp_smart",
-        "check_star",  # OUTPUT-REVIEW-2026-10 step 6: the check star and its trust statistics
-        "color_fallback",  # legacy (tier copies before OUTPUT-REVIEW step 6)
-        "max_delta_bprp_used",  # legacy
-    }
-)
-
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 1: Global fixed aperture from PSF FWHM (MASTERSTAR VY_FWHM or fit)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 2: Aperture photometry per frame - median sky
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 3: Comparison-star stability check (Abbe p2p scatter + MAD)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 4: Ensemble normalisation
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 5: Outlier detection
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 6: Output - lightcurve CSV
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# STEP 6: Output - PNG plots
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Main wrapper - run_aperture_photometry
-# ---------------------------------------------------------------------------
-
-
-#: TARGET-RULES-2026-10 (Milan 2026-10-13): target skips decided on MASTERSTAR in target
-#: selection (saturated = upper cut, below_snr_min = lower cut, VSX type out of scope) are final:
-#: no comparison-star selection, never measured, never revived later.
-FINAL_SKIP_REASONS = frozenset({"saturated", "below_snr_min", "vsx_type_out_of_scope"})
-
-
-_LC_QUALITY_FLAGS: tuple[str, ...] = (
-    "good",
-    "noisy",
-    "noisy_moon",
-    "short_baseline",
-    "no_data",
-    "saturated",
-)
-
-
-# src_py/photometry_core.py -> repo root is parent.parent (git cwd + porcelain path base).
-_REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent.parent
-
-
+from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO, MAD_CONSISTENCY  # noqa: F401
 from mag_constants import MAG_ERR_SCALE
 
 _PSF_ERR_MAG_SCALE = MAG_ERR_SCALE
-
-
-# ======================================================================
-# photometry.py (merged into photometry_core)
-# ======================================================================
-
-
-# Columns loaded from per-frame CSV for bootstrap (78 % memory saving)
-_PHASE_USECOLS_PERFRAME: list[str] = [
-    "catalog_id",
-    "bjd_tdb_mid",
-    "dao_flux",
-    "sky_adu_per_px_annulus",
-    "aperture_r_px",
-    "is_saturated",
-    "is_noisy",
-    "snr50_ok",
-    "vsx_known_variable",
-    "likely_saturated",
-    # APERTURE-K-2026-10: comparison-star RMS on the light-curve aperture grid
-    "flux_k100",
-    "flux_k125",
-    "flux_k150",
-    "flux_k175",
-    "flux_k200",
-]
 
 
 def run_full_photometry_pipeline(
@@ -172,7 +48,7 @@ def run_full_photometry_pipeline(
     per_frame_csv_dir: Path,
     detrended_aligned_dir: Path,
     output_dir: Path,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     db: Any = None,
     draft_id: int | None = None,
     progress_cb: Any = None,
@@ -181,7 +57,7 @@ def run_full_photometry_pipeline(
 
     The UI uses it as a single 'RUN Aperture Photometry' action for the given obs_group.
     """
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
 
 
     def _p(msg: str) -> None:
@@ -296,8 +172,6 @@ def run_full_photometry_pipeline(
         detrended_aligned_dir=Path(detrended_aligned_dir),
         output_dir=Path(output_dir),
         fwhm_px=float(fwhm_px),
-        annulus_inner_fwhm=float(_cfg.annulus_inner_fwhm),
-        annulus_outer_fwhm=float(_cfg.annulus_outer_fwhm),
         cfg=_cfg2a,
         progress_cb=progress_cb,
         db=db,
@@ -337,9 +211,10 @@ __all__ = [
     "select_comparison_stars_per_target",
 ]
 
-from photometry_ui_helpers import resolve_lc_time_base  # noqa: E402,F401
+from photometry_lightcurve import resolve_lc_time_base  # noqa: E402,F401
 
 from photometry_shared import (
+    _sky_pp_for_photometric_error,
     _safe_polyfit,
     _normalize_gaia_id,
     finalize_hybrid_bkg_fallback_proc_dir,
@@ -357,40 +232,37 @@ from photometry_shared import (
     enhance_catalog_dataframe_aperture,
 )
 
-import sys as _sys_e4
-_p2a_mod = _sys_e4.modules.get("aperture_photometry")
-if _p2a_mod is None or getattr(_p2a_mod, "run_aperture_photometry", None) is not None:
-    from aperture_photometry import (  # noqa: E402,F401
-        parse_comp_quality_json_map,
-        _mad_sigma_or_std_floor,
-        measure_fwhm_from_masterstar,
-        compute_optimal_apertures,
-        _howell_variance_adu2,
-        _photometric_error,
-        _photometric_error_with_bkg_mode,
-        _aperture_proc_column_requirements,
-        _aperture_cache_columns,
-        _aperture_empirical_sigma_bkg_ap,
-        _sky_pp_for_photometric_error,
-        _resolve_aperture_equipment_id,
-        _draft_dir_from_aperture_paths,
-        _require_comparison_stars_per_target_schema,
-        _resolve_photometric_aperture_px_for_gs11,
-        read_flux_from_csv,
-        fit_color_term_c1,
-        should_apply_color_term,
-        resolve_apply_color_term,
-        _group_comp_mag_inst_from_proc_csvs,
-        empirical_feature_mask_mag,
-        apply_reporting_postprocess,
-        build_rms_mag_model,
-        expected_rms_from_model,
-        classify_lc_quality,
-        build_lc_quality_summary,
-        _AperturePhotometryState,
-        _propagate_aperture_skip_reason_to_active,
-        run_aperture_photometry,
-    )
+from aperture_photometry import (  # noqa: E402,F401
+    _mad_sigma_or_std_floor,
+    measure_fwhm_from_masterstar,
+    compute_optimal_apertures,
+    _aperture_proc_column_requirements,
+    _aperture_cache_columns,
+    _aperture_empirical_sigma_bkg_ap,
+    _resolve_aperture_equipment_id,
+    _draft_dir_from_aperture_paths,
+    _require_comparison_stars_per_target_schema,
+    _resolve_photometric_aperture_px_for_gs11,
+    read_flux_from_csv,
+    fit_color_term_c1,
+    _group_comp_mag_inst_from_proc_csvs,
+    empirical_feature_mask_mag,
+    apply_reporting_postprocess,
+    build_rms_mag_model,
+    expected_rms_from_model,
+    classify_lc_quality,
+    build_lc_quality_summary,
+    _AperturePhotometryState,
+    _propagate_aperture_skip_reason_to_active,
+    run_aperture_photometry,
+)
+from band_classify import should_apply_color_term, resolve_apply_color_term  # noqa: E402,F401
+from photometry_gate_helpers import (  # noqa: E402,F401
+    _howell_variance_adu2,
+    _photometric_error,
+    _photometric_error_with_bkg_mode,
+)
+from comp_table import parse_comp_quality_json_map  # noqa: E402,F401
 
 from photometry_lightcurve import (
     _aperture_skip_empty_comps_target,
@@ -414,7 +286,6 @@ from photometry_lightcurve import (
 from photometry_gate_helpers import (
     _sigma_bkg_r_key,
     _assert_inv_err_sigma_acct_01,
-    comp_quality_quality_strings,
     _clamp_err_empty_apertures_n,
     _labbe_content_seed_from_header,
     measure_empty_aperture_sigma_bkg,
@@ -426,6 +297,7 @@ from photometry_gate_helpers import (
     _annulus_sky_subtracted_flux,
     _aperture_flux_sky_per_star,
 )
+from comp_table import comp_quality_quality_strings
 
 from photometry_exports import (  # noqa: E402,F401
     lc_has_finite_airmass,
@@ -460,5 +332,7 @@ from photometry_comp import (
 )
 
 from target_comp_selection import run_target_and_comp_selection  # noqa: E402,F401
+from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: E402,F401
+from aperture_photometry_target import _aperture_process_one_target  # noqa: E402,F401
 
 

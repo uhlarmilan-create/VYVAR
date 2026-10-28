@@ -14,9 +14,11 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
 
+import dataclasses
+
+from config import AppConfig
 from pipeline import (
     _EXPORT_PER_FRAME_WORKER_STATE,
-    _cfg_from_export_worker_state,
     _init_export_per_frame_worker,
 )
 
@@ -25,8 +27,7 @@ def _probe_worker_state_key(key: str):
     """Return one value from the spawn-worker global (same module as initializer)."""
     st = _EXPORT_PER_FRAME_WORKER_STATE
     if key == "_cfg_observer_lat":
-        cfg = _cfg_from_export_worker_state(st)
-        return float(cfg.observer_lat)
+        return float(st["cfg"].observer_lat)  # CONFIG-ONE-2026-10: the run config travels in the state
     return st.get(key)
 
 
@@ -34,9 +35,7 @@ def test_export_per_frame_mp_spawn_state_roundtrip() -> None:
     import multiprocessing
 
     state = {
-        "observer_lat": 48.5,
-        "observer_lon": 17.1,
-        "observer_alt_m": 200.0,
+        "cfg": dataclasses.replace(AppConfig(), observer_lat=48.5, observer_lon=17.1, observer_alt_m=200.0),
         "probe": "e6a",
     }
     ctx = multiprocessing.get_context("spawn")

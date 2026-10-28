@@ -24,7 +24,6 @@ CALIBRATION_LIBRARY_NATIVE_BINNING: int = 1
 
 import logging
 import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, NamedTuple
 
@@ -57,39 +56,6 @@ class ProcessedMasterResult(NamedTuple):
     flat_median_adu_before_norm: float | None = None
     #: True if flat was normalized in RAM here (after resample); legacy flats stay False (pipeline divides).
     flat_normalized_at_calibrate: bool = False
-
-
-def _parse_master_header_datetime(raw: object) -> datetime | None:
-    if raw in (None, ""):
-        return None
-    txt = str(raw).strip()
-    if not txt:
-        return None
-    txt = txt.replace("Z", "+00:00")
-    for cand in (txt, txt.replace(" ", "T")):
-        try:
-            dt = datetime.fromisoformat(cand)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(timezone.utc)
-        except ValueError:
-            pass
-    for fmt in ("%Y%m%d", "%Y-%m-%d"):
-        try:
-            dt = datetime.strptime(txt, fmt).replace(tzinfo=timezone.utc)
-            return dt
-        except ValueError:
-            pass
-    return None
-
-
-def _header_capture_datetime(hdr: fits.Header) -> tuple[datetime | None, str | None]:
-    """Priority: VY_CDATE (VYVAR stack stamp) -> DATE-OBS -> DATEOBS; naive -> UTC."""
-    for key in ("VY_CDATE", "DATE-OBS", "DATEOBS"):
-        dt = _parse_master_header_datetime(hdr.get(key))
-        if dt is not None:
-            return dt, key
-    return None, None
 
 
 def reset_master_age_mtime_warnings() -> None:
@@ -414,32 +380,20 @@ def normalize_flat_master(
 
 
 def _flat_offset_at_use(path: Path, hdr: fits.Header, db: VyvarDatabase | None) -> float:
-    """Offset [ADU] to remove from a FLAT master at use time (see calib_masters)."""
+    """Offset [ADU] to remove from a FLAT master at use time (see calib_masters).
+
+    CONFIG-ONE-2026-10 (G01-34): the run resolves the offsets once with its own database
+    (``flat_offset_for_master``); a call without a database is an error, it never opens the database of a
+    freshly read config.json (workers used to do that, so the result depended on the worker count)."""
     if hdr.get("VYOFFSUB") is not None:
         return 0.0
-    try:
-        import calib_library as _cl  # noqa: PLC0415
-        import calib_masters as _cm  # noqa: PLC0415
+    if db is None:
+        raise ValueError(f"flat offset of {path.name}: no database (resolve it in the run with flat_offset_for_master)")
+    import calib_library as _cl  # noqa: PLC0415
+    import calib_masters as _cm  # noqa: PLC0415
 
-        _db = db
-        _own = False
-        if _db is None:
-            from config import AppConfig  # noqa: PLC0415
-
-            _dbp = str(AppConfig().database_path or "").strip()
-            if not _dbp or not Path(_dbp).is_file():
-                return 0.0
-            _db = VyvarDatabase(Path(_dbp))
-            _own = True
-        try:
-            row = _cl.get_master_by_path(_db, path)
-            return float(_cm.flat_offset_to_subtract(hdr, row))
-        finally:
-            if _own:
-                _db.conn.close()
-    except Exception as exc:  # noqa: BLE001
-        logger.error("[CAL] flat offset lookup failed for %s: %s", path, exc)
-        return 0.0
+    row = _cl.get_master_by_path(db, path)
+    return float(_cm.flat_offset_to_subtract(hdr, row))
 
 
 def flat_offset_for_master(path: str | Path, db: VyvarDatabase | None) -> float:

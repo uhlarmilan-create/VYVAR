@@ -22,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src_py"))
 from pipeline_catalog import (  # noqa: E402
     _detect_empirical_clip_level_adu,
     _resolve_peak_saturation_limit_adu,
-    inv_sat_limit_peak_test_adu,
 )
+from sat_diag import inv_sat_limit_peak_test_adu  # noqa: E402
 from pipeline_constants import LINEARITY_FRAC  # noqa: E402
 from sat_diag import (  # noqa: E402
     derive_ceiling_from_paths,

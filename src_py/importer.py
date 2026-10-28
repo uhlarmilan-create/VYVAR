@@ -19,12 +19,13 @@ from calibration import reset_master_age_mtime_warnings
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from fits_suffixes import path_suffix_is_fits
 from infolog import log_event
-from pipeline import (
+from fits_meta import (
     extract_fits_metadata,
     fits_metadata_from_primary_header,
     log_lights_binning_from_headers_preflight,
 )
 from utils import fits_binning_xy_from_header, plate_scale_arcsec_per_pixel
+from fits_meta import observation_group_folder_name  # LAYER-2026-10: moved there
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +59,6 @@ def observation_group_key(filter_name: str, exposure_s: float, binning: int) -> 
         e = 0.0
     b = max(1, int(binning))
     return f"{flt}|{e:g}|{b}"
-
-
-def observation_group_folder_name(group_key: str) -> str:
-    """Filesystem-safe folder under ``lights`` (replaces ``|``)."""
-    s = group_key.replace("|", "_").replace("/", "_").replace("\\", "_")
-    s = "".join(c if c.isalnum() or c in "._-" else "_" for c in s)
-    return s[:120] if len(s) > 120 else s
 
 
 _CCD_TEMP_HEADER_KEYS = ("CCD-TEMP", "SENSORTEMP", "SET-TEMP")

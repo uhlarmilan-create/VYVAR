@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from reportlab.pdfgen import canvas
 
 # Gaia ID must be str - float64 loses digits
-_GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 # Time + airmass columns only (PDF cover airmass summary from lightcurve_*.csv).
 _AIRMASS_COLS = {
@@ -66,7 +65,7 @@ def _register_pdf_unicode_fonts() -> tuple[str, str, str]:
         return (H + "vetica", H + "vetica-Bold", H + "vetica-Oblique")
 
 
-def config_deviation_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+def config_deviation_model(pipeline_meta: dict[str, Any] | None, live_cfg: Any) -> dict[str, Any]:
     """Build the PDF Configuration-page model from a run provenance snapshot.
 
     Deviations only: keys whose run/snapshot value differs from the current dataclass
@@ -91,12 +90,7 @@ def config_deviation_model(pipeline_meta: dict[str, Any] | None) -> dict[str, An
         source_label = "run snapshot"
         fallback = False
     else:
-        try:
-            from config import AppConfig
-
-            cfg_dict = AppConfig().to_dict()
-        except Exception:  # noqa: BLE001
-            cfg_dict = {}
+        cfg_dict = live_cfg.to_dict()
         source_label = "live (no run snapshot)"
         fallback = True
         prov = {}
@@ -125,7 +119,7 @@ def config_deviation_model(pipeline_meta: dict[str, Any] | None) -> dict[str, An
     }
 
 
-def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str, Any]:
+def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None, live_cfg: Any) -> dict[str, Any]:
     """Full as-run config snapshot (every key) grouped by phase, for the report appendix.
 
     This is the honest "copy of the config file" taken from the run (``provenance.config_snapshot``),
@@ -147,12 +141,7 @@ def full_config_snapshot_model(pipeline_meta: dict[str, Any] | None) -> dict[str
         source_label = "run snapshot"
         fallback = False
     else:
-        try:
-            from config import AppConfig  # noqa: PLC0415
-
-            cfg_dict = AppConfig().to_dict()
-        except Exception:  # noqa: BLE001
-            cfg_dict = {}
+        cfg_dict = live_cfg.to_dict()
         source_label = "live (no run snapshot)"
         fallback = True
 
@@ -452,7 +441,10 @@ class _PhotometryReportBuilder:
         paragraph_mod: Any,
         paragraph_style_mod: Any,
         ta_left_mod: Any,
+        cfg: Any,
     ) -> None:
+        # CONFIG-ONE-2026-10: the caller's config (the run's); the PDF shows the run snapshot over it.
+        self._live_cfg = cfg
 
         self._colors = colors_mod
         self.cm = cm_mod
@@ -489,7 +481,7 @@ class _PhotometryReportBuilder:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # AP-TAB-2026-10: tables prepared once in target_page (same data as the UI tab).
-        _fr = load_frames(self.platesolve_dir)
+        _fr = load_frames(self.platesolve_dir, self._live_cfg)
         self._pipeline_meta = _fr["pipeline_meta"]
         if "calibration_mode" not in (self._pipeline_meta or {}):
             try:
@@ -809,9 +801,9 @@ class _PhotometryReportBuilder:
             _alt = float(_meta_loc.get("alt_m", 0.0) or 0.0)
         else:
             _loc_name = str(getattr(_cfg_o, "observer_location_name", "") or "").strip() if _cfg_o else ""
-            _lat = float(getattr(_cfg_o, "observer_lat", 0.0) or 0.0) if _cfg_o else 0.0
-            _lon = float(getattr(_cfg_o, "observer_lon", 0.0) or 0.0) if _cfg_o else 0.0
-            _alt = float(getattr(_cfg_o, "observer_alt_m", 0.0) or 0.0) if _cfg_o else 0.0
+            _lat = float(getattr(_cfg_o, "observer_lat", float("nan"))) if _cfg_o else 0.0
+            _lon = float(getattr(_cfg_o, "observer_lon", float("nan"))) if _cfg_o else 0.0
+            _alt = float(getattr(_cfg_o, "observer_alt_m", float("nan"))) if _cfg_o else 0.0
         _has_coords = math.isfinite(_lat) and math.isfinite(_lon) and (_lat != 0.0 or _lon != 0.0)
         if not _loc_name and not _has_coords:
             y = self._draw_flow_lines(c, y, [("Location: not configured", self.FONT_REG, 9.0)], paginate=True)
@@ -1022,7 +1014,7 @@ class _PhotometryReportBuilder:
             rows_out.append(("Target ensembles by colour tier (T1 / T2 / T3 / T4)", _tc))
         n_good = n_susp = n_rej = 0
         try:
-            from photometry_core import parse_comp_quality_json_map
+            from comp_table import parse_comp_quality_json_map
 
             for qpath in sorted(self.lc_dir.glob("comp_quality_*.json")):
                 if not qpath.is_file():
@@ -1071,13 +1063,6 @@ class _PhotometryReportBuilder:
                 name = str(obs.get("name", obs.get("observer_name", "")) or "").strip()
                 code = str(obs.get("code", obs.get("obscode", obs.get("observer_code", ""))) or "").strip()
         cfg = self._cfg
-        if cfg is None:
-            try:
-                from config import AppConfig
-
-                cfg = AppConfig()
-            except Exception:  # noqa: BLE001
-                cfg = None
         if cfg is not None:
             if not name:
                 name = str(getattr(cfg, "observer_name", "") or "").strip()
@@ -1121,10 +1106,9 @@ class _PhotometryReportBuilder:
         draft_id = self._draft_id_from_dirname()
         if draft_id is not None:
             try:
-                from config import AppConfig
                 from database import VyvarDatabase
 
-                row = VyvarDatabase(AppConfig().database_path).fetch_obs_draft_telescope_equipment(int(draft_id))
+                row = VyvarDatabase.for_config(self._live_cfg).fetch_obs_draft_telescope_equipment(int(draft_id))
                 if isinstance(row, dict):
                     tel = str(row.get("telescope_name", "") or "").strip()
                     cam = str(row.get("equipment_name", "") or "").strip()
@@ -1890,13 +1874,6 @@ class _PhotometryReportBuilder:
         c.drawString(self.M_LEFT, y, "Ensemble photometry: weighted ZP w_i = 1/sigma_i^2")
         y -= 0.45 * self.cm
         _cfg_m = self._cfg
-        if _cfg_m is None:
-            try:
-                from config import AppConfig
-
-                _cfg_m = AppConfig()
-            except Exception:  # noqa: BLE001
-                _cfg_m = None
         _ap_med = float(self.aperture_px) if np.isfinite(float(self.aperture_px)) else float("nan")
         _pu_ver = "?"
         _ap_ver = "?"
@@ -2010,18 +1987,12 @@ class _PhotometryReportBuilder:
         draft_id = self._draft_id_from_dirname()
         if draft_id is None:
             return pd.DataFrame()
+        from database import VyvarDatabase  # noqa: PLC0415
         try:
-            from config import AppConfig
-            from database import VyvarDatabase
-        except Exception:  # noqa: BLE001
-            # EXC-0258: T2 -- report/export may omit or misstate (from config import AppConfig / from database import... (EXCEPT-BULK 2026-07-08)
-            return pd.DataFrame()
-        try:
-            cfg = AppConfig()
-            db = VyvarDatabase(cfg.database_path)
+            db = VyvarDatabase.for_config(self._live_cfg)
             rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
         except Exception:  # noqa: BLE001
-            # EXC-0259: T2 -- report/export may omit or misstate (db = VyvarDatabase(cfg.database_path) / rows = db.f... (EXCEPT-BULK 2026-07-08)
+            # EXC-0259: T2 -- report/export may omit or misstate (db = VyvarDatabase.for_config(cfg) / rows = db.f... (EXCEPT-BULK 2026-07-08)
             return pd.DataFrame()
         if not rows:
             return pd.DataFrame()
@@ -2559,7 +2530,7 @@ class _PhotometryReportBuilder:
             try:
                 raw = json.loads(qpath.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
-                    from photometry_core import parse_comp_quality_json_map
+                    from comp_table import parse_comp_quality_json_map
 
                     qmap = parse_comp_quality_json_map(raw)
                     for ck, info in qmap.items():
@@ -2602,7 +2573,7 @@ class _PhotometryReportBuilder:
 
                 qraw = json.loads(qpath.read_text(encoding="utf-8"))
                 if isinstance(qraw, dict):
-                    from photometry_core import parse_comp_quality_json_map
+                    from comp_table import parse_comp_quality_json_map
 
                     qmap = parse_comp_quality_json_map(qraw)
         except Exception:  # noqa: BLE001
@@ -2625,7 +2596,7 @@ class _PhotometryReportBuilder:
         w_rel_by_row: dict[int, float] = {}
         try:
             if "comp_weight" in sub.columns:
-                from photometry_core import apply_comp_w_rel_for_display
+                from photometry_exports import apply_comp_w_rel_for_display
 
                 sub_w = apply_comp_w_rel_for_display(sub, qmap_str)
                 if "w_rel" in sub_w.columns:
@@ -3172,8 +3143,6 @@ class _PhotometryReportBuilder:
         import sqlite3
 
         try:
-            from config import AppConfig
-
             from hrd_analysis import (
                 HRD_CAPTION,
                 HRD_EMPTY_FIELD_MSG,
@@ -3190,8 +3159,9 @@ class _PhotometryReportBuilder:
             self._report_hrd_unavailable_page(c, f"import failed ({exc})")
             return
 
-        gdb = Path(str(getattr(AppConfig(), "gaia_db_path", "") or "").strip())
-        cfg = AppConfig()
+        # G11-27: the run snapshot (paths from the caller's config), as every other page
+        cfg = self._cfg
+        gdb = Path(str(getattr(cfg, "gaia_db_path", "") or "").strip())
         ms_csv = self.platesolve_dir / "masterstars_full_match.csv"
         if not ms_csv.is_file():
             logging.error("PDF HRD: missing %s", ms_csv.name)
@@ -3946,7 +3916,7 @@ class _PhotometryReportBuilder:
 
     def _report_configuration_page(self, c: "canvas.Canvas") -> None:
         """Configuration page: run-vs-default deviations from the provenance snapshot."""
-        model = config_deviation_model(self._pipeline_meta)
+        model = config_deviation_model(self._pipeline_meta, self._live_cfg)
 
         def _fmt(v: Any) -> str:
             if isinstance(v, bool):
@@ -4140,7 +4110,7 @@ class _PhotometryReportBuilder:
 
     def _report_full_config_snapshot_pages(self, c: "canvas.Canvas") -> None:
         """Appendix: the complete as-run config snapshot, grouped by phase, multi-column."""
-        model = full_config_snapshot_model(self._pipeline_meta)
+        model = full_config_snapshot_model(self._pipeline_meta, self._live_cfg)
 
         def _fmt(v: Any) -> str:
             if isinstance(v, bool):
@@ -4375,6 +4345,7 @@ def generate_photometry_report(
     tess_results: dict | None = None,
     report_title: str = "VYVAR \u2014 Summary Measure Report",
     verify_overflow: bool = False,
+    cfg: Any,
 ) -> Path | None:
     """
     Build a PDF photometry report for one observation night.
@@ -4426,6 +4397,7 @@ def generate_photometry_report(
         paragraph_mod=Paragraph,
         paragraph_style_mod=ParagraphStyle,
         ta_left_mod=TA_LEFT,
+        cfg=cfg,
     )
     builder._verify_overflow = bool(verify_overflow)
     result = builder.build_pdf()

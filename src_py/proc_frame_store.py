@@ -24,7 +24,7 @@ from typing import Iterator
 import numpy as np
 import pandas as pd
 
-from gaia_catalog_id import normalize_gaia_source_id_series
+from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id_series
 
 # Union of all columns needed by any consumer.
 # Superset of comparison-star selection _needed_cols + aperture photometry _needed_cols_2a.
@@ -148,8 +148,6 @@ def round_proc_columns(df: pd.DataFrame, columns: list[str] | tuple[str, ...] | 
 def write_proc_csv(df: pd.DataFrame, path: Path | str) -> None:
     """The one writer of proc CSVs: proc precision, frame values left to ``frames.csv`` when it
     holds them for this file, then the VYVAR CSV writer."""
-    from pipeline_astrometry import _vyvar_df_to_csv  # noqa: PLC0415
-
     _vyvar_df_to_csv(round_proc_columns(strip_frame_columns(df, path)), path)
 
 
@@ -201,8 +199,6 @@ def write_frame_table(proc_dir: Path | str, rows: dict[str, dict[str, object]]) 
         table[str(Path(name).name)] = dict(vals)
     recs = [{FRAME_TABLE_KEY: k, **{c: v.get(c) for c in PROC_FRAME_COLS}} for k, v in sorted(table.items())]
     df = pd.DataFrame(recs, columns=[FRAME_TABLE_KEY, *PROC_FRAME_COLS])
-    from pipeline_astrometry import _vyvar_df_to_csv  # noqa: PLC0415
-
     _vyvar_df_to_csv(round_proc_columns(df), path)
     _FRAME_TABLE_CACHE.pop(str(path), None)
     return path
@@ -531,3 +527,60 @@ class ProcFrameStore:
     def paths(self) -> list[str]:
         """All loaded frame paths (string keys)."""
         return list(self._store.keys())
+
+
+# --- moved from pipeline_astrometry (LAYER-2026-10) ---
+
+
+_VYVAR_TIME_JD_CSV_COLS = ("jd_mid", "hjd_mid", "bjd_tdb_mid")
+
+
+def _vyvar_df_round_time_jd_for_csv(df: pd.DataFrame) -> pd.DataFrame:
+    """Round geocentric/heliocentric/barycentric JD columns to six decimals for stable CSV / spreadsheet display."""
+    cols = [c for c in _VYVAR_TIME_JD_CSV_COLS if c in df.columns]
+    if not cols:
+        return df
+    out = df.copy()
+    for c in cols:
+        out[c] = pd.to_numeric(out[c], errors="coerce").round(6)
+    return out
+
+
+def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
+    """Write sidecar / per-frame proc CSV.
+
+    When ``mag`` is present it holds the Gaia catalog G magnitude (``phot_g_mean_mag`` at
+    cross-match time) - constant per star for the night, not the frame instrumental magnitude.
+    Science paths must use ``dao_flux`` (see ``docs/VYVAR_PROCESS.md``).
+    """
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    export_df = df
+    if "catalog_id" in df.columns:
+        export_df = df.copy()
+        export_df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
+    export_df = _vyvar_df_round_time_jd_for_csv(export_df)
+    try:
+        import pyarrow as pa  # type: ignore[import-not-found]
+        import pyarrow.csv as pacsv  # type: ignore[import-not-found]
+
+        pacsv.write_csv(pa.Table.from_pandas(export_df, preserve_index=False), str(p))
+    except Exception:  # noqa: BLE001
+        export_df.to_csv(p, index=False, lineterminator="\n", na_rep="")
+
+
+# --- moved from pipeline_astrometry (LAYER-2026-10) ---
+
+
+def _safe_proc_name(original_name: str) -> str:
+    name = (original_name or "").strip()
+    if not name:
+        return "proc.fits"
+    if name.lower().startswith("proc_"):
+        return name
+    return "proc_" + name
+
+
+# --- moved from epsf_psf_merge (LAYER-2026-10) ---
+
+

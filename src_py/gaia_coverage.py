@@ -241,7 +241,7 @@ def ra_intervals(ra_min: float, ra_max: float) -> list[tuple[float, float]]:
 
 def field_box(center: Any, radius_deg: float, *, margin_deg: float = 0.0) -> tuple[float, float, float, float]:
     """Sky box (ra_min, ra_max, dec_min, dec_max) of the field cone grown by ``margin_deg``."""
-    from pipeline_catalog import cone_sky_box  # noqa: PLC0415
+    from catalog_db import cone_sky_box  # noqa: PLC0415
 
     return cone_sky_box(center, float(radius_deg) + max(0.0, float(margin_deg)))
 

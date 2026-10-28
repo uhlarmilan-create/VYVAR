@@ -38,9 +38,9 @@ from pipeline_constants import (
     MS_DAO_PASS2_SIGMA,
     MS_GAIA_CENSUS_EDGE_MARGIN_PX,
 )
-from photometry_core import stamp_masterstar_snr_columns
+from photometry_shared import stamp_masterstar_snr_columns
 from pipeline_calibrate import _effective_saturation_limit
-from pipeline_astrometry import _vyvar_df_to_csv
+from proc_frame_store import _vyvar_df_to_csv
 from pipeline_catalog import (
     _all_pix2world_icrs_deg,
     _box_peaks_at_centroids,
@@ -67,6 +67,7 @@ from pipeline_catalog import (
     _write_field_catalog_cone_meta,
     build_ucac_catalog_kdtree,
 )
+from pipeline_constants import CATALOG_MATCH_SEP_ARCSEC, MASTERSTAR_MAX_DAO_ROWS  # noqa: E402
 
 LOGGER = logging.getLogger("pipeline")
 
@@ -114,16 +115,13 @@ def detect_stars_and_match_catalog(
     data: "np.ndarray",
     hdr: fits.Header,
     *,
-    max_catalog_rows: int = 12000,
     vsx_df: pd.DataFrame | None = None,
     exo_df: pd.DataFrame | None = None,
     gaia_variable_df: pd.DataFrame | None = None,
-    match_sep_arcsec: float = 8.0,
     vsx_match_max_sep_arcsec: float = 5.0,
     gaia_variable_match_max_sep_arcsec: float = 2.0,
     gaia_db_path: Path | None = None,
     field_catalog_export_path: Path | None = None,
-    dao_threshold_sigma: float = 3.5,
     dao_fwhm_px: float | None = None,
     fallback_saturate_adu: float | None = None,
     equipment_saturate_adu: float | None = None,
@@ -131,8 +129,12 @@ def detect_stars_and_match_catalog(
     dao_fwhm_bypass_header: bool = False,
     measured_saturate_adu: float | None = None,
     photometric_gain: float | None = None,
+    cfg: AppConfig,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Detect stars (DAOStarFinder), sky coordinates from WCS, match to the **local Gaia** DB.
+
+    ``cfg`` is the run configuration (CONFIG-ONE-2026-10): DAO threshold, aperture / annulus factors and
+    the catalogue paths come from it, never from a fresh read of config.json.
 
     Used for MASTERSTAR (WCS verified by astrosolve). The local Gaia catalogue of the solved
     footprint is read from ``gaia_db_path`` (argument; config as fallback), every star the DB holds
@@ -146,18 +148,17 @@ def detect_stars_and_match_catalog(
     Identity (IDENTITY-2026-10): radius max(1 px, FWHM); each detection (brightest first) takes
     the brightest unclaimed Gaia star in the radius that is at most 2 mag fainter than its flux
     implies (known variables exempt); then the post-match identity gate. Tolerances
-    (pass-2 seeds, census lock) derive from the identity residuals; ``match_sep_arcsec`` is only
+    (pass-2 seeds, census lock) derive from the identity residuals; ``CATALOG_MATCH_SEP_ARCSEC`` is only
     recorded in the meta (requested value).
 
-    ``max_catalog_rows`` caps DAO detections written per frame. Rows are chosen with **spatial
+    ``MASTERSTAR_MAX_DAO_ROWS`` caps the DAO detections kept. Rows are chosen with **spatial
     stratification** (brightest per coarse grid cell, then global flux top-up) so vignetting does not
     mimic a ``catalog disc`` the way a plain brightest-N sort does.
 
     If ``field_catalog_export_path`` is set, the **full** cone table (``cat_df``) is written there for
     QA overlays - many more rows than DAO detections in ``masterstars.csv``.
 
-    ``dao_threshold_sigma``: DAOStarFinder threshold = sigma x std(background); lower values detect more faint
-    sources (cf. SIPS ~2.5sigma).
+    DAOStarFinder threshold = ``cfg.detection_threshold_sigma`` x std(background).
 
     False detections: measured on the negated image (``det_meta["dao_false_detection"]``);
     ``det_meta["dao_flux_noise_adu"]`` is the sky noise of a DAO ``flux`` (sum over the kernel
@@ -179,9 +180,7 @@ def detect_stars_and_match_catalog(
     arr = np.asarray(data, dtype=np.float32)
     h, wpx = arr.shape
     center, radius_deg = _effective_field_catalog_cone_radius_deg(wcs_obj, h, wpx)
-    # The caller's gaia_db_path wins; the configured DB is the fallback (before the config
-    # silently replaced the argument).
-    cfg = AppConfig()
+    # The caller's gaia_db_path wins; the run's configured DB is the fallback.
     _gaia_db_path: Path | None = Path(gaia_db_path) if gaia_db_path is not None else None
     if _gaia_db_path is None:
         gp = (cfg.gaia_db_path or "").strip()
@@ -251,7 +250,7 @@ def detect_stars_and_match_catalog(
     n_raw_dao = 0
     _dao_false: dict[str, Any] = {}
     _dao_flux_noise: float | None = None
-    _cfg_df = AppConfig()
+    cfg = cfg
     _fb_c = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
     if dao_fwhm_bypass_header and dao_fwhm_px is not None:
         try:
@@ -271,8 +270,6 @@ def detect_stars_and_match_catalog(
     _match_depth_g = float("inf")
     from photutils.detection import DAOStarFinder  # type: ignore
 
-    _ds = float(dao_threshold_sigma)
-    _ds = max(0.5, min(20.0, _ds))
     dao_scale = _dao_auto_binning_factor(*data0.shape)
     data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
     fwhm_eff = max(1.2, _base_fw / float(bfac))
@@ -346,9 +343,7 @@ def detect_stars_and_match_catalog(
             "catalog_match_mode": "full_cone",
             "reason": "std_dao_zero",
         }
-    _thr_sigma = float(getattr(_cfg_df, "detection_threshold_sigma", _ds))
-    if not math.isfinite(_thr_sigma) or _thr_sigma <= 0:
-        _thr_sigma = float(_ds)
+    _thr_sigma = float(cfg.detection_threshold_sigma)
     _thr = max(_thr_sigma * float(std_dao), 1e-6)
     _dao_n_equiv_used = float(_thr_sigma)
     # Adaptive threshold monitoring: match-rate check runs after first catalog match pass (below).
@@ -394,7 +389,7 @@ def detect_stars_and_match_catalog(
            "(hot / cold pixels, gradients) or the threshold is too low" if _ff > DAO_FALSE_FRACTION_WARN else "")
     )
     if tbl is not None and len(tbl) > 0:
-        tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+        tbl = _prefilter_dao_table_brightest(tbl, max(int(MASTERSTAR_MAX_DAO_ROWS) * 12, 36_000))
         from astropy.table import Table as _AstropyTable
 
         tbl = _AstropyTable(tbl, copy=True)
@@ -576,12 +571,12 @@ def detect_stars_and_match_catalog(
             ),
             "n_gaia_variable_in_field": int(len(gaia_variable_df)) if gaia_variable_df is not None else 0,
             "field_catalog_cone_csv": str(Path(field_catalog_export_path)) if field_catalog_export_path else None,
-            "dao_threshold_sigma": float(dao_threshold_sigma),
+            "dao_threshold_sigma": float(_thr_sigma),
             "dao_fwhm_px": float(max(1.2, _base_fw)),
             "dao_detect_binning": int(bfac),
             "frame_depth": dict(_frame_depth),
-            "match_sep_arcsec_requested": float(match_sep_arcsec),
-            "match_sep_arcsec_effective": float(match_sep_arcsec),
+            "match_sep_arcsec_requested": float(CATALOG_MATCH_SEP_ARCSEC),
+            "match_sep_arcsec_effective": float(CATALOG_MATCH_SEP_ARCSEC),
             "saturate_limit_adu": float(sat_limit) if sat_limit is not None else None,
             "saturate_limit_source": sat_limit_src,
             **foot_meta,
@@ -590,15 +585,15 @@ def detect_stars_and_match_catalog(
     _d_h2, _d_w2 = int(data_dao.shape[0]), int(data_dao.shape[1])
     # Stratify brightest DAO sources on a coarse grid over the **full** chip (not radial distance from center).
     _keep2 = _dao_spatial_flux_cap_row_indices(
-        tbl, max_n=int(max_catalog_rows), width_px=float(_d_w2), height_px=float(_d_h2)
+        tbl, max_n=int(MASTERSTAR_MAX_DAO_ROWS), width_px=float(_d_w2), height_px=float(_d_h2)
     )
     tbl = tbl[_keep2]
     tbl.sort("flux")
     tbl = tbl[::-1]
     n_spatial = int(len(tbl))
     log_event(
-        f"DAO on frame: raw={n_raw_dao} (after brightest-prefilter max {max(int(max_catalog_rows) * 12, 36_000):d}) -> "
-        f"after spatial cap max_n={int(max_catalog_rows)}: {n_spatial} points (DAO binning={bfac}x)."
+        f"DAO on frame: raw={n_raw_dao} (after brightest-prefilter max {max(int(MASTERSTAR_MAX_DAO_ROWS) * 12, 36_000):d}) -> "
+        f"after spatial cap max_n={int(MASTERSTAR_MAX_DAO_ROWS)}: {n_spatial} points (DAO binning={bfac}x)."
     )
     n = n_spatial
     xb = np.asarray(tbl["x_centroid"], dtype=np.float64)
@@ -712,7 +707,7 @@ def detect_stars_and_match_catalog(
     idx_det = np.arange(1, n + 1, dtype=np.int32)
     det_str = np.array([f"DET_{i:04d}" for i in idx_det], dtype=object)
     n_matched = 0
-    match_sep_used = float(match_sep_arcsec)  # replaced by the identity radius once matching runs
+    match_sep_used = float(CATALOG_MATCH_SEP_ARCSEC)  # replaced by the identity radius once matching runs
     _match_sep_formula_inputs: dict[str, Any] = {}
     from wcs_invertibility import empty_identity_gate_acc
 
@@ -1038,7 +1033,7 @@ def detect_stars_and_match_catalog(
         "n_gaia_variable_in_field": int(len(gaia_variable_df)) if gaia_variable_df is not None else 0,
         **foot_meta,
         "field_catalog_cone_csv": str(Path(field_catalog_export_path)) if field_catalog_export_path else None,
-        "dao_threshold_sigma": float(dao_threshold_sigma),
+        "dao_threshold_sigma": float(_thr_sigma),
         "dao_detection_n_equiv": (
             float(_dao_n_equiv_used) if _dao_n_equiv_used is not None and math.isfinite(_dao_n_equiv_used) else None
         ),
@@ -1048,7 +1043,7 @@ def detect_stars_and_match_catalog(
         "dao_false_detection": dict(_dao_false),
         "dao_flux_noise_adu": _dao_flux_noise,
         "frame_depth": dict(_frame_depth),
-        "match_sep_arcsec_requested": float(match_sep_arcsec),
+        "match_sep_arcsec_requested": float(CATALOG_MATCH_SEP_ARCSEC),
         "match_sep_arcsec_effective": float(match_sep_used),
         "match_sep_formula_inputs": dict(_match_sep_formula_inputs),
         "catalog_match_fraction_target": 0.95,
@@ -1114,10 +1109,10 @@ def detect_stars_and_match_catalog(
     if not (math.isfinite(_gain_ms) and _gain_ms > 0):
         from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
 
-        _gain_ms = float(photometric_gain_read_noise(hdr, _cfg_df, None).gain)
-    _ap_fac = float(_cfg_df.aperture_fwhm_factor)
-    _ann_in = float(_cfg_df.annulus_inner_fwhm)
-    _ann_out = float(_cfg_df.annulus_outer_fwhm)
+        _gain_ms = float(photometric_gain_read_noise(hdr, cfg, None).gain)
+    _ap_fac = float(cfg.aperture_fwhm_factor)
+    _ann_in = float(cfg.annulus_inner_fwhm)
+    _ann_out = float(cfg.annulus_outer_fwhm)
     df_out = stamp_masterstar_snr_columns(
         df_out,
         image=arr,

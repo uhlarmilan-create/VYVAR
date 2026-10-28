@@ -173,10 +173,8 @@ class RunCitationContext:
     snr_min: float = 10.0
 
 
-def _vsx_db_configured(cfg: AppConfig | None) -> bool:
-    if cfg is None:
-        return False
-    p = str(getattr(cfg, "objects_db_path", "") or "").strip()
+def _vsx_db_configured(cfg: AppConfig) -> bool:
+    p = str(cfg.objects_db_path or "").strip()
     return bool(p) and Path(p).is_file()
 
 
@@ -203,7 +201,7 @@ def _targets_use_vsx_names(targets_df: Any) -> bool:
 
 
 def build_run_citation_context(
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     *,
     pipeline_meta: dict[str, Any] | None = None,
     targets_df: Any = None,
@@ -220,9 +218,9 @@ def build_run_citation_context(
 
     use_vsx = _targets_use_vsx_names(targets_df) or _vsx_db_configured(cfg)
     use_color = True  # colour-term / citations use Gaia BP-RP only (Johnson B-V retired)
-    use_gs11 = bool(getattr(cfg, "gs11_dilution_enabled", False)) if cfg else False
+    use_gs11 = bool(cfg.gs11_dilution_enabled)
     use_gs11 = use_gs11 or bool(gs11_meta.get("enabled", False))
-    use_tess = bool(tess_used) or bool(getattr(cfg, "tess_enabled", False)) if cfg else bool(tess_used)
+    use_tess = bool(tess_used) or bool(cfg.tess_enabled)
     use_cm_detrend = bool(meta.get("common_mode_stability_detrend", False)) if meta else False
     # Sparse fallback / iterative comp clip removed (COMP-RULES-2026-10); older drafts
     # may still carry the pipeline_meta flag.
@@ -234,12 +232,12 @@ def build_run_citation_context(
     if not use_catalog_recovery:
         _ast = meta.get("astrometry") if isinstance(meta.get("astrometry"), dict) else {}
         use_catalog_recovery = bool(_ast.get("catalog_recovery_verified", False))
-    _k2m = str(getattr(cfg, "k2_mode", "off") or "off").strip().lower() if cfg else "off"
+    _k2m = str(cfg.k2_mode or "off").strip().lower()
     use_k2 = _k2m not in ("0", "false", "no", "off", "none")
-    use_hrd = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg else True
+    use_hrd = bool(cfg.hrd_online_enrich_enabled)
     use_pfs = True  # SAT-LIN-2026-10: always on
     use_emp_bkg = True  # CONSOLIDATE-01D: empirical is the only background-err policy
-    _ct = str(getattr(cfg, "apply_color_term", "off") or "off").strip().lower() if cfg else "off"
+    _ct = str(cfg.apply_color_term or "off").strip().lower()
     if _ct in ("0", "false", "no"):
         _ct = "off"
     k2_src_label, k2_val = _resolve_k2_matrix_fields(cfg, meta, k2_mode=_k2m, use_k2=use_k2,
@@ -262,7 +260,7 @@ def build_run_citation_context(
 
     _fb = filter_band_for_obs_group(_og)
     try:
-        from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+        from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
         _kg = tuple(float(x) for x in DEFAULT_APERTURE_F_GRID)
     except Exception:  # noqa: BLE001
@@ -270,14 +268,14 @@ def build_run_citation_context(
     return RunCitationContext(
         zp_band_label=_fb.label if _og else "",
         filter_transformable=bool(_fb.transformable) if _og else False,
-        n_comp_min=int(getattr(cfg, "phase01_comparison_n_comp_min", 3) or 3) if cfg else 3,
-        n_comp_max=int(getattr(cfg, "phase01_comparison_n_comp_max", 8) or 8) if cfg else 8,
+        n_comp_min=int(cfg.phase01_comparison_n_comp_min),
+        n_comp_max=int(cfg.phase01_comparison_n_comp_max),
         k_grid=_kg,
         annulus_fwhm=(
-            float(getattr(cfg, "annulus_inner_fwhm", 2.7)) if cfg else 2.7,
-            float(getattr(cfg, "annulus_outer_fwhm", 5.2)) if cfg else 5.2,
+            float(cfg.annulus_inner_fwhm),
+            float(cfg.annulus_outer_fwhm),
         ),
-        snr_min=float(getattr(cfg, "snr_min", 10.0)) if cfg else 10.0,
+        snr_min=float(cfg.snr_min),
         use_vsx=use_vsx,
         use_psf=use_psf,
         use_color_tiers=use_color,
@@ -285,7 +283,7 @@ def build_run_citation_context(
         use_period_analysis=bool(period_analysis),
         use_variability_envelope=bool(variability_detection),
         use_lightkurve=use_tess,
-        use_transients=bool(getattr(cfg, "transient_search_enabled", False)) if cfg else False,
+        use_transients=bool(cfg.transient_search_enabled),
         use_common_mode_stability_detrend=use_cm_detrend,
         use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,

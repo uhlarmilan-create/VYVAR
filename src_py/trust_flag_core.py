@@ -101,7 +101,7 @@ def lc_epoch_counts(photometry_dir: Path, target_id: str) -> tuple[int | None, i
     except (OSError, ValueError):
         return None, None
     # same row selection as the exporters (single source: export_reports._select_export_lc_rows)
-    from export_reports import _select_export_lc_rows  # noqa: PLC0415
+    from photometry_lightcurve import _select_export_lc_rows  # noqa: PLC0415
 
     n = int(len(df))
     from photometry_lightcurve import published_mag_column  # noqa: PLC0415
@@ -113,16 +113,10 @@ def lc_epoch_counts(photometry_dir: Path, target_id: str) -> tuple[int | None, i
     return int(len(_select_export_lc_rows(df, mag_column=mag_col))), n
 
 
-def comp_thresholds_from_config(cfg: Any | None) -> CompTrustThresholds:
-    """Trust GREEN threshold (``comp_trust_min_comps`` = green_min); selection floor unchanged."""
-    if cfg is None:
-        return CompTrustThresholds.from_bounds(3, 12)
-    if getattr(cfg, "comp_trust_min_comps", None) is not None:
-        gm = int(getattr(cfg, "comp_trust_min_comps"))
-    else:
-        gm = int(getattr(cfg, "phase01_comparison_n_comp_min", 3))
-    mx = int(getattr(cfg, "phase01_comparison_n_comp_max", 12))
-    return CompTrustThresholds.from_bounds(gm, mx)
+def comp_thresholds_from_config(cfg: Any) -> CompTrustThresholds:
+    """Trust GREEN threshold (``comp_trust_min_comps`` = green_min) and the comparison maximum of the run
+    config (CONFIG-ONE-2026-10, G13-03: no 3 / 12 fallback; the defaults are 5 / 8)."""
+    return CompTrustThresholds.from_bounds(int(cfg.comp_trust_min_comps), int(cfg.phase01_comparison_n_comp_max))
 
 
 #: Minimum check-star epochs before the scatter thresholds apply.
@@ -492,7 +486,7 @@ def evaluate_target(
     n_clean: int,
     lc_quality: str,
     check_scatter: float,
-    thresholds: CompTrustThresholds | None = None,
+    thresholds: CompTrustThresholds,
     n_frames: int | None = None,
     n_check: int = 0,
     check_min_epochs: int = 5,
@@ -512,7 +506,7 @@ def evaluate_target(
     comp_delta_bprp_max: float = float("nan"),
     comp_delta_bprp_cap: float = float("nan"),
 ) -> dict[str, Any]:
-    th = thresholds or CompTrustThresholds.from_bounds(3, 8)
+    th = thresholds
     lq = str(lc_quality or "").strip().lower() or "-"
     sparse_band: str | None = None
     sparse_flags: tuple[str, ...] = ()
@@ -583,7 +577,7 @@ def evaluate_target(
 def compute_trust_for_photometry_dir(
     photometry_dir: Path,
     *,
-    thresholds: CompTrustThresholds | None = None,
+    thresholds: CompTrustThresholds,
     check_min_epochs: int | None = None,
     cfg: Any | None = None,
 ) -> dict[str, Any]:
@@ -592,7 +586,7 @@ def compute_trust_for_photometry_dir(
     if not summ_path.is_file():
         raise FileNotFoundError(f"missing {summ_path}")
 
-    th = thresholds or CompTrustThresholds.from_bounds(3, 8)
+    th = thresholds
     min_chk = max(3, int(check_min_epochs if check_min_epochs is not None else 5))
     summ = pd.read_csv(summ_path, dtype={"catalog_id": str}, low_memory=False)
     # "T3+ comps with color term off" applies only to a standard filter, where a colour term could correct the
@@ -606,7 +600,7 @@ def compute_trust_for_photometry_dir(
         _color_term_off = True
         if cfg is not None:
             try:
-                from photometry_core import resolve_apply_color_term  # noqa: PLC0415
+                from band_classify import resolve_apply_color_term  # noqa: PLC0415
 
                 _color_term_off = not resolve_apply_color_term(cfg, _obs_group)
             except Exception:  # noqa: BLE001
@@ -767,7 +761,7 @@ def run_trust_flag_for_photometry_dir(
     *,
     photometry_dir: Path,
     update_summary: bool = True,
-    cfg: Any | None = None,
+    cfg: Any,
     thresholds: CompTrustThresholds | None = None,
 ) -> dict[str, Any]:
     """Pipeline / CLI entry: trust columns in photometry_summary.csv."""

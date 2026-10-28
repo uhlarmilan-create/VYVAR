@@ -658,7 +658,7 @@ def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Pat
     if r["kind"] == "NEW":
         c1, c2 = st.columns([3, 2])
         if c1.button("Check catalogues again (VSX, SIMBAD, ASAS-SN, ZTF, ATLAS, Gaia vari)", key=f"var_xm_{cid}"):
-            from variability_field import _catalog_check  # noqa: PLC0415
+            from catalog_crossmatch import _catalog_check  # noqa: PLC0415
 
             from variability_field import load_variability_candidates, write_candidate_catalogs  # noqa: PLC0415
 

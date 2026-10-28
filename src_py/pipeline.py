@@ -35,10 +35,9 @@ from cal_stage import _header_has_vy_skysf  # noqa: E402,F401  # re-export; surv
 class AstroPipeline:
     """Skeleton for the modular variable-star processing workflow."""
 
-    def __init__(self, config: AppConfig | None = None) -> None:
-        self.config = config or AppConfig()
-        self.db = VyvarDatabase(self.config.database_path)
-        self.db._archive_root_override = Path(self.config.archive_root)
+    def __init__(self, config: AppConfig) -> None:
+        self.config = config
+        self.db = VyvarDatabase.for_config(self.config)
 
 
     def quick_calibrate_last_import(
@@ -206,11 +205,11 @@ from pipeline_calibrate import (
     _sync_obs_calibration_state_with_retry,
     apply_perf10_dao_qc_to_obs_files,
     calibrate_lights_to_calibrated,
-    norm_fits_path_key,
     run_draft_ram_calibration_qc_to_obs_files,
     run_osc_channel_extraction_for_archive,
     scan_calibrated_lights_pointing,
 )
+from utils import norm_fits_path_key
 from pipeline_preprocess import (
     _archive_raw_to_calibrated_light,
     _qc_suggest_thresholds,
@@ -226,29 +225,29 @@ from pipeline_preprocess import (
 
 
 from pipeline_astrometry import (
-    _dao_targeted_pass2_unmatched_gaia,
     _merge_vsx_exoplanet_variable_targets,
-    _path_segments_forbidden_for_masterstar_physical_source,
     _plate_solve_input_bundle,
     _query_vsx_local_frame_bbox,
-    _resolve_best_effort_path_under,
-    _vyvar_df_to_csv,
-    astrometry_align_and_build_masterstar,
     draft_is_multi_group_obs,
     draft_obs_group_count,
     get_masterstar_candidates,
-    resolve_masterstar_input_root,
     select_comparison_stars_spatial_grid,
     write_photometry_plan_files,
 )
+from pipeline_catalog import _dao_targeted_pass2_unmatched_gaia
+from astrometry_orchestration import astrometry_align_and_build_masterstar
+from pipeline_preprocess import (
+    _path_segments_forbidden_for_masterstar_physical_source,
+    _resolve_best_effort_path_under,
+    resolve_masterstar_input_root,
+)
+from proc_frame_store import _vyvar_df_to_csv
 from pipeline_catalog import (
     _EXPORT_PER_FRAME_WORKER_STATE,
     _MASTERSTAR_ZONE_LOG_ONCE,
     _annotate_masterstars_flux_zones,
     _apply_dao_centroid_wcs_guard,
-    _box_peak_max_adu,
     _build_exoplanet_promotion_rows_from_masterstars,
-    _cfg_from_export_worker_state,
     _compute_airmass_from_altaz,
     _dao_convolved_background_rms_adu,
     _dao_detection_threshold_adu,
@@ -265,8 +264,8 @@ from pipeline_catalog import (
     _query_exoplanet_local,
     _query_vsx_local,
     find_qc_metrics_csv,
-    inv_sat_limit_peak_test_adu,
 )
+from sat_diag import _box_peak_max_adu, inv_sat_limit_peak_test_adu
 
 from catalog_match import detect_stars_and_match_catalog  # noqa: E402,F401
 from frame_export import export_per_frame_catalogs  # noqa: E402,F401

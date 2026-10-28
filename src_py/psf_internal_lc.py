@@ -125,7 +125,7 @@ def load_epsf_build_meta(platesolve_dir: Path) -> dict[str, Any]:
 
 
 def _git_provenance() -> tuple[str, str]:
-    from photometry_core import _resolve_git_provenance  # noqa: PLC0415
+    from photometry_provenance import _resolve_git_provenance  # noqa: PLC0415
 
     git_hash, git_dirty, _files = _resolve_git_provenance()
     gh = str(git_hash) if git_hash else ""
@@ -356,7 +356,7 @@ def write_one_internal_psf_lc(
     git_hash: str,
     git_dirty: str,
 ) -> Path | None:
-    from photometry_core import ensemble_normalize  # noqa: PLC0415
+    from photometry_lightcurve import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag, rel_sigma_to_mag  # noqa: PLC0415
 
     tid = normalize_gaia_source_id(target_cid)

@@ -27,6 +27,7 @@ def test_empty_pool_gives_no_comps_never_masterstars():
         target, ms, paths, csv_cache=cache, cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
         min_dist_arcsec=30.0, variable_target_catalog_ids=frozenset({_TARGET_ID}),
         global_comp_pool_df=pd.DataFrame(),
+        fwhm_px=3.7, n_comp_min=3, n_comp_max=7, max_comp_rms=0.1, min_frames_frac=0.3, plate_scale_arcsec=1.3,
     )
     assert out.empty
 

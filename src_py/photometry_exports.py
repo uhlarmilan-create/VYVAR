@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 import pandas as pd
 from gaia_catalog_id import normalize_gaia_source_id
-from photometry_gate_helpers import comp_quality_quality_strings
+from comp_table import comp_quality_quality_strings
 
 
 

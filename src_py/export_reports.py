@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from gaia_catalog_id import VYVAR_CSV_DTYPE
+
 import json
 import math
 import logging
@@ -27,14 +29,12 @@ from report_methods import aavso_export_path, lc_csv_path, varastro_export_path
 from check_star_kmag import (
     check_kmag_sidecar_path,
 )
-from photometry_core import (
-    _resolve_plate_scale_arcsec_per_px,
-    parse_comp_quality_json_map,
-)
+from photometry_shared import _resolve_plate_scale_arcsec_per_px
+from comp_table import parse_comp_quality_json_map
 from vyvar_version import VYVAR_SOFTWARE_VERSION
+from photometry_lightcurve import _select_export_lc_rows  # LAYER-2026-10: moved there
 
 # Gaia ID must be str - float64 loses digits
-_GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 
 INV_PSF_SUBMIT_01 = "INV-PSF-SUBMIT-01"
@@ -68,7 +68,7 @@ def _accumulate_export_stat(export_stats: dict[str, int] | None, key: str, n: in
 def _maybe_set_airmass_citation(run_citation_ctx: Any, lc_df: pd.DataFrame) -> None:
     if run_citation_ctx is None:
         return
-    from photometry_core import lc_has_finite_airmass  # noqa: PLC0415
+    from photometry_exports import lc_has_finite_airmass  # noqa: PLC0415
 
     if lc_has_finite_airmass(lc_df):
         run_citation_ctx.use_airmass = True
@@ -212,13 +212,13 @@ def _site_coords(
     if cfg is None:
         return None
     try:
-        lat = float(getattr(cfg, "observer_lat", 0.0) or 0.0)
-        lon = float(getattr(cfg, "observer_lon", 0.0) or 0.0)
+        lat = float(getattr(cfg, "observer_lat", float("nan")))
+        lon = float(getattr(cfg, "observer_lon", float("nan")))
     except (TypeError, ValueError):
         return None
     if not (math.isfinite(lat) and math.isfinite(lon)) or (lat == 0.0 and lon == 0.0):
         return None
-    alt = float(getattr(cfg, "observer_alt_m", 0.0) or 0.0)
+    alt = float(getattr(cfg, "observer_alt_m", float("nan")))
     name = str(getattr(cfg, "observer_location_name", "") or "").strip()
     return lat, lon, alt, name
 
@@ -445,60 +445,6 @@ def _lc_missing_export_columns(lc_df: pd.DataFrame, *, differential: bool, mag_c
     return missing
 
 
-def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
-    """Rows suitable for AAVSO/VAR.ASTRO export; the exported magnitude is put in ``mag_calib``
-    for the writers.
-
-    Default magnitude: the published one (``mag_calib_ct`` with a colour term, else ``mag_calib``;
-    ``photometry_lightcurve.published_mag_column``). ``differential`` (UNCAL-EXPORT-2026-10): the
-    target has no standard zero point and ``delta_mag`` is exported."""
-    if lc_df is None or lc_df.empty:
-        return pd.DataFrame()
-    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
-
-    work = lc_df.copy()
-    if mag_column:
-        mag_col = str(mag_column)
-    elif differential:
-        mag_col = "delta_mag"
-    else:
-        mag_col = published_mag_column(work) or "mag_calib"
-    if mag_col not in work.columns:
-        return pd.DataFrame()
-    mag = pd.to_numeric(work[mag_col], errors="coerce")
-    # A row needs a time: UTC JD (AAVSO) or BJD_TDB (VarAstro); each writer checks its own.
-    _jd = pd.to_numeric(work["jd"], errors="coerce") if "jd" in work.columns else None
-    _bj = pd.to_numeric(work["bjd"], errors="coerce") if "bjd" in work.columns else None
-    _t_ok = pd.Series(False, index=work.index)
-    for _tc in (_jd, _bj):
-        if _tc is not None:
-            _t_ok = _t_ok | (_tc.notna() & np.isfinite(_tc.to_numpy(dtype=float)))
-    finite = mag.notna() & np.isfinite(mag.to_numpy(dtype=float)) & _t_ok
-    if "flag" in work.columns:
-        from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
-
-        fl = work["flag"].astype(str).str.strip().str.lower()
-        # FRAME-REJECT-2026-10: only the physical reasons drop an epoch (saturated, low_snr, no_data,
-        # edge_fail, nondetection); frame_qc / artifact / high_err / spike stay, named in NOTES FLAG=.
-        bad = fl.isin(list(EXPORT_EXCLUDE_FLAGS))
-        mask = finite & ~bad
-        n_excl = int((finite & bad).sum())
-        if n_excl:
-            logging.info(
-                "[EXPORT] LC-OUTLIER excluded %d epochs (flags in %s)",
-                n_excl,
-                sorted(EXPORT_EXCLUDE_FLAGS),
-            )
-        # FIX-EXPORTALLBAD-2026-10: when every epoch carries an exclusion flag nothing is
-        # exported (the old fallback exported all of them, flags ignored).
-        out = work.loc[mask].copy()
-    else:
-        out = work.loc[finite].copy()
-    if mag_col != "mag_calib":
-        out["mag_calib"] = pd.to_numeric(out[mag_col], errors="coerce")
-    return out
-
-
 def _lc_first_str(lc: pd.DataFrame, col: str) -> str:
     if col not in lc.columns:
         return ""
@@ -602,7 +548,7 @@ def export_lightcurve_reports(
     observer_name: str = "Unknown Observer",
     comp_quality_map: dict[str, str] | None = None,
     software_version: str | None = None,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     lc_dir: Path | None = None,
     obs_group: str = "",
     targets_df: pd.DataFrame | None = None,
@@ -633,11 +579,11 @@ def export_lightcurve_reports(
     """
     from gaia_bands import filter_band_for_obs_group, zp_mag_from_gaia  # noqa: PLC0415
 
-    fresh_cfg = cfg or AppConfig()
+    fresh_cfg = cfg
     if not str(observer_code).strip():
         observer_code = str(getattr(fresh_cfg, "observer_code", "") or "")
     if observer_name == "Unknown Observer":
-        _on = str(getattr(fresh_cfg, "observer_name", "") or "").strip()
+        _on = str(fresh_cfg.observer_name or "").strip()
         if _on:
             observer_name = _on
 
@@ -719,7 +665,7 @@ def export_lightcurve_reports(
         return {}
     fb = filter_band_for_obs_group(obs_group_resolved)
     aavso_filter = fb.aavso_code
-    _umap = getattr(fresh_cfg, "aavso_filter_map", None) or {}
+    _umap = fresh_cfg.aavso_filter_map or {}
     if fb.filter_token and _umap:
         for uk, uv in _umap.items():
             if _filter_lookup_key(str(uk)) == _filter_lookup_key(fb.filter_token) and str(uv).strip():
@@ -1128,7 +1074,8 @@ def export_lightcurve_reports(
     if not _is_eclipsing(vsx_type):
         logging.info("[EXPORT] Skip varastro %s - not an eclipsing type (%s)", vsx_name, vsx_type)
         return paths
-    from photometry_core import TIME_BASE_BJD_TDB, resolve_lc_time_base  # noqa: PLC0415
+    from photometry_defs import TIME_BASE_BJD_TDB  # noqa: PLC0415
+    from photometry_lightcurve import resolve_lc_time_base  # noqa: PLC0415
 
     try:
         _tb = resolve_lc_time_base(lc_normal)
@@ -1197,7 +1144,7 @@ def export_all_method_lightcurve_reports(
     target_cid: str,
     comp_df: pd.DataFrame,
     summary_row: pd.Series,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     export_failures: list[ExportFailure] | None = None,
     export_stats: dict[str, int] | None = None,
     **kwargs: Any,
@@ -1208,7 +1155,7 @@ def export_all_method_lightcurve_reports(
     through these writers (INV-PSF-SUBMIT-01). The glob remains as a presence
     signal for reports; submission methods stay aperture-only.
     """
-    fresh_cfg = cfg or AppConfig()
+    fresh_cfg = cfg
     _lc_dir = Path(lc_dir)
     _tid = str(target_cid or target_row.get("catalog_id", "") or "").strip()
     _have_psf_files = any(_lc_dir.glob("lightcurve_*_psf.csv"))
@@ -1274,7 +1221,7 @@ def export_group_reports(
     photometry_dir: Path | str,
     *,
     obs_group: str,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     at_df: pd.DataFrame | None = None,
     summary_df: pd.DataFrame | None = None,
     comp_index: dict[str, pd.DataFrame] | None = None,
@@ -1288,10 +1235,10 @@ def export_group_reports(
     from report_methods import lc_csv_path  # noqa: PLC0415
 
     phot = Path(photometry_dir)
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
     lc_dir = phot / "lightcurves"
     if at_df is None:
-        at_df = pd.read_csv(phot / "active_targets.csv", low_memory=False, dtype=_GAIA_ID_DTYPE)
+        at_df = pd.read_csv(phot / "active_targets.csv", low_memory=False, dtype=VYVAR_CSV_DTYPE)
     if summary_df is None:
         summary_df = pd.read_csv(phot / "photometry_summary.csv", low_memory=False, dtype={"catalog_id": str})
     if comp_index is None:

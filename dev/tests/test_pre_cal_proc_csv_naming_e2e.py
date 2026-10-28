@@ -75,9 +75,7 @@ def test_pre_cal_export_writes_proc_csv_glob() -> None:
         per = export_per_frame_catalogs(
             frames_root=aligned,
             platesolve_dir=ps,
-            dao_threshold_sigma=3.5,
             dao_fwhm_px=3.5,
-            max_catalog_rows=20000,
             catalog_match_max_sep_arcsec=3.0,
             masterstars_csv=ps / "masterstars_full_match.csv",
             masterstar_fits=ps / "MASTERSTAR.fits",

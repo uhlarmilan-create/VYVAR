@@ -196,7 +196,6 @@ PIPELINE_E6A_CATALOG = (
     "_apply_dao_centroid_wcs_guard",
     "_box_peak_max_adu",
     "_build_exoplanet_promotion_rows_from_masterstars",
-    "_cfg_from_export_worker_state",
     "_compute_airmass_from_altaz",
     "_dao_convolved_background_rms_adu",
     "_dao_detection_threshold_adu",
@@ -228,9 +227,41 @@ PHOTOMETRY_PHYSICAL = frozenset({
 })
 
 
+# LAYER-2026-10 (code review 2 T13): helpers moved to the layer they belong to; the facades still
+# export them (D-FACADE-PERMANENT-01), the home module changed.
+MOVED_HOMES_2026_10 = {
+    "norm_fits_path_key": "utils",
+    "_vyvar_df_to_csv": "proc_frame_store",
+    "resolve_masterstar_input_root": "pipeline_preprocess",
+    "_path_segments_forbidden_for_masterstar_physical_source": "pipeline_preprocess",
+    "_resolve_best_effort_path_under": "pipeline_preprocess",
+    "_dao_targeted_pass2_unmatched_gaia": "pipeline_catalog",
+    "astrometry_align_and_build_masterstar": "astrometry_orchestration",
+    "inv_sat_limit_peak_test_adu": "sat_diag",
+    "_box_peak_max_adu": "sat_diag",
+    "_finite_positive_adu": "sat_diag",
+    "_airmass_from_altitude_deg": "time_utils",
+    "cone_sky_box": "catalog_db",
+    "observation_group_folder_name": "fits_meta",
+    "parse_comp_quality_json_map": "comp_table",
+    "_howell_variance_adu2": "photometry_gate_helpers",
+    "_photometric_error": "photometry_gate_helpers",
+    "_photometric_error_with_bkg_mode": "photometry_gate_helpers",
+    "should_apply_color_term": "band_classify",
+    "resolve_apply_color_term": "band_classify",
+    "_sky_pp_for_photometric_error": "photometry_shared",
+    "_select_export_lc_rows": "photometry_lightcurve",
+    "flux_k_column": "photometry_defs",
+}
+
+
 def _assert_facade(facade, home, names: tuple[str, ...]) -> None:
     """bcead65: functions/classes/mutables must be identity; scalars presence-only."""
+    import importlib
+
+    default_home = home
     for name in names:
+        home = importlib.import_module(MOVED_HOMES_2026_10[name]) if name in MOVED_HOMES_2026_10 else default_home
         obj = getattr(facade, name)
         home_obj = getattr(home, name)
         if inspect.isfunction(obj) or inspect.isclass(obj):

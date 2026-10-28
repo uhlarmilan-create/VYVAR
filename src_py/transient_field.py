@@ -369,7 +369,7 @@ def run_field_transients(
         from aperture_pertarget import moment_fwhm  # noqa: PLC0415
 
         ref_fw = _field_moment_fwhm(ms_img, ms, fwhm_med)
-        from variability_field import _frame_footprints, _inside_all  # noqa: PLC0415
+        from frame_footprint import _frame_footprints, _inside_all  # noqa: PLC0415
 
         quads = _frame_footprints(Path(per_frame_dir), stems)
         r_ann = a_out * float(np.nanmax(fwhm))
@@ -476,7 +476,7 @@ def run_field_transients(
         T = T.drop(columns=["_lc"], errors="ignore")
         T["catalogs"] = ""
         if check_catalogs and len(c):
-            from variability_field import _catalog_check  # noqa: PLC0415
+            from catalog_crossmatch import _catalog_check  # noqa: PLC0415
 
             T.loc[c, "catalogs"] = [_catalog_check(pd.Series({"ra_deg": T.at[j, "ra_deg"], "dec_deg": T.at[j, "dec_deg"],
                                                               "mag": T.at[j, "mag_g_est"]}), cfg) for j in c]
@@ -672,7 +672,7 @@ def _minor_bodies(cfg: Any, wcs: Any, msh: Any, frame: pd.DataFrame, ps: Path) -
 
 def _catalog_dir(cfg: Any) -> Path:
     """The local catalogue folder (the one that holds ``objects_db_path``)."""
-    return Path(str(getattr(cfg, "objects_db_path", "") or "catalogs/vyvar_objects.db")).parent
+    return Path(str(cfg.objects_db_path)).parent
 
 
 def load_galaxies(cat_dir: Path) -> pd.DataFrame | None:

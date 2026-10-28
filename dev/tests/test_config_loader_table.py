@@ -44,7 +44,7 @@ def test_out_of_range_is_clamped_with_a_warning(tmp_path, caplog) -> None:
     with caplog.at_level(logging.WARNING):
         cfg = _load(tmp_path, {"snr_min": 1.0, "alignment_max_stars": 99999})
     assert cfg.snr_min == 3.0
-    assert cfg.alignment_max_stars == 5000
+    assert cfg.alignment_max_stars == 200  # G02-47: the range is the real cap
     msgs = " ".join(r.getMessage() for r in caplog.records)
     assert "snr_min" in msgs and "alignment_max_stars" in msgs
 

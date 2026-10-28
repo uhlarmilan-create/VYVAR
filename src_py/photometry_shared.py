@@ -1,4 +1,4 @@
-"""Moved from photometry_core.py (CONSOLIDATE-01E2). Facade re-exports these names."""
+"""Shared photometry helpers (sky, geometry, plate scale, GS11 summary); the facade re-exports them."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,14 +7,13 @@ import logging
 import math
 import numpy as np
 import pandas as pd
-from aperture_pertarget import flux_k_column  # noqa: F401  (re-exported: one definition)
+from photometry_defs import flux_k_column  # noqa: F401  (re-exported: one definition)
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from utils import plate_scale_arcsec_per_pixel
 
-from photometry_core import (
-    BKG_SCALE_R_CLAMP_HI,
-    BKG_SCALE_R_CLAMP_LO,
+from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO
+from photometry_defs import (
     ERR_BKG_SOURCE_COL,
     ERR_BKG_SOURCE_EMPIRICAL,
     ERR_BKG_SOURCE_HOWELL_FALLBACK,
@@ -23,6 +22,17 @@ from photometry_core import (
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
     SKY_SURFACE_BG_MEDIAN_ADU_COL,
+)
+from photometry_gate_helpers import (
+    _assert_inv_err_sigma_acct_01,
+    _clamp_err_empty_apertures_min,
+    _clamp_err_empty_apertures_n,
+    _labbe_content_seed_from_header,
+    _sigma_bkg_r_key,
+    bkg_scale_ratio_empirical_over_howell,
+    compute_setup_bkg_scale_r,
+    measure_empty_aperture_sigma_bkg,
+    scaled_sigma_bkg_ap_from_howell,
 )
 
 
@@ -169,11 +179,23 @@ def _sky_pp_from_values(pre_sub: float, ann: float) -> float:
     return 0.0
 
 
+def _sky_pp_for_photometric_error(row: Any) -> float:
+    """Sky level (ADU/px) for the Howell ``_photometric_error`` from a proc-CSV row.
+
+    I-11: prefer pre-subtraction ``sky_surface_bg_median_adu`` (photons that arrived before the 2D
+    sky surface was subtracted), otherwise ``sky_adu_per_px_annulus`` (the per-star annulus sky).
+    """
+    return _sky_pp_from_values(
+        float(pd.to_numeric(row.get(SKY_SURFACE_BG_MEDIAN_ADU_COL), errors="coerce")),
+        float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce")),
+    )
+
+
 def finalize_hybrid_bkg_fallback_proc_dir(
     proc_dir: Path,
     *,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
     setup_label: str = "",
 ) -> dict[str, Any]:
     """Post-pass: replace raw Howell fallback rows with setup-calibrated ``howell_scaled``.
@@ -281,10 +303,10 @@ def stamp_masterstar_snr_columns(
     image: np.ndarray | None,
     fwhm_dao_px: float,
     bg_sigma_adu: float,
-    gain: float = 1.0,
-    aperture_fwhm_factor: float = 1.9,
-    annulus_inner_fwhm: float = 4.75,
-    annulus_outer_fwhm: float = 9.0,
+    gain: float,
+    aperture_fwhm_factor: float,
+    annulus_inner_fwhm: float,
+    annulus_outer_fwhm: float,
 ) -> pd.DataFrame:
     """Stamp MASTERSTAR ``snr_ap_pixscaled`` = flux_ap/err_ap_pixscaled and ``snr_peak``.
 
@@ -469,7 +491,7 @@ def build_gs11_summary(
     summary_rows: list[dict[str, Any]],
     cfg: Any,
     *,
-    plate_scale_arcsec: float = 1.3,
+    plate_scale_arcsec: float,
 ) -> dict[str, Any]:
     """Aggregate GS11 dilution stats for ``pipeline_meta.json``."""
     enabled = bool(cfg.gs11_dilution_enabled)
@@ -1082,7 +1104,7 @@ def enhance_catalog_dataframe_aperture(
             # (same positions, same annulus sky), so comparison-star RMS in comparison-star selection is
             # measured on the apertures the light curves use.
             try:
-                from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+                from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
                 for _k in DEFAULT_APERTURE_F_GRID:
                     _r_k = max(0.5, float(_k) * float(fw))
@@ -1214,18 +1236,3 @@ def enhance_catalog_dataframe_aperture(
         out.loc[_forced_mask & _has_flux, "photometry_ok"] = True
 
     return out
-
-
-from photometry_gate_helpers import (  # noqa: E402
-    _assert_inv_err_sigma_acct_01,
-    _clamp_err_empty_apertures_min,
-    _clamp_err_empty_apertures_n,
-    _labbe_content_seed_from_header,
-    _sigma_bkg_r_key,
-    _sky_pp_from_annulus_mask,
-    bkg_scale_ratio_empirical_over_howell,
-    compute_setup_bkg_scale_r,
-    measure_empty_aperture_sigma_bkg,
-    scaled_sigma_bkg_ap_from_howell,
-)
-from aperture_photometry import _sky_pp_for_photometric_error  # noqa: E402

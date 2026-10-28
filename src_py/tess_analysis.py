@@ -48,7 +48,10 @@ import logging
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from config import AppConfig
 
 import numpy as np
 
@@ -790,7 +793,7 @@ def gaia_sources_for(ra: float, dec: float, cfg: Any, radius_arcsec: float = 210
     """Gaia neighbours (+ target) for the TESS cutout from the local DB."""
     from dilution import query_gaia_neighbors  # noqa: PLC0415
 
-    db = str(getattr(cfg, "gaia_db_path", "") or "")
+    db = str(cfg.gaia_db_path or "")
     rows = query_gaia_neighbors(ra, dec, radius_arcsec, db) if db else []
     out = [
         {"source_id": str(r.get("source_id")), "ra": r["ra"], "dec": r["dec"],
@@ -806,7 +809,7 @@ def run_tess(
     dec: float,
     out_dir: Path,
     *,
-    cfg: Any = None,
+    cfg: AppConfig,
     sources: list[dict[str, Any]] | None = None,
     vyvar_lc: tuple[np.ndarray, np.ndarray] | None = None,
     progress: Callable[[str, float], None] | None = None,
@@ -817,9 +820,8 @@ def run_tess(
 
     ``target_mag``: Gaia G of the target, used when the star is not in the local Gaia DB.
     A failed download never overwrites an earlier result in ``out_dir``."""
-    from config import AppConfig  # noqa: PLC0415
 
-    cfg = cfg or AppConfig()
+    cfg = cfg
     cid = str(catalog_id).strip()
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

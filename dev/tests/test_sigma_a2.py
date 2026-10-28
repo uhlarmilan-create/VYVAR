@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from sigma_budget import resolve_rig_scintillation_params
+from config import AppConfig  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -39,11 +40,20 @@ def test_altitude_zero_pipeline_meta_falls_back_to_location(monkeypatch):
         def get_draft_location_id(self, draft_id: int) -> int:
             return 1
 
-    monkeypatch.setattr("database.VyvarDatabase", lambda *_a, **_k: _FakeDB())
+    class _FakeVyvarDatabase:
+        def __new__(cls, *_a, **_k):
+            return _FakeDB()
+
+        @classmethod
+        def for_config(cls, *_a, **_k):  # CONFIG-ONE-2026-10: the run database from the run config
+            return _FakeDB()
+
+    monkeypatch.setattr("database.VyvarDatabase", _FakeVyvarDatabase)
     rig = resolve_rig_scintillation_params(
         draft_id=424,
         setup="NoFilter_60_2",
         pipeline_meta={"observer_location": {"alt_m": 0.0}},
+        cfg=AppConfig(),
     )
     assert rig.altitude_m == pytest.approx(250.0)
     assert any("ignored (<=0)" in n for n in rig.source_notes)

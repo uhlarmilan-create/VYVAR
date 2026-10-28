@@ -1,6 +1,8 @@
 """Step 5 (2026-10): saturation from data, snr_min, check-star rules."""
 from __future__ import annotations
 
+from config import AppConfig
+
 import sys
 from pathlib import Path
 
@@ -87,7 +89,7 @@ def test_check_star_follows_target_colour():
             "status": ["good"] * 4,
         }
     )
-    row = select_check_star(pool, ensemble_ids={"1"}, n_comp_min=1, target_bp_rp=0.8, target_mag=12.0)
+    row = select_check_star(pool, ensemble_ids={"1"}, n_comp_min=1, target_bp_rp=0.8, target_mag=12.0, cfg=AppConfig())
     assert str(row["catalog_id"]) == "3"
 
 

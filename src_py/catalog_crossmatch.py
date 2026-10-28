@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import numpy as np
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.utils.exceptions import AstropyWarning
@@ -688,3 +689,23 @@ if __name__ == "__main__":
                 print(" ", m.name, "|", m.summary(), "| mag", m.mag, "| dr", m.delta_r)
     for cat, msg in r.errors.items():
         print(f"\n!! {cat}: {msg}")
+
+
+# --- moved from variability_field (LAYER-2026-10) ---
+
+
+def _catalog_check(row: pd.Series, cfg: Any) -> str:
+    """Known-variable check of one candidate in online catalogues (astroquery)."""
+    try:
+
+        r = check_candidate_in_catalogs(
+            float(row["ra_deg"]), float(row["dec_deg"]), mag=float(row["mag"]), radius_arcsec=15.0,
+            objects_db_path=str(cfg.objects_db_path or "") or None,
+        )
+        hits = [b for b in r.catalog_summary_bullets() if "no match" not in b and "error" not in b]
+        errs = [b for b in r.catalog_summary_bullets() if "error" in b]
+        if hits:
+            return " | ".join(hits)
+        return "none of the catalogues lists it" + (f" ({len(errs)} not reachable)" if errs else "")
+    except Exception as exc:  # noqa: BLE001
+        return f"catalogue check failed: {exc}"

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from config import AppConfig
+
 import types
 
 import numpy as np
@@ -36,7 +38,7 @@ def test_tess_period_two_p_and_localisation(tmp_path) -> None:
     rng = np.random.default_rng(7)
     a, src = _tpf(15, 2459800.0, "T", rng)
     b, _ = _tpf(55, 2460500.0, "T", rng)
-    r = ta.run_tess("T", 320.0, 51.8, tmp_path / "t", sources=src, tpfs=[a, b])
+    r = ta.run_tess("T", 320.0, 51.8, tmp_path / "t", sources=src, tpfs=[a, b], cfg=AppConfig())
     assert r.best is not None and abs(r.best.period_d - 0.4) < 5e-4  # 2P chosen (unequal minima/maxima)
     assert r.two_p_preferred
     assert max(r.localization, key=r.localization.get) == "T"
@@ -50,7 +52,7 @@ def test_tess_period_two_p_and_localisation(tmp_path) -> None:
     assert "files" not in _json.loads((tmp_path / "t" / "tess_result.json").read_text())
     a2, src2 = _tpf(15, 2459800.0, "N1", rng)
     b2, _ = _tpf(55, 2460500.0, "N1", rng)
-    r2 = ta.run_tess("T", 320.0, 51.8, tmp_path / "n", sources=src2, tpfs=[a2, b2])
+    r2 = ta.run_tess("T", 320.0, 51.8, tmp_path / "n", sources=src2, tpfs=[a2, b2], cfg=AppConfig())
     assert r2.verdict == "NEIGHBOUR"
 
 

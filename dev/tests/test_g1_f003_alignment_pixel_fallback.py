@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from config import AppConfig
+
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,7 +12,7 @@ import pandas as pd
 from astropy.io import fits
 from astropy.table import Table
 
-from photometry_core import read_flux_from_csv, save_lightcurve_csv
+from photometry_core import read_flux_from_csv
 from trust_flag_core import CompTrustThresholds, classify_warnings, evaluate_target
 
 _TH = CompTrustThresholds.from_bounds(3, 8)
@@ -65,7 +67,6 @@ def _fake_dao_table() -> Table:
 
 
 def _run_detect(aligned: bool, with_wcs: bool) -> tuple[pd.DataFrame, dict]:
-    import pipeline as pl
     import pipeline_catalog as pc
 
     rng = np.random.default_rng(0)
@@ -85,10 +86,10 @@ def _run_detect(aligned: bool, with_wcs: bool) -> tuple[pd.DataFrame, dict]:
         return tbl, 0, 0
 
     with patch("photutils.detection.DAOStarFinder", _FakeFinder):
-        with patch.object(pl, "_dao_targeted_pass2_unmatched_gaia", _pass2):
+        with patch.object(pc, "_dao_targeted_pass2_unmatched_gaia", _pass2):
             return pc.detect_stars_match_master_reference(
                 data, hdr, master, match_sep_arcsec=8.0
-            )
+            , cfg=AppConfig())
 
 
 def test_aligned_bad_wcs_uses_pixel_fallback() -> None:
@@ -138,11 +139,12 @@ def test_read_flux_propagates_alignment_failed(tmp_path: Path) -> None:
         ["1497343732462852864"],
         {"1497343732462852864": 3.0},
         frame_times=ft,
+        gain=1.0, read_noise=10.0,
     )
     assert bool(out.iloc[0]["alignment_failed"])
     mag_with = float(out.iloc[0]["mag_inst"])
     ft_ok = {"alignment_failed": False, "aligned": True, "airmass": 1.1}
-    out_ok = read_flux_from_csv(csv_path, ["1497343732462852864"], {"1497343732462852864": 3.0}, frame_times=ft_ok)
+    out_ok = read_flux_from_csv(csv_path, ["1497343732462852864"], {"1497343732462852864": 3.0}, frame_times=ft_ok, gain=1.0, read_noise=10.0)
     assert not bool(out_ok.iloc[0]["alignment_failed"])
     assert mag_with == float(out_ok.iloc[0]["mag_inst"])
 

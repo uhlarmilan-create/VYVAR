@@ -22,6 +22,7 @@ import streamlit as st
 
 import catalog_jobs as cj
 import settings_model as sm
+from pipeline_constants import GAIA_BUILD_MAG_LIMIT_DEFAULT, VSX_BUILD_MAG_LIMIT_DEFAULT
 
 _K = "vyvar_catb_"
 
@@ -118,7 +119,7 @@ def _gaia(data_root: Path, current: dict[str, Any], locked: bool) -> None:
     if status is None:
         st.markdown(f"**Build** a new catalog: `{target}`")
         c1, c2, c3 = st.columns(3)
-        g = c1.number_input("G limit", 12.0, 18.0, 17.5, 0.5, key=f"{_K}g_mag")
+        g = c1.number_input("G limit", 12.0, 18.0, GAIA_BUILD_MAG_LIMIT_DEFAULT, 0.5, key=f"{_K}g_mag")
         d0 = c2.number_input("Dec from", -90.0, 89.0, -90.0, 1.0, key=f"{_K}g_d0")
         d1 = c3.number_input("Dec to", -89.0, 90.0, 90.0, 1.0, key=f"{_K}g_d1")
         free = _free_gb(target)
@@ -167,7 +168,7 @@ def _objects(data_root: Path, current: dict[str, Any], locked: bool) -> None:
     c1, c2, c3, c4 = st.columns(4)
     do_vsx = c1.checkbox("VSX", True, key=f"{_K}o_vsx")
     do_exo = c2.checkbox("Exoplanets", True, key=f"{_K}o_exo")
-    mag = c3.number_input("VSX: max brighter than", 10.0, 25.0, float(vp.get("mag_limit_max") or 18.0), 0.5,
+    mag = c3.number_input("VSX: max brighter than", 10.0, 25.0, float(vp.get("mag_limit_max") or VSX_BUILD_MAG_LIMIT_DEFAULT), 0.5,
                           key=f"{_K}o_mag", disabled=not do_vsx)
     c4.caption(f"Dec {vp.get('dec_min', -90.0):g} .. {vp.get('dec_max', 90.0):g}")
     if st.button("Update VSX + exoplanets" if meta else "Build objects catalog", type="primary",

@@ -21,6 +21,8 @@ import pytest
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.wcs import WCS
+
+from config import AppConfig
 import astropy.units as u
 
 SCALE = 2.0  # arcsec / px
@@ -117,12 +119,15 @@ def test_identity_radius_is_pixel_based() -> None:
 def test_brightest_star_wins_and_flux_consistency(tmp_path: Path) -> None:
     from catalog_match import detect_stars_and_match_catalog
 
+    cfg5 = AppConfig()
+    cfg5.detection_threshold_sigma = 5.0  # the run's DAO sigma (was the dead dao_threshold_sigma argument)
     img, w, db = _field(tmp_path)
     hdr = w.to_header()
     hdr["VY_SOLVR"] = "astrosolve"
     df, meta = detect_stars_and_match_catalog(
-        img, hdr, gaia_db_path=db, vsx_df=pd.DataFrame(), dao_threshold_sigma=5.0, dao_fwhm_px=FWHM,
-        dao_fwhm_bypass_header=True, max_catalog_rows=10000, photometric_gain=1.0,
+        img, hdr, gaia_db_path=db, vsx_df=pd.DataFrame(), dao_fwhm_px=FWHM,
+        dao_fwhm_bypass_header=True, photometric_gain=1.0,
+        cfg=cfg5,
     )
     x = pd.to_numeric(df["x"], errors="coerce")
     y = pd.to_numeric(df["y"], errors="coerce")
@@ -163,7 +168,7 @@ def test_confirm_handed_over_wcs(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("dec", [0.0, 45.0, 61.0, 80.0])
 def test_cone_sky_box_contains_cone(dec: float) -> None:
-    from pipeline_catalog import cone_sky_box
+    from catalog_db import cone_sky_box
 
     c = SkyCoord(100.0 * u.deg, dec * u.deg)
     r = 4.7
@@ -178,7 +183,7 @@ def test_cone_sky_box_contains_cone(dec: float) -> None:
 
 def test_cone_sky_box_pole_and_ra_wrap() -> None:
     from catalog_db import ra_intervals_deg
-    from pipeline_catalog import cone_sky_box
+    from catalog_db import cone_sky_box
 
     assert cone_sky_box(SkyCoord(10 * u.deg, 88 * u.deg), 3.0)[:2] == (0.0, 360.0)
     ra_min, ra_max, _, _ = cone_sky_box(SkyCoord(1.0 * u.deg, 10 * u.deg), 2.0)
@@ -254,6 +259,7 @@ def test_pool_keeps_binaries_drops_per_frame_saturated(monkeypatch: pytest.Monke
         masterstars_df=_pool_df(), per_frame_csv_paths=[tmp_path / "proc_001.csv"], csv_cache={},
         variable_target_catalog_ids=frozenset(), safe_bbox=None, chip_fw=1000, chip_fh=1000,
         chip_interior_margin_px=0, max_comp_rms=0.1, cfg=cfg,
+        min_frames_frac=0.3, fwhm_px=3.7,
     )
     ids = set(pool["catalog_id"].astype(str))
     assert "2001" in ids, "a non-variable binary stays a comparison candidate"

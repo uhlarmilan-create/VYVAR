@@ -10,7 +10,10 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from config import AppConfig
 
 
 # Osborn et al. (2015) MNRAS 452, 1707 -- modified Young, eq. (7)
@@ -110,14 +113,13 @@ def resolve_rig_scintillation_params(
     *,
     draft_id: int | None,
     setup: str,
-    cfg: Any | None = None,
+    cfg: AppConfig,
     pipeline_meta: dict[str, Any] | None = None,
 ) -> RigScintillationParams:
     """Resolve telescope diameter and altitude from DB + pipeline_meta (report sources)."""
-    from config import AppConfig
     from database import VyvarDatabase
 
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
     notes: list[str] = []
     alt_m: float | None = None
     diam_m: float | None = None
@@ -135,7 +137,7 @@ def resolve_rig_scintillation_params(
 
     if draft_id is not None:
         try:
-            db = VyvarDatabase(_cfg.database_path)
+            db = VyvarDatabase.for_config(_cfg)
             tel_id = db.get_draft_telescope_id(int(draft_id))
             loc_id = db.get_draft_location_id(int(draft_id))
             if tel_id is not None:

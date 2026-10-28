@@ -25,16 +25,15 @@ from config import AppConfig
 from gaia_catalog_id import normalize_gaia_id_set, normalize_gaia_source_id
 from infolog import log_event
 from pipeline_constants import COMP_LINEARITY_FRAC, COMP_SAT_LIMIT_SCALE
-from photometry_core import (
-    _PHASE_USECOLS_PERFRAME,
+from photometry_defs import PHASE_USECOLS_PERFRAME
+from photometry_comp import (
     _bool_col,
     _enrich_comp_bp_rp,
-    _normalize_gaia_id,
     _normalize_id_series,
-    _normalize_id_value,
     _select_comps_by_rms_then_color,
     _warn_zero_compstars_edge,
 )
+from photometry_shared import _normalize_gaia_id
 from sky_separation import (
     angular_distance_deg_vectorized as _angular_distance_deg_vectorized,
     pixel_distance_deg_vectorized as _pixel_distance_deg_vectorized,
@@ -76,9 +75,9 @@ def _resolve_target_color_for_comp_selection(
     target: pd.Series,
     *,
     gaia_db_path: str | None,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
 ) -> dict[str, Any]:
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
     ra_t = float(target["ra_deg"])
     dec_t = float(target["dec_deg"])
     mag_t = float(
@@ -238,7 +237,7 @@ def _filter_comp_candidates_spatial_static(
     use_pixel_dist: bool = False,
     x_t: float | None = None,
     y_t: float | None = None,
-    plate_scale_arcsec: float = 1.3,
+    plate_scale_arcsec: float,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Per-target admission mask of the comparison pool: returns (ms with ``_dist_deg`` / ``_mag``,
     mask). Pool gates (S/N, saturation, edge, blend, identity) are applied once in the global pool;
@@ -348,7 +347,7 @@ def _bootstrap_comp_selection_csv_cache(
     avail_cols: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
     if avail_cols is None:
-        avail_cols = list(_PHASE_USECOLS_PERFRAME)
+        avail_cols = list(PHASE_USECOLS_PERFRAME)
     if csv_cache is None:
         # Note: csv_cache should be passed from the comparison-star selection entry to avoid duplicate reads
         #       when multiple code paths call with csv_cache=None. TODO-CACHE-CENTRAL.
@@ -773,7 +772,7 @@ def _assign_comp_tiers_to_pool(
     chip_fw: int | None,
     chip_fh: int | None,
     chip_interior_margin_px: int,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     max_comp_rms: float | None = None,
     fwhm_px: float | None = None,
     field_x: np.ndarray | None = None,
@@ -905,7 +904,7 @@ def _assign_comp_tiers_to_pool(
         comp_delta_bprp_map = {}
         comp_color_tier_src_map = {}
 
-    _cfg_w = cfg or AppConfig()
+    _cfg_w = cfg
     _max_d = float(_cfg_w.comp_max_delta_bprp or 0.79)
 
     # COMP-ASSIGN-03 single-source: nearest-neighbour distance in FWHM units

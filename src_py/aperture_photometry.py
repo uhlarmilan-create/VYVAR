@@ -17,47 +17,29 @@ from gaia_catalog_id import read_vyvar_csv
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from config import AppConfig
 from pipeline_constants import CT_MIN_COMP
-from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from proc_frame_store import ProcFrameStore
 from stats_core import _flux_to_mag
-from photometry_core import (
+from photometry_defs import (
     ERR_BKG_SOURCE_COL,
-    ERR_BKG_SOURCE_EMPIRICAL,
-    ERR_BKG_SOURCE_HOWELL_FALLBACK,
+    LC_QUALITY_FLAGS,
     LOGGER,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
     SKY_SURFACE_BG_MEDIAN_ADU_COL,
-    _COMP_QUALITY_JSON_META_KEYS,
-    _GAIA_ID_DTYPE,
-    _LC_QUALITY_FLAGS,
-    _MAD_CONSISTENCY,
 )
+from photometry_provenance import merge_photometry_pipeline_meta
+from photometry_shared import (
+    _normalize_gaia_id,
+    _sky_pp_for_photometric_error,
+    _safe_polyfit,
+    build_gs11_summary,
+)
+from gaia_catalog_id import VYVAR_CSV_DTYPE
+from pipeline_constants import MAD_CONSISTENCY
+from photometry_gate_helpers import _photometric_error_with_bkg_mode  # LAYER-2026-10: moved there
+from band_classify import should_apply_color_term  # LAYER-2026-10: moved there
 
-
-
-
-def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:
-    """Return ``catalog_id`` -> ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
-
-    Accepts legacy flat strings (``"good"``) and structured objects
-    (``{"quality": "suspect", "note": "..."}``).
-    """
-    out: dict[str, dict[str, str]] = {}
-    if not isinstance(raw, dict):
-        return out
-    for k, v in raw.items():
-        ks = str(k).strip()
-        if ks in _COMP_QUALITY_JSON_META_KEYS:
-            continue
-        if isinstance(v, str) and v.strip().lower() in ("good", "suspect", "excluded"):
-            out[ks] = {"quality": v.strip().lower(), "note": ""}
-        elif isinstance(v, dict):
-            q = str(v.get("quality", "") or "").strip().lower()
-            if q in ("good", "suspect", "excluded"):
-                out[ks] = {"quality": q, "note": str(v.get("note", "") or "").strip()}
-    return out
 
 class _CsvRowMap(Mapping):
     """id -> proc CSV row (``csv_df.iloc[pos]``), built lazily and cached."""
@@ -162,8 +144,8 @@ def _mad_sigma_or_std_floor(arr: np.ndarray) -> float:
     med = float(np.median(arr))
     mad = float(np.median(np.abs(arr - med)))
     if not math.isfinite(mad) or mad <= 0:
-        return float(np.std(arr)) / _MAD_CONSISTENCY or 1e-9
-    return mad / _MAD_CONSISTENCY
+        return float(np.std(arr)) / MAD_CONSISTENCY or 1e-9
+    return mad / MAD_CONSISTENCY
 
 def measure_fwhm_from_masterstar(
     masterstar_fits_path: Path,
@@ -338,7 +320,7 @@ def compute_optimal_apertures(
     star_positions: pd.DataFrame,
     fwhm_px: float,
     *,
-    aperture_fwhm_factor: float = 1.75,
+    aperture_fwhm_factor: float,
 ) -> dict[str, float]:
     """Global fixed aperture = aperture_fwhm_factor x FWHM.
 
@@ -375,77 +357,6 @@ def compute_optimal_apertures(
 
     return result
 
-def _howell_variance_adu2(
-    flux: float,
-    sky_pp: float,
-    area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-) -> float:
-    """Total variance [ADU^2] from a reduced Howell (1989) eq. 2 form.
-
-    Implemented terms: source Poisson (``flux/gain``), sky Poisson on the aperture
-    (``sky_pp/gain * area``), and read noise (``(read_noise/gain)^2 * area``).
-
-    Omitted (not in this helper): dark-current shot noise, the ``(1 + n_pix/n_B)``
-    sky-estimation factor, flat-field noise, and digitisation/quantisation noise.
-    """
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    if not math.isfinite(sky_pp) or sky_pp < 0:
-        sky_pp = 0.0
-    if not math.isfinite(area) or area <= 0:
-        return float("nan")
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    rn = float(read_noise) if math.isfinite(read_noise) and read_noise >= 0 else 10.0
-    return flux / g + max(0.0, sky_pp) / g * area + (rn / g) ** 2 * area
-
-def _photometric_error(
-    flux: float,
-    sky_pp: float,
-    area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-) -> float:
-    """Relative photometric error from Poisson + read-noise variance (Howell 1989 eq. 2).
-
-    Units at boundary: ``flux`` and ``sky_pp`` in ADU (per px for sky); ``gain`` in e-/ADU;
-    ``read_noise`` in e-; internal variance in ADU^2. Returns dimensionless err/flux.
-    Legacy ``howell`` mode - byte-identical to pre F-BINGAIN-1 behaviour.
-    """
-    variance = _howell_variance_adu2(flux, sky_pp, area, gain=gain, read_noise=read_noise)
-    if not math.isfinite(variance) or variance < 0:
-        return float("nan")
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan")
-    return math.sqrt(variance) / flux
-
-def _photometric_error_with_bkg_mode(
-    flux: float,
-    *,
-    sky_pp: float,
-    area: float,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
-    sigma_bkg_ap: float | None = None,
-) -> tuple[float, str]:
-    """Relative err/flux with empirical background term (F-BINGAIN-1).
-
-    Empirical (production): ``var = F/g + sigma_bkg_ap^2`` - photutils/SExtractor
-    pattern with measured ``sigma_bkg`` at aperture scale (Labbe et al. 2003).
-    When ``sigma_bkg_ap`` is missing, Howell variance is the data-conditioned
-    fallback.
-    """
-    if not math.isfinite(flux) or flux <= 0:
-        return float("nan"), ERR_BKG_SOURCE_HOWELL_FALLBACK
-    g = float(gain) if math.isfinite(gain) and gain > 0 else 1.0
-    sig_ap = float(sigma_bkg_ap) if sigma_bkg_ap is not None else float("nan")
-    if math.isfinite(sig_ap) and sig_ap >= 0:
-        variance = flux / g + sig_ap * sig_ap
-        if math.isfinite(variance) and variance >= 0:
-            return math.sqrt(variance) / flux, ERR_BKG_SOURCE_EMPIRICAL
-    err = _photometric_error(flux, sky_pp, area, gain=gain, read_noise=read_noise)
-    return err, ERR_BKG_SOURCE_HOWELL_FALLBACK
 
 def _aperture_proc_column_requirements() -> dict[str, list[str]]:
     """Named proc-CSV column requirements for headless aperture photometry.
@@ -528,23 +439,6 @@ def _aperture_empirical_sigma_bkg_ap(
         f"'{SIGMA_BKG_AP_COL}' in aperture photometry input; missing/NaN for catalog_id={catalog_id} "
         f"in {source_file} (err_bkg_source={src or 'missing'})."
     )
-
-def _sky_pp_for_photometric_error(row: Any) -> float:
-    """Sky level (ADU/px) for Howell ``_photometric_error`` from a proc-CSV row.
-
-    I-11: prefer pre-subtraction ``sky_surface_bg_median_adu`` for the Howell sky Poisson
-    term (photons that arrived before the 2D sky surface was subtracted). Post-subtraction
-    annulus sky collapses toward zero and under-quotes the sky term on the legacy path.
-
-    Otherwise ``sky_adu_per_px_annulus`` (the per-star annulus sky of the proc CSV).
-    """
-    pre_sub = float(pd.to_numeric(row.get(SKY_SURFACE_BG_MEDIAN_ADU_COL), errors="coerce"))
-    if math.isfinite(pre_sub) and pre_sub >= 0:
-        return pre_sub
-    ann = float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce"))
-    if math.isfinite(ann) and ann >= 0:
-        return ann
-    return 0.0
 
 def _resolve_aperture_equipment_id(
     db: Any | None,
@@ -679,8 +573,8 @@ def read_flux_from_csv(
     frame_times: dict[str, Any] | None = None,
     csv_df: pd.DataFrame | None = None,
     lookup: tuple[dict[str, pd.Series], pd.DataFrame] | None = None,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
     variable_target_catalog_ids: frozenset[str] | None = None,
 ) -> pd.DataFrame:
     """Step 2: read flux from the per-frame CSV (dao_flux).
@@ -704,7 +598,7 @@ def read_flux_from_csv(
             # Keep Gaia IDs stable (avoid float/scientific precision loss in per-frame CSV).
             from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
-            csv_df = read_proc_csv(frame_csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
+            csv_df = read_proc_csv(frame_csv_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
         except (OSError, ValueError) as exc:
             logging.warning(f"[APERTURE] Cannot read CSV {frame_csv_path}: {exc}")
             return pd.DataFrame()
@@ -1002,90 +896,12 @@ def fit_color_term_c1(
     )
     return c1, c1_stderr, int(x.size)
 
-def should_apply_color_term(
-    obs_group: str,
-    c1: float,
-    c1_stderr: float,
-    n_comp: int,
-    *,
-    min_comp_for_ct: int = CT_MIN_COMP,
-    max_stderr_ratio: float = 0.5,
-    cfg: Any | None = None,
-) -> tuple[bool, str]:
-    """
-    Automatic decision whether to apply the color-term correction.
-
-    Returns: (apply: bool, reason: str)
-    reason = short description of why CT is or is not applied
-    """
-    from band_classify import classify_photometric_band, color_term_auto_from_band
-
-    filter_raw = str(obs_group or "").split("|")[0].strip()
-    band = classify_photometric_band(obs_group)
-
-    if not color_term_auto_from_band(band):
-        return False, f"{band.value} ({filter_raw}) - CT not needed"
-
-    try:
-        n_comp_i = int(n_comp)
-    except Exception:  # noqa: BLE001
-        n_comp_i = 0
-    if n_comp_i < int(min_comp_for_ct):
-        return (
-            False,
-            (
-                f"Filter {filter_raw} - CT skipped: "
-                f"too few COMP ({n_comp_i} < {int(min_comp_for_ct)})"
-            ),
-        )
-
-    if not (float(c1) != 0.0 and abs(float(c1)) > 1e-6):
-        return False, f"Filter {filter_raw} - CT skipped: c1 ~ 0"
-
-    stderr_ratio = abs(float(c1_stderr) / float(c1)) if float(c1) != 0.0 else float("inf")
-    if not math.isfinite(stderr_ratio):
-        return False, f"Filter {filter_raw} - CT unreliable: stderr/c1=NaN"
-    if float(stderr_ratio) > float(max_stderr_ratio):
-        return (
-            False,
-            (
-                f"Filter {filter_raw} - CT unreliable: "
-                f"stderr/c1={stderr_ratio:.2f} > {float(max_stderr_ratio):.2f}"
-            ),
-        )
-
-    return True, (
-        f"Filter {filter_raw} - CT applied: "
-        f"c1={float(c1):+.4f} +- {float(c1_stderr):.4f} "
-        f"(stderr/c1={stderr_ratio:.2f}, n_comp={n_comp_i})"
-    )
 
 def _obs_group_filter_key(obs_group: str) -> str:
     raw = str(obs_group or "").split("|")[0].strip()
     part = raw.split("_")[0].strip()
     return part.lower() if part else raw.lower()
 
-def resolve_apply_color_term(
-    cfg: Any | None,
-    obs_group: str,
-    *,
-    fits_filter: str | None = None,
-    aavso_code: str | None = None,
-) -> bool:
-    """User/config toggle: CT applies correction only - never limits the target set."""
-    from band_classify import classify_photometric_band, color_term_auto_from_band
-
-    mode = str(getattr(cfg, "apply_color_term", "auto") or "auto").strip().lower()
-    if mode in ("0", "false", "no", "off"):
-        return False
-    if mode in ("1", "true", "yes", "on"):
-        return True
-    band = classify_photometric_band(
-        obs_group,
-        fits_filter=fits_filter,
-        aavso_code=aavso_code,
-    )
-    return bool(color_term_auto_from_band(band))
 
 @dataclass
 class _ColorTermGroupFit:
@@ -1140,7 +956,7 @@ def _group_comp_mag_inst_from_proc_csvs(
         try:
             from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
-            df = read_proc_csv(csv_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
+            df = read_proc_csv(csv_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
         except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
             from except_fix_counters import get_except_fix_counters
 
@@ -1186,7 +1002,7 @@ def _comp_maps_from_comparison_stars_csv(
     """
     from gaia_bands import band_mag_from_gaia  # noqa: PLC0415
 
-    comp_df = pd.read_csv(comp_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    comp_df = pd.read_csv(comp_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     comp_bp_rp: dict[str, float] = {}
     comp_catalog_mag: dict[str, float] = {}
     comp_quality: dict[str, dict] = {}
@@ -1363,7 +1179,7 @@ def _ensure_group_comp_pool_csv(
     if not ms_fits.is_file() or not ms_path.is_file():
         return comp_csv
     try:
-        from pipeline import write_photometry_plan_files  # noqa: PLC0415
+        from pipeline_astrometry import write_photometry_plan_files  # noqa: PLC0415
 
         write_photometry_plan_files(
             platesolve_dir=ps_dir,
@@ -1371,7 +1187,7 @@ def _ensure_group_comp_pool_csv(
             masterstars_csv=ms_path,
             require_non_variable=bool(getattr(cfg, "phase01_comparison_require_non_variable", True)),
             draft_id=int(draft_id) if draft_id is not None else None,
-            database_path=getattr(cfg, "database_path", None),
+            cfg=cfg,
         )
         log_event(f"[PHOT] Refreshed comparison_stars.csv pool ({n_pool}->spatial grid) for CT fit in {ps_dir.name}")
     except Exception as exc:  # noqa: BLE001
@@ -1406,7 +1222,7 @@ def empirical_feature_mask_mag(
     r_fin = resid[finite]
     r_med = float(np.median(r_fin))
     mad = float(np.median(np.abs(r_fin - r_med)))
-    sigma = max(mad / _MAD_CONSISTENCY, 1e-12)
+    sigma = max(mad / MAD_CONSISTENCY, 1e-12)
     deep = (resid < (-float(k) * sigma)) & finite
 
     i = 0
@@ -1668,7 +1484,7 @@ def build_lc_quality_summary(
     rms_noisy_k: float = 3.0,
 ) -> dict[str, Any]:
     """Aggregate ``lc_quality_flag`` counts for ``pipeline_meta.json``."""
-    counts = {f: 0 for f in _LC_QUALITY_FLAGS}
+    counts = {f: 0 for f in LC_QUALITY_FLAGS}
     has_flag = False
     for row in summary_rows:
         if "lc_quality_flag" not in row:
@@ -1702,7 +1518,7 @@ def build_lc_quality_summary(
         "available": bool(has_flag),
     }
     if not has_flag:
-        out.update({f: 0 for f in _LC_QUALITY_FLAGS})
+        out.update({f: 0 for f in LC_QUALITY_FLAGS})
         out["total"] = 0
     return out
 
@@ -1711,11 +1527,11 @@ def _aperture_write_summary(
     output_dir: Path,
     *,
     lunar_context: dict[str, Any] | None = None,
-    cfg: Any | None = None,
-    plate_scale_arcsec: float = 1.3,
+    cfg: AppConfig,
+    plate_scale_arcsec: float,
 ) -> tuple[Path, pd.DataFrame]:
     """Write photometry_summary.csv. Returns path and written frame."""
-    _cfg_summary = cfg or AppConfig()
+    _cfg_summary = cfg
     _lunar_risk = "UNKNOWN"
     if isinstance(lunar_context, dict):
         _lunar_risk = str(lunar_context.get("lunar_risk", "UNKNOWN") or "UNKNOWN")
@@ -2204,7 +2020,7 @@ def _aperture_finalize_exports(
     _ms_data: object,
     progress_cb: Any = None,
     lunar_context: dict[str, Any] | None = None,
-    plate_scale_arcsec: float = 1.3,
+    plate_scale_arcsec: float,
 ) -> dict[str, Any]:
     def _p2(msg: str) -> None:
         if progress_cb is None:
@@ -2461,7 +2277,7 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
     n_min = int(getattr(cfg, "phase01_comparison_n_comp_min", 3) or 3)
     n_max = int(getattr(cfg, "phase01_comparison_n_comp_max", 8) or 8)
     # COMP-CATOFF-2026-10: catalogue magnitudes in the zero-point band (same as the target's ZP)
-    catoff = float(getattr(cfg, "comp_catalog_offset_max_mag", 0.20) or 0.0)
+    catoff = float(cfg.comp_catalog_offset_max_mag)
     from gaia_bands import filter_band_for_obs_group, zp_mag_from_gaia  # noqa: PLC0415
 
     _fb = filter_band_for_obs_group(str(getattr(state, "obs_group", "") or ""))
@@ -2531,9 +2347,6 @@ def run_aperture_photometry(
     output_dir: Path,
     fwhm_px: float,
     *,
-    annulus_inner_fwhm: float = 4.0,
-    annulus_outer_fwhm: float = 6.0,
-    aperture_fwhm_factor: float | None = None,
     sat_limit_adu: float | None = None,
     outlier_sigma: float = 3.0,
     stability_sigma: float = 3.0,
@@ -2553,6 +2366,11 @@ def run_aperture_photometry(
     Returns:
         dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map
     """
+    # The driver runs the two stage modules; they import helpers from this module, so they are
+    # imported here and not at module level (LAYER-2026-10: no module-level import cycle).
+    from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: PLC0415
+    from aperture_photometry_target import _aperture_process_one_target  # noqa: PLC0415
+
     output_dir = Path(output_dir)
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
@@ -2584,9 +2402,6 @@ def run_aperture_photometry(
         active_targets_csv=active_targets_csv,
         detrended_aligned_dir=detrended_aligned_dir,
         fwhm_px=fwhm_px,
-        annulus_inner_fwhm=annulus_inner_fwhm,
-        annulus_outer_fwhm=annulus_outer_fwhm,
-        aperture_fwhm_factor=aperture_fwhm_factor,
         sat_limit_adu=sat_limit_adu,
         force_aperture_px=force_aperture_px,
         cfg=cfg,
@@ -2606,17 +2421,10 @@ def run_aperture_photometry(
     _cfg = state._cfg
     _nt = state._nt
     _save_png = bool(_cfg.save_lightcurve_png)
-    if aperture_fwhm_factor is not None:
-        try:
-            _apt_fw = float(aperture_fwhm_factor)
-            if not math.isfinite(_apt_fw) or _apt_fw <= 0:
-                _apt_fw = float(_cfg.aperture_fwhm_factor)
-            else:
-                _apt_fw = max(0.25, min(6.0, _apt_fw))
-        except (TypeError, ValueError):
-            _apt_fw = float(_cfg.aperture_fwhm_factor)
-    else:
-        _apt_fw = float(_cfg.aperture_fwhm_factor)
+    # CONFIG-ONE-2026-10 (G06-12): aperture and annulus factors come from the run config only
+    _apt_fw = float(_cfg.aperture_fwhm_factor)
+    annulus_inner_fwhm = float(_cfg.annulus_inner_fwhm)
+    annulus_outer_fwhm = float(_cfg.annulus_outer_fwhm)
 
     summary_rows: list[dict[str, Any]] = []
     n_lc = 0
@@ -2705,9 +2513,9 @@ def run_aperture_photometry(
         field_k_by_brightness,
         target_inst_mag,
         measure_night_grid,
-        DEFAULT_APERTURE_F_GRID,
         write_per_target_choices,
     )
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
     _p2("Aperture photometry: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
     _ids: set[str] = set()
@@ -2946,7 +2754,7 @@ def run_aperture_photometry(
     )
     # PROGRESS-MEASURED-2026-10 (Milan 2026-10-12): the status line counts only the targets
     # that are measured; final skips (S/N, VSX type, depth/noise) are counted separately.
-    from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
+    from photometry_defs import FINAL_SKIP_REASONS  # noqa: PLC0415
 
     _sr_all = at_df.get("skip_reason", pd.Series("", index=at_df.index)).fillna("").astype(str).str.strip()
     state.n_final_skip = int(_sr_all.isin(list(FINAL_SKIP_REASONS) + ["per_frame_saturation"]).sum())
@@ -3032,54 +2840,3 @@ def run_aperture_photometry(
         lunar_context=state.lunar_context,
         plate_scale_arcsec=float(state.plate_scale_arcsec),
     )
-
-
-# Already-extracted siblings after bodies: importing them in the header
-# re-enters photometry_core while this module is incomplete (V1 stub path).
-from photometry_provenance import merge_photometry_pipeline_meta  # noqa: E402,F401
-from photometry_shared import (  # noqa: E402,F401
-    _normalize_gaia_id,
-    _safe_polyfit,
-    _target_display_name,
-    build_gs11_summary,
-)
-
-# When this module is imported first (pipeline.py / ui), photometry_core skips the
-# late from-import. Bind the moved names onto the facade (and shared) here.
-import photometry_core as _photometry_core  # noqa: E402
-
-_E4_APERTURE_NAMES = (
-    "parse_comp_quality_json_map",
-    "_mad_sigma_or_std_floor",
-    "_howell_variance_adu2",
-    "_photometric_error",
-    "_photometric_error_with_bkg_mode",
-    "_aperture_proc_column_requirements",
-    "_aperture_cache_columns",
-    "_aperture_empirical_sigma_bkg_ap",
-    "_sky_pp_for_photometric_error",
-    "_resolve_aperture_equipment_id",
-    "_draft_dir_from_aperture_paths",
-    "_require_comparison_stars_per_target_schema",
-    "_resolve_photometric_aperture_px_for_gs11",
-    "read_flux_from_csv",
-    "fit_color_term_c1",
-    "should_apply_color_term",
-    "resolve_apply_color_term",
-    "_group_comp_mag_inst_from_proc_csvs",
-    "build_rms_mag_model",
-    "expected_rms_from_model",
-    "classify_lc_quality",
-    "build_lc_quality_summary",
-    "_AperturePhotometryState",
-    "_propagate_aperture_skip_reason_to_active",
-    "run_aperture_photometry",
-)
-for _n in _E4_APERTURE_NAMES:
-    setattr(_photometry_core, _n, globals()[_n])
-
-from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: E402
-_photometry_core._aperture_prepare_shared_state = _aperture_prepare_shared_state
-
-from aperture_photometry_target import _aperture_process_one_target  # noqa: E402
-_photometry_core._aperture_process_one_target = _aperture_process_one_target

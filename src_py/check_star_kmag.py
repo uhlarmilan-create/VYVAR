@@ -13,11 +13,8 @@ import pandas as pd
 
 from config import AppConfig
 from gaia_catalog_id import normalize_gaia_source_id
-from photometry_core import (
-    ensemble_normalize,
-)
+from photometry_lightcurve import ensemble_normalize
 
-_GAIA_ID_DTYPE: dict[str, type] = {"catalog_id": str, "name": str}
 
 
 def normalize_comp_df_export_columns(
@@ -30,7 +27,7 @@ def normalize_comp_df_export_columns(
     if "p2p_rms" not in df.columns and "comp_rms" in df.columns:
         df["p2p_rms"] = df["comp_rms"]
     if "w_rel" not in df.columns and "comp_weight" in df.columns:
-        from photometry_core import apply_comp_w_rel_for_display
+        from photometry_exports import apply_comp_w_rel_for_display
 
         df = apply_comp_w_rel_for_display(df, comp_quality_map)
     return df
@@ -168,7 +165,7 @@ def select_check_star(
     *,
     ensemble_ids: set[str] | None = None,
     n_comp_min: int = 3,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     target_bp_rp: float | None = None,
     target_mag: float | None = None,
 ) -> pd.Series | None:
@@ -206,7 +203,7 @@ def select_check_star(
     # IMPL-04: do not promote a tier-1 star whose RMS exceeds the existing
     # phase01_comparison_max_comp_rms ceiling (draft 514: lone T1 at 0.125 mag
     # beat quieter T2/T3 and produced 222 mmag check LCs).
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
     try:
         _rms_ceil = float(getattr(_cfg, "phase01_comparison_max_comp_rms", 0.1) or 0.1)
     except (TypeError, ValueError):
@@ -596,10 +593,8 @@ def build_comp_photon_mag_from_frames(
     source_files: list[str],
 ) -> dict[str, np.ndarray]:
     """Per-epoch photon sigma (mag) aligned to ``source_files`` order."""
-    from photometry_core import (  # noqa: PLC0415
-        _photometric_error_with_bkg_mode,
-        _sky_pp_for_photometric_error,
-    )
+    from photometry_gate_helpers import _photometric_error_with_bkg_mode  # noqa: PLC0415
+    from photometry_shared import _sky_pp_for_photometric_error  # noqa: PLC0415
     from sparse_trust_core import rel_flux_err_to_photon_mag  # noqa: PLC0415
 
     n = len(source_files)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from config import AppConfig
+
 import math
 from pathlib import Path
 
@@ -53,7 +55,7 @@ def test_faza0_funnel_reaches_infolog(infolog_lines, tmp_path: Path, monkeypatch
             }
         ]
     ).to_csv(vt, index=False)
-    select_active_targets(vt, ms, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    select_active_targets(vt, ms, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     lines = infolog_lines()
     assert any("[TARGET-SELECT] funnel:" in ln for ln in lines)
     funnel = next(ln for ln in lines if "[TARGET-SELECT] funnel:" in ln)

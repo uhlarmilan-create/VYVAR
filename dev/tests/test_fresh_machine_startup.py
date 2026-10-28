@@ -64,10 +64,12 @@ def test_appconfig_resolves_local_roots_when_paths_blanked(tmp_path: Path) -> No
         assert "ASTRO" not in value.upper() or str(root).upper().find("ASTRO") >= 0
 
 
-def test_blanked_catalog_keys_stay_empty_for_limited_mode(tmp_path: Path) -> None:
+def test_blanked_catalog_keys_resolve_to_the_default_files(tmp_path: Path) -> None:
     cfg = AppConfig(project_root=_fresh_root(tmp_path))
-    # Empty Gaia path signals "no catalogs" (LIMITED MODE) rather than crashing.
-    assert cfg.gaia_db_path == ""
+    # CONFIG-ONE-2026-10 (Milan 2026-10-27): an empty Gaia path is the default file the catalogue builder
+    # writes (absent on a fresh machine = no catalogue; the run gates check the file), never an author path.
+    assert str(cfg.gaia_db_path).replace("\\", "/").endswith("catalogs/vyvar_gaia_dr3.db")
+    assert not Path(cfg.gaia_db_path).exists()
     # Empty objects path resolves to the default file under the data directory (absent on a fresh
     # machine = no VSX / exoplanet labels), never to an author path.
     assert str(cfg.objects_db_path).replace("\\", "/").endswith("catalogs/vyvar_objects.db")

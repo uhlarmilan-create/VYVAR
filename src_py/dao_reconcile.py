@@ -763,7 +763,7 @@ def frame_depth_limits(frame_depth: dict[str, Any] | None) -> dict[str, Any]:
     g90 = _finite_or_none(fd.get("g90"))
     sig = _finite_or_none(fd.get("sigma_mag"))
     if g90 is None and g50 is not None and sig is not None:
-        from frame_depth import Z_90  # noqa: PLC0415
+        from pipeline_constants import Z_90  # noqa: PLC0415
 
         g90 = g50 - Z_90 * sig
     method = str(fd.get("method") or "none")

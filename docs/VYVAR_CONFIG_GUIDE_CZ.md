@@ -187,7 +187,7 @@ Sesazeni vsech snimku serie na spolecnou pixelovou mriz, aby kazda hvezda zustal
 
 | Parametr | Vychozi | Typ | Odkud se bere | Kde se pouziva | Vysvetleni |
 |---|---|---|---|---|---|
-| `alignment_max_stars` | 160; rozsah 10 .. 5000 | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:122`) | Strop poctu hvezd uvazovanych parovacem pri zarovnani. |
+| `alignment_max_stars` | 160; rozsah 10 .. 200 | Nastaveni (config.json) | config.json | UI Nastaveni (`ui_settings.py:122`) | Strop poctu hvezd uvazovanych parovacem pri zarovnani. |
 
 ## Detekce, reseni souradnic a masterstar
 

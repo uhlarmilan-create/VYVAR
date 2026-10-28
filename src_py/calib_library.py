@@ -148,7 +148,6 @@ def header_flat_offset_handling(hdr: fits.Header) -> str:
 
 
 def header_capture_utc(hdr: fits.Header) -> datetime | None:
-    from calibration import _header_capture_datetime  # noqa: PLC0415
 
     dt, _ = _header_capture_datetime(hdr)
     if dt is not None and dt.tzinfo is None:
@@ -636,3 +635,39 @@ def iter_light_dates(paths: Iterable[str | Path]) -> list[datetime]:
         if dt is not None:
             out.append(dt)
     return out
+
+
+# --- moved from calibration (LAYER-2026-10) ---
+
+
+def _parse_master_header_datetime(raw: object) -> datetime | None:
+    if raw in (None, ""):
+        return None
+    txt = str(raw).strip()
+    if not txt:
+        return None
+    txt = txt.replace("Z", "+00:00")
+    for cand in (txt, txt.replace(" ", "T")):
+        try:
+            dt = datetime.fromisoformat(cand)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except ValueError:
+            pass
+    for fmt in ("%Y%m%d", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(txt, fmt).replace(tzinfo=timezone.utc)
+            return dt
+        except ValueError:
+            pass
+    return None
+
+
+def _header_capture_datetime(hdr: fits.Header) -> tuple[datetime | None, str | None]:
+    """Priority: VY_CDATE (VYVAR stack stamp) -> DATE-OBS -> DATEOBS; naive -> UTC."""
+    for key in ("VY_CDATE", "DATE-OBS", "DATEOBS"):
+        dt = _parse_master_header_datetime(hdr.get(key))
+        if dt is not None:
+            return dt, key
+    return None, None

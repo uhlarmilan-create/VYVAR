@@ -535,9 +535,9 @@ def resolve_site(
         # site's altitude applies when the configured site is the same place (within 0.01 deg)
         if _header_value(header, "elev")[0] is None and cfg is not None:
             try:
-                clat = float(getattr(cfg, "observer_lat", 0.0) or 0.0)
-                clon = float(getattr(cfg, "observer_lon", 0.0) or 0.0)
-                calt = float(getattr(cfg, "observer_alt_m", 0.0) or 0.0)
+                clat = float(getattr(cfg, "observer_lat", float("nan")))
+                clon = float(getattr(cfg, "observer_lon", float("nan")))
+                calt = float(getattr(cfg, "observer_alt_m", float("nan")))
             except (TypeError, ValueError):
                 clat = clon = calt = 0.0
             if abs(clat - res.lat) <= 0.01 and abs(clon - res.lon) <= 0.01 and calt > 0:
@@ -547,9 +547,9 @@ def resolve_site(
 
     if allow_config and cfg is not None:
         try:
-            clat = float(getattr(cfg, "observer_lat", 0.0) or 0.0)
-            clon = float(getattr(cfg, "observer_lon", 0.0) or 0.0)
-            calt = float(getattr(cfg, "observer_alt_m", 0.0) or 0.0)
+            clat = float(getattr(cfg, "observer_lat", float("nan")))
+            clon = float(getattr(cfg, "observer_lon", float("nan")))
+            calt = float(getattr(cfg, "observer_alt_m", float("nan")))
         except (TypeError, ValueError):
             clat = clon = calt = 0.0
         if not is_null_island_coords(clat, clon):

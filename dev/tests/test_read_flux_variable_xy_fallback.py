@@ -65,6 +65,7 @@ def test_bright_neighbor_rejected(tmp_path, bright_neighbor_flux):
         star_xy={target_cid: (tx, ty)},
         xy_tol_px=18.0,
         variable_target_catalog_ids=frozenset({target_cid}),
+        gain=1.0, read_noise=10.0,
     )
     row = out.iloc[0]
     assert row["flag"] == "no_data"
@@ -87,6 +88,7 @@ def test_mag_similar_different_cid_neighbor_rejected(tmp_path, faint_neighbor_fl
         star_xy={target_cid: (tx, ty)},
         xy_tol_px=18.0,
         variable_target_catalog_ids=frozenset({target_cid}),
+        gain=1.0, read_noise=10.0,
     )
     assert not math.isfinite(float(out.iloc[0]["mag_inst"]))
     assert out.iloc[0]["flag"] == "no_data"
@@ -100,9 +102,11 @@ def test_direct_catalog_id_hit_unchanged(tmp_path):
         "star_xy": {target_cid: (100.0, 200.0)},
         "xy_tol_px": 18.0,
         "variable_target_catalog_ids": frozenset({target_cid}),
+        "gain": 1.0,
+        "read_noise": 10.0,
     }
     a = read_flux_from_csv(proc, [target_cid], {target_cid: 3.0}, **kwargs)
-    b = read_flux_from_csv(proc, [target_cid], {target_cid: 3.0})
+    b = read_flux_from_csv(proc, [target_cid], {target_cid: 3.0}, gain=1.0, read_noise=10.0)
     assert a.iloc[0]["mag_inst"] == b.iloc[0]["mag_inst"]
     assert a.iloc[0]["err"] == b.iloc[0]["err"]
 
@@ -120,6 +124,7 @@ def test_comp_star_xy_fallback_legacy_guard_preserved(tmp_path, bright_neighbor_
         {comp_cid: 3.0},
         star_xy={comp_cid: (tx, ty)},
         xy_tol_px=18.0,
+        gain=1.0, read_noise=10.0,
     )
     out_new = read_flux_from_csv(
         proc,
@@ -128,6 +133,7 @@ def test_comp_star_xy_fallback_legacy_guard_preserved(tmp_path, bright_neighbor_
         star_xy={comp_cid: (tx, ty)},
         xy_tol_px=18.0,
         variable_target_catalog_ids=frozenset({"other_target"}),
+        gain=1.0, read_noise=10.0,
     )
     assert float(out_legacy.iloc[0]["mag_inst"]) == float(out_new.iloc[0]["mag_inst"])
     assert out_legacy.iloc[0]["flag"] == out_new.iloc[0]["flag"]
@@ -154,5 +160,6 @@ def test_blowup_geometry_draft_419(tmp_path, bright_neighbor_flux):
         star_xy={target_cid: (tx, ty)},
         xy_tol_px=18.0,
         variable_target_catalog_ids=frozenset({target_cid}),
+        gain=1.0, read_noise=10.0,
     )
     assert not math.isfinite(float(out.iloc[0]["mag_inst"]))

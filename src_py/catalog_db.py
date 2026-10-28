@@ -20,14 +20,21 @@ import math
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable
+
+if TYPE_CHECKING:
+    from astropy.coordinates import SkyCoord
 
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 
 #: default catalog DBs under the VYVAR data directory (one folder for every catalog)
-OBJECTS_DB_DEFAULT = "catalogs/vyvar_objects.db"
-GAIA_DB_DEFAULT = "catalogs/vyvar_gaia_dr3.db"
+from pipeline_constants import (  # noqa: E402,F401  (one default)
+    GAIA_BUILD_MAG_LIMIT_DEFAULT,
+    GAIA_DB_DEFAULT,
+    OBJECTS_DB_DEFAULT,
+    VSX_BUILD_MAG_LIMIT_DEFAULT,
+)
 
 #: the indexes of ``gaia_dr3`` VYVAR queries use (EXPLAIN QUERY PLAN, 2026-10-20): sky box
 #: (ra, dec), Dec strips of the blind index build, magnitude cuts. ``catalogs/gaia_maintain.py``
@@ -567,3 +574,26 @@ def query_local_exoplanet(
     )
     log_event(f"EXO SQL: {len(rows)} rows (box Dec=[{de0:.3f},{de1:.3f}], RA intervals={n_int})")
     return rows
+
+
+# --- moved from pipeline_catalog (LAYER-2026-10) ---
+
+
+def cone_sky_box(center: SkyCoord, radius_deg: float) -> tuple[float, float, float, float]:
+    """RA/Dec box [deg] that contains the great-circle cone (CATALOG-FOOTPRINT-2026-10).
+
+    RA half-width is ``r / cos(dec)`` at the box edge nearest the pole (a box of +-r in RA covers
+    only r*cos(dec) on the sky: at Dec 61 a 4.7 deg cone lost the chip edges). A cone that reaches
+    a pole takes every RA. RA may lie outside [0, 360); ``query_local_*`` splits the wrap."""
+    ra0 = float(center.icrs.ra.deg)
+    de0 = float(center.icrs.dec.deg)
+    r = max(0.0, float(radius_deg))
+    de_min = max(-90.0, de0 - r)
+    de_max = min(90.0, de0 + r)
+    d_edge = max(abs(de_min), abs(de_max))
+    if d_edge >= 89.999:
+        return 0.0, 360.0, de_min, de_max
+    half = r / max(math.cos(math.radians(d_edge)), 1e-6)
+    if half >= 180.0:
+        return 0.0, 360.0, de_min, de_max
+    return ra0 - half, ra0 + half, de_min, de_max

@@ -128,6 +128,17 @@ def validate_text(text: str) -> tuple[list[tuple[str, str]], dict | None]:
                 problems.append(
                     ("ERROR", f"key '{key}': value {value} outside allowed range [{lo}, {hi}]")
                 )
+    # Rules between keys: the same list the loader and the Settings page use (CONFIG-ONE-2026-10).
+    import dataclasses
+
+    values: dict = {}
+    for f in dataclasses.fields(config.AppConfig):
+        if f.default is not dataclasses.MISSING:
+            values[f.name] = f.default
+        elif f.default_factory is not dataclasses.MISSING:  # type: ignore[misc]
+            values[f.name] = f.default_factory()  # type: ignore[misc]
+    values.update(data)
+    problems.extend(("ERROR", msg) for msg in config.config_rule_problems(values))
     return problems, data
 
 

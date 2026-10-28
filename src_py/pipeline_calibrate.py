@@ -62,6 +62,7 @@ from utils import (
 )
 from vyvar_alignment_frame import _as_fits_float32_image
 from fits_meta import pointing_hint_from_header as _pointing_hint_from_header
+from utils import norm_fits_path_key  # LAYER-2026-10: moved there
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton). Avoids
 # pipeline -> pipeline_calibrate -> pipeline at module load (spawn children
@@ -289,14 +290,6 @@ def _resolve_draft_light_raw_path(archive: Path, file_path: Path | str) -> Path 
         except OSError:
             pass
     return None
-
-
-def norm_fits_path_key(path: Path | str) -> str:
-    """Normalized absolute path key for qc_metrics / allowlist joins (casefold)."""
-    try:
-        return str(Path(path).resolve()).casefold()
-    except OSError:
-        return str(path).casefold()
 
 
 def _archive_preprocess_lights_root(
@@ -1856,7 +1849,7 @@ def calibrate_lights_to_calibrated(
     master_dark_path: Path | None,
     masterflat_by_filter: dict[str, Path | None],
     progress_cb: "callable | None" = None,
-    pipeline_config: AppConfig | None = None,
+    pipeline_config: AppConfig,
     equipment_id: int | None = None,
     max_workers: int | None = None,
     draft_id: int | None = None,
@@ -1885,7 +1878,7 @@ def calibrate_lights_to_calibrated(
     Parallelism (SPEED-2026-10): ``max_workers`` or the pipeline's worker count, capped by free RAM; the
     same per-frame function runs in every worker and the run process alone writes the draft manifest.
     """
-    cfg = pipeline_config or AppConfig()
+    cfg = pipeline_config
     qc_pack = _qc_pack_from_config(cfg, draft_id=draft_id, observation_id=observation_id)
 
     mf_merged: dict[str, Path | None] = {}
@@ -1979,7 +1972,7 @@ def calibrate_lights_to_calibrated(
     ]
     if observation_id or draft_id is not None:
         try:
-            _dbc = VyvarDatabase(Path(cfg.database_path))
+            _dbc = VyvarDatabase.for_config(cfg)
             if observation_id:
                 _n_o = _dbc.count_obs_files_for_observation(str(observation_id))
                 _log_bits.append(
@@ -1998,7 +1991,7 @@ def calibrate_lights_to_calibrated(
         log_lights_binning_from_headers_preflight(files, context="Calibration")
         _diag_light = _pick_light_for_metadata_diagnostic(files)
         try:
-            _db_cal_meta = VyvarDatabase(Path(cfg.database_path))
+            _db_cal_meta = VyvarDatabase.for_config(cfg)
             try:
                 _meta0 = extract_fits_metadata(
                     _diag_light,
@@ -2132,8 +2125,6 @@ def calibrate_lights_to_calibrated(
 
     _refresh_manifest_after_cal_qc()
     return stats
-
-
 
 
 def _qc_fwhm_elongation(
@@ -2309,7 +2300,7 @@ def run_osc_channel_extraction_for_archive(
     calibrated_lights_root: Path,
     db: VyvarDatabase,
     equipment_id: int,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
     progress_cb: Callable[..., None] | None = None,
 ) -> dict[str, Any]:
     """Extract OSC CFA mosaics into four channel obs-groups; QC+sky-surface per channel."""
@@ -2322,7 +2313,7 @@ def run_osc_channel_extraction_for_archive(
         iter_mosaic_light_fits,
     )
 
-    cfg = app_config or AppConfig()
+    cfg = app_config
     bayermask = db.get_equipment_bayermask(int(equipment_id))
     if not is_osc_bayermask(bayermask):
         return {"skipped": True, "reason": "mono equipment"}
@@ -2664,7 +2655,7 @@ def _sync_manifest_cal_stage_from_qc_row(
 def _qc_enrich_calibrated_in_place(
     calibrated_root: Path,
     *,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
     target_ra: float | None = None,
     target_dec: float | None = None,
     inject_pointing_only_if_missing: bool = True,
@@ -2689,7 +2680,7 @@ def _qc_enrich_calibrated_in_place(
     """
     import numpy as np
 
-    cfg = app_config or AppConfig()
+    cfg = app_config
     sky_order = int(cfg.preprocess_sky_surface_order)
 
     calibrated_root = Path(calibrated_root)

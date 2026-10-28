@@ -10,6 +10,7 @@ import pytest
 from invariants_runtime import InvariantViolation, check_osc03_export_eligibility
 from k2_extinction import K2_NONE_TOKENS, filter_token_from_obs_group
 from osc_align import is_onerggb_internal_obs_group, obs_group_band_token
+from config import AppConfig  # noqa: E402
 
 
 def test_onerggb_not_export_eligible() -> None:
@@ -70,6 +71,7 @@ def test_export_onerggb_skipped(tmp_path: Path) -> None:
         pd.DataFrame(),
         summary,
         obs_group="NoFilter_60_2_oneRGGB",
+        cfg=AppConfig(),
     )
     assert paths == {}
 
@@ -100,6 +102,7 @@ def test_export_channel_filt_in_aavso_file(tmp_path: Path) -> None:
         comp,
         summary,
         obs_group="NoFilter_60_2_G",
+        cfg=AppConfig(),
     )
     assert "aavso" in paths
     text = paths["aavso"].read_text(encoding="utf-8")

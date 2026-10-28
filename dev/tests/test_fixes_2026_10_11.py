@@ -95,7 +95,7 @@ def test_aperture_tab_is_informational_only() -> None:
 
 
 def test_export_rows_differential_and_all_flagged() -> None:
-    from export_reports import _select_export_lc_rows
+    from photometry_lightcurve import _select_export_lc_rows
 
     lc = pd.DataFrame({"jd": [1.0, 2.0, 3.0], "bjd": [1.0, 2.0, 3.0], "mag_calib": [np.nan] * 3,
                        "mag_calib_final": [np.nan] * 3, "delta_mag": [0.4, 0.5, 0.45],
@@ -337,10 +337,11 @@ def test_reserve_does_not_change_primary_comps() -> None:
     cfg.gs11_dilution_enabled = False
     from photometry_comp import build_global_comp_pool  # noqa: PLC0415
 
-    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg)
+    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg, min_frames_frac=0.3, fwhm_px=3.7)
     kw = dict(csv_cache=cache, cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
               min_dist_arcsec=30.0, n_comp_max=5, global_comp_pool_df=pool,
-              variable_target_catalog_ids=frozenset({_TARGET_ID}))
+              variable_target_catalog_ids=frozenset({_TARGET_ID}),
+              fwhm_px=3.7, n_comp_min=3, max_comp_rms=0.1, min_frames_frac=0.3, plate_scale_arcsec=1.3)
     base = select_comparison_stars_per_target(target, ms, paths, **kw)
     both = select_comparison_stars_per_target(target, ms, paths, n_reserve=8, **kw)
     prim, resv = _split_comp_reserve(both)

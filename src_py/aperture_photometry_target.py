@@ -38,9 +38,7 @@ from photometry_lightcurve import (
     save_lightcurve_png,
 )
 
-from photometry_core import (
-    LOGGER,
-)
+from photometry_defs import LOGGER
 
 
 

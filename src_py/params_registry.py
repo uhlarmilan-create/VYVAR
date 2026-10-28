@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -192,10 +193,13 @@ def _numeric(x: Any) -> bool:
 
 
 def values_differ(run_value: Any, default_value: Any) -> bool:
-    """True when a run/config value deviates from the dataclass default."""
+    """True when a run/config value deviates from the dataclass default (NaN equals NaN, G13-25)."""
     if _numeric(run_value) and _numeric(default_value):
         try:
-            return float(run_value) != float(default_value)
+            a, b = float(run_value), float(default_value)
+            if math.isnan(a) and math.isnan(b):
+                return False
+            return a != b
         except (TypeError, ValueError, OverflowError):
             return run_value != default_value
     return run_value != default_value

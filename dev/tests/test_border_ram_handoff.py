@@ -120,7 +120,6 @@ def test_require_safe_bbox_from_ram_frames(tmp_path: Path, monkeypatch: pytest.M
         annulus_outer_fwhm = 5.2
         gaia_db_path = ""
 
-    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     a = np.full((512, 512), 100.0, dtype=np.float32)
     ram = [("f001.fits", _aligned_header(0, 0), a), ("f002.fits", _aligned_header(-40, 30), a)]
@@ -131,6 +130,7 @@ def test_require_safe_bbox_from_ram_frames(tmp_path: Path, monkeypatch: pytest.M
         masterstars_csv=ms_csv,
         aligned_ram_frames=ram,
         require_safe_bbox=True,
+        cfg=_Cfg(),
     )
     plan = json.loads((ps / "photometry_plan.json").read_text(encoding="utf-8"))
     sb = plan.get("safe_bbox_px")
@@ -149,7 +149,6 @@ def test_require_safe_bbox_raises_without_frames(tmp_path: Path, monkeypatch: py
         annulus_outer_fwhm = 5.2
         gaia_db_path = ""
 
-    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     with pytest.raises(RuntimeError, match="Post-alignment border filter"):
         write_photometry_plan_files(
@@ -157,4 +156,5 @@ def test_require_safe_bbox_raises_without_frames(tmp_path: Path, monkeypatch: py
             masterstar_fits=ms_fits,
             masterstars_csv=ms_csv,
             require_safe_bbox=True,
+        cfg=_Cfg(),
         )

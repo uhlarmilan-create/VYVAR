@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from photometry_core import select_active_targets
+from config import AppConfig  # noqa: E402
 
 
 def _write_fixtures(tmp_path: Path) -> tuple[Path, Path]:
@@ -80,6 +81,7 @@ def test_select_active_targets_excludes_unmatched_vsx(tmp_path: Path) -> None:
         frame_w_px=512,
         frame_h_px=512,
         edge_margin_px=50,
+        cfg=AppConfig(),
     )
     assert len(out) == 1
     assert str(out.iloc[0]["catalog_id"]) == "1111111111111111111"

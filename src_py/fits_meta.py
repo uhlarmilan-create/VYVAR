@@ -683,3 +683,13 @@ def pointing_hint_from_header(header: fits.Header) -> tuple[float | None, float 
     except (TypeError, ValueError):
         pass
     return None, None, "none"
+
+
+# --- moved from importer (LAYER-2026-10) ---
+
+
+def observation_group_folder_name(group_key: str) -> str:
+    """Filesystem-safe folder under ``lights`` (replaces ``|``)."""
+    s = group_key.replace("|", "_").replace("/", "_").replace("\\", "_")
+    s = "".join(c if c.isalnum() or c in "._-" else "_" for c in s)
+    return s[:120] if len(s) > 120 else s

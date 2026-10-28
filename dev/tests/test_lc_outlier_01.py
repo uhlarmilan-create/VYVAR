@@ -153,7 +153,7 @@ def test_t5_frame_qc_propagates_to_all_stars() -> None:
 def test_t6_export_drops_artifact_keeps_spike_unconfirmed() -> None:
     """T6 (FRAME-REJECT-2026-10): sigma-threshold flags (artifact/frame_qc/high_err/spike) are
     flags only and stay in the export; saturated / low_snr are dropped."""
-    from export_reports import _select_export_lc_rows
+    from photometry_lightcurve import _select_export_lc_rows
 
     lc = pd.DataFrame(
         {

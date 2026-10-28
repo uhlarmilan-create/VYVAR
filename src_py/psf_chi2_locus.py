@@ -328,7 +328,7 @@ def reapply_night_locus_to_proc_dir(
         )["psf_chi2_locus_resid_sigma"].to_numpy()
         df["psf_fit_ok"] = ok
         # Only psf_* columns change; the guarded writer restores the file otherwise (INV-EXPORT-READ-ONLY-01).
-        from epsf_psf_merge import guarded_psf_sidecar_write  # noqa: PLC0415
+        from psf_sidecar_guard import guarded_psf_sidecar_write  # noqa: PLC0415
 
         guarded_psf_sidecar_write(fp, df, before)
         entry = {

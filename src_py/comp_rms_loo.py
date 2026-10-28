@@ -197,7 +197,7 @@ def choose_field_aperture_k(
     the stars measured at every k (ties within 1 % -> larger k, more robust to seeing).
     Returns (k, loo_map at k, {k: median rms}); (None, {}, {}) without grid columns.
     """
-    from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
     from photometry_shared import flux_k_column  # noqa: PLC0415
 
     have: set[float] | None = None

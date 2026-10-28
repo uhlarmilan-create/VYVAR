@@ -15,7 +15,6 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from aperture_pertarget import (  # noqa: E402
-    DEFAULT_APERTURE_F_GRID,
     FALLBACK_F_STAR,
     ApertureGridNight,
     apply_grid_fluxes_to_frames,
@@ -29,6 +28,7 @@ from aperture_pertarget import (  # noqa: E402
     measure_flux_on_f_grid,
     pick_f_star_snr,
 )
+from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: E402
 from aperture_policy import fwhm_for_radius  # noqa: E402
 from config import AppConfig  # noqa: E402
 
@@ -57,7 +57,7 @@ def test_per_frame_r_scales_with_frame_fwhm() -> None:
             {"catalog_id": "C1", "source_file": "proc_f002.csv", "mag_inst": 99.0},
         ]
     )
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=f_star)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=f_star, gain=None, read_noise=None, annulus_inner_fwhm=None, annulus_outer_fwhm=None)
     r1 = out.loc[out["source_file"] == "proc_f001.csv", "aperture_r_px"].to_numpy()
     r2 = out.loc[out["source_file"] == "proc_f002.csv", "aperture_r_px"].to_numpy()
     assert np.allclose(r1, 4.0)
@@ -109,7 +109,8 @@ def test_fallback_not_grid_midpoint_135() -> None:
         night.sky_pp[stem] = {"T": {f: float("nan") for f in night.f_grid}}
         night.fwhm_by_frame[stem] = 5.0
     ch = choose_f_for_target(
-        night, target_cid="T", comp_ids=[], frame_order=sorted(night.frames.keys())
+        night, target_cid="T", comp_ids=[], frame_order=sorted(night.frames.keys()),
+        gain=1.0, read_noise=10.0,
     )
     assert abs(ch.f_star - FALLBACK_F_STAR) < 1e-12
     assert "fallback" in ch.reason
@@ -197,9 +198,9 @@ def test_photon_limited_comps_choose_larger_k_than_sky_limited() -> None:
     faint, ids = _noisy_night(total_flux=3000.0, sky=2000.0)
     bright, _ = _noisy_night(total_flux=3.0e6, sky=20.0)
     f_faint = choose_f_for_target(faint, target_cid="T", comp_ids=ids,
-                                  frame_order=sorted(faint.frames.keys())).f_star
+                                  frame_order=sorted(faint.frames.keys()), gain=1.0, read_noise=10.0).f_star
     f_bright = choose_f_for_target(bright, target_cid="T", comp_ids=ids,
-                                   frame_order=sorted(bright.frames.keys())).f_star
+                                   frame_order=sorted(bright.frames.keys()), gain=1.0, read_noise=10.0).f_star
     assert f_bright > f_faint
 
 
@@ -211,7 +212,7 @@ def test_missing_grid_flux_gives_nan_not_other_aperture() -> None:
         {"catalog_id": "T", "source_file": "proc_a.csv", "mag_inst": 1.0},
         {"catalog_id": "C1", "source_file": "proc_a.csv", "mag_inst": 2.0},
     ])
-    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=1.0)
+    out = apply_grid_fluxes_to_frames(df, night, catalog_ids=["T", "C1"], f_star=1.0, gain=None, read_noise=None, annulus_inner_fwhm=None, annulus_outer_fwhm=None)
     assert math.isnan(float(out.loc[out.catalog_id == "C1", "mag_inst"].iloc[0]))
 
 

@@ -36,7 +36,12 @@ PILEUP_RATIO = 10.0
 N_PLATEAU_MIN_PEAKS = 10
 PLATEAU_BAND_FRAC = 0.01
 SAT_DIAG_MAX_FRAMES = 30
-from pipeline_constants import LINEARITY_FRAC  # noqa: E402
+from pipeline_constants import (  # noqa: E402
+    LINEARITY_FRAC,
+    SAT_LIMIT_CONTAINER_CLIP_ADU,
+    SAT_LIMIT_NO_KNEE_FRAC,
+    SAT_LIMIT_PEAK_TEST_SOURCE,
+)
 
 # SAT-LIN-2026-10: one limit (0.90 x SAT) for linearity, likely-saturated and comp admission.
 LINEARITY_DEFAULT_FRAC = LINEARITY_FRAC
@@ -195,13 +200,13 @@ def image_adu_array(hdu: fits.PrimaryHDU | fits.ImageHDU) -> np.ndarray:
 
 
 def bitpix_container_ceiling(hdr: fits.Header) -> float | None:
-    from pipeline import _infer_sat_limit_from_bitpix  # noqa: PLC0415
+    from pipeline_calibrate import _infer_sat_limit_from_bitpix  # noqa: PLC0415
 
     return _infer_sat_limit_from_bitpix(hdr)
 
 
 def header_sat_value(hdr: fits.Header) -> float | None:
-    from pipeline import _saturate_limit_adu_from_header  # noqa: PLC0415
+    from pipeline_calibrate import _saturate_limit_adu_from_header  # noqa: PLC0415
 
     v = _saturate_limit_adu_from_header(hdr)
     if v is not None:
@@ -535,7 +540,6 @@ def alignment_inverse_from_header(hdr: fits.Header | None) -> np.ndarray | None:
 
 
 def box_peak_max(arr: np.ndarray, x: float, y: float, half: int = PEAK_BOX_HALF) -> float:
-    from pipeline import _box_peak_max_adu  # noqa: PLC0415
 
     return _box_peak_max_adu(arr, x, y, half=half)
 
@@ -1055,7 +1059,6 @@ def draft_peak_test_adu(platesolve_dir: Path | str) -> tuple[float, str]:
     LINEARITY_FRAC x the SAT-DIAG level (sat_diag.json) when it may exclude stars; otherwise the
     INV-SAT-LIMIT default (LINEARITY_FRAC x 65535). Draft 532 (float, +32768 offset, saturation
     98 278 ADU) used the 65535 default and skipped unsaturated targets."""
-    from pipeline_catalog import inv_sat_limit_peak_test_adu  # noqa: PLC0415
 
     arch = draft_archive_from_platesolve(Path(platesolve_dir))
     ctx = load_sat_diag_json(arch / "sat_diag.json") if arch is not None else None
@@ -1207,3 +1210,51 @@ def linearity_check_infolog_lines(chk: dict[str, Any]) -> list[str]:
             else "[LINEARITY] linear up to the limit"
         )
     return lines
+
+
+# --- moved from pipeline_astrometry (LAYER-2026-10) ---
+
+
+def _finite_positive_adu(value: Any) -> float | None:
+    """Return a finite positive ADU, else None (NaN/inf/<=0/unparsable)."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isfinite(v) and v > 0:
+        return v
+    return None
+
+
+# --- moved from pipeline_catalog (LAYER-2026-10) ---
+
+
+def inv_sat_limit_peak_test_adu() -> tuple[float, str]:
+    """Catalog-zone peak-test (INV-SAT-LIMIT). One authority for zone and per-frame.
+
+    Hard container clip is ``SAT_LIMIT_CONTAINER_CLIP_ADU`` (named separately;
+    not used as the clean-frame test). This returns the peak-test used for
+    ``zone==saturated``: currently 0.80 x 65535 = 52428 ADU when the D1-2 knee
+    is unmeasured. n_stack is not applied here: per-frame CSVs are one exposure.
+    """
+    peak = float(SAT_LIMIT_CONTAINER_CLIP_ADU) * float(SAT_LIMIT_NO_KNEE_FRAC)
+    return peak, SAT_LIMIT_PEAK_TEST_SOURCE
+
+
+def _box_peak_max_adu(data: "np.ndarray", x: float, y: float, half: int = 3) -> float:
+    """Maximum pixel value in ``(2*half+1)^2`` box around ``(x,y)`` on the **original** image (linear units)."""
+    import numpy as np
+
+    arr = np.asarray(data)
+    if arr.ndim != 2:
+        return float("nan")
+    h, w = arr.shape
+    xi = int(round(float(x)))
+    yi = int(round(float(y)))
+    y0, y1 = max(0, yi - half), min(h, yi + half + 1)
+    x0, x1 = max(0, xi - half), min(w, xi + half + 1)
+    if y0 >= y1 or x0 >= x1:
+        return float("nan")
+    return float(np.nanmax(arr[y0:y1, x0:x1]))

@@ -68,8 +68,10 @@ class _ReportConfigView:
 
 def resolve_report_config(
     pipeline_meta: dict[str, Any] | None,
+    live: Any,
 ) -> tuple[Any | None, str]:
-    """PDF cfg source: run ``provenance.config_snapshot`` when present, else live AppConfig."""
+    """PDF cfg source: run ``provenance.config_snapshot`` when present (``live`` fills keys it lacks), else
+    ``live`` - the caller's config (the run's, or the GUI's), never a fresh read (CONFIG-ONE-2026-10)."""
     snapshot: dict[str, Any] | None = None
     if isinstance(pipeline_meta, dict):
         prov = pipeline_meta.get("provenance")
@@ -77,13 +79,6 @@ def resolve_report_config(
             raw = prov.get("config_snapshot")
             if isinstance(raw, dict) and raw:
                 snapshot = raw
-    live = None
-    try:
-        from config import AppConfig
-
-        live = AppConfig()
-    except Exception:  # noqa: BLE001 - no config file: snapshot only
-        live = None
     if snapshot is not None:
         return _ReportConfigView(snapshot, live), "run snapshot"
     return live, "live (no run snapshot)"
@@ -107,7 +102,7 @@ def vsx_type_sort_rank(val: Any) -> int:
     return 50
 
 
-def load_frames(platesolve_dir: Path) -> dict[str, Any]:
+def load_frames(platesolve_dir: Path, live_cfg: Any) -> dict[str, Any]:
     """Summary, active targets and comparison stars of one group, prepared as the report uses
     them: ``_cid`` keys, target metadata and exoplanet-host columns merged into the summary,
     rows sorted by VSX type then lc_rms; plus pipeline_meta and the run config."""
@@ -146,7 +141,7 @@ def load_frames(platesolve_dir: Path) -> dict[str, Any]:
         meta = at_df[["_cid"] + meta_cols].drop_duplicates("_cid")
         summary_df = summary_df.merge(meta, how="left", on="_cid", suffixes=("", "_at"))
 
-    from pipeline import resolve_masterstars_metadata_csv  # noqa: PLC0415
+    from pipeline_ui_helpers import resolve_masterstars_metadata_csv  # noqa: PLC0415
 
     ms_csv = resolve_masterstars_metadata_csv(platesolve_dir)
     if ms_csv is not None and "_cid" in summary_df.columns:
@@ -177,10 +172,7 @@ def load_frames(platesolve_dir: Path) -> dict[str, Any]:
     else:
         summary_df = summary_df.sort_values("_vsx_rank", ascending=True, na_position="last")
 
-    try:
-        cfg, cfg_label = resolve_report_config(pipeline_meta)
-    except Exception:  # noqa: BLE001 - report must render without a config
-        cfg, cfg_label = None, "live (no run snapshot)"
+    cfg, cfg_label = resolve_report_config(pipeline_meta, live_cfg)
     return {
         "summary_df": summary_df, "at_df": at_df, "comp_df": comp_df,
         "pipeline_meta": pipeline_meta, "cfg": cfg, "cfg_label": cfg_label,
@@ -738,8 +730,8 @@ class TargetPages:
         }
 
 
-def load_target_pages(platesolve_dir: Path) -> TargetPages:
+def load_target_pages(platesolve_dir: Path, live_cfg: Any) -> TargetPages:
     """TargetPages for one observation group, tables prepared as for the PDF report."""
-    fr = load_frames(platesolve_dir)
+    fr = load_frames(platesolve_dir, live_cfg)
     return TargetPages(platesolve_dir, summary_df=fr["summary_df"], at_df=fr["at_df"], comp_df=fr["comp_df"],
                        cfg=fr["cfg"])

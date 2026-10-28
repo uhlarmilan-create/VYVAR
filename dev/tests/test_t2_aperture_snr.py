@@ -25,6 +25,7 @@ def test_snr_uses_flux_over_pixscaled_err_not_peak() -> None:
         bg_sigma_adu=24.35,
         gain=1.0,
         aperture_fwhm_factor=1.9,
+        annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0,
     )
     snr_peak = 157.70 / 24.35
     assert abs(float(out.loc[0, "snr_peak"]) - snr_peak) < 1e-6
@@ -40,7 +41,8 @@ def test_snr_uses_flux_over_pixscaled_err_not_peak() -> None:
 def test_snr_peak_not_gated_column() -> None:
     df = pd.DataFrame({"flux": [1.0e6], "peak_dao": [50.0]})
     out = stamp_masterstar_snr_columns(
-        df, image=None, fwhm_dao_px=2.5, bg_sigma_adu=10.0, gain=1.0
+        df, image=None, fwhm_dao_px=2.5, bg_sigma_adu=10.0, gain=1.0,
+        aperture_fwhm_factor=1.9, annulus_inner_fwhm=4.75, annulus_outer_fwhm=9.0,
     )
     assert "snr_peak" in out.columns
     assert float(out.loc[0, "snr_peak"]) == 5.0

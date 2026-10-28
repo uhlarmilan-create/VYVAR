@@ -56,6 +56,7 @@ from pipeline_catalog import (
     _finalize_hybrid_bkg_fallback_sidecar,
     _pick_reference_frame_by_star_count,
 )
+from pipeline_constants import ALIGN_MAX_DETECTED_STARS, ALIGN_MIN_DETECTED_STARS, CATALOG_MATCH_SEP_ARCSEC, FRAME_MAX_DAO_ROWS  # noqa: E402
 
 LOGGER = logging.getLogger("pipeline")
 
@@ -65,26 +66,23 @@ def _astrometry_align_impl_body(
     *,
     job: dict[str, Any],
     archive_path: Path,
-    min_detected_stars: int = 100,
-    max_detected_stars: int = 500,
-    catalog_match_max_sep_arcsec: float = 25.0,
-    max_catalog_rows: int = 12000,
     n_comparison_stars: int = 0,
     require_non_variable_comparisons: bool = True,
-    dao_threshold_sigma: float = 3.5,
     id_equipment: int | None = None,
     draft_id: int | None = None,
     build_masterstar_and_catalogs: bool = False,
     progress_cb: "callable | None" = None,
     ram_align_and_catalog: bool = False,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
     sibling_recovery_use_masterstar: bool = False,
     osc_registration_handoff: dict[str, Any] | None = None,
     osc_write_registration_handoff: bool = False,
 ) -> dict[str, Any]:
     """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
-    from pipeline import (  # noqa: PLC0415  # call-time: giants re-exported by facade
+    from frame_export import (  # noqa: PLC0415  # call-time: giants re-exported by facade
         export_per_frame_catalogs,
+    )
+    from masterstar_build import (  # noqa: PLC0415  # call-time: giants re-exported by facade
         generate_masterstar_and_catalog,
     )
 
@@ -100,39 +98,22 @@ def _astrometry_align_impl_body(
     # Aligned FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (nested paths mirror the input)
     os.makedirs(str(aligned_root), exist_ok=True)
     os.makedirs(str(platesolve_dir), exist_ok=True)
-    _cfg_align = app_config or AppConfig()
-    _align_star_cap = max(10, min(5000, int(_cfg_align.alignment_max_stars)))
-    # Keep alignment input stable on dense fields: use at most TOP 200 brightest stars.
-    _align_star_cap = min(_align_star_cap, 200)
-    _cfg_align_sig = resolve_detection_threshold_sigma(_cfg_align.detection_threshold_sigma)
-    try:
-        _ui_sig = float(dao_threshold_sigma)
-    except (TypeError, ValueError):
-        _ui_sig = 0.0
-    if not math.isfinite(_ui_sig) or _ui_sig <= 0:
-        _ui_sig = 0.0
-    # Session override > Settings detection_threshold_sigma (CFG-CLEAN 2026-10).
-    _align_det_sigma = max(
-        0.8,
-        min(20.0, _ui_sig if _ui_sig > 0 else _cfg_align_sig),
-    )
+    _cfg_align = app_config
+    # Range 10-200 is the config range (G02-47: the hidden min(.., 200) cap is now the documented range).
+    _align_star_cap = int(_cfg_align.alignment_max_stars)
+    # The run's DAO sigma (a session / CLI override is already in the run config, night_run).
+    _align_det_sigma = resolve_detection_threshold_sigma(_cfg_align.detection_threshold_sigma)
     _fb_align = DAO_FWHM_FALLBACK_PX
     if build_masterstar_and_catalogs:
         LOGGER.info("Astrometry + MASTERSTAR + per-frame CSV: archive %s", ap)
     else:
         LOGGER.info("Astrometry + alignment + per-frame CSV (without MASTERSTAR): archive %s", ap)
-    # MASTERSTAR initial match: allow a looser sep (min 10") for robust first-pass Gaia join.
-    _catalog_match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
-    if _catalog_match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
-        log_event(
-            f"Catalog match threshold raised to {_catalog_match_sep_eff:.2f}\" "
-            "(minimum for a robust initial cross-match)."
-        )
+    _catalog_match_sep_eff = CATALOG_MATCH_SEP_ARCSEC
 
-    equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment)
+    equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment, _cfg_align)
     if draft_id is not None and files:
         try:
-            _db_sat = VyvarDatabase(Path(_cfg_align.database_path))
+            _db_sat = VyvarDatabase.for_config(_cfg_align)
             try:
                 _cmb_sat = _db_sat.get_combined_metadata(files[0], int(draft_id))
                 if _cmb_sat.get("saturate_adu") is not None:
@@ -214,10 +195,8 @@ def _astrometry_align_impl_body(
         _prog("platesolve/MASTERSTAR: reference frame + plate-solve + catalogs...")
         _cat_info_root = generate_masterstar_and_catalog(
             archive_path=ap,
-            max_catalog_rows=int(max_catalog_rows),
             source_root=detrended_root,
             platesolve_dir=_ps_root,
-            catalog_match_max_sep_arcsec=float(_catalog_match_sep_eff),
             n_comparison_stars=int(n_comparison_stars),
             require_non_variable_comparisons=bool(require_non_variable_comparisons),
             equipment_saturate_adu=equip_sat_adu,
@@ -379,7 +358,7 @@ def _astrometry_align_impl_body(
         pass
     ref_xy_all = _alignment_detect_xy(
         data_to_detect,
-        int(max(100, max_detected_stars)),
+        int(ALIGN_MAX_DETECTED_STARS),
         det_sigma=_align_det_sigma,
         fwhm_px=_align_fwhm_ref,
         label=ref_fp.name,
@@ -393,9 +372,9 @@ def _astrometry_align_impl_body(
     else:
         n_keep = min(300, n_ref)
     ref_xy = ref_xy_all[:n_keep]
-    if len(ref_xy) < int(min_detected_stars):
+    if len(ref_xy) < int(ALIGN_MIN_DETECTED_STARS):
         raise RuntimeError(
-            f"Reference frame has too few detected stars ({len(ref_xy)} < {min_detected_stars})."
+            f"Reference frame has too few detected stars ({len(ref_xy)} < {ALIGN_MIN_DETECTED_STARS})."
         )
     ref_xy_fit = ref_xy[: int(min(_align_star_cap, len(ref_xy)))]
     log_event(
@@ -533,8 +512,8 @@ def _astrometry_align_impl_body(
         "platesolve_dir": str(platesolve_dir),
         "align_star_cap": int(_align_star_cap),
         "max_control_points": int(align_cp),
-        "min_detected_stars": int(min_detected_stars),
-        "max_detected_stars": int(max_detected_stars),
+        "min_detected_stars": int(ALIGN_MIN_DETECTED_STARS),
+        "max_detected_stars": int(ALIGN_MAX_DETECTED_STARS),
         "fb_align": float(_fb_align),
         "rotation_ref_angle_deg": rotation_ref_angle_deg,
     }
@@ -806,11 +785,7 @@ def _astrometry_align_impl_body(
                     n_comparison_stars=int(n_comparison_stars),
                     require_non_variable=bool(require_non_variable_comparisons),
                     draft_id=int(draft_id) if draft_id is not None else None,
-                    database_path=(
-                        Path(str(_cfg_align.database_path))
-                        if str(_cfg_align.database_path or "").strip()
-                        else None
-                    ),
+                    cfg=_cfg_align,
                     aligned_files=_aligned_disk if _aligned_disk else None,
                     aligned_ram_frames=aligned_ram_buffer if use_ram_handoff and aligned_ram_buffer else None,
                     require_safe_bbox=True,
@@ -839,9 +814,7 @@ def _astrometry_align_impl_body(
         per_cat = export_per_frame_catalogs(
             frames_root=aligned_root,
             platesolve_dir=platesolve_dir,
-            max_catalog_rows=int(max_catalog_rows),
             catalog_match_max_sep_arcsec=float(per_frame_match_sep),
-            dao_threshold_sigma=float(dao_threshold_sigma),
             masterstars_csv=ms_csv,
             masterstar_fits=ms_fits,
             equipment_saturate_adu=equip_sat_adu,
@@ -898,9 +871,7 @@ def _astrometry_align_impl_body(
         per_cat = export_per_frame_catalogs(
             frames_root=aligned_root,
             platesolve_dir=platesolve_dir,
-            max_catalog_rows=int(max_catalog_rows),
             catalog_match_max_sep_arcsec=float(per_frame_match_sep),
-            dao_threshold_sigma=float(dao_threshold_sigma),
             masterstars_csv=ms_csv,
             masterstar_fits=ms_fits,
             equipment_saturate_adu=equip_sat_adu,
@@ -950,7 +921,7 @@ def _astrometry_align_impl_body(
         "catalog_match_max_sep_arcsec": float(_catalog_match_sep_eff),
         "saturate_limit_adu": (cat_info.get("saturate_limit_adu") if build_masterstar_and_catalogs else None),
         "saturate_limit_source": (cat_info.get("saturate_limit_source") if build_masterstar_and_catalogs else None),
-        "max_catalog_rows": int(max_catalog_rows),
+        "max_catalog_rows": int(FRAME_MAX_DAO_ROWS),
         "per_frame_catalog_dir": per_cat.get("per_frame_dir"),
         "per_frame_catalog_index_csv": per_cat.get("index_csv"),
         "per_frame_catalogs_written": per_cat.get("written"),

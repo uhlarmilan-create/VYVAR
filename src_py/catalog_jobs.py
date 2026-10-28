@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from pipeline_constants import GAIA_BUILD_MAG_LIMIT_DEFAULT, VSX_BUILD_MAG_LIMIT_DEFAULT
+
 from run_job import STATUS_FILE, STDOUT_FILE, pid_alive, read_status, stop_job, write_status
 
 JOB_FILE = "job.json"
@@ -61,7 +63,7 @@ def jobs_root(data_root: Path | str) -> Path:
 def tool_args(tool: str, **opt: Any) -> list[str]:
     """Command-line arguments of ``tool`` from the wizard options (paths always explicit)."""
     if tool == "gaia_build":
-        a = ["--out", str(opt["out"]), "--mag-limit", f"{float(opt.get('mag_limit', 17.5)):g}",
+        a = ["--out", str(opt["out"]), "--mag-limit", f"{float(opt.get('mag_limit', GAIA_BUILD_MAG_LIMIT_DEFAULT)):g}",
              "--dec-min", f"{float(opt.get('dec_min', -90.0)):g}", "--dec-max", f"{float(opt.get('dec_max', 90.0)):g}"]
         if opt.get("full_source"):
             a.append("--full-source")
@@ -72,7 +74,7 @@ def tool_args(tool: str, **opt: Any) -> list[str]:
     if tool == "objects_update":
         a = ["--db", str(opt["db"])]
         if opt.get("vsx", True):
-            a += ["--vsx", "--vsx-mag-limit", f"{float(opt.get('vsx_mag_limit', 18.0)):g}",
+            a += ["--vsx", "--vsx-mag-limit", f"{float(opt.get('vsx_mag_limit', VSX_BUILD_MAG_LIMIT_DEFAULT)):g}",
                   "--vsx-dec-min", f"{float(opt.get('vsx_dec_min', -90.0)):g}",
                   "--vsx-dec-max", f"{float(opt.get('vsx_dec_max', 90.0)):g}"]
         if opt.get("exoplanets", True):

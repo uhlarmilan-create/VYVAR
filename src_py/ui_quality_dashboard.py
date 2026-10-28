@@ -24,7 +24,7 @@ from config import AppConfig
 from database import VyvarDatabase
 from frame_qc import evaluate_frame_qc, group_key_of, load_frame_qc
 from importer import quicklook_preview_png_bytes
-from pipeline import _resolve_light_fits_for_quality_inspection
+from pipeline_ui_helpers import _resolve_light_fits_for_quality_inspection
 from ui_components import DRAFT_CENTER_DE_STATE_KEY, DRAFT_CENTER_RA_STATE_KEY
 from ui_session import resolve_draft_dir
 

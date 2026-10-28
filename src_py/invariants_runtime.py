@@ -235,9 +235,8 @@ def check_flat_mean_near_one(
 
 def read_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
     """Map normalized absolute FITS path -> status (for QC-01 / allowlist checks)."""
-    import pandas as pd
 
-    from pipeline import norm_fits_path_key  # noqa: PLC0415
+    from utils import norm_fits_path_key  # noqa: PLC0415
 
     p = Path(qc_csv)
     if not p.is_file():
@@ -262,7 +261,7 @@ def check_qc01_skipproc_alignment(
     meta: dict[str, Any] | None = None,
 ) -> None:
     """QC-01: every aligned frame must appear in qc_metrics.csv with status=ok."""
-    from pipeline import norm_fits_path_key  # noqa: PLC0415
+    from utils import norm_fits_path_key  # noqa: PLC0415
 
     meta_block = meta if meta is not None else {"invariants": []}
     status_map = read_qc_metrics_status_by_path(qc_csv)
@@ -614,7 +613,6 @@ def validate_config_behavior(meta: dict[str, Any], photometry_dir: Path | str | 
     else:
         _voos_list = []
     if not _voos_list and photometry_dir is not None:
-        import pandas as pd
 
         for rel in (
             Path(photometry_dir) / "photometry_summary.csv",

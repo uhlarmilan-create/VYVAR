@@ -9,9 +9,10 @@ import logging
 import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from importer import SmartImportPlan
+if TYPE_CHECKING:  # annotation only: the manifest store must not import the importer (LAYER-2026-10)
+    from importer import SmartImportPlan
 
 CALIBRATION_MODE_VYVAR = "vyvar_calibrated"
 CALIBRATION_MODE_PRE = "pre_calibrated"

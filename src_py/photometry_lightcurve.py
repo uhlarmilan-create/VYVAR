@@ -17,11 +17,7 @@ from jd_axis_format import jd_axis_title, jd_series_relative
 from photometry_shared import _normalize_gaia_id
 from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
 
-from photometry_core import (
-    LOGGER,
-    TIME_BASE_BJD_TDB,
-    TIME_BASE_JD_FALLBACK,
-)
+from photometry_defs import LOGGER, TIME_BASE_BJD_TDB, TIME_BASE_COL, TIME_BASE_JD_FALLBACK
 
 
 def _aperture_empty_comp_summary_row(
@@ -1048,7 +1044,7 @@ def _target_selection_skip_reason(row: Any) -> str:
     Target-selection cuts and per_frame_saturation are kept; a MASTERSTAR-saturated zone is the upper
     cut even when an old run cleared it; reasons written by aperture photometry for other purposes
     (e.g. ``no_comps``) are not selection skips."""
-    from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
+    from photometry_defs import FINAL_SKIP_REASONS  # noqa: PLC0415
 
     sr = str(row.get("skip_reason", "") or "").strip()
     sr = _LEGACY_SELECTION_SKIP.get(sr, sr)
@@ -1171,7 +1167,7 @@ def _resolve_pfs_peak_test(
     sat_limit_adu: float | None,
 ) -> tuple[float | None, str, float, str]:
     """Return (peak_test, peak_test_source, container_clip, container_source)."""
-    from pipeline_catalog import inv_sat_limit_peak_test_adu  # noqa: PLC0415
+    from sat_diag import inv_sat_limit_peak_test_adu  # noqa: PLC0415
 
     container = float(SAT_LIMIT_CONTAINER_CLIP_ADU)
     container_src = "SAT_LIMIT_CONTAINER_CLIP_ADU"
@@ -1404,7 +1400,7 @@ def target_airmass(
         from astropy.coordinates import AltAz, EarthLocation, SkyCoord
         from astropy.time import Time
 
-        from pipeline_catalog import _airmass_from_altitude_deg  # noqa: PLC0415
+        from time_utils import _airmass_from_altitude_deg  # noqa: PLC0415
 
         location = EarthLocation(lat=lat * u.deg, lon=lon * u.deg, height=alt * u.m)
         t = Time(jd_arr[finite], format="jd", scale="utc", location=location)
@@ -1497,3 +1493,82 @@ def _recompute_bjd_hjd_with_status(
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
     return bjd_out, hjd_out, TIME_BASE_BJD_TDB
+
+
+# --- moved from export_reports (LAYER-2026-10) ---
+
+
+def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
+    """Rows suitable for AAVSO/VAR.ASTRO export; the exported magnitude is put in ``mag_calib``
+    for the writers.
+
+    Default magnitude: the published one (``mag_calib_ct`` with a colour term, else ``mag_calib``;
+    ``photometry_lightcurve.published_mag_column``). ``differential`` (UNCAL-EXPORT-2026-10): the
+    target has no standard zero point and ``delta_mag`` is exported."""
+    if lc_df is None or lc_df.empty:
+        return pd.DataFrame()
+    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
+
+    work = lc_df.copy()
+    if mag_column:
+        mag_col = str(mag_column)
+    elif differential:
+        mag_col = "delta_mag"
+    else:
+        mag_col = published_mag_column(work) or "mag_calib"
+    if mag_col not in work.columns:
+        return pd.DataFrame()
+    mag = pd.to_numeric(work[mag_col], errors="coerce")
+    # A row needs a time: UTC JD (AAVSO) or BJD_TDB (VarAstro); each writer checks its own.
+    _jd = pd.to_numeric(work["jd"], errors="coerce") if "jd" in work.columns else None
+    _bj = pd.to_numeric(work["bjd"], errors="coerce") if "bjd" in work.columns else None
+    _t_ok = pd.Series(False, index=work.index)
+    for _tc in (_jd, _bj):
+        if _tc is not None:
+            _t_ok = _t_ok | (_tc.notna() & np.isfinite(_tc.to_numpy(dtype=float)))
+    finite = mag.notna() & np.isfinite(mag.to_numpy(dtype=float)) & _t_ok
+    if "flag" in work.columns:
+        from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
+
+        fl = work["flag"].astype(str).str.strip().str.lower()
+        # FRAME-REJECT-2026-10: only the physical reasons drop an epoch (saturated, low_snr, no_data,
+        # edge_fail, nondetection); frame_qc / artifact / high_err / spike stay, named in NOTES FLAG=.
+        bad = fl.isin(list(EXPORT_EXCLUDE_FLAGS))
+        mask = finite & ~bad
+        n_excl = int((finite & bad).sum())
+        if n_excl:
+            logging.info(
+                "[EXPORT] LC-OUTLIER excluded %d epochs (flags in %s)",
+                n_excl,
+                sorted(EXPORT_EXCLUDE_FLAGS),
+            )
+        # FIX-EXPORTALLBAD-2026-10: when every epoch carries an exclusion flag nothing is
+        # exported (the old fallback exported all of them, flags ignored).
+        out = work.loc[mask].copy()
+    else:
+        out = work.loc[finite].copy()
+    if mag_col != "mag_calib":
+        out["mag_calib"] = pd.to_numeric(out[mag_col], errors="coerce")
+    return out
+
+
+# --- moved from photometry_ui_helpers (LAYER-2026-10) ---
+
+
+def resolve_lc_time_base(lc_df: pd.DataFrame) -> str:
+    """Return the single ``time_base`` value for an LC dataframe."""
+    if lc_df is None or getattr(lc_df, "empty", True):
+        raise ValueError("empty LC")
+    if TIME_BASE_COL not in lc_df.columns:
+        raise ValueError("time_base column absent")
+    raw = lc_df[TIME_BASE_COL].astype(str).str.strip()
+    raw = raw[raw.str.lower().ne("nan") & (raw != "")]
+    if raw.empty:
+        raise ValueError("time_base column empty")
+    uniq = set(raw.unique())
+    if len(uniq) > 1:
+        raise ValueError(f"mixed time_base values: {sorted(uniq)}")
+    tb = uniq.pop()
+    if tb not in (TIME_BASE_BJD_TDB, TIME_BASE_JD_FALLBACK):
+        raise ValueError(f"unknown time_base: {tb!r}")
+    return tb

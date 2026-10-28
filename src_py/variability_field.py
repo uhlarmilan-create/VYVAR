@@ -51,6 +51,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from frame_footprint import _frame_footprints, _inside_all  # LAYER-2026-10: moved there
+from catalog_crossmatch import _catalog_check  # LAYER-2026-10: moved there
 
 LOGGER = logging.getLogger(__name__)
 
@@ -109,41 +111,6 @@ def write_candidate_catalogs(photometry_dir: Path, catalogs: dict[str, str]) -> 
     hit = field["catalog_id"].astype(str).isin(catalogs)
     field.loc[hit, "catalogs"] = field.loc[hit, "catalog_id"].astype(str).map(catalogs)
     field.to_csv(fp, index=False)
-
-
-def _frame_footprints(frames_dir: Path, stems: list[str]) -> list[np.ndarray]:
-    """Corners of every frame mapped onto the reference grid (VY_AM0..8 frame->ref)."""
-    from astropy.io import fits  # noqa: PLC0415
-
-    out = []
-    for st in stems:
-        fp = Path(frames_dir) / f"{st}.fits"
-        if not fp.is_file():
-            continue
-        try:
-            h = fits.getheader(fp)
-            mat = np.array([float(h[f"VY_AM{k}"]) for k in range(9)]).reshape(3, 3)
-            w, hh = int(h["NAXIS1"]), int(h["NAXIS2"])
-        except Exception:  # noqa: BLE001
-            continue
-        c = np.array([[0, 0, 1], [w - 1, 0, 1], [w - 1, hh - 1, 1], [0, hh - 1, 1]], float).T
-        q = mat @ c
-        out.append((q[:2] / q[2]).T)
-    return out
-
-
-def _inside_all(x: np.ndarray, y: np.ndarray, r: float, quads: list[np.ndarray]) -> np.ndarray:
-    """True where the circle (x, y, r) lies inside every quadrilateral."""
-    ok = np.ones(x.size, bool)
-    for q in quads:
-        area = 0.5 * np.sum(q[:, 0] * np.roll(q[:, 1], -1) - np.roll(q[:, 0], -1) * q[:, 1])
-        sgn = 1.0 if area > 0 else -1.0
-        for a, b in zip(q, np.roll(q, -1, axis=0), strict=False):
-            ex, ey = b - a
-            ln = math.hypot(ex, ey)
-            d = sgn * (ex * (y - a[1]) - ey * (x - a[0])) / ln  # signed distance, + inside
-            ok &= d >= r
-    return ok
 
 
 def _eta(r: np.ndarray) -> float:
@@ -216,7 +183,7 @@ def run_field_variability(
     variability_meta.json and lightcurves/varcand_<id>.csv. Returns the meta dict."""
     from scipy import optimize, stats  # noqa: PLC0415
 
-    from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
     from photometry_shared import flux_k_column  # noqa: PLC0415
 
@@ -314,7 +281,7 @@ def run_field_variability(
     info["snr_med"] = 1.0857 / info["e_med"]
 
     # gates: SNR, footprint, neighbour light
-    snr_min = float(getattr(cfg, "snr_min", 10.0) or 10.0)
+    snr_min = float(cfg.snr_min)
     info["gate_snr"] = info["snr_med"] >= snr_min
     fw_max = float(frame["fwhm"].max())
     quads = _frame_footprints(per_frame_dir, list(frame["stem"]))
@@ -448,7 +415,7 @@ def run_field_variability(
             info.at[cid, "systematic"] = True
 
     info["candidate"] = info["signal"] & info["gates_ok"] & ~info["known_variable"] & ~info["systematic"]
-    transients = bool(getattr(cfg, "transient_search_enabled", False))
+    transients = bool(cfg.transient_search_enabled)
     zp_g = float("nan")
     if transients:
         zp_g = _brightened_vs_gaia(info, M.sub(E, axis=1).median(axis=1), use, ref)
@@ -531,24 +498,6 @@ def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref:
     gate = (info["gate_snr"] & info["gate_edge"]).to_numpy(bool)
     info["brightened"] = gate & np.isfinite(dm) & (dm <= -1.0) & (dm <= -3.0 * sig)
     return float(p[0] + p[1] * 0.82 + p[2] * 0.82**2)
-
-
-def _catalog_check(row: pd.Series, cfg: Any) -> str:
-    """Known-variable check of one candidate in online catalogues (astroquery)."""
-    try:
-        from catalog_crossmatch import check_candidate_in_catalogs  # noqa: PLC0415
-
-        r = check_candidate_in_catalogs(
-            float(row["ra_deg"]), float(row["dec_deg"]), mag=float(row["mag"]), radius_arcsec=15.0,
-            objects_db_path=str(getattr(cfg, "objects_db_path", "") or "") or None,
-        )
-        hits = [b for b in r.catalog_summary_bullets() if "no match" not in b and "error" not in b]
-        errs = [b for b in r.catalog_summary_bullets() if "error" in b]
-        if hits:
-            return " | ".join(hits)
-        return "none of the catalogues lists it" + (f" ({len(errs)} not reachable)" if errs else "")
-    except Exception as exc:  # noqa: BLE001
-        return f"catalogue check failed: {exc}"
 
 
 def _target_ids(phot: Path) -> set[str]:

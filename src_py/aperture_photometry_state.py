@@ -32,17 +32,15 @@ from aperture_photometry import (
     compute_optimal_apertures,
     measure_fwhm_from_masterstar,
     read_flux_from_csv,
-    resolve_apply_color_term,
 )
+from band_classify import resolve_apply_color_term
 from photometry_lightcurve import (
     _build_aperture_resolved_facts,
     apply_per_frame_saturation_to_active_targets,
 )
 
-from photometry_core import (
-    LOGGER,
-    _GAIA_ID_DTYPE,
-)
+from photometry_defs import LOGGER
+from gaia_catalog_id import VYVAR_CSV_DTYPE
 
 
 def _aperture_prepare_shared_state(
@@ -56,12 +54,9 @@ def _aperture_prepare_shared_state(
     active_targets_csv: Path,
     detrended_aligned_dir: Path,
     fwhm_px: float,
-    annulus_inner_fwhm: float = 4.0,
-    annulus_outer_fwhm: float = 6.0,
-    aperture_fwhm_factor: float | None = None,
     sat_limit_adu: float | None = None,
     force_aperture_px: float | None = None,
-    cfg: AppConfig | None = None,
+    cfg: AppConfig,
     db: Any | None = None,
     draft_id: int | None = None,
     proc_frame_store: ProcFrameStore | None = None,
@@ -79,27 +74,20 @@ def _aperture_prepare_shared_state(
     lc_dir = output_dir / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
 
-    _cfg = cfg or AppConfig()
+    _cfg = cfg
     # Obs_group / filter name for decisions (e.g. color term). Prefer FITS header, fallback to directory name.
     obs_group = str(Path(per_frame_csv_dir).name)
-    if aperture_fwhm_factor is not None:
-        try:
-            _apt_fw = float(aperture_fwhm_factor)
-            if not math.isfinite(_apt_fw) or _apt_fw <= 0:
-                _apt_fw = float(_cfg.aperture_fwhm_factor)
-            else:
-                _apt_fw = max(0.25, min(6.0, _apt_fw))
-        except (TypeError, ValueError):
-            _apt_fw = float(_cfg.aperture_fwhm_factor)
-    else:
-        _apt_fw = float(_cfg.aperture_fwhm_factor)
+    # CONFIG-ONE-2026-10 (G06-12): aperture and annulus factors come from the run config only
+    _apt_fw = float(_cfg.aperture_fwhm_factor)
+    annulus_inner_fwhm = float(_cfg.annulus_inner_fwhm)
+    annulus_outer_fwhm = float(_cfg.annulus_outer_fwhm)
 
     # Load inputs (Gaia ID as string - float64 loses digits)
     if not Path(active_targets_csv).is_file():
         raise FileNotFoundError(f"active_targets_csv not found: {active_targets_csv}")
     if not Path(comparison_stars_csv).is_file():
         raise FileNotFoundError(f"comparison_stars_csv not found: {comparison_stars_csv}")
-    at_df = pd.read_csv(active_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    at_df = pd.read_csv(active_targets_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # OUTPUT-REVIEW-2026-10 step 5: aperture photometry starts from the comparison-star selection rows of
     # the comparison table (admitted rows; the reserve below), never from the used sets of an earlier run.
     from comp_table import admitted as _comp_admitted, load_comp_table, reserve as _comp_reserve  # noqa: PLC0415

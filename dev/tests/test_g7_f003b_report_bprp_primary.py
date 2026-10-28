@@ -76,6 +76,7 @@ def _minimal_report_builder(
         paragraph_mod=MagicMock(),
         paragraph_style_mod=MagicMock(),
         ta_left_mod=MagicMock(),
+        cfg=AppConfig(project_root=tmp_path),
     )
 
 

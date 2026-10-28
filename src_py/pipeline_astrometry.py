@@ -17,27 +17,21 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 import pandas as pd
-import config
 from config import AppConfig
 from catalog_db import query_local_gaia_by_source_ids, query_local_vsx
 from database import DraftTechnicalMetadataError, VyvarDatabase
-from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id
+from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from utils import iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import fits_meta
 from fits_meta import _focal_mm_plausible
-from masterstar_gaia_accounting import _dao_xy_binned_to_full
-from masterstar_gaia_accounting import _dao_full_to_binned_xy
 from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
 from pipeline_calibrate import (
-    _archive_preprocess_lights_root,
     _filter_light_paths_maybe,
 )
-from pipeline_preprocess import (
-    _partition_detrended_by_subfolder,
-    filter_files_by_qc_metrics_allowlist,
-)
+from proc_frame_store import _vyvar_df_to_csv  # LAYER-2026-10: moved there
+from pipeline_preprocess import _path_is_under_tree, _path_segments_forbidden_for_masterstar_physical_source, _pick_preferred_masterstar_basename_hit, _resolve_best_effort_path_under  # LAYER-2026-10: moved there
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_astrometry -> pipeline at module load.
@@ -80,97 +74,6 @@ def draft_obs_group_count(archive_path: Path | str) -> int:
 
 def draft_is_multi_group_obs(archive_path: Path | str) -> bool:
     return int(draft_obs_group_count(archive_path)) > 1
-
-
-def resolve_masterstar_input_root(
-    archive_path: Path | str,
-    setup_name: str | None = None,
-    *,
-    draft_id: int | None = None,
-    db: VyvarDatabase | None = None,
-) -> Path | None:
-    """Pick MASTERSTAR input root under draft lights[/setup_name] with robust fallback.
-
-    Uses ``calibrated/lights`` or ``non_calibrated/lights`` (via :func:`resolve_draft_lights_root`).
-
-    When ``setup_name`` is explicitly provided, only that subdir is considered - no cross-group scan.
-    Returns ``None`` when the requested setup is missing/empty (multi-group safe).
-    """
-    from draft_provenance import draft_archive_root, resolve_draft_lights_root
-
-    ap = draft_archive_root(Path(archive_path).expanduser())
-    lights_root = resolve_draft_lights_root(ap, draft_id=draft_id, db=db)
-    setup_key = str(setup_name or "").strip()
-
-    def _pick_under(base: Path) -> Path | None:
-        if setup_key:
-            cand = base / setup_key
-            if cand.is_dir() and any(_iter_fits_recursive(cand)):
-                return cand
-            log_event(
-                f"WARN: MASTERSTAR input root for setup {setup_key!r} not found under {base}; "
-                "refusing cross-group fallback"
-            )
-            return None
-        if base.is_dir():
-            subdirs = sorted([d for d in base.iterdir() if d.is_dir()], key=lambda p: p.name.casefold())
-            for sd in subdirs:
-                if any(_iter_fits_recursive(sd)):
-                    return sd
-            if any(_iter_fits_recursive(base)):
-                return base
-        return None
-
-    hit = _pick_under(lights_root)
-    if hit is not None:
-        return hit
-    return lights_root if not setup_key else None
-
-
-def _path_segments_forbidden_for_masterstar_physical_source(
-    p: Path,
-    *,
-    pre_calibrated: bool = False,
-) -> bool:
-    """``True`` if resolved path must not be used as MASTERSTAR physical source.
-
-    In VYVAR-calibrated mode, ``non_calibrated/`` and ``raw/`` are forbidden (use processed/calibrated).
-    In pre-calibrated mode, ``non_calibrated/lights/`` **is** the valid source tree; only ``raw/`` is forbidden.
-    """
-    try:
-        parts = Path(p).resolve().parts
-    except OSError:
-        parts = Path(p).parts
-    bad = {"raw"} if pre_calibrated else {"raw", "non_calibrated"}
-    return any(seg.casefold() in bad for seg in parts)
-
-
-def _path_is_under_tree(root: Path, p: Path) -> bool:
-    try:
-        Path(p).resolve().relative_to(Path(root).resolve())
-        return True
-    except (OSError, ValueError):
-        return False
-
-
-def _pick_preferred_masterstar_basename_hit(
-    hits: list[Path],
-    *,
-    pre_calibrated: bool = False,
-) -> Path | None:
-    """With several basename matches prefer ``proc_*.fits`` (processed frame)."""
-    if not hits:
-        return None
-    clean = [
-        h
-        for h in hits
-        if not _path_segments_forbidden_for_masterstar_physical_source(h, pre_calibrated=pre_calibrated)
-    ]
-    if not clean:
-        return None
-    proc_first = [h for h in clean if h.name.casefold().startswith("proc_")]
-    use = proc_first if proc_first else clean
-    return sorted(use, key=lambda x: str(x).casefold())[0]
 
 
 def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
@@ -442,7 +345,7 @@ def build_masterstar_from_detrended(
 
 def _update_masterstar_obs_file_status(
     *,
-    cfg: AppConfig | None,
+    cfg: AppConfig,
     draft_id: int | None,
     selected_ref_path: Path | None,
     wcs_ok: bool,
@@ -453,8 +356,8 @@ def _update_masterstar_obs_file_status(
     try:
         from draft_provenance import load_or_init_manifest, patch_draft_manifest, resolve_draft_dir_for_id
 
-        app_cfg = cfg or AppConfig()
-        db = VyvarDatabase(Path(app_cfg.database_path))
+        app_cfg = cfg
+        db = VyvarDatabase.for_config(app_cfg)
         ar = getattr(app_cfg, "archive_root", None)
         if ar:
             db._archive_root_override = Path(str(ar)).expanduser().resolve()
@@ -502,76 +405,6 @@ def _update_masterstar_obs_file_status(
             db.conn.close()
     except Exception as exc:  # noqa: BLE001
         log_event(f"MASTERSTAR manifest update skipped: {exc!s}")
-
-
-def _resolve_best_effort_path_under(
-    root: Path,
-    raw_path: str,
-    *,
-    pre_calibrated: bool = False,
-) -> Path | None:
-    """Map an manifest files[].FILE_PATH (often archived raw path) to an existing file under ``root``.
-
-    Strategy: exact relative join, else basename match (first hit). This is intentionally heuristic because
-    imports may store different path bases (absolute vs relative, calibrated vs processed).
-    """
-    _forbid_kw = {"pre_calibrated": bool(pre_calibrated)}
-    rp = str(raw_path or "").strip()
-    if not rp:
-        return None
-    p = Path(rp)
-    # If already absolute and exists under root tree, accept.
-    if p.is_absolute():
-        try:
-            rel = p.resolve().relative_to(root.resolve())
-            cand = (root / rel).resolve()
-            if (
-                cand.is_file()
-                and _path_is_under_tree(root, cand)
-                and not _path_segments_forbidden_for_masterstar_physical_source(cand, **_forbid_kw)
-            ):
-                return cand
-        except Exception:  # noqa: BLE001
-            pass
-    # If relative, try directly.
-    cand2 = (root / p).resolve()
-    if (
-        cand2.is_file()
-        and _path_is_under_tree(root, cand2)
-        and not _path_segments_forbidden_for_masterstar_physical_source(cand2, **_forbid_kw)
-    ):
-        return cand2
-    # Explicit processed-name fallback in the same folder (e.g. Light_066.fits -> proc_Light_066.fits).
-    if not pre_calibrated:
-        try:
-            cand2_proc = cand2.with_name(_safe_proc_name(cand2.name)).resolve()
-            if (
-                cand2_proc.is_file()
-                and _path_is_under_tree(root, cand2_proc)
-                and not _path_segments_forbidden_for_masterstar_physical_source(cand2_proc, **_forbid_kw)
-            ):
-                return cand2_proc
-        except Exception:  # noqa: BLE001
-            pass
-    # Basename / fuzzy suffix fallback (handles prefixes like ``proc_``).
-    name = p.name
-    if not name:
-        return None
-    _name_cf = name.casefold()
-    _name_noproc = _name_cf[5:] if _name_cf.startswith("proc_") else _name_cf
-    hits = []
-    for x in _iter_fits_recursive(root):
-        xn = x.name.casefold()
-        xn_noproc = xn[5:] if xn.startswith("proc_") else xn
-        if (
-            xn == _name_cf
-            or xn_noproc == _name_noproc
-            or xn.endswith(_name_cf)
-            or xn_noproc.endswith(_name_noproc)
-        ):
-            if not _path_segments_forbidden_for_masterstar_physical_source(x, **_forbid_kw):
-                hits.append(x)
-    return _pick_preferred_masterstar_basename_hit(hits, pre_calibrated=pre_calibrated)
 
 
 def get_masterstar_candidate_rows(
@@ -667,7 +500,7 @@ def get_masterstar_candidates(draft_id: int, percentage: float, *, db: VyvarData
 
 def _vyvar_open_database(cfg: AppConfig) -> VyvarDatabase | None:
     try:
-        return VyvarDatabase(Path(cfg.database_path))
+        return VyvarDatabase.for_config(cfg)
     except Exception:  # noqa: BLE001
         return None
 
@@ -738,13 +571,13 @@ def _resolve_focal_mm_for_plate_scale(
 def _plate_solve_input_bundle(
     fits_path: Path,
     *,
-    app_config: AppConfig | None,
+    app_config: AppConfig,
     equipment_id: int | None,
     draft_id: int | None = None,
     telescope_id: int | None = None,
 ) -> dict[str, Any]:
     """Open DB once: metadata, effective pixel, focal length, expected plate scale [arcsec/pixel]."""
-    cfg_u = app_config or AppConfig()
+    cfg_u = app_config
     db_u = _vyvar_open_database(cfg_u)
     _eq_use, _tel_use = resolve_optics_ids_for_platesolve(
         db_u, draft_id, equipment_id=equipment_id, telescope_id=telescope_id
@@ -894,14 +727,14 @@ def _solve_wcs_external(
     hint_ra_deg: float | None = None,
     hint_dec_deg: float | None = None,
     scale_hint_arcsec: float | None = None,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
 ) -> dict[str, Any]:
     """Plate solve a FITS in place with VYVAR astrosolve (PLATESOLVE-2026-10): hinted with the
     header / caller position, blind index as fallback. The solver needs neither a field size
     nor a plate scale; a scale hint only orders the catalogue cones."""
     import astrosolve  # noqa: PLC0415
 
-    cfg_u = app_config or AppConfig()
+    cfg_u = app_config
     gaia_db = str(cfg_u.gaia_db_path or "").strip()
     if not gaia_db:
         return {"solved": False,
@@ -1094,21 +927,8 @@ def _query_vsx_local_frame_bbox(
     return df
 
 
-def _finite_positive_adu(value: Any) -> float | None:
-    """Return a finite positive ADU, else None (NaN/inf/<=0/unparsable)."""
-    if value is None:
-        return None
-    try:
-        v = float(value)
-    except (TypeError, ValueError):
-        return None
-    if math.isfinite(v) and v > 0:
-        return v
-    return None
-
-
-def _equipment_saturate_adu_from_db(equipment_id: int | None) -> float | None:
-    """Read ``EQUIPMENTS.SATURATE_ADU`` when a valid equipment id is given."""
+def _equipment_saturate_adu_from_db(equipment_id: int | None, cfg: AppConfig) -> float | None:
+    """Read ``EQUIPMENTS.SATURATE_ADU`` (run database) when a valid equipment id is given."""
     if equipment_id is None:
         return None
     try:
@@ -1118,48 +938,11 @@ def _equipment_saturate_adu_from_db(equipment_id: int | None) -> float | None:
     if eid <= 0:
         return None
     try:
-        cfg = AppConfig()
-        db = VyvarDatabase(cfg.database_path)
+        db = VyvarDatabase.for_config(cfg)
         return db.get_equipment_saturation_adu(eid)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 - optional source: the header / measured level decide then
+        logging.warning("[SAT] equipment %s saturation not read from the database: %s", eid, exc)
         return None
-
-
-_VYVAR_TIME_JD_CSV_COLS = ("jd_mid", "hjd_mid", "bjd_tdb_mid")
-
-
-def _vyvar_df_round_time_jd_for_csv(df: pd.DataFrame) -> pd.DataFrame:
-    """Round geocentric/heliocentric/barycentric JD columns to six decimals for stable CSV / spreadsheet display."""
-    cols = [c for c in _VYVAR_TIME_JD_CSV_COLS if c in df.columns]
-    if not cols:
-        return df
-    out = df.copy()
-    for c in cols:
-        out[c] = pd.to_numeric(out[c], errors="coerce").round(6)
-    return out
-
-
-def _vyvar_df_to_csv(df: pd.DataFrame, path: Path | str) -> None:
-    """Write sidecar / per-frame proc CSV.
-
-    When ``mag`` is present it holds the Gaia catalog G magnitude (``phot_g_mean_mag`` at
-    cross-match time) - constant per star for the night, not the frame instrumental magnitude.
-    Science paths must use ``dao_flux`` (see ``docs/VYVAR_PROCESS.md``).
-    """
-    p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    export_df = df
-    if "catalog_id" in df.columns:
-        export_df = df.copy()
-        export_df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
-    export_df = _vyvar_df_round_time_jd_for_csv(export_df)
-    try:
-        import pyarrow as pa  # type: ignore[import-not-found]
-        import pyarrow.csv as pacsv  # type: ignore[import-not-found]
-
-        pacsv.write_csv(pa.Table.from_pandas(export_df, preserve_index=False), str(p))
-    except Exception:  # noqa: BLE001
-        export_df.to_csv(p, index=False, lineterminator="\n", na_rep="")
 
 
 def select_comparison_stars_spatial_grid(
@@ -1370,14 +1153,14 @@ def write_photometry_plan_files(
     n_comparison_stars: int = 0,
     require_non_variable: bool = True,
     draft_id: int | None = None,
-    database_path: Path | str | None = None,
+    cfg: AppConfig,
     aligned_files: list[Path] | None = None,
     aligned_ram_frames: list[tuple[str, Any, Any]] | None = None,
     require_safe_bbox: bool = False,
     enrichment_expected: bool = True,
 ) -> dict[str, Any]:
     """Write ``comparison_stars.csv`` from ``masterstars.csv`` + image size; stub ``variable_targets.csv``."""
-    from pipeline import (  # noqa: PLC0415
+    from pipeline_catalog import (  # noqa: PLC0415
         _build_exoplanet_promotion_rows_from_masterstars,
         _effective_field_catalog_cone_radius_deg,
     )
@@ -1442,7 +1225,7 @@ def write_photometry_plan_files(
     if wpx <= 0 or h <= 0:
         return {"comparison_stars_csv": "", "error": "MASTERSTAR has no data"}
 
-    _cfg_plan = config.AppConfig()
+    _cfg_plan = cfg
 
     comp_path = ps / "comparison_stars.csv"
     var_path = ps / "variable_targets.csv"
@@ -1498,7 +1281,7 @@ def write_photometry_plan_files(
                 )
             log_event(f"[BORDER] Not enough aligned frames for intersection bbox: {n_frame_sources}")
         else:
-            from photometry_core import (  # noqa: PLC0415
+            from photometry_shared import (  # noqa: PLC0415
                 common_field_intersection_bbox_px,
                 common_field_intersection_bbox_px_from_headers,
             )
@@ -2023,189 +1806,6 @@ def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
         return
 
 
-def _catalog_match_radius_px(
-    wcs_obj: Any,
-    *,
-    match_sep_arcsec: float,
-) -> float:
-    """Pixel matching radius for Gaia<->DAO (floor 10 px)."""
-    import numpy as np
-    from astropy.wcs.utils import proj_plane_pixel_scales
-
-    floor_px = 10.0
-    try:
-        scales_deg = proj_plane_pixel_scales(wcs_obj)
-        arcsec_per_px = float(np.mean(scales_deg)) * 3600.0
-        if math.isfinite(arcsec_per_px) and arcsec_per_px > 0:
-            return max(floor_px, float(match_sep_arcsec) / arcsec_per_px)
-    except Exception:  # noqa: BLE001
-        pass
-    return floor_px
-
-
-def _merge_dao_pass1_pass2_tables(
-    tbl_pass1: Any,
-    pass2_rows: list[dict[str, float]],
-    *,
-    bfac: int,
-    dedup_px: float = 3.0,
-) -> Any:
-    """Append pass-2 detections; drop pass-2 if within ``dedup_px`` of pass-1 (full image coords).
-
-    Adds integer column ``vy_dao_pass`` (1=pass1, 2=pass2): provenance of each detection
-    (MASTERSTAR catalog, pass-2 calibration).
-    """
-    import numpy as np
-    from astropy.table import Table, vstack
-
-    if tbl_pass1 is not None and len(tbl_pass1) > 0 and "vy_dao_pass" not in tbl_pass1.colnames:
-        tbl_pass1 = Table(tbl_pass1, copy=True)
-        tbl_pass1["vy_dao_pass"] = np.ones(len(tbl_pass1), dtype=np.int16)
-
-    if not pass2_rows:
-        return tbl_pass1
-    p1x = np.asarray([], dtype=np.float64)
-    p1y = np.asarray([], dtype=np.float64)
-    if tbl_pass1 is not None and len(tbl_pass1) > 0:
-        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
-        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
-        p1x, p1y = _dao_xy_binned_to_full(xb, yb, int(bfac))
-    kept: list[dict[str, float]] = []
-    for row in pass2_rows:
-        xf = float(row["x_full"])
-        yf = float(row["y_full"])
-        if p1x.size:
-            d = np.hypot(p1x - xf, p1y - yf)
-            if float(np.min(d)) < float(dedup_px):
-                continue
-        xb, yb = _dao_full_to_binned_xy(xf, yf, int(bfac))
-        kept.append(
-            {
-                "x_centroid": xb,
-                "y_centroid": yb,
-                "flux": float(row["flux"]),
-                "peak": float(row.get("peak", row["flux"])),
-                "vy_dao_pass": 2,
-            }
-        )
-    if not kept:
-        return tbl_pass1
-    t2 = Table(kept)
-    if tbl_pass1 is None or len(tbl_pass1) == 0:
-        return t2
-    return vstack([tbl_pass1, t2])
-
-
-def _dao_targeted_pass2_unmatched_gaia(
-    data0: "np.ndarray",
-    tbl_pass1: Any,
-    *,
-    cat_df: pd.DataFrame,
-    wcs_obj: Any,
-    bfac: int,
-    fwhm_px: float,
-    pass2_sigma: float,
-    pass2_center_tol_px: float = 5.0,
-    match_sep_arcsec: float,
-    wpx: int,
-    h: int,
-) -> tuple[Any, int, int]:
-    """Run local DAO on Gaia positions with no pass-1 DAO neighbor. Returns (merged_tbl, n_unmatched, n_pass2)."""
-    import numpy as np
-
-    from masterstar_gaia_accounting import Pass2AcceptParams, dao_pass2_try_at_position
-
-    if cat_df is None or cat_df.empty or "ra_deg" not in cat_df.columns or "dec_deg" not in cat_df.columns:
-        return tbl_pass1, 0, 0
-
-    ra = pd.to_numeric(cat_df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    de = pd.to_numeric(cat_df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    ok = np.isfinite(ra) & np.isfinite(de)
-    if not bool(ok.any()):
-        return tbl_pass1, 0, 0
-
-    gx, gy = wcs_obj.world_to_pixel_values(ra[ok], de[ok])
-    inb = (gx >= 0) & (gx < float(wpx)) & (gy >= 0) & (gy < float(h))
-    gx = gx[inb]
-    gy = gy[inb]
-    n_gaia_in = int(gx.size)
-    if n_gaia_in == 0:
-        return tbl_pass1, 0, 0
-
-    match_r_px = _catalog_match_radius_px(wcs_obj, match_sep_arcsec=float(match_sep_arcsec))
-    dao_x = np.asarray([], dtype=np.float64)
-    dao_y = np.asarray([], dtype=np.float64)
-    if tbl_pass1 is not None and len(tbl_pass1) > 0:
-        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
-        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
-        dao_x, dao_y = _dao_xy_binned_to_full(xb, yb, int(bfac))
-
-    unmatched_idx: list[int] = []
-    if dao_x.size == 0:
-        unmatched_idx = list(range(n_gaia_in))
-    else:
-        from scipy.spatial import cKDTree  # type: ignore
-
-        tree = cKDTree(np.column_stack([dao_x, dao_y]))
-        dist, _ = tree.query(np.column_stack([gx, gy]), distance_upper_bound=float(match_r_px))
-        unmatched_idx = [i for i, d in enumerate(dist) if not np.isfinite(d) or float(d) > float(match_r_px)]
-
-    n_unmatched = len(unmatched_idx)
-    if n_unmatched == 0:
-        return tbl_pass1, 0, 0
-
-    sigma_p2 = max(1.5, min(20.0, float(pass2_sigma)))
-    fwhm_cut = max(1.2, min(20.0, float(fwhm_px)))
-    center_tol = max(0.5, min(10.0, float(pass2_center_tol_px)))
-    from masterstar_gaia_accounting import derive_point_source_q_floor  # noqa: PLC0415
-
-    _shape_meta = derive_point_source_q_floor(
-        data0, dao_x, dao_y, gx, gy, match_r_px=float(match_r_px)
-    )
-    p2_params = Pass2AcceptParams(
-        sigma=sigma_p2,
-        center_tol_px=center_tol,
-        fwhm_px=float(fwhm_cut),
-        shape_q_floor=_shape_meta.get("q_floor"),
-    )
-    LOGGER.info(
-        "[DAO pass 2] POINT-SOURCE-SHAPE-01 q_floor=%s n_ref=%s",
-        _shape_meta.get("q_floor"),
-        _shape_meta.get("n_ref"),
-    )
-    pass2_rows: list[dict[str, float]] = []
-    n_empty_cutouts = 0
-
-    for i in unmatched_idx:
-        x0 = float(gx[i])
-        y0 = float(gy[i])
-        hit = dao_pass2_try_at_position(
-            data0, x0, y0, wpx=int(wpx), h=int(h), params=p2_params
-        )
-        if not hit.get("accepted"):
-            if str(hit.get("reason", "")) == "no_detection":
-                n_empty_cutouts += 1
-            continue
-        pass2_rows.append(
-            {
-                "x_full": float(hit["x_det"]),
-                "y_full": float(hit["y_det"]),
-                "flux": float(hit["flux"]),
-                "peak": float(hit.get("peak", hit["flux"])),
-            }
-        )
-
-    if n_empty_cutouts > 0:
-        LOGGER.info(
-            "[DAO pass 2] %d/%d targeted cutouts had no detection "
-            "(NoDetectionsWarning suppressed)",
-            int(n_empty_cutouts),
-            int(n_unmatched),
-        )
-    merged = _merge_dao_pass1_pass2_tables(tbl_pass1, pass2_rows, bfac=int(bfac), dedup_px=3.0)
-    return merged, n_unmatched, len(pass2_rows)
-
-
 def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
     df: pd.DataFrame,
     *,
@@ -2292,559 +1892,3 @@ def pick_sibling_donor_filter(recipient_filter: str, verified_filters: set[str])
     return min(candidates, key=lambda f: abs(float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(str(f).lower(), 550.0)) - lam_r))
 
 
-def _pass2_sibling_wcs_recovery(
-    *,
-    reports: list[dict[str, Any]],
-    skipped: list[dict[str, Any]],
-    job_list: list[dict[str, Any]],
-    align_kw: dict[str, Any],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Pass 2: a filter sub-group whose MASTERSTAR did not solve is solved again by astrosolve with
-    the field centre and plate scale of a solved sibling filter as the hint (BLIND-SOLVE-2026-10,
-    Milan 2026-10-20: one plate-solve code; the old bulk-shift WCS copy with its own matching and
-    odds is removed). The result is verified and refined like any solve."""
-    from astropy.wcs import WCS  # noqa: PLC0415
-    from astropy.wcs.utils import proj_plane_pixel_scales  # noqa: PLC0415
-
-    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
-    from pipeline import generate_masterstar_and_catalog  # noqa: PLC0415
-
-    cfg = align_kw.get("app_config") or AppConfig()
-    if len(job_list) <= 1 or not skipped or not reports:
-        return reports, skipped
-
-    job_by_gkey = {str(j.get("gkey") or ""): j for j in job_list}
-    report_by_gkey: dict[str, dict[str, Any]] = {}
-    for rep in reports:
-        gk = str(rep.get("observation_group_key") or "")
-        if gk:
-            report_by_gkey[gk] = rep
-
-    verified_filters: set[str] = set()
-    for gk in report_by_gkey:
-        setup = Path(gk).name if gk else "(root)"
-        flt = filter_code_from_setup_name(setup)
-        if flt:
-            verified_filters.add(flt)
-
-    still_skipped: list[dict[str, Any]] = []
-    archive_path = Path(align_kw["archive_path"])
-
-    for sk in skipped:
-        gkey = str(sk.get("gkey") or "")
-        setup = str(sk.get("setup") or (Path(gkey).name if gkey else "(root)"))
-        recipient_filter = filter_code_from_setup_name(setup)
-        job = job_by_gkey.get(gkey)
-        if not recipient_filter or job is None:
-            still_skipped.append(sk)
-            continue
-
-        donor_filter = pick_sibling_donor_filter(recipient_filter, verified_filters)
-        if donor_filter is None:
-            still_skipped.append(sk)
-            continue
-
-        donor_gkey: str | None = None
-        donor_report: dict[str, Any] | None = None
-        for gk, rep in report_by_gkey.items():
-            d_setup = Path(gk).name if gk else "(root)"
-            if filter_code_from_setup_name(d_setup) == donor_filter:
-                donor_gkey = gk
-                donor_report = rep
-                break
-        donor_job = job_by_gkey.get(donor_gkey or "") if donor_gkey else None
-        if donor_report is None or donor_job is None:
-            still_skipped.append(sk)
-            continue
-
-        platesolve_dir = Path(job["platesolve_dir"])
-        platesolve_dir.mkdir(parents=True, exist_ok=True)
-        recipient_ms = platesolve_dir / "MASTERSTAR.fits"
-        donor_ms_str = str(donor_report.get("masterstar_fits") or "").strip()
-        donor_ms = (
-            Path(donor_ms_str)
-            if donor_ms_str
-            else Path(donor_job["platesolve_dir"]) / "MASTERSTAR.fits"
-        )
-
-        try:
-            if not recipient_ms.is_file():
-                generate_masterstar_and_catalog(
-                    archive_path=archive_path,
-                    source_root=Path(job["detrended_root"]),
-                    platesolve_dir=platesolve_dir,
-                    setup_name=gkey or None,
-                    masterstar_fits_only=True,
-                    app_config=cfg,
-                    equipment_id=align_kw.get("id_equipment"),
-                    draft_id=align_kw.get("draft_id"),
-                )
-
-            donor_centre = _wcs_field_center_radec_deg(donor_ms)
-            with fits.open(donor_ms, memmap=False) as _hd_d:
-                _wd = WCS(_hd_d[0].header).celestial
-            donor_scale = float(np.mean(proj_plane_pixel_scales(_wd))) * 3600.0
-            if donor_centre is None or not math.isfinite(donor_scale) or donor_scale <= 0:
-                still_skipped.append(sk)
-                continue
-            rec_result = _solve_wcs_external(
-                recipient_ms,
-                hint_ra_deg=float(donor_centre[0]),
-                hint_dec_deg=float(donor_centre[1]),
-                scale_hint_arcsec=donor_scale,
-                app_config=cfg,
-            )
-            rec_result["donor_filter"] = donor_filter
-            if not rec_result.get("solved"):
-                log_event(
-                    f"SIBLING Pass2: {setup} not solved with the {donor_filter} hint - "
-                    f"{rec_result.get('message')}"
-                )
-                still_skipped.append(sk)
-                continue
-
-            generate_masterstar_and_catalog(
-                archive_path=archive_path,
-                platesolve_dir=platesolve_dir,
-                setup_name=gkey or None,
-                masterstar_skip_build=True,
-                masterstar_platesolve_skip_solve=True,
-                app_config=cfg,
-                equipment_id=align_kw.get("id_equipment"),
-                draft_id=align_kw.get("draft_id"),
-                catalog_match_max_sep_arcsec=float(
-                    align_kw.get("catalog_match_max_sep_arcsec") or 25.0
-                ),
-                max_catalog_rows=int(align_kw.get("max_catalog_rows") or 12000),
-            )
-
-            rep = _astrometry_align_impl_body(
-                job=job,
-                sibling_recovery_use_masterstar=True,
-                build_masterstar_and_catalogs=False,
-                **{
-                    k: v
-                    for k, v in align_kw.items()
-                    if k not in {"build_masterstar_and_catalogs"}
-                },
-            )
-            rep["sibling_recovery"] = rec_result
-            reports.append(rep)
-            report_by_gkey[gkey] = rep
-            verified_filters.add(recipient_filter)
-            log_event(
-                f"SIBLING Pass2: {setup} solved with the {donor_filter} hint - "
-                f"{rec_result.get('n_match')} matches, rms {rec_result.get('rms_px')} px"
-            )
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.error("Sibling Pass2 failed for %s: %s", setup, exc)
-            log_event(f"! Sibling Pass2: set {setup} remains skipped - {exc}")
-            still_skipped.append(sk)
-
-    return reports, still_skipped
-
-
-def _merge_astrometry_group_reports(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    if not rows:
-        return {}
-    if len(rows) == 1:
-        return rows[0]
-    tot_aligned = sum(int(x.get("aligned_frames") or 0) for x in rows)
-    tot_in = sum(int(x.get("input_frames") or 0) for x in rows)
-    merged = dict(rows[-1])
-    merged["aligned_frames"] = int(tot_aligned)
-    merged["input_frames"] = int(tot_in)
-    merged["observation_subgroup_reports"] = rows
-    merged["masterstar_fits"] = "; ".join(
-        str(x.get("masterstar_fits") or "").strip()
-        for x in rows
-        if str(x.get("masterstar_fits") or "").strip()
-    )
-    merged["masterstars_csv"] = "; ".join(
-        str(x.get("masterstars_csv") or "").strip()
-        for x in rows
-        if str(x.get("masterstars_csv") or "").strip()
-    )
-    log_event(
-        f"Astrometry: finished {len(rows)} subgroups - aligned frames in total {tot_aligned} / {tot_in}."
-    )
-    return merged
-
-
-def _run_osc_multi_group_alignment(
-    *,
-    job_list: list[dict[str, Any]],
-    osc_bundles: dict[str, dict[str, dict[str, Any]]],
-    align_kw: dict[str, Any],
-) -> dict[str, Any]:
-    """OSC-2: oneRGGB full solve+align first; R/G/B reuse WCS + registration handoff."""
-    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
-    from pipeline import generate_masterstar_and_catalog  # noqa: PLC0415
-
-    from osc_align import (
-        OSC_REGISTRATION_HANDOFF,
-        load_registration_handoff,
-        log_channel_match_rate_verification,
-        propagate_wcs_between_fits,
-        require_osc_donor_products,
-        write_wcs_propagation_meta,
-    )
-
-    build_ms = bool(align_kw.get("build_masterstar_and_catalogs"))
-    reports: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-    archive_path = Path(align_kw["archive_path"])
-    cfg = align_kw.get("app_config") or AppConfig()
-
-    for base in sorted(osc_bundles.keys(), key=str.casefold):
-        bundle = osc_bundles[base]
-        one_job = dict(bundle["oneRGGB"])
-        one_job["osc_write_registration_handoff"] = True
-        _setup = Path(str(one_job.get("gkey") or "")).name or base
-        one_rggb_failed = False
-        try:
-            one_rep = _astrometry_align_impl_body(job=one_job, **align_kw)
-            reports.append(one_rep)
-        except Exception as exc:  # noqa: BLE001
-            one_rggb_failed = True
-            LOGGER.error("OSC oneRGGB alignment failed for %s: %s", _setup, exc)
-            skipped.append({"gkey": one_job.get("gkey"), "setup": _setup, "skipped_reason": str(exc)})
-            continue
-
-        donor_ps = Path(one_job["platesolve_dir"])
-        try:
-            require_osc_donor_products(donor_ps)
-            handoff = load_registration_handoff(donor_ps / OSC_REGISTRATION_HANDOFF)
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.error("OSC donor products missing for %s: %s", base, exc)
-            skipped.append({"gkey": one_job.get("gkey"), "setup": _setup, "skipped_reason": str(exc)})
-            continue
-
-        for ch in ("R", "G", "B"):
-            ch_job = dict(bundle[ch])
-            ch_setup = Path(str(ch_job.get("gkey") or "")).name or f"{base}_{ch}"
-            ch_ps = Path(ch_job["platesolve_dir"])
-            ch_ps.mkdir(parents=True, exist_ok=True)
-            try:
-                if build_ms:
-                    generate_masterstar_and_catalog(
-                        archive_path=archive_path,
-                        source_root=Path(ch_job["detrended_root"]),
-                        platesolve_dir=ch_ps,
-                        setup_name=str(ch_job.get("gkey") or "") or None,
-                        masterstar_fits_only=True,
-                        app_config=cfg,
-                        equipment_id=align_kw.get("id_equipment"),
-                        draft_id=align_kw.get("draft_id"),
-                    )
-                    ch_ms = ch_ps / "MASTERSTAR.fits"
-                    propagate_wcs_between_fits(donor_ps / "MASTERSTAR.fits", ch_ms)
-                    cat_info = generate_masterstar_and_catalog(
-                        archive_path=archive_path,
-                        platesolve_dir=ch_ps,
-                        setup_name=str(ch_job.get("gkey") or "") or None,
-                        masterstar_skip_build=True,
-                        masterstar_platesolve_skip_solve=True,
-                        app_config=cfg,
-                        equipment_id=align_kw.get("id_equipment"),
-                        draft_id=align_kw.get("draft_id"),
-                        catalog_match_max_sep_arcsec=float(
-                            align_kw.get("catalog_match_max_sep_arcsec") or 25.0
-                        ),
-                        max_catalog_rows=int(align_kw.get("max_catalog_rows") or 12000),
-                    )
-                    mr = None
-                    if isinstance(cat_info, dict):
-                        sm = cat_info.get("solve") or cat_info
-                        if isinstance(sm, dict):
-                            mr = sm.get("match_rate")
-                    write_wcs_propagation_meta(
-                        ch_ps,
-                        donor_dir=donor_ps,
-                        channel=str(ch),
-                        match_rate=float(mr) if mr is not None else None,
-                    )
-                    log_channel_match_rate_verification(
-                        channel=str(ch),
-                        match_rate=float(mr) if mr is not None else None,
-                        one_rggb_failed=one_rggb_failed,
-                        log_event=log_event,
-                    )
-                ch_kw = {
-                    k: v
-                    for k, v in align_kw.items()
-                    if k not in {"build_masterstar_and_catalogs"}
-                }
-                ch_rep = _astrometry_align_impl_body(
-                    job=ch_job,
-                    osc_registration_handoff=handoff,
-                    sibling_recovery_use_masterstar=True,
-                    build_masterstar_and_catalogs=False,
-                    **ch_kw,
-                )
-                ch_rep["osc_channel"] = ch
-                ch_rep["osc_donor"] = str(donor_ps)
-                reports.append(ch_rep)
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.error("OSC channel %s alignment failed for %s: %s", ch, ch_setup, exc)
-                skipped.append({"gkey": ch_job.get("gkey"), "setup": ch_setup, "skipped_reason": str(exc)})
-
-    from osc_align import parse_osc_channel_from_setup
-
-    mono_jobs: list[dict[str, Any]] = []
-    for j in job_list:
-        gkey = str(j.get("gkey") or "")
-        setup = Path(gkey).name if gkey else ""
-        _, ch = parse_osc_channel_from_setup(setup)
-        if ch is None:
-            mono_jobs.append(j)
-
-    for j in mono_jobs:
-        try:
-            reports.append(_astrometry_align_impl_body(job=j, **align_kw))
-        except Exception as exc:  # noqa: BLE001
-            setup = Path(str(j.get("gkey") or "")).name if j.get("gkey") else "(root)"
-            skipped.append({"gkey": j.get("gkey"), "setup": setup, "skipped_reason": str(exc)})
-
-    if not reports:
-        raise RuntimeError(
-            "OSC astrometry: no group succeeded. "
-            + "; ".join(f"{s.get('setup')}: {s.get('skipped_reason')}" for s in skipped)
-        )
-    merged = _merge_astrometry_group_reports(reports)
-    if skipped:
-        merged["skipped_subgroups"] = skipped
-    merged["osc_orchestration"] = True
-    return merged
-
-
-def astrometry_align_and_build_masterstar(
-    *,
-    archive_path: Path,
-    min_detected_stars: int = 100,
-    max_detected_stars: int = 500,
-    catalog_match_max_sep_arcsec: float = 25.0,
-    max_catalog_rows: int = 12000,
-    n_comparison_stars: int = 0,
-    require_non_variable_comparisons: bool = True,
-    dao_threshold_sigma: float = 3.5,
-    id_equipment: int | None = None,
-    draft_id: int | None = None,
-    build_masterstar_and_catalogs: bool = False,
-    progress_cb: "callable | None" = None,
-    ram_align_and_catalog: bool = False,
-    app_config: AppConfig | None = None,
-    masterstar_candidate_paths: "Sequence[str] | None" = None,
-    masterstar_selection_pct: float | None = None,
-) -> dict[str, Any]:
-    """Astrometry + alignment + per-frame catalog CSV (mandatory outputs).
-
-    Preprocessed frames under ``<archive>/processed/lights`` (or legacy ``detrended/lights``) are grouped
-    by full relative parent folder (multi-observation / FILTER+EXP+BIN layout). Each group gets its own
-    alignment, ``MASTERSTAR``, and ``platesolve/<group>/`` outputs. Frames stored directly in ``lights/``
-    form a single group.
-    """
-    from astrometry_align import _astrometry_align_impl_body  # noqa: PLC0415
-    from pipeline_catalog import find_qc_metrics_csv  # noqa: PLC0415
-
-    ap = Path(archive_path)
-    _cfg_align_root = app_config or AppConfig()
-    input_root = _archive_preprocess_lights_root(
-        ap,
-        draft_id=draft_id,
-        db=None,
-    )
-    if not input_root.exists():
-        # FAIL-LOUD-2026-10 (code review 2 G03-37): the former fallback took the first subfolder of
-        # processed/lights and silently dropped every other setup of the night
-        raise FileNotFoundError(f"preprocessed lights folder missing: {input_root}")
-    det_top = input_root
-    ali_top = ap / "detrended_aligned" / "lights"
-    os.makedirs(str(ali_top), exist_ok=True)
-    ps_top = ap / "platesolve"
-    os.makedirs(str(ps_top), exist_ok=True)
-    files_all = _iter_fits_recursive(det_top)
-    _n_before_qc = len(files_all)
-    _qc_csv = find_qc_metrics_csv(
-        ap,
-        draft_id=draft_id,
-        db=None,
-    )
-    if _qc_csv is None or not _qc_csv.is_file():
-        raise FileNotFoundError(
-            "Preprocess QC step required; run Analyze/preprocess first to produce qc_metrics.csv"
-        )
-    files_all, _qc_status_map = filter_files_by_qc_metrics_allowlist(files_all, _qc_csv)
-    log_event(
-        f"QC allowlist: using {len(files_all)}/{_n_before_qc} lights FITS "
-        f"(qc_metrics.csv) for alignment from {det_top}"
-    )
-    from invariants_runtime import check_qc01_skipproc_alignment  # noqa: PLC0415
-
-    check_qc01_skipproc_alignment(files_all, _qc_csv, meta={"invariants": []})
-    _bayermask = None
-    if id_equipment is not None and _cfg_align_root is not None:
-        try:
-            from database import VyvarDatabase
-
-            _osc_db = VyvarDatabase(str(_cfg_align_root.database_path))
-            _bayermask = _osc_db.get_equipment_bayermask(int(id_equipment))
-        except Exception:  # noqa: BLE001
-            _bayermask = None
-    from invariants_runtime import check_osc01_channel_extraction_required  # noqa: PLC0415
-
-    check_osc01_channel_extraction_required(
-        files_all,
-        equipment_bayermask=_bayermask,
-        meta={"invariants": []},
-    )
-    _n_root_only = len(list(det_top.glob("*.fits"))) if det_top.exists() else 0
-    _n_all = len(files_all)
-    if _n_root_only != _n_all:
-        log_event(
-            f"FITS total: {_n_all} under {det_top} ({_n_root_only} directly in the root; "
-            f"the rest in subfolders, e.g. filter/exp/binning)."
-        )
-    else:
-        log_event(f"FITS total: {_n_all} in {det_top}")
-    log_event(f"Alignment input root: {det_top}")
-    if not files_all:
-        raise FileNotFoundError(
-            f"No FITS in {det_top}. Plate solve reads only **processed** frames. "
-            "Run **MAKE MASTERSTAR** after the **Analyze** step first (writes from "
-            f"`{ap / 'calibrated' / 'lights'}` -> `{ap / 'processed' / 'lights'}` or older `{ap / 'detrended' / 'lights'}`)."
-        )
-    job_list: list[dict[str, Any]] = []
-    # Group strictly by real folder structure under processed/detrended lights.
-    # DO NOT create scan_<id> subfolders: users expect platesolve/ + detrended_aligned/ to mirror
-    # processed/lights/<setup_name>/ layout (as in older drafts like draft_000231).
-    groups = _partition_detrended_by_subfolder(files_all, det_top)
-    for gkey in sorted(groups.keys()):
-        gfs = groups[gkey]
-        if not gfs:
-            continue
-        _setup_name = Path(gkey).name if gkey else ""
-        if _setup_name:
-            log_event(
-                f"Alignment subgroup detected: setup_name={_setup_name} "
-                f"(input={det_top / gkey}, files={len(gfs)})"
-            )
-        if gkey:
-            job_list.append(
-                {
-                    "gkey": gkey,
-                    "scanning_id": None,
-                    "detrended_root": det_top / gkey,
-                    "aligned_root": ali_top / gkey,
-                    "platesolve_dir": ps_top / gkey,
-                    "files": gfs,
-                }
-            )
-        else:
-            job_list.append(
-                {
-                    "gkey": "",
-                    "scanning_id": None,
-                    "detrended_root": det_top,
-                    "aligned_root": ali_top,
-                    "platesolve_dir": ps_top,
-                    "files": gfs,
-                }
-            )
-    if len(job_list) > 1:
-        log_event(
-            "Astrometry: several sub-observations (subfolders in processed|detrended/lights) - "
-            "separate alignment, MASTERSTAR and catalogs for each group."
-        )
-    from osc_align import partition_jobs_for_osc_alignment
-
-    job_list, osc_meta = partition_jobs_for_osc_alignment(job_list)
-    if osc_meta.get("has_osc_bundles"):
-        from invariants_runtime import check_osc02_unified_frame_sets
-
-        check_osc02_unified_frame_sets(osc_meta["bundles"], meta={"invariants": []})
-    _ms_paths = [str(x).strip() for x in (masterstar_candidate_paths or []) if str(x).strip()]
-    try:
-        _ms_pct = float(masterstar_selection_pct) if masterstar_selection_pct is not None else None
-    except (TypeError, ValueError):
-        _ms_pct = None
-    if _ms_pct is not None and (not math.isfinite(_ms_pct) or _ms_pct <= 0):
-        _ms_pct = None
-    _multi_obs = len(job_list) > 1
-    for _j in job_list:
-        _j["masterstar_candidate_paths"] = [] if _multi_obs else _ms_paths
-        _j["masterstar_selection_pct"] = _ms_pct
-
-    _kw: dict[str, Any] = dict(
-        archive_path=archive_path,
-        min_detected_stars=min_detected_stars,
-        max_detected_stars=max_detected_stars,
-        catalog_match_max_sep_arcsec=catalog_match_max_sep_arcsec,
-        max_catalog_rows=max_catalog_rows,
-        n_comparison_stars=n_comparison_stars,
-        require_non_variable_comparisons=require_non_variable_comparisons,
-        dao_threshold_sigma=dao_threshold_sigma,
-        id_equipment=id_equipment,
-        draft_id=draft_id,
-        build_masterstar_and_catalogs=build_masterstar_and_catalogs,
-        progress_cb=progress_cb,
-        ram_align_and_catalog=ram_align_and_catalog,
-        app_config=app_config,
-    )
-    if osc_meta.get("has_osc_bundles"):
-        return _run_osc_multi_group_alignment(
-            job_list=job_list,
-            osc_bundles=osc_meta["bundles"],
-            align_kw=_kw,
-        )
-    if len(job_list) == 1:
-        return _astrometry_align_impl_body(job=job_list[0], **_kw)
-
-    reports: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-    for j in job_list:
-        _gkey = str(j.get("gkey") or "")
-        _setup = Path(_gkey).name if _gkey else "(root)"
-        try:
-            reports.append(_astrometry_align_impl_body(job=j, **_kw))
-        except Exception as exc:  # noqa: BLE001
-            LOGGER.error("Astrometry/MASTERSTAR failed for set %s: %s", _setup, exc)
-            log_event(
-                f"! Set {_setup}: plate-solve/MASTERSTAR failed - skipping the set, "
-                f"continuing with the next set. Reason: {exc}"
-            )
-            skipped.append(
-                {"gkey": _gkey, "setup": _setup, "solved": False, "skipped_reason": str(exc)}
-            )
-            continue
-
-    reports, skipped = _pass2_sibling_wcs_recovery(
-        reports=reports,
-        skipped=skipped,
-        job_list=job_list,
-        align_kw=_kw,
-    )
-
-    if not reports:
-        raise RuntimeError(
-            "Astrometry: no set passed plate-solve/MASTERSTAR. "
-            + "; ".join(f"{s['setup']}: {s['skipped_reason']}" for s in skipped)
-        )
-
-    merged = _merge_astrometry_group_reports(reports)
-    if skipped:
-        merged["skipped_subgroups"] = skipped
-        log_event(
-            f"Astrometry: {len(reports)} sets OK, {len(skipped)} skipped: "
-            + ", ".join(s["setup"] for s in skipped)
-        )
-    return merged
-
-
-def _safe_proc_name(original_name: str) -> str:
-    name = (original_name or "").strip()
-    if not name:
-        return "proc.fits"
-    if name.lower().startswith("proc_"):
-        return name
-    return "proc_" + name

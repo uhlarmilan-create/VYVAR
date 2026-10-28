@@ -21,26 +21,18 @@ def test_resolve_frame_hw_from_fits_naxis(tmp_path: Path) -> None:
 
     ms = tmp_path / "MASTERSTAR.fits"
     _write_synthetic_ms(ms, 4096, 3000)
-    w, h, src = _resolve_frame_hw_px_from_masterstar(
-        ms,
-        frame_w_px=2082,
-        frame_h_px=1397,
-    )
+    w, h, src = _resolve_frame_hw_px_from_masterstar(ms)
     assert src == "fits_naxis"
     assert w == 4096
     assert h == 3000
     assert (w, h) != (2082, 1397)
 
 
-def test_resolve_frame_hw_falls_back_to_caller_default(tmp_path: Path) -> None:
+def test_resolve_frame_hw_unknown_raises(tmp_path: Path) -> None:
+    """CONFIG-ONE-2026-10: no caller default (2082 x 1397 px fitted one camera); unknown size is an error."""
+    import pytest
+
     from photometry_core import _resolve_frame_hw_px_from_masterstar
 
-    missing = tmp_path / "missing.fits"
-    w, h, src = _resolve_frame_hw_px_from_masterstar(
-        missing,
-        frame_w_px=2082,
-        frame_h_px=1397,
-    )
-    assert src == "caller_default"
-    assert w == 2082
-    assert h == 1397
+    with pytest.raises(RuntimeError, match="frame size unknown"):
+        _resolve_frame_hw_px_from_masterstar(tmp_path / "missing.fits")

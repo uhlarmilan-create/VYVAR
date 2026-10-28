@@ -160,27 +160,8 @@ def check_value(key: str, value: Any, entry: dict[str, Any]) -> str | None:
 
 
 def cross_check(values: dict[str, Any]) -> list[str]:
-    """Rules between keys (Save is refused while one fails)."""
-    errs: list[str] = []
-
-    def g(k: str) -> Any:
-        return values.get(k)
-
-    if g("annulus_outer_fwhm") is not None and g("annulus_inner_fwhm") is not None:
-        if float(g("annulus_outer_fwhm")) <= float(g("annulus_inner_fwhm")):
-            errs.append("Sky annulus: the outer radius must be larger than the inner radius.")
-        if g("aperture_fwhm_factor") is not None and float(g("annulus_inner_fwhm")) <= float(g("aperture_fwhm_factor")):
-            errs.append("Sky annulus: the inner radius must be larger than the aperture radius.")
-    if g("phase01_comparison_n_comp_max") is not None and g("phase01_comparison_n_comp_min") is not None:
-        if int(g("phase01_comparison_n_comp_max")) < int(g("phase01_comparison_n_comp_min")):
-            errs.append("Comparison stars: 'Most comparison stars' must be at least 'Fewest comparison stars'.")
-        if g("comp_trust_min_comps") is not None and int(g("comp_trust_min_comps")) > int(g("phase01_comparison_n_comp_max")):
-            errs.append("Trust: 'Comparison stars for green' cannot exceed 'Most comparison stars'.")
-    tiers = g("comp_color_tiers")
-    if tiers and g("comp_max_delta_bprp") is not None:
-        if float(tiers[-1].get("bprp", 0.0)) > float(g("comp_max_delta_bprp")):
-            errs.append("Comparison stars: colour class 3 cannot exceed 'Largest colour difference'.")
-    return errs
+    """Rules between keys (Save is refused while one fails); the one list in ``config``."""
+    return config.config_rule_problems(values)
 
 
 def changed_keys(current: dict[str, Any], edited: dict[str, Any]) -> list[str]:

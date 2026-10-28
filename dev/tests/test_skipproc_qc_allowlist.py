@@ -277,7 +277,8 @@ def test_legacy_alias_keys_are_known_removed(tmp_path: Path, caplog) -> None:
     cfg = AppConfig(project_root=tmp_path)
     for key in payload:
         assert not hasattr(cfg, key)
-    assert cfg.observer_code == "" and cfg.gaia_db_path == ""
+    assert cfg.observer_code == ""
+    assert str(cfg.gaia_db_path).replace("\\", "/").endswith("catalogs/vyvar_gaia_dr3.db")  # not "g.db"
     assert not any(r.levelno >= logging.WARNING for r in caplog.records)
     assert sum("CFG-REVIEW-2026-10" in r.getMessage() for r in caplog.records) == 3
 

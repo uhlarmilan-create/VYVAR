@@ -29,12 +29,12 @@ from catalog_match_trust import export_catalog_match_mode_from_internal
 from catalog_db import query_local_exoplanet, query_local_gaia, query_local_vsx
 from database import VyvarDatabase
 from time_utils import _header_float as _header_float_tu
-from photometry import enhance_catalog_dataframe_aperture
+from photometry_shared import enhance_catalog_dataframe_aperture
 from infolog import log_event
 from proc_frame_store import proc_csv_path_for_aligned_fits
 from plain_stats import plain_mean_med_std
 from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER, dao_detection_fwhm_pixels
-from masterstar_gaia_accounting import _dao_xy_binned_to_full
+from masterstar_gaia_accounting import _dao_full_to_binned_xy, _dao_xy_binned_to_full
 from pipeline_calibrate import (
     _effective_saturation_limit,
     _has_valid_wcs,
@@ -43,10 +43,8 @@ from pipeline_preprocess import (
     _load_raw_for_frame,
     _load_raw_hdr_for_frame,
 )
-from pipeline_astrometry import (
-    _finite_positive_adu,
-    _vyvar_df_to_csv,
-)
+from sat_diag import _finite_positive_adu
+from proc_frame_store import _vyvar_df_to_csv
 from pipeline_constants import (
     DAO_FWHM_FALLBACK_PX,
     DAO_CENTROID_MAX_SHIFT_FWHM,
@@ -56,9 +54,12 @@ from pipeline_constants import (
     LINEARITY_FRAC,
     SAT_LIMIT_CONTAINER_CLIP_ADU,
     SAT_LIMIT_NO_KNEE_FRAC,
-    SAT_LIMIT_PEAK_TEST_SOURCE,
     _EXO_HOST_ANNOTATION_COLUMNS,
 )
+from sat_diag import _box_peak_max_adu  # LAYER-2026-10: moved there
+from time_utils import _airmass_from_altitude_deg  # LAYER-2026-10: moved there
+from catalog_db import cone_sky_box  # LAYER-2026-10: moved there
+from pipeline_constants import FRAME_MAX_DAO_ROWS  # noqa: E402
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_catalog -> pipeline at module load.
@@ -82,9 +83,9 @@ def _apply_aperture_catalog_enhancements_from_st(
             df,
             data,
             hdr,
-            aperture_fwhm_factor=float(st.get("aperture_fwhm_factor", 1.7)),
-            annulus_inner_fwhm=float(st.get("annulus_inner_fwhm", 4.0)),
-            annulus_outer_fwhm=float(st.get("annulus_outer_fwhm", 6.0)),
+            aperture_fwhm_factor=float(st["cfg"].aperture_fwhm_factor),
+            annulus_inner_fwhm=float(st["cfg"].annulus_inner_fwhm),
+            annulus_outer_fwhm=float(st["cfg"].annulus_outer_fwhm),
             gaussian_fwhm_px_override=_go_f,
             fwhm_night_median_px=st.get("fwhm_night_median_px"),
             qc_fwhm_by_name=st.get("qc_fwhm_by_name"),
@@ -227,26 +228,6 @@ def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[s
         if scores.get(str(fp), 0) == best_n:
             return fp, scores
     return files[0], scores
-
-
-def cone_sky_box(center: SkyCoord, radius_deg: float) -> tuple[float, float, float, float]:
-    """RA/Dec box [deg] that contains the great-circle cone (CATALOG-FOOTPRINT-2026-10).
-
-    RA half-width is ``r / cos(dec)`` at the box edge nearest the pole (a box of +-r in RA covers
-    only r*cos(dec) on the sky: at Dec 61 a 4.7 deg cone lost the chip edges). A cone that reaches
-    a pole takes every RA. RA may lie outside [0, 360); ``query_local_*`` splits the wrap."""
-    ra0 = float(center.icrs.ra.deg)
-    de0 = float(center.icrs.dec.deg)
-    r = max(0.0, float(radius_deg))
-    de_min = max(-90.0, de0 - r)
-    de_max = min(90.0, de0 + r)
-    d_edge = max(abs(de_min), abs(de_max))
-    if d_edge >= 89.999:
-        return 0.0, 360.0, de_min, de_max
-    half = r / max(math.cos(math.radians(d_edge)), 1e-6)
-    if half >= 180.0:
-        return 0.0, 360.0, de_min, de_max
-    return ra0 - half, ra0 + half, de_min, de_max
 
 
 #: INJECTION-2026-10: CSV of synthetic catalogue stars (injection-recovery tests only). Unset in
@@ -702,35 +683,6 @@ def _build_exoplanet_promotion_rows_from_masterstars(
     )
     log_event(f"[EXO TARGET] {len(rows)} exoplanet host(s) promoted from masterstars (<={exo_max:g} arcsec)")
     return pd.DataFrame(rows)
-
-
-def inv_sat_limit_peak_test_adu() -> tuple[float, str]:
-    """Catalog-zone peak-test (INV-SAT-LIMIT). One authority for zone and per-frame.
-
-    Hard container clip is ``SAT_LIMIT_CONTAINER_CLIP_ADU`` (named separately;
-    not used as the clean-frame test). This returns the peak-test used for
-    ``zone==saturated``: currently 0.80 x 65535 = 52428 ADU when the D1-2 knee
-    is unmeasured. n_stack is not applied here: per-frame CSVs are one exposure.
-    """
-    peak = float(SAT_LIMIT_CONTAINER_CLIP_ADU) * float(SAT_LIMIT_NO_KNEE_FRAC)
-    return peak, SAT_LIMIT_PEAK_TEST_SOURCE
-
-
-def _box_peak_max_adu(data: "np.ndarray", x: float, y: float, half: int = 3) -> float:
-    """Maximum pixel value in ``(2*half+1)^2`` box around ``(x,y)`` on the **original** image (linear units)."""
-    import numpy as np
-
-    arr = np.asarray(data)
-    if arr.ndim != 2:
-        return float("nan")
-    h, w = arr.shape
-    xi = int(round(float(x)))
-    yi = int(round(float(y)))
-    y0, y1 = max(0, yi - half), min(h, yi + half + 1)
-    x0, x1 = max(0, xi - half), min(w, xi + half + 1)
-    if y0 >= y1 or x0 >= x1:
-        return float("nan")
-    return float(np.nanmax(arr[y0:y1, x0:x1]))
 
 
 def _box_peaks_at_centroids(
@@ -1457,23 +1409,14 @@ def dao_false_detection_fraction(
 _BATCH_E_N_EQUIV_LOGGED = False
 
 
-def _dao_detection_threshold_adu(
-    rms_conv: float,
-    *,
-    cfg: Any | None,
-    dao_threshold_sigma: float,
-) -> tuple[float, float]:
-    """T4-1 Option B: threshold = N_equiv * rms_conv (measured N from Part 2b)."""
+def _dao_detection_threshold_adu(rms_conv: float, *, cfg: AppConfig) -> tuple[float, float]:
+    """T4-1 Option B: threshold = N x rms_conv with N = ``cfg.detection_threshold_sigma`` of the run."""
     global _BATCH_E_N_EQUIV_LOGGED  # noqa: PLW0603
     rms = float(rms_conv)
     if not math.isfinite(rms) or rms <= 0:
         return 1e-6, float("nan")
-    n_eff = float(getattr(cfg, "detection_threshold_sigma", dao_threshold_sigma)) if cfg is not None else float(
-        dao_threshold_sigma
-    )
-    if not math.isfinite(n_eff) or n_eff <= 0:
-        n_eff = float(dao_threshold_sigma)
-    if cfg is not None and not _BATCH_E_N_EQUIV_LOGGED:
+    n_eff = float(cfg.detection_threshold_sigma)
+    if not _BATCH_E_N_EQUIV_LOGGED:
         LOGGER.info("[BATCH-E E.4] N_equiv=%.2f applied for DAO detection threshold", n_eff)
         _BATCH_E_N_EQUIV_LOGGED = True
     return max(n_eff * rms, 1e-6), n_eff
@@ -1760,9 +1703,8 @@ def detect_stars_match_master_reference(
     hdr: fits.Header,
     master_df: pd.DataFrame,
     *,
-    max_catalog_rows: int = 12000,
     match_sep_arcsec: float = 8.0,
-    dao_threshold_sigma: float = 3.5,
+    cfg: AppConfig,
     dao_fwhm_px: float | None = None,
     fallback_saturate_adu: float | None = None,
     equipment_saturate_adu: float | None = None,
@@ -1780,7 +1722,6 @@ def detect_stars_match_master_reference(
     saturation flags are per-frame. Intended for ``detrended_aligned`` data whose WCS matches
     ``MASTERSTAR.fits`` astrometry.
     """
-    from pipeline import _dao_targeted_pass2_unmatched_gaia  # noqa: PLC0415
 
     import numpy as np
 
@@ -1811,13 +1752,10 @@ def detect_stars_match_master_reference(
     mean, med, std = plain_mean_med_std(arr)
     data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     bfac = 1
-    _cfg_dao = AppConfig()
     _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
     _base_fw_m = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_m)
     from photutils.detection import DAOStarFinder  # type: ignore
 
-    thr_s = float(dao_threshold_sigma)
-    thr_s = max(0.5, min(20.0, thr_s))
     dao_scale = _dao_auto_binning_factor(*data0.shape)
     data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
     fwhm_eff = max(1.2, _base_fw_m / float(bfac))
@@ -1859,9 +1797,7 @@ def detect_stars_match_master_reference(
         print(f"WARNING: {_nm} std=0 even after fallback, skipping")
         empty_meta: dict[str, Any] = {"status": "std_zero"}
         return pd.DataFrame(), empty_meta
-    _thr, _n_equiv_used = _dao_detection_threshold_adu(
-        float(std_dao), cfg=_cfg_dao, dao_threshold_sigma=float(thr_s),
-    )
+    _thr, _n_equiv_used = _dao_detection_threshold_adu(float(std_dao), cfg=cfg)
     try:
         _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
         logging.getLogger(__name__).debug(
@@ -1881,7 +1817,7 @@ def detect_stars_match_master_reference(
     )
     tbl = finder(data_dao)
     if tbl is not None and len(tbl) > 0:
-        tbl = _prefilter_dao_table_brightest(tbl, max(int(max_catalog_rows) * 12, 36_000))
+        tbl = _prefilter_dao_table_brightest(tbl, max(int(FRAME_MAX_DAO_ROWS) * 12, 36_000))
         from astropy.table import Table as _AstropyTable
 
         tbl = _AstropyTable(tbl, copy=True)
@@ -1951,7 +1887,7 @@ def detect_stars_match_master_reference(
         "n_vsx_in_field": 0,
         "n_gaia_variable_in_field": 0,
         "field_catalog_cone_csv": None,
-        "dao_threshold_sigma": float(dao_threshold_sigma),
+        "dao_threshold_sigma": float(cfg.detection_threshold_sigma),
         "dao_fwhm_px": float(max(1.2, _base_fw_m)),
         "dao_detect_binning": 1,
         "match_sep_arcsec_requested": float(match_sep_arcsec),
@@ -1975,7 +1911,7 @@ def detect_stars_match_master_reference(
     _fwhm_used_m = float(max(1.2, _base_fw_m / float(bfac)))
     _d_h, _d_w = int(data_dao.shape[0]), int(data_dao.shape[1])
     _keep = _dao_spatial_flux_cap_row_indices(
-        tbl, max_n=int(max_catalog_rows), width_px=float(_d_w), height_px=float(_d_h)
+        tbl, max_n=int(FRAME_MAX_DAO_ROWS), width_px=float(_d_w), height_px=float(_d_h)
     )
     tbl = tbl[_keep]
     tbl.sort("flux")
@@ -2257,7 +2193,7 @@ def detect_stars_match_master_reference(
         "n_gaia_variable_in_field": 0,
         **foot_meta,
         "field_catalog_cone_csv": None,
-        "dao_threshold_sigma": float(dao_threshold_sigma),
+        "dao_threshold_sigma": float(cfg.detection_threshold_sigma),
         "dao_fwhm_px": _fwhm_used_m,
         "dao_detect_binning": int(bfac),
         "match_sep_arcsec_requested": float(match_sep_arcsec),
@@ -2388,14 +2324,6 @@ def _init_export_per_frame_worker(state: dict[str, Any]) -> None:
     _EXPORT_PER_FRAME_WORKER_STATE = state
 
 
-def _airmass_from_altitude_deg(alt_deg: float) -> float:
-    """Kasten & Young (1989) airmass from altitude in degrees."""
-    alt_rad = math.radians(float(alt_deg))
-    return 1.0 / (
-        math.sin(alt_rad) + 0.50572 * (float(alt_deg) + 6.07995) ** (-1.6364)
-    )
-
-
 def _compute_airmass_from_altaz(
     hdr: fits.Header,
     cfg: AppConfig | None = None,
@@ -2511,15 +2439,6 @@ def _extract_airmass_from_header(
         return am_altaz
 
     return float("nan")
-
-
-def _cfg_from_export_worker_state(st: dict[str, Any]) -> AppConfig:
-    """Rebuild minimal AppConfig observer fields from per-frame worker state dict."""
-    c = AppConfig()
-    c.observer_lat = float(st.get("observer_lat", 0.0) or 0.0)
-    c.observer_lon = float(st.get("observer_lon", 0.0) or 0.0)
-    c.observer_alt_m = float(st.get("observer_alt_m", 0.0) or 0.0)
-    return c
 
 
 # OUTPUT-REVIEW-2026-10 step 4: columns the per-frame export uses in memory (identity, the
@@ -2638,9 +2557,8 @@ def _export_per_frame_run_catalog_core(
             data,
             hdr,
             master_tab,
-            max_catalog_rows=int(st["max_catalog_rows"]),
             match_sep_arcsec=float(st["catalog_match_max_sep_arcsec"]),
-            dao_threshold_sigma=float(st["dao_threshold_sigma"]),
+            cfg=st["cfg"],
             dao_fwhm_px=float(st.get("dao_fwhm_px", DAO_FWHM_FALLBACK_PX)),
             equipment_saturate_adu=st.get("equipment_saturate_adu"),
             frame_name=fname,
@@ -2744,11 +2662,11 @@ def _export_per_frame_run_catalog_core(
     try:
         from time_utils import compute_time_columns
 
-        _dbp = str(st.get("database_path") or "").strip()
+        _dbp = str(st["cfg"].database_path or "").strip()
         _did_tc = st.get("draft_id")
         if _dbp and _did_tc is not None:
-            _db_tc = VyvarDatabase(Path(_dbp))
-        _geo_cfg = _cfg_from_export_worker_state(st)
+            _db_tc = VyvarDatabase.for_config(st["cfg"])
+        _geo_cfg = st["cfg"]
         _time_cols = compute_time_columns(
             hdr,
             db=_db_tc,
@@ -2916,7 +2834,7 @@ def _finalize_hybrid_bkg_fallback_sidecar(
     if not write_sidecar:
         return {}
     try:
-        from photometry_core import finalize_hybrid_bkg_fallback_proc_dir
+        from photometry_shared import finalize_hybrid_bkg_fallback_proc_dir
 
         return finalize_hybrid_bkg_fallback_proc_dir(
             proc_dir,
@@ -2951,3 +2869,189 @@ def _estimate_catalog_frame_hw(
         except Exception:  # noqa: BLE001
             continue
     return 2048, 2048
+
+
+# --- moved from pipeline_astrometry (LAYER-2026-10) ---
+
+
+def _catalog_match_radius_px(
+    wcs_obj: Any,
+    *,
+    match_sep_arcsec: float,
+) -> float:
+    """Pixel matching radius for Gaia<->DAO (floor 10 px)."""
+    import numpy as np
+    from astropy.wcs.utils import proj_plane_pixel_scales
+
+    floor_px = 10.0
+    try:
+        scales_deg = proj_plane_pixel_scales(wcs_obj)
+        arcsec_per_px = float(np.mean(scales_deg)) * 3600.0
+        if math.isfinite(arcsec_per_px) and arcsec_per_px > 0:
+            return max(floor_px, float(match_sep_arcsec) / arcsec_per_px)
+    except Exception:  # noqa: BLE001
+        pass
+    return floor_px
+
+
+def _merge_dao_pass1_pass2_tables(
+    tbl_pass1: Any,
+    pass2_rows: list[dict[str, float]],
+    *,
+    bfac: int,
+    dedup_px: float = 3.0,
+) -> Any:
+    """Append pass-2 detections; drop pass-2 if within ``dedup_px`` of pass-1 (full image coords).
+
+    Adds integer column ``vy_dao_pass`` (1=pass1, 2=pass2): provenance of each detection
+    (MASTERSTAR catalog, pass-2 calibration).
+    """
+    import numpy as np
+    from astropy.table import Table, vstack
+
+    if tbl_pass1 is not None and len(tbl_pass1) > 0 and "vy_dao_pass" not in tbl_pass1.colnames:
+        tbl_pass1 = Table(tbl_pass1, copy=True)
+        tbl_pass1["vy_dao_pass"] = np.ones(len(tbl_pass1), dtype=np.int16)
+
+    if not pass2_rows:
+        return tbl_pass1
+    p1x = np.asarray([], dtype=np.float64)
+    p1y = np.asarray([], dtype=np.float64)
+    if tbl_pass1 is not None and len(tbl_pass1) > 0:
+        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
+        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
+        p1x, p1y = _dao_xy_binned_to_full(xb, yb, int(bfac))
+    kept: list[dict[str, float]] = []
+    for row in pass2_rows:
+        xf = float(row["x_full"])
+        yf = float(row["y_full"])
+        if p1x.size:
+            d = np.hypot(p1x - xf, p1y - yf)
+            if float(np.min(d)) < float(dedup_px):
+                continue
+        xb, yb = _dao_full_to_binned_xy(xf, yf, int(bfac))
+        kept.append(
+            {
+                "x_centroid": xb,
+                "y_centroid": yb,
+                "flux": float(row["flux"]),
+                "peak": float(row.get("peak", row["flux"])),
+                "vy_dao_pass": 2,
+            }
+        )
+    if not kept:
+        return tbl_pass1
+    t2 = Table(kept)
+    if tbl_pass1 is None or len(tbl_pass1) == 0:
+        return t2
+    return vstack([tbl_pass1, t2])
+
+
+def _dao_targeted_pass2_unmatched_gaia(
+    data0: "np.ndarray",
+    tbl_pass1: Any,
+    *,
+    cat_df: pd.DataFrame,
+    wcs_obj: Any,
+    bfac: int,
+    fwhm_px: float,
+    pass2_sigma: float,
+    pass2_center_tol_px: float = 5.0,
+    match_sep_arcsec: float,
+    wpx: int,
+    h: int,
+) -> tuple[Any, int, int]:
+    """Run local DAO on Gaia positions with no pass-1 DAO neighbor. Returns (merged_tbl, n_unmatched, n_pass2)."""
+    import numpy as np
+
+    from masterstar_gaia_accounting import Pass2AcceptParams, dao_pass2_try_at_position
+
+    if cat_df is None or cat_df.empty or "ra_deg" not in cat_df.columns or "dec_deg" not in cat_df.columns:
+        return tbl_pass1, 0, 0
+
+    ra = pd.to_numeric(cat_df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de = pd.to_numeric(cat_df["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    ok = np.isfinite(ra) & np.isfinite(de)
+    if not bool(ok.any()):
+        return tbl_pass1, 0, 0
+
+    gx, gy = wcs_obj.world_to_pixel_values(ra[ok], de[ok])
+    inb = (gx >= 0) & (gx < float(wpx)) & (gy >= 0) & (gy < float(h))
+    gx = gx[inb]
+    gy = gy[inb]
+    n_gaia_in = int(gx.size)
+    if n_gaia_in == 0:
+        return tbl_pass1, 0, 0
+
+    match_r_px = _catalog_match_radius_px(wcs_obj, match_sep_arcsec=float(match_sep_arcsec))
+    dao_x = np.asarray([], dtype=np.float64)
+    dao_y = np.asarray([], dtype=np.float64)
+    if tbl_pass1 is not None and len(tbl_pass1) > 0:
+        xb = np.asarray(tbl_pass1["x_centroid"], dtype=np.float64)
+        yb = np.asarray(tbl_pass1["y_centroid"], dtype=np.float64)
+        dao_x, dao_y = _dao_xy_binned_to_full(xb, yb, int(bfac))
+
+    unmatched_idx: list[int] = []
+    if dao_x.size == 0:
+        unmatched_idx = list(range(n_gaia_in))
+    else:
+        from scipy.spatial import cKDTree  # type: ignore
+
+        tree = cKDTree(np.column_stack([dao_x, dao_y]))
+        dist, _ = tree.query(np.column_stack([gx, gy]), distance_upper_bound=float(match_r_px))
+        unmatched_idx = [i for i, d in enumerate(dist) if not np.isfinite(d) or float(d) > float(match_r_px)]
+
+    n_unmatched = len(unmatched_idx)
+    if n_unmatched == 0:
+        return tbl_pass1, 0, 0
+
+    sigma_p2 = max(1.5, min(20.0, float(pass2_sigma)))
+    fwhm_cut = max(1.2, min(20.0, float(fwhm_px)))
+    center_tol = max(0.5, min(10.0, float(pass2_center_tol_px)))
+    from masterstar_gaia_accounting import derive_point_source_q_floor  # noqa: PLC0415
+
+    _shape_meta = derive_point_source_q_floor(
+        data0, dao_x, dao_y, gx, gy, match_r_px=float(match_r_px)
+    )
+    p2_params = Pass2AcceptParams(
+        sigma=sigma_p2,
+        center_tol_px=center_tol,
+        fwhm_px=float(fwhm_cut),
+        shape_q_floor=_shape_meta.get("q_floor"),
+    )
+    LOGGER.info(
+        "[DAO pass 2] POINT-SOURCE-SHAPE-01 q_floor=%s n_ref=%s",
+        _shape_meta.get("q_floor"),
+        _shape_meta.get("n_ref"),
+    )
+    pass2_rows: list[dict[str, float]] = []
+    n_empty_cutouts = 0
+
+    for i in unmatched_idx:
+        x0 = float(gx[i])
+        y0 = float(gy[i])
+        hit = dao_pass2_try_at_position(
+            data0, x0, y0, wpx=int(wpx), h=int(h), params=p2_params
+        )
+        if not hit.get("accepted"):
+            if str(hit.get("reason", "")) == "no_detection":
+                n_empty_cutouts += 1
+            continue
+        pass2_rows.append(
+            {
+                "x_full": float(hit["x_det"]),
+                "y_full": float(hit["y_det"]),
+                "flux": float(hit["flux"]),
+                "peak": float(hit.get("peak", hit["flux"])),
+            }
+        )
+
+    if n_empty_cutouts > 0:
+        LOGGER.info(
+            "[DAO pass 2] %d/%d targeted cutouts had no detection "
+            "(NoDetectionsWarning suppressed)",
+            int(n_empty_cutouts),
+            int(n_unmatched),
+        )
+    merged = _merge_dao_pass1_pass2_tables(tbl_pass1, pass2_rows, bfac=int(bfac), dedup_px=3.0)
+    return merged, n_unmatched, len(pass2_rows)

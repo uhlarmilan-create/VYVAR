@@ -22,10 +22,8 @@ from config import AppConfig
 from pipeline_constants import DAO_FWHM_FALLBACK_PX
 from infolog import log_event
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
-from pipeline_astrometry import (
-    _equipment_saturate_adu_from_db,
-    _vyvar_df_to_csv,
-)
+from pipeline_astrometry import _equipment_saturate_adu_from_db
+from proc_frame_store import _vyvar_df_to_csv
 from pipeline_catalog import (
     _estimate_catalog_frame_hw,
     _export_per_frame_disk_worker_task,
@@ -53,9 +51,7 @@ def export_per_frame_catalogs(
     *,
     frames_root: Path,
     platesolve_dir: Path,
-    max_catalog_rows: int = 12000,
     catalog_match_max_sep_arcsec: float = 25.0,
-    dao_threshold_sigma: float = 3.5,
     dao_fwhm_px: float | None = None,
     write_sidecar_csv_next_to_fits: bool = True,
     mirror_flat_platesolve_folder: bool = False,
@@ -66,7 +62,7 @@ def export_per_frame_catalogs(
     aligned_ram: "Sequence[tuple[str, fits.Header, Any]] | None" = None,
     aligned_target_dir: Path | str | None = None,
     defer_disk_writes: bool = False,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
     draft_id: int | None = None,
     equipment_id: int | None = None,
     full_catalog_export: bool = False,
@@ -91,7 +87,7 @@ def export_per_frame_catalogs(
     """
     import numpy as np
 
-    _cfg_ap = app_config or AppConfig()
+    _cfg_ap = app_config
 
     ps = Path(platesolve_dir) if platesolve_dir is not None else None
     _qc_fwhm_by_name: dict[str, float] = {}
@@ -212,7 +208,7 @@ def export_per_frame_catalogs(
             _sat_diag_archive = str(_arch)
             _eq_sat = equipment_saturate_adu
             if _eq_sat is None and equipment_id is not None:
-                _eq_sat = _equipment_saturate_adu_from_db(int(equipment_id))
+                _eq_sat = _equipment_saturate_adu_from_db(int(equipment_id), _cfg_ap)
             _ref_hdr = fits.Header()
             if files:
                 with fits.open(files[0], memmap=False) as _rh:
@@ -297,9 +293,7 @@ def export_per_frame_catalogs(
     def _catalog_worker_state() -> dict[str, Any]:
         return {
             "master_tab": master_tab,
-            "max_catalog_rows": int(max_catalog_rows),
             "catalog_match_max_sep_arcsec": float(catalog_match_max_sep_arcsec),
-            "dao_threshold_sigma": float(dao_threshold_sigma),
             "dao_fwhm_px": float(_dao_fw_export),
             "equipment_saturate_adu": equipment_saturate_adu,
             "sat_diag_ctx_dict": (
@@ -313,20 +307,14 @@ def export_per_frame_catalogs(
             "mirror_flat_platesolve_folder": mirror_flat_platesolve_folder,
             "defer_disk_writes": defer_disk_writes,
             "out_flat": str(out_flat.resolve()),
-            "aperture_fwhm_factor": float(_cfg_ap.aperture_fwhm_factor),
-            "annulus_inner_fwhm": float(_cfg_ap.annulus_inner_fwhm),
-            "annulus_outer_fwhm": float(_cfg_ap.annulus_outer_fwhm),
-            "database_path": str(Path(_cfg_ap.database_path).resolve()),
+            # CONFIG-ONE-2026-10: the run config itself (pickled once per worker), not copies of keys
+            "cfg": _cfg_ap,
             "draft_id": int(draft_id) if draft_id is not None else None,
             "equipment_id": int(equipment_id) if equipment_id is not None else None,
             "gaussian_fwhm_px_override": _gauss_override,
             "fwhm_night_median_px": _fwhm_night_median_px,
             "qc_fwhm_by_name": dict(_qc_fwhm_by_name),
             "platesolve_dir": str(ps.resolve()),
-            "observer_lat": float(_cfg_ap.observer_lat),
-            "observer_lon": float(_cfg_ap.observer_lon),
-            "observer_alt_m": float(_cfg_ap.observer_alt_m),
-            "objects_db_path": str(_cfg_ap.objects_db_path or ""),
         }
 
     # PER-FRAME-ONE-PATH-2026-10 (Milan 2026-10-13): one per-frame catalog function for any

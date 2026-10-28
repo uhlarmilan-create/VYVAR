@@ -106,9 +106,8 @@ def test_vsx_export_error_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         annulus_outer_fwhm = 5.2
         gaia_db_path = ""
 
-    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
     with pytest.raises(RuntimeError, match="VSX export"):
-        write_photometry_plan_files(platesolve_dir=ps, masterstar_fits=ms_fits, masterstars_csv=ms_csv)
+        write_photometry_plan_files(platesolve_dir=ps, masterstar_fits=ms_fits, masterstars_csv=ms_csv, cfg=_Cfg())
 
 
 # --- G10-09: no process-wide warnings filter at import -----------------------------------------------------

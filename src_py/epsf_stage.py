@@ -248,7 +248,7 @@ def run_epsf_stage(
     out["epsf_model_sha256"] = str(load_epsf_build_meta(ps).get("model_sha256") or "")
 
     try:
-        from photometry_core import merge_photometry_pipeline_meta
+        from photometry_provenance import merge_photometry_pipeline_meta
 
         merge_photometry_pipeline_meta(
             phot,

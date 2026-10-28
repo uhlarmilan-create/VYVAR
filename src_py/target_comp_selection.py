@@ -10,11 +10,7 @@ import time
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
-from config import (
-    AppConfig,
-    classify_field_density,
-    compute_field_density,
-)
+from config import AppConfig
 from catalog_db import query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
@@ -37,9 +33,7 @@ from photometry_provenance import merge_photometry_pipeline_meta
 from photometry_shared import _angular_distance_deg, build_gs11_summary
 from proc_frame_store import PROC_CSV_GLOB, PROC_STORE_COLS, ProcFrameStore
 
-from photometry_core import (
-    _GAIA_ID_DTYPE,
-)
+from gaia_catalog_id import VYVAR_CSV_DTYPE
 
 
 from comp_smart import N_RESERVE as _N_RESERVE  # noqa: E402
@@ -116,18 +110,16 @@ def run_target_and_comp_selection(
     per_frame_csv_dir: Path,
     output_dir: Path,
     *,
-    fwhm_px: float = 3.7,
-    frame_w_px: int = 2082,
-    frame_h_px: int = 1397,
+    fwhm_px: float,
     plate_scale_arcsec_px: float | None = None,
-    n_comp_min: int = 3,
-    n_comp_max: int = 7,
-    max_comp_rms: float = 0.1,
+    n_comp_min: int,
+    n_comp_max: int,
+    max_comp_rms: float,
     min_dist_arcsec: float = 60.0,
-    min_frames_frac: float = 0.3,
+    min_frames_frac: float,
     flux_col: str = "dao_flux",
-    comp_max_delta_bprp: float = 0.5,
-    cfg: AppConfig | None = None,
+    comp_max_delta_bprp: float,
+    cfg: AppConfig,
     progress_cb: Any = None,
     draft_id: int | None = None,
     db: Any = None,
@@ -190,27 +182,14 @@ def run_target_and_comp_selection(
             # Use ASCII escapes so printing never raises again.
             progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    _cfg_base = cfg if cfg is not None else AppConfig()
+    _cfg_base = cfg
     # CODE-REVIEW step 7B: the edge margin is the sky-annulus radius (was a fixed 50 px key).
     chip_interior_margin_px = int(math.ceil(float(_cfg_base.annulus_outer_fwhm) * float(fwhm_px)))
     _ms_density = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
-    _fw_in, _fh_in = int(frame_w_px), int(frame_h_px)
     frame_w_px, frame_h_px, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
-        _ms_density,
-        frame_w_px=_fw_in,
-        frame_h_px=_fh_in,
-        db=db,
-        draft_id=draft_id,
+        _ms_density, db=db, draft_id=draft_id
     )
-    if _frame_hw_src != "caller_default":
-        logging.info(
-            "[TARGET-SELECT] Frame dimensions %dx%d px from %s (caller default %dx%d)",
-            int(frame_w_px),
-            int(frame_h_px),
-            _frame_hw_src,
-            _fw_in,
-            _fh_in,
-        )
+    logging.info("[TARGET-SELECT] Frame dimensions %dx%d px from %s", int(frame_w_px), int(frame_h_px), _frame_hw_src)
     _n_field, _cw_fd, _ch_fd, _nsrc_fd, _vy_ndao_raw = _read_field_density_inputs(
         _ms_density,
         Path(masterstars_csv),
@@ -364,7 +343,7 @@ def run_target_and_comp_selection(
         }
 
     # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
-    ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # Normalize Gaia ID to string
     if "catalog_id" in ms_df.columns:
         ms_df["catalog_id"] = _normalize_id_series(ms_df["catalog_id"])
@@ -399,7 +378,7 @@ def run_target_and_comp_selection(
         float(fwhm_night_px),
         _fwn_src,
         float(fwhm_px),
-        float(fwhm_night_px) * float(getattr(cfg or AppConfig(), "comp_isolation_fwhm", 3.0) or 3.0),
+        float(fwhm_night_px) * float(getattr(cfg, "comp_isolation_fwhm", 3.0) or 3.0),
     )
     _p(f"Comparison-star selection: {len(_proc_store)} per-frame catalogs, {len(active)} targets...")
 
@@ -407,7 +386,7 @@ def run_target_and_comp_selection(
     _gaia_db_targets = str(_cfg_gaia_targets.gaia_db_path or "").strip()
     _vsx_db_targets = str(_cfg_gaia_targets.objects_db_path or "").strip() or None
 
-    _vt_chip = pd.read_csv(variable_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    _vt_chip = pd.read_csv(variable_targets_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     _vt_cid_exclude: frozenset[str] | None = None
     try:
         if "catalog_id" in _vt_chip.columns:
@@ -550,7 +529,7 @@ def run_target_and_comp_selection(
     _n_oos_skipped = 0
     # PHASE1-SKIP / TARGET-RULES-2026-10: no comparison selection for targets whose target-selection skip is
     # final (saturated, S/N below snr_min, VSX type out of scope) - they are never measured.
-    from photometry_core import FINAL_SKIP_REASONS  # noqa: PLC0415
+    from photometry_defs import FINAL_SKIP_REASONS  # noqa: PLC0415
 
     _n_comp_selection = int(
         (~active.get("skip_reason", pd.Series("", index=active.index)).fillna("").astype(str).str.strip()
@@ -561,7 +540,7 @@ def run_target_and_comp_selection(
     # 60 arcsec: the comparison aperture must lie outside the target's sky annulus
     # (d >= r_out + r_ap = (annulus_outer_fwhm + k_max) x FWHM).
     try:
-        from aperture_pertarget import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+        from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
         _scale_md = locals().get("_actual_scale") if bool(locals().get("_wcs_scale_ok", False)) else None
         if not (isinstance(_scale_md, float) and math.isfinite(_scale_md) and _scale_md > 0):
@@ -921,3 +900,23 @@ def run_target_and_comp_selection(
         "field_density_n_stars": int(_n_field),
         "proc_store": _proc_store,
     }
+
+
+# --- moved from config (LAYER-2026-10) ---
+
+
+def compute_field_density(n_masterstar_stars: int, chip_w_px: int, chip_h_px: int) -> float:
+    """Return the field density in stars/Mpx."""
+    mpx = (float(chip_w_px) * float(chip_h_px)) / 1_000_000.0
+    if mpx <= 0 or n_masterstar_stars < 0:
+        return 0.0
+    return float(n_masterstar_stars) / float(mpx)
+
+
+def classify_field_density(density: float, sparse_th: float, dense_th: float) -> str:
+    """Return ``sparse`` / ``normal`` / ``dense``."""
+    if density < float(sparse_th):
+        return "sparse"
+    if density <= float(dense_th):
+        return "normal"
+    return "dense"

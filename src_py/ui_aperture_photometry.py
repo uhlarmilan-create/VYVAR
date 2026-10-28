@@ -60,9 +60,10 @@ def _measured_cids(pages: "TargetPages") -> list[str]:
 @st.cache_resource(show_spinner="Loading the processed field into memory...", max_entries=4)
 def _group_pages(platesolve_setup_dir: str, _stamp: float) -> "TargetPages":
     """All page data of one observation group, read once (``_stamp`` = summary mtime, part of the key)."""
+    from config import AppConfig  # noqa: PLC0415
     from target_page import load_target_pages  # noqa: PLC0415
 
-    pages = load_target_pages(Path(platesolve_setup_dir))
+    pages = load_target_pages(Path(platesolve_setup_dir), AppConfig())
     pages.preload(_measured_cids(pages))
     return pages
 

@@ -1,0 +1,100 @@
+"""Photometry names: logger, proc / LC column names, labels and key sets (leaf module).
+
+LAYER-2026-10 (code review 2 T13): the photometry modules import these from here, not from the
+``photometry_core`` facade (that import made 12 modules unimportable on their own). Leaf rule as
+``pipeline_constants``: this module imports nothing from VYVAR; anything may import it.
+Physical constants live in ``pipeline_constants`` (D-CONSTANTS-LEAF-01).
+"""
+
+from __future__ import annotations
+
+import logging
+
+#: One logger for the photometry stage; the name is kept so log routing is unchanged.
+LOGGER = logging.getLogger("photometry_core")
+
+# Explicit annulus sky (ADU/px) for the Howell error.
+SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
+SKY_SURFACE_BG_MEDIAN_ADU_COL = "sky_surface_bg_median_adu"
+
+# F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
+SIGMA_BKG_AP_COL = "sigma_bkg_ap"
+ERR_BKG_SOURCE_COL = "err_bkg_source"
+ERR_BKG_SOURCE_EMPIRICAL = "empirical"
+ERR_BKG_SOURCE_HOWELL_FALLBACK = "howell_fallback"
+ERR_BKG_SOURCE_HOWELL_SCALED = "howell_scaled"
+
+# Per-target LC time provenance (F-BJD-1): labels the BJD recompute path, does not alter time values.
+TIME_BASE_COL = "time_base"
+TIME_BASE_BJD_TDB = "BJD_TDB"
+TIME_BASE_JD_FALLBACK = "JD_FALLBACK"
+
+COMP_QUALITY_JSON_META_KEYS = frozenset(
+    {
+        "selected_tier",
+        "tier4_warning",
+        "n_tier1",
+        "n_tier2",
+        "n_tier3",
+        "n_tier4",
+        "aperture_correction",  # legacy key in pre-2026-10 comp_quality JSON (AC removed)
+        "qa_degraded",
+        "qa_degraded_reason",
+        "broeg_weights",  # EXPORT-2026-10: normalised Broeg (2005) ensemble weights
+        "comp_band_mag",  # catalogue magnitudes in the zero-point band
+        "band_system",
+        "zp_band_label",
+        "zero_point",  # ZP-ERR-2026-10: comps setting the absolute level + its uncertainty
+        "gspc_zero_point",
+        "comp_smart",
+        "check_star",  # OUTPUT-REVIEW-2026-10 step 6: the check star and its trust statistics
+        "color_fallback",  # legacy (tier copies before OUTPUT-REVIEW step 6)
+        "max_delta_bprp_used",  # legacy
+    }
+)
+
+LC_QUALITY_FLAGS: tuple[str, ...] = (
+    "good",
+    "noisy",
+    "noisy_moon",
+    "short_baseline",
+    "no_data",
+    "saturated",
+)
+
+#: TARGET-RULES-2026-10 (Milan 2026-10-13): target skips decided on MASTERSTAR in target
+#: selection (saturated = upper cut, below_snr_min = lower cut, VSX type out of scope) are final:
+#: no comparison-star selection, never measured, never revived later.
+FINAL_SKIP_REASONS = frozenset({"saturated", "below_snr_min", "vsx_type_out_of_scope"})
+
+#: Per-frame CSV columns loaded for the comparison pool.
+PHASE_USECOLS_PERFRAME: tuple[str, ...] = (
+    "catalog_id",
+    "bjd_tdb_mid",
+    "dao_flux",
+    "sky_adu_per_px_annulus",
+    "aperture_r_px",
+    "is_saturated",
+    "is_noisy",
+    "snr50_ok",
+    "vsx_known_variable",
+    "likely_saturated",
+    # APERTURE-K-2026-10: comparison-star RMS on the light-curve aperture grid
+    "flux_k100",
+    "flux_k125",
+    "flux_k150",
+    "flux_k175",
+    "flux_k200",
+)
+
+
+# --- moved from aperture_pertarget (LAYER-2026-10) ---
+
+
+# APERTURE-K-2026-10: small grid of apertures in units of the frame FWHM.
+DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (1.0, 1.25, 1.5, 1.75, 2.0)
+
+
+def flux_k_column(k: float) -> str:
+    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``)."""
+    return f"flux_k{int(round(float(k) * 100))}"

@@ -43,8 +43,8 @@ def test_read_flux_propagates_catalog_match_mode_without_changing_mag(tmp_path: 
     pd.DataFrame({**row, "catalog_match_mode": ["master_reference_pixel"]}).to_csv(csv_pix, index=False)
     ids = ["1234567890123456789"]
     ap = {"1234567890123456789": 3.0}
-    out_sky = read_flux_from_csv(csv_sky, ids, ap)
-    out_pix = read_flux_from_csv(csv_pix, ids, ap)
+    out_sky = read_flux_from_csv(csv_sky, ids, ap, gain=1.0, read_noise=10.0)
+    out_pix = read_flux_from_csv(csv_pix, ids, ap, gain=1.0, read_noise=10.0)
     assert out_sky.iloc[0]["catalog_match_mode"] == "master_reference_sky"
     assert not bool(out_sky.iloc[0]["wcs_untrusted"])
     assert out_pix.iloc[0]["catalog_match_mode"] == "master_reference_pixel"

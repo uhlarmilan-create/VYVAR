@@ -104,6 +104,6 @@ def test_settings_card_reads_catalog_meta_and_flags_indexes(tmp_path: Path) -> N
 def test_builders_default_to_the_catalogs_folder() -> None:
     import config
 
-    # empty gaia_db_path stays "no catalog" (LIMITED MODE); the builder writes to catalogs/
-    assert config.AppConfig.__dataclass_fields__["gaia_db_path"].default == ""
+    # CONFIG-ONE-2026-10: one default file for VYVAR, the builders and the wizard
+    assert config.AppConfig.__dataclass_fields__["gaia_db_path"].default == cdb.GAIA_DB_DEFAULT
     assert cdb.GAIA_DB_DEFAULT.startswith("catalogs/") and cdb.OBJECTS_DB_DEFAULT.startswith("catalogs/")

@@ -66,10 +66,6 @@ class NightRunParams:
     dao_threshold_sigma: float | None = None
     # UI RUN VYVAR hardcodes cat_match_arc=2.0; pipeline floors with max(10, sep) for
     # MASTERSTAR initial match - so NightRun default follows UI intent (effective 10").
-    catalog_match_max_sep_arcsec: float = 2.0
-    max_catalog_rows: int = 12000
-    min_detected_stars: int = 100
-    max_detected_stars: int = 500
     post_platesolve_hook: Callable[[int, Path, AppConfig, AstroPipeline], None] | None = None
     pre_calibrated_mode: bool = False
     #: CAL-2026-10: masters next to the LIGHTs ("lights", default) or from the
@@ -408,7 +404,7 @@ def resolve_photometry_context_triple(
     """Aperture-photometry plate scale / site / calibration_mode (C3 fire-proof)."""
     from draft_provenance import resolve_calibration_mode
     from param_resolver import resolve_site
-    from photometry_core import _get_plate_scale_from_cfg
+    from photometry_shared import _get_plate_scale_from_cfg
 
     hdr = None
     ms = Path(masterstar_fits) if masterstar_fits is not None else None
@@ -449,16 +445,8 @@ def resolve_photometry_context_triple(
 
 
 def _load_app_config(config_path: Path | None) -> AppConfig:
-    """Load ``AppConfig``; optional explicit ``config.json`` path."""
-    cfg = AppConfig()
-    if config_path is None:
-        return cfg
-    path = Path(config_path).expanduser().resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f"Config file not found: {path}")
-    cfg.project_root = path.parent
-    cfg.__post_init__()
-    return cfg
+    """The run config: the install's config.json, or exactly ``config_path`` (``--config``, G12-03)."""
+    return AppConfig() if config_path is None else AppConfig.from_file(config_path)
 
 
 def _masterstar_candidate_path_for_job(
@@ -469,7 +457,7 @@ def _masterstar_candidate_path_for_job(
     db: Any = None,
 ) -> str:
     """Prefer draft lights FITS for MASTERSTAR job input (processed or pre-cal non_calibrated)."""
-    from pipeline import resolve_obs_file_to_processed_fits
+    from pipeline_preprocess import resolve_obs_file_to_processed_fits
 
     def _has_raw_seg(pp: Path) -> bool:
         try:
@@ -534,12 +522,12 @@ def _night_run_preprocess(
 ) -> None:
     """Preprocess (calibrated -> processed) for RUN VYVAR (GUI and CLI)."""
     from draft_provenance import resolve_draft_lights_root
-    from pipeline import (
+    from pipeline_preprocess import (
         build_prefilter_rejected_map,
         calibrated_paths_for_draft_apply_filters,
         qc_enrich_calibrated_lights_in_place,
-        _iter_light_fits,
     )
+    from pipeline_calibrate import _iter_light_fits
 
     _app_cfg = pipeline.config
     ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
@@ -629,12 +617,10 @@ def _night_run_platesolve(
     progress_cb: Callable[[int, int, str], None],
 ) -> dict[str, Any]:
     """Plate solve + alignment + MASTERSTAR for RUN VYVAR (GUI and CLI)."""
-    from pipeline import astrometry_align_and_build_masterstar
+    from astrometry_orchestration import astrometry_align_and_build_masterstar
 
+    # The run config already holds the resolved DAO sigma (run_night_pipeline, the one place it is set).
     cfg_run = pipeline.config
-    cfg_run.detection_threshold_sigma = resolve_detection_threshold_sigma(
-        pending.get("dao_threshold_sigma", cfg_run.detection_threshold_sigma)
-    )
 
     _ms_pct = pending.get("masterstar_selection_pct")
     try:
@@ -648,12 +634,7 @@ def _night_run_platesolve(
     return astrometry_align_and_build_masterstar(
         archive_path=ap,
         app_config=cfg_run,
-        min_detected_stars=int(pending.get("min_detected_stars", 100)),
-        max_detected_stars=int(pending.get("max_detected_stars", 500)),
-        catalog_match_max_sep_arcsec=float(pending.get("catalog_match_max_sep_arcsec", 25.0)),
-        max_catalog_rows=int(pending.get("max_catalog_rows", 12000)),
         n_comparison_stars=int(pending.get("n_comparison_stars", 0)),
-        dao_threshold_sigma=float(cfg_run.detection_threshold_sigma),
         id_equipment=int(_peq) if _peq is not None else None,
         draft_id=int(_draft_ps) if _draft_ps is not None else None,
         build_masterstar_and_catalogs=bool(pending.get("build_masterstar_and_catalogs", True)),
@@ -927,7 +908,8 @@ def run_night_photometry(
     Forwards ``draft_id`` and ``db``. Completeness gate is shared: a UI run
     can FAIL loudly. INV-CFG-SOURCE-01 applies when ``existing_draft`` is True.
     """
-    from photometry_core import merge_photometry_pipeline_meta, run_full_photometry_pipeline
+    from photometry_provenance import merge_photometry_pipeline_meta
+    from photometry_core import run_full_photometry_pipeline
     from platesolve_ui_paths import find_photometry_setups
 
     timings = timings if timings is not None else {}
@@ -1171,7 +1153,8 @@ def run_night_photometry(
                 from photometry_report import generate_photometry_report
 
                 pdf_path = generate_photometry_report(
-                    draft_dir, str(nm), None, tess_results={}, report_title="VYVAR - Summary Measure Report"
+                    draft_dir, str(nm), None, tess_results={}, report_title="VYVAR - Summary Measure Report",
+                    cfg=phot_cfg,
                 )
                 if pdf_path is not None:
                     _p(f"PDF report: {Path(pdf_path).name}")
@@ -1465,9 +1448,9 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
 
-        from pipeline import (
-            generate_observation_hash,
-            resolve_preprocess_target_coordinates,
+        from fits_meta import generate_observation_hash
+        from pipeline_preprocess import resolve_preprocess_target_coordinates
+        from pipeline_calibrate import (
             run_draft_ram_calibration_qc_to_obs_files,
             scan_calibrated_lights_pointing,
         )
@@ -1558,7 +1541,7 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
         # draft also stores it as the draft MASTERSTAR source path (read by MASTERSTAR QA).
         _stage("MASTERSTAR reference frame per channel")
         t0 = time.time()
-        from pipeline import draft_is_multi_group_obs
+        from pipeline_astrometry import draft_is_multi_group_obs
 
         _multi_obs = draft_is_multi_group_obs(ap_root)
         use_path = ""
@@ -1621,10 +1604,6 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             "inject_pointing_ra_deg": (float(ira) if coords_ok else None),
             "inject_pointing_dec_deg": (float(ide) if coords_ok else None),
             "quality_filter_draft_id": draft_id,
-            "min_detected_stars": int(params.min_detected_stars),
-            "max_detected_stars": int(params.max_detected_stars),
-            "catalog_match_max_sep_arcsec": float(params.catalog_match_max_sep_arcsec),
-            "max_catalog_rows": int(params.max_catalog_rows),
             "n_comparison_stars": 0,
             "dao_threshold_sigma": dao_sigma,
             "id_equipment": ps_eq,

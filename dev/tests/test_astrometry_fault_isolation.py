@@ -1,6 +1,8 @@
 """Per-set astrometry fault isolation (multi-group plate-solve / MASTERSTAR)."""
 from __future__ import annotations
 
+from config import AppConfig
+
 from pathlib import Path
 
 import pandas as pd
@@ -60,7 +62,7 @@ def test_astrometry_multi_group_skips_failed_set(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _fake_impl)
 
-    result = pl.astrometry_align_and_build_masterstar(archive_path=ap)
+    result = pl.astrometry_align_and_build_masterstar(archive_path=ap, app_config=AppConfig())
 
     assert int(result.get("aligned_frames") or 0) == 10
     skipped = result.get("skipped_subgroups") or []
@@ -86,7 +88,7 @@ def test_astrometry_multi_group_all_fail_raises(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _always_fail)
 
     with pytest.raises(RuntimeError, match="no set passed"):
-        pl.astrometry_align_and_build_masterstar(archive_path=ap)
+        pl.astrometry_align_and_build_masterstar(archive_path=ap, app_config=AppConfig())
 
 
 def test_astrometry_single_group_failure_propagates(tmp_path: Path, monkeypatch):
@@ -102,4 +104,4 @@ def test_astrometry_single_group_failure_propagates(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(astrometry_align, "_astrometry_align_impl_body", _fail)
 
     with pytest.raises(RuntimeError, match="solo fail"):
-        pl.astrometry_align_and_build_masterstar(archive_path=ap)
+        pl.astrometry_align_and_build_masterstar(archive_path=ap, app_config=AppConfig())

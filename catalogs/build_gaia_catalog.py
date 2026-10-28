@@ -67,6 +67,7 @@ from gaia_coverage import (  # noqa: E402
 )
 
 from catalog_db import (  # noqa: E402
+    GAIA_BUILD_MAG_LIMIT_DEFAULT,
     GAIA_DB_DEFAULT,
     GAIA_INDEXES,
     configured_catalog_path,
@@ -135,8 +136,8 @@ def parse_args(argv: list[str] | None = None) -> BuildConfig:
     parser.add_argument(
         "--mag-limit",
         type=float,
-        default=_env_float("GAIA_MAG_LIMIT", 16.5),
-        help="Upper G mag limit (default 16.5; env GAIA_MAG_LIMIT).",
+        default=_env_float("GAIA_MAG_LIMIT", GAIA_BUILD_MAG_LIMIT_DEFAULT),
+        help=f"Upper G mag limit (default {GAIA_BUILD_MAG_LIMIT_DEFAULT:g}; env GAIA_MAG_LIMIT).",
     )
     parser.add_argument(
         "--dec-min",

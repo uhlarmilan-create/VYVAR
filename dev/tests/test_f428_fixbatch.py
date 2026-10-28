@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
+from config import AppConfig  # noqa: E402
 
 
 def test_hrd_enrich_tap_retry_then_success(tmp_path: Path) -> None:
@@ -110,6 +111,7 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
         masterstars_csv=ms_csv,
         frame_w_px=2000,
         frame_h_px=2000,
+        cfg=AppConfig(),
     )
     assert active.empty
     excluded = photometry_comp.LAST_EXCLUDED_TARGETS

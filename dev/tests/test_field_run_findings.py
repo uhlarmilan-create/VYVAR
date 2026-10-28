@@ -13,6 +13,7 @@ import numpy as np
 from catalog_db import VSXCatalogError, require_vsx_db
 from pipeline import _query_vsx_local, _query_vsx_local_frame_bbox, write_photometry_plan_files
 from photometry_core import run_full_photometry_pipeline
+from config import AppConfig  # noqa: E402
 
 
 def _make_vsx_db(path: Path, rows: list[tuple[int, float, float]]) -> None:
@@ -108,12 +109,12 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
         annulus_outer_fwhm = 5.2
         gaia_db_path = ""
 
-    monkeypatch.setattr("config.AppConfig", lambda *a, **k: _Cfg())
 
     write_photometry_plan_files(
         platesolve_dir=ps,
         masterstar_fits=ms_fits,
         masterstars_csv=ms_csv,
+        cfg=_Cfg(),
     )
 
     joined = " ".join(infolog_lines())
@@ -158,6 +159,7 @@ def test_run_full_photometry_zero_targets_skips_aperture(tmp_path: Path) -> None
         per_frame_csv_dir=pf,
         detrended_aligned_dir=dt,
         output_dir=out,
+        cfg=AppConfig(),
     )
     assert result.get("zero_targets") is True
     assert int(result.get("n_active_targets") or 0) == 0
@@ -209,4 +211,5 @@ def test_photometry_refuses_without_border_filter(tmp_path: Path) -> None:
             per_frame_csv_dir=tmp_path / "per_frame",
             detrended_aligned_dir=tmp_path / "aligned",
             output_dir=tmp_path / "photometry",
+            cfg=AppConfig(),
         )

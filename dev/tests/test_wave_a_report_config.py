@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import params_registry as pr
 from photometry_report import full_config_snapshot_model, resolved_facts_model
+from config import AppConfig
 
 
 def _synthetic_meta() -> dict:
@@ -42,7 +43,7 @@ def _synthetic_meta() -> dict:
 # full_config_snapshot_model                                                   #
 # --------------------------------------------------------------------------- #
 def test_full_snapshot_from_run_groups_by_phase() -> None:
-    model = full_config_snapshot_model(_synthetic_meta())
+    model = full_config_snapshot_model(_synthetic_meta(), AppConfig())
     assert model["fallback"] is False
     assert model["source_label"] == "run snapshot"
     assert model["n_keys"] == 3
@@ -59,7 +60,7 @@ def test_full_snapshot_from_run_groups_by_phase() -> None:
 
 
 def test_full_snapshot_missing_snapshot_falls_back_to_live() -> None:
-    model = full_config_snapshot_model({})
+    model = full_config_snapshot_model({}, AppConfig())
     assert model["fallback"] is True
     assert model["source_label"] == "live (no run snapshot)"
     # live AppConfig has many keys; grouping must still be well-formed
@@ -68,7 +69,7 @@ def test_full_snapshot_missing_snapshot_falls_back_to_live() -> None:
 
 
 def test_full_snapshot_none_meta_does_not_crash() -> None:
-    model = full_config_snapshot_model(None)
+    model = full_config_snapshot_model(None, AppConfig())
     assert model["fallback"] is True
     assert isinstance(model["by_phase"], dict)
 
@@ -77,12 +78,12 @@ def test_full_snapshot_completeness_note_trigger() -> None:
     reg = pr.load_registry()
     # Complete snapshot (every registry key present) -> no omitted keys, no note.
     complete = {k: 0 for k in reg}
-    m = full_config_snapshot_model({"provenance": {"config_snapshot": complete}})
+    m = full_config_snapshot_model({"provenance": {"config_snapshot": complete}}, AppConfig())
     assert m["registry_count"] == len(reg)
     assert m["omitted_keys"] == []
     # Incomplete snapshot -> omitted_keys names exactly the missing registry keys.
     partial = dict(list(complete.items())[:-3])
-    m2 = full_config_snapshot_model({"provenance": {"config_snapshot": partial}})
+    m2 = full_config_snapshot_model({"provenance": {"config_snapshot": partial}}, AppConfig())
     assert m2["omitted_keys"] == sorted(set(reg) - set(partial))
     assert len(m2["omitted_keys"]) == 3
 

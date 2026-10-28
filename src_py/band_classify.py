@@ -11,8 +11,11 @@ Use :func:`band_failsafe_clear` or :func:`effective_band_for_extinction` for tha
 from __future__ import annotations
 
 import enum
+import math
 import re
-from typing import Final
+from typing import Any, Final
+
+from pipeline_constants import CT_MIN_COMP
 
 # ---------------------------------------------------------------------------
 # Public enum
@@ -332,3 +335,82 @@ def color_term_auto_from_band(band: PhotometricBand) -> bool:
     return band is PhotometricBand.STANDARD_FILTER
 
 
+# --- moved from aperture_photometry (LAYER-2026-10) ---
+
+
+def should_apply_color_term(
+    obs_group: str,
+    c1: float,
+    c1_stderr: float,
+    n_comp: int,
+    *,
+    min_comp_for_ct: int = CT_MIN_COMP,
+    max_stderr_ratio: float = 0.5,
+    cfg: Any | None = None,
+) -> tuple[bool, str]:
+    """
+    Automatic decision whether to apply the color-term correction.
+
+    Returns: (apply: bool, reason: str)
+    reason = short description of why CT is or is not applied
+    """
+    filter_raw = str(obs_group or "").split("|")[0].strip()
+    band = classify_photometric_band(obs_group)
+
+    if not color_term_auto_from_band(band):
+        return False, f"{band.value} ({filter_raw}) - CT not needed"
+
+    try:
+        n_comp_i = int(n_comp)
+    except Exception:  # noqa: BLE001
+        n_comp_i = 0
+    if n_comp_i < int(min_comp_for_ct):
+        return (
+            False,
+            (
+                f"Filter {filter_raw} - CT skipped: "
+                f"too few COMP ({n_comp_i} < {int(min_comp_for_ct)})"
+            ),
+        )
+
+    if not (float(c1) != 0.0 and abs(float(c1)) > 1e-6):
+        return False, f"Filter {filter_raw} - CT skipped: c1 ~ 0"
+
+    stderr_ratio = abs(float(c1_stderr) / float(c1)) if float(c1) != 0.0 else float("inf")
+    if not math.isfinite(stderr_ratio):
+        return False, f"Filter {filter_raw} - CT unreliable: stderr/c1=NaN"
+    if float(stderr_ratio) > float(max_stderr_ratio):
+        return (
+            False,
+            (
+                f"Filter {filter_raw} - CT unreliable: "
+                f"stderr/c1={stderr_ratio:.2f} > {float(max_stderr_ratio):.2f}"
+            ),
+        )
+
+    return True, (
+        f"Filter {filter_raw} - CT applied: "
+        f"c1={float(c1):+.4f} +- {float(c1_stderr):.4f} "
+        f"(stderr/c1={stderr_ratio:.2f}, n_comp={n_comp_i})"
+    )
+
+
+def resolve_apply_color_term(
+    cfg: Any | None,
+    obs_group: str,
+    *,
+    fits_filter: str | None = None,
+    aavso_code: str | None = None,
+) -> bool:
+    """User/config toggle: CT applies correction only - never limits the target set."""
+    mode = str(getattr(cfg, "apply_color_term", "auto") or "auto").strip().lower()
+    if mode in ("0", "false", "no", "off"):
+        return False
+    if mode in ("1", "true", "yes", "on"):
+        return True
+    band = classify_photometric_band(
+        obs_group,
+        fits_filter=fits_filter,
+        aavso_code=aavso_code,
+    )
+    return bool(color_term_auto_from_band(band))

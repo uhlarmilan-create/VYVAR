@@ -8,6 +8,7 @@ measure stars or sky on that fill.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -104,3 +105,41 @@ def off_footprint(
         ann = (rr >= r_in) & (rr <= r_out)
         out[i] = bool((ann & ~offw).sum() < 0.5 * ann.sum())
     return out
+
+
+# --- moved from variability_field (LAYER-2026-10) ---
+
+
+def _frame_footprints(frames_dir: Path, stems: list[str]) -> list[np.ndarray]:
+    """Corners of every frame mapped onto the reference grid (VY_AM0..8 frame->ref)."""
+    from astropy.io import fits  # noqa: PLC0415
+
+    out = []
+    for st in stems:
+        fp = Path(frames_dir) / f"{st}.fits"
+        if not fp.is_file():
+            continue
+        try:
+            h = fits.getheader(fp)
+            mat = np.array([float(h[f"VY_AM{k}"]) for k in range(9)]).reshape(3, 3)
+            w, hh = int(h["NAXIS1"]), int(h["NAXIS2"])
+        except Exception:  # noqa: BLE001
+            continue
+        c = np.array([[0, 0, 1], [w - 1, 0, 1], [w - 1, hh - 1, 1], [0, hh - 1, 1]], float).T
+        q = mat @ c
+        out.append((q[:2] / q[2]).T)
+    return out
+
+
+def _inside_all(x: np.ndarray, y: np.ndarray, r: float, quads: list[np.ndarray]) -> np.ndarray:
+    """True where the circle (x, y, r) lies inside every quadrilateral."""
+    ok = np.ones(x.size, bool)
+    for q in quads:
+        area = 0.5 * np.sum(q[:, 0] * np.roll(q[:, 1], -1) - np.roll(q[:, 0], -1) * q[:, 1])
+        sgn = 1.0 if area > 0 else -1.0
+        for a, b in zip(q, np.roll(q, -1, axis=0), strict=False):
+            ex, ey = b - a
+            ln = math.hypot(ex, ey)
+            d = sgn * (ex * (y - a[1]) - ey * (x - a[0])) / ln  # signed distance, + inside
+            ok &= d >= r
+    return ok

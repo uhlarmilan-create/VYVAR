@@ -169,7 +169,7 @@ def test_w1_is_night_run_wrapper() -> None:
 
 def test_export_read_only_quoted_header_hash(tmp_path: Path) -> None:
     """Pandas column read, not naive header split, on a quoted comma-in-header."""
-    from epsf_psf_merge import non_psf_columns_equal
+    from psf_sidecar_guard import non_psf_columns_equal
 
     csv_path = tmp_path / "proc_quoted.csv"
     csv_path.write_text(
@@ -188,7 +188,7 @@ def test_export_read_only_quoted_header_hash(tmp_path: Path) -> None:
 
 def test_export_read_only_raises_and_restores(tmp_path: Path) -> None:
     """A merge that writes a non-psf column raises and restores the pre-image."""
-    from epsf_psf_merge import guarded_psf_sidecar_write
+    from psf_sidecar_guard import guarded_psf_sidecar_write
 
     sidecar = tmp_path / "proc_frame.csv"
     before = pd.DataFrame(
@@ -206,7 +206,7 @@ def test_export_read_only_raises_and_restores(tmp_path: Path) -> None:
 
 def test_export_read_only_sparse_float_roundtrip(tmp_path: Path) -> None:
     """Sparse-finite float64 (1 value, rest NaN) must hash stable across CSV rewrite."""
-    from epsf_psf_merge import guarded_psf_sidecar_write, non_psf_columns_equal
+    from psf_sidecar_guard import guarded_psf_sidecar_write, non_psf_columns_equal
     from pipeline import _vyvar_df_to_csv
 
     sidecar = tmp_path / "proc_sparse.csv"
@@ -231,7 +231,7 @@ def test_export_read_only_sparse_float_roundtrip(tmp_path: Path) -> None:
 
 def test_export_read_only_rounding_tie_roundtrip(tmp_path: Path) -> None:
     """533 g: a value on a rounding tie of the CSV writer must not trip INV-EXPORT-READ-ONLY-01."""
-    from epsf_psf_merge import guarded_psf_sidecar_write, non_psf_columns_equal
+    from psf_sidecar_guard import guarded_psf_sidecar_write, non_psf_columns_equal
     from pipeline import _vyvar_df_to_csv
 
     sidecar = tmp_path / "proc_tie.csv"
@@ -249,7 +249,7 @@ def test_export_read_only_rounding_tie_roundtrip(tmp_path: Path) -> None:
 def test_export_read_only_object_vs_float_column() -> None:
     """A numeric column that comes back as object (pyarrow round-trip) still compares numerically;
     a changed value or a changed text flag is still caught."""
-    from epsf_psf_merge import non_psf_columns_equal
+    from psf_sidecar_guard import non_psf_columns_equal
 
     before = pd.DataFrame({"sep": [1.8121917245949797, None, None], "flag": ["ok", "edge", ""]})
     after = pd.DataFrame({"sep": ["1.81219172459", "", None], "flag": ["ok", "edge", None]})

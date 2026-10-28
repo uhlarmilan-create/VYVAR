@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 import sqlite3
@@ -469,6 +468,13 @@ class VyvarDatabase:
     #: MASTER_SOURCES retirement warning shown once per process (log spam otherwise).
     _master_sources_warned: bool = False
 
+    @classmethod
+    def for_config(cls, cfg: Any) -> "VyvarDatabase":
+        """The run's database with the run's Archive root (CONFIG-ONE-2026-10: no config.json re-read)."""
+        db = cls(cfg.database_path)
+        db._archive_root_override = Path(cfg.archive_root)
+        return db
+
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = str(db_path)
         self._archive_root_override: Path | None = None
@@ -488,7 +494,9 @@ class VyvarDatabase:
             if not cfg_path.is_file():
                 continue
             try:
-                raw = json.loads(cfg_path.read_text(encoding="utf-8"))
+                from jsonc import parse_config_text  # noqa: PLC0415  (config.json has // comments)
+
+                raw = parse_config_text(cfg_path.read_text(encoding="utf-8"))
                 ar = str(raw.get("archive_root") or "").strip()
                 if ar:
                     p = Path(ar).expanduser()

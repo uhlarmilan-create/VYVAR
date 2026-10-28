@@ -6461,3 +6461,69 @@ limit (BLEND-K) still caps it. Brno 534: bright stars 1.25, fainter 1.0; BO CVn:
 - Test fixtures that used a non-celestial MASTERSTAR WCS or no objects DB were relying on the silent VSX skip; they
   now use a celestial WCS and a real objects DB. Tests: dev/tests/test_fail_loud_2026_10.py (6 of 7 fail on the old
   code).
+
+## LAYER-2026-10 (code review 2 T13, phase 2 step 2) - no import cycles; pipeline modules skip the facades
+- Before: 12 modules could not be imported on their own (aperture_photometry, photometry_shared, photometry_comp,
+  target_comp_selection, ...); they worked only after `photometry_core` was imported, because they took LOGGER and
+  constants from the facade that re-exports them, and `aperture_photometry` bound 25 names onto the facade with
+  `setattr`. Counting call-time imports, one cycle joined 79 modules.
+- Now: every src_py module imports on its own; no cycle among module-level imports; call-time cycles only between a
+  driver and its stages / dispatchers (aperture driver + state/target, comp selection pair, night_run <-> run_job,
+  astro_index <-> astrosolve, config <-> params_registry, database <-> observer_location), frozen in
+  dev/tests/test_layering_2026_10.py (may only shrink; the aperture and comp pairs go with the T12 splits).
+- D-FACADE-PERMANENT-01 kept: `pipeline.py`, `photometry_core.py` and `photometry.py` stay as re-export facades for
+  dev/ scripts. Pipeline modules import from the defining module (contract test); a facade may still be imported for
+  a name it defines itself (AstroPipeline, run_full_photometry_pipeline).
+- New leaf `photometry_defs.py`: photometry logger (name "photometry_core", routing unchanged), proc / LC column
+  names, labels, FINAL_SKIP_REASONS, aperture-grid names (DEFAULT_APERTURE_F_GRID, flux_k_column). MAD_CONSISTENCY and
+  BKG_SCALE_R_CLAMP_* to `pipeline_constants` (D-CONSTANTS-LEAF-01). `_GAIA_ID_DTYPE` copies replaced by
+  `VYVAR_CSV_DTYPE`.
+- Helpers moved to the layer they belong to (facades still export them): CSV writer `_vyvar_df_to_csv` and
+  `_safe_proc_name` -> proc_frame_store; saturation peak helpers -> sat_diag; airmass -> time_utils; cone_sky_box ->
+  catalog_db; MASTERSTAR input-path helpers -> pipeline_preprocess; DAO pass-2 -> pipeline_catalog; astrometry
+  orchestration -> new `astrometry_orchestration.py`; export row selection and `resolve_lc_time_base` ->
+  photometry_lightcurve (`photometry_ui_helpers.py` removed); Howell error model -> photometry_gate_helpers;
+  colour-term mode -> band_classify; comp-quality JSON helpers -> comp_table; footprint helpers -> frame_footprint;
+  PSF sidecar guard -> new `psf_sidecar_guard.py`; obs-group folder name -> fits_meta; header capture time ->
+  calib_library; norm_fits_path_key -> utils; field density -> target_comp_selection; `draft_provenance` imports
+  SmartImportPlan under TYPE_CHECKING only.
+- Not in this step: G04-38 pass-2 finder cache (kept, SPEED-2026-10; pass-2 is serial), G06-31 / G09-35 (T12 splits),
+  G10-36 / G10-38 network helpers (T19), G11-39 porcelain parsed twice (T11).
+
+## CONFIG-ONE-2026-10 (code review 2 T06, phase 2 step 2) - one run config, no second defaults
+- One `AppConfig` per run, built by the entry point (night_run, run_job, app / ui_*) and passed down as a required
+  `cfg` / `app_config`; no library module builds one (static test). Before: 53 call sites re-read config.json, so
+  `--config`, the draft config snapshot of a re-run (INV-CFG-SOURCE-01) and the DAO sigma override did not reach
+  catalog_match, the per-frame DAO, the plan writer, the report and others. Per-frame workers get the run config in
+  their state (pickled once), not copies of single keys.
+- `--config X` loads exactly X (`AppConfig.from_file`; it loaded config.json next to X, G12-03).
+- DAO sigma: resolved once in night_run into the run config; the `dao_threshold_sigma` arguments that the stages
+  ignored (catalog_match, per-frame DAO) or passed through (astrometry_align, frame_export, orchestration) are gone.
+- Gaia / objects DB: an empty or missing key is the default file the builder writes (`pipeline_constants`
+  GAIA_DB_DEFAULT / OBJECTS_DB_DEFAULT, Milan 2026-10-27); no file there = no catalogue (run gates check the file).
+  Builder magnitude defaults in one place (Gaia 17.5, VSX 18.0; the Gaia CLI said 16.5).
+- No fallback that differs from the config default and no rig default: annulus 4.0 / 6.0 and aperture 1.75 / 1.9
+  keyword defaults, n_comp_max 7, min_frames_frac 0.3, delta BP-RP 0.5, FWHM 3.7 px, frame 2082 x 1397 px, plate
+  scale 1.3 "/px, gain 1 / read noise 10, trust bounds 3 / 12 and 3 / 8, observer site 0 / 0 removed (required
+  arguments or the config value). The frame size comes from MASTERSTAR NAXIS (or a light); unknown is an error.
+  run_aperture_photometry / prepare state take aperture and annulus factors only from cfg (force_aperture_r_px.py
+  measured with annulus 4 / 6 before).
+- Calibration workers never open the database of a freshly read config: the flat offset is resolved in the run
+  (G01-34); a call without the database is an error.
+- `VyvarDatabase.for_config(cfg)` sets the run's Archive root; the path-only fallback parses config.json as JSONC
+  (new leaf `jsonc.py`; json.loads always failed on the comment lines, G13-11).
+- Loader: rules between keys in one list `config_rule_problems` (loader warns, Settings refuses, validator reports,
+  G13-08); a typo in k2_mode / apply_color_term and a truncated whole number warn (G13-35/36); KNOWN_REMOVED_KEYS
+  moved to `config_removed_keys.py` (G13-40); alignment_max_stars range 10-200 = the real cap (G02-47).
+- Settings Save starts from the file as written (relative catalogue paths stay relative, G14-35); registry marks the
+  observer site keys resolved / hidden (G13-26); values_differ(NaN, NaN) is False (G13-25); the report HRD page uses
+  the run snapshot (G11-27).
+- Tests: dev/tests/test_config_one_2026_10.py (E3 / E4 contracts + behaviour). Tests that relied on the removed
+  defaults pass those values explicitly.
+- Follow-up (Milan 2026-10-27, approved removal): GUI / CLI parameters catalog_match_max_sep_arcsec, max_catalog_rows,
+  min_detected_stars, max_detected_stars removed end to end (app, NightRunParams, night_run, orchestration,
+  astrometry_align, masterstar_build, frame_export, per-frame DAO, catalog_match). They had three defaults each
+  (2.0 / 25.0 / 12000, 100 / 500) and were floored. The values runs used are now `pipeline_constants`:
+  CATALOG_MATCH_SEP_ARCSEC 10" (MASTERSTAR initial match, meta only - the identity radius replaces it; the per-frame
+  radius comes from the plate scale as before), MASTERSTAR_MAX_DAO_ROWS 100000, FRAME_MAX_DAO_ROWS 12000,
+  ALIGN_MIN_DETECTED_STARS 100, ALIGN_MAX_DETECTED_STARS 500. Whether 12000 suits other rigs is T09.

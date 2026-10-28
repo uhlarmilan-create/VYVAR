@@ -7,6 +7,8 @@ labelled live-config fallback.
 """
 from __future__ import annotations
 
+from config import AppConfig
+
 from photometry_report import config_deviation_model
 
 
@@ -31,7 +33,7 @@ def test_deviation_table_from_synthetic_snapshot() -> None:
         },
         "field_density": {"density_class": "dense"},
     }
-    model = config_deviation_model(meta)
+    model = config_deviation_model(meta, AppConfig())
 
     assert model["fallback"] is False
     assert model["source_label"] == "run snapshot"
@@ -56,7 +58,7 @@ def test_deviation_table_from_synthetic_snapshot() -> None:
 
 
 def test_missing_snapshot_uses_labelled_live_fallback() -> None:
-    model = config_deviation_model(None)
+    model = config_deviation_model(None, AppConfig())
     assert model["fallback"] is True
     assert model["source_label"] == "live (no run snapshot)"
     # header provenance fields are absent (no run to source them from)
@@ -69,6 +71,6 @@ def test_missing_snapshot_uses_labelled_live_fallback() -> None:
 
 def test_empty_snapshot_dict_falls_back() -> None:
     # provenance present but config_snapshot empty -> treated as missing (fallback)
-    model = config_deviation_model({"provenance": {"config_snapshot": {}}})
+    model = config_deviation_model({"provenance": {"config_snapshot": {}}}, AppConfig())
     assert model["fallback"] is True
     assert model["source_label"] == "live (no run snapshot)"

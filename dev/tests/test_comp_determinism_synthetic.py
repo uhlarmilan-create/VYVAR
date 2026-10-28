@@ -118,6 +118,7 @@ def _run_comp_selection(
 
     pool = build_global_comp_pool(
         masterstars, per_frame_paths, csv_cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg,
+        min_frames_frac=0.3, fwhm_px=3.7,
     )
     out = select_comparison_stars_per_target(
         target,
@@ -131,6 +132,7 @@ def _run_comp_selection(
         chip_interior_margin_px=0,
         min_dist_arcsec=30.0,
         variable_target_catalog_ids=frozenset({_TARGET_ID}),
+        fwhm_px=3.7, n_comp_min=3, n_comp_max=7, max_comp_rms=0.1, min_frames_frac=0.3, plate_scale_arcsec=1.3,
     )
     assert not out.empty, "synthetic fixture must select at least one comp star"
     return out.reset_index(drop=True)

@@ -307,7 +307,7 @@ def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
     cfg.gs11_dilution_enabled = False
     from photometry_comp import build_global_comp_pool  # noqa: PLC0415
 
-    pool = build_global_comp_pool(masterstars, paths, cache, frozenset({"6000000000000000005"}), None, 800, 600, 0, 0.05, cfg)
+    pool = build_global_comp_pool(masterstars, paths, cache, frozenset({"6000000000000000005"}), None, 800, 600, 0, 0.05, cfg, min_frames_frac=0.3, fwhm_px=3.7)
     out = select_comparison_stars_per_target(
         target,
         masterstars,
@@ -320,6 +320,7 @@ def test_osc_comp_selection_smoke_per_channel(channel: str) -> None:
         chip_interior_margin_px=0,
         min_dist_arcsec=30.0,
         variable_target_catalog_ids=frozenset({"6000000000000000005"}),
+        fwhm_px=3.7, n_comp_min=3, n_comp_max=7, max_comp_rms=0.1, min_frames_frac=0.3, plate_scale_arcsec=1.3,
     )
     assert not out.empty
     assert "catalog_id" in out.columns

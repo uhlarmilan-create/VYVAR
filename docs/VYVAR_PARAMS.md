@@ -6,14 +6,14 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-10-26T08:35:41Z at git HEAD 3ed29a4._
+_Generated 2026-10-27T23:36:48Z at git HEAD 7377f2b._
 
 ## Summary
 
 - Entries: 55
-- Tier: basic 13, advanced 24, expert 18
-- Kind: static 55, derived 0, resolved 0
-- Widget: auto 53, custom 0, hidden 2
+- Tier: basic 9, advanced 24, expert 22
+- Kind: static 51, derived 0, resolved 4
+- Widget: auto 49, custom 0, hidden 6
 - Owner: db_static 5, config_runtime 44, fits_dynamic 0, internal 6
 - Scope: universal 39, rig 7, site 9, session 0
 - Scope key: none 39, rig 4, rig_band 2, rig_sampling 1, site 9, frame 0
@@ -26,12 +26,12 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
 | `aavso_filter_map` | {} | - | expert | static | config_runtime | site | site | n/a | auto | AAVSO filter names |
-| `observer_alt_m` | nan | - | basic | static | db_static | site | site | n/a | auto | Observer Alt M |
+| `observer_alt_m` | nan | - | expert | resolved | db_static | site | site | n/a | hidden | Observer Alt M |
 | `observer_code` |  | - | basic | static | config_runtime | site | site | n/a | auto | AAVSO observer code |
-| `observer_lat` | nan | - | basic | static | db_static | site | site | n/a | auto | Observer Lat |
+| `observer_lat` | nan | - | expert | resolved | db_static | site | site | n/a | hidden | Observer Lat |
 | `observer_location_id` | 0 | - | expert | static | db_static | site | site | n/a | hidden | Observing site (run time) |
-| `observer_location_name` |  | - | basic | static | db_static | site | site | n/a | auto | Observer Location Name |
-| `observer_lon` | nan | - | basic | static | db_static | site | site | n/a | auto | Observer Lon |
+| `observer_location_name` |  | - | expert | resolved | db_static | site | site | n/a | hidden | Observer Location Name |
+| `observer_lon` | nan | - | expert | resolved | db_static | site | site | n/a | hidden | Observer Lon |
 | `observer_name` | Unknown Observer | - | basic | static | config_runtime | site | site | n/a | auto | Observer name |
 
 ## paths
@@ -42,7 +42,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `astrometry_index_dir` |  | - | advanced | static | config_runtime | universal | none | n/a | auto | Blind plate-solve index |
 | `calibration_library_root` | (resolved at runtime) | - | expert | static | internal | universal | none | n/a | auto | Calibration library |
 | `database_path` | (resolved at runtime) | - | expert | static | internal | universal | none | n/a | auto | App database |
-| `gaia_db_path` |  | - | expert | static | internal | universal | none | n/a | auto | Gaia DR3 catalog |
+| `gaia_db_path` | catalogs/vyvar_gaia_dr3.db | - | expert | static | internal | universal | none | n/a | auto | Gaia DR3 catalog |
 | `objects_db_path` | catalogs/vyvar_objects.db | - | expert | static | internal | universal | none | n/a | auto | Objects catalog (VSX + exoplanets) |
 | `project_root` | (git toplevel) | - | expert | static | internal | universal | none | n/a | hidden | Project Root |
 
@@ -68,7 +68,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 
 | key | default | range | tier | kind | owner | scope | scope_key | scope_group | widget | label |
 |-----|---------|-------|------|------|-------|-------|-----------|-------------|--------|-------|
-| `alignment_max_stars` | 160 | 10 .. 5000 | advanced | static | config_runtime | universal | none | n/a | auto | Stars used for alignment |
+| `alignment_max_stars` | 160 | 10 .. 200 | advanced | static | config_runtime | universal | none | n/a | auto | Stars used for alignment |
 
 ## detection
 

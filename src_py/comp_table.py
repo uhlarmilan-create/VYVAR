@@ -19,9 +19,11 @@ from them. Readers take :func:`used`, :func:`admitted` or :func:`reserve` of tha
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 import pandas as pd
+
+from photometry_defs import COMP_QUALITY_JSON_META_KEYS
 
 COMP_TABLE_CSV = "comparison_stars_per_target.csv"
 LEGACY_COMP_SELECTION_CSV = "comparison_stars_per_target_phase1.csv"
@@ -219,4 +221,47 @@ def with_used_sets(df: pd.DataFrame, used_by_target: dict[str, Iterable[tuple[st
                 continue
             out.iat[i, out.columns.get_loc("used_role")] = str(role or USED_PRIMARY)
             out.iat[i, out.columns.get_loc("used_rank")] = rank
+    return out
+
+
+# --- moved from aperture_photometry (LAYER-2026-10) ---
+
+
+def parse_comp_quality_json_map(raw: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Return ``catalog_id`` -> ``{quality, note}`` from ``comp_quality_*.json`` (strip metadata keys).
+
+    Accepts legacy flat strings (``"good"``) and structured objects
+    (``{"quality": "suspect", "note": "..."}``).
+    """
+    out: dict[str, dict[str, str]] = {}
+    if not isinstance(raw, dict):
+        return out
+    for k, v in raw.items():
+        ks = str(k).strip()
+        if ks in COMP_QUALITY_JSON_META_KEYS:
+            continue
+        if isinstance(v, str) and v.strip().lower() in ("good", "suspect", "excluded"):
+            out[ks] = {"quality": v.strip().lower(), "note": ""}
+        elif isinstance(v, dict):
+            q = str(v.get("quality", "") or "").strip().lower()
+            if q in ("good", "suspect", "excluded"):
+                out[ks] = {"quality": q, "note": str(v.get("note", "") or "").strip()}
+    return out
+
+
+# --- moved from photometry_gate_helpers (LAYER-2026-10) ---
+
+
+def comp_quality_quality_strings(
+    qmap: dict[str, dict[str, str]] | dict[str, str] | None,
+) -> dict[str, str]:
+    """Flatten parsed comp-quality map to ``catalog_id`` -> quality string (for w_rel / export helpers)."""
+    if not qmap:
+        return {}
+    out: dict[str, str] = {}
+    for k, v in qmap.items():
+        if isinstance(v, dict):
+            out[str(k)] = str(v.get("quality", "") or "").strip().lower()
+        else:
+            out[str(k)] = str(v).strip().lower()
     return out

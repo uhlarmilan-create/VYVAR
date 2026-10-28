@@ -82,7 +82,7 @@ def test_merge_psf_drops_columns_of_the_old_fitter(tmp_path: Path) -> None:
 
 
 def test_x_fit_y_fit_are_psf_columns() -> None:
-    from epsf_psf_merge import is_psf_column
+    from psf_sidecar_guard import is_psf_column
 
     assert is_psf_column("x_fit")
     assert is_psf_column("y_fit")

@@ -19,7 +19,7 @@ from pipeline import _dao_detection_threshold_adu, _apply_dao_centroid_wcs_guard
 def test_dao_n_equiv_threshold_uses_measured_n() -> None:
     cfg = AppConfig()
     cfg.detection_threshold_sigma = 3.78
-    thr, n_eff = _dao_detection_threshold_adu(55.63, cfg=cfg, dao_threshold_sigma=3.8)
+    thr, n_eff = _dao_detection_threshold_adu(55.63, cfg=cfg)
     assert abs(n_eff - 3.78) < 1e-9
     assert abs(thr - 3.78 * 55.63) < 0.01
 

@@ -49,7 +49,13 @@ _ROOT, _SRC = _find_src(_HERE)
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from catalog_db import CATALOG_META_SCHEMA, OBJECTS_DB_DEFAULT, connect_rw, write_catalog_meta  # noqa: E402
+from catalog_db import (  # noqa: E402
+    CATALOG_META_SCHEMA,
+    OBJECTS_DB_DEFAULT,
+    VSX_BUILD_MAG_LIMIT_DEFAULT,
+    connect_rw,
+    write_catalog_meta,
+)
 
 BUILDER = "catalogs/objects_make.py"
 
@@ -379,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--vsx", action="store_true", help="download VSX (VizieR B/vsx/vsx)")
     ap.add_argument("--vsx-dec-min", type=float, default=-90.0)
     ap.add_argument("--vsx-dec-max", type=float, default=90.0)
-    ap.add_argument("--vsx-mag-limit", type=float, default=18.0, help="cut on VSX max (brightness at maximum)")
+    ap.add_argument("--vsx-mag-limit", type=float, default=VSX_BUILD_MAG_LIMIT_DEFAULT, help="cut on VSX max (brightness at maximum)")
     ap.add_argument("--vsx-batch-deg", type=float, default=1.0)
     ap.add_argument("--exoplanets", action="store_true", help="download the NASA Exoplanet Archive")
     ap.add_argument("--exo-mag-limit", type=float, default=None, help="cut on host TESS mag (default: none)")

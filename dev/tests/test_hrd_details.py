@@ -18,6 +18,7 @@ from hrd_analysis import (
     hrd_detail_header_name,
 )
 from photometry_report import _PhotometryReportBuilder
+from config import AppConfig  # noqa: E402
 
 
 def _series(**kwargs) -> pd.Series:
@@ -129,6 +130,7 @@ def _minimal_report_builder(tmp_path: Path) -> _PhotometryReportBuilder:
         paragraph_mod=Paragraph,
         paragraph_style_mod=ParagraphStyle,
         ta_left_mod=TA_LEFT,
+        cfg=AppConfig(),
     )
 
 

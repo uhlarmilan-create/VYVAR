@@ -148,10 +148,10 @@ def test_choose_f_respects_allowed_apertures() -> None:
         for cid in ("T", "c1", "c2", "c3"):
             night.frames[st][cid] = {k: 1e5 * (1 + rng.normal(0, noise[k])) for k in grid}
             night.sky_pp[st][cid] = {k: 100.0 for k in grid}
-    free = choose_f_for_target(night, target_cid="T", comp_ids=["c1", "c2", "c3"], frame_order=frames)
+    free = choose_f_for_target(night, target_cid="T", comp_ids=["c1", "c2", "c3"], frame_order=frames, gain=1.0, read_noise=10.0)
     assert free.f_star == 2.0 and free.f_allowed is None
     lim = choose_f_for_target(night, target_cid="T", comp_ids=["c1", "c2", "c3"], frame_order=frames,
-                              allowed_f=[1.0, 1.25])
+                              allowed_f=[1.0, 1.25], gain=1.0, read_noise=10.0)
     assert lim.f_star == 1.25 and lim.f_allowed == [1.0, 1.25]
 
 

@@ -78,7 +78,7 @@ def test_identity_join_excludes_missing_masterstar(tmp_path: Path) -> None:
             }
         ],
     )
-    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     assert len(out) == 0
 
 
@@ -103,7 +103,7 @@ def test_misassociation_guard_near_bright_neighbor(tmp_path: Path) -> None:
             }
         ],
     )
-    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     assert len(out) == 0
 
 
@@ -127,7 +127,7 @@ def test_gaia_dr3_direct_never_active(tmp_path: Path) -> None:
             }
         ],
     )
-    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     assert len(out) == 0
 
 
@@ -151,7 +151,7 @@ def test_no_match_source_never_active(tmp_path: Path) -> None:
             }
         ],
     )
-    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     assert len(out) == 0
 
 
@@ -175,7 +175,7 @@ def test_masterstars_identity_promotes_matching_planner_id(tmp_path: Path) -> No
             }
         ],
     )
-    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50)
+    out = select_active_targets(vt_csv, ms_csv, frame_w_px=512, frame_h_px=512, edge_margin_px=50, cfg=AppConfig())
     assert len(out) == 1
     assert str(out.iloc[0]["catalog_id"]) == "1111111111111111111"
 

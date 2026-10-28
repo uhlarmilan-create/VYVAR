@@ -15,6 +15,8 @@ from reportlab.lib.units import cm, mm
 from photometry_report import _PhotometryReportBuilder
 from target_page import resolve_report_config
 
+from config import AppConfig
+
 
 def _patch_appconfig_root(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
     def _factory(**kwargs: object):
@@ -62,6 +64,7 @@ def _minimal_builder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Photom
         paragraph_mod=MagicMock(),
         paragraph_style_mod=MagicMock(),
         ta_left_mod=MagicMock(),
+        cfg=AppConfig(project_root=tmp_path),
     )
 
 
@@ -80,7 +83,7 @@ def test_resolve_report_config_uses_snapshot_not_live(
             }
         }
     }
-    cfg, label = resolve_report_config(meta)
+    cfg, label = resolve_report_config(meta, AppConfig(project_root=tmp_path))
     assert label == "run snapshot"
     assert float(getattr(cfg, "aperture_fwhm_factor")) == 1.25
 
@@ -136,6 +139,7 @@ def test_builder_uses_snapshot_decoupled_from_live_config(
         paragraph_mod=MagicMock(),
         paragraph_style_mod=MagicMock(),
         ta_left_mod=MagicMock(),
+        cfg=AppConfig(project_root=tmp_path),
     )
     assert builder._cfg_source_label == "run snapshot"
     assert builder._use_bprp_primary is True

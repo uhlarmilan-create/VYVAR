@@ -15,12 +15,13 @@ from config import AppConfig
 from database import VyvarDatabase
 from infolog import log_event, log_milestone
 from utils import iter_fits_paths_recursive as _iter_fits_recursive
+from proc_frame_store import _safe_proc_name
 from pipeline_calibrate import (
     _qc_enrich_calibrated_in_place,
     _resolve_draft_light_raw_path,
     draft_median_pointing_icrs_deg,
-    norm_fits_path_key,
 )
+from utils import norm_fits_path_key
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_preprocess -> pipeline at module load.
@@ -339,12 +340,6 @@ def resolve_obs_file_to_processed_fits(
     VYVAR-calibrated: ``processed/lights/.../proc_*.fits`` (legacy alias kept for callers).
     Pre-calibrated: ``non_calibrated/lights/<setup>/`` - the import frame is the frame (no proc_ remap).
     """
-    from pipeline import (  # noqa: PLC0415
-        _path_segments_forbidden_for_masterstar_physical_source,
-        _resolve_best_effort_path_under,
-        resolve_masterstar_input_root,
-    )
-
     if archive_path is None:
         return None
     from draft_provenance import draft_archive_root, is_pre_calibrated_draft
@@ -406,7 +401,7 @@ def qc_enrich_calibrated_lights_in_place(
     prefilter_rejected: Mapping[Path | str, str] | None = None,
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
 ) -> pd.DataFrame:
     """In-place QC enrichment on ``calibrated/lights`` (no ``processed/`` copy tree).
 
@@ -419,7 +414,7 @@ def qc_enrich_calibrated_lights_in_place(
 
     Parallelism: :func:`parallel_frames.stage_workers` (the run's RAM and CPU budget).
     """
-    cfg = app_config or AppConfig()
+    cfg = app_config
     calibrated_root = Path(calibrated_root)
 
     if db is not None and draft_id is not None:
@@ -539,3 +534,165 @@ def _qc_suggest_thresholds(df: "pd.DataFrame") -> dict[str, float | int | None]:
     return out
 
 
+# --- moved from pipeline_astrometry (LAYER-2026-10) ---
+
+
+def resolve_masterstar_input_root(
+    archive_path: Path | str,
+    setup_name: str | None = None,
+    *,
+    draft_id: int | None = None,
+    db: VyvarDatabase | None = None,
+) -> Path | None:
+    """Pick MASTERSTAR input root under draft lights[/setup_name] with robust fallback.
+
+    Uses ``calibrated/lights`` or ``non_calibrated/lights`` (via :func:`resolve_draft_lights_root`).
+
+    When ``setup_name`` is explicitly provided, only that subdir is considered - no cross-group scan.
+    Returns ``None`` when the requested setup is missing/empty (multi-group safe).
+    """
+    from draft_provenance import draft_archive_root, resolve_draft_lights_root
+
+    ap = draft_archive_root(Path(archive_path).expanduser())
+    lights_root = resolve_draft_lights_root(ap, draft_id=draft_id, db=db)
+    setup_key = str(setup_name or "").strip()
+
+    def _pick_under(base: Path) -> Path | None:
+        if setup_key:
+            cand = base / setup_key
+            if cand.is_dir() and any(_iter_fits_recursive(cand)):
+                return cand
+            log_event(
+                f"WARN: MASTERSTAR input root for setup {setup_key!r} not found under {base}; "
+                "refusing cross-group fallback"
+            )
+            return None
+        if base.is_dir():
+            subdirs = sorted([d for d in base.iterdir() if d.is_dir()], key=lambda p: p.name.casefold())
+            for sd in subdirs:
+                if any(_iter_fits_recursive(sd)):
+                    return sd
+            if any(_iter_fits_recursive(base)):
+                return base
+        return None
+
+    hit = _pick_under(lights_root)
+    if hit is not None:
+        return hit
+    return lights_root if not setup_key else None
+
+
+def _path_segments_forbidden_for_masterstar_physical_source(
+    p: Path,
+    *,
+    pre_calibrated: bool = False,
+) -> bool:
+    """``True`` if resolved path must not be used as MASTERSTAR physical source.
+
+    In VYVAR-calibrated mode, ``non_calibrated/`` and ``raw/`` are forbidden (use processed/calibrated).
+    In pre-calibrated mode, ``non_calibrated/lights/`` **is** the valid source tree; only ``raw/`` is forbidden.
+    """
+    try:
+        parts = Path(p).resolve().parts
+    except OSError:
+        parts = Path(p).parts
+    bad = {"raw"} if pre_calibrated else {"raw", "non_calibrated"}
+    return any(seg.casefold() in bad for seg in parts)
+
+
+def _path_is_under_tree(root: Path, p: Path) -> bool:
+    try:
+        Path(p).resolve().relative_to(Path(root).resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _pick_preferred_masterstar_basename_hit(
+    hits: list[Path],
+    *,
+    pre_calibrated: bool = False,
+) -> Path | None:
+    """With several basename matches prefer ``proc_*.fits`` (processed frame)."""
+    if not hits:
+        return None
+    clean = [
+        h
+        for h in hits
+        if not _path_segments_forbidden_for_masterstar_physical_source(h, pre_calibrated=pre_calibrated)
+    ]
+    if not clean:
+        return None
+    proc_first = [h for h in clean if h.name.casefold().startswith("proc_")]
+    use = proc_first if proc_first else clean
+    return sorted(use, key=lambda x: str(x).casefold())[0]
+
+
+def _resolve_best_effort_path_under(
+    root: Path,
+    raw_path: str,
+    *,
+    pre_calibrated: bool = False,
+) -> Path | None:
+    """Map an manifest files[].FILE_PATH (often archived raw path) to an existing file under ``root``.
+
+    Strategy: exact relative join, else basename match (first hit). This is intentionally heuristic because
+    imports may store different path bases (absolute vs relative, calibrated vs processed).
+    """
+    _forbid_kw = {"pre_calibrated": bool(pre_calibrated)}
+    rp = str(raw_path or "").strip()
+    if not rp:
+        return None
+    p = Path(rp)
+    # If already absolute and exists under root tree, accept.
+    if p.is_absolute():
+        try:
+            rel = p.resolve().relative_to(root.resolve())
+            cand = (root / rel).resolve()
+            if (
+                cand.is_file()
+                and _path_is_under_tree(root, cand)
+                and not _path_segments_forbidden_for_masterstar_physical_source(cand, **_forbid_kw)
+            ):
+                return cand
+        except Exception:  # noqa: BLE001
+            pass
+    # If relative, try directly.
+    cand2 = (root / p).resolve()
+    if (
+        cand2.is_file()
+        and _path_is_under_tree(root, cand2)
+        and not _path_segments_forbidden_for_masterstar_physical_source(cand2, **_forbid_kw)
+    ):
+        return cand2
+    # Explicit processed-name fallback in the same folder (e.g. Light_066.fits -> proc_Light_066.fits).
+    if not pre_calibrated:
+        try:
+            cand2_proc = cand2.with_name(_safe_proc_name(cand2.name)).resolve()
+            if (
+                cand2_proc.is_file()
+                and _path_is_under_tree(root, cand2_proc)
+                and not _path_segments_forbidden_for_masterstar_physical_source(cand2_proc, **_forbid_kw)
+            ):
+                return cand2_proc
+        except Exception:  # noqa: BLE001
+            pass
+    # Basename / fuzzy suffix fallback (handles prefixes like ``proc_``).
+    name = p.name
+    if not name:
+        return None
+    _name_cf = name.casefold()
+    _name_noproc = _name_cf[5:] if _name_cf.startswith("proc_") else _name_cf
+    hits = []
+    for x in _iter_fits_recursive(root):
+        xn = x.name.casefold()
+        xn_noproc = xn[5:] if xn.startswith("proc_") else xn
+        if (
+            xn == _name_cf
+            or xn_noproc == _name_noproc
+            or xn.endswith(_name_cf)
+            or xn_noproc.endswith(_name_noproc)
+        ):
+            if not _path_segments_forbidden_for_masterstar_physical_source(x, **_forbid_kw):
+                hits.append(x)
+    return _pick_preferred_masterstar_basename_hit(hits, pre_calibrated=pre_calibrated)

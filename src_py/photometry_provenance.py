@@ -5,15 +5,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 import json
-import logging
 import subprocess
 
 _GIT_PROVENANCE_WARNED = False
 
-from photometry_core import (
-    LOGGER,
-    _REPO_ROOT_FOR_PROVENANCE,
-)
+from photometry_defs import LOGGER
+
+# src_py/photometry_provenance.py -> repo root is parent.parent (git cwd + porcelain path base).
+_REPO_ROOT_FOR_PROVENANCE = Path(__file__).resolve().parent.parent
 
 def _is_import_relevant_py_path(path: str) -> bool:
     """True for VYVAR modules imported by the pipeline: ``src_py/*.py`` plus the root ``app.py`` shim.

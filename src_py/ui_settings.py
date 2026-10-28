@@ -17,7 +17,7 @@ import streamlit as st
 
 import params_registry as pr
 import settings_model as sm
-from config import AppConfig, save_config_json, ui_config_persist
+from config import AppConfig, load_config_json, save_config_json, ui_config_persist
 
 _P = "vyvar_set_"  # session-state prefix
 _STATE_COLOURS = {"ready": ("#1E6B3A", "#E6F4EA"), "old": ("#7A4700", "#FFF4E0"), "unfinished": ("#7A4700", "#FFF4E0"),
@@ -319,7 +319,9 @@ def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path |
 # page
 # ---------------------------------------------------------------------------
 def _save(cfg: AppConfig, draft: dict[str, Any], current: dict[str, Any]) -> None:
-    data = dict(current)
+    # G14-35: start from the file as written (relative catalogue paths stay relative; ``current`` holds
+    # resolved absolute paths), then put in only the keys changed in the form.
+    data = load_config_json(cfg.data_root)
     for k in sm.changed_keys(current, draft):
         data[k] = draft[k]
     with ui_config_persist():

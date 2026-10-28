@@ -25,7 +25,7 @@ from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
 from gaia_catalog_id import read_vyvar_csv
 from masterstar_context import header_core_fwhm_px
-from photometry_core import merge_photometry_pipeline_meta
+from photometry_provenance import merge_photometry_pipeline_meta
 from dao_reconcile import reconcile_to_pipeline_meta
 from pipeline_astrometry import _fill_masterstars_gaia_matched_bp_rp_from_local_db
 from pipeline_constants import (
@@ -49,27 +49,30 @@ from pipeline_calibrate import (
 from pipeline_preprocess import resolve_obs_file_to_processed_fits
 from pipeline_astrometry import (
     _equipment_saturate_adu_from_db,
-    _path_is_under_tree,
-    _path_segments_forbidden_for_masterstar_physical_source,
     _plate_solve_input_bundle,
-    _resolve_best_effort_path_under,
     _sync_comparison_stars_across_setups,
     _update_masterstar_obs_file_status,
-    _vyvar_df_to_csv,
     _vyvar_open_database,
     build_masterstar_from_detrended,
     compute_plate_scale_from_db,
     draft_is_multi_group_obs,
     get_masterstar_candidate_rows,
     get_masterstar_candidates,
-    resolve_masterstar_input_root,
     write_photometry_plan_files,
 )
+from pipeline_preprocess import (
+    _path_is_under_tree,
+    _path_segments_forbidden_for_masterstar_physical_source,
+    _resolve_best_effort_path_under,
+    resolve_masterstar_input_root,
+)
+from proc_frame_store import _vyvar_df_to_csv
 from pipeline_catalog import (
     _annotate_masterstars_flux_zones,
     _effective_field_catalog_cone_radius_deg,
     _invalidate_field_catalog_cone_cache_if_needed,
 )
+from pipeline_constants import CATALOG_MATCH_SEP_ARCSEC, MASTERSTAR_MAX_DAO_ROWS  # noqa: E402
 
 LOGGER = logging.getLogger("pipeline")
 
@@ -92,14 +95,12 @@ def generate_masterstar_and_catalog(
 
     *,
     archive_path: Path,
-    max_catalog_rows: int = 12000,
     source_root: Path | None = None,
     platesolve_dir: Path | None = None,
-    catalog_match_max_sep_arcsec: float = 25.0,
     n_comparison_stars: int = 0,
     require_non_variable_comparisons: bool = True,
     equipment_saturate_adu: float | None = None,
-    app_config: AppConfig | None = None,
+    app_config: AppConfig,
     equipment_id: int | None = None,
     draft_id: int | None = None,
     telescope_id: int | None = None,
@@ -123,9 +124,10 @@ def generate_masterstar_and_catalog(
     If ``masterstar_platesolve_only=True``, stop after a successful plate-solve and WCS scale adjustment (no DAO CSV,
     ``masterstars_full_match.csv``, photometric plan or MASTER_SOURCES write).
     """
-    from pipeline import detect_stars_and_match_catalog  # noqa: PLC0415  # call-time: giant; patch analysis in Phase B
+    from catalog_match import (  # noqa: PLC0415  # call-time: giant; patch analysis in Phase B
+        detect_stars_and_match_catalog,
+    )
 
-    max_catalog_rows = max(int(max_catalog_rows), 100000)
     import numpy as np
 
     ap = Path(archive_path).expanduser()
@@ -163,11 +165,7 @@ def generate_masterstar_and_catalog(
                 f"MASTERSTAR plate-solve: in {platesolve_dir} the file {_ms_name} is missing. "
                 "First run **MAKE MASTERSTAR** on the archive or create MASTERSTAR another way (FITS QA -> reference frame)."
             )
-        _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
-        if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
-            log_event(
-                f"MASTERSTAR: catalog match sep eff={_match_sep_eff:.2f} arcsec (min 10 for initial match)."
-            )
+        _match_sep_eff = CATALOG_MATCH_SEP_ARCSEC
         log_event(
             f"MASTERSTAR platesolve-from-disk: {masterstar_fits.resolve()} - VYVAR solver + catalog "
             "(no new build from processed)."
@@ -244,12 +242,7 @@ def generate_masterstar_and_catalog(
                 "MASTERSTAR: pre-calibrated draft - candidates resolved directly under "
                 f"{Path(detrended_root).resolve()} (no processed/calibrated remap)."
             )
-        _match_sep_eff = max(10.0, float(catalog_match_max_sep_arcsec))
-        if _match_sep_eff > float(catalog_match_max_sep_arcsec) + 1e-9:
-            log_event(
-                f"MASTERSTAR: catalog match sep raised to {_match_sep_eff:.2f}\" "
-                f"(required minimum for the initial match)."
-            )
+        _match_sep_eff = CATALOG_MATCH_SEP_ARCSEC
 
         ps = Path(platesolve_dir) if platesolve_dir is not None else (ap / "platesolve")
         platesolve_dir = ps
@@ -385,7 +378,7 @@ def generate_masterstar_and_catalog(
                         f"MASTERSTAR: frame QC best {Path(_qc_best).name} not found under {detrended_root}"
                     )
         if only_ms_paths is None and draft_id is not None and not (_multi_obs and setup_name):
-            _db_ms = _vyvar_open_database(app_config or AppConfig())
+            _db_ms = _vyvar_open_database(app_config)
             if _db_ms is not None:
                 try:
                     # FITS QA 'Confirm MASTERSTAR selection' -> ``get_obs_draft_masterstar_source_path``
@@ -456,7 +449,7 @@ def generate_masterstar_and_catalog(
                 f"MASTERSTAR: no FITS to select from in {detrended_root}, even after UI/DB."
             )
 
-        _cfg_stack = app_config or AppConfig()
+        _cfg_stack = app_config
         _ms_fwhm_fb = DAO_FWHM_FALLBACK_PX
         if draft_id is not None:
             _dbc_fw = _vyvar_open_database(_cfg_stack)
@@ -559,7 +552,7 @@ def generate_masterstar_and_catalog(
         _selected_ref_path = None
 
     if masterstar_fits_only:
-        _cfg_fast = app_config or AppConfig()
+        _cfg_fast = app_config
         try:
             _ms_out = str(Path(masterstar_fits).resolve())
         except OSError:
@@ -583,7 +576,7 @@ def generate_masterstar_and_catalog(
         }
         try:
             if draft_id is not None:
-                _db_ms = VyvarDatabase(Path(_cfg_fast.database_path))
+                _db_ms = VyvarDatabase.for_config(_cfg_fast)
                 try:
                     _db_ms.set_obs_draft_masterstar_fits_path(int(draft_id), _ms_out)
                 finally:
@@ -598,7 +591,7 @@ def generate_masterstar_and_catalog(
         hdr = hdul[0].header.copy()
         data = np.array(hdul[0].data, dtype=np.float32, copy=True)
 
-    _cfg_ms = app_config or AppConfig()
+    _cfg_ms = app_config
 
     _dao_sigma_eff = resolve_detection_threshold_sigma(_cfg_ms.detection_threshold_sigma)
     log_event(
@@ -875,7 +868,7 @@ def generate_masterstar_and_catalog(
         log_event(f"MASTERSTAR WCS round-trip check skipped: {_rt_exc!s}")
 
     if masterstar_platesolve_only:
-        _cfg_early = app_config or AppConfig()
+        _cfg_early = app_config
         try:
             _ms_out_early = str(Path(masterstar_fits).resolve())
         except OSError:
@@ -903,7 +896,7 @@ def generate_masterstar_and_catalog(
         }
         try:
             if draft_id is not None:
-                _db_early = VyvarDatabase(Path(_cfg_early.database_path))
+                _db_early = VyvarDatabase.for_config(_cfg_early)
                 try:
                     _db_early.set_obs_draft_masterstar_fits_path(int(draft_id), _ms_out_early)
                 finally:
@@ -967,17 +960,15 @@ def generate_masterstar_and_catalog(
         log_event(f"Catalog: field_catalog_cone cache check skipped - {exc!s}")
 
     # Full-field MASTERSTAR depth: keep deeper Gaia and larger catalog rows for corner recovery.
-    _ms_max_catalog_rows_eff = max(int(max_catalog_rows), 100000)
+    _ms_max_catalog_rows_eff = MASTERSTAR_MAX_DAO_ROWS
     _detect_kw: dict[str, Any] = {
-        "max_catalog_rows": int(_ms_max_catalog_rows_eff),
         "gaia_db_path": Path(_full_db),
-        "match_sep_arcsec": float(_match_sep_eff),
         "field_catalog_export_path": platesolve_dir / "field_catalog_cone.csv",
-        "dao_threshold_sigma": float(_dao_sigma_eff),
         "dao_fwhm_px": dao_fwhm_px_for_ms,
         "equipment_saturate_adu": equipment_saturate_adu,
         "measured_saturate_adu": _ms_measured_sat,
         "dao_fwhm_bypass_header": bool(_dao_fwhm_bypass_hdr),
+        "cfg": _cfg_ms,
     }
     # GAIN-ONE-2026-10: the SNR of the MASTERSTAR catalogue (snr_min gates) with the run's gain
     from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
@@ -1555,6 +1546,7 @@ def generate_masterstar_and_catalog(
         n_comparison_stars=int(n_comparison_stars),
         require_non_variable=bool(require_non_variable_comparisons),
         enrichment_expected=False,
+        cfg=_cfg_ms,
     )
     # F-431 / C1: stamp AFTER VT exists (write_photometry_plan_files).
     try:
@@ -1651,7 +1643,7 @@ def generate_masterstar_and_catalog(
                         if sat_limit is None:
                             _eq_sat_ms = equipment_saturate_adu
                             if _eq_sat_ms is None and equipment_id is not None:
-                                _eq_sat_ms = _equipment_saturate_adu_from_db(equipment_id)
+                                _eq_sat_ms = _equipment_saturate_adu_from_db(equipment_id, _cfg_ms)
                             sat_limit, _ = _effective_saturation_limit(
                                 hdr,
                                 fallback_adu=None,
@@ -1720,6 +1712,7 @@ def generate_masterstar_and_catalog(
                                     n_comparison_stars=int(n_comparison_stars),
                                     require_non_variable=bool(require_non_variable_comparisons),
                                     draft_id=int(draft_id),
+                                    cfg=_cfg_ms,
                                 )
                                 out.update(_wp2)
                             except Exception as _wp2_exc:  # noqa: BLE001
@@ -1734,7 +1727,7 @@ def generate_masterstar_and_catalog(
     # Persist MASTERSTAR path on draft for later UI reloads / Step 3 continuity.
     try:
         if draft_id is not None:
-            _db_ms = VyvarDatabase(Path(_cfg_ms.database_path))
+            _db_ms = VyvarDatabase.for_config(_cfg_ms)
             try:
                 _db_ms.set_obs_draft_masterstar_fits_path(int(draft_id), str(Path(masterstar_fits).resolve()))
             finally:

@@ -3,9 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pipeline import (
-    _archive_raw_to_calibrated_light,
-)
+from pipeline_preprocess import _archive_raw_to_calibrated_light
 
 
 def _resolve_light_fits_for_quality_inspection(archive: Path, raw_fp: Path | str) -> Path | None:

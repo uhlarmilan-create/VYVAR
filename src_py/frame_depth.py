@@ -23,11 +23,10 @@ import math
 from typing import Any
 
 import numpy as np
+from pipeline_constants import Z_90  # LAYER-2026-10: moved there
 
 #: G_lim = G50 + N_SIGMA * sigma (C = 0.13 %): beyond it the frame holds practically no detections.
 N_SIGMA_LIMIT = 3.0
-#: C(G90) = 0.9 on the Fleming erf: G90 = G50 - z_0.9 sigma.
-Z_90 = 1.2815516
 _BIN_MAG = 0.5
 _MIN_STARS_ZP = 20
 

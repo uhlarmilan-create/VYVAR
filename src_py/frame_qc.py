@@ -101,7 +101,7 @@ class GroupQC:
 # ---------------------------------------------------------------------------
 def setup_name_for_group(group_key: str) -> str:
     """Folder name of a group under ``lights/`` (same rule as the importer)."""
-    from importer import observation_group_folder_name  # noqa: PLC0415
+    from fits_meta import observation_group_folder_name  # noqa: PLC0415
 
     return observation_group_folder_name(str(group_key))
 

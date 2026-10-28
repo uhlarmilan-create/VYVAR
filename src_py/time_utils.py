@@ -277,3 +277,14 @@ def compute_time_columns(
 
     hjd, bjd = compute_hjd_bjd(jd, float(ra), float(dec), float(lat), float(lon), float(elev or 0.0))
     return {"jd_mid": jd, "hjd_mid": hjd, "bjd_tdb_mid": bjd}
+
+
+# --- moved from pipeline_catalog (LAYER-2026-10) ---
+
+
+def _airmass_from_altitude_deg(alt_deg: float) -> float:
+    """Kasten & Young (1989) airmass from altitude in degrees."""
+    alt_rad = math.radians(float(alt_deg))
+    return 1.0 / (
+        math.sin(alt_rad) + 0.50572 * (float(alt_deg) + 6.07995) ** (-1.6364)
+    )

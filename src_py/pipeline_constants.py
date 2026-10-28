@@ -100,3 +100,34 @@ ALIGNMENT_MAX_CONTROL_POINTS = 80
 # light; this is reached only when that measurement failed). Was config sips_dao_fwhm_px (2.5),
 # which dao_detection_fwhm_pixels already raised to 3.0.
 DAO_FWHM_FALLBACK_PX = 3.0
+
+# MAD -> sigma for a normal distribution: sigma = MAD / 0.6745 (= 1.4826 x MAD).
+MAD_CONSISTENCY = 0.6745
+# F-BINGAIN-1: clamp of the empirical / Howell background scale ratio.
+BKG_SCALE_R_CLAMP_LO = 0.05
+BKG_SCALE_R_CLAMP_HI = 2.0
+
+
+# --- moved from frame_depth (LAYER-2026-10) ---
+
+
+#: C(G90) = 0.9 on the Fleming erf: G90 = G50 - z_0.9 sigma.
+Z_90 = 1.2815516
+
+# CONFIG-ONE-2026-10 (G05-15 / G14-13, Milan 2026-10-27): one default location of the catalogue DBs, used by
+# AppConfig, the catalogue builders and the Settings wizard (relative to the data directory).
+GAIA_DB_DEFAULT = "catalogs/vyvar_gaia_dr3.db"
+OBJECTS_DB_DEFAULT = "catalogs/vyvar_objects.db"
+# G05-18: catalogue builder defaults, one place for the wizard, its job arguments and the scripts' CLI.
+GAIA_BUILD_MAG_LIMIT_DEFAULT = 17.5
+VSX_BUILD_MAG_LIMIT_DEFAULT = 18.0
+# CONFIG-ONE-2026-10 (Milan 2026-10-27): the values runs used, now named constants (the GUI / CLI parameters
+# catalog_match_max_sep_arcsec, max_catalog_rows, min/max_detected_stars had three defaults each and were floored).
+#: MASTERSTAR initial Gaia match radius [arcsec]; recorded in the meta, the identity radius replaces it (IDENTITY-2026-10).
+CATALOG_MATCH_SEP_ARCSEC = 10.0
+#: DAO detections kept on MASTERSTAR (spatially stratified) and on each aligned frame.
+MASTERSTAR_MAX_DAO_ROWS = 100000
+FRAME_MAX_DAO_ROWS = 12000
+#: Alignment reference frame: fewest stars to accept it, most stars detected on it.
+ALIGN_MIN_DETECTED_STARS = 100
+ALIGN_MAX_DETECTED_STARS = 500

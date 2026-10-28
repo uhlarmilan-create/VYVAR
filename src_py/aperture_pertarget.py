@@ -35,11 +35,10 @@ import time
 
 import numpy as np
 import pandas as pd
+from photometry_defs import DEFAULT_APERTURE_F_GRID, flux_k_column  # LAYER-2026-10: moved there
 
 LOGGER = logging.getLogger(__name__)
 
-# APERTURE-K-2026-10: small grid of apertures in units of the frame FWHM.
-DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (1.0, 1.25, 1.5, 1.75, 2.0)
 
 # Documented fallback when S/N cannot be evaluated (no finite fluxes / sky).
 # Midpoint of the Howell/Naylor sky-limited optimum band ~0.6-0.75 FWHM.
@@ -104,8 +103,8 @@ def howell_variance_adu2(
     sky_pp: float,
     area: float,
     *,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
 ) -> float:
     """Total variance [ADU^2] - mirror of ``aperture_photometry._howell_variance_adu2``.
 
@@ -130,8 +129,8 @@ def howell_snr(
     sky_pp: float,
     area: float,
     *,
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
 ) -> float:
     """Predicted S/N = F / sqrt(var) using VYVAR Howell variance terms."""
     f = float(flux)
@@ -230,11 +229,6 @@ def measure_flux_on_f_grid(
         out_f[k][ok] = sums - sky * float(ap.area)
         out_s[k][ok] = sky
     return out_f, out_s, edge
-
-
-def flux_k_column(k: float) -> str:
-    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``)."""
-    return f"flux_k{int(round(float(k) * 100))}"
 
 
 def blend_k_column(k: float) -> str:
@@ -602,8 +596,8 @@ def choose_f_for_target(
     target_cid: str,
     comp_ids: Sequence[str],
     frame_order: Sequence[str],
-    gain: float = 1.0,
-    read_noise: float = 10.0,
+    gain: float,
+    read_noise: float,
     allowed_f: Sequence[float] | None = None,
 ) -> PerTargetChoice:
     """k* = argmin over the grid of the comparison-star leave-one-out scatter.
@@ -852,10 +846,10 @@ def apply_grid_fluxes_to_frames(
     *,
     catalog_ids: Sequence[str],
     f_star: float,
-    gain: float | None = None,
-    read_noise: float | None = None,
-    annulus_inner_fwhm: float | None = None,
-    annulus_outer_fwhm: float | None = None,
+    gain: float | None,
+    read_noise: float | None,
+    annulus_inner_fwhm: float | None,
+    annulus_outer_fwhm: float | None,
 ) -> pd.DataFrame:
     """Set mag_inst / aperture_r_px (r = k* x FWHM_frame) for target, comps and check star.
 

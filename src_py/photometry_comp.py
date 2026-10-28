@@ -23,11 +23,8 @@ from catalog_db import connect_ro, query_local_gaia_by_source_ids
 from gaia_catalog_id import normalize_gaia_source_id, normalize_gaia_source_id_series, read_vyvar_csv
 from infolog import log_event
 from photometry_shared import _normalize_gaia_id, _safe_polyfit, _target_display_name
-from photometry_core import (
-    LOGGER,
-    _GAIA_ID_DTYPE,
-    _PHASE_USECOLS_PERFRAME,
-)
+from photometry_defs import LOGGER, PHASE_USECOLS_PERFRAME
+from gaia_catalog_id import VYVAR_CSV_DTYPE
 
 LAST_EXCLUDED_TARGETS: pd.DataFrame = pd.DataFrame(
     columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"]
@@ -274,51 +271,34 @@ def _enrich_active_targets_bp_rp(
 def _resolve_frame_hw_px_from_masterstar(
     ms_fits: Path,
     *,
-    frame_w_px: int,
-    frame_h_px: int,
     db: Any = None,
     draft_id: int | None = None,
 ) -> tuple[int, int, str]:
-    """Authoritative chip width/height for target and comparison-star selection spatial culling.
-
-    Priority: (1) MASTERSTAR FITS ``NAXIS1``/``NAXIS2``; (2) light FITS via draft;
-    (3) caller defaults (global cfg knob / hardcoded 2082x1397).
-    """
-    w_def, h_def = int(frame_w_px), int(frame_h_px)
+    """Chip width / height for target and comparison-star selection: MASTERSTAR ``NAXIS1/2``, else a light
+    FITS of the draft. CONFIG-ONE-2026-10 (G07-21): no caller default (it was 2082 x 1397 px, one camera);
+    an unknown size is an error."""
     if ms_fits.is_file():
         try:
             with astrofits.open(ms_fits, memmap=False) as hdul:
                 hdr = hdul[0].header
                 w = int(hdr.get("NAXIS1", 0) or 0)
                 h = int(hdr.get("NAXIS2", 0) or 0)
+            if w > 0 and h > 0:
+                return w, h, "fits_naxis"
+        except Exception as exc:  # noqa: BLE001 - next source: a light of the draft
+            logging.warning("[TARGET-SELECT] MASTERSTAR size not read from %s: %s", ms_fits.name, exc)
+    if db is not None and draft_id is not None and int(draft_id) > 0:
+        for lr in db.fetch_draft_light_rows_for_quality(int(draft_id)):
+            fp0 = lr.get("FILE_PATH")
+            if fp0:
+                with astrofits.open(str(fp0), memmap=False) as _hdul:
+                    w = int(_hdul[0].header.get("NAXIS1") or 0)
+                    h = int(_hdul[0].header.get("NAXIS2") or 0)
                 if w > 0 and h > 0:
-                    return w, h, "fits_naxis"
-        except Exception:  # noqa: BLE001
-            pass
-    if db is not None and draft_id is not None:
-        try:
-            did = int(draft_id)
-        except (TypeError, ValueError):
-            did = 0
-        if did > 0 and hasattr(db, "fetch_draft_light_rows_for_quality"):
-            try:
-                light_rows = db.fetch_draft_light_rows_for_quality(did)
-                fp0 = None
-                for lr in light_rows:
-                    fp0 = lr.get("FILE_PATH")
-                    if fp0:
-                        break
-                if fp0:
-                    from astropy.io import fits as _fits_nax
+                    return w, h, "fits_naxis_light"
+                break
+    raise RuntimeError(f"frame size unknown: no NAXIS in {ms_fits} and no light FITS of draft {draft_id}")
 
-                    with _fits_nax.open(str(fp0), memmap=False) as _hdul:
-                        w = int(_hdul[0].header.get("NAXIS1") or 0)
-                        h = int(_hdul[0].header.get("NAXIS2") or 0)
-                    if w > 0 and h > 0:
-                        return w, h, "fits_naxis_light"
-            except Exception:  # noqa: BLE001
-                pass
-    return w_def, h_def, "caller_default"
 
 def _read_field_density_inputs(
     ms_fits: Path,
@@ -336,11 +316,6 @@ def _read_field_density_inputs(
     n_stars = 0
     src = "defaults"
     vy_ndao_raw: int | None = None
-    cw, ch, _hw_src = _resolve_frame_hw_px_from_masterstar(
-        ms_fits, frame_w_px=cw, frame_h_px=ch
-    )
-    if _hw_src == "fits_naxis":
-        src = "fits_naxis"
     if ms_fits.is_file():
         try:
             with astrofits.open(ms_fits, memmap=False) as hdul:
@@ -393,7 +368,7 @@ def _refresh_variable_targets_xy(
 
     logging.debug("[VT REFRESH] frame %sx%s px (MASTERSTAR -> VT x,y)", chip_w, chip_h)
 
-    df = pd.read_csv(vt_path, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    df = pd.read_csv(vt_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     if "ra_deg" in df.columns:
         ra = pd.to_numeric(df["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
     elif "ra" in df.columns:
@@ -455,12 +430,12 @@ def select_active_targets(
     variable_targets_csv: Path,
     masterstars_csv: Path,
     *,
-    frame_w_px: int = 2082,
-    frame_h_px: int = 1397,
+    frame_w_px: int,
+    frame_h_px: int,
     edge_margin_px: int = 50,
     safe_bbox: tuple[float, float, float, float] | None = None,
     gaia_db_path: str | None = None,
-    cfg: Any | None = None,
+    cfg: AppConfig,
 ) -> pd.DataFrame:
     """Target selection: filter VSX variables -> active_targets.
 
@@ -490,9 +465,9 @@ def select_active_targets(
     # Auto-repair corrupted Gaia IDs before loading (if a local Gaia DB is available).
 
     # variable_targets.csv may come from outside and often has catalog_id as float/scientific - read as string
-    vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # masterstars_full_match.csv often carries the exact Gaia source_id in "name" even when catalog_id is float-corrupted
-    ms = pd.read_csv(masterstars_csv, low_memory=False, dtype=_GAIA_ID_DTYPE)
+    ms = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     if "catalog_id" in vt.columns:
         vt["catalog_id"] = vt["catalog_id"].apply(_normalize_gaia_id)
     # Normalize Gaia IDs to string.
@@ -545,7 +520,7 @@ def select_active_targets(
         )
     vt_in = vt[in_frame].copy()
 
-    _cfg = cfg if cfg is not None else AppConfig()
+    _cfg = cfg
 
     from vsx_type_scope import (  # noqa: PLC0415
         is_vsx_auto_selected_target,
@@ -961,7 +936,7 @@ def _select_comps_by_rms_then_color(
     target_bprp: float,
     n_comp_min: int,
     n_comp_max: int,
-    max_delta_bprp: float = 0.5,
+    max_delta_bprp: float,
     *,
     cfg: AppConfig | None = None,
     max_comp_rms: float | None = None,
@@ -1377,8 +1352,8 @@ def build_global_comp_pool(
     cfg: AppConfig,
     *,
     flux_col: str = "dao_flux",
-    min_frames_frac: float = 0.3,
-    fwhm_px: float = 3.7,
+    min_frames_frac: float,
+    fwhm_px: float,
     photometry_dir_for_meta: Path | str | None = None,
     obs_group: str | None = None,
     masterstar_fits: Path | str | None = None,
@@ -1532,7 +1507,8 @@ def build_global_comp_pool(
         # <= 1 % (aperture_pertarget.allowed_f_from_comp_blend); the pool keeps a star that
         # passes at the smallest k, so that k is always available. Contamination is defined
         # for the aperture actually used, as Kepler / TESS CROWDSAP.
-        from aperture_pertarget import DEFAULT_APERTURE_F_GRID, blend_k_column  # noqa: PLC0415
+        from aperture_pertarget import blend_k_column  # noqa: PLC0415
+        from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
         from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool  # noqa: PLC0415
 
         # BLEND-FWHM-2026-10: the apertures are r = k x FWHM(frame); the light is
@@ -1794,13 +1770,13 @@ def select_comparison_stars_per_target(
     *,
     csv_cache: dict[str, pd.DataFrame] | None = None,
     global_comp_pool_df: pd.DataFrame | None = None,
-    fwhm_px: float = 3.7,
+    fwhm_px: float,
     fwhm_d3_px: float | None = None,
-    n_comp_min: int = 3,
-    n_comp_max: int = 7,
-    max_comp_rms: float = 0.1,
+    n_comp_min: int,
+    n_comp_max: int,
+    max_comp_rms: float,
     min_dist_arcsec: float = 60.0,
-    min_frames_frac: float = 0.3,
+    min_frames_frac: float,
     flux_col: str = "dao_flux",
     chip_fw: int | None = None,
     chip_fh: int | None = None,
@@ -1809,8 +1785,8 @@ def select_comparison_stars_per_target(
     gaia_db_path: str | None = None,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
     variable_target_catalog_ids: AbstractSet[str] | None = None,
-    cfg: AppConfig | None = None,
-    plate_scale_arcsec: float = 1.3,
+    cfg: AppConfig,
+    plate_scale_arcsec: float,
     use_pixel_dist: bool = False,
     sat_may_exclude: bool = True,
     n_reserve: int = 0,
@@ -1823,7 +1799,7 @@ def select_comparison_stars_per_target(
 
     Procedure (option D = B + C):
     1. Spatial + photometric filter of candidates from masterstars
-    2. Load flux from all per-frame CSVs (only _PHASE_USECOLS_PERFRAME)
+    2. Load flux from all per-frame CSVs (only PHASE_USECOLS_PERFRAME)
     3. Normalize flux to the ensemble median per frame
     4. Compute the RMS scatter of each candidate
     5. Iterative ensemble filter - drop the top outliers until RMS stops decreasing
@@ -1860,7 +1836,7 @@ def select_comparison_stars_per_target(
         _score_comp_candidates_broeg,
     )
 
-    _cfg_p1 = cfg if cfg is not None else AppConfig()
+    _cfg_p1 = cfg
 
     if global_comp_pool_df is None or getattr(global_comp_pool_df, "empty", True):
         # COMP-POOL-ONLY-2026-10 (Milan 2026-10-26, D5): comparison stars come only from the pool
@@ -1955,7 +1931,7 @@ def select_comparison_stars_per_target(
     flux_map: dict[str, list[float]] = {}
     min_frames = 3
     if not _pool_rms_ready:
-        avail_cols = _PHASE_USECOLS_PERFRAME.copy()
+        avail_cols = list(PHASE_USECOLS_PERFRAME)
         csv_cache = _bootstrap_comp_selection_csv_cache(
             per_frame_csv_paths,
             csv_cache,

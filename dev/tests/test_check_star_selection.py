@@ -29,7 +29,7 @@ def test_cs3_never_picks_ensemble_member() -> None:
             _good_row("600", rms=0.04),
         ]
     )
-    row = select_check_star(df, ensemble_ids={"100", "200", "300"}, n_comp_min=3)
+    row = select_check_star(df, ensemble_ids={"100", "200", "300"}, n_comp_min=3, cfg=AppConfig())
     assert row is not None
     assert str(row["catalog_id"]) == "400"
 
@@ -42,7 +42,7 @@ def test_cs3_all_low_rms_in_ensemble_returns_none() -> None:
             _good_row("300", rms=0.003),
         ]
     )
-    assert select_check_star(df, ensemble_ids={"100", "200", "300"}, n_comp_min=3) is None
+    assert select_check_star(df, ensemble_ids={"100", "200", "300"}, n_comp_min=3, cfg=AppConfig()) is None
 
 
 def test_cs3_independent_star_preferred_over_ensemble() -> None:
@@ -54,7 +54,7 @@ def test_cs3_independent_star_preferred_over_ensemble() -> None:
             _good_row("c4", rms=0.04),
         ]
     )
-    row = select_check_star(df, ensemble_ids={"ens"}, n_comp_min=3)
+    row = select_check_star(df, ensemble_ids={"ens"}, n_comp_min=3, cfg=AppConfig())
     assert row is not None
     assert str(row["catalog_id"]) == "ind"
 
@@ -81,6 +81,6 @@ def test_cs2_all_below_floor_returns_none() -> None:
             _good_row("c", rms=0.0),
         ]
     )
-    assert select_check_star(df, ensemble_ids=set(), n_comp_min=3) is None
+    assert select_check_star(df, ensemble_ids=set(), n_comp_min=3, cfg=AppConfig()) is None
 
 

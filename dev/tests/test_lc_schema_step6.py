@@ -18,7 +18,7 @@ from check_star_kmag import (  # noqa: E402
     load_check_star,
     save_check_kmag_sidecar,
 )
-from export_reports import _select_export_lc_rows  # noqa: E402
+from photometry_lightcurve import _select_export_lc_rows  # noqa: E402
 from frame_export import PER_FRAME_INDEX_COLUMNS, write_per_frame_index  # noqa: E402
 from photometry_lightcurve import published_mag_column, save_lightcurve_csv  # noqa: E402
 from photometry_report import _publication_lc_mag_column  # noqa: E402
@@ -113,7 +113,7 @@ def test_check_star_block_in_comp_quality(tmp_path: Path) -> None:
 
     tr = read_sparse_trust_sidecar(tmp_path, "7")
     assert tr["trust_R_hi"] == 1.7 and tr["check_sparse"] and tr["sparse_flags"] == ("R_hi_exceeds_T_green",)
-    from aperture_photometry import parse_comp_quality_json_map
+    from comp_table import parse_comp_quality_json_map
 
     assert set(parse_comp_quality_json_map(json.loads((lc_dir / "comp_quality_7.json").read_text()))) == {"9"}
 

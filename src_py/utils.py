@@ -474,3 +474,12 @@ def estimate_field_diameter_deg_diagonal(
     return float(diag_arcsec / 3600.0)
 
 
+# --- moved from pipeline_calibrate (LAYER-2026-10) ---
+
+
+def norm_fits_path_key(path: Path | str) -> str:
+    """Normalized absolute path key for qc_metrics / allowlist joins (casefold)."""
+    try:
+        return str(Path(path).resolve()).casefold()
+    except OSError:
+        return str(path).casefold()

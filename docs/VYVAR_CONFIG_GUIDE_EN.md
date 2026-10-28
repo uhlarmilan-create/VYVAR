@@ -185,7 +185,7 @@ Registering all frames of a series onto a common pixel grid so that each star st
 
 | Parameter | Default | Type | Source | Used in | Explanation |
 |---|---|---|---|---|---|
-| `alignment_max_stars` | 160; range 10 .. 5000 | Setting (config.json) | config.json | Settings UI (`ui_settings.py:122`) | Cap on stars considered by the alignment matcher. |
+| `alignment_max_stars` | 160; range 10 .. 200 | Setting (config.json) | config.json | Settings UI (`ui_settings.py:122`) | Cap on stars considered by the alignment matcher. |
 
 ## Detection, plate solving & masterstar
 
