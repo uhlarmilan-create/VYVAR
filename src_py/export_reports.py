@@ -21,10 +21,9 @@ from citations import (
     build_run_citation_context,
     emit_export_citation_lines,
     emit_varastro_method_summary_lines,
-    load_pipeline_meta,
 )
 from gaia_catalog_id import normalize_gaia_source_id
-from invariants_runtime import InvariantViolation
+from invariants_runtime import InvariantViolation, load_pipeline_meta
 from report_methods import aavso_export_path, lc_csv_path, varastro_export_path
 from check_star_kmag import (
     check_kmag_sidecar_path,
@@ -244,7 +243,7 @@ def _vyvar_export_citation_lines(
     return emit_export_citation_lines(run_ctx)
 
 
-def _safe_filename(name: str) -> str:
+def safe_filename(name: str) -> str:
     """Sanitize a VSX name for the filesystem. 'BO CVn' -> 'BO_CVn'."""
     s = str(name).strip()
     s = re.sub(r"[^\w\s\-\+]", "", s)
@@ -252,7 +251,7 @@ def _safe_filename(name: str) -> str:
     return s or "unknown"
 
 
-def _bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
+def bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
     """BJD(TDB) (JD-like float) -> calendar date string YYYYMMDD (UTC-like display)."""
     try:
         t = Time(float(bjd_tdb), format="jd", scale="tdb")
@@ -322,7 +321,7 @@ def _osc_export_citation_context(
     )
 
 
-def _guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, str | None]:
+def guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, str | None]:
     """Best-effort: parse 'NoFilter_60_2' or 'NoFilter_60_2_G' -> (filter, exptime, binning)."""
     from osc_align import parse_osc_channel_from_setup
 
@@ -599,7 +598,7 @@ def export_lightcurve_reports(
     from star_page_m3 import target_display_name  # noqa: PLC0415
 
     vsx_name = target_display_name(target_row)
-    safe = _safe_filename(vsx_name)
+    safe = safe_filename(vsx_name)
     _export_method = str(export_method or "aperture").strip().lower()
     if _export_method != "aperture":
         raise InvariantViolation(
@@ -673,7 +672,7 @@ def export_lightcurve_reports(
     check_osc03_export_eligibility(
         obs_group_resolved, aavso_filter, meta={"target": _target_id, "method": _export_method}
     )
-    setup_filter_raw, exptime_s, binning = _guess_setup_info_from_obs_group(obs_group_resolved)
+    setup_filter_raw, exptime_s, binning = guess_setup_info_from_obs_group(obs_group_resolved)
 
     cq = _load_comp_quality_json(_lc_dir, target_cid)
     # GSPC-ZP-2026-10: calibration note B (red comps / GSPC zero point differs) in the header
@@ -794,7 +793,7 @@ def export_lightcurve_reports(
     jd0 = _lc_first_float(lc_normal, "jd")
     bjd0 = _lc_first_float(lc_normal, "bjd")
     _t_tag = jd0 if math.isfinite(jd0) else bjd0
-    date_tag = _bjd_to_datestr_yyyymmdd(float(_t_tag)) if math.isfinite(_t_tag) else "unknown"
+    date_tag = bjd_to_datestr_yyyymmdd(float(_t_tag)) if math.isfinite(_t_tag) else "unknown"
     aavso_path = aavso_export_path(out_base, safe, date_tag)
     var_path = varastro_export_path(out_base, safe, date_tag)
     # EXPORT-AUDIT-2026-10 (Milan 2026-10-21): a RED-trust target is written for inspection into

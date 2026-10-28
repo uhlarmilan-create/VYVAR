@@ -82,8 +82,7 @@ def test_empty_aperture_white_noise_matches_analytic() -> None:
         r_out,
         n_apertures=48,
         min_valid=16,
-        rng=rng,
-    )
+        rng=rng, sky=data)
     assert reason == ""
     assert n_valid >= 16
     area = math.pi * r_ap**2
@@ -111,8 +110,7 @@ def test_correlated_noise_empirical_exceeds_howell_reconstruction() -> None:
         18.0,
         n_apertures=64,
         min_valid=16,
-        rng=rng,
-    )
+        rng=rng, sky=data)
     assert reason == ""
     area = math.pi * r_ap**2
     howell_bkg_adu = math.sqrt(sky_pp / g * area + (rn / g) ** 2 * area)
@@ -134,8 +132,7 @@ def test_crowding_fallback() -> None:
         20.0,
         n_apertures=32,
         min_valid=16,
-        rng=rng,
-    )
+        rng=rng, sky=data)
     assert not math.isfinite(sig_ap)
     assert n_valid < 16
     assert "crowding" in reason

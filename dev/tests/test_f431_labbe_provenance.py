@@ -26,11 +26,9 @@ def test_labbe_seed_deterministic_same_content() -> None:
     hdr["NAXIS2"] = 200
     seed = _labbe_content_seed_from_header(hdr, r_ap=3.0)
     a, _, _ = measure_empty_aperture_sigma_bkg(
-        data, xs, ys, 3.0, 5.0, 9.0, n_apertures=32, min_valid=8, seed=seed
-    )
+        data, xs, ys, 3.0, 5.0, 9.0, n_apertures=32, min_valid=8, seed=seed, sky=data)
     b, _, _ = measure_empty_aperture_sigma_bkg(
-        data, xs, ys, 3.0, 5.0, 9.0, n_apertures=32, min_valid=8, seed=seed
-    )
+        data, xs, ys, 3.0, 5.0, 9.0, n_apertures=32, min_valid=8, seed=seed, sky=data)
     assert np.isfinite(a) and np.isfinite(b)
     assert a == b
 

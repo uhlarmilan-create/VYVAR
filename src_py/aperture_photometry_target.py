@@ -1131,6 +1131,8 @@ def _aperture_process_one_target(
                 if _chk_result is not None and np.isfinite(_chk_result.kmag).any():
                     # CHECK-RULES-2026-10: per-epoch K error = photon (check) + ensemble + sigma_sys,
                     # the same budget as the target, for the chi2 consistency test.
+                    # CHECK-SCINT-2026-10 (code review 2 D10 / G08-10, Milan 2026-10-28 with O1): plus the
+                    # scintillation of the epoch, as in the target's error.
                     _kerr = np.full(len(src_files), np.nan, dtype=np.float64)
                     try:
                         _cf = all_frames[
@@ -1150,7 +1152,8 @@ def _aperture_process_one_target(
                             _er = float(_err_by_src.get(str(_sf), float("nan")))
                             _es = float(_ensemble_scatter_by_file.get(str(_sf), 0.0) or 0.0)
                             if math.isfinite(_er) and _er > 0:
-                                _kerr[_ii] = math.sqrt((1.0857362 * _er) ** 2 + (_es if math.isfinite(_es) else 0.0) ** 2 + _ss**2)
+                                _kerr[_ii] = math.sqrt((1.0857362 * _er) ** 2 + (_es if math.isfinite(_es) else 0.0) ** 2
+                                                       + _ss**2 + float(_scint_mag_arr[_ii]) ** 2)
                     except Exception as _kerr_exc:  # noqa: BLE001
                         logging.debug("[CHECK-KMAG] kmag_err not built for %s: %s", target_cid, _kerr_exc)
                     save_check_kmag_sidecar(

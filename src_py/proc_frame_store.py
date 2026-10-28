@@ -24,6 +24,8 @@ from typing import Iterator
 import numpy as np
 import pandas as pd
 
+from photometry_defs import FLUX_K_COLUMNS
+
 from gaia_catalog_id import catalog_id_series_for_masterstars_export, normalize_gaia_source_id_series
 
 # Union of all columns needed by any consumer.
@@ -44,11 +46,7 @@ PROC_STORE_COLS = [
     "aperture_r_px",
     "fwhm_px_for_aperture",
     # APERTURE-K-2026-10: light-curve aperture grid r = k x FWHM
-    "flux_k100",
-    "flux_k125",
-    "flux_k150",
-    "flux_k175",
-    "flux_k200",
+    *FLUX_K_COLUMNS,
     # Quality flags
     "peak_max_adu",
     "saturate_limit_adu_85pct",
@@ -98,11 +96,7 @@ PROC_ROUND_DECIMALS: dict[str, int] = {
 PROC_ROUND_SIGNIFICANT = 8
 PROC_ROUND_SIG_COLS: tuple[str, ...] = (
     "dao_flux",
-    "flux_k100",
-    "flux_k125",
-    "flux_k150",
-    "flux_k175",
-    "flux_k200",
+    *FLUX_K_COLUMNS,
     "peak_max_adu",
     "peak_max_adu_aligned",
     "saturate_limit_adu_85pct",
@@ -349,11 +343,7 @@ def list_proc_csvs(proc_dir: Path | str, *, recursive: bool = False) -> list[Pat
 
 _NUMERIC_COLS = (
     "dao_flux",
-    "flux_k100",
-    "flux_k125",
-    "flux_k150",
-    "flux_k175",
-    "flux_k200",
+    *FLUX_K_COLUMNS,
     "sky_adu_per_px_annulus",
     "sigma_bkg_ap",
     "aperture_r_px",

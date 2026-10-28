@@ -66,7 +66,7 @@ def test_merge_last_writer_wins_overwrites_provenance(tmp_path: Path) -> None:
 def test_merge_git_unavailable_sets_null_keys(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import photometry_provenance as pc
 
-    monkeypatch.setattr(pc, "_GIT_PROVENANCE_WARNED", False)
+    pc._warn_git_unavailable.cache_clear()
     phot = tmp_path / "photometry"
     phot.mkdir()
 

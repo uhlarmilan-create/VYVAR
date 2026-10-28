@@ -267,7 +267,6 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
         "prefill_ra_text": "",
         "prefill_dec_text": "",
         "suggested_reject_fwhm_px": None,
-        "suggest_max_detected_stars": None,
     }
     if nr.platesolve_job_output is not None:
         st.session_state["vyvar_last_job_output"] = nr.platesolve_job_output
@@ -621,21 +620,11 @@ def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
             )
     st.session_state["center_ra"] = float(st.session_state.get(_ra_key, 0.0))
     st.session_state["center_de"] = float(st.session_state.get(_de_key, 0.0))
-    if "vyvar_ui_max_align_stars" not in st.session_state:
-        st.session_state["vyvar_ui_max_align_stars"] = 500
 
     _ljo_apply = st.session_state.get("vyvar_last_job_output")
     if isinstance(_ljo_apply, dict) and _ljo_apply.get("job_kind") == "analyze":
         _tok_a = str(_ljo_apply.get("analyze_token", ""))
         if st.session_state.get("vyvar_applied_analyze_token") != _tok_a:
-            _sm = _ljo_apply.get("suggest_max_detected_stars")
-            if _sm is not None:
-                try:
-                    sm_i = int(_sm)
-                    if math.isfinite(float(sm_i)):
-                        st.session_state["vyvar_ui_max_align_stars"] = int(max(100, min(5000, sm_i)))
-                except (TypeError, ValueError):
-                    pass
             st.session_state["vyvar_applied_analyze_token"] = _tok_a
             st.session_state["vyvar_pointing_scan_cache"] = _ljo_apply.get("pointing_scan")
             _rq = _ljo_apply.get("ram_qc_summary") or {}

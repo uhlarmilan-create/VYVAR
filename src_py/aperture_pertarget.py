@@ -35,7 +35,7 @@ import time
 
 import numpy as np
 import pandas as pd
-from photometry_defs import DEFAULT_APERTURE_F_GRID, flux_k_column  # LAYER-2026-10: moved there
+from photometry_defs import DEFAULT_APERTURE_F_GRID, blend_k_column, flux_k_column  # LAYER-2026-10: moved there
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,6 +55,10 @@ SNR_FLAT_FRAC: float = 0.01
 # group takes the largest k whose median scatter ratio is within one bootstrap standard error of the
 # group minimum (larger k: less sensitive to seeing, centring and pixel phase - AP-NIGHT-K study).
 BRIGHT_K_BIN_MAG: float = 0.5
+#: A target without a brightness group (no magnitude, or too few constant field stars) keeps the largest
+#: allowed k <= BRIGHT_K_NO_GROUP: apertures below 1.0 FWHM are chosen only from measured field scatter
+#: (AP-SMALL-K-2026-10; 1.0 was the smallest k of the grid before the grid went down to 0.6).
+BRIGHT_K_NO_GROUP: float = 1.0
 BRIGHT_K_MIN_STARS: int = 30
 BRIGHT_K_BOOT: int = 200
 
@@ -229,11 +233,6 @@ def measure_flux_on_f_grid(
         out_f[k][ok] = sums - sky * float(ap.area)
         out_s[k][ok] = sky
     return out_f, out_s, edge
-
-
-def blend_k_column(k: float) -> str:
-    """Column of the neighbour-light fraction at r = k x FWHM (BLEND-K-2026-10)."""
-    return f"blend_k{int(round(float(k) * 100)):03d}"
 
 
 def allowed_f_from_comp_blend(
@@ -814,7 +813,7 @@ def apply_brightness_k(
     """AP-BRIGHT-K-2026-10: each target gets the k of its brightness group (changes ``choices`` in place).
 
     Blend limit: the largest k the target may use that is <= its group k, else its smallest allowed k.
-    A target without a magnitude gets the smallest allowed k (the faint-star choice). Target, its comps and
+    A target without a brightness group gets the largest allowed k <= BRIGHT_K_NO_GROUP. Target, its comps and
     its check star are measured with that k (one enclosed-light fraction per light curve).
     """
     grid = sorted(float(k) for k in f_grid)
@@ -824,7 +823,8 @@ def apply_brightness_k(
         m = float(target_mag.get(cid, float("nan")))
         k_want = bk.k_for(m) if bk else None
         if k_want is None:
-            k_t, why = min(al), "no brightness group - smallest k"
+            below = [k for k in al if k <= BRIGHT_K_NO_GROUP + 1e-9]
+            k_t, why = (max(below) if below else min(al)), f"no brightness group - k {BRIGHT_K_NO_GROUP:g}"
         else:
             below = [k for k in al if k <= k_want + 1e-9]
             k_t = max(below) if below else min(al)

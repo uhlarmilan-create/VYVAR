@@ -2252,7 +2252,8 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
 
     Uses the aperture-grid fluxes at each target's k*; rewrites ``state._comp_index``.
     Log per target in ``state.smart_log`` (comp_quality json / PDF / provenance)."""
-    from aperture_pertarget import blend_k_column, series_from_grid  # noqa: PLC0415
+    from aperture_pertarget import series_from_grid  # noqa: PLC0415
+    from photometry_defs import blend_k_column  # noqa: PLC0415
     from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
     from comp_smart import smart_select  # noqa: PLC0415
 
@@ -2410,6 +2411,9 @@ def run_aperture_photometry(
         proc_frame_store=proc_frame_store,
     )
     at_df = state.at_df
+    # G06-31: per-frame saturation skips are recorded in active_targets.csv as an explicit step after
+    # loading (it was a side effect inside the state builder; a failed write was only logged).
+    at_df.to_csv(active_targets_csv, index=False)
     _comp_index = state._comp_index
     csv_files = state.csv_files
     n_frames = state.n_frames
@@ -2508,6 +2512,7 @@ def run_aperture_photometry(
     state.aperture_grid_night = None
     state.per_target_aperture = {}
     from aperture_pertarget import (  # noqa: PLC0415
+        BRIGHT_K_NO_GROUP,
         apply_brightness_k,
         choose_f_for_target,
         field_k_by_brightness,
@@ -2517,7 +2522,8 @@ def run_aperture_photometry(
     )
     from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
-    _p2("Aperture photometry: measuring k grid (1.0-2.0 x FWHM) for targets, comps and check stars...")
+    _p2(f"Aperture photometry: measuring k grid ({min(DEFAULT_APERTURE_F_GRID):g}-{max(DEFAULT_APERTURE_F_GRID):g} x FWHM) "
+        "for targets, comps and check stars...")
     _ids: set[str] = set()
     for _, _tr in at_df.iterrows():
         _cid = str(_tr.get("catalog_id", "") or "").strip()
@@ -2678,7 +2684,7 @@ def run_aperture_photometry(
     _tmag = {c: target_inst_mag(_grid, c) for c in _choices}
     _nk = apply_brightness_k(_choices, _grid.f_grid, _tmag, _bk)
     if _bk is None:
-        logging.warning("[APERTURE-BRIGHT-K] too few constant field stars - every target gets its smallest k")
+        logging.warning("[APERTURE-BRIGHT-K] too few constant field stars - every target gets k %g", BRIGHT_K_NO_GROUP)
     else:
         logging.info("[APERTURE-BRIGHT-K] k by instrumental magnitude: %s; targets by k: %s",
                      ", ".join(f"<{hi:.2f}: {k:g}" for hi, k in zip(_bk.mag_hi, _bk.k, strict=False)),
@@ -2696,8 +2702,11 @@ def run_aperture_photometry(
     # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
     # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526
     # CSS J153101.6 with G 10.2 at 5 px. Used by trust (soft > 1 %, hard > 5 %).
+    # BLEND-SEEING-2026-10 (Milan 2026-10-28): judged at the night's bad-seeing FWHM (p90 of the frames).
     try:
-        from comp_blend import blend_contamination_for_pool  # noqa: PLC0415
+        from comp_blend import blend_contamination_for_pool, blend_fwhm_px  # noqa: PLC0415
+
+        _fw_tb, _fw_tb_src = blend_fwhm_px(list(_grid.fwhm_by_frame.values()), _fwhm_pt)
         from gaia_bands import filter_band_for_obs_group  # noqa: PLC0415
 
         _msp = Path(masterstar_fits_path)
@@ -2712,8 +2721,9 @@ def run_aperture_photometry(
         for _k, _s in _pairs:
             _cont, _bm = blend_contamination_for_pool(
                 _tpool, field_catalog_csv=_msp.parent / "field_catalog_cone.csv", masterstar_fits=_msp,
-                zp_band=_fb_tb.blend_band, fwhm_px=_fwhm_pt, r_ap_px=_k * _fwhm_pt * _s, sat_adu=None,
-                annulus_px=(float(annulus_inner_fwhm) * _fwhm_pt * _s, float(annulus_outer_fwhm) * _fwhm_pt * _s),
+                zp_band=_fb_tb.blend_band, fwhm_px=_fw_tb, profile_fwhm_px=_fwhm_pt,
+                r_ap_px=_k * _fw_tb * _s, sat_adu=None,
+                annulus_px=(float(annulus_inner_fwhm) * _fw_tb * _s, float(annulus_outer_fwhm) * _fw_tb * _s),
                 profile_df=getattr(state, "masterstars_df", None), psf=_psf_tb,
             )
             if _bm.get("status") != "ok":
@@ -2727,6 +2737,9 @@ def run_aperture_photometry(
             _key = (float(_ch_t.f_star), _sc_tb.get(str(_tr["catalog_id"]), 1.0)) if _ch_t is not None else None
             if _key is not None and _key in _tb_by_ks:
                 state.target_blend[_tr["catalog_id"]] = float(_tb_by_ks[_key].loc[_i])
+        merge_photometry_pipeline_meta(output_dir, {"target_blend": {
+            "fwhm_px": float(_fw_tb), "fwhm_source": str(_fw_tb_src), "fwhm_median_px": float(_fwhm_pt),
+            "n_targets": len(state.target_blend)}})
     except Exception as _tb_exc:  # noqa: BLE001
         logging.warning("[TARGET-BLEND] not computed: %s", _tb_exc)
         state.target_blend = {}

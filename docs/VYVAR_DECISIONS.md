@@ -6527,3 +6527,59 @@ limit (BLEND-K) still caps it. Brno 534: bright stars 1.25, fainter 1.0; BO CVn:
   CATALOG_MATCH_SEP_ARCSEC 10" (MASTERSTAR initial match, meta only - the identity radius replaces it; the per-frame
   radius comes from the plate scale as before), MASTERSTAR_MAX_DAO_ROWS 100000, FRAME_MAX_DAO_ROWS 12000,
   ALIGN_MIN_DETECTED_STARS 100, ALIGN_MAX_DETECTED_STARS 500. Whether 12000 suits other rigs is T09.
+
+## AP-SMALL-K-2026-10 (Milan 2026-10-28, phase-1 item O5) - the aperture grid goes down to 0.6 FWHM
+DEFAULT_APERTURE_F_GRID = (0.6, 0.75, 0.875, 1.0, 1.25, 1.5, 1.75, 2.0) (was 1.0 ... 2.0). With the old grid the
+field-scatter minimum of most magnitude groups lay at the grid edge k = 1.0 (Brno 534 g 14/16, r 11/13, BO CVn
+12/14). Isolated constant field stars, LOO scatter k 0.6 vs 1.0: Brno g G 16-17 40.8 vs 46.8 mmag, G 17-18 71.2
+vs 83.8; r 31.3 vs 35.5, 52.4 vs 62.7; BO CVn (FWHM 2.2 px) G 14-15 204 vs 231, G 15-16 329 (0.5) vs 376.
+Literature: S/N optimum for sky-limited profiles ~0.6-0.7 FWHM radius (Howell 1989; Naylor 1998).
+AP-BRIGHT-K is unchanged (per magnitude group the largest k within one bootstrap SE of the minimum), so bright
+groups keep 1.0-1.5. A target without a brightness group keeps k <= BRIGHT_K_NO_GROUP = 1.0 (small apertures
+only from measured field scatter). Columns flux_kNNN / blend_kNNN are generated from the grid (3 digits:
+flux_k060, flux_k075, flux_k088).
+
+## BLEND-SEEING-2026-10 (Milan 2026-10-28, phase-1 item O4b) - neighbour light judged at bad seeing
+The neighbour-light model (comp_blend, Moffat with the MASTERSTAR beta) is evaluated at the night's bad-seeing
+FWHM, BLEND_FWHM_QUANTILE = 0.9 of the group's frame FWHM, instead of the median; thresholds unchanged (comps and
+check <= 1 %, target trust soft > 1 %, hard > 5 %, variability gate <= 1 %). Reason: a neighbour outside the
+aperture at median seeing enters it in bad seeing (Brno 534 FWHM 3.9-8.7 px). Field stars: measured airmass
+slopes = 1.01 x (g) / 0.96 x (r) the slopes predicted from the per-frame FWHM (r = 0.74 / 0.79). Brno g: 10
+targets with blend <= 1 % at the median FWHM had a predicted night range of 6-102 mmag (6 GREEN), e.g. Gaia DR3
+2172312549003414144 (G 13.6, neighbour G 17.1 at 8.6 px; its LC correlates 0.78 with the prediction). The beta is
+measured on the MASTERSTAR at the median FWHM (profile_fwhm_px). pipeline_meta target_blend records the FWHM.
+
+## SIGMA-SYS-TOTAL-2026-10 (Milan 2026-10-28, phase-1 item O1 option C) - night floor from the total scatter
+night_sigma_sys_from_comps takes the comps' total LOO scatter 1.4826 MAD(r - median r) instead of the
+point-to-point scatter. The floor then holds the night's slow systematics and the LC errors describe the
+repeatability over the night (AAVSO practice: check-star scatter as the uncertainty). Evidence: Brno 534 constant
+check stars p2p / err 0.85-1.0 in every magnitude bin (white noise right) but total / err 1.3-1.9 (slow, mostly
+airmass-correlated); 14 (g) / 12 (r) targets were YELLOW only from the check-star test. Supersedes the p2p
+choice of SIGMA-SYS-NIGHT-2026-10; the SIGMA-SYS-MODEL-2026-10 variance model (photon + scintillation +
+reference) is unchanged.
+CHECK-SCINT-2026-10 (code review 2 D10 / G08-10, with O1): the check-star K error adds the epoch's
+scintillation, as the target error does.
+
+## SKY-ONE-2026-10 (Milan 2026-10-28, phase-1 item O7) - empty apertures use the science sky
+measure_empty_aperture_sigma_bkg takes the source-masked sky image (sky_estimation.sky_image) and the
+annulus_sky_medians rule of the science photometry (SKY-SRC-MASK-2026-10) instead of the plain median of the
+whole annulus. Effect ~1 % (Brno g sigma_bkg_ap / Howell 1.333 -> 1.321). The spatial excess over Howell (~32 %)
+is static field structure: the time-domain noise of constant stars matches the CCD equation (p2p / err
+0.85-1.0), so the LC errors correctly keep the CCD equation and do not use sigma_bkg_ap.
+
+## Phase-1 items closed without code change (2026-10-28)
+- O2 "Brno errors underestimated": constant check stars p2p / err 0.85-1.0; targets 1.1-1.2 because they vary.
+- O3 check star Gaia DR3 2172313747292886528: -0.07 (r) / -0.13 (g) mag vs a field colour fit with 0.05-0.07
+  mag scatter, no neighbour within 15"; no longer selected as check; COMP-CATOFF 0.20 / trust 0.10 catch worse.
+
+## SKY-MASK-KEEP-2026-10 (Milan 2026-10-28, phase-1 item O4a) - per-frame source mask kept; residual trend documented
+Faint isolated stars in a crowded field fade slightly with airmass: the per-frame source mask (SKY-SRC-MASK-2026-10)
+follows the seeing (fewer faint sources detected in bad seeing, more of their light in the sky median). Brno 534,
+isolated constant stars, flux-domain slope vs a bright isolated reference, G 16-17 / 17-18: k 1.0 +22/+52 (g),
++16/+39 (r) mmag/X; with the k 0.6 apertures of AP-SMALL-K +19/+38, +13/+28. Tested, not adopted: fixed MASTERSTAR
+mask with a constant radius (1.5 x night median FWHM) +12/+23, +7/+19; with a radius growing with the frame FWHM
+-16/-22, -14/-19 (masks most of the field in bad seeing); union with the per-frame mask -21/-34; mean / mode
+estimators; a per-frame additive sky offset fitted on constant stars (unstable). Bright stars (G < 15) are
+unaffected by every variant. No mask removes the effect; it is a limit of aperture photometry in crowded fields.
+Faint targets in crowded fields: the ePSF light curve (joint fit with Gaia neighbours) is the reference product.
+BO CVn (X 1.01-1.22) cannot test it.

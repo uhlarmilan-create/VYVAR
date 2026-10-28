@@ -211,6 +211,22 @@ def _labbe_content_seed_from_header(hdr: Any, *, r_ap: float) -> int:
     digest = hashlib.sha256("|".join(parts).encode("utf-8")).digest()
     return int.from_bytes(digest[:8], "little", signed=False) % (2**63 - 1)
 
+def _empty_aperture_net(
+    d: np.ndarray, sky: np.ndarray, x_c: float, y_c: float, r_ap: float, r_in: float, r_out: float
+) -> float:
+    """Aperture sum of ``d`` minus area x the science local sky (annulus median of ``sky``); NaN without sky."""
+    from photutils.aperture import CircularAperture  # noqa: PLC0415
+    from photutils.aperture import aperture_photometry as _aphot  # noqa: PLC0415
+
+    from sky_estimation import annulus_sky_medians  # noqa: PLC0415
+
+    pos = np.array([[float(x_c), float(y_c)]], dtype=np.float64)
+    ap = CircularAperture(pos, r=float(r_ap))
+    sum_ap = float(np.asarray(_aphot(d, ap, method="exact")["aperture_sum"], dtype=np.float64).ravel()[0])
+    sky_pp = float(annulus_sky_medians(sky, pos, float(r_in), float(r_out))[0])
+    return float(sum_ap - sky_pp * float(ap.area)) if math.isfinite(sky_pp) else float("nan")
+
+
 def measure_empty_aperture_sigma_bkg(
     data: np.ndarray,
     star_x: np.ndarray,
@@ -219,6 +235,7 @@ def measure_empty_aperture_sigma_bkg(
     r_in: float,
     r_out: float,
     *,
+    sky: np.ndarray,
     n_apertures: int = 64,
     min_valid: int = 16,
     rng: np.random.Generator | None = None,
@@ -228,8 +245,11 @@ def measure_empty_aperture_sigma_bkg(
 ) -> tuple[float, int, str]:
     """Empirical aperture background noise via random empty apertures (Labbe et al. 2003).
 
-    Each placement uses the same annulus sky subtraction as production science apertures
-    (``_annulus_sky_subtracted_flux``). The robust scatter of net sums is ``sigma_bkg_ap``
+    Each placement uses the same local sky as production science apertures: ``sky`` is the
+    frame for local-sky medians (``sky_estimation.sky_image``: NaN off the aligned footprint and on
+    detected sources) and ``sky_estimation.annulus_sky_medians`` takes the annulus median
+    (SKY-ONE-2026-10, Milan 2026-10-28: one sky rule; it used the plain median of the whole annulus).
+    The robust scatter of net sums is ``sigma_bkg_ap``
     [ADU] and already includes background Poisson, read noise, resampling covariance,
     pedestal offsets, and the Merline & Howell (1995) sky-estimation term - do **not**
     add a separate RN or annulus term (would double-count).
@@ -275,6 +295,12 @@ def measure_empty_aperture_sigma_bkg(
     d = np.asarray(data, dtype=np.float64)
     if d.ndim != 2 or d.size == 0:
         return float("nan"), 0, "empty_image"
+    sky_img = np.asarray(sky, dtype=np.float64)
+    if sky_img.shape != d.shape:
+        raise ValueError(f"sky image shape {sky_img.shape} != frame shape {d.shape}")
+    d_fill = d
+    if np.any(~np.isfinite(d)):
+        d_fill = np.where(np.isfinite(d), d, float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0)
 
     margin_px = max(2.0, float(r_out) - float(r_in))
     excl_r = float(r_out) + margin_px
@@ -320,7 +346,7 @@ def measure_empty_aperture_sigma_bkg(
     for j in idx:
         xc = float(free_x[j]) + 0.5
         yc = float(free_y[j]) + 0.5
-        flux_net, _, _ = _annulus_sky_subtracted_flux(d, xc, yc, float(r_ap), float(r_in), float(r_out))
+        flux_net = _empty_aperture_net(d_fill, sky_img, xc, yc, float(r_ap), float(r_in), float(r_out))
         if math.isfinite(flux_net):
             net_sums.append(float(flux_net))
             if len(first5) < 5:

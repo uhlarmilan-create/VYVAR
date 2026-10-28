@@ -36,7 +36,7 @@ from config import AppConfig  # noqa: E402
 def test_fixed_k_grid() -> None:
     cfg = AppConfig()
     assert not hasattr(cfg, "aperture_policy_mode")  # per_target is the only policy (CFG-REVIEW-2026-10)
-    assert tuple(DEFAULT_APERTURE_F_GRID) == (1.0, 1.25, 1.5, 1.75, 2.0)
+    assert tuple(DEFAULT_APERTURE_F_GRID) == (0.6, 0.75, 0.875, 1.0, 1.25, 1.5, 1.75, 2.0)  # AP-SMALL-K-2026-10
     assert not hasattr(cfg, "aperture_f_grid")
 
 
@@ -96,7 +96,8 @@ def test_pick_f_star_snr_flat_top_largest() -> None:
 
 
 def test_grid_edge_flag() -> None:
-    assert f_star_is_grid_edge(1.0, DEFAULT_APERTURE_F_GRID) is True
+    assert f_star_is_grid_edge(0.6, DEFAULT_APERTURE_F_GRID) is True
+    assert f_star_is_grid_edge(1.0, DEFAULT_APERTURE_F_GRID) is False
     assert f_star_is_grid_edge(2.0, DEFAULT_APERTURE_F_GRID) is True
     assert f_star_is_grid_edge(1.5, DEFAULT_APERTURE_F_GRID) is False
 
@@ -191,7 +192,7 @@ def test_sky_limited_comps_choose_small_k() -> None:
     night, ids = _noisy_night(total_flux=3000.0, sky=2000.0)
     ch = choose_f_for_target(night, target_cid="T", comp_ids=ids,
                              frame_order=sorted(night.frames.keys()), gain=1.0, read_noise=5.0)
-    assert ch.f_star == 1.0, ch.p2p_by_f
+    assert ch.f_star <= 0.75, ch.p2p_by_f  # AP-SMALL-K-2026-10: below the former grid edge 1.0
 
 
 def test_photon_limited_comps_choose_larger_k_than_sky_limited() -> None:
@@ -270,11 +271,11 @@ def test_brightness_k_from_constant_field_stars(tmp_path: Path) -> None:
     saturated on any frame are not used."""
     d = _synthetic_procs(tmp_path)
     bk = field_k_by_brightness(sorted(d.glob("proc_*.csv")), DEFAULT_APERTURE_F_GRID)
-    assert bk is not None and bk.k[0] == 2.0 and set(bk.k) == {1.0, 2.0}
+    assert bk is not None and bk.k[0] == 2.0 and set(bk.k) == {0.6, 2.0}
     assert bk.k_for(-2.5 * math.log10(2.0e5)) == 2.0
-    assert bk.k_for(-2.5 * math.log10(2.0e2)) == 1.0
+    assert bk.k_for(-2.5 * math.log10(2.0e2)) == 0.6
     assert sum(bk.n_stars) == 200  # VAR and SAT excluded
-    assert bk.k_for(-30.0) == 2.0 and bk.k_for(0.0) == 1.0  # outside the range: end groups
+    assert bk.k_for(-30.0) == 2.0 and bk.k_for(0.0) == 0.6  # outside the range: end groups
     assert bk.k_for(float("nan")) is None
 
 
@@ -292,7 +293,7 @@ def test_brightness_k_assignment_blend_limit_and_no_magnitude() -> None:
     assert ch["BR"].f_star == 1.5 and abs(ch["BR"].r_ap_px - 7.5) < 1e-9 and ch["BR"].reason == "brightness_k"
     assert ch["FA"].f_star == 1.0
     assert ch["BL"].f_star == 1.25 and "blend limit" in ch["BL"].reason
-    assert ch["NM"].f_star == 1.0 and "smallest k" in ch["NM"].reason
+    assert ch["NM"].f_star == 1.0 and "no brightness group" in ch["NM"].reason
     assert info["k_by_target"]["BR"] == {"inst_mag": -12.0, "k": 1.5}
 
 

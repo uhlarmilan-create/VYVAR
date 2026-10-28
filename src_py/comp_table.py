@@ -23,7 +23,7 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from photometry_defs import COMP_QUALITY_JSON_META_KEYS
+from photometry_defs import BLEND_K_COLUMNS, COMP_QUALITY_JSON_META_KEYS
 
 COMP_TABLE_CSV = "comparison_stars_per_target.csv"
 LEGACY_COMP_SELECTION_CSV = "comparison_stars_per_target_phase1.csv"
@@ -55,11 +55,7 @@ COMP_TABLE_COLUMNS: tuple[str, ...] = (
     "comp_rms",
     "comp_n_frames",
     "comp_score",
-    "blend_k100",
-    "blend_k125",
-    "blend_k150",
-    "blend_k175",
-    "blend_k200",
+    *BLEND_K_COLUMNS,
     "_dist_deg",
     "delta_bprp_abs",
     "comp_tier",

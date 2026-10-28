@@ -83,13 +83,10 @@ def tmp_path_is_data_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 @pytest.fixture(autouse=True)
 def _reset_hrd_service_state():
-    """hrd_enrich remembers a failed web service for 10 min; tests must not share that."""
-    try:
-        import hrd_enrich  # noqa: PLC0415
+    """net_call remembers a failed web service for 10 min; tests must not share that."""
+    import net_call  # noqa: PLC0415
 
-        hrd_enrich._UNAVAILABLE.clear()
-    except Exception:  # noqa: BLE001
-        pass
+    net_call.clear_unavailable()
     yield
 
 

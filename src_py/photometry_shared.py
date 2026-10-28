@@ -1163,6 +1163,7 @@ def enhance_catalog_dataframe_aperture(
                     seed=int(_seed),
                     frame_id=_frame_id,
                     star_list_source="catalog_df_in_memory",
+                    sky=d_sky,
                 )
                 if not hasattr(enhance_catalog_dataframe_aperture, "_labbe_seeds"):
                     enhance_catalog_dataframe_aperture._labbe_seeds = []

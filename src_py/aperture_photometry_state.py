@@ -394,10 +394,7 @@ def _aperture_prepare_shared_state(
         peak_test_adu=_peak_test_adu,
         peak_test_source=_peak_test_src,
     )
-    try:
-        at_df.to_csv(active_targets_csv, index=False)
-    except Exception as exc:  # noqa: BLE001
-        logging.error("[EXC-PFS] active_targets.csv rewrite after per-frame sat failed: %s", exc)
+    # G06-31: the driver writes active_targets.csv after the state is built (no side effect while loading).
     logging.info(
         "[PER-FRAME-SAT] skipped=%s (min_clean_frac=%.3f peak_test=%.1f ADU src=%s)",
         _per_frame_sat_meta.get("per_frame_sat_n_skipped"),

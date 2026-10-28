@@ -657,7 +657,7 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "variability_min_points_rms removed 2026-10-10 VAR-2026-10: the field search derives its noise model and threshold from the data"
     ),
     "aperture_f_grid": (
-        "aperture_f_grid removed 2026-10; fixed k grid 1.0-2.0 x FWHM, k* by comparison-star "
+        "aperture_f_grid removed 2026-10; fixed k grid 0.6-2.0 x FWHM, k* by comparison-star "
         "scatter (APERTURE-K-2026-10)"
     ),
     "skip_processed_directory": (

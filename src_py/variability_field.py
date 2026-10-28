@@ -292,7 +292,7 @@ def run_field_variability(
         info["gate_edge"] = True
         meta["edge_note"] = "no alignment matrices - frame footprints not checked"
     try:
-        from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool  # noqa: PLC0415
+        from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool, blend_fwhm_px  # noqa: PLC0415
         from gaia_bands import filter_band_for_obs_group  # noqa: PLC0415
 
         ms = None
@@ -301,12 +301,16 @@ def run_field_variability(
             ms = pd.read_csv(msc, low_memory=False, dtype={"catalog_id": str})
         pool = info.reset_index().rename(columns={"index": "catalog_id"})
         fw_med = float(frame["fwhm"].median())
+        # BLEND-SEEING-2026-10: neighbour light at the night's bad-seeing FWHM (p90 of the frames)
+        fw_b, fw_b_src = blend_fwhm_px(frame["fwhm"].tolist(), fw_med)
         c, bmeta = blend_contamination_for_pool(
             pool, field_catalog_csv=ps / "field_catalog_cone.csv", masterstar_fits=ps / "MASTERSTAR.fits",
-            zp_band=filter_band_for_obs_group(per_frame_dir.name).blend_band, fwhm_px=fw_med, r_ap_px=k * fw_med,
+            zp_band=filter_band_for_obs_group(per_frame_dir.name).blend_band, fwhm_px=fw_b,
+            profile_fwhm_px=fw_med, r_ap_px=k * fw_b,
             sat_adu=float(pd.to_numeric(ms["saturate_limit_adu"], errors="coerce").median()) if ms is not None and "saturate_limit_adu" in ms else None,
-            annulus_px=(a_in * fw_med, a_out * fw_med), profile_df=ms,
+            annulus_px=(a_in * fw_b, a_out * fw_b), profile_df=ms,
         )
+        bmeta["fwhm_source"] = fw_b_src
         info["blend"] = c.to_numpy()
         # |c|: extra light in the aperture or a sky pushed up by a neighbour (c < 0)
         # are both errors; unknown neighbour light (NaN) does not pass

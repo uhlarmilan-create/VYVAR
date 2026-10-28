@@ -25,7 +25,7 @@ def _draft(tmp_path: Path) -> Path:
     (lc / "lightcurve_2_psf.csv").write_text(head + "bjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n2461316.3,False,,\n")
     (ps / "epsf_frames").mkdir()
     (ps / "epsf_frames" / "epsf_frames_manifest.json").write_text(json.dumps({
-        "frames": [{"fwhm_px": 4.0}, {"fwhm_px": 5.0}], "spatial": {"grid": [3, 3]}, "fit_set": {"selection": "E*"},
+        "oversampling": 2, "frames": [{"fwhm_px": 4.0}, {"fwhm_px": 5.0}], "spatial": {"grid": [3, 3]}, "fit_set": {"selection": "E*"},
         "fit_sources": {"merged_neighbours": [{"catalog_id": "1", "neighbour_id": "55", "sep_px": 1.8, "dmag": 3.2}]}}))
     return ps
 

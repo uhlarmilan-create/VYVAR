@@ -27,12 +27,11 @@ from typing import Any, Callable
 
 import pandas as pd
 
+from net_call import call_with_timeout, mark_unavailable, unavailable_reason
 from catalog_db import add_catalog_meta_rows, connect_rw, ra_intervals_deg, resolve_catalog_path
 
 #: Agreed margin around the field edges for a top-up (Milan 2026-10-14: "+- 1 degree around the field edges").
 TOPUP_MARGIN_DEG = 1.0
-#: Seconds a failed archive call keeps later top-ups in this process from waiting again.
-_UNAVAILABLE_HOLD_S = 600.0
 _TAP_TIMEOUT_S = 600.0
 _INSERT_BATCH = 8000
 _EPS_DEG = 1e-6
@@ -91,8 +90,6 @@ GAIA_SOURCE_LITE_SELECT = """
             phot_variable_flag AS var_flag,
             non_single_star"""
 
-
-_UNAVAILABLE: dict[str, tuple[float, str]] = {}
 
 
 def _db_path(db_path: str | Path) -> Path:
@@ -394,13 +391,10 @@ def _fetch_tap(adql: str) -> pd.DataFrame:
     def _run() -> pd.DataFrame:
         from astroquery.gaia import Gaia  # noqa: PLC0415
 
-        Gaia.ROW_LIMIT = -1
         table = Gaia.launch_job_async(adql).get_results()
         return pd.DataFrame() if table is None or len(table) == 0 else table.to_pandas()
 
-    from hrd_enrich import _call_with_timeout  # noqa: PLC0415
-
-    return _call_with_timeout(_run, _TAP_TIMEOUT_S, "Gaia TAP top-up")
+    return call_with_timeout(_run, _TAP_TIMEOUT_S, "Gaia TAP top-up")
 
 
 def top_up_field(
@@ -423,9 +417,9 @@ def top_up_field(
     if not (math.isfinite(float(g_from)) and math.isfinite(float(g_to))) or float(g_to) <= float(g_from):
         out["error"] = "nothing to fetch"
         return out
-    _down = _UNAVAILABLE.get("gaia_tap_topup")
-    if fetch is None and _down and time.monotonic() - _down[0] < _UNAVAILABLE_HOLD_S:
-        out.update({"status": "offline", "error": f"Gaia archive unavailable a moment ago ({_down[1]})"})
+    _down = unavailable_reason("gaia_tap_topup")
+    if fetch is None and _down is not None:
+        out.update({"status": "offline", "error": f"Gaia archive unavailable a moment ago ({_down})"})
         return out
     if not _coverage_table_stored(db_path):
         # The record of the whole DB must be stored before deeper stars go in (MAX(g_mag) would
@@ -438,7 +432,7 @@ def top_up_field(
         df = (fetch or _fetch_tap)(adql)
     except Exception as exc:  # noqa: BLE001 - offline / archive down: continue with the local DB
         if fetch is None:
-            _UNAVAILABLE["gaia_tap_topup"] = (time.monotonic(), str(exc)[:200])
+            mark_unavailable("gaia_tap_topup", exc)
         out.update({"status": "offline", "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
         return out
     df = normalize_tap_dataframe(df)

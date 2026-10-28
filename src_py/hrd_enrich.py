@@ -15,6 +15,7 @@ import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
+from net_call import call_with_timeout, mark_unavailable, unavailable_reason
 
 logger = logging.getLogger(__name__)
 
@@ -34,39 +35,6 @@ _GAIA_CACHE_KEYS = (
 _SIMBAD_CACHE_KEYS = ("simbad_main_id", "simbad_otype", "simbad_sp_type")
 
 
-
-#: Services that failed recently (monotonic time, reason). For the next
-#: ``_UNAVAILABLE_HOLD_S`` seconds calls fail at once instead of waiting again
-#: (one wait per run instead of one per setup; the GUI process recovers later).
-_UNAVAILABLE: dict[str, tuple[float, str]] = {}
-_UNAVAILABLE_HOLD_S = 600.0
-
-
-def _call_with_timeout(fn: Any, timeout_s: float, what: str) -> Any:
-    """Run ``fn`` in a daemon thread and give up after ``timeout_s``.
-
-    A hung web query must not hold the run: the thread is a daemon, nobody
-    waits for it (ThreadPoolExecutor's context manager and interpreter exit
-    both join their threads, which made the old timeout ineffective).
-    """
-    import threading  # noqa: PLC0415
-
-    box: dict[str, Any] = {}
-
-    def _target() -> None:
-        try:
-            box["value"] = fn()
-        except BaseException as exc:  # noqa: BLE001
-            box["error"] = exc
-
-    th = threading.Thread(target=_target, name=f"vyvar-{what}", daemon=True)
-    th.start()
-    th.join(max(1.0, float(timeout_s)))
-    if th.is_alive():
-        raise TimeoutError(f"{what} timed out after {timeout_s}s")
-    if "error" in box:
-        raise box["error"]
-    return box.get("value")
 
 def _safe_float_masked(val: Any) -> float | None:
     """Parse float; honor array-like ``.mask``. No catalog blank-token list."""
@@ -185,7 +153,6 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
     def _run() -> dict[str, dict[str, Any]]:
         from astroquery.gaia import Gaia  # noqa: PLC0415
 
-        Gaia.ROW_LIMIT = max(len(source_ids), _GAIA_BATCH)
         out: dict[str, dict[str, Any]] = {}
         for i0 in range(0, len(source_ids), _GAIA_BATCH):
             chunk = source_ids[i0 : i0 + _GAIA_BATCH]
@@ -231,7 +198,7 @@ def _fetch_gaia_tap(source_ids: list[str], *, timeout_s: float) -> dict[str, dic
                 }
         return out
 
-    return _call_with_timeout(_run, timeout_s, "Gaia TAP")
+    return call_with_timeout(_run, timeout_s, "Gaia TAP")
 
 
 def _fetch_gaia_tap_with_retry(
@@ -248,9 +215,9 @@ def _fetch_gaia_tap_with_retry(
     """
     from infolog import log_event
 
-    _down = _UNAVAILABLE.get("gaia_tap")
-    if _down and time.monotonic() - _down[0] < _UNAVAILABLE_HOLD_S:
-        raise TimeoutError(f"Gaia TAP skipped: unavailable a moment ago ({_down[1]})")
+    _down = unavailable_reason("gaia_tap")
+    if _down is not None:
+        raise TimeoutError(f"Gaia TAP skipped: unavailable a moment ago ({_down})")
     last_exc: Exception | None = None
     attempts = 0
     for attempt in range(max(1, int(max_attempts))):
@@ -267,7 +234,7 @@ def _fetch_gaia_tap_with_retry(
                 )
                 time.sleep(max(0.0, float(delay)))
     assert last_exc is not None
-    _UNAVAILABLE["gaia_tap"] = (time.monotonic(), str(last_exc)[:200])
+    mark_unavailable("gaia_tap", last_exc)
     setattr(last_exc, "tap_attempts", attempts)
     raise last_exc
 
@@ -318,7 +285,7 @@ def _fetch_simbad(source_ids: list[str], *, timeout_s: float) -> dict[str, dict[
             }
         return out
 
-    return _call_with_timeout(_run, timeout_s, "SIMBAD")
+    return call_with_timeout(_run, timeout_s, "SIMBAD")
 
 
 def enrich_candidates(

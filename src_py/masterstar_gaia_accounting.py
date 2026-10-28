@@ -5,6 +5,7 @@ assignment (Part B), FORCED_SEED admission (Part C), BLENDED accounting (Part D)
 """
 from __future__ import annotations
 
+import copy
 import math
 import warnings
 from dataclasses import dataclass
@@ -240,10 +241,14 @@ def _pass2_catalog(cutout: np.ndarray, fwhm: float, threshold: float) -> Any:
     only copies the columns). The finder of a FWHM is built once (its kernel) and the per-cutout
     threshold is set as its __init__ sets it. 67k cutouts per night: the table build and the
     kernel were 45 % of the pass-2 time."""
-    f = _PASS2_FINDERS.get(fwhm)
-    if f is None:
-        f = DAOStarFinder(fwhm=fwhm, threshold=1.0, n_brightest=None, **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER)
-        _PASS2_FINDERS[fwhm] = f
+    base = _PASS2_FINDERS.get(fwhm)
+    if base is None:
+        base = DAOStarFinder(fwhm=fwhm, threshold=1.0, n_brightest=None, **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER)
+        _PASS2_FINDERS[fwhm] = base
+    # G04-38: the cached finder is never mutated; each call works on its own shallow copy (the kernel is
+    # shared read-only), so pass-2 stays correct if it is ever run in threads. The private
+    # ``_get_raw_catalog`` is pinned by test_pass2_catalog_equals_public_finder (photutils < 4).
+    f = copy.copy(base)
     f.threshold = threshold
     f.threshold_eff = threshold * f.kernel.rel_err if f.scale_threshold else threshold
     cat = f._get_raw_catalog(cutout)

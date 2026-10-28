@@ -1269,14 +1269,9 @@ def _select_comps_by_rms_then_color(
     selected.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
-def night_median_fwhm_px(
-    per_frame_csv_paths: Any, fallback: float
-) -> tuple[float, str]:
-    """Night median frame FWHM (px) of THIS observation group: median over its per-frame
-    CSVs of fwhm_px_for_aperture (the per-frame QC FWHM stamped on the frame,
-    FWHM-AUTH-01). The draft-level qc_metrics.csv is not used here - it mixes the
-    filters of the draft (524: g 5.31, r 4.91, mixed 5.14 px). Fallback: ``fallback``
-    (MASTERSTAR). Returns (fwhm, source)."""
+def night_frame_fwhms_px(per_frame_csv_paths: Any) -> list[float]:
+    """Per-frame FWHM (px) of THIS observation group: median of ``fwhm_px_for_aperture`` of each per-frame
+    CSV (the per-frame QC FWHM stamped on the frame, FWHM-AUTH-01)."""
     vals = []
     for p in list(per_frame_csv_paths or []):
         try:
@@ -1288,6 +1283,16 @@ def night_median_fwhm_px(
                 vals.append(v)
         except Exception:  # noqa: BLE001
             continue
+    return vals
+
+
+def night_median_fwhm_px(
+    per_frame_csv_paths: Any, fallback: float
+) -> tuple[float, str]:
+    """Night median frame FWHM (px) of THIS observation group (``night_frame_fwhms_px``).
+    The draft-level qc_metrics.csv is not used here - it mixes the filters of the draft
+    (524: g 5.31, r 4.91, mixed 5.14 px). Fallback: ``fallback`` (MASTERSTAR). Returns (fwhm, source)."""
+    vals = night_frame_fwhms_px(per_frame_csv_paths)
     if vals:
         return float(np.median(vals)), f"night median of {len(vals)} frames (fwhm_px_for_aperture)"
     logging.warning(
@@ -1502,18 +1507,25 @@ def build_global_comp_pool(
 
         # BLEND-2026-10: neighbour light in the comparison aperture <= 1 % of the star's flux.
         # BLEND-K-2026-10: the light is computed for every aperture of the grid
-        # (r = k x FWHM, columns blend_k100 ... blend_k200, one measured PSF). The target's
+        # (r = k x FWHM, columns blend_k060 ... blend_k200, one measured PSF). The target's
         # aperture is chosen later (aperture photometry) only among the k at which all its comps stay
         # <= 1 % (aperture_pertarget.allowed_f_from_comp_blend); the pool keeps a star that
         # passes at the smallest k, so that k is always available. Contamination is defined
         # for the aperture actually used, as Kepler / TESS CROWDSAP.
-        from aperture_pertarget import blend_k_column  # noqa: PLC0415
+        from photometry_defs import blend_k_column  # noqa: PLC0415
         from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
         from comp_blend import BLEND_FLUX_FRAC_MAX, blend_contamination_for_pool  # noqa: PLC0415
 
-        # BLEND-FWHM-2026-10: the apertures are r = k x FWHM(frame); the light is
-        # evaluated at the night median FWHM of this group (the typical frame).
-        _fw, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px))
+        # BLEND-FWHM-2026-10: the apertures are r = k x FWHM(frame).
+        # BLEND-SEEING-2026-10 (Milan 2026-10-28): the light is evaluated at the night's bad-seeing
+        # frames (quantile BLEND_FWHM_QUANTILE of the group's frame FWHM): a neighbour outside the
+        # aperture at the median seeing moves into it when the FWHM grows (Brno 534: 3.9 -> 8.7 px),
+        # which put seeing-shaped trends of 6-100 mmag into "clean" light curves. The Moffat beta is
+        # measured once on the MASTERSTAR at its own (night median) FWHM.
+        from comp_blend import BLEND_FWHM_QUANTILE, blend_fwhm_px  # noqa: PLC0415
+
+        _fw_med, _fw_src = night_median_fwhm_px(per_frame_csv_paths, float(fwhm_px))
+        _fw, _fw_src_b = blend_fwhm_px(night_frame_fwhms_px(per_frame_csv_paths), _fw_med)
         _ks = sorted(float(k) for k in DEFAULT_APERTURE_F_GRID)
         _ann = (
             float(getattr(cfg, "annulus_inner_fwhm", 2.7)) * _fw,
@@ -1531,6 +1543,7 @@ def build_global_comp_pool(
                 masterstar_fits=Path(masterstar_fits) if masterstar_fits else None,
                 zp_band=_fb.blend_band,
                 fwhm_px=_fw,
+                profile_fwhm_px=_fw_med,
                 r_ap_px=_k * _fw,
                 sat_adu=_sat_b,
                 annulus_px=_ann,
@@ -1549,7 +1562,8 @@ def build_global_comp_pool(
             _bmeta.update(
                 n_in=int(len(pool)), n_out=int(len(pool) - int(_drop_b.sum())),
                 k_grid=_ks, gate_k=_k_gate, r_ap_px=_k_gate * _fw,
-                fwhm_px=_fw, fwhm_source=_fw_src,
+                fwhm_px=_fw, fwhm_source=_fw_src_b, fwhm_median_px=_fw_med, fwhm_median_source=_fw_src,
+                fwhm_quantile=BLEND_FWHM_QUANTILE,
             )
             logging.info(
                 "[GLOBAL COMP POOL] |neighbour light| > %.0f%% at the smallest aperture k=%.2f "

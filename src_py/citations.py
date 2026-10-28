@@ -8,7 +8,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from invariants_runtime import load_pipeline_meta  # noqa: F401  # re-export
 
 try:
     from config import AppConfig

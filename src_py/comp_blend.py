@@ -46,6 +46,11 @@ LOGGER = logging.getLogger(__name__)
 
 #: Maximum neighbour light in a comparison / check aperture, fraction of the star's own flux.
 BLEND_FLUX_FRAC_MAX: Final[float] = 0.01
+#: BLEND-SEEING-2026-10 (Milan 2026-10-28): neighbour light is judged at the night's bad-seeing frames,
+#: this quantile of the group's frame FWHM (p90), not at the median - the light of a neighbour just outside
+#: the aperture grows with the FWHM and gives seeing-shaped trends (Brno 534: FWHM 3.9-8.7 px; measured
+#: field-star airmass slopes = 1.0 x the slopes predicted from the per-frame FWHM, r = 0.74-0.79).
+BLEND_FWHM_QUANTILE: Final[float] = 0.9
 #: Moffat beta used when the MASTERSTAR has too few isolated stars to measure it.
 MOFFAT_BETA_FALLBACK: Final[float] = 2.5
 _MIN_PROFILE_STARS: Final[int] = 5
@@ -54,6 +59,16 @@ _MIN_PROFILE_STARS: Final[int] = 5
 _GL_X, _GL_W = np.polynomial.legendre.leggauss(48)
 _N_THETA: Final[int] = 96
 _THETA = (np.arange(_N_THETA) + 0.5) * (2.0 * math.pi / _N_THETA)
+
+
+def blend_fwhm_px(frame_fwhms_px: Any, fallback_px: float) -> tuple[float, str]:
+    """FWHM (px) at which neighbour light is judged: BLEND_FWHM_QUANTILE of the frame FWHMs of the
+    observation group; ``fallback_px`` (the night median) without per-frame values."""
+    v = np.asarray([float(x) for x in (frame_fwhms_px or []) if math.isfinite(float(x)) and float(x) > 0])
+    if v.size:
+        return float(np.quantile(v, BLEND_FWHM_QUANTILE)), (
+            f"p{int(round(100 * BLEND_FWHM_QUANTILE))} of {v.size} frame FWHM")
+    return float(fallback_px), "night median (no per-frame FWHM)"
 
 
 def moffat_alpha(fwhm: float, beta: float) -> float:
@@ -274,6 +289,7 @@ def blend_contamination_for_pool(
     masterstar_fits: Path | None,
     zp_band: str,
     fwhm_px: float,
+    profile_fwhm_px: float,
     r_ap_px: float,
     sat_adu: float | None,
     annulus_px: tuple[float, float] | None = None,
@@ -282,6 +298,9 @@ def blend_contamination_for_pool(
 ) -> tuple[pd.Series, dict[str, Any]]:
     """Contamination fraction for every pool row (index-aligned) and a metadata dict.
 
+    ``fwhm_px``: the seeing at which the light is evaluated (the aperture and annulus are given in px);
+    ``profile_fwhm_px``: the FWHM of the MASTERSTAR, used to measure the Moffat beta on it
+    (BLEND-SEEING-2026-10: the two differ when the light is judged at bad seeing).
     ``psf``: a profile from an earlier call (``meta["psf"]``) - reused instead of measuring
     beta again, so a grid of apertures uses one PSF.
 
@@ -358,7 +377,7 @@ def blend_contamination_for_pool(
     if psf is not None and math.isfinite(float(psf.get("beta", float("nan")))):
         prof = dict(psf)
     elif math.isfinite(sat) and sat > 0 and np.isfinite(peaks).any():
-        prof = measure_moffat_beta(img, _ppx, _ppy, peaks, sat, fwhm_px, nb_xy, cg, _ppg)
+        prof = measure_moffat_beta(img, _ppx, _ppy, peaks, sat, float(profile_fwhm_px), nb_xy, cg, _ppg)
     else:
         prof = {"beta": MOFFAT_BETA_FALLBACK, "fwhm_fit_px": float("nan"), "n_stars": 0, "source": "fallback"}
     meta["psf"] = prof

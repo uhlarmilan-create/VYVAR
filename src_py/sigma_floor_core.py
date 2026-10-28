@@ -149,9 +149,12 @@ def night_sigma_sys_from_comps(
     comparison stars instead of a fixed config constant.
 
     For each comp: leave-one-out differential light curve against the equal-weight ensemble of
-    the other comps (each normalised to its median), robust point-to-point scatter
-    s = 1.4826 MAD(diff) / sqrt(2) (insensitive to slow trends), and its predicted photon +
-    sky + read noise e (the same CCD equation as the LC ``err``). The floor is
+    the other comps (each normalised to its median), its robust scatter over the night
+    s = 1.4826 MAD(r - median r), and its predicted photon + sky + read noise e (the same CCD
+    equation as the LC ``err``). SIGMA-SYS-TOTAL-2026-10 (Milan 2026-10-28, phase-1 item O1 option C):
+    s is the total scatter, not the point-to-point scatter, so the floor holds the night's slow
+    systematics (Brno 534 check stars: p2p / err 0.85-1.0 but total / err 1.3-1.9) and the errors
+    describe the repeatability over the night, as the check-star scatter does (AAVSO practice). The floor is
     sqrt(median(s^2 - e^2)) over comps whose own photon error is below ``max_photon_mag``
     (bright comps, where a systematic term is measurable), never negative.
     Everett & Howell (2001): 2-5 mmag typical. Returns {"sigma_sys_mag", "n_comps", ...};
@@ -168,7 +171,7 @@ def night_sigma_sys_from_comps(
 
     ids = [c for c in flux_by_cid if np.isfinite(np.asarray(flux_by_cid[c], float)).sum() >= 10]
     out: dict[str, Any] = {"sigma_sys_mag": float("nan"), "n_comps": 0,
-                           "method": "comps LOO p2p - (photon + scintillation + reference)"}
+                           "method": "comps LOO total scatter - (photon + scintillation + reference)"}
     if len(ids) < int(min_comps):
         out["reason"] = f"only {len(ids)} comps with >= 10 frames"
         return out
@@ -201,8 +204,8 @@ def night_sigma_sys_from_comps(
         ok = np.isfinite(r)
         if int(ok.sum()) < 10:
             continue
-        d = np.diff(r[ok])
-        s = 1.4826 * float(np.median(np.abs(d - np.median(d)))) / math.sqrt(2.0)
+        rr = r[ok]
+        s = 1.4826 * float(np.median(np.abs(rr - np.median(rr))))
         own = np.nan_to_num(E2[i])
         ref_var = (tot_var - own - sc2) / (n_oth * n_oth)
         pred = E2[i] + sc2 + ref_var

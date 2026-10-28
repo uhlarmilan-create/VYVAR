@@ -432,7 +432,7 @@ def lc_facts(lc_csv: Path) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- ePSF page (EPSF-PDF-2026-10)
-def _psf_lc_header(psf_csv: Path) -> dict[str, str]:
+def psf_lc_header(psf_csv: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     with Path(psf_csv).open(encoding="utf-8") as fh:
         for line in fh:
@@ -461,7 +461,7 @@ def epsf_page_data(lc_dir: Path, platesolve_dir: Path, cid: str, *, min_epochs: 
     if int(df["psf_ok"].sum()) < int(min_epochs):
         return None
     st = pair_stats(df)
-    hdr = _psf_lc_header(psf_csv)
+    hdr = psf_lc_header(psf_csv)
     man_p = Path(platesolve_dir) / "epsf_frames" / "epsf_frames_manifest.json"
     man = json.loads(man_p.read_text(encoding="utf-8")) if man_p.is_file() else {}
     n_ep = int(st["n_epochs"])

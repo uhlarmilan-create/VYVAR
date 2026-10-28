@@ -68,6 +68,28 @@ LC_QUALITY_FLAGS: tuple[str, ...] = (
 FINAL_SKIP_REASONS = frozenset({"saturated", "below_snr_min", "vsx_type_out_of_scope"})
 
 #: Per-frame CSV columns loaded for the comparison pool.
+# APERTURE-K-2026-10: small grid of apertures in units of the frame FWHM.
+# AP-SMALL-K-2026-10 (Milan 2026-10-28): down to 0.6 FWHM - for faint (sky-limited) stars the field
+# scatter minimum lay at the old grid edge 1.0 (Brno 534, BO CVn: 12-16 % lower scatter at 0.6-0.75;
+# S/N optimum ~0.6-0.7 FWHM, Howell 1989, Naylor 1998). AP-BRIGHT-K still chooses k per brightness group.
+DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (0.6, 0.75, 0.875, 1.0, 1.25, 1.5, 1.75, 2.0)
+
+
+def flux_k_column(k: float) -> str:
+    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``, 0.6 -> ``flux_k060``)."""
+    return f"flux_k{int(round(float(k) * 100)):03d}"
+
+
+def blend_k_column(k: float) -> str:
+    """Column of the neighbour-light fraction at r = k x FWHM (BLEND-K-2026-10)."""
+    return f"blend_k{int(round(float(k) * 100)):03d}"
+
+
+#: proc columns of the aperture grid and the comparison-table neighbour-light columns, in grid order
+FLUX_K_COLUMNS: tuple[str, ...] = tuple(flux_k_column(k) for k in DEFAULT_APERTURE_F_GRID)
+BLEND_K_COLUMNS: tuple[str, ...] = tuple(blend_k_column(k) for k in DEFAULT_APERTURE_F_GRID)
+
+
 PHASE_USECOLS_PERFRAME: tuple[str, ...] = (
     "catalog_id",
     "bjd_tdb_mid",
@@ -80,21 +102,10 @@ PHASE_USECOLS_PERFRAME: tuple[str, ...] = (
     "vsx_known_variable",
     "likely_saturated",
     # APERTURE-K-2026-10: comparison-star RMS on the light-curve aperture grid
-    "flux_k100",
-    "flux_k125",
-    "flux_k150",
-    "flux_k175",
-    "flux_k200",
+    *FLUX_K_COLUMNS,
 )
 
 
 # --- moved from aperture_pertarget (LAYER-2026-10) ---
 
 
-# APERTURE-K-2026-10: small grid of apertures in units of the frame FWHM.
-DEFAULT_APERTURE_F_GRID: tuple[float, ...] = (1.0, 1.25, 1.5, 1.75, 2.0)
-
-
-def flux_k_column(k: float) -> str:
-    """Per-frame proc column with the flux in r = k x FWHM (e.g. 1.25 -> ``flux_k125``)."""
-    return f"flux_k{int(round(float(k) * 100))}"

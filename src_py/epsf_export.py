@@ -15,12 +15,11 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
-from epsf_frame import OVERSAMPLING
 from epsf_lc_compare import p2p_scatter
-from export_reports import _bjd_to_datestr_yyyymmdd, _guess_setup_info_from_obs_group, _safe_filename
+from export_reports import bjd_to_datestr_yyyymmdd, guess_setup_info_from_obs_group, safe_filename
 from gaia_catalog_id import read_vyvar_csv
 from report_methods import lc_csv_path
-from star_page_m3 import _psf_lc_header
+from star_page_m3 import psf_lc_header
 from vyvar_version import VYVAR_SOFTWARE_VERSION
 
 EPSF_EXPORT_DIRNAME = "epsf"
@@ -30,13 +29,13 @@ COLUMNS = ("bjd_tdb", "delta_mag", "err")
 def epsf_export_path(photometry_dir: Path | str, name: str, bjd: float, setup: str) -> Path:
     """``<photometry>/lightcurves_reports/epsf/<name>_<YYYYMMDD>_<setup>_epsf.txt``."""
     return (Path(photometry_dir) / "lightcurves_reports" / EPSF_EXPORT_DIRNAME
-            / f"{_safe_filename(name)}_{_bjd_to_datestr_yyyymmdd(bjd)}_{_safe_filename(setup)}_epsf.txt")
+            / f"{safe_filename(name)}_{bjd_to_datestr_yyyymmdd(bjd)}_{safe_filename(setup)}_epsf.txt")
 
 
 def find_epsf_export(photometry_dir: Path | str, cid: str, setup: str) -> Path | None:
     """The export file of one target and setup (matched by its ``# catalog_id=`` header line)."""
     for p in sorted((Path(photometry_dir) / "lightcurves_reports" / EPSF_EXPORT_DIRNAME).glob(
-            f"*_{_safe_filename(setup)}_epsf.txt")):
+            f"*_{safe_filename(setup)}_epsf.txt")):
         with p.open(encoding="utf-8") as fh:
             for line in fh:
                 if not line.startswith("#"):
@@ -89,9 +88,9 @@ def _num(v: Any, nd: int) -> str:
 def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.DataFrame, *,
                       setup: str, observer_code: str, manifest: dict[str, Any]) -> list[str]:
     """Header + data lines of one export file."""
-    hdr = _psf_lc_header(psf_csv)
+    hdr = psf_lc_header(psf_csv)
     name = _txt(info.get("vsx_name")) or _txt(info.get("name")) or cid
-    filt, exptime, binning = _guess_setup_info_from_obs_group(setup)
+    filt, exptime, binning = guess_setup_info_from_obs_group(setup)
     t0, t1 = float(rows["bjd_tdb"].iloc[0]), float(rows["bjd_tdb"].iloc[-1])
     frames = manifest.get("frames") or []
     fw = np.array([float(f.get("fwhm_px", np.nan)) for f in frames], dtype=np.float64)
@@ -102,6 +101,9 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
                                                ("psf_lc_n_epochs_dropped_pin", "frame not fitted or a comparison star missing"))
              if int(float(hdr.get(k, "0") or 0))]
     grid = "x".join(str(v) for v in ((manifest.get("spatial") or {}).get("grid") or [1, 1]))
+    # G09-35: the oversampling the ePSF stage recorded, not the constant of the current code
+    ovs = (f"oversampling {int(manifest['oversampling'])}" if manifest.get("oversampling") is not None
+           else "oversampling not recorded")
     p2p = 1e3 * p2p_scatter(rows["delta_mag"])
     L = [
         "# VYVAR ePSF light curve - user product, NOT an AAVSO / VarAstro submission file",
@@ -117,7 +119,7 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
         f"# filter={filt}",
         f"# exptime_s={exptime or ''}",
         f"# binning={binning or ''}",
-        f"# night_utc={_bjd_to_datestr_yyyymmdd(t0)}",
+        f"# night_utc={bjd_to_datestr_yyyymmdd(t0)}",
         f"# time_span_bjd_tdb={t0:.6f}-{t1:.6f}",
         "# time=BJD_TDB, mid-exposure",
         "# delta_mag=differential instrumental magnitude of the target against the weighted ensemble of the "
@@ -126,7 +128,7 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
                                         "aperture light curve" if hdr.get("psf_lc_k2_applied") == "true" else "not applied"),
         "# err=1-sigma magnitude error: PSF fit (Fisher, model variance) + unresolved-neighbour term + ensemble "
         "+ scintillation + night systematic floor",
-        f"# method=per-frame ePSF (photutils EPSFBuilder, oversampling {OVERSAMPLING}, {grid} spatial perturbation), "
+        f"# method=per-frame ePSF (photutils EPSFBuilder, {ovs}, {grid} spatial perturbation), "
         "joint fit of the target with its Gaia neighbours at fixed positions, local sky annulus",
         f"# epsf_frames={len(frames)}",
         f"# epsf_fwhm_px_median={np.nanmedian(fw):.2f}" if fw.size and np.isfinite(fw).any() else "# epsf_fwhm_px_median=",

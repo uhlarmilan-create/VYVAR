@@ -119,7 +119,7 @@ def drop_blended_check_candidates(pool: pd.DataFrame, f_star: float) -> pd.DataF
     """BLEND-K-2026-10: drop check candidates with |neighbour light| > 1 % at the target's
     aperture k (column blend_kNNN from the comparison-star selection pool). NaN (unknown) does not block,
     as for comparison stars; without the column nothing is dropped (older drafts)."""
-    from aperture_pertarget import blend_k_column  # noqa: PLC0415
+    from photometry_defs import blend_k_column  # noqa: PLC0415
     from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
 
     col = blend_k_column(float(f_star))

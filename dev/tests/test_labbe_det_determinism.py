@@ -34,8 +34,7 @@ def test_labbe_order_invariant_shuffled_stars() -> None:
     data, xs, ys = _synthetic_frame()
     seed = 424242
     a, na, ra = measure_empty_aperture_sigma_bkg(
-        data, xs, ys, 3.5, 6.0, 10.0, n_apertures=40, min_valid=10, seed=seed
-    )
+        data, xs, ys, 3.5, 6.0, 10.0, n_apertures=40, min_valid=10, seed=seed, sky=data)
     perm = np.random.default_rng(7).permutation(xs.size)
     b, nb, rb = measure_empty_aperture_sigma_bkg(
         data,
@@ -46,8 +45,7 @@ def test_labbe_order_invariant_shuffled_stars() -> None:
         10.0,
         n_apertures=40,
         min_valid=10,
-        seed=seed,
-    )
+        seed=seed, sky=data)
     assert ra == "" and rb == ""
     assert na == nb
     assert a == b
@@ -64,8 +62,7 @@ def test_labbe_identical_across_pythonhashseed_subprocesses() -> None:
         xs = np.array([40.0, 90.0, 130.0, 55.0, 150.0])
         ys = np.array([45.0, 95.0, 120.0, 140.0, 60.0])
         sig, n, reason = measure_empty_aperture_sigma_bkg(
-            data, xs, ys, 3.5, 6.0, 10.0, n_apertures=40, min_valid=10, seed=424242
-        )
+            data, xs, ys, 3.5, 6.0, 10.0, n_apertures=40, min_valid=10, seed=424242, sky=data)
         assert reason == ""
         print(f"{sig:.17g}|{n}")
         """
