@@ -19,14 +19,12 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import erf, erfinv
 
-from catalog_db import query_local_gaia, query_local_gaia_by_source_ids
+from catalog_db import cone_sky_box, query_local_gaia, query_local_gaia_by_source_ids
 from gaia_catalog_id import normalize_gaia_source_id_series
 
 BLEND_FWHM_FACTOR = 1.5
 DEFAULT_EDGE_MARGIN_FWHM = 2.0
 DEFAULT_BIN_WIDTH_MAG = 0.5
-COLLINEAR_MIN_POINTS = 3
-COLLINEAR_MAX_PERP_PX = 2.0
 DEFAULT_MATCH_SEP_ARCSEC = 8.0
 
 
@@ -40,7 +38,6 @@ class FlemingFitResult:
     g_lim_90: float | None
     sigma_mag: float | None
     fit_method: str
-    fit_params: dict[str, float | None]
     curve_bins: list[dict[str, Any]]
     no_crossing_50: bool = False
     no_crossing_90: bool = False
@@ -81,12 +78,8 @@ def split_missed_by_g90(
         gv = float(g)
         if g90_thr is not None and gv < float(g90_thr):
             below += 1
-        elif g50_thr is not None and float(g90_thr or g50_thr) <= gv <= float(g50_thr):
-            fade += 1
-        elif g90_thr is not None and g50_thr is not None and gv > float(g50_thr):
-            pass
-        elif g90_thr is None and g50_thr is not None and gv <= float(g50_thr):
-            fade += 1
+        elif g50_thr is not None and gv <= float(g50_thr):
+            fade += 1  # between G90 (or no G90) and G50; fainter than G50 is not counted
     return {
         "n_missed_below_g90": int(below),
         "n_missed_fadezone": int(fade),
@@ -116,14 +109,36 @@ def fleming_completeness(mag: np.ndarray | float, g_lim_50: float, sigma_mag: fl
     return 0.5 * (1.0 + erf((float(g_lim_50) - m) / (math.sqrt(2.0) * sig)))
 
 
-def frame_sky_bbox_deg(wcs: Any, naxis1: int, naxis2: int) -> tuple[float, float, float, float]:
-    """RA/Dec extrema from the four chip corners (ICRS deg)."""
-    xs = [0.0, float(naxis1 - 1), float(naxis1 - 1), 0.0]
-    ys = [0.0, 0.0, float(naxis2 - 1), float(naxis2 - 1)]
-    ra, dec = wcs.all_pix2world(xs, ys, 0)
-    ra = np.asarray(ra, dtype=np.float64)
-    dec = np.asarray(dec, dtype=np.float64)
-    return float(np.nanmin(ra)), float(np.nanmax(ra)), float(np.nanmin(dec)), float(np.nanmax(dec))
+def frame_sky_cone_deg(wcs: Any, naxis1: int, naxis2: int) -> tuple[float, float, float]:
+    """(ra, dec, radius) [deg] of a cone that contains the whole chip (G04-12, RA-BOX-2026-10).
+
+    Centre = the chip centre pixel; radius = the largest great-circle distance to the chip border
+    (pixel edges -0.5 .. naxis-0.5, sampled every ``step`` px) plus the sampling step itself. The
+    farthest point of the chip from an interior point lies on its border, so the cone holds the
+    chip; the corner RA/Dec min/max box it replaces became the complement across RA 0 and missed
+    the pole-ward bulge of the chip edges."""
+    nx, ny = int(naxis1), int(naxis2)
+    xc, yc = (nx - 1) / 2.0, (ny - 1) / 2.0
+    step = max(1.0, max(nx, ny) / 256.0)
+    xs = np.linspace(-0.5, nx - 0.5, int(math.ceil(nx / step)) + 1)
+    ys = np.linspace(-0.5, ny - 0.5, int(math.ceil(ny / step)) + 1)
+    # closed loop around the chip: bottom, right, top, left (neighbours are one step apart)
+    bx = np.concatenate([xs, np.full(len(ys), nx - 0.5), xs[::-1], np.full(len(ys), -0.5)])
+    by = np.concatenate([np.full(len(xs), -0.5), ys, np.full(len(xs), ny - 0.5), ys[::-1]])
+    ra_c, de_c = (float(np.asarray(v).ravel()[0]) for v in wcs.all_pix2world([xc], [yc], 0))
+    ra_b, de_b = wcs.all_pix2world(bx, by, 0)
+    ra_b, de_b = np.asarray(ra_b, dtype=np.float64), np.asarray(de_b, dtype=np.float64)
+    if not (math.isfinite(ra_c) and math.isfinite(de_c) and np.all(np.isfinite(ra_b)) and np.all(np.isfinite(de_b))):
+        raise ValueError("chip footprint: WCS gives non-finite sky positions on the chip border")
+    r0, d0 = math.radians(ra_c), math.radians(de_c)
+    rb, db = np.radians(ra_b), np.radians(de_b)
+    cosc = np.clip(math.sin(d0) * np.sin(db) + math.cos(d0) * np.cos(db) * np.cos(rb - r0), -1.0, 1.0)
+    sep = float(np.degrees(np.arccos(cosc)).max())
+    # one sampling step on the sky (largest neighbour spacing along the border)
+    dstep = float(np.degrees(np.arccos(np.clip(
+        np.sin(db[:-1]) * np.sin(db[1:]) + np.cos(db[:-1]) * np.cos(db[1:]) * np.cos(rb[1:] - rb[:-1]), -1.0, 1.0))).max())
+    ra_c = ra_c % 360.0
+    return ra_c, de_c, sep + dstep
 
 
 def project_ra_dec_to_pixel(
@@ -208,8 +223,12 @@ def query_reference_population(
     *,
     mag_limit: float | None = None,
 ) -> pd.DataFrame:
-    """Direct Gaia DB query over the frame WCS bbox down to ``mag_limit`` (no row cap)."""
-    ra_min, ra_max, dec_min, dec_max = frame_sky_bbox_deg(wcs, naxis1, naxis2)
+    """Direct Gaia DB query over the cone of the chip down to ``mag_limit`` (no row cap); the
+    footprint filter keeps the chip."""
+    from astropy.coordinates import SkyCoord  # noqa: PLC0415
+
+    ra_c, de_c, rad = frame_sky_cone_deg(wcs, naxis1, naxis2)
+    ra_min, ra_max, dec_min, dec_max = cone_sky_box(SkyCoord(ra_c, de_c, unit="deg", frame="icrs"), rad)
     ml = float(mag_limit) if mag_limit is not None and math.isfinite(float(mag_limit)) else None
     rows = query_local_gaia(
         gaia_db_path,
@@ -408,7 +427,6 @@ def fit_fleming_completeness(
             g_lim_90=None,
             sigma_mag=None,
             fit_method="none",
-            fit_params={},
             curve_bins=[],
         )
 
@@ -425,7 +443,6 @@ def fit_fleming_completeness(
     g50: float | None = g50_i
     g90: float | None = g90_i
     sigma: float | None = None
-    params: dict[str, float | None] = {"g_lim_50_interp": g50_i, "g_lim_90_interp": g90_i}
 
     if len(curve_bins) >= 4 and np.any(fracs < 0.95) and np.any(fracs > 0.05):
         try:
@@ -450,7 +467,6 @@ def fit_fleming_completeness(
             sigma = sig_f
             g90 = m50_f - math.sqrt(2.0) * sig_f * float(erfinv(0.8))
             fit_method = "fleming1995_erf"
-            params = {"g_lim_50": m50_f, "sigma_mag": sig_f, "g_lim_90": g90}
         except Exception:  # noqa: BLE001
             pass
 
@@ -473,15 +489,12 @@ def fit_fleming_completeness(
 
     if g90 is not None and not math.isfinite(float(g90)):
         g90 = g90_i if g90_i is not None and math.isfinite(float(g90_i)) else None
-    if no_cross_90 and g90 is None and fit_method != "degenerate":
-        pass
 
     return FlemingFitResult(
         g_lim_50=g50,
         g_lim_90=g90,
         sigma_mag=sigma,
         fit_method=fit_method,
-        fit_params={k: (round(float(v), 4) if v is not None and math.isfinite(float(v)) else None) for k, v in params.items()},
         curve_bins=curve_bins,
         no_crossing_50=bool(no_cross_50 and g50 is None and fit_method == "no_crossing"),
         no_crossing_90=bool(no_cross_90 and g90 is None and fit_method in ("no_crossing", "interpolation", "fleming1995_erf")),
@@ -572,56 +585,60 @@ def completeness_50_pct(n_matched_detectable: int, n_missed: int) -> float | Non
     return round(100.0 * float(n_matched_detectable) / float(denom), 2)
 
 
-def raw_completeness_pct(n_matched_unique: int, catalog_rows: int) -> float | None:
-    if int(catalog_rows) <= 0:
-        return None
-    return round(100.0 * float(n_matched_unique) / float(catalog_rows), 2)
-
-
-def _perp_distances_to_line(xy: np.ndarray, p0: np.ndarray, direction: np.ndarray) -> np.ndarray:
-    v = direction / (np.linalg.norm(direction) + 1e-12)
-    rel = xy - p0
-    along = np.dot(rel, v)
-    perp = rel - np.outer(along, v)
-    return np.linalg.norm(perp, axis=1)
-
-
-def find_largest_collinear_group(
-    xy: np.ndarray,
+def gaia_detection_counts(
+    detections_df: pd.DataFrame,
+    gaia_on_chip: pd.DataFrame | None,
     *,
-    min_points: int = COLLINEAR_MIN_POINTS,
-    max_perp_px: float = COLLINEAR_MAX_PERP_PX,
+    depth_g: float | None,
 ) -> dict[str, Any]:
-    pts = np.asarray(xy, dtype=np.float64)
-    ok = np.isfinite(pts).all(axis=1)
-    pts = pts[ok]
-    n = len(pts)
-    if n < min_points:
-        return {"n_collinear": 0, "inlier_indices": [], "consistent_with_line": False}
+    """Detection counts and raw Gaia->DAO completeness of a MASTERSTAR catalogue (G04-08).
 
-    best_n = 0
-    best_mask: np.ndarray | None = None
-    for i in range(n):
-        for j in range(i + 1, n):
-            direction = pts[j] - pts[i]
-            if float(np.linalg.norm(direction)) < 1e-6:
-                continue
-            perp = _perp_distances_to_line(pts, pts[i], direction)
-            mask = perp <= float(max_perp_px)
-            cnt = int(mask.sum())
-            if cnt > best_n:
-                best_n = cnt
-                best_mask = mask
+    One definition for masterstar_build (pipeline_meta, result dict) and the reconciliation:
 
-    if best_mask is None or best_n < min_points:
-        return {"n_collinear": 0, "inlier_indices": [], "consistent_with_line": False}
-
-    inlier_idx = np.where(ok)[0][best_mask].tolist()
-    return {
-        "n_collinear": best_n,
-        "inlier_indices": inlier_idx,
-        "consistent_with_line": bool(best_n >= min_points),
+    - ``n_detection_rows``: DAO detections = rows with ``source_state`` DETECTED_* or DAO_ONLY
+      (every row when the catalogue carries no ``source_state``: nothing was added to it).
+    - ``n_gaia_detection_rows``: detections with a Gaia id (``_detected_mask``); catalogue-
+      membership rows are not detections.
+    - reference = on-chip Gaia stars (``gaia_on_chip``) with G <= ``depth_g`` (the matching
+      depth: the same set the membership expansion gives a row); ``n_gaia_detected`` = reference
+      stars that have a detection row, ``n_gaia_undetected`` = the rest,
+      ``completeness_raw_pct`` = 100 x detected / reference (None without a reference).
+    """
+    n = int(len(detections_df)) if detections_df is not None else 0
+    df = detections_df if detections_df is not None else pd.DataFrame()
+    det_gaia = _detected_mask(df) if n else pd.Series([], dtype=bool)
+    if n and "source_state" in df.columns:
+        state = df["source_state"].fillna("").astype(str).str.strip()
+        n_det_rows = int((state.str.startswith("DETECTED") | state.eq("DAO_ONLY")).sum())
+    else:
+        n_det_rows = n
+    out: dict[str, Any] = {
+        "n_detection_rows": n_det_rows,
+        "n_gaia_detection_rows": int(det_gaia.sum()) if n else 0,
+        "reference_depth_g": None,
+        "n_gaia_reference": None,
+        "n_gaia_detected": None,
+        "n_gaia_undetected": None,
+        "completeness_raw_pct": None,
     }
+    if gaia_on_chip is None or depth_g is None:
+        return out
+    gm = pd.to_numeric(gaia_on_chip.get("g_mag", gaia_on_chip.get("mag")), errors="coerce")
+    in_depth = gm.le(float(depth_g)).to_numpy(dtype=bool)
+    ref_ids = set(_normalize_id_series(gaia_on_chip).to_numpy(dtype=object)[in_depth]) - {""}
+    det_ids = _detected_catalog_id_set(df) if n else set()
+    n_ref = len(ref_ids)
+    n_hit = len(ref_ids & det_ids)
+    out.update(
+        {
+            "reference_depth_g": float(depth_g),
+            "n_gaia_reference": n_ref,
+            "n_gaia_detected": n_hit,
+            "n_gaia_undetected": n_ref - n_hit,
+            "completeness_raw_pct": round(100.0 * n_hit / n_ref, 2) if n_ref > 0 else None,
+        }
+    )
+    return out
 
 
 def _positional_match_to_reference(
@@ -666,81 +683,26 @@ def classify_unmatched_dao(
     ref_in_frame: pd.DataFrame | None = None,
     match_sep_arcsec: float = DEFAULT_MATCH_SEP_ARCSEC,
     plate_scale_arcsec: float | None = None,
-    collinear_min_points: int = COLLINEAR_MIN_POINTS,
-    collinear_max_perp_px: float = COLLINEAR_MAX_PERP_PX,
 ) -> dict[str, Any]:
+    """DAO detections without a catalogue id: count, and how many lie on a fainter in-frame Gaia star.
+
+    G04-23: the collinearity search, hot-pixel guess and flux / peak statistics had no reader
+    (pipeline_meta takes only these two counts) and were removed.
+    """
     cid = _normalize_id_series(detections_df)
     unmatched = detections_df.loc[cid == ""].copy()
     n_total = int(len(unmatched))
-    if n_total == 0:
-        return {
-            "n_dao_unmatched": 0,
-            "n_now_matched_to_faint": 0,
-            "n_artifact_candidates": 0,
-            "n_unexplained": 0,
-            "collinearity": find_largest_collinear_group(np.empty((0, 2))),
-            "flux": {},
-            "peak_dao": {},
-            "classification": "none",
-        }
-
-    peak = pd.to_numeric(unmatched.get("peak_dao", unmatched.get("peak_max_adu")), errors="coerce")
-    flux = pd.to_numeric(unmatched.get("flux", unmatched.get("dao_flux")), errors="coerce")
-    xy = np.column_stack(
-        [
-            pd.to_numeric(unmatched.get("x"), errors="coerce").to_numpy(dtype=np.float64),
-            pd.to_numeric(unmatched.get("y"), errors="coerce").to_numpy(dtype=np.float64),
-        ]
-    )
-    collin = find_largest_collinear_group(
-        xy[: min(n_total, 400)],
-        min_points=collinear_min_points,
-        max_perp_px=collinear_max_perp_px,
-    )
-
-    faint_hit = np.zeros(n_total, dtype=bool)
-    if ref_in_frame is not None and not ref_in_frame.empty:
-        faint_hit = _positional_match_to_reference(
-            unmatched,
-            ref_in_frame,
-            match_sep_arcsec=match_sep_arcsec,
-            plate_scale_arcsec=plate_scale_arcsec,
+    n_faint = 0
+    if n_total and ref_in_frame is not None and not ref_in_frame.empty:
+        n_faint = int(
+            _positional_match_to_reference(
+                unmatched,
+                ref_in_frame,
+                match_sep_arcsec=match_sep_arcsec,
+                plate_scale_arcsec=plate_scale_arcsec,
+            ).sum()
         )
-
-    artifact_mask = faint_hit.copy()
-    if collin["consistent_with_line"] and collin["inlier_indices"]:
-        artifact_mask[collin["inlier_indices"]] = True
-    if peak.notna().sum() >= 5:
-        med_peak = float(peak.median())
-        p90_peak = float(peak.quantile(0.9))
-        hot_thr = max(med_peak * 3.0, p90_peak * 1.5)
-        artifact_mask |= peak.to_numpy(dtype=np.float64) >= hot_thr
-
-    n_faint = int(faint_hit.sum())
-    n_artifact = int(artifact_mask.sum())
-    n_unexplained = int(n_total - n_artifact)
-
-    def _dist_stats(s: pd.Series) -> dict[str, float | None]:
-        arr = pd.to_numeric(s, errors="coerce").dropna()
-        if arr.empty:
-            return {"n": 0, "p50": None, "p90": None, "max": None}
-        return {
-            "n": int(len(arr)),
-            "p50": round(float(arr.quantile(0.5)), 4),
-            "p90": round(float(arr.quantile(0.9)), 4),
-            "max": round(float(arr.max()), 4),
-        }
-
-    return {
-        "n_dao_unmatched": n_total,
-        "n_now_matched_to_faint": n_faint,
-        "n_artifact_candidates": n_artifact,
-        "n_unexplained": n_unexplained,
-        "classification": "artifact_dominant" if n_artifact >= max(1, n_total // 2) else "mixed",
-        "collinearity": collin,
-        "flux": _dist_stats(flux),
-        "peak_dao": _dist_stats(peak),
-    }
+    return {"n_dao_unmatched": n_total, "n_now_matched_to_faint": n_faint}
 
 
 def _finite_or_none(v: Any) -> float | None:
@@ -797,7 +759,8 @@ def compute_gaia_dao_reconcile(
     bin_width_mag: float = DEFAULT_BIN_WIDTH_MAG,
     blend_factor: float = BLEND_FWHM_FACTOR,
     match_sep_arcsec: float = DEFAULT_MATCH_SEP_ARCSEC,
-    cone_df: pd.DataFrame | None = None,
+    gaia_on_chip: pd.DataFrame | None = None,
+    matching_depth_g: float | None = None,
 ) -> dict[str, Any]:
     """Footprint-based Gaia<->DAO reconciliation of the final catalogue against the frame depth."""
     lim = frame_depth_limits(frame_depth)
@@ -810,7 +773,7 @@ def compute_gaia_dao_reconcile(
         mag_limit=ref_depth,
     )
     reference_df = augment_reference_with_matched_ids(reference_df, detections_df, gaia_db_path)
-    pop_check = check_reference_population_consistency(detections_df, reference_df)
+    check_reference_population_consistency(detections_df, reference_df)  # raises on a mismatch
     reference_df, _n_off = apply_footprint_filter(
         reference_df,
         wcs,
@@ -850,10 +813,8 @@ def compute_gaia_dao_reconcile(
         completeness_label = f"measured to G <= {g_lim_50:.2f}"
     else:
         completeness_label = "completeness_50 unavailable"
-    cid = _normalize_id_series(detections_df)
-    n_matched_unique = int(cid[cid != ""].nunique())
-    catalog_rows = int(len(cone_df)) if cone_df is not None else int(len(reference_df))
-    raw_pct = raw_completeness_pct(n_matched_unique, catalog_rows) if cone_df is not None else None
+    # G04-08: detections only (no membership rows); reference = on-chip Gaia to the matching depth.
+    det_counts = gaia_detection_counts(detections_df, gaia_on_chip, depth_g=matching_depth_g)
 
     if plate_scale_arcsec is None and wcs is not None:
         try:
@@ -880,7 +841,6 @@ def compute_gaia_dao_reconcile(
 
     return {
         "methodology": "footprint_reference_frame_depth",
-        "population_check": pop_check,
         "reference_depth_g": ref_depth,
         "g_lim_50": round(g_lim_50, 4) if g_lim_50 is not None else None,
         "g_lim_90": round(g_lim_90, 4) if g_lim_90 is not None else None,
@@ -903,17 +863,16 @@ def compute_gaia_dao_reconcile(
         "n_ref_total": int(len(reference_df)),
         "n_ref_in_frame": int(counts["n_ref_in_frame"]),
         "n_gaia_off_frame": int(counts["n_gaia_off_frame"]),
-        "catalog_rows": catalog_rows,
-        "n_gaia_matched_unique": n_matched_unique,
+        "n_gaia_reference": det_counts["n_gaia_reference"],
+        "n_gaia_matched_unique": len(matched_ids),
         **counts,
         "gaia_dao_completeness_pct": corr_pct,
-        "gaia_dao_completeness_raw_pct": raw_pct,
+        "gaia_dao_completeness_raw_pct": det_counts["completeness_raw_pct"],
         "n_missed_below_g90": missed_split["n_missed_below_g90"],
         "n_missed_fadezone": missed_split["n_missed_fadezone"],
         "missed_below_g90_uses_censored_depth": missed_split["missed_below_g90_uses_censored_depth"],
         "unmatched_dao": unmatched_dao,
         "n_dao_unmatched": int(unmatched_dao["n_dao_unmatched"]),
-        "labeled_reference": labeled,
     }
 
 
@@ -1059,21 +1018,10 @@ def _estimate_frame_noise_adu(df: pd.DataFrame, *, frame_noise_adu: float | None
     if frame_noise_adu is not None and math.isfinite(float(frame_noise_adu)) and float(frame_noise_adu) > 0:
         return float(frame_noise_adu)
     flux = pd.to_numeric(df.get("flux"), errors="coerce")
-    snr_ok = df.get("snr50_ok")
-    if snr_ok is not None:
-        mask = snr_ok.fillna(False).astype(bool) & flux.gt(0)
-        if mask.any():
-            return float((flux.loc[mask] / 50.0).median())
     matched = ~_dao_only_row_mask(df)
     f = flux.loc[matched & flux.gt(0)]
     if len(f) >= 10:
         return float(f.median() / 100.0)
-    return None
-
-
-def _row_noise_adu(row: pd.Series, *, frame_noise_adu: float | None) -> float | None:
-    if frame_noise_adu is not None and math.isfinite(float(frame_noise_adu)) and float(frame_noise_adu) > 0:
-        return float(frame_noise_adu)
     return None
 
 
@@ -1137,9 +1085,14 @@ def classify_dao_only_dataframe(
         return out, meta
 
     flux = pd.to_numeric(out.get("flux"), errors="coerce")
+    # G04-24 / IDENTITY-2026-10: the DAO flux sign is not a criterion (it is summed against the global
+    # sky; real faint stars on a bright local background have DAO flux <= 0). A DAO_ONLY row is an
+    # artifact_negative only when its aperture flux against the local annulus sky is not positive.
+    if "flux_ap" not in out.columns:
+        raise ValueError("classify_dao_only_dataframe: flux_ap (aperture flux, local sky) missing on DAO_ONLY rows")
+    flux_ap = pd.to_numeric(out["flux_ap"], errors="coerce")
     peak = pd.to_numeric(out.get("peak_max_adu"), errors="coerce")
     sat = out.get("likely_saturated")
-    edge = out.get("edge_safe_10px")
     zp_rms = float(flux_fit.residual_rms) if flux_fit.residual_rms is not None and flux_fit.ok else float("nan")
     sigma_samples: list[float] = []
     implied_samples: list[float] = []
@@ -1156,7 +1109,8 @@ def classify_dao_only_dataframe(
         sig_g = float("nan")
         ig_minus = float("nan")
 
-        if pd.notna(f) and float(f) <= 0:
+        f_ap = flux_ap.loc[idx]
+        if pd.notna(f_ap) and float(f_ap) <= 0:
             cls = DAO_ONLY_CLASS_ARTIFACT_NEGATIVE
         elif depth_unresolvable:
             cls = DAO_ONLY_CLASS_INDETERMINATE
@@ -1178,14 +1132,9 @@ def classify_dao_only_dataframe(
                 sv = str(sat.loc[idx]).strip().lower()
                 if sv in ("true", "1", "t", "yes"):
                     indet = True
-            if edge is not None:
-                ev = str(edge.loc[idx]).strip().lower()
-                if ev in ("false", "0", "f", "no"):
-                    indet = True
             if peak is not None and (not pd.notna(peak.loc[idx])):
                 indet = True
-            noise = _row_noise_adu(out.loc[idx], frame_noise_adu=noise_frame)
-            snr = row_snr_from_flux(f, noise_adu=noise)
+            snr = row_snr_from_flux(f, noise_adu=noise_frame)
             if math.isfinite(zp_rms):
                 sig_g = sigma_g_row(zp_residual_rms=zp_rms, snr=snr)
                 if math.isfinite(sig_g):

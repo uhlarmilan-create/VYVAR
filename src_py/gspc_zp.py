@@ -179,7 +179,9 @@ def gspc_zero_point(weights: dict[str, float], levels: dict[str, float],
     M_j = Honeycutt level). Also the ensemble instrumental level sum w M / sum w over all comps.
 
     Returns {n_comp, n_eff, C, inst_level, sigma_model, sigma_data, rejected{reason: n}}; C is
-    NaN with fewer than MIN_COMPS accepted comps."""
+    NaN with fewer than MIN_COMPS accepted comps. Both sigmas carry the GSPC systematic SIGMA_SYS_MAG
+    once (common to every comp, it does not average down - G08-49): sigma_model with the photon
+    errors, sigma_data with the scatter of the comps about C."""
     out: dict[str, Any] = {"band": band, "n_comp": 0, "n_eff": None, "C": float("nan"),
                            "inst_level": float("nan"), "sigma_model": None, "sigma_data": None,
                            "rejected": {}}
@@ -194,7 +196,8 @@ def gspc_zero_point(weights: dict[str, float], levels: dict[str, float],
         if row is None:
             out["rejected"]["not in Gaia archive result"] = out["rejected"].get("not in Gaia archive result", 0) + 1
             continue
-        m, s, why = gspc_mag(row, band)
+        # photon part only: the GSPC systematic (SIGMA_SYS_MAG) is common to all comps (G08-49)
+        m, s, why = gspc_mag(row, band, sigma_sys=0.0)
         if why:
             out["rejected"][why] = out["rejected"].get(why, 0) + 1
             continue
@@ -208,10 +211,11 @@ def gspc_zero_point(weights: dict[str, float], levels: dict[str, float],
     n_eff = sw * sw / sum(a[0] ** 2 for a in acc)
     out["C"] = d
     out["n_eff"] = round(n_eff, 3)
-    out["sigma_model"] = round(math.sqrt(sum((a[0] * a[2]) ** 2 for a in acc)) / sw, 5)
+    # G08-49: independent photon errors average down, the common GSPC systematic does not
+    out["sigma_model"] = round(math.hypot(math.sqrt(sum((a[0] * a[2]) ** 2 for a in acc)) / sw, SIGMA_SYS_MAG), 5)
     if len(acc) >= 3 and n_eff > 1.0:
         var = sum(a[0] * (a[1] - d) ** 2 for a in acc) / sw * n_eff / (n_eff - 1.0)
-        out["sigma_data"] = round(math.sqrt(var) / math.sqrt(n_eff), 5)
+        out["sigma_data"] = round(math.hypot(math.sqrt(var) / math.sqrt(n_eff), SIGMA_SYS_MAG), 5)
     return out
 
 

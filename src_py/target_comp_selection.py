@@ -10,27 +10,24 @@ import time
 from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
+from aperture_policy import fwhm_from_header_vy_fwhm
 from config import AppConfig
-from catalog_db import query_local_gaia
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from photometry_comp import (
     _batch_enrich_targets_bp_rp_from_gaia_db,
     _enrich_target_bp_rp_from_gaia_db,
     _normalize_id_series,
-    _normalize_id_value,
     _target_selection_effective_frame_hw_px,
     _read_field_density_inputs,
     _refresh_variable_targets_xy,
     _resolve_frame_hw_px_from_masterstar,
-    _write_suspected_variables,
     build_global_comp_pool,
     select_active_targets,
     select_comparison_stars_per_target,
 )
 import photometry_comp as _photometry_comp
 from photometry_provenance import merge_photometry_pipeline_meta
-from photometry_shared import _angular_distance_deg, build_gs11_summary
 from proc_frame_store import PROC_CSV_GLOB, PROC_STORE_COLS, ProcFrameStore
 
 from gaia_catalog_id import VYVAR_CSV_DTYPE
@@ -62,14 +59,14 @@ def _comp_safe_bbox(
         if not math.isfinite(r0):
             return safe_bbox
         from aperture_pertarget import frame_stem_from_source  # noqa: PLC0415
-        from aperture_policy import clamp_fwhm_px  # noqa: PLC0415
+        from aperture_policy import fwhm_from_header_vy_fwhm  # noqa: PLC0415
 
         fws: list[float] = []
         for cp in csv_paths:
             fp = Path(cp).with_name(frame_stem_from_source(Path(cp).name) + ".fits")
             if fp.is_file():
                 # same clamp as the aperture-photometry grid (measure_night_grid / _fwhm_from_fits_header)
-                v = clamp_fwhm_px(_fits.getheader(fp).get("VY_FWHM"))
+                v = fwhm_from_header_vy_fwhm(_fits.getheader(fp))
                 if v is not None:
                     fws.append(float(v))
         if not fws:
@@ -104,92 +101,19 @@ def _split_comp_reserve(comps: pd.DataFrame, ) -> tuple[pd.DataFrame, pd.DataFra
     return prim.reset_index(drop=True), resv.reset_index(drop=True)
 
 
-def run_target_and_comp_selection(
-    variable_targets_csv: Path,
-    masterstars_csv: Path,
-    per_frame_csv_dir: Path,
-    output_dir: Path,
+def _tcs_field_geometry(
     *,
-    fwhm_px: float,
-    plate_scale_arcsec_px: float | None = None,
-    n_comp_min: int,
-    n_comp_max: int,
-    max_comp_rms: float,
-    min_dist_arcsec: float = 60.0,
-    min_frames_frac: float,
-    flux_col: str = "dao_flux",
-    comp_max_delta_bprp: float,
-    cfg: AppConfig,
-    progress_cb: Any = None,
-    draft_id: int | None = None,
-    db: Any = None,
-) -> dict[str, Any]:
-    """Run target selection + comparison-star selection and save the outputs.
-
-    Outputs (saved to output_dir):
-      active_targets.csv              - VSX targets + ``zone_flag`` / ``skip_photometry`` (saturated)
-      comparison_stars_per_target.csv - comparison stars for each target
-      suspected_variables.csv         - candidate new variables (high RMS, not in VSX)
-
-    Returns:
-        dict with keys:
-          n_active_targets, n_comparison_pairs,
-          active_targets_csv, comparison_stars_csv, suspected_variables_csv,
-          targets_without_comps (list catalog_id)
-
-    Edge rule: a star is used when its sky annulus fits on the chip - inside the annulus-aware
-    safe box of photometry_plan.json (alignment intersection shrunk by r_out), else at least
-    annulus_outer_fwhm x MASTERSTAR FWHM from the frame edge.
-    """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # MASTERSTAR FWHM (VY_FWHM): used for the D3 astrometric gate. Neighbour geometry
-    # (isolation, separation) uses the group night median (NIGHT-FWHM-2026-10, below).
-    _ms_fits_fwhm = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
-    try:
-        if _ms_fits_fwhm.is_file():
-            from astropy.io import fits as _astrofits_fwhm  # noqa: PLC0415
-
-            with _astrofits_fwhm.open(_ms_fits_fwhm, memmap=False) as _hdul_fw:
-                _hdr_fw = _hdul_fw[0].header
-            for _k_fw in ("VY_FWHM",):
-                _v_fw = _hdr_fw.get(_k_fw)
-                if _v_fw is None:
-                    continue
-                _fv_fw = float(_v_fw)
-                if 0.5 < _fv_fw < 30.0:
-                    fwhm_px = _fv_fw
-                    break
-    except Exception as exc:  # noqa: BLE001
-        logging.error(
-            "[EXC-FWHM-P01] MASTERSTAR FWHM resolve failed - keeping fwhm_px=%.3f: %s",
-            float(fwhm_px),
-            exc,
-        )
-    logging.info(
-        "[TARGET-SELECT] MASTERSTAR fwhm_px=%.3f (D3 astrometric gate)",
-        float(fwhm_px),
-    )
-
-    def _p(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            # Some Windows consoles use legacy encodings (cp1252) and crash on diacritics.
-            # Use ASCII escapes so printing never raises again.
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
-
-    _cfg_base = cfg
-    # CODE-REVIEW step 7B: the edge margin is the sky-annulus radius (was a fixed 50 px key).
-    chip_interior_margin_px = int(math.ceil(float(_cfg_base.annulus_outer_fwhm) * float(fwhm_px)))
-    _ms_density = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
-    frame_w_px, frame_h_px, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
-        _ms_density, db=db, draft_id=draft_id
-    )
-    logging.info("[TARGET-SELECT] Frame dimensions %dx%d px from %s", int(frame_w_px), int(frame_h_px), _frame_hw_src)
+    _cfg_base,
+    _ms_density,
+    _p,
+    frame_h_px,
+    frame_w_px,
+    masterstars_csv,
+    output_dir,
+    plate_scale_arcsec_px,
+    variable_targets_csv,
+):
+    """Field density (diagnostic), plate scale of the MASTERSTAR WCS and the MASTERSTAR WCS / variable-target inputs."""
     _n_field, _cw_fd, _ch_fd, _nsrc_fd, _vy_ndao_raw = _read_field_density_inputs(
         _ms_density,
         Path(masterstars_csv),
@@ -227,7 +151,6 @@ def run_target_and_comp_selection(
         },
     )
 
-    _wcs_scale_ok = True
     # PLATE-SCALE-2026-10: the plate scale of the solved MASTERSTAR (photometry_core); no config
     # value (a fixed 1.3"/px was silently wrong on every rig)
     if not (plate_scale_arcsec_px is not None and math.isfinite(float(plate_scale_arcsec_px))
@@ -235,6 +158,10 @@ def run_target_and_comp_selection(
         raise ValueError("Target and comparison-star selection: plate scale not derivable from the MASTERSTAR WCS")
     _ps_p01 = float(plate_scale_arcsec_px)
     _expected_scale = _ps_p01
+    # G07-17: the former "WCS sanity" check compared the MASTERSTAR WCS with a scale derived from the
+    # same WCS (never failed), so the pixel-distance mode was unreachable; comp distances are RA/Dec.
+    # The WCS determinant scale is kept for the minimum target-comp separation below.
+    _actual_scale: float | None = None
     if _ms_density.is_file():
         try:
             from astropy.wcs import WCS as _WCS_check  # noqa: PLC0415
@@ -243,25 +170,9 @@ def run_target_and_comp_selection(
                 _wcs_check = _WCS_check(_hdul_wcs[0].header)
             _psm_chk = np.asarray(_wcs_check.pixel_scale_matrix, dtype=np.float64)
             _actual_scale = float(np.sqrt(np.abs(np.linalg.det(_psm_chk))) * 3600.0)
-            _scale_ratio = abs(_actual_scale - _expected_scale) / max(_expected_scale, 1e-9)
-            if _scale_ratio > 0.20:
-                log_event(
-                    f"[WCS SANITY] Scale {_actual_scale:.3f}\"/px deviates "
-                    f"{_scale_ratio * 100.0:.1f}% from expected "
-                    f"{_expected_scale:.3f}\"/px - using pixel-distance fallback"
-                )
-                _wcs_scale_ok = False
         except Exception as _wcs_exc:  # noqa: BLE001
-            logging.error('[EXC-0210] WCS scale sanity exception assumes scale OK - comp matching uses ra/dec haversine when ...: %s', _wcs_exc)
-            logging.warning(
-                "[WCS SANITY] check failed (non-fatal): %s - skipping check, assuming WCS scale OK "
-                "(radec-haversine distance mode).",
-                _wcs_exc,
-            )
-    log_event(
-        f"[COMP SELECT] Distance mode: "
-        f"{'pixel-fallback' if not _wcs_scale_ok else 'radec-haversine'}"
-    )
+            logging.warning("[COMP SELECT] MASTERSTAR WCS scale not read (%s); using %.3f \"/px", _wcs_exc, _expected_scale)
+    log_event("[COMP SELECT] Distance mode: radec-haversine")
 
     # -- target selection --
     _p("Target selection: active targets from VSX...")
@@ -303,46 +214,27 @@ def run_target_and_comp_selection(
             chip_w=int(frame_w_px),
             chip_h=int(frame_h_px),
         )
+    return _actual_scale, _cfg_p01, _d_class, _density, _expected_scale, _n_field, _safe_bbox
 
-    active = select_active_targets(
-        variable_targets_csv,
-        masterstars_csv,
-        frame_w_px=frame_w_px,
-        frame_h_px=frame_h_px,
-        edge_margin_px=int(chip_interior_margin_px),
-        safe_bbox=_safe_bbox,
-        gaia_db_path=str(_cfg_p01.gaia_db_path or ""),
-        cfg=_cfg_p01,
-    )
-    active_csv = output_dir / "active_targets.csv"
-    from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
 
-    if "catalog_id" in active.columns:
-        active = active.copy()
-        active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
-    active.to_csv(active_csv, index=False)
-    logging.info(f"[TARGET-SELECT] Saved: {active_csv} ({len(active)} targets)")
-    _excluded = _photometry_comp.LAST_EXCLUDED_TARGETS
-    if _excluded is not None and not _excluded.empty:
-        excluded_csv = output_dir / "excluded_targets.csv"
-        _excluded.to_csv(excluded_csv, index=False)
-        logging.info(f"[TARGET-SELECT] Saved: {excluded_csv} ({len(_excluded)} excluded)")
-    _p(f"Target selection done: {len(active)} active targets")
-
-    if active.empty:
-        return {
-            "n_active_targets": 0,
-            "n_comparison_pairs": 0,
-            "active_targets_csv": str(active_csv),
-            "comparison_stars_csv": None,
-            "suspected_variables_csv": None,
-            "targets_without_comps": [],
-            "field_density_h_star_per_mpx": float(_density),
-            "field_density_class": str(_d_class),
-            "field_density_n_stars": int(_n_field),
-        }
-
-    # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
+def _tcs_selection_inputs(
+    *,
+    _cfg_base,
+    _p,
+    _safe_bbox,
+    active,
+    cfg,
+    chip_interior_margin_px,
+    flux_col,
+    frame_h_px,
+    frame_w_px,
+    fwhm_px,
+    masterstars_csv,
+    output_dir,
+    per_frame_csv_dir,
+    variable_targets_csv,
+):
+    """Inputs of comparison selection: frame size, comp-safe bbox, proc CSV list and the shared CSV cache."""
     ms_df = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # Normalize Gaia ID to string
     if "catalog_id" in ms_df.columns:
@@ -451,8 +343,35 @@ def run_target_and_comp_selection(
 
     _cfg_gp = _cfg_base
     _global_pool_df: pd.DataFrame | None = None
-    # CONSOLIDATE-01D: global pool is always on (COMP-POOL-01); False branch deleted.
-    # COMP-POOL-ONLY-2026-10: no try - a failed pool build stops the run (no ungated fallback).
+    return _cfg_gaia_targets, _cfg_gp, _comp_bbox, _fh_chip, _fw_chip, _gaia_db_targets, _proc_store, _sat_may_exclude, _vt_cid_exclude, all_comp_rows, all_reserve_rows, csv_paths, fwhm_night_px, ms_df, shared_csv_cache, targets_without_comps
+
+
+def _tcs_global_pool(
+    *,
+    _actual_scale,
+    _cfg_base,
+    _cfg_gp,
+    _comp_bbox,
+    _expected_scale,
+    _fh_chip,
+    _fw_chip,
+    _gaia_db_targets,
+    _sat_may_exclude,
+    _vt_cid_exclude,
+    active,
+    chip_interior_margin_px,
+    csv_paths,
+    flux_col,
+    fwhm_night_px,
+    fwhm_px,
+    min_dist_arcsec,
+    min_frames_frac,
+    ms_df,
+    output_dir,
+    shared_csv_cache,
+    variable_targets_csv,
+):
+    """Global comparison pool (rule gates once), Gaia bp_rp prefetch and the physical minimum target-comp separation."""
     _global_pool_df = build_global_comp_pool(
         masterstars_df=ms_df,
         per_frame_csv_paths=csv_paths,
@@ -462,7 +381,6 @@ def run_target_and_comp_selection(
         chip_fw=int(_fw_chip),
         chip_fh=int(_fh_chip),
         chip_interior_margin_px=int(chip_interior_margin_px),
-        max_comp_rms=float(max_comp_rms),
         cfg=_cfg_gp,
         flux_col=flux_col,
         min_frames_frac=float(min_frames_frac),
@@ -494,7 +412,7 @@ def run_target_and_comp_selection(
             int(len(active)),
         )
 
-    # PERF-3: prefetch Gaia bp_rp + teff for masterstars comp pool (before per-target loop).
+    # PERF-3: prefetch Gaia bp_rp for the masterstars comp pool (before per-target loop).
     _comp_gaia_prefetch: dict[str, dict[str, Any]] = {}
     _comp_source_ids_n = 0
     try:
@@ -542,7 +460,7 @@ def run_target_and_comp_selection(
     try:
         from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
-        _scale_md = locals().get("_actual_scale") if bool(locals().get("_wcs_scale_ok", False)) else None
+        _scale_md = _actual_scale
         if not (isinstance(_scale_md, float) and math.isfinite(_scale_md) and _scale_md > 0):
             _scale_md = float(_expected_scale)
         _k_md = float(getattr(_cfg_base, "annulus_outer_fwhm", 5.2)) + float(max(DEFAULT_APERTURE_F_GRID))
@@ -559,6 +477,41 @@ def run_target_and_comp_selection(
     except Exception as _md_exc:  # noqa: BLE001
         logging.warning("[COMP-RULES] physical min separation not resolved (%s); using %.1f arcsec",
                         _md_exc, float(min_dist_arcsec))
+    return _comp_gaia_prefetch, _gaia_batch, _global_pool_df, _i_comp_selection, _n_comp_selection, _n_oos_skipped, _t_comp_selection, min_dist_arcsec
+
+
+def _tcs_select_comps(
+    *,
+    _cfg_gaia_targets,
+    _cfg_gp,
+    _comp_gaia_prefetch,
+    _fh_chip,
+    _fw_chip,
+    _gaia_batch,
+    _gaia_db_targets,
+    _global_pool_df,
+    _i_comp_selection,
+    _n_comp_selection,
+    _n_oos_skipped,
+    _p,
+    _vt_cid_exclude,
+    active,
+    active_csv,
+    all_comp_rows,
+    all_reserve_rows,
+    chip_interior_margin_px,
+    fwhm_night_px,
+    max_comp_rms,
+    min_dist_arcsec,
+    ms_df,
+    n_comp_max,
+    n_comp_min,
+    progress_cb,
+    targets_without_comps,
+):
+    """Comparison stars per active target (and reserves), active_targets.csv with filled colours, the comp table."""
+    from photometry_defs import FINAL_SKIP_REASONS  # noqa: PLC0415
+
     for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         _skip_reason = str(target_row.get("skip_reason") or "").strip()
         if _skip_reason in FINAL_SKIP_REASONS:
@@ -578,11 +531,8 @@ def run_target_and_comp_selection(
         comps = select_comparison_stars_per_target(
             tr_enriched,
             ms_df,
-            csv_paths,
-            csv_cache=shared_csv_cache,
             global_comp_pool_df=_global_pool_df,
             fwhm_px=fwhm_night_px,
-            fwhm_d3_px=float(fwhm_px),
             n_comp_min=n_comp_min,
             # COMP-SMART-2026-10: rank N_RESERVE more candidates as the reserve that
             # aperture photometry uses to replace suspect comps (split below).
@@ -590,8 +540,6 @@ def run_target_and_comp_selection(
             n_reserve=_N_RESERVE,
             max_comp_rms=max_comp_rms,
             min_dist_arcsec=min_dist_arcsec,
-            min_frames_frac=min_frames_frac,
-            flux_col=flux_col,
             chip_fw=_fw_chip,
             chip_fh=_fh_chip,
             chip_interior_margin_px=int(chip_interior_margin_px),
@@ -599,9 +547,6 @@ def run_target_and_comp_selection(
             gaia_prefetch=_comp_gaia_prefetch,
             variable_target_catalog_ids=_vt_cid_exclude,
             cfg=_cfg_gp,
-            plate_scale_arcsec=_ps_p01,
-            use_pixel_dist=not _wcs_scale_ok,
-            sat_may_exclude=_sat_may_exclude,
         )
         if comps is not None and not comps.empty:
             comps, _resv = _split_comp_reserve(comps)
@@ -636,24 +581,6 @@ def run_target_and_comp_selection(
                 f"comparison_stars_per_target: removed {_before - _after} "
                 f"duplicate (target_catalog_id, catalog_id) rows"
             )
-    if _comp_gaia_prefetch and not comp_df.empty and "catalog_id" in comp_df.columns:
-        try:
-            _sel_cids = {
-                normalize_gaia_source_id(x)
-                for x in comp_df["catalog_id"].tolist()
-                if normalize_gaia_source_id(x)
-            }
-            _n_pref_hit = sum(1 for c in _sel_cids if c in _comp_gaia_prefetch)
-            logging.info(
-                "[PERF-3] Selected comp stars covered by prefetch: %d/%d "
-                "(pool prefetch %d ids, %d DB hits)",
-                _n_pref_hit,
-                len(_sel_cids),
-                _comp_source_ids_n,
-                len(_comp_gaia_prefetch),
-            )
-        except Exception:  # noqa: BLE001
-            pass
     # Safety: even when no comps found (or all targets failed), keep a stable schema so CSV isn't empty.
     if comp_df is None or len(list(comp_df.columns)) == 0:
         comp_df = pd.DataFrame(
@@ -685,155 +612,20 @@ def run_target_and_comp_selection(
                 "n_tier4",
             ]
         )
+    return comp_df,
 
-    # Fallback: fill bp_rp for COMP stars without a Gaia colour from the local Gaia DB (sky box around RA/Dec).
-    try:
-        if (
-            not comp_df.empty
-            and "bp_rp" in comp_df.columns
-            and "ra_deg" in comp_df.columns
-            and "dec_deg" in comp_df.columns
-        ):
-            gaia_db_path = str(_cfg_base.gaia_db_path or "").strip() or None
 
-            bp_nan = pd.to_numeric(comp_df["bp_rp"], errors="coerce").isna()
-            ra_ok = pd.to_numeric(comp_df["ra_deg"], errors="coerce").apply(lambda v: math.isfinite(float(v)))
-            dec_ok = pd.to_numeric(comp_df["dec_deg"], errors="coerce").apply(lambda v: math.isfinite(float(v)))
-            needs = comp_df[bp_nan & ra_ok & dec_ok].copy()
-
-            n_nan = int(len(needs))
-            n_found = 0
-            if n_nan > 0 and gaia_db_path:
-                if "gaia_bp_rp_source" not in comp_df.columns:
-                    comp_df["gaia_bp_rp_source"] = ""
-
-                # Magnitude column for matching Gaia photometry (prefer "mag", fallback to "phot_g_mean_mag").
-                mag_col = "mag" if "mag" in comp_df.columns else ("phot_g_mean_mag" if "phot_g_mean_mag" in comp_df.columns else None)
-
-                radius_deg = 0.001  # ~3.6 arcsec
-                for i, row in needs.iterrows():
-                    ra0 = float(pd.to_numeric(row.get("ra_deg"), errors="coerce"))
-                    dec0 = float(pd.to_numeric(row.get("dec_deg"), errors="coerce"))
-                    if not (math.isfinite(ra0) and math.isfinite(dec0)):
-                        continue
-
-                    mag_comp = float("nan")
-                    if mag_col is not None:
-                        try:
-                            mag_comp = float(pd.to_numeric(row.get(mag_col), errors="coerce"))
-                        except Exception:  # noqa: BLE001
-                            # EXC-0216: T4 -- Bad ra/dec on one Gaia fallback row skipped in comp bp_rp nearest-neighbor search (EXCEPT-BULK-2 2026-07-08)
-                            mag_comp = float("nan")
-                    if not math.isfinite(mag_comp):
-                        continue
-
-                    dec_min = max(-90.0, dec0 - radius_deg)
-                    dec_max = min(90.0, dec0 + radius_deg)
-
-                    # Handle RA wrap at 0/360 for tiny windows.
-                    ra_min = ra0 - radius_deg
-                    ra_max = ra0 + radius_deg
-                    gaia_rows: list[dict[str, Any]] = []
-                    if ra_min < 0.0:
-                        gaia_rows.extend(
-                            query_local_gaia(
-                                ra_min=360.0 + ra_min,
-                                ra_max=360.0,
-                                dec_min=dec_min,
-                                dec_max=dec_max,
-                                db_path=gaia_db_path,
-                                mag_limit=max(20.0, mag_comp + 2.0),
-                                max_rows=200,
-                            )
-                        )
-                        gaia_rows.extend(
-                            query_local_gaia(
-                                ra_min=0.0,
-                                ra_max=ra_max,
-                                dec_min=dec_min,
-                                dec_max=dec_max,
-                                db_path=gaia_db_path,
-                                mag_limit=max(20.0, mag_comp + 2.0),
-                                max_rows=200,
-                            )
-                        )
-                    elif ra_max > 360.0:
-                        gaia_rows.extend(
-                            query_local_gaia(
-                                ra_min=ra_min,
-                                ra_max=360.0,
-                                dec_min=dec_min,
-                                dec_max=dec_max,
-                                db_path=gaia_db_path,
-                                mag_limit=max(20.0, mag_comp + 2.0),
-                                max_rows=200,
-                            )
-                        )
-                        gaia_rows.extend(
-                            query_local_gaia(
-                                ra_min=0.0,
-                                ra_max=ra_max - 360.0,
-                                dec_min=dec_min,
-                                dec_max=dec_max,
-                                db_path=gaia_db_path,
-                                mag_limit=max(20.0, mag_comp + 2.0),
-                                max_rows=200,
-                            )
-                        )
-                    else:
-                        gaia_rows = query_local_gaia(
-                            ra_min=ra_min,
-                            ra_max=ra_max,
-                            dec_min=dec_min,
-                            dec_max=dec_max,
-                            db_path=gaia_db_path,
-                            mag_limit=max(20.0, mag_comp + 2.0),
-                            max_rows=200,
-                        )
-
-                    if not gaia_rows:
-                        continue
-
-                    best = None
-                    best_d = float("inf")
-                    for gr in gaia_rows:
-                        try:
-                            g_mag = float(gr.get("g_mag"))
-                        except Exception:  # noqa: BLE001
-                            g_mag = float("nan")
-                        if not (math.isfinite(g_mag) and abs(g_mag - mag_comp) < 1.0):
-                            continue
-                        try:
-                            ra_g = float(gr.get("ra"))
-                            dec_g = float(gr.get("dec"))
-                        except Exception:  # noqa: BLE001
-                            continue
-                        if not (math.isfinite(ra_g) and math.isfinite(dec_g)):
-                            continue
-                        d = _angular_distance_deg(ra0, dec0, ra_g, dec_g)
-                        if math.isfinite(d) and d < best_d:
-                            best_d = d
-                            best = gr
-
-                    if best is None:
-                        continue
-                    bprp = best.get("bp_rp")
-                    try:
-                        bprp_f = float(bprp)
-                    except Exception:  # noqa: BLE001
-                        bprp_f = float("nan")
-                    if not math.isfinite(bprp_f):
-                        continue
-
-                    comp_df.loc[i, "bp_rp"] = bprp_f
-                    comp_df.loc[i, "gaia_bp_rp_source"] = "gaia_db_fallback"
-                    n_found += 1
-
-            if n_nan > 0:
-                log_event(f"COMP bp_rp fallback: {n_found}/{n_nan} stars filled from Gaia DB")
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0217] Whole comp bp_rp Gaia-DB fallback block fails - comps export with NaN bp_rp and wrong t...: %s', exc)
-        pass
+def _tcs_write_comp_table(
+    *,
+    _t_comp_selection,
+    all_comp_rows,
+    all_reserve_rows,
+    comp_df,
+    output_dir,
+):
+    """Write comparison_stars_per_target.csv (used / reserve roles, check star) and its pipeline_meta facts."""
+    # G07-03: a comp without a Gaia colour keeps NaN bp_rp (unknown colour); the former post-selection
+    # fallback copied the colour of the nearest Gaia row within 3.6" - another star's colour.
 
     comp_csv = output_dir / "comparison_stars_per_target.csv"
     # OUTPUT-REVIEW-2026-10 step 5: one table - the admitted comps and the COMP-SMART reserve
@@ -843,7 +635,8 @@ def run_target_and_comp_selection(
     _res_all = pd.concat(all_reserve_rows, ignore_index=True) if all_reserve_rows else None
     write_comp_table(comp_selection_table(comp_df, _res_all), comp_csv)
     logging.info("[COMP-SMART] reserve: %d rows (in %s)", 0 if _res_all is None else len(_res_all), comp_csv.name)
-    for _old in (LEGACY_COMP_SELECTION_CSV, LEGACY_RESERVE_CSV):  # files of the earlier 3-table format
+    # files of the earlier 3-table format and the removed suspected_variables.csv (no reader, 2026-10-29)
+    for _old in (LEGACY_COMP_SELECTION_CSV, LEGACY_RESERVE_CSV, "suspected_variables.csv"):
         try:
             (output_dir / _old).unlink(missing_ok=True)
         except OSError as _ul_exc:
@@ -853,38 +646,217 @@ def run_target_and_comp_selection(
         f"({len(comp_df)} rows, {len(all_comp_rows)} targets with comparison stars)"
     )
     logging.info(f"[COMP-SELECT] Time (comp selection): {time.time() - _t_comp_selection:.1f}s")
-    _ps_p1 = _ps_p01
-    _gs11_p1 = build_gs11_summary(
-        [],
-        _cfg_base,
-        plate_scale_arcsec=_ps_p1,
+
+    return comp_csv
+
+
+def run_target_and_comp_selection(
+    variable_targets_csv: Path,
+    masterstars_csv: Path,
+    per_frame_csv_dir: Path,
+    output_dir: Path,
+    *,
+    fwhm_px: float,
+    plate_scale_arcsec_px: float | None = None,
+    n_comp_min: int,
+    n_comp_max: int,
+    max_comp_rms: float,
+    min_dist_arcsec: float = 60.0,
+    min_frames_frac: float,
+    flux_col: str = "dao_flux",
+    cfg: AppConfig,
+    progress_cb: Any = None,
+    draft_id: int | None = None,
+    db: Any = None,
+) -> dict[str, Any]:
+    """Run target selection + comparison-star selection and save the outputs.
+
+    Outputs (saved to output_dir):
+      active_targets.csv              - VSX targets + ``zone_flag`` / ``skip_photometry`` (saturated)
+      comparison_stars_per_target.csv - comparison stars for each target
+
+    Returns:
+        dict with keys:
+          n_active_targets, n_comparison_pairs,
+          active_targets_csv, comparison_stars_csv,
+          targets_without_comps (list catalog_id)
+
+    Edge rule: a star is used when its sky annulus fits on the chip - inside the annulus-aware
+    safe box of photometry_plan.json (alignment intersection shrunk by r_out), else at least
+    annulus_outer_fwhm x MASTERSTAR FWHM from the frame edge.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # MASTERSTAR FWHM (VY_FWHM): used for the D3 astrometric gate. Neighbour geometry
+    # (isolation, separation) uses the group night median (NIGHT-FWHM-2026-10, below).
+    _ms_fits_fwhm = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
+    try:
+        if _ms_fits_fwhm.is_file():
+            from astropy.io import fits as _astrofits_fwhm  # noqa: PLC0415
+
+            with _astrofits_fwhm.open(_ms_fits_fwhm, memmap=False) as _hdul_fw:
+                _hdr_fw = _hdul_fw[0].header
+            _fv_fw = fwhm_from_header_vy_fwhm(_hdr_fw)  # G03-29: the one reader
+            if _fv_fw is not None:
+                fwhm_px = _fv_fw
+    except Exception as exc:  # noqa: BLE001
+        logging.error(
+            "[EXC-FWHM-P01] MASTERSTAR FWHM resolve failed - keeping fwhm_px=%.3f: %s",
+            float(fwhm_px),
+            exc,
+        )
+    logging.info(
+        "[TARGET-SELECT] MASTERSTAR fwhm_px=%.3f (D3 astrometric gate)",
+        float(fwhm_px),
     )
-    merge_photometry_pipeline_meta(output_dir, {"gs11_summary": _gs11_p1})
 
-    # -- Suspected variables --
-    # Stars with high RMS (>3 sigma above the median) that are neither VSX nor active targets
-    _p("Suspected variables (new candidates)...")
-    suspected_csv = output_dir / "suspected_variables.csv"
-    _active_ids: set[str] = set()
-    for _ax in active["catalog_id"].tolist():
-        _nx = _normalize_id_value(_ax)
-        if _nx:
-            _active_ids.add(_nx)
+    def _p(msg: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(str(msg))
+        except UnicodeEncodeError:
+            # Some Windows consoles use legacy encodings (cp1252) and crash on diacritics.
+            # Use ASCII escapes so printing never raises again.
+            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
 
-    _m_sus = float(chip_interior_margin_px)
-    _box_sus = _comp_bbox if _comp_bbox is not None else (
-        _m_sus, _m_sus, float(_fw_chip) - _m_sus, float(_fh_chip) - _m_sus
+    _cfg_base = cfg
+    # CODE-REVIEW step 7B: the edge margin is the sky-annulus radius (was a fixed 50 px key).
+    chip_interior_margin_px = int(math.ceil(float(_cfg_base.annulus_outer_fwhm) * float(fwhm_px)))
+    _ms_density = Path(variable_targets_csv).resolve().parent / "MASTERSTAR.fits"
+    frame_w_px, frame_h_px, _frame_hw_src = _resolve_frame_hw_px_from_masterstar(
+        _ms_density, db=db, draft_id=draft_id
+    )
+    logging.info("[TARGET-SELECT] Frame dimensions %dx%d px from %s", int(frame_w_px), int(frame_h_px), _frame_hw_src)
+    _actual_scale, _cfg_p01, _d_class, _density, _expected_scale, _n_field, _safe_bbox = _tcs_field_geometry(
+        _cfg_base=_cfg_base,
+        _ms_density=_ms_density,
+        _p=_p,
+        frame_h_px=frame_h_px,
+        frame_w_px=frame_w_px,
+        masterstars_csv=masterstars_csv,
+        output_dir=output_dir,
+        plate_scale_arcsec_px=plate_scale_arcsec_px,
+        variable_targets_csv=variable_targets_csv,
     )
 
-    _write_suspected_variables(
-        ms_df=ms_df,
+    active = select_active_targets(
+        variable_targets_csv,
+        masterstars_csv,
+        frame_w_px=frame_w_px,
+        frame_h_px=frame_h_px,
+        edge_margin_px=int(chip_interior_margin_px),
+        safe_bbox=_safe_bbox,
+        gaia_db_path=str(_cfg_p01.gaia_db_path or ""),
+        cfg=_cfg_p01,
+    )
+    active_csv = output_dir / "active_targets.csv"
+    from gaia_catalog_id import normalize_gaia_source_id_series  # noqa: PLC0415
+
+    if "catalog_id" in active.columns:
+        active = active.copy()
+        active["catalog_id"] = normalize_gaia_source_id_series(active["catalog_id"])
+    active.to_csv(active_csv, index=False)
+    logging.info(f"[TARGET-SELECT] Saved: {active_csv} ({len(active)} targets)")
+    _excluded = _photometry_comp.LAST_EXCLUDED_TARGETS
+    if _excluded is not None and not _excluded.empty:
+        excluded_csv = output_dir / "excluded_targets.csv"
+        _excluded.to_csv(excluded_csv, index=False)
+        logging.info(f"[TARGET-SELECT] Saved: {excluded_csv} ({len(_excluded)} excluded)")
+    _p(f"Target selection done: {len(active)} active targets")
+
+    if active.empty:
+        return {
+            "n_active_targets": 0,
+            "n_comparison_pairs": 0,
+            "active_targets_csv": str(active_csv),
+            "comparison_stars_csv": None,
+            "targets_without_comps": [],
+            "field_density_h_star_per_mpx": float(_density),
+            "field_density_class": str(_d_class),
+            "field_density_n_stars": int(_n_field),
+        }
+
+    # Read as strings to prevent Gaia ID precision loss (float64/scientific notation).
+    _cfg_gaia_targets, _cfg_gp, _comp_bbox, _fh_chip, _fw_chip, _gaia_db_targets, _proc_store, _sat_may_exclude, _vt_cid_exclude, all_comp_rows, all_reserve_rows, csv_paths, fwhm_night_px, ms_df, shared_csv_cache, targets_without_comps = _tcs_selection_inputs(
+        _cfg_base=_cfg_base,
+        _p=_p,
+        _safe_bbox=_safe_bbox,
+        active=active,
+        cfg=cfg,
+        chip_interior_margin_px=chip_interior_margin_px,
+        flux_col=flux_col,
+        frame_h_px=frame_h_px,
+        frame_w_px=frame_w_px,
+        fwhm_px=fwhm_px,
+        masterstars_csv=masterstars_csv,
+        output_dir=output_dir,
+        per_frame_csv_dir=per_frame_csv_dir,
+        variable_targets_csv=variable_targets_csv,
+    )
+    # CONSOLIDATE-01D: global pool is always on (COMP-POOL-01); False branch deleted.
+    # COMP-POOL-ONLY-2026-10: no try - a failed pool build stops the run (no ungated fallback).
+    _comp_gaia_prefetch, _gaia_batch, _global_pool_df, _i_comp_selection, _n_comp_selection, _n_oos_skipped, _t_comp_selection, min_dist_arcsec = _tcs_global_pool(
+        _actual_scale=_actual_scale,
+        _cfg_base=_cfg_base,
+        _cfg_gp=_cfg_gp,
+        _comp_bbox=_comp_bbox,
+        _expected_scale=_expected_scale,
+        _fh_chip=_fh_chip,
+        _fw_chip=_fw_chip,
+        _gaia_db_targets=_gaia_db_targets,
+        _sat_may_exclude=_sat_may_exclude,
+        _vt_cid_exclude=_vt_cid_exclude,
+        active=active,
+        chip_interior_margin_px=chip_interior_margin_px,
         csv_paths=csv_paths,
-        active_target_ids=_active_ids,
-        output_path=suspected_csv,
+        flux_col=flux_col,
+        fwhm_night_px=fwhm_night_px,
+        fwhm_px=fwhm_px,
+        min_dist_arcsec=min_dist_arcsec,
         min_frames_frac=min_frames_frac,
-        outlier_sigma=3.0,
-        interior_bbox=_box_sus,
-        csv_cache=shared_csv_cache,
+        ms_df=ms_df,
+        output_dir=output_dir,
+        shared_csv_cache=shared_csv_cache,
+        variable_targets_csv=variable_targets_csv,
+    )
+    comp_df, = _tcs_select_comps(
+        _cfg_gaia_targets=_cfg_gaia_targets,
+        _cfg_gp=_cfg_gp,
+        _comp_gaia_prefetch=_comp_gaia_prefetch,
+        _fh_chip=_fh_chip,
+        _fw_chip=_fw_chip,
+        _gaia_batch=_gaia_batch,
+        _gaia_db_targets=_gaia_db_targets,
+        _global_pool_df=_global_pool_df,
+        _i_comp_selection=_i_comp_selection,
+        _n_comp_selection=_n_comp_selection,
+        _n_oos_skipped=_n_oos_skipped,
+        _p=_p,
+        _vt_cid_exclude=_vt_cid_exclude,
+        active=active,
+        active_csv=active_csv,
+        all_comp_rows=all_comp_rows,
+        all_reserve_rows=all_reserve_rows,
+        chip_interior_margin_px=chip_interior_margin_px,
+        fwhm_night_px=fwhm_night_px,
+        max_comp_rms=max_comp_rms,
+        min_dist_arcsec=min_dist_arcsec,
+        ms_df=ms_df,
+        n_comp_max=n_comp_max,
+        n_comp_min=n_comp_min,
+        progress_cb=progress_cb,
+        targets_without_comps=targets_without_comps,
+    )
+
+    # Fallback: fill bp_rp for COMP stars without a Gaia colour from the local Gaia DB (sky box around RA/Dec).
+    comp_csv = _tcs_write_comp_table(
+        _t_comp_selection=_t_comp_selection,
+        all_comp_rows=all_comp_rows,
+        all_reserve_rows=all_reserve_rows,
+        comp_df=comp_df,
+        output_dir=output_dir,
     )
 
     _p(f"Target and comparison-star selection done: {int(len(active))} targets, {int(len(comp_df))} target-comparison pairs")
@@ -893,7 +865,6 @@ def run_target_and_comp_selection(
         "n_comparison_pairs": int(len(comp_df)),
         "active_targets_csv": str(active_csv),
         "comparison_stars_csv": str(comp_csv),
-        "suspected_variables_csv": str(suspected_csv),
         "targets_without_comps": targets_without_comps,
         "field_density_h_star_per_mpx": float(_density),
         "field_density_class": str(_d_class),

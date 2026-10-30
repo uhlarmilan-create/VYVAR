@@ -85,25 +85,7 @@ class CrossmatchResult:
     matches: dict[str, list[CatalogMatch]]
     errors: dict[str, str]
 
-    def has_any_match(self) -> bool:
-        return any(bool(v) for v in self.matches.values())
-
-    def best_period(self) -> float | None:
-        order = ("VSX", "ASAS-SN", "ZTF", "Gaia varisum", "ATLAS", "CSS", "KELT", "VSBS", "TESS-EB", "SIMBAD")
-        for cat in order:
-            for m in self.matches.get(cat, []):
-                if m.period is not None and math.isfinite(m.period) and m.period > 0:
-                    return float(m.period)
-        for cat, lst in self.matches.items():
-            if cat in order:
-                continue
-            for m in lst:
-                if m.period is not None and math.isfinite(m.period) and m.period > 0:
-                    return float(m.period)
-        return None
-
     def catalog_summary_bullets(self) -> list[str]:
-        lines: list[str] = []
         preferred = [
             "SIMBAD",
             "VSX",
@@ -116,22 +98,8 @@ class CrossmatchResult:
             "VSBS",
             "TESS-EB",
         ]
-        seen: set[str] = set()
-        for cat in preferred:
-            seen.add(cat)
-            lst = self.matches.get(cat, [])
-            err = self.errors.get(cat)
-            if err:
-                lines.append(f"{cat}: error ({err})")
-            elif not lst:
-                lines.append(f"{cat}: no match")
-            else:
-                head = lst[0]
-                tail = f" (+{len(lst) - 1} more)" if len(lst) > 1 else ""
-                lines.append(f"{cat}: {head.name or '-'} - {head.summary()}{tail}")
-        for cat in sorted(self.matches.keys()):
-            if cat in seen:
-                continue
+        lines: list[str] = []
+        for cat in preferred + [c for c in sorted(self.matches.keys()) if c not in preferred]:
             lst = self.matches.get(cat, [])
             err = self.errors.get(cat)
             if err:
@@ -155,8 +123,9 @@ _GAIA_VARISUM_FLAGS: dict[str, str] = {
     "VRM": "Rotation modulation",
     "VMSO": "Main-sequence oscillator",
     "VAGN": "AGN / extragalactic candidate",
-    "VCC": "Close companion / contamination",
-    "VPN": "Stochastic / instrumental variability",
+    # G10-12: the Gaia DR3 vari_summary classes (I/358 ReadMe): planetary transit, compact companion
+    "VCC": "Compact companion",
+    "VPN": "Planetary transit",
 }
 
 
@@ -252,17 +221,14 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
     if not p.is_file():
         return []
     try:
-        from catalog_db import query_local_vsx  # noqa: PLC0415
+        from catalog_db import cone_sky_box, query_local_vsx  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for VSX local import: %s", exc)
         return []
 
-    r_deg = max(float(radius_arcsec) / 3600.0 * 1.5, 0.002)
-    ra0 = float(coord.ra.deg)
-    de0 = float(coord.dec.deg)
-    cosd = max(0.2, abs(math.cos(math.radians(de0))))
-    ra_min, ra_max = ra0 - r_deg / cosd, ra0 + r_deg / cosd
-    dec_min, dec_max = de0 - r_deg, de0 + r_deg
+    # RA-BOX-2026-10 (G05-50, D36): the box of the cone itself (exact cos dec, RA wrap, poles);
+    # no row cap - the separation cut below decides.
+    ra_min, ra_max, dec_min, dec_max = cone_sky_box(coord, float(radius_arcsec) / 3600.0)
 
     try:
         rows = query_local_vsx(
@@ -271,7 +237,6 @@ def _query_vsx_local_point(db_path: str | Path, coord: SkyCoord, radius_arcsec: 
             ra_max=float(ra_max),
             dec_min=float(dec_min),
             dec_max=float(dec_max),
-            max_rows=300,
         )
     except Exception as exc:  # noqa: BLE001
         LOGGER.debug("[CROSSMATCH] Query failed for VSX local: %s", exc)
@@ -415,7 +380,8 @@ def _query_ztf(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
 
 
 def _query_gaia_varisum(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
-    tl = _vizier_table(coord, radius_arcsec, "I/358/varisum", None)
+    # all columns: the VizieR default set does not hold every class flag (G10-12)
+    tl = _vizier_table(coord, radius_arcsec, "I/358/varisum", ["**"])
     if not tl or len(tl) == 0:
         return []
     t = tl[0]
@@ -469,33 +435,35 @@ def _query_atlas(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
     return out
 
 
+#: Drake et al. 2014, ApJS 213, 9, table3 note (2): numerical class -> variable type
+_CSS_CLASS: dict[int, str] = {
+    1: "EW", 2: "EA", 3: "EB", 4: "RRAB", 5: "RRC", 6: "RRD", 7: "RRAB (Blazhko)", 8: "RS", 9: "ACEP",
+    10: "CW", 11: "HADS", 12: "DSCT", 13: "LPV", 14: "ELL", 15: "Hump", 16: "PCEB", 17: "EA (P unknown)",
+}
+
+
 def _query_css(coord: SkyCoord, radius_arcsec: float) -> list[CatalogMatch]:
-    # J/AJ/147/119 is Catalina Serpens periodic sample; schema uses KIC/KOI, not "CSS" id.
-    tl = _vizier_table(
-        coord,
-        radius_arcsec,
-        "J/AJ/147/119/table1",
-        None,
-    )
+    """Catalina Surveys periodic variables (Drake et al. 2014, ApJS 213, 9; VizieR J/ApJS/213/9 table3,
+    47 055 stars, Dec -75..+65). G10-11: the former table J/AJ/147/119 was Coughlin et al. 2014 (Kepler
+    field eclipsing binaries), not Catalina."""
+    tl = _vizier_table(coord, radius_arcsec, "J/ApJS/213/9/table3", None)
     if not tl or len(tl) == 0:
         return []
     t = tl[0]
     out: list[CatalogMatch] = []
     for row in t:
-        kid = _row_get(row, "KIC", "KOI")
-        name = str(int(kid)) if str(kid).replace(".", "").isdigit() else str(kid or "").strip()
         dra = _row_get(row, "_RA", "RAJ2000")
         dde = _row_get(row, "_DE", "DEJ2000")
         dr_css = _sep_arcsec_skycoord(coord, dra, dde) if (_safe_float_blank_tokens(dra) is not None and _safe_float_blank_tokens(dde) is not None) else None
+        cl = _safe_float_blank_tokens(_row_get(row, "Cl"))
         out.append(
             CatalogMatch(
                 catalog="CSS",
-                name=name or "-",
-                var_type=str(_row_get(row, "Type") or "").strip(),
+                name="CSS_" + str(_row_get(row, "CRTS") or "").strip() if _row_get(row, "CRTS") else "-",
+                var_type=_CSS_CLASS.get(int(cl), "") if cl is not None else "",
                 period=_safe_float_blank_tokens(_row_get(row, "Per")),
-                amplitude=_safe_float_blank_tokens(_row_get(row, "Depth")),
-                mag=_safe_float_blank_tokens(_row_get(row, "Kpmag")),
-                epoch=_safe_float_blank_tokens(_row_get(row, "BJD")),
+                amplitude=_safe_float_blank_tokens(_row_get(row, "Vamp")),
+                mag=_safe_float_blank_tokens(_row_get(row, "Vmag", "<Vmag>", "Mag")),
                 delta_r=dr_css,
             )
         )
@@ -676,36 +644,46 @@ def check_candidate_in_catalogs(
     )
 
 
-if __name__ == "__main__":
-    # RR Lyr region (user test coordinates)
-    ra, dec = 291.3543, 42.7847
-    r = check_candidate_in_catalogs(ra, dec, mag=None, radius_arcsec=15.0)
-    print("has_any_match:", r.has_any_match())
-    print("best_period:", r.best_period())
-    for cat, lst in r.matches.items():
-        if lst:
-            print(f"\n== {cat} ({len(lst)}) ==")
-            for m in lst:
-                print(" ", m.name, "|", m.summary(), "| mag", m.mag, "| dr", m.delta_r)
-    for cat, msg in r.errors.items():
-        print(f"\n!! {cat}: {msg}")
-
-
 # --- moved from variability_field (LAYER-2026-10) ---
 
 
-def _catalog_check(row: pd.Series, cfg: Any) -> str:
-    """Known-variable check of one candidate in online catalogues (astroquery)."""
-    try:
+#: SIMBAD "All variable stars" (AVS) object types (SIMBAD object-type list, CDS 2022 reorganisation) and their
+#: candidate forms (code with "?" for "*", e.g. EB? ; V*?). G10-13: only these make a SIMBAD hit a known variable.
+SIMBAD_VARIABLE_OTYPES = frozenset(
+    {"V*", "bC*", "Or*", "SX*", "gD*", "dS*", "RR*", "WV*", "Ce*", "cC*", "LP*", "Mi*", "RV*", "a2*", "RC*", "El*",
+     "EB*", "BY*", "RS*", "CV*", "No*", "Ir*", "Er*", "Ro*", "Pu*"}
+)
 
+
+def is_simbad_variable_otype(otype: str) -> bool:
+    ot = str(otype or "").strip()
+    return ot in SIMBAD_VARIABLE_OTYPES or ot == "V*?" or (
+        ot.endswith("?") and f"{ot[:-1]}*" in SIMBAD_VARIABLE_OTYPES)
+
+
+def _catalog_check(row: pd.Series, cfg: Any) -> str:
+    """Known-variable check of one candidate in online catalogues (astroquery).
+
+    G10-13: from the structured matches / errors (not by filtering the text bullets); a SIMBAD object counts
+    only with a variable-star object type (any SIMBAD id is not a known variable)."""
+    try:
         r = check_candidate_in_catalogs(
             float(row["ra_deg"]), float(row["dec_deg"]), mag=float(row["mag"]), radius_arcsec=15.0,
             objects_db_path=str(cfg.objects_db_path or "") or None,
         )
-        hits = [b for b in r.catalog_summary_bullets() if "no match" not in b and "error" not in b]
-        errs = [b for b in r.catalog_summary_bullets() if "error" in b]
-        if hits:
-            return " | ".join(hits)
-        return "none of the catalogues lists it" + (f" ({len(errs)} not reachable)" if errs else "")
     except Exception as exc:  # noqa: BLE001
         return f"catalogue check failed: {exc}"
+    hits: list[str] = []
+    for cat, lst in r.matches.items():
+        if cat in r.errors:
+            continue
+        if cat == "SIMBAD":
+            lst = [m for m in lst if is_simbad_variable_otype(m.var_type)]
+        if lst:
+            head = lst[0]
+            tail = f" (+{len(lst) - 1} more)" if len(lst) > 1 else ""
+            hits.append(f"{cat}: {head.name or '-'} - {head.summary()}{tail}")
+    if hits:
+        return " | ".join(hits)
+    n_err = len(r.errors)
+    return "none of the catalogues lists it" + (f" ({n_err} not reachable)" if n_err else "")

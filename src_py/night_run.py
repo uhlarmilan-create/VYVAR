@@ -127,7 +127,7 @@ def resolve_epsf_run(epsf: bool | None, cfg: Any | None = None) -> bool:
     """Whether to run the ePSF night-run stage.
 
     Explicit True/False wins. None (or omitted) reads ``cfg.epsf_auto_run``
-    (default False). ``run_epsf_stage(params=None)`` is the button path and
+    (default False). The UI ePSF button calls ``run_epsf_stage`` directly and
     always runs -- it does not call this helper.
     """
     if epsf is True:
@@ -269,46 +269,6 @@ def parse_night_run_cli(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def apply_smart_plan_flat_fallbacks(
-    plan: Any,
-    choices: dict[str, str] | None = None,
-) -> None:
-    """Apply per-observation flat fallbacks (Streamlit-free).
-
-    ``choices`` maps group_key -> source obs_key. Missing / ``__skip__``
-    leaves that group unchanged and only refreshes missing-flat bookkeeping.
-    """
-    ogs = getattr(plan, "observation_groups", None) or {}
-    if not ogs:
-        return
-    mf = dict(getattr(plan, "masterflat_by_obs_key", None) or {})
-    choices = dict(choices or {})
-    for p in getattr(plan, "flat_fallback_prompts", None) or []:
-        gk = str(p.get("group_key") or "")
-        if not gk:
-            continue
-        choice = choices.get(gk, "__skip__")
-        if choice and choice != "__skip__":
-            src = mf.get(str(choice))
-            if src and Path(str(src)).is_file():
-                mf[gk] = src
-    missing = sorted(
-        gk
-        for gk in ogs
-        if not (mf.get(gk) and str(mf[gk]).strip() and Path(str(mf[gk])).is_file())
-    )
-    plan.masterflat_by_obs_key = mf
-    plan.missing_obs_keys = missing
-    plan.missing_flat_filters = sorted({ogs[gk]["filter"] for gk in missing})
-    mfb: dict[str, Any] = {}
-    for gk, g in ogs.items():
-        fln = g["filter"]
-        pth = mf.get(gk)
-        if fln not in mfb or pth is not None and mfb[fln] is None:
-            mfb[fln] = pth
-    plan.masterflat_by_filter = mfb
-
-
 def load_draft_config_snapshot(draft_dir: Path) -> dict[str, Any] | None:
     """Return ``provenance.config_snapshot`` from a draft ``pipeline_meta.json``."""
     root = Path(draft_dir)
@@ -404,7 +364,7 @@ def resolve_photometry_context_triple(
     """Aperture-photometry plate scale / site / calibration_mode (C3 fire-proof)."""
     from draft_provenance import resolve_calibration_mode
     from param_resolver import resolve_site
-    from photometry_shared import _get_plate_scale_from_cfg
+    from optics import frame_plate_scale
 
     hdr = None
     ms = Path(masterstar_fits) if masterstar_fits is not None else None
@@ -416,13 +376,7 @@ def resolve_photometry_context_triple(
                 hdr = hdul[0].header.copy()
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("MASTERSTAR header for context triple skipped: %s", exc)
-    plate = _get_plate_scale_from_cfg(
-        cfg,
-        db=db,
-        draft_id=draft_id,
-        fits_path=ms,
-        ms_header=hdr,
-    )
+    plate = frame_plate_scale(ms, header=hdr, db=db, draft_id=draft_id)
     site = resolve_site(hdr, db=db, draft_id=draft_id, cfg=cfg)
     cal = resolve_calibration_mode(draft_id=draft_id, db=db)
     site_s = (
@@ -532,69 +486,29 @@ def _night_run_preprocess(
     _app_cfg = pipeline.config
     ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
     _dqf = pending.get("quality_filter_draft_id")
-    _fwhm_lim = float(pending.get("fwhm_limit_px") or 0.0)
-    source_dir = (
-        resolve_draft_lights_root(
-            ap_root,
-            draft_id=int(_dqf) if _dqf is not None else None,
-            db=pipeline.db,
-        )
-        if _dqf is not None
-        else ap_root / "calibrated" / "lights"
-    )
+    if _dqf is None:
+        raise RuntimeError("INV-FRAME-QC-01: quality_filter_draft_id is required")
+    source_dir = resolve_draft_lights_root(ap_root, draft_id=int(_dqf), db=pipeline.db)
+    if not source_dir.exists():
+        raise FileNotFoundError("Missing source lights directory for preprocess filter.")
 
-    _pp_kw = dict(
+    p1 = calibrated_paths_for_draft_apply_filters(ap_root, pipeline.db, int(_dqf), source_dir=source_dir)
+    if not p1:
+        raise FileNotFoundError("QC filter: no frames matching IS_REJECTED=0.")
+    _all_lights = _iter_light_fits(source_dir)
+    _n_all = max(len(_all_lights), 1)
+    qc_enrich_calibrated_lights_in_place(
+        calibrated_root=source_dir,
+        only_paths=None,
+        prefilter_rejected=build_prefilter_rejected_map(_all_lights, p1),
+        progress_cb=lambda i, _t, msg: progress_cb(i, _n_all, msg),
+        db=pipeline.db,
+        draft_id=int(_dqf),
         inject_pointing_ra_deg=pending.get("inject_pointing_ra_deg"),
         inject_pointing_dec_deg=pending.get("inject_pointing_dec_deg"),
         inject_pointing_only_if_missing=False,
         app_config=_app_cfg,
     )
-
-    if _dqf is not None:
-        p1, _unused = calibrated_paths_for_draft_apply_filters(
-            ap_root,
-            pipeline.db,
-            int(_dqf),
-            fwhm_max_px=_fwhm_lim,
-            source_dir=source_dir,
-        )
-        if not p1:
-            why = ["IS_REJECTED=0"]
-            if _fwhm_lim > 0:
-                why.append("FWHM <= limit or FWHM is NULL")
-            raise FileNotFoundError("QC filter: no frames matching " + ", ".join(why) + ".")
-        dfs_pp: list[pd.DataFrame] = []
-        _all_lights = _iter_light_fits(source_dir)
-        _prefilter_map = build_prefilter_rejected_map(_all_lights, p1)
-        tot_pp = len(_all_lights)
-        off_pp = 0
-
-        def _pcb_pp(off0: int):
-            def _inner(i: int, _t: int, msg: str) -> None:
-                progress_cb(off0 + i, max(tot_pp, 1), msg)
-
-            return _inner
-
-        if not source_dir.exists():
-            raise FileNotFoundError("Missing source lights directory for preprocess filter.")
-        dfs_pp.append(
-            qc_enrich_calibrated_lights_in_place(
-                calibrated_root=source_dir,
-                only_paths=None,
-                prefilter_rejected=_prefilter_map,
-                progress_cb=_pcb_pp(off_pp),
-                db=pipeline.db,
-                draft_id=int(_dqf),
-                **_pp_kw,
-            )
-        )
-    else:
-        raise RuntimeError(
-            "INV-FRAME-QC-01: quality_filter_draft_id is required; "
-            "the unfiltered qc_enrich else-branch is removed"
-        )
-
-    pipeline.quick_preprocess_last_import(archive_path=ap_root, run=False)
 
     _ph_done = pending.get("processing_hash")
     _dqf_done = pending.get("quality_filter_draft_id")
@@ -1091,13 +1005,12 @@ def run_night_photometry(
 
         do_epsf = resolve_epsf_run(epsf, phot_cfg)
         if do_epsf:
-            from epsf_stage import EpsfStagePaths, run_epsf_stage
+            from epsf_stage import EpsfStagePaths, configured_epsf_targets, run_epsf_stage
 
             _stage(f"ePSF photometry - {nm}")
             t0 = time.time()
             try:
                 epsf_out = run_epsf_stage(
-                    params=None,
                     paths=EpsfStagePaths(
                         platesolve_dir=og_dir,
                         frames_root=dt_dir,
@@ -1109,6 +1022,8 @@ def run_night_photometry(
                     progress_cb=_p,
                     db=pipeline.db,
                     draft_id=draft_id,
+                    # NEW-5: the same call as the GUI's RUN ePSF (explicit photometry dir and selection)
+                    targets=configured_epsf_targets(phot_cfg),
                 )
                 out["epsf_stage"][str(nm)] = {
                     "epsf_model_sha256": epsf_out.get("epsf_model_sha256"),
@@ -1180,6 +1095,449 @@ def run_night_photometry(
         return out
 
     return out
+
+
+def _nr_scan_source(*, _md_days, _mf_days, _t, cfg, eq_id, params, pipeline, source, tel_id):
+    """Smart scan of the source folder (rig ids, light groups) and the scan facts in the result."""
+    t0 = time.time()
+    plan = smart_scan_source(
+        source_root=source,
+        calibration_library_root=cfg.calibration_library_root,
+        masterdark_validity_days=_md_days,
+        masterflat_validity_days=_mf_days,
+        db=pipeline.db,
+        id_equipments=eq_id,
+        id_telescope=tel_id,
+        calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
+        precalibrated=bool(params.pre_calibrated_mode),
+        masters_from=str(params.masters_from or "lights"),
+        import_source_masters=True,
+    )
+    _t("smart_scan_source", t0)
+
+    lights_bad = any(
+        r.type == "Lights" and r.status in ("missing", "empty") for r in plan.scan_rows
+    )
+    return lights_bad, plan
+
+
+def _nr_import(*, _p, _stage, _t, cfg, eq_id, params, pipeline, plan, tel_id):
+    """Pre-calibrated / calibrated import plan, observer site and the import session into a new draft."""
+    from parallel_frames import check_disk_for_run  # noqa: PLC0415
+
+    # DISK-PREFLIGHT-2026-10: fail before the import, not in the middle of the night
+    _p(check_disk_for_run(cfg.archive_root, list(plan.lights_files)))
+
+    # CAL-2026-10: the calibration plan alone decides masters (same for GUI and CLI).
+    # Manual flat paths and flats borrowed from another filter bypass the library
+    # links and validity window, so they are no longer applied.
+    if params.manual_flat_map or params.apply_smart_plan_flat_fallbacks:
+        _p(
+            "Calibration: manual / substitute flats are ignored - import the master into "
+            "the calibration library and link it to camera + telescope instead."
+        )
+
+    if params.pre_calibrated_mode:
+        from draft_provenance import (
+            CALIBRATION_MODE_PRE,
+            apply_pre_calibrated_import_plan,
+            calibration_mode_report_line,
+        )
+
+        apply_pre_calibrated_import_plan(plan)
+        _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
+
+    # Import - resolve observing site first (product rule SITE-UI-01).
+    _stage("Import session")
+    from observer_location import (  # noqa: PLC0415
+        apply_resolved_observer_location_to_config,
+        resolve_observer_location_for_run,
+    )
+
+    _loc_hint = params.location_source_hint
+    if _loc_hint is None and params.location_id is not None:
+        _loc_hint = "cli_arg"
+    _resolved_site = resolve_observer_location_for_run(
+        cfg.database_path,
+        explicit_location_id=params.location_id,
+        manifest_location_id=params.manifest_location_id,
+        cfg=cfg,
+        source_hint=_loc_hint,
+    )
+    apply_resolved_observer_location_to_config(cfg, _resolved_site)
+    _p(_resolved_site.milestone_line())
+    t0 = time.time()
+    import_result = smart_import_session(
+        plan=plan,
+        pipeline=pipeline,
+        id_equipment=eq_id,
+        id_telescope=tel_id,
+        id_location=_resolved_site.location_id,
+        location_source=_resolved_site.source,
+        cfg=cfg,
+    )
+    _t("smart_import_session", t0)
+    return _resolved_site, import_result
+
+
+def _nr_calibrate(
+    *,
+    _p,
+    _resolved_site,
+    _stage,
+    _t,
+    eq_id,
+    import_result,
+    params,
+    pipeline,
+    plan,
+    prog_cb,
+    result,
+    timings,
+):
+    """Draft provenance and calibration (VYVAR masters or pre-calibrated lights) of the imported draft."""
+    draft_id = int(import_result.draft_id)
+    result.draft_id = draft_id
+    result.import_result = import_result
+    result.plan = plan
+    ap = Path(str(import_result.archive_path))
+    ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
+    result.draft_dir = ap_root.resolve()
+    result.archive_path = ap
+
+    from infolog import log_milestone, start_infolog_session  # noqa: PLC0415
+
+    start_infolog_session(result.draft_dir)
+    log_milestone(_resolved_site.milestone_line())
+    from parallel_frames import resource_budget  # noqa: PLC0415
+
+    log_milestone(f"[RESOURCES] {resource_budget().describe()}")
+
+    from draft_provenance import (
+        CALIBRATION_MODE_PRE,
+        CALIBRATION_MODE_VYVAR,
+        record_draft_calibration_provenance,
+        record_observer_location_provenance,
+    )
+
+    record_draft_calibration_provenance(
+        archive_path=ap_root,
+        draft_id=draft_id,
+        calibration_mode=CALIBRATION_MODE_PRE if params.pre_calibrated_mode else CALIBRATION_MODE_VYVAR,
+    )
+    record_observer_location_provenance(
+        archive_path=ap_root,
+        draft_id=draft_id,
+        resolved=_resolved_site,
+    )
+    mf_map: dict[str, Path | None] = {}
+    for k, v in (getattr(plan, "masterflat_by_filter", None) or {}).items():
+        mf_map[str(k)] = Path(v) if v else None
+    mf_obs: dict[str, Path | None] = {}
+    for k, v in (getattr(plan, "masterflat_by_obs_key", None) or {}).items():
+        mf_obs[str(k)] = Path(str(v)) if v else None
+    dm_obs: dict[str, Path | None] = {}
+    for k, v in (getattr(plan, "dark_master_by_obs_key", None) or {}).items():
+        dm_obs[str(k)] = Path(str(v)) if v else None
+
+    if params.pre_calibrated_mode:
+        mf_map = {}
+        mf_obs = {}
+        dm_obs = {}
+        _p(
+            "Calibration skipped - pre-calibrated import; downstream reads non_calibrated/lights "
+            "(no calibrated/ directory)"
+        )
+        _cal_out: dict[str, Any] = {"pre_calibrated_skip_calibration": True}
+        timings["calibration"] = 0.0
+    else:
+        _stage("Calibration")
+        t0 = time.time()
+        _cal_out = pipeline.quick_calibrate_last_import(
+            archive_path=ap,
+            master_dark_path=None,
+            masterflat_by_filter=mf_map,
+            progress_cb=prog_cb,
+            equipment_id=eq_id,
+            draft_id=draft_id,
+            observation_id=getattr(import_result, "observation_id", None),
+            masterflat_by_obs_key=mf_obs or None,
+            master_dark_by_obs_key=dm_obs or None,
+            flat_substitute_by_obs_key=dict(getattr(plan, "flat_substitute_by_obs_key", None) or {}),
+        )
+        _t("calibration", t0)
+    result.calibration_output = dict(_cal_out or {})
+
+    from draft_provenance import resolve_draft_lights_root
+
+    lights_root = resolve_draft_lights_root(ap_root, draft_id=draft_id, db=pipeline.db)
+    return _cal_out, ap, ap_root, dm_obs, draft_id, lights_root, mf_map, mf_obs
+
+
+def _nr_frame_qc(
+    *,
+    _cal_out,
+    _stage,
+    _t,
+    ap_root,
+    cfg,
+    dm_obs,
+    draft_id,
+    eq_id,
+    lights_root,
+    mf_map,
+    mf_obs,
+    params,
+    pipeline,
+    prog_cb,
+    result,
+    timings,
+):
+    """Frame QC of the calibrated lights (RAM QC, per-group best frame, rejections) and the QC provenance."""
+    qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
+
+    from pipeline_calibrate import (
+        run_draft_ram_calibration_qc_to_obs_files,
+        scan_calibrated_lights_pointing,
+    )
+
+
+    # RAM QC (skipped when PERF-10: DAO QC already done in calibration)
+    _perf10_ok = (
+        not params.pre_calibrated_mode
+        and int(qsum.get("n_successful_fwhm") or 0) > 0
+    )
+    if not _perf10_ok:
+        _stage("Frame quality check (RAM QC)")
+        t0 = time.time()
+        qsum = run_draft_ram_calibration_qc_to_obs_files(
+            db=pipeline.db,
+            draft_id=draft_id,
+            archive_path=ap_root,
+            master_dark_path=None,
+            masterflat_by_filter=mf_map,
+            masterflat_by_obs_key=mf_obs or None,
+            master_dark_by_obs_key=dm_obs or None,
+            equipment_id=eq_id,
+            progress_cb=prog_cb,
+            pedestal_temp_tol_c=float(pipeline.config.calibration_master_ccd_temp_tolerance_c),
+        )
+        _t("ram_qc", t0)
+    else:
+        LOGGER.info("[PERF-10] RAM QC skipped - DAO QC computed during calibration")
+        timings["ram_qc"] = 0.0
+    result.ram_qc_summary = dict(qsum or {})
+
+    # Pointing
+    t0 = time.time()
+    pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
+    r_pref = next(
+        (
+            r
+            for r in pointing["rows"]
+            if r.get("display_ra_deg") is not None and r.get("display_dec_deg") is not None
+        ),
+        None,
+    )
+    ra_ui: float | None = None
+    de_ui: float | None = None
+    if r_pref:
+        ra_ui = float(r_pref["display_ra_deg"])
+        de_ui = float(r_pref["display_dec_deg"])
+    try:
+        mra_q = qsum.get("median_ra_deg")
+        mde_q = qsum.get("median_de_deg")
+        if mra_q is not None and math.isfinite(float(mra_q)):
+            ra_ui = float(mra_q)
+        if mde_q is not None and math.isfinite(float(mde_q)):
+            de_ui = float(mde_q)
+    except (TypeError, ValueError):
+        pass
+    result.pointing = pointing if isinstance(pointing, dict) else {}
+    result.ra_ui = ra_ui
+    result.de_ui = de_ui
+    _t("pointing_scan", t0)
+
+    # Frame QC per channel (frame_qc.py, QC-PER-GROUP-2026-10): per observation
+    # group FWHM / elongation limits (median + k*1.4826*MAD, one pass), rejections written
+    # to the manifest (IS_REJECTED + reason) and frame_qc.json, best frame per group.
+    _stage("Frame QC per channel")
+    t0 = time.time()
+    from frame_qc import run_frame_qc
+
+    _qc_groups = run_frame_qc(
+        pipeline.db,
+        draft_id,
+        ap_root,
+        k=float(cfg.auto_fwhm_k_factor),
+        reject=bool(cfg.auto_fwhm_enabled),
+    )
+    _t("frame_qc", t0)
+    # Rejections are in IS_REJECTED; preprocess applies no extra pooled FWHM cap.
+    fwhm_lim = 0.0
+    fwhm_limit_source = (
+        f"frame_qc per group (k={float(cfg.auto_fwhm_k_factor):g})"
+        if bool(cfg.auto_fwhm_enabled)
+        else "frame_qc ranking only (auto_fwhm_enabled=False)"
+    )
+    result.fwhm_limit_px = float(fwhm_lim)
+    result.fwhm_limit_source = fwhm_limit_source
+    result.frame_qc = {gk: g.to_dict() for gk, g in _qc_groups.items()}
+
+    # MASTERSTAR source = best frame of each group (frame_qc.json). A single-group
+    # draft also stores it as the draft MASTERSTAR source path (read by MASTERSTAR QA).
+    _stage("MASTERSTAR reference frame per channel")
+    t0 = time.time()
+    from pipeline_astrometry import draft_is_multi_group_obs
+
+    _multi_obs = draft_is_multi_group_obs(ap_root)
+    use_path = ""
+    return _multi_obs, _qc_groups, de_ui, fwhm_lim, fwhm_limit_source, ra_ui, t0, use_path
+
+
+def _nr_preprocess_and_platesolve(
+    *,
+    _multi_obs,
+    _qc_groups,
+    _stage,
+    _t,
+    ap,
+    ap_root,
+    cfg,
+    de_ui,
+    draft_id,
+    fwhm_lim,
+    fwhm_limit_source,
+    params,
+    pipeline,
+    prog_cb,
+    ps_eq,
+    ra_ui,
+    result,
+    t0,
+    use_path,
+):
+    """Reference coordinates, preprocess (QC enrich) and the plate solve / alignment / MASTERSTAR job."""
+    from fits_meta import generate_observation_hash  # noqa: PLC0415
+    from pipeline_preprocess import resolve_preprocess_target_coordinates  # noqa: PLC0415
+
+    if not _multi_obs and len(_qc_groups) == 1:
+        top_path = str(next(iter(_qc_groups.values())).best_path or "").strip()
+        use_path = (
+            _masterstar_candidate_path_for_job(
+                ap_root, top_path, draft_id=draft_id, db=pipeline.db
+            )
+            or top_path
+        ).strip()
+    try:
+        pipeline.db.set_obs_draft_masterstar_source_path(draft_id, use_path or None)
+    except Exception as exc:  # noqa: BLE001
+        result.warnings.append(f"MASTERSTAR DB path write: {exc}")
+    _t("masterstar_resolve", t0)
+
+    # Steps 9-10: Coordinates + hash
+    t0 = time.time()
+    ira, ide = resolve_preprocess_target_coordinates(
+        db=pipeline.db,
+        draft_id=draft_id,
+        ui_ra_deg=ra_ui,
+        ui_dec_deg=de_ui,
+    )
+    coords_ok = False
+    try:
+        coords_ok = (
+            ira is not None
+            and ide is not None
+            and math.isfinite(float(ira))
+            and math.isfinite(float(ide))
+            and not (abs(float(ira)) < 1e-9 and abs(float(ide)) < 1e-9)
+        )
+    except (TypeError, ValueError):
+        coords_ok = False
+    ph: str | None = None
+    try:
+        ph = generate_observation_hash(pipeline.db, draft_id)
+    except Exception:  # noqa: BLE001
+        ph = None
+    _t("preprocess_prep", t0)
+
+    dao_sigma = resolve_detection_threshold_sigma(
+        params.dao_threshold_sigma
+        if params.dao_threshold_sigma is not None
+        else cfg.detection_threshold_sigma
+    )
+
+    pipeline.config.detection_threshold_sigma = dao_sigma
+
+    job_ms: dict[str, Any] = {
+        "kind": "make_masterstar",
+        "archive_path": str(ap),
+        "inject_pointing_ra_deg": (float(ira) if coords_ok else None),
+        "inject_pointing_dec_deg": (float(ide) if coords_ok else None),
+        "quality_filter_draft_id": draft_id,
+        "n_comparison_stars": 0,
+        "dao_threshold_sigma": dao_sigma,
+        "id_equipment": ps_eq,
+        "draft_id": draft_id,
+        "build_masterstar_and_catalogs": True,
+        "masterstar_candidate_paths": [use_path] if use_path else [],
+    }
+    if ph:
+        job_ms["processing_hash"] = ph
+        job_ms["overwrite_qc_processing"] = True
+    result.processing_hash = ph
+    result.masterstar_path = str(use_path or "")
+    log_frame_qc_provenance(
+        draft_id=draft_id,
+        fwhm_limit_px=float(fwhm_lim),
+        fwhm_limit_source=fwhm_limit_source,
+        cfg_source=result.cfg_source,
+        cfg_changed_keys=result.cfg_changed_keys,
+    )
+
+    _stage("Preprocess (calibrated -> processed)")
+    t0 = time.time()
+    _night_run_preprocess(pending=job_ms, ap=ap, pipeline=pipeline, progress_cb=prog_cb)
+    _t("preprocess", t0)
+
+    _stage("Plate solve + alignment + MASTERSTAR")
+    t0 = time.time()
+    ps_out = _night_run_platesolve(
+        pending=job_ms,
+        ap=ap,
+        pipeline=pipeline,
+        progress_cb=prog_cb,
+    )
+    _t("platesolve_align_masterstar", t0)
+    return ps_out,
+
+
+def _nr_photometry(*, cfg, draft_id, params, pipeline, result, timings):
+    """Night photometry of every setup and its outcome in the result."""
+    phot = run_night_photometry(
+        cfg=cfg,
+        pipeline=pipeline,
+        draft_id=draft_id,
+        draft_dir_override=None,
+        progress_cb=params.progress_cb,
+        timings=timings,
+        write_pdfs=True,
+        existing_draft=False,
+        epsf=params.epsf,
+    )
+    result.cfg_source = str(phot.get("cfg_source") or "live")
+    result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
+    result.photometry_context = dict(phot.get("photometry_context") or {})
+    result.zero_target_setups = list(phot.get("zero_target_setups") or [])
+    result.completed_setups = list(phot.get("completed_setups") or [])
+    result.photometry_completeness = dict(phot.get("photometry_completeness") or {})
+    result.epsf_stage = dict(phot.get("epsf_stage") or {})
+    result.warnings.extend(list(phot.get("warnings") or []))
+    if phot.get("output_dir") is not None:
+        result.output_dir = Path(phot["output_dir"])
+
+    phot_errors = list(phot.get("errors") or [])
+    return phot, phot_errors
 
 
 def run_night_pipeline(params: NightRunParams) -> NightRunResult:
@@ -1277,165 +1635,52 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             return result
 
         _stage("Scan source")
-        t0 = time.time()
-        plan = smart_scan_source(
-            source_root=source,
-            calibration_library_root=cfg.calibration_library_root,
-            masterdark_validity_days=_md_days,
-            masterflat_validity_days=_mf_days,
-            db=pipeline.db,
-            id_equipments=eq_id,
-            id_telescope=tel_id,
-            calibration_master_ccd_temp_tolerance_c=cfg.calibration_master_ccd_temp_tolerance_c,
-            precalibrated=bool(params.pre_calibrated_mode),
-            masters_from=str(params.masters_from or "lights"),
-            import_source_masters=True,
-        )
-        _t("smart_scan_source", t0)
-
-        lights_bad = any(
-            r.type == "Lights" and r.status in ("missing", "empty") for r in plan.scan_rows
+        lights_bad, plan = _nr_scan_source(
+            _md_days=_md_days,
+            _mf_days=_mf_days,
+            _t=_t,
+            cfg=cfg,
+            eq_id=eq_id,
+            params=params,
+            pipeline=pipeline,
+            source=source,
+            tel_id=tel_id,
         )
         if lights_bad:
             result.errors.append("Scan plan is missing or has empty light frames")
             result.phase_timings = timings
             return result
-        from parallel_frames import check_disk_for_run  # noqa: PLC0415
-
-        # DISK-PREFLIGHT-2026-10: fail before the import, not in the middle of the night
-        _p(check_disk_for_run(cfg.archive_root, list(plan.lights_files)))
-
-        # CAL-2026-10: the calibration plan alone decides masters (same for GUI and CLI).
-        # Manual flat paths and flats borrowed from another filter bypass the library
-        # links and validity window, so they are no longer applied.
-        if params.manual_flat_map or params.apply_smart_plan_flat_fallbacks:
-            _p(
-                "Calibration: manual / substitute flats are ignored - import the master into "
-                "the calibration library and link it to camera + telescope instead."
-            )
-
-        if params.pre_calibrated_mode:
-            from draft_provenance import (
-                CALIBRATION_MODE_PRE,
-                apply_pre_calibrated_import_plan,
-                calibration_mode_report_line,
-            )
-
-            apply_pre_calibrated_import_plan(plan)
-            _p(calibration_mode_report_line(CALIBRATION_MODE_PRE))
-
-        # Import - resolve observing site first (product rule SITE-UI-01).
-        _stage("Import session")
-        from observer_location import (  # noqa: PLC0415
-            apply_resolved_observer_location_to_config,
-            resolve_observer_location_for_run,
-        )
-
-        _loc_hint = params.location_source_hint
-        if _loc_hint is None and params.location_id is not None:
-            _loc_hint = "cli_arg"
-        _resolved_site = resolve_observer_location_for_run(
-            cfg.database_path,
-            explicit_location_id=params.location_id,
-            manifest_location_id=params.manifest_location_id,
+        _resolved_site, import_result = _nr_import(
+            _p=_p,
+            _stage=_stage,
+            _t=_t,
             cfg=cfg,
-            source_hint=_loc_hint,
-        )
-        apply_resolved_observer_location_to_config(cfg, _resolved_site)
-        _p(_resolved_site.milestone_line())
-        t0 = time.time()
-        import_result = smart_import_session(
-            plan=plan,
+            eq_id=eq_id,
+            params=params,
             pipeline=pipeline,
-            id_equipment=eq_id,
-            id_telescope=tel_id,
-            id_location=_resolved_site.location_id,
-            location_source=_resolved_site.source,
-            cfg=cfg,
+            plan=plan,
+            tel_id=tel_id,
         )
-        _t("smart_import_session", t0)
 
         if getattr(import_result, "draft_id", None) is None:
             result.errors.append("Import did not return draft_id")
             result.phase_timings = timings
             return result
 
-        draft_id = int(import_result.draft_id)
-        result.draft_id = draft_id
-        result.import_result = import_result
-        result.plan = plan
-        ap = Path(str(import_result.archive_path))
-        ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-        result.draft_dir = ap_root.resolve()
-        result.archive_path = ap
-
-        from infolog import log_milestone, start_infolog_session  # noqa: PLC0415
-
-        start_infolog_session(result.draft_dir)
-        log_milestone(_resolved_site.milestone_line())
-        from parallel_frames import resource_budget  # noqa: PLC0415
-
-        log_milestone(f"[RESOURCES] {resource_budget().describe()}")
-
-        from draft_provenance import (
-            CALIBRATION_MODE_PRE,
-            CALIBRATION_MODE_VYVAR,
-            record_draft_calibration_provenance,
-            record_observer_location_provenance,
+        _cal_out, ap, ap_root, dm_obs, draft_id, lights_root, mf_map, mf_obs = _nr_calibrate(
+            _p=_p,
+            _resolved_site=_resolved_site,
+            _stage=_stage,
+            _t=_t,
+            eq_id=eq_id,
+            import_result=import_result,
+            params=params,
+            pipeline=pipeline,
+            plan=plan,
+            prog_cb=prog_cb,
+            result=result,
+            timings=timings,
         )
-
-        record_draft_calibration_provenance(
-            archive_path=ap_root,
-            draft_id=draft_id,
-            calibration_mode=CALIBRATION_MODE_PRE if params.pre_calibrated_mode else CALIBRATION_MODE_VYVAR,
-        )
-        record_observer_location_provenance(
-            archive_path=ap_root,
-            draft_id=draft_id,
-            resolved=_resolved_site,
-        )
-        md = Path(plan.dark_master) if getattr(plan, "dark_master", None) else None
-        mf_map: dict[str, Path | None] = {}
-        for k, v in (getattr(plan, "masterflat_by_filter", None) or {}).items():
-            mf_map[str(k)] = Path(v) if v else None
-        mf_obs: dict[str, Path | None] = {}
-        for k, v in (getattr(plan, "masterflat_by_obs_key", None) or {}).items():
-            mf_obs[str(k)] = Path(str(v)) if v else None
-        dm_obs: dict[str, Path | None] = {}
-        for k, v in (getattr(plan, "dark_master_by_obs_key", None) or {}).items():
-            dm_obs[str(k)] = Path(str(v)) if v else None
-
-        if params.pre_calibrated_mode:
-            md = None
-            mf_map = {}
-            mf_obs = {}
-            dm_obs = {}
-            _p(
-                "Calibration skipped - pre-calibrated import; downstream reads non_calibrated/lights "
-                "(no calibrated/ directory)"
-            )
-            _cal_out: dict[str, Any] = {"pre_calibrated_skip_calibration": True}
-            timings["calibration"] = 0.0
-        else:
-            _stage("Calibration")
-            t0 = time.time()
-            _cal_out = pipeline.quick_calibrate_last_import(
-                archive_path=ap,
-                master_dark_path=md if (md and md.exists()) else None,
-                masterflat_by_filter=mf_map,
-                progress_cb=prog_cb,
-                equipment_id=eq_id,
-                draft_id=draft_id,
-                observation_id=getattr(import_result, "observation_id", None),
-                masterflat_by_obs_key=mf_obs or None,
-                master_dark_by_obs_key=dm_obs or None,
-            )
-            _t("calibration", t0)
-        result.calibration_output = dict(_cal_out or {})
-
-        from draft_provenance import resolve_draft_lights_root
-
-        lights_root = resolve_draft_lights_root(ap_root, draft_id=draft_id, db=pipeline.db)
         if not lights_root.exists():
             _msg = (
                 "Missing non_calibrated/lights after pre-cal import"
@@ -1446,198 +1691,49 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
             result.phase_timings = timings
             return result
 
-        qsum: dict[str, Any] = dict(_cal_out.get("perf10_qsum") or {})
-
-        from fits_meta import generate_observation_hash
-        from pipeline_preprocess import resolve_preprocess_target_coordinates
-        from pipeline_calibrate import (
-            run_draft_ram_calibration_qc_to_obs_files,
-            scan_calibrated_lights_pointing,
+        _multi_obs, _qc_groups, de_ui, fwhm_lim, fwhm_limit_source, ra_ui, t0, use_path = _nr_frame_qc(
+            _cal_out=_cal_out,
+            _stage=_stage,
+            _t=_t,
+            ap_root=ap_root,
+            cfg=cfg,
+            dm_obs=dm_obs,
+            draft_id=draft_id,
+            eq_id=eq_id,
+            lights_root=lights_root,
+            mf_map=mf_map,
+            mf_obs=mf_obs,
+            params=params,
+            pipeline=pipeline,
+            prog_cb=prog_cb,
+            result=result,
+            timings=timings,
         )
-
-
-        # RAM QC (skipped when PERF-10: DAO QC already done in calibration)
-        _perf10_ok = (
-            not params.pre_calibrated_mode
-            and int(qsum.get("n_successful_fwhm") or 0) > 0
-        )
-        if not _perf10_ok:
-            _stage("Frame quality check (RAM QC)")
-            t0 = time.time()
-            qsum = run_draft_ram_calibration_qc_to_obs_files(
-                db=pipeline.db,
-                draft_id=draft_id,
-                archive_path=ap_root,
-                master_dark_path=md if (md and md.exists()) else None,
-                masterflat_by_filter=mf_map,
-                masterflat_by_obs_key=mf_obs or None,
-                master_dark_by_obs_key=dm_obs or None,
-                equipment_id=eq_id,
-                progress_cb=prog_cb,
-            )
-            _t("ram_qc", t0)
-        else:
-            LOGGER.info("[PERF-10] RAM QC skipped - DAO QC computed during calibration")
-            timings["ram_qc"] = 0.0
-        result.ram_qc_summary = dict(qsum or {})
-
-        # Pointing
-        t0 = time.time()
-        pointing = scan_calibrated_lights_pointing(lights_root, max_files=None)
-        r_pref = next(
-            (
-                r
-                for r in pointing["rows"]
-                if r.get("display_ra_deg") is not None and r.get("display_dec_deg") is not None
-            ),
-            None,
-        )
-        ra_ui: float | None = None
-        de_ui: float | None = None
-        if r_pref:
-            ra_ui = float(r_pref["display_ra_deg"])
-            de_ui = float(r_pref["display_dec_deg"])
-        try:
-            mra_q = qsum.get("median_ra_deg")
-            mde_q = qsum.get("median_de_deg")
-            if mra_q is not None and math.isfinite(float(mra_q)):
-                ra_ui = float(mra_q)
-            if mde_q is not None and math.isfinite(float(mde_q)):
-                de_ui = float(mde_q)
-        except (TypeError, ValueError):
-            pass
-        result.pointing = pointing if isinstance(pointing, dict) else {}
-        result.ra_ui = ra_ui
-        result.de_ui = de_ui
-        _t("pointing_scan", t0)
-
-        # Frame QC per channel (frame_qc.py, QC-PER-GROUP-2026-10): per observation
-        # group FWHM / elongation limits (median + k*1.4826*MAD, one pass), rejections written
-        # to the manifest (IS_REJECTED + reason) and frame_qc.json, best frame per group.
-        _stage("Frame QC per channel")
-        t0 = time.time()
-        from frame_qc import run_frame_qc
-
-        _qc_groups = run_frame_qc(
-            pipeline.db,
-            draft_id,
-            ap_root,
-            k=float(cfg.auto_fwhm_k_factor),
-            reject=bool(cfg.auto_fwhm_enabled),
-        )
-        _t("frame_qc", t0)
-        # Rejections are in IS_REJECTED; preprocess applies no extra pooled FWHM cap.
-        fwhm_lim = 0.0
-        fwhm_limit_source = (
-            f"frame_qc per group (k={float(cfg.auto_fwhm_k_factor):g})"
-            if bool(cfg.auto_fwhm_enabled)
-            else "frame_qc ranking only (auto_fwhm_enabled=False)"
-        )
-        result.fwhm_limit_px = float(fwhm_lim)
-        result.fwhm_limit_source = fwhm_limit_source
-        result.frame_qc = {gk: g.to_dict() for gk, g in _qc_groups.items()}
-
-        # MASTERSTAR source = best frame of each group (frame_qc.json). A single-group
-        # draft also stores it as the draft MASTERSTAR source path (read by MASTERSTAR QA).
-        _stage("MASTERSTAR reference frame per channel")
-        t0 = time.time()
-        from pipeline_astrometry import draft_is_multi_group_obs
-
-        _multi_obs = draft_is_multi_group_obs(ap_root)
-        use_path = ""
         if not any(g.best_path for g in _qc_groups.values()):
             result.errors.append("Frame QC: no usable frame in any group (all rejected or no FWHM)")
             result.phase_timings = timings
             return result
-        if not _multi_obs and len(_qc_groups) == 1:
-            top_path = str(next(iter(_qc_groups.values())).best_path or "").strip()
-            use_path = (
-                _masterstar_candidate_path_for_job(
-                    ap_root, top_path, draft_id=draft_id, db=pipeline.db
-                )
-                or top_path
-            ).strip()
-        try:
-            pipeline.db.set_obs_draft_masterstar_source_path(draft_id, use_path or None)
-        except Exception as exc:  # noqa: BLE001
-            result.warnings.append(f"MASTERSTAR DB path write: {exc}")
-        _t("masterstar_resolve", t0)
-
-        # Steps 9-10: Coordinates + hash
-        t0 = time.time()
-        ira, ide = resolve_preprocess_target_coordinates(
-            db=pipeline.db,
-            draft_id=draft_id,
-            ui_ra_deg=ra_ui,
-            ui_dec_deg=de_ui,
-        )
-        coords_ok = False
-        try:
-            coords_ok = (
-                ira is not None
-                and ide is not None
-                and math.isfinite(float(ira))
-                and math.isfinite(float(ide))
-                and not (abs(float(ira)) < 1e-9 and abs(float(ide)) < 1e-9)
-            )
-        except (TypeError, ValueError):
-            coords_ok = False
-        ph: str | None = None
-        try:
-            ph = generate_observation_hash(pipeline.db, draft_id)
-        except Exception:  # noqa: BLE001
-            ph = None
-        _t("preprocess_prep", t0)
-
-        dao_sigma = resolve_detection_threshold_sigma(
-            params.dao_threshold_sigma
-            if params.dao_threshold_sigma is not None
-            else cfg.detection_threshold_sigma
-        )
-
-        pipeline.config.detection_threshold_sigma = dao_sigma
-
-        job_ms: dict[str, Any] = {
-            "kind": "make_masterstar",
-            "archive_path": str(ap),
-            "fwhm_limit_px": float(fwhm_lim),
-            "inject_pointing_ra_deg": (float(ira) if coords_ok else None),
-            "inject_pointing_dec_deg": (float(ide) if coords_ok else None),
-            "quality_filter_draft_id": draft_id,
-            "n_comparison_stars": 0,
-            "dao_threshold_sigma": dao_sigma,
-            "id_equipment": ps_eq,
-            "draft_id": draft_id,
-            "build_masterstar_and_catalogs": True,
-            "masterstar_candidate_paths": [use_path] if use_path else [],
-        }
-        if ph:
-            job_ms["processing_hash"] = ph
-            job_ms["overwrite_qc_processing"] = True
-        result.processing_hash = ph
-        result.masterstar_path = str(use_path or "")
-        log_frame_qc_provenance(
-            draft_id=draft_id,
-            fwhm_limit_px=float(fwhm_lim),
-            fwhm_limit_source=fwhm_limit_source,
-            cfg_source=result.cfg_source,
-            cfg_changed_keys=result.cfg_changed_keys,
-        )
-
-        _stage("Preprocess (calibrated -> processed)")
-        t0 = time.time()
-        _night_run_preprocess(pending=job_ms, ap=ap, pipeline=pipeline, progress_cb=prog_cb)
-        _t("preprocess", t0)
-
-        _stage("Plate solve + alignment + MASTERSTAR")
-        t0 = time.time()
-        ps_out = _night_run_platesolve(
-            pending=job_ms,
+        ps_out, = _nr_preprocess_and_platesolve(
+            _multi_obs=_multi_obs,
+            _qc_groups=_qc_groups,
+            _stage=_stage,
+            _t=_t,
             ap=ap,
+            ap_root=ap_root,
+            cfg=cfg,
+            de_ui=de_ui,
+            draft_id=draft_id,
+            fwhm_lim=fwhm_lim,
+            fwhm_limit_source=fwhm_limit_source,
+            params=params,
             pipeline=pipeline,
-            progress_cb=prog_cb,
+            prog_cb=prog_cb,
+            ps_eq=ps_eq,
+            ra_ui=ra_ui,
+            result=result,
+            t0=t0,
+            use_path=use_path,
         )
-        _t("platesolve_align_masterstar", t0)
         if isinstance(ps_out, dict) and ps_out.get("error"):
             result.errors.append(f"Platesolve failed: {ps_out.get('error')}")
             result.phase_timings = timings
@@ -1659,29 +1755,14 @@ def run_night_pipeline(params: NightRunParams) -> NightRunResult:
 
         # Steps 13-15: Photometry (shared slice)
         _stage("Discover observation groups")
-        phot = run_night_photometry(
+        phot, phot_errors = _nr_photometry(
             cfg=cfg,
-            pipeline=pipeline,
             draft_id=draft_id,
-            draft_dir_override=None,
-            progress_cb=params.progress_cb,
+            params=params,
+            pipeline=pipeline,
+            result=result,
             timings=timings,
-            write_pdfs=True,
-            existing_draft=False,
-            epsf=params.epsf,
         )
-        result.cfg_source = str(phot.get("cfg_source") or "live")
-        result.cfg_changed_keys = list(phot.get("cfg_changed_keys") or [])
-        result.photometry_context = dict(phot.get("photometry_context") or {})
-        result.zero_target_setups = list(phot.get("zero_target_setups") or [])
-        result.completed_setups = list(phot.get("completed_setups") or [])
-        result.photometry_completeness = dict(phot.get("photometry_completeness") or {})
-        result.epsf_stage = dict(phot.get("epsf_stage") or {})
-        result.warnings.extend(list(phot.get("warnings") or []))
-        if phot.get("output_dir") is not None:
-            result.output_dir = Path(phot["output_dir"])
-
-        phot_errors = list(phot.get("errors") or [])
         if phot_errors:
             result.errors.extend(phot_errors)
             result.phase_timings = timings

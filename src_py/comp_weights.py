@@ -20,11 +20,6 @@ LOGGER = logging.getLogger(__name__)
 C_COL_PSF_EE_MMAG = 29.485010546318453
 C_COL_PSF_BPRP_SPAN = 1.0  # BP-RP 0.5 to 1.5
 C_COL_PSF_REFRACTIVE_MAG_PER_BPRP = float(C_COL_PSF_EE_MMAG / 1000.0 / C_COL_PSF_BPRP_SPAN)
-C_COL_PSF_SOURCE = (
-    "MEASURED COMP-POOL-02 Item4: mmag_cog_fwhm_rescaled="
-    f"{C_COL_PSF_EE_MMAG:.3f} over Delta(BP-RP)={C_COL_PSF_BPRP_SPAN:.3f} "
-    f"(0.5->1.5); c_col_psf={C_COL_PSF_REFRACTIVE_MAG_PER_BPRP:.6g} mag/BP-RP"
-)
 
 
 def sigma_eff_mag(

@@ -120,6 +120,26 @@ def merge_psf_frame_result(
     return int(key.isin(fit.index).sum())
 
 
+def clear_psf_frame_result(
+    sidecar_path: Path,
+    *,
+    frame_name: str,
+    pipeline_meta: dict[str, Any] | None = None,
+) -> None:
+    """G09-06: a frame whose PSF fit failed in this run carries no PSF values of an earlier run - every
+    PSF column is replaced by "not measured" (flux NaN, flags False), INV-PSF-ADDITIVE-01 enforced."""
+    if not sidecar_path.is_file():
+        return
+    empty = pd.DataFrame({"catalog_id": pd.Series(dtype=str), **{c: pd.Series(dtype=float) for c in PSF_PROC_COLUMNS}})
+    merge_psf_frame_result(sidecar_path, empty, frame_name=frame_name, pipeline_meta=pipeline_meta)
+    before = read_vyvar_csv(sidecar_path, low_memory=False)
+    after = before.copy()
+    for col in ("psf_sat_masked", "psf_edge_masked"):
+        after[col] = False
+    assert_inv_psf_additive_01(before, after, frame_name=frame_name, pipeline_meta=pipeline_meta)
+    guarded_psf_sidecar_write(sidecar_path, after, before)
+
+
 def frame_saturation_limit_adu(sidecar_path: Path) -> float:
     """The frame's peak non-linearity / saturation limit (``saturate_limit_adu_85pct`` of its proc
     sidecar, INV-SAT-LIMIT): PSF fit pixels at or above it are masked. Raises when it is unknown."""
@@ -182,7 +202,6 @@ def run_epsf_psf_merge_job(
     progress_cb: Callable[[int, int, str], None] | None = None,
     fit_set: Any,
     pipeline_meta: dict[str, Any] | None = None,
-    max_frames: int | None = None,
 ) -> dict[str, Any]:
     """RUN ePSF photometry pass (EPSF-SPATIAL-2026-10).
 
@@ -209,8 +228,6 @@ def run_epsf_psf_merge_job(
     ps = Path(platesolve_dir)
     root = Path(frames_root)
     files = list_epsf_science_light_fits(root)
-    if max_frames is not None:
-        files = files[: max(0, int(max_frames))]
     if not files:
         raise FileNotFoundError(f"No science-light FITS under {root}")
 
@@ -232,10 +249,16 @@ def run_epsf_psf_merge_job(
     fwhm_night, fwhm_night_src = night_median_fwhm_px([proc_csv_path_for_aligned_fits(f) for f in files], float("nan"))
     if not (math.isfinite(fwhm_night) and fwhm_night > 0):
         raise ValueError("ePSF: no per-frame fwhm_px_for_aperture in the proc sidecars - night FWHM unknown")
+    # G09-22: neighbours are collected for the largest fit box of the night (worst-seeing frame)
+    from photometry_comp import night_frame_fwhms_px
+
+    _fw_frames = night_frame_fwhms_px([proc_csv_path_for_aligned_fits(f) for f in files])
+    fwhm_reach = max(max(_fw_frames), fwhm_ms) if _fw_frames else fwhm_ms
     fit_stars, neighbours, sources_meta = frame_fit_sources(
-        ps, fit_set.catalog_ids, cutout_size=cutout, fwhm_px=fwhm_ms, merge_fwhm_px=fwhm_night
+        ps, fit_set.catalog_ids, cutout_size=cutout, fwhm_px=fwhm_reach, merge_fwhm_px=fwhm_night
     )
     sources_meta["merge_fwhm_source"] = fwhm_night_src
+    sources_meta["reach_fwhm_px"] = round(float(fwhm_reach), 3)
 
     if progress_cb is not None:
         progress_cb(0, len(files), "night spatial ePSF perturbation")
@@ -268,6 +291,7 @@ def run_epsf_psf_merge_job(
             rec.update({k: res[k] for k in ("exception_class", "exception_message", "traceback_tail")})
         if rec["exception_class"] is not None:
             LOGGER.warning("[ePSF] frame %s failed: %s: %s", fp.name, rec["exception_class"], rec["exception_message"])
+            clear_psf_frame_result(proc_csv_path_for_aligned_fits(fp), frame_name=fp.name, pipeline_meta=pipeline_meta)
         records.append(rec)
 
     created = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")

@@ -15,7 +15,6 @@ from astropy.io import fits
 from astropy.visualization import ZScaleInterval
 
 
-from calibration import reset_master_age_mtime_warnings
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from fits_suffixes import path_suffix_is_fits
 from infolog import log_event
@@ -24,8 +23,10 @@ from fits_meta import (
     fits_metadata_from_primary_header,
     log_lights_binning_from_headers_preflight,
 )
-from utils import fits_binning_xy_from_header, plate_scale_arcsec_per_pixel
+from optics import plate_scale_arcsec_per_pixel
+from utils import fits_binning_xy_from_header
 from fits_meta import observation_group_folder_name  # LAYER-2026-10: moved there
+from fits_meta import observation_group_key  # G02-42: the one group-key builder
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,6 @@ class ImportResult:
     draft_id: int | None
     observation_id: str | None
     lights_path: str
-    dark_path: str
     flat_path: str
     archive_path: str
     warnings: list[str]
@@ -47,32 +47,15 @@ class SmartScanRow:
     status: str  # ok | missing | empty | raw | master | library | expired | draft
     count: int
     parameters: str
-    details: str | None = None
 
 
-def observation_group_key(filter_name: str, exposure_s: float, binning: int) -> str:
-    """Unique observation subgroup: (FILTER, EXPTIME, XBINNING) - binning from FITS via metadata."""
-    flt = _filter_name_for_calibration_library_flat(filter_name)
-    try:
-        e = float(exposure_s)
-    except (TypeError, ValueError):
-        e = 0.0
-    b = max(1, int(binning))
-    return f"{flt}|{e:g}|{b}"
-
-
-_CCD_TEMP_HEADER_KEYS = ("CCD-TEMP", "SENSORTEMP", "SET-TEMP")
 
 
 def _raw_ccd_temp_from_header(header: fits.Header) -> float | None:
-    for key in _CCD_TEMP_HEADER_KEYS:
-        if key in header and header[key] not in (None, ""):
-            try:
-                v = float(header[key])
-            except (TypeError, ValueError):
-                continue
-            return v if math.isfinite(v) else None
-    return None
+    """Sensor temperature [C] or None (G01-08: the one reader, ``calib_library.header_temp``)."""
+    from calib_library import header_temp  # noqa: PLC0415
+
+    return header_temp(header)
 
 
 def _calibration_light_temp_c(
@@ -113,15 +96,10 @@ class SmartImportPlan:
     lights_files: list[str]
     dark_files: list[str]
     flat_files: list[str]
-    lights_first_fits: str | None
     metadata: dict[str, Any] | None
     scan_rows: list[SmartScanRow]
-    dark_master: str | None
-    flat_master: str | None
     masterflat_by_filter: dict[str, str | None]
-    masterflat_status: dict[str, str]
     missing_flat_filters: list[str]
-    masterdark_status: str
     quick_look: bool
     detected_filters: list[str]
     warnings: list[str]
@@ -129,18 +107,12 @@ class SmartImportPlan:
     observation_groups: dict[str, dict[str, Any]] = field(default_factory=dict)
     masterflat_by_obs_key: dict[str, str | None] = field(default_factory=dict)
     dark_master_by_obs_key: dict[str, str | None] = field(default_factory=dict)
+    #: groups without any FLAT (calibrated with the DARK only, flagged; decision A1) - information only
     missing_obs_keys: list[str] = field(default_factory=list)
-    flat_fallback_prompts: list[dict[str, Any]] = field(default_factory=list)
+    #: groups whose FLAT is a flagged substitute from another night -> its capture date (decision A1)
+    flat_substitute_by_obs_key: dict[str, str] = field(default_factory=dict)
     #: CAL-2026-10 calibration plan (calib_plan.CalibrationPlan.to_dict()).
     calibration_plan: dict[str, Any] = field(default_factory=dict)
-
-
-def _filter_name_for_calibration_library_flat(flt: str | None) -> str:
-    """Normalize FILTER for CALIBRATION_LIBRARY flat rows (must match import matching)."""
-    s = str(flt or "").strip()
-    if not s or s.lower() in {"unknown", "none", "nan"}:
-        return "NoFilter"
-    return s
 
 
 def _looks_like_master(fp: Path) -> bool:
@@ -397,16 +369,13 @@ def _dst_path_with_length_limit(dst_dir: Path, original_name: str, *, max_path_l
 
 def _params_string(meta: dict[str, Any], *, include_filter: bool) -> str:
     exp = float(meta.get("exposure", 0.0))
-    gain = int(meta.get("gain", 0))
-    temp_s = f"{float(meta.get('temp', 0.0)):g}"
+    gain = float(meta.get("gain", 0.0) or 0.0)
+    _t = meta.get("temp")
+    temp_s = f"{float(_t):g}" if _t is not None else "unknown"
     binning = int(meta.get("binning", 1))
     flt = str(meta.get("filter", "Unknown"))
-    base = f"Exp={exp:g}s, Gain={gain}G, Temp={temp_s}C, Bin={binning}"
+    base = f"Exp={exp:g}s, Gain={gain:g}G, Temp={temp_s}C, Bin={binning}"
     return f"{base}, Filter={flt}" if include_filter else base
-
-
-def _reset_master_age_mtime_warnings() -> None:
-    reset_master_age_mtime_warnings()
 
 
 def mixed_camera_settings_message(group_key: str, settings: dict[tuple[Any, Any, Any], int]) -> str | None:
@@ -471,7 +440,6 @@ def smart_scan_source(
 
     scan_rows: list[SmartScanRow] = []
     warnings: list[str] = []
-    _reset_master_age_mtime_warnings()
 
     if not root.exists() or not root.is_dir():
         scan_rows.append(SmartScanRow("Lights", "missing", 0, ""))
@@ -480,15 +448,10 @@ def smart_scan_source(
             lights_files=[],
             dark_files=[],
             flat_files=[],
-            lights_first_fits=None,
             metadata=None,
             scan_rows=scan_rows,
-            dark_master=None,
-            flat_master=None,
             masterflat_by_filter={},
-            masterflat_status={},
             missing_flat_filters=[],
-            masterdark_status="MasterDark: n/a (invalid source root)",
             quick_look=False,
             detected_filters=[],
             warnings=warnings,
@@ -500,7 +463,7 @@ def smart_scan_source(
     flat_files = files_by_type.get("flat", [])
     # Filters+binning combos from lights
     detected_filters = sorted(
-        {flt for flt in (_read_filter(fp, db=db) for fp in lights_files[:500]) if flt}
+        {flt for flt in (_read_filter(fp, db=db) for fp in lights_files) if flt}  # G01-36: no cap
     )
 
     if not lights_files:
@@ -513,15 +476,10 @@ def smart_scan_source(
             lights_files=[],
             dark_files=[str(p) for p in dark_files],
             flat_files=[str(p) for p in flat_files],
-            lights_first_fits=None,
             metadata=None,
             scan_rows=scan_rows,
-            dark_master=None,
-            flat_master=None,
             masterflat_by_filter={},
-            masterflat_status={},
             missing_flat_filters=[],
-            masterdark_status="MasterDark: n/a (no Lights)",
             quick_look=False,
             detected_filters=[],
             warnings=warnings,
@@ -551,7 +509,7 @@ def smart_scan_source(
     calib_root = Path(calibration_library_root)
 
     observation_groups: dict[str, dict[str, Any]] = {}
-    for fp in lights_files[:8000]:
+    for fp in lights_files:  # G01-36: every LIGHT gets its plan group (no cap)
         try:
             meta_i = extract_fits_metadata(fp, db=db)
         except Exception as exc:  # noqa: BLE001
@@ -583,7 +541,7 @@ def smart_scan_source(
                 "filter": f_i,
                 "exposure_s": exp_i,
                 "binning": b_i,
-                "gain": int(meta_i.get("gain", 0)),
+                "gain": float(meta_i.get("gain", 0.0) or 0.0),
                 "temp": _calibration_light_temp_c(fp, db=db),
                 "representative_light": str(fp),
                 "light_paths": [],
@@ -604,9 +562,10 @@ def smart_scan_source(
     # CAL-2026-10 (dev/results/specs/VYVAR_CALIBRATION_SPEC.md): one plan for GUI and night runner.
     import calib_plan as _cp  # noqa: PLC0415
 
-    master_like_in_source = [fp for fp in list(dark_files) + list(flat_files) if _looks_like_master(fp)]
-    raw_darks = [fp for fp in dark_files if not _looks_like_master(fp)]
-    raw_flats = [fp for fp in flat_files if not _looks_like_master(fp)]
+    _is_master = {fp: _looks_like_master(fp) for fp in list(dark_files) + list(flat_files)}  # one pass (G01-36)
+    master_like_in_source = [fp for fp in list(dark_files) + list(flat_files) if _is_master[fp]]
+    raw_darks = [fp for fp in dark_files if not _is_master[fp]]
+    raw_flats = [fp for fp in flat_files if not _is_master[fp]]
     _light_instrume = str(_hdr0.get("INSTRUME") or "").strip()
     src_masters, _src_msgs = _cp.masters_next_to_lights(
         master_like_in_source,
@@ -644,8 +603,8 @@ def smart_scan_source(
                 warnings.append(_m)
     masterflat_by_obs_key = cal_plan.flat_by_group()
     dark_master_by_obs_key = cal_plan.dark_by_group()
-    masterflat_status = {gk: g.status for gk, g in cal_plan.groups.items()}
     missing_obs_keys = [gk for gk, g in cal_plan.groups.items() if g.flat is None]
+    flat_substitute_by_obs_key = {gk: g.flat_substitute for gk, g in cal_plan.groups.items() if g.flat_substitute}
     masterflat_by_filter: dict[str, str | None] = {}
     for gk, g in cal_plan.groups.items():
         if g.flat is not None and masterflat_by_filter.get(g.filter_name) is None:
@@ -674,11 +633,6 @@ def smart_scan_source(
 
     scan_rows.append(_row("Darks", "dark"))
     scan_rows.append(_row("Flats", "flat"))
-    masterdark_status = (
-        "Calibration skipped (pre-calibrated / uncalibrated LIGHTs)"
-        if precalibrated
-        else f"MasterDark: {n_dark_ok}/{n_groups} groups OK"
-    )
     quick_look = (not precalibrated) and n_dark_ok == 0
     if quick_look:
         warnings.append("No valid master DARK for any group - LIGHTs will stay uncalibrated.")
@@ -687,15 +641,10 @@ def smart_scan_source(
         lights_files=[str(p) for p in lights_files],
         dark_files=[str(p) for p in dark_files],
         flat_files=[str(p) for p in flat_files],
-        lights_first_fits=str(first_light),
         metadata=metadata,
         scan_rows=scan_rows,
-        dark_master=None,
-        flat_master=None,
         masterflat_by_filter=masterflat_by_filter,
-        masterflat_status=masterflat_status,
         missing_flat_filters=missing_flat_filters,
-        masterdark_status=masterdark_status,
         quick_look=quick_look,
         detected_filters=detected_filters,
         warnings=warnings,
@@ -703,7 +652,7 @@ def smart_scan_source(
         masterflat_by_obs_key=masterflat_by_obs_key,
         dark_master_by_obs_key=dark_master_by_obs_key,
         missing_obs_keys=missing_obs_keys,
-        flat_fallback_prompts=[],
+        flat_substitute_by_obs_key=flat_substitute_by_obs_key,
         calibration_plan=cal_plan.to_dict(),
     )
 
@@ -720,6 +669,60 @@ def _first_object_name(lights_files: list[Path]) -> str:
             if val:
                 return val
     return ""
+
+
+def _unique_import_dst(dst_dir: Path, fp: Path, used: dict[Path, Path], warnings: list[str]) -> Path:
+    """G01-18: destination of one imported file, unique within this import. Two source files with the
+    same name (e.g. ``a/Light_001.fits`` and ``b/Light_001.fits``) no longer overwrite each other: the
+    second gets a short hash of its source folder in the name, and the import warns."""
+    import hashlib
+
+    src = Path(fp).resolve()
+    dst = first = _dst_path_with_length_limit(dst_dir, fp.name)
+    if dst in used and used[dst] != src:
+        tag = hashlib.sha1(str(src.parent).encode("utf-8")).hexdigest()[:8]
+        base, dot, ext = fp.name.partition(".")
+        dst = _dst_path_with_length_limit(dst_dir, f"{base}__{tag}{dot}{ext}")
+        if dst in used and used[dst] != src:
+            raise ValueError(f"import: cannot give {src} a unique name in {dst_dir}")
+        msg = (
+            f"{fp.name}: another source file of this import has the same name ({used[first]}); "
+            f"imported as {dst.name}"
+        )
+        warnings.append(msg)
+        log_event(f"IMPORT WARNING: {msg}")
+    used[dst] = src
+    return dst
+
+
+def _copy_light_into_draft(
+    fp: Path, lights_root: Path, db: VyvarDatabase, used: dict[Path, Path], warnings: list[str]
+) -> dict[str, Any]:
+    """Copy one LIGHT into its group folder; the manifest evidence row.
+
+    G01-32: the group key is built from the raw FILTER (the key of the plan, VY_OBSG and the calibration);
+    only the folder name uses the sanitised filter (folder names unchanged)."""
+    flt_raw = _read_filter(fp, db=db)
+    flt = _sanitize_filter_folder(flt_raw)
+    try:
+        meta_l = extract_fits_metadata(fp, db=db)
+        exp_l, b_l = float(meta_l.get("exposure", 0.0)), int(meta_l.get("binning", 1) or 1)
+        sc_i = int(db.derive_scanning_id(meta_l))
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[IMPORT] metadata read failed for %s (group %s|0|1): %s", fp, flt_raw, exc)
+        exp_l, b_l, sc_i = 0.0, 1, None
+    gk = observation_group_key(flt_raw, exp_l, b_l)
+    dst_dir = lights_root / observation_group_folder_name(observation_group_key(flt, exp_l, b_l))
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    dst_path = _unique_import_dst(dst_dir, fp, used, warnings)
+    _safe_copy2(fp, dst_path)
+    return {
+        "file_path": str(dst_path),
+        "imagetyp": "light",
+        "filter": flt,
+        "observation_group_key": gk,
+        "id_scanning": sc_i,
+    }
 
 
 def smart_import_session(
@@ -755,7 +758,7 @@ def smart_import_session(
 
     _import_warnings: list[str] = []
     _jd_starts: list[float] = []
-    for fp in lights_files[:500]:
+    for fp in lights_files:  # G01-36: every LIGHT (Bayer cross-check, start time)
         try:
             meta_x = extract_fits_metadata(fp, db=pipeline.db)
         except Exception:  # noqa: BLE001
@@ -781,8 +784,6 @@ def smart_import_session(
     scanning_id = pipeline.db.derive_scanning_id(metadata)
 
     # Ingestion creates DRAFT only (Session ID created after astrometry).
-    missing_obs_keys_set: set[str] = set(getattr(plan, "missing_obs_keys", []) or [])
-    draft_filters: set[str] = set(getattr(plan, "missing_flat_filters", []) or [])
     # PROCESSED-FIELD-NAME-2026-10: the folder is <TARGET>_<YYYYMMDD>_<NNN> - the target from the
     # FITS OBJECT (else the selected source folder), the evening the night began (first frame).
     _jd_ok = [j for j in _jd_starts if j > 2400000.0]
@@ -793,7 +794,7 @@ def smart_import_session(
             "id_location": int(_id_loc),
             "id_scanning": int(scanning_id),
             "observation_start_jd": float(min(_jd_ok)) if _jd_ok else float(metadata["jd_start"]),
-            "is_calibrated": (len(draft_filters) == 0 and not plan.quick_look),
+            "is_calibrated": not plan.quick_look,
             "object_name": _first_object_name(lights_files),
             "source_folder_name": Path(str(plan.source_root)).name if plan.source_root else "",
             "site_lon_deg": float(_resolved.lon),
@@ -816,31 +817,11 @@ def smart_import_session(
         target = archive_session / "non_calibrated"
         lights_root = target / "lights"
         evidence: list[dict[str, Any]] = []
+        _used_q: dict[Path, Path] = {}
         for fp in lights_files:
-            flt = _sanitize_filter_folder(_read_filter(fp, db=pipeline.db))
-            try:
-                meta_l = extract_fits_metadata(fp, db=pipeline.db)
-                gk = observation_group_key(
-                    flt, float(meta_l.get("exposure", 0.0)), int(meta_l.get("binning", 1) or 1)
-                )
-                sc_i = int(pipeline.db.derive_scanning_id(meta_l))
-            except Exception:  # noqa: BLE001
-                gk = observation_group_key(flt, 0.0, 1)
-                sc_i = None
-            dst_dir = lights_root / observation_group_folder_name(gk)
-            dst_dir.mkdir(parents=True, exist_ok=True)
-            dst_path = _dst_path_with_length_limit(dst_dir, fp.name)
-            _safe_copy2(fp, dst_path)
             evidence.append(
-                {
-                    "file_path": str(dst_path),
-                    "imagetyp": "light",
-                    "filter": flt,
-                    "observation_group_key": gk,
-                    "id_scanning": sc_i,
-                    "is_calibrated": 0,
-                    "calib_type": "RAW_NON_CALIBRATED",
-                }
+                _copy_light_into_draft(fp, lights_root, pipeline.db, _used_q, plan.warnings)
+                | {"is_calibrated": 0, "calib_type": "RAW_NON_CALIBRATED"}
             )
         now_utc = datetime.now(timezone.utc)
         pipeline.db.update_draft_import_log(
@@ -857,7 +838,6 @@ def smart_import_session(
             draft_id=draft_id,
             observation_id=None,
             lights_path=str(lights_root),
-            dark_path="",
             flat_path="",
             archive_path=str(archive_session),
             warnings=plan.warnings,
@@ -872,48 +852,23 @@ def smart_import_session(
     darks_dst.mkdir(parents=True, exist_ok=True)
     flats_dst.mkdir(parents=True, exist_ok=True)
 
-    # If some filters are missing MasterFlat, import those lights into non_calibrated
-    draft_root = archive_session / "non_calibrated"
-    draft_lights_root = draft_root / "lights"
-
+    # G01-01 (decision A1): one lights tree per draft. Every group goes to Raw/lights, also a group without
+    # a FLAT (the plan calibrates it with the DARK only and flags it); the former non_calibrated split left
+    # the groups WITH masters uncalibrated.
     # Flexible sorting: even if mixed folders exist, we sort per-file by IMAGETYP
     evidence: list[dict[str, Any]] = []
+    _used: dict[Path, Path] = {}
     for fp in lights_files:
-        flt = _sanitize_filter_folder(_read_filter(fp, db=pipeline.db))
-        try:
-            meta_l = extract_fits_metadata(fp, db=pipeline.db)
-            gk = observation_group_key(
-                flt, float(meta_l.get("exposure", 0.0)), int(meta_l.get("binning", 1) or 1)
-            )
-            sc_i = int(pipeline.db.derive_scanning_id(meta_l))
-        except Exception:  # noqa: BLE001
-            gk = observation_group_key(flt, 0.0, 1)
-            sc_i = None
-        is_draft = gk in missing_obs_keys_set or flt in draft_filters or (
-            flt == "NoFilter" and "NoFilter" in draft_filters
-        )
-        dst_base = draft_lights_root if is_draft else lights_root
-        dst_dir = dst_base / observation_group_folder_name(gk)
-        dst_dir.mkdir(parents=True, exist_ok=True)
-        dst_path = _dst_path_with_length_limit(dst_dir, fp.name)
-        _safe_copy2(fp, dst_path)
         evidence.append(
-            {
-                "file_path": str(dst_path),
-                "imagetyp": "light",
-                "filter": flt,
-                "observation_group_key": gk,
-                "id_scanning": sc_i,
-                "is_calibrated": 0 if is_draft else 1,
-                "calib_type": "RAW_PENDING_CALIBRATION" if is_draft else "MASTER_PIPELINE",
-            }
+            _copy_light_into_draft(fp, lights_root, pipeline.db, _used, plan.warnings)
+            | {"is_calibrated": 1, "calib_type": "MASTER_PIPELINE"}
         )
     for fp in [Path(p) for p in plan.dark_files]:
-        dst_path = _dst_path_with_length_limit(darks_dst, fp.name)
+        dst_path = _unique_import_dst(darks_dst, fp, _used, plan.warnings)
         _safe_copy2(fp, dst_path)
         evidence.append({"file_path": str(dst_path), "imagetyp": "dark", "filter": ""})
     for fp in [Path(p) for p in plan.flat_files]:
-        dst_path = _dst_path_with_length_limit(flats_dst, fp.name)
+        dst_path = _unique_import_dst(flats_dst, fp, _used, plan.warnings)
         _safe_copy2(fp, dst_path)
         evidence.append(
             {
@@ -928,13 +883,13 @@ def smart_import_session(
         draft_id,
         lights_path=str(lights_root),
         calib_path=(
-            f"dark={plan.dark_master};flat_by_filter={plan.masterflat_by_filter};"
+            f"flat_by_filter={plan.masterflat_by_filter};"
             f"flat_by_obs_key={getattr(plan, 'masterflat_by_obs_key', {})};"
             f"dark_by_obs_key={getattr(plan, 'dark_master_by_obs_key', {})}"
         ),
         imported_at=now_utc.isoformat(timespec="seconds"),
         import_warnings="\n".join(plan.warnings) if plan.warnings else None,
-        is_calibrated=(len(draft_filters) == 0),
+        is_calibrated=True,
         archive_path=str(archive_session),
     )
     pipeline.db.insert_draft_files(draft_id, evidence)
@@ -942,7 +897,6 @@ def smart_import_session(
         draft_id=draft_id,
         observation_id=None,
         lights_path=str(lights_root),
-        dark_path=str(plan.dark_master or ""),
         flat_path=";".join(
             [f"{k}={v}" for k, v in (getattr(plan, "masterflat_by_obs_key", None) or plan.masterflat_by_filter or {}).items()]
         ),

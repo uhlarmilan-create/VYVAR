@@ -46,6 +46,10 @@ MIN_PATTERN_FRACTION = 0.10
 # term of one match is huge (area / (K 2 pi sigma^2)), so a handful of chance matches passed
 # ln(1e9). Measured on the true WCS of drafts 529 / 536: useful index bands put 20-300 stars in
 # the field (band 3 of 529: 4 stars still gave log-odds 22.3 > 20.7).
+# G03-02 (2026-10-29): the root cause (the 4 pattern stars vouching for their own hypothesis) is
+# fixed - verify_hypothesis leaves them out. With them excluded, K = 5..19 catalog stars + 146
+# random detections never reached ln(1e6) (3000 trials, max log-odds -17.8). The floor is kept
+# for now (it also covers confirm_fits, which has no pattern); removing it is an open question.
 #: a hypothesis is verified only against at least this many catalog stars inside the field
 MIN_VERIFY_CATALOG_STARS = 20
 #: the linear "tweak" re-fit needs this many pairs; the detections used in that fit are not
@@ -178,15 +182,22 @@ def fit_similarity(src: np.ndarray, dst: np.ndarray, mirror: bool) -> tuple[comp
 
 
 def wcs_from_similarity(a: complex, b: complex, mirror: bool, ra0: float, dec0: float, shape: tuple[int, int]) -> Any:
-    """TAN WCS: pixel (0-based x, y) -> tangent plane (deg, about ra0/dec0) via the similarity,
-    re-centred on the image centre."""
+    """TAN WCS of the similarity pixel (0-based x, y) -> tangent plane (deg) about (ra0, dec0).
+
+    G03-01: the similarity maps pixels into the plane tangent at (ra0, dec0), so that point is
+    CRVAL and CRPIX is the pixel that maps onto it (z0 = -b / a; conjugated for the mirror
+    parity); the CD matrix is the linear part. Moving CRVAL to the image centre while keeping the
+    CD of the (ra0, dec0) plane dropped the meridian convergence and the plane curvature between
+    the two tangent points (222 px at 9.8"/px, Dec 60, corner pattern). ``shape`` is unused: the
+    refinement re-centres the WCS on the image."""
     from astropy.wcs import WCS  # noqa: PLC0415
 
-    ny, nx = shape
-    xc, yc = (nx - 1) / 2.0, (ny - 1) / 2.0
-    zc = complex(xc, -yc) if mirror else complex(xc, yc)
-    wc = a * zc + b
-    ra_c, dec_c = tan_deproject(np.array([wc.real]), np.array([wc.imag]), ra0, dec0)
+    del shape
+    if a == 0:
+        raise ValueError("degenerate similarity (scale 0)")
+    z0 = -b / a
+    if mirror:
+        z0 = z0.conjugate()
     # linear part: d(xi, eta)/d(x, y)
     if mirror:
         cd = np.array([[a.real, a.imag], [a.imag, -a.real]])
@@ -194,8 +205,8 @@ def wcs_from_similarity(a: complex, b: complex, mirror: bool, ra0: float, dec0: 
         cd = np.array([[a.real, -a.imag], [a.imag, a.real]])
     w = WCS(naxis=2)
     w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-    w.wcs.crpix = [xc + 1.0, yc + 1.0]
-    w.wcs.crval = [float(ra_c[0]), float(dec_c[0])]
+    w.wcs.crpix = [z0.real + 1.0, z0.imag + 1.0]
+    w.wcs.crval = [float(ra0) % 360.0, float(dec0)]
     w.wcs.cd = cd
     return w
 
@@ -250,10 +261,14 @@ def verify_hypothesis(
     shape: tuple[int, int],
     *,
     sigma_px: float,
+    exclude: np.ndarray | None = None,
 ) -> tuple[float, int, Any]:
     """Log-odds of a WCS hypothesis. Detections (brightest first) are balanced to the
     number of catalog stars in the field; fewer than ``MIN_VERIFY_CATALOG_STARS`` catalog
-    stars in the field cannot verify anything. A 4-star hypothesis is only exact near its
+    stars in the field cannot verify anything. ``exclude`` (indices into ``det_xy_bright``)
+    are the detections that generated the hypothesis - the 4 stars of the matched pattern
+    fit it by construction and are left out of every log-odds and of the balance count
+    (G03-02; Lang et al. 2010 sect. 2.4). A 4-star hypothesis is only exact near its
     pattern, so when it is promising (>= ``TWEAK_MIN_PAIRS`` pairs within a loose radius)
     the linear TAN is re-fitted once on those pairs ("tweak"); the detections used in that
     fit are left out of its log-odds, so the fit cannot vouch for itself.
@@ -262,6 +277,10 @@ def verify_hypothesis(
     from astropy.wcs.utils import fit_wcs_from_points  # noqa: PLC0415
     from scipy.spatial import cKDTree  # noqa: PLC0415
 
+    if exclude is not None and len(exclude):
+        keep = np.ones(len(det_xy_bright), dtype=bool)
+        keep[np.asarray(exclude, dtype=np.int64)] = False
+        det_xy_bright = det_xy_bright[keep]
     ny, nx = shape
     area = float(nx * ny)
     cpx, inside = _project_catalog(w, cat_ra, cat_dec, shape)
@@ -336,9 +355,12 @@ def solve_against_catalog(
     sigma_px: float,
     scale_range_arcsec: tuple[float, float] | None = None,
     max_hypotheses: int = 20_000,
+    gaia_db: str | None = None,
 ) -> SolveResult:
     """Match image patterns to catalog patterns (catalog = stars around ra0/dec0) and
-    verify hypotheses; the first one above ``LOG_ODDS_ACCEPT`` is refined and returned."""
+    verify hypotheses. Every hypothesis above ``LOG_ODDS_ACCEPT`` goes through
+    :func:`accept_hypothesis` (refinement + ``credible_solution``); the first one that passes
+    is returned, a rejected one does not end the search (G03-04)."""
     from scipy.spatial import cKDTree  # noqa: PLC0415
 
     ny, nx = shape
@@ -369,6 +391,9 @@ def solve_against_catalog(
     n_ver_det = min(len(det_xy), 150)
     det_order = np.argsort(-det_flux)[:n_ver_det]
     vxy = det_xy[det_order]
+    # position of every detection in the verification list (-1 = not in it)
+    ver_pos = np.full(len(det_xy), -1, dtype=np.int64)
+    ver_pos[det_order] = np.arange(len(det_order))
     tested = 0
     best = SolveResult(False, message="no hypothesis passed verification")
     order_hits = np.argsort(-isize)  # large image patterns first (better leverage)
@@ -388,7 +413,9 @@ def solve_against_catalog(
                 if not math.isfinite(rms) or rms > 0.02 * csize[cj]:
                     continue
                 w = wcs_from_similarity(a, b, mirror, ra0, dec0, shape)
-                lo, nm, w = verify_hypothesis(w, vxy, cat_ra, cat_dec, cat_mag, shape, sigma_px=sigma_px)
+                quad = ver_pos[i_sel[icanon[ii]]]
+                lo, nm, w = verify_hypothesis(w, vxy, cat_ra, cat_dec, cat_mag, shape, sigma_px=sigma_px,
+                                              exclude=quad[quad >= 0])
                 if not math.isfinite(lo):
                     continue
                 tested += 1
@@ -396,10 +423,14 @@ def solve_against_catalog(
                     best = SolveResult(False, wcs=w, log_odds=lo, n_match=nm, mirrored=mirror,
                                        scale_arcsec=s_as, message="best rejected hypothesis")
                 if lo >= LOG_ODDS_ACCEPT:
-                    res = refine_wcs(w, det_xy, cat_ra, cat_dec, shape, sigma_px=sigma_px)
-                    res.n_hypotheses = tested
-                    res.log_odds = max(res.log_odds, lo)
-                    return res
+                    res, why = accept_hypothesis(w, det_xy, shape, sigma_px=sigma_px, gaia_db=gaia_db,
+                                                 cat=(cat_ra, cat_dec))
+                    if res is None:
+                        best.message = f"verified hypothesis rejected: {why}"
+                    else:
+                        res.n_hypotheses = tested
+                        res.log_odds = max(res.log_odds, lo)
+                        return res
                 if tested >= max_hypotheses:
                     best.n_hypotheses = tested
                     return best
@@ -497,6 +528,35 @@ def credible_solution(res: SolveResult, n_det: int, sigma_px: float) -> tuple[bo
     return True, "solved"
 
 
+def accept_hypothesis(
+    w: Any,
+    det_xy: np.ndarray,
+    shape: tuple[int, int],
+    *,
+    sigma_px: float,
+    gaia_db: str | None,
+    cat: tuple[np.ndarray, np.ndarray] | None = None,
+) -> tuple[SolveResult | None, str]:
+    """Decision on a verified hypothesis, shared by the hinted and the blind solver (G03-04).
+
+    Refined against ``cat`` (ra, dec) when given (the hinted cone), else against the Gaia stars
+    of its own footprint; with ``gaia_db`` then re-fitted against a Gaia catalogue cut to the
+    field and deep enough for all detections (:func:`_final_refine`). The result is a solution
+    only when it passes :func:`credible_solution`; otherwise ``(None, reason)`` and the caller
+    keeps searching."""
+    if cat is not None:
+        res = refine_wcs(w, det_xy, cat[0], cat[1], shape, sigma_px=sigma_px)
+    elif gaia_db:
+        scale = float(np.sqrt(abs(np.linalg.det(w.pixel_scale_matrix)))) * 3600.0
+        res = refine_with_gaia(w, scale, det_xy, shape, gaia_db=gaia_db, sigma=sigma_px)
+    else:
+        raise ValueError("accept_hypothesis needs a catalogue or a Gaia DB")
+    if res.ok and gaia_db:
+        res = _final_refine(res, det_xy, shape, gaia_db=gaia_db, sigma=sigma_px)
+    ok, why = credible_solution(res, len(det_xy), sigma_px)
+    return (res, why) if ok else (None, why)
+
+
 # ---------------------------------------------------------------------------
 # image detections
 # ---------------------------------------------------------------------------
@@ -533,44 +593,53 @@ def detect_stars(img: np.ndarray) -> tuple[np.ndarray, np.ndarray, float | None]
 # ---------------------------------------------------------------------------
 # Gaia (local VYVAR DB)
 # ---------------------------------------------------------------------------
-GAIA_MAG_STEPS = (9.0, 11.0, 13.0, 15.0, 16.5, 17.5)
-
-
 def query_gaia_cone(db_path: str, ra0: float, dec0: float, radius: float, *, want: int = 3000) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Gaia stars within ``radius`` deg of (ra0, dec0), brightest first, at least ``want``
-    stars when available. Handles RA wrap at 0/360 and the poles; magnitude limit is
-    deepened step by step so dense fields do not read millions of rows."""
-    from catalog_db import connect_ro  # noqa: PLC0415
+    """The brightest ``want`` Gaia stars (all when fewer) within the great-circle cone of
+    ``radius`` deg about (ra0, dec0), brightest first.
 
+    RA box from ``catalog_db.ra_boxes_for_cone`` (G03-05: exact cos dec at any Dec, RA wrap,
+    poles). G03-45: no fixed G ladder (it capped the catalogue at G 17.5 and re-ran the SQL per
+    step): one ``ORDER BY g_mag LIMIT n`` read per RA interval, n = ``want`` x box area / cone
+    area, doubled until the cone holds ``want`` stars or the box is exhausted. The n brightest of
+    the box contain every cone star brighter than the n-th, so the result is exactly the
+    ``want`` brightest of the cone."""
+    from catalog_db import connect_ro, ra_boxes_for_cone  # noqa: PLC0415
+
+    want = max(1, int(want))
+    ra_boxes, dmin, dmax = ra_boxes_for_cone(ra0, dec0, radius)
+    r = math.radians(max(float(radius), 0.0))
+    cone_sr = 2.0 * math.pi * (1.0 - math.cos(r))
+    box_sr = sum(math.radians(b - a) for a, b in ra_boxes) * (math.sin(math.radians(dmax)) - math.sin(math.radians(dmin)))
+    n = int(math.ceil(want * max(1.0, box_sr / cone_sr))) if cone_sr > 0 else want
+    # unary + keeps SQLite on the (ra, dec) index (the g_mag index would scan the whole sky)
+    sql = ("SELECT ra, dec, g_mag FROM gaia_dr3 WHERE ra BETWEEN ? AND ? AND dec BETWEEN ? AND ? "
+           "AND g_mag IS NOT NULL ORDER BY +g_mag LIMIT ?")
     con = connect_ro(db_path)
     try:
-        dmin, dmax = max(-90.0, dec0 - radius), min(90.0, dec0 + radius)
-        cosd = math.cos(math.radians(min(abs(dmin), abs(dmax)) if dmin * dmax > 0 else 0.0))
-        if dmax >= 89.999 or dmin <= -89.999 or radius / max(cosd, 1e-6) >= 180.0:
-            ra_boxes = [(0.0, 360.0)]
-        else:
-            dra = radius / max(cosd, 1e-6)
-            lo, hi = (ra0 - dra) % 360.0, (ra0 + dra) % 360.0
-            ra_boxes = [(lo, hi)] if lo < hi else [(lo, 360.0), (0.0, hi)]
-        rows: list[tuple[float, float, float]] = []
-        for mlim in GAIA_MAG_STEPS:
-            rows = []
-            for a, b in ra_boxes:
-                rows += con.execute(
-                    "SELECT ra, dec, g_mag FROM gaia_dr3 WHERE ra BETWEEN ? AND ? AND dec BETWEEN ? AND ? "
-                    "AND g_mag IS NOT NULL AND g_mag <= ?", (a, b, dmin, dmax, mlim)).fetchall()
-            arr = np.asarray(rows, dtype=np.float64).reshape(-1, 3)
+        while True:
+            parts = [np.asarray(con.execute(sql, (a, b, dmin, dmax, n)).fetchall(), dtype=np.float64).reshape(-1, 3)
+                     for a, b in ra_boxes]
+            exhausted = all(len(p) < n for p in parts)
+            arr = np.vstack(parts)
+            arr = arr[np.argsort(arr[:, 2], kind="stable")][:n]
             if len(arr):
-                xi, eta = tan_project(arr[:, 0], arr[:, 1], ra0, dec0)
-                arr = arr[np.hypot(xi, eta) <= radius]
-            if len(arr) >= want:
+                arr = arr[_angular_sep_deg(arr[:, 0], arr[:, 1], ra0, dec0) <= float(radius)]
+            if len(arr) >= want or exhausted:
                 break
+            n *= 2
     finally:
         con.close()
     if not len(arr):
         return np.zeros(0), np.zeros(0), np.zeros(0)
-    o = np.argsort(arr[:, 2])
-    return arr[o, 0], arr[o, 1], arr[o, 2]
+    arr = arr[:want]
+    return arr[:, 0], arr[:, 1], arr[:, 2]
+
+
+def _angular_sep_deg(ra: np.ndarray, dec: np.ndarray, ra0: float, dec0: float) -> np.ndarray:
+    r, d = np.radians(ra), np.radians(dec)
+    r0, d0 = math.radians(ra0), math.radians(dec0)
+    c = np.clip(math.sin(d0) * np.sin(d) + math.cos(d0) * np.cos(d) * np.cos(r - r0), -1.0, 1.0)
+    return np.degrees(np.arccos(c))
 
 
 # ---------------------------------------------------------------------------
@@ -632,15 +701,10 @@ def solve_hinted(
             tried.append({"radius_deg": r, "n_cat": int(len(ra)), "status": "few catalog stars"})
             continue
         res = solve_against_catalog(det_xy, det_flux, shape, ra, dec, mag, ra0=ra_hint, dec0=dec_hint,
-                                    sigma_px=sigma)
+                                    sigma_px=sigma, gaia_db=gaia_db)
         tried.append({"radius_deg": r, "n_cat": int(len(ra)), "status": res.message,
                       "log_odds": res.log_odds, "hyp": res.n_hypotheses})
-        if res.ok:
-            res = _final_refine(res, det_xy, shape, gaia_db=gaia_db, sigma=sigma)
-            ok, why = credible_solution(res, len(det_xy), sigma)
-            if not ok:
-                tried[-1]["status"] = why
-                continue
+        if res.ok:  # refined and credible (accept_hypothesis)
             res.extra["cones"] = tried
             res.extra["cone_radius_deg"] = r
             return res
@@ -664,16 +728,11 @@ def strip_wcs(hdr: Any) -> None:
 
 
 def header_scale_hint(hdr: Any) -> float | None:
-    """arcsec/px from FOCALLEN and XPIXSZ (only orders the cone ladder - a wrong value
-    costs time, never the result)."""
-    try:
-        f = float(hdr.get("FOCALLEN"))
-        p = float(hdr.get("XPIXSZ") or hdr.get("PIXSIZE1"))
-    except (TypeError, ValueError):
-        return None
-    if not (f > 0 and p > 0):
-        return None
-    return 206.265 * p / f
+    """arcsec/px from the header focal length and pixel (optics module, G03-19; only orders the
+    cone ladder - a wrong value costs time, never the result)."""
+    from optics import optics_hint  # noqa: PLC0415
+
+    return optics_hint(hdr).arcsec_per_px
 
 
 def default_index_dir(gaia_db: str | None, configured: str | None = None) -> str | None:

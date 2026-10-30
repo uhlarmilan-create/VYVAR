@@ -14,7 +14,8 @@ detections, Smith et al. 2020).
    moving object. MASTERSTAR detections without a Gaia star brighter than the catalogue depth
    (``unmatched_in_range``) are sources too.
 2. Every stationary source is measured on every frame at its position: aperture k x FWHM_frame
-   (the field k), sky = median of the annulus, the frame zero point of the variability search
+   (k of the faintest brightness group, C1-2026-10), sky = median of the annulus, the frame zero point of the variability search
+   corrected to that k (aperture correction of the field search)
    (Honeycutt), CCD-equation error; magnitude on the Gaia G scale of the field.
 3. Kept as a candidate (T1, T2, ...): S/N >= 5 on >= 3 consecutive frames; centroid within 0.75 FWHM;
    not fixed on the detector while the field moves (hot pixel); no Gaia star within
@@ -55,6 +56,10 @@ DETECT_NSIGMA = 5.0
 SNR_DETECT = 5.0
 N_CONSEC_MIN = 3
 MATCH_FWHM = 1.0
+#: G10-03: empty-sky apertures needed on the data footprint of every frame (of 300 placed).
+#: G10-02: position tolerance of a minor body (two-body propagation of MPCORB elements over months: tens of arcsec).
+BODY_POS_TOL_ARCSEC = 60.0
+EMPTY_SKY_MIN_VALID = 100
 LINK_FWHM = 1.0
 MOVE_FWHM = 1.5
 CENTROID_MAX_FWHM = 0.75
@@ -84,36 +89,54 @@ DETECTOR_FRAC_MAX = 0.15
 
 
 # ---------------------------------------------------------------- per-frame detection
+
+def shape_text(extended: object, fwhm_ratio: object) -> str:
+    """Shape of a candidate on the MASTERSTAR for the user (UI and report): ``point`` or ``extended``
+    with its FWHM relative to field stars (``extended`` when > EXTENDED_RATIO). An extended candidate is
+    a galaxy, nebula, comet coma or a blend - not a point-like transient; ``-`` when not measured."""
+    try:
+        r = float(fwhm_ratio)
+    except (TypeError, ValueError):
+        r = float("nan")
+    if not math.isfinite(r):
+        return "-"
+    ext = str(extended).strip().lower() in ("true", "1", "yes")
+    return f"{'extended' if ext else 'point'} (FWHM x{r:.2f})"
+
 def _detect_one(args: tuple) -> pd.DataFrame:
     fp, t, fwhm = args
     from astropy.io import fits  # noqa: PLC0415
     from photutils.detection import DAOStarFinder  # noqa: PLC0415
 
     from frame_footprint import aligned_footprint  # noqa: PLC0415
-    from frame_metrics import pixel_noise_sigma  # noqa: PLC0415
     from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER  # noqa: PLC0415
 
     with fits.open(fp, memmap=False) as h:
         img = np.asarray(h[0].data, dtype=np.float64)
         hdr = h[0].header
     cov = aligned_footprint(hdr, img.shape)
-    sky = float(np.median(img[cov]))
-    sig = pixel_noise_sigma(np.where(cov, img, np.nan))
-    if not sig:
+    vals = img[cov & np.isfinite(img)]
+    if vals.size < 100:
+        return pd.DataFrame()
+    sky = float(np.median(vals))
+    # G02-28: the pixel noise of a RESAMPLED aligned frame from the robust spread of its sky pixels; the
+    # neighbour-difference estimator sees the interpolation correlation and put the 5-sigma threshold near 4 sigma
+    sig = 1.4826 * float(np.median(np.abs(vals - sky)))
+    if not (math.isfinite(sig) and sig > 0):
         return pd.DataFrame()
     tbl = DAOStarFinder(fwhm=float(fwhm), threshold=DETECT_NSIGMA * sig, n_brightest=None,
                         **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER)(img - sky, mask=~cov)
     if tbl is None or len(tbl) == 0:
         return pd.DataFrame()
     return pd.DataFrame({"t": t, "x": np.asarray(tbl["x_centroid"], float), "y": np.asarray(tbl["y_centroid"], float),
-                         "flux": np.asarray(tbl["flux"], float), "sharp": np.asarray(tbl["sharpness"], float)})
+                         "flux": np.asarray(tbl["flux"], float)})
 
 
 def detect_all_frames(frame_paths: list[Path], fwhm: list[float], workers: int) -> pd.DataFrame:
     jobs = [(str(p), t, f) for t, (p, f) in enumerate(zip(frame_paths, fwhm, strict=True))]
     parts = list(map_frames(_detect_one, jobs, workers=workers, stage="transient detection"))
     parts = [p for p in parts if not p.empty]
-    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["t", "x", "y", "flux", "sharp"])
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["t", "x", "y", "flux"])
 
 
 def unmatched_detections(det: pd.DataFrame, known_xy: np.ndarray, fwhm_by_t: np.ndarray) -> pd.DataFrame:
@@ -145,15 +168,25 @@ def link_detections(un: pd.DataFrame, link_px: float) -> np.ndarray:
     return connected_components(g, directed=False)[1]
 
 
-def classify_groups(un: pd.DataFrame, labels: np.ndarray, times: np.ndarray, fwhm_med: float) -> tuple[list[dict], list[dict]]:
-    """(stationary sources, moving objects) from linked detections."""
+def classify_groups(un: pd.DataFrame, labels: np.ndarray, times: np.ndarray, fwhm_med: float,
+                    dropped: dict[str, int] | None = None) -> tuple[list[dict], list[dict]]:
+    """(stationary sources, moving objects) from linked detections.
+
+    G10-43: groups that are neither are counted in ``dropped`` (``short``: seen on fewer than N_CONSEC_MIN
+    frames; ``not_linear``: they move but not along one line - e.g. two crossing tracks merged by the
+    friends-of-friends linking), so a lost object is visible in transient_meta."""
     stat, mov = [], []
+    if dropped is not None:
+        dropped.setdefault("short", 0)
+        dropped.setdefault("not_linear", 0)
     if un.empty:
         return stat, mov
     un = un.assign(g=labels)
     for _g, d in un.groupby("g"):
         fr = d["t"].nunique()
         if fr < N_CONSEC_MIN:
+            if dropped is not None:
+                dropped["short"] += 1
             continue
         d = d.sort_values("t")
         tt = times[d["t"].to_numpy(int)]
@@ -175,6 +208,8 @@ def classify_groups(un: pd.DataFrame, labels: np.ndarray, times: np.ndarray, fwh
                         "_x0": float(cx[1]), "_y0": float(cy[1])})
         elif drift <= MOVE_FWHM * fwhm_med:
             stat.append({"x": float(np.median(x)), "y": float(np.median(y)), "n_det_frames": int(fr), "origin": "frames"})
+        elif dropped is not None:
+            dropped["not_linear"] += 1
     return stat, mov
 
 
@@ -284,10 +319,15 @@ def run_field_transients(
     gain: float,
     read_noise: float,
     check_catalogs: bool = True,
+    site: tuple[float, float, float] | None = None,
 ) -> dict[str, Any]:
     """Run the search for one observation group. ``frame`` (index = time order t; stem, time,
     fwhm, airmass, jd_utc), ``E`` (frame zero point by t) and ``zp_g`` (G = m_inst - E - zp_g for a
-    star of solar colour) come from the variability search of the same run."""
+    star of solar colour) come from the variability search of the same run.
+
+    ``frame["time"]`` (field-centre frame time) orders and spaces the frames; the times written
+    for a source (``first_time``, ``transient_T*.csv``) are that source's own BJD_TDB from
+    ``jd_utc`` and ``site`` (G02-18, ``time_utils.star_times``)."""
     from astropy.io import fits  # noqa: PLC0415
     from astropy.wcs import WCS  # noqa: PLC0415
     from scipy.spatial import cKDTree  # noqa: PLC0415
@@ -317,15 +357,21 @@ def run_field_transients(
     ms = ms[np.isfinite(pd.to_numeric(ms["x"], errors="coerce")) & np.isfinite(pd.to_numeric(ms["y"], errors="coerce"))]
     known_xy = ms[["x", "y"]].to_numpy(float)
     cat = read_vyvar_csv(ps / "field_catalog_cone.csv", low_memory=False)
-    gx, gy = wcs.all_world2pix(pd.to_numeric(cat["ra_deg"]), pd.to_numeric(cat["dec_deg"]), 0)
+    gx, gy = wcs.all_world2pix(pd.to_numeric(cat["ra_deg"], errors="coerce"), pd.to_numeric(cat["dec_deg"], errors="coerce"), 0)
     gmag = pd.to_numeric(cat["mag"], errors="coerce").to_numpy(float)
+    # G10-42: catalogue rows without a finite projection are dropped (a NaN point breaks the KD-tree)
+    _gok = np.isfinite(gx) & np.isfinite(gy)
+    gx, gy, gmag = gx[_gok], gy[_gok], gmag[_gok]
+    meta["n_catalog_not_projected"] = int((~_gok).sum())
     gtree = cKDTree(np.c_[gx, gy])
 
     # 1. sources
     det = detect_all_frames(paths, list(fwhm), workers)
     un = unmatched_detections(det, known_xy, fwhm)
     labels = link_detections(un, LINK_FWHM * fwhm_med)
-    stat, mov = classify_groups(un, labels, times, fwhm_med)
+    _dropped: dict[str, int] = {}
+    stat, mov = classify_groups(un, labels, times, fwhm_med, dropped=_dropped)
+    meta["groups_dropped"] = _dropped
     mats = [np.array([float(fits.getheader(p)[f"VY_AM{j}"]) for j in range(9)]).reshape(3, 3) for p in paths]
     n_mov0 = len(mov)
     mov = [m for m in mov if not _detector_fixed(un, labels, m, mats, fwhm_med)]
@@ -360,7 +406,14 @@ def run_field_transients(
         rnd = _empty_positions(msh, ms, fwhm_med, a_out, n=300)
         allxy = np.vstack([xy, rnd])
         Fm = forced_photometry(paths, fwhm, allxy, k=k, a_in=a_in, a_out=a_out, gain=gain, rn=read_noise, workers=workers)
-        Fe = Fm[:, len(xy):, 0]
+        # G10-03: only empty apertures on the frame's data (the alignment fill is constant: net 0, MAD shrinks)
+        Fe = np.where(Fm[:, len(xy):, 3] > 0.5, Fm[:, len(xy):, 0], np.nan)
+        n_valid_sky = np.isfinite(Fe).sum(axis=1)
+        meta["empty_sky_min_valid"] = int(n_valid_sky.min()) if n_valid_sky.size else 0
+        if n_valid_sky.size == 0 or int(n_valid_sky.min()) < EMPTY_SKY_MIN_VALID:
+            meta["status"] = f"empty-sky noise unknown: < {EMPTY_SKY_MIN_VALID} empty apertures on a frame's data"
+            _write_meta(phot, meta)
+            return meta
         sig_sky = 1.4826 * np.nanmedian(np.abs(Fe - np.nanmedian(Fe, axis=1, keepdims=True)), axis=1)
         meta["empty_sky_noise_ratio"] = float(np.nanmedian(sig_sky / np.nanmedian(Fm[:, len(xy):, 1], axis=1)))
         Fm = Fm[:, : len(xy)]
@@ -375,8 +428,10 @@ def run_field_transients(
         r_ann = a_out * float(np.nanmax(fwhm))
         ins_ann = (np.array([_inside_all(xy[:, 0], xy[:, 1], r_ann, [q]) for q in quads]) if len(quads) == len(paths)
                    else np.ones((len(paths), len(xy)), bool))
-        dark = _master_dark(ps, per_frame_dir.name if hasattr(per_frame_dir, "name") else Path(per_frame_dir).name, paths[0])
+        dark, _dark_why = _master_dark(cfg, paths[0])
         meta["master_dark"] = None if dark is None else dark.get("file")
+        if dark is None:
+            meta["master_dark_note"] = f"hot-pixel test off: {_dark_why}"
         gal = load_galaxies(_catalog_dir(cfg))
         meta["galaxy_catalogue"] = None if gal is None else {"file": OPENNGC_NAME, "n": int(len(gal))}
         ra, dec = wcs.all_pix2world(xy[:, 0], xy[:, 1], 0)
@@ -453,7 +508,6 @@ def run_field_transients(
                 reasons.append(f"aperture or sky annulus outside the frame on > {100 * (1 - EDGE_MIN_FRAC):.0f} % of frames")
             rows.append({"x": float(xy[i, 0]), "y": float(xy[i, 1]), "ra_deg": float(ra[i]), "dec_deg": float(dec[i]),
                          "origin": S.loc[i, "origin"], "kind": kind, "first_frame": int(first),
-                         "first_time": float(times[first]) if first >= 0 else float("nan"),
                          "n_frames_snr5": int(det_i.sum()), "longest_run": int(_runs(det_i)[0]),
                          "snr_max": float(np.nanmax(snr)) if np.isfinite(snr).any() else float("nan"),
                          "mag_g_est": mag_med, "centroid_off_px": off_med, "extended": ext,
@@ -464,10 +518,19 @@ def run_field_transients(
                          "in_galaxy": bool(gname) and gdist <= max(gsemi, GALAXY_CORE_ARCSEC),
                          "candidate": not reasons, "reject_reason": "; ".join(reasons)})
             if not reasons:
-                rows[-1]["_lc"] = pd.DataFrame({"time": times, "mag": mag, "err": 1.0857 * eF / np.where(F > 0, F, np.nan),
+                rows[-1]["_lc"] = pd.DataFrame({"time": np.nan, "mag": mag, "err": 1.0857 * eF / np.where(F > 0, F, np.nan),
                                                 "snr": snr, "fwhm": fwhm, "airmass": frame["airmass"].to_numpy(float)})
     T = pd.DataFrame(rows)
     if not T.empty:
+        # G02-18 / C6: per-source times (one vectorised call for all sources)
+        from time_utils import star_times  # noqa: PLC0415
+
+        t_src, meta["time_column"] = star_times(frame["jd_utc"].to_numpy(float), T["ra_deg"], T["dec_deg"], site)
+        ff = T["first_frame"].to_numpy(int)
+        T.insert(int(T.columns.get_loc("first_frame")) + 1, "first_time",
+                 np.where(ff >= 0, t_src[np.arange(len(T)), np.clip(ff, 0, None)], np.nan))
+        for j in T.index[T["candidate"]]:
+            T.at[j, "_lc"]["time"] = t_src[T.index.get_loc(j)]
         c = T[T["candidate"]].sort_values("snr_max", ascending=False).index
         T["label"] = ""
         T.loc[c, "label"] = [f"T{j + 1}" for j in range(len(c))]
@@ -484,7 +547,7 @@ def run_field_transients(
 
     # 3. minor bodies
     Mv = pd.DataFrame(mov)
-    bodies = _minor_bodies(cfg, wcs, msh, frame, ps)
+    bodies = _minor_bodies(cfg, wcs, msh, frame, phot)
     if not Mv.empty:
         Mv["ra_t0"], Mv["dec_t0"] = wcs.all_pix2world(Mv["x_t0"], Mv["y_t0"], 0)
         Mv["rate_arcsec_h"] = Mv["rate_px_day"] * scale / 24.0
@@ -493,17 +556,20 @@ def run_field_transients(
     if not B.empty:
         B["detected_frames"] = 0
         B["moving_object"] = -1
-        dtree = cKDTree(det[["x", "y"]].to_numpy(float)) if not det.empty else None
-        tol = max(3.0, 60.0 / scale)
+        # G10-02: a body is "detected" on a frame by an UNMATCHED detection (no catalogue / MASTERSTAR source)
+        # within the ephemeris tolerance (two-body propagation, BODY_POS_TOL_ARCSEC; at least 1 FWHM); one
+        # KD-tree per frame - field stars inside a 60" circle (107 px on 0.56"/px) no longer count
+        tol = max(fwhm_med, BODY_POS_TOL_ARCSEC / scale)
+        trees = {int(t): cKDTree(g[["x", "y"]].to_numpy(float)) for t, g in un.groupby("t")} if not un.empty else {}
         for bi, br in B.iterrows():
             px = np.asarray(br["_x"], float)
             py = np.asarray(br["_y"], float)
             n = 0
             for t in range(len(frame)):
-                if dtree is None or not (0 <= px[t] < msh["NAXIS1"] and 0 <= py[t] < msh["NAXIS2"]):
+                tr = trees.get(t)
+                if tr is None or not (0 <= px[t] < msh["NAXIS1"] and 0 <= py[t] < msh["NAXIS2"]):
                     continue
-                hit = dtree.query_ball_point((px[t], py[t]), tol)
-                n += int(any(int(det.iloc[h]["t"]) == t for h in hit))
+                n += int(len(tr.query_ball_point((px[t], py[t]), tol)) > 0)
             B.at[bi, "detected_frames"] = n
             if not Mv.empty:
                 tm = 0.5 * (times[0] + times[-1])
@@ -553,41 +619,34 @@ def _empty_positions(msh: Any, ms: pd.DataFrame, fwhm: float, a_out: float, n: i
     return np.asarray(out[:n], float).reshape(-1, 2)
 
 
-def _master_dark(ps: Path, obs_group: str, frame0: Path) -> dict[str, Any] | None:
-    """The run's master dark (draft manifest ``dark_by_obs_key``), binned to the lights' pixels the way
-    the calibration did (sum), with its median and robust sigma. None when not found."""
-    import re  # noqa: PLC0415
-
+def _master_dark(cfg: Any, frame0: Path) -> tuple[dict[str, Any] | None, str]:
+    """The master dark the calibration applied to this group (G10-04: the frame's own stamp VY_DARK / VY_MDP,
+    the file in the calibration library), with the raw frame shape. Returns (dark or None, reason)."""
     from astropy.io import fits  # noqa: PLC0415
 
-    man = None
-    for p in (ps.parent.parent / "draft_manifest.json", ps.parent / "draft_manifest.json"):
-        if p.is_file():
-            man = p
-            break
-    if man is None:
-        return None
     try:
-        calib = str(json.loads(man.read_text(encoding="utf-8")).get("paths", {}).get("calib", ""))
-    except (OSError, ValueError):
-        return None
-    m = re.search(r"dark_by_obs_key=\{([^}]*)\}", calib)
-    if not m:
-        return None
-    key = obs_group.replace("_", "|")
-    cands = re.findall(r"'([^']+)':\s*'([^']+)'", m.group(1))
-    fp = next((Path(v) for k, v in cands if k == key), None) or (Path(cands[0][1]) if cands else None)
-    if fp is None or not fp.is_file():
-        return None
+        h0 = fits.getheader(frame0)
+    except OSError as exc:
+        return None, f"frame header unreadable: {exc}"
+    if not bool(h0.get("VY_DARK", False)):
+        return None, "no master dark applied to this group"
+    name = str(h0.get("VY_MDP", "") or "").strip()
+    if not name:
+        return None, "frame has no VY_MDP (master dark name)"
+    root = Path(getattr(cfg, "calibration_library_root", "") or "")
+    fp = root / name
+    if not fp.is_file():
+        hits = sorted(root.rglob(name)) if root.is_dir() else []
+        if not hits:
+            return None, f"master dark {name} not found under {root}"
+        fp = hits[0]
     try:
         dk = np.asarray(fits.getdata(fp), dtype=np.float64)
-        h0 = fits.getheader(frame0)
-        ny, nx = int(h0["NAXIS2"]), int(h0["NAXIS1"])  # aligned frames keep the raw frame size
-    except (OSError, ValueError):
-        return None
+    except (OSError, ValueError) as exc:
+        return None, f"master dark unreadable: {exc}"
     if dk.ndim != 2:
-        return None
-    return {"file": str(fp), "data": dk, "raw_shape": (ny, nx)}
+        return None, "master dark is not a 2-D image"
+    return {"file": str(fp), "data": dk, "raw_shape": (int(h0["NAXIS2"]), int(h0["NAXIS1"]))}, ""
 
 
 def dark_hot_pixel(dark: dict[str, Any] | None, mats: list[np.ndarray], xy: np.ndarray, t_ref: int) -> bool:
@@ -630,7 +689,7 @@ def _field_moment_fwhm(img: np.ndarray, ms: pd.DataFrame, fwhm: float) -> float:
     return float(np.median(v)) if v else float("nan")
 
 
-def _minor_bodies(cfg: Any, wcs: Any, msh: Any, frame: pd.DataFrame, ps: Path) -> dict[str, Any]:
+def _minor_bodies(cfg: Any, wcs: Any, msh: Any, frame: pd.DataFrame, phot: Path) -> dict[str, Any]:
     """Minor planets / comets brighter than V 20 in the frame (empty without the MPC files)."""
     from minor_bodies import bodies_in_field, load_orbits  # noqa: PLC0415
 
@@ -647,7 +706,10 @@ def _minor_bodies(cfg: Any, wcs: Any, msh: Any, frame: pd.DataFrame, ps: Path) -
     from minor_bodies import _sep_deg  # noqa: PLC0415
 
     rad = float(np.max(_sep_deg(corners[:, 0], corners[:, 1], c[0], c[1])))
-    site = _site(ps)
+    # one site for the run: the observer location the target BJD and the star times use (pipeline_meta)
+    from time_utils import run_site  # noqa: PLC0415
+
+    site = run_site(phot) or (None, None, None)
     jd = frame["jd_utc"].to_numpy(float) if "jd_utc" in frame else frame["time"].to_numpy(float)
     step = max(1, len(jd) // 24)
     jd_s = jd[::step] if jd[::step][-1] == jd[-1] else np.r_[jd[::step], jd[-1]]
@@ -709,31 +771,6 @@ def galaxy_near(gal: pd.DataFrame | None, ra: float, dec: float) -> tuple[str, f
     if d[j] > max(3.0 * semi, GALAXY_CORE_ARCSEC):
         return "", float("nan"), float("nan")
     return str(gal.at[j, "Name"]), float(d[j]), semi
-
-
-def _site(ps: Path) -> tuple[float | None, float | None, float | None]:
-    """Observer latitude, longitude, height of the run (draft manifest)."""
-    for p in (ps.parent / "draft_manifest.json", ps.parent.parent / "draft_manifest.json"):
-        try:
-            d = json.loads(p.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        loc = d.get("observer_location") or d.get("site") or {}
-        lat = loc.get("lat") if isinstance(loc, dict) else None
-        lon = loc.get("lon") if isinstance(loc, dict) else None
-        h = loc.get("height_m", loc.get("alt_m")) if isinstance(loc, dict) else None
-        if lat is not None and lon is not None:
-            return float(lat), float(lon), float(h) if h is not None else 0.0
-    return None, None, None
-
-
-def load_transient_candidates(photometry_dir: Path) -> pd.DataFrame:
-    """The kept candidates (T1, T2, ...) of a setup; empty without the search."""
-    fp = Path(photometry_dir) / TRANSIENT_CSV
-    if not fp.is_file() or fp.stat().st_size <= 2:
-        return pd.DataFrame()
-    d = pd.read_csv(fp, low_memory=False)
-    return d[d["candidate"].astype(str).str.lower() == "true"].reset_index(drop=True) if "candidate" in d else d
 
 
 def _write_meta(phot: Path, meta: dict[str, Any]) -> None:

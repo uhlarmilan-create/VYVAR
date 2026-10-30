@@ -152,137 +152,18 @@ def test_zp_sigmaclip_preserves_good_data():
 # ---------------------------------------------------------------------------
 # Color term - BP-RP extrapolation guard
 # ---------------------------------------------------------------------------
-def test_color_term_extrapolation_in_range():
-    from photometry_core import _check_color_term_extrapolation
-
-    assert _check_color_term_extrapolation(1.0, [0.8, 0.9, 1.1, 1.2]) is True
-    assert _check_color_term_extrapolation(0.8, [0.8, 0.9, 1.1, 1.2]) is True
-    assert _check_color_term_extrapolation(1.2, [0.8, 0.9, 1.1, 1.2]) is True
-
-
-def test_color_term_extrapolation_out_of_range_blocks():
-    from photometry_core import _check_color_term_extrapolation
-
-    assert _check_color_term_extrapolation(2.5, [0.8, 0.9, 1.1, 1.2]) is False
-    assert _check_color_term_extrapolation(0.5, [0.8, 0.9, 1.1, 1.2]) is False
-
-
-def test_ct_ref_uses_full_ensemble_not_export_pool():
-    """4-member ensemble with 1 member in comparison_stars.csv -> CT ref uses all 4."""
-    import numpy as np
-
-    from photometry_core import apply_color_term, ct_ensemble_reference_maps
-
-    ens_bp = {
-        "1497771992240531712": 0.3280553817749023,
-        "1499200223486564608": 0.6063861846923828,
-        "1497974027502858240": 0.4753026962280273,
-        "1497368849430107904": 0.5014162063598633,
-    }
-    ens_q = {cid: {"quality": "good"} for cid in ens_bp}
-    export_only = {"1499200223486564608": 0.6063861846923828}
-    export_q = {"1499200223486564608": {"quality": "good"}}
-    bp, q = ct_ensemble_reference_maps(ens_bp, ens_q)
-    assert set(bp) == set(ens_bp)
-    mag = np.array([10.0], dtype=np.float64)
-    _, _, med_ens = apply_color_term(mag, 0.458137, bp, q, -0.373)
-    _, _, med_export = apply_color_term(mag, 0.458137, export_only, export_q, -0.373)
-    assert abs(float(med_ens) - float(np.median(list(ens_bp.values())))) < 1e-9
-    assert abs(float(med_export) - 0.606386) < 1e-3
-    assert abs(float(med_ens) - float(med_export)) > 0.1
-
-
-def test_color_term_extrapolation_tolerance():
-    from photometry_core import _check_color_term_extrapolation
-
-    comps = [0.8, 0.9, 1.1, 1.2]
-    assert _check_color_term_extrapolation(1.25, comps, extrapolation_tol=0.0) is False
-    assert _check_color_term_extrapolation(1.25, comps, extrapolation_tol=0.1) is True
-
-
-def test_color_term_extrapolation_fallback_preserves_mag():
-    """Out-of-range -> apply_color_term not used; magnitudes unchanged."""
-    import numpy as np
-
-    from photometry_core import (
-        _check_color_term_extrapolation,
-        apply_color_term,
-    )
-
-    mag = np.array([12.0, 12.01, 11.99], dtype=np.float64)
-    comp_bp_rp = {"c1": 0.9, "c2": 1.0, "c3": 1.1}
-    comp_quality = {
-        "c1": {"quality": "good"},
-        "c2": {"quality": "good"},
-        "c3": {"quality": "good"},
-    }
-    target_bp_rp = 2.0
-    c1 = -0.5
-    in_range = _check_color_term_extrapolation(
-        target_bp_rp,
-        list(comp_bp_rp.values()),
-    )
-    assert in_range is False
-    mag_ct, ct_corr, bp_med = apply_color_term(
-        mag, target_bp_rp, comp_bp_rp, comp_quality, c1
-    )
-    assert abs(float(ct_corr)) > 0.1
-    # Call-site fallback (block path)
-    mag_blocked = mag.copy()
-    ct_corr_blocked = 0.0
-    ct_ok = False
-    if not in_range:
-        mag_blocked = mag.copy()
-        ct_corr_blocked = 0.0
-        ct_ok = False
-    assert ct_ok is False
-    assert ct_corr_blocked == 0.0
-    np.testing.assert_array_equal(mag_blocked, mag)
-
-
 @pytest.mark.parametrize(
-    ("filter_name", "expected_apply"),
-    [
-        ("TG", True),
-        ("TB", True),
-        ("TR", True),
-        ("SG", True),
-        ("SR", True),
-        ("SI", True),
-        ("CV", False),
-        ("CR", False),
-    ],
+    ("filter_name", "expected"),
+    [("SG", True), ("SR", True), ("SI", True), ("g", True), ("V", True),
+     ("TG", False), ("TB", False), ("TR", False), ("CV", False), ("CR", False),
+     ("NoFilter", False), ("Clear", False), ("L", False), ("Luminance", False), ("test", False)],
 )
-def test_should_apply_color_term_osc_aavso_broadband(filter_name: str, expected_apply: bool):
-    from photometry_core import should_apply_color_term
+def test_colour_term_only_for_standard_filters(filter_name: str, expected: bool):
+    """CT-ONE-2026-10 / BANDAUTH-2026-10: one authority decides whether a filter gets a colour term
+    (should_apply_color_term of the removed "fit" path is gone; tri-colour OSC channels are not standard)."""
+    from gaia_bands import filter_band_for_obs_group
 
-    apply, reason = should_apply_color_term(
-        obs_group=filter_name,
-        c1=-0.5,
-        c1_stderr=0.05,
-        n_comp=8,
-        min_comp_for_ct=7,
-    )
-    assert apply is expected_apply
-    if expected_apply:
-        assert "aplikovany" in reason.lower() or "CT" in reason
-
-
-@pytest.mark.parametrize(
-    "filter_name",
-    ["NoFilter", "Clear", "L", "Luminance", "test"],
-)
-def test_should_apply_color_term_not_broadband_or_nofilter(filter_name: str):
-    from photometry_core import should_apply_color_term
-
-    apply, _ = should_apply_color_term(
-        obs_group=filter_name,
-        c1=-0.5,
-        c1_stderr=0.05,
-        n_comp=8,
-        min_comp_for_ct=7,
-    )
-    assert apply is False
+    assert filter_band_for_obs_group(filter_name).transformable is expected
 
 
 @pytest.mark.parametrize(

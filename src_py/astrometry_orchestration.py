@@ -24,7 +24,7 @@ from pipeline_astrometry import (
     _solve_wcs_external,
     _wcs_field_center_radec_deg,
     filter_code_from_setup_name,
-    pick_sibling_donor_filter,
+    pick_sibling_donor_setup,
 )
 
 
@@ -59,12 +59,12 @@ def _pass2_sibling_wcs_recovery(
         if gk:
             report_by_gkey[gk] = rep
 
-    verified_filters: set[str] = set()
+    # G03-35: donors keyed by setup (same filter first, then the nearest wavelength)
+    solved_setup_gkey: dict[str, str] = {}
     for gk in report_by_gkey:
         setup = Path(gk).name if gk else "(root)"
-        flt = filter_code_from_setup_name(setup)
-        if flt:
-            verified_filters.add(flt)
+        if filter_code_from_setup_name(setup):
+            solved_setup_gkey.setdefault(setup, gk)
 
     still_skipped: list[dict[str, Any]] = []
     archive_path = Path(align_kw["archive_path"])
@@ -78,19 +78,12 @@ def _pass2_sibling_wcs_recovery(
             still_skipped.append(sk)
             continue
 
-        donor_filter = pick_sibling_donor_filter(recipient_filter, verified_filters)
-        if donor_filter is None:
+        donor_setup = pick_sibling_donor_setup(setup, list(solved_setup_gkey))
+        if donor_setup is None:
             still_skipped.append(sk)
             continue
-
-        donor_gkey: str | None = None
-        donor_report: dict[str, Any] | None = None
-        for gk, rep in report_by_gkey.items():
-            d_setup = Path(gk).name if gk else "(root)"
-            if filter_code_from_setup_name(d_setup) == donor_filter:
-                donor_gkey = gk
-                donor_report = rep
-                break
+        donor_gkey: str | None = solved_setup_gkey[donor_setup]
+        donor_report: dict[str, Any] | None = report_by_gkey.get(donor_gkey)
         donor_job = job_by_gkey.get(donor_gkey or "") if donor_gkey else None
         if donor_report is None or donor_job is None:
             still_skipped.append(sk)
@@ -133,10 +126,11 @@ def _pass2_sibling_wcs_recovery(
                 scale_hint_arcsec=donor_scale,
                 app_config=cfg,
             )
-            rec_result["donor_filter"] = donor_filter
+            rec_result["donor_setup"] = donor_setup
+            rec_result["donor_filter"] = filter_code_from_setup_name(donor_setup)
             if not rec_result.get("solved"):
                 log_event(
-                    f"SIBLING Pass2: {setup} not solved with the {donor_filter} hint - "
+                    f"SIBLING Pass2: {setup} not solved with the {donor_setup} hint - "
                     f"{rec_result.get('message')}"
                 )
                 still_skipped.append(sk)
@@ -166,9 +160,9 @@ def _pass2_sibling_wcs_recovery(
             rep["sibling_recovery"] = rec_result
             reports.append(rep)
             report_by_gkey[gkey] = rep
-            verified_filters.add(recipient_filter)
+            solved_setup_gkey.setdefault(setup, gkey)
             log_event(
-                f"SIBLING Pass2: {setup} solved with the {donor_filter} hint - "
+                f"SIBLING Pass2: {setup} solved with the {donor_setup} hint - "
                 f"{rec_result.get('n_match')} matches, rms {rec_result.get('rms_px')} px"
             )
         except Exception as exc:  # noqa: BLE001
@@ -236,12 +230,10 @@ def _run_osc_multi_group_alignment(
         one_job = dict(bundle["oneRGGB"])
         one_job["osc_write_registration_handoff"] = True
         _setup = Path(str(one_job.get("gkey") or "")).name or base
-        one_rggb_failed = False
         try:
             one_rep = _astrometry_align_impl_body(job=one_job, **align_kw)
             reports.append(one_rep)
         except Exception as exc:  # noqa: BLE001
-            one_rggb_failed = True
             LOGGER.error("OSC oneRGGB alignment failed for %s: %s", _setup, exc)
             skipped.append({"gkey": one_job.get("gkey"), "setup": _setup, "skipped_reason": str(exc)})
             continue
@@ -298,7 +290,6 @@ def _run_osc_multi_group_alignment(
                     log_channel_match_rate_verification(
                         channel=str(ch),
                         match_rate=float(mr) if mr is not None else None,
-                        one_rggb_failed=one_rggb_failed,
                         log_event=log_event,
                     )
                 ch_kw = {

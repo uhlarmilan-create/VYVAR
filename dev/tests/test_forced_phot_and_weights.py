@@ -103,30 +103,6 @@ def test_ensemble_contributing_set_equal_when_all_finite():
         assert contrib == {"A", "B", "C"}
 
 
-def test_ensemble_sat_excluded_explicitly_membership_unchanged():
-    n = 4
-    t = np.full(n, 12.0)
-    comps = {
-        "A": np.full(n, 11.0),
-        "B": np.full(n, 11.1),
-    }
-    cat = {"A": 10.0, "B": 10.1}
-    qual = {k: {} for k in comps}
-    sat = {"A": np.array([False, True, False, False]), "B": np.zeros(n, dtype=bool)}
-    mag_c, _, _ = ensemble_normalize(
-        t,
-        comps,
-        cat,
-        qual,
-        comp_likely_saturated=sat,
-        n_comp_min=1,
-    )
-    assert math.isfinite(float(mag_c[0]))
-    assert math.isfinite(float(mag_c[1]))  # B alone still forms ZP
-    # Membership keys unchanged
-    assert set(qual.keys()) == {"A", "B"}
-
-
 def test_universality_with_nonzero_coeffs_exact():
     """Subset invariance must hold exactly with non-zero c_col/c_dist."""
     c_col = C_COL_PSF_REFRACTIVE_MAG_PER_BPRP

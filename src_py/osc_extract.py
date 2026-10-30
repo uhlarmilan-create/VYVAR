@@ -206,22 +206,21 @@ def build_channel_header(
     for key in COPY_HEADER_KEYS:
         if key in src_hdr:
             hdr[key] = src_hdr[key]
+    from optics import header_native_pixel_um_mean  # noqa: PLC0415
+
     scale = superpixel_scale_factor(osc_bin)
-    xpix = src_hdr.get("XPIXSZ") or src_hdr.get("PIXSIZE") or src_hdr.get("PIXSIZE1")
-    try:
-        pix_native = float(xpix) if xpix not in (None, "") else None
-    except (TypeError, ValueError):
-        pix_native = None
-    if pix_native is not None and math.isfinite(pix_native) and pix_native > 0:
-        eff_pix = pix_native * scale
-        hdr["XPIXSZ"] = eff_pix
-        hdr["YPIXSZ"] = eff_pix
     bin_out = max(1, int(src_hdr.get("XBINNING") or src_hdr.get("BINNING") or 1)) * int(scale)
     hdr["XBINNING"] = int(bin_out)
     hdr["YBINNING"] = int(bin_out)
     hdr["BINNING"] = int(bin_out)
+    # G01-41: XPIXSZ is the BINNED pitch (MaxIm convention, optics module): native x channel binning,
+    # written once - the effective pixel of the channel is native x source binning x 2 x osc_bin
+    pix_native = header_native_pixel_um_mean(src_hdr)
+    if pix_native is not None:
+        hdr["XPIXSZ"] = (float(pix_native) * float(bin_out), "X binned pixel size in microns")
+        hdr["YPIXSZ"] = (float(pix_native) * float(bin_out), "Y binned pixel size in microns")
     hdr["VYCHANNL"] = (channel, "OSC extracted channel token")
-    hdr["VYBAYMSK"] = (bayermask, "Equipment Bayer mask used for extraction")
+    hdr["VYBAYMSK"] = (bayermask, "Bayer pattern used for extraction (equipment)")
     hdr["VYOSCBIN"] = (int(osc_bin), "Post-extraction average binning factor N")
     if math.isfinite(float(gain_eff)):
         hdr["EGAIN"] = (float(gain_eff), "Effective gain e-/ADU after OSC extract+bin")
@@ -253,12 +252,18 @@ def extract_one_light_to_channels(
     gain_e_per_adu: float,
     read_noise_e: float,
 ) -> dict[str, Path]:
-    """Extract one calibrated mosaic FITS into four channel outputs."""
+    """Extract one calibrated mosaic FITS into four channel outputs.
+
+    G01-19: the planes follow the equipment Bayer mask (the one authority, OSC-CHANNEL-EXTRACTION; the
+    flat normalisation uses it too) and VYBAYMSK records that pattern; a different FITS BAYERPAT is
+    reported by :func:`validate_bayer_crosscheck`."""
+    pat = valid_bayer_pattern_4(normalize_bayermask(bayermask) or "")
+    if pat is None:
+        raise ValueError(f"{src_path.name}: equipment Bayer mask {bayermask!r} is not a CFA pattern")
     with fits.open(src_path, memmap=False) as hdul:
         src_hdr = hdul[0].header
         data = np.asarray(hdul[0].data, dtype=np.float32)
-        hdr_pat = valid_bayer_pattern_4(str(src_hdr.get("BAYERPAT") or "")) or bayermask
-    r, g1, g2, b = bayer_planes_from_mosaic(data, hdr_pat)
+    r, g1, g2, b = bayer_planes_from_mosaic(data, pat)
     planes = derive_channel_planes(r, g1, g2, b)
     written: dict[str, Path] = {}
     for ch in OSC_CHANNELS:
@@ -269,7 +274,7 @@ def extract_one_light_to_channels(
         ch_hdr = build_channel_header(
             src_hdr,
             channel=ch,
-            bayermask=bayermask,
+            bayermask=pat,
             osc_bin=osc_bin,
             gain_eff=g_eff,
             rn_eff=rn_eff,

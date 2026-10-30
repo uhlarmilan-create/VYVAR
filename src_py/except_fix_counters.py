@@ -10,10 +10,8 @@ class ExceptFixCounters:
     sky_annulus_mask_fail: int = 0
     sky_annulus_invalid: int = 0
     aperture_csv_cache_skip: int = 0
-    comp_pool_csv_skip: int = 0
     comp_selection_csv_cache_skip: int = 0
     comp_frame_accumulation_skip: int = 0
-    comp_detrend_skip: int = 0
     vt_wcs_refresh_fail: int = 0
     psf_local_sky_fail: int = 0
     psf_grouped_fit_fail: int = 0
@@ -25,7 +23,6 @@ class ExceptFixCounters:
     vsx_frame_bbox_wcs_fail: int = 0
     vsx_variable_coord_drop: int = 0
     stress_sidecar_skip: int = 0
-    masterstar_ref_swap_fail: int = 0
     calibrate_db_sync_fail: int = 0
     # EXCEPT-FIX-3 (tranche 3: importer / platesolver / alignment / astrometry_optimizer)
     importer_filter_read_fail: int = 0
@@ -40,6 +37,7 @@ class ExceptFixCounters:
     # EXCEPT-FIX-4 (tranche 4: time/trust/export/optics/check-star)
     timeobs_parse_fallback: int = 0
     jd_mid_compute_fail: int = 0
+    date_obs_parse_fail: int = 0
     hjd_bjd_compute_fail: int = 0
     trust_kmag_sidecar_read_fail: int = 0
     variability_gaia_id_norm_skip: int = 0
@@ -53,10 +51,8 @@ class ExceptFixCounters:
             "sky_annulus_mask_fail": self.sky_annulus_mask_fail,
             "sky_annulus_invalid": self.sky_annulus_invalid,
             "aperture_csv_cache_skip": self.aperture_csv_cache_skip,
-            "comp_pool_csv_skip": self.comp_pool_csv_skip,
             "comp_selection_csv_cache_skip": self.comp_selection_csv_cache_skip,
             "comp_frame_accumulation_skip": self.comp_frame_accumulation_skip,
-            "comp_detrend_skip": self.comp_detrend_skip,
             "vt_wcs_refresh_fail": self.vt_wcs_refresh_fail,
             "psf_local_sky_fail": self.psf_local_sky_fail,
             "psf_grouped_fit_fail": self.psf_grouped_fit_fail,
@@ -68,7 +64,6 @@ class ExceptFixCounters:
             "vsx_frame_bbox_wcs_fail": self.vsx_frame_bbox_wcs_fail,
             "vsx_variable_coord_drop": self.vsx_variable_coord_drop,
             "stress_sidecar_skip": self.stress_sidecar_skip,
-            "masterstar_ref_swap_fail": self.masterstar_ref_swap_fail,
             "calibrate_db_sync_fail": self.calibrate_db_sync_fail,
             "importer_filter_read_fail": self.importer_filter_read_fail,
             "calib_scope_conflict_check_fail": self.calib_scope_conflict_check_fail,
@@ -81,6 +76,7 @@ class ExceptFixCounters:
             "platesolve_match_rate_meta_fail": self.platesolve_match_rate_meta_fail,
             "timeobs_parse_fallback": self.timeobs_parse_fallback,
             "jd_mid_compute_fail": self.jd_mid_compute_fail,
+            "date_obs_parse_fail": self.date_obs_parse_fail,
             "hjd_bjd_compute_fail": self.hjd_bjd_compute_fail,
             "trust_kmag_sidecar_read_fail": self.trust_kmag_sidecar_read_fail,
             "variability_gaia_id_norm_skip": self.variability_gaia_id_norm_skip,

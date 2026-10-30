@@ -15,7 +15,6 @@ LOGGER = logging.getLogger(__name__)
 
 INV_PSF_FRAME_01 = "INV-PSF-FRAME-01"
 DEFAULT_ZERO_OK_FRAME_FRACTION_FAIL = 0.20
-_TRACEBACK_TAIL_LINES = 8
 
 
 def is_non_science_aligned_fits(name: str | Path) -> bool:

@@ -74,7 +74,7 @@ def test_generate_files_writes_every_setup_with_epsf_curves(tmp_path: Path) -> N
 
     setups = {"g_120_4": _setup(tmp_path, "g", ["EA", "EW"]), "r_100_4": _setup(tmp_path, "r", ["EA"])}
     lc = tmp_path / "g" / "photometry" / "lightcurves"
-    (lc / "lightcurve_1_psf.csv").write_text("# ensemble_n_comp=3\nbjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n"
+    (lc / "lightcurve_1_psf.csv").write_text("# ensemble_n_comp=3\n# psf_lc_time_base=BJD_TDB\nbjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n"
                                              "2461316.3,True,0.5,0.01\n2461316.4,True,0.6,0.01\n")
     assert generate_epsf_files(setups, "UMIA") == {"g_120_4": 1}
     out = list((tmp_path / "g" / "photometry" / "lightcurves_reports" / "epsf").glob("*_epsf.txt"))

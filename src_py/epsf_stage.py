@@ -35,35 +35,18 @@ def _p(progress_cb: ProgressCb | None, msg: str) -> None:
         progress_cb(msg)
 
 
-def _resolve_paths(paths: EpsfStagePaths | dict[str, Any]) -> EpsfStagePaths:
-    if isinstance(paths, EpsfStagePaths):
-        ps = Path(paths.platesolve_dir)
-        frames = Path(paths.frames_root)
-        ms = Path(paths.masterstar_fits) if paths.masterstar_fits is not None else ps / "MASTERSTAR.fits"
-        csv = (
-            Path(paths.masterstars_csv)
-            if paths.masterstars_csv is not None
-            else ps / "masterstars_full_match.csv"
-        )
-        phot = Path(paths.photometry_dir) if paths.photometry_dir is not None else ps / "photometry"
-        return EpsfStagePaths(
-            platesolve_dir=ps,
-            frames_root=frames,
-            masterstar_fits=ms,
-            masterstars_csv=csv,
-            photometry_dir=phot,
-        )
-    ps = Path(paths["platesolve_dir"])
-    frames = Path(paths["frames_root"])
-    ms_raw = paths.get("masterstar_fits")
-    csv_raw = paths.get("masterstars_csv")
-    phot_raw = paths.get("photometry_dir")
+def _resolve_paths(paths: EpsfStagePaths) -> EpsfStagePaths:
+    ps = Path(paths.platesolve_dir)
+    frames = Path(paths.frames_root)
+    ms = Path(paths.masterstar_fits) if paths.masterstar_fits is not None else ps / "MASTERSTAR.fits"
+    csv = Path(paths.masterstars_csv) if paths.masterstars_csv is not None else ps / "masterstars_full_match.csv"
+    phot = Path(paths.photometry_dir) if paths.photometry_dir is not None else ps / "photometry"
     return EpsfStagePaths(
         platesolve_dir=ps,
         frames_root=frames,
-        masterstar_fits=Path(ms_raw) if ms_raw else ps / "MASTERSTAR.fits",
-        masterstars_csv=Path(csv_raw) if csv_raw else ps / "masterstars_full_match.csv",
-        photometry_dir=Path(phot_raw) if phot_raw else ps / "photometry",
+        masterstar_fits=ms,
+        masterstars_csv=csv,
+        photometry_dir=phot,
     )
 
 
@@ -88,8 +71,7 @@ def remove_stale_epsf_products(photometry_dir: Path, setup: str, target_ids: fro
 
 
 def run_epsf_stage(
-    params: Any,
-    paths: EpsfStagePaths | dict[str, Any],
+    paths: EpsfStagePaths,
     cfg: Any,
     progress_cb: ProgressCb | None = None,
     *,
@@ -98,31 +80,21 @@ def run_epsf_stage(
     do_build: bool = True,
     do_fit_merge: bool = True,
     do_lc: bool = True,
-    max_frames: int | None = None,
-    dry_run: bool = False,
-    pipeline_meta: dict[str, Any] | None = None,
     targets: str | None = None,
 ) -> dict[str, Any]:
     """Build ePSF, fit+merge psf_* into proc sidecars, write internal PSF LCs.
 
     ``targets``: which targets are fitted (``epsf_science_set.build_epsf_fit_set`` selection: ``ALL`` or
-    comma-separated VSX types / names / ids, ``*`` wildcards); None -> ``cfg.epsf_targets``.
+    comma-separated VSX types / names / ids, ``*`` wildcards); None -> :func:`configured_epsf_targets`.
 
-    ``params.epsf`` True/False overrides config. None reads ``cfg.epsf_auto_run``
-    (default OFF). When ``params`` is None the stage always runs (UI ePSF button
-    / dashboard). Sub-steps are selected by ``do_build`` / ``do_fit_merge`` /
+    G09-18: the invariant records of the fit + merge (INV-PSF-ADDITIVE-01, INV-PSF-FRAME-01) and the night chi2
+    locus are written to the setup's ``photometry/pipeline_meta.json`` (``epsf_invariants``,
+    ``psf_chi2_locus_night``); they went to a throw-away dict before.
+
+    Whether the stage runs at all is decided by the caller (``night_run.resolve_epsf_run`` for a night
+    run; the UI ePSF button always runs it). Sub-steps are selected by ``do_build`` / ``do_fit_merge`` /
     ``do_lc``.
     """
-    if params is not None:
-        flag = getattr(params, "epsf", None)
-        if flag is False:
-            _p(progress_cb, "skipped (NightRunParams.epsf=False)")
-            return {"skipped": True, "reason": "epsf=False"}
-        if flag is not True:
-            auto = bool(getattr(cfg, "epsf_auto_run", False)) if cfg is not None else False
-            if not auto:
-                _p(progress_cb, "skipped (epsf_auto_run=False)")
-                return {"skipped": True, "reason": "epsf=False"}
 
     resolved = _resolve_paths(paths)
     ps = resolved.platesolve_dir
@@ -133,9 +105,8 @@ def run_epsf_stage(
     assert ms_fits is not None and ms_csv is not None and phot is not None
 
     did = draft_id
-    if did is None and params is not None:
-        did = getattr(params, "draft_id", None)
 
+    stage_meta: dict[str, Any] = {}  # invariant records and night locus of the fit + merge (G09-18)
     out: dict[str, Any] = {
         "skipped": False,
         "platesolve_dir": str(ps),
@@ -147,11 +118,6 @@ def run_epsf_stage(
         "epsf_model_sha256": "",
         "n_stars": -1,
     }
-
-    if dry_run:
-        _p(progress_cb, f"dry-run build={do_build} fit={do_fit_merge} lc={do_lc} {ps}")
-        out["dry_run"] = True
-        return out
 
     if do_build:
         if not ms_fits.is_file():
@@ -178,7 +144,7 @@ def run_epsf_stage(
 
     from epsf_science_set import build_epsf_fit_set
 
-    selection = targets if targets is not None else str(getattr(cfg, "epsf_targets", "ALL") or "ALL")
+    selection = targets if targets is not None else configured_epsf_targets(cfg)
     fit_set = build_epsf_fit_set(ps, selection)
     out["fit_set"] = fit_set.to_meta_dict()
     _p(progress_cb, f"fit set '{fit_set.selection}': {len(fit_set.target_ids)} targets + "
@@ -202,8 +168,7 @@ def run_epsf_stage(
             app_config=cfg,
             progress_cb=_merge_cb,
             fit_set=fit_set,
-            pipeline_meta=pipeline_meta,
-            max_frames=max_frames,
+            pipeline_meta=stage_meta,
         )
         out["merge"] = {
             "written": merge_out.get("written"),
@@ -247,17 +212,39 @@ def run_epsf_stage(
 
     out["epsf_model_sha256"] = str(load_epsf_build_meta(ps).get("model_sha256") or "")
 
+    upd: dict[str, Any] = {
+        "epsf_model_sha256": out.get("epsf_model_sha256") or "",
+        "epsf_n_stars": out.get("n_stars"),
+    }
+    if do_fit_merge:
+        upd["epsf_invariants"] = summarize_invariant_records(stage_meta.get("invariants") or [])
+        if "psf_chi2_locus_night" in stage_meta:
+            upd["psf_chi2_locus_night"] = stage_meta["psf_chi2_locus_night"]
     try:
         from photometry_provenance import merge_photometry_pipeline_meta
 
-        merge_photometry_pipeline_meta(
-            phot,
-            {
-                "epsf_model_sha256": out.get("epsf_model_sha256") or "",
-                "epsf_n_stars": out.get("n_stars"),
-            },
-        )
+        merge_photometry_pipeline_meta(phot, upd)
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[ePSF stage] pipeline_meta stamp skipped: %s", exc)
 
+    return out
+
+
+def configured_epsf_targets(cfg: Any) -> str:
+    """The ePSF target selection of the configuration (``epsf_targets``, default ``ALL``)."""
+    return str(getattr(cfg, "epsf_targets", "ALL") or "ALL")
+
+
+def summarize_invariant_records(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Per invariant id: checks, failures and the details of the failed checks (one record per frame and
+    invariant would bloat pipeline_meta)."""
+    out: dict[str, Any] = {}
+    for r in records:
+        if not isinstance(r, dict):
+            continue
+        e = out.setdefault(str(r.get("id")), {"policy": r.get("policy"), "n_checked": 0, "n_failed": 0, "failed": []})
+        e["n_checked"] += 1
+        if not r.get("ok"):
+            e["n_failed"] += 1
+            e["failed"].append(str(r.get("detail") or ""))
     return out

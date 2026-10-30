@@ -60,11 +60,7 @@ class SparseTrustStats:
     comp_stability_p: float
     x2_pair_mag2: float
     triangulation_clipped: bool
-    zp_sem_ratio: float | None = None
     single_comp: bool = False
-    trust_R_detrend: float = float("nan")
-    trust_R_detrend_lo: float = float("nan")
-    trust_R_detrend_hi: float = float("nan")
     flags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -227,26 +223,6 @@ def comp_stability_test(
     )
 
 
-def detrend_kmag_airmass(kmag: np.ndarray, airmass: np.ndarray) -> np.ndarray:
-    """Linear airmass detrend of kmag (diagnostic only; band uses raw R)."""
-    km = np.asarray(kmag, dtype=np.float64)
-    am = np.asarray(airmass, dtype=np.float64)
-    n = min(km.size, am.size)
-    if n < 3:
-        return km.copy()
-    ok = np.isfinite(km[:n]) & np.isfinite(am[:n])
-    if ok.sum() < 3:
-        return km.copy()
-    x = am[:n][ok]
-    y = km[:n][ok]
-    if float(np.max(x) - np.min(x)) <= 1e-9:
-        return km.copy()
-    slope, intercept = np.polyfit(x, y, 1)
-    out = km.copy()
-    out[:n] = km[:n] - (slope * am[:n] + intercept)
-    return out
-
-
 def two_star_model_ratio_ci(
     m_k: np.ndarray,
     m_c1: np.ndarray,
@@ -254,12 +230,16 @@ def two_star_model_ratio_ci(
     photon_c1: np.ndarray,
     *,
     sigma_sys_mag: float,
-    airmass: np.ndarray | None = None,
-) -> tuple[ModelRatioCI, ModelRatioCI]:
+) -> ModelRatioCI:
     """n=1 ensemble branch: R from var(K-C1) vs photon+floor model (Section 2.1)."""
-    a, b = _finite_pairs(m_k, m_c1)
+    # G08-09: one finite mask for all four series (photon errors stay aligned with their epochs)
+    mk, mc, pk, pc = (np.asarray(v, dtype=np.float64) for v in (m_k, m_c1, photon_k, photon_c1))
+    if not (mk.size == mc.size == pk.size == pc.size):
+        raise ValueError(f"two_star_model_ratio_ci: series lengths differ {mk.size}/{mc.size}/{pk.size}/{pc.size}")
+    ok = np.isfinite(mk) & np.isfinite(mc)
+    a, b, pk, pc = mk[ok], mc[ok], pk[ok], pc[ok]
     if a.size < 2:
-        nan = ModelRatioCI(
+        return ModelRatioCI(
             R=float("nan"),
             R_lo=float("nan"),
             R_hi=float("nan"),
@@ -267,11 +247,8 @@ def two_star_model_ratio_ci(
             v_model=float("nan"),
             n_epochs=int(a.size),
         )
-        return nan, nan
     d = a - b
     v_obs = float(np.var(d, ddof=1))
-    pk = np.asarray(photon_k, dtype=np.float64)[: d.size]
-    pc = np.asarray(photon_c1, dtype=np.float64)[: d.size]
     floor = float(sigma_sys_mag) if math.isfinite(float(sigma_sys_mag)) and float(sigma_sys_mag) > 0 else 0.0
     models: list[float] = []
     for i in range(d.size):
@@ -279,21 +256,7 @@ def two_star_model_ratio_ci(
             continue
         models.append(pk[i] * pk[i] + pc[i] * pc[i] + floor * floor)
     v_model = float(np.mean(models)) if models else float("nan")
-    raw = check_model_ratio_ci(v_obs, v_model, int(d.size))
-    if airmass is None:
-        return raw, ModelRatioCI(
-            R=float("nan"),
-            R_lo=float("nan"),
-            R_hi=float("nan"),
-            v_obs=v_obs,
-            v_model=v_model,
-            n_epochs=int(d.size),
-        )
-    am = np.asarray(airmass, dtype=np.float64)
-    km = detrend_kmag_airmass(d, am[: d.size])
-    v_obs_dt = sample_variance(km)
-    det = check_model_ratio_ci(v_obs_dt, v_model, int(d.size))
-    return raw, det
+    return check_model_ratio_ci(v_obs, v_model, int(d.size))
 
 
 def trust_band(
@@ -355,7 +318,6 @@ def compute_sparse_trust_stats(
     comp_photon_mag: dict[str, np.ndarray],
     sigma_sys_mag: float,
     n_comps: int,
-    airmass: np.ndarray | None = None,
 ) -> SparseTrustStats:
     """End-to-end sparse trust statistics for one target night."""
     n_comp = int(n_comps)
@@ -379,13 +341,12 @@ def compute_sparse_trust_stats(
         c1 = comp_ids[0]
         p_k = comp_photon_mag.get("__check__", np.full_like(m_K, float("nan")))
         p_c1 = comp_photon_mag.get(c1, np.full_like(m_K, float("nan")))
-        raw, det = two_star_model_ratio_ci(
+        raw = two_star_model_ratio_ci(
             m_K,
             comp_mags[c1],
             p_k,
             p_c1,
             sigma_sys_mag=float(sigma_sys_mag),
-            airmass=airmass,
         )
         km = np.asarray(kmag, dtype=np.float64)
         n_epochs = int(np.isfinite(km).sum())
@@ -400,9 +361,6 @@ def compute_sparse_trust_stats(
             x2_pair_mag2=float("nan"),
             triangulation_clipped=False,
             single_comp=True,
-            trust_R_detrend=det.R,
-            trust_R_detrend_lo=det.R_lo,
-            trust_R_detrend_hi=det.R_hi,
         )
 
     if len(comp_ids) < 2:
@@ -454,18 +412,6 @@ def compute_sparse_trust_stats(
     v_obs = sample_variance(km)
     n_epochs = int(np.isfinite(km).sum())
     ratio = check_model_ratio_ci(v_obs, v_model, n_epochs)
-    if airmass is not None:
-        km_dt = detrend_kmag_airmass(km, np.asarray(airmass, dtype=np.float64))
-        ratio_dt = check_model_ratio_ci(sample_variance(km_dt), v_model, n_epochs)
-    else:
-        ratio_dt = ModelRatioCI(
-            R=float("nan"),
-            R_lo=float("nan"),
-            R_hi=float("nan"),
-            v_obs=float("nan"),
-            v_model=v_model,
-            n_epochs=n_epochs,
-        )
     stab = comp_stability_test(
         s2_c1c2,
         p_c1,
@@ -486,9 +432,6 @@ def compute_sparse_trust_stats(
         comp_stability_p=stab.p_value,
         x2_pair_mag2=stab.x2_pair_mag2,
         triangulation_clipped=tri.triangulation_clipped,
-        trust_R_detrend=ratio_dt.R,
-        trust_R_detrend_lo=ratio_dt.R_lo,
-        trust_R_detrend_hi=ratio_dt.R_hi,
     )
 
 

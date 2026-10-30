@@ -133,7 +133,7 @@ def query_gaia_neighbors(
                 "bp_mag": row.get("bp_mag"),
                 "rp_mag": row.get("rp_mag"),
                 "bp_rp": row.get("bp_rp"),
-                "var_flag": row.get("var_flag") or row.get("phot_variable_flag"),
+                "var_flag": row.get("var_flag"),
                 "sep_arcsec": float(sep),
             }
         )

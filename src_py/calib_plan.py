@@ -32,6 +32,8 @@ STATUS_NO_FLAT = "MISSING_FLAT"
 STATUS_NO_MASTERS = "MISSING_DARK_AND_FLAT"
 STATUS_NO_RIG = "NO_CAMERA_SELECTED"
 STATUS_PRECAL = "PRECALIBRATED"
+#: G01-01 (decision A1): no valid flat in the window; a FLAT of the same filter from another night is used
+STATUS_FLAT_SUBSTITUTE = "FLAT_FROM_OTHER_NIGHT"
 
 FROM_LIGHTS = "lights"
 FROM_LIBRARY = "library"
@@ -46,7 +48,7 @@ class GroupPlan:
     filter_name: str
     exposure_s: float
     binning: int
-    gain: int
+    gain: float
     offset: int | None
     temp: float | None
     n_lights: int
@@ -62,6 +64,8 @@ class GroupPlan:
     flat_from: str = ""
     flat_offset_handling: str = ""
     flat_offset_adu: float | None = None
+    #: capture date (ISO) of a FLAT from another night used as a flagged substitute, '' otherwise
+    flat_substitute: str = ""
     status: str = ""
     messages: list[str] = field(default_factory=list)
 
@@ -97,6 +101,7 @@ class GroupPlan:
             "flat_from": self.flat_from,
             "flat_offset_handling": self.flat_offset_handling,
             "flat_offset_adu": self.flat_offset_adu,
+            "flat_substitute": self.flat_substitute or None,
             "status": self.status,
             "messages": list(self.messages),
         }
@@ -338,7 +343,7 @@ def build_calibration_plan(
             filter_name=str(g.get("filter") or "NoFilter"),
             exposure_s=float(g.get("exposure_s") or 0.0),
             binning=int(g.get("binning") or 1),
-            gain=int(g.get("gain") or 0),
+            gain=cl.gain_key(g.get("gain")),
             offset=cl.header_offset(hdr0),
             temp=(float(g["temp"]) if g.get("temp") is not None and math.isfinite(float(g["temp"])) else None),
             n_lights=len(paths),
@@ -371,6 +376,20 @@ def build_calibration_plan(
         gp.dark, gp.dark_reason, gp.dark_rebin = d.master, d.reason, d.rebin_from
         f, gp.flat_from = _pick_source(order, {FROM_LIGHTS: lambda: _flat(src), FROM_LIBRARY: lambda: _flat(None)})
         gp.flat, gp.flat_reason, gp.flat_rebin = f.master, f.reason, f.rebin_from
+        if gp.flat is None and dates:
+            # G01-01 (decision A1): no valid flat in the window - nearest FLAT of the same filter from
+            # another night, recorded as a flagged substitute (plan, manifest, frame headers)
+            def _sub(cands: Sequence[cl.LibraryMaster] | None, gp: GroupPlan = gp, dates: list = dates) -> cl.MatchResult:
+                return cl.find_flat_substitute(db, camera_id=int(camera_id), telescope_id=telescope_id,
+                                               filter_name=gp.filter_name, gain=gp.gain, binning=gp.binning,
+                                               light_dates=dates, candidates=cands)
+
+            fs, from_s = _pick_source(order, {FROM_LIGHTS: lambda: _sub(src), FROM_LIBRARY: lambda: _sub(None)})
+            if fs.master is not None:
+                gp.messages.append(f"no valid FLAT ({gp.flat_reason}); {fs.reason} - flagged")
+                gp.flat, gp.flat_from, gp.flat_rebin = fs.master, from_s, fs.rebin_from
+                gp.flat_reason = fs.reason
+                gp.flat_substitute = fs.master.capture_utc.date().isoformat() if fs.master.capture_utc else "unknown"
         if gp.flat is not None:
             _resolve_flat_offset(db, gp)
         if gp.dark is None and gp.flat is None:
@@ -379,12 +398,17 @@ def build_calibration_plan(
             gp.status = STATUS_NO_DARK
         elif gp.flat is None:
             gp.status = STATUS_NO_FLAT
+        elif gp.flat_substitute:
+            gp.status = STATUS_FLAT_SUBSTITUTE
         else:
             gp.status = STATUS_OK
         if gp.dark is None:
             gp.messages.append(gp.dark_reason)
         if gp.flat is None:
             gp.messages.append(gp.flat_reason)
+            if gp.dark is not None:
+                gp.messages.append("calibrated with the DARK only and flagged: relative photometry, "
+                                   "not for AAVSO/VarAstro submission")
         if gp.dark is None and gp.flat is not None:
             gp.messages.append("without a DARK the FLAT is not applied (offset would remain in the LIGHT)")
     plan.log()
@@ -463,6 +487,17 @@ def _resolve_flat_offset(db: Any, gp: GroupPlan, ) -> None:
         m.offset_adu = est.adu
         gp.flat_offset_handling, gp.flat_offset_adu = "removed-at-use", est.adu
         gp.messages.append(f"flat built without offset removal: {est.adu:.1f} ADU removed at use ({est.method})")
+        # G01-02: show early (scan) that the run will refuse this flat; the calibration stops on it
+        import numpy as np  # noqa: PLC0415
+
+        from calibration import MasterResamplingError, check_flat_offset_removable  # noqa: PLC0415
+
+        with fits.open(m.path, memmap=False) as h:
+            fmed = float(np.nanmedian(np.asarray(h[0].data, dtype=np.float32)))
+        try:
+            check_flat_offset_removable(fmed, float(est.adu), Path(m.path).name)
+        except MasterResamplingError as exc:
+            gp.messages.append(f"[X] {exc}")
     else:
         gp.flat_offset_handling, gp.flat_offset_adu = cl.OFFSET_NONE, None
         gp.messages.append("flat offset unknown and no dark to measure it - flat used as is")

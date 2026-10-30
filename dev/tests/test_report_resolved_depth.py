@@ -14,7 +14,7 @@ def test_resolved_facts_tolerates_missing_depth() -> None:
     assert "Frame faint limit (Gaia G)" not in labels
     vsx_row = next(r for r in model["rows"] if r["label"] == "VSX auto-target scope")
     assert "detection-limited" in vsx_row["value"]
-    assert model["vsx_depth"]["warn"] is False
+    assert "vsx_depth" not in model  # G11-32: no producer of a depth warning
 
 
 def test_resolved_facts_frame_depth_and_topup_rows() -> None:

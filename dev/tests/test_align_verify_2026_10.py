@@ -60,7 +60,7 @@ def _ctx(ref_img: np.ndarray, tmp: Path) -> dict:
     return dict(
         ref_data=ref_img, ref_hdr=fits.Header(), ref_fp_name="REF.fits", fixed_target_pts=rxy,
         reference_list=rxy.tolist(), has_ref_wcs=False, platesolve_dir=str(tmp), align_star_cap=160,
-        max_control_points=80, min_detected_stars=30, max_detected_stars=500, fb_align=FWHM,
+        max_control_points=80, min_detected_stars=30, max_detected_stars=500, fb_align=FWHM, det_sigma=4.5,
         rotation_ref_angle_deg=None,
     )
 

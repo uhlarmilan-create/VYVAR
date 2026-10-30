@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import glob
 import json
 import logging
 import math
@@ -20,6 +19,8 @@ from gaia_catalog_id import read_vyvar_csv
 from citations import build_run_citation_context, emit_pdf_methods_sections
 from target_page import TargetPages, _norm_cid_decimal, load_frames, star_fields
 from report_methods import pdf_report_path
+from mag_constants import MAG_ERR_SCALE
+from export_reports import setup_uses_airmass
 
 if TYPE_CHECKING:
     from reportlab.pdfgen import canvas
@@ -38,6 +39,98 @@ _AIRMASS_COLS = {
     "AIRMASS",
     "am",
 }
+
+
+# G11-36: method texts of the PDF formatted from the constants of the code they describe (they drifted
+# when a constant changed). Pure functions, no reportlab.
+def variability_method_text(meta: dict[str, Any], *, snr_min: float) -> str:
+    """Method paragraph of the variability section (variability_field constants + its meta)."""
+    from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
+    from variability_field import COVERAGE_MIN, FAP_FIELD  # noqa: PLC0415
+
+    nm = meta.get("noise_model") or {}
+    return (
+        f"Every star measured unsaturated on at least {100 * COVERAGE_MIN:g} % of the {meta.get('n_frames')} frames "
+        f"({meta.get('n_stars')} stars) is put on a "
+        "common frame zero point (Honeycutt 1992). Its robust scatter (1.4826 MAD) is compared with the scatter expected from "
+        f"its CCD error, scaled and floored by the field itself (a = {float(nm.get('a') or 0):.2f}, floor = "
+        f"{1000 * float(nm.get('floor_mag') or 0):.1f} mmag); the second index is 1/eta (von Neumann ratio; smooth = "
+        "variable; tail from a skew-normal fitted to the field) against stars of similar "
+        f"brightness (Sokolovsky et al. 2017). A star is a candidate when one index exceeds z = "
+        f"{float(meta.get('z_threshold') or 0):.2f} (field false-alarm probability {100 * FAP_FIELD:g} %) and it passes "
+        f"the gates: |neighbour light| <= {100 * BLEND_FLUX_FRAC_MAX:g} %, sky annulus inside every frame, median "
+        f"SNR >= {snr_min:g}, a Gaia magnitude "
+        f"({meta.get('n_gates_ok')} stars pass). A signal that a linear dependence on FWHM and airmass explains is marked "
+        "as systematic and not listed. No sigma clipping, no detrending."
+    )
+
+
+def transient_method_text(tm: dict[str, Any]) -> str:
+    """Method paragraph of the transient section (transient_field / variability_field constants)."""
+    import transient_field as tf  # noqa: PLC0415
+    from variability_field import BRIGHTENED_DMAG, BRIGHTENED_NSIGMA  # noqa: PLC0415
+
+    return (
+        f"Every aligned frame ({tm.get('n_frames')}) was searched for sources (DAOStarFinder, {tf.DETECT_NSIGMA:g} sigma) "
+        f"that are not on MASTERSTAR. A new source is seen on >= {tf.N_CONSEC_MIN} consecutive frames at "
+        f"S/N >= {tf.SNR_DETECT:g} (noise measured on empty sky), stays on one sky position, is not a detector pixel, has "
+        f"no Gaia star brighter than its own magnitude + {tf.NEIGHBOUR_DMAG:g} within max({tf.NEIGHBOUR_ARCSEC:g}\", "
+        f"{tf.NEIGHBOUR_FWHM:g} FWHM), is not in the halo of a much brighter G < {tf.BRIGHT_G:g} star nor on a hot "
+        "pixel of the master dark, "
+        f"and is brighter than the catalogue depth - {tf.DEPTH_MARGIN:g} mag (Gaia Science Alerts / NMW method, no image "
+        "subtraction: a supernova on top of a galaxy core is not found). Stars brighter than Gaia: night magnitude >= "
+        f"{BRIGHTENED_DMAG:g} mag and >= {BRIGHTENED_NSIGMA:g} sigma above Gaia G with the neighbours' light. Candidates "
+        "must be checked on the images before any report "
+        f"(TNS for extragalactic transients, CBAT for novae). Status: {tm.get('n_candidates', 0)} new source(s) of "
+        f"{tm.get('n_sources', 0)} examined."
+    )
+
+
+def sigma_floor_method_line(pipeline_meta: dict[str, Any] | None) -> str | None:
+    """Methods sentence on the systematic floor in the per-point errors, from the run's pipeline_meta.
+
+    Night floor measured (SIGMA-SYS-NIGHT / -MODEL / -TOTAL): its value, comparison-star count and the
+    ``method`` the measurement recorded (NEW-4: was hard-coded "scatter minus photon noise"). Otherwise the
+    per-rig floor of ``dynamic_params.sigma_floor`` (G11-10: was read at the top level, never found)."""
+    meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
+    sn = meta.get("sigma_sys_night")
+    if isinstance(sn, dict) and sn.get("applied") == "night":
+        how = str(sn.get("method") or "").strip()
+        return (f"  Per-point uncertainties include this night's systematic floor "
+                f"{1000 * float(sn.get('sigma_sys_mag', 0.0)):.1f} mmag, measured on "
+                f"{int(sn.get('n_comps', 0))} comparison stars"
+                + (f" ({how})" if how else "")
+                + "; correlated (red) noise is reported separately.")
+    dp = meta.get("dynamic_params") if isinstance(meta.get("dynamic_params"), dict) else {}
+    sf = dp.get("sigma_floor")
+    if isinstance(sf, dict) and sf.get("sigma_sys_mag") is not None:
+        return (f"  Per-point uncertainties include a per-rig systematic floor "
+                f"({1000 * float(sf.get('sigma_sys_mag') or 0.0):.1f} mmag, EQUIPMENTS); correlated "
+                "(red) noise is reported separately and is not included in per-point bars.")
+    return None
+
+
+def variability_cover_rows(photometry_dir: Path) -> list[tuple[str, str]]:
+    """G11-02: cover rows of the field variability search from ``variability_meta.json``."""
+    try:
+        meta = json.loads((Path(photometry_dir) / "variability_meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(meta, dict):
+        return []
+    if meta.get("status") != "ok":
+        return [("Variability search", f"not available ({meta.get('status', 'not run')})")]
+
+    def _i(key: str) -> str:
+        v = meta.get(key)
+        return f"{int(v):d}" if isinstance(v, (int, float)) else "-"
+
+    return [
+        ("Stars analysed (variability)", _i("n_stars")),
+        ("Stars passing the gates", _i("n_gates_ok")),
+        ("New variable-star candidates", _i("n_candidates")),
+        ("Known variables recovered", _i("n_known_detected")),
+    ]
 
 
 def _register_pdf_unicode_fonts() -> tuple[str, str, str]:
@@ -367,7 +460,6 @@ def resolved_facts_model(
         "fallback": fallback,
         "warnings": warnings,
         "rows": rows,
-        "vsx_depth": {"status": "n/a", "warn": False, "line": "detection-limited (DAO+Gaia match)"},
     }
 
 
@@ -379,8 +471,6 @@ def gs11_report_lines(pipeline_meta: dict[str, Any] | None, cfg: Any) -> list[st
         raw = pipeline_meta.get("gs11_summary")
         if isinstance(raw, dict):
             gs11 = raw
-    if not enabled and not bool(gs11.get("enabled", False)):
-        return ["  Flux dilution correction: disabled"]
     if not enabled:
         return ["  Flux dilution correction: disabled"]
     ap = float(gs11.get("aperture_arcsec", float("nan")))
@@ -418,11 +508,6 @@ class _PhotometryReportBuilder:
         draft_dir: Path,
         obs_group: str,
         output_pdf: Path | None,
-        var_results: dict[str, Any] | None,
-        candidates: list[str] | None,
-        crossmatch_bullets: dict[str, str] | None,
-        accepted_periods: dict[str, float] | None,
-        variability_timestamp: str | None,
         report_draft_label: str | None,
         tess_results: dict | None,
         report_title: str,
@@ -465,15 +550,9 @@ class _PhotometryReportBuilder:
         self.FONT_REG = font_reg
         self.FONT_BOLD = font_bold
         self.FONT_OBL = font_obl
-        self.candidates = candidates
-        self._var_results = var_results
-        self._crossmatch_bullets = dict(crossmatch_bullets or {})
-        self._accepted_periods = dict(accepted_periods or {})
-        self._variability_ts = str(variability_timestamp or '').strip()
         self._report_draft_lbl = str(report_draft_label or '').strip() or str(Path(draft_dir).name)
         self._tess_results = dict(tess_results or {})
         self._report_title = str(report_title or 'VYVAR \u2014 Summary Measure Report')
-        self._candidates_set = {str(x).strip() for x in (candidates or []) if str(x).strip()}
         self.platesolve_dir = self.draft_dir / "platesolve" / self.obs_group
         self.photometry_dir = self.platesolve_dir / "photometry"
         self.lc_dir = self.photometry_dir / "lightcurves"
@@ -498,29 +577,15 @@ class _PhotometryReportBuilder:
         self.comp_df = _fr["comp_df"]
         self.at_df = _fr["at_df"]
         self._cfg, self._cfg_source_label = _fr["cfg"], _fr["cfg_label"]
-        self._candidates_norm = {_norm_cid_decimal(str(x)) for x in self._candidates_set if str(x).strip()}
         self._pages = TargetPages(self.platesolve_dir, summary_df=self.summary_df, at_df=self.at_df,
                                   comp_df=self.comp_df, cfg=self._cfg)
         self._use_bprp_primary = True
 
-        if (self._var_results is None) or (not self._candidates_set):
-            vr_csv, cnorm_csv = self._try_load_variability_from_csv()
-            if vr_csv is not None and self._var_results is None:
-                self._var_results = vr_csv
-            if cnorm_csv and not self._candidates_set:
-                self._candidates_set = set(str(x).strip() for x in cnorm_csv if str(x).strip())
-            if self._candidates_set:
-                self._candidates_norm = {_norm_cid_decimal(str(x)) for x in self._candidates_set if str(x).strip()}
-
         self.obs_date_human = self._obs_date_str()
-        self.date_token = datetime.today().strftime("%Y%m%d")
-        try:
-            # If obs_date_human is in YYYY-MM-DD, take it.
-            if "-" in self.obs_date_human and len(self.obs_date_human) >= 10:
-                self.date_token = self.obs_date_human.split("T", 1)[0].replace("-", "")
-        except Exception:  # noqa: BLE001
-            # EXC-0228: T2 -- report/export may omit or misstate (if '-' in self.obs_date_human and len(self.obs_date... (EXCEPT-BULK 2026-07-08)
-            pass
+        # G11-09: the PDF name carries the night (UTC date of the first measured epoch, "YYYY.MM.DD"),
+        # as the export files do; today's date only when the run has no date at all
+        _m = re.match(r"^(\d{4})[.-](\d{2})[.-](\d{2})", str(self.obs_date_human or ""))
+        self.date_token = "".join(_m.groups()) if _m else datetime.today().strftime("%Y%m%d")
 
         if self.output_pdf is None:
             self.output_pdf = pdf_report_path(self.draft_dir, self.obs_group, date_str=self.date_token)
@@ -581,7 +646,6 @@ class _PhotometryReportBuilder:
         self.n_varastro_ds = len(list((self.varastro_dir / DONTSUBMIT_DIRNAME).glob("*.txt")))
 
         self.comp_pool_cover_rows = self._build_comp_pool_cover_rows()
-        self._var_cand_by_cid = self._load_variability_candidates_by_cid()
         self._lc_stats_by_cid = self._pages.lc_stats_by_cid
         self._night_qc = self._build_night_qc_summary()
 
@@ -630,58 +694,26 @@ class _PhotometryReportBuilder:
             "hrd_field": (900, 72),
         }
 
-        # ---------------------------------------------------------------------
-        # QA page (FWHM + sky + masterstar candidate table)
-        # ---------------------------------------------------------------------
-        self.bullets_by_cid = {_norm_cid_decimal(str(k)): str(v) for k, v in self._crossmatch_bullets.items()}
 
-    def _try_load_variability_from_csv(self, ) -> tuple[dict[str, Any] | None, set[str]]:
-        """Fallback when UI did not pass var_results/candidates: read exported pipeline/UI CSV."""
-        from variability_field import load_variability_candidates  # noqa: PLC0415
+    def _no_page_reason(self, row: Any) -> str:
+        """Why a target of the summary gets no page ("" = it gets one): no light curve in this run, or
+        TRUST-COVERAGE-2026-10 / PDF-NODATA-2026-10 (Milan 2026-10-12) too few usable epochs (it stays in the
+        summary table of all targets). One rule for the page loop and the cover count (G11-35)."""
+        _lc_rms = pd.to_numeric(row.get("lc_rms"), errors="coerce")
+        _n_frames = int(pd.to_numeric(row.get("n_frames"), errors="coerce") or 0)
+        if _n_frames <= 0 or not np.isfinite(float(_lc_rms)):
+            return f"no light curve (n_frames={_n_frames}, lc_rms={_lc_rms})"
+        from trust_flag_core import coverage_insufficient, lc_epoch_counts  # noqa: PLC0415
 
-        try:
-            vdf = load_variability_candidates(self.photometry_dir)
-        except Exception:  # noqa: BLE001
-            # EXC-0230: T2 -- report/export may omit or misstate (EXCEPT-BULK 2026-07-08)
-            return None, set()
-        if vdf.empty or "catalog_id" not in vdf.columns:
-            return None, set()
-        cands_raw = {str(x).strip() for x in vdf["catalog_id"].tolist() if str(x).strip()}
-        rms_like = vdf.copy()
-        try:
-            from gaia_catalog_id import normalize_gaia_source_id_series
+        cid = str(row.get("_cid", "") or self._norm_cid_decimal(row.get("catalog_id", "")))
+        _ne, _nl = lc_epoch_counts(self.photometry_dir, cid)
+        if bool(_ne is not None and _nl and coverage_insufficient(_ne, _nl)):
+            return f"insufficient data ({_ne} of {_nl} epochs usable)"
+        return ""
 
-            rms_like["catalog_id"] = normalize_gaia_source_id_series(rms_like["catalog_id"])
-        except Exception:  # noqa: BLE001
-            rms_like["catalog_id"] = rms_like["catalog_id"].map(_norm_cid_decimal)
-        vsx_known: set[str] = set()
-        if "_cid" in self.summary_df.columns and "vsx_name" in self.summary_df.columns:
-            m = self.summary_df["vsx_name"].fillna("").astype(str).str.strip().ne("")
-            vsx_known = set(self.summary_df.loc[m, "_cid"].astype(str).map(_norm_cid_decimal))
-        rms_like["vsx_known_variable"] = rms_like["catalog_id"].astype(str).map(_norm_cid_decimal).isin(vsx_known)
-        rms_like["edge_ok"] = True
-        if "edge_ok" in rms_like.columns:
-            try:
-                rms_like["edge_ok"] = pd.to_numeric(rms_like["edge_ok"], errors="coerce").fillna(1).astype(bool)
-            except Exception:  # noqa: BLE001
-                rms_like["edge_ok"] = True
-        dm = (
-            rms_like["detection_method"].fillna("RMS").astype(str)
-            if "detection_method" in rms_like.columns
-            else pd.Series(["RMS+VDI"] * len(rms_like), index=rms_like.index)
-        )
-        cr_rms = dm.str.contains("RMS", case=False, na=False)
-        if not bool(cr_rms.any()):
-            cr_rms = pd.Series(True, index=rms_like.index)
-        cr_vdi = dm.str.contains("VDI", case=False, na=False)
-        rms_like["is_variable_candidate"] = cr_rms
-        if "vdi_score" not in rms_like.columns:
-            rms_like["vdi_score"] = np.nan
-        if "vdi_z_score" not in rms_like.columns:
-            rms_like["vdi_z_score"] = np.nan
-        vdi_df = rms_like[["catalog_id", "vdi_score", "vdi_z_score"]].copy()
-        vdi_df["is_variable_candidate"] = cr_vdi.astype(bool).values
-        return {"rms_df": rms_like, "vdi_df": vdi_df}, {_norm_cid_decimal(str(x)) for x in cands_raw}
+    def _n_targets_without_page(self) -> int:
+        return sum(1 for _, r in self.summary_df.iterrows() if self._no_page_reason(r))
+
     def _lc_files(self) -> list[Path]:
         """This run's aperture light curves (lightcurves/lightcurve_<id>.csv). The summary's
         absolute lc_csv paths break when a draft is moved (REPORT-AUDIT-2026-10)."""
@@ -1002,7 +1034,7 @@ class _PhotometryReportBuilder:
         n_unique = int(gdf["_id"].nunique())
         rows_out.append(("Comparison stars used (unique)", f"{n_unique:d}"))
         rows_out.append(("Median comp rms (per star)",
-                         f"{1085.7 * med_rms_pool:.1f} mmag" if np.isfinite(med_rms_pool) else "-"))
+                         f"{1000.0 * med_rms_pool:.1f} mmag" if np.isfinite(med_rms_pool) else "-"))
         if np.isfinite(mn_mag) and np.isfinite(mx_mag):
             rows_out.append(("Comp mag range", f"{mn_mag:.3f} - {mx_mag:.3f}"))
         else:
@@ -1039,35 +1071,13 @@ class _PhotometryReportBuilder:
             rows_out.append(("Good / suspect / excluded (target-comp pairs)", "-"))
         return rows_out
 
-    def _load_variability_candidates_by_cid(self) -> dict[str, dict[str, Any]]:
-        from variability_field import load_variability_candidates  # noqa: PLC0415
-
-        out: dict[str, dict[str, Any]] = {}
-        try:
-            vdf = load_variability_candidates(self.photometry_dir)
-        except Exception:  # noqa: BLE001
-            # EXC-0233: T2 -- report/export may omit or misstate (EXCEPT-BULK 2026-07-08)
-            return out
-        for _, r in vdf.iterrows():
-            nk = self._norm_cid_decimal(r.get("catalog_id"))
-            if nk:
-                out[nk] = r.to_dict()
-        return out
-
     def _resolve_observer_identity(self) -> tuple[str, str]:
         name = ""
         code = ""
-        if isinstance(self._pipeline_meta, dict):
-            obs = self._pipeline_meta.get("observer")
-            if isinstance(obs, dict):
-                name = str(obs.get("name", obs.get("observer_name", "")) or "").strip()
-                code = str(obs.get("code", obs.get("obscode", obs.get("observer_code", ""))) or "").strip()
-        cfg = self._cfg
+        cfg = self._cfg  # G11-32: pipeline_meta has no observer block (no writer)
         if cfg is not None:
-            if not name:
-                name = str(getattr(cfg, "observer_name", "") or "").strip()
-            if not code:
-                code = str(getattr(cfg, "observer_code", "") or "").strip()
+            name = str(getattr(cfg, "observer_name", "") or "").strip()
+            code = str(getattr(cfg, "observer_code", "") or "").strip()
         if not name:
             name = "-"
         if not code:
@@ -1115,11 +1125,6 @@ class _PhotometryReportBuilder:
             except Exception:  # noqa: BLE001
                 # EXC-0235: T2 -- report/export may omit or misstate (tel = str(row.get('telescope_name', '') or '').stri... (EXCEPT-BULK 2026-07-08)
                 pass
-        if isinstance(self._pipeline_meta, dict):
-            eq = self._pipeline_meta.get("equipment")
-            if isinstance(eq, dict):
-                tel = tel or str(eq.get("telescope", eq.get("telescope_name", "")) or "").strip()
-                cam = cam or str(eq.get("camera", eq.get("equipment_name", "")) or "").strip()
         parts = [p for p in (tel, cam) if p]
         if parts:
             return " . ".join(parts)
@@ -1183,17 +1188,9 @@ class _PhotometryReportBuilder:
         return out
 
     def _variability_cover_rows(self) -> list[tuple[str, str]]:
-        vm = self._variability_cover_metrics()
-        if not vm:
-            return []
-        rows = [
-            ("Stars analysed (variability)", f"{int(vm.get('n_all', 0)):d}"),
-            ("New RMS candidates", f"{int(vm.get('n_rms', 0)):d}"),
-            ("New VDI candidates", f"{int(vm.get('n_vdi', 0)):d}"),
-            ("Combined edge-safe candidates", f"{int(vm.get('n_combined', 0)):d}"),
-            ("Known VSX variables", f"{int(vm.get('n_vsx', 0)):d}"),
-        ]
-        return rows
+        """G11-02: the cover counts of the field variability search from variability_meta.json, the source
+        of the variability section (was emulated from the candidate rows, all labelled RMS+VDI)."""
+        return variability_cover_rows(self.photometry_dir)
 
     def _compress_image_for_pdf(self, 
         src_path: str | Path,
@@ -1451,46 +1448,6 @@ class _PhotometryReportBuilder:
                 y = y_bottom - max(0.0, step - ph - 1.0)
         return y
 
-    def _variability_cover_metrics(self, ) -> dict[str, Any] | None:
-        """Build counts from ``var_results`` for the cover page (same merge logic as the variability UI)."""
-        vr = self._var_results
-        if not vr:
-            return None
-        rms_df = vr.get("rms_df")
-        if not isinstance(rms_df, pd.DataFrame) or rms_df.empty:
-            return None
-        work = rms_df.copy()
-        vdi_df = vr.get("vdi_df")
-        if isinstance(vdi_df, pd.DataFrame) and not vdi_df.empty:
-            work = work.merge(
-                vdi_df[["catalog_id", "vdi_score", "vdi_z_score", "is_variable_candidate"]],
-                on="catalog_id",
-                how="left",
-                suffixes=("_rms", "_vdi"),
-            )
-            work = work.rename(columns={"is_variable_candidate": "is_variable_candidate_vdi"})
-        else:
-            work["vdi_score"] = np.nan
-            work["vdi_z_score"] = np.nan
-            work["is_variable_candidate_vdi"] = False
-        if "is_variable_candidate" in work.columns and "is_variable_candidate_rms" not in work.columns:
-            work = work.rename(columns={"is_variable_candidate": "is_variable_candidate_rms"})
-        work["is_variable_candidate_rms"] = work["is_variable_candidate_rms"].fillna(False).astype(bool)
-        work["is_variable_candidate_vdi"] = work["is_variable_candidate_vdi"].fillna(False).astype(bool)
-        work["is_candidate_combined"] = work["is_variable_candidate_rms"] | work["is_variable_candidate_vdi"]
-        work["vsx_known_variable"] = work["vsx_known_variable"].fillna(False).astype(bool)
-        n_combined_edge = int((work["is_candidate_combined"] & ~work["vsx_known_variable"]).sum())
-        n_all = int(len(work))
-        n_rms = int((work["is_variable_candidate_rms"] & ~work["vsx_known_variable"]).sum())
-        n_vdi = int((work["is_variable_candidate_vdi"] & ~work["vsx_known_variable"]).sum())
-        n_vsx = int(work["vsx_known_variable"].sum())
-        return {
-            "n_all": n_all,
-            "n_rms": n_rms,
-            "n_vdi": n_vdi,
-            "n_combined": n_combined_edge,
-            "n_vsx": n_vsx,
-        }
     def _draw_image_fit(self, 
         c: "canvas.Canvas",
         img_path: Path,
@@ -1717,7 +1674,8 @@ class _PhotometryReportBuilder:
         rows = [
             ("Light curves", self.lc_count_display),
             # REPORT-AUDIT-2026-10: targets of the run without a light curve get no target page
-            ("Targets without light curve (no page)", f"{max(0, len(self.summary_df) - self.n_lc):d}"),
+            # G11-35: the same rule as the page loop (coverage-RED targets included)
+            ("Targets without a page", f"{self._n_targets_without_page():d}"),
             ("Median lc_rms", f"{self.med_rms:.4f}" if np.isfinite(self.med_rms) else "-"),
             ("RMS < 0.05 mag", f"{self.rms_lt_005:d}"),
             ("Avg good comp", f"{self.avg_good_comp:.2f}" if np.isfinite(self.avg_good_comp) else "-"),
@@ -1892,26 +1850,17 @@ class _PhotometryReportBuilder:
             # EXC-0256: T2 -- report/export may omit or misstate (_ap_ver = str(getattr(astropy, '__version__', '?'))... (EXCEPT-BULK 2026-07-08)
             pass
 
-        _period_used = bool(self._accepted_periods) or bool(
-            isinstance(self._var_results, dict)
-            and any(
-                isinstance(v, dict) and v.get("period") not in (None, "", float("nan"))
-                for v in self._var_results.values()
-            )
-        )
-        _var_det_used = bool(self._candidates_set) or (
-            (self.photometry_dir / "variability_field.csv").is_file()
-            or (self.photometry_dir / "variability_candidates.csv").is_file()
-        )
+        # G11-02: periods in this PDF come from the TESS analysis results handed to the report
+        _period_used = bool(self._tess_results)
         _cite_ctx = build_run_citation_context(
             _cfg_m,
             pipeline_meta=self._pipeline_meta,
             targets_df=self.at_df,
             obs_group=str(self.obs_group or ""),
             period_analysis=_period_used,
-            variability_detection=_var_det_used,
             tess_used=bool(self._tess_results),
             psf_used=any(self.lc_dir.glob("lightcurve_*_psf.csv")) if self.lc_dir.is_dir() else False,
+            use_airmass=setup_uses_airmass(self.lc_dir),  # G11-17: the same rule as the export headers
         )
         methods_sections = emit_pdf_methods_sections(_cite_ctx)
         methods_lines: list[str] = []
@@ -1924,24 +1873,9 @@ class _PhotometryReportBuilder:
                 insert_at,
                 f"  Aperture: median target r={_ap_med:.2f}px (same radius for target and comps)",
             )
-        _sf_meta = (self._pipeline_meta or {}).get("sigma_floor")
-        _sn_meta = (self._pipeline_meta or {}).get("sigma_sys_night")
-        if isinstance(_sn_meta, dict) and _sn_meta.get("applied") == "night":
-            # SIGMA-SYS-NIGHT-2026-10
-            methods_lines.insert(
-                2 if len(methods_lines) > 2 else len(methods_lines),
-                f"  Per-point uncertainties include this night's systematic floor "
-                f"{1000 * float(_sn_meta.get('sigma_sys_mag', 0.0)):.1f} mmag, measured on "
-                f"{int(_sn_meta.get('n_comps', 0))} bright comparison stars (scatter minus photon noise); "
-                "correlated (red) noise is reported separately.",
-            )
-        elif isinstance(_sf_meta, dict):
-            methods_lines.insert(
-                2 if len(methods_lines) > 2 else len(methods_lines),
-                f"  Per-point uncertainties include a per-rig systematic floor "
-                f"({1000 * float(_sf_meta.get('sigma_sys_mag', 0.0) or 0.0):.1f} mmag, EQUIPMENTS); correlated "
-                "(red) noise is reported separately and is not included in per-point bars.",
-            )
+        _floor_line = sigma_floor_method_line(self._pipeline_meta)
+        if _floor_line:
+            methods_lines.insert(2 if len(methods_lines) > 2 else len(methods_lines), _floor_line)
         if _pu_ver != "?" or _ap_ver != "?":
             for i, ln in enumerate(methods_lines):
                 if ln.strip().startswith("Bradley et al."):
@@ -2398,6 +2332,7 @@ class _PhotometryReportBuilder:
             dz = gq.get("dzp_limit")
             pa = gq.get("patchy_limit")
             bt = gq.get("best_transparency")
+            from frame_qc import MIN_COMMON_STARS  # noqa: PLC0415
 
             def _f(v: Any, fmt: str) -> str:
                 return format(float(v), fmt) if v is not None else "none"
@@ -2407,7 +2342,7 @@ class _PhotometryReportBuilder:
                 f"; FWHM median {_f(gq.get('fwhm_median'), '.2f')} px (not a rejection criterion)",
                 "Reject (limits = median + k*1.4826*MAD of this setup): no FWHM; elongation > "
                 f"{_f(el, '.3f')}; transparency loss dZP > {_f(dz, '.3f')} mag; "
-                f"non-uniform (quadrant spread) > {_f(pa, '.3f')} mag; < 5 common stars",
+                f"non-uniform (quadrant spread) > {_f(pa, '.3f')} mag; < {MIN_COMMON_STARS} common stars",
                 "MASTERSTAR source: max T/(FWHM*sigma_pix)"
                 + (f" -> {Path(str(gq.get('best_path')).replace(chr(92), '/')).name}" if gq.get("best_path") else "")
                 + (f" (T={float(bt):.3f})" if bt is not None else ""),
@@ -2419,276 +2354,6 @@ class _PhotometryReportBuilder:
 
         self._page_footer(c)
         c.showPage()
-    def _format_comp_catalog_id(self, row: Any) -> str:
-        bv_src = str(row.get("bv_source", "") or "").strip().lower()
-        cid = self._norm_cid_decimal(row.get("catalog_id", ""))
-        if not cid:
-            return "-"
-        if bv_src in ("gaia_bprp", "gaia_teff", "unknown", ""):
-            return cid
-        if bv_src == "tycho2":
-            tycho_id = str(row.get("tycho_id", row.get("tycho2_id", "")) or "").strip()
-            if tycho_id and tycho_id.lower() not in ("nan", "none"):
-                return f"TYC {tycho_id}"
-            return cid
-        if bv_src == "apass":
-            apass_id = str(row.get("apass_id", "") or "").strip()
-            if apass_id and apass_id.lower() not in ("nan", "none"):
-                return f"AP {apass_id}"
-            return cid
-        return cid
-
-    def _proc_csv_dir(self) -> Path | None:
-        proc_dir = self.draft_dir / "detrended_aligned" / "lights" / self.obs_group
-        if proc_dir.is_dir() and any(proc_dir.glob("proc_*.csv")):
-            return proc_dir
-        for p in sorted(self.draft_dir.glob("detrended_aligned/lights/*/")):
-            if p.is_dir() and any(p.glob("proc_*.csv")):
-                return p
-        return None
-
-    def _rms_p2p_from_quality_note(self, note: str) -> float:
-        m = re.search(r"p2p=([0-9.]+(?:e[-+]?\d+)?)", str(note or ""), flags=re.I)
-        if m:
-            try:
-                return float(m.group(1))
-            except ValueError:
-                pass
-        return float("nan")
-
-    def _proc_flux_rows(self) -> list[tuple[float, list[tuple[str, float]]]]:
-        """Per proc CSV (sorted): (median frame time, [(catalog_id, flux) of every comparison-pool row]).
-
-        SPEED-2026-10: read once per report (was once per target: 62 x 97 reads on 534 g). Rows keep the
-        CSV order; only ids of the report's comparison table are kept (bounded memory)."""
-        cached = getattr(self, "_proc_flux_rows_cache", None)
-        if cached is not None:
-            return cached
-        rows_out: list[tuple[float, list[tuple[str, float]]]] = []
-        proc_dir = self._proc_csv_dir()
-        pool: set[str] = set()
-        if not self.comp_df.empty and "catalog_id" in self.comp_df.columns:
-            pool = {c for c in (_norm_cid_decimal(x) for x in self.comp_df["catalog_id"].tolist()) if c}
-        if proc_dir is not None and pool:
-            for fp in sorted(glob.glob(str(proc_dir / "proc_*.csv"))):
-                try:
-                    from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-                    df = read_proc_csv(
-                        fp,
-                        dtype={"catalog_id": str},
-                        usecols=lambda c: c in {"catalog_id", "dao_flux", "flux", "bjd_tdb_mid", "jd_mid", "hjd_mid"},
-                    )
-                except Exception:  # noqa: BLE001
-                    # EXC-0266: T2 -- report/export may omit or misstate (EXCEPT-BULK 2026-07-08)
-                    continue
-                if df.empty or "catalog_id" not in df.columns:
-                    continue
-                tcol = next((c for c in ("bjd_tdb_mid", "jd_mid", "hjd_mid") if c in df.columns), None)
-                tval = float(pd.to_numeric(df[tcol], errors="coerce").median()) if tcol else float("nan")
-                flux_col = "dao_flux" if "dao_flux" in df.columns else "flux"
-                vals = df[flux_col].tolist() if flux_col in df.columns else [None] * len(df)
-                kept: list[tuple[str, float]] = []
-                for raw_id, raw_fx in zip(df["catalog_id"].tolist(), vals, strict=True):
-                    cid = _norm_cid_decimal(raw_id)
-                    if cid not in pool:
-                        continue
-                    kept.append((cid, float(pd.to_numeric(raw_fx, errors="coerce"))))
-                rows_out.append((tval, kept))
-        self._proc_flux_rows_cache = rows_out
-        return rows_out
-
-    def _comp_rms_p2p_map_from_proc(self, comp_ids: list[str]) -> dict[str, float]:
-        """Report-only Abbe p2p from per-frame dao_flux (same definition as the aperture-photometry stability)."""
-        proc_dir = self._proc_csv_dir()
-        if proc_dir is None or not comp_ids:
-            return {}
-        want = {_norm_cid_decimal(x) for x in comp_ids if _norm_cid_decimal(x)}
-        flux_by_cid: dict[str, list[tuple[float, float]]] = {c: [] for c in want}
-        for tval, kept in self._proc_flux_rows():
-            for cid, fx in kept:
-                if cid in want and math.isfinite(fx) and fx > 0 and math.isfinite(tval):
-                    flux_by_cid.setdefault(cid, []).append((tval, fx))
-        out: dict[str, float] = {}
-        for cid, pairs in flux_by_cid.items():
-            if len(pairs) < 3:
-                out[cid] = float("nan")
-                continue
-            pairs.sort(key=lambda x: x[0])
-            mags = np.array([-2.5 * math.log10(fx) for _, fx in pairs if fx > 0], dtype=float)
-            if mags.size < 3:
-                out[cid] = float("nan")
-                continue
-            diff = np.diff(mags)
-            out[cid] = float(np.std(diff) / math.sqrt(2.0)) if diff.size > 1 else float("nan")
-        return out
-
-    def _comp_rms_p2p_map_for_target(self, target_cid: str, comp_ids: list[str]) -> dict[str, float]:
-        qpath = self.lc_dir / f"comp_quality_{target_cid}.json"
-        parsed: dict[str, float] = {}
-        if qpath.is_file():
-            try:
-                raw = json.loads(qpath.read_text(encoding="utf-8"))
-                if isinstance(raw, dict):
-                    from comp_table import parse_comp_quality_json_map
-
-                    qmap = parse_comp_quality_json_map(raw)
-                    for ck, info in qmap.items():
-                        nk = _norm_cid_decimal(ck)
-                        if not nk:
-                            continue
-                        v = self._rms_p2p_from_quality_note(info.get("note", ""))
-                        if math.isfinite(v):
-                            parsed[nk] = v
-            except Exception:  # noqa: BLE001
-                parsed = {}
-        proc_map = self._comp_rms_p2p_map_from_proc(comp_ids)
-        for cid in comp_ids:
-            nk = _norm_cid_decimal(cid)
-            if not nk:
-                continue
-            if nk not in parsed or not math.isfinite(parsed.get(nk, float("nan"))):
-                if nk in proc_map and math.isfinite(proc_map[nk]):
-                    parsed[nk] = proc_map[nk]
-        return parsed
-
-    def _comp_rows_for_target(self, cid: str) -> tuple[list[list[str]], str]:
-        if self.comp_df.empty or not cid:
-            return [], ""
-        if "_tcid" not in self.comp_df.columns:
-            return [], ""
-        sub = self.comp_df[self.comp_df["_tcid"] == cid].copy()
-        if sub.empty:
-            return [], ""
-        # Normalize dist column name
-        if "_dist_deg" in sub.columns and "dist_deg" not in sub.columns:
-            sub["dist_deg"] = sub["_dist_deg"]
-
-        # Optional per-target comp quality from AperturePhotometry (saved as JSON).
-        qmap: dict[str, dict[str, str]] = {}
-        try:
-            qpath = self.lc_dir / f"comp_quality_{cid}.json"
-            if qpath.exists():
-                import json
-
-                qraw = json.loads(qpath.read_text(encoding="utf-8"))
-                if isinstance(qraw, dict):
-                    from comp_table import parse_comp_quality_json_map
-
-                    qmap = parse_comp_quality_json_map(qraw)
-        except Exception:  # noqa: BLE001
-            qmap = {}
-        qmap_str = (
-            {k: v["quality"] for k, v in qmap.items()}
-            if qmap
-            else {}
-        )
-        excluded_for_note: list[tuple[str, str]] = []
-        comp_id_list = [_norm_cid_decimal(r.get("catalog_id", "")) for _, r in sub.iterrows()]
-        comp_id_list = [x for x in comp_id_list if x]
-        rms_p2p_map = self._comp_rms_p2p_map_for_target(cid, comp_id_list)
-
-        def _fmt(v: Any, nd: int) -> str:
-            x = pd.to_numeric(v, errors="coerce")
-            return f"{float(x):.{nd}f}" if np.isfinite(x) else "-"
-
-        # Relative weights via apply_comp_w_rel_for_display (excluded -> w_rel=0).
-        w_rel_by_row: dict[int, float] = {}
-        try:
-            if "comp_weight" in sub.columns:
-                from photometry_exports import apply_comp_w_rel_for_display
-
-                sub_w = apply_comp_w_rel_for_display(sub, qmap_str)
-                if "w_rel" in sub_w.columns:
-                    for i in range(len(sub_w)):
-                        wr = pd.to_numeric(sub_w.iloc[i].get("w_rel"), errors="coerce")
-                        w_rel_by_row[i] = float(wr) if math.isfinite(float(wr)) else float("nan")
-        except Exception:  # noqa: BLE001
-            w_rel_by_row = {}
-
-        def _cid_short(catalog_id: str) -> str:
-            digits = "".join(ch for ch in str(catalog_id) if ch.isdigit())
-            return digits[-6:] if len(digits) >= 6 else digits or str(catalog_id)[-6:]
-
-        out: list[list[str]] = []
-        sub = sub.reset_index(drop=True)
-        for i in range(len(sub)):
-            r = sub.iloc[i]
-            ccid = ""
-            try:
-                ccid = self._norm_cid_decimal(r.get("catalog_id", ""))
-            except Exception:  # noqa: BLE001
-                ccid = ""
-            q_entry = qmap.get(ccid, {}) if ccid else {}
-            q_quality = str(q_entry.get("quality", "") or "").strip().lower()
-            q_note = str(q_entry.get("note", "") or "").strip()
-            if q_quality == "excluded":
-                excluded_for_note.append((_cid_short(ccid), q_note or "excluded"))
-                continue
-            # 'stav' may be stored under different column names; fallback to comp_quality json.
-            stav = ""
-            for col in ("stav", "quality", "comp_quality"):
-                if col in sub.columns:
-                    stav = str(r.get(col, "") or "").strip()
-                    break
-            if not stav and q_quality:
-                if q_quality == "suspect":
-                    stav = f"suspect - {q_note}" if q_note else "suspect"
-                else:
-                    stav = q_quality
-            _cts0 = str(r.get("color_tier_src", "") or "").strip().lower()
-            _cts_lbl = (
-                "BP-RP"
-                if _cts0 == "bprp"
-                else ("BV->" if _cts0 == "bv_converted" else ("?" if _cts0 == "unknown" else ("-" if not _cts0 else _cts0[:5])))
-            )
-            bv_src_cell = (
-                "G-bp"
-                if str(r.get("bv_source", "") or "").strip().lower() == "gaia_bprp"
-                else (
-                    "G-T"
-                    if str(r.get("bv_source", "") or "").strip().lower() == "gaia_teff"
-                    else (
-                        "AP"
-                        if str(r.get("bv_source", "") or "").strip().lower() == "apass"
-                        else (
-                            "TY"
-                            if str(r.get("bv_source", "") or "").strip().lower() == "tycho2"
-                            else "?"
-                        )
-                    )
-                )
-            )
-            tail = [
-                _fmt(r.get("bp_rp"), 3),
-                _fmt(r.get("delta_bprp_abs"), 3) if "delta_bprp_abs" in sub.columns else "-",
-                _cts_lbl,
-                _fmt(r.get("dist_deg"), 4),
-                str(int(pd.to_numeric(r.get("comp_n_frames"), errors="coerce")))
-                if np.isfinite(pd.to_numeric(r.get("comp_n_frames"), errors="coerce"))
-                else "-",
-                _fmt(r.get("comp_rms"), 4),
-                _fmt(rms_p2p_map.get(ccid, float("nan")), 4),
-                _fmt(
-                    w_rel_by_row.get(i, float("nan")),
-                    3,
-                ),
-                str(r.get("comp_tier", "") or ""),
-                stav,
-            ]
-            row0 = [str(len(out) + 1), self._format_comp_catalog_id(r), _fmt(r.get("mag"), 3)]
-            if self._use_bprp_primary:
-                out.append(row0 + tail)
-            else:
-                out.append(row0 + [_fmt(r.get("b_v"), 3), bv_src_cell] + tail)
-        excluded_note = ""
-        if excluded_for_note:
-            parts = ", ".join(f"{short} ({note})" for short, note in excluded_for_note)
-            n_ex = len(excluded_for_note)
-            excluded_note = (
-                f"{n_ex} comp star(s) excluded from ensemble: {parts}"
-            )
-        return out, excluded_note
     def _report_per_star_page(self, c: "canvas.Canvas", star_data: dict[str, Any]) -> None:
         """STAR-PAGE-M3-2026-10 (layout approved by Milan 2026-10-11): header with the object
         name by source (VSX / exoplanet host / Gaia), trust line; left: light curve with the
@@ -2933,14 +2598,6 @@ class _PhotometryReportBuilder:
         def _cell_txt(val: Any) -> str:
             return str(val if val is not None else "").strip()
 
-        def _zone_row_fill(zf: str) -> Any:
-            z = str(zf or "").strip().lower()
-            if z == "linear":
-                return self.colors.HexColor("#eaf7eb")
-            if "catalog" in z:
-                return self.colors.HexColor("#fff6e0")
-            return self.colors.white
-
         y = self.PAGE_H - self.M_TOP
         c.setFont(self.FONT_BOLD, 14)
         c.setFillColor(self.C_TITLE)
@@ -2995,8 +2652,11 @@ class _PhotometryReportBuilder:
                 if cn == id_key:
                     row_out.append(self.Paragraph(self._pdf_id_display(r.get(cn)), id_style))
                 elif cn == "vsx_name":
+                    # G11-22: the column shows the target's name (VSX, exoplanet host, own name or Gaia id)
+                    from star_page_m3 import target_display_name  # noqa: PLC0415
+
                     row_out.append(
-                        self.Paragraph(self._pdf_id_display(r.get(cn), break_digits=False), name_style)
+                        self.Paragraph(self._pdf_id_display(target_display_name(r), break_digits=False), name_style)
                     )
                 elif mag_key and cn == mag_key:
                     x = pd.to_numeric(r.get(cn), errors="coerce")
@@ -3096,13 +2756,7 @@ class _PhotometryReportBuilder:
                 chunk_start += 1
 
             sty = self.TableStyle(list(base_cmds))
-            if "zone_flag" in work.columns:
-                for j in range(1, len(chunk_rows)):
-                    abs_i = i0 + j - 1
-                    if 0 <= abs_i < len(work):
-                        zv = str(work.iloc[abs_i].get("zone_flag", "") or "")
-                        sty.add("BACKGROUND", (0, j), (-1, j), _zone_row_fill(zv))
-            elif "lc_quality_flag" in work.columns:
+            if "lc_quality_flag" in work.columns:
                 for j in range(1, len(chunk_rows)):
                     abs_i = i0 + j - 1
                     if 0 <= abs_i < len(work):
@@ -3527,19 +3181,8 @@ class _PhotometryReportBuilder:
             c.showPage()
             return
         field = pd.read_csv(fcsv, dtype={"catalog_id": str}, low_memory=False)
-        nm = meta.get("noise_model") or {}
         sty = self._get_para_style("var_v2_body", fontName=self.FONT_REG, fontSize=8.5, leading=11)
-        txt = (
-            f"Every star measured on at least 90 % of the {meta.get('n_frames')} frames ({meta.get('n_stars')} stars) is put on a "
-            "common frame zero point (Honeycutt 1992). Its robust scatter (1.4826 MAD) is compared with the scatter expected from "
-            f"its CCD error, scaled and floored by the field itself (a = {float(nm.get('a') or 0):.2f}, floor = "
-            f"{1000 * float(nm.get('floor_mag') or 0):.1f} mmag); the second index is 1/eta (von Neumann ratio; smooth = variable; tail from a skew-normal fitted to the field) against stars of similar "
-            f"brightness (Sokolovsky et al. 2017). A star is a candidate when one index exceeds z = "
-            f"{float(meta.get('z_threshold') or 0):.2f} (field false-alarm probability 1 %) and it passes the comparison-star "
-            f"gates: unsaturated, |neighbour light| <= 1 %, sky annulus inside every frame, SNR >= snr_min "
-            f"({meta.get('n_gates_ok')} stars pass). A signal that a linear dependence on FWHM and airmass explains is marked "
-            "as systematic and not listed. No sigma clipping, no detrending."
-        )
+        txt = variability_method_text(meta, snr_min=float(self._cfg.snr_min))
         y = self._draw_paragraph_block(c, self.M_LEFT, y, self.USE_W, self._pdf_escape(txt), sty, paginate=False)
         hp = self.cache_dir / "variability_hockey_report.png"
         hockey_png(field, meta, hp, title=f"{self.obs_group} - new candidates: {meta.get('n_candidates', 0)}, "
@@ -3704,14 +3347,7 @@ class _PhotometryReportBuilder:
         c.setFillColor(self.colors.black)
         y -= 1.0 * self.cm
         sty = self._get_para_style("tr_body", fontName=self.FONT_REG, fontSize=8.5, leading=11)
-        txt = (f"Every aligned frame ({tm.get('n_frames')}) was searched for sources (DAOStarFinder, 5 sigma) that are not on "
-               "MASTERSTAR. A new source is seen on >= 3 consecutive frames at S/N >= 5 (noise measured on empty sky), stays on one "
-               "sky position, is not a detector pixel, has no Gaia star of similar brightness within 2.5 FWHM, is not in the halo of a much brighter G < 8 star nor on a hot pixel of the master dark, "
-               "and is brighter than the catalogue depth - 1 mag (Gaia Science Alerts / NMW method, no image subtraction: a "
-               "supernova on top of a galaxy core is not found). Stars brighter than Gaia: night magnitude >= 1 mag and >= 3 sigma "
-               "above Gaia G with the neighbours' light. Candidates must be checked on the images before any report "
-               f"(TNS for extragalactic transients, CBAT for novae). Status: {tm.get('n_candidates', 0)} new source(s) of "
-               f"{tm.get('n_sources', 0)} examined.")
+        txt = transient_method_text(tm)
         y = self._draw_paragraph_block(c, self.M_LEFT, y, self.USE_W, self._pdf_escape(txt), sty, paginate=False)
         y -= 0.3 * self.cm
 
@@ -3740,12 +3376,16 @@ class _PhotometryReportBuilder:
                 yy -= 0.4 * self.cm
             return yy - 0.4 * self.cm
 
+        from transient_field import shape_text  # noqa: PLC0415
+
         kind_txt = {"appeared": "appeared", "faded": "faded", "present": "all night"}
-        y = _table("New sources", ["Id", "kind", "first seen JD", "G est.", "S/N max", "frames", "RA", "Dec", "in galaxy", "catalogues"],
-                   [0.0, 1.0, 3.0, 5.6, 7.0, 8.4, 9.8, 12.0, 14.2, 16.6],
+        y = _table("New sources", ["Id", "kind", "first seen JD", "G est.", "S/N max", "frames", "RA", "Dec", "in galaxy", "shape",
+                                   "catalogues"],
+                   [0.0, 1.0, 3.0, 5.6, 7.0, 8.4, 9.8, 12.0, 14.2, 16.6, 20.0],
                    [[r["label"], kind_txt.get(str(r["kind"]), r["kind"]), f"{float(r['first_time']):.5f}", f"{float(r['mag_g_est']):.2f}",
                      f"{float(r['snr_max']):.1f}", int(r["n_frames_snr5"]), f"{float(r['ra_deg']):.5f}", f"{float(r['dec_deg']):+.5f}",
                      (str(r.get("galaxy") or "") if str(r.get("in_galaxy")).lower() == "true" else "-"),
+                     shape_text(r.get("extended"), r.get("fwhm_ratio")),
                      str(r.get("catalogs") or "not checked")] for _, r in cand.iterrows()], y)
         y = _table("Stars brighter than Gaia predicts", ["Gaia DR3", "G (Gaia)", "brighter by", "BP-RP", "neighbour light", "VSX / target"],
                    [0.0, 4.2, 6.0, 8.0, 9.6, 12.0],
@@ -3863,10 +3503,11 @@ class _PhotometryReportBuilder:
             ("n_good_comp", "Aperture-photometry ensemble pool: comps with stability quality good or suspect (summary column)"),
             ("n_clean", "Comparison stars in the target's ensemble (all passed the selection gates; trust gate metric)"),
             ("setup", "Observation group (filter _ exposure _ binning, e.g. NoFilter_60_2)"),
-            ("comp_rms", "Comparison-star selection detrended relative-flux scatter (comparison star stability)"),
-            ("rms mmag", "Comparison-star stability rms (comparison-star selection, 1.0857 x relative-flux scatter)"),
+            ("comp_rms", "Comparison-star stability: leave-one-out 1.4826 x MAD of its night magnitudes (mag)"),
+            ("rms mmag", "Comparison-star stability rms: leave-one-out 1.4826 x MAD of its night magnitudes (comparison-star selection)"),
             ("period_reliability", "reliable / uncertain / noise - quality flag for TESS period"),
-            ("RMS candidate", "Star with RMS significantly above the noise envelope"),
+            ("candidate", "New variable-star candidate of the field search: robust scatter or 1/eta above the field "
+                          "false-alarm threshold (Sokolovsky et al. 2017)"),
             ("ROT", "Rotational variable"),
             ("SNR", "Signal-to-noise ratio"),
             ("TESS", "Transiting Exoplanet Survey Satellite (NASA) - used for period analysis"),
@@ -3879,16 +3520,14 @@ class _PhotometryReportBuilder:
             ("GSPC", "Gaia DR3 synthetic photometry (XP spectra) - zero point for g/r/i from synthetic standards"),
             ("ePSF", "Effective PSF (Anderson & King 2000) - internal PSF light curve, not exported"),
             ("k''", "Second-order (colour) extinction coefficient, mag per airmass per BP-RP"),
-            ("MERR", "Median per-point magnitude error (1.0857 x relative flux error)"),
+            ("MERR", f"Median per-point magnitude error ({MAG_ERR_SCALE:.4f} x relative flux error)"),
             ("mmag", "Millimagnitude (0.001 mag)"),
             ("n_eff", "Effective number of comparison stars of a weighted ensemble"),
             ("OOE", "Out-of-eclipse: rms over the epochs outside eclipses"),
             ("p2p", "Point-to-point scatter, 1.4826 x MAD(diff) / sqrt(2)"),
             ("sigma_ZP", "Uncertainty of the zero point"),
             ("TRUST", "GREEN / YELLOW / RED user information from data-quality warnings (check star, ZP scatter, ...)"),
-            ("VDI", "Variability Detection Index (phase-space metric)"),
-            ("VDI candidate", "Star with high VDI score (non-random phase distribution)"),
-            ("w(rel)", "Relative weight of comparison star in ensemble"),
+            ("w", "Broeg (2005) weight of a comparison star in its ensemble (weights sum to 1, as in the AAVSO NOTES)"),
             ("ZP", "Zero point (photometric calibration offset)"),
             ("zone_flag", "linear = DAO-detected; saturated = likely saturated on MASTERSTAR"),
             ("FWHM", "Full Width at Half Maximum (PSF size in pixels)"),
@@ -4077,13 +3716,6 @@ class _PhotometryReportBuilder:
             c.setFillColor(self.colors.black)
             y -= 0.2 * self.cm
 
-        _vsx = model.get("vsx_depth") if isinstance(model.get("vsx_depth"), dict) else {}
-        if bool(_vsx.get("warn")) and _vsx.get("message"):
-            c.setFont(self.FONT_BOLD, 9)
-            c.setFillColor(self.colors.HexColor("#b00000"))
-            c.drawString(self.M_LEFT, y, f"WARN: {_vsx['message']}")
-            c.setFillColor(self.colors.black)
-            y -= 0.5 * self.cm
 
         col_lbl = self.M_LEFT
         col_val = self.M_LEFT + 7.0 * self.cm
@@ -4256,16 +3888,9 @@ class _PhotometryReportBuilder:
         for _, row in self.summary_df.iterrows():
             try:
                 cid = str(row.get("_cid", "") or self._norm_cid_decimal(row.get("catalog_id", "")))
-                vsx_name = str(row.get("vsx_name", cid) or cid)
-                _lc_rms = pd.to_numeric(row.get("lc_rms"), errors="coerce")
-                _n_frames = int(pd.to_numeric(row.get("n_frames"), errors="coerce") or 0)
-                if _n_frames <= 0 or (not np.isfinite(float(_lc_rms))):
-                    logging.debug(
-                        "[PDF] Skip LC page - no data: %s (n_frames=%d, lc_rms=%s)",
-                        vsx_name,
-                        _n_frames,
-                        _lc_rms,
-                    )
+                _why = self._no_page_reason(row)
+                if _why:
+                    logging.info("PDF: no page for %s - %s", cid, _why)
                     continue
 
                 # target field map of aperture photometry (embedded once, at the PDF size)
@@ -4273,21 +3898,11 @@ class _PhotometryReportBuilder:
 
                 field_img = field_map_path(self.lc_dir, cid)
 
-                comp_rows_pdf, comp_excluded_note = self._comp_rows_for_target(cid)
+                # G11-01: the comparison-star table of the page comes from TargetPages.page
                 star_data = {
                     **star_fields(row, self._lc_stats_by_cid.get(cid, {})),
                     "field_img": str(field_img) if field_img is not None else "",
-                    "comp_rows": comp_rows_pdf,
-                    "comp_excluded_note": comp_excluded_note,
                 }
-                # TRUST-COVERAGE-2026-10 / PDF-NODATA-2026-10 (Milan 2026-10-12): a target with too
-                # few usable epochs gets no page (it stays in the summary table of all targets).
-                from trust_flag_core import coverage_insufficient, lc_epoch_counts  # noqa: PLC0415
-
-                _ne, _nl = lc_epoch_counts(self.photometry_dir, cid)
-                if bool(_ne is not None and _nl and coverage_insufficient(_ne, _nl)):
-                    logging.info("PDF: no page for %s - insufficient data (%s of %s epochs usable)", cid, _ne, _nl)
-                    continue
                 self._report_per_star_page(c, star_data)
                 self._report_epsf_star_page(c, star_data)
             except Exception as exc_star:  # noqa: BLE001
@@ -4336,15 +3951,9 @@ def generate_photometry_report(
     obs_group: str,
     output_pdf: Path | None,
     *,
-    var_results: dict[str, Any] | None = None,
-    candidates: list[str] | None = None,
-    crossmatch_bullets: dict[str, str] | None = None,
-    accepted_periods: dict[str, float] | None = None,
-    variability_timestamp: str | None = None,
     report_draft_label: str | None = None,
     tess_results: dict | None = None,
     report_title: str = "VYVAR \u2014 Summary Measure Report",
-    verify_overflow: bool = False,
     cfg: Any,
 ) -> Path | None:
     """
@@ -4374,11 +3983,6 @@ def generate_photometry_report(
         draft_dir=Path(draft_dir),
         obs_group=str(obs_group),
         output_pdf=output_pdf,
-        var_results=var_results,
-        candidates=candidates,
-        crossmatch_bullets=crossmatch_bullets,
-        accepted_periods=accepted_periods,
-        variability_timestamp=variability_timestamp,
         report_draft_label=report_draft_label,
         tess_results=tess_results,
         report_title=_title,
@@ -4399,11 +4003,4 @@ def generate_photometry_report(
         ta_left_mod=TA_LEFT,
         cfg=cfg,
     )
-    builder._verify_overflow = bool(verify_overflow)
-    result = builder.build_pdf()
-    if verify_overflow:
-        generate_photometry_report.last_overflow_violations = builder.overflow_violation_count  # type: ignore[attr-defined]
-    return result
-
-
-generate_photometry_report.last_overflow_violations = 0  # type: ignore[attr-defined]
+    return builder.build_pdf()

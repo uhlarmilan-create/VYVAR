@@ -90,11 +90,6 @@ def test_b3_snap_vs_phot_only_match_after_quantize() -> None:
 
 
 def test_comp_selection_aliases_are_sky_separation() -> None:
-    from comp_selection_per_target import (
-        _angular_distance_deg_vectorized,
-        _pixel_distance_deg_vectorized,
-    )
-    from sky_separation import pixel_distance_deg_vectorized
+    from comp_selection_per_target import _angular_distance_deg_vectorized
 
     assert _angular_distance_deg_vectorized is angular_distance_deg_vectorized
-    assert _pixel_distance_deg_vectorized is pixel_distance_deg_vectorized

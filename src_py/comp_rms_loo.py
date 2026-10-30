@@ -141,48 +141,6 @@ def compute_loo_mag_rms_map(
     return out, COMP_RMS_FRAMES_BASIS
 
 
-def saturated_any_frame_ids(
-    cand_ids: set[str],
-    per_frame_csv_paths: list[Path],
-    csv_cache: dict[str, pd.DataFrame],
-) -> dict[str, int]:
-    """SAT-LIN-2026-10: ``{normalized_id: n_frames}`` for stars saturated on >= 1 frame.
-
-    A frame counts when ``likely_saturated`` is true (raw peak >= LINEARITY_FRAC x SAT,
-    set by sat_diag) or, without that column, ``peak_max_adu >= saturate_limit_adu_85pct``.
-    A comparison star that leaves the linear range on any frame biases every ratio it
-    enters, so it is not a comparison star for this night.
-    """
-    if not cand_ids:
-        return {}
-    id_set = {_norm_id_val(x) for x in cand_ids if _norm_id_val(x)}
-    out: dict[str, int] = {}
-    for csv_path in sort_per_frame_csv_paths(per_frame_csv_paths, csv_cache):
-        df = csv_cache.get(str(csv_path))
-        if df is None or df.empty:
-            continue
-        id_col = "catalog_id" if "catalog_id" in df.columns else ("name" if "name" in df.columns else None)
-        if id_col is None:
-            continue
-        if "likely_saturated" in df.columns:
-            flag = df["likely_saturated"].map(
-                lambda v: str(v).strip().lower() in ("true", "1", "1.0", "yes")
-            ).to_numpy(dtype=bool)
-        elif "peak_max_adu" in df.columns and "saturate_limit_adu_85pct" in df.columns:
-            pk = pd.to_numeric(df["peak_max_adu"], errors="coerce").to_numpy(dtype=np.float64)
-            lim = pd.to_numeric(df["saturate_limit_adu_85pct"], errors="coerce").to_numpy(dtype=np.float64)
-            flag = np.isfinite(pk) & np.isfinite(lim) & (lim > 0) & (pk >= lim)
-        else:
-            continue
-        if not flag.any():
-            continue
-        for v in df.loc[flag, id_col].tolist():
-            nid = _norm_id_val(v)
-            if nid in id_set:
-                out[nid] = out.get(nid, 0) + 1
-    return out
-
-
 def choose_field_aperture_k(
     cand_ids: set[str],
     per_frame_csv_paths: list[Path],

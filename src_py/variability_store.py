@@ -109,7 +109,14 @@ def epoch_of_minimum(t: np.ndarray, mag: np.ndarray, period_d: float, n_bins: in
     ref = float(np.nanmin(t))
     ph = phase_of(t, period_d, ref)
     b = np.minimum((ph * n_bins).astype(int), n_bins - 1)
-    means = np.array([np.nanmean(m[b == k]) if np.any(b == k) else -np.inf for k in range(n_bins)])
+    # G10-18: a bin without at least 3 finite points cannot be the minimum (an all-NaN bin gave NaN -> argmax)
+    means = np.full(n_bins, -np.inf)
+    for k in range(n_bins):
+        x = m[(b == k) & np.isfinite(m)]
+        if x.size >= 3:
+            means[k] = float(np.mean(x))
+    if not np.isfinite(means).any():
+        return float("nan")
     return ref + (int(np.argmax(means)) + 0.5) / n_bins * float(period_d)
 
 

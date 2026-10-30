@@ -2,15 +2,10 @@
 
 ONE place that decides, per physical parameter, which source wins:
 
-    * OBSERVATION-SPECIFIC (pointing, time, exptime, binning, filter, ccd-temp,
-      plate-scale): HEADER / solved-WCS (valid) -> DB -> config.
     * GAIN / READ NOISE (CAMERA-PROFILE-2026-10): header e-/ADU -> the camera
       profile (``camera_profile``: measured / manual points, the camera's default
       point, the catalog curve) at the header gain setting and the frame binning.
       Read noise: camera profile -> header card (fallback + cross-check).
-      (DB authority is required because plausible-but-wrong headers exist:
-      draft 363 carries XPIXSIZE=10.0 um while the real IMX457 pitch is 3.76 um -
-      a pure sanity range would accept 10.0; only the DB cross-check rejects it.)
     * SITE (lat/lon/elev): per-draft ID_LOCATION -> header SITELAT/LONG/ELEV ->
       config.  config is NOT a silent fallback: if neither the draft location nor
       the header resolves the site, the result is flagged ``ok=False`` so callers
@@ -48,18 +43,12 @@ def _warn_once_logger(key: str, message: str) -> None:
 
 # --------------------------------------------------------------------------- #
 # Sanity ranges (lo, hi).  A value is valid iff lo < v <= hi and math.isfinite.
-# These reject present-but-invalid headers (e.g. GAIN=0.0) but NOT
-# plausible-but-wrong ones (e.g. pixel=10.0); the DB cross-check handles those.
+# These reject present-but-invalid headers (e.g. GAIN=0.0), not plausible-but-wrong ones.
 # --------------------------------------------------------------------------- #
 SANITY: dict[str, tuple[float, float]] = {
     "gain": (0.0, 100.0),            # e-/ADU
     "read_noise": (0.0, 200.0),      # e-
-    "pixel_um": (0.0, 50.0),         # micron (physical pitch)
-    "focal_mm": (1.0, 120000.0),     # mm
-    "saturation": (1.0, 1.0e7),      # ADU
     "binning": (0.5, 16.0),          # integer 1..16
-    "exptime": (0.0, 1.0e5),         # seconds
-    "plate_scale": (0.1, 30.0),      # arcsec/px
     "lat": (-90.0, 90.0),
     "lon": (-180.0, 180.0),
     "elev": (-500.0, 9000.0),
@@ -69,11 +58,7 @@ SANITY: dict[str, tuple[float, float]] = {
 HEADER_KEYS: dict[str, tuple[str, ...]] = {
     "gain": ("VY_EGAIN", "EGAIN", "GAIN"),
     "read_noise": ("VYRDNOIS", "RDNOISE", "READNOISE", "RDNOISEE", "RN"),
-    "pixel_um": ("XPIXSZ", "PIXSIZE1", "XPIXSIZE", "PIXSIZE", "PIXSZLX"),
-    "focal_mm": ("FOCALLEN", "FOCLEN", "TELFOCA"),
-    "saturation": ("SATURATE", "MAXLIN", "ESATUR", "LINLIMIT", "MAXADU", "DATAMAX"),
     "binning": ("XBINNING", "BINNING"),
-    "exptime": ("EXPTIME", "EXPOSURE"),
     "lat": ("SITELAT", "OBSLAT", "OBSGEO-B"),
     "lon": ("SITELONG", "OBSLONG", "OBSGEO-L"),
     "elev": ("SITEELEV", "OBSELEV", "OBSGEO-H", "ALTITUDE"),
@@ -276,6 +261,10 @@ def _header_setting(header: Any, profile: Any) -> tuple[float | None, str | None
     raw, key, comment = _header_gain_raw(header)
     if raw is None:
         return None, None, False
+    # G01-04: VYVAR's own effective gain stamp (OSC channel frames: VY_EGAIN and the EGAIN written with
+    # it) is e-/ADU whatever the camera writes into GAIN, as VYRDNOIS is for the read noise
+    if key == "VY_EGAIN" or (key == "EGAIN" and header.get("VYCHANNL")):
+        return None, key, True
     kind = getattr(profile, "header_gain", None)
     if kind == "e_per_adu":
         return None, key, True
@@ -397,11 +386,6 @@ def resolve_read_noise(
     res.source, res.ok = "unresolved", False
     res.warnings.append(f"[RESOLVE read_noise] {lk.detail} (camera {prof.name or prof.equipment_id}, bin {binning})")
     return res
-
-
-# --------------------------------------------------------------------------- #
-# OBSERVATION-SPECIFIC: header (valid) -> DB -> config
-# --------------------------------------------------------------------------- #
 
 
 # --------------------------------------------------------------------------- #

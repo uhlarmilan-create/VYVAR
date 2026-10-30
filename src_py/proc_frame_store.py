@@ -375,7 +375,6 @@ class ProcFrameStore:
 
     def __init__(self) -> None:
         self._store: dict[str, pd.DataFrame] = {}
-        self._columns_on_disk: dict[str, list[str]] = {}
         self.n_frames: int = 0
         self.n_stars_median: float = 0.0
 
@@ -386,7 +385,6 @@ class ProcFrameStore:
         *,
         glob_pattern: str = PROC_CSV_GLOB,
         extra_cols: list[str] | None = None,
-        dtype_overrides: dict | None = None,
     ) -> ProcFrameStore:
         """Build store by reading all proc_*.csv files once."""
         store = cls()
@@ -411,8 +409,6 @@ class ProcFrameStore:
             want_cols.update(extra_cols)
 
         _dtypes: dict[str, type] = {"catalog_id": str, "name": str}
-        if dtype_overrides:
-            _dtypes.update(dtype_overrides)
 
         row_counts: list[int] = []
         n_loaded = 0
@@ -427,7 +423,6 @@ class ProcFrameStore:
                     dtype={k: v for k, v in _dtypes.items()},
                     low_memory=False,
                 )
-                store._columns_on_disk[key] = list(df.columns)
 
                 if "catalog_id" in df.columns:
                     df["catalog_id"] = normalize_gaia_source_id_series(df["catalog_id"])
@@ -513,10 +508,6 @@ class ProcFrameStore:
 
     def __len__(self) -> int:
         return len(self._store)
-
-    def paths(self) -> list[str]:
-        """All loaded frame paths (string keys)."""
-        return list(self._store.keys())
 
 
 # --- moved from pipeline_astrometry (LAYER-2026-10) ---

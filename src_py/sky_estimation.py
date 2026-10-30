@@ -9,31 +9,13 @@ import numpy as np
 
 
 
-def sky_median_mask(
-    data: np.ndarray | None = None,
-    ann_img: np.ndarray | None = None,
-    *,
-    values: np.ndarray | None = None,
-    min_pix: int = 1,
-) -> float:
-    """Production SKY-CLIP-01: plain median of annulus-mask pixels, no rejection.
-
-    ``data`` + ``ann_img`` is the catalog path (mask image, ``ann_img > 0``).
-    ``values`` is the PSF path (pre-extracted finite samples, ``min_pix=8``).
-    """
-    if values is not None:
-        v = np.asarray(values, dtype=np.float64).ravel()
-        v = v[np.isfinite(v)]
-        if v.size >= int(min_pix):
-            return float(np.median(v))
-        return float("nan")
-    if data is None or ann_img is None:
-        return float("nan")
-    d = np.asarray(data)
-    sky_pixels = d[np.asarray(ann_img) > 0]
-    if sky_pixels.size >= 1:
-        return float(np.median(sky_pixels))
-    return float(np.nanmedian(d))
+def sky_median_mask(*, values: np.ndarray, min_pix: int = 1) -> float:
+    """Production SKY-CLIP-01: plain median of the finite annulus samples, no rejection; NaN below ``min_pix``."""
+    v = np.asarray(values, dtype=np.float64).ravel()
+    v = v[np.isfinite(v)]
+    if v.size >= int(min_pix):
+        return float(np.median(v))
+    return float("nan")
 
 
 # SKY-SRC-MASK-2026-10: local sky without the light of resolved stars.

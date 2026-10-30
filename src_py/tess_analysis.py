@@ -441,7 +441,7 @@ def analyse_periods(t: np.ndarray, m: np.ndarray, e: np.ndarray, cadence_d: floa
     try:
         # eclipsing binaries: P >= 0.2 d; astropy needs every duration < the shortest
         # period, so short and long eclipses are searched in two passes
-        bls = BoxLeastSquares(t, m, e)
+        bls = BoxLeastSquares(t, -m, e)  # G09-08: BLS searches dips in y; an eclipse is a rise in magnitude
         p_all = 1.0 / freq[:: max(1, freq.size // 20000)]
         best_b = None
         for p_min, dur in ((0.2, np.array([0.02, 0.04, 0.08])), (0.6, np.array([0.16, 0.3]))):
@@ -571,6 +571,21 @@ def localise(
 # ---------------------------------------------------------------------------
 # one sector from a lightkurve TargetPixelFile
 # ---------------------------------------------------------------------------
+def source_magnitudes_one_band(sources: list[dict[str, Any]]) -> dict[str, float]:
+    """G09-40: magnitudes of the cutout sources in ONE band - Gaia RP (closest to the TESS band) when every
+    source has it, else G for all (a G magnitude next to RP ones mis-scales the flux ratios by its G-RP)."""
+
+    def _mag(v: Any) -> float:
+        try:
+            x = float(v)
+        except (TypeError, ValueError):
+            return float("nan")
+        return x if math.isfinite(x) else float("nan")
+
+    band = "rp_mag" if all(math.isfinite(_mag(s.get("rp_mag"))) for s in sources) else "g_mag"
+    return {str(s["source_id"]): _mag(s.get(band)) for s in sources}
+
+
 def sector_light_curve(
     tpf: Any, target_id: str, sources: list[dict[str, Any]]
 ) -> tuple[TessSector, dict[str, Any]]:
@@ -584,15 +599,16 @@ def sector_light_curve(
     cad = float(np.nanmedian(np.diff(t))) * 86400.0 if nt > 1 else float("nan")
     med = np.nanmedian(flux, axis=0)
     xy: dict[str, tuple[float, float]] = {}
-    rp: dict[str, float] = {}
+    on_cut = []
     for s in sources:
         try:
             px, py = tpf.wcs.all_world2pix(float(s["ra"]), float(s["dec"]), 0)
         except Exception:  # noqa: BLE001
             continue
         xy[str(s["source_id"])] = (float(px), float(py))
-        _mg = s.get("rp_mag") if s.get("rp_mag") is not None else s.get("g_mag")
-        rp[str(s["source_id"])] = float(_mg) if _mg is not None else float("nan")
+        on_cut.append(s)
+
+    rp = source_magnitudes_one_band(on_cut)
     if target_id not in xy:
         return TessSector(sector, cad, 0, float("nan"), float("nan"), float("nan"), 0, float("nan"), error="target not on cutout"), {}
     if not math.isfinite(rp[target_id]):
@@ -883,7 +899,7 @@ def run_tess(
     t = np.concatenate(all_t); m = np.concatenate(all_m); e = np.concatenate(all_e)
     cad = float(np.nanmin([s.cadence_s for s, _ in auxs])) / 86400.0
     _p("Period analysis", 0.75)
-    sols, two_p_all, plots = analyse_periods(t, m, e, cad)
+    sols, _two_p_all, plots = analyse_periods(t, m, e, cad)
     res.periods = {k: v for k, v in sols.items() if k != "best"}
     res.best, mult = combine_sectors(t, m, e, auxs, sols.get("best"))
     res.period_multiplier = int(mult)

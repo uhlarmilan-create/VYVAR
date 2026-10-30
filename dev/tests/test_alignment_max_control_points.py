@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from config import AppConfig
-from vyvar_alignment_frame import _alignment_as_alignment_points, _alignment_run_astroalign_points
+from vyvar_alignment_frame import _alignment_run_astroalign_points
 
 
 def test_default_alignment_max_control_points_is_80():
@@ -61,8 +61,8 @@ def test_as_alignment_points_then_mcp_with_dense_detection():
     rng = np.random.default_rng(7)
     xy = rng.uniform(50, 450, (300, 2)).astype(np.float32)
     ref = rng.uniform(50, 450, (300, 2)).astype(np.float32)
-    xy_fit = _alignment_as_alignment_points(xy, label="source", log_sink=None)
-    ref_fit = _alignment_as_alignment_points(ref, label="target", log_sink=None)
+    xy_fit = np.asarray(xy, dtype=np.float32)[:, :2]  # G02-22: inputs are (N, 2) arrays
+    ref_fit = np.asarray(ref, dtype=np.float32)[:, :2]
     n_fit = int(min(len(xy_fit), len(ref_fit)))
     mcp = max(12, min(80, n_fit))
     assert n_fit == 300

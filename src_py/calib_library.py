@@ -46,6 +46,9 @@ _NEW_COLUMNS: dict[str, str] = {
     "CAPTURE_DATE": "TEXT",
     "OFFSET_HANDLING": "TEXT",
     "OFFSET_ADU": "REAL",
+    # G01-10: 1 when GAIN holds the header card exactly (float), 0 when the row predates it and the
+    # master file was not readable (GAIN may be rounded); NULL = not yet migrated
+    "GAIN_EXACT": "INTEGER",
 }
 
 
@@ -59,6 +62,36 @@ def ensure_schema(db: Any) -> None:
     for name, typ in _NEW_COLUMNS.items():
         if name not in cols:
             db.conn.execute(f"ALTER TABLE CALIBRATION_LIBRARY ADD COLUMN {name} {typ};")
+    db.conn.commit()
+    _migrate_exact_gain(db)
+
+
+def _migrate_exact_gain(db: Any) -> None:
+    """G01-10: library rows registered before the exact gain key stored ``int(round(GAIN))`` (a 12.48
+    e-/ADU card became 12, a 1.6 card 2). Re-read the GAIN card of every not yet migrated master once;
+    a row whose file is missing keeps its value and is marked GAIN_EXACT = 0."""
+    rows = db.conn.execute(
+        "SELECT ID, FILE_PATH, GAIN FROM CALIBRATION_LIBRARY WHERE GAIN_EXACT IS NULL;"
+    ).fetchall()
+    if not rows:
+        return
+    for r in rows:
+        p = Path(str(r["FILE_PATH"]))
+        exact = 0
+        g_new = r["GAIN"]
+        if p.is_file():
+            try:
+                with fits.open(p, memmap=False) as h:
+                    g_new = header_gain(h[0].header)
+                exact = 1
+            except (OSError, ValueError) as exc:
+                log_event(f"CALIB LIB: gain of {p.name} not re-read ({exc}); kept {r['GAIN']}")
+        if exact and g_new != r["GAIN"]:
+            log_event(f"CALIB LIB: {p.name} gain {r['GAIN']} -> {g_new:g} (exact header GAIN, G01-10)")
+        db.conn.execute(
+            "UPDATE CALIBRATION_LIBRARY SET GAIN = ?, GAIN_EXACT = ? WHERE ID = ?;",
+            (g_new, int(exact), int(r["ID"])),
+        )
     db.conn.commit()
 
 
@@ -91,9 +124,41 @@ def header_offset(hdr: fits.Header) -> int | None:
     return int(round(v)) if v is not None else None
 
 
-def header_gain(hdr: fits.Header) -> int:
-    v = _hfloat(hdr, "GAIN")
-    return int(round(v)) if v is not None else 0
+#: Header keys of the camera GAIN card (setting or e-/ADU, as the capture software writes it).
+GAIN_HEADER_KEYS = ("GAIN", "GAINER", "CCD-GAIN")
+
+
+def gain_key(value: Any) -> float:
+    """G01-10 / G02-40: the one gain key of LIGHTs and masters - the GAIN card as a float, exact (no
+    truncation or rounding: 1.6 e-/ADU stays 1.6, 0.33 and 0.45 stay different). A missing card is 0
+    (the library convention for "no GAIN"); a card that is not a number raises."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return 0.0
+    v = float(value)
+    if not math.isfinite(v):
+        raise ValueError(f"GAIN {value!r} is not a finite number")
+    return v
+
+
+def header_gain(hdr: fits.Header) -> float:
+    for k in GAIN_HEADER_KEYS:
+        v = hdr.get(k)
+        if v is None or (isinstance(v, str) and not v.strip()):
+            continue
+        try:
+            return gain_key(v)
+        except ValueError as exc:
+            raise ValueError(f"header {k}={v!r} is not a number") from exc
+    return 0.0
+
+
+def header_readout_mode(hdr: fits.Header) -> str | None:
+    """Driver readout mode (READOUTM / READMODE) as written, or None."""
+    for k in ("READOUTM", "READMODE"):
+        v = hdr.get(k)
+        if v is not None and str(v).strip():
+            return str(v).strip()
+    return None
 
 
 def header_temp(hdr: fits.Header) -> float | None:
@@ -177,7 +242,7 @@ class LibraryMaster:
     exptime: float
     temp: float | None
     filter_name: str
-    gain: int
+    gain: float
     offset: int | None
     ncombine: int | None
     camera_id: int | None
@@ -226,7 +291,7 @@ def _row_to_master(row: Any) -> LibraryMaster:
         exptime=float(r.get("EXPTIME") or 0.0),
         temp=(float(r["CCD_TEMP"]) if r.get("CCD_TEMP") is not None else None),
         filter_name=str(r.get("FILTER_NAME") or ""),
-        gain=int(r.get("GAIN") or 0),
+        gain=gain_key(r.get("GAIN")),
         offset=(int(r["OFFSET"]) if r.get("OFFSET") is not None else None),
         ncombine=(int(r["NCOMBINE"]) if r.get("NCOMBINE") is not None else None),
         camera_id=(int(r["ID_EQUIPMENTS"]) if r.get("ID_EQUIPMENTS") is not None else None),
@@ -308,8 +373,8 @@ def register_master(
         INSERT INTO CALIBRATION_LIBRARY (
             KIND, FILE_PATH, XBINNING, EXPTIME, CCD_TEMP, FILTER_NAME, GAIN, NCOMBINE,
             REGISTERED_AT, ID_EQUIPMENTS, ID_TELESCOPE, OFFSET, ORIGIN, ORIGIN_SOFTWARE,
-            COMBINE_METHOD, CAPTURE_DATE, OFFSET_HANDLING, OFFSET_ADU)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            COMBINE_METHOD, CAPTURE_DATE, OFFSET_HANDLING, OFFSET_ADU, GAIN_EXACT)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
         ON CONFLICT(FILE_PATH) DO UPDATE SET
             KIND=excluded.KIND, XBINNING=excluded.XBINNING, EXPTIME=excluded.EXPTIME,
             CCD_TEMP=excluded.CCD_TEMP, FILTER_NAME=excluded.FILTER_NAME, GAIN=excluded.GAIN,
@@ -317,7 +382,7 @@ def register_master(
             ID_EQUIPMENTS=excluded.ID_EQUIPMENTS, ID_TELESCOPE=excluded.ID_TELESCOPE,
             OFFSET=excluded.OFFSET, ORIGIN=excluded.ORIGIN, ORIGIN_SOFTWARE=excluded.ORIGIN_SOFTWARE,
             COMBINE_METHOD=excluded.COMBINE_METHOD, CAPTURE_DATE=excluded.CAPTURE_DATE,
-            OFFSET_HANDLING=excluded.OFFSET_HANDLING, OFFSET_ADU=excluded.OFFSET_ADU;
+            OFFSET_HANDLING=excluded.OFFSET_HANDLING, OFFSET_ADU=excluded.OFFSET_ADU, GAIN_EXACT=1;
         """,
         (
             k,
@@ -501,7 +566,7 @@ def find_dark(
     db: Any,
     *,
     camera_id: int,
-    gain: int,
+    gain: float,
     offset: int | None,
     exposure: float,
     binning: int,
@@ -526,7 +591,7 @@ def find_dark(
     cands = [
         m
         for m in pool
-        if m.gain == int(gain)
+        if m.gain == gain_key(gain)
         and _same_offset(m.offset, offset)
         and abs(m.exptime - float(exposure)) <= 1e-6 * max(1.0, abs(float(exposure)))
         and m.temp is not None
@@ -542,7 +607,7 @@ def find_flat(
     camera_id: int,
     telescope_id: int | None,
     filter_name: str,
-    gain: int,
+    gain: float,
     binning: int,
     light_dates: Sequence[datetime],
     validity_days: float,
@@ -563,10 +628,60 @@ def find_flat(
     cands = [
         m
         for m in pool
-        if m.telescope_id == int(telescope_id) and m.gain == int(gain) and m.filter_name == flt
+        if m.telescope_id == int(telescope_id) and m.gain == gain_key(gain) and m.filter_name == flt
     ]
     return _pick_best(cands, validity_days=validity_days, light_dates=light_dates,
                  light_binning=int(binning), temp=None, what="FLAT")
+
+
+def find_flat_substitute(
+    db: Any,
+    *,
+    camera_id: int,
+    telescope_id: int | None,
+    filter_name: str,
+    gain: float,
+    binning: int,
+    light_dates: Sequence[datetime],
+    candidates: Sequence[LibraryMaster] | None = None,
+) -> MatchResult:
+    """G01-01 (decision A1): a FLAT from another night when no flat is valid for the LIGHTs.
+
+    Same keys as :func:`find_flat` (camera, telescope, filter, gain, binning or a 1x1 master to rebin)
+    without the validity window; the flat captured nearest to the LIGHT dates is chosen (same binning
+    first). The plan records it as a flagged substitute (a slightly old flat still removes vignetting
+    and most dust, which no flat leaves in).
+    """
+    if telescope_id is None or not light_dates:
+        return MatchResult(None, "no substitute FLAT (no telescope or no LIGHT date)")
+    flt = str(filter_name or "NoFilter")
+    pool = (
+        [m for m in candidates if m.kind == KIND_FLAT]
+        if candidates is not None
+        else list_masters(db, kind=KIND_FLAT, camera_id=camera_id)
+    )
+    t_mid = min(light_dates) + (max(light_dates) - min(light_dates)) / 2
+    ok: list[tuple[int, float, LibraryMaster]] = []
+    for m in pool:
+        if not (m.telescope_id == int(telescope_id) and m.gain == gain_key(gain) and m.filter_name == flt):
+            continue
+        if m.capture_utc is None or not Path(m.path).is_file():
+            continue
+        if m.binning == int(binning):
+            rb = 1
+        elif m.binning == 1 and int(binning) > 1:
+            rb = int(binning)
+        else:
+            continue
+        ok.append((0 if rb == 1 else 1, abs((m.capture_utc - t_mid).total_seconds()), m))
+    if not ok:
+        return MatchResult(None, "no FLAT of this filter from another night either")
+    ok.sort(key=lambda t: (t[0], t[1]))
+    best = ok[0][2]
+    rb = 1 if best.binning == int(binning) else int(binning)
+    days = ok[0][1] / 86400.0
+    return MatchResult(best, f"FLAT {Path(best.path).name} from {best.capture_utc.date()} "
+                             f"({days:.0f} d from the LIGHTs, substitute)", rb)
 
 
 # ---------------------------------------------------------------------------
@@ -590,7 +705,7 @@ def measure_offset_adu(
     db: Any,
     *,
     camera_id: int,
-    gain: int,
+    gain: float,
     offset: int | None,
     binning: int,
     temp: float | None = None,
@@ -606,7 +721,7 @@ def measure_offset_adu(
         m
         for kind in (KIND_DARK, KIND_DARKFLAT)
         for m in list_masters(db, kind=kind, camera_id=camera_id)
-        if m.gain == int(gain) and _same_offset(m.offset, offset) and m.binning == int(binning)
+        if m.gain == gain_key(gain) and _same_offset(m.offset, offset) and m.binning == int(binning)
         and Path(m.path).is_file()
         and (temp is None or temp_tol is None or m.temp is None or abs(m.temp - float(temp)) <= float(temp_tol) + 1e-9)
     ]

@@ -163,9 +163,6 @@ class SatDiagContext:
             return None
         return float(self.sat_adu)
 
-    def may_exclude_linearity(self) -> bool:
-        return str(self.lin_source) == "MEASURED"
-
     def admission_threshold_adu(self) -> float | None:
         if self.sat_adu is None:
             return None
@@ -183,20 +180,11 @@ class SatDiagContext:
 
 
 def image_adu_array(hdu: fits.PrimaryHDU | fits.ImageHDU) -> np.ndarray:
-    """Image ADU per spec section 4.1 (stored 0..65535 for unsigned 16-bit)."""
-    hdr = hdu.header
-    d = np.asarray(hdu.data, dtype=np.float64)
-    try:
-        bitpix = int(hdr.get("BITPIX", 0))
-        bzero = float(hdr.get("BZERO", 0.0))
-        bscale = float(hdr.get("BSCALE", 1.0))
-    except (TypeError, ValueError):
-        return d
-    if bitpix < 0:
-        return d
-    if bitpix == 16 and abs(bzero - 32768.0) < 1.0 and abs(bscale - 1.0) < 1e-9:
-        return d
-    return d * bscale + bzero
+    """Image ADU per spec section 4.1 (stored 0..65535 for unsigned 16-bit).
+
+    astropy already applies BZERO / BSCALE when ``hdu.data`` is read (the header keeps the cards), so the
+    values are physical; applying them again turned uint32 [1, 40000] into ~2.1e9 (G02-06)."""
+    return np.asarray(hdu.data, dtype=np.float64)
 
 
 def bitpix_container_ceiling(hdr: fits.Header) -> float | None:
@@ -254,7 +242,8 @@ def _star_peak_plateau(paths: Sequence[Path]) -> PileupResult:
     Star peaks = local maxima (box 2*PEAK_BOX_HALF+1) above the half level between the frame
     median and its maximum. Values are in the units the pipeline measures in
     (``image_adu_array``)."""
-    from scipy.ndimage import maximum_filter  # noqa: PLC0415
+    from scipy.ndimage import label, maximum_filter  # noqa: PLC0415
+    from scipy.ndimage import maximum as nd_max  # noqa: PLC0415
 
     peaks: list[np.ndarray] = []
     max_px = -math.inf
@@ -273,7 +262,11 @@ def _star_peak_plateau(paths: Sequence[Path]) -> PileupResult:
         if not vmax > med:  # flat frame: no stars, no plateau
             continue
         loc = (a == maximum_filter(a, size=2 * PEAK_BOX_HALF + 1)) & (a >= med + 0.5 * (vmax - med))
-        peaks.append(a[loc])
+        # G02-35: a flat clipped core makes every one of its pixels a "maximum" - one peak per star
+        # (connected component of the maxima), else one saturated star alone filled the plateau count
+        lab, n_lab = label(loc)
+        if n_lab:
+            peaks.append(np.asarray(nd_max(a, labels=lab, index=np.arange(1, n_lab + 1)), dtype=np.float64))
     pk = np.sort(np.concatenate(peaks)) if peaks else np.zeros(0)
     if pk.size == 0:
         return PileupResult(False, None, 0, 0, max_px, n_frames, None, method="star_peak_plateau")
@@ -333,8 +326,11 @@ def derive_ceiling_from_paths(paths: Sequence[Path]) -> PileupResult:
 
 
 def _compatible_stated(stated: float | None, max_pixel: float) -> bool:
+    """A stated level is refuted only by a pixel above it; without frames (max unknown) it stands (G02-02)."""
     if stated is None or not math.isfinite(stated) or stated <= 0:
         return False
+    if not math.isfinite(float(max_pixel)):
+        return True
     return float(stated) >= float(max_pixel)
 
 
@@ -436,8 +432,8 @@ def resolve_sat_limit(
     except (TypeError, ValueError):
         xbin, ybin = 1, 1
 
-    if refuted_source and prov not in ("CONFLICT_DERIVED",):
-        prov = "CONFLICT_DERIVED"
+    # G02-02: CONFLICT_DERIVED (a measured level) only from the derived-after-refute branch above; a
+    # stated / container / observed winner keeps its own label after a refute (it is not a measurement)
 
     return SatDiagContext(
         sat_adu=win_val,
@@ -925,8 +921,14 @@ def apply_raw_peaks_to_proc_df(
         raw_hit = likely_sat & np.where(_al_ok, aligned_pk >= 0.5 * _lim_ls, True)
         new_ls = prev | raw_hit
         df["likely_saturated"] = new_ls
-        ok_new = ~new_ls
-        df["photometry_ok"] = ok_new
+        # G02-37: combine with the existing verdict (a row already not ok stays not ok)
+        if "photometry_ok" in df.columns:
+            prev_ok = ~df["photometry_ok"].map(  # only an explicit False is "not ok" (missing = no verdict)
+                lambda v: str(v).strip().lower() in ("false", "0", "0.0", "no")
+            ).to_numpy(dtype=bool)
+        else:
+            prev_ok = np.ones(len(df), dtype=bool)
+        df["photometry_ok"] = prev_ok & ~new_ls
 
     if ctx.saturate_limit_adu_85pct() is not None:
         df["saturate_limit_adu_85pct"] = float(ctx.saturate_limit_adu_85pct())

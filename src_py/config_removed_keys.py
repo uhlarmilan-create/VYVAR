@@ -162,13 +162,13 @@ KNOWN_REMOVED_KEYS: dict[str, str] = {
         "masterstar_dao_pass2_sigma removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
     ),
     "masterstar_forced_seed_centroid_max_px": (
-        "masterstar_forced_seed_centroid_max_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+        "masterstar_forced_seed_centroid_max_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7); the MASTERSTAR forced seeds themselves were removed 2026-10-29 (code review 2 G04-05)"
     ),
     "masterstar_forced_seed_comp_pool_enabled": (
         "masterstar_forced_seed_comp_pool_enabled removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): forced seeds never enter the comparison pool (was always off)"
     ),
     "masterstar_forced_seed_snr_min": (
-        "masterstar_forced_seed_snr_min removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"
+        "masterstar_forced_seed_snr_min removed 2026-10-22 (CODE-REVIEW-2026-10 step 7); the MASTERSTAR forced seeds themselves were removed 2026-10-29 (code review 2 G04-05)"
     ),
     "masterstar_gaia_census_edge_margin_px": (
         "masterstar_gaia_census_edge_margin_px removed 2026-10-22 (CODE-REVIEW-2026-10 step 7): a fixed MASTERSTAR constant now (pipeline_constants.MS_*), same value"

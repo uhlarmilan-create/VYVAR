@@ -97,7 +97,7 @@ Implemented in `src_py/dao_reconcile.py`. Wired before CSV write in `src_py/pipe
 
 | Class | Meaning |
 |-------|---------|
-| `artifact_negative` | Non-positive flux |
+| `artifact_negative` | Non-positive aperture flux `flux_ap` (local annulus sky); the DAO flux sign is not a criterion (IDENTITY-2026-10, G04-24) |
 | `unmatched_in_range` | Implied G clearly below confirmable depth (purity signal) |
 | `ambiguous_depth` | Implied G within +/- sigma_g of confirmable depth |
 | `beyond_catalogue` | Implied G clearly above confirmable depth |
@@ -206,7 +206,7 @@ Wide rigs are pixel-limited / correlated-noise dominated rather than seeing-limi
 | 435 | 8 | 81 | 17 | 0 | 3 |
 | 500 | 48 | 455 | 49 | 0 | 9 |
 
-`artifact_negative` on draft_501 = **142** (regression locked in `dev/tests/test_dao_reconcile.py`).
+`artifact_negative` on draft_501 = **142** (regression locked in `dev/tests/test_dao_reconcile.py`). That count used the DAO flux sign; since G04-24 (2026-10-29) the class uses the aperture flux, so the locked number no longer applies to a re-run.
 
 ### 4.5 Confusion-blend test (DAO-CLOSE)
 

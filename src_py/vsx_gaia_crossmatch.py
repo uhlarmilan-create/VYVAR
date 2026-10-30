@@ -181,10 +181,24 @@ def _mixture_pdf(
     sigma_broad: float,
     rho_per_deg2: float,
 ) -> float | np.ndarray:
-    r_deg = np.asarray(r_arcsec, dtype=float) / 3600.0
-    f_true = _true_match_pdf(r_arcsec, w, sigma_narrow, sigma_broad)
-    f_chance = 2.0 * math.pi * r_deg * float(rho_per_deg2)
-    return float(q) * f_true + f_chance
+    """Pdf [1/arcsec] of the nearest-neighbour separation: a true counterpart with probability
+    ``q`` (two-Rayleigh mixture) or the nearest chance source of a Poisson field,
+    2 pi rho r exp(-pi rho r^2) (G05-04: both terms per arcsec, rho in arcsec^-2; the chance
+    term was per degree and not normalised)."""
+    r = np.asarray(r_arcsec, dtype=float)
+    f_true = _true_match_pdf(r, w, sigma_narrow, sigma_broad)
+    return float(q) * f_true + (1.0 - float(q)) * _nn_chance_pdf(r, rho_per_deg2)
+
+
+def _rho_per_arcsec2(rho_per_deg2: float) -> float:
+    return float(rho_per_deg2) / 3600.0 ** 2
+
+
+def _nn_chance_pdf(r_arcsec: np.ndarray | float, rho_per_deg2: float) -> np.ndarray | float:
+    """Nearest-neighbour separation pdf [1/arcsec] of a Poisson field of density rho."""
+    rho = _rho_per_arcsec2(rho_per_deg2)
+    r = np.asarray(r_arcsec, dtype=float)
+    return 2.0 * math.pi * rho * r * np.exp(-math.pi * rho * r * r)
 
 
 def _acceptance_radius_arcsec(rho_per_deg2: float) -> float:
@@ -220,9 +234,11 @@ def _reliability_from_sep(
         return 0.0
     if sigma_narrow <= 0 or sigma_broad <= 0:
         return 0.0
-    r_deg = float(sep_arcsec) / 3600.0
-    f_true = float(_true_match_pdf(float(sep_arcsec), w, sigma_narrow, sigma_broad))
-    f_chance = 2.0 * math.pi * r_deg * float(rho_per_deg2)
+    # Sutherland & Saunders (1992) likelihood ratio q f(r) / n(r), both per arcsec (G05-04): the
+    # chance density at r is 2 pi rho r with rho in arcsec^-2 (was per degree -> LR 3600x small).
+    r_as = float(sep_arcsec)
+    f_true = float(_true_match_pdf(r_as, w, sigma_narrow, sigma_broad))
+    f_chance = 2.0 * math.pi * _rho_per_arcsec2(rho_per_deg2) * r_as
     if f_chance <= 0:
         return 1.0 if f_true > 0 else 0.0
     likelihood = float(q) * f_true / f_chance
@@ -367,6 +383,22 @@ def field_area_deg2_from_wcs(wcs: Any, width_px: int, height_px: int) -> float:
         return float("nan")
 
 
+def count_in_field(wcs: Any, width_px: int, height_px: int, ra_deg: np.ndarray, dec_deg: np.ndarray) -> int:
+    """Number of sky positions inside the chip rectangle of ``field_area_deg2_from_wcs``
+    (pixel 0 .. width, 0 .. height). G05-05: the Gaia density is counted on the area it is
+    divided by - the RA/Dec bbox query (+ margin) holds up to 2.2x the chip area for a rotated
+    field, so rho was too high and r_max too small."""
+    ra = np.asarray(ra_deg, dtype=float)
+    de = np.asarray(dec_deg, dtype=float)
+    ok = np.isfinite(ra) & np.isfinite(de)
+    if not ok.any():
+        return 0
+    x, y = wcs.all_world2pix(ra[ok], de[ok], 0)
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    inside = np.isfinite(x) & np.isfinite(y) & (x >= 0.0) & (x < float(width_px)) & (y >= 0.0) & (y < float(height_px))
+    return int(np.count_nonzero(inside))
+
+
 def frame_bbox_radec_limits(
     wcs: Any,
     width_px: int,
@@ -501,6 +533,7 @@ def match_vsx_to_gaia_density_aware(
     gaia_dec_deg: np.ndarray,
     *,
     field_area_deg2: float,
+    n_gaia_in_field: int | None = None,
     pmra: np.ndarray | None = None,
     pmdec: np.ndarray | None = None,
     vsx_match_epoch: float = VSX_MATCH_EPOCH,
@@ -510,6 +543,10 @@ def match_vsx_to_gaia_density_aware(
 ) -> tuple[list[VsxGaiaMatchRow], VsxGaiaCrossmatchDiagnostics]:
     """
     Match each VSX row to the nearest Gaia DR3 neighbour using a two-Rayleigh mixture fit.
+
+    The Gaia rows may extend beyond the field (counterparts of VSX stars at the chip edge);
+    ``n_gaia_in_field`` is the number of them inside ``field_area_deg2`` and sets the density
+    (G05-05). ``None`` states that every Gaia row lies inside the field.
 
     Raises VsxGaiaCrossmatchError / VsxGaiaCrossmatchDegenerateError on failure.
     """
@@ -555,7 +592,7 @@ def match_vsx_to_gaia_density_aware(
             f"(n_gaia={n_gaia}, area={field_area_deg2})"
         )
 
-    idx_before, seps_before = _nn_separations_arcsec(
+    _idx_before, seps_before = _nn_separations_arcsec(
         vsx_ra_deg, vsx_dec_deg, gaia_ra_deg, gaia_dec_deg
     )
     ga_ra, ga_dec, pm_path, sigma_pm, _n_pm_used = _apply_pm_to_gaia_catalog(
@@ -563,7 +600,12 @@ def match_vsx_to_gaia_density_aware(
     )
     _idx_after, seps_arcsec = _nn_separations_arcsec(vsx_ra_deg, vsx_dec_deg, ga_ra, ga_dec)
 
-    rho = float(n_gaia) / float(field_area_deg2)
+    n_rho = n_gaia if n_gaia_in_field is None else int(n_gaia_in_field)
+    if not 0 < n_rho <= n_gaia:
+        raise VsxGaiaCrossmatchError(
+            f"VSX->Gaia cross-match refused: {n_rho} Gaia sources in the field of {n_gaia} queried"
+        )
+    rho = float(n_rho) / float(field_area_deg2)
     mean_nn = _mean_nn_arcsec(rho)
     if rho <= 0 or not math.isfinite(rho):
         raise VsxGaiaCrossmatchError(f"VSX->Gaia cross-match refused: invalid rho={rho}")

@@ -31,3 +31,15 @@ def test_validity_ranges_no_extrapolation():
 def test_filter_names_case_sensitive():
     assert [band_for_filter(f) for f in ("g", "r", "i", "R", "Rc", "V", "B", "Clear", "L")] == [
         "g", "r", "i", "R", "R", "V", "B", "G", "G"]
+
+
+def test_v_colour_limit_is_table_5_10() -> None:
+    """GAIA-JC-RANGE-2026-10 (Milan 2026-10-29): V valid for -0.5 < BP-RP < 5.0, no G magnitude limit."""
+    import math
+
+    from gaia_bands import band_mag_from_gaia
+
+    assert math.isfinite(band_mag_from_gaia(14.0, 4.99, "V")[0])
+    assert math.isnan(band_mag_from_gaia(14.0, 5.05, "V")[0])
+    for g in (6.0, 18.5):  # no magnitude range in Table 5.10
+        assert math.isfinite(band_mag_from_gaia(g, 1.0, "V")[0])

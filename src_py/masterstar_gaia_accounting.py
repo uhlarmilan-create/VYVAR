@@ -1,7 +1,12 @@
 """MASTERSTAR-GAIA-01: Gaia-complete membership, honest source_state census, lock assignment.
 
-Shared pass-2 / forced-seed acceptance (Part A audit + production), lock-existing
-assignment (Part B), FORCED_SEED admission (Part C), BLENDED accounting (Part D).
+Shared pass-2 acceptance (Part A audit + production), lock-existing assignment (Part B),
+source_state census (Part C), BLENDED accounting (Part D).
+
+G04-05 (code review 2, Milan 2026-10-29): the FORCED_SEED mechanism is gone. Catalogue
+membership (DAO-GAIA-ERA-01 M1, ``expand_detection_to_catalog_membership``) gives every
+on-chip Gaia star to the matching depth a row, so a seed never admitted anything. Only DAO
+detections (own ``vy_dao_pass`` in {1, 2} and a finite ``peak_dao``) own a Gaia star.
 """
 from __future__ import annotations
 
@@ -15,13 +20,11 @@ import numpy as np
 import pandas as pd
 
 from pipeline_constants import (
-    MS_FORCED_SEED_CENTROID_MAX_PX,
-    MS_FORCED_SEED_SNR_MIN,
+    MS_DAO_PASS1_DEDUP_PX,
     MS_GAIA_CENSUS_EDGE_MARGIN_PX,
     MS_LOCK_LEFTOVER_RADIUS_PX,
     MS_LOCK_PAIR_TOL_PX,
 )
-from photutils.aperture import CircularAnnulus, CircularAperture
 from photutils.detection import DAOStarFinder
 from photutils.utils.exceptions import NoDetectionsWarning
 from scipy.spatial import cKDTree
@@ -29,22 +32,13 @@ from scipy.spatial import cKDTree
 from plain_stats import plain_mean_med_std
 from utils import DAO_STAR_FINDER_NO_ROUNDNESS_FILTER
 
-# Seed-specific sky annulus pads (px), not APERTURE-01 geometry. Forced-seed
-# acceptance on era04 is byte-locked to r_in = r_ap+4, r_out = r_ap+8.
-# Production resolver (f=1.35, inner=2.7, outer=5.2) would change those
-# radii and retune MASTERSTAR forced seeds. Keep pads for byte-identity.
-SEED_ANNULUS_INNER_PAD_PX = 4.0
-SEED_ANNULUS_OUTER_PAD_PX = 8.0
-
 # --- source_state values (Part C) ---
 SOURCE_DETECTED_P1 = "DETECTED_P1"
 SOURCE_DETECTED_P2 = "DETECTED_P2"
-SOURCE_FORCED_SEED = "FORCED_SEED"
 SOURCE_BLENDED = "BLENDED"
 SOURCE_TOO_FAINT = "TOO_FAINT"
 SOURCE_SATURATED = "SATURATED"
 SOURCE_EDGE = "EDGE"
-SOURCE_SEED_REJECTED = "SEED_REJECTED"
 SOURCE_CATALOG_ONLY = "CATALOG_ONLY"
 SOURCE_CATALOG_MEMBERSHIP = "catalog_membership"
 
@@ -52,12 +46,10 @@ ALL_SOURCE_STATES = frozenset(
     {
         SOURCE_DETECTED_P1,
         SOURCE_DETECTED_P2,
-        SOURCE_FORCED_SEED,
         SOURCE_BLENDED,
         SOURCE_TOO_FAINT,
         SOURCE_SATURATED,
         SOURCE_EDGE,
-        SOURCE_SEED_REJECTED,
         SOURCE_CATALOG_ONLY,
         SOURCE_CATALOG_MEMBERSHIP,
     }
@@ -66,8 +58,6 @@ ALL_SOURCE_STATES = frozenset(
 # Census states that may label a non-detection row (INV-SOURCE-STATE-01).
 _NONDET_CENSUS_STATES = frozenset(
     {
-        SOURCE_FORCED_SEED,
-        SOURCE_SEED_REJECTED,
         SOURCE_CATALOG_MEMBERSHIP,
         SOURCE_CATALOG_ONLY,
         SOURCE_TOO_FAINT,
@@ -101,15 +91,6 @@ class Pass2AcceptParams:
     center_tol_px: float = 2.0
     cutout_half_width: int = 10
     fwhm_px: float = 5.3
-    #: POINT-SOURCE-SHAPE-01 floor on q (None = gate off).
-    shape_q_floor: float | None = None
-
-
-@dataclass(frozen=True)
-class ForcedSeedAcceptParams:
-    centroid_max_px: float = 2.0
-    snr_min: float = 4.0
-    aperture_r_px: float | None = None  # None -> 1.5 * fwhm
     #: POINT-SOURCE-SHAPE-01 floor on q (None = gate off).
     shape_q_floor: float | None = None
 
@@ -485,7 +466,7 @@ def merge_dao_pass1_pass2_born_owned(
             by_owner[cid] = row
 
     kept: list[dict[str, Any]] = []
-    for row in by_owner.values():
+    for row in _dedup_pass2_by_position(list(by_owner.values()), gaia_chip):
         xb, yb = float(row["x_binned"]), float(row["y_binned"])
         kept.append(
             {
@@ -504,6 +485,40 @@ def merge_dao_pass1_pass2_born_owned(
     if tbl_pass1 is None or len(tbl_pass1) == 0:
         return t2
     return vstack([tbl_pass1, t2])
+
+
+def _dedup_pass2_by_position(
+    rows: list[dict[str, Any]], gaia_chip: pd.DataFrame | None, *, sep_px: float = MS_DAO_PASS1_DEDUP_PX
+) -> list[dict[str, Any]]:
+    """G04-07: one pass-2 detection per centroid.
+
+    Two Gaia seeds closer than the pass-2 centre tolerance can both accept the same DAO centroid; each
+    seed then made its own MASTERSTAR row at one pixel (full flux twice, two Gaia ids). Detections
+    whose full-resolution centroids lie within ``sep_px`` (the pass-1 duplicate radius) are one
+    detection: the brightest seed (smallest Gaia G; ties by catalog id) owns it. The other seed keeps
+    no row, so the census marks it BLENDED next to the owner (annotate_blended_groups)."""
+    if len(rows) <= 1:
+        return rows
+    gmag: dict[str, float] = {}
+    if gaia_chip is not None and not gaia_chip.empty and "catalog_id" in gaia_chip.columns:
+        gm = pd.to_numeric(gaia_chip.get("g_mag", gaia_chip.get("mag")), errors="coerce").to_numpy(dtype=np.float64)
+        for cid, g in zip(gaia_chip["catalog_id"].map(_norm_cid_strip_dotzero), gm):
+            if cid and math.isfinite(float(g)):
+                gmag[cid] = float(g)
+
+    def _key(r: dict[str, Any]) -> tuple[float, str]:
+        cid = _norm_cid_strip_dotzero(r.get("vy_seed_catalog_id", ""))
+        return (gmag.get(cid, math.inf), cid)
+
+    order = sorted(range(len(rows)), key=lambda i: _key(rows[i]))
+    xy = np.array([[float(rows[i]["x_full"]), float(rows[i]["y_full"])] for i in range(len(rows))], dtype=np.float64)
+    tree = cKDTree(xy)
+    kept = np.zeros(len(rows), dtype=bool)
+    for i in order:
+        if any(kept[j] for j in tree.query_ball_point(xy[i], r=float(sep_px))):
+            continue
+        kept[i] = True
+    return [rows[i] for i in range(len(rows)) if kept[i]]
 
 
 def _dao_xy_binned_to_full(x: np.ndarray, y: np.ndarray, f: int) -> tuple[np.ndarray, np.ndarray]:
@@ -577,14 +592,11 @@ def dao_pass2_born_owned_rows(
 
     pass2_rows: list[dict[str, Any]] = []
     ambiguous_pairs: list[dict[str, Any]] = []
-    n_empty = 0
     for j in unmatched:
         x0, y0 = float(gx[j]), float(gy[j])
         cid = _norm_cid_strip_dotzero(cids[j])
         hit = dao_pass2_try_at_position(data0, x0, y0, wpx=int(wpx), h=int(h), params=pass2_params)
         if not hit.get("accepted"):
-            if str(hit.get("reason", "")) == "no_detection":
-                n_empty += 1
             continue
         xd, yd = float(hit["x_det"]), float(hit["y_det"])
         amb, j_other = check_ambiguous_owner(xd, yd, j, gaia_chip)
@@ -611,112 +623,6 @@ def dao_pass2_born_owned_rows(
                 }
             )
     return pass2_rows, len(unmatched), len(pass2_rows), ambiguous_pairs
-
-
-def forced_seed_measure_at_position(
-    data0: np.ndarray,
-    x: float,
-    y: float,
-    *,
-    fwhm_px: float,
-    params: ForcedSeedAcceptParams | None = None,
-) -> dict[str, float]:
-    """Forced aperture + COM centroid at propagated Gaia position."""
-    p = params or ForcedSeedAcceptParams()
-    r_px = float(p.aperture_r_px) if p.aperture_r_px is not None else max(1.5 * float(fwhm_px), 3.0)
-    h, w = data0.shape
-    if not (math.isfinite(x) and math.isfinite(y)):
-        return {
-            "flux": float("nan"),
-            "sigma": float("nan"),
-            "snr": float("nan"),
-            "peak": float("nan"),
-            "cx": x,
-            "cy": y,
-            "centroid_px": float("nan"),
-            "local_sigma": float("nan"),
-            "shape_q": float("nan"),
-            "shape_peak_snr": float("nan"),
-        }
-    ap = CircularAperture((x, y), r=float(r_px))
-    ann = CircularAnnulus(
-        (x, y),
-        r_in=float(r_px) + SEED_ANNULUS_INNER_PAD_PX,
-        r_out=float(r_px) + SEED_ANNULUS_OUTER_PAD_PX,
-    )
-    # Exact-overlap aperture sum (= aperture_photometry(method="exact") without building a QTable,
-    # which cost ~2 ms per call; the census measures every undetected Gaia star on the chip).
-    _apm = ap.to_mask(method="exact")
-    _apv = _apm.get_values(data0)
-    flux_raw = float(np.sum(_apv)) if _apv.size else 0.0
-    try:
-        ann_mask = ann.to_mask(method="center")
-        vals = ann_mask.multiply(data0)
-        vals = vals[ann_mask.data > 0]
-        vals = vals[np.isfinite(vals)]
-        _, md, sd = (
-            plain_mean_med_std(vals)
-            if vals.size >= 10
-            else (float("nan"), float("nan"), float("nan"))
-        )
-    except Exception:  # noqa: BLE001
-        md, sd = float("nan"), float("nan")
-    area = math.pi * float(r_px) ** 2
-    flux = flux_raw - float(md) * area if math.isfinite(md) else flux_raw
-    snr = flux / (sd * math.sqrt(area)) if math.isfinite(sd) and sd > 0 else float("nan")
-    ix, iy = int(round(x)), int(round(y))
-    hw = 3
-    x0, x1 = max(0, ix - hw), min(w, ix + hw + 1)
-    y0, y1 = max(0, iy - hw), min(h, iy + hw + 1)
-    stamp = data0[y0:y1, x0:x1]
-    peak = float(np.nanmax(stamp)) if stamp.size else float("nan")
-    yy, xx = np.mgrid[y0:y1, x0:x1]
-    wgt = np.clip(stamp - (md if math.isfinite(md) else 0.0), 0, None)
-    s = float(np.nansum(wgt))
-    if s > 0:
-        cx = float(np.nansum(xx * wgt) / s)
-        cy = float(np.nansum(yy * wgt) / s)
-    else:
-        cx, cy = x, y
-    dcent = float(math.hypot(cx - x, cy - y))
-    q, psnr = point_source_shape_q(
-        data0, cx, cy, local_bg=float(md) if math.isfinite(md) else 0.0, local_sigma=float(sd)
-    )
-    return {
-        "shape_q": float(q),
-        "shape_peak_snr": float(psnr),
-        "flux": float(flux),
-        "sigma": float(sd) if math.isfinite(sd) else float("nan"),
-        "snr": float(snr),
-        "peak": float(peak),
-        "cx": float(cx),
-        "cy": float(cy),
-        "centroid_px": dcent,
-        "local_sigma": float(sd) if math.isfinite(sd) else float("nan"),
-    }
-
-
-def forced_seed_accept(
-    meas: dict[str, float],
-    *,
-    params: ForcedSeedAcceptParams | None = None,
-) -> tuple[bool, str]:
-    p = params or ForcedSeedAcceptParams()
-    dcent = float(meas.get("centroid_px", float("nan")))
-    snr = float(meas.get("snr", float("nan")))
-    if not math.isfinite(dcent):
-        return False, "bad_centroid"
-    if dcent > float(p.centroid_max_px):
-        return False, "centroid_tol"
-    if not math.isfinite(snr) or snr < float(p.snr_min):
-        return False, "snr_low"
-    if not point_source_shape_ok(
-        float(meas.get("shape_q", float("nan"))),
-        float(meas.get("shape_peak_snr", float("nan"))),
-        p.shape_q_floor,
-    ):
-        return False, "shape_not_point_source"
-    return True, "ok"
 
 
 def _row_is_dao_detected(peak_dao: object, vy_dao_pass: object) -> tuple[bool, int]:
@@ -865,7 +771,7 @@ def lock_existing_and_leftover_assign(
                     if d <= float(leftover_radius_px):
                         pairs.append((d, i, j))
     pairs.sort(key=lambda t: t[0])
-    for d, i, j in pairs:
+    for _d, i, j in pairs:
         if i in used_det or j in used_g:
             continue
         used_det.add(i)
@@ -926,16 +832,20 @@ def annotate_blended_groups(
 def build_gaia_census_rows(
     gaia_on_chip: pd.DataFrame,
     gaia_owner: np.ndarray,
-    det_pass: np.ndarray | None,
+    det_pass: np.ndarray,
     *,
     target_depth_g: float,
     edge_margin_px: float,
     wpx: int,
     h: int,
-    forced_results: dict[int, dict[str, Any]] | None = None,
 ) -> pd.DataFrame:
-    """One row per on-chip Gaia with source_state (does not alter MS detection table)."""
-    forced_results = forced_results or {}
+    """One row per on-chip Gaia with source_state (does not alter MS detection table).
+
+    ``gaia_owner[j]`` is the MASTERSTAR row index of the DAO detection that owns Gaia star ``j``
+    (-1: none); ``det_pass[i]`` is that row's own DAO pass (1 or 2; 0 = not a detection).
+    An owned star is DETECTED_P1/P2 from the owner's own pass. An unowned star inside the chip
+    margin and to the depth is CATALOG_ONLY (G04-05: no forced seed probe any more).
+    """
     rows: list[dict[str, Any]] = []
     gx = pd.to_numeric(gaia_on_chip.get("x_gaia"), errors="coerce").to_numpy(dtype=np.float64)
     gy = pd.to_numeric(gaia_on_chip.get("y_gaia"), errors="coerce").to_numpy(dtype=np.float64)
@@ -947,7 +857,6 @@ def build_gaia_census_rows(
         xg, yg = float(gx[j]), float(gy[j])
         gmag = float(gm[j]) if math.isfinite(gm[j]) else float("nan")
         state = SOURCE_TOO_FAINT
-        reason = ""
         owner = int(gaia_owner[j]) if j < len(gaia_owner) else -1
         if (
             xg < edge_margin_px
@@ -959,32 +868,22 @@ def build_gaia_census_rows(
         elif math.isfinite(gmag) and gmag > float(target_depth_g):
             state = SOURCE_TOO_FAINT
         elif owner >= 0:
-            p = int(det_pass[owner]) if det_pass is not None and owner < len(det_pass) else 1
+            p = int(det_pass[owner])
+            if p not in (1, 2):
+                raise ValueError(f"Gaia {cid} owned by row {owner} that is not a DAO detection (pass={p})")
             state = SOURCE_DETECTED_P2 if p == 2 else SOURCE_DETECTED_P1
-        elif j in forced_results:
-            fr = forced_results[j]
-            if fr.get("accepted"):
-                state = SOURCE_FORCED_SEED
-            else:
-                state = SOURCE_SEED_REJECTED
-                reason = str(fr.get("reason", ""))
-        elif math.isfinite(gmag) and gmag <= float(target_depth_g):
-            state = SOURCE_SEED_REJECTED
-            reason = "no_owner_no_seed"
-        row = {
-            "catalog_id": cid,
-            "x_gaia": xg,
-            "y_gaia": yg,
-            "g_mag": gmag,
-            "source_state": state,
-            "seed_reject_reason": reason,
-            "ambiguous_owner": False,
-        }
-        if j in forced_results:
-            for k in ("centroid_px", "snr", "local_sigma", "flux"):
-                if k in forced_results[j]:
-                    row[f"seed_{k}"] = forced_results[j][k]
-        rows.append(row)
+        elif math.isfinite(gmag):
+            state = SOURCE_CATALOG_ONLY
+        rows.append(
+            {
+                "catalog_id": cid,
+                "x_gaia": xg,
+                "y_gaia": yg,
+                "g_mag": gmag,
+                "source_state": state,
+                "ambiguous_owner": False,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -1080,19 +979,6 @@ def expand_detection_to_catalog_membership(
         errors="coerce",
     ).to_numpy(dtype=np.float64)
     depth = float(membership_depth_g)
-    sat_cids: set[str] = set()
-    if "catalog_id" in out.columns:
-        _sat = pd.Series(False, index=out.index)
-        if "likely_saturated" in out.columns:
-            _sat |= out["likely_saturated"].fillna(False).astype(bool)
-        if "is_saturated" in out.columns:
-            _sat |= out["is_saturated"].fillna(False).astype(bool)
-        if "zone" in out.columns:
-            _sat |= out["zone"].astype(str).str.strip().str.lower().eq("saturated")
-        for _cid in out.loc[_sat, "catalog_id"].tolist():
-            _c = _norm_cid_strip_dotzero(_cid)
-            if _c:
-                sat_cids.add(_c)
     new_rows: list[dict[str, Any]] = []
 
     for j in range(len(gdf)):
@@ -1105,9 +991,8 @@ def expand_detection_to_catalog_membership(
         if xg < 0 or yg < 0 or xg >= float(wpx) or yg >= float(h):
             continue
         gmag = float(gm[j]) if j < len(gm) and math.isfinite(gm[j]) else float("nan")
-        in_depth = math.isfinite(gmag) and gmag <= depth
-        in_sat = cid in sat_cids
-        if not in_depth and not in_sat:
+        # G04-37: saturated detections are already in ``present``; only the depth decides here
+        if not (math.isfinite(gmag) and gmag <= depth):
             continue
         row = {
             "name": cid,
@@ -1127,6 +1012,8 @@ def expand_detection_to_catalog_membership(
         }
         if "bp_rp" in gdf.columns:
             row["bp_rp"] = gdf.iloc[j].get("bp_rp")
+        # GAIA-VAR-ID-2026-10: the Gaia DR3 variability flag of the catalogue row, as for detections
+        row["gaia_dr3_variable_catalog"] = str(gdf.iloc[j].get("var_flag") or "").strip().upper() == "VARIABLE"
         new_rows.append(row)
         present.add(cid)
 
@@ -1154,40 +1041,43 @@ def verify_ms_expand_guard(expand_meta: dict[str, Any]) -> tuple[bool, str]:
     )
 
 
-def enrich_masterstar_gaia_complete(
-    df_ms: pd.DataFrame,
-    *,
-    data0: np.ndarray,
-    gaia_on_chip: pd.DataFrame,
-    wpx: int,
-    h: int,
-    fwhm_px: float,
-    target_depth_g: float,
-    locked_pairs: dict[str, tuple[float, float]] | None = None,
-    identity_lock_only: bool = False,
-    catalog_derived_membership: bool = False,
-    tolerance_overrides: dict[str, float] | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
-    """Apply lock-leftover assignment, FORCED_SEED admission, BLENDED + census (Parts B-D).
+def dao_detection_pass(df: pd.DataFrame) -> np.ndarray:
+    """Per row: its own DAO pass (1 or 2) when the row is a DAO detection, else 0.
 
-    ``identity_lock_only=True`` keeps existing MS row identities (no leftover
-    catalog_id rewrite). Unowned on-chip Gaia at depth may still append FORCED_SEED.
-
-    ``catalog_derived_membership=True`` (DAO-GAIA-ERA-01 M1): membership rows were
-    pre-expanded from the catalog; do not rewrite catalog_id via leftover promotion and
-    do not append duplicate FORCED_SEED membership rows (census seed probe still runs).
+    INV-SOURCE-STATE-01 / G04-05: one rule (``_row_is_dao_detected``) - own ``vy_dao_pass`` in
+    {1, 2} and a finite positive ``peak_dao``; no fillna. Catalogue-membership rows are never
+    detections.
     """
-    meta: dict[str, Any] = {
-        "n_forced_seed": 0,
-        "n_leftover_promotions": 0,
-        "n_seed_rejected": 0,
-        "n_lock_geometry_reject": 0,
-    }
-    out = df_ms.copy() if df_ms is not None else pd.DataFrame()
+    n = len(df)
+    out = np.zeros(n, dtype=np.int16)
+    if n == 0 or "peak_dao" not in df.columns or "vy_dao_pass" not in df.columns:
+        return out
+    peak = df["peak_dao"].to_numpy(dtype=object)
+    vpass = df["vy_dao_pass"].to_numpy(dtype=object)
+    for i in range(n):
+        ok, p = _row_is_dao_detected(peak[i], vpass[i])
+        if ok:
+            out[i] = p
+    return out
 
-    if gaia_on_chip is None or gaia_on_chip.empty:
-        return out, pd.DataFrame(), meta
 
+def _acc_identity_locks(
+    *,
+    catalog_derived_membership,
+    fwhm_px,
+    gaia_on_chip,
+    identity_lock_only,
+    locked_pairs,
+    meta,
+    out,
+    tolerance_overrides,
+):
+    """Gaia stars on the chip and their identity locks to DAO detections (owner map).
+
+    Only DAO detection rows (``dao_detection_pass`` > 0) take part: a catalogue-membership row
+    sits at its own Gaia position and would otherwise lock its own star (G04-05).
+    Returns (gaia_owner as MASTERSTAR row index or -1, gdf, identity_lock_only, det_pass, n_g).
+    """
     gdf = gaia_on_chip.copy()
     if "x_gaia" not in gdf.columns:
         gdf["x_gaia"] = pd.to_numeric(gdf.get("x"), errors="coerce")
@@ -1196,27 +1086,24 @@ def enrich_masterstar_gaia_complete(
         gdf["g_mag"] = pd.to_numeric(gdf["mag"], errors="coerce")
 
     n_g = len(gdf)
-    gaia_owner = np.full(n_g, -1, dtype=np.int64)
-
-    det_x = pd.to_numeric(out.get("x"), errors="coerce").to_numpy(dtype=np.float64)
-    det_y = pd.to_numeric(out.get("y"), errors="coerce").to_numpy(dtype=np.float64)
-    n_d = len(out)
+    det_pass = dao_detection_pass(out)
+    det_rows = np.flatnonzero(det_pass > 0)
+    det_x = pd.to_numeric(out.get("x"), errors="coerce").to_numpy(dtype=np.float64)[det_rows]
+    det_y = pd.to_numeric(out.get("y"), errors="coerce").to_numpy(dtype=np.float64)[det_rows]
+    det_cids = (
+        out["catalog_id"].map(_norm_cid_strip_dotzero).to_numpy(dtype=object)[det_rows]
+        if "catalog_id" in out.columns
+        else np.array([""] * len(det_rows), dtype=object)
+    )
 
     if locked_pairs is None:
         locked_pairs = {}
-        if "catalog_id" in out.columns:
-            cids = out["catalog_id"].map(_norm_cid_strip_dotzero)
-            _pass_col = (
-                pd.to_numeric(out.get("vy_dao_pass"), errors="coerce").fillna(1).to_numpy(dtype=np.int16)
-                if "vy_dao_pass" in out.columns
-                else np.ones(n_d, dtype=np.int16)
-            )
-            for i in range(n_d):
-                cid = _norm_cid_strip_dotzero(cids.iloc[i])
-                if cid and math.isfinite(det_x[i]) and math.isfinite(det_y[i]):
-                    # Born-owned pass2 wins over pass1 when both carry the same catalog_id.
-                    if cid not in locked_pairs or int(_pass_col[i]) == 2:
-                        locked_pairs[cid] = (float(det_x[i]), float(det_y[i]))
+        for k, i in enumerate(det_rows):
+            cid = det_cids[k]
+            if cid and math.isfinite(det_x[k]) and math.isfinite(det_y[k]):
+                # Born-owned pass2 wins over pass1 when both carry the same catalog_id.
+                if cid not in locked_pairs or int(det_pass[i]) == 2:
+                    locked_pairs[cid] = (float(det_x[k]), float(det_y[k]))
 
     if catalog_derived_membership:
         identity_lock_only = True
@@ -1241,7 +1128,7 @@ def enrich_masterstar_gaia_complete(
     identity_fail_px = float(
         (tolerance_overrides or {}).get("identity_fail_px", 3.0 * _fwhm_lock)
     )
-    det_to_g, gaia_owner, vy_modes, _geom_rej = lock_existing_and_leftover_assign(
+    det_to_g, owner_k, vy_modes, _geom_rej = lock_existing_and_leftover_assign(
         det_x,
         det_y,
         gdf,
@@ -1249,141 +1136,57 @@ def enrich_masterstar_gaia_complete(
         leftover_radius_px=leftover_r,
         lock_tol_px=lock_tol,
         identity_fail_px=identity_fail_px,
-        det_catalog_ids=(
-            out["catalog_id"].map(_norm_cid_strip_dotzero).to_numpy(dtype=object)
-            if "catalog_id" in out.columns
-            else None
-        ),
+        det_catalog_ids=det_cids,
     )
-    meta["n_lock_geometry_reject"] = int(len({int(i) for i in _geom_rej}))
+    # Owner as MASTERSTAR row index (the assignment works on the detection subset).
+    gaia_owner = np.full(n_g, -1, dtype=np.int64)
+    _owned = owner_k >= 0
+    gaia_owner[_owned] = det_rows[owner_k[_owned]]
+    meta["n_lock_geometry_reject"] = int(len({int(k) for k in _geom_rej}))
     meta["identity_fail_px"] = float(identity_fail_px)
     meta["lock_pair_tol_px_effective"] = float(lock_tol)
     if _geom_rej:
         from wcs_invertibility import clear_row_match_identity, det_fallback_name
 
-        for i in _geom_rej:
-            if int(det_to_g[i]) >= 0:
+        for k in _geom_rej:
+            if int(det_to_g[k]) >= 0:
                 continue
-            idx = out.index[i]
-            clear_row_match_identity(out, idx, det_name=det_fallback_name(i + 1))
+            i = int(det_rows[k])
+            clear_row_match_identity(out, out.index[i], det_name=det_fallback_name(i + 1))
 
     if "vy_match_mode" not in out.columns:
         out["vy_match_mode"] = ""
-    for i in range(n_d):
-        if vy_modes[i]:
-            idx = out.index[i]
-            cur = str(out.loc[idx, "vy_match_mode"] or "").strip()
-            # Expand rows stay catalog_membership; lock must not relabel them (INV-SOURCE-STATE-01).
-            if cur != "catalog_membership":
-                out.loc[idx, "vy_match_mode"] = str(vy_modes[i])
-        gr = int(det_to_g[i])
+    for k, i in enumerate(det_rows):
+        idx = out.index[int(i)]
+        if vy_modes[k]:
+            out.loc[idx, "vy_match_mode"] = str(vy_modes[k])
+        gr = int(det_to_g[k])
         if (not identity_lock_only) and gr >= 0 and gr < n_g:
             cid = _norm_cid_strip_dotzero(gdf.iloc[gr].get("catalog_id"))
             if cid:
-                out.loc[out.index[i], "catalog_id"] = cid
-                out.loc[out.index[i], "source_type"] = "GAIA_MATCHED"
-                if str(vy_modes[i]) == "leftover_promotion":
+                out.loc[idx, "catalog_id"] = cid
+                out.loc[idx, "source_type"] = "GAIA_MATCHED"
+                if str(vy_modes[k]) == "leftover_promotion":
                     meta["n_leftover_promotions"] = int(meta["n_leftover_promotions"]) + 1
 
-    seed_params = ForcedSeedAcceptParams(
-        centroid_max_px=float(
-            (tolerance_overrides or {}).get(
-                "forced_seed_centroid_max_px",
-                MS_FORCED_SEED_CENTROID_MAX_PX,
-            )
-        ),
-        snr_min=MS_FORCED_SEED_SNR_MIN,
-        shape_q_floor=(tolerance_overrides or {}).get("point_source_q_floor"),
-    )
-    edge_m = MS_GAIA_CENSUS_EDGE_MARGIN_PX
-    forced_results: dict[int, dict[str, Any]] = {}
-    new_rows: list[dict[str, Any]] = []
-    _cid_first_idx: dict[str, Any] | None = None
+    return gaia_owner, gdf, identity_lock_only, det_pass, n_g
 
-    det_pass = (
-        pd.to_numeric(out.get("vy_dao_pass"), errors="coerce").fillna(1).to_numpy(dtype=np.int16)
-        if "vy_dao_pass" in out.columns
-        else np.ones(n_d, dtype=np.int16)
-    )
 
-    for j in range(n_g):
-        if int(gaia_owner[j]) >= 0:
-            continue
-        gmag = float(gdf.iloc[j].get("g_mag", np.nan))
-        if not (math.isfinite(gmag) and gmag <= float(target_depth_g)):
-            continue
-        xg = float(gdf.iloc[j]["x_gaia"])
-        yg = float(gdf.iloc[j]["y_gaia"])
-        if (
-            xg < edge_m
-            or yg < edge_m
-            or xg >= float(wpx) - edge_m
-            or yg >= float(h) - edge_m
-        ):
-            continue
-        meas = forced_seed_measure_at_position(data0, xg, yg, fwhm_px=fwhm_px, params=seed_params)
-        ok, reason = forced_seed_accept(meas, params=seed_params)
-        fr: dict[str, Any] = {
-            "accepted": ok,
-            "reason": reason,
-            "centroid_px": meas.get("centroid_px"),
-            "snr": meas.get("snr"),
-            "local_sigma": meas.get("local_sigma"),
-            "flux": meas.get("flux"),
-        }
-        forced_results[j] = fr
-        if ok and not catalog_derived_membership:
-            cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
-            new_rows.append(
-                {
-                    "name": cid or f"SEED_{j:05d}",
-                    "catalog_id": cid,
-                    "catalog": "Gaia",
-                    "source_type": "GAIA_MATCHED",
-                    "source_state": SOURCE_FORCED_SEED,
-                    "forced_photometry": True,
-                    "x": xg,
-                    "y": yg,
-                    "ra_deg": gdf.iloc[j].get("ra_deg"),
-                    "dec_deg": gdf.iloc[j].get("dec_deg"),
-                    "mag": gmag,
-                    "flux": meas.get("flux"),
-                    "seed_centroid_px": meas.get("centroid_px"),
-                    "seed_snr": meas.get("snr"),
-                    "seed_local_sigma": meas.get("local_sigma"),
-                    "vy_match_mode": "forced_seed",
-                    "is_usable": False,
-                    "photometry_ok": False,
-                }
-            )
-            meta["n_forced_seed"] = int(meta["n_forced_seed"]) + 1
-        elif ok and catalog_derived_membership:
-            cid = _norm_cid_strip_dotzero(gdf.iloc[j].get("catalog_id"))
-            if cid and "catalog_id" in out.columns:
-                if _cid_first_idx is None:
-                    _cid_first_idx = {}
-                    for _ix_o, _c_o in zip(out.index, out["catalog_id"].map(_norm_cid_strip_dotzero)):
-                        if _c_o and _c_o not in _cid_first_idx:
-                            _cid_first_idx[_c_o] = _ix_o
-                idx = _cid_first_idx.get(cid)
-                if idx is not None:
-                    out.loc[idx, "source_state"] = SOURCE_FORCED_SEED
-                    out.loc[idx, "forced_photometry"] = True
-                    out.loc[idx, "flux"] = meas.get("flux")
-                    out.loc[idx, "seed_centroid_px"] = meas.get("centroid_px")
-                    out.loc[idx, "seed_snr"] = meas.get("snr")
-                    out.loc[idx, "seed_local_sigma"] = meas.get("local_sigma")
-                    out.loc[idx, "vy_match_mode"] = "forced_seed"
-            meta["n_forced_seed"] = int(meta["n_forced_seed"]) + 1
-        else:
-            meta["n_seed_rejected"] = int(meta["n_seed_rejected"]) + 1
-
-    # When identity_lock_only=True (overlay path), FORCED_SEED rows must NOT be appended
-    # to the masterstars table because extra rows change per-target comparison-star selection
-    # even when excluded by is_usable=False. They are recorded in the census only.
-    if new_rows and not identity_lock_only:
-        out = pd.concat([out, pd.DataFrame(new_rows)], ignore_index=True)
-
+def _acc_census(
+    *,
+    det_pass,
+    edge_m,
+    fwhm_px,
+    gaia_owner,
+    gdf,
+    h,
+    meta,
+    n_g,
+    out,
+    target_depth_g,
+    wpx,
+):
+    """Blended groups and the MASTERSTAR Gaia census rows (detected / blended / catalogue only / below limit)."""
     gdf = annotate_blended_groups(gdf, gaia_owner, fwhm_px=fwhm_px)
     census = build_gaia_census_rows(
         gdf,
@@ -1393,7 +1196,6 @@ def enrich_masterstar_gaia_complete(
         edge_margin_px=edge_m,
         wpx=int(wpx),
         h=int(h),
-        forced_results=forced_results,
     )
     _bg_col = gdf["blend_group_id"] if "blend_group_id" in gdf.columns else pd.Series([""] * n_g, index=gdf.index)
     _bg_arr = _bg_col.fillna("").astype(str).str.strip().to_numpy(dtype=object)
@@ -1421,16 +1223,8 @@ def enrich_masterstar_gaia_complete(
             cc = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
             if cc:
                 census_st[cc] = str(census.iloc[ci].get("source_state", "")).strip()
-    peak_dao = pd.to_numeric(out.get("peak_dao"), errors="coerce")
     for i in range(len(out)):
         cid = _norm_cid_strip_dotzero(cid_out.iloc[i])
-        _fp_raw = out.loc[out.index[i], "forced_photometry"] if "forced_photometry" in out.columns else False
-        _fp_ok = False
-        if _fp_raw is not None and not (isinstance(_fp_raw, float) and not math.isfinite(_fp_raw)):
-            _fp_ok = str(_fp_raw).strip().lower() in {"true", "1", "yes"}
-        if _fp_ok:
-            out.loc[out.index[i], "source_state"] = SOURCE_FORCED_SEED
-            continue
         if not cid:
             out.loc[out.index[i], "source_state"] = "DAO_ONLY"
             continue
@@ -1440,10 +1234,8 @@ def enrich_masterstar_gaia_complete(
             pass
         elif str(st).strip():
             continue
-        peak_v = peak_dao.iloc[i] if i < len(peak_dao) else float("nan")
-        vp_raw = out.loc[out.index[i], "vy_dao_pass"] if "vy_dao_pass" in out.columns else float("nan")
-        is_det, vp = _row_is_dao_detected(peak_v, vp_raw)
-        if is_det:
+        vp = int(det_pass[i])
+        if vp in (1, 2):
             out.loc[out.index[i], "source_state"] = (
                 SOURCE_DETECTED_P2 if vp == 2 else SOURCE_DETECTED_P1
             )
@@ -1478,8 +1270,62 @@ def enrich_masterstar_gaia_complete(
             cid = _norm_cid_strip_dotzero(census.iloc[ci].get("catalog_id"))
             if amb_map.get(cid):
                 census.loc[census.index[ci], "ambiguous_owner"] = True
+    return census
+
+
+def enrich_masterstar_gaia_complete(
+    df_ms: pd.DataFrame,
+    *,
+    gaia_on_chip: pd.DataFrame,
+    wpx: int,
+    h: int,
+    fwhm_px: float,
+    target_depth_g: float,
+    locked_pairs: dict[str, tuple[float, float]] | None = None,
+    identity_lock_only: bool = False,
+    catalog_derived_membership: bool = False,
+    tolerance_overrides: dict[str, float] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Apply lock-leftover assignment, BLENDED + census (Parts B-D). Never adds rows.
+
+    ``identity_lock_only=True`` keeps existing MS row identities (no leftover
+    catalog_id rewrite).
+
+    ``catalog_derived_membership=True`` (DAO-GAIA-ERA-01 M1): membership rows were
+    pre-expanded from the catalog; do not rewrite catalog_id via leftover promotion.
+    """
+    meta: dict[str, Any] = {
+        "n_leftover_promotions": 0,
+        "n_lock_geometry_reject": 0,
+    }
+    out = df_ms.copy() if df_ms is not None else pd.DataFrame()
+
+    if gaia_on_chip is None or gaia_on_chip.empty:
+        return out, pd.DataFrame(), meta
+
+    gaia_owner, gdf, identity_lock_only, det_pass, n_g = _acc_identity_locks(
+        catalog_derived_membership=catalog_derived_membership,
+        fwhm_px=fwhm_px,
+        gaia_on_chip=gaia_on_chip,
+        identity_lock_only=identity_lock_only,
+        locked_pairs=locked_pairs,
+        meta=meta,
+        out=out,
+        tolerance_overrides=tolerance_overrides,
+    )
+    census = _acc_census(
+        det_pass=det_pass,
+        edge_m=MS_GAIA_CENSUS_EDGE_MARGIN_PX,
+        fwhm_px=fwhm_px,
+        gaia_owner=gaia_owner,
+        gdf=gdf,
+        h=h,
+        meta=meta,
+        n_g=n_g,
+        out=out,
+        target_depth_g=target_depth_g,
+        wpx=wpx,
+    )
     meta["identity_lock_only"] = bool(identity_lock_only)
     meta["catalog_derived_membership"] = bool(catalog_derived_membership)
     return out, census, meta
-
-

@@ -14,11 +14,16 @@ from camera_profile import (
     catalog_models,
     load_profile,
     lookup,
-    match_catalog_model,
     match_catalog_models,
     scale_for_binning,
 )
 from param_resolver import resolve_gain, resolve_read_noise
+
+
+def _one_model(*names):
+    """The single catalog model the names identify, None when none or ambiguous (G01-31: test helper)."""
+    hits = match_catalog_models(*names)
+    return hits[0] if len(hits) == 1 else None
 
 
 def _hdr(binning: int = 1, **cards: tuple[float, str]) -> fits.Header:
@@ -194,10 +199,10 @@ def test_catalog_is_consistent() -> None:
             for pt in mode.get("curve", []):
                 assert pt.get("source"), (m["key"], pt)
                 assert pt.get("e_per_adu") is not None or pt.get("read_noise_e") is not None
-    assert match_catalog_model("QHY CCD QHY294PROM")["key"] == "qhy_qhy294m_pro"
+    assert _one_model("QHY CCD QHY294PROM")["key"] == "qhy_qhy294m_pro"
     for legacy in ("qhy294m_pro", "qhy600m", "moravian_c3_26000", "moravian_c5a_150m", "zwo_asi533mc_pro"):
         assert catalog_model(legacy) is not None, legacy  # keys stored in existing databases
-    assert match_catalog_model("some unknown camera") is None
+    assert _one_model("some unknown camera") is None
 
 
 def test_no_hard_coded_camera_ids_left() -> None:
@@ -300,13 +305,13 @@ def test_fixed_gain_readout_mode_value() -> None:
     ],
 )
 def test_header_names_from_capture_programs(instrume: str, key: str) -> None:
-    hit = match_catalog_model(instrume)
+    hit = _one_model(instrume)
     assert hit is not None and hit["key"] == key, (instrume, hit and hit["key"])
 
 
 def test_ambiguous_or_generic_header_names_are_not_guessed() -> None:
     # The mono and the colour Atik Horizon report the same name: no single model is chosen ...
-    assert match_catalog_model("Atik Horizon") is None
+    assert _one_model("Atik Horizon") is None
     assert {m["key"] for m in match_catalog_models("Atik Horizon")} == {"atik_horizon_mono", "atik_horizon_color"}
     # ... and driver names that carry no model stay unmatched.
     for generic in ("ASI Camera (1)", "SBIG CCD", "FLI CCD", "MI Camera", ""):

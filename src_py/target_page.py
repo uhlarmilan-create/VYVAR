@@ -243,6 +243,8 @@ class TargetPages:
         self._ms_g_bprp_map: dict[str, tuple[float, float]] | None = None
         self._ms_xyg: np.ndarray | None = None
         self._ms_ids: np.ndarray = np.array([], dtype=str)
+        self._manifest: dict[str, Any] | None = None
+        self._manifest_read = False
         self.lc_stats_by_cid = self._build_target_lc_stats()
 
     # --- per-target files (read once) ---------------------------------------------------------
@@ -273,6 +275,21 @@ class TargetPages:
                 self._chk[cid] = None
         return self._chk[cid]
 
+    def export_record(self, cid: str) -> dict[str, Any] | None:
+        """G11-03: what the exporter wrote for this target (``export_manifest.json``); None when not exported."""
+        if not self._manifest_read:
+            from export_reports import load_export_manifest  # noqa: PLC0415
+
+            self._manifest, self._manifest_read = load_export_manifest(self.photometry_dir), True
+        return (self._manifest or {}).get(_norm_cid_decimal(cid))
+
+    def export_mag_column(self, cid: str) -> str:
+        """Magnitude column of the target's export (differential targets: delta_mag)."""
+        from photometry_lightcurve import export_mag_column  # noqa: PLC0415
+
+        df = self.lc_df(cid)
+        return export_mag_column(df if df is not None else pd.DataFrame(), differential=self.uncalibrated(cid))
+
     def preload(self, cids: list[str]) -> None:
         """Read every target's files now so switching targets never touches the disk."""
         for cid in cids:
@@ -300,13 +317,11 @@ class TargetPages:
                 n_fr = _int0(row.get("n_frames"))
                 stats[cid] = {"n_points": n_fr if n_fr > 0 else 0, "merr_med": float("nan")}
                 continue
-            # REPORT-AUDIT-2026-10: points = the epochs the exports carry (all but the
-            # EXPORT_EXCLUDE_FLAGS), the same count as the target page's "Frames" line
-            if "flag" in df.columns:
-                from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
+            # REPORT-AUDIT-2026-10 / G11-12: points = the epochs the exports carry (export_row_mask),
+            # the same count as the target page's "Frames" line
+            from photometry_lightcurve import export_row_mask  # noqa: PLC0415
 
-                _fl = df["flag"].astype(str).str.strip().str.lower()
-                df = df[~_fl.isin(list(EXPORT_EXCLUDE_FLAGS))]
+            df = df[export_row_mask(df, mag_column=self.export_mag_column(cid))]
             n_pt = int(len(df))
             err_col = "err" if "err" in df.columns else ("magerr" if "magerr" in df.columns else "MAGERR")
             merr = float("nan")
@@ -447,18 +462,11 @@ class TargetPages:
             return np.array([np.nan])
         return pd.to_numeric(df["mag_gspc"], errors="coerce").to_numpy(dtype=float)
 
-    def _resolve_check_kname(self, check_cid: str, target_cid: str) -> str:
+    def _resolve_check_kname(self, check_cid: str) -> str:
         cc = _norm_cid_decimal(check_cid)
         if not cc:
             return "-"
-        if not self.comp_df.empty and "_tcid" in self.comp_df.columns:
-            sub = self.comp_df[self.comp_df["_tcid"].astype(str).eq(_norm_cid_decimal(target_cid))]
-            if not sub.empty and "catalog_id" in sub.columns:
-                m = sub["catalog_id"].map(_norm_cid_decimal).astype(str).eq(cc)
-                if bool(m.any()) and "vsx_name" in sub.columns:
-                    vn = str(sub.loc[m, "vsx_name"].iloc[0] or "").strip()
-                    if vn and vn.lower() not in ("nan", "none"):
-                        return vn
+        # G11-40: the comp table has no vsx_name; the name comes from the active targets
         if not self.at_df.empty and "_cid" in self.at_df.columns and "vsx_name" in self.at_df.columns:
             m2 = self.at_df["_cid"].astype(str).eq(cc)
             if bool(m2.any()):
@@ -477,9 +485,9 @@ class TargetPages:
         sdf = self.check_df(cid) if cid else None
         if sdf is None or sdf.empty or "kmag" not in sdf.columns:
             return out
-        km = pd.to_numeric(sdf["kmag"], errors="coerce")
-        med = float(np.nanmedian(km))
-        sc = float(np.nanstd(km)) if int(km.notna().sum()) > 1 else float("nan")
+        # G11-11: the check-star numbers of the export header and the trust (exported epochs, ddof=1)
+        st = self.check_stats(cid)
+        med, sc = st.median, st.scatter
         out["kmag"] = f"{med:.3f}" if np.isfinite(med) else "na"
         uncal = self.uncalibrated(cid)
         if uncal:
@@ -490,15 +498,14 @@ class TargetPages:
         from check_star_kmag import load_check_star  # noqa: PLC0415
 
         chk = str(load_check_star(self.lc_dir, cid).get("catalog_id", "") or "")
-        out["kname"] = self._resolve_check_kname(chk, cid)
+        out["kname"] = self._resolve_check_kname(chk)
         kc = _norm_cid_decimal(chk)
         out["kcid"] = kc
         g_k, b_k = self._ms_g_bprp(kc) if kc else (float("nan"), float("nan"))
         out["g"] = f"{g_k:.2f}" if np.isfinite(g_k) else ""
         out["bp_rp"] = f"{b_k:.2f}" if np.isfinite(b_k) else ""
         if "kmag_err" in sdf.columns:
-            ke = pd.to_numeric(sdf["kmag_err"], errors="coerce")
-            em = float(np.nanmedian(ke)) if int(ke.notna().sum()) else float("nan")
+            em = st.err_med
             if np.isfinite(em) and em > 0:
                 out["err_med"] = f"{em:.4f}"
                 if np.isfinite(sc):
@@ -510,6 +517,13 @@ class TargetPages:
                 out["kref"] = f"{float(_kr):.3f}"
                 out["kdelta"] = f"{med - float(_kr):+.3f}"
         return out
+
+    def check_stats(self, cid: str) -> Any:
+        """``check_star_kmag.CheckStarStats`` of the target over its exported epochs (G11-11)."""
+        from check_star_kmag import exported_check_stats  # noqa: PLC0415
+
+        return exported_check_stats(self.lc_dir, cid, lc_df=self.lc_df(cid), sidecar=self.check_df(cid),
+                                    mag_column=self.export_mag_column(cid))
 
     def summary_row(self, cid: str) -> dict[str, Any]:
         sd = self.summary_df
@@ -533,7 +547,6 @@ class TargetPages:
         """Content of one target page (STAR-PAGE-M3-2026-10, layout approved by Milan 2026-10-11)."""
         import star_page_m3 as m3  # noqa: PLC0415
         from dilution import gs11_dilution_from_summary  # noqa: PLC0415
-        from export_reports import _is_eclipsing  # noqa: PLC0415
         from gspc_zp import gspc_standard_available  # noqa: PLC0415
 
         cid = _norm_cid_decimal(str(star_data.get("catalog_id", "") or ""))
@@ -546,7 +559,7 @@ class TargetPages:
         if band.upper() == "NONE":
             band = str(gz.get("band") or "").strip()
         lc_csv = self.lc_dir / f"lightcurve_{cid}.csv"
-        facts_lc = m3.lc_facts(lc_csv) if lc_csv.is_file() else {}
+        facts_lc = m3.lc_facts(lc_csv, mag_column=self.export_mag_column(cid)) if lc_csv.is_file() else {}
 
         # header
         _bp = float(pd.to_numeric(at_row.get("bp_rp", star_data.get("bp_rp")), errors="coerce"))
@@ -626,12 +639,10 @@ class TargetPages:
                 zp_val += f"; reported as {_fbp.aavso_code} (untransformed)"
         else:
             zp_val = "-"
-        _eb = _is_eclipsing(str(at_row.get("vsx_type", "") or ""))
-        _dif = uncal and not _gspc_std
-        exp_val = (f"AAVSO {'no (differential)' if _dif else ('STD (GSPC)' if _gspc_std else 'STD')}   "
-                   f"VarAstro {('dif' if _dif else 'yes') if _eb else 'no (not EB)'}")
-        if trust == "RED":  # REPORT-AUDIT-2026-10: RED files are written to _dontsubmit
-            exp_val += "   (RED: in _dontsubmit)"
+        # G11-03: the files the exporter actually wrote (export_manifest.json), not a re-derived routing
+        from export_reports import export_fact_text  # noqa: PLC0415
+
+        exp_val = export_fact_text(self.export_record(cid))
         # PSF-LOCAL-2026-10: broader own PSF -> aperture was scaled
         _pr = float(pd.to_numeric(star_data.get("psf_ratio"), errors="coerce"))
         _ps = float(pd.to_numeric(star_data.get("psf_scale"), errors="coerce"))
@@ -682,8 +693,8 @@ class TargetPages:
         facts = [
             ("Gaia DR3", cid),
             ("RA / Dec", m3.ra_dec_text(_ra, _de)),
-            ("Frames", f"{int(facts_lc.get('n_total', 0)) - int(facts_lc.get('n_flagged', 0))} exported / "
-                       f"{int(facts_lc.get('n_total', 0))}  ({int(facts_lc.get('n_flagged', 0))} excluded, "
+            ("Frames", f"{int(facts_lc.get('n_exported', 0))} exported / "
+                       f"{int(facts_lc.get('n_total', 0))}  ({int(facts_lc.get('n_excluded', 0))} excluded, "
                        f"{int(facts_lc.get('n_noted', 0))} flagged in NOTES)"),
             ("Span / airmass", f"{facts_lc.get('span_h', float('nan')):.1f} h / {_am[0]:.2f}-{_am[1]:.2f}"),
             ("Aperture", (f"{_r:.1f} px ({_k:.2f} x FWHM)" if np.isfinite(_r) else "-") + _psf_txt),

@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import math
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +79,9 @@ class PhotometricGain:
     container_scale: float
     gain_source: str
     read_noise_source: str
+    #: G06-30: the ``param_resolver.Resolved`` records behind ``gain_native`` / ``read_noise`` (provenance)
+    gain_resolved: Any = field(default=None, compare=False)
+    read_noise_resolved: Any = field(default=None, compare=False)
 
 
 def photometric_gain_read_noise(header: Any, cfg: Any | None, equipment_id: int | None) -> PhotometricGain:
@@ -113,4 +116,6 @@ def photometric_gain_read_noise(header: Any, cfg: Any | None, equipment_id: int 
         container_scale=scale,
         gain_source=str(g_res.source),
         read_noise_source=str(rn_res.source),
+        gain_resolved=g_res,
+        read_noise_resolved=rn_res,
     )

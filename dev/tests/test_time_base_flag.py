@@ -63,7 +63,8 @@ def test_time_base_jd_fallback_astropy_failure(monkeypatch):
     def _boom(*args, **kwargs):
         raise RuntimeError("forced astropy failure")
 
-    monkeypatch.setattr("astropy.time.Time", _boom)
+    # G02-19: the one BJD/HJD formula is time_utils.light_time_corrected_jd
+    monkeypatch.setattr("time_utils.light_time_corrected_jd", _boom)
     bjd, hjd, time_base = _recompute_bjd_hjd_with_status(jd, 207.4983, 39.4037, cfg)
     assert time_base == TIME_BASE_JD_FALLBACK
     np.testing.assert_array_equal(bjd, jd)

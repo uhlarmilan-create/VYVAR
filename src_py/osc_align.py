@@ -292,23 +292,22 @@ def apply_registration_handoff_to_frame(
     mat = np.asarray(handoff_entry.get("matrix") or [], dtype=np.float64)
     if mat.size != 9 or not np.all(np.isfinite(mat)):
         return None, hdr, "osc_handoff_none"
-    import astroalign
     from skimage.transform import ProjectiveTransform
 
     from vyvar_alignment_frame import _as_fits_float32_image
 
     poly_inv = handoff_entry.get("poly_inv")
+    from vyvar_alignment_frame import warp_to_reference
+
     if poly_inv is not None:
         # ALIGN-POLY-2026-10: the donor was registered with the polynomial; apply the same one
         from skimage.transform import PolynomialTransform
-
-        from vyvar_alignment_frame import warp_to_reference
 
         p_inv = np.asarray(poly_inv, dtype=np.float64).reshape(2, -1)
         aligned = warp_to_reference(data, ref_data.shape, PolynomialTransform(p_inv))
     else:
         t = ProjectiveTransform(matrix=mat.reshape(3, 3))
-        aligned, _ = astroalign.apply_transform(t, data, ref_data)
+        aligned = warp_to_reference(data, ref_data.shape, t.inverse)
     aligned = _as_fits_float32_image(aligned)
     method = f"osc_handoff_{method}"
 
@@ -331,10 +330,9 @@ def log_channel_match_rate_verification(
     *,
     channel: str,
     match_rate: float | None,
-    one_rggb_failed: bool,
     log_event: Any,
 ) -> None:
-    """D5: WARN per-channel below threshold; FAIL only if oneRGGB itself failed."""
+    """D5: WARN per channel below the match-rate threshold (a failed oneRGGB skips its channels)."""
     if match_rate is None or not math.isfinite(float(match_rate)):
         return
     mr = float(match_rate)
@@ -344,8 +342,6 @@ def log_channel_match_rate_verification(
             f"OSC-2 channel {ch}: DAO-Gaia match_rate={mr * 100.0:.1f}% "
             f"< {PLATESOLVE_MATCH_RATE_WARN * 100.0:.0f}% (expected for B; WARN only)"
         )
-        if one_rggb_failed:
-            raise RuntimeError(msg.replace("WARN only", "oneRGGB failed - FAIL"))
         log_event(f"WARNING: {msg}")
     else:
         log_event(f"OSC-2 channel {ch}: match_rate={mr * 100.0:.1f}% OK (propagated WCS)")

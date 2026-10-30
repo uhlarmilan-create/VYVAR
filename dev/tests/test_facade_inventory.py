@@ -75,14 +75,11 @@ PHOTOMETRY_E2_PROVENANCE = (
 
 PHOTOMETRY_E2_SHARED = (
     "enhance_catalog_dataframe_aperture",
-    "_get_plate_scale_from_cfg",
     "finalize_hybrid_bkg_fallback_proc_dir",
     "stamp_vsx_known_variable_on_masterstars",
     "stamp_masterstar_snr_columns",
     "compute_fwhm_gaussian_for_aperture_catalog",
-    "_read_plate_scale_from_fits_path",
     "build_gs11_summary",
-    "_resolve_plate_scale_arcsec_per_px",
     "_fwhm_moment_at",
     "common_field_intersection_bbox_px",
     "_safe_polyfit",
@@ -107,13 +104,10 @@ PHOTOMETRY_E3_COMP = (
 
 PHOTOMETRY_E4_APERTURE = (
     "run_aperture_photometry",
-    "measure_fwhm_from_masterstar",
     "read_flux_from_csv",
     "_AperturePhotometryState",
     "parse_comp_quality_json_map",
     "apply_reporting_postprocess",
-    "fit_color_term_c1",
-    "should_apply_color_term",
     "resolve_apply_color_term",
 
     "_photometric_error",
@@ -123,7 +117,6 @@ PHOTOMETRY_E4_APERTURE = (
 PHOTOMETRY_E4_LC = (
     "ensemble_normalize",
     "save_lightcurve_csv",
-    "apply_color_term",
     "_recompute_bjd_hjd_with_status",
 )
 
@@ -161,12 +154,10 @@ PIPELINE_E5 = (
 
 PIPELINE_E6A_PREPROCESS = (
     "_archive_raw_to_calibrated_light",
-    "_qc_suggest_thresholds",
     "build_prefilter_rejected_map",
     "calibrated_paths_for_draft_apply_filters",
     "filter_files_by_qc_metrics_allowlist",
     "load_qc_metrics_status_by_path",
-    "preprocess_calibrated_to_processed",
     "qc_enrich_calibrated_lights_in_place",
     "resolve_obs_file_to_processed_fits",
     "resolve_preprocess_target_coordinates",
@@ -231,6 +222,7 @@ PHOTOMETRY_PHYSICAL = frozenset({
 # export them (D-FACADE-PERMANENT-01), the home module changed.
 MOVED_HOMES_2026_10 = {
     "norm_fits_path_key": "utils",
+    "load_qc_metrics_status_by_path": "utils",  # G12-28: one loader for preprocess and INV-QC-01
     "_vyvar_df_to_csv": "proc_frame_store",
     "resolve_masterstar_input_root": "pipeline_preprocess",
     "_path_segments_forbidden_for_masterstar_physical_source": "pipeline_preprocess",
@@ -247,7 +239,6 @@ MOVED_HOMES_2026_10 = {
     "_howell_variance_adu2": "photometry_gate_helpers",
     "_photometric_error": "photometry_gate_helpers",
     "_photometric_error_with_bkg_mode": "photometry_gate_helpers",
-    "should_apply_color_term": "band_classify",
     "resolve_apply_color_term": "band_classify",
     "_sky_pp_for_photometric_error": "photometry_shared",
     "_select_export_lc_rows": "photometry_lightcurve",

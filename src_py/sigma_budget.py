@@ -7,8 +7,8 @@ See dev/results/specs/VYVAR_SIGMA_BUDGET_SPEC.md.
 
 from __future__ import annotations
 
+import logging
 import math
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -24,11 +24,8 @@ OSBORN_CY_DEFAULT = 1.5
 from mag_constants import MAG_ERR_SCALE
 
 
-SIGMA_VARIANT_HOWELL_ONLY = "howell_only"
-SIGMA_VARIANT_HOWELL_SCINT_FULL = "howell_scint_full"
-SIGMA_VARIANT_HOWELL_SCINT_FRESID_FLOOR_ENSEMBLE = "howell_scint_fresid_floor_ensemble"
-# Acceptance-authoritative harness variant: LC ``err`` column (production uncertainty).
-SIGMA_VARIANT_PRODUCTION_LC_ERR = "production_lc_err"
+LOGGER = logging.getLogger(__name__)
+_WARNED_NO_SCINT: set[tuple[Any, str]] = set()
 
 
 @dataclass
@@ -40,17 +37,6 @@ class RigScintillationParams:
     exposure_s: float
     c_y: float
     source_notes: list[str]
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "draft_id": self.draft_id,
-            "setup": self.setup,
-            "telescope_diameter_m": self.telescope_diameter_m,
-            "altitude_m": self.altitude_m,
-            "exposure_s": self.exposure_s,
-            "c_y": self.c_y,
-            "source_notes": list(self.source_notes),
-        }
 
 
 def scintillation_sigma(
@@ -98,32 +84,31 @@ def relative_flux_err_to_mag_sigma(err_rel: float) -> float:
     return float(MAG_ERR_SCALE * err_rel)
 
 
-def parse_setup_exposure_s(setup_name: str) -> float | None:
-    """Parse exposure seconds from setup folder name (e.g. ``NoFilter_60_2`` -> 60)."""
-    m = re.match(r"^.+_(\d+)_\d+$", str(setup_name or "").strip())
-    if not m:
-        return None
-    try:
-        return float(m.group(1))
-    except ValueError:
-        return None
-
-
 def resolve_rig_scintillation_params(
     *,
     draft_id: int | None,
     setup: str,
+    exposure_s: float,
     cfg: AppConfig,
     pipeline_meta: dict[str, Any] | None = None,
 ) -> RigScintillationParams:
-    """Resolve telescope diameter and altitude from DB + pipeline_meta (report sources)."""
+    """Resolve telescope diameter and altitude from DB + pipeline_meta (report sources).
+
+    ``exposure_s``: the frame exposure from the FITS header (utils.exposure_seconds, EXPOSURE-ONE-2026-10);
+    it was parsed from the setup name, which failed for the "g|120|4" form and fell back to 60 s."""
     from database import VyvarDatabase
 
     _cfg = cfg
     notes: list[str] = []
     alt_m: float | None = None
     diam_m: float | None = None
-    exp_s = parse_setup_exposure_s(setup)
+    try:
+        exp_s = float(exposure_s)
+    except (TypeError, ValueError):
+        exp_s = float("nan")
+    if not (math.isfinite(exp_s) and exp_s > 0):
+        raise ValueError(f"scintillation: exposure {exposure_s!r} s of setup {setup!r} is not a positive number "
+                         "(EXPTIME missing in the MASTERSTAR header?)")
 
     meta = pipeline_meta or {}
     ol = meta.get("observer_location") if isinstance(meta.get("observer_location"), dict) else {}
@@ -169,19 +154,22 @@ def resolve_rig_scintillation_params(
         except Exception as exc:  # noqa: BLE001
             notes.append(f"DB rig lookup failed: {exc!s}")
 
-    # Generic fallbacks when the draft has no telescope / site row (reported, not silent).
+    # C3 / G08-16 (Milan 2026-10-29): no generic telescope or site - without the telescope diameter or the
+    # site altitude the scintillation term is left out (the run continues), with a warning in the log and
+    # a note in the meta; the export error line then says so. (Was: D = 0.07 m and 300 m silently.)
     if diam_m is None:
-        diam_m = 0.07
-        notes.append("D=0.07 m generic fallback (no TELESCOPE.DIAMETER for this draft)")
+        diam_m = float("nan")
+        notes.append("scintillation NOT included: no TELESCOPE.DIAMETER for this draft (enter it in Settings)")
     if alt_m is None:
-        alt_m = 300.0
-        notes.append("altitude_m=300 generic fallback (no site altitude for this draft)")
+        alt_m = float("nan")
+        notes.append("scintillation NOT included: no site altitude for this draft (enter it in Settings)")
+    if not (math.isfinite(diam_m) and math.isfinite(alt_m)):
+        _key = (draft_id, str(setup))
+        if _key not in _WARNED_NO_SCINT:
+            _WARNED_NO_SCINT.add(_key)
+            LOGGER.warning("[SCINT] %s: %s", setup, "; ".join(n for n in notes if n.startswith("scintillation NOT")))
 
-    if exp_s is None or not math.isfinite(exp_s):
-        exp_s = 60.0
-        notes.append(f"exposure_s={exp_s} fallback (setup name parse failed for {setup!r})")
-    else:
-        notes.append(f"exposure_s={exp_s} from setup name {setup!r}")
+    notes.append(f"exposure_s={exp_s:g} from the frame header (EXPTIME)")
 
     return RigScintillationParams(
         draft_id=draft_id,

@@ -282,6 +282,30 @@ def contamination_fractions(
     return out
 
 
+VARIABLE_TARGETS_CSV = "variable_targets.csv"
+
+
+def variable_amplitudes(variable_targets_csv: Path) -> tuple[dict[str, float], str]:
+    """Gaia id -> VSX amplitude (mag, > 0) of the known variables of the field (``variable_targets.csv``
+    beside the field catalogue, column ``vsx_amplitude_mag``). Returns ``({}, why)`` without them."""
+    from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
+
+    p = Path(variable_targets_csv)
+    if not p.is_file():
+        return {}, "none: variable_targets.csv missing"
+    vt = read_vyvar_csv(p, low_memory=False)
+    if "vsx_amplitude_mag" not in vt.columns or "catalog_id" not in vt.columns:
+        LOGGER.warning("[BLEND] %s has no vsx_amplitude_mag - variable neighbours at their mean", p.name)
+        return {}, "none: no vsx_amplitude_mag column (catalogue step before B4-2026-10)"
+    a = pd.to_numeric(vt["vsx_amplitude_mag"], errors="coerce").to_numpy(dtype=float)
+    out: dict[str, float] = {}
+    for cid, v in zip(vt["catalog_id"].to_numpy(), a, strict=True):
+        k = str(normalize_gaia_source_id(cid) or "")
+        if k and math.isfinite(v) and v > 0:
+            out[k] = max(out.get(k, 0.0), float(v))
+    return out, "vsx_amplitude_mag"
+
+
 def blend_contamination_for_pool(
     pool: pd.DataFrame,
     *,
@@ -355,7 +379,12 @@ def blend_contamination_for_pool(
 
     nb_ids = [str(normalize_gaia_source_id(v) or "") for v in cat["catalog_id"].to_numpy()[ok]]
     nb_xy = np.c_[cx, cy]
-    nb_flux = _band_flux(cg, cbp)
+    # B4-2026-10: a known variable neighbour shines at its maximum (Gaia mean + VSX amplitude is an
+    # upper bound: the mean lies between maximum and minimum)
+    amp, amp_src = variable_amplitudes(Path(field_catalog_csv).parent / VARIABLE_TARGETS_CSV)
+    nb_boost = np.array([10.0 ** (0.4 * amp[i]) if i in amp else 1.0 for i in nb_ids], dtype=float)
+    nb_flux = _band_flux(cg, cbp) * nb_boost
+    meta["variable_neighbours"] = {"source": amp_src, "n_at_maximum": int(np.count_nonzero(nb_boost > 1.0))}
     meta["neighbour_catalog_mag_limit"] = float(np.nanmax(cg)) if cg.size else float("nan")
     meta["n_neighbour_catalog"] = int(cg.size)
 
@@ -394,7 +423,7 @@ def blend_contamination_for_pool(
         r_ap_px=float(r_ap_px), fwhm_px=float(fwhm_px), beta=float(prof["beta"]),
         annulus_px=annulus_px,
         star_ids=s_ids, neighbour_ids=nb_ids,
-        star_flux_g=10.0 ** (-0.4 * pg), neighbour_flux_g=10.0 ** (-0.4 * cg),
+        star_flux_g=10.0 ** (-0.4 * pg), neighbour_flux_g=10.0 ** (-0.4 * cg) * nb_boost,
     )
     meta["status"] = "ok"
     return pd.Series(c, index=pool.index, dtype=float), meta

@@ -125,3 +125,19 @@ def test_dark_hot_pixel_binned_and_shifted() -> None:
     assert TF.dark_hot_pixel(d, mats, np.array([65.0, 37.0]), 0)
     assert not TF.dark_hot_pixel(d, mats, np.array([60.0, 40.0]), 0)
     assert not TF.dark_hot_pixel(None, mats, np.array([65.0, 37.0]), 0)
+
+
+def test_shape_text_shown_to_the_user() -> None:
+    """G10-44 (Milan 2026-10-29): extended / fwhm_ratio are shown in the UI table and the PDF report."""
+    import math
+    from pathlib import Path
+
+    from transient_field import EXTENDED_RATIO, shape_text
+
+    assert shape_text(True, 1.83) == "extended (FWHM x1.83)"
+    assert shape_text("False", 1.02) == "point (FWHM x1.02)"
+    assert shape_text(False, math.nan) == "-"
+    assert EXTENDED_RATIO == 1.5
+    src = Path(__file__).resolve().parents[2] / "src_py"
+    for name in ("ui_variability.py", "photometry_report.py"):
+        assert "shape_text(" in (src / name).read_text(encoding="utf-8"), name

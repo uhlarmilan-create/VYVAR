@@ -27,12 +27,8 @@ SAT_LIMIT_CONTAINER_CLIP_ADU = 65535.0
 # (pile-up), header or bit depth (sat_diag), not from a user parameter.
 LINEARITY_FRAC = 0.90
 SAT_LIMIT_NO_KNEE_FRAC = LINEARITY_FRAC
-# COMP-SAT-80-2026-10 (Milan 2026-10-12): comparison stars must be safely linear - a comp is
-# not admitted when its raw peak reaches 0.80 x saturation level (targets: 0.90). AAVSO CCD/CMOS
-# guide 3.3.7: keep peaks well below the linearity limit (60-70 %), >= 90 % is unreliable.
-COMP_LINEARITY_FRAC = 0.80
-#: factor on the per-row ``saturate_limit_adu_85pct`` column (== LINEARITY_FRAC x SAT)
-COMP_SAT_LIMIT_SCALE = COMP_LINEARITY_FRAC / LINEARITY_FRAC
+# COMP-SAT-80-2026-10: the comparison-star peak limit (0.80 x SAT) is the config value comp_peak_sat_frac
+# (Milan 2026-10-29, COMP-SAT-ONE-2026-10); targets keep LINEARITY_FRAC.
 # COMP-SNR-20-2026-10 (Milan 2026-10-12): minimum MASTERSTAR aperture S/N of a comparison star
 # (snr_ap_pixscaled; AAVSO CCD/CMOS guide 2.1.4: S/N 100 excellent, below 10-20 poor). 50 removed
 # 2924 of 3272 pool stars on the 60 s wide-field rig (S/N 50 ~ G 11.5, draft 526), 20 keeps
@@ -92,8 +88,6 @@ MS_DAO_CENTROID_QA_FLOOR_PX = 1.0  # centroid QA tolerance floor
 MS_DAO_CENTROID_QA_CAP_PX = 3.0  # centroid QA tolerance cap
 MS_LOCK_LEFTOVER_RADIUS_PX = 3.0  # leftover DAO detection promoted to a Gaia star within this
 MS_LOCK_PAIR_TOL_PX = 3.0  # DAO-Gaia lock pair tolerance
-MS_FORCED_SEED_CENTROID_MAX_PX = 2.0  # forced seed accepted when its centroid moves less than this
-MS_FORCED_SEED_SNR_MIN = 4.0  # forced seed accepted from this S/N
 # Alignment: astroalign control-point cap (detection count is alignment_max_stars).
 ALIGNMENT_MAX_CONTROL_POINTS = 80
 # DAO kernel FWHM (px) for a frame without a measured FWHM (QC writes VY_FWHM on every processed

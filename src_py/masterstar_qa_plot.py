@@ -18,39 +18,6 @@ MATCHED_STATES = frozenset({"DETECTED_P1", "DETECTED_P2"})
 UNMATCHED_STATE = "DAO_ONLY"
 
 
-def downsample_array_2d(arr: np.ndarray, max_side: int) -> tuple[np.ndarray, float, float]:
-    h, w = arr.shape
-    m = max(h, w)
-    if m <= max_side:
-        return arr, 1.0, 1.0
-    scale = max_side / float(m)
-    nh, nw = max(1, int(h * scale)), max(1, int(w * scale))
-    from PIL import Image
-
-    im = Image.fromarray(np.nan_to_num(arr, nan=0.0).astype(np.float32), mode="F")
-    im = im.resize((nw, nh), Image.Resampling.BILINEAR)
-    return np.asarray(im, dtype=np.float32), float(nw) / float(w), float(nh) / float(h)
-
-
-def percentile_stretch_rgb(data: np.ndarray, p_lo: float, p_hi: float) -> np.ndarray:
-    d = np.asarray(data, dtype=np.float64)
-    finite = np.isfinite(d)
-    if not np.any(finite):
-        z = np.zeros_like(d, dtype=np.float64)
-    else:
-        p_lo = float(np.clip(p_lo, 0.001, 49.999))
-        p_hi = float(np.clip(p_hi, p_lo + 0.01, 99.999))
-        lo, hi = np.nanpercentile(d[finite], (p_lo, p_hi))
-        if not np.isfinite(lo):
-            lo = 0.0
-        if not np.isfinite(hi) or hi <= lo:
-            hi = lo + 1e-6
-        z = np.clip((d - lo) / (hi - lo + 1e-12), 0.0, 1.0)
-    z = np.where(np.isfinite(z), z, 0.0)
-    u8 = (z * 255.0).astype(np.uint8)
-    return np.stack([u8, u8, u8], axis=-1)
-
-
 def _sexagesimal_ra(ra_deg: float) -> str:
     h = (ra_deg % 360.0) / 15.0
     hh = int(h)

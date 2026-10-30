@@ -5,9 +5,11 @@ Product rules (Milan 2026-10-01 / 2026-10-02):
 - Isolated spike alone is not enough for ``artifact``; need image evidence.
 - Runs of >=2 same-sign elevated residuals (flares/eclipses) stay ``normal``.
 - ``spike_unconfirmed`` is never excluded from exports.
-- ``high_err``: err_i > median(err) + n_sigma x 1.4826 x MAD(err) on the
-  star's own LC (LC-FLAG-ERR-01), errors taken at the median brightness (a
-  fainter point's larger error is expected, not inflated). Hides points whose
+- ``high_err``: the epoch's random error (photon + sky + read noise) is above
+  its model ln err = a + b X (robust line in airmass) by more than n_sigma x
+  1.4826 x MAD of the log ratios (LC-FLAG-ERR-01, B1-2026-10); errors taken at
+  the median brightness (a fainter point's larger error is expected). Constant
+  floor / ensemble terms and scintillation are not tested. Hides points whose
   huge error bar would otherwise silence the spike test.
 
 Flag vocabulary::
@@ -67,22 +69,6 @@ EXPORT_EXCLUDE_FLAGS = frozenset(
         "nondetection",
     }
 )
-# LC-FLAG-ERR-01: all non-normal classes drawn red; toggle hides them all.
-UI_HIDE_WHEN_TOGGLE_OFF = frozenset(
-    {
-        "low_snr",
-        FLAG_FRAME_QC,
-        FLAG_ARTIFACT,
-        FLAG_HIGH_ERR,
-        FLAG_SPIKE_UNCONFIRMED,
-        "saturated",
-        "outlier_hi",
-        "outlier_lo",
-        "no_data",
-    }
-)
-# spike_unconfirmed stays in exports; display is red like other non-normal.
-ALWAYS_SHOW_FLAGS = frozenset()
 
 # One flag threshold for every LC outlier test (isolated spike, frame QC, pixel evidence, high error);
 # the former four config keys always held 5 sigma.
@@ -111,71 +97,63 @@ def high_err_mask(
     *,
     n_sigma: float = OUTLIER_N_SIGMA,
     mag: np.ndarray | None = None,
-) -> tuple[np.ndarray, float, float]:
-    """LC-FLAG-ERR-01: err_i > median(err) + n_sigma x 1.4826 x MAD(err).
+    airmass: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """LC-FLAG-ERR-01 / B1-2026-10: an epoch whose random error is larger than its error model.
 
-    INJECTION-2026-10: with ``mag`` a point fainter than the star's median brightness is tested
-    with the error it would have at the median. A fainter star has a larger relative error by
-    itself (by sqrt(F_med/F) when its own light dominates the noise, by F_med/F when the sky
-    does), so the bottom of a 0.3 mag eclipse was flagged high_err (injection-recovery, night
-    537). Such errors are scaled by r = F_i/F_med = 10**(-0.4 (mag_i - median mag)) < 1, the
-    lenient (sky-limited) case; brighter points keep their error (it only shrinks with
-    brightness). An error inflated by a bad frame at normal brightness is still flagged.
+    ``err`` is the per-epoch random photometric error (CCD equation: source + sky + read noise,
+    i.e. ``err_photon``). Constant terms (rig floor, ensemble SEM) and the modelled scintillation do
+    not belong here: a constant added in quadrature only compresses the spread (a few % change was
+    flagged), and scintillation grows with airmass by law (Osborn et al. 2015), as AstroImageJ also
+    keeps it out of its error (Collins et al. 2017, App. B).
 
-    Returns (is_high_err, median_err, mad_err) where mad_err is the raw MAD
-    (not yet scaled by 1.4826).
+    Model of the epoch (G08-06): ln err_i = a + b X_i (robust Theil-Sen line in airmass X). The
+    photon error of a constant star grows with airmass through extinction (less flux) and the
+    brighter sky low in the sky; both are expected, not inflated. Without airmass (or a constant one)
+    the model is the night median. INJECTION-2026-10: with ``mag`` a point fainter than the star's
+    median brightness is tested with the error it would have at the median (scaled by
+    r = 10**(-0.4 (mag_i - median mag)) < 1; brighter points keep their error), so an eclipse bottom
+    is not high_err.
+
+    Flag: ln(err_i / model_i) > median + n_sigma x 1.4826 x MAD of those log ratios.
+    Returns ``(is_high_err, ratio)`` with ratio = err_i / model_i (NaN where untestable).
     """
-    e = np.asarray(err, dtype=float)
+    e = np.asarray(err, dtype=float).copy()
     n = len(e)
     out = np.zeros(n, dtype=bool)
+    ratio = np.full(n, np.nan)
     if mag is not None and len(mag) == n:
         mm = np.asarray(mag, dtype=float)
         fin = mm[np.isfinite(mm)]
         if fin.size >= 3:
             r = np.power(10.0, -0.4 * (mm - float(np.median(fin))))
-            scale = np.where(np.isfinite(r), np.minimum(r, 1.0), 1.0)
-            e = e * scale
-    finite = e[np.isfinite(e) & (e > 0)]
-    if finite.size < 3:
-        return out, float("nan"), float("nan")
-    med = float(np.median(finite))
-    mad = float(np.median(np.abs(finite - med)))
+            e = e * np.where(np.isfinite(r), np.minimum(r, 1.0), 1.0)
+    ok = np.isfinite(e) & (e > 0)
+    if int(ok.sum()) < 3:
+        return out, ratio
+    y = np.full(n, np.nan)
+    y[ok] = np.log(e[ok])
+    x = np.asarray(airmass, dtype=float) if airmass is not None and len(airmass) == n else np.full(n, np.nan)
+    use = ok & np.isfinite(x)
+    if int(use.sum()) >= 3 and float(np.ptp(x[use])) > 0:
+        from scipy.stats import theilslopes  # noqa: PLC0415
+
+        slope, icpt, _lo, _hi = theilslopes(y[use], x[use])
+        model = icpt + slope * x
+        model[~np.isfinite(x)] = np.nan
+    else:
+        model = np.full(n, float(np.median(y[ok])))
+    res = y - model
+    fin_r = res[np.isfinite(res)]
+    if fin_r.size < 3:
+        return out, ratio
+    med = float(np.median(fin_r))
+    mad = float(np.median(np.abs(fin_r - med)))
     thr = med + float(n_sigma) * _MAD_TO_SIGMA * mad
-    for i in range(n):
-        ei = float(e[i])
-        if math.isfinite(ei) and ei > thr:
-            out[i] = True
-    return out, med, mad
-
-
-def dominant_err_component(
-    i: int,
-    *,
-    err_photon: np.ndarray | None = None,
-    err_sem_rel: np.ndarray | None = None,
-    err_scint_rel: np.ndarray | None = None,
-    err_sigma_sys_rel: np.ndarray | None = None,
-) -> str:
-    """Name the largest finite err component at index i for flag_reason."""
-    comps: list[tuple[str, float]] = []
-    for name, arr in (
-        ("err_photon", err_photon),
-        ("err_sem_rel", err_sem_rel),
-        ("err_scint_rel", err_scint_rel),
-        ("err_sigma_sys_rel", err_sigma_sys_rel),
-    ):
-        if arr is None:
-            continue
-        a = np.asarray(arr, dtype=float)
-        if i < 0 or i >= len(a):
-            continue
-        v = float(a[i])
-        if math.isfinite(v):
-            comps.append((name, v))
-    if not comps:
-        return "err:unknown"
-    name, val = max(comps, key=lambda t: t[1])
-    return f"{name}={val:.6g}"
+    good = np.isfinite(res)
+    ratio[good] = np.exp(res[good])
+    out[good] = res[good] > thr
+    return out, ratio
 
 
 def cadence_half_window(bjd: np.ndarray) -> int:
@@ -434,11 +412,15 @@ def evaluate_image_evidence(
     return ev
 
 
+#: Frame QC metrics where only a HIGH value means a worse frame (one-sided test, G08-22).
+FRAME_QC_HIGH_IS_BAD = frozenset({"fwhm", "elongation", "sky_level"})
+
+
 def frame_qc_mask_from_night_table(
     frame_metrics: pd.DataFrame,
     *,
     n_sigma: float = OUTLIER_N_SIGMA,
-    metric_cols: Sequence[str] = ("fwhm", "elongation", "sky_level", "ensemble_zp"),
+    metric_cols: Sequence[str] = ("fwhm", "elongation", "sky_level"),
 ) -> dict[str, str]:
     """Robust MAD-sigma frame QC vs the night distribution.
 
@@ -469,7 +451,10 @@ def frame_qc_mask_from_night_table(
         reasons: list[str] = []
         for col, zarr in zcols.items():
             z = float(zarr[i])
-            if math.isfinite(z) and abs(z) > thr:
+            # G08-22 (Milan 2026-10-29): a larger FWHM / elongation / sky is a worse frame; an exceptionally
+            # good one is not flagged. Metrics without a known bad side stay two-sided.
+            zt = z if col in FRAME_QC_HIGH_IS_BAD else abs(z)
+            if math.isfinite(z) and zt > thr:
                 reasons.append(f"{col}_z={z:.2f}")
         out[str(key)] = ";".join(reasons)
     return out
@@ -507,8 +492,6 @@ def load_frame_metrics_from_manifest(manifest_path: Path) -> pd.DataFrame:
                 "fwhm": insp.get("fwhm"),
                 "elongation": insp.get("elongation_mean"),
                 "sky_level": insp.get("sky_level", qc.get("background")),
-                "ensemble_zp": float("nan"),  # filled later if available
-                "stars": qc.get("stars", insp.get("star_count")),
             }
         )
     return pd.DataFrame(rows)
@@ -608,9 +591,7 @@ def assign_lc_flags(
     adjacent_sigma: float = ADJACENT_SIGMA,
     high_err_n_sigma: float = OUTLIER_N_SIGMA,
     err_photon: np.ndarray | None = None,
-    err_sem_rel: np.ndarray | None = None,
-    err_scint_rel: np.ndarray | None = None,
-    err_sigma_sys_rel: np.ndarray | None = None,
+    airmass: np.ndarray | None = None,
 ) -> FlagResult:
     """Assign flag / flag_reason for one light curve (photometry unchanged).
 
@@ -653,23 +634,17 @@ def assign_lc_flags(
                 flags[i] = FLAG_FRAME_QC
                 reasons[i] = f"frame_qc:{why}"
 
-    # LC-FLAG-ERR-01: inflated photometric error (before spike so high_err
-    # beats spike_unconfirmed; artifact may still overwrite below).
-    he_mask, _med_e, _mad_e = high_err_mask(e, n_sigma=float(high_err_n_sigma), mag=m)
+    # LC-FLAG-ERR-01 / B1-2026-10: random (photon + sky + read noise) error above its airmass model
+    # (before spike so high_err beats spike_unconfirmed; artifact may still overwrite below).
+    e_rand = np.asarray(err_photon, dtype=float) if err_photon is not None and len(err_photon) == n else e
+    he_mask, he_ratio = high_err_mask(e_rand, n_sigma=float(high_err_n_sigma), mag=m, airmass=airmass)
     for i in range(n):
         if not bool(he_mask[i]):
             continue
         if flags[i] in _PRESERVE_FLAGS or flags[i] == FLAG_FRAME_QC:
             continue
-        dom = dominant_err_component(
-            i,
-            err_photon=err_photon,
-            err_sem_rel=err_sem_rel,
-            err_scint_rel=err_scint_rel,
-            err_sigma_sys_rel=err_sigma_sys_rel,
-        )
         flags[i] = FLAG_HIGH_ERR
-        reasons[i] = f"high_err:{dom}"
+        reasons[i] = f"high_err:err_photon x{float(he_ratio[i]):.2f} of its airmass model"
 
     spike, _resid, _smooth = isolated_spike_mask(
         m, e, t, n_sigma=n_sigma, adjacent_sigma=adjacent_sigma
@@ -836,7 +811,6 @@ class EvidenceCache:
 
 
 __all__ = [
-    "ALWAYS_SHOW_FLAGS",
     "ADJACENT_SIGMA",
     "OUTLIER_N_SIGMA",
     "EvidenceCache",
@@ -850,10 +824,8 @@ __all__ = [
     "FLAG_SPIKE_UNCONFIRMED",
     "FlagResult",
     "ImageEvidence",
-    "UI_HIDE_WHEN_TOGGLE_OFF",
     "assign_lc_flags",
     "cadence_half_window",
-    "dominant_err_component",
     "evaluate_image_evidence",
     "fits_path_for_proc",
     "frame_key_from_source",

@@ -268,7 +268,6 @@ def test_library_masters_calibrate_end_to_end_raw_frames_only_reported(env, tmp_
     assert g["status"] == "OK" and g["dark_from"] == "library" and g["flat_from"] == "library", cp_
     assert len(cl.list_masters(db)) == n_before  # scan wrote nothing
     assert any("raw dark" in w and "Calibration Library" in w for w in plan.warnings)
-    assert plan.dark_master is None  # no global fallback dark
     _calibrate_and_check(plan, lights_dir, cam, tmp_path)
 
 

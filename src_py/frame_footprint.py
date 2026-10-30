@@ -19,20 +19,63 @@ def has_alignment_transform(header: Any) -> bool:
     return header is not None and all(f"VY_AM{k}" in header for k in range(9))
 
 
-def aligned_footprint(header: Any, shape: tuple[int, int]) -> np.ndarray:
-    """True on the aligned-grid pixels that hold data of the frame.
+def stamp_alignment_transform(header: Any, registration: dict[str, Any], raw_shape: tuple[int, int]) -> None:
+    """Write the frame->reference transform of an aligned frame into its header (every alignment
+    method, OSC channel handoff included - G02-03): ``VY_AM0..8`` (row-major 3x3), ``VY_AMSRC``,
+    ``VY_AMERR`` (max px error of VY_AM vs a polynomial registration; absent = VY_AM is exact) and the
+    frame's own size ``VY_RAWNX`` / ``VY_RAWNY`` (G02-34: the aligned header's NAXIS is the
+    reference size). Raises when the registration has no finite 3x3 matrix - an aligned frame
+    without its transform cannot be footprint-checked."""
+    mat = np.asarray((registration or {}).get("matrix") if isinstance(registration, dict) else [], dtype=np.float64)
+    if mat.size != 9 or not np.all(np.isfinite(mat)):
+        raise ValueError("aligned frame has no finite frame->reference matrix")
+    for k, v in enumerate(mat.reshape(-1)):
+        header[f"VY_AM{k}"] = (float(v), "frame->reference transform (row-major 3x3)")
+    header["VY_AMSRC"] = (str(registration.get("method") or "astroalign")[:60], "transform source")
+    err = registration.get("matrix_max_err_px")
+    if err is not None:
+        # ALIGN-POLY-2026-10: VY_AM is the projective approximation of the polynomial
+        header["VY_AMERR"] = (float(err), "max px error of VY_AM vs the polynomial")
+    elif "VY_AMERR" in header:
+        del header["VY_AMERR"]
+    header["VY_RAWNX"] = (int(raw_shape[1]), "frame width before alignment (px)")
+    header["VY_RAWNY"] = (int(raw_shape[0]), "frame height before alignment (px)")
 
-    The frame's corners are mapped through the frame->reference transform ``VY_AM0..8``
-    (ALIGN-MATRIX-2026-10); the pixels inside that quadrilateral, at least 1 px from its edges, are
-    covered (checked on 533 r: first data column 30 / 48 px vs quadrilateral 29.4-33.8 / 47.8-51.7 px).
-    Raises when the transform is missing.
-    """
+
+def _transform_raw_size_margin(header: Any, shape: tuple[int, int]) -> tuple[np.ndarray, int, int, float]:
+    """VY_AM matrix, the frame's own size and the footprint margin (px).
+
+    Raw size: ``VY_RAWNX`` / ``VY_RAWNY`` (G02-34); frames aligned before those keys existed carry
+    only NAXIS1/2, which astropy rewrites to the aligned (reference) size - right only when the frame
+    has the reference's size (one camera / binning, as every alignment before 2026-10-29).
+    Margin: 1 px plus ``VY_AMERR`` (G02-24: the projective VY_AM of a polynomial registration is off by
+    up to VY_AMERR px; the 1 px margin alone assumed that error < 1 px)."""
     try:
         mat = np.array([float(header[f"VY_AM{k}"]) for k in range(9)], dtype=np.float64).reshape(3, 3)
     except KeyError as exc:
         raise ValueError(f"aligned frame has no frame->reference transform ({exc.args[0]}) - re-run the alignment") from exc
     h, w = int(shape[0]), int(shape[1])
-    wr, hr = int(header.get("NAXIS1", w)), int(header.get("NAXIS2", h))
+    if "VY_RAWNX" in header and "VY_RAWNY" in header:
+        wr, hr = int(header["VY_RAWNX"]), int(header["VY_RAWNY"])
+    else:
+        wr, hr = int(header.get("NAXIS1", w)), int(header.get("NAXIS2", h))
+    err = float(header.get("VY_AMERR", 0.0) or 0.0)
+    if not (math.isfinite(err) and err >= 0.0):
+        raise ValueError(f"VY_AMERR={header.get('VY_AMERR')!r} is not a finite error")
+    return mat, wr, hr, 1.0 + err
+
+
+def aligned_footprint(header: Any, shape: tuple[int, int]) -> np.ndarray:
+    """True on the aligned-grid pixels that hold data of the frame.
+
+    The frame's corners are mapped through the frame->reference transform ``VY_AM0..8``
+    (ALIGN-MATRIX-2026-10); the pixels inside that quadrilateral, at least 1 px from its edges, are
+    covered (checked on 533 r: first data column 30 / 48 px vs quadrilateral 29.4-33.8 / 47.8-51.7 px;
+    plus VY_AMERR for a polynomial registration, see :func:`_transform_raw_size_margin`).
+    Raises when the transform is missing.
+    """
+    mat, wr, hr, margin = _transform_raw_size_margin(header, shape)
+    h, w = int(shape[0]), int(shape[1])
     corners = np.array([[0, 0, 1], [wr - 1, 0, 1], [wr - 1, hr - 1, 1], [0, hr - 1, 1]], dtype=np.float64).T
     q = mat @ corners
     quad = (q[:2] / q[2]).T
@@ -44,7 +87,7 @@ def aligned_footprint(header: Any, shape: tuple[int, int]) -> np.ndarray:
     inside = np.ones((h, w), dtype=bool)
     for a, b in zip(quad, np.roll(quad, -1, axis=0), strict=False):
         ex, ey = b - a
-        inside &= sgn * (ex * (yy - a[1]) - ey * (xx - a[0])) / math.hypot(ex, ey) >= 1.0
+        inside &= sgn * (ex * (yy - a[1]) - ey * (xx - a[0])) / math.hypot(ex, ey) >= margin
     return inside
 
 
@@ -52,23 +95,19 @@ def footprint_bbox(header: Any, shape: tuple[int, int]) -> tuple[float, float, f
     """Axis-aligned rectangle (x0, y0, x1, y1) inside the frame's data footprint on the aligned grid
     (BORDER-FOOTPRINT-2026-10). The frame's corners are mapped through ``VY_AM0..8``; the second
     smallest / second largest mapped x and y bound the rectangle, so it stays inside a slightly
-    rotated (or 180 deg flipped) quadrilateral; 1 px inside its edges like :func:`aligned_footprint`.
-    Raises when the transform is missing."""
-    try:
-        mat = np.array([float(header[f"VY_AM{k}"]) for k in range(9)], dtype=np.float64).reshape(3, 3)
-    except KeyError as exc:
-        raise ValueError(f"aligned frame has no frame->reference transform ({exc.args[0]}) - re-run the alignment") from exc
+    rotated (or 180 deg flipped) quadrilateral; inside its edges by the margin of
+    :func:`aligned_footprint`. Raises when the transform is missing."""
+    mat, wr, hr, margin = _transform_raw_size_margin(header, shape)
     h, w = int(shape[0]), int(shape[1])
-    wr, hr = int(header.get("NAXIS1", w)), int(header.get("NAXIS2", h))
     corners = np.array([[0, 0, 1], [wr - 1, 0, 1], [wr - 1, hr - 1, 1], [0, hr - 1, 1]], dtype=np.float64).T
     q = mat @ corners
     xs = np.sort(q[0] / q[2])
     ys = np.sort(q[1] / q[2])
     return (
-        max(0.0, float(xs[1]) + 1.0),
-        max(0.0, float(ys[1]) + 1.0),
-        min(float(w - 1), float(xs[2]) - 1.0),
-        min(float(h - 1), float(ys[2]) - 1.0),
+        max(0.0, float(xs[1]) + margin),
+        max(0.0, float(ys[1]) + margin),
+        min(float(w - 1), float(xs[2]) - margin),
+        min(float(h - 1), float(ys[2]) - margin),
     )
 
 
@@ -80,8 +119,8 @@ def off_footprint(
     ``r_in``-``r_out`` lies on data."""
     n = len(xs)
     out = np.zeros(n, dtype=bool)
-    if not off.any():
-        return out
+    # NEW-2 (step-4 triage): no early return for a frame that covers the whole chip - pixels outside the
+    # array are "off" as well, so the chip edge is tested on every frame
     h, w = off.shape
     r = int(math.ceil(max(r_out, r_core))) + 1
     for i in range(n):
@@ -121,8 +160,7 @@ def _frame_footprints(frames_dir: Path, stems: list[str]) -> list[np.ndarray]:
             continue
         try:
             h = fits.getheader(fp)
-            mat = np.array([float(h[f"VY_AM{k}"]) for k in range(9)]).reshape(3, 3)
-            w, hh = int(h["NAXIS1"]), int(h["NAXIS2"])
+            mat, w, hh, _margin = _transform_raw_size_margin(h, (int(h["NAXIS2"]), int(h["NAXIS1"])))
         except Exception:  # noqa: BLE001
             continue
         c = np.array([[0, 0, 1], [w - 1, 0, 1], [w - 1, hh - 1, 1], [0, hh - 1, 1]], float).T

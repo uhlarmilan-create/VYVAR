@@ -139,23 +139,15 @@ class RunCitationContext:
 
     use_vsx: bool = False
     use_psf: bool = False
-    use_color_tiers: bool = False
     use_gs11: bool = False
     use_period_analysis: bool = False
-    use_variability_envelope: bool = False
     use_lightkurve: bool = False
     use_transients: bool = False
-    use_common_mode_stability_detrend: bool = False
-    use_iterative_comp_clip: bool = False
     use_catalog_recovery_verify: bool = False
     use_k2_literature: bool = False
     use_hrd_extreme: bool = True
-    use_ensemble_flux_sum: bool = True
-    use_per_frame_sat: bool = False
-    use_empirical_background: bool = True
     use_airmass: bool = False
     color_term_mode: str = "off"
-    k2_mode: str = "off"
     k2_source_label: str = "none"
     k2_value: float | None = None
     k2_off_reason: str = ""
@@ -167,6 +159,7 @@ class RunCitationContext:
     filter_transformable: bool = False
     n_comp_min: int = 3
     n_comp_max: int = 8
+    comp_peak_sat_frac: float = 0.80
     k_grid: tuple[float, ...] = ()
     annulus_fwhm: tuple[float, float] = (2.7, 5.2)
     snr_min: float = 10.0
@@ -189,9 +182,10 @@ def _targets_use_vsx_names(targets_df: Any) -> bool:
     col = "vsx_name" if "vsx_name" in targets_df.columns else None
     if col is None:
         return False
-    for val in targets_df[col].astype(str):
-        name = str(val or "").strip()
-        if not name:
+    # G11-25: NaN / empty / a bare catalogue id is no VSX name (astype(str) made NaN "nan" -> VSX cited)
+    for val in targets_df[col].dropna().astype(str):
+        name = val.strip()
+        if not name or name.lower() in ("nan", "none") or name.isdigit():
             continue
         low = name.lower()
         if not low.startswith("gaia") and not low.startswith("ztf j") and "dr3" not in low[:12]:
@@ -206,9 +200,9 @@ def build_run_citation_context(
     targets_df: Any = None,
     psf_used: bool = False,
     period_analysis: bool = False,
-    variability_detection: bool = False,
     tess_used: bool = False,
     obs_group: str = "",
+    use_airmass: bool = False,
 ) -> RunCitationContext:
     meta = pipeline_meta if isinstance(pipeline_meta, dict) else {}
     gs11_meta = meta.get("gs11_summary") if isinstance(meta.get("gs11_summary"), dict) else {}
@@ -216,17 +210,9 @@ def build_run_citation_context(
     use_psf = bool(psf_used)  # ePSF light curves in the PDF report (exports are aperture only)
 
     use_vsx = _targets_use_vsx_names(targets_df) or _vsx_db_configured(cfg)
-    use_color = True  # colour-term / citations use Gaia BP-RP only (Johnson B-V retired)
     use_gs11 = bool(cfg.gs11_dilution_enabled)
     use_gs11 = use_gs11 or bool(gs11_meta.get("enabled", False))
     use_tess = bool(tess_used) or bool(cfg.tess_enabled)
-    use_cm_detrend = bool(meta.get("common_mode_stability_detrend", False)) if meta else False
-    # Sparse fallback / iterative comp clip removed (COMP-RULES-2026-10); older drafts
-    # may still carry the pipeline_meta flag.
-    use_iter_clip = bool(
-        int(meta.get("comp_sparse_fallback_target_count", 0) or 0) > 0
-        or meta.get("comp_sparse_fallback_used", meta.get("comp_iterative_clip_used", False))
-    )
     use_catalog_recovery = bool(meta.get("masterstar_catalog_recovery_verified", False))
     if not use_catalog_recovery:
         _ast = meta.get("astrometry") if isinstance(meta.get("astrometry"), dict) else {}
@@ -234,8 +220,6 @@ def build_run_citation_context(
     _k2m = str(cfg.k2_mode or "off").strip().lower()
     use_k2 = _k2m not in ("0", "false", "no", "off", "none")
     use_hrd = bool(cfg.hrd_online_enrich_enabled)
-    use_pfs = True  # SAT-LIN-2026-10: always on
-    use_emp_bkg = True  # CONSOLIDATE-01D: empirical is the only background-err policy
     _ct = str(cfg.apply_color_term or "off").strip().lower()
     if _ct in ("0", "false", "no"):
         _ct = "off"
@@ -269,30 +253,24 @@ def build_run_citation_context(
         filter_transformable=bool(_fb.transformable) if _og else False,
         n_comp_min=int(cfg.phase01_comparison_n_comp_min),
         n_comp_max=int(cfg.phase01_comparison_n_comp_max),
+        comp_peak_sat_frac=float(cfg.comp_peak_sat_frac),
         k_grid=_kg,
         annulus_fwhm=(
             float(cfg.annulus_inner_fwhm),
             float(cfg.annulus_outer_fwhm),
         ),
         snr_min=float(cfg.snr_min),
+        use_airmass=bool(use_airmass),
         use_vsx=use_vsx,
         use_psf=use_psf,
-        use_color_tiers=use_color,
         use_gs11=use_gs11,
         use_period_analysis=bool(period_analysis),
-        use_variability_envelope=bool(variability_detection),
         use_lightkurve=use_tess,
         use_transients=bool(cfg.transient_search_enabled),
-        use_common_mode_stability_detrend=use_cm_detrend,
-        use_iterative_comp_clip=use_iter_clip,
         use_catalog_recovery_verify=use_catalog_recovery,
         use_k2_literature=use_k2,
         use_hrd_extreme=use_hrd,
-        use_ensemble_flux_sum=True,
-        use_per_frame_sat=use_pfs,
-        use_empirical_background=use_emp_bkg,
         color_term_mode=_ct,
-        k2_mode=_k2m if use_k2 else "off",
         k2_source_label=k2_src_label,
         k2_value=k2_val,
         k2_off_reason=k2_off_reason,
@@ -436,13 +414,7 @@ def _sections_for_context(ctx: RunCitationContext) -> list[tuple[str, list[str]]
             )
         )
 
-    if ctx.use_variability_envelope:
-        sections.append(
-            (
-                "VARIABILITY DETECTION",
-                [citation_line("aigrain2004", bib=bib)],
-            )
-        )
+    # G11-42: no "variability envelope" citation (Aigrain & Irwin 2004 is a transit search, not used)
 
     # VAR-2026-10: the field variability search runs in every aperture photometry run (GUI and night run).
     # The trust gate (comp count, check star, lc quality) has no literature method to cite;
@@ -526,15 +498,23 @@ def build_methods_matrix_lines(ctx: RunCitationContext) -> list[str]:
             k2_state = f"ON ({ctx.k2_source_label})"
     else:
         k2_state = f"OFF ({ctx.k2_off_reason})" if ctx.k2_off_reason else "OFF"
+    from comp_blend import BLEND_FLUX_FRAC_MAX  # noqa: PLC0415
+    from pipeline_constants import COMP_SNR_MIN  # noqa: PLC0415
+
+    from sky_estimation import SKY_BOX_FACTOR, SKY_MIN_PIX, SKY_SRC_NSIGMA  # noqa: PLC0415
+
     a_in, a_out = ctx.annulus_fwhm
     pairs = [
         ("aperture photometry", f"ON (r = k x FWHM, k per target from {_kg_s})"),
-        ("local sky", f"ON (median of annulus {a_in:.1f}-{a_out:.1f} FWHM, no clipping)"),
+        # NEW-3 / SKY-SRC-MASK-2026-10: median of the annulus pixels outside the detected sources
+        ("local sky", f"ON (median of annulus {a_in:.1f}-{a_out:.1f} FWHM without the pixels of sources detected at "
+                      f"{SKY_SRC_NSIGMA:g} x MAD sigma, grown by 1 FWHM; fewer than {SKY_MIN_PIX} sky pixels: box of "
+                      f"half-size {SKY_BOX_FACTOR:g} x outer radius; no clipping)"),
         ("zero point", f"Gaia DR3 -> {ctx.zp_band_label or 'observed band'}"),
         (
             "comparison stars",
-            f"{ctx.n_comp_min}-{ctx.n_comp_max} per target; rejected: >= 0.90 SAT, "
-            "neighbour light > 1%, no valid band magnitude",
+            f"{ctx.n_comp_min}-{ctx.n_comp_max} per target; rejected: peak >= {ctx.comp_peak_sat_frac:.2f} SAT on a frame, "
+            f"S/N < {COMP_SNR_MIN:g}, neighbour light > {100 * BLEND_FLUX_FRAC_MAX:g}%, no valid band magnitude",
         ),
         ("ensemble weights", "ON (Broeg 2005 iterative)"),
         ("colour term", ct_state),

@@ -39,9 +39,16 @@ def _frame(tmp_path: Path, fwhm: float, *, n: int = 64, seed: int = 5) -> tuple[
 
 
 def test_grid_shape_needs_fifty_stars_per_cell() -> None:
-    assert grid_shape_for(600) == (3, 3)
-    assert grid_shape_for(449) == (2, 2)
-    assert grid_shape_for(199) == (1, 1)
+    # G09-12: every cell of the grid needs >= 50 build stars (not the total)
+    rng = np.random.default_rng(0)
+
+    def stars(n, xmax=900.0):
+        return pd.DataFrame({"x": rng.uniform(0, xmax, n), "y": rng.uniform(0, 900, n)})
+
+    assert grid_shape_for(stars(900), (900, 900)) == (3, 3)
+    assert grid_shape_for(stars(400), (900, 900)) == (2, 2)
+    assert grid_shape_for(stars(150), (900, 900)) == (1, 1)
+    assert grid_shape_for(stars(900, xmax=440.0), (900, 900)) == (1, 1)  # all in the left half
 
 
 @pytest.mark.parametrize("fwhm", [2.0, 3.0])
@@ -137,7 +144,8 @@ def test_fit_set_selection_by_type_name_wildcard(tmp_path: Path) -> None:
     assert build_epsf_fit_set(tmp_path, "EA").target_ids == {"2"}  # 'EA:' matches EA
     assert build_epsf_fit_set(tmp_path, "e*").target_ids == {"1", "2", "6"}  # EW, EA:, EXOPLANET
     assert build_epsf_fit_set(tmp_path, "BY").target_ids == {"3"}  # token of 'RS|BY'
-    assert build_epsf_fit_set(tmp_path, "V1 Cyg; ztf*").target_ids == {"1", "3"}
+    # G09-42 (Milan 2026-10-29): the wildcard is for variability types only; a name pattern selects nothing
+    assert build_epsf_fit_set(tmp_path, "V1 Cyg; ztf*").target_ids == {"1"}
     fs = build_epsf_fit_set(tmp_path, "EW, V9 Cyg")
     assert fs.target_ids == {"1"} and fs.unmatched_tokens == ("V9 Cyg",)
     none = build_epsf_fit_set(tmp_path, "DSCT")
@@ -235,11 +243,10 @@ def test_unresolved_fainter_companion_is_merged_brighter_one_is_fitted(tmp_path:
     stars, nb, meta = frame_fit_sources(tmp_path, set(ids), cutout_size=31, fwhm_px=1.0, merge_fwhm_px=2.5)  # merge uses the night FWHM
     assert "4000000000000000001" not in set(nb["catalog_id"])  # merged into its fit star
     assert "4000000000000000002" in set(nb["catalog_id"])  # brighter: fitted jointly
-    s = stars.set_index("catalog_id")
-    assert s.loc[ids[0], "merged_light_frac"] == pytest.approx(10 ** (-0.4 * 2.0), rel=1e-6)
-    assert s.loc[ids[1], "merged_light_frac"] == 0.0
+    assert "merged_light_frac" not in stars.columns  # no reader (Milan 2026-10-29); the pair is in the manifest
     assert meta["merge_radius_px"] == pytest.approx(1.25)
     assert [m["neighbour_id"] for m in meta["merged_neighbours"]] == ["4000000000000000001"]
+    assert meta["merged_neighbours"][0]["dmag"] == pytest.approx(2.0, abs=1e-3)
 
 
 def test_aligned_footprint_excludes_the_constant_fill(tmp_path: Path) -> None:

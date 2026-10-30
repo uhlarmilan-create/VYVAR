@@ -398,6 +398,7 @@ PARAM_RANGES: dict[str, tuple[float, float]] = {
     "phase01_comparison_n_comp_min": (2, 12),
     "phase01_comparison_n_comp_max": (3, 20),
     "snr_min": (3.0, 1000.0),
+    "comp_peak_sat_frac": (0.5, 0.9),
     "phase01_comparison_max_comp_rms": (0.01, 0.5),
     "phase01_comparison_min_frames_frac": (0.05, 0.95),
     "comp_max_delta_bprp": (0.0, 5.0),
@@ -582,6 +583,10 @@ class AppConfig:
     #: aperture SNR on MASTERSTAR below this -> not measured; a frame where the target SNR
     #: falls below it is not exported. Default 10 (sigma ~ 0.11 mag).
     snr_min: float = 10.0
+    #: COMP-SAT-80-2026-10 / COMP-SAT-ONE-2026-10 (Milan 2026-10-29): a comparison star is not admitted
+    #: when its raw peak reaches this fraction of the measured saturation level on the MASTERSTAR or on
+    #: any frame (AAVSO CCD/CMOS guide 3.3.5 / 3.3.7: comps well inside the linear range). Targets: 0.90.
+    comp_peak_sat_frac: float = 0.80
     phase01_comparison_max_comp_rms: float = 0.1
     phase01_comparison_min_frames_frac: float = 0.2
     #: Max |DeltaBP-RP| (Gaia) between target and comparison star (hard filter of the selection).

@@ -1,20 +1,37 @@
-"""JD / HJD / BJD helpers for per-frame catalog metadata (mid-exposure times)."""
+"""JD / HJD / BJD helpers (mid-exposure times).
+
+Columns of the per-frame catalogues (proc_*.csv, :func:`compute_time_columns`):
+
+* ``jd_mid``      - UTC JD of mid-exposure (the same for every star of the frame);
+* ``hjd_mid``     - HJD for the FIELD CENTRE of the frame;
+* ``bjd_tdb_mid`` - BJD_TDB for the FIELD CENTRE of the frame.
+
+The field-centre columns are frame times (order and spacing of frames). A time that belongs to
+one star (light curve, candidate, transient) is computed from ``jd_mid`` and the star's own
+RA/Dec with :func:`light_time_corrected_jd` (G02-18, decision C6 2026-10-29; Eastman, Siverd &
+Gaudi 2010): the barycentric light time differs by ~8.8 s per degree across the field.
+"""
 
 from __future__ import annotations
 
 import astro_env  # noqa: F401  (IERS-OFF-2026-10: no IERS downloads)
 
+import json
 import logging
 import math
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import astropy.units as u
-from astropy.coordinates import Angle, EarthLocation, SkyCoord
+import numpy as np
+from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.io import fits
 from astropy.time import Time, TimeDelta
 
 from database import VyvarDatabase
+from fits_meta import exposure_start_utc, field_centre_radec
 from infolog import log_event
+from utils import exposure_seconds
 
 if TYPE_CHECKING:
     from config import AppConfig
@@ -36,76 +53,14 @@ def _warn_once_infolog(key: str, message: str) -> None:
 
 
 
-def _header_float(hdr: fits.Header, key: str) -> float | None:
-    if key not in hdr:
-        return None
-    try:
-        v = float(hdr[key])
-        if math.isfinite(v):
-            return v
-    except (TypeError, ValueError):
-        pass
-    return None
-
-
 def mid_exposure_jd(header: fits.Header) -> float | None:
-    date_obs_log = header.get("DATE-OBS")
+    """UTC JD of mid-exposure: :func:`exposure_start_utc` + EXPTIME / 2 (None without a start time)."""
     try:
-        raw = header.get("DATE-OBS")
-        if raw is None:
-            _warn_once_infolog(
-                "date_obs_missing",
-                "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
-            )
+        t_start = exposure_start_utc(header)
+        if t_start is None:
             return None
-        s = str(raw).strip()
-        if not s:
-            _warn_once_infolog(
-                "date_obs_empty",
-                "VYVAR time_utils: DATE-OBS missing - jd_mid / HJD / BJD columns unavailable for affected frames.",
-            )
-            return None
-        try:
-            t_start = Time(s, format="isot", scale="utc")
-        except Exception:  # noqa: BLE001
-            if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
-                t_start = Time(f"{s[:10]}T00:00:00", format="isot", scale="utc")
-            else:
-                return None
-
-        # DATE-OBS often carries only the calendar date; TIME-OBS then holds UT of exposure start.
-        if ("T" not in s.upper()) and len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
-            to_raw = header.get("TIME-OBS")
-            if to_raw is not None:
-                to = str(to_raw).strip().replace(" ", "")
-                if to:
-                    try:
-                        t_start = Time(f"{s[:10]}T{to}", format="isot", scale="utc")
-                    except Exception as exc:  # noqa: BLE001
-                        from except_fix_counters import get_except_fix_counters
-
-                        get_except_fix_counters().timeobs_parse_fallback += 1
-                        logger.error(
-                            "[TIME] TIME-OBS parse failed DATE-OBS=%r TIME-OBS=%r; "
-                            "jd will be DATE-only (midnight) for this frame: %s",
-                            s,
-                            to_raw,
-                            exc,
-                        )
-
-        exptime = 0.0
-        exptime_ok = False
-        for key in ("EXPTIME", "EXPOSURE"):
-            if key not in header:
-                continue
-            try:
-                exptime = float(header[key])
-                if math.isfinite(exptime) and exptime > 0.0:
-                    exptime_ok = True
-                    break
-            except (TypeError, ValueError):
-                continue
-        if not exptime_ok:
+        exptime = exposure_seconds(header) or 0.0
+        if not exptime > 0.0:
             _warn_once_infolog(
                 "exptime_missing_or_invalid",
                 "VYVAR time_utils: EXPTIME/EXPOSURE missing or <=0 - jd_mid equals shutter-open "
@@ -121,10 +76,80 @@ def mid_exposure_jd(header: fits.Header) -> float | None:
         get_except_fix_counters().jd_mid_compute_fail += 1
         logger.error(
             "[TIME] jd_mid computation failed for DATE-OBS=%r: %s",
-            date_obs_log,
+            header.get("DATE-OBS"),
             exc,
         )
         return None
+
+
+def light_time_corrected_jd(
+    jd_utc: Any,
+    ra_deg: Any,
+    dec_deg: Any,
+    site: tuple[float | None, float | None, float | None],
+) -> tuple[np.ndarray, np.ndarray]:
+    """BJD_TDB and HJD of mid-exposure instants for arrays of stars (G02-18, decision C6).
+
+    ``jd_utc``, ``ra_deg`` and ``dec_deg`` broadcast against each other with numpy rules, so one
+    call gives a star x frame grid (``ra[:, None]``, ``dec[:, None]``, ``jd[None, :]``) while the
+    ephemeris is evaluated once per frame. ``site`` = (lat deg, lon deg, height m) of the observer.
+
+    BJD_TDB = (t.tdb + ltt_bary).jd and HJD = (t_utc + ltt_helio).jd with astropy
+    ``Time.light_travel_time`` (Roemer delay towards the star's own direction; Eastman, Siverd &
+    Gaudi 2010, PASP 122, 935). The correction differs by up to ~8.8 s per degree between two
+    directions, so a per-star time needs that star's coordinates, not the field centre.
+
+    Non-finite inputs give NaN in both outputs. An incomplete ``site`` raises ``ValueError``.
+    """
+    lat, lon = site[0], site[1]
+    if lat is None or lon is None or not (math.isfinite(float(lat)) and math.isfinite(float(lon))):
+        raise ValueError(f"light_time_corrected_jd: observer site incomplete: {site!r}")
+    elev = float(site[2]) if site[2] is not None and math.isfinite(float(site[2])) else 0.0
+    jd_in = np.asarray(jd_utc, dtype=float)
+    ra_in = np.asarray(ra_deg, dtype=float)
+    de_in = np.asarray(dec_deg, dtype=float)
+    shape = np.broadcast_shapes(jd_in.shape, ra_in.shape, de_in.shape)
+    # NaN never reaches astropy: placeholders, and those cells are NaN in the result
+    jd_ok = np.isfinite(jd_in)
+    pos_ok = np.isfinite(ra_in) & np.isfinite(de_in)
+    location = EarthLocation(lat=float(lat) * u.deg, lon=float(lon) * u.deg, height=elev * u.m)
+    t = Time(np.where(jd_ok, jd_in, 2451545.0), format="jd", scale="utc", location=location)
+    target = SkyCoord(
+        ra=np.where(pos_ok, ra_in, 0.0) * u.deg, dec=np.where(pos_ok, de_in, 0.0) * u.deg, frame="icrs"
+    )
+    ltt_bary = t.light_travel_time(target, "barycentric")
+    ltt_helio = t.light_travel_time(target, "heliocentric")
+    bjd = np.broadcast_to(np.asarray((t.tdb + ltt_bary).jd, dtype=float), shape).copy()
+    hjd = np.broadcast_to(np.asarray((t + ltt_helio).jd, dtype=float), shape).copy()
+    bad = ~(np.broadcast_to(jd_ok, shape) & np.broadcast_to(pos_ok, shape))
+    bjd[bad] = np.nan
+    hjd[bad] = np.nan
+    return bjd, hjd
+
+
+def star_times(
+    jd_utc: Any,
+    ra_deg: Any,
+    dec_deg: Any,
+    site: tuple[float | None, float | None, float | None] | None,
+) -> tuple[np.ndarray, str]:
+    """Time of every frame for every star: (stars x frames array, time column name).
+
+    BJD_TDB from the frames' mid-exposure UTC JD and each star's own RA/Dec (one vectorised
+    :func:`light_time_corrected_jd` call), name ``"bjd_tdb"``. Without a site: the UTC JD of
+    mid-exposure (the same for all stars), name ``"jd_mid"``.
+    """
+    import pandas as pd  # noqa: PLC0415
+
+    jd = np.atleast_1d(np.asarray(jd_utc, dtype=float))
+    ra = np.asarray(pd.to_numeric(pd.Series(np.ravel(ra_deg)), errors="coerce"), dtype=float)
+    dec = np.asarray(pd.to_numeric(pd.Series(np.ravel(dec_deg)), errors="coerce"), dtype=float)
+    if site is None:
+        return np.broadcast_to(jd, (ra.size, jd.size)).copy(), "jd_mid"
+    if ra.size == 0:
+        return np.empty((0, jd.size)), "bjd_tdb"
+    bjd, _hjd = light_time_corrected_jd(jd[None, :], ra[:, None], dec[:, None], site)
+    return bjd, "bjd_tdb"
 
 
 def compute_hjd_bjd(
@@ -135,26 +160,18 @@ def compute_hjd_bjd(
     site_lon: float,
     site_elev_m: float = 0.0,
 ) -> tuple[float | None, float | None]:
-    """Heliocentric / barycentric Julian Date at mid-exposure (astropy ``light_travel_time`` added to UTC / TDB).
+    """Heliocentric / barycentric Julian Date of one instant and one direction.
 
-    ``bjd_tdb_mid`` is the JD number of the TDB instant ``t.tdb + ltt_bary`` (geometric Roemer correction to the SSB).
+    Scalar form of :func:`light_time_corrected_jd` (the one formula). In the per-frame export the
+    direction is the FIELD CENTRE (:func:`compute_time_columns`); per-star times use
+    :func:`light_time_corrected_jd` with the star's own RA/Dec.
     """
     try:
-        location = EarthLocation(
-            lat=site_lat * u.deg,
-            lon=site_lon * u.deg,
-            height=site_elev_m * u.m,
-        )
-        t = Time(jd, format="jd", scale="utc", location=location)
-        target = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
-
-        ltt_helio = t.light_travel_time(target, "heliocentric")
-        hjd = float((t + ltt_helio).jd)
-
-        ltt_bary = t.light_travel_time(target, "barycentric")
-        bjd = float((t.tdb + ltt_bary).jd)
-
-        return hjd, bjd
+        bjd, hjd = light_time_corrected_jd(jd, ra_deg, dec_deg, (site_lat, site_lon, site_elev_m))
+        hjd_f, bjd_f = float(hjd), float(bjd)
+        if not (math.isfinite(hjd_f) and math.isfinite(bjd_f)):
+            raise ValueError("non-finite input")
+        return hjd_f, bjd_f
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
 
@@ -202,69 +219,26 @@ def resolve_observer_location(
     return site.lat, site.lon, site.elev
 
 
-def _parse_objctradec(ra_s: str, dec_s: str) -> tuple[float | None, float | None]:
-    try:
-        ra_str = str(ra_s).strip()
-        de_str = str(dec_s).strip()
-        if not ra_str or not de_str:
-            return None, None
-        ra_deg = float(Angle(ra_str, unit=u.hourangle).to(u.deg).value)
-        dec_deg = float(Angle(de_str, unit=u.deg).value)
-        if math.isfinite(ra_deg) and math.isfinite(dec_deg):
-            return ra_deg, dec_deg
-    except Exception:  # noqa: BLE001
-        pass
-    return None, None
-
-
-def resolve_target_coordinates(
-    header: fits.Header,
-    db: VyvarDatabase | None = None,
-    draft_id: int | None = None,
-) -> tuple[float | None, float | None]:
-    ra = _header_float(header, "VYTARGRA")
-    de = _header_float(header, "VYTARGDE")
-    if ra is not None and de is not None:
-        return ra, de
-
-    ra = _header_float(header, "RA")
-    de = _header_float(header, "DEC")
-    if ra is not None and de is not None:
-        return ra, de
-
-    if "OBJCTRA" in header and "OBJCTDEC" in header:
-        ra, de = _parse_objctradec(str(header["OBJCTRA"]), str(header["OBJCTDEC"]))
-        if ra is not None and de is not None:
-            return ra, de
-
-    if db is not None and draft_id is not None:
-        try:
-            if hasattr(db, "fetch_obs_draft_by_id"):
-                row = db.fetch_obs_draft_by_id(int(draft_id))
-                if row is not None:
-                    r0, d0 = row.get("CENTEROFFIELDRA"), row.get("CENTEROFFIELDDE")
-                    if r0 is not None and d0 is not None:
-                        rf, df = float(r0), float(d0)
-                        if math.isfinite(rf) and math.isfinite(df):
-                            return rf, df
-        except Exception:  # noqa: BLE001
-            pass
-
-    return None, None
-
-
 def compute_time_columns(
     header: fits.Header,
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
     cfg: AppConfig | None = None,
 ) -> dict[str, float | None]:
+    """Frame time columns of the per-frame catalogue (proc CSV): ``jd_mid``, ``hjd_mid``, ``bjd_tdb_mid``.
+
+    ``hjd_mid`` / ``bjd_tdb_mid`` are computed for the FIELD CENTRE of the frame
+    (:func:`fits_meta.field_centre_radec`), the same value on every row of the frame. They are
+    frame times (time order, frame spacing), NOT the time of an individual star: across a wide
+    field the barycentric correction differs by ~8.8 s per degree (G02-18). A time published for
+    a star is computed from ``jd_mid`` and the star's RA/Dec with :func:`light_time_corrected_jd`.
+    """
     jd = mid_exposure_jd(header)
     if jd is None:
         return {"jd_mid": None, "hjd_mid": None, "bjd_tdb_mid": None}
 
     lat, lon, elev = resolve_observer_location(header, db, draft_id, cfg=cfg)
-    ra, dec = resolve_target_coordinates(header, db, draft_id)
+    ra, dec, _src = field_centre_radec(header, db=db, draft_id=draft_id)
 
     if None in (lat, lon, ra, dec):
         if lat is None or lon is None:
@@ -288,3 +262,22 @@ def _airmass_from_altitude_deg(alt_deg: float) -> float:
     return 1.0 / (
         math.sin(alt_rad) + 0.50572 * (float(alt_deg) + 6.07995) ** (-1.6364)
     )
+
+
+def run_site(photometry_dir: Path) -> tuple[float, float, float] | None:
+    """Observer site (lat, lon, height m) the run's aperture photometry used for the target BJD
+    (``pipeline_meta.json`` ``observer_location``); None when missing or unset (0/0)."""
+    from param_resolver import is_null_island_coords  # noqa: PLC0415
+
+    try:
+        loc = json.loads((Path(photometry_dir) / "pipeline_meta.json").read_text(encoding="utf-8")).get("observer_location") or {}
+    except (OSError, ValueError):
+        return None
+    try:
+        lat, lon = float(loc["lat"]), float(loc["lon"])
+        alt = float(loc.get("alt_m") or 0.0)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (math.isfinite(lat) and math.isfinite(lon)) or is_null_island_coords(lat, lon):
+        return None
+    return lat, lon, alt if math.isfinite(alt) else 0.0

@@ -93,8 +93,9 @@ def test_sigma_sys_holds_slow_systematics() -> None:
 def test_check_star_error_includes_scintillation() -> None:
     """CHECK-SCINT-2026-10 (D10 / G08-10): the check K error has the target's scintillation term."""
     src = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
-    i = src.index("_kerr[_ii] = math.sqrt(")
-    assert "_scint_mag_arr[_ii]" in src[i:i + 300]
+    # G06-39: the check K error is built by the target's own error helper (scintillation included)
+    i = src.index("_kerr_rel, _ = _combine_err_with_ensemble_scatter_keyed(")
+    assert "sigma_scint_mag=_scint_mag_arr" in src[i:i + 500]
 
 
 def test_empty_apertures_use_the_science_sky() -> None:
@@ -112,11 +113,11 @@ def test_empty_apertures_use_the_science_sky() -> None:
     sky = np.where(src, np.nan, data)
     clean = rng.normal(100.0, 5.0, (220, 220))
     a, na, ra = measure_empty_aperture_sigma_bkg(data, np.array([]), np.array([]), 3.0, 6.0, 10.0,
-                                                 n_apertures=48, min_valid=12, seed=5, sky=sky)
+                                                 n_apertures=48, min_valid=12, seed=5, sky=sky, covered=None)
     b, nb, rb = measure_empty_aperture_sigma_bkg(clean, np.array([]), np.array([]), 3.0, 6.0, 10.0,
-                                                 n_apertures=48, min_valid=12, seed=5, sky=clean)
+                                                 n_apertures=48, min_valid=12, seed=5, sky=clean, covered=None)
     assert ra == rb == "" and math.isfinite(a) and math.isfinite(b)
     import pytest
 
     with pytest.raises(ValueError, match="sky image shape"):
-        measure_empty_aperture_sigma_bkg(data, np.array([]), np.array([]), 3.0, 6.0, 10.0, seed=5, sky=sky[:10])
+        measure_empty_aperture_sigma_bkg(data, np.array([]), np.array([]), 3.0, 6.0, 10.0, seed=5, sky=sky[:10], covered=None)

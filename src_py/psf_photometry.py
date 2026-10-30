@@ -21,13 +21,14 @@ import pandas as pd
 from astropy.io import fits
 from astropy.nddata import NDData
 from astropy.table import Table
-from masterstar_context import header_core_fwhm_px
+from aperture_policy import fwhm_from_header_vy_fwhm
 from photutils import __version__ as _photutils_version
 from photutils.psf import EPSFBuilder, EPSFStar, EPSFStars, extract_stars
 
 from database import VyvarDatabase
 from gaia_catalog_id import normalize_gaia_source_id as _norm_catalog_id
 from infolog import log_event
+from optics import plate_scale_from_fits
 
 LOGGER = logging.getLogger(__name__)
 
@@ -65,13 +66,12 @@ _EPSF_CUTOUT_FWHM = 12.0
 # iterations (photutils 3.1 convergence). The 49-star 535 MASTERSTAR build converges at
 # iteration 18, so the photutils default of 10 would stop it unconverged.
 _EPSF_BUILD_MAXITERS = 50
-_EPSF_BUILD_CLEAN_SOURCE_STATES = frozenset({"DETECTED_P1", "DETECTED_P2", "FORCED_SEED"})
+_EPSF_BUILD_CLEAN_SOURCE_STATES = frozenset({"DETECTED_P1", "DETECTED_P2"})
 
 
 def _epsf_apply_build_selection_gates(
     df: pd.DataFrame,
     *,
-    platesolve_dir: Path,
     cutout_size: int,
     image_shape: tuple[int, int],
     funnel: dict[str, Any],
@@ -138,14 +138,14 @@ def get_epsf_fwhm_from_context(
     db: VyvarDatabase,
     draft_id: int,
 ) -> float:
-    """Return FWHM in pixels for EPSFBuilder (MASTERSTAR VY_FWHM
-    -> manifest files[] median -> 4.5), clamped to [2, 12]."""
+    """Return FWHM in pixels for EPSFBuilder (MASTERSTAR VY_FWHM -> manifest files[] median),
+    clamped to [2, 12]. Neither available -> RuntimeError (G03-29: no 4.5 px default)."""
     fwhm: float | None = None
     p = Path(masterstar_fits_path)
     try:
         if p.is_file():
             with fits.open(p, memmap=True) as hdul:
-                fwhm = header_core_fwhm_px(hdul[0].header)
+                fwhm = fwhm_from_header_vy_fwhm(hdul[0].header)
     except Exception:  # noqa: BLE001
         fwhm = None
 
@@ -153,7 +153,7 @@ def get_epsf_fwhm_from_context(
         fwhm = _median_fwhm_obs_files(db, draft_id)
 
     if fwhm is None:
-        fwhm = 4.5
+        raise RuntimeError(f"ePSF: no FWHM (MASTERSTAR VY_FWHM of {p} and the frame QC FWHM are missing)")
 
     return _clamp_fwhm_px(fwhm)
 
@@ -195,114 +195,6 @@ def _scalar_is_explicit_true(v: Any) -> bool:
     if s == "":
         return False
     return s in ("true", "1", "yes", "y")
-
-
-def _read_plate_scale_arcsec_px_from_fits(fits_path: Path) -> float | None:
-    """Read plate scale in arcsec/px from FITS header, CD/WCS-FIRST.
-
-    Priority: (1) solved WCS CD matrix / CDELT; (2) VY_PLTS - ONLY if it agrees with
-    the CD value within 5% (else ignored); (3) SECPIX/PIXSCALE/SCALE only when no CD.
-    Returns None if no reliable value. Sanity range: 0.1-30.0 arcsec/px (wide-field safe).
-    """
-    _sane_min = 0.1
-    _sane_max = 30.0
-    try:
-        with fits.open(Path(fits_path), memmap=False) as hdul:
-            hdr = hdul[0].header
-
-            # (1) Authoritative: solved WCS (handles CD, PC+CDELT, SIP), then raw CD, then CDELT.
-            cd_scale: float | None = None
-            try:
-                import warnings  # noqa: PLC0415
-
-                import numpy as _np  # noqa: PLC0415
-                from astropy.wcs import WCS as _WCS  # noqa: PLC0415
-                from astropy.wcs import FITSFixedWarning as _FFW  # noqa: PLC0415
-                from astropy.wcs.utils import proj_plane_pixel_scales as _pps  # noqa: PLC0415
-
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", _FFW)
-                    _w = _WCS(hdr)
-                if _w.has_celestial:
-                    v = float(_np.mean(_pps(_w))) * 3600.0
-                    if _sane_min <= v <= _sane_max:
-                        cd_scale = v
-            except Exception:  # noqa: BLE001
-                cd_scale = None
-            if cd_scale is None:
-                cd11 = hdr.get("CD1_1")
-                cd12 = hdr.get("CD1_2", 0.0)
-                if cd11 is not None:
-                    try:
-                        v = math.sqrt(float(cd11) ** 2 + float(cd12) ** 2) * 3600.0
-                        if _sane_min <= v <= _sane_max:
-                            cd_scale = v
-                    except (TypeError, ValueError):
-                        pass
-            if cd_scale is None:
-                cdelt1 = hdr.get("CDELT1")
-                if cdelt1 is not None:
-                    try:
-                        v = abs(float(cdelt1)) * 3600.0
-                        if _sane_min <= v <= _sane_max:
-                            cd_scale = v
-                    except (TypeError, ValueError):
-                        pass
-
-            if cd_scale is not None:
-                # (2) VY_PLTS cross-check: warn and ignore if it disagrees > 5%.
-                vy = hdr.get("VY_PLTS")
-                if vy is not None:
-                    try:
-                        vyf = float(vy)
-                        if vyf > 0 and abs(vyf - cd_scale) / cd_scale > 0.05:
-                            logging.warning(
-                                "[ePSF] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) - using CD.",
-                                vyf,
-                                cd_scale,
-                            )
-                    except (TypeError, ValueError):
-                        pass
-                return cd_scale
-
-            # (3) No usable CD/WCS - header keyword fallbacks (incl. VY_PLTS).
-            vy = hdr.get("VY_PLTS")
-            if vy is not None:
-                try:
-                    v = float(vy)
-                    if _sane_min <= v <= _sane_max:
-                        return v
-                except (TypeError, ValueError):
-                    pass
-
-            for key in ("SECPIX", "PIXSCALE", "PIXSCAL1", "PLTSCALE"):
-                val = hdr.get(key)
-                if val is not None:
-                    try:
-                        v = float(val)
-                        if _sane_min <= v <= _sane_max:
-                            return v
-                    except (TypeError, ValueError):
-                        pass
-
-            scale = hdr.get("SCALE")
-            if scale is not None:
-                try:
-                    v = float(scale)
-                    if _sane_min <= v <= _sane_max:
-                        return v
-                except (TypeError, ValueError):
-                    pass
-
-            return None
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0447] Plate scale from the MASTERSTAR header unreadable: %s', exc)
-        return None
-
-
-# ePSF/input FWHM ratio warning band (diagnostic only; set from V3e harness scatter).
-_EPSF_FWHM_RATIO_WARN_LO = 0.80
-_EPSF_FWHM_RATIO_WARN_HI = 1.25
 
 
 def _epsf_fwhm_native_from_profile(epsf_data: np.ndarray, *, osamp: int) -> float:
@@ -355,7 +247,6 @@ def _epsf_build_imagepsf_from_stars(
     *,
     osamp: int,
     fwhm_px: float,
-    cutout_size: int,
 ) -> dict[str, Any]:
     """Run EPSFBuilder on a (sky-subtracted) EPSFStars set; return normalized array + QC.
 
@@ -482,15 +373,15 @@ def frame_mag_limit(platesolve_dir: Path) -> float:
     return float(g_lim)
 
 
-def _load_cone_catalog(epsf_dir: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+def _load_cone_catalog(epsf_dir: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load the FULL Gaia cone catalogue (ra_deg, dec_deg, mag) for ePSF isolation.
 
-    Returns ``None`` if the cone CSV is absent/unreadable so the caller can fall back to
-    the legacy candidate-vs-candidate test.
+    G09-11: the cone is required (the per-frame ePSF fit reads it as well); a missing file raises
+    instead of falling back to a candidate-vs-candidate test that let blended stars pass.
     """
     p = Path(epsf_dir) / _CONE_CATALOG_NAME
     if not p.is_file():
-        return None
+        raise FileNotFoundError(f"ePSF build-star isolation needs the Gaia cone catalogue: {p}")
     c = pd.read_csv(p, low_memory=False, usecols=lambda col: col in ("ra_deg", "dec_deg", "mag"))  # unreadable: error
     ra = pd.to_numeric(c["ra_deg"], errors="coerce").to_numpy(dtype=float)
     dec = pd.to_numeric(c["dec_deg"], errors="coerce").to_numpy(dtype=float)
@@ -521,25 +412,8 @@ def _epsf_sky_subtracted_stars(data: np.ndarray, cat: Table, cutout_size: int) -
     return EPSFStars(out)
 
 
-def _epsf_prepare_stars(
-    masterstar_fits_path: Path,
-    masterstars_csv_path: Path,
-    db: VyvarDatabase,
-    draft_id: int,
-    *,
-    min_stars: int,
-) -> dict[str, Any]:
-    """Select clean, isolated ePSF candidate stars and return sky-subtracted EPSFStars + meta.
-
-    Candidate positions come only from ``masterstars_full_match.csv`` (quality-filtered
-    rows with finite ``x``/``y``). The ``db`` parameter is used for FWHM manifest fallback and
-    gain/read-noise resolution elsewhere in the ePSF pipeline - not for star selection.
-
-    Conscious widening (MS-SOURCES-RETIRE, 2026-08-21): production ePSF uses the full
-    CSV-quality pool instead of the retired MASTER_SOURCES safe-comp subset, targeting, and
-    broad-pool augment. PSF-star selection refinement belongs to ePSF-VALID-01.
-    """
-    mpath = Path(masterstar_fits_path)
+def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpath):
+    """Build-star candidates of the MASTERSTAR (gates, linear zone, magnitude cap), night FWHM, cutout size."""
     csvpath = Path(masterstars_csv_path)
     if not mpath.is_file():
         raise FileNotFoundError(f"MASTERSTAR FITS not found: {mpath}")
@@ -624,7 +498,6 @@ def _epsf_prepare_stars(
         _gate_shape = np.asarray(_hd_gate[0].data).shape
     csv_ok = _epsf_apply_build_selection_gates(
         csv_ok,
-        platesolve_dir=mpath.parent,
         cutout_size=cutout_size,
         image_shape=(int(_gate_shape[0]), int(_gate_shape[1])),
         funnel=funnel,
@@ -701,6 +574,11 @@ def _epsf_prepare_stars(
         raise ValueError(_fmsg)
 
     psf_stars_df = pd.DataFrame(star_rows)
+    return csvpath, cutout_size, funnel, fwhm_px, min_stars, psf_stars_df
+
+
+def _epsf_isolate_build_stars(*, csvpath, funnel, fwhm_px, min_stars, mpath, psf_stars_df):
+    """Isolation of the build stars against the full Gaia cone (neighbours within radius and Delta mag)."""
     n_join = int(len(psf_stars_df))
     funnel["n_after_csv_select"] = n_join
     funnel["n_after_db_join"] = n_join
@@ -728,7 +606,7 @@ def _epsf_prepare_stars(
     _isolation_fwhm_mult = 3.0
     _isolation_delta_mag = 2.5
     _isolation_radius_px = float(fwhm_px) * _isolation_fwhm_mult
-    plate_scale_arcsec_px = _read_plate_scale_arcsec_px_from_fits(mpath)
+    plate_scale_arcsec_px = plate_scale_from_fits(mpath)  # G09-24: the one plate-scale reader
     n_before_iso = int(len(psf_stars_df))
     funnel["n_before_isolation"] = n_before_iso
     if plate_scale_arcsec_px is None or not math.isfinite(plate_scale_arcsec_px) or plate_scale_arcsec_px <= 0:
@@ -745,79 +623,59 @@ def _epsf_prepare_stars(
             if "mag" in psf_stars_df.columns
             else np.full(len(psf_stars_df), np.nan)
         )
-        _cone = _load_cone_catalog(mpath.parent)
+        cone_ra, cone_dec, cone_mag = _load_cone_catalog(mpath.parent)
+        # G09-38 (RA-BOX-2026-10): neighbour candidates from a KD-tree on unit vectors (no RA box:
+        # the cos(dec) clamp missed neighbours above |dec| 82 and the box broke at RA 0).
+        from scipy.spatial import cKDTree  # noqa: PLC0415
+
+        _cr, _cd = np.radians(np.asarray(cone_ra, dtype=float)), np.radians(np.asarray(cone_dec, dtype=float))
+        _cone_ok = np.isfinite(_cr) & np.isfinite(_cd)
+        _cone_idx = np.where(_cone_ok)[0]
+        _cone_tree = cKDTree(np.column_stack([
+            np.cos(_cd[_cone_ok]) * np.cos(_cr[_cone_ok]), np.cos(_cd[_cone_ok]) * np.sin(_cr[_cone_ok]), np.sin(_cd[_cone_ok]),
+        ])) if _cone_idx.size else None
+        _chord = 2.0 * math.sin(math.radians(radius_deg) / 2.0) * (1.0 + 1e-9)
         _isolated: list[bool] = []
-        if _cone is not None:
-            cone_ra, cone_dec, cone_mag = _cone
-            _n_rej = 0
-            for i, row in psf_stars_df.iterrows():
-                ra_i = float(row["ra_deg"])
-                de_i = float(row["dec_deg"])
-                if not (math.isfinite(ra_i) and math.isfinite(de_i)):
-                    _isolated.append(False)
-                    continue
-                cosd = max(math.cos(math.radians(de_i)), 0.2)
-                box = (np.abs(cone_dec - de_i) <= radius_deg * 1.5) & (
-                    np.abs(cone_ra - ra_i) <= radius_deg * 1.5 / cosd
-                )
-                if not box.any():
-                    _isolated.append(True)
-                    continue
-                d_deg = _angular_distance_deg_vectorized(ra_i, de_i, cone_ra[box], cone_dec[box])
-                m_box = cone_mag[box]
-                cand_m = float(_cand_mag[i]) if (i < len(_cand_mag) and math.isfinite(_cand_mag[i])) else float("nan")
-                near = (d_deg > self_deg) & (d_deg <= radius_deg)
-                if math.isfinite(cand_m):
-                    contaminating = near & ((m_box - cand_m) <= _isolation_delta_mag)
-                else:
-                    contaminating = near  # no candidate mag -> any neighbour disqualifies (conservative)
-                iso = not bool(np.any(contaminating))
-                _isolated.append(iso)
-                if not iso:
-                    _n_rej += 1
-            psf_stars_df = psf_stars_df.loc[_isolated].reset_index(drop=True)
-            funnel["n_after_isolation"] = int(len(psf_stars_df))
-            log_event(
-                f"[ePSF] Cone isolation ({_isolation_fwhm_mult}xFWHM={_isolation_radius_px:.1f}px, "
-                f"Deltamag<={_isolation_delta_mag}): rejected {_n_rej}/{n_before_iso}, kept {len(psf_stars_df)}"
-            )
-            LOGGER.info(
-                "[ePSF funnel] after isolation: n_before=%s n_after=%s rejected=%s",
-                n_before_iso,
-                funnel["n_after_isolation"],
-                _n_rej,
-            )
-        else:
-            _ra_arr = psf_stars_df["ra_deg"].to_numpy(dtype=float)
-            _dec_arr = psf_stars_df["dec_deg"].to_numpy(dtype=float)
-            for _, row in psf_stars_df.iterrows():
-                ra_i = float(row["ra_deg"])
-                de_i = float(row["dec_deg"])
-                if not (math.isfinite(ra_i) and math.isfinite(de_i)):
-                    _isolated.append(False)
-                    continue
-                dists_px = (
-                    _angular_distance_deg_vectorized(ra_i, de_i, _ra_arr, _dec_arr)
-                    * 3600.0
-                    / float(plate_scale_arcsec_px)
-                )
-                neighbor_dists = dists_px[dists_px > 0.01]
-                _isolated.append(
-                    len(neighbor_dists) == 0 or float(neighbor_dists.min()) > _isolation_radius_px
-                )
-            psf_stars_df = psf_stars_df.loc[_isolated].reset_index(drop=True)
-            funnel["n_after_isolation"] = int(len(psf_stars_df))
-            LOGGER.info(
-                "[ePSF] Isolation (candidate-set fallback, %.1fxFWHM=%.1fpx): %d PSF stars",
-                _isolation_fwhm_mult,
-                _isolation_radius_px,
-                len(psf_stars_df),
-            )
-            LOGGER.info(
-                "[ePSF funnel] after isolation (fallback): n_before=%s n_after=%s",
-                n_before_iso,
-                funnel["n_after_isolation"],
-            )
+        _n_rej = 0
+        for i, row in psf_stars_df.iterrows():
+            ra_i = float(row["ra_deg"])
+            de_i = float(row["dec_deg"])
+            if not (math.isfinite(ra_i) and math.isfinite(de_i)):
+                _isolated.append(False)
+                continue
+            if _cone_tree is None:
+                _isolated.append(True)
+                continue
+            _ri, _di = math.radians(ra_i), math.radians(de_i)
+            box = _cone_idx[_cone_tree.query_ball_point(
+                [math.cos(_di) * math.cos(_ri), math.cos(_di) * math.sin(_ri), math.sin(_di)], _chord)]
+            if not box.size:
+                _isolated.append(True)
+                continue
+            d_deg = _angular_distance_deg_vectorized(ra_i, de_i, cone_ra[box], cone_dec[box])
+            m_box = cone_mag[box]
+            cand_m = float(_cand_mag[i]) if (i < len(_cand_mag) and math.isfinite(_cand_mag[i])) else float("nan")
+            near = (d_deg > self_deg) & (d_deg <= radius_deg)
+            if math.isfinite(cand_m):
+                contaminating = near & ((m_box - cand_m) <= _isolation_delta_mag)
+            else:
+                contaminating = near  # no candidate mag -> any neighbour disqualifies (conservative)
+            iso = not bool(np.any(contaminating))
+            _isolated.append(iso)
+            if not iso:
+                _n_rej += 1
+        psf_stars_df = psf_stars_df.loc[_isolated].reset_index(drop=True)
+        funnel["n_after_isolation"] = int(len(psf_stars_df))
+        log_event(
+            f"[ePSF] Cone isolation ({_isolation_fwhm_mult}xFWHM={_isolation_radius_px:.1f}px, "
+            f"Deltamag<={_isolation_delta_mag}): rejected {_n_rej}/{n_before_iso}, kept {len(psf_stars_df)}"
+        )
+        LOGGER.info(
+            "[ePSF funnel] after isolation: n_before=%s n_after=%s rejected=%s",
+            n_before_iso,
+            funnel["n_after_isolation"],
+            _n_rej,
+        )
         if len(psf_stars_df) < min_stars:
             funnel["n_final"] = int(len(psf_stars_df))
             _fmsg = (
@@ -841,6 +699,43 @@ def _epsf_prepare_stars(
     xs = psf_stars_df["x"].to_numpy(dtype=float).tolist()
     ys = psf_stars_df["y"].to_numpy(dtype=float).tolist()
     cat = Table([xs, ys], names=("x", "y"))
+    return _isolation_radius_px, cat, n_before_iso, n_join, plate_scale_arcsec_px, psf_stars_df
+
+
+def _epsf_prepare_stars(
+    masterstar_fits_path: Path,
+    masterstars_csv_path: Path,
+    db: VyvarDatabase,
+    draft_id: int,
+    *,
+    min_stars: int,
+) -> dict[str, Any]:
+    """Select clean, isolated ePSF candidate stars and return sky-subtracted EPSFStars + meta.
+
+    Candidate positions come only from ``masterstars_full_match.csv`` (quality-filtered
+    rows with finite ``x``/``y``). The ``db`` parameter is used for FWHM manifest fallback and
+    gain/read-noise resolution elsewhere in the ePSF pipeline - not for star selection.
+
+    Conscious widening (MS-SOURCES-RETIRE, 2026-08-21): production ePSF uses the full
+    CSV-quality pool instead of the retired MASTER_SOURCES safe-comp subset, targeting, and
+    broad-pool augment. PSF-star selection refinement belongs to ePSF-VALID-01.
+    """
+    mpath = Path(masterstar_fits_path)
+    csvpath, cutout_size, funnel, fwhm_px, min_stars, psf_stars_df = _epsf_build_candidates(
+        db=db,
+        draft_id=draft_id,
+        masterstars_csv_path=masterstars_csv_path,
+        min_stars=min_stars,
+        mpath=mpath,
+    )
+    _isolation_radius_px, cat, n_before_iso, n_join, plate_scale_arcsec_px, psf_stars_df = _epsf_isolate_build_stars(
+        csvpath=csvpath,
+        funnel=funnel,
+        fwhm_px=fwhm_px,
+        min_stars=min_stars,
+        mpath=mpath,
+        psf_stars_df=psf_stars_df,
+    )
     with fits.open(mpath, memmap=True) as hdul:
         data = np.asarray(hdul[0].data, dtype=np.float32)
 

@@ -10,27 +10,26 @@ from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
 
+from aperture_policy import fwhm_from_header_vy_fwhm
 from gaia_catalog_id import read_vyvar_csv
 from catalog_match_trust import normalize_catalog_match_mode
 from config import AppConfig
 from infolog import log_event
-from photometry_shared import _normalize_gaia_id, _resolve_plate_scale_arcsec_per_px
+from optics import plate_scale_from_fits
+from photometry_shared import _normalize_gaia_id
 from proc_frame_store import ProcFrameStore, is_masterstar_proc_name
 
 from aperture_photometry import (
     _ColorTermGroupFit,
     _AperturePhotometryState,
     _build_csv_lookup,
-    _compute_group_color_term_fit,
+
     _draft_dir_from_aperture_paths,
-    _ensure_group_comp_pool_csv,
     _aperture_cache_columns,
     _aperture_coerce_skip_photometry,
     _require_comparison_stars_per_target_schema,
     _resolve_aperture_equipment_id,
-    _sat_limit_peak_adu,
     compute_optimal_apertures,
-    measure_fwhm_from_masterstar,
     read_flux_from_csv,
 )
 from band_classify import resolve_apply_color_term
@@ -43,32 +42,17 @@ from photometry_defs import LOGGER
 from gaia_catalog_id import VYVAR_CSV_DTYPE
 
 
-def _aperture_prepare_shared_state(
-    output_dir: Path,
-    lc_dir: Path,
-    masterstar_fits_path: Path,
-    comparison_stars_csv: Path,
-    per_frame_csv_dir: Path,
-    progress_cb: Any,
+def _st_load_targets_and_masterstar(
     *,
-    active_targets_csv: Path,
-    detrended_aligned_dir: Path,
-    fwhm_px: float,
-    sat_limit_adu: float | None = None,
-    force_aperture_px: float | None = None,
-    cfg: AppConfig,
-    db: Any | None = None,
-    draft_id: int | None = None,
-    proc_frame_store: ProcFrameStore | None = None,
-) -> _AperturePhotometryState:
-    def _p2(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
-
+    active_targets_csv,
+    cfg,
+    comparison_stars_csv,
+    detrended_aligned_dir,
+    masterstar_fits_path,
+    output_dir,
+    per_frame_csv_dir,
+):
+    """Active targets, comparison table and the MASTERSTAR header / catalogue of the setup."""
     _aligned_dir_2a = Path(detrended_aligned_dir)
     output_dir = Path(output_dir)
     lc_dir = output_dir / "lightcurves"
@@ -90,7 +74,7 @@ def _aperture_prepare_shared_state(
     at_df = pd.read_csv(active_targets_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # OUTPUT-REVIEW-2026-10 step 5: aperture photometry starts from the comparison-star selection rows of
     # the comparison table (admitted rows; the reserve below), never from the used sets of an earlier run.
-    from comp_table import admitted as _comp_admitted, load_comp_table, reserve as _comp_reserve  # noqa: PLC0415
+    from comp_table import admitted as _comp_admitted, load_comp_table  # noqa: PLC0415
 
     _comp_table = load_comp_table(Path(comparison_stars_csv))
     comp_df = _comp_admitted(_comp_table)
@@ -140,8 +124,24 @@ def _aperture_prepare_shared_state(
     except Exception:  # noqa: BLE001
         chip_fw, chip_fh = None, None
         logging.warning("[PHOT] chip dims: MASTERSTAR read failed, fallback to CSV max(x/y)")
+    return _aligned_dir_2a, _apt_fw, _cfg, _comp_table, _ms_data, _ms_header, _ms_path, annulus_inner_fwhm, annulus_outer_fwhm, at_df, chip_fh, chip_fw, comp_df, obs_group, output_dir
 
-    # Fallback: estimate from star positions in CSV (any axis still unknown after MASTERSTAR).
+
+def _st_frames_and_epochs(
+    *,
+    _comp_table,
+    _p2,
+    at_df,
+    chip_fh,
+    chip_fw,
+    comp_df,
+    masterstar_fits_path,
+    per_frame_csv_dir,
+    proc_frame_store,
+):
+    """Chip size, frame list and epochs dropped by the MASTERSTAR-epoch rule."""
+    from comp_table import reserve as _comp_reserve  # noqa: PLC0415
+
     if chip_fw is None or chip_fh is None:
         try:
             xm = float(
@@ -226,8 +226,11 @@ def _aperture_prepare_shared_state(
     _n_total = int(len(at_df))
     logging.info("[APERTURE] %d targets (DAO+Gaia matched)", _n_total)
     _p2(f"Aperture photometry: {_n_total} targets, {n_frames} frames - loading per-frame catalogs...")
+    return _comp_index, _reserve_index, chip_fh, chip_fw, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid
 
-    # Load the CSV cache once for all of aperture photometry (otherwise read_flux_from_csv runs 82x per target).
+
+def _st_proc_cache(*, _p2, csv_files, masterstar_fits_path, proc_frame_store):
+    """Per-frame proc tables (store or CSV), lookup cache and the frame time lookup."""
     if proc_frame_store is not None and len(proc_frame_store) > 0:
         _aperture_csv_cache = proc_frame_store
         logging.info(
@@ -356,8 +359,11 @@ def _aperture_prepare_shared_state(
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0168] alignment_report.csv alignment_failed/reason not propagated into frame_time_lookup: %s', exc)
         pass
-    # ALIGN-VERIFY-2026-10: frames whose registration was not verified have no proc CSV; count
-    # them so the light-curve trust can still report the lost epochs.
+    return _aperture_csv_cache, _aperture_lookup_cache, frame_time_lookup
+
+
+def _st_times_and_saturation(*, _aperture_csv_cache, _cfg, at_df, comp_df, csv_files, masterstar_fits_path):
+    """Per-frame saturation of the targets, the list of all measured stars, the header FWHM and the alignment skips."""
     _n_align_skipped = 0
     try:
         _rep_p = Path(masterstar_fits_path).resolve().parent / "alignment_report.csv"
@@ -424,6 +430,28 @@ def _aperture_prepare_shared_state(
 
     # Priority: 1. VY_FWHM (frame QC elliptical Gaussian, FWHM-ONE), 2. fit on MASTERSTAR
     _fwhm_from_header: float | None = None
+    return _fwhm_from_header, _n_align_skipped, _per_frame_sat_meta, all_stars
+
+
+def _st_fwhm(
+    *,
+    _cfg,
+    csv_files,
+    _fwhm_from_header,
+    _ms_data,
+    _ms_header,
+    _ms_path,
+    _p2,
+    all_stars,
+    at_df,
+    db,
+    draft_id,
+    fwhm_px,
+    masterstar_fits_path,
+    obs_group,
+    output_dir,
+):
+    """Night FWHM and aperture policy, gain / read noise of the rig and the variable-target ids."""
     try:
         hdr = _ms_header
         if hdr is None and _ms_path.is_file():
@@ -439,9 +467,8 @@ def _aperture_prepare_shared_state(
             except Exception as exc:  # noqa: BLE001
                 logging.error('[EXC-0169] VY_OBSG/OBSG/FILTER header tag not parsed - obs_group label missing from frame metadata: %s', exc)
                 pass
-            vy_fwhm = hdr.get("VY_FWHM", None)
-            if vy_fwhm is not None and 0.5 < float(vy_fwhm) < 30.0:
-                _fwhm_from_header = float(vy_fwhm)
+            _fwhm_from_header = fwhm_from_header_vy_fwhm(hdr)  # G03-29: the one reader
+            if _fwhm_from_header is not None:
                 logging.info(f"[APERTURE] FWHM from VY_FWHM: {_fwhm_from_header:.3f} px")
     except Exception as _e:  # noqa: BLE001
         logging.error('[EXC-0170] MASTERSTAR header FWHM read throws - measured FWHM from stars used instead (logged warn...: %s', _e)
@@ -450,19 +477,22 @@ def _aperture_prepare_shared_state(
     if _fwhm_from_header is not None:
         fwhm_px = _fwhm_from_header
     else:
-        _fallback_hint = float(fwhm_px) if math.isfinite(fwhm_px) and fwhm_px > 0 else 3.5
-        fwhm_px = measure_fwhm_from_masterstar(
-            Path(masterstar_fits_path),
-            all_stars,
-            dao_fwhm_hint=_fallback_hint,
-            ms_data=_ms_data,
-        )
-        logging.info(f"[APERTURE] FWHM from Gaussian fit: {fwhm_px:.3f} px")
+        # G06-35 / FWHM-AUTH-01: the night median of this group's per-frame QC FWHM, no Gaussian
+        # fit on the MASTERSTAR and no constant
+        from photometry_comp import night_frame_fwhms_px  # noqa: PLC0415
+
+        _night_vals = night_frame_fwhms_px(csv_files)
+        if not _night_vals:
+            raise RuntimeError(
+                f"Aperture photometry: MASTERSTAR {masterstar_fits_path} has no valid VY_FWHM and the "
+                "per-frame CSVs carry no QC FWHM - rerun the frame QC / MASTERSTAR build."
+            )
+        fwhm_px = float(np.median(_night_vals))
+        logging.info(f"[APERTURE] FWHM from the night median of {len(_night_vals)} frames: {fwhm_px:.3f} px")
 
     _p2(f"Aperture photometry: FWHM={float(fwhm_px):.3f} px - field map and light curves...")
 
     # GAIN-ONE-2026-10: one gain / read-noise authority for every stage (rig_photometry)
-    from param_resolver import resolve_gain, resolve_read_noise  # noqa: PLC0415
     from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
 
     _equipment_id = _resolve_aperture_equipment_id(
@@ -472,8 +502,8 @@ def _aperture_prepare_shared_state(
         masterstar_fits_path=Path(masterstar_fits_path),
     )
     _pg = photometric_gain_read_noise(_ms_header, _cfg, _equipment_id)
-    _gain_res = resolve_gain(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)  # provenance record
-    _rn_res = resolve_read_noise(_ms_header, db=db, equipment_id=_equipment_id, cfg=_cfg)
+    # G06-30: the provenance records are the ones behind the values used (no second resolution)
+    _gain_res, _rn_res = _pg.gain_resolved, _pg.read_noise_resolved
     _gain_phot, _rn_phot = float(_pg.gain), float(_pg.read_noise)
     logging.info(
         "[APERTURE] Photometric errors: gain=%.3f e-/ADU_container (native %.3f src=%s / container scale %.0f), "
@@ -482,16 +512,29 @@ def _aperture_prepare_shared_state(
     )
 
     _draft_dir_ee = _draft_dir_from_aperture_paths(output_dir, Path(masterstar_fits_path))
-    _snr_ap_table = None
-
-    _variable_target_cids = frozenset(
-        c
-        for _, row in at_df.iterrows()
-        for c in [_normalize_gaia_id(row.get("catalog_id", ""))]
-        if c
-    )
-
     _ap_pol: dict[str, Any] | None = None
+    return _ap_pol, _draft_dir_ee, _equipment_id, _gain_phot, _gain_res, _rn_phot, _rn_res, fwhm_px, obs_group
+
+
+def _st_apertures(
+    *,
+    _ap_pol,
+    _apt_fw,
+    _draft_dir_ee,
+    _ms_data,
+    _ms_header,
+    all_stars,
+    annulus_inner_fwhm,
+    annulus_outer_fwhm,
+    at_df,
+    comp_df,
+    csv_files,
+    force_aperture_px,
+    masterstar_fits_path,
+    output_dir,
+    sat_limit_adu,
+):
+    """Aperture radius per star (forced or FWHM-scaled) and the star positions."""
     if force_aperture_px is not None and force_aperture_px > 0:
         # Fixed aperture for all stars - debug/calibration
         apertures_px = {
@@ -548,15 +591,12 @@ def _aperture_prepare_shared_state(
             fwhm_night_median_px=_night_p2a,
         )
         if _fw_p2a is None:
-            from aperture_policy import fwhm_from_header_vy_fwhm  # noqa: PLC0415
-
             _fw_p2a = fwhm_from_header_vy_fwhm(_ms_header)
         if _fw_p2a is None:
-            logging.warning(
-                "[APERTURE-01] QC fwhm_px missing (csv=%s); refusing the MASTERSTAR VY_FWHM fallback",
-                _qc_csv_p2a,
+            # G03-29: no constant FWHM (was 5.0 px)
+            raise RuntimeError(
+                f"[APERTURE-01] no QC FWHM (qc_metrics {_qc_csv_p2a}, per-frame CSVs) and no MASTERSTAR VY_FWHM"
             )
-            _fw_p2a = 5.0
         apertures_px = compute_optimal_apertures(
             all_stars,
             float(_fw_p2a),
@@ -585,17 +625,7 @@ def _aperture_prepare_shared_state(
             len(apertures_px),
         )
 
-    star_xy: dict[str, tuple[float, float]] = {}
-    for _, row in all_stars.iterrows():
-        cid = _normalize_gaia_id(row.get("catalog_id", ""))
-        if not cid:
-            continue
-        try:
-            star_xy[cid] = (float(row["x"]), float(row["y"]))
-        except (KeyError, TypeError, ValueError):
-            pass
-
-    sat_limit_resolved = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
+    sat_limit_resolved = sat_limit_adu
 
     # Field map of the whole setup (FIELD-MAP-2026-10: JPEG with RA/Dec grid, scale, orientation)
     from field_map import FIELD_MAP_NAME, save_field_map  # noqa: PLC0415
@@ -610,6 +640,30 @@ def _aperture_prepare_shared_state(
 
     # PERF-8: collect all star IDs needed across all targets (union targets + comps).
     _all_lc_ids: set[str] = set()
+    return _all_lc_ids, _ap_pol, apertures_px, field_map_path, sat_limit_resolved
+
+
+def _st_flux_matrix(
+    *,
+    _all_lc_ids,
+    _aperture_csv_cache,
+    _aperture_lookup_cache,
+    _cfg,
+    _comp_index,
+    _gain_phot,
+    _ms_header,
+    _ms_path,
+    _reserve_index,
+    _rn_phot,
+    apertures_px,
+    at_df,
+    chip_fh,
+    chip_fw,
+    csv_files,
+    frame_time_lookup,
+    sat_limit_resolved,
+):
+    """Night flux matrix (frame x star) of targets, comps and reserves; plate scale and Gaia DB path."""
     for _, _trow in at_df.iterrows():
         _tcid = _normalize_gaia_id(_trow.get("catalog_id", ""))
         if _tcid:
@@ -648,14 +702,11 @@ def _aperture_prepare_shared_state(
             _all_lc_ids_list,
             apertures_px,
             sat_limit_adu=sat_limit_resolved,
-            star_xy=star_xy,
-            xy_tol_px=18.0,
             frame_times=_ft,
             csv_df=_cached_df,
             lookup=_lookup_row,
             gain=float(_gain_phot),
             read_noise=float(_rn_phot),
-            variable_target_catalog_ids=_variable_target_cids,
         )
         if not _df_all.empty:
             _flux_matrix_rows.append(_df_all)
@@ -688,10 +739,35 @@ def _aperture_prepare_shared_state(
                 chip_fh = int(math.ceil(_ym)) + 2
 
     _nt = int(len(at_df))
-    _plate_scale_arcsec = _resolve_plate_scale_arcsec_per_px(
-        _cfg, _ms_path, ms_header=_ms_header
-    )
+    _plate_scale_arcsec = plate_scale_from_fits(_ms_path, header=_ms_header)  # G08-29: one reader
     _gaia_db_path = str(_cfg.gaia_db_path or "").strip() or None
+    return _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec, chip_fh, chip_fw
+
+
+def _st_night_facts(
+    *,
+    _cfg,
+    _flux_matrix,
+    _gaia_db_path,
+    _gain_phot,
+    _gain_res,
+    _ms_header,
+    _plate_scale_arcsec,
+    _reserve_index,
+    _rn_phot,
+    _rn_res,
+    chip_fh,
+    chip_fw,
+    comp_df,
+    csv_files,
+    db,
+    draft_id,
+    masterstar_fits_path,
+    obs_group,
+    output_dir,
+    sat_limit_resolved,
+):
+    """Plate scale, site, gain / read noise, k'', group colour term, resolved facts and the GSPC zero point."""
     if _plate_scale_arcsec is not None:
         logging.info(
             "[APERTURE] GS11 context: plate_scale=%.4f arcsec/px gaia_db=%s",
@@ -739,29 +815,10 @@ def _aperture_prepare_shared_state(
         log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
 
     _apply_ct = resolve_apply_color_term(_cfg, obs_group)
+    # G06-18: the colour-term fit runs after the aperture grid (run_aperture_photometry), on the k the light
+    # curves use; here only the switch.
     _group_ct: _ColorTermGroupFit | None = None
-    if _apply_ct:
-        _pool_csv = _ensure_group_comp_pool_csv(
-            platesolve_dir=Path(masterstar_fits_path).resolve().parent,
-            masterstar_fits=Path(masterstar_fits_path),
-            masterstars_csv=Path(comparison_stars_csv).resolve().parent / "masterstars_full_match.csv",
-            cfg=_cfg,
-            draft_id=draft_id,
-        )
-        _group_ct = _compute_group_color_term_fit(
-            comparison_stars_csv=_pool_csv,
-            flux_matrix=_flux_matrix,
-            csv_files=csv_files,
-            obs_group=obs_group,
-            cfg=_cfg,
-            k2_value=float(_k2_bprp),
-            k2_source=_k2_src_enum,
-        )
-        if _group_ct is not None:
-            log_event(f"[COLOR TERM] group pool fit ({obs_group}): {_group_ct.gate_reason}")
-        else:
-            logging.warning("[COLOR TERM] group pool fit unavailable for %s", obs_group)
-    else:
+    if not _apply_ct:
         log_event(f"[COLOR TERM] disabled for {obs_group} (apply_color_term toggle / filter type)")
 
     # Run-effective resolved facts for the honest full-config report (metadata only).
@@ -811,6 +868,150 @@ def _aperture_prepare_shared_state(
         _gspc_status = f"unavailable ({type(_gspc_exc).__name__}: {_gspc_exc})"[:200]
         logging.warning("[GSPC] second zero point not available: %s", _gspc_exc)
     logging.info("[GSPC] %s", _gspc_status)
+    return _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_src_enum, _resolved_facts, _site, _site_loc_id
+
+
+def _aperture_prepare_shared_state(
+    output_dir: Path,
+    lc_dir: Path,
+    masterstar_fits_path: Path,
+    comparison_stars_csv: Path,
+    per_frame_csv_dir: Path,
+    progress_cb: Any,
+    *,
+    active_targets_csv: Path,
+    detrended_aligned_dir: Path,
+    fwhm_px: float,
+    sat_limit_adu: float | None = None,
+    force_aperture_px: float | None = None,
+    cfg: AppConfig,
+    db: Any | None = None,
+    draft_id: int | None = None,
+    proc_frame_store: ProcFrameStore | None = None,
+) -> _AperturePhotometryState:
+    def _p2(msg: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(str(msg))
+        except UnicodeEncodeError:
+            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+
+    _aligned_dir_2a, _apt_fw, _cfg, _comp_table, _ms_data, _ms_header, _ms_path, annulus_inner_fwhm, annulus_outer_fwhm, at_df, chip_fh, chip_fw, comp_df, obs_group, output_dir = _st_load_targets_and_masterstar(
+        active_targets_csv=active_targets_csv,
+        cfg=cfg,
+        comparison_stars_csv=comparison_stars_csv,
+        detrended_aligned_dir=detrended_aligned_dir,
+        masterstar_fits_path=masterstar_fits_path,
+        output_dir=output_dir,
+        per_frame_csv_dir=per_frame_csv_dir,
+    )
+
+    # Fallback: estimate from star positions in CSV (any axis still unknown after MASTERSTAR).
+    _comp_index, _reserve_index, chip_fh, chip_fw, csv_files, masterstars_df, n_frames, target_bp_rp_by_cid = _st_frames_and_epochs(
+        _comp_table=_comp_table,
+        _p2=_p2,
+        at_df=at_df,
+        chip_fh=chip_fh,
+        chip_fw=chip_fw,
+        comp_df=comp_df,
+        masterstar_fits_path=masterstar_fits_path,
+        per_frame_csv_dir=per_frame_csv_dir,
+        proc_frame_store=proc_frame_store,
+    )
+
+    # Load the CSV cache once for all of aperture photometry (otherwise read_flux_from_csv runs 82x per target).
+    _aperture_csv_cache, _aperture_lookup_cache, frame_time_lookup = _st_proc_cache(
+        _p2=_p2,
+        csv_files=csv_files,
+        masterstar_fits_path=masterstar_fits_path,
+        proc_frame_store=proc_frame_store,
+    )
+    # ALIGN-VERIFY-2026-10: frames whose registration was not verified have no proc CSV; count
+    # them so the light-curve trust can still report the lost epochs.
+    _fwhm_from_header, _n_align_skipped, _per_frame_sat_meta, all_stars = _st_times_and_saturation(
+        _aperture_csv_cache=_aperture_csv_cache,
+        _cfg=_cfg,
+        at_df=at_df,
+        comp_df=comp_df,
+        csv_files=csv_files,
+        masterstar_fits_path=masterstar_fits_path,
+    )
+    _ap_pol, _draft_dir_ee, _equipment_id, _gain_phot, _gain_res, _rn_phot, _rn_res, fwhm_px, obs_group = _st_fwhm(
+        _cfg=_cfg,
+        csv_files=csv_files,
+        _fwhm_from_header=_fwhm_from_header,
+        _ms_data=_ms_data,
+        _ms_header=_ms_header,
+        _ms_path=_ms_path,
+        _p2=_p2,
+        all_stars=all_stars,
+        at_df=at_df,
+        db=db,
+        draft_id=draft_id,
+        fwhm_px=fwhm_px,
+        masterstar_fits_path=masterstar_fits_path,
+        obs_group=obs_group,
+        output_dir=output_dir,
+    )
+    _all_lc_ids, _ap_pol, apertures_px, field_map_path, sat_limit_resolved = _st_apertures(
+        _ap_pol=_ap_pol,
+        _apt_fw=_apt_fw,
+        _draft_dir_ee=_draft_dir_ee,
+        _ms_data=_ms_data,
+        _ms_header=_ms_header,
+        all_stars=all_stars,
+        annulus_inner_fwhm=annulus_inner_fwhm,
+        annulus_outer_fwhm=annulus_outer_fwhm,
+        at_df=at_df,
+        comp_df=comp_df,
+        csv_files=csv_files,
+        force_aperture_px=force_aperture_px,
+        masterstar_fits_path=masterstar_fits_path,
+        output_dir=output_dir,
+        sat_limit_adu=sat_limit_adu,
+    )
+    _all_lc_ids_list, _flux_matrix, _gaia_db_path, _nt, _plate_scale_arcsec, chip_fh, chip_fw = _st_flux_matrix(
+        _all_lc_ids=_all_lc_ids,
+        _aperture_csv_cache=_aperture_csv_cache,
+        _aperture_lookup_cache=_aperture_lookup_cache,
+        _cfg=_cfg,
+        _comp_index=_comp_index,
+        _gain_phot=_gain_phot,
+        _ms_header=_ms_header,
+        _ms_path=_ms_path,
+        _reserve_index=_reserve_index,
+        _rn_phot=_rn_phot,
+        apertures_px=apertures_px,
+        at_df=at_df,
+        chip_fh=chip_fh,
+        chip_fw=chip_fw,
+        csv_files=csv_files,
+        frame_time_lookup=frame_time_lookup,
+        sat_limit_resolved=sat_limit_resolved,
+    )
+    _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_src_enum, _resolved_facts, _site, _site_loc_id = _st_night_facts(
+        _cfg=_cfg,
+        _flux_matrix=_flux_matrix,
+        _gaia_db_path=_gaia_db_path,
+        _gain_phot=_gain_phot,
+        _gain_res=_gain_res,
+        _ms_header=_ms_header,
+        _plate_scale_arcsec=_plate_scale_arcsec,
+        _reserve_index=_reserve_index,
+        _rn_phot=_rn_phot,
+        _rn_res=_rn_res,
+        chip_fh=chip_fh,
+        chip_fw=chip_fw,
+        comp_df=comp_df,
+        csv_files=csv_files,
+        db=db,
+        draft_id=draft_id,
+        masterstar_fits_path=masterstar_fits_path,
+        obs_group=obs_group,
+        output_dir=output_dir,
+        sat_limit_resolved=sat_limit_resolved,
+    )
 
     return _AperturePhotometryState(
         at_df=at_df,
@@ -826,7 +1027,6 @@ def _aperture_prepare_shared_state(
         n_align_skipped=_n_align_skipped,
         fwhm_px=fwhm_px,
         apertures_px=apertures_px,
-        star_xy=star_xy,
         chip_fw=chip_fw,
         chip_fh=chip_fh,
         _ms_header=_ms_header,
@@ -861,8 +1061,6 @@ def _aperture_prepare_shared_state(
         apply_color_term=bool(_apply_ct),
         k2_bprp=float(_k2_bprp),
         k2_source=str(_k2_src_enum.value),
-        variable_target_catalog_ids=_variable_target_cids,
-        snr_ap_table=_snr_ap_table,
         resolved_facts=_resolved_facts,
         per_frame_sat_meta=dict(_per_frame_sat_meta or {}),
         aperture_policy=_ap_pol,

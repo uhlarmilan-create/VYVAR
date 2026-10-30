@@ -1,5 +1,5 @@
 # -*- coding: ascii -*-
-"""EPSF-CHAIN-01: run_epsf_stage wraps build / merge / LC; CLI and skip flags."""
+"""EPSF-CHAIN-01: run_epsf_stage wraps build / merge / LC."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,51 +25,6 @@ def _write_fit_set(ps: Path, vsx_type: str = "EW") -> None:
     (phot / "lightcurves" / "lightcurve_111.csv").write_text("bjd,delta_mag\n", encoding="ascii")
 
 
-def test_run_epsf_stage_skips_when_params_epsf_false(tmp_path: Path) -> None:
-    params = SimpleNamespace(epsf=False)
-    out = run_epsf_stage(
-        params,
-        EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
-        cfg=SimpleNamespace(epsf_auto_run=True),
-    )
-    assert out["skipped"] is True
-    assert out["reason"] == "epsf=False"
-
-
-def test_run_epsf_stage_skips_when_params_epsf_none_and_config_off(tmp_path: Path) -> None:
-    params = SimpleNamespace(epsf=None)
-    out = run_epsf_stage(
-        params,
-        EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
-        cfg=SimpleNamespace(epsf_auto_run=False),
-    )
-    assert out["skipped"] is True
-    assert out["reason"] == "epsf=False"
-
-
-def test_run_epsf_stage_params_none_runs_when_config_off(tmp_path: Path) -> None:
-    """A2: UI ePSF button (params=None) forces the stage regardless of the key."""
-    out = run_epsf_stage(
-        None,
-        {"platesolve_dir": tmp_path, "frames_root": tmp_path},
-        cfg=SimpleNamespace(epsf_auto_run=False),
-        dry_run=True,
-    )
-    assert out.get("skipped") is False
-    assert out["dry_run"] is True
-
-
-def test_run_epsf_stage_dry_run(tmp_path: Path) -> None:
-    out = run_epsf_stage(
-        None,
-        {"platesolve_dir": tmp_path, "frames_root": tmp_path},
-        cfg=SimpleNamespace(),
-        dry_run=True,
-    )
-    assert out["dry_run"] is True
-    assert out["skipped"] is False
-
-
 def test_run_epsf_stage_lc_only_calls_writer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -85,14 +40,13 @@ def test_run_epsf_stage_lc_only_calls_writer(
         "photometry_core.merge_photometry_pipeline_meta", lambda *a, **k: None
     )
     out = run_epsf_stage(
-        None,
         EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path / "frames"),
         cfg=SimpleNamespace(),
         do_build=False,
         do_fit_merge=False,
         do_lc=True,
     )
-    off = run_epsf_stage(None, EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path / "frames"),
+    off = run_epsf_stage(EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path / "frames"),
                          cfg=SimpleNamespace(epsf_export_auto=False), do_build=False, do_fit_merge=False, do_lc=True)
     assert off["export"] is None  # epsf_export_auto off: the ePSF tab's button writes the files
     assert called["kwargs"]["platesolve_dir"] == tmp_path
@@ -114,10 +68,10 @@ def test_run_epsf_stage_fit_gets_the_selected_fit_set(tmp_path: Path, monkeypatc
     _write_fit_set(tmp_path)
     kw = dict(do_build=False, do_fit_merge=True, do_lc=False, draft_id=516)
     paths = EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path)
-    run_epsf_stage(None, paths, cfg=SimpleNamespace(epsf_targets="E*"), **kw)
+    run_epsf_stage(paths, cfg=SimpleNamespace(epsf_targets="E*"), **kw)
     assert seen["fit_set"].selection == "E*" and seen["fit_set"].target_ids == {"111"}
     seen.clear()
-    out = run_epsf_stage(None, paths, cfg=SimpleNamespace(epsf_targets="E*"), targets="EA", **kw)
+    out = run_epsf_stage(paths, cfg=SimpleNamespace(epsf_targets="E*"), targets="EA", **kw)
     assert not seen and out["fit_set"]["selection"] == "EA" and out["fit_set"]["n_total"] == 0
 
 
@@ -134,7 +88,6 @@ def test_run_epsf_stage_skips_fit_and_lc_when_nothing_is_selected(
     monkeypatch.setattr("photometry_core.merge_photometry_pipeline_meta", lambda *a, **k: None)
     _write_fit_set(tmp_path, vsx_type="ROT")
     out = run_epsf_stage(
-        None,
         EpsfStagePaths(platesolve_dir=tmp_path, frames_root=tmp_path),
         cfg=SimpleNamespace(epsf_targets="E*"),
         do_build=False,

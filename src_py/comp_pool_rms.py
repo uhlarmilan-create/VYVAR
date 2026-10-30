@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from gaia_catalog_id import normalize_gaia_source_id as _norm_id_val  # GAIA-ID-2026-10: one exact normaliser
-from pipeline_constants import COMP_SAT_LIMIT_SCALE
+from pipeline_constants import LINEARITY_FRAC
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,11 @@ def sort_per_frame_csv_paths(
     per_frame_csv_paths: list[Path],
     csv_cache: dict[str, pd.DataFrame],
 ) -> list[Path]:
-    """Sort frames by median ``bjd_tdb_mid`` per CSV, then path (deterministic time order)."""
+    """Sort frames by median ``bjd_tdb_mid`` per CSV, then path (deterministic time order).
+
+    ``bjd_tdb_mid`` is the field-centre frame time (G02-18); only the frame order is used, which a
+    per-star light-time difference (< 1 min, the same sign for all frames of a night) cannot change.
+    """
 
     def _key(p: Path) -> tuple[float, str]:
         bjd = float("inf")
@@ -41,11 +45,13 @@ def comp_frame_stats(
     per_frame_csv_paths: list[Path],
     csv_cache: dict[str, pd.DataFrame],
     *,
+    comp_peak_sat_frac: float,
     flux_col: str = "dao_flux",
 ) -> dict[str, dict[str, int]]:
     """PHASE1-ONE-PASS-2026-10: per comparison candidate, over all per-frame catalogs:
     ``n_frames`` (frames with a positive flux), ``n_peak`` (frames with a peak and a limit) and
-    ``n_over`` (frames whose raw peak >= COMP_LINEARITY_FRAC x SAT, COMP-SAT-80 per frame).
+    ``n_over`` (frames whose raw peak >= comp_peak_sat_frac x SAT or flagged likely_saturated;
+    COMP-SAT-ONE-2026-10).
     One pass for the whole field (before: a field pass whose filters only fed a diagnostic
     column, plus a second pass per target whose filters did not change the selection)."""
     out: dict[str, dict[str, int]] = {str(c): {"n_frames": 0, "n_peak": 0, "n_over": 0} for c in cand_ids}
@@ -67,14 +73,22 @@ def comp_frame_stats(
             ok_f = pd.to_numeric(sub[fcol], errors="coerce").gt(0)
             for cid, n in ids[ok_f].value_counts().items():
                 out[str(cid)]["n_frames"] += int(n)
+        flagged = (
+            sub["likely_saturated"].map(lambda v: str(v).strip().lower() in ("true", "1", "1.0", "yes"))
+            if "likely_saturated" in sub.columns else pd.Series(False, index=sub.index)
+        )
+        over = flagged.copy()
         if "peak_max_adu" in sub.columns and "saturate_limit_adu_85pct" in sub.columns:
             pk = pd.to_numeric(sub["peak_max_adu"], errors="coerce")
-            lim = pd.to_numeric(sub["saturate_limit_adu_85pct"], errors="coerce") * COMP_SAT_LIMIT_SCALE
+            # saturate_limit_adu_85pct == LINEARITY_FRAC x SAT
+            lim = pd.to_numeric(sub["saturate_limit_adu_85pct"], errors="coerce") * (
+                float(comp_peak_sat_frac) / float(LINEARITY_FRAC))
             ok_p = pk.notna() & lim.gt(0)
             for cid, n in ids[ok_p].value_counts().items():
                 out[str(cid)]["n_peak"] += int(n)
-            for cid, n in ids[ok_p & (pk >= lim)].value_counts().items():
-                out[str(cid)]["n_over"] += int(n)
+            over = over | (ok_p & (pk >= lim))
+        for cid, n in ids[over].value_counts().items():
+            out[str(cid)]["n_over"] += int(n)
     return out
 
 

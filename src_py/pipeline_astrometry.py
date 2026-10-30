@@ -18,20 +18,22 @@ from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
 import pandas as pd
 from config import AppConfig
-from catalog_db import query_local_gaia_by_source_ids, query_local_vsx
+from catalog_db import query_local_gaia_by_source_ids, query_local_vsx, vsx_amplitude_mag
 from database import DraftTechnicalMetadataError, VyvarDatabase
 from gaia_catalog_id import normalize_gaia_source_id
 from infolog import log_event
 from optics_selection import resolve_optics_ids_for_platesolve
-from utils import iter_fits_paths_recursive as _iter_fits_recursive, normalize_telescope_focal_mm_for_plate_scale, plate_scale_arcsec_per_pixel, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
+from optics import optics_hint
+from utils import iter_fits_paths_recursive as _iter_fits_recursive, strip_celestial_wcs_keys, strip_vendor_platesolve_metadata
 import fits_meta
-from fits_meta import _focal_mm_plausible
 from pipeline_constants import _EXO_HOST_ANNOTATION_COLUMNS
 from pipeline_calibrate import (
     _filter_light_paths_maybe,
+    _qc_center_crop_for_stars,
 )
+from aperture_policy import clamp_fwhm_px, fwhm_from_header_vy_fwhm
 from proc_frame_store import _vyvar_df_to_csv  # LAYER-2026-10: moved there
-from pipeline_preprocess import _path_is_under_tree, _path_segments_forbidden_for_masterstar_physical_source, _pick_preferred_masterstar_basename_hit, _resolve_best_effort_path_under  # LAYER-2026-10: moved there
+from pipeline_preprocess import _path_is_under_tree, _path_segments_forbidden_for_masterstar_physical_source, _pick_preferred_masterstar_basename_hit, _resolve_best_effort_path_under, fits_basename_index  # LAYER-2026-10: moved there
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_astrometry -> pipeline at module load.
@@ -76,43 +78,16 @@ def draft_is_multi_group_obs(archive_path: Path | str) -> bool:
     return int(draft_obs_group_count(archive_path)) > 1
 
 
-def _header_vy_fwhm_px(hdr: fits.Header | None) -> float | None:
-    """Measured QC FWHM from ``VY_FWHM`` if present and sane."""
-    if hdr is None or "VY_FWHM" not in hdr:
-        return None
-    try:
-        v = float(hdr["VY_FWHM"])
-        if math.isfinite(v) and 0.5 < v < 80.0:
-            return float(v)
-    except (TypeError, ValueError):
-        return None
-    return None
-
-
-def _sort_masterstar_paths_by_fwhm(
-    files: list[Path],
-    *,
-    fwhm_by_basename: dict[str, float] | None = None,
-) -> list[Path]:
-    """Best first: lowest VY_FWHM (header or DB map), unknown last."""
-    _fb = fwhm_by_basename or {}
+def _sort_masterstar_paths_by_fwhm(files: list[Path]) -> list[Path]:
+    """Best first: lowest header VY_FWHM, unknown last."""
     scored: list[tuple[float, str, Path]] = []
     for fp in files:
         v: float | None = None
         try:
             with fits.open(fp, memmap=False) as h:
-                v = _header_vy_fwhm_px(h[0].header)
+                v = fwhm_from_header_vy_fwhm(h[0].header)
         except Exception:  # noqa: BLE001
             pass
-        if v is None:
-            _n = fp.name.casefold()
-            vv = _fb.get(_n)
-            if vv is None and _n.startswith("proc_"):
-                vv = _fb.get(_n[5:])
-            if vv is None and not _n.startswith("proc_"):
-                vv = _fb.get(f"proc_{_n}")
-            if vv is not None and math.isfinite(vv) and vv > 0:
-                v = float(vv)
         score = float(v) if v is not None and math.isfinite(v) and v > 0 else float("inf")
         scored.append((score, str(fp).casefold(), fp))
     scored.sort(key=lambda t: (t[0], t[1]))
@@ -145,11 +120,11 @@ def build_masterstar_from_detrended(
     *,
     detrended_root: Path,
     output_fits: Path,
-    only_paths: "Sequence[Path | str] | None" = None,
+    only_paths: "Sequence[Path | str]",
     fwhm_fallback_px: float | None = None,
     pre_calibrated: bool = False,
 ) -> dict[str, Any]:
-    """Build MASTERSTAR by copying the single best processed FITS (lowest VY_FWHM)."""
+    """Build MASTERSTAR by copying the best (lowest VY_FWHM) of the candidate FITS ``only_paths``."""
     import shutil
 
     import numpy as np
@@ -163,11 +138,12 @@ def build_masterstar_from_detrended(
         and not _path_segments_forbidden_for_masterstar_physical_source(fp, **_forbid_kw)
     ]
     files = _filter_light_paths_maybe(all_fits, only_paths)
-    if not files and only_paths is not None:
+    if not files:
         remapped: list[Path] = []
         seen_r: set[str] = set()
+        _bn_index = fits_basename_index(root, pre_calibrated=pre_calibrated)  # G03-41: one scan
         for op in only_paths:
-            hit = _resolve_best_effort_path_under(root, str(op), pre_calibrated=pre_calibrated)
+            hit = _resolve_best_effort_path_under(root, str(op), pre_calibrated=pre_calibrated, index=_bn_index)
             if hit is None or not _path_is_under_tree(root, hit):
                 continue
             if _path_segments_forbidden_for_masterstar_physical_source(hit, **_forbid_kw):
@@ -187,53 +163,19 @@ def build_masterstar_from_detrended(
                 f"MASTERSTAR: selection merged via best-effort mapping ({len(files)} FITS; path filter was empty)."
             )
     if files:
-        if only_paths is None:
-            log_event(
-                f"Found {len(files)} files in {root} (including subdirectories)."
-            )
-        else:
-            log_event(
-                f"Found {len(files)} files for MASTERSTAR in {root} (candidate selection; "
-                f"in the tree {len(all_fits)} FITS in total)."
-            )
-    if not files:
-        if only_paths is not None:
-            try:
-                _want = ", ".join(Path(str(x)).name for x in only_paths[:8])
-            except Exception:  # noqa: BLE001
-                _want = str(only_paths)
-            msg = (
-                f"MASTERSTAR: explicit selection does not match the files under {root}: {_want}"
-                + (" ..." if len(list(only_paths)) > 8 else "")
-            )
-            log_event(msg)
-            raise FileNotFoundError(msg)
-        # Whole tree (no candidate filter): deterministic small batch from disk.
-        log_event("MASTERSTAR: no candidate filter - taking the first N FITS from the folder.")
-        batch = sorted(
-            (
-                fp
-                for fp in _iter_fits_recursive(root)
-                if _path_is_under_tree(root, fp)
-                and not _path_segments_forbidden_for_masterstar_physical_source(fp, **_forbid_kw)
-            ),
-            key=lambda p: str(p).casefold(),
+        log_event(
+            f"Found {len(files)} files for MASTERSTAR in {root} (candidate selection; "
+            f"in the tree {len(all_fits)} FITS in total)."
         )
-        if batch:
-            n_take = max(1, min(8, len(batch)))
-            files = batch[:n_take]
-            all_fits = batch
-
-    if not files:
-        if not all_fits:
-            msg = (
-                f"No FITS files found in {root} (searched path, including subdirectories)."
-            )
-        else:
-            msg = (
-                f"No FITS for MASTERSTAR after candidate selection: {root} contains {len(all_fits)} file(s), "
-                "but no path matches the database selection."
-            )
+    else:
+        try:
+            _want = ", ".join(Path(str(x)).name for x in only_paths[:8])
+        except Exception:  # noqa: BLE001
+            _want = str(only_paths)
+        msg = (
+            f"MASTERSTAR: explicit selection does not match the files under {root}: {_want}"
+            + (" ..." if len(list(only_paths)) > 8 else "")
+        )
         log_event(msg)
         raise FileNotFoundError(msg)
     try:
@@ -242,7 +184,7 @@ def build_masterstar_from_detrended(
     except Exception:  # noqa: BLE001
         pass
 
-    sorted_files = _sort_masterstar_paths_by_fwhm(files, fwhm_by_basename=None)
+    sorted_files = _sort_masterstar_paths_by_fwhm(files)
 
     output_fits.parent.mkdir(parents=True, exist_ok=True)
 
@@ -272,10 +214,7 @@ def build_masterstar_from_detrended(
     try:
         from astropy.io.fits import getheader
 
-        _ref_hdr = getheader(str(reference_path))
-        _bfw = float(_ref_hdr.get("VY_FWHM", 0))
-        if 0.5 < _bfw < 80.0:
-            best_frame_fwhm_px = float(_bfw)
+        best_frame_fwhm_px = fwhm_from_header_vy_fwhm(getheader(str(reference_path)))  # G03-29
     except Exception:  # noqa: BLE001
         best_frame_fwhm_px = None
 
@@ -307,12 +246,19 @@ def build_masterstar_from_detrended(
 
         with fits.open(output_fits, memmap=False) as _hm:
             _arr = np.asarray(_hm[0].data, dtype=np.float32)
-        _h, _w = _arr.shape
-        _c = min(1000, _h, _w)
-        _y0, _x0 = (_h - _c) // 2, (_w - _c) // 2
-        _m = measure_frame(_arr[_y0:_y0 + _c, _x0:_x0 + _c])
-        _fwhm_auto = float(_m.get("fwhm_mean") or (fwhm_fallback_px if fwhm_fallback_px is not None else 4.5))
-        log_event(f"MASTERSTAR: FWHM = {_fwhm_auto:.3f} px (measured on MASTERSTAR, VY_FWHM missing)")
+        # G03-29: the same crop and measurement as frame QC (the VY_FWHM it would have stamped)
+        _m = measure_frame(_qc_center_crop_for_stars(_arr))
+        _fwhm_meas = clamp_fwhm_px(_m.get("fwhm_mean"))
+        if _fwhm_meas is not None:
+            _fwhm_auto = float(_fwhm_meas)
+            log_event(f"MASTERSTAR: FWHM = {_fwhm_auto:.3f} px (measured on MASTERSTAR, VY_FWHM missing)")
+        elif clamp_fwhm_px(fwhm_fallback_px) is not None:
+            _fwhm_auto = float(clamp_fwhm_px(fwhm_fallback_px))
+            log_event(f"MASTERSTAR: FWHM = {_fwhm_auto:.3f} px (night median QC FWHM; not measurable on MASTERSTAR)")
+        else:
+            raise ValueError(
+                f"MASTERSTAR: no FWHM - {reference_path.name} has no VY_FWHM, none measurable and no night QC FWHM."
+            )
 
     try:
         with fits.open(output_fits, mode="update", memmap=False) as h:
@@ -335,9 +281,6 @@ def build_masterstar_from_detrended(
         "masterstar_path": str(output_fits),
         "frames_used": int(len(files)),
         "reference_path": str(reference_path),
-        "reference_index": 0,
-        "stacked": False,
-        "frames_combined": 1,
         "copied_from": str(reference_path),
         "best_frame_fwhm_px": best_frame_fwhm_px,
     }
@@ -505,69 +448,6 @@ def _vyvar_open_database(cfg: AppConfig) -> VyvarDatabase | None:
         return None
 
 
-def _header_focal_length_mm(header: fits.Header) -> float | None:
-    """Focal length [mm] from common FITS keys (``FOCALLEN`` / ``FOCLEN`` often in **metres**)."""
-    for key in ("FOCALLEN", "FOCLEN", "TELFOCA", "FOCAL_LEN", "FOCALL", "FOC_LEN"):
-        if key not in header or header[key] in (None, "", " ", "0", 0):
-            continue
-        try:
-            v = float(header[key])
-        except (TypeError, ValueError):
-            continue
-        if not math.isfinite(v) or v <= 0:
-            continue
-        mm = v * 1000.0 if v < 25.0 else v
-        if 40.0 <= mm <= 120_000.0:
-            return float(mm)
-    return None
-
-
-def _resolve_focal_mm_for_plate_scale(
-    header: fits.Header | None,
-    db: VyvarDatabase | None,
-    *,
-    telescope_id: int | None = None,
-) -> tuple[float | None, str]:
-    """Plausible FITS focal first; else ``TELESCOPE.FOCAL``."""
-    if header is not None:
-        hdr_mm = _header_focal_length_mm(header)
-        if hdr_mm is not None:
-            hdr_n, hfixed = normalize_telescope_focal_mm_for_plate_scale(hdr_mm)
-            if hfixed:
-                log_event(
-                    f"FOCAL: focal length in the FITS header looked like a 10x typo ({hdr_mm:g} mm -> {hdr_n:g} mm)."
-                )
-            hdr_mm = hdr_n
-        if hdr_mm is not None and _focal_mm_plausible(hdr_mm):
-            return float(hdr_mm), "fits_header"
-    if db is not None and telescope_id is not None:
-        try:
-            tel_raw = db.get_telescope_focal_mm(int(telescope_id))
-        except Exception:  # noqa: BLE001
-            tel_raw = None
-        if tel_raw is not None:
-            tel_n, tel_fixed = normalize_telescope_focal_mm_for_plate_scale(float(tel_raw))
-            if tel_fixed:
-                log_event(
-                    f"FOCAL: TELESCOPE.FOCAL (ID={int(telescope_id)}) looked like a 10x typo "
-                    f"({tel_raw:g} mm -> {tel_n:g} mm) - used for plate scale / solver."
-                )
-            if _focal_mm_plausible(tel_n):
-                return float(tel_n), "database_telescope"
-    if db is not None:
-        raw = db.get_telescope_focal_mm(None)
-        if raw is not None:
-            norm, fixed = normalize_telescope_focal_mm_for_plate_scale(float(raw))
-            if fixed:
-                log_event(
-                    f"FOCAL: TELESCOPE.FOCAL in DB looked like a 10x typo ({raw:g} mm -> {norm:g} mm) - "
-                    "used for plate scale / solver."
-                )
-            if _focal_mm_plausible(norm):
-                return float(norm), "database_telescope"
-    return None, "none"
-
-
 def _plate_solve_input_bundle(
     fits_path: Path,
     *,
@@ -602,52 +482,25 @@ def _plate_solve_input_bundle(
             _m = out["meta"]
             if _m.get("focal_length") is None or _m.get("effective_pixel_um_plate_scale") is None:
                 raise DraftTechnicalMetadataError(int(draft_id))
-        foc: float | None = None
-        _mf = out["meta"].get("focal_length")
-        if _mf is not None:
-            try:
-                _fx = float(_mf)
-                if math.isfinite(_fx) and _focal_mm_plausible(_fx):
-                    foc = _fx
-            except (TypeError, ValueError):
-                foc = None
-        if foc is None:
-            foc, _ = _resolve_focal_mm_for_plate_scale(
-                out["header"], db_u, telescope_id=_tel_use
+        # T08 optics module (G03-19): one rule - DB rig values first, header second, no rewriting
+        hint = optics_hint(
+            out["header"],
+            db_u,
+            equipment_id=_eq_use,
+            telescope_id=_tel_use,
+            binning=(
+                max(1, int(out["meta"].get("binning", 1) or 1)),
+                max(1, int(out["meta"].get("binning_y", out["meta"].get("binning", 1)) or 1)),
+            ),
+        )
+        out["focal_mm"] = hint.focal_mm
+        out["eff_um"] = hint.pixel_effective_um
+        out["expected_arcsec_per_px"] = hint.arcsec_per_px
+        if hint.arcsec_per_px is not None:
+            log_event(
+                f"MATH CHECK: ({hint.pixel_effective_um} / {hint.focal_mm}) * 206.265 = {hint.arcsec_per_px} "
+                f"(focal: {hint.focal_source}, pixel: {hint.pixel_source})"
             )
-        out["focal_mm"] = foc
-        eff_um: float | None = None
-        x_bin = max(1, int(out["meta"].get("binning", 1) or 1))
-        if db_u is not None and _eq_use is not None:
-            try:
-                _nat = db_u.get_equipment_pixel_size_um(int(_eq_use))
-            except Exception:  # noqa: BLE001
-                _nat = None
-            if _nat is not None:
-                try:
-                    _nv = float(_nat)
-                    if math.isfinite(_nv) and 0.5 < _nv <= 300.0:
-                        eff_um = float(_nv) * float(x_bin)
-                except (TypeError, ValueError):
-                    pass
-        if eff_um is None:
-            _ev = out["meta"].get("effective_pixel_um_plate_scale")
-            if _ev is not None:
-                try:
-                    _ef = float(_ev)
-                    if math.isfinite(_ef) and _ef > 0:
-                        eff_um = _ef
-                except (TypeError, ValueError):
-                    eff_um = None
-        out["eff_um"] = eff_um
-        if eff_um is not None and foc is not None:
-            out["expected_arcsec_per_px"] = plate_scale_arcsec_per_pixel(
-                pixel_pitch_um=float(eff_um),
-                focal_length_mm=float(foc),
-            )
-            calculated_scale = out["expected_arcsec_per_px"]
-            if calculated_scale is not None:
-                log_event(f"MATH CHECK: ({eff_um} / {foc}) * 206.265 = {calculated_scale}")
     except DraftTechnicalMetadataError:
         raise  # FAIL-LOUD-2026-10 (code review 2 G03-18): the caller (app) handles missing optics metadata
     except Exception as exc:  # noqa: BLE001
@@ -668,57 +521,16 @@ def _plate_solve_input_bundle(
 def compute_plate_scale_from_db(
     equipment_id: int | None,
     telescope_id: int | None,
-    db_conn: Any,
+    db: Any,
     *,
     binning: int = 1,
 ) -> float | None:
-    """Compute plate scale [arcsec/px] from the EQUIPMENTS and TELESCOPE tables.
-
-    Formula: plate_scale = (pixel_um * binning) / focal_mm * 206.265
-    """
-    try:
-        pixel_um = None
-        focal_mm = None
-        bx = max(1, int(binning))
-        if equipment_id is not None:
-            row = db_conn.execute(
-                "SELECT PIXELSIZE FROM EQUIPMENTS WHERE ID = ?",
-                (int(equipment_id),),
-            ).fetchone()
-            if row is not None and row[0] is not None:
-                pixel_um = float(row[0])
-
-        if telescope_id is not None:
-            row = db_conn.execute(
-                "SELECT FOCAL FROM TELESCOPE WHERE ID = ?",
-                (int(telescope_id),),
-            ).fetchone()
-            if row is not None and row[0] is not None and float(row[0]) > 0:
-                focal_mm = float(row[0])
-
-        if pixel_um and focal_mm:
-            scale = (pixel_um * bx) / focal_mm * 206.265
-            return round(scale, 4)
-    except Exception:  # noqa: BLE001
-        pass
-    return None
-
-
-def _apply_wcs_header_to_fits(fits_path: Path, wcs_hdr: fits.Header) -> None:
-    """Merge celestial WCS keywords from ``wcs_hdr`` into the image FITS (primary HDU)."""
-    with fits.open(fits_path, mode="update", memmap=False) as hdul:
-        h = hdul[0].header
-        strip_celestial_wcs_keys(h)
-        for k in wcs_hdr:
-            if k in ("", "COMMENT", "HISTORY", "SIMPLE", "BITPIX", "NAXIS", "EXTEND"):
-                continue
-            if k.startswith("NAXIS") and k != "NAXIS":
-                continue
-            try:
-                h[k] = wcs_hdr[k]
-            except Exception:  # noqa: BLE001
-                pass
-        hdul.flush()
+    """Expected plate scale [arcsec/px] of the draft rig from ``EQUIPMENTS`` + ``TELESCOPE`` only
+    (:func:`optics.optics_hint` without a header); None when either value is missing."""
+    hint = optics_hint(
+        None, db, equipment_id=equipment_id, telescope_id=telescope_id, binning=(int(binning), int(binning))
+    )
+    return hint.arcsec_per_px
 
 
 def _solve_wcs_external(
@@ -951,25 +763,26 @@ def select_comparison_stars_spatial_grid(
     width_px: float,
     height_px: float,
     n_comp: int = 0,
-    require_catalog_match: bool = True,
-    require_photometry_ok: bool = True,
     require_non_variable: bool = True,
-    variable_targets_df: pd.DataFrame | None = None,
     safe_bbox: tuple[float, float, float, float] | None = None,
-    exclude_nonlinear_badcolumn: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Choose comparison stars for ensemble photometry: ~one brightest candidate per spatial grid cell.
+    """Comparison pool for ensemble photometry: all usable, catalog-matched, photometry-ok, linear stars
+    inside ``safe_bbox``, sorted by flux (brightest first), uncapped (COMP-POOL-01).
 
-    Uses catalog-matched, photometry-safe detections, stratified on a nxxny grid sized for ``n_comp`` and
-    image aspect ratio so stars are spread across the full detector (typical 100-200 comps for APASS-like work).
+    G03-13: the former spatial-grid cap (``n_comp > 0``) had no production caller and was removed; the
+    per-target comp choice happens later (photometry_comp). ``n_comp`` must be 0.
 
     When ``require_non_variable`` is True and column ``catalog_known_variable`` exists, stars flagged as
-    known variables (VSX and/or Gaia ``phot_variable_flag``) are excluded from the ensemble.
-    """
-    import math
+    known variables (VSX and/or the Gaia DR3 variability catalogue) are excluded from the ensemble.
 
+    B4-2026-10 (G03-14): no fixed-angle proximity veto around VSX stars (10" was 1 px on one rig and
+    18 px on another); light from neighbours - known variables at their maximum - is judged by the
+    neighbour-light model (comp_blend.blend_contamination_for_pool, COMP_BLEND_NEIGHBOUR_LIGHT).
+    """
     import numpy as np
 
+    if int(n_comp) > 0:
+        raise ValueError("n_comp > 0: the spatial-grid comp cap was removed (G03-13); the pool is uncapped")
     if df.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "empty"}
 
@@ -978,61 +791,18 @@ def select_comparison_stars_spatial_grid(
         work = work[work["is_usable"].fillna(False).astype(bool)]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_usable_filter"}
-    # Forced seeds (Gaia positions measured without a detection) never enter the comparison pool.
-    if "source_state" in work.columns:
-        work = work[work["source_state"].astype(str).str.strip() != "FORCED_SEED"]
+    # Forced-photometry rows (Gaia positions measured without a detection) never enter the pool.
     if "forced_photometry" in work.columns:
         _fp = work["forced_photometry"].astype(str).str.strip().str.lower()
         work = work[~_fp.isin(["true", "1", "yes"])]
     if work.empty:
         return pd.DataFrame(), {"n_selected": 0, "grid_nx": 0, "grid_ny": 0, "reason": "no_rows_after_seed_pool_filter"}
-    if require_catalog_match and "catalog" in work.columns:
+    if "catalog" in work.columns:
         work = work[work["catalog"].fillna("").astype(str).str.strip() != ""]
-    if require_photometry_ok and "photometry_ok" in work.columns:
+    if "photometry_ok" in work.columns:
         work = work[work["photometry_ok"].fillna(True).astype(bool)]
     if require_non_variable and "catalog_known_variable" in work.columns:
         work = work[~work["catalog_known_variable"].fillna(False).astype(bool)]
-    # Proximity veto: exclude comp candidates within 10 arcsec of any VSX variable target.
-    # This is intentionally coordinate-based (not catalog_id-based), because VSX->Gaia cross-id can resolve
-    # to a different nearby Gaia source_id than the comp candidate, yet still represent the same physical star.
-    if (
-        variable_targets_df is not None
-        and not getattr(variable_targets_df, "empty", True)
-        and "ra_deg" in work.columns
-        and "dec_deg" in work.columns
-        and "ra_deg" in variable_targets_df.columns
-        and "dec_deg" in variable_targets_df.columns
-    ):
-        from astropy.coordinates import SkyCoord  # noqa: PLC0415
-        import astropy.units as u  # noqa: PLC0415
-
-        w_ra = pd.to_numeric(work["ra_deg"], errors="coerce")
-        w_de = pd.to_numeric(work["dec_deg"], errors="coerce")
-        ok_w = w_ra.notna() & w_de.notna()
-        v_ra = pd.to_numeric(variable_targets_df["ra_deg"], errors="coerce")
-        v_de = pd.to_numeric(variable_targets_df["dec_deg"], errors="coerce")
-        ok_v = v_ra.notna() & v_de.notna()
-        if bool(ok_w.any()) and bool(ok_v.any()):
-            comp_coo = SkyCoord(
-                ra=w_ra.loc[ok_w].astype(float).to_numpy() * u.deg,
-                dec=w_de.loc[ok_w].astype(float).to_numpy() * u.deg,
-                frame="icrs",
-            )
-            vsx_coo = SkyCoord(
-                ra=v_ra.loc[ok_v].astype(float).to_numpy() * u.deg,
-                dec=v_de.loc[ok_v].astype(float).to_numpy() * u.deg,
-                frame="icrs",
-            )
-            _idx, sep2d, _ = comp_coo.match_to_catalog_sky(vsx_coo)
-            veto_arcsec = 10.0
-            near = sep2d <= (float(veto_arcsec) * u.arcsec)
-            n_removed = int(getattr(near, "sum", lambda: 0)())
-            if n_removed > 0:
-                drop_idx = w_ra.loc[ok_w].index[np.asarray(near, dtype=bool)]
-                work = work.drop(index=drop_idx)
-            log_event(
-                f"[COMP SELECT] Proximity veto: removed {n_removed} comp candidates within {float(veto_arcsec):.0f} arcsec of VSX targets"
-            )
     # Annulus-aware border filter: keep only stars whose centroid is within the safe bbox
     # (intersection of aligned frames shrunk by sky-annulus outer radius).
     if safe_bbox is not None and "x" in work.columns and "y" in work.columns:
@@ -1051,7 +821,7 @@ def select_comparison_stars_spatial_grid(
                 f"[BORDER] Comp selection: removed {removed} candidates outside safe bbox "
                 f"(annulus-aware intersection)"
             )
-    if exclude_nonlinear_badcolumn and "likely_nonlinear" in work.columns:
+    if "likely_nonlinear" in work.columns:
         _ln = pd.to_numeric(work["likely_nonlinear"], errors="coerce").fillna(0).astype(int)
         work = work[_ln == 0]
 
@@ -1068,66 +838,22 @@ def select_comparison_stars_spatial_grid(
         work["flux"] = 0.0
     work["_flux_key"] = pd.to_numeric(work["flux"], errors="coerce").fillna(0.0)
 
-    # COMP-POOL-01: n_comp <= 0 means uncapped pool (no grid truncate).
-    if int(n_comp) <= 0:
-        picked = work.sort_values("_flux_key", ascending=False).drop(
-            columns=["_flux_key"], errors="ignore"
-        )
-        picked.insert(0, "comp_id", [f"COMP_{i+1:04d}" for i in range(len(picked))])
-        picked.insert(1, "role", "comparison")
-        meta = {
-            "n_selected": int(len(picked)),
-            "grid_nx": 0,
-            "grid_ny": 0,
-            "n_comp_requested": 0,
-            "pool_uncapped": True,
-            "width_px": float(w),
-            "height_px": float(h),
-            "require_non_variable": bool(require_non_variable),
-            "exclude_nonlinear_badcolumn": bool(exclude_nonlinear_badcolumn),
-        }
-        return picked, meta
-
-    ar = w / h
-    nc = max(1, int(n_comp))
-    ny = max(1, int(round(math.sqrt(nc / ar))))
-    nx = max(1, int(math.ceil(nc / ny)))
-    while nx * ny < nc:
-        nx += 1
-
-    cw = w / float(nx)
-    ch = h / float(ny)
-
-    ix = np.floor(np.clip(work["x"].to_numpy(dtype=float), 0.0, w - 1e-6) / cw).astype(int)
-    iy = np.floor(np.clip(work["y"].to_numpy(dtype=float), 0.0, h - 1e-6) / ch).astype(int)
-    ix = np.clip(ix, 0, nx - 1)
-    iy = np.clip(iy, 0, ny - 1)
-    work["_cell"] = ix + iy * nx
-
-    # Brightest per cell
-    picked = (
-        work.sort_values("_flux_key", ascending=False)
-        .groupby("_cell", as_index=False, sort=False)
-        .head(1)
+    # COMP-POOL-01: uncapped pool; meta keys kept for pipeline_meta comparison_selection
+    picked = work.sort_values("_flux_key", ascending=False).drop(
+        columns=["_flux_key"], errors="ignore"
     )
-
-    if len(picked) > nc:
-        picked = picked.nlargest(nc, "_flux_key")
-
-    picked = picked.drop(columns=["_cell", "_flux_key"], errors="ignore")
     picked.insert(0, "comp_id", [f"COMP_{i+1:04d}" for i in range(len(picked))])
     picked.insert(1, "role", "comparison")
-
     meta = {
         "n_selected": int(len(picked)),
-        "grid_nx": int(nx),
-        "grid_ny": int(ny),
-        "n_comp_requested": int(nc),
-        "pool_uncapped": False,
+        "grid_nx": 0,
+        "grid_ny": 0,
+        "n_comp_requested": 0,
+        "pool_uncapped": True,
         "width_px": float(w),
         "height_px": float(h),
         "require_non_variable": bool(require_non_variable),
-        "exclude_nonlinear_badcolumn": bool(exclude_nonlinear_badcolumn),
+        "exclude_nonlinear_badcolumn": True,
     }
     return picked, meta
 
@@ -1145,96 +871,10 @@ COMP_POOL_CSV_COLUMNS: tuple[str, ...] = (
 )
 
 
-def write_photometry_plan_files(
-    *,
-    platesolve_dir: Path,
-    masterstar_fits: Path,
-    masterstars_csv: Path,
-    n_comparison_stars: int = 0,
-    require_non_variable: bool = True,
-    draft_id: int | None = None,
-    cfg: AppConfig,
-    aligned_files: list[Path] | None = None,
-    aligned_ram_frames: list[tuple[str, Any, Any]] | None = None,
-    require_safe_bbox: bool = False,
-    enrichment_expected: bool = True,
-) -> dict[str, Any]:
-    """Write ``comparison_stars.csv`` from ``masterstars.csv`` + image size; stub ``variable_targets.csv``."""
-    from pipeline_catalog import (  # noqa: PLC0415
-        _build_exoplanet_promotion_rows_from_masterstars,
-        _effective_field_catalog_cone_radius_deg,
-    )
+def _plan_safe_bbox(*, _cfg_plan, aligned_files, aligned_ram_frames, hdr, ps, require_safe_bbox):
+    """Comparison-safe bbox: intersection of the aligned frames shrunk by the sky-annulus outer radius (BORDER)."""
+    import numpy as np  # noqa: PLC0415
 
-    import numpy as np
-    import json
-
-
-    ps = Path(platesolve_dir)
-    ps.mkdir(parents=True, exist_ok=True)
-
-    if not masterstars_csv.is_file():
-        return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "missing masterstars.csv"}
-
-    # Read IDs as strings (avoid float64 precision loss for 19-digit Gaia IDs).
-    df = pd.read_csv(masterstars_csv, low_memory=False, dtype={"catalog_id": str, "name": str})
-    try:
-        from gaia_catalog_id import catalog_id_series_for_masterstars_export  # noqa: PLC0415
-
-        if "catalog_id" in df.columns:
-            df = df.copy()
-            df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
-    except Exception:  # noqa: BLE001
-        pass
-
-    _enrichment_provenance: dict[str, Any] = {"source": "masterstars_full_match.csv"}
-    try:
-        from masterstars_enrichment import missing_comp_selection_enrichment_columns  # noqa: PLC0415
-
-        _missing_enrich = missing_comp_selection_enrichment_columns(df)
-        if _missing_enrich:
-            _msg = (
-                "comp-selection enrichment unavailable for this draft: columns "
-                f"{_missing_enrich} absent from masterstars_full_match.csv - "
-                "selection proceeds without nonlinearity/bad-column exclusion"
-            )
-            if enrichment_expected:
-                logging.error("[COMP-SELECTION] %s", _msg)
-                log_event(f"ERROR: {_msg}")
-            else:
-                # First plan pass inside MASTERSTAR build runs before the enrichment
-                # columns are attached; the later passes carry them.
-                logging.debug("[COMP-SELECTION] (pre-enrichment pass) %s", _msg)
-            _enrichment_provenance = {
-                "source": "masterstars_full_match.csv",
-                "enrichment_missing_columns": list(_missing_enrich),
-                "nonlinearity_badcolumn_exclusion": False,
-                "message": _msg,
-            }
-        else:
-            _enrichment_provenance["nonlinearity_badcolumn_exclusion"] = True
-    except Exception as _enrich_exc:  # noqa: BLE001
-        logging.error("[COMP-SELECTION] enrichment column check failed: %s", _enrich_exc)
-    try:
-        with fits.open(masterstar_fits, memmap=False) as hdul:
-            hdr = hdul[0].header
-    except Exception as _ms_open_exc:  # noqa: BLE001
-        log_event(f"write_photometry_plan_files: could not open MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
-        return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "MASTERSTAR open failed"}
-    wpx = int(hdr.get("NAXIS1", 0) or 0)
-    h = int(hdr.get("NAXIS2", 0) or 0)
-    if wpx <= 0 or h <= 0:
-        return {"comparison_stars_csv": "", "error": "MASTERSTAR has no data"}
-
-    _cfg_plan = cfg
-
-    comp_path = ps / "comparison_stars.csv"
-    var_path = ps / "variable_targets.csv"
-
-    # --- Annulus-aware intersection bbox (Variant A2) ---
-    # Compute a "safe" bbox from the intersection of aligned frames, shrunk by the sky-annulus outer radius.
-    # CONSOLIDATE-01B A2: FWHM source stays MASTERSTAR VY_FWHM (qc vs header differ on all
-    # 134 era04 frames at FITS-card rounding; night-median qc vs MASTERSTAR is also not
-    # last-ulp identical). Do not invent 3.5 / 10.5.
     _safe_bbox: tuple[float, float, float, float] | None = None
     _r_out: float | None = None
     try:
@@ -1328,8 +968,14 @@ def write_photometry_plan_files(
             raise RuntimeError(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s}") from _bbox_exc
         log_event(f"[BORDER] safe_bbox computation failed: {_bbox_exc!s} - skipping border filter")
         _safe_bbox = None
+    return _r_out, _safe_bbox
 
-    # VSX variable targets for the field (frame bbox), with pixel coords from MASTERSTAR WCS.
+
+def _plan_vsx_targets(*, _cfg_plan, df, h, hdr, wpx):
+    """variable_targets.csv rows: VSX stars in the frame footprint, identified with Gaia (fails loud)."""
+    from pipeline_catalog import _effective_field_catalog_cone_radius_deg  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
+
     var_cols = [
         "name",
         "catalog_id",
@@ -1349,6 +995,7 @@ def write_photometry_plan_files(
         "gaia_match_quality",
         "gaia_match_source",
         "vsx_mag_max",
+        "vsx_amplitude_mag",
         "exo_host_obj_id",
         "exo_host_name",
         "exo_cat_source",
@@ -1374,10 +1021,8 @@ def write_photometry_plan_files(
             # 50px margin used by the in-frame pixel filter below), not the 3.5 deg cone box. The
             # cone box hit the 15000-row catalog_query_max_rows cap (no ORDER BY) and silently
             # dropped a contiguous Dec slice (northern half of the field, incl. bright named
-            # variables). The frame bbox is tiny -> no cap -> spatial-first completeness. Note this
-            # list also drives the global comparison-pool veto, so the now-complete variable set
-            # correctly purges newly-recognised variables from the comp ensemble (Milan-approved,
-            # CURSOR_RESULT_round1).
+            # variables). The frame bbox is tiny -> no cap -> spatial-first completeness. The list
+            # also gives the VSX amplitudes for the neighbour light of known variables (B4-2026-10).
             vsx_df = _query_vsx_local_frame_bbox(
                 wcs=w0,
                 width_px=int(wpx),
@@ -1440,6 +1085,7 @@ def write_photometry_plan_files(
                     from vsx_gaia_crossmatch import (  # noqa: PLC0415
                         VsxGaiaCrossmatchError,
                         catalog_depth_for_frame_bbox,
+                        count_in_field,
                         field_area_deg2_from_wcs,
                         match_vsx_to_gaia_density_aware,
                         query_gaia_for_frame_bbox,
@@ -1506,6 +1152,11 @@ def write_photometry_plan_files(
                             _gdf["ra_deg"].astype(float).to_numpy(),
                             _gdf["dec_deg"].astype(float).to_numpy(),
                             field_area_deg2=float(_field_area),
+                            n_gaia_in_field=count_in_field(
+                                w0, int(wpx), int(h),
+                                _gdf["ra_deg"].astype(float).to_numpy(),
+                                _gdf["dec_deg"].astype(float).to_numpy(),
+                            ),
                             pmra=_pmra,
                             pmdec=_pmdec,
                             catalog_depth_g=_catalog_depth_g,
@@ -1642,6 +1293,11 @@ def write_photometry_plan_files(
                         "gaia_match_quality": quality_out,
                         "gaia_match_source": source_out,
                         "vsx_mag_max": _mmx.to_numpy(dtype=float),
+                        # B4-2026-10: neighbour light of a known variable is judged at its maximum
+                        "vsx_amplitude_mag": np.array(
+                            [vsx_amplitude_mag(a, b) for a, b in zip(_mmx, v.get("mag_min", pd.Series(np.nan, index=v.index)), strict=True)],
+                            dtype=float,
+                        ),
                     }
                 )
                 n_gaia_ok = int(sum(1 for c in cat_id_out if str(c).strip()))
@@ -1675,6 +1331,27 @@ def write_photometry_plan_files(
         # FAIL-LOUD-2026-10 (code review 2 G03-06): no VSX targets means known variables can become comparison
         # stars - a failed VSX block stops the run with its cause instead of writing an empty variable_targets.csv
         raise RuntimeError(f"variable_targets.csv (VSX export) failed: {_vsx_exc!s}") from _vsx_exc
+    return _vsx_diag, _vsx_n_cone, vsx_out
+
+
+def _plan_write_comp_and_targets(
+    *,
+    _cfg_plan,
+    _safe_bbox,
+    _vsx_diag,
+    _vsx_n_cone,
+    comp_path,
+    df,
+    h,
+    hdr,
+    n_comparison_stars,
+    require_non_variable,
+    var_path,
+    vsx_out,
+    wpx,
+):
+    """Exoplanet promotions, comparison pool and the comparison / variable-target CSVs."""
+    from pipeline_catalog import _build_exoplanet_promotion_rows_from_masterstars  # noqa: PLC0415
 
     exo_promo = _build_exoplanet_promotion_rows_from_masterstars(
         df,
@@ -1685,19 +1362,12 @@ def write_photometry_plan_files(
         margin_px=50.0,
     )
     merged_var = _merge_vsx_exoplanet_variable_targets(vsx_out, exo_promo)
-    _proximity_veto_df: pd.DataFrame | None = None
-    if merged_var is not None and not merged_var.empty:
-        _ra_v = pd.to_numeric(merged_var.get("ra_deg"), errors="coerce")
-        _de_v = pd.to_numeric(merged_var.get("dec_deg"), errors="coerce")
-        _proximity_veto_df = merged_var.loc[_ra_v.notna() & _de_v.notna()].copy()
-
     comp_df, cmeta = select_comparison_stars_spatial_grid(
         df,
         width_px=float(wpx),
         height_px=float(h),
         n_comp=int(n_comparison_stars),
         require_non_variable=bool(require_non_variable),
-        variable_targets_df=_proximity_veto_df,
         safe_bbox=_safe_bbox,
     )
     try:
@@ -1736,6 +1406,120 @@ def write_photometry_plan_files(
             f"variable_targets.csv (VSX export): cone={_vsx_n_cone} -> written={int(len(merged_var))} "
             f"({var_path.name})"
         )
+    return cmeta,
+
+
+def write_photometry_plan_files(
+    *,
+    platesolve_dir: Path,
+    masterstar_fits: Path,
+    masterstars_csv: Path,
+    n_comparison_stars: int = 0,
+    require_non_variable: bool = True,
+    cfg: AppConfig,
+    aligned_files: list[Path] | None = None,
+    aligned_ram_frames: list[tuple[str, Any, Any]] | None = None,
+    require_safe_bbox: bool = False,
+    enrichment_expected: bool = True,
+) -> dict[str, Any]:
+    """Write ``comparison_stars.csv`` from ``masterstars.csv`` + image size; stub ``variable_targets.csv``."""
+
+    import json
+
+
+    ps = Path(platesolve_dir)
+    ps.mkdir(parents=True, exist_ok=True)
+
+    if not masterstars_csv.is_file():
+        return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "missing masterstars.csv"}
+
+    # Read IDs as strings (avoid float64 precision loss for 19-digit Gaia IDs).
+    df = pd.read_csv(masterstars_csv, low_memory=False, dtype={"catalog_id": str, "name": str})
+    try:
+        from gaia_catalog_id import catalog_id_series_for_masterstars_export  # noqa: PLC0415
+
+        if "catalog_id" in df.columns:
+            df = df.copy()
+            df["catalog_id"] = catalog_id_series_for_masterstars_export(df)
+    except Exception:  # noqa: BLE001
+        pass
+
+    _enrichment_provenance: dict[str, Any] = {"source": "masterstars_full_match.csv"}
+    try:
+        from masterstars_enrichment import missing_comp_selection_enrichment_columns  # noqa: PLC0415
+
+        _missing_enrich = missing_comp_selection_enrichment_columns(df)
+        if _missing_enrich:
+            _msg = (
+                "comp-selection enrichment unavailable for this draft: columns "
+                f"{_missing_enrich} absent from masterstars_full_match.csv - "
+                "selection proceeds without nonlinearity/bad-column exclusion"
+            )
+            if enrichment_expected:
+                logging.error("[COMP-SELECTION] %s", _msg)
+                log_event(f"ERROR: {_msg}")
+            else:
+                # First plan pass inside MASTERSTAR build runs before the enrichment
+                # columns are attached; the later passes carry them.
+                logging.debug("[COMP-SELECTION] (pre-enrichment pass) %s", _msg)
+            _enrichment_provenance = {
+                "source": "masterstars_full_match.csv",
+                "enrichment_missing_columns": list(_missing_enrich),
+                "nonlinearity_badcolumn_exclusion": False,
+                "message": _msg,
+            }
+        else:
+            _enrichment_provenance["nonlinearity_badcolumn_exclusion"] = True
+    except Exception as _enrich_exc:  # noqa: BLE001
+        logging.error("[COMP-SELECTION] enrichment column check failed: %s", _enrich_exc)
+    try:
+        with fits.open(masterstar_fits, memmap=False) as hdul:
+            hdr = hdul[0].header
+    except Exception as _ms_open_exc:  # noqa: BLE001
+        log_event(f"write_photometry_plan_files: could not open MASTERSTAR.fits ({masterstar_fits}): {_ms_open_exc!s}")
+        return {"comparison_stars_csv": "", "variable_targets_csv": "", "error": "MASTERSTAR open failed"}
+    wpx = int(hdr.get("NAXIS1", 0) or 0)
+    h = int(hdr.get("NAXIS2", 0) or 0)
+    if wpx <= 0 or h <= 0:
+        return {"comparison_stars_csv": "", "error": "MASTERSTAR has no data"}
+
+    _cfg_plan = cfg
+
+    comp_path = ps / "comparison_stars.csv"
+    var_path = ps / "variable_targets.csv"
+
+    # --- Annulus-aware intersection bbox (Variant A2) ---
+    # Compute a "safe" bbox from the intersection of aligned frames, shrunk by the sky-annulus outer radius.
+    # CONSOLIDATE-01B A2: FWHM source stays MASTERSTAR VY_FWHM (qc vs header differ on all
+    # 134 era04 frames at FITS-card rounding; night-median qc vs MASTERSTAR is also not
+    # last-ulp identical). Do not invent 3.5 / 10.5.
+    _r_out, _safe_bbox = _plan_safe_bbox(
+        _cfg_plan=_cfg_plan,
+        aligned_files=aligned_files,
+        aligned_ram_frames=aligned_ram_frames,
+        hdr=hdr,
+        ps=ps,
+        require_safe_bbox=require_safe_bbox,
+    )
+
+    # VSX variable targets for the field (frame bbox), with pixel coords from MASTERSTAR WCS.
+    _vsx_diag, _vsx_n_cone, vsx_out = _plan_vsx_targets(_cfg_plan=_cfg_plan, df=df, h=h, hdr=hdr, wpx=wpx)
+
+    cmeta, = _plan_write_comp_and_targets(
+        _cfg_plan=_cfg_plan,
+        _safe_bbox=_safe_bbox,
+        _vsx_diag=_vsx_diag,
+        _vsx_n_cone=_vsx_n_cone,
+        comp_path=comp_path,
+        df=df,
+        h=h,
+        hdr=hdr,
+        n_comparison_stars=n_comparison_stars,
+        require_non_variable=require_non_variable,
+        var_path=var_path,
+        vsx_out=vsx_out,
+        wpx=wpx,
+    )
 
     plan_path = ps / "photometry_plan.json"
     # OUTPUT-REVIEW-2026-10: the plan keeps only what is read back (target and comparison-star selection
@@ -1753,57 +1537,6 @@ def write_photometry_plan_files(
         "comparison_selection": cmeta,
         "comp_selection_enrichment": _enrichment_provenance,
     }
-
-
-def _sync_comparison_stars_across_setups(platesolve_root: Path) -> None:
-    """Copy comparison_stars.csv from a reference setup to all other setup dirs under platesolve/.
-
-    Reference preference:
-    - first setup containing 'R_' in its name with comparison_stars.csv
-    - else first setup (sorted) that has comparison_stars.csv
-    """
-    try:
-        root = Path(platesolve_root)
-        if not root.is_dir():
-            return
-        setup_dirs = [
-            d
-            for d in root.iterdir()
-            if d.is_dir() and (d / "per_frame_catalog_index.csv").exists()
-        ]
-        if len(setup_dirs) < 2:
-            return
-        ref_dir: Path | None = None
-        for d in setup_dirs:
-            if "R_" in d.name and (d / "comparison_stars.csv").exists():
-                ref_dir = d
-                break
-        if ref_dir is None:
-            for d in sorted(setup_dirs, key=lambda p: p.name.casefold()):
-                if (d / "comparison_stars.csv").exists():
-                    ref_dir = d
-                    break
-        if ref_dir is None:
-            return
-        ref_comp = ref_dir / "comparison_stars.csv"
-        if not ref_comp.is_file():
-            return
-        import shutil
-
-        for d in setup_dirs:
-            if d == ref_dir:
-                continue
-            target_comp = d / "comparison_stars.csv"
-            try:
-                shutil.copy2(ref_comp, target_comp)
-                log_event(
-                    f"INFO: Comparison stars skopirovane z {ref_dir.name} -> {d.name}"
-                )
-            except Exception:  # noqa: BLE001
-                pass
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[PIPE] comparison-star sync across setups skipped: %s", exc)
-        return
 
 
 def _fill_masterstars_gaia_matched_bp_rp_from_local_db(
@@ -1882,13 +1615,21 @@ def filter_code_from_setup_name(setup: str) -> str:
     return s.split("_")[0].strip().lower()
 
 
-def pick_sibling_donor_filter(recipient_filter: str, verified_filters: set[str]) -> str | None:
-    """The solved filter spectrally nearest to the recipient (a preference, not a rule)."""
-    candidates = {str(f) for f in verified_filters if str(f)}
-    candidates.discard(str(recipient_filter))
-    if not candidates:
+def pick_sibling_donor_setup(recipient_setup: str, solved_setups: Sequence[str]) -> str | None:
+    """The solved setup to hint a failed one (G03-35: donors keyed by setup, not by filter - a
+    failed g_120_2 can use the solved g_60_2): the same filter first, then the spectrally nearest
+    filter; ties by setup name. The recipient itself is never its own donor."""
+    rec = str(recipient_setup or "").strip()
+    cands = sorted({str(x).strip() for x in solved_setups if str(x).strip() and str(x).strip() != rec})
+    if not cands:
         return None
-    lam_r = float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(str(recipient_filter).lower(), 550.0))
-    return min(candidates, key=lambda f: abs(float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(str(f).lower(), 550.0)) - lam_r))
+    f_r = filter_code_from_setup_name(rec)
+    lam_r = float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(f_r, 550.0))
+
+    def _key(setup: str) -> tuple[int, float, str]:
+        f = filter_code_from_setup_name(setup)
+        return (0 if f == f_r else 1, abs(float(FILTER_EFFECTIVE_WAVELENGTH_NM.get(f, 550.0)) - lam_r), setup)
+
+    return min(cands, key=_key)
 
 

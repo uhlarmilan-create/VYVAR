@@ -21,6 +21,7 @@ import numpy as np
 from band_classify import (
     band_failsafe_clear,
     classify_photometric_band,
+    standard_band_of_filter,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -96,40 +97,32 @@ def filter_token_from_obs_group(obs_group: str) -> str:
     return ""
 
 
-# Johnson/Cousins bands with negligible k'' (AAVSO practice); uppercase tokens only.
-JOHNSON_K2_ZERO_TOKENS: frozenset[str] = frozenset({"V", "VC", "R", "RC", "RJ", "I", "IC", "IJ"})
-
-
 def k2_native_to_bprp(k_native: float, *, native_slope: float) -> float:
     return float(k_native) * float(native_slope)
 
 
+# Johnson-Cousins V, R, I: negligible k'' (AAVSO practice).
+# G08-13: k'' per standard band of the ONE filter table (band_classify.standard_band_of_filter).
+# Johnson U uses the Sloan u' value of Smith et al. 2002 (no Johnson U k'' in the cited sources).
+_K2_SLOAN_OF_BAND: dict[str, str] = {"u": "U", "g": "G", "r": "R", "i": "I", "z": "Z", "U": "U"}
+_K2_ZERO_BANDS: frozenset[str] = frozenset({"V", "Rc", "Ic", "Rj", "Ij"})
+
+
 def computed_k2_bprp_for_token(token: str) -> float | None:
-    """Literature k'' per BP-RP for a canonical filter token, or None if not applicable."""
+    """Literature k'' per BP-RP for a filter token, or None if not applicable."""
     raw = str(token or "").strip().replace("''", "'")
-    if not raw:
+    if not raw or raw.upper() in K2_NONE_TOKENS:
         return None
-    key = raw.upper()
-    if key in K2_NONE_TOKENS:
+    band = standard_band_of_filter(raw)
+    if band is None:
         return None
-    # Sloan lowercase obs_group tokens (g,r,i,u,z) - distinct from Johnson uppercase R/I.
-    if len(raw) == 1 and raw.islower() and raw in "griuz":
-        slo = raw.upper()
-        if slo in SMITH_K2_NATIVE:
-            kn = SMITH_K2_NATIVE[slo]
-            if slo in ("U", "SU", "UP"):
-                return k2_native_to_bprp(kn, native_slope=SLOPE_UG_PER_BPRP)
-            return k2_native_to_bprp(kn, native_slope=SLOPE_GR_PER_BPRP)
-    if raw.isupper() and key in JOHNSON_K2_ZERO_TOKENS:
+    if band in _K2_ZERO_BANDS:
         return 0.0
-    if key in ("B", "BC"):
+    if band == "B":
         return k2_native_to_bprp(HENDEN_K2_B_PER_BV, native_slope=SLOPE_BV_PER_BPRP)
-    if key in SMITH_K2_NATIVE:
-        kn = SMITH_K2_NATIVE[key]
-        if key in ("U", "SU", "UP"):
-            return k2_native_to_bprp(kn, native_slope=SLOPE_UG_PER_BPRP)
-        return k2_native_to_bprp(kn, native_slope=SLOPE_GR_PER_BPRP)
-    return None
+    slo = _K2_SLOAN_OF_BAND[band]
+    slope = SLOPE_UG_PER_BPRP if slo == "U" else SLOPE_GR_PER_BPRP
+    return k2_native_to_bprp(SMITH_K2_NATIVE[slo], native_slope=slope)
 
 
 def resolve_k2_mode(cfg: Any | None) -> str:

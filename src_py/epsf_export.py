@@ -18,6 +18,7 @@ import pandas as pd
 from epsf_lc_compare import p2p_scatter
 from export_reports import bjd_to_datestr_yyyymmdd, guess_setup_info_from_obs_group, safe_filename
 from gaia_catalog_id import read_vyvar_csv
+from photometry_defs import TIME_BASE_BJD_TDB
 from report_methods import lc_csv_path
 from star_page_m3 import psf_lc_header
 from vyvar_version import VYVAR_SOFTWARE_VERSION
@@ -60,6 +61,19 @@ def _epsf_rows(psf_csv: Path) -> pd.DataFrame:
     return out.sort_values("bjd_tdb").reset_index(drop=True)
 
 
+def _aperture_time_base(ap_csv: Path) -> str:
+    """Time base of the aperture light curve (the PSF light curve copies its times; PSF light curves
+    written before G09-39 have no psf_lc_time_base header)."""
+    from photometry_lightcurve import resolve_lc_time_base  # noqa: PLC0415
+
+    if not ap_csv.is_file():
+        return ""
+    try:
+        return resolve_lc_time_base(pd.read_csv(ap_csv, usecols=["time_base"]))
+    except ValueError:
+        return ""
+
+
 def _target_info(photometry_dir: Path) -> dict[str, dict[str, Any]]:
     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
 
@@ -98,6 +112,7 @@ def epsf_export_lines(cid: str, info: dict[str, Any], psf_csv: Path, rows: pd.Da
               if str(m.get("catalog_id")) == cid]
     drops = [f"{hdr[k]} ({lbl})" for k, lbl in (("psf_lc_n_epochs_target_saturated", "target saturated"),
                                                ("psf_lc_n_epochs_target_outside_footprint", "target off the frame's data"),
+                                               ("psf_lc_n_epochs_target_fit_not_ok", "target PSF fit failed"),
                                                ("psf_lc_n_epochs_dropped_pin", "frame not fitted or a comparison star missing"))
              if int(float(hdr.get(k, "0") or 0))]
     grid = "x".join(str(v) for v in ((manifest.get("spatial") or {}).get("grid") or [1, 1]))
@@ -177,6 +192,11 @@ def write_epsf_user_lightcurves(platesolve_dir: Path | str, target_ids: Iterable
         rows = _epsf_rows(psf_csv)
         if rows.empty:
             skipped[cid] = "no epoch kept"
+            continue
+        # G09-39: the file says BJD_TDB; a light curve whose times are the JD fallback is not exported
+        _tb = psf_lc_header(psf_csv).get("psf_lc_time_base") or _aperture_time_base(lc_csv_path(lc_dir, cid))
+        if _tb != TIME_BASE_BJD_TDB:
+            skipped[cid] = f"time base {_tb or 'not recorded'} (BJD_TDB required)"
             continue
         tinfo = info.get(cid, {})
         name = _txt(tinfo.get("vsx_name")) or _txt(tinfo.get("name")) or cid

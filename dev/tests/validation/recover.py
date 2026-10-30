@@ -361,18 +361,24 @@ def _run_tier_b(report: ValidationReport) -> None:
         comp_bp_rp[cid] = float(row["bp_rp"])
         comp_quality[cid] = {"quality": "good"}
 
-    from photometry_core import fit_color_term_c1
+    # CT-ONE-2026-10: the one colour-term fit (color_transform.fit_colour_term, order by BIC); the linear
+    # coefficient is compared with the injected slope
+    from color_transform import fit_colour_term
 
-    c1, c1_err, n_comp = fit_color_term_c1(
-        comp_mag_inst, comp_catalog_mag, comp_bp_rp, comp_quality, min_comp=3
-    )
+    _ids = [c for c in comp_mag_inst if np.isfinite(comp_mag_inst[c]).sum() >= 3]
+    _x = np.array([comp_bp_rp[c] for c in _ids])
+    _y = np.array([comp_catalog_mag[c] - float(np.nanmedian(comp_mag_inst[c])) for c in _ids])
+    _pf = fit_colour_term(_x, _y, max_order=1)
+    c1 = float(_pf.coeffs[0]) if _pf is not None and len(_pf.coeffs) >= 1 else float("nan")
+    c1_err = float("nan")
+    n_comp = int(len(_ids))
     ok = math.isfinite(c1) and abs(c1 + B4_COLOR_SLOPE) < max(
         0.03, 2.0 * (c1_err if math.isfinite(c1_err) else 0.03)
     )
     report.add(
         "B4",
         "color-dependent systematic (bp_rp slope)",
-        "photometry_core.fit_color_term_c1",
+        "color_transform.fit_colour_term",
         "color-term coefficient recovery",
         expected=f"c1 near -injected slope {-B4_COLOR_SLOPE:.3f} (cat-inst vs bp_rp)",
         recovered=f"c1={c1:.4f} +/- {c1_err:.4f} (n={n_comp})",
@@ -527,7 +533,7 @@ def _run_v3(report: ValidationReport) -> None:
     try:
         epsf_stars = extract_stars(NDData(frame_data), cat, size=cutout)
         built = _epsf_build_imagepsf_from_stars(
-            epsf_stars, osamp=2, fwhm_px=inj_fwhm, cutout_size=cutout
+            epsf_stars, osamp=2, fwhm_px=inj_fwhm
         )
         qc = built["qc"]
         ratio = float(qc.get("epsf_vs_input_fwhm_ratio") or float("nan"))

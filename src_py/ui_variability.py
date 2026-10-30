@@ -402,15 +402,15 @@ def render_variability_dashboard(
     if rows.empty or sel not in set(rows["catalog_id"]):
         st.info("No variable star to analyse in this setup.")
     else:
-        _star_section(rows, sel, og, sel_key, phot, ps, meta, cfg)
-    _transient_section(phot, ps, Path(draft_dir) / "detrended_aligned" / "lights" / og, og, cfg)
+        _star_section(rows, sel, og, sel_key, phot, meta, cfg)
+    _transient_section(phot, ps, Path(draft_dir) / "detrended_aligned" / "lights" / og, og)
 
 
 # ---------------------------------------------------------------- TRANSIENT-2026-10
 KIND_TEXT = {"appeared": "appeared during the night", "faded": "faded during the night", "present": "present all night"}
 
 
-def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str, cfg: AppConfig) -> None:
+def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str) -> None:
     """New sources, stars brighter than Gaia, minor planets and comets (transient search; off by default)."""
     tm = _read_json(phot / "transient_meta.json")
     if not tm:  # the search is off (transient_search_enabled): the tab stays as it is
@@ -436,24 +436,33 @@ def _transient_section(phot: Path, ps: Path, frames_dir: Path, og: str, cfg: App
     if cand.empty:
         st.success("No new source passes the checks in this setup.")
     else:
+        from transient_field import shape_text  # noqa: PLC0415
+
+        # C6: the transient time is the source's own BJD_TDB when the run knows its site (else UTC JD)
+        t_label = "First seen (BJD_TDB)" if str(tm.get("time_column", "")) == "bjd_tdb" else "First seen (JD UTC)"
         cand["n"] = cand["label"].str[1:].astype(int)
         cand = cand.sort_values("n").reset_index(drop=True)
         show = pd.DataFrame({
             "Id": cand["label"], "Kind": cand["kind"].map(KIND_TEXT).fillna(cand["kind"]),
-            "First seen (JD)": cand["first_time"], "G (est.)": cand["mag_g_est"], "S/N max": cand["snr_max"],
+            t_label: cand["first_time"], "G (est.)": cand["mag_g_est"], "S/N max": cand["snr_max"],
             "Frames S/N\u22655": cand["n_frames_snr5"], "RA": cand["ra_deg"], "Dec": cand["dec_deg"],
             "In galaxy": cand.get("galaxy", pd.Series("", index=cand.index)).fillna("").where(cand.get("in_galaxy", False).astype(bool), ""),
+            "Shape": [shape_text(e, f) for e, f in zip(cand.get("extended", pd.Series(False, index=cand.index)),
+                                                       cand.get("fwhm_ratio", pd.Series(float("nan"), index=cand.index)),
+                                                       strict=False)],
             "Catalogues": cand.get("catalogs", pd.Series("", index=cand.index)).fillna(""),
         })
         ev = st.dataframe(show, hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
                           key=f"tr_table_{og}", column_config={
-                              "First seen (JD)": st.column_config.NumberColumn(format="%.5f"),
+                              t_label: st.column_config.NumberColumn(format="%.5f"),
                               "G (est.)": st.column_config.NumberColumn(format="%.2f"),
                               "S/N max": st.column_config.NumberColumn(format="%.1f"),
                               "RA": st.column_config.NumberColumn(format="%.5f"), "Dec": st.column_config.NumberColumn(format="%.5f")})
         st.caption("A new source is seen on \u2265 3 consecutive frames at S/N \u2265 5 where Gaia has no star of similar brightness, "
                    "stays on one sky position, is not a detector pixel and is brighter than the catalogue depth - 1 mag. "
-                   "G (est.) is on the Gaia G scale of the field for a solar-colour source. Check every candidate on the images "
+                   "G (est.) is on the Gaia G scale of the field for a solar-colour source. Shape: FWHM on the MASTERSTAR "
+                   "relative to field stars; 'extended' (> 1.5 x) is a galaxy, nebula, comet coma or blend, not a point source. "
+                   "Check every candidate on the images "
                    "before reporting (TNS for extragalactic transients, CBAT for novae).")
         try:
             pick = list(ev.selection.rows)
@@ -520,10 +529,10 @@ def _transient_detail(r: pd.Series, phot: Path, ps: Path, frames_dir: Path, og: 
         fig.update_xaxes(title_text="JD", tickformat=".3f", row=2, col=1)
         fig.update_layout(height=360, margin=dict(l=60, r=16, t=10, b=40), showlegend=False, hovermode="x unified")
         c1.plotly_chart(fig, width="stretch", config=_PLOT_CFG, key=f"tr_lc_{og}_{lab}")
-    c2.plotly_chart(_cutout_figure(r, lc, ps, frames_dir), width="stretch", config=_PLOT_CFG, key=f"tr_cut_{og}_{lab}")
+    c2.plotly_chart(_cutout_figure(r, ps, frames_dir), width="stretch", config=_PLOT_CFG, key=f"tr_cut_{og}_{lab}")
 
 
-def _cutout_figure(r: pd.Series, lc: pd.DataFrame | None, ps: Path, frames_dir: Path) -> go.Figure:
+def _cutout_figure(r: pd.Series, ps: Path, frames_dir: Path) -> go.Figure:
     """MASTERSTAR, the first frame with the source and a frame before it (2 x 2 FWHM boxes)."""
     from astropy.io import fits  # noqa: PLC0415
 
@@ -643,7 +652,7 @@ def _adopt_period(phot: Path, cid: str, period: float, t0: float) -> None:
     save_report_include(phot, load_report_include(phot) + [cid])
 
 
-def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Path, ps: Path, meta: dict[str, Any], cfg: AppConfig) -> None:
+def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Path, meta: dict[str, Any], cfg: AppConfig) -> None:
     r = rows[rows["catalog_id"] == cid].iloc[0]
     st.divider()
     h1, h2 = st.columns([10, 2])
@@ -680,11 +689,11 @@ def _star_section(rows: pd.DataFrame, cid: str, og: str, sel_key: str, phot: Pat
         st.plotly_chart(night_figure(night, "BJD_TDB" if "bjd" in str(meta.get("time_column", "")).lower() else "JD"), width="stretch", config=_PLOT_CFG, key=f"var_night_{cid}")
     else:
         st.caption("No night light curve for this star.")
-    _tess_section(cid, r, phot, og, night, cfg)
+    _tess_section(cid, r, phot, night, cfg)
 
 
 @st.fragment
-def _tess_section(cid: str, r: pd.Series, phot: Path, og: str, night: pd.DataFrame | None, cfg: AppConfig) -> None:
+def _tess_section(cid: str, r: pd.Series, phot: Path, night: pd.DataFrame | None, cfg: AppConfig) -> None:
     """TESS download and the period / phase view (reruns alone while the period changes)."""
     tdir = tess_dir_for(phot, cid)
     h1, h2 = st.columns([3, 2])

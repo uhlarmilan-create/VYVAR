@@ -13,11 +13,9 @@ from astropy.io import fits as astrofits
 import numpy as np
 import pandas as pd
 
-from gaia_catalog_id import read_vyvar_csv
 from catalog_match_trust import is_wcs_untrusted_catalog_match_mode, normalize_catalog_match_mode
 from config import AppConfig
 from pipeline_constants import CT_MIN_COMP
-from infolog import log_event
 from proc_frame_store import ProcFrameStore
 from stats_core import _flux_to_mag
 from photometry_defs import (
@@ -26,7 +24,6 @@ from photometry_defs import (
     LOGGER,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
-    SKY_SURFACE_BG_MEDIAN_ADU_COL,
 )
 from photometry_provenance import merge_photometry_pipeline_meta
 from photometry_shared import (
@@ -36,9 +33,7 @@ from photometry_shared import (
     build_gs11_summary,
 )
 from gaia_catalog_id import VYVAR_CSV_DTYPE
-from pipeline_constants import MAD_CONSISTENCY
 from photometry_gate_helpers import _photometric_error_with_bkg_mode  # LAYER-2026-10: moved there
-from band_classify import should_apply_color_term  # LAYER-2026-10: moved there
 
 
 class _CsvRowMap(Mapping):
@@ -66,255 +61,21 @@ class _CsvRowMap(Mapping):
         return len(self._pos)
 
 
-def _build_csv_lookup(
-    csv_df: pd.DataFrame,
-    id_col: str,
-) -> tuple[Mapping[str, pd.Series], pd.DataFrame]:
-    """Build two lookup mechanisms:
-    1. Primary: dict {normalized_id -> row}
-    2. Fallback: rows with numeric x,y for nearest-neighbor match (full CSV columns).
+def _build_csv_lookup(csv_df: pd.DataFrame, id_col: str) -> Mapping[str, pd.Series]:
+    """Rows of a proc CSV by normalised ``id_col`` (catalog_id).
 
-    Key: the normalised ``id_col`` (catalog_id) only - ids are read as text everywhere (GAIA-ID-STRICT-2026-10),
-    ``name`` is a label and never an identity (INV-MATCH-IDENTITY-01, code review 2 G04-17).
+    Ids are read as text everywhere (GAIA-ID-STRICT-2026-10), ``name`` is a label and never an
+    identity (INV-MATCH-IDENTITY-01, G04-17). G06-28: identity only - the nearest-neighbour fallback
+    (a star missing by id took the nearest row within 15-18 px) is gone; forced photometry gives
+    every catalogue star its own row (FORCED-PHOT-01).
     """
     pos: dict[str, int] = {}
     for i, v in enumerate(csv_df[id_col].tolist()):
         cid = _normalize_gaia_id(v)
         if cid:
             pos.setdefault(cid, i)
-    id_map = _CsvRowMap(csv_df, pos)
-    # Full copy: the NN fallback must return a Series with all columns (dao_flux, times, ...).
-    xy_df = csv_df.copy()
-    xy_df["_cid_norm"] = xy_df[id_col].map(_normalize_gaia_id)  # identity = catalog_id only (G04-17)
-    xy_df["x"] = pd.to_numeric(xy_df["x"], errors="coerce")
-    xy_df["y"] = pd.to_numeric(xy_df["y"], errors="coerce")
-    return id_map, xy_df.dropna(subset=["x", "y"])
+    return _CsvRowMap(csv_df, pos)
 
-def _lookup_star_in_csv(
-    cid: str,
-    id_map: dict[str, pd.Series],
-    xy_df: pd.DataFrame,
-    ref_x: float | None,
-    ref_y: float | None,
-    *,
-    xy_tol_px: float = 15.0,
-) -> pd.Series | None:
-    """Find a star in the CSV - primarily by ID, fallback by x,y."""
-    cid_key = _normalize_gaia_id(cid)
-    if cid_key and cid_key in id_map:
-        return id_map[cid_key]
-
-    if ref_x is None or ref_y is None or xy_df.empty:
-        return None
-    if not (math.isfinite(ref_x) and math.isfinite(ref_y)):
-        return None
-
-    dx = xy_df["x"].to_numpy(dtype=np.float64) - float(ref_x)
-    dy = xy_df["y"].to_numpy(dtype=np.float64) - float(ref_y)
-    dists = np.sqrt(dx * dx + dy * dy)
-    tol = float(xy_tol_px)
-    if "dao_flux" in xy_df.columns:
-        flux_arr = pd.to_numeric(xy_df["dao_flux"], errors="coerce").to_numpy(dtype=np.float64)
-        candidate = np.isfinite(dists) & (dists <= tol) & np.isfinite(flux_arr) & (flux_arr > 0.0)
-    else:
-        candidate = np.isfinite(dists) & (dists <= tol)
-    if not candidate.any():
-        return None
-    dist_masked = np.where(candidate, dists, np.inf)
-    j = int(np.argmin(dist_masked))
-    if not math.isfinite(float(dists[j])) or float(dists[j]) > tol:
-        return None
-    _hit = xy_df.iloc[j]
-    _mid = str(_hit.get("_cid_norm", ""))
-    logging.debug(
-        "[APERTURE] CSV NN fallback ok: requested_cid=%s matched_csv_id=%s dist_px=%.2f tol=%.1f",
-        cid,
-        _mid,
-        float(dists[j]),
-        tol,
-    )
-    return _hit
-
-def _sat_limit_peak_adu() -> float | None:
-    """peak_max_adu limit from config (optional). No global fallback - saturation comes from FITS/DB in the pipeline."""
-    return None
-
-def _mad_sigma_or_std_floor(arr: np.ndarray) -> float:
-    """MAD/0.6745; no finite filter. Zero MAD falls back to std/0.6745 or 1e-9."""
-    med = float(np.median(arr))
-    mad = float(np.median(np.abs(arr - med)))
-    if not math.isfinite(mad) or mad <= 0:
-        return float(np.std(arr)) / MAD_CONSISTENCY or 1e-9
-    return mad / MAD_CONSISTENCY
-
-def measure_fwhm_from_masterstar(
-    masterstar_fits_path: Path,
-    star_positions: pd.DataFrame,
-    *,
-    n_stars: int = 20,
-    fit_box_fwhm: float = 8.0,
-    dao_fwhm_hint: float = 3.5,
-    ms_data: np.ndarray | None = None,
-) -> float:
-    """Measure the true Gaussian FWHM from the MASTERSTAR FITS.
-
-    Fits a 2D Gaussian to isolated, unsaturated stars from ``star_positions``
-    and returns the median FWHM in pixels. This is the physically correct FWHM
-    (matches the AIJ/IRAF definition), unlike the DAO estimate, which
-    systematically overestimates FWHM.
-
-    Args:
-        masterstar_fits_path: Path to MASTERSTAR.fits
-        star_positions: DataFrame with columns x, y, mag (catalog_id optional)
-        n_stars: Number of stars to fit (picks isolated, medium-bright ones)
-        fit_box_fwhm: Fit window size in units of dao_fwhm_hint
-        dao_fwhm_hint: Rough DAO estimate used to set the window size
-
-    Returns:
-        Median Gaussian FWHM in pixels.
-    """
-    from astropy.modeling import fitting, models
-
-    if ms_data is not None:
-        data = np.asarray(ms_data, dtype=np.float64)
-    else:
-        with astrofits.open(masterstar_fits_path, memmap=False) as hdul:
-            data = np.asarray(hdul[0].data, dtype=np.float64)
-    fill = float(np.nanmedian(data))
-    data = np.where(np.isfinite(data), data, fill)
-    h, w = data.shape
-
-    df = star_positions.copy()
-    if df.empty:
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: empty star_positions, fallback dao_fwhm_hint=%.2f px",
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-    df["x"] = pd.to_numeric(df["x"], errors="coerce")
-    df["y"] = pd.to_numeric(df["y"], errors="coerce")
-    df = df.dropna(subset=["x", "y"])
-    if len(df) < 3:
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: too few rows with x,y, fallback dao_fwhm_hint=%.2f px",
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-
-    box = int(fit_box_fwhm * dao_fwhm_hint)
-    margin = box + 5
-    if box < 3 or margin * 2 >= min(h, w):
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: box=%s too small/too large, fallback dao_fwhm_hint=%.2f px",
-            box,
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-
-    df = df[(df["x"] > margin) & (df["x"] < w - margin) & (df["y"] > margin) & (df["y"] < h - margin)].copy()
-    if len(df) < 3:
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: too few stars after edge filter, fallback dao_fwhm_hint=%.2f px",
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-
-    if "mag" in df.columns:
-        df["_mag"] = pd.to_numeric(df["mag"], errors="coerce")
-        df = df.dropna(subset=["_mag"]).sort_values("_mag")
-        n_skip = max(1, len(df) // 10)
-        df = df.iloc[n_skip : n_skip + n_stars * 3]
-    else:
-        df = df.iloc[: n_stars * 3]
-
-    if len(df) < 1:
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: empty selection after mag cut, fallback dao_fwhm_hint=%.2f px",
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-
-    xs = df["x"].to_numpy(dtype=float)
-    ys = df["y"].to_numpy(dtype=float)
-    isolated: list[Any] = []
-    for i in range(len(xs)):
-        dists = np.sqrt((xs - xs[i]) ** 2 + (ys - ys[i]) ** 2)
-        dists[i] = np.inf
-        if float(np.min(dists)) > 2.0 * box:
-            isolated.append(df.index[i])
-        if len(isolated) >= n_stars:
-            break
-
-    if not isolated:
-        isolated = list(df.index[: min(n_stars, len(df))])
-
-    df = df.loc[isolated]
-
-    fitter = fitting.LevMarLSQFitter()
-    fwhm_values: list[float] = []
-
-    y_grid, x_grid = np.mgrid[0 : 2 * box + 1, 0 : 2 * box + 1]
-
-    for _, row in df.iterrows():
-        try:
-            xc = int(round(float(row["x"])))
-            yc = int(round(float(row["y"])))
-            if not (box <= xc < w - box and box <= yc < h - box):
-                continue
-
-            cutout = data[yc - box : yc + box + 1, xc - box : xc + box + 1].copy()
-            if cutout.shape != (2 * box + 1, 2 * box + 1):
-                continue
-
-            border = np.concatenate(
-                [cutout[0, :], cutout[-1, :], cutout[1:-1, 0], cutout[1:-1, -1]]
-            )
-            sky = float(np.median(border))
-            cutout -= sky
-            peak = float(np.max(cutout))
-            if peak <= 0:
-                continue
-
-            g_init = models.Gaussian2D(
-                amplitude=peak,
-                x_mean=float(box),
-                y_mean=float(box),
-                x_stddev=dao_fwhm_hint / 2.355,
-                y_stddev=dao_fwhm_hint / 2.355,
-            )
-            g_fit = fitter(g_init, x_grid, y_grid, cutout)
-
-            sx = abs(float(getattr(g_fit.x_stddev, "value", g_fit.x_stddev)))
-            sy = abs(float(getattr(g_fit.y_stddev, "value", g_fit.y_stddev)))
-            fwhm_x = 2.355 * sx
-            fwhm_y = 2.355 * sy
-
-            if (
-                0.5 * dao_fwhm_hint < fwhm_x < 4.0 * dao_fwhm_hint
-                and 0.5 * dao_fwhm_hint < fwhm_y < 4.0 * dao_fwhm_hint
-            ):
-                fwhm_values.append((fwhm_x + fwhm_y) / 2.0)
-
-        except Exception:  # noqa: BLE001
-            # EXC-0124: T4 -- One star skipped in Gaussian FWHM loop - median still computed from remaining stars (EXCEPT-BULK-2 2026-07-08)
-            continue
-
-    if len(fwhm_values) < 3:
-        logging.warning(
-            "[APERTURE] Gaussian FWHM fit: fewer than 3 stars (%s), fallback dao_fwhm_hint=%.2f px",
-            len(fwhm_values),
-            float(dao_fwhm_hint),
-        )
-        return float(dao_fwhm_hint)
-
-    result = float(np.median(fwhm_values))
-    logging.info(
-        "[APERTURE] Gaussian FWHM from MASTERSTAR: %.3f px (from %s stars, DAO hint %.3f px)",
-        result,
-        len(fwhm_values),
-        float(dao_fwhm_hint),
-    )
-    return result
 
 def compute_optimal_apertures(
     star_positions: pd.DataFrame,
@@ -382,7 +143,6 @@ def _aperture_proc_column_requirements() -> dict[str, list[str]]:
             "dao_flux",
             "aperture_r_px",
             "sky_adu_per_px_annulus",
-            SKY_SURFACE_BG_MEDIAN_ADU_COL,
         ],
         "err_empirical": [
             SIGMA_BKG_AP_COL,
@@ -568,14 +328,11 @@ def read_flux_from_csv(
     apertures_px: dict[str, float],
     *,
     sat_limit_adu: float | None = None,
-    star_xy: dict[str, tuple[float, float]] | None = None,
-    xy_tol_px: float = 15.0,
     frame_times: dict[str, Any] | None = None,
     csv_df: pd.DataFrame | None = None,
-    lookup: tuple[dict[str, pd.Series], pd.DataFrame] | None = None,
+    lookup: Mapping[str, pd.Series] | None = None,
     gain: float,
     read_noise: float,
-    variable_target_catalog_ids: frozenset[str] | None = None,
 ) -> pd.DataFrame:
     """Step 2: read flux from the per-frame CSV (dao_flux).
 
@@ -606,7 +363,7 @@ def read_flux_from_csv(
     if csv_df.empty:
         return pd.DataFrame()
 
-    _lim_raw = sat_limit_adu if sat_limit_adu is not None else _sat_limit_peak_adu()
+    _lim_raw = sat_limit_adu
     if _lim_raw is None or (isinstance(_lim_raw, float) and not math.isfinite(_lim_raw)):
         _sat_lim = float("inf")
     else:
@@ -615,9 +372,9 @@ def read_flux_from_csv(
 
     id_col = "catalog_id" if "catalog_id" in csv_df.columns else "name"
     if lookup is not None:
-        id_map, xy_df_lookup = lookup
+        id_map = lookup
     else:
-        id_map, xy_df_lookup = _build_csv_lookup(csv_df, id_col)
+        id_map = _build_csv_lookup(csv_df, id_col)
 
     # Airmass from frame_times
     am_frame = float("nan")
@@ -678,53 +435,21 @@ def read_flux_from_csv(
             "flag": "no_data",
         }
 
-        ref_x, ref_y = None, None
-        if star_xy and cid in star_xy:
-            rx, ry = star_xy[cid]
-            ref_x = float(rx) if math.isfinite(float(rx)) else None
-            ref_y = float(ry) if math.isfinite(float(ry)) else None
-
         cid_key = _normalize_gaia_id(cid)
-        _is_variable_target = (
-            variable_target_catalog_ids is not None
-            and cid_key
-            and cid_key in variable_target_catalog_ids
-        )
-        if _is_variable_target:
-            if not cid_key or cid_key not in id_map:
-                rows.append(base)
-                continue
-            row_csv = id_map[cid_key]
-        else:
-            row_csv = _lookup_star_in_csv(
-                cid_key or cid, id_map, xy_df_lookup, ref_x, ref_y, xy_tol_px=xy_tol_px
-            )
-            if row_csv is None:
-                rows.append(base)
-                continue
-
-            # XY fallback (not a direct ID hit): comp pool keeps legacy guard.
-            if not cid_key or cid_key not in id_map:
-                fallback_flux = float(row_csv.get("dao_flux", float("nan")))
-                if math.isfinite(fallback_flux) and fallback_flux > 0:
-                    fallback_mag = _flux_to_mag(fallback_flux)
-                    if math.isfinite(fallback_mag) and fallback_mag > -8.0:
-                        logging.warning(
-                            "[APERTURE] XY fallback wrong star: cid=%s, fallback_mag=%.2f > -8.0, "
-                            "setting NaN",
-                            cid,
-                            fallback_mag,
-                        )
-                        rows.append(base)
-                        continue
-
+        if not cid_key or cid_key not in id_map:
+            rows.append(base)
+            continue
+        row_csv = id_map[cid_key]
 
         _row_cmm = normalize_catalog_match_mode(row_csv.get("catalog_match_mode"))
         if _row_cmm:
             base["catalog_match_mode"] = _row_cmm
             base["wcs_untrusted"] = is_wcs_untrusted_catalog_match_mode(_row_cmm)
 
-        # Time stamps
+        # Time stamps: the FIELD-CENTRE frame times of the proc CSV (G02-18). Here they order frames
+        # and feed the comparison-star stability tests (slopes, point-to-point), which a constant
+        # per-star offset of < 1 min cannot change; the published target LC recomputes BJD/HJD with
+        # the target's own RA/Dec (_recompute_bjd_hjd_with_status).
         base["bjd"] = float(row_csv.get("bjd_tdb_mid", float("nan")))
         base["hjd"] = float(row_csv.get("hjd_mid", float("nan")))
         base["jd"] = float(row_csv.get("jd_mid", float("nan")))
@@ -811,92 +536,6 @@ def read_flux_from_csv(
 
     return pd.DataFrame(rows)
 
-def fit_color_term_c1(
-    comp_mag_inst: dict[str, np.ndarray],
-    comp_catalog_mag: dict[str, float],
-    comp_bp_rp: dict[str, float],
-    comp_quality: dict[str, dict],
-    *,
-    min_comp: int = 5,
-) -> tuple[float, float, int]:
-    """
-    Fit the color-term coefficient c1 from the COMP stars.
-
-    For each good/suspect COMP star:
-      x_i = bp_rp_i - median(bp_rp of all used COMP)
-      y_i = median(cat_mag_i - inst_mag_i)  [over all frames]
-
-    Linear fit: y = c1 * x + ZP_offset
-
-    Returns: (c1, c1_stderr, n_comp_used)
-    On error or too few COMP: (0.0, nan, 0)
-    """
-    try:
-        min_comp_i = int(min_comp)
-    except Exception:  # noqa: BLE001
-        min_comp_i = 5
-    min_comp_i = max(2, min_comp_i)
-
-    usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
-    xs: list[float] = []
-    ys: list[float] = []
-    bp_vals: list[float] = []
-
-    for cid in usable:
-        bp = float(comp_bp_rp.get(cid, float("nan")))
-        if not math.isfinite(bp):
-            continue
-        if cid not in comp_mag_inst:
-            continue
-        inst = np.asarray(comp_mag_inst[cid], dtype=np.float64)
-        finite = inst[np.isfinite(inst)]
-        if finite.size < min_comp_i:
-            continue
-        cat = float(comp_catalog_mag.get(cid, float("nan")))
-        if not math.isfinite(cat):
-            continue
-        y = float(np.nanmedian(cat - finite))
-        if not math.isfinite(y):
-            continue
-        bp_vals.append(bp)
-        ys.append(y)
-        # x will be centered later once we know bp median
-
-    n0 = len(ys)
-    if n0 < min_comp_i:
-        return 0.0, float("nan"), 0
-
-    bp_med = float(np.median(np.asarray(bp_vals, dtype=np.float64)))
-    for bp in bp_vals:
-        xs.append(float(bp) - bp_med)
-
-    x = np.asarray(xs, dtype=np.float64)
-    y = np.asarray(ys, dtype=np.float64)
-
-    fit_cl = _safe_polyfit(x, y, 1, cov=True)
-    if fit_cl is None:
-        return 0.0, float("nan"), 0
-    try:
-        coeffs, cov = fit_cl
-        c1 = float(coeffs[0])
-        c1_stderr = float(math.sqrt(float(cov[0, 0]))) if cov is not None else float("nan")
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.debug("[PHOT] color-term c1 fit (inner) failed; no correction: %s", exc)
-        return 0.0, float("nan"), 0
-
-    bp_min = float(np.min(np.asarray(bp_vals, dtype=np.float64)))
-    bp_max = float(np.max(np.asarray(bp_vals, dtype=np.float64)))
-    logging.info(
-        "[COLOR TERM] c1=%.4f +- %.4f, bp_rp_range=[%.2f, %.2f], n_comp=%s, sigma_clip_removed=0",
-        c1,
-        c1_stderr,
-        bp_min,
-        bp_max,
-        int(x.size),
-    )
-    return c1, c1_stderr, int(x.size)
-
-
 def _obs_group_filter_key(obs_group: str) -> str:
     raw = str(obs_group or "").split("|")[0].strip()
     part = raw.split("_")[0].strip()
@@ -913,83 +552,53 @@ class _ColorTermGroupFit:
     comp_catalog_mag: dict[str, float]
     apply_gate: bool
     gate_reason: str
-    mode: str = "fit"  # "fit" | "band"
+    mode: str = "band"  # CT-ONE-2026-10: the only colour-term path
     #: CT-2026-10: observed band of the comparison catalogue magnitudes ("G" = Gaia G).
     band: str = "G"
     #: CT-2026-10: polynomial colour term (order by BIC) in the observed band.
     poly_fit: Any = None
 
-def _group_comp_mag_inst_from_flux_matrix(
-    flux_matrix: pd.DataFrame,
+def _group_comp_mag_inst_on_group_k(
     comp_ids: list[str],
     csv_files: list[Path],
+    kplan: Mapping[str, Any],
 ) -> dict[str, np.ndarray]:
-    n = len(csv_files)
-    out: dict[str, np.ndarray] = {cid: np.full(n, float("nan"), dtype=np.float64) for cid in comp_ids}
-    if flux_matrix is None or getattr(flux_matrix, "empty", True):
-        return out
-    if "mag_inst" not in flux_matrix.columns or "source_file" not in flux_matrix.columns:
-        return out
-    id_set = set(comp_ids)
-    fm = flux_matrix[flux_matrix["catalog_id"].astype(str).isin(id_set)].copy()
-    for i, csv_path in enumerate(csv_files):
-        stem = csv_path.name
-        sub = fm[fm["source_file"].astype(str) == stem]
-        for cid in comp_ids:
-            hit = sub[sub["catalog_id"].astype(str) == cid]
-            if hit.empty:
-                continue
-            v = pd.to_numeric(hit.iloc[0]["mag_inst"], errors="coerce")
-            if math.isfinite(float(v)):
-                out[cid][i] = float(v)
-    return out
+    """G06-18 (Milan 2026-10-29): instrumental magnitudes of the pool comps per frame (``csv_files`` order) on
+    the aperture the light curves use - each star at the k of its brightness group, corrected per frame to
+    k_ref (``aperture_pertarget.group_k_fluxes``, the rule of the field search). Not the comp-selection
+    aperture (dao_flux) any more. Flux <= 0 or unusable rows give NaN."""
+    from aperture_pertarget import group_k_fluxes  # noqa: PLC0415
+    from photometry_defs import flux_k_column  # noqa: PLC0415
+    from proc_frame_store import read_proc_csv  # noqa: PLC0415
 
-def _group_comp_mag_inst_from_proc_csvs(
-    comp_ids: list[str],
-    csv_files: list[Path],
-) -> dict[str, np.ndarray]:
-    """Inst magnitudes for global comp pool - one array per comp across all frames."""
     n = len(csv_files)
     out: dict[str, np.ndarray] = {cid: np.full(n, float("nan"), dtype=np.float64) for cid in comp_ids}
     id_set = set(comp_ids)
+    kcols = {flux_k_column(k) for k in kplan["k_all"]}
+    want = kcols | {"catalog_id", "likely_saturated", "photometry_ok"}
+    parts = []
     for i, csv_path in enumerate(csv_files):
-        try:
-            from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-            df = read_proc_csv(csv_path, low_memory=False, dtype=VYVAR_CSV_DTYPE)
-        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-            from except_fix_counters import get_except_fix_counters
-
-            get_except_fix_counters().comp_pool_csv_skip += 1
-            logging.error("[PHOT] comp-pool CSV skip %s (frame %d): %s", csv_path, i, exc)
-            continue
-        if "catalog_id" not in df.columns:
-            continue
-        _nid = df["catalog_id"].apply(_normalize_gaia_id)
-        _in = _nid.isin(id_set)
-        sub = df[_in]
-        mag_col = "mag_inst" if "mag_inst" in sub.columns else None
-        flux_col = None
-        if mag_col is None:
-            for fc in ("dao_flux", "flux", "aperture_flux"):
-                if fc in sub.columns:
-                    flux_col = fc
-                    break
-        # SPEED-2026-10: column lists instead of iterrows (same rows, same order, last row wins).
-        _vcol = mag_col if mag_col is not None else flux_col
-        if _vcol is None:
-            continue
-        for cid, raw in zip(_nid[_in].astype(str).tolist(), sub[_vcol].tolist(), strict=True):
-            if cid not in out:
-                continue
-            if mag_col is not None:
-                v = pd.to_numeric(raw, errors="coerce")
-                if math.isfinite(float(v)):
-                    out[cid][i] = float(v)
-            else:
-                flux = float(pd.to_numeric(raw, errors="coerce"))
-                if math.isfinite(flux) and flux > 0:
-                    out[cid][i] = float(-2.5 * math.log10(flux))
+        df = read_proc_csv(csv_path, usecols=lambda c: c in want, low_memory=False, dtype=VYVAR_CSV_DTYPE)
+        if not kcols <= set(df.columns):
+            raise ValueError(f"{Path(csv_path).name}: proc catalogue lacks {sorted(kcols - set(df.columns))}")
+        df["catalog_id"] = df["catalog_id"].map(_normalize_gaia_id)
+        df["t"] = i
+        parts.append(df[df["catalog_id"] != ""])
+    if not parts:
+        return out
+    D = pd.concat(parts, ignore_index=True).drop_duplicates(["catalog_id", "t"])
+    def _flag(col: str, default: bool) -> pd.Series:
+        if col not in D.columns:
+            return pd.Series(default, index=D.index)
+        return D[col].astype(str).str.strip().str.lower().isin(("true", "1", "1.0", "yes"))
+    base = ~_flag("likely_saturated", False) & (_flag("photometry_ok", True) if "photometry_ok" in D.columns
+                                                 else pd.Series(True, index=D.index))
+    gk = group_k_fluxes(D, base, kplan)
+    f = gk["flux"].where(base & (gk["flux"] > 0))
+    m = -2.5 * np.log10(f) + gk["apcorr_row"]
+    sel = D["catalog_id"].isin(id_set) & np.isfinite(m)
+    for cid, t, v in zip(D.loc[sel, "catalog_id"], D.loc[sel, "t"], m[sel], strict=True):
+        out[str(cid)][int(t)] = float(v)
     return out
 
 def _comp_maps_from_comparison_stars_csv(
@@ -1029,7 +638,7 @@ def _comp_maps_from_comparison_stars_csv(
 def _compute_group_color_term_fit(
     *,
     comparison_stars_csv: Path,
-    flux_matrix: pd.DataFrame,
+    kplan: Mapping[str, Any],
     csv_files: list[Path],
     obs_group: str,
     cfg: Any,
@@ -1051,14 +660,7 @@ def _compute_group_color_term_fit(
     if not comp_ids:
         return None
 
-    comp_mag_inst = _group_comp_mag_inst_from_proc_csvs(comp_ids, csv_files)
-    n_from_matrix = sum(
-        1
-        for cid in comp_ids
-        if int(np.isfinite(comp_mag_inst[cid]).sum()) >= 3
-    )
-    if n_from_matrix < max(10, len(comp_ids) // 4) and flux_matrix is not None:
-        comp_mag_inst = _group_comp_mag_inst_from_flux_matrix(flux_matrix, comp_ids, csv_files)
+    comp_mag_inst = _group_comp_mag_inst_on_group_k(comp_ids, csv_files, kplan)
     from k2_extinction import (  # noqa: PLC0415
         K2Source,
         apply_k2_to_comp_mag_inst,
@@ -1125,124 +727,12 @@ def _compute_group_color_term_fit(
                 band=_band,
                 poly_fit=_pf if _ok else None,
             )
-    c1, c1_stderr, n_comp = fit_color_term_c1(
-        comp_mag_inst,
-        comp_catalog_mag,
-        comp_bp_rp,
-        comp_quality,
-        min_comp=5,
-    )
-    apply_gate, gate_reason = should_apply_color_term(
-        obs_group=_obs_group_filter_key(obs_group),
-        c1=float(c1),
-        c1_stderr=float(c1_stderr),
-        n_comp=int(n_comp),
-        cfg=cfg,
-    )
-    return _ColorTermGroupFit(
-        c1=float(c1),
-        c1_stderr=float(c1_stderr),
-        n_comp=int(n_comp),
-        comp_bp_rp=comp_bp_rp,
-        comp_quality=comp_quality,
-        comp_catalog_mag=comp_catalog_mag,
-        apply_gate=bool(apply_gate),
-        gate_reason=str(gate_reason),
-        mode="fit",
-    )
-
-def _ensure_group_comp_pool_csv(
-    *,
-    platesolve_dir: Path,
-    masterstar_fits: Path,
-    masterstars_csv: Path,
-    cfg: Any,
-    draft_id: int | None,
-    min_pool: int = 20,
-) -> Path:
-    """Ensure ``comparison_stars.csv`` has enough stars for global colour-term fit."""
-    ps_dir = Path(platesolve_dir)
-    comp_csv = ps_dir / "comparison_stars.csv"
-    n_pool = 0
-    if comp_csv.is_file():
-        try:
-            n_pool = int(len(read_vyvar_csv(comp_csv, usecols=["catalog_id"])))
-        except Exception:  # noqa: BLE001
-            try:
-                n_pool = int(len(read_vyvar_csv(comp_csv)))
-            except Exception:  # noqa: BLE001
-                n_pool = 0
-    if n_pool >= int(min_pool):
-        return comp_csv
-    ms_fits = Path(masterstar_fits)
-    ms_path = Path(masterstars_csv)
-    if not ms_fits.is_file() or not ms_path.is_file():
-        return comp_csv
-    try:
-        from pipeline_astrometry import write_photometry_plan_files  # noqa: PLC0415
-
-        write_photometry_plan_files(
-            platesolve_dir=ps_dir,
-            masterstar_fits=ms_fits,
-            masterstars_csv=ms_path,
-            require_non_variable=bool(getattr(cfg, "phase01_comparison_require_non_variable", True)),
-            draft_id=int(draft_id) if draft_id is not None else None,
-            cfg=cfg,
-        )
-        log_event(f"[PHOT] Refreshed comparison_stars.csv pool ({n_pool}->spatial grid) for CT fit in {ps_dir.name}")
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0137] comparison_stars.csv spatial pool refresh fails - CT fit uses stale/sparse comp pool: %s', exc)
-        logging.warning("[PHOT] comparison_stars pool refresh failed: %s", exc)
-    return comp_csv
-
-def empirical_feature_mask_mag(
-    mag: np.ndarray,
-    *,
-    k: float = 3.0,
-    min_run: int = 3,
-) -> np.ndarray:
-    """Mask eclipses/transits before sigma-clipping (TESS subdwarf recipe, arXiv:2402.16018).
-
-    In flux space: mark runs of >= ``min_run`` consecutive points below ``-k`` sigma_MAD
-    from the median flux; extend the mask on both sides until flux returns above the median.
-    """
-    n = len(mag)
-    protected = np.zeros(n, dtype=bool)
-    m = np.asarray(mag, dtype=float)
-    finite = np.isfinite(m)
-    if int(finite.sum()) < max(int(min_run) + 2, 5):
-        return protected
-
-    flux = np.power(10.0, -0.4 * m)
-    f_ref = float(np.nanmedian(flux[finite]))
-    if not math.isfinite(f_ref) or f_ref <= 0:
-        return protected
-
-    resid = flux - f_ref
-    r_fin = resid[finite]
-    r_med = float(np.median(r_fin))
-    mad = float(np.median(np.abs(r_fin - r_med)))
-    sigma = max(mad / MAD_CONSISTENCY, 1e-12)
-    deep = (resid < (-float(k) * sigma)) & finite
-
-    i = 0
-    while i < n:
-        if not bool(deep[i]):
-            i += 1
-            continue
-        j = i
-        while j < n and bool(deep[j]):
-            j += 1
-        if (j - i) >= int(min_run):
-            lo = i
-            while lo > 0 and bool(finite[lo - 1]) and float(flux[lo - 1]) < f_ref:
-                lo -= 1
-            hi = j
-            while hi < n and bool(finite[hi]) and float(flux[hi]) < f_ref:
-                hi += 1
-            protected[lo:hi] = True
-        i = j
-    return protected
+    # CT-ONE-2026-10 (Milan 2026-10-29, code review 2 G08-12 / G11-05): one colour-term path - the band
+    # polynomial above. Too few colour-valid comparison stars (or no band) -> no colour term, logged. The
+    # former "fit" mode fitted c1 against Gaia G magnitudes and applied it to a band zero point.
+    logging.info("[COLOR TERM] %s: band %s - too few colour-valid comparison stars for a colour term -> none",
+                 obs_group, _band)
+    return None
 
 def apply_reporting_postprocess(
     mag_calib: np.ndarray,
@@ -1252,15 +742,14 @@ def apply_reporting_postprocess(
     sat_flags: np.ndarray,
     target_frames: pd.DataFrame,
     ct_ok: bool,
+    base_flags: list[str] | None = None,
     err: np.ndarray | None = None,
     bjd: np.ndarray | None = None,
     source_files: list[str] | None = None,
     frame_qc_reasons: dict[str, str] | None = None,
     evidence_for_index: Any | None = None,
     err_photon: np.ndarray | None = None,
-    err_sem_rel: np.ndarray | None = None,
-    err_scint_rel: np.ndarray | None = None,
-    err_sigma_sys_rel: np.ndarray | None = None,
+    airmass: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, list[str], list[str]]:
     """Workstream B: ship ensemble-calibrated mag; LC-OUTLIER / LC-FLAG-ERR flags; no target airmass LSQ.
 
@@ -1277,34 +766,20 @@ def apply_reporting_postprocess(
     _src = source_files
     if _src is None and "source_file" in target_frames.columns:
         _src = target_frames["source_file"].astype(str).tolist()
-    # Keep empirical eclipse mask as soft log only; isolation rule is the hard guard.
-    _feature_mask = empirical_feature_mask_mag(mag_for_report)
-    if int(_feature_mask.sum()) > 0:
-        logging.info(
-            "[OUTLIER] Feature mask (info): %d/%d frames look like eclipse runs "
-            "(adjacent-sign rule protects them; arXiv:2402.16018)",
-            int(_feature_mask.sum()),
-            len(_feature_mask),
-        )
     result = assign_lc_flags(
         mag_for_report,
         e,
         t,
+        base_flags=base_flags,
         sat_flags=np.asarray(sat_flags, dtype=bool),
         source_files=_src,
         frame_qc_reasons=frame_qc_reasons,
         evidence_for_index=evidence_for_index,
         err_photon=err_photon,
-        err_sem_rel=err_sem_rel,
-        err_scint_rel=err_scint_rel,
-        err_sigma_sys_rel=err_sigma_sys_rel,
+        airmass=airmass,
     )
     out_flags = list(result.flags)
     out_reasons = list(result.reasons)
-    _preserve_nondetection_flags_helper(out_flags, target_frames)
-    for i in range(min(len(out_flags), len(out_reasons))):
-        if out_flags[i] == "nondetection" and not out_reasons[i]:
-            out_reasons[i] = "nondetection"
     if result.n_artifact or result.n_spike_unconfirmed or result.n_frame_qc or result.n_high_err:
         logging.info(
             "[LC-OUTLIER] %s: artifact=%d spike_unconfirmed=%d frame_qc=%d "
@@ -1674,19 +1149,15 @@ def _aperture_resolve_field_center_ra_dec(
     ms_header: Any,
     at_df: pd.DataFrame,
 ) -> tuple[float, float, str]:
-    """Field center (deg ICRS): MASTERSTAR WCS CRVAL, else median of active_targets ra/dec."""
+    """Field centre (deg ICRS) of the lunar context: ``fits_meta.field_centre_radec`` of the MASTERSTAR
+    header (G02-17: the same authority as the frame BJD and airmass), else the median of the active
+    targets."""
     if ms_header is not None:
-        try:
-            cr1 = ms_header.get("CRVAL1")
-            cr2 = ms_header.get("CRVAL2")
-            if cr1 is not None and cr2 is not None:
-                ra = float(cr1)
-                dec = float(cr2)
-                if math.isfinite(ra) and math.isfinite(dec):
-                    return ra, dec, "MASTERSTAR_CRVAL"
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0159] MASTERSTAR CRVAL1/2 parse fails - field center falls back to active_targets median (may...: %s', exc)
-            pass
+        from fits_meta import field_centre_radec  # noqa: PLC0415
+
+        ra, dec, src = field_centre_radec(ms_header)
+        if ra is not None and dec is not None:
+            return float(ra), float(dec), f"MASTERSTAR_{src}"
     if at_df is not None and not at_df.empty:
         ra_col = "ra_deg" if "ra_deg" in at_df.columns else ("ra" if "ra" in at_df.columns else None)
         de_col = "dec_deg" if "dec_deg" in at_df.columns else ("dec" if "dec" in at_df.columns else None)
@@ -1726,7 +1197,6 @@ class _AperturePhotometryState:
     frame_time_lookup: dict
     fwhm_px: float
     apertures_px: dict
-    star_xy: dict
     chip_fw: int | None
     chip_fh: int | None
     _ms_header: object
@@ -1760,8 +1230,6 @@ class _AperturePhotometryState:
     k2_bprp: float = float("nan")
     k2_source: str = "none"
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
-    variable_target_catalog_ids: frozenset[str] = field(default_factory=frozenset)
-    snr_ap_table: dict[str, Any] | None = None
     equipment_id: int | None = None
     #: Run-effective resolved facts (metadata only; PARAM-OWNERSHIP-WAVE-A STEP 4).
     #: gain/read-noise/site sources, saturation, plate scale, frame dims, binning,
@@ -1876,9 +1344,14 @@ def _build_aperture_dynamic_params(
     if _plate is None or not math.isfinite(float(_plate)):
         _plate = None
 
-    from sigma_floor_core import resolve_sigma_sys_mag  # noqa: PLC0415
+    from sigma_floor_core import ERR_MODEL_TERMS, ERR_MODEL_TEXT, resolve_sigma_sys_mag  # noqa: PLC0415
 
     _ssm = resolve_sigma_sys_mag(state.equipment_id, state._cfg, rig_label=str(state.obs_group or ""))
+    # G08-32: the error model as combine_production_err_rel builds it, with the scintillation parameters
+    _rig = _rig_scint_params(state, output_dir)
+
+    def _num(v: Any) -> float | None:
+        return float(v) if v is not None and math.isfinite(float(v)) else None
 
     return {
         "fwhm_px": float(state.fwhm_px) if state.fwhm_px is not None and math.isfinite(float(state.fwhm_px)) else None,
@@ -1893,8 +1366,15 @@ def _build_aperture_dynamic_params(
         "sigma_floor": {
             "equipment_id": state.equipment_id,
             "sigma_sys_mag": float(_ssm),
-            "c4_correction": True,
-            "err_model": "err_photon^2 + sem_ens^2 + sigma_sys^2 (rel flux)",
+            "err_model": ERR_MODEL_TEXT,
+            "err_terms": list(ERR_MODEL_TERMS),
+            "scintillation": {
+                "telescope_diameter_m": _num(_rig.telescope_diameter_m),
+                "altitude_m": _num(_rig.altitude_m),
+                "exposure_s": _num(_rig.exposure_s),
+                "c_y": _num(_rig.c_y),
+                "notes": list(_rig.source_notes),
+            },
             "red_noise_diagnostic": "report-only (PZQ 2006); not in per-point bars",
         },
     }
@@ -1952,17 +1432,6 @@ def _aperture_compute_lunar_context(state: _AperturePhotometryState) -> dict[str
     )
     return lunar
 
-def _preserve_nondetection_flags_helper(
-    out_flags_local: list[str], target_frames: pd.DataFrame
-) -> None:
-    if "flag" not in target_frames.columns:
-        return
-    _rf_nd = target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
-    for i in range(min(len(out_flags_local), len(_rf_nd))):
-        if str(_rf_nd.iloc[i]) == "nondetection":
-            out_flags_local[i] = "nondetection"
-
-
 def _propagate_aperture_skip_reason_to_active(
     active_csv: Path,
     summary_rows: list[dict[str, Any]],
@@ -2006,7 +1475,6 @@ def _propagate_aperture_skip_reason_to_active(
 def _aperture_finalize_exports(
     *,
     summary_rows: list,
-    lc_dir: Path,
     output_dir: Path,
     _cfg: Any,
     n_lc: int,
@@ -2175,12 +1643,27 @@ def _aperture_finalize_exports(
     }
 
 
+def _rig_scint_params(state: Any, output_dir: Path) -> Any:
+    """Scintillation parameters of the run (telescope diameter, site altitude, exposure, C_Y): the ones the
+    light-curve error and the night floor use (``sigma_budget.resolve_rig_scintillation_params``)."""
+    from processed_field import processed_field_id  # noqa: PLC0415
+    from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
+    from utils import exposure_seconds  # noqa: PLC0415
+
+    return resolve_rig_scintillation_params(
+        draft_id=processed_field_id(output_dir),
+        setup=str(state.obs_group or ""),
+        exposure_s=exposure_seconds(state._ms_header),
+        cfg=state._cfg,
+        pipeline_meta=({"observer_location": {"alt_m": float(state.site_alt)}}
+                       if state.site_ok and state.site_alt is not None else None),
+    )
+
+
 def _frame_scintillation_mag(state: Any, frame_order: list, output_dir: Path) -> np.ndarray:
     """Per-frame scintillation [mag] at the frame airmass with the rig parameters the light-curve
     error uses (SIGMA-SYS-MODEL-2026-10); 0 where the airmass is unknown."""
     from aperture_pertarget import frame_stem_from_source  # noqa: PLC0415
-    from processed_field import processed_field_id  # noqa: PLC0415
-    from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
     from sigma_floor_core import scintillation_mag_per_epoch  # noqa: PLC0415
 
     am_by_stem: dict[str, float] = {}
@@ -2189,13 +1672,7 @@ def _frame_scintillation_mag(state: Any, frame_order: list, output_dir: Path) ->
             v = pd.to_numeric(df["airmass"], errors="coerce")
             if v.notna().any():
                 am_by_stem[frame_stem_from_source(str(key))] = float(v.median())
-    rig = resolve_rig_scintillation_params(
-        draft_id=processed_field_id(output_dir),
-        setup=str(state.obs_group or ""),
-        cfg=state._cfg,
-        pipeline_meta=({"observer_location": {"alt_m": float(state.site_alt)}}
-                       if state.site_ok and state.site_alt is not None else None),
-    )
+    rig = _rig_scint_params(state, output_dir)
     out = np.zeros(len(frame_order), dtype=float)
     for i, stem in enumerate(frame_order):
         am = am_by_stem.get(str(stem), float("nan"))
@@ -2258,7 +1735,8 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
     from comp_smart import smart_select  # noqa: PLC0415
 
     res_idx = getattr(state, "reserve_index", None) or {}
-    # BJD per frame stem from the per-frame CSV cache
+    # BJD per frame stem from the per-frame CSV cache: the field-centre frame time (G02-18) - smart_select
+    # uses it for comparison-star slopes per hour, unchanged by a constant per-star offset
     bjd_by_stem: dict[str, float] = {}
     for _k, _df in (getattr(state, "_aperture_csv_cache", None) or {}).items():
         try:
@@ -2339,100 +1817,8 @@ def _smart_prepass(state: Any, grid: Any, choices: dict, frame_order: list, cfg:
         logging.info("[COMP-SMART] %s: %d clean of %d candidates; dropped %s, added %s, kept suspect %s",
                      tcid, log["n_clean"], len(lc), log["replaced"], log["added"], log["kept_suspect"])
 
-def run_aperture_photometry(
-    masterstar_fits_path: Path,
-    active_targets_csv: Path,
-    comparison_stars_csv: Path,
-    per_frame_csv_dir: Path,
-    detrended_aligned_dir: Path,
-    output_dir: Path,
-    fwhm_px: float,
-    *,
-    sat_limit_adu: float | None = None,
-    outlier_sigma: float = 3.0,
-    stability_sigma: float = 3.0,
-    force_aperture_px: float | None = None,
-    cfg: AppConfig | None = None,
-    progress_cb: Any = None,
-    db: Any | None = None,
-    draft_id: int | None = None,
-    proc_frame_store: ProcFrameStore | None = None,
-) -> dict[str, Any]:
-    """Main wrapper for aperture photometry.
-
-    Global FWHM for the aperture: ``VY_FWHM`` (frame QC elliptical Gaussian), else a 2D Gaussian fit
-    (``measure_fwhm_from_masterstar``) with a hint from ``fwhm_px``.
-    Aperture radius = ``aperture_fwhm_factor x FWHM`` (default from ``cfg``).
-
-    Returns:
-        dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map
-    """
-    # The driver runs the two stage modules; they import helpers from this module, so they are
-    # imported here and not at module level (LAYER-2026-10: no module-level import cycle).
-    from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: PLC0415
-    from aperture_photometry_target import _aperture_process_one_target  # noqa: PLC0415
-
-    output_dir = Path(output_dir)
-    lc_dir = output_dir / "lightcurves"
-    lc_dir.mkdir(parents=True, exist_ok=True)
-    # OUTPUT-REVIEW-2026-10 step 7: a target skipped now must not keep (and export) its old products
-    from run_outputs import clear_aperture_products  # noqa: PLC0415
-
-    clear_aperture_products(output_dir)
-
-    from except_fix_counters import reset_except_fix_counters
-
-    reset_except_fix_counters()
-
-    def _p2(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
-
-    _p2("Aperture photometry: preparing shared state...")
-    state = _aperture_prepare_shared_state(
-        output_dir=output_dir,
-        lc_dir=lc_dir,
-        masterstar_fits_path=masterstar_fits_path,
-        comparison_stars_csv=comparison_stars_csv,
-        per_frame_csv_dir=per_frame_csv_dir,
-        progress_cb=progress_cb,
-        active_targets_csv=active_targets_csv,
-        detrended_aligned_dir=detrended_aligned_dir,
-        fwhm_px=fwhm_px,
-        sat_limit_adu=sat_limit_adu,
-        force_aperture_px=force_aperture_px,
-        cfg=cfg,
-        db=db,
-        draft_id=draft_id,
-        proc_frame_store=proc_frame_store,
-    )
-    at_df = state.at_df
-    # G06-31: per-frame saturation skips are recorded in active_targets.csv as an explicit step after
-    # loading (it was a side effect inside the state builder; a failed write was only logged).
-    at_df.to_csv(active_targets_csv, index=False)
-    _comp_index = state._comp_index
-    csv_files = state.csv_files
-    n_frames = state.n_frames
-    fwhm_px = state.fwhm_px
-    _ms_header = state._ms_header
-    _ms_data = state._ms_data
-    _flux_matrix = state._flux_matrix
-    field_map_path = state.field_map_path
-    _cfg = state._cfg
-    _nt = state._nt
-    _save_png = bool(_cfg.save_lightcurve_png)
-    # CONFIG-ONE-2026-10 (G06-12): aperture and annulus factors come from the run config only
-    _apt_fw = float(_cfg.aperture_fwhm_factor)
-    annulus_inner_fwhm = float(_cfg.annulus_inner_fwhm)
-    annulus_outer_fwhm = float(_cfg.annulus_outer_fwhm)
-
-    summary_rows: list[dict[str, Any]] = []
-    n_lc = 0
-
+def _rap_write_start_meta(*, _apt_fw, _cfg, db, draft_id, masterstar_fits_path, output_dir, state):
+    """Lunar context, dynamic parameters, calibration facts and the start block of pipeline_meta."""
     state.lunar_context = _aperture_compute_lunar_context(state)
     # LC-OUTLIER-01: night-level frame QC (MAD-sigma vs draft_manifest inspection).
     try:
@@ -2505,21 +1891,15 @@ def run_aperture_photometry(
         _cfg,
         entry_point="run_aperture_photometry",
     )
-    # INV-CFG-01: per-frame sat markers present only when enabled.
+
+
+def _rap_frame_qc_and_psf_scales(*, _p2, at_df, masterstar_fits_path, output_dir, state):
+    """Frame QC reasons of the night and the per-star PSF scale (local FWHM ratio) for the aperture grid."""
     if state.per_frame_sat_meta:
         merge_photometry_pipeline_meta(output_dir, dict(state.per_frame_sat_meta))
     # APERTURE-PERTARGET-01: measure f-grid for targets+comps and pick f* per target.
     state.aperture_grid_night = None
     state.per_target_aperture = {}
-    from aperture_pertarget import (  # noqa: PLC0415
-        BRIGHT_K_NO_GROUP,
-        apply_brightness_k,
-        choose_f_for_target,
-        field_k_by_brightness,
-        target_inst_mag,
-        measure_night_grid,
-        write_per_target_choices,
-    )
     from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
 
     _p2(f"Aperture photometry: measuring k grid ({min(DEFAULT_APERTURE_F_GRID):g}-{max(DEFAULT_APERTURE_F_GRID):g} x FWHM) "
@@ -2629,6 +2009,59 @@ def run_aperture_photometry(
     except Exception as _ps_exc:  # noqa: BLE001
         logging.warning("[PSF-LOCAL] not computed: %s", _ps_exc)
         _psf_scale = {}
+    return _fwhm_pt, _ids, _psf_scale, _xy_ms
+
+
+def _rap_group_colour_term(*, masterstar_fits_path, output_dir, state) -> None:
+    """G06-18 (Milan 2026-10-29): the setup's colour term, fitted after the aperture grid on the comps'
+    group-k magnitudes (the aperture the light curves use; aperture_per_target.json written by the grid step)."""
+    if not state.apply_color_term:
+        return
+    from aperture_pertarget import field_k_plan  # noqa: PLC0415
+    from k2_extinction import K2Source  # noqa: PLC0415
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+
+    kplan = field_k_plan(Path(output_dir), DEFAULT_APERTURE_F_GRID)
+    if kplan is None:
+        raise RuntimeError("colour term: aperture_per_target.json missing after the aperture grid")
+    obs_group = str(state.obs_group or "")
+    state.group_color_term = _compute_group_color_term_fit(
+        comparison_stars_csv=Path(masterstar_fits_path).resolve().parent / "comparison_stars.csv",
+        kplan=kplan,
+        csv_files=list(state.csv_files),
+        obs_group=obs_group,
+        cfg=state._cfg,
+        k2_value=float(state.k2_bprp),
+        k2_source=K2Source(state.k2_source),
+    )
+    if state.group_color_term is not None:
+        logging.info("[COLOR TERM] group pool fit (%s, group-k magnitudes): %s", obs_group, state.group_color_term.gate_reason)
+    else:
+        logging.warning("[COLOR TERM] group pool fit unavailable for %s", obs_group)
+
+
+def _rap_measure_grid_and_choose_k(
+    *,
+    _fwhm_pt,
+    _ids,
+    _psf_scale,
+    _xy_ms,
+    annulus_inner_fwhm,
+    annulus_outer_fwhm,
+    at_df,
+    output_dir,
+    state,
+):
+    """Measure the k grid on every frame, the field k per brightness, the per-target k choice (written)."""
+    from aperture_pertarget import BRIGHT_K_NO_GROUP  # noqa: PLC0415
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+    from aperture_pertarget import apply_brightness_k  # noqa: PLC0415
+    from aperture_pertarget import choose_f_for_target  # noqa: PLC0415
+    from aperture_pertarget import field_k_by_brightness  # noqa: PLC0415
+    from aperture_pertarget import measure_night_grid  # noqa: PLC0415
+    from aperture_pertarget import target_inst_mag  # noqa: PLC0415
+    from aperture_pertarget import write_per_target_choices  # noqa: PLC0415
+
     _grid = measure_night_grid(
         frames_dir=Path(state._aligned_dir_2a),
         catalog_ids=sorted(_ids),
@@ -2640,7 +2073,14 @@ def run_aperture_photometry(
         scale_by_cid=_psf_scale,
     )
     state.aperture_grid_night = _grid
-    _frame_order = sorted(_grid.frames.keys())
+    # G08-07: the grid series (p2p scatter, night floor) in time order of the frames
+    _ftl = getattr(state, "frame_time_lookup", None) or {}
+
+    def _frame_time_key(stem: str) -> tuple[bool, float, str]:
+        jd = float((_ftl.get(f"proc_{stem}") or _ftl.get(stem) or {}).get("jd", float("nan")))
+        return (not math.isfinite(jd), jd if math.isfinite(jd) else 0.0, stem)
+
+    _frame_order = sorted(_grid.frames.keys(), key=_frame_time_key)
     _choices = {}
     for _, _tr in at_df.iterrows():
         _tcid = str(_tr.get("catalog_id", "") or "").strip()
@@ -2699,10 +2139,25 @@ def run_aperture_photometry(
         read_noise=float(state._rn_phot) if state._rn_phot is not None else None,
         brightness_k=_nk,
     )
-    # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
-    # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526
-    # CSS J153101.6 with G 10.2 at 5 px. Used by trust (soft > 1 %, hard > 5 %).
-    # BLEND-SEEING-2026-10 (Milan 2026-10-28): judged at the night's bad-seeing FWHM (p90 of the frames).
+    return _choices, _frame_order, _grid
+
+
+def _rap_target_blend_and_counts(
+    *,
+    _cfg,
+    _choices,
+    _frame_order,
+    _fwhm_pt,
+    _grid,
+    _psf_scale,
+    annulus_inner_fwhm,
+    annulus_outer_fwhm,
+    at_df,
+    masterstar_fits_path,
+    output_dir,
+    state,
+):
+    """Target blend at bad seeing (BLEND-SEEING), edge counts and the measured / skipped target counters."""
     try:
         from comp_blend import blend_contamination_for_pool, blend_fwhm_px  # noqa: PLC0415
 
@@ -2773,6 +2228,147 @@ def run_aperture_photometry(
     state.n_final_skip = int(_sr_all.isin(list(FINAL_SKIP_REASONS) + ["per_frame_saturation"]).sum())
     state.n_to_measure = int(len(at_df)) - state.n_final_skip
     state.i_measured = 0
+
+
+def run_aperture_photometry(
+    masterstar_fits_path: Path,
+    active_targets_csv: Path,
+    comparison_stars_csv: Path,
+    per_frame_csv_dir: Path,
+    detrended_aligned_dir: Path,
+    output_dir: Path,
+    fwhm_px: float,
+    *,
+    sat_limit_adu: float | None = None,
+    force_aperture_px: float | None = None,
+    cfg: AppConfig | None = None,
+    progress_cb: Any = None,
+    db: Any | None = None,
+    draft_id: int | None = None,
+    proc_frame_store: ProcFrameStore | None = None,
+) -> dict[str, Any]:
+    """Main wrapper for aperture photometry.
+
+    Global FWHM: MASTERSTAR ``VY_FWHM`` (frame QC FWHM), else the night median of this group's
+    per-frame QC FWHM (FWHM-AUTH-01; no MASTERSTAR Gaussian fit, G06-35).
+    Aperture radius = ``aperture_fwhm_factor x FWHM`` (default from ``cfg``).
+
+    Returns:
+        dict: n_targets, n_frames, n_lightcurves, summary_csv, field_map
+    """
+    # The driver runs the two stage modules; they import helpers from this module, so they are
+    # imported here and not at module level (LAYER-2026-10: no module-level import cycle).
+    from aperture_photometry_state import _aperture_prepare_shared_state  # noqa: PLC0415
+    from aperture_photometry_target import _aperture_process_one_target  # noqa: PLC0415
+
+    output_dir = Path(output_dir)
+    lc_dir = output_dir / "lightcurves"
+    lc_dir.mkdir(parents=True, exist_ok=True)
+    # OUTPUT-REVIEW-2026-10 step 7: a target skipped now must not keep (and export) its old products
+    from run_outputs import clear_aperture_products  # noqa: PLC0415
+
+    clear_aperture_products(output_dir)
+
+    from except_fix_counters import reset_except_fix_counters
+
+    reset_except_fix_counters()
+
+    def _p2(msg: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(str(msg))
+        except UnicodeEncodeError:
+            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+
+    _p2("Aperture photometry: preparing shared state...")
+    state = _aperture_prepare_shared_state(
+        output_dir=output_dir,
+        lc_dir=lc_dir,
+        masterstar_fits_path=masterstar_fits_path,
+        comparison_stars_csv=comparison_stars_csv,
+        per_frame_csv_dir=per_frame_csv_dir,
+        progress_cb=progress_cb,
+        active_targets_csv=active_targets_csv,
+        detrended_aligned_dir=detrended_aligned_dir,
+        fwhm_px=fwhm_px,
+        sat_limit_adu=sat_limit_adu,
+        force_aperture_px=force_aperture_px,
+        cfg=cfg,
+        db=db,
+        draft_id=draft_id,
+        proc_frame_store=proc_frame_store,
+    )
+    at_df = state.at_df
+    # G06-31: per-frame saturation skips are recorded in active_targets.csv as an explicit step after
+    # loading (it was a side effect inside the state builder; a failed write was only logged).
+    at_df.to_csv(active_targets_csv, index=False)
+    _comp_index = state._comp_index
+    csv_files = state.csv_files
+    n_frames = state.n_frames
+    fwhm_px = state.fwhm_px
+    _ms_header = state._ms_header
+    _ms_data = state._ms_data
+    _flux_matrix = state._flux_matrix
+    field_map_path = state.field_map_path
+    _cfg = state._cfg
+    _nt = state._nt
+    _save_png = bool(_cfg.save_lightcurve_png)
+    # CONFIG-ONE-2026-10 (G06-12): aperture and annulus factors come from the run config only
+    _apt_fw = float(_cfg.aperture_fwhm_factor)
+    annulus_inner_fwhm = float(_cfg.annulus_inner_fwhm)
+    annulus_outer_fwhm = float(_cfg.annulus_outer_fwhm)
+
+    summary_rows: list[dict[str, Any]] = []
+    n_lc = 0
+
+    _rap_write_start_meta(
+        _apt_fw=_apt_fw,
+        _cfg=_cfg,
+        db=db,
+        draft_id=draft_id,
+        masterstar_fits_path=masterstar_fits_path,
+        output_dir=output_dir,
+        state=state,
+    )
+    # INV-CFG-01: per-frame sat markers present only when enabled.
+    _fwhm_pt, _ids, _psf_scale, _xy_ms = _rap_frame_qc_and_psf_scales(
+        _p2=_p2,
+        at_df=at_df,
+        masterstar_fits_path=masterstar_fits_path,
+        output_dir=output_dir,
+        state=state,
+    )
+    _choices, _frame_order, _grid = _rap_measure_grid_and_choose_k(
+        _fwhm_pt=_fwhm_pt,
+        _ids=_ids,
+        _psf_scale=_psf_scale,
+        _xy_ms=_xy_ms,
+        annulus_inner_fwhm=annulus_inner_fwhm,
+        annulus_outer_fwhm=annulus_outer_fwhm,
+        at_df=at_df,
+        output_dir=output_dir,
+        state=state,
+    )
+    _rap_group_colour_term(masterstar_fits_path=masterstar_fits_path, output_dir=output_dir, state=state)
+    # TARGET-BLEND-2026-10 (Milan 2026-10-11): neighbour light in the TARGET aperture at
+    # its chosen k (same Moffat model as the comp gate, comp_blend), e.g. draft 526
+    # CSS J153101.6 with G 10.2 at 5 px. Used by trust (soft > 1 %, hard > 5 %).
+    # BLEND-SEEING-2026-10 (Milan 2026-10-28): judged at the night's bad-seeing FWHM (p90 of the frames).
+    _rap_target_blend_and_counts(
+        _cfg=_cfg,
+        _choices=_choices,
+        _frame_order=_frame_order,
+        _fwhm_pt=_fwhm_pt,
+        _grid=_grid,
+        _psf_scale=_psf_scale,
+        annulus_inner_fwhm=annulus_inner_fwhm,
+        annulus_outer_fwhm=annulus_outer_fwhm,
+        at_df=at_df,
+        masterstar_fits_path=masterstar_fits_path,
+        output_dir=output_dir,
+        state=state,
+    )
     # Per target loop
     # _aperture_process_single_target (inline): ZP -> CT -> (outlier -> airmass | airmass -> outlier) -> export.
     from field_map import DeferredTargetFieldMaps  # noqa: PLC0415
@@ -2783,21 +2379,17 @@ def run_aperture_photometry(
         state.target_field_map = DeferredTargetFieldMaps(_fm_data, _fm_hdr)
     except (OSError, ValueError, TypeError, ImportError) as _fm_exc:
         LOGGER.warning("[APERTURE] target field maps not drawn: %s", _fm_exc)
-    for ti, (_, target_row) in enumerate(at_df.iterrows(), start=1):
+    for _, target_row in at_df.iterrows():
         summary_rows, n_lc = _aperture_process_one_target(
             target_row=target_row,
-            ti=ti,
             state=state,
             summary_rows=summary_rows,
             n_lc=n_lc,
             lc_dir=lc_dir,
             output_dir=output_dir,
             progress_cb=progress_cb,
-            masterstar_fits_path=masterstar_fits_path,
             annulus_inner_fwhm=annulus_inner_fwhm,
             annulus_outer_fwhm=annulus_outer_fwhm,
-            outlier_sigma=outlier_sigma,
-            stability_sigma=stability_sigma,
             _apt_fw=_apt_fw,
             _save_png=_save_png,
         )
@@ -2837,7 +2429,6 @@ def run_aperture_photometry(
         logging.warning("[COMP-SMART] used sets not written into the comparison table: %s", _cw_exc)
     return _aperture_finalize_exports(
         summary_rows=summary_rows,
-        lc_dir=lc_dir,
         output_dir=output_dir,
         _cfg=_cfg,
         n_lc=n_lc,

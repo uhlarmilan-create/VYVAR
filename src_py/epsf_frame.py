@@ -62,10 +62,16 @@ _BLEND_ERR_K = 0.040
 _MERGE_FWHM = 0.5
 
 
-def grid_shape_for(n_build_stars: int) -> tuple[int, int]:
-    """(nx, ny) of the spatial grid: 3x3 or 2x2 with >= 50 build stars per cell, else (1, 1)."""
+def grid_shape_for(build_stars: pd.DataFrame, shape: tuple[int, int]) -> tuple[int, int]:
+    """(nx, ny) of the spatial grid: 3x3 or 2x2 when EVERY cell holds >= _MIN_STARS_PER_CELL build stars
+    (G09-12: the per-cell counts on the MASTERSTAR grid, not the total - stars in one half of the chip
+    left empty cells and EPSFBuilder raised), else (1, 1)."""
+    x = build_stars["x"].to_numpy(float)
+    y = build_stars["y"].to_numpy(float)
     for n in (3, 2):
-        if n_build_stars >= _MIN_STARS_PER_CELL * n * n:
+        xe, ye, _ = grid_cells(shape, n, n)
+        counts, _, _ = np.histogram2d(y, x, bins=[ye, xe])
+        if counts.min() >= _MIN_STARS_PER_CELL:
             return n, n
     return 1, 1
 
@@ -84,7 +90,7 @@ def _xy_table(df: pd.DataFrame) -> Table:
 
 def _build_epsf(data: np.ndarray, stars_df: pd.DataFrame, cutout_size: int, fwhm_px: float) -> dict[str, Any]:
     stars = _epsf_sky_subtracted_stars(data, _xy_table(stars_df), int(cutout_size))
-    built = _epsf_build_imagepsf_from_stars(stars, osamp=OVERSAMPLING, fwhm_px=float(fwhm_px), cutout_size=int(cutout_size))
+    built = _epsf_build_imagepsf_from_stars(stars, osamp=OVERSAMPLING, fwhm_px=float(fwhm_px))
     built["n_stars"] = int(len(stars))
     return built
 
@@ -132,6 +138,11 @@ def _frame_cell_deltas(frame_fits: Path) -> tuple[np.ndarray, list[int], float, 
                 (stars_fp["x"] >= xe[i]) & (stars_fp["x"] < xe[i + 1])
                 & (stars_fp["y"] >= ye[j]) & (stars_fp["y"] < ye[j + 1])
             )
+            # G09-12: a cell this frame covers with too few build stars gives no delta on this frame
+            if int(m.sum()) < _MIN_STARS_PER_CELL:
+                cells.append(np.full(field.shape, np.nan))
+                n_cell.append(int(m.sum()))
+                continue
             cell = _build_epsf(data, stars_fp[m], cutout_size, fwhm_px)
             cells.append(cell["arr"].astype(np.float64) - field)
             n_cell.append(cell["n_stars"])
@@ -156,7 +167,7 @@ def night_spatial_delta(
     """
     from parallel_frames import map_frames  # noqa: PLC0415
 
-    nx, ny = grid_shape_for(len(build_stars))
+    nx, ny = grid_shape_for(build_stars, tuple(fits.getdata(frames[0]).shape)) if frames else (1, 1)
     out = {"grid": [nx, ny], "n_build_stars": int(len(build_stars)), "file": None, "n_frames": 0}
     if nx == 1 or not frames:
         return out
@@ -168,7 +179,12 @@ def night_spatial_delta(
     deltas = [r[0] for r in res]
     n_cell, peak = res[-1][1], res[-1][2]
     _, _, centres = grid_cells(res[-1][3], nx, ny)
-    delta = np.median(np.array(deltas), axis=0)
+    stack = np.array(deltas)
+    n_ok = np.isfinite(stack).all(axis=(2, 3)).sum(axis=0)  # frames with a delta, per cell
+    if int(n_ok.min()) == 0:
+        out.update(grid=[1, 1], note="a grid cell had too few covered build stars on every frame - no spatial grid")
+        return out
+    delta = np.nanmedian(stack, axis=0)
     hdr = fits.Header()
     hdr["GRID_NX"], hdr["GRID_NY"], hdr["NFRAMES"], hdr["OVERSAMP"] = nx, ny, len(subset), OVERSAMPLING
     out_path = Path(out_path)
@@ -232,6 +248,11 @@ def build_frame_model(
     return model, record
 
 
+def fit_box_px(fwhm_px: float) -> int:
+    """Side of the PSF fit box (px): 2 FWHM + 1, at least 5 (one rule for the fit and the neighbour reach)."""
+    return max(5, 2 * int(round(float(fwhm_px))) + 1)
+
+
 def frame_fit_sources(
     platesolve_dir: Path, fit_ids: set[str] | list[str], *, cutout_size: int, fwhm_px: float, merge_fwhm_px: float
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
@@ -241,11 +262,12 @@ def frame_fit_sources(
     aligned to the MASTERSTAR, and a DAO centroid of a faint star is pulled towards a bright
     neighbour (535: 0.6 px). Neighbours: catalogue stars down to the frame limit
     (``frame_depth.g_lim_frame``) whose model reaches a fit star's fit box
-    (cutout/2 + fit box/2 + 1 px). A fainter neighbour closer than ``_MERGE_FWHM`` x ``merge_fwhm_px``
+    (cutout/2 + fit box/2 + 1 px; G09-22: ``fwhm_px`` is the night's LARGEST frame FWHM, the frame with the
+    largest fit box). A fainter neighbour closer than ``_MERGE_FWHM`` x ``merge_fwhm_px``
     (the night median frame FWHM, not the MASTERSTAR: 534 g MASTERSTAR 3.44 px, frames 3.34-9.55 px,
     median 5.48) is not fitted: such a pair is not separable (Brno injections at 0.25-0.5 FWHM: joint fit 55-250 mmag
-    scatter with pull 2-3, merged 3-12 mmag), so its light stays with the fit star
-    (``merged_light_frac``, Gaia G flux ratio). Returns (stars[catalog_id, x, y, merged_light_frac],
+    scatter with pull 2-3, merged 3-12 mmag), so its light stays with the fit star (the pair and its
+    Gaia G difference are listed in ``meta["merged_neighbours"]``). Returns (stars[catalog_id, x, y],
     neighbours[catalog_id, x, y, mag], meta).
     """
     from astropy.wcs import WCS  # noqa: PLC0415
@@ -270,7 +292,7 @@ def frame_fit_sources(
     stars = cone.loc[cone["catalog_id"].isin(ids), ["catalog_id", "x", "y"]].reset_index(drop=True)
     missing = sorted(ids - set(stars["catalog_id"]))
     mag_limit = frame_mag_limit(ps)
-    fsz = max(5, 2 * int(round(float(fwhm_px))) + 1)
+    fsz = fit_box_px(fwhm_px)
     reach = int(cutout_size) / 2.0 + fsz / 2.0 + 1.0
     cand = cone[(cone["mag"] <= mag_limit) & ~cone["catalog_id"].isin(ids)]
     tree = cKDTree(np.c_[cand["x"].to_numpy(float), cand["y"].to_numpy(float)])
@@ -283,7 +305,6 @@ def frame_fit_sources(
     # per night (night median frame FWHM, ``merge_fwhm_px``), so the light curve has no dilution jumps.
     merge_r = _MERGE_FWHM * float(merge_fwhm_px)
     star_mag = cone.set_index("catalog_id")["mag"]
-    stars["merged_light_frac"] = 0.0
     merged: list[dict[str, Any]] = []
     drop: set[int] = set()
     for i, s in stars.iterrows():
@@ -293,7 +314,6 @@ def frame_fit_sources(
             m_n = float(nb.at[j, "mag"])
             if np.isfinite(m_s) and np.isfinite(m_n) and m_n > m_s:
                 drop.add(int(j))
-                stars.at[i, "merged_light_frac"] += 10.0 ** (-0.4 * (m_n - m_s))
                 merged.append({"catalog_id": str(s["catalog_id"]), "neighbour_id": str(nb.at[j, "catalog_id"]),
                                "sep_px": round(float(sep[j]), 3), "dmag": round(m_n - m_s, 3)})
     nb = nb.drop(index=sorted(drop)).reset_index(drop=True)
@@ -322,7 +342,6 @@ def fit_frame_psf(
     read_noise_e: float,
     sat_limit_adu: float | None = None,
     covered: np.ndarray | None = None,
-    fit_box_fwhm: float = 1.0,
 ) -> pd.DataFrame:
     """PSF photometry of ``stars`` (catalog_id, x, y) on one frame, fitted together with their
     catalogue ``neighbours`` (x, y); one row per star of ``stars`` (EPSF-BLEND-2026-10).
@@ -354,7 +373,7 @@ def fit_frame_psf(
     off = np.zeros(d.shape, dtype=bool) if covered is None else ~np.asarray(covered, dtype=bool)
     mask |= off
     fw = float(fwhm_px)
-    fsz = max(5, 2 * int(round(fit_box_fwhm * fw)) + 1)
+    fsz = fit_box_px(fw)
     sky0 = float(np.nanmedian(d))
     psf = model.copy()
     psf.x_0.fixed = True

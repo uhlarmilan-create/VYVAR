@@ -147,6 +147,10 @@
   // SNR a star is not measured, and a frame where the target falls below it
   // is not exported. 10 = 0.11 mag.
   "snr_min": 10.0,
+  // Comparison stars: largest raw peak allowed, as a fraction of the measured
+  // saturation level, on the MASTERSTAR and on every frame (AAVSO guidance:
+  // comps well inside the linear range). Targets use 0.90.
+  "comp_peak_sat_frac": 0.8,
   // A candidate with a catalogue neighbour closer than this is treated as a
   // blend and not used.
   "comp_isolation_fwhm": 3.0,

@@ -1,5 +1,6 @@
 """POINT-SOURCE-SHAPE-01 (F1, RUN522-CRASH-01): single-pixel events must not pass
-pass-2 / forced-seed acceptance; real stars must, for well- and under-sampled PSFs."""
+pass-2 acceptance; real stars must, for well- and under-sampled PSFs.
+(The forced-seed acceptance was removed with the FORCED_SEED mechanism, G04-05.)"""
 from __future__ import annotations
 
 import sys
@@ -11,12 +12,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src_py"))
 
 from masterstar_gaia_accounting import (  # noqa: E402
-    ForcedSeedAcceptParams,
     Pass2AcceptParams,
     dao_pass2_try_at_position,
     derive_point_source_q_floor,
-    forced_seed_accept,
-    forced_seed_measure_at_position,
     point_source_shape_ok,
     point_source_shape_q,
 )
@@ -85,24 +83,6 @@ def test_hot_pixel_rejected_star_accepted_pass2():
     r = dao_pass2_try_at_position(img, hx, hy, wpx=w, h=h, params=p_on)
     assert not r["accepted"] and r["reason"] == "shape_not_point_source"
     assert dao_pass2_try_at_position(img, sx, sy, wpx=w, h=h, params=p_on)["accepted"]
-
-
-def test_hot_pixel_rejected_star_accepted_forced_seed():
-    img, ref = _field(3.5, seed=3)
-    fl = _floor(img, ref)
-    hx, hy = _free_spot(ref, 1)
-    img[int(hy), int(hx)] += 150.0  # cosmic-ray-like single pixel
-    sx, sy = _free_spot(np.vstack([ref, [[hx, hy]]]), 2)
-    sx, sy = sx + 0.3, sy - 0.2
-    _gauss(img, sx, sy, 600.0, 3.5)
-    sp = ForcedSeedAcceptParams(centroid_max_px=2.5, snr_min=4.0, shape_q_floor=fl["q_floor"])
-    sp_off = ForcedSeedAcceptParams(centroid_max_px=2.5, snr_min=4.0)
-    m_hot = forced_seed_measure_at_position(img, hx, hy, fwhm_px=3.5, params=sp)
-    assert forced_seed_accept(m_hot, params=sp_off)[0]  # passes without the gate
-    ok_hot, why = forced_seed_accept(m_hot, params=sp)
-    assert not ok_hot and why == "shape_not_point_source"
-    ok_star, _ = forced_seed_accept(forced_seed_measure_at_position(img, sx, sy, fwhm_px=3.5, params=sp), params=sp)
-    assert ok_star
 
 
 def test_gate_off_without_floor_and_low_snr_not_rejected():

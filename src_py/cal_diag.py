@@ -19,8 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 # Implementation constants (VYVAR_CAL_DIAG_V2_SPEC.md -- not user config).
 CAL_PED_INTERCEPT_MIN_EXPTIMES = 2
-CAL_PED_BOOTSTRAP_N = 200
-CAL_PED_SUBSAMPLE_N = 100_000
 CAL_PED_CONSISTENCY_REL = 0.05
 CAL_CONV_SUM_SCALE = 0.85
 CAL_SKY_HARD_SIGMA = 5.0
@@ -38,6 +36,13 @@ CalDiagConventionSrc = Literal[
 CalDiagStatus = Literal["PASS", "WARN", "ABORT"]
 
 MatchCropFn = Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]
+
+#: G01-24 (decision A3): abort reason when a dark must be rebinned and the data cannot decide SUM vs MEAN
+CONVENTION_UNDECIDED = "CONVENTION_UNDECIDED"
+
+
+class DarkConventionUndecidedError(RuntimeError):
+    """A DARK must be rebinned to the LIGHT binning and its SUM/MEAN convention cannot be measured."""
 
 
 @dataclass
@@ -89,7 +94,6 @@ class CalDiagGateResult:
 class CalDiagSession:
     gate_results: dict[str, CalDiagGateResult] = field(default_factory=dict)
     aborted_groups: set[str] = field(default_factory=set)
-    dark_cache: dict[str, np.ndarray] = field(default_factory=dict)
     checked_keys: set[str] = field(default_factory=set)
 
     def json_export(self) -> dict[str, Any]:
@@ -102,16 +106,6 @@ class CalDiagSession:
 
 def cal_diag_gate_key(obs_group_key: str, dark_path: Path | str, light_binning: int) -> str:
     return f"{obs_group_key}|{Path(dark_path).resolve()}|b{int(light_binning)}"
-
-
-def dark_np_cache_key(
-    dark_path: Path,
-    light_binning: int,
-    master_binning: int | None,
-    dark_resample_mode: DarkResampleMode,
-) -> str:
-    _mb_key = "hdr" if master_binning is None else str(int(master_binning))
-    return f"{Path(dark_path).resolve()}|b{int(light_binning)}|mb{_mb_key}|{dark_resample_mode}"
 
 
 def convention_to_dark_mode(convention: CalDiagConvention) -> DarkResampleMode:
@@ -137,7 +131,12 @@ def _mad_sigma_r(arr: np.ndarray) -> float:
     return CAL_MAD_SIGMA * mad
 
 
-def _read_dark_median_and_exptime(path: Path) -> tuple[float, float] | None:
+def _read_dark_median_and_exptime(path: Path) -> tuple[float, float, float] | None:
+    """(median, exposure time, standard error of the median) of a master dark.
+
+    G01-46: the standard error of the median of N pixels is sqrt(pi/2) x sigma / sqrt(N) (sigma = 1.4826 x MAD);
+    integer-valued masters whose MAD is 0 (Brno 534: every pixel 512 ADU) give 0 - the median is exact there.
+    """
     try:
         with fits.open(path, memmap=False) as hdul:
             data = hdul[0].data
@@ -145,12 +144,47 @@ def _read_dark_median_and_exptime(path: Path) -> tuple[float, float] | None:
         if data is None:
             return None
         ex = float(hdr.get("EXPTIME") or hdr.get("EXPOSURE") or 0.0)
-        med = float(np.nanmedian(np.asarray(data, dtype=np.float64)))
-        if not math.isfinite(med):
+        arr = np.asarray(data, dtype=np.float64)
+        arr = arr[np.isfinite(arr)]
+        if arr.size == 0:
             return None
-        return med, ex
+        med = float(np.median(arr))
+        se = math.sqrt(math.pi / 2.0) * CAL_MAD_SIGMA * float(np.median(np.abs(arr - med))) / math.sqrt(arr.size)
+        return med, ex, se
     except (OSError, TypeError, ValueError):
         return None
+
+
+def _pedestal_intercept_fit(items: list[tuple[float, float, float]]) -> tuple[float, float, float, str]:
+    """Pedestal P (intercept), dark current k (slope) and sigma_P of median = P + k x t (G01-46).
+
+    Ordinary least squares over all darks. sigma_P: with 3 or more exposure times the residual-based standard
+    error of the intercept, s x sqrt(1/n + t_mean^2 / S_tt) (it also holds systematics such as a non-linear
+    dark current), combined in quadrature with the propagated standard errors of the medians; with 2
+    exposure times the line passes through both points, so only the propagated standard errors are known
+    (Milan 2026-10-30, option a) - the returned note says so.
+    """
+    t = np.array([i[0] for i in items], dtype=float)
+    m = np.array([i[1] for i in items], dtype=float)
+    se = np.array([i[2] for i in items], dtype=float)
+    n = t.size
+    tm = float(t.mean())
+    stt = float(np.sum((t - tm) ** 2))
+    k = float(np.sum((t - tm) * (m - m.mean())) / stt)
+    p = float(m.mean() - k * tm)
+    # propagated: P = sum_i w_i m_i with w_i = 1/n - tm (t_i - tm) / S_tt
+    w = 1.0 / n - tm * (t - tm) / stt
+    var_stat = float(np.sum((w * se) ** 2))
+    n_exp = len(set(t.tolist()))
+    if n_exp >= 3:
+        resid = m - (p + k * t)
+        s2 = float(np.sum(resid**2) / (n - 2))
+        var_fit = s2 * (1.0 / n + tm * tm / stt)
+        return p, k, math.sqrt(var_fit + var_stat), ""
+    return p, k, math.sqrt(var_stat), (
+        f"{n_exp} exposure times - sigma_P is the statistical error of the dark medians only "
+        "(a systematic deviation from the line is not measurable with 2 exposure times)"
+    )
 
 
 def derive_pedestal_from_masters(
@@ -159,7 +193,7 @@ def derive_pedestal_from_masters(
     light_exptime: float | None = None,
 ) -> PedestalResult:
     """Check P: derive per-bin1-pixel pedestal from master dark(s)."""
-    uniq: dict[Path, tuple[float, float]] = {}
+    uniq: dict[Path, tuple[float, float, float]] = {}
     for p in dark_paths:
         pp = Path(p)
         if not pp.is_file():
@@ -181,53 +215,31 @@ def derive_pedestal_from_masters(
             check_p_consistent=False,
         )
 
-    if len(uniq) >= CAL_PED_INTERCEPT_MIN_EXPTIMES:
-        exps = sorted({ex for _, ex in uniq.values() if ex > 0})
-        if len(exps) >= 2:
-            rng = np.random.default_rng(42)
-            paths_list = list(uniq.keys())
-            samples_p: list[float] = []
-            for pth in paths_list:
-                with fits.open(pth, memmap=False) as hdul:
-                    arr = np.asarray(hdul[0].data, dtype=np.float64)
-                n = arr.size
-                take = min(CAL_PED_SUBSAMPLE_N, n)
-                idx = rng.choice(n, size=take, replace=False)
-                samples_p.append(float(np.nanmedian(arr.ravel()[idx])))
-            # Pairwise slope from medians (robust for stacked masters).
-            items = [(ex, med) for med, ex in uniq.values() if ex > 0]
-            items.sort(key=lambda x: x[0])
-            t0, m0 = items[0]
-            t1, m1 = items[-1]
-            if t1 > t0:
-                k = (m1 - m0) / (t1 - t0)
-            else:
-                k = 0.0
-            p = m0 - k * t0
-            boots: list[float] = []
-            for _ in range(CAL_PED_BOOTSTRAP_N):
-                j = rng.integers(0, len(items))
-                ex_b, med_b = items[j]
-                boots.append(med_b - k * ex_b)
-            sigma_p = float(np.std(boots)) if boots else 0.0
-            k_status: Literal["FITTED", "NEGLIGIBLE", "UNKNOWN"] = "FITTED"
-            t_ref = float(light_exptime or t0)
-            if abs(k) * max(t_ref, t0, t1) < CAL_DARK_CURRENT_NEGLIGIBLE_FRAC * max(abs(p), 1e-6):
-                k_status = "NEGLIGIBLE"
-            return PedestalResult(
-                p_adu=float(p),
-                sigma_p=sigma_p,
-                k_adu_per_s=float(k),
-                k_status=k_status,
-                method="INTERCEPT",
-                n_exptimes=len(exps),
-                pedestal_measurable=True,
-                check_p_consistent=True,
-            )
+    items = sorted((ex, med, se) for med, ex, se in uniq.values() if ex > 0)
+    exps = sorted({ex for ex, _m, _s in items})
+    if len(exps) >= CAL_PED_INTERCEPT_MIN_EXPTIMES:
+        p, k, sigma_p, note = _pedestal_intercept_fit(items)
+        if note:
+            log_event(f"CAL-DIAG pedestal: {note}")
+        k_status: Literal["FITTED", "NEGLIGIBLE", "UNKNOWN"] = "FITTED"
+        t0, t1 = exps[0], exps[-1]
+        t_ref = float(light_exptime or t0)
+        if abs(k) * max(t_ref, t0, t1) < CAL_DARK_CURRENT_NEGLIGIBLE_FRAC * max(abs(p), 1e-6):
+            k_status = "NEGLIGIBLE"
+        return PedestalResult(
+            p_adu=float(p),
+            sigma_p=float(sigma_p),
+            k_adu_per_s=float(k),
+            k_status=k_status,
+            method="INTERCEPT",
+            n_exptimes=len(exps),
+            pedestal_measurable=True,
+            check_p_consistent=True,
+        )
 
     # Single-exposure fallback.
     pth = next(iter(uniq.keys()))
-    med, ex = uniq[pth]
+    med, ex, _se = uniq[pth]
     return PedestalResult(
         p_adu=float(med),
         sigma_p=max(float(med) * 1e-4, 0.01),
@@ -368,7 +380,7 @@ def cal_diag_gate_for_obs_group(
             messages.append(wmsg)
             status = "WARN"
 
-    def _abort(reason: str, msg: str) -> CalDiagGateResult:
+    def _abort(reason: str, msg: str, src: CalDiagConventionSrc = "DERIVED") -> CalDiagGateResult:
         full = (
             f"INV-CAL-01 ABORT [{obs_group_key}] {reason}: {msg} | "
             f"P={ped.p_adu:.4g}+/-{ped.sigma_p:.4g} bf={bf} "
@@ -382,7 +394,7 @@ def cal_diag_gate_for_obs_group(
             light_binning=int(light_binning),
             status="ABORT",
             convention="SUM",
-            convention_src="DERIVED",
+            convention_src=src,
             aborted=True,
             abort_reason=reason,
             m_L=m_L,
@@ -475,27 +487,23 @@ def cal_diag_gate_for_obs_group(
         and (m_D_sum / float(bf * bf)) <= m_L * (1.0 + eps)
     )
 
+    # G01-24 (decision A3): the dark must be rebinned, so the convention must be measured; when the
+    # data cannot decide it, the calibration stops (no SUM default) - a dark at the LIGHT binning is needed.
     if delta_dark < res_limit:
-        convention = "SUM"
-        convention_src = "INDETERMINATE_NEGLIGIBLE"
-        wmsg = (
-            f"INV-CAL-01 [{obs_group_key}]: convention separation {delta_dark:.4g} ADU "
-            f"< resolv_limit {res_limit:.4g} ADU; SUM default (difference negligible)"
+        return _abort(
+            CONVENTION_UNDECIDED,
+            f"SUM and MEAN darks differ by {delta_dark:.4g} ADU < resolution {res_limit:.4g} ADU - the binning "
+            "convention cannot be measured; make a master DARK at the LIGHT binning",
+            "INDETERMINATE_NEGLIGIBLE",
         )
-        log_event(wmsg)
-        messages.append(wmsg)
-        status = "WARN"
-    elif not ped.pedestal_measurable or (bf > 1 and ped.method == "INTERCEPT" and not check_p_ok):
-        convention = "SUM"
-        convention_src = "INDETERMINATE_UNMEASURED"
-        wmsg = (
-            f"INV-CAL-01 WARN [{obs_group_key}]: pedestal not fully measured "
-            f"(method={ped.method}, check_p_ok={check_p_ok}); applying SUM with caution"
+    if not ped.pedestal_measurable or (bf > 1 and ped.method == "INTERCEPT" and not check_p_ok):
+        return _abort(
+            CONVENTION_UNDECIDED,
+            f"pedestal not measured (method={ped.method}, check_p_ok={check_p_ok}) - the binning convention "
+            "cannot be decided; make a master DARK at the LIGHT binning",
+            "INDETERMINATE_UNMEASURED",
         )
-        log_event(wmsg)
-        messages.append(wmsg)
-        status = "WARN"
-    elif sum_supported and not mean_supported:
+    if sum_supported and not mean_supported:
         convention = "SUM"
         convention_src = "DERIVED"
     elif mean_supported and not sum_supported:
@@ -557,8 +565,6 @@ def cal_diag_gate_for_obs_group(
         return _abort("CHECK_B_FAIL", f"sky_median={sky:.4g} sigma_r={sig:.4g}")
 
     status = st_b
-    if status == "PASS" and convention_src.startswith("INDETERMINATE"):
-        status = "WARN"
 
     if status in ("PASS", "WARN"):
         log_event(
@@ -627,37 +633,6 @@ def ensure_cal_diag_gate(
     return result
 
 
-def dark_np_for_cal_diag(
-    session: CalDiagSession,
-    *,
-    master_binning: int | None,
-    dark_path: Path | None,
-    light_binning: int,
-    light_shape: tuple[int, int] | None,
-    light_filename: str,
-    gate_result: CalDiagGateResult | None,
-) -> np.ndarray | None:
-    if dark_path is None or not dark_path.is_file():
-        return None
-    convention: CalDiagConvention = "SUM"
-    if gate_result is not None:
-        convention = gate_result.convention
-    mode = convention_to_dark_mode(convention)
-    key = dark_np_cache_key(dark_path, light_binning, master_binning, mode)
-    if key not in session.dark_cache:
-        pm = get_processed_master(
-            dark_path,
-            int(light_binning),
-            kind="dark",
-            master_binning=master_binning,
-            light_shape=light_shape,
-            light_filename=light_filename,
-            dark_resample_mode=mode,
-        )
-        session.dark_cache[key] = pm.data
-    return session.dark_cache[key]
-
-
 def apply_cal_diag_headers(hdr: fits.Header, gate_result: CalDiagGateResult | None) -> None:
     if gate_result is None or gate_result.aborted:
         return
@@ -700,16 +675,46 @@ def group_lights_by_obs_key(
     return groups
 
 
-def discover_pedestal_dark_paths(dark_path: Path) -> list[Path]:
-    """Sibling library darks for pedestal intercept (same folder, Dark*.fits)."""
+def discover_pedestal_dark_paths(dark_path: Path, *, temp_tol_c: float) -> list[Path]:
+    """Darks of the SAME sensor setup as ``dark_path`` for the pedestal intercept (G01-46).
+
+    Every FITS master dark (IMAGETYP / FRAME) in the dark's folder whose camera (INSTRUME), gain, offset,
+    binning and readout mode equal the dark's, and whose sensor temperature is within ``temp_tol_c``
+    (``calibration_master_ccd_temp_tolerance_c``: the dark current, the slope of the fit, depends on it).
+    Before G01-46 the folder's ``Dark*.fits`` files were taken whatever the camera (Brno 534: the pedestal
+    24.47 ADU of the QHY294 instead of 512 ADU of its own camera).
+    """
+    from calib_library import (  # noqa: PLC0415
+        KIND_DARK,
+        header_binning,
+        header_gain,
+        header_kind,
+        header_offset,
+        header_readout_mode,
+        header_temp,
+    )
+
+    def _setup(hdr: fits.Header) -> tuple[Any, ...]:
+        return (str(hdr.get("INSTRUME") or "").strip(), header_gain(hdr), header_offset(hdr),
+                header_binning(hdr), header_readout_mode(hdr))
+
     dp = Path(dark_path).resolve()
-    parent = dp.parent
-    out: list[Path] = []
-    for f in sorted(parent.glob("Dark*.fits")):
-        if f.is_file():
-            out.append(f)
-    if dp not in [p.resolve() for p in out]:
-        out.insert(0, dp)
+    ref = fits.getheader(dp, 0)
+    ref_setup, ref_t = _setup(ref), header_temp(ref)
+    out: list[Path] = [dp]
+    for f in sorted(dp.parent.iterdir()):
+        if f.resolve() == dp or not f.is_file() or f.suffix.lower() not in (".fits", ".fit", ".fts"):
+            continue
+        try:
+            hdr = fits.getheader(f, 0)
+        except (OSError, ValueError):
+            continue
+        if header_kind(hdr) != KIND_DARK or _setup(hdr) != ref_setup:
+            continue
+        t = header_temp(hdr)
+        if (t is None) != (ref_t is None) or (t is not None and abs(t - ref_t) > float(temp_tol_c) + 1e-9):
+            continue
+        out.append(f.resolve())
     return out
 
 
@@ -722,11 +727,12 @@ def run_cal_diag_pregate(
     master_binning: int | None,
     match_and_crop_pair: MatchCropFn,
     saturation_for_light: Callable[[Path], float | None],
+    pedestal_temp_tol_c: float,
     pedestal_paths_for_dark: Callable[[Path], list[Path]] | None = None,
 ) -> CalDiagSession:
     session = CalDiagSession()
     groups = group_lights_by_obs_key(files, obs_group_key_from_path=obs_group_key_from_path)
-    ped_fn = pedestal_paths_for_dark or discover_pedestal_dark_paths
+    ped_fn = pedestal_paths_for_dark or (lambda p: discover_pedestal_dark_paths(p, temp_tol_c=pedestal_temp_tol_c))
     for og, paths in sorted(groups.items()):
         if not paths:
             continue
@@ -792,6 +798,17 @@ def gate_result_for_frame(
         return None
     gkey = cal_diag_gate_key(obs_group_key, dark_path, light_binning)
     return session.gate_results.get(gkey)
+
+
+def raise_if_dark_convention_undecided(session: CalDiagSession) -> None:
+    """G01-24 (decision A3): stop the calibration when a group's dark rebin convention is undecided."""
+    bad = [g for g in session.gate_results.values() if g.abort_reason == CONVENTION_UNDECIDED]
+    if bad:
+        raise DarkConventionUndecidedError(
+            "Calibration stopped - dark binning convention (SUM/MEAN) cannot be measured for: "
+            + "; ".join(f"{g.obs_group_key} (dark {Path(g.dark_path).name}, {g.block_factor}x rebin): "
+                        f"{(g.messages or [''])[0]}" for g in bad)
+        )
 
 
 def is_obs_group_aborted(session: CalDiagSession, obs_group_key: str) -> bool:

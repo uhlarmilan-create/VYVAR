@@ -1838,7 +1838,9 @@ w = 1 / sigma_eff^2
 MASTERSTAR members are injected and aperture-measured every frame at locked
 MASTERSTAR XY after DAO match. Detection no longer gates presence.
 
-**Broeg iteration.** VYVAR's `ensemble_normalize` uses one-shot `1/sigma^2` for the
+**Broeg iteration.** *(Superseded by ENSEMBLE-BROEG-2026-10: `ensemble_normalize` now iterates the
+Broeg weights and the Honeycutt comparison levels; the sentence below describes the code of this date.)*
+VYVAR's `ensemble_normalize` uses one-shot `1/sigma^2` for the
 catalog zeropoint (AIJ/Honeycutt unweighted flux sum for `delta_mag`). It does not
 iterate residuals into weights. Adding colour/distance systematic terms to
 `sigma_eff` does not introduce iteration; an iterative fit that down-weights is
@@ -5845,8 +5847,9 @@ proc sidecars, NIGHT-FWHM-2026-10; raises without per-frame FWHM). One decision 
 would put dilution jumps into the light curve; 0.5 x the median keeps the night's best frames below the 0.75-1 FWHM
 crossover (533 g best / median 3.77 / 4.50 px, 534 g 3.34 / 5.48 px). The MASTERSTAR FWHM was tried first and is
 wrong here: 534 g MASTERSTAR 3.44 px gave a 1.72 px radius and left the pair (2.02 px) in the joint fit - p2p 21.3
-vs 13.1 mmag aperture, PSF - aperture p2p 19.7 mmag; 533 r merged it only by 0.007 px. `merged_light_frac` (Gaia G flux ratio) goes to the sidecar as `psf_merged_light_frac`, the
-pairs to the manifest (`fit_sources.merged_neighbours`). A brighter neighbour that close stays in the joint fit.
+vs 13.1 mmag aperture, PSF - aperture p2p 19.7 mmag; 533 r merged it only by 0.007 px. The pairs (with their Gaia G
+difference) go to the manifest (`fit_sources.merged_neighbours`); the per-star `merged_light_frac` was dropped
+2026-10-29 (no reader, code review 2 G09-20, Milan: data VYVAR does not use is removed). A brighter neighbour that close stays in the joint fit.
 Result on that star: p2p 33.9 -> 14.8 mmag; no other star of the Brno fit sets has a neighbour within 1 FWHM.
 
 Measured on Brno and kept unchanged:
@@ -5904,6 +5907,7 @@ dominated) 46-71 % smaller; comparison-star pull with the night floor 1.10 / 1.1
 
 ## EPSF-TARGETS-2026-10 (Milan 2026-10-19) - RUN ePSF measures the selected catalogue variables; ePSF tab
 
+*(Candidate rule superseded by EPSF-ALL-TARGETS-2026-10: every target with an aperture light curve.)*
 Replaces the E-type-only fit set of EPSF-FRAME-2026-10. Candidates (`epsf_science_set.epsf_target_candidates`):
 targets of `active_targets.csv` with `catalog` VSX whose aperture light curve exists - targets out of the configured
 type scope (`vsx_out_of_scope_types`) or skipped for S/N / saturation have none, `catalog_only` is left out;
@@ -6583,3 +6587,359 @@ estimators; a per-frame additive sky offset fitted on constant stars (unstable).
 unaffected by every variant. No mask removes the effect; it is a limit of aperture photometry in crowded fields.
 Faint targets in crowded fields: the ePSF light curve (joint fit with Gaia neighbours) is the reference product.
 BO CVn (X 1.01-1.22) cannot test it.
+
+## UNUSED-DELETE-2026-10 (Milan 2026-10-29, code review 2 decisions) - data VYVAR does not use is removed
+Milan: "ak sa nieco uz nepouziva VYVAR tie data nepotrebuje tak to mozeme zmazat". Applied:
+- G07-15 suspected_variables.csv (high-RMS field stars; no reader - the field variability search is the product
+  for new variables): writer removed; an old file in a photometry folder is removed on the next run with the
+  other legacy comp tables.
+- G08-25 ensemble_normalize(comp_likely_saturated=...): never passed by any caller; removed.
+- G09-20 psf_merged_light_frac: computed, never written; removed. The merged pairs with their Gaia G
+  difference stay in the ePSF manifest (fit_sources.merged_neighbours); EPSF-MERGE-2026-10 text amended.
+- G04-36 phot_variable_flag in masterstars_full_match.csv: always empty (the local DB column is var_flag);
+  known variables come from the Gaia DR3 variability catalogue (gaia_dr3_variable_catalog) and VSX.
+- G10-40 HRD background: the qc_metrics best-frame fallback removed (every photometry run has a MASTERSTAR).
+- G01-21 calibration_plan.json: never written, no reader; the calibration spec no longer promises it.
+- G05-39 $VYVAR_INJECT_CATALOG: the synthetic-star hook left production code; injection-recovery runs use
+  dev/tools/injection_night_run.py --inject-catalog (wraps the Gaia cone query, fails if it was not used).
+- T10 batch 1 side effects accepted: MASTERSTAR header card VY_MBNC (always -1) and the "dark=None;" prefix
+  of the draft calib path string (ImportPlan.dark_master was always None) are no longer written.
+Kept because they are used: comp_weight (w_rel in exports / report), comp_score (check-star fallback).
+
+## TRANSIENT-SHAPE-2026-10 (Milan 2026-10-29, G10-44) - candidate shape shown to the user
+The transient search (TRANSIENT-2026-10) wrote extended / fwhm_ratio without showing them. A real transient
+is rare; the user judges each candidate, so the shape is shown in the UI table and the PDF report: "point" or
+"extended" with the FWHM on the MASTERSTAR relative to field stars (extended > 1.5 x: galaxy, nebula, comet
+coma or blend). No candidate is rejected by it (a supernova on a galaxy is still listed with in_galaxy).
+
+## GAIA-JC-RANGE-2026-10 (Milan 2026-10-29, G08-26) - Johnson-Cousins transform: colour range only
+Gaia DR3 documentation 5.5.1, Table 5.10 gives colour ranges for the GBP-GRP -> V / B / R_C relations and no G
+magnitude range; the 8 < Mag < 16 of Ruelas-Mayorga et al. 2025 is their Landolt validation sample. So no G
+cut is applied (the unused G_MAG_MIN / MAX constants were removed in T10). V upper colour limit 5.1 -> 5.0 as in
+Table 5.10 (-0.5 < GBP-GRP < 5.0). B <= 1.75 and R <= 2.0 stay (Table 5.10 notes k, j: beyond only M giants).
+Affects only V / B / R filters (Milan's data: g, r, clear - no change).
+
+## COMP-SAT-ONE-2026-10 (Milan 2026-10-29, code review 2 G07-27, decision B5 option a)
+One saturation rule for comparison stars: a star whose raw peak reaches comp_peak_sat_frac x the measured
+saturation level (or which is flagged likely_saturated) on the MASTERSTAR or on ANY frame is not a comparison
+star and not a LOO reference. comp_peak_sat_frac is a config.json setting, default 0.80 (COMP-SAT-80-2026-10;
+AAVSO CCD/CMOS guide 3.3.5 / 3.3.7); targets keep LINEARITY_FRAC 0.90. Replaces three rules: the ungated
+>= 0.90 any-frame rule, the "> 10 % of frames over 0.80" rule and the masterstars-fallback copy of it. Like
+every saturation exclusion it applies only with a measured saturation level (SAT-LIMIT-01). The literature
+check (AAVSO: comp peak at most 60-70 % of the linearity limit) was presented; Milan kept 0.80 as a setting.
+
+## BJD-TEXT-2026-10 (Milan 2026-10-29) - the VarAstro header states how BJD is computed
+"Time: BJD_TDB at mid-exposure = UTC mid-exposure (DATE-OBS + EXPTIME/2) in TDB plus the barycentric
+light-travel time toward this star's own RA/Dec (Gaia DR3, ICRS) from the observing site (astropy; Eastman,
+Siverd & Gaudi 2010, PASP 122, 935)". The barycentric correction depends on the star's direction: one frame,
+one UTC instant, but the BJD of a star 3.5 deg from the field centre differs by ~24 s (BO CVn field, 2026-04-23).
+
+## CT-ONE-2026-10 (Milan 2026-10-29, code review 2 G08-12 / G11-05, decision B3) - one colour-term path
+The colour term is the band polynomial only: comparison-star catalogue magnitudes in the filter band (Gaia DR3
+BP-RP -> band, DR3 doc 5.5.1), (cat - inst) vs BP-RP, order by BIC, applied within the comparison colour range
+(as ZTF, Masci et al. 2019). With fewer than CT_MIN_COMP colour-valid comparison stars there is no colour term
+(logged). The former "fit" mode (fit_color_term_c1 / should_apply_color_term / apply_color_term) fitted c1 against
+Gaia G magnitudes and applied it to a band zero point, and the export then said TRANS=NO - removed; supersedes
+the "fit_color_term_c1 is production and stays" note of CT-STUB-REMOVED-2026-10.
+
+## CHECK-LIKE-TARGET-2026-10 (Milan 2026-10-29, code review 2 G11-06 / G08-45, decision B2)
+The check star is processed exactly like the target: its K series receives the same per-epoch k'' term (target
+airmass, ensemble colour reference) and the same band colour-term correction (one helper `_band_ct_correction`
+for both). AAVSO KMAG under TRANS=YES is then comparable with the target MAG (AAVSO forum / TransformApplier
+practice). A check colour outside the fitted colour range gets no colour term and the comp_quality check block
+says so ("corrections").
+
+## SCINT-NO-RIG-2026-10 (Milan 2026-10-29, code review 2 G08-16, decision C3)
+Without the telescope diameter (TELESCOPE.DIAMETER) or the site altitude the run continues WITHOUT the scintillation
+term: a WARNING in the log, a note in the scintillation provenance, and the export error line says "scintillation
+NOT included". The former silent generic rig (D = 0.07 m, 300 m) is gone. Settings: aperture and site altitude are
+required fields. (AstroImageJ includes no scintillation term at all; Osborn et al. 2015 needs D and altitude.)
+
+## HIGH-ERR-MODEL-2026-10 (Milan 2026-10-29, code review 2 G08-06, decision B1) - high_err against the epoch's error model
+high_err tests only the random error of the epoch (err_photon: source + sky + read noise, CCD equation) against its
+model ln err = a + b X (robust Theil-Sen line in airmass X); flag when ln(err/model) > median + 5 x 1.4826 x MAD.
+Not tested: the constant rig floor and the ensemble SEM (constant per light curve; in quadrature they only compress
+the spread, so a few-% change was flagged) and scintillation (grows with airmass by law, Osborn et al. 2015;
+AstroImageJ keeps it out of its error, Collins et al. 2017 App. B). The airmass line absorbs the expected photon-error
+growth (extinction, brighter sky low down). The brightness scaling of INJECTION-2026-10 (eclipse bottom) is kept.
+Reason text: "high_err:err_photon x<ratio> of its airmass model". Golden A/B (d29): BO CVn 21 -> 0 high_err epochs,
+Brno 79 -> 7; the 7 are two frames (g 0090: 2 stars, r 0147: 5 stars) with the photon error ~1.2x model in many
+stars at once (frame-level sky/transparency event).
+
+## NEIGHBOUR-VAR-MAX-2026-10 (Milan 2026-10-29, code review 2 G03-14, decision B4) - no fixed 10" veto
+The comparison pool no longer drops candidates within 10" of a VSX star (10" was 1 px on the 9.8"/px rig and 18 px
+on the 0.56"/px rig; no published criterion uses a fixed angle - AAVSO sequence guidelines: "exclude close doubles",
+ZTF: "relatively isolated" calibrators). Light from neighbours is judged by the neighbour-light model
+(COMP_BLEND_NEIGHBOUR_LIGHT, aperture and annulus at the bad-seeing FWHM) and a known variable neighbour enters it at
+its maximum: Gaia mean flux x 10^(0.4 A), A = VSX amplitude (mag_min - mag_max, or the VSX "(amp)" value) - an upper
+bound, the mean lies between maximum and minimum. variable_targets.csv gains `vsx_amplitude_mag`; the blend meta
+records `variable_neighbours` (source, n_at_maximum). The same model serves comps, target blend and the field search.
+
+## MS-DETECTIONS-ONLY-2026-10 (Milan 2026-10-29, code review 2 C4 / G04-05, G04-08, G04-25) - no forced seeds
+The MASTERSTAR FORCED_SEED mechanism is removed: catalogue membership (DAO-GAIA-ERA-01 M1) already gives every
+on-chip Gaia star to the matching depth a row, so a seed never admitted anything. Only DAO detections (own
+`vy_dao_pass` in {1, 2}, finite `peak_dao`) own and lock a Gaia star; census states FORCED_SEED / SEED_REJECTED are
+gone (an unowned on-chip Gaia star is CATALOG_ONLY; BLENDED can occur). One `dao_reconcile.gaia_detection_counts`
+gives detected_stars, catalog_matched, n_gaia_detected and the raw completeness against the Gaia stars on the chip to
+the matching depth (`n_gaia_reference`, `gaia_reference_depth_g` in pipeline_meta) - membership rows are not
+detections. MASTERSTAR rows keep their own `vy_dao_pass` / `ambiguous_owner` (no write / re-read / remap by id).
+
+## COMP-ONE-PATH-2026-10 (code review 2 G07-01 residue, G07-25, G07-03, G06-28, step 4) - the pool decides once
+- The comparison-star RMS is the pool's LOO `comp_rms` only; a pool without it gives no comps (the per-target
+  re-derivation from the proc CSVs with a relative-flux statistic is removed).
+- D3 candidacy runs once, on the pool (MASTERSTAR FWHM and the plate-solve residual), not again per target.
+- A comp without a Gaia BP-RP keeps NaN (no colour copied from the nearest Gaia row within 3.6").
+- Proc-CSV flux rows are found by catalog_id only (no nearest-neighbour row within 15-18 px).
+- The colour-tier ladder is sorted and ends at comp_max_delta_bprp (G07-35).
+
+## LC-TIME-ORDER-2026-10 (code review 2 G08-07) - per-epoch series in time order
+Every per-epoch series of a light curve (target, comps, ensemble scatter, errors, flags) and the aperture-grid
+series (p2p, night floor) are ordered by the frame's mid-exposure JD, not by file name.
+
+## FIELD-K-GROUPS-2026-10 (Milan 2026-10-29, option a; code review 2 G10-07, decision C1) - field search on the LC k
+The field variability search measures every star on the aperture k its light curve would use: the AP-BRIGHT-K group
+of its instrumental magnitude (aperture_per_target.json; magnitude at the smallest grid k, as the groups are built).
+All magnitudes are put on one scale by a per-frame aperture correction to the largest group k (k_ref): the median of
+m(k_ref) - m(k) over the stars of the k_ref group (bright, high S/N; Stetson 1990). The CCD error uses each star's own
+radius; the neighbour-light gate is evaluated at each star's k. Transients are measured at the k of the faintest group
+(new sources are near the limit), with the zero point corrected to that k. A run without groups uses
+BRIGHT_K_NO_GROUP for every star (as its targets); no aperture_per_target.json -> status "aperture k unknown" (the
+silent k = 1.5 fallback and the COMP_RMS_APERTURE_K source are gone). Meta: `aperture_k` (rule, k_ref, k for
+transients, stars per k, median correction per k) replaces `field_k`.
+A/B, BO CVn golden d29 with the aligned frames (edge gate active): k 1.0 -> groups 0.6-1.5: stars through the gates
+859 -> 921, noise floor 6.65 -> 5.92 mmag, known variables recovered 10 -> 11, new candidates 0 -> 0. Brno g / r
+(no aligned frames kept, edge gate off in both arms - relative numbers only): floor 6.1 -> 4.6 / 5.3 -> 3.6 mmag,
+known 3 -> 4 / 3 -> 4.
+
+## COVERAGE-FAINT-2026-10 (Milan 2026-10-29) - a faint frame is measured, not missing
+In the field search a measured frame whose flux is below its 1-sigma error is the star below the frame's limit (a
+variable can be detectable at maximum and not at minimum): it counts towards the 90 % coverage and enters the indices
+at its 1-sigma flux (upper limit, S/N 1); `n_below_limit` per star in variability_field.csv. Gated stars (median S/N
+>= snr_min) reach it only by real fading. BO CVn A/B: +49 stars measured, all outside the gates (edge); candidates
+and noise model unchanged.
+
+## CAL-NOFLAT-2026-10 (Milan 2026-10-29, decision A1, G01-01) - one lights tree; a group without flat is a relative product
+A night where one LIGHT group had no valid FLAT put that group into non_calibrated/lights and the rest into
+Raw/lights; quick_calibrate_last_import calibrated only non_calibrated/, so the groups WITH masters were never
+calibrated (no error). Now every group is imported into Raw/lights and every LIGHT gets a calibrated frame (a
+draft imported before the fix: both trees are calibrated). A group without a valid FLAT first takes the FLAT of
+the same camera/telescope/filter/gain/binning captured nearest to the LIGHT dates (outside the validity window),
+as a flagged substitute: plan status FLAT_FROM_OTHER_NIGHT, frame VY_FLSUB + VY_WARN, manifest
+calibration_groups.flat_substitute, trust soft warning (YELLOW). Without any flat the group is calibrated with
+the DARK only (VY_CFLAG D, VY_WARN, WARNING in the log); the manifest marks it relative_only, which is a hard
+trust reason ("calibration incomplete") - RED, so its files go to _dontsubmit/ (the one "not for submission"
+rule). Literature check A1: AAVSO CCD/CMOS guide s2.1.5, s2.5 (flat-fielding required for submission).
+The manifest also records calibration_mode PASSTHROUGH when no frame got a DARK (G12-01, INV-CAL-01 then WARNs).
+
+## CAL-BADFLAT-2026-10 (Milan 2026-10-29, decision A2, G01-29) - bad flat pixels are NaN, no 0.15 floor
+The normalised flat was floored at 0.15 silently (deep vignetting under-corrected, dead pixels x6.7). Now (IRAF
+ccdproc/ccdmask practice) a flat pixel is bad when it is <= 0 / invalid or deviates from its reference by more
+than t x sigma. Reference: median of the 12 neighbour-pair means in a 5x5 box (linear gradients cancel; a dead
+pixel or a dead column through / next to the pixel touches a minority of pairs) plus the vignetting curvature
+the pair means leave (its Gaussian mean at the box scale over the non-defect pixels). sigma: 1.4826 MAD of the
+ratio over the flat (its own PRNU + shot noise); t: Gaussian threshold for one expected false mark per flat (5.35
+sigma on 11.6 Mpx); OSC: per CFA plane; the 2-px border (no full neighbourhood) is bad only when invalid. Bad
+pixels are NaN in the calibrated frame (VY_FLBAD); smooth vignetting is divided as it is. The warp keeps NaN
+local (fill = median of the finite pixels), alignment detection fills NaN at the sky level, and a star whose
+aperture touches a NaN pixel is flagged edge_fail (no data), never measured on the median-filled image.
+Measured on Milan's masters: QHY294 NoFilter bin1 713 pixels (0.0061 %; 2.2-9.0 % from the reference, 685 low /
+28 high; 480 clusters <= 6 px); C5A g / r bin4 23 / 90. Draft 527 frame (bin 2): 275 NaN pixels, every other
+pixel byte-identical to the old code; draft 534 g frame: 23 NaN, every other pixel byte-identical. Cost: the
+mask is computed once per flat and process (~10 s on 11.6 Mpx).
+
+## CAL-DARKBIN-2026-10 (Milan 2026-10-29, decision A3, G01-24) - dark rebin convention measured or stop
+A DARK at the LIGHT binning is preferred by the matcher (verified). A 1x1 DARK rebinned to NxN uses the SUM/MEAN
+convention CAL-DIAG measures for that group; when the data cannot decide (pedestal not measured, or the SUM/MEAN
+difference below the resolution - formerly INDETERMINATE_* with a SUM default) the gate aborts with
+CONVENTION_UNDECIDED and the calibration stops with a message (make a DARK at the LIGHT binning). Without a gate
+result a dark rebin raises (no default in resample_master_to_light_binning / get_processed_master).
+
+## CAL-FLATPREP-2026-10 (G01-02, G01-03; code review 2, no decision needed) - one flat preparation
+Normalise first (median of the valid pixels), then mark invalid pixels bad (NaN) - legacy flats set invalid pixels
+to 1.0 before dividing by the ADU median (-> x6.7 after the floor). A pedestal is removed only from a flat whose
+own signal exceeds it (median - P > P); a normalised imported flat with "unknown" offset (median ~1, P 24.5)
+stops the calibration with a message instead of becoming flat == 1 everywhere with VY_CFLAG DF. A master error
+(MasterResamplingError) stops the run instead of being counted as per-frame errors.
+
+## CAL-QUESTIONS-2026-10 (Milan 2026-10-29, answers to the calibration step) and FRAME-QC-ONE-SIDED-2026-10
+- Every group not fully calibrated (no flat, no dark, passthrough night) is "calibration incomplete": RED, files in
+  _dontsubmit/ (CAL-NOFLAT applies to all of them).
+- A bad flat pixel in a star's aperture keeps the existing flag edge_fail ("no data in the aperture").
+- A substitute flat from another night must match the gain exactly (with camera, telescope, filter, binning).
+- Frame QC (G08-22): FWHM, elongation and sky level are tested one-sided (only a high value is a worse frame); an
+  exceptionally good frame is no longer flagged frame_qc.
+
+## RA-BOX-2026-10 (step 4, code review 2 G03-05 / G04-12 / G05-50 / G09-38, D36) - one RA-box rule
+Every catalogue box query takes its RA range from `catalog_db.cone_ra_half_width_deg` (exact tangent-meridian
+half-width asin(sin r / cos dec0); every RA when the cone reaches a pole) and splits the wrap at RA 0 with
+`ra_intervals_deg` (`ra_boxes_for_cone` / `cone_sky_box`). Users: the plate-solve cone (`query_gaia_cone`), the blind
+index cells (`Band.cone`), field Gaia / VSX / exoplanet cones, the VSX point query of catalog_crossmatch (no 0.2
+cos-dec clamp, no row cap). The reconciliation reference population is the cone of the chip (largest distance from the
+chip centre to the border), not the min/max of the corner RAs (which became the complement across RA 0). A capped box
+query (`max_rows`) keeps the rows nearest to the box centre. ePSF build-star isolation finds neighbours with a KD-tree
+on unit vectors. Outputs change only at |Dec| > ~78 deg or across RA 0, except the reconciliation reference (chip
+edges bulge pole-ward beyond the corner box on wide fields: QA counts only).
+
+## PLATESOLVE-VERIFY-2026-10 (step 4, code review 2 G03-01 / G03-02 / G03-04 / G03-45) - hypothesis and acceptance
+A 4-star hypothesis WCS has CRVAL at the tangent point of its similarity and CRPIX at the pixel that maps onto it
+(re-centring CRVAL with the same CD dropped meridian convergence: 2-60 px at 0.5-1 "/px, Dec 60-85). The 4 detections
+of the matched pattern are left out of its verification (Lang et al. 2010 sect. 2.4). Every verified hypothesis goes
+through `accept_hypothesis` (refinement + credible_solution) in the hinted and in the blind solver; a rejected one does
+not end the search. The solver catalogue is the `want` brightest Gaia stars of the great-circle cone (one ORDER BY
+g_mag LIMIT read, no fixed G <= 17.5 ladder). MIN_VERIFY_CATALOG_STARS = 20 is kept (open question).
+
+## VSX-GAIA-LR-2026-10 (step 4, code review 2 G05-04 / G05-05) - density and likelihood ratio units
+rho = Gaia sources inside the chip (world -> pixel) / chip area; the RA/Dec bbox query (+ margin) only supplies the
+candidates. Likelihood ratio q f(r) / (2 pi rho r) with f per arcsec and rho per arcsec^2 (Sutherland & Saunders 1992);
+the mixture fit models nearest-neighbour separations as q f_true + (1 - q) 2 pi rho r exp(-pi rho r^2).
+
+## ENSEMBLE-BROEG-2026-10 (in code since 2026-10-21; entry written 2026-10-29, code review 2 G08-37) - the ensemble
+Recorded from what `photometry_lightcurve.ensemble_normalize` / `broeg_weights` do; it supersedes the "Broeg
+iteration" paragraph of COMP-ADMIT (one-shot 1/sigma^2, no iteration).
+- Membership: exactly the comparison stars of the target's selection (`comp_quality` keys), the same on every frame
+  (INV-COMP-MEMBERSHIP). No clipping anywhere.
+- Each comparison star is put on its own night level M_j (m_jf = M_j + E_f, Honeycutt 1992), so a comp missing on
+  some frames does not shift the level. Levels and weights are alternated (up to 50 rounds, until no level moves by
+  1e-7 mag); the frame term E_f is gauged to median 0.
+- Weights (Broeg, Fernandez & Neuhaeuser 2005): w_j = 1/sigma_j^2, sigma_j = standard deviation (ddof 1, >= 3 epochs)
+  of comp j against the weighted ensemble of the OTHER comps (leave-one-out); iterated until the largest relative
+  change is < 1e-5 (at most 200 iterations); normalised to sum 1. A variable comp ends with a small weight.
+- Frame zero point: weighted mean of the present normalised comps; fewer than `n_comp_min` present -> NaN (epoch not
+  exported). mag_calib = m_target - Z_f + C with C = weighted mean of (catalogue - level); delta_mag uses the
+  weighted mean level instead of C.
+- Ensemble error per frame: sqrt(1 / sum_present 1/sigma_j^2), combined in quadrature with the target error.
+- Published: `comp_quality_<target>.json` `broeg_weights` (sum 1 over the ensemble) - the w of the AAVSO NOTES, the
+  VarAstro header and (G11-38, 2026-10-29) the w column of the PDF / UI comparison table.
+
+## EPSF-ALL-TARGETS-2026-10 (Milan 2026-10-23, s36; entry written 2026-10-29, code review 2 G09-47) - ePSF candidates
+Supersedes the candidate rule of EPSF-TARGETS-2026-10 (VSX catalogue variables only); the selection syntax, the
+`epsf_targets` key and the ePSF tab stay as described there. Found by the injection-recovery test
+(VYVAR_INJECTION_RECOVERY.md point 7): exoplanet hosts, manual targets and the synthetic stars had no PSF light curve
+and the photometry completeness gate failed. Rule (`epsf_science_set.epsf_target_candidates`): every target of
+`active_targets.csv` with an aperture light curve - VSX variables, exoplanet hosts (typed `EXOPLANET` for the type
+selection when they have no VSX type), manual targets. Not candidates: targets skipped for S/N or saturation and
+targets out of the VSX type scope (`vsx_out_of_scope_types`; they have no aperture light curve) and the
+`catalog_only` zone. The ePSF joint fit matters most for a target next to a brighter star. Fit-set meta `rule`:
+"targets with aperture photometry (VSX, exoplanet hosts, manual; not out of scope, not skipped) matching the
+selection + their comparison stars".
+
+## HDR-ONE-2026-10 (code review 2 T08, step 4) - one authority per header fact
+- **Exposure start**: `fits_meta.exposure_start_utc` (re-exported by `time_utils`). DATE-OBS with `T` or a space,
+  `Z` or a numeric UTC offset; date + TIME-OBS; then MJD-OBS, JD-OBS/JD; a date-only DATE-OBS is midnight only with an
+  error log + counter. TIMESYS UTC/UT/TT/TDT/TAI/TDB/GPS honoured (absent = UTC; unknown = no time). jd_start (DB),
+  INSPECTION_JD (QC axis, observation hash) and jd_mid (= start + EXPTIME/2) share it. DATE-OBS (FITS standard
+  start) wins over JD keywords (some capture programs write JD at mid-exposure).
+- **Filter token**: `band_classify.obs_group_first_token` (pipe form: whole first field; folder form: strip
+  `_<exp>_<bin>[_<OSC channel>]`, fractional exposures) and `band_classify.standard_band_of_filter` (one name ->
+  band table for band_classify, gaia_bands, k2). Unknown names are UNKNOWN (no prefix heuristic); IR-cut / UV-IR-cut /
+  L / broadband light-pollution names are LUMINANCE. Upper-case "G" stays Sloan g (open question G08-14).
+- **Optics**: `optics.py`. DB (TELESCOPE.FOCAL, EQUIPMENTS.PIXELSIZE) -> header, logged cross-check; no value rewritten
+  (the 1750-2250 mm "typo" rule is gone; a solved scale > 10 % off the expected one is reported). FOCALLEN unit from
+  the card comment, else metres below 0.5. XPIXSZ/YPIXSZ = binned pitch (MaxIm convention, QHY comment "X binned
+  pixel size"), PIXSIZE1/2 = native pitch. One FITS plate-scale reader (solved WCS first, no 0.1-30 window).
+- **Group key**: `fits_meta.observation_group_key` + `fits_meta.normalize_filter_name`.
+- **FWHM**: `aperture_policy.fwhm_from_header_vy_fwhm` (0.5..30 px) is the only VY_FWHM reader; no constant FWHM
+  (4.5 / 3.7 / 3.5 / 5.0 px removed); no MASTERSTAR Gaussian fit (night median QC FWHM instead).
+
+## CT-GROUP-K-2026-10 (Milan 2026-10-29, code review 2 G06-18) - colour term on the light-curve aperture
+The setup's colour term is fitted after the aperture grid, from the comps' instrumental magnitudes on the aperture
+the light curves use: each comp at the k of its brightness group, corrected per frame to k_ref
+(`aperture_pertarget.group_k_fluxes`, the rule of FIELD-K-GROUPS-2026-10), read once from the grid columns of the
+proc catalogues. It was fitted on the comp-selection aperture (dao_flux / mag_inst), re-reading every proc CSV with all
+columns. A/B Brno 534 (golden d29, 1875 comps): g order 2, c1 0.108 -> 0.125, c2 -0.066 -> -0.066, rms 52.3 -> 48.6
+mmag; r order 0 (no colour term) -> order 1, c1 0.033, rms 47.8 -> 41.4 mmag. BO CVn: no colour term (clear filter).
+
+## FWHM-BOUND-2026-10 (Milan 2026-10-29, answers to the header step)
+- A star FWHM is valid between 0.5 px and 1/20 of the frame's shorter side (the fixed 30 px rejected real FWHMs of
+  long-focus rigs); a value without a frame shape has no upper bound.
+- VY_FWHM is used as it is everywhere (FWHM-AUTH-01): the DAO_TO_GAUSSIAN (x 2/3) conversion of one path is removed.
+- No fixed FWHM: the aperture grid without VY_FWHM and without a night median stops with an error (was 5.0 px).
+- Pending (Milan): uppercase G / R / B filters of an LRGB wheel (G08-14).
+
+## NO-DATA-AP-2026-10 (found by the step-4 A/B on BO CVn) - an aperture on no data has no proc flux
+The per-frame catalogue fluxes (`flux`, `flux_kNNN`) were measured on an image whose non-finite pixels (bad flat
+pixels of CAL-BADFLAT, warp NaN) and alignment fill hold one constant: a star whose aperture lay there got flux ~ 0
+(exactly 0 for all k off the frame's data). With COVERAGE-FAINT such a point became a "deep fading" and nine
+constant stars of BO CVn became variability candidates. Now an aperture touching a pixel without data (non-finite or
+outside the aligned footprint) gives NaN (not measured), as AP-FOOTPRINT already does for the light curves.
+
+## WARP-NAN-2026-10 (found by the step-4 A/B on BO CVn) - a missing pixel stays local in every warp
+
+BO CVn 527 frame 003 was aligned by the polynomial (ALIGN-POLY) and came out all NaN: skimage warps a
+projective map with a local bicubic kernel, but any other map through scipy ``map_coordinates``, whose
+spline prefilter is global, so one NaN (a bad flat pixel, G01-29) spread over the frame. All 29 targets
+lost that frame as ``edge_fail`` and ePSF had no stars. ``warp_to_reference`` now warps the frame with
+its NaN filled by the median and sets NaN where the 4x4 cubic support holds a missing pixel (missing mask
+grown by one pixel, warped bilinearly). Similarity / projective results are unchanged bit for bit (test);
+a frame without NaN is warped exactly as before.
+
+## BADPIX-REPAIR-2026-10 (Milan 2026-10-29) - a bad pixel is filled from the frame's PSF model, the point stays
+
+**Found.** In the step-4 A/B on BO CVn (527) TOI-3919 lost 27 of 146 points as ``edge_fail``. A single bad
+flat pixel (G01-29: NaN in the calibrated frame) lay 4.1-5.1 px from the star: inside the largest grid
+aperture (k = 2, 4.5-5.4 px), outside the chosen one (1.7-2.0 px); after the cubic warp it is a 4x4 block.
+Re-measured with the chosen aperture, the 27 points sit in the scatter of the curve (residual median
+-11 mmag, robust scatter 33 mmag vs 35 mmag of the normal points). Bad flat pixels per frame: BO CVn 275
+(0.010 %), Brno g 23, r 90. Milan: such points must stay, as in MuniWin / AIJ / SIPS.
+
+**Literature.** SExtractor (MASK_TYPE=CORRECT) replaces a masked pixel by its mirror through the object
+centre and keeps the measurement (FLAGS bit 1 only above 10 % bad pixels); SEP replaces it by the aperture
+mean and ignores masked annulus pixels; IRAF repairs bad pixels before photometry (``fixpix``: linear
+interpolation across the narrowest span) and ``phot`` reports bad data in the aperture as error 304.
+
+**Study (injection-recovery, Brno 534, 10 calibrated frames g/r, 400 isolated stars, k = 0.75 / 1.0 / 1.5,
+7164 cases per method).** Error of the repaired aperture flux in units of the star's photon noise:
+
+| one missing pixel, native grid | bias | robust scatter | 95 % below | 95 % below at < 0.25 FWHM |
+|---|---|---|---|---|
+| aperture mean (SEP) | +0.03 | 0.49 | 4.5 | 15 |
+| linear interpolation (IRAF fixpix) | -0.01 | 0.17 | 1.3 | 4.5 |
+| mirror pixel (SExtractor) | -0.01 | 0.22 | 1.4 | 2.8 |
+| Moffat fit | +0.01 | 0.16 | 1.0 | 2.0 |
+| frame ePSF fit | +0.003 | 0.12 | 0.42 | 0.72 |
+
+The same pixel after the warp (4x4 block): ePSF 0.81 (95 % < 6), all others 1.4-5.3 (95 % < 12-52); the
+mirror is impossible in 18 % of the cases (its mirror lies in the block). So: repair before the alignment,
+from the frame's ePSF.
+
+**Decision.** ``badpix_repair.repair_missing_pixels`` runs in QC in-place (after the FWHM, before the
+alignment; GUI and night run): every missing pixel = local sky (4-6 FWHM annulus median of ``sky_image``)
++ the ePSF models of the sources reaching it (flux and position fitted on the good pixels, groups jointly,
+non-linear pixels masked, centre within one FWHM of the DAO centroid). The ePSF is built from the frame's
+<= 100 brightest isolated stellar detections below ``LINEARITY_FRAC x VY_CSAT`` (calibration stamps
+``VY_CSAT`` = (SAT - pedestal) / max normalised flat). Detection sees a missing pixel as the median of its
+neighbours (a missing peak must not hide the star). A star pixel stays missing (point ``edge_fail`` as
+before, reason in the log) without ``VY_CSAT``, with < ``EPSF_MIN_BUILD_STARS`` build stars, or when the
+star's fit fails. Repaired pixels: ``VYBPFIX`` extension of the calibrated frame -> ``badpix_repaired.json``
+next to the aligned frames (reference grid) -> ``bp_repaired_px`` per aperture -> LC ``flag_reason`` note
+``bad_pixel_repaired: N px``; the point keeps its flag.
+
+**Verification of the production code** (same frames, one missing pixel in every test star at once,
+3 rounds, 15 659 cases): bias -0.004 sigma, robust scatter 0.125 sigma, 95 % < 0.43 sigma, |error| > 1 sigma
+in 0.75 %, > 3 sigma in 0.15 % (very bright stars, S/N 400-2000, 0.2-1.4 %: ePSF shape mismatch in the
+core); 14 pixels (0.09 %) left missing by a failed fit. Added noise of a repaired point: sqrt(1 + 0.125^2)
+= +0.8 %.
+
+A/B on full nights (baseline d29): BO CVn 527 - 275 missing pixels per frame (87-106 from star models, the
+rest from the sky; 1-3 left in 5 of 147 frames); TOI-3919 146/146 points, the 27 recovered points all
+normal, rms 35.60 mmag (35.63); edge_fail points 56 -> 0, normal 3975 -> 4000, median lc_rms +0.05 %,
+candidates 0, known variables 12. Brno 534 - g: 2254 missing pixels in 98 frames (1394 star model, 859
+sky, 1 left), r: 8820 in 98 (5855 / 2918 / 47 left); export file names identical to d29, median lc_rms
+-0.02 % (g) / -0.1 % (r). Cost: preprocess BO CVn 142 -> 613 s, Brno 532 -> 1047 s on the 2-worker test
+machine (whole run +15 % / +1 %).
+
+## PEDESTAL-FIT-2026-10 (Milan 2026-10-30, code review 2 G01-46) - pedestal from the darks of the same sensor setup, sigma_P from the fit
+
+CAL-DIAG Check P derives the pedestal P as the intercept of the master-dark median against the exposure
+time. Before: the darks were the folder's ``Dark*.fits`` files of any camera (Brno 534 took the QHY294 darks of
+BO CVn: P = 24.47 ADU; its own C5A-150M darks give 512 ADU), and sigma_P was a "bootstrap" of single points
+on a fixed two-point slope - exactly 0 with two exposure times (527: resolv_limit at its floor 1 ADU).
+Now: ``discover_pedestal_dark_paths`` takes every master dark (IMAGETYP / FRAME) of the folder with the same
+INSTRUME, gain, offset, binning and readout mode and a sensor temperature within
+``calibration_master_ccd_temp_tolerance_c`` (the slope is the dark current); P and k are the ordinary
+least-squares fit over all of them; sigma_P = residual standard error of the intercept (3+ exposure times,
+holds systematics such as a non-linear dark current) combined with the propagated standard errors of the
+medians (sqrt(pi/2) x 1.4826 MAD / sqrt(N)). With 2 exposure times only the propagated part is known (option
+a; option b, "not measurable", would stop BO CVn, dark bin 1 / lights bin 2) and the log says so. BO CVn:
+P 24.471, sigma_P 0.0014 ADU (convention SUM unchanged, Delta 73.6 >> limit 1 ADU); Brno: P 512.000 (was
+24.47), bf = 1. ``samples_p`` and the RNG are gone.

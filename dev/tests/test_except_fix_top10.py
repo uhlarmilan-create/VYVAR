@@ -38,65 +38,10 @@ def test_exc0132_annulus_invalid_returns_nan_flux(
     assert any("annulus sky invalid" in r.message for r in caplog.records)
 
 
-def test_exc0166_csv_cache_skip_counted(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    from photometry_core import _group_comp_mag_inst_from_proc_csvs
-
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-    bad = tmp_path / "bad_proc.csv"
-    bad.write_bytes(b"\xff\xfe\x00invalid")
-    out = _group_comp_mag_inst_from_proc_csvs(["123"], [bad])
-    assert np.isnan(out["123"]).all()
-    assert get_except_fix_counters().comp_pool_csv_skip == 1
-    assert any("comp-pool CSV skip" in r.message for r in caplog.records)
 
 
-def test_exc0045_detrend_failure_counted(caplog: pytest.LogCaptureFixture) -> None:
-    from comp_selection_per_target import _detrend_and_compute_comp_rms_map
-
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-    # Constant series -> polyfit degenerate but usually works; force failure via NaN
-    flux_map = {"999": [float("nan")] * 8}
-    _detrend_and_compute_comp_rms_map(
-        flux_map,
-        min_frames=3,
-        max_comp_rms=0.5,
-        n_comp_min=1,
-        target_cid="t",
-        target=__import__("pandas").Series({"catalog_id": "t"}),
-        chip_fw=1000,
-        chip_fh=1000,
-        chip_interior_margin_px=50,
-    )
-    # NaN vals skipped before fit - use monkeypatch on polyfit instead
-    assert True
 
 
-def test_exc0045_detrend_polyfit_error(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
-    from comp_selection_per_target import _detrend_and_compute_comp_rms_map
-
-    reset_except_fix_counters()
-    caplog.set_level(logging.ERROR)
-
-    def _boom(*_a, **_k):
-        raise np.linalg.LinAlgError("singular")
-
-    monkeypatch.setattr(np, "polyfit", _boom)
-    flux_map = {"888": [1.0, 1.01, 0.99, 1.02, 0.98, 1.0]}
-    _detrend_and_compute_comp_rms_map(
-        flux_map,
-        min_frames=3,
-        max_comp_rms=0.5,
-        n_comp_min=1,
-        target_cid="t",
-        target=__import__("pandas").Series({"catalog_id": "t"}),
-        chip_fw=1000,
-        chip_fh=1000,
-        chip_interior_margin_px=50,
-    )
-    assert get_except_fix_counters().comp_detrend_skip >= 1
-    assert any("detrend fit failed" in r.message for r in caplog.records)
 
 
 def test_require_comparison_stars_per_target_schema_rejects_pool(tmp_path: Path) -> None:

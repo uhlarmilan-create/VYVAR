@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src_py"))
 
 import photometry_core  # noqa: E402,F401  (import order)
 from astropy.io import fits  # noqa: E402
-from comp_rms_loo import saturated_any_frame_ids  # noqa: E402
+from comp_pool_rms import comp_frame_stats  # noqa: E402
 from d3_comparison_candidacy import apply_d3_comparison_candidacy  # noqa: E402
 from pipeline_constants import LINEARITY_FRAC  # noqa: E402
 from sat_diag import PileupResult, linearity_check, resolve_sat_limit  # noqa: E402
@@ -38,8 +38,9 @@ def test_saturated_any_frame_ids(tmp_path):
         str(p1): pd.DataFrame({"catalog_id": ["111", "222"], "likely_saturated": [False, False]}),
         str(p2): pd.DataFrame({"catalog_id": ["111", "222"], "likely_saturated": [True, False]}),
     }
-    out = saturated_any_frame_ids({"111", "222"}, [p1, p2], cache)
-    assert out == {"111": 1}
+    # COMP-SAT-ONE-2026-10: likely_saturated on one frame counts as over the comparison limit
+    out = comp_frame_stats({"111", "222"}, [p1, p2], cache, comp_peak_sat_frac=0.80)
+    assert out["111"]["n_over"] == 1 and out["222"]["n_over"] == 0
 
 
 def test_d3_uses_snr_min():

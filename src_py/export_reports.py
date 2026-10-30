@@ -28,9 +28,10 @@ from report_methods import aavso_export_path, lc_csv_path, varastro_export_path
 from check_star_kmag import (
     check_kmag_sidecar_path,
 )
-from photometry_shared import _resolve_plate_scale_arcsec_per_px
+from optics import plate_scale_from_fits
 from comp_table import parse_comp_quality_json_map
 from vyvar_version import VYVAR_SOFTWARE_VERSION
+from mag_constants import MAG_ERR_SCALE
 from photometry_lightcurve import _select_export_lc_rows  # LAYER-2026-10: moved there
 
 # Gaia ID must be str - float64 loses digits
@@ -64,13 +65,83 @@ def _accumulate_export_stat(export_stats: dict[str, int] | None, key: str, n: in
     export_stats[key] = int(export_stats.get(key, 0)) + int(n)
 
 
-def _maybe_set_airmass_citation(run_citation_ctx: Any, lc_df: pd.DataFrame) -> None:
-    if run_citation_ctx is None:
-        return
+#: G11-03: what the exporter wrote for every target of a setup (lightcurves_reports/); the PDF and the UI
+#: read it instead of re-deriving the routing
+EXPORT_MANIFEST_NAME = "export_manifest.json"
+
+
+def export_manifest_path(photometry_dir: Path | str) -> Path:
+    return Path(photometry_dir) / "lightcurves_reports" / EXPORT_MANIFEST_NAME
+
+
+def _manifest_record(manifest: dict[str, Any] | None, target_id: str, name: str = "") -> dict[str, Any]:
+    """The manifest entry of one target (a throw-away dict when no manifest is kept)."""
+    rec: dict[str, Any] = {"name": name, "kind": "", "dontsubmit": False, "n_rows": 0,
+                           "aavso": None, "aavso_reason": "", "varastro": None, "varastro_reason": ""}
+    if manifest is not None:
+        manifest[str(target_id)] = rec
+    return rec
+
+
+def _manifest_refuse(rec: dict[str, Any], reason: str) -> None:
+    """Neither file written for one reason."""
+    rec["aavso_reason"] = rec["aavso_reason"] or reason
+    rec["varastro_reason"] = rec["varastro_reason"] or reason
+
+
+def load_export_manifest(photometry_dir: Path | str) -> dict[str, Any] | None:
+    """The export manifest of a setup; None when the export has not run (or its file is unreadable)."""
+    p = export_manifest_path(photometry_dir)
+    if not p.is_file():
+        return None
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logging.warning("[EXPORT] export manifest unreadable %s: %s", p, exc)
+        return None
+    return raw.get("targets") if isinstance(raw, dict) and isinstance(raw.get("targets"), dict) else None
+
+
+def export_fact_text(rec: dict[str, Any] | None) -> str:
+    """The "Export" fact of a target page (PDF and UI) from its manifest entry: the files actually written."""
+    if rec is None:
+        return "not exported (no export record for this target - export not run since photometry)"
+
+    def _one(label: str, key: str) -> str:
+        if rec.get(key):
+            return f"{label} {rec.get('kind') or 'yes'}"
+        return f"{label} no ({rec.get(key + '_reason') or 'not written'})"
+
+    txt = f"{_one('AAVSO', 'aavso')}   {_one('VarAstro', 'varastro')}"
+    if rec.get("dontsubmit") and (rec.get("aavso") or rec.get("varastro")):
+        txt += "   (RED: in _dontsubmit)"
+    return txt
+
+
+def setup_uses_airmass(lc_dir: Path | str) -> bool:
+    """G11-17: the airmass citation is decided once per setup - any aperture light curve with a finite
+    airmass (same answer for every target's header and for the PDF, independent of target order)."""
     from photometry_exports import lc_has_finite_airmass  # noqa: PLC0415
 
-    if lc_has_finite_airmass(lc_df):
-        run_citation_ctx.use_airmass = True
+    d = Path(lc_dir)
+    for p in sorted(d.glob("lightcurve_*.csv")) if d.is_dir() else []:
+        if p.name.endswith("_psf.csv"):
+            continue
+        try:
+            head = pd.read_csv(p, nrows=0).columns
+            if "airmass" in head and lc_has_finite_airmass(pd.read_csv(p, usecols=["airmass"])):
+                return True
+        except (OSError, ValueError):
+            continue
+    return False
+
+
+def ascii_text(text: str) -> str:
+    """G11-18: names with diacritics in ASCII headers ('Dablice' for D + a-acute + blice), not '?'."""
+    import unicodedata  # noqa: PLC0415
+
+    s = unicodedata.normalize("NFKD", str(text))
+    return "".join(ch for ch in s if not unicodedata.combining(ch)).encode("ascii", errors="replace").decode("ascii")
 
 def record_export_failure(
     failures: list[ExportFailure] | None,
@@ -126,7 +197,7 @@ def _resolve_export_arcsec_per_px(
     """Derive plate scale (arcsec/px) for export headers - derive-or-None (no magic 1.3).
 
     Priority: ``pipeline_meta.json`` ``plate_scale_arcsec_px`` (aperture photometry session);
-    then WCS/CD from sibling ``MASTERSTAR.fits`` via ``_resolve_plate_scale_arcsec_per_px``.
+    then WCS/CD from sibling ``MASTERSTAR.fits`` via ``optics.plate_scale_from_fits``.
     """
     meta = load_pipeline_meta(photometry_dir)
     ps = meta.get("plate_scale_arcsec_px")
@@ -140,7 +211,7 @@ def _resolve_export_arcsec_per_px(
     masterstar = photometry_dir.parent / "MASTERSTAR.fits"
     if masterstar.is_file():
         try:
-            v = _resolve_plate_scale_arcsec_per_px(cfg, masterstar)
+            v = plate_scale_from_fits(masterstar)
             if v is not None and math.isfinite(float(v)) and float(v) > 0:
                 return float(v)
         except Exception:  # noqa: BLE001
@@ -233,12 +304,15 @@ def _vyvar_export_citation_lines(
 ) -> list[str]:
     """Comment header block for AAVSO / VAR.ASTRO text exports (CITATIONS.bib)."""
     if run_ctx is None:
-        run_ctx = _osc_export_citation_context(
-            cfg,
-            photometry_dir=photometry_dir,
-            obs_group=obs_group,
-            targets_df=targets_df,
-            target_row=target_row,
+        # G11-16: build_run_citation_context already sets the OSC channel fields
+        from citations import build_run_citation_context  # noqa: PLC0415
+
+        targets = targets_df
+        if targets is None and target_row is not None:
+            targets = pd.DataFrame([target_row])
+        run_ctx = build_run_citation_context(
+            cfg, pipeline_meta=load_pipeline_meta(photometry_dir), targets_df=targets, obs_group=obs_group,
+            use_airmass=setup_uses_airmass(Path(photometry_dir) / "lightcurves") if photometry_dir is not None else False,
         )
     return emit_export_citation_lines(run_ctx)
 
@@ -249,6 +323,15 @@ def safe_filename(name: str) -> str:
     s = re.sub(r"[^\w\s\-\+]", "", s)
     s = re.sub(r"\s+", "_", s)
     return s or "unknown"
+
+
+def utc_jd_to_datestr_yyyymmdd(jd_utc: float) -> str:
+    """UTC Julian date -> its UTC calendar date YYYYMMDD (export file names, G11-19)."""
+    try:
+        dt = Time(float(jd_utc), format="jd", scale="utc").datetime
+        return f"{dt.year:04d}{dt.month:02d}{dt.day:02d}"
+    except Exception:  # noqa: BLE001
+        return "unknown"
 
 
 def bjd_to_datestr_yyyymmdd(bjd_tdb: float) -> str:
@@ -278,47 +361,6 @@ def _fmt_opt_num_na(v: Any, fmt: str, *, na: str = "na") -> str:
 def _filter_lookup_key(name: str) -> str:
     s = str(name or "").strip().upper()
     return re.sub(r"[\s\-]+", "_", s)
-
-
-def _osc_export_citation_context(
-    cfg: AppConfig | None,
-    *,
-    photometry_dir: Path | None,
-    obs_group: str,
-    targets_df: pd.DataFrame | None = None,
-    target_row: pd.Series | None = None,
-    run_ctx: Any = None,
-) -> Any:
-    """Build citation context with OSC export flags when obs-group is a channel folder."""
-    from citations import RunCitationContext, build_run_citation_context
-    from gaia_johnson import TRANSFORM_CITATION
-    from osc_align import is_osc_export_eligible_obs_group, parse_osc_channel
-
-    if run_ctx is not None and isinstance(run_ctx, RunCitationContext):
-        base = run_ctx
-    else:
-        meta = load_pipeline_meta(photometry_dir)
-        targets = targets_df
-        if targets is None and target_row is not None:
-            targets = pd.DataFrame([target_row])
-        base = build_run_citation_context(
-            cfg,
-            pipeline_meta=meta,
-            targets_df=targets,
-            obs_group=obs_group,
-        )
-    ch = parse_osc_channel(obs_group)
-    if ch is None:
-        return base
-    osc_bin = int(getattr(cfg, "osc_channel_binning", 2) or 2) if cfg else 2
-    return RunCitationContext(
-        **{
-            **base.__dict__,
-            "osc_channel_export": is_osc_export_eligible_obs_group(obs_group),
-            "osc_channel_binning": osc_bin,
-            "osc_transform_citation": TRANSFORM_CITATION if is_osc_export_eligible_obs_group(obs_group) else "",
-        }
-    )
 
 
 def guess_setup_info_from_obs_group(obs_group: str) -> tuple[str, str | None, str | None]:
@@ -441,6 +483,8 @@ def _lc_missing_export_columns(lc_df: pd.DataFrame, *, differential: bool, mag_c
     missing = [] if mag_col in lc_df.columns else [mag_col]
     if not ({"jd", "bjd"} & set(lc_df.columns)):
         missing.append("jd/bjd")
+    if "err" not in lc_df.columns:
+        missing.append("err")
     return missing
 
 
@@ -499,6 +543,17 @@ def _load_comp_quality_json(lc_dir: Path, target_cid: str) -> dict[str, Any]:
         return {}
 
 
+def _check_sidecar_df(lc_dir: Path, target_cid: str) -> pd.DataFrame | None:
+    p = check_kmag_sidecar_path(lc_dir, target_cid)
+    if not p.is_file():
+        return None
+    try:
+        return read_vyvar_csv(p, low_memory=False)
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("[EXPORT] check-star sidecar unreadable %s: %s", p, exc)
+        return None
+
+
 def _check_sidecar_by_file(lc_dir: Path, target_cid: str) -> tuple[str, dict[str, tuple[float, float]]]:
     """(check catalog id, source_file -> (kmag, kmag_err)) from the aperture-photometry sidecar."""
     p = check_kmag_sidecar_path(lc_dir, target_cid)
@@ -555,6 +610,7 @@ def export_lightcurve_reports(
     export_method: str = "aperture",
     export_failures: list[ExportFailure] | None = None,
     export_stats: dict[str, int] | None = None,
+    manifest: dict[str, Any] | None = None,
 ) -> dict[str, Path]:
     """AAVSO Extended Format + VarAstro files for one target (EXPORT-2026-10).
 
@@ -575,6 +631,9 @@ def export_lightcurve_reports(
     A target whose magnitudes are not on the band of the filter (``band_system`` other
     than the zero-point band - no measured comparison star with a valid band magnitude) is
     not exported; the reason is recorded.
+
+    Rows: :func:`photometry_lightcurve.export_row_mask` (both files carry the same epochs). What was
+    written, or why not, goes into ``manifest[target id]`` (G11-03).
     """
     from gaia_bands import filter_band_for_obs_group, zp_mag_from_gaia  # noqa: PLC0415
 
@@ -592,7 +651,7 @@ def export_lightcurve_reports(
     _phot_dir = out_base.parent
     _lc_dir = Path(lc_dir) if lc_dir is not None else (_phot_dir / "lightcurves")
     _sw_ver = str(software_version or VYVAR_SOFTWARE_VERSION).strip() or VYVAR_SOFTWARE_VERSION
-    _resolved_site = _resolved_site_from_meta(out_base)
+    _resolved_site = _resolved_site_from_meta(_phot_dir)  # G11-04: pipeline_meta.json is in the photometry dir
 
     # STAR-NAME-2026-10: VSX name, else exoplanet host (TOI-xxxx ...), else Gaia DR3 id
     from star_page_m3 import target_display_name  # noqa: PLC0415
@@ -608,6 +667,7 @@ def export_lightcurve_reports(
         )
     target_cid = str(normalize_gaia_source_id(target_row.get("catalog_id", "")) or "").strip()
     _target_id = target_cid or vsx_name
+    _rec = _manifest_record(manifest, _target_id, vsx_name)
 
     # UNCAL-EXPORT-2026-10 (Milan 2026-10-11): a target without a standard zero point
     # (band_system NONE - no comparison star with a valid band magnitude) is exported as
@@ -626,26 +686,32 @@ def export_lightcurve_reports(
     )
     differential = _bs0.upper() == "NONE" and not gspc_std
     _mag_override = "mag_gspc" if gspc_std else None
+    _missing = ([] if lc_df is None or lc_df.empty
+                else _lc_missing_export_columns(lc_df, differential=differential, mag_column=_mag_override))
+    if _missing:
+        record_export_failure(export_failures, _target_id, _export_method,
+                              f"LC file lacks column(s) {', '.join(_missing)}")
+        _manifest_refuse(_rec, f"LC lacks {', '.join(_missing)}")
+        return {}
     lc_normal = _select_export_lc_rows(lc_df.copy() if lc_df is not None else pd.DataFrame(),
                                        differential=differential, mag_column=_mag_override)
+    _n_lc_all = int(len(lc_df)) if lc_df is not None else 0
+    if len(lc_normal) < _n_lc_all:
+        logging.info("[EXPORT] %s: %d of %d epochs not exported (flag in EXPORT_EXCLUDE_FLAGS, or no finite "
+                     "magnitude / time / error > 0)", _target_id, _n_lc_all - len(lc_normal), _n_lc_all)
     if lc_normal.empty:
-        _missing = ([] if lc_df is None or lc_df.empty
-                    else _lc_missing_export_columns(lc_df, differential=differential, mag_column=_mag_override))
-        if _missing:
-            record_export_failure(export_failures, _target_id, _export_method,
-                                  f"LC file lacks column(s) {', '.join(_missing)}")
-        else:
-            record_export_skip(export_stats, _target_id, _export_method, "no exportable LC points")
+        record_export_skip(export_stats, _target_id, _export_method, "no exportable LC points")
+        _manifest_refuse(_rec, "no exportable epochs")
         return {}
     # TRUST-COVERAGE-2026-10: too few usable epochs -> not exported (same rule as trust RED)
     from trust_flag_core import coverage_insufficient  # noqa: PLC0415
 
-    _n_lc_all = int(len(lc_df)) if lc_df is not None else 0
     if coverage_insufficient(len(lc_normal), _n_lc_all):
         record_export_skip(export_stats, _target_id, _export_method,
                            f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
+        _manifest_refuse(_rec, f"insufficient data: {len(lc_normal)} of {_n_lc_all} epochs usable")
         return {}
-    _maybe_set_airmass_citation(run_citation_ctx, lc_normal)
+    _rec["n_rows"] = int(len(lc_normal))
 
     # --- observation group / band authority --------------------------------------------
     obs_group_resolved = str(obs_group or "").strip()
@@ -661,6 +727,7 @@ def export_lightcurve_reports(
 
     if is_onerggb_internal_obs_group(obs_group_resolved):
         record_export_skip(export_stats, _target_id, _export_method, "oneRGGB internal-only")
+        _manifest_refuse(_rec, "oneRGGB internal-only")
         return {}
     fb = filter_band_for_obs_group(obs_group_resolved)
     aavso_filter = fb.aavso_code
@@ -672,7 +739,7 @@ def export_lightcurve_reports(
     check_osc03_export_eligibility(
         obs_group_resolved, aavso_filter, meta={"target": _target_id, "method": _export_method}
     )
-    setup_filter_raw, exptime_s, binning = guess_setup_info_from_obs_group(obs_group_resolved)
+    _, exptime_s, binning = guess_setup_info_from_obs_group(obs_group_resolved)
 
     cq = _load_comp_quality_json(_lc_dir, target_cid)
     # GSPC-ZP-2026-10: calibration note B (red comps / GSPC zero point differs) in the header
@@ -689,14 +756,21 @@ def export_lightcurve_reports(
     # EXPORT-AUDIT-2026-10 (Milan 2026-10-21): a differential target (no zero point) goes to VarAstro
     # only - AAVSO MTYPE=DIF needs one named comparison star (CNAME/CMAG), not an ensemble, and DIF
     # data are neither validated nor plotted there.
-    aavso_ok = (on_band or gspc_std) and bool(aavso_filter)
+    aavso_ok = (on_band or gspc_std) and bool(aavso_filter) and "jd" in lc_normal.columns
     if differential:
         _accumulate_export_stat(export_stats, "aavso_skipped_differential")
+        _rec["aavso_reason"] = "differential"
     if (on_band or gspc_std) and not aavso_filter:
         record_export_failure(
             export_failures, _target_id, _export_method,
             f"filter '{fb.filter_token}' has no AAVSO code - AAVSO file not written", level=logging.WARNING,
         )
+        _rec["aavso_reason"] = f"filter '{fb.filter_token}' has no AAVSO code"
+    elif (on_band or gspc_std) and "jd" not in lc_normal.columns:
+        record_export_failure(export_failures, _target_id, _export_method, "AAVSO: LC has no UTC jd column",
+                              level=logging.WARNING)
+        _rec["aavso_reason"] = "no UTC JD in the LC"
+    _rec["kind"] = "dif" if differential else ("STD (GSPC)" if gspc_std else "STD")
     if gspc_std:
         _zp_note_txt = zero_point_note_text("A", fb.zp_band, _gz_exp)
         _zp_note_short = ""
@@ -713,8 +787,8 @@ def export_lightcurve_reports(
             f"magnitudes not on the {fb.label} scale (band_system={band_system or 'unknown'})",
         )
         _accumulate_export_stat(export_stats, "band_refused")
-        if not (fb.zp_band == "G" and band_system == "G"):
-            return {}
+        _manifest_refuse(_rec, f"magnitudes not on the {fb.label} scale")
+        return {}
 
     # --- per-target facts ------------------------------------------------------------------
     # colour term of the target: photometry_summary.csv (OUTPUT-REVIEW step 6); the LC of older
@@ -790,10 +864,11 @@ def export_lightcurve_reports(
     if _trust not in ("GREEN", "YELLOW", "RED"):
         _trust, _trust_reason = "RED", "trust not evaluated"
 
-    jd0 = _lc_first_float(lc_normal, "jd")
-    bjd0 = _lc_first_float(lc_normal, "bjd")
-    _t_tag = jd0 if math.isfinite(jd0) else bjd0
-    date_tag = bjd_to_datestr_yyyymmdd(float(_t_tag)) if math.isfinite(_t_tag) else "unknown"
+    # G11-19: the night = UTC date of the earliest exported epoch (rows are not time-ordered by contract)
+    if "jd" in lc_normal.columns:
+        date_tag = utc_jd_to_datestr_yyyymmdd(float(pd.to_numeric(lc_normal["jd"], errors="coerce").min()))
+    else:
+        date_tag = bjd_to_datestr_yyyymmdd(float(pd.to_numeric(lc_normal["bjd"], errors="coerce").min()))
     aavso_path = aavso_export_path(out_base, safe, date_tag)
     var_path = varastro_export_path(out_base, safe, date_tag)
     # EXPORT-AUDIT-2026-10 (Milan 2026-10-21): a RED-trust target is written for inspection into
@@ -802,6 +877,7 @@ def export_lightcurve_reports(
         aavso_path = aavso_path.parent / DONTSUBMIT_DIRNAME / aavso_path.name
         var_path = var_path.parent / DONTSUBMIT_DIRNAME / var_path.name
         _accumulate_export_stat(export_stats, "dontsubmit_red")
+        _rec["dontsubmit"] = True
 
     _cite_kw: dict[str, Any] = {
         "photometry_dir": _phot_dir,
@@ -860,12 +936,11 @@ def export_lightcurve_reports(
     _flag_ser = (lc_normal["flag"].fillna("").astype(str).str.strip().str.lower()
                  if "flag" in lc_normal.columns else pd.Series("", index=lc_normal.index))
     _flag_counts = {k: int(v) for k, v in _flag_ser[~_flag_ser.isin(("", "normal"))].value_counts().items()}
-    _kser = pd.Series([kmag_by_file.get(str(sf).strip(), (float("nan"), float("nan")))[0]
-                       for sf in lc_normal.get("source_file", pd.Series(dtype=str)).astype(str)], dtype=float)
-    _keser = pd.Series([kmag_by_file.get(str(sf).strip(), (float("nan"), float("nan")))[1]
-                        for sf in lc_normal.get("source_file", pd.Series(dtype=str)).astype(str)], dtype=float)
-    if gspc_std:
-        _kser = _kser + _gspc_shift
+    # G11-11: check-star numbers over the exported epochs, the computation the PDF and the trust use
+    from check_star_kmag import check_star_stats  # noqa: PLC0415
+
+    _kst = check_star_stats(_check_sidecar_df(_lc_dir, target_cid),
+                            lc_normal["source_file"] if "source_file" in lc_normal.columns else [])
     _comp_by_id: dict[str, Any] = {}
     if comp_df is not None and not comp_df.empty and "catalog_id" in comp_df.columns:
         for _, _cr in comp_df.iterrows():
@@ -906,20 +981,18 @@ def export_lightcurve_reports(
                     _g = float(pd.to_numeric(_cr.get("mag"), errors="coerce"))
                     _bp = float(pd.to_numeric(_cr.get("bp_rp"), errors="coerce"))
                     _dist = 60.0 * float(pd.to_numeric(_cr.get("_dist_deg"), errors="coerce"))
-                    _rms = 1085.7362 * float(pd.to_numeric(_cr.get("comp_rms"), errors="coerce"))
+                    _rms = 1000.0 * float(pd.to_numeric(_cr.get("comp_rms"), errors="coerce"))  # comp_rms is a magnitude (LOO MAD)
                 d.append(f"#   {c} | {_fmt_opt_num_na(_g, '.3f')} | {_fmt_opt_num_na(_bp, '.3f')} | "
                          f"{_fmt_opt_num_na(band_mags.get(c), '.3f')} | {_fmt_opt_num_na(_dist, '.1f')} | "
                          f"{_fmt_opt_num_na(_rms, '.1f')} | {_fmt_opt_num_na(weights.get(c), '.3f')}\n")
         if check_cid:
-            _km = _kser.dropna()
-            _kmed = float(_km.median()) if len(_km) else float("nan")
-            _ksc = float(_km.std(ddof=1)) if len(_km) > 1 else float("nan")
-            _kem = float(_keser.dropna().median()) if _keser.notna().any() else float("nan")
+            # GSPC scale: the check star gets the target's constant shift (scatter unchanged)
+            _kmed = _kst.median + (_gspc_shift if gspc_std else 0.0)
             d.append(f"# Check star Gaia DR3 {check_cid}: catalogue {_fmt_opt_num_na(k_ref, '.3f')}, measured median "
                      f"{_fmt_opt_num_na(_kmed, '.3f')}"
                      + (f" (difference {_kmed - k_ref:+.3f})" if math.isfinite(_kmed) and math.isfinite(k_ref) else "")
-                     + f", scatter {_fmt_opt_num_na(_ksc, '.4f')} mag, median error {_fmt_opt_num_na(_kem, '.4f')} mag, "
-                     f"{len(_km)} epochs\n")
+                     + f", scatter {_fmt_opt_num_na(_kst.scatter, '.4f')} mag, median error "
+                     f"{_fmt_opt_num_na(_kst.err_med, '.4f')} mag, {_kst.n} exported epochs\n")
         return d
 
     def _desc_lines(time_line: str, *, ensemble_list: bool = True) -> list[str]:
@@ -954,7 +1027,13 @@ def export_lightcurve_reports(
             d.append("# Colour term: none (filter reported untransformed) -> TRANS=NO\n")
         if ap_line:
             d.append(ap_line)
-        d.append("# Error: 1-sigma total (CCD equation + ensemble + scintillation + systematic floor)\n")
+        # C3 (Milan 2026-10-29): without telescope diameter / site altitude the scintillation term is not in the error
+        _scint = pd.to_numeric(lc_normal.get("err_scint_rel", pd.Series(dtype=float)), errors="coerce")
+        if bool((_scint > 0).any()):
+            d.append("# Error: 1-sigma total (CCD equation + ensemble + scintillation + systematic floor)\n")
+        else:
+            d.append("# Error: 1-sigma total (CCD equation + ensemble + systematic floor); scintillation NOT included "
+                     "(telescope diameter or site altitude missing in Settings)\n")
         d.append(f"# Ensemble: {n_comp} comparison stars, Broeg (2005) weights" + (":\n" if ensemble_list else "\n"))
         for c in (comp_ids if ensemble_list else []):
             _bm = band_mags.get(c)
@@ -995,11 +1074,10 @@ def export_lightcurve_reports(
                        + (f" without GSPC catalogue magnitude ({_k_ref_why})" if check_cid and _k_ref_why else ""))
         _n_rows = 0
         for _, row in lc_normal.iterrows():
+            # export_row_mask: finite jd / bjd / magnitude and err > 0 on every row
             jd = float(pd.to_numeric(row.get("jd", float("nan")), errors="coerce"))
             mag = float(pd.to_numeric(row.get("mag_calib", float("nan")), errors="coerce"))
             err = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))
-            if not (math.isfinite(jd) and math.isfinite(mag) and math.isfinite(err) and err > 0):
-                continue
             am = float(pd.to_numeric(row.get("airmass", float("nan")), errors="coerce"))
             sf = str(row.get("source_file", "") or "").strip()
             km, _ke = kmag_by_file.get(sf, (float("nan"), float("nan")))
@@ -1039,7 +1117,7 @@ def export_lightcurve_reports(
                         starid,
                         f"{jd:.6f}",
                         f"{mag:.3f}",
-                        f"{min(1.0857362 * err, 9.999):.3f}",
+                        f"{min(MAG_ERR_SCALE * err, 9.999):.3f}",
                         aavso_filter,
                         "YES" if trans_yes else "NO",
                         "STD",
@@ -1056,22 +1134,21 @@ def export_lightcurve_reports(
                 + "\n"
             )
             _n_rows += 1
-        if _n_rows == 0:
-            record_export_failure(export_failures, _target_id, _export_method, "AAVSO: no rows with JD/mag/err",
-                                  level=logging.WARNING)
-        else:
-            try:
-                aavso_path.parent.mkdir(parents=True, exist_ok=True)
-                aavso_path.write_text("".join(a_lines), encoding="ascii", errors="replace")
-                logging.info("[EXPORT] AAVSO: %s (%d rows)", aavso_path.name, _n_rows)
-                paths["aavso"] = aavso_path
-            except OSError as exc:
-                record_export_failure(export_failures, _target_id, _export_method, f"AAVSO write error: {exc}")
+        try:
+            aavso_path.parent.mkdir(parents=True, exist_ok=True)
+            aavso_path.write_text(ascii_text("".join(a_lines)), encoding="ascii")
+            logging.info("[EXPORT] AAVSO: %s (%d rows)", aavso_path.name, _n_rows)
+            paths["aavso"] = aavso_path
+            _rec["aavso"] = aavso_path.name
+        except OSError as exc:
+            record_export_failure(export_failures, _target_id, _export_method, f"AAVSO write error: {exc}")
+            _rec["aavso_reason"] = f"write error: {exc}"
 
     # --- VarAstro -------------------------------------------------------------------------------
     vsx_type = str(target_row.get("vsx_type", "") or "").strip()
     if not _is_eclipsing(vsx_type):
         logging.info("[EXPORT] Skip varastro %s - not an eclipsing type (%s)", vsx_name, vsx_type)
+        _rec["varastro_reason"] = "not EB"
         return paths
     from photometry_defs import TIME_BASE_BJD_TDB  # noqa: PLC0415
     from photometry_lightcurve import resolve_lc_time_base  # noqa: PLC0415
@@ -1086,6 +1163,7 @@ def export_lightcurve_reports(
             level=logging.WARNING,
         )
         _accumulate_export_stat(export_stats, "time_base_refused")
+        _rec["varastro_reason"] = f"time base {_tb}, BJD_TDB required"
         return paths
     v_lines: list[str] = [
         f"# {_sw_ver} - differential ensemble aperture photometry | Observer: {observer_name}"
@@ -1096,7 +1174,9 @@ def export_lightcurve_reports(
         f" BP-RP={_fmt_opt_num_na(target_row.get('bp_rp'), '.3f')}\n",
     ]
     v_lines.extend(
-        _desc_lines("# Time: BJD_TDB at mid-exposure (select BJD at upload; Eastman et al. 2010)\n",
+        _desc_lines("# Time: BJD_TDB at mid-exposure = UTC mid-exposure (DATE-OBS + EXPTIME/2) in TDB plus the "
+                    "barycentric light-travel time toward this star's own RA/Dec (Gaia DR3, ICRS) from the observing "
+                    "site (astropy; Eastman, Siverd & Gaudi 2010, PASP 122, 935); select BJD at upload\n",
                     ensemble_list=False)
     )
     v_lines.extend(_detail_lines())
@@ -1117,21 +1197,21 @@ def export_lightcurve_reports(
                    else "# BJD_TDB          mag      err\n")
     _nv = 0
     for _, row in lc_normal.iterrows():
+        # export_row_mask (G11-20): the same epochs as the AAVSO file (finite bjd / magnitude, err > 0)
         bjd = float(pd.to_numeric(row.get("bjd", float("nan")), errors="coerce"))
         mag = float(pd.to_numeric(row.get("mag_calib", float("nan")), errors="coerce"))
         err = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))
-        if not (math.isfinite(bjd) and math.isfinite(mag) and math.isfinite(err)):
-            continue
-        v_lines.append(f"{bjd:.6f}   {mag:.4f}   {1.0857362 * err:.4f}\n")
+        v_lines.append(f"{bjd:.6f}   {mag:.4f}   {MAG_ERR_SCALE * err:.4f}\n")
         _nv += 1
-    if _nv:
-        try:
-            var_path.parent.mkdir(parents=True, exist_ok=True)
-            var_path.write_text("".join(v_lines), encoding="ascii", errors="replace")
-            logging.info("[EXPORT] VAR.ASTRO: %s (%d rows)", var_path.name, _nv)
-            paths["varastro"] = var_path
-        except OSError as exc:
-            record_export_failure(export_failures, _target_id, _export_method, f"VarAstro write error: {exc}")
+    try:
+        var_path.parent.mkdir(parents=True, exist_ok=True)
+        var_path.write_text(ascii_text("".join(v_lines)), encoding="ascii")
+        logging.info("[EXPORT] VAR.ASTRO: %s (%d rows)", var_path.name, _nv)
+        paths["varastro"] = var_path
+        _rec["varastro"] = var_path.name
+    except OSError as exc:
+        record_export_failure(export_failures, _target_id, _export_method, f"VarAstro write error: {exc}")
+        _rec["varastro_reason"] = f"write error: {exc}"
     return paths
 
 
@@ -1146,74 +1226,53 @@ def export_all_method_lightcurve_reports(
     cfg: AppConfig,
     export_failures: list[ExportFailure] | None = None,
     export_stats: dict[str, int] | None = None,
+    manifest: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Path]]:
-    """Export AAVSO + VarAstro for the aperture submission product only.
-
-    Internal PSF LC files (``lightcurve_*_psf.csv``) are never routed
-    through these writers (INV-PSF-SUBMIT-01). The glob remains as a presence
-    signal for reports; submission methods stay aperture-only.
+    """Export AAVSO + VarAstro for the aperture submission product only (INV-PSF-SUBMIT-01: internal
+    PSF LC files ``lightcurve_*_psf.csv`` are never routed through these writers). Returns
+    ``{"aperture": paths}`` or ``{}``. G11-41: the former one-element method loop and PSF glob are gone.
     """
-    fresh_cfg = cfg
+    method = "aperture"
     _lc_dir = Path(lc_dir)
     _tid = str(target_cid or target_row.get("catalog_id", "") or "").strip()
-    _have_psf_files = any(_lc_dir.glob("lightcurve_*_psf.csv"))
-    if _have_psf_files:
-        logging.info(
-            "[EXPORT] internal PSF LC files present; "
-            "INV-PSF-SUBMIT-01 keeps AAVSO/VarAstro aperture-only"
+    lc_path = lc_csv_path(_lc_dir, target_cid, method)
+    if not lc_path.is_file():
+        # F-435-EXPORT-GHOSTS: active_targets may lack an LC (no comps / dropped).
+        # Skip with INFO - do not record as export failure.
+        logging.info("[EXPORT] skip %s %s: no LC CSV (not a photometry product)", _tid or target_cid, method)
+        _manifest_refuse(_manifest_record(manifest, _tid), "no light curve")
+        return {}
+    try:
+        lc_df = pd.read_csv(lc_path, low_memory=False)
+    except Exception as exc:  # noqa: BLE001
+        record_export_failure(export_failures, _tid, method, f"LC CSV read error: {exc}")
+        _manifest_refuse(_manifest_record(manifest, _tid), f"LC read error: {exc}")
+        return {}
+    if lc_df.empty:
+        record_export_failure(export_failures, _tid, method, "LC CSV empty")
+        _manifest_refuse(_manifest_record(manifest, _tid), "LC empty")
+        return {}
+    try:
+        paths = export_lightcurve_reports(
+            output_dir,
+            target_row,
+            lc_df,
+            comp_df,
+            summary_row,
+            cfg=cfg,
+            lc_dir=_lc_dir,
+            export_method=method,
+            export_failures=export_failures,
+            export_stats=export_stats,
+            manifest=manifest,
+            **kwargs,
         )
-    _methods = ["aperture"]
-    out: dict[str, dict[str, Path]] = {}
-    for method in _methods:
-        lc_path = lc_csv_path(_lc_dir, target_cid, method)
-        if not lc_path.is_file():
-            # F-435-EXPORT-GHOSTS: active_targets may lack an LC (no comps / dropped).
-            # Skip with INFO - do not record as export failure.
-            logging.info(
-                "[EXPORT] skip %s %s: no LC CSV (not a photometry product)",
-                _tid or target_cid,
-                method,
-            )
-            continue
-        try:
-            lc_df = pd.read_csv(lc_path, low_memory=False)
-        except Exception as exc:  # noqa: BLE001
-            record_export_failure(
-                export_failures,
-                _tid,
-                method,
-                f"LC CSV read error: {exc}",
-            )
-            continue
-        if lc_df.empty:
-            record_export_failure(export_failures, _tid, method, "LC CSV empty")
-            continue
-        try:
-            paths = export_lightcurve_reports(
-                output_dir,
-                target_row,
-                lc_df,
-                comp_df,
-                summary_row,
-                cfg=fresh_cfg,
-                lc_dir=_lc_dir,
-                export_method=method,
-                export_failures=export_failures,
-                export_stats=export_stats,
-                **kwargs,
-            )
-        except Exception as exc:  # noqa: BLE001
-            record_export_failure(
-                export_failures,
-                _tid,
-                method,
-                f"export error: {exc}",
-            )
-            continue
-        if paths:
-            out[method] = paths
-    return out
+    except Exception as exc:  # noqa: BLE001
+        record_export_failure(export_failures, _tid, method, f"export error: {exc}")
+        _manifest_refuse(_manifest_record(manifest, _tid), f"export error: {exc}")
+        return {}
+    return {method: paths} if paths else {}
 
 
 def export_group_reports(
@@ -1258,7 +1317,9 @@ def export_group_reports(
         pipeline_meta=load_pipeline_meta(phot),
         targets_df=at_df,
         obs_group=obs_group,
+        use_airmass=setup_uses_airmass(lc_dir),  # G11-17: once per setup, before the loop
     )
+    manifest: dict[str, Any] = {}
     sum_by: dict[str, pd.Series] = {}
     if "catalog_id" in summary_df.columns:
         for _, r in summary_df.iterrows():
@@ -1277,16 +1338,18 @@ def export_group_reports(
         _nfr = pd.to_numeric(pd.Series([_srow.get("n_frames") if _srow is not None else None]), errors="coerce").iloc[0]
         if not (pd.notna(_nfr) and _nfr > 0) or not lc_csv_path(lc_dir, tcid, "aperture").is_file():
             n_skip += 1
+            _manifest_refuse(_manifest_record(manifest, tcid), "not measured in this run")
             continue
+        # G11-13: the full quality map - the exporter drops the "excluded" comps from NCOMP / NOTES
         qmap: dict[str, str] = {}
         cq = lc_dir / f"comp_quality_{tcid}.json"
         if cq.is_file():
             try:
                 for qk, qv in parse_comp_quality_json_map(json.loads(cq.read_text(encoding="utf-8"))).items():
-                    q2 = str(qv.get("quality", "")).strip().lower()
-                    if q2 != "excluded":
-                        qmap[str(normalize_gaia_source_id(qk) or "")] = q2
-            except (OSError, ValueError):
+                    qmap[str(normalize_gaia_source_id(qk) or "")] = str(qv.get("quality", "")).strip().lower()
+            except (OSError, ValueError) as exc:
+                record_export_failure(failures, tcid, "aperture", f"comp_quality JSON unreadable: {exc}",
+                                      level=logging.WARNING)
                 qmap = {}
         try:
             out = export_all_method_lightcurve_reports(
@@ -1305,6 +1368,7 @@ def export_group_reports(
                 run_citation_ctx=run_cite,
                 export_failures=failures,
                 export_stats=stats,
+                manifest=manifest,
             )
             if out:
                 n_ok += 1
@@ -1312,7 +1376,13 @@ def export_group_reports(
                 n_skip += 1
         except Exception as exc:  # noqa: BLE001
             record_export_failure(failures, tcid, "all", f"export batch error: {exc}")
+            _manifest_refuse(_manifest_record(manifest, tcid), f"export error: {exc}")
             n_skip += 1
+    try:
+        export_manifest_path(phot).write_text(
+            json.dumps({"obs_group": obs_group, "targets": manifest}, indent=2, sort_keys=True), encoding="utf-8")
+    except OSError as exc:
+        record_export_failure(failures, "", "all", f"export manifest write error: {exc}")
     log_export_batch_summary(failures, stats)
     logging.info("[EXPORT] %s: %d targets exported, %d skipped", obs_group, n_ok, n_skip)
     return {"n_ok": n_ok, "n_skip": n_skip, "failures": failures, "stats": stats}

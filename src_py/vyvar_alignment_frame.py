@@ -12,12 +12,8 @@ import warnings
 from pathlib import Path
 from typing import Any, NamedTuple
 
-import astropy.units as u
 import numpy as np
-import pandas as pd
 
-from gaia_catalog_id import read_vyvar_csv
-from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.wcs import FITSFixedWarning
@@ -120,41 +116,6 @@ def _alignment_n_unique_spread_sample(
         return -1
 
 
-def _alignment_as_alignment_points(
-    sources: Any, *, label: str, log_sink: list[str] | None
-) -> np.ndarray:
-    pts: np.ndarray
-    try:
-        if hasattr(sources, "colnames") and "x_centroid" in getattr(sources, "colnames", []) and "y_centroid" in getattr(
-            sources, "colnames", []
-        ):
-            pts = np.transpose((sources["x_centroid"], sources["y_centroid"]))  # type: ignore[index]
-        elif hasattr(sources, "dtype") and getattr(sources.dtype, "names", None):
-            names = set(sources.dtype.names or ())
-            if "x_centroid" in names and "y_centroid" in names:
-                pts = np.transpose((sources["x_centroid"], sources["y_centroid"]))  # type: ignore[index]
-            else:
-                arr = np.asarray(sources, dtype=np.float64)
-                pts = arr.reshape((-1, 2)) if arr.ndim == 1 and arr.size % 2 == 0 else arr
-        else:
-            arr = np.asarray(sources, dtype=np.float64)
-            pts = arr.reshape((-1, 2)) if arr.ndim == 1 and arr.size % 2 == 0 else arr
-    except Exception:  # noqa: BLE001
-        pts = np.zeros((0, 2), dtype=np.float32)
-    if pts.ndim != 2:
-        pts = np.zeros((0, 2), dtype=np.float32)
-    elif pts.shape[1] > 2:
-        pts = np.asarray(pts[:, :2], dtype=np.float64)
-    elif pts.shape[1] < 2:
-        pts = np.zeros((0, 2), dtype=np.float32)
-    pts = np.asarray(pts, dtype=np.float32)
-    _alignment_emit_log(
-        log_sink,
-        f"DEBUG: Alignment input ({label}) type: {type(sources).__name__} and shape: {tuple(pts.shape)}",
-    )
-    return pts
-
-
 def _alignment_detect_xy(
     img: np.ndarray,
     want_max: int,
@@ -168,8 +129,13 @@ def _alignment_detect_xy(
 
     if int(want_max) <= 0:
         return np.zeros((0, 2), dtype=np.float32)
-    data = np.ascontiguousarray(img, dtype=np.float32)
-    data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32, copy=False)
+    data = np.array(img, dtype=np.float32, copy=True)  # modified in place below
+    _fin = np.isfinite(data)
+    if not bool(_fin.all()):
+        # G01-29: missing pixels (bad flat pixels are NaN) at the sky level, not 0 - a 0 strip next to the
+        # sky is a step the detector would answer
+        data = np.where(_fin, data, np.float32(np.median(data[_fin])) if _fin.any() else np.float32(0.0))
+        data = np.asarray(data, dtype=np.float32)
     sky_pixels = data[data > 10.0]
     if sky_pixels.size > 0:
         m = float(np.nanmedian(sky_pixels))
@@ -182,25 +148,9 @@ def _alignment_detect_xy(
         log_sink,
         f"[alert] [ALIGNMENT] Frame: {_frame_name} | Offset Removed: {m:.2f} | Final Mean: {np.nanmean(data):.4f}",
     )
-    arr = data
-    finite = np.isfinite(data)
-    if not np.any(finite):
+    if data.size == 0:
         return np.zeros((0, 2), dtype=np.float32)
-    try:
-        _vals = arr[finite].astype(np.float64, copy=False)
-        _mean = float(np.mean(_vals)) if _vals.size else 0.0
-        _std = float(np.std(_vals)) if _vals.size else 0.0
-        _max = float(np.max(_vals)) if _vals.size else 0.0
-        _nm = label or "frame"
-        _alignment_emit_log(
-            log_sink,
-            f"DEBUG: Image stats for {_nm} - Mean: {_mean:.6g}, Std: {_std:.6g}, Max: {_max:.6g}",
-        )
-    except Exception:  # noqa: BLE001
-        pass
-    arr_bg = arr
-    used_bg_sub = False
-    arr_bg = np.nan_to_num(arr_bg, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32, copy=False)
+    arr_bg = data  # finite after nan_to_num above
     _med_bg = float(np.nanmedian(arr_bg))
     _std_bg = float(np.nanstd(arr_bg))
     _floor_bg = _med_bg - 3.0 * _std_bg if np.isfinite(_std_bg) and _std_bg > 0 else _med_bg
@@ -219,26 +169,6 @@ def _alignment_detect_xy(
     data = np.nan_to_num((arr_bg - float(med)).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     sig = max(0.5, min(20.0, float(det_sigma)))
     threshold = float(sig) * float(bg_std)
-    _nm = label or "frame"
-    try:
-        data_chk = np.asarray(data, dtype=np.float32)
-        nan_count = int(np.isnan(data_chk).sum())
-        inf_count = int(np.isinf(data_chk).sum())
-        min_val = float(np.min(data_chk))
-        max_val = float(np.max(data_chk))
-        mean_val = float(np.mean(data_chk))
-        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] File: {_nm}")
-        _alignment_emit_log(
-            log_sink,
-            f"[DEBUG DATA CHECK] Stats -> Min: {min_val:.4f}, Max: {max_val:.4f}, Mean: {mean_val:.4f}",
-        )
-        _alignment_emit_log(
-            log_sink,
-            f"[DEBUG DATA CHECK] Bad Pixels -> NaNs: {nan_count}, Infs: {inf_count}",
-        )
-        _alignment_emit_log(log_sink, f"[DEBUG DATA CHECK] Current Threshold in use: {threshold:.2f}")
-    except Exception:  # noqa: BLE001
-        pass
     _alignment_emit_log(
         log_sink,
         f"DEBUG: Using FWHM={float(fwhm_px):.2f} and Sigma={float(sig):.2f} (from alignment det_sigma) for detection.",
@@ -280,16 +210,6 @@ def _alignment_detect_xy(
 
     _nm = label or "frame"
     tbl, used_sigma, best_n = _run_dao_on(data, sig_try, nm=_nm)
-    if (tbl is None or best_n <= 0) and used_bg_sub:
-        _med_r = float(np.nanmedian(arr))
-        _std_r = float(np.nanstd(arr))
-        _floor_r = _med_r - 3.0 * _std_r if np.isfinite(_std_r) and _std_r > 0 else _med_r
-        arr_raw2 = np.nan_to_num((arr - _med_r).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
-        arr_raw2 = np.clip(arr_raw2, _floor_r - _med_r, None).astype(np.float32, copy=False)
-        _alignment_emit_log(log_sink, f"DEBUG: {_nm} - fallback without background subtraction (median-only).")
-        tbl2, used_sigma2, best_n2 = _run_dao_on(arr_raw2, sig_try, nm=_nm)
-        if best_n2 > best_n:
-            tbl, used_sigma, best_n = tbl2, used_sigma2, best_n2
     if float(used_sigma) < float(sig) - 1e-9:
         _alignment_emit_log(
             log_sink,
@@ -323,6 +243,46 @@ def _alignment_detect_xy(
     return np.stack([x, y], axis=1)
 
 
+# G02-48: relaxed detection steps after the run's DAO sigma (sigma, max stars) - one ladder for the
+# reference and for every frame (before, the frames used a fixed 3.5 sigma start and ignored the run's
+# sigma, so the two matched point lists came from two different detection rules).
+_ALIGN_RELAXED_STEPS: tuple[tuple[float, int], ...] = ((2.5, 300), (2.0, 400), (1.5, 500))
+
+
+def alignment_keep_count(n_detected: int) -> int:
+    """Brightest stars kept from one detection: all below 100, else at most 300."""
+    n = int(n_detected)
+    return n if n < 100 else min(300, n)
+
+
+def alignment_detection_attempts(det_sigma: float) -> list[dict[str, Any]]:
+    """The detection attempts of the alignment: the run's DAO sigma (brightest stars by
+    :func:`alignment_keep_count`), then the relaxed steps below it. The reference uses the first
+    attempt that gives ALIGN_MIN_DETECTED_STARS; a frame steps down when its registration fails."""
+    s0 = float(det_sigma)
+    out: list[dict[str, Any]] = [{"dao_sigma": s0, "max_stars": None}]
+    out += [{"dao_sigma": s, "max_stars": n} for s, n in _ALIGN_RELAXED_STEPS if s < s0 - 1e-9]
+    return out
+
+
+def alignment_star_list(
+    img: np.ndarray, attempt: dict[str, Any], *, fwhm_px: float, label: str = "", log_sink: list[str] | None = None
+) -> np.ndarray:
+    """Star list (brightest first) of one detection attempt - the same rule for reference and frames."""
+    from pipeline_constants import ALIGN_MAX_DETECTED_STARS  # noqa: PLC0415
+
+    mx = attempt.get("max_stars")
+    xy = _alignment_detect_xy(
+        img,
+        int(ALIGN_MAX_DETECTED_STARS if mx is None else max(100, int(mx))),
+        det_sigma=float(attempt["dao_sigma"]),
+        fwhm_px=fwhm_px,
+        label=label,
+        log_sink=log_sink,
+    )
+    return xy[: alignment_keep_count(len(xy))] if mx is None else xy
+
+
 def _alignment_run_astroalign_points(
     *,
     source_pts: Any,
@@ -353,7 +313,7 @@ def _alignment_run_astroalign_points(
                 target=np.asarray(tgt, dtype=np.float32),
                 max_control_points=mcp,
             )
-        aligned_data, _ = astroalign.apply_transform(t, image_source, image_target)
+        aligned_data = warp_to_reference(image_source, np.asarray(image_target).shape, t.inverse)
         handoff = {
             "method": "astroalign",
             "matrix": [float(x) for x in np.asarray(t.params, dtype=np.float64).reshape(-1)],
@@ -635,69 +595,43 @@ def projective_approximation(fwd: Any, shape_hw: tuple[int, int]) -> tuple[list[
 
 
 def warp_to_reference(data: Any, ref_shape: tuple[int, int], inverse_map: Any) -> np.ndarray:
-    """Resample a frame onto the reference grid exactly as astroalign.apply_transform does (cubic,
-    constant fill with the frame median) - for transforms astroalign cannot apply (polynomial)."""
+    """Resample a frame onto the reference grid as astroalign.apply_transform does (cubic, constant fill
+    with the frame median) - the one warp of every registration method.
+
+    G01-29: missing pixels (NaN, e.g. bad flat pixels of the calibrated frame) stay missing - the cubic
+    kernel spreads a NaN only to its own 4x4 neighbourhood; the fill uses the median of the finite
+    pixels (astroalign's np.median would turn the whole fill into NaN). Identical to astroalign for a
+    frame without NaN.
+
+    WARP-NAN-2026-10: skimage resamples a projective map with a local bicubic kernel, but any other
+    map (the ALIGN-POLY polynomial) goes through scipy ``map_coordinates`` whose spline prefilter is
+    global - one NaN pixel turned the whole polynomial-aligned frame into NaN (BO CVn 527 frame 003).
+    So NaN never enters the warp: the frame is warped with its NaN filled by the median, and an output
+    pixel is NaN when its 4x4 cubic support holds a missing input pixel (the missing mask grown by one
+    pixel, warped bilinearly). Same result for every map; a frame without NaN is warped unchanged."""
+    from scipy.ndimage import binary_dilation  # noqa: PLC0415
     from skimage.transform import warp  # noqa: PLC0415
 
     src = np.asarray(data)
-    return warp(
-        src,
+    missing = ~np.isfinite(src)
+    fill = float(np.nanmedian(src))
+    out = warp(
+        np.where(missing, fill, src) if missing.any() else src,
         inverse_map=inverse_map,
         output_shape=tuple(ref_shape),
         order=3,
         mode="constant",
-        cval=float(np.median(src)),
+        cval=fill,
         clip=True,
         preserve_range=True,
     )
-
-
-def _alignment_load_masterstar_catalog_points_for_frame(
-    hdr_frame: fits.Header,
-    *,
-    shape_hw: tuple[int, int],
-    platesolve_dir: Path,
-    align_star_cap: int,
-) -> np.ndarray:
-    try:
-        ms_csv = Path(platesolve_dir) / "masterstars.csv"
-        if not ms_csv.is_file():
-            return np.zeros((0, 2), dtype=np.float32)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FITSFixedWarning)
-            w = WCS(hdr_frame)
-        if not getattr(w, "has_celestial", False):
-            return np.zeros((0, 2), dtype=np.float32)
-        mdf = read_vyvar_csv(
-            ms_csv,
-            low_memory=False,
-            dtype={"catalog_id": str, "name": str},  # Gaia ID must be str - float64 loses digits
-        )
-        if "ra_deg" not in mdf.columns or "dec_deg" not in mdf.columns:
-            return np.zeros((0, 2), dtype=np.float32)
-        ra = pd.to_numeric(mdf["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-        de = pd.to_numeric(mdf["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-        ok = np.isfinite(ra) & np.isfinite(de)
-        if not np.any(ok):
-            return np.zeros((0, 2), dtype=np.float32)
-        sky = SkyCoord(ra=ra[ok] * u.deg, dec=de[ok] * u.deg, frame="icrs")
-        xp, yp = w.world_to_pixel(sky)
-        xy = np.stack([np.asarray(xp, dtype=np.float32), np.asarray(yp, dtype=np.float32)], axis=1)
-        h, wpx = int(shape_hw[0]), int(shape_hw[1])
-        inb = (
-            np.isfinite(xy[:, 0])
-            & np.isfinite(xy[:, 1])
-            & (xy[:, 0] >= 0)
-            & (xy[:, 1] >= 0)
-            & (xy[:, 0] < float(wpx))
-            & (xy[:, 1] < float(h))
-        )
-        xy = xy[inb]
-        if len(xy) > int(align_star_cap):
-            xy = xy[: int(align_star_cap)]
-        return np.asarray(xy, dtype=np.float32)
-    except Exception:  # noqa: BLE001
-        return np.zeros((0, 2), dtype=np.float32)
+    if missing.any():
+        grown = binary_dilation(missing, structure=np.ones((3, 3), dtype=bool)).astype(np.float32)
+        hit = warp(grown, inverse_map=inverse_map, output_shape=tuple(ref_shape), order=1,
+                   mode="constant", cval=0.0, preserve_range=True)
+        out = np.asarray(out, dtype=float)
+        out[hit > 0] = np.nan
+    return out
 
 
 def _alignment_compute_one_frame(
@@ -711,9 +645,6 @@ def _alignment_compute_one_frame(
     ref_hdr = ctx["ref_hdr"]
     ref_fp_name = str(ctx["ref_fp_name"])
     fixed_target_pts: np.ndarray = ctx["fixed_target_pts"]
-    reference_list: list[Any] = ctx["reference_list"]
-    platesolve_dir = Path(ctx["platesolve_dir"])
-    align_star_cap = int(ctx["align_star_cap"])
     max_control_points = int(ctx.get("max_control_points", 80))
     min_detected_stars = int(ctx["min_detected_stars"])
     fb_align = float(ctx["fb_align"])
@@ -728,9 +659,12 @@ def _alignment_compute_one_frame(
         except Exception:  # noqa: BLE001
             ref_wcs_obj = None
 
+    from badpix_sidecar import read_repair_table  # noqa: PLC0415
+
     with fits.open(fp, memmap=False) as hdul:
         hdr = hdul[0].header.copy()
         data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+        bp_native = read_repair_table(hdul)  # BADPIX-REPAIR-2026-10: pixels filled in the calibrated frame
 
     is_flipped = False
     try:
@@ -744,25 +678,9 @@ def _alignment_compute_one_frame(
         is_flipped = False
 
     fw_i = float(dao_detection_fwhm_pixels(hdr, configured_fallback=fb_align) or fb_align)
-    data_to_detect = np.asarray(data, dtype=np.float32)
-    try:
-        _alignment_emit_log(
-            log_sink,
-            "DEBUG: Data stats for alignment - "
-            f"Min: {np.min(data_to_detect):.2f}, "
-            f"Max: {np.max(data_to_detect):.2f}, "
-            f"Mean: {np.mean(data_to_detect):.2f}, "
-            f"NaN count: {np.isnan(data_to_detect).sum()}",
-        )
-    except Exception:  # noqa: BLE001
-        pass
+    data_to_detect = np.asarray(data, dtype=np.float32)  # G02-22: no per-frame debug statistics
 
-    _attempts = [
-        {"dao_sigma": 3.5, "max_stars": 200},
-        {"dao_sigma": 2.5, "max_stars": 300},
-        {"dao_sigma": 2.0, "max_stars": 400},
-        {"dao_sigma": 1.5, "max_stars": 500},
-    ]
+    _attempts = alignment_detection_attempts(float(ctx["det_sigma"]))
     aligned_data: np.ndarray | None = None
     aligned_method = "astroalign"
     registration_handoff: dict[str, Any] | None = None
@@ -781,17 +699,8 @@ def _alignment_compute_one_frame(
         )
 
     for i_att, att in enumerate(_attempts, start=1):
-        dao_sig = float(att["dao_sigma"])
-        max_st = int(att["max_stars"])
         try:
-            xy = _alignment_detect_xy(
-                data_to_detect,
-                int(max(100, max_st)),
-                det_sigma=dao_sig,
-                fwhm_px=fw_i,
-                label=fp.name,
-                log_sink=log_sink,
-            )
+            xy = alignment_star_list(data_to_detect, att, fwhm_px=fw_i, label=fp.name, log_sink=log_sink)
         except Exception as _det_exc:  # noqa: BLE001
             # ALIGN-VERIFY-2026-10: never swallow a detection failure silently (526: 5 frames
             # failed every attempt on Milan's PC with no trace in the log)
@@ -803,22 +712,12 @@ def _alignment_compute_one_frame(
             xy = np.zeros((0, 2), dtype=np.float32)
 
         if len(xy) == 0:
-            xy_ms = _alignment_load_masterstar_catalog_points_for_frame(
-                hdr, shape_hw=tuple(data.shape), platesolve_dir=platesolve_dir, align_star_cap=align_star_cap
+            # G02-07: no catalogue fallback (it read masterstars.csv, which nothing writes)
+            _alignment_emit_log(
+                log_sink,
+                f"WARNING: {fp.name} attempt {i_att} failed (0 stars detected), retrying with relaxed parameters",
             )
-            if len(xy_ms) > 0:
-                xy = np.asarray(xy_ms[:max_st], dtype=np.float32)
-                _alignment_emit_log(
-                    log_sink,
-                    f"DEBUG: {fp.name} attempt {i_att} - DAO=0, using fallback MASTERSTAR catalog ({len(xy)} points).",
-                )
-            else:
-                _alignment_emit_log(
-                    log_sink,
-                    f"WARNING: {fp.name} attempt {i_att} failed (0 stars detected, no MASTERSTAR fallback), "
-                    "retrying with relaxed parameters",
-                )
-                continue
+            continue
 
         if len(xy) < int(min_detected_stars):
             _alignment_emit_log(
@@ -906,10 +805,11 @@ def _alignment_compute_one_frame(
                     raise RuntimeError(
                         "FATAL ERROR: reference points were cleared from memory before alignment started!"
                     )
-                current_target = np.array(reference_list, dtype="float32")
+                current_target = np.asarray(fixed_target_pts, dtype=np.float32)
                 n_fit = int(min(len(current_target), len(xy)))
-                xy_fit = _alignment_as_alignment_points(xy[:n_fit], label="source", log_sink=log_sink)
-                ref_fit = _alignment_as_alignment_points(current_target[:n_fit], label="target", log_sink=log_sink)
+                # G02-22: the inputs are (N, 2) arrays already (no table / structured-array input)
+                xy_fit = np.asarray(xy[:n_fit], dtype=np.float32)[:, :2]
+                ref_fit = np.asarray(current_target[:n_fit], dtype=np.float32)[:, :2]
                 n_fit = int(min(len(xy_fit), len(ref_fit)))
                 if n_fit > 0:
                     xy_fit = np.asarray(xy_fit[:n_fit], dtype=np.float32)
@@ -1009,9 +909,7 @@ def _alignment_compute_one_frame(
             _t, chk = None, _NO_CHECK
         if _t is not None and registration_ok(chk, fwhm_px=fw_i):
             try:
-                import astroalign  # type: ignore  # noqa: PLC0415
-
-                _warped, _ = astroalign.apply_transform(_t, data, ref_data)
+                _warped = warp_to_reference(data, ref_data.shape, _t.inverse)
                 aligned_data = _as_fits_float32_image(_warped)
                 aligned_method = "star_similarity"
                 registration_handoff = {
@@ -1066,13 +964,15 @@ def _alignment_compute_one_frame(
             _alignment_emit_log(log_sink, f"WARNING: {fp.name} polynomial fit failed: {_poly_exc}")
             _poly = None
         if _poly is not None and registration_ok(_poly[2], fwhm_px=fw_i):
-            _fwd, _inv, chk = _poly
+            # G02-23: the reported check becomes the polynomial's only after its warp succeeded
+            _fwd, _inv, _chk_poly = _poly
             from pipeline_constants import ALIGN_POLY_ORDER  # noqa: PLC0415
 
             try:
                 _am, _am_err = projective_approximation(_fwd, np.asarray(data).shape[:2])
                 aligned_data = _as_fits_float32_image(warp_to_reference(data, ref_data.shape, _inv))
                 aligned_method = "star_polynomial"
+                chk = _chk_poly
                 registration_handoff = {
                     "method": "star_polynomial",
                     "matrix": _am,
@@ -1135,8 +1035,10 @@ def _alignment_compute_one_frame(
         "aligned_data": np.copy(aligned_data),
         "aligned_method": aligned_method,
         "registration_handoff": registration_handoff,
+        "raw_shape": tuple(np.asarray(data).shape[:2]),
         "xy_used": xy_used,
         "fw_i": fw_i,
+        "bp_native": bp_native,
         "star_count": {
             "file": fp.name,
             "frame_index": int(frame_index_1based),

@@ -1,4 +1,4 @@
-"""Batch D audit closure: I-11 sky term, P-02 scintillation wiring."""
+"""Batch D audit closure: empirical background path, P-02 scintillation wiring (I-11 removed, G01-20)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 
 from photometry_core import (
-    SKY_SURFACE_BG_MEDIAN_ADU_COL,
     _photometric_error_with_bkg_mode,
     _sky_pp_for_photometric_error,
     ERR_BKG_SOURCE_EMPIRICAL,
@@ -17,38 +16,8 @@ from sigma_budget import scintillation_sigma
 from sigma_floor_core import combine_production_err_rel, scintillation_mag_per_epoch
 
 
-def test_i11_presubtract_sky_used_on_howell_fallback() -> None:
-    """Howell fallback must use pre-subtraction sky, not post-subtract annulus ~0."""
-    row = {
-        SKY_SURFACE_BG_MEDIAN_ADU_COL: 250.0,
-        "sky_adu_per_px_annulus": 0.5,
-        "noise_floor_adu": 1.0,
-    }
-    sky_pp = _sky_pp_for_photometric_error(row)
-    assert sky_pp == pytest.approx(250.0)
-    flux = 50000.0
-    area = math.pi * 4.0 * 4.0
-    err_sub, _ = _photometric_error_with_bkg_mode(
-        flux,
-        sky_pp=sky_pp,
-        area=area,
-        gain=1.0,
-        read_noise=10.0,
-        sigma_bkg_ap=None,
-    )
-    err_annulus, _ = _photometric_error_with_bkg_mode(
-        flux,
-        sky_pp=0.5,
-        area=area,
-        gain=1.0,
-        read_noise=10.0,
-        sigma_bkg_ap=None,
-    )
-    assert err_sub > err_annulus
-
-
 def test_i11_empirical_path_ignores_sky_pp_when_sigma_bkg_present() -> None:
-    row = {SKY_SURFACE_BG_MEDIAN_ADU_COL: 200.0, "sky_adu_per_px_annulus": 0.0}
+    row = {"sky_adu_per_px_annulus": 0.0}
     sky_pp = _sky_pp_for_photometric_error(row)
     err, src = _photometric_error_with_bkg_mode(
         10000.0,

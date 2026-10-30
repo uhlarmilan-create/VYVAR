@@ -16,177 +16,25 @@ if TYPE_CHECKING:  # annotation only: the manifest store must not import the imp
 
 CALIBRATION_MODE_VYVAR = "vyvar_calibrated"
 CALIBRATION_MODE_PRE = "pre_calibrated"
+#: G12-01: no frame of the draft got a master DARK (passthrough copy of the raw lights)
+CALIBRATION_MODE_PASSTHROUGH = "PASSTHROUGH"
 MANIFEST_SCHEMA_VERSION = 3
 
 _MANIFEST_NAME = "draft_manifest.json"
-
-# Phase 2.1 shadow-observe + Phase 2.2 manifest-first rig-id reads.
-MANIFEST_SHADOW_MISMATCHES = 0
-MANIFEST_SHADOW_ABSENT = 0
-MANIFEST_SHADOW_EQUAL = 0
-MANIFEST_FALLBACK = 0
-
-
-_MANIFEST_SHADOW_LOAD_CACHE: dict[tuple[int, str, int], dict[str, Any]] = {}
-
 
 def derive_scanning_id(metadata: dict[str, Any]) -> int:
     """Stable scanning id from FITS metadata (no SCANNING SQL table)."""
     exp_time = float(metadata["exposure"])
     filters = str(metadata["filter"])
     binning = int(metadata["binning"])
-    sensor_temp = float(metadata["temp"])
-    gain = int(metadata.get("gain", 0))
-    payload = f"{exp_time:.6f}|{filters}|{binning}|{sensor_temp:.3f}|{gain}"
+    _t = metadata.get("temp")
+    # G13-18: an unknown sensor temperature is its own setup, never 0 C
+    temp_s = f"{float(_t):.3f}" if _t is not None else "unknown"
+    gain = float(metadata.get("gain", 0.0) or 0.0)
+    payload = f"{exp_time:.6f}|{filters}|{binning}|{temp_s}|{gain:g}"
     digest = hashlib.md5(payload.encode("utf-8"), usedforsecurity=False).hexdigest()
     val = int(digest[:7], 16) & 0x7FFFFFFF
     return val if val > 0 else 1
-
-
-def clear_manifest_shadow_load_cache() -> None:
-    """Clear per-draft manifest load cache (tests)."""
-    _MANIFEST_SHADOW_LOAD_CACHE.clear()
-
-
-def _normalize_rig_id(value: Any) -> int | None:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _load_manifest_for_shadow(draft_id: int, archive_root: Path) -> dict[str, Any]:
-    manifest_path = archive_root / _MANIFEST_NAME
-    try:
-        mtime_ns = manifest_path.stat().st_mtime_ns if manifest_path.is_file() else -1
-    except OSError:
-        mtime_ns = -1
-    cache_key = (int(draft_id), str(archive_root.resolve()), int(mtime_ns))
-    cached = _MANIFEST_SHADOW_LOAD_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-    loaded = load_draft_manifest(archive_root)
-    _MANIFEST_SHADOW_LOAD_CACHE[cache_key] = loaded
-    return loaded
-
-
-def _resolve_archive_root_for_shadow(
-    draft_id: int,
-    draft_row: dict[str, Any] | None,
-    db: Any | None,
-) -> Path | None:
-    if draft_row is not None:
-        root = resolve_draft_archive_root_from_row(draft_row)
-        if root is not None:
-            return root
-    if db is not None:
-        root = resolve_draft_dir_for_id(db, int(draft_id))
-        if root is not None:
-            return draft_archive_root(root)
-    return None
-
-
-def observe_manifest_rig_ids(
-    draft_id: int,
-    db_rig: dict[str, int | None],
-    *,
-    draft_row: dict[str, Any] | None = None,
-    db: Any | None = None,
-) -> None:
-    """Phase 2.1: log manifest-vs-DB rig id mismatches (observe-only)."""
-    global MANIFEST_SHADOW_MISMATCHES, MANIFEST_SHADOW_ABSENT, MANIFEST_SHADOW_EQUAL
-
-    if not db_rig:
-        return
-
-    did = int(draft_id)
-    root = _resolve_archive_root_for_shadow(did, draft_row, db)
-    if root is None:
-        MANIFEST_SHADOW_ABSENT += 1
-        return
-
-    manifest = _load_manifest_for_shadow(did, root)
-    if not manifest:
-        MANIFEST_SHADOW_ABSENT += 1
-        return
-
-    rig_m = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
-    mismatches: list[tuple[str, int | None, int | None]] = []
-    for key, db_val in db_rig.items():
-        man_val = _normalize_rig_id(rig_m.get(key))
-        db_norm = _normalize_rig_id(db_val)
-        if db_norm != man_val:
-            mismatches.append((str(key), db_norm, man_val))
-
-    if mismatches:
-        MANIFEST_SHADOW_MISMATCHES += 1
-        from infolog import log_event
-
-        for key, db_v, man_v in mismatches:
-            msg = (
-                f"MANIFEST_SHADOW mismatch draft_id={did} {key} "
-                f"db={db_v!r} manifest={man_v!r}"
-            )
-            logging.warning(msg)
-            log_event(msg)
-    else:
-        MANIFEST_SHADOW_EQUAL += 1
-
-
-def _log_manifest_fallback(draft_id: int, field: str, reason: str) -> None:
-    global MANIFEST_FALLBACK
-    MANIFEST_FALLBACK += 1
-    from infolog import log_event
-
-    msg = f"MANIFEST_FALLBACK draft_id={int(draft_id)} {field} ({reason})"
-    logging.info(msg)
-    log_event(msg)
-
-
-def resolve_rig_id_manifest_first(
-    draft_id: int,
-    field: str,
-    db_value: int | None,
-    *,
-    draft_row: dict[str, Any] | None = None,
-    db: Any | None = None,
-) -> int | None:
-    """Phase 2.2: return manifest rig id when present, else DB fallback."""
-    did = int(draft_id)
-    db_norm = _normalize_rig_id(db_value)
-    root = _resolve_archive_root_for_shadow(did, draft_row, db)
-    if root is None:
-        _log_manifest_fallback(did, field, "archive root not resolvable")
-        return db_norm
-
-    manifest = _load_manifest_for_shadow(did, root)
-    if not manifest:
-        _log_manifest_fallback(did, field, "manifest absent")
-        return db_norm
-
-    rig_m = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
-    if field not in rig_m or rig_m.get(field) is None:
-        _log_manifest_fallback(did, field, "rig field missing in manifest")
-        return db_norm
-
-    man_val = _normalize_rig_id(rig_m.get(field))
-    if man_val is None:
-        _log_manifest_fallback(did, field, "rig field null in manifest")
-        return db_norm
-
-    if man_val != db_norm:
-        observe_manifest_rig_ids(
-            did,
-            {field: db_norm},
-            draft_row=draft_row,
-            db=db,
-        )
-    else:
-        global MANIFEST_SHADOW_EQUAL
-        MANIFEST_SHADOW_EQUAL += 1
-    return man_val
 
 
 def draft_archive_root(archive_path: Path | str) -> Path:
@@ -334,18 +182,12 @@ def light_rows_from_manifest(
     imagetyp: str = "light",
 ) -> list[dict[str, Any]] | None:
     """Return manifest file-row-shaped light rows from manifest files[] when present."""
-    did = int(draft_id)
-    root = resolve_draft_dir_for_id(db, did)
+    root = resolve_draft_dir_for_id(db, int(draft_id))
     if root is None:
-        _log_manifest_fallback(did, "files[]", "archive root not resolvable")
         return None
-    manifest = _load_manifest_for_shadow(did, root)
-    if not manifest:
-        _log_manifest_fallback(did, "files[]", "manifest absent")
-        return None
-    files = manifest.get("files")
+    manifest = load_draft_manifest(root)
+    files = manifest.get("files") if manifest else None
     if not isinstance(files, list):
-        _log_manifest_fallback(did, "files[]", "files missing in manifest")
         return None
 
     want = str(imagetyp or "light").strip().lower()
@@ -357,7 +199,7 @@ def light_rows_from_manifest(
         if it != want:
             continue
         obs_id = _optional_int(entry.get("obs_file_id"))
-        rows.append(_manifest_entry_to_obs_file_row(entry, draft_id=did, obs_file_id=obs_id))
+        rows.append(_manifest_entry_to_obs_file_row(entry, draft_id=int(draft_id), obs_file_id=obs_id))
     rows.sort(key=lambda r: str(r.get("FILE_PATH") or ""))
     return rows
 
@@ -383,56 +225,6 @@ def count_manifest_files_for_observation(archive_root: Path | str, observation_i
 def _manifest_rig_pair(manifest: dict[str, Any]) -> tuple[int | None, int | None]:
     rig = manifest.get("rig") if isinstance(manifest.get("rig"), dict) else {}
     return (_optional_int(rig.get("equipment_id")), _optional_int(rig.get("telescope_id")))
-
-
-def iter_manifest_final_data_pairs(
-    archive_root: Path | str,
-    db: Any | None = None,
-) -> list[tuple[int | None, int | None]]:
-    """Equipment/telescope id pairs referenced by draft manifests and QC runs (FINAL_DATA source)."""
-    pairs: list[tuple[int | None, int | None]] = []
-    seen: set[tuple[int | None, int | None]] = set()
-
-    def _add(manifest: dict[str, Any]) -> None:
-        key = _manifest_rig_pair(manifest)
-        if key not in seen:
-            seen.add(key)
-            pairs.append(key)
-
-    for _did, apath in iter_draft_archive_dirs(archive_root):
-        manifest = load_draft_manifest(apath)
-        if manifest:
-            _add(manifest)
-
-    if db is not None and hasattr(db, "conn"):
-        try:
-            for row in db.conn.execute("SELECT DISTINCT DRAFT_ID FROM OBS_QC_PROCESSING_RUN;"):
-                did = int(row["DRAFT_ID"])
-                root = resolve_draft_dir_for_id(db, did)
-                if root is None:
-                    continue
-                manifest = load_draft_manifest(root)
-                if manifest:
-                    _add(manifest)
-        except Exception:  # noqa: BLE001
-            pass
-    return pairs
-
-
-def count_manifest_final_data_for_equipment(db: Any, equipment_id: int) -> int:
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    want = int(equipment_id)
-    return sum(1 for eq, _tel in iter_manifest_final_data_pairs(archive_root, db) if eq == want)
-
-
-def count_manifest_final_data_for_telescope(db: Any, telescope_id: int) -> int:
-    archive_root = db.resolve_archive_root() if hasattr(db, "resolve_archive_root") else None
-    if archive_root is None:
-        return 0
-    want = int(telescope_id)
-    return sum(1 for _eq, tel in iter_manifest_final_data_pairs(archive_root, db) if tel == want)
 
 
 def is_pre_calibrated_draft(
@@ -461,8 +253,6 @@ def resolve_draft_lights_root(
 def apply_pre_calibrated_import_plan(plan: SmartImportPlan) -> None:
     """Force quick-look import into ``non_calibrated/lights`` (Telescope Live / pre-cal exports)."""
     plan.quick_look = True
-    plan.dark_master = None
-    plan.flat_master = None
     plan.masterflat_by_filter = {}
     plan.masterflat_by_obs_key = {}
     plan.dark_master_by_obs_key = {}
@@ -520,7 +310,73 @@ def purge_calibrated_light_frames(archive_path: Path | str, *, draft_id: int) ->
 def calibration_mode_report_line(mode: str | None) -> str:
     if str(mode or "").strip() == CALIBRATION_MODE_PRE:
         return "Calibration: skipped - source treated as pre-calibrated"
+    if str(mode or "").strip() == CALIBRATION_MODE_PASSTHROUGH:
+        return "Calibration: none - no valid master DARK, raw frames used"
     return "Calibration: VYVAR dark/flat per calibration plan"
+
+
+#: VY_CFLAG of a fully calibrated frame (dark subtracted and flat-fielded)
+CFLAG_FULL = "DF"
+_CFLAG_TEXT = {
+    "D": "dark only, no flat field",
+    "FS": "no dark, flat not applied",
+    "P": "no calibration frames (raw)",
+}
+
+
+def record_calibration_outcome(
+    archive_path: Path | str,
+    *,
+    draft_id: int,
+    flags_by_group: dict[str, dict[str, int]],
+    flat_substitute_by_group: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """G01-01 / G12-01: record in the manifest the calibration really done, per LIGHT group folder.
+
+    ``calibration_groups[<group folder>]``: ``vy_cflag`` counts, ``flat_substitute`` (capture date of a FLAT
+    from another night, decision A1; ``flat_substitute_by_group`` is keyed by group folder), ``relative_only``
+    and ``reason``. A group with any frame that is not fully calibrated (VY_CFLAG other than DF: no flat
+    field) is a relative product: its light curves are not for AAVSO/VarAstro submission (trust hard
+    reason, see :func:`calibration_trust_reasons`). ``calibration_mode`` becomes PASSTHROUGH when no frame
+    got a dark (G12-01). Returns the group block.
+    """
+    subs = {str(k): str(v) for k, v in (flat_substitute_by_group or {}).items() if v}
+    groups: dict[str, Any] = {}
+    all_flags: set[str] = set()
+    for folder, counts in sorted((flags_by_group or {}).items()):
+        cnt = {str(k): int(v) for k, v in counts.items()}
+        all_flags |= set(cnt)
+        partial = sorted(f for f in cnt if f != CFLAG_FULL)
+        reason = ""
+        if partial:
+            reason = "calibration incomplete: " + ", ".join(
+                f"{cnt[f]} frame(s) {_CFLAG_TEXT.get(f, f)}" for f in partial
+            ) + " - relative photometry only"
+        groups[str(folder)] = {
+            "vy_cflag": cnt,
+            "flat_substitute": subs.get(str(folder)) or None,
+            "relative_only": bool(partial),
+            "reason": reason,
+        }
+    root = draft_archive_root(archive_path)
+    mode = CALIBRATION_MODE_PASSTHROUGH if all_flags and all_flags <= {"P"} else None
+    patch_draft_manifest(root, int(draft_id), calibration_mode=mode, extra={"calibration_groups": groups})
+    return groups
+
+
+def calibration_trust_reasons(draft_dir: Path | str, group_folder: str) -> tuple[str, str]:
+    """(hard, soft) trust reason of the calibration of one LIGHT group folder (decision A1).
+
+    Hard: the group is a relative product (not fully calibrated). Soft: the FLAT is a flagged substitute
+    from another night. ('', '') when the draft manifest has no calibration record for the group.
+    """
+    groups = load_draft_manifest(draft_dir).get("calibration_groups")
+    g = groups.get(str(group_folder)) if isinstance(groups, dict) else None
+    if not isinstance(g, dict):
+        return "", ""
+    hard = str(g.get("reason") or "") if g.get("relative_only") else ""
+    soft = f"FLAT from another night ({g['flat_substitute']})" if g.get("flat_substitute") else ""
+    return hard, soft
 
 
 def write_draft_manifest(
@@ -687,7 +543,6 @@ def _persist_manifest(
     path = Path(root).expanduser().resolve() / _MANIFEST_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    clear_manifest_shadow_load_cache()
     return path
 
 

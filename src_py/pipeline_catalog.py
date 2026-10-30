@@ -28,7 +28,6 @@ from config import AppConfig
 from catalog_match_trust import export_catalog_match_mode_from_internal
 from catalog_db import query_local_exoplanet, query_local_gaia, query_local_vsx
 from database import VyvarDatabase
-from time_utils import _header_float as _header_float_tu
 from photometry_shared import enhance_catalog_dataframe_aperture
 from infolog import log_event
 from proc_frame_store import proc_csv_path_for_aligned_fits
@@ -230,37 +229,6 @@ def _pick_reference_frame_by_star_count(files: list[Path]) -> tuple[Path, dict[s
     return files[0], scores
 
 
-#: INJECTION-2026-10: CSV of synthetic catalogue stars (injection-recovery tests only). Unset in
-#: normal use; when set, its rows join the Gaia cone like real stars and every run logs it.
-INJECT_CATALOG_ENV = "VYVAR_INJECT_CATALOG"
-
-
-def _append_injected_catalogue(df: pd.DataFrame, center: SkyCoord, radius_deg: float) -> pd.DataFrame:
-    """Add the synthetic stars of ``$VYVAR_INJECT_CATALOG`` inside the cone (test hook).
-
-    The injection-recovery tool (dev/tools/injection_recovery.py) injects stars into raw frames
-    where Gaia has none; VYVAR measures only catalogue stars (identity join on source_id), so the
-    test lists them here with ids above the Gaia range. Without the variable: no change."""
-    import os  # noqa: PLC0415
-
-    path = os.environ.get(INJECT_CATALOG_ENV, "").strip()
-    if not path:
-        return df
-    extra = pd.read_csv(path, dtype={"catalog_id": str})
-    if extra.empty:
-        return df
-    coo = SkyCoord(ra=extra["ra_deg"].astype(float).to_numpy() * u.deg,
-                   dec=extra["dec_deg"].astype(float).to_numpy() * u.deg, frame="icrs")
-    extra = extra.loc[center.separation(coo).deg <= radius_deg + 1e-9].copy()
-    extra["catalog"] = "GAIA_DR3"
-    LOGGER.warning("[INJECT] %d synthetic catalogue stars added to the Gaia cone from %s (test run)",
-                   len(extra), path)
-    log_event(f"[INJECT] {len(extra)} synthetic catalogue stars added from {path} (injection-recovery test run)")
-    if df.empty:
-        return extra.reset_index(drop=True)
-    return pd.concat([df, extra[[c for c in extra.columns if c in df.columns]]], ignore_index=True)
-
-
 def _query_gaia_local(
     *,
     center: SkyCoord,
@@ -320,7 +288,6 @@ def _query_gaia_local(
         )
         _inner = center.separation(_coo_q).deg <= float(radius_deg) + 1e-9
         df = sub.loc[_inner].reset_index(drop=True)
-    df = _append_injected_catalogue(df, center, float(radius_deg))
     if max_mag is not None and "mag" in df.columns:
         m = pd.to_numeric(df["mag"], errors="coerce")
         df = df[(m.notna()) & (m <= float(max_mag))].copy()
@@ -810,10 +777,13 @@ def _saturated_core_plateau_vectorized(
     xx = np.clip(xx, 0, w - 1)
     patches = arr[yy, xx]
     pmax = np.nanmax(patches.reshape(n, -1), axis=1)
-    thr = pmax * float(plateau_rel)
+    # G05-01: the plateau is relative to the star's amplitude above the sky (frame median), not to the
+    # raw level - on a high sky (33 000 ADU) every faint star's 3x3 core lay within 0.4 % of its maximum
+    sky = float(np.nanmedian(arr)) if np.isfinite(arr).any() else 0.0
+    thr = sky + (pmax - sky) * float(plateau_rel)
     thr3 = thr.reshape(-1, 1, 1)
     n_high = np.sum(np.isfinite(patches) & (patches >= thr3), axis=(1, 2))
-    return (n_high >= int(min_plateau_pixels)) & np.isfinite(pmax) & (pmax > 0)
+    return (n_high >= int(min_plateau_pixels)) & np.isfinite(pmax) & (pmax > sky)
 
 
 def _vectorized_star_saturation_columns(
@@ -1698,105 +1668,31 @@ def _dao_spatial_flux_cap_row_indices(
     return np.asarray(sorted(picked), dtype=np.int64)
 
 
-def detect_stars_match_master_reference(
-    data: "np.ndarray",
-    hdr: fits.Header,
-    master_df: pd.DataFrame,
+def _mr_dao_detect(
     *,
-    match_sep_arcsec: float = 8.0,
-    cfg: AppConfig,
-    dao_fwhm_px: float | None = None,
-    fallback_saturate_adu: float | None = None,
-    equipment_saturate_adu: float | None = None,
-    frame_name: str = "",
-    sat_diag_ctx: Any | None = None,
-    raw_data: "np.ndarray | None" = None,
-    raw_hdr: fits.Header | None = None,
-    ref_ra_deg: float | None = None,
-    ref_dec_deg: float | None = None,
-    drift_ref_catalog_id: str | None = None,
-) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """DAO on this frame + nearest-neighbor match to ``masterstars.csv`` (no Vizier / cone).
+    _base_fw_m,
+    arr,
+    bfac,
+    cfg,
+    data0,
+    data_dao,
+    equipment_saturate_adu,
+    fallback_saturate_adu,
+    frame_name,
+    fwhm_eff,
+    hdr,
+    m_valid,
+    match_sep_arcsec,
+    rms_conv,
+    sat_diag_ctx,
+    sigma_pp_diag,
+    std_dao,
+    wcs_obj,
+):
+    """DAO pass 1 and the targeted pass 2 at unmatched MASTERSTAR positions; saturation fraction and footprint meta."""
+    from photutils.detection import DAOStarFinder  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
 
-    Catalog IDs and static columns come from the master row; ``x``, ``y``, ``flux``, ``peak_*`` and
-    saturation flags are per-frame. Intended for ``detrended_aligned`` data whose WCS matches
-    ``MASTERSTAR.fits`` astrometry.
-    """
-
-    import numpy as np
-
-    m = master_df
-    # Primary mode: sky match using per-frame WCS (DAO x/y -> RA/Dec), then NN match against MASTERSTAR ra/dec.
-    # Fallback: if frame has no usable celestial WCS, do a pixel NN match (15 px) against MASTERSTAR x/y.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FITSFixedWarning)
-        wcs_obj = WCS(hdr)
-
-    # MASTERSTAR sky catalog
-    if "ra_deg" not in m.columns or "dec_deg" not in m.columns:
-        raise ValueError("masterstars table must contain ra_deg, dec_deg")
-    _ra = pd.to_numeric(m["ra_deg"], errors="coerce")
-    _de = pd.to_numeric(m["dec_deg"], errors="coerce")
-    okm_sky = _ra.notna() & _de.notna()
-    if not bool(okm_sky.any()):
-        raise ValueError("No valid ra_deg/dec_deg rows in masterstars")
-    m_valid = m.loc[okm_sky].reset_index(drop=True)
-    ra_m = pd.to_numeric(m_valid["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    de_m = pd.to_numeric(m_valid["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
-    master_coords = SkyCoord(ra=ra_m * u.deg, dec=de_m * u.deg, frame="icrs")
-
-    match_mode = "sky"
-    plate_scale_arcsec_per_px = None
-
-    arr = np.asarray(data, dtype=np.float32)
-    mean, med, std = plain_mean_med_std(arr)
-    data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
-    bfac = 1
-    _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
-    _base_fw_m = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_m)
-    from photutils.detection import DAOStarFinder  # type: ignore
-
-    dao_scale = _dao_auto_binning_factor(*data0.shape)
-    data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
-    fwhm_eff = max(1.2, _base_fw_m / float(bfac))
-    rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
-    sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
-    std_dao = rms_conv
-    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-        try:
-            std_dao = float(np.nanstd(arr))
-        except Exception:  # noqa: BLE001
-            std_dao = float("nan")
-    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-        try:
-            finite = np.isfinite(arr)
-            n_finite = int(np.count_nonzero(finite))
-            if n_finite > 0:
-                vals = arr[finite]
-                n_unique = int(len(np.unique(vals)))
-                mn = float(np.nanmin(vals))
-                mx = float(np.nanmax(vals))
-            else:
-                n_unique, mn, mx = 0, float("nan"), float("nan")
-            print(
-                f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
-                f"min={mn:.1f} max={mx:.1f}"
-            )
-        except Exception:  # noqa: BLE001
-            pass
-        # If the frame isn't constant (min != max), try std from non-zero finite pixels.
-        try:
-            nonzero_mask = (arr != 0) & np.isfinite(arr)
-            if int(np.count_nonzero(nonzero_mask)) > 100:
-                std_dao = float(np.std(arr[nonzero_mask]))
-        except Exception:  # noqa: BLE001
-            pass
-    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
-        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
-        print(f"WARNING: {_nm} std=0 even after fallback, skipping")
-        empty_meta: dict[str, Any] = {"status": "std_zero"}
-        return pd.DataFrame(), empty_meta
     _thr, _n_equiv_used = _dao_detection_threshold_adu(float(std_dao), cfg=cfg)
     try:
         _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
@@ -1872,6 +1768,127 @@ def detect_stars_match_master_reference(
             "plateau_min_pixels": 5,
         },
     }
+    return foot_meta, sat_frac, sat_limit, sat_limit_src, tbl
+
+
+def detect_stars_match_master_reference(
+    data: "np.ndarray",
+    hdr: fits.Header,
+    master_df: pd.DataFrame,
+    *,
+    match_sep_arcsec: float = 8.0,
+    cfg: AppConfig,
+    dao_fwhm_px: float | None = None,
+    fallback_saturate_adu: float | None = None,
+    equipment_saturate_adu: float | None = None,
+    frame_name: str = "",
+    sat_diag_ctx: Any | None = None,
+    raw_data: "np.ndarray | None" = None,
+    raw_hdr: fits.Header | None = None,
+    ref_ra_deg: float | None = None,
+    ref_dec_deg: float | None = None,
+    drift_ref_catalog_id: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """DAO on this frame + nearest-neighbor match to ``masterstars.csv`` (no Vizier / cone).
+
+    Catalog IDs and static columns come from the master row; ``x``, ``y``, ``flux``, ``peak_*`` and
+    saturation flags are per-frame. Intended for ``detrended_aligned`` data whose WCS matches
+    ``MASTERSTAR.fits`` astrometry.
+    """
+
+    import numpy as np
+
+    m = master_df
+    # Primary mode: sky match using per-frame WCS (DAO x/y -> RA/Dec), then NN match against MASTERSTAR ra/dec.
+    # Fallback: if frame has no usable celestial WCS, do a pixel NN match (15 px) against MASTERSTAR x/y.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FITSFixedWarning)
+        wcs_obj = WCS(hdr)
+
+    # MASTERSTAR sky catalog
+    if "ra_deg" not in m.columns or "dec_deg" not in m.columns:
+        raise ValueError("masterstars table must contain ra_deg, dec_deg")
+    _ra = pd.to_numeric(m["ra_deg"], errors="coerce")
+    _de = pd.to_numeric(m["dec_deg"], errors="coerce")
+    okm_sky = _ra.notna() & _de.notna()
+    if not bool(okm_sky.any()):
+        raise ValueError("No valid ra_deg/dec_deg rows in masterstars")
+    m_valid = m.loc[okm_sky].reset_index(drop=True)
+    ra_m = pd.to_numeric(m_valid["ra_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    de_m = pd.to_numeric(m_valid["dec_deg"], errors="coerce").to_numpy(dtype=np.float64)
+    master_coords = SkyCoord(ra=ra_m * u.deg, dec=de_m * u.deg, frame="icrs")
+
+    match_mode = "sky"
+    plate_scale_arcsec_per_px = None
+
+    arr = np.asarray(data, dtype=np.float32)
+    mean, med, std = plain_mean_med_std(arr)
+    data0 = np.nan_to_num((arr - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    bfac = 1
+    _fb_m = float(dao_fwhm_px) if dao_fwhm_px is not None else DAO_FWHM_FALLBACK_PX
+    _base_fw_m = dao_detection_fwhm_pixels(hdr, configured_fallback=_fb_m)
+
+    dao_scale = _dao_auto_binning_factor(*data0.shape)
+    data_dao, bfac = _mean_bin2d_for_dao(data0, dao_scale)
+    fwhm_eff = max(1.2, _base_fw_m / float(bfac))
+    rms_conv, _dao_rel_err = _dao_convolved_background_rms_adu(data_dao, fwhm_px=fwhm_eff)
+    sigma_pp_diag = _dao_noise_sigma_adu(arr, bfac=bfac, fallback_std=float(std), data_dao=data_dao)
+    std_dao = rms_conv
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        try:
+            std_dao = float(np.nanstd(arr))
+        except Exception:  # noqa: BLE001
+            std_dao = float("nan")
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        try:
+            finite = np.isfinite(arr)
+            n_finite = int(np.count_nonzero(finite))
+            if n_finite > 0:
+                vals = arr[finite]
+                n_unique = int(len(np.unique(vals)))
+                mn = float(np.nanmin(vals))
+                mx = float(np.nanmax(vals))
+            else:
+                n_unique, mn, mx = 0, float("nan"), float("nan")
+            print(
+                f"DEBUG std=0: {_nm} n_unique={n_unique} n_finite={n_finite} "
+                f"min={mn:.1f} max={mx:.1f}"
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        # If the frame isn't constant (min != max), try std from non-zero finite pixels.
+        try:
+            nonzero_mask = (arr != 0) & np.isfinite(arr)
+            if int(np.count_nonzero(nonzero_mask)) > 100:
+                std_dao = float(np.std(arr[nonzero_mask]))
+        except Exception:  # noqa: BLE001
+            pass
+    if std_dao is None or (not np.isfinite(float(std_dao))) or float(std_dao) <= 0:
+        _nm = str(frame_name or hdr.get("FILENAME") or "").strip() or "frame"
+        print(f"WARNING: {_nm} std=0 even after fallback, skipping")
+        empty_meta: dict[str, Any] = {"status": "std_zero"}
+        return pd.DataFrame(), empty_meta
+    foot_meta, sat_frac, sat_limit, sat_limit_src, tbl = _mr_dao_detect(
+        _base_fw_m=_base_fw_m,
+        arr=arr,
+        bfac=bfac,
+        cfg=cfg,
+        data0=data0,
+        data_dao=data_dao,
+        equipment_saturate_adu=equipment_saturate_adu,
+        fallback_saturate_adu=fallback_saturate_adu,
+        frame_name=frame_name,
+        fwhm_eff=fwhm_eff,
+        hdr=hdr,
+        m_valid=m_valid,
+        match_sep_arcsec=match_sep_arcsec,
+        rms_conv=rms_conv,
+        sat_diag_ctx=sat_diag_ctx,
+        sigma_pp_diag=sigma_pp_diag,
+        std_dao=std_dao,
+        wcs_obj=wcs_obj,
+    )
 
     empty_meta = {
         "n_detected": 0,
@@ -2331,7 +2348,7 @@ def _compute_airmass_from_altaz(
     db: VyvarDatabase | None = None,
     draft_id: int | None = None,
 ) -> float:
-    """Compute airmass from field center RA/Dec + observer site + mid-exposure JD (AltAz).
+    """Compute airmass from the field centre (``fits_meta.field_centre_radec``) + observer site + mid-exposure JD (AltAz).
 
     Site is resolved via the unified resolver (per-draft ID_LOCATION -> header
     SITELAT -> flagged config) so airmass uses the same location as BJD/HJD and is
@@ -2354,17 +2371,10 @@ def _compute_airmass_from_altaz(
     if jd is None:
         return float("nan")
 
-    # Safe: airmass from CRVAL1/2 or OBJCTRA/DEC; returns nan if missing - handled downstream.
-    ra = _header_float_tu(hdr, "CRVAL1")
-    dec = _header_float_tu(hdr, "CRVAL2")
-    if ra is None or dec is None:
-        if "OBJCTRA" in hdr and "OBJCTDEC" in hdr:
-            try:
-                from time_utils import _parse_objctradec  # noqa: PLC0415
+    # G02-17: the same field centre as the frame BJD/HJD (fits_meta.field_centre_radec)
+    from fits_meta import field_centre_radec  # noqa: PLC0415
 
-                ra, dec = _parse_objctradec(str(hdr["OBJCTRA"]), str(hdr["OBJCTDEC"]))
-            except Exception:  # noqa: BLE001
-                ra, dec = None, None
+    ra, dec, _src = field_centre_radec(hdr, db=db, draft_id=draft_id)
     if ra is None or dec is None:
         return float("nan")
 
@@ -2470,6 +2480,185 @@ PROC_NOT_WRITTEN: tuple[str, ...] = (
 def proc_columns_for_write(df: pd.DataFrame) -> pd.DataFrame:
     """The proc CSV as written: ``df`` without :data:`PROC_NOT_WRITTEN`."""
     return df.drop(columns=[c for c in PROC_NOT_WRITTEN if c in df.columns])
+
+
+def _pf_annotate_and_measure(
+    *,
+    _raw_arr,
+    _raw_hdr,
+    _sat_ctx,
+    data,
+    debug_pixel_match,
+    df,
+    fname,
+    hdr,
+    master_tab,
+    meta,
+    st,
+):
+    """One frame: MASTERSTAR join, forced rows, saturation, aperture photometry and time columns."""
+    _before_dao = len(df)
+    df = _proc_drop_unmatched_dao_rows(df)
+    LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d -> %d rows", _before_dao, len(df))
+
+    # --- Join MASTERSTAR annotations into per-frame catalog (via catalog_id) ---
+    # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns (bp_rp, G, saturation).
+    if master_tab is not None and "catalog_id" in df.columns and "catalog_id" in master_tab.columns:
+        _JOIN_COLS = [
+            "is_saturated",
+            "bp_rp",
+            "phot_g_mean_mag",
+            "saturate_limit_adu_85pct",
+            "source_type",
+        ]
+        join_cols = [c for c in _JOIN_COLS if c in master_tab.columns]
+        if join_cols:
+            master_lookup = master_tab[["catalog_id"] + join_cols].copy()
+            master_lookup["catalog_id"] = (
+                master_lookup["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+            )
+            master_lookup = master_lookup.dropna(subset=["catalog_id"])
+            master_lookup = master_lookup.drop_duplicates(subset=["catalog_id"], keep="first")
+
+            df = df.copy()
+            df["catalog_id"] = df["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+
+            # Avoid column collisions; MASTERSTAR values should win for these columns.
+            df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore")
+            df = df.merge(master_lookup, on="catalog_id", how="left")
+    # FORCED-PHOT-01: inject force-eligible MASTERSTAR members missing from DAO match.
+    # DAO path above is unchanged (n_raw_dao / match counts preserved). Forced rows are
+    # measured at locked MASTERSTAR (x,y) with bounded peak refine.
+    if master_tab is not None:
+        from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
+
+        from photometry_shared import catalog_aperture_radii  # noqa: PLC0415
+
+        # G05-11: forced positions are tested against the frame's data footprint (VY_AM) with the
+        # catalogue aperture and annulus (was: the image rectangle only - stars on the fill of a
+        # shifted frame were measured)
+        df, _fp_meta = inject_forced_masterstar_rows(
+            df,
+            master_tab,
+            image=np.asarray(data) if data is not None else None,
+            header=hdr,
+            aperture_radii=catalog_aperture_radii(
+                hdr,
+                aperture_fwhm_factor=float(st["cfg"].aperture_fwhm_factor),
+                annulus_inner_fwhm=float(st["cfg"].annulus_inner_fwhm),
+                annulus_outer_fwhm=float(st["cfg"].annulus_outer_fwhm),
+                fwhm_night_median_px=st.get("fwhm_night_median_px"),
+                qc_fwhm_by_name=st.get("qc_fwhm_by_name"),
+                frame_name=fname,
+            ),
+        )
+        meta["forced_photometry"] = dict(_fp_meta)
+        debug_pixel_match["forced_photometry"] = dict(_fp_meta)
+        LOGGER.debug(
+            "[FORCED-PHOT] %s injected=%s geometry_miss=%s",
+            fname,
+            _fp_meta.get("n_injected"),
+            _fp_meta.get("n_geometry_miss"),
+        )
+    # FORCED-SAT-2026-10: forced rows get the per-frame saturation test of the DAO rows
+    # (aligned-frame peak + core plateau, then the raw-frame placed-aperture peak).
+    df, _fs_meta = stamp_forced_rows_saturation(
+        df,
+        data,
+        hdr,
+        peak_sat_limit_adu=meta.get("peak_sat_limit_adu"),
+        sat_diag_ctx=_sat_ctx,
+        raw_data=_raw_arr,
+        raw_hdr=_raw_hdr,
+        ref_ra_deg=st.get("sat_diag_ref_ra"),
+        ref_dec_deg=st.get("sat_diag_ref_dec"),
+        drift_ref_catalog_id=st.get("sat_diag_ref_catalog_id"),
+    )
+    meta["forced_saturation"] = _fs_meta
+    debug_pixel_match["match_mode"] = meta.get("catalog_match_mode")
+    debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px")
+    debug_pixel_match["n_matched"] = meta.get("n_matched")
+    st["current_frame_name"] = fname
+    df = _apply_aperture_catalog_enhancements_from_st(df, data, hdr, st)
+
+    # --- Time columns (JD / HJD / BJD) --- hjd_mid / bjd_tdb_mid are for the FIELD CENTRE (frame times,
+    # G02-18); per-star times are computed by the consumers that publish them (time_utils docstring).
+    _db_tc = None
+    try:
+        from time_utils import compute_time_columns
+
+        _dbp = str(st["cfg"].database_path or "").strip()
+        _did_tc = st.get("draft_id")
+        if _dbp and _did_tc is not None:
+            _db_tc = VyvarDatabase.for_config(st["cfg"])
+        _geo_cfg = st["cfg"]
+        _time_cols = compute_time_columns(
+            hdr,
+            db=_db_tc,
+            draft_id=int(_did_tc) if _did_tc is not None else None,
+            cfg=_geo_cfg,
+        )
+        _tk = ("jd_mid", "hjd_mid", "bjd_tdb_mid")
+        _cols_base = list(df.columns)
+        _anchors = [c for c in ("jd", "inspection_jd") if c in _cols_base]
+        if _anchors:
+            _pos = max(_cols_base.index(c) for c in _anchors) + 1
+        else:
+            _flux_first = next((c for c in _cols_base if c in ("dao_flux", "flux")), None)
+            _pos = _cols_base.index(_flux_first) if _flux_first is not None else len(_cols_base)
+        for _i, _nm in enumerate(_tk):
+            df.insert(_pos + _i, _nm, _time_cols[_nm])
+
+        # Airmass - same value for all stars in the frame (frame-level)
+        _am_val = _extract_airmass_from_header(
+            hdr,
+            cfg=_geo_cfg,
+            db=_db_tc,
+            draft_id=int(_did_tc) if _did_tc is not None else None,
+        )
+        if "airmass" not in df.columns:
+            _am_insert_pos = _pos + len(_tk)
+            df.insert(_am_insert_pos, "airmass", _am_val)
+    finally:
+        if _db_tc is not None:
+            try:
+                _db_tc.conn.close()
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
+
+    df2 = df.copy()
+    _cmm_export = str(meta.get("catalog_match_mode") or "").strip()
+    if _cmm_export:
+        df2["catalog_match_mode"] = _cmm_export
+
+    _before_cat = len(df2)
+    df2 = _proc_catalog_keep_matched_rows_only(df2)
+    LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
+
+    # FORCED-PHOT / DRAFT-514-TRIAGE A2: multiple DAO detections can match the same
+    # Gaia id; dedupe before write. Alternate export path already called this;
+    # production ``_export_per_frame_run_catalog_core`` did not (root cause of
+    # 127 duplicate rows in proc_BO_CVn_Light_001 on draft 514).
+    _before_dedupe = len(df2)
+    df2 = _proc_deduplicate_matched_catalog_rows(df2)
+    if len(df2) != _before_dedupe:
+        LOGGER.debug(
+            "[PROC] dedupe catalog_id: %d -> %d rows",
+            _before_dedupe,
+            len(df2),
+        )
+
+    from proc_frame_store import PROC_FRAME_COLS, frame_values_of, round_proc_columns  # noqa: PLC0415
+
+    df2 = round_proc_columns(proc_columns_for_write(df2))
+    # Per-frame values go to frames.csv (written by the collector once all frames are done).
+    frame_values = frame_values_of(df2)
+    df2 = df2.drop(columns=[c for c in PROC_FRAME_COLS if c in df2.columns])
+
+    csv_paths: list[str] = []
+    write_sidecar = bool(st.get("write_sidecar_csv_next_to_fits"))
+    defer = bool(st.get("defer_disk_writes"))
+    return csv_paths, defer, df2, frame_values, write_sidecar
 
 
 def _export_per_frame_run_catalog_core(
@@ -2581,160 +2770,19 @@ def _export_per_frame_run_catalog_core(
         }
 
 
-    _before_dao = len(df)
-    df = _proc_drop_unmatched_dao_rows(df)
-    LOGGER.debug("[TODO-13] catalog-only pre-filter (detect): %d -> %d rows", _before_dao, len(df))
-
-    # --- Join MASTERSTAR annotations into per-frame catalog (via catalog_id) ---
-    # For matched rows (catalog_id non-empty), bring stable MASTERSTAR columns (bp_rp, G, saturation).
-    if master_tab is not None and "catalog_id" in df.columns and "catalog_id" in master_tab.columns:
-        _JOIN_COLS = [
-            "is_saturated",
-            "bp_rp",
-            "phot_g_mean_mag",
-            "saturate_limit_adu_85pct",
-            "source_type",
-        ]
-        join_cols = [c for c in _JOIN_COLS if c in master_tab.columns]
-        if join_cols:
-            master_lookup = master_tab[["catalog_id"] + join_cols].copy()
-            master_lookup["catalog_id"] = (
-                master_lookup["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
-            )
-            master_lookup = master_lookup.dropna(subset=["catalog_id"])
-            master_lookup = master_lookup.drop_duplicates(subset=["catalog_id"], keep="first")
-
-            df = df.copy()
-            df["catalog_id"] = df["catalog_id"].astype(str).str.strip().replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
-
-            # Avoid column collisions; MASTERSTAR values should win for these columns.
-            df = df.drop(columns=[c for c in join_cols if c in df.columns], errors="ignore")
-            df = df.merge(master_lookup, on="catalog_id", how="left")
-    # FORCED-PHOT-01: inject force-eligible MASTERSTAR members missing from DAO match.
-    # DAO path above is unchanged (n_raw_dao / match counts preserved). Forced rows are
-    # measured at locked MASTERSTAR (x,y) with bounded peak refine.
-    if master_tab is not None:
-        from forced_photometry import inject_forced_masterstar_rows  # noqa: PLC0415
-
-        _force_ids = st.get("forced_photometry_catalog_ids")
-        _force_set = (
-            {str(x).strip() for x in _force_ids if str(x).strip()}
-            if _force_ids
-            else None
-        )
-        df, _fp_meta = inject_forced_masterstar_rows(
-            df,
-            master_tab,
-            image=np.asarray(data) if data is not None else None,
-            force_ids=_force_set,
-        )
-        meta["forced_photometry"] = dict(_fp_meta)
-        debug_pixel_match["forced_photometry"] = dict(_fp_meta)
-        LOGGER.debug(
-            "[FORCED-PHOT] %s injected=%s geometry_miss=%s",
-            fname,
-            _fp_meta.get("n_injected"),
-            _fp_meta.get("n_geometry_miss"),
-        )
-    # FORCED-SAT-2026-10: forced rows get the per-frame saturation test of the DAO rows
-    # (aligned-frame peak + core plateau, then the raw-frame placed-aperture peak).
-    df, _fs_meta = stamp_forced_rows_saturation(
-        df,
-        data,
-        hdr,
-        peak_sat_limit_adu=meta.get("peak_sat_limit_adu"),
-        sat_diag_ctx=_sat_ctx,
-        raw_data=_raw_arr,
-        raw_hdr=_raw_hdr,
-        ref_ra_deg=st.get("sat_diag_ref_ra"),
-        ref_dec_deg=st.get("sat_diag_ref_dec"),
-        drift_ref_catalog_id=st.get("sat_diag_ref_catalog_id"),
+    csv_paths, defer, df2, frame_values, write_sidecar = _pf_annotate_and_measure(
+        _raw_arr=_raw_arr,
+        _raw_hdr=_raw_hdr,
+        _sat_ctx=_sat_ctx,
+        data=data,
+        debug_pixel_match=debug_pixel_match,
+        df=df,
+        fname=fname,
+        hdr=hdr,
+        master_tab=master_tab,
+        meta=meta,
+        st=st,
     )
-    meta["forced_saturation"] = _fs_meta
-    debug_pixel_match["match_mode"] = meta.get("catalog_match_mode")
-    debug_pixel_match["plate_scale_arcsec_per_px"] = meta.get("plate_scale_arcsec_per_px")
-    debug_pixel_match["n_matched"] = meta.get("n_matched")
-    st["current_frame_name"] = fname
-    df = _apply_aperture_catalog_enhancements_from_st(df, data, hdr, st)
-
-    # --- Time columns (JD / HJD / BJD) ---
-    _db_tc = None
-    try:
-        from time_utils import compute_time_columns
-
-        _dbp = str(st["cfg"].database_path or "").strip()
-        _did_tc = st.get("draft_id")
-        if _dbp and _did_tc is not None:
-            _db_tc = VyvarDatabase.for_config(st["cfg"])
-        _geo_cfg = st["cfg"]
-        _time_cols = compute_time_columns(
-            hdr,
-            db=_db_tc,
-            draft_id=int(_did_tc) if _did_tc is not None else None,
-            cfg=_geo_cfg,
-        )
-        _tk = ("jd_mid", "hjd_mid", "bjd_tdb_mid")
-        _cols_base = list(df.columns)
-        _anchors = [c for c in ("jd", "inspection_jd") if c in _cols_base]
-        if _anchors:
-            _pos = max(_cols_base.index(c) for c in _anchors) + 1
-        else:
-            _flux_first = next((c for c in _cols_base if c in ("dao_flux", "flux")), None)
-            _pos = _cols_base.index(_flux_first) if _flux_first is not None else len(_cols_base)
-        for _i, _nm in enumerate(_tk):
-            df.insert(_pos + _i, _nm, _time_cols[_nm])
-
-        # Airmass - same value for all stars in the frame (frame-level)
-        _am_val = _extract_airmass_from_header(
-            hdr,
-            cfg=_geo_cfg,
-            db=_db_tc,
-            draft_id=int(_did_tc) if _did_tc is not None else None,
-        )
-        if "airmass" not in df.columns:
-            _am_insert_pos = _pos + len(_tk)
-            df.insert(_am_insert_pos, "airmass", _am_val)
-    finally:
-        if _db_tc is not None:
-            try:
-                _db_tc.conn.close()
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
-
-    df2 = df.copy()
-    _cmm_export = str(meta.get("catalog_match_mode") or "").strip()
-    if _cmm_export:
-        df2["catalog_match_mode"] = _cmm_export
-
-    _before_cat = len(df2)
-    df2 = _proc_catalog_keep_matched_rows_only(df2)
-    LOGGER.debug("[TODO-13] catalog-only filter: %d -> %d rows", _before_cat, len(df2))
-
-    # FORCED-PHOT / DRAFT-514-TRIAGE A2: multiple DAO detections can match the same
-    # Gaia id; dedupe before write. Alternate export path already called this;
-    # production ``_export_per_frame_run_catalog_core`` did not (root cause of
-    # 127 duplicate rows in proc_BO_CVn_Light_001 on draft 514).
-    _before_dedupe = len(df2)
-    df2 = _proc_deduplicate_matched_catalog_rows(df2)
-    if len(df2) != _before_dedupe:
-        LOGGER.debug(
-            "[PROC] dedupe catalog_id: %d -> %d rows",
-            _before_dedupe,
-            len(df2),
-        )
-
-    from proc_frame_store import PROC_FRAME_COLS, frame_values_of, round_proc_columns  # noqa: PLC0415
-
-    df2 = round_proc_columns(proc_columns_for_write(df2))
-    # Per-frame values go to frames.csv (written by the collector once all frames are done).
-    frame_values = frame_values_of(df2)
-    df2 = df2.drop(columns=[c for c in PROC_FRAME_COLS if c in df2.columns])
-
-    csv_paths: list[str] = []
-    write_sidecar = bool(st.get("write_sidecar_csv_next_to_fits"))
-    mirror_flat = bool(st.get("mirror_flat_platesolve_folder"))
-    defer = bool(st.get("defer_disk_writes"))
-    out_flat = Path(str(st.get("out_flat") or "."))
 
     if write_sidecar:
         sidecar = proc_csv_path_for_aligned_fits(base_path)
@@ -2743,16 +2791,6 @@ def _export_per_frame_run_catalog_core(
         else:
             _vyvar_df_to_csv(df2, sidecar)
         csv_paths.append(str(sidecar))
-
-    if mirror_flat:
-        stem = Path(fname).stem
-        safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in stem)[:120]
-        flat_path = out_flat / f"{safe}_catalog.csv"
-        if defer:
-            deferred_writes.append((str(flat_path), df2.copy()))
-        else:
-            _vyvar_df_to_csv(df2, flat_path)
-        csv_paths.append(str(flat_path))
 
     primary_csv = csv_paths[0] if csv_paths else ""
     return {

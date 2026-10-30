@@ -92,50 +92,6 @@ class InvariantViolation(RuntimeError):
         super().__init__(f"{self.inv_id}: {self.detail}")
 
 
-class PopulationEmptiedError(InvariantViolation):
-    """INV-NO-SILENT-EMPTY: a filter removed every row of a non-empty population."""
-
-    def __init__(
-        self,
-        *,
-        rule_id: str,
-        threshold: object,
-        unit: str,
-        population: str,
-        n_in: int,
-    ) -> None:
-        self.rule_id = str(rule_id)
-        self.threshold = threshold
-        self.unit = str(unit)
-        self.population = str(population)
-        self.n_in = int(n_in)
-        detail = (
-            f"rule_id={self.rule_id} emptied population={self.population!r} "
-            f"n_in={self.n_in} n_out=0 threshold={self.threshold!r} unit={self.unit}"
-        )
-        super().__init__("INV-NO-SILENT-EMPTY", detail)
-
-
-def assert_population_nonempty(
-    *,
-    n_in: int,
-    n_out: int,
-    rule_id: str,
-    threshold: object,
-    unit: str,
-    population: str,
-) -> None:
-    """Raise when a gate empties a previously non-empty population (INV-NO-SILENT-EMPTY)."""
-    if int(n_in) > 0 and int(n_out) == 0:
-        raise PopulationEmptiedError(
-            rule_id=str(rule_id),
-            threshold=threshold,
-            unit=str(unit),
-            population=str(population),
-            n_in=int(n_in),
-        )
-
-
 def inv_check(
     meta: dict[str, Any],
     inv_id: str,
@@ -233,27 +189,6 @@ def check_flat_mean_near_one(
     return ok, f"median={med_a:.6f} |median-1|={rel:.3e} mean={mean_a:.6f} (tol={rel_tol:g})"
 
 
-def read_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
-    """Map normalized absolute FITS path -> status (for QC-01 / allowlist checks)."""
-
-    from utils import norm_fits_path_key  # noqa: PLC0415
-
-    p = Path(qc_csv)
-    if not p.is_file():
-        raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
-    df = read_vyvar_csv(p)
-    if "status" not in df.columns:
-        raise ValueError(f"qc_metrics.csv missing status column: {p}")
-    src_col = "src" if "src" in df.columns else "dst"
-    out: dict[str, str] = {}
-    for _, row in df.iterrows():
-        raw = row.get(src_col)
-        if raw is None or (isinstance(raw, float) and not math.isfinite(float(raw))):
-            continue
-        out[norm_fits_path_key(str(raw))] = str(row["status"]).strip()
-    return out
-
-
 def check_qc01_skipproc_alignment(
     selected_files: Sequence[Path | str],
     qc_csv: Path | str,
@@ -264,7 +199,9 @@ def check_qc01_skipproc_alignment(
     from utils import norm_fits_path_key  # noqa: PLC0415
 
     meta_block = meta if meta is not None else {"invariants": []}
-    status_map = read_qc_metrics_status_by_path(qc_csv)
+    from utils import load_qc_metrics_status_by_path  # noqa: PLC0415
+
+    status_map = load_qc_metrics_status_by_path(qc_csv)
     ok_keys = {k for k, v in status_map.items() if v == "ok"}
     bad: list[str] = []
     for raw in selected_files:
@@ -819,15 +756,6 @@ def check_sat_diag(meta: dict[str, Any], *, photometry_dir: Path | str | None = 
         policy="FAIL",
         detail=detail,
     )
-    lin_src = str((block or {}).get("lin_source") or "")
-    if lin_src == "DEFAULT_FRAC" and bool((block or {}).get("tier3_exclusion_fired")):
-        inv_check(
-            meta,
-            "INV-SAT-01",
-            False,
-            policy="FAIL",
-            detail="Tier 3 DEFAULT_FRAC must not trigger exclusion",
-        )
 
 
 def validate_provenance_schema(

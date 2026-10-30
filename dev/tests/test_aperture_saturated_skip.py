@@ -42,10 +42,6 @@ def _build_state(tmp_path: Path, target_cid: str, comp_cids: list[str]) -> _Aper
     comps = _comp_table(target_cid, comp_cids)
     comp_index = {target_cid: comps}
 
-    star_xy: dict[str, tuple[float, float]] = {target_cid: (100.0, 100.0)}
-    for i, cid in enumerate(comp_cids):
-        star_xy[cid] = (50.0 + i * 10.0, 50.0 + i * 10.0)
-
     csv_path = tmp_path / "proc_frame1.csv"
     csv_path.write_text("stub", encoding="utf-8")
     apertures = {target_cid: 5.0}
@@ -68,7 +64,6 @@ def _build_state(tmp_path: Path, target_cid: str, comp_cids: list[str]) -> _Aper
         },
         fwhm_px=3.0,
         apertures_px=apertures,
-        star_xy=star_xy,
         chip_fw=512,
         chip_fh=512,
         _ms_header=None,
@@ -122,18 +117,14 @@ def test_saturated_target_skips_with_zero_frames(tmp_path: Path) -> None:
     with patch("aperture_photometry_target.read_flux_from_csv") as mock_read:
         summary, n_lc = _aperture_process_one_target(
             row,
-            ti=1,
             state=state,
             summary_rows=[],
             n_lc=0,
             lc_dir=lc_dir,
             output_dir=out_dir,
             progress_cb=None,
-            masterstar_fits_path=fits_stub,
             annulus_inner_fwhm=2.0,
             annulus_outer_fwhm=3.0,
-            outlier_sigma=3.0,
-            stability_sigma=3.0,
             _apt_fw=1.5,
             _save_png=False,
         )

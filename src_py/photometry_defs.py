@@ -15,7 +15,6 @@ LOGGER = logging.getLogger("photometry_core")
 
 # Explicit annulus sky (ADU/px) for the Howell error.
 SKY_ADU_PER_PX_ANNULUS_COL = "sky_adu_per_px_annulus"
-SKY_SURFACE_BG_MEDIAN_ADU_COL = "sky_surface_bg_median_adu"
 
 # F-BINGAIN-1: empirical background noise (empty-aperture scatter) + provenance.
 SIGMA_BKG_AP_COL = "sigma_bkg_ap"
@@ -61,6 +60,9 @@ LC_QUALITY_FLAGS: tuple[str, ...] = (
     "no_data",
     "saturated",
 )
+#: G08-04: light-curve qualities that are information only (trust not lowered): "noisy" and its moonlit
+#: variant are the same verdict (decisions 3632 / 3654); "noisy_moon" was a hard RED by omission.
+LC_QUALITY_INFORMATIONAL: frozenset[str] = frozenset({"good", "noisy", "noisy_moon"})
 
 #: TARGET-RULES-2026-10 (Milan 2026-10-13): target skips decided on MASTERSTAR in target
 #: selection (saturated = upper cut, below_snr_min = lower cut, VSX type out of scope) are final:

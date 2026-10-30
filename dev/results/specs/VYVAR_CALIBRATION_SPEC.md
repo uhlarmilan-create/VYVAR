@@ -73,6 +73,11 @@ contract for the calibration code, the GUI and the night runner. English, ASCII.
 - Legacy VYVAR flats (median of raw flats, no `VYOFFSUB`): subtracting a
   constant commutes with the median, so they are corrected at use time by
   subtracting P (2b) and renormalising; flagged `legacy-corrected`.
+- G01-02 (2026-10-29): P is removed only from a flat in raw ADU. When the
+  flat's own signal does not exceed the pedestal (median - P <= P, e.g. an
+  imported normalised flat with median ~1), the plan shows `[X]` and the
+  calibration stops with a message (mark the flat's offset as already
+  removed); the flat is never replaced by 1.0.
 
 ## 4. Matching a master to a LIGHT group
 
@@ -88,14 +93,22 @@ Keys must match exactly unless stated:
 
 - **Binning**: the standard is masters in the same binning as the LIGHTs.
   Software rebinning of a 1x1 master to NxN is allowed as a fallback, never the
-  reverse. DARK rebin uses the camera's binning mode (sum or mean), which VYVAR
-  measures once from data and stores with the camera; if the mode is unknown,
-  no DARK rebin is done (reported). FLAT rebin uses the mean (the mode cancels
-  after normalisation).
+  reverse; a DARK at the LIGHT binning is always preferred. DARK rebin uses the
+  camera's binning convention (SUM or MEAN) measured by CAL-DIAG from the data
+  for that group; when the data cannot decide it (pedestal not measured, or the
+  SUM/MEAN difference below the resolution) the calibration **stops** with a
+  message (make a DARK at the LIGHT binning) - there is no default convention
+  (decision A3, 2026-10-29). FLAT rebin uses the mean (the mode cancels after
+  normalisation).
 - **Validity window**: a master with capture date D and validity V days is valid
   for a LIGHT with date L when `D - 1 day <= L <= D + V`. Outside the window it
   is **never used**, in the GUI or the night runner; the user must make new
   masters. (Validity per kind from config: dark 90 d, flat 200 d.)
+  Exception (decision A1, 2026-10-29): a LIGHT group with no valid FLAT uses the
+  FLAT of the same camera/telescope/filter/gain/binning captured nearest to the
+  LIGHT dates, as a **flagged substitute** (plan status FLAT_FROM_OTHER_NIGHT,
+  frame header `VY_FLSUB` + `VY_WARN`, manifest `calibration_groups`, trust soft
+  warning).
 - Optics changes (cleaning, refocus, new filter) are the observer's
   responsibility: make new flats.
 - Among valid candidates: closest temperature (darks), then newest capture date.
@@ -104,8 +117,16 @@ Keys must match exactly unless stated:
 
 - `build_calibration_plan(...)` returns, per LIGHT group (setup): chosen DARK,
   FLAT (+ offset handling, P), rebin factors and modes, validity status,
-  messages. Status per group: OK / MISSING_DARK / MISSING_FLAT / EXPIRED /
-  UNCALIBRATED (user choice) / PRECALIBRATED.
+  messages. Status per group: OK / FLAT_FROM_OTHER_NIGHT / MISSING_DARK /
+  MISSING_FLAT / EXPIRED / UNCALIBRATED (user choice) / PRECALIBRATED.
+- **Group without a FLAT** (decision A1, 2026-10-29): all LIGHT groups of a
+  night are imported into one tree (`Raw/lights`) and every LIGHT gets a
+  calibrated frame. A group without any FLAT (no substitute either) is
+  calibrated with the DARK only (`VY_CFLAG` D, `VY_WARN`) and logged as a
+  WARNING; the draft manifest records it in `calibration_groups` as
+  `relative_only`, which is a hard trust reason ("calibration incomplete"), so
+  its light curves are RED and go to `_dontsubmit/` (not for AAVSO/VarAstro) -
+  a relative product only.
 - **Masters next to the LIGHTs** (2026-10-09, Milan): master files in the
   source tree (name MD_/MF_/MASTER*, or NCOMBINE / HISTORY master) are
   recognised from their headers (IMAGETYP kind, EXPTIME, binning, gain, offset,
@@ -120,12 +141,27 @@ Keys must match exactly unless stated:
   library (origin IMPORTED + program, linked to the selected camera, and
   telescope for FLAT) and calibrates with the library copies.
 - The GUI shows one plan table: LIGHT group, frames, status, DARK + source,
-  FLAT + source, note; the night runner logs it and writes
-  `calibration_plan.json` into the draft.
+  FLAT + source, note; the night runner logs it (no `calibration_plan.json`:
+  nothing reads it, Milan 2026-10-29, code review 2 G01-21).
 
 ## 6. Apply
 
 - On the raw frame (mono) or raw CFA (OSC): `(light - dark) / flat_norm`.
+- Flat preparation (G01-03, decision A2, 2026-10-29): one path - normalise by
+  the median of the valid pixels first, then mark bad pixels; there is no floor
+  on the flat. A flat pixel is bad when it is <= 0 / invalid, or when it deviates
+  from the median of its neighbour-pair means in a 5x5 box plus the local
+  vignetting curvature (IRAF ccdmask method; OSC: per CFA plane; the 2-px border
+  is tested only for invalid values) by more than t x sigma, sigma = the flat's
+  own robust pixel noise (1.4826 MAD of that ratio), t = the Gaussian threshold
+  with one expected false mark per flat. Smooth vignetting is not bad. Bad flat pixels are NaN in
+  the calibrated frame (`VY_FLBAD` = count); non-finite pixels stay NaN (never
+  zeroed). A star whose aperture touches a NaN pixel in the aligned frame is
+  flagged (`edge_fail`: no data in the aperture), never measured on a filled
+  value. A flat with most pixels invalid stops the calibration.
+- The draft manifest records the calibration really done per LIGHT group
+  (`calibration_groups`: VY_CFLAG counts, flat substitute, relative_only,
+  reason); `calibration_mode` is PASSTHROUGH when no frame got a DARK.
 - OSC: after calibration, superpixel extraction (R, G=(G1+G2)/2, B) and binning;
   channel headers keep all calibration stamps; gain/read noise are not guessed.
 - Pre-calibrated LIGHTs (made by another program) and deliberately

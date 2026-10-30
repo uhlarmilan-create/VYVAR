@@ -73,6 +73,20 @@ def _build_star_exclusion_mask(
     return blocked
 
 
+def _off_footprint_band(covered: np.ndarray | None, shape: tuple[int, ...], radius_px: float) -> np.ndarray:
+    """True on pixels within ``radius_px`` of a pixel outside the data footprint (all False without one)."""
+    if covered is None:
+        return np.zeros(shape[:2], dtype=bool)
+    cov = np.asarray(covered, dtype=bool)
+    if cov.shape != tuple(shape[:2]):
+        raise ValueError(f"footprint shape {cov.shape} != frame shape {tuple(shape[:2])}")
+    if cov.all():
+        return np.zeros(cov.shape, dtype=bool)
+    from scipy.ndimage import distance_transform_edt  # noqa: PLC0415
+
+    return distance_transform_edt(cov) <= float(radius_px)
+
+
 def _canonicalize_star_xy(
     star_x: np.ndarray,
     star_y: np.ndarray,
@@ -236,6 +250,7 @@ def measure_empty_aperture_sigma_bkg(
     r_out: float,
     *,
     sky: np.ndarray,
+    covered: np.ndarray | None,
     n_apertures: int = 64,
     min_valid: int = 16,
     rng: np.random.Generator | None = None,
@@ -249,6 +264,9 @@ def measure_empty_aperture_sigma_bkg(
     frame for local-sky medians (``sky_estimation.sky_image``: NaN off the aligned footprint and on
     detected sources) and ``sky_estimation.annulus_sky_medians`` takes the annulus median
     (SKY-ONE-2026-10, Milan 2026-10-28: one sky rule; it used the plain median of the whole annulus).
+    G08-11: ``covered`` is the aligned frame's data footprint (``frame_footprint.aligned_footprint``;
+    None = the whole frame is data). No empty aperture or its annulus may touch the aligner's constant
+    fill: a placement there has a net sum of exactly 0 and pulls the scatter down.
     The robust scatter of net sums is ``sigma_bkg_ap``
     [ADU] and already includes background Poisson, read noise, resampling covariance,
     pedestal offsets, and the Merline & Howell (1995) sky-estimation term - do **not**
@@ -305,14 +323,15 @@ def measure_empty_aperture_sigma_bkg(
     margin_px = max(2.0, float(r_out) - float(r_in))
     excl_r = float(r_out) + margin_px
     edge_margin = float(r_out) + float(r_ap) + 1.0
-    blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)
+    off_fp = _off_footprint_band(covered, d.shape, float(r_out) + 1.0)
+    blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin) | off_fp
     free_y, free_x = np.nonzero(~blocked)
     if free_x.size < n_min:
         # APERTURE-01: FWHM-scaled sky annulus (~9 x FWHM) around every catalog
         # star can fill the chip, so Labbe has nowhere to sit. Keep the aperture
         # star-free (4 x r_ap) and still require the empty aperture+annulus on-chip.
         excl_r = max(4.0 * float(r_ap), 8.0)
-        blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin)
+        blocked = _build_star_exclusion_mask(d.shape, xs_c, ys_c, excl_r, edge_margin) | off_fp
         free_y, free_x = np.nonzero(~blocked)
     mask_hash = hashlib.sha256(np.ascontiguousarray(blocked).view(np.uint8)).hexdigest()
     labbe_input_hash = hashlib.sha256(

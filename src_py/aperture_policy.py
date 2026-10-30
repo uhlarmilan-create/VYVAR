@@ -29,20 +29,40 @@ FWHM_AUTH_NOTE = (
 POLICY_ID = "APERTURE-01"
 
 
-def clamp_fwhm_px(value: Any, *, fallback: float | None = None) -> float | None:
+#: FWHM-BOUND-2026-10 (Milan 2026-10-29): a star FWHM is at most this fraction of the frame's shorter side
+#: (the fixed 30 px rejected real FWHMs of long-focus rigs; 1/20 of a 1000 px frame = 50 px).
+FWHM_MAX_FRAME_FRACTION = 1.0 / 20.0
+FWHM_MIN_PX = 0.5
+
+
+def fwhm_max_px(shape: tuple[int, int] | None) -> float:
+    """Largest valid FWHM (px) for a frame of ``shape`` (rows, cols); no upper bound without a shape."""
+    if shape is None:
+        return math.inf
+    return FWHM_MAX_FRAME_FRACTION * float(min(int(shape[0]), int(shape[1])))
+
+
+def header_shape(hdr: Any) -> tuple[int, int] | None:
+    """(NAXIS2, NAXIS1) of a FITS header, None when absent."""
     try:
-        v = float(value)
-    except (TypeError, ValueError):
-        v = float("nan")
-    if math.isfinite(v) and 0.5 < v < 30.0:
-        return float(v)
-    if fallback is not None:
+        return int(hdr["NAXIS2"]), int(hdr["NAXIS1"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def clamp_fwhm_px(value: Any, *, fallback: float | None = None, shape: tuple[int, int] | None = None) -> float | None:
+    """``value`` when it is a valid FWHM (> 0.5 px, below ``fwhm_max_px(shape)``), else ``fallback`` when valid,
+    else None."""
+    hi = fwhm_max_px(shape)
+    for cand in (value, fallback):
+        if cand is None:
+            continue
         try:
-            fb = float(fallback)
+            v = float(cand)
         except (TypeError, ValueError):
-            return None
-        if math.isfinite(fb) and 0.5 < fb < 30.0:
-            return float(fb)
+            continue
+        if math.isfinite(v) and FWHM_MIN_PX < v < hi:
+            return v
     return None
 
 
@@ -128,7 +148,7 @@ def fwhm_from_header_vy_fwhm(hdr: Any) -> float | None:
         return None
     if isinstance(raw, tuple):
         raw = raw[0]
-    return clamp_fwhm_px(raw)
+    return clamp_fwhm_px(raw, shape=header_shape(hdr))
 
 
 def lookup_qc_fwhm_px(

@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from optics import header_focal_length_mm, header_native_pixel_um_mean, parse_sensor_size
+
 # Auto-fill must be CONSERVATIVE: a wrong equipment auto-fill silently corrupts gain/
 # pixel via the resolver's DB-set authority, whereas a *missed* match only prompts.
 #   high   (>= 0.80) -> auto-fill (override default)
@@ -45,11 +47,6 @@ class Detection:
     def ok(self) -> bool:
         """Usable match (pre-fill or better) - not flagged as an unresolved gap."""
         return self.matched_id is not None and self.confidence >= PREFILL_THRESHOLD
-
-    @property
-    def autofill(self) -> bool:
-        """High-confidence: safe to silently override the default selector."""
-        return self.matched_id is not None and self.confidence >= AUTOFILL_THRESHOLD
 
     def band(self) -> str:
         if self.matched_id is None or self.confidence < PREFILL_THRESHOLD:
@@ -113,19 +110,6 @@ def _model_core(norm_name: str) -> str:
     return m.group(0) if m else ""
 
 
-def _parse_sensorsize(raw: Any) -> tuple[int, int] | None:
-    """Parse ``"4164*2796"`` / ``"6252x4176"`` -> (w, h)."""
-    if raw is None:
-        return None
-    m = re.search(r"(\d{2,})\s*[*xXx]\s*(\d{2,})", str(raw))
-    if not m:
-        return None
-    try:
-        return int(m.group(1)), int(m.group(2))
-    except ValueError:
-        return None
-
-
 def _dims_close(a: float, b: float, tol_frac: float = 0.01, tol_abs: float = 8.0) -> bool:
     """Sensor dims close, allowing for binning truncation (e.g. 1397*2=2794 vs 2796)."""
     return abs(a - b) <= max(tol_abs, tol_frac * max(a, b))
@@ -143,7 +127,8 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
     full_w = naxis1 * xbin if naxis1 else None
     full_h = naxis2 * ybin if naxis2 else None
     gain_h = _hdr_float(header, "EGAIN", "GAIN")
-    xpix = _hdr_float(header, "XPIXSZ", "PIXSIZE1", "XPIXSIZE", "PIXSIZE")
+    # native pitch by the optics convention (XPIXSZ binned, PIXSIZE1 native)
+    px_full = header_native_pixel_um_mean(header) if header is not None else None
     sensortype_n = _norm(_hdr_str(header, "SENSOR", "SENSORTYP"))
 
     best: Detection = Detection()
@@ -165,7 +150,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
             if _own is not None and any(str(m.get("key")) == str(_own.get("key")) for m in _hits):
                 score += 0.50
                 reasons.append(f"INSTRUME = catalog model {_own.get('model')}")
-        ss = _parse_sensorsize(row.get("SENSORSIZE"))
+        ss = parse_sensor_size(row.get("SENSORSIZE"))
         if ss and full_w and full_h and _dims_close(full_w, ss[0]) and _dims_close(full_h, ss[1]):
             score += 0.40
             reasons.append(
@@ -178,8 +163,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
             score += 0.30
             reasons.append(f"GAIN {gain_h:g} ~ DB {float(g_db):g}")
         px_db = row.get("PIXELSIZE")
-        if xpix and xpix > 0 and px_db and float(px_db) > 0:
-            px_full = xpix / (xbin or 1.0)
+        if px_full and px_db and float(px_db) > 0:
             if math.isclose(px_full, float(px_db), rel_tol=0.05):
                 score += 0.15
                 reasons.append(f"pixel {px_full:g}um ~ DB {float(px_db):g}um")
@@ -199,9 +183,7 @@ def detect_equipment(header: Any, equipments: list[dict[str, Any]]) -> Detection
 
 
 def detect_telescope(header: Any, telescopes: list[dict[str, Any]]) -> Detection:
-    focal_h = _hdr_float(header, "FOCALLEN", "FOCLEN", "TELFOCA")
-    if focal_h is not None and 0.0 < focal_h < 25.0:
-        focal_h *= 1000.0  # metres -> mm for fast scopes
+    focal_h = header_focal_length_mm(header)  # optics: one unit rule (G02-41)
     apt_h = _hdr_float(header, "APTDIA", "APERTURE", "TELDIAM", "DIAMETER")
     tel_n = _norm(_hdr_str(header, "TELESCOP", "TELESCOPE"))
 

@@ -38,6 +38,7 @@ def test_qc_enrich_stamps_stage_on_apply(tmp_path: Path) -> None:
         target_ra=None,
         target_dec=None,
         inject_pointing_only_if_missing=True,
+        detection_sigma=4.5,
     )
     assert row.get("cal_stage") == "SKYSF_2"
     with fits.open(fp) as hdul:

@@ -132,28 +132,3 @@ def catalog_fingerprints_equal(a: dict[str, Any] | None, b: dict[str, Any] | Non
     return all(a.get(k) == b.get(k) for k in keys) and _coverage_key(a.get("coverage")) == _coverage_key(
         b.get("coverage")
     )
-
-
-def summarize_catalog_delta(
-    expected: dict[str, Any] | None,
-    actual: dict[str, Any] | None,
-) -> list[str]:
-    if expected is None and actual is None:
-        return []
-    if expected is None or actual is None:
-        return ["catalog block missing on one side"]
-    issues: list[str] = []
-    for name in ("gaia_dr3", "vsx", "exoplanets"):
-        exp = (expected or {}).get(name)
-        act = (actual or {}).get(name)
-        if catalog_fingerprints_equal(exp, act):
-            continue
-        issues.append(f"{name}: input catalogue changed")
-        if exp and act:
-            for k in ("fingerprint_sha256", "size_bytes", "row_count", "coverage", "mtime_utc"):
-                ev, av = exp.get(k), act.get(k)
-                if k == "coverage":
-                    ev, av = _coverage_key(ev), _coverage_key(av)
-                if ev != av:
-                    issues.append(f"  {name}.{k}: anchor={exp.get(k)!r} run={act.get(k)!r}")
-    return issues

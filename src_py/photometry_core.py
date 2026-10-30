@@ -5,7 +5,6 @@ Pipeline modules import from the defining modules, never from here (LAYER-2026-1
 from __future__ import annotations
 
 import logging
-import math
 from pathlib import Path
 from typing import Any
 
@@ -29,13 +28,14 @@ from photometry_defs import (  # noqa: F401
     PHASE_USECOLS_PERFRAME,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
-    SKY_SURFACE_BG_MEDIAN_ADU_COL,
     TIME_BASE_BJD_TDB,
     TIME_BASE_COL,
     TIME_BASE_JD_FALLBACK,
 )
 from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO, MAD_CONSISTENCY  # noqa: F401
 from mag_constants import MAG_ERR_SCALE
+from aperture_policy import fwhm_from_header_vy_fwhm
+from optics import frame_plate_scale
 
 _PSF_ERR_MAG_SCALE = MAG_ERR_SCALE
 
@@ -83,39 +83,15 @@ def run_full_photometry_pipeline(
         except Exception as exc:  # noqa: BLE001
             logging.error('[EXC-0220] Shared MASTERSTAR header cache load fails - repeated FITS opens (perf), not science num...: %s', exc)
             logging.warning("[PERF-2] Cannot open MASTERSTAR.fits for header: %s", exc)
-    if _ms_header_shared is not None:
-        try:
-            for key in ("VY_FWHM",):
-                v = _ms_header_shared.get(key)
-                if v is None:
-                    continue
-                fv = float(v)
-                if 0.5 < fv < 30.0:
-                    fwhm_px = fv
-                    break
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0221] VY_FWHM header parse fails - pipeline uses default/config FWHM for target and comparison-star selection: %s', exc)
-            pass
+    # G03-29: the one VY_FWHM reader
+    _vy_fw = fwhm_from_header_vy_fwhm(_ms_header_shared)
+    if _vy_fw is not None:
+        fwhm_px = _vy_fw
 
     # -- target and comparison-star selection --
     _p("Target and comparison-star selection...")
-    _plate_scale = _get_plate_scale_from_cfg(
-        _cfg,
-        db=db,
-        draft_id=draft_id,
-        fits_path=Path(masterstar_fits_path),
-        ms_header=_ms_header_shared,
-    )
-    if _plate_scale is None:
-        _plate_scale = _read_plate_scale_from_fits_path(
-            Path(masterstar_fits_path),
-            ms_header=_ms_header_shared,
-        )
-        if _plate_scale is not None and math.isfinite(float(_plate_scale)) and float(_plate_scale) > 0:
-            logging.info(
-                "[FOV] plate_scale from MASTERSTAR.fits header -> %.4f arcsec/px",
-                float(_plate_scale),
-            )
+    # G08-29: one plate-scale reader (optics): solved WCS of the MASTERSTAR, else the draft rig
+    _plate_scale = frame_plate_scale(Path(masterstar_fits_path), header=_ms_header_shared, db=db, draft_id=draft_id)
     p01 = run_target_and_comp_selection(
         variable_targets_csv=Path(variable_targets_csv),
         masterstars_csv=Path(masterstars_csv),
@@ -123,7 +99,6 @@ def run_full_photometry_pipeline(
         output_dir=Path(output_dir),
         fwhm_px=float(fwhm_px),
         plate_scale_arcsec_px=_plate_scale,
-        comp_max_delta_bprp=float(_cfg.comp_max_delta_bprp),
         n_comp_min=int(_cfg.phase01_comparison_n_comp_min),
         n_comp_max=int(_cfg.phase01_comparison_n_comp_max),
         max_comp_rms=float(_cfg.phase01_comparison_max_comp_rms),
@@ -195,11 +170,9 @@ __all__ = [
     "compute_fwhm_gaussian_for_aperture_catalog",
     "compute_lc_rms_ooe",
     "compute_optimal_apertures",
-    "empirical_feature_mask_mag",
     "enhance_catalog_dataframe_aperture",
     "ensemble_normalize",
     # aperture_photometry (legacy)
-    "measure_fwhm_from_masterstar",
     "read_flux_from_csv",
     "resolve_apply_color_term",
     "run_full_photometry_pipeline",
@@ -222,9 +195,6 @@ from photometry_shared import (
     _target_display_name,
     stamp_vsx_known_variable_on_masterstars,
     build_gs11_summary,
-    _get_plate_scale_from_cfg,
-    _resolve_plate_scale_arcsec_per_px,
-    _read_plate_scale_from_fits_path,
     common_field_intersection_bbox_px_from_headers,
     common_field_intersection_bbox_px,
     _fwhm_moment_at,
@@ -233,8 +203,6 @@ from photometry_shared import (
 )
 
 from aperture_photometry import (  # noqa: E402,F401
-    _mad_sigma_or_std_floor,
-    measure_fwhm_from_masterstar,
     compute_optimal_apertures,
     _aperture_proc_column_requirements,
     _aperture_cache_columns,
@@ -244,9 +212,6 @@ from aperture_photometry import (  # noqa: E402,F401
     _require_comparison_stars_per_target_schema,
     _resolve_photometric_aperture_px_for_gs11,
     read_flux_from_csv,
-    fit_color_term_c1,
-    _group_comp_mag_inst_from_proc_csvs,
-    empirical_feature_mask_mag,
     apply_reporting_postprocess,
     build_rms_mag_model,
     expected_rms_from_model,
@@ -256,7 +221,7 @@ from aperture_photometry import (  # noqa: E402,F401
     _propagate_aperture_skip_reason_to_active,
     run_aperture_photometry,
 )
-from band_classify import should_apply_color_term, resolve_apply_color_term  # noqa: E402,F401
+from band_classify import resolve_apply_color_term  # noqa: E402,F401
 from photometry_gate_helpers import (  # noqa: E402,F401
     _howell_variance_adu2,
     _photometric_error,
@@ -271,9 +236,6 @@ from photometry_lightcurve import (
     ensemble_normalize,
     _ensemble_scatter_by_source_file,
     _combine_err_with_ensemble_scatter_keyed,
-    ct_ensemble_reference_maps,
-    apply_color_term,
-    _check_color_term_extrapolation,
     save_lightcurve_csv,
     save_lightcurve_png,
     _per_frame_sat_flags_for_catalog_id,

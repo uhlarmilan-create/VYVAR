@@ -15,6 +15,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import FITSFixedWarning, WCS
 
+from aperture_policy import fwhm_from_header_vy_fwhm
 from fits_suffixes import path_suffix_is_fits
 
 # Shared deterministic RNG seed (solver RANSAC uses 42; astroalign patched below).
@@ -193,16 +194,6 @@ def circular_angle_diff_deg(a_deg: float, b_deg: float) -> float:
     return abs(float(d))
 
 
-def effective_binned_pixel_pitch_um(*, base_pixel_um_1x1: float, binning: int) -> float:
-    """Physical pixel pitch of one **image** pixel after symmetric binning.
-
-    ``base_pixel_um_1x1`` is the camera datasheet pitch at 1x1 (e.g. from EQUIPMENTS.PIXELSIZE).
-    For 2x2 binning each output pixel spans 2x2 sensor pixels -> pitch doubles.
-    """
-    b = max(1, int(binning))
-    return float(base_pixel_um_1x1) * float(b)
-
-
 def parse_fits_binning_int(raw: object, default: int = 1) -> int:
     """Parse FITS binning: ``2``, ``2.0``, ``"2x2"``, ``"2 x 2"`` -> int; else *default*."""
     if raw is None:
@@ -214,24 +205,13 @@ def parse_fits_binning_int(raw: object, default: int = 1) -> int:
             return max(1, int(round(float(raw))))
         return max(1, int(default))
     s = str(raw).strip().lower().replace(" ", "")
-    m = re.match(r"^(\d+)[xx](\d+)$", s)
+    m = re.match("^(\\d+)[*x\u00d7](\\d+)$", s)  # G13-07: "2x2", "2*2", "2 X 2"
     if m:
         return max(1, int(m.group(1)))
     try:
         return max(1, int(round(float(raw))))
     except (TypeError, ValueError):
         return max(1, int(default))
-
-
-def parse_sensor_naxis_from_text(sensor_size: str | None) -> tuple[int, int] | None:
-    """Parse ``EQUIPMENTS.SENSORSIZE`` like ``6280x4176`` -> (width, height)."""
-    if not sensor_size or not str(sensor_size).strip():
-        return None
-    m = re.search(r"(\d+)\s*[xx]\s*(\d+)", str(sensor_size), flags=re.IGNORECASE)
-    if not m:
-        return None
-    w, h = int(m.group(1)), int(m.group(2))
-    return (w, h) if w > 0 and h > 0 else None
 
 
 def infer_binning_xy_from_sensor_shape(
@@ -265,30 +245,6 @@ def fits_binning_xy_from_header(header: fits.Header) -> tuple[int, int]:
     return xb, yb
 
 
-def normalize_telescope_focal_mm_for_plate_scale(raw_mm: float) -> tuple[float, bool]:
-    """Correct a common data-entry error: focal length stored as **2000** instead of **200** mm.
-
-    Only a narrow band is adjusted so real ~2 m systems (e.g. 2000 mm) are not rewritten blindly.
-    Returns ``(focal_mm, was_corrected)``.
-    """
-    if not math.isfinite(raw_mm) or raw_mm <= 0:
-        return float(raw_mm), False
-    if 1750.0 <= raw_mm <= 2250.0:
-        v10 = raw_mm / 10.0
-        if 120.0 <= v10 <= 380.0:
-            return float(v10), True
-    return float(raw_mm), False
-
-
-# Plate scale [arcsec/pixel] = (pixel_pitch_um / focal_length_mm) * K; K = 206.265 (~ rad-> arcsec / 1000 for um/mm).
-PLATE_SCALE_ARCSEC_PER_UM_OVER_MM: float = 206.265
-
-# Minimum great-circle cone radius [deg] for Gaia queries and overlays. Undersized cones (often from a
-# bad WCS scale that collapses corner separations) produce a visible 'catalog disc' in QA; wide chips at ~200 mm
-# need several degrees to cover the diagonal.
-MIN_GAIA_CONE_RADIUS_DEG: float = 3.5
-
-
 # photutils ``DAOStarFinder`` (>=3): ``roundness_range`` / ``sharpness_range`` disable shape
 # filtering when set to extreme values; ``min_separation=0`` freezes 2.x detection (DEPS-CYCLE-2).
 # Comatic / corner stars are non-round and would be rejected with default roundness (-1, 1).
@@ -300,52 +256,19 @@ DAO_STAR_FINDER_NO_ROUNDNESS_FILTER: dict[str, float | tuple[float, float]] = {
 
 
 def dao_detection_fwhm_pixels(header: fits.Header | None, *, configured_fallback: float | None) -> float | None:
-    """DAO centroid kernel from header FWHM, or fallback.
-
-    - If ``VY_FWHM`` exists: returns ``VY_FWHM`` (clamped to a sensible range).
-    - Else: returns ``max(3, configured_fallback)`` when fallback is provided.
-    - If fallback is ``None`` and header has no usable value: returns ``None``.
+    """DAO centroid kernel FWHM [px]: header ``VY_FWHM`` (the one reader,
+    :func:`aperture_policy.fwhm_from_header_vy_fwhm`, G03-29) clamped to 1.2..20 px, else
+    ``max(3, configured_fallback)``; None when neither is usable (no 4.5 px default).
     """
-    measured: float | None = None
-    # Safe: header key checked with `in header` before access.
-    if header is not None and "VY_FWHM" in header:
-        try:
-            v = float(header["VY_FWHM"])
-            if math.isfinite(v) and 0.5 < v < 80.0:
-                measured = v
-        except (TypeError, ValueError):
-            pass
+    measured = fwhm_from_header_vy_fwhm(header)
     if measured is not None:
         return float(max(1.2, min(20.0, measured)))
     if configured_fallback is None:
         return None
     cf = float(configured_fallback)
     if not math.isfinite(cf) or cf <= 0:
-        cf = 4.5
+        return None
     return float(max(3.0, cf))
-
-
-def catalog_cone_radius_from_fov_diameter_deg(fov_diameter_deg: float) -> float:
-    """Cone radius [deg] = (FOV diameter / 2) x 1.2 (20 % margin over half-angle to edge)."""
-    d = float(fov_diameter_deg)
-    if not math.isfinite(d) or d <= 0:
-        return 0.0
-    return float(0.5 * d * 1.2)
-
-
-def plate_scale_arcsec_per_pixel(*, pixel_pitch_um: float, focal_length_mm: float) -> float | None:
-    """Small-angle plate scale [arcsec/pixel] from pixel pitch [um] and focal length [mm].
-
-    ``scale = (pixel_pitch_um / focal_mm) * 206.265``. Focal length is passed through
-    :func:`normalize_telescope_focal_mm_for_plate_scale` so a common ``2000`` vs ``200`` mm typo
-    cannot slip through on this path.
-    """
-    if pixel_pitch_um <= 0:
-        return None
-    foc_n, _ = normalize_telescope_focal_mm_for_plate_scale(float(focal_length_mm))
-    if foc_n <= 0:
-        return None
-    return (float(pixel_pitch_um) / float(foc_n)) * PLATE_SCALE_ARCSEC_PER_UM_OVER_MM
 
 
 def per_frame_catalog_match_sep_arcsec_for_scale(
@@ -360,126 +283,53 @@ def per_frame_catalog_match_sep_arcsec_for_scale(
     return max(float(floor_arcsec), float(arcsec_per_px) * 2.5)
 
 
-def get_optimal_params(
-    *,
-    focal_length_mm: float | None,
-    pixel_size_um: float | None,
-    binning: int = 1,
-    naxis1: int | None = None,
-    naxis2: int | None = None,
-    fov_diameter_deg: float | None = None,
-) -> dict[str, float]:
-    """Heuristic defaults for star detection / catalog search by optics.
-
-    Returns:
-    - ``fwhm``: DAO kernel FWHM in pixels (wide-field / bigger effective pixels -> 4.5)
-    - ``detection_threshold``: sigma threshold (default 1.5)
-    - ``search_radius``: catalog cone radius [deg] with +20 % margin
-    """
-    b = max(1, int(binning or 1))
-    px_native = float(pixel_size_um) if pixel_size_um is not None else float("nan")
-    eff_um = (
-        effective_binned_pixel_pitch_um(base_pixel_um_1x1=px_native, binning=b)
-        if math.isfinite(px_native) and px_native > 0
-        else float("nan")
-    )
-    foc = float(focal_length_mm) if focal_length_mm is not None else float("nan")
-
-    # Wide-field / larger pixels: broader PSF footprint in pixels -> use 4.5 as requested baseline.
-    if (math.isfinite(foc) and foc <= 300.0) or (math.isfinite(eff_um) and eff_um >= 8.0):
-        fwhm = 4.5
-    else:
-        fwhm = 3.5
-    detection_threshold = 1.5
-
-    if (
-        naxis1 is not None
-        and naxis2 is not None
-        and math.isfinite(foc)
-        and foc > 0
-        and math.isfinite(eff_um)
-        and eff_um > 0
-    ):
-        sr = catalog_cone_radius_deg_from_optics(
-            naxis1=int(naxis1),
-            naxis2=int(naxis2),
-            pixel_pitch_um=float(eff_um),
-            focal_length_mm=float(foc),
-            margin=1.2,
-            fov_diameter_fallback_deg=float(fov_diameter_deg or 1.0),
-        )
-    else:
-        sr = catalog_cone_radius_from_fov_diameter_deg(float(fov_diameter_deg or 1.0))
-    return {
-        "fwhm": float(fwhm),
-        "detection_threshold": float(detection_threshold),
-        "search_radius": float(sr),
-    }
-
-
-def catalog_cone_radius_deg_from_optics(
-    *,
-    naxis1: int,
-    naxis2: int,
-    pixel_pitch_um: float,
-    focal_length_mm: float,
-    margin: float = 1.3,
-    fov_diameter_fallback_deg: float = 1.0,
-) -> float:
-    """Great-circle radius [deg] from field centre to chip corner (diagonal), then ``margin`` (default +30%).
-
-    Uses chip diagonal directly: ``hypot(naxis1, naxis2)`` with plate scale [arcsec/px], then half-diagonal
-    converted to degrees and padded by ``margin``. This guarantees query cone >= full rectangular sensor field.
-
-    If focal length or pixel pitch are non-positive, falls back to ``fov_diameter_fallback_deg`` with a
-    sensible floor (>= ``MIN_GAIA_CONE_RADIUS_DEG``, default 3.5 deg).
-    """
-    wpx = max(1, int(naxis1))
-    hpx = max(1, int(naxis2))
-    f_mm = float(focal_length_mm)
-    p_um = float(pixel_pitch_um)
-    r_floor = float(MIN_GAIA_CONE_RADIUS_DEG)
-    if math.isfinite(f_mm) and f_mm > 0 and math.isfinite(p_um) and p_um > 0:
-        sc = plate_scale_arcsec_per_pixel(pixel_pitch_um=p_um, focal_length_mm=f_mm)
-        if sc is None or (not math.isfinite(float(sc))) or float(sc) <= 0:
-            sc = 0.0
-        fov_x_deg = (float(wpx) * float(sc)) / 3600.0
-        fov_y_deg = (float(hpx) * float(sc)) / 3600.0
-        # Required formula: radius = 0.5 * hypot(FOV_x, FOV_y) * padding.
-        r = 0.5 * float(math.hypot(fov_x_deg, fov_y_deg)) * float(margin)
-        # Dynamic floor: wide-field (short focal) needs a larger Gaia cone by default,
-        # but narrow-field optics must not be forced to the global MIN_GAIA_CONE_RADIUS_DEG (3.5 deg),
-        # otherwise the catalog becomes too large and triangle matching becomes intractable.
-        #
-        # For long focal lengths: floor ~ (600 / focal_mm) deg, with a small absolute minimum.
-        dyn_floor = max(0.08, min(float(r_floor), 600.0 / f_mm))
-        return float(max(0.08, max(r, float(dyn_floor))))
-    fb = max(0.05, float(fov_diameter_fallback_deg))
-    return float(max(r_floor, fb * 0.65))
-
-
-def estimate_field_diameter_deg_diagonal(
-    *,
-    naxis1: int,
-    naxis2: int,
-    scale_x_arcsec_per_px: float,
-    scale_y_arcsec_per_px: float,
-) -> float:
-    """Rough field diameter along chip diagonal (different X/Y scales allowed)."""
-    import math
-
-    w = max(1, int(naxis1))
-    h = max(1, int(naxis2))
-    diag_arcsec = math.hypot(w * float(scale_x_arcsec_per_px), h * float(scale_y_arcsec_per_px))
-    return float(diag_arcsec / 3600.0)
-
-
-# --- moved from pipeline_calibrate (LAYER-2026-10) ---
-
-
 def norm_fits_path_key(path: Path | str) -> str:
     """Normalized absolute path key for qc_metrics / allowlist joins (casefold)."""
     try:
         return str(Path(path).resolve()).casefold()
     except OSError:
         return str(path).casefold()
+
+
+def load_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
+    """Map normalized absolute FITS path -> ``status`` from ``qc_metrics.csv``."""
+    import pandas as pd  # noqa: PLC0415
+
+    p = Path(qc_csv)
+    if not p.is_file():
+        raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
+    df = pd.read_csv(p)
+    if "status" not in df.columns:
+        raise ValueError(f"qc_metrics.csv missing status column: {p}")
+    src_col = "src" if "src" in df.columns else "dst"
+    out: dict[str, str] = {}
+    for _, row in df.iterrows():
+        raw = row.get(src_col)
+        if raw is None or (isinstance(raw, float) and not math.isfinite(float(raw))):
+            continue
+        out[norm_fits_path_key(str(raw))] = str(row["status"]).strip()
+    return out
+
+
+#: EXPOSURE-ONE-2026-10: header keywords of the exposure duration, in priority order (one authority).
+EXPOSURE_KEYWORDS: tuple[str, ...] = ("EXPTIME", "EXPOSURE", "EXPOSURE0", "EXP_TIME", "EXPTIM")
+
+
+def exposure_seconds(hdr: Any) -> float | None:
+    """Exposure duration [s] of one frame from its FITS header (EXPOSURE_KEYWORDS), None when absent.
+
+    The single reader of the exposure (code review 2 G06-03 / G08-02): never parsed from a setup or
+    folder name such as ``g_120_4`` or ``g|120|4``."""
+    if hdr is None:
+        return None
+    for k in EXPOSURE_KEYWORDS:
+        v = hdr.get(k)
+        if v is None:
+            continue
+        try:
+            sec = float(v)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(sec) and sec >= 0.0:
+            return sec
+    return None

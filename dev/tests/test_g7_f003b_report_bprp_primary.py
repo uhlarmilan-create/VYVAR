@@ -13,7 +13,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import cm, mm
 
 from config import AppConfig
-from photometry_report import _PhotometryReportBuilder, _norm_cid_decimal
+from photometry_report import _PhotometryReportBuilder
 
 _NOTE_TXT = (
     "Gaia BP-RP colour | COMP weights: w = 1/sigma^2 - Broeg et al., Astron. Nachr. 326, 134 (2005)"
@@ -53,11 +53,6 @@ def _minimal_report_builder(
         draft_dir=tmp_path,
         obs_group=obs_group,
         output_pdf=tmp_path / "report.pdf",
-        var_results=None,
-        candidates=None,
-        crossmatch_bullets=None,
-        accepted_periods=None,
-        variability_timestamp=None,
         report_draft_label=None,
         tess_results=None,
         report_title="Test report",
@@ -97,57 +92,3 @@ def test_report_legacy_flag_false_still_uses_bprp_display(
     assert builder._use_bprp_primary is True
     assert builder.NOTE_TXT == _NOTE_TXT
     assert "Riello" not in builder.NOTE_TXT
-
-
-def test_comp_rows_legacy_flag_false_still_skips_bv(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    target = "486430957815961344"
-    comp_df = pd.DataFrame(
-        {
-            "target_catalog_id": [target],
-            "catalog_id": ["1498613634033133184"],
-            "mag": [12.0],
-            "b_v": [0.55],
-            "bv_source": ["gaia_bprp"],
-            "bp_rp": [0.8],
-            "delta_bprp_abs": [0.1],
-            "dist_deg": [0.01],
-            "comp_n_frames": [10],
-            "comp_rms": [0.02],
-            "comp_tier": [1],
-        }
-    )
-    builder = _minimal_report_builder(
-        tmp_path, monkeypatch, extra_cfg={"phase01_use_bprp_primary": False}, comp_df=comp_df
-    )
-    rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
-    assert len(rows) == 1
-    assert rows[0][3] == "0.800"
-
-
-def test_comp_rows_true_skips_bv_columns(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    target = "486430957815961344"
-    comp_df = pd.DataFrame(
-        {
-            "target_catalog_id": [target],
-            "catalog_id": ["1498613634033133184"],
-            "mag": [12.0],
-            "b_v": [0.55],
-            "bv_source": ["gaia_bprp"],
-            "bp_rp": [0.8],
-            "delta_bprp_abs": [0.1],
-            "dist_deg": [0.01],
-            "comp_n_frames": [10],
-            "comp_rms": [0.02],
-            "comp_tier": [1],
-        }
-    )
-    builder = _minimal_report_builder(
-        tmp_path, monkeypatch, extra_cfg={"phase01_use_bprp_primary": True}, comp_df=comp_df
-    )
-    rows, _ = builder._comp_rows_for_target(_norm_cid_decimal(target))
-    assert len(rows) == 1
-    assert rows[0][3] == "0.800"

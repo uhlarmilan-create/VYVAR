@@ -175,7 +175,7 @@ def candidate_lc_png(lc_csv: Path, out: Path, title: str, time_label: str = "JD"
         ax2.plot(t - t0, d["airmass"], c="#B08900", lw=1)
         ax2.set_ylabel("airmass", fontsize=8)
     axs[1].set_ylabel("FWHM", fontsize=8)
-    tl = {"bjd_tdb_mid": "BJD_TDB", "jd_mid": "JD (UTC)"}.get(str(time_label), str(time_label))
+    tl = {"bjd_tdb": "BJD_TDB", "bjd_tdb_mid": "BJD_TDB", "jd_mid": "JD (UTC)"}.get(str(time_label), str(time_label))
     axs[1].set_xlabel(f"{tl} - {t0:.0f} [d]")
     fig.tight_layout()
     out = Path(out)

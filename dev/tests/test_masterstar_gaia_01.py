@@ -30,7 +30,7 @@ def test_inv_ms_census_01_fail_loud(tmp_path: Path) -> None:
     assert not list(tmp_path.iterdir())  # OUTPUT-REVIEW-2026-10: no census file
 
 
-def test_seed_rows_excluded_from_comp_pool_when_gate_off() -> None:
+def test_forced_photometry_rows_excluded_from_comp_pool() -> None:
     from pipeline import select_comparison_stars_spatial_grid
 
     rows = []
@@ -61,7 +61,7 @@ def test_seed_rows_excluded_from_comp_pool_when_gate_off() -> None:
             "mag": 11.0,
             "is_usable": True,
             "photometry_ok": True,
-            "source_state": "FORCED_SEED",
+            "source_state": "catalog_membership",
             "forced_photometry": True,
         }
     )

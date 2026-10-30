@@ -46,5 +46,5 @@ def test_measured_targets_and_page(tmp_path) -> None:
 def test_tier_text_and_ut_ticks() -> None:
     assert _tier_text("1.0") == "1" and _tier_text("TIER3_x") == "3" and _tier_text("") == "-"
     jd = np.array([2461154.30, 2461154.45])
-    vals, labs = _ut_ticks(jd - 2461154.0, jd)
+    vals, labs = _ut_ticks(jd - 2461154.0, 2461154.0)  # G14-17: offset from star_page_m3.lc_plot_data
     assert labs[0] == "20:00" and abs(vals[0] - (2461154.0 + 20 / 24.0 - 0.5 - 2461154.0 + 0.0)) < 1e-9

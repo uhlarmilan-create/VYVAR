@@ -113,6 +113,13 @@ def load_pair(lc_dir: Path | str, catalog_id: str, fwhm_by_frame: dict[str, floa
     return df
 
 
+def psf_level_shift(df: pd.DataFrame) -> float:
+    """G14-17: the ePSF curve is drawn at the aperture level - median of (ePSF - aperture) over the epochs
+    both methods kept (``load_pair``); 0 without a common epoch. One computation for the PDF and the UI."""
+    both = df.loc[df["ap_ok"] & df["psf_ok"]]
+    return float(np.median(both["psf_mag"] - both["ap_mag"])) if len(both) else 0.0
+
+
 def pair_stats(df: pd.DataFrame) -> dict[str, float]:
     """Statistics of one star's epoch table (``load_pair``); magnitudes in mmag. Scatter and median error of
     both methods are taken on the common epochs only: the p2p scatter of a variable star grows with the time

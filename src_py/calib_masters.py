@@ -144,7 +144,7 @@ def master_filename(kind: str, hdr: fits.Header, *, camera_id: int, capture: Any
     ]
     if kind == "flat":
         parts.append(re.sub(r"[^A-Za-z0-9.+-]", "", cl.header_filter(hdr)) or "NoFilter")
-    parts.append(f"{cl.header_gain(hdr)}G")
+    parts.append(f"{cl.header_gain(hdr):g}G")
     if off is not None:
         parts.append(f"O{off}")
     if temp is not None:

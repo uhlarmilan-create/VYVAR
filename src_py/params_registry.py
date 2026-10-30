@@ -230,22 +230,3 @@ def compute_deviations(
     return {"modified": modified, "unknown": unknown}
 
 
-def infer_widget_kind(field_name: str, field_type: str, entry: dict[str, Any]) -> str:
-    """Map a registry entry + field type to a concrete widget kind.
-
-    Returns one of: ``checkbox`` | ``number`` | ``select`` | ``text``. Pure function
-    (no Streamlit); used by the dashboard renderer and its smoke test.
-    """
-    t = (field_type or "").lower()
-    if "bool" in t:
-        return "checkbox"
-    if field_name in LITERAL_OPTIONS:
-        return "select"
-    # Compound containers before scalar float/int (``list[float]`` contains "float").
-    if "dict" in t or "list" in t:
-        return "text"
-    if entry.get("range") is not None:
-        return "number"
-    if "int" in t or "float" in t:
-        return "number"
-    return "text"

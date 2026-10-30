@@ -16,11 +16,11 @@ from typing import Any, Callable, Mapping, Sequence
 import numpy as np
 import pandas as pd
 from astropy.io import fits
-from astropy.time import Time
 
 from config import AppConfig, resolve_detection_threshold_sigma
 from database import VyvarDatabase
 from calibration import (
+    MasterResamplingError,
     filter_light_paths_for_calibration_db,
     get_processed_master,
 )
@@ -32,17 +32,19 @@ from cal_diag import (
     gate_result_for_frame,
     is_obs_group_aborted,
     passthrough_cal_diag_headers,
+    raise_if_dark_convention_undecided,
     run_cal_diag_pregate,
     write_cal_diag_json,
 )
 from cal_stage import _header_has_vy_skysf
 from fits_meta import (
-    _safe_filter_token,
+    exposure_start_utc,
     _summarize_lights_binning_from_headers,
     _valid_bayerpat_from_header,
     extract_fits_metadata,
     fits_metadata_from_primary_header,
     log_lights_binning_from_headers_preflight,
+    normalize_filter_name,
     observation_group_key_from_metadata,
 )
 from fits_suffixes import FITS_SUFFIXES_LOWER
@@ -62,7 +64,7 @@ from utils import (
 )
 from vyvar_alignment_frame import _as_fits_float32_image
 from fits_meta import pointing_hint_from_header as _pointing_hint_from_header
-from utils import norm_fits_path_key  # LAYER-2026-10: moved there
+from utils import exposure_seconds, norm_fits_path_key  # LAYER-2026-10: moved there
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton). Avoids
 # pipeline -> pipeline_calibrate -> pipeline at module load (spawn children
@@ -151,10 +153,6 @@ def _cal_diag_export_for_workers(session: CalDiagSession) -> dict[str, Any] | No
     if not session.gate_results and not session.aborted_groups:
         return None
     return session.json_export()
-
-
-# ``_calibrate_one_light_*``: explicit ``None`` = read master FITS; omit param = library default (1x1).
-_CALIB_MASTER_NB_UNSET = object()
 
 
 def _log_calibration_io_preflight(
@@ -310,61 +308,9 @@ def _archive_preprocess_lights_root(
 
 
 def _inspection_jd_from_header(hdr: fits.Header) -> float | None:
-    """Julian Date (UTC) for scatter time axis."""
-    for k in ("MJD-OBS", "MJD_OBS"):
-        v = hdr.get(k)
-        if v is not None:
-            try:
-                mjd = float(v)
-                if math.isfinite(mjd):
-                    return mjd + 2400000.5
-            except (TypeError, ValueError):
-                continue
-    for k in ("JD-OBS", "JD_OBS", "JD"):
-        v = hdr.get(k)
-        if v is not None:
-            try:
-                jd = float(v)
-                if math.isfinite(jd):
-                    return jd
-            except (TypeError, ValueError):
-                continue
-    date = hdr.get("DATE-OBS")
-    if date:
-        tim = hdr.get("TIME-OBS", hdr.get("TIME", "00:00:00"))
-        d_s = str(date).strip()
-        tim_s = str(tim).strip() if tim is not None else "00:00:00"
-        if "T" in d_s:
-            base = d_s.split("T", 1)[0]
-            iso = f"{base}T{tim_s}"
-        else:
-            iso = f"{d_s}T{tim_s}"
-        try:
-            t = Time(iso, format="isot", scale="utc")
-            return float(t.jd)
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0283] DATE-OBS/Time parse failure leaves inspection_jd NULL in manifest files[] QC updates.: %s', exc)
-            try:
-                t = Time(d_s, scale="utc")
-                return float(t.jd)
-            except Exception:  # noqa: BLE001
-                pass
-    return None
-
-
-def _exposure_sec_from_header(hdr: fits.Header) -> float | None:
-    """Exposure duration in seconds from common FITS keywords."""
-    for k in ("EXPTIME", "EXPOSURE", "EXPOSURE0", "EXP_TIME", "EXPTIM"):
-        v = hdr.get(k)
-        if v is None:
-            continue
-        try:
-            sec = float(v)
-            if math.isfinite(sec) and sec >= 0.0:
-                return sec
-        except (TypeError, ValueError):
-            continue
-    return None
+    """UTC JD of exposure start for the QC time axis (G01-05: the one parser, fits_meta.exposure_start_utc)."""
+    t = exposure_start_utc(hdr)
+    return float(t.jd) if t is not None else None
 
 
 def _quality_inspection_dao_metrics_array(
@@ -387,7 +333,7 @@ def _quality_inspection_dao_metrics_array(
         "sky_background": None,
         "star_count": 0,
         "inspection_jd": _inspection_jd_from_header(hdr),
-        "exposure_sec": _exposure_sec_from_header(hdr),
+        "exposure_sec": exposure_seconds(hdr),
         "elongation_mean": None,
         "noise_sigma": None,
         "qc_stars": [],
@@ -635,7 +581,6 @@ def apply_perf10_dao_qc_to_obs_files(
 
     med_ra, med_de = draft_median_pointing_icrs_deg(db, int(draft_id))
     sync_obs_files_drift_arcmin_for_draft(db, int(draft_id), ref_ra_deg=med_ra, ref_de_deg=med_de)
-    db._try_refresh_draft_manifest(int(draft_id))
     _dl_suggest = 5.0
     return {
         "draft_id": int(draft_id),
@@ -662,8 +607,11 @@ def run_draft_ram_calibration_qc_to_obs_files(
     master_dark_by_obs_key: dict[str, str | Path | None] | None = None,
     equipment_id: int | None = None,
     progress_cb: Callable[[int, int, str], None] | None = None,
+    pedestal_temp_tol_c: float,
 ) -> dict[str, Any]:
     """Calibrate each draft light **in RAM only**, DAO metrics -> ``manifest files[]``; FWHM x1.5 reject.
+
+    ``pedestal_temp_tol_c``: ``calibration_master_ccd_temp_tolerance_c`` for the CAL-DIAG pedestal darks (G01-46).
 
     No calibrated FITS are written. Uses the same master selection rules as :func:`calibrate_lights_to_calibrated`.
     After QC, :func:`sync_obs_files_drift_arcmin_for_draft` writes ``DRIFT`` / ``DRIFT_DRA`` / ``DRIFT_DDE``.
@@ -671,7 +619,7 @@ def run_draft_ram_calibration_qc_to_obs_files(
     import numpy as np
 
     ap = Path(archive_path).expanduser()
-    db_cal = _db_for_calibration_tasks(None)
+    db_cal = db  # G01-15: the run's database (flat offsets, saturation) - never None here
 
     mf_merged: dict[str, Path | None] = {}
     for k, v in (masterflat_by_filter or {}).items():
@@ -682,8 +630,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
     md_path_ok: Path | None = None
     if master_dark_path is not None and Path(master_dark_path).exists():
         md_path_ok = Path(master_dark_path)
-
-    _native_b = None  # CAL-2026-10: master binning from each master header
 
     flat_cache: dict[str, Any] = {}
     flat_median_scale: dict[str, float] = {}
@@ -711,15 +657,17 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 master_dark_by_obs_key=master_dark_by_obs_key,
             ),
             light_binning_from_path=_light_binning_from_path,
-            master_binning=_native_b,
+            master_binning=None,
             match_and_crop_pair=_match_and_crop_pair,
             saturation_for_light=lambda fp: _saturation_adu_for_cal_diag(
                 fits.getheader(fp, 0),
                 db=db_cal,
                 equipment_id=equipment_id,
             ),
+            pedestal_temp_tol_c=float(pedestal_temp_tol_c),
         )
     write_cal_diag_json(ap, cal_diag_session)
+    raise_if_dark_convention_undecided(cal_diag_session)
 
     for i, row in enumerate(rows, start=1):
         rid = int(row["ID"])
@@ -773,7 +721,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
                 dark_cache=dark_cache,
                 db=db_cal,
                 id_equipments=equipment_id,
-                calibration_master_native_binning=_native_b,
                 cal_diag_gate_result=gr,
             )
         except Exception as exc:  # noqa: BLE001
@@ -847,7 +794,6 @@ def run_draft_ram_calibration_qc_to_obs_files(
         "errors": errors,
         "suggested_drift_limit_arcmin": float(_dl_suggest_ram),
     }
-    db._try_refresh_draft_manifest(int(draft_id))
     return result
 
 
@@ -980,17 +926,21 @@ def _effective_saturation_limit(
 def _db_for_calibration_tasks(
     qc_opt: dict[str, Any] | None,
 ) -> VyvarDatabase | None:
-    """Open DB once per worker / sequential pass when post-calibrate QC needs it."""
+    """The run's database for the calibration (flat offsets, manifest calib_flags / cal_stage, QC).
+
+    G01-15: opened whenever a database is configured, independent of the post-calibration QC switch
+    (switching QC off used to drop the manifest provenance and made every flat offset lookup fail).
+    Returns None only when no database is configured; a configured database that cannot be opened
+    raises (no silent loss of the calibration record)."""
     q = qc_opt or {}
-    p: str | None = None
-    if q.get("enabled") and q.get("db_path"):
-        p = str(q["db_path"])
+    p = str(q.get("db_path") or "").strip()
     if not p:
         return None
-    try:
-        return VyvarDatabase(Path(p))
-    except Exception:  # noqa: BLE001
-        return None
+    db = VyvarDatabase(Path(p))
+    ar = str(q.get("archive_root") or "").strip()
+    if ar:
+        db._archive_root_override = Path(ar)
+    return db
 
 
 def _qc_pack_from_config(
@@ -1014,7 +964,8 @@ def _qc_pack_from_config(
     return {
         "enabled": en,
         "dao_detection_sigma": _dao,
-        "db_path": str(Path(cfg.database_path).resolve()) if en else None,
+        "db_path": (str(Path(cfg.database_path).resolve()) if str(cfg.database_path or "").strip() else None),
+        "archive_root": str(getattr(cfg, "archive_root", "") or "") or None,
         "draft_id": draft_id,
         "observation_id": observation_id,
         "id_equipments": id_equipments,
@@ -1238,33 +1189,38 @@ def _calibrate_one_light_apply_masters_in_ram(
     src: Path,
     master_dark_path: Path | None,
     masterflat_by_filter: dict[str, Path | None],
-    flat_norm_floor: float = 0.15,
     flat_cache: dict[str, Any] | None = None,
     flat_median_scale: dict[str, float] | None = None,
     dark_cache: dict[tuple[Any, ...], Any] | None = None,
     db: VyvarDatabase | None = None,
     id_equipments: int | None = None,
-    calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
     cal_diag_gate_result: CalDiagGateResult | None = None,
     flat_offsets: dict[str, float] | None = None,
+    flat_substitutes: Mapping[str, str] | None = None,
 ) -> tuple[Any, fits.Header, bool, bool]:
     """Apply dark/flat in RAM; return ``(data_float32, header, used_dark, used_flat)`` (no disk write).
 
-    ``calibration_master_native_binning`` defaults to :data:`calibration.CALIBRATION_LIBRARY_NATIVE_BINNING`
-    (CalibrationLibrary stores native masters; resample in RAM to match light ``XBINNING``).
-    Pass ``None`` to read ``XBINNING`` from each master FITS.
+    The binning of each master is read from its own FITS header (CAL-2026-10) and the master is
+    resampled in RAM to the light's ``XBINNING``.
 
     ``dark_cache`` (SPEED-2026-10): the processed master dark per (path, binning, shape, resample
     mode) is read and resampled once per run instead of once per frame (same array).
-    """
-    import numpy as np
 
-    if calibration_master_native_binning is _CALIB_MASTER_NB_UNSET:
-        _mb_lib = None  # CAL-2026-10: master binning from each master header
-    elif calibration_master_native_binning is None:
-        _mb_lib = None
-    else:
-        _mb_lib = max(1, int(calibration_master_native_binning))
+    Flat (G01-03 / G01-29, decision A2): one preparation (:func:`calibration.prepare_flat_for_division`)
+    - normalise, then bad flat pixels are NaN, so those calibrated pixels are NaN (missing data; the
+    aperture photometry flags a star whose aperture touches them). No floor, no replacement by 1.0.
+    Non-finite pixels stay NaN (never zeroed).
+
+    ``flat_substitutes`` (G01-01, decision A1): observation group -> capture date of a FLAT taken on
+    another night (outside the validity window) that the plan chose because the night has no valid
+    flat; the frame is stamped ``VY_FLSUB`` and ``VY_WARN``.
+
+    Dark rebin (G01-24, decision A3): the SUM/MEAN convention comes only from the CAL-DIAG gate
+    result; without one a dark that needs rebinning raises (no default).
+    """
+    from calibration import prepare_flat_for_division  # noqa: PLC0415
+
+    import numpy as np
 
     fc: dict[str, Any] = flat_cache if flat_cache is not None else {}
     fms: dict[str, float] = flat_median_scale if flat_median_scale is not None else {}
@@ -1276,30 +1232,20 @@ def _calibrate_one_light_apply_masters_in_ram(
     light_bx, light_by = fits_binning_xy_from_header(hdr)
     hdr["VY_CLBX"] = (int(light_bx), "Light XBINNING for master matching/resample")
     hdr["VY_CLBY"] = (int(light_by), "Light YBINNING (diagnostic)")
-    if _mb_lib is None:
-        hdr["VY_MBNC"] = (
-            -1,
-            "Native XBINNING of the library masters",
-        )
-    else:
-        hdr["VY_MBNC"] = (
-            int(_mb_lib),
-            "Assumed native XBINNING of library masters",
-        )
 
     md_data: np.ndarray | None = None
     if master_dark_path is not None and master_dark_path.exists():
-        _drm = "sum"
+        _drm = None
         if cal_diag_gate_result is not None:
             _drm = convention_to_dark_mode(cal_diag_gate_result.convention)
-        _dk = (str(Path(master_dark_path).resolve()), int(light_bx), tuple(data.shape), str(_drm), _mb_lib)
+        _dk = (str(Path(master_dark_path).resolve()), int(light_bx), tuple(data.shape), str(_drm))
         pm = dark_cache.get(_dk) if dark_cache is not None else None
         if pm is None:
             pm = get_processed_master(
                 master_dark_path,
                 light_bx,
                 kind="dark",
-                master_binning=_mb_lib,
+                master_binning=None,
                 light_shape=data.shape,
                 light_filename=src.name,
                 dark_resample_mode=_drm,
@@ -1315,13 +1261,14 @@ def _calibrate_one_light_apply_masters_in_ram(
 
     used_dark = False
     used_flat = False
+    flat_max = 1.0  # normalised flat maximum (1.0 when no flat is applied)
 
     if md_data is not None:
         data2, md2 = _match_and_crop_pair(data, md_data)
         data = data2 - md2
         used_dark = True
 
-    flt = _safe_filter_token(str(hdr.get("FILTER") or hdr.get("FILT") or "NoFilter"))
+    flt = normalize_filter_name(hdr.get("FILTER") or hdr.get("FILT"))
     _obs_k = observation_group_key_from_metadata(fits_metadata_from_primary_header(hdr))
     hdr["VY_OBSG"] = (_obs_k, "Observation group FILTER|EXPTIME|XBINNING")
     mf_path = None
@@ -1341,13 +1288,13 @@ def _calibrate_one_light_apply_masters_in_ram(
             if p_f.is_file():
                 mf_path = p_f
     if mf_path is not None and mf_path.exists() and used_dark:
-        key = f"{flt}|{mf_path!s}|lb{light_bx}"
+        key = f"{flt}|{mf_path!s}|lb{light_bx}|{tuple(data.shape)}"
         if key not in fc:
             pmf = get_processed_master(
                 mf_path,
                 light_bx,
                 kind="flat",
-                master_binning=_mb_lib,
+                master_binning=None,
                 light_shape=data.shape,
                 light_filename=src.name,
                 db=db,
@@ -1359,33 +1306,19 @@ def _calibrate_one_light_apply_masters_in_ram(
                     f"Calibration: library flat native {pmf.master_binning}x{pmf.master_binning} -> "
                     f"resampled (RAM) to {light_bx}x{light_bx} for Light [{src.name}]"
                 )
-            flat = pmf.data
-            flat = np.where(np.isfinite(flat) & (flat > 0), flat, 1.0).astype(np.float32)
-            if pmf.flat_normalized_at_calibrate:
-                fm = pmf.flat_median_adu_before_norm
-                if fm is None or not np.isfinite(fm) or fm <= 0:
-                    fm = float(np.nanmedian(flat))
-                    if not np.isfinite(fm) or fm <= 0:
-                        fm = 1.0
-            else:
-                fm = float(np.nanmedian(flat))
-                if not np.isfinite(fm) or fm <= 0:
-                    fm = 1.0
-                flat = (flat / fm).astype(np.float32)
-            flat = np.maximum(flat, float(flat_norm_floor)).astype(np.float32)
-            fc[key] = flat
-            fms[key] = fm
-        flat_arr = fc[key]
+            _cfa = light_bx == 1 and _valid_bayerpat_from_header(hdr) is not None
+            fc[key] = prepare_flat_for_division(pmf, cfa=_cfa, name=Path(mf_path).name)
+            fms[key] = fc[key][1]
+        flat_arr, _fm, n_flat_bad = fc[key]
+        if key + "|max" not in fc:
+            fc[key + "|max"] = float(np.nanmax(flat_arr))
+        flat_max = fc[key + "|max"]
         data2, flat2 = _match_and_crop_pair(data, flat_arr)
-        data = data2 / flat2
+        data = (data2 / flat2).astype(np.float32)
         used_flat = True
     flat_skipped_no_dark = bool(mf_path is not None and mf_path.exists() and not used_dark)
     if flat_skipped_no_dark:
         log_event("Flat skipped because no Dark was subtracted (offset would remain in the LIGHT).")
-
-    if used_dark or used_flat:
-        if used_flat or not np.all(np.isfinite(data)):
-            data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
 
     hdr["VYVARCAL"] = (True, "VYVAR calibrated output")
     hdr["VY_DARK"] = (bool(used_dark), "MasterDark applied")
@@ -1410,24 +1343,22 @@ def _calibrate_one_light_apply_masters_in_ram(
             True,
             "Flat not applied: no dark (over-correction)",
         )
+    elif _flags == "D":
+        # G01-01 (decision A1): no flat for this group - a relative product, not for submission
+        hdr["VY_WARN"] = (True, "No flat field: relative photometry only")
+    _sub = (flat_substitutes or {}).get(_obs_k) if used_flat else None
+    if _sub:
+        hdr["VY_FLSUB"] = (str(_sub)[:40], "FLAT from another night (capture date)")
+        hdr["VY_WARN"] = (True, "FLAT substitute from another night")
+        hdr.add_history(f"VYVAR: no valid FLAT for this night; FLAT captured {_sub} used (flagged substitute).")
     if master_dark_path is not None:
         # LOG-NOISE-2026-10: a long file name leaves no room for a comment on the 80-character card
         hdr["VY_MDP"] = str(master_dark_path.name)[:68]
     if mf_path is not None:
         hdr["VY_MFP"] = str(Path(mf_path).name)[:68]
     if used_flat:
-        try:
-            key_m = f"{flt}|{mf_path!s}|lb{light_bx}"
-            hdr["VY_FLATM"] = (
-                float(fms[key_m]),
-                "Median ADU of master flat before normalising",
-            )
-            hdr["VY_FLFL"] = (
-                float(flat_norm_floor),
-                "Min normalised flat value before division",
-            )
-        except KeyError:
-            pass
+        hdr["VY_FLATM"] = (float(_fm), "Median ADU of master flat before normalising")
+        hdr["VY_FLBAD"] = (int(n_flat_bad), "Bad flat pixels (NaN in this frame)")
 
     if used_dark or used_flat:
         _strip_raw_linearity_header_keywords(hdr)
@@ -1437,6 +1368,14 @@ def _calibrate_one_light_apply_masters_in_ram(
         )
 
     apply_cal_diag_headers(hdr, cal_diag_gate_result)
+    # BADPIX-REPAIR-2026-10: lowest calibrated level of a raw-saturated pixel (the linearity limit of the
+    # bad-pixel repair, which runs on the calibrated frame); absent when the saturation is unknown.
+    if used_dark and cal_diag_gate_result is not None:
+        from badpix_repair import calibrated_saturation_adu  # noqa: PLC0415
+
+        _csat = calibrated_saturation_adu(cal_diag_gate_result.saturation_adu, cal_diag_gate_result.pedestal_p, flat_max)
+        if _csat is not None:
+            hdr["VY_CSAT"] = (round(float(_csat), 2), "Raw saturation in calibrated ADU (lowest)")
 
     return data, hdr, used_dark, used_flat
 
@@ -1497,16 +1436,15 @@ def _calibrate_one_light_disk(
     dst: Path,
     master_dark_path: Path | None,
     masterflat_by_filter: dict[str, Path | None],
-    flat_norm_floor: float = 0.15,
     flat_cache: dict[str, Any] | None = None,
     flat_median_scale: dict[str, float] | None = None,
     dark_cache: dict[tuple[Any, ...], Any] | None = None,
     db: VyvarDatabase | None = None,
     qc_pack: dict[str, Any] | None = None,
-    calibration_master_native_binning: int | None | object = _CALIB_MASTER_NB_UNSET,
     cal_diag_gate_result: CalDiagGateResult | None = None,
     db_updates: list[tuple[str, dict[str, Any]]] | None = None,
     flat_offsets: dict[str, float] | None = None,
+    flat_substitutes: Mapping[str, str] | None = None,
 ) -> tuple[bool, bool, dict[str, Any] | None, str, dict[str, Any] | None]:
     """Apply master dark / flat to one light FITS and write ``dst``.
 
@@ -1536,15 +1474,14 @@ def _calibrate_one_light_disk(
         src=src,
         master_dark_path=master_dark_path,
         masterflat_by_filter=masterflat_by_filter,
-        flat_norm_floor=flat_norm_floor,
         flat_cache=flat_cache,
         flat_median_scale=flat_median_scale,
         dark_cache=dark_cache,
         db=db,
         id_equipments=_id_eq,
-        calibration_master_native_binning=calibration_master_native_binning,
         cal_diag_gate_result=cal_diag_gate_result,
         flat_offsets=flat_offsets,
+        flat_substitutes=flat_substitutes,
     )
 
     qc_summary: dict[str, Any] | None = None
@@ -1640,7 +1577,7 @@ def _init_calibrate_frame_worker(ctx: dict[str, Any]) -> None:
     """Per-process state for :func:`_calibrate_frame_task` (SPEED-2026-10).
 
     ``ctx``: ``master_dark_path``, ``master_dark_by_obs_key``, ``masterflat_by_filter`` (str paths),
-    ``qc_pack``, ``native_b`` and either the live ``session`` (run process) or ``cal_diag_blob``
+    ``qc_pack`` and either the live ``session`` (run process) or ``cal_diag_blob``
     (worker process). Flat and dark masters are cached per process.
     """
     _CAL_FRAME_STATE.clear()
@@ -1699,10 +1636,10 @@ def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
                 dark_cache=st["dark_cache"],
                 db=st.get("db"),
                 qc_pack=st.get("qc_pack"),
-                calibration_master_native_binning=st.get("native_b"),
                 cal_diag_gate_result=gr,
                 db_updates=updates,
                 flat_offsets=st.get("flat_offsets"),
+                flat_substitutes=st.get("flat_substitutes"),
             )
             return {
                 "ok": True,
@@ -1717,6 +1654,7 @@ def _calibrate_frame_task(item: tuple[str, str]) -> dict[str, Any]:
             }
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc), "exc_type": type(exc).__name__,
+                    "master_error": isinstance(exc, MasterResamplingError),
                     "traceback": traceback.format_exc(), "events": list(events)}
 
 
@@ -1737,6 +1675,17 @@ def _flat_offsets_for_masters(paths: Any, db: VyvarDatabase | None) -> dict[str,
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("[CAL] flat offset lookup failed for %s: %s", key, exc)
     return out
+
+
+def _light_group_folder(src: Path, lights_root: Path) -> str:
+    """The LIGHT group folder (``lights/<group>/file``) of a light, '' for a file directly in lights/."""
+    parts = Path(src).relative_to(lights_root).parts
+    return str(parts[0]) if len(parts) > 1 else ""
+
+
+def _count_group_flag(stats: dict[str, Any], group: str, flag: str) -> None:
+    g = stats.setdefault("flags_by_group", {}).setdefault(str(group), {})
+    g[str(flag)] = int(g.get(str(flag), 0)) + 1
 
 
 def _has_usable_master_dark(path: Path | None) -> bool:
@@ -1765,7 +1714,10 @@ def _passthrough_lights_to_calibrated(
         "qc_evaluated": 0,
         "passthrough_mode": True,
         "passthrough_existing_reused": 0,
+        "flags_by_group": {},
     }
+    for src in files:
+        _count_group_flag(stats, _light_group_folder(src, lights_root), "P")
     db_pt: VyvarDatabase | None = None
     try:
         if database_path is not None and Path(database_path).is_file():
@@ -1856,6 +1808,7 @@ def calibrate_lights_to_calibrated(
     observation_id: str | None = None,
     masterflat_by_obs_key: dict[str, str | Path | None] | None = None,
     master_dark_by_obs_key: dict[str, str | Path | None] | None = None,
+    flat_substitute_by_obs_key: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Apply available masters to lights and write into calibrated_root.
 
@@ -1865,11 +1818,16 @@ def calibrate_lights_to_calibrated(
     - none (passthrough copy when dark is unavailable)
 
     MasterFlat is **median-normalized to ~1.0** before division so calibrated values stay in the same order
-    of magnitude as (light - dark) and extreme spikes from tiny flat pixels are avoided.
+    of magnitude as (light - dark).
 
-    After normalization, each flat pixel is **clamped below by a small positive floor** so dust donuts and
-    dead columns cannot divide the image by near-zero (which would create nonsense ADU far above the
-    detector range in viewers).
+    Bad flat pixels (G01-29, decision A2: local outliers of the normalised flat, or <= 0 / invalid) are
+    NaN, so the calibrated pixel is NaN (missing data) - no floor on the flat.
+
+    ``stats["flags_by_group"]``: per LIGHT group folder, the count of each ``VY_CFLAG`` actually written
+    (the calibration really done, recorded in the draft manifest by the caller).
+
+    A master error (:class:`calibration.MasterResamplingError`: unusable flat, shape mismatch, dark
+    rebin without a measured convention) stops the calibration.
 
     Pixels are **not** expected to match raw ADU counts: calibration is ``(L - D) / F_norm`` with
     ``F_norm = flat / median(flat)``. Raw linearity keywords (SATURATE, DATAMAX, ...) are dropped when any
@@ -1919,8 +1877,6 @@ def calibrate_lights_to_calibrated(
         md_path_ok = master_dark_path
         md_init_str = str(master_dark_path.resolve())
 
-    _native_b = None  # CAL-2026-10: master binning from each master header
-
     mf_serial: dict[str, str | None] = {}
     for k, v in (masterflat_by_filter or {}).items():
         if v is None:
@@ -1941,6 +1897,7 @@ def calibrate_lights_to_calibrated(
         "perf10_qc_results": {},
         "cal_db_sync_failures": 0,
         "cal_db_sync_errors": [],
+        "flags_by_group": {},
     }
     perf10_qc_results: dict[str, dict[str, Any]] = stats["perf10_qc_results"]
 
@@ -2009,13 +1966,6 @@ def calibrate_lights_to_calibrated(
 
     db_main = _db_for_calibration_tasks(qc_pack)
 
-    def _refresh_manifest_after_cal_qc() -> None:
-        if draft_id is not None and db_main is not None:
-            try:
-                db_main._try_refresh_draft_manifest(int(draft_id))
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.debug("draft_manifest refresh after calibrate QC: %s", exc)
-
     cal_diag_session = CalDiagSession()
 
     def _resolve_dark_for_pregate(fp: Path, og: str, lb: int) -> Path | None:
@@ -2036,11 +1986,16 @@ def calibrate_lights_to_calibrated(
             obs_group_key_from_path=_obs_group_key_from_light_path,
             resolve_dark_path=_resolve_dark_for_pregate,
             light_binning_from_path=_light_binning_from_path,
-            master_binning=_native_b,
+            master_binning=None,
             match_and_crop_pair=_match_and_crop_pair,
             saturation_for_light=_sat_for_pregate,
+            pedestal_temp_tol_c=float(cfg.calibration_master_ccd_temp_tolerance_c),
         )
     stats["cal_diag_aborted_groups"] = len(cal_diag_session.aborted_groups)
+    _arch = _archive_root_from_lights_root(lights_root)
+    if _arch is not None:
+        write_cal_diag_json(_arch, cal_diag_session)
+    raise_if_dark_convention_undecided(cal_diag_session)
 
     # SPEED-2026-10: one per-frame function for any number of workers; the run process writes the
     # manifest / DB updates and the infolog lines in frame order (workers never touch the manifest).
@@ -2053,8 +2008,8 @@ def calibrate_lights_to_calibrated(
         },
         "masterflat_by_filter": mf_serial,
         "qc_pack": qc_pack,
-        "native_b": _native_b,
         "flat_offsets": _flat_offsets_for_masters(mf_serial.values(), db_main),
+        "flat_substitutes": {str(k): str(v) for k, v in (flat_substitute_by_obs_key or {}).items() if v},
     }
     from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers  # noqa: PLC0415
 
@@ -2080,6 +2035,10 @@ def calibrate_lights_to_calibrated(
             from infolog import replay_events  # noqa: PLC0415
 
             replay_events(res.get("events"))
+            if not res.get("ok") and res.get("master_error"):
+                # a master problem is the same for every frame of the group: stop, do not count errors
+                log_event(f"CALIBRATION STOPPED: {src.name}: {res.get('error')}")
+                raise MasterResamplingError(str(res.get("error")))
             if not res.get("ok"):
                 LOGGER.error("Calibration: file %s: %s\n%s", src, res.get("error"), res.get("traceback", ""))
                 if not _seq_tb_logged:
@@ -2097,6 +2056,7 @@ def calibrate_lights_to_calibrated(
             if isinstance(perf10_qc, dict) and perf10_qc and not perf10_qc.get("error"):
                 perf10_qc_results[str(src.resolve())] = perf10_qc
             _flags = str(res.get("vy_cflag") or "P")
+            _count_group_flag(stats, _light_group_folder(src, lights_root), _flags)
             _sync_obs_calibration_state_with_retry(
                 db_main,
                 raw_light_path=src,
@@ -2119,11 +2079,6 @@ def calibrate_lights_to_calibrated(
         _results.close()
         _CAL_FRAME_STATE.clear()
 
-    _arch = _archive_root_from_lights_root(lights_root)
-    if _arch is not None:
-        write_cal_diag_json(_arch, cal_diag_session)
-
-    _refresh_manifest_after_cal_qc()
     return stats
 
 
@@ -2453,10 +2408,10 @@ def _decide_preprocess_sky_action(
     )
 
 
-def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None, bool]) -> Any:
+def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None, bool, float]) -> Any:
     """Pool task of the in-place QC: one frame; a sky-surface order conflict is returned, not
     raised, so the main process stops with the frame's name."""
-    fp_str, status, sky_order, ra, dec, only_if_missing = item
+    fp_str, status, sky_order, ra, dec, only_if_missing, det_sigma = item
     try:
         return _qc_enrich_one_frame(
             fp_str,
@@ -2465,6 +2420,7 @@ def _qc_enrich_task(item: tuple[str, str | None, int, float | None, float | None
             target_ra=ra,
             target_dec=dec,
             inject_pointing_only_if_missing=only_if_missing,
+            detection_sigma=det_sigma,
         )
     except SkySurfaceOrderConflictError as exc:
         return exc
@@ -2478,14 +2434,17 @@ def _qc_enrich_one_frame(
     target_ra: float | None,
     target_dec: float | None,
     inject_pointing_only_if_missing: bool,
+    detection_sigma: float,
 ) -> dict[str, Any]:
-    """Process one calibrated light frame in-place (picklable worker for parallel QC)."""
+    """Process one calibrated light frame in-place (picklable worker for parallel QC).
+
+    BADPIX-REPAIR-2026-10: after the FWHM, the missing pixels (bad flat pixels) are filled from the frame's
+    PSF model (:func:`badpix_repair.repair_missing_pixels`) and listed in the ``VYBPFIX`` extension."""
     import numpy as np
 
     from cal_stage import (  # noqa: PLC0415
         compute_skysf_apply_stage,
         stamp_cal_stage_headers,
-        verify_fits_datasum,
     )
 
     fp = Path(fp_str)
@@ -2524,6 +2483,15 @@ def _qc_enrich_one_frame(
         n_stars = int(qc.get("n_stars_detected") or 0)
         status = prefilter_status if prefilter_status else "ok"
 
+        from badpix_repair import REPAIR_HDU, repair_missing_pixels, repair_table_hdu  # noqa: PLC0415
+
+        _csat = hdr.get("VY_CSAT")
+        bp = repair_missing_pixels(
+            data, fwhm_px=fwhm, detection_sigma=float(detection_sigma),
+            sat_cal_adu=float(_csat) if _csat is not None else None,
+        )
+        data = bp.data
+
         with fits.open(fp, mode="update") as hdul:
             # FITS-SCALE-2026-10: no BZERO of the integer original on the float data
             set_float_image_data_in_place(hdul[0], _as_fits_float32_image(data))
@@ -2548,15 +2516,20 @@ def _qc_enrich_one_frame(
                         pstbg=cal_pstbg,
                         skypass=skypass,
                     )
-                    if not verify_fits_datasum(data, cal_datasum):
-                        raise RuntimeError(
-                            f"INV-CAL-02: VYCALSUM self-check failed on {fp.name}"
-                        )
             if math.isfinite(fwhm):
                 hdr["VY_FWHM"] = (round(fwhm, 4), "Estimated FWHM [pix]")
             if math.isfinite(elong):
                 hdr["VY_ELONG"] = (round(elong, 4), "Estimated elongation (a/b)")
             hdr["VY_NSTAR"] = (n_stars, "Approx. star detections (QC)")
+            if bp.n_missing:
+                hdr["VY_BPMIS"] = (bp.n_missing, "Missing pixels before the repair")
+                hdr["VY_BPPSF"] = (bp.n_psf, "Missing pixels filled: sky + star ePSF model")
+                hdr["VY_BPSKY"] = (bp.n_sky, "Missing pixels filled: local sky")
+                hdr["VY_BPLFT"] = (bp.n_left, "Missing pixels left missing")
+            if REPAIR_HDU in hdul:
+                del hdul[REPAIR_HDU]
+            if bp.xy_kind:
+                hdul.append(repair_table_hdu(bp))
             hdr["VY_QC"] = (status, "QC status")
             hdr["VYVARPR"] = (True, "VYVAR pre-processed output")
             if target_ra is not None and target_dec is not None:
@@ -2582,6 +2555,11 @@ def _qc_enrich_one_frame(
             "n_sources": qc.get("n_sources"),
             "n_stars_detected": n_stars,
             "bg_median": float(np.nanmedian(data)) if data.size else None,
+            "bp_missing": bp.n_missing,
+            "bp_psf": bp.n_psf,
+            "bp_sky": bp.n_sky,
+            "bp_left": bp.n_left,
+            "bp_reason_left": bp.reason_left,
             **sky_stats,
         }
         if cal_stage_token and cal_datasum:
@@ -2698,9 +2676,12 @@ def _qc_enrich_calibrated_in_place(
     from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers  # noqa: PLC0415
 
     n_workers = stage_workers(total, frame_bytes_of_fits(fits_paths[0]), stage="QC in-place") if total > 1 else 1
+    from config import resolve_detection_threshold_sigma  # noqa: PLC0415
+
+    _det_sigma = float(resolve_detection_threshold_sigma(cfg))
     tasks = [
         (str(fp), _prefilter.get(norm_fits_path_key(fp)), sky_order, target_ra, target_dec,
-         bool(inject_pointing_only_if_missing))
+         bool(inject_pointing_only_if_missing), _det_sigma)
         for fp in fits_paths
     ]
     rows = map_frames(_qc_enrich_task, tasks, workers=n_workers, stage="QC in-place")
@@ -2720,6 +2701,15 @@ def _qc_enrich_calibrated_in_place(
                 f"FWHM={float(row.get('fwhm_px', float('nan'))):.2f} "
                 f"elong={float(row.get('elongation', float('nan'))):.2f}"
             )
+            if int(row.get("bp_missing") or 0):
+                log_event(
+                    f"[BADPIX] {fp.name}: {int(row['bp_missing'])} missing pixel(s) - {int(row['bp_psf'])} filled "
+                    f"from the star ePSF model, {int(row['bp_sky'])} from the local sky, {int(row['bp_left'])} left"
+                    + (f" ({row.get('bp_reason_left')})" if int(row.get("bp_left") or 0) else "")
+                )
+                if int(row.get("bp_left") or 0):
+                    LOGGER.warning("[BADPIX] %s: %d pixel(s) left missing: %s", fp.name, int(row["bp_left"]),
+                                   row.get("bp_reason_left"))
     results.sort(key=lambda r: str(r.get("src", "")))
 
     n_ok = sum(1 for r in results if r.get("status") == "ok")

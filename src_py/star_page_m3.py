@@ -69,18 +69,15 @@ def target_source_line(row: Mapping[str, Any] | None) -> str:
 
 
 def ra_dec_text(ra: float, dec: float) -> str:
+    """'hh:mm:ss.ss +dd:mm:ss.s'; rounding carries into minutes / hours (G11-37: never ':60.00')."""
     if not (math.isfinite(ra) and math.isfinite(dec)):
         return "-"
-    h = ra / 15.0
-    hh = int(h)
-    mm = int((h - hh) * 60)
-    ss = ((h - hh) * 60 - mm) * 60
-    sgn = "-" if dec < 0 else "+"
-    d = abs(dec)
-    dd = int(d)
-    dm = int((d - dd) * 60)
-    ds = ((d - dd) * 60 - dm) * 60
-    return f"{hh:02d}:{mm:02d}:{ss:05.2f} {sgn}{dd:02d}:{dm:02d}:{ds:04.1f}"
+    from astropy import units as u  # noqa: PLC0415
+    from astropy.coordinates import Angle  # noqa: PLC0415
+
+    ra_t = Angle(ra % 360.0, unit=u.deg).to_string(unit=u.hourangle, sep=":", precision=2, pad=True)
+    de_t = Angle(dec, unit=u.deg).to_string(unit=u.deg, sep=":", precision=1, pad=True, alwayssign=True)
+    return f"{ra_t} {de_t}"
 
 
 def _jd_to_hhmm(jd: float) -> str:
@@ -89,6 +86,54 @@ def _jd_to_hhmm(jd: float) -> str:
     frac = (jd + 0.5) % 1.0
     m = int(round(frac * 1440.0)) % 1440
     return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def lc_plot_data(df: pd.DataFrame, chk: pd.DataFrame | None, *, uncalibrated: bool) -> dict[str, Any] | None:
+    """G14-17: the numbers of the light-curve figure, shared by the PDF (matplotlib) and the UI (plotly).
+
+    Points: exported = ``photometry_lightcurve.export_row_mask`` (the rows of the AAVSO / VarAstro files),
+    the other plotted points are not exported. Check strip: ``check_star_kmag.check_star_stats`` on the
+    exported epochs (the numbers of the export header and the trust), around its median. ``ut_offset``:
+    JD(UTC) = x + ut_offset on the plotted axis. None when fewer than 2 points can be drawn."""
+    from check_star_kmag import check_star_stats  # noqa: PLC0415
+    from photometry_lightcurve import export_row_mask, published_mag_column  # noqa: PLC0415
+
+    if df is None or df.empty:
+        return None
+    ycol = "delta_mag" if uncalibrated else (published_mag_column(df) or "mag_calib")
+    if ycol not in df.columns:
+        return None
+    xcol = "bjd" if "bjd" in df.columns else "jd"
+    x = pd.to_numeric(df[xcol], errors="coerce").to_numpy(float)
+    y = pd.to_numeric(df[ycol], errors="coerce").to_numpy(float)
+    e = MAG_ERR_SCALE * pd.to_numeric(df["err"], errors="coerce").to_numpy(float) if "err" in df.columns else None
+    fl = (df["flag"].astype(str).str.strip().str.lower().to_numpy() if "flag" in df.columns
+          else np.array(["normal"] * len(df)))
+    ok = np.isfinite(x) & np.isfinite(y)
+    if int(ok.sum()) < 2:
+        return None
+    exp = export_row_mask(df, mag_column=ycol).to_numpy(bool)
+    good = ok & exp
+    bad = ok & ~exp
+    x0 = float(np.floor(np.nanmin(x[ok])))
+    ut_offset = float("nan")
+    if "jd" in df.columns:
+        jd = pd.to_numeric(df["jd"], errors="coerce").to_numpy(float)
+        okj = ok & np.isfinite(jd)
+        if int(okj.sum()) >= 2:
+            # JD - (BJD - x0) changes by < 1 s over a night: a constant offset is exact enough
+            ut_offset = float(np.median(jd[okj] - (x[okj] - x0)))
+    st = check_star_stats(chk, df.loc[exp, "source_file"] if "source_file" in df.columns else [])
+    has_check = st.n >= 2 and bool(np.isfinite(st.bjd).all())
+    kx = st.bjd - x0 if has_check else np.array([])
+    kr = st.kmag - st.median if has_check else np.array([])
+    lim = max(0.03, float(np.percentile(np.abs(kr), 98)) * 1.3) if has_check else 0.03
+    return {
+        "xcol": xcol, "ycol": ycol, "x": x, "y": y, "e": e, "flag": fl, "ok": ok, "good": good, "bad": bad,
+        "x0": x0, "ut_offset": ut_offset, "has_check": has_check, "kx": kx, "kr": kr, "check_lim": lim,
+        "check_text": f"check star scatter {st.scatter:.3f} mag" if has_check else "",
+        "xlabel": f"BJD_TDB - {x0:.0f}" if xcol == "bjd" else f"JD - {x0:.0f}",
+    }
 
 
 def plot_lc_check(
@@ -111,39 +156,18 @@ def plot_lc_check(
     import matplotlib.pyplot as plt
 
     df = pd.read_csv(lc_csv, low_memory=False)
-    if df.empty:
-        return None
-    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
-
-    ycol = "delta_mag" if uncalibrated else (published_mag_column(df) or "mag_calib")
-    if ycol not in df.columns:
-        return None
-    xcol = "bjd" if "bjd" in df.columns else "jd"
-    x = pd.to_numeric(df[xcol], errors="coerce").to_numpy(float)
-    y = pd.to_numeric(df[ycol], errors="coerce").to_numpy(float)
-    e = MAG_ERR_SCALE * pd.to_numeric(df.get("err"), errors="coerce").to_numpy(float) if "err" in df.columns else None
-    fl = df["flag"].astype(str).str.strip().str.lower().to_numpy() if "flag" in df.columns else np.array(["normal"] * len(df))
-    from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
-
-    ok = np.isfinite(x) & np.isfinite(y)
-    if int(ok.sum()) < 2:
-        return None
-    exp_mask = ok & ~np.isin(fl, list(EXPORT_EXCLUDE_FLAGS))
-    bad_mask = ok & ~exp_mask
-    x0 = float(np.floor(np.nanmin(x[ok])))
-
-    has_check = False
-    kx = ky = None
+    chk = None
     if check_csv is not None and Path(check_csv).is_file():
         try:
-            kd = read_vyvar_csv(check_csv, low_memory=False)
-            kx = pd.to_numeric(kd["bjd"], errors="coerce").to_numpy(float)
-            ky = pd.to_numeric(kd["kmag"], errors="coerce").to_numpy(float)
-            kok = np.isfinite(kx) & np.isfinite(ky)
-            kx, ky = kx[kok], ky[kok]
-            has_check = len(kx) >= 2
-        except (OSError, KeyError, ValueError):
-            has_check = False
+            chk = read_vyvar_csv(check_csv, low_memory=False)
+        except (OSError, ValueError):
+            chk = None
+    pd_ = lc_plot_data(df, chk, uncalibrated=uncalibrated)
+    if pd_ is None:
+        return None
+    x, y, e, ok, x0 = pd_["x"], pd_["y"], pd_["e"], pd_["ok"], pd_["x0"]
+    exp_mask, bad_mask, ycol = pd_["good"], pd_["bad"], pd_["ycol"]
+    has_check = pd_["has_check"]
 
     fig = plt.figure(figsize=figsize, dpi=150)
     if has_check:
@@ -175,34 +199,29 @@ def plot_lc_check(
                 a2 = ax.secondary_yaxis("right", functions=(lambda v, o=off: v + o, lambda v, o=off: v - o))
                 a2.set_ylabel(f"{gspc_band} GSPC (same scale, shifted)", fontsize=8, color="#57606a")
                 a2.tick_params(labelsize=7, colors="#57606a")
-        # UT (HH:MM) on the top axis: JD(UTC) mid-exposure interpolated on the plotted time.
-        if "jd" in df.columns:
-            jd = pd.to_numeric(df["jd"], errors="coerce").to_numpy(float)
-            okj = ok & np.isfinite(jd)
-            if int(okj.sum()) >= 2:
-                # JD - (BJD - x0) changes by < 1 s over a night: a constant offset is exact enough
-                _dj = float(np.median(jd[okj] - (x[okj] - x0)))
-                at = ax.secondary_xaxis("top", functions=(lambda v, d=_dj: v + d, lambda v, d=_dj: v - d))
-                at.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1.0 / 24.0))  # full UT hours
-                at.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _p: _jd_to_hhmm(v)))
-                at.tick_params(labelsize=7)
-                at.set_xlabel("UT (HH:MM)", fontsize=8)
+        # UT (HH:MM) on the top axis: JD(UTC) mid-exposure on the plotted time (lc_plot_data ut_offset)
+        _dj = pd_["ut_offset"]
+        if math.isfinite(_dj):
+            at = ax.secondary_xaxis("top", functions=(lambda v, d=_dj: v + d, lambda v, d=_dj: v - d))
+            at.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1.0 / 24.0))  # full UT hours
+            at.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _p: _jd_to_hhmm(v)))
+            at.tick_params(labelsize=7)
+            at.set_xlabel("UT (HH:MM)", fontsize=8)
         if axk is not None:
-            kr = ky - float(np.nanmedian(ky))
-            axk.plot(kx - x0, kr, "o", ms=2.4, color="#6e7781")
+            axk.plot(pd_["kx"], pd_["kr"], "o", ms=2.4, color="#6e7781")
             axk.axhline(0, color="#d0d7de", lw=0.8)
             axk.invert_yaxis()
-            lim = max(0.03, float(np.nanpercentile(np.abs(kr), 98)) * 1.3)
+            lim = pd_["check_lim"]
             axk.set_ylim(lim, -lim)
             axk.grid(True, alpha=0.3, lw=0.5)
             axk.tick_params(labelsize=7)
             axk.set_ylabel("check - med", fontsize=8)
-            axk.text(0.01, 0.92, f"check star scatter {np.nanstd(kr):.3f} mag", transform=axk.transAxes,
+            axk.text(0.01, 0.92, pd_["check_text"], transform=axk.transAxes,
                      fontsize=7, color="#57606a", va="top")
             plt.setp(ax.get_xticklabels(), visible=False)
-            axk.set_xlabel(f"BJD_TDB - {x0:.0f}" if xcol == "bjd" else f"JD - {x0:.0f}", fontsize=9)
+            axk.set_xlabel(pd_["xlabel"], fontsize=9)
         else:
-            ax.set_xlabel(f"BJD_TDB - {x0:.0f}" if xcol == "bjd" else f"JD - {x0:.0f}", fontsize=9)
+            ax.set_xlabel(pd_["xlabel"], fontsize=9)
         out_png.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(out_png, dpi=150, bbox_inches="tight")
     finally:
@@ -321,10 +340,10 @@ def comp_rows(
     target_bp_rp: float = float("nan"),
     max_rows: int = 12,
 ) -> tuple[list[list[str]], list[str], int]:
-    """Rows: #, Gaia DR3, G, BP-RP, dBP-RP, dist ('), rms (mmag), w (Broeg, rel.), g GSPC, status.
+    """Rows: #, Gaia DR3, G, BP-RP, dBP-RP, dist ('), rms (mmag), w (Broeg, sum 1), g GSPC, status.
     Excluded comps go to the returned note list; the int is the number of rows not shown."""
+    # G11-38: w as written to the AAVSO NOTES / VarAstro header - the Broeg weights of the ensemble, sum 1
     w = cq.get("broeg_weights") if isinstance(cq.get("broeg_weights"), dict) else {}
-    wmax = max([float(v) for v in w.values()] or [float("nan")])
     gz = cq.get("gspc_zero_point") if isinstance(cq.get("gspc_zero_point"), dict) else {}
     rows: list[list[str]] = []
     excluded: list[str] = []
@@ -338,11 +357,11 @@ def comp_rows(
         dbp = abs(bp - target_bp_rp) if math.isfinite(bp) and math.isfinite(target_bp_rp) else _f(r.get("delta_bprp_abs"))
         dist = _f(r.get("_dist_deg", r.get("dist_deg")))
         rms = _f(r.get("comp_rms"))
-        wr = float(w[cid]) / wmax if cid in w and math.isfinite(wmax) and wmax > 0 else float("nan")
+        wr = _f(w.get(cid))
         rows.append([
             str(len(rows) + 1), cid, f"{_f(r.get('mag')):.2f}", f"{bp:.2f}" if math.isfinite(bp) else "-",
             f"{dbp:.2f}" if math.isfinite(dbp) else "-", f"{dist * 60:.1f}" if math.isfinite(dist) else "-",
-            f"{rms * 1085.7:.1f}" if math.isfinite(rms) else "-", f"{wr:.2f}" if math.isfinite(wr) else "-",
+            f"{rms * 1000.0:.1f}" if math.isfinite(rms) else "-", f"{wr:.3f}" if math.isfinite(wr) else "-",
             gspc_cell(cid, gz, gspc_rows or {}, band) if gspc_rows else "-",
             short_status(ent) + (" (reserve)" if _s(r.get("used_role") or r.get("comp_role")) == "replacement" else ""),
         ])
@@ -354,7 +373,8 @@ COMP_HEADERS = ["#", "Gaia DR3", "G", "BP-RP", "dBP-RP", "dist '", "rms mmag", "
 COMP_FOOT = ("* suspect = aperture-photometry stability slope; kept only when fewer than 3 clean comps exist (COMP-SMART); "
              "(reserve) = replaced a suspect comp.  GSPC: accepted value; "
              "(m) f0 = flag 0 (extrapolation), bl = XP spectrum blended, S/N = below 30 - not used.  "
-             "w = Broeg weight (relative).  rms = comparison-star scatter.")
+             "w = Broeg (2005) weight in the ensemble (weights sum to 1, as in the AAVSO NOTES).  "
+             "rms = comparison-star scatter (leave-one-out, mmag).")
 
 
 def n_eff(weights: Mapping[str, float]) -> float:
@@ -391,20 +411,23 @@ def _aperture_choice(lc_csv: Path) -> tuple[float, float]:
     return _f(apt.get("fwhm_night_px")), _f(ent.get("f_star"))
 
 
-def lc_facts(lc_csv: Path) -> dict[str, Any]:
-    """Frames used / flagged, span, airmass range, aperture radius (median, k), FWHM night."""
+def lc_facts(lc_csv: Path, *, mag_column: str | None = None) -> dict[str, Any]:
+    """Frames exported / not exported (``export_row_mask`` with the target's export magnitude column, G11-12),
+    span, airmass range, aperture radius (median, k), FWHM night."""
     out: dict[str, Any] = {}
     try:
         df = pd.read_csv(lc_csv, low_memory=False)
     except (OSError, ValueError):
         return out
-    from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
+    from photometry_lightcurve import export_row_mask, lc_export_mag_column  # noqa: PLC0415
 
     fl = df["flag"].astype(str).str.strip().str.lower() if "flag" in df.columns else pd.Series(["normal"] * len(df))
+    exp = export_row_mask(df, mag_column=mag_column or lc_export_mag_column(df))
     out["n_total"] = int(len(df))
-    out["n_flagged"] = int(fl.isin(list(EXPORT_EXCLUDE_FLAGS)).sum())
+    out["n_exported"] = int(exp.sum())
+    out["n_excluded"] = out["n_total"] - out["n_exported"]
     # exported with FLAG=<flag> in the AAVSO NOTES (REPORT-AUDIT-2026-10)
-    out["n_noted"] = int((~fl.isin(list(EXPORT_EXCLUDE_FLAGS)) & fl.ne("normal")).sum())
+    out["n_noted"] = int((exp & fl.ne("normal").to_numpy()).sum())
     t = _col(df, "bjd")
     out["span_h"] = float((t.max() - t.min()) * 24.0) if t.notna().sum() > 1 else float("nan")
     am = _col(df, "airmass")
@@ -475,6 +498,7 @@ def epsf_page_data(lc_dir: Path, platesolve_dir: Path, cid: str, *, min_epochs: 
     drops = []
     for key, label in (("psf_lc_n_epochs_target_saturated", "the target saturated"),
                        ("psf_lc_n_epochs_target_outside_footprint", "the target off the frame's data"),
+                       ("psf_lc_n_epochs_target_fit_not_ok", "the target PSF fit failed"),
                        ("psf_lc_n_epochs_dropped_pin", "the frame not fitted or a comparison star missing")):
         if _i(key):
             drops.append(f"{_i(key)} with {label}")
@@ -529,7 +553,9 @@ def plot_lc_epsf(df: pd.DataFrame, out_png: Path, *, figsize: tuple[float, float
     both = df.loc[df["ap_ok"] & df["psf_ok"]]
     if len(ps) < 2:
         return None
-    shift = float(np.median(both["psf_mag"] - both["ap_mag"])) if len(both) else 0.0
+    from epsf_lc_compare import psf_level_shift  # noqa: PLC0415
+
+    shift = psf_level_shift(df)
     x0 = float(np.floor(np.nanmin(df["bjd"])))
     fig = plt.figure(figsize=figsize, dpi=150)
     gs = fig.add_gridspec(2, 1, height_ratios=[3.3, 1.0], hspace=0.06)

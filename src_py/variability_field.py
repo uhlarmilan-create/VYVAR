@@ -6,9 +6,11 @@ only reads its products.
 
 Method (Sokolovsky et al. 2017, A&A 598, A108; VaST, Sokolovsky & Lebedev 2018):
 
-* Every star measured on >= 90 % of the frames, on the aperture grid column of the
-  field k (r = k x FWHM_frame, the k the comparison stars use), sky = plain median of
-  the annulus.
+* Every star measured on >= 90 % of the frames, on the aperture grid column of the k
+  its light curve would use (C1-2026-10: the AP-BRIGHT-K group of its instrumental
+  magnitude, aperture_per_target.json; r = k x FWHM_frame), put on one magnitude scale
+  by a per-frame aperture correction to the largest group k (median m(k_ref) - m(k)
+  of the stars of the k_ref group; Stetson 1990), sky = median of the annulus.
 * Common frame zero point (Honeycutt 1992): m_it = M_i + E_t, solved by alternating
   medians over reference stars (expected error < 1 %, all gates passed).
 * Expected error of each point from the CCD equation (Merline & Howell 1995) with the
@@ -40,6 +42,12 @@ catalogued star, a dwarf nova in outburst all night) - and runs the search for n
 (:mod:`transient_field`).
 
 No sigma clipping and no detrending of the light curves themselves.
+
+Times (G02-18, decision C6 2026-10-29): the frames are ordered and spaced by the field-centre frame
+time of the proc catalogues (``bjd_tdb_mid``, else ``jd_mid``; meta ``frame_time_column``); the
+``time`` of ``varcand_<id>.csv`` (and of the transients) is the star's own BJD_TDB from ``jd_mid``,
+its RA/Dec and the run's site (meta ``time_column`` = ``bjd_tdb``; ``jd_mid`` without a site).
+Across a 200 mm field the field-centre value would be off by up to ~30 s at the edge.
 """
 from __future__ import annotations
 
@@ -59,11 +67,33 @@ LOGGER = logging.getLogger(__name__)
 COVERAGE_MIN = 0.90
 FAP_FIELD = 0.01
 REF_ERR_MAX = 0.01  # reference stars for the frame zero point: expected error < 1 %
+#: TRANSIENT-2026-10 "brightened": night magnitude at least this much and this many sigma (stars of the same
+#: brightness) above Gaia G with the neighbours' light
+BRIGHTENED_DMAG = 1.0
+BRIGHTENED_NSIGMA = 3.0
 _COLS = [
     "catalog_id", "x", "y", "ra_deg", "dec_deg", "mag", "bp_rp", "likely_saturated",
     "photometry_ok", "vsx_known_variable", "fwhm_px_for_aperture", "sky_adu_per_px_annulus",
     "airmass", "bjd_tdb_mid", "jd_mid",
 ]
+
+
+def star_times_bjd(
+    frame: pd.DataFrame,
+    ra_deg: Any,
+    dec_deg: Any,
+    site: tuple[float, float, float] | None,
+) -> tuple[np.ndarray, str]:
+    """Per-star time of every frame (G02-18, decision C6): (stars x frames array, time column name),
+    from the frames' mid-exposure UTC JD (``frame["jd_utc"]``) - :func:`time_utils.star_times`."""
+    if "jd_utc" not in frame:
+        raise ValueError("variability: proc catalogues lack jd_mid - no star times")
+    from time_utils import star_times  # noqa: PLC0415
+
+    t, col = star_times(frame["jd_utc"].to_numpy(float), ra_deg, dec_deg, site)
+    if col == "jd_mid" and site is None:
+        LOGGER.warning("[VARIABILITY] observer site unknown - star times are UTC JD (no barycentric correction)")
+    return t, col
 
 
 def _bool(s: pd.Series) -> pd.Series:
@@ -170,58 +200,18 @@ def _skewnorm_quantile_fit(u: np.ndarray) -> tuple[float, float, float]:
     return float(best.x[0]), float(best.x[1]), float(math.exp(best.x[2]))
 
 
-def run_field_variability(
-    per_frame_dir: Path,
-    photometry_dir: Path,
-    cfg: Any,
-    *,
-    field_k: float | None = None,
-    platesolve_dir: Path | None = None,
-    check_catalogs: bool = True,
-) -> dict[str, Any]:
-    """Run the search; writes variability_field.csv (candidates: ``candidate``, ``label``, ``catalogs``),
-    variability_meta.json and lightcurves/varcand_<id>.csv. Returns the meta dict."""
-    from scipy import optimize, stats  # noqa: PLC0415
+def limit_magnitudes(flux: pd.Series, var: pd.Series) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """COVERAGE-FAINT-2026-10: (magnitude, error, below_limit) of measured points; a flux below its 1-sigma
+    error takes the 1-sigma flux (the point's upper limit, S/N 1) instead of being dropped."""
+    sig = np.sqrt(var.clip(lower=0))
+    use = np.maximum(flux, sig)
+    return -2.5 * np.log10(use), 1.0857 * sig / use, flux < sig
 
-    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+
+def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, t_mid):
+    """Night table of all stars (time order), magnitudes / errors and per-star gates."""
     from gaia_catalog_id import normalize_gaia_source_id  # noqa: PLC0415
-    from photometry_shared import flux_k_column  # noqa: PLC0415
 
-    per_frame_dir = Path(per_frame_dir)
-    phot = Path(photometry_dir)
-    ps = Path(platesolve_dir) if platesolve_dir else phot.parent
-    files = sorted(per_frame_dir.glob("proc_*.csv"))
-    meta: dict[str, Any] = {"method": "VAR-2026-10", "n_frames": len(files)}
-    if len(files) < 10:
-        meta["status"] = "too few frames"
-        _write_meta(phot, meta)
-        return meta
-    if not field_k:
-        # the field k of the comparison stars (comparison-star selection admission record)
-        try:
-            adm = json.loads((phot / "pipeline_meta.json").read_text(encoding="utf-8")).get("comp_pool_admission") or {}
-            for rule in adm.get("rules", []):
-                if rule.get("rule_id") == "COMP_RMS_APERTURE_K":
-                    field_k = float(rule.get("threshold_value"))
-        except (OSError, ValueError, TypeError):
-            field_k = None
-    k = float(field_k) if field_k else 1.5
-    if k not in [float(v) for v in DEFAULT_APERTURE_F_GRID]:
-        k = 1.5
-    kcol = flux_k_column(k)
-    rows, t_mid = [], []
-    for i, f in enumerate(files):
-        from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-        d = read_proc_csv(f, usecols=lambda c: c in set(_COLS) | {kcol}, low_memory=False, dtype={"catalog_id": str})
-        if kcol not in d.columns:
-            meta["status"] = f"proc catalogues lack {kcol}"
-            _write_meta(phot, meta)
-            return meta
-        d["stem"] = f.stem[len("proc_"):]
-        t_mid.append(float(pd.to_numeric(d["jd_mid"], errors="coerce").median()) if "jd_mid" in d else float(i))
-        rows.append(d)
-    # 1/eta needs the frames in time order (file names are not guaranteed to be)
     order = np.argsort(np.where(np.isfinite(t_mid), t_mid, np.arange(len(t_mid)) * 1e9), kind="stable")
     for t_idx, j in enumerate(order):
         rows[j]["t"] = t_idx
@@ -231,10 +221,25 @@ def run_field_variability(
     nT = len(files)
     sat = _bool(D["likely_saturated"]) if "likely_saturated" in D else pd.Series(False, index=D.index)
     pok = _bool(D["photometry_ok"]) if "photometry_ok" in D else pd.Series(True, index=D.index)
-    F = pd.to_numeric(D[kcol], errors="coerce")
-    good = (~sat) & pok & (F > 0)
+    # C1-2026-10: each star on the aperture k of its brightness group (the k its light curve uses)
+    from aperture_pertarget import group_k_fluxes  # noqa: PLC0415
+
+    base = (~sat) & pok
+    gk = group_k_fluxes(D, base, kplan)
+    k_star, apc, k_ref = gk["k_star"], gk["apcorr"], kplan["k_ref"]
+    D["k"] = gk["k_row"]
+    F = gk["flux"]
+    # COVERAGE-FAINT-2026-10 (Milan 2026-10-29): a measured frame with flux <= 0 is the star below the
+    # frame's limit (a variable can be detectable at maximum and not at minimum), not a missing frame
+    good = base & np.isfinite(F)
+    D["apcorr"] = gk["apcorr_row"]
     D = D[good].copy()
     D["F"] = F[good]
+    meta["aperture_k"] = {
+        "rule": kplan["rule"], "k_ref": k_ref, "k_for_transients": kplan["k_transient"],
+        "n_stars_by_k": {f"{kk:g}": int(sum(1 for v in k_star.values() if v == kk)) for kk in kplan["k_all"]},
+        "apcorr_median_mag_by_k": {f"{kk:g}": round(float(np.nanmedian(ser)), 4) for kk, ser in apc.items()},
+    }
 
     # frame quantities
     frame = D.groupby("t").agg(fwhm=("fwhm_px_for_aperture", "median"), stem=("stem", "first"))
@@ -242,11 +247,14 @@ def run_field_variability(
     if not np.isfinite(am).any():
         am = _airmass_from_lightcurves(phot, frame["stem"])
     frame["airmass"] = am.reindex(frame.index)
+    # frame time (G02-18): the proc column of the FIELD CENTRE - used only for the order and spacing of
+    # frames (1/eta, moving-object fits), where a star-to-star offset of < 1 min does not matter. Times
+    # written for a star (varcand_*.csv, transients) are per star (star_times_bjd).
     tcol = "bjd_tdb_mid" if "bjd_tdb_mid" in D and np.isfinite(pd.to_numeric(D["bjd_tdb_mid"], errors="coerce")).any() else "jd_mid"
     frame["time"] = pd.to_numeric(D[tcol], errors="coerce").groupby(D["t"]).median()
     if "jd_mid" in D:
         frame["jd_utc"] = pd.to_numeric(D["jd_mid"], errors="coerce").groupby(D["t"]).median()
-    meta["time_column"] = tcol
+    meta["frame_time_column"] = tcol
 
     # CCD-equation error of every point (Merline & Howell 1995)
     # GAIN-ONE-2026-10: the gain / read noise of the run's aperture photometry; the annulus of the config
@@ -257,26 +265,37 @@ def run_field_variability(
     if not (math.isfinite(g) and g > 0 and math.isfinite(rn) and rn >= 0):
         raise RuntimeError("variability: gain / read noise of aperture photometry missing (aperture_per_target.json)")
     a_in, a_out = float(cfg.annulus_inner_fwhm), float(cfg.annulus_outer_fwhm)
-    meta.update(gain=g, read_noise=rn, field_k=k)
-    r = k * pd.to_numeric(D["fwhm_px_for_aperture"], errors="coerce")
+    meta.update(gain=g, read_noise=rn)
+    fw_row = pd.to_numeric(D["fwhm_px_for_aperture"], errors="coerce")
+    r = D["k"] * fw_row
     A = np.pi * r * r
-    n_sky = np.pi * ((a_out * r / k) ** 2 - (a_in * r / k) ** 2)
+    n_sky = np.pi * fw_row**2 * (a_out**2 - a_in**2)
     sky = pd.to_numeric(D["sky_adu_per_px_annulus"], errors="coerce").clip(lower=0)
-    var = D["F"] / g + A * (1 + A / n_sky) * (sky / g + (rn / g) ** 2)
-    D["m"] = -2.5 * np.log10(D["F"])
-    D["e"] = 1.0857 * np.sqrt(var) / D["F"]
+    var = D["F"].clip(lower=0) / g + A * (1 + A / n_sky) * (sky / g + (rn / g) ** 2)
+    # magnitude on the k_ref scale (aperture correction; its own error - a median over the k_ref
+    # group - is small against the point error and not propagated)
+    # a point below 1 sigma takes the 1-sigma flux (its upper limit, S/N 1): a magnitude for the indices
+    # (MAD scatter, 1/eta) that says "this faint or fainter". Gated stars (median S/N >= snr_min) reach it
+    # only by real fading, not by noise.
+    m_inst, D["e"], D["below_limit"] = limit_magnitudes(D["F"], var)
+    D["m"] = m_inst + D["apcorr"]
 
+    # aperture correction of each group k by frame (0 for k_ref): the transient search measures new
+    # sources at k_transient and puts them on the same scale
+    for kk in kplan["k_all"]:
+        frame[f"apcorr_{kk:g}"] = apc[kk].reindex(frame.index).to_numpy(float) if kk in apc else 0.0
     cnt = D.groupby("catalog_id")["t"].nunique()
     keep_ids = cnt[cnt >= COVERAGE_MIN * nT].index
     D = D[D["catalog_id"].isin(keep_ids)]
     M = D.pivot(index="catalog_id", columns="t", values="m")
     S = D.pivot(index="catalog_id", columns="t", values="e")
-    info = D.groupby("catalog_id")[["x", "y", "ra_deg", "dec_deg", "mag", "bp_rp"]].first()
+    info = D.groupby("catalog_id")[["x", "y", "ra_deg", "dec_deg", "mag", "bp_rp", "k"]].first()
     known = _bool(D.groupby("catalog_id")["vsx_known_variable"].first()) if "vsx_known_variable" in D else pd.Series(False, index=info.index)
     targets = _target_ids(phot)
     info["known_variable"] = known.reindex(info.index).fillna(False) | info.index.isin(targets)
     info["target"] = info.index.isin(targets)
     info["n_frames"] = cnt.reindex(info.index)
+    info["n_below_limit"] = D.groupby("catalog_id")["below_limit"].sum().reindex(info.index).fillna(0).astype(int)
     info["e_med"] = S.median(axis=1)
     info["snr_med"] = 1.0857 / info["e_med"]
 
@@ -303,13 +322,22 @@ def run_field_variability(
         fw_med = float(frame["fwhm"].median())
         # BLEND-SEEING-2026-10: neighbour light at the night's bad-seeing FWHM (p90 of the frames)
         fw_b, fw_b_src = blend_fwhm_px(frame["fwhm"].tolist(), fw_med)
-        c, bmeta = blend_contamination_for_pool(
-            pool, field_catalog_csv=ps / "field_catalog_cone.csv", masterstar_fits=ps / "MASTERSTAR.fits",
-            zp_band=filter_band_for_obs_group(per_frame_dir.name).blend_band, fwhm_px=fw_b,
-            profile_fwhm_px=fw_med, r_ap_px=k * fw_b,
-            sat_adu=float(pd.to_numeric(ms["saturate_limit_adu"], errors="coerce").median()) if ms is not None and "saturate_limit_adu" in ms else None,
-            annulus_px=(a_in * fw_b, a_out * fw_b), profile_df=ms,
-        )
+        # neighbour light in each star's own aperture (one evaluation per group k, one PSF)
+        c = pd.Series(np.nan, index=pool.index)
+        _psf = None
+        for kk in sorted(pool["k"].dropna().unique()):
+            ck, bmeta = blend_contamination_for_pool(
+                pool, field_catalog_csv=ps / "field_catalog_cone.csv", masterstar_fits=ps / "MASTERSTAR.fits",
+                zp_band=filter_band_for_obs_group(per_frame_dir.name).blend_band, fwhm_px=fw_b,
+                profile_fwhm_px=fw_med, r_ap_px=float(kk) * fw_b,
+                sat_adu=float(pd.to_numeric(ms["saturate_limit_adu"], errors="coerce").median()) if ms is not None and "saturate_limit_adu" in ms else None,
+                annulus_px=(a_in * fw_b, a_out * fw_b), profile_df=ms, psf=_psf,
+            )
+            if bmeta.get("status") != "ok":
+                break
+            _psf = bmeta.get("psf")
+            sel = pool["k"] == kk
+            c[sel] = ck[sel]
         bmeta["fwhm_source"] = fw_b_src
         info["blend"] = c.to_numpy()
         # |c|: extra light in the aperture or a sky pushed up by a neighbour (c < 0)
@@ -321,11 +349,13 @@ def run_field_variability(
         info["blend"] = np.nan
         info["gate_blend"] = False
         meta["blend"] = {"status": f"failed: {exc}"}
-    if str((meta.get("blend") or {}).get("status", "")) != "ok":
-        meta["status"] = "neighbour light unknown - " + str((meta.get("blend") or {}).get("status"))
-        _write_meta(phot, meta)
-        LOGGER.warning("[VARIABILITY] search not run: %s", meta["status"])
-        return meta
+    return M, S, frame, g, info, rn
+
+
+def _var_frame_zero_point(*, M, S, info, meta):
+    """Common frame zero point from reference stars (Honeycutt 1992) and the residual matrix."""
+    from scipy import optimize  # noqa: PLC0415
+
     info["gate_catalog"] = np.isfinite(pd.to_numeric(info["mag"], errors="coerce"))
     info["gates_ok"] = info["gate_snr"] & info["gate_edge"] & info["gate_blend"] & info["gate_catalog"]
 
@@ -344,7 +374,8 @@ def run_field_variability(
         E = E_new
     R = M.sub(E, axis=1)
     R = R.sub(R.median(axis=1), axis=0)
-    sigE = 1.4826 * R.loc[ref].abs().median(axis=0) / math.sqrt(max(len(ref), 1))
+    # error of the frame zero point E, a MEDIAN over the reference stars: sqrt(pi/2) sigma / sqrt(n) (G10-29)
+    sigE = math.sqrt(math.pi / 2.0) * 1.4826 * R.loc[ref].abs().median(axis=0) / math.sqrt(max(len(ref), 1))
     meta["n_ref"] = int(len(ref))
 
     info["s"] = 1.4826 * R.abs().median(axis=1)
@@ -365,11 +396,13 @@ def run_field_variability(
     meta["noise_model"] = {"a": a, "floor_mag": fl, "n_fit": int(len(fitset))}
 
     use = (info["gates_ok"] & ~info["known_variable"]).to_numpy()
-    if int(use.sum()) < 50:
-        meta.update(status=f"only {int(use.sum())} stars pass the gates (< 50) - no noise model", n_stars=int(len(info)),
-                    n_gates_ok=int(use.sum()))
-        _write_meta(phot, meta)
-        return meta
+    return E, R, a, fl, ref, use
+
+
+def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
+    """Variability indices (scatter z, von Neumann eta) by magnitude, transients, zero-point check."""
+    from scipy import stats  # noqa: PLC0415
+
     lq = np.log(info["s"] / info["s_exp"]).to_numpy(float)
     md = float(np.nanmedian(lq[use]))
     sc = 1.4826 * float(np.nanmedian(np.abs(lq[use] - md)))
@@ -435,20 +468,111 @@ def run_field_variability(
     out["label"] = ""
     out.loc[order_c, "label"] = [f"V{i + 1}" for i in range(len(order_c))]
     out["catalogs"] = ""
+    return n_test, order_c, out, transients, zp_g, zthr
+
+
+def run_field_variability(
+    per_frame_dir: Path,
+    photometry_dir: Path,
+    cfg: Any,
+    *,
+    platesolve_dir: Path | None = None,
+    check_catalogs: bool = True,
+) -> dict[str, Any]:
+    """Run the search; writes variability_field.csv (candidates: ``candidate``, ``label``, ``catalogs``),
+    variability_meta.json and lightcurves/varcand_<id>.csv. Returns the meta dict."""
+
+    from photometry_defs import DEFAULT_APERTURE_F_GRID  # noqa: PLC0415
+    from photometry_shared import flux_k_column  # noqa: PLC0415
+
+    per_frame_dir = Path(per_frame_dir)
+    phot = Path(photometry_dir)
+    ps = Path(platesolve_dir) if platesolve_dir else phot.parent
+    # G10-06: the products of a previous search go first - a rerun that stops early, or runs with the
+    # transient search off, leaves no stale candidates behind (TRANSIENT-2026-10: "off: no file")
+    from run_outputs import remove_files  # noqa: PLC0415
+    from transient_field import BODIES_CSV, META_JSON, MOVING_CSV, TRANSIENT_CSV  # noqa: PLC0415
+
+    remove_files(phot, (FIELD_CSV, TRANSIENT_CSV, MOVING_CSV, BODIES_CSV, META_JSON))
+    remove_files(phot / "lightcurves", ("varcand_*.csv", "transient_*.csv"))
+    files = sorted(per_frame_dir.glob("proc_*.csv"))
+    meta: dict[str, Any] = {"method": "VAR-2026-10", "n_frames": len(files)}
+    if len(files) < 10:
+        meta["status"] = "too few frames"
+        _write_meta(phot, meta)
+        return meta
+    from aperture_pertarget import field_k_plan  # noqa: PLC0415
+
+    kplan = field_k_plan(phot, DEFAULT_APERTURE_F_GRID)
+    if kplan is None:
+        meta["status"] = "aperture k unknown - aperture_per_target.json missing (aperture photometry did not run)"
+        _write_meta(phot, meta)
+        LOGGER.warning("[VARIABILITY] search not run: %s", meta["status"])
+        return meta
+    kcols = {flux_k_column(kk) for kk in kplan["k_all"]}
+    rows, t_mid = [], []
+    for i, f in enumerate(files):
+        from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+        d = read_proc_csv(f, usecols=lambda c: c in set(_COLS) | kcols, low_memory=False, dtype={"catalog_id": str})
+        if not kcols <= set(d.columns):
+            meta["status"] = f"proc catalogues lack {sorted(kcols - set(d.columns))}"
+            _write_meta(phot, meta)
+            return meta
+        d["stem"] = f.stem[len("proc_"):]
+        t_mid.append(float(pd.to_numeric(d["jd_mid"], errors="coerce").median()) if "jd_mid" in d else float(i))
+        rows.append(d)
+    # 1/eta needs the frames in time order (file names are not guaranteed to be)
+    M, S, frame, g, info, rn = _var_frame_table(
+        cfg=cfg,
+        files=files,
+        kplan=kplan,
+        meta=meta,
+        per_frame_dir=per_frame_dir,
+        phot=phot,
+        ps=ps,
+        rows=rows,
+        t_mid=t_mid,
+    )
+    if str((meta.get("blend") or {}).get("status", "")) != "ok":
+        meta["status"] = "neighbour light unknown - " + str((meta.get("blend") or {}).get("status"))
+        _write_meta(phot, meta)
+        LOGGER.warning("[VARIABILITY] search not run: %s", meta["status"])
+        return meta
+    E, R, a, fl, ref, use = _var_frame_zero_point(M=M, S=S, info=info, meta=meta)
+    if int(use.sum()) < 50:
+        meta.update(status=f"only {int(use.sum())} stars pass the gates (< 50) - no noise model", n_stars=int(len(info)),
+                    n_gates_ok=int(use.sum()))
+        _write_meta(phot, meta)
+        return meta
+    n_test, order_c, out, transients, zp_g, zthr = _var_indices(
+        E=E,
+        M=M,
+        R=R,
+        cfg=cfg,
+        frame=frame,
+        info=info,
+        meta=meta,
+        ref=ref,
+        use=use,
+    )
 
     cand = out.loc[order_c].reset_index(drop=True)
     lc_dir = phot / "lightcurves"
     lc_dir.mkdir(parents=True, exist_ok=True)
-    from run_outputs import remove_files  # noqa: PLC0415
+    lc_ids = list(cand["catalog_id"]) + list(out.loc[out["known_detected"], "catalog_id"])
+    from time_utils import run_site  # noqa: PLC0415
 
-    remove_files(lc_dir, ("varcand_*.csv",))  # OUTPUT-REVIEW step 7: the candidates of this search only
-    for cid in list(cand["catalog_id"]) + list(out.loc[out["known_detected"], "catalog_id"]):
+    site = run_site(phot)
+    # G02-18 / C6: the published time of a star is that star's own BJD_TDB
+    t_star, meta["time_column"] = star_times_bjd(frame, info.loc[lc_ids, "ra_deg"], info.loc[lc_ids, "dec_deg"], site)
+    for j, cid in enumerate(lc_ids):
         rr = R.loc[cid].reindex(frame.index)
         ee = S.loc[cid].reindex(frame.index)
         # error of a point as the field noise model predicts it (CCD error scaled by a, floor)
         em = np.sqrt((a * ee) ** 2 + fl**2)
-        pd.DataFrame({"time": frame["time"], "dmag": rr.to_numpy(), "err": em.to_numpy(),
-                      "fwhm": frame["fwhm"], "airmass": frame["airmass"]}).to_csv(
+        pd.DataFrame({"time": t_star[j], "dmag": rr.to_numpy(), "err": em.to_numpy(),
+                      "fwhm": frame["fwhm"].to_numpy(), "airmass": frame["airmass"].to_numpy()}).to_csv(
             lc_dir / f"varcand_{cid}.csv", index=False)
     if check_catalogs and not cand.empty:
         out.loc[order_c, "catalogs"] = [_catalog_check(row, cfg) for _, row in cand.iterrows()]
@@ -458,8 +582,9 @@ def run_field_variability(
             from transient_field import run_field_transients  # noqa: PLC0415
 
             tm = run_field_transients(per_frame_dir=per_frame_dir, photometry_dir=phot, platesolve_dir=ps, cfg=cfg,
-                                      frame=frame, E=E, zp_g=zp_g, k=k, gain=g, read_noise=rn,
-                                      check_catalogs=check_catalogs)
+                                      frame=frame, E=E.sub(frame[f"apcorr_{kplan['k_transient']:g}"]), zp_g=zp_g,
+                                      k=kplan["k_transient"], gain=g, read_noise=rn,
+                                      check_catalogs=check_catalogs, site=site)
             meta["transients"] = {kk: tm.get(kk) for kk in ("status", "n_sources", "n_candidates", "n_minor_bodies")}
         except Exception as exc:  # noqa: BLE001
             LOGGER.error("[TRANSIENT] search failed: %s", exc)
@@ -476,7 +601,8 @@ def run_field_variability(
 def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref: Any) -> float:
     """TRANSIENT-2026-10: ``dmag_vs_gaia`` (night magnitude - expected from Gaia incl. the neighbours'
     light in the aperture; negative = brighter) and ``brightened``; returns the field zero point for a
-    star of solar colour (BP-RP 0.82): G = m_inst - E - zp."""
+    star of solar colour (SOLAR_BP_RP): G = m_inst - E - zp."""
+    from mag_constants import SOLAR_BP_RP  # noqa: PLC0415
     from scipy import optimize  # noqa: PLC0415
 
     mi = Mi.reindex(info.index).to_numpy(float)
@@ -493,15 +619,15 @@ def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref:
         return mi[fit] - G[fit] - (p[0] + p[1] * c[fit] + p[2] * c[fit] ** 2)
 
     p = optimize.least_squares(_r, [float(np.median(mi[fit] - G[fit])), 0.0, 0.0], loss="soft_l1", f_scale=0.05).x
-    cc = np.where(np.isfinite(c), c, 0.82)
+    cc = np.where(np.isfinite(c), c, SOLAR_BP_RP)
     expect = G + p[0] + p[1] * cc + p[2] * cc**2 - 2.5 * np.log10(np.clip(1.0 + np.nan_to_num(bl, nan=0.0), 1e-3, None))
     dm = mi - expect
     info["dmag_vs_gaia"] = dm
     ok = use & np.isfinite(dm)
     sig = np.array([_window_stats(dm, G, ok, float(G[i]))[1] for i in range(len(dm))])
     gate = (info["gate_snr"] & info["gate_edge"]).to_numpy(bool)
-    info["brightened"] = gate & np.isfinite(dm) & (dm <= -1.0) & (dm <= -3.0 * sig)
-    return float(p[0] + p[1] * 0.82 + p[2] * 0.82**2)
+    info["brightened"] = gate & np.isfinite(dm) & (dm <= -BRIGHTENED_DMAG) & (dm <= -BRIGHTENED_NSIGMA * sig)
+    return float(p[0] + p[1] * SOLAR_BP_RP + p[2] * SOLAR_BP_RP**2)
 
 
 def _target_ids(phot: Path) -> set[str]:

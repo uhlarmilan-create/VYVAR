@@ -197,7 +197,7 @@ def _render_setting(key: str, entry: dict[str, Any], draft: dict[str, Any], curr
 # ---------------------------------------------------------------------------
 # groups
 # ---------------------------------------------------------------------------
-def _render_group(group: str, keys: list[str], registry: dict[str, Any], draft: dict[str, Any],
+def _render_group(keys: list[str], registry: dict[str, Any], draft: dict[str, Any],
                   current: dict[str, Any], defaults: dict[str, Any], errors: dict[str, str]) -> None:
     tiers: dict[str, list[str]] = {"basic": [], "advanced": [], "expert": []}
     for k in keys:
@@ -289,7 +289,7 @@ def _render_observer_site(cfg: AppConfig) -> None:
 def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path | None, draft: dict[str, Any]) -> None:
     """Suggestion from the active MASTERSTAR for the detection / aperture values (fills the draft;
     Save writes it). Computing these per draft automatically is a later, separate step."""
-    from masterstar_context import load_masterstar_context, resolve_masterstar_fits_path  # noqa: PLC0415
+    from masterstar_context import masterstar_header_fwhm_px, resolve_masterstar_fits_path  # noqa: PLC0415
 
     with st.expander("Suggest detection values from the active MASTERSTAR"):
         ms = resolve_masterstar_fits_path(cfg=cfg, db=getattr(pipeline, "db", None),
@@ -298,8 +298,7 @@ def _render_dao_helper(cfg: AppConfig, pipeline: Any, draft_dir_override: Path |
         if ms is None or not Path(ms).is_file():
             st.caption("No MASTERSTAR for the loaded processed field (Pipeline -> Load processed field).")
             return
-        ctx = load_masterstar_context(ms)
-        fwhm = ctx.vy_fwhm_px
+        fwhm = masterstar_header_fwhm_px(Path(ms))
         n = sm.masterstar_detection_count(Path(ms))
         if fwhm is None or not math.isfinite(float(fwhm)):
             st.caption("The MASTERSTAR header has no FWHM.")
@@ -424,7 +423,7 @@ def render_settings_dashboard(
         else:
             if group == "detection":
                 _render_dao_helper(cfg, pipeline, draft_dir_override, draft)
-            _render_group(group, groups[group], registry, draft, current, defaults, errors)
+            _render_group(groups[group], registry, draft, current, defaults, errors)
 
     with head:
         _render_header(cfg, groups, registry, draft, current, defaults, errors, n_keys)

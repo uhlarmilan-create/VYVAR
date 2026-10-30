@@ -336,17 +336,20 @@ class Band:
         return np.concatenate(rows), np.concatenate(hits)
 
     def cone(self, ra0: float, dec0: float, radius: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Index stars within ``radius`` deg (great circle) of (ra0, dec0). The cells come from
+        the RA half-width of ``catalog_db.cone_ra_half_width_deg`` (G03-05) plus one cell."""
+        from catalog_db import cone_ra_half_width_deg  # noqa: PLC0415
+
         g = self.grid
         dmin, dmax = max(-90.0, dec0 - radius), min(90.0, dec0 + radius)
         i0 = int(np.clip((dmin + 90.0) / g.size, 0, g.n_dec - 1))
         i1 = int(np.clip((dmax + 90.0) / g.size, 0, g.n_dec - 1))
         offs = g.offsets()
+        half = cone_ra_half_width_deg(dec0, radius)
         idx: list[np.ndarray] = []
         for i in range(i0, i1 + 1):
             nra = int(g.n_ra(i))
-            dec_c = -90.0 + (i + 0.5) * g.size
-            cosd = max(math.cos(math.radians(min(89.9, abs(dec_c) + g.size))), 1e-3)
-            dra = radius / cosd + 360.0 / nra
+            dra = 180.0 if half is None else half + 360.0 / nra
             if dra >= 180.0:
                 ra_cells = range(nra)
             else:
@@ -362,8 +365,7 @@ class Band:
             return np.zeros(0), np.zeros(0), np.zeros(0)
         ii = np.concatenate(idx)
         ra, dec = np.asarray(self.stars[ii, 0]), np.asarray(self.stars[ii, 1])
-        xi, eta = A.tan_project(ra, dec, ra0, dec0)
-        m = np.hypot(xi, eta) <= radius
+        m = A._angular_sep_deg(ra, dec, ra0, dec0) <= radius
         return ra[m], dec[m], np.asarray(self.mags[ii])[m]
 
 
@@ -396,7 +398,12 @@ def solve_blind(
     diag = math.hypot(nx, ny)
     sigma = max(1.0, 0.5 * (fwhm_px or 2.0))
     order = A.uniform_brightest(det_xy, -det_flux, BLIND_DEPTHS[-1], (0, nx, 0, ny))
-    vxy = det_xy[np.argsort(-det_flux)[:150]]
+    ver_order = np.argsort(-det_flux)[:150]
+    vxy = det_xy[ver_order]
+    # position of every detection in the verification list (-1 = not in it): the 4 detections
+    # of a matched pattern are left out of its verification (G03-02)
+    ver_pos = np.full(len(det_xy), -1, dtype=np.int64)
+    ver_pos[ver_order] = np.arange(len(ver_order))
     bands = load_index(index_dir)
     accept_at = A.LOG_ODDS_TUNE_UP if gaia_db else A.LOG_ODDS_ACCEPT
     tried = 0
@@ -463,7 +470,9 @@ def solve_blind(
                 c_ra, c_dec = w.wcs_pix2world([[cx, cy]], 0)[0]
                 rad = 0.55 * diag * s_as / 3600.0
                 cra, cdec, cmag = band.cone(float(c_ra), float(c_dec), rad)
-                lo, nm, w = A.verify_hypothesis(w, vxy, cra, cdec, cmag, shape, sigma_px=sigma)
+                quad = ver_pos[order[icanon[ii]]]
+                lo, nm, w = A.verify_hypothesis(w, vxy, cra, cdec, cmag, shape, sigma_px=sigma,
+                                                exclude=quad[quad >= 0])
                 if not math.isfinite(lo):
                     continue
                 tried += 1
@@ -471,14 +480,9 @@ def solve_blind(
                     best = A.SolveResult(False, wcs=w, log_odds=lo, n_match=nm, mirrored=mirror,
                                          scale_arcsec=s_as, message="best rejected blind hypothesis")
                 if lo >= accept_at:
-                    if gaia_db:
-                        res = A.refine_with_gaia(w, s_as, det_xy, shape, gaia_db=gaia_db, sigma=sigma)
-                        if res.ok:
-                            res = A._final_refine(res, det_xy, shape, gaia_db=gaia_db, sigma=sigma)
-                    else:
-                        res = A.refine_wcs(w, det_xy, cra, cdec, shape, sigma_px=sigma)
-                    ok, why = A.credible_solution(res, len(det_xy), sigma)
-                    if not ok:
+                    res, why = A.accept_hypothesis(w, det_xy, shape, sigma_px=sigma, gaia_db=gaia_db,
+                                                   cat=None if gaia_db else (cra, cdec))
+                    if res is None:
                         best.message = f"verified blind hypothesis rejected: {why}"
                         continue
                     res.log_odds = max(res.log_odds, lo)

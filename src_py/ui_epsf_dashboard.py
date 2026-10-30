@@ -27,7 +27,7 @@ _TARGETS_HELP = (
     "ALL = every target that has aperture photometry - VSX variables, exoplanet hosts (type EXOPLANET), "
     "manual targets (types excluded in config.json vsx_out_of_scope_types have none). Or a comma-separated "
     "list of types (EA, EB, EW, EXOPLANET), star names "
-    "(V0393 Cyg) or catalog ids; * is a wildcard (E* = every type starting with E, ZTF* = every ZTF name). "
+    "(V0393 Cyg) or catalog ids; * is a wildcard for variability types only (E* = EA, EB, EW, ...); names and ids match exactly. "
     "The comparison stars of the chosen targets are measured with them."
 )
 
@@ -59,8 +59,9 @@ def psf_lc_figure(df: pd.DataFrame, label: str, *, show_aperture: bool):
 
     ap = df.loc[df["ap_ok"]]
     ps = df.loc[df["psf_ok"]]
-    both = df.loc[df["ap_ok"] & df["psf_ok"]]
-    shift = float(np.median(both["psf_mag"] - both["ap_mag"])) if show_aperture and len(both) else 0.0
+    from epsf_lc_compare import psf_level_shift  # noqa: PLC0415
+
+    shift = psf_level_shift(df) if show_aperture else 0.0
     t0 = float(np.floor(np.nanmin(df["bjd"]))) if np.isfinite(df["bjd"]).any() else 0.0
     fig = go.Figure()
     if show_aperture:

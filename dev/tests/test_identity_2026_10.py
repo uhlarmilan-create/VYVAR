@@ -193,10 +193,11 @@ def test_cone_sky_box_pole_and_ra_wrap() -> None:
 
 
 def test_comp_frame_stats_counts() -> None:
-    from comp_pool_rms import COMP_SAT_LIMIT_SCALE, comp_frame_stats
+    from comp_pool_rms import comp_frame_stats
+    from pipeline_constants import LINEARITY_FRAC
 
     lim85 = 50000.0
-    over = lim85 * COMP_SAT_LIMIT_SCALE + 1.0
+    over = lim85 * 0.80 / LINEARITY_FRAC + 1.0
     cache = {}
     paths = []
     for i in range(10):
@@ -211,7 +212,7 @@ def test_comp_frame_stats_counts() -> None:
                 "bjd_tdb_mid": [2460000.0 + i] * 2,
             }
         )
-    st = comp_frame_stats({"A", "B"}, paths, cache)
+    st = comp_frame_stats({"A", "B"}, paths, cache, comp_peak_sat_frac=0.80)
     assert st["A"] == {"n_frames": 10, "n_peak": 10, "n_over": 3}
     assert st["B"] == {"n_frames": 8, "n_peak": 10, "n_over": 0}
 
@@ -245,26 +246,26 @@ def _pool_df(n: int = 8) -> pd.DataFrame:
 
 def test_pool_keeps_binaries_drops_per_frame_saturated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A Gaia binary (non_single_star > 0) that does not vary is a valid comparison (Milan
-    2026-10-14: what matters is that a comparison is not variable). PHASE1-ONE-PASS-2026-10: a comp
-    over COMP-SAT-80 in more than 10 % of its frames leaves the pool; one over it in <= 10 % stays."""
+    2026-10-14: what matters is that a comparison is not variable). COMP-SAT-ONE-2026-10 (Milan
+    2026-10-29): a comp over comp_peak_sat_frac x SAT on any frame leaves the pool."""
     from config import AppConfig
     from photometry_comp import build_global_comp_pool
 
     stats = {str(2000 + i): {"n_frames": 40, "n_peak": 40, "n_over": 0} for i in range(8)}
-    stats["2002"]["n_over"] = 5   # 12.5 % -> out
-    stats["2003"]["n_over"] = 4   # 10 % -> stays
+    stats["2002"]["n_over"] = 5   # out
+    stats["2003"]["n_over"] = 1   # one frame -> out as well
     monkeypatch.setattr("photometry_comp.comp_frame_stats", lambda *_a, **_k: stats)
     cfg = AppConfig()
     pool = build_global_comp_pool(
         masterstars_df=_pool_df(), per_frame_csv_paths=[tmp_path / "proc_001.csv"], csv_cache={},
         variable_target_catalog_ids=frozenset(), safe_bbox=None, chip_fw=1000, chip_fh=1000,
-        chip_interior_margin_px=0, max_comp_rms=0.1, cfg=cfg,
+        chip_interior_margin_px=0, cfg=cfg,
         min_frames_frac=0.3, fwhm_px=3.7,
     )
     ids = set(pool["catalog_id"].astype(str))
     assert "2001" in ids, "a non-variable binary stays a comparison candidate"
-    assert "2002" not in ids, "comp saturated in > 10 % of frames must leave the pool"
-    assert {"2000", "2003", "2004"} <= ids
+    assert "2002" not in ids and "2003" not in ids, "a comp over the limit on any frame leaves the pool"
+    assert {"2000", "2004"} <= ids
     assert set(pool["comp_n_frames"].astype(int)) == {40}
 
 
@@ -347,3 +348,30 @@ def test_no_static_depth_parameter() -> None:
         assert not hasattr(cfg, k) and k in KNOWN_REMOVED_KEYS
     src = (Path(__file__).resolve().parents[2] / "src_py" / "masterstar_build.py").read_text(encoding="utf-8")
     assert "_census_depth_g = 17.5" not in src
+
+
+def test_gaia_variable_flag_by_identity(tmp_path: Path) -> None:
+    """GAIA-VAR-ID-2026-10 (G04-01): gaia_dr3_variable_catalog is the var_flag of the identified Gaia row
+    (it was False on every row: no caller passed the separate position list)."""
+    import sqlite3
+
+    from catalog_match import detect_stars_and_match_catalog
+
+    cfg5 = AppConfig()
+    cfg5.detection_threshold_sigma = 5.0
+    img, w, db = _field(tmp_path)
+    con = sqlite3.connect(db)
+    con.execute("UPDATE gaia_dr3 SET var_flag = 'NOT_AVAILABLE'")
+    con.execute("UPDATE gaia_dr3 SET var_flag = 'VARIABLE' WHERE source_id IN (1, 1003)")
+    con.commit()
+    con.close()
+    hdr = w.to_header()
+    hdr["VY_SOLVR"] = "astrosolve"
+    df, meta = detect_stars_and_match_catalog(
+        img, hdr, gaia_db_path=db, vsx_df=pd.DataFrame(), dao_fwhm_px=FWHM,
+        dao_fwhm_bypass_header=True, photometric_gain=1.0, cfg=cfg5,
+    )
+    cid = df["catalog_id"].fillna("").astype(str).str.strip()
+    var = df["gaia_dr3_variable_catalog"].astype(bool)
+    assert set(cid[var]) == {"1", "1003"}
+    assert meta["n_gaia_variable_in_field"] == 2

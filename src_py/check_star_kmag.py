@@ -296,21 +296,6 @@ def select_check_star(
         return None
 
 
-def evaluate_k_colour_caveat(
-    k_colour_offset: float,
-    *,
-    colour_window: float,
-    airmass_range: float,
-) -> bool:
-    return (
-        math.isfinite(float(k_colour_offset))
-        and math.isfinite(float(colour_window))
-        and math.isfinite(float(airmass_range))
-        and float(k_colour_offset) > float(colour_window)
-        and float(airmass_range) > 0.2
-    )
-
-
 @dataclass(frozen=True, slots=True)
 class CheckEnsembleResult:
     """Check-star ensemble output + sparse-trust sidecar metadata."""
@@ -324,16 +309,8 @@ class CheckEnsembleResult:
     comp_stability_p: float = float("nan")
     x2_pair_mag2: float = float("nan")
     triangulation_clipped: bool = False
-    zp_sem_ratio: float | None = None
     single_comp: bool = False
     sparse_flags: tuple[str, ...] = ()
-    k_source: str = ""
-    k_colour_offset: float = float("nan")
-    k_tier_excluded: bool = False
-    k_colour_caveat: bool = False
-    trust_R_detrend: float = float("nan")
-    trust_R_detrend_lo: float = float("nan")
-    trust_R_detrend_hi: float = float("nan")
 
 
 def compute_check_ensemble_mag_calib(
@@ -343,18 +320,12 @@ def compute_check_ensemble_mag_calib(
     comp_catalog_mag: dict[str, float],
     comp_quality: dict[str, dict],
     *,
-    cfg: AppConfig,
     n_comp_min: int | None = None,
     comp_photon_mag: dict[str, np.ndarray] | None = None,
     sigma_sys_mag: float = 0.0,
-    airmass: np.ndarray | None = None,
-    k_source: str = "",
-    k_colour_offset: float = float("nan"),
-    k_tier_excluded: bool = False,
-    sparse_external_k: bool = False,
     allow_relative: bool = False,
 ) -> CheckEnsembleResult | None:
-    """Ensemble-standardize the check star; K external on sparse branch (Amendment 1).
+    """Ensemble-standardize the check star (one comp: K = m_check - m_comp + catalogue(comp)).
 
     ``allow_relative`` (UNCAL-LC-2026-10): only for a target without a band zero point -
     the check is then verified on its differential magnitude (its level is not exported)."""
@@ -382,25 +353,10 @@ def compute_check_ensemble_mag_calib(
     n_ensemble = len(other_quality)
     _min_other = max(2, int(n_comp_min if n_comp_min is not None else 2))
 
-    k_meta = {
-        "k_source": str(k_source or ""),
-        "k_colour_offset": float(k_colour_offset),
-        "k_tier_excluded": bool(k_tier_excluded),
-        "k_colour_caveat": False,
-    }
-    colour_win = float(getattr(cfg, "comp_max_delta_bprp", 0.79) or 0.79)
-    if airmass is not None:
-        am = np.asarray(airmass, dtype=np.float64)
-        am_ok = am[np.isfinite(am)]
-        am_range = float(am_ok.max() - am_ok.min()) if am_ok.size >= 2 else float("nan")
-        k_meta["k_colour_caveat"] = evaluate_k_colour_caveat(
-            float(k_colour_offset), colour_window=colour_win, airmass_range=am_range,
-        )
-
     if n_ensemble < 1:
         return None
 
-    if n_ensemble == 1 and (sparse_external_k or n_ensemble < _min_other):
+    if n_ensemble == 1:  # _min_other >= 2, so a single comp is always the sparse branch
         c1 = next(iter(other_quality))
         m_k = np.asarray(comp_lc[cid], dtype=np.float64)
         m_c1 = np.asarray(comp_lc[c1], dtype=np.float64)
@@ -434,7 +390,6 @@ def compute_check_ensemble_mag_calib(
                 comp_photon_mag=phot,
                 sigma_sys_mag=float(sigma_sys_mag),
                 n_comps=1,
-                airmass=airmass,
             )
             _, sparse_flags = trust_band(
                 R_hi=sparse_stats.trust_R_hi,
@@ -458,10 +413,6 @@ def compute_check_ensemble_mag_calib(
                 triangulation_clipped=False,
                 single_comp=True,
                 sparse_flags=sparse_flags,
-                trust_R_detrend=sparse_stats.trust_R_detrend,
-                trust_R_detrend_lo=sparse_stats.trust_R_detrend_lo,
-                trust_R_detrend_hi=sparse_stats.trust_R_detrend_hi,
-                **k_meta,
             )
         return CheckEnsembleResult(
             kmag=mag_calib,
@@ -469,10 +420,9 @@ def compute_check_ensemble_mag_calib(
             n_comps=1,
             single_comp=True,
             sparse_flags=sparse_flags,
-            **k_meta,
         )
 
-    if n_ensemble < _min_other and not sparse_external_k:
+    if n_ensemble < _min_other:
         return None
 
     other_lc = {c: comp_lc[c] for c in other_quality}
@@ -498,7 +448,6 @@ def compute_check_ensemble_mag_calib(
     check_sparse = n_other <= 2
     sparse_stats = None
     sparse_flags: tuple[str, ...] = ()
-    zp_ratio: float | None = None
     if comp_photon_mag is not None and n_other >= 2:
         from sparse_trust_core import (  # noqa: PLC0415
             compute_sparse_trust_stats,
@@ -517,7 +466,6 @@ def compute_check_ensemble_mag_calib(
             comp_photon_mag=phot,
             sigma_sys_mag=float(sigma_sys_mag),
             n_comps=n_other,
-            airmass=airmass,
         )
         _, sparse_flags = trust_band(
             R_hi=sparse_stats.trust_R_hi,
@@ -528,35 +476,6 @@ def compute_check_ensemble_mag_calib(
             triangulation_clipped=sparse_stats.triangulation_clipped,
             cfg=SparseTrustConfig(),
         )
-        if n_other in (3, 4):
-            sem_med = float(np.nanmedian(ensemble_scatter[np.isfinite(ensemble_scatter)]))
-            if math.isfinite(sem_med) and sem_med > 0 and comp_photon_mag:
-                from sparse_trust_core import sigma_zp_per_epoch, triangulate_variances  # noqa: PLC0415
-
-                c1, c2 = use_ids[0], use_ids[1] if len(use_ids) > 1 else use_ids[0]
-                tri = triangulate_variances(
-                    float(np.nanvar(comp_lc[cid] - comp_lc[c1], ddof=1)),
-                    float(np.nanvar(comp_lc[cid] - comp_lc[c2], ddof=1)),
-                    float(np.nanvar(comp_lc[c1] - comp_lc[c2], ddof=1)),
-                )
-                x2_c1 = max(tri.sig2_C1, 0.0)
-                x2_c2 = max(tri.sig2_C2, 0.0)
-                flux = np.vstack(
-                    [
-                        10.0 ** (-0.4 * np.asarray(comp_lc[c1], dtype=float)),
-                        10.0 ** (-0.4 * np.asarray(comp_lc[c2], dtype=float)),
-                    ]
-                )
-                phot_stack = np.vstack(
-                    [
-                        comp_photon_mag.get(c1, np.full(len(comp_lc[c1]), float("nan"))),
-                        comp_photon_mag.get(c2, np.full(len(comp_lc[c2]), float("nan"))),
-                    ]
-                )
-                tri_zp = sigma_zp_per_epoch(flux, phot_stack, np.array([x2_c1, x2_c2]))
-                tri_med = float(np.nanmedian(tri_zp[np.isfinite(tri_zp)]))
-                if math.isfinite(tri_med) and tri_med > 0:
-                    zp_ratio = sem_med / tri_med
 
     if sparse_stats is not None:
         return CheckEnsembleResult(
@@ -569,21 +488,14 @@ def compute_check_ensemble_mag_calib(
             comp_stability_p=sparse_stats.comp_stability_p,
             x2_pair_mag2=sparse_stats.x2_pair_mag2,
             triangulation_clipped=sparse_stats.triangulation_clipped,
-            zp_sem_ratio=zp_ratio,
             sparse_flags=sparse_flags,
             single_comp=n_other == 1,
-            trust_R_detrend=sparse_stats.trust_R_detrend,
-            trust_R_detrend_lo=sparse_stats.trust_R_detrend_lo,
-            trust_R_detrend_hi=sparse_stats.trust_R_detrend_hi,
-            **k_meta,
         )
     return CheckEnsembleResult(
         kmag=mag_calib,
         check_sparse=check_sparse,
         n_comps=n_other,
-        zp_sem_ratio=zp_ratio,
         single_comp=n_other == 1,
-        **k_meta,
     )
 
 
@@ -642,6 +554,70 @@ def check_kmag_sidecar_path(lc_dir: Path | str, target_cid: str) -> Path:
     return Path(lc_dir) / f"check_kmag_{str(target_cid).strip()}.csv"
 
 
+@dataclass(frozen=True)
+class CheckStarStats:
+    """Check-star numbers of one target (G11-11): over the check epochs of the target's exported rows."""
+
+    n: int
+    median: float
+    scatter: float  # standard deviation, ddof=1 (NaN below 2 epochs)
+    err_med: float  # median kmag_err
+    bjd: np.ndarray
+    kmag: np.ndarray
+
+
+def check_star_stats(sidecar: pd.DataFrame | None, source_files: Any = None) -> CheckStarStats:
+    """G11-11: the one computation of the check-star median, scatter and median error (export header, PDF and
+    UI facts, plot strip, trust). ``source_files``: the target's exported rows (``export_row_mask``); the
+    check epochs of other frames are not counted. ``None`` counts every finite check epoch."""
+    empty = CheckStarStats(0, float("nan"), float("nan"), float("nan"), np.array([]), np.array([]))
+    if sidecar is None or sidecar.empty or "kmag" not in sidecar.columns:
+        return empty
+    df = sidecar
+    if source_files is not None:
+        if "source_file" not in df.columns:
+            return empty
+        keep = {str(x).strip() for x in source_files}
+        df = df[df["source_file"].astype(str).str.strip().isin(keep)]
+    km = pd.to_numeric(df["kmag"], errors="coerce").to_numpy(dtype=float)
+    ok = np.isfinite(km)
+    km = km[ok]
+    bjd = (pd.to_numeric(df["bjd"], errors="coerce").to_numpy(dtype=float)[ok] if "bjd" in df.columns
+           else np.full(km.size, np.nan))
+    ke = (pd.to_numeric(df["kmag_err"], errors="coerce").to_numpy(dtype=float)[ok] if "kmag_err" in df.columns
+          else np.full(km.size, np.nan))
+    n = int(km.size)
+    return CheckStarStats(
+        n=n,
+        median=float(np.median(km)) if n else float("nan"),
+        scatter=float(np.std(km, ddof=1)) if n > 1 else float("nan"),
+        err_med=float(np.nanmedian(ke)) if np.isfinite(ke).any() else float("nan"),
+        bjd=bjd,
+        kmag=km,
+    )
+
+
+def exported_check_stats(lc_dir: Path | str, target_cid: str, *, lc_df: pd.DataFrame | None = None,
+                         sidecar: pd.DataFrame | None = None, mag_column: str | None = None) -> CheckStarStats:
+    """:func:`check_star_stats` of a target from its files: the check epochs of the rows its light curve
+    exports (magnitude column: ``mag_column``, else ``photometry_lightcurve.lc_export_mag_column``)."""
+    from gaia_catalog_id import read_vyvar_csv  # noqa: PLC0415
+    from photometry_lightcurve import export_row_mask, lc_export_mag_column  # noqa: PLC0415
+
+    lc_dir = Path(lc_dir)
+    tid = str(target_cid).strip()
+    if sidecar is None:
+        p = check_kmag_sidecar_path(lc_dir, tid)
+        sidecar = read_vyvar_csv(p, low_memory=False) if p.is_file() else None
+    if lc_df is None:
+        p = lc_dir / f"lightcurve_{tid}.csv"
+        lc_df = read_vyvar_csv(p, low_memory=False) if p.is_file() else None
+    if lc_df is None or lc_df.empty or "source_file" not in lc_df.columns:
+        return check_star_stats(None)
+    m = export_row_mask(lc_df, mag_column=mag_column or lc_export_mag_column(lc_df))
+    return check_star_stats(sidecar, lc_df.loc[m, "source_file"])
+
+
 #: OUTPUT-REVIEW-2026-10 step 6: the per-check values (one per target) live in
 #: ``comp_quality_<target>.json`` under this key; ``check_kmag_<target>.csv`` keeps the epochs.
 CHECK_STAR_JSON_KEY = "check_star"
@@ -672,14 +648,6 @@ def check_star_block(check_cid: str, ensemble: CheckEnsembleResult | None) -> di
             "sparse_flags": list(ensemble.sparse_flags or []),
         }
     )
-    if ensemble.k_source:
-        out["k_source"] = str(ensemble.k_source)
-    if math.isfinite(float(ensemble.k_colour_offset)):
-        out["k_colour_offset"] = _json_num(ensemble.k_colour_offset, 6)
-    if math.isfinite(float(ensemble.trust_R_detrend)):
-        out["trust_R_detrend"] = _json_num(ensemble.trust_R_detrend, 6)
-        out["trust_R_detrend_lo"] = _json_num(ensemble.trust_R_detrend_lo, 6)
-        out["trust_R_detrend_hi"] = _json_num(ensemble.trust_R_detrend_hi, 6)
     return out
 
 

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
@@ -51,7 +52,11 @@ def run_tess_for_star(photometry_dir: Path, catalog_id: str, cfg: Any, progress:
             d = pd.read_csv(lc)
             from photometry_lightcurve import published_mag_column  # noqa: PLC0415
 
-            col = published_mag_column(d) or "mag_calib"
+            # G09-41: the published magnitude, or delta_mag for a light curve without a band zero point
+            # (UNCAL-LC-2026-10: mag_calib all NaN) - the overlay only needs the shape
+            col = published_mag_column(d)
+            if col is None or not np.isfinite(pd.to_numeric(d[col], errors="coerce")).any():
+                col = "delta_mag"
             vy = (pd.to_numeric(d["bjd"], errors="coerce").to_numpy(float), pd.to_numeric(d[col], errors="coerce").to_numpy(float))
     res = run_tess(cid, ra, dec, tess_dir_for(phot, cid), cfg=cfg, vyvar_lc=vy, progress=progress, target_mag=gmag)
     LOGGER.info("[TESS] %s: verdict %s %s", cid, res.verdict, "; ".join(res.reasons))

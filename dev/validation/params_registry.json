@@ -784,5 +784,19 @@
     "scope_confidence": "high",
     "scope_key": "none",
     "scope_group": "n/a"
+  },
+  "comp_peak_sat_frac": {
+    "help": "Comparison stars: largest raw peak allowed, as a fraction of the measured saturation level, on the MASTERSTAR and on every frame. 0.80 = AAVSO guidance (comps well inside the linear range); targets use 0.90.",
+    "kind": "static",
+    "label": "Comparison peak limit (x saturation)",
+    "owner": "config_runtime",
+    "phase": "comp_selection",
+    "tier": "advanced",
+    "unit": null,
+    "widget": "auto",
+    "scope": "universal",
+    "scope_confidence": "high",
+    "scope_key": "none",
+    "scope_group": "n/a"
   }
 }

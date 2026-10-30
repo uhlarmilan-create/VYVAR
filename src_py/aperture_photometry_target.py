@@ -20,7 +20,6 @@ from aperture_photometry import (
     read_flux_from_csv,
 )
 from photometry_lightcurve import (
-    _check_color_term_extrapolation,
     _combine_err_with_ensemble_scatter_keyed,
     _ensemble_scatter_by_source_file,
     _err_budget_components_keyed,
@@ -29,17 +28,23 @@ from photometry_lightcurve import (
     _get_lc,
     _aperture_skip_empty_comps_target,
     _recompute_bjd_hjd_with_status,
-    apply_color_term,
     check_comparison_stability,
     compute_lc_rms_ooe,
-    ct_ensemble_reference_maps,
     ensemble_normalize,
+    frame_rows_in_time_order,
     save_lightcurve_csv,
     save_lightcurve_png,
 )
 
+from mag_constants import MAG_ERR_SCALE
 from photometry_defs import LOGGER
 
+
+
+def _vsx_name_of(target_row: Any) -> str:
+    """The VSX name of a target (empty for manual / exoplanet / candidate targets, G11-22)."""
+    v = str(target_row.get("vsx_name", "") or "").strip()
+    return "" if v.lower() in ("nan", "none") else v
 
 
 def zero_point_uncertainty(
@@ -91,114 +96,8 @@ def zero_point_uncertainty(
         out["sigma_zp_data_mag"] = round(s / math.sqrt(n_eff), 5)
     return out
 
-def _aperture_process_one_target(
-    target_row: Any,
-    *,
-    ti: int,
-    state: _AperturePhotometryState,
-    summary_rows: list,
-    n_lc: int,
-    lc_dir: Path,
-    output_dir: Path,
-    progress_cb: Any,
-    masterstar_fits_path: Path,
-    annulus_inner_fwhm: float,
-    annulus_outer_fwhm: float,
-    outlier_sigma: float,
-    stability_sigma: float,
-    _apt_fw: float,
-    _save_png: bool,
-) -> tuple[list, int]:
-    """Process one target through the full aperture photometry pipeline.
-
-    Returns updated (summary_rows, n_lc).
-    """
-    def _p2(msg: str) -> None:
-        if progress_cb is None:
-            return
-        try:
-            progress_cb(str(msg))
-        except UnicodeEncodeError:
-            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
-
-    _comp_index = state._comp_index
-    target_bp_rp_by_cid = state.target_bp_rp_by_cid
-    csv_files = state.csv_files
-    _aperture_csv_cache = state._aperture_csv_cache
-    _aperture_lookup_cache = state._aperture_lookup_cache
-    frame_time_lookup = state.frame_time_lookup
-    fwhm_px = state.fwhm_px
-    apertures_px = state.apertures_px
-    star_xy = state.star_xy
-    chip_fw = state.chip_fw
-    chip_fh = state.chip_fh
-    _flux_matrix = state._flux_matrix
-    obs_group = state.obs_group
-    _gain_phot = state._gain_phot
-    _rn_phot = state._rn_phot
-    sat_limit_resolved = state.sat_limit_resolved
-    _cfg = state._cfg
-    _nt = state._nt
-
-    target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
-    target_name = _target_display_name(target_row, fallback_cid=target_cid)
-    target_vsx_type = str(target_row.get("vsx_type", "") or "").strip()
-    _sp = target_row.get("skip_photometry", False)
-    if isinstance(_sp, (bool, np.bool_)):
-        skip_photo = bool(_sp)
-    else:
-        skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
-    _zf_row = str(target_row.get("zone_flag", "")).strip()
-    # skip_photometry / skip_reason carry the whole decision (target-selection cuts + per-frame saturation)
-    if not skip_photo:
-        state.i_measured = int(getattr(state, "i_measured", 0)) + 1
-        _nm = int(getattr(state, "n_to_measure", 0)) or _nt
-        _im = int(state.i_measured)
-        if progress_cb is not None and (_im == 1 or _im >= _nm or (_nm > 1 and _im % max(1, _nm // 12) == 0)):
-            _ns = int(getattr(state, "n_final_skip", 0))
-            _p2(f"Aperture photometry: target {_im}/{_nm}: {target_name[:50]}"
-                + (f" ({_ns} skipped: saturation, S/N, type)" if _ns else ""))
-    if skip_photo:
-        _skip_reason = str(target_row.get("skip_reason", "") or "").strip()
-        logging.info(f"[APERTURE] Skipping photometry ({_skip_reason}): {target_name}")
-        _skip_sum: dict[str, Any] = {
-            "catalog_id": target_cid,
-            "vsx_name": target_name,
-            "vsx_type": target_vsx_type,
-            "zone_flag": _zf_row,
-            "n_frames": 0,
-            "n_good_comp": 0,
-            "n_saturated": 0,
-            "lc_rms": float("nan"),
-            "lc_median_mag": float("nan"),
-            "aperture_px": float("nan"),
-            "lc_csv": "",
-            "lc_png": "",
-        }
-        _skip_sum["skip_reason"] = _skip_reason
-        summary_rows.append(_skip_sum)
-        return summary_rows, n_lc
-    logging.info(
-        f"[APERTURE] Starting: target={target_name}, "
-        f"frames={len(csv_files)}, "
-        f"aperture={_apt_fw * float(fwhm_px):.2f}px "
-        f"(FWHM={float(fwhm_px):.3f}px x {_apt_fw:.2f})"
-    )
-
-    # Comp stars for this target
-    target_comps = _comp_index.get(target_cid, pd.DataFrame()).copy()
-    _star_xy = dict(star_xy)
-
-    if target_comps.empty:
-        summary_rows = _aperture_skip_empty_comps_target(
-            target_cid=target_cid,
-            target_name=target_name,
-            zone_flag=_zf_row,
-            summary_rows=summary_rows,
-            vsx_type=target_vsx_type,
-        )
-        return summary_rows, n_lc
-
+def _tgt_comp_inputs(*, obs_group, target_cid, target_comps):
+    """Comparison ids of the target, their band magnitudes (zero-point band or NONE) and pool RMS."""
     comp_ids: list[str] = []
     _seen_comp: set[str] = set()
     for c in target_comps["catalog_id"].tolist():
@@ -243,7 +142,23 @@ def _aperture_process_one_target(
         except Exception:  # noqa: BLE001
             rms_raw = float("nan")
         comp_rms_map[cid0] = float(rms_raw)
+    return _band_system, _fb, all_ids, comp_catalog_mag, comp_ids, comp_rms_map
 
+
+def _tgt_choose_check_star(
+    *,
+    _cfg,
+    _fb,
+    all_ids,
+    comp_catalog_mag,
+    comp_ids,
+    state,
+    target_cid,
+    target_comps,
+    target_row,
+):
+    """Check star of the target: the comp-table check role, else the best reserve / pool star."""
+    from gaia_bands import zp_mag_from_gaia  # noqa: PLC0415
 
     _chk_cid_pref: str | None = None
     if _chk_cid_pref is None:
@@ -331,15 +246,26 @@ def _aperture_process_one_target(
                             _fb,
                         )
                         break
-                try:
-                    _cx = float(pd.to_numeric(_chk_row_pref.get("x"), errors="coerce"))
-                    _cy = float(pd.to_numeric(_chk_row_pref.get("y"), errors="coerce"))
-                except Exception:  # noqa: BLE001
-                    _cx, _cy = float("nan"), float("nan")
-                if math.isfinite(_cx) and math.isfinite(_cy):
-                    _star_xy[_chk_cid_pref] = (_cx, _cy)
+    return _chk_cid_pref,
 
-    # Step 2: photometry per frame (PERF-8: slice shared flux matrix when built)
+
+def _tgt_frame_rows(
+    *,
+    _aperture_csv_cache,
+    _aperture_lookup_cache,
+    _flux_matrix,
+    _gain_phot,
+    _rn_phot,
+    all_ids,
+    apertures_px,
+    chip_fh,
+    chip_fw,
+    csv_files,
+    frame_time_lookup,
+    sat_limit_resolved,
+    state,
+):
+    """Per-frame rows (target + comps) from the night flux matrix with saturation / edge / alignment flags."""
     frame_results: list[pd.DataFrame] = []
     if not _flux_matrix.empty:
         _id_set = set(all_ids)
@@ -362,44 +288,7 @@ def _aperture_process_one_target(
                     chip_fw = int(math.ceil(_xm)) + 2
                 if chip_fh is None and math.isfinite(_ym) and _ym > 0:
                     chip_fh = int(math.ceil(_ym)) + 2
-            if chip_fw is not None and chip_fh is not None and int(chip_fw) > 0 and int(chip_fh) > 0:
-                tmask = df_frame["catalog_id"].astype(str).str.strip().eq(target_cid)
-                if bool(tmask.any()):
-                    tr = df_frame.loc[tmask].iloc[0]
-                    try:
-                        x_t = float(pd.to_numeric(tr.get("x"), errors="coerce"))
-                        y_t = float(pd.to_numeric(tr.get("y"), errors="coerce"))
-                    except Exception:  # noqa: BLE001
-                        x_t, y_t = float("nan"), float("nan")
-                    try:
-                        r_out_t = float(pd.to_numeric(tr.get("sky_annulus_r_out_px", 30.0), errors="coerce"))
-                    except Exception:  # noqa: BLE001
-                        r_out_t = 30.0
-                    if not (math.isfinite(r_out_t) and r_out_t > 0):
-                        r_out_t = 30.0
-                    # PSF-LOCAL-2026-10: the target's annulus scales with its own PSF too
-                    r_out_t *= float((getattr(state, "psf_scale", None) or {}).get(str(target_cid), 1.0))
-                    if math.isfinite(x_t) and math.isfinite(y_t):
-                        edge_ok = (
-                            (x_t - r_out_t >= 0)
-                            and (x_t + r_out_t <= float(chip_fw))
-                            and (y_t - r_out_t >= 0)
-                            and (y_t + r_out_t <= float(chip_fh))
-                        )
-                        if not edge_ok:
-                            df_frame = df_frame.copy()
-                            df_frame.loc[tmask, "mag_inst"] = float("nan")
-                            df_frame.loc[tmask, "flag"] = "edge_fail"
-                            if "edge_fail" in df_frame.columns:
-                                df_frame.loc[tmask, "edge_fail"] = True
-                            logging.info(
-                                "[TARGET EDGE] %s: frame %s rejected - annulus off chip (x=%.0f, y=%.0f, r_out=%.1fpx)",
-                                str(target_name),
-                                str(csv_path.name),
-                                float(x_t),
-                                float(y_t),
-                                float(r_out_t),
-                            )
+            # G06-07: the chip / footprint edge verdict comes from the flux grid only (AP-FOOTPRINT-2026-10)
             frame_results.append(df_frame)
     else:
         for csv_path in csv_files:
@@ -413,14 +302,11 @@ def _aperture_process_one_target(
                 all_ids,
                 apertures_px,
                 sat_limit_adu=sat_limit_resolved,
-                star_xy=_star_xy,
-                xy_tol_px=18.0,
                 frame_times=_ft,
                 csv_df=_cached_df,
                 lookup=_lookup_row,
                 gain=float(_gain_phot),
                 read_noise=float(_rn_phot),
-                variable_target_catalog_ids=state.variable_target_catalog_ids,
             )
             if not df_frame.empty:
                 if (chip_fw is None or chip_fh is None) and ("x" in df_frame.columns and "y" in df_frame.columns):
@@ -434,49 +320,22 @@ def _aperture_process_one_target(
                     if chip_fh is None and math.isfinite(_ym) and _ym > 0:
                         chip_fh = int(math.ceil(_ym)) + 2
 
-                if chip_fw is not None and chip_fh is not None and int(chip_fw) > 0 and int(chip_fh) > 0:
-                    tmask = df_frame["catalog_id"].astype(str).str.strip().eq(target_cid)
-                    if bool(tmask.any()):
-                        tr = df_frame.loc[tmask].iloc[0]
-                        try:
-                            x_t = float(pd.to_numeric(tr.get("x"), errors="coerce"))
-                            y_t = float(pd.to_numeric(tr.get("y"), errors="coerce"))
-                        except Exception:  # noqa: BLE001
-                            x_t, y_t = float("nan"), float("nan")
-                        try:
-                            r_out_t = float(pd.to_numeric(tr.get("sky_annulus_r_out_px", 30.0), errors="coerce"))
-                        except Exception:  # noqa: BLE001
-                            r_out_t = 30.0
-                        if not (math.isfinite(r_out_t) and r_out_t > 0):
-                            r_out_t = 30.0
-                        # PSF-LOCAL-2026-10: the target's annulus scales with its own PSF too
-                        r_out_t *= float((getattr(state, "psf_scale", None) or {}).get(str(target_cid), 1.0))
-                        if math.isfinite(x_t) and math.isfinite(y_t):
-                            edge_ok = (
-                                (x_t - r_out_t >= 0)
-                                and (x_t + r_out_t <= float(chip_fw))
-                                and (y_t - r_out_t >= 0)
-                                and (y_t + r_out_t <= float(chip_fh))
-                            )
-                            if not edge_ok:
-                                df_frame = df_frame.copy()
-                                df_frame.loc[tmask, "mag_inst"] = float("nan")
-                                df_frame.loc[tmask, "flag"] = "edge_fail"
-                                if "edge_fail" in df_frame.columns:
-                                    df_frame.loc[tmask, "edge_fail"] = True
-                                logging.info(
-                                    "[TARGET EDGE] %s: frame %s rejected - annulus off chip (x=%.0f, y=%.0f, r_out=%.1fpx)",
-                                    str(target_name),
-                                    str(csv_path.name),
-                                    float(x_t),
-                                    float(y_t),
-                                    float(r_out_t),
-                                )
+                # G06-07: edge verdict from the flux grid only
                 frame_results.append(df_frame)
+    return chip_fh, chip_fw, frame_results
 
-    if not frame_results:
-        return summary_rows, n_lc
 
+def _tgt_apply_night_k(
+    *,
+    _chk_cid_pref,
+    annulus_inner_fwhm,
+    annulus_outer_fwhm,
+    comp_ids,
+    frame_results,
+    state,
+    target_cid,
+):
+    """Concatenate the frame rows and apply the target's per-target aperture k (AP-PERTARGET)."""
     all_frames = pd.concat(frame_results, ignore_index=True)
 
     # APERTURE-PERTARGET-01: rebuild mag_inst at f* for target + its comps (same f).
@@ -505,7 +364,11 @@ def _aperture_process_one_target(
             float(_pt_choice.r_ap_px),
             len(comp_ids),
         )
-    # Build time series per star
+    return all_frames,
+
+
+def _tgt_ensemble(*, _band_system, _cfg, _fb, all_frames, comp_catalog_mag, comp_ids, target_cid):
+    """Ensemble zero point (Broeg weights) of the target: calibrated and differential magnitudes, ZP uncertainty."""
     target_lc = _get_lc(target_cid, all_frames)
     comp_lc = {cid: _get_lc(cid, all_frames) for cid in comp_ids}
 
@@ -553,6 +416,23 @@ def _aperture_process_one_target(
         "aperture_arcsec": float("nan"),
         "search_radius_arcsec": float("nan"),
     }
+    return _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _ensemble_scatter_by_file, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc
+
+
+def _tgt_dilution(
+    *,
+    _cfg,
+    _dilution_result,
+    apertures_px,
+    fwhm_px,
+    mag_calib,
+    obs_group,
+    state,
+    target_bp_rp_by_cid,
+    target_cid,
+    target_row,
+):
+    """GS11 flux dilution by Gaia neighbours (only with gs11_dilution_enabled)."""
     if bool(_cfg.gs11_dilution_enabled) and state.gaia_db_path:
         from dilution import apply_target_dilution_to_mag_calib, compute_dilution_factor  # noqa: PLC0415
 
@@ -635,8 +515,25 @@ def _aperture_process_one_target(
             _cfg,
             target_cid=str(target_cid),
         )
+    return _dilution_result, mag_calib
 
-    # -- Color term (BP-RP) - global comp-pool fit; toggle controls correction only --
+
+def _tgt_k2(
+    *,
+    _calibrated,
+    _cfg,
+    all_frames,
+    comp_quality,
+    comp_weight_map,
+    delta_mag,
+    mag_calib,
+    state,
+    target_bp_rp_by_cid,
+    target_cid,
+    target_comps,
+    target_row,
+):
+    """Colours, target airmass and the second-order extinction k'' correction."""
     target_bp_rp = float(target_bp_rp_by_cid.get(target_cid, float("nan")))
     comp_bp_rp: dict[str, float] = {}
     if "bp_rp" in target_comps.columns:
@@ -704,7 +601,44 @@ def _aperture_process_one_target(
             k2_coeff_lc = float(_k2_val) * (float(target_bp_rp) - float(_bp_med_k2))
     # summary: the k'' source of the target (the tag when any epoch got the correction)
     k2_source_target = next((str(v) for v in k2_source_rows if str(v) != K2Source.NONE.value), K2Source.NONE.value)
+    return _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_source_target, k2_value_lc, mag_calib, target_bp_rp
 
+
+def _band_ct_correction(pf: Any, colour: float, comp_bp_rp: dict, comp_catalog_mag: dict,
+                        comp_weight_map: dict) -> tuple[float, float]:
+    """(correction, weighted ensemble colour) of the band colour term for a star of ``colour``:
+    P(C) - sum w_j P(C_j) / sum w_j over the zero-point comparison stars (CT-2026-10). NaN outside the
+    fitted colour range (no extrapolation). One implementation for the target and the check star."""
+    cc, ww = [], []
+    for cid, bp in comp_bp_rp.items():
+        w = float(comp_weight_map.get(cid, float("nan")))
+        if math.isfinite(float(comp_catalog_mag.get(cid, float("nan")))) and math.isfinite(w) and w > 0:
+            cc.append(float(bp))
+            ww.append(w)
+    if not cc:
+        return float("nan"), float("nan")
+    ens = float(np.sum(np.asarray(ww) * np.asarray(cc)) / np.sum(ww))
+    if pf is None:
+        return 0.0, float(np.median(cc))
+    if not (math.isfinite(float(colour)) and pf.c_min <= float(colour) <= pf.c_max):
+        return float("nan"), ens
+    return float(pf.correction(float(colour), cc, ww)), ens
+
+
+def _tgt_colour_term(
+    *,
+    _band_system,
+    comp_bp_rp,
+    comp_catalog_mag,
+    comp_quality,
+    comp_weight_map,
+    mag_calib,
+    state,
+    target_bp_rp,
+    target_cid,
+    target_name,
+):
+    """Group colour term applied to the target when the gate allows it (no extrapolation)."""
     c1 = 0.0
     c1_stderr = float("nan")
     ct_mode = ""
@@ -721,64 +655,41 @@ def _aperture_process_one_target(
         ct_mode = f"band:{_band_system}:o{_pf.order if _pf is not None else 0}"
         ct_n_comp = int(_group_ct.n_comp)
         if _band_system not in ("G", "NONE"):
-            _cc, _ww = [], []
-            for _cid_ct, _bp_ct in comp_bp_rp.items():
-                _w = float(comp_weight_map.get(_cid_ct, float("nan")))
-                if math.isfinite(float(comp_catalog_mag.get(_cid_ct, float("nan")))) and math.isfinite(_w) and _w > 0:
-                    _cc.append(float(_bp_ct))
-                    _ww.append(_w)
-            if _pf is None:
-                ct_corr, ct_ok = 0.0, True
-                bp_rp_comp_med = float(np.median(_cc)) if _cc else float("nan")
-            elif math.isfinite(float(target_bp_rp)) and _pf.c_min <= float(target_bp_rp) <= _pf.c_max and _cc:
-                ct_corr = float(_pf.correction(float(target_bp_rp), _cc, _ww))
-                ct_ok = math.isfinite(ct_corr)
+            ct_corr, bp_rp_comp_med = _band_ct_correction(_pf, float(target_bp_rp), comp_bp_rp, comp_catalog_mag,
+                                                          comp_weight_map)
+            ct_ok = math.isfinite(ct_corr)
+            if _pf is not None and ct_ok:
                 c1 = float(_pf.coeffs[0])
-                bp_rp_comp_med = float(np.sum(np.asarray(_ww) * np.asarray(_cc)) / np.sum(_ww))
-            else:
+            if not ct_ok:
                 logging.info("[COLOR TERM] %s: target colour outside the fitted range -> no colour term", target_cid)
-                ct_corr, ct_ok = 0.0, False
+                ct_corr = 0.0
             if not math.isfinite(ct_corr):
                 ct_corr, ct_ok = 0.0, False
             mag_calib_ct = mag_calib + float(ct_corr)
-    elif state.apply_color_term and _group_ct is not None and _group_ct.apply_gate:
-        c1 = float(_group_ct.c1)
-        c1_stderr = float(_group_ct.c1_stderr)
-        ct_mode = str(getattr(_group_ct, "mode", "fit") or "fit")
-        ct_n_comp = int(_group_ct.n_comp)
-        _ref_bp, _ref_q = ct_ensemble_reference_maps(comp_bp_rp, comp_quality)
-        _ct_in_range = _check_color_term_extrapolation(
-            target_bp_rp=float(target_bp_rp),
-            comp_bp_rp_values=[float(v) for v in _ref_bp.values()],
-            target_name=str(target_name),
-        )
-        if _ct_in_range:
-            mag_calib_ct, ct_corr, bp_rp_comp_med = apply_color_term(
-                mag_calib,
-                target_bp_rp,
-                _ref_bp,
-                _ref_q,
-                c1,
-            )
-            ct_ok = (
-                bool(math.isfinite(float(target_bp_rp)))
-                and float(c1) != 0.0
-                and math.isfinite(float(bp_rp_comp_med))
-            )
-        else:
-            logging.info(
-                "[COLOR TERM] extrapolation -> CT skipped (target kept, uncorrected)"
-            )
-            mag_calib_ct = mag_calib.copy()
-            ct_corr = 0.0
-            bp_rp_comp_med = float("nan")
-            ct_ok = False
+    return _group_ct, bp_rp_comp_med, c1, c1_stderr, ct_corr, ct_mode, ct_n_comp, ct_ok, mag_calib_ct
 
-    # Target time values - sort by source_file so ensemble_scatter index aligns
-    # with ``_get_lc`` / ``_ensemble_scatter_by_source_file`` (LABBE-DET / SEM determinism).
+
+def _tgt_time_and_errors(
+    *,
+    _cfg,
+    _ensemble_scatter_by_file,
+    _target_airmass_arr,
+    all_frames,
+    bp_rp_comp_med,
+    c1_stderr,
+    ct_corr,
+    ct_ok,
+    mag_calib,
+    output_dir,
+    state,
+    target_bp_rp,
+    target_cid,
+    target_name,
+    target_row,
+):
+    """Times (BJD/HJD), error budget (photon, ensemble scatter, scintillation, night floor, CT) and per-epoch flags."""
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
-    if not target_frames.empty and "source_file" in target_frames.columns:
-        target_frames = target_frames.sort_values(["source_file"], kind="mergesort")
+    target_frames = frame_rows_in_time_order(target_frames)
     _pt_active = bool((getattr(state, "per_target_aperture", None) or {}).get(str(target_cid)))
     # SPEED-2026-10 (S1): the proc-cache (comparison-star selection global) radius is read only when the target has
     # no per-target aperture; otherwise it is never used.
@@ -825,6 +736,7 @@ def _aperture_process_one_target(
     # (term-3, ``ensemble_scatter``). Joined by EXACT ``source_file`` (G2-F004), not positional index.
     _src_for_err = target_frames["source_file"].astype(str).tolist()
     from sigma_budget import resolve_rig_scintillation_params  # noqa: PLC0415
+    from utils import exposure_seconds  # noqa: PLC0415
     from sigma_floor_core import resolve_sigma_sys_mag, scintillation_mag_per_epoch  # noqa: PLC0415
 
     _sigma_sys_mag = resolve_sigma_sys_mag(
@@ -846,6 +758,7 @@ def _aperture_process_one_target(
     _rig_scint = resolve_rig_scintillation_params(
         draft_id=_draft_id_lc,
         setup=str(state.obs_group or ""),
+        exposure_s=exposure_seconds(state._ms_header),
         cfg=_cfg,
         pipeline_meta=(
             {"observer_location": {"alt_m": float(state.site_alt)}}
@@ -932,12 +845,27 @@ def _aperture_process_one_target(
         _raw_tf = target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
     else:
         _raw_tf = pd.Series(["__none__"] * len(mag_calib))
-    # GSPC-ZP-2026-10: second zero point from Gaia DR3 synthetic photometry (GSPC) with the
-    # same estimator and weights as the standard one. mag_gspc = standard light curve shifted by
-    # (C_GSPC - C_std); for an uncalibrated light curve mag_gspc = delta_mag + level + C_GSPC.
-    # Notes: "A" = no standard zero point (band NONE); "B" = |C_GSPC - C_std| >= 0.02 mag;
-    # "B-heuristic" = GSPC not available, red comps (median BP-RP > 1.5) in the Galactic plane
-    # (|b| < 10 deg).
+    return _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base
+
+
+def _tgt_gspc_zero_point(
+    *,
+    _broeg_w,
+    _calibrated,
+    _comp_levels,
+    _fb,
+    _group_ct,
+    comp_bp_rp,
+    comp_catalog_mag,
+    comp_weight_map,
+    ct_corr,
+    ct_ok,
+    state,
+    target_bp_rp,
+    target_cid,
+    target_row,
+):
+    """GSPC second zero point and the zero-point note of the target."""
     from gspc_zp import GSPC_BAND, ZP_NOTE_MIN_DIFF_MAG, gspc_zero_point  # noqa: PLC0415
 
     _gspc_zp: dict[str, Any] = {"status": str(getattr(state, "gspc_status", "not used")), "band": _fb.zp_band}
@@ -1014,7 +942,30 @@ def _aperture_process_one_target(
     _gspc_zp["comp_bp_rp_median"] = round(float(np.median(_cbp_all)), 3) if _cbp_all else None
     _gspc_zp["comp_bp_rp_min"] = round(float(np.min(_cbp_all)), 3) if _cbp_all else None
     _gspc_zp["comp_bp_rp_max"] = round(float(np.max(_cbp_all)), 3) if _cbp_all else None
+    return _gspc_shift, _gspc_zp
 
+
+def _tgt_lc_flags(
+    *,
+    _calibrated,
+    _cfg,
+    _err_rel_for_snr,
+    _raw_tf,
+    airmass_arr,
+    bjd,
+    ct_ok,
+    delta_mag,
+    err,
+    err_photon_export,
+    mag_calib,
+    mag_calib_ct,
+    sat_flags,
+    state,
+    target_cid,
+    target_frames,
+    target_name,
+):
+    """Per-epoch flags: base flags (saturation, alignment, WCS, S/N) and the LC outlier tests with pixel evidence."""
     base_flags: list[str] = []
     # UNCAL-LC-2026-10: a frame is measured when the differential magnitude exists. Without a
     # band zero point (band_system NONE) mag_calib is NaN by design (export guard), but the
@@ -1031,9 +982,9 @@ def _aperture_process_one_target(
             base_flags.append("saturated")
         elif math.isfinite(_er) and _er > 0 and (1.0 / _er) < _snr_min_f and math.isfinite(_meas[i]):
             base_flags.append("low_snr")
-        elif i < len(_raw_tf) and str(_raw_tf.iloc[i]) == "nondetection":
-            base_flags.append("nondetection")
-        elif math.isfinite(mag_calib[i]):
+        elif i < len(_raw_tf) and str(_raw_tf.iloc[i]) in ("nondetection", "edge_fail"):
+            base_flags.append(str(_raw_tf.iloc[i]))  # G08-05: the grid's edge verdict survives the LC flags
+        elif math.isfinite(_meas[i]):  # UNCAL-LC: delta_mag when there is no band zero point
             base_flags.append("normal")
         else:
             base_flags.append("no_data")
@@ -1063,6 +1014,7 @@ def _aperture_process_one_target(
             mag_calib_ct if _calibrated else _meas,
             target_name=target_name,
             sat_flags=sat_flags,
+            base_flags=base_flags,
             target_frames=target_frames,
             ct_ok=bool(ct_ok),
             err=err,
@@ -1071,31 +1023,50 @@ def _aperture_process_one_target(
             frame_qc_reasons=getattr(state, "frame_qc_reasons", None),
             evidence_for_index=_evidence_at,
             err_photon=err_photon_export,
-            err_sem_rel=err_sem_rel_export,
-            err_scint_rel=err_scint_rel_export,
-            err_sigma_sys_rel=err_sigma_sys_rel_export,
+            airmass=airmass_arr,
         )
     )
-    # FIX-LOWSNR-2026-10: the FRAME-REJECT-2026-10 verdict (target SNR < snr_min -> low_snr,
-    # not exported) lived only in base_flags, which nothing read; apply it to the LC flags.
-    # Physical verdicts already set (saturated / no_data / nondetection / edge_fail) stay.
+    # G08-05: the upstream verdicts (saturated / edge_fail / nondetection / low_snr) enter assign_lc_flags as
+    # base_flags (one flag merge); the S/N of a low_snr epoch is written into its reason
     if out_flag_reasons is None or len(out_flag_reasons) != len(out_flags):
         out_flag_reasons = [""] * len(out_flags)
-    for _i, _bf in enumerate(base_flags):
-        if _bf == "low_snr" and _i < len(out_flags) and out_flags[_i] not in (
-            "saturated", "no_data", "nondetection", "edge_fail"
-        ):
-            _prev = (str(out_flag_reasons[_i] or out_flags[_i]) if out_flags[_i] != "normal" else "")
-            out_flags[_i] = "low_snr"
+    for _i, _fl in enumerate(out_flags):
+        if _fl == "low_snr":
             _er_i = float(_err_rel_arr[_i]) if _i < _err_rel_arr.size else float("nan")
             out_flag_reasons[_i] = (f"low_snr: SNR {1.0 / _er_i:.1f} < {_snr_min_f:g}"
                                     if math.isfinite(_er_i) and _er_i > 0 else "low_snr")
-            if _prev:  # keep the earlier diagnosis (e.g. frame_qc / high_err) in the reason
-                out_flag_reasons[_i] += f" (also {_prev})"
+    # BADPIX-REPAIR-2026-10: a repaired (ePSF-model) pixel inside the target aperture is a note, not a flag
+    if "bp_repaired_px" in target_frames.columns:
+        _bp = pd.to_numeric(target_frames["bp_repaired_px"], errors="coerce").fillna(0).astype(int).tolist()
+        for _i, _n in enumerate(_bp[: len(out_flag_reasons)]):
+            if _n > 0:
+                _note = f"bad_pixel_repaired: {_n} px"
+                out_flag_reasons[_i] = f"{out_flag_reasons[_i]}; {_note}" if out_flag_reasons[_i] else _note
     if not _calibrated:
         _nan_lc = np.full(len(_meas), np.nan, dtype=np.float64)
         mag_calib, mag_calib_ct = _nan_lc.copy(), _nan_lc.copy()
+    return mag_calib, mag_calib_ct, out_flag_reasons, out_flags
 
+
+def _tgt_check_star(
+    *,
+    _k_like_target,
+    _calibrated,
+    _chk_cid_pref,
+    _ensemble_scatter_by_file,
+    _scint_mag_arr,
+    _sigma_sys_mag,
+    all_frames,
+    bjd,
+    comp_catalog_mag,
+    comp_ids,
+    comp_lc,
+    comp_quality,
+    lc_dir,
+    src_files,
+    target_cid,
+):
+    """Check-star K series and its comp_quality JSON block (ensemble without the check star)."""
     _check_block: dict[str, Any] | None = None  # comp_quality JSON "check_star" (OUTPUT-REVIEW step 6)
     try:
         from check_star_kmag import (  # noqa: PLC0415
@@ -1122,40 +1093,38 @@ def _aperture_process_one_target(
                     _ext_lc,
                     comp_catalog_mag,
                     comp_quality,
-                    cfg=_cfg,
                     n_comp_min=2,
                     comp_photon_mag=_comp_photon,
                     sigma_sys_mag=_sigma_sys_mag,
                     allow_relative=not _calibrated,
                 )
                 if _chk_result is not None and np.isfinite(_chk_result.kmag).any():
+                    # B2 / G11-06 / G08-45 (Milan 2026-10-29): the check star is processed exactly like the
+                    # target - the same k'' term and the same band colour term (AAVSO KMAG under TRANS=YES)
+                    _k_corr, _k_note = _k_like_target(_chk_cid)
+                    import dataclasses  # noqa: PLC0415
+
+                    _chk_result = dataclasses.replace(
+                        _chk_result, kmag=np.asarray(_chk_result.kmag, dtype=np.float64) + _k_corr)
                     # CHECK-RULES-2026-10: per-epoch K error = photon (check) + ensemble + sigma_sys,
                     # the same budget as the target, for the chi2 consistency test.
                     # CHECK-SCINT-2026-10 (code review 2 D10 / G08-10, Milan 2026-10-28 with O1): plus the
                     # scintillation of the epoch, as in the target's error.
-                    _kerr = np.full(len(src_files), np.nan, dtype=np.float64)
-                    try:
-                        _cf = all_frames[
-                            all_frames["catalog_id"].astype(str).map(_normalize_gaia_id) == str(_chk_cid)
-                        ]
-                        _err_by_src = dict(
-                            zip(
-                                _cf["source_file"].astype(str),
-                                pd.to_numeric(_cf["err"], errors="coerce").to_numpy(dtype=np.float64),
-                                strict=False,
-                            )
-                        )
-                        _ss = float(_sigma_sys_mag) if _sigma_sys_mag is not None else 0.0
-                        if not math.isfinite(_ss):
-                            _ss = 0.0
-                        for _ii, _sf in enumerate(src_files):
-                            _er = float(_err_by_src.get(str(_sf), float("nan")))
-                            _es = float(_ensemble_scatter_by_file.get(str(_sf), 0.0) or 0.0)
-                            if math.isfinite(_er) and _er > 0:
-                                _kerr[_ii] = math.sqrt((1.0857362 * _er) ** 2 + (_es if math.isfinite(_es) else 0.0) ** 2
-                                                       + _ss**2 + float(_scint_mag_arr[_ii]) ** 2)
-                    except Exception as _kerr_exc:  # noqa: BLE001
-                        logging.debug("[CHECK-KMAG] kmag_err not built for %s: %s", target_cid, _kerr_exc)
+                    # G06-39: the target's own error helper (one budget: matched NaN scatter = no ensemble
+                    # term, unmatched epoch = NaN), so K and target errors agree epoch by epoch
+                    _cf = all_frames[all_frames["catalog_id"].astype(str).map(_normalize_gaia_id) == str(_chk_cid)]
+                    _err_by_src = dict(zip(_cf["source_file"].astype(str),
+                                           pd.to_numeric(_cf["err"], errors="coerce").to_numpy(dtype=np.float64),
+                                           strict=False))
+                    _kerr_rel, _ = _combine_err_with_ensemble_scatter_keyed(
+                        np.array([_err_by_src.get(str(_sf), np.nan) for _sf in src_files], dtype=np.float64),
+                        src_files,
+                        _ensemble_scatter_by_file,
+                        sigma_sys_mag=_sigma_sys_mag,
+                        sigma_scint_mag=_scint_mag_arr,
+                        target_name=f"{target_cid} check {_chk_cid}",
+                    )
+                    _kerr = MAG_ERR_SCALE * np.asarray(_kerr_rel, dtype=np.float64)
                     save_check_kmag_sidecar(
                         check_kmag_sidecar_path(lc_dir, target_cid),
                         bjd=bjd,
@@ -1164,6 +1133,8 @@ def _aperture_process_one_target(
                         kmag_err=_kerr,
                     )
                     _check_block = check_star_block(_chk_cid, _chk_result)
+                    if isinstance(_check_block, dict):
+                        _check_block["corrections"] = _k_note
                 else:
                     logging.warning(
                         "[CHECK-KMAG] ensemble returned empty for target=%s check=%s",
@@ -1180,8 +1151,54 @@ def _aperture_process_one_target(
             logging.warning("[CHECK-KMAG] no check star selected for target %s", target_cid)
     except (ImportError, KeyError, TypeError, ValueError, AttributeError, OSError) as _ck_exc:
         logging.warning("[CHECK-KMAG] sidecar skipped for %s: %s", target_cid, _ck_exc)
+    return _check_block,
 
-    # Step 6: save outputs
+
+def _tgt_write_outputs(
+    *,
+    _band_system,
+    _broeg_w,
+    _calibrated,
+    _cfg,
+    _check_block,
+    _comp_index,
+    _gspc_shift,
+    _gspc_zp,
+    _save_png,
+    _zp_info,
+    airmass_arr,
+    all_frames,
+    ap_arr,
+    bjd,
+    comp_catalog_mag,
+    comp_ids,
+    comp_lc,
+    comp_quality,
+    comp_rms_map,
+    delta_mag,
+    err,
+    err_photon_export,
+    err_scatter_unmatched_arr,
+    err_scint_rel_export,
+    err_sem_rel_export,
+    err_sigma_sys_rel_export,
+    hjd,
+    jd,
+    k2_coeff_lc,
+    lc_dir,
+    mag_calib,
+    mag_calib_ct,
+    out_flag_reasons,
+    out_flags,
+    src_files,
+    state,
+    target_cid,
+    target_lc,
+    target_name,
+    target_row,
+    time_base,
+):
+    """Write the light curve CSV, comp_quality JSON, LC PNG and the target field map."""
     lc_csv = lc_dir / f"lightcurve_{target_cid}.csv"
     # I-04: exclude epochs with unmatched ensemble scatter from LC export.
     if err_scatter_unmatched_arr is not None and np.any(err_scatter_unmatched_arr):
@@ -1337,12 +1354,54 @@ def _aperture_process_one_target(
     # Per-target field map with numbered comp stars - always (UI)
     try:
         if state.target_field_map is not None:
-            state.target_field_map.save(lc_dir / f"field_map_{target_cid}.jpg", target_row,
+            from field_map import target_field_map_path  # noqa: PLC0415
+
+            state.target_field_map.save(target_field_map_path(lc_dir, target_cid), target_row,
                                         _comp_index.get(target_cid, pd.DataFrame()))
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[APERTURE] Optional artifact write failed (field map PNG): %s", exc)
+    return bjd, comp_quality, delta_mag, lc_csv, lc_png, mag_calib, out_flags
 
-    # Summary row
+
+def _tgt_summary_row(
+    *,
+    _band_system,
+    _calibrated,
+    _dilution_result,
+    _measured_ap_target,
+    _pt_active,
+    apertures_px,
+    bjd,
+    bp_rp_comp_med,
+    c1,
+    c1_stderr,
+    comp_quality,
+    ct_corr,
+    ct_mode,
+    ct_n_comp,
+    ct_ok,
+    delta_mag,
+    k2_colour_ref,
+    k2_source_target,
+    k2_value_lc,
+    lc_csv,
+    lc_png,
+    mag_calib,
+    n_alignment_failed,
+    n_lc,
+    n_wcs_untrusted,
+    out_flags,
+    state,
+    summary_rows,
+    target_bp_rp,
+    target_cid,
+    target_comps,
+    target_frames,
+    target_name,
+    target_row,
+    target_vsx_type,
+):
+    """Summary row of the target (photometry_summary.csv)."""
     finite_calib = mag_calib[np.isfinite(mag_calib)]
     _meas_lc = np.asarray(mag_calib if _calibrated else delta_mag, dtype=np.float64)
     finite_meas = _meas_lc[np.isfinite(_meas_lc)]
@@ -1378,7 +1437,8 @@ def _aperture_process_one_target(
 
     _sum_row: dict[str, Any] = {
         "catalog_id": target_cid,
-        "vsx_name": target_name,
+        "name": target_name,
+        "vsx_name": _vsx_name_of(target_row),
         "vsx_type": target_vsx_type,
         "zone_flag": str(target_row.get("zone_flag", "")).strip(),
         "n_frames": len(bjd),
@@ -1428,6 +1488,396 @@ def _aperture_process_one_target(
         f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
         f"aperture={r_ap:.2f}px (measured)"
+    )
+    return n_lc,
+
+
+def _aperture_process_one_target(
+    target_row: Any,
+    *,
+    state: _AperturePhotometryState,
+    summary_rows: list,
+    n_lc: int,
+    lc_dir: Path,
+    output_dir: Path,
+    progress_cb: Any,
+    annulus_inner_fwhm: float,
+    annulus_outer_fwhm: float,
+    _apt_fw: float,
+    _save_png: bool,
+) -> tuple[list, int]:
+    """Process one target through the full aperture photometry pipeline.
+
+    Returns updated (summary_rows, n_lc).
+    """
+    def _p2(msg: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(str(msg))
+        except UnicodeEncodeError:
+            progress_cb(str(msg).encode("ascii", "backslashreplace").decode("ascii"))
+
+    _comp_index = state._comp_index
+    target_bp_rp_by_cid = state.target_bp_rp_by_cid
+    csv_files = state.csv_files
+    _aperture_csv_cache = state._aperture_csv_cache
+    _aperture_lookup_cache = state._aperture_lookup_cache
+    frame_time_lookup = state.frame_time_lookup
+    fwhm_px = state.fwhm_px
+    apertures_px = state.apertures_px
+    chip_fw = state.chip_fw
+    chip_fh = state.chip_fh
+    _flux_matrix = state._flux_matrix
+    obs_group = state.obs_group
+    _gain_phot = state._gain_phot
+    _rn_phot = state._rn_phot
+    sat_limit_resolved = state.sat_limit_resolved
+    _cfg = state._cfg
+    _nt = state._nt
+
+    target_cid = _normalize_gaia_id(target_row.get("catalog_id", ""))
+    target_name = _target_display_name(target_row, fallback_cid=target_cid)
+    target_vsx_type = str(target_row.get("vsx_type", "") or "").strip()
+    _sp = target_row.get("skip_photometry", False)
+    if isinstance(_sp, (bool, np.bool_)):
+        skip_photo = bool(_sp)
+    else:
+        skip_photo = str(_sp).strip().lower() in ("1", "true", "yes", "t")
+    _zf_row = str(target_row.get("zone_flag", "")).strip()
+    # skip_photometry / skip_reason carry the whole decision (target-selection cuts + per-frame saturation)
+    if not skip_photo:
+        state.i_measured = int(getattr(state, "i_measured", 0)) + 1
+        _nm = int(getattr(state, "n_to_measure", 0)) or _nt
+        _im = int(state.i_measured)
+        if progress_cb is not None and (_im == 1 or _im >= _nm or (_nm > 1 and _im % max(1, _nm // 12) == 0)):
+            _ns = int(getattr(state, "n_final_skip", 0))
+            _p2(f"Aperture photometry: target {_im}/{_nm}: {target_name[:50]}"
+                + (f" ({_ns} skipped: saturation, S/N, type)" if _ns else ""))
+    if skip_photo:
+        _skip_reason = str(target_row.get("skip_reason", "") or "").strip()
+        logging.info(f"[APERTURE] Skipping photometry ({_skip_reason}): {target_name}")
+        _skip_sum: dict[str, Any] = {
+            "catalog_id": target_cid,
+            "name": target_name,
+            "vsx_name": _vsx_name_of(target_row),
+            "vsx_type": target_vsx_type,
+            "zone_flag": _zf_row,
+            "n_frames": 0,
+            "n_good_comp": 0,
+            "n_saturated": 0,
+            "lc_rms": float("nan"),
+            "lc_median_mag": float("nan"),
+            "aperture_px": float("nan"),
+            "lc_csv": "",
+            "lc_png": "",
+        }
+        _skip_sum["skip_reason"] = _skip_reason
+        summary_rows.append(_skip_sum)
+        return summary_rows, n_lc
+    logging.info(
+        f"[APERTURE] Starting: target={target_name}, "
+        f"frames={len(csv_files)}, "
+        f"aperture={_apt_fw * float(fwhm_px):.2f}px "
+        f"(FWHM={float(fwhm_px):.3f}px x {_apt_fw:.2f})"
+    )
+
+    # Comp stars for this target
+    target_comps = _comp_index.get(target_cid, pd.DataFrame()).copy()
+
+    if target_comps.empty:
+        summary_rows = _aperture_skip_empty_comps_target(
+            target_cid=target_cid,
+            target_name=target_name,
+            zone_flag=_zf_row,
+            summary_rows=summary_rows,
+            vsx_type=target_vsx_type,
+        )
+        return summary_rows, n_lc
+
+    _band_system, _fb, all_ids, comp_catalog_mag, comp_ids, comp_rms_map = _tgt_comp_inputs(
+        obs_group=obs_group,
+        target_cid=target_cid,
+        target_comps=target_comps,
+    )
+
+
+    _chk_cid_pref, = _tgt_choose_check_star(
+        _cfg=_cfg,
+        _fb=_fb,
+        all_ids=all_ids,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_ids=comp_ids,
+        state=state,
+        target_cid=target_cid,
+        target_comps=target_comps,
+        target_row=target_row,
+    )
+
+    # Step 2: photometry per frame (PERF-8: slice shared flux matrix when built)
+    chip_fh, chip_fw, frame_results = _tgt_frame_rows(
+        _aperture_csv_cache=_aperture_csv_cache,
+        _aperture_lookup_cache=_aperture_lookup_cache,
+        _flux_matrix=_flux_matrix,
+        _gain_phot=_gain_phot,
+        _rn_phot=_rn_phot,
+        all_ids=all_ids,
+        apertures_px=apertures_px,
+        chip_fh=chip_fh,
+        chip_fw=chip_fw,
+        csv_files=csv_files,
+        frame_time_lookup=frame_time_lookup,
+        sat_limit_resolved=sat_limit_resolved,
+        state=state,
+    )
+
+    if not frame_results:
+        return summary_rows, n_lc
+
+    all_frames, = _tgt_apply_night_k(
+        _chk_cid_pref=_chk_cid_pref,
+        annulus_inner_fwhm=annulus_inner_fwhm,
+        annulus_outer_fwhm=annulus_outer_fwhm,
+        comp_ids=comp_ids,
+        frame_results=frame_results,
+        state=state,
+        target_cid=target_cid,
+    )
+    # Build time series per star
+    _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _ensemble_scatter_by_file, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc = _tgt_ensemble(
+        _band_system=_band_system,
+        _cfg=_cfg,
+        _fb=_fb,
+        all_frames=all_frames,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_ids=comp_ids,
+        target_cid=target_cid,
+    )
+    _dilution_result, mag_calib = _tgt_dilution(
+        _cfg=_cfg,
+        _dilution_result=_dilution_result,
+        apertures_px=apertures_px,
+        fwhm_px=fwhm_px,
+        mag_calib=mag_calib,
+        obs_group=obs_group,
+        state=state,
+        target_bp_rp_by_cid=target_bp_rp_by_cid,
+        target_cid=target_cid,
+        target_row=target_row,
+    )
+
+    # -- Color term (BP-RP) - global comp-pool fit; toggle controls correction only --
+    _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_source_target, k2_value_lc, mag_calib, target_bp_rp = _tgt_k2(
+        _calibrated=_calibrated,
+        _cfg=_cfg,
+        all_frames=all_frames,
+        comp_quality=comp_quality,
+        comp_weight_map=comp_weight_map,
+        delta_mag=delta_mag,
+        mag_calib=mag_calib,
+        state=state,
+        target_bp_rp_by_cid=target_bp_rp_by_cid,
+        target_cid=target_cid,
+        target_comps=target_comps,
+        target_row=target_row,
+    )
+
+    _group_ct, bp_rp_comp_med, c1, c1_stderr, ct_corr, ct_mode, ct_n_comp, ct_ok, mag_calib_ct = _tgt_colour_term(
+        _band_system=_band_system,
+        comp_bp_rp=comp_bp_rp,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_quality=comp_quality,
+        comp_weight_map=comp_weight_map,
+        mag_calib=mag_calib,
+        state=state,
+        target_bp_rp=target_bp_rp,
+        target_cid=target_cid,
+        target_name=target_name,
+    )
+
+    # Target time values in the row order of ``_get_lc`` / ``_ensemble_scatter_by_source_file``
+    # (``frame_rows_in_time_order``, G08-07).
+    _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base = _tgt_time_and_errors(
+        _cfg=_cfg,
+        _ensemble_scatter_by_file=_ensemble_scatter_by_file,
+        _target_airmass_arr=_target_airmass_arr,
+        all_frames=all_frames,
+        bp_rp_comp_med=bp_rp_comp_med,
+        c1_stderr=c1_stderr,
+        ct_corr=ct_corr,
+        ct_ok=ct_ok,
+        mag_calib=mag_calib,
+        output_dir=output_dir,
+        state=state,
+        target_bp_rp=target_bp_rp,
+        target_cid=target_cid,
+        target_name=target_name,
+        target_row=target_row,
+    )
+    # GSPC-ZP-2026-10: second zero point from Gaia DR3 synthetic photometry (GSPC) with the
+    # same estimator and weights as the standard one. mag_gspc = standard light curve shifted by
+    # (C_GSPC - C_std); for an uncalibrated light curve mag_gspc = delta_mag + level + C_GSPC.
+    # Notes: "A" = no standard zero point (band NONE); "B" = |C_GSPC - C_std| >= 0.02 mag;
+    # "B-heuristic" = GSPC not available, red comps (median BP-RP > 1.5) in the Galactic plane
+    # (|b| < 10 deg).
+    _gspc_shift, _gspc_zp = _tgt_gspc_zero_point(
+        _broeg_w=_broeg_w,
+        _calibrated=_calibrated,
+        _comp_levels=_comp_levels,
+        _fb=_fb,
+        _group_ct=_group_ct,
+        comp_bp_rp=comp_bp_rp,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_weight_map=comp_weight_map,
+        ct_corr=ct_corr,
+        ct_ok=ct_ok,
+        state=state,
+        target_bp_rp=target_bp_rp,
+        target_cid=target_cid,
+        target_row=target_row,
+    )
+
+    mag_calib, mag_calib_ct, out_flag_reasons, out_flags = _tgt_lc_flags(
+        _calibrated=_calibrated,
+        _cfg=_cfg,
+        _err_rel_for_snr=_err_rel_for_snr,
+        _raw_tf=_raw_tf,
+        airmass_arr=airmass_arr,
+        bjd=bjd,
+        ct_ok=ct_ok,
+        delta_mag=delta_mag,
+        err=err,
+        err_photon_export=err_photon_export,
+        mag_calib=mag_calib,
+        mag_calib_ct=mag_calib_ct,
+        sat_flags=sat_flags,
+        state=state,
+        target_cid=target_cid,
+        target_frames=target_frames,
+        target_name=target_name,
+    )
+
+    def _k_like_target(chk_cid: str) -> tuple[np.ndarray, str]:
+        """Per-epoch k'' + colour-term corrections of the check star, as applied to the target."""
+        _n = len(src_files)
+        _corr = np.zeros(_n, dtype=np.float64)
+        _row = state.masterstars_df.loc[state.masterstars_df["catalog_id"].astype(str).map(_normalize_gaia_id) == chk_cid]
+        _c = float(pd.to_numeric(_row["bp_rp"], errors="coerce").iloc[0]) if len(_row) and "bp_rp" in _row else float("nan")
+        _notes = []
+        if k2_source_target != "none" and math.isfinite(k2_value_lc) and math.isfinite(k2_colour_ref) and math.isfinite(_c):
+            _am = np.asarray(_target_airmass_arr, dtype=np.float64)[:_n]
+            _corr[: len(_am)] -= np.where(np.isfinite(_am), float(k2_value_lc) * (_c - float(k2_colour_ref)) * _am, 0.0)
+            _notes.append("k2")
+        if ct_ok and state.group_color_term is not None:
+            _cc, _ = _band_ct_correction(getattr(state.group_color_term, "poly_fit", None), _c, comp_bp_rp,
+                                         comp_catalog_mag, comp_weight_map)
+            if math.isfinite(_cc):
+                _corr += _cc
+                _notes.append("colour term")
+            else:
+                _notes.append("colour term not applicable (check colour outside the fitted range)")
+        return _corr, ", ".join(_notes) if _notes else "none"
+
+    _check_block, = _tgt_check_star(
+        _k_like_target=_k_like_target,
+        _calibrated=_calibrated,
+        _chk_cid_pref=_chk_cid_pref,
+        _ensemble_scatter_by_file=_ensemble_scatter_by_file,
+        _scint_mag_arr=_scint_mag_arr,
+        _sigma_sys_mag=_sigma_sys_mag,
+        all_frames=all_frames,
+        bjd=bjd,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_ids=comp_ids,
+        comp_lc=comp_lc,
+        comp_quality=comp_quality,
+        lc_dir=lc_dir,
+        src_files=src_files,
+        target_cid=target_cid,
+    )
+
+    # Step 6: save outputs
+    bjd, comp_quality, delta_mag, lc_csv, lc_png, mag_calib, out_flags = _tgt_write_outputs(
+        _band_system=_band_system,
+        _broeg_w=_broeg_w,
+        _calibrated=_calibrated,
+        _cfg=_cfg,
+        _check_block=_check_block,
+        _comp_index=_comp_index,
+        _gspc_shift=_gspc_shift,
+        _gspc_zp=_gspc_zp,
+        _save_png=_save_png,
+        _zp_info=_zp_info,
+        airmass_arr=airmass_arr,
+        all_frames=all_frames,
+        ap_arr=ap_arr,
+        bjd=bjd,
+        comp_catalog_mag=comp_catalog_mag,
+        comp_ids=comp_ids,
+        comp_lc=comp_lc,
+        comp_quality=comp_quality,
+        comp_rms_map=comp_rms_map,
+        delta_mag=delta_mag,
+        err=err,
+        err_photon_export=err_photon_export,
+        err_scatter_unmatched_arr=err_scatter_unmatched_arr,
+        err_scint_rel_export=err_scint_rel_export,
+        err_sem_rel_export=err_sem_rel_export,
+        err_sigma_sys_rel_export=err_sigma_sys_rel_export,
+        hjd=hjd,
+        jd=jd,
+        k2_coeff_lc=k2_coeff_lc,
+        lc_dir=lc_dir,
+        mag_calib=mag_calib,
+        mag_calib_ct=mag_calib_ct,
+        out_flag_reasons=out_flag_reasons,
+        out_flags=out_flags,
+        src_files=src_files,
+        state=state,
+        target_cid=target_cid,
+        target_lc=target_lc,
+        target_name=target_name,
+        target_row=target_row,
+        time_base=time_base,
+    )
+
+    # Summary row
+    n_lc, = _tgt_summary_row(
+        _band_system=_band_system,
+        _calibrated=_calibrated,
+        _dilution_result=_dilution_result,
+        _measured_ap_target=_measured_ap_target,
+        _pt_active=_pt_active,
+        apertures_px=apertures_px,
+        bjd=bjd,
+        bp_rp_comp_med=bp_rp_comp_med,
+        c1=c1,
+        c1_stderr=c1_stderr,
+        comp_quality=comp_quality,
+        ct_corr=ct_corr,
+        ct_mode=ct_mode,
+        ct_n_comp=ct_n_comp,
+        ct_ok=ct_ok,
+        delta_mag=delta_mag,
+        k2_colour_ref=k2_colour_ref,
+        k2_source_target=k2_source_target,
+        k2_value_lc=k2_value_lc,
+        lc_csv=lc_csv,
+        lc_png=lc_png,
+        mag_calib=mag_calib,
+        n_alignment_failed=n_alignment_failed,
+        n_lc=n_lc,
+        n_wcs_untrusted=n_wcs_untrusted,
+        out_flags=out_flags,
+        state=state,
+        summary_rows=summary_rows,
+        target_bp_rp=target_bp_rp,
+        target_cid=target_cid,
+        target_comps=target_comps,
+        target_frames=target_frames,
+        target_name=target_name,
+        target_row=target_row,
+        target_vsx_type=target_vsx_type,
     )
 
 

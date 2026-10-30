@@ -1,10 +1,17 @@
-"""Per-rig systematic floor (sigma_sys) and small-sample SEM correction (c4).
+"""Per-point error model of the light curves and its systematic floor (sigma_sys).
 
-Production error model (relative-flux domain for LC ``err``):
+Production error model (relative-flux domain for LC ``err``, :func:`combine_production_err_rel`):
 
-    err_total^2 = err_photon_bkg^2 + sem_ens_rel^2 + sigma_sys_rel^2
+    err^2 = err_photon^2 + err_ensemble^2 + err_scint^2 + sigma_sys^2
 
-See dev/results/specs/VYVAR_SIGMA_FLOOR_SPEC.md.
+* err_photon: CCD equation of the target (source, sky, read noise; Merline & Howell 1995);
+* err_ensemble: error of the weighted comparison ensemble on the frame, sqrt(1 / sum 1/sigma_j^2) over the
+  present comps (``photometry_lightcurve.ensemble_normalize``, Broeg weights) - no c4 / small-sample factor;
+* err_scint: scintillation at the epoch airmass (Young 1967 / Osborn et al. 2015; telescope diameter, site
+  altitude, exposure; 0 when the rig parameters are missing, SCINT-NO-RIG-2026-10);
+* sigma_sys: the night floor measured on the comparison stars (SIGMA-SYS-NIGHT / -MODEL), else the per-rig value.
+
+LC columns: err_photon, err_sem_rel, err_scint_rel, err_sigma_sys_rel. See dev/results/specs/VYVAR_SIGMA_FLOOR_SPEC.md.
 """
 
 from __future__ import annotations
@@ -28,6 +35,12 @@ def rel_sigma_to_mag(sigma_rel: float) -> float:
     if not math.isfinite(sigma_rel) or sigma_rel <= 0:
         return 0.0
     return float(sigma_rel) * MAG_ERR_SCALE
+
+
+#: G08-32: the terms combine_production_err_rel adds (pipeline_meta dynamic_params.sigma_floor)
+ERR_MODEL_TERMS = ("photon", "ensemble", "scintillation", "systematic_floor")
+ERR_MODEL_TEXT = ("err^2 = err_photon^2 + err_ensemble^2 + err_scint^2 + sigma_sys^2 (relative flux; "
+                  "err_ensemble = sqrt(1/sum 1/sigma_j^2) of the present comparison stars)")
 
 
 def combine_production_err_rel(

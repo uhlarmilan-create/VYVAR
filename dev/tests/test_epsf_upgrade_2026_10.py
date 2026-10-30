@@ -70,7 +70,7 @@ def test_masterstar_535_build_is_bounded_and_converged() -> None:
     z = np.load(FIXTURE)
     stars = EPSFStars([EPSFStar(d, cutout_center=tuple(c)) for d, c in zip(z["data"], z["cutout_center"], strict=True)])
     built = _epsf_build_imagepsf_from_stars(
-        stars, osamp=2, fwhm_px=float(z["fwhm_px"]), cutout_size=int(z["cutout_size"])
+        stars, osamp=2, fwhm_px=float(z["fwhm_px"])
     )
     arr = built["arr"].astype(float)
     assert _edge_over_peak(arr) < 0.02  # was 1.9 (photutils 3.0 + sky-in-flux stars)
@@ -85,7 +85,7 @@ def test_synthetic_truth_recovery() -> None:
     fwhm, osamp = 3.0, 2
     img, cat, _ = _synthetic_field(fwhm, 64, seed=11)
     built = _epsf_build_imagepsf_from_stars(
-        _epsf_sky_subtracted_stars(img, cat, 19), osamp=osamp, fwhm_px=fwhm, cutout_size=19
+        _epsf_sky_subtracted_stars(img, cat, 19), osamp=osamp, fwhm_px=fwhm
     )
     arr = built["arr"].astype(float)
     ny, nx = arr.shape
@@ -109,6 +109,6 @@ def test_synthetic_truth_recovery() -> None:
 def test_nan_inside_a_fit_region_does_not_abort_the_build() -> None:
     img, cat, _ = _synthetic_field(2.0, 49, seed=3, nan_first=True)
     built = _epsf_build_imagepsf_from_stars(
-        _epsf_sky_subtracted_stars(img, cat, 15), osamp=2, fwhm_px=2.0, cutout_size=15
+        _epsf_sky_subtracted_stars(img, cat, 15), osamp=2, fwhm_px=2.0
     )
     assert np.isfinite(built["arr"]).all()

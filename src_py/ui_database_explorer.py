@@ -251,7 +251,8 @@ _SPECS: dict[str, dict[str, Any]] = {
         "fields": [
             _Field("TELESCOPENAME", "Name", "text", required=True),
             _Field("ALIAS", "Note", "text"),
-            _Field("DIAMETER", "Aperture (mm)", "float", 1.0, 20000.0),
+            _Field("DIAMETER", "Aperture (mm)", "float", 1.0, 20000.0,
+                   "Needed for the scintillation term of the photometric errors (C3, Milan 2026-10-29).", required=True),
             _Field("FOCAL", "Focal length (mm)", "float", 1.0, 120000.0, "Effective focal length incl. reducer."),
         ],
     },
@@ -263,7 +264,8 @@ _SPECS: dict[str, dict[str, Any]] = {
             _Field("PLACENAME", "Name", "text", required=True),
             _Field("LATITUDE", "Latitude (deg, north +)", "float", -90.0, 90.0),
             _Field("LONGITUDE", "Longitude (deg, east +)", "float", -180.0, 180.0),
-            _Field("ALTITUDE", "Altitude (m)", "float", -500.0, 9000.0),
+            _Field("ALTITUDE", "Altitude (m)", "float", -500.0, 9000.0,
+                   "Needed for the scintillation term of the photometric errors.", required=True),
         ],
     },
 }
@@ -314,7 +316,7 @@ def _field_widget(f: _Field, row: dict[str, Any], key: str, container: Any) -> A
     step = 1 if f.kind == "int" else None
     num = None if cur is None else (int(float(cur)) if f.kind == "int" else float(cur))
     return container.number_input(
-        f.label, value=num, min_value=(int(f.lo) if f.kind == "int" else f.lo) if f.lo is not None else None,
+        f.label + (" *" if f.required else ""), value=num, min_value=(int(f.lo) if f.kind == "int" else f.lo) if f.lo is not None else None,
         max_value=(int(f.hi) if f.kind == "int" else f.hi) if f.hi is not None else None,
         step=step, key=key, help=f.help or None, format=None if f.kind == "int" else "%g",
     )

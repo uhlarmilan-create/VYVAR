@@ -144,19 +144,16 @@ def find_photometry_setups(cfg, draft_id: int | None, *, draft_dir_override: Pat
 
 
 def masterstar_fwhm_px(masterstar_fits: Path | None) -> float:
-    """FWHM (px) stamped on MASTERSTAR.fits (VY_FWHM); 3.7 when absent."""
-    if masterstar_fits is None or not Path(masterstar_fits).is_file():
-        return 3.7
+    """FWHM (px) stamped on MASTERSTAR.fits (VY_FWHM, the one reader of G03-29), rounded to 3 decimals.
+
+    A missing file or VY_FWHM raises ValueError (was a silent 3.7 px)."""
     from astropy.io import fits as astrofits  # noqa: PLC0415
 
-    try:
-        with astrofits.open(masterstar_fits, memmap=False) as hdul:
-            for key in ("VY_FWHM",):
-                v = hdul[0].header.get(key)
-                if v is not None:
-                    fv = float(v)
-                    if 0.5 < fv < 30.0:
-                        return round(fv, 3)
-    except (OSError, ValueError, TypeError):
-        pass
-    return 3.7
+    from aperture_policy import fwhm_from_header_vy_fwhm  # noqa: PLC0415
+
+    if masterstar_fits is None or not Path(masterstar_fits).is_file():
+        raise ValueError(f"MASTERSTAR not found: {masterstar_fits}")
+    fv = fwhm_from_header_vy_fwhm(astrofits.getheader(str(masterstar_fits)))
+    if fv is None:
+        raise ValueError(f"MASTERSTAR {masterstar_fits} has no valid VY_FWHM")
+    return round(fv, 3)

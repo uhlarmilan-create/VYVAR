@@ -1,7 +1,7 @@
+from optics import parse_sensor_size
 from utils import (
     infer_binning_xy_from_sensor_shape,
     parse_fits_binning_int,
-    parse_sensor_naxis_from_text,
 )
 
 
@@ -24,4 +24,4 @@ def test_infer_binning_from_sensor_shape():
 
 
 def test_parse_sensor_naxis():
-    assert parse_sensor_naxis_from_text("6280 x 4176") == (6280, 4176)
+    assert parse_sensor_size("6280 x 4176") == (6280, 4176)

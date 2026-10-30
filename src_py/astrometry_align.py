@@ -25,8 +25,9 @@ import pandas as pd
 
 import vyvar_alignment_frame  # A-durable: fresh-attr MP func lookup at dispatch
 from vyvar_alignment_frame import (
-    _alignment_detect_xy,
     _as_fits_float32_image,
+    alignment_detection_attempts,
+    alignment_star_list,
 )
 from config import AppConfig, resolve_detection_threshold_sigma
 from pipeline_constants import ALIGNMENT_MAX_CONTROL_POINTS, DAO_FWHM_FALLBACK_PX
@@ -42,7 +43,6 @@ from utils import dao_detection_fwhm_pixels
 from fits_meta import pointing_hint_from_header as _pointing_hint_from_header
 from pipeline_calibrate import _has_valid_wcs
 from pipeline_astrometry import (
-    _apply_wcs_header_to_fits,
     _assert_alignment_produced_fits,
     _ensure_parent_dirs_for_aligned_fits,
     _equipment_saturate_adu_from_db,
@@ -56,141 +56,40 @@ from pipeline_catalog import (
     _finalize_hybrid_bkg_fallback_sidecar,
     _pick_reference_frame_by_star_count,
 )
-from pipeline_constants import ALIGN_MAX_DETECTED_STARS, ALIGN_MIN_DETECTED_STARS, CATALOG_MATCH_SEP_ARCSEC, FRAME_MAX_DAO_ROWS  # noqa: E402
+from pipeline_constants import ALIGN_MIN_DETECTED_STARS, CATALOG_MATCH_SEP_ARCSEC, FRAME_MAX_DAO_ROWS  # noqa: E402
 
 LOGGER = logging.getLogger("pipeline")
 
 
-def _astrometry_align_impl_body(
-
+def _al_masterstar_for_reference(
     *,
-    job: dict[str, Any],
-    archive_path: Path,
-    n_comparison_stars: int = 0,
-    require_non_variable_comparisons: bool = True,
-    id_equipment: int | None = None,
-    draft_id: int | None = None,
-    build_masterstar_and_catalogs: bool = False,
-    progress_cb: "callable | None" = None,
-    ram_align_and_catalog: bool = False,
-    app_config: AppConfig,
-    sibling_recovery_use_masterstar: bool = False,
-    osc_registration_handoff: dict[str, Any] | None = None,
-    osc_write_registration_handoff: bool = False,
-) -> dict[str, Any]:
-    """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
-    from frame_export import (  # noqa: PLC0415  # call-time: giants re-exported by facade
-        export_per_frame_catalogs,
-    )
-    from masterstar_build import (  # noqa: PLC0415  # call-time: giants re-exported by facade
-        generate_masterstar_and_catalog,
-    )
+    _cat_info_root,
+    _cfg_align,
+    _masterstar_built,
+    _prog,
+    _ps_root,
+    ap,
+    build_masterstar_and_catalogs,
+    detrended_root,
+    draft_id,
+    equip_sat_adu,
+    has_wcs,
+    id_equipment,
+    job,
+    n_comparison_stars,
+    n_files,
+    obs_group_key,
+    platesolve_dir,
+    ref_data,
+    ref_fp,
+    ref_hdr,
+    require_non_variable_comparisons,
+    sibling_recovery_use_masterstar,
+):
+    """MASTERSTAR + catalogues of the setup before alignment (its WCS is the alignment reference)."""
+    from masterstar_build import generate_masterstar_and_catalog  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
 
-    import numpy as np
-
-    ap = Path(archive_path)
-    obs_group_key = str(job.get("gkey", "") or "")
-    scanning_id = int(job.get("scanning_id", 0) or 0)
-    detrended_root = Path(job["detrended_root"])
-    aligned_root = Path(job["aligned_root"])
-    platesolve_dir = Path(job["platesolve_dir"])
-    files = list(job["files"])
-    # Aligned FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (nested paths mirror the input)
-    os.makedirs(str(aligned_root), exist_ok=True)
-    os.makedirs(str(platesolve_dir), exist_ok=True)
-    _cfg_align = app_config
-    # Range 10-200 is the config range (G02-47: the hidden min(.., 200) cap is now the documented range).
-    _align_star_cap = int(_cfg_align.alignment_max_stars)
-    # The run's DAO sigma (a session / CLI override is already in the run config, night_run).
-    _align_det_sigma = resolve_detection_threshold_sigma(_cfg_align.detection_threshold_sigma)
-    _fb_align = DAO_FWHM_FALLBACK_PX
-    if build_masterstar_and_catalogs:
-        LOGGER.info("Astrometry + MASTERSTAR + per-frame CSV: archive %s", ap)
-    else:
-        LOGGER.info("Astrometry + alignment + per-frame CSV (without MASTERSTAR): archive %s", ap)
-    _catalog_match_sep_eff = CATALOG_MATCH_SEP_ARCSEC
-
-    equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment, _cfg_align)
-    if draft_id is not None and files:
-        try:
-            _db_sat = VyvarDatabase.for_config(_cfg_align)
-            try:
-                _cmb_sat = _db_sat.get_combined_metadata(files[0], int(draft_id))
-                if _cmb_sat.get("saturate_adu") is not None:
-                    equip_sat_adu = _cmb_sat["saturate_adu"]
-            finally:
-                _db_sat.conn.close()
-        except Exception:  # noqa: BLE001
-            # EXC-0414: T4 -- `_db_pf.conn.close()` after plate-scale lookup for per-frame match sep; cleanup only. (EXCEPT-BULK-2 2026-07-08)
-            pass
-    if not files:
-        raise FileNotFoundError(
-            f"No FITS in {detrended_root}. Plate solve reads only **processed** frames. "
-            "First run **MAKE MASTERSTAR** after the **Analyze** step (writes to "
-            f"`{ap / 'processed' / 'lights'}` or, older, `{ap / 'detrended' / 'lights'}`)."
-        )
-
-    _t_step3_start = time.time()
-    n_files = len(files)
-    ref_fp, ref_star_scores = _pick_reference_frame_by_star_count(files)
-    if osc_registration_handoff is not None:
-        ref_name = str(osc_registration_handoff.get("reference_file") or "")
-        for _rf in files:
-            if _rf.name == ref_name:
-                ref_fp = _rf
-                break
-    # Read reference once (no lock during solve step).
-    with fits.open(ref_fp, memmap=False) as hdul:
-        ref_hdr = hdul[0].header.copy()
-        ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-    _scale_pf: float | None = None
-    _db_pf = _vyvar_open_database(_cfg_align)
-    if _db_pf is not None:
-        try:
-            _eq_pf, _tel_pf = resolve_optics_ids_for_platesolve(
-                _db_pf, draft_id, equipment_id=id_equipment
-            )
-            _xb_pf, _yb_pf = fits_binning_xy_from_header(ref_hdr)
-            _bin_pf = max(1, int(_xb_pf), int(_yb_pf))
-            _scale_pf = compute_plate_scale_from_db(_eq_pf, _tel_pf, _db_pf.conn, binning=_bin_pf)
-        except Exception:  # noqa: BLE001
-            _scale_pf = None
-        finally:
-            try:
-                _db_pf.conn.close()
-            except Exception:  # noqa: BLE001
-                pass
-    _j_psep = job.get("per_frame_catalog_match_sep_arcsec")
-    if _j_psep is not None:
-        try:
-            per_frame_match_sep = float(_j_psep)
-        except (TypeError, ValueError):
-            per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
-    else:
-        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
-    if not math.isfinite(per_frame_match_sep) or per_frame_match_sep <= 0:
-        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
-
-    has_wcs = _has_valid_wcs(ref_hdr)
-    solve_steps = 0 if has_wcs else 1
-    master_steps = 1 if build_masterstar_and_catalogs else 0
-    global_total = max(1, 1 + solve_steps + n_files + master_steps + n_files)
-    prog_i = [0]
-
-    def _prog(msg: str) -> None:
-        if progress_cb is None:
-            return
-        prog_i[0] += 1
-        progress_cb(prog_i[0], global_total, msg)
-
-    # --- MASTERSTAR build + plate-solve (per-setup platesolve/) before alignment ---
-    # IMPORTANT (multi-filter): each setup must have its own MASTERSTAR + catalogs, otherwise
-    # R/V/B runs overwrite each other (MASTERSTAR.fits, masterstars_full_match.csv, VY_MIRR, ...)
-    # and reference/per-frame astrometry becomes unstable.
-    _masterstar_built = False
-    _cat_info_root: dict[str, Any] = {}
-    _ps_root = platesolve_dir
-    _t_platesolve = time.time()
     if build_masterstar_and_catalogs:
         _prog("platesolve/MASTERSTAR: reference frame + plate-solve + catalogs...")
         _cat_info_root = generate_masterstar_and_catalog(
@@ -213,57 +112,26 @@ def _astrometry_align_impl_body(
         )
         _masterstar_built = True
 
-        # Prefer MASTERSTAR as the canonical alignment reference when available.
-        # This guarantees that:
-        # - the output pixel grid matches MASTERSTAR (no WCS/data grid mismatch),
-        # - per-frame matching against masterstars_full_match.csv works reliably.
-        try:
-            _ms_fp = _cat_info_root.get("masterstar_fits") if isinstance(_cat_info_root, dict) else None
-            if _ms_fp:
-                _ms_path = Path(str(_ms_fp)).resolve()
-                if _ms_path.is_file():
-                    with fits.open(_ms_path, memmap=False) as hdul:
-                        ref_hdr = hdul[0].header.copy()
-                        ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-                    ref_fp = _ms_path
-                    has_wcs = _has_valid_wcs(ref_hdr)
-                    log_event(f"INFO: Alignment reference set to MASTERSTAR: {ref_fp.name}")
-        except Exception as _ms_ref_exc:  # noqa: BLE001
-            # EXC-0416: T1 -- Copying MASTERSTAR WCS onto reference FITS fails silently; aligned products can carry a... (EXCEPT-BULK-2 2026-07-08)
-            from except_fix_counters import get_except_fix_counters
-
-            get_except_fix_counters().masterstar_ref_swap_fail += 1
-            LOGGER.error("Using MASTERSTAR as alignment reference failed: %s", _ms_ref_exc)
+        # G02-09: MASTERSTAR is the alignment reference (its pixel grid and WCS are the grid of every
+        # aligned frame and of the per-frame match against masterstars_full_match.csv) - or the run
+        # stops. Nothing is written into the reference file (a second block copied the MASTERSTAR
+        # header INTO ref_fp, a processed light, when this switch had failed).
+        _ms_fp = _cat_info_root.get("masterstar_fits") if isinstance(_cat_info_root, dict) else None
+        _ms_path = Path(str(_ms_fp)).resolve() if _ms_fp else None
+        if _ms_path is None or not _ms_path.is_file():
+            raise RuntimeError(f"MASTERSTAR build returned no MASTERSTAR file ({_ms_fp!r}) - no alignment reference")
+        with fits.open(_ms_path, memmap=False) as hdul:
+            ref_hdr = hdul[0].header.copy()
+            ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+        if not _has_valid_wcs(ref_hdr):
+            raise RuntimeError(f"MASTERSTAR {_ms_path} has no valid WCS - no alignment reference")
+        ref_fp = _ms_path
+        has_wcs = True
+        log_event(f"INFO: Alignment reference set to MASTERSTAR: {ref_fp.name} (its WCS for alignment and per-frame match)")
 
     _prog(
         f"detrended_aligned/lights: preparing alignment ({n_files} frames from {detrended_root.name}/...)..."
     )
-
-    # If MASTERSTAR was built for this setup and has a valid WCS, prefer it as the canonical
-    # WCS for detrended_aligned products. Some frames already carry a WCS that can be offset by
-    # arcminutes from MASTERSTAR; using it would break per-frame Gaia matching (master_reference_sky).
-    if build_masterstar_and_catalogs and isinstance(_cat_info_root, dict):
-        try:
-            _ms_fp = _cat_info_root.get("masterstar_fits")
-            if _ms_fp:
-                _ms_path = Path(str(_ms_fp)).resolve()
-                if _ms_path.is_file():
-                    with fits.open(_ms_path, memmap=False) as _ms_hdul:
-                        _ms_hdr = _ms_hdul[0].header.copy()
-                    if _has_valid_wcs(_ms_hdr):
-                        _apply_wcs_header_to_fits(ref_fp, _ms_hdr)
-                        with fits.open(ref_fp, memmap=False) as hdul:
-                            ref_hdr = hdul[0].header.copy()
-                            ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
-                        has_wcs = True
-                        log_event(
-                            f"INFO: Reference WCS taken from MASTERSTAR ({_ms_path.name}) - using MASTERSTAR WCS for alignment and per-frame match."
-                        )
-        except Exception as _wcs_copy_exc:  # noqa: BLE001
-            try:
-                log_event(f"DEBUG: Reference WCS copy from MASTERSTAR failed: {_wcs_copy_exc}")
-            except Exception:  # noqa: BLE001
-                pass
 
     if (
         not build_masterstar_and_catalogs
@@ -300,6 +168,24 @@ def _astrometry_align_impl_body(
 
     if not has_wcs:
         _prog("Plate solve of the reference (may take a while)...")
+    return _cat_info_root, _masterstar_built, has_wcs, ref_data, ref_fp, ref_hdr
+
+
+def _al_reference_stars(
+    *,
+    _align_det_sigma,
+    _align_star_cap,
+    _cfg_align,
+    _fb_align,
+    _t_platesolve,
+    has_wcs,
+    ram_align_and_catalog,
+    ref_data,
+    ref_fp,
+    ref_hdr,
+):
+    """Reference frame WCS and the DAO reference stars of the alignment."""
+    import numpy as np  # noqa: PLC0415
 
     if not has_wcs:
         # Solve reference file in-place (no open handle on Windows).
@@ -356,22 +242,16 @@ def _astrometry_align_impl_body(
         )
     except Exception:  # noqa: BLE001
         pass
-    ref_xy_all = _alignment_detect_xy(
-        data_to_detect,
-        int(ALIGN_MAX_DETECTED_STARS),
-        det_sigma=_align_det_sigma,
-        fwhm_px=_align_fwhm_ref,
-        label=ref_fp.name,
-        log_sink=None,
-    )
-    n_ref = int(len(ref_xy_all))
-    if n_ref > 1000:
-        n_keep = 300
-    elif n_ref < 100:
-        n_keep = n_ref
-    else:
-        n_keep = min(300, n_ref)
-    ref_xy = ref_xy_all[:n_keep]
+    # G02-48: the same detection rule as every frame (run's DAO sigma, then the relaxed steps)
+    ref_xy = np.zeros((0, 2), dtype=np.float32)
+    for _att in alignment_detection_attempts(float(_align_det_sigma)):
+        ref_xy = alignment_star_list(data_to_detect, _att, fwhm_px=_align_fwhm_ref, label=ref_fp.name)
+        if len(ref_xy) >= int(ALIGN_MIN_DETECTED_STARS):
+            break
+        log_event(
+            f"Alignment reference {ref_fp.name}: {len(ref_xy)} stars at sigma {float(_att['dao_sigma']):.2f} "
+            f"< {ALIGN_MIN_DETECTED_STARS} - next detection step"
+        )
     if len(ref_xy) < int(ALIGN_MIN_DETECTED_STARS):
         raise RuntimeError(
             f"Reference frame has too few detected stars ({len(ref_xy)} < {ALIGN_MIN_DETECTED_STARS})."
@@ -387,6 +267,28 @@ def _astrometry_align_impl_body(
     # take at most half of the run's RAM budget; the other half is for the main process and the
     # workers. Otherwise they are written to disk as they are aligned.
     use_ram_handoff = bool(ram_align_and_catalog)
+    return _t_align, extra_platesolve_results, hint_dec, hint_ra, ref_data, ref_hdr, ref_xy, ref_xy_fit, use_ram_handoff
+
+
+def _al_write_reference(
+    *,
+    _align_star_cap,
+    _prog,
+    aligned_root,
+    detrended_root,
+    files,
+    n_files,
+    platesolve_dir,
+    ref_data,
+    ref_fp,
+    ref_hdr,
+    ref_xy,
+    ref_xy_fit,
+    use_ram_handoff,
+):
+    """Reference frame output (RAM handoff or disk) and its alignment-report row."""
+    import numpy as np  # noqa: PLC0415
+
     if use_ram_handoff:
         from parallel_frames import frame_bytes as _fb, resource_budget  # noqa: PLC0415
 
@@ -458,6 +360,12 @@ def _astrometry_align_impl_body(
         hdr["VY_ALGN"] = (True, "Aligned to reference")
         hdr["VYALGOK"] = (True, "Alignment OK")
         hdr["VY_REF"] = (ref_fp.name[:60], "Reference frame for alignment")
+        # G02-03: every aligned frame carries its transform; the reference maps onto itself
+        from frame_footprint import stamp_alignment_transform  # noqa: PLC0415
+
+        stamp_alignment_transform(
+            hdr, {"method": "reference", "matrix": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]}, tuple(data.shape[:2])
+        )
         if use_ram_handoff:
             aligned_ram_buffer.append((ref_rel.as_posix(), hdr.copy(), np.copy(data)))
         else:
@@ -484,8 +392,6 @@ def _astrometry_align_impl_body(
     # Keep immutable backup of reference points; never overwrite with per-frame source detections.
     fixed_target_pts = np.copy(ref_pts).astype("float32")
     log_event(f"DEBUG: Start alignment, reference stars N = {len(fixed_target_pts)}")
-    # Brute-force isolation from any shared numpy buffers.
-    REFERENCE_LIST = fixed_target_pts.tolist()
     LOGGER.info(
         "Astrometry alignment: astroalign uses up to %s control points on up to %s DAO sources per frame",
         align_cp,
@@ -493,10 +399,46 @@ def _astrometry_align_impl_body(
     )
 
     n_written_align = 1
-    from parallel_frames import frame_bytes, map_frames, stage_workers  # noqa: PLC0415
+    from parallel_frames import frame_bytes  # noqa: PLC0415
 
     _frame_nbytes = frame_bytes(*np.shape(ref_data)[:2])
     align_tasks: list[tuple[str, int]] = []
+    return _flip_logged, _frame_nbytes, align_cp, align_tasks, aligned_files, aligned_ram_buffer, fixed_target_pts, n_written_align, ref_wcs_obj, rotation_flip_first_index_1based, rotation_flip_frame_indices_1based, rotation_ref_angle_deg, star_counts, use_ram_handoff
+
+
+def _al_align_frames(
+    *,
+    _align_det_sigma,
+    _fb_align,
+    _flip_logged,
+    _frame_nbytes,
+    _prog,
+    align_cp,
+    align_tasks,
+    aligned_files,
+    aligned_ram_buffer,
+    aligned_root,
+    detrended_root,
+    files,
+    fixed_target_pts,
+    n_files,
+    n_written_align,
+    osc_registration_handoff,
+    ref_data,
+    ref_fp,
+    ref_hdr,
+    ref_wcs_obj,
+    rotation_flip_first_index_1based,
+    rotation_flip_frame_indices_1based,
+    rotation_ref_angle_deg,
+    star_counts,
+    use_ram_handoff,
+):
+    """Align every other frame (worker pool or OSC registration reuse) and flush each result."""
+    from parallel_frames import map_frames  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
+    from parallel_frames import stage_workers  # noqa: PLC0415
+
     for frame_index_1based, fp in enumerate(files, start=1):
         if fp == ref_fp:
             continue
@@ -507,17 +449,31 @@ def _astrometry_align_impl_body(
         "ref_hdr": ref_hdr.copy(),
         "ref_fp_name": ref_fp.name,
         "fixed_target_pts": np.copy(fixed_target_pts).astype(np.float32, copy=False),
-        "reference_list": list(REFERENCE_LIST),
         "has_ref_wcs": ref_wcs_obj is not None,
-        "platesolve_dir": str(platesolve_dir),
-        "align_star_cap": int(_align_star_cap),
         "max_control_points": int(align_cp),
         "min_detected_stars": int(ALIGN_MIN_DETECTED_STARS),
-        "max_detected_stars": int(ALIGN_MAX_DETECTED_STARS),
         "fb_align": float(_fb_align),
+        "det_sigma": float(_align_det_sigma),
         "rotation_ref_angle_deg": rotation_ref_angle_deg,
     }
     _osc_registration_capture: dict[str, dict[str, Any]] = {}
+    # BADPIX-REPAIR-2026-10: repaired pixels of each aligned frame on the reference grid (per output dir)
+    from badpix_sidecar import read_repair_table, repaired_xy_on_reference, write_repaired_sidecar  # noqa: PLC0415
+
+    _bp_ref: dict[Path, dict[str, list[list[float]]]] = {}
+
+    def _note_repaired(out_fp: Path, bp_native: Any, hdr_out: Any) -> None:
+        _bp_ref.setdefault(out_fp.parent, {})[out_fp.name] = repaired_xy_on_reference(bp_native, hdr_out)
+
+    try:
+        _ref_rel = ref_fp.relative_to(detrended_root)
+    except Exception:  # noqa: BLE001
+        _ref_rel = Path(ref_fp.name)
+    with fits.open(ref_fp, memmap=False) as _rh:
+        _ref_bp = read_repair_table(_rh)
+    _bp_ref.setdefault((aligned_root / _ref_rel).parent, {})[_ref_rel.name] = [
+        [round(float(x), 2), round(float(y), 2), int(k)] for x, y, k in _ref_bp
+    ]
 
     def _drop_stale_aligned_outputs(fp: Path) -> None:
         """ALIGN-VERIFY-2026-10: a frame that is not aligned in this run must not be measured from
@@ -571,19 +527,15 @@ def _astrometry_align_impl_body(
         )
         # ALIGN-MATRIX-2026-10: keep the frame->reference transform (3x3, astroalign params)
         # in the aligned header so later steps can map reference (x, y) back to the
-        # non-resampled frame (raw saturation peaks; photometry on calibrated frames).
+        # non-resampled frame (raw saturation peaks; photometry on calibrated frames) and know the
+        # frame's data footprint. Every aligned frame has it (G02-03: OSC channel frames had none).
+        from frame_footprint import stamp_alignment_transform  # noqa: PLC0415
+
         try:
-            _rh = res.get("registration_handoff")
-            _mat = _rh.get("matrix") if isinstance(_rh, dict) else None
-            if _mat is not None and len(_mat) == 9:
-                for _k, _v in enumerate(_mat):
-                    hdr_out[f"VY_AM{_k}"] = (float(_v), "frame->reference transform (row-major 3x3)")
-                hdr_out["VY_AMSRC"] = (str(_rh.get("method") or "astroalign"), "transform source")
-                if _rh.get("matrix_max_err_px") is not None:
-                    # ALIGN-POLY-2026-10: VY_AM is the projective approximation of the polynomial
-                    hdr_out["VY_AMERR"] = (float(_rh["matrix_max_err_px"]), "max px error of VY_AM vs the polynomial")
-        except Exception as _am_exc:  # noqa: BLE001
-            logging.debug("[ALIGN] transform header not written for %s: %s", fp.name, _am_exc)
+            stamp_alignment_transform(hdr_out, res.get("registration_handoff"), tuple(res["raw_shape"]))
+        except ValueError as _am_exc:
+            raise RuntimeError(f"[ALIGN] {fp.name}: aligned without a frame->reference transform ({_am_exc})") from _am_exc
+        _note_repaired(out_fp, res.get("bp_native"), hdr_out)
         if use_ram_handoff:
             aligned_ram_buffer.append((fp_rel.as_posix(), hdr_out.copy(), np.copy(aligned_data)))
         else:
@@ -652,6 +604,9 @@ def _astrometry_align_impl_body(
                     "hdr": hdr_out,
                     "aligned_data": aligned_data,
                     "aligned_method": method,
+                    # G02-03: the donor's verified registration (matrix, VY_AMERR of a polynomial)
+                    "registration_handoff": dict(entry, method=method),
+                    "raw_shape": tuple(raw_data.shape[:2]),
                     "star_count": {
                         "file": fp.name,
                         "frame_index": int(files.index(fp) + 1) if fp in files else 0,
@@ -683,8 +638,33 @@ def _astrometry_align_impl_body(
                 log_event(ln)
             _flush_one_alignment({k: v for k, v in res.items() if k != "log_events"})
 
+    for _dir, _frames in _bp_ref.items():
+        write_repaired_sidecar(_dir, _frames)
     n_aligned = int(sum(1 for r in star_counts if r.get("aligned")))
     n_failed_align = int(sum(1 for r in star_counts if not bool(r.get("aligned"))))
+    return _osc_registration_capture, n_aligned, n_failed_align, rotation_flip_first_index_1based
+
+
+def _al_alignment_checks(
+    *,
+    _cat_info_root,
+    _osc_registration_capture,
+    _prog,
+    _t_align,
+    aligned_ram_buffer,
+    aligned_root,
+    build_masterstar_and_catalogs,
+    files,
+    job,
+    n_aligned,
+    n_failed_align,
+    osc_write_registration_handoff,
+    platesolve_dir,
+    ref_fp,
+    star_counts,
+    use_ram_handoff,
+):
+    """Alignment failure summary / minimum count, OSC registration handoff, RAM flush before the catalogues."""
     if n_failed_align > 0:
         reasons: dict[str, int] = {}
         for r in star_counts:
@@ -720,6 +700,7 @@ def _astrometry_align_impl_body(
 
     # If we aligned in RAM, flush aligned FITS to disk before MASTERSTAR (needs files on disk).
     _ram_flushed_before_masterstar = False
+    _aligned_file_list: list[Path] = []
     if use_ram_handoff and aligned_ram_buffer and build_masterstar_and_catalogs:
         _prog("detrended_aligned/lights: writing FITS to disk (RAM -> disk, before MASTERSTAR)...")
         for name, hdr, arr in aligned_ram_buffer:
@@ -743,6 +724,45 @@ def _astrometry_align_impl_body(
     # sibling-filter / OSC-channel MASTERSTAR built before this alignment) exports per-frame
     # catalogues locked to it - one identity list for the whole run.
     _have_masterstar = bool(build_masterstar_and_catalogs) or bool(_cat_info_root)
+    return _aligned_file_list, _have_masterstar, _ram_flushed_before_masterstar, _t_csv, cat_info, ms_csv, ms_fits, rep_path
+
+
+def _al_export_catalogs(
+    *,
+    _aligned_file_list,
+    _cat_info_root,
+    _cfg_align,
+    _have_masterstar,
+    _prog,
+    _ps_root,
+    _ram_flushed_before_masterstar,
+    _t_csv,
+    _t_step3_start,
+    aligned_files,
+    aligned_ram_buffer,
+    aligned_root,
+    build_masterstar_and_catalogs,
+    cat_info,
+    detrended_root,
+    draft_id,
+    equip_sat_adu,
+    files,
+    global_total,
+    id_equipment,
+    ms_csv,
+    ms_fits,
+    n_aligned,
+    n_comparison_stars,
+    obs_group_key,
+    per_frame_match_sep,
+    platesolve_dir,
+    prog_i,
+    progress_cb,
+    require_non_variable_comparisons,
+    use_ram_handoff,
+):
+    """Photometry plan of the aligned set and the per-frame catalogues (RAM handoff or disk)."""
+    from frame_export import export_per_frame_catalogs  # noqa: PLC0415
 
     if _have_masterstar:
         # Use per-setup platesolve/ artifacts built before alignment.
@@ -784,7 +804,6 @@ def _astrometry_align_impl_body(
                     masterstars_csv=ms_csv or (platesolve_dir / "masterstars_full_match.csv"),
                     n_comparison_stars=int(n_comparison_stars),
                     require_non_variable=bool(require_non_variable_comparisons),
-                    draft_id=int(draft_id) if draft_id is not None else None,
                     cfg=_cfg_align,
                     aligned_files=_aligned_disk if _aligned_disk else None,
                     aligned_ram_frames=aligned_ram_buffer if use_ram_handoff and aligned_ram_buffer else None,
@@ -825,7 +844,6 @@ def _astrometry_align_impl_body(
             app_config=_catalog_app_cfg,
             draft_id=draft_id,
             equipment_id=id_equipment,
-            full_catalog_export=True,
         )
         _prog("detrended_aligned/lights: writing FITS + CSV to disk (batch after RAM processing)...")
         if not _ram_flushed_before_masterstar:
@@ -879,7 +897,6 @@ def _astrometry_align_impl_body(
             app_config=_catalog_app_cfg,
             draft_id=draft_id,
             equipment_id=id_equipment,
-            full_catalog_export=True,
         )
 
     _assert_alignment_produced_fits(aligned_root)
@@ -894,6 +911,264 @@ def _astrometry_align_impl_body(
         int(per_cat.get("written", 0)),
         "yes" if build_masterstar_and_catalogs else "no",
         "yes" if use_ram_handoff else "no",
+    )
+    return cat_info, ms_csv, ms_fits, per_cat
+
+
+def _astrometry_align_impl_body(
+
+    *,
+    job: dict[str, Any],
+    archive_path: Path,
+    n_comparison_stars: int = 0,
+    require_non_variable_comparisons: bool = True,
+    id_equipment: int | None = None,
+    draft_id: int | None = None,
+    build_masterstar_and_catalogs: bool = False,
+    progress_cb: "callable | None" = None,
+    ram_align_and_catalog: bool = False,
+    app_config: AppConfig,
+    sibling_recovery_use_masterstar: bool = False,
+    osc_registration_handoff: dict[str, Any] | None = None,
+    osc_write_registration_handoff: bool = False,
+) -> dict[str, Any]:
+    """Internal: astrometry + alignment + per-frame CSV for one observation subtree (``job``)."""
+
+    import numpy as np
+
+    ap = Path(archive_path)
+    obs_group_key = str(job.get("gkey", "") or "")
+    scanning_id = int(job.get("scanning_id", 0) or 0)
+    detrended_root = Path(job["detrended_root"])
+    aligned_root = Path(job["aligned_root"])
+    platesolve_dir = Path(job["platesolve_dir"])
+    files = list(job["files"])
+    # Aligned FITS: {archive}/detrended_aligned/lights/{filter_exp_binning}/... (nested paths mirror the input)
+    os.makedirs(str(aligned_root), exist_ok=True)
+    os.makedirs(str(platesolve_dir), exist_ok=True)
+    _cfg_align = app_config
+    # Range 10-200 is the config range (G02-47: the hidden min(.., 200) cap is now the documented range).
+    _align_star_cap = int(_cfg_align.alignment_max_stars)
+    # The run's DAO sigma (a session / CLI override is already in the run config, night_run).
+    _align_det_sigma = resolve_detection_threshold_sigma(_cfg_align.detection_threshold_sigma)
+    _fb_align = DAO_FWHM_FALLBACK_PX
+    if build_masterstar_and_catalogs:
+        LOGGER.info("Astrometry + MASTERSTAR + per-frame CSV: archive %s", ap)
+    else:
+        LOGGER.info("Astrometry + alignment + per-frame CSV (without MASTERSTAR): archive %s", ap)
+    _catalog_match_sep_eff = CATALOG_MATCH_SEP_ARCSEC
+
+    equip_sat_adu = _equipment_saturate_adu_from_db(id_equipment, _cfg_align)
+    if draft_id is not None and files:
+        try:
+            _db_sat = VyvarDatabase.for_config(_cfg_align)
+            try:
+                _cmb_sat = _db_sat.get_combined_metadata(files[0], int(draft_id))
+                if _cmb_sat.get("saturate_adu") is not None:
+                    equip_sat_adu = _cmb_sat["saturate_adu"]
+            finally:
+                _db_sat.conn.close()
+        except Exception:  # noqa: BLE001
+            # EXC-0414: T4 -- `_db_pf.conn.close()` after plate-scale lookup for per-frame match sep; cleanup only. (EXCEPT-BULK-2 2026-07-08)
+            pass
+    if not files:
+        raise FileNotFoundError(
+            f"No FITS in {detrended_root}. Plate solve reads only **processed** frames. "
+            "First run **MAKE MASTERSTAR** after the **Analyze** step (writes to "
+            f"`{ap / 'processed' / 'lights'}` or, older, `{ap / 'detrended' / 'lights'}`)."
+        )
+
+    _t_step3_start = time.time()
+    n_files = len(files)
+    ref_fp, ref_star_scores = _pick_reference_frame_by_star_count(files)
+    if osc_registration_handoff is not None:
+        ref_name = str(osc_registration_handoff.get("reference_file") or "")
+        for _rf in files:
+            if _rf.name == ref_name:
+                ref_fp = _rf
+                break
+    # Read reference once (no lock during solve step).
+    with fits.open(ref_fp, memmap=False) as hdul:
+        ref_hdr = hdul[0].header.copy()
+        ref_data = _as_fits_float32_image(hdul[0].data).astype(np.float32, copy=False)
+    _scale_pf: float | None = None
+    _db_pf = _vyvar_open_database(_cfg_align)
+    if _db_pf is not None:
+        try:
+            _eq_pf, _tel_pf = resolve_optics_ids_for_platesolve(
+                _db_pf, draft_id, equipment_id=id_equipment
+            )
+            _xb_pf, _yb_pf = fits_binning_xy_from_header(ref_hdr)
+            _bin_pf = max(1, int(_xb_pf), int(_yb_pf))
+            _scale_pf = compute_plate_scale_from_db(_eq_pf, _tel_pf, _db_pf, binning=_bin_pf)
+        except Exception:  # noqa: BLE001
+            _scale_pf = None
+        finally:
+            try:
+                _db_pf.conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+    _j_psep = job.get("per_frame_catalog_match_sep_arcsec")
+    if _j_psep is not None:
+        try:
+            per_frame_match_sep = float(_j_psep)
+        except (TypeError, ValueError):
+            per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+    else:
+        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+    if not math.isfinite(per_frame_match_sep) or per_frame_match_sep <= 0:
+        per_frame_match_sep = per_frame_catalog_match_sep_arcsec_for_scale(_scale_pf)
+
+    has_wcs = _has_valid_wcs(ref_hdr)
+    solve_steps = 0 if has_wcs else 1
+    master_steps = 1 if build_masterstar_and_catalogs else 0
+    global_total = max(1, 1 + solve_steps + n_files + master_steps + n_files)
+    prog_i = [0]
+
+    def _prog(msg: str) -> None:
+        if progress_cb is None:
+            return
+        prog_i[0] += 1
+        progress_cb(prog_i[0], global_total, msg)
+
+    # --- MASTERSTAR build + plate-solve (per-setup platesolve/) before alignment ---
+    # IMPORTANT (multi-filter): each setup must have its own MASTERSTAR + catalogs, otherwise
+    # R/V/B runs overwrite each other (MASTERSTAR.fits, masterstars_full_match.csv, VY_MIRR, ...)
+    # and reference/per-frame astrometry becomes unstable.
+    _masterstar_built = False
+    _cat_info_root: dict[str, Any] = {}
+    _ps_root = platesolve_dir
+    _t_platesolve = time.time()
+    _cat_info_root, _masterstar_built, has_wcs, ref_data, ref_fp, ref_hdr = _al_masterstar_for_reference(
+        _cat_info_root=_cat_info_root,
+        _cfg_align=_cfg_align,
+        _masterstar_built=_masterstar_built,
+        _prog=_prog,
+        _ps_root=_ps_root,
+        ap=ap,
+        build_masterstar_and_catalogs=build_masterstar_and_catalogs,
+        detrended_root=detrended_root,
+        draft_id=draft_id,
+        equip_sat_adu=equip_sat_adu,
+        has_wcs=has_wcs,
+        id_equipment=id_equipment,
+        job=job,
+        n_comparison_stars=n_comparison_stars,
+        n_files=n_files,
+        obs_group_key=obs_group_key,
+        platesolve_dir=platesolve_dir,
+        ref_data=ref_data,
+        ref_fp=ref_fp,
+        ref_hdr=ref_hdr,
+        require_non_variable_comparisons=require_non_variable_comparisons,
+        sibling_recovery_use_masterstar=sibling_recovery_use_masterstar,
+    )
+
+    _t_align, extra_platesolve_results, hint_dec, hint_ra, ref_data, ref_hdr, ref_xy, ref_xy_fit, use_ram_handoff = _al_reference_stars(
+        _align_det_sigma=_align_det_sigma,
+        _align_star_cap=_align_star_cap,
+        _cfg_align=_cfg_align,
+        _fb_align=_fb_align,
+        _t_platesolve=_t_platesolve,
+        has_wcs=has_wcs,
+        ram_align_and_catalog=ram_align_and_catalog,
+        ref_data=ref_data,
+        ref_fp=ref_fp,
+        ref_hdr=ref_hdr,
+    )
+    _flip_logged, _frame_nbytes, align_cp, align_tasks, aligned_files, aligned_ram_buffer, fixed_target_pts, n_written_align, ref_wcs_obj, rotation_flip_first_index_1based, rotation_flip_frame_indices_1based, rotation_ref_angle_deg, star_counts, use_ram_handoff = _al_write_reference(
+        _align_star_cap=_align_star_cap,
+        _prog=_prog,
+        aligned_root=aligned_root,
+        detrended_root=detrended_root,
+        files=files,
+        n_files=n_files,
+        platesolve_dir=platesolve_dir,
+        ref_data=ref_data,
+        ref_fp=ref_fp,
+        ref_hdr=ref_hdr,
+        ref_xy=ref_xy,
+        ref_xy_fit=ref_xy_fit,
+        use_ram_handoff=use_ram_handoff,
+    )
+    _osc_registration_capture, n_aligned, n_failed_align, rotation_flip_first_index_1based = _al_align_frames(
+        _align_det_sigma=_align_det_sigma,
+        _fb_align=_fb_align,
+        _flip_logged=_flip_logged,
+        _frame_nbytes=_frame_nbytes,
+        _prog=_prog,
+        align_cp=align_cp,
+        align_tasks=align_tasks,
+        aligned_files=aligned_files,
+        aligned_ram_buffer=aligned_ram_buffer,
+        aligned_root=aligned_root,
+        detrended_root=detrended_root,
+        files=files,
+        fixed_target_pts=fixed_target_pts,
+        n_files=n_files,
+        n_written_align=n_written_align,
+        osc_registration_handoff=osc_registration_handoff,
+        ref_data=ref_data,
+        ref_fp=ref_fp,
+        ref_hdr=ref_hdr,
+        ref_wcs_obj=ref_wcs_obj,
+        rotation_flip_first_index_1based=rotation_flip_first_index_1based,
+        rotation_flip_frame_indices_1based=rotation_flip_frame_indices_1based,
+        rotation_ref_angle_deg=rotation_ref_angle_deg,
+        star_counts=star_counts,
+        use_ram_handoff=use_ram_handoff,
+    )
+    _aligned_file_list, _have_masterstar, _ram_flushed_before_masterstar, _t_csv, cat_info, ms_csv, ms_fits, rep_path = _al_alignment_checks(
+        _cat_info_root=_cat_info_root,
+        _osc_registration_capture=_osc_registration_capture,
+        _prog=_prog,
+        _t_align=_t_align,
+        aligned_ram_buffer=aligned_ram_buffer,
+        aligned_root=aligned_root,
+        build_masterstar_and_catalogs=build_masterstar_and_catalogs,
+        files=files,
+        job=job,
+        n_aligned=n_aligned,
+        n_failed_align=n_failed_align,
+        osc_write_registration_handoff=osc_write_registration_handoff,
+        platesolve_dir=platesolve_dir,
+        ref_fp=ref_fp,
+        star_counts=star_counts,
+        use_ram_handoff=use_ram_handoff,
+    )
+
+    cat_info, ms_csv, ms_fits, per_cat = _al_export_catalogs(
+        _aligned_file_list=_aligned_file_list,
+        _cat_info_root=_cat_info_root,
+        _cfg_align=_cfg_align,
+        _have_masterstar=_have_masterstar,
+        _prog=_prog,
+        _ps_root=_ps_root,
+        _ram_flushed_before_masterstar=_ram_flushed_before_masterstar,
+        _t_csv=_t_csv,
+        _t_step3_start=_t_step3_start,
+        aligned_files=aligned_files,
+        aligned_ram_buffer=aligned_ram_buffer,
+        aligned_root=aligned_root,
+        build_masterstar_and_catalogs=build_masterstar_and_catalogs,
+        cat_info=cat_info,
+        detrended_root=detrended_root,
+        draft_id=draft_id,
+        equip_sat_adu=equip_sat_adu,
+        files=files,
+        global_total=global_total,
+        id_equipment=id_equipment,
+        ms_csv=ms_csv,
+        ms_fits=ms_fits,
+        n_aligned=n_aligned,
+        n_comparison_stars=n_comparison_stars,
+        obs_group_key=obs_group_key,
+        per_frame_match_sep=per_frame_match_sep,
+        platesolve_dir=platesolve_dir,
+        prog_i=prog_i,
+        progress_cb=progress_cb,
+        require_non_variable_comparisons=require_non_variable_comparisons,
+        use_ram_handoff=use_ram_handoff,
     )
 
     return {

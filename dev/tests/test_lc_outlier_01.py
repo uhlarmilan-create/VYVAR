@@ -188,18 +188,16 @@ def test_high_err_inflated_error_flagged() -> None:
     mag[20] = 13.5
     err[20] = 0.80
     err_photon = err.copy()
-    err_sem = np.full(n, 0.01)
     res = assign_lc_flags(
         mag,
         err,
         bjd,
         err_photon=err_photon,
-        err_sem_rel=err_sem,
         high_err_n_sigma=5.0,
     )
     assert res.flags[20] == FLAG_HIGH_ERR
     assert "high_err:" in res.reasons[20]
-    assert "err_photon=" in res.reasons[20]
+    assert "err_photon x" in res.reasons[20]
     assert res.n_high_err >= 1
     # Spike test alone would not fire (r = (m-S)/err small).
     spike, _, _ = isolated_spike_mask(mag, err, bjd, n_sigma=5.0)

@@ -146,10 +146,8 @@ def test_milan_state_scan_shows_expired_dark_and_import_succeeds(tmp_path: Path)
         calibration_master_ccd_temp_tolerance_c=0.5,
     )
     assert plan.lights_files
-    assert any("expired" in (row.parameters or "").lower() or row.status == "expired" for row in plan.scan_rows if row.type != "Lights") or any(
-        "expired" in str(plan.masterdark_status).lower()
-        for _ in [0]
-    )
+    assert any("expired" in (row.parameters or "").lower() or row.status == "expired"
+               for row in plan.scan_rows if row.type != "Lights")
 
     pipeline = _Pipeline(db, cfg)
     result = smart_import_session(

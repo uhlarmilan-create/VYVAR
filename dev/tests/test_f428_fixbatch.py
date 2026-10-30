@@ -102,7 +102,7 @@ def test_excluded_targets_sidecar_on_no_match(tmp_path: Path, monkeypatch) -> No
         lambda df, **k: df,
     )
     monkeypatch.setattr(
-        "photometry_comp._ensure_active_target_display_names",
+        "photometry_comp._ensure_active_target_names",
         lambda df: df,
     )
 

@@ -207,9 +207,6 @@ def test_d2_filter_never_fitted_comps_from_ensemble():
     assert "333" not in measured
     # Pre-fix style: INV-PIN would drop every epoch because C never has flux.
     pins = ["111", "222", "333"]
-    weights = {"111": 0.4, "222": 0.4, "333": 0.2}
-    kept, w2, dropped = filter_ensemble_to_psf_measured(pins, weights, measured)
+    kept, dropped = filter_ensemble_to_psf_measured(pins, measured)
     assert kept == ["111", "222"]
     assert dropped == ["333"]
-    assert abs(sum(w2.values()) - 1.0) < 1e-9
-    assert "333" not in w2

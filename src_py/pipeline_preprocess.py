@@ -21,7 +21,7 @@ from pipeline_calibrate import (
     _resolve_draft_light_raw_path,
     draft_median_pointing_icrs_deg,
 )
-from utils import norm_fits_path_key
+from utils import load_qc_metrics_status_by_path, norm_fits_path_key  # noqa: F401  (pipeline facade re-export)
 
 # Same named logger as pipeline.LOGGER (logging.getLogger singleton).
 # Avoids pipeline -> pipeline_preprocess -> pipeline at module load.
@@ -85,24 +85,6 @@ def _load_raw_hdr_for_frame(st: dict[str, Any], fname: str) -> fits.Header | Non
             return hdul[0].header.copy()
     except Exception:  # noqa: BLE001
         return None
-
-
-def load_qc_metrics_status_by_path(qc_csv: Path | str) -> dict[str, str]:
-    """Map normalized absolute FITS path -> ``status`` from ``qc_metrics.csv``."""
-    p = Path(qc_csv)
-    if not p.is_file():
-        raise FileNotFoundError(f"qc_metrics.csv not found: {p}")
-    df = pd.read_csv(p)
-    if "status" not in df.columns:
-        raise ValueError(f"qc_metrics.csv missing status column: {p}")
-    src_col = "src" if "src" in df.columns else "dst"
-    out: dict[str, str] = {}
-    for _, row in df.iterrows():
-        raw = row.get(src_col)
-        if raw is None or (isinstance(raw, float) and not math.isfinite(float(raw))):
-            continue
-        out[norm_fits_path_key(str(raw))] = str(row["status"]).strip()
-    return out
 
 
 def filter_files_by_qc_metrics_allowlist(
@@ -202,19 +184,15 @@ def calibrated_paths_for_draft_apply_filters(
     db: VyvarDatabase,
     draft_id: int,
     *,
-    fwhm_max_px: float,
     source_dir: Path | str | None = None,
-) -> tuple[list[Path], list[Path]]:
-    """Calibrated FITS paths that pass QC: ``IS_REJECTED`` 0/NULL + optional ``FWHM`` cap.
+) -> list[Path]:
+    """Calibrated FITS paths of the frames that pass frame QC (``IS_REJECTED`` 0 / NULL).
 
-    ``IS_REJECTED`` is the frame QC decision (``frame_qc.run_frame_qc``, per channel);
-    it is honoured as written. When ``fwhm_max_px`` > 0, rows with finite ``FWHM`` > max
-    are excluded as well (legacy pooled cap; RUN VYVAR passes 0).
-
-    ``drift_max_arcmin`` is kept only for backward-compatible callers and is ignored.
+    ``IS_REJECTED`` is the frame QC decision (``frame_qc.run_frame_qc``, per channel); it is honoured as
+    written. G12-12 / G01-31: the pooled FWHM cap (always 0 since frame QC) and its rescue pass are gone.
     """
     ap = Path(archive_path).expanduser()
-    log_event(f"Preprocess: draft {draft_id} frames with IS_REJECTED=0 (frame QC), FWHM cap={fwhm_max_px}")
+    log_event(f"Preprocess: draft {draft_id} frames with IS_REJECTED=0 (frame QC)")
     cal_paths: list[Path] = []
     if source_dir is None:
         from draft_provenance import resolve_draft_lights_root
@@ -222,33 +200,8 @@ def calibrated_paths_for_draft_apply_filters(
         src_root = resolve_draft_lights_root(ap, draft_id=int(draft_id), db=db).resolve()
     else:
         src_root = Path(source_dir).expanduser().resolve()
-    lim_active = bool(fwhm_max_px is not None and float(fwhm_max_px) > 0)
-    lim_v = float(fwhm_max_px) if lim_active else 0.0
-    all_rows = db.fetch_draft_light_rows_for_quality(int(draft_id))
-    if lim_active:
-        _nonnull_cnt = sum(1 for _r in all_rows if _r.get("FWHM") is not None)
-        if _nonnull_cnt > 0:
-            rows = [
-                _r
-                for _r in all_rows
-                if _r.get("IS_REJECTED") in (None, 0)
-                and _r.get("FWHM") is not None
-                and float(_r["FWHM"]) <= float(lim_v)
-            ]
-        else:
-            rows = [
-                _r
-                for _r in all_rows
-                if _r.get("IS_REJECTED") in (None, 0)
-                and (_r.get("FWHM") is None or float(_r["FWHM"]) <= float(lim_v))
-            ]
-        log_event(
-            f"DEBUG: Preprocess DB filter selected {len(rows)} rows (limit={float(lim_v):.3f} px, strict, nonnull_fwhm={_nonnull_cnt})."
-        )
-    else:
-        log_event("DEBUG: Preprocess filter - FWHM limit disabled (0/None); keeping all non-rejected frames.")
-        rows = [_r for _r in all_rows if _r.get("IS_REJECTED") in (None, 0)]
-        log_event(f"DEBUG: Preprocess DB filter selected {len(rows)} rows (FWHM disabled).")
+    rows = [_r for _r in db.fetch_draft_light_rows_for_quality(int(draft_id)) if _r.get("IS_REJECTED") in (None, 0)]
+    log_event(f"DEBUG: Preprocess DB filter selected {len(rows)} rows.")
 
     for row in rows:
         raw = Path(str(row.get("FILE_PATH") or ""))
@@ -273,46 +226,17 @@ def calibrated_paths_for_draft_apply_filters(
         except ValueError:
             continue
         cal_paths.append(resolved_raw)
-    if not cal_paths:
-        rescue_rows = [
-            _r
-            for _r in db.fetch_draft_light_rows_for_quality(int(draft_id))
-            if _r.get("IS_REJECTED") in (None, 0)
-        ]
-        if rescue_rows:
-            log_event(f"INFO: Rescue pass found {len(rescue_rows)} files (FWHM cap ignored, IS_REJECTED honoured).")
-        for row in rescue_rows:
-            raw = Path(str(row["FILE_PATH"] or ""))
-            m = _archive_raw_to_calibrated_light(ap, raw)
-            if m is not None:
-                cand_m, _cand_root = m
-                try:
-                    if cand_m.is_file() and cand_m.resolve().is_relative_to(src_root):
-                        cal_paths.append(cand_m.resolve())
-                        continue
-                except Exception:  # noqa: BLE001
-                    pass
-            cand = src_root / raw.name
-            if cand.is_file():
-                cal_paths.append(cand)
-                continue
-            resolved_raw = _resolve_draft_light_raw_path(ap, raw)
-            if resolved_raw is None or not resolved_raw.is_file():
-                continue
-            try:
-                resolved_raw.relative_to(src_root)
-            except ValueError:
-                continue
-            cal_paths.append(resolved_raw)
     if not cal_paths and src_root.is_dir():
-        # Final safety net: keep DB-filter intent by fuzzy matching selected DB file names to on-disk FITS.
+        # Final safety net: keep DB-filter intent by matching the kept DB file names to on-disk FITS.
+        # G01-45: exact stem match (legacy ``proc_`` prefix allowed) - a substring match took Light_10..19
+        # for a kept Light_1.
         disk_fits = [p for p in _iter_fits_recursive(src_root) if p.is_file()]
         db_names = [Path(str(r.get("FILE_PATH") or "")).name for r in rows]
         db_stems = {Path(n).stem.lower() for n in db_names if str(n).strip()}
         matched: list[Path] = []
         for fp in disk_fits:
             s = fp.stem.lower()
-            if any((st in s) or (s in st) for st in db_stems):
+            if s in db_stems or (s.startswith("proc_") and s[len("proc_"):] in db_stems):
                 matched.append(fp)
         if matched:
             cal_paths = sorted(matched)
@@ -324,7 +248,7 @@ def calibrated_paths_for_draft_apply_filters(
             log_event(
                 f"WARNING: {len(disk_fits)} FITS in {src_root} but none matches a kept QC row - nothing selected."
             )
-    return cal_paths, []
+    return cal_paths
 
 
 def resolve_obs_file_to_processed_fits(
@@ -454,86 +378,6 @@ def qc_enrich_calibrated_lights_in_place(
     return df
 
 
-def preprocess_calibrated_to_processed(
-    *,
-    calibrated_root: Path,
-    progress_cb: Callable[..., None] | None = None,
-    inject_pointing_ra_deg: float | None = None,
-    inject_pointing_dec_deg: float | None = None,
-    inject_pointing_only_if_missing: bool = True,
-    only_paths: Sequence[Path | str] | None = None,
-    prefilter_rejected: Mapping[Path | str, str] | None = None,
-    db: VyvarDatabase | None = None,
-    draft_id: int | None = None,
-    app_config: AppConfig | None = None,
-) -> pd.DataFrame:
-    """Deprecated alias for :func:`qc_enrich_calibrated_lights_in_place`.
-
-    ``processed_root`` and ``use_gpu_if_available`` are ignored (legacy API).
-    """
-    return qc_enrich_calibrated_lights_in_place(
-        calibrated_root=calibrated_root,
-        progress_cb=progress_cb,
-        inject_pointing_ra_deg=inject_pointing_ra_deg,
-        inject_pointing_dec_deg=inject_pointing_dec_deg,
-        inject_pointing_only_if_missing=inject_pointing_only_if_missing,
-        only_paths=only_paths,
-        prefilter_rejected=prefilter_rejected,
-        db=db,
-        draft_id=draft_id,
-        app_config=app_config,
-    )
-
-
-def _qc_suggest_thresholds(df: "pd.DataFrame") -> dict[str, float | int | None]:
-    """Compute best/worst and robust suggested reject thresholds."""
-    import numpy as np
-
-    out: dict[str, float | int | None] = {
-        "fwhm_min": None,
-        "fwhm_median": None,
-        "fwhm_max": None,
-        "elong_min": None,
-        "elong_median": None,
-        "elong_max": None,
-        "suggest_reject_fwhm_px": None,
-        "suggest_reject_elongation": None,
-        "n_qc": 0,
-    }
-    if df is None or df.empty:
-        return out
-
-    def _robust_suggest(x: "np.ndarray", k: float) -> float | None:
-        x = x[np.isfinite(x)]
-        if x.size < 5:
-            return None
-        med = float(np.nanmedian(x))
-        mad = float(np.nanmedian(np.abs(x - med))) + 1e-6
-        sigma = 1.4826 * mad
-        return float(med + k * sigma)
-
-    f = np.asarray(df.get("fwhm_px"), dtype=np.float64)
-    e = np.asarray(df.get("elongation"), dtype=np.float64)
-    f_ok = f[np.isfinite(f)]
-    e_ok = e[np.isfinite(e)]
-    out["n_qc"] = int(min(f_ok.size, e_ok.size) if (f_ok.size and e_ok.size) else max(f_ok.size, e_ok.size))
-
-    if f_ok.size:
-        out["fwhm_min"] = float(np.nanmin(f_ok))
-        out["fwhm_median"] = float(np.nanmedian(f_ok))
-        out["fwhm_max"] = float(np.nanmax(f_ok))
-        # Suggest: median + 3*MAD_sigma (conservative)
-        out["suggest_reject_fwhm_px"] = _robust_suggest(f_ok, k=3.0)
-    if e_ok.size:
-        out["elong_min"] = float(np.nanmin(e_ok))
-        out["elong_median"] = float(np.nanmedian(e_ok))
-        out["elong_max"] = float(np.nanmax(e_ok))
-        # Suggest: median + 4*MAD_sigma (elongation is often tighter)
-        out["suggest_reject_elongation"] = _robust_suggest(e_ok, k=4.0)
-
-    return out
-
-
 # --- moved from pipeline_astrometry (LAYER-2026-10) ---
 
 
@@ -628,16 +472,36 @@ def _pick_preferred_masterstar_basename_hit(
     return sorted(use, key=lambda x: str(x).casefold())[0]
 
 
+def _basename_key(name: str) -> str:
+    """Case-folded file name without the ``proc_`` prefix of a processed frame."""
+    n = str(name).casefold()
+    return n[5:] if n.startswith("proc_") else n
+
+
+def fits_basename_index(root: Path, *, pre_calibrated: bool = False) -> dict[str, list[Path]]:
+    """G03-41: one scan of ``root``: basename key (:func:`_basename_key`) -> FITS paths allowed as a
+    MASTERSTAR physical source. Build it once and pass it to every
+    :func:`_resolve_best_effort_path_under` of a loop (each call scanned the whole tree)."""
+    idx: dict[str, list[Path]] = {}
+    for x in _iter_fits_recursive(root):
+        if not _path_segments_forbidden_for_masterstar_physical_source(x, pre_calibrated=bool(pre_calibrated)):
+            idx.setdefault(_basename_key(x.name), []).append(x)
+    return idx
+
+
 def _resolve_best_effort_path_under(
     root: Path,
     raw_path: str,
     *,
     pre_calibrated: bool = False,
+    index: dict[str, list[Path]] | None = None,
 ) -> Path | None:
     """Map an manifest files[].FILE_PATH (often archived raw path) to an existing file under ``root``.
 
-    Strategy: exact relative join, else basename match (first hit). This is intentionally heuristic because
-    imports may store different path bases (absolute vs relative, calibrated vs processed).
+    Strategy: exact relative join, else the same basename (optionally with the ``proc_`` prefix)
+    anywhere under ``root`` (imports may store different path bases: absolute vs relative,
+    calibrated vs processed). G03-41: no suffix match ("flight_1.fits" is not "light_1.fits");
+    ``index`` = :func:`fits_basename_index` of ``root`` (built here when not given).
     """
     _forbid_kw = {"pre_calibrated": bool(pre_calibrated)}
     rp = str(raw_path or "").strip()
@@ -677,22 +541,11 @@ def _resolve_best_effort_path_under(
                 return cand2_proc
         except Exception:  # noqa: BLE001
             pass
-    # Basename / fuzzy suffix fallback (handles prefixes like ``proc_``).
+    # Same basename (with or without the ``proc_`` prefix) anywhere under root.
     name = p.name
     if not name:
         return None
-    _name_cf = name.casefold()
-    _name_noproc = _name_cf[5:] if _name_cf.startswith("proc_") else _name_cf
-    hits = []
-    for x in _iter_fits_recursive(root):
-        xn = x.name.casefold()
-        xn_noproc = xn[5:] if xn.startswith("proc_") else xn
-        if (
-            xn == _name_cf
-            or xn_noproc == _name_noproc
-            or xn.endswith(_name_cf)
-            or xn_noproc.endswith(_name_noproc)
-        ):
-            if not _path_segments_forbidden_for_masterstar_physical_source(x, **_forbid_kw):
-                hits.append(x)
+    if index is None:
+        index = fits_basename_index(root, pre_calibrated=pre_calibrated)
+    hits = list(index.get(_basename_key(name), ()))
     return _pick_preferred_masterstar_basename_hit(hits, pre_calibrated=pre_calibrated)

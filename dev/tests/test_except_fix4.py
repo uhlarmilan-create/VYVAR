@@ -46,7 +46,9 @@ def test_fix4_2_jd_mid_compute_fail_counts(
     def _boom(*_a, **_k):
         raise RuntimeError("time boom")
 
-    monkeypatch.setattr("time_utils.Time", _boom)
+    # G02-01: a DATE-OBS that Time rejects is now a counted parse failure (exposure_start_utc);
+    # the mid-exposure step itself fails here.
+    monkeypatch.setattr("time_utils.TimeDelta", _boom)
 
     hdr = fits.Header()
     hdr["DATE-OBS"] = "2024-03-15T12:00:00"

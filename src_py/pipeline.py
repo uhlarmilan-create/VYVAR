@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 
 from config import AppConfig
 from database import (
@@ -52,8 +51,14 @@ class AstroPipeline:
         observation_id: str | None = None,
         masterflat_by_obs_key: dict[str, str | Path | None] | None = None,
         master_dark_by_obs_key: dict[str, str | Path | None] | None = None,
+        flat_substitute_by_obs_key: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        """Calibrate imported draft/raw lights into `calibrated/` under archive_path."""
+        """Calibrate imported draft/raw lights into `calibrated/` under archive_path.
+
+        ``flat_substitute_by_obs_key``: groups whose FLAT is a flagged substitute from another night
+        (plan, decision A1). The calibration really done per group is recorded in the draft manifest
+        (``calibration_groups``; ``calibration_mode`` PASSTHROUGH when no frame got a dark).
+        """
         ap = Path(archive_path)
         # Accept both draft root (.../draft_xxx) and direct non_calibrated path (.../draft_xxx/non_calibrated).
         ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
@@ -63,15 +68,17 @@ class AstroPipeline:
         outputs: dict[str, Any] = {"archive_path": str(ap_root), "results": {}, "perf10_qsum": {}}
         merged_perf10: dict[str, dict[str, Any]] = {}
 
-        draft_lights = ap_root / "non_calibrated" / "lights"
-        if not draft_lights.exists() and ap.name.casefold() == "non_calibrated":
-            draft_lights = ap / "lights"
-        raw_lights = ap_root / "Raw" / "lights"
-        # In non_calibrated draft mode always prefer Draft/non_calibrated/lights.
-        if draft_lights.exists():
-            out_root = ap_root / "calibrated" / "lights"
-            outputs["results"]["non_calibrated"] = calibrate_lights_to_calibrated(
-                lights_root=draft_lights,
+        # G01-01 (decision A1): one lights tree per draft - Raw/lights (VYVAR-calibrated import) or
+        # non_calibrated/lights (quick look). A draft imported before the fix may have both (the groups
+        # without a flat were split off); every existing tree is calibrated, so no imported light is lost.
+        trees = [("non_calibrated", ap_root / "non_calibrated" / "lights"), ("Raw", ap_root / "Raw" / "lights")]
+        out_root = ap_root / "calibrated" / "lights"
+        flags_by_group: dict[str, dict[str, int]] = {}
+        for section, lights_tree in trees:
+            if not lights_tree.exists():
+                continue
+            sec = calibrate_lights_to_calibrated(
+                lights_root=lights_tree,
                 calibrated_root=out_root,
                 master_dark_path=master_dark_path,
                 masterflat_by_filter=masterflat_by_filter,
@@ -82,22 +89,35 @@ class AstroPipeline:
                 observation_id=observation_id,
                 masterflat_by_obs_key=masterflat_by_obs_key,
                 master_dark_by_obs_key=master_dark_by_obs_key,
+                flat_substitute_by_obs_key=flat_substitute_by_obs_key,
             )
-        elif raw_lights.exists():
-            out_root = ap_root / "calibrated" / "lights"
-            outputs["results"]["Raw"] = calibrate_lights_to_calibrated(
-                lights_root=raw_lights,
-                calibrated_root=out_root,
-                master_dark_path=master_dark_path,
-                masterflat_by_filter=masterflat_by_filter,
-                progress_cb=progress_cb,
-                pipeline_config=self.config,
-                equipment_id=equipment_id,
-                draft_id=draft_id,
-                observation_id=observation_id,
-                masterflat_by_obs_key=masterflat_by_obs_key,
-                master_dark_by_obs_key=master_dark_by_obs_key,
+            outputs["results"][section] = sec
+            for grp, counts in (sec.get("flags_by_group") or {}).items():
+                tgt = flags_by_group.setdefault(str(grp), {})
+                for flag, n in counts.items():
+                    tgt[str(flag)] = int(tgt.get(str(flag), 0)) + int(n)
+        if draft_id is not None and flags_by_group:
+            from draft_provenance import record_calibration_outcome  # noqa: PLC0415
+            from fits_meta import observation_group_folder_name  # noqa: PLC0415
+            from infolog import log_event  # noqa: PLC0415
+
+            outputs["calibration_groups"] = record_calibration_outcome(
+                ap_root,
+                draft_id=int(draft_id),
+                flags_by_group=flags_by_group,
+                flat_substitute_by_group={
+                    observation_group_folder_name(str(k)): str(v)
+                    for k, v in (flat_substitute_by_obs_key or {}).items() if v
+                },
             )
+            for grp, info in outputs["calibration_groups"].items():
+                if info.get("relative_only"):
+                    LOGGER.warning("Calibration WARNING [%s]: %s", grp, info.get("reason"))
+                    log_event(f"CALIBRATION WARNING [{grp}]: {info.get('reason')} - "
+                              "light curves not for AAVSO/VarAstro submission")
+                if info.get("flat_substitute"):
+                    log_event(f"CALIBRATION WARNING [{grp}]: FLAT from another night "
+                              f"({info.get('flat_substitute')}) - flagged substitute")
 
         for _sec_stats in (outputs.get("results") or {}).values():
             if isinstance(_sec_stats, dict):
@@ -127,66 +147,6 @@ class AstroPipeline:
                 outputs["osc_extraction"] = osc_out
         return outputs
 
-    def quick_preprocess_last_import(
-        self,
-        *,
-        archive_path: Path | str,
-        run: bool = True,
-        reject_fwhm_px: float | None = None,
-        reject_elongation: float | None = None,
-        use_gpu_if_available: bool = False,
-    ) -> dict[str, Any]:
-        ap = Path(archive_path)
-        ap_root = ap.parent if ap.name.casefold() == "non_calibrated" else ap
-        src_cal = ap_root / "calibrated" / "lights"
-        src_noncal = ap_root / "non_calibrated" / "lights"
-        source_dir = src_cal if src_cal.exists() else src_noncal
-        out: dict[str, Any] = {
-            "archive_path": str(ap_root),
-            "processed": {},
-            "qc_suggestions": {},
-            "checked": {
-                "archive_exists": bool(ap_root.exists()),
-                "source_path": str(source_dir),
-                "calibrated_path": str(src_cal),
-                "non_calibrated_path": str(src_noncal),
-                "processed_path": str(ap_root / "processed" / "lights"),
-                "detrended_path": str(ap_root / "detrended" / "lights"),
-            },
-        }
-
-        if source_dir.exists():
-            if run:
-                df = preprocess_calibrated_to_processed(
-                    calibrated_root=source_dir,
-                    progress_cb=None,
-                    app_config=self.config,
-                )
-            else:
-                qc_csv_existing = source_dir / "qc_metrics.csv"
-                if not qc_csv_existing.exists():
-                    qc_csv_existing = ap_root / "detrended" / "lights" / "qc_metrics.csv"
-                try:
-                    df = pd.read_csv(qc_csv_existing) if qc_csv_existing.exists() else pd.DataFrame()
-                except Exception:  # noqa: BLE001
-                    df = pd.DataFrame()
-            out["processed"]["source"] = {
-                "lights_root": str(source_dir),
-                "rows": int(len(df)),
-                "rejected": int((df["status"].astype(str).str.startswith("rejected")).sum()) if not df.empty else 0,
-                "source_dir": str(source_dir),
-            }
-            try:
-                qc_csv = source_dir / "qc_metrics.csv"
-                out["processed"]["source"]["qc_csv"] = str(qc_csv)
-            except Exception as exc:  # noqa: BLE001
-                LOGGER.debug("[PIPELINE] Cleanup step failed (non-critical): %s", exc)
-            out["qc_suggestions"]["source"] = _qc_suggest_thresholds(df)
-
-        if not out["processed"]:
-            out["warning"] = "No calibrated lights found under this archive_path. Run calibration first (Run quick pipeline step)."
-        return out
-
 
 from pipeline_calibrate import (
     SkySurfaceOrderConflictError,
@@ -212,12 +172,10 @@ from pipeline_calibrate import (
 from utils import norm_fits_path_key
 from pipeline_preprocess import (
     _archive_raw_to_calibrated_light,
-    _qc_suggest_thresholds,
     build_prefilter_rejected_map,
     calibrated_paths_for_draft_apply_filters,
     filter_files_by_qc_metrics_allowlist,
     load_qc_metrics_status_by_path,
-    preprocess_calibrated_to_processed,
     qc_enrich_calibrated_lights_in_place,
     resolve_obs_file_to_processed_fits,
     resolve_preprocess_target_coordinates,

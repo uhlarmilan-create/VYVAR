@@ -69,7 +69,6 @@ def test_assemble_comp_rows_survives_duplicate_selected_ids() -> None:
         comp_tier_final_map={cid: 2},
         comp_delta_bprp_map={cid: 0.2},
         comp_color_tier_src_map={cid: "bprp"},
-        final_lookup=None,
     )
     assert len(out) == 1
     assert out["catalog_id"].iloc[0] == cid

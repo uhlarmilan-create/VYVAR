@@ -38,9 +38,7 @@ def test_export_and_report_cache(tmp_path: Path) -> None:
     epsf = _touch(tmp_path / "lightcurves_reports" / "epsf" / "b_epsf.txt")
     assert clear_export_dirs(tmp_path, ("aavso", "varastro")) == 1 and epsf.exists()
     _touch(tmp_path / "_report_cache" / "m3_cut_1.png")
-    _touch(tmp_path / "_report_cache" / "pdf_embed" / "h_w900_q72.jpg")
-    assert clear_report_cache(tmp_path) == 2
-    assert not (tmp_path / "_report_cache" / "pdf_embed").exists()
+    assert clear_report_cache(tmp_path) == 1
 
 
 def test_export_writes_measured_targets_only() -> None:

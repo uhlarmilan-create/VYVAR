@@ -6,7 +6,7 @@ Per-frame metrics come from ``frame_metrics.measure_frame`` (calibration step).
 
 * **Transparency** (relative zero point): every frame's star list is matched to the
   group's provisional reference (translation by pair voting, 180 deg rotation for a
-  meridian flip), dZP = median(-2.5 log10(F_frame / F_ref)) over common stars,
+  meridian flip, refined to a similarity on the stars - field rotation), dZP = median(-2.5 log10(F_frame / F_ref)) over common stars,
   non-uniformity = max - min of the median dm in the 4 field quadrants, T = 10**(-0.4 (dZP -
   dZP_min)) relative to the clearest kept frame of the group (T = 1 there).
 * **Reject only real failures** (one pass, no sigma clipping; limit = median +
@@ -36,6 +36,7 @@ from typing import Any, Sequence
 
 import numpy as np
 
+from fits_meta import normalize_filter_name
 from infolog import log_event
 
 MAD_TO_SIGMA = 1.4826
@@ -136,10 +137,13 @@ def depth_score(fwhm: float | None, noise: float | None, transparency: float | N
 
 
 def group_key_of(row: dict[str, Any]) -> str:
+    """The manifest group key of a light row; rows without one get the same ``FILTER|EXPTIME``
+    form as :func:`fits_meta.observation_group_key` (one filter normaliser, G02-42) with ``?``
+    for the binning the row does not carry."""
     gk = str(row.get("OBSERVATION_GROUP_KEY") or "").strip()
     if gk:
         return gk
-    flt = str(row.get("FILTER") or "NoFilter").strip() or "NoFilter"
+    flt = normalize_filter_name(row.get("FILTER"))
     exp = _finite(row.get("EXPTIME"))
     return f"{flt}|{exp:g}|?" if exp is not None else f"{flt}|?|?"
 
@@ -197,13 +201,21 @@ def match_to_reference(
     shape: tuple[int, int] | None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Common stars of two star lists (x, y, flux). Translation by voting on pair
-    differences of the brightest stars; tries a 180 deg rotation (meridian flip).
+    differences of the brightest stars; tries a 180 deg rotation (meridian flip). G02-04: the
+    voted translation (+ flip) is then refined to a similarity (rotation, scale) on the stars
+    themselves (``vyvar_alignment_frame.fit_similarity_from_stars``, the alignment's star-pair fit)
+    before the final match - a field rotated by ~1 deg (polar misalignment) matched only a central
+    patch with the translation alone and the frame was rejected for too few common stars.
     Returns (flux_ref, flux_cur, xy_ref) of matched pairs, or None."""
     from scipy.spatial import cKDTree  # noqa: PLC0415
 
     if ref.shape[0] < MIN_COMMON_STARS or cur.shape[0] < MIN_COMMON_STARS:
         return None
     rb = ref[np.argsort(-ref[:, 2])][:N_MATCH_BRIGHT, :2]
+    # G02-04: the translation vote uses the first pairing radius of the star-pair similarity fit
+    # (max(20 px, 10 x tol)), so a rotated field still votes for one translation; the fit below
+    # then finds the rotation and the final match uses ``tol``.
+    r_vote = max(20.0, 10.0 * float(tol))
     best: tuple[int, np.ndarray, bool] | None = None
     for rot in (False, True):
         if rot and shape is None:
@@ -215,19 +227,25 @@ def match_to_reference(
         cb = c[np.argsort(-cur[:, 2])][:N_MATCH_BRIGHT]
         d = (rb[:, None, :] - cb[None, :, :]).reshape(-1, 2)
         t = cKDTree(d)
-        cnt = np.array([len(x) for x in t.query_ball_point(d, r=tol)])
+        cnt = np.array([len(x) for x in t.query_ball_point(d, r=r_vote)])
         i = int(np.argmax(cnt))
         if best is None or cnt[i] > best[0]:
-            near = t.query_ball_point(d[i], r=tol)
+            near = t.query_ball_point(d[i], r=r_vote)
             best = (int(cnt[i]), np.median(d[near], axis=0), rot)
     if best is None or best[0] < MIN_COMMON_STARS:
         return None
     _, off, rot = best
-    c = cur[:, :2].copy()
+    from vyvar_alignment_frame import fit_similarity_from_stars  # noqa: PLC0415
+
+    m0 = np.eye(3)
     if rot:
-        c[:, 0] = (shape[1] - 1) - c[:, 0]
-        c[:, 1] = (shape[0] - 1) - c[:, 1]
-    c = c + off
+        m0[0, 0] = m0[1, 1] = -1.0
+        m0[0, 2], m0[1, 2] = (shape[1] - 1) + off[0], (shape[0] - 1) + off[1]
+    else:
+        m0[0, 2], m0[1, 2] = off[0], off[1]
+    t_sim, _chk = fit_similarity_from_stars(cur[:, :2], ref[:, :2], [m0], fwhm_px=float(tol))
+    m = np.asarray(t_sim.params, dtype=np.float64) if t_sim is not None else m0
+    c = cur[:, :2] @ m[:2, :2].T + m[:2, 2]
     dist, idx = cKDTree(ref[:, :2]).query(c, distance_upper_bound=tol)
     ok = np.isfinite(dist)
     if ok.sum() < MIN_COMMON_STARS:
@@ -307,7 +325,9 @@ def evaluate_frame_qc(
         def _shape_ok(p: str) -> bool:
             return fw[p] is not None and fw[p] > 0 and (e_lim is None or el[p] is None or el[p] <= e_lim)
 
-        ref_p = max((p for p in paths if _shape_ok(p) and depth_score(fw[p], sig[p]) is not None),
+        # (G02-32: with star lists, only a frame that has one can be the reference)
+        ref_p = max((p for p in paths if _shape_ok(p) and depth_score(fw[p], sig[p]) is not None
+                     and (not stars or p in stars)),
                     key=lambda p: (depth_score(fw[p], sig[p]), p), default=None)
         g.reference_path = ref_p
         have_stars = bool(stars) and ref_p is not None and ref_p in (stars or {})
@@ -359,9 +379,14 @@ def evaluate_frame_qc(
         for p in paths:
             if p in g.rejected:
                 continue
-            t = _t(p) or 1.0
-            d = depth_score(fw[p], sig[p], t)
-            key = (d if d is not None else -1.0, p)
+            t = _t(p)
+            if have_stars and t is None:
+                # G02-32: a frame without a transparency (no star list / no match) ranks last; it was
+                # given T = 1, the best possible value, and could become the MASTERSTAR source
+                key = (-math.inf, p)
+            else:
+                d = depth_score(fw[p], sig[p], 1.0 if t is None else t)
+                key = (d if d is not None else -1.0, p)
             if best is None or key > best:
                 best = key
         if best is not None:
@@ -369,6 +394,8 @@ def evaluate_frame_qc(
             g.best_path, g.best_fwhm, g.best_sky, g.best_noise = p, fw[p], sky[p], sig[p]
             g.best_transparency = _t(p)
             g.best_depth = best[0] if best[0] >= 0 else None
+            if best[0] == -math.inf:
+                log_event(f"[FRAME-QC] {gk}: no kept frame has a measured transparency - best frame {p} is unranked")
         out[gk] = g
     return out
 

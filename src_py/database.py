@@ -13,7 +13,6 @@ from typing import Any, Iterable
 from astropy.io import fits
 
 from infolog import log_event
-from utils import normalize_telescope_focal_mm_for_plate_scale
 
 LOGGER = logging.getLogger(__name__)
 
@@ -283,30 +282,11 @@ class DraftTechnicalMetadataError(RuntimeError):
         )
 
 
-def _db_fits_pixel_raw_to_micrometres(value: float) -> float:
-    """Map raw FITS pixel-size keywords to micrometres (same semantics as ``pipeline``)."""
-    if not math.isfinite(value) or value <= 0:
-        return 0.0
-    v = float(value)
-    if v < 5e-5:
-        return v * 1e6
-    if v < 0.2:
-        return v * 1000.0
-    return v
-
-
 def _db_to_float(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
         return default
-
-
-def _db_pick_header(header: fits.Header, *keys: str, default: Any = None) -> Any:
-    for key in keys:
-        if key in header and header[key] not in (None, ""):
-            return header[key]
-    return default
 
 
 def _db_xbinning_strict(header: fits.Header) -> int:
@@ -322,43 +302,14 @@ def _db_ybinning_header(header: fits.Header, ) -> int:
     return fits_binning_xy_from_header(header)[1]
 
 
-def _db_focal_plausible_mm(mm: float) -> bool:
-    return math.isfinite(mm) and 40.0 <= mm <= 120_000.0
-
-
-def _db_header_focal_length_mm(header: fits.Header) -> float | None:
-    """Focal length [mm] from FITS; ``FOCALLEN`` / ``FOCLEN`` often metres."""
-    for key in ("FOCALLEN", "FOCLEN", "TELFOCA", "FOCAL_LEN", "FOCALL", "FOC_LEN"):
-        if key not in header or header[key] in (None, "", " ", "0", 0):
-            continue
-        try:
-            v = float(header[key])
-        except (TypeError, ValueError):
-            continue
-        if not math.isfinite(v) or v <= 0:
-            continue
-        mm = v * 1000.0 if v < 25.0 else v
-        if _db_focal_plausible_mm(mm):
-            return float(mm)
-    return None
-
-
-def _db_header_pixel_native_um_mean(header: fits.Header) -> float | None:
-    p1 = _db_fits_pixel_raw_to_micrometres(
-        _db_to_float(_db_pick_header(header, "PIXSIZE1", "XPIXSZ", "PIXSZLX", "PIXSIZE", default=0.0))
-    )
-    p2 = _db_fits_pixel_raw_to_micrometres(
-        _db_to_float(_db_pick_header(header, "PIXSIZE2", "YPIXSZ", "PIXSZLY", default=0.0))
-    )
-    px = p1 if p1 > 0 else None
-    py = p2 if p2 > 0 else None
-    if px is not None and py is not None:
-        return (float(px) + float(py)) / 2.0
-    if px is not None:
-        return float(px)
-    if py is not None:
-        return float(py)
-    return None
+def _optional_finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return v if math.isfinite(v) else None
 
 
 def fits_header_cache_row_to_meta(row: sqlite3.Row) -> dict[str, Any]:
@@ -395,8 +346,11 @@ def fits_header_cache_row_to_meta(row: sqlite3.Row) -> dict[str, Any]:
         "pixel_size_um_physical": phys_approx,
         "pixel_size_um_header": pitch,
         "effective_pixel_um_plate_scale": pitch,
-        "temp": float(row["CCD_TEMP"] if row["CCD_TEMP"] is not None else 0.0),
-        "gain": int(row["GAIN"] or 0),
+        # G01-08: an unknown sensor temperature stays None (never 0 C)
+        "temp": _optional_finite_float(row["CCD_TEMP"]),
+        "gain": float(row["GAIN"] or 0.0),  # G01-10: exact GAIN card
+        "offset": (int(row["OFFSET"]) if row["OFFSET"] is not None else None),
+        "readout_mode": (str(row["READOUT_MODE"]) if row["READOUT_MODE"] not in (None, "") else None),
         "ra": float(row["RA_DEG"] if row["RA_DEG"] is not None else 0.0),
         "dec": float(row["DEC_DEG"] if row["DEC_DEG"] is not None else 0.0),
         "jd_start": float(row["JD_START"] if row["JD_START"] is not None else 0.0),
@@ -450,8 +404,8 @@ def _fits_header_cache_pack_row(
         int(meta.get("naxis1", 0) or 0),
         int(meta.get("naxis2", 0) or 0),
         pu_sql,
-        float(meta.get("temp", 0.0)),
-        int(meta.get("gain", 0) or 0),
+        _optional_finite_float(meta.get("temp")),
+        float(meta.get("gain", 0.0) or 0.0),
         float(meta.get("ra", 0.0)),
         float(meta.get("dec", 0.0)),
         float(meta.get("jd_start", 0.0)),
@@ -459,6 +413,8 @@ def _fits_header_cache_pack_row(
         None if cam in (None, "") else str(cam),
         date_obs,
         str(imagetyp or ""),
+        (int(meta["offset"]) if meta.get("offset") is not None else None),
+        (str(meta["readout_mode"]) if meta.get("readout_mode") not in (None, "") else None),
     )
 
 
@@ -479,8 +435,7 @@ class VyvarDatabase:
         self.db_path = str(db_path)
         self._archive_root_override: Path | None = None
         self.conn = ThreadSafeSQLiteConnection(open_sqlite_connection(self.db_path))
-        self._create_tables()
-        self.initialize_database()
+        self._create_tables()  # reference tables stay empty on a fresh DB (DB-SEED-SPLIT)
         self._drop_vestigial_tables()
         self._drop_equipments_focal_column()
 
@@ -591,16 +546,13 @@ class VyvarDatabase:
         finally:
             self.conn.execute("PRAGMA foreign_keys = ON;")
 
-    def _rebuild_table_active_column_to_text(self, table: str, create_sql: str, copy_sql: str) -> None:
-        self._rebuild_table_safely(table, create_sql, copy_sql)
-
     def _normalize_active_columns_to_text(self) -> None:
         """One-time migration: ACTIVE is physically ``YES``/``NO`` on EQUIPMENTS/TELESCOPE/LOCATION."""
         self._normalize_active_values_in_place("EQUIPMENTS")
 
         tel_type = self._column_sql_type("TELESCOPE", "ACTIVE")
         if tel_type and "INT" in tel_type:
-            self._rebuild_table_active_column_to_text(
+            self._rebuild_table_safely(
                 "TELESCOPE",
                 """
                 CREATE TABLE TELESCOPE (
@@ -634,7 +586,7 @@ class VyvarDatabase:
 
         loc_type = self._column_sql_type("LOCATION", "ACTIVE")
         if loc_type and "INT" in loc_type:
-            self._rebuild_table_active_column_to_text(
+            self._rebuild_table_safely(
                 "LOCATION",
                 """
                 CREATE TABLE LOCATION (
@@ -882,45 +834,28 @@ class VyvarDatabase:
             "LIGHTS_PATH": row.get("LIGHTS_PATH"),
         }
 
-    def _resolve_draft_rig_id(self, draft_id: int, field: str, db_col: str) -> int | None:
-        from draft_provenance import resolve_rig_id_manifest_first
-
+    def _resolve_draft_rig_id(self, draft_id: int, db_col: str) -> int | None:
+        """Rig id of a draft from its manifest row (G12-23: the row is read from the manifest, so the
+        former manifest-first re-read / shadow comparison could never differ)."""
         row = self._draft_rig_resolve_row(draft_id)
-        if row is None:
+        if row is None or row.get(db_col) is None:
             return None
-        raw = row.get(db_col)
-        db_val: int | None
-        if raw is None:
-            db_val = None
-        else:
-            try:
-                db_val = int(raw)
-            except (TypeError, ValueError):
-                db_val = None
-        return resolve_rig_id_manifest_first(
-            int(draft_id),
-            field,
-            db_val,
-            draft_row=row,
-            db=self,
-        )
+        try:
+            return int(row.get(db_col))
+        except (TypeError, ValueError):
+            return None
 
     def get_draft_equipment_id(self, draft_id: int) -> int | None:
         """Manifest-first ``equipment_id``; DB fallback when manifest absent."""
-        return self._resolve_draft_rig_id(int(draft_id), "equipment_id", "ID_EQUIPMENTS")
+        return self._resolve_draft_rig_id(int(draft_id), "ID_EQUIPMENTS")
 
     def get_draft_telescope_id(self, draft_id: int) -> int | None:
         """Manifest-first ``telescope_id``; DB fallback when manifest absent."""
-        return self._resolve_draft_rig_id(int(draft_id), "telescope_id", "ID_TELESCOPE")
+        return self._resolve_draft_rig_id(int(draft_id), "ID_TELESCOPE")
 
     def get_draft_location_id(self, draft_id: int) -> int | None:
         """Manifest-first ``location_id``; DB fallback when manifest absent."""
-        return self._resolve_draft_rig_id(int(draft_id), "location_id", "ID_LOCATION")
-
-
-    def _try_refresh_draft_manifest(self, draft_id: int) -> None:
-        """No-op: manifest is written directly (Phase 2.8)."""
-        return
+        return self._resolve_draft_rig_id(int(draft_id), "ID_LOCATION")
 
 
     def update_obs_draft_status_panel_values(
@@ -1073,7 +1008,24 @@ class VyvarDatabase:
         patch_draft_manifest(root, int(draft_id), status=str(status))
 
     def _ensure_fits_header_cache_table(self) -> None:
-        """Primary-header cache for fast smart_scan (path + size + mtime invalidation)."""
+        """Primary-header cache for fast smart_scan (path + size + mtime invalidation).
+
+        G01-08 / G13-18: ``CCD_TEMP`` is NULL when the header has no sensor temperature; G01-10: ``GAIN`` is
+        the exact GAIN card (REAL). A cache created with ``CCD_TEMP NOT NULL`` / ``GAIN INTEGER`` stored a
+        missing temperature as 0.0 and a truncated gain, so it is dropped and rebuilt (it holds only header
+        copies; the next scan re-reads the headers). G01-09: OFFSET / READOUT_MODE of every frame (a cache
+        without them is rebuilt the same way)."""
+        cols = {
+            str(r["name"]).upper(): r for r in self.conn.execute("PRAGMA table_info('FITS_HEADER_CACHE');").fetchall()
+        }
+        if cols and (
+            int(cols["CCD_TEMP"]["notnull"] if "CCD_TEMP" in cols else 1)
+            or str(cols["GAIN"]["type"] if "GAIN" in cols else "").upper() != "REAL"
+            or "READOUT_MODE" not in cols
+        ):
+            self.conn.execute("DROP TABLE FITS_HEADER_CACHE;")
+            self.conn.commit()
+            LOGGER.info("[DB] FITS_HEADER_CACHE rebuilt (unknown CCD temperature NULL, exact gain; G01-08/G01-10)")
         self.conn.execute(
             """
             CREATE TABLE IF NOT EXISTS FITS_HEADER_CACHE (
@@ -1087,15 +1039,17 @@ class VyvarDatabase:
                 NAXIS1 INTEGER NOT NULL,
                 NAXIS2 INTEGER NOT NULL,
                 PIXEL_UM REAL,
-                CCD_TEMP REAL NOT NULL,
-                GAIN INTEGER NOT NULL,
+                CCD_TEMP REAL,
+                GAIN REAL NOT NULL,
                 RA_DEG REAL NOT NULL,
                 DEC_DEG REAL NOT NULL,
                 JD_START REAL NOT NULL,
                 TELESCOPE TEXT,
                 CAMERA TEXT,
                 DATE_OBS TEXT,
-                IMAGETYP TEXT NOT NULL DEFAULT ''
+                IMAGETYP TEXT NOT NULL DEFAULT '',
+                OFFSET INTEGER,
+                READOUT_MODE TEXT
             );
             """
         )
@@ -1170,8 +1124,8 @@ class VyvarDatabase:
             INSERT INTO FITS_HEADER_CACHE (
                 FILE_PATH, FILE_SIZE, MTIME, EXPTIME, FILTER, BINNING, BINNING_Y,
                 NAXIS1, NAXIS2, PIXEL_UM, CCD_TEMP, GAIN, RA_DEG, DEC_DEG, JD_START,
-                TELESCOPE, CAMERA, DATE_OBS, IMAGETYP
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                TELESCOPE, CAMERA, DATE_OBS, IMAGETYP, OFFSET, READOUT_MODE
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(FILE_PATH) DO UPDATE SET
                 FILE_SIZE = excluded.FILE_SIZE,
                 MTIME = excluded.MTIME,
@@ -1190,7 +1144,9 @@ class VyvarDatabase:
                 TELESCOPE = excluded.TELESCOPE,
                 CAMERA = excluded.CAMERA,
                 DATE_OBS = excluded.DATE_OBS,
-                IMAGETYP = excluded.IMAGETYP;
+                IMAGETYP = excluded.IMAGETYP,
+                OFFSET = excluded.OFFSET,
+                READOUT_MODE = excluded.READOUT_MODE;
         """
         self.conn.execute("BEGIN IMMEDIATE;")
         try:
@@ -2075,25 +2031,6 @@ class VyvarDatabase:
             """,
         )
 
-    def initialize_database(self) -> None:
-        """Reference tables are created (schema) but intentionally EMPTY on a fresh DB.
-
-        Product decision (DB-SEED-SPLIT, 2026-07-18): a new user's fresh database must
-        be empty -- they create their own Location / Telescope / Equipment in Settings.
-        The author's observatory rows are a REFERENCE FIXTURE for the anchor/test
-        machinery, not product content; they were moved out of the runtime package to
-        ``dev/tools/reference_seed.py::seed_reference_observatory(db)``. The ``--full``
-        anchor harness and pytest fixtures that need the anchor context call that helper
-        explicitly (it uses ``INSERT OR IGNORE``, so it is a no-op on an already
-        populated DB such as the author's production DB).
-
-        The schema itself is created by ``_create_tables`` (run just before this in
-        ``__init__``); this method is deliberately a no-op kept for API stability and
-        as the documented seam where seeding used to live.
-        """
-        # Intentionally no rows: fresh reference tables stay empty.
-        return
-
     @staticmethod
     def _jd_to_yyyymmdd(jd: float) -> str:
         """Convert Julian date to UTC date string YYYYMMDD.
@@ -2230,9 +2167,8 @@ class VyvarDatabase:
     def get_combined_metadata(self, file_path: str | Path, draft_id: int) -> dict[str, Any]:
         """Merge FITS primary header with ``draft manifest`` -> ``TELESCOPE`` / ``EQUIPMENTS`` SQL fallbacks.
 
-        - Focal: plausible FITS keywords first; else ``TELESCOPE.FOCAL`` for the draft telescope.
-        - Native pixel [um]: FITS ``PIXSIZE*`` / ``XPIXSZ`` ...; else ``EQUIPMENTS.PIXELSIZE`` via draft join
-          (same as ``get_equipment_pixel_size_um`` on ``draft manifest.ID_EQUIPMENTS``).
+        - Focal and native pixel [um]: :func:`optics.optics_hint` - ``TELESCOPE.FOCAL`` /
+          ``EQUIPMENTS.PIXELSIZE`` of the draft rig first, the FITS header when the DB has no value.
         - **Binning:** ``XBINNING`` / ``BINNING`` (supports ``2x2`` strings); if header says 1x1 but
           ``NAXIS`` matches ``EQUIPMENTS.SENSORSIZE`` at 2x/3x/4x, binning is inferred. Effective pixel
           is ``native_pixel_um * XBINNING``.
@@ -2255,7 +2191,8 @@ class VyvarDatabase:
         x_bin = _db_xbinning_strict(header)
         y_bin = _db_ybinning_header(header)
 
-        from utils import infer_binning_xy_from_sensor_shape, parse_sensor_naxis_from_text
+        from optics import optics_hint, parse_sensor_size  # noqa: PLC0415
+        from utils import infer_binning_xy_from_sensor_shape  # noqa: PLC0415
 
         naxis1 = int(header.get("NAXIS1") or 0)
         naxis2 = int(header.get("NAXIS2") or 0)
@@ -2266,7 +2203,7 @@ class VyvarDatabase:
                 (int(id_eq),),
             ).fetchone()
             if row_ss is not None:
-                native_size = parse_sensor_naxis_from_text(row_ss["SENSORSIZE"])
+                native_size = parse_sensor_size(row_ss["SENSORSIZE"])
         x_inf, y_inf, inferred = infer_binning_xy_from_sensor_shape(
             naxis1, naxis2, native_size, (x_bin, y_bin)
         )
@@ -2277,38 +2214,11 @@ class VyvarDatabase:
             )
             x_bin, y_bin = x_inf, y_inf
 
-        focal_mm = _db_header_focal_length_mm(header)
-        _f_hdr_ok = focal_mm is not None and _db_focal_plausible_mm(float(focal_mm))
-        focal_src = "fits_header" if _f_hdr_ok else "none"
-        if not _f_hdr_ok:
-            focal_mm = None
-            if id_tel is not None:
-                try:
-                    tf = self.get_telescope_focal_mm(int(id_tel))
-                except Exception:  # noqa: BLE001
-                    tf = None
-                if tf is not None:
-                    n2, _ = normalize_telescope_focal_mm_for_plate_scale(float(tf))
-                    if _db_focal_plausible_mm(n2):
-                        focal_mm = float(n2)
-                        focal_src = "telescope_focal_sql"
-
-        native_um = _db_header_pixel_native_um_mean(header)
-        pix_src = "fits_header"
-        if native_um is None or not math.isfinite(native_um) or native_um <= 0 or native_um > 300.0:
-            native_um = None
-            pix_src = "none"
-            if id_eq is not None:
-                try:
-                    native_um = self.get_equipment_pixel_size_um(int(id_eq))
-                except Exception:  # noqa: BLE001
-                    native_um = None
-                if native_um is not None:
-                    pix_src = "equipment_pixelsize_sql"
-
-        pixel_effective_um: float | None = None
-        if native_um is not None and math.isfinite(float(native_um)) and float(native_um) > 0:
-            pixel_effective_um = float(native_um) * float(x_bin)
+        # T08 optics module (G13-17 / G03-19): DB (valid) -> header, one rule for focal and pixel
+        hint = optics_hint(header, self, equipment_id=id_eq, telescope_id=id_tel, binning=(x_bin, y_bin))
+        focal_mm, focal_src = hint.focal_mm, hint.focal_source
+        native_um, pix_src = hint.pixel_native_um, hint.pixel_source
+        pixel_effective_um = hint.pixel_effective_um
 
         sat: float | None = None
         if id_eq is not None:
@@ -2316,11 +2226,6 @@ class VyvarDatabase:
                 sat = self.get_equipment_saturation_adu(int(id_eq))
             except Exception:  # noqa: BLE001
                 sat = None
-
-        if focal_mm is not None:
-            n_f, _ = normalize_telescope_focal_mm_for_plate_scale(float(focal_mm))
-            if _db_focal_plausible_mm(n_f):
-                focal_mm = float(n_f)
 
         return {
             "draft_id": did,
@@ -2391,7 +2296,6 @@ class VyvarDatabase:
         id_equipments: int,
         id_telescope: int,
         id_location: int,
-        id_scanning: int,
     ) -> None:
         checks = (
             ("EQUIPMENTS", int(id_equipments), "equipment/camera"),
@@ -2645,7 +2549,7 @@ class VyvarDatabase:
 
     def fetch_light_file_paths_not_rejected_for_observation(self, observation_id: str) -> set[str]:
         """Light paths for a finalized observation (manifest ``final_observation_id``)."""
-        from draft_provenance import collect_manifest_obs_file_rows, iter_draft_archive_dirs
+        from draft_provenance import collect_manifest_obs_file_rows
 
         out: set[str] = set()
         archive_root = self.resolve_archive_root()
@@ -2659,17 +2563,8 @@ class VyvarDatabase:
             fp = row.get("FILE_PATH")
             if fp:
                 out.add(self._normalize_obs_file_path_key(str(fp)))
-        if out:
-            return out
-        for did, _ in iter_draft_archive_dirs(archive_root):
-            rows2 = self.fetch_draft_light_rows_for_quality(int(did))
-            for row in rows2:
-                rej = row.get("IS_REJECTED")
-                if rej not in (None, 0):
-                    continue
-                fp = row.get("FILE_PATH")
-                if fp:
-                    out.add(self._normalize_obs_file_path_key(str(fp)))
+        # G13-19: an observation whose lights are all rejected has no accepted light (empty set); it never
+        # falls back to the lights of every draft in the Archive
         return out
 
     def create_draft(self, data: dict[str, Any]) -> int:
@@ -2677,12 +2572,10 @@ class VyvarDatabase:
         id_equipments = int(data.get("id_equipments", 1))
         id_telescope = int(data.get("id_telescope", 1))
         id_location = int(data.get("id_location", 1))
-        id_scanning = int(data.get("id_scanning", 1))
         self._validate_observation_foreign_keys(
             id_equipments=id_equipments,
             id_telescope=id_telescope,
             id_location=id_location,
-            id_scanning=id_scanning,
         )
         from draft_provenance import create_draft_manifest
 

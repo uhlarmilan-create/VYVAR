@@ -65,14 +65,6 @@ BRIGHT_K_BOOT: int = 200
 MODE_PER_TARGET = "per_target"
 
 
-def flux_to_mag(flux: np.ndarray | float) -> np.ndarray:
-    f = np.asarray(flux, dtype=float)
-    out = np.full(f.shape, float("nan"), dtype=float)
-    ok = np.isfinite(f) & (f > 0)
-    out[ok] = -2.5 * np.log10(f[ok])
-    return out
-
-
 def pick_f_star_snr(
     snr_by_f: Mapping[float, float],
     *,
@@ -154,7 +146,9 @@ class FrameImages:
 
     ``filled``: the image with NaN replaced by its NaN-median (the image itself when all pixels are
     finite - ``nan_to_num`` would return an equal copy); ``sky``: NaN off the aligned footprint;
-    ``off``: pixels without data of the aligned frame (None when the footprint is not checked).
+    ``off``: pixels without data - off the aligned footprint or NaN in the frame (G01-29: bad flat
+    pixels are NaN after calibration), None when there are none to check. A star whose aperture
+    touches an ``off`` pixel is flagged (``edge_fail``), so a filled value never enters its flux.
     """
 
     img: np.ndarray
@@ -168,11 +162,13 @@ def prepare_frame_images(image: np.ndarray, fwhm_px: float, covered: np.ndarray 
     from sky_estimation import sky_image  # noqa: PLC0415
 
     img = np.asarray(image, dtype=float)
-    if bool(np.isfinite(img).all()):
+    finite = np.isfinite(img)
+    off = None if covered is None else ~np.asarray(covered, dtype=bool)
+    if bool(finite.all()):
         filled = img
     else:
         filled = np.nan_to_num(img, nan=float(np.nanmedian(img)))
-    off = None if covered is None else ~np.asarray(covered, dtype=bool)
+        off = ~finite if off is None else (off | ~finite)
     return FrameImages(img=img, filled=filled, sky=sky_image(img, fwhm_px, covered=covered), off=off)
 
 
@@ -194,8 +190,8 @@ def measure_flux_on_f_grid(
 
     AP-FOOTPRINT-2026-10: ``covered`` (``frame_footprint.aligned_footprint``) - the sky median uses
     only annulus pixels with data of the aligned frame (not the aligner's constant fill); the third
-    return value marks stars whose largest aperture reaches the fill or whose annulus keeps less than
-    half of its pixels (the light curve drops them as ``edge_fail``).
+    return value marks stars whose largest aperture reaches the fill or a missing (NaN) pixel, or whose
+    annulus keeps less than half of its pixels (the light curve drops them as ``edge_fail``).
     """
     from photutils.aperture import CircularAperture  # noqa: PLC0415
     from photutils.aperture import aperture_photometry as _aphot  # noqa: PLC0415
@@ -219,10 +215,12 @@ def measure_flux_on_f_grid(
     if not ok.any():
         return out_f, out_s, edge
     p = pos[ok]
-    if fr.off is not None:
-        from frame_footprint import off_footprint  # noqa: PLC0415
+    from frame_footprint import off_footprint  # noqa: PLC0415
 
-        edge[ok] = off_footprint(fr.off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
+    # G06-07: one edge test for every frame - a frame without a transform (not resampled) covers the whole
+    # chip, and the chip bounds still count
+    _off = fr.off if fr.off is not None else np.zeros(np.asarray(fr.img).shape, dtype=bool)
+    edge[ok] = off_footprint(_off, p[:, 0], p[:, 1], max(ks) * float(fwhm_px), r_in, r_out)
     from sky_estimation import annulus_sky_medians  # noqa: PLC0415
 
     sky = annulus_sky_medians(fr.sky, p, r_in, r_out)
@@ -301,6 +299,8 @@ class ApertureGridNight:
     # AP-FOOTPRINT-2026-10: frame_stem -> stars whose aperture / annulus is off the aligned frame's data
     edge_by_frame: dict[str, set[str]] = field(default_factory=dict)
     n_frames_no_transform: int = 0
+    # BADPIX-REPAIR-2026-10: frame_stem -> repaired pixels on the reference grid (x, y, is_star_model)
+    bp_by_frame: dict[str, Any] = field(default_factory=dict)
 
 
 def frame_stem_from_source(source_file: str) -> str:
@@ -313,21 +313,17 @@ def frame_stem_from_source(source_file: str) -> str:
 
 
 def _fwhm_from_fits_header(hdr: Any, *, night_fallback: float) -> tuple[float, bool]:
-    """Return (fwhm_px, used_night_fallback). Prefer VY_FWHM (FWHM-AUTH-01)."""
-    from aperture_policy import clamp_fwhm_px  # noqa: PLC0415
+    """Return (fwhm_px, used_night_fallback). Prefer VY_FWHM (FWHM-AUTH-01), else the night median; neither
+    -> error (no fixed FWHM, Milan 2026-10-29)."""
+    from aperture_policy import clamp_fwhm_px, fwhm_from_header_vy_fwhm, header_shape  # noqa: PLC0415
 
-    raw = None
-    try:
-        raw = hdr.get("VY_FWHM")
-    except Exception:  # noqa: BLE001
-        raw = None
-    frame = clamp_fwhm_px(raw)
+    frame = fwhm_from_header_vy_fwhm(hdr)
     if frame is not None:
         return float(frame), False
-    night = clamp_fwhm_px(night_fallback)
+    night = clamp_fwhm_px(night_fallback, shape=header_shape(hdr))
     if night is not None:
         return float(night), True
-    return 5.0, True
+    raise ValueError("aperture grid: frame without a valid VY_FWHM and no night median FWHM")
 
 
 _GRID_CTX: dict[str, Any] = {}
@@ -451,6 +447,9 @@ def measure_night_grid(
     )
     if not want or not Path(frames_dir).is_dir():
         return night
+    from badpix_sidecar import load_repaired_sidecar  # noqa: PLC0415
+
+    night.bp_by_frame = load_repaired_sidecar(frames_dir)
     t0 = time.perf_counter()
     fits_files = sorted(Path(frames_dir).glob("*.fits"))
     if max_frames is not None:
@@ -872,6 +871,12 @@ def apply_grid_fluxes_to_frames(
     _cid_l = [str(v) for v in out["catalog_id"].tolist()] if "catalog_id" in out.columns else [""] * _n
     _src_l = [str(v) for v in out["source_file"].tolist()]
     _labels = out.index.tolist()
+    from badpix_sidecar import repaired_in_aperture  # noqa: PLC0415
+
+    _x_l = out["x"].to_numpy(float) if "x" in out.columns else np.full(_n, np.nan)
+    _y_l = out["y"].to_numpy(float) if "y" in out.columns else np.full(_n, np.nan)
+    if "bp_repaired_px" not in out.columns:
+        out["bp_repaired_px"] = 0
     for _p in [j for j, c in enumerate(_cid_l) if c in want]:
         i = _labels[_p]
         cid = _cid_l[_p]
@@ -887,6 +892,8 @@ def apply_grid_fluxes_to_frames(
         r_ap = k * fwhm
         out.at[i, "aperture_r_px"] = float(r_ap)
         out.at[i, "aperture_f"] = k
+        # BADPIX-REPAIR-2026-10: repaired (model-filled) pixels inside this aperture - a note, not a flag
+        out.at[i, "bp_repaired_px"] = repaired_in_aperture(night.bp_by_frame.get(stem), _x_l[_p], _y_l[_p], r_ap)
         if cid in night.edge_by_frame.get(stem, set()):
             out.at[i, "mag_inst"] = float("nan")
             out.at[i, "flag"] = "edge_fail"
@@ -926,6 +933,97 @@ def load_photometric_gain(photometry_dir: Path | str) -> tuple[float, float]:
         return x if math.isfinite(x) else float("nan")
 
     return _f(d.get("gain")), _f(d.get("read_noise"))
+
+
+def load_field_k(photometry_dir: Path | str) -> tuple[BrightnessK | None, str]:
+    """C1-2026-10 (G10-07): the aperture k the light curves use, for the field searches.
+
+    Returns ``(brightness groups, status)``: the AP-BRIGHT-K groups of ``aperture_per_target.json``
+    (``None`` with status ``"no_group"`` when the run had too few constant field stars - every star then
+    takes BRIGHT_K_NO_GROUP, as the targets do). Status ``"missing"`` when the file is absent or unreadable
+    (aperture photometry did not run) - the caller stops instead of guessing a k.
+    """
+    try:
+        d = json.loads((Path(photometry_dir) / "aperture_per_target.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None, "missing"
+    groups = ((d.get("brightness_k") or {}).get("brightness_k") or {}).get("groups") or []
+    if not groups:
+        return None, "no_group"
+    bk = BrightnessK([], [], [], [], [], [])
+    for g in groups:
+        bk.mag_lo.append(float(g["mag_lo"]))
+        bk.mag_hi.append(float(g["mag_hi"]))
+        bk.k.append(float(g["k"]))
+        bk.n_stars.append(int(g.get("n_stars") or 0))
+        bk.curves.append(dict(g.get("curve") or {}))
+        bk.se.append(float(g.get("se") or float("nan")))
+    return bk, "brightness_k"
+
+
+def field_k_plan(photometry_dir: Path, f_grid: Any) -> dict[str, Any] | None:
+    """C1-2026-10 (Milan 2026-10-29, option a): the aperture k of every star of the field search.
+
+    The AP-BRIGHT-K groups of the run (aperture_per_target.json): a star takes the k of its
+    instrumental-magnitude group (magnitude at the smallest grid k, as the groups were built);
+    k_ref = the largest group k (the scale all magnitudes are corrected to); transients are measured
+    at the k of the faintest group (new sources are near the detection limit). A run without groups
+    (too few constant field stars) uses BRIGHT_K_NO_GROUP for every star, as its targets do.
+    None when aperture_per_target.json is missing - no k is guessed.
+    """
+    bk, status = load_field_k(photometry_dir)
+    if status == "missing":
+        return None
+    grid = sorted(float(v) for v in f_grid)
+    k_default = max(k for k in grid if k <= BRIGHT_K_NO_GROUP + 1e-9)
+    ks = sorted({float(k) for k in bk.k}) if bk is not None else [k_default]
+    for kk in ks:
+        if not any(abs(kk - g) < 1e-9 for g in grid):
+            raise ValueError(f"brightness-group k {kk} is not on the aperture grid {grid}")
+    return {
+        "rule": "brightness_k" if bk is not None else "no_group",
+        "groups": bk,
+        "k_default": k_default,
+        "k0": grid[0],
+        "k_ref": max(ks),
+        "k_transient": float(bk.k[-1]) if bk is not None else k_default,
+        "k_all": sorted(set(ks) | {grid[0], k_default}),
+    }
+
+
+def group_k_fluxes(D: pd.DataFrame, base: pd.Series, kplan: Mapping[str, Any]) -> dict[str, Any]:
+    """C1-2026-10 / G06-18: flux of every row of a night table on the aperture k of its star's brightness group,
+    and the per-frame aperture correction to k_ref (one rule for the field search and the colour-term fit).
+
+    ``D``: one row per star and frame (``catalog_id``, frame index ``t``, the grid columns ``flux_kNNN`` of
+    ``kplan["k_all"]``); ``base``: rows usable at all (not saturated, photometry ok). A star's group is that of
+    its night-median instrumental magnitude at the smallest grid k (as the AP-BRIGHT-K groups are built).
+    Aperture correction m(k_ref) - m(k): median per frame over the stars of the k_ref group (bright, high S/N;
+    Stetson 1990). Returns {k_star, k_row, flux, apcorr (k -> Series by t), apcorr_row}.
+    """
+    k0, k_ref = kplan["k0"], kplan["k_ref"]
+    bk, k_default = kplan["groups"], kplan["k_default"]
+    fk = {kk: pd.to_numeric(D[flux_k_column(kk)], errors="coerce") for kk in kplan["k_all"]}
+    f0 = fk[k0].where(base & (fk[k0] > 0))
+    m0 = -2.5 * np.log10(f0.groupby(D["catalog_id"]).median())
+    k_star = {c: (bk.k_for(float(m)) if bk is not None else None) or k_default for c, m in m0.items()}
+    k_row = D["catalog_id"].map(k_star).fillna(k_default).astype(float)
+    flux = pd.Series(np.nan, index=D.index)
+    for kk in kplan["k_all"]:
+        sel = k_row == kk
+        flux[sel] = fk[kk][sel]
+    apc: dict[float, pd.Series] = {}
+    in_ref = base & (k_row == k_ref) & (fk[k_ref] > 0)
+    for kk in kplan["k_all"]:
+        if kk == k_ref or not (k_row == kk).any():
+            continue
+        ok = in_ref & (fk[kk] > 0)
+        apc[kk] = (-2.5 * np.log10(fk[k_ref][ok] / fk[kk][ok])).groupby(D.loc[ok, "t"]).median()
+    apcorr_row = pd.Series(0.0, index=D.index)
+    for kk, ser in apc.items():
+        sel = k_row == kk
+        apcorr_row[sel] = D.loc[sel, "t"].map(ser).to_numpy(float)
+    return {"k_star": k_star, "k_row": k_row, "flux": flux, "apcorr": apc, "apcorr_row": apcorr_row}
 
 
 def write_per_target_choices(
@@ -990,6 +1088,9 @@ __all__ = [
     "BRIGHT_K_BOOT",
     "BRIGHT_K_MIN_STARS",
     "BrightnessK",
+    "load_field_k",
+    "field_k_plan",
+    "group_k_fluxes",
     "SNR_FLAT_FRAC",
     "ApertureGridNight",
     "PerTargetChoice",
@@ -1002,7 +1103,6 @@ __all__ = [
     "blend_k_column",
     "flux_k_column",
     "f_star_is_grid_edge",
-    "flux_to_mag",
     "frame_stem_from_source",
     "howell_snr",
     "howell_variance_adu2",

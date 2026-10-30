@@ -22,8 +22,8 @@ from pipeline_constants import COMP_SELECT_RMS_FLOOR
 from catalog_db import connect_ro, query_local_gaia_by_source_ids
 from gaia_catalog_id import normalize_gaia_source_id, normalize_gaia_source_id_series, read_vyvar_csv
 from infolog import log_event
-from photometry_shared import _normalize_gaia_id, _safe_polyfit, _target_display_name
-from photometry_defs import LOGGER, PHASE_USECOLS_PERFRAME
+from photometry_shared import _normalize_gaia_id
+from photometry_defs import LOGGER
 from gaia_catalog_id import VYVAR_CSV_DTYPE
 
 LAST_EXCLUDED_TARGETS: pd.DataFrame = pd.DataFrame(
@@ -136,17 +136,15 @@ def _enrich_comp_bp_rp(
 
     return df
 
-def _ensure_active_target_display_names(df: pd.DataFrame) -> pd.DataFrame:
+def _ensure_active_target_names(df: pd.DataFrame) -> pd.DataFrame:
+    """``vsx_name`` holds the VSX name only (empty for manual / exoplanet / candidate targets - Milan
+    2026-10-29, G11-22); a blank ``name`` takes the catalog id. Displays use
+    ``star_page_m3.target_display_name``."""
     if df is None or getattr(df, "empty", True):
         return df
     out = df.copy()
     if "vsx_name" not in out.columns:
         out["vsx_name"] = ""
-    filled: list[str] = []
-    for _, row in out.iterrows():
-        cid = _normalize_gaia_id(row.get("catalog_id", ""))
-        filled.append(_target_display_name(row, fallback_cid=cid))
-    out["vsx_name"] = filled
     if "name" in out.columns:
         blank_name = out["name"].astype(str).str.strip().str.lower().isin(("", "nan", "none"))
         out.loc[blank_name, "name"] = out.loc[blank_name, "catalog_id"]
@@ -426,45 +424,17 @@ def _masterstar_row_is_dao_detection(ms_row: pd.Series) -> bool:
     return math.isfinite(f)
 
 
-def select_active_targets(
-    variable_targets_csv: Path,
-    masterstars_csv: Path,
+def _at_in_frame_targets(
     *,
-    frame_w_px: int,
-    frame_h_px: int,
-    edge_margin_px: int = 50,
-    safe_bbox: tuple[float, float, float, float] | None = None,
-    gaia_db_path: str | None = None,
-    cfg: AppConfig,
-) -> pd.DataFrame:
-    """Target selection: filter VSX variables -> active_targets.
-
-    Rules:
-    - The star must be in the frame (``x,y`` at least ``edge_margin_px`` from the edge of the effective field; the
-      same number as ``chip_interior_margin_px`` in target and comparison-star selection - consistent with the
-      comparison stars and suspected variables).
-    - Width/height are enlarged from the data if needed
-    - VSX auto rows: identity join on planner ``catalog_id`` in masterstars (no positional matching).
-      Only ``gaia_match_source=masterstars`` rows are promotable; ``gaia_dr3_direct`` / ``no_match`` stay
-      in variable_targets for comp veto but are excluded here.
-    - Manual / exoplanet targets: identity join on ``catalog_id`` when present (not subject to VSX gate).
-    - ``catalog_id`` from masterstars must be non-empty (otherwise the target is skipped).
-    - TARGET-RULES-2026-10 (Milan 2026-10-13): a target is a star DAO detected on MASTERSTAR.
-      Catalogue-membership rows (Gaia position, no DAO detection) are catalogue rows, not image
-      data -> excluded (``no_dao_detection``). Then exactly three final cuts, in this order:
-      ``saturated`` (MASTERSTAR zone saturated = peak above the linear limit 0.90 x SAT-DIAG),
-      ``below_snr_min`` (MASTERSTAR aperture S/N < cfg.snr_min, star drowned in noise) and
-      ``vsx_type_out_of_scope`` (cfg.vsx_out_of_scope_types, VSX auto-selected targets only).
-      Masked targets stay in active_targets with ``skip_photometry=True`` (mask-first).
-    Returns:
-        DataFrame of active targets - columns from variable_targets + added from masterstars:
-        [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
-         x, y, mag, b_v, bp_rp, zone_flag, skip_photometry, skip_reason]
-    """
-    global LAST_EXCLUDED_TARGETS
-    # Auto-repair corrupted Gaia IDs before loading (if a local Gaia DB is available).
-
-    # variable_targets.csv may come from outside and often has catalog_id as float/scientific - read as string
+    cfg,
+    edge_margin_px,
+    frame_h_px,
+    frame_w_px,
+    masterstars_csv,
+    safe_bbox,
+    variable_targets_csv,
+):
+    """Variable targets inside the frame / safe bbox and the MASTERSTAR rows by catalog id."""
     vt = pd.read_csv(variable_targets_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
     # masterstars_full_match.csv often carries the exact Gaia source_id in "name" even when catalog_id is float-corrupted
     ms = pd.read_csv(masterstars_csv, low_memory=False, dtype=VYVAR_CSV_DTYPE)
@@ -522,10 +492,6 @@ def select_active_targets(
 
     _cfg = cfg
 
-    from vsx_type_scope import (  # noqa: PLC0415
-        is_vsx_auto_selected_target,
-        vsx_type_is_out_of_scope,
-    )
 
     # Identity join index: normalized Gaia source_id -> masterstar row.
     ms_by_cid: dict[str, pd.Series] = {}
@@ -535,6 +501,14 @@ def select_active_targets(
             ms_by_cid[str(cid_ms)] = ms_row
 
     out_of_frame = int(len(vt) - int(in_frame.sum()))
+    return _cfg, in_frame, ms_by_cid, out_of_frame, vt, vt_in
+
+
+def _at_match_targets(*, _cfg, in_frame, ms_by_cid, vt, vt_in):
+    """Match each in-frame target to its MASTERSTAR detection; count the exclusion reasons."""
+    from vsx_type_scope import is_vsx_auto_selected_target  # noqa: PLC0415
+    from vsx_type_scope import vsx_type_is_out_of_scope  # noqa: PLC0415
+
     no_catalog_id = 0
     no_gaia_id = 0
     no_dao_detection = 0
@@ -652,41 +626,25 @@ def select_active_targets(
                 rec[_exo_col] = vrow.get(_exo_col, "")
         matched_vt_idx.add(vidx)
         matched_rows.append(rec)
+    return excluded_rows, matched_rows, no_catalog_id, no_dao_detection, no_gaia_id, not_target_eligible
 
-    _empty_cols = [
-        "name",
-        "vsx_name",
-        "vsx_type",
-        "vsx_period",
-        "ra_deg",
-        "dec_deg",
-        "x",
-        "y",
-        "catalog_id",
-        "mag",
-        "bp_rp",
-        "zone_flag",
-        "skip_photometry",
-        "skip_reason",
-    ]
-    # (a plain sum: on an empty string column pandas 3 sums to '' and int('') raises)
-    n_gaia_id_assigned = sum(bool(_normalize_gaia_id(x)) for x in vt_in["catalog_id"]) if "catalog_id" in vt_in.columns else 0
-    if not matched_rows:
-        LAST_EXCLUDED_TARGETS = (
-            pd.DataFrame(excluded_rows)
-            if excluded_rows
-            else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
-        )
-        _funnel0 = (
-            f"[TARGET-SELECT] funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
-            f"gaia_id_assigned={n_gaia_id_assigned} -> dao_detected=0 -> active=0 | excluded: "
-            f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} no_catalog_id={no_catalog_id} "
-            f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame}"
-        )
-        logging.info(_funnel0)
-        log_event(_funnel0)
-        return pd.DataFrame(columns=_empty_cols)
 
+def _at_assemble(
+    *,
+    _cfg,
+    _empty_cols,
+    gaia_db_path,
+    matched_rows,
+    n_gaia_id_assigned,
+    no_catalog_id,
+    no_dao_detection,
+    no_gaia_id,
+    not_target_eligible,
+    out_of_frame,
+    vt,
+    vt_in,
+):
+    """Active target table: ids, Gaia colours, funnel log and the excluded rows."""
     result = pd.DataFrame(matched_rows) if matched_rows else pd.DataFrame(columns=_empty_cols)
     if "catalog_id" in result.columns:
         # DO NOT use float() (precision loss). Use the robust normalization.
@@ -756,19 +714,126 @@ def select_active_targets(
                 int(len(vt_in)),
                 100.0 * _assign_frac,
             )
+    return result,
+
+
+def select_active_targets(
+    variable_targets_csv: Path,
+    masterstars_csv: Path,
+    *,
+    frame_w_px: int,
+    frame_h_px: int,
+    edge_margin_px: int = 50,
+    safe_bbox: tuple[float, float, float, float] | None = None,
+    gaia_db_path: str | None = None,
+    cfg: AppConfig,
+) -> pd.DataFrame:
+    """Target selection: filter VSX variables -> active_targets.
+
+    Rules:
+    - The star must be in the frame (``x,y`` at least ``edge_margin_px`` from the edge of the effective field; the
+      same number as ``chip_interior_margin_px`` in target and comparison-star selection - consistent with the
+      comparison stars and suspected variables).
+    - Width/height are enlarged from the data if needed
+    - VSX auto rows: identity join on planner ``catalog_id`` in masterstars (no positional matching).
+      Only ``gaia_match_source=masterstars`` rows are promotable; ``gaia_dr3_direct`` / ``no_match`` stay
+      in variable_targets (neighbour light at maximum, B4-2026-10) but are excluded here.
+    - Manual / exoplanet targets: identity join on ``catalog_id`` when present (not subject to VSX gate).
+    - ``catalog_id`` from masterstars must be non-empty (otherwise the target is skipped).
+    - TARGET-RULES-2026-10 (Milan 2026-10-13): a target is a star DAO detected on MASTERSTAR.
+      Catalogue-membership rows (Gaia position, no DAO detection) are catalogue rows, not image
+      data -> excluded (``no_dao_detection``). Then exactly three final cuts, in this order:
+      ``saturated`` (MASTERSTAR zone saturated = peak above the linear limit 0.90 x SAT-DIAG),
+      ``below_snr_min`` (MASTERSTAR aperture S/N < cfg.snr_min, star drowned in noise) and
+      ``vsx_type_out_of_scope`` (cfg.vsx_out_of_scope_types, VSX auto-selected targets only).
+      Masked targets stay in active_targets with ``skip_photometry=True`` (mask-first).
+    Returns:
+        DataFrame of active targets - columns from variable_targets + added from masterstars:
+        [name, catalog_id, ra_deg, dec_deg, vsx_name, vsx_type, vsx_period,
+         x, y, mag, b_v, bp_rp, zone_flag, skip_photometry, skip_reason]
+    """
+    global LAST_EXCLUDED_TARGETS
+    # Auto-repair corrupted Gaia IDs before loading (if a local Gaia DB is available).
+
+    # variable_targets.csv may come from outside and often has catalog_id as float/scientific - read as string
+    _cfg, in_frame, ms_by_cid, out_of_frame, vt, vt_in = _at_in_frame_targets(
+        cfg=cfg,
+        edge_margin_px=edge_margin_px,
+        frame_h_px=frame_h_px,
+        frame_w_px=frame_w_px,
+        masterstars_csv=masterstars_csv,
+        safe_bbox=safe_bbox,
+        variable_targets_csv=variable_targets_csv,
+    )
+    excluded_rows, matched_rows, no_catalog_id, no_dao_detection, no_gaia_id, not_target_eligible = _at_match_targets(
+        _cfg=_cfg,
+        in_frame=in_frame,
+        ms_by_cid=ms_by_cid,
+        vt=vt,
+        vt_in=vt_in,
+    )
+
+    _empty_cols = [
+        "name",
+        "vsx_name",
+        "vsx_type",
+        "vsx_period",
+        "ra_deg",
+        "dec_deg",
+        "x",
+        "y",
+        "catalog_id",
+        "mag",
+        "bp_rp",
+        "zone_flag",
+        "skip_photometry",
+        "skip_reason",
+    ]
+    # (a plain sum: on an empty string column pandas 3 sums to '' and int('') raises)
+    n_gaia_id_assigned = sum(bool(_normalize_gaia_id(x)) for x in vt_in["catalog_id"]) if "catalog_id" in vt_in.columns else 0
+    if not matched_rows:
+        LAST_EXCLUDED_TARGETS = (
+            pd.DataFrame(excluded_rows)
+            if excluded_rows
+            else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
+        )
+        _funnel0 = (
+            f"[TARGET-SELECT] funnel: vsx_bbox={int(len(vt))} -> in_frame={int(len(vt_in))} -> "
+            f"gaia_id_assigned={n_gaia_id_assigned} -> dao_detected=0 -> active=0 | excluded: "
+            f"no_dao_detection={no_dao_detection} no_gaia_id={no_gaia_id} no_catalog_id={no_catalog_id} "
+            f"not_target_eligible={not_target_eligible} out_of_frame={out_of_frame}"
+        )
+        logging.info(_funnel0)
+        log_event(_funnel0)
+        return pd.DataFrame(columns=_empty_cols)
+
+    result, = _at_assemble(
+        _cfg=_cfg,
+        _empty_cols=_empty_cols,
+        gaia_db_path=gaia_db_path,
+        matched_rows=matched_rows,
+        n_gaia_id_assigned=n_gaia_id_assigned,
+        no_catalog_id=no_catalog_id,
+        no_dao_detection=no_dao_detection,
+        no_gaia_id=no_gaia_id,
+        not_target_eligible=not_target_eligible,
+        out_of_frame=out_of_frame,
+        vt=vt,
+        vt_in=vt_in,
+    )
     LAST_EXCLUDED_TARGETS = (
         pd.DataFrame(excluded_rows)
         if excluded_rows
         else pd.DataFrame(columns=["name", "vsx_name", "vsx_type", "ra_deg", "dec_deg", "mag", "reason"])
     )
-    result = _ensure_active_target_display_names(result)
+    result = _ensure_active_target_names(result)
     return result.reset_index(drop=True)
 
 def _batch_enrich_targets_bp_rp_from_gaia_db(
     target_cids: list[str],
     gaia_db_path: str,
 ) -> dict[str, dict[str, Any]]:
-    """Prefetch Gaia ``bp_rp`` / ``teff_gspphot`` for comparison-star selection targets (batched SQL)."""
+    """Prefetch Gaia ``bp_rp`` for comparison-star selection targets (batched SQL)."""
     gdb = str(gaia_db_path or "").strip()
     if not target_cids or not gdb:
         return {}
@@ -790,50 +855,13 @@ def _batch_enrich_targets_bp_rp_from_gaia_db(
     if not ids_norm:
         return {}
 
-    out: dict[str, dict[str, Any]] = {}
     try:
         base = query_local_gaia_by_source_ids(gp, ids_norm)
-        for k, v in base.items():
-            out[k] = {
-                "bp_rp": v.get("bp_rp"),
-                "teff_gspphot": None,
-            }
     except Exception as exc:  # noqa: BLE001
         LOGGER.warning("[COMP-SELECT] Batch Gaia bp_rp lookup failed: %s", exc)
         return {}
-
-    try:
-        import sqlite3  # noqa: PLC0415
-
-        con = connect_ro(gp)
-        con.row_factory = sqlite3.Row
-        try:
-            cols = {
-                str(r[1]).strip().lower()
-                for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()
-            }
-            if "teff_gspphot" not in cols:
-                return out
-            ids_int = [int(x) for x in ids_norm]
-            bs = 500
-            for i0 in range(0, len(ids_int), bs):
-                chunk = ids_int[i0 : i0 + bs]
-                ph = ",".join("?" * len(chunk))
-                q = f"SELECT source_id, teff_gspphot FROM gaia_dr3 WHERE source_id IN ({ph});"
-                for row in con.execute(q, chunk):
-                    key = normalize_gaia_source_id(row["source_id"])
-                    if not key or key not in out:
-                        continue
-                    te = row["teff_gspphot"]
-                    if te is not None:
-                        try:
-                            out[key]["teff_gspphot"] = float(te)
-                        except (TypeError, ValueError):
-                            pass
-        finally:
-            con.close()
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("[COMP-SELECT] Batch Gaia teff lookup failed: %s", exc)
+    # G07-20: only bp_rp is used by comp selection (the teff query had no reader)
+    out: dict[str, dict[str, Any]] = {k: {"bp_rp": v.get("bp_rp")} for k, v in base.items()}
 
     return out
 
@@ -882,7 +910,7 @@ def _enrich_target_bp_rp_from_gaia_db(
             con.row_factory = sqlite3.Row
             try:
                 cols = {str(r[1]).strip().lower() for r in con.execute("PRAGMA table_info('gaia_dr3')").fetchall()}
-                parts = [c for c in ("bp_rp", "teff_gspphot") if c in cols]
+                parts = [c for c in ("bp_rp",) if c in cols]
                 if parts:
                     rw = con.execute(
                         f"SELECT {', '.join(parts)} FROM gaia_dr3 WHERE source_id=? LIMIT 1;",
@@ -925,11 +953,146 @@ def _bprp_tier_ladder_for_selection(
         ]
     else:
         raw = [float(max_delta_bprp)]
-    out: list[float] = []
-    for v in raw:
-        if math.isfinite(v) and v > 0 and v not in out:
-            out.append(float(v))
-    return out or [float(max_delta_bprp)]
+    # G07-35: a widening ladder that ends at the cap (a tier above comp_max_delta_bprp is clipped)
+    cap = raw[-1]
+    if not (math.isfinite(cap) and cap > 0):
+        raise ValueError(f"comp_max_delta_bprp must be a positive number, got {cap!r}")
+    return sorted({min(float(v), cap) for v in raw if math.isfinite(v) and v > 0})
+
+def _sel_colour_ladder(*, _n_min, cfg, max_delta_bprp, out, target_bprp):
+    """Colour ladder: candidates within the widening |Delta BP-RP| window until n_comp_min remain."""
+    id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
+    tb = float(target_bprp)
+    if "bp_rp" in out.columns and math.isfinite(tb):
+        out["_delta_bprp_abs"] = (
+            pd.to_numeric(out.get("bp_rp"), errors="coerce") - tb
+        ).abs()
+    else:
+        out["_delta_bprp_abs"] = 0.0
+
+    if "_dist_deg" in out.columns:
+        out["_dist_sort"] = pd.to_numeric(out["_dist_deg"], errors="coerce")
+    elif "dist_deg" in out.columns:
+        out["_dist_sort"] = pd.to_numeric(out["dist_deg"], errors="coerce")
+    else:
+        out["_dist_sort"] = 0.0
+    out["_dist_sort"] = out["_dist_sort"].fillna(float("inf"))
+    out["_rms_sort"] = pd.to_numeric(out["comp_rms"], errors="coerce").fillna(float("inf"))
+    out["_delta_bprp_abs"] = pd.to_numeric(out["_delta_bprp_abs"], errors="coerce").fillna(
+        float("inf")
+    )
+
+    ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
+    selected = pd.DataFrame()
+    used_lim = float("nan")
+    ladder_step = 0
+    for step_i, lim in enumerate(ladder, start=1):
+        pool = out[out["_delta_bprp_abs"] <= float(lim)].copy()
+        if len(pool) >= _n_min:
+            selected = pool
+            used_lim = float(lim)
+            ladder_step = int(step_i)
+            logging.info(
+                "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d) "
+                "ladder_step=%d (RMS-ordered within)",
+                float(lim),
+                len(pool),
+                _n_min,
+                ladder_step,
+            )
+            break
+        selected = pool
+        used_lim = float(lim)
+        ladder_step = int(step_i)
+    return id_col, ladder, ladder_step, selected, tb, used_lim
+
+
+def _sel_rank_and_cap(
+    *,
+    _ceil,
+    _iso_fwhm,
+    _n_max,
+    color_fallback,
+    id_col,
+    ladder_step,
+    out,
+    selected,
+    used_lim,
+):
+    """Log the colour-window rejections, single-source isolation gate, rank by RMS and cap at n_comp_max."""
+    n_pre_colour = int(len(out))
+    n_colour_pool = int(len(selected))
+    if n_pre_colour > n_colour_pool and math.isfinite(float(used_lim)):
+        _col_dropped = out.loc[~out.index.isin(selected.index)]
+        if not _col_dropped.empty:
+            _bcol = _col_dropped.sort_values("_rms_sort", kind="mergesort").iloc[0]
+            _db = float(pd.to_numeric(_bcol.get("_delta_bprp_abs"), errors="coerce"))
+            logging.info(
+                "[COMP] best colour-rejected cid=%s rms=%s d_bprp=%s colour_lim=%.3f",
+                str(_bcol.get(id_col, "")),
+                str(_bcol.get("comp_rms", "")),
+                f"{_db:.3f}" if math.isfinite(_db) else "nan",
+                float(used_lim),
+            )
+    _sort_cols = (
+        ["_delta_bprp_abs", "_rms_sort", "_dist_sort", id_col]
+        if color_fallback
+        else ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col]
+    )
+    selected = selected.sort_values(
+        _sort_cols,
+        ascending=[True, True, True, True],
+        kind="mergesort",
+    )
+    n_clean_pool = int(len(selected))
+    _ceil_s = f"{float(_ceil):.4f}" if math.isfinite(_ceil) and _ceil > 0 else "nan"
+    if n_clean_pool > _n_max:
+        _nxt = selected.iloc[_n_max]
+        _nr = float(pd.to_numeric(_nxt.get("comp_rms"), errors="coerce"))
+        _nd = float(pd.to_numeric(_nxt.get("_delta_bprp_abs"), errors="coerce"))
+        _nds = float(pd.to_numeric(_nxt.get("_dist_sort"), errors="coerce"))
+        logging.info(
+            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
+            "n_comp_max=%d admitted=%d; best not-admitted (n_comp_max/distance sort) "
+            "cid=%s rms=%s d_bprp=%s dist_deg=%s "
+            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
+            n_clean_pool,
+            _n_max,
+            _n_max,
+            str(_nxt.get(id_col, "")),
+            f"{_nr:.4f}" if math.isfinite(_nr) else "nan",
+            f"{_nd:.3f}" if math.isfinite(_nd) else "nan",
+            f"{_nds:.5f}" if math.isfinite(_nds) else "nan",
+            _ceil_s,
+            float(_iso_fwhm),
+            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
+        )
+    else:
+        logging.info(
+            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
+            "n_comp_max=%d admitted=%d; nothing better in the pool "
+            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
+            n_clean_pool,
+            _n_max,
+            n_clean_pool,
+            _ceil_s,
+            float(_iso_fwhm),
+            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
+        )
+    selected = selected.head(_n_max).copy()
+    _max_d_used = float(pd.to_numeric(selected.get("_delta_bprp_abs"), errors="coerce").max())
+    if not math.isfinite(_max_d_used):
+        _max_d_used = float(used_lim) if math.isfinite(float(used_lim)) else float("nan")
+    selected.attrs["color_ladder_lim"] = used_lim
+    selected.attrs["color_ladder_step"] = int(ladder_step)
+    selected.attrs["color_fallback"] = bool(color_fallback)
+    selected.attrs["max_delta_bprp_used"] = float(_max_d_used)
+    selected.attrs["max_comp_rms_ceiling"] = (
+        float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
+    )
+    selected.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
+    return selected,
+
 
 def _select_comps_by_rms_then_color(
     candidates: pd.DataFrame,
@@ -1090,49 +1253,13 @@ def _select_comps_by_rms_then_color(
             )
             return out
 
-    id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
-    tb = float(target_bprp)
-    if "bp_rp" in out.columns and math.isfinite(tb):
-        out["_delta_bprp_abs"] = (
-            pd.to_numeric(out.get("bp_rp"), errors="coerce") - tb
-        ).abs()
-    else:
-        out["_delta_bprp_abs"] = 0.0
-
-    if "_dist_deg" in out.columns:
-        out["_dist_sort"] = pd.to_numeric(out["_dist_deg"], errors="coerce")
-    elif "dist_deg" in out.columns:
-        out["_dist_sort"] = pd.to_numeric(out["dist_deg"], errors="coerce")
-    else:
-        out["_dist_sort"] = 0.0
-    out["_dist_sort"] = out["_dist_sort"].fillna(float("inf"))
-    out["_rms_sort"] = pd.to_numeric(out["comp_rms"], errors="coerce").fillna(float("inf"))
-    out["_delta_bprp_abs"] = pd.to_numeric(out["_delta_bprp_abs"], errors="coerce").fillna(
-        float("inf")
+    id_col, ladder, ladder_step, selected, tb, used_lim = _sel_colour_ladder(
+        _n_min=_n_min,
+        cfg=cfg,
+        max_delta_bprp=max_delta_bprp,
+        out=out,
+        target_bprp=target_bprp,
     )
-
-    ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
-    selected = pd.DataFrame()
-    used_lim = float("nan")
-    ladder_step = 0
-    for step_i, lim in enumerate(ladder, start=1):
-        pool = out[out["_delta_bprp_abs"] <= float(lim)].copy()
-        if len(pool) >= _n_min:
-            selected = pool
-            used_lim = float(lim)
-            ladder_step = int(step_i)
-            logging.info(
-                "[COMP] color filter at delta_bprp<=%.3f (n=%d >= n_comp_min=%d) "
-                "ladder_step=%d (RMS-ordered within)",
-                float(lim),
-                len(pool),
-                _n_min,
-                ladder_step,
-            )
-            break
-        selected = pool
-        used_lim = float(lim)
-        ladder_step = int(step_i)
 
     # D-RED-TARGET-T4-01 (i-a): last rung (cap) n < n_comp_min and finite
     # target BP-RP -> T4_FALLBACK on the same post-ceiling / post-isolation
@@ -1196,77 +1323,17 @@ def _select_comps_by_rms_then_color(
 
     # COMP-ASSIGN-03: RMS first, then colour, then distance.
     # T4_FALLBACK: |dBP-RP| first (D-RED-TARGET-T4-01).
-    n_pre_colour = int(len(out))
-    n_colour_pool = int(len(selected))
-    if n_pre_colour > n_colour_pool and math.isfinite(float(used_lim)):
-        _col_dropped = out.loc[~out.index.isin(selected.index)]
-        if not _col_dropped.empty:
-            _bcol = _col_dropped.sort_values("_rms_sort", kind="mergesort").iloc[0]
-            _db = float(pd.to_numeric(_bcol.get("_delta_bprp_abs"), errors="coerce"))
-            logging.info(
-                "[COMP] best colour-rejected cid=%s rms=%s d_bprp=%s colour_lim=%.3f",
-                str(_bcol.get(id_col, "")),
-                str(_bcol.get("comp_rms", "")),
-                f"{_db:.3f}" if math.isfinite(_db) else "nan",
-                float(used_lim),
-            )
-    _sort_cols = (
-        ["_delta_bprp_abs", "_rms_sort", "_dist_sort", id_col]
-        if color_fallback
-        else ["_rms_sort", "_delta_bprp_abs", "_dist_sort", id_col]
+    selected, = _sel_rank_and_cap(
+        _ceil=_ceil,
+        _iso_fwhm=_iso_fwhm,
+        _n_max=_n_max,
+        color_fallback=color_fallback,
+        id_col=id_col,
+        ladder_step=ladder_step,
+        out=out,
+        selected=selected,
+        used_lim=used_lim,
     )
-    selected = selected.sort_values(
-        _sort_cols,
-        ascending=[True, True, True, True],
-        kind="mergesort",
-    )
-    n_clean_pool = int(len(selected))
-    _ceil_s = f"{float(_ceil):.4f}" if math.isfinite(_ceil) and _ceil > 0 else "nan"
-    if n_clean_pool > _n_max:
-        _nxt = selected.iloc[_n_max]
-        _nr = float(pd.to_numeric(_nxt.get("comp_rms"), errors="coerce"))
-        _nd = float(pd.to_numeric(_nxt.get("_delta_bprp_abs"), errors="coerce"))
-        _nds = float(pd.to_numeric(_nxt.get("_dist_sort"), errors="coerce"))
-        logging.info(
-            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
-            "n_comp_max=%d admitted=%d; best not-admitted (n_comp_max/distance sort) "
-            "cid=%s rms=%s d_bprp=%s dist_deg=%s "
-            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
-            n_clean_pool,
-            _n_max,
-            _n_max,
-            str(_nxt.get(id_col, "")),
-            f"{_nr:.4f}" if math.isfinite(_nr) else "nan",
-            f"{_nd:.3f}" if math.isfinite(_nd) else "nan",
-            f"{_nds:.5f}" if math.isfinite(_nds) else "nan",
-            _ceil_s,
-            float(_iso_fwhm),
-            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
-        )
-    else:
-        logging.info(
-            "[COMP] clean pool n=%d after ceiling/isolation/colour; "
-            "n_comp_max=%d admitted=%d; nothing better in the pool "
-            "(thresholds: ceiling=%s isolation=%.2f FWHM colour_lim=%s)",
-            n_clean_pool,
-            _n_max,
-            n_clean_pool,
-            _ceil_s,
-            float(_iso_fwhm),
-            f"{float(used_lim):.3f}" if math.isfinite(float(used_lim)) else "nan",
-        )
-    selected = selected.head(_n_max).copy()
-    _max_d_used = float(pd.to_numeric(selected.get("_delta_bprp_abs"), errors="coerce").max())
-    if not math.isfinite(_max_d_used):
-        _max_d_used = float(used_lim) if math.isfinite(float(used_lim)) else float("nan")
-    selected.attrs["color_ladder_lim"] = used_lim
-    selected.attrs["color_ladder_step"] = int(ladder_step)
-    selected.attrs["color_fallback"] = bool(color_fallback)
-    selected.attrs["max_delta_bprp_used"] = float(_max_d_used)
-    selected.attrs["max_comp_rms_ceiling"] = (
-        float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
-    )
-    selected.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
 def night_frame_fwhms_px(per_frame_csv_paths: Any) -> list[float]:
@@ -1302,25 +1369,27 @@ def night_median_fwhm_px(
     return float(fallback), "fallback (no per-frame FWHM)"
 
 
-def apply_comp_quality_gates(pool: pd.DataFrame, *, label: str = "COMP") -> pd.DataFrame:
+def apply_comp_quality_gates(pool: pd.DataFrame, *, comp_peak_sat_frac: float, label: str = "COMP") -> pd.DataFrame:
     """COMP-SAT-80-2026-10 / COMP-SNR-20-2026-10 (Milan 2026-10-12): comps must be safely linear
     (MASTERSTAR raw peak < 0.80 x SAT; targets keep 0.90) and well measured (aperture S/N on
     MASTERSTAR >= COMP_SNR_MIN; AAVSO CCD/CMOS guide: S/N 100 excellent, < 10-20 poor).
     Applied to the global pool AND to the masterstars fallback (one rule)."""
-    from pipeline_constants import COMP_SAT_LIMIT_SCALE, COMP_SNR_MIN  # noqa: PLC0415
+    from pipeline_constants import COMP_SNR_MIN, LINEARITY_FRAC  # noqa: PLC0415
 
     _n0 = int(len(pool))
     if "peak_max_adu" in pool.columns and "saturate_limit_adu_85pct" in pool.columns:
         _pk = pd.to_numeric(pool["peak_max_adu"], errors="coerce")
-        _lim = pd.to_numeric(pool["saturate_limit_adu_85pct"], errors="coerce") * COMP_SAT_LIMIT_SCALE
+        # saturate_limit_adu_85pct == LINEARITY_FRAC x SAT -> the comp limit comp_peak_sat_frac x SAT
+        _lim = pd.to_numeric(pool["saturate_limit_adu_85pct"], errors="coerce") * (
+            float(comp_peak_sat_frac) / float(LINEARITY_FRAC))
         pool = pool.loc[~((_lim > 0) & (_pk >= _lim))].copy()
     _n1 = int(len(pool))
     if "snr_ap_pixscaled" in pool.columns:
         _snr = pd.to_numeric(pool["snr_ap_pixscaled"], errors="coerce")
         pool = pool.loc[_snr >= float(COMP_SNR_MIN)].copy()
     logging.info(
-        "[%s] linearity 0.80 x SAT removed %d, S/N < %.0f removed %d (of %d)",
-        label, _n0 - _n1, float(COMP_SNR_MIN), _n1 - int(len(pool)), _n0,
+        "[%s] linearity %.2f x SAT removed %d, S/N < %.0f removed %d (of %d)",
+        label, float(comp_peak_sat_frac), _n0 - _n1, float(COMP_SNR_MIN), _n1 - int(len(pool)), _n0,
     )
     return pool
 
@@ -1344,46 +1413,19 @@ def _stamp_comp_pool_admission(photometry_dir: Path | str, rules: list[dict[str,
     merge_photometry_pipeline_meta(Path(photometry_dir), {"comp_pool_admission": clean})
 
 
-def build_global_comp_pool(
-    masterstars_df: pd.DataFrame,
-    per_frame_csv_paths: list[Path],
-    csv_cache: dict[str, pd.DataFrame],
-    variable_target_catalog_ids: AbstractSet[str] | None,
-    safe_bbox: tuple[float, float, float, float] | None,
-    chip_fw: int,
-    chip_fh: int,
-    chip_interior_margin_px: int,
-    max_comp_rms: float,
-    cfg: AppConfig,
+def _pool_geometry_gates(
     *,
-    flux_col: str = "dao_flux",
-    min_frames_frac: float,
-    fwhm_px: float,
-    photometry_dir_for_meta: Path | str | None = None,
-    obs_group: str | None = None,
-    masterstar_fits: Path | str | None = None,
-    field_catalog_csv: Path | str | None = None,
-    sat_may_exclude: bool = True,
-) -> pd.DataFrame:
-    """Build the global comp pool - static filters + RMS across frames (once per field)."""
-    pool = masterstars_df.copy()
-    if "catalog_id" in pool.columns:
-        pool["catalog_id"] = _normalize_id_series(pool["catalog_id"])
-    for col in (
-        "is_usable",
-        "is_saturated",
-        "is_noisy",
-        "snr50_ok",
-        "vsx_known_variable",
-        "likely_saturated",
-    ):
-        if col in pool.columns:
-            pool[col] = _bool_col(pool[col])
-
-    margin = int(chip_interior_margin_px)
-    if "x" not in pool.columns or "y" not in pool.columns:
-        logging.warning("[GLOBAL COMP POOL] missing x/y - empty pool")
-        return pd.DataFrame()
+    cfg,
+    chip_fh,
+    chip_fw,
+    fwhm_px,
+    margin,
+    photometry_dir_for_meta,
+    pool,
+    safe_bbox,
+    variable_target_catalog_ids,
+):
+    """Static pool gates: safe bbox / chip margin, variable targets, saturated / VSX rows, D3 candidacy."""
     xn = pd.to_numeric(pool["x"], errors="coerce")
     yn = pd.to_numeric(pool["y"], errors="coerce")
 
@@ -1430,7 +1472,7 @@ def build_global_comp_pool(
         & ~_bool_col(pool.get("likely_saturated", pd.Series(False, index=pool.index)))
     )
     pool = pool.loc[cand_mask].copy()
-    pool = apply_comp_quality_gates(pool, label="GLOBAL COMP POOL")
+    pool = apply_comp_quality_gates(pool, comp_peak_sat_frac=float(cfg.comp_peak_sat_frac), label="GLOBAL COMP POOL")
 
     from d3_comparison_candidacy import apply_d3_comparison_candidacy  # noqa: PLC0415
 
@@ -1454,6 +1496,150 @@ def build_global_comp_pool(
         snr_min=float(getattr(cfg, "snr_min", 10.0)),
     )
     pool = pool.loc[_d3_mask].copy()
+    return pool,
+
+
+def _pool_admission_gates(
+    *,
+    _fstats,
+    admission_rules_band,
+    admission_rules_blend,
+    admission_rules_sat,
+    cand_ids,
+    csv_cache,
+    flux_col,
+    id_col,
+    min_frames_frac,
+    per_frame_csv_paths,
+    photometry_dir_for_meta,
+    pool,
+):
+    """Aperture-k RMS (LOO), frames per comp, Gaia DR3 known variables."""
+    admission_rules: list[dict[str, Any]] = []
+    if admission_rules_sat is not None:
+        admission_rules.append(admission_rules_sat)
+    for _r_extra in (admission_rules_band, admission_rules_blend):
+        if _r_extra is not None:
+            admission_rules.append(_r_extra)
+
+    # PHASE1-ONE-PASS-2026-10: the per-frame pass of the saturation rule also gives the frames measured per comp
+    # APERTURE-K-2026-10: comparison RMS on the light-curve aperture grid (field k);
+    # falls back to ``flux_col`` for per-frame catalogs written before the grid columns.
+    from comp_rms_loo import choose_field_aperture_k  # noqa: PLC0415
+
+    _k_field, _loo_k, _k_scores = choose_field_aperture_k(
+        cand_ids, per_frame_csv_paths, csv_cache, min_frames_frac=min_frames_frac
+    )
+    if _k_field is not None:
+        loo_map = _loo_k
+        admission_rules.append(
+            {
+                "rule_id": "COMP_RMS_APERTURE_K",
+                "n_in": int(len(pool)),
+                "n_out": int(len(pool)),
+                "threshold_value": float(_k_field),
+                "unit": "k (r = k x FWHM)",
+                "scores": {f"{k:.2f}": float(v) for k, v in _k_scores.items()},
+            }
+        )
+    else:
+        loo_map, _basis = compute_loo_mag_rms_map(
+            cand_ids=cand_ids,
+            per_frame_csv_paths=per_frame_csv_paths,
+            csv_cache=csv_cache,
+            flux_col=flux_col,
+            min_frames_frac=min_frames_frac,
+        )
+    pool = attach_comp_rms_to_pool_rows(
+        pool,
+        loo_map,
+        id_col=id_col,
+        frames_basis=COMP_RMS_FRAMES_BASIS,
+    )
+    _keys_fs = pool[id_col].astype(str).str.strip()
+    pool["comp_n_frames"] = _keys_fs.map(lambda c: int((_fstats.get(c) or {}).get("n_frames", 0)))
+
+    # COMP-ADMIT-2026-10: known variables are never comparison stars - VSX (coordinate match,
+    # removed above with the static gates) and the Gaia DR3 variability catalogue. This replaces the
+    # derived admission (COMP-POOL-01), whose only decision was this same catalogue test: its noise
+    # curve, thresholds and dilution were diagnostics nobody read, computed with gain 1 / read
+    # noise 0 / plate scale 1.3"/px from the raw config, and cost about 40 s per setup.
+    _before_var = int(len(pool))
+    _var = _bool_col(pool.get("gaia_dr3_variable_catalog", pd.Series(False, index=pool.index)))
+    pool = pool.loc[~_var].copy()
+    admission_rules.append(
+        {
+            "rule_id": "COMP_KNOWN_VARIABLE",
+            "n_in": _before_var,
+            "n_out": int(len(pool)),
+            "threshold_value": "vsx_known_variable or gaia_dr3_variable_catalog",
+            "unit": "catalogue flag",
+        }
+    )
+    if photometry_dir_for_meta is not None:
+        _stamp_comp_pool_admission(photometry_dir_for_meta, admission_rules)
+
+    _before_dedupe = int(len(pool))
+    pool = _dedupe_comp_pool_by_gaia_key(pool)
+    if int(len(pool)) < _before_dedupe:
+        logging.info(
+            "[GLOBAL COMP POOL] deduped Gaia catalog_id: %d -> %d rows",
+            _before_dedupe,
+            int(len(pool)),
+        )
+    return pool,
+
+
+def build_global_comp_pool(
+    masterstars_df: pd.DataFrame,
+    per_frame_csv_paths: list[Path],
+    csv_cache: dict[str, pd.DataFrame],
+    variable_target_catalog_ids: AbstractSet[str] | None,
+    safe_bbox: tuple[float, float, float, float] | None,
+    chip_fw: int,
+    chip_fh: int,
+    chip_interior_margin_px: int,
+    cfg: AppConfig,
+    *,
+    flux_col: str = "dao_flux",
+    min_frames_frac: float,
+    fwhm_px: float,
+    photometry_dir_for_meta: Path | str | None = None,
+    obs_group: str | None = None,
+    masterstar_fits: Path | str | None = None,
+    field_catalog_csv: Path | str | None = None,
+    sat_may_exclude: bool = True,
+) -> pd.DataFrame:
+    """Build the global comp pool - static filters + RMS across frames (once per field)."""
+    pool = masterstars_df.copy()
+    if "catalog_id" in pool.columns:
+        pool["catalog_id"] = _normalize_id_series(pool["catalog_id"])
+    for col in (
+        "is_usable",
+        "is_saturated",
+        "is_noisy",
+        "snr50_ok",
+        "vsx_known_variable",
+        "likely_saturated",
+    ):
+        if col in pool.columns:
+            pool[col] = _bool_col(pool[col])
+
+    margin = int(chip_interior_margin_px)
+    if "x" not in pool.columns or "y" not in pool.columns:
+        logging.warning("[GLOBAL COMP POOL] missing x/y - empty pool")
+        return pd.DataFrame()
+    pool, = _pool_geometry_gates(
+        cfg=cfg,
+        chip_fh=chip_fh,
+        chip_fw=chip_fw,
+        fwhm_px=fwhm_px,
+        margin=margin,
+        photometry_dir_for_meta=photometry_dir_for_meta,
+        pool=pool,
+        safe_bbox=safe_bbox,
+        variable_target_catalog_ids=variable_target_catalog_ids,
+    )
 
     if pool.empty:
         logging.warning("[GLOBAL COMP POOL] 0 rows after static filters")
@@ -1464,34 +1650,36 @@ def build_global_comp_pool(
     if not cand_ids:
         return pool.reset_index(drop=True)
 
-    # SAT-LIN-2026-10: a star above LINEARITY_FRAC x SAT on any frame is not a comparison
-    # star (and is not used as a LOO reference either).
+    # COMP-SAT-ONE-2026-10 (Milan 2026-10-29, code review 2 G07-27): one saturation rule for comparison
+    # stars - raw peak >= comp_peak_sat_frac x SAT (or flagged likely_saturated) on ANY frame -> not a
+    # comparison star and not a LOO reference (COMP-SAT-80-2026-10: "< 0.80 x SAT per frame"). Replaces
+    # the >= 0.90 any-frame rule (ungated) and the "> 10 % of frames" rule. Applied only with a measured
+    # saturation level (SAT-LIMIT-01: never exclude against an unverified level).
     from comp_pool_rms import _norm_id_val  # noqa: PLC0415
-    from comp_rms_loo import saturated_any_frame_ids  # noqa: PLC0415
-    from pipeline_constants import LINEARITY_FRAC  # noqa: PLC0415
 
-    _sat_any = saturated_any_frame_ids(cand_ids, per_frame_csv_paths, csv_cache)
-    if _sat_any:
+    _frac_c = float(cfg.comp_peak_sat_frac)
+    _fstats = comp_frame_stats(cand_ids, per_frame_csv_paths, csv_cache, flux_col=flux_col,
+                               comp_peak_sat_frac=_frac_c)
+    admission_rules_sat = None
+    if sat_may_exclude:
+        _over = {_norm_id_val(c) for c, v in _fstats.items() if int(v.get("n_over", 0)) > 0}
         _nid_pool = pool[id_col].map(_norm_id_val)
-        _drop = _nid_pool.isin(set(_sat_any))
-        logging.info(
-            "[GLOBAL COMP POOL] saturated on >=1 frame (peak >= %.2f x SAT): %d stars removed",
-            float(LINEARITY_FRAC),
-            int(_drop.sum()),
-        )
+        _drop = _nid_pool.isin(_over)
+        logging.info("[GLOBAL COMP POOL] raw peak >= %.2f x SAT on >= 1 frame: %d stars removed",
+                     _frac_c, int(_drop.sum()))
         admission_rules_sat = {
-            "rule_id": "COMP_SATURATED_ANY_FRAME",
+            "rule_id": "COMP_SAT_ANY_FRAME",
             "n_in": int(len(pool)),
             "n_out": int(len(pool) - int(_drop.sum())),
-            "threshold_value": float(LINEARITY_FRAC),
-            "unit": "fraction_of_SAT",
+            "threshold_value": _frac_c,
+            "unit": "fraction_of_SAT (raw peak, any frame)",
         }
         pool = pool.loc[~_drop].copy()
         cand_ids = {str(x).strip() for x in pool[id_col].tolist() if str(x).strip()}
         if not cand_ids:
             return pool.reset_index(drop=True)
     else:
-        admission_rules_sat = None
+        logging.info("[SAT-DIAG] comparison saturation exclusion disabled (saturation level unverified)")
 
     # COMP-BAND-2026-10: no band-validity gate on comparison stars. The light-curve shape
     # comes from the whole ensemble; only the absolute level (zero point) needs catalogue
@@ -1582,97 +1770,20 @@ def build_global_comp_pool(
         if not cand_ids:
             return pool.reset_index(drop=True)
 
-    admission_rules: list[dict[str, Any]] = []
-    if admission_rules_sat is not None:
-        admission_rules.append(admission_rules_sat)
-    for _r_extra in (admission_rules_band, admission_rules_blend):
-        if _r_extra is not None:
-            admission_rules.append(_r_extra)
-
-    # PHASE1-ONE-PASS-2026-10: one per-frame pass for the field: frames measured per comp and
-    # COMP-SAT-80 per frame (peak >= 0.80 x SAT in more than 10 % of its frames -> not a comp).
-    _fstats = comp_frame_stats(cand_ids, per_frame_csv_paths, csv_cache, flux_col=flux_col)
-    # APERTURE-K-2026-10: comparison RMS on the light-curve aperture grid (field k);
-    # falls back to ``flux_col`` for per-frame catalogs written before the grid columns.
-    from comp_rms_loo import choose_field_aperture_k  # noqa: PLC0415
-
-    _k_field, _loo_k, _k_scores = choose_field_aperture_k(
-        cand_ids, per_frame_csv_paths, csv_cache, min_frames_frac=min_frames_frac
-    )
-    if _k_field is not None:
-        loo_map = _loo_k
-        admission_rules.append(
-            {
-                "rule_id": "COMP_RMS_APERTURE_K",
-                "n_in": int(len(pool)),
-                "n_out": int(len(pool)),
-                "threshold_value": float(_k_field),
-                "unit": "k (r = k x FWHM)",
-                "scores": {f"{k:.2f}": float(v) for k, v in _k_scores.items()},
-            }
-        )
-    else:
-        loo_map, _basis = compute_loo_mag_rms_map(
-            cand_ids=cand_ids,
-            per_frame_csv_paths=per_frame_csv_paths,
-            csv_cache=csv_cache,
-            flux_col=flux_col,
-            min_frames_frac=min_frames_frac,
-        )
-    pool = attach_comp_rms_to_pool_rows(
-        pool,
-        loo_map,
+    pool, = _pool_admission_gates(
+        _fstats=_fstats,
+        admission_rules_band=admission_rules_band,
+        admission_rules_blend=admission_rules_blend,
+        admission_rules_sat=admission_rules_sat,
+        cand_ids=cand_ids,
+        csv_cache=csv_cache,
+        flux_col=flux_col,
         id_col=id_col,
-        frames_basis=COMP_RMS_FRAMES_BASIS,
+        min_frames_frac=min_frames_frac,
+        per_frame_csv_paths=per_frame_csv_paths,
+        photometry_dir_for_meta=photometry_dir_for_meta,
+        pool=pool,
     )
-    _keys_fs = pool[id_col].astype(str).str.strip()
-    pool["comp_n_frames"] = _keys_fs.map(lambda c: int((_fstats.get(c) or {}).get("n_frames", 0)))
-    if sat_may_exclude:
-        _n_pk = _keys_fs.map(lambda c: int((_fstats.get(c) or {}).get("n_peak", 0)))
-        _n_ov = _keys_fs.map(lambda c: int((_fstats.get(c) or {}).get("n_over", 0)))
-        _sat_frames = (_n_pk >= 10) & (_n_ov > 0.10 * _n_pk)
-        _n_before_sf = int(len(pool))
-        pool = pool.loc[~_sat_frames].reset_index(drop=True)
-        admission_rules.append({
-            "rule_id": "COMP_SAT_80_PER_FRAME",
-            "n_in": _n_before_sf,
-            "n_out": int(len(pool)),
-            "threshold_value": 0.10,
-            "unit": "fraction of frames with raw peak >= 0.80 x SAT",
-        })
-        logging.info("[COMP-SAT-80] per frame: %d comps saturated in > 10 %% of their frames removed",
-                     _n_before_sf - int(len(pool)))
-    else:
-        logging.info("[SAT-DIAG] per-frame comp saturation exclusion disabled (saturation level unverified)")
-
-    # COMP-ADMIT-2026-10: known variables are never comparison stars - VSX (coordinate match,
-    # removed above with the static gates) and the Gaia DR3 variability catalogue. This replaces the
-    # derived admission (COMP-POOL-01), whose only decision was this same catalogue test: its noise
-    # curve, thresholds and dilution were diagnostics nobody read, computed with gain 1 / read
-    # noise 0 / plate scale 1.3"/px from the raw config, and cost about 40 s per setup.
-    _before_var = int(len(pool))
-    _var = _bool_col(pool.get("gaia_dr3_variable_catalog", pd.Series(False, index=pool.index)))
-    pool = pool.loc[~_var].copy()
-    admission_rules.append(
-        {
-            "rule_id": "COMP_KNOWN_VARIABLE",
-            "n_in": _before_var,
-            "n_out": int(len(pool)),
-            "threshold_value": "vsx_known_variable or gaia_dr3_variable_catalog",
-            "unit": "catalogue flag",
-        }
-    )
-    if photometry_dir_for_meta is not None:
-        _stamp_comp_pool_admission(photometry_dir_for_meta, admission_rules)
-
-    _before_dedupe = int(len(pool))
-    pool = _dedupe_comp_pool_by_gaia_key(pool)
-    if int(len(pool)) < _before_dedupe:
-        logging.info(
-            "[GLOBAL COMP POOL] deduped Gaia catalog_id: %d -> %d rows",
-            _before_dedupe,
-            int(len(pool)),
-        )
     logging.info(
         "[GLOBAL COMP POOL] %d candidates (of %d masterstars, after filters)",
         len(pool),
@@ -1780,29 +1891,20 @@ def _count_gate_passing_comps(
 def select_comparison_stars_per_target(
     target: pd.Series,
     masterstars_df: pd.DataFrame,
-    per_frame_csv_paths: list[Path],
     *,
-    csv_cache: dict[str, pd.DataFrame] | None = None,
     global_comp_pool_df: pd.DataFrame | None = None,
     fwhm_px: float,
-    fwhm_d3_px: float | None = None,
     n_comp_min: int,
     n_comp_max: int,
     max_comp_rms: float,
     min_dist_arcsec: float = 60.0,
-    min_frames_frac: float,
-    flux_col: str = "dao_flux",
     chip_fw: int | None = None,
     chip_fh: int | None = None,
     chip_interior_margin_px: int = 0,
-    edge_bad_frame_frac_max: float = 0.10,
     gaia_db_path: str | None = None,
     gaia_prefetch: dict[str, dict[str, Any]] | None = None,
     variable_target_catalog_ids: AbstractSet[str] | None = None,
     cfg: AppConfig,
-    plate_scale_arcsec: float,
-    use_pixel_dist: bool = False,
-    sat_may_exclude: bool = True,
     n_reserve: int = 0,
 ) -> pd.DataFrame:
     """Comparison-star selection: pick the most stable comparison stars for one target.
@@ -1837,13 +1939,9 @@ def select_comparison_stars_per_target(
         Empty DataFrame if not enough stable stars are found.
     """
     from comp_selection_per_target import (  # noqa: PLC0415
-        _accumulate_per_frame_comp_metrics,
-        _apply_comp_metric_hard_filters,
         _assemble_comp_selection_result_rows,
         _assign_comp_tiers_to_pool,
-        _bootstrap_comp_selection_csv_cache,
         _build_candidates_pre,
-        _detrend_and_compute_comp_rms_map,
         _ensemble_mad_filter_rms,
         _filter_comp_candidates_spatial_static,
         _resolve_target_color_for_comp_selection,
@@ -1866,11 +1964,7 @@ def select_comparison_stars_per_target(
         if col in ms.columns:
             ms[col] = _bool_col(ms[col])
 
-    ctx = _resolve_target_color_for_comp_selection(
-        target,
-        gaia_db_path=gaia_db_path,
-        cfg=_cfg_p1,
-    )
+    ctx = _resolve_target_color_for_comp_selection(target, cfg=_cfg_p1)
     ra_t = float(ctx["ra_t"])
     dec_t = float(ctx["dec_t"])
     mag_t = float(ctx["mag_t"])
@@ -1879,8 +1973,6 @@ def select_comparison_stars_per_target(
     _individual_tier = ctx["_individual_tier"]
     _target_name = str(ctx["_target_name"])
 
-    _x_t = float(pd.to_numeric(target.get("x"), errors="coerce"))
-    _y_t = float(pd.to_numeric(target.get("y"), errors="coerce"))
     ms, _base_mask = _filter_comp_candidates_spatial_static(
         ms,
         ra_t=ra_t,
@@ -1888,10 +1980,6 @@ def select_comparison_stars_per_target(
         target_cid=target_cid,
         min_dist_arcsec=min_dist_arcsec,
         variable_target_catalog_ids=variable_target_catalog_ids,
-        use_pixel_dist=bool(use_pixel_dist),
-        x_t=_x_t if math.isfinite(_x_t) else None,
-        y_t=_y_t if math.isfinite(_y_t) else None,
-        plate_scale_arcsec=float(plate_scale_arcsec),
     )
 
     candidates_pre = _build_candidates_pre(
@@ -1904,10 +1992,6 @@ def select_comparison_stars_per_target(
         chip_fh=chip_fh,
         chip_interior_margin_px=int(chip_interior_margin_px),
         target=target,
-        cfg=_cfg_p1,
-        # NIGHT-FWHM-2026-10: D3 astrometric residual is measured on MASTERSTAR -> its FWHM.
-        fwhm_dao_px=float(fwhm_d3_px if fwhm_d3_px is not None else fwhm_px),
-        solve_rms_px=None,
     )
     if candidates_pre is None:
         return pd.DataFrame()
@@ -1934,130 +2018,21 @@ def select_comparison_stars_per_target(
         logging.warning(f"[COMP-SELECT] Aperture isolation skipped (error): {_iso_exc!s}")
         ms_arr_x = ms_arr_y = ms_arr_mag = np.array([], dtype=float)
 
-    id_col = "catalog_id" if "catalog_id" in candidates_pre.columns else "name"  # identity = catalog_id (G07-05)
-    cand_ids = set(candidates_pre[id_col].astype(str).str.strip())
-
-    # PHASE1-ONE-PASS-2026-10: the global pool already carries comp_rms, frames per comp and the
-    # per-frame gates (one field pass). Re-reading every frame per target (~48 s per target on
-    # 532) only fed SAT/EDGE "filters" that could not change the selection. The per-frame pass
-    # stays for the masterstars fallback (empty global pool: no comp_rms yet).
-    _pool_rms_ready = "comp_rms" in ms.columns and bool(pd.to_numeric(ms["comp_rms"], errors="coerce").notna().any())
-    flux_map: dict[str, list[float]] = {}
-    min_frames = 3
-    if not _pool_rms_ready:
-        avail_cols = list(PHASE_USECOLS_PERFRAME)
-        csv_cache = _bootstrap_comp_selection_csv_cache(
-            per_frame_csv_paths,
-            csv_cache,
-            flux_col=flux_col,
-            avail_cols=avail_cols,
-        )
-        metrics = _accumulate_per_frame_comp_metrics(
-            per_frame_csv_paths,
-            csv_cache,
-            cand_ids,
-            flux_col=flux_col,
-            chip_fw=chip_fw,
-            chip_fh=chip_fh,
-        )
-        flux_map = metrics["flux_map"]
-        min_frames = max(3, int(int(metrics["n_frames_loaded"]) * min_frames_frac))
-        flux_map = _apply_comp_metric_hard_filters(
-            flux_map,
-            metrics["peak_over_map"],
-            metrics["peak_total_map"],
-            metrics["edge_bad_map"],
-            metrics["edge_total_map"],
-            edge_bad_frame_frac_max=edge_bad_frame_frac_max,
-            sat_may_exclude=bool(sat_may_exclude),
-        )
-
-    _dilution_map: dict[str, dict[str, Any]] | None = None
-    if bool(_cfg_p1.gs11_dilution_enabled) and gaia_db_path:
-        from dilution import compute_dilution_factor  # noqa: PLC0415
-
-        _ap_r_px = 2.75 * float(fwhm_px) if math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 else 7.0
-        _ap_arcsec = float(_ap_r_px) * float(plate_scale_arcsec)
-        _dilution_map = {}
-        for _, crow in candidates_pre.iterrows():
-            _cid_d = str(crow.get(id_col, crow.get("catalog_id", "")) or "").strip()
-            if not _cid_d:
-                continue
-            try:
-                _ra_d = float(pd.to_numeric(crow.get("ra_deg", crow.get("ra")), errors="coerce"))
-                _dec_d = float(pd.to_numeric(crow.get("dec_deg", crow.get("dec")), errors="coerce"))
-            except (TypeError, ValueError):
-                continue
-            _gm_d = float("nan")
-            for _gcol in ("phot_g_mean_mag", "mag", "_mag"):
-                if _gcol in crow.index:
-                    try:
-                        _gv = float(pd.to_numeric(crow[_gcol], errors="coerce"))
-                    except (TypeError, ValueError):
-                        _gv = float("nan")
-                    if math.isfinite(_gv):
-                        _gm_d = _gv
-                        break
-            from dilution import _normalize_exclude_source_id  # noqa: PLC0415
-
-            _dilution_map[_cid_d] = compute_dilution_factor(
-                _ra_d,
-                _dec_d,
-                _gm_d,
-                _ap_arcsec,
-                str(gaia_db_path),
-                catalog_id=_normalize_exclude_source_id(_cid_d),
-            )
-
-
-    if _pool_rms_ready and "comp_n_frames" in ms.columns:
-        _idc_nf = "catalog_id" if "catalog_id" in ms.columns else "name"
-        comp_n_frames_map = {
-            str(k).strip(): int(v)
-            for k, v in zip(ms[_idc_nf].tolist(), pd.to_numeric(ms["comp_n_frames"], errors="coerce").fillna(0).tolist())
-        }
-    else:
-        comp_n_frames_map = {str(k): len(v) for k, v in flux_map.items()}
-
-    # COMP-ASSIGN-01 D2: one RMS measurement - prefer pool step-1 ``comp_rms``.
-    _id_rms_col = (
-        "catalog_id"
-        if "catalog_id" in ms.columns
-        else ("name" if "name" in ms.columns else None)
-    )
-    _pool_rms_map: dict[str, float] = {}
-    if _id_rms_col and "comp_rms" in ms.columns:
-        _ids = ms[_id_rms_col].map(lambda v: str(v).strip() if pd.notna(v) else "")
-        _vals = pd.to_numeric(ms["comp_rms"], errors="coerce")
-        for _cid_p, _rv_p in zip(_ids.tolist(), _vals.tolist(), strict=False):
-            if _cid_p and math.isfinite(float(_rv_p)):
-                _pool_rms_map[str(_cid_p)] = float(_rv_p)
-    if _pool_rms_map:
-        rms_map = dict(_pool_rms_map)
-        sorted_rms_map = dict(
-            sorted(rms_map.items(), key=lambda kv: (float(kv[1]), str(kv[0])))
-        )
-        logging.info(
-            "[COMP-ASSIGN] Target %s: using pool step-1 comp_rms (n=%d); "
-            "skip per-target RMS re-derivation",
-            target_cid,
-            len(rms_map),
-        )
-    else:
-        rms_result = _detrend_and_compute_comp_rms_map(
-            flux_map,
-            min_frames=min_frames,
-            max_comp_rms=max_comp_rms,
-            n_comp_min=n_comp_min,
-            target_cid=target_cid,
-            target=target,
-            chip_fw=chip_fw,
-            chip_fh=chip_fh,
-            chip_interior_margin_px=int(chip_interior_margin_px),
-        )
-        if rms_result[0] is None:
-            return pd.DataFrame()
-        rms_map, sorted_rms_map = rms_result
+    # PHASE1-ONE-PASS-2026-10 / COMP-ASSIGN-01 D2: the global pool carries the one comp RMS (LOO, comp_rms),
+    # frames per comp and the per-frame gates. G07-01 residue: no per-target re-derivation from the proc
+    # CSVs with another statistic - a pool without a finite comp_rms gives no comparison stars.
+    _idc_pool = "catalog_id" if "catalog_id" in ms.columns else "name"
+    _pool_ids = ms[_idc_pool].map(lambda v: str(v).strip() if pd.notna(v) else "").tolist()
+    _rms_vals = pd.to_numeric(ms["comp_rms"], errors="coerce").tolist() if "comp_rms" in ms.columns else []
+    rms_map: dict[str, float] = {
+        c: float(v) for c, v in zip(_pool_ids, _rms_vals, strict=False) if c and math.isfinite(float(v))
+    }
+    if not rms_map:
+        logging.warning("[COMP-ASSIGN] Target %s: no pool comp has a comp_rms - no comparison stars", target_cid)
+        return pd.DataFrame()
+    _nf = pd.to_numeric(ms["comp_n_frames"], errors="coerce").fillna(0).astype(int).tolist() if "comp_n_frames" in ms.columns else []
+    comp_n_frames_map = {c: int(v) for c, v in zip(_pool_ids, _nf, strict=False) if c}
+    logging.info("[COMP-ASSIGN] Target %s: pool comp_rms for %d comps", target_cid, len(rms_map))
 
     def _apply_aperture_isolation_safe(cands: pd.DataFrame) -> pd.DataFrame:
         if cands.empty:
@@ -2159,13 +2134,6 @@ def select_comparison_stars_per_target(
     if final_comps is None or getattr(final_comps, "empty", True):
         return pd.DataFrame()
 
-    try:
-        final_lookup = final_comps.copy()
-        final_lookup[id_col_cand] = final_lookup[id_col_cand].astype(str).str.strip()
-        final_lookup = final_lookup.set_index(id_col_cand, drop=False)
-    except Exception:  # noqa: BLE001
-        final_lookup = None
-
     result = _assemble_comp_selection_result_rows(
         tier_out["selected_ids"],
         final_comps,
@@ -2187,8 +2155,6 @@ def select_comparison_stars_per_target(
         comp_tier_final_map=tier_out["comp_tier_final_map"],
         comp_delta_bprp_map=tier_out["comp_delta_bprp_map"],
         comp_color_tier_src_map=tier_out["comp_color_tier_src_map"],
-        final_lookup=final_lookup,
-        dilution_map=_dilution_map,
         per_target_rms_map=rms_map,
     )
 
@@ -2224,8 +2190,7 @@ def select_comparison_stars_per_target(
                 field_y=ms_arr_y,
                 score_map=score_map,
                 comp_n_frames_map=comp_n_frames_map,
-                dilution_map=_dilution_map,
-                per_target_rms_map=rms_map,
+                        per_target_rms_map=rms_map,
             )
         except Exception as _res_exc:  # noqa: BLE001
             logging.warning("[COMP-SMART] %s: reserve selection failed (%s) - no reserve", target_cid, _res_exc)
@@ -2242,7 +2207,6 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
 
     score_map = kw.pop("score_map")
     comp_n_frames_map = kw.pop("comp_n_frames_map")
-    dilution_map = kw.pop("dilution_map")
     rms_map = kw.pop("per_target_rms_map")
     candidates = kw.pop("candidates")
     active = kw.pop("active")
@@ -2274,8 +2238,6 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
         comp_tier_final_map=wide.get("comp_tier_final_map") or {},
         comp_delta_bprp_map=wide.get("comp_delta_bprp_map") or {},
         comp_color_tier_src_map=wide.get("comp_color_tier_src_map") or {},
-        final_lookup=None,
-        dilution_map=dilution_map,
         per_target_rms_map=rms_map,
     )
     if res is None or res.empty:
@@ -2290,283 +2252,3 @@ def _append_reserve_rows(result: pd.DataFrame, tier_primary: dict[str, Any], **k
         if c in result.columns and c in res.columns and len(result):
             res[c] = result[c].iloc[0]
     return pd.concat([result, res], ignore_index=True, sort=False)
-
-def _write_suspected_variables(
-    ms_df: pd.DataFrame,
-    csv_paths: list[Path],
-    active_target_ids: set[str],
-    output_path: Path,
-    *,
-    flux_col: str = "dao_flux",
-    min_frames_frac: float = 0.5,
-    outlier_sigma: float = 3.0,
-    interior_bbox: tuple[float, float, float, float] | None = None,
-    csv_cache: dict[str, pd.DataFrame] | None = None,
-) -> None:
-    """Detect stars with high RMS scatter that are not in VSX - suspected new variables.
-
-    Writes suspected_variables.csv with columns:
-    catalog_id, ra_deg, dec_deg, mag, comp_rms, n_frames, zone
-
-    With ``interior_bbox`` (x0, y0, x1, y1) the pool and the per-frame points outside it are dropped
-    (the same box as the comparison stars in ``run_target_and_comp_selection``).
-    """
-    # Usable stars that are neither VSX nor active targets
-    ms = ms_df.copy()
-    for col in ("is_usable", "is_saturated", "is_noisy", "vsx_known_variable"):
-        if col in ms.columns:
-            ms[col] = _bool_col(ms[col])
-
-    id_col = "catalog_id" if "catalog_id" in ms.columns else "name"
-    base_mask = (
-        _bool_col(ms.get("is_usable", pd.Series(True, index=ms.index)))
-        & ~_bool_col(ms.get("is_saturated", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("is_noisy", pd.Series(False, index=ms.index)))
-        & ~_bool_col(ms.get("vsx_known_variable", pd.Series(False, index=ms.index)))
-    )
-    pool = ms[base_mask].copy()
-    pool["_nid"] = pool[id_col].map(_normalize_id_value)
-    pool = pool[pool["_nid"] != ""].drop_duplicates(subset=["_nid"], keep="first")
-
-    _use_xy = interior_bbox is not None
-    if _use_xy:
-        _bx0, _by0, _bx1, _by1 = (float(v) for v in interior_bbox)
-    if _use_xy and "x" in pool.columns and "y" in pool.columns:
-        _xn = pd.to_numeric(pool["x"], errors="coerce")
-        _yn = pd.to_numeric(pool["y"], errors="coerce")
-        _ok = _xn.between(_bx0, _bx1) & _yn.between(_by0, _by1)
-        _n_pool0 = int(len(pool))
-        pool = pool[_ok].copy()
-        logging.info(
-            "[SUSPECTED] interior box (as targets and comparison stars): %s -> %s stars "
-            "(x %.0f-%.0f, y %.0f-%.0f px)",
-            _n_pool0, len(pool), _bx0, _bx1, _by0, _by1,
-        )
-
-    pool_ids = set(pool["_nid"]) - active_target_ids
-
-    if not pool_ids:
-        pd.DataFrame().to_csv(output_path, index=False)
-        return
-
-    # Load flux for all stars of the pool
-    flux_map: dict[str, list[float]] = {cid: [] for cid in pool_ids}
-    n_frames = 0
-    _cache_hits = 0
-    _cache_misses = 0
-
-    for csv_path in csv_paths:
-        try:
-            _cache_key = str(csv_path)
-            _cached = csv_cache.get(_cache_key) if csv_cache else None
-            if _cached is not None and not _cached.empty:
-                header_cols = _cached.columns
-            else:
-                from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-                header_cols = read_proc_csv(csv_path, nrows=0).columns
-            actual_flux = flux_col if flux_col in header_cols else "dao_flux"
-            name_c = "catalog_id" if "catalog_id" in header_cols else "name"
-            use = [name_c, actual_flux]
-            if "mag" in header_cols and "mag" not in use:
-                use.append("mag")
-            if _use_xy and "x" in header_cols and "y" in header_cols:
-                use.extend([c for c in ("x", "y") if c not in use])
-            if _cached is not None and not _cached.empty:
-                df = _cached[[c for c in use if c in _cached.columns]].copy()
-                _cache_hits += 1
-            else:
-                from proc_frame_store import read_proc_csv  # noqa: PLC0415
-
-                df = read_proc_csv(csv_path, usecols=use, reader=read_vyvar_csv, low_memory=False)
-                _cache_misses += 1
-            if name_c not in df.columns:
-                continue
-            df[name_c] = _normalize_id_series(df[name_c])
-            df[actual_flux] = pd.to_numeric(df[actual_flux], errors="coerce")
-            sub = df[df[name_c].isin(pool_ids) & df[actual_flux].gt(0)]
-            if _use_xy and "x" in sub.columns and "y" in sub.columns:
-                _xs = pd.to_numeric(sub["x"], errors="coerce")
-                _ys = pd.to_numeric(sub["y"], errors="coerce")
-                sub = sub[_xs.between(_bx0, _bx1) & _ys.between(_by0, _by1)]
-            if sub.empty:
-                continue
-
-            # Mag-bin normalization: a separate median for each mag bin (0.5 mag wide)
-            mag_col_frame = "mag" if "mag" in df.columns else None
-            if mag_col_frame and mag_col_frame in sub.columns:
-                sub = sub.copy()
-                sub["_mag_num"] = pd.to_numeric(sub[mag_col_frame], errors="coerce")
-                sub["_mag_bin"] = (sub["_mag_num"] / 0.5).apply(
-                    lambda x: int(x) if math.isfinite(x) else -1
-                )
-                bin_meds: dict[int, float] = {}
-                for b, grp in sub.groupby("_mag_bin"):
-                    bmed = float(grp[actual_flux].median())
-                    if math.isfinite(bmed) and bmed > 0:
-                        bin_meds[int(b)] = bmed
-                if not bin_meds:
-                    continue
-            else:
-                # Fallback: global median
-                frame_med = float(sub[actual_flux].median())
-                if not math.isfinite(frame_med) or frame_med <= 0:
-                    continue
-                bin_meds = {}
-
-            n_frames += 1
-            # One sample per star per frame (the CSV may have duplicate rows).
-            _agg: dict[str, dict[str, float]] = {}
-            # SPEED-2026-10 (S4): column lists instead of iterrows (same values, same order).
-            _cids_l = sub[name_c].tolist()
-            _flux_l = sub[actual_flux].tolist()
-            _mag_l = sub["_mag_num"].tolist() if "_mag_num" in sub.columns else [float("nan")] * len(_cids_l)
-            for _cv, _fv, _mv in zip(_cids_l, _flux_l, _mag_l, strict=True):
-                cid = str(_cv)
-                if cid not in pool_ids:
-                    continue
-                raw_flux = float(_fv)
-                if not math.isfinite(raw_flux) or raw_flux <= 0:
-                    continue
-                mag_num = float(_mv)
-                ent = _agg.setdefault(cid, {"fluxes": [], "mags": []})
-                ent["fluxes"].append(raw_flux)
-                if math.isfinite(mag_num):
-                    ent["mags"].append(mag_num)
-            for cid, ent in _agg.items():
-                fluxes = ent["fluxes"]
-                if not fluxes:
-                    continue
-                # median of one value is the value itself
-                raw_flux = fluxes[0] if len(fluxes) == 1 else float(np.median(np.asarray(fluxes, dtype=np.float64)))
-                if not math.isfinite(raw_flux) or raw_flux <= 0:
-                    continue
-                mags = ent["mags"]
-                if not mags:
-                    mag_num = float("nan")
-                else:
-                    mag_num = mags[0] if len(mags) == 1 else float(np.median(np.asarray(mags, dtype=np.float64)))
-                if bin_meds:
-                    b = int(mag_num / 0.5) if math.isfinite(mag_num) else -1
-                    norm_med = bin_meds.get(b)
-                    if norm_med is None:
-                        closest = min(bin_meds.keys(), key=lambda k: abs(k - b))
-                        norm_med = bin_meds[closest]
-                else:
-                    norm_med = frame_med  # type: ignore[assignment]
-                rel = raw_flux / norm_med
-                if math.isfinite(rel) and rel > 0:
-                    flux_map[cid].append(rel)
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0222] One frame skipped in suspected-variables flux accumulation - star RMS computed without ...: %s', exc)
-            continue
-
-    logging.info(
-        "[PERF-1] _write_suspected_variables: %d cache hits, %d disk reads (of %d frames)",
-        _cache_hits,
-        _cache_misses,
-        len(csv_paths),
-    )
-    if _cache_misses > 0:
-        logging.warning(
-            "[PERF-1] %d frames read from disk (not in shared_csv_cache) - "
-            "check if csv_cache is populated before calling _write_suspected_variables",
-            _cache_misses,
-        )
-
-    # Airmass detrending for suspected variables
-    for cid in list(flux_map.keys()):
-        vals = flux_map[cid]
-        if len(vals) < 6:
-            continue
-        arr = np.asarray(vals, dtype=np.float64)
-        t = np.linspace(0.0, 1.0, len(arr))
-        try:
-            coeffs = _safe_polyfit(t, arr, 2)
-            if coeffs is None:
-                continue
-            trend_fit = np.polyval(coeffs, t)
-            safe_trend = np.where(np.abs(trend_fit) > 1e-9, trend_fit, 1.0)
-            detrended = arr / safe_trend
-            med_dt = float(np.median(detrended))
-            if math.isfinite(med_dt) and med_dt > 0:
-                flux_map[cid] = (detrended / med_dt).tolist()
-        except Exception as exc:  # noqa: BLE001
-            logging.error('[EXC-0223] Detrend fit failure in suspected-variables leaves raw flux - false variable candidates ...: %s', exc)
-            pass
-
-    min_f = max(3, int(n_frames * min_frames_frac))
-    rms_map: dict[str, float] = {}
-    nframes_map: dict[str, int] = {}
-    for cid, vals in flux_map.items():
-        if len(vals) < min_f:
-            continue
-        arr = np.asarray(vals, dtype=np.float64)
-        rms = float(np.sqrt(np.mean((arr - 1.0) ** 2)))
-        if math.isfinite(rms):
-            rms_map[cid] = rms
-            nframes_map[cid] = len(vals)
-
-    # COMP-RMS-DEF-01-B: flag on LOO mag MAD; keep mag-bin relflux RMS as diagnostic.
-    _csv_cache = csv_cache or {}
-    loo_map, _basis = compute_loo_mag_rms_map(
-        set(pool_ids),
-        csv_paths,
-        _csv_cache,
-        flux_col=flux_col,
-        min_frames_frac=min_frames_frac,
-    )
-    if not loo_map:
-        pd.DataFrame().to_csv(output_path, index=False)
-        return
-
-    _MAD_CONSISTENCY = 0.6745
-    loo_arr = np.asarray(list(loo_map.values()), dtype=np.float64)
-    med = float(np.median(loo_arr))
-    mad_raw = float(np.median(np.abs(loo_arr - med)))
-    if not math.isfinite(mad_raw) or mad_raw <= 0:
-        mad_sigma = float(np.std(loo_arr)) / _MAD_CONSISTENCY or 1e-9
-    else:
-        mad_sigma = mad_raw / _MAD_CONSISTENCY
-    threshold = med + outlier_sigma * mad_sigma
-
-    suspected = {cid: rms for cid, rms in loo_map.items() if rms > threshold}
-
-    if not suspected:
-        pd.DataFrame().to_csv(output_path, index=False)
-        return
-
-    rows = []
-    pool_idx = pool.set_index("_nid", drop=False)
-    for cid, rms in sorted(suspected.items(), key=lambda x: -x[1]):
-        if cid not in pool_idx.index:
-            continue
-        r = pool_idx.loc[cid]
-        if isinstance(r, pd.DataFrame):
-            r = r.iloc[0]
-        rows.append(
-            {
-                "catalog_id": cid,
-                "ra_deg": r.get("ra_deg", float("nan")),
-                "dec_deg": r.get("dec_deg", float("nan")),
-                "mag": r.get("mag", float("nan")),
-                "comp_rms_loo_mag": rms,
-                "comp_relflux_mad": float(rms_map.get(cid, float("nan"))),
-                "comp_rms": rms,
-                "n_frames": nframes_map.get(cid, 0),
-                "zone": r.get("zone", ""),
-            }
-        )
-
-    out_df = pd.DataFrame(rows)
-    try:
-        if "catalog_id" in out_df.columns:
-            out_df["catalog_id"] = normalize_gaia_source_id_series(out_df["catalog_id"])
-    except Exception as exc:  # noqa: BLE001
-        logging.error('[EXC-0224] suspected_variables.csv catalog_id normalization fails - exported IDs may be float-corr...: %s', exc)
-        pass
-    out_df.to_csv(output_path, index=False)
-    logging.info(
-        f"[SUSPECTED] {len(out_df)} new-variable candidates -> {output_path.name} "
-        f"(threshold RMS > {threshold:.4f})"
-    )

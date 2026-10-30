@@ -16,7 +16,6 @@ from cal_diag import (
     PedestalResult,
     apply_cal_diag_headers,
     cal_diag_gate_for_obs_group,
-    dark_np_for_cal_diag,
     passthrough_cal_diag_headers,
     resolv_limit_adu,
     write_cal_diag_json,
@@ -177,9 +176,9 @@ def test_gate_indeterminate_negligible(tmp_path: Path):
             match_and_crop_pair=_match,
             saturation_adu=None,
         )
+    # G01-24 (decision A3): an undecidable rebin convention stops the calibration (no SUM default)
     assert res.convention_src == "INDETERMINATE_NEGLIGIBLE"
-    assert res.convention == "SUM"
-    assert res.status == "WARN"
+    assert res.status == "ABORT" and res.abort_reason == "CONVENTION_UNDECIDED"
 
 
 def test_gate_indeterminate_unmeasured(tmp_path: Path):
@@ -214,8 +213,7 @@ def test_gate_indeterminate_unmeasured(tmp_path: Path):
             saturation_adu=None,
         )
     assert res.convention_src == "INDETERMINATE_UNMEASURED"
-    assert res.convention == "SUM"
-    assert res.status == "WARN"
+    assert res.status == "ABORT" and res.abort_reason == "CONVENTION_UNDECIDED"
 
 
 def test_passthrough_headers():
@@ -274,40 +272,5 @@ def test_write_cal_diag_json(tmp_path: Path):
     assert out is not None and out.is_file()
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data.get("spec_version") == "CAL-DIAG-v2"
-
-
-def test_dark_cache_same_convention(tmp_path: Path):
-    dark_master = np.full((4, 4), 10.0, dtype=np.float32)
-    dp = tmp_path / "dark.fits"
-    _write_fits(dp, dark_master, XBINNING=1, YBINNING=1)
-    session = CalDiagSession()
-    gr = CalDiagGateResult(
-        obs_group_key="k",
-        dark_path=str(dp),
-        light_binning=2,
-        status="PASS",
-        convention="SUM",
-        convention_src="DERIVED",
-    )
-    a = dark_np_for_cal_diag(
-        session,
-        master_binning=1,
-        dark_path=dp,
-        light_binning=2,
-        light_shape=(2, 2),
-        light_filename="l.fits",
-        gate_result=gr,
-    )
-    b = dark_np_for_cal_diag(
-        session,
-        master_binning=1,
-        dark_path=dp,
-        light_binning=2,
-        light_shape=(2, 2),
-        light_filename="l.fits",
-        gate_result=gr,
-    )
-    assert a is b
-    assert float(np.nanmedian(a)) == pytest.approx(40.0)
 
 

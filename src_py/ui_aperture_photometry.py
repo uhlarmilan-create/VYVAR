@@ -20,7 +20,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from mag_constants import MAG_ERR_SCALE
 from platesolve_ui_paths import find_photometry_setups, setup_label
 from ui_session import resolve_draft_dir_path
 
@@ -68,13 +67,12 @@ def _group_pages(platesolve_setup_dir: str, _stamp: float) -> "TargetPages":
     return pages
 
 
-def _ut_ticks(x_rel: np.ndarray, jd: np.ndarray) -> tuple[list[float], list[str]]:
-    """Full-hour UT ticks positioned on the relative BJD axis."""
-    ok = np.isfinite(x_rel) & np.isfinite(jd)
-    if int(ok.sum()) < 2:
+def _ut_ticks(x_rel: np.ndarray, dj: float) -> tuple[list[float], list[str]]:
+    """Full-hour UT ticks positioned on the relative BJD axis (JD UTC = x_rel + dj, ``lc_plot_data``)."""
+    ok = np.isfinite(x_rel)
+    if int(ok.sum()) < 2 or not math.isfinite(dj):
         return [], []
-    dj = float(np.median(jd[ok] - x_rel[ok]))
-    lo, hi = float(np.nanmin(jd[ok])), float(np.nanmax(jd[ok]))
+    lo, hi = float(np.nanmin(x_rel[ok])) + dj, float(np.nanmax(x_rel[ok])) + dj
     vals, labs = [], []
     for h in range(math.ceil((lo + 0.5) * 24.0), math.floor((hi + 0.5) * 24.0) + 1):
         vals.append(h / 24.0 - 0.5 - dj)
@@ -87,30 +85,22 @@ def _lc_figure(pages: "TargetPages", pg: dict[str, Any], *, show_airmass: bool, 
     import plotly.graph_objects as go  # noqa: PLC0415
     from plotly.subplots import make_subplots  # noqa: PLC0415
 
-    from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
+    import star_page_m3 as m3  # noqa: PLC0415
 
     cid = pg["cid"]
     df = pages.lc_df(cid)
     uncal = pg["uncalibrated"]
-    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
-
-    ycol = "delta_mag" if uncal else (published_mag_column(df) or "mag_calib")
+    # G14-17: the figure numbers of the PDF (exported split, check strip, limits, scatter text, UT offset)
+    d = m3.lc_plot_data(df, pages.check_df(cid), uncalibrated=uncal)
+    if d is None:
+        return None
+    ycol = d["ycol"]
     ylab = "delta_mag (not calibrated)" if uncal else (f"{pg['band']} [mag]" if pg["band"] else ycol)
-    xcol = "bjd" if "bjd" in df.columns else "jd"
-    x = pd.to_numeric(df[xcol], errors="coerce").to_numpy(float)
-    y = pd.to_numeric(df[ycol], errors="coerce").to_numpy(float)
-    e = MAG_ERR_SCALE * pd.to_numeric(df["err"], errors="coerce").to_numpy(float) if "err" in df.columns else None
+    x, y, e, fl, x0, good, bad = d["x"], d["y"], d["e"], d["flag"], d["x0"], d["good"], d["bad"]
     n = len(df)
-    fl = df["flag"].astype(str).str.strip().str.lower().to_numpy() if "flag" in df.columns else np.array(["normal"] * n)
     reason = df["flag_reason"].fillna("").astype(str).to_numpy() if "flag_reason" in df.columns else np.array([""] * n)
-    ok = np.isfinite(x) & np.isfinite(y)
-    x0 = float(np.floor(np.nanmin(x[ok]))) if ok.any() else 0.0
     xr = x - x0
-    good = ok & ~np.isin(fl, list(EXPORT_EXCLUDE_FLAGS))
-    bad = ok & ~good
-
-    chk = pages.check_df(cid)
-    has_chk = chk is not None and {"bjd", "kmag"} <= set(chk.columns) and len(chk) >= 2
+    has_chk = bool(d["has_check"])
     fig = make_subplots(rows=2 if has_chk else 1, cols=1, shared_xaxes=True, vertical_spacing=0.05,
                         row_heights=[0.77, 0.23] if has_chk else [1.0],
                         specs=[[{"secondary_y": True}]] + ([[{}]] if has_chk else []))
@@ -140,29 +130,23 @@ def _lc_figure(pages: "TargetPages", pg: dict[str, Any], *, show_airmass: bool, 
     else:
         fig.update_yaxes(visible=False, secondary_y=True, row=1, col=1)
     if has_chk:
-        kx = pd.to_numeric(chk["bjd"], errors="coerce").to_numpy(float)
-        ky = pd.to_numeric(chk["kmag"], errors="coerce").to_numpy(float)
-        kok = np.isfinite(kx) & np.isfinite(ky)
-        kr = ky[kok] - float(np.nanmedian(ky[kok])) if kok.any() else np.array([])
+        kr = d["kr"]
         fig.add_trace(go.Scatter(
-            x=kx[kok] - x0, y=kr, mode="markers", name="check star", marker=dict(color="#9ca3af", size=5),
+            x=d["kx"], y=kr, mode="markers", name="check star", marker=dict(color="#9ca3af", size=5),
             hovertemplate="check - median %{y:+.4f}<extra></extra>",
         ), row=2, col=1)
-        lim = max(0.03, float(np.nanpercentile(np.abs(kr), 98)) * 1.3) if kr.size else 0.03
+        lim = d["check_lim"]
         fig.update_yaxes(title_text="check - med", range=[lim, -lim], row=2, col=1)
-        if kr.size:
-            fig.add_annotation(text=f"check star scatter {np.nanstd(kr):.3f} mag", row=2, col=1,
-                               xref="x domain", yref="y domain", x=0.01, y=0.95, showarrow=False,
-                               font=dict(size=11, color="#6b7280"), xanchor="left")
+        fig.add_annotation(text=d["check_text"], row=2, col=1,
+                           xref="x domain", yref="y domain", x=0.01, y=0.95, showarrow=False,
+                           font=dict(size=11, color="#6b7280"), xanchor="left")
     fig.update_yaxes(title_text=ylab, autorange="reversed", row=1, col=1, secondary_y=False)
-    fig.update_xaxes(title_text=(f"BJD_TDB - {x0:.0f}" if xcol == "bjd" else f"JD - {x0:.0f}"),
-                     row=2 if has_chk else 1, col=1)
-    if "jd" in df.columns:
-        tv, tt = _ut_ticks(xr, pd.to_numeric(df["jd"], errors="coerce").to_numpy(float))
-        if tv:
-            # UT (HH:MM) on the top axis of the light-curve panel, same scale as the BJD axis
-            fig.update_xaxes(side="top", tickvals=tv, ticktext=tt, title_text="UT (HH:MM)", showticklabels=True,
-                             row=1, col=1)
+    fig.update_xaxes(title_text=d["xlabel"], row=2 if has_chk else 1, col=1)
+    tv, tt = _ut_ticks(xr[d["ok"]], d["ut_offset"])
+    if tv:
+        # UT (HH:MM) on the top axis of the light-curve panel, same scale as the BJD axis
+        fig.update_xaxes(side="top", tickvals=tv, ticktext=tt, title_text="UT (HH:MM)", showticklabels=True,
+                         row=1, col=1)
     fig.update_layout(height=580, margin=dict(l=60, r=60, t=60, b=40), template="plotly_white",
                       legend=dict(orientation="h", y=-0.12, x=0), hovermode="closest")
     return fig
@@ -387,7 +371,10 @@ def render_aperture_photometry(
             fig = _all_setups_figure(setups, cid) if all_setups else None
             if fig is None:
                 fig = _lc_figure(pages, pg, show_airmass=show_am, show_flagged=show_fl)
-            st.plotly_chart(fig, width="stretch", key=f"vyvar_ap_lc_{setup}_{cid}")
+            if fig is None:
+                st.info("Fewer than 2 light-curve points to plot.")
+            else:
+                st.plotly_chart(fig, width="stretch", key=f"vyvar_ap_lc_{setup}_{cid}")
         with right:
             st.markdown(_facts_html(pg), unsafe_allow_html=True)
             ci, cm = st.columns([1, 1.6])

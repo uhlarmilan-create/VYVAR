@@ -20,6 +20,12 @@ from __future__ import annotations
 import math
 from typing import Final
 
+from band_classify import (
+    PhotometricBand,
+    classify_photometric_band,
+    obs_group_first_token,
+    standard_band_of_filter,
+)
 from gaia_johnson import BPRP_MAX as _JC_XMAX, GDR3_TABLE59_COEFFS, SCATTER_SIGMA as _JC_SIGMA
 
 # band -> (coefficients a0..an of G - band in X = BP-RP, X_min, X_max, sigma)
@@ -36,26 +42,15 @@ _JC: Final[dict[str, tuple[tuple[float, ...], float, float, float]]] = {
     "R": (GDR3_TABLE59_COEFFS["RC"], 0.0, 2.0, _JC_SIGMA["RC"]),
 }
 
-#: FITS FILTER names -> band key. Unknown / clear filters -> "G" (no transform).
-_FILTER_ALIASES: Final[dict[str, str]] = {
-    "g": "g", "gp": "g", "g'": "g", "sg": "g", "sloan_g": "g", "sloang": "g",
-    "r": "r", "rp": "r", "r'": "r", "sr": "r", "sloan_r": "r", "sloanr": "r",
-    "i": "i", "ip": "i", "i'": "i", "si": "i", "sloan_i": "i", "sloani": "i",
-    "v": "V", "johnson_v": "V",
-    "b": "B", "johnson_b": "B",
-    "rc": "R", "cousins_r": "R",
-}
+# G08-13: filter name -> standard band comes from the ONE table (band_classify.standard_band_of_filter);
+# this maps a standard band to the zero-point band of the Gaia relations above. Bands without a
+# relation here (Sloan u/z, Johnson U, I_C, R_J, I_J) -> "G" (no transform).
+_ZP_OF_STANDARD_BAND: Final[dict[str, str]] = {"g": "g", "r": "r", "i": "i", "V": "V", "B": "B", "Rc": "R"}
 
 
 def band_for_filter(filter_name: str | None) -> str:
     """Band key ('g','r','i','V','B','R') for a FITS FILTER value; 'G' when unknown/clear."""
-    raw = str(filter_name or "").strip().replace(" ", "")
-    # Single letters are case sensitive: R / I / V / B = Johnson-Cousins, r / i / g = Sloan.
-    if raw in ("V", "B", "R", "Rc", "RC"):
-        return "R" if raw.upper().startswith("R") else raw
-    if raw in ("I", "Ic", "IC"):
-        return "G"  # I_C has no BP-RP relation in Table 5.9 used here
-    return _FILTER_ALIASES.get(raw.lower(), "G")
+    return _ZP_OF_STANDARD_BAND.get(standard_band_of_filter(filter_name) or "", "G")
 
 
 def band_mag_from_gaia(g_mag: float, bp_rp: float, band: str) -> tuple[float, float]:
@@ -85,8 +80,7 @@ def band_mag_from_gaia(g_mag: float, bp_rp: float, band: str) -> tuple[float, fl
 
 def band_for_obs_group(obs_group: str | None) -> str:
     """Band key from an observation group name such as ``g_120_4`` or ``g|120|4``."""
-    raw = str(obs_group or "").split("|")[0].split("_")[0].strip()
-    return band_for_filter(raw)
+    return band_for_filter(obs_group_first_token(str(obs_group or "")))
 
 
 # ---------------------------------------------------------------------------
@@ -141,13 +135,8 @@ def filter_band(filter_name: str | None) -> FilterBand:
     band = band_for_filter(raw)
     if band != "G":
         return FilterBand(raw, band, _ZP_CODE[band], True, _ZP_LABEL[band])
-    try:
-        from band_classify import classify_photometric_band  # noqa: PLC0415
-
-        cls = classify_photometric_band(raw)
-    except Exception:  # noqa: BLE001
-        cls = None
-    if cls is not None and cls.name in ("CLEAR_UNFILTERED", "LUMINANCE"):
+    cls = classify_photometric_band("", fits_filter=raw)
+    if cls in (PhotometricBand.CLEAR_UNFILTERED, PhotometricBand.LUMINANCE):
         # AAVSO 'CV': unfiltered / luminance with V comparison magnitudes, untransformed.
         return FilterBand(raw, "V", "CV", False, "Clear on Johnson V zero point (CV)")
     return FilterBand(raw, "G", "", False, "Gaia G (filter not supported for AAVSO)")
@@ -167,8 +156,7 @@ def filter_band_for_obs_group(obs_group: str | None) -> FilterBand:
                 return filter_band(tok)
     except Exception:  # noqa: BLE001
         pass
-    raw = str(obs_group or "").split("|")[0].split("_")[0].strip()
-    return filter_band(raw)
+    return filter_band(obs_group_first_token(str(obs_group or "")))
 
 
 def zp_mag_from_gaia(g_mag: float, bp_rp: float, fb: FilterBand) -> float:

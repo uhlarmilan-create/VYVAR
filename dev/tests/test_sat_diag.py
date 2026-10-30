@@ -64,9 +64,13 @@ def test_conflict_derived_refutes_equipment(tmp_path: Path) -> None:
     hdr["BITPIX"] = 16
     hdr["BZERO"] = 32768
     ctx = resolve_sat_limit(hdr=hdr, pileup=pileup, equipment_adu=16384.0)
-    assert ctx.sat_source == "CONFLICT_DERIVED"
+    # G02-02: no pile-up is measured here (the 5000 ADU shoulder outnumbers the 65535 pixels), so the
+    # refuted equipment value leaves the container ceiling - labelled as such, not as a measured level
+    assert not pileup.pileup_detected
+    assert ctx.sat_source == "DERIVED_NO_PILEUP"
     assert ctx.sat_adu == 65535.0
     assert ctx.refuted_source == "EQUIPMENT"
+    assert ctx.measured_sat_adu() is None
 
 
 def test_derived_no_pileup_bitpix(tmp_path: Path) -> None:

@@ -116,6 +116,7 @@ def test_guard_reads_marker_from_frame_being_modified_not_sibling(tmp_path: Path
         target_ra=None,
         target_dec=None,
         inject_pointing_only_if_missing=True,
+        detection_sigma=4.5,
     )
     assert row.get("sky_surface_applied") is True
     with fits.open(bare) as hdul:

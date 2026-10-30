@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from check_star_kmag import evaluate_k_colour_caveat, build_comp_photon_mag_from_frames
+from check_star_kmag import build_comp_photon_mag_from_frames
 from sparse_trust_core import (
     check_model_ratio_ci,
     compute_sparse_trust_stats,
-    detrend_kmag_airmass,
     trust_band,
     two_star_model_ratio_ci,
 )
@@ -27,12 +26,6 @@ def _pool_df() -> pd.DataFrame:
     )
 
 
-def test_k_colour_caveat_trigger() -> None:
-    assert evaluate_k_colour_caveat(0.9, colour_window=0.79, airmass_range=0.25) is True
-    assert evaluate_k_colour_caveat(0.5, colour_window=0.79, airmass_range=0.25) is False
-    assert evaluate_k_colour_caveat(0.9, colour_window=0.79, airmass_range=0.1) is False
-
-
 def test_n1_two_star_r_hand_computed() -> None:
     n = 30
     rng = np.random.default_rng(7)
@@ -41,7 +34,7 @@ def test_n1_two_star_r_hand_computed() -> None:
     floor = 0.018
     m_k = 12.0 + rng.normal(0, 0.02, n)
     m_c1 = 11.5 + rng.normal(0, 0.015, n)
-    raw, _ = two_star_model_ratio_ci(m_k, m_c1, p_k, p_c1, sigma_sys_mag=floor)
+    raw = two_star_model_ratio_ci(m_k, m_c1, p_k, p_c1, sigma_sys_mag=floor)
     d = m_k - m_c1
     v_obs = float(np.var(d, ddof=1))
     v_model = float(np.mean(p_k * p_k + p_c1 * p_c1 + floor * floor))
@@ -78,14 +71,6 @@ def test_n2_external_k_end_to_end_synthetic() -> None:
     assert math.isfinite(stats_out.trust_R_lo)
     assert math.isfinite(stats_out.trust_R_hi)
     assert stats_out.n_epochs == n
-
-
-def test_detrend_kmag_changes_series() -> None:
-    n = 20
-    am = np.linspace(1.1, 1.4, n)
-    km = 0.05 * am + np.random.default_rng(0).normal(0, 0.001, n)
-    dt = detrend_kmag_airmass(km, am)
-    assert float(np.std(dt)) < float(np.std(km))
 
 
 def test_build_comp_photon_matches_production_err() -> None:

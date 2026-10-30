@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 from photometry_defs import flux_k_column  # noqa: F401  (re-exported: one definition)
 from gaia_catalog_id import normalize_gaia_source_id
+from aperture_policy import fwhm_from_header_vy_fwhm
 from infolog import log_event
-from utils import plate_scale_arcsec_per_pixel
 
 from pipeline_constants import BKG_SCALE_R_CLAMP_HI, BKG_SCALE_R_CLAMP_LO
 from photometry_defs import (
@@ -21,7 +21,6 @@ from photometry_defs import (
     LOGGER,
     SIGMA_BKG_AP_COL,
     SKY_ADU_PER_PX_ANNULUS_COL,
-    SKY_SURFACE_BG_MEDIAN_ADU_COL,
 )
 from photometry_gate_helpers import (
     _assert_inv_err_sigma_acct_01,
@@ -170,25 +169,19 @@ def _col_floats(df: pd.DataFrame, col: str, n: int) -> list[float]:
     return [float(pd.to_numeric(v, errors="coerce")) for v in c.tolist()]
 
 
-def _sky_pp_from_values(pre_sub: float, ann: float) -> float:
-    """``_sky_pp_for_photometric_error`` from the two column values."""
-    if math.isfinite(pre_sub) and pre_sub >= 0:
-        return pre_sub
+def _sky_pp_from_values(ann: float) -> float:
+    """``_sky_pp_for_photometric_error`` from the annulus sky value (0 when missing or negative)."""
     if math.isfinite(ann) and ann >= 0:
         return ann
     return 0.0
 
 
 def _sky_pp_for_photometric_error(row: Any) -> float:
-    """Sky level (ADU/px) for the Howell ``_photometric_error`` from a proc-CSV row.
-
-    I-11: prefer pre-subtraction ``sky_surface_bg_median_adu`` (photons that arrived before the 2D
-    sky surface was subtracted), otherwise ``sky_adu_per_px_annulus`` (the per-star annulus sky).
-    """
-    return _sky_pp_from_values(
-        float(pd.to_numeric(row.get(SKY_SURFACE_BG_MEDIAN_ADU_COL), errors="coerce")),
-        float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce")),
-    )
+    """Sky level (ADU/px) for the Howell ``_photometric_error`` from a proc-CSV row: the per-star
+    annulus sky ``sky_adu_per_px_annulus``. G01-20 / G06-15: the I-11 pre-subtraction sky
+    (``sky_surface_bg_median_adu``) never reached a proc CSV; since P-10 the sky surface keeps the
+    pedestal, so the annulus sky is the photon sky (I-11 moot)."""
+    return _sky_pp_from_values(float(pd.to_numeric(row.get(SKY_ADU_PER_PX_ANNULUS_COL), errors="coerce")))
 
 
 def finalize_hybrid_bkg_fallback_proc_dir(
@@ -229,12 +222,11 @@ def finalize_hybrid_bkg_fallback_proc_dir(
         if not _emp:
             continue
         _sig = _col_floats(df, SIGMA_BKG_AP_COL, n)
-        _pre = _col_floats(df, SKY_SURFACE_BG_MEDIAN_ADU_COL, n)
         _ann = _col_floats(df, SKY_ADU_PER_PX_ANNULUS_COL, n)
         _area = _col_floats(df, "aperture_area_px", n)
         _rap = _col_floats(df, "aperture_r_px", n)
         for i in _emp:
-            sky = _sky_pp_from_values(_pre[i], _ann[i])
+            sky = _sky_pp_from_values(_ann[i])
             area = _area[i]
             if not math.isfinite(area) or area <= 0:
                 r_ap = _rap[i]
@@ -350,20 +342,17 @@ def stamp_masterstar_snr_columns(
         flux_ap = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
 
     if image is not None and n > 0 and "x" in out.columns and "y" in out.columns:
-        try:
-            xx = pd.to_numeric(out["x"], errors="coerce").to_numpy(dtype=np.float64)
-            yy = pd.to_numeric(out["y"], errors="coerce").to_numpy(dtype=np.float64)
-            ok = np.isfinite(xx) & np.isfinite(yy)
-            if int(np.count_nonzero(ok)) > 0:
-                d = np.asarray(image, dtype=np.float64)
-                pos = np.column_stack([xx[ok], yy[ok]])
-                from sky_estimation import sky_image  # noqa: PLC0415
+        # fail loud: a silent fallback to the DAO flux would bring back the flux-sign rule G04-24 removed
+        xx = pd.to_numeric(out["x"], errors="coerce").to_numpy(dtype=np.float64)
+        yy = pd.to_numeric(out["y"], errors="coerce").to_numpy(dtype=np.float64)
+        ok = np.isfinite(xx) & np.isfinite(yy)
+        if int(np.count_nonzero(ok)) > 0:
+            d = np.asarray(image, dtype=np.float64)
+            pos = np.column_stack([xx[ok], yy[ok]])
+            from sky_estimation import sky_image  # noqa: PLC0415
 
-                flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out, sky=sky_image(d, fw))
-                flux_ap[ok] = flux_m
-        except Exception:  # noqa: BLE001
-            if "flux" in out.columns:
-                flux_ap = pd.to_numeric(out["flux"], errors="coerce").to_numpy(dtype=np.float64)
+            flux_m, _sky = _aperture_flux_sky_batch(d, pos, r_ap, r_in, r_out, sky=sky_image(d, fw))
+            flux_ap[ok] = flux_m
 
     f = np.asarray(flux_ap, dtype=np.float64)
     var = np.full(n, np.nan, dtype=np.float64)
@@ -540,264 +529,6 @@ def build_gs11_summary(
     }
 
 
-def _get_plate_scale_from_cfg(
-    cfg: Any,
-    db: Any = None,
-    draft_id: int | None = None,
-    *,
-    fits_path: Path | None = None,
-    ms_header: Any | None = None,
-) -> float | None:
-    """
-    Plate scale (arcsec/px) for FOV / max_dist_deg.
-    Priority:
-    1. Solved WCS/CD matrix from the FITS (authoritative)
-    2. DB EQUIPMENTS+TELESCOPE+FITS binning (pixel/focal/binning)
-    None if unavailable (no config fallback, PLATE-SCALE-2026-10)
-    """
-    result: float | None = None
-
-    # 1. Authoritative: solved WCS/CD from the frame's FITS.
-    if fits_path is not None or ms_header is not None:
-        try:
-            _fp = Path(fits_path) if fits_path is not None else Path(".")
-            _wcs_ps = _read_plate_scale_from_fits_path(_fp, ms_header=ms_header)
-        except Exception:  # noqa: BLE001
-            _wcs_ps = None
-        if _wcs_ps is not None and math.isfinite(float(_wcs_ps)) and float(_wcs_ps) > 0:
-            logging.info(
-                "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (solved WCS/CD)",
-                float(_wcs_ps),
-            )
-            return float(_wcs_ps)
-
-    # 2. DB: derive plate scale from EQUIPMENTS + TELESCOPE + FITS binning (if available).
-    if db is not None and draft_id is not None:
-        try:
-            did = int(draft_id)
-        except Exception:  # noqa: BLE001
-            did = 0
-        if did > 0:
-            try:
-                dr = None
-                try:
-                    dr = db.fetch_obs_draft_by_id(did) if hasattr(db, "fetch_obs_draft_by_id") else None
-                except Exception:  # noqa: BLE001
-                    dr = None
-                id_eq = int(dr.get("ID_EQUIPMENTS") or 0) if isinstance(dr, dict) else 0
-                id_tel = int(dr.get("ID_TELESCOPE") or 0) if isinstance(dr, dict) else 0
-
-                binning = 1
-                try:
-                    light_rows = (
-                        db.fetch_draft_light_rows_for_quality(did)
-                        if hasattr(db, "fetch_draft_light_rows_for_quality")
-                        else []
-                    )
-                    fp0 = None
-                    for lr in light_rows:
-                        fp0 = lr.get("FILE_PATH")
-                        if fp0:
-                            break
-                    if fp0:
-                        from astropy.io import fits as _fits_bin
-
-                        with _fits_bin.open(str(fp0), memmap=False) as _hdul:
-                            _hdr = _hdul[0].header
-                            _xb = _hdr.get("XBINNING") or _hdr.get("BINNING")
-                            if _xb is not None:
-                                b0 = int(float(_xb))
-                                if 1 <= b0 <= 16:
-                                    binning = b0
-                except Exception:  # noqa: BLE001
-                    # EXC-0181: T4 -- DB plate-scale lookup failure returns None (EXCEPT-BULK-2 2026-07-08)
-                    binning = 1
-
-                pix_um = None
-                foc_mm = None
-                try:
-                    pix_um = (
-                        float(db.get_equipment_pixel_size_um(id_eq))
-                        if (hasattr(db, "get_equipment_pixel_size_um") and id_eq > 0)
-                        else None
-                    )
-                except Exception:  # noqa: BLE001
-                    pix_um = None
-                try:
-                    foc_mm = (
-                        float(db.get_telescope_focal_mm(id_tel if id_tel > 0 else None))
-                        if hasattr(db, "get_telescope_focal_mm")
-                        else None
-                    )
-                except Exception:  # noqa: BLE001
-                    foc_mm = None
-
-                if (
-                    pix_um is not None
-                    and foc_mm is not None
-                    and math.isfinite(float(pix_um))
-                    and float(pix_um) > 0
-                    and math.isfinite(float(foc_mm))
-                    and float(foc_mm) > 0
-                ):
-                    eff_um = float(pix_um) * float(max(1, int(binning)))
-                    sc = plate_scale_arcsec_per_pixel(pixel_pitch_um=float(eff_um), focal_length_mm=float(foc_mm))
-                    if sc is not None and math.isfinite(float(sc)) and float(sc) > 0:
-                        result = float(sc)
-                        logging.info(
-                            "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (DB: eq/tel/bin=%s)",
-                            float(result),
-                            int(binning),
-                        )
-                        return result
-            except Exception:  # noqa: BLE001
-                pass
-    # PLATE-SCALE-2026-10: no config value - a fixed 1.3"/px was silently wrong on every rig
-    logging.info(
-        "[FOV] _get_plate_scale_from_cfg -> %.4f arcsec/px (None = fallback na max_dist_deg)",
-        -1.0,
-    )
-    return None
-
-def _resolve_plate_scale_arcsec_per_px(
-    cfg: Any,
-    fits_path: Path | None = None,
-    *,
-    ms_header: Any | None = None,
-) -> float | None:
-    """Plate scale (arcsec/px) for GS11 + aperture arcsec conversion.
-
-    Solved WCS/CD matrix of the FITS (no config fallback, PLATE-SCALE-2026-10).
-    Returns None when nothing derivable (derive-or-None; no magic default).
-    Clamp [0.1, 30.0] when a value is returned.
-    """
-    _lo, _hi = 0.1, 30.0
-    _fits_ps: float | None = None
-    if fits_path is not None or ms_header is not None:
-        try:
-            _fp = Path(fits_path) if fits_path is not None else Path(".")
-            _fits_ps = _read_plate_scale_from_fits_path(_fp, ms_header=ms_header)
-        except Exception:  # noqa: BLE001
-            # EXC-0183: T4 -- WCS pixel_scale_from_wcs path fails - CD-matrix fallback attempted next (EXCEPT-BULK 2026-07-08)
-            _fits_ps = None
-    if _fits_ps is not None and math.isfinite(_fits_ps) and _lo <= float(_fits_ps) <= _hi:
-        return float(_fits_ps)
-    logging.warning(
-        "[PLATE SCALE] plate scale not derivable from the WCS - returning None"
-    )
-    return None
-
-def _cd_matrix_scale_arcsec_per_px(hdr: Any) -> float | None:
-    """Plate scale (arcsec/px) from the SOLVED astrometric WCS (CD/PC matrix -> CDELT).
-
-    This is the authoritative source: it reflects the actual sky-to-pixel solution,
-    independent of stale VY_PLTS / config values. Returns None if no usable WCS.
-    """
-    if hdr is None:
-        return None
-    # Full WCS handles CD, PC+CDELT, SIP, etc.
-    try:
-        import warnings  # noqa: PLC0415
-
-        import numpy as _np  # noqa: PLC0415
-        from astropy.wcs import WCS as _WCS  # noqa: PLC0415
-        from astropy.wcs import FITSFixedWarning as _FFW  # noqa: PLC0415
-        from astropy.wcs.utils import proj_plane_pixel_scales as _pps  # noqa: PLC0415
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", _FFW)
-            _w = _WCS(hdr)
-        if _w.has_celestial:
-            sc = float(_np.mean(_pps(_w))) * 3600.0
-            if math.isfinite(sc) and 0.01 < sc < 200.0:
-                return float(sc)
-    except Exception:  # noqa: BLE001
-        pass
-    # Raw CD matrix fallback.
-    try:
-        cd11 = hdr.get("CD1_1")
-        cd12 = hdr.get("CD1_2", 0.0)
-        if cd11 is not None:
-            sc = math.sqrt(float(cd11) ** 2 + float(cd12) ** 2) * 3600.0
-            if math.isfinite(sc) and 0.01 < sc < 200.0:
-                return float(sc)
-    except (TypeError, ValueError):
-        pass
-    # CDELT1 fallback.
-    try:
-        cdelt1 = hdr.get("CDELT1")
-        if cdelt1 is not None:
-            sc = abs(float(cdelt1)) * 3600.0
-            if math.isfinite(sc) and 0.01 < sc < 200.0:
-                return float(sc)
-    except (TypeError, ValueError):
-        pass
-    return None
-
-def _read_plate_scale_from_fits_path(
-    fits_path: Path,
-    *,
-    ms_header: Any | None = None,
-) -> float | None:
-    """Plate scale (arcsec/px) from FITS, CD/WCS-FIRST.
-
-    Priority: (1) solved WCS/CD matrix; (2) VY_PLTS header - only if it agrees with
-    the CD value within 5% (else ignored, logged); (3) other header keywords, only
-    when no usable CD/WCS exists. Clamp [0.1, 30.0] (covers fine ~0.3 and wide-field ~10).
-    """
-    _MIN, _MAX = 0.1, 30.0
-    try:
-        from astropy.io import fits as astrofits  # noqa: PLC0415
-
-        if ms_header is not None:
-            hdr = ms_header
-        else:
-            fp = Path(fits_path)
-            if not fp.is_file():
-                return None
-            with astrofits.open(fp, memmap=False) as hdul:
-                hdr = hdul[0].header
-    except Exception as exc:  # noqa: BLE001
-        # EXC-0185: T4 -- Header keyword plate-scale scan fails - returns None after trying CD/WCS paths (EXCEPT-BULK-2 2026-07-08)
-        logging.error('[EXC-0184] FITS open/header read for plate scale fails - returns None, caller uses config/default ...: %s', exc)
-        return None
-
-    # (1) Authoritative: solved WCS / CD matrix.
-    cd_scale = _cd_matrix_scale_arcsec_per_px(hdr)
-    if cd_scale is not None and _MIN <= cd_scale <= _MAX:
-        # (2) Cross-check VY_PLTS: warn and ignore if it disagrees > 5%.
-        vy = hdr.get("VY_PLTS")
-        try:
-            vyf = float(vy) if vy is not None else None
-        except (TypeError, ValueError):
-            vyf = None
-        if vyf is not None and vyf > 0 and abs(vyf - cd_scale) / cd_scale > 0.05:
-            logging.warning(
-                "[PLATE SCALE] VY_PLTS=%.3f disagrees with CD-derived %.3f arcsec/px (>5%%) - using CD.",
-                vyf,
-                cd_scale,
-            )
-        return float(cd_scale)
-
-    # (3) No usable WCS/CD - fall back to header keywords (still header, above config).
-    try:
-        for key in ("VY_PLTS", "PIXSCALE", "SECPIX", "SECPIX1", "SCALE", "CDELT1"):
-            v = hdr.get(key)
-            if v is None:
-                continue
-            try:
-                f = float(v)
-                if key == "CDELT1":
-                    f = abs(f) * 3600.0
-            except (TypeError, ValueError):
-                continue
-            if math.isfinite(f) and _MIN <= f <= _MAX:
-                return float(f)
-    except Exception:  # noqa: BLE001
-        # EXC-0186: T4 -- Non-numeric catalog_id string returned unchanged instead of int-normalized form (EXCEPT-BULK 2026-07-08)
-        return None
-    return None
-
 def _angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
     """Angular distance in degrees (haversine). Same formula as comparison-star selection ``_dist_deg``."""
     from sky_separation import angular_distance_deg  # noqa: PLC0415
@@ -901,33 +632,21 @@ def compute_fwhm_gaussian_for_aperture_catalog(
     if not math.isfinite(fwhm_moment_med) or fwhm_moment_med <= 0:
         fwhm_moment_med = float("nan")
 
-    DAO_TO_GAUSSIAN = 1.0 / 1.5  # 0.667 - physically derived, setup-independent
+    from aperture_policy import clamp_fwhm_px  # noqa: PLC0415
+
     fwhm_gaussian: float | None = None
-
     if gaussian_fwhm_px_override is not None:
-        try:
-            _ov = float(gaussian_fwhm_px_override)
-            if math.isfinite(_ov) and 0.5 < _ov < 30.0:
-                fwhm_gaussian = _ov
-        except (TypeError, ValueError):
-            pass
+        fwhm_gaussian = clamp_fwhm_px(gaussian_fwhm_px_override, shape=arr.shape[:2])
 
-    if fwhm_gaussian is None and hdr is not None:
-        try:
-            _vy = hdr.get("VY_FWHM", None)
-            if _vy is not None:
-                _vy_f = float(_vy)
-                if math.isfinite(_vy_f) and 0.5 < _vy_f < 30.0:
-                    fwhm_gaussian = _vy_f * DAO_TO_GAUSSIAN
-                    if not bool(getattr(enhance_catalog_dataframe_aperture, "_did_log_fwhm", False)):
-                        logging.info(
-                            f"[PHOT] FWHM from VY_FWHM (DAO): {_vy_f:.3f}px x {DAO_TO_GAUSSIAN:.3f} = "
-                            f"{float(fwhm_gaussian):.3f}px -> aperture = "
-                            f"{float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
-                        )
-                        enhance_catalog_dataframe_aperture._did_log_fwhm = True
-        except (TypeError, ValueError):
-            pass
+    # FWHM-AUTH-01 (Milan 2026-10-29): VY_FWHM is used as it is - the override path never converted it either
+    _vy_f = fwhm_from_header_vy_fwhm(hdr) if fwhm_gaussian is None else None  # G03-29: the one reader
+    if _vy_f is not None:
+        fwhm_gaussian = _vy_f
+        if not bool(getattr(enhance_catalog_dataframe_aperture, "_did_log_fwhm", False)):
+            logging.info(
+                f"[PHOT] FWHM from VY_FWHM: {_vy_f:.3f}px -> aperture = {float(fwhm_gaussian) * float(aperture_fwhm_factor):.3f}px"
+            )
+            enhance_catalog_dataframe_aperture._did_log_fwhm = True
 
     if fwhm_gaussian is None:
         if math.isfinite(fwhm_moment_med) and fwhm_moment_med > 0:
@@ -951,6 +670,37 @@ def compute_fwhm_gaussian_for_aperture_catalog(
 
     return fwhm_per, fwhm_moment_med, float(fwhm_gaussian) if math.isfinite(float(fwhm_gaussian)) else float("nan")
 
+
+
+def catalog_aperture_radii(
+    hdr: Any,
+    *,
+    aperture_fwhm_factor: float,
+    annulus_inner_fwhm: float,
+    annulus_outer_fwhm: float,
+    fwhm_night_median_px: float | None = None,
+    qc_fwhm_by_name: dict[str, float] | None = None,
+    frame_name: str | None = None,
+) -> tuple[float, float, float] | None:
+    """(r_ap, r_in, r_out) of the per-frame catalogue aperture (APERTURE-01: the frame's QC FWHM, the
+    same rule as :func:`enhance_catalog_dataframe_aperture`); None when the frame has no FWHM."""
+    from aperture_policy import fwhm_for_radius, resolve_aperture_geometry, resolve_frame_fwhm_px  # noqa: PLC0415
+
+    fw = fwhm_for_radius(
+        fwhm_frame_px=resolve_frame_fwhm_px(
+            hdr=hdr, frame_name=frame_name, qc_fwhm_by_name=qc_fwhm_by_name, fwhm_night_median_px=fwhm_night_median_px
+        ),
+        fwhm_night_median_px=fwhm_night_median_px,
+    )
+    if fw is None or not (math.isfinite(float(fw)) and float(fw) > 0):
+        return None
+    r_ap, r_in, r_out = resolve_aperture_geometry(
+        f=float(aperture_fwhm_factor),
+        fwhm_px=float(fw),
+        annulus_inner_fwhm=float(annulus_inner_fwhm),
+        annulus_outer_fwhm=float(annulus_outer_fwhm),
+    )
+    return float(r_ap), float(r_in), float(r_out)
 
 
 def enhance_catalog_dataframe_aperture(
@@ -1004,12 +754,11 @@ def enhance_catalog_dataframe_aperture(
         fwhm_night_median_px=fwhm_night_median_px,
     )
     if fwhm_frame_px is not None:
-        try:
-            _ff = float(fwhm_frame_px)
-            if math.isfinite(_ff) and 0.5 < _ff < 30.0:
-                _ap01_fwhm_frame = _ff
-        except (TypeError, ValueError):
-            pass
+        from aperture_policy import clamp_fwhm_px  # noqa: PLC0415
+
+        _ff = clamp_fwhm_px(fwhm_frame_px, shape=arr.shape[:2])
+        if _ff is not None:
+            _ap01_fwhm_frame = _ff
     _ap01_fwhm_used = fwhm_for_radius(
         fwhm_frame_px=_ap01_fwhm_frame,
         fwhm_night_median_px=fwhm_night_median_px,
@@ -1071,7 +820,8 @@ def enhance_catalog_dataframe_aperture(
                 )
 
             d = np.asarray(arr, dtype=np.float64)
-            if np.any(~np.isfinite(d)):
+            _no_data = ~np.isfinite(d)  # bad flat pixels (CAL-BADFLAT), warp NaN
+            if np.any(_no_data):
                 fill = float(np.nanmedian(d)) if np.any(np.isfinite(d)) else 0.0
                 d = np.where(np.isfinite(d), d, fill)
 
@@ -1083,7 +833,21 @@ def enhance_catalog_dataframe_aperture(
             # SKY-SRC-MASK-2026-10: and without the pixels of detected sources (crowded-field sky bias).
             from sky_estimation import sky_image  # noqa: PLC0415
 
-            d_sky = sky_image(d, fw, covered=aligned_footprint(hdr, d.shape) if has_alignment_transform(hdr) else None)
+            _covered = aligned_footprint(hdr, d.shape) if has_alignment_transform(hdr) else None
+            d_sky = sky_image(d, fw, covered=_covered)
+            # NO-DATA-AP-2026-10: an aperture touching a pixel without data (alignment fill, NaN) has no
+            # flux - the filled value made it look like sky (flux ~ 0, a false deep fading in the field search)
+            if _covered is not None:
+                _no_data = _no_data | ~_covered
+            _no_data_f = _no_data.astype(np.float64) if np.any(_no_data) else None
+
+            def _touches_no_data(r: float) -> np.ndarray:
+                bad = np.zeros(n, dtype=bool)
+                if _no_data_f is not None and _ix.size:
+                    cnt = np.asarray(_aphot(_no_data_f, CircularAperture(pos[_ix], r=r), method="center")["aperture_sum"],
+                                     dtype=np.float64)
+                    bad[_ix] = cnt > 0
+                return bad
 
             # A row without a finite position is not measured (NaN), it does not abort the frame:
             # one such row used to throw away the aperture photometry of every star in the frame.
@@ -1100,6 +864,7 @@ def enhance_catalog_dataframe_aperture(
 
                 sky_pp_arr[_ix] = annulus_sky_medians(d_sky, pos[_ix], r_in, r_out)
             flux_arr = sum_ap - sky_pp_arr * area_ap_per
+            flux_arr[_touches_no_data(r_ap)] = np.nan
             # APERTURE-K-2026-10: the same photometry on the aperture grid r = k x FWHM
             # (same positions, same annulus sky), so comparison-star RMS in comparison-star selection is
             # measured on the apertures the light curves use.
@@ -1114,7 +879,9 @@ def enhance_catalog_dataframe_aperture(
                             _aphot(d, CircularAperture(pos[_ix], r=_r_k), method="exact")["aperture_sum"],
                             dtype=np.float64,
                         )
-                    out[flux_k_column(float(_k))] = _sum_k - sky_pp_arr * float(math.pi * _r_k ** 2)
+                    _fk = _sum_k - sky_pp_arr * float(math.pi * _r_k ** 2)
+                    _fk[_touches_no_data(_r_k)] = np.nan
+                    out[flux_k_column(float(_k))] = _fk
             except Exception as _fk_exc:  # noqa: BLE001
                 logging.warning("[APERTURE-K] grid fluxes not written: %s", _fk_exc)
             out["flux"] = flux_arr.astype(np.float64)
@@ -1164,6 +931,7 @@ def enhance_catalog_dataframe_aperture(
                     frame_id=_frame_id,
                     star_list_source="catalog_df_in_memory",
                     sky=d_sky,
+                    covered=_covered,
                 )
                 if not hasattr(enhance_catalog_dataframe_aperture, "_labbe_seeds"):
                     enhance_catalog_dataframe_aperture._labbe_seeds = []

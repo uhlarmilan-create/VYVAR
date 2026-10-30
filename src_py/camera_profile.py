@@ -193,13 +193,6 @@ def match_catalog_models(*names: Any, path: Path | None = None) -> list[dict[str
     return []
 
 
-def match_catalog_model(*names: Any, path: Path | None = None) -> dict[str, Any] | None:
-    """The one catalog model ``names`` identifies, or None when there is none or more than one
-    (no guessing between e.g. a mono and a colour version)."""
-    hits = match_catalog_models(*names, path=path)
-    return hits[0] if len(hits) == 1 else None
-
-
 def _catalog_points(mode: dict[str, Any] | None) -> list[CurvePoint]:
     out: list[CurvePoint] = []
     # fixed-gain readout modes (scientific sCMOS): one value for the mode, any setting

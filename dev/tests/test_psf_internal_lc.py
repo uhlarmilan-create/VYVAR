@@ -14,11 +14,7 @@ from config import AppConfig
 from export_reports import export_all_method_lightcurve_reports, export_lightcurve_reports
 from invariants_runtime import InvariantViolation
 from photometry_core import TIME_BASE_BJD_TDB
-from psf_internal_lc import (
-    INV_PSF_LC_PIN_01,
-    REQUIRED_HEADER_MARKERS,
-    write_internal_psf_lightcurves,
-)
+from psf_internal_lc import INTERNAL_BANNER, TRUST_NOTE_LINE1, TRUST_NOTE_LINE2, write_internal_psf_lightcurves
 from report_methods import lc_csv_path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +23,30 @@ PS_516 = DRAFT_516 / "platesolve" / "NoFilter_60_2"
 FRAMES_516 = DRAFT_516 / "detrended_aligned" / "lights" / "NoFilter_60_2"
 BO_CVN_ID = "1498613634033133184"
 N_SCIENCE_LIGHTS = 134
+
+# Substrings that T1 / header audits must find (every provenance line); G09-15: test-side list.
+REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
+    INTERNAL_BANNER,
+    "epsf_model_file=",
+    "epsf_model_sha256=",
+    "epsf_n_stars=",
+    "epsf_build_timestamp=",
+    "epsf_oversampling=",
+    "epsf_smoothing_kernel=",
+    "epsf_cutout_size=",
+    "psf_fit=",
+    "psf_err_mode=",
+    "gain_authority=",
+    "ensemble_n_comp=",
+    "ensemble_pinned_ids=",
+    "git_hash=",
+    "git_dirty=",
+    TRUST_NOTE_LINE1,
+    TRUST_NOTE_LINE2,
+    "psf_lc_n_epochs_full=",
+    "psf_lc_n_epochs_dropped_pin=",
+    "psf_ap_level_offset_mag=",
+)
 
 INV_PSF_SUBMIT_01 = "INV-PSF-SUBMIT-01"
 
@@ -238,7 +258,6 @@ def test_writer_header_and_nan_epochs_synthetic(tmp_path: Path) -> None:
     assert "delta_mag" not in df.columns and "err" not in df.columns and "product" not in df.columns
     assert {"bjd", "hjd", "jd"} <= set(df.columns)
     assert "# product=internal_psf_diagnostic" in text
-    assert INV_PSF_LC_PIN_01 == "INV-PSF-LC-PIN-01"
 
 
 def test_inv_psf_lc_pin_01_failed_comp_not_renormalized(tmp_path: Path) -> None:
@@ -343,8 +362,17 @@ def test_fit_ok_false_epoch_is_dropped_even_with_finite_flux(tmp_path: Path) -> 
     out = write_internal_psf_lightcurves(
         platesolve_dir=ps, frames_root=frames, target_ids=[target], output_directory=tmp_path / "out"
     )
-    d = pd.read_csv(Path(out["written"][0]), comment="#")
+    path = Path(out["written"][0])
+    d = pd.read_csv(path, comment="#")
     assert pd.isna(d.loc[0, "psf_delta_mag"]) and bool(d.loc[0, "psf_fit_ok"]) is False
+    # G09-04: the epoch carries its reason and is not counted as complete
+    assert str(d.loc[0, "psf_epoch_drop_reason"]) == "target_fit_not_ok"
+    txt = path.read_text(encoding="utf-8")
+    n_fit = int((d["psf_epoch_drop_reason"].astype(str) == "target_fit_not_ok").sum())
+    assert n_fit >= 1 and f"# psf_lc_n_epochs_target_fit_not_ok={n_fit}" in txt
+    assert d.loc[pd.to_numeric(d["psf_delta_mag"], errors="coerce").isna(), "psf_epoch_drop_reason"].notna().all()
+    n_fin = int(pd.to_numeric(d["psf_delta_mag"], errors="coerce").notna().sum())
+    assert f"# psf_lc_n_epochs_full={n_fin}" in txt
 
 
 def test_psf_usable_mask_unit():

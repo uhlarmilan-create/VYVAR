@@ -16,11 +16,6 @@ from masterstar_gaia_accounting import (
 def test_inject_row_not_labelled_detected_when_vy_dao_pass_column_exists() -> None:
     """H-LABEL: column presence must not make a catalog inject DETECTED_*."""
     h, w = 80, 80
-    data0 = np.zeros((h, w), dtype=np.float32)
-    yy, xx = np.mgrid[0:h, 0:w]
-    data0 += (80.0 * np.exp(-((xx - 20.0) ** 2 + (yy - 20.0) ** 2) / (2.0 * 1.6 ** 2))).astype(
-        np.float32
-    )
     df = pd.DataFrame(
         {
             "x": [20.0, 50.0],
@@ -43,7 +38,6 @@ def test_inject_row_not_labelled_detected_when_vy_dao_pass_column_exists() -> No
     )
     out, _census, _meta = enrich_masterstar_gaia_complete(
         df,
-        data0=data0,
         gaia_on_chip=gaia,
         wpx=w,
         h=h,

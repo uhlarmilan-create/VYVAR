@@ -52,6 +52,7 @@ def test_altitude_zero_pipeline_meta_falls_back_to_location(monkeypatch):
     rig = resolve_rig_scintillation_params(
         draft_id=424,
         setup="NoFilter_60_2",
+        exposure_s=60.0,
         pipeline_meta={"observer_location": {"alt_m": 0.0}},
         cfg=AppConfig(),
     )
@@ -59,3 +60,21 @@ def test_altitude_zero_pipeline_meta_falls_back_to_location(monkeypatch):
     assert any("ignored (<=0)" in n for n in rig.source_notes)
     assert any("LOCATION" in n for n in rig.source_notes)
 
+
+
+def test_scintillation_exposure_from_header_not_setup_name(monkeypatch) -> None:
+    """EXPOSURE-ONE-2026-10 (G06-03 / G08-02): the exposure comes from EXPTIME; the "g|120|4" setup form
+    used to fail the name parse and fall back to 60 s. A missing exposure is an error, not 60 s."""
+    from astropy.io import fits
+
+    from utils import exposure_seconds
+
+    h = fits.Header()
+    h["EXPTIME"] = 120.0
+    assert exposure_seconds(h) == 120.0
+    assert exposure_seconds(fits.Header()) is None
+    rig = resolve_rig_scintillation_params(draft_id=None, setup="g|120|4", exposure_s=exposure_seconds(h),
+                                           cfg=AppConfig())
+    assert rig.exposure_s == 120.0
+    with pytest.raises(ValueError, match="exposure"):
+        resolve_rig_scintillation_params(draft_id=None, setup="g|120|4", exposure_s=None, cfg=AppConfig())

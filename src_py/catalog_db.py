@@ -281,7 +281,7 @@ def query_local_gaia(
                 log_event("GAIA DB: no (ra, dec) index found; sky-box queries will be slow.")
             _GAIA_INDEX_CHECK_DONE = True
         base_cols = ["source_id", "ra", "dec", "g_mag", "bp_mag", "rp_mag", "bp_rp", "var_flag"]
-        opt_cols = [c for c in ("g_flux_error_rel", "non_single_star", "phot_variable_flag", "pmra", "pmdec") if c in cols]
+        opt_cols = [c for c in ("g_flux_error_rel", "non_single_star", "pmra", "pmdec") if c in cols]
         # Alternate schema: some DBs carry a string catalog id.
         if "catalog_id" in cols:
             opt_cols.append("catalog_id")
@@ -495,7 +495,9 @@ def _query_box(
     max_rows: int | None,
 ) -> tuple[list[dict[str, Any]], float, float, int]:
     """Rows of an objects table in an RA/Dec box; RA wrap via split intervals; de-duplicated by
-    ``key_col`` when present, else by (ra_deg, dec_deg)."""
+    ``key_col`` when present, else by (ra_deg, dec_deg). With ``max_rows`` the rows nearest to the
+    box centre are kept (G05-50: a LIMIT without ORDER BY kept an arbitrary subset, the first RA
+    interval first)."""
     p = resolve_catalog_path(db_path)
     de0, de1 = float(dec_min), float(dec_max)
     if de1 < de0:
@@ -519,8 +521,6 @@ def _query_box(
         seen: set[Any] = set()
         rows_out: list[dict[str, Any]] = []
         for rlo, rhi in intervals:
-            if lim is not None and len(rows_out) >= lim:
-                break
             for r in conn.execute(q, (float(rlo), float(rhi), de0, de1)).fetchall():
                 d = dict(r)
                 k = d.get(key_col)
@@ -531,11 +531,28 @@ def _query_box(
                     continue
                 seen.add(key)
                 rows_out.append(d)
-                if lim is not None and len(rows_out) >= lim:
-                    break
+        if lim is not None and len(rows_out) > lim:
+            rows_out = _nearest_rows(rows_out, float(ra_min), float(ra_max), de0, de1)[:lim]
         return rows_out, de0, de1, len(intervals)
     finally:
         conn.close()
+
+
+def _nearest_rows(rows: list[dict[str, Any]], ra_min: float, ra_max: float, de0: float, de1: float) -> list[dict[str, Any]]:
+    """``rows`` sorted by great-circle distance to the centre of the box (rows without a finite
+    position last)."""
+    rc = math.radians((0.5 * (ra_min + ra_max)) % 360.0)
+    dc = math.radians(0.5 * (de0 + de1))
+
+    def _key(d: dict[str, Any]) -> float:
+        try:
+            ra, de = math.radians(float(d["ra_deg"])), math.radians(float(d["dec_deg"]))
+        except (TypeError, ValueError, KeyError):
+            return math.inf
+        c = math.sin(dc) * math.sin(de) + math.cos(dc) * math.cos(de) * math.cos(ra - rc)
+        return -c if math.isfinite(c) else math.inf
+
+    return sorted(rows, key=_key)
 
 
 def query_local_vsx(
@@ -555,6 +572,19 @@ def query_local_vsx(
     )
     log_event(f"VSX SQL: {len(rows)} rows (box Dec=[{de0:.3f},{de1:.3f}], RA intervals={n_int})")
     return rows
+
+
+def vsx_amplitude_mag(mag_max: Any, mag_min: Any) -> float:
+    """Amplitude (mag) of a VSX entry: ``mag_min - mag_max``; VSX writes the amplitude itself in the
+    minimum field when only the range is known ("(0.34)"), which the table holds as a value below
+    ``mag_max``. NaN when either is missing."""
+    try:
+        mx, mn = float(mag_max), float(mag_min)
+    except (TypeError, ValueError):
+        return float("nan")
+    if not (math.isfinite(mx) and math.isfinite(mn)):
+        return float("nan")
+    return mn - mx if mn >= mx else mn
 
 
 def query_local_exoplanet(
@@ -579,21 +609,52 @@ def query_local_exoplanet(
 # --- moved from pipeline_catalog (LAYER-2026-10) ---
 
 
+#: float rounding pad of the RA half-width [deg] (the half-width itself is exact)
+_RA_HALF_WIDTH_PAD_DEG = 1e-9
+
+
+def cone_ra_half_width_deg(dec0_deg: float, radius_deg: float) -> float | None:
+    """Exact RA half-width [deg] of a great-circle cone of ``radius_deg`` about Dec ``dec0_deg``.
+
+    The cone's RA extremes are its tangent points with meridians: sin(dRA) = sin(r) / cos(dec0)
+    (RA-BOX-2026-10, G03-05). ``None`` when the cone reaches a pole (|dec0| + r >= 90): every RA."""
+    r = max(0.0, float(radius_deg))
+    d0 = float(dec0_deg)
+    if abs(d0) + r >= 90.0:
+        return None
+    s = math.sin(math.radians(r)) / math.cos(math.radians(d0))
+    if s >= 1.0:
+        return None
+    return math.degrees(math.asin(s)) + _RA_HALF_WIDTH_PAD_DEG
+
+
+def ra_boxes_for_cone(ra0_deg: float, dec0_deg: float, radius_deg: float) -> tuple[list[tuple[float, float]], float, float]:
+    """RA intervals inside [0, 360] and the Dec range [deg] of the box that contains the cone.
+
+    The one RA-box rule of VYVAR (RA-BOX-2026-10, Milan 2026-10-29): every catalogue box query
+    (Gaia, VSX, exoplanets, the plate-solve cone, the blind index cells) takes its RA range from
+    :func:`cone_ra_half_width_deg` and splits the wrap at RA 0 with :func:`ra_intervals_deg`."""
+    r = max(0.0, float(radius_deg))
+    d0 = float(dec0_deg)
+    de_min, de_max = max(-90.0, d0 - r), min(90.0, d0 + r)
+    half = cone_ra_half_width_deg(d0, r)
+    if half is None or half >= 180.0:
+        return [(0.0, 360.0)], de_min, de_max
+    ra0 = float(ra0_deg) % 360.0
+    return ra_intervals_deg(ra0 - half, ra0 + half), de_min, de_max
+
+
 def cone_sky_box(center: SkyCoord, radius_deg: float) -> tuple[float, float, float, float]:
     """RA/Dec box [deg] that contains the great-circle cone (CATALOG-FOOTPRINT-2026-10).
 
-    RA half-width is ``r / cos(dec)`` at the box edge nearest the pole (a box of +-r in RA covers
-    only r*cos(dec) on the sky: at Dec 61 a 4.7 deg cone lost the chip edges). A cone that reaches
-    a pole takes every RA. RA may lie outside [0, 360); ``query_local_*`` splits the wrap."""
+    RA half-width from :func:`cone_ra_half_width_deg` (RA-BOX-2026-10). A cone that reaches a pole
+    takes every RA. RA may lie outside [0, 360); ``query_local_*`` splits the wrap."""
     ra0 = float(center.icrs.ra.deg)
     de0 = float(center.icrs.dec.deg)
     r = max(0.0, float(radius_deg))
     de_min = max(-90.0, de0 - r)
     de_max = min(90.0, de0 + r)
-    d_edge = max(abs(de_min), abs(de_max))
-    if d_edge >= 89.999:
-        return 0.0, 360.0, de_min, de_max
-    half = r / max(math.cos(math.radians(d_edge)), 1e-6)
-    if half >= 180.0:
+    half = cone_ra_half_width_deg(de0, r)
+    if half is None or half >= 180.0:
         return 0.0, 360.0, de_min, de_max
     return ra0 - half, ra0 + half, de_min, de_max

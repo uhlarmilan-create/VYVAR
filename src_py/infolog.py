@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 _lock = threading.Lock()
-_session_log_path: Path | None = None
 _session_log_file: Any = None
 # milestones logged before the run's draft directory exists; written when the file opens
 _milestones: list[str] = []
@@ -22,8 +21,6 @@ _milestones: list[str] = []
 _captured: list[str] | None = None
 
 VYVAR_LOGGERS = ("pipeline", "importer")
-
-_handler: InfologHandler | None = None
 
 
 def _handler_already_attached() -> bool:
@@ -90,7 +87,7 @@ def _append_session_line(line: str) -> None:
 
 def start_infolog_session(draft_dir: str | Path) -> str | None:
     """Open the run infolog ``draft_dir/infolog_<ts>.txt`` (append, flushed per line)."""
-    global _session_log_path, _session_log_file
+    global _session_log_file
     try:
         root = Path(str(draft_dir)).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
@@ -106,7 +103,6 @@ def start_infolog_session(draft_dir: str | Path) -> str | None:
                 fh.write(f"{m}\n")
             _milestones.clear()
         fh.flush()
-        _session_log_path = path
         _session_log_file = fh
         return str(path)
     except Exception as exc:  # noqa: BLE001
@@ -116,27 +112,13 @@ def start_infolog_session(draft_dir: str | Path) -> str | None:
 
 def end_infolog_session() -> None:
     """Close the run infolog (best-effort)."""
-    global _session_log_file, _session_log_path
+    global _session_log_file
     try:
         if _session_log_file is not None:
             _session_log_file.close()
     except Exception:  # noqa: BLE001
         pass
     _session_log_file = None
-    _session_log_path = None
-
-
-def log_gaia_query(ra: float, dec: float, calculated_radius: float) -> None:
-    """Structured Gaia query debug line."""
-    log_event(f"GAIA QUERY: Center={ra},{dec} | Radius={calculated_radius:.2f} deg")
-
-
-def log_exception(prefix: str, exc: BaseException) -> None:
-    """Log exception message and full traceback into Infolog (for debugging worker/pool failures)."""
-    import traceback
-
-    log_event(f"{prefix}: {exc!s}")
-    log_event(traceback.format_exc())
 
 
 def log_phase_boundary(phase: str, *, status: str = "start") -> None:
@@ -158,7 +140,6 @@ class InfologHandler(logging.Handler):
 
 def ensure_infolog_logging() -> None:
     """Attach InfologHandler to VYVAR module loggers once (safe across Streamlit reruns)."""
-    global _handler
     if _handler_already_attached():
         for name in VYVAR_LOGGERS:
             logging.getLogger(name).propagate = False
@@ -169,7 +150,6 @@ def ensure_infolog_logging() -> None:
     h = InfologHandler()
     h.setLevel(logging.INFO)
     h.setFormatter(fmt)
-    _handler = h
 
     for name in VYVAR_LOGGERS:
         lg = logging.getLogger(name)

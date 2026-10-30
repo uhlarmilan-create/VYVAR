@@ -23,15 +23,10 @@ def _minimal_plan(*, quick_look: bool = False) -> SmartImportPlan:
         lights_files=["/tmp/src/a.fits"],
         dark_files=[],
         flat_files=[],
-        lights_first_fits="/tmp/src/a.fits",
         metadata=None,
         scan_rows=[SmartScanRow(type="Lights", status="ok", count=1, parameters="")],
-        dark_master="/lib/master_dark.fits",
-        flat_master=None,
         masterflat_by_filter={"V": "/lib/flat_v.fits"},
-        masterflat_status={"V": "ok"},
         missing_flat_filters=[],
-        masterdark_status="found",
         quick_look=quick_look,
         detected_filters=["V"],
         warnings=[],
@@ -42,7 +37,6 @@ def test_apply_pre_calibrated_import_plan_forces_quick_look_and_clears_masters()
     plan = _minimal_plan(quick_look=False)
     apply_pre_calibrated_import_plan(plan)
     assert plan.quick_look is True
-    assert plan.dark_master is None
     assert plan.masterflat_by_filter == {}
     assert plan.masterflat_by_obs_key == {}
     assert plan.dark_master_by_obs_key == {}

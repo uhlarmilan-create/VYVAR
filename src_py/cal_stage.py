@@ -4,15 +4,11 @@ from __future__ import annotations
 
 import logging
 import math
-import re
 
 import numpy as np
 from astropy.io import fits
 
 LOGGER = logging.getLogger(__name__)
-
-
-_STAGE_SKYSF_RE = re.compile(r"^SKYSF_(\d+)(?:_R(\d+))?$")
 
 
 def compute_fits_datasum(data: np.ndarray) -> str:
@@ -32,27 +28,6 @@ def verify_fits_datasum(data: np.ndarray, expected: str | None) -> bool:
         return compute_fits_datasum(data) == str(expected).strip()
     except Exception:  # noqa: BLE001
         return False
-
-
-def parse_cal_stage_token(stage: str) -> tuple[int | None, int]:
-    """Return ``(sky_order, sky_pass)`` for stage tokens."""
-    token = str(stage or "").strip().upper()
-    if token in ("PURE", "PASSTHROUGH", ""):
-        return None, 1
-    m = _STAGE_SKYSF_RE.match(token)
-    if not m:
-        return None, 1
-    order = int(m.group(1))
-    pass_n = int(m.group(2)) if m.group(2) else 1
-    return order, max(1, pass_n)
-
-
-def skysf_stage_token(*, order: int, pass_n: int = 1) -> str:
-    order_i = int(order)
-    pass_i = max(1, int(pass_n))
-    if pass_i <= 1:
-        return f"SKYSF_{order_i}"
-    return f"SKYSF_{order_i}_R{pass_i}"
 
 
 def _header_bool(hdr: fits.Header, key: str) -> bool | None:
@@ -77,8 +52,9 @@ def _header_has_vy_skysf(hdr: fits.Header) -> bool:
 
 
 def compute_skysf_apply_stage(*, sky_order: int) -> tuple[str, int]:
-    """Stage token and pass count when applying the sky surface (always the first pass)."""
-    return skysf_stage_token(order=int(sky_order), pass_n=1), 1
+    """Stage token and pass count when applying the sky surface (always the first pass; G01-31:
+    the ``_R{n}`` re-pass tokens had no producer)."""
+    return f"SKYSF_{int(sky_order)}", 1
 
 
 def stamp_cal_stage_headers(

@@ -16,7 +16,8 @@ Comp-count thresholds follow ``comp_trust_min_comps`` / ``phase01_comparison_n_c
 numeric photometry.
 
 Gate semantics (comparison-star selection degradation, green_min=3):
-- **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check >= 0.05).
+- **RED:** ``n_clean == 0`` OR no check star OR hard warnings (bad lc_quality, check >= 0.05, calibration
+  incomplete - a LIGHT group without flat field, decision A1).
 - **YELLOW:** thin comp set (1-2 clean), T3+ with colour-term off, soft check scatter.
 - **GREEN:** ``n_clean >= green_min`` (T1/T2 count >= green_min) + check OK, no soft warnings.
 - ``short_baseline`` is a non-escalating soft (excluded from ``len(soft) >= 3`` -> RED).
@@ -36,10 +37,11 @@ import pandas as pd
 from gaia_catalog_id import read_vyvar_csv
 
 from gaia_catalog_id import norm_id_or_empty as norm_id
+from photometry_defs import LC_QUALITY_INFORMATIONAL
 
 LOGGER = logging.getLogger(__name__)
 
-_LC_QUALITY_OK = frozenset({"good", "noisy"})
+_LC_QUALITY_OK = LC_QUALITY_INFORMATIONAL  # G08-04: one set of informational qualities
 _LC_QUALITY_SOFT = frozenset({"short_baseline"})
 _CHECK_SOFT_LO = 0.02
 _CHECK_HARD_LO = 0.05
@@ -100,17 +102,23 @@ def lc_epoch_counts(photometry_dir: Path, target_id: str) -> tuple[int | None, i
         df = read_vyvar_csv(p, low_memory=False)
     except (OSError, ValueError):
         return None, None
-    # same row selection as the exporters (single source: export_reports._select_export_lc_rows)
-    from photometry_lightcurve import _select_export_lc_rows  # noqa: PLC0415
+    # same row rule as the exporters (photometry_lightcurve.export_row_mask, G11-12)
+    from photometry_lightcurve import export_row_mask, lc_export_mag_column  # noqa: PLC0415
 
-    n = int(len(df))
-    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
+    return int(export_row_mask(df, mag_column=lc_export_mag_column(df)).sum()), int(len(df))
 
-    mag_col = next((c for c in (published_mag_column(df), "delta_mag")
-                    if c and c in df.columns and pd.to_numeric(df[c], errors="coerce").notna().any()), None)
-    if mag_col is None:
-        return 0, n
-    return int(len(_select_export_lc_rows(df, mag_column=mag_col))), n
+
+def _calibration_reasons_for_photometry_dir(photometry_dir: Path) -> tuple[str, str]:
+    """Decision A1: calibration trust reasons of ``<draft>/platesolve/<setup>/photometry`` (an OSC channel
+    setup maps to its LIGHT group folder); ('', '') outside a draft layout."""
+    from draft_provenance import calibration_trust_reasons  # noqa: PLC0415
+    from osc_align import parse_osc_channel_from_setup  # noqa: PLC0415
+
+    phot = Path(photometry_dir)
+    if phot.parent.parent.name.casefold() != "platesolve":
+        return "", ""
+    base, _ch = parse_osc_channel_from_setup(phot.parent.name)
+    return calibration_trust_reasons(phot.parent.parent.parent, base or phot.parent.name)
 
 
 def comp_thresholds_from_config(cfg: Any) -> CompTrustThresholds:
@@ -124,29 +132,20 @@ CHECK_STAR_MIN_EPOCHS = 5
 
 
 def check_star_scatter(photometry_dir: Path, target_id: str) -> tuple[float, int]:
-    """Return (scatter mag, finite epoch count). Missing file -> (nan, 0)."""
-    p = Path(photometry_dir) / "lightcurves" / f"check_kmag_{target_id}.csv"
-    if not p.is_file():
-        return float("nan"), 0
+    """(scatter mag, epoch count) of the check star over the target's exported epochs
+    (``check_star_kmag.exported_check_stats``, G11-11: the number the export header and the PDF print).
+    Missing file -> (nan, 0)."""
+    from check_star_kmag import exported_check_stats  # noqa: PLC0415
+
     try:
-        sdf = read_vyvar_csv(p, low_memory=False)
-        if sdf.empty or "kmag" not in sdf.columns:
-            return float("nan"), 0
-        km = pd.to_numeric(sdf["kmag"], errors="coerce")
-        n_finite = int(km.notna().sum())
-        if n_finite < 2:
-            return float("nan"), n_finite
-        return float(np.nanstd(km, ddof=1)), n_finite
+        st = exported_check_stats(Path(photometry_dir) / "lightcurves", str(target_id))
     except Exception as exc:  # noqa: BLE001
         from except_fix_counters import get_except_fix_counters
 
         get_except_fix_counters().trust_kmag_sidecar_read_fail += 1
-        LOGGER.error(
-            "[TRUST] check-star kmag sidecar read failed for %s: %s",
-            p,
-            exc,
-        )
+        LOGGER.error("[TRUST] check-star kmag sidecar read failed for %s: %s", target_id, exc)
         return float("nan"), 0
+    return st.scatter, st.n
 
 
 def check_star_chi2(photometry_dir: Path, target_id: str) -> tuple[float, float]:
@@ -236,14 +235,16 @@ def check_delta_and_zp_sigma(photometry_dir: Path, target_id: str) -> tuple[floa
     kc = str(load_check_star(lc_dir, str(target_id)).get("catalog_id", "") or "")
     bm = cq.get("comp_band_mag") if isinstance(cq.get("comp_band_mag"), dict) else {}
     kref = pd.to_numeric(pd.Series([bm.get(kc)]), errors="coerce").iloc[0] if kc else float("nan")
-    p = lc_dir / f"check_kmag_{target_id}.csv"
-    if kc and pd.notna(kref) and p.is_file():
+    if kc and pd.notna(kref):
+        # G11-11: median over the target's exported epochs, as the export header and the PDF
+        from check_star_kmag import exported_check_stats  # noqa: PLC0415
+
         try:
-            km = pd.to_numeric(pd.read_csv(p, usecols=["kmag"])["kmag"], errors="coerce").dropna()
+            med = exported_check_stats(lc_dir, str(target_id)).median
         except (OSError, ValueError):
-            km = pd.Series(dtype=float)
-        if len(km):
-            delta = float(km.median()) - float(kref)
+            med = float("nan")
+        if np.isfinite(med):
+            delta = float(med) - float(kref)
     return delta, zp_sigma
 
 
@@ -301,6 +302,8 @@ def classify_warnings(
     zp_sigma_mag: float = float("nan"),
     comp_delta_bprp_max: float = float("nan"),
     comp_delta_bprp_cap: float = float("nan"),
+    calibration_hard: str = "",
+    calibration_soft: str = "",
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target.
 
@@ -315,6 +318,12 @@ def classify_warnings(
     # a target aperture photometry skipped (e.g. per-frame saturation) has no light curve of this run
     if str(skip_reason or "").strip():
         hard.append(f"not measured: {str(skip_reason).strip()}")
+    # G01-01 (decision A1): a group without flat field is a relative product - RED, so its files go to
+    # _dontsubmit/ (the one "not for submission" rule); a FLAT from another night is a soft warning
+    if str(calibration_hard or "").strip():
+        hard.append(str(calibration_hard).strip())
+    if str(calibration_soft or "").strip():
+        soft.append(str(calibration_soft).strip())
     # TRUST-COVERAGE-2026-10 (Milan 2026-10-11): trust follows the epochs that are actually
     # exported (draft 526: CSS J153101.6 GREEN with 5 of 122 points).
     if n_export is not None and n_frames is not None and int(n_frames) > 0:
@@ -505,6 +514,8 @@ def evaluate_target(
     zp_sigma_mag: float = float("nan"),
     comp_delta_bprp_max: float = float("nan"),
     comp_delta_bprp_cap: float = float("nan"),
+    calibration_hard: str = "",
+    calibration_soft: str = "",
 ) -> dict[str, Any]:
     th = thresholds
     lq = str(lc_quality or "").strip().lower() or "-"
@@ -548,6 +559,8 @@ def evaluate_target(
         zp_sigma_mag=float(zp_sigma_mag),
         comp_delta_bprp_max=float(comp_delta_bprp_max),
         comp_delta_bprp_cap=float(comp_delta_bprp_cap),
+        calibration_hard=str(calibration_hard or ""),
+        calibration_soft=str(calibration_soft or ""),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -631,6 +644,7 @@ def compute_trust_for_photometry_dir(
             comp_meta = {}
     per_target: dict[str, dict[str, Any]] = {}
     conf_counts: dict[str, int] = {}
+    _cal_hard, _cal_soft = _calibration_reasons_for_photometry_dir(phot)
 
     for _, row in summ.iterrows():
         cid = norm_id(row.get("catalog_id"))
@@ -696,6 +710,8 @@ def compute_trust_for_photometry_dir(
             zp_sigma_mag=_zp_sigma,
             comp_delta_bprp_max=float(_cm0.get("max_dbprp", float("nan"))),
             comp_delta_bprp_cap=_dbprp_cap,
+            calibration_hard=_cal_hard,
+            calibration_soft=_cal_soft,
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

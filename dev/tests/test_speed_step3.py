@@ -102,7 +102,7 @@ def test_csv_lookup_keys_are_catalog_id_only() -> None:
         "name": ["4000000000000000001", "DET_2", "4000000000000000003", "4000000000000000009", ""],
         "x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [1.0, 2.0, 3.0, 4.0, 5.0],
     })
-    id_map, _xy = _build_csv_lookup(df, "catalog_id")
+    id_map = _build_csv_lookup(df, "catalog_id")
     assert set(id_map) == {"4000000000000000001", "4000000000000000002"}
     assert id_map["4000000000000000001"].equals(df.iloc[0])  # first row wins
     assert "4000000000000000003" not in id_map and "4000000000000000009" not in id_map

@@ -15,7 +15,6 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 | `night_run.py` | entry | Headless VYVAR night pipeline runner. Extracted from ``app.py`` ``_run_vyvar_full_pipeline``. | scripts/archive/diag/_debug_fk343.py; scripts/archive/draft_runs/_simulate_night_run_draft343.py; scripts/chiandh_allfilters_overnight.py; scripts/chiandh_continue375_solve.py; ... | entry |
 | `simulate_night_run.py` | entry | E2E simulacia nocneho behu (ekvivalent UI Session Upload -> RUN VYVAR); volitelny `--dry-run`. | - | entry |
 | `xval_run.py` | entry | Offline cross-validation harness: nezavisla photutils/sep extrakcia vs VYVAR dao_flux a lc_rms (draft-agnostic). | `xval_harness_core` | entry |
-| `psf_runner.py` | entry | Headless RUN ePSF na jeden draft / obs group (tenky CLI nad `epsf_stage.run_epsf_stage`). | `epsf_stage` | entry |
 | `run_smoothness_report.py` | entry | Jednorazovy dev skript: RMS variabilita + smoothness ratio na hardcoded draft (``variability_detector``). | ``variability_detector`` | util |
 | `comp_qa.py` | entry | Comp-star LOO QA CLI - delegates to comp_qa_core (same math as pipeline stage). | - | entry |
 | `trust_flag.py` | entry | CLI for per-target trust flags (uses draft photometry_summary.csv). | - | entry |
@@ -72,7 +71,7 @@ Zivy dokument - pri pridani/zmazani modulu aktualizovat tabulku a kontrolu uplno
 
 | Subor | Typ | Rola vo workflow (1-2 vety) | Vola / volany kym | Cython? |
 |---|---|---|---|---|
-| `psf_photometry.py` | core | ePSF build-star selection on the MASTERSTAR catalogue (`select_epsf_build_stars`), ePSF builder helpers (photutils 3.1.1), gain/RN authority; the per-star cutout fitter was removed (EPSF-CLEAN-2026-10). | psf_runner.py; pipeline.py; app.py; ... | yes |
+| `psf_photometry.py` | core | ePSF build-star selection on the MASTERSTAR catalogue (`select_epsf_build_stars`), ePSF builder helpers (photutils 3.1.1), gain/RN authority; the per-star cutout fitter was removed (EPSF-CLEAN-2026-10). | epsf_stage.py; pipeline.py; app.py; ... | yes |
 | `epsf_frame.py` | core | Per-frame ePSF + night spatial perturbation (3x3/2x2 GriddedPSFModel); frame-level PSF photometry fitted jointly with Gaia neighbours at fixed Gaia positions, unresolved fainter companions merged, aligned-footprint mask (EPSF-SPATIAL / EPSF-BLEND / EPSF-MERGE / EPSF-FOOTPRINT-2026-10). | epsf_psf_merge.py | no |
 | `frame_footprint.py` | core | Data footprint of an aligned frame on the reference grid (VY_AM0..8): covered-pixel mask and the off-footprint test for apertures / PSF fit boxes and their sky annuli (EPSF-FOOTPRINT / AP-FOOTPRINT-2026-10). | epsf_frame.py, aperture_pertarget.py, photometry_shared.py | no |
 | `epsf_export.py` | core | ePSF light curve export for the user: bjd_tdb, delta_mag, err with a descriptive header, one file per target and setup (EPSF-EXPORT-2026-10). | epsf_stage.py; ui_epsf_dashboard.py | yes |

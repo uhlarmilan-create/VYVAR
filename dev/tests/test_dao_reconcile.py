@@ -333,6 +333,7 @@ def test_dao_only_classification_buckets():
         {
             "source_type": ["DAO_ONLY"] * 5,
             "flux": [-1.0, 50000.0, 10.0, 50000.0, 50000.0],
+            "flux_ap": [-1.0, 50000.0, 10.0, 50000.0, 50000.0],
             "peak_max_adu": [1.0, 500.0, 500.0, 50.0, 500.0],
             "likely_saturated": [False, False, False, False, False],
             "edge_safe_10px": [True, True, True, True, True],
@@ -358,6 +359,7 @@ def test_dao_only_depth_unresolvable_all_indeterminate():
         {
             "source_type": ["DAO_ONLY", "GAIA_MATCHED"],
             "flux": [100.0, 1000.0],
+            "flux_ap": [100.0, 1000.0],
             "phot_g_mean_mag": [np.nan, 12.0],
             "catalog_id": ["", "123"],
         }
@@ -435,7 +437,7 @@ def test_reconcile_to_pipeline_meta_includes_dao_only_class():
 
 @pytest.mark.slow
 def test_draft501_artifact_negative_count():
-    """Regression: draft_501 should have 142 artifact_negative DAO_ONLY rows."""
+    """draft_501: artifact_negative DAO_ONLY rows == DAO_ONLY rows with non-positive aperture flux (G04-24)."""
     from config import AppConfig
     from pathlib import Path
 
@@ -464,7 +466,9 @@ def test_draft501_artifact_negative_count():
         frame_noise_adu=10.0,
     )
     n_neg = int((meta.get("counts") or {}).get(DAO_ONLY_CLASS_ARTIFACT_NEGATIVE, 0))
-    assert n_neg == 142
+    # G04-24: the class follows the aperture flux (was 142 on the DAO flux sign)
+    _dao = df["source_type"].astype(str).eq("DAO_ONLY")
+    assert n_neg == int((pd.to_numeric(df.loc[_dao, "flux_ap"], errors="coerce") <= 0).sum())
 
 
 def test_membership_rows_are_not_detections():

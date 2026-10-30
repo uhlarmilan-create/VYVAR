@@ -7,7 +7,6 @@ export bytes are not rewritten by this module.
 
 from __future__ import annotations
 
-import argparse
 import json
 import logging
 import math
@@ -24,38 +23,15 @@ from stats_core import _coerce_bool
 LOGGER = logging.getLogger(__name__)
 
 INTERNAL_BANNER = "# INTERNAL DIAGNOSTIC PRODUCT - NOT FOR AAVSO/VARASTRO SUBMISSION"
-TRUST_NOTE_LINE1 = "# PSF absolute scale untrusted pending EPSF-SHAPE-01;"
-TRUST_NOTE_LINE2 = "# relative photometry only"
+# G09-14: what the file is now (EPSF-SHAPE-01 is closed; the PSF is per frame)
+TRUST_NOTE_LINE1 = ("# differential ePSF magnitudes against the target's aperture ensemble (its comparison stars "
+                    "with an ePSF measurement on the night);")
+TRUST_NOTE_LINE2 = "# relative photometry only - internal comparison with the aperture light curve, not submitted"
 PRODUCT_NAME = "internal_psf_diagnostic"
 # EPSF-SPATIAL-2026-10: one fit for every star of a frame (photutils PSFPhotometry, frame ePSF +
 # night spatial perturbation, local annulus background); errors = Fisher, model variance.
 PSF_FIT_METHOD = "frame_psfphotometry_epsf_spatial_local_bkg"
 PSF_ERR_MODE = "fisher_model_variance"
-INV_PSF_LC_PIN_01 = "INV-PSF-LC-PIN-01"
-
-# Substrings that T1 / header audits must find (every provenance line).
-REQUIRED_HEADER_MARKERS: tuple[str, ...] = (
-    INTERNAL_BANNER,
-    "epsf_model_file=",
-    "epsf_model_sha256=",
-    "epsf_n_stars=",
-    "epsf_build_timestamp=",
-    "epsf_oversampling=",
-    "epsf_smoothing_kernel=",
-    "epsf_cutout_size=",
-    "psf_fit=",
-    "psf_err_mode=",
-    "gain_authority=",
-    "ensemble_n_comp=",
-    "ensemble_pinned_ids=",
-    "git_hash=",
-    "git_dirty=",
-    TRUST_NOTE_LINE1,
-    TRUST_NOTE_LINE2,
-    "psf_lc_n_epochs_full=",
-    "psf_lc_n_epochs_dropped_pin=",
-    "psf_ap_level_offset_mag=",
-)
 
 _PROC_USECOLS = (
     "catalog_id",
@@ -70,6 +46,16 @@ _PROC_USECOLS = (
     "psf_edge_masked",
     "dao_flux",
 )
+
+
+def _time_base_of(aperture_lc: pd.DataFrame) -> str:
+    """G09-39: the time base of the aperture light curve the PSF light curve copies its times from."""
+    from photometry_lightcurve import resolve_lc_time_base  # noqa: PLC0415
+
+    try:
+        return resolve_lc_time_base(aperture_lc)
+    except ValueError as exc:
+        return f"unknown ({exc})"
 
 
 def psf_usable_mask(fit_ok: np.ndarray, flux: np.ndarray) -> np.ndarray:
@@ -138,29 +124,23 @@ def _git_provenance() -> tuple[str, str]:
     return gh, dirty
 
 
-def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[str], dict[str, float], str]:
-    """Aperture ``comparison_stars_per_target`` membership for ``target_cid``."""
+def resolve_ensemble_ids(target_cid: str, photometry_dir: Path) -> tuple[list[str], str]:
+    """Aperture ``comparison_stars_per_target`` membership for ``target_cid`` (G09-16: ids only - the
+    PSF ensemble computes its own Broeg weights in ensemble_normalize)."""
     tid = normalize_gaia_source_id(target_cid)
     comp_pt = Path(photometry_dir) / "comparison_stars_per_target.csv"
     if not comp_pt.is_file():
-        return [], {}, "none"
+        return [], "none"
     from comp_table import load_comp_table, used  # noqa: PLC0415
 
     df = used(load_comp_table(comp_pt))
     if "target_catalog_id" not in df.columns or "catalog_id" not in df.columns:
-        return [], {}, "none"
+        return [], "none"
     tcol = df["target_catalog_id"].map(normalize_gaia_source_id)
     sub = df.loc[tcol == tid]
     ids = [normalize_gaia_source_id(v) for v in sub["catalog_id"].tolist()]
     ids = [c for c in ids if c]
-    weights: dict[str, float] = {}
-    if "comp_weight" in sub.columns:
-        for _, row in sub.iterrows():
-            cid = normalize_gaia_source_id(row.get("catalog_id"))
-            w = float(pd.to_numeric(row.get("comp_weight"), errors="coerce"))
-            if cid and math.isfinite(w) and w > 0:
-                weights[cid] = w
-    return ids, weights, "comparison_stars_per_target"
+    return ids, "comparison_stars_per_target"
 
 
 def comps_with_psf_measurement_on_night(stack: pd.DataFrame) -> set[str]:
@@ -182,10 +162,9 @@ def comps_with_psf_measurement_on_night(stack: pd.DataFrame) -> set[str]:
 
 def filter_ensemble_to_psf_measured(
     comp_ids: Sequence[str],
-    weights: dict[str, float],
     measured: set[str],
-) -> tuple[list[str], dict[str, float], list[str]]:
-    """Drop comps with no PSF measurement on the night; renormalise weights."""
+) -> tuple[list[str], list[str]]:
+    """Drop comps with no PSF measurement on the night; returns (kept, dropped)."""
     kept: list[str] = []
     dropped: list[str] = []
     for cid in comp_ids:
@@ -196,15 +175,7 @@ def filter_ensemble_to_psf_measured(
             kept.append(c)
         else:
             dropped.append(c)
-    w_out: dict[str, float] = {}
-    if weights:
-        for c in kept:
-            if c in weights and math.isfinite(float(weights[c])) and float(weights[c]) > 0:
-                w_out[c] = float(weights[c])
-        s = sum(w_out.values())
-        if s > 0 and w_out:
-            w_out = {k: v / s for k, v in w_out.items()}
-    return kept, w_out, dropped
+    return kept, dropped
 
 
 def build_provenance_header(
@@ -369,14 +340,12 @@ def write_one_internal_psf_lc(
     epoch_keys = [str(s).strip() for s in ap["source_file"].tolist()]
     n = len(epoch_keys)
     tgt = _star_frame_table(stack, tid, epoch_keys)
-    comp_ids, weight_map, ens_source = resolve_ensemble_ids(tid, photometry_dir)
+    comp_ids, ens_source = resolve_ensemble_ids(tid, photometry_dir)
     if not comp_ids:
         LOGGER.warning("[PSF-LC] %s has no ensemble membership; skip", tid)
         return None
     measured = comps_with_psf_measurement_on_night(stack)
-    comp_ids, weight_map, dropped_no_psf = filter_ensemble_to_psf_measured(
-        comp_ids, weight_map, measured
-    )
+    comp_ids, dropped_no_psf = filter_ensemble_to_psf_measured(comp_ids, measured)
     if dropped_no_psf:
         LOGGER.info(
             "[PSF-LC] %s dropped %d pinned comp(s) with no PSF measurement on night: %s",
@@ -407,14 +376,13 @@ def write_one_internal_psf_lc(
         comp_mag[cid] = mag
         comp_quality[cid] = {"quality": "good"}
 
-    dummy_cat = {cid: 0.0 for cid in comp_ids}
-    _mag_calib, psf_delta, ensemble_scatter = ensemble_normalize(
+    # differential only: catalogue magnitudes are irrelevant (zeros), the calibrated level is not used
+    _, psf_delta, ensemble_scatter = ensemble_normalize(
         target_mag,
         comp_mag,
-        dummy_cat,
+        {cid: 0.0 for cid in comp_ids},
         comp_quality,
     )
-    _ = _mag_calib
 
     # INV-PSF-LC-PIN-01: full pinned ensemble membership or NaN. No partial ZP.
     drop_reason = [""] * n
@@ -431,6 +399,11 @@ def write_one_internal_psf_lc(
         elif bool(tgt["edge_masked"].iloc[i]):
             psf_delta[i] = float("nan")
             drop_reason[i] = "target_outside_footprint"
+        elif not usable[i]:
+            # G09-04: the target's own fit failed (psf_fit_ok False / no flux) - an epoch with a reason,
+            # not a silent NaN counted as complete
+            psf_delta[i] = float("nan")
+            drop_reason[i] = "target_fit_not_ok"
         elif missing:
             psf_delta[i] = float("nan")
             drop_reason[i] = f"comp_psf_fail:{missing[0]}"
@@ -443,10 +416,15 @@ def write_one_internal_psf_lc(
     k2_applied = bool(len(k2_term) == n and np.isfinite(k2_term).any())
     if k2_applied:
         psf_delta = np.where(np.isfinite(k2_term), psf_delta - k2_term, psf_delta)
+    for i in range(n):
+        if not drop_reason[i] and not math.isfinite(float(psf_delta[i])):
+            drop_reason[i] = "ensemble_zero_point_nan"  # every NaN epoch has a reason (G09-04)
     n_dropped_pin = int(sum(1 for r in drop_reason if r.startswith("comp_psf_fail")))
     n_target_sat = int(sum(1 for r in drop_reason if r == "target_saturated"))
     n_target_edge = int(sum(1 for r in drop_reason if r == "target_outside_footprint"))
-    n_full = int(n - n_dropped_pin - n_target_sat - n_target_edge)
+    n_target_fit = int(sum(1 for r in drop_reason if r == "target_fit_not_ok"))
+    # G09-04: complete epochs are the finite ones; every NaN epoch carries its reason
+    n_full = int(np.count_nonzero(np.isfinite(psf_delta)))
     ap_delta = pd.to_numeric(ap.get("delta_mag"), errors="coerce").to_numpy(dtype=np.float64)
     if len(ap_delta) != n:
         ap_delta = np.full(n, np.nan)
@@ -509,8 +487,10 @@ def write_one_internal_psf_lc(
         n_epochs_dropped_pin=n_dropped_pin,
         psf_ap_level_offset_mag=level_off,
         extra_header_lines=[f"# psf_lc_k2_applied={str(k2_applied).lower()}",
+                             f"# psf_lc_time_base={_time_base_of(ap)}",
                              f"# psf_lc_n_epochs_target_saturated={n_target_sat}",
-                             f"# psf_lc_n_epochs_target_outside_footprint={n_target_edge}"],
+                             f"# psf_lc_n_epochs_target_outside_footprint={n_target_edge}",
+                             f"# psf_lc_n_epochs_target_fit_not_ok={n_target_fit}"],
         ensemble_dropped_no_psf=dropped_no_psf,
     )
 
@@ -553,10 +533,10 @@ def write_internal_psf_lightcurves(
     platesolve_dir: Path | str,
     frames_root: Path | str,
     photometry_dir: Path | str | None = None,
-    target_ids: Iterable[str] | None = None,
+    target_ids: Iterable[str],
     output_directory: Path | str | None = None,
 ) -> dict[str, Any]:
-    """Write ``lightcurve_<id>_psf.csv`` for aperture LC targets. Additive only."""
+    """Write ``lightcurve_<id>_psf.csv`` for the given aperture LC targets. Additive only."""
     ps = Path(platesolve_dir)
     root = Path(frames_root)
     phot = Path(photometry_dir) if photometry_dir is not None else ps / "photometry"
@@ -571,18 +551,7 @@ def write_internal_psf_lightcurves(
     git_hash, git_dirty = _git_provenance()
     stack = _read_proc_stack(root)
 
-    if target_ids is None:
-        wanted = []
-        for p in sorted(lc_dir.glob("lightcurve_*.csv")):
-            stem = p.stem
-            if stem.endswith("_psf") or stem.endswith("_adaptive"):
-                continue
-            cid = stem.replace("lightcurve_", "", 1)
-            if cid:
-                wanted.append(normalize_gaia_source_id(cid))
-        target_ids = [c for c in wanted if c]
-    else:
-        target_ids = [normalize_gaia_source_id(t) for t in target_ids if normalize_gaia_source_id(t)]
+    target_ids = [normalize_gaia_source_id(t) for t in target_ids if normalize_gaia_source_id(t)]
 
     written: list[str] = []
     skipped: list[str] = []
@@ -623,24 +592,3 @@ def write_internal_psf_lightcurves(
         "lc_dir": str(lc_dir),
         "output_directory": str(out_dir),
     }
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Write internal diagnostic PSF light curves.")
-    parser.add_argument("--platesolve-dir", required=True, type=Path)
-    parser.add_argument("--frames-root", required=True, type=Path)
-    parser.add_argument("--target-id", action="append", default=None)
-    parser.add_argument("--output-directory", type=Path, default=None)
-    args = parser.parse_args(argv)
-    out = write_internal_psf_lightcurves(
-        platesolve_dir=args.platesolve_dir,
-        frames_root=args.frames_root,
-        target_ids=args.target_id,
-        output_directory=args.output_directory,
-    )
-    print(json.dumps({"n_written": out["n_written"], "n_skipped": out["n_skipped"]}, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

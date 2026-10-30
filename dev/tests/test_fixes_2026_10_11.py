@@ -25,11 +25,16 @@ def test_k2_source_is_a_per_target_summary_value() -> None:
 
 
 def test_low_snr_applied_after_flagging() -> None:
+    """FIX-LOWSNR-2026-10, since G08-05 through base_flags: a low_snr epoch keeps its flag after the LC tests."""
+    import numpy as np
+
+    from lc_outlier import assign_lc_flags
+
+    r = assign_lc_flags(np.array([10.0, 10.0, 10.5, 10.0]), np.full(4, 0.01), np.arange(4.0),
+                        base_flags=["normal", "normal", "low_snr", "normal"])
+    assert r.flags[2] == "low_snr"
     s = (SRC / "aperture_photometry_target.py").read_text(encoding="utf-8")
-    i_pp = s.index("apply_reporting_postprocess(")
-    i_fix = s.index("FIX-LOWSNR-2026-10")
-    assert i_fix > i_pp
-    assert 'out_flags[_i] = "low_snr"' in s
+    assert "base_flags=base_flags" in s
     from lc_outlier import EXPORT_EXCLUDE_FLAGS
 
     assert "low_snr" in EXPORT_EXCLUDE_FLAGS
@@ -42,7 +47,7 @@ def _single(cat: dict, allow_relative: bool):
     lc = {"c1": -9.0 + z + rng.normal(0, 0.004, n), "9": -8.0 + z + rng.normal(0, 0.004, n)}
     return compute_check_ensemble_mag_calib(
         "9", ["c1"], lc, cat, {"c1": {"quality": "good"}},
-        cfg=AppConfig(), allow_relative=allow_relative,
+        allow_relative=allow_relative,
     )
 
 
@@ -133,7 +138,7 @@ def test_star_page_m3_helpers(tmp_path) -> None:
     pd.DataFrame({"bjd": lc.bjd, "kmag": 0.9 + 0.01 * np.cos(np.arange(n))}).to_csv(tmp_path / "k.csv", index=False)
     assert m3.plot_lc_check(tmp_path / "lc.csv", tmp_path / "o.png", check_csv=tmp_path / "k.csv", uncalibrated=True).is_file()
     f = m3.lc_facts(tmp_path / "lc.csv")
-    assert f["n_total"] == n and f["n_flagged"] == 1 and f["date_ut"] == "2026-10-02"
+    assert f["n_total"] == n and f["n_excluded"] == 1 and f["n_exported"] == n - 1 and f["date_ut"] == "2026-10-02"
 
 
 def test_gspc_standard_rule() -> None:
@@ -221,8 +226,13 @@ def test_check_star_report_facts(tmp_path) -> None:
     b = TargetPages(tmp_path, summary_df=pd.DataFrame(), at_df=pd.DataFrame(), comp_df=pd.DataFrame(), cfg=None)
     b.lc_dir.mkdir(parents=True, exist_ok=True)
     kc = "1593035088421948672"
-    pd.DataFrame({"check_catalog_id": [kc] * 4, "kmag": [10.19, 10.20, 10.21, 10.20],
+    # G11-11: the check numbers are taken on the target's exported epochs (the LC rows)
+    sf = ["f1", "f2", "f3", "f4"]
+    pd.DataFrame({"check_catalog_id": [kc] * 4, "source_file": sf, "kmag": [10.19, 10.20, 10.21, 10.20],
                   "kmag_err": [0.004] * 4}).to_csv(b.lc_dir / "check_kmag_77.csv", index=False)
+    pd.DataFrame({"source_file": sf, "jd": [1.0, 2.0, 3.0, 4.0], "bjd": [1.0, 2.0, 3.0, 4.0], "mag_calib": [12.0] * 4,
+                  "delta_mag": [0.1] * 4, "err": [0.01] * 4, "flag": ["normal"] * 4}).to_csv(
+        b.lc_dir / "lightcurve_77.csv", index=False)
     (b.lc_dir / "comp_quality_77.json").write_text(json.dumps({"comp_band_mag": {kc: 10.180}}))
     pd.DataFrame({"catalog_id": [kc], "phot_g_mean_mag": [10.51], "bp_rp": [0.88]}).to_csv(
         b.platesolve_dir / "masterstars_full_match.csv", index=False)
@@ -230,7 +240,7 @@ def test_check_star_report_facts(tmp_path) -> None:
     out = b.check_star("77")
     assert out["kcid"] == kc and out["g"] == "10.51" and out["bp_rp"] == "0.88"
     assert out["kmag"] == "10.200" and out["kref"] == "10.180" and out["kdelta"] == "+0.020"
-    assert out["err_med"] == "0.0040" and out["scatter_ratio"] == "1.8"
+    assert out["err_med"] == "0.0040" and out["scatter_ratio"] == "2.0"  # G11-11: std ddof=1 (was ddof=0: 1.8)
     b.uncalibrated = lambda cid: True
     b._chk.clear()
     out2 = b.check_star("77")
@@ -337,13 +347,13 @@ def test_reserve_does_not_change_primary_comps() -> None:
     cfg.gs11_dilution_enabled = False
     from photometry_comp import build_global_comp_pool  # noqa: PLC0415
 
-    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, 0.05, cfg, min_frames_frac=0.3, fwhm_px=3.7)
-    kw = dict(csv_cache=cache, cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
+    pool = build_global_comp_pool(ms, paths, cache, frozenset({_TARGET_ID}), None, 800, 600, 0, cfg, min_frames_frac=0.3, fwhm_px=3.7)
+    kw = dict(cfg=cfg, chip_fw=800, chip_fh=600, chip_interior_margin_px=0,
               min_dist_arcsec=30.0, n_comp_max=5, global_comp_pool_df=pool,
               variable_target_catalog_ids=frozenset({_TARGET_ID}),
-              fwhm_px=3.7, n_comp_min=3, max_comp_rms=0.1, min_frames_frac=0.3, plate_scale_arcsec=1.3)
-    base = select_comparison_stars_per_target(target, ms, paths, **kw)
-    both = select_comparison_stars_per_target(target, ms, paths, n_reserve=8, **kw)
+              fwhm_px=3.7, n_comp_min=3, max_comp_rms=0.1)
+    base = select_comparison_stars_per_target(target, ms, **kw)
+    both = select_comparison_stars_per_target(target, ms, n_reserve=8, **kw)
     prim, resv = _split_comp_reserve(both)
     assert list(prim["catalog_id"]) == list(base["catalog_id"])
     pd.testing.assert_frame_equal(prim.reset_index(drop=True), base.reset_index(drop=True), check_like=True)

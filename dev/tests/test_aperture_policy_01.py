@@ -14,7 +14,7 @@ from photometry_core import enhance_catalog_dataframe_aperture
 def test_radius_fwhm_is_frame_then_night() -> None:
     assert fwhm_for_radius(fwhm_frame_px=6.0, fwhm_night_median_px=5.0) == 6.0
     assert fwhm_for_radius(fwhm_frame_px=None, fwhm_night_median_px=5.0) == 5.0
-    assert fwhm_for_radius(fwhm_frame_px=99.0, fwhm_night_median_px=5.0) == 5.0
+    assert fwhm_for_radius(fwhm_frame_px=0.3, fwhm_night_median_px=5.0) == 5.0  # FWHM-BOUND: below 0.5 px invalid
 
 
 def test_geometry_same_fwhm_scales_annulus() -> None:

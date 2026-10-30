@@ -52,7 +52,9 @@ def clear_export_dirs(photometry_dir: Path | str, subdirs: Iterable[str] = EXPOR
     """Delete the export files of ``lightcurves_reports/<sub>/`` and of its ``_dontsubmit/`` (written
     again from this run)."""
     rep = Path(photometry_dir) / "lightcurves_reports"
-    return sum(remove_files(rep / s, ("*",)) + remove_files(rep / s / "_dontsubmit", ("*",)) for s in subdirs)
+    # G11-03: the export manifest describes these files - it goes with them
+    n_man = remove_files(rep, ("export_manifest.json",)) if "aavso" in tuple(subdirs) else 0
+    return n_man + sum(remove_files(rep / s, ("*",)) + remove_files(rep / s / "_dontsubmit", ("*",)) for s in subdirs)
 
 
 def clear_aperture_products(photometry_dir: Path | str) -> dict[str, int]:
@@ -73,10 +75,4 @@ def clear_report_cache(photometry_dir: Path | str) -> int:
     cache = Path(photometry_dir) / REPORT_CACHE_DIRNAME
     if not cache.is_dir():
         return 0
-    n = remove_files(cache, ("*",))
-    n += remove_files(cache / "pdf_embed", ("*",))
-    try:
-        (cache / "pdf_embed").rmdir()
-    except OSError:
-        pass
-    return n
+    return remove_files(cache, ("*",))

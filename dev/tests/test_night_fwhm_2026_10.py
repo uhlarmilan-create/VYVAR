@@ -91,21 +91,12 @@ def test_median_robust_to_bad_seeing_tail(tmp_path) -> None:
     assert math.isclose(v, 5.3)
 
 
-def test_d3_gate_stays_on_masterstar_fwhm() -> None:
-    s = (SRC / "target_comp_selection.py").read_text(encoding="utf-8")
-    kw = {k.arg: k.value for k in _calls(s, "select_comparison_stars_per_target")[0].keywords}
-    assert ast.unparse(kw["fwhm_d3_px"]) == "float(fwhm_px)"
-    pc = (SRC / "photometry_comp.py").read_text(encoding="utf-8")
-    pre = _calls(pc, "_build_candidates_pre")
-    assert len(pre) == 1
-    kwp = {k.arg: k.value for k in pre[0].keywords}
-    assert "fwhm_d3_px" in ast.unparse(kwp["fwhm_dao_px"])
-
-
-def test_select_signature_has_d3_param() -> None:
+def test_d3_gate_runs_once_on_the_pool() -> None:
+    """G07-25: D3 runs once, on the global pool (MASTERSTAR FWHM + plate-solve residual), not per target."""
     import inspect
 
-    from photometry_comp import select_comparison_stars_per_target
+    from comp_selection_per_target import _build_candidates_pre
 
-    sig = inspect.signature(select_comparison_stars_per_target)
-    assert sig.parameters["fwhm_d3_px"].default is None
+    assert "apply_d3_comparison_candidacy" not in inspect.getsource(_build_candidates_pre)
+    pc = (SRC / "photometry_comp.py").read_text(encoding="utf-8")
+    assert pc.count("apply_d3_comparison_candidacy(") == 1

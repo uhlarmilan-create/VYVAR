@@ -28,8 +28,9 @@ def parse_epsf_selection(selection: str | None) -> list[str]:
 
 
 def _token_matches(token: str, vsx_type: str, names: list[str], cid: str) -> bool:
-    """A token selects a target by VSX type token (``EA`` matches ``EA``, ``EA:``, ``EA|RS``), by name /
-    VSX name or by catalog id; ``*`` and ``?`` are wildcards (``E*`` = every type starting with E).
+    """A token selects a target by VSX variability type (``EA`` matches ``EA``, ``EA:``, ``EA|RS``; ``*`` and
+    ``?`` are wildcards on the TYPE only: ``E*`` = EA, EB, EW, ...), or by the exact star name / VSX name /
+    catalog id (Milan 2026-10-29, G09-42: a wildcard never selects by name - ``E*`` must not pick EZ Lyn).
     Case-insensitive."""
     from fnmatch import fnmatchcase  # noqa: PLC0415
 
@@ -40,7 +41,9 @@ def _token_matches(token: str, vsx_type: str, names: list[str], cid: str) -> boo
         return False
     if any(fnmatchcase(tok, normalize_vsx_type_token(t)) for tok in tokenize_vsx_type(vsx_type)):
         return True
-    return any(n and fnmatchcase(n.strip().upper(), t) for n in [*names, cid])
+    if any(ch in t for ch in "*?["):
+        return False
+    return any(n and n.strip().upper() == t for n in [*names, cid])
 
 
 @dataclass(frozen=True)

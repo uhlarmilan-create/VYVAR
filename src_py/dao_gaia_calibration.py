@@ -22,28 +22,6 @@ PX_ROUND_STEP = 0.5
 
 
 @dataclass(frozen=True)
-class DiagnosticPopulationStats:
-    """Auditable diagnostic-mode residual population (A-fix 4)."""
-
-    name: str
-    n: int
-    p50_px: float
-    p95_px: float
-    n_raw: int
-    p50_raw_px: float
-    p95_raw_px: float
-    tail_estimate_px: float
-    tail_method: str
-    measurement_mode: str
-    diagnostic_radius_px: float | None = None
-    g_band: str | None = None
-    states: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(frozen=True)
 class PopulationStats:
     """Measured residual population for one tolerance derivation (D-A)."""
 
@@ -67,41 +45,18 @@ class DerivedTolerances:
     pass2_center_tol_px: float
     lock_pair_tol_px: float
     lock_leftover_radius_px: float
-    forced_seed_centroid_max_px: float
     plate_scale_arcsec_per_px: float
     fwhm_px: float
     pass1_sigma: float
     pass2_sigma: float
     detection_identity: PopulationStats | None = None
     seed_centroid: PopulationStats | None = None
-    faint_star_centroid: PopulationStats | None = None  # legacy alias
-    diagnostic: DiagnosticTolerances | None = None
 
-    def to_dict(self) -> dict[str, float]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
-        if self.detection_identity is not None:
-            d["detection_identity"] = self.detection_identity.to_dict()
-        seed = self.seed_centroid or self.faint_star_centroid
-        if seed is not None:
-            d["seed_centroid"] = seed.to_dict()
-            d["faint_star_centroid"] = seed.to_dict()
-        else:
-            d.pop("faint_star_centroid", None)
+        if self.seed_centroid is None:
             d.pop("seed_centroid", None)
-        if self.diagnostic is not None:
-            d["diagnostic"] = {
-                "detection_identity": self.diagnostic.detection_identity.to_dict(),
-                "seed_centroid": self.diagnostic.seed_centroid.to_dict(),
-            }
         return d
-
-
-@dataclass(frozen=True)
-class DiagnosticTolerances:
-    """Diagnostic distributions recorded in certificate (A-fix 4)."""
-
-    detection_identity: DiagnosticPopulationStats
-    seed_centroid: DiagnosticPopulationStats
 
 
 def _round_px(value: float, *, step: float = PX_ROUND_STEP) -> float:
@@ -116,17 +71,11 @@ def _clamp_lo_hi(value: float, lo: float, hi: float) -> float:
 
 
 def plate_scale_arcsec_per_px_from_wcs_nan(wcs_obj: Any) -> float:
-    """Mean of proj_plane_pixel_scales [arcsec/px]; returns nan on failure."""
-    from astropy.wcs.utils import proj_plane_pixel_scales
+    """:func:`optics.plate_scale_arcsec_per_px_from_wcs` with NaN instead of None (G04-30: one formula)."""
+    from optics import plate_scale_arcsec_per_px_from_wcs  # noqa: PLC0415
 
-    try:
-        scales_deg = proj_plane_pixel_scales(wcs_obj)
-        arcsec = float(np.mean(scales_deg)) * 3600.0
-        if math.isfinite(arcsec) and arcsec > 0:
-            return arcsec
-    except Exception:  # noqa: BLE001
-        pass
-    return float("nan")
+    v = plate_scale_arcsec_per_px_from_wcs(wcs_obj)
+    return float("nan") if v is None else float(v)
 
 
 def solve_rms_px_from_fits_header(hdr: Any) -> float | None:
@@ -223,7 +172,7 @@ def derive_tolerances_from_residuals(
     centroid_floor_px: float = DEFAULT_CENTROID_FLOOR_PX,
     centroid_cap_px: float = DEFAULT_CENTROID_CAP_PX,
     identity_states: str = "pass1+pass2|all_G|matched",
-    seed_states: str = "DETECTED_P2|FORCED_SEED|Gaia_seed_position",
+    seed_states: str = "DETECTED_P2|Gaia_seed_position",
 ) -> DerivedTolerances:
     """Derive match radius from full matched identity p95; centroid QA from seed acceptances p95."""
     if identity_dr_px.size == 0:
@@ -255,14 +204,12 @@ def derive_tolerances_from_residuals(
         pass2_center_tol_px=float(centroid_px),
         lock_pair_tol_px=float(match_px),
         lock_leftover_radius_px=float(match_px),
-        forced_seed_centroid_max_px=float(centroid_px),
         plate_scale_arcsec_per_px=float(plate_scale_arcsec_per_px),
         fwhm_px=float(fwhm_px),
         pass1_sigma=float(pass1_sigma),
         pass2_sigma=float(pass2_sigma),
         detection_identity=pop_id,
         seed_centroid=pop_seed,
-        faint_star_centroid=pop_seed,
     )
 
 

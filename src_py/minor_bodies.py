@@ -26,7 +26,6 @@ from __future__ import annotations
 import gzip
 import logging
 import math
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -174,13 +173,20 @@ def load_orbits(catalogs_dir: Path | str) -> tuple[pd.DataFrame | None, pd.DataF
 
 # ---------------------------------------------------------------- orbits
 def _kepler_E(M: np.ndarray, e: np.ndarray) -> np.ndarray:
-    E = np.where(e < 0.8, M, np.pi * np.ones_like(M))
-    for _ in range(30):
-        dE = (E - e * np.sin(E) - M) / (1.0 - e * np.cos(E))
+    """Eccentric anomaly of Kepler's equation E - e sin E = M (elliptic, e < 1), Newton from the Danby (1987)
+    start E0 = M + 0.85 e sign(sin M) with M reduced to [-pi, pi] (G10-01: E0 = pi for e >= 0.8 failed for
+    M < 0: 0.7 / 2.7 / 13.6 % of positions at e 0.8 / 0.9 / 0.99). A position that does not converge is NaN."""
+    M = np.asarray(M, dtype=float)
+    e = np.asarray(e, dtype=float) * np.ones_like(M)
+    Mr = np.mod(M + np.pi, 2.0 * np.pi) - np.pi
+    E = Mr + 0.85 * e * np.sign(np.sin(Mr))
+    for _ in range(50):
+        dE = (E - e * np.sin(E) - Mr) / (1.0 - e * np.cos(E))
         E = E - dE
-        if np.nanmax(np.abs(dE)) < 1e-12:
+        if not np.any(np.abs(dE) >= 1e-12):
             break
-    return E
+    E = np.where(np.abs(E - e * np.sin(E) - Mr) <= 1e-9, E, np.nan)
+    return E + (M - Mr)
 
 
 def _hyper_H(M: np.ndarray, e: np.ndarray) -> np.ndarray:
@@ -274,18 +280,10 @@ def _hg_mag(H: np.ndarray, G: np.ndarray, r: np.ndarray, delta: np.ndarray, R: f
     return H + 5.0 * np.log10(r * delta) - 2.5 * np.log10(np.clip((1 - G) * p1 + G * p2, 1e-12, None))
 
 
-@dataclass
-class BodyPositions:
-    kind: str  # "minor_planet" | "comet"
-    name: np.ndarray
-    ra_deg: np.ndarray  # (n_bodies, n_times)
-    dec_deg: np.ndarray
-    mag: np.ndarray  # (n_bodies, n_times)
-    r_au: np.ndarray
-    delta_au: np.ndarray
-
-
-def _topocentric(fn, df: pd.DataFrame, jd_utc: np.ndarray, site: tuple) -> BodyPositions | None:
+def _topocentric(
+    fn, df: pd.DataFrame, jd_utc: np.ndarray, site: tuple
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Topocentric RA, Dec [deg], distance, heliocentric distance [au] per body and time; Sun distance per time."""
     n_t = len(jd_utc)
     ra = np.zeros((len(df), n_t))
     dec = np.zeros((len(df), n_t))

@@ -93,6 +93,37 @@ def _in_footprint(
     return True, ""
 
 
+def _footprint_misses(
+    xs: np.ndarray,
+    ys: np.ndarray,
+    *,
+    header: Any,
+    shape: tuple[int, int],
+    aperture_radii: tuple[float, float, float] | None,
+) -> np.ndarray:
+    """G05-11: True where a forced position cannot be measured on the frame's data.
+
+    The data footprint is the aligned footprint (``VY_AM0..8``; the aligner fills the rest of the
+    reference grid with a constant) or the whole chip for a frame that was not resampled. With the
+    aperture radii, the aperture must not touch the fill / chip edge and at least half of the sky
+    annulus must lie on data (``off_footprint``, as AP-FOOTPRINT); without them the centre pixel
+    must lie on data."""
+    from frame_footprint import aligned_footprint, has_alignment_transform, off_footprint  # noqa: PLC0415
+
+    h, w = int(shape[0]), int(shape[1])
+    covered = aligned_footprint(header, (h, w)) if has_alignment_transform(header) else np.ones((h, w), dtype=bool)
+    if aperture_radii is not None:
+        r_ap, r_in, r_out = (float(v) for v in aperture_radii)
+        return off_footprint(~covered, xs, ys, r_ap, r_in, r_out)
+    out = np.ones(len(xs), dtype=bool)
+    fin = np.isfinite(xs) & np.isfinite(ys)
+    xi = np.rint(np.where(fin, xs, -1)).astype(np.int64)
+    yi = np.rint(np.where(fin, ys, -1)).astype(np.int64)
+    inb = fin & (xi >= 0) & (xi < w) & (yi >= 0) & (yi < h)
+    out[inb] = ~covered[yi[inb], xi[inb]]
+    return out
+
+
 
 def inject_forced_masterstar_rows(
     df: pd.DataFrame,
@@ -100,12 +131,15 @@ def inject_forced_masterstar_rows(
     *,
     image: np.ndarray | None = None,
     margin_px: float = 0.0,
-    force_ids: set[str] | None = None,
+    header: Any = None,
+    aperture_radii: tuple[float, float, float] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Inject missing force-eligible MASTERSTAR members into ``df``.
 
     Positions are MASTERSTAR ``(x,y)`` (aligned grid; no refine, POS-SUBPIX-2026-10).
-    ``image`` only gives the frame footprint. Geometry misses get a row with
+    ``image`` (with its ``header``) gives the frame's data footprint: G05-11, the aligned footprint
+    from ``VY_AM0..8`` and the aperture / annulus ``aperture_radii`` (see :func:`_footprint_misses`);
+    without ``header`` only the image rectangle is used. Geometry misses get a row with
     ``geometry_ok=False`` and no finite flux coordinates for measurement skip,
     or are omitted from measurement while still recorded.
 
@@ -120,9 +154,6 @@ def inject_forced_masterstar_rows(
         return df if df is not None else pd.DataFrame(), meta
 
     eligible = master_tab.loc[force_eligible_masterstar_mask(master_tab)].copy()
-    if force_ids is not None:
-        cid_e = eligible["catalog_id"].astype(str).str.strip()
-        eligible = eligible.loc[cid_e.isin({str(x).strip() for x in force_ids})].copy()
     if eligible.empty:
         return df if df is not None else pd.DataFrame(), meta
 
@@ -167,7 +198,16 @@ def inject_forced_masterstar_rows(
         eligible = eligible.iloc[[i for i, c in enumerate(_cids) if c and c not in present]]
     # SPEED-2026-10: records instead of iterrows (0.5 s per frame of pandas row objects).
     _copy_cols = [c for c in _MASTERSTAR_COPY_COLS if c in eligible.columns]
-    for row in eligible.to_dict("records"):
+    _miss = None
+    if header is not None and img is not None and h_img > 0 and w_img > 0 and len(eligible):
+        _miss = _footprint_misses(
+            pd.to_numeric(eligible["x"], errors="coerce").to_numpy(dtype=np.float64),
+            pd.to_numeric(eligible["y"], errors="coerce").to_numpy(dtype=np.float64),
+            header=header,
+            shape=(h_img, w_img),
+            aperture_radii=aperture_radii,
+        )
+    for i_row, row in enumerate(eligible.to_dict("records")):
         cid = str(row.get("catalog_id", "")).strip()
         if not cid or cid in present:
             continue
@@ -176,6 +216,8 @@ def inject_forced_masterstar_rows(
         geo_ok, geo_reason = _in_footprint(
             x_ref, y_ref, width=max(w_img, 1), height=max(h_img, 1), margin_px=margin_px
         )
+        if geo_ok and _miss is not None and bool(_miss[i_row]):
+            geo_ok, geo_reason = False, "outside_aligned_footprint"
         if not geo_ok:
             meta["n_geometry_miss"] = int(meta["n_geometry_miss"]) + 1
             # Record miss as a stub row (no usable xy for aperture -> NaN flux).

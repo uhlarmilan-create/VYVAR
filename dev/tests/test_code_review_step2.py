@@ -64,7 +64,7 @@ def test_selection_requires_plate_scale(tmp_path: Path) -> None:
 
     import target_comp_selection
 
-    src = inspect.getsource(target_comp_selection.run_target_and_comp_selection)
+    src = inspect.getsource(target_comp_selection)  # the check lives in a step of the selection (T12 split)
     assert "or 1.3" not in src and "plate scale not derivable" in src
 
 
@@ -87,5 +87,7 @@ def test_comp_pool_known_variable_gate() -> None:
 
     import photometry_comp
 
-    src = inspect.getsource(photometry_comp.build_global_comp_pool)
+    src = inspect.getsource(photometry_comp.build_global_comp_pool) + inspect.getsource(
+        photometry_comp._pool_admission_gates
+    )
     assert "COMP_KNOWN_VARIABLE" in src and "analyze_draft_comp_pool" not in src

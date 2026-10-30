@@ -10,7 +10,6 @@ import pandas as pd
 
 import photometry_core  # noqa: F401  (import order: avoids circular import)
 from check_star_kmag import compute_check_ensemble_mag_calib
-from config import AppConfig
 
 SRC = Path(__file__).resolve().parents[2] / "src_py"
 
@@ -30,7 +29,7 @@ def _check(cat: dict, allow_relative: bool):
     ids = list(comps)
     return compute_check_ensemble_mag_calib(
         "9", ids, lc, cat, {c: {"quality": "good"} for c in ids},
-        cfg=AppConfig(), allow_relative=allow_relative,
+        allow_relative=allow_relative,
     )
 
 

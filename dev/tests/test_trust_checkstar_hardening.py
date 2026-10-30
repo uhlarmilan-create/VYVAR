@@ -169,7 +169,12 @@ def test_check_scatter_uses_sample_std_ddof1(tmp_path: Path) -> None:
     lc.mkdir()
     cid = "999"
     vals = [10.0, 10.2, 10.4, 10.1, 10.3]
-    pd.DataFrame({"kmag": vals}).to_csv(lc / f"check_kmag_{cid}.csv", index=False)
+    # G11-11: the check epochs of the target's exported rows (LC with matching source_file)
+    sf = [f"f{i}" for i in range(len(vals))]
+    pd.DataFrame({"source_file": sf, "kmag": vals}).to_csv(lc / f"check_kmag_{cid}.csv", index=False)
+    t = np.arange(len(vals), dtype=float)
+    pd.DataFrame({"source_file": sf, "jd": t, "bjd": t, "mag_calib": 12.0, "err": 0.01, "flag": "normal"}).to_csv(
+        lc / f"lightcurve_{cid}.csv", index=False)
     scatter, n = check_star_scatter(tmp_path, cid)
     assert n == len(vals)
     assert scatter == pytest.approx(float(np.nanstd(vals, ddof=1)), rel=0, abs=1e-9)

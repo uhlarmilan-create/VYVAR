@@ -65,6 +65,10 @@ def test_check_delta_and_zp_sigma_from_files(tmp_path: Path) -> None:
     }), encoding="utf-8")
     pd.DataFrame({"bjd": [1.0, 2.0, 3.0], "source_file": ["a", "b", "c"], "kmag": [11.10, 11.12, 11.14],
                   "kmag_err": [0.01] * 3}).to_csv(lc / "check_kmag_1.csv", index=False)
+    # G11-11: median over the target's exported epochs (its LC rows)
+    pd.DataFrame({"source_file": ["a", "b", "c"], "jd": [1.0, 2.0, 3.0], "bjd": [1.0, 2.0, 3.0],
+                  "mag_calib": [12.0] * 3, "err": [0.01] * 3, "flag": ["normal"] * 3}).to_csv(
+        lc / "lightcurve_1.csv", index=False)
     d, z = check_delta_and_zp_sigma(tmp_path, "1")
     assert d == pytest.approx(0.12) and z == pytest.approx(0.03)
     # band NONE -> not judged

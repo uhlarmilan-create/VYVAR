@@ -97,7 +97,7 @@ def test_border_deferred_when_no_aligned_frames(infolog_lines, tmp_path: Path, m
     w.wcs.cd = [[0.0001, 0.0], [0.0, 0.0001]]
     hdr.update(w.to_header())
     ms_fits = ps / "MASTERSTAR.fits"
-    fits.writeto(ms_fits, np.zeros((64, 64), dtype=np.float32), header=hdr, overwrite=True)
+    fits.writeto(ms_fits, np.zeros((128, 128), dtype=np.float32), header=hdr, overwrite=True)
 
     vsx = tmp_path / "vsx.db"
     _make_vsx_db(vsx, [(1, 0.0, 0.0)])  # outside the field: no VSX->Gaia cross-match needed

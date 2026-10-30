@@ -30,10 +30,14 @@ FIELD_MODES: tuple[FieldMode, ...] = ("inverted", "vivid", "physical")
 
 TEFF_MIN_K = 2500.0
 TEFF_MAX_K = 40000.0
-# Pecaut & Mamajek (2013, ApJS 208, 9) Gaia-era BP-RP vs Teff anchors (2024 online table).
-_BP_RP_ANCHORS = np.array([-0.40, -0.25, -0.05, 0.65, 1.00, 1.35, 1.80, 2.15, 2.85, 3.60, 4.50])
-_TEFF_ANCHORS = np.array([40000.0, 30000.0, 9600.0, 5772.0, 5250.0, 4400.0, 3800.0, 3400.0, 3000.0, 2700.0, 2500.0])
-_BP_RP_TO_TEFF = PchipInterpolator(_BP_RP_ANCHORS, _TEFF_ANCHORS, extrapolate=True)
+# G10-17: Pecaut & Mamajek (2013, ApJS 208, 9) dwarf sequence, table version 2022.04.16 (Bp-Rp, Teff):
+# B9V A0V A5V F0V F5V G0V G2V K0V K5V M0V M3V M5V M6V M7V M8V. The table gives no Bp-Rp hotter than B9V;
+# outside B9V..M8V the colour does not fix Teff here and the end values are returned (a bound, not a value).
+_BP_RP_ANCHORS = np.array([-0.120, -0.037, 0.194, 0.377, 0.587, 0.784, 0.823, 0.983, 1.43, 1.84, 2.50, 3.35, 4.16,
+                           4.65, 4.86])
+_TEFF_ANCHORS = np.array([10700.0, 9700.0, 8100.0, 7220.0, 6550.0, 5930.0, 5770.0, 5270.0, 4440.0, 3850.0, 3430.0,
+                          3060.0, 2810.0, 2680.0, 2570.0])
+_BP_RP_TO_TEFF = PchipInterpolator(_BP_RP_ANCHORS, _TEFF_ANCHORS, extrapolate=False)
 
 # display palette along BP-RP (sRGB 0..1)
 _PAL_BP_RP = np.array([-0.3, 0.2, 0.6, 0.85, 1.2, 1.6, 2.2, 3.2])
@@ -49,9 +53,9 @@ _CHROMA_BOOST = {"vivid": 1.6, "physical": 1.0}
 
 
 def teff_from_bp_rp(bp_rp: float | np.ndarray) -> np.ndarray:
-    """BP-RP -> Teff (K), monotonic, clamped to 2500..40000 K."""
+    """BP-RP -> Teff (K) on the Pecaut & Mamajek dwarf sequence (monotonic); outside B9V..M8V the end value."""
     x = np.atleast_1d(np.asarray(bp_rp, dtype=float))
-    return np.clip(_BP_RP_TO_TEFF(x), TEFF_MIN_K, TEFF_MAX_K)
+    return _BP_RP_TO_TEFF(np.clip(x, _BP_RP_ANCHORS[0], _BP_RP_ANCHORS[-1]))
 
 
 def bp_rp_rgb(bp_rp: float | np.ndarray) -> np.ndarray:

@@ -12,10 +12,12 @@ from pipeline import AstroPipeline
 
 
 def test_open_sqlite_connection_allows_cross_thread_use(tmp_path) -> None:
-    from database import open_sqlite_connection
+    from database import ThreadSafeSQLiteConnection, open_sqlite_connection
 
+    # The raw connection only lifts the same-thread check; concurrent use must go
+    # through the RLock wrapper (what VyvarDatabase uses), otherwise the test races.
     db = tmp_path / "vyvar.sqlite3"
-    conn = open_sqlite_connection(db)
+    conn = ThreadSafeSQLiteConnection(open_sqlite_connection(db))
 
     def _read() -> int:
         row = conn.execute("SELECT 1 AS n;").fetchone()

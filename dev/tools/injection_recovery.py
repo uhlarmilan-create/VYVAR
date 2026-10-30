@@ -20,7 +20,7 @@ check: pulls; detection limit) and next to isolated real stars (blend bias; leak
 neighbour's variability). A star is a real star of the same frame (a template: dark- and
 sky-subtracted, isolated, bright) shifted to the new position and scaled, plus photon noise.
 VYVAR measures catalogue stars only, so the synthetic stars are listed in a CSV that the night
-run reads through the test hook ``$VYVAR_INJECT_CATALOG`` (pipeline_catalog).
+run adds to its Gaia cone when started through ``dev/tools/injection_night_run.py --inject-catalog``.
   plan-new    control draft -> plan.json + inject_catalog.csv
   inject-new  raw LIGHT dir + plan + control draft + master dark -> injected raw LIGHT dir
   targets     (as above; adds the synthetic stars)

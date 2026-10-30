@@ -86,9 +86,17 @@ _LABEL_PRIORITY: tuple[str, ...] = (
 )
 
 
-_LUM_CLASS_RE = re.compile(r"(IAB|IB|IA|I|II|III|IV|V)\s*$", re.IGNORECASE)
-_LUM_CLASS_EMBED_RE = re.compile(r"\d(?:\.\d)?(IAB|IB|IA|I|II|III|IV|V)", re.IGNORECASE)
+#: G10-14: MK luminosity class = the first class after the temperature type (letters + subclass, optionally a
+#: range like K2/3 or G8-K0); longest token first, so "K3IIIb" is III (not IB) and "K0IVa" is IV (not I).
+_LUM_CLASS_RE = re.compile(
+    r"^[A-Z]*?\d+(?:\.\d+)?(?:[-/][A-Z]?\d+(?:\.\d+)?)?(IAB|IA|IB|III|IV|II|VI|V|I)", re.IGNORECASE
+)
 _IDENT_TIERS = ("confirmed", "likely", "candidate")
+#: G10-15: SIMBAD object types that confirm a label (explicit sets; "C..." matched Cl*, CV*, Ce* and any
+#: "*" made every star a binary). Very cool: carbon, S, long-period variable, Mira; binary: eclipsing,
+#: spectroscopic, double star and the legacy eclipsing sub-types.
+_SIMBAD_OTYPES_VERY_COOL = frozenset({"C*", "S*", "LP*", "MI*", "LP?", "MI?", "C*?", "S*?"})
+_SIMBAD_OTYPES_BINARY = frozenset({"EB*", "SB*", "**", "EB?", "SB?", "AL*", "BL*", "WU*", "EL*"})
 
 # Display names for confirmed-tier labels (drop "candidate").
 _CONFIRMED_NAME: dict[str, str] = {
@@ -109,14 +117,8 @@ def _sp_normalized(sp: str | None) -> str:
 def _parse_luminosity_class(sp_type: str | None) -> str | None:
     if not sp_type or not str(sp_type).strip():
         return None
-    s = _sp_normalized(sp_type)
-    m = _LUM_CLASS_RE.search(s)
-    if m:
-        return m.group(1).upper()
-    m2 = _LUM_CLASS_EMBED_RE.search(s)
-    if m2:
-        return m2.group(1).upper()
-    return None
+    m = _LUM_CLASS_RE.match(_sp_normalized(sp_type))
+    return m.group(1).upper() if m else None
 
 
 def _effective_logg(row: pd.Series) -> tuple[float | None, str]:
@@ -202,11 +204,7 @@ def _match_literature_confirmed(base_label: str, otype: str | None, sp_type: str
     elif base_label == _LABEL_VERY_COOL:
         if ot:
             ot_clean = ot_up.replace(" ", "")
-            if ot_clean.startswith(("LP", "MI")):
-                return f"{sp or ot}, SIMBAD"
-            if ot_clean.startswith("C*") or (ot_clean.startswith("C") and "C*" not in ot_clean[:2]):
-                return f"{sp or ot}, SIMBAD"
-            if ot_clean.startswith("S*") and not any(x in ot_clean for x in ("S*R", "S*B")):
+            if ot_clean in _SIMBAD_OTYPES_VERY_COOL:
                 return f"{sp or ot}, SIMBAD"
         if _is_m5_plus_or_cs(sp):
             return f"{sp}, SIMBAD"
@@ -221,7 +219,7 @@ def _match_literature_confirmed(base_label: str, otype: str | None, sp_type: str
         if _is_wr_sp(sp):
             return f"{sp}, SIMBAD"
     elif base_label == _LABEL_BINARY:
-        if ot and ("*" in ot or "BIN" in ot_up or ot_up.startswith("EB")):
+        if ot and (ot_up.replace(" ", "") in _SIMBAD_OTYPES_BINARY or "BIN" in ot_up):
             return f"{sp or ot}, SIMBAD"
     return None
 
@@ -951,7 +949,6 @@ def get_top_interesting_stars(
     min_per_net = HRD_MIN_PER_NET
     # One switch for the online lookups (Gaia TAP + SIMBAD).
     enrich_enabled = bool(getattr(cfg, "hrd_online_enrich_enabled", True)) if cfg is not None else True
-    simbad_enabled = enrich_enabled
     dsc_threshold = HRD_DSC_CONFIRM_PROB
 
     nss_enabled = hrd_nss_category_enabled(cfg)
@@ -961,18 +958,17 @@ def get_top_interesting_stars(
     if candidates.empty:
         return _empty_field_table()
 
-    if enrich_enabled or simbad_enabled:
+    if enrich_enabled:
         from hrd_enrich import enrich_candidates  # noqa: PLC0415
 
         candidates = enrich_candidates(
             candidates,
             cache_path,
-            enabled=enrich_enabled,
-            simbad_enabled=simbad_enabled,
+            enabled=True,
             timeout_s=HRD_ENRICH_TAP_TIMEOUT_S,
         )
 
-    enrichment_active = bool(enrich_enabled or simbad_enabled)
+    enrichment_active = enrich_enabled
     scored = _add_extremity_columns(candidates)
     scored = scored.sort_values(["_ext_bp", "_ext_abs"], ascending=[False, False])
     classified: list[tuple[pd.Series, str, str, str, str, str]] = []
@@ -1151,49 +1147,6 @@ def _resolve_masterstar_fits_path(platesolve_dir: Path | None) -> Path | None:
     return None
 
 
-def _draft_dir_from_photometry(photometry_dir: Path) -> Path:
-    """``.../Drafts/draft_XXX/platesolve/<obs>/photometry`` -> draft root."""
-    return Path(photometry_dir).resolve().parent.parent.parent
-
-
-def _obs_group_from_photometry(photometry_dir: Path) -> str:
-    return str(Path(photometry_dir).resolve().parent.name)
-
-
-def _masterstar_frame_score(df: pd.DataFrame) -> pd.Series:
-    """Weighted frame score (higher = better); HRD only - frame QC uses frame_qc.depth_score."""
-    score = pd.Series(0.0, index=df.index)
-    if df.empty:
-        return score
-
-    def _norm_inverse(s: pd.Series) -> pd.Series:
-        mn, mx = float(s.min()), float(s.max())
-        if not (np.isfinite(mn) and np.isfinite(mx) and mx > mn):
-            return pd.Series(1.0, index=s.index)
-        return 1.0 - (s - mn) / (mx - mn)
-
-    def _norm_direct(s: pd.Series) -> pd.Series:
-        mn, mx = float(s.min()), float(s.max())
-        if not (np.isfinite(mn) and np.isfinite(mx) and mx > mn):
-            return pd.Series(1.0, index=s.index)
-        return (s - mn) / (mx - mn)
-
-    fwhm = pd.to_numeric(df.get("FWHM_PX"), errors="coerce")
-    elong = pd.to_numeric(df.get("ELONGATION"), errors="coerce")
-    stars = pd.to_numeric(df.get("STAR_COUNT"), errors="coerce")
-    sky = pd.to_numeric(df.get("SKY_LEVEL"), errors="coerce")
-
-    if fwhm.notna().sum() >= 2:
-        score += 0.45 * _norm_inverse(fwhm.fillna(fwhm.max()))
-    if elong.notna().sum() >= 2:
-        score += 0.30 * _norm_inverse(elong.fillna(elong.max()))
-    if stars.notna().sum() >= 2:
-        score += 0.15 * _norm_direct(stars.fillna(stars.min()))
-    if sky.notna().sum() >= 2:
-        score += 0.10 * _norm_inverse(sky.fillna(sky.max()))
-    return score
-
-
 def fits_first_image_to_png(
     fits_path: Path,
     png_path: Path,
@@ -1223,7 +1176,9 @@ def fits_first_image_to_png(
         scaled = np.clip((data - lo) / (hi - lo), 0.0, 1.0)
         gray = (scaled * 255.0).astype(np.uint8)
         gray[~ok] = 0
-        img = Image.fromarray(gray, mode="L").convert("RGB")
+        # G10-41: FITS row 0 is the bottom of the image (origin="lower", as every other field map of VYVAR);
+        # a PNG starts at the top row, so the rows are flipped (field_annotation_y maps the markers)
+        img = Image.fromarray(np.ascontiguousarray(np.flipud(gray)), mode="L").convert("RGB")
         png_path = Path(png_path)
         png_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(png_path))
@@ -1254,39 +1209,9 @@ def ensure_clean_field_background_png(
     if ms_fits is not None and fits_first_image_to_png(ms_fits, out_png):
         return out_png, True
 
-    try:
-        draft_dir = _draft_dir_from_photometry(pt)
-        obs_group = _obs_group_from_photometry(pt)
-        from pipeline_catalog import find_qc_metrics_csv
-
-        qc_csv = find_qc_metrics_csv(draft_dir)
-        if qc_csv is None:
-            logger.info(
-                "HRD: no clean PNG and no qc_metrics.csv under %s (calibrated/ or processed/)",
-                draft_dir,
-            )
-            return None, False
-        dfq = pd.read_csv(qc_csv, low_memory=False)
-        if dfq.empty or "dst" not in dfq.columns:
-            return None, False
-        m = dfq["dst"].astype(str).str.contains(str(obs_group), regex=False)
-        dfq = dfq.loc[m].copy()
-        if dfq.empty:
-            return None, False
-        dfq["FWHM_PX"] = pd.to_numeric(dfq.get("fwhm_px"), errors="coerce")
-        dfq["ELONGATION"] = pd.to_numeric(dfq.get("elongation"), errors="coerce")
-        dfq["STAR_COUNT"] = pd.to_numeric(dfq.get("n_stars_detected"), errors="coerce")
-        dfq["SKY_LEVEL"] = pd.to_numeric(dfq.get("bg_median"), errors="coerce")
-        dfq["_fits_path"] = dfq["dst"].map(lambda s: Path(str(s).strip()))
-        dfq["_score"] = _masterstar_frame_score(dfq)
-        best = dfq.sort_values("_score", ascending=False).head(3)
-        for _, row in best.iterrows():
-            fp = row["_fits_path"]
-            if isinstance(fp, Path) and fp.is_file() and fits_first_image_to_png(fp, out_png):
-                return out_png, True
-    except Exception:  # noqa: BLE001
-        logger.exception("ensure_clean_field_background_png failed")
-
+    # G10-40 (Milan 2026-10-29): every photometry run has a MASTERSTAR, so the former qc_metrics best-frame
+    # fallback had no use; without a MASTERSTAR image the HRD is drawn without the field background.
+    logger.info("HRD: no MASTERSTAR image under %s - field background not drawn", platesolve_dir)
     return None, False
 
 
@@ -1311,6 +1236,11 @@ def _resolve_masterstar_naxis(platesolve_dir: Path | None) -> tuple[int, int] | 
 
 def _field_png_is_fits_derived(png_path: Path) -> bool:
     return Path(png_path).name == "hrd_field_from_fits.png"
+
+
+def field_annotation_y(y_fits: float, scale_y: float, png_h: int) -> float:
+    """PNG row of a FITS y (0-based, row 0 at the bottom) on the flipped field PNG (G10-41)."""
+    return float(png_h) - (float(y_fits) + 0.5) * float(scale_y)
 
 
 def field_annotation_pixel_scale(
@@ -1447,7 +1377,7 @@ def annotate_field_image(
         if x_raw is None or y_raw is None:
             continue
         x = x_raw * sx
-        y = y_raw * sy
+        y = field_annotation_y(y_raw, sy, h)
         if not (radius < x < w - radius and radius < y < h - radius):
             continue
         cat_raw = str(star.get("category", "")).strip()
@@ -1486,8 +1416,6 @@ def annotate_field_image(
             used_categories,
             key=lambda lab: _LABEL_PRIORITY.index(lab) if lab in _LABEL_PRIORITY else 99,
         )
-        if nss_category_enabled and _LABEL_BINARY not in entries:
-            pass
         lh = font_size + line_gap
         box_h = pad * 2 + lh * len(entries)
         box_w = max(80, int(w * 0.12))

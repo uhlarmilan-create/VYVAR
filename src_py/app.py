@@ -39,8 +39,6 @@ from ui_variability import render_variability_dashboard
 
 LOGGER = logging.getLogger(__name__)
 
-# MASTERSTAR: DB fallback (top % FWHM) when explicit UI paths fail to map; no session/UI control.
-_DEFAULT_MASTERSTAR_SELECTION_PCT = 10.0
 
 
 def _vyvar_effective_draft_dir_override() -> Path | None:
@@ -63,26 +61,6 @@ def _vyvar_format_run_failure_message(*, default: str) -> str:
         msg = str(detail or "Pipeline preflight failed before the infolog of the processed field was opened.")
         return f"{msg} Preflight log: {log_path}"
     return default
-
-
-def _vyvar_reset_variability_session_state() -> None:
-    """On loading a new draft, clear the variability / TESS / PDF state in the session."""
-    st.session_state.pop("var_analysis_done", None)
-    st.session_state.pop("tess_auto_done", None)
-    st.session_state.pop("crossmatch_auto_done", None)
-    st.session_state.pop("var_candidates", None)
-    st.session_state.pop("var_catalog_bullets", None)
-    st.session_state.pop("var_crossmatch_results", None)
-    st.session_state.pop("tess_results", None)
-    st.session_state.pop("accepted_period", None)
-    st.session_state.pop("accepted_period_msg", None)
-    st.session_state["var_analysis_timestamp"] = None
-    st.session_state["pdf_ready"] = False
-    st.session_state.pop("crossmatch_result", None)
-    st.session_state["selected_for_export"] = []
-    st.session_state.pop("var_results", None)
-    st.session_state.pop("_var_run_sig", None)
-    st.session_state.pop("var_candidate_count_autorun", None)
 
 
 def _run_vyvar_full_pipeline(
@@ -233,7 +211,6 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
 
     if nr.plan is not None:
         st.session_state["vyvar_smart_plan"] = nr.plan
-        st.session_state["vyvar_last_import_plan"] = nr.plan
     st.session_state["vyvar_last_import_equipment_id"] = int(
         (st.session_state.get("vyvar_active_job") or {}).get("equipment_id") or 0
     )
@@ -243,17 +220,10 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
         st.session_state["vyvar_last_draft_id"] = int(nr.draft_id)
     if nr.archive_path is not None:
         st.session_state["vyvar_post_cal_archive_path"] = str(nr.archive_path)
-        if nr.plan is not None:
-            st.session_state["vyvar_post_cal_plan_source"] = str(
-                getattr(nr.plan, "source_root", "") or ""
-            )
-        st.session_state["vyvar_status_calibrated"] = True
     if nr.ra_ui is not None:
         st.session_state["vyvar_pending_center_ra"] = float(nr.ra_ui)
     if nr.de_ui is not None:
         st.session_state["vyvar_pending_center_de"] = float(nr.de_ui)
-    if nr.processing_hash:
-        st.session_state["vyvar_observation_processing_hash"] = nr.processing_hash
     qsum = dict(nr.ram_qc_summary or {})
     analyze_token = f"ram_qc:{nr.draft_id}:{qsum.get('n_lights')}:{qsum.get('median_fwhm')}"
     st.session_state["vyvar_last_job_output"] = {
@@ -270,14 +240,11 @@ def _vyvar_apply_run_result(nr: Any, cfg: AppConfig, footer_placeholder: Any | N
     }
     if nr.platesolve_job_output is not None:
         st.session_state["vyvar_last_job_output"] = nr.platesolve_job_output
-    st.session_state["vyvar_last_job_summary"] = {"kind": "analyze", **qsum}
-    st.session_state["vyvar_status_analyzed"] = True
 
     if not nr.success:
         err = " ; ".join(nr.errors) if nr.errors else "night run failed"
         return _fail("Night pipeline", RuntimeError(err))
 
-    _vyvar_reset_variability_session_state()
     zero_target_setups = list(nr.zero_target_setups or [])
     completed = list(nr.completed_setups or [])
     _photometry_ran = [s for s in completed if s not in zero_target_setups]
@@ -626,7 +593,6 @@ def _sync_varstrem_session_state(pipeline: AstroPipeline) -> None:
         _tok_a = str(_ljo_apply.get("analyze_token", ""))
         if st.session_state.get("vyvar_applied_analyze_token") != _tok_a:
             st.session_state["vyvar_applied_analyze_token"] = _tok_a
-            st.session_state["vyvar_pointing_scan_cache"] = _ljo_apply.get("pointing_scan")
             _rq = _ljo_apply.get("ram_qc_summary") or {}
             _mra = _rq.get("median_ra_deg")
             _mde = _rq.get("median_de_deg")
@@ -763,12 +729,12 @@ def _render_pending_job_dispatcher(
 
                     LOGGER.info(f"[ePSF job] {_tag_epsf}: run_epsf_stage (build + fit + merge + LCs)")
                     stage_out = run_epsf_stage(
-                        params=None,
                         paths=EpsfStagePaths(
                             platesolve_dir=_ps_dir,
                             frames_root=_frames_root,
                             masterstar_fits=_ms_fits,
                             masterstars_csv=_ms_csv,
+                            photometry_dir=_ps_dir / "photometry",
                         ),
                         cfg=cfg,
                         progress_cb=_stage_cb,
@@ -793,7 +759,6 @@ def _render_pending_job_dispatcher(
                     + "; ".join(_lines_epsf),
                 }
                 st.session_state["vyvar_last_job_output"] = _out_epsf
-                st.session_state["vyvar_last_job_summary"] = {"kind": "run_epsf", "n_lightcurves": _n_lc_epsf}
                 LOGGER.info(f"[ePSF job] Done - {_out_epsf['message']}")
 
             else:
@@ -1127,7 +1092,6 @@ def render_live_view(
                             context="Scan Source",
                         )
                         st.session_state.pop("vyvar_post_cal_archive_path", None)
-                        st.session_state.pop("vyvar_post_cal_plan_source", None)
                     except Exception as exc:  # noqa: BLE001
                         st.error(f"Scan failed: {exc}")
                         st.session_state.pop("vyvar_smart_plan", None)
@@ -1177,7 +1141,6 @@ def render_live_view(
             if run_vyvar_clicked or run_vyvar_nc_clicked:
                 _pre_cal = bool(run_vyvar_nc_clicked)
                 _dao_sigma_default = resolve_detection_threshold_sigma(cfg.detection_threshold_sigma)
-                st.session_state["dao_threshold_sigma"] = _dao_sigma_default
                 st.session_state.pop("vyvar_active_job", None)
                 _started = _run_vyvar_full_pipeline(
                     pipeline=pipeline,
@@ -1320,7 +1283,6 @@ def main() -> None:
             s = (draft_path_inp or "").strip()
             if not s:
                 st.session_state.pop("vyvar_draft_dir_override", None)
-                _vyvar_reset_variability_session_state()
                 st.info("Processed field cleared - using the archive path from the configuration.")
                 st.rerun()
             else:
@@ -1333,7 +1295,6 @@ def main() -> None:
                     st.session_state["vyvar_draft_dir_override"] = str(ddir)
                     if parsed_id is not None:
                         st.session_state["vyvar_last_draft_id"] = int(parsed_id)
-                    _vyvar_reset_variability_session_state()
                     st.success(f"Processed field loaded: {ddir}")
                     st.rerun()
         ov = _vyvar_effective_draft_dir_override()

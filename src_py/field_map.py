@@ -27,7 +27,6 @@ LOGGER = logging.getLogger(__name__)
 
 FIELD_MAP_JPEG_QUALITY = 90
 FIELD_MAP_NAME = "field_map.jpg"
-FIELD_MAP_TARGET_FMT = "field_map_{cid}.jpg"
 
 #: grid steps: Dec in arcmin, RA in seconds of time; scale bar lengths in arcmin
 _DEC_STEPS_ARCMIN = (0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 60.0, 120.0, 300.0, 600.0)
@@ -35,6 +34,11 @@ _RA_STEPS_SEC = (1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0, 900
                  7200.0, 14400.0)
 _BAR_ARCMIN = (0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 60.0, 120.0, 300.0)
 _GRID_LINES = 6  # about this many lines across the field in each coordinate
+
+
+def target_field_map_path(lc_dir: Path | str, cid: str) -> Path:
+    """Where the per-target field map is written (``lightcurves/field_map_<id>.jpg``)."""
+    return Path(lc_dir) / f"field_map_{cid}.jpg"
 
 
 def field_map_path(directory: Path | str, cid: str | None = None) -> Path | None:
@@ -211,7 +215,9 @@ def _target_markers(target_row: pd.Series, comp_rows: pd.DataFrame) -> Callable[
                 raise ValueError("target outside the image")
             out.append(ax.add_patch(mpatches.Rectangle(
                 (tx - 15, ty - 15), 30, 30, linewidth=2.0, edgecolor="red", facecolor="none")))
-            tname = str(target_row.get("vsx_name", target_row.get("catalog_id", "T")))[:20]
+            from star_page_m3 import target_display_name  # noqa: PLC0415
+
+            tname = target_display_name(target_row)[:20]  # G11-22: the export STARID name, never "nan"
             out.append(ax.text(tx + 18, ty, f"T: {tname}", color="red", fontsize=7, va="center", fontweight="bold",
                                clip_on=True))
         except (KeyError, TypeError, ValueError):
@@ -240,7 +246,9 @@ class TargetFieldMap:
         self.canvas = FieldMapCanvas(data, header)
 
     def save(self, output_path: Path, target_row: pd.Series, comp_rows: pd.DataFrame) -> Path:
-        name = str(target_row.get("vsx_name", target_row.get("catalog_id", "")))
+        from star_page_m3 import target_display_name  # noqa: PLC0415
+
+        name = target_display_name(target_row)  # G11-22: the name of the export files (VSX, exoplanet host, Gaia DR3)
         return self.canvas.save(output_path, f"VYVAR - {name}   (red = VSX target, green = comparison stars)",
                                 _target_markers(target_row, comp_rows))
 
@@ -314,7 +322,8 @@ def save_field_map(
     comp_df: pd.DataFrame,
 ) -> Path | None:
     """``photometry/field_map.jpg``: every active target (red, named) and comparison star (green)."""
-    from photometry_shared import _normalize_gaia_id, _target_display_name  # noqa: PLC0415
+    from photometry_shared import _normalize_gaia_id  # noqa: PLC0415
+    from star_page_m3 import target_display_name  # noqa: PLC0415
 
     try:
         canvas = FieldMapCanvas(data, header)
@@ -356,7 +365,7 @@ def save_field_map(
                 continue
             out.append(ax.add_patch(mpatches.Rectangle(
                 (xc - 12, yc - 12), 24, 24, linewidth=1.5, edgecolor="red", facecolor="none")))
-            out.append(ax.text(xc + 14, yc, _target_display_name(row)[:20], color="red", fontsize=5, va="center",
+            out.append(ax.text(xc + 14, yc, target_display_name(row)[:20], color="red", fontsize=5, va="center",
                                clip_on=True))
         return out
 

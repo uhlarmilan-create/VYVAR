@@ -6,17 +6,17 @@ Source: `validation/params_registry.json` (editorial metadata) + `dataclasses.fi
 Human-readable guide: `VYVAR_CONFIG_GUIDE_EN.md` / `VYVAR_CONFIG_GUIDE_CZ.md` (per-parameter plain-language explanations, hand-authored).
 In-depth handbook: `VYVAR_PARAMETER_HANDBOOK_CZ.pdf` (Czech; per-parameter reasoning, ranges, math and literature; regenerate with `python dev/tools/docs_pdf/build_parameter_handbook.py`).
 
-_Generated 2026-10-27T23:36:48Z at git HEAD 7377f2b._
+_Generated 2026-10-29T12:20:09Z at git HEAD ac15980._
 
 ## Summary
 
-- Entries: 55
-- Tier: basic 9, advanced 24, expert 22
-- Kind: static 51, derived 0, resolved 4
-- Widget: auto 49, custom 0, hidden 6
-- Owner: db_static 5, config_runtime 44, fits_dynamic 0, internal 6
-- Scope: universal 39, rig 7, site 9, session 0
-- Scope key: none 39, rig 4, rig_band 2, rig_sampling 1, site 9, frame 0
+- Entries: 56
+- Tier: basic 9, advanced 25, expert 22
+- Kind: static 52, derived 0, resolved 4
+- Widget: auto 50, custom 0, hidden 6
+- Owner: db_static 5, config_runtime 45, fits_dynamic 0, internal 6
+- Scope: universal 40, rig 7, site 9, session 0
+- Scope key: none 40, rig 4, rig_band 2, rig_sampling 1, site 9, frame 0
 - Rig triage group: a 5, c 2
 
 Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, widget, label. `kind=resolved` means the runtime value can be auto-derived/overridden by the pipeline (the configured value is the base/fallback). `owner` is the storage-and-ownership axis: `db_static` (DB reference tables), `config_runtime` (user-tuned config.json), `fits_dynamic` (resolved from FITS/WCS at run time), `internal` (plumbing). `widget=custom` keys keep their hand-built UI; `widget=hidden` keys are plumbing not surfaced in the generated dashboard.
@@ -101,6 +101,7 @@ Columns: key, default, range, tier, kind, owner, scope, scope_key, scope_group, 
 | `comp_isolation_fwhm` | 3.0 | 1 .. 12 | expert | static | config_runtime | universal | none | n/a | auto | Comparison isolation |
 | `comp_max_delta_bprp` | 0.79 | 0 .. 5 | advanced | static | config_runtime | universal | none | n/a | auto | Largest colour difference |
 | `comp_max_slope_mmag_hr` | 5.0 | 0 .. 500 | expert | static | config_runtime | universal | none | n/a | auto | Comparison drift limit |
+| `comp_peak_sat_frac` | 0.8 | 0.5 .. 0.9 | advanced | static | config_runtime | universal | none | n/a | auto | Comparison peak limit (x saturation) |
 | `phase01_comparison_max_comp_rms` | 0.1 | 0.01 .. 0.5 | advanced | static | config_runtime | universal | none | n/a | auto | Comparison scatter limit |
 | `phase01_comparison_min_frames_frac` | 0.2 | 0.05 .. 0.95 | advanced | static | config_runtime | universal | none | n/a | auto | Comparison frame coverage |
 | `phase01_comparison_n_comp_max` | 8 | 3 .. 20 | advanced | static | config_runtime | universal | none | n/a | auto | Most comparison stars |

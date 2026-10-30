@@ -9,6 +9,7 @@ import logging
 
 from mag_constants import MAG_ERR_SCALE
 import math
+import warnings
 import numpy as np
 import pandas as pd
 from config import AppConfig
@@ -185,10 +186,20 @@ def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str
     if n < 3:
         return {c: a[:n].copy() for c, a in zip(cids, arrays, strict=True)}
     stack = np.column_stack([a[:n] for a in arrays])
-    med = np.nanmedian(stack, axis=1)
+    # G08-01: each comp on its own night level first (COMP-RMS-NORM-2026-10), then the per-frame median of
+    # the OTHER comps (leave-one-out): the raw per-frame median made the middle-brightness comp the
+    # reference (residual 0) and measured every slope against it
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # an all-NaN comp / frame stays NaN
+        lvl = np.nanmedian(stack, axis=0)
+    y = stack - lvl[None, :]
     out: dict[str, np.ndarray] = {}
     for j, cid in enumerate(cids):
-        out[cid] = stack[:, j] - med
+        others = np.delete(y, j, axis=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            ref = np.nanmedian(others, axis=1) if others.shape[1] else np.full(n, np.nan)
+        out[cid] = y[:, j] - ref
     return out
 
 def compute_lc_rms_ooe(
@@ -272,7 +283,7 @@ def check_comparison_stability(
 
     # Compute metrics on the per-frame differential residual series
     for cid, lc in comp_lc.items():
-        resid = _detrended_lc.get(cid, lc)
+        resid = _detrended_lc.get(cid, _residual_lc.get(cid, lc))  # G08-54: never the raw series
         finite = np.asarray(resid, dtype=np.float64)[np.isfinite(resid)]
         if len(finite) < 3:
             result[cid] = {
@@ -439,7 +450,6 @@ def ensemble_normalize(
     comp_catalog_mag: dict[str, float],
     comp_quality: dict[str, dict],
     *,
-    comp_likely_saturated: dict[str, np.ndarray] | None = None,
     n_comp_min: int = 3,
     weights_out: dict[str, float] | None = None,
     levels_out: dict[str, float] | None = None,
@@ -460,7 +470,6 @@ def ensemble_normalize(
       delta_mag = m_target - (Z_f + sum_all w_j median(m_j) / sum_all w_j).
     * ensemble_scatter = error of the weighted ensemble on that frame,
       sqrt(1 / sum_present (1/sigma_j^2)) - combined in quadrature with the target error.
-    * ``comp_likely_saturated`` (catalog_id -> bool per frame): that comp epoch is not used.
 
     Returns (mag_calib, delta_mag, ensemble_scatter), arrays of length n_frames.
     """
@@ -469,7 +478,6 @@ def ensemble_normalize(
     mag_calib = np.full(n_frames, float("nan"))
     delta_mag = np.full(n_frames, float("nan"))
     ensemble_scatter = np.full(n_frames, float("nan"))
-    comp_likely_saturated = comp_likely_saturated or {}
 
     selected = sorted(comp_quality.keys(), key=str) if comp_quality else sorted(comp_mag_inst.keys(), key=str)
     good_ids = [c for c in selected if c in comp_mag_inst]  # INV-COMP-MEMBERSHIP: good_ids = selected
@@ -478,16 +486,10 @@ def ensemble_normalize(
         return mag_calib, delta_mag, ensemble_scatter
 
     m = np.full((len(good_ids), n_frames), np.nan, dtype=np.float64)
-    n_sat_excluded = 0
     for j, cid in enumerate(good_ids):
         arr = np.asarray(comp_mag_inst[cid], dtype=np.float64).reshape(-1)
         k = min(n_frames, int(arr.size))
         m[j, :k] = arr[:k]
-        sat = comp_likely_saturated.get(cid)
-        if sat is not None:
-            sa = np.asarray(sat, dtype=bool).reshape(-1)[:k]
-            n_sat_excluded += int(np.count_nonzero(sa & np.isfinite(m[j, :k])))
-            m[j, :k] = np.where(sa, np.nan, m[j, :k])
 
     med = np.array([float(np.median(r[np.isfinite(r)])) if np.isfinite(r).any() else np.nan for r in m])
     keep = np.isfinite(med)
@@ -557,11 +559,11 @@ def ensemble_normalize(
     n_min = max(1, min(int(n_comp_min), len(ids)))
     frame_ok = (n_present >= n_min) & np.isfinite(t) & np.isfinite(Z)
     delta_mag = np.where(frame_ok, t - (Z + inst_level), np.nan)
-    if math.isfinite(C):
-        mag_calib = np.where(frame_ok, t - Z + C, np.nan)
-    else:
-        mag_calib = np.where(frame_ok, delta_mag + float(np.nanmedian(cat)) if ok_cat.any() else np.nan, np.nan)
-    ensemble_scatter = np.where(frame_ok & (iv > 0), np.sqrt(1.0 / np.where(iv > 0, iv, 1.0)), np.where(frame_ok, 0.0, np.nan))
+    # C is NaN only when no comp has a catalogue magnitude: no calibrated scale (G08-34)
+    mag_calib = np.where(frame_ok, t - Z + C, np.nan) if math.isfinite(C) else np.full_like(t, np.nan)
+    # G08-34: a frame whose present comps all lack a scatter estimate has an unknown ensemble error (NaN),
+    # not a zero one; the error budget treats a matched NaN as "no ensemble term" (documented there)
+    ensemble_scatter = np.where(frame_ok & (iv > 0), np.sqrt(1.0 / np.where(iv > 0, iv, 1.0)), np.nan)
 
     if weights_out is not None:
         weights_out.clear()
@@ -572,15 +574,26 @@ def ensemble_normalize(
         levels_out.update({c: float(v) for c, v in zip(ids, med, strict=False)})
     n_short = int(np.count_nonzero(np.isfinite(t) & (n_present < n_min)))
     logging.info(
-        "[ENSEMBLE-BROEG] n_comp=%d iter=%d w=[%s] frames_without_%d_comps=%d sat_epochs_excluded=%d",
+        "[ENSEMBLE-BROEG] n_comp=%d iter=%d w=[%s] frames_without_%d_comps=%d",
         len(ids),
         n_it,
         ", ".join(f"{v:.3f}" for v in w),
         n_min,
         n_short,
-        n_sat_excluded,
     )
     return mag_calib, delta_mag, ensemble_scatter
+
+
+def frame_rows_in_time_order(sub: pd.DataFrame) -> pd.DataFrame:
+    """G08-07: one star's frame rows in time order (frame mid-exposure ``jd``, then ``source_file``).
+
+    Every per-epoch series (target, comps, ensemble scatter, errors, flags) uses this order, so the
+    spike neighbours, running medians and point-to-point scatter see the night in time - file names
+    without zero padding (Light_9, Light_10) or two sequences with different prefixes do not reorder it.
+    ``jd`` is the frame's own time (the same for every star of a frame); frames without one go last.
+    """
+    keys = [c for c in ("jd", "source_file") if c in sub.columns]
+    return sub.sort_values(keys, kind="mergesort", na_position="last") if keys else sub
 
 
 def _ensemble_scatter_by_source_file(
@@ -590,8 +603,8 @@ def _ensemble_scatter_by_source_file(
 ) -> dict[str, float]:
     """Map proc CSV filename -> ensemble_scatter (G2-F004 epoch-level join key).
 
-    Must use the same ``source_file`` sort as ``_get_lc`` so indices of
-    ``ensemble_scatter`` (built from sorted target LC) map to the correct files.
+    Must use the same row order as ``_get_lc`` (``frame_rows_in_time_order``) so indices of
+    ``ensemble_scatter`` (built from the target LC) map to the correct files.
     """
     if ensemble_scatter is None:
         return {}
@@ -601,8 +614,7 @@ def _ensemble_scatter_by_source_file(
     sub = all_frames[all_frames["catalog_id"] == target_cid]
     if sub.empty:
         return {}
-    if "source_file" in sub.columns:
-        sub = sub.sort_values(["source_file"], kind="mergesort")
+    sub = frame_rows_in_time_order(sub)
     out: dict[str, float] = {}
     for i, sf in enumerate(sub["source_file"].astype(str).str.strip().tolist()):
         if i >= len(sc):
@@ -624,9 +636,9 @@ def _combine_err_with_ensemble_scatter_keyed(
     """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
 
     Domain contract: ``err_photon`` is relative flux (err/flux); ``scatter_by_file`` values are
-    ensemble SEM in magnitudes (Honeycutt residual std/sqrt(n) with c4 correction from
-    ``ensemble_normalize``). Per-rig ``sigma_sys_mag`` and per-epoch ``sigma_scint_mag`` (mag)
-    are added in quadrature after SEM.
+    the ensemble error in magnitudes, sqrt(1 / sum 1/sigma_j^2) over the present comparison stars
+    (``ensemble_normalize``, Broeg weights; no c4 factor). ``sigma_sys_mag`` (night or per-rig floor)
+    and per-epoch ``sigma_scint_mag`` (mag) are added in quadrature (``combine_production_err_rel``).
 
     err_total^2 = err_photon^2 + sem_rel^2 + scint_rel^2 + sigma_sys_rel^2 (relative-flux domain).
 
@@ -723,108 +735,6 @@ def _exclude_err_scatter_unmatched_epochs(
         else:
             out.append(arr)
     return tuple(out)
-
-def ct_ensemble_reference_maps(
-    ensemble_bp_rp: dict[str, float],
-    ensemble_quality: dict[str, dict],
-) -> tuple[dict[str, float], dict[str, dict]]:
-    """Per-target CT colour-ref membership is the ZP ensemble, never ``comparison_stars.csv``.
-
-    ``c1`` may still come from a field-level fit; ``ct_bp_rp_comp_med`` and the
-    weighted colour reference must use the same stars (and weights) as the
-    ensemble zero-point. An export-pool subset of the ensemble is not a valid
-    reference.
-    """
-    bp = dict(ensemble_bp_rp or {})
-    q = dict(ensemble_quality or {})
-    return bp, q
-
-def apply_color_term(
-    mag_calib: np.ndarray,
-    target_bp_rp: float,
-    comp_bp_rp: dict[str, float],
-    comp_quality: dict[str, dict],
-    c1: float,
-) -> tuple[np.ndarray, float, float]:
-    """Apply a constant colour correction to the calibrated light curve.
-
-    Caller must pass the ZP ensemble maps (``ct_ensemble_reference_maps``), not
-    the ``comparison_stars.csv`` export pool.
-
-    Formula:
-      bp_rp_comp_ref = median(bp_rp) of the usable ensemble comps
-      ct_correction  = c1 * (target_bp_rp - bp_rp_comp_ref)
-      mag_calib_ct   = mag_calib + ct_correction
-
-    The correction is a **per-target / per-draft constant** (no airmass / epoch dependence).
-
-    Returns: (mag_calib_ct, ct_correction, bp_rp_comp_ref)
-    """
-    if mag_calib is None:
-        return np.asarray([], dtype=np.float64), 0.0, float("nan")
-    base = np.asarray(mag_calib, dtype=np.float64)
-    if (not math.isfinite(float(c1))) or float(c1) == 0.0 or (not math.isfinite(float(target_bp_rp))):
-        return base.copy(), 0.0, float("nan")
-
-    usable = [cid for cid, q in comp_quality.items() if q.get("quality") in ("good", "suspect")]
-    bps = [float(comp_bp_rp.get(cid, float("nan"))) for cid in usable]
-    bps = [b for b in bps if math.isfinite(b)]
-    if not bps:
-        return base.copy(), 0.0, float("nan")
-    bp_ref = float(np.median(np.asarray(bps, dtype=np.float64)))
-    ref_label = "comp_med"
-    corr = float(c1) * (float(target_bp_rp) - float(bp_ref))
-    out = base + float(corr)
-    logging.info(
-        "[COLOR TERM] target bp_rp=%.3f, %s bp_rp=%.3f, correction=%+.4f mag (constant)",
-        float(target_bp_rp),
-        ref_label,
-        float(bp_ref),
-        float(corr),
-    )
-    return out, float(corr), float(bp_ref)
-
-def _check_color_term_extrapolation(
-    target_bp_rp: float,
-    comp_bp_rp_values: list[float],
-    target_name: str = "",
-    *,
-    extrapolation_tol: float = 0.0,
-) -> bool:
-    """Return True when target BP-RP is within the comp BP-RP range (+- ``extrapolation_tol``).
-
-    Return False when outside range -> caller must skip CT (target kept, uncorrected).
-    """
-    finite_vals: list[float] = []
-    for v in comp_bp_rp_values:
-        try:
-            vf = float(v)
-        except (TypeError, ValueError):
-            continue
-        if math.isfinite(vf):
-            finite_vals.append(vf)
-    try:
-        tgt = float(target_bp_rp)
-    except (TypeError, ValueError):
-        return True
-    if len(finite_vals) < 2 or not math.isfinite(tgt):
-        return True
-    try:
-        tol = max(0.0, float(extrapolation_tol))
-    except (TypeError, ValueError):
-        tol = 0.0
-    min_bprp = float(min(finite_vals))
-    max_bprp = float(max(finite_vals))
-    in_range = (min_bprp - tol) <= tgt <= (max_bprp + tol)
-    if not in_range:
-        logging.warning(
-            "[COLOR TERM] Target %s BP-RP=%.3f is outside the comp range [%.3f, %.3f] - color-term extrapolation may cause systematics.",
-            str(target_name or ""),
-            float(tgt),
-            float(min_bprp),
-            float(max_bprp),
-        )
-    return in_range
 
 # OUTPUT-REVIEW-2026-10 step 6 (Milan 2026-10-21): the light curve holds the per-epoch values only.
 # Per-target constants (colour term, k'') are in photometry_summary.csv, per-night ones in
@@ -1352,17 +1262,19 @@ def _get_lc(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
     sub = all_frames[all_frames["catalog_id"] == cid]
     if sub.empty:
         return np.array([], dtype=float)
-    if "source_file" in sub.columns:
-        sub = sub.sort_values(["source_file"], kind="mergesort")
+    sub = frame_rows_in_time_order(sub)
     return sub["mag_inst"].to_numpy(dtype=float)
 
 def _get_comp_bjd_series(cid: str, all_frames: pd.DataFrame) -> np.ndarray:
-    """BJD (or JD) time series for a comp, same row order as ``_get_lc``."""
+    """BJD (or JD) time series for a comp, same row order as ``_get_lc``.
+
+    The field-centre frame time of the proc CSV (G02-18): used for comparison-star stability (slope,
+    point-to-point), where a constant per-star offset of < 1 min does not matter; never published.
+    """
     sub = all_frames[all_frames["catalog_id"] == cid]
     if sub.empty:
         return np.array([], dtype=float)
-    if "source_file" in sub.columns:
-        sub = sub.sort_values(["source_file"], kind="mergesort")
+    sub = frame_rows_in_time_order(sub)
     if "bjd" in sub.columns:
         return sub["bjd"].to_numpy(dtype=float)
     if "jd" in sub.columns:
@@ -1457,33 +1369,16 @@ def _recompute_bjd_hjd_with_status(
         LOGGER.warning("BJD-PERTARGET: observer location not set - using frame JD fallback")
         return jd_arr.copy(), jd_arr.copy(), TIME_BASE_JD_FALLBACK
 
+    finite = np.isfinite(jd_arr)
+    if not np.any(finite):
+        return bjd_out, hjd_out, TIME_BASE_BJD_TDB
     try:
-        import astropy.units as u
-        from astropy.coordinates import EarthLocation, SkyCoord
-        from astropy.time import Time
+        from time_utils import light_time_corrected_jd  # noqa: PLC0415  (G02-19: the one formula)
 
-        location = EarthLocation(
-            lat=lat * u.deg,
-            lon=lon * u.deg,
-            height=alt * u.m,
-        )
-        target = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
-        finite = np.isfinite(jd_arr)
-        if not np.any(finite):
-            return bjd_out, hjd_out, TIME_BASE_BJD_TDB
-
-        t = Time(jd_arr[finite], format="jd", scale="utc", location=location)
-        ltt_bary = t.light_travel_time(target, "barycentric")
-        bjd_finite = (t.tdb + ltt_bary).jd
-        ltt_helio = t.light_travel_time(target, "heliocentric")
-        hjd_finite = (t + ltt_helio).jd
-
-        bjd_out[finite] = np.asarray(bjd_finite, dtype=float)
-        hjd_out[finite] = np.asarray(hjd_finite, dtype=float)
-        n_ok = int(np.sum(np.isfinite(bjd_out[finite])))
+        bjd_out, hjd_out = light_time_corrected_jd(jd_arr, ra_deg, dec_deg, (lat, lon, alt))
         LOGGER.debug(
             "BJD-PERTARGET: %d/%d frames recomputed (batch) for ra=%.4f dec=%.4f",
-            n_ok,
+            int(np.sum(np.isfinite(bjd_out))),
             int(finite.sum()),
             ra_deg,
             dec_deg,
@@ -1498,55 +1393,68 @@ def _recompute_bjd_hjd_with_status(
 # --- moved from export_reports (LAYER-2026-10) ---
 
 
-def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
-    """Rows suitable for AAVSO/VAR.ASTRO export; the exported magnitude is put in ``mag_calib``
-    for the writers.
-
-    Default magnitude: the published one (``mag_calib_ct`` with a colour term, else ``mag_calib``;
-    ``photometry_lightcurve.published_mag_column``). ``differential`` (UNCAL-EXPORT-2026-10): the
-    target has no standard zero point and ``delta_mag`` is exported."""
-    if lc_df is None or lc_df.empty:
-        return pd.DataFrame()
-    from photometry_lightcurve import published_mag_column  # noqa: PLC0415
-
-    work = lc_df.copy()
+def export_mag_column(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> str:
+    """The magnitude column an export of ``lc_df`` carries: ``mag_column`` when given, ``delta_mag`` for a
+    differential target, else the published one (``mag_calib_ct`` with a colour term, else ``mag_calib``)."""
     if mag_column:
-        mag_col = str(mag_column)
-    elif differential:
-        mag_col = "delta_mag"
-    else:
-        mag_col = published_mag_column(work) or "mag_calib"
-    if mag_col not in work.columns:
-        return pd.DataFrame()
-    mag = pd.to_numeric(work[mag_col], errors="coerce")
-    # A row needs a time: UTC JD (AAVSO) or BJD_TDB (VarAstro); each writer checks its own.
-    _jd = pd.to_numeric(work["jd"], errors="coerce") if "jd" in work.columns else None
-    _bj = pd.to_numeric(work["bjd"], errors="coerce") if "bjd" in work.columns else None
-    _t_ok = pd.Series(False, index=work.index)
-    for _tc in (_jd, _bj):
-        if _tc is not None:
-            _t_ok = _t_ok | (_tc.notna() & np.isfinite(_tc.to_numpy(dtype=float)))
-    finite = mag.notna() & np.isfinite(mag.to_numpy(dtype=float)) & _t_ok
-    if "flag" in work.columns:
+        return str(mag_column)
+    if differential:
+        return "delta_mag"
+    return published_mag_column(lc_df) or "mag_calib"
+
+
+def lc_export_mag_column(lc_df: pd.DataFrame) -> str:
+    """Magnitude column of a target's export known from its light curve alone: the published one when it
+    has a finite value, else ``delta_mag`` (a target without a band zero point is exported differential;
+    the GSPC column of such a target is ``delta_mag`` plus a constant)."""
+    pub = published_mag_column(lc_df)
+    if pub and pub in lc_df.columns and pd.to_numeric(lc_df[pub], errors="coerce").notna().any():
+        return pub
+    return "delta_mag"
+
+
+def export_row_mask(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.Series:
+    """EXPORT-ROWS (G11-12 / G11-20): the one row rule of the AAVSO and VarAstro files, the PDF / UI
+    "exported" counts and plots, and the trust coverage count.
+
+    A row is exported when its magnitude is finite, every time column it has (``jd`` UTC for AAVSO,
+    ``bjd`` BJD_TDB for VarAstro) is finite, its error ``err`` is finite and > 0 (when the LC has the
+    column; an LC without ``err`` is a broken file the exporter reports) and its flag is not one of
+    ``lc_outlier.EXPORT_EXCLUDE_FLAGS`` (FRAME-REJECT-2026-10: only the physical reasons drop an epoch;
+    frame_qc / artifact / high_err / spike stay, named in NOTES FLAG=). Both writers therefore carry the
+    same epochs."""
+    if lc_df is None or lc_df.empty:
+        return pd.Series(dtype=bool)
+    mag_col = export_mag_column(lc_df, differential=differential, mag_column=mag_column)
+    if mag_col not in lc_df.columns:
+        return pd.Series(False, index=lc_df.index)
+
+    def _fin(col: str) -> pd.Series:
+        v = pd.to_numeric(lc_df[col], errors="coerce").astype(float)
+        return pd.Series(np.isfinite(v.to_numpy()), index=lc_df.index)
+
+    times = [c for c in ("jd", "bjd") if c in lc_df.columns]
+    ok = _fin(mag_col) & pd.Series(bool(times), index=lc_df.index)
+    for c in times:
+        ok &= _fin(c)
+    if "err" in lc_df.columns:
+        ok &= _fin("err") & (pd.to_numeric(lc_df["err"], errors="coerce") > 0)
+    if "flag" in lc_df.columns:
         from lc_outlier import EXPORT_EXCLUDE_FLAGS  # noqa: PLC0415
 
-        fl = work["flag"].astype(str).str.strip().str.lower()
-        # FRAME-REJECT-2026-10: only the physical reasons drop an epoch (saturated, low_snr, no_data,
-        # edge_fail, nondetection); frame_qc / artifact / high_err / spike stay, named in NOTES FLAG=.
-        bad = fl.isin(list(EXPORT_EXCLUDE_FLAGS))
-        mask = finite & ~bad
-        n_excl = int((finite & bad).sum())
-        if n_excl:
-            logging.info(
-                "[EXPORT] LC-OUTLIER excluded %d epochs (flags in %s)",
-                n_excl,
-                sorted(EXPORT_EXCLUDE_FLAGS),
-            )
-        # FIX-EXPORTALLBAD-2026-10: when every epoch carries an exclusion flag nothing is
-        # exported (the old fallback exported all of them, flags ignored).
-        out = work.loc[mask].copy()
-    else:
-        out = work.loc[finite].copy()
+        ok &= ~lc_df["flag"].astype(str).str.strip().str.lower().isin(list(EXPORT_EXCLUDE_FLAGS))
+    return ok
+
+
+def _select_export_lc_rows(lc_df: pd.DataFrame, *, differential: bool = False, mag_column: str | None = None) -> pd.DataFrame:
+    """Rows of :func:`export_row_mask`; the exported magnitude is put in ``mag_calib`` for the writers.
+    FIX-EXPORTALLBAD-2026-10: when every epoch carries an exclusion flag nothing is exported."""
+    if lc_df is None or lc_df.empty:
+        return pd.DataFrame()
+    mag_col = export_mag_column(lc_df, differential=differential, mag_column=mag_column)
+    if mag_col not in lc_df.columns:
+        return pd.DataFrame()
+    out = lc_df.loc[export_row_mask(lc_df, mag_column=mag_col)].copy()
     if mag_col != "mag_calib":
         out["mag_calib"] = pd.to_numeric(out[mag_col], errors="coerce")
     return out

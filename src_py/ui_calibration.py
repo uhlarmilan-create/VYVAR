@@ -11,7 +11,8 @@ import pandas as pd
 _PLAN_STATUS_LABEL = {
     "OK": "OK",
     "MISSING_DARK": "no valid DARK",
-    "MISSING_FLAT": "no valid FLAT",
+    "MISSING_FLAT": "no valid FLAT - DARK only, flagged (not for submission)",
+    "FLAT_FROM_OTHER_NIGHT": "FLAT from another night (flagged)",
     "MISSING_DARK_AND_FLAT": "no valid DARK / FLAT",
     "NO_CAMERA_SELECTED": "select camera + telescope",
     "PRECALIBRATED": "used as is (pre-calibrated / uncalibrated)",

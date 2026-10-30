@@ -104,7 +104,8 @@ def test_owner_distribution(reg) -> None:
     # TRANSIENT-2026-10: transient_search_enabled added (44 -> 45).
     # RESOURCES-2026-10: per_frame_mp_reserve_ram_gb removed (config_runtime 45 -> 44) and
     # qc_preprocess_workers removed (internal 7 -> 6).
-    assert dict(dist) == {"db_static": 5, "config_runtime": 44, "internal": 6}, dist
+    # COMP-SAT-ONE-2026-10 (Milan 2026-10-29): comp_peak_sat_frac added (config_runtime 44 -> 45).
+    assert dict(dist) == {"db_static": 5, "config_runtime": 45, "internal": 6}, dist
 
 
 def test_site_is_not_stored_in_config(cfg_json) -> None:

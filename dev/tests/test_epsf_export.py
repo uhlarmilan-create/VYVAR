@@ -18,7 +18,8 @@ def _draft(tmp_path: Path) -> Path:
                   "vsx_period": [0.3, 1.2], "ra_deg": [320.1, 320.2], "dec_deg": [51.7, 51.8], "mag": [13.2, 14.1],
                   "catalog": "VSX"}).to_csv(ps / "photometry" / "active_targets.csv", index=False)
     head = ("# epsf_model_sha256=abc\n# ensemble_n_comp=3\n# ensemble_pinned_ids=7,8,9\n"
-            "# psf_lc_n_epochs_full=3\n# psf_lc_n_epochs_dropped_pin=1\n# psf_lc_n_epochs_target_saturated=0\n")
+            "# psf_lc_n_epochs_full=3\n# psf_lc_n_epochs_dropped_pin=1\n# psf_lc_n_epochs_target_saturated=0\n"
+            "# psf_lc_time_base=BJD_TDB\n")
     rows = ("bjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n2461316.40,True,0.512,0.008\n"
             "2461316.30,True,0.501,0.007\n2461316.35,False,,\n2461316.45,True,0.523,0.009\n")
     (lc / "lightcurve_1_psf.csv").write_text(head + rows)
@@ -59,3 +60,11 @@ def test_rerun_replaces_the_target_file(tmp_path: Path) -> None:
         "bjd,psf_fit_ok,psf_delta_mag,psf_delta_mag_err\n2461316.3,False,,\n")
     r = write_epsf_user_lightcurves(ps, ["1"], setup="g_120_4")
     assert r["n_written"] == 0 and not p.exists()  # no stale file of an earlier run
+
+
+def test_g09_39_jd_fallback_light_curve_is_not_exported_as_bjd(tmp_path: Path) -> None:
+    ps = _draft(tmp_path)
+    f = ps / "photometry" / "lightcurves" / "lightcurve_1_psf.csv"
+    f.write_text(f.read_text().replace("psf_lc_time_base=BJD_TDB", "psf_lc_time_base=JD_FALLBACK"))
+    r = write_epsf_user_lightcurves(ps, ["1"], setup="g_120_4")
+    assert r["n_written"] == 0 and "BJD_TDB required" in r["skipped"]["1"]

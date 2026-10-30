@@ -33,11 +33,10 @@ LOGGER = logging.getLogger(__name__)
 
 JohnsonBand = str  # "V", "B", "RC"
 
-# Table 5.10 applicability for Johnson-Cousins GBP-GRP polynomials (Gaia DR3 docs).
-BPRP_MIN: Final[float] = -0.5
-BPRP_MAX: Final[float] = 5.1
-G_MAG_MIN: Final[float] = 8.0
-G_MAG_MAX: Final[float] = 16.0
+# Table 5.10 applicability of G-V = f(GBP-GRP): -0.5 < GBP-GRP < 5.0 (Gaia DR3 docs 5.5.1; was 5.1 until
+# 2026-10-29, Milan). Table 5.10 gives colour ranges only - no G magnitude limit (the 8 < Mag < 16 of
+# Ruelas-Mayorga et al. 2025 is their validation sample, not a validity range).
+BPRP_MAX: Final[float] = 5.0
 
 # Table 5.9 sigma column (mag), same source as GDR3_TABLE59_COEFFS.
 SCATTER_SIGMA: Final[dict[JohnsonBand, float]] = {
@@ -53,15 +52,6 @@ GDR3_TABLE59_COEFFS: Final[dict[JohnsonBand, tuple[float, ...]]] = {
     "RC": (-0.02275, 0.3961, -0.1243, -0.01396, 0.003775),
 }
 
-# Back-compat alias (pre-push name; coefficients are GDR3 Table 5.9, not a separate fit).
-RODRIGUEZ2025_LANDOLT = GDR3_TABLE59_COEFFS
-
-# Riello et al. 2021 EDR3 Table C.2 / DR2 documentation (tests only).
-RIELLO_EDR3_FALLBACK: Final[dict[JohnsonBand, tuple[float, ...]]] = {
-    "V": (-0.0176, -0.00686, -0.1732),
-    "B": (0.01448, -0.6874, -0.3604, 0.06718, -0.006061),
-    "RC": (-0.02126, 0.4077, -0.1772, -0.02347, 0.00571),
-}
 
 
 COEFFICIENT_CITATION: Final[str] = (

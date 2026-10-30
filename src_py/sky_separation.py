@@ -99,25 +99,3 @@ def angular_distance_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> fl
         np.asarray([float(dec2)], dtype=np.float64),
     )
     return float(out[0])
-
-
-def pixel_distance_deg_vectorized(
-    x_t: float,
-    y_t: float,
-    x_arr: np.ndarray,
-    y_arr: np.ndarray,
-    *,
-    plate_scale_arcsec: float,
-) -> np.ndarray:
-    """Euclidean pixel distance converted to degrees via plate scale; invalid -> 999.0."""
-    x2 = np.asarray(x_arr, dtype=np.float64)
-    y2 = np.asarray(y_arr, dtype=np.float64)
-    scale = float(plate_scale_arcsec)
-    if not math.isfinite(scale) or scale <= 0:
-        return np.full(x2.shape, DIST_DEG_INVALID, dtype=np.float64)
-    _bad_xt = not math.isfinite(float(x_t))
-    _bad_yt = not math.isfinite(float(y_t))
-    bad = ~np.isfinite(x2) | ~np.isfinite(y2) | _bad_xt | _bad_yt
-    dist_px = np.hypot(x2 - float(x_t), y2 - float(y_t))
-    dist_deg = dist_px * scale / 3600.0
-    return np.where(bad, DIST_DEG_INVALID, dist_deg)
