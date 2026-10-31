@@ -81,8 +81,8 @@ def test_b_cap_suffices_byte_identical_to_rms_order() -> None:
     assert float(out.iloc[0]["comp_rms"]) <= float(out.iloc[1]["comp_rms"])
 
 
-def test_c_nan_bprp_legacy_delta_zero_bypass() -> None:
-    """(c) NaN target BP-RP: _delta_bprp_abs=0.0; no T4_FALLBACK."""
+def test_c_nan_bprp_whole_pool_no_fallback() -> None:
+    """(c) NaN target BP-RP (G07-02): |dBP-RP| undefined (NaN), whole pool by comp_rms; no T4_FALLBACK."""
     rows = [_row(f"S{i}", 0.2 + i, 0.02 + 0.001 * i) for i in range(5)]
     df = pd.DataFrame(rows)
     out = _select_comps_by_rms_then_color(
@@ -90,11 +90,12 @@ def test_c_nan_bprp_legacy_delta_zero_bypass() -> None:
     )
     assert not out.empty
     assert bool(out.attrs.get("color_fallback")) is False
-    assert (pd.to_numeric(out["_delta_bprp_abs"], errors="coerce") == 0.0).all()
+    assert bool(out.attrs.get("colour_unknown")) is True
+    assert pd.to_numeric(out["_delta_bprp_abs"], errors="coerce").isna().all()
 
 
 def test_d_fallback_still_below_nmin_returns_empty() -> None:
-    """(d) quality set still < n_comp_min -> empty (no_comps)."""
+    """(d) quality set still < n_comp_min -> empty (no_comps, reason too_few_comps - G07-02 floor)."""
     tgt = 5.675
     rows = [
         _row("ONLY1", 3.4, 0.02),
@@ -105,7 +106,7 @@ def test_d_fallback_still_below_nmin_returns_empty() -> None:
         df, target_bprp=tgt, n_comp_min=3, n_comp_max=8, max_delta_bprp=0.79, cfg=_cfg()
     )
     assert out.empty
-    assert bool(out.attrs.get("color_fallback")) is True
+    assert out.attrs.get("no_comps_reason") == "too_few_comps"
 
 
 def test_ladder_last_rung_is_cap_not_t4_110() -> None:

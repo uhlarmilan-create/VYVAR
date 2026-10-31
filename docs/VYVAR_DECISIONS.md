@@ -8,6 +8,9 @@ numbers and the day-by-day record live in `VYVAR_JOURNAL.md`; open work in `VYVA
 
 ## D-EPSF-CHI2-LOCUS-01 (Milan LOCK 2026-09-30) - ENACTED
 
+SUPERSEDED by CHI2-FLUX-REF-2026-10 (2026-10-27: binned plain medians, no straight line, no clipping) and
+CHI2-LOCUS-STARS-2026-10 (2026-10-31: >= 15 distinct stars per flux group). Marked in step 7 (G09-09).
+
 Fixed ``psf_chi2_threshold=50`` SET replaced by data-derived chi2(flux)
 locus (night slope k + per-frame intercept a_f; ``psf_chi2_locus_nsigma``
 default 5.0). Evidence: SAT-CHI2-01 (bright comps MODEL not SAT),
@@ -442,6 +445,8 @@ Evidence: `CURSOR_RESULT_EPSF_CORE_03.md`.
 
 ## D-RED-TARGET-T4-01 (Milan 2026-09-08)
 
+SUPERSEDED (the NaN-BP-RP `_delta_bprp_abs=0.0` bypass only) by COMP-FLOOR-2026-10 (2026-10-31).
+
 (i-a) automatic tier4 fallback. In
 `_select_comps_by_rms_then_color`'s color ladder
 (`photometry_comp.py` ladder build / rung loop), when the last
@@ -533,7 +538,9 @@ FRAME-QC-PARITY-01; "REJECTED" wording retired on annotate-only
 paths). Any future promotion of a Layer A metric to drop authority
 is a new decision with its own measured delta and anchor plan.
 
-## D-MP-CALIB-OFF-01 (Milan 2026-09-07)
+## D-MP-CALIB-OFF-01 (Milan 2026-09-07) - SUPERSEDED by MP-CALIB-ON-2026-10
+
+SUPERSEDED by MP-CALIB-ON-2026-10 (Milan 2026-10-26; parity test G01-42, 2026-10-31). Not to be enacted.
 
 Parallel calibration (VYVAR_CALIBRATE_MP=1) is permanently OFF and
 unsupported in production. The E5 latent spawn defect
@@ -3910,6 +3917,7 @@ class (draft_385, draft_383).
 `check_star_min_epochs=5`; `check_star_scatter` uses `ddof=1`. **Finding E re-checked:**
 `short_baseline` remains non-escalating YELLOW.
 
+SUPERSEDED (the n_comp_min candidate count of CS-3 only) by CHECK-ONE-2026-10 (2026-10-31).
 **CS-3 (circular check):** Phase-2A check-star selection used column-based ensemble exclusion
 that was dead code - on draft_387 ~97% of selected checks were still ensemble members. Fix:
 `ensemble_member_ids()` + `select_check_star(..., ensemble_ids=...)`. Spec:
@@ -4225,6 +4233,8 @@ SNR-opt sizing prefers observed-band catalog `mag` over Gaia G (`_APERTURE_SIZIN
 **Decision:** Headline precision on variable target cards = **out-of-eclipse** scatter
 (`lc_rms_ooe`, brightest tertile). Full undemeaned `lc_rms` retained but not the headline for
 variables (eclipse-dominated otherwise).
+SUPERSEDED by LC-PRECISION-P2P-2026-10 (headline = robust point-to-point scatter; lc_rms_ooe stays only as an
+EB diagnostic column).
 
 **Validation:** draft_409 V0612 cross-validated vs SIPS - eclipse shape + single bright outlier at
 ~JD 2461200.385 match in both reductions (frame-level artifact, not VYVAR bug).
@@ -5759,12 +5769,18 @@ The DAO-Gaia match itself was correct (a faint star's DAO centroid is pulled ~0.
    (`frame_depth.g_lim_frame`) whose model reaches a fit star's fit box (`epsf_frame.frame_fit_sources`);
    stars closer than two fit boxes form a group (photutils `SourceGrouper`). Positions fixed at Gaia
    through the MASTERSTAR WCS (frames are aligned to it), only fluxes fitted.
+   AMENDED by PSF-GROUP-REACH-2026-10 (2026-10-31): the group radius is the model reach (model half size +
+   fit box half size + 1 px), not two fit boxes.
 2. ePSF cutout / model = 12 x FWHM (was max(15, 5 x FWHM)): the growth curve of isolated bright stars
    reaches 0.94 at 7 px and levels off at ~12 px.
 3. Tested and **rejected**: sky from the residual image after subtracting the neighbours (comp RMS 7.31 vs
    6.85 mmag, blend bias unchanged); build stars with <= 1 % neighbour light in the cutout (288 instead of 600
    stars, 2x2 grid, comp RMS 7.18 vs 6.91 mmag, blend bias unchanged - EPSFBuilder's sigma clipping removes
    the contamination). The 3xFWHM / 2.5 mag build-star isolation stays.
+   CORRECTED 2026-10-31 (step 7 G09-02): since EPSF-NOCLIP-2026-10 the builder does not clip; the plain median of
+   the residuals over the build stars removes the contamination (Brno 534 g, 600 stars: wing light r > 4 FWHM all
+   vs the 350 clean stars -0.007 % of total). The residual-image sky was adopted later for the PSF fit's pass 2
+   (PSF-SKY-ALLSTAR-2026-10).
 
 **Injection-recovery** (10 frames; a real isolated star's stamp, scaled 2-5 mag fainter than a G 8.5-10.5
 host, placed 3-12 px from it, photon noise added; bias relative to isolated injected controls):
@@ -6343,6 +6359,8 @@ parameters as the LC error) and the reference noise (sum over the other n comps 
 n^2 - and the floor is the median excess above it, never negative. Simulation (12 comps, 300 frames, 4 mmag
 scintillation): no true floor gave 4.2 mmag before, < 1.5 mmag now; 3 and 6 mmag floors are recovered within
 1.5 mmag (dev/tests/test_sigma_sys_model_2026_10.py). Burdanov et al. (2014); Everett & Howell (2001).
+SUPERSEDED in part by SIGMA-SYS-POOL-2026-10 (Broeg-weighted reference, pooled robust pull solver; the term
+model stays).
 
 ## K2-ONE-2026-10 (Milan 2026-10-26, D4) - one k'' convention, ensemble colour
 Second-order extinction is a differential effect, dm0 = dm - k'' X (C_target - C_comparison) (Henden, AAVSO
@@ -6352,6 +6370,8 @@ of a calibrated g night showed a ~17 mmag airmass trend. Now the same per-epoch 
 into mag_calib when the curve is calibrated (mag_calib - delta_mag stays the zero point). The comparison colour is
 the Broeg-weighted mean BP-RP of the ensemble comps the light curve uses (`k2_extinction.ensemble_bp_rp`), the
 same weights as the zero point; the plain median of usable comps only when no weights exist.
+  SUPERSEDED in part by K2-BAND-2026-10 (no median fallback; the colourless weight share is recorded; per-band
+  colour slopes and NONE bands).
 
 ## COMP-POOL-ONLY-2026-10 (Milan 2026-10-26, D5) - comparison stars only from the rule pool
 When the global comparison pool was empty or its build failed, every target took MASTERSTAR stars with a
@@ -6382,6 +6402,18 @@ on 300 build stars, tested by PSF fits on the other 300): fit residual identical
 model power), PSF flux / cutout sum 0.961 vs 0.947 (1.4 % closer in every frame), ePSF peak 1.5 % lower, wings
 +0.02 % of the peak. Anderson & King (2000) used a mean with 2.5 sigma rejection; Godden & Blundell (2025) show that a
 clipped median biases the peak. Plot: dev/results/plots/D1_epsf_noclip_20261026.png.
+Deviation from the literature (step 7 G09-02, 2026-10-31, Milan approved): Anderson & King 2000 (PASP 112, 1360)
+combine with a 2.5-sigma rejecting mean and photutils by default with a 3-sigma clipped median; VYVAR uses a plain
+median of the residuals from the current model, iterated (Brno 534 g, 600 build stars: wing light all vs clean
+-0.007 %; peak -0.25 % vs clipped; the 50 % breakdown point covers neighbours in ~40 % of the stamps; a common peak
+bias cancels in differential photometry). Grid points without a sample are filled by cubic interpolation (photutils;
+no sample, not a rejection). The median stays safe for build sets well above ~50 stars:
+`epsf_build_stars_meta.json` records `n_stars`, `min_build_stars` (EPSF_MIN_BUILD_STARS, the hard minimum),
+`build_stars_warn_below` (100; WARNING below it at selection and per frame, `frames[i].n_stars_used`) and
+`frac_build_stars_nb_light_gt_1pct` (share of build stars with > 1 % Gaia neighbour light in the cutout,
+`psf_photometry.build_star_neighbour_light`). Tests: test_step7_psf_2026_10.py::
+test_g0902_build_star_meta_records_count_minimum_and_neighbour_light,
+test_g0902_no_clip_epsf_ignores_minority_neighbour_contamination.
 
 ## CHI2-FLUX-REF-2026-10 (Milan 2026-10-27, A) - psf_fit_ok against stars of similar flux
 The chi2 test of the frame PSF fit (EPSF-CHI2-LOCUS-01) compared each star with one straight line
@@ -6810,6 +6842,7 @@ iteration" paragraph of COMP-ADMIT (one-shot 1/sigma^2, no iteration).
   exported). mag_calib = m_target - Z_f + C with C = weighted mean of (catalogue - level); delta_mag uses the
   weighted mean level instead of C.
 - Ensemble error per frame: sqrt(1 / sum_present 1/sigma_j^2), combined in quadrature with the target error.
+  SUPERSEDED by ENSEMBLE-ERR-CC06-2026-10 (per-frame comp noise model + night excess, Collier Cameron 2006 eq. 4).
 - Published: `comp_quality_<target>.json` `broeg_weights` (sum 1 over the ensemble) - the w of the AAVSO NOTES, the
   VarAstro header and (G11-38, 2026-10-29) the w column of the PDF / UI comparison table.
 
@@ -6835,6 +6868,7 @@ selection + their comparison stars".
   `_<exp>_<bin>[_<OSC channel>]`, fractional exposures) and `band_classify.standard_band_of_filter` (one name ->
   band table for band_classify, gaia_bands, k2). Unknown names are UNKNOWN (no prefix heuristic); IR-cut / UV-IR-cut /
   L / broadband light-pollution names are LUMINANCE. Upper-case "G" stays Sloan g (open question G08-14).
+  SUPERSEDED by FILTER-G-AMBIG-2026-10 (bare upper-case G / Z are not a standard band).
 - **Optics**: `optics.py`. DB (TELESCOPE.FOCAL, EQUIPMENTS.PIXELSIZE) -> header, logged cross-check; no value rewritten
   (the 1750-2250 mm "typo" rule is gone; a solved scale > 10 % off the expected one is reported). FOCALLEN unit from
   the card comment, else metres below 0.5. XPIXSZ/YPIXSZ = binned pitch (MaxIm convention, QHY comment "X binned
@@ -7428,3 +7462,451 @@ a section "Gaia DB incomplete -> how to check and repair": the run's infolog WAR
 lines, the Windows commands from the VYVAR folder (`gaia_maintain.py --report`, `build_gaia_catalog.py --check`,
 `--repair --strip KEY`, `--repair`), resumable (one strip per transaction), rough duration, and that it needs
 internet access to the ESA Gaia archive. Item 8 of the same round: no log tab in the GUI (no change).
+
+## COMP-FLOOR-2026-10 (G07-02) - one comp-count floor; targets without a colour (Milan 2026-10-31)
+
+Literature: three-star method needs >= 3 stars (Howell et al. 1988, Howell 2007 slides); AAVSO Guide to
+Photometric Uncertainty App. B (12-20 typical); PINES / PHOTOMETRYPIPELINE >= 3; VaST does not use an unknown
+colour. Change (`photometry_comp._select_comps_by_rms_then_color`): the admitted count is 0 or in
+[n_comp_min, n_comp_max] for every target. A target with NaN BP-RP has no |dBP-RP| (`_delta_bprp_abs` NaN): its
+rung is the whole under-ceiling single-source set ranked by comp_rms, selection_note `colour_unknown` in
+comparison_stars_per_target.csv, trust soft note "target colour unknown - no colour matching, no colour term /
+k''". Fewer candidates than n_comp_min (either branch) -> no comparison set: WARNING, summary skip_reason
+`no_comps`, reason in pipeline_meta `comp_selection_no_comps.by_reason` (`too_few_comps`; other reasons:
+`empty_pool`, `no_candidates`, `no_comp_rms`). The "keeping thin set (graceful degradation)" path is gone (an
+admitted set below the floor raises). Supersedes the NaN-colour bypass of D-RED-TARGET-T4-01.
+
+## COMP-SNR-ONE-2026-10 (G07-26) - one comparison-star S/N gate, justified by the log bias (Milan 2026-10-31)
+
+Literature: sigma_mag = 1.0857 / (S/N) (Howell 2006 ch. 4); differential error s^2 = s_t^2 + s_ens^2 (Astrokit,
+Newberry 1991); AAVSO CCD/CMOS guide 2.1.4 (S/N below 10-20 poor), AAVSO uncertainty guide App. B (brighter comps
+for fainter targets). COMP_SNR_MIN = 20 is kept and now justified by the magnitude (log) bias of a comp,
++0.543 / (S/N)^2 mag (S/N 10 -> 5.4 mmag, 20 -> 1.4, 50 -> 0.2; it moves with transparency and leaks into the
+frame zero point of a thin faint ensemble) - written into pipeline_constants. Change: one gate
+max(cfg.snr_min, COMP_SNR_MIN) in `photometry_comp.apply_comp_quality_gates` (`comp_snr_gate`; a pool without
+`snr_ap_pixscaled` raises); the D3 S/N term is removed (`d3_comparison_candidacy`: D3_SNR_MIN and the
+`snr_min` argument gone); config.py / config guides: snr_min is the target limit, comps and check stars (from the
+comp pool) need max(snr_min, 20); methods matrix prints the effective gate. New summary column
+`ens_to_target_noise` = median over epochs of s_ens / sqrt(photon^2 + scint^2) of the target (relative flux; floor
+excluded), WARNING when > 1 (comps dominate the error) - a diagnostic, not a gate. Numbers byte-identical at
+defaults (snr_min 10 < 20). Refines COMP-SNR-20-2026-10 (kept).
+
+## CHECK-ONE-2026-10 (G08-41) - one clean independent check star suffices (Milan 2026-10-31)
+
+Literature: AAVSO extended format has one KNAME / KMAG; AAVSO forum (VPhot thread): "you always use one check";
+AAVSO Guide to Photometric Uncertainty, Technique 2: the check "closest in magnitude to the variable", "within 2
+magnitudes"; no source asks for >= 3 check candidates. Change: `check_star_kmag.select_check_star` drops the
+`n_comp_min` count floor (the caller passed min(3, pool size BEFORE the ensemble exclusion), so a target with
+1-2 independent clean candidates got no check star and went hard RED "no check-star verification"); the best
+clean independent candidate is chosen when >= 1 exists. CHECK-RULES-2026-10, CHECK-NOT-SUSPECT, BLEND-K
+unchanged. Optional rule taken: G(check) - G(target) recorded as `check_star.check_minus_target_g_mag` in the
+comp_quality JSON, WARNING when |dG| > 2 mag (`CHECK_TARGET_DMAG_WARN`, not a gate). Spec
+VYVAR_CHECKSTAR_SELECTION_SPEC.md CS-3 amended. Supersedes the count part of CS-3 (2026-06-11).
+
+## CT-ZP-ERR-2026-10 (G08-46) - colour-term uncertainty is a zero-point term (Milan 2026-10-31)
+
+Literature: transformation coefficients are solved once per night / system and applied to every observation
+(Harris, Fitzgerald & Reed 1981; Henden & Kaitchuck 1982, 2nd hand); AAVSO CCD guide 2.2. The correction
+dm = P(C_t) - sum w_j P(C_j) / sum w_j uses the same fitted coefficients on every epoch, so its error is fully
+correlated across the light curve: a per-target zero-point term, not a per-point random term. Change: the dead
+per-point block (`err += |dC| c1_stderr`, c1_stderr was always NaN) is deleted - per-point `err` is unchanged.
+`color_transform._robust_poly` returns the coefficient covariance, stored as `ColourTermFit.cov`;
+`ColourTermFit.correction_sigma` = sqrt(g^T Cov g), g_k = (C_t - c_ref)^k - sum_j wn_j (C_j - c_ref)^k (valid for
+order >= 2); `aperture_photometry_target.ct_zero_point_sigma` adds P'(C_t) sigma(BP-RP_t) when the Gaia DB holds
+the target's BP-RP error (`catalog_db.query_local_gaia_bp_rp_error`: column `bp_rp_error`, else
+`bp_flux_error_rel` / `rp_flux_error_rel`); otherwise the colour part is left out and recorded as unavailable
+(the current DB schema has neither - `target_bp_rp_err_source` = "unavailable: Gaia DB has no BP/RP error
+columns"; nothing is invented). Reported: comp_quality JSON `zero_point` (`sigma_zp_ct_mag`,
+`sigma_zp_ct_coef_mag`, `sigma_zp_ct_colour_mag`, `target_bp_rp_err`, `target_bp_rp_err_source`; only when the
+colour term is applied), summary columns `sigma_zp_ct_mag` and `ct_c1_stderr` (now finite), AAVSO NOTES
+`CTERR=` and an export header line. Covariance estimator: the M-estimator sandwich B^-1 M B^-1 n/(n-p) for the
+soft-L1 fit (Huber 1981) - the loss-scaled least_squares Jacobian with the robust scale named in the literature
+review overestimates the bootstrap scatter of c1 by 25-45 % on Gaussian data and fails the agreed bootstrap test
+(20 %); the sandwich agrees within 5 % (/root/scr/s7/impl_comp/ct_cov_variants.py; test in dev/tests/test_step7_comp_2026_10.py). For Milan to confirm.
+
+Known limitation (not implemented, G08-46 side note): for a variable whose colour changes with phase, the
+colour term uses the constant catalogue BP-RP of the target, so the corrected light curve carries an amplitude
+scale error of about c1 x dC/dm (e.g. 0.149 x 0.3 = 4.5 % in g for a star reddening by 0.3 mag in BP-RP per
+mag of brightening). Fixing it needs a per-epoch colour (a second filter); until then the amplitude of
+strongly colour-changing variables in a transformed band is uncertain at that level.
+
+
+## FILTER-G-AMBIG-2026-10 - a bare "G" or "Z" filter is no standard band (G08-14, Milan approved 2026-10-31)
+Literature: AAVSO filter codes (aavso.org/filters: SG = Sloan g, TG = tri-colour green, a bare G is not a code),
+AAVSO recommended FITS FILTER values (archive.aavso.org/node/79093), Henden (node 79179: a green filter is TG).
+`band_classify.standard_band_of_filter` no longer maps upper-case "G" / "Z" to Sloan g / z: they are UNKNOWN
+(`band_classify.AMBIGUOUS_FILTER_LETTERS`). `gaia_bands.filter_band` gives them no zero-point band (zp_band "",
+no AAVSO code, not transformable): comps have no catalogue magnitude -> band_system NONE -> differential light
+curve, AAVSO export refused; no colour term, k'' source none. WARNING in the log / infolog and pipeline_meta
+`filter_band` {filter_token, zp_band, aavso_code, transformable, label, warning}. Explicit names (g, gp, g', sg,
+SG, sloan_g, sdss_g) stay Sloan g; R / B unchanged (AAVSO FITS R = Cousins R, B = Johnson B). The band lookup
+of a FITS FILTER keeps the case of single letters. Later option C: the rig declares its wheel. Supersedes the
+"upper-case G stays Sloan g" line of HDR-ONE-2026-10.
+
+## K2-BAND-2026-10 - k'' per band from the band's own colour; NONE bands with a reason (G09-05 / G08-47 / G08-48, Milan approved 2026-10-31)
+Literature: Smith et al. 2002 (AJ 123, 2121) eqs. 4-8 (u' per u'-g', g' per g'-r', r' per r'-i', i' / z' per
+i'-z'); Jordi et al. 2010 (A&A 523, A48; the module cited "A&A 515 A16") Table 5 (r-i) -> BP-RP;
+AAVSO PEP Guide 3.0 Sect. 3.5.4 (second-order extinction in V, R, I negligible). K2-ONE-2026-10 (one convention,
+Broeg-weighted ensemble colour) is kept. Changes in `k2_extinction`: Sloan r k'' = -0.004 x d(r-i)/d(BP-RP)
+= -0.004 x 0.433 (Jordi Table 5 at r-i = 0.15) instead of x 1.054 (the g-r slope; 2.4x too large); Sloan i / z ->
+source none "no citable colour slope" (no Jordi i-z relation); V / Rc / Ic / Rj / Ij -> source none "negligible per
+AAVSO PEP Guide 3.5.4" (no column of k2_delta_mag zeros any more); clear / luminance / tri-colour -> none
+"uncorrected ... k'' X dC remains"; unknown / ambiguous filters -> none with that reason. `resolve_k2` returns
+(value, source, reason); the reason is in photometry_summary.csv `k2_reason` and pipeline_meta `k2`
+{k2_value, k2_source, k2_reason}. The k'' colour reference no longer falls back to the plain comp median; the
+Broeg-weight share of comps without BP-RP is `k2_colour_missing_wfrac` in the summary, WARNING when > 0.
+Johnson U / Sloan u keep the documented u'-g' slope exception. Supersedes the V/R/I "k2 = 0" convention of
+K2 v1 (2026-07-07) and the median fallback of K2-ONE-2026-10.
+
+## LC-PRECISION-P2P-2026-10 - headline precision = robust point-to-point scatter (G08-17, Milan approved 2026-10-31)
+Literature: Sokolovsky et al. 2017 (MNRAS 464, 274) Sect. 2.15 (von Neumann ratio, delta^2 = 2 sigma^2 for white
+noise; 1/eta sensitive only to variability slower than the sampling) and Sect. 2.3 (MAD x 1.4826); Pont et al.
+2006 (red noise); AAVSO practice (check-star scatter as the uncertainty). The brightest-tertile scatter
+`lc_rms_ooe` is 0.53 x sigma for white noise and ~1.7 x sigma for pulsators (goldens: OOE / err 0.48-0.74, below
+the error bars). Now every target's headline is `lc_precision_p2p` = 1.4826 MAD(diff(m)) / sqrt(2) over
+consecutive normal epochs (`photometry_lightcurve.compute_lc_precision_p2p`; NaN below 3 normal epochs), new
+column of photometry_summary.csv. Target page / PDF per-star facts: "Precision (p2p) / MERR" with the ratio
+p2p / median err (error-bar check, ~1), "rms (full)" (amplitude + noise), the check-star scatter (night
+repeatability, red noise included) as before; PDF run summary: "Median precision (p2p)" and a column in the
+summary table. lc_rms (full) and lc_rms_ooe stay in the summary (the latter only as a labelled EB diagnostic).
+Caveats: p2p misses red noise (hence the check-star row) and inflates for variables with fewer than ~20 points
+per period. No LC, err or export change. Supersedes "lc_rms (OOE) for variables" (headline).
+
+## ENSEMBLE-ERR-CC06-2026-10 - ensemble error = comps' per-frame noise model + night excess (G08-08, Milan approved 2026-10-31)
+Literature: Collier Cameron et al. 2006 (MNRAS 373, 799, Sect. 4.1 eq. 4: weights 1/(sigma_ij^2 + s_j^2), per-frame
+formal error plus a night-constant per-star excess); variance of a weighted mean of independent comps; Astrokit
+(Burdanov et al. 2014: the star's own theoretical error). Option C'' of the step-7 literature review: per frame
+err_ens_f = sqrt(sum_present wn_jf^2 (p_jf^2 + x_j^2)), wn = Broeg weights normalised over the present comps,
+p_jf = the comp's noise model on the frame (CCD error at the light-curve aperture + the frame's scintillation,
+the same functions as the target error; PSF light curve: PSF fit error + the aperture LC's scintillation),
+x_j^2 = max(0, s_j^2 - mean_f p_jf^2), s_j^2 from the linear leave-one-out deconvolution (I + U2) s^2 = R with
+the final Broeg weights (solved directly; negative s^2 -> 0). `photometry_lightcurve.ensemble_error_per_frame`;
+`ensemble_normalize(..., comp_noise_mag=)` returns it (None without a model); the aperture light curve computes it
+in `_tgt_time_and_errors` once the scintillation is known. N <= 2 comps -> ValueError (not identifiable; G07-02
+keeps every ensemble >= 3); the PSF light curve of a target with < 3 PSF-measured comps is not written (WARNING).
+A present comp without a noise model -> NaN error on that frame + WARNING. Broeg weights and Z_f unchanged
+(delta_mag / mag_calib identical); err, err_sem_rel, kmag_err, chi2 / trust ratios change. Simulation (20 % bad
+frames, N = 3-8, variable comp, missing comps, floor): std(z) 0.96-1.03 on good and bad frames (old 0.51-0.77 /
+1.00-1.50). Supersedes the ensemble-error line of ENSEMBLE-BROEG-2026-10.
+
+## SIGMA-SYS-POOL-2026-10 - night floor: one f for all comps by the pooled robust pull (G08-03, Milan approved 2026-10-31)
+Literature: Collier Cameron et al. 2006 (MNRAS 373, 799, Sect. 4.1 eq. 5-6: extra variance by the "reduced
+chi^2 = 1" normalisation of heteroscedastic residuals); Osborn et al. 2015 (MNRAS 452, 1707, eq. 7 and Table 1:
+scintillation model, C_Y quartiles ~ +-30 %); Dravins et al. 1998 (airmass exponent). The SIGMA-SYS-MODEL term
+model (photon + sky + read, scintillation once, reference noise) and SIGMA-SYS-TOTAL (total, not p2p) are kept.
+`sigma_floor_core.night_sigma_sys_from_comps` now: the LOO reference of each comp is the Broeg-weighted mean of
+the other present comps (`photometry_lightcurve.broeg_weights`), its noise sum_k u_k^2 (photon_k^2 + scint^2) -
+the deconvolution of ENSEMBLE-ERR-CC06-2026-10; the floor f is ONE value for all qualifying comps solving
+1.4826 MAD over all (comp, frame) of r / sqrt(pred + f^2 (1 + sum u^2)) = 1 (the reference carries the others'
+floor: 1 + 1/n for equal weights; no clipping; f = 0 when the pull is <= 1 without a floor). This replaces
+sqrt(median_comps(s^2 - median_frames(pred))), which compared a heteroscedastic MAD with a median prediction
+(scint 5 / floor 3 mmag -> 1.87) and was high by sqrt(1 + 1/n). Simulation (10 comps, scint ~X^1.5, x3 range):
+floor 3 -> 3.1-3.2 mmag, no floor -> < 1 mmag, 5 comps floor 4 -> 4.0. pipeline_meta `sigma_sys_night` adds
+`pull_comps` (pooled pull at f), `pull_comps_no_floor`, `scint_share` (median scint^2 / predicted variance),
+`warning` (WARNING when scint_share > 0.5: "floor not separable from the scintillation model, C_Y uncertain"),
+`pull_check_stars` / `n_check_stars` (pooled 1.4826 MAD of (K - median K) / kmag_err over the night's check
+stars, each once; expected ~1). Goldens: expected change < 0.3 mmag.
+
+## PSF-BADFLAGS-2026-10 - every unusable-fit photutils bit closes psf_converged (step 7 C4, 2026-10-31, Milan approved)
+
+Literature / source: photutils 3.1.1 `psf/flags.py` (bit 2048 "non-finite local background ... not subtracted
+before fitting"). Reproduced: a fit star whose 4-6 FWHM annulus and its 2 x r_out fallback box hold fewer than
+SKY_MIN_PIX sky pixels (halo of a saturated star, dense field) got a NaN sky, photutils fitted it with sky 0
+(70059 instead of 29802 ADU) and `psf_converged` stayed True, so only the chi2 locus could catch it.
+Change: `epsf_frame._BAD_FIT_FLAGS` = 2|4|8|16 plus 64 (no overlap), 128 (fully masked), 256 (too few pixels),
+1024 (non-finite flux), 2048 (non-finite local sky). Per frame the frames manifest records
+`frames[i].fit.n_bad_fit_flags` and `bad_fit_flag_counts` (per bit name), and a WARNING names the frame (fail loud).
+Amends EPSF-BLEND-2026-10 ("psf_converged = fit without flags 2/4/8/16").
+Test: dev/tests/test_step7_psf_2026_10.py::test_c4_nan_local_sky_is_not_a_converged_fit.
+
+## PSF-SKY-ALLSTAR-2026-10 - PSF pass-2 sky measured with all fitted stars subtracted (step 7 C1, 2026-10-31, Milan approved)
+
+Literature: DAOPHOT II manual (Stetson): ALLSTAR re-determines each star's sky as "the median value found in pixels
+surrounding the star after all known stars have been subtracted from the frame"; IRAF allstar `fitsky`. A free sky
+per group was measured and rejected (1.5-1.7x the flux noise, a free sky is degenerate with flux in a ~1 FWHM fit box).
+Problem: the 4-6 FWHM annulus median (SKY-SRC-MASK-2026-10) keeps a bright neighbour's wing outside the source mask
+(Moffat beta 2.7, target 2e4 next to a 4e6 neighbour, model truncated at the cutout: +24.7 / +11.8 mmag at 8 / 12 px).
+Change (`epsf_frame.fit_frame_psf`): after pass 1 the model image of ALL fitted stars (fit set + neighbours) is
+subtracted, the same 4-6 FWHM annulus median is measured on `sky_image(data - model)` and used in pass 2 (one sky
+pass; a second changed < 1 mmag). A star without a pass-1 sky keeps NaN (PSF-BADFLAGS-2026-10). The proc sidecar
+keeps `psf_sky` (the sky of the fit) and `psf_sky_pass1` (the annulus sky); the frames manifest records
+`frames[i].fit.sky_allstar_median_abs_diff_adu`. The aperture photometry sky is unchanged (SKY-SRC-MASK-2026-10);
+the PSF / aperture sky difference is intended. Amends EPSF-BLEND-2026-10 (which had rejected a residual-image sky on
+comp RMS alone: 7.31 vs 6.85 mmag on draft 535) - A/B on 527 + 534 by the architect (comp RMS must not grow).
+Test: test_step7_psf_2026_10.py::test_c1_allstar_sky_removes_the_bright_neighbour_wing (exact model, 12 px:
+old +4.8 mmag, new 0.0 mmag); test_epsf_psf_merge.py updated (psf_sky is now a sidecar column).
+
+## EPSF-CUTOUT-FRAME-2026-10 - every frame's ePSF is odd(12 x that frame's FWHM) (step 7 C3, 2026-10-31, Milan approved)
+
+Literature: photutils 3.1.1 EPSFBuilder docstring ("fitted fluxes are ... the fluxes within the area of the grid");
+DAOPHOT II manual (PSF radius "somewhat larger than the actual radius of the brightest star"), DAOPHOT primer
+(3-4 FWHM); Anderson & King 2000 (ePSF out to several hundred px). All tie the model radius to the PSF size.
+Problem: the frame models used the MASTERSTAR cutout (12 x MASTERSTAR FWHM, Brno 534 g: 41 px) on frames with FWHM
+up to 10 px. Measured (lit_psf/c3_cutout.py, Moffat beta 2.5): light in the model 0.993 -> 0.890 at FWHM 3.4 -> 10,
+faint-bright differential 0.2 -> 5.7 mmag, a 5 mag brighter neighbour 28-48 px away unmodelled (-529..-31 mmag) -
+all following the seeing (FWHM-correlated systematics). With 12 x frame FWHM: 0.993-0.994 and <= 0.2 mmag at every FWHM.
+Change: `psf_photometry.epsf_cutout_px(fwhm)` is the one cutout rule (MASTERSTAR selection and frames). The merge job
+reads each frame's `fwhm_px_for_aperture` (proc catalogue, `epsf_psf_merge.frame_fwhm_px`; missing -> the frame
+fails loud) and builds that frame's model at `epsf_cutout_px(frame FWHM)`; `frame_fit_sources` collects neighbours
+for the worst frame's own model size. Build stars whose bigger cutout leaves the footprint drop out
+(`frames[i].n_stars_used`, WARNING below EPSF_BUILD_STARS_WARN = 100, G09-02). The night spatial delta stays
+built at the MASTERSTAR cutout and is applied centred inside it (zero outside, cut centrally when the frame grid is
+smaller; no resampling - the optics' perturbation is fixed in pixels); manifest `spatial_delta_on_frame_grid`,
+`frame_cutout_rule`, `frame_cutout_px_range`, per frame `cutout_size` and `frame_fwhm_px`. Runtime grows with the
+cutout on bad-seeing frames (synthetic FWHM 10: 2 -> 5 s per frame). Supersedes the fixed MASTERSTAR cutout of
+EPSF-SPATIAL-2026-10 for the frame models. A/B (architect): 534 g + 527 comp RMS and its correlation with frame FWHM.
+Tests: test_step7_psf_2026_10.py::test_c3_frame_cutout_follows_the_frame_seeing,
+test_c3_spatial_delta_is_applied_inside_the_masterstar_cutout, test_c3_fit_task_builds_the_model_at_the_frame_fwhm.
+
+## PSF-GROUP-REACH-2026-10 - PSF fit groups by the model reach (step 7 G09-07, 2026-10-31, Milan approved)
+
+Literature: IRAF daophot.group (two stars share a group when within psfrad + fitrad + 1 px and the brighter one's PSF
+at fitrad + 1 exceeds critsnratio x noise); DAOPHOT II manual (critical overlap at "one fitting radius plus one
+pixel"); photutils SourceGrouper (min_separation = distance below which stars are fitted together). photutils fits
+every group on the raw frame (no subtraction between groups), so a source outside the group but inside the model
+reach is unmodelled light.
+Problem: group radius 2 x fit box (Brno 14 px) < reach (24.5-25 px): a 5.75 mag brighter neighbour 16 / 20 px away
+biased a faint star by -72 / -17 mmag (exact model, step-7 test).
+Change: `epsf_frame.model_reach_px(cutout, fwhm)` = cutout / 2 + fit box / 2 + 1 px is the one rule for the neighbour
+reach (`frame_fit_sources`) and the group radius (`fit_frame_psf`, cutout taken from the frame model,
+`model_cutout_px`; per frame since EPSF-CUTOUT-FRAME-2026-10). Frames manifest: `frames[i].fit.group_size_max` /
+`group_size_p99`, night `group_size_max_night`, `group_radius_rule`; WARNING (and photutils group_warning_threshold)
+above GROUP_SIZE_WARN = 45, the largest group measured on the golden fit sets with this radius (geometry of fit
+stars + neighbours per frame FWHM: Brno 534 g 158 + 684, 15 on the median frame, 45 on the FWHM 10.2 frame; old radius
+13; BO CVn 527: 6). The DAOPHOT critical-overlap condition is not added (groups grew 3.5x, not the ~10x that would
+need it). Runtime grows with the group size on bad-seeing frames (to be measured on 534 by the architect).
+Test: test_step7_psf_2026_10.py::test_g0907_flux_does_not_depend_on_a_group_radius_beyond_the_reach (16/20/24 px:
+production radius vs one group < 1 mmag), test_g0907_frame_fit_sources_reach_is_the_shared_rule.
+
+## CHI2-LOCUS-STARS-2026-10 - chi2 locus flux groups need >= 15 distinct stars (step 7 G09-09, 2026-10-31, Milan approved)
+
+Literature: MAD scale, Gaussian efficiency 37 %, relative standard error ~1.17 / sqrt(n) (Rousseeuw & Croux 1993,
+JASA 88, 1273); DAOPHOT judges chi against magnitude star by star (Stetson 1987). Problem: CHI2-FLUX-REF-2026-10
+merged 0.25 dex bins until a group held MIN_N_BIN = 30 star x frame SAMPLES. On Brno 534 g the 15 groups held 2-31
+distinct stars (bright groups 7-17, the last 2 stars / 90 samples); above log F 3.6 the persistent per-star chi2
+offsets (0.10-0.66 dex) are as large as the pooled MAD, so the scale's effective n is the number of stars and the
+gate of a few-star group is set by a handful of stars (Qn instead of MAD changes <= 10 %: not adopted).
+Change (`psf_chi2_locus.fit_chi2_locus`, `star_ids` now required): consecutive bins merge until a group holds >= 30
+samples AND >= MIN_STARS_BIN = 15 distinct stars (statistical minimum, relative error 0.30; not a rig constant); a
+night with fewer than 15 stars is one group (WARNING, locus `note`). The night locus record
+(`pipeline_meta.psf_chi2_locus_night.night_locus`) carries `n_stars_bin` per group and `min_stars_bin`. The 5-sigma
+gate and the no-clip rule stay. Supersedes the MIN_N_BIN-only grouping of CHI2-FLUX-REF-2026-10.
+A/B (architect, 527 + 534): psf_fit_ok fraction per magnitude bin (the bright groups may change only in the rejected
+fraction), comp RMS must not grow.
+Tests: test_step7_psf_2026_10.py::test_g0909_flux_groups_hold_at_least_15_distinct_stars,
+test_g0909_gate_is_stable_and_flags_per_frame_outliers (synthetic 80 stars x 100 frames with per-star offsets: gate
+spread 0.19 vs 0.30 with sample-count groups); test_epsf_chi2_locus_01.py updated for the star_ids argument.
+
+## SYS-FIELD-RESPONSE-2026-10 - the variability "systematic" test removes the field's response, not the star's own fit (step 7 G10-08, 2026-10-31, Milan approved)
+
+Literature: Kepler PDC-MAP (Smith et al. 2012, PASP 124, 1000): a per-star least-squares fit of the systematics
+vectors "may ... remove the signature of intrinsic stellar variability"; the fix is a prior from the ensemble of
+robust fit coefficients of well-correlated stars. Hartman et al. 2011 (HATNet EPD/TFA): decorrelation can distort
+long-period signals, report both. SysRem (Tamuz et al. 2005), TFA (Kovacs et al. 2005): effects from the ensemble.
+Problem: VAR-2026-10 flagged a signal star `systematic` (and dropped it) when its own OLS on [1, frame FWHM, airmass]
+removed the signal. On Brno 534 g airmass and FWHM run monotonically (corr with time 0.95 / 0.93); the OLS absorbed
+80-88 % of a sinusoid with P = 2-4 x the night and lost 59-87 of 87-133 detected slow injections.
+Change (`variability_field.field_response`, `_var_indices`, R2+F of the step-7 review): own OLS coefficients for every
+star; the FIELD set = gated, not known variables, no signal; per star the field FWHM coefficient = median over field
+stars within +-0.5 mag (>= 15 stars) and the airmass coefficient = Theil-Sen line in BP-RP (colour extinction) + the
+median residual in the same window. `systematic` = the signal vanishes after removing that field prediction (not
+listed, as before). New columns of variability_field.csv: `trend_like` (the star's own OLS removes its signal - the old
+rule, now a flag) and `seeing_response_z` (own FWHM coefficient vs the field, 1.4826 MAD); neither removes a star; both
+show in the PDF candidate table ("trend" / "seeing" in the index cell) and the methods text. variability_meta.json
+`systematics`: n_field, field FWHM coefficient median, Theil-Sen slope / intercept, all with bootstrap errors
+(FIELD_RESPONSE_BOOTSTRAP = 100 resamples, seed 0), stars without BP-RP (field median colour, counted). Fewer than 15
+field stars with BP-RP -> the search fails loud. Published light curves stay undetrended.
+Expected (first pass): Brno 534 g systematic 15 -> 9, candidates +6; BO CVn 4 -> 2 (+2). A/B (architect): 534 g/r,
+527, one long night; injections P = 2x / 4x the night, A 0.03-0.1 (pass: >= 90 % of detected kept); LC + FWHM strip of
+the Brno stars that move. Supersedes the per-star-OLS systematics rule of VAR-2026-10.
+Test: test_step7_psf_2026_10.py::test_g1008_slow_variable_survives_and_flags_report_own_responses (old rule: the slow
+star, the seeing star and the red star were all systematic).
+
+## SYS-SEEING-DIFF-2026-10 - the systematics test uses the star's own seeing response from frame-to-frame differences (step 7 A/B follow-up of G10-08, 2026-10-31, Milan approved)
+
+Problem (A/B s5d vs s7m): SYS-FIELD-RESPONSE-2026-10 removes only the FIELD's typical FWHM response, so a star with
+its own strong seeing response (neighbour light entering the aperture, near-saturation) passed as a candidate:
+Brno 534 g 1 -> 9, r 0 -> 13, BO CVn 527 0 -> 3 candidates; all 25 brighten with the frame FWHM (corr -0.8 .. -0.95),
+none is a real variable. The old per-star level OLS caught them but absorbed 80-88 % of slow real variations.
+Change (`variability_field.seeing_coef_from_differences`, `_var_indices`): the star's own FWHM coefficient from first
+differences of consecutive frames, sum(dy dF) / sum(dF^2) (>= 10 pairs; field median + WARNING + meta count when the
+FWHM has no frame-to-frame variation). A slow intrinsic change and a monotonic FWHM run do not enter it (spurious
+regression of trending series and the first-difference remedy: Granger & Newbold 1974, J. Econometrics 2, 111).
+The airmass term stays the field colour-extinction prediction (airmass is smooth: no frame-to-frame information).
+New column variability_field.csv `fwhm_coef_diff` [mag/px]; meta `systematics.seeing_coef`,
+`n_seeing_coef_field_fallback`. `trend_like` and `seeing_response_z` unchanged (flags).
+Evidence (offline, varcand LCs of s7m_527/534): scatter/error of the 25 false candidates 1.9-3.9 -> 0.7-1.6 after
+removing the own difference coefficient; injected slow sinusoid (P 2x / 4x night, A 0.03-0.1, real Brno FWHM
+series) keeps a median 97-106 % of its amplitude (own level OLS: 10-23 %).
+A/B (variability search rerun on the s7m goldens, same gates): candidates Brno 534 g 9 -> 2 (one is the only
+candidate of the pre-step-7 code), r 13 -> 1, BO CVn 527 3 -> 0; known variables detected unchanged (4 / 3 / 12).
+Tests: test_step7_psf_2026_10.py::test_g1008_slow_variable_survives_and_flags_report_own_responses (updated: the
+seeing star is now systematic), ::test_seeing_diff_slow_variable_with_a_seeing_response_stays_a_candidate,
+::test_seeing_coef_from_differences_ignores_a_slow_trend. Refines SYS-FIELD-RESPONSE-2026-10 (seeing term only).
+
+## COVERAGE-FAINT-LIMIT-2026-10 - fainter-than points are marked, and never exported as measurements (step 7 G10-30, 2026-10-31, Milan approved)
+
+Literature: censored data (Isobe, Feigelson & Nelson 1986, ApJ 306, 490): substituting the limit is biased for
+amplitudes but conservative for detection; AAVSO Extended File Format: "Prepend with < if a fainter-than".
+COVERAGE-FAINT-2026-10 stays (a point with flux below its 1-sigma error takes the 1-sigma flux; the amplitude it gives
+is a lower limit). Added: `varcand_<id>.csv` has a `below_limit` column (`variability_field.write_candidate_lightcurves`).
+`export_reports.export_lightcurve_reports` writes a light-curve row with `below_limit` = True to the AAVSO file as
+MAG "<m" with MAGERR "na" and NOTES LIMIT=1sigma, and leaves it out of the VarAstro file (no fainter-than form; count
+in the export manifest `varastro_below_limit_not_written`). The target aperture light curves have no below_limit
+column today (an F <= 0 epoch has no finite magnitude and is not exported), so the export output of current runs is
+unchanged. Tests: test_step7_psf_2026_10.py::test_g1030_varcand_lightcurve_marks_points_below_the_limit,
+test_g1030_aavso_writes_a_below_limit_point_as_fainter_than.
+
+## VAR-2026-10 - field variability search (Milan 2026-10; recorded 2026-10-31 from code at step 7, code review 2 G10-46)
+
+One function for the night run and the GUI (`variability_field.run_field_variability`; the UI reads its products).
+Method after Sokolovsky et al. 2017 (A&A 598, A108) / VaST:
+- Stars: measured (finite flux, not likely_saturated, photometry_ok) on >= COVERAGE_MIN = 90 % of the frames, on the
+  aperture k of their brightness group (FIELD-K-GROUPS-2026-10); a frame below 1 sigma counts as measured at its
+  1-sigma flux and is marked below_limit (COVERAGE-FAINT-2026-10, COVERAGE-FAINT-LIMIT-2026-10).
+- Gates: median S/N >= snr_min (config, default 10); |neighbour light incl. the annulus effect| <=
+  BLEND_FLUX_FRAC_MAX = 1 % at the p90 frame FWHM (BLEND-SEEING-2026-10); sky annulus inside every frame footprint;
+  Gaia magnitude present. Known VSX variables and targets are marked (known_detected), not listed.
+- Frame zero point: the model of Honeycutt 1992 (PASP 104, 435), m_it = M_i + E_t, solved by alternating plain medians
+  (robust, unweighted; <= 10 iterations, 1e-5 mag) over reference stars with expected error < REF_ERR_MAX = 1 % (fewer
+  than 20 -> the 50 best). sigma_E = sqrt(pi/2) x 1.4826 MAD / sqrt(n_ref): the asymptotic standard error of a median
+  for Gaussian data; the MAD here is taken about 0 (median |R| of the median-subtracted residuals), not about the median.
+- Noise model: s_exp^2 = (a e)^2 + floor^2 fitted to all gated non-variable stars (stats_core.fit_scatter_noise_model,
+  soft_l1, bounds a 0.2-10, floor 0-0.2 mag; NOISE-FIT-ONE-2026-10); e = CCD equation (Merline & Howell 1995) + sigma_E.
+- Index 1: s = 1.4826 MAD of the residual light curve; z_s = (ln(s / s_exp) - median) / (1.4826 MAD) over the gated
+  stars. Sokolovsky 2017 list MAD and recommend IQR as the best single index; MAD has the same robustness (50 %
+  breakdown) and a direct Gaussian scaling.
+- Index 2: 1/eta (von Neumann 1941, Ann. Math. Stat. 12, 367, as used by Sokolovsky 2017); u = ln(1/eta)
+  standardised in a +-0.5 mag window (>= 15 stars); tail from a skew-normal (Azzalini 1985, Scand. J. Stat. 12, 171)
+  matched to the field's 10/50/90 % quantiles (>= 50 stars), converted to a Gaussian z. MC (white, AR(1), mixed noise,
+  N 30-87): false alarms 1-5x nominal (Gaussian tail: 20-60x).
+- Threshold: a Bonferroni split of the 1 % field false-alarm probability over 2 indices x N gated stars:
+  z_thr = Phi^-1(1 - 0.005 / N) (Brno 534 g: 4.45 at N 1183).
+- Systematics (G10-08, SYS-FIELD-RESPONSE-2026-10, after Kepler PDC-MAP, Smith et al. 2012): the field's typical
+  response to frame FWHM and airmass (median over gated non-signal stars within +-0.5 mag; airmass term as a
+  Theil-Sen line in BP-RP = colour extinction) is subtracted; a star is `systematic` only if its signal then vanishes.
+  The star's own OLS fit is reported as `trend_like` and its own FWHM coefficient as `seeing_response_z`; neither
+  removes a star.
+- No sigma clipping and no detrending of the published light curves. Products: variability_field.csv,
+  variability_meta.json (method "VAR-2026-10"), lightcurves/varcand_<id>.csv (the star's own BJD_TDB, G02-18/C6;
+  below_limit).
+Deviations from the literature: plain medians instead of weighted least squares (Honeycutt 1992); MAD instead of IQR
+(Sokolovsky 2017); no clipping anywhere.
+Evidence (before SYS-FIELD-RESPONSE-2026-10): golden Brno 534 g 1183 gated / 1 candidate / 4 known / 15 systematic;
+BO CVn 527 917 / 0 / 12 / 5.
+Tests: test_var_tab_2026_10.py, test_var_tess_sky_2026_10.py, test_variability_candidates_merge.py,
+test_step4_bjd_2026_10.py (star times), test_step7_psf_2026_10.py::test_g1008_slow_variable_survives_and_flags_report_own_responses,
+test_g1030_varcand_lightcurve_marks_points_below_the_limit.
+
+## STEP7-CAL-MP-PARITY-2026-10 - parallel calibration parity test; D-MP-CALIB-OFF-01 marked superseded (Milan 2026-10-31, G01-42)
+
+Milan approved (T17 literature review, lit_cal G01-42). D-MP-CALIB-OFF-01 now carries "SUPERSEDED by
+MP-CALIB-ON-2026-10" (DECISIONS and VYVAR_STATE.md). The parity gate it asked for ("hash equality of all calibrated
+products") is a unit test: 4 synthetic lights + master dark + master flat calibrated with max_workers 1 and 2 give
+identical md5 of every calibrated FITS data unit, identical header cards and identical per-group flags
+(dev/tests/test_step7_cal_2026_10.py). Reference: reproducibility practice (serial vs parallel determinism test on
+identical input); per-frame calibration is the same arithmetic sequence in every worker. No code change.
+
+## STEP7-CAL-BINCONV-2026-10 - no default binning convention for gain / read noise (Milan 2026-10-31, G01-06 / G01-24)
+
+Milan approved (T17 literature review, lit_cal G01-06 + G01-24). `camera_profile.DEFAULT_BIN_MODE = "average"`
+is deleted: a camera without BIN_MODE (database or catalog) no longer gets gain x N^2 at bin N silently. Order
+for gain / read noise at bin N > 1 (`camera_profile.lookup` / `binning_convention`):
+(a) a measured / manual point at that readout mode, setting and binning - used as is, no scaling;
+(b) a bin-1 point scaled by BIN_MODE, else by the convention CAL-DIAG measured on the darks of the group
+(new header card `VYBINCNV` = SUM / MEAN, written only when the dark was rebinned; SUM -> sum, MEAN -> average;
+recorded as `bin_mode_source = "cal_diag"`); BIN_MODE contradicting CAL-DIAG (average vs SUM, sum/charge vs
+MEAN) stops (unresolved -> `photometric_gain_read_noise` ValueError);
+(c) CAL-DIAG SUM fixes the gain but not the read noise: RN x N (digital sum) for a CMOS sensor (catalog cameras,
+or CMOS in EQUIPMENTS.SENSORTYPE), stop for CCD / unknown unless BIN_MODE says `charge`;
+(d) nothing known -> stop, like an unknown gain. Catalog: qhy294m_pro 11mp `binning: "sum"` (source CAL-DIAG 527 +
+sky-pair PTC 2026-10-31: file gain 0.95 vs 0.79 sum / 3.17 average). `pipeline_meta.resolved_facts.gain` /
+`.read_noise` record `detail`, `bin_mode`, `bin_mode_source`. Literature: ASCOM camera FAQ (ElectronsPerADU
+follows BinX/BinY), Collins et al. 2017 (AIJ) / IRAF datapars (gain at the frame binning, no convention
+guessing), EMVA 1288 R4.0 sec. 6.6 (photon transfer at the used binning). Supersedes the "default average"
+part of CAMERA-PROFILE-2026-10.
+
+## STEP7-CAL-LSB-2026-10 - container scale measured from the raw data; photon transfer beats header EGAIN (Milan 2026-10-31, G06-34)
+
+Milan approved (T17 literature review, lit_cal G06-34, option B with the ambiguity rule). The raw LSB granularity
+g = the largest 2^k dividing every finite, unsaturated raw pixel value (`gain_ptc.lsb_granularity`; exact test,
+no threshold) is measured on the first raw light of every observation group at calibration and checked against
+`container_scale(ADC_BITS)` (`gain_ptc.container_scale_check`, `pipeline_calibrate.check_container_scale_of_groups`):
+equal -> ok; g > scale, or bin 1 and g != scale -> stop (`ContainerScaleError`); bin > 1 and g < scale ->
+WARNING (in-camera average binning erases the step; Brno 534 type data); non-integer data / unknown ADC_BITS ->
+WARNING. Every calibrated frame carries `VY_LSB` (its own raw granularity); `pipeline_meta.resolved_facts.gain`
+records `container_scale` and `container_scale_measured`. A measured photon-transfer point at the frame binning
+beats a header e-/ADU card when they differ by more than 3 x the point's gain_err (CROSS_CHECK_RTOL when the point
+has no error) - WARNING + facts (header_gain, ptc_gain, ptc_gain_err, ptc_bound, winner); EQUIPMENT_CURVE gains
+`E_PER_ADU_ERR` (and `PTC_JSON`, see C2). Literature: ASCOM camera FAQ (ElectronsPerADU driver-defined; "ADUs should
+increase in steps of 1"), NINA issues #159 / #441 (EGAIN units and container scale vary by driver), Janesick
+photon transfer / EMVA 1288 R4.0 (the physical authority). 527 (g 4, ADC 14) and 534 (g 1, ADC 16, bin 4) pass
+unchanged. Supersedes the silent "header EGAIN is native" assumption of GAIN-ONE-2026-10 when a PTC point exists.
+
+## STEP7-CAL-CCDEQ-2026-10 - dark-current and digitisation terms in the CCD equation (Milan 2026-10-31, G06-25)
+
+Milan approved (T17 literature review, lit_cal G06-25: keep (a) real n_sky and (b) pi/2 for the median; add (c) and
+(d)). The run's one gain authority (`rig_photometry.photometric_gain_read_noise`) now passes the per-pixel
+non-sky noise RN_eff = sqrt(RN^2 + F_D + g^2 sigma_f^2) [e-] as `read_noise` to every CCD-equation call site
+(`ccd_noise` unchanged: the terms share the factor A (1 + c A / n_sky)); `read_noise_camera` keeps RN.
+F_D = CAL-DIAG fitted dark slope per light pixel (new card `VY_CDKR`; SUM-rebinned darks x bf^2; negative fits
+= 0) x EXPTIME x g; 0 + `dark_current: unmeasured` (WARNING) when CAL-DIAG has no slope (one dark exposure time,
+no dark). sigma_f = g_LSB / sqrt(12) file ADU with g_LSB = `VY_LSB` (G06-34), added only when the read noise is not
+a measured point at the frame binning (`rn_includes_digitization`); 0 + `digitization: unmeasured` when VY_LSB is
+absent. `pipeline_meta.resolved_facts.read_noise` records read_noise_camera_e, dark_current, dark_e_per_px,
+digitization, digitization_e2, rn_includes_digitization, pixel_noise_e; its `value` is RN_eff. Expected: 527
+< 0.1 % on sigma; 534 ~ +1 % on sky-limited sigma (1 ADU = 12.5 e- after in-camera average binning).
+Literature: Merline & Howell 1995 (Exp. Astron. 6, 163) eq. 1; Collins et al. 2017 (AIJ, AJ 153, 77) eq. B1
+(F_D, sigma_f = 0.289 ADU). Supersedes the CCD-ONE-2026-10 note "dark current and quantisation not included".
+
+## STEP7-CAL-SKYMASK-2026-10 - sky-surface star mask in FWHM units, coverage mask instead of a 40 px band (Milan 2026-10-31, G01-07)
+
+Milan approved (T17 literature review, lit_cal G01-07: close the gradient finding, SKY-MASK-2026-10 confirmed;
+clean-up of the remaining px constants). `_fit_subtract_preprocess_sky_surface` gets the frame's QC FWHM of record
+(VY_FWHM / manifest frame QC; `_qc_enrich_one_frame` passes it) - was never passed, so DAO, the star stamps and the
+dilation always used 2.5 px. Without a FWHM of record it is measured from the pass-1 DAO detections
+(`_fwhm_from_pass1_detections`: data-derived first guess `frame_metrics.first_fwhm_guess` as DAO kernel, detection at
+the QC threshold, median second-moment FWHM of the brightest unsaturated isolated detections) with a WARNING; not
+measurable -> the surface is not fitted (WARNING, skip reason `fwhm_unknown`). Stamps 3.5 FWHM (the 4 px floor is
+removed), dilation 1 FWHM. The fixed `margin = 40` px edge band is replaced by the coverage mask (finite pixels)
+eroded by one DAO kernel half-width, max(2, int(1.5 sigma)) (photutils sigma_radius; stars centred there are not
+detected). qc_metrics.csv now writes `sky_surface_fwhm_px` and `sky_surface_fwhm_source` (header / measured /
+unknown). Expected on 527 / 534: sky surface change < 1 ADU, residual_flatness_p99 and comp RMS equal within noise.
+Tests that encoded the 2.5 px fallback now pass the FWHM of record (test_preprocess_sky_surface,
+test_skysf_double_guard, test_cal_stage_gate; test_lc_schema_step6 column list). Literature: photutils background
+guide (mask sources by segmentation + dilation, scale > source size), SExtractor / SWarp (coverage / weight maps,
+no fixed edge band).
+
+## STEP7-CAL-RESAMPLE-2026-10 - one resampler for WCS- and star-registered frames (Milan 2026-10-31, G02-25)
+
+Milan approved (T17 literature review, lit_cal G02-25, option A). A frame whose own WCS passes the star check
+(ALIGN-WCS-2026-10) is resampled by `warp_to_reference` with `AffineTransform(_wcs_matrix)` (the affine
+frame->reference fit through both WCS, ALIGN-MATRIX-2026-10) - cubic, median fill, WARP-NAN mask, footprint from
+VY_AM - like every other registration method. `reproject_interp` (bilinear, NaN outside) and its round-trip helper
+`_roundtrip_needed` are removed from alignment; no WCS matrix -> the star-matched fit. The method label stays
+`wcs_reproject` (alignment report / handoff compatibility). Reason: one kernel = one noise correlation; T4-1 and
+DAO-THRESHOLD-OPTION-B calibrate one N_equiv for a fixed kernel, and bilinear vs cubic differ (pixel noise 0.66 vs
+0.81 of the true value, peak -11 %, FWHM +9 % at FWHM 2 px). 527 / 534 unchanged (the WCS path was used 0 times).
+Literature: Fruchter & Hook 2002 (PASP 114, 144) sec. 7.2 (correlated noise of interpolation), SWarp manual sec.
+5.6 (bilinear smooths, one kernel per stack), Evans & Irwin 2003 (flux conserved by normalised kernels), reproject
+docs (interp not flux conserving). Long-term note (not now): photometry on unresampled frames is the literature
+reference (AIJ, IRAF phot). test_speed_step7.py: the `_roundtrip_needed` test is removed with the helper.
+
+## STEP7-CAL-PTC-2026-10 - photon-transfer tooling and the per-night sky-pair gain diagnostic (Milan 2026-10-31, C2)
+
+Milan approved (T17 literature review, lit_cal C2). `gain_ptc.measure_from_files` (EMVA 1288 R4.0 sec. 6.5-6.9):
+per level the dark-pair variance of the same exposure is subtracted, var(F1-F2)/2 - var(D1-D2)/2, and the line
+is fitted through the origin when every level has its dark pair (else with intercept, message); report of the
+local slopes vs the global slope (EMVA eq. 51, 3 %), mean level vs exposure (linearity 5-95 % of saturation) and
+the nearest-neighbour correlation of the flat differences averaged over the levels (|rho| > 1 % and > 3 standard
+errors -> covariances summed into the variance, Astier et al. 2019). The measured point is stored with
+`E_PER_ADU_ERR` (1 sigma, native) and `PTC_JSON` (`PtcResult.to_json`: pair points, linearity, covariance,
+saturation) in EQUIPMENT_CURVE at its binning (`save_measured_curve_point`; "Save to camera"). Per night,
+`pipeline_calibrate.add_sky_pair_gain_diagnostic` stores `sky_pair_gain` in each CAL-DIAG gate result
+(cal_diag.json): `gain_ptc.sky_pair_gain` on up to 12 consecutive raw light pairs (tiles of 64 px: level = median
+above the dark, var(A-B)/2 plain; slope over the decile medians; seeded bootstrap over the pairs), ratio to the
+profile gain at the light binning; WARNING outside 1 +- 7 % (the method band of the 527 audit); skipped when the
+sky shot-noise span over the tiles does not exceed the read-noise variance (Brno 534) or with < 2 pairs. Never an
+authority. User procedure (EN + CZ): docs/INSTALL.md section 5. Expected: 527 WARNING every night (ratio ~1.2,
+stored 3.17 e-/ADU vs ~3.8) until Milan's flat PTC is saved; 534 skipped. Literature: Janesick photon transfer
+(IRAF findgain), EMVA 1288 R4.0, Astier et al. 2019 (A&A 629, A36).

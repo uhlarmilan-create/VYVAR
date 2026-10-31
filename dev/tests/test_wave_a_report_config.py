@@ -201,8 +201,8 @@ def test_build_resolved_facts_writer_captures_sources() -> None:
         ms_header={"FILTER": "V", "EXPTIME": 60.0, "XBINNING": 2, "YBINNING": 2},
         obs_group="NoFilter_60_2",
     )
-    assert facts["gain"] == {"value": 2.0, "source": "header", "key": "EGAIN"}
-    assert facts["read_noise"] == {"value": 8.5, "source": "db", "key": None}
+    assert {k: facts["gain"][k] for k in ("value", "source", "key")} == {"value": 2.0, "source": "header", "key": "EGAIN"}  # step 7 G01-06 adds bin_mode keys
+    assert {k: facts["read_noise"][k] for k in ("value", "source", "key")} == {"value": 8.5, "source": "db", "key": None}
     assert facts["site"]["source"] == "draft" and facts["site"]["name"] == "Jirny"
     assert facts["site"]["lat"] == 50.1  # from resolver, not cfg
     assert facts["saturation_adu"] == 60000.0

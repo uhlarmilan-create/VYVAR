@@ -768,11 +768,13 @@ def _st_night_facts(
         _site.ok,
     )
 
-    from k2_extinction import resolve_k2_bprp_value  # noqa: PLC0415
+    from k2_extinction import resolve_k2  # noqa: PLC0415
 
-    _k2_bprp, _k2_src_enum = resolve_k2_bprp_value(_cfg, obs_group)
-    if _k2_src_enum.value != "none" and math.isfinite(float(_k2_bprp)):
-        log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value}")
+    # K2-BAND-2026-10: the reason travels with the source (summary k2_reason, pipeline_meta k2)
+    _k2_bprp, _k2_src_enum, _k2_reason = resolve_k2(_cfg, obs_group)
+    log_event(f"[K2] obs_group {obs_group}: k2={float(_k2_bprp):.6f} source={_k2_src_enum.value} ({_k2_reason})"
+              if math.isfinite(float(_k2_bprp)) else
+              f"[K2] obs_group {obs_group}: source={_k2_src_enum.value} ({_k2_reason})")
 
     _apply_ct = resolve_apply_color_term(_cfg, obs_group)
     # G06-18: the colour-term fit runs after the aperture grid (run_aperture_photometry), on the k the light
@@ -828,7 +830,7 @@ def _st_night_facts(
         _gspc_status = f"unavailable ({type(_gspc_exc).__name__}: {_gspc_exc})"[:200]
         logging.warning("[GSPC] second zero point not available: %s", _gspc_exc)
     logging.info("[GSPC] %s", _gspc_status)
-    return _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_src_enum, _resolved_facts, _site, _site_loc_id
+    return _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_reason, _k2_src_enum, _resolved_facts, _site, _site_loc_id
 
 
 def _aperture_prepare_shared_state(
@@ -943,7 +945,7 @@ def _aperture_prepare_shared_state(
         frame_time_lookup=frame_time_lookup,
         sat_limit_resolved=sat_limit_resolved,
     )
-    _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_src_enum, _resolved_facts, _site, _site_loc_id = _st_night_facts(
+    _apply_ct, _group_ct, _gspc_rows, _gspc_status, _k2_bprp, _k2_reason, _k2_src_enum, _resolved_facts, _site, _site_loc_id = _st_night_facts(
         _cfg=_cfg,
         _flux_matrix=_flux_matrix,
         _gaia_db_path=_gaia_db_path,
@@ -1014,6 +1016,7 @@ def _aperture_prepare_shared_state(
         apply_color_term=bool(_apply_ct),
         k2_bprp=float(_k2_bprp),
         k2_source=str(_k2_src_enum.value),
+        k2_reason=str(_k2_reason),
         resolved_facts=_resolved_facts,
         per_frame_sat_meta=dict(_per_frame_sat_meta or {}),
         aperture_policy=_ap_pol,

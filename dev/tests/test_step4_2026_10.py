@@ -523,15 +523,18 @@ def test_g08_07_series_in_time_order_not_file_name():
 
 
 def test_g08_34_frame_without_comp_sigma_has_unknown_ensemble_error():
+    # ENSEMBLE-ERR-CC06-2026-10 (G08-08): 3 comps needed; a present comp without a noise estimate (two
+    # finite points: no LOO variance) leaves the frame's ensemble error unknown (NaN), never 0
     from photometry_lightcurve import ensemble_normalize
 
     n = 30
     t = np.full(n, 12.0)
-    comps = {"a": np.full(n, 11.0), "b": np.full(n, 11.5)}
-    comps["a"][3:] = np.nan  # two finite points: no sigma for a
-    comps["b"][2:] = np.nan
-    _m, _d, es = ensemble_normalize(t, comps, {"a": 11.0, "b": 11.5}, {}, n_comp_min=1)
-    assert np.isnan(es[0]) and not np.any(es == 0.0)
+    rng = np.random.default_rng(1)
+    comps = {"a": np.full(n, 11.0), **{k: 11.5 + 0.01 * rng.standard_normal(n) for k in ("b", "c", "d")}}
+    comps["a"][2:] = np.nan  # two finite points: no sigma for a
+    _m, _d, es = ensemble_normalize(t, comps, {k: 11.0 for k in comps}, {}, n_comp_min=1,
+                                    comp_noise_mag={c: np.full(n, 0.01) for c in comps})
+    assert np.isnan(es[0]) and np.isfinite(es[5]) and not np.any(es == 0.0)
 
 
 def test_g08_49_gspc_zero_point_keeps_the_common_systematic():

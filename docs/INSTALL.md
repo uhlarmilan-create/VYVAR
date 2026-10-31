@@ -185,6 +185,67 @@ In the app:
 Catalogs (~12 GB recommended set, or full Gaia ~64 GB locally) are required for
 science runs; Option 3 install leaves LIMITED MODE until catalogs are added.
 
+## 5. Measure gain and read noise (photon transfer)
+
+The error bars of every light curve scale with the camera gain (e-/ADU) and read noise. A typical value
+from the catalog or the camera's spec sheet can be off by 10-20 % (BO CVn 527, QHY294M Pro 11MP gain 0:
+the stored 3.17 e-/ADU is about 20 % lower than the sky-pair estimate 3.8-3.9; each night run reports this
+check as "C2 sky-pair gain" in the infolog and in `cal_diag.json`). The measurement below takes about one
+hour and is stored with the camera; it then wins over the catalog, the camera's default point and a header
+EGAIN that disagrees with it. Method: Janesick photon transfer as in EMVA 1288 Release 4.0.
+
+### EN - procedure (QHY294M Pro example: 11MP mode / READMODE 0, gain 0, your production OFFSET, -10 C)
+
+Measure at every binning you use for science (bin 2; separately bin 1 if you use it). Keep the gain
+setting, offset, readout mode and temperature of your science frames.
+
+1. **Light source.** A flat panel on the telescope (or a diffuser in front of the bare camera) with steady
+   brightness. If the panel dims by PWM, use exposures of 1 s or longer.
+2. **Saturation first.** Take one strongly over-exposed frame; its maximum is the saturation level. Enter
+   it as SATURATE_ADU of the camera (Database Explorer > Cameras).
+3. **Exposure ladder.** About 25 exposure times, spaced logarithmically, so that the mean level runs from
+   about 0.5 % to 90 % of saturation. At every exposure take **2 consecutive flats**. After any change of
+   setting, throw away the first frame. At the end repeat one middle exposure: the panel must not drift by
+   more than 0.5 %.
+4. **Darks.** At the same temperature take **2 darks for every flat exposure time**, plus **10 frames at
+   the shortest exposure** (5 pairs) for the read noise. Check that no raw dark pixel sits at 0 ADU (the
+   bias of the QHY294 at OFFSET 0 is only about 3 sigma of the read noise above zero): if it does, raise
+   OFFSET and use that offset for science as well.
+5. **Measure.** Put all raw frames (not masters) of one binning into one folder. Calibration Library >
+   "Measure gain and read noise from raw flats": choose the camera and the folder, press Measure.
+   VYVAR subtracts the dark-pair variance at every level, fits the line through 0-70 % of saturation and
+   shows the local slopes (EMVA: within 3 %), the mean level vs exposure time (linearity, 5-95 %) and the
+   neighbour correlation of the flat differences (above 1 % the covariances are summed). Read the
+   messages: unsteady light, non-linearity or too few levels are named there.
+6. **Save to camera.** Saves the gain (with its 1-sigma error), the read noise and the whole report as a
+   measured point at this gain setting and binning. A new measurement replaces the old one at the same
+   key. The night runs use it at that binning without any binning convention; keep the old catalog / default
+   value only for provenance.
+
+### CZ - postup (priklad QHY294M Pro: rezim 11MP / READMODE 0, gain 0, vas OFFSET, -10 C)
+
+Merte pri kazdem binningu, ktery pouzivate pro vedu (bin 2; zvlast bin 1, pokud ho pouzivate). Gain,
+offset, rezim cteni a teplota musi byt stejne jako u vedeckych snimku.
+
+1. **Zdroj svetla.** Flat panel na dalekohledu (nebo difuzor pred samotnou kamerou) se stalym jasem. Pokud
+   panel stmiva pomoci PWM, pouzijte expozice 1 s a delsi.
+2. **Nejdriv saturace.** Jeden silne preexponovany snimek; jeho maximum je uroven saturace. Zadejte ji jako
+   SATURATE_ADU kamery (Database Explorer > Cameras).
+3. **Rada expozic.** Asi 25 expozicnich casu v logaritmickych krocich, aby prumerna uroven sla od asi 0,5 %
+   do 90 % saturace. Pri kazde expozici **2 flaty po sobe**. Po kazde zmene nastaveni prvni snimek zahodte.
+   Na konci zopakujte jednu stredni expozici: panel se nesmi zmenit o vic nez 0,5 %.
+4. **Darky.** Pri stejne teplote **2 darky ke kazdemu expozicnimu casu flatu** a **10 snimku nejkratsi
+   expozice** (5 paru) pro sum cteni. Zkontrolujte, ze zadny surovy pixel darku neni na 0 ADU (bias QHY294
+   pri OFFSET 0 je jen asi 3 sigma sumu cteni nad nulou); pokud je, zvyste OFFSET a ten pouzivejte i pro vedu.
+5. **Mereni.** Vsechny surove snimky (ne mastery) jednoho binningu dejte do jedne slozky. Calibration
+   Library > "Measure gain and read noise from raw flats": vyberte kameru a slozku, stisknete Measure.
+   VYVAR odecte rozptyl paru darku na kazde urovni, prolozi primku 0-70 % saturace a ukaze lokalni sklony
+   (EMVA: do 3 %), prumernou uroven proti expozici (linearita 5-95 %) a korelaci sousednich pixelu rozdilu
+   flatu (nad 1 % se kovariance sectou). Prectete hlaseni: nestabilni svetlo, nelinearita nebo malo urovni.
+6. **Save to camera.** Ulozi gain (s chybou 1 sigma), sum cteni a cely protokol jako mereny bod pri tomto
+   gainu a binningu. Nove mereni nahradi stare se stejnym klicem. Nocni zpracovani ho pri tom binningu
+   pouzije bez jakekoli konvence binningu.
+
 ## Development vs release builds
 
 Day-to-day development and CI run **interpreted** Python from `src_py/` (see

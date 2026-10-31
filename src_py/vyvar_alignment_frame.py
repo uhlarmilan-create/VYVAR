@@ -1,4 +1,11 @@
-"""Per-frame astrometry alignment (DAO + WCS reproject / astroalign) for ProcessPoolExecutor workers.
+"""Per-frame astrometry alignment (DAO + WCS affine / astroalign / star fits) for ProcessPoolExecutor workers.
+
+G02-25 (STEP7-CAL-RESAMPLE-2026-10): every registration method resamples through ``warp_to_reference`` (cubic,
+median fill, WARP-NAN mask) - one kernel, one fill, one NaN rule, so the noise correlation the detection threshold
+and the peak-based saturation test are calibrated for (T4-1 / DAO-THRESHOLD-OPTION-B N_equiv) is the same on
+every frame. A verified frame WCS gives its affine frame->reference matrix (``_wcs_matrix``); ``reproject`` is no
+longer used for alignment (its bilinear interpolation smoothed the noise by 1.5x more than cubic; Fruchter &
+Hook 2002 sec. 7.2, SWarp manual sec. 5.6).
 
 Kept separate from ``pipeline.py`` to avoid circular imports while remaining picklable top-level
 entry points for multiprocessing (Windows spawn).
@@ -35,24 +42,6 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
-
-def _roundtrip_needed(w_in: WCS, w_out: WCS, shape_out: tuple[int, ...], step: int = 16) -> bool:
-    """SPEED-2026-10: does reproject's coordinate round trip (out -> in -> out, > 1 px = NaN) reset
-    any pixel? Checked on a grid every ``step`` px plus the last row / column; when none fails the
-    full-image round trip is skipped (the same output, half the WCS transforms: 4 s of 5 s per
-    frame). A failure anywhere on the grid keeps the full round trip."""
-    from astropy.wcs.utils import pixel_to_pixel  # noqa: PLC0415
-
-    ny, nx = int(shape_out[0]), int(shape_out[1])
-    xs = np.unique(np.r_[np.arange(0, nx, step), nx - 1]).astype(float)
-    ys = np.unique(np.r_[np.arange(0, ny, step), ny - 1]).astype(float)
-    gx, gy = np.meshgrid(xs, ys)
-    gx, gy = gx.ravel(), gy.ravel()
-    ix, iy = pixel_to_pixel(w_out, w_in, gx, gy)
-    bx, by = pixel_to_pixel(w_in, w_out, ix, iy)
-    with np.errstate(invalid="ignore"):  # same test as reproject (NaN never resets)
-        bad = (np.abs(bx - gx) > 1) | (np.abs(by - gy) > 1)
-    return bool(np.any(bad))
 
 def _as_fits_float32_image(data: Any) -> np.ndarray:
     return np.ascontiguousarray(np.asarray(data, dtype=np.float32))
@@ -729,8 +718,6 @@ def _alignment_compute_one_frame(
             aligned_method = "astroalign"
             if ref_wcs_obj is not None and _hdr_has_wcs(hdr):
                 try:
-                    from reproject import reproject_interp  # type: ignore
-
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore", FITSFixedWarning)
                         w_i = WCS(hdr)
@@ -773,19 +760,16 @@ def _alignment_compute_one_frame(
                                 xy_used = np.asarray(xy, dtype=np.float32)
                                 _chk_wcs = _chk_w
                                 break
-                        aligned_data, _foot = reproject_interp(
-                            (np.asarray(data, dtype=np.float32), w_i.celestial),
-                            ref_wcs_obj.celestial,
-                            shape_out=ref_data.shape,
-                            roundtrip_coords=_roundtrip_needed(
-                                w_i.celestial, ref_wcs_obj.celestial, ref_data.shape
-                            ),
-                        )
-                        aligned_data = _as_fits_float32_image(aligned_data)
-                        aligned_method = "wcs_reproject"
-                        registration_handoff = {"method": "wcs_reproject"}
                         if _wcs_matrix is not None:
-                            registration_handoff["matrix"] = _wcs_matrix
+                            # G02-25: the verified WCS affine goes through the one warp of every method
+                            # (the method keeps its historical label "wcs_reproject")
+                            from skimage.transform import AffineTransform  # noqa: PLC0415
+
+                            _t_wcs = AffineTransform(matrix=np.asarray(_wcs_matrix, dtype=np.float64).reshape(3, 3))
+                            aligned_data = _as_fits_float32_image(
+                                warp_to_reference(data, ref_data.shape, _t_wcs.inverse))
+                            aligned_method = "wcs_reproject"
+                            registration_handoff = {"method": "wcs_reproject", "matrix": _wcs_matrix}
                 except Exception:  # noqa: BLE001
                     aligned_data = None
 

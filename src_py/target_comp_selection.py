@@ -525,6 +525,7 @@ def _tcs_select_comps(
     """Comparison stars per active target (and reserves), active_targets.csv with filled colours, the comp table."""
     from photometry_defs import FINAL_SKIP_REASONS  # noqa: PLC0415
 
+    no_comps_reasons: dict[str, str] = {}
     for _i_active, (active_idx, target_row) in enumerate(active.iterrows(), start=1):
         _skip_reason = str(target_row.get("skip_reason") or "").strip()
         if _skip_reason in FINAL_SKIP_REASONS:
@@ -566,13 +567,28 @@ def _tcs_select_comps(
             if _resv is not None and not _resv.empty:
                 all_reserve_rows.append(_resv)
         if comps is None or comps.empty:
-            targets_without_comps.append(str(tr_enriched.get("catalog_id", "")))
+            _cid_nc = str(tr_enriched.get("catalog_id", ""))
+            targets_without_comps.append(_cid_nc)
+            # G07-02: the reason of a target without comparison stars (too_few_comps = < n_comp_min)
+            _why = str(((getattr(comps, "attrs", None) or {}).get("no_comps_reason")) or "no_candidates")
+            no_comps_reasons[_cid_nc] = _why
+            logging.warning("[COMP-SELECT] %s (%s): no comparison stars - %s", _cid_nc,
+                            str(tr_enriched.get("vsx_name", "") or ""), _why)
         else:
             all_comp_rows.append(comps)
     if _n_oos_skipped:
         logging.info(
             "Comparison-star selection: %d targets with a final skip (VSX type, S/N, depth) - no comp selection",
             _n_oos_skipped,
+        )
+    if no_comps_reasons:
+        # G07-02: per target the reason of no_comps (the summary keeps skip_reason "no_comps")
+        _by_reason: dict[str, list[str]] = {}
+        for _c, _r in sorted(no_comps_reasons.items()):
+            _by_reason.setdefault(_r, []).append(_c)
+        merge_photometry_pipeline_meta(
+            Path(active_csv).parent,
+            {"comp_selection_no_comps": {"n_comp_min": int(n_comp_min), "by_reason": _by_reason}},
         )
 
     try:

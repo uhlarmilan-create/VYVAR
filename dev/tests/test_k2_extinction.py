@@ -10,6 +10,7 @@ from config import AppConfig
 from k2_extinction import (
     K2Source,
     SLOPE_GR_PER_BPRP,
+    SLOPE_RI_PER_BPRP,
     apply_k2_per_frame,
     computed_k2_bprp_for_token,
     filter_token_from_obs_group,
@@ -19,13 +20,16 @@ from k2_extinction import (
 
 def test_g_k2_bprp_from_smith_jordi() -> None:
     expected = -0.016 * SLOPE_GR_PER_BPRP
-    got = computed_k2_bprp_for_token("G")
+    got = computed_k2_bprp_for_token("g")
     assert got is not None
     assert got == pytest.approx(expected, rel=1e-6)
+    # G08-14: a bare upper-case G is not Sloan g
+    assert computed_k2_bprp_for_token("G") is None
 
 
-def test_v_k2_zero() -> None:
-    assert computed_k2_bprp_for_token("V") == 0.0
+def test_v_k2_none() -> None:
+    # K2-BAND-2026-10 (G08-48): V has no k'' correction (negligible, AAVSO PEP Guide) - None, not 0.0
+    assert computed_k2_bprp_for_token("V") is None
 
 
 def test_osc_blue_k2_none() -> None:
@@ -106,9 +110,10 @@ def test_filter_token_from_obs_group() -> None:
     assert filter_token_from_obs_group("CV_20_2") == "CV"
 
 
-def test_sloan_r_literature_johnson_r_zero() -> None:
-    assert computed_k2_bprp_for_token("r") == pytest.approx(-0.004 * SLOPE_GR_PER_BPRP, rel=1e-6)
-    assert computed_k2_bprp_for_token("R") == 0.0
+def test_sloan_r_literature_johnson_r_none() -> None:
+    # K2-BAND-2026-10 (G09-05): Sloan r k'' is per (r'-i') (Smith 2002), converted with Jordi Table 5
+    assert computed_k2_bprp_for_token("r") == pytest.approx(-0.004 * SLOPE_RI_PER_BPRP, rel=1e-6)
+    assert computed_k2_bprp_for_token("R") is None
 
 
 def test_k2_literature_signs_negative_u_b_g_r() -> None:
@@ -119,11 +124,10 @@ def test_k2_literature_signs_negative_u_b_g_r() -> None:
         assert float(val) < 0.0, token
 
 
-def test_k2_literature_signs_positive_i_z() -> None:
+def test_k2_i_z_have_no_citable_slope() -> None:
+    # K2-BAND-2026-10 (G09-05): i'/z' k'' is per (i'-z'), no Jordi 2010 relation -> none
     for token in ("i", "z"):
-        val = computed_k2_bprp_for_token(token)
-        assert val is not None
-        assert float(val) > 0.0, token
+        assert computed_k2_bprp_for_token(token) is None, token
 
 
 def test_k2_B_in_spec_anchored_range() -> None:

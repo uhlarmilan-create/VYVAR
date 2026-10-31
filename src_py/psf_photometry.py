@@ -38,6 +38,11 @@ EPSF_BUILD_STARS_NAME = "masterstar_epsf_build_stars.csv"
 EPSF_BUILD_STARS_META_NAME = "epsf_build_stars_meta.json"
 EPSF_SPATIAL_DELTA_NAME = "epsf_spatial_delta.fits"
 EPSF_FRAMES_DIR = "epsf_frames"
+# G09-02 / EPSF-CUTOUT-FRAME-2026-10: a frame ePSF built from fewer build stars than this logs a WARNING. The
+# plain median of the residuals (EPSF-NOCLIP) stays safe with ~30 % contaminated stamps only for build sets well
+# above ~50 stars (lit review step 7); 100 = the build-star count the step-7 checks were made with as the floor
+# (photutils guide: "several hundred"; golden nights 600). The hard minimum stays EPSF_MIN_BUILD_STARS.
+EPSF_BUILD_STARS_WARN = 100
 EPSF_FRAMES_MANIFEST = "epsf_frames_manifest.json"
 #: Manifest keys that describe the build, not the models (left out of the model hash).
 _MANIFEST_VOLATILE_KEYS = frozenset({"created_utc"})
@@ -164,6 +169,12 @@ def _to_odd_cutout(n: int) -> int:
     if n % 2 == 0:
         n += 1
     return n
+
+
+def epsf_cutout_px(fwhm_px: float) -> int:
+    """ePSF cutout / model side (px) for a FWHM: odd(_EPSF_CUTOUT_FWHM x FWHM), at least 15. One rule for the
+    MASTERSTAR build-star selection and for every frame's model (EPSF-CUTOUT-FRAME-2026-10: the frame's own FWHM)."""
+    return _to_odd_cutout(int(round(float(fwhm_px) * _EPSF_CUTOUT_FWHM)))
 
 
 def _epsf_fwhm_native_from_profile(epsf_data: np.ndarray, *, osamp: int) -> float:
@@ -439,7 +450,7 @@ def _epsf_build_candidates(*, db, draft_id, masterstars_csv_path, min_stars, mpa
     min_stars = max(10, int(min_stars))
 
     fwhm_px = get_epsf_fwhm_from_context(mpath, db, draft_id)
-    cutout_size = _to_odd_cutout(int(round(fwhm_px * _EPSF_CUTOUT_FWHM)))
+    cutout_size = epsf_cutout_px(fwhm_px)
     log_event(f"PSF ePSF: FWHM={fwhm_px:.3f} px (clamped context), cutout_size={cutout_size}")
 
     def _csv_catalog_id_cell(raw: Any) -> str:
@@ -744,6 +755,33 @@ def _epsf_prepare_stars(
     }
 
 
+def build_star_neighbour_light(stars_df: pd.DataFrame, masterstar_fits: Path, cutout_size: int) -> np.ndarray:
+    """G09-02: Gaia light of the other cone stars inside each build star's cutout box, as a fraction of the star's
+    own (G-band fluxes 10^(-0.4 mag); a cone star within 0.5 px is the star itself). NaN without a magnitude."""
+    from astropy.wcs import WCS  # noqa: PLC0415
+    from scipy.spatial import cKDTree  # noqa: PLC0415
+
+    ra, dec, mag = _load_cone_catalog(Path(masterstar_fits).parent)
+    cx, cy = WCS(fits.getheader(masterstar_fits)).all_world2pix(ra, dec, 0)
+    okc = np.isfinite(cx) & np.isfinite(cy) & np.isfinite(mag)
+    cx, cy, cf = cx[okc], cy[okc], 10 ** (-0.4 * mag[okc])
+    half = int(cutout_size) / 2.0
+    tree = cKDTree(np.c_[cx, cy])
+    out = np.full(len(stars_df), np.nan)
+    sm = pd.to_numeric(stars_df["mag"], errors="coerce").to_numpy(float)
+    for i, (x, y) in enumerate(zip(stars_df["x"].to_numpy(float), stars_df["y"].to_numpy(float), strict=True)):
+        if not np.isfinite(sm[i]):
+            continue
+        idx = np.asarray(tree.query_ball_point([x, y], half * math.sqrt(2.0)), dtype=int)
+        if idx.size:
+            dx, dy = cx[idx] - x, cy[idx] - y
+            other = (np.abs(dx) <= half) & (np.abs(dy) <= half) & (np.hypot(dx, dy) > 0.5)
+            out[i] = float(cf[idx][other].sum()) / 10 ** (-0.4 * sm[i])
+        else:
+            out[i] = 0.0
+    return out
+
+
 def select_epsf_build_stars(
     masterstar_fits_path: Path,
     masterstars_csv_path: Path,
@@ -767,10 +805,22 @@ def select_epsf_build_stars(
     stars_df = prep["psf_stars_df"][["catalog_id", "x", "y", "mag"]]
     stars_df.to_csv(out_dir / EPSF_BUILD_STARS_NAME, index=False)
     created = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    # G09-02 (EPSF-NOCLIP-2026-10 note): the plain median of the residuals is safe while the contaminated stamps are
+    # a minority of a large set - record the set size, the minimum and the share of stamps with > 1 % neighbour light
+    nb_light = build_star_neighbour_light(stars_df, Path(prep["mpath"]), int(prep["cutout_size"]))
+    n_nb = int(np.sum(np.isfinite(nb_light)))
+    frac_nb1 = float(np.sum(nb_light > 0.01) / n_nb) if n_nb else None
+    if len(stars_df) < EPSF_BUILD_STARS_WARN:
+        log_event(f"ePSF WARNING: only {len(stars_df)} build stars (< {EPSF_BUILD_STARS_WARN}, G09-02)")
+        LOGGER.warning("[ePSF] only %d build stars (< %d)", len(stars_df), EPSF_BUILD_STARS_WARN)
     meta = {
         "fwhm_px": float(prep["fwhm_px"]),
         "cutout_size": int(prep["cutout_size"]),
         "n_stars": int(len(stars_df)),
+        "min_build_stars": int(prep["min_stars"]),
+        "build_stars_warn_below": int(EPSF_BUILD_STARS_WARN),
+        "frac_build_stars_nb_light_gt_1pct": round(frac_nb1, 4) if frac_nb1 is not None else None,
+        "n_build_stars_nb_light_known": n_nb,
         "isolation_radius_px": float(prep["isolation_radius_px"]),
         "plate_scale_arcsec_px": prep["plate_scale_arcsec_px"],
         "build_funnel": dict(prep.get("funnel") or {}),

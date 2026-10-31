@@ -569,9 +569,10 @@ class AppConfig:
     #: No magnitude window and no maximum distance: candidates are ranked RMS -> colour -> distance.
     phase01_comparison_n_comp_min: int = 3
     phase01_comparison_n_comp_max: int = 8
-    #: SNR-MIN-2026-10: faint limit for every star (targets, comparison and check stars):
-    #: aperture SNR on MASTERSTAR below this -> not measured; a frame where the target SNR
-    #: falls below it is not exported. Default 10 (sigma ~ 0.11 mag).
+    #: SNR-MIN-2026-10: faint limit of the targets: aperture SNR on MASTERSTAR below this -> not
+    #: measured; a frame where the target SNR falls below it is not exported. Default 10 (sigma ~ 0.11
+    #: mag). Comparison stars, and the check stars chosen from the comparison pool, need
+    #: max(snr_min, 20) (COMP-SNR-20 / COMP-SNR-ONE-2026-10, photometry_comp.apply_comp_quality_gates).
     snr_min: float = 10.0
     #: COMP-SAT-80-2026-10 / COMP-SAT-ONE-2026-10 (Milan 2026-10-29): a comparison star is not admitted
     #: when its raw peak reaches this fraction of the measured saturation level on the MASTERSTAR or on

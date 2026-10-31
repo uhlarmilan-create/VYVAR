@@ -97,8 +97,6 @@ _STANDARD: Final[frozenset[str]] = frozenset(
         "IC",
         "VC",
         "BC",
-        "G",
-        "Z",
         "GP",
         "RP",
         "IP",
@@ -168,14 +166,28 @@ def _compact_key(text: str) -> str:
 # G08-13: ONE table "filter name -> standard band" for band_classify, gaia_bands and k2_extinction.
 # Values: Sloan "u" "g" "r" "i" "z"; Johnson-Cousins "U" "B" "V" "Rc" "Ic"; Johnson "Rj" "Ij".
 # Single letters are case sensitive (lower case = Sloan, upper case = Johnson-Cousins; a bare R / I
-# is Cousins). Upper-case "G" and "Z" have no Johnson-Cousins meaning and are read as Sloan
-# (G08-14: an LRGB green "G" is open - see VYVAR_DECISIONS HDR-ONE-2026-10).
+# is Cousins). G08-14 (FILTER-G-AMBIG-2026-10): upper-case "G" and "Z" have no Johnson-Cousins
+# meaning and are NOT a standard band - "G" is Sloan g (AAVSO SG) or a tri-colour / LRGB green (AAVSO TG),
+# "Z" Sloan z (SZ) or another Z band; a bare letter is not an AAVSO code (aavso.org/filters). They are
+# UNKNOWN: differential light curve, no export, WARNING + pipeline_meta ``filter_band.warning``.
 # ---------------------------------------------------------------------------
 _SINGLE_LETTER_BAND: Final[dict[str, str]] = {
     "u": "u", "g": "g", "r": "r", "i": "i", "z": "z",
     "U": "U", "B": "B", "V": "V", "R": "Rc", "I": "Ic",
-    "G": "g", "Z": "z", "v": "V", "b": "B",
+    "v": "V", "b": "B",
 }
+
+#: G08-14: single upper-case letters that name no standard band unambiguously -> the reason text
+AMBIGUOUS_FILTER_LETTERS: Final[dict[str, str]] = {
+    "G": "ambiguous filter G (AAVSO: SG or TG)",
+    "Z": "ambiguous filter Z (AAVSO: SZ or another Z band)",
+}
+
+
+def ambiguous_filter_note(filter_token: str | None) -> str:
+    """G08-14: the reason text when ``filter_token`` is a bare upper-case G / Z (no standard band), else ""."""
+    raw = str(filter_token or "").strip(" _-")
+    return AMBIGUOUS_FILTER_LETTERS.get(raw, "")
 
 
 def _build_band_names() -> dict[str, str]:
@@ -344,6 +356,10 @@ def _classify_canonical_token(token: str) -> PhotometricBand:
 def _classify_raw_string(raw: str) -> PhotometricBand:
     if not str(raw or "").strip():
         return PhotometricBand.CLEAR_UNFILTERED
+    # the band table is case sensitive for single letters (g = Sloan, G = ambiguous, G08-14): look it up
+    # on the raw name before the canonical (upper-case) token loses the case
+    if standard_band_of_filter(raw) is not None:
+        return PhotometricBand.STANDARD_FILTER
     canonical = normalize_filter_synonym(raw)
     return _classify_canonical_token(canonical)
 
@@ -390,7 +406,8 @@ def classify_photometric_band(
         return PhotometricBand.CLEAR_UNFILTERED
     for source in (
         og_token or None,
-        normalize_fits_filter(fits_filter) if fits_filter is not None else None,
+        # raw FITS name (case kept for the single-letter band table, G08-14); "" when it normalises to empty
+        (str(fits_filter).strip() if normalize_fits_filter(fits_filter) else "") if fits_filter is not None else None,
     ):
         if source is None:
             continue

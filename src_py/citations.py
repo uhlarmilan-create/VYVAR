@@ -514,7 +514,7 @@ def build_methods_matrix_lines(ctx: RunCitationContext) -> list[str]:
         (
             "comparison stars",
             f"{ctx.n_comp_min}-{ctx.n_comp_max} per target; rejected: peak >= {ctx.comp_peak_sat_frac:.2f} SAT on a frame, "
-            f"S/N < {COMP_SNR_MIN:g}, neighbour light > {100 * BLEND_FLUX_FRAC_MAX:g}%, no valid band magnitude",
+            f"S/N < {max(float(ctx.snr_min), COMP_SNR_MIN):g}, neighbour light > {100 * BLEND_FLUX_FRAC_MAX:g}%, no valid band magnitude",
         ),
         ("ensemble weights", "ON (Broeg 2005 iterative)"),
         ("colour term", ct_state),

@@ -68,7 +68,9 @@ def test_merge_psf_preserves_aperture_columns_and_maps_fit(tmp_path: Path) -> No
     assert float(after.loc[0, "dao_flux"]) == pytest.approx(12345.6)
     assert float(after.loc[0, "psf_flux"]) == pytest.approx(999.0)
     # OUTPUT-REVIEW-2026-10: only PSF_PROC_COLUMNS of the fit are written
-    assert not {"x_fit", "psf_flags", "psf_snr", "psf_sky"} & set(after.columns)
+    assert not {"x_fit", "psf_flags", "psf_snr"} & set(after.columns)
+    # PSF-SKY-ALLSTAR-2026-10 (step 7 C1): the sky the fit used is kept in the sidecar
+    assert float(after.loc[0, "psf_sky"]) == pytest.approx(5.0)
     assert float(after.loc[0, "psf_flux_err"]) == pytest.approx(9.0)
     assert np.isnan(after.loc[1, "psf_flux"])  # not in the fit set
     assert not after["psf_fit_ok"].astype(bool).any()  # set later by the night chi2 locus

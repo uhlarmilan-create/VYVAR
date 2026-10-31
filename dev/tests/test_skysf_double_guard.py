@@ -25,6 +25,7 @@ def _synthetic_gradient_with_stars(shape: tuple[int, int] = (128, 128)) -> np.nd
 def _write_mono_light(path: Path, *, hdr_extra: fits.Header | None = None) -> None:
     data = _synthetic_gradient_with_stars()
     hdr = fits.Header()
+    hdr["VY_FWHM"] = 2.0 * 2.3548  # G01-07: the frame QC FWHM of record sets the sky-mask scales
     if hdr_extra is not None:
         hdr.update(hdr_extra)
     fits.writeto(path, data, hdr, overwrite=True)

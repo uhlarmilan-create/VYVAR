@@ -38,10 +38,14 @@ def test_order0_bypass_leaves_frame_identical() -> None:
     np.testing.assert_array_equal(out, data)
 
 
+#: G01-07: the frame FWHM of record (VY_FWHM) is passed; a frame without one has it measured from its stars
+STAR_FWHM = 2.0 * 2.3548  # the synthetic stars have sigma 2 px
+
+
 def test_order2_flattens_gradient_only_frame() -> None:
     data = _gradient_only_frame(order=2)
     in_flat = float(residual_large_scale_p99_adu(data, order=2))
-    out, stats = _fit_subtract_preprocess_sky_surface(data, order=2)
+    out, stats = _fit_subtract_preprocess_sky_surface(data, order=2, fwhm_px=STAR_FWHM)
     assert stats["sky_surface_applied"] is True
     out_flat = float(residual_large_scale_p99_adu(out, order=2))
     assert out_flat < 0.15 * in_flat
@@ -52,7 +56,7 @@ def test_order1_gradient_removal_ratio_and_pedestal() -> None:
     """P-10 regression: must remove gradient, not double it (ratio ~2 before fix)."""
     data = _gradient_only_frame(order=1)
     in_flat = float(residual_large_scale_p99_adu(data, order=1))
-    out, stats = _fit_subtract_preprocess_sky_surface(data, order=1)
+    out, stats = _fit_subtract_preprocess_sky_surface(data, order=1, fwhm_px=STAR_FWHM)
     assert stats["sky_surface_applied"] is True
     out_flat = float(residual_large_scale_p99_adu(out, order=1))
     assert in_flat > 20.0
@@ -63,7 +67,7 @@ def test_order1_gradient_removal_ratio_and_pedestal() -> None:
 
 def test_order2_preserves_star_fluxes() -> None:
     data = _synthetic_gradient_with_stars()
-    out, stats = _fit_subtract_preprocess_sky_surface(data, order=2)
+    out, stats = _fit_subtract_preprocess_sky_surface(data, order=2, fwhm_px=STAR_FWHM)
     assert stats["sky_surface_applied"] is True
     assert stats["sky_surface_p2p_adu"] > 10.0
 
@@ -75,7 +79,7 @@ def test_order2_preserves_star_fluxes() -> None:
 
 def test_sky_surface_helper_writes_stats_dict() -> None:
     data = _synthetic_gradient_with_stars((128, 128))
-    _, stats = _fit_subtract_preprocess_sky_surface(data, order=2)
+    _, stats = _fit_subtract_preprocess_sky_surface(data, order=2, fwhm_px=STAR_FWHM)
     assert stats["sky_surface_order"] == 2
     assert stats["sky_surface_applied"] is True
     assert stats["sky_surface_p2p_adu"] > 0.0

@@ -96,11 +96,16 @@ header when it states e-/ADU (`EGAIN`, or `GAIN` with an e-/ADU comment, e.g. Mo
 otherwise the camera's gain curve at the gain setting written in the header (QHY / ZWO through
 NINA or ASCOM write the setting, not e-/ADU) - a point measured from raw flats wins over a manually
 entered one, the camera's default point and the typical values of the shipped camera catalog
-(`src_py/camera_catalog.json`). Binning is applied by the camera's convention (digital average:
-gain x N^2; digital sum: gain x 1; charge binning: both x 1). When nothing is known the run stops
-with a message instead of using a default. Cameras are added from the catalog in Database Explorer
+(`src_py/camera_catalog.json`). At bin N a point measured at bin N is used as is; a bin-1 value is
+scaled by the camera's binning convention (digital average: gain x N^2; digital sum: gain x 1; charge
+binning: both x 1), else by the convention CAL-DIAG measured on the night's darks; a contradiction
+between the two, or no convention at all, stops the run (no default). A measured point also wins over
+a header EGAIN that disagrees with it. Cameras are added from the catalog in Database Explorer
 > EQUIPMENTS; Calibration Library > Measure gain derives gain and read noise from raw flat and dark
-pairs (photon transfer, Janesick 2007). The report shows where the gain came from and an
+pairs (photon transfer, Janesick 2007 / EMVA 1288; procedure in docs/INSTALL.md section 5). Each night
+CAL-DIAG also estimates the gain from consecutive raw lights (sky pairs) as a diagnostic and warns when
+it differs from the camera's gain. The error model adds dark-current shot noise and the digitisation
+step to the read noise (Merline & Howell 1995). The report shows where the gain came from and an
 error-model check (check-star scatter / reported errors). Lights of one observation group must
 share the gain setting.
 

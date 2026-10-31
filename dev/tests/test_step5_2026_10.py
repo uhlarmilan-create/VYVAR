@@ -43,7 +43,9 @@ def test_saturated_any_frame_ids(tmp_path):
     assert out["111"]["n_over"] == 1 and out["222"]["n_over"] == 0
 
 
-def test_d3_uses_snr_min():
+def test_d3_has_no_snr_term():
+    """COMP-SNR-ONE-2026-10 (G07-26): D3 no longer cuts on S/N (the comp S/N gate is
+    apply_comp_quality_gates, max(snr_min, COMP_SNR_MIN)); was test_d3_uses_snr_min."""
     df = pd.DataFrame(
         {
             "source_state": ["DETECTED_P1"] * 2,
@@ -52,9 +54,8 @@ def test_d3_uses_snr_min():
             "snr_ap_pixscaled": [12.0, 30.0],
         }
     )
-    m10, _ = apply_d3_comparison_candidacy(df, fwhm_dao_px=2.0, solve_rms_px=None, snr_min=10.0)
-    m20, _ = apply_d3_comparison_candidacy(df, fwhm_dao_px=2.0, solve_rms_px=None, snr_min=20.0)
-    assert m10.tolist() == [True, True] and m20.tolist() == [False, True]
+    m, meta = apply_d3_comparison_candidacy(df, fwhm_dao_px=2.0, solve_rms_px=None)
+    assert m.tolist() == [True, True] and "snr_ap_pixscaled" not in meta["drops"]
 
 
 def test_linearity_check_flags_knee(tmp_path):
@@ -90,7 +91,7 @@ def test_check_star_follows_target_colour():
             "status": ["good"] * 4,
         }
     )
-    row = select_check_star(pool, ensemble_ids={"1"}, n_comp_min=1, target_bp_rp=0.8, target_mag=12.0, cfg=AppConfig())
+    row = select_check_star(pool, ensemble_ids={"1"}, target_bp_rp=0.8, target_mag=12.0, cfg=AppConfig())
     assert str(row["catalog_id"]) == "3"
 
 

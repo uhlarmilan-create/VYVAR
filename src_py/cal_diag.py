@@ -89,6 +89,12 @@ class CalDiagGateResult:
     saturation_adu: float | None = None
     resolv_limit_adu: float | None = None
     messages: list[str] = field(default_factory=list)
+    #: G06-25: dark current per LIGHT pixel [file ADU/s] from the pedestal fit (slope; SUM-rebinned darks x bf^2),
+    #: None when not measured (one dark exposure time); status FITTED / NEGLIGIBLE / UNKNOWN
+    dark_rate_adu_s: float | None = None
+    dark_rate_status: str | None = None
+    #: C2: sky-pair gain of the night's raw lights (diagnostic only: ratio to the profile gain, bootstrap sigma)
+    sky_pair_gain: dict[str, Any] | None = None
 
     def to_json_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -116,6 +122,16 @@ def convention_to_dark_mode(convention: CalDiagConvention) -> DarkResampleMode:
     if convention == "MEAN":
         return "mean"
     return "sum"
+
+
+def dark_rate_per_light_pixel(ped: PedestalResult, convention: str, block_factor: int) -> float | None:
+    """G06-25: dark current per light pixel [file ADU/s]: the fitted slope k of the master darks (per dark
+    pixel), x bf^2 when the dark is SUM-rebinned to the light binning; negative fits (noise) count as 0.
+    None when the slope is not measured (a single dark exposure time)."""
+    if ped.k_status == "UNKNOWN" or not math.isfinite(float(ped.k_adu_per_s)):
+        return None
+    bf = max(1, int(block_factor))
+    return max(float(ped.k_adu_per_s), 0.0) * (float(bf * bf) if convention == "SUM" and bf > 1 else 1.0)
 
 
 def resolv_limit_adu(*, sigma_p: float, block_factor: int) -> float:
@@ -421,6 +437,8 @@ def cal_diag_gate_for_obs_group(
             saturation_adu=saturation_adu,
             resolv_limit_adu=res_limit,
             messages=messages,
+            dark_rate_adu_s=dark_rate_per_light_pixel(ped, convention, bf),
+            dark_rate_status=ped.k_status,
         )
 
     # bf > 1: convention resolution.
@@ -533,6 +551,8 @@ def cal_diag_gate_for_obs_group(
         saturation_adu=saturation_adu,
         resolv_limit_adu=res_limit,
         messages=messages,
+        dark_rate_adu_s=dark_rate_per_light_pixel(ped, convention, bf),
+        dark_rate_status=ped.k_status,
     )
 
 
@@ -578,6 +598,9 @@ def apply_cal_diag_headers(hdr: fits.Header, gate_result: CalDiagGateResult | No
         hdr["VYDKRSMP"] = ("SUM", "CAL-DIAG: no resample, dark at light binning")
     else:
         hdr["VYDKRSMP"] = (conv, "CAL-DIAG dark resample convention applied")
+        if conv in ("SUM", "MEAN") and int(gate_result.block_factor) > 1:
+            # G01-06: the binning convention measured for this light binning (gain / read-noise scaling)
+            hdr["VYBINCNV"] = (conv, "CAL-DIAG measured binning convention (SUM/MEAN)")
     hdr["VYDKRSRC"] = (
         gate_result.convention_src,
         "CAL-DIAG: how the convention was established",
@@ -590,6 +613,9 @@ def apply_cal_diag_headers(hdr: fits.Header, gate_result: CalDiagGateResult | No
     hdr["VYCDSTAT"] = (gate_result.status, "CAL-DIAG gate outcome for obs_group")
     if gate_result.pedestal_p is not None and math.isfinite(float(gate_result.pedestal_p)):
         hdr["VY_CPED"] = (float(gate_result.pedestal_p), "CAL-DIAG derived bin1 pedestal ADU")
+    if gate_result.dark_rate_adu_s is not None and math.isfinite(float(gate_result.dark_rate_adu_s)):
+        # G06-25: dark-current shot noise of the CCD equation (rig_photometry)
+        hdr["VY_CDKR"] = (float(gate_result.dark_rate_adu_s), "CAL-DIAG dark current ADU/s per light pixel")
 
 
 def passthrough_cal_diag_headers(hdr: fits.Header) -> None:

@@ -468,6 +468,9 @@ def _color_rms_sel_note(fc: pd.DataFrame | None, _cfg_w) -> str:
             sel_note = "color_rms_wide"
     if fc is not None and bool(getattr(fc, "attrs", {}).get("color_fallback")):
         sel_note = "color_rms_t4_fallback"
+    # G07-02: a target without a colour has no colour matching (whole pool ranked by comp_rms)
+    if fc is not None and not getattr(fc, "empty", True) and bool(getattr(fc, "attrs", {}).get("colour_unknown")):
+        sel_note = "colour_unknown"
     return sel_note
 
 
@@ -603,10 +606,11 @@ def _tier_summary(*, final_comps, id_col_cand, n_comp_min, sel_note, target_cid)
     n_t4 = int((_t_final == 4).sum())
     n_good = int(n_t1 + n_t2)
 
-    if len(selected_ids) < int(n_comp_min):
-        logging.warning(
-            f"[COMP-SELECT] Target {target_cid}: only {len(selected_ids)} after filtering "
-            f"< n_comp_min={n_comp_min} - keeping thin set (graceful degradation)."
+    if len(selected_ids) < max(1, int(n_comp_min)):
+        # G07-02: _select_comps_by_rms_then_color admits 0 or >= n_comp_min comps (one floor)
+        raise ValueError(
+            f"[COMP-SELECT] Target {target_cid}: {len(selected_ids)} comps admitted < n_comp_min={n_comp_min} "
+            "(G07-02 floor violated)"
         )
 
     # Tier distribution + warning logic (after final selection)
@@ -724,6 +728,10 @@ def _assign_comp_tiers_to_pool(
         )
         return {
             "final_comps": None,
+            # G07-02: why the target has no comparison set (too_few_comps = fewer than n_comp_min)
+            "no_comps_reason": str(
+                (getattr(final_comps, "attrs", None) or {}).get("no_comps_reason", "") or "no_candidates"
+            ),
             "sel_note": "",
             "selected_ids": [],
             "n_t1": 0,

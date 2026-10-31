@@ -5,8 +5,9 @@ Production error model (relative-flux domain for LC ``err``, :func:`combine_prod
     err^2 = err_photon^2 + err_ensemble^2 + err_scint^2 + sigma_sys^2
 
 * err_photon: CCD equation of the target (source, sky, read noise; Merline & Howell 1995);
-* err_ensemble: error of the weighted comparison ensemble on the frame, sqrt(1 / sum 1/sigma_j^2) over the
-  present comps (``photometry_lightcurve.ensemble_normalize``, Broeg weights) - no c4 / small-sample factor;
+* err_ensemble: error of the Broeg-weighted comparison ensemble on the frame, sqrt(sum wn_j^2 (p_jf^2 + x_j^2))
+  over the present comps (``photometry_lightcurve.ensemble_error_per_frame``, Collier Cameron et al. 2006 eq. 4:
+  each comp's own per-frame noise model p_jf plus its night excess x_j, ENSEMBLE-ERR-CC06-2026-10);
 * err_scint: scintillation at the epoch airmass (Young 1967 / Osborn et al. 2015; telescope diameter, site
   altitude, exposure; 0 when the rig parameters are missing, SCINT-NO-RIG-2026-10);
 * sigma_sys: the night floor measured on the comparison stars (SIGMA-SYS-NIGHT / -MODEL), else the per-rig value.
@@ -40,7 +41,8 @@ def rel_sigma_to_mag(sigma_rel: float) -> float:
 #: G08-32: the terms combine_production_err_rel adds (pipeline_meta dynamic_params.sigma_floor)
 ERR_MODEL_TERMS = ("photon", "ensemble", "scintillation", "systematic_floor")
 ERR_MODEL_TEXT = ("err^2 = err_photon^2 + err_ensemble^2 + err_scint^2 + sigma_sys^2 (relative flux; "
-                  "err_ensemble = sqrt(1/sum 1/sigma_j^2) of the present comparison stars)")
+                  "err_ensemble = sqrt(sum wn_j^2 (p_jf^2 + x_j^2)) of the present comparison stars, "
+                  "Collier Cameron et al. 2006 eq. 4)")
 
 
 def combine_production_err_rel(
@@ -158,6 +160,22 @@ def resolve_sigma_sys_mag(
     return float(val)
 
 
+#: G08-03: scintillation share of the predicted comp noise above which the floor is not separable from the
+#: scintillation model (C_Y quartile spread ~ +-30 %, Osborn et al. 2015 Table 1) - a WARNING, not a gate
+SCINT_SHARE_WARN = 0.5
+
+
+def _robust_pull_scale(z: Any) -> float:
+    """1.4826 MAD of the pooled pulls (no clipping)."""
+    import numpy as np
+
+    z = np.asarray(z, float)
+    z = z[np.isfinite(z)]
+    if z.size < 3:
+        return float("nan")
+    return float(1.4826 * np.median(np.abs(z - np.median(z))))
+
+
 def night_sigma_sys_from_comps(
     flux_by_cid: dict[str, Any],
     sky_by_cid: dict[str, Any],
@@ -174,35 +192,36 @@ def night_sigma_sys_from_comps(
     """SIGMA-SYS-NIGHT-2026-10 (Milan 2026-10-12): the night's systematic floor measured on the
     comparison stars instead of a fixed config constant.
 
-    For each comp: leave-one-out differential light curve against the equal-weight ensemble of
-    the other comps (each normalised to its median), its robust scatter over the night
-    s = 1.4826 MAD(r - median r), and its predicted photon + sky + read noise e (the same CCD
-    equation as the LC ``err``). SIGMA-SYS-TOTAL-2026-10 (Milan 2026-10-28, phase-1 item O1 option C):
-    s is the total scatter, not the point-to-point scatter, so the floor holds the night's slow
-    systematics (Brno 534 check stars: p2p / err 0.85-1.0 but total / err 1.3-1.9) and the errors
-    describe the repeatability over the night, as the check-star scatter does (AAVSO practice). The floor is
-    sqrt(median(s^2 - e^2)) over comps whose own photon error is below ``max_photon_mag``
-    (bright comps, where a systematic term is measurable), never negative.
-    Everett & Howell (2001): 2-5 mmag typical. CCD-ONE-2026-10: the photon error is
-    ``ccd_noise.ccd_variance_adu2`` with each comp's real number of sky pixels per frame (``n_sky_by_cid``);
-    gain and read noise are required (ValueError). Returns {"sigma_sys_mag", "n_comps", ...};
-    sigma_sys_mag is NaN when fewer than ``min_comps`` comps qualify.
+    Each comp (normalised to its own median) is compared with the Broeg-weighted mean of the OTHER comps
+    present on the frame (leave-one-out; weights ``ensemble_weights.broeg_weights``, the ensemble's
+    weights): r_jf. SIGMA-SYS-MODEL-2026-10 (D3): the predicted variance holds every known term once - the
+    comp's photon + sky + read noise (``ccd_noise.ccd_variance_adu2`` with its real number of sky pixels per
+    frame, ``n_sky_by_cid``; gain and read noise required, ValueError), its scintillation at the frame airmass
+    (``scint_mag_by_frame``, the value the LC error adds) and the noise of its reference,
+    sum_k u_jkf^2 (photon_k^2 + scint^2), u = the normalised weights of the others (the same deconvolution as
+    the ensemble error, ENSEMBLE-ERR-CC06-2026-10). SIGMA-SYS-TOTAL-2026-10 (O1): the residual is the total
+    (not point-to-point) one, so the floor holds the night's slow systematics.
 
-    SIGMA-SYS-MODEL-2026-10 (Milan 2026-10-26, D3): the predicted variance e^2 holds every known
-    term once - the comp's photon + sky + read noise, its scintillation (``scint_mag_by_frame``,
-    the same per-epoch value the LC error adds) and the noise of its reference, the mean of the
-    other n comps: (sum over the others of photon^2 + scintillation^2) / n^2. The floor is what
-    is left above that model, so the LC error, which adds scintillation and the ensemble error
-    itself, does not count them twice (Burdanov et al. 2014; Everett & Howell 2001).
+    SIGMA-SYS-POOL-2026-10 (G08-03): the floor f is the ONE value for all qualifying comps (own median photon
+    error below ``max_photon_mag``) for which the pooled robust pull over all (comp, frame) is 1:
+    1.4826 MAD(r_jf / sqrt(pred_jf + f^2 (1 + sum_k u_jkf^2))) = 1 (robust analogue of Collier Cameron et al.
+    2006 eq. 5; the reference carries the others' floor too, hence 1 + sum u^2 = 1 + 1/n for equal weights;
+    no clipping). f = 0 when the pull is <= 1 without a floor. Returns {"sigma_sys_mag", "n_comps",
+    "pull_comps" (pooled pull at f), "scint_share" (median scint^2 / predicted variance without the floor),
+    "warning" (scint_share > ``SCINT_SHARE_WARN``: floor not separable from the scintillation model), ...};
+    sigma_sys_mag is NaN when fewer than ``min_comps`` comps qualify.
     """
     import numpy as np
+    from scipy.optimize import brentq  # noqa: PLC0415
 
     from ccd_noise import ccd_variance_adu2, check_gain_read_noise  # noqa: PLC0415
+    from ensemble_weights import broeg_weights  # noqa: PLC0415
 
     check_gain_read_noise(gain, read_noise)
     ids = [c for c in flux_by_cid if np.isfinite(np.asarray(flux_by_cid[c], float)).sum() >= 10]
     out: dict[str, Any] = {"sigma_sys_mag": float("nan"), "n_comps": 0,
-                           "method": "comps LOO total scatter - (photon + scintillation + reference)"}
+                           "method": "comps LOO (Broeg-weighted reference) total scatter: pooled robust pull = 1 "
+                                     "over photon + scintillation + reference + floor"}
     if len(ids) < int(min_comps):
         out["reason"] = f"only {len(ids)} comps with >= 10 frames"
         return out
@@ -213,8 +232,6 @@ def night_sigma_sys_from_comps(
     with np.errstate(invalid="ignore", divide="ignore"):
         M = -2.5 * np.log10(np.where(F > 0, F, np.nan))
         M = M - np.nanmedian(M, axis=1, keepdims=True)
-        tot = np.nansum(M, axis=0)
-        cnt = np.isfinite(M).sum(axis=0)
         r_ap = float(k) * fw
         area = math.pi * r_ap**2
         var = ccd_variance_adu2(F, S, area, NS, gain=gain, read_noise=read_noise)
@@ -222,33 +239,55 @@ def night_sigma_sys_from_comps(
         E2 = np.where(np.isfinite(M) & (F > 0), E2, np.nan)
     sc = np.zeros(F.shape[1]) if scint_mag_by_frame is None else np.nan_to_num(np.asarray(scint_mag_by_frame, float))
     sc2 = sc * sc
-    tot_var = np.nansum(E2 + sc2, axis=0)  # every comp of the frame: photon + scintillation
-    excess, ph = [], []
+    fin = np.isfinite(M)
+    w, _ = broeg_weights(M)
+    wf = w[:, None] * fin
+    tot_w = wf.sum(axis=0)
+    tot_wm = (wf * np.where(fin, M, 0.0)).sum(axis=0)
+    own_var = np.where(fin, np.nan_to_num(E2) + sc2[None, :], 0.0)  # every comp of the frame: photon + scint
+    tot_w2v = (wf * wf * own_var).sum(axis=0)
+    tot_w2 = (wf * wf).sum(axis=0)
+    R, P0, U2, SC, ph = [], [], [], [], []
     for i in range(len(ids)):
-        m = M[i]
-        n_oth = np.maximum(cnt - np.isfinite(m), 1)
-        others = (tot - np.nan_to_num(m)) / n_oth
-        r = m - others
-        ok = np.isfinite(r)
+        ow = tot_w - wf[i]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            ref = np.where(ow > 0, (tot_wm - wf[i] * np.nan_to_num(M[i])) / ow, np.nan)
+            u2 = np.where(ow > 0, (tot_w2 - wf[i] ** 2) / (ow * ow), np.nan)  # sum_k u_ik^2
+            ref_var = np.where(ow > 0, (tot_w2v - wf[i] ** 2 * own_var[i]) / (ow * ow), np.nan)
+        r = M[i] - ref
+        pred = E2[i] + sc2 + ref_var
+        ok = np.isfinite(r) & np.isfinite(pred) & np.isfinite(u2)
         if int(ok.sum()) < 10:
             continue
-        rr = r[ok]
-        s = 1.4826 * float(np.median(np.abs(rr - np.median(rr))))
-        own = np.nan_to_num(E2[i])
-        ref_var = (tot_var - own - sc2) / (n_oth * n_oth)
-        pred = E2[i] + sc2 + ref_var
-        e_med = float(np.sqrt(np.nanmedian(E2[i][ok]))) if np.isfinite(E2[i][ok]).any() else float("nan")
-        pred_med = float(np.nanmedian(pred[ok])) if np.isfinite(pred[ok]).any() else float("nan")
-        if math.isfinite(s) and math.isfinite(e_med) and math.isfinite(pred_med):
-            excess.append(s * s - pred_med)
-            ph.append(e_med)
-    ph_a, ex_a = np.asarray(ph), np.asarray(excess)
-    sel = ph_a < float(max_photon_mag)
+        R.append(r[ok]); P0.append(pred[ok]); U2.append(u2[ok]); SC.append(sc2[ok])
+        ph.append(float(np.sqrt(np.median(E2[i][ok]))))
+    ph_a = np.asarray(ph)
+    sel = np.flatnonzero(ph_a < float(max_photon_mag))
     out["n_comps_total"] = int(len(ph_a))
-    if int(sel.sum()) < int(min_comps):
-        out["reason"] = f"only {int(sel.sum())} comps with photon error < {max_photon_mag} mag"
+    if int(sel.size) < int(min_comps):
+        out["reason"] = f"only {int(sel.size)} comps with photon error < {max_photon_mag} mag"
         return out
-    med = float(np.median(ex_a[sel]))
-    out.update(sigma_sys_mag=math.sqrt(med) if med > 0 else 0.0, n_comps=int(sel.sum()),
-               median_photon_mag=float(np.median(ph_a[sel])))
+    r_all = np.concatenate([R[i] for i in sel])
+    p_all = np.concatenate([P0[i] for i in sel])
+    u_all = np.concatenate([U2[i] for i in sel])
+    s_all = np.concatenate([SC[i] for i in sel])
+
+    def _pull(f: float) -> float:
+        return _robust_pull_scale(r_all / np.sqrt(p_all + f * f * (1.0 + u_all)))
+
+    pull0 = _pull(0.0)
+    f = 0.0
+    if pull0 > 1.0:
+        hi = _robust_pull_scale(r_all) + 1e-6  # the floor alone at the total scatter: pull < 1
+        while _pull(hi) >= 1.0:
+            hi *= 2.0
+        f = float(brentq(lambda x: _pull(x) - 1.0, 0.0, hi, xtol=1e-7))
+    scint_share = float(np.median(s_all / p_all)) if s_all.size else float("nan")
+    out.update(sigma_sys_mag=f, n_comps=int(sel.size), median_photon_mag=float(np.median(ph_a[sel])),
+               pull_comps=round(_pull(f), 4), pull_comps_no_floor=round(pull0, 4),
+               scint_share=round(scint_share, 4), warning="")
+    if math.isfinite(scint_share) and scint_share > SCINT_SHARE_WARN:
+        out["warning"] = (f"scintillation is {100 * scint_share:.0f} % of the predicted comp noise: floor not "
+                          "separable from the scintillation model (C_Y uncertain)")
+        logging.warning("[SIGMA-SYS] %s", out["warning"])
     return out

@@ -1,9 +1,13 @@
 """Second-order extinction (k'') - literature defaults and per-frame correction.
 
-Native literature coefficients (Smith 2002 Sloan, Henden 1982 Johnson B) convert to
-BP-RP units via Jordi et al. 2010 colour slopes:
+Native literature coefficients (Smith et al. 2002 Sloan, Henden 1982 Johnson B) convert to
+BP-RP units via Jordi et al. 2010 (A&A 523, A48) colour slopes:
 
     k2_bprp = k''_native * d(C_native)/d(C_bprp)
+
+C_native is the colour the literature k'' multiplies (Smith 2002 eqs. 4-8: u' -> u'-g', g' -> g'-r',
+r' -> r'-i', i' and z' -> i'-z'; AAVSO PEP Guide 3.5.4: B -> B-V). K2-BAND-2026-10 (G09-05 / G08-47 / G08-48):
+every resolution carries a reason; bands without a citable k'' get source NONE (no k2_delta_mag column).
 
 The night fit of k'' (NIGHT_FIT v2, never enabled) is removed (CFG-REVIEW-2026-10).
 
@@ -26,15 +30,24 @@ from band_classify import (
 
 LOGGER = logging.getLogger(__name__)
 
-# Jordi et al. 2010 A&A 515 A16 colour-colour polynomials (Sect. 5.2, Eq. 1):
+# Jordi et al. 2010 A&A 523 A48 colour-colour polynomials (Sect. 5.2, Eq. 1):
 #   C_Gaia = a + b*C_native + c*C_native^2 + d*C_native^3
 # Converter uses d(C_native)/d(BP-RP) = 1 / (b + 2*c*C0 + 3*d*C0^2) at FGK anchor C0.
 # Validity: BaSeL3.1 FGK dwarfs; B-V fits have large scatter for Teff < 4500 K (Sect. 5.2).
 
 # Table 6 unreddened SDSS (g-r) -> GBP-GRP: a=0.3523, b=1.1876, c=-0.5370, d=0.4003.
 # Anchor g-r=0.48 (FGK): d(g-r)/d(BP-RP) = 1/(1.1876 - 2*0.5370*0.48 + 3*0.4003*0.48^2) ~ +1.054.
-# Smith g k2 = -0.016 * 1.054 ~ -0.0169; r k2 = -0.004 * 1.054 ~ -0.0042.
+# Smith g k2 = -0.016 * 1.054 ~ -0.0169 (g' k'' multiplies g'-r').
 SLOPE_GR_PER_BPRP = 1.054  # d(g'-r')/d(BP-RP); Jordi 2010 Table 6, FGK anchor g-r=0.48
+
+# K2-BAND-2026-10 (G09-05): Smith 2002 eq. 6 multiplies the r' k'' by (r'-i'), not (g'-r').
+# Jordi 2010 Table 5 (r-i) -> GBP-GRP: a=0.4649, b=2.3969, c=-0.2976, d=0.0207.
+# Anchor r-i=0.15 (FGK): d(r-i)/d(BP-RP) = 1/(2.3969 - 2*0.2976*0.15 + 3*0.0207*0.15^2) ~ +0.433.
+# Smith r k2 = -0.004 * 0.433 ~ -0.0017.
+_JORDI_T5_RI = (0.4649, 2.3969, -0.2976, 0.0207)
+_RI_ANCHOR = 0.15
+SLOPE_RI_PER_BPRP = 1.0 / (_JORDI_T5_RI[1] + 2.0 * _JORDI_T5_RI[2] * _RI_ANCHOR
+                           + 3.0 * _JORDI_T5_RI[3] * _RI_ANCHOR ** 2)  # d(r'-i')/d(BP-RP) ~ 0.433
 
 # Table 3 Johnson-Cousins (B-V) -> GBP-GRP, all Av: a=0.0981, b=1.4290, c=-0.0269, d=0.0061.
 # Anchor B-V=0.58 (FGK): d(B-V)/d(BP-RP) = 1/(1.429 - 2*0.0269*0.58 + 3*0.0061*0.58^2) ~ +0.713.
@@ -101,28 +114,52 @@ def k2_native_to_bprp(k_native: float, *, native_slope: float) -> float:
     return float(k_native) * float(native_slope)
 
 
-# Johnson-Cousins V, R, I: negligible k'' (AAVSO practice).
 # G08-13: k'' per standard band of the ONE filter table (band_classify.standard_band_of_filter).
 # Johnson U uses the Sloan u' value of Smith et al. 2002 (no Johnson U k'' in the cited sources).
-_K2_SLOAN_OF_BAND: dict[str, str] = {"u": "U", "g": "G", "r": "R", "i": "I", "z": "Z", "U": "U"}
+# K2-BAND-2026-10 (G08-47 / G08-48): Johnson-Cousins V, R, I have no k'' correction (negligible, AAVSO PEP
+# Guide 3.5.4) - source NONE, not a column of zeros; Sloan i' / z' (Smith: per i'-z') have no citable
+# BP-RP slope (no Jordi 2010 i-z relation) - source NONE until one is sourced.
+_K2_SLOAN_OF_BAND: dict[str, str] = {"u": "U", "g": "G", "r": "R", "U": "U"}
+_K2_SLOPE_OF_SLOAN: dict[str, float] = {"U": SLOPE_UG_PER_BPRP, "G": SLOPE_GR_PER_BPRP, "R": SLOPE_RI_PER_BPRP}
 _K2_ZERO_BANDS: frozenset[str] = frozenset({"V", "Rc", "Ic", "Rj", "Ij"})
+_K2_NO_SLOPE_BANDS: frozenset[str] = frozenset({"i", "z"})
+
+K2_REASON_NEGLIGIBLE = "none - negligible per AAVSO PEP Guide 3.5.4"
+K2_REASON_UNCORRECTED = "none - uncorrected (no literature k'' for unfiltered / tri-colour); k'' X dC remains"
+K2_REASON_NO_SLOPE = "none - no citable colour slope (Smith 2002 k'' per i'-z'; no Jordi 2010 i-z relation)"
+K2_REASON_NOT_STANDARD = "none - filter is not a standard band"
+K2_REASON_OFF = "none - k2_mode off"
+K2_REASON_OVERRIDE = "config k2_defaults_bprp"
+
+
+def k2_for_token(token: str) -> tuple[float | None, str]:
+    """(literature k'' per BP-RP or None, reason) for a filter token (K2-BAND-2026-10)."""
+    raw = str(token or "").strip().replace("''", "'")
+    if not raw or raw.upper() in K2_NONE_TOKENS:
+        return None, K2_REASON_UNCORRECTED
+    band = standard_band_of_filter(raw)
+    if band is None:
+        cls = classify_photometric_band("", fits_filter=raw)
+        if cls.value == "standard_filter":
+            return None, "none - no literature k'' for this band"
+        return None, K2_REASON_UNCORRECTED if band_failsafe_clear(cls) and cls.value != "unknown" \
+            else K2_REASON_NOT_STANDARD
+    if band in _K2_ZERO_BANDS:
+        return None, K2_REASON_NEGLIGIBLE
+    if band in _K2_NO_SLOPE_BANDS:
+        return None, K2_REASON_NO_SLOPE
+    if band == "B":
+        return (k2_native_to_bprp(HENDEN_K2_B_PER_BV, native_slope=SLOPE_BV_PER_BPRP),
+                "Henden & Kaitchuck 1982 k''_B per B-V x Jordi 2010 d(B-V)/d(BP-RP)")
+    slo = _K2_SLOAN_OF_BAND[band]
+    colour = {"U": "u'-g'", "G": "g'-r'", "R": "r'-i'"}[slo]
+    return (k2_native_to_bprp(SMITH_K2_NATIVE[slo], native_slope=_K2_SLOPE_OF_SLOAN[slo]),
+            f"Smith et al. 2002 k'' per {colour} x d({colour})/d(BP-RP)")
 
 
 def computed_k2_bprp_for_token(token: str) -> float | None:
-    """Literature k'' per BP-RP for a filter token, or None if not applicable."""
-    raw = str(token or "").strip().replace("''", "'")
-    if not raw or raw.upper() in K2_NONE_TOKENS:
-        return None
-    band = standard_band_of_filter(raw)
-    if band is None:
-        return None
-    if band in _K2_ZERO_BANDS:
-        return 0.0
-    if band == "B":
-        return k2_native_to_bprp(HENDEN_K2_B_PER_BV, native_slope=SLOPE_BV_PER_BPRP)
-    slo = _K2_SLOAN_OF_BAND[band]
-    slope = SLOPE_UG_PER_BPRP if slo == "U" else SLOPE_GR_PER_BPRP
-    return k2_native_to_bprp(SMITH_K2_NATIVE[slo], native_slope=slope)
+    """Literature k'' per BP-RP for a filter token, or None if not applicable (reason: :func:`k2_for_token`)."""
+    return k2_for_token(token)[0]
 
 
 def resolve_k2_mode(cfg: Any | None) -> str:
@@ -138,15 +175,20 @@ def _literature_k2_bprp_for_obs_group(
     *,
     fits_filter: str | None = None,
     aavso_code: str | None = None,
-) -> tuple[float, K2Source]:
-    """Literature / none path."""
-    band = classify_photometric_band(obs_group, fits_filter=fits_filter, aavso_code=aavso_code)
-    if band_failsafe_clear(band):
-        return float("nan"), K2Source.NONE
+) -> tuple[float, K2Source, str]:
+    """Literature / none path: (k'' per BP-RP, source, reason)."""
+    from band_classify import ambiguous_filter_note  # noqa: PLC0415
 
+    band = classify_photometric_band(obs_group, fits_filter=fits_filter, aavso_code=aavso_code)
     token = filter_token_from_obs_group(obs_group)
+    if band_failsafe_clear(band):
+        if band.value == "unknown":
+            _amb = ambiguous_filter_note(token)
+            return float("nan"), K2Source.NONE, (f"none - {_amb}" if _amb else K2_REASON_NOT_STANDARD)
+        return float("nan"), K2Source.NONE, K2_REASON_UNCORRECTED
+
     if token in K2_NONE_TOKENS:
-        return float("nan"), K2Source.NONE
+        return float("nan"), K2Source.NONE, K2_REASON_UNCORRECTED
 
     overrides = getattr(cfg, "k2_defaults_bprp", None) or {}
     if isinstance(overrides, dict):
@@ -157,12 +199,26 @@ def _literature_k2_bprp_for_obs_group(
                 except (TypeError, ValueError):
                     continue
                 if math.isfinite(v):
-                    return v, K2Source.LITERATURE_DEFAULT
+                    return v, K2Source.LITERATURE_DEFAULT, K2_REASON_OVERRIDE
 
-    computed = computed_k2_bprp_for_token(token)
+    computed, reason = k2_for_token(token)
     if computed is None:
-        return float("nan"), K2Source.NONE
-    return float(computed), K2Source.LITERATURE_DEFAULT
+        return float("nan"), K2Source.NONE, reason
+    return float(computed), K2Source.LITERATURE_DEFAULT, reason
+
+
+def resolve_k2(
+    cfg: Any | None,
+    obs_group: str,
+    *,
+    fits_filter: str | None = None,
+    aavso_code: str | None = None,
+) -> tuple[float, K2Source, str]:
+    """(k2 per BP-RP, source, reason) for an obs_group: literature default, or none with the reason
+    (k2_mode off, negligible V/R/I, unfiltered / tri-colour, no citable slope, not a standard band)."""
+    if resolve_k2_mode(cfg) == "off":
+        return float("nan"), K2Source.NONE, K2_REASON_OFF
+    return _literature_k2_bprp_for_obs_group(cfg, obs_group, fits_filter=fits_filter, aavso_code=aavso_code)
 
 
 def resolve_k2_bprp_value(
@@ -172,12 +228,24 @@ def resolve_k2_bprp_value(
     fits_filter: str | None = None,
     aavso_code: str | None = None,
 ) -> tuple[float, K2Source]:
-    """Return (k2 per BP-RP, source) for an obs_group: literature default, or none (k2_mode off / no k'')."""
-    mode = resolve_k2_mode(cfg)
-    if mode == "off":
-        return float("nan"), K2Source.NONE
+    """Return (k2 per BP-RP, source) for an obs_group (:func:`resolve_k2` without the reason)."""
+    v, src, _ = resolve_k2(cfg, obs_group, fits_filter=fits_filter, aavso_code=aavso_code)
+    return v, src
 
-    return _literature_k2_bprp_for_obs_group(cfg, obs_group, fits_filter=fits_filter, aavso_code=aavso_code)
+
+def colourless_weight_fraction(comp_bp_rp: dict[str, float], weights: dict[str, float]) -> float:
+    """K2-BAND-2026-10 (G09-05 b): Broeg-weight fraction of the ensemble comps without a BP-RP colour.
+    :func:`ensemble_bp_rp` is the weighted colour of the comps WITH a colour; this is the share it misses
+    (NaN without weights)."""
+    tot = miss = 0.0
+    for cid, w in (weights or {}).items():
+        w = float(w)
+        if not (math.isfinite(w) and w > 0):
+            continue
+        tot += w
+        if not math.isfinite(float(comp_bp_rp.get(cid, float("nan")))):
+            miss += w
+    return miss / tot if tot > 0 else float("nan")
 
 
 def bp_rp_comp_median(

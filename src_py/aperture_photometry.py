@@ -690,7 +690,7 @@ def _compute_group_color_term_fit(
             )
             return _ColorTermGroupFit(
                 c1=float(_pf.coeffs[0]) if _pf.coeffs else 0.0,
-                c1_stderr=float("nan"),
+                c1_stderr=float(_pf.coeff_stderr()[0]) if _pf.coeffs else float("nan"),  # G08-46
                 n_comp=int(_pf.n),
                 comp_bp_rp=_cbp,
                 comp_quality=_cq,
@@ -1196,6 +1196,7 @@ class _AperturePhotometryState:
     apply_color_term: bool = False
     k2_bprp: float = float("nan")
     k2_source: str = "none"
+    k2_reason: str = ""
     stability_run_flags: dict[str, Any] = field(default_factory=dict)
     equipment_id: int | None = None
     #: Run-effective resolved facts (metadata only; PARAM-OWNERSHIP-WAVE-A STEP 4).
@@ -1227,6 +1228,10 @@ class _AperturePhotometryState:
     psf_ratio: dict[str, float] = field(default_factory=dict)
     #: SIGMA-SYS-NIGHT-2026-10: measured systematic floor of the night (mag); None = config
     sigma_sys_night: float | None = None
+    #: G08-03: the night floor's pipeline_meta block and the check stars' pulls (K - median) / kmag_err,
+    #: pooled into ``sigma_sys_night.pull_check_stars`` after the targets
+    sigma_sys_night_meta: dict[str, Any] = field(default_factory=dict)
+    check_pulls: dict[str, Any] = field(default_factory=dict)
     #: PROGRESS-MEASURED-2026-10: progress counters (measured targets only)
     n_to_measure: int = 0
     n_final_skip: int = 0
@@ -1701,6 +1706,22 @@ def _frame_scintillation_mag(state: Any, frame_order: list, output_dir: Path) ->
     return out
 
 
+def _record_check_star_pulls(state: Any, output_dir: Path) -> None:
+    """G08-03: pooled robust pull 1.4826 MAD((K - median K) / kmag_err) of the night's check stars (each check
+    star once) into pipeline_meta ``sigma_sys_night`` (expected ~1; the comps' pull is ``pull_comps``)."""
+    from sigma_floor_core import _robust_pull_scale  # noqa: PLC0415
+
+    pulls = [np.asarray(v, float) for v in (getattr(state, "check_pulls", None) or {}).values()]
+    blk = dict(getattr(state, "sigma_sys_night_meta", None) or {"applied": "config"})
+    blk["n_check_stars"] = len(pulls)
+    blk["pull_check_stars"] = (round(_robust_pull_scale(np.concatenate(pulls)), 4) if pulls else None)
+    try:
+        merge_photometry_pipeline_meta(Path(output_dir), {"sigma_sys_night": blk})
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("[SIGMA-SYS] pipeline_meta check-star pull not written: %s", exc)
+    logging.info("[SIGMA-SYS] check-star pull scale %s from %d check stars", blk["pull_check_stars"], len(pulls))
+
+
 def _night_sigma_sys(state: Any, grid: Any, frame_order: list, output_dir: Path, *,
                      choices: dict | None = None) -> None:
     """SIGMA-SYS-NIGHT-2026-10 (Milan 2026-10-12): measure the night's systematic floor on the
@@ -1729,6 +1750,11 @@ def _night_sigma_sys(state: Any, grid: Any, frame_order: list, output_dir: Path,
     v = float(r.get("sigma_sys_mag", float("nan")))
     state.sigma_sys_night = v if math.isfinite(v) else None
     r["applied"] = "night" if state.sigma_sys_night is not None else "config"
+    state.sigma_sys_night_meta = dict(r)
+    if r.get("warning"):
+        from infolog import log_event  # noqa: PLC0415
+
+        log_event(f"[SIGMA-SYS] WARNING {r['warning']}")
     try:
         from photometry_provenance import merge_photometry_pipeline_meta as _mpm  # noqa: PLC0415
 
@@ -1880,9 +1906,22 @@ def _rap_write_start_meta(*, _apt_fw, _cfg, db, draft_id, masterstar_fits_path, 
     except Exception as exc:  # noqa: BLE001
         logging.error('[EXC-0180] cal_diag block not merged into pipeline_meta: %s', exc)
         pass
+    # G08-14: the run's filter -> band facts; an ambiguous name (bare G / Z) is a WARNING + meta
+    from gaia_bands import filter_band_meta  # noqa: PLC0415
+    from infolog import log_event  # noqa: PLC0415
+
+    _fb_meta = filter_band_meta(str(getattr(state, "obs_group", "") or ""))
+    if _fb_meta["warning"]:
+        LOGGER.warning("[BAND] %s: %s - no standard band, differential light curves, no export "
+                       "(name the filter explicitly, e.g. g / SG or TG)", state.obs_group, _fb_meta["warning"])
+        log_event(f"[BAND] WARNING {state.obs_group}: {_fb_meta['warning']} - differential only, export refused")
     merge_photometry_pipeline_meta(
         output_dir,
         {
+            "filter_band": _fb_meta,
+            # K2-BAND-2026-10: the night's k'' (per BP-RP), its source and the reason
+            "k2": {"k2_value": float(state.k2_bprp) if math.isfinite(float(state.k2_bprp)) else None,
+                   "k2_source": str(state.k2_source), "k2_reason": str(state.k2_reason)},
             "lunar_context": state.lunar_context,
             "observer_location": _aperture_observer_location_dict(
                 _cfg,
@@ -2431,6 +2470,7 @@ def run_aperture_photometry(
     if state.target_field_map is not None:
         state.target_field_map.close()
         state.target_field_map = None
+    _record_check_star_pulls(state, output_dir)
     _n_uncal = sum(1 for r in summary_rows if str(r.get("band_system", "")) == "NONE")
     if _n_uncal:
         LOGGER.warning("[BAND] %d of %d target(s) without a comparison star with a valid catalogue magnitude in "

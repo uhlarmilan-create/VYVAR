@@ -65,7 +65,7 @@ def _frame(n: int, seed: int, *, offset_dex: float = 0.0, scatter: float = 0.08,
 
 def _night(rows: list[dict]) -> Chi2Locus:
     night = fit_chi2_locus([r["psf_flux"] for r in rows], [r["psf_chi2"] for r in rows],
-                           converged=[True] * len(rows), source="night")
+                           star_ids=[r["catalog_id"] for r in rows], converged=[True] * len(rows), source="night")
     assert night is not None
     return night
 
@@ -151,7 +151,7 @@ def test_t5_residual_uses_scatter_of_the_star_flux_bin():
     lf = rng.uniform(3.0, 6.0, 6000)
     sc = np.where(lf < 4.5, 0.05, 0.3)  # bright bins scatter more
     lc = np.log10(_curved_chi2(lf)) + rng.normal(0, 1, lf.size) * sc
-    night = fit_chi2_locus(10**lf, 10**lc, source="night")
+    night = fit_chi2_locus(10**lf, 10**lc, star_ids=np.arange(lf.size), source="night")
     assert night is not None
     r_faint = locus_residual_sigma(10**4.0, 10 ** (np.log10(_curved_chi2(np.array([4.0]))[0]) + 0.3), night)
     r_bright = locus_residual_sigma(10**5.7, 10 ** (np.log10(_curved_chi2(np.array([5.7]))[0]) + 0.3), night)

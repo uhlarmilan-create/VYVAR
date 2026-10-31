@@ -17,6 +17,16 @@ The effective gain of the delivered pixel values depends on how the camera bins:
 
 A point measured at the binning of the frames is used as is; a bin-1 point is scaled by the
 convention. The container scale of N-bit ADCs (``ADC_BITS``) is applied later by ``rig_photometry``.
+
+STEP7-CAL-BINCONV-2026-10 (G01-06 / G01-24): there is no default convention. At bin N > 1 the order is
+(a) a measured / manual point at bin N, used as is; (b) a bin-1 point scaled by the camera's ``BIN_MODE``
+(database, else catalog), else by the convention CAL-DIAG measured on the night's darks (SUM -> sum,
+MEAN -> average; header card ``VYBINCNV``, source ``cal_diag``); BIN_MODE and CAL-DIAG disagreeing stops;
+(c) CAL-DIAG SUM fixes the gain but not the read noise (digital sum RN x N vs charge binning RN x 1): RN x N
+for a CMOS sensor, unresolved for a CCD / unknown sensor unless BIN_MODE says ``charge``; (d) nothing known
+-> unresolved (the run stops like for an unknown gain). Literature: ASCOM ElectronsPerADU follows BinX/BinY;
+AIJ / IRAF take the gain at the frame binning; the authority is a photon-transfer point at that binning
+(EMVA 1288 R4.0 sec. 6.6).
 """
 from __future__ import annotations
 
@@ -33,8 +43,10 @@ from typing import Any
 CATALOG_PATH = Path(__file__).resolve().with_name("camera_catalog.json")
 
 BIN_MODES = ("average", "sum", "charge")
-#: Binning convention when a camera states none - the behaviour VYVAR always had for DB values.
-DEFAULT_BIN_MODE = "average"
+#: CAL-DIAG dark convention (header ``VYBINCNV``) -> the camera binning conventions it is consistent with
+#: (SUM: the dark level scales x N^2 - digital sum or charge binning; MEAN: digital average).
+CAL_DIAG_COMPATIBLE: dict[str, tuple[str, ...]] = {"SUM": ("sum", "charge"), "MEAN": ("average",)}
+SENSOR_CLASSES = ("cmos", "ccd")
 HEADER_GAIN_KINDS = ("e_per_adu", "setting")
 
 #: Priority of point sources (lower wins) at the same setting.
@@ -49,6 +61,7 @@ class CurvePoint:
     read_noise_e: float | None
     source: str  # measured | manual | equipment | catalog
     note: str = ""
+    e_per_adu_err: float | None = None  # 1 sigma of a photon-transfer gain (native e-/ADU)
 
 
 @dataclass(frozen=True)
@@ -57,8 +70,9 @@ class CameraProfile:
     name: str = ""
     model_key: str | None = None
     mode_key: str | None = None
-    bin_mode: str = DEFAULT_BIN_MODE
-    bin_mode_source: str = "default"
+    bin_mode: str | None = None  # None = not stated (database / catalog); see binning_convention()
+    bin_mode_source: str = "unset"  # equipment | catalog | unset
+    sensor_class: str | None = None  # cmos | ccd | None (unknown)
     header_gain: str | None = None  # e_per_adu | setting | None (decide from the card comment)
     default_setting: float | None = None
     adc_bits: int | None = None
@@ -70,6 +84,11 @@ class Lookup:
     value: float | None
     source: str  # measured | manual | equipment | catalog | unresolved
     detail: str = ""
+    #: binning convention used to scale a bin-1 value (None: no scaling) and where it came from
+    bin_mode: str | None = None
+    bin_mode_source: str | None = None
+    #: True when the value is a point at the frame binning (no scaling)
+    exact_binning: bool = False
 
 
 # --------------------------------------------------------------------------- #
@@ -236,13 +255,23 @@ def _norm_bin_mode(v: Any) -> str | None:
     return s if s in BIN_MODES else None
 
 
+def _sensor_class(sensortype: Any, model: dict[str, Any] | None) -> str | None:
+    """CMOS / CCD class: the catalog lists CMOS cameras only (its ``about``); else a ``CMOS`` / ``CCD`` word
+    in EQUIPMENTS.SENSORTYPE; else unknown."""
+    if model is not None:
+        return "cmos"
+    words = set(re.findall(r"[a-z]+", str(sensortype or "").casefold()))
+    hits = [c for c in SENSOR_CLASSES if c in words or f"s{c}" in words]
+    return hits[0] if len(hits) == 1 else None
+
+
 def _norm_header_gain(v: Any) -> str | None:
     s = str(v or "").strip().lower()
     return s if s in HEADER_GAIN_KINDS else None
 
 
 _EQ_PROFILE_COLS = (
-    "CAMERANAME", "GAIN_ADU", "READNOISE_E", "ADC_BITS",
+    "CAMERANAME", "SENSORTYPE", "GAIN_ADU", "READNOISE_E", "ADC_BITS",
     "MODEL_KEY", "READOUT_MODE", "BIN_MODE", "HEADER_GAIN", "DEFAULT_GAIN_SETTING",
 )
 
@@ -262,8 +291,10 @@ def profile_from_connection(conn: sqlite3.Connection, equipment_id: int | None) 
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()}
     mode_key = (str(v.get("READOUT_MODE")).strip() or None) if v.get("READOUT_MODE") is not None else None
     if "EQUIPMENT_CURVE" in tables:
+        ccols = {r[1] for r in conn.execute("PRAGMA table_info('EQUIPMENT_CURVE');").fetchall()}
+        err_col = "E_PER_ADU_ERR" if "E_PER_ADU_ERR" in ccols else "NULL"
         for r in conn.execute(
-            "SELECT READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, READNOISE_E, SOURCE, NOTE "
+            f"SELECT READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, READNOISE_E, SOURCE, NOTE, {err_col} "
             "FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ? ORDER BY MEASURED_AT DESC, ID DESC;",  # NEW-1: newest first
             (eid,),
         ).fetchall():
@@ -279,6 +310,7 @@ def profile_from_connection(conn: sqlite3.Connection, equipment_id: int | None) 
                     read_noise_e=_pos(r[4]),
                     source=src if src in ("measured", "manual") else "manual",
                     note=str(r[6] or ""),
+                    e_per_adu_err=_pos(r[7]),
                 )
             )
     default_setting = _num(v.get("DEFAULT_GAIN_SETTING"))
@@ -291,8 +323,8 @@ def profile_from_connection(conn: sqlite3.Connection, equipment_id: int | None) 
     bin_src = "equipment"
     if bin_mode is None and mode is not None and _norm_bin_mode(mode.get("binning")):
         bin_mode, bin_src = _norm_bin_mode(mode.get("binning")), "catalog"
-    if bin_mode is None:
-        bin_mode, bin_src = DEFAULT_BIN_MODE, "default"
+    if bin_mode is None:  # G01-06: no default; binning_convention() decides from CAL-DIAG or stops
+        bin_src = "unset"
     header_gain = _norm_header_gain(v.get("HEADER_GAIN"))
     if header_gain is None and model is not None:
         header_gain = _norm_header_gain(model.get("header_gain"))
@@ -306,6 +338,7 @@ def profile_from_connection(conn: sqlite3.Connection, equipment_id: int | None) 
         mode_key=str(mode.get("key")) if mode else mode_key,
         bin_mode=bin_mode,
         bin_mode_source=bin_src,
+        sensor_class=_sensor_class(v.get("SENSORTYPE"), model),
         header_gain=header_gain,
         default_setting=default_setting,
         adc_bits=int(adc) if adc is not None and adc > 0 else None,
@@ -331,13 +364,65 @@ def load_profile(db_path: str | Path | None, equipment_id: int | None) -> Camera
 # Lookup
 # --------------------------------------------------------------------------- #
 def scale_for_binning(value: float, binning: int, bin_mode: str, param: str) -> float:
-    """Bin-1 value -> value at ``binning`` under the camera's binning convention."""
+    """Bin-1 value -> value at ``binning`` under the binning convention ``bin_mode`` (``BIN_MODES``)."""
     n = max(1, int(binning))
     if n == 1:
         return float(value)
+    if bin_mode not in BIN_MODES:
+        raise ValueError(f"binning convention {bin_mode!r} is not one of {BIN_MODES}")
     if param == "gain":
         return float(value) * (n * n if bin_mode == "average" else 1)
     return float(value) * (1 if bin_mode == "charge" else n)
+
+
+def norm_cal_diag_convention(v: Any) -> str | None:
+    """CAL-DIAG convention measured for the light binning (``VYBINCNV``): SUM / MEAN, else None."""
+    s = str(v or "").strip().upper()
+    return s if s in CAL_DIAG_COMPATIBLE else None
+
+
+def binning_convention(
+    profile: CameraProfile, param: str, cal_diag_convention: str | None
+) -> tuple[str | None, str, str]:
+    """(convention, source, reason when None) used to scale a bin-1 ``param`` value to bin N > 1
+    (G01-06 order (b)-(d), see the module docstring). Source: equipment | catalog | cal_diag | conflict |
+    unresolved."""
+    cd = norm_cal_diag_convention(cal_diag_convention)
+    if profile.bin_mode is not None:
+        if cd is not None and profile.bin_mode not in CAL_DIAG_COMPATIBLE[cd]:
+            return None, "conflict", (
+                f"binning convention {profile.bin_mode!r} ({profile.bin_mode_source}) contradicts CAL-DIAG {cd} "
+                f"measured on the darks (consistent: {', '.join(CAL_DIAG_COMPATIBLE[cd])}) - correct the camera's "
+                "binning convention or measure gain and read noise at this binning (photon transfer)"
+            )
+        return profile.bin_mode, profile.bin_mode_source, ""
+    if cd == "MEAN":
+        return "average", "cal_diag", ""
+    if cd == "SUM":
+        if param == "gain" or profile.sensor_class == "cmos":
+            return "sum", "cal_diag", ""
+        return None, "unresolved", (
+            "CAL-DIAG SUM fixes the gain but cannot tell digital sum (read noise x N) from charge binning "
+            f"(read noise x 1) for a {profile.sensor_class or 'sensor of unknown type'} - set the camera's binning "
+            "convention (sum / charge) or measure the read noise at this binning"
+        )
+    return None, "unresolved", (
+        "binning convention unknown (no BIN_MODE in the database or catalog, and CAL-DIAG measured none: dark "
+        "at the light binning or no dark) - set the camera's binning convention or measure gain and read noise "
+        "at this binning (photon transfer)"
+    )
+
+
+def measured_point(profile: CameraProfile, setting: float | None, binning: int) -> CurvePoint | None:
+    """G06-34: the measured (photon-transfer) gain point at this setting (None = the default setting) and
+    exactly this binning, else None."""
+    eff = setting if setting is not None else profile.default_setting
+    for p in profile.points:
+        if p.source != "measured" or p.e_per_adu is None or p.binning != int(binning):
+            continue
+        if p.setting is None or (eff is not None and _same_setting(p.setting, eff)):
+            return p
+    return None
 
 
 def _attr(p: CurvePoint, param: str) -> float | None:
@@ -348,17 +433,35 @@ def _same_setting(a: float | None, b: float | None) -> bool:
     return a is not None and b is not None and math.isclose(float(a), float(b), rel_tol=0.0, abs_tol=1e-6)
 
 
-def lookup(profile: CameraProfile, param: str, setting: float | None, binning: int) -> Lookup:
+def lookup(
+    profile: CameraProfile,
+    param: str,
+    setting: float | None,
+    binning: int,
+    cal_diag_convention: str | None = None,
+) -> Lookup:
     """Gain (``param="gain"``, e-/ADU native) or read noise (``"read_noise"``, e-) at the frame's gain
     setting and binning. ``setting`` None = the header states no setting (the camera default is used).
+    ``cal_diag_convention``: the CAL-DIAG convention of the frame (header ``VYBINCNV``), if measured.
 
     Order: user points at that setting (measured > manual > the camera's default point), exact binning
     first, else bin 1 scaled; then the catalog curve (exact point, or interpolated between its
     points - log-linear for gain, linear for read noise; never extrapolated). The camera's default
     point also serves a header without a setting, and any setting when no default setting is stored
-    (the behaviour of databases without curves).
+    (the behaviour of databases without curves). Scaling to bin N > 1 uses :func:`binning_convention`;
+    when that is unknown or contradicted the result is unresolved (no default convention).
     """
     eff_setting = setting if setting is not None else profile.default_setting
+
+    def _scaled(v: float, src: str, detail: str) -> Lookup:
+        if binning <= 1:
+            return Lookup(float(v), src, detail)
+        mode, msrc, why = binning_convention(profile, param, cal_diag_convention)
+        if mode is None:
+            return Lookup(None, "unresolved", f"{param} at bin {binning}: {why}", bin_mode_source=msrc)
+        return Lookup(scale_for_binning(float(v), binning, mode, param), src, f"{detail} ({mode}, {msrc})",
+                      bin_mode=mode, bin_mode_source=msrc)
+
     users = [p for p in profile.points if p.source != "catalog" and _attr(p, param) is not None]
     users.sort(key=lambda p: _SOURCE_RANK.get(p.source, 9))
 
@@ -372,31 +475,29 @@ def lookup(profile: CameraProfile, param: str, setting: float | None, binning: i
             if not _ok(p):
                 continue
             if want_exact and p.binning == binning:
-                return Lookup(float(_attr(p, param)), p.source, _detail(p, binning, profile, scaled=False))
+                return Lookup(float(_attr(p, param)), p.source, _detail(p, binning, scaled=False), exact_binning=True)
             if not want_exact and p.binning == 1:
-                val = scale_for_binning(float(_attr(p, param)), binning, profile.bin_mode, param)
-                return Lookup(val, p.source, _detail(p, binning, profile, scaled=binning > 1))
+                return _scaled(float(_attr(p, param)), p.source, _detail(p, binning, scaled=binning > 1))
     cat = [p for p in profile.points if p.source == "catalog" and p.setting is not None and _attr(p, param) is not None]
     if eff_setting is not None and cat:
         v = _interp(cat, float(eff_setting), param)
         if v is not None:
-            val = scale_for_binning(v, binning, profile.bin_mode, param)
-            return Lookup(val, "catalog", f"catalog curve at setting {eff_setting:g}, bin {binning} ({profile.bin_mode})")
+            return _scaled(v, "catalog", f"catalog curve at setting {eff_setting:g}, bin {binning}")
     fixed = [p for p in profile.points if p.source == "catalog" and p.setting is None and _attr(p, param) is not None]
     if fixed:
-        val = scale_for_binning(float(_attr(fixed[0], param)), binning, profile.bin_mode, param)
-        return Lookup(val, "catalog", f"catalog value of readout mode {profile.mode_key or '-'}, bin {binning}")
+        return _scaled(float(_attr(fixed[0], param)), "catalog",
+                       f"catalog value of readout mode {profile.mode_key or '-'}, bin {binning}")
     return Lookup(None, "unresolved", f"no {param} for setting {eff_setting if eff_setting is not None else '?'}")
 
 
 _SOURCE_TEXT = {"measured": "measured point", "manual": "manual point", "equipment": "camera default point"}
 
 
-def _detail(p: CurvePoint, binning: int, profile: CameraProfile, *, scaled: bool) -> str:
+def _detail(p: CurvePoint, binning: int, *, scaled: bool) -> str:
     s = "any setting" if p.setting is None else f"setting {p.setting:g}"
     src = _SOURCE_TEXT.get(p.source, p.source)
     if scaled:
-        return f"{src}, {s}, bin 1 scaled to bin {binning} ({profile.bin_mode})"
+        return f"{src}, {s}, bin 1 scaled to bin {binning}"
     return f"{src}, {s}, bin {p.binning}"
 
 

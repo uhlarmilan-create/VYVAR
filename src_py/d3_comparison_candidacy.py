@@ -1,9 +1,9 @@
 # -*- coding: ascii -*-
-"""D3: comparison candidacy predicates (before RMS ceiling).
+"""D3: comparison candidacy predicates (before RMS ceiling): detected source, identity gate,
+Gaia-DAO residual.
 
-SNR gate uses MASTERSTAR ``snr_ap_pixscaled`` (pixel-scaled
-``sqrt(F/g + (sigma_pix * sqrt(pi r^2))^2)``), not empty-aperture empirical
-error. Threshold ``D3_SNR_MIN`` stays 10 (SEL-GHOST-01 D5).
+COMP-SNR-ONE-2026-10 (G07-26, Milan 2026-10-31): the comparison-star S/N cut is not here - it is the
+one gate max(cfg.snr_min, COMP_SNR_MIN) in ``photometry_comp.apply_comp_quality_gates``.
 """
 
 from __future__ import annotations
@@ -22,10 +22,8 @@ D3_REQUIRED_COLUMNS = (
     "source_state",
     "vy_identity_gate",
     "gaia_dao_resid_px",
-    "snr_ap_pixscaled",
 )
 D3_DETECTED_STATES = frozenset({SOURCE_DETECTED_P1, SOURCE_DETECTED_P2})
-D3_SNR_MIN = 10.0
 
 
 class D3CandidacyError(ValueError):
@@ -48,7 +46,6 @@ def apply_d3_comparison_candidacy(
     fwhm_dao_px: float,
     solve_rms_px: float | None,
     log_label: str = "pool",
-    snr_min: float | None = None,
 ) -> tuple[pd.Series, dict[str, Any]]:
     """Return a boolean mask of D3-eligible rows. Missing columns raise ``D3CandidacyError``."""
     if df is None or getattr(df, "empty", True):
@@ -62,30 +59,24 @@ def apply_d3_comparison_candidacy(
     st = df["source_state"].astype(str).str.strip()
     gate = df["vy_identity_gate"].astype(str).str.strip().str.lower()
     resid = pd.to_numeric(df["gaia_dao_resid_px"], errors="coerce")
-    snr = pd.to_numeric(df["snr_ap_pixscaled"], errors="coerce")
     m_state = st.isin(D3_DETECTED_STATES)
     m_gate = gate.ne("fail")
     m_resid = resid.le(ceil)
-    # SNR-MIN-2026-10: user parameter cfg.snr_min (default 10 = D3_SNR_MIN).
-    _snr_min = float(snr_min) if snr_min is not None and np.isfinite(float(snr_min)) else D3_SNR_MIN
-    m_snr = snr.ge(_snr_min)
-    mask = m_state & m_gate & m_resid & m_snr
+    mask = m_state & m_gate & m_resid
     drops = {
         "source_state": int((~m_state).sum()),
         "vy_identity_gate": int((m_state & ~m_gate).sum()),
         "gaia_dao_resid_px": int((m_state & m_gate & ~m_resid).sum()),
-        "snr_ap_pixscaled": int((m_state & m_gate & m_resid & ~m_snr).sum()),
     }
     n_out = int(mask.sum())
     LOGGER.info(
-        "[D3] %s: n_in=%d n_out=%d drops state=%d gate=%d resid=%d snr_ap_pixscaled=%d (ceil=%.3f px)",
+        "[D3] %s: n_in=%d n_out=%d drops state=%d gate=%d resid=%d (ceil=%.3f px)",
         str(log_label),
         n_in,
         n_out,
         drops["source_state"],
         drops["vy_identity_gate"],
         drops["gaia_dao_resid_px"],
-        drops["snr_ap_pixscaled"],
         float(ceil),
     )
     return mask, {"n_in": n_in, "n_out": n_out, "drops": drops, "resid_ceiling_px": float(ceil)}

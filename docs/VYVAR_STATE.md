@@ -111,7 +111,8 @@ both PERMANENT facades (D-FACADE-PERMANENT-01); pipeline_constants leaf
 Anchors unchanged: era04_aperture d55fcc9d n=53 / ext cc8b532e n=157 /
 epsf01 c743b8ba n=53; live 516 csv bfa24039 / fits 13e77cf8 /
 epsf 172f9540.
-D-MP-CALIB-OFF-01: parallel calibration permanently OFF; no parity campaign.
+D-MP-CALIB-OFF-01: SUPERSEDED by MP-CALIB-ON-2026-10 (parallel calibration on; 1 vs 2 worker
+parity test G01-42 in dev/tests/test_step7_cal_2026_10.py).
 D-FWHM-AUTH-01-CLOSE: FWHM authority is the file chain only
 (qc_metrics.csv -> VY_FWHM -> night median); DB is not a source.
 **CLOSE-OUT 2026-08-27 APERTURE-01d LOCK.** Annulus

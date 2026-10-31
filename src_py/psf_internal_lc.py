@@ -327,6 +327,7 @@ def write_one_internal_psf_lc(
     git_dirty: str,
     by_star: dict[str, pd.DataFrame] | None = None,
 ) -> Path | None:
+    from mag_constants import MAG_ERR_SCALE  # noqa: PLC0415
     from photometry_lightcurve import ensemble_normalize  # noqa: PLC0415
     from sigma_floor_core import combine_production_err_mag, rel_sigma_to_mag  # noqa: PLC0415
 
@@ -367,7 +368,18 @@ def write_one_internal_psf_lc(
     target_mag = np.full(n, np.nan, dtype=np.float64)
     target_mag[usable] = flux_to_mag(psf_flux)[usable]
 
+    if len(comp_ids) < 3:
+        # ENSEMBLE-ERR-CC06-2026-10 (G08-08): the ensemble error needs >= 3 comps
+        LOGGER.warning("[PSF-LC] %s: only %d ensemble member(s) with a PSF measurement - no PSF light curve "
+                       "(the ensemble error needs >= 3 comps)", tid, len(comp_ids))
+        return None
+
+    # the epoch's scintillation of the aperture light curve (same frame, same rig model)
+    _scint_rel_ap = (pd.to_numeric(ap["err_scint_rel"], errors="coerce").to_numpy(dtype=np.float64)
+                     if "err_scint_rel" in ap.columns else np.zeros(n, dtype=np.float64))
+    _scint_mag_ap = np.array([rel_sigma_to_mag(float(v)) for v in _scint_rel_ap], dtype=np.float64)
     comp_mag: dict[str, np.ndarray] = {}
+    comp_noise: dict[str, np.ndarray] = {}
     comp_quality: dict[str, dict] = {}
     for cid in comp_ids:
         ctab = _star_frame_table(by_star, cid, epoch_keys)
@@ -376,6 +388,11 @@ def write_one_internal_psf_lc(
         mag = np.full(n, np.nan, dtype=np.float64)
         mag[cok] = flux_to_mag(cf)[cok]
         comp_mag[cid] = mag
+        # per-frame noise model of the comp: its PSF fit error + the epoch's scintillation (mag)
+        cfe = ctab["psf_flux_err"].to_numpy(dtype=np.float64)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            _ph = np.where(cok & (cfe > 0), MAG_ERR_SCALE * cfe / cf, np.nan)
+        comp_noise[cid] = np.sqrt(_ph * _ph + _scint_mag_ap * _scint_mag_ap)
         comp_quality[cid] = {"quality": "good"}
 
     # differential only: catalogue magnitudes are irrelevant (zeros), the calibrated level is not used
@@ -384,6 +401,7 @@ def write_one_internal_psf_lc(
         comp_mag,
         {cid: 0.0 for cid in comp_ids},
         comp_quality,
+        comp_noise_mag=comp_noise,
     )
 
     # INV-PSF-LC-PIN-01: full pinned ensemble membership or NaN. No partial ZP.

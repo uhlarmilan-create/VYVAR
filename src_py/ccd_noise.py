@@ -20,9 +20,10 @@ normal deviates is (pi/2) sigma^2 / n (Kendall & Stuart 1977, The Advanced Theor
 distribution), so c = pi/2 for a median and 1 for a mean. The sky of a CCD pixel at the levels VYVAR
 measures (tens to thousands of e-) is Poisson + Gaussian read noise, i.e. normal to good approximation.
 
-Not included, because the call sites do not know them: dark-current shot noise of dark-subtracted
-pixels and the ADC quantisation term g^2 sigma_f^2 of Merline & Howell (both below 1 % of the per-pixel
-variance for cooled cameras at the read noise / gain of VYVAR rigs).
+G06-25 (STEP7-CAL-CCDEQ-2026-10): the per-pixel terms other than the sky - dark-current electrons F_D and the
+digitisation g^2 sigma_f^2 (Merline & Howell 1995; Collins et al. 2017, AIJ eq. B1) - enter through RN: the run's
+gain authority (``rig_photometry.photometric_gain_read_noise``) passes RN_eff = sqrt(RN^2 + F_D + g^2 sigma_f^2),
+which is exact because all of them carry the same factor A (1 + c A / n_sky).
 
 No defaults for gain, read noise, area or n_sky: a missing gain / read noise is an error (ValueError);
 a non-finite or non-positive area / n_sky (a star without a sky estimate) gives NaN for that value.

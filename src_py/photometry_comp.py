@@ -796,15 +796,20 @@ def _bprp_tier_ladder_for_selection(
     return sorted({min(float(v), cap) for v in raw if math.isfinite(v) and v > 0})
 
 def _sel_colour_ladder(*, _n_min, cfg, max_delta_bprp, out, target_bprp):
-    """Colour ladder: candidates within the widening |Delta BP-RP| window until n_comp_min remain."""
+    """Colour ladder: candidates within the widening |Delta BP-RP| window until n_comp_min remain.
+
+    G07-02 (Milan 2026-10-31): a target without a colour (NaN BP-RP) has no |dBP-RP|; its rung is the
+    whole under-ceiling single-source set (ranked by comp_rms), ``_delta_bprp_abs`` stays NaN."""
     id_col = "catalog_id" if "catalog_id" in out.columns else out.columns[0]
     tb = float(target_bprp)
-    if "bp_rp" in out.columns and math.isfinite(tb):
+    if not math.isfinite(tb):
+        out["_delta_bprp_abs"] = float("nan")
+    elif "bp_rp" in out.columns:
         out["_delta_bprp_abs"] = (
             pd.to_numeric(out.get("bp_rp"), errors="coerce") - tb
         ).abs()
     else:
-        out["_delta_bprp_abs"] = 0.0
+        raise ValueError("colour ladder: candidates carry no bp_rp column (target colour is finite)")
 
     if "_dist_deg" in out.columns:
         out["_dist_sort"] = pd.to_numeric(out["_dist_deg"], errors="coerce")
@@ -814,11 +819,14 @@ def _sel_colour_ladder(*, _n_min, cfg, max_delta_bprp, out, target_bprp):
         out["_dist_sort"] = 0.0
     out["_dist_sort"] = out["_dist_sort"].fillna(float("inf"))
     out["_rms_sort"] = pd.to_numeric(out["comp_rms"], errors="coerce").fillna(float("inf"))
+    ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
+    if not math.isfinite(tb):
+        logging.info("[COMP] target colour unknown: whole under-ceiling set n=%d ranked by comp_rms", len(out))
+        return id_col, ladder, 0, out, tb, float("nan")
     out["_delta_bprp_abs"] = pd.to_numeric(out["_delta_bprp_abs"], errors="coerce").fillna(
         float("inf")
     )
 
-    ladder = _bprp_tier_ladder_for_selection(cfg, float(max_delta_bprp))
     selected = pd.DataFrame()
     used_lim = float("nan")
     ladder_step = 0
@@ -1032,6 +1040,7 @@ def _select_comps_by_rms_then_color(
             float(_k_loo),
             float(_abs_ceil),
         )
+        out.attrs["no_comps_reason"] = "too_few_comps"  # G07-02: 0 < n_comp_min
         return out
 
     # Single-source (COMP-ASSIGN-03): exclude blends inside CoG isolation radius.
@@ -1091,7 +1100,26 @@ def _select_comps_by_rms_then_color(
                 "[COMP] no candidates after single-source isolation (%.2f FWHM)",
                 float(_iso_fwhm),
             )
+            out.attrs["no_comps_reason"] = "too_few_comps"  # G07-02: 0 < n_comp_min
             return out
+
+    # G07-02 (Milan 2026-10-31): one floor for every target - the admitted count is 0 or in
+    # [n_comp_min, n_comp_max], with or without a target colour (>= 3 stars tell which one varies,
+    # Howell et al. 1988; AAVSO uncertainty guide App. B). Fewer under-ceiling single-source
+    # candidates than n_comp_min -> no comparison set (no_comps, reason too_few_comps).
+    _colour_unknown = not math.isfinite(float(target_bprp))
+    if len(out) < _n_min:
+        logging.warning(
+            "[COMP] too_few_comps: %d under-ceiling single-source candidates < n_comp_min=%d -> no_comps%s",
+            int(len(out)),
+            _n_min,
+            " (target colour unknown)" if _colour_unknown else "",
+        )
+        empty = out.iloc[0:0].copy()
+        empty.attrs["no_comps_reason"] = "too_few_comps"
+        empty.attrs["n_candidates"] = int(len(out))
+        empty.attrs["colour_unknown"] = bool(_colour_unknown)
+        return empty
 
     id_col, ladder, ladder_step, selected, tb, used_lim = _sel_colour_ladder(
         _n_min=_n_min,
@@ -1103,63 +1131,22 @@ def _select_comps_by_rms_then_color(
 
     # D-RED-TARGET-T4-01 (i-a): last rung (cap) n < n_comp_min and finite
     # target BP-RP -> T4_FALLBACK on the same post-ceiling / post-isolation
-    # set, ranked by |dBP-RP|. Quality chain is the SNR floor (abs RMS
-    # ceiling 0.080 mag ~ SNR 13.6 / epoch). NaN-BP-RP keeps the legacy
-    # relax-to-full-set path (_delta_bprp_abs=0.0 bypass above).
+    # set (len(out) >= n_comp_min, floor above), ranked by |dBP-RP|. Quality chain is
+    # the SNR floor (abs RMS ceiling 0.080 mag ~ SNR 13.6 / epoch).
     color_fallback = False
-    if math.isfinite(tb) and len(selected) < _n_min:
+    if not _colour_unknown and len(selected) < _n_min:
         n_ladder = int(len(selected))
-        if len(out) >= _n_min:
-            selected = out.copy()
-            color_fallback = True
-            used_lim = float("inf")
-            ladder_step = int(len(ladder)) + 1
-            logging.info(
-                "[COMP] T4_FALLBACK: last rung n=%d < n_comp_min=%d; "
-                "quality set n=%d ranked by |dBP-RP| (SNR floor = RMS ceiling)",
-                n_ladder,
-                _n_min,
-                int(len(selected)),
-            )
-        else:
-            logging.warning(
-                "[COMP] T4_FALLBACK still n=%d < n_comp_min=%d -> no_comps",
-                int(len(out)),
-                _n_min,
-            )
-            empty = out.iloc[0:0].copy()
-            empty.attrs["color_fallback"] = True
-            empty.attrs["color_ladder_lim"] = float("nan")
-            empty.attrs["color_ladder_step"] = int(len(ladder)) + 1
-            empty.attrs["max_delta_bprp_used"] = float("nan")
-            empty.attrs["max_comp_rms_ceiling"] = (
-                float(_ceil) if math.isfinite(_ceil) and _ceil > 0 else float("nan")
-            )
-            empty.attrs["single_source_isolation_fwhm"] = float(_iso_fwhm)
-            return empty.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
-    elif not math.isfinite(tb):
-        if selected.empty:
-            selected = out
-            used_lim = float(ladder[-1]) if ladder else float(max_delta_bprp)
-            ladder_step = int(len(ladder)) if ladder else 0
-            logging.warning(
-                "[COMP] color filter relaxed to full under-ceiling single-source set "
-                "(no ladder step reached n_comp_min=%d; lim=%.3f; n=%d)",
-                _n_min,
-                used_lim,
-                int(len(selected)),
-            )
-        elif len(selected) < _n_min and len(out) >= _n_min:
-            n_ladder = int(len(selected))
-            selected = out
-            ladder_step = int(len(ladder)) if ladder else ladder_step
-            logging.info(
-                "[COMP] color filter relaxed to full under-ceiling single-source set "
-                "after ladder (n_ladder=%d < n_comp_min=%d; n_full=%d)",
-                n_ladder,
-                _n_min,
-                int(len(out)),
-            )
+        selected = out.copy()
+        color_fallback = True
+        used_lim = float("inf")
+        ladder_step = int(len(ladder)) + 1
+        logging.info(
+            "[COMP] T4_FALLBACK: last rung n=%d < n_comp_min=%d; "
+            "quality set n=%d ranked by |dBP-RP| (SNR floor = RMS ceiling)",
+            n_ladder,
+            _n_min,
+            int(len(selected)),
+        )
 
     # COMP-ASSIGN-03: RMS first, then colour, then distance.
     # T4_FALLBACK: |dBP-RP| first (D-RED-TARGET-T4-01).
@@ -1174,6 +1161,7 @@ def _select_comps_by_rms_then_color(
         selected=selected,
         used_lim=used_lim,
     )
+    selected.attrs["colour_unknown"] = bool(_colour_unknown)
     return selected.drop(columns=["_rms_sort", "_dist_sort"], errors="ignore")
 
 def night_frame_fwhms_px(per_frame_csv_paths: Any, store: Any = None) -> list[float]:
@@ -1213,11 +1201,13 @@ def night_median_fwhm_px(
     return float(fallback), "fallback (no per-frame FWHM)"
 
 
-def apply_comp_quality_gates(pool: pd.DataFrame, *, comp_peak_sat_frac: float, label: str = "COMP") -> pd.DataFrame:
+def apply_comp_quality_gates(pool: pd.DataFrame, *, comp_peak_sat_frac: float, snr_min: float,
+                             label: str = "COMP") -> pd.DataFrame:
     """COMP-SAT-80-2026-10 / COMP-SNR-20-2026-10 (Milan 2026-10-12): comps must be safely linear
-    (MASTERSTAR raw peak < 0.80 x SAT; targets keep 0.90) and well measured (aperture S/N on
-    MASTERSTAR >= COMP_SNR_MIN; AAVSO CCD/CMOS guide: S/N 100 excellent, < 10-20 poor).
-    Applied to the global pool AND to the masterstars fallback (one rule)."""
+    (MASTERSTAR raw peak < 0.80 x SAT; targets keep 0.90) and well measured.
+
+    COMP-SNR-ONE-2026-10 (G07-26, Milan 2026-10-31): the ONE comparison-star S/N cut - MASTERSTAR aperture
+    S/N (``snr_ap_pixscaled``) >= max(cfg.snr_min, COMP_SNR_MIN); a pool without the column is an error."""
     from pipeline_constants import COMP_SNR_MIN, LINEARITY_FRAC  # noqa: PLC0415
 
     _n0 = int(len(pool))
@@ -1228,14 +1218,27 @@ def apply_comp_quality_gates(pool: pd.DataFrame, *, comp_peak_sat_frac: float, l
             float(comp_peak_sat_frac) / float(LINEARITY_FRAC))
         pool = pool.loc[~((_lim > 0) & (_pk >= _lim))].copy()
     _n1 = int(len(pool))
-    if "snr_ap_pixscaled" in pool.columns:
-        _snr = pd.to_numeric(pool["snr_ap_pixscaled"], errors="coerce")
-        pool = pool.loc[_snr >= float(COMP_SNR_MIN)].copy()
+    if "snr_ap_pixscaled" not in pool.columns:
+        raise ValueError(f"[{label}] comparison pool has no snr_ap_pixscaled column (comp S/N gate)")
+    _snr_gate = comp_snr_gate(snr_min)
+    _snr = pd.to_numeric(pool["snr_ap_pixscaled"], errors="coerce")
+    pool = pool.loc[_snr >= _snr_gate].copy()
     logging.info(
-        "[%s] linearity %.2f x SAT removed %d, S/N < %.0f removed %d (of %d)",
-        label, float(comp_peak_sat_frac), _n0 - _n1, float(COMP_SNR_MIN), _n1 - int(len(pool)), _n0,
+        "[%s] linearity %.2f x SAT removed %d, S/N < %.0f (max(snr_min %.0f, COMP_SNR_MIN %.0f)) removed %d (of %d)",
+        label, float(comp_peak_sat_frac), _n0 - _n1, _snr_gate, float(snr_min), float(COMP_SNR_MIN),
+        _n1 - int(len(pool)), _n0,
     )
     return pool
+
+
+def comp_snr_gate(snr_min: float) -> float:
+    """COMP-SNR-ONE-2026-10: the comparison-star S/N floor max(cfg.snr_min, COMP_SNR_MIN)."""
+    from pipeline_constants import COMP_SNR_MIN  # noqa: PLC0415
+
+    v = float(snr_min)
+    if not math.isfinite(v):
+        raise ValueError(f"snr_min must be finite, got {snr_min!r}")
+    return max(v, float(COMP_SNR_MIN))
 
 
 def _stamp_comp_pool_admission(photometry_dir: Path | str, rules: list[dict[str, Any]]) -> None:
@@ -1316,7 +1319,8 @@ def _pool_geometry_gates(
         & ~coerce_bool_series(pool.get("likely_saturated", pd.Series(False, index=pool.index)))
     )
     pool = pool.loc[cand_mask].copy()
-    pool = apply_comp_quality_gates(pool, comp_peak_sat_frac=float(cfg.comp_peak_sat_frac), label="GLOBAL COMP POOL")
+    pool = apply_comp_quality_gates(pool, comp_peak_sat_frac=float(cfg.comp_peak_sat_frac),
+                                    snr_min=float(cfg.snr_min), label="GLOBAL COMP POOL")
 
     from d3_comparison_candidacy import apply_d3_comparison_candidacy  # noqa: PLC0415
 
@@ -1337,7 +1341,6 @@ def _pool_geometry_gates(
         fwhm_dao_px=float(fwhm_px),
         solve_rms_px=_solve_rms_d3,
         log_label="global_comp_pool",
-        snr_min=float(getattr(cfg, "snr_min", 10.0)),
     )
     pool = pool.loc[_d3_mask].copy()
     return pool,
@@ -1841,6 +1844,13 @@ def _count_gate_passing_comps(
             n_good += 1
     return n_good
 
+def _no_comps_frame(reason: str) -> pd.DataFrame:
+    """Empty comparison set of a target with the reason in ``attrs["no_comps_reason"]`` (G07-02)."""
+    df = pd.DataFrame()
+    df.attrs["no_comps_reason"] = str(reason)
+    return df
+
+
 def select_comparison_stars_per_target(
     target: pd.Series,
     masterstars_df: pd.DataFrame,
@@ -1908,7 +1918,7 @@ def select_comparison_stars_per_target(
         # that passed every rule (Gaia/VSX variables, blend, saturation, D3, frames); an empty pool
         # means no comparison star for any target - never ungated MASTERSTAR stars.
         logging.warning("[COMP] %s: no comparison star passed the pool rules - no comps", target.get("catalog_id", ""))
-        return pd.DataFrame()
+        return _no_comps_frame("empty_pool")
     # COMP-ASSIGN-01 D2: keep step-1 pool ``comp_rms`` (do not drop / re-derive).
     ms = global_comp_pool_df.copy()
     if "catalog_id" in ms.columns:
@@ -1947,7 +1957,7 @@ def select_comparison_stars_per_target(
         target=target,
     )
     if candidates_pre is None:
-        return pd.DataFrame()
+        return _no_comps_frame("no_candidates")
 
     _r_ap_iso = 7.0
     try:
@@ -1982,7 +1992,7 @@ def select_comparison_stars_per_target(
     }
     if not rms_map:
         logging.warning("[COMP-ASSIGN] Target %s: no pool comp has a comp_rms - no comparison stars", target_cid)
-        return pd.DataFrame()
+        return _no_comps_frame("no_comp_rms")
     _nf = pd.to_numeric(ms["comp_n_frames"], errors="coerce").fillna(0).astype(int).tolist() if "comp_n_frames" in ms.columns else []
     comp_n_frames_map = {c: int(v) for c, v in zip(_pool_ids, _nf, strict=False) if c}
     logging.info("[COMP-ASSIGN] Target %s: pool comp_rms for %d comps", target_cid, len(rms_map))
@@ -2035,7 +2045,7 @@ def select_comparison_stars_per_target(
             chip_fh=chip_fh,
             chip_interior_margin_px=int(chip_interior_margin_px),
         )
-        return pd.DataFrame()
+        return _no_comps_frame("no_candidates")
     candidates = _apply_aperture_isolation_safe(candidates)
 
     active = _ensemble_mad_filter_rms(
@@ -2048,7 +2058,7 @@ def select_comparison_stars_per_target(
         chip_interior_margin_px=int(chip_interior_margin_px),
     )
     if active is None:
-        return pd.DataFrame()
+        return _no_comps_frame("no_candidates")
 
     id_col_cand = "catalog_id" if "catalog_id" in candidates.columns else "name"  # identity = catalog_id (G07-05)
     score_map, tier_map = _score_comp_candidates_broeg(
@@ -2091,7 +2101,7 @@ def select_comparison_stars_per_target(
         tier_out = tier_out["primary"]
     final_comps = tier_out["final_comps"]
     if final_comps is None or getattr(final_comps, "empty", True):
-        return pd.DataFrame()
+        return _no_comps_frame(str(tier_out.get("no_comps_reason") or "no_candidates"))
 
     result = _assemble_comp_selection_result_rows(
         tier_out["selected_ids"],
@@ -2117,10 +2127,13 @@ def select_comparison_stars_per_target(
         per_target_rms_map=rms_map,
     )
 
-    # Zero comps passing the per-target comp_rms gate -> no comparison set for this target.
+    # G07-02: fewer comps passing the per-target comp_rms gate than n_comp_min -> no comparison set
+    # (the selection gates on the same ceiling, so this only fires on an inconsistent pool).
     _n_good = _count_gate_passing_comps(result, rms_map, max_comp_rms, id_col_cand)
-    if _n_good < 1:
-        return pd.DataFrame()
+    if _n_good < max(1, int(n_comp_min)):
+        logging.warning("[COMP] %s: %d comps pass the comp_rms gate < n_comp_min=%d -> no_comps (too_few_comps)",
+                        target_cid, _n_good, int(n_comp_min))
+        return _no_comps_frame("too_few_comps")
     if tier_wide is not tier_out:
         result = _append_reserve_rows(
             result,

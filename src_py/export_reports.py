@@ -184,6 +184,13 @@ def log_export_batch_summary(
                     f["target_id"], f.get("method") or "-", f["reason"])
 
 
+def _row_below_limit(row: Any) -> bool:
+    """G10-30: True when the light-curve row carries ``below_limit`` = True (flux below its 1-sigma error; the
+    magnitude is the 1-sigma limit, COVERAGE-FAINT-2026-10). Light curves without the column have no such rows."""
+    v = row.get("below_limit", False)
+    return str(v).strip().lower() in ("true", "1", "1.0")
+
+
 def _aavso_software_header_line(software_version: str) -> str:
     """Format AAVSO ``#SOFTWARE`` from the canonical version string."""
     ver = str(software_version or VYVAR_SOFTWARE_VERSION).strip() or VYVAR_SOFTWARE_VERSION
@@ -973,6 +980,14 @@ def export_lightcurve_reports(
                      f"(effective {_fmt_opt_num_na(_zp.get('n_eff'), '.1f')}); sigma_ZP model "
                      f"{_fmt_opt_num_na(_zp.get('sigma_zp_model_mag'), '.4f')} mag"
                      + (f", from their mutual scatter {_fmt_opt_num_na(_sd, '.4f')} mag" if _sd is not None else "") + "\n")
+            if trans_yes and _zp.get("sigma_zp_ct_mag") is not None:
+                # G08-46: the colour-term uncertainty is common to all epochs (zero-point term)
+                d.append(f"# Colour-term uncertainty (zero-point term, same for all epochs): "
+                         f"{float(_zp['sigma_zp_ct_mag']):.4f} mag (coefficients "
+                         f"{_fmt_opt_num_na(_zp.get('sigma_zp_ct_coef_mag'), '.4f')}; target BP-RP error "
+                         + (f"{float(_zp['sigma_zp_ct_colour_mag']):.4f} mag" if _zp.get("sigma_zp_ct_colour_mag")
+                            is not None else str(_zp.get("target_bp_rp_err_source") or "unavailable"))
+                         + ")\n")
         if comp_ids:
             d.append(f"# Comparison stars: Gaia DR3 id | G | BP-RP | {fb.zp_band} | distance arcmin | rms mmag | weight\n")
             for c in comp_ids:
@@ -1104,6 +1119,10 @@ def export_lightcurve_reports(
             if trans_yes:
                 notes.append(f"TRANSMETH=colour_term_order{ct_order}_in_BP-RP_fitted_on_Gaia_DR3_comparison_stars")
                 notes.append(f"CT={ct_corr:+.4f}")
+                # G08-46: colour-term uncertainty, a zero-point term of the whole series
+                _cterr = _zp.get("sigma_zp_ct_mag")
+                if _cterr is not None:
+                    notes.append(f"CTERR={float(_cterr):.4f}")
             # EXPORT-AUDIT-2026-10: statistical flags are kept (no sigma clipping) and named per epoch
             _fl = str(row.get("flag", "") or "").strip().lower()
             if _fl and _fl not in ("normal", "nan"):
@@ -1112,13 +1131,18 @@ def export_lightcurve_reports(
                 notes.append(f"TRUST={_notes_value(_trust)}")
             if _gs11 is not None:
                 notes.append(f"GS11D={_gs11[0]:.3f}")
+            # G10-30 (COVERAGE-FAINT-2026-10): a point below its 1-sigma limit is a fainter-than value, never a measured
+            # magnitude (AAVSO Extended Format: MAG prefixed with "<")
+            _below = _row_below_limit(row)
+            if _below:
+                notes.append("LIMIT=1sigma")
             a_lines.append(
                 ",".join(
                     [
                         starid,
                         f"{jd:.6f}",
-                        f"{mag:.3f}",
-                        f"{min(MAG_ERR_SCALE * err, 9.999):.3f}",
+                        f"<{mag:.3f}" if _below else f"{mag:.3f}",
+                        "na" if _below else f"{min(MAG_ERR_SCALE * err, 9.999):.3f}",
                         aavso_filter,
                         "YES" if trans_yes else "NO",
                         "STD",
@@ -1197,8 +1221,13 @@ def export_lightcurve_reports(
     v_lines.append("# BJD_TDB          dif_mag  err\n" if differential
                    else "# BJD_TDB          mag      err\n")
     _nv = 0
+    _n_limit = 0
     for _, row in lc_normal.iterrows():
-        # export_row_mask (G11-20): the same epochs as the AAVSO file (finite bjd / magnitude, err > 0)
+        # export_row_mask (G11-20): the same epochs as the AAVSO file (finite bjd / magnitude, err > 0); a
+        # fainter-than point (G10-30) has no VarAstro form and is not written as a measured magnitude
+        if _row_below_limit(row):
+            _n_limit += 1
+            continue
         bjd = float(pd.to_numeric(row.get("bjd", float("nan")), errors="coerce"))
         mag = float(pd.to_numeric(row.get("mag_calib", float("nan")), errors="coerce"))
         err = float(pd.to_numeric(row.get("err", float("nan")), errors="coerce"))
@@ -1210,6 +1239,8 @@ def export_lightcurve_reports(
         logging.info("[EXPORT] VAR.ASTRO: %s (%d rows)", var_path.name, _nv)
         paths["varastro"] = var_path
         _rec["varastro"] = var_path.name
+        if _n_limit:
+            _rec["varastro_below_limit_not_written"] = _n_limit
     except OSError as exc:
         record_export_failure(export_failures, _target_id, _export_method, f"VarAstro write error: {exc}")
         _rec["varastro_reason"] = f"write error: {exc}"

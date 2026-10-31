@@ -8848,8 +8848,8 @@
      "width": 4164,
      "height": 2796,
      "adc_bits": 14,
-     "binning": null,
-     "binning_source": null,
+     "binning": "sum",
+     "binning_source": "sum: CAL-DIAG 527 (QHY294M Pro, 11MP, bin 2: 1x1 dark level x 4 = SUM) + sky-pair PTC 2026-10-31 (file gain 0.95 e-/ADU vs 0.79 sum / 3.17 average; VYVAR T17 lit_cal C2)",
      "curve": [
       {
        "setting": 1600,

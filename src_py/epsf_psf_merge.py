@@ -76,8 +76,9 @@ def assert_inv_psf_additive_01(
 
 
 # OUTPUT-REVIEW-2026-10 step 4: the PSF columns a proc file carries (read by the PSF light curves,
-# lc_outlier and the night locus). The fit's diagnostics (Fisher-only error, flags, S/N, local sky,
-# group size, neighbour light) stay in memory.
+# lc_outlier and the night locus). The fit's diagnostics (Fisher-only error, flags, S/N,
+# group size, neighbour light) stay in memory. PSF-SKY-ALLSTAR-2026-10 (C1): the pass-1 annulus sky and the
+# ALLSTAR pass-2 sky the fit used are kept (PSF minus aperture sky differences are intended and checkable).
 PSF_PROC_COLUMNS: tuple[str, ...] = (
     "psf_flux",
     "psf_flux_err",
@@ -85,6 +86,8 @@ PSF_PROC_COLUMNS: tuple[str, ...] = (
     "psf_converged",
     "psf_sat_masked",
     "psf_edge_masked",
+    "psf_sky",
+    "psf_sky_pass1",
 )
 
 
@@ -150,6 +153,18 @@ def frame_saturation_limit_adu(sidecar_path: Path) -> float:
     return float(vals.median())
 
 
+def frame_fwhm_px(sidecar_path: Path) -> float:
+    """The frame's FWHM (px): median ``fwhm_px_for_aperture`` of its proc catalogue (the per-frame QC FWHM the
+    aperture photometry and the night FWHM use). Raises when it is unknown (the model size depends on it)."""
+    from proc_frame_store import read_proc_csv  # noqa: PLC0415
+
+    df = read_proc_csv(sidecar_path, usecols=lambda c: c == "fwhm_px_for_aperture")
+    v = float(pd.to_numeric(df.get("fwhm_px_for_aperture"), errors="coerce").median()) if len(df) else float("nan")
+    if not (math.isfinite(v) and v > 0):
+        raise ValueError(f"fwhm_px_for_aperture missing in {Path(sidecar_path).name} - frame ePSF size unknown")
+    return v
+
+
 _FIT_CTX: dict[str, Any] = {}
 
 
@@ -163,21 +178,24 @@ def _fit_frame_task(fp: Path) -> dict[str, Any]:
     parent's (INV-PSF-ADDITIVE-01 guard, serial). A failure is returned, not raised."""
     from epsf_frame import build_frame_model, fit_frame_psf  # noqa: PLC0415
     from frame_footprint import aligned_footprint  # noqa: PLC0415
-    from psf_photometry import _psf_resolve_gain_read_noise  # noqa: PLC0415
+    from psf_photometry import _psf_resolve_gain_read_noise, epsf_cutout_px  # noqa: PLC0415
 
     c = _FIT_CTX
     out: dict[str, Any] = {"mrec": None, "fit_df": None, "exception_class": None, "exception_message": None,
                            "traceback_tail": None}
     try:
-        model, mrec = build_frame_model(fp, c["build_stars"], cutout_size=c["cutout"], fwhm_px=c["fwhm_ms"],
+        sidecar = proc_csv_path_for_aligned_fits(fp)
+        # EPSF-CUTOUT-FRAME-2026-10 (C3): the model size follows the frame's own seeing (12 x frame FWHM)
+        fw_frame = frame_fwhm_px(sidecar)
+        model, mrec = build_frame_model(fp, c["build_stars"], cutout_size=epsf_cutout_px(fw_frame), fwhm_px=fw_frame,
                                         delta=c["delta"], grid=c["grid"])
+        mrec["frame_fwhm_px"] = round(fw_frame, 4)
         out["mrec"] = mrec
         with fits.open(fp, memmap=True) as hdul:
             data = np.asarray(hdul[0].data, dtype=np.float32)
             hdr = hdul[0].header.copy()
         covered = aligned_footprint(hdr, data.shape)
         gain, rn = _psf_resolve_gain_read_noise(hdr, photometry_dir=Path(c["platesolve_dir"]) / "photometry", cfg=c["app_config"])
-        sidecar = proc_csv_path_for_aligned_fits(fp)
         out["fit_df"] = fit_frame_psf(
             data, model, c["fit_stars"], c["neighbours"], fwhm_px=mrec["fwhm_px"], gain=gain, read_noise_e=rn,
             sat_limit_adu=frame_saturation_limit_adu(sidecar), covered=covered,
@@ -213,7 +231,7 @@ def run_epsf_psf_merge_job(
     3. Night chi^2 locus sets ``psf_fit_ok`` (D-EPSF-CHI2-LOCUS-01); INV-PSF-FRAME-01 accounting.
     """
     from epsf_frame import OVERSAMPLING as EPSF_OVERSAMPLING
-    from epsf_frame import frame_fit_sources, night_spatial_delta
+    from epsf_frame import EPSF_BUILD_STARS_WARN, GROUP_SIZE_WARN, frame_fit_sources, frame_fit_stats, night_spatial_delta
     from parallel_frames import frame_bytes_of_fits, map_frames, stage_workers
     from epsf_frame_accounting import finalize_epsf_frame_job, list_epsf_science_light_fits
     from psf_photometry import (
@@ -253,8 +271,11 @@ def run_epsf_psf_merge_job(
         raise ValueError("ePSF: no per-frame fwhm_px_for_aperture in the proc sidecars - night FWHM unknown")
     # G09-22: neighbours are collected for the largest fit box of the night (worst-seeing frame)
     fwhm_reach = max(max(_fw_frames), fwhm_ms) if _fw_frames else fwhm_ms
+    # C3: the reach uses the worst frame's own model size (EPSF-CUTOUT-FRAME-2026-10), not the MASTERSTAR cutout
+    from psf_photometry import epsf_cutout_px
+
     fit_stars, neighbours, sources_meta = frame_fit_sources(
-        ps, fit_set.catalog_ids, cutout_size=cutout, fwhm_px=fwhm_reach, merge_fwhm_px=fwhm_night
+        ps, fit_set.catalog_ids, cutout_size=epsf_cutout_px(fwhm_reach), fwhm_px=fwhm_reach, merge_fwhm_px=fwhm_night
     )
     sources_meta["merge_fwhm_source"] = fwhm_night_src
     sources_meta["reach_fwhm_px"] = round(float(fwhm_reach), 3)
@@ -267,7 +288,7 @@ def run_epsf_psf_merge_job(
     delta = fits.getdata(frames_dir / EPSF_SPATIAL_DELTA_NAME).astype(np.float64) if spatial["file"] else None
     grid = (int(spatial["grid"][0]), int(spatial["grid"][1]))
 
-    ctx = {"build_stars": build_stars, "cutout": cutout, "fwhm_ms": fwhm_ms, "delta": delta, "grid": grid,
+    ctx = {"build_stars": build_stars, "delta": delta, "grid": grid,
            "platesolve_dir": str(ps), "app_config": app_config, "fit_stars": fit_stars, "neighbours": neighbours}
     records: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
@@ -278,7 +299,13 @@ def run_epsf_psf_merge_job(
         rec: dict[str, Any] = {"frame_name": fp.name, "frame_index": i - 1, "n_fit": 0, "n_ok": 0,
                                "exception_class": None, "exception_message": None, "traceback_tail": None}
         if res["mrec"] is not None:
-            models.append(res["mrec"])
+            mrec_out = dict(res["mrec"])
+            if mrec_out["n_stars_used"] < EPSF_BUILD_STARS_WARN:  # G09-02: few build stars on this frame
+                LOGGER.warning("[ePSF] frame %s: model built from %d build stars (< %d)", fp.name,
+                               mrec_out["n_stars_used"], EPSF_BUILD_STARS_WARN)
+            if res["fit_df"] is not None:
+                mrec_out["fit"] = frame_fit_stats(res["fit_df"], fp.name)  # C4: unusable-fit flags per frame
+            models.append(mrec_out)
         if res["exception_class"] is None:
             try:
                 rec["n_fit"] = merge_psf_frame_result(
@@ -299,6 +326,17 @@ def run_epsf_psf_merge_job(
         "mode": "per_frame_plus_night_spatial",
         "photutils_version": _photutils_version,
         "cutout_size": int(cutout),
+        # EPSF-CUTOUT-FRAME-2026-10: each frame's model is odd(12 x its fwhm_px_for_aperture) (frames[i].cutout_size);
+        # ``cutout_size`` above is the MASTERSTAR one (build-star selection, night spatial delta)
+        "frame_cutout_rule": "odd(12 x frame fwhm_px_for_aperture), >= 15",
+        "frame_cutout_px_range": ([min(m["cutout_size"] for m in models), max(m["cutout_size"] for m in models)]
+                                  if models else None),
+        "spatial_delta_on_frame_grid": "centred inside the MASTERSTAR cutout, zero outside, cut when the frame grid is smaller",
+        "build_stars_warn_below": int(EPSF_BUILD_STARS_WARN),
+        # PSF-GROUP-REACH-2026-10 (G09-07): group radius = model half + fit box half + 1 px of each frame
+        "group_radius_rule": "frame cutout / 2 + frame fit box / 2 + 1 px (epsf_frame.model_reach_px)",
+        "group_size_warn_above": int(GROUP_SIZE_WARN),
+        "group_size_max_night": max((m["fit"]["group_size_max"] or 0 for m in models if m.get("fit")), default=None),
         "oversampling": int(EPSF_OVERSAMPLING),
         "build_stars_file": EPSF_BUILD_STARS_NAME,
         "n_build_stars": int(len(build_stars)),

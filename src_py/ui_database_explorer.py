@@ -126,15 +126,17 @@ def _render_cameras(pipeline: AstroPipeline) -> None:
             model = catalog_model(prof.model_key)
             st.caption(
                 f"Model: {_model_label(model) if model else 'not chosen'} | readout mode: {prof.mode_key or '-'} | "
-                f"binning convention: {prof.bin_mode} ({prof.bin_mode_source}) | header GAIN card: "
+                f"binning convention: {prof.bin_mode or 'not set (CAL-DIAG measurement or a point at the binning)'} "
+                f"({prof.bin_mode_source}) | header GAIN card: "
                 f"{prof.header_gain or 'decided from its comment'} | default setting: "
                 f"{'any' if prof.default_setting is None else f'{prof.default_setting:g}'} | ADC bits: {prof.adc_bits or '-'}"
             )
             st.markdown("**Your points** (measured or entered; they win over the catalog)")
             df = _read_df(
                 pipeline.db.conn,
-                "SELECT ID, EQUIPMENT_ID, READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, READNOISE_E, SOURCE, "
-                "MEASURED_AT, NOTE FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ? ORDER BY GAIN_SETTING, BINNING;",
+                "SELECT ID, EQUIPMENT_ID, READOUT_MODE, GAIN_SETTING, BINNING, E_PER_ADU, E_PER_ADU_ERR, READNOISE_E, "
+                "SOURCE, MEASURED_AT, NOTE, PTC_JSON FROM EQUIPMENT_CURVE WHERE EQUIPMENT_ID = ? "
+                "ORDER BY GAIN_SETTING, BINNING;",
                 (int(eid),),
             )
             edited = st.data_editor(
@@ -142,7 +144,7 @@ def _render_cameras(pipeline: AstroPipeline) -> None:
                 width="stretch",
                 num_rows="dynamic",
                 hide_index=True,
-                disabled=["ID", "EQUIPMENT_ID"],
+                disabled=["ID", "EQUIPMENT_ID", "PTC_JSON"],
                 column_config={
                     "SOURCE": st.column_config.SelectboxColumn("SOURCE", options=["manual", "measured"], required=True),
                     "BINNING": st.column_config.NumberColumn("BINNING", min_value=1, max_value=16, step=1),

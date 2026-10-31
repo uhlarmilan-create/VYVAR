@@ -18,6 +18,7 @@ from jd_axis_format import jd_axis_title, jd_series_relative
 from photometry_shared import _normalize_gaia_id
 from pipeline_constants import SAT_LIMIT_CONTAINER_CLIP_ADU
 from stats_core import coerce_bool, robust_p2p_scatter
+from ensemble_weights import BROEG_MAX_ITER, BROEG_TOL, _loo_sigma, broeg_weights  # noqa: F401  (G08-36 one implementation)
 
 from photometry_defs import LOGGER, TIME_BASE_BJD_TDB, TIME_BASE_COL, TIME_BASE_JD_FALLBACK
 
@@ -187,16 +188,35 @@ def _comp_lc_frame_ensemble_residual(comp_lc: dict[str, np.ndarray]) -> dict[str
         out[cid] = y[:, j] - ref
     return out
 
+def compute_lc_precision_p2p(mag: np.ndarray, flags: Sequence[str]) -> float:
+    """LC-PRECISION-P2P-2026-10 (G08-17): the headline precision of a light curve - the robust von Neumann
+    sigma, 1.4826 MAD(diff(m)) / sqrt(2) over consecutive normal epochs (time order; Sokolovsky et al. 2017,
+    MNRAS 464, 274, Sect. 2.3 and 2.15: for white noise delta^2 = 2 sigma^2; the difference removes signal slower
+    than the cadence, so it serves constant stars, pulsators and eclipsing binaries alike). Misses red noise
+    (see the check-star scatter) and inflates for variables with fewer than ~20 points per period. ``flags``
+    of the LC length: only "normal" epochs count. NaN below 3 such epochs."""
+    m = np.asarray(mag, dtype=np.float64)
+    fl = [str(f).strip().lower() for f in flags]
+    if len(fl) != m.size:
+        raise ValueError(f"flags length {len(fl)} != light-curve length {m.size}")
+    keep = m[np.isfinite(m) & np.array([f == "normal" for f in fl], dtype=bool)]
+    if keep.size < 3:
+        return float("nan")
+    d = np.diff(keep)
+    return float(1.4826 * np.median(np.abs(d - np.median(d))) / math.sqrt(2.0))
+
+
 def compute_lc_rms_ooe(
     mag_calib: np.ndarray,
     flags: Sequence[str],
     *,
     brightest_frac: float = 0.33,
 ) -> float:
-    """Out-of-eclipse / brightest-tertile scatter (precision metric for variables).
+    """Brightest-tertile scatter - a labelled eclipsing-binary diagnostic only (summary ``lc_rms_ooe``).
 
-    For eclipsing variables the faintest frames are in eclipse; the brightest ``brightest_frac``
-  fraction approximates OOE scatter without requiring a period.
+    Not a precision: for white noise it is 0.53 x sigma (truncated distribution), for a pulsator ~1.7 x sigma.
+    The headline precision is :func:`compute_lc_precision_p2p` (LC-PRECISION-P2P-2026-10, supersedes the
+    "lc_rms (OOE) for variables" decision).
     """
     m = np.asarray(mag_calib, dtype=np.float64)
     if m.size < 3:
@@ -372,79 +392,80 @@ def check_comparison_stability(
     )
     return sorted_result
 
-BROEG_TOL = 1e-5
-BROEG_MAX_ITER = 200
-
-
-def _loo_sigma(y: np.ndarray, w: np.ndarray) -> np.ndarray:
-    """Leave-one-out scatter of each comparison star: sample std (ddof=1, >= 3 frames) of comp j
-    against the ``w``-weighted ensemble of the OTHER comps (only comp j when it is the only one).
-    ``y`` is (n_comp, n_frames) with NaN = missing. G08-36: the one LOO sigma - used inside the Broeg
-    iteration and, with the final weights, for the ensemble inverse variances."""
-    y = np.asarray(y, dtype=np.float64)
-    n = int(y.shape[0])
-    fin = np.isfinite(y)
-    y0 = np.where(fin, y, 0.0)
-    wf = np.asarray(w, dtype=np.float64)[:, None] * fin
-    tot_w = wf.sum(axis=0)
-    tot_wy = (wf * y0).sum(axis=0)
-    sig = np.full(n, np.nan)
-    for j in range(n):
-        if n >= 2:
-            ow = tot_w - wf[j]
-            ens = np.where(ow > 0, (tot_wy - wf[j] * y0[j]) / np.where(ow > 0, ow, 1.0), np.nan)
-            r = y[j] - ens
-        else:
-            r = y[j]
-        v = r[np.isfinite(r)]
-        sig[j] = float(np.std(v, ddof=1)) if v.size >= 3 else np.nan
-    return sig
-
-
-def broeg_weights(
-    y: np.ndarray,
+def ensemble_error_per_frame(
+    comp_mag_inst: dict[str, np.ndarray],
+    comp_noise_mag: dict[str, np.ndarray],
+    weights: dict[str, float],
+    levels: dict[str, float],
     *,
-    tol: float = BROEG_TOL,
-    max_iter: int = BROEG_MAX_ITER,
-) -> tuple[np.ndarray, int]:
-    """Broeg, Fernandez & Neuhaeuser (2005) weights for comparison stars.
+    info_out: dict[str, Any] | None = None,
+) -> np.ndarray:
+    """ENSEMBLE-ERR-CC06-2026-10 (G08-08): error of the Broeg-weighted ensemble zero point Z_f per frame.
 
-    ``y`` is (n_comp, n_frames) of normalised instrumental magnitudes (each comp minus its
-    own median; NaN = missing). Each weight is ``1/sigma_j^2`` where ``sigma_j`` is the
-    standard deviation of comp j against the weighted ensemble of the OTHER comps
-    (leave-one-out); iterated until the largest relative weight change is < ``tol``.
-    No clipping: a variable comparison star simply ends with a small weight.
-    Returns (weights normalised to sum 1, n_iterations).
+    Variance model of Collier Cameron et al. 2006 (MNRAS 373, 799, Sect. 4.1 eq. 4): each comp j carries its
+    per-frame noise model p_jf (``comp_noise_mag``: photon + sky + read noise of its own CCD error and the
+    scintillation of the frame, mag) plus a night-constant excess x_j (floor, low-level variability). For
+    independent comps Var(Z_f) = sum_present wn_jf^2 (p_jf^2 + x_j^2), wn = the Broeg weights normalised over the
+    comps present on the frame.
+
+    x_j: the leave-one-out residual of comp j against the weighted mean of the others (``_loo_sigma`` with the
+    final weights) has variance R_j = s_j^2 + sum_{k != j} u_jk^2 s_k^2 (u_jk = w_k / sum_{l != j} w_l), a linear
+    system (I + U2) s^2 = R solved directly (well posed for N >= 3; N = 2 is singular); s_j^2 < 0 from noise is
+    set to 0 (a variance), x_j^2 = max(0, s_j^2 - mean_f p_jf^2). ``weights`` / ``levels`` are the ensemble's
+    (``ensemble_normalize`` weights_out / levels_out). N <= 2 comps -> ValueError (the noise of the comps is
+    not identifiable). A frame where a present comp has no noise model (NaN p or no LOO variance) gets NaN,
+    counted in ``info_out["n_frames_unknown"]`` with a WARNING (never 0).
     """
-    y = np.asarray(y, dtype=np.float64)
-    n = int(y.shape[0])
-    if n == 0:
-        return np.zeros(0), 0
-    if n == 1:
-        return np.ones(1), 0
+    ids = [str(c) for c in weights]
+    n = len(ids)
+    if n <= 2:
+        raise ValueError(f"ensemble error needs >= 3 comparison stars, got {n} (G08-08: the comps' own noise "
+                         "is not identifiable from 2 stars)")
+    n_frames = max(int(np.asarray(v).size) for v in comp_noise_mag.values()) if comp_noise_mag else 0
+    y = np.full((n, n_frames), np.nan)
+    p2 = np.full((n, n_frames), np.nan)
+    for j, cid in enumerate(ids):
+        arr = np.asarray(comp_mag_inst.get(cid, []), dtype=np.float64).reshape(-1)[:n_frames]
+        y[j, : arr.size] = arr - float(levels.get(cid, float("nan")))
+        pa = np.asarray(comp_noise_mag.get(cid, []), dtype=np.float64).reshape(-1)[:n_frames]
+        p2[j, : pa.size] = pa * pa
+    w = np.array([float(weights[c]) for c in ids], dtype=np.float64)
     fin = np.isfinite(y)
-
-    def _sig(r: np.ndarray, m: np.ndarray) -> float:
-        v = r[m]
-        return float(np.std(v, ddof=1)) if v.size >= 3 else float("nan")
-
-    w = np.array([_sig(y[j], fin[j]) for j in range(n)], dtype=np.float64)
-    w = np.where(np.isfinite(w) & (w > 0), 1.0 / (w * w), np.nan)
-    if not np.isfinite(w).any():
-        return np.full(n, 1.0 / n), 0
-    w = np.where(np.isfinite(w), w, np.nanmin(w))
-    it = 0
-    for it in range(1, int(max_iter) + 1):
-        sj = _loo_sigma(y, w)
-        new = np.where(np.isfinite(sj) & (sj > 0), 1.0 / (sj * sj), np.nan)
-        if not np.isfinite(new).any():
-            break
-        new = np.where(np.isfinite(new), new, np.nanmin(new))
-        rel = np.max(np.abs(new - w) / np.maximum(w, 1e-300))
-        w = new
-        if rel < float(tol):
-            break
-    return w / float(np.sum(w)), int(it)
+    R = _loo_sigma(y, w) ** 2
+    ok = np.isfinite(R)
+    idx = np.flatnonzero(ok)
+    s2 = np.full(n, np.nan)
+    cond = float("nan")
+    if idx.size >= 3:
+        wo = w[idx]
+        A = np.eye(idx.size)
+        for a, _j in enumerate(idx):
+            o = np.arange(idx.size) != a
+            A[a, o] = (wo[o] / wo[o].sum()) ** 2
+        cond = float(np.linalg.cond(A))
+        s2[idx] = np.clip(np.linalg.solve(A, R[idx]), 0.0, None)
+    with np.errstate(invalid="ignore"):
+        p2_mean = np.array([float(np.mean(p2[j][fin[j] & np.isfinite(p2[j])])) if np.any(fin[j] & np.isfinite(p2[j]))
+                            else float("nan") for j in range(n)])
+    x2 = np.maximum(0.0, s2 - p2_mean)
+    wf = w[:, None] * fin
+    sw = wf.sum(axis=0)
+    wn = np.where(sw > 0, wf / np.where(sw > 0, sw, 1.0), 0.0)
+    term = wn * wn * (p2 + x2[:, None])
+    unknown = (fin & ~np.isfinite(term)).any(axis=0)
+    err = np.where((sw > 0) & ~unknown, np.sqrt(np.where(fin, np.nan_to_num(term), 0.0).sum(axis=0)), np.nan)
+    n_unknown = int(np.count_nonzero(unknown & (sw > 0)))
+    if n_unknown:
+        logging.warning("[ENSEMBLE-ERR] %d of %d frames: a present comp has no noise model - ensemble error "
+                        "unknown (NaN) on those frames", n_unknown, n_frames)
+    if info_out is not None:
+        info_out.clear()
+        info_out.update({
+            "s_mag": {c: float(math.sqrt(v)) if math.isfinite(v) else float("nan") for c, v in zip(ids, s2, strict=False)},
+            "x_mag": {c: float(math.sqrt(v)) if math.isfinite(v) else float("nan") for c, v in zip(ids, x2, strict=False)},
+            "cond": cond, "n_frames_unknown": n_unknown,
+        })
+    return err
 
 
 def ensemble_normalize(
@@ -456,7 +477,8 @@ def ensemble_normalize(
     n_comp_min: int = 3,
     weights_out: dict[str, float] | None = None,
     levels_out: dict[str, float] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    comp_noise_mag: dict[str, np.ndarray] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     """Step 4: ensemble (artificial comparison star) per frame - Broeg et al. (2005).
 
     ENSEMBLE-BROEG-2026-10:
@@ -471,16 +493,18 @@ def ensemble_normalize(
     * Absolute level C = sum_all w_j (cat_j - median(m_j)) / sum_all w_j;
       mag_calib = m_target - Z_f + C;
       delta_mag = m_target - (Z_f + sum_all w_j median(m_j) / sum_all w_j).
-    * ensemble_scatter = error of the weighted ensemble on that frame,
-      sqrt(1 / sum_present (1/sigma_j^2)) - combined in quadrature with the target error.
+    * Ensemble error (ENSEMBLE-ERR-CC06-2026-10, G08-08): :func:`ensemble_error_per_frame` with the final
+      weights and levels, computed here when ``comp_noise_mag`` (per comp and frame noise model, mag) is
+      given - else None (callers that do not use the error, or compute it later with the frame's
+      scintillation, e.g. the aperture light curve). Needs >= 3 comps (ValueError).
 
-    Returns (mag_calib, delta_mag, ensemble_scatter), arrays of length n_frames.
+    Returns (mag_calib, delta_mag, ensemble_error or None), arrays of length n_frames.
     """
     t = np.asarray(target_mag_inst, dtype=np.float64)
     n_frames = int(len(t))
     mag_calib = np.full(n_frames, float("nan"))
     delta_mag = np.full(n_frames, float("nan"))
-    ensemble_scatter = np.full(n_frames, float("nan"))
+    ensemble_scatter: np.ndarray | None = None
 
     selected = sorted(comp_quality.keys(), key=str) if comp_quality else sorted(comp_mag_inst.keys(), key=str)
     good_ids = [c for c in selected if c in comp_mag_inst]  # INV-COMP-MEMBERSHIP: good_ids = selected
@@ -529,9 +553,6 @@ def ensemble_normalize(
             break
     y = m - med[:, None]
     w, n_it = broeg_weights(y)
-    # inverse-variance scale for the ensemble error: w_abs = 1/sigma^2 (LOO sigma with the final weights)
-    sig = _loo_sigma(y, w)
-    inv_var = np.where(np.isfinite(sig) & (sig > 0), 1.0 / (sig * sig), np.nan)
 
     cat = np.array([float(comp_catalog_mag.get(c, float("nan"))) for c in ids], dtype=np.float64)
     ok_cat = np.isfinite(cat)
@@ -546,15 +567,16 @@ def ensemble_normalize(
     wf = w[:, None] * fin
     sw = wf.sum(axis=0)
     Z = np.where(sw > 0, (wf * np.where(fin, y, 0.0)).sum(axis=0) / np.where(sw > 0, sw, 1.0), np.nan)
-    iv = np.where(fin & np.isfinite(inv_var)[:, None], inv_var[:, None], 0.0).sum(axis=0)
     n_min = max(1, min(int(n_comp_min), len(ids)))
     frame_ok = (n_present >= n_min) & np.isfinite(t) & np.isfinite(Z)
     delta_mag = np.where(frame_ok, t - (Z + inst_level), np.nan)
     # C is NaN only when no comp has a catalogue magnitude: no calibrated scale (G08-34)
     mag_calib = np.where(frame_ok, t - Z + C, np.nan) if math.isfinite(C) else np.full_like(t, np.nan)
-    # G08-34: a frame whose present comps all lack a scatter estimate has an unknown ensemble error (NaN),
-    # not a zero one; the error budget treats a matched NaN as "no ensemble term" (documented there)
-    ensemble_scatter = np.where(frame_ok & (iv > 0), np.sqrt(1.0 / np.where(iv > 0, iv, 1.0)), np.nan)
+    if comp_noise_mag is not None:
+        ensemble_scatter = ensemble_error_per_frame(
+            {c: m[j] for j, c in enumerate(ids)}, comp_noise_mag, dict(zip(ids, w, strict=False)),
+            dict(zip(ids, med, strict=False)))
+        ensemble_scatter = np.where(frame_ok, ensemble_scatter[:n_frames], np.nan)
 
     if weights_out is not None:
         weights_out.clear()
@@ -627,8 +649,7 @@ def _combine_err_with_ensemble_scatter_keyed(
     """Join photon ``err`` with ensemble scatter by EXACT ``source_file`` match (G2-F004).
 
     Domain contract: ``err_photon`` is relative flux (err/flux); ``scatter_by_file`` values are
-    the ensemble error in magnitudes, sqrt(1 / sum 1/sigma_j^2) over the present comparison stars
-    (``ensemble_normalize``, Broeg weights; no c4 factor). ``sigma_sys_mag`` (night or per-rig floor)
+    the ensemble error in magnitudes (``ensemble_error_per_frame``, ENSEMBLE-ERR-CC06-2026-10). ``sigma_sys_mag`` (night or per-rig floor)
     and per-epoch ``sigma_scint_mag`` (mag) are added in quadrature (``combine_production_err_rel``).
 
     err_total^2 = err_photon^2 + sem_rel^2 + scint_rel^2 + sigma_sys_rel^2 (relative-flux domain).
@@ -1233,11 +1254,20 @@ def _build_aperture_resolved_facts(
             "value": _num_or_none(gain_value),
             "source": (getattr(gain_res, "source", None) if getattr(gain_res, "ok", False) else "default"),
             "key": getattr(gain_res, "key", None),
+            # G01-06: lookup detail and the binning convention used to scale a bin-1 value (and its source)
+            "detail": getattr(gain_res, "detail", None),
+            "bin_mode": getattr(gain_res, "bin_mode", None),
+            "bin_mode_source": getattr(gain_res, "bin_mode_source", None),
+            **dict(getattr(gain_res, "facts", None) or {}),
         },
         "read_noise": {
             "value": _num_or_none(rn_value),
             "source": (getattr(rn_res, "source", None) if getattr(rn_res, "ok", False) else "default"),
             "key": getattr(rn_res, "key", None),
+            "detail": getattr(rn_res, "detail", None),
+            "bin_mode": getattr(rn_res, "bin_mode", None),
+            "bin_mode_source": getattr(rn_res, "bin_mode_source", None),
+            **dict(getattr(rn_res, "facts", None) or {}),
         },
         "saturation_adu": _num_or_none(sat_limit),
         "plate_scale_arcsec_per_px": _num_or_none(plate_scale_arcsec),

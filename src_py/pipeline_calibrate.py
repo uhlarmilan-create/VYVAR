@@ -32,6 +32,7 @@ from cal_diag import (
     apply_cal_diag_headers,
     convention_to_dark_mode,
     gate_result_for_frame,
+    group_lights_by_obs_key,
     is_obs_group_aborted,
     passthrough_cal_diag_headers,
     raise_if_dark_convention_undecided,
@@ -1072,6 +1073,7 @@ def _calibrate_one_light_apply_masters_in_ram(
     with fits.open(src, memmap=False) as hdul:
         hdr = hdul[0].header.copy()
         data = np.array(hdul[0].data, dtype=np.float32, copy=True)
+    _stamp_lsb_granularity(hdr, data)
 
     light_bx, light_by = fits_binning_xy_from_header(hdr)
     hdr["VY_CLBX"] = (int(light_bx), "Light XBINNING for master matching/resample")
@@ -1505,6 +1507,96 @@ def _has_usable_master_dark(path: Path | None) -> bool:
     return bool(path is not None and Path(path).is_file())
 
 
+def _stamp_lsb_granularity(hdr: fits.Header, raw: Any) -> None:
+    """G06-34: the raw frame's LSB granularity (``gain_ptc.lsb_granularity``) as ``VY_LSB`` (absent when the
+    values are not integers). Read by ``rig_photometry`` (container scale record, digitisation term)."""
+    from gain_ptc import lsb_granularity  # noqa: PLC0415
+
+    g = lsb_granularity(raw)
+    if g is not None:
+        hdr["VY_LSB"] = (int(g), "Raw LSB granularity [ADU] (largest 2^k step)")
+
+
+def check_container_scale_of_groups(files: list[Path], *, cfg: Any, equipment_id: int | None) -> dict[str, Any]:
+    """G06-34: LSB granularity of the first raw light of every observation group against the camera's
+    ADC_BITS (``gain_ptc.container_scale_check``). A contradiction stops the calibration
+    (``ContainerScaleError``); an ambiguous / unverifiable case is a WARNING. Returns
+    ``{group: {granularity, adc_bits, binning, status, message}}`` (stats / meta ``container_scale``)."""
+    from camera_profile import load_profile  # noqa: PLC0415
+    from gain_ptc import ContainerScaleError, container_scale_check, lsb_granularity  # noqa: PLC0415
+
+    prof = load_profile(getattr(cfg, "database_path", None), equipment_id)
+    out: dict[str, Any] = {}
+    for og, paths in sorted(group_lights_by_obs_key(files, obs_group_key_from_path=_obs_group_key_from_light_path).items()):
+        if not paths:
+            continue
+        with fits.open(paths[0], memmap=False) as hdul:
+            raw = np.asarray(hdul[0].data)
+            hdr = hdul[0].header
+            binning = int(fits_binning_xy_from_header(hdr)[0])
+            g = lsb_granularity(raw)
+        status, msg = container_scale_check(g, prof.adc_bits, binning)
+        out[og] = {"granularity": g, "adc_bits": prof.adc_bits, "binning": binning, "status": status,
+                   "message": msg, "frame": paths[0].name}
+        if status == "contradiction":
+            log_event(f"CALIBRATION STOPPED [G06-34] {og}: {msg} (first light {paths[0].name})")
+            raise ContainerScaleError(f"Calibration stopped - {og}: {msg} (first light {paths[0].name}).")
+        if status != "ok":
+            logging.warning("[G06-34] %s: %s (first light %s)", og, msg, paths[0].name)
+            log_event(f"WARNING [G06-34] {og}: {msg} (first light {paths[0].name})")
+    return out
+
+
+#: C2: consecutive raw light pairs read for the sky-pair gain diagnostic (sampling budget, evenly spaced).
+SKY_PAIR_MAX_PAIRS = 12
+
+
+def add_sky_pair_gain_diagnostic(
+    session: CalDiagSession, files: list[Path], *, cfg: Any, equipment_id: int | None
+) -> None:
+    """C2: per observation group with a CAL-DIAG result, the sky-pair gain of up to ``SKY_PAIR_MAX_PAIRS``
+    consecutive raw light pairs (``gain_ptc.sky_pair_gain``) against the run's profile gain at the light
+    binning, stored as ``sky_pair_gain`` in the gate result (cal_diag.json). Diagnostic only: a ratio outside the
+    method band is a WARNING, the photometry keeps the profile gain."""
+    from gain_ptc import sky_pair_gain  # noqa: PLC0415
+    from rig_photometry import photometric_gain_read_noise  # noqa: PLC0415
+    from utils import VYVAR_RANDOM_SEED  # noqa: PLC0415
+
+    groups = group_lights_by_obs_key(files, obs_group_key_from_path=_obs_group_key_from_light_path)
+    for gr in session.gate_results.values():
+        if gr.aborted or gr.sky_pair_gain is not None:
+            continue
+        paths = groups.get(gr.obs_group_key) or []
+        n_pairs = min(SKY_PAIR_MAX_PAIRS, len(paths) // 2)
+        idx = sorted({int(round(k * (len(paths) - 2) / max(1, n_pairs - 1))) for k in range(n_pairs)}) if n_pairs else []
+        pairs = []
+        for i in idx:
+            pairs.append((np.asarray(fits.getdata(paths[i]), dtype=np.float64),
+                          np.asarray(fits.getdata(paths[i + 1]), dtype=np.float64)))
+        hdr = fits.getheader(paths[0]) if paths else fits.Header()
+        if gr.convention in ("SUM", "MEAN") and int(gr.block_factor) > 1:
+            hdr["VYBINCNV"] = gr.convention
+        try:
+            pg = photometric_gain_read_noise(hdr, cfg, equipment_id, noise_terms=False)
+            g_p, rn_p = float(pg.gain), float(pg.read_noise_camera)
+        except ValueError:
+            g_p = rn_p = None
+        dark_level = gr.m_D_mean if gr.convention == "MEAN" else gr.m_D_sum
+        res = sky_pair_gain(pairs, dark_level=float(dark_level or 0.0), profile_gain_file=g_p,
+                            profile_read_noise_e=rn_p, seed=VYVAR_RANDOM_SEED)
+        gr.sky_pair_gain = res
+        if res.get("status") == "warning":
+            msg = (f"WARNING [C2 sky-pair gain] {gr.obs_group_key}: gain of the file values {res['gain_file']:.4g} "
+                   f"+- {res['gain_file_sigma']:.2g} e-/ADU vs profile {res['profile_gain_file']:.4g} (ratio "
+                   f"{res['ratio_to_profile']:.3f}, band +-{res['band']:.0%}) - diagnostic only; measure a photon "
+                   "transfer curve at this binning (docs/INSTALL.md)")
+            logging.warning(msg)
+            log_event(msg)
+        else:
+            log_event(f"CAL-DIAG sky-pair gain [{gr.obs_group_key}]: {res.get('status')} "
+                      f"{res.get('reason') or ('ratio %.3f' % res['ratio_to_profile'])}")
+
+
 def _passthrough_lights_to_calibrated(
     *,
     lights_root: Path,
@@ -1566,6 +1658,7 @@ def _passthrough_lights_to_calibrated(
                 with fits.open(src, memmap=False) as hdul:
                     hdr = hdul[0].header.copy()
                     data = np.asarray(hdul[0].data, dtype=np.float32)
+                _stamp_lsb_granularity(hdr, data)
                 hdr["VYVARCAL"] = (True, "VYVAR calibrated output")
                 hdr["VY_DARK"] = (False, "MasterDark applied")
                 hdr["VY_FLAT"] = (False, "MasterFlat applied")
@@ -1678,13 +1771,16 @@ def calibrate_lights_to_calibrated(
             "Calibration Passthrough: missing MasterDark -> "
             "copy Raw/lights to calibrated/lights with VY_CALIB=PASSTHROUGH."
         )
-        return _passthrough_lights_to_calibrated(
+        _cs = check_container_scale_of_groups(_iter_light_fits(lights_root), cfg=cfg, equipment_id=equipment_id)
+        _pt = _passthrough_lights_to_calibrated(
             lights_root=lights_root,
             calibrated_root=calibrated_root,
             progress_cb=progress_cb,
             database_path=Path(cfg.database_path) if str(cfg.database_path).strip() else None,
             draft_id=draft_id,
         )
+        _pt["container_scale"] = _cs
+        return _pt
 
     md_path_ok: Path | None = None
     md_init_str: str | None = None
@@ -1806,7 +1902,10 @@ def calibrate_lights_to_calibrated(
             saturation_for_light=_sat_for_pregate,
             pedestal_temp_tol_c=float(cfg.calibration_master_ccd_temp_tolerance_c),
         )
+    if total > 0:
+        add_sky_pair_gain_diagnostic(cal_diag_session, files, cfg=cfg, equipment_id=equipment_id)
     stats["cal_diag_aborted_groups"] = len(cal_diag_session.aborted_groups)
+    stats["container_scale"] = check_container_scale_of_groups(files, cfg=cfg, equipment_id=equipment_id) if files else {}
     _arch = _archive_root_from_lights_root(lights_root)
     if _arch is not None:
         write_cal_diag_json(_arch, cal_diag_session)
@@ -1939,6 +2038,79 @@ _SURFACE_EVAL_ROWS = 256
 #: connected pixels are sources; the mask is dilated by one FWHM so their wings are excluded too.
 SKY_MASK_NSIGMA = 2.0
 SKY_MASK_NPIXELS = 5
+#: photutils DAOStarFinder kernel extent in sigma (``sigma_radius`` default): the half-width of the detection
+#: kernel is max(2, int(1.5 sigma)) px; stars centred closer than that to a coverage edge are not detected.
+DAO_KERNEL_SIGMA_RADIUS = 1.5
+_FWHM_PER_SIGMA = 2.0 * math.sqrt(2.0 * math.log(2.0))
+
+
+def _dao_kernel_half_width(fwhm_px: float) -> int:
+    """Half-width [px] of the DAO detection kernel of ``fwhm_px`` (photutils ``_StarFinderKernel``)."""
+    return int(max(2, int(DAO_KERNEL_SIGMA_RADIUS * float(fwhm_px) / _FWHM_PER_SIGMA)))
+
+
+def _fwhm_from_pass1_detections(work: Any, finite: Any, med: float) -> float | None:
+    """G01-07: FWHM [px] of a frame without a QC FWHM on record: DAO detections with the data-derived first
+    guess (``frame_metrics.first_fwhm_guess``, half-maximum radii) as kernel, then the median second-moment
+    FWHM, 2.3548 sqrt((Mxx + Myy) / 2), of the brightest unsaturated ones (peak below
+    ``frame_metrics.SAT_FRACTION_OF_MAX`` of the frame maximum; at most ``N_FWHM0_PEAKS``; detected at the frame
+    QC threshold ``DETECT_NSIGMA`` x pixel noise) that have no other
+    detection in their box of +-2 first-guess FWHM, each minus the median of the box edge. None when not
+    measurable."""
+    import numpy as np
+    from photutils.detection import DAOStarFinder
+
+    from frame_metrics import (  # noqa: PLC0415
+        DETECT_NSIGMA,
+        N_FWHM0_PEAKS,
+        SAT_FRACTION_OF_MAX,
+        first_fwhm_guess,
+        pixel_noise_sigma,
+    )
+
+    sig = pixel_noise_sigma(np.where(finite, work, np.nan))
+    fw0 = first_fwhm_guess(np.where(finite, work, np.nan), float(med), float(sig)) if sig else None
+    if fw0 is None or not math.isfinite(float(fw0)) or fw0 <= 0:
+        return None
+    data0 = np.nan_to_num((work - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    # detection at the frame QC threshold (DETECT_NSIGMA x the neighbour-difference pixel noise), so that
+    # faint neighbours are found and the isolation test below sees them
+    tbl = DAOStarFinder(fwhm=float(fw0), threshold=DETECT_NSIGMA * float(sig),
+                        **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER)(data0)
+    if tbl is None or len(tbl) == 0:
+        return None
+    vmax = float(np.nanmax(np.where(finite, work, np.nan)))
+    pk = np.asarray(tbl["peak"], dtype=np.float64) + float(med)
+    ok = np.flatnonzero(pk < SAT_FRACTION_OF_MAX * vmax)
+    ok = ok[np.argsort(-pk[ok])][:N_FWHM0_PEAKS]
+    from scipy.spatial import cKDTree  # noqa: PLC0415
+
+    h, w = work.shape
+    r = int(math.ceil(2.0 * float(fw0)))
+    xy = np.column_stack([np.asarray(tbl["x_centroid"], dtype=np.float64), np.asarray(tbl["y_centroid"], dtype=np.float64)])
+    tree = cKDTree(xy)
+    fw: list[float] = []
+    for i in ok:
+        if len(tree.query_ball_point(xy[i], r * math.sqrt(2.0))) > 1:
+            continue  # another detection in the box (blend): its light would widen the moments
+        cx, cy = float(xy[i, 0]), float(xy[i, 1])
+        ix, iy = int(round(cx)), int(round(cy))
+        if iy - r < 0 or ix - r < 0 or iy + r >= h or ix + r >= w:
+            continue
+        cut = np.asarray(work[iy - r:iy + r + 1, ix - r:ix + r + 1], dtype=np.float64)
+        if not np.all(finite[iy - r:iy + r + 1, ix - r:ix + r + 1]):
+            continue
+        edge = np.concatenate([cut[0, :], cut[-1, :], cut[1:-1, 0], cut[1:-1, -1]])
+        z = cut - float(np.median(edge))
+        tot = float(z.sum())
+        if not (tot > 0):
+            continue
+        yy, xx = np.mgrid[iy - r:iy + r + 1, ix - r:ix + r + 1]
+        mx, my = float((z * xx).sum() / tot), float((z * yy).sum() / tot)
+        m2 = float((z * ((xx - mx) ** 2 + (yy - my) ** 2)).sum() / tot) / 2.0
+        if m2 > 0:
+            fw.append(_FWHM_PER_SIGMA * math.sqrt(m2))
+    return float(np.median(fw)) if len(fw) >= 3 else None
 
 
 def _fit_subtract_preprocess_sky_surface(
@@ -1958,6 +2130,12 @@ def _fit_subtract_preprocess_sky_surface(
     FWHM) are added to the mask and the polynomial is fitted again; that surface is subtracted.
     No sigma-clip on the fit samples (zero-clipping policy 2026-08-12); the photutils guide calls
     masking the better way to exclude sources from a background estimate.
+
+    G01-07 (STEP7-CAL-SKYMASK-2026-10): the scales are in units of the frame FWHM - ``fwhm_px`` (the frame's
+    QC FWHM, VY_FWHM), else measured from the pass-1 DAO detections (:func:`_fwhm_from_pass1_detections`,
+    WARNING, ``sky_surface_fwhm_source`` = measured); not measurable -> the surface is not fitted (WARNING,
+    skip reason ``fwhm_unknown``). The fit uses the coverage mask (finite pixels) eroded by one DAO kernel
+    half-width (stars centred there are not detected), not a fixed edge band.
     """
     import numpy as np
     from photutils.detection import DAOStarFinder
@@ -1975,22 +2153,26 @@ def _fit_subtract_preprocess_sky_surface(
     fill = float(np.nanmedian(arr[finite])) if finite.any() else 0.0
     work = np.where(finite, arr, fill)
 
-    mask = np.ones((h, w), dtype=bool)
-    margin = 40
-    if h > 2 * margin and w > 2 * margin:
-        mask[:margin, :] = False
-        mask[-margin:, :] = False
-        mask[:, :margin] = False
-        mask[:, -margin:] = False
-    mask &= finite
-
-    fwhm_eff = max(
-        1.2,
-        float(fwhm_px) if fwhm_px is not None and math.isfinite(float(fwhm_px)) else 2.5,
-    )
     _, med, std = plain_mean_med_std(work)
-    data0 = np.nan_to_num((work - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     thr = max(3.0 * float(std), 1e-6)
+    fwhm_src = "header"
+    fwhm_eff = float(fwhm_px) if fwhm_px is not None and math.isfinite(float(fwhm_px)) and float(fwhm_px) > 0 \
+        else None
+    if fwhm_eff is None:
+        fwhm_eff = _fwhm_from_pass1_detections(work, finite, float(med))
+        fwhm_src = "measured" if fwhm_eff is not None else "unknown"
+        if fwhm_eff is None:
+            LOGGER.warning("[SKY-SURFACE] frame FWHM unknown (no QC FWHM, not measurable from the detections) - "
+                           "sky surface not fitted")
+            return arr.copy(), {"sky_surface_order": order_i, "sky_surface_applied": False,
+                                "sky_surface_skip_reason": "fwhm_unknown", "sky_surface_fwhm_source": "unknown"}
+        LOGGER.warning("[SKY-SURFACE] no QC FWHM on record - FWHM %.3f px measured from the pass-1 detections "
+                       "for the star mask", fwhm_eff)
+    from scipy.ndimage import binary_erosion
+
+    _hw = _dao_kernel_half_width(fwhm_eff)
+    mask = binary_erosion(finite, structure=np.ones((2 * _hw + 1, 2 * _hw + 1), dtype=bool), border_value=0)
+    data0 = np.nan_to_num((work - med).astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
     finder = DAOStarFinder(
         fwhm=float(fwhm_eff),
         threshold=float(thr),
@@ -1998,7 +2180,7 @@ def _fit_subtract_preprocess_sky_surface(
         **DAO_STAR_FINDER_NO_ROUNDNESS_FILTER,
     )
     tbl = finder(data0)
-    stamp_r = int(max(4, round(3.5 * fwhm_eff)))
+    stamp_r = int(max(1, round(3.5 * fwhm_eff)))  # G01-07: FWHM units only (was a 4 px floor)
     if tbl is not None and len(tbl) > 0:
         r2 = stamp_r * stamp_r
         for row in tbl:
@@ -2015,7 +2197,7 @@ def _fit_subtract_preprocess_sky_surface(
     bg_median, _, _ = plain_mean_med_std(work, mask=~mask)
     step = max(1, int(subsample_step))
     skip = {"sky_surface_order": order_i, "sky_surface_applied": False,
-            "sky_surface_skip_reason": "insufficient_fit_pixels"}
+            "sky_surface_skip_reason": "insufficient_fit_pixels", "sky_surface_fwhm_source": fwhm_src}
     pass1 = _poly_surface_fit(work, mask, order_i, step, float(bg_median))
     if pass1 is None:
         return arr.copy(), skip
@@ -2055,6 +2237,7 @@ def _fit_subtract_preprocess_sky_surface(
         "sky_surface_median_adu": float(np.nanmedian(surf)),
         "sky_surface_n_fit_pixels": int(pass2[1]),
         "sky_surface_fwhm_px": float(fwhm_eff),
+        "sky_surface_fwhm_source": fwhm_src,
         "sky_surface_bg_median_adu": float(bg_median),
         "sky_surface_source_mask_px": n_src_px,
         "residual_flatness_p99_adu": _flat_p99,
@@ -2337,10 +2520,13 @@ def _qc_enrich_one_frame(
         cal_pstbg: float | None = None
         skypass: int | None = None
         is_mosaic = _valid_bayerpat_from_header(hdr) is not None and not hdr.get("VYCHANNL")
+        qc = _frame_fwhm_of_record(hdr, frame_qc)
         if sky_order > 0 and not is_mosaic:
             action = _decide_preprocess_sky_action(hdr, sky_order=sky_order)
             if action == "apply":
-                data, sky_stats = _fit_subtract_preprocess_sky_surface(data, order=sky_order)
+                # G01-07: the frame's QC FWHM of record sets the star-mask scales (else measured inside)
+                data, sky_stats = _fit_subtract_preprocess_sky_surface(
+                    data, order=sky_order, fwhm_px=_finite_or_none((qc or {}).get("fwhm_px")))
                 cal_stage_token, skypass = compute_skysf_apply_stage(sky_order=sky_order)
                 cal_pstbg = float(np.nanmedian(data)) if data.size else None
             else:
@@ -2355,7 +2541,6 @@ def _qc_enrich_one_frame(
                     sky_order,
                 )
 
-        qc = _frame_fwhm_of_record(hdr, frame_qc)
         if qc is None:
             _m = _quality_inspection_dao_metrics_array(data, hdr)
             qc = {"fwhm_px": _m.get("fwhm_mean"), "elongation": _m.get("elongation_mean"),
@@ -2471,9 +2656,9 @@ def _qc_enrich_one_frame(
 
 
 #: qc_metrics.csv columns kept in memory only: n_sources (n_stars_detected is the count read),
-#: cal_pstbg (= bg_median; synced to the DB from the row), the sky-surface FWHM / calm threshold
-#: (configuration constants).
-QC_METRICS_NOT_WRITTEN: tuple[str, ...] = ("n_sources", "cal_pstbg", "sky_surface_fwhm_px", "sky_surface_source_mask_px")
+#: cal_pstbg (= bg_median; synced to the DB from the row), the source-mask pixel count. G01-07: the sky-surface
+#: FWHM and its source (header / measured / unknown) are written (data-derived, no longer a constant).
+QC_METRICS_NOT_WRITTEN: tuple[str, ...] = ("n_sources", "cal_pstbg", "sky_surface_source_mask_px")
 
 
 def _infer_raw_light_path_for_calibrated(cal_fp: Path) -> Path | None:

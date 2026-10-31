@@ -27,12 +27,15 @@ Method (Sokolovsky et al. 2017, A&A 598, A108; VaST, Sokolovsky & Lebedev 2018):
   nominal in Monte Carlo of white, AR(1) and mixed noise, N = 30-87 frames.
 * Candidate: z_s or z_eta above the threshold of a field false-alarm probability of
   1 % split over the two indices (z = Phi^-1(1 - 0.005 / N)), and all gates passed:
-  unsaturated (< 0.90 SAT) on >= 90 % of frames, median SNR >= snr_min, |neighbour light|
+  not likely_saturated on >= 90 % of frames, median SNR >= snr_min, |neighbour light|
   <= 1 % in its aperture incl. the sky-annulus effect (comp_blend), sky annulus inside every frame footprint, not a
   known variable / target (those are marked, not listed).
-* Systematics: if the signal disappears after removing a linear dependence on the frame
-  FWHM and airmass (both indices below threshold), the star is flagged
-  ``systematic`` and not listed as a candidate.
+* Systematics (G10-08 SYS-FIELD-RESPONSE-2026-10 + SYS-SEEING-DIFF-2026-10): if the signal disappears after
+  removing the star's OWN response to frame FWHM, measured from frame-to-frame differences (``fwhm_coef_diff``;
+  a slow intrinsic change does not enter it), and the FIELD's airmass response (Theil-Sen line in BP-RP = colour
+  extinction + median of similar-magnitude gated non-signal stars), the star is flagged ``systematic`` and not
+  listed. The star's own level OLS fit is reported as ``trend_like`` and its own level FWHM coefficient against
+  the field as ``seeing_response_z``; neither removes a star.
 
 TRANSIENT-2026-10 (``transient_search_enabled``, off by default): the same run also compares every
 star's night magnitude with Gaia - expected = Gaia G through the field relation (robust fit,
@@ -318,6 +321,7 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
     D = D[D["catalog_id"].isin(keep_ids)]
     M = D.pivot(index="catalog_id", columns="t", values="m")
     S = D.pivot(index="catalog_id", columns="t", values="e")
+    info_bl = D.pivot(index="catalog_id", columns="t", values="below_limit")  # G10-30: per-point fainter-than flag
     info = D.groupby("catalog_id")[["x", "y", "ra_deg", "dec_deg", "mag", "bp_rp", "k"]].first()
     known = coerce_bool_series(D.groupby("catalog_id")["vsx_known_variable"].first()) if "vsx_known_variable" in D else pd.Series(False, index=info.index)
     targets = _target_ids(phot)
@@ -378,7 +382,7 @@ def _var_frame_table(*, cfg, files, kplan, meta, per_frame_dir, phot, ps, rows, 
         info["blend"] = np.nan
         info["gate_blend"] = False
         meta["blend"] = {"status": f"failed: {exc}"}
-    return M, S, frame, g, info, rn
+    return M, S, info_bl, frame, g, info, rn
 
 
 def _var_frame_zero_point(*, M, S, info, meta):
@@ -461,27 +465,57 @@ def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
     meta.update(n_stars=int(len(info)), n_gates_ok=n_test, z_threshold=zthr, fap_field=FAP_FIELD)
     info["signal"] = (info["z_s"] > zthr) | (info["z_eta"] > zthr)
 
-    # systematics: does the signal vanish after removing linear FWHM + airmass dependence?
-    X = np.c_[np.ones(len(frame)), frame["fwhm"].to_numpy(float), np.nan_to_num(frame["airmass"].to_numpy(float), nan=float(np.nanmedian(frame["airmass"])) if np.isfinite(frame["airmass"]).any() else 1.0)]
-    X = X.reshape(len(frame), -1)
-    info["systematic"] = False
-    _li_windows = _MagWindows(li, mags, use)
-    for cid in info.index[info["signal"] & info["gates_ok"]]:
-        y = R.loc[cid].reindex(frame.index).to_numpy(float)
-        ok = np.isfinite(y)
-        if ok.sum() < 10:
-            continue
-        beta, *_ = np.linalg.lstsq(X[ok], y[ok], rcond=None)
-        rr = y - X @ beta
+    # systematics (G10-08, SYS-FIELD-RESPONSE-2026-10, after Kepler PDC-MAP, Smith et al. 2012): the FIELD's typical
+    # response to frame FWHM and airmass is removed, not the star's own fit (a per-star OLS on [1, FWHM, airmass]
+    # absorbed 80-88 % of a slow sinusoid on Brno 534 g, where both run monotonically through the night)
+    fw_f = frame["fwhm"].to_numpy(float)
+    am_f = np.nan_to_num(frame["airmass"].to_numpy(float), nan=float(np.nanmedian(frame["airmass"])) if np.isfinite(frame["airmass"]).any() else 1.0)
+    X = np.c_[np.ones(len(frame)), fw_f, am_f]
+
+    def _zs_ze(cid: str, rr: np.ndarray) -> tuple[float, float]:
+        ok = np.isfinite(rr)
         s2 = 1.4826 * float(np.nanmedian(np.abs(rr[ok] - np.nanmedian(rr[ok]))))
         zs2 = (math.log(max(s2, 1e-9) / float(info.at[cid, "s_exp"])) - md) / sc if sc > 0 else np.nan
         e2 = _eta(rr)
         m2, sc2 = _li_windows.stats(float(info.at[cid, "mag"]))
         ze2 = (float(_z_from_u(np.array([(math.log(1.0 / max(e2, 1e-9)) - m2) / sc2]))[0])
                if (math.isfinite(e2) and math.isfinite(sc2) and sc2 > 0) else np.nan)
-        if not (zs2 > zthr or ze2 > zthr):
-            info.at[cid, "systematic"] = True
+        return zs2, ze2
 
+    _li_windows = _MagWindows(li, mags, use)
+    resp = field_response(R.reindex(columns=frame.index), X, info, use & ~info["signal"].to_numpy(bool), meta)
+    info["seeing_response_z"] = resp["seeing_response_z"]
+    info["systematic"] = False
+    info["trend_like"] = False
+    info["fwhm_coef_diff"] = np.nan
+    n_fw_fallback = 0
+    for cid in info.index[info["signal"] & info["gates_ok"]]:
+        y = R.loc[cid].reindex(frame.index).to_numpy(float)
+        ok = np.isfinite(y)
+        if ok.sum() < 10:
+            continue
+        # decision (SYS-SEEING-DIFF-2026-10): the star's signal vanishes once its OWN seeing response, measured from
+        # frame-to-frame changes (first differences: a slow intrinsic change does not enter it), and the field's
+        # colour-extinction response (airmass is smooth, so it has no frame-to-frame information) are removed
+        b_fw = seeing_coef_from_differences(y, fw_f)
+        info.at[cid, "fwhm_coef_diff"] = b_fw
+        if not math.isfinite(b_fw):
+            b_fw = float(resp["fwhm_coef"][cid])
+            n_fw_fallback += 1
+        pred = b_fw * (fw_f - fw_f.mean()) + resp["airmass_coef"][cid] * (am_f - am_f.mean())
+        zs2, ze2 = _zs_ze(cid, y - pred)
+        info.at[cid, "systematic"] = bool(not (zs2 > zthr or ze2 > zthr))
+        # flag only (never removes a star): the star's own OLS on [1, FWHM, airmass] removes its signal
+        beta, *_ = np.linalg.lstsq(X[ok], y[ok], rcond=None)
+        zs3, ze3 = _zs_ze(cid, y - X @ beta)
+        info.at[cid, "trend_like"] = bool(not (zs3 > zthr or ze3 > zthr))
+
+    meta["systematics"]["seeing_coef"] = ("own, from first differences (SYS-SEEING-DIFF-2026-10); field median when "
+                                          "the frame FWHM has no frame-to-frame variation")
+    meta["systematics"]["n_seeing_coef_field_fallback"] = int(n_fw_fallback)
+    if n_fw_fallback:
+        LOGGER.warning("[VARIABILITY] %d signal stars: no frame-to-frame FWHM variation - field seeing response used",
+                       n_fw_fallback)
     info["candidate"] = info["signal"] & info["gates_ok"] & ~info["known_variable"] & ~info["systematic"]
     transients = bool(cfg.transient_search_enabled)
     zp_g = float("nan")
@@ -500,6 +534,109 @@ def _var_indices(*, E, M, R, cfg, frame, info, meta, ref, use):
     out.loc[order_c, "label"] = [f"V{i + 1}" for i in range(len(order_c))]
     out["catalogs"] = ""
     return n_test, order_c, out, transients, zp_g, zthr
+
+
+#: SYS-SEEING-DIFF-2026-10: fewest consecutive frame pairs for a star's own seeing coefficient
+SEEING_DIFF_MIN_PAIRS = 10
+
+
+def seeing_coef_from_differences(y: np.ndarray, fwhm: np.ndarray) -> float:
+    """A star's own response to the frame FWHM [mag / px] from first differences of consecutive frames (time order):
+    sum(dy dF) / sum(dF^2) over pairs where both frames are finite. Regressing differences instead of levels removes
+    any slow common trend - a slow intrinsic variation or a monotonic FWHM run through the night cannot alias into the
+    coefficient (spurious regression of trending series, Granger & Newbold 1974, J. Econometrics 2, 111). NaN when
+    fewer than SEEING_DIFF_MIN_PAIRS pairs or no FWHM change between frames."""
+    y = np.asarray(y, dtype=float)
+    f = np.asarray(fwhm, dtype=float)
+    ok = np.isfinite(y[1:]) & np.isfinite(y[:-1]) & np.isfinite(f[1:]) & np.isfinite(f[:-1])
+    if int(ok.sum()) < SEEING_DIFF_MIN_PAIRS:
+        return float("nan")
+    dy = (y[1:] - y[:-1])[ok]
+    df = (f[1:] - f[:-1])[ok]
+    den = float(np.sum(df * df))
+    return float(np.sum(dy * df) / den) if den > 0 else float("nan")
+
+
+#: G10-08: bootstrap resamples of the field-response coefficients (their errors in variability_meta.json; the
+#: relative error of a bootstrap standard deviation is ~1/sqrt(2 (B - 1)) = 7 %)
+FIELD_RESPONSE_BOOTSTRAP = 100
+
+
+def field_response(R: pd.DataFrame, X: np.ndarray, info: pd.DataFrame, field: np.ndarray, meta: dict[str, Any]) -> dict[str, Any]:
+    """G10-08 (SYS-FIELD-RESPONSE-2026-10): the field's typical linear response to frame FWHM and airmass.
+
+    Every star with >= 10 frames gets its own OLS coefficients on ``X`` = [1, FWHM, airmass]. The field set
+    (``field``: gated, not known variables, no signal - variables would bias the prior) gives, for each star,
+    the FWHM coefficient = median over field stars within +-0.5 mag (widened to >= 15 stars), and the airmass
+    coefficient = a Theil-Sen line in BP-RP (colour extinction) plus the median residual from that line in the same
+    magnitude window. A star without BP-RP takes the field's median colour (counted in meta). Returns per-star
+    ``fwhm_coef`` / ``airmass_coef`` (the field prediction) and ``seeing_response_z`` = (own FWHM coefficient - field) /
+    field scale (1.4826 MAD); records the field coefficients with bootstrap errors in ``meta["systematics"]``.
+    """
+    from scipy import stats  # noqa: PLC0415
+
+    ids = list(info.index)
+    B = np.full((len(ids), 3), np.nan)
+    for i, cid in enumerate(ids):
+        y = R.loc[cid].to_numpy(float) if cid in R.index else np.full(len(X), np.nan)
+        ok = np.isfinite(y)
+        if ok.sum() >= 10:
+            B[i] = np.linalg.lstsq(X[ok], y[ok], rcond=None)[0]
+    mags = pd.to_numeric(info["mag"], errors="coerce").to_numpy(float)
+    col = pd.to_numeric(info["bp_rp"], errors="coerce").to_numpy(float)
+    fset = np.asarray(field, dtype=bool) & np.isfinite(B).all(axis=1)
+    col_med = float(np.nanmedian(col[fset])) if np.isfinite(col[fset]).any() else 0.0
+    col_use = np.where(np.isfinite(col), col, col_med)
+    fit_c = fset & np.isfinite(col)
+    if int(fit_c.sum()) < 15:
+        raise RuntimeError(f"variability: only {int(fit_c.sum())} gated non-signal stars with BP-RP - no field response")
+    ts = stats.theilslopes(B[fit_c, 2], col[fit_c])
+    ba_res = B[:, 2] - (ts.intercept + ts.slope * col_use)
+    win_f = _MagWindows(B[:, 1], mags, fset)
+    win_a = _MagWindows(ba_res, mags, fset)
+    bf_pred = np.full(len(ids), np.nan)
+    ba_pred = np.full(len(ids), np.nan)
+    srz = np.full(len(ids), np.nan)
+    for i in range(len(ids)):
+        mf, sf = win_f.stats(float(mags[i]))
+        ma, _ = win_a.stats(float(mags[i]))
+        bf_pred[i] = mf
+        ba_pred[i] = ts.intercept + ts.slope * col_use[i] + ma
+        if math.isfinite(sf) and sf > 0 and math.isfinite(B[i, 1]):
+            srz[i] = (B[i, 1] - mf) / sf
+    # bootstrap over the field stars (fixed seed: reproducible meta)
+    rng = np.random.default_rng(0)
+    idx_c, idx_f = np.flatnonzero(fit_c), np.flatnonzero(fset)
+    bs_slope, bs_int, bs_bf = [], [], []
+    for _ in range(FIELD_RESPONSE_BOOTSTRAP):
+        k = rng.choice(idx_c, idx_c.size, replace=True)
+        t = stats.theilslopes(B[k, 2], col[k])
+        bs_slope.append(t.slope)
+        bs_int.append(t.intercept)
+        bs_bf.append(float(np.median(B[rng.choice(idx_f, idx_f.size, replace=True), 1])))
+    meta["systematics"] = {
+        "method": "field response (G10-08 R2+F, after Kepler PDC-MAP): systematic = signal vanishes after removing the "
+                  "field's typical FWHM / airmass response; trend_like and seeing_response_z are flags only",
+        "n_field": int(fset.sum()),
+        "n_field_with_colour": int(fit_c.sum()),
+        "n_stars_colour_missing": int(np.sum(~np.isfinite(col))),
+        "colour_for_missing_bp_rp": round(col_med, 4),
+        "fwhm_coef_field_median_mag_per_px": round(float(np.median(B[fset, 1])), 6),
+        "fwhm_coef_field_median_err_bootstrap": round(float(np.std(bs_bf)), 6),
+        "airmass_coef_vs_bp_rp_theil_sen": {
+            "slope_mag_per_airmass_per_mag": round(float(ts.slope), 6),
+            "slope_err_bootstrap": round(float(np.std(bs_slope)), 6),
+            "intercept_mag_per_airmass": round(float(ts.intercept), 6),
+            "intercept_err_bootstrap": round(float(np.std(bs_int)), 6),
+        },
+        "n_bootstrap": FIELD_RESPONSE_BOOTSTRAP,
+        "magnitude_window": "+-0.5 mag, widened x1.5 to >= 15 field stars",
+    }
+    return {
+        "fwhm_coef": pd.Series(bf_pred, index=ids),
+        "airmass_coef": pd.Series(ba_pred, index=ids),
+        "seeing_response_z": srz,
+    }
 
 
 def run_field_variability(
@@ -554,7 +691,7 @@ def run_field_variability(
         t_mid.append(float(pd.to_numeric(d["jd_mid"], errors="coerce").median()) if "jd_mid" in d else float(i))
         rows.append(d)
     # 1/eta needs the frames in time order (file names are not guaranteed to be)
-    M, S, frame, g, info, rn = _var_frame_table(
+    M, S, BL, frame, g, info, rn = _var_frame_table(
         cfg=cfg,
         files=files,
         kplan=kplan,
@@ -597,14 +734,7 @@ def run_field_variability(
     site = run_site(phot)
     # G02-18 / C6: the published time of a star is that star's own BJD_TDB
     t_star, meta["time_column"] = star_times_bjd(frame, info.loc[lc_ids, "ra_deg"], info.loc[lc_ids, "dec_deg"], site)
-    for j, cid in enumerate(lc_ids):
-        rr = R.loc[cid].reindex(frame.index)
-        ee = S.loc[cid].reindex(frame.index)
-        # error of a point as the field noise model predicts it (CCD error scaled by a, floor)
-        em = np.sqrt((a * ee) ** 2 + fl**2)
-        pd.DataFrame({"time": t_star[j], "dmag": rr.to_numpy(), "err": em.to_numpy(),
-                      "fwhm": frame["fwhm"].to_numpy(), "airmass": frame["airmass"].to_numpy()}).to_csv(
-            lc_dir / f"varcand_{cid}.csv", index=False)
+    write_candidate_lightcurves(lc_dir, lc_ids, R=R, S=S, BL=BL, frame=frame, t_star=t_star, a=a, fl=fl)
     if check_catalogs and not cand.empty:
         out.loc[order_c, "catalogs"] = [_catalog_check(row, cfg) for _, row in cand.iterrows()]
     out.to_csv(phot / FIELD_CSV, index=False)
@@ -627,6 +757,23 @@ def run_field_variability(
     LOGGER.info("[VARIABILITY] %d stars, %d pass gates, noise a=%.2f floor=%.4f, z>%.2f: %d candidates, %d known detected, %d systematic",
                 len(out), n_test, a, fl, zthr, len(cand), meta["n_known_detected"], meta["n_systematic"])
     return meta
+
+
+def write_candidate_lightcurves(
+    lc_dir: Path, lc_ids: list[str], *, R: pd.DataFrame, S: pd.DataFrame, BL: pd.DataFrame, frame: pd.DataFrame,
+    t_star: np.ndarray, a: float, fl: float,
+) -> None:
+    """``varcand_<id>.csv`` of each star: its own time (``t_star`` row), residual magnitude, the field noise model's
+    error ((a e)^2 + floor^2), ``below_limit`` (G10-30: the point is the star's 1-sigma flux limit,
+    COVERAGE-FAINT-2026-10 - a fainter-than value, not a measurement), frame FWHM and airmass."""
+    for j, cid in enumerate(lc_ids):
+        rr = R.loc[cid].reindex(frame.index)
+        ee = S.loc[cid].reindex(frame.index)
+        em = np.sqrt((a * ee) ** 2 + fl**2)
+        bl = BL.loc[cid].reindex(frame.index).astype("boolean").fillna(False).astype(bool)
+        pd.DataFrame({"time": t_star[j], "dmag": rr.to_numpy(), "err": em.to_numpy(), "below_limit": bl.to_numpy(),
+                      "fwhm": frame["fwhm"].to_numpy(), "airmass": frame["airmass"].to_numpy()}).to_csv(
+            Path(lc_dir) / f"varcand_{cid}.csv", index=False)
 
 
 def _brightened_vs_gaia(info: pd.DataFrame, Mi: pd.Series, use: np.ndarray, ref: Any) -> float:

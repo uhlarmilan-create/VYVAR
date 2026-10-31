@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numpy as np
-from astropy.wcs import WCS
 from photutils.detection import DAOStarFinder
 
 from masterstar_gaia_accounting import _pass2_catalog
@@ -31,14 +30,3 @@ def test_pass2_catalog_equals_daostarfinder_table() -> None:
             np.testing.assert_array_equal(np.asarray(tab[col]), np.asarray(getattr(cat, col)))
 
 
-def test_roundtrip_check_passes_for_a_plain_shift() -> None:
-    from vyvar_alignment_frame import _roundtrip_needed
-
-    w1 = WCS(naxis=2)
-    w1.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-    w1.wcs.crval = [240.0, 50.0]
-    w1.wcs.crpix = [500.0, 400.0]
-    w1.wcs.cdelt = [-0.0027, 0.0027]
-    w2 = w1.deepcopy()
-    w2.wcs.crpix = [503.5, 398.0]
-    assert _roundtrip_needed(w1, w2, (800, 1000)) is False

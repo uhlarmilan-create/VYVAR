@@ -33,6 +33,11 @@ SAT_LIMIT_NO_KNEE_FRAC = LINEARITY_FRAC
 # (snr_ap_pixscaled; AAVSO CCD/CMOS guide 2.1.4: S/N 100 excellent, below 10-20 poor). 50 removed
 # 2924 of 3272 pool stars on the 60 s wide-field rig (S/N 50 ~ G 11.5, draft 526), 20 keeps
 # the comps up to G ~12.5 that the ensemble used before.
+# COMP-SNR-ONE-2026-10 (G07-26, Milan 2026-10-31): why 20 and not the target cut snr_min 10 - the magnitude
+# (log) bias of a comp, +0.543 / (S/N)^2 mag (Monte Carlo confirmed): S/N 10 -> 5.4 mmag, 20 -> 1.4, 50 -> 0.2;
+# it moves with transparency (S/N x 0.6: +10.1 / +2.5 / +0.4 mmag) and leaks into the frame zero point as a
+# trend when a thin ensemble is faint. S/N 20 keeps it at the 1-2 mmag level of the best light curves.
+# Dimensionless (not rig-dependent). Applied once: max(cfg.snr_min, COMP_SNR_MIN) in apply_comp_quality_gates.
 COMP_SNR_MIN = 20.0
 # ALIGN-VERIFY-2026-10 (Milan 2026-10-12): every frame->reference registration is checked on the
 # stars themselves. The frame's detections are mapped through the transform and paired with the

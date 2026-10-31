@@ -1152,7 +1152,13 @@ def test_g01_35_ptc_result_identical(tmp_path, variant):
                               odd=variant == "odd")
     ref = _measure_from_files_ref(flats, darks, saturation_adu=65535.0)
     new = measure_from_files(flats, darks, saturation_adu=65535.0)
-    assert repr(ref) == repr(new)
+    # STEP7 C2 changed the fit (dark-pair variance per level, fit through the origin, covariance / linearity
+    # report): the G01-35 guarantee kept here is that the central-region loading measures the same pairs
+    # (files, levels, raw pair variances, flags) and the same dark read noise as the full-frame reference.
+    assert [(q.files, q.exptime, q.level_adu, q.var_half, q.used, q.note) for q in ref.points] == \
+        [(q.files, q.exptime, q.level_adu, q.var_half_raw, q.used, q.note) for q in new.points]
+    assert (ref.read_noise_adu, ref.binning, ref.gain_setting) == (new.read_noise_adu, new.binning, new.gain_setting)
+    assert ref.ok == new.ok
     if variant == "full":
         assert new.ok and new.n_levels >= 3
 

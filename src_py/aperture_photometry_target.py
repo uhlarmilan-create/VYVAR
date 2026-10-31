@@ -29,6 +29,7 @@ from photometry_lightcurve import (
     _aperture_skip_empty_comps_target,
     _recompute_bjd_hjd_with_status,
     check_comparison_stability,
+    compute_lc_precision_p2p,
     compute_lc_rms_ooe,
     ensemble_normalize,
     frame_rows_in_time_order,
@@ -39,6 +40,11 @@ from photometry_lightcurve import (
 from mag_constants import MAG_ERR_SCALE
 from photometry_defs import LOGGER
 
+
+
+#: CHECK-ONE-2026-10 (G08-41): AAVSO Guide to Photometric Uncertainty, Technique 2 - a check star "within 2
+#: magnitudes" of the variable; beyond it a WARNING (not a gate).
+CHECK_TARGET_DMAG_WARN = 2.0
 
 
 def _vsx_name_of(target_row: Any) -> str:
@@ -95,6 +101,17 @@ def zero_point_uncertainty(
         s = math.sqrt(float(np.sum(w * (d - mu) ** 2) / w.sum()) * n_eff / (n_eff - 1.0))
         out["sigma_zp_data_mag"] = round(s / math.sqrt(n_eff), 5)
     return out
+
+def ens_to_target_noise(sem_rel: Any, photon_rel: Any, scint_rel: Any) -> float:
+    """COMP-SNR-ONE-2026-10 (G07-26, Milan 2026-10-31): median over the epochs of s_ens / s_t, the ensemble
+    (comparison) error over the target's own random error s_t = sqrt(photon^2 + scintillation^2) (relative
+    flux; the night floor is excluded). Diagnostic only, not a gate: > 1 means the comparison stars dominate
+    the error (AAVSO uncertainty guide App. B: use brighter comps). NaN when no epoch has both terms."""
+    se = np.asarray(sem_rel, dtype=np.float64)
+    st = np.hypot(np.asarray(photon_rel, dtype=np.float64), np.asarray(scint_rel, dtype=np.float64))
+    ok = np.isfinite(se) & np.isfinite(st) & (st > 0)
+    return float(np.median(se[ok] / st[ok])) if ok.any() else float("nan")
+
 
 def _tgt_comp_inputs(*, obs_group, target_cid, target_comps):
     """Comparison ids of the target, their band magnitudes (zero-point band or NONE) and pool RMS."""
@@ -161,6 +178,7 @@ def _tgt_choose_check_star(
     from gaia_bands import zp_mag_from_gaia  # noqa: PLC0415
 
     _chk_cid_pref: str | None = None
+    _chk_row_pref = None
     if _chk_cid_pref is None:
         try:
             from check_star_kmag import (  # noqa: PLC0415
@@ -195,7 +213,6 @@ def _tgt_choose_check_star(
                 _chk_row_pref = select_check_star(
                     _chk_pool_pref,
                     ensemble_ids=set(comp_ids),
-                    n_comp_min=max(1, min(3, len(_chk_pool_pref))),
                     cfg=_cfg,
                     target_bp_rp=pd.to_numeric(target_row.get("bp_rp"), errors="coerce"),
                     target_mag=pd.to_numeric(
@@ -243,7 +260,19 @@ def _tgt_choose_check_star(
                             _fb,
                         )
                         break
-    return _chk_cid_pref,
+    # CHECK-ONE-2026-10 (G08-41): AAVSO uncertainty guide Technique 2 - the check star within 2 mag of the
+    # target; recorded (Gaia G) and a WARNING beyond, not a gate
+    _chk_dmag = float("nan")
+    if _chk_cid_pref:
+        _tg = float(pd.to_numeric(target_row.get("mag", target_row.get("phot_g_mean_mag")), errors="coerce"))
+        _kr = state.masterstar_row(_chk_cid_pref) if _chk_row_pref is None else _chk_row_pref
+        _kg = float(pd.to_numeric(_kr.get("mag", _kr.get("phot_g_mean_mag")), errors="coerce")) \
+            if _kr is not None else float("nan")
+        _chk_dmag = _kg - _tg if math.isfinite(_kg) and math.isfinite(_tg) else float("nan")
+        if math.isfinite(_chk_dmag) and abs(_chk_dmag) > CHECK_TARGET_DMAG_WARN:
+            logging.warning("[CHECK-KMAG] %s: check star %s is %+.2f mag (G) from the target (AAVSO: within %.0f mag)",
+                            target_cid, _chk_cid_pref, _chk_dmag, CHECK_TARGET_DMAG_WARN)
+    return _chk_cid_pref, _chk_dmag
 
 
 def _tgt_frame_rows(
@@ -349,7 +378,9 @@ def _tgt_ensemble(*, _band_system, _cfg, _fb, all_frames, comp_catalog_mag, comp
     # Step 4: ensemble normalization (consumes the delivered set as given)
     _broeg_w: dict[str, float] = {}
     _comp_levels: dict[str, float] = {}
-    mag_calib, delta_mag, ensemble_scatter = ensemble_normalize(
+    # ENSEMBLE-ERR-CC06-2026-10: the ensemble error needs the frame's scintillation - computed with the
+    # target's error budget (_tgt_time_and_errors) from these weights and levels
+    mag_calib, delta_mag, _ = ensemble_normalize(
         target_lc,
         comp_lc,
         comp_catalog_mag,
@@ -374,9 +405,6 @@ def _tgt_ensemble(*, _band_system, _cfg, _fb, all_frames, comp_catalog_mag, comp
     # ENSEMBLE-BROEG-2026-10: the colour-term correction sum_j w_j P(C_j) / sum_j w_j must use
     # the SAME weights as the ensemble zero point, i.e. the Broeg weights.
     comp_weight_map: dict[str, float] = {str(k): float(v) for k, v in _broeg_w.items()}
-    _ensemble_scatter_by_file = _ensemble_scatter_by_source_file(
-        all_frames, target_cid, ensemble_scatter
-    )
 
     _dilution_result: dict[str, Any] = {
         "dilution_factor": 1.0,
@@ -386,7 +414,7 @@ def _tgt_ensemble(*, _band_system, _cfg, _fb, all_frames, comp_catalog_mag, comp
         "aperture_arcsec": float("nan"),
         "search_radius_arcsec": float("nan"),
     }
-    return _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _ensemble_scatter_by_file, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc
+    return _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc
 
 
 def _tgt_dilution(
@@ -491,7 +519,6 @@ def _tgt_k2(
     _calibrated,
     _cfg,
     all_frames,
-    comp_quality,
     comp_weight_map,
     delta_mag,
     mag_calib,
@@ -532,7 +559,7 @@ def _tgt_k2(
         cid=target_cid,
     )
 
-    from k2_extinction import K2Source, apply_k2_per_frame, bp_rp_comp_median, ensemble_bp_rp  # noqa: PLC0415
+    from k2_extinction import K2Source, apply_k2_per_frame, colourless_weight_fraction, ensemble_bp_rp  # noqa: PLC0415
 
     k2_value_lc = float("nan")
     k2_colour_ref = float("nan")
@@ -542,13 +569,20 @@ def _tgt_k2(
     k2_source_rows = [K2Source.NONE.value] * len(mag_calib)
     _k2_val = float(getattr(state, "k2_bprp", float("nan")))
     _k2_src = str(getattr(state, "k2_source", K2Source.NONE.value))
+    k2_reason = str(getattr(state, "k2_reason", "") or "")
+    k2_colourless_wfrac = float("nan")
     if _k2_src == K2Source.LITERATURE_DEFAULT.value and math.isfinite(_k2_val):
         _airmass_k2 = _target_airmass_arr
         # K2-ONE-2026-10 (Milan 2026-10-26, D4): the colour of the comparison is the colour of
         # the ensemble the light curve uses - the Broeg-weighted mean colour of its comps.
         _bp_med_k2 = ensemble_bp_rp(comp_bp_rp, comp_weight_map)
-        if not math.isfinite(_bp_med_k2):
-            _bp_med_k2 = bp_rp_comp_median(comp_bp_rp, comp_quality)
+        # K2-BAND-2026-10 (G09-05 b): comps without a colour do not enter that mean - their weight share
+        # is recorded (summary k2_colour_missing_wfrac) and warned about, never dropped silently
+        k2_colourless_wfrac = colourless_weight_fraction(comp_bp_rp, comp_weight_map)
+        if math.isfinite(k2_colourless_wfrac) and k2_colourless_wfrac > 0:
+            logging.warning("[K2] target %s: %.1f %% of the ensemble weight is on comps without BP-RP - "
+                            "k'' colour reference from the coloured comps only", target_cid,
+                            100.0 * k2_colourless_wfrac)
         _k2_src_enum = K2Source.LITERATURE_DEFAULT
         # k'' x airmass x (target - ensemble colour) is a differential effect: one convention,
         # applied to delta_mag and to mag_calib alike (Henden: dm0 = dm - k'' X dC).
@@ -571,7 +605,39 @@ def _tgt_k2(
             k2_coeff_lc = float(_k2_val) * (float(target_bp_rp) - float(_bp_med_k2))
     # summary: the k'' source of the target (the tag when any epoch got the correction)
     k2_source_target = next((str(v) for v in k2_source_rows if str(v) != K2Source.NONE.value), K2Source.NONE.value)
-    return _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_source_target, k2_value_lc, mag_calib, target_bp_rp
+    return _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_colourless_wfrac, k2_reason, k2_source_target, k2_value_lc, mag_calib, target_bp_rp
+
+
+def _band_ct_zp_comps(comp_bp_rp: dict, comp_catalog_mag: dict, comp_weight_map: dict) -> tuple[list, list]:
+    """(colours, weights) of the zero-point comparison stars of the band colour term."""
+    cc, ww = [], []
+    for cid, bp in comp_bp_rp.items():
+        w = float(comp_weight_map.get(cid, float("nan")))
+        if math.isfinite(float(comp_catalog_mag.get(cid, float("nan")))) and math.isfinite(w) and w > 0:
+            cc.append(float(bp))
+            ww.append(w)
+    return cc, ww
+
+
+def ct_zero_point_sigma(pf: Any, colour: float, sigma_colour: float, colour_err_source: str,
+                        comp_bp_rp: dict, comp_catalog_mag: dict, comp_weight_map: dict) -> dict[str, Any]:
+    """G08-46 (Milan 2026-10-31): uncertainty of the band colour-term correction of a target. The fitted
+    coefficients are the same for every epoch, so it is a zero-point term of the light curve (reported with
+    the zero point, not added per point): sigma_zp_ct^2 = g^T Cov(p) g (``ColourTermFit.correction_sigma``)
+    + (P'(C_t) sigma(C_t))^2 with sigma(C_t) the Gaia BP-RP error of the target when the Gaia DB has it
+    (else recorded as unavailable and left out)."""
+    cc, ww = _band_ct_zp_comps(comp_bp_rp, comp_catalog_mag, comp_weight_map)
+    s_coef = float(pf.correction_sigma(float(colour), cc, ww)) if pf is not None else float("nan")
+    s_col = abs(float(pf.slope(float(colour)))) * float(sigma_colour) \
+        if pf is not None and math.isfinite(float(sigma_colour)) else float("nan")
+    parts = [v for v in (s_coef, s_col) if math.isfinite(v)]
+    tot = math.sqrt(sum(v * v for v in parts)) if math.isfinite(s_coef) else float("nan")
+
+    def _r(v: float) -> float | None:
+        return round(float(v), 6) if math.isfinite(float(v)) else None
+
+    return {"sigma_zp_ct_mag": _r(tot), "sigma_zp_ct_coef_mag": _r(s_coef), "sigma_zp_ct_colour_mag": _r(s_col),
+            "target_bp_rp_err": _r(sigma_colour), "target_bp_rp_err_source": str(colour_err_source)}
 
 
 def _band_ct_correction(pf: Any, colour: float, comp_bp_rp: dict, comp_catalog_mag: dict,
@@ -579,12 +645,7 @@ def _band_ct_correction(pf: Any, colour: float, comp_bp_rp: dict, comp_catalog_m
     """(correction, weighted ensemble colour) of the band colour term for a star of ``colour``:
     P(C) - sum w_j P(C_j) / sum w_j over the zero-point comparison stars (CT-2026-10). NaN outside the
     fitted colour range (no extrapolation). One implementation for the target and the check star."""
-    cc, ww = [], []
-    for cid, bp in comp_bp_rp.items():
-        w = float(comp_weight_map.get(cid, float("nan")))
-        if math.isfinite(float(comp_catalog_mag.get(cid, float("nan")))) and math.isfinite(w) and w > 0:
-            cc.append(float(bp))
-            ww.append(w)
+    cc, ww = _band_ct_zp_comps(comp_bp_rp, comp_catalog_mag, comp_weight_map)
     if not cc:
         return float("nan"), float("nan")
     ens = float(np.sum(np.asarray(ww) * np.asarray(cc)) / np.sum(ww))
@@ -630,6 +691,7 @@ def _tgt_colour_term(
             ct_ok = math.isfinite(ct_corr)
             if _pf is not None and ct_ok:
                 c1 = float(_pf.coeffs[0])
+                c1_stderr = float(_pf.coeff_stderr()[0])  # G08-46: from the fit covariance
             if not ct_ok:
                 logging.info("[COLOR TERM] %s: target colour outside the fitted range -> no colour term", target_cid)
                 ct_corr = 0.0
@@ -642,22 +704,20 @@ def _tgt_colour_term(
 def _tgt_time_and_errors(
     *,
     _cfg,
-    _ensemble_scatter_by_file,
+    _broeg_w,
+    _comp_levels,
     _target_airmass_arr,
     all_frames,
-    bp_rp_comp_med,
-    c1_stderr,
-    ct_corr,
-    ct_ok,
+    comp_lc,
     mag_calib,
     output_dir,
     state,
-    target_bp_rp,
     target_cid,
     target_name,
     target_row,
 ):
-    """Times (BJD/HJD), error budget (photon, ensemble scatter, scintillation, night floor, CT) and per-epoch flags."""
+    """Times (BJD/HJD), error budget (photon, ensemble scatter, scintillation, night floor) and per-epoch flags.
+    The colour-term coefficient uncertainty is a zero-point term (G08-46, ``ct_zero_point_sigma``), not per point."""
     target_frames = all_frames[all_frames["catalog_id"] == target_cid]
     target_frames = frame_rows_in_time_order(target_frames)
     _pt_active = bool((getattr(state, "per_target_aperture", None) or {}).get(str(target_cid)))
@@ -732,6 +792,18 @@ def _tgt_time_and_errors(
         ],
         dtype=np.float64,
     )
+    # ENSEMBLE-ERR-CC06-2026-10 (G08-08): ensemble error per frame from each comp's own noise model
+    # (CCD error at the light-curve aperture + the frame's scintillation) plus its night excess
+    # (Collier Cameron et al. 2006 eq. 4); the same frames / order as the target rows
+    from check_star_kmag import build_comp_photon_mag_from_frames  # noqa: PLC0415
+    from photometry_lightcurve import ensemble_error_per_frame  # noqa: PLC0415
+
+    _ens_ids = [str(c) for c in _broeg_w]
+    _comp_phot = build_comp_photon_mag_from_frames(all_frames, _ens_ids, _src_for_err)
+    _comp_noise = {c: np.sqrt(np.square(_comp_phot[c]) + np.square(_scint_mag_arr)) for c in _ens_ids}
+    _ens_err = ensemble_error_per_frame({c: comp_lc[c] for c in _ens_ids}, _comp_noise, _broeg_w, _comp_levels) \
+        if _ens_ids else np.full(len(_src_for_err), np.nan)
+    _ensemble_scatter_by_file = _ensemble_scatter_by_source_file(all_frames, target_cid, _ens_err)
     err, err_scatter_unmatched_arr = _combine_err_with_ensemble_scatter_keyed(
         err,
         _src_for_err,
@@ -740,20 +812,6 @@ def _tgt_time_and_errors(
         sigma_scint_mag=_scint_mag_arr,
         target_name=str(target_name),
     )
-    # Propagate colour-level coefficient uncertainty into exported err (constant per LC).
-    if bool(ct_ok) and math.isfinite(float(c1_stderr)) and math.isfinite(float(ct_corr)):
-        # corr = c1 * (target - ref) => sigma_corr = |target-ref| * sigma_c1
-        _dcol = float(target_bp_rp) - float(bp_rp_comp_med) if math.isfinite(float(bp_rp_comp_med)) else float("nan")
-        if math.isfinite(_dcol):
-            _err_ct = abs(_dcol) * float(c1_stderr)
-            if math.isfinite(_err_ct) and _err_ct > 0:
-                # ``err`` is a relative flux error; the colour-term error is in mag.
-                err = np.sqrt(np.square(np.asarray(err, dtype=np.float64)) + (_err_ct / 1.0857362) ** 2)
-                logging.info(
-                    "[COLOR TERM] err += %.4f mag from k uncertainty (delta_colour=%+.3f)",
-                    float(_err_ct),
-                    float(_dcol),
-                )
     err_photon_export, err_sem_rel_export, err_scint_rel_export, err_sigma_sys_rel_export = (
         _err_budget_components_keyed(
             err_photon_arr,
@@ -796,7 +854,7 @@ def _tgt_time_and_errors(
         _raw_tf = target_frames["flag"].astype(str).str.strip().str.lower().reset_index(drop=True)
     else:
         _raw_tf = pd.Series(["__none__"] * len(mag_calib))
-    return _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base
+    return _ensemble_scatter_by_file, _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base
 
 
 def _tgt_gspc_zero_point(
@@ -1001,9 +1059,11 @@ def _tgt_lc_flags(
 
 def _tgt_check_star(
     *,
+    state,
     _k_like_target,
     _calibrated,
     _chk_cid_pref,
+    _chk_dmag,
     _ensemble_scatter_by_file,
     _scint_mag_arr,
     _sigma_sys_mag,
@@ -1076,6 +1136,11 @@ def _tgt_check_star(
                         target_name=f"{target_cid} check {_chk_cid}",
                     )
                     _kerr = MAG_ERR_SCALE * np.asarray(_kerr_rel, dtype=np.float64)
+                    # G08-03: the check star's pulls for the night's pooled pull scale (each check star once)
+                    _kk = np.asarray(_chk_result.kmag, dtype=np.float64)
+                    if np.isfinite(_kk).any():
+                        with np.errstate(invalid="ignore", divide="ignore"):
+                            state.check_pulls.setdefault(str(_chk_cid), (_kk - np.nanmedian(_kk)) / _kerr)
                     save_check_kmag_sidecar(
                         check_kmag_sidecar_path(lc_dir, target_cid),
                         bjd=bjd,
@@ -1086,6 +1151,9 @@ def _tgt_check_star(
                     _check_block = check_star_block(_chk_cid, _chk_result)
                     if isinstance(_check_block, dict):
                         _check_block["corrections"] = _k_note
+                        # CHECK-ONE-2026-10: G(check) - G(target), AAVSO "within 2 magnitudes"
+                        _check_block["check_minus_target_g_mag"] = (
+                            round(float(_chk_dmag), 3) if math.isfinite(float(_chk_dmag)) else None)
                 else:
                     logging.warning(
                         "[CHECK-KMAG] ensemble returned empty for target=%s check=%s",
@@ -1333,7 +1401,10 @@ def _tgt_summary_row(
     ct_n_comp,
     ct_ok,
     delta_mag,
+    ens_noise_ratio,
     k2_colour_ref,
+    k2_colourless_wfrac,
+    k2_reason,
     k2_source_target,
     k2_value_lc,
     lc_csv,
@@ -1343,6 +1414,7 @@ def _tgt_summary_row(
     n_lc,
     n_wcs_untrusted,
     out_flags,
+    sigma_zp_ct,
     state,
     summary_rows,
     target_bp_rp,
@@ -1380,6 +1452,7 @@ def _tgt_summary_row(
             _measured_ap = float(np.median(_ap_meas.to_numpy(dtype=float)))
     _lc_rms_full = float(np.std(finite_meas)) if len(finite_meas) > 1 else float("nan")
     _lc_rms_ooe = compute_lc_rms_ooe(_meas_lc, out_flags)
+    _lc_prec = compute_lc_precision_p2p(_meas_lc, out_flags)
 
     _n_tier12 = 0
     if not target_comps.empty:
@@ -1403,6 +1476,8 @@ def _tgt_summary_row(
         "n_wcs_untrusted": n_wcs_untrusted,
         "lc_rms": _lc_rms_full,
         "lc_rms_ooe": _lc_rms_ooe,
+        # LC-PRECISION-P2P-2026-10 (G08-17): the headline precision (robust point-to-point)
+        "lc_precision_p2p": _lc_prec,
         "lc_median_mag": float(np.median(finite_calib)) if len(finite_calib) > 0 else float("nan"),
         "aperture_px": _measured_ap if math.isfinite(_measured_ap) else float(apertures_px.get(target_cid, float("nan"))),
         "target_blend_frac": float((getattr(state, "target_blend", None) or {}).get(str(target_cid), float("nan"))),
@@ -1420,6 +1495,7 @@ def _tgt_summary_row(
         "ct_corr": float(ct_corr) if bool(ct_ok) and math.isfinite(float(ct_corr)) else float("nan"),
         "ct_c1": float(c1) if bool(ct_ok) and math.isfinite(float(c1)) else float("nan"),
         "ct_c1_stderr": float(c1_stderr) if bool(ct_ok) and math.isfinite(float(c1_stderr)) else float("nan"),
+        "sigma_zp_ct_mag": float(sigma_zp_ct) if bool(ct_ok) and math.isfinite(float(sigma_zp_ct)) else float("nan"),
         "ct_mode": str(ct_mode) if bool(ct_ok) else "",
         "ct_n_comp": int(ct_n_comp) if bool(ct_ok) else 0,
         "ct_bp_rp_target": float(target_bp_rp) if bool(ct_ok) else float("nan"),
@@ -1427,17 +1503,20 @@ def _tgt_summary_row(
         "k2_source": k2_source_target,
         "k2_value": float(k2_value_lc) if math.isfinite(float(k2_value_lc)) else float("nan"),
         "k2_colour_ref": float(k2_colour_ref) if math.isfinite(float(k2_colour_ref)) else float("nan"),
+        "k2_reason": str(k2_reason),
+        "k2_colour_missing_wfrac": float(k2_colourless_wfrac),
         "band_system": str(_band_system),
+        "ens_to_target_noise": float(ens_noise_ratio),
     }
     _sum_row["skip_reason"] = str(target_row.get("skip_reason", "") or "")
     summary_rows.append(_sum_row)
     n_lc += 1
     lc_rms = float(summary_rows[-1]["lc_rms"])
-    lc_rms_ooe = float(summary_rows[-1].get("lc_rms_ooe", float("nan")))
+    lc_prec = float(summary_rows[-1].get("lc_precision_p2p", float("nan")))
     r_ap = float(summary_rows[-1]["aperture_px"])
     logging.info(
         f"[APERTURE] {target_name}: "
-        f"lc_rms={lc_rms:.4f}, lc_rms_ooe={lc_rms_ooe:.4f}, "
+        f"precision_p2p={lc_prec:.4f}, lc_rms={lc_rms:.4f}, "
         f"n_comp={n_good_comp} (stability_good={n_stability_good}), "
         f"aperture={r_ap:.2f}px (measured)"
     )
@@ -1542,7 +1621,7 @@ def _aperture_process_one_target(
     )
 
 
-    _chk_cid_pref, = _tgt_choose_check_star(
+    _chk_cid_pref, _chk_dmag = _tgt_choose_check_star(
         _cfg=_cfg,
         _fb=_fb,
         all_ids=all_ids,
@@ -1580,7 +1659,7 @@ def _aperture_process_one_target(
         target_cid=target_cid,
     )
     # Build time series per star
-    _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _ensemble_scatter_by_file, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc = _tgt_ensemble(
+    _band_system, _broeg_w, _calibrated, _comp_levels, _dilution_result, _zp_info, comp_lc, comp_quality, comp_weight_map, delta_mag, mag_calib, target_lc = _tgt_ensemble(
         _band_system=_band_system,
         _cfg=_cfg,
         _fb=_fb,
@@ -1601,11 +1680,10 @@ def _aperture_process_one_target(
     )
 
     # -- Color term (BP-RP) - global comp-pool fit; toggle controls correction only --
-    _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_source_target, k2_value_lc, mag_calib, target_bp_rp = _tgt_k2(
+    _target_airmass_arr, comp_bp_rp, delta_mag, k2_coeff_lc, k2_colour_ref, k2_colourless_wfrac, k2_reason, k2_source_target, k2_value_lc, mag_calib, target_bp_rp = _tgt_k2(
         _calibrated=_calibrated,
         _cfg=_cfg,
         all_frames=all_frames,
-        comp_quality=comp_quality,
         comp_weight_map=comp_weight_map,
         delta_mag=delta_mag,
         mag_calib=mag_calib,
@@ -1629,25 +1707,39 @@ def _aperture_process_one_target(
         target_name=target_name,
     )
 
+    # G08-46: colour-term uncertainty is a zero-point term of the light curve (zero-point record, summary,
+    # AAVSO NOTES), not a per-point error
+    _sigma_zp_ct = float("nan")
+    if ct_ok and _group_ct is not None:
+        from catalog_db import query_local_gaia_bp_rp_error  # noqa: PLC0415
+
+        _sbp, _sbp_src = query_local_gaia_bp_rp_error(getattr(state, "gaia_db_path", None), target_cid)
+        _ct_sig = ct_zero_point_sigma(getattr(_group_ct, "poly_fit", None), float(target_bp_rp), _sbp, _sbp_src,
+                                      comp_bp_rp, comp_catalog_mag, comp_weight_map)
+        _zp_info.update(_ct_sig)
+        if _ct_sig["sigma_zp_ct_mag"] is not None:
+            _sigma_zp_ct = float(_ct_sig["sigma_zp_ct_mag"])
+
     # Target time values in the row order of ``_get_lc`` / ``_ensemble_scatter_by_source_file``
     # (``frame_rows_in_time_order``, G08-07).
-    _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base = _tgt_time_and_errors(
+    _ensemble_scatter_by_file, _err_rel_for_snr, _measured_ap_target, _pt_active, _raw_tf, _scint_mag_arr, _sigma_sys_mag, airmass_arr, ap_arr, bjd, err, err_photon_export, err_scatter_unmatched_arr, err_scint_rel_export, err_sem_rel_export, err_sigma_sys_rel_export, hjd, jd, n_alignment_failed, n_wcs_untrusted, sat_flags, src_files, target_frames, time_base = _tgt_time_and_errors(
         _cfg=_cfg,
-        _ensemble_scatter_by_file=_ensemble_scatter_by_file,
+        _broeg_w=_broeg_w,
+        _comp_levels=_comp_levels,
+        comp_lc=comp_lc,
         _target_airmass_arr=_target_airmass_arr,
         all_frames=all_frames,
-        bp_rp_comp_med=bp_rp_comp_med,
-        c1_stderr=c1_stderr,
-        ct_corr=ct_corr,
-        ct_ok=ct_ok,
         mag_calib=mag_calib,
         output_dir=output_dir,
         state=state,
-        target_bp_rp=target_bp_rp,
         target_cid=target_cid,
         target_name=target_name,
         target_row=target_row,
     )
+    _ens_noise_ratio = ens_to_target_noise(err_sem_rel_export, err_photon_export, err_scint_rel_export)
+    if math.isfinite(_ens_noise_ratio) and _ens_noise_ratio > 1.0:
+        logging.warning("[COMP] %s: ensemble error %.2f x the target's own error (median) - the comparison "
+                        "stars dominate the error budget (brighter comps would help)", target_name, _ens_noise_ratio)
     # GSPC-ZP-2026-10: second zero point from Gaia DR3 synthetic photometry (GSPC) with the
     # same estimator and weights as the standard one. mag_gspc = standard light curve shifted by
     # (C_GSPC - C_std); for an uncalibrated light curve mag_gspc = delta_mag + level + C_GSPC.
@@ -1713,9 +1805,11 @@ def _aperture_process_one_target(
         return _corr, ", ".join(_notes) if _notes else "none"
 
     _check_block, = _tgt_check_star(
+        state=state,
         _k_like_target=_k_like_target,
         _calibrated=_calibrated,
         _chk_cid_pref=_chk_cid_pref,
+        _chk_dmag=_chk_dmag,
         _ensemble_scatter_by_file=_ensemble_scatter_by_file,
         _scint_mag_arr=_scint_mag_arr,
         _sigma_sys_mag=_sigma_sys_mag,
@@ -1793,7 +1887,10 @@ def _aperture_process_one_target(
         ct_n_comp=ct_n_comp,
         ct_ok=ct_ok,
         delta_mag=delta_mag,
+        ens_noise_ratio=_ens_noise_ratio,
         k2_colour_ref=k2_colour_ref,
+        k2_colourless_wfrac=k2_colourless_wfrac,
+        k2_reason=k2_reason,
         k2_source_target=k2_source_target,
         k2_value_lc=k2_value_lc,
         lc_csv=lc_csv,
@@ -1803,6 +1900,7 @@ def _aperture_process_one_target(
         n_lc=n_lc,
         n_wcs_untrusted=n_wcs_untrusted,
         out_flags=out_flags,
+        sigma_zp_ct=_sigma_zp_ct,
         state=state,
         summary_rows=summary_rows,
         target_bp_rp=target_bp_rp,

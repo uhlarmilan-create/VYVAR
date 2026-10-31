@@ -165,12 +165,15 @@ def select_check_star(
     comp_df: pd.DataFrame,
     *,
     ensemble_ids: set[str] | None = None,
-    n_comp_min: int = 3,
     cfg: AppConfig,
     target_bp_rp: float | None = None,
     target_mag: float | None = None,
 ) -> pd.Series | None:
     """Pick independent check star - best stability among non-ensemble good comps.
+
+    CHECK-ONE-2026-10 (G08-41, Milan 2026-10-31): ONE clean independent candidate suffices (AAVSO extended
+    format: one KNAME / KMAG; AAVSO uncertainty guide Technique 2). The former floor of n_comp_min
+    candidates was the ensemble rule misapplied (CS-3 is about excluding the ensemble, not a count).
 
     CHECK-RULES-2026-10: with ``target_bp_rp`` the check star follows the comparison-star
     rules relative to THIS target: colour ladder |BP-RP - target| (comp_color_tiers, then
@@ -230,7 +233,7 @@ def select_check_star(
             if not work.empty:
                 df = work
 
-    if len(df) < int(n_comp_min):
+    if df.empty:
         return None
 
     try:
@@ -430,7 +433,7 @@ def compute_check_ensemble_mag_calib(
     other_cat = {c: comp_catalog_mag[c] for c in other_quality if c in comp_catalog_mag}
     if len(other_quality) < 2:
         return None
-    mag_calib, _delta_k, ensemble_scatter = ensemble_normalize(
+    mag_calib, _delta_k, _ = ensemble_normalize(
         comp_lc[cid],
         other_lc,
         other_cat,

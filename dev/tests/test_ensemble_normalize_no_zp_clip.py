@@ -23,7 +23,8 @@ def test_ensemble_normalize_no_per_frame_zp_rejection():
 
     w_out: dict[str, float] = {}
     mag, _delta, scatter = ensemble_normalize(
-        target, comp_lc, cat, quality, n_comp_min=3, weights_out=w_out
+        target, comp_lc, cat, quality, n_comp_min=3, weights_out=w_out,
+        comp_noise_mag={c: np.full(n, 0.003) for c in cids},  # ENSEMBLE-ERR-CC06-2026-10: per-frame model
     )
     assert np.isfinite(mag).sum() == n
     assert set(w_out) == set(cids)  # membership unchanged

@@ -402,6 +402,49 @@ def query_local_gaia_by_source_ids(
     return out
 
 
+#: G08-46: Gaia DB columns that give sigma(BP-RP): the error itself, or the relative BP / RP flux errors
+#: (phot_*_mean_flux_error / phot_*_mean_flux, the convention of g_flux_error_rel).
+GAIA_BP_RP_ERROR_COLUMNS = ("bp_rp_error",)
+GAIA_BP_RP_FLUX_ERROR_REL_COLUMNS = ("bp_flux_error_rel", "rp_flux_error_rel")
+
+
+def query_local_gaia_bp_rp_error(db_path: str | Path | None, source_id: Any) -> tuple[float, str]:
+    """G08-46: Gaia DR3 sigma(BP-RP) of one star from the local Gaia DB and where it came from.
+
+    ``bp_rp_error`` when the DB has it, else 1.0857 x hypot(bp_flux_error_rel, rp_flux_error_rel) (photon
+    term; the BP / RP zero-point errors are common to all stars of the field and cancel in a differential
+    colour term). No such columns, no DB or no value -> (NaN, "unavailable: <why>") - never a guessed value."""
+    gdb = str(db_path or "").strip()
+    if not gdb:
+        return float("nan"), "unavailable: no Gaia DB configured"
+    p = resolve_catalog_path(gdb)
+    if not p.is_file():
+        return float("nan"), "unavailable: Gaia DB file not found"
+    sid = _normalize_gaia_source_id_for_sql(source_id)
+    if sid is None:
+        return float("nan"), "unavailable: not a Gaia source_id"
+    conn = connect_ro(p)
+    try:
+        cols = _table_columns(conn, "gaia_dr3")
+        if all(c in cols for c in GAIA_BP_RP_ERROR_COLUMNS):
+            row = conn.execute("SELECT bp_rp_error FROM gaia_dr3 WHERE source_id = ?;", (sid,)).fetchone()
+            v = float(row[0]) if row is not None and row[0] is not None else float("nan")
+            src = "gaia_db:bp_rp_error"
+        elif all(c in cols for c in GAIA_BP_RP_FLUX_ERROR_REL_COLUMNS):
+            row = conn.execute("SELECT bp_flux_error_rel, rp_flux_error_rel FROM gaia_dr3 WHERE source_id = ?;",
+                               (sid,)).fetchone()
+            ok = row is not None and row[0] is not None and row[1] is not None
+            v = 1.0857362047581294 * math.hypot(float(row[0]), float(row[1])) if ok else float("nan")
+            src = "gaia_db:bp_rp_flux_error_rel"
+        else:
+            return float("nan"), "unavailable: Gaia DB has no BP/RP error columns"
+    finally:
+        conn.close()
+    if not (math.isfinite(v) and v >= 0):
+        return float("nan"), "unavailable: star without a BP/RP error in the Gaia DB"
+    return v, src
+
+
 def _validate_table(db_path: str | Path, table: str, required: set[str]) -> tuple[bool, str]:
     p = resolve_catalog_path(db_path)
     if not str(db_path).strip() or not p.is_file():

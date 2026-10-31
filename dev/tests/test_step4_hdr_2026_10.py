@@ -201,9 +201,10 @@ def test_filter_band_and_k2_token_agree(alias: str) -> None:
         assert filter_token_from_obs_group(og) == alias
         k2, _src = resolve_k2_bprp_value(None, og)
         if ref.transformable:
-            # a reportable standard band always has a k'' (Sloan Smith 2002, B Henden, V/R zero)
             assert classify_photometric_band(og) is PhotometricBand.STANDARD_FILTER
-            assert math.isfinite(k2)
+            # K2-BAND-2026-10: k'' only where a citable colour slope exists (Sloan g / r, Johnson B);
+            # V / R negligible and Sloan i without a slope -> none
+            assert math.isfinite(k2) == (ref.zp_band in ("g", "r", "B"))
         else:
             assert not math.isfinite(k2)
 

@@ -66,6 +66,10 @@ HEADER_KEYS: dict[str, tuple[str, ...]] = {
 
 # Relative tolerance for header<->DB cross-check warnings (equipment-intrinsic).
 CROSS_CHECK_RTOL = 0.05
+#: G06-34: a header e-/ADU and a measured photon-transfer gain disagree when they differ by more than this many
+#: standard errors of the photon-transfer gain (3 sigma, the usual significance level); a point without an
+#: error uses CROSS_CHECK_RTOL.
+PTC_DISAGREE_NSIGMA = 3.0
 
 _E_PER_ADU_COMMENT_MARKERS = ("e-/adu", "e/adu", "electron")
 _GAIN_INDEX_COMMENTS = frozenset({"gain", "index", ""})
@@ -80,6 +84,14 @@ class Resolved:
     key: str | None = None          # winning header keyword (if source == header)
     ok: bool = False
     warnings: list[str] = field(default_factory=list)
+    #: G01-06: the camera-profile lookup behind the value (point, setting, binning, convention and its source)
+    detail: str | None = None
+    bin_mode: str | None = None
+    bin_mode_source: str | None = None
+    #: the value is a measured / manual point at the frame binning (not scaled)
+    exact_binning: bool = False
+    #: further provenance for pipeline_meta.resolved_facts (G06-34 / G06-25: container scale, noise terms)
+    facts: dict[str, Any] = field(default_factory=dict)
 
     def __bool__(self) -> bool:  # truthy iff successfully resolved
         return bool(self.ok)
@@ -280,6 +292,23 @@ def _header_setting(header: Any, profile: Any) -> tuple[float | None, str | None
     return None, key, True
 
 
+def _cal_diag_convention(header: Any) -> str | None:
+    """G01-06: the SUM / MEAN convention CAL-DIAG measured for this frame's binning (``VYBINCNV``)."""
+    from camera_profile import norm_cal_diag_convention  # noqa: PLC0415
+
+    if header is None:
+        return None
+    try:
+        return norm_cal_diag_convention(header.get("VYBINCNV"))
+    except AttributeError:
+        return None
+
+
+def _take_lookup(res: Resolved, lk: Any) -> None:
+    res.detail, res.bin_mode, res.bin_mode_source = lk.detail, lk.bin_mode, lk.bin_mode_source
+    res.exact_binning = bool(getattr(lk, "exact_binning", False))
+
+
 def _frame_binning(header: Any, label: str) -> int:
     b = _binning_from_header(header)
     if b is None:
@@ -287,6 +316,45 @@ def _frame_binning(header: Any, label: str) -> int:
             _warn_once_logger(f"bin_unresolved_{label}", f"[RESOLVE {label}] binning unresolved - bin 1 assumed")
         return 1
     return int(b)
+
+
+def _measured_point_beats_header(
+    res: Resolved, header: Any, prof: Any, raw: float, hdr_key: str | None, binning: int
+) -> bool:
+    """G06-34: header e-/ADU vs a measured photon-transfer point at the frame binning. The header's unit
+    (native or 16-bit container ADU) depends on the driver; the photon transfer of the file values is the
+    physical authority (Janesick; EMVA 1288). Disagreement beyond PTC_DISAGREE_NSIGMA x gain_err -> the
+    measured point wins (WARNING + facts); agreement or no point -> False (header used)."""
+    from camera_profile import measured_point  # noqa: PLC0415
+
+    if hdr_key == "VY_EGAIN" or (hdr_key == "EGAIN" and header is not None and header.get("VYCHANNL")):
+        return False  # VYVAR's own stamp, derived from the profile already
+    setting = None
+    if getattr(prof, "header_gain", None) == "setting" and hdr_key != "GAIN" and header is not None and "GAIN" in header:
+        try:
+            setting = float(header["GAIN"])
+        except (TypeError, ValueError):
+            setting = None
+    mp = measured_point(prof, setting, binning)
+    if mp is None:
+        return False
+    g = float(mp.e_per_adu)
+    err = mp.e_per_adu_err
+    bound = PTC_DISAGREE_NSIGMA * float(err) if err else CROSS_CHECK_RTOL * g
+    basis = f"{PTC_DISAGREE_NSIGMA:g} x gain_err {float(err):.3g}" if err else f"{CROSS_CHECK_RTOL:.0%} (no gain_err)"
+    res.facts.update({"header_gain": raw, "header_key": hdr_key, "ptc_gain": g, "ptc_gain_err": err,
+                      "ptc_bound": bound})
+    if abs(raw - g) <= bound:
+        return False
+    msg = (f"[RESOLVE gain] header {hdr_key}={raw:g} e-/ADU disagrees with the measured photon-transfer gain {g:g} "
+           f"at bin {binning} (|diff| > {basis}); using the measured point (header units depend on the driver)")
+    res.value, res.source, res.ok = g, "measured", True
+    res.detail = f"measured point, bin {binning} (beats header {hdr_key})"
+    res.exact_binning = True
+    res.facts["winner"] = "measured_over_header"
+    res.warnings.append(msg)
+    _warn_once_logger(f"ptc_beats_header_{prof.equipment_id}_{binning}", msg)
+    return True
 
 
 def resolve_gain(
@@ -312,11 +380,15 @@ def resolve_gain(
     prof = _profile_for(profile=profile, db=db, equipment_id=equipment_id, cfg=cfg, db_value=db_value, param="gain")
     res = Resolved()
     binning = _frame_binning(header, "gain")
+    conv = _cal_diag_convention(header)
     setting, hdr_key, is_e_per_adu = _header_setting(header, prof)
     raw, _, _ = _header_gain_raw(header)
     if is_e_per_adu and raw is not None and _is_valid("gain", raw):
+        if _measured_point_beats_header(res, header, prof, float(raw), hdr_key, binning):
+            return res
         res.value, res.source, res.key, res.ok = float(raw), "header", hdr_key, True
-        ref = lookup(prof, "gain", None, binning)
+        res.detail = f"header {hdr_key} (e-/ADU)"
+        ref = lookup(prof, "gain", None, binning, conv)
         if ref.value is not None and not math.isclose(float(raw), float(ref.value), rel_tol=CROSS_CHECK_RTOL):
             msg = (
                 f"[RESOLVE gain] header {hdr_key}={raw:g} disagrees with the camera profile "
@@ -325,7 +397,8 @@ def resolve_gain(
             res.warnings.append(msg)
             _warn_once_logger(f"xcheck_gain_header_wins_{prof.equipment_id}", msg)
         return res
-    lk = lookup(prof, "gain", setting, binning)
+    lk = lookup(prof, "gain", setting, binning, conv)
+    _take_lookup(res, lk)
     if lk.value is not None and _is_valid("gain", lk.value):
         res.value, res.source, res.ok = float(lk.value), lk.source, True
         res.key = f"{hdr_key}={setting:g}" if setting is not None and hdr_key else None
@@ -368,7 +441,8 @@ def resolve_read_noise(
         return res
     binning = _frame_binning(header, "read_noise")
     setting, _, _ = _header_setting(header, prof)
-    lk = lookup(prof, "read_noise", setting, binning)
+    lk = lookup(prof, "read_noise", setting, binning, _cal_diag_convention(header))
+    _take_lookup(res, lk)
     hdr_v, hdr_key = _header_value(header, "read_noise")
     if lk.value is not None and _is_valid("read_noise", lk.value):
         res.value, res.source, res.ok = float(lk.value), lk.source, True
@@ -380,8 +454,9 @@ def resolve_read_noise(
             res.warnings.append(msg)
             _warn_once_logger(f"xcheck_read_noise_{prof.equipment_id}", msg)
         return res
-    if hdr_v is not None:
+    if hdr_v is not None and lk.bin_mode_source != "conflict":
         res.value, res.source, res.key, res.ok = float(hdr_v), "header", hdr_key, True
+        res.detail = f"header {hdr_key}"
         return res
     res.source, res.ok = "unresolved", False
     res.warnings.append(f"[RESOLVE read_noise] {lk.detail} (camera {prof.name or prof.equipment_id}, bin {binning})")

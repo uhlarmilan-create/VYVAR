@@ -10,7 +10,8 @@ bright, well-measured stars 4-8 sigma above it and rejected them (Brno 534 g: 35
 log10 flux 4.5 rejected while their PSF/aperture ratio was as stable as that of the accepted ones).
 
 Night reference: the night's stars are pooled and binned in log10(flux) (``LOCUS_BIN_DEX``; consecutive bins are
-merged until a group holds ``MIN_N_BIN`` stars); per group the plain median of log10(chi2) at the group's median log10(flux), and
+merged until a group holds ``MIN_N_BIN`` star x frame samples AND ``MIN_STARS_BIN`` distinct stars - G09-09: the
+samples of one star share its persistent chi2 offset, so the scale's effective n is the number of stars); per group the plain median of log10(chi2) at the group's median log10(flux), and
 the MAD sigma of the residuals from that curve; between group centres the curve is linear, outside it is extended linearly from the two
 end groups (scatter held). A star is compared only with stars of similar flux.
 Per frame, a plain median offset of log10(chi2) from the night curve (seeing changes chi2 for every star).
@@ -33,9 +34,13 @@ from gaia_catalog_id import read_vyvar_csv
 
 LOGGER = logging.getLogger(__name__)
 
-# Statistical sample sizes (not equipment): a frame offset needs MIN_N_LOCUS_FIT stars, a bin statistic MIN_N_BIN.
+# Statistical sample sizes (not equipment): a frame offset needs MIN_N_LOCUS_FIT stars, a bin statistic MIN_N_BIN
+# samples from at least MIN_STARS_BIN distinct stars (G09-09, CHI2-LOCUS-STARS-2026-10: relative standard error of a
+# MAD scale ~1.17 / sqrt(n) = 0.30 at n = 15 stars; Brno 534 g bright groups held 2-17 stars, their per-star chi2
+# offsets 0.10-0.66 dex were as large as the pooled MAD).
 MIN_N_LOCUS_FIT = 10
 MIN_N_BIN = 30
+MIN_STARS_BIN = 15
 # Flux resolution of the reference: 0.25 dex = 0.625 mag.
 LOCUS_BIN_DEX = 0.25
 MAD_TO_SIGMA = 1.4826
@@ -53,6 +58,8 @@ class Chi2Locus:
     source: str  # "night" | "frame"
     offset: float = 0.0
     n_bin: tuple[int, ...] = field(default=())
+    n_stars_bin: tuple[int, ...] = field(default=())
+    note: str = ""
 
     def predict(self, logf: np.ndarray) -> np.ndarray:
         """Linear between group centres, linear extrapolation from the two end groups outside."""
@@ -76,6 +83,9 @@ class Chi2Locus:
             "med": [float(v) for v in self.med],
             "scatter": [float(v) for v in self.scatter],
             "n_bin": [int(v) for v in self.n_bin],
+            "n_stars_bin": [int(v) for v in self.n_stars_bin],
+            "min_stars_bin": MIN_STARS_BIN,
+            "note": self.note,
             "n": int(self.n),
             "source": self.source,
             "offset": float(self.offset),
@@ -103,42 +113,54 @@ def fit_chi2_locus(
     flux: Sequence[float] | np.ndarray,
     chi2: Sequence[float] | np.ndarray,
     *,
+    star_ids: Sequence[Any] | np.ndarray,
     converged: Sequence[bool] | np.ndarray | None = None,
     saturated: Sequence[bool] | np.ndarray | None = None,
     source: str = "night",
 ) -> Chi2Locus | None:
     """Binned reference curve: plain median and MAD sigma of log10(chi2) per log10(flux) bin.
 
-    Returns None if the night has fewer than ``MIN_N_BIN`` stars.
+    ``star_ids`` names the star of every sample (a group needs ``MIN_STARS_BIN`` distinct stars). Returns None if
+    the night has fewer than ``MIN_N_BIN`` samples. A night with fewer than ``MIN_STARS_BIN`` stars in all is one
+    group (WARNING, ``note`` in the locus record).
     """
     f = np.asarray(flux, dtype=np.float64)
     c = np.asarray(chi2, dtype=np.float64)
+    sid = np.asarray([str(v) for v in star_ids], dtype=object)
+    if sid.size != f.size:
+        raise ValueError(f"fit_chi2_locus: {sid.size} star ids for {f.size} samples")
     m = _finite_mask(f, c, converged, saturated)
     if int(m.sum()) < MIN_N_BIN:
         return None
     x = np.log10(f[m])
     y = np.log10(c[m])
+    sid = sid[m]
     lo = math.floor(float(x.min()) / LOCUS_BIN_DEX) * LOCUS_BIN_DEX
     idx = np.floor((x - lo) / LOCUS_BIN_DEX).astype(int)
-    # consecutive LOCUS_BIN_DEX bins are merged until a group holds MIN_N_BIN stars (sparse bright end);
-    # a sparse remainder joins the previous group
+    # consecutive LOCUS_BIN_DEX bins are merged until a group holds MIN_N_BIN samples AND MIN_STARS_BIN distinct stars
+    # (sparse bright end); a sparse remainder joins the previous group
     groups: list[np.ndarray] = []
     cur: list[np.ndarray] = []
+    note = ""
     for b in np.unique(idx):
         cur.append(np.flatnonzero(idx == b))
-        if sum(len(v) for v in cur) >= MIN_N_BIN:
-            groups.append(np.concatenate(cur))
+        g = np.concatenate(cur)
+        if g.size >= MIN_N_BIN and np.unique(sid[g]).size >= MIN_STARS_BIN:
+            groups.append(g)
             cur = []
     if cur:
         if groups:
             groups[-1] = np.concatenate([groups[-1]] + cur)
         else:
-            return None
+            groups = [np.concatenate(cur)]
+            note = f"only {np.unique(sid).size} stars (< MIN_STARS_BIN {MIN_STARS_BIN}): one flux group"
+            LOGGER.warning("[ePSF] chi2 locus: %s", note)
     # pass 1: plain median of log10(chi2) per group -> curve; pass 2: MAD sigma of the residuals from that curve
     # (the curve's own rise inside a wide bright group must not count as scatter)
     centres = [float(np.median(x[g])) for g in groups]
     med = [float(np.median(y[g])) for g in groups]
     nb = [int(len(g)) for g in groups]
+    ns = [int(np.unique(sid[g]).size) for g in groups]
     curve = Chi2Locus(centres=tuple(centres), med=tuple(med), scatter=tuple([1.0] * len(centres)), n=int(m.sum()),
                       source=source)
     resid = y - curve.predict(x)
@@ -152,10 +174,12 @@ def fit_chi2_locus(
     med = [med[i] for i in good]
     scat = [scat[i] for i in good]
     nb = [nb[i] for i in good]
+    ns = [ns[i] for i in good]
     if not centres:
         return None
     return Chi2Locus(
-        centres=tuple(centres), med=tuple(med), scatter=tuple(scat), n=int(m.sum()), source=source, n_bin=tuple(nb)
+        centres=tuple(centres), med=tuple(med), scatter=tuple(scat), n=int(m.sum()), source=source, n_bin=tuple(nb),
+        n_stars_bin=tuple(ns), note=note,
     )
 
 
@@ -173,14 +197,16 @@ def frame_offset_locus(
     m = _finite_mask(f, c, converged, saturated)
     n_f = int(m.sum())
     base = Chi2Locus(
-        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="night", n_bin=night.n_bin
+        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="night", n_bin=night.n_bin,
+        n_stars_bin=night.n_stars_bin, note=night.note,
     )
     if n_f < MIN_N_LOCUS_FIT:
         return base
     lf = np.log10(f[m])
     off = float(np.median(np.log10(c[m]) - base.predict(lf)))
     return Chi2Locus(
-        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="frame", offset=off, n_bin=night.n_bin
+        centres=night.centres, med=night.med, scatter=night.scatter, n=n_f, source="frame", offset=off, n_bin=night.n_bin,
+        n_stars_bin=night.n_stars_bin, note=night.note,
     )
 
 
@@ -231,7 +257,9 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
     chi2s: list[np.ndarray] = []
     convs: list[np.ndarray] = []
     sats: list[np.ndarray] = []
+    ids: list[np.ndarray] = []
     usecols = [
+        "catalog_id",
         "psf_flux",
         "psf_chi2",
         "psf_converged",
@@ -244,6 +272,8 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
         df = read_vyvar_csv(fp, usecols=lambda c: c in usecols, low_memory=False)
         if "psf_flux" not in df.columns or "psf_chi2" not in df.columns:
             continue
+        if "catalog_id" not in df.columns:
+            raise ValueError(f"{fp.name}: no catalog_id - the chi2 locus counts distinct stars per flux bin")
         f = pd.to_numeric(df["psf_flux"], errors="coerce").to_numpy(dtype=np.float64)
         c = pd.to_numeric(df["psf_chi2"], errors="coerce").to_numpy(dtype=np.float64)
         if "psf_converged" in df.columns:
@@ -259,11 +289,13 @@ def fit_night_locus_from_proc_dir(proc_dir: Path) -> Chi2Locus | None:
         chi2s.append(c)
         convs.append(cv)
         sats.append(sat)
+        ids.append(df["catalog_id"].astype(str).to_numpy())
     if not fluxes:
         return None
     return fit_chi2_locus(
         np.concatenate(fluxes),
         np.concatenate(chi2s),
+        star_ids=np.concatenate(ids),
         converged=np.concatenate(convs),
         saturated=np.concatenate(sats),
         source="night",
@@ -399,6 +431,7 @@ __all__ = [
     "fit_chi2_locus",
     "frame_offset_locus",
     "MIN_N_BIN",
+    "MIN_STARS_BIN",
     "LOCUS_BIN_DEX",
     "locus_residual_sigma",
     "chi2_ok_from_locus",

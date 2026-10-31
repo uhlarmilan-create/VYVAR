@@ -10,7 +10,8 @@ vs 7.8 mmag with the night-averaged perturbation).
 
 Photometry fits the fit set together with its catalogue neighbours (Gaia down to the frame limit)
 in one photutils ``PSFPhotometry`` call on the full frame (global pixel coordinates, so the gridded
-model is evaluated at each star's position; stars closer than two fit boxes are fitted as a group).
+model is evaluated at each star's position; stars whose models reach each other's fit box are fitted as a
+group, PSF-GROUP-REACH-2026-10).
 Positions are fixed at Gaia through the MASTERSTAR WCS, only fluxes are fitted (EPSF-BLEND-2026-10):
 a faint star next to a bright one keeps its own light. Local sky from an annulus, two passes with
 per-pixel errors from the model (sky + model) / gain + RN^2.
@@ -25,6 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import math
 from pathlib import Path
 from typing import Any
@@ -38,7 +40,9 @@ from photutils.psf import GriddedPSFModel, ImagePSF, PSFPhotometry, SourceGroupe
 
 from frame_footprint import aligned_footprint, off_footprint
 from sky_estimation import annulus_sky_medians, sky_image
-from psf_photometry import _epsf_build_imagepsf_from_stars, _epsf_sky_subtracted_stars
+from psf_photometry import EPSF_BUILD_STARS_WARN, _epsf_build_imagepsf_from_stars, _epsf_sky_subtracted_stars  # noqa: F401
+
+LOGGER = logging.getLogger(__name__)
 
 OVERSAMPLING = 2
 # At least ~50 stars per PSF (Anderson et al. 2006, A&A 454, 1029); fewer build stars -> coarser grid.
@@ -46,14 +50,27 @@ _MIN_STARS_PER_CELL = 50
 # The night perturbation is the median over every k-th frame, at most this many frames.
 _DELTA_MAX_FRAMES = 30
 # photutils flags that make a fit unusable: 2 outside image, 4 non-positive flux,
-# 8 fit did not converge, 16 covariance unavailable.
-_BAD_FIT_FLAGS = 2 | 4 | 8 | 16
+# 8 fit did not converge, 16 covariance unavailable; C4 (step 7, 2026-10-31): 64 no overlap with the data,
+# 128 fit box fully masked, 256 too few pixels, 1024 non-finite flux, 2048 non-finite local sky (photutils
+# then fits with the sky set to 0: 70059 instead of 29802 ADU on a test star - the annulus and its fallback box
+# had < SKY_MIN_PIX sky pixels, e.g. in the halo of a saturated star).
+_BAD_FIT_FLAGS = 2 | 4 | 8 | 16 | 64 | 128 | 256 | 1024 | 2048
+# Names of the unusable-fit bits, counted per frame in the manifest (``frame_fit_stats``).
+_BAD_FIT_FLAG_NAMES = {
+    2: "position_outside_image", 4: "non_positive_flux", 8: "no_convergence", 16: "no_covariance",
+    64: "no_overlap", 128: "fully_masked", 256: "too_few_pixels", 1024: "non_finite_flux",
+    2048: "non_finite_local_bkg",
+}
 # Blend error (EPSF-BLEND-ERR2-2026-10): the model-shape error of the neighbours' light inside the fit box
 # is a fixed fraction of that light, sigma_F = k * F_nb, i.e. sigma_rel = k * f_nb (f_nb = neighbour light /
 # own light in the box). Injections 2-5 mag fainter, 3-12 px from bright stars: k fitted on draft 535
 # (wide rig, 9.8"/px) 0.0406, on Brno 533 g / 534 r (0.56"/px) 0.0399; each tested on the other rig:
 # pull 0.78-1.22 per separation bin. The earlier 0.113 * sqrt(f_nb) (535 only) gave 0.45-1.35 on Brno.
 _BLEND_ERR_K = 0.040
+# PSF-GROUP-REACH-2026-10 (G09-07): WARNING when a frame's largest fit group exceeds the largest group measured on
+# the golden nights with the reach group radius (Brno 534 g: 158 fit stars + 684 neighbours, 45 on the worst-seeing
+# frame FWHM 10.2, 15 on the median frame; BO CVn 527: 6). Also photutils' own group_warning_threshold.
+GROUP_SIZE_WARN = 45
 # EPSF-MERGE-2026-10: a fainter Gaia neighbour closer than 0.5 x night FWHM is merged with the fit star
 # (injections on Brno 533 g at 0.25 / 0.5 / 0.75 / 1.0 FWHM, 2-5 mag fainter: joint fit 110-250 / 55-70 /
 # 20-33 / 8-19 mmag, merged 3-11 / 3-12 / 2-15 / 3-36 mmag; the crossover is at 0.75-1 FWHM of the frame,
@@ -204,6 +221,22 @@ def night_spatial_delta(
     return out
 
 
+def _delta_on_grid(delta: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+    """The night perturbation (cells x n_m x n_m, built at the MASTERSTAR cutout) on a frame model grid of
+    ``shape``: centred, zero outside the MASTERSTAR cutout, cut centrally when the frame grid is smaller. Both
+    grids are odd with the same oversampling, so pixel offsets are whole and nothing is resampled (the optics'
+    perturbation is fixed in pixels, not in FWHM)."""
+    n_c, h_m, w_m = delta.shape
+    h_f, w_f = shape
+    out = np.zeros((n_c, h_f, w_f), dtype=np.float64)
+    dy, dx = (h_f - h_m) // 2, (w_f - w_m) // 2
+    sy0, sx0 = max(0, -dy), max(0, -dx)
+    ty0, tx0 = max(0, dy), max(0, dx)
+    hh, ww = min(h_m - sy0, h_f - ty0), min(w_m - sx0, w_f - tx0)
+    out[:, ty0 : ty0 + hh, tx0 : tx0 + ww] = delta[:, sy0 : sy0 + hh, sx0 : sx0 + ww]
+    return out
+
+
 def build_frame_model(
     frame_fits: Path,
     build_stars: pd.DataFrame,
@@ -215,6 +248,11 @@ def build_frame_model(
 ) -> tuple[Any, dict[str, Any]]:
     """The frame's ePSF (+ night perturbation per cell); returns the photutils model and its record.
 
+    ``cutout_size`` is the frame's own model size (EPSF-CUTOUT-FRAME-2026-10: odd(12 x frame FWHM),
+    ``psf_photometry.epsf_cutout_px``); the night perturbation ``delta`` was built at the MASTERSTAR cutout and
+    is applied inside it (``_delta_on_grid``). Build stars whose cutout leaves the frame footprint drop out
+    (``n_stars_used``; the merge job warns below ``EPSF_BUILD_STARS_WARN``).
+
     The model is used in memory only (OUTPUT-REVIEW-2026-10: no per-frame model files); the record's
     ``sha256`` is the hash of the model as a FITS (primary: the whole-field ePSF; extension CELLS:
     the cell models), so the manifest still identifies the model set.
@@ -225,7 +263,7 @@ def build_frame_model(
     nx, ny = grid
     hdus = [fits.PrimaryHDU(field.astype(np.float32))]
     if delta is not None and nx > 1:
-        cells = np.array([field + d for d in delta])
+        cells = np.array([field + d for d in _delta_on_grid(np.asarray(delta, dtype=np.float64), field.shape)])
         cells = np.array([c / (c.sum() / OVERSAMPLING**2) for c in cells])
         _, _, centres = grid_cells(data.shape, nx, ny)
         model: Any = GriddedPSFModel(NDData(cells, meta={"grid_xypos": centres, "oversampling": OVERSAMPLING}))
@@ -240,6 +278,7 @@ def build_frame_model(
         "sha256": hashlib.sha256(buf.getvalue()).hexdigest(),
         "fwhm_px": float(fwhm_frame) if fwhm_frame is not None else float(fwhm_px),
         "grid": [nx, ny],
+        "cutout_size": int(cutout_size),
         "n_stars_used": built["n_stars"],
         "converged": bool(built["build_converged"]),
         "iterations": len(built["build_iterations"]),
@@ -251,6 +290,21 @@ def build_frame_model(
 def fit_box_px(fwhm_px: float) -> int:
     """Side of the PSF fit box (px): 2 FWHM + 1, at least 5 (one rule for the fit and the neighbour reach)."""
     return max(5, 2 * int(round(float(fwhm_px))) + 1)
+
+
+def model_reach_px(cutout_size: float, fwhm_px: float) -> float:
+    """Distance (px) within which a source's model touches another star's fit box: model half size + fit box half
+    size + 1 px - the IRAF daophot.group condition psfrad + fitrad + 1 (G09-07, PSF-GROUP-REACH-2026-10). One rule
+    for the neighbour collection (``frame_fit_sources``) and the group radius of the fit (``fit_frame_psf``)."""
+    return float(cutout_size) / 2.0 + fit_box_px(fwhm_px) / 2.0 + 1.0
+
+
+def model_cutout_px(model: Any) -> float:
+    """Side (native px) of a photutils ImagePSF / GriddedPSFModel ePSF: (grid points - 1) / oversampling (an
+    EPSFBuilder model of an n px cutout has n x os + 1 points)."""
+    n = int(np.asarray(model.data).shape[-1])
+    os_ = float(np.atleast_1d(np.asarray(model.oversampling))[0])
+    return (n - 1) / os_
 
 
 def frame_fit_sources(
@@ -292,8 +346,7 @@ def frame_fit_sources(
     stars = cone.loc[cone["catalog_id"].isin(ids), ["catalog_id", "x", "y"]].reset_index(drop=True)
     missing = sorted(ids - set(stars["catalog_id"]))
     mag_limit = frame_mag_limit(ps)
-    fsz = fit_box_px(fwhm_px)
-    reach = int(cutout_size) / 2.0 + fsz / 2.0 + 1.0
+    reach = model_reach_px(int(cutout_size), fwhm_px)
     cand = cone[(cone["mag"] <= mag_limit) & ~cone["catalog_id"].isin(ids)]
     tree = cKDTree(np.c_[cand["x"].to_numpy(float), cand["y"].to_numpy(float)])
     hit: set[int] = set()
@@ -347,10 +400,12 @@ def fit_frame_psf(
     catalogue ``neighbours`` (x, y); one row per star of ``stars`` (EPSF-BLEND-2026-10).
 
     Positions are fixed (Gaia through the MASTERSTAR WCS; the frames are aligned to it): only the
-    fluxes are fitted. Stars closer than two fit boxes form one group and are fitted jointly
+    fluxes are fitted. Stars closer than ``model_reach_px`` (model half size + fit box half size + 1 px,
+    PSF-GROUP-REACH-2026-10) form one group and are fitted jointly
     (photutils ``SourceGrouper``), so a faint star next to a bright one keeps its own light - fitted
     alone with a free position it slid onto the bright neighbour (draft 535: up to 3 px, 2-4 mag
-    too bright). Sky: plain median of an annulus 4-6 FWHM without detected sources (SKY-SRC-MASK-2026-10). Pass 1 uses per-pixel errors from the data,
+    too bright). Sky: plain median of an annulus 4-6 FWHM without detected sources (SKY-SRC-MASK-2026-10); pass 2 re-measures it on
+    the frame with all pass-1 fitted stars subtracted (DAOPHOT ALLSTAR, PSF-SKY-ALLSTAR-2026-10). Pass 1 uses per-pixel errors from the data,
     pass 2 from the pass-1 model image ((sky + model) / gain + (RN / gain)^2, ADU): weights from
     the data bias faint stars low (Stetson 1987; ALLSTAR uses the model). The flux error is the
     photutils covariance error; chi^2 is kept as ``psf_chi2`` for the night locus.
@@ -378,8 +433,13 @@ def fit_frame_psf(
     psf = model.copy()
     psf.x_0.fixed = True
     psf.y_0.fixed = True
+    # PSF-GROUP-REACH-2026-10 (G09-07): stars whose models reach each other's fit box are fitted together
+    # (IRAF daophot.group: psfrad + fitrad + 1); photutils fits every group on the raw frame, so the old 2 fit boxes
+    # (14 px on Brno) left a bright neighbour 16-24 px away unmodelled (-92 mmag at 16 px).
+    group_r = model_reach_px(model_cutout_px(model), fw)
     phot = PSFPhotometry(
-        psf, (fsz, fsz), aperture_radius=1.5 * fw, grouper=SourceGrouper(min_separation=2.0 * fsz),
+        psf, (fsz, fsz), aperture_radius=1.5 * fw, grouper=SourceGrouper(min_separation=group_r),
+        group_warning_threshold=GROUP_SIZE_WARN,
     )
     n_st = len(stars)
     nb = neighbours if neighbours is not None else pd.DataFrame({"x": [], "y": []})
@@ -394,10 +454,18 @@ def fit_frame_psf(
     init = Table({"id": np.arange(1, len(xs) + 1), "x": xs, "y": ys, "local_bkg": lbkg})
     r1 = phot(d, mask=mask, init_params=init, error=err1)
     model_img = phot.make_model_image(d.shape, include_local_bkg=False)
+    # PSF-SKY-ALLSTAR-2026-10 (C1, DAOPHOT II ALLSTAR sky re-determination): the pass-2 sky is the same annulus
+    # median measured on the frame with ALL pass-1 fitted stars subtracted - a bright neighbour's wing outside the
+    # source mask no longer lifts a faint star's sky (Moffat beta 2.7, 5.75 mag brighter neighbour at 8 / 12 px,
+    # model truncated at the cutout: +24.7 / +11.8 -> 0.0 mmag). One sky pass (a second one changed < 1 mmag).
+    # A star without a pass-1 sky (C4: flag 2048) keeps NaN: its pass-1 fit ran with sky 0, so the residual around
+    # it (its own over-fitted core included) is no sky; it stays an unusable fit.
+    lbkg2 = annulus_sky_medians(sky_image(np.where(mask, np.nan, d - model_img), fw), np.c_[xs, ys], 4.0 * fw, 6.0 * fw)
+    lbkg2 = np.where(np.isfinite(lbkg), lbkg2, np.nan)
     err2 = np.sqrt(np.clip(sky0 + model_img, 0.0, None) / float(gain) + rn_adu2)
     r1 = r1[np.argsort(np.asarray(r1["id"]))]
     init2 = Table({"id": np.asarray(r1["id"]), "x": xs, "y": ys, "flux": np.asarray(r1["flux_fit"], float),
-                   "local_bkg": lbkg})
+                   "local_bkg": lbkg2})
     r2 = phot(d, mask=mask, init_params=init2, error=err2)
     all_img = phot.make_model_image(d.shape, include_local_bkg=False)
     r2 = r2[np.argsort(np.asarray(r2["id"]))][:n_st]
@@ -424,12 +492,43 @@ def fit_frame_psf(
             "psf_converged": good,
             "psf_snr": snr,
             "psf_sky": np.asarray(r2["local_bkg"], float),
+            "psf_sky_pass1": lbkg[:n_st],
             "psf_group_size": np.asarray(r2["group_size"], int),
             "psf_nb_light_frac": nb_frac,
             "psf_sat_masked": _box_has_mask(sat_mask, stars["x"].to_numpy(float), stars["y"].to_numpy(float), fsz // 2),
             "psf_edge_masked": off_footprint(off, stars["x"].to_numpy(float), stars["y"].to_numpy(float), fsz // 2, 4.0 * fw, 6.0 * fw, square_core=True),
         }
     )
+
+
+def frame_fit_stats(fit_df: pd.DataFrame, frame_name: str) -> dict[str, Any]:
+    """Per-frame diagnostics of ``fit_frame_psf`` for the frames manifest; WARNING for what makes fits unusable.
+
+    C4: fit stars carrying an unusable-fit photutils bit (``_BAD_FIT_FLAGS``; psf_converged False), counted per
+    bit name (fail loud: a non-finite local sky used to pass as a converged fit with the sky set to 0).
+    """
+    flags = pd.to_numeric(fit_df["psf_flags"], errors="coerce").fillna(0).astype(int).to_numpy()
+    counts = {name: int(((flags & bit) != 0).sum()) for bit, name in _BAD_FIT_FLAG_NAMES.items()}
+    n_bad = int(((flags & _BAD_FIT_FLAGS) != 0).sum())
+    out: dict[str, Any] = {
+        "n_fit_stars": int(len(fit_df)),
+        "n_bad_fit_flags": n_bad,
+        "bad_fit_flag_counts": {k: v for k, v in counts.items() if v},
+    }
+    # G09-07: size of the fit groups (fit stars + neighbours) the fit stars sit in
+    gs = pd.to_numeric(fit_df["psf_group_size"], errors="coerce").dropna()
+    out["group_size_max"] = int(gs.max()) if len(gs) else None
+    out["group_size_p99"] = round(float(np.percentile(gs, 99)), 1) if len(gs) else None
+    if len(gs) and int(gs.max()) > GROUP_SIZE_WARN:
+        LOGGER.warning("[ePSF] frame %s: largest PSF fit group %d stars (> %d, golden nights' maximum)",
+                       frame_name, int(gs.max()), GROUP_SIZE_WARN)
+    # C1: how much the ALLSTAR re-measurement moved the sky (ADU/px), median over the fit stars
+    dsky = (pd.to_numeric(fit_df["psf_sky"], errors="coerce") - pd.to_numeric(fit_df["psf_sky_pass1"], errors="coerce")).abs()
+    out["sky_allstar_median_abs_diff_adu"] = round(float(dsky.median()), 4) if dsky.notna().any() else None
+    if n_bad:
+        LOGGER.warning("[ePSF] frame %s: %d fit star(s) with unusable-fit photutils flags %s (psf_converged False)",
+                       frame_name, n_bad, out["bad_fit_flag_counts"])
+    return out
 
 
 def _neighbour_light_in_box(

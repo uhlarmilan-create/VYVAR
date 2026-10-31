@@ -111,6 +111,8 @@ PROC_ROUND_SIG_COLS: tuple[str, ...] = (
     "psf_flux_err",
     "psf_chi2",
     "psf_chi2_locus_resid_sigma",
+    "psf_sky",
+    "psf_sky_pass1",
 )
 
 

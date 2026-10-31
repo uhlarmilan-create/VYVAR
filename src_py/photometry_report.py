@@ -46,9 +46,25 @@ def variability_method_text(meta: dict[str, Any], *, snr_min: float) -> str:
         f"{float(meta.get('z_threshold') or 0):.2f} (field false-alarm probability {100 * FAP_FIELD:g} %) and it passes "
         f"the gates: |neighbour light| <= {100 * BLEND_FLUX_FRAC_MAX:g} %, sky annulus inside every frame, median "
         f"SNR >= {snr_min:g}, a Gaia magnitude "
-        f"({meta.get('n_gates_ok')} stars pass). A signal that a linear dependence on FWHM and airmass explains is marked "
-        "as systematic and not listed. No sigma clipping, no detrending."
+        f"({meta.get('n_gates_ok')} stars pass). A signal that the field's typical response to FWHM and airmass (stars of "
+        "similar magnitude; airmass term linear in BP-RP) explains is marked as systematic and not listed (after Kepler "
+        "PDC-MAP, Smith et al. 2012); a candidate whose own linear FWHM / airmass fit removes the signal is marked "
+        "'trend', one whose own FWHM response is a z > threshold outlier of the field 'seeing'. No sigma clipping, no "
+        "detrending."
     )
+
+
+def _var_index_cell(r: Any, zthr: float) -> str:
+    """Candidate table 'index' cell: the index that fired plus the G10-08 flags (trend / seeing), which never
+    remove a candidate."""
+    idx = str(r["index"]) if pd.notna(r.get("index")) and str(r.get("index")) else "-"
+    flags = []
+    if bool(r.get("trend_like")) and str(r.get("trend_like")).lower() != "nan":
+        flags.append("trend")
+    srz = pd.to_numeric(r.get("seeing_response_z"), errors="coerce")
+    if pd.notna(srz) and abs(float(srz)) > zthr:
+        flags.append("seeing")
+    return idx + (f" ({', '.join(flags)})" if flags else "")
 
 
 def transient_method_text(tm: dict[str, Any]) -> str:
@@ -636,6 +652,9 @@ class _PhotometryReportBuilder:
         self.n_lc = int(len(self.measured_summary_df))
         self.lc_count_display = self._format_lc_count_display()
         self.med_rms = float(np.nanmedian(pd.to_numeric(self.summary_df.get("lc_rms"), errors="coerce"))) if self.n_lc else float("nan")
+        # LC-PRECISION-P2P-2026-10 (G08-17): the headline precision of the light curves
+        self.med_p2p = float(np.nanmedian(pd.to_numeric(self.summary_df.get("lc_precision_p2p"), errors="coerce"))) \
+            if self.n_lc and "lc_precision_p2p" in self.summary_df.columns else float("nan")
         self.rms_lt_005 = int((pd.to_numeric(self.summary_df.get("lc_rms"), errors="coerce") < 0.05).sum()) if self.n_lc else 0
         self.avg_good_comp = float(np.nanmean(pd.to_numeric(self.measured_summary_df.get("n_good_comp"), errors="coerce"))) if self.n_lc else float("nan")
         self.best_rms = float(np.nanmin(pd.to_numeric(self.summary_df.get("lc_rms"), errors="coerce"))) if self.n_lc else float("nan")
@@ -1641,6 +1660,7 @@ class _PhotometryReportBuilder:
             # REPORT-AUDIT-2026-10: targets of the run without a light curve get no target page
             # G11-35: the same rule as the page loop (coverage-RED targets included)
             ("Targets without a page", f"{self._n_targets_without_page():d}"),
+            ("Median precision (p2p)", f"{self.med_p2p:.4f}" if np.isfinite(self.med_p2p) else "-"),
             ("Median lc_rms", f"{self.med_rms:.4f}" if np.isfinite(self.med_rms) else "-"),
             ("RMS < 0.05 mag", f"{self.rms_lt_005:d}"),
             ("Avg good comp", f"{self.avg_good_comp:.2f}" if np.isfinite(self.avg_good_comp) else "-"),
@@ -1654,7 +1674,7 @@ class _PhotometryReportBuilder:
         c.setFont(self.FONT_REG, 12)
         for k, v in rows:
             c.drawString(self.M_LEFT, y, f"{k}:")
-            if k in ("Median lc_rms", "Best lc_rms", "Worst lc_rms"):
+            if k in ("Median precision (p2p)", "Median lc_rms", "Best lc_rms", "Worst lc_rms"):
                 c.setFillColor(self._metric_color(float(pd.to_numeric(v, errors="coerce"))))
             c.drawString(self.M_LEFT + 7.5 * self.cm, y, str(v))
             c.setFillColor(self.colors.black)
@@ -2576,7 +2596,8 @@ class _PhotometryReportBuilder:
 
         id_key = "catalog_id" if "catalog_id" in self.summary_df.columns else ("_cid" if "_cid" in self.summary_df.columns else None)
         mag_key = next((k for k in ("lc_median_mag", "mag") if k in self.summary_df.columns), None)
-        tail_want = ("vsx_name", "vsx_type", "lc_rms", "n_good_comp", "n_points", "merr_med", "lc_quality_flag")
+        tail_want = ("vsx_name", "vsx_type", "lc_precision_p2p", "lc_rms", "n_good_comp", "n_points", "merr_med",
+                     "lc_quality_flag")
         if not id_key:
             self._page_footer(c)
             c.showPage()
@@ -2635,7 +2656,7 @@ class _PhotometryReportBuilder:
                             cell_style,
                         )
                     )
-                elif cn == "lc_rms" or cn == "merr_med":
+                elif cn in ("lc_precision_p2p", "lc_rms", "merr_med"):
                     x = pd.to_numeric(r.get(cn), errors="coerce")
                     row_out.append(
                         self.Paragraph(
@@ -2659,6 +2680,7 @@ class _PhotometryReportBuilder:
             "mag": 0.07,
             "vsx_name": 0.17,
             "vsx_type": 0.06,
+            "lc_precision_p2p": 0.06,
             "lc_rms": 0.06,
             "n_good_comp": 0.06,
             "n_points": 0.05,
@@ -3205,7 +3227,7 @@ class _PhotometryReportBuilder:
                 zz = max(float(r["z_s"]) if pd.notna(r["z_s"]) else -9, float(r["z_eta"]) if pd.notna(r["z_eta"]) else -9)
                 vals = [r["label"], r["catalog_id"], f"{float(r['ra_deg']):.5f}", f"{float(r['dec_deg']):+.5f}",
                         f"{float(r['mag']):.2f}", f"{float(r['bp_rp']):.2f}" if pd.notna(r.get("bp_rp")) else "-",
-                        f"{float(r['s']):.4f}", f"{zz:.1f}", str(r["index"]) if pd.notna(r.get("index")) and str(r.get("index")) else "-",
+                        f"{float(r['s']):.4f}", f"{zz:.1f}", _var_index_cell(r, float(meta.get("z_threshold") or float("inf"))),
                         str(r.get("catalogs", "not checked"))[:60], tcell[:40]]
                 for v, x in zip(vals, xs):
                     c.drawString(self.M_LEFT + x * self.cm, y, self._pdf_escape(str(v)))

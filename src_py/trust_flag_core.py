@@ -50,6 +50,8 @@ _CHECK_HARD_LO = 0.05
 # cosmic-ray epochs do not dominate). 1 = scatter explained by the errors.
 CHECK_RATIO_SOFT = 1.5
 CHECK_RATIO_HARD = 3.0
+# G07-02 (Milan 2026-10-31): soft note of a target without a Gaia BP-RP (comps not colour-matched)
+TARGET_COLOUR_UNKNOWN_SOFT = "target colour unknown - no colour matching, no colour term / k''"
 _UNEVALUATED_TRUST = "RED"
 _UNEVALUATED_REASON = "not evaluated (no comp QA / missing from trust map)"
 
@@ -355,6 +357,7 @@ def classify_warnings(
     comp_delta_bprp_cap: float = float("nan"),
     calibration_hard: str = "",
     calibration_soft: str = "",
+    target_colour_unknown: bool = False,
 ) -> tuple[list[str], list[str]]:
     """Return (hard_labels, soft_labels) for one target.
 
@@ -400,6 +403,10 @@ def classify_warnings(
             and float(comp_delta_bprp_max) > float(comp_delta_bprp_cap):
         hard.append(f"colour mismatch: comparison stars up to |dBP-RP| {float(comp_delta_bprp_max):.2f} "
                     f"(cap {float(comp_delta_bprp_cap):.2f})")
+
+    # G07-02 (Milan 2026-10-31): a target without a Gaia colour gets comps by comp_rms only
+    if nc > 0 and bool(target_colour_unknown):
+        soft.append(TARGET_COLOUR_UNKNOWN_SOFT)
 
     if 0 < nc < th.strong:
         soft.append(
@@ -567,6 +574,7 @@ def evaluate_target(
     comp_delta_bprp_cap: float = float("nan"),
     calibration_hard: str = "",
     calibration_soft: str = "",
+    target_colour_unknown: bool = False,
 ) -> dict[str, Any]:
     th = thresholds
     lq = str(lc_quality or "").strip().lower() or "-"
@@ -612,6 +620,7 @@ def evaluate_target(
         comp_delta_bprp_cap=float(comp_delta_bprp_cap),
         calibration_hard=str(calibration_hard or ""),
         calibration_soft=str(calibration_soft or ""),
+        target_colour_unknown=bool(target_colour_unknown),
     )
     trust = trust_level(int(n_clean), hard, soft, th)
     reason = build_reason(
@@ -687,9 +696,13 @@ def compute_trust_for_photometry_dir(
                         continue
                     _dc = (pd.to_numeric(grp["delta_bprp_abs"], errors="coerce")
                            if "delta_bprp_abs" in grp.columns else pd.Series(dtype=float))
+                    _tc = (pd.to_numeric(grp["target_bp_rp"], errors="coerce")
+                           if "target_bp_rp" in grp.columns else None)
                     comp_meta[norm_id(tid) or tid] = {
                         "n_comps": int(grp["catalog_id"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
                         "max_dbprp": float(_dc.max()) if _dc.notna().any() else float("nan"),
+                        # G07-02: comparison set chosen without a target colour
+                        "colour_unknown": bool(_tc is not None and len(_tc) > 0 and not _tc.notna().any()),
                     }
         except Exception:  # noqa: BLE001
             comp_meta = {}
@@ -764,6 +777,7 @@ def compute_trust_for_photometry_dir(
             comp_delta_bprp_cap=_dbprp_cap,
             calibration_hard=_cal_hard,
             calibration_soft=_cal_soft,
+            target_colour_unknown=bool(_cm0.get("colour_unknown", False)),
         )
         per_target[cid] = info
         conf_counts[info["trust"]] = conf_counts.get(info["trust"], 0) + 1

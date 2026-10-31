@@ -769,6 +769,7 @@ class VyvarDatabase:
     #: Columns of a gain / read-noise point the user edits (``EQUIPMENT_CURVE``).
     CURVE_POINT_COLUMNS: tuple[str, ...] = (
         "READOUT_MODE", "GAIN_SETTING", "BINNING", "E_PER_ADU", "READNOISE_E", "SOURCE", "MEASURED_AT", "NOTE",
+        "E_PER_ADU_ERR", "PTC_JSON",
     )
 
     def save_equipment_curve(self, equipment_id: int, rows: Any) -> int:
@@ -816,10 +817,14 @@ class VyvarDatabase:
         readnoise_e: float | None,
         note: str = "",
         measured_at: str | None = None,
+        e_per_adu_err: float | None = None,
+        ptc_json: str | None = None,
     ) -> int:
         """G14-15 / NEW-1: store a measured gain / read-noise point ("Save to camera"). A new
         measurement REPLACES the earlier one at the same camera, readout mode, gain setting and
-        binning (one transaction); returns the new row ID."""
+        binning (one transaction); returns the new row ID. STEP7 C2: ``e_per_adu_err`` (1 sigma, native
+        e-/ADU) and ``ptc_json`` (the photon-transfer report: pair points, linearity, covariance, saturation)
+        are stored with the point."""
         eid = int(equipment_id)
         if self.conn.execute("SELECT 1 FROM EQUIPMENTS WHERE ID = ?;", (eid,)).fetchone() is None:
             raise ValueError(f"EQUIPMENTS ID={eid} does not exist.")
@@ -827,6 +832,7 @@ class VyvarDatabase:
             "READOUT_MODE": readout_mode, "GAIN_SETTING": gain_setting, "BINNING": int(binning),
             "E_PER_ADU": e_per_adu, "READNOISE_E": readnoise_e, "SOURCE": "measured",
             "MEASURED_AT": measured_at or datetime.now(timezone.utc).date().isoformat(), "NOTE": note,
+            "E_PER_ADU_ERR": e_per_adu_err, "PTC_JSON": ptc_json,
         }
         vals = {c: self._coerce_sql_param("EQUIPMENT_CURVE", c, raw[c]) for c in self.CURVE_POINT_COLUMNS}
         if vals["E_PER_ADU"] is None and vals["READNOISE_E"] is None:
@@ -1617,7 +1623,9 @@ class VyvarDatabase:
                 READNOISE_E REAL,
                 SOURCE TEXT NOT NULL DEFAULT 'manual',
                 MEASURED_AT TEXT,
-                NOTE TEXT
+                NOTE TEXT,
+                E_PER_ADU_ERR REAL,
+                PTC_JSON TEXT
             );
             """
 
@@ -1637,6 +1645,11 @@ class VyvarDatabase:
             if name not in cols:
                 self.conn.execute(f"ALTER TABLE EQUIPMENTS ADD COLUMN {name} {decl};")
         self.conn.execute(self._EQUIPMENT_CURVE_DDL)
+        # STEP7 C2: 1-sigma gain error and the photon-transfer report of a measured point
+        cc = {row["name"] for row in self.conn.execute("PRAGMA table_info('EQUIPMENT_CURVE');").fetchall()}
+        for name, decl in (("E_PER_ADU_ERR", "REAL"), ("PTC_JSON", "TEXT")):
+            if name not in cc:
+                self.conn.execute(f"ALTER TABLE EQUIPMENT_CURVE ADD COLUMN {name} {decl};")
         self.conn.commit()
         self._dedupe_measured_curve_points()
 
@@ -1935,7 +1948,8 @@ class VyvarDatabase:
         parents = {str(r[2]) for r in self.conn.execute("PRAGMA foreign_key_list('EQUIPMENT_CURVE');").fetchall()}
         if not parents or parents == {"EQUIPMENTS"}:
             return
-        cols = ", ".join(("ID", "EQUIPMENT_ID", *self.CURVE_POINT_COLUMNS))
+        have = {str(r[1]) for r in self.conn.execute("PRAGMA table_info('EQUIPMENT_CURVE');").fetchall()}
+        cols = ", ".join(c for c in ("ID", "EQUIPMENT_ID", *self.CURVE_POINT_COLUMNS) if c in have)
         self._rebuild_table_safely(
             "EQUIPMENT_CURVE",
             self._EQUIPMENT_CURVE_DDL.replace("IF NOT EXISTS ", ""),

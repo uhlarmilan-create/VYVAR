@@ -54,6 +54,8 @@ PHOTOMETRY_PROVENANCE_COLS = frozenset(
         "k2_source",
         "k2_value",
         "k2_colour_ref",
+        "k2_reason",
+        "k2_colour_missing_wfrac",
     }
 )
 PHOTOMETRY_QC_COLS_LC = frozenset(

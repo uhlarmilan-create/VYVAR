@@ -22,6 +22,7 @@ from typing import Final
 
 from band_classify import (
     PhotometricBand,
+    ambiguous_filter_note,
     classify_photometric_band,
     obs_group_first_token,
     standard_band_of_filter,
@@ -94,7 +95,8 @@ class FilterBand:
     """How a FITS filter is calibrated and reported.
 
     zp_band        band of the comparison catalogue magnitudes ('g','r','i','V','B','R');
-                   'G' = no supported band (Gaia G scale, not reportable to AAVSO).
+                   'G' = no supported band (Gaia G scale, not reportable to AAVSO);
+                   '' = no zero point at all (ambiguous filter name, G08-14: differential only).
     aavso_code     AAVSO filter code; '' when the filter cannot be reported.
     transformable  True when a colour term to the standard band is meaningful
                    (real standard filter); False for clear / tri-colour / unknown.
@@ -132,6 +134,11 @@ def filter_band(filter_name: str | None) -> FilterBand:
     if low in _TRICOLOUR:
         zp, code = _TRICOLOUR[low]
         return FilterBand(raw, zp, code, False, f"{_ZP_LABEL[zp]} ({code}, untransformed)")
+    _amb = ambiguous_filter_note(raw)
+    if _amb:
+        # G08-14: a bare G / Z is not a standard band - no catalogue magnitudes (band_system NONE ->
+        # differential light curve), no AAVSO code, no colour term
+        return FilterBand(raw, "", "", False, f"{_amb} - differential only")
     band = band_for_filter(raw)
     if band != "G":
         return FilterBand(raw, band, _ZP_CODE[band], True, _ZP_LABEL[band])
@@ -157,6 +164,15 @@ def filter_band_for_obs_group(obs_group: str | None) -> FilterBand:
     except Exception:  # noqa: BLE001
         pass
     return filter_band(obs_group_first_token(str(obs_group or "")))
+
+
+def filter_band_meta(obs_group: str | None) -> dict:
+    """pipeline_meta ``filter_band`` block of the run's filter (G08-14): token, zero-point band, AAVSO code,
+    transformable, label, and ``warning`` (non-empty for an ambiguous name such as a bare G)."""
+    fb = filter_band_for_obs_group(obs_group)
+    return {"filter_token": fb.filter_token, "zp_band": fb.zp_band, "aavso_code": fb.aavso_code,
+            "transformable": bool(fb.transformable), "label": fb.label,
+            "warning": ambiguous_filter_note(fb.filter_token)}
 
 
 def zp_mag_from_gaia(g_mag: float, bp_rp: float, fb: FilterBand) -> float:

@@ -268,9 +268,10 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
     st.markdown("**Measure gain and read noise from raw flats (photon transfer)**")
     st.caption(
         "Folder with RAW (not mastered) frames of one gain setting and binning: flats in pairs - two "
-        "consecutive flats of the same exposure, best at 3-5 exposures from about 10 % to 60 % of "
-        "saturation - and two darks of each flat exposure (the shortest pair also gives the read noise). "
-        "Masters cannot be used: averaging removes the noise this method measures."
+        "consecutive flats of the same exposure, best about 25 exposures from 0.5 % to 90 % of saturation - "
+        "and two darks of each flat exposure (dark variance removed per level; the shortest pair also gives "
+        "the read noise). Masters cannot be used: averaging removes the noise this method measures. "
+        "Procedure: docs/INSTALL.md, 'Measure gain and read noise (photon transfer)'."
     )
     cams = _camera_options(db)
     if not cams:
@@ -308,7 +309,11 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
     if res.points:
         pts = pd.DataFrame([
             {"Flats": " + ".join(pt.files), "Exposure s": pt.exptime, "Level ADU": round(pt.level_adu, 1),
-             "var/2 ADU^2": round(pt.var_half, 2), "Used": pt.used, "Note": pt.note} for pt in res.points
+             "var/2 ADU^2": round(pt.var_half, 2),
+             "dark var/2": None if pt.dark_var_half is None else round(pt.dark_var_half, 2),
+             "rho x": None if pt.rho_x is None else round(pt.rho_x, 4),
+             "rho y": None if pt.rho_y is None else round(pt.rho_y, 4),
+             "Used": pt.used, "Note": pt.note} for pt in res.points
         ])
         st.dataframe(pts, hide_index=True, width="stretch")
         st.scatter_chart(pts[pts["Used"]], x="Level ADU", y="var/2 ADU^2")
@@ -327,6 +332,9 @@ def _render_measure_gain(db: VyvarDatabase) -> None:
             int(out["cam"]), readout_mode=out["mode"], gain_setting=res.gain_setting, binning=int(res.binning),
             e_per_adu=g_nat, readnoise_e=res.read_noise_e, measured_at=_dt.date.today().isoformat(),
             note=f"photon transfer, {res.n_levels} levels, R2 {res.r2 if res.r2 is not None else float('nan'):.4f}",
+            # STEP7 C2: the gain error (native) and the whole report (pair points, linearity, covariance)
+            e_per_adu_err=native_gain(float(res.gain_err), out["adc"]) if res.gain_err else None,
+            ptc_json=res.to_json(),
         )
         st.session_state.pop("clib_g_res", None)
         st.success("Saved. It replaces an earlier measurement and wins over the catalog and the camera default "

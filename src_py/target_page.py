@@ -194,7 +194,8 @@ def star_fields(row: Mapping[str, Any], lc_stats: Mapping[str, Any]) -> dict[str
         "vsx_type": row.get("vsx_type", ""),
         "zone_flag": row.get("zone_flag", ""),
         "bp_rp": row.get("bp_rp", float("nan")),
-        "lc_rms": row.get("lc_rms_ooe", row.get("lc_rms", float("nan"))),
+        # LC-PRECISION-P2P-2026-10 (G08-17): headline precision = robust point-to-point scatter
+        "lc_precision_p2p": row.get("lc_precision_p2p", float("nan")),
         "lc_rms_full": row.get("lc_rms", float("nan")),
         "good_comp": row.get("n_stability_good", row.get("n_good_comp", 0)),
         "n_stability_good": row.get("n_stability_good", row.get("n_good_comp", 0)),
@@ -622,7 +623,8 @@ class TargetPages:
         chk = self.check_star(cid)
         _ain = float(getattr(self.cfg, "annulus_inner_fwhm", 2.7) or 2.7) if self.cfg else 2.7
         _aout = float(getattr(self.cfg, "annulus_outer_fwhm", 5.2) or 5.2) if self.cfg else 5.2
-        _lc_rms = float(pd.to_numeric(star_data.get("lc_rms"), errors="coerce"))
+        _p2p = float(pd.to_numeric(star_data.get("lc_precision_p2p"), errors="coerce"))
+        _lc_rms_full = float(pd.to_numeric(star_data.get("lc_rms_full"), errors="coerce"))
         _merr = float(pd.to_numeric(star_data.get("merr_med"), errors="coerce"))
         _gz_note = str(gz.get("note") or "")
         _gspc_std = bool(uncal and gspc_standard_available(gz, self._mag_gspc(cid)))
@@ -671,7 +673,7 @@ class TargetPages:
                                              f"diff {chk.get('kdelta')}"))
         else:
             _chk_facts.append(("Check KMAG", str(chk.get("kmag", "-"))))
-        _sc_t = str(chk.get("scatter", "-")).replace(" mag", "")
+        _sc_t = str(chk.get("scatter", "-")).replace(" mag", "")  # night repeatability (red noise included)
         if chk.get("err_med"):
             _sc_t += f" (expected {chk['err_med']}, x{chk.get('scatter_ratio') or '-'})"
         _chk_facts.append(("Check scatter", _sc_t))
@@ -702,7 +704,10 @@ class TargetPages:
             ("Aperture", (f"{_r:.1f} px ({_k:.2f} x FWHM)" if np.isfinite(_r) else "-") + _psf_txt),
             ("Sky annulus", f"{max(_ain * _fw_t, _r if np.isfinite(_r) else 0.0):.1f}-{_aout * _fw_t:.1f} px"
              if np.isfinite(_fw_t) else "-"),
-            ("rms OOE / MERR", f"{_lc_rms:.3f} / {_merr:.4f} mag" if np.isfinite(_lc_rms) else "-"),
+            ("Precision (p2p) / MERR", (f"{_p2p:.4f} / {_merr:.4f} mag"
+                                        + (f" (p2p/err {_p2p / _merr:.2f})" if np.isfinite(_merr) and _merr > 0 else ""))
+             if np.isfinite(_p2p) else "-"),
+            ("rms (full)", f"{_lc_rms_full:.4f} mag (amplitude + noise)" if np.isfinite(_lc_rms_full) else "-"),
             *_chk_facts,
             ("Comps", f"{len(rows)}  n_eff {m3.n_eff(w_br):.1f}" if w_br else f"{len(rows)}"),
             ("Zero point", zp_val),

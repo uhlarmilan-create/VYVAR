@@ -32,3 +32,11 @@ VY_COSM / VY_COSMNPX (removed 2026-08-12) is gone.
 
 Contract: dev/tests/test_fits_keywords.py (no VYVAR keyword longer than 8 characters, no header
 write of a longer keyword, none of the old names in the code).
+
+## Keywords added by step 7 (cal, 2026-10-31)
+
+| keyword | written by | meaning |
+|---|---|---|
+| VYBINCNV | cal_diag | binning convention CAL-DIAG measured for the light binning (SUM / MEAN); only when the dark was rebinned. Read by the gain / read-noise resolver (G01-06) |
+| VY_LSB | pipeline_calibrate | raw LSB granularity of the frame [ADU]: largest 2^k dividing every unsaturated raw value (G06-34; 4 = 14-bit data in the 16-bit container) |
+| VY_CDKR | cal_diag | dark current per light pixel [file ADU/s] from the CAL-DIAG pedestal fit slope; dark-current shot noise of the CCD equation (G06-25) |
